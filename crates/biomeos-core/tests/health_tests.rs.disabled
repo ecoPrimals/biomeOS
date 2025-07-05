@@ -1,0 +1,426 @@
+//! Unit tests for the biomeos-core health module
+
+use biomeos_core::health::*;
+use std::collections::HashMap;
+use chrono::Utc;
+
+#[test]
+fn test_health_status_variants() {
+    let statuses = vec![
+        HealthStatus::Unknown,
+        HealthStatus::Healthy,
+        HealthStatus::Unhealthy,
+        HealthStatus::Degraded,
+        HealthStatus::Critical,
+        HealthStatus::Maintenance,
+    ];
+    
+    assert_eq!(statuses.len(), 6);
+    assert!(matches!(statuses[0], HealthStatus::Unknown));
+    assert!(matches!(statuses[1], HealthStatus::Healthy));
+    assert!(matches!(statuses[2], HealthStatus::Unhealthy));
+    assert!(matches!(statuses[3], HealthStatus::Degraded));
+    assert!(matches!(statuses[4], HealthStatus::Critical));
+    assert!(matches!(statuses[5], HealthStatus::Maintenance));
+}
+
+#[test]
+fn test_health_info_creation() {
+    let mut health_info = HealthInfo {
+        status: HealthStatus::Healthy,
+        message: Some("System is operating normally".to_string()),
+        timestamp: Utc::now(),
+        component: "test-component".to_string(),
+        details: HashMap::new(),
+    };
+    
+    health_info.details.insert("uptime".to_string(), "3600".to_string());
+    health_info.details.insert("version".to_string(), "1.0.0".to_string());
+    
+    assert!(matches!(health_info.status, HealthStatus::Healthy));
+    assert!(health_info.message.is_some());
+    assert_eq!(health_info.message.unwrap(), "System is operating normally");
+    assert_eq!(health_info.component, "test-component");
+    assert_eq!(health_info.details.len(), 2);
+    assert_eq!(health_info.details.get("uptime"), Some(&"3600".to_string()));
+    assert_eq!(health_info.details.get("version"), Some(&"1.0.0".to_string()));
+}
+
+#[test]
+fn test_health_info_unhealthy() {
+    let health_info = HealthInfo {
+        status: HealthStatus::Unhealthy,
+        message: Some("Service is down".to_string()),
+        timestamp: Utc::now(),
+        component: "failed-service".to_string(),
+        details: HashMap::new(),
+    };
+    
+    assert!(matches!(health_info.status, HealthStatus::Unhealthy));
+    assert!(health_info.message.is_some());
+    assert_eq!(health_info.message.unwrap(), "Service is down");
+    assert_eq!(health_info.component, "failed-service");
+    assert!(health_info.details.is_empty());
+}
+
+#[test]
+fn test_health_metrics_creation() {
+    let metrics = HealthMetrics {
+        cpu_usage_percent: 45.5,
+        memory_usage_percent: 67.2,
+        disk_usage_percent: 23.8,
+        network_rx_bytes: 1024000,
+        network_tx_bytes: 512000,
+        uptime_seconds: 86400, // 24 hours
+        response_time_ms: 150.0,
+        error_rate: 0.01,
+        active_connections: 42,
+        custom_metrics: HashMap::new(),
+    };
+    
+    assert_eq!(metrics.cpu_usage_percent, 45.5);
+    assert_eq!(metrics.memory_usage_percent, 67.2);
+    assert_eq!(metrics.disk_usage_percent, 23.8);
+    assert_eq!(metrics.network_rx_bytes, 1024000);
+    assert_eq!(metrics.network_tx_bytes, 512000);
+    assert_eq!(metrics.uptime_seconds, 86400);
+    assert_eq!(metrics.response_time_ms, 150.0);
+    assert_eq!(metrics.error_rate, 0.01);
+    assert_eq!(metrics.active_connections, 42);
+    assert!(metrics.custom_metrics.is_empty());
+}
+
+#[test]
+fn test_health_metrics_with_custom_metrics() {
+    let mut metrics = HealthMetrics {
+        cpu_usage_percent: 30.0,
+        memory_usage_percent: 50.0,
+        disk_usage_percent: 20.0,
+        network_rx_bytes: 500000,
+        network_tx_bytes: 250000,
+        uptime_seconds: 3600,
+        response_time_ms: 100.0,
+        error_rate: 0.005,
+        active_connections: 20,
+        custom_metrics: HashMap::new(),
+    };
+    
+    // Add custom metrics
+    metrics.custom_metrics.insert("cache_hit_rate".to_string(), 0.95);
+    metrics.custom_metrics.insert("queue_length".to_string(), 5.0);
+    metrics.custom_metrics.insert("gc_time_ms".to_string(), 25.0);
+    
+    assert_eq!(metrics.custom_metrics.len(), 3);
+    assert_eq!(metrics.custom_metrics.get("cache_hit_rate"), Some(&0.95));
+    assert_eq!(metrics.custom_metrics.get("queue_length"), Some(&5.0));
+    assert_eq!(metrics.custom_metrics.get("gc_time_ms"), Some(&25.0));
+}
+
+#[test]
+fn test_health_status_ordering() {
+    // Test that health statuses can be compared
+    assert!(HealthStatus::Healthy != HealthStatus::Unhealthy);
+    assert!(HealthStatus::Unknown != HealthStatus::Healthy);
+    assert!(HealthStatus::Critical != HealthStatus::Degraded);
+    assert!(HealthStatus::Maintenance != HealthStatus::Healthy);
+}
+
+#[test]
+fn test_health_info_serialization() {
+    let health_info = HealthInfo {
+        status: HealthStatus::Healthy,
+        message: Some("All systems operational".to_string()),
+        timestamp: Utc::now(),
+        component: "system".to_string(),
+        details: HashMap::new(),
+    };
+    
+    // Test JSON serialization
+    let json = serde_json::to_string(&health_info);
+    assert!(json.is_ok());
+    
+    // Test deserialization
+    let deserialized: Result<HealthInfo, _> = serde_json::from_str(&json.unwrap());
+    assert!(deserialized.is_ok());
+    
+    let deserialized_info = deserialized.unwrap();
+    assert!(matches!(deserialized_info.status, HealthStatus::Healthy));
+    assert_eq!(deserialized_info.message, Some("All systems operational".to_string()));
+    assert_eq!(deserialized_info.component, "system");
+}
+
+#[test]
+fn test_health_metrics_serialization() {
+    let metrics = HealthMetrics {
+        cpu_usage_percent: 25.0,
+        memory_usage_percent: 40.0,
+        disk_usage_percent: 15.0,
+        network_rx_bytes: 100000,
+        network_tx_bytes: 50000,
+        uptime_seconds: 1800,
+        response_time_ms: 75.0,
+        error_rate: 0.001,
+        active_connections: 15,
+        custom_metrics: HashMap::new(),
+    };
+    
+    // Test JSON serialization
+    let json = serde_json::to_string(&metrics);
+    assert!(json.is_ok());
+    
+    // Test deserialization
+    let deserialized: Result<HealthMetrics, _> = serde_json::from_str(&json.unwrap());
+    assert!(deserialized.is_ok());
+    
+    let deserialized_metrics = deserialized.unwrap();
+    assert_eq!(deserialized_metrics.cpu_usage_percent, 25.0);
+    assert_eq!(deserialized_metrics.memory_usage_percent, 40.0);
+    assert_eq!(deserialized_metrics.disk_usage_percent, 15.0);
+    assert_eq!(deserialized_metrics.network_rx_bytes, 100000);
+    assert_eq!(deserialized_metrics.network_tx_bytes, 50000);
+    assert_eq!(deserialized_metrics.uptime_seconds, 1800);
+    assert_eq!(deserialized_metrics.response_time_ms, 75.0);
+    assert_eq!(deserialized_metrics.error_rate, 0.001);
+    assert_eq!(deserialized_metrics.active_connections, 15);
+}
+
+#[test]
+fn test_health_info_clone() {
+    let health_info = HealthInfo {
+        status: HealthStatus::Degraded,
+        message: Some("Performance degraded".to_string()),
+        timestamp: Utc::now(),
+        component: "performance".to_string(),
+        details: HashMap::new(),
+    };
+    
+    let cloned = health_info.clone();
+    
+    assert!(matches!(cloned.status, HealthStatus::Degraded));
+    assert_eq!(cloned.message, Some("Performance degraded".to_string()));
+    assert_eq!(cloned.component, "performance");
+    assert_eq!(cloned.timestamp, health_info.timestamp);
+}
+
+#[test]
+fn test_health_metrics_clone() {
+    let metrics = HealthMetrics {
+        cpu_usage_percent: 80.0,
+        memory_usage_percent: 90.0,
+        disk_usage_percent: 95.0,
+        network_rx_bytes: 2000000,
+        network_tx_bytes: 1000000,
+        uptime_seconds: 7200,
+        response_time_ms: 300.0,
+        error_rate: 0.05,
+        active_connections: 100,
+        custom_metrics: HashMap::new(),
+    };
+    
+    let cloned = metrics.clone();
+    
+    assert_eq!(cloned.cpu_usage_percent, 80.0);
+    assert_eq!(cloned.memory_usage_percent, 90.0);
+    assert_eq!(cloned.disk_usage_percent, 95.0);
+    assert_eq!(cloned.network_rx_bytes, 2000000);
+    assert_eq!(cloned.network_tx_bytes, 1000000);
+    assert_eq!(cloned.uptime_seconds, 7200);
+    assert_eq!(cloned.response_time_ms, 300.0);
+    assert_eq!(cloned.error_rate, 0.05);
+    assert_eq!(cloned.active_connections, 100);
+}
+
+#[test]
+fn test_health_info_debug() {
+    let health_info = HealthInfo {
+        status: HealthStatus::Critical,
+        message: Some("Critical system error".to_string()),
+        timestamp: Utc::now(),
+        component: "core".to_string(),
+        details: HashMap::new(),
+    };
+    
+    let debug_str = format!("{:?}", health_info);
+    assert!(debug_str.contains("Critical"));
+    assert!(debug_str.contains("Critical system error"));
+    assert!(debug_str.contains("core"));
+}
+
+#[test]
+fn test_health_metrics_debug() {
+    let metrics = HealthMetrics {
+        cpu_usage_percent: 50.0,
+        memory_usage_percent: 60.0,
+        disk_usage_percent: 30.0,
+        network_rx_bytes: 1000000,
+        network_tx_bytes: 500000,
+        uptime_seconds: 3600,
+        response_time_ms: 200.0,
+        error_rate: 0.02,
+        active_connections: 50,
+        custom_metrics: HashMap::new(),
+    };
+    
+    let debug_str = format!("{:?}", metrics);
+    assert!(debug_str.contains("50.0"));
+    assert!(debug_str.contains("60.0"));
+    assert!(debug_str.contains("30.0"));
+    assert!(debug_str.contains("1000000"));
+    assert!(debug_str.contains("500000"));
+    assert!(debug_str.contains("3600"));
+    assert!(debug_str.contains("200.0"));
+    assert!(debug_str.contains("0.02"));
+    assert!(debug_str.contains("50"));
+}
+
+#[test]
+fn test_health_status_serialization() {
+    let statuses = vec![
+        HealthStatus::Unknown,
+        HealthStatus::Healthy,
+        HealthStatus::Unhealthy,
+        HealthStatus::Degraded,
+        HealthStatus::Critical,
+        HealthStatus::Maintenance,
+    ];
+    
+    for status in statuses {
+        // Test JSON serialization
+        let json = serde_json::to_string(&status);
+        assert!(json.is_ok());
+        
+        // Test deserialization
+        let deserialized: Result<HealthStatus, _> = serde_json::from_str(&json.unwrap());
+        assert!(deserialized.is_ok());
+        
+        let deserialized_status = deserialized.unwrap();
+        assert_eq!(std::mem::discriminant(&status), std::mem::discriminant(&deserialized_status));
+    }
+}
+
+#[test]
+fn test_health_info_with_empty_details() {
+    let health_info = HealthInfo {
+        status: HealthStatus::Healthy,
+        message: None,
+        timestamp: Utc::now(),
+        component: "minimal".to_string(),
+        details: HashMap::new(),
+    };
+    
+    assert!(matches!(health_info.status, HealthStatus::Healthy));
+    assert!(health_info.message.is_none());
+    assert_eq!(health_info.component, "minimal");
+    assert!(health_info.details.is_empty());
+}
+
+#[test]
+fn test_health_info_with_multiple_details() {
+    let mut health_info = HealthInfo {
+        status: HealthStatus::Healthy,
+        message: Some("System healthy with details".to_string()),
+        timestamp: Utc::now(),
+        component: "detailed".to_string(),
+        details: HashMap::new(),
+    };
+    
+    // Add multiple details
+    health_info.details.insert("cpu_cores".to_string(), "8".to_string());
+    health_info.details.insert("memory_gb".to_string(), "16".to_string());
+    health_info.details.insert("disk_type".to_string(), "SSD".to_string());
+    health_info.details.insert("network_speed".to_string(), "1Gbps".to_string());
+    health_info.details.insert("os_version".to_string(), "Linux 5.4".to_string());
+    
+    assert_eq!(health_info.details.len(), 5);
+    assert_eq!(health_info.details.get("cpu_cores"), Some(&"8".to_string()));
+    assert_eq!(health_info.details.get("memory_gb"), Some(&"16".to_string()));
+    assert_eq!(health_info.details.get("disk_type"), Some(&"SSD".to_string()));
+    assert_eq!(health_info.details.get("network_speed"), Some(&"1Gbps".to_string()));
+    assert_eq!(health_info.details.get("os_version"), Some(&"Linux 5.4".to_string()));
+}
+
+#[test]
+fn test_health_metrics_extreme_values() {
+    let metrics = HealthMetrics {
+        cpu_usage_percent: 100.0,
+        memory_usage_percent: 0.0,
+        disk_usage_percent: 99.9,
+        network_rx_bytes: u64::MAX,
+        network_tx_bytes: 0,
+        uptime_seconds: u64::MAX,
+        response_time_ms: 0.1,
+        error_rate: 1.0,
+        active_connections: 0,
+        custom_metrics: HashMap::new(),
+    };
+    
+    assert_eq!(metrics.cpu_usage_percent, 100.0);
+    assert_eq!(metrics.memory_usage_percent, 0.0);
+    assert_eq!(metrics.disk_usage_percent, 99.9);
+    assert_eq!(metrics.network_rx_bytes, u64::MAX);
+    assert_eq!(metrics.network_tx_bytes, 0);
+    assert_eq!(metrics.uptime_seconds, u64::MAX);
+    assert_eq!(metrics.response_time_ms, 0.1);
+    assert_eq!(metrics.error_rate, 1.0);
+    assert_eq!(metrics.active_connections, 0);
+}
+
+#[test]
+fn test_health_info_timestamp_ordering() {
+    let timestamp1 = Utc::now();
+    let timestamp2 = timestamp1 + chrono::Duration::seconds(1);
+    
+    let health1 = HealthInfo {
+        status: HealthStatus::Healthy,
+        message: Some("First check".to_string()),
+        timestamp: timestamp1,
+        component: "test".to_string(),
+        details: HashMap::new(),
+    };
+    
+    let health2 = HealthInfo {
+        status: HealthStatus::Healthy,
+        message: Some("Second check".to_string()),
+        timestamp: timestamp2,
+        component: "test".to_string(),
+        details: HashMap::new(),
+    };
+    
+    assert!(health1.timestamp < health2.timestamp);
+    assert_ne!(health1.timestamp, health2.timestamp);
+}
+
+#[test]
+fn test_health_metrics_calculations() {
+    let metrics = HealthMetrics {
+        cpu_usage_percent: 25.5,
+        memory_usage_percent: 75.2,
+        disk_usage_percent: 40.8,
+        network_rx_bytes: 1024 * 1024, // 1 MB
+        network_tx_bytes: 512 * 1024,  // 512 KB
+        uptime_seconds: 3600,           // 1 hour
+        response_time_ms: 150.0,
+        error_rate: 0.01,               // 1%
+        active_connections: 50,
+        custom_metrics: HashMap::new(),
+    };
+    
+    // Test that values are as expected
+    assert_eq!(metrics.cpu_usage_percent, 25.5);
+    assert_eq!(metrics.memory_usage_percent, 75.2);
+    assert_eq!(metrics.disk_usage_percent, 40.8);
+    assert_eq!(metrics.network_rx_bytes, 1_048_576); // 1024 * 1024
+    assert_eq!(metrics.network_tx_bytes, 524_288);   // 512 * 1024
+    assert_eq!(metrics.uptime_seconds, 3600);
+    assert_eq!(metrics.response_time_ms, 150.0);
+    assert_eq!(metrics.error_rate, 0.01);
+    assert_eq!(metrics.active_connections, 50);
+    
+    // Test total network bytes
+    let total_network = metrics.network_rx_bytes + metrics.network_tx_bytes;
+    assert_eq!(total_network, 1_572_864); // 1.5 MB
+    
+    // Test uptime in different units
+    assert_eq!(metrics.uptime_seconds / 60, 60);    // 60 minutes
+    assert_eq!(metrics.uptime_seconds / 3600, 1);   // 1 hour
+} 

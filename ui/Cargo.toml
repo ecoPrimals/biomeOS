@@ -1,0 +1,53 @@
+[package]
+name = "biomeos-ui"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "biomeOS Bootstrap UI - Sovereignty-first ecosystem management interface"
+
+[[bin]]
+name = "biomeos-ui"
+path = "src/main.rs"
+
+[dependencies]
+# Core dependencies
+anyhow = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+# UI framework
+eframe = { workspace = true }
+egui = { workspace = true }
+egui_extras = { version = "0.27.2", features = ["default"] }
+egui_plot = { workspace = true }
+rfd = { workspace = true }
+
+# biomeOS integration
+biomeos-core = { path = "../crates/biomeos-core" }
+
+# System information
+num_cpus = { workspace = true }
+
+# Random number generation for simulated metrics
+rand = "0.8"
+
+# Additional UI enhancements
+image = { version = "0.24", features = ["png", "jpeg"] }
+reqwest = { workspace = true }
+env_logger = "0.11"
+
+# Workspace dependencies for interacting with other Primals (when ready)
+# toadstool-api = { path = "../../toadstool/crates/api" }
+# songbird-api = { path = "../../songbird/crates/api" }
+# nestgate-api = { path = "../../nestgate/crates/api" }
+
+[dev-dependencies]
+tokio-test = { workspace = true }
+mockall = { workspace = true } 

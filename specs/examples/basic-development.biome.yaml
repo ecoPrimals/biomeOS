@@ -1,0 +1,239 @@
+# Basic Development Biome
+# A simple biomeOS setup for development work with all Primals enabled
+
+apiVersion: biomeOS/v1
+kind: Biome
+metadata:
+  name: dev-biome
+  version: "1.0.0"
+  description: "Basic development environment with all Primals"
+  specialization: development
+  created: "2025-01-15T10:30:00Z"
+  owner: "dev-team"
+  tags:
+    - development
+    - basic
+    - learning
+
+# Primal Configuration - All enabled with minimal resources
+primals:
+  # 🐕 BearDog - Security (Minimal for dev)
+  beardog:
+    enabled: true
+    priority: 1
+    startup_timeout: 30s
+    config:
+      security_level: low
+      compliance: []
+      hsm_integration: false
+      dev_mode: true
+      
+  # 🎼 Songbird - Service Mesh
+  songbird:
+    enabled: true
+    priority: 2
+    startup_timeout: 30s
+    depends_on: [beardog]
+    config:
+      discovery_backend: memory
+      load_balancing: round_robin
+      federation_enabled: false
+      
+  # 🏰 NestGate - Storage (Basic ZFS)
+  nestgate:
+    enabled: true
+    priority: 3
+    startup_timeout: 45s
+    depends_on: [beardog, songbird]
+    config:
+      zfs_pool: "devpool"
+      tiered_storage: false
+      protocols: [nfs]
+      
+  # 🍄 Toadstool - Runtime
+  toadstool:
+    enabled: true
+    priority: 4
+    startup_timeout: 30s
+    depends_on: [beardog, songbird, nestgate]
+    config:
+      runtimes: [container, native]
+      resource_limits:
+        cpu: "0-7"
+        memory: "16Gi"
+        
+  # 🐿️ Squirrel - MCP Platform
+  squirrel:
+    enabled: true
+    priority: 5
+    startup_timeout: 30s
+    depends_on: [beardog, songbird, toadstool]
+    config:
+      ai_providers: [openai]
+      plugin_sandboxing: relaxed
+      mcp_transports: [stdio]
+
+# Development Services
+services:
+  # Code Editor
+  code-server:
+    primal: toadstool
+    runtime: container
+    image: "codercom/code-server:latest"
+    resources:
+      cpu: 2
+      memory: "4Gi"
+    volumes:
+      - name: workspace
+        mount: /home/coder/workspace
+        size: "100Gi"
+        tier: default
+    ports:
+      - 8080:8080
+    environment:
+      PASSWORD: "devpassword"
+      
+  # Development Database
+  postgres-dev:
+    primal: toadstool
+    runtime: container
+    image: "postgres:15"
+    resources:
+      cpu: 1
+      memory: "2Gi"
+    volumes:
+      - name: postgres-data
+        mount: /var/lib/postgresql/data
+        size: "10Gi"
+        tier: default
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_PASSWORD: "devpassword"
+      POSTGRES_DB: "devdb"
+      
+  # Simple AI Assistant
+  dev-assistant:
+    primal: squirrel
+    type: mcp_agent
+    provider: openai
+    model: gpt-3.5-turbo
+    capabilities:
+      - code_review
+      - documentation
+    sandbox: relaxed
+    memory_limit: "1Gi"
+
+# Basic Resource Configuration
+resources:
+  compute:
+    nodes:
+      - name: dev-node
+        cpu_cores: 8
+        memory: "32Gi"
+        storage:
+          local: "500Gi"
+          
+  storage:
+    pools:
+      - name: devpool
+        type: zfs
+        devices:
+          - /dev/sda
+        compression: lz4
+        
+    volumes:
+      - name: workspace
+        pool: devpool
+        size: "100Gi"
+        snapshots: false
+        backup: false
+        
+      - name: postgres-data
+        pool: devpool
+        size: "10Gi"
+        snapshots: true
+        backup: false
+
+# Minimal Security for Development
+security:
+  authentication:
+    provider: beardog
+    methods: [basic]
+    token_lifetime: 7d
+    
+  service_mesh:
+    mtls_enabled: false
+    
+  secrets:
+    provider: file
+    encryption: none
+    
+  rbac:
+    roles:
+      - name: developer
+        permissions:
+          - "*:*"
+    users:
+      - name: dev
+        roles: [developer]
+
+# Simple Networking
+networking:
+  discovery:
+    provider: songbird
+    backend: memory
+    health_checks: true
+    
+  load_balancing:
+    algorithm: round_robin
+    health_check_interval: 60s
+    
+  federation:
+    enabled: false
+
+# Basic Observability
+observability:
+  metrics:
+    provider: none
+    
+  logging:
+    provider: stdout
+    log_level: debug
+    
+  tracing:
+    provider: none
+    
+  alerting:
+    provider: none
+
+# Development-Specific Configuration
+deployment:
+  bootstrap:
+    timeout: 180s
+    retry_attempts: 1
+    health_check_interval: 30s
+    
+  updates:
+    strategy: recreate
+    
+  backup:
+    enabled: false
+
+# Development Environment Overrides
+environments:
+  development:
+    security:
+      authentication:
+        methods: [none]  # No auth for local dev
+    observability:
+      logging:
+        log_level: trace
+
+# Validation Rules (Relaxed for Development)
+validation:
+  required_primals: [beardog, songbird]
+  security_minimum: none
+  resource_limits:
+    max_memory: "64Gi"
+    max_storage: "1Ti" 

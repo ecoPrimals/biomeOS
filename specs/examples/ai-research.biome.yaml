@@ -1,0 +1,577 @@
+# AI Research Biome
+# High-performance biomeOS setup for AI/ML research with GPU compute and large-scale data processing
+
+apiVersion: biomeOS/v1
+kind: Biome
+metadata:
+  name: ai-research-biome
+  version: "1.0.0"
+  description: "AI research environment with GPU compute and ML workflows"
+  specialization: research
+  created: "2025-01-15T10:30:00Z"
+  owner: "ai-research-team"
+  tags:
+    - ai-research
+    - gpu-compute
+    - machine-learning
+    - large-storage
+    - high-performance
+
+# Primal Configuration - Optimized for AI workloads
+primals:
+  # 🐕 BearDog - Enhanced Security for Research Data
+  beardog:
+    enabled: true
+    priority: 1
+    startup_timeout: 30s
+    config:
+      security_level: high
+      compliance: [gdpr, hipaa]
+      hsm_integration: true
+      data_classification: true
+      
+  # 🎼 Songbird - High-Performance Service Mesh
+  songbird:
+    enabled: true
+    priority: 2
+    startup_timeout: 45s
+    depends_on: [beardog]
+    config:
+      discovery_backend: consul
+      load_balancing: health_based
+      federation_enabled: true
+      gpu_aware_routing: true
+      
+  # 🏰 NestGate - Large-Scale Tiered Storage
+  nestgate:
+    enabled: true
+    priority: 3
+    startup_timeout: 60s
+    depends_on: [beardog, songbird]
+    config:
+      zfs_pool: "researchpool"
+      tiered_storage: true
+      protocols: [nfs, smb, s3]
+      deduplication: true
+      compression: zstd
+      
+  # 🍄 Toadstool - Multi-Runtime with GPU Support
+  toadstool:
+    enabled: true
+    priority: 4
+    startup_timeout: 45s
+    depends_on: [beardog, songbird, nestgate]
+    config:
+      runtimes: [container, wasm, native, gpu]
+      resource_limits:
+        cpu: "0-31"
+        memory: "256Gi"
+        gpu: "0-7"
+      gpu_scheduling: true
+      
+  # 🐿️ Squirrel - Advanced AI Agent Platform
+  squirrel:
+    enabled: true
+    priority: 5
+    startup_timeout: 60s
+    depends_on: [beardog, songbird, toadstool]
+    config:
+      ai_providers: [openai, anthropic, gemini, local]
+      plugin_sandboxing: strict
+      mcp_transports: [stdio, websocket, sse]
+      gpu_acceleration: true
+
+# AI Research Services
+services:
+  # Jupyter Lab with GPU Support
+  jupyter-lab:
+    primal: toadstool
+    runtime: container
+    image: "jupyter/tensorflow-notebook:latest"
+    resources:
+      cpu: 8
+      memory: "32Gi"
+      gpu: 2
+    volumes:
+      - name: research-notebooks
+        mount: /home/jovyan/work
+        size: "500Gi"
+        tier: hot
+      - name: datasets
+        mount: /home/jovyan/datasets
+        size: "5Ti"
+        tier: warm
+    ports:
+      - 8888:8888
+    environment:
+      JUPYTER_TOKEN: "${secrets.jupyter_token}"
+      CUDA_VISIBLE_DEVICES: "0,1"
+      
+  # MLflow Experiment Tracking
+  mlflow:
+    primal: toadstool
+    runtime: container
+    image: "mlflow/mlflow:latest"
+    resources:
+      cpu: 4
+      memory: "8Gi"
+    volumes:
+      - name: mlflow-artifacts
+        mount: /mlflow/artifacts
+        size: "2Ti"
+        tier: warm
+    ports:
+      - 5000:5000
+    environment:
+      MLFLOW_BACKEND_STORE_URI: "postgresql://mlflow:${secrets.mlflow_db_password}@postgres-mlflow:5432/mlflow"
+      
+  # PostgreSQL for MLflow
+  postgres-mlflow:
+    primal: toadstool
+    runtime: container
+    image: "postgres:15"
+    resources:
+      cpu: 2
+      memory: "8Gi"
+    volumes:
+      - name: mlflow-db
+        mount: /var/lib/postgresql/data
+        size: "100Gi"
+        tier: hot
+    environment:
+      POSTGRES_PASSWORD: "${secrets.mlflow_db_password}"
+      POSTGRES_DB: "mlflow"
+      POSTGRES_USER: "mlflow"
+      
+  # TensorBoard for Visualization
+  tensorboard:
+    primal: toadstool
+    runtime: container
+    image: "tensorflow/tensorflow:latest"
+    command: ["tensorboard", "--logdir=/logs", "--host=0.0.0.0"]
+    resources:
+      cpu: 2
+      memory: "4Gi"
+    volumes:
+      - name: tensorboard-logs
+        mount: /logs
+        size: "500Gi"
+        tier: hot
+    ports:
+      - 6006:6006
+      
+  # Model Registry (S3-compatible)
+  model-registry:
+    primal: nestgate
+    protocol: s3
+    bucket: ml-models
+    tier: warm
+    retention: 2y
+    versioning: true
+    lifecycle:
+      - rule: archive-old-models
+        filter: "*.pkl"
+        transition:
+          days: 90
+          tier: cold
+          
+  # Large Dataset Storage
+  dataset-storage:
+    primal: nestgate
+    protocol: nfs
+    path: /datasets
+    tier: warm
+    size: "50Ti"
+    deduplication: true
+    compression: zstd
+    
+  # Research Assistant Agent
+  research-assistant:
+    primal: squirrel
+    type: mcp_agent
+    provider: anthropic
+    model: claude-3-sonnet
+    capabilities:
+      - name: code_analysis
+        tools: [ast_parser, complexity_analyzer, performance_profiler]
+      - name: data_processing
+        tools: [pandas_toolkit, numpy_ops, scipy_stats]
+      - name: ml_assistance
+        tools: [sklearn_helper, pytorch_utils, tensorflow_ops]
+      - name: research_assistance
+        tools: [arxiv_search, paper_analyzer, citation_manager]
+      - name: experiment_tracking
+        tools: [mlflow_client, wandb_integration]
+    resources:
+      memory: "8Gi"
+      cpu: 4
+      timeout: 600s
+    sandbox:
+      type: strict
+      network_access: limited
+      file_access: /workspace
+      gpu_access: false
+      
+  # Data Science Agent with GPU Access
+  ml-specialist:
+    primal: squirrel
+    type: mcp_agent
+    provider: local
+    model: "llama-3-70b"
+    capabilities:
+      - name: model_training
+        tools: [pytorch_trainer, tensorflow_trainer, huggingface_trainer]
+      - name: hyperparameter_optimization
+        tools: [optuna, ray_tune, wandb_sweeps]
+      - name: model_evaluation
+        tools: [sklearn_metrics, custom_evaluators]
+    resources:
+      memory: "16Gi"
+      cpu: 8
+      gpu: 1
+      timeout: 3600s
+    sandbox:
+      type: gpu_enabled
+      network_access: full
+      file_access: /workspace
+
+# High-Performance Resource Configuration
+resources:
+  compute:
+    nodes:
+      - name: gpu-node-1
+        cpu_cores: 32
+        memory: "256Gi"
+        gpu:
+          - type: nvidia-a100
+            count: 4
+            memory: "80Gi"
+          - type: nvidia-h100
+            count: 4
+            memory: "80Gi"
+        storage:
+          local: "4Ti"
+          nvme: true
+          
+      - name: cpu-node-1
+        cpu_cores: 64
+        memory: "512Gi"
+        storage:
+          local: "2Ti"
+          
+  storage:
+    pools:
+      - name: researchpool
+        type: zfs
+        devices:
+          - /dev/nvme0n1  # Hot tier - NVMe SSD
+          - /dev/nvme1n1
+          - /dev/sda      # Warm tier - SATA SSD
+          - /dev/sdb
+          - /dev/sdc
+          - /dev/sdd      # Cold tier - HDD
+          - /dev/sde
+          - /dev/sdf
+        tiers:
+          hot:
+            devices: [/dev/nvme0n1, /dev/nvme1n1]
+            size: "8Ti"
+            compression: lz4
+            deduplication: true
+          warm:
+            devices: [/dev/sda, /dev/sdb, /dev/sdc]
+            size: "24Ti"
+            compression: zstd
+            deduplication: true
+          cold:
+            devices: [/dev/sdd, /dev/sde, /dev/sdf]
+            size: "60Ti"
+            compression: zstd-19
+            deduplication: true
+            
+    volumes:
+      - name: research-notebooks
+        pool: researchpool
+        size: "500Gi"
+        tier: hot
+        snapshots: true
+        backup: daily
+        
+      - name: datasets
+        pool: researchpool
+        size: "5Ti"
+        tier: warm
+        deduplication: true
+        compression: zstd
+        
+      - name: mlflow-artifacts
+        pool: researchpool
+        size: "2Ti"
+        tier: warm
+        snapshots: true
+        
+      - name: model-archive
+        pool: researchpool
+        size: "10Ti"
+        tier: cold
+        compression: zstd-19
+
+# Enhanced Security for Research Data
+security:
+  authentication:
+    provider: beardog
+    methods: [jwt, mutual_tls, saml]
+    token_lifetime: 8h
+    refresh_enabled: true
+    mfa_required: true
+    
+  service_mesh:
+    mtls_enabled: true
+    cipher_suites: [ECDHE-ECDSA-AES256-GCM-SHA384]
+    cert_rotation: 24h
+    
+  secrets:
+    provider: beardog_hsm
+    rotation_policy: 7d
+    encryption: aes256
+    key_escrow: true
+    
+  compliance:
+    standards: [gdpr, hipaa, iso27001]
+    audit_retention: 7y
+    log_encryption: true
+    data_classification: true
+    
+  rbac:
+    roles:
+      - name: researcher
+        permissions:
+          - jupyter:read,write
+          - datasets:read
+          - models:read,write
+          - experiments:read,write
+      - name: senior_researcher
+        permissions:
+          - jupyter:read,write
+          - datasets:read,write
+          - models:read,write,delete
+          - experiments:read,write,delete
+          - compute:gpu_access
+      - name: admin
+        permissions:
+          - "*:*"
+    users:
+      - name: alice
+        roles: [senior_researcher]
+        mfa_enabled: true
+      - name: bob
+        roles: [researcher]
+        mfa_enabled: true
+
+# High-Performance Networking
+networking:
+  discovery:
+    provider: songbird
+    backend: consul
+    health_checks: true
+    gpu_topology_aware: true
+    
+  load_balancing:
+    algorithm: gpu_aware
+    health_check_interval: 15s
+    failure_threshold: 2
+    
+  federation:
+    enabled: true
+    peers:
+      - name: hpc-cluster
+        endpoint: "https://hpc.research.edu"
+        trust_domain: "hpc.research.local"
+        gpu_sharing: true
+        
+  policies:
+    default_deny: true
+    ingress:
+      - from: [jupyter-lab]
+        to: [model-registry, dataset-storage]
+        ports: [443, 2049]
+      - from: [research-assistant]
+        to: [external]
+        domains: ["api.anthropic.com", "arxiv.org"]
+    egress:
+      - from: [ml-specialist]
+        to: [external]
+        domains: ["huggingface.co", "pytorch.org"]
+
+# Comprehensive Observability
+observability:
+  metrics:
+    provider: prometheus
+    retention: 90d
+    scrape_interval: 10s
+    gpu_metrics: true
+    custom_metrics:
+      - training_loss
+      - inference_latency
+      - gpu_utilization
+      - memory_usage
+    
+  logging:
+    provider: loki
+    retention: 180d
+    log_level: info
+    structured: true
+    experiment_logging: true
+    
+  tracing:
+    provider: jaeger
+    sampling_rate: 0.01
+    retention: 30d
+    ml_tracing: true
+    
+  alerting:
+    provider: alertmanager
+    channels:
+      - type: slack
+        webhook: "${secrets.slack_webhook}"
+        severity: [critical, warning]
+      - type: email
+        recipients: ["research-team@example.com"]
+        severity: [critical]
+      - type: pagerduty
+        integration_key: "${secrets.pagerduty_key}"
+        severity: [critical]
+    rules:
+      - name: gpu_utilization_low
+        condition: "gpu_utilization < 10% for 30m"
+        severity: warning
+      - name: training_stalled
+        condition: "training_loss unchanged for 1h"
+        severity: warning
+      - name: storage_full
+        condition: "storage_usage > 90%"
+        severity: critical
+
+# Advanced AI Agent Configuration
+agents:
+  research_coordinator:
+    provider: anthropic
+    model: claude-3-opus
+    runtime: squirrel
+    capabilities:
+      - name: experiment_planning
+        tools: [experiment_designer, resource_planner]
+      - name: literature_review
+        tools: [arxiv_search, semantic_scholar, citation_analysis]
+      - name: collaboration
+        tools: [slack_integration, email_composer]
+    resources:
+      memory: "16Gi"
+      cpu: 8
+      timeout: 1800s
+    sandbox:
+      type: research_grade
+      network_access: full
+      file_access: /research_workspace
+
+# Research-Optimized Deployment
+deployment:
+  bootstrap:
+    timeout: 600s
+    retry_attempts: 3
+    health_check_interval: 5s
+    gpu_initialization: true
+    
+  updates:
+    strategy: blue_green
+    max_unavailable: 0
+    max_surge: 2
+    
+  backup:
+    enabled: true
+    schedule: "0 1 * * *"  # Daily at 1 AM
+    retention: 90d
+    destinations:
+      - type: s3
+        bucket: research-backups
+        encryption: true
+        compression: zstd
+      - type: tape
+        library: quantum_scalar
+        encryption: aes256
+
+# Research Environment Overrides
+environments:
+  development:
+    security:
+      compliance: []
+      mfa_required: false
+    resources:
+      compute:
+        nodes:
+          - cpu_cores: 16
+            memory: "64Gi"
+            gpu:
+              - type: nvidia-rtx-4090
+                count: 2
+                
+  production:
+    security:
+      compliance: [sox, gdpr, hipaa, iso27001]
+      audit_level: detailed
+    observability:
+      metrics:
+        retention: 365d
+      logging:
+        retention: 2y
+      alerting:
+        escalation_enabled: true
+
+# Research Templates
+templates:
+  deep_learning:
+    description: "Deep learning research with multi-GPU support"
+    includes:
+      - jupyter-lab
+      - tensorboard
+      - model-registry
+      - ml-specialist
+    resources:
+      gpu_required: true
+      min_gpu: 2
+      storage_tier: hot
+      
+  nlp_research:
+    description: "Natural language processing research"
+    includes:
+      - jupyter-lab
+      - mlflow
+      - research-assistant
+    agents:
+      - provider: huggingface
+        model: "transformers-agent"
+        
+  computer_vision:
+    description: "Computer vision research with large datasets"
+    includes:
+      - jupyter-lab
+      - dataset-storage
+      - model-registry
+    storage:
+      dataset_size: "50Ti"
+      tier: warm
+
+# Validation Rules for Research Environment
+validation:
+  required_primals: [beardog, songbird, nestgate, toadstool, squirrel]
+  security_minimum: high
+  resource_limits:
+    max_memory: "1Ti"
+    max_storage: "100Ti"
+    max_gpu: 8
+  compliance_checks:
+    - encryption_at_rest
+    - access_logging
+    - backup_verification
+    - gpu_isolation
+    - data_classification 

@@ -1,0 +1,93 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/biomeos-core",
+    "crates/biomeos-manifest", 
+    "crates/biomeos-system",
+    "tools",
+    "ui",
+    "showcase"
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["biomeOS Team"]
+license = "MIT"
+repository = "https://github.com/biomeOS/biomeOS"
+homepage = "https://biomeOS.org"
+documentation = "https://docs.biomeOS.org"
+description = "biomeOS ecosystem workspace"
+keywords = ["biomeos", "distributed", "sovereignty", "primals"]
+categories = ["os", "distributed-systems", "virtualization"]
+
+[workspace.dependencies]
+# Core dependencies
+tokio = { version = "1.0", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+uuid = { version = "1.0", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+anyhow = "1.0"
+thiserror = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# HTTP and networking
+reqwest = { version = "0.12", features = ["json"] }
+axum = "0.7"
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+
+# UI dependencies
+egui = { version = "0.27.2", features = ["default"] }
+eframe = { version = "0.27.2", features = ["persistence"] }
+egui_extras = { version = "0.27.2", features = ["default"] }
+egui_plot = "0.27.2"
+rfd = "0.14"
+
+# Configuration and validation
+config = "0.14"
+validator = { version = "0.18", features = ["derive"] }
+clap = { version = "4.4", features = ["derive"] }
+tempfile = "3.8"
+walkdir = "2.4"
+
+# System information
+num_cpus = "1.16"
+
+# Random number generation
+rand = "0.8"
+
+# Crypto and security
+sha2 = "0.10"
+base64 = "0.22"
+
+# Async and concurrency
+futures = "0.3"
+async-trait = "0.1"
+
+# Integration with Primals (when available)
+# toadstool = { path = "../toadstool" }
+# songbird = { path = "../songbird" } 
+# nestgate = { path = "../nestgate" }
+# beardog = { path = "../bearDog2/beardog" }
+# squirrel = { path = "../squirrel" }
+
+# Testing Dependencies  
+tokio-test = "0.4"
+mockall = "0.12"
+criterion = { version = "0.5", features = ["html_reports"] }
+proptest = "1.4"
+rstest = "0.18"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+
+[profile.dev]
+opt-level = 0
+debug = true 

@@ -1,0 +1,45 @@
+[package]
+name = "biomeos-tools"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "biomeOS development and integration tools - Rust until the very edge"
+
+[[bin]]
+name = "integration-test-runner"
+path = "src/bin/integration_test_runner.rs"
+
+[[bin]]
+name = "all-demos"
+path = "src/bin/all_demos.rs"
+
+[[bin]]
+name = "test-coverage"
+path = "src/bin/test_coverage.rs"
+
+[[bin]]
+name = "ecosystem-health"
+path = "src/bin/ecosystem_health.rs"
+
+[dependencies]
+# Core dependencies
+tokio = { workspace = true }
+anyhow = { workspace = true }
+clap = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+# File system operations
+tempfile = { workspace = true }
+walkdir = { workspace = true }
+
+# biomeOS integration
+biomeos-core = { path = "../crates/biomeos-core" }
+
+# Testing
+tokio-test = { workspace = true }
+criterion = { workspace = true } 
