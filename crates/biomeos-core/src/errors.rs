@@ -10,6 +10,10 @@ pub enum BiomeError {
     #[error("Configuration error: {message}")]
     ConfigError { message: String },
     
+    /// Configuration error (simple)
+    #[error("Config error: {0}")]
+    Config(String),
+    
     /// Network error
     #[error("Network error: {message}")]
     NetworkError { message: String },
@@ -26,6 +30,18 @@ pub enum BiomeError {
     #[error("Security error: {message}")]
     SecurityError { message: String },
     
+    /// Security error (simple)
+    #[error("Security error: {0}")]
+    Security(String),
+    
+    /// Sovereignty violation
+    #[error("Sovereignty violation: {0}")]
+    SovereigntyViolation(String),
+    
+    /// Vendor lock detected
+    #[error("Vendor lock detected: {0}")]
+    VendorLock(String),
+    
     /// Storage error
     #[error("Storage error: {message}")]
     StorageError { message: String },
@@ -38,6 +54,18 @@ pub enum BiomeError {
     #[error("Serialization error: {message}")]
     SerializationError { message: String },
     
+    /// Runtime error for toadStool integration
+    #[error("Runtime error: {0}")]
+    RuntimeError(String),
+    
+    /// Validation error for manifest validation
+    #[error("Validation error: {0}")]
+    ValidationError(String),
+    
+    /// Invalid input error
+    #[error("Invalid input: {0}")]
+    InvalidInput(String),
+
     /// Generic error
     #[error("Error: {message}")]
     Generic { message: String },
@@ -66,3 +94,6 @@ impl From<serde_yaml::Error> for BiomeError {
         }
     }
 }
+
+/// Result type for biomeOS operations
+pub type BiomeResult<T> = Result<T, BiomeError>;

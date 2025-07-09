@@ -1,0 +1,195 @@
+# Universal biomeOS UI Configuration
+# This configuration works with any combination of Primals
+
+# UI Mode Configuration
+ui_mode: "desktop"  # desktop, terminal, web
+theme: "dark"       # dark, light
+auto_refresh_interval: 5000  # milliseconds
+
+# Standard biomeOS Primals
+api_endpoints:
+  # Core orchestration Primal
+  songbird: "http://localhost:8080"
+  
+  # Storage and infrastructure Primal  
+  nestgate: "http://localhost:8082"
+  
+  # Compute and runtime Primal
+  toadstool: "http://localhost:8084"
+  
+  # Security and encryption Primal
+  beardog: "http://localhost:9000"
+  
+  # AI and MCP Primal (when available)
+  squirrel: "http://localhost:5000"
+
+# Custom Primals (examples)
+custom_primals:
+  # Custom AI/ML Primal
+  custom_ai_primal:
+    endpoint: "http://localhost:7000"
+    capabilities: ["ai", "ml", "inference"]
+    description: "Custom AI processing Primal"
+  
+  # Custom storage Primal
+  custom_storage_primal:
+    endpoint: "http://localhost:7001"
+    capabilities: ["storage", "backup", "sync"]
+    description: "Specialized storage Primal"
+  
+  # Community-developed Primal
+  community_compute:
+    endpoint: "http://localhost:7002"
+    capabilities: ["compute", "gpu", "hpc"]
+    description: "High-performance compute Primal"
+
+# WebSocket endpoints for real-time events
+websocket_endpoints:
+  events: "ws://localhost:8080/events"
+  songbird: "ws://localhost:8080/ws"
+  nestgate: "ws://localhost:8082/ws"
+  toadstool: "ws://localhost:8084/ws"
+
+# AI Assistant Configuration
+ai_config:
+  provider: "local"  # openai, anthropic, local
+  model: "local-assistant"
+  max_tokens: 1000
+  temperature: 0.7
+  # api_key: "your-api-key-here"  # if using external AI
+
+# UI Feature Toggles
+features:
+  ai_assistant: true
+  real_time_monitoring: true
+  deployment_wizard: true
+  service_management: true
+  log_viewer: true
+  metrics_dashboard: true
+
+# Primal Discovery Settings
+discovery:
+  auto_discover: true
+  discovery_timeout: 5000  # milliseconds
+  retry_attempts: 3
+  health_check_interval: 30000  # milliseconds
+
+# Example: Production Configuration
+production_example:
+  ui_mode: "web"
+  api_endpoints:
+    songbird: "https://songbird.mycompany.com"
+    nestgate: "https://nestgate.mycompany.com"
+    toadstool: "https://toadstool.mycompany.com"
+    beardog: "https://beardog.mycompany.com"
+    custom_ai: "https://ai.mycompany.com"
+  
+  websocket_endpoints:
+    events: "wss://events.mycompany.com/ws"
+  
+  ai_config:
+    provider: "openai"
+    model: "gpt-4"
+    api_key: "${OPENAI_API_KEY}"
+
+# Example: Development Configuration
+development_example:
+  ui_mode: "terminal"
+  api_endpoints:
+    songbird: "http://localhost:8080"
+    nestgate: "http://localhost:8082"
+    toadstool: "http://localhost:8084"
+    # Only include available Primals during development
+  
+  features:
+    ai_assistant: true
+    real_time_monitoring: false  # Disable for faster development
+    deployment_wizard: true
+
+# Example: Custom Primal Integration
+custom_integration_example:
+  # Your custom Primal that implements the universal API
+  api_endpoints:
+    songbird: "http://localhost:8080"
+    my_custom_primal: "http://localhost:9999"
+  
+  # The UI will automatically detect capabilities and integrate
+  # No additional configuration needed thanks to universal API
+
+# Example: Multi-Environment Setup
+environments:
+  development:
+    api_endpoints:
+      songbird: "http://dev-songbird:8080"
+      nestgate: "http://dev-nestgate:8082"
+      toadstool: "http://dev-toadstool:8084"
+  
+  staging:
+    api_endpoints:
+      songbird: "https://staging-songbird.company.com"
+      nestgate: "https://staging-nestgate.company.com"
+      toadstool: "https://staging-toadstool.company.com"
+  
+  production:
+    api_endpoints:
+      songbird: "https://songbird.company.com"
+      nestgate: "https://nestgate.company.com"
+      toadstool: "https://toadstool.company.com"
+      beardog: "https://beardog.company.com"
+      custom_ai: "https://ai.company.com"
+
+# CLI Usage Examples
+cli_examples:
+  # Start interactive UI
+  start_desktop: "biomeos-ui --mode desktop"
+  start_terminal: "biomeos-ui --mode terminal"
+  start_web: "biomeos-ui --mode web"
+  
+  # Execute single commands
+  check_status: "biomeos-ui exec 'show ecosystem status'"
+  deploy_biome: "biomeos-ui exec 'deploy a biome called my-app'"
+  scale_service: "biomeos-ui exec 'scale web-service to 5 replicas'"
+  
+  # Use custom endpoints
+  custom_endpoints: "biomeos-ui --endpoint songbird=http://custom:8080 --endpoint my-primal=http://localhost:9999"
+  
+  # Different output formats
+  json_output: "biomeos-ui status --format json"
+  table_output: "biomeos-ui list primals --format table"
+
+# Integration with CI/CD
+cicd_integration:
+  # Deploy biome from CI/CD pipeline
+  deploy_command: "biomeos-ui deploy manifest.yaml --watch"
+  
+  # Check deployment status
+  status_check: "biomeos-ui status --format json | jq '.overall_health'"
+  
+  # Scale services based on load
+  auto_scale: "biomeos-ui exec 'scale ${SERVICE_NAME} to ${REPLICA_COUNT} replicas'"
+
+# Docker Integration
+docker_usage:
+  # Run UI in container
+  docker_run: |
+    docker run -it --rm \
+      -e BIOMEOS_CONFIG=/config/ui.yaml \
+      -v $(pwd)/config:/config \
+      biomeos-ui:latest start
+  
+  # Use with docker-compose
+  docker_compose: |
+    version: '3.8'
+    services:
+      biomeos-ui:
+        image: biomeos-ui:latest
+        ports:
+          - "3000:3000"
+        environment:
+          - BIOMEOS_CONFIG=/config/ui.yaml
+        volumes:
+          - ./config:/config
+        depends_on:
+          - songbird
+          - nestgate
+          - toadstool 

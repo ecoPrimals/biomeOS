@@ -480,7 +480,7 @@ impl Biome {
     /// Create a new biome
     pub fn new(name: String, description: String) -> Self {
         Self {
-            id: BiomeId::new_v4(),
+            id: Uuid::new_v4(),
             name: name.clone(),
             description,
             metadata: BiomeMetadata {

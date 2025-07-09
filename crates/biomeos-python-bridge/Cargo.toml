@@ -1,0 +1,46 @@
+[package]
+name = "biomeos-python-bridge"
+version.workspace = true
+edition.workspace = true
+description = "PyO3 bridge for biomeOS Python integration - preparing for Squirrel MCP integration"
+license.workspace = true
+
+[lib]
+name = "biomeos_python_bridge"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# Core biomeOS dependencies
+biomeos-core = { path = "../biomeos-core" }
+biomeos-manifest = { path = "../biomeos-manifest" }
+
+# Workspace dependencies
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+
+# Python integration
+pyo3 = { workspace = true }
+pyo3-asyncio = { workspace = true }
+
+# Async and futures
+async-trait = { workspace = true }
+futures = { workspace = true }
+
+[features]
+default = ["extension-module"]
+extension-module = ["pyo3/extension-module"]
+prepare-squirrel-integration = []
+huggingface-integration = []
+
+[dev-dependencies]
+tokio-test = { workspace = true }
+tempfile = { workspace = true }
+
+# Python testing dependencies
+pythonize = "0.20" 

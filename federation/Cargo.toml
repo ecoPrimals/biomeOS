@@ -1,0 +1,49 @@
+[package]
+name = "biome-federation"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+description = "BiomeOS Federation CLI for basement tower deployment"
+keywords.workspace = true
+categories.workspace = true
+
+[[bin]]
+name = "biome-federation"
+path = "src/main.rs"
+
+[dependencies]
+biomeos-core = { path = "../crates/biomeos-core" }
+biomeos-manifest = { path = "../crates/biomeos-manifest" }
+biomeos-system = { path = "../crates/biomeos-system" }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+reqwest = { workspace = true }
+axum = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+config = { workspace = true }
+validator = { workspace = true }
+clap = { workspace = true }
+tempfile = { workspace = true }
+walkdir = { workspace = true }
+dirs = { workspace = true }
+libc = { workspace = true }
+num_cpus = { workspace = true }
+rand = { workspace = true }
+sha2 = { workspace = true }
+base64 = { workspace = true }
+futures = { workspace = true }
+async-trait = { workspace = true }
+toml = "0.8" 

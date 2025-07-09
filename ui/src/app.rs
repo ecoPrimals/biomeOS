@@ -18,6 +18,10 @@ use crate::views::{
     sovereignty::SovereigntyView,
     settings::SettingsView,
     yaml_editor::YamlEditorView,
+    byob::ByobView,
+    iso_creator::IsoCreatorView,
+    niche_manager::NicheManagerView,
+    toadstool::ToadStoolView,
     View,
 };
 use crate::api::BiomeOSApi;
@@ -40,6 +44,10 @@ pub struct BiomeOSApp {
     sovereignty_view: SovereigntyView,
     settings_view: SettingsView,
     yaml_editor_view: YamlEditorView,
+    byob_view: ByobView,
+    iso_creator_view: IsoCreatorView,
+    niche_manager_view: NicheManagerView,
+    toadstool_view: ToadStoolView,
     
     /// UI state
     show_dev_panel: bool,
@@ -54,6 +62,10 @@ pub enum AppView {
     Sovereignty,
     Settings,
     YamlEditor,
+    Byob,
+    IsoCreator,
+    NicheManager,
+    ToadStool,
 }
 
 impl BiomeOSApp {
@@ -71,6 +83,10 @@ impl BiomeOSApp {
             sovereignty_view: SovereigntyView::new(state.clone(), api.clone()),
             settings_view: SettingsView::new(state.clone(), api.clone()),
             yaml_editor_view: YamlEditorView::new(state.clone(), api.clone()),
+            byob_view: ByobView::new(state.clone(), api.clone()),
+            iso_creator_view: IsoCreatorView::new(state.clone(), api.clone()),
+            niche_manager_view: NicheManagerView::new(state.clone(), api.clone()),
+            toadstool_view: ToadStoolView::new(state.clone(), api.clone()),
             show_dev_panel: false,
             show_api_debug: false,
         }
@@ -100,6 +116,27 @@ impl BiomeOSApp {
             }
             
             if ui.selectable_label(
+                self.current_view == AppView::Byob,
+                "🧬 BYOB"
+            ).clicked() {
+                self.current_view = AppView::Byob;
+            }
+            
+            if ui.selectable_label(
+                self.current_view == AppView::NicheManager,
+                "🎭 Niches"
+            ).clicked() {
+                self.current_view = AppView::NicheManager;
+            }
+            
+            if ui.selectable_label(
+                self.current_view == AppView::IsoCreator,
+                "💿 ISO Creator"
+            ).clicked() {
+                self.current_view = AppView::IsoCreator;
+            }
+            
+            if ui.selectable_label(
                 self.current_view == AppView::Installation,
                 "🚀 Installation"
             ).clicked() {
@@ -118,6 +155,13 @@ impl BiomeOSApp {
                 "🔒 Sovereignty"
             ).clicked() {
                 self.current_view = AppView::Sovereignty;
+            }
+            
+            if ui.selectable_label(
+                self.current_view == AppView::ToadStool,
+                "🍄 ToadStool"
+            ).clicked() {
+                self.current_view = AppView::ToadStool;
             }
             
             // Spacer to push settings to the right
@@ -143,10 +187,14 @@ impl BiomeOSApp {
         match self.current_view {
             AppView::Dashboard => self.dashboard_view.render(ui, ctx),
             AppView::YamlEditor => self.yaml_editor_view.render(ui, ctx),
+            AppView::Byob => self.byob_view.render(ui, ctx),
+            AppView::NicheManager => self.niche_manager_view.render(ui, ctx),
+            AppView::IsoCreator => self.iso_creator_view.render(ui, ctx),
             AppView::Installation => self.installation_view.render(ui, ctx),
             AppView::Primals => self.primals_view.render(ui, ctx),
             AppView::Sovereignty => self.sovereignty_view.render(ui, ctx),
             AppView::Settings => self.settings_view.render(ui, ctx),
+            AppView::ToadStool => self.toadstool_view.render(ui, ctx),
         }
     }
 
@@ -188,6 +236,17 @@ impl BiomeOSApp {
                 if ui.small_button("YAML Editor").clicked() {
                     self.current_view = AppView::YamlEditor;
                 }
+                if ui.small_button("BYOB").clicked() {
+                    self.current_view = AppView::Byob;
+                }
+            });
+            ui.horizontal(|ui| {
+                if ui.small_button("Niches").clicked() {
+                    self.current_view = AppView::NicheManager;
+                }
+                if ui.small_button("ISO Creator").clicked() {
+                    self.current_view = AppView::IsoCreator;
+                }
                 if ui.small_button("Installation").clicked() {
                     self.current_view = AppView::Installation;
                 }
@@ -199,6 +258,9 @@ impl BiomeOSApp {
                 ui.label("Connection: Active");
                 ui.label("Last Request: 2.3s ago");
                 ui.label("YAML Validation: Active");
+                ui.label("BYOB Deployments: 3 active");
+                ui.label("ISO Builds: 1 in queue");
+                ui.label("Niche Registry: 12 available");
             }
         });
     }
@@ -232,6 +294,15 @@ impl BiomeOSApp {
                 AppView::Installation => {
                     ui.label("🚀 Installer: Ready");
                 }
+                AppView::Byob => {
+                    ui.label("🧬 BYOB: 3 teams active");
+                }
+                AppView::NicheManager => {
+                    ui.label("🎭 Niches: 12 available");
+                }
+                AppView::IsoCreator => {
+                    ui.label("💿 ISO: Ready to build");
+                }
                 _ => {}
             }
             
@@ -245,10 +316,16 @@ impl BiomeOSApp {
 
 impl eframe::App for BiomeOSApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // Handle command line arguments for YAML editor mode
+        // Handle command line arguments for specific modes
         let args: Vec<String> = std::env::args().collect();
         if args.iter().any(|arg| arg == "--yaml-editor") {
             self.current_view = AppView::YamlEditor;
+        } else if args.iter().any(|arg| arg == "--byob") {
+            self.current_view = AppView::Byob;
+        } else if args.iter().any(|arg| arg == "--iso-creator") {
+            self.current_view = AppView::IsoCreator;
+        } else if args.iter().any(|arg| arg == "--niche-manager") {
+            self.current_view = AppView::NicheManager;
         }
         
         // Main UI layout

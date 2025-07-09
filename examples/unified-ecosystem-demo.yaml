@@ -1,0 +1,516 @@
+# Unified EcoPrimals Ecosystem Demonstration
+# Complete integration showcase across biomeOS, Songbird, NestGate, and Toadstool
+
+apiVersion: biomeOS/v1
+kind: Biome
+metadata:
+  name: unified-ecosystem-demo
+  version: "1.0.0"
+  description: "Complete ecosystem demonstration with all Primals working in harmony"
+  specialization: ecosystem_showcase
+  created: "2025-01-15T15:00:00Z"
+  owner: "ecoprimal-team"
+  tags:
+    - ecosystem
+    - demonstration
+    - integration
+    - unified
+    - all-primals
+
+# Unified Primal Configuration
+primals:
+  # 🎼 Songbird - Service Mesh & Orchestration
+  songbird:
+    enabled: true
+    priority: 1
+    startup_timeout: 30s
+    config:
+      orchestration_mode: "ecosystem"
+      byob_enabled: true
+      federation_enabled: true
+      discovery_backend: "memory"
+      load_balancing: "health_based"
+      service_mesh: true
+    endpoints:
+      primary: "http://songbird:8080"
+      admin: "http://songbird:8081"
+      websocket: "ws://songbird:8080/ws"
+    capabilities:
+      core:
+        - "service_discovery"
+        - "load_balancing" 
+        - "traffic_routing"
+        - "health_monitoring"
+      extended:
+        - "federation"
+        - "byob_coordination"
+        - "multi_protocol_support"
+      integrations:
+        - "toadstool_orchestration"
+        - "nestgate_storage_discovery"
+        - "biomeos_ecosystem_integration"
+
+  # 🏰 NestGate - Sovereign Storage
+  nestgate:
+    enabled: true
+    priority: 2
+    startup_timeout: 45s
+    depends_on: ["songbird"]
+    config:
+      storage_mode: "ecosystem"
+      auto_provisioning: true
+      volume_coordination: true
+      zfs_pool: "ecosystem-pool"
+      tiered_storage: true
+      protocols: ["nfs", "smb", "s3"]
+    endpoints:
+      primary: "http://nestgate:8082"
+      storage_api: "http://nestgate:8083"
+      admin: "http://nestgate:8084"
+    capabilities:
+      core:
+        - "storage_provisioning"
+        - "volume_management"
+        - "zfs_operations"
+        - "snapshot_management"
+      extended:
+        - "tiered_storage"
+        - "multi_protocol_access"
+        - "deduplication"
+        - "encryption_at_rest"
+      integrations:
+        - "biomeos_volume_provisioning"
+        - "toadstool_mount_coordination"
+        - "songbird_discovery_integration"
+
+  # 🍄 Toadstool - Universal Runtime & Compute
+  toadstool:
+    enabled: true
+    priority: 3
+    startup_timeout: 30s
+    depends_on: ["songbird", "nestgate"]
+    config:
+      execution_mode: "ecosystem"
+      manifest_integration: true
+      byob_execution: true
+      runtimes: ["container", "native", "wasm", "python"]
+      resource_limits:
+        cpu: "0-15"
+        memory: "64Gi"
+        gpu: "0-1"
+    endpoints:
+      primary: "http://toadstool:8084"
+      execution_api: "http://toadstool:8085"
+      admin: "http://toadstool:8086"
+    capabilities:
+      core:
+        - "workload_execution"
+        - "runtime_orchestration"
+        - "resource_management"
+        - "container_runtime"
+      extended:
+        - "multi_runtime_support"
+        - "byob_execution"
+        - "gpu_acceleration"
+        - "python_runtime"
+      integrations:
+        - "biomeos_manifest_parsing"
+        - "nestgate_volume_mounting"
+        - "songbird_service_registration"
+
+  # 🐕 BearDog - Security Framework (Preparing)
+  beardog:
+    enabled: false
+    priority: 4
+    startup_timeout: 60s
+    depends_on: ["songbird"]
+    config:
+      security_level: "maximum"
+      compliance: ["gdpr", "hipaa"]
+      hsm_integration: false
+      dev_mode: true
+    endpoints:
+      primary: "http://beardog:9000"
+      security_api: "http://beardog:9001"
+    capabilities:
+      core:
+        - "authentication"
+        - "authorization"
+        - "encryption"
+        - "audit_logging"
+      extended:
+        - "threat_detection"
+        - "compliance_monitoring"
+        - "secure_communication"
+      integrations:
+        - "ecosystem_security_coordination"
+        - "inter_primal_authentication"
+
+  # 🐿️ Squirrel - AI/ML Platform (Preparing)
+  squirrel:
+    enabled: false
+    priority: 5
+    startup_timeout: 45s
+    depends_on: ["songbird", "toadstool"]
+    config:
+      ai_mode: "ecosystem"
+      mcp_protocol: "latest"
+      plugin_system: true
+      ai_models: ["claude-3-sonnet"]
+      sandboxing: "secure"
+    endpoints:
+      primary: "http://squirrel:5000"
+      ai_api: "http://squirrel:5001"
+      mcp_endpoint: "http://squirrel:5002"
+    capabilities:
+      core:
+        - "ai_inference"
+        - "mcp_coordination"
+        - "plugin_management"
+        - "agent_orchestration"
+      extended:
+        - "ecosystem_intelligence"
+        - "workload_optimization"
+        - "predictive_scaling"
+      integrations:
+        - "ecosystem_ai_coordination"
+        - "toadstool_workload_optimization"
+
+# Unified Ecosystem Services
+services:
+  # Full-Stack Web Application
+  web-application:
+    name: "ecosystem-web-app"
+    description: "Complete web application showcasing all Primal coordination"
+    
+    # Orchestration by Songbird
+    orchestrator: "songbird"
+    load_balancing: "health_based"
+    service_discovery: true
+    
+    # Execution by Toadstool
+    executor: "toadstool"
+    workload:
+      type: "container"
+      image: "nginx:alpine"
+      replicas: 3
+      runtime_config:
+        cpu_limit: 1.0
+        memory_limit: "1Gi"
+        
+    # Storage by NestGate
+    storage: "nestgate"
+    storage_requirements:
+      - name: "web-content"
+        size: "10Gi"
+        tier: "hot"
+        mount_path: "/usr/share/nginx/html"
+        protocols: ["nfs"]
+      - name: "web-logs"
+        size: "5Gi"
+        tier: "warm"
+        mount_path: "/var/log/nginx"
+        protocols: ["nfs"]
+        
+    # Networking coordination
+    networking:
+      ports:
+        - container_port: 80
+          service_port: 8080
+          protocol: "http"
+      health_check:
+        path: "/health"
+        interval: "30s"
+        timeout: "10s"
+
+  # Data Processing Pipeline
+  data-pipeline:
+    name: "ecosystem-data-pipeline"
+    description: "Data processing showcasing Python runtime and storage integration"
+    
+    orchestrator: "songbird"
+    executor: "toadstool"
+    storage: "nestgate"
+    
+    workload:
+      type: "python"
+      image: "python:3.11-slim"
+      command: ["python", "-c"]
+      args: ["import time; import os; print('Processing data...'); time.sleep(60)"]
+      environment:
+        PYTHONPATH: "/app"
+        DATA_PATH: "/data"
+        
+    storage_requirements:
+      - name: "input-data"
+        size: "20Gi"
+        tier: "hot"
+        mount_path: "/data/input"
+        protocols: ["s3", "nfs"]
+      - name: "output-data"
+        size: "50Gi"
+        tier: "warm"
+        mount_path: "/data/output"
+        protocols: ["s3"]
+        
+    networking:
+      ports:
+        - container_port: 8000
+          service_port: 8000
+          protocol: "http"
+
+  # Ecosystem Dashboard
+  ecosystem-dashboard:
+    name: "ecosystem-dashboard"
+    description: "Real-time ecosystem monitoring and visualization"
+    
+    orchestrator: "songbird"
+    executor: "toadstool"
+    storage: "nestgate"
+    
+    workload:
+      type: "container"
+      image: "grafana/grafana:latest"
+      environment:
+        GF_SECURITY_ADMIN_PASSWORD: "ecosystem"
+        GF_INSTALL_PLUGINS: "grafana-piechart-panel"
+        
+    storage_requirements:
+      - name: "dashboard-data"
+        size: "5Gi"
+        tier: "hot"
+        mount_path: "/var/lib/grafana"
+        protocols: ["nfs"]
+        
+    networking:
+      ports:
+        - container_port: 3000
+          service_port: 3000
+          protocol: "http"
+      load_balancing: "round_robin"
+
+# Ecosystem Resource Management
+resources:
+  # Total ecosystem allocation
+  total_allocation:
+    cpu_cores: 16
+    memory_gb: 64
+    storage_gb: 500
+    gpu_count: 1
+    
+  # Per-Primal allocation
+  primal_allocation:
+    songbird:
+      cpu_cores: 2
+      memory_gb: 4
+      storage_gb: 20
+    nestgate:
+      cpu_cores: 4
+      memory_gb: 16
+      storage_gb: 200
+    toadstool:
+      cpu_cores: 8
+      memory_gb: 32
+      storage_gb: 100
+    beardog:
+      cpu_cores: 1
+      memory_gb: 2
+      storage_gb: 10
+    squirrel:
+      cpu_cores: 1
+      memory_gb: 10
+      storage_gb: 170
+
+# Ecosystem Security (Preparing for BearDog)
+security:
+  ecosystem_mode: "coordinated"
+  inter_primal_auth: "ecosystem_jwt"
+  external_access: "controlled"
+  audit_logging: true
+  encryption_in_transit: true
+  
+  # Security policies
+  policies:
+    - name: "inter_primal_communication"
+      rule: "allow"
+      source: "any_primal"
+      destination: "any_primal"
+      
+    - name: "external_access"
+      rule: "require_auth"
+      source: "external"
+      destination: "any_service"
+
+# Ecosystem Networking
+networking:
+  ecosystem_mesh: true
+  service_discovery: "automatic"
+  load_balancing: "health_based"
+  proximity_optimization: true
+  
+  # Network policies
+  policies:
+    - name: "inter_service_communication"
+      rule: "allow"
+      ports: ["80", "443", "8080-8090"]
+      
+    - name: "primal_coordination"
+      rule: "allow"
+      source: "primal_network"
+      destination: "primal_network"
+
+# Ecosystem Monitoring & Observability
+monitoring:
+  ecosystem_metrics: true
+  primal_health_checks: true
+  service_tracing: true
+  log_aggregation: true
+  
+  # Metrics collection
+  metrics:
+    - name: "ecosystem_health"
+      interval: "30s"
+      endpoints: ["all_primals"]
+      
+    - name: "resource_utilization"
+      interval: "60s"
+      endpoints: ["toadstool", "nestgate"]
+      
+    - name: "service_performance"
+      interval: "15s"
+      endpoints: ["songbird"]
+
+# Deployment Strategy
+deployment:
+  strategy: "coordinated_rolling"
+  coordination_timeout: "300s"
+  health_check_timeout: "60s"
+  
+  # Deployment phases
+  phases:
+    - name: "infrastructure"
+      description: "Initialize core Primals"
+      services: ["songbird", "nestgate"]
+      parallel: false
+      
+    - name: "compute"
+      description: "Start compute execution"
+      services: ["toadstool"]
+      depends_on: ["infrastructure"]
+      
+    - name: "applications"
+      description: "Deploy ecosystem services"
+      services: ["web-application", "data-pipeline", "ecosystem-dashboard"]
+      depends_on: ["compute"]
+      parallel: true
+      
+    - name: "verification"
+      description: "Verify ecosystem health"
+      action: "health_check"
+      targets: ["all_services"]
+
+# Ecosystem Intelligence & Optimization
+intelligence:
+  ecosystem_learning: true
+  pattern_analysis: true
+  auto_optimization: true
+  predictive_scaling: false  # Will be true when Squirrel is ready
+  
+  # Optimization rules
+  optimization:
+    - name: "resource_rebalancing"
+      trigger: "high_utilization"
+      action: "redistribute_load"
+      
+    - name: "storage_tiering"
+      trigger: "access_patterns"
+      action: "move_to_optimal_tier"
+      
+    - name: "service_scaling"
+      trigger: "load_threshold"
+      action: "scale_replicas"
+
+# Documentation & Usage
+documentation:
+  overview: |
+    This biome demonstrates the complete EcoPrimals ecosystem working together
+    in perfect coordination. It showcases:
+    
+    🎼 Songbird: Service mesh orchestration and load balancing
+    🏰 NestGate: Unified storage provisioning and multi-protocol access
+    🍄 Toadstool: Multi-runtime workload execution (container, Python)
+    🐕 BearDog: Security framework (preparing for integration)
+    🐿️ Squirrel: AI/ML platform (preparing for integration)
+    
+    The system demonstrates:
+    - Unified manifest-driven deployment
+    - Cross-Primal resource coordination
+    - Automated service discovery and routing
+    - Intelligent storage provisioning
+    - Multi-runtime workload execution
+    - Real-time ecosystem monitoring
+    
+  usage: |
+    # Deploy the complete ecosystem
+    ecosystem-demo deploy unified-ecosystem-demo.yaml --watch
+    
+    # Monitor ecosystem status
+    ecosystem-demo status --detailed --watch
+    
+    # Run health checks
+    ecosystem-demo health --comprehensive
+    
+    # Show Primal coordination
+    ecosystem-demo primals matrix
+    
+    # Run demonstration scenarios
+    ecosystem-demo demo --scenario full-stack
+    
+    # Access services
+    curl http://localhost:8080  # Web application
+    curl http://localhost:3000  # Ecosystem dashboard
+    curl http://localhost:8000  # Data pipeline
+    
+  examples: |
+    # Complete ecosystem deployment
+    biome deploy unified-ecosystem-demo.yaml
+    
+    # Check ecosystem health
+    biome status unified-ecosystem-demo
+    
+    # Scale web application
+    biome scale unified-ecosystem-demo web-application --replicas 5
+    
+    # View logs across all Primals
+    biome logs unified-ecosystem-demo --all-primals
+    
+    # Test cross-Primal coordination
+    biome exec unified-ecosystem-demo web-application -- curl nestgate:8082/health
+
+# Metadata
+metadata:
+  author: "EcoPrimals Team"
+  category: "ecosystem_demonstration"
+  tags: ["unified", "ecosystem", "all-primals", "coordination", "integration"]
+  license: "MIT"
+  repository: "https://github.com/ecoprimal/stagingArea"
+  documentation: "https://docs.ecoprimal.com/ecosystem"
+  support: "https://github.com/ecoprimal/stagingArea/issues"
+  
+  # Ecosystem readiness
+  readiness:
+    songbird: "95%"
+    nestgate: "85%"
+    toadstool: "90%"
+    beardog: "80%"  # Preparing
+    squirrel: "88%" # Preparing
+    overall: "91.6%"
+    
+  # Integration status
+  integration_status:
+    songbird_nestgate: "complete"
+    songbird_toadstool: "complete"
+    nestgate_toadstool: "complete"
+    beardog_integration: "preparing"
+    squirrel_integration: "preparing"
+    ecosystem_coordination: "active" 

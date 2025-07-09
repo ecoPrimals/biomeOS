@@ -1,7 +1,10 @@
+[workspace]
+# This package is not part of the parent workspace
+
 [package]
 name = "biomeos-tools"
-version.workspace = true
-edition.workspace = true
+version = "0.1.0"
+edition = "2021"
 authors.workspace = true
 license.workspace = true
 description = "biomeOS development and integration tools - Rust until the very edge"
@@ -22,6 +25,18 @@ path = "src/bin/test_coverage.rs"
 name = "ecosystem-health"
 path = "src/bin/ecosystem_health.rs"
 
+[[bin]]
+name = "songbird_universal_ui_demo"
+path = "src/bin/songbird_universal_ui_demo.rs"
+
+[[bin]]
+name = "comprehensive_ecosystem_demo"
+path = "src/bin/comprehensive_ecosystem_demo.rs"
+
+[[bin]]
+name = "mock_primal_server"
+path = "src/bin/mock_primal_server.rs"
+
 [dependencies]
 # Core dependencies
 tokio = { workspace = true }
@@ -32,6 +47,9 @@ serde_json = { workspace = true }
 chrono = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+
+# Networking
+reqwest = { version = "0.11", features = ["json"] }
 
 # File system operations
 tempfile = { workspace = true }

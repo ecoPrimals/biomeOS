@@ -1,0 +1,488 @@
+# Federation Demo BYOB Manifest
+# Demonstrates self-contained federation with Songbird + BearDog
+# Deploy across basement towers to showcase proximity-first networking
+
+name: federation-demo
+description: "Self-contained federation demonstration with Songbird coordination and BearDog security"
+version: "1.0.0"
+
+# Team workspace configuration
+team:
+  id: federation-demo
+  name: "Federation Demo Team"
+  description: "Demonstrating self-contained federation capabilities"
+
+# Federation-specific configuration
+federation:
+  enabled: true
+  deployment_strategy: "multi_tower"
+  security_level: "enhanced"
+  proximity_optimization: true
+  max_latency_ms: 50
+  
+  # Discovery configuration
+  discovery:
+    protocols: ["mdns", "upnp", "beardog"]
+    local_timeout: "5s"
+    regional_timeout: "60s"
+    global_timeout: "300s"
+    
+  # BearDog security integration
+  security:
+    provider: "beardog"
+    tunnel_protocol: "bstp"
+    encryption_level: "gaming_grade"
+    session_timeout: "3600s"
+
+# Resource quotas for the demo
+quotas:
+  max_cpu_cores: 12
+  max_memory_gb: 48
+  max_storage_gb: 100
+  max_network_mbps: 1000
+  max_deployments: 5
+
+# Services that demonstrate federation capabilities
+services:
+  # Songbird federation coordinator
+  songbird-coordinator:
+    image: "songbird-federation:latest"
+    build:
+      context: "songbird"
+      dockerfile: "Dockerfile.federation"
+    
+    resources:
+      cpu: 2
+      memory: 4GB
+      storage: 10GB
+      
+    placement:
+      strategy: "coordination_optimized"
+      prefer_capabilities: ["orchestration", "coordination"]
+      prefer_nodes: ["tower-1"]  # Master coordination node
+      
+    environment:
+      RUST_LOG: "info"
+      SONGBIRD_MODE: "federation"
+      FEDERATION_ROLE: "coordinator"
+      DISCOVERY_PROTOCOLS: "mdns,upnp,beardog"
+      BEARDOG_INTEGRATION: "enabled"
+      
+    ports:
+      - "8080:8080"   # Federation API
+      - "8081:8081"   # Discovery service
+      - "8082:8082"   # BearDog integration
+      
+    volumes:
+      - name: "federation-config"
+        mount: "/etc/songbird/federation"
+        size: "1GB"
+        
+    health:
+      check: "curl -f http://localhost:8080/health"
+      interval: "10s"
+      timeout: "5s"
+      retries: 3
+
+  # BearDog security daemon
+  beardog-security:
+    image: "beardog-daemon:latest"
+    build:
+      context: "beardog"
+      dockerfile: "Dockerfile.daemon"
+      
+    resources:
+      cpu: 1
+      memory: 2GB
+      storage: 5GB
+      
+    placement:
+      strategy: "security_optimized"
+      prefer_capabilities: ["security", "encryption"]
+      collocate_with: ["songbird-coordinator"]
+      
+    environment:
+      RUST_LOG: "info"
+      BEARDOG_MODE: "federation"
+      TUNNEL_PROTOCOL: "bstp"
+      ENCRYPTION_LEVEL: "gaming_grade"
+      SONGBIRD_INTEGRATION: "enabled"
+      
+    ports:
+      - "9080:9080"   # BearDog API
+      - "9081:9081"   # Tunnel endpoint
+      - "9082:9082"   # Security monitoring
+      
+    volumes:
+      - name: "beardog-keys"
+        mount: "/etc/beardog/keys"
+        size: "1GB"
+        encryption: "enabled"
+        
+    health:
+      check: "curl -f http://localhost:9080/health"
+      interval: "10s"
+      timeout: "5s"
+      retries: 3
+
+  # Federation discovery service
+  federation-discovery:
+    image: "songbird-discovery:latest"
+    build:
+      context: "songbird"
+      dockerfile: "Dockerfile.discovery"
+      
+    resources:
+      cpu: 1
+      memory: 2GB
+      storage: 5GB
+      
+    placement:
+      strategy: "distributed"
+      prefer_capabilities: ["networking", "discovery"]
+      distribute_across: ["all_towers"]
+      
+    environment:
+      RUST_LOG: "info"
+      DISCOVERY_MODE: "proximity_first"
+      PROTOCOLS: "mdns,upnp,stun,turn,beardog"
+      COORDINATION_ENDPOINT: "http://songbird-coordinator:8080"
+      SECURITY_ENDPOINT: "http://beardog-security:9080"
+      
+    ports:
+      - "7080:7080"   # Discovery API
+      - "7081:7081"   # mDNS service
+      - "7082:7082"   # UPnP service
+      
+    volumes:
+      - name: "discovery-cache"
+        mount: "/var/cache/discovery"
+        size: "2GB"
+        
+    health:
+      check: "curl -f http://localhost:7080/discovery/health"
+      interval: "15s"
+      timeout: "5s"
+      retries: 3
+
+  # Federation monitoring dashboard
+  federation-dashboard:
+    image: "songbird-dashboard:latest"
+    build:
+      context: "songbird"
+      dockerfile: "Dockerfile.dashboard"
+      
+    resources:
+      cpu: 1
+      memory: 2GB
+      storage: 5GB
+      
+    placement:
+      strategy: "user_accessible"
+      prefer_capabilities: ["frontend", "monitoring"]
+      prefer_nodes: ["tower-1"]  # Primary access point
+      
+    environment:
+      RUST_LOG: "info"
+      DASHBOARD_MODE: "federation"
+      COORDINATOR_ENDPOINT: "http://songbird-coordinator:8080"
+      SECURITY_ENDPOINT: "http://beardog-security:9080"
+      DISCOVERY_ENDPOINT: "http://federation-discovery:7080"
+      
+    ports:
+      - "3000:3000"   # Web dashboard
+      - "3001:3001"   # WebSocket updates
+      
+    volumes:
+      - name: "dashboard-data"
+        mount: "/var/lib/dashboard"
+        size: "2GB"
+        
+    health:
+      check: "curl -f http://localhost:3000/health"
+      interval: "30s"
+      timeout: "10s"
+      retries: 3
+
+  # Demo workload generator
+  demo-workload:
+    image: "federation-demo-workload:latest"
+    build:
+      context: "ecoPrimals"
+      dockerfile: "Dockerfile.demo-workload"
+      
+    resources:
+      cpu: 2
+      memory: 4GB
+      storage: 10GB
+      
+    placement:
+      strategy: "load_generator"
+      prefer_capabilities: ["compute", "demo"]
+      distribute_across: ["all_towers"]
+      
+    environment:
+      RUST_LOG: "info"
+      DEMO_MODE: "federation"
+      WORKLOAD_PATTERNS: "ai,gaming,frontend,storage"
+      COORDINATOR_ENDPOINT: "http://songbird-coordinator:8080"
+      INTENSITY: "medium"
+      
+    ports:
+      - "6000:6000"   # Workload API
+      - "6001:6001"   # Metrics endpoint
+      
+    volumes:
+      - name: "demo-data"
+        mount: "/var/lib/demo"
+        size: "5GB"
+        
+    health:
+      check: "curl -f http://localhost:6000/workload/health"
+      interval: "20s"
+      timeout: "5s"
+      retries: 3
+
+# Networking configuration
+networking:
+  # Federation mesh networking
+  mesh:
+    enabled: true
+    protocol: "beardog_bstp"
+    discovery: "proximity_first"
+    
+  # Service mesh for inter-service communication
+  service_mesh:
+    enabled: true
+    encryption: "beardog"
+    load_balancing: "proximity_weighted"
+    
+  # External access
+  ingress:
+    enabled: true
+    endpoints:
+      - name: "federation-dashboard"
+        service: "federation-dashboard"
+        port: 3000
+        path: "/"
+        
+      - name: "federation-api"
+        service: "songbird-coordinator"
+        port: 8080
+        path: "/api"
+        
+      - name: "demo-workload"
+        service: "demo-workload"
+        port: 6000
+        path: "/demo"
+
+# Storage configuration
+storage:
+  # Federation configuration storage
+  federation-config:
+    type: "config"
+    size: "1GB"
+    replication: "cross_tower"
+    encryption: "beardog"
+    
+  # BearDog key storage
+  beardog-keys:
+    type: "secrets"
+    size: "1GB"
+    replication: "secure_cross_tower"
+    encryption: "hardware"
+    
+  # Discovery cache
+  discovery-cache:
+    type: "cache"
+    size: "2GB"
+    tier: "hot"
+    replication: "local"
+    
+  # Dashboard data
+  dashboard-data:
+    type: "data"
+    size: "2GB"
+    tier: "warm"
+    replication: "cross_tower"
+    
+  # Demo workload data
+  demo-data:
+    type: "data"
+    size: "5GB"
+    tier: "warm"
+    replication: "optional"
+
+# Monitoring and observability
+monitoring:
+  # Performance metrics
+  metrics:
+    enabled: true
+    interval: "10s"
+    retention: "7d"
+    
+  # Federation health monitoring
+  health:
+    federation_topology: "30s"
+    node_connectivity: "10s"
+    security_sessions: "15s"
+    service_health: "20s"
+    
+  # Alerts
+  alerts:
+    - name: "federation_node_down"
+      condition: "node_offline > 30s"
+      action: "rebalance_services"
+      
+    - name: "high_latency"
+      condition: "inter_tower_latency > 100ms"
+      action: "optimize_routes"
+      
+    - name: "security_threat"
+      condition: "beardog_threat_level > 5"
+      action: "isolate_affected_nodes"
+
+# Demo scenarios
+scenarios:
+  # Basic federation demo
+  basic_federation:
+    description: "Demonstrate basic federation capabilities"
+    duration: "5m"
+    steps:
+      - "start_services"
+      - "discover_nodes"
+      - "establish_mesh"
+      - "deploy_workloads"
+      - "monitor_performance"
+      
+  # Proximity optimization demo
+  proximity_optimization:
+    description: "Show proximity-first routing optimization"
+    duration: "10m"
+    steps:
+      - "measure_baseline_latency"
+      - "enable_proximity_routing"
+      - "generate_varied_workloads"
+      - "compare_performance"
+      
+  # Security integration demo
+  security_integration:
+    description: "Demonstrate BearDog security integration"
+    duration: "15m"
+    steps:
+      - "establish_secure_tunnels"
+      - "test_encryption_performance"
+      - "simulate_threat_scenarios"
+      - "verify_mitigation_responses"
+      
+  # Scaling demo
+  scaling_demo:
+    description: "Show federation scaling capabilities"
+    duration: "20m"
+    steps:
+      - "start_with_single_tower"
+      - "add_towers_incrementally"
+      - "monitor_capacity_scaling"
+      - "demonstrate_network_effects"
+
+# Deployment instructions
+deployment:
+  # Pre-requisites
+  prerequisites:
+    - "Docker runtime installed"
+    - "Rust toolchain (1.70+)"
+    - "Network connectivity between towers"
+    - "Sufficient resources per tower"
+    
+  # Build instructions
+  build:
+    - "cargo build --release --workspace"
+    - "docker build -t songbird-federation songbird/"
+    - "docker build -t beardog-daemon beardog/"
+    - "docker build -t songbird-discovery songbird/"
+    - "docker build -t songbird-dashboard songbird/"
+    - "docker build -t federation-demo-workload ecoPrimals/"
+    
+  # Deployment steps
+  deploy:
+    - "biome deploy federation-demo.yaml"
+    - "biome status federation-demo"
+    - "biome logs federation-demo"
+    - "biome dashboard federation-demo"
+    
+  # Verification
+  verify:
+    - "curl http://localhost:3000/health"
+    - "curl http://localhost:8080/federation/status"
+    - "curl http://localhost:9080/security/status"
+    - "curl http://localhost:7080/discovery/topology"
+
+# Documentation
+documentation:
+  readme: |
+    # Federation Demo BYOB Manifest
+    
+    This manifest demonstrates the self-contained federation capabilities
+    of the ecoPrimals ecosystem using Songbird coordination and BearDog security.
+    
+    ## Quick Start
+    
+    ```bash
+    # Deploy the federation demo
+    biome deploy federation-demo.yaml
+    
+    # Check deployment status
+    biome status federation-demo
+    
+    # Access the dashboard
+    open http://localhost:3000
+    ```
+    
+    ## Features Demonstrated
+    
+    - Self-contained federation (no external dependencies)
+    - Proximity-first discovery and routing
+    - BearDog gaming-grade security
+    - Multi-tower coordination
+    - Network effects and scaling
+    
+    ## Architecture
+    
+    - **Songbird**: Coordination and orchestration
+    - **BearDog**: Security and encrypted networking
+    - **Discovery**: Proximity-first node discovery
+    - **Dashboard**: Real-time federation monitoring
+    - **Demo Workload**: Load generation and testing
+    
+  troubleshooting: |
+    # Troubleshooting
+    
+    ## Common Issues
+    
+    1. **Services not starting**: Check resource availability
+    2. **Discovery timeout**: Verify network connectivity
+    3. **Security handshake failure**: Check BearDog key exchange
+    4. **High latency**: Verify proximity optimization settings
+    
+    ## Debug Commands
+    
+    ```bash
+    # Check federation status
+    biome exec federation-demo songbird-coordinator -- /status
+    
+    # Verify security tunnels
+    biome exec federation-demo beardog-security -- /tunnels
+    
+    # Test discovery
+    biome exec federation-demo federation-discovery -- /discover
+    ```
+
+# Metadata
+metadata:
+  author: "ecoPrimals Team"
+  category: "federation"
+  tags: ["songbird", "beardog", "federation", "demo", "hpc"]
+  license: "MIT"
+  repository: "https://github.com/ecoprimal/stagingArea"
+  documentation: "https://docs.ecoprimal.com/federation"
+  support: "https://github.com/ecoprimal/stagingArea/issues" 

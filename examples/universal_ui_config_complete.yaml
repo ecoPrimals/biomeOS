@@ -1,0 +1,432 @@
+# Universal biomeOS UI Configuration - Complete Example
+# This configuration demonstrates how to set up the UI to work with any combination of primals
+
+# UI Mode and Theme Configuration
+ui_mode: "desktop"  # desktop, web, terminal, cli
+theme:
+  name: "biomeOS-sovereign"
+  colors:
+    primary: "#2E8B57"      # Sea green - biomeOS brand
+    secondary: "#4682B4"    # Steel blue
+    accent: "#FF6347"       # Tomato red for alerts
+    background: "#F5F5DC"   # Beige
+    surface: "#FFFFFF"      # White
+    text: "#2F4F4F"        # Dark slate gray
+    text_secondary: "#708090"  # Slate gray
+  fonts:
+    primary: "Inter"
+    monospace: "JetBrains Mono"
+    heading: "Inter"
+  layout:
+    sidebar_width: 280.0
+    header_height: 64.0
+    panel_spacing: 12.0
+    responsive_breakpoints:
+      mobile: 768.0
+      tablet: 1024.0
+      desktop: 1200.0
+
+# Auto-discovery Configuration
+auto_discovery:
+  enabled: true
+  discovery_interval_secs: 30
+  health_check_interval_secs: 10
+  discovery_ports: [8080, 8081, 8082, 8083, 8084, 9000, 5000, 7000]
+  discovery_paths: 
+    - "/health"
+    - "/api/v1/health"
+    - "/status"
+    - "/ping"
+
+# Standard biomeOS Primals Configuration
+primal_endpoints:
+  # Core orchestration Primal
+  songbird: "http://localhost:8080"
+  
+  # Storage and infrastructure Primal  
+  nestgate: "http://localhost:8082"
+  
+  # Compute and runtime Primal
+  toadstool: "http://localhost:8084"
+  
+  # Security and encryption Primal
+  beardog: "http://localhost:9000"
+  
+  # AI and MCP Primal (when available)
+  squirrel: "http://localhost:5000"
+
+# Custom Primals Configuration
+custom_primals:
+  # Custom AI/ML Primal
+  custom_ai_primal:
+    endpoint: "http://localhost:7000"
+    capabilities: ["ai", "ml", "inference", "training"]
+    description: "Custom AI processing and machine learning Primal"
+    ui_config:
+      display_name: "AI Engine"
+      icon: "🤖"
+      color: "#FF6B6B"
+      dashboard_widgets:
+        - widget_type: "metrics_chart"
+          title: "Inference Performance"
+          api_endpoint: "/api/v1/metrics/inference"
+          refresh_interval_secs: 5
+          display_config:
+            chart_type: "line"
+            metrics: ["requests_per_second", "latency_ms", "accuracy"]
+        - widget_type: "status_card"
+          title: "Model Status"
+          api_endpoint: "/api/v1/models/status"
+          refresh_interval_secs: 10
+          display_config:
+            show_model_list: true
+            show_gpu_usage: true
+        - widget_type: "log_viewer"
+          title: "Training Logs"
+          api_endpoint: "/api/v1/training/logs"
+          refresh_interval_secs: 2
+          display_config:
+            max_lines: 100
+            auto_scroll: true
+      custom_actions:
+        - action_id: "start_training"
+          display_name: "Start Training"
+          api_endpoint: "/api/v1/training/start"
+          method: "POST"
+          parameters:
+            - name: "model_name"
+              param_type: "string"
+              required: true
+            - name: "dataset"
+              param_type: "string"
+              required: true
+            - name: "epochs"
+              param_type: "integer"
+              required: false
+              default_value: 10
+          confirmation_required: true
+        - action_id: "deploy_model"
+          display_name: "Deploy Model"
+          api_endpoint: "/api/v1/models/deploy"
+          method: "POST"
+          parameters:
+            - name: "model_id"
+              param_type: "string"
+              required: true
+            - name: "replicas"
+              param_type: "integer"
+              required: false
+              default_value: 1
+          confirmation_required: false
+      metrics_config:
+        enabled: true
+        metrics_endpoint: "/api/v1/metrics"
+        chart_types: ["line", "bar", "gauge"]
+        default_time_range: "1h"
+    auth_config:
+      auth_type: "bearer"
+      endpoint: "/api/v1/auth/token"
+      headers:
+        Content-Type: "application/json"
+
+  # Custom storage Primal
+  custom_storage_primal:
+    endpoint: "http://localhost:7001"
+    capabilities: ["storage", "backup", "sync", "replication"]
+    description: "Specialized high-performance storage Primal"
+    ui_config:
+      display_name: "Storage Engine"
+      icon: "💾"
+      color: "#4ECDC4"
+      dashboard_widgets:
+        - widget_type: "storage_overview"
+          title: "Storage Overview"
+          api_endpoint: "/api/v1/storage/overview"
+          refresh_interval_secs: 15
+          display_config:
+            show_capacity: true
+            show_iops: true
+            show_throughput: true
+        - widget_type: "backup_status"
+          title: "Backup Status"
+          api_endpoint: "/api/v1/backup/status"
+          refresh_interval_secs: 30
+          display_config:
+            show_recent_backups: 10
+            show_schedule: true
+      custom_actions:
+        - action_id: "create_backup"
+          display_name: "Create Backup"
+          api_endpoint: "/api/v1/backup/create"
+          method: "POST"
+          parameters:
+            - name: "volume_id"
+              param_type: "string"
+              required: true
+            - name: "backup_type"
+              param_type: "select"
+              required: true
+              validation:
+                allowed_values: ["full", "incremental", "differential"]
+          confirmation_required: true
+        - action_id: "restore_volume"
+          display_name: "Restore Volume"
+          api_endpoint: "/api/v1/restore"
+          method: "POST"
+          parameters:
+            - name: "backup_id"
+              param_type: "string"
+              required: true
+            - name: "target_volume"
+              param_type: "string"
+              required: true
+          confirmation_required: true
+      metrics_config:
+        enabled: true
+        metrics_endpoint: "/api/v1/metrics"
+        chart_types: ["line", "area", "gauge"]
+        default_time_range: "6h"
+
+  # Community-developed GPU compute Primal
+  community_gpu_compute:
+    endpoint: "http://localhost:7002"
+    capabilities: ["compute", "gpu", "hpc", "distributed"]
+    description: "High-performance GPU compute cluster Primal"
+    ui_config:
+      display_name: "GPU Cluster"
+      icon: "⚡"
+      color: "#FFD93D"
+      dashboard_widgets:
+        - widget_type: "gpu_utilization"
+          title: "GPU Utilization"
+          api_endpoint: "/api/v1/gpu/utilization"
+          refresh_interval_secs: 2
+          display_config:
+            show_per_gpu: true
+            show_memory_usage: true
+            show_temperature: true
+        - widget_type: "job_queue"
+          title: "Job Queue"
+          api_endpoint: "/api/v1/jobs/queue"
+          refresh_interval_secs: 5
+          display_config:
+            show_pending: true
+            show_running: true
+            show_completed: 10
+      custom_actions:
+        - action_id: "submit_job"
+          display_name: "Submit Job"
+          api_endpoint: "/api/v1/jobs/submit"
+          method: "POST"
+          parameters:
+            - name: "job_script"
+              param_type: "text"
+              required: true
+            - name: "gpu_count"
+              param_type: "integer"
+              required: false
+              default_value: 1
+              validation:
+                min_value: 1
+                max_value: 8
+            - name: "memory_gb"
+              param_type: "integer"
+              required: false
+              default_value: 32
+          confirmation_required: false
+        - action_id: "cancel_job"
+          display_name: "Cancel Job"
+          api_endpoint: "/api/v1/jobs/cancel"
+          method: "DELETE"
+          parameters:
+            - name: "job_id"
+              param_type: "string"
+              required: true
+          confirmation_required: true
+      metrics_config:
+        enabled: true
+        metrics_endpoint: "/api/v1/metrics"
+        chart_types: ["line", "heatmap", "gauge"]
+        default_time_range: "2h"
+
+  # Fork of standard Primal with custom extensions
+  forked_nestgate:
+    endpoint: "http://localhost:7003"
+    capabilities: ["storage", "zfs", "backup", "encryption", "custom_features"]
+    description: "Forked NestGate with custom enterprise features"
+    ui_config:
+      display_name: "Enterprise Storage"
+      icon: "🏢"
+      color: "#6C5CE7"
+      dashboard_widgets:
+        - widget_type: "enterprise_dashboard"
+          title: "Enterprise Overview"
+          api_endpoint: "/api/v1/enterprise/overview"
+          refresh_interval_secs: 30
+          display_config:
+            show_compliance: true
+            show_audit_logs: true
+            show_encryption_status: true
+        - widget_type: "zfs_pools"
+          title: "ZFS Pools"
+          api_endpoint: "/api/v1/zfs/pools"
+          refresh_interval_secs: 15
+          display_config:
+            show_health: true
+            show_scrub_status: true
+            show_snapshots: true
+      custom_actions:
+        - action_id: "create_encrypted_pool"
+          display_name: "Create Encrypted Pool"
+          api_endpoint: "/api/v1/zfs/pools/create"
+          method: "POST"
+          parameters:
+            - name: "pool_name"
+              param_type: "string"
+              required: true
+              validation:
+                pattern: "^[a-zA-Z0-9_-]+$"
+                min_length: 3
+                max_length: 32
+            - name: "encryption_key"
+              param_type: "password"
+              required: true
+            - name: "disks"
+              param_type: "array"
+              required: true
+          confirmation_required: true
+        - action_id: "compliance_audit"
+          display_name: "Run Compliance Audit"
+          api_endpoint: "/api/v1/compliance/audit"
+          method: "POST"
+          parameters:
+            - name: "audit_type"
+              param_type: "select"
+              required: true
+              validation:
+                allowed_values: ["SOC2", "HIPAA", "PCI_DSS", "GDPR"]
+          confirmation_required: false
+      metrics_config:
+        enabled: true
+        metrics_endpoint: "/api/v1/metrics"
+        chart_types: ["line", "bar", "table"]
+        default_time_range: "24h"
+
+# WebSocket endpoints for real-time events
+websocket_endpoints:
+  events: "ws://localhost:8080/events"
+  songbird: "ws://localhost:8080/ws"
+  nestgate: "ws://localhost:8082/ws"
+  toadstool: "ws://localhost:8084/ws"
+  beardog: "ws://localhost:9000/ws"
+  squirrel: "ws://localhost:5000/ws"
+  custom_ai_primal: "ws://localhost:7000/ws"
+  custom_storage_primal: "ws://localhost:7001/ws"
+  community_gpu_compute: "ws://localhost:7002/ws"
+  forked_nestgate: "ws://localhost:7003/ws"
+
+# UI Feature Configuration
+features:
+  ai_assistant: true
+  real_time_monitoring: true
+  deployment_wizard: true
+  service_management: true
+  log_viewer: true
+  metrics_dashboard: true
+  custom_dashboards: true
+  multi_primal_coordination: true
+  advanced_analytics: true
+  custom_themes: true
+  plugin_system: true
+  api_explorer: true
+
+# Real-time Configuration
+real_time:
+  enabled: true
+  websocket_endpoints: {}  # Populated from websocket_endpoints above
+  event_types:
+    - "service_started"
+    - "service_stopped"
+    - "service_health_changed"
+    - "deployment_completed"
+    - "deployment_failed"
+    - "primal_connected"
+    - "primal_disconnected"
+    - "alert_triggered"
+    - "metric_threshold_exceeded"
+    - "backup_completed"
+    - "job_submitted"
+    - "job_completed"
+    - "custom_event"
+  buffer_size: 2000
+  reconnect_interval_secs: 3
+
+# AI Assistant Configuration
+ai_config:
+  enabled: true
+  provider: "local"  # openai, anthropic, local, custom
+  model: "biomeOS-assistant"
+  context_window: 8192
+  temperature: 0.7
+  custom_prompts:
+    system: |
+      You are the biomeOS AI assistant. You help users manage their biomeOS ecosystem
+      with all available primals. You understand the capabilities of each primal and
+      can help coordinate complex multi-primal deployments.
+    
+    primal_coordination: |
+      When coordinating between primals, consider their capabilities and dependencies.
+      Always check health status before making recommendations.
+    
+    deployment_assistance: |
+      For deployment tasks, analyze the requirements and suggest the optimal primal
+      configuration. Consider resource constraints and performance requirements.
+    
+    troubleshooting: |
+      When troubleshooting issues, systematically check each primal's health and logs.
+      Look for patterns across primals that might indicate system-wide issues.
+
+# Primal Discovery Settings
+discovery:
+  scan_local_network: true
+  scan_docker_containers: true
+  scan_kubernetes_services: true
+  custom_discovery_plugins: []
+  discovery_timeout_secs: 10
+  max_concurrent_discoveries: 5
+
+# Security Configuration
+security:
+  require_auth: false
+  auth_providers: []
+  cors_enabled: true
+  cors_origins: ["*"]
+  rate_limiting:
+    enabled: true
+    requests_per_minute: 1000
+  
+# Logging Configuration
+logging:
+  level: "info"
+  format: "json"
+  output: "stdout"
+  log_to_file: false
+  file_path: "/var/log/biomeos-ui.log"
+  max_file_size_mb: 100
+  max_files: 10
+
+# Performance Configuration
+performance:
+  ui_refresh_rate_ms: 100
+  data_cache_ttl_secs: 30
+  max_concurrent_requests: 50
+  request_timeout_secs: 30
+  websocket_ping_interval_secs: 30
+
+# Development Configuration
+development:
+  debug_mode: false
+  mock_primals: false
+  enable_dev_tools: false
+  hot_reload: false
+  verbose_logging: false 

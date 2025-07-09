@@ -1,49 +1,58 @@
 [package]
 name = "biomeos-core"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
+description = "Core biomeOS types and functionality"
+license.workspace = true
+
+[[bin]]
+name = "biome"
+path = "src/bin/biome.rs"
 
 [dependencies]
-# Core functionality
-tokio = { version = "1.0", features = ["full"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+# Core dependencies
+serde = { workspace = true }
+serde_json = { workspace = true }
 serde_yaml = { workspace = true }
-uuid = { version = "1.0", features = ["serde", "v4"] }
-chrono = { version = "0.4", features = ["serde"] }
+uuid = { workspace = true }
+chrono = { workspace = true }
 anyhow = { workspace = true }
-thiserror = "1.0"
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
 
-# Async and networking
-async-trait = "0.1"
-reqwest = { version = "0.11", features = ["json", "stream"] }
-futures = { workspace = true }
+# HTTP and networking
+reqwest = { workspace = true }
+axum = { workspace = true }
 
 # Configuration
 config = { workspace = true }
 validator = { workspace = true }
+clap = { workspace = true }
 
-# Platform detection and system info
-num_cpus = "1.16"
-sysinfo = "0.30"
+# System dependencies
+dirs = { workspace = true }
+libc = { workspace = true }
+num_cpus = { workspace = true }
+rand = { workspace = true }
 
-# Universal deployment
-dirs = "5.0"
+# Async
+async-trait = { workspace = true }
+futures = { workspace = true }
 
-# Additional dependencies
-sha2 = "0.10"
-clap = { version = "4.0", features = ["derive", "env"] }
-jsonschema = "0.17"
-flate2 = "1.0"
-tar = "0.4"
-zip = "0.6"
-regex = "1.10"
-libc = "0.2"
-rand = "0.8"
+# Crypto
+sha2 = { workspace = true }
+base64 = { workspace = true }
+
+# Note: Primal integrations will be added via HTTP APIs rather than build dependencies
+# This maintains sovereignty while enabling network effects
+
+[features]
+default = []
+# Future: API-based Primal integrations
+http-adapters = []
 
 [dev-dependencies]
 tokio-test = { workspace = true }
-tempfile = { workspace = true }
-proptest = { workspace = true } 
+tempfile = { workspace = true } 

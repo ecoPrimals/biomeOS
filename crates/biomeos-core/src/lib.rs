@@ -19,9 +19,13 @@ pub mod crypto;
 pub mod compute;
 pub mod orchestration;
 pub mod locks;
+pub mod byob;
+pub mod ecosystem_integration;
+pub mod manifest;
+pub mod runtime_bridge;
 
 // Re-export core types with specific imports to avoid conflicts
-pub use biome::{Biome, BiomeSpec, BiomeManifest};
+pub use biome::{Biome, BiomeSpec, BiomeManifest, BiomeMetadata};
 pub use primal::{PrimalType, Capability, ResourceLimits as PrimalResourceLimits, PrimalConfig};
 // pub use primal::{Primal, PrimalError, PrimalType, PrimalManifest, PrimalSpec, PrimalCapability, HealthStatus as PrimalHealthStatus, Capability};
 // pub use networking::{NetworkingError, ServiceRegistry, ServiceRegistration, ServiceInstance, ServiceHealth, DiscoveryProvider, DiscoveryError};
@@ -42,6 +46,29 @@ pub use compute::{UniversalComputeManager, ComputeProviderType};
 pub use orchestration::{UniversalOrchestrationManager, OrchestratorType};
 pub use locks::{CryptoLockManager, ComplianceLevel, PersonalAiLimits};
 
+// BYOB exports
+pub use byob::{
+    ByobDeploymentManager, TeamWorkspace, ResourceQuota, IsolationConfig,
+    DeploymentInstance, DeploymentStatus
+};
+
+// toadStool integration exports
+pub use manifest::{
+    ToadStoolManifest, ManifestGenerator, RuntimeType as ToadStoolRuntimeType,
+    ServiceConfig, PrimalConfig as ToadStoolPrimalConfig, FederationConfig, ResourceLimits,
+    HealthCheck, BiomeMetadata as ToadStoolBiomeMetadata
+};
+pub use runtime_bridge::{
+    ToadStoolBridge, DeploymentHandle, BiomeStatus, BiomeEvent, BiomeMonitor,
+    DeploymentStatus as ToadStoolDeploymentStatus, ResourceUsage, ServiceStatus,
+    FederationStatus, PeerStatus
+};
+
+// Core error and result types
+pub use errors::{BiomeError, BiomeResult};
+
+// Core ID types
+
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -56,7 +83,6 @@ pub type BiomeId = Uuid;
 pub type PrimalId = String;
 
 /// biomeOS result type
-pub type BiomeResult<T> = Result<T, BiomeError>;
 
 /// Core biomeOS configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -140,7 +166,7 @@ impl Default for BiomeOSConfig {
 pub async fn init_biomeos() -> BiomeResult<()> {
     // Initialize logging
     tracing_subscriber::fmt()
-        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .with_env_filter(tracing_subscriber::filter::EnvFilter::from_default_env())
         .init();
 
     tracing::info!("biomeOS v{} initializing...", BIOMEOS_VERSION);
@@ -455,68 +481,6 @@ mod tests {
 }
 
 /// Main biomeOS error type
-#[derive(Debug, thiserror::Error)]
-pub enum BiomeError {
-    #[error("Configuration error: {0}")]
-    Config(String),
-    
-    #[error("Primal error: {0}")]
-    Primal(String),
-    
-    #[error("Primal not found: {0}")]
-    PrimalNotFound(String),
-    
-    #[error("Networking error: {0}")]
-    Networking(String),
-    
-    #[error("Security error: {0}")]
-    Security(String),
-    
-    #[error("Storage error: {0}")]
-    Storage(String),
-    
-    #[error("Cloud provider error: {0}")]
-    Cloud(String),
-    
-    #[error("Compute provider error: {0}")]
-    Compute(String),
-    
-    #[error("Orchestration error: {0}")]
-    Orchestration(String),
-    
-    #[error("Crypto lock error: {0}")]
-    CryptoLock(String),
-    
-    #[error("Universal platform error: {0}")]
-    UniversalPlatform(String),
-    
-    #[error("Installation error: {0}")]
-    Installation(String),
-    
-    #[error("Sovereignty violation: {0}")]
-    SovereigntyViolation(String),
-    
-    #[error("Vendor lock detected: {0}")]
-    VendorLock(String),
-    
-    #[error("Compliance violation: {severity:?} - {message}")]
-    ComplianceViolation { severity: String, message: String },
-    
-    #[error("Initialization error: {0}")]
-    Initialization(String),
-    
-    #[error("Health check failed: {0}")]
-    HealthCheck(String),
-    
-    #[error("Operation timeout: {0}")]
-    Timeout(String),
-    
-    #[error("Unknown error: {0}")]
-    Unknown(String),
-    
-    #[error("Generic error: {message}")]
-    Generic { message: String },
-}
 
 /// Universal biomeOS configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1037,7 +1001,15 @@ impl Default for CryptoLockConfig {
         Self {
             enabled: true,  // Crypto locks enabled by default
             ai_cat_door: AiCatDoorConfig::default(),
-            sovereign_keys: vec![],
+            sovereign_keys: vec![
+                SovereignKeyConfig {
+                    key_id: "default-sovereign-key".to_string(),
+                    grantee: "individual-user".to_string(),
+                    access_level: "personal".to_string(),
+                    dependencies: vec!["ai-services".to_string()],
+                    validity_months: 12,
+                },
+            ],
             compliance_level: ComplianceLevel::Personal,
             licensing: LicensingConfig::default(),
         }
@@ -1143,7 +1115,16 @@ impl Default for UniversalProviderConfig {
                     config: std::collections::HashMap::new(),
                 },
             ],
-            cloud_providers: vec![],
+            cloud_providers: vec![
+                CloudProviderConfig {
+                    name: "local".to_string(),
+                    provider_type: CloudProviderType::SelfHosted,
+                    enabled: true,
+                    sovereignty_compliant: true,
+                    credentials: None,
+                    regions: vec!["local".to_string()],
+                },
+            ],
             compute_providers: vec![
                 ComputeProviderConfig {
                     name: "cpu".to_string(),
@@ -1206,8 +1187,11 @@ impl Default for InverseScaleConfig {
 impl Default for GeneticBeardogKey {
     fn default() -> Self {
         Self {
-            parent_key_fingerprint: "not_set".to_string(),
-            genetic_lineage: vec![],
+            parent_key_fingerprint: "genesis-key-fingerprint".to_string(),
+            genetic_lineage: vec![
+                "genesis".to_string(),
+                "first-generation".to_string(),
+            ],
             access_level: BeardogAccessLevel::PowerUser,
             encrypted_endpoint: None,
             valid_until: None,
