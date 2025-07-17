@@ -1,60 +1,68 @@
+use crate::BiomeResult;
+use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use serde::{Deserialize, Serialize};
-use async_trait::async_trait;
-use crate::BiomeResult;
 
 /// Universal Cloud Interface - eliminates cloud provider vendor lock-in
 #[async_trait]
 pub trait UniversalCloudInterface {
     /// Get cloud provider information
     async fn provider_info(&self) -> BiomeResult<CloudProviderInfo>;
-    
+
     /// Create virtual machine instance
     async fn create_instance(&self, spec: &InstanceSpec) -> BiomeResult<InstanceId>;
-    
+
     /// Start instance
     async fn start_instance(&self, id: &InstanceId) -> BiomeResult<()>;
-    
+
     /// Stop instance
     async fn stop_instance(&self, id: &InstanceId) -> BiomeResult<()>;
-    
+
     /// Terminate instance
     async fn terminate_instance(&self, id: &InstanceId) -> BiomeResult<()>;
-    
+
     /// Get instance status
     async fn instance_status(&self, id: &InstanceId) -> BiomeResult<InstanceStatus>;
-    
+
     /// List all instances
     async fn list_instances(&self) -> BiomeResult<Vec<InstanceInfo>>;
-    
+
     /// Create storage volume
     async fn create_volume(&self, spec: &VolumeSpec) -> BiomeResult<VolumeId>;
-    
+
     /// Attach volume to instance
-    async fn attach_volume(&self, volume_id: &VolumeId, instance_id: &InstanceId) -> BiomeResult<()>;
-    
+    async fn attach_volume(
+        &self,
+        volume_id: &VolumeId,
+        instance_id: &InstanceId,
+    ) -> BiomeResult<()>;
+
     /// Detach volume from instance
     async fn detach_volume(&self, volume_id: &VolumeId) -> BiomeResult<()>;
-    
+
     /// Create network
     async fn create_network(&self, spec: &NetworkSpec) -> BiomeResult<NetworkId>;
-    
+
     /// Create load balancer
     async fn create_load_balancer(&self, spec: &LoadBalancerSpec) -> BiomeResult<LoadBalancerId>;
-    
+
     /// Upload object to storage
     async fn upload_object(&self, bucket: &str, key: &str, data: &[u8]) -> BiomeResult<()>;
-    
+
     /// Download object from storage
     async fn download_object(&self, bucket: &str, key: &str) -> BiomeResult<Vec<u8>>;
-    
+
     /// Execute serverless function
-    async fn invoke_function(&self, spec: &FunctionSpec, payload: &[u8]) -> BiomeResult<FunctionResult>;
-    
+    async fn invoke_function(
+        &self,
+        spec: &FunctionSpec,
+        payload: &[u8],
+    ) -> BiomeResult<FunctionResult>;
+
     /// Get billing information
     async fn get_billing_info(&self) -> BiomeResult<BillingInfo>;
-    
+
     /// Export data for sovereignty
     async fn export_all_data(&self) -> BiomeResult<DataExport>;
 }
@@ -561,6 +569,12 @@ pub struct ExitStrategy {
     pub dependencies_to_resolve: Vec<String>,
 }
 
+impl Default for UniversalCloudManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl UniversalCloudManager {
     /// Create a new universal cloud manager
     pub fn new() -> Self {
@@ -599,4 +613,4 @@ impl UniversalCloudManager {
             },
         }
     }
-} 
+}

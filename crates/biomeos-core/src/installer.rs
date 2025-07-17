@@ -4,7 +4,6 @@
 //! and any platform where Toadstool can provide universal compute abstraction.
 
 use crate::{BiomeResult, UniversalPlatform};
-use crate::universal::{DeploymentConfig, OsType};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -158,7 +157,7 @@ impl UniversalInstaller {
             },
         }
     }
-    
+
     /// Get default installation directory for current platform
     fn get_default_install_dir() -> PathBuf {
         if cfg!(target_os = "windows") {
@@ -169,7 +168,7 @@ impl UniversalInstaller {
             PathBuf::from("/opt/biomeos")
         }
     }
-    
+
     /// Get default data directory for current platform
     fn get_default_data_dir() -> PathBuf {
         if let Some(data_dir) = dirs::data_dir() {
@@ -180,7 +179,7 @@ impl UniversalInstaller {
             PathBuf::from("/var/lib/biomeos")
         }
     }
-    
+
     /// Get default components to install
     fn get_default_components() -> Vec<ComponentSelection> {
         vec![
@@ -222,47 +221,56 @@ impl UniversalInstaller {
             },
         ]
     }
-    
+
     /// Run the complete installation process with AI guidance
     pub async fn install_with_ai_guidance(&mut self) -> BiomeResult<()> {
         // Initialize the platform with AI-first configuration
         self.platform.initialize_ai_first().await?;
-        
+
         // Start the installation process
         self.start_installation().await?;
-        
+
         Ok(())
     }
-    
+
     /// Start the installation process
     async fn start_installation(&mut self) -> BiomeResult<()> {
         println!("🚀 Starting biomeOS installation...");
         println!();
-        
+
         // Phase 1: Platform Detection
-        self.update_progress(InstallationPhase::PlatformDetection, 10.0, "Analyzing your system...").await;
-        
+        self.update_progress(
+            InstallationPhase::PlatformDetection,
+            10.0,
+            "Analyzing your system...",
+        )
+        .await;
+
         // Phase 2: Complete
-        self.update_progress(InstallationPhase::Complete, 100.0, "Installation complete!").await;
+        self.update_progress(InstallationPhase::Complete, 100.0, "Installation complete!")
+            .await;
         self.show_completion_message().await?;
-        
+
         Ok(())
     }
-    
+
     /// Update installation progress
     async fn update_progress(&mut self, phase: InstallationPhase, progress: f64, step: &str) {
         self.progress.current_phase = phase;
         self.progress.overall_progress = progress;
         self.progress.current_step = step.to_string();
-        
+
         // Show progress in a grandma-friendly way
         let bars = (progress / 5.0) as usize;
         let empty = 20 - bars;
         let progress_bar = "█".repeat(bars) + &"░".repeat(empty);
-        
-        println!("📊 Progress: [{}] {:.0}% - {}", progress_bar, progress, step);
+
+        println!(
+            "📊 Progress: [{}] {:.0}% - {}",
+            progress_bar, progress, step
+        );
     }
-    
+
     /// Show completion message with next steps
     async fn show_completion_message(&self) -> BiomeResult<()> {
         println!();
@@ -283,7 +291,7 @@ impl UniversalInstaller {
         println!("   Just type 'biomeos chat' to start a conversation!");
         println!();
         println!("🚀 Welcome to the future of computing!");
-        
+
         Ok(())
     }
 }

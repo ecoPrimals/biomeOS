@@ -1,8 +1,8 @@
 //! Unit tests for the biomeos-manifest module
 
 use biomeos_manifest::*;
-use std::collections::HashMap;
 use serde_json::json;
+use std::collections::HashMap;
 
 #[test]
 fn test_biome_manifest_creation() {
@@ -202,7 +202,10 @@ fn test_mycorrhiza_config_default() {
     assert!(config.enforcement.deep_packet_inspection);
     assert!(config.enforcement.api_signature_detection);
     assert!(config.enforcement.behavioral_analysis);
-    assert!(matches!(config.enforcement.threat_response, ThreatResponse::BlockAndPreserve));
+    assert!(matches!(
+        config.enforcement.threat_response,
+        ThreatResponse::BlockAndPreserve
+    ));
 }
 
 #[test]
@@ -271,15 +274,15 @@ fn test_repository_types() {
 #[test]
 fn test_validation_results() {
     let mut results = ValidationResults::new();
-    
+
     assert!(results.is_valid());
     assert_eq!(results.errors.len(), 0);
     assert_eq!(results.warnings.len(), 0);
-    
+
     results.add_error("Test error".to_string());
     assert!(!results.is_valid());
     assert_eq!(results.errors.len(), 1);
-    
+
     results.add_warning("Test warning".to_string());
     assert_eq!(results.warnings.len(), 1);
 }
@@ -322,37 +325,36 @@ fn test_template_metadata() {
         is_template: true,
         category: Some("development".to_string()),
         difficulty: Some(TemplateDifficulty::Beginner),
-        parameters: vec![
-            TemplateParameter {
-                name: "app_name".to_string(),
-                description: "Application name".to_string(),
-                param_type: ParameterType::String,
-                required: true,
-                default: None,
-                validation: Some(ParameterValidation {
-                    min: Some(json!(1)),
-                    max: Some(json!(50)),
-                    pattern: Some("^[a-zA-Z0-9-]+$".to_string()),
-                    message: Some("Invalid app name".to_string()),
-                }),
+        parameters: vec![TemplateParameter {
+            name: "app_name".to_string(),
+            description: "Application name".to_string(),
+            param_type: ParameterType::String,
+            required: true,
+            default: None,
+            validation: Some(ParameterValidation {
+                min: Some(json!(1)),
+                max: Some(json!(50)),
+                pattern: Some("^[a-zA-Z0-9-]+$".to_string()),
+                message: Some("Invalid app name".to_string()),
+            }),
+        }],
+        examples: vec![TemplateExample {
+            name: "Basic App".to_string(),
+            description: "A basic application".to_string(),
+            parameters: {
+                let mut params = HashMap::new();
+                params.insert("app_name".to_string(), json!("my-app"));
+                params
             },
-        ],
-        examples: vec![
-            TemplateExample {
-                name: "Basic App".to_string(),
-                description: "A basic application".to_string(),
-                parameters: {
-                    let mut params = HashMap::new();
-                    params.insert("app_name".to_string(), json!("my-app"));
-                    params
-                },
-            },
-        ],
+        }],
     };
 
     assert!(template.is_template);
     assert!(template.category.is_some());
-    assert!(matches!(template.difficulty, Some(TemplateDifficulty::Beginner)));
+    assert!(matches!(
+        template.difficulty,
+        Some(TemplateDifficulty::Beginner)
+    ));
     assert_eq!(template.parameters.len(), 1);
     assert_eq!(template.examples.len(), 1);
     assert_eq!(template.parameters[0].name, "app_name");
@@ -444,34 +446,33 @@ fn test_environment_config() {
 #[test]
 fn test_dependency_config() {
     let dependency = DependencyConfig {
-        requires: vec![
-            DependencySpec {
-                name: "postgres".to_string(),
-                version: Some(">=13.0".to_string()),
-                source: None,
-                optional: false,
-                reason: Some("Database storage".to_string()),
-            },
-        ],
-        suggests: vec![
-            DependencySpec {
-                name: "redis".to_string(),
-                version: Some(">=6.0".to_string()),
-                source: None,
-                optional: true,
-                reason: Some("Caching".to_string()),
-            },
-        ],
+        requires: vec![DependencySpec {
+            name: "postgres".to_string(),
+            version: Some(">=13.0".to_string()),
+            source: None,
+            optional: false,
+            reason: Some("Database storage".to_string()),
+        }],
+        suggests: vec![DependencySpec {
+            name: "redis".to_string(),
+            version: Some(">=6.0".to_string()),
+            source: None,
+            optional: true,
+            reason: Some("Caching".to_string()),
+        }],
         conflicts: vec![],
         features: {
             let mut features = HashMap::new();
-            features.insert("monitoring".to_string(), FeatureSpec {
-                description: "Enable monitoring".to_string(),
-                dependencies: vec!["prometheus".to_string()],
-                services: vec!["metrics".to_string()],
-                config: Some(json!({"metrics_port": 9090})),
-                default_enabled: false,
-            });
+            features.insert(
+                "monitoring".to_string(),
+                FeatureSpec {
+                    description: "Enable monitoring".to_string(),
+                    dependencies: vec!["prometheus".to_string()],
+                    services: vec!["metrics".to_string()],
+                    config: Some(json!({"metrics_port": 9090})),
+                    default_enabled: false,
+                },
+            );
             features
         },
     };
@@ -528,19 +529,22 @@ fn test_serialization_deserialization() {
     };
 
     // Add a primal for testing
-    manifest.primals.insert("toadstool".to_string(), PrimalSpec {
-        enabled: true,
-        primal_type: PrimalType::Toadstool,
-        priority: 10,
-        version: Some("1.0.0".to_string()),
-        source: None,
-        depends_on: vec![],
-        startup_timeout: None,
-        config: None,
-        networking: None,
-        resources: None,
-        extensions: None,
-    });
+    manifest.primals.insert(
+        "toadstool".to_string(),
+        PrimalSpec {
+            enabled: true,
+            primal_type: PrimalType::Toadstool,
+            priority: 10,
+            version: Some("1.0.0".to_string()),
+            source: None,
+            depends_on: vec![],
+            startup_timeout: None,
+            config: None,
+            networking: None,
+            resources: None,
+            extensions: None,
+        },
+    );
 
     // Test serialization
     let serialized = serde_json::to_string(&manifest).unwrap();
@@ -565,10 +569,16 @@ fn test_complex_biome_specializations() {
     let dynamic_shift = BiomeSpecialization::DynamicShift;
 
     assert!(matches!(gaming_server, BiomeSpecialization::GamingServer));
-    assert!(matches!(biocomputation, BiomeSpecialization::Biocomputation));
+    assert!(matches!(
+        biocomputation,
+        BiomeSpecialization::Biocomputation
+    ));
     assert!(matches!(devops, BiomeSpecialization::DevOps));
     assert!(matches!(edge_computing, BiomeSpecialization::EdgeComputing));
-    assert!(matches!(content_creation, BiomeSpecialization::ContentCreation));
+    assert!(matches!(
+        content_creation,
+        BiomeSpecialization::ContentCreation
+    ));
     assert!(matches!(dual_purpose, BiomeSpecialization::DualPurpose));
     assert!(matches!(dynamic_shift, BiomeSpecialization::DynamicShift));
 }

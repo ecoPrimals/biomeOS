@@ -1,5 +1,5 @@
 [package]
-name = "biomeos-ui"
+name = "biomeos-ui-app"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

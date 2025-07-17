@@ -1,0 +1,35 @@
+apiVersion: biome.io/v1
+kind: Biome
+metadata:
+  name: dev-biome
+  version: "1.0.0"
+  description: "Development-focused biome"
+
+primals:
+  toadstool:
+    enabled: true
+    priority: 1
+    config:
+      compute_nodes: 1
+      memory_limit: "16Gi"
+      development_mode: true
+      
+  squirrel:
+    enabled: true
+    priority: 2
+    config:
+      ai_model: "gpt-3.5-turbo"
+      mcp_enabled: true
+      development_tools: true
+      
+resources:
+  limits:
+    memory: "32Gi"
+    cpu: "8"
+    
+networking:
+  mode: "development"
+  
+security:
+  encryption: false
+  development_mode: true 

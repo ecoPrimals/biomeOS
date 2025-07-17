@@ -1,0 +1,55 @@
+apiVersion: biome.io/v1
+kind: Biome
+metadata:
+  name: full-biome
+  version: "1.0.0"
+  description: "Complete biome with all primals"
+
+primals:
+  beardog:
+    enabled: true
+    priority: 1
+    config:
+      security_level: "high"
+      encryption: "aes-256"
+      
+  songbird:
+    enabled: true
+    priority: 2
+    config:
+      orchestration_mode: "advanced"
+      
+  nestgate:
+    enabled: true
+    priority: 3
+    config:
+      storage_type: "distributed"
+      
+  toadstool:
+    enabled: true
+    priority: 4
+    config:
+      compute_nodes: 3
+      memory_limit: "32Gi"
+      
+  squirrel:
+    enabled: true
+    priority: 5
+    config:
+      ai_model: "gpt-4"
+      mcp_enabled: true
+      
+resources:
+  limits:
+    memory: "64Gi"
+    cpu: "16"
+    storage: "1Ti"
+    
+networking:
+  mode: "mesh"
+  encryption: true
+  
+security:
+  encryption: true
+  authentication: "oauth2"
+  authorization: "rbac" 

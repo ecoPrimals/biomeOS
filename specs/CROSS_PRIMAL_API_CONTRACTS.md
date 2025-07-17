@@ -1,716 +1,1208 @@
-# Cross-Primal API Contracts
+# Cross-Primal Universal API Contracts
 
-**Version:** 1.0.0 | **Status:** Draft | **Date:** January 2025
+**Version:** 1.0.0 | **Status:** Implementation Ready | **Date:** January 2025
+
+**Related Documents:**
+- [UNIVERSAL_PARSER_ADAPTER_SPEC.md](./UNIVERSAL_PARSER_ADAPTER_SPEC.md)
+- [ARCHITECTURE_OVERVIEW.md](./ARCHITECTURE_OVERVIEW.md)
+- [TOADSTOOL_BIOMEOS_UNIFICATION_SPEC.md](./TOADSTOOL_BIOMEOS_UNIFICATION_SPEC.md)
 
 ---
 
 ## Overview
 
-This specification defines the standardized API contracts for communication between Primals within biomeOS. These contracts ensure consistent, secure, and reliable integration patterns across the entire ecosystem.
+This specification defines the **Universal API Contracts** for cross-primal communication where **toadstool serves as the universal parser** and biomeOS provides universal adapter patterns for seamless integration with current and future Primals. The contracts ensure consistent, agnostic, and capability-based communication across all Primals in the ecosystem.
 
-## Authentication & Security Layer
+## Universal Parser Architecture
 
-### Universal Authentication Header
+### Core Communication Flow
 
-All cross-Primal API calls must include BearDog-issued authentication:
-
-```http
-Authorization: Bearer <beardog-jwt-token>
-X-Biome-ID: <biome-instance-uuid>
-X-Request-ID: <unique-request-id>
-X-Primal-Source: <calling-primal-id>
-X-Primal-Target: <target-primal-id>
-Content-Type: application/json
+```mermaid
+---
+title: Universal Cross-Primal Communication Architecture
+---
+graph TB
+    subgraph "biomeOS Universal Layer"
+        UA[Universal Adapter]
+        CR[Capability Registry]
+        PM[Primal Manager]
+        AR[API Router]
+    end
+    
+    subgraph "Universal Parser Layer (toadstool)"
+        TP[Toadstool Parser]
+        TV[Toadstool Validator]
+        TE[Toadstool Executor]
+        API[Toadstool API Gateway]
+    end
+    
+    subgraph "Universal Primal Layer"
+        subgraph "Standard Primals"
+            BD[beardog]
+            SB[songbird]
+            NG[nestgate]
+            TS[toadstool]
+            SQ[squirrel]
+        end
+        
+        subgraph "Future/Custom Primals"
+            FP[Future Primal]
+            CP[Custom Primal]
+            TPP[Third-Party Primal]
+        end
+    end
+    
+    UA --> TP
+    TP --> API
+    API --> AR
+    AR --> CR
+    CR --> PM
+    
+    PM --> BD
+    PM --> SB
+    PM --> NG
+    PM --> TS
+    PM --> SQ
+    
+    PM --> FP
+    PM --> CP
+    PM --> TPP
+    
+    style TP fill:#e8f5e8
+    style UA fill:#e1f5fe
+    style API fill:#f3e5f5
+    style AR fill:#fce4ec
 ```
 
-### Standard Error Response
+## Universal API Interface
 
-```json
-{
-  "error": {
-    "code": "ERROR_CODE",
-    "message": "Human readable error message",
-    "details": {
-      "field": "specific error details"
-    },
-    "request_id": "req-uuid",
-    "timestamp": "2025-01-15T10:30:00Z",
-    "retry_after": "30s"
-  }
+### Core Universal Request/Response Format
+
+```rust
+// Universal request format for all Primals
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UniversalRequest {
+    /// Request identifier
+    pub id: String,
+    
+    /// Source primal making the request
+    pub source_primal: String,
+    
+    /// Target capability required
+    pub capability: String,
+    
+    /// Optional target primal preference
+    pub target_primal: Option<String>,
+    
+    /// Request payload
+    pub payload: serde_json::Value,
+    
+    /// Request metadata
+    pub metadata: RequestMetadata,
+    
+    /// Timestamp
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+    
+    /// Security context
+    pub security_context: SecurityContext,
+}
+
+// Universal response format for all Primals
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UniversalResponse {
+    /// Response identifier (matches request id)
+    pub id: String,
+    
+    /// Source primal providing the response
+    pub source_primal: String,
+    
+    /// Request capability that was handled
+    pub capability: String,
+    
+    /// Response status
+    pub status: ResponseStatus,
+    
+    /// Response payload
+    pub payload: serde_json::Value,
+    
+    /// Response metadata
+    pub metadata: ResponseMetadata,
+    
+    /// Timestamp
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+    
+    /// Error information (if any)
+    pub error: Option<UniversalError>,
+}
+
+// Universal error format
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UniversalError {
+    pub code: String,
+    pub message: String,
+    pub details: Option<serde_json::Value>,
+    pub retryable: bool,
+}
+
+// Security context for requests
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SecurityContext {
+    pub auth_token: Option<String>,
+    pub user_id: Option<String>,
+    pub permissions: Vec<String>,
+    pub security_level: SecurityLevel,
+}
+
+// Request metadata
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RequestMetadata {
+    pub trace_id: String,
+    pub span_id: String,
+    pub priority: Priority,
+    pub timeout: Option<Duration>,
+    pub retry_count: u32,
+}
+
+// Response metadata
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResponseMetadata {
+    pub trace_id: String,
+    pub span_id: String,
+    pub processing_time: Duration,
+    pub resource_usage: ResourceUsage,
+}
+
+// Response status
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ResponseStatus {
+    Success,
+    Partial,
+    Failed,
+    Timeout,
+    Retry,
+}
+
+// Priority levels
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum Priority {
+    Low,
+    Normal,
+    High,
+    Critical,
+}
+
+// Security levels
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum SecurityLevel {
+    Public,
+    Internal,
+    Restricted,
+    Confidential,
 }
 ```
 
-## 🐕 BearDog Security Provider APIs
+## Universal Primal Interface
 
-### Authentication Service
+### Universal Primal Trait
 
-#### Token Generation
-```http
-POST /auth/token
-Content-Type: application/json
+```rust
+// Universal trait that all Primals must implement
+#[async_trait]
+pub trait UniversalPrimal: Send + Sync {
+    /// Unique identifier for this Primal
+    fn primal_id(&self) -> &str;
+    
+    /// Type of this Primal
+    fn primal_type(&self) -> PrimalType;
+    
+    /// Capabilities this Primal provides
+    fn capabilities(&self) -> Vec<String>;
+    
+    /// Version of this Primal
+    fn version(&self) -> &str;
+    
+    /// Initialize the Primal with configuration
+    async fn initialize(&mut self, config: serde_json::Value) -> Result<()>;
+    
+    /// Health check for this Primal
+    async fn health_check(&self) -> HealthStatus;
+    
+    /// Shutdown the Primal gracefully
+    async fn shutdown(&mut self) -> Result<()>;
+    
+    /// Handle a universal request
+    async fn handle_request(&self, request: UniversalRequest) -> Result<UniversalResponse>;
+    
+    /// Check if this Primal can handle a specific capability
+    async fn can_handle_capability(&self, capability: &str) -> bool;
+    
+    /// Get metadata for a specific capability
+    async fn get_capability_metadata(&self, capability: &str) -> Option<CapabilityMetadata>;
+    
+    /// Get dynamic configuration for this Primal
+    fn get_dynamic_config(&self) -> Option<serde_json::Value>;
+    
+    /// Register with toadstool parser
+    async fn register_with_parser(&self, parser_endpoint: &str) -> Result<()>;
+    
+    /// Notify parser of status changes
+    async fn notify_parser_status(&self, status: PrimalStatus) -> Result<()>;
+}
 
-{
-  "primal_id": "primal-toadstool-001",
-  "requested_scope": ["volume_access", "service_registration"],
-  "duration": "24h"
+// Primal types
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum PrimalType {
+    Security,
+    Storage,
+    ServiceMesh,
+    Runtime,
+    AI,
+    Custom(String),
+}
+
+// Health status
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum HealthStatus {
+    Healthy,
+    Degraded,
+    Unhealthy,
+    Unknown,
+}
+
+// Primal status
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum PrimalStatus {
+    Starting,
+    Running,
+    Stopping,
+    Stopped,
+    Error(String),
+}
+
+// Capability metadata
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CapabilityMetadata {
+    pub name: String,
+    pub version: String,
+    pub description: String,
+    pub parameters: Vec<CapabilityParameter>,
+    pub security_requirements: Vec<String>,
+    pub resource_requirements: ResourceRequirements,
+}
+
+// Capability parameter
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CapabilityParameter {
+    pub name: String,
+    pub param_type: String,
+    pub required: bool,
+    pub default_value: Option<String>,
+    pub description: String,
+}
+
+// Resource requirements
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResourceRequirements {
+    pub cpu: Option<String>,
+    pub memory: Option<String>,
+    pub storage: Option<String>,
+    pub network: Option<String>,
 }
 ```
 
-Response:
-```json
-{
-  "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...",
-  "token_type": "Bearer",
-  "expires_in": 86400,
-  "scope": ["volume_access", "service_registration"],
-  "refresh_token": "refresh_token_here"
+## Toadstool Parser Integration
+
+### Universal Parser Interface
+
+```rust
+// Universal parser interface for toadstool
+#[async_trait]
+pub trait UniversalParser: Send + Sync {
+    /// Parse a biome manifest
+    async fn parse_manifest(&self, manifest_path: &str) -> Result<ParsedManifest>;
+    
+    /// Validate a parsed manifest
+    async fn validate_manifest(&self, manifest: &ParsedManifest) -> Result<ValidationResult>;
+    
+    /// Execute a manifest with resolved Primals
+    async fn execute_manifest(
+        &self, 
+        manifest: ParsedManifest, 
+        primals: Vec<ResolvedPrimal>
+    ) -> Result<ExecutionResult>;
+    
+    /// Get parser status
+    async fn get_status(&self) -> ParserStatus;
+    
+    /// Register a Primal with the parser
+    async fn register_primal(&self, primal: Arc<dyn UniversalPrimal>) -> Result<()>;
+    
+    /// Unregister a Primal from the parser
+    async fn unregister_primal(&self, primal_id: &str) -> Result<()>;
+    
+    /// Route a request to the appropriate Primal
+    async fn route_request(&self, request: UniversalRequest) -> Result<UniversalResponse>;
+    
+    /// Get registered Primals
+    async fn get_registered_primals(&self) -> Vec<PrimalInfo>;
+    
+    /// Get capability registry
+    async fn get_capability_registry(&self) -> CapabilityRegistry;
+}
+
+// Parsed manifest structure
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ParsedManifest {
+    pub api_version: String,
+    pub kind: String,
+    pub metadata: ManifestMetadata,
+    pub primals: HashMap<String, PrimalSpec>,
+    pub services: Vec<ServiceSpec>,
+    pub volumes: HashMap<String, VolumeSpec>,
+    pub networks: HashMap<String, NetworkSpec>,
+    pub sources: SourceSpec,
+    pub mycorrhiza: Option<MycorrhizaSpec>,
+}
+
+// Validation result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValidationResult {
+    pub valid: bool,
+    pub errors: Vec<ValidationError>,
+    pub warnings: Vec<ValidationWarning>,
+}
+
+// Execution result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExecutionResult {
+    pub success: bool,
+    pub deployed_primals: Vec<DeployedPrimal>,
+    pub failed_primals: Vec<FailedPrimal>,
+    pub execution_time: Duration,
+    pub resource_usage: ResourceUsage,
+}
+
+// Parser status
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ParserStatus {
+    pub status: String,
+    pub version: String,
+    pub registered_primals: usize,
+    pub active_deployments: usize,
+    pub uptime: Duration,
+}
+
+// Primal info
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PrimalInfo {
+    pub id: String,
+    pub primal_type: PrimalType,
+    pub capabilities: Vec<String>,
+    pub version: String,
+    pub status: PrimalStatus,
+    pub health: HealthStatus,
 }
 ```
 
-#### Certificate Management
-```http
-POST /pki/certificates
-Content-Type: application/json
+## Standard Primal API Contracts
 
-{
-  "primal_id": "primal-nestgate-001",
-  "certificate_type": "service_mtls",
-  "common_name": "nestgate.biome.local",
-  "san": ["nestgate", "nestgate.biome.local"],
-  "duration": "30d"
-}
-```
+### Beardog Security API
 
-Response:
-```json
-{
-  "certificate": "-----BEGIN CERTIFICATE-----\n...",
-  "private_key": "-----BEGIN PRIVATE KEY-----\n...",
-  "ca_certificate": "-----BEGIN CERTIFICATE-----\n...",
-  "expires_at": "2025-02-14T10:30:00Z",
-  "serial_number": "1234567890"
-}
-```
-
-### Secrets Management
-```http
-GET /secrets/{secret_name}
-Authorization: Bearer <token>
-X-Primal-ID: primal-nestgate-001
-
-Response:
-{
-  "secret_name": "storage_encryption_key",
-  "secret_value": "encrypted_value_here",
-  "version": 3,
-  "created_at": "2025-01-15T10:30:00Z",
-  "expires_at": "2025-02-15T10:30:00Z"
-}
-```
-
-## 🎼 Songbird Service Discovery APIs
-
-### Service Registration
-```http
-POST /services
-Authorization: Bearer <beardog-token>
-Content-Type: application/json
-
-{
-  "service_id": "primal-toadstool-001",
-  "primal_type": "toadstool",
-  "endpoints": {
-    "primary": "https://toadstool:8080",
-    "health": "https://toadstool:8080/health"
-  },
-  "capabilities": ["container_runtime", "gpu_scheduling"],
-  "metadata": {
-    "zone": "us-west-2a",
-    "version": "1.0.0"
-  }
-}
-```
-
-### Service Discovery
-```http
-GET /discovery
-Authorization: Bearer <beardog-token>
-Query Parameters:
-  - primal_type: toadstool
-  - capability: gpu_scheduling
-  - health_status: healthy
-  - zone: us-west-2a
-
-Response:
-{
-  "services": [
-    {
-      "service_id": "primal-toadstool-001",
-      "endpoints": {
-        "primary": "https://toadstool:8080"
-      },
-      "capabilities": ["container_runtime", "gpu_scheduling"],
-      "health_status": "healthy",
-      "load_metrics": {
-        "cpu_usage": "45%",
-        "memory_usage": "60%"
-      }
-    }
-  ]
-}
-```
-
-### Health Monitoring
-```http
-PUT /services/{service_id}/health
-Authorization: Bearer <beardog-token>
-Content-Type: application/json
-
-{
-  "status": "healthy",
-  "metrics": {
-    "cpu_usage": "45%",
-    "memory_usage": "60%",
-    "request_rate": "150/min"
-  },
-  "checks": {
-    "database": "healthy",
-    "storage": "healthy"
-  }
-}
-```
-
-## 🏰 NestGate Storage APIs
-
-### Volume Provisioning API (for Toadstool)
-
-#### Create Volume
-```http
-POST /volumes
-Authorization: Bearer <beardog-token>
-X-Requesting-Primal: primal-toadstool-001
-Content-Type: application/json
-
-{
-  "volume_name": "jupyter-workspace",
-  "size": "100Gi",
-  "tier": "hot",
-  "filesystem": "zfs",
-  "mount_options": {
-    "compression": "lz4",
-    "snapshots": true,
-    "backup": true
-  },
-  "access_mode": "ReadWriteOnce",
-  "service_binding": {
-    "service_id": "jupyter-lab-001",
-    "mount_path": "/workspace"
-  }
-}
-```
-
-Response:
-```json
-{
-  "volume_id": "vol-uuid-1234",
-  "volume_name": "jupyter-workspace", 
-  "status": "provisioning",
-  "mount_info": {
-    "nfs_export": "nestgate:/volumes/vol-uuid-1234",
-    "mount_options": "vers=4.1,rsize=1048576,wsize=1048576",
-    "access_credentials": {
-      "username": "service_account",
-      "password": "encrypted_password"
-    }
-  },
-  "created_at": "2025-01-15T10:30:00Z",
-  "estimated_ready": "2025-01-15T10:32:00Z"
-}
-```
-
-#### Volume Status
-```http
-GET /volumes/{volume_id}
-Authorization: Bearer <beardog-token>
-
-Response:
-{
-  "volume_id": "vol-uuid-1234",
-  "status": "ready",
-  "usage": {
-    "used": "25Gi",
-    "available": "75Gi",
-    "usage_percent": 25
-  },
-  "performance_metrics": {
-    "iops": 1500,
-    "throughput": "150MB/s",
-    "latency": "2ms"
-  },
-  "snapshots": [
-    {
-      "snapshot_id": "snap-uuid-5678",
-      "created_at": "2025-01-15T02:00:00Z",
-      "size": "20Gi"
-    }
-  ]
-}
-```
-
-### MCP Volume API (for Squirrel)
-
-#### MCP Volume Request
-```http
-POST /mcp/volumes
-Authorization: Bearer <beardog-token>
-X-MCP-Agent-ID: research-assistant-001
-Content-Type: application/json
-
-{
-  "agent_id": "research-assistant-001",
-  "volume_request": {
-    "name": "agent-workspace",
-    "size": "10Gi",
-    "tier": "hot",
-    "temporary": true,
-    "ttl": "24h"
-  },
-  "access_pattern": "read_write",
-  "data_classification": "research_data"
-}
-```
-
-Response:
-```json
-{
-  "volume_id": "mcp-vol-uuid-9999",
-  "mount_info": {
-    "protocol": "mcp_native",
-    "endpoint": "nestgate://mcp/vol-uuid-9999",
-    "access_token": "mcp_access_token"
-  },
-  "expires_at": "2025-01-16T10:30:00Z"
-}
-```
-
-## 🍄 Toadstool Runtime APIs
-
-### Service Execution API (from Songbird)
-
-#### Deploy Service
-```http
-POST /services
-Authorization: Bearer <beardog-token>
-X-Orchestrator: songbird
-Content-Type: application/json
-
-{
-  "service_definition": {
-    "service_id": "jupyter-lab-001",
-    "runtime": "container",
-    "image": "jupyter/tensorflow-notebook:latest",
-    "resources": {
-      "cpu": "4",
-      "memory": "16Gi",
-      "gpu": 1
-    },
-    "volumes": [
-      {
-        "volume_id": "vol-uuid-1234",
-        "mount_path": "/workspace",
-        "read_only": false
-      }
-    ],
-    "environment": {
-      "JUPYTER_TOKEN": "${secrets.jupyter_token}"
-    },
-    "networking": {
-      "ports": [{"container": 8888, "host": 8888}],
-      "service_mesh": true
-    }
-  },
-  "deployment_options": {
-    "strategy": "rolling_update",
-    "health_check": {
-      "path": "/health",
-      "interval": "30s"
-    }
-  }
-}
-```
-
-Response:
-```json
-{
-  "deployment_id": "deploy-uuid-5678",
-  "service_id": "jupyter-lab-001",
-  "status": "deploying",
-  "endpoints": {
-    "primary": "https://jupyter-lab-001.biome.local:8888",
-    "health": "https://jupyter-lab-001.biome.local:8888/health"
-  },
-  "estimated_ready": "2025-01-15T10:32:00Z"
-}
-```
-
-### Agent Execution API (from Squirrel)
-
-#### Execute Agent
-```http
-POST /agents/execute
-Authorization: Bearer <beardog-token>
-X-MCP-Platform: squirrel
-Content-Type: application/json
-
-{
-  "agent_definition": {
-    "agent_id": "research-assistant-001",
-    "provider": "anthropic",
-    "model": "claude-3-sonnet",
-    "runtime_config": {
-      "memory_limit": "4Gi",
-      "cpu_limit": "2",
-      "timeout": "300s",
-      "sandbox": "strict"
-    },
-    "capabilities": [
-      "code_analysis",
-      "data_processing"
-    ],
-    "volumes": [
-      {
-        "volume_id": "mcp-vol-uuid-9999",
-        "mount_path": "/workspace"
-      }
-    ]
-  },
-  "execution_context": {
-    "user_id": "user-123",
-    "session_id": "session-456",
-    "security_context": "research_grade"
-  }
-}
-```
-
-Response:
-```json
-{
-  "execution_id": "exec-uuid-7890",
-  "agent_id": "research-assistant-001",
-  "status": "starting",
-  "runtime_info": {
-    "container_id": "container-abc123",
-    "process_id": 12345,
-    "sandbox_id": "sandbox-def456"
-  },
-  "communication": {
-    "mcp_endpoint": "ws://toadstool:8080/mcp/exec-uuid-7890",
-    "stdio_pipes": {
-      "stdin": "/tmp/pipes/exec-uuid-7890.stdin",
-      "stdout": "/tmp/pipes/exec-uuid-7890.stdout"
-    }
-  }
-}
-```
-
-### Resource Management
-```http
-GET /resources
-Authorization: Bearer <beardog-token>
-
-Response:
-{
-  "compute": {
-    "cpu": {
-      "total_cores": 32,
-      "available_cores": 20,
-      "usage_percent": 37.5
-    },
-    "memory": {
-      "total": "256Gi",
-      "available": "180Gi", 
-      "usage_percent": 29.7
-    },
-    "gpu": {
-      "total_devices": 8,
-      "available_devices": 6,
-      "types": {
-        "nvidia-a100": 4,
-        "nvidia-h100": 4
-      }
-    }
-  },
-  "active_services": 12,
-  "queued_requests": 3
-}
-```
-
-## 🐿️ Squirrel MCP Platform APIs
-
-### Agent Management API (from Toadstool)
-
-#### Agent Status
-```http
-GET /agents/{agent_id}/status
-Authorization: Bearer <beardog-token>
-X-Execution-ID: exec-uuid-7890
-
-Response:
-{
-  "agent_id": "research-assistant-001",
-  "execution_id": "exec-uuid-7890",
-  "status": "running",
-  "runtime_metrics": {
-    "cpu_usage": "25%",
-    "memory_usage": "2.1Gi",
-    "uptime": "45m30s"
-  },
-  "mcp_session": {
-    "session_id": "mcp-session-123",
-    "transport": "websocket",
-    "messages_processed": 156,
-    "last_activity": "2025-01-15T10:29:30Z"
-  },
-  "capabilities_status": {
-    "code_analysis": "available",
-    "data_processing": "available"
-  }
-}
-```
-
-### AI Provider Integration
-
-#### Provider Status
-```http
-GET /providers
-Authorization: Bearer <beardog-token>
-
-Response:
-{
-  "providers": [
-    {
-      "name": "anthropic",
-      "status": "available",
-      "models": [
-        {
-          "name": "claude-3-sonnet",
-          "status": "available",
-          "rate_limits": {
-            "requests_per_minute": 1000,
-            "tokens_per_minute": 100000
-          }
+```rust
+// Beardog universal security API
+impl UniversalPrimal for BeardogAdapter {
+    async fn handle_request(&self, request: UniversalRequest) -> Result<UniversalResponse> {
+        match request.capability.as_str() {
+            "encryption" => self.handle_encryption(request).await,
+            "authentication" => self.handle_authentication(request).await,
+            "authorization" => self.handle_authorization(request).await,
+            "compliance" => self.handle_compliance(request).await,
+            "hsm" => self.handle_hsm(request).await,
+            _ => Err(UniversalError::unsupported_capability(&request.capability))
         }
-      ],
-      "health_metrics": {
-        "latency": "250ms",
-        "success_rate": "99.5%"
-      }
-    }
-  ]
-}
-```
-
-### Plugin Management
-```http
-POST /plugins/install
-Authorization: Bearer <beardog-token>
-Content-Type: application/json
-
-{
-  "plugin_name": "data_analyzer",
-  "plugin_source": "https://plugins.biome.local/data_analyzer:1.0.0",
-  "capabilities": ["pandas_toolkit", "numpy_ops"],
-  "sandbox_requirements": {
-    "network_access": false,
-    "file_access": "/workspace",
-    "memory_limit": "1Gi"
-  },
-  "target_agents": ["research-assistant-001"]
-}
-```
-
-## Error Handling Patterns
-
-### Retry Logic
-```json
-{
-  "retry_policy": {
-    "max_attempts": 3,
-    "backoff_strategy": "exponential",
-    "base_delay": "1s",
-    "max_delay": "30s",
-    "retryable_errors": [
-      "NETWORK_ERROR",
-      "TEMPORARY_UNAVAILABLE", 
-      "RATE_LIMITED"
-    ]
-  }
-}
-```
-
-### Circuit Breaker
-```json
-{
-  "circuit_breaker": {
-    "failure_threshold": 5,
-    "recovery_timeout": "60s",
-    "half_open_max_calls": 3,
-    "state": "closed|open|half_open"
-  }
-}
-```
-
-## Async Operation Patterns
-
-### Long-Running Operations
-```http
-POST /volumes
-Authorization: Bearer <beardog-token>
-Content-Type: application/json
-
-{
-  "volume_name": "large-dataset",
-  "size": "10Ti",
-  "tier": "cold"
-}
-
-Response:
-HTTP/1.1 202 Accepted
-Location: /operations/op-uuid-1234
-{
-  "operation_id": "op-uuid-1234",
-  "status": "in_progress",
-  "estimated_completion": "2025-01-15T11:00:00Z"
-}
-```
-
-### Operation Status
-```http
-GET /operations/{operation_id}
-Authorization: Bearer <beardog-token>
-
-Response:
-{
-  "operation_id": "op-uuid-1234",
-  "status": "completed",
-  "progress": 100,
-  "result": {
-    "volume_id": "vol-uuid-5678",
-    "mount_info": {...}
-  },
-  "started_at": "2025-01-15T10:30:00Z",
-  "completed_at": "2025-01-15T10:45:00Z"
-}
-```
-
-## Event Streaming
-
-### WebSocket Events
-```javascript
-// Connect to event stream
-const ws = new WebSocket('wss://songbird:8080/events');
-
-// Event message format
-{
-  "event_type": "service_health_changed",
-  "timestamp": "2025-01-15T10:30:00Z",
-  "source": "primal-toadstool-001",
-  "data": {
-    "service_id": "jupyter-lab-001",
-    "old_status": "healthy",
-    "new_status": "degraded",
-    "reason": "high_cpu_usage"
-  }
-}
-```
-
-## Rate Limiting
-
-### Rate Limit Headers
-```http
-HTTP/1.1 200 OK
-X-RateLimit-Limit: 1000
-X-RateLimit-Remaining: 999
-X-RateLimit-Reset: 1642248000
-X-RateLimit-Window: 3600
-```
-
-### Rate Limit Exceeded
-```http
-HTTP/1.1 429 Too Many Requests
-Retry-After: 60
-{
-  "error": {
-    "code": "RATE_LIMIT_EXCEEDED",
-    "message": "API rate limit exceeded",
-    "retry_after": "60s"
-  }
-}
-```
-
-## Monitoring & Observability
-
-### Request Tracing
-All API calls must include distributed tracing headers:
-```http
-X-Trace-ID: 550e8400-e29b-41d4-a716-446655440000
-X-Span-ID: 6ba7b810-9dad-11d1-80b4-00c04fd430c8
-X-Parent-Span-ID: 6ba7b811-9dad-11d1-80b4-00c04fd430c8
-```
-
-### Metrics Collection
-Standardized metrics for all API endpoints:
-```
-# Request duration
-api_request_duration_seconds{method="POST",endpoint="/volumes",status="200"}
-
-# Request count
-api_requests_total{method="POST",endpoint="/volumes",status="200"}
-
-# Error rate
-api_errors_total{method="POST",endpoint="/volumes",error_type="validation_error"}
-```
-
-## Testing & Validation
-
-### Contract Testing
-```python
-# Example contract test
-def test_volume_creation_contract():
-    # Given
-    volume_request = {
-        "volume_name": "test-volume",
-        "size": "10Gi",
-        "tier": "hot"
     }
     
-    # When
-    response = nestgate_client.create_volume(volume_request)
+    async fn handle_encryption(&self, request: UniversalRequest) -> Result<UniversalResponse> {
+        #[derive(Deserialize)]
+        struct EncryptionRequest {
+            data: String,
+            algorithm: Option<String>,
+            key_id: Option<String>,
+        }
+        
+        #[derive(Serialize)]
+        struct EncryptionResponse {
+            encrypted_data: String,
+            key_id: String,
+            algorithm: String,
+        }
+        
+        let req: EncryptionRequest = serde_json::from_value(request.payload)?;
+        let result = self.beardog_client.encrypt(&req.data, req.algorithm, req.key_id).await?;
+        
+        Ok(UniversalResponse {
+            id: request.id,
+            source_primal: self.primal_id().to_string(),
+            capability: "encryption".to_string(),
+            status: ResponseStatus::Success,
+            payload: serde_json::to_value(EncryptionResponse {
+                encrypted_data: result.encrypted_data,
+                key_id: result.key_id,
+                algorithm: result.algorithm,
+            })?,
+            metadata: ResponseMetadata {
+                trace_id: request.metadata.trace_id,
+                span_id: request.metadata.span_id,
+                processing_time: Duration::from_millis(10),
+                resource_usage: ResourceUsage::minimal(),
+            },
+            timestamp: chrono::Utc::now(),
+            error: None,
+        })
+    }
     
-    # Then
-    assert response.status_code == 202
-    assert "volume_id" in response.json()
-    assert "mount_info" in response.json()
-    
-    # Verify async completion
-    operation_id = response.json()["operation_id"]
-    wait_for_completion(operation_id, timeout=300)
+    async fn handle_authentication(&self, request: UniversalRequest) -> Result<UniversalResponse> {
+        #[derive(Deserialize)]
+        struct AuthRequest {
+            credentials: String,
+            auth_type: String,
+        }
+        
+        #[derive(Serialize)]
+        struct AuthResponse {
+            token: String,
+            expires_at: chrono::DateTime<chrono::Utc>,
+            user_id: String,
+            permissions: Vec<String>,
+        }
+        
+        let req: AuthRequest = serde_json::from_value(request.payload)?;
+        let result = self.beardog_client.authenticate(&req.credentials, &req.auth_type).await?;
+        
+        Ok(UniversalResponse {
+            id: request.id,
+            source_primal: self.primal_id().to_string(),
+            capability: "authentication".to_string(),
+            status: ResponseStatus::Success,
+            payload: serde_json::to_value(AuthResponse {
+                token: result.token,
+                expires_at: result.expires_at,
+                user_id: result.user_id,
+                permissions: result.permissions,
+            })?,
+            metadata: ResponseMetadata {
+                trace_id: request.metadata.trace_id,
+                span_id: request.metadata.span_id,
+                processing_time: Duration::from_millis(50),
+                resource_usage: ResourceUsage::low(),
+            },
+            timestamp: chrono::Utc::now(),
+            error: None,
+        })
+    }
+}
 ```
 
-### Integration Testing
-```bash
-# Test cross-Primal workflow
-curl -X POST https://toadstool:8080/services \
-  -H "Authorization: Bearer ${BEARDOG_TOKEN}" \
-  -d @service-definition.json
+### Songbird Service Mesh API
 
-# Verify service registration in Songbird
-curl -X GET "https://songbird:8080/discovery?service_id=jupyter-lab-001" \
-  -H "Authorization: Bearer ${BEARDOG_TOKEN}"
-
-# Check volume mounting in NestGate
-curl -X GET https://nestgate:8080/volumes/vol-uuid-1234 \
-  -H "Authorization: Bearer ${BEARDOG_TOKEN}"
+```rust
+// Songbird universal service mesh API
+impl UniversalPrimal for SongbirdAdapter {
+    async fn handle_request(&self, request: UniversalRequest) -> Result<UniversalResponse> {
+        match request.capability.as_str() {
+            "service_discovery" => self.handle_service_discovery(request).await,
+            "load_balancing" => self.handle_load_balancing(request).await,
+            "api_gateway" => self.handle_api_gateway(request).await,
+            "protocol_translation" => self.handle_protocol_translation(request).await,
+            "federation" => self.handle_federation(request).await,
+            _ => Err(UniversalError::unsupported_capability(&request.capability))
+        }
+    }
+    
+    async fn handle_service_discovery(&self, request: UniversalRequest) -> Result<UniversalResponse> {
+        #[derive(Deserialize)]
+        struct DiscoveryRequest {
+            service_name: Option<String>,
+            service_type: Option<String>,
+            tags: Option<Vec<String>>,
+        }
+        
+        #[derive(Serialize)]
+        struct DiscoveryResponse {
+            services: Vec<ServiceInfo>,
+        }
+        
+        #[derive(Serialize)]
+        struct ServiceInfo {
+            id: String,
+            name: String,
+            address: String,
+            port: u16,
+            tags: Vec<String>,
+            health: String,
+        }
+        
+        let req: DiscoveryRequest = serde_json::from_value(request.payload)?;
+        let services = self.songbird_client.discover_services(
+            req.service_name,
+            req.service_type,
+            req.tags,
+        ).await?;
+        
+        Ok(UniversalResponse {
+            id: request.id,
+            source_primal: self.primal_id().to_string(),
+            capability: "service_discovery".to_string(),
+            status: ResponseStatus::Success,
+            payload: serde_json::to_value(DiscoveryResponse {
+                services: services.into_iter().map(|s| ServiceInfo {
+                    id: s.id,
+                    name: s.name,
+                    address: s.address,
+                    port: s.port,
+                    tags: s.tags,
+                    health: s.health.to_string(),
+                }).collect(),
+            })?,
+            metadata: ResponseMetadata {
+                trace_id: request.metadata.trace_id,
+                span_id: request.metadata.span_id,
+                processing_time: Duration::from_millis(20),
+                resource_usage: ResourceUsage::low(),
+            },
+            timestamp: chrono::Utc::now(),
+            error: None,
+        })
+    }
+    
+    async fn handle_load_balancing(&self, request: UniversalRequest) -> Result<UniversalResponse> {
+        #[derive(Deserialize)]
+        struct LoadBalanceRequest {
+            service_name: String,
+            request_data: serde_json::Value,
+            algorithm: Option<String>,
+        }
+        
+        #[derive(Serialize)]
+        struct LoadBalanceResponse {
+            target_endpoint: String,
+            response_data: serde_json::Value,
+            load_info: LoadInfo,
+        }
+        
+        #[derive(Serialize)]
+        struct LoadInfo {
+            algorithm_used: String,
+            endpoint_selected: String,
+            load_score: f64,
+        }
+        
+        let req: LoadBalanceRequest = serde_json::from_value(request.payload)?;
+        let result = self.songbird_client.balance_request(
+            &req.service_name,
+            req.request_data,
+            req.algorithm,
+        ).await?;
+        
+        Ok(UniversalResponse {
+            id: request.id,
+            source_primal: self.primal_id().to_string(),
+            capability: "load_balancing".to_string(),
+            status: ResponseStatus::Success,
+            payload: serde_json::to_value(LoadBalanceResponse {
+                target_endpoint: result.target_endpoint,
+                response_data: result.response_data,
+                load_info: LoadInfo {
+                    algorithm_used: result.algorithm_used,
+                    endpoint_selected: result.endpoint_selected,
+                    load_score: result.load_score,
+                },
+            })?,
+            metadata: ResponseMetadata {
+                trace_id: request.metadata.trace_id,
+                span_id: request.metadata.span_id,
+                processing_time: Duration::from_millis(30),
+                resource_usage: ResourceUsage::medium(),
+            },
+            timestamp: chrono::Utc::now(),
+            error: None,
+        })
+    }
+}
 ```
 
-This specification provides the foundation for reliable, secure, and consistent communication between all Primals in the biomeOS ecosystem. 
+### Nestgate Storage API
+
+```rust
+// Nestgate universal storage API
+impl UniversalPrimal for NestgateAdapter {
+    async fn handle_request(&self, request: UniversalRequest) -> Result<UniversalResponse> {
+        match request.capability.as_str() {
+            "persistent_storage" => self.handle_persistent_storage(request).await,
+            "tiered_storage" => self.handle_tiered_storage(request).await,
+            "backup" => self.handle_backup(request).await,
+            "encryption" => self.handle_storage_encryption(request).await,
+            _ => Err(UniversalError::unsupported_capability(&request.capability))
+        }
+    }
+    
+    async fn handle_persistent_storage(&self, request: UniversalRequest) -> Result<UniversalResponse> {
+        #[derive(Deserialize)]
+        struct StorageRequest {
+            operation: String, // "create", "read", "update", "delete"
+            path: String,
+            data: Option<serde_json::Value>,
+            metadata: Option<HashMap<String, String>>,
+        }
+        
+        #[derive(Serialize)]
+        struct StorageResponse {
+            success: bool,
+            path: String,
+            data: Option<serde_json::Value>,
+            metadata: Option<HashMap<String, String>>,
+            storage_info: StorageInfo,
+        }
+        
+        #[derive(Serialize)]
+        struct StorageInfo {
+            size: u64,
+            created_at: chrono::DateTime<chrono::Utc>,
+            modified_at: chrono::DateTime<chrono::Utc>,
+            storage_tier: String,
+            checksum: String,
+        }
+        
+        let req: StorageRequest = serde_json::from_value(request.payload)?;
+        
+        let result = match req.operation.as_str() {
+            "create" => self.nestgate_client.create_object(&req.path, req.data, req.metadata).await?,
+            "read" => self.nestgate_client.read_object(&req.path).await?,
+            "update" => self.nestgate_client.update_object(&req.path, req.data, req.metadata).await?,
+            "delete" => self.nestgate_client.delete_object(&req.path).await?,
+            _ => return Err(UniversalError::invalid_operation(&req.operation)),
+        };
+        
+        Ok(UniversalResponse {
+            id: request.id,
+            source_primal: self.primal_id().to_string(),
+            capability: "persistent_storage".to_string(),
+            status: ResponseStatus::Success,
+            payload: serde_json::to_value(StorageResponse {
+                success: result.success,
+                path: result.path,
+                data: result.data,
+                metadata: result.metadata,
+                storage_info: StorageInfo {
+                    size: result.size,
+                    created_at: result.created_at,
+                    modified_at: result.modified_at,
+                    storage_tier: result.storage_tier,
+                    checksum: result.checksum,
+                },
+            })?,
+            metadata: ResponseMetadata {
+                trace_id: request.metadata.trace_id,
+                span_id: request.metadata.span_id,
+                processing_time: Duration::from_millis(100),
+                resource_usage: ResourceUsage::high(),
+            },
+            timestamp: chrono::Utc::now(),
+            error: None,
+        })
+    }
+}
+```
+
+### Toadstool Runtime API
+
+```rust
+// Toadstool universal runtime API (dual role: parser + runtime)
+impl UniversalPrimal for ToadstoolAdapter {
+    async fn handle_request(&self, request: UniversalRequest) -> Result<UniversalResponse> {
+        match request.capability.as_str() {
+            "container_orchestration" => self.handle_container_orchestration(request).await,
+            "wasm_runtime" => self.handle_wasm_runtime(request).await,
+            "process_isolation" => self.handle_process_isolation(request).await,
+            "resource_management" => self.handle_resource_management(request).await,
+            "manifest_parsing" => self.handle_manifest_parsing(request).await,
+            _ => Err(UniversalError::unsupported_capability(&request.capability))
+        }
+    }
+    
+    async fn handle_container_orchestration(&self, request: UniversalRequest) -> Result<UniversalResponse> {
+        #[derive(Deserialize)]
+        struct ContainerRequest {
+            operation: String, // "create", "start", "stop", "delete", "list"
+            container_spec: Option<ContainerSpec>,
+            container_id: Option<String>,
+        }
+        
+        #[derive(Deserialize)]
+        struct ContainerSpec {
+            image: String,
+            command: Option<Vec<String>>,
+            environment: Option<HashMap<String, String>>,
+            volumes: Option<Vec<VolumeMount>>,
+            networks: Option<Vec<String>>,
+            resources: Option<ResourceLimits>,
+        }
+        
+        #[derive(Serialize)]
+        struct ContainerResponse {
+            success: bool,
+            container_id: Option<String>,
+            containers: Option<Vec<ContainerInfo>>,
+            operation: String,
+        }
+        
+        #[derive(Serialize)]
+        struct ContainerInfo {
+            id: String,
+            name: String,
+            image: String,
+            status: String,
+            created_at: chrono::DateTime<chrono::Utc>,
+            resource_usage: ResourceUsage,
+        }
+        
+        let req: ContainerRequest = serde_json::from_value(request.payload)?;
+        
+        let result = match req.operation.as_str() {
+            "create" => {
+                let spec = req.container_spec.ok_or_else(|| UniversalError::missing_field("container_spec"))?;
+                self.toadstool_client.create_container(spec).await?
+            }
+            "start" => {
+                let id = req.container_id.ok_or_else(|| UniversalError::missing_field("container_id"))?;
+                self.toadstool_client.start_container(&id).await?
+            }
+            "stop" => {
+                let id = req.container_id.ok_or_else(|| UniversalError::missing_field("container_id"))?;
+                self.toadstool_client.stop_container(&id).await?
+            }
+            "delete" => {
+                let id = req.container_id.ok_or_else(|| UniversalError::missing_field("container_id"))?;
+                self.toadstool_client.delete_container(&id).await?
+            }
+            "list" => self.toadstool_client.list_containers().await?,
+            _ => return Err(UniversalError::invalid_operation(&req.operation)),
+        };
+        
+        Ok(UniversalResponse {
+            id: request.id,
+            source_primal: self.primal_id().to_string(),
+            capability: "container_orchestration".to_string(),
+            status: ResponseStatus::Success,
+            payload: serde_json::to_value(result)?,
+            metadata: ResponseMetadata {
+                trace_id: request.metadata.trace_id,
+                span_id: request.metadata.span_id,
+                processing_time: Duration::from_millis(200),
+                resource_usage: ResourceUsage::high(),
+            },
+            timestamp: chrono::Utc::now(),
+            error: None,
+        })
+    }
+    
+    async fn handle_manifest_parsing(&self, request: UniversalRequest) -> Result<UniversalResponse> {
+        #[derive(Deserialize)]
+        struct ParseRequest {
+            manifest_content: String,
+            manifest_path: Option<String>,
+            validation_level: Option<String>,
+        }
+        
+        #[derive(Serialize)]
+        struct ParseResponse {
+            success: bool,
+            parsed_manifest: Option<ParsedManifest>,
+            validation_result: ValidationResult,
+            parse_time: Duration,
+        }
+        
+        let req: ParseRequest = serde_json::from_value(request.payload)?;
+        let start_time = std::time::Instant::now();
+        
+        let result = if let Some(path) = req.manifest_path {
+            self.toadstool_client.parse_manifest_file(&path).await?
+        } else {
+            self.toadstool_client.parse_manifest_content(&req.manifest_content).await?
+        };
+        
+        let parse_time = start_time.elapsed();
+        
+        Ok(UniversalResponse {
+            id: request.id,
+            source_primal: self.primal_id().to_string(),
+            capability: "manifest_parsing".to_string(),
+            status: ResponseStatus::Success,
+            payload: serde_json::to_value(ParseResponse {
+                success: result.success,
+                parsed_manifest: result.parsed_manifest,
+                validation_result: result.validation_result,
+                parse_time: parse_time.into(),
+            })?,
+            metadata: ResponseMetadata {
+                trace_id: request.metadata.trace_id,
+                span_id: request.metadata.span_id,
+                processing_time: parse_time.into(),
+                resource_usage: ResourceUsage::medium(),
+            },
+            timestamp: chrono::Utc::now(),
+            error: None,
+        })
+    }
+}
+```
+
+## Future Primal Integration
+
+### Custom Primal Example
+
+```rust
+// Example: Custom AI inference primal
+impl UniversalPrimal for CustomAIPrimal {
+    async fn handle_request(&self, request: UniversalRequest) -> Result<UniversalResponse> {
+        match request.capability.as_str() {
+            "llm_inference" => self.handle_llm_inference(request).await,
+            "embedding_generation" => self.handle_embedding_generation(request).await,
+            "vision_processing" => self.handle_vision_processing(request).await,
+            _ => Err(UniversalError::unsupported_capability(&request.capability))
+        }
+    }
+    
+    async fn handle_llm_inference(&self, request: UniversalRequest) -> Result<UniversalResponse> {
+        #[derive(Deserialize)]
+        struct LLMRequest {
+            prompt: String,
+            model: Option<String>,
+            parameters: Option<HashMap<String, serde_json::Value>>,
+        }
+        
+        #[derive(Serialize)]
+        struct LLMResponse {
+            response: String,
+            model_used: String,
+            tokens_used: u32,
+            processing_time: Duration,
+        }
+        
+        let req: LLMRequest = serde_json::from_value(request.payload)?;
+        let result = self.ai_client.generate_text(
+            &req.prompt,
+            req.model,
+            req.parameters,
+        ).await?;
+        
+        Ok(UniversalResponse {
+            id: request.id,
+            source_primal: self.primal_id().to_string(),
+            capability: "llm_inference".to_string(),
+            status: ResponseStatus::Success,
+            payload: serde_json::to_value(LLMResponse {
+                response: result.response,
+                model_used: result.model_used,
+                tokens_used: result.tokens_used,
+                processing_time: result.processing_time,
+            })?,
+            metadata: ResponseMetadata {
+                trace_id: request.metadata.trace_id,
+                span_id: request.metadata.span_id,
+                processing_time: result.processing_time,
+                resource_usage: ResourceUsage::high(),
+            },
+            timestamp: chrono::Utc::now(),
+            error: None,
+        })
+    }
+}
+```
+
+## Universal API Router
+
+### Request Routing Logic
+
+```rust
+// Universal API router for cross-primal communication
+pub struct UniversalAPIRouter {
+    primal_registry: Arc<PrimalRegistry>,
+    capability_registry: Arc<CapabilityRegistry>,
+    toadstool_parser: Arc<dyn UniversalParser>,
+    metrics_collector: Arc<MetricsCollector>,
+    security_manager: Arc<SecurityManager>,
+}
+
+impl UniversalAPIRouter {
+    pub async fn route_request(&self, request: UniversalRequest) -> Result<UniversalResponse> {
+        let span = tracing::info_span!("route_request", 
+            request_id = %request.id,
+            capability = %request.capability
+        );
+        let _enter = span.enter();
+        
+        // 1. Validate request
+        self.validate_request(&request).await?;
+        
+        // 2. Check security
+        self.security_manager.authorize_request(&request).await?;
+        
+        // 3. Resolve target primal
+        let target_primal = self.resolve_target_primal(&request).await?;
+        
+        // 4. Route to primal
+        let response = target_primal.handle_request(request.clone()).await?;
+        
+        // 5. Collect metrics
+        self.metrics_collector.record_request(&request, &response).await?;
+        
+        // 6. Notify parser if needed
+        if request.capability == "manifest_parsing" {
+            self.toadstool_parser.notify_parser_activity(&request, &response).await?;
+        }
+        
+        Ok(response)
+    }
+    
+    async fn resolve_target_primal(&self, request: &UniversalRequest) -> Result<Arc<dyn UniversalPrimal>> {
+        // 1. Check for specific primal preference
+        if let Some(target_primal) = &request.target_primal {
+            if let Some(primal) = self.primal_registry.get_primal(target_primal).await? {
+                if primal.can_handle_capability(&request.capability).await {
+                    return Ok(primal);
+                }
+            }
+        }
+        
+        // 2. Use capability registry to find best match
+        let providers = self.capability_registry
+            .find_providers_for_capability(&request.capability)
+            .await?;
+        
+        if providers.is_empty() {
+            return Err(UniversalError::capability_not_found(&request.capability));
+        }
+        
+        // 3. Select best provider based on load, health, etc.
+        let best_provider = self.select_best_provider(providers, request).await?;
+        
+        Ok(best_provider)
+    }
+    
+    async fn select_best_provider(
+        &self,
+        providers: Vec<Arc<dyn UniversalPrimal>>,
+        request: &UniversalRequest,
+    ) -> Result<Arc<dyn UniversalPrimal>> {
+        let mut best_provider = None;
+        let mut best_score = f64::MIN;
+        
+        for provider in providers {
+            // Check health
+            let health = provider.health_check().await;
+            if !matches!(health, HealthStatus::Healthy) {
+                continue;
+            }
+            
+            // Calculate score based on various factors
+            let score = self.calculate_provider_score(&provider, request).await?;
+            
+            if score > best_score {
+                best_score = score;
+                best_provider = Some(provider);
+            }
+        }
+        
+        best_provider.ok_or_else(|| UniversalError::no_healthy_providers(&request.capability))
+    }
+    
+    async fn calculate_provider_score(
+        &self,
+        provider: &Arc<dyn UniversalPrimal>,
+        request: &UniversalRequest,
+    ) -> Result<f64> {
+        let mut score = 0.0;
+        
+        // Factor 1: Health status
+        match provider.health_check().await {
+            HealthStatus::Healthy => score += 100.0,
+            HealthStatus::Degraded => score += 50.0,
+            _ => score += 0.0,
+        }
+        
+        // Factor 2: Current load (from metrics)
+        let load = self.metrics_collector.get_provider_load(provider.primal_id()).await?;
+        score += (1.0 - load) * 50.0;
+        
+        // Factor 3: Capability match quality
+        if let Some(metadata) = provider.get_capability_metadata(&request.capability).await {
+            score += 25.0; // Bonus for detailed capability metadata
+        }
+        
+        // Factor 4: Security level match
+        if request.security_context.security_level == SecurityLevel::Confidential {
+            // Prefer security-focused primals for confidential requests
+            if provider.primal_type() == PrimalType::Security {
+                score += 20.0;
+            }
+        }
+        
+        // Factor 5: Request priority
+        match request.metadata.priority {
+            Priority::Critical => score += 10.0,
+            Priority::High => score += 5.0,
+            _ => {}
+        }
+        
+        Ok(score)
+    }
+    
+    async fn validate_request(&self, request: &UniversalRequest) -> Result<()> {
+        // Validate request structure
+        if request.id.is_empty() {
+            return Err(UniversalError::invalid_request("missing request id"));
+        }
+        
+        if request.capability.is_empty() {
+            return Err(UniversalError::invalid_request("missing capability"));
+        }
+        
+        if request.source_primal.is_empty() {
+            return Err(UniversalError::invalid_request("missing source primal"));
+        }
+        
+        // Validate capability exists
+        if !self.capability_registry.capability_exists(&request.capability).await? {
+            return Err(UniversalError::capability_not_found(&request.capability));
+        }
+        
+        // Validate timeout
+        if let Some(timeout) = request.metadata.timeout {
+            if timeout > Duration::from_secs(300) {
+                return Err(UniversalError::invalid_request("timeout too long"));
+            }
+        }
+        
+        Ok(())
+    }
+}
+```
+
+## Error Handling and Recovery
+
+### Universal Error Types
+
+```rust
+// Universal error types for cross-primal communication
+#[derive(thiserror::Error, Debug)]
+pub enum UniversalError {
+    #[error("Capability '{capability}' not found")]
+    CapabilityNotFound { capability: String },
+    
+    #[error("No healthy providers available for capability '{capability}'")]
+    NoHealthyProviders { capability: String },
+    
+    #[error("Unsupported capability '{capability}' for primal '{primal}'")]
+    UnsupportedCapability { capability: String, primal: String },
+    
+    #[error("Invalid request: {reason}")]
+    InvalidRequest { reason: String },
+    
+    #[error("Invalid operation: {operation}")]
+    InvalidOperation { operation: String },
+    
+    #[error("Missing required field: {field}")]
+    MissingField { field: String },
+    
+    #[error("Security error: {message}")]
+    SecurityError { message: String },
+    
+    #[error("Timeout waiting for response")]
+    Timeout,
+    
+    #[error("Primal '{primal}' is unavailable")]
+    PrimalUnavailable { primal: String },
+    
+    #[error("Parser error: {message}")]
+    ParserError { message: String },
+    
+    #[error("Internal error: {message}")]
+    InternalError { message: String },
+}
+
+impl UniversalError {
+    pub fn unsupported_capability(capability: &str) -> Self {
+        Self::UnsupportedCapability {
+            capability: capability.to_string(),
+            primal: "unknown".to_string(),
+        }
+    }
+    
+    pub fn capability_not_found(capability: &str) -> Self {
+        Self::CapabilityNotFound {
+            capability: capability.to_string(),
+        }
+    }
+    
+    pub fn no_healthy_providers(capability: &str) -> Self {
+        Self::NoHealthyProviders {
+            capability: capability.to_string(),
+        }
+    }
+    
+    pub fn invalid_request(reason: &str) -> Self {
+        Self::InvalidRequest {
+            reason: reason.to_string(),
+        }
+    }
+    
+    pub fn invalid_operation(operation: &str) -> Self {
+        Self::InvalidOperation {
+            operation: operation.to_string(),
+        }
+    }
+    
+    pub fn missing_field(field: &str) -> Self {
+        Self::MissingField {
+            field: field.to_string(),
+        }
+    }
+    
+    pub fn is_retryable(&self) -> bool {
+        matches!(self, 
+            Self::Timeout | 
+            Self::PrimalUnavailable { .. } | 
+            Self::NoHealthyProviders { .. }
+        )
+    }
+}
+```
+
+## Benefits of Universal API Contracts
+
+### Parser Integration Benefits
+- **Proven Foundation**: Leverages toadstool's mature parsing capabilities
+- **Unified Processing**: Single point of manifest processing and validation
+- **Consistent Behavior**: Standardized parsing across all deployments
+- **Performance Optimized**: Optimized parsing performance from mature implementation
+
+### Universal Primal Benefits
+- **Consistent Interface**: All Primals implement the same universal interface
+- **Capability-Based Routing**: Route requests by capability, not specific implementation
+- **Future-Proof**: Automatic support for new Primals through universal contracts
+- **Vendor Independence**: No lock-in to specific Primal implementations
+
+### Cross-Primal Communication Benefits
+- **Standardized Protocols**: Consistent request/response formats across all Primals
+- **Security Context**: Standardized security handling across all communications
+- **Tracing Support**: Built-in distributed tracing for all requests
+- **Error Handling**: Consistent error handling and recovery mechanisms
+
+### Operational Benefits
+- **Monitoring Integration**: Universal monitoring across all Primal communications
+- **Performance Metrics**: Consistent metrics collection and reporting
+- **Health Management**: Standardized health checking and status reporting
+- **Load Balancing**: Intelligent routing based on Primal health and load
+
+This universal API contract specification ensures that all Primals can communicate seamlessly while leveraging toadstool's proven parsing capabilities as the foundation for all biomeOS operations. 

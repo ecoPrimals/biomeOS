@@ -149,4 +149,4 @@ fn test_default_functions() {
     assert_eq!(default_kind(), "Biome");
     assert_eq!(default_true(), true);
     assert_eq!(default_priority(), 100);
-} 
+}

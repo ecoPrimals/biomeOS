@@ -1,36 +1,54 @@
-# biome.yaml Specification
+# biome.yaml Universal Specification
 
-**Version:** 1.0.0 | **Status:** Draft | **Date:** January 2025
+**Version:** 1.0.0 | **Status:** Implementation Ready | **Date:** January 2025
 
 ---
 
 ## Overview
 
-The `biome.yaml` file is the **genome of a biomeOS instance** - it defines the complete configuration, capabilities, and orchestration of all five Primals within a digital organism. This specification aligns with Toadstool's existing `BiomeManifest` structure while extending it for full biomeOS integration.
+The `biome.yaml` file is the **universal genome** of a biomeOS instance, defining the complete configuration and orchestration of all Primals using **toadstool as the universal parser**. This specification employs universal and agnostic patterns to ensure compatibility with current and future Primals while leveraging toadstool's proven parsing capabilities.
 
-## File Structure
+### Universal Parser Architecture
+
+```mermaid
+---
+title: biome.yaml Universal Parser Flow
+---
+graph LR
+    A[biome.yaml] --> B[biomeOS Universal Adapter]
+    B --> C[Toadstool Parser]
+    C --> D[Validation Pipeline]
+    D --> E[Capability Matcher]
+    E --> F[Primal Deployment]
+    
+    style C fill:#e8f5e8
+    style B fill:#e1f5fe
+    style A fill:#fff3e0
+```
+
+## Universal File Structure
 
 ```yaml
-# biome.yaml - The Digital Organism Genome
-apiVersion: biomeOS/v1
-kind: Biome
+# biome.yaml - Universal Digital Organism Genome
+apiVersion: biomeOS/v1      # Universal compatibility
+kind: Biome                 # Toadstool parser compatibility
 metadata:
-  name: my-biome
+  name: my-universal-biome
   version: "1.0.0"
-  description: "A digital organism for AI research"
+  description: "Universal biome supporting any Primal"
   specialization: research  # development, enterprise, edge, scientific, research
   created: "2025-01-15T10:30:00Z"
   owner: "research-team"
   tags:
+    - universal
     - ai-research
     - gpu-compute
-    - large-storage
 
-# MYCORRHIZA Energy Flow Management
+# MYCORRHIZA: biomeOS-specific energy flow management
 mycorrhiza:
   system_state: "closed"  # closed | private_open | commercial_open
   
-  # Personal sovereignty - always available in closed systems
+  # Personal sovereignty - always available
   personal_ai:
     enabled: true
     local_models:
@@ -41,31 +59,21 @@ mycorrhiza:
         key_ref: claude_personal_key
       - provider: openai
         key_ref: gpt4_personal_key
-      - provider: google
-        key_ref: gemini_personal_key
-  
-  # Trust-based external access (private_open state)
-  trusted_externals:
-    enabled: false  # Set to true in private_open state
-    grants: []      # Crypto keys granted on good faith
-    
-  # Commercial integrations (commercial_open state)
-  commercial_access:
-    enabled: false  # Set to true in commercial_open state
-    licensed_providers: []  # AWS, GCP, Azure require payment
-    
+        
   # Security enforcement
   enforcement:
     deep_packet_inspection: true
     api_signature_detection: true
     behavioral_analysis: true
-    threat_response: "block_and_preserve"  # block | warn | preserve
+    threat_response: "block_and_preserve"
 
-# Primal Orchestration Configuration
+# Universal Primal Orchestration (toadstool-parsed)
 primals:
-  # 🐕 BearDog - Security (Always First)
-  beardog:
-    enabled: true
+  # Security Primal (capability-based selection)
+  security:
+    capability_required: "encryption"
+    provider_preference: ["beardog", "custom_security"]
+    version: ">=0.2.0"
     priority: 1
     startup_timeout: 30s
     config:
@@ -73,387 +81,351 @@ primals:
       compliance: [gdpr, hipaa]
       hsm_integration: true
       
-  # 🎼 Songbird - Service Mesh (Second)  
-  songbird:
-    enabled: true
+  # Service Mesh Primal (capability-based selection)
+  service_mesh:
+    capability_required: "service_discovery"
+    provider_preference: ["songbird", "custom_mesh"]
+    version: ">=0.3.0"
     priority: 2
     startup_timeout: 45s
-    depends_on: [beardog]
+    depends_on: ["security"]
     config:
       discovery_backend: consul
       load_balancing: health_based
       federation_enabled: true
       
-  # 🏰 NestGate - Storage (Third)
-  nestgate:
-    enabled: true
+  # Storage Primal (capability-based selection)
+  storage:
+    capability_required: "persistent_storage"
+    provider_preference: ["nestgate", "custom_storage"]
+    version: ">=0.1.5"
     priority: 3
     startup_timeout: 60s
-    depends_on: [beardog, songbird]
+    depends_on: ["security", "service_mesh"]
     config:
-      zfs_pool: "nestpool"
+      storage_type: "zfs"
       tiered_storage: true
       protocols: [nfs, smb, s3]
       
-  # 🍄 Toadstool - Runtime (Fourth)
-  toadstool:
-    enabled: true
+  # Runtime Primal (toadstool as parser AND runtime)
+  runtime:
+    capability_required: "container_orchestration"
+    provider_preference: ["toadstool"]
+    version: ">=0.4.0"
     priority: 4
     startup_timeout: 30s
-    depends_on: [beardog, songbird, nestgate]
+    depends_on: ["security", "service_mesh", "storage"]
     config:
-      runtimes: [container, wasm, native, gpu]
-      resource_limits:
-        cpu: "0-15"
-        memory: "64Gi"
-        gpu: "0-3"
-        
-  # 🐿️ Squirrel - MCP Platform (Fifth)
-  squirrel:
-    enabled: true
+      runtime_types: ["wasm", "container"]
+      security_enforcement: true
+      
+  # AI Processing Primal (future/custom example)
+  ai_processing:
+    capability_required: "llm_inference"
+    provider_preference: ["squirrel", "custom_ai", "cloud_ai"]
+    version: ">=1.0.0"
     priority: 5
-    startup_timeout: 45s
-    depends_on: [beardog, songbird, toadstool]
+    startup_timeout: 120s
+    depends_on: ["security", "storage"]
     config:
-      ai_providers: [openai, anthropic, gemini]
-      plugin_sandboxing: strict
-      mcp_transports: [stdio, websocket, sse]
+      models: ["llama-3", "mistral-7b"]
+      gpu_support: true
+      quantization: true
 
-# Service Definitions
+# Universal Source Management (delegated to toadstool)
+sources:
+  primal_registry:
+    type: "oci"
+    url: "registry.ecoprimals.io"
+    auth: "bearer_token"
+    
+  custom_registry:
+    type: "oci"
+    url: "custom.registry.example.com"
+    auth: "basic_auth"
+    
+  future_registry:
+    type: "oci"
+    url: "future.primal.registry.io"
+    auth: "oauth2"
+
+# Universal Volume Management (delegated to toadstool)
+volumes:
+  research_data:
+    driver: "universal-storage"
+    provider_preference: ["nestgate", "custom_storage"]
+    options:
+      encryption: true
+      compression: "zstd"
+      quota: "1TB"
+      backup: true
+      
+  model_cache:
+    driver: "universal-storage"
+    provider_preference: ["nestgate", "fast_storage"]
+    options:
+      performance: "high"
+      quota: "500GB"
+      ssd_preferred: true
+
+# Universal Network Management (delegated to toadstool)
+networks:
+  research_net:
+    driver: "universal-network"
+    provider_preference: ["songbird", "custom_network"]
+    subnet: "10.42.0.0/16"
+    security_level: "high"
+    
+  ai_mesh:
+    driver: "universal-network"
+    provider_preference: ["songbird", "high_performance_network"]
+    subnet: "10.43.0.0/16"
+    performance: "low_latency"
+
+# Universal Service Definitions (delegated to toadstool)
 services:
-  # AI Research Services
-  jupyter-lab:
-    primal: toadstool
-    runtime: container
-    image: "jupyter/tensorflow-notebook:latest"
-    resources:
-      cpu: 4
-      memory: "16Gi"
-      gpu: 1
-    volumes:
-      - name: research-data
-        mount: /home/jovyan/data
-        size: "1Ti"
-        tier: hot
+  research_api:
+    primal: "service_mesh"
+    source: "primal_registry:research-api:v1.0.0"
+    runtime: "wasm"
+    capabilities_required: ["http_server", "database_access"]
+    networks:
+      - research_net
     ports:
-      - 8888:8888
-    environment:
-      JUPYTER_TOKEN: "${secrets.jupyter_token}"
-      
-  # AI Model Storage
-  model-registry:
-    primal: nestgate
-    protocol: s3
-    bucket: ml-models
-    tier: warm
-    retention: 365d
-    versioning: true
-    
-  # Research Assistant Agent
-  research-agent:
-    primal: squirrel
-    type: mcp_agent
-    provider: anthropic
-    model: claude-3-sonnet
-    capabilities:
-      - code_analysis
-      - data_processing
-      - research_assistance
-    sandbox: strict
-    memory_limit: "4Gi"
-
-# Resource Management
-resources:
-  # Compute Resources
-  compute:
-    nodes:
-      - name: primary
-        cpu_cores: 16
-        memory: "128Gi"
-        gpu:
-          - type: nvidia-a100
-            count: 4
-            memory: "40Gi"
-        storage:
-          local: "2Ti"
-          
-  # Storage Configuration
-  storage:
-    pools:
-      - name: nestpool
-        type: zfs
-        devices:
-          - /dev/nvme0n1  # Hot tier - NVMe
-          - /dev/sda      # Warm tier - SSD
-          - /dev/sdb      # Cold tier - HDD
-        tiers:
-          hot:
-            devices: [/dev/nvme0n1]
-            size: "2Ti"
-            compression: lz4
-          warm:
-            devices: [/dev/sda]
-            size: "8Ti"
-            compression: gzip
-          cold:
-            devices: [/dev/sdb]
-            size: "32Ti"
-            compression: zstd
-            
+      - "8080:8080"
     volumes:
-      - name: research-data
-        pool: nestpool
-        size: "1Ti"
-        tier: hot
-        snapshots: true
-        backup: daily
-        
-      - name: model-storage
-        pool: nestpool
-        size: "10Ti"
-        tier: warm
-        deduplication: true
-        
-      - name: archive-data
-        pool: nestpool
-        size: "20Ti"
-        tier: cold
-        compression: zstd
+      - "research_data:/app/data"
+    depends_on: ["research_db"]
+    
+  research_db:
+    primal: "storage"
+    source: "primal_registry:postgres:14"
+    runtime: "container"
+    capabilities_required: ["sql_database", "persistence"]
+    networks:
+      - research_net
+    volumes:
+      - "research_data:/var/lib/postgresql/data"
+    config:
+      database_name: "research"
+      encryption: true
+      
+  ai_inference:
+    primal: "ai_processing"
+    source: "primal_registry:llama-inference:v2.0.0"
+    runtime: "gpu"
+    capabilities_required: ["llm_inference", "gpu_compute"]
+    networks:
+      - ai_mesh
+    volumes:
+      - "model_cache:/models"
+    config:
+      model: "llama-3-8b"
+      quantization: "4bit"
+      max_tokens: 4096
+```
 
-# Security Configuration
-security:
-  # Authentication & Authorization
-  authentication:
-    provider: beardog
-    methods: [jwt, mutual_tls]
-    token_lifetime: 24h
-    refresh_enabled: true
-    
-  # Service-to-Service Security
-  service_mesh:
-    mtls_enabled: true
-    cipher_suites: [ECDHE-ECDSA-AES256-GCM-SHA384]
-    cert_rotation: 7d
-    
-  # Secrets Management
-  secrets:
-    provider: beardog_hsm
-    rotation_policy: 30d
-    encryption: aes256
-    
-  # Compliance & Audit
-  compliance:
-    standards: [gdpr, hipaa]
-    audit_retention: 7y
-    log_encryption: true
-    
-  # Access Control
-  rbac:
-    roles:
-      - name: researcher
-        permissions:
-          - jupyter:read,write
-          - data:read,write
-          - models:read
-      - name: admin
-        permissions:
-          - "*:*"
-    users:
-      - name: alice
-        roles: [researcher]
-      - name: bob
-        roles: [admin]
+## Universal Primal Specification Format
 
-# Networking Configuration
-networking:
-  # Service Discovery
-  discovery:
-    provider: songbird
-    backend: consul
-    health_checks: true
+### Standard Primal Pattern
+```yaml
+primal_name:
+  capability_required: "capability_name"           # What capability is needed
+  provider_preference: ["primary", "fallback"]    # Ordered preference list
+  version: ">=x.y.z"                             # Version constraint
+  priority: 1                                    # Startup order
+  startup_timeout: 30s                          # Startup timeout
+  depends_on: ["other_primal"]                   # Dependencies
+  config:                                        # Primal-specific config
+    key: value
+```
+
+### Future Primal Integration
+```yaml
+# Example: Hypothetical quantum computing primal
+quantum_compute:
+  capability_required: "quantum_simulation"
+  provider_preference: ["quantum_primal", "simulation_fallback"]
+  version: ">=3.0.0"
+  priority: 10
+  startup_timeout: 300s
+  depends_on: ["security", "storage"]
+  config:
+    qubits: 50
+    error_correction: true
+    algorithms: ["shor", "grover"]
+```
+
+## Universal Capabilities System
+
+### Core Capabilities
+- **Security**: `encryption`, `authentication`, `compliance`, `hsm`
+- **Storage**: `persistent_storage`, `tiered_storage`, `backup`, `encryption`
+- **Networking**: `service_discovery`, `load_balancing`, `api_gateway`, `federation`
+- **Runtime**: `container_orchestration`, `wasm_runtime`, `process_isolation`
+- **AI**: `llm_inference`, `embedding_generation`, `vision_processing`
+
+### Capability Matching Logic
+```rust
+// Universal capability resolution
+pub async fn resolve_capability(
+    capability: &str,
+    preferences: &[String],
+    available_primals: &[PrimalProvider]
+) -> Result<PrimalProvider> {
+    // 1. Try preferred providers in order
+    for preference in preferences {
+        if let Some(primal) = available_primals.iter()
+            .find(|p| p.id == *preference && p.has_capability(capability)) {
+            return Ok(primal.clone());
+        }
+    }
     
-  # Load Balancing
-  load_balancing:
-    algorithm: health_based
-    health_check_interval: 30s
-    failure_threshold: 3
-    
-  # Federation (Multi-Biome)
-  federation:
+    // 2. Fallback to any available provider
+    available_primals.iter()
+        .find(|p| p.has_capability(capability))
+        .cloned()
+        .ok_or_else(|| CapabilityNotFoundError::new(capability))
+}
+```
+
+## MYCORRHIZA Universal Energy Flow
+
+### Energy Flow States
+```yaml
+mycorrhiza:
+  system_state: "closed"  # Universal default
+  
+  # Personal AI - always available in any state
+  personal_ai:
     enabled: true
-    peers:
-      - name: production-biome
-        endpoint: "https://prod.example.com"
-        trust_domain: "prod.biome.local"
+    local_models: ["llama.cpp", "whisper.cpp"]
+    api_keys:
+      - provider: anthropic
+        key_ref: claude_key
+      - provider: openai  
+        key_ref: gpt4_key
         
-  # Network Policies
-  policies:
-    default_deny: true
-    ingress:
-      - from: [jupyter-lab]
-        to: [model-registry]
-        ports: [443]
-    egress:
-      - from: [research-agent]
-        to: [external]
-        domains: ["api.anthropic.com"]
-
-# Monitoring & Observability
-observability:
-  # Metrics Collection
-  metrics:
-    provider: prometheus
-    retention: 30d
-    scrape_interval: 15s
+  # Trust-based external access (private_open)
+  trusted_externals:
+    enabled: false
+    grants: []  # Crypto keys for trusted access
     
-  # Logging
-  logging:
-    provider: loki
-    retention: 90d
-    log_level: info
-    structured: true
+  # Commercial integrations (commercial_open)
+  commercial_access:
+    enabled: false
+    licensed_providers: []  # Paid cloud services
     
-  # Tracing
-  tracing:
-    provider: jaeger
-    sampling_rate: 0.1
-    retention: 7d
-    
-  # Alerting
-  alerting:
-    provider: alertmanager
-    channels:
-      - type: slack
-        webhook: "${secrets.slack_webhook}"
-      - type: email
-        recipients: ["admin@example.com"]
+  # Universal enforcement
+  enforcement:
+    deep_packet_inspection: true
+    api_signature_detection: true
+    behavioral_analysis: true
+    threat_response: "block_and_preserve"
+```
 
-# AI Agent Configuration
-agents:
-  # Research Assistant
-  research-assistant:
-    provider: anthropic
-    model: claude-3-sonnet
-    runtime: squirrel
-    capabilities:
-      - name: code_analysis
-        tools: [ast_parser, complexity_analyzer]
-      - name: data_processing
-        tools: [pandas_toolkit, numpy_ops]
-      - name: research_assistance
-        tools: [web_search, paper_analyzer]
-    resources:
-      memory: "4Gi"
-      cpu: 2
-      timeout: 300s
-    sandbox:
-      type: strict
-      network_access: limited
-      file_access: /workspace
-      
-  # Data Science Agent
-  data-scientist:
-    provider: openai
-    model: gpt-4
-    runtime: squirrel
-    capabilities:
-      - name: statistical_analysis
-        tools: [scipy_stats, sklearn_toolkit]
-      - name: visualization
-        tools: [matplotlib, plotly]
-    resources:
-      memory: "8Gi"
-      cpu: 4
-      gpu: 1
+## Universal Validation Rules
 
-# Deployment Configuration
-deployment:
-  # Bootstrap Sequence
-  bootstrap:
-    timeout: 300s
-    retry_attempts: 3
-    health_check_interval: 10s
-    
-  # Rolling Updates
-  updates:
-    strategy: rolling
-    max_unavailable: 1
-    max_surge: 1
-    
-  # Backup & Recovery
-  backup:
-    enabled: true
-    schedule: "0 2 * * *"  # Daily at 2 AM
-    retention: 30d
-    destinations:
-      - type: s3
-        bucket: biome-backups
-        encryption: true
+### Toadstool Parser Validation
+1. **Schema Validation**: Uses toadstool's proven validation system
+2. **Dependency Checking**: Validates Primal dependencies
+3. **Capability Verification**: Ensures required capabilities are available
+4. **Resource Validation**: Checks resource requirements and constraints
 
-# Environment-Specific Overrides
-environments:
-  development:
-    security:
-      authentication:
-        token_lifetime: 7d
-    resources:
-      compute:
-        nodes:
-          - cpu_cores: 8
-            memory: "32Gi"
-            
-  production:
-    security:
-      compliance:
-        standards: [sox, pci_dss]
-    observability:
-      metrics:
-        retention: 365d
-      logging:
-        retention: 2y
+### biomeOS Universal Validation
+1. **MYCORRHIZA Compliance**: Validates energy flow configurations
+2. **Capability Matching**: Ensures capabilities can be resolved
+3. **Security Validation**: Validates security configurations
+4. **Performance Validation**: Checks resource allocation
 
-# Templates & Specializations
-templates:
-  # Quick Start Templates
-  ai_research:
-    description: "AI research environment with GPU compute"
-    includes:
-      - jupyter-lab
-      - model-registry
-      - research-agent
-    resources:
-      gpu_required: true
-      storage_tier: hot
-      
-  secure_enterprise:
-    description: "Enterprise environment with enhanced security"
-    security:
-      compliance: [sox, gdpr, hipaa]
-      encryption: fips_140_2
-    observability:
-      audit_level: detailed
-      
-  edge_computing:
-    description: "Lightweight edge deployment"
-    primals:
-      toadstool:
-        config:
-          runtimes: [container, wasm]
-      squirrel:
-        enabled: false
-    resources:
-      compute:
-        memory_limit: "16Gi"
-        cpu_limit: 4
+## Universal Deployment Process
 
-# Validation Rules
-validation:
-  required_primals: [beardog, songbird]
-  security_minimum: medium
-  resource_limits:
-    max_memory: "1Ti"
-    max_storage: "100Ti"
-  compliance_checks:
-    - encryption_at_rest
-    - access_logging
-    - backup_verification 
+### Phase 1: Parsing (Toadstool)
+```rust
+// Toadstool handles proven parsing
+let parsed_manifest = toadstool_parser.parse(biome_yaml).await?;
+```
+
+### Phase 2: Universal Transformation (biomeOS)
+```rust
+// biomeOS applies universal patterns
+let universal_manifest = biomeos_adapter.universalize(parsed_manifest).await?;
+```
+
+### Phase 3: Capability Resolution (biomeOS)
+```rust
+// Match capabilities to available Primals
+let resolved_primals = capability_matcher.resolve_all(&universal_manifest).await?;
+```
+
+### Phase 4: Deployment (Universal)
+```rust
+// Deploy to matched Primals
+let deployment = primal_deployer.deploy_all(resolved_primals).await?;
+```
+
+## Universal Extension Points
+
+### Custom Primal Integration
+```yaml
+# Example: Custom blockchain primal
+blockchain:
+  capability_required: "distributed_ledger"
+  provider_preference: ["custom_blockchain", "ethereum_adapter"]
+  version: ">=1.0.0"
+  priority: 8
+  config:
+    network: "mainnet"
+    consensus: "proof_of_stake"
+    smart_contracts: true
+```
+
+### Third-Party Primal Support
+```yaml
+# Example: Third-party monitoring primal
+monitoring:
+  capability_required: "metrics_collection"
+  provider_preference: ["prometheus_primal", "custom_metrics"]
+  version: ">=2.0.0"
+  priority: 7
+  depends_on: ["service_mesh"]
+  config:
+    retention: "30d"
+    alerting: true
+    dashboards: ["grafana"]
+```
+
+## Benefits of Universal Architecture
+
+### Toadstool Parser Benefits
+- **Proven Stability**: Leverages mature, battle-tested parsing
+- **Comprehensive Validation**: Uses toadstool's robust validation system
+- **Performance Optimized**: Optimized parsing performance
+- **Feature Rich**: Full feature set from mature implementation
+
+### Universal Primal Benefits
+- **Future-Proof**: Automatic support for new Primals
+- **Vendor Independent**: No lock-in to specific implementations
+- **Capability Focused**: Choose best Primal for each capability
+- **Extensible**: Easy integration of custom and third-party Primals
+
+### Developer Benefits
+- **Consistent API**: Single interface for all Primal interactions
+- **Easy Testing**: Mock any Primal through universal interface
+- **Clear Patterns**: Consistent patterns across all integrations
+- **Gradual Migration**: Migrate between Primals without breaking changes
+
+## Migration from Current Specification
+
+### Backwards Compatibility
+- Existing `biome.yaml` files remain compatible
+- Gradual migration path available
+- No breaking changes to core structure
+
+### Enhancement Path
+1. **Add capability requirements** to existing Primal definitions
+2. **Specify provider preferences** for flexibility
+3. **Update to universal patterns** for future-proofing
+4. **Test with multiple providers** for resilience
+
+This universal specification ensures that biomeOS can work with any current or future Primal while leveraging toadstool's proven parsing capabilities as the foundation. 

@@ -1,16 +1,16 @@
 //! ToadStool Compute Orchestration View
-//! 
+//!
 //! Manage and monitor toadStool compute execution, runtime orchestration,
 //! and ecosystem integration within the biomeOS interface.
 
 use eframe::egui;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
 
-use crate::state::AppState;
 use crate::api::BiomeOSApi;
+use crate::state::AppState;
 use crate::views::{BaseView, View};
 
 /// ToadStool orchestration view for compute management
@@ -238,7 +238,11 @@ impl ToadStoolView {
                 engine_type: "container".to_string(),
                 version: "1.6.9".to_string(),
                 status: "active".to_string(),
-                capabilities: vec!["isolation".to_string(), "networking".to_string(), "volumes".to_string()],
+                capabilities: vec![
+                    "isolation".to_string(),
+                    "networking".to_string(),
+                    "volumes".to_string(),
+                ],
                 supported_architectures: vec!["x86_64".to_string(), "aarch64".to_string()],
                 performance_score: 8.5,
             },
@@ -247,8 +251,16 @@ impl ToadStoolView {
                 engine_type: "wasm".to_string(),
                 version: "20.0.2".to_string(),
                 status: "active".to_string(),
-                capabilities: vec!["fast_startup".to_string(), "memory_safe".to_string(), "portable".to_string()],
-                supported_architectures: vec!["x86_64".to_string(), "aarch64".to_string(), "riscv64".to_string()],
+                capabilities: vec![
+                    "fast_startup".to_string(),
+                    "memory_safe".to_string(),
+                    "portable".to_string(),
+                ],
+                supported_architectures: vec![
+                    "x86_64".to_string(),
+                    "aarch64".to_string(),
+                    "riscv64".to_string(),
+                ],
                 performance_score: 9.2,
             },
             RuntimeEngine {
@@ -256,7 +268,11 @@ impl ToadStoolView {
                 engine_type: "native".to_string(),
                 version: "1.0.0".to_string(),
                 status: "active".to_string(),
-                capabilities: vec!["direct_execution".to_string(), "system_access".to_string(), "performance".to_string()],
+                capabilities: vec![
+                    "direct_execution".to_string(),
+                    "system_access".to_string(),
+                    "performance".to_string(),
+                ],
                 supported_architectures: vec!["x86_64".to_string(), "aarch64".to_string()],
                 performance_score: 9.8,
             },
@@ -270,8 +286,8 @@ impl ToadStoolView {
             memory_total_bytes: 64 * 1024 * 1024 * 1024, // 64 GB
             storage_usage_bytes: 150 * 1024 * 1024 * 1024, // 150 GB
             storage_total_bytes: 1000 * 1024 * 1024 * 1024, // 1 TB
-            network_rx_bytes: 2 * 1024 * 1024 * 1024, // 2 GB
-            network_tx_bytes: 1024 * 1024 * 1024, // 1 GB
+            network_rx_bytes: 2 * 1024 * 1024 * 1024,    // 2 GB
+            network_tx_bytes: 1024 * 1024 * 1024,        // 1 GB
             gpu_usage_percent: None,
         }
     }
@@ -287,22 +303,43 @@ impl ToadStoolView {
 
     fn render_tab_bar(&mut self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
-            if ui.selectable_label(self.selected_tab == ToadStoolTab::Overview, "🏠 Overview").clicked() {
+            if ui
+                .selectable_label(self.selected_tab == ToadStoolTab::Overview, "🏠 Overview")
+                .clicked()
+            {
                 self.selected_tab = ToadStoolTab::Overview;
             }
-            if ui.selectable_label(self.selected_tab == ToadStoolTab::Workloads, "⚙️ Workloads").clicked() {
+            if ui
+                .selectable_label(self.selected_tab == ToadStoolTab::Workloads, "⚙️ Workloads")
+                .clicked()
+            {
                 self.selected_tab = ToadStoolTab::Workloads;
             }
-            if ui.selectable_label(self.selected_tab == ToadStoolTab::Runtimes, "🚀 Runtimes").clicked() {
+            if ui
+                .selectable_label(self.selected_tab == ToadStoolTab::Runtimes, "🚀 Runtimes")
+                .clicked()
+            {
                 self.selected_tab = ToadStoolTab::Runtimes;
             }
-            if ui.selectable_label(self.selected_tab == ToadStoolTab::Resources, "📊 Resources").clicked() {
+            if ui
+                .selectable_label(self.selected_tab == ToadStoolTab::Resources, "📊 Resources")
+                .clicked()
+            {
                 self.selected_tab = ToadStoolTab::Resources;
             }
-            if ui.selectable_label(self.selected_tab == ToadStoolTab::Ecosystem, "🌐 Ecosystem").clicked() {
+            if ui
+                .selectable_label(self.selected_tab == ToadStoolTab::Ecosystem, "🌐 Ecosystem")
+                .clicked()
+            {
                 self.selected_tab = ToadStoolTab::Ecosystem;
             }
-            if ui.selectable_label(self.selected_tab == ToadStoolTab::Configuration, "⚙️ Config").clicked() {
+            if ui
+                .selectable_label(
+                    self.selected_tab == ToadStoolTab::Configuration,
+                    "⚙️ Config",
+                )
+                .clicked()
+            {
                 self.selected_tab = ToadStoolTab::Configuration;
             }
         });
@@ -312,32 +349,59 @@ impl ToadStoolView {
         ui.horizontal(|ui| {
             // Status card
             self.base.render_card(ui, "🍄 ToadStool Status", |ui| {
-                self.base.render_status(ui, "Health", &self.toadstool_status.health, 
-                    if self.toadstool_status.health == "healthy" { 
-                        egui::Color32::GREEN 
-                    } else { 
-                        egui::Color32::RED 
-                    }
+                self.base.render_status(
+                    ui,
+                    "Health",
+                    &self.toadstool_status.health,
+                    if self.toadstool_status.health == "healthy" {
+                        egui::Color32::GREEN
+                    } else {
+                        egui::Color32::RED
+                    },
                 );
-                self.base.render_kv(ui, "Version", &self.toadstool_status.version);
-                self.base.render_kv(ui, "Service ID", &self.toadstool_status.service_id);
-                self.base.render_kv(ui, "Uptime", &format!("{}h {}m", 
-                    self.toadstool_status.uptime_seconds / 3600,
-                    (self.toadstool_status.uptime_seconds % 3600) / 60));
+                self.base
+                    .render_kv(ui, "Version", &self.toadstool_status.version);
+                self.base
+                    .render_kv(ui, "Service ID", &self.toadstool_status.service_id);
+                self.base.render_kv(
+                    ui,
+                    "Uptime",
+                    &format!(
+                        "{}h {}m",
+                        self.toadstool_status.uptime_seconds / 3600,
+                        (self.toadstool_status.uptime_seconds % 3600) / 60
+                    ),
+                );
             });
 
             ui.add_space(10.0);
 
             // Quick stats
             self.base.render_card(ui, "📊 Quick Stats", |ui| {
-                self.base.render_metric(ui, "Active Biomes", 
-                    &self.toadstool_status.active_biomes.to_string(), "");
-                self.base.render_metric(ui, "Active Workloads", 
-                    &self.toadstool_status.active_workloads.to_string(), "");
-                self.base.render_metric(ui, "CPU Cores", 
-                    &self.toadstool_status.total_cpu_cores.to_string(), "");
-                self.base.render_metric(ui, "Memory", 
-                    &self.toadstool_status.total_memory_gb.to_string(), "GB");
+                self.base.render_metric(
+                    ui,
+                    "Active Biomes",
+                    &self.toadstool_status.active_biomes.to_string(),
+                    "",
+                );
+                self.base.render_metric(
+                    ui,
+                    "Active Workloads",
+                    &self.toadstool_status.active_workloads.to_string(),
+                    "",
+                );
+                self.base.render_metric(
+                    ui,
+                    "CPU Cores",
+                    &self.toadstool_status.total_cpu_cores.to_string(),
+                    "",
+                );
+                self.base.render_metric(
+                    ui,
+                    "Memory",
+                    &self.toadstool_status.total_memory_gb.to_string(),
+                    "GB",
+                );
             });
         });
 
@@ -348,7 +412,11 @@ impl ToadStoolView {
             ui.horizontal(|ui| {
                 ui.vertical(|ui| {
                     ui.label("CPU Usage");
-                    self.base.render_progress(ui, "", self.resource_usage.cpu_usage_percent / 100.0);
+                    self.base.render_progress(
+                        ui,
+                        "",
+                        (self.resource_usage.cpu_usage_percent / 100.0) as f32,
+                    );
                     ui.label(format!("{:.1}%", self.resource_usage.cpu_usage_percent));
                 });
 
@@ -356,24 +424,30 @@ impl ToadStoolView {
 
                 ui.vertical(|ui| {
                     ui.label("Memory Usage");
-                    let memory_percent = (self.resource_usage.memory_usage_bytes as f64 / 
-                        self.resource_usage.memory_total_bytes as f64) as f32;
+                    let memory_percent = (self.resource_usage.memory_usage_bytes as f64
+                        / self.resource_usage.memory_total_bytes as f64)
+                        as f32;
                     self.base.render_progress(ui, "", memory_percent);
-                    ui.label(format!("{:.1} GB / {:.1} GB", 
+                    ui.label(format!(
+                        "{:.1} GB / {:.1} GB",
                         self.resource_usage.memory_usage_bytes as f64 / (1024.0 * 1024.0 * 1024.0),
-                        self.resource_usage.memory_total_bytes as f64 / (1024.0 * 1024.0 * 1024.0)));
+                        self.resource_usage.memory_total_bytes as f64 / (1024.0 * 1024.0 * 1024.0)
+                    ));
                 });
 
                 ui.separator();
 
                 ui.vertical(|ui| {
                     ui.label("Storage Usage");
-                    let storage_percent = (self.resource_usage.storage_usage_bytes as f64 / 
-                        self.resource_usage.storage_total_bytes as f64) as f32;
+                    let storage_percent = (self.resource_usage.storage_usage_bytes as f64
+                        / self.resource_usage.storage_total_bytes as f64)
+                        as f32;
                     self.base.render_progress(ui, "", storage_percent);
-                    ui.label(format!("{:.0} GB / {:.0} GB", 
+                    ui.label(format!(
+                        "{:.0} GB / {:.0} GB",
                         self.resource_usage.storage_usage_bytes as f64 / (1024.0 * 1024.0 * 1024.0),
-                        self.resource_usage.storage_total_bytes as f64 / (1024.0 * 1024.0 * 1024.0)));
+                        self.resource_usage.storage_total_bytes as f64 / (1024.0 * 1024.0 * 1024.0)
+                    ));
                 });
             });
         });
@@ -385,24 +459,42 @@ impl ToadStoolView {
             ui.horizontal(|ui| {
                 ui.vertical(|ui| {
                     ui.strong("Container Runtime");
-                    ui.label(format!("Active: {}", self.runtime_metrics.container_runtime.active_workloads));
-                    ui.label(format!("Success Rate: {:.1}%", self.runtime_metrics.container_runtime.success_rate));
+                    ui.label(format!(
+                        "Active: {}",
+                        self.runtime_metrics.container_runtime.active_workloads
+                    ));
+                    ui.label(format!(
+                        "Success Rate: {:.1}%",
+                        self.runtime_metrics.container_runtime.success_rate
+                    ));
                 });
 
                 ui.separator();
 
                 ui.vertical(|ui| {
                     ui.strong("WASM Runtime");
-                    ui.label(format!("Active: {}", self.runtime_metrics.wasm_runtime.active_workloads));
-                    ui.label(format!("Success Rate: {:.1}%", self.runtime_metrics.wasm_runtime.success_rate));
+                    ui.label(format!(
+                        "Active: {}",
+                        self.runtime_metrics.wasm_runtime.active_workloads
+                    ));
+                    ui.label(format!(
+                        "Success Rate: {:.1}%",
+                        self.runtime_metrics.wasm_runtime.success_rate
+                    ));
                 });
 
                 ui.separator();
 
                 ui.vertical(|ui| {
                     ui.strong("Native Runtime");
-                    ui.label(format!("Active: {}", self.runtime_metrics.native_runtime.active_workloads));
-                    ui.label(format!("Success Rate: {:.1}%", self.runtime_metrics.native_runtime.success_rate));
+                    ui.label(format!(
+                        "Active: {}",
+                        self.runtime_metrics.native_runtime.active_workloads
+                    ));
+                    ui.label(format!(
+                        "Success Rate: {:.1}%",
+                        self.runtime_metrics.native_runtime.success_rate
+                    ));
                 });
             });
         });
@@ -461,56 +553,67 @@ impl ToadStoolView {
         ];
 
         for workload in &demo_workloads {
-            self.base.render_card(ui, &format!("⚙️ {}", workload.name), |ui| {
-                ui.horizontal(|ui| {
-                    ui.vertical(|ui| {
-                        self.base.render_kv(ui, "ID", &workload.workload_id);
-                        self.base.render_kv(ui, "Runtime", &workload.runtime_type);
-                        self.base.render_kv(ui, "Biome", &workload.biome_id);
-                    });
+            self.base
+                .render_card(ui, &format!("⚙️ {}", workload.name), |ui| {
+                    ui.horizontal(|ui| {
+                        ui.vertical(|ui| {
+                            self.base.render_kv(ui, "ID", &workload.workload_id);
+                            self.base.render_kv(ui, "Runtime", &workload.runtime_type);
+                            self.base.render_kv(ui, "Biome", &workload.biome_id);
+                        });
 
-                    ui.separator();
+                        ui.separator();
 
-                    ui.vertical(|ui| {
-                        let status_color = match workload.status.as_str() {
-                            "running" => egui::Color32::GREEN,
-                            "starting" => egui::Color32::YELLOW,
-                            "stopping" => egui::Color32::ORANGE,
-                            "error" => egui::Color32::RED,
-                            _ => egui::Color32::GRAY,
-                        };
-                        self.base.render_status(ui, "Status", &workload.status, status_color);
-                        self.base.render_metric(ui, "CPU", &format!("{:.1}", workload.cpu_usage), "cores");
-                        self.base.render_metric(ui, "Memory", 
-                            &format!("{:.0}", workload.memory_usage as f64 / (1024.0 * 1024.0)), "MB");
-                    });
+                        ui.vertical(|ui| {
+                            let status_color = match workload.status.as_str() {
+                                "running" => egui::Color32::GREEN,
+                                "starting" => egui::Color32::YELLOW,
+                                "stopping" => egui::Color32::from_rgb(255, 165, 0), // Orange
+                                "error" => egui::Color32::RED,
+                                _ => egui::Color32::GRAY,
+                            };
+                            self.base
+                                .render_status(ui, "Status", &workload.status, status_color);
+                            self.base.render_metric(
+                                ui,
+                                "CPU",
+                                &format!("{:.1}", workload.cpu_usage),
+                                "cores",
+                            );
+                            self.base.render_metric(
+                                ui,
+                                "Memory",
+                                &format!("{:.0}", workload.memory_usage as f64 / (1024.0 * 1024.0)),
+                                "MB",
+                            );
+                        });
 
-                    ui.separator();
+                        ui.separator();
 
-                    ui.vertical(|ui| {
-                        if !workload.endpoints.is_empty() {
-                            ui.label("Endpoints:");
-                            for endpoint in &workload.endpoints {
-                                ui.small(endpoint);
+                        ui.vertical(|ui| {
+                            if !workload.endpoints.is_empty() {
+                                ui.label("Endpoints:");
+                                for endpoint in &workload.endpoints {
+                                    ui.small(endpoint);
+                                }
                             }
-                        }
-                        
-                        ui.add_space(5.0);
-                        ui.horizontal(|ui| {
-                            if ui.button("📊 Logs").clicked() {
-                                // View logs
-                            }
-                            if ui.button("⏹️ Stop").clicked() {
-                                // Stop workload
-                            }
-                            if ui.button("🔄 Restart").clicked() {
-                                // Restart workload
-                            }
+
+                            ui.add_space(5.0);
+                            ui.horizontal(|ui| {
+                                if ui.button("📊 Logs").clicked() {
+                                    // View logs
+                                }
+                                if ui.button("⏹️ Stop").clicked() {
+                                    // Stop workload
+                                }
+                                if ui.button("🔄 Restart").clicked() {
+                                    // Restart workload
+                                }
+                            });
                         });
                     });
                 });
-            });
-            
+
             ui.add_space(10.0);
         }
     }
@@ -528,9 +631,10 @@ impl ToadStoolView {
                     ConnectionStatus::Disconnected => ("Disconnected", egui::Color32::RED),
                     ConnectionStatus::Error(msg) => (msg.as_str(), egui::Color32::RED),
                 };
-                
-                self.base.render_status(ui, "Status", status_text, status_color);
-                
+
+                self.base
+                    .render_status(ui, "Status", status_text, status_color);
+
                 // Add primal-specific information
                 match primal.as_str() {
                     "songbird" => {
@@ -577,7 +681,7 @@ impl ToadStoolView {
                     }
                 });
             });
-            
+
             ui.add_space(10.0);
         }
     }
@@ -590,36 +694,37 @@ impl View for ToadStoolView {
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 ui.checkbox(&mut self.auto_refresh, "Auto Refresh");
                 if self.auto_refresh {
-                    ui.add(egui::Slider::new(&mut self.refresh_interval, 1.0..=30.0)
-                        .suffix("s").text("Interval"));
+                    ui.add(
+                        egui::Slider::new(&mut self.refresh_interval, 1.0..=30.0)
+                            .suffix("s")
+                            .text("Interval"),
+                    );
                 }
             });
         });
-        
+
         ui.label("Universal runtime environment for sovereign compute execution");
         ui.separator();
 
         self.render_tab_bar(ui);
         ui.add_space(10.0);
 
-        egui::ScrollArea::vertical().show(ui, |ui| {
-            match self.selected_tab {
-                ToadStoolTab::Overview => self.render_overview_tab(ui),
-                ToadStoolTab::Workloads => self.render_workloads_tab(ui),
-                ToadStoolTab::Runtimes => {
-                    ui.heading("🚀 Runtime Engines");
-                    ui.label("Runtime engine management coming soon...");
-                }
-                ToadStoolTab::Resources => {
-                    ui.heading("📊 Resource Management");
-                    ui.label("Resource monitoring and allocation coming soon...");
-                }
-                ToadStoolTab::Ecosystem => self.render_ecosystem_tab(ui),
-                ToadStoolTab::Configuration => {
-                    ui.heading("⚙️ Configuration");
-                    ui.label("ToadStool configuration management coming soon...");
-                }
+        egui::ScrollArea::vertical().show(ui, |ui| match self.selected_tab {
+            ToadStoolTab::Overview => self.render_overview_tab(ui),
+            ToadStoolTab::Workloads => self.render_workloads_tab(ui),
+            ToadStoolTab::Runtimes => {
+                ui.heading("🚀 Runtime Engines");
+                ui.label("Runtime engine management coming soon...");
+            }
+            ToadStoolTab::Resources => {
+                ui.heading("📊 Resource Management");
+                ui.label("Resource monitoring and allocation coming soon...");
+            }
+            ToadStoolTab::Ecosystem => self.render_ecosystem_tab(ui),
+            ToadStoolTab::Configuration => {
+                ui.heading("⚙️ Configuration");
+                ui.label("ToadStool configuration management coming soon...");
             }
         });
     }
-} 
+}

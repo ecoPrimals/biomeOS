@@ -1,5 +1,5 @@
 //! Application State Management
-//! 
+//!
 //! This module manages the shared state across all UI views in the biomeOS bootstrap UI.
 //! Follows the API-driven, universal, sovereignty-first design principles.
 
@@ -13,31 +13,31 @@ use uuid::Uuid;
 pub struct AppState {
     /// System online status
     pub system_online: bool,
-    
+
     /// System installation state
     pub installation: InstallationState,
-    
+
     /// Primal ecosystem status
     pub primals: PrimalsState,
-    
+
     /// Sovereignty and security status
     pub sovereignty: SovereigntyState,
-    
+
     /// System configuration
     pub config: SystemConfig,
-    
+
     /// Real-time metrics
     pub metrics: SystemMetrics,
-    
+
     /// Real-time system metrics (alias for dashboard compatibility)
     pub system_metrics: SystemMetrics,
-    
+
     /// Sovereignty status (alias for dashboard compatibility)
     pub sovereignty_status: SovereigntyState,
-    
+
     /// Ecosystem status (alias for dashboard compatibility)
     pub ecosystem_status: EcosystemStatus,
-    
+
     /// UI preferences
     pub ui_preferences: UiPreferences,
 }
@@ -405,25 +405,25 @@ impl AppState {
             ui_preferences: UiPreferences::new(),
         }
     }
-    
+
     /// Refresh application state
     pub fn refresh(&mut self) {
         self.system_metrics = SystemMetrics::new();
         self.sovereignty_status = self.sovereignty.clone();
         self.ecosystem_status = EcosystemStatus::new();
     }
-    
+
     /// Start installation process
     pub fn start_installation(&mut self) {
         self.installation.status = InstallationStatus::InProgress;
         self.installation.current_step = InstallationStep::PlatformDetection;
         self.installation.progress = 0.0;
     }
-    
+
     /// Advance to next installation step
     pub fn advance_step(&mut self) {
         use InstallationStep::*;
-        
+
         self.installation.current_step = match self.installation.current_step {
             PlatformDetection => DependencyCheck,
             DependencyCheck => CoreInstallation,
@@ -434,7 +434,7 @@ impl AppState {
             Testing => Completion,
             Completion => Completion, // Stay at completion
         };
-        
+
         let total_steps = 8.0;
         let current_step_num = match self.installation.current_step {
             PlatformDetection => 1.0,
@@ -446,14 +446,14 @@ impl AppState {
             Testing => 7.0,
             Completion => 8.0,
         };
-        
+
         self.installation.progress = current_step_num / total_steps;
-        
+
         if self.installation.current_step == Completion {
             self.installation.status = InstallationStatus::Completed;
         }
     }
-    
+
     /// Get installation progress as 0-based step number
     pub fn current_step(&self) -> usize {
         match self.installation.current_step {
@@ -467,12 +467,12 @@ impl AppState {
             InstallationStep::Completion => 7,
         }
     }
-    
+
     /// Get total number of installation steps
     pub fn total_steps(&self) -> usize {
         8
     }
-    
+
     /// Check if installation is in progress
     pub fn installation_in_progress(&self) -> bool {
         self.installation.status == InstallationStatus::InProgress
@@ -514,7 +514,10 @@ impl PrimalsState {
             available_primals: HashMap::new(),
             active_primals: HashMap::new(),
             primal_health: HashMap::new(),
-            ecosystem_graph: EcosystemGraph { nodes: Vec::new(), edges: Vec::new() },
+            ecosystem_graph: EcosystemGraph {
+                nodes: Vec::new(),
+                edges: Vec::new(),
+            },
             discovery_status: DiscoveryStatus::Idle,
         }
     }
@@ -606,10 +609,10 @@ mod tests {
     #[test]
     fn test_app_state_refresh() {
         let mut state = AppState::new();
-        
+
         // Test refresh functionality
         state.refresh();
-        
+
         // Should have updated metrics
         assert!(state.system_metrics.last_updated <= Utc::now());
     }
@@ -617,21 +620,21 @@ mod tests {
     #[test]
     fn test_installation_progress() {
         let mut state = AppState::new();
-        
+
         // Start installation
         state.start_installation();
         assert!(state.installation_in_progress());
         assert_eq!(state.current_step(), 0);
-        
+
         // Advance step
         state.advance_step();
         assert_eq!(state.current_step(), 1);
-        
+
         // Complete all steps
         for _ in 1..state.total_steps() {
             state.advance_step();
         }
-        
+
         assert_eq!(state.current_step(), state.total_steps() - 1);
         assert!(!state.installation_in_progress()); // Should auto-complete
     }
@@ -646,21 +649,21 @@ mod tests {
             mitigation: Some("Use crypto locks".to_string()),
             detected_at: Utc::now(),
         };
-        
+
         assert_eq!(threat.threat_type, ThreatType::VendorLock);
     }
 
     #[test]
     fn test_state_serialization() {
         let state = AppState::new();
-        
+
         // Test serialization of key components
         let json = serde_json::to_string(&state.system_metrics);
         assert!(json.is_ok());
-        
+
         let json = serde_json::to_string(&state.sovereignty_status);
         assert!(json.is_ok());
-        
+
         let json = serde_json::to_string(&state.ecosystem_status);
         assert!(json.is_ok());
     }
@@ -668,23 +671,23 @@ mod tests {
     #[test]
     fn test_state_consistency() {
         let mut state = AppState::new();
-        
+
         // Test that state remains consistent during operations
         if state.installation_in_progress() {
             assert!(state.current_step() <= state.total_steps());
         }
-        
+
         // Test refresh maintains consistency
         state.refresh();
-        
+
         // Test various state transitions
         for _i in 0..10 {
             state.refresh();
-            
+
             // State should remain valid
             assert!(state.sovereignty.compliance_score >= 0.0);
             assert!(state.sovereignty.compliance_score <= 1.0);
-            
+
             // Test specific field access without moving
             let current_step_index = state.current_step();
             let installation_step_index = match state.installation.current_step {

@@ -1,0 +1,502 @@
+# Basic Development Biome Configuration
+# Simple setup for developers getting started with biomeOS
+
+apiVersion: biomeOS/v1
+kind: Biome
+metadata:
+  name: "basic-development-platform"
+  version: "1.0.0"
+  description: "Simple development platform for getting started with biomeOS"
+  team: "development"
+  author: "Development Team"
+  created: "2025-01-01T00:00:00Z"
+  tags:
+    - "development"
+    - "basic"
+    - "getting-started"
+    - "web-development"
+    - "simple"
+
+# Primal Configuration
+primals:
+  # Toadstool - Runtime & Compute
+  toadstool:
+    primal_type: "toadstool"
+    version: "latest"
+    endpoint: "auto-discover"
+    
+    # Simple single-instance configuration
+    multi_instance:
+      enabled: false
+      
+    # Basic configuration
+    config:
+      runtime_preferences:
+        - "container"
+        - "native"
+        
+      container_configuration:
+        runtime: "docker"
+        registry: "docker.io"
+        pull_policy: "if_not_present"
+        
+      resource_limits:
+        max_cpu_cores: 8
+        max_memory: "16GB"
+        max_storage: "100GB"
+
+  # Songbird - Service Mesh & Orchestration
+  songbird:
+    primal_type: "songbird"
+    version: "latest"
+    endpoint: "auto-discover"
+    
+    # Simple service mesh
+    config:
+      service_mesh:
+        enabled: true
+        protocol: "http"
+        load_balancing: "round_robin"
+        
+      discovery:
+        method: "static"
+        
+      monitoring:
+        metrics_collection: true
+        
+  # NestGate - Storage
+  nestgate:
+    primal_type: "nestgate"
+    version: "latest"
+    endpoint: "auto-discover"
+    
+    # Simple storage configuration
+    config:
+      storage_tiers:
+        - name: "local-ssd"
+          type: "ssd"
+          capacity: "500GB"
+          performance: "standard"
+          
+      protocols:
+        - "posix"
+        - "s3"
+        
+      backup_strategy:
+        enabled: true
+        schedule: "daily"
+        retention: "7d"
+
+  # Squirrel - AI Agent Platform (Optional)
+  squirrel:
+    primal_type: "squirrel"
+    version: "latest"
+    endpoint: "auto-discover"
+    
+    # Simple AI configuration
+    config:
+      mcp_configuration:
+        enabled: true
+        protocol_version: "1.0"
+        transport: "websocket"
+        
+      ai_providers:
+        - name: "openai"
+          type: "openai"
+          models: ["gpt-3.5-turbo"]
+          
+      plugin_system:
+        enabled: true
+        plugin_registry: "public"
+
+  # BearDog - Basic Security
+  beardog:
+    primal_type: "beardog"
+    version: "latest"
+    endpoint: "auto-discover"
+    
+    # Basic security configuration
+    config:
+      security_level: "standard"
+      
+      authentication:
+        methods: ["jwt"]
+        token_lifetime: "24h"
+        
+      authorization:
+        rbac_enabled: true
+        
+      encryption:
+        at_rest: true
+        in_transit: true
+        algorithms: ["AES-256"]
+        
+      audit:
+        enabled: true
+        log_level: "info"
+        retention: "30d"
+
+# Service Definitions
+services:
+  # Web Application
+  web-app:
+    primal: "toadstool"
+    runtime: "container"
+    
+    container:
+      image: "nginx:alpine"
+      ports:
+        - "80:80"
+        - "443:443"
+        
+    resources:
+      cpu: "1"
+      memory: "512MB"
+      storage:
+        - name: "web-content"
+          size: "10GB"
+          tier: "local-ssd"
+          
+    volumes:
+      - name: "html-content"
+        source: "nestgate://web-content"
+        target: "/usr/share/nginx/html"
+        
+    health_check:
+      http:
+        path: "/"
+        port: 80
+      interval: "30s"
+      timeout: "10s"
+      retries: 3
+
+  # Database
+  database:
+    primal: "toadstool"
+    runtime: "container"
+    
+    container:
+      image: "postgres:15"
+      ports:
+        - "5432:5432"
+      environment:
+        - "POSTGRES_DB=devdb"
+        - "POSTGRES_USER=developer"
+        - "POSTGRES_PASSWORD=devpass"
+        
+    resources:
+      cpu: "2"
+      memory: "2GB"
+      storage:
+        - name: "db-data"
+          size: "20GB"
+          tier: "local-ssd"
+          
+    volumes:
+      - name: "postgres-data"
+        source: "nestgate://postgres-data"
+        target: "/var/lib/postgresql/data"
+        
+    health_check:
+      tcp:
+        port: 5432
+      interval: "30s"
+      timeout: "10s"
+      retries: 3
+
+  # API Backend
+  api-backend:
+    primal: "toadstool"
+    runtime: "container"
+    
+    container:
+      image: "node:18-alpine"
+      ports:
+        - "3000:3000"
+      command: ["npm", "start"]
+      working_dir: "/app"
+      
+    resources:
+      cpu: "2"
+      memory: "1GB"
+      storage:
+        - name: "api-data"
+          size: "5GB"
+          tier: "local-ssd"
+          
+    volumes:
+      - name: "api-code"
+        source: "nestgate://api-code"
+        target: "/app"
+        
+    health_check:
+      http:
+        path: "/health"
+        port: 3000
+      interval: "30s"
+      timeout: "10s"
+      retries: 3
+      
+    depends_on:
+      - "database"
+
+  # Development Tools
+  dev-tools:
+    primal: "toadstool"
+    runtime: "container"
+    
+    container:
+      image: "code-server:latest"
+      ports:
+        - "8080:8080"
+      environment:
+        - "PASSWORD=devpass"
+        
+    resources:
+      cpu: "2"
+      memory: "4GB"
+      storage:
+        - name: "dev-workspace"
+          size: "50GB"
+          tier: "local-ssd"
+          
+    volumes:
+      - name: "workspace"
+        source: "nestgate://workspace"
+        target: "/home/coder/workspace"
+        
+    health_check:
+      http:
+        path: "/"
+        port: 8080
+      interval: "30s"
+
+  # Simple AI Assistant
+  dev-assistant:
+    primal: "squirrel"
+    runtime: "agent"
+    
+    agent:
+      type: "mcp"
+      capabilities:
+        - "code_assistance"
+        - "documentation"
+        - "debugging_help"
+        
+      ai_provider: "openai"
+      model: "gpt-3.5-turbo"
+      
+      tools:
+        - "code_analyzer"
+        - "documentation_generator"
+        - "error_explainer"
+        
+    resources:
+      cpu: "1"
+      memory: "1GB"
+      
+    configuration:
+      personality: "helpful_developer"
+      language_model:
+        temperature: 0.7
+        max_tokens: 2048
+
+# Resource Configuration
+resources:
+  # Storage volumes
+  storage:
+    web-content:
+      tier: "local-ssd"
+      size: "10GB"
+      access_mode: "ReadWriteMany"
+      backup: true
+      
+    postgres-data:
+      tier: "local-ssd"
+      size: "20GB"
+      access_mode: "ReadWriteOnce"
+      backup: true
+      
+    api-code:
+      tier: "local-ssd"
+      size: "5GB"
+      access_mode: "ReadWriteMany"
+      backup: true
+      
+    workspace:
+      tier: "local-ssd"
+      size: "50GB"
+      access_mode: "ReadWriteMany"
+      backup: true
+
+  # Networking
+  networking:
+    service_mesh:
+      enabled: true
+      
+    ingress:
+      enabled: true
+      class: "nginx"
+      
+    dns:
+      enabled: true
+      domain: "dev.local"
+
+  # Compute resources
+  compute:
+    cpu_pool:
+      cores: 16
+      memory: "32GB"
+
+# Security Configuration
+security:
+  level: "standard"
+  
+  authentication:
+    providers:
+      - "beardog"
+    
+    methods:
+      - "jwt"
+      
+  authorization:
+    rbac:
+      enabled: true
+      
+    policies:
+      - name: "developer"
+        subjects: ["group:developers"]
+        resources: ["*"]
+        actions: ["read", "write", "execute"]
+        
+      - name: "guest"
+        subjects: ["group:guests"]
+        resources: ["web-app"]
+        actions: ["read"]
+        
+  encryption:
+    at_rest: true
+    in_transit: true
+    
+  audit:
+    enabled: true
+    retention: "30d"
+
+# Monitoring & Observability
+monitoring:
+  metrics:
+    enabled: true
+    retention: "7d"
+    
+  logging:
+    enabled: true
+    level: "info"
+    retention: "7d"
+    
+  alerting:
+    enabled: true
+    
+    rules:
+      - name: "high_cpu_usage"
+        condition: "cpu_utilization > 80%"
+        duration: "5m"
+        severity: "warning"
+        
+      - name: "service_down"
+        condition: "service_unavailable"
+        duration: "1m"
+        severity: "critical"
+        
+      - name: "low_disk_space"
+        condition: "disk_usage > 90%"
+        duration: "2m"
+        severity: "warning"
+
+# Deployment Configuration
+deployment:
+  environment: "development"
+  
+  scaling:
+    auto_scaling:
+      enabled: true
+      min_replicas: 1
+      max_replicas: 3
+      
+  updates:
+    strategy: "rolling"
+    
+  health_checks:
+    enabled: true
+    
+    startup_probe:
+      enabled: true
+      initial_delay: "30s"
+      timeout: "10s"
+      
+    liveness_probe:
+      enabled: true
+      interval: "30s"
+      timeout: "10s"
+      
+    readiness_probe:
+      enabled: true
+      interval: "10s"
+      timeout: "5s"
+
+# Backup Configuration
+backup:
+  enabled: true
+  
+  schedule:
+    full_backup: "0 2 * * 0"  # Weekly on Sunday at 2 AM
+    incremental_backup: "0 2 * * 1-6"  # Daily at 2 AM
+    
+  retention:
+    daily: "7d"
+    weekly: "4w"
+    
+  storage:
+    backend: "local"
+    
+# Development Configuration
+development:
+  tools:
+    - name: "code-server"
+      enabled: true
+      port: 8080
+      
+    - name: "database-admin"
+      enabled: true
+      port: 8081
+      
+  hot_reload:
+    enabled: true
+    
+  debug_mode:
+    enabled: true
+    
+  test_environment:
+    enabled: true
+    
+  integration:
+    git:
+      enabled: true
+      remote: "https://github.com/user/repo.git"
+      
+    ci_cd:
+      enabled: false  # Can be enabled later
+      
+# Simple Cost Management
+cost_management:
+  enabled: true
+  
+  budget:
+    monthly_limit: "$100"
+    alert_thresholds: [75, 90]
+    
+  resource_optimization:
+    enabled: true
+    
+  auto_shutdown:
+    enabled: true
+    idle_timeout: "4h"  # Shutdown after 4 hours of inactivity 

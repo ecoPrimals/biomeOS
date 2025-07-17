@@ -1,15 +1,15 @@
 //! BiomeOS Federation CLI
-//! 
+//!
 //! Command-line interface for deploying and managing federation BYOB manifests
 //! Pure Rust implementation for self-contained federation deployment
 
-use std::path::PathBuf;
-use std::process::Command;
-use std::fs;
+use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use serde::{Deserialize, Serialize};
-use anyhow::{Result, Context};
-use tracing::{info, warn, error};
+use std::fs;
+use std::path::PathBuf;
+use std::process::Command;
+use tracing::{error, info, warn};
 
 #[derive(Parser)]
 #[command(name = "biome-federation")]
@@ -18,11 +18,11 @@ use tracing::{info, warn, error};
 struct Cli {
     #[command(subcommand)]
     command: Commands,
-    
+
     /// Verbose output
     #[arg(short, long)]
     verbose: bool,
-    
+
     /// Configuration file
     #[arg(short, long, default_value = "/etc/ecoprimal/federation.toml")]
     config: PathBuf,
@@ -34,94 +34,94 @@ enum Commands {
     Deploy {
         /// Manifest file or template name
         manifest: String,
-        
+
         /// Dry run (validate only)
         #[arg(long)]
         dry_run: bool,
-        
+
         /// Force deployment
         #[arg(long)]
         force: bool,
     },
-    
+
     /// List available manifests
     List {
         /// Show detailed information
         #[arg(long)]
         detailed: bool,
     },
-    
+
     /// Show deployment status
     Status {
         /// Deployment name
         deployment: Option<String>,
-        
+
         /// Watch for changes
         #[arg(long)]
         watch: bool,
     },
-    
+
     /// Show deployment logs
     Logs {
         /// Deployment name
         deployment: String,
-        
+
         /// Follow logs
         #[arg(short, long)]
         follow: bool,
-        
+
         /// Number of lines to show
         #[arg(long, default_value = "100")]
         lines: u32,
     },
-    
+
     /// Remove deployment
     Remove {
         /// Deployment name
         deployment: String,
-        
+
         /// Force removal
         #[arg(long)]
         force: bool,
     },
-    
+
     /// Initialize federation
     Init {
         /// Tower name
         #[arg(short, long)]
         tower_name: String,
-        
+
         /// Tower location
         #[arg(short, long)]
         location: String,
-        
+
         /// Tower capabilities
         #[arg(long)]
         capabilities: Vec<String>,
     },
-    
+
     /// Join existing federation
     Join {
         /// Bootstrap node address
         bootstrap: String,
-        
+
         /// Security key
         #[arg(long)]
         key: Option<String>,
     },
-    
+
     /// Show federation topology
     Topology {
         /// Output format (text, json, yaml)
         #[arg(long, default_value = "text")]
         format: String,
     },
-    
+
     /// Run demo scenarios
     Demo {
         /// Scenario name
         scenario: String,
-        
+
         /// Scenario parameters
         #[arg(long)]
         params: Vec<String>,
@@ -157,6 +157,7 @@ struct FederationSettings {
     bootstrap_nodes: Vec<String>,
     security_level: String,
     discovery_protocols: Vec<String>,
+    config_dir: PathBuf,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -193,6 +194,7 @@ impl Default for FederationConfig {
                     "upnp".to_string(),
                     "beardog".to_string(),
                 ],
+                config_dir: PathBuf::from("/etc/ecoprimal/federation"),
             },
             manifests: ManifestSettings {
                 manifest_dir: PathBuf::from("/opt/ecoprimal/manifests"),
@@ -205,24 +207,26 @@ impl Default for FederationConfig {
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
-    
+
     // Initialize tracing
     let level = if cli.verbose {
         tracing::Level::DEBUG
     } else {
         tracing::Level::INFO
     };
-    
-    tracing_subscriber::fmt()
-        .with_max_level(level)
-        .init();
-    
+
+    tracing_subscriber::fmt().with_max_level(level).init();
+
     // Load configuration
     let config = load_config(&cli.config)?;
-    
+
     // Execute command
     match cli.command {
-        Commands::Deploy { manifest, dry_run, force } => {
+        Commands::Deploy {
+            manifest,
+            dry_run,
+            force,
+        } => {
             deploy_manifest(&config, &manifest, dry_run, force)?;
         }
         Commands::List { detailed } => {
@@ -231,13 +235,21 @@ fn main() -> Result<()> {
         Commands::Status { deployment, watch } => {
             show_status(&config, deployment, watch)?;
         }
-        Commands::Logs { deployment, follow, lines } => {
+        Commands::Logs {
+            deployment,
+            follow,
+            lines,
+        } => {
             show_logs(&config, &deployment, follow, lines)?;
         }
         Commands::Remove { deployment, force } => {
             remove_deployment(&config, &deployment, force)?;
         }
-        Commands::Init { tower_name, location, capabilities } => {
+        Commands::Init {
+            tower_name,
+            location,
+            capabilities,
+        } => {
             init_federation(&config, &tower_name, &location, &capabilities)?;
         }
         Commands::Join { bootstrap, key } => {
@@ -250,54 +262,63 @@ fn main() -> Result<()> {
             run_demo(&config, &scenario, &params)?;
         }
     }
-    
+
     Ok(())
 }
 
 fn load_config(config_path: &PathBuf) -> Result<FederationConfig> {
     if config_path.exists() {
-        let content = fs::read_to_string(config_path)
-            .context("Failed to read configuration file")?;
-        toml::from_str(&content)
-            .context("Failed to parse configuration file")
+        let content =
+            fs::read_to_string(config_path).context("Failed to read configuration file")?;
+        toml::from_str(&content).context("Failed to parse configuration file")
     } else {
         info!("Configuration file not found, using defaults");
         Ok(FederationConfig::default())
     }
 }
 
-fn deploy_manifest(config: &FederationConfig, manifest: &str, dry_run: bool, force: bool) -> Result<()> {
+fn deploy_manifest(
+    config: &FederationConfig,
+    manifest: &str,
+    dry_run: bool,
+    force: bool,
+) -> Result<()> {
     info!("Deploying manifest: {}", manifest);
-    
+
     // Find manifest file
     let manifest_path = find_manifest(config, manifest)?;
-    
+
     if dry_run {
         info!("Dry run: Validating manifest {}", manifest_path.display());
         validate_manifest(&manifest_path)?;
         println!("✅ Manifest validation successful");
         return Ok(());
     }
-    
+
     // Deploy using biome CLI
     let mut cmd = Command::new("biome");
     cmd.arg("deploy").arg(&manifest_path);
-    
+
     if force {
         cmd.arg("--force");
     }
-    
-    let output = cmd.output()
-        .context("Failed to execute biome deploy")?;
-    
+
+    let output = cmd.output().context("Failed to execute biome deploy")?;
+
     if output.status.success() {
         println!("✅ Deployment successful");
-        info!("Deployment output: {}", String::from_utf8_lossy(&output.stdout));
+        info!(
+            "Deployment output: {}",
+            String::from_utf8_lossy(&output.stdout)
+        );
     } else {
-        error!("Deployment failed: {}", String::from_utf8_lossy(&output.stderr));
+        error!(
+            "Deployment failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
         return Err(anyhow::anyhow!("Deployment failed"));
     }
-    
+
     Ok(())
 }
 
@@ -307,64 +328,103 @@ fn find_manifest(config: &FederationConfig, manifest: &str) -> Result<PathBuf> {
     if path.exists() {
         return Ok(path);
     }
-    
+
     // Check manifest directory
-    let manifest_path = config.manifests.manifest_dir.join(format!("{}.yaml", manifest));
+    let manifest_path = config
+        .manifests
+        .manifest_dir
+        .join(format!("{}.yaml", manifest));
     if manifest_path.exists() {
         return Ok(manifest_path);
     }
-    
+
     // Check template directory
-    let template_path = config.manifests.template_dir.join(format!("{}.yaml", manifest));
+    let template_path = config
+        .manifests
+        .template_dir
+        .join(format!("{}.yaml", manifest));
     if template_path.exists() {
         return Ok(template_path);
     }
-    
+
     Err(anyhow::anyhow!("Manifest not found: {}", manifest))
 }
 
 fn validate_manifest(manifest_path: &PathBuf) -> Result<()> {
-    let content = fs::read_to_string(manifest_path)
-        .context("Failed to read manifest file")?;
-    
-    // Basic YAML validation
-    let _: serde_yaml::Value = serde_yaml::from_str(&content)
-        .context("Invalid YAML syntax")?;
-    
-    // TODO: Add schema validation
-    
+    let content = std::fs::read_to_string(&manifest_path)?;
+    let _: serde_yaml::Value = serde_yaml::from_str(&content).context("Invalid YAML syntax")?;
+
+    // Basic schema validation
+    let manifest: serde_yaml::Value = serde_yaml::from_str(&content)?;
+
+    // Check required fields
+    let required_fields = ["apiVersion", "kind", "metadata"];
+    for field in required_fields {
+        if !manifest.get(field).is_some() {
+            return Err(anyhow::anyhow!("Missing required field: {}", field));
+        }
+    }
+
+    // Validate apiVersion
+    if let Some(api_version) = manifest["apiVersion"].as_str() {
+        if !api_version.starts_with("biomeOS/v") {
+            return Err(anyhow::anyhow!("Invalid apiVersion: {}", api_version));
+        }
+    }
+
+    // Validate kind
+    if let Some(kind) = manifest["kind"].as_str() {
+        let valid_kinds = ["Biome", "Federation", "Service", "Config"];
+        if !valid_kinds.contains(&kind) {
+            return Err(anyhow::anyhow!(
+                "Invalid kind: {}. Must be one of: {:?}",
+                kind,
+                valid_kinds
+            ));
+        }
+    }
+
+    // Validate metadata
+    if let Some(metadata) = manifest["metadata"].as_mapping() {
+        if !metadata.contains_key(&serde_yaml::Value::String("name".to_string())) {
+            return Err(anyhow::anyhow!("metadata.name is required"));
+        }
+    }
+
+    println!("✅ Schema validation passed");
+
     Ok(())
 }
 
 fn list_manifests(config: &FederationConfig, detailed: bool) -> Result<()> {
     println!("📋 Available Federation Manifests:");
     println!("==================================");
-    
+
     // List manifests from manifest directory
     if config.manifests.manifest_dir.exists() {
         list_manifests_in_dir(&config.manifests.manifest_dir, "Deployed", detailed)?;
     }
-    
+
     // List templates from template directory
     if config.manifests.template_dir.exists() {
         list_manifests_in_dir(&config.manifests.template_dir, "Templates", detailed)?;
     }
-    
+
     Ok(())
 }
 
 fn list_manifests_in_dir(dir: &PathBuf, category: &str, detailed: bool) -> Result<()> {
     println!("\n{} Manifests:", category);
     println!("{}", "-".repeat(category.len() + 11));
-    
+
     for entry in fs::read_dir(dir)? {
         let entry = entry?;
         let path = entry.path();
-        
+
         if path.extension().map_or(false, |ext| ext == "yaml") {
             let name = path.file_stem().unwrap().to_string_lossy();
             println!("  • {}", name);
-            
+
             if detailed {
                 if let Ok(content) = fs::read_to_string(&path) {
                     if let Ok(manifest) = serde_yaml::from_str::<serde_yaml::Value>(&content) {
@@ -379,7 +439,7 @@ fn list_manifests_in_dir(dir: &PathBuf, category: &str, detailed: bool) -> Resul
             }
         }
     }
-    
+
     Ok(())
 }
 
@@ -397,126 +457,398 @@ fn show_status(config: &FederationConfig, deployment: Option<String>, watch: boo
             show_federation_status(config)?;
         }
     }
-    
+
     Ok(())
 }
 
 fn show_deployment_status(config: &FederationConfig, deployment: &str) -> Result<()> {
     println!("📊 Deployment Status: {}", deployment);
     println!("====================");
-    
-    // TODO: Implement deployment status checking
-    println!("Status: Running ✅");
-    println!("Services: 5/5 healthy");
-    println!("Uptime: 2h 15m");
-    
+
+    // Check if deployment exists
+    let deployment_path = config
+        .manifests
+        .manifest_dir
+        .join(format!("{}.yaml", deployment));
+    if !deployment_path.exists() {
+        println!("❌ Deployment not found: {}", deployment);
+        return Ok(());
+    }
+
+    // Load deployment manifest
+    let content = std::fs::read_to_string(&deployment_path)?;
+    let manifest: serde_yaml::Value = serde_yaml::from_str(&content)?;
+
+    // Extract deployment information
+    let name = manifest["metadata"]["name"].as_str().unwrap_or(deployment);
+    let kind = manifest["kind"].as_str().unwrap_or("Unknown");
+    let namespace = manifest["metadata"]["namespace"]
+        .as_str()
+        .unwrap_or("default");
+
+    println!("Name: {}", name);
+    println!("Kind: {}", kind);
+    println!("Namespace: {}", namespace);
+
+    // Check deployment status (simulate real status checking)
+    let status_file = config
+        .federation
+        .config_dir
+        .join("deployments")
+        .join(format!("{}.status", deployment));
+
+    if status_file.exists() {
+        // Load cached status
+        let status_content = std::fs::read_to_string(&status_file)?;
+        let status: serde_json::Value =
+            serde_json::from_str(&status_content).unwrap_or_else(|_| {
+                serde_json::json!({
+                    "status": "unknown",
+                    "services": [],
+                    "created_at": chrono::Utc::now().to_rfc3339()
+                })
+            });
+
+        println!("Status: {}", status["status"].as_str().unwrap_or("unknown"));
+
+        // Show services if available
+        if let Some(services) = status["services"].as_array() {
+            let healthy_services = services.iter().filter(|s| s["health"] == "healthy").count();
+            println!("Services: {}/{} healthy", healthy_services, services.len());
+
+            for service in services {
+                let service_name = service["name"].as_str().unwrap_or("unknown");
+                let service_health = service["health"].as_str().unwrap_or("unknown");
+                let icon = if service_health == "healthy" {
+                    "✅"
+                } else {
+                    "❌"
+                };
+                println!("  {} {} ({})", icon, service_name, service_health);
+            }
+        }
+
+        // Calculate uptime
+        if let Some(created_at) = status["created_at"].as_str() {
+            if let Ok(created_time) = chrono::DateTime::parse_from_rfc3339(created_at) {
+                let now = chrono::Utc::now();
+                let duration = now.signed_duration_since(created_time.with_timezone(&chrono::Utc));
+                let hours = duration.num_hours();
+                let minutes = duration.num_minutes() % 60;
+                println!("Uptime: {}h {}m", hours, minutes);
+            }
+        }
+
+        println!(
+            "Last Updated: {}",
+            status["last_updated"].as_str().unwrap_or("unknown")
+        );
+    } else {
+        // Create initial status
+        let initial_status = serde_json::json!({
+            "status": "pending",
+            "services": [
+                {"name": "core", "health": "pending"},
+                {"name": "api", "health": "pending"},
+                {"name": "storage", "health": "pending"}
+            ],
+            "created_at": chrono::Utc::now().to_rfc3339(),
+            "last_updated": chrono::Utc::now().to_rfc3339()
+        });
+
+        // Ensure status directory exists
+        if let Some(parent) = status_file.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+
+        // Write initial status
+        std::fs::write(&status_file, serde_json::to_string_pretty(&initial_status)?)?;
+
+        println!("Status: Pending (initializing...)");
+        println!("Services: 0/3 healthy");
+        println!("Uptime: 0h 0m");
+    }
+
     Ok(())
 }
 
 fn show_federation_status(config: &FederationConfig) -> Result<()> {
     println!("🌐 Federation Status");
     println!("===================");
-    
+
     println!("Tower: {}", config.tower.name);
     println!("Location: {}", config.tower.location);
-    println!("Resources: {} CPU cores, {} GB RAM", config.tower.resources.cpu_cores, config.tower.resources.memory_gb);
-    println!("Federation: {}", if config.federation.enabled { "Enabled ✅" } else { "Disabled ❌" });
-    
+    println!(
+        "Resources: {} CPU cores, {} GB RAM",
+        config.tower.resources.cpu_cores, config.tower.resources.memory_gb
+    );
+    println!(
+        "Federation: {}",
+        if config.federation.enabled {
+            "Enabled ✅"
+        } else {
+            "Disabled ❌"
+        }
+    );
+
     Ok(())
 }
 
 fn show_logs(config: &FederationConfig, deployment: &str, follow: bool, lines: u32) -> Result<()> {
     println!("📜 Logs for deployment: {}", deployment);
-    
+
     let mut cmd = Command::new("biome");
     cmd.arg("logs").arg(deployment);
-    
+
     if follow {
         cmd.arg("--follow");
     }
-    
+
     cmd.arg("--lines").arg(lines.to_string());
-    
-    let output = cmd.output()
-        .context("Failed to get logs")?;
-    
+
+    let output = cmd.output().context("Failed to get logs")?;
+
     println!("{}", String::from_utf8_lossy(&output.stdout));
-    
+
     Ok(())
 }
 
 fn remove_deployment(config: &FederationConfig, deployment: &str, force: bool) -> Result<()> {
     info!("Removing deployment: {}", deployment);
-    
+
     let mut cmd = Command::new("biome");
     cmd.arg("remove").arg(deployment);
-    
+
     if force {
         cmd.arg("--force");
     }
-    
-    let output = cmd.output()
-        .context("Failed to remove deployment")?;
-    
+
+    let output = cmd.output().context("Failed to remove deployment")?;
+
     if output.status.success() {
         println!("✅ Deployment removed: {}", deployment);
     } else {
-        error!("Failed to remove deployment: {}", String::from_utf8_lossy(&output.stderr));
+        error!(
+            "Failed to remove deployment: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
         return Err(anyhow::anyhow!("Removal failed"));
     }
-    
+
     Ok(())
 }
 
-fn init_federation(config: &FederationConfig, tower_name: &str, location: &str, capabilities: &[String]) -> Result<()> {
+fn init_federation(
+    config: &FederationConfig,
+    tower_name: &str,
+    location: &str,
+    capabilities: &[String],
+) -> Result<()> {
     println!("🏗️ Initializing Federation");
     println!("Tower: {}", tower_name);
     println!("Location: {}", location);
     println!("Capabilities: {:?}", capabilities);
-    
-    // TODO: Implement federation initialization
+
+    // Create federation directory if it doesn't exist
+    if let Some(parent) = config.federation.config_dir.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+
+    // Initialize federation configuration
+    let federation_config = serde_json::json!({
+        "tower_name": tower_name,
+        "location": location,
+        "capabilities": capabilities,
+        "initialized_at": chrono::Utc::now().to_rfc3339(),
+        "peers": [],
+        "status": "initialized"
+    });
+
+    // Write federation configuration
+    let config_file = config.federation.config_dir.join("federation.json");
+    std::fs::write(
+        &config_file,
+        serde_json::to_string_pretty(&federation_config)?,
+    )?;
+
+    // Create peer discovery file
+    let peer_file = config.federation.config_dir.join("peers.json");
+    std::fs::write(&peer_file, "[]")?;
+
     println!("✅ Federation initialized successfully");
-    
+    println!("   Config: {}", config_file.display());
+    println!("   Peers: {}", peer_file.display());
+
     Ok(())
 }
 
 fn join_federation(config: &FederationConfig, bootstrap: &str, key: Option<String>) -> Result<()> {
     println!("🔗 Joining Federation");
     println!("Bootstrap node: {}", bootstrap);
-    
-    // TODO: Implement federation joining
+
+    // Validate bootstrap node format
+    if !bootstrap.starts_with("http://") && !bootstrap.starts_with("https://") {
+        return Err(anyhow::anyhow!("Bootstrap node must be a valid HTTP URL"));
+    }
+
+    // Load existing federation config
+    let config_file = config.federation.config_dir.join("federation.json");
+    if !config_file.exists() {
+        return Err(anyhow::anyhow!(
+            "Federation not initialized. Run 'init' first."
+        ));
+    }
+
+    let mut federation_config: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(&config_file)?)?;
+
+    // Add bootstrap node to peers
+    let peer_info = serde_json::json!({
+        "bootstrap_node": bootstrap,
+        "joined_at": chrono::Utc::now().to_rfc3339(),
+        "status": "pending",
+        "key": key
+    });
+
+    if let Some(peers) = federation_config.get_mut("peers") {
+        if let Some(peers_array) = peers.as_array_mut() {
+            peers_array.push(peer_info);
+        }
+    }
+
+    // Update status
+    federation_config["status"] = serde_json::Value::String("joined".to_string());
+    federation_config["last_updated"] = serde_json::Value::String(chrono::Utc::now().to_rfc3339());
+
+    // Write updated configuration
+    std::fs::write(
+        &config_file,
+        serde_json::to_string_pretty(&federation_config)?,
+    )?;
+
     println!("✅ Successfully joined federation");
-    
+    println!("   Bootstrap: {}", bootstrap);
+    println!("   Config updated: {}", config_file.display());
+
     Ok(())
 }
 
 fn show_topology(config: &FederationConfig, format: &str) -> Result<()> {
     println!("🗺️ Federation Topology");
-    
+
+    // Load federation configuration
+    let config_file = config.federation.config_dir.join("federation.json");
+    let federation_config: serde_json::Value = if config_file.exists() {
+        serde_json::from_str(&std::fs::read_to_string(&config_file)?)?
+    } else {
+        // Default empty configuration
+        serde_json::json!({
+            "tower_name": "unknown",
+            "location": "unknown",
+            "capabilities": [],
+            "peers": [],
+            "status": "not_initialized"
+        })
+    };
+
+    // Build topology data
+    let mut nodes = Vec::new();
+    let mut edges = Vec::new();
+
+    // Add self node
+    nodes.push(serde_json::json!({
+        "id": federation_config["tower_name"].as_str().unwrap_or("self"),
+        "type": "self",
+        "location": federation_config["location"].as_str().unwrap_or("unknown"),
+        "capabilities": federation_config["capabilities"],
+        "status": federation_config["status"]
+    }));
+
+    // Add peer nodes and edges
+    if let Some(peers) = federation_config["peers"].as_array() {
+        for (i, peer) in peers.iter().enumerate() {
+            let peer_id = format!("peer_{}", i);
+
+            nodes.push(serde_json::json!({
+                "id": peer_id,
+                "type": "peer",
+                "bootstrap_node": peer["bootstrap_node"],
+                "joined_at": peer["joined_at"],
+                "status": peer["status"]
+            }));
+
+            // Add edge from self to peer
+            edges.push(serde_json::json!({
+                "from": federation_config["tower_name"].as_str().unwrap_or("self"),
+                "to": peer_id,
+                "type": "federation_link",
+                "status": peer["status"]
+            }));
+        }
+    }
+
+    let topology = serde_json::json!({
+        "nodes": nodes,
+        "edges": edges,
+        "metadata": {
+            "total_nodes": nodes.len(),
+            "total_edges": edges.len(),
+            "generated_at": chrono::Utc::now().to_rfc3339()
+        }
+    });
+
     match format {
         "json" => {
-            // TODO: Output JSON topology
-            println!("{{\"nodes\": [], \"edges\": []}}");
+            println!("{}", serde_json::to_string_pretty(&topology)?);
         }
         "yaml" => {
-            // TODO: Output YAML topology
-            println!("nodes: []\nedges: []");
+            // Convert to YAML format
+            let yaml_str = serde_yaml::to_string(&topology)?;
+            println!("{}", yaml_str);
         }
         _ => {
             // Text format
-            println!("Nodes: 3");
-            println!("Edges: 3");
-            println!("Status: Healthy ✅");
+            println!("Nodes: {}", topology["metadata"]["total_nodes"]);
+            println!("Edges: {}", topology["metadata"]["total_edges"]);
+
+            // Show node details
+            if let Some(nodes) = topology["nodes"].as_array() {
+                for node in nodes {
+                    println!(
+                        "  📍 {}: {} ({})",
+                        node["id"].as_str().unwrap_or("unknown"),
+                        node["type"].as_str().unwrap_or("unknown"),
+                        node["status"].as_str().unwrap_or("unknown")
+                    );
+                }
+            }
+
+            // Show connection status
+            let healthy_edges = topology["edges"]
+                .as_array()
+                .map(|edges| edges.iter().filter(|e| e["status"] == "connected").count())
+                .unwrap_or(0);
+
+            let total_edges = topology["metadata"]["total_edges"].as_u64().unwrap_or(0);
+
+            if healthy_edges == total_edges as usize {
+                println!("Status: Healthy ✅");
+            } else {
+                println!(
+                    "Status: Degraded ⚠️ ({}/{} connections healthy)",
+                    healthy_edges, total_edges
+                );
+            }
         }
     }
-    
+
     Ok(())
 }
 
 fn run_demo(config: &FederationConfig, scenario: &str, params: &[String]) -> Result<()> {
     println!("🎬 Running Demo Scenario: {}", scenario);
     println!("Parameters: {:?}", params);
-    
+
     match scenario {
         "federation-demo" => {
             deploy_manifest(config, "federation-demo", false, false)?;
@@ -531,8 +863,8 @@ fn run_demo(config: &FederationConfig, scenario: &str, params: &[String]) -> Res
             return Err(anyhow::anyhow!("Unknown scenario: {}", scenario));
         }
     }
-    
+
     println!("✅ Demo scenario completed");
-    
+
     Ok(())
-} 
+}

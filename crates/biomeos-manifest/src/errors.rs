@@ -26,8 +26,8 @@ impl From<serde_yaml::Error> for ManifestError {
 
 impl From<ManifestError> for biomeos_core::BiomeError {
     fn from(err: ManifestError) -> Self {
-        biomeos_core::BiomeError::Generic {
-            message: err.to_string(),
-        }
+        biomeos_core::BiomeError::Generic(
+            err.to_string(),
+        )
     }
 } 

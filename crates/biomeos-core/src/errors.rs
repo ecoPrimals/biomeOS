@@ -1,97 +1,116 @@
 //! Error types for biomeOS
 
-use serde::{Deserialize, Serialize};
-use thiserror::Error;
+use std::fmt;
 
-/// Main error type for biomeOS operations
-#[derive(Error, Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug)]
 pub enum BiomeError {
     /// Configuration error
-    #[error("Configuration error: {message}")]
-    ConfigError { message: String },
-    
-    /// Configuration error (simple)
-    #[error("Config error: {0}")]
     Config(String),
-    
-    /// Network error
-    #[error("Network error: {message}")]
-    NetworkError { message: String },
-    
-    /// Primal error
-    #[error("Primal error: {message}")]
-    PrimalError { message: String },
-    
-    /// Primal not found
-    #[error("Primal not found: {0}")]
-    PrimalNotFound(String),
-    
-    /// Security error
-    #[error("Security error: {message}")]
-    SecurityError { message: String },
-    
-    /// Security error (simple)
-    #[error("Security error: {0}")]
-    Security(String),
-    
-    /// Sovereignty violation
-    #[error("Sovereignty violation: {0}")]
-    SovereigntyViolation(String),
-    
-    /// Vendor lock detected
-    #[error("Vendor lock detected: {0}")]
-    VendorLock(String),
-    
-    /// Storage error
-    #[error("Storage error: {message}")]
-    StorageError { message: String },
-    
+    /// Configuration error (legacy)
+    ConfigError(String),
     /// IO error
-    #[error("IO error: {message}")]
-    IoError { message: String },
-    
+    Io(std::io::Error),
+    /// IO error (legacy)
+    IoError(std::io::Error),
     /// Serialization error
-    #[error("Serialization error: {message}")]
-    SerializationError { message: String },
-    
-    /// Runtime error for toadStool integration
-    #[error("Runtime error: {0}")]
-    RuntimeError(String),
-    
-    /// Validation error for manifest validation
-    #[error("Validation error: {0}")]
+    Serialization(String),
+    /// Network error
+    Network(String),
+    /// Network error (legacy)
+    NetworkError(String),
+    /// Authentication error
+    Authentication(String),
+    /// Authorization error
+    Authorization(String),
+    /// Security error
+    Security(String),
+    /// Validation error
+    Validation(String),
+    /// Validation error (legacy)
     ValidationError(String),
-    
     /// Invalid input error
-    #[error("Invalid input: {0}")]
     InvalidInput(String),
-
+    /// Invalid response error
+    InvalidResponse(String),
+    /// Resource not found
+    NotFound(String),
+    /// Feature not implemented
+    NotImplemented(String),
+    /// Operation timeout
+    Timeout(String),
+    /// Runtime error
+    RuntimeError(String),
+    /// Service error
+    ServiceError(String),
+    /// Resource error
+    ResourceError(String),
+    /// Resource exhausted
+    ResourceExhausted(String),
+    /// Sovereignty violation
+    SovereigntyViolation(String),
+    /// Vendor lock-in detected
+    VendorLock(String),
+    /// Primal not found
+    PrimalNotFound(String),
+    /// YAML parsing error
+    YamlError(serde_yaml::Error),
+    /// JSON parsing error
+    JsonError(serde_json::Error),
     /// Generic error
-    #[error("Error: {message}")]
-    Generic { message: String },
+    Generic(String),
 }
 
-impl From<std::io::Error> for BiomeError {
-    fn from(err: std::io::Error) -> Self {
-        BiomeError::IoError {
-            message: err.to_string(),
+impl fmt::Display for BiomeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            BiomeError::Config(msg) => write!(f, "Configuration error: {}", msg),
+            BiomeError::ConfigError(msg) => write!(f, "Configuration error: {}", msg),
+            BiomeError::Io(err) => write!(f, "IO error: {}", err),
+            BiomeError::IoError(err) => write!(f, "IO error: {}", err),
+            BiomeError::Serialization(msg) => write!(f, "Serialization error: {}", msg),
+            BiomeError::Network(msg) => write!(f, "Network error: {}", msg),
+            BiomeError::NetworkError(msg) => write!(f, "Network error: {}", msg),
+            BiomeError::Authentication(msg) => write!(f, "Authentication error: {}", msg),
+            BiomeError::Authorization(msg) => write!(f, "Authorization error: {}", msg),
+            BiomeError::Security(msg) => write!(f, "Security error: {}", msg),
+            BiomeError::Validation(msg) => write!(f, "Validation error: {}", msg),
+            BiomeError::ValidationError(msg) => write!(f, "Validation error: {}", msg),
+            BiomeError::InvalidInput(msg) => write!(f, "Invalid input: {}", msg),
+            BiomeError::InvalidResponse(msg) => write!(f, "Invalid response: {}", msg),
+            BiomeError::NotFound(msg) => write!(f, "Not found: {}", msg),
+            BiomeError::NotImplemented(msg) => write!(f, "Not implemented: {}", msg),
+            BiomeError::Timeout(msg) => write!(f, "Timeout: {}", msg),
+            BiomeError::RuntimeError(msg) => write!(f, "Runtime error: {}", msg),
+            BiomeError::ServiceError(msg) => write!(f, "Service error: {}", msg),
+            BiomeError::ResourceError(msg) => write!(f, "Resource error: {}", msg),
+            BiomeError::ResourceExhausted(msg) => write!(f, "Resource exhausted: {}", msg),
+            BiomeError::SovereigntyViolation(msg) => write!(f, "Sovereignty violation: {}", msg),
+            BiomeError::VendorLock(msg) => write!(f, "Vendor lock detected: {}", msg),
+            BiomeError::PrimalNotFound(msg) => write!(f, "Primal not found: {}", msg),
+            BiomeError::YamlError(err) => write!(f, "YAML error: {}", err),
+            BiomeError::JsonError(err) => write!(f, "JSON error: {}", err),
+            BiomeError::Generic(msg) => write!(f, "Error: {}", msg),
         }
     }
 }
 
-impl From<serde_json::Error> for BiomeError {
-    fn from(err: serde_json::Error) -> Self {
-        BiomeError::SerializationError {
-            message: err.to_string(),
-        }
+impl std::error::Error for BiomeError {}
+
+impl From<std::io::Error> for BiomeError {
+    fn from(err: std::io::Error) -> Self {
+        BiomeError::Io(err)
     }
 }
 
 impl From<serde_yaml::Error> for BiomeError {
     fn from(err: serde_yaml::Error) -> Self {
-        BiomeError::SerializationError {
-            message: err.to_string(),
-        }
+        BiomeError::YamlError(err)
+    }
+}
+
+impl From<serde_json::Error> for BiomeError {
+    fn from(err: serde_json::Error) -> Self {
+        BiomeError::JsonError(err)
     }
 }
 

@@ -1,28 +1,29 @@
 //! biomeOS API Integration Layer
-//! 
+//!
 //! This module provides the API abstraction layer for the biomeOS UI to communicate
 //! with the core biomeOS system and ecosystem primals. Follows API-driven architecture.
 
+use anyhow::Result;
+use biomeos_core::*;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use anyhow::Result;
-use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
-use biomeos_core::*;
 
 use crate::state::*;
+use crate::views::byob::types::{HealthStatus, PrimalCapability};
 
 /// Main API client for biomeOS core integration
 pub struct BiomeOSApi {
     /// Core biomeOS manager
     core: Arc<Mutex<Option<UniversalBiomeManager>>>,
-    
+
     /// API endpoints for different services
     endpoints: HashMap<String, String>,
-    
+
     /// HTTP client for external API calls
     client: reqwest::Client,
-    
+
     /// Connection status
     connected: Arc<Mutex<bool>>,
 }
@@ -35,7 +36,7 @@ impl BiomeOSApi {
         endpoints.insert("byob".to_string(), "http://localhost:8082".to_string());
         endpoints.insert("iso".to_string(), "http://localhost:8083".to_string());
         endpoints.insert("niches".to_string(), "http://localhost:8084".to_string());
-        
+
         Self {
             core: Arc::new(Mutex::new(None)),
             endpoints,
@@ -48,17 +49,17 @@ impl BiomeOSApi {
     pub async fn initialize(&self) -> Result<()> {
         let config = biomeos_core::BiomeOSConfig::default();
         let manager = UniversalBiomeManager::new(config);
-        
+
         {
             let mut core = self.core.lock().await;
             *core = Some(manager);
         }
-        
+
         {
             let mut connected = self.connected.lock().await;
             *connected = true;
         }
-        
+
         Ok(())
     }
 
@@ -106,7 +107,10 @@ impl BiomeOSApi {
     }
 
     /// Get installation progress
-    pub async fn get_installation_progress(&self, installation_id: &str) -> Result<InstallationProgress> {
+    pub async fn get_installation_progress(
+        &self,
+        installation_id: &str,
+    ) -> Result<InstallationProgress> {
         // Mock progress data
         Ok(InstallationProgress {
             installation_id: installation_id.to_string(),
@@ -128,7 +132,11 @@ impl BiomeOSApi {
                     name: "Toadstool".to_string(),
                     description: "Universal compute runtime".to_string(),
                     version: "1.0.0".to_string(),
-                    capabilities: vec!["containers".to_string(), "vms".to_string(), "native".to_string()],
+                    capabilities: vec![
+                        "containers".to_string(),
+                        "vms".to_string(),
+                        "native".to_string(),
+                    ],
                     dependencies: vec![],
                     api_endpoints: vec!["http://localhost:8080".to_string()],
                     installation_status: PrimalInstallationStatus::Installed,
@@ -138,7 +146,11 @@ impl BiomeOSApi {
                     name: "Songbird".to_string(),
                     description: "Service mesh and orchestration".to_string(),
                     version: "1.0.0".to_string(),
-                    capabilities: vec!["mesh".to_string(), "discovery".to_string(), "routing".to_string()],
+                    capabilities: vec![
+                        "mesh".to_string(),
+                        "discovery".to_string(),
+                        "routing".to_string(),
+                    ],
                     dependencies: vec![],
                     api_endpoints: vec!["http://localhost:8081".to_string()],
                     installation_status: PrimalInstallationStatus::Installed,
@@ -152,22 +164,26 @@ impl BiomeOSApi {
     pub async fn validate_yaml(&self, yaml_content: &str) -> Result<YamlValidationResponse> {
         // Mock validation
         let is_valid = !yaml_content.contains("invalid");
-        
+
         Ok(YamlValidationResponse {
             is_valid,
-            errors: if is_valid { 
-                Vec::new() 
-            } else { 
-                vec!["Invalid YAML syntax".to_string()] 
+            errors: if is_valid {
+                Vec::new()
+            } else {
+                vec!["Invalid YAML syntax".to_string()]
             },
             warnings: Vec::new(),
         })
     }
 
     /// BYOB API Methods
-    
+
     /// Create a new team workspace
-    pub async fn create_team(&self, team_name: &str, description: &str) -> Result<TeamCreationResponse> {
+    pub async fn create_team(
+        &self,
+        team_name: &str,
+        description: &str,
+    ) -> Result<TeamCreationResponse> {
         Ok(TeamCreationResponse {
             team_id: uuid::Uuid::new_v4().to_string(),
             team_name: team_name.to_string(),
@@ -177,7 +193,11 @@ impl BiomeOSApi {
     }
 
     /// Deploy a biome for a team
-    pub async fn deploy_biome(&self, team_id: &str, manifest_path: &str) -> Result<DeploymentResponse> {
+    pub async fn deploy_biome(
+        &self,
+        team_id: &str,
+        manifest_path: &str,
+    ) -> Result<DeploymentResponse> {
         Ok(DeploymentResponse {
             deployment_id: uuid::Uuid::new_v4().to_string(),
             team_id: team_id.to_string(),
@@ -189,24 +209,31 @@ impl BiomeOSApi {
     /// Get team deployments
     pub async fn get_team_deployments(&self, team_id: &str) -> Result<Vec<DeploymentInfo>> {
         // Mock deployment data
-        Ok(vec![
-            DeploymentInfo {
-                id: "dep-001".to_string(),
-                name: "webapp-production".to_string(),
-                team: team_id.to_string(),
-                status: DeploymentStatus::Running,
-                created_at: "2024-01-15 10:30:00".to_string(),
-                updated_at: "2024-01-15 14:22:00".to_string(),
-                services: vec![],
-                resource_usage: ResourceUsage {
-                    cpu_cores: 8.0,
-                    memory_gb: 16.0,
-                    storage_gb: 100.0,
-                    network_mbps: 50.0,
-                },
-                health_score: 0.95,
-            }
-        ])
+        Ok(vec![DeploymentInfo {
+            id: "dep-001".to_string(),
+            name: "webapp-production".to_string(),
+            team: team_id.to_string(),
+            status: DeploymentStatus::Running,
+            created_at: "2024-01-15 10:30:00".to_string(),
+            updated_at: "2024-01-15 14:22:00".to_string(),
+            last_updated: "2024-01-15 14:22:00".to_string(),
+            services: vec![],
+            resource_usage: ResourceUsage {
+                cpu_percent: 40.0,
+                memory_percent: 60.0,
+                storage_percent: 50.0,
+                network_mbps: 50.0,
+                cpu_cores: 8.0,
+                memory_gb: 16.0,
+                storage_gb: 100.0,
+            },
+            health_status: HealthStatus::Healthy,
+            primals: vec!["toadstool".to_string(), "nestgate".to_string()],
+            capabilities: [PrimalCapability::Compute, PrimalCapability::Storage]
+                .into_iter()
+                .collect(),
+            health_score: 0.95,
+        }])
     }
 
     /// Get team resource usage
@@ -214,26 +241,28 @@ impl BiomeOSApi {
         Ok(TeamResourceResponse {
             team_id: team_id.to_string(),
             quota: ResourceQuota {
-                max_cpu_cores: 20.0,
-                max_memory_gb: 40.0,
-                max_storage_gb: 200.0,
-                max_deployments: 5,
+                max_memory_bytes: 40 * 1024 * 1024 * 1024,   // 40GB
+                max_storage_bytes: 200 * 1024 * 1024 * 1024, // 200GB
+                max_network_bandwidth_mbps: 1000.0,
                 used_cpu_cores: 12.0,
                 used_memory_gb: 24.0,
                 used_storage_gb: 150.0,
                 used_deployments: 3,
             },
             current_usage: ResourceUsage {
+                cpu_percent: 60.0,
+                memory_percent: 60.0,
+                storage_percent: 75.0,
+                network_mbps: 100.0,
                 cpu_cores: 12.0,
                 memory_gb: 24.0,
                 storage_gb: 150.0,
-                network_mbps: 100.0,
             },
         })
     }
 
     /// ISO Creator API Methods
-    
+
     /// Start ISO build process
     pub async fn start_iso_build(&self, config: &IsoConfig) -> Result<IsoBuildResponse> {
         Ok(IsoBuildResponse {
@@ -285,7 +314,7 @@ impl BiomeOSApi {
     }
 
     /// Niche Manager API Methods
-    
+
     /// Create a new niche package
     pub async fn create_niche(&self, niche_yaml: &str) -> Result<NicheCreationResponse> {
         Ok(NicheCreationResponse {
@@ -298,10 +327,14 @@ impl BiomeOSApi {
     /// Validate niche package
     pub async fn validate_niche(&self, niche_yaml: &str) -> Result<NicheValidationResponse> {
         let is_valid = !niche_yaml.contains("invalid");
-        
+
         Ok(NicheValidationResponse {
             is_valid,
-            errors: if is_valid { Vec::new() } else { vec!["Invalid niche syntax".to_string()] },
+            errors: if is_valid {
+                Vec::new()
+            } else {
+                vec!["Invalid niche syntax".to_string()]
+            },
             warnings: vec![],
             suggestions: vec!["Consider adding resource limits".to_string()],
         })
@@ -342,24 +375,22 @@ impl BiomeOSApi {
 
     /// Get marketplace niches
     pub async fn get_marketplace_niches(&self) -> Result<Vec<MarketplaceNicheInfo>> {
-        Ok(vec![
-            MarketplaceNicheInfo {
-                package: NichePackageInfo {
-                    id: "enterprise-crm".to_string(),
-                    name: "Enterprise CRM Suite".to_string(),
-                    description: "Complete customer relationship management system".to_string(),
-                    version: "3.2.1".to_string(),
-                    size_mb: 1500,
-                    category: "Enterprise".to_string(),
-                    author: "Enterprise Solutions Inc.".to_string(),
-                },
-                verified: true,
-                featured: true,
-                security_score: 9.2,
-                community_rating: 4.8,
-                downloads: 450,
+        Ok(vec![MarketplaceNicheInfo {
+            package: NichePackageInfo {
+                id: "enterprise-crm".to_string(),
+                name: "Enterprise CRM Suite".to_string(),
+                description: "Complete customer relationship management system".to_string(),
+                version: "3.2.1".to_string(),
+                size_mb: 1500,
+                category: "Enterprise".to_string(),
+                author: "Enterprise Solutions Inc.".to_string(),
             },
-        ])
+            verified: true,
+            featured: true,
+            security_score: 9.2,
+            community_rating: 4.8,
+            downloads: 450,
+        }])
     }
 
     async fn detect_container_runtime(&self) -> Option<String> {
@@ -367,7 +398,7 @@ impl BiomeOSApi {
         if let Ok(output) = tokio::process::Command::new("docker")
             .arg("--version")
             .output()
-            .await 
+            .await
         {
             if output.status.success() {
                 return Some("docker".to_string());
@@ -378,7 +409,7 @@ impl BiomeOSApi {
         if let Ok(output) = tokio::process::Command::new("podman")
             .arg("--version")
             .output()
-            .await 
+            .await
         {
             if output.status.success() {
                 return Some("podman".to_string());
@@ -393,17 +424,17 @@ impl BiomeOSApi {
         // Create a basic BiomeOSConfig for initialization
         let config = biomeos_core::BiomeOSConfig::default();
         let manager = UniversalBiomeManager::new(config);
-        
+
         {
             let mut core = self.core.lock().await;
             *core = Some(manager);
         }
-        
+
         {
             let mut connected = self.connected.lock().await;
             *connected = true;
         }
-        
+
         Ok(InitializationResponse {
             status: "initialized".to_string(),
             message: "BiomeOS initialized successfully".to_string(),
@@ -584,10 +615,10 @@ pub struct MarketplaceNicheInfo {
 }
 
 // Import types from views for consistency
-use crate::views::byob::{DeploymentInfo, DeploymentStatus, ResourceUsage, ResourceQuota};
+use crate::views::byob::{DeploymentInfo, DeploymentStatus, ResourceQuota, ResourceUsage};
 
 impl Default for BiomeOSApi {
     fn default() -> Self {
         Self::new()
     }
-} 
+}

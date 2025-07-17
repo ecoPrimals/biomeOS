@@ -429,14 +429,19 @@ impl PackageManager {
     }
 
     /// Install package
-    pub async fn install_package(&self, package_name: &str, version: Option<&str>) -> BiomeResult<()> {
+    pub async fn install_package(
+        &self,
+        package_name: &str,
+        version: Option<&str>,
+    ) -> BiomeResult<()> {
         tracing::info!("Installing package: {}", package_name);
 
         // Check if package is already installed
         if self.is_package_installed(package_name).await? {
-            return Err(biomeos_core::BiomeError::Generic {
-                message: format!("Package already installed: {}", package_name),
-            });
+            return Err(biomeos_core::BiomeError::Generic(format!(
+                "Package already installed: {}",
+                package_name
+            )));
         }
 
         // Find package in repositories
@@ -467,9 +472,13 @@ impl PackageManager {
     }
 
     /// Find package in repositories
-    async fn find_package(&self, package_name: &str, version: Option<&str>) -> BiomeResult<RepositoryPackage> {
+    async fn find_package(
+        &self,
+        package_name: &str,
+        version: Option<&str>,
+    ) -> BiomeResult<RepositoryPackage> {
         let repositories = self.repositories.read().await;
-        
+
         for repo in repositories.values() {
             if let Some(package) = repo.packages.get(package_name) {
                 // TODO: Check version constraints
@@ -477,17 +486,24 @@ impl PackageManager {
             }
         }
 
-        Err(biomeos_core::BiomeError::Generic {
-            message: format!("Package not found: {}", package_name),
-        })
+        Err(biomeos_core::BiomeError::Generic(format!(
+            "Package not found: {}",
+            package_name
+        )))
     }
 
     /// Download package
-    async fn download_package(&self, repo_package: &RepositoryPackage) -> BiomeResult<CachedPackage> {
+    async fn download_package(
+        &self,
+        repo_package: &RepositoryPackage,
+    ) -> BiomeResult<CachedPackage> {
         // TODO: Implement package download
         // For now, create a mock cached package
-        let cache_path = self.config.cache_dir.join(format!("{}-{}.pkg", repo_package.name, repo_package.version));
-        
+        let cache_path = self.config.cache_dir.join(format!(
+            "{}-{}.pkg",
+            repo_package.name, repo_package.version
+        ));
+
         let cached_package = CachedPackage {
             package: repo_package.clone(),
             cache_path,
@@ -549,9 +565,10 @@ impl PackageManager {
 
         // Check if package is installed
         if !self.is_package_installed(package_name).await? {
-            return Err(biomeos_core::BiomeError::Generic {
-                message: format!("Package not installed: {}", package_name),
-            });
+            return Err(biomeos_core::BiomeError::Generic(format!(
+                "Package not installed: {}",
+                package_name
+            )));
         }
 
         // Remove package files
@@ -646,4 +663,4 @@ impl Default for PackageConfig {
             allow_untrusted: false,
         }
     }
-} 
+}

@@ -3,7 +3,7 @@
 //! Manages user accounts, authentication, and permissions for biomeOS.
 //! **FULLY INTEGRATED** with BearDog security for keys, secrets, and authentication.
 
-use biomeos_core::{BiomeResult, BeardogAccessLevel, GeneticBeardogKey};
+use biomeos_core::{BeardogAccessLevel, BiomeResult, GeneticBeardogKey};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -95,9 +95,7 @@ pub enum BeardogAuthMethod {
         ca_path: PathBuf,
     },
     /// API key authentication
-    ApiKey {
-        key_reference: String,
-    },
+    ApiKey { key_reference: String },
     /// Service account authentication
     ServiceAccount {
         account_id: String,
@@ -324,13 +322,19 @@ pub enum UserAuthMethod {
     /// Password authentication (validated through BearDog)
     Password { password: String },
     /// SSH key authentication (validated through BearDog)
-    SshKey { public_key: String, signature: String },
+    SshKey {
+        public_key: String,
+        signature: String,
+    },
     /// API key authentication (validated through BearDog)
     ApiKey { key: String },
     /// Genetic BearDog key authentication
     GeneticKey { key: GeneticBeardogKey },
     /// Biometric authentication (processed through BearDog)
-    Biometric { biometric_data: String, biometric_type: String },
+    Biometric {
+        biometric_data: String,
+        biometric_type: String,
+    },
 }
 
 /// BearDog key management operations
@@ -342,31 +346,48 @@ pub struct BeardogKeyManagement {
 
 impl BeardogKeyManagement {
     /// Create a new BearDog key for user
-    pub async fn create_user_key(&self, username: &str, key_type: KeyType) -> BiomeResult<String> {
+    pub async fn create_user_key(
+        &self,
+        _username: &str,
+        _key_type: KeyType,
+    ) -> BiomeResult<String> {
         // Implementation would call BearDog API
         todo!("Implement BearDog key creation")
     }
-    
+
     /// Rotate user's BearDog key
-    pub async fn rotate_user_key(&self, username: &str, old_key_ref: &str) -> BiomeResult<String> {
+    pub async fn rotate_user_key(
+        &self,
+        _username: &str,
+        _old__key_ref: &str,
+    ) -> BiomeResult<String> {
         // Implementation would call BearDog API
         todo!("Implement BearDog key rotation")
     }
-    
+
     /// Validate user key through BearDog
-    pub async fn validate_user_key(&self, key_ref: &str, challenge: &str) -> BiomeResult<bool> {
+    pub async fn validate_user_key(&self, _key_ref: &str, _challenge: &str) -> BiomeResult<bool> {
         // Implementation would call BearDog API
         todo!("Implement BearDog key validation")
     }
-    
+
     /// Store secret in BearDog HSM
-    pub async fn store_user_secret(&self, username: &str, secret_name: &str, secret_value: &str) -> BiomeResult<String> {
+    pub async fn store_user_secret(
+        &self,
+        _username: &str,
+        _secret_name: &str,
+        _secret_value: &str,
+    ) -> BiomeResult<String> {
         // Implementation would call BearDog secret storage
         todo!("Implement BearDog secret storage")
     }
-    
+
     /// Retrieve secret from BearDog HSM
-    pub async fn retrieve_user_secret(&self, username: &str, secret_ref: &str) -> BiomeResult<String> {
+    pub async fn retrieve_user_secret(
+        &self,
+        _username: &str,
+        _secret_ref: &str,
+    ) -> BiomeResult<String> {
         // Implementation would call BearDog secret retrieval
         todo!("Implement BearDog secret retrieval")
     }
@@ -447,36 +468,41 @@ impl UserManager {
     }
 
     /// Initialize BearDog connection and validate security context
-    async fn initialize_beardog_connection(&self, provider: &BeardogSecurityProvider) -> BiomeResult<()> {
+    async fn initialize_beardog_connection(
+        &self,
+        _provider: &BeardogSecurityProvider,
+    ) -> BiomeResult<()> {
         tracing::info!("Initializing BearDog security provider connection");
-        
+
         // Validate BearDog endpoints
         // Implementation would ping BearDog services and validate connectivity
-        
+
         // Establish service-to-service authentication
         // Implementation would authenticate with BearDog using service credentials
-        
+
         // Validate security context
         // Implementation would verify security level and compliance mode
-        
+
         tracing::info!("BearDog security provider initialized successfully");
         Ok(())
     }
 
     /// Create user with BearDog key management
-    pub async fn create_user_with_beardog(&self, 
-        username: &str, 
-        auth_method: UserAuthMethod,
+    pub async fn create_user_with_beardog(
+        &self,
+        username: &str,
+        _auth_method: UserAuthMethod,
         access_level: BeardogAccessLevel,
-        full_name: Option<String>
+        full_name: Option<String>,
     ) -> BiomeResult<u32> {
         tracing::info!("Creating user '{}' with BearDog integration", username);
 
         // Check if user already exists
         if self.user_exists(username).await? {
-            return Err(biomeos_core::BiomeError::Generic {
-                message: format!("User '{}' already exists", username)
-            });
+            return Err(biomeos_core::BiomeError::Generic(format!(
+                "User '{}' already exists",
+                username
+            )));
         }
 
         let user_id = self.generate_user_id().await;
@@ -484,11 +510,16 @@ impl UserManager {
         // Create BearDog key for the user
         let beardog_key_reference = if let Some(provider) = &self.beardog_provider {
             // Implementation would create key through BearDog API
-            format!("beardog_key_{}_{}_{}", username, user_id, Uuid::new_v4().simple())
+            format!(
+                "beardog_key_{}_{}_{}",
+                username,
+                user_id,
+                Uuid::new_v4().simple()
+            )
         } else {
-            return Err(biomeos_core::BiomeError::Generic {
-                message: "BearDog provider not configured".to_string()
-            });
+            return Err(biomeos_core::BiomeError::Generic(
+                "BearDog provider not configured".to_string(),
+            ));
         };
 
         // Generate genetic key if enabled
@@ -536,15 +567,25 @@ impl UserManager {
         }
 
         // Log user creation through BearDog audit system
-        self.audit_user_operation("user_created", username, &HashMap::new()).await?;
+        self.audit_user_operation("user_created", username, &HashMap::new())
+            .await?;
 
-        tracing::info!("User '{}' created successfully with BearDog integration", username);
+        tracing::info!(
+            "User '{}' created successfully with BearDog integration",
+            username
+        );
         Ok(user_id)
     }
 
     /// Authenticate user through BearDog
-    pub async fn authenticate_with_beardog(&self, auth_request: UserAuthRequest) -> BiomeResult<UserSession> {
-        tracing::info!("Authenticating user '{}' through BearDog", auth_request.username);
+    pub async fn authenticate_with_beardog(
+        &self,
+        auth_request: UserAuthRequest,
+    ) -> BiomeResult<UserSession> {
+        tracing::info!(
+            "Authenticating user '{}' through BearDog",
+            auth_request.username
+        );
 
         // Get user from database
         let user = {
@@ -552,18 +593,25 @@ impl UserManager {
             users.get(&auth_request.username).cloned()
         };
 
-        let user = user.ok_or_else(|| biomeos_core::BiomeError::Generic {
-            message: format!("User '{}' not found", auth_request.username)
+        let user = user.ok_or_else(|| {
+            biomeos_core::BiomeError::Generic(format!("User '{}' not found", auth_request.username))
         })?;
 
         // Validate through BearDog
-        let validation_result = self.validate_auth_through_beardog(&user, &auth_request.auth_method).await?;
+        let validation_result = self
+            .validate_auth_through_beardog(&user, &auth_request.auth_method)
+            .await?;
 
         if !validation_result.success {
-            self.audit_user_operation("authentication_failed", &auth_request.username, &HashMap::new()).await?;
-            return Err(biomeos_core::BiomeError::Generic {
-                message: "Authentication failed".to_string()
-            });
+            self.audit_user_operation(
+                "authentication_failed",
+                &auth_request.username,
+                &HashMap::new(),
+            )
+            .await?;
+            return Err(biomeos_core::BiomeError::Generic(
+                "Authentication failed".to_string(),
+            ));
         }
 
         // Create BearDog security context
@@ -578,7 +626,9 @@ impl UserManager {
         };
 
         // Create session with BearDog integration
-        let session = self.create_beardog_session(&user, beardog_context, &auth_request).await?;
+        let session = self
+            .create_beardog_session(&user, beardog_context, &auth_request)
+            .await?;
 
         // Update last login time
         {
@@ -589,17 +639,29 @@ impl UserManager {
         }
 
         // Log successful authentication
-        self.audit_user_operation("authentication_success", &auth_request.username, &HashMap::new()).await?;
+        self.audit_user_operation(
+            "authentication_success",
+            &auth_request.username,
+            &HashMap::new(),
+        )
+        .await?;
 
-        tracing::info!("User '{}' authenticated successfully through BearDog", auth_request.username);
+        tracing::info!(
+            "User '{}' authenticated successfully through BearDog",
+            auth_request.username
+        );
         Ok(session)
     }
 
     /// Validate authentication through BearDog
-    async fn validate_auth_through_beardog(&self, user: &User, auth_method: &UserAuthMethod) -> BiomeResult<BeardogValidationResult> {
+    async fn validate_auth_through_beardog(
+        &self,
+        user: &User,
+        auth_method: &UserAuthMethod,
+    ) -> BiomeResult<BeardogValidationResult> {
         // Implementation would call BearDog authentication API
         // This is a placeholder for the actual BearDog integration
-        
+
         Ok(BeardogValidationResult {
             success: true,
             auth_token: format!("beardog_token_{}", Uuid::new_v4().simple()),
@@ -613,7 +675,12 @@ impl UserManager {
     }
 
     /// Create session with BearDog security context
-    async fn create_beardog_session(&self, user: &User, beardog_context: BeardogSecurityContext, auth_request: &UserAuthRequest) -> BiomeResult<UserSession> {
+    async fn create_beardog_session(
+        &self,
+        user: &User,
+        beardog_context: BeardogSecurityContext,
+        auth_request: &UserAuthRequest,
+    ) -> BiomeResult<UserSession> {
         let session_id = Uuid::new_v4().to_string();
         let audit_trail_reference = format!("beardog_audit_{}", Uuid::new_v4().simple());
 
@@ -624,7 +691,8 @@ impl UserManager {
             beardog_context,
             start_time: chrono::Utc::now(),
             last_activity: chrono::Utc::now(),
-            expires_at: chrono::Utc::now() + chrono::Duration::seconds(self.config.session_timeout_seconds as i64),
+            expires_at: chrono::Utc::now()
+                + chrono::Duration::seconds(self.config.session_timeout_seconds as i64),
             ip_address: auth_request.client_ip.clone(),
             user_agent: auth_request.client_user_agent.clone(),
             status: SessionStatus::Active,
@@ -642,22 +710,40 @@ impl UserManager {
     }
 
     /// Audit user operations through BearDog
-    async fn audit_user_operation(&self, operation: &str, username: &str, metadata: &HashMap<String, String>) -> BiomeResult<()> {
+    async fn audit_user_operation(
+        &self,
+        operation: &str,
+        username: &str,
+        _metadata: &HashMap<String, String>,
+    ) -> BiomeResult<()> {
         if let Some(provider) = &self.beardog_provider {
             // Implementation would log to BearDog audit system
-            tracing::info!("Auditing operation '{}' for user '{}' through BearDog", operation, username);
+            tracing::info!(
+                "Auditing operation '{}' for user '{}' through BearDog",
+                operation,
+                username
+            );
         }
         Ok(())
     }
 
     /// Add SSH key for user (stored in BearDog)
-    pub async fn add_user_ssh_key(&self, username: &str, public_key: &str, key_name: &str) -> BiomeResult<String> {
-        tracing::info!("Adding SSH key '{}' for user '{}' through BearDog", key_name, username);
+    pub async fn add_user_ssh_key(
+        &self,
+        username: &str,
+        _public_key: &str,
+        key_name: &str,
+    ) -> BiomeResult<String> {
+        tracing::info!(
+            "Adding SSH key '{}' for user '{}' through BearDog",
+            key_name,
+            username
+        );
 
         if let Some(provider) = &self.beardog_provider {
             // Implementation would store SSH key in BearDog
             let key_reference = format!("ssh_key_{}_{}", username, Uuid::new_v4().simple());
-            
+
             // Update user record
             {
                 let mut users = self.users.write().await;
@@ -666,27 +752,41 @@ impl UserManager {
                 }
             }
 
-            self.audit_user_operation("ssh_key_added", username, &HashMap::from([
-                ("key_name".to_string(), key_name.to_string()),
-                ("key_reference".to_string(), key_reference.clone()),
-            ])).await?;
+            self.audit_user_operation(
+                "ssh_key_added",
+                username,
+                &HashMap::from([
+                    ("key_name".to_string(), key_name.to_string()),
+                    ("key_reference".to_string(), key_reference.clone()),
+                ]),
+            )
+            .await?;
 
             Ok(key_reference)
         } else {
-            Err(biomeos_core::BiomeError::Generic {
-                message: "BearDog provider not configured".to_string()
-            })
+            Err(biomeos_core::BiomeError::Generic(
+                "BearDog provider not configured".to_string(),
+            ))
         }
     }
 
     /// Generate API key for user (stored in BearDog)
-    pub async fn generate_user_api_key(&self, username: &str, key_name: &str, permissions: Vec<String>) -> BiomeResult<String> {
-        tracing::info!("Generating API key '{}' for user '{}' through BearDog", key_name, username);
+    pub async fn generate_user_api_key(
+        &self,
+        username: &str,
+        key_name: &str,
+        permissions: Vec<String>,
+    ) -> BiomeResult<String> {
+        tracing::info!(
+            "Generating API key '{}' for user '{}' through BearDog",
+            key_name,
+            username
+        );
 
         if let Some(provider) = &self.beardog_provider {
             // Implementation would generate API key in BearDog
             let key_reference = format!("api_key_{}_{}", username, Uuid::new_v4().simple());
-            
+
             // Update user record
             {
                 let mut users = self.users.write().await;
@@ -695,22 +795,27 @@ impl UserManager {
                 }
             }
 
-            self.audit_user_operation("api_key_generated", username, &HashMap::from([
-                ("key_name".to_string(), key_name.to_string()),
-                ("key_reference".to_string(), key_reference.clone()),
-                ("permissions".to_string(), permissions.join(",")),
-            ])).await?;
+            self.audit_user_operation(
+                "api_key_generated",
+                username,
+                &HashMap::from([
+                    ("key_name".to_string(), key_name.to_string()),
+                    ("key_reference".to_string(), key_reference.clone()),
+                    ("permissions".to_string(), permissions.join(",")),
+                ]),
+            )
+            .await?;
 
             Ok(key_reference)
         } else {
-            Err(biomeos_core::BiomeError::Generic {
-                message: "BearDog provider not configured".to_string()
-            })
+            Err(biomeos_core::BiomeError::Generic(
+                "BearDog provider not configured".to_string(),
+            ))
         }
     }
 
     // ... existing methods updated for BearDog integration
-    
+
     async fn load_users(&self) -> BiomeResult<()> {
         // Implementation would load users from database
         // Enhanced to load BearDog key references and genetic keys
@@ -719,7 +824,7 @@ impl UserManager {
 
     async fn create_default_groups(&self) -> BiomeResult<()> {
         tracing::info!("Creating default groups with BearDog policies");
-        
+
         let default_groups = vec![
             ("administrators", "System administrators with full access"),
             ("users", "Standard users"),
@@ -751,12 +856,13 @@ impl UserManager {
 
         self.create_user_with_beardog(
             "root",
-            UserAuthMethod::Password { 
-                password: "root".to_string() // Would be securely generated
+            UserAuthMethod::Password {
+                password: "root".to_string(), // Would be securely generated
             },
             BeardogAccessLevel::Enterprise, // Root gets enterprise level access
-            Some("Root User".to_string())
-        ).await?;
+            Some("Root User".to_string()),
+        )
+        .await?;
 
         Ok(())
     }
@@ -805,7 +911,8 @@ impl UserManager {
         // Implementation would save user data including BearDog references
 
         // Audit shutdown operation
-        self.audit_user_operation("user_manager_shutdown", "system", &HashMap::new()).await?;
+        self.audit_user_operation("user_manager_shutdown", "system", &HashMap::new())
+            .await?;
 
         tracing::info!("User manager shutdown complete");
         Ok(())
@@ -865,7 +972,7 @@ mod tests {
     #[test]
     fn test_user_config_default() {
         let config = UserConfig::default();
-        
+
         assert!(config.user_db_path.ends_with("users.db"));
         assert!(config.home_dir_base.ends_with("home"));
         assert_eq!(config.default_shell, PathBuf::from("/bin/bash"));
@@ -880,12 +987,15 @@ mod tests {
     fn test_user_manager_creation() {
         let config = UserConfig::default();
         let user_manager = UserManager::new(config);
-        
+
         // Verify the user manager was created with the correct configuration
         assert_eq!(user_manager.config.default_group, "users");
         assert_eq!(user_manager.config.session_timeout_seconds, 3600);
-        assert_eq!(user_manager.config.default_shell, PathBuf::from("/bin/bash"));
-        
+        assert_eq!(
+            user_manager.config.default_shell,
+            PathBuf::from("/bin/bash")
+        );
+
         // Verify BearDog provider is created when key management is enabled
         assert!(user_manager.beardog_provider.is_some());
     }
@@ -904,7 +1014,7 @@ mod tests {
             compliance_mode: "standard".to_string(),
             security_level: "internal".to_string(),
         };
-        
+
         assert_eq!(beardog_config.endpoint, "https://beardog.test.local");
         assert!(beardog_config.key_management_enabled);
         assert!(beardog_config.secret_storage_enabled);
@@ -916,23 +1026,27 @@ mod tests {
 
     #[test]
     fn test_user_auth_method_variants() {
-        let password_auth = UserAuthMethod::Password { password: "secret".to_string() };
-        let ssh_key_auth = UserAuthMethod::SshKey { 
+        let password_auth = UserAuthMethod::Password {
+            password: "secret".to_string(),
+        };
+        let ssh_key_auth = UserAuthMethod::SshKey {
             public_key: "ssh-rsa AAAAB3...".to_string(),
             signature: "signature".to_string(),
         };
-        let api_key_auth = UserAuthMethod::ApiKey { key: "api_key_123".to_string() };
-        
+        let api_key_auth = UserAuthMethod::ApiKey {
+            key: "api_key_123".to_string(),
+        };
+
         match password_auth {
             UserAuthMethod::Password { password } => assert_eq!(password, "secret"),
             _ => panic!("Expected password auth"),
         }
-        
+
         match ssh_key_auth {
             UserAuthMethod::SshKey { public_key, .. } => assert!(public_key.starts_with("ssh-rsa")),
             _ => panic!("Expected SSH key auth"),
         }
-        
+
         match api_key_auth {
             UserAuthMethod::ApiKey { key } => assert_eq!(key, "api_key_123"),
             _ => panic!("Expected API key auth"),
@@ -944,7 +1058,7 @@ mod tests {
         let active_status = SessionStatus::Active;
         let expired_status = SessionStatus::Expired;
         let revoked_status = SessionStatus::Revoked;
-        
+
         assert_eq!(format!("{:?}", active_status), "Active");
         assert_eq!(format!("{:?}", expired_status), "Expired");
         assert_eq!(format!("{:?}", revoked_status), "Revoked");
@@ -957,34 +1071,36 @@ mod tests {
             key_path: PathBuf::from("/path/to/key.pem"),
             ca_path: PathBuf::from("/path/to/ca.pem"),
         };
-        
+
         let api_key = BeardogAuthMethod::ApiKey {
             key_reference: "beardog_key_123".to_string(),
         };
-        
+
         match mutual_tls {
-            BeardogAuthMethod::MutualTLS { cert_path, key_path, ca_path } => {
+            BeardogAuthMethod::MutualTLS {
+                cert_path,
+                key_path,
+                ca_path,
+            } => {
                 assert!(cert_path.ends_with("cert.pem"));
                 assert!(key_path.ends_with("key.pem"));
                 assert!(ca_path.ends_with("ca.pem"));
-            },
+            }
             _ => panic!("Expected mutual TLS auth"),
         }
-        
+
         match api_key {
             BeardogAuthMethod::ApiKey { key_reference } => {
                 assert_eq!(key_reference, "beardog_key_123");
-            },
+            }
             _ => panic!("Expected API key auth"),
         }
     }
 
     #[test]
     fn test_beardog_key_management_creation() {
-        let key_mgmt = BeardogKeyManagement {
-            provider: None,
-        };
-        
+        let key_mgmt = BeardogKeyManagement { provider: None };
+
         assert!(key_mgmt.provider.is_none());
     }
 
@@ -992,12 +1108,14 @@ mod tests {
     fn test_user_auth_request_creation() {
         let auth_request = UserAuthRequest {
             username: "testuser".to_string(),
-            auth_method: UserAuthMethod::Password { password: "secret".to_string() },
+            auth_method: UserAuthMethod::Password {
+                password: "secret".to_string(),
+            },
             client_ip: Some("127.0.0.1".to_string()),
             client_user_agent: Some("test-agent".to_string()),
             metadata: HashMap::new(),
         };
-        
+
         assert_eq!(auth_request.username, "testuser");
         assert_eq!(auth_request.client_ip.unwrap(), "127.0.0.1");
         assert_eq!(auth_request.client_user_agent.unwrap(), "test-agent");
@@ -1009,7 +1127,7 @@ mod tests {
         let active = UserStatus::Active;
         let disabled = UserStatus::Disabled;
         let locked = UserStatus::Locked;
-        
+
         assert_eq!(format!("{:?}", active), "Active");
         assert_eq!(format!("{:?}", disabled), "Disabled");
         assert_eq!(format!("{:?}", locked), "Locked");
@@ -1020,7 +1138,7 @@ mod tests {
         let auth_key = KeyType::Authentication;
         let enc_key = KeyType::Encryption;
         let sign_key = KeyType::Signing;
-        
+
         assert_eq!(format!("{:?}", auth_key), "Authentication");
         assert_eq!(format!("{:?}", enc_key), "Encryption");
         assert_eq!(format!("{:?}", sign_key), "Signing");
@@ -1030,15 +1148,15 @@ mod tests {
     async fn test_user_manager_async_operations() {
         let config = UserConfig::default();
         let user_manager = UserManager::new(config);
-        
+
         // Test user existence check
         let exists = user_manager.user_exists("nonexistent").await.unwrap();
         assert!(!exists);
-        
+
         // Test ID generation
         let user_id = user_manager.generate_user_id().await;
         assert_eq!(user_id, 1000); // Should start from 1000
-        
+
         let group_id = user_manager.generate_group_id().await;
         assert_eq!(group_id, 100); // Should start from 100
     }
@@ -1047,15 +1165,15 @@ mod tests {
     async fn test_user_manager_get_operations() {
         let config = UserConfig::default();
         let user_manager = UserManager::new(config);
-        
+
         // Test getting non-existent user
         let user = user_manager.get_user("nonexistent").await;
         assert!(user.is_none());
-        
+
         // Test getting all users (should be empty initially)
         let all_users = user_manager.get_all_users().await;
         assert!(all_users.is_empty());
-        
+
         // Test getting non-existent session
         let session = user_manager.get_session("nonexistent").await;
         assert!(session.is_none());
@@ -1070,18 +1188,18 @@ mod tests {
             level: PermissionLevel::Read,
             beardog_auth_reference: Some("beardog_auth_123".to_string()),
         };
-        
+
         assert_eq!(permission.name, "read_files");
         assert_eq!(permission.description, "Read access to files");
         assert!(permission.beardog_auth_reference.is_some());
-        
+
         match permission.scope {
-            PermissionScope::System => {}, // Expected
+            PermissionScope::System => {} // Expected
             _ => panic!("Expected system scope"),
         }
-        
+
         match permission.level {
-            PermissionLevel::Read => {}, // Expected
+            PermissionLevel::Read => {} // Expected
             _ => panic!("Expected read level"),
         }
     }
@@ -1097,7 +1215,7 @@ mod tests {
             beardog_policy_reference: Some("dev_policy".to_string()),
             metadata: HashMap::new(),
         };
-        
+
         assert_eq!(group.id, 100);
         assert_eq!(group.name, "developers");
         assert_eq!(group.description.unwrap(), "Developer group");
@@ -1118,7 +1236,7 @@ mod tests {
             threat_assessment_score: 0.85,
             compliance_status: "compliant".to_string(),
         };
-        
+
         assert_eq!(context.auth_token, "token123");
         assert_eq!(context.security_level, "confidential");
         assert_eq!(context.authorized_operations.len(), 2);
@@ -1152,7 +1270,7 @@ mod tests {
             audit_trail_reference: "audit123".to_string(),
             metadata: HashMap::new(),
         };
-        
+
         assert_eq!(session.id, "session123");
         assert_eq!(session.user_id, 1001);
         assert_eq!(session.username, "testuser");
@@ -1167,11 +1285,13 @@ mod tests {
     fn test_permission_scope_variants() {
         let system_scope = PermissionScope::System;
         let user_scope = PermissionScope::User;
-        let resource_scope = PermissionScope::Resource { resource: "database".to_string() };
-        
+        let resource_scope = PermissionScope::Resource {
+            resource: "database".to_string(),
+        };
+
         assert_eq!(format!("{:?}", system_scope), "System");
         assert_eq!(format!("{:?}", user_scope), "User");
-        
+
         match resource_scope {
             PermissionScope::Resource { resource } => assert_eq!(resource, "database"),
             _ => panic!("Expected resource scope"),
@@ -1183,9 +1303,9 @@ mod tests {
         let read_level = PermissionLevel::Read;
         let write_level = PermissionLevel::Write;
         let admin_level = PermissionLevel::Admin;
-        
+
         assert_eq!(format!("{:?}", read_level), "Read");
         assert_eq!(format!("{:?}", write_level), "Write");
         assert_eq!(format!("{:?}", admin_level), "Admin");
     }
-} 
+}

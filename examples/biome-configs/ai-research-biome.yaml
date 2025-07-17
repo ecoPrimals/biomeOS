@@ -1,0 +1,729 @@
+# AI Research Biome Configuration
+# Optimized for machine learning research, GPU compute, and AI development
+
+apiVersion: biomeOS/v1
+kind: Biome
+metadata:
+  name: "ai-research-platform"
+  version: "1.0.0"
+  description: "AI research platform with GPU compute, large storage, and ML workflows"
+  team: "ai-research"
+  author: "AI Research Team"
+  created: "2025-01-01T00:00:00Z"
+  tags:
+    - "ai"
+    - "research"
+    - "gpu"
+    - "ml"
+    - "tensorflow"
+    - "pytorch"
+
+# Primal Configuration
+primals:
+  # Toadstool - Universal Runtime & Compute
+  toadstool:
+    primal_type: "toadstool"
+    version: "latest"
+    endpoint: "auto-discover"
+    
+    # Multi-instance configuration for different workloads
+    multi_instance:
+      enabled: true
+      creation_strategy: "on_demand"
+      max_instances: 5
+      
+    # Context constraints for AI workloads
+    context_constraints:
+      - field: "security_level"
+        operator: "greater_than_or_equal"
+        value: "standard"
+      - field: "team_id"
+        operator: "equals"
+        value: "ai-research"
+    
+    # Toadstool-specific configuration
+    config:
+      runtime_preferences:
+        - "gpu"
+        - "container"
+        - "wasm"
+      
+      gpu_configuration:
+        enabled: true
+        driver: "nvidia-cuda"
+        minimum_memory: "8GB"
+        shared_memory: true
+        
+      container_configuration:
+        runtime: "containerd"
+        registry: "ghcr.io/biomeos"
+        pull_policy: "always"
+        
+      resource_limits:
+        max_cpu_cores: 32
+        max_memory: "128GB"
+        max_gpu_memory: "32GB"
+        max_storage: "2TB"
+
+  # Songbird - Service Mesh & Orchestration
+  songbird:
+    primal_type: "songbird"
+    version: "latest"
+    endpoint: "auto-discover"
+    
+    # Load balancing for AI workloads
+    multi_instance:
+      enabled: true
+      creation_strategy: "persistent"
+      max_instances: 3
+      
+    # Service mesh configuration
+    config:
+      service_mesh:
+        enabled: true
+        protocol: "grpc"
+        load_balancing: "round_robin"
+        health_checks: true
+        
+      federation:
+        enabled: true
+        discovery_method: "dns"
+        cross_biome_communication: true
+        
+      monitoring:
+        metrics_collection: true
+        distributed_tracing: true
+        log_aggregation: true
+
+  # NestGate - Storage & Data Management
+  nestgate:
+    primal_type: "nestgate"
+    version: "latest"
+    endpoint: "auto-discover"
+    
+    # High-performance storage configuration
+    config:
+      storage_tiers:
+        - name: "nvme-hot"
+          type: "nvme"
+          capacity: "2TB"
+          performance: "high"
+          
+        - name: "ssd-warm"
+          type: "ssd"
+          capacity: "10TB"
+          performance: "medium"
+          
+        - name: "hdd-cold"
+          type: "hdd"
+          capacity: "100TB"
+          performance: "low"
+          
+      data_management:
+        auto_tiering: true
+        compression: true
+        deduplication: true
+        
+      backup_strategy:
+        enabled: true
+        schedule: "daily"
+        retention: "30d"
+        
+      protocols:
+        - "s3"
+        - "nfs"
+        - "posix"
+
+  # Squirrel - AI Agent Platform
+  squirrel:
+    primal_type: "squirrel"
+    version: "latest"
+    endpoint: "auto-discover"
+    
+    # AI agent configuration
+    config:
+      mcp_configuration:
+        enabled: true
+        protocol_version: "1.0"
+        transport: "websocket"
+        
+      ai_providers:
+        - name: "openai"
+          type: "openai"
+          models: ["gpt-4", "gpt-3.5-turbo"]
+          
+        - name: "local-llm"
+          type: "ollama"
+          models: ["llama2", "mistral"]
+          
+      agent_runtime:
+        sandbox_enabled: true
+        resource_limits:
+          cpu: "4"
+          memory: "8GB"
+          
+      plugin_system:
+        enabled: true
+        plugin_registry: "biomeos-plugins"
+
+  # BearDog - Security & Authentication
+  beardog:
+    primal_type: "beardog"
+    version: "latest"
+    endpoint: "auto-discover"
+    
+    # Security configuration for AI research
+    config:
+      security_level: "standard"
+      encryption:
+        at_rest: true
+        in_transit: true
+        algorithms: ["AES-256", "RSA-4096"]
+        
+      authentication:
+        methods: ["jwt", "certificates"]
+        token_lifetime: "24h"
+        
+      authorization:
+        rbac_enabled: true
+        fine_grained_permissions: true
+        
+      audit:
+        enabled: true
+        log_level: "info"
+        retention: "90d"
+
+# Service Definitions
+services:
+  # Jupyter Lab for Interactive Development
+  jupyter-lab:
+    primal: "toadstool"
+    runtime: "container"
+    
+    container:
+      image: "ghcr.io/biomeos/jupyter-ai:latest"
+      ports:
+        - "8888:8888"
+      environment:
+        - "JUPYTER_ENABLE_LAB=yes"
+        - "JUPYTER_TOKEN=research-token"
+        
+    resources:
+      cpu: "4"
+      memory: "16GB"
+      gpu: "1"
+      storage:
+        - name: "jupyter-data"
+          size: "100GB"
+          tier: "nvme-hot"
+          
+    volumes:
+      - name: "datasets"
+        source: "nestgate://datasets"
+        target: "/data/datasets"
+        
+      - name: "models"
+        source: "nestgate://models"
+        target: "/data/models"
+        
+      - name: "experiments"
+        source: "nestgate://experiments"
+        target: "/data/experiments"
+        
+    health_check:
+      http:
+        path: "/lab/api/status"
+        port: 8888
+      interval: "30s"
+      timeout: "10s"
+      retries: 3
+
+  # MLflow Tracking Server
+  mlflow-tracking:
+    primal: "toadstool"
+    runtime: "container"
+    
+    container:
+      image: "ghcr.io/biomeos/mlflow:latest"
+      ports:
+        - "5000:5000"
+      command: ["mlflow", "server", "--host", "0.0.0.0", "--port", "5000"]
+      
+    resources:
+      cpu: "2"
+      memory: "4GB"
+      storage:
+        - name: "mlflow-data"
+          size: "50GB"
+          tier: "ssd-warm"
+          
+    volumes:
+      - name: "mlflow-artifacts"
+        source: "nestgate://mlflow-artifacts"
+        target: "/mlflow/artifacts"
+        
+    health_check:
+      http:
+        path: "/health"
+        port: 5000
+      interval: "30s"
+
+  # TensorBoard for Visualization
+  tensorboard:
+    primal: "toadstool"
+    runtime: "container"
+    
+    container:
+      image: "tensorflow/tensorflow:latest-gpu"
+      ports:
+        - "6006:6006"
+      command: ["tensorboard", "--logdir", "/logs", "--host", "0.0.0.0"]
+      
+    resources:
+      cpu: "2"
+      memory: "4GB"
+      gpu: "0"
+      
+    volumes:
+      - name: "tensorboard-logs"
+        source: "nestgate://tensorboard-logs"
+        target: "/logs"
+
+  # Distributed Training Coordinator
+  training-coordinator:
+    primal: "toadstool"
+    runtime: "container"
+    
+    container:
+      image: "ghcr.io/biomeos/horovod:latest"
+      
+    resources:
+      cpu: "8"
+      memory: "32GB"
+      gpu: "2"
+      
+    volumes:
+      - name: "training-data"
+        source: "nestgate://training-data"
+        target: "/data"
+        
+      - name: "model-outputs"
+        source: "nestgate://model-outputs"
+        target: "/outputs"
+        
+    scaling:
+      min_replicas: 1
+      max_replicas: 5
+      auto_scaling:
+        enabled: true
+        target_cpu: "80%"
+        target_memory: "85%"
+
+  # AI Research Assistant Agent
+  research-assistant:
+    primal: "squirrel"
+    runtime: "agent"
+    
+    agent:
+      type: "mcp"
+      capabilities:
+        - "code_generation"
+        - "data_analysis"
+        - "literature_review"
+        - "experiment_planning"
+        
+      ai_provider: "openai"
+      model: "gpt-4"
+      
+      tools:
+        - "python_code_executor"
+        - "data_visualization"
+        - "arxiv_search"
+        - "experiment_tracker"
+        
+    resources:
+      cpu: "2"
+      memory: "4GB"
+      
+    configuration:
+      personality: "research-focused"
+      language_model:
+        temperature: 0.7
+        max_tokens: 4096
+        
+      memory:
+        type: "vector"
+        size: "1GB"
+        
+      context_window: "32k"
+
+  # Model Serving API
+  model-serving:
+    primal: "toadstool"
+    runtime: "container"
+    
+    container:
+      image: "ghcr.io/biomeos/triton-server:latest"
+      ports:
+        - "8000:8000"
+        - "8001:8001"
+        - "8002:8002"
+        
+    resources:
+      cpu: "4"
+      memory: "16GB"
+      gpu: "1"
+      
+    volumes:
+      - name: "model-repository"
+        source: "nestgate://model-repository"
+        target: "/models"
+        
+    scaling:
+      min_replicas: 1
+      max_replicas: 3
+      auto_scaling:
+        enabled: true
+        target_requests_per_second: 100
+
+# Resource Configuration
+resources:
+  # Storage volumes
+  storage:
+    datasets:
+      tier: "ssd-warm"
+      size: "1TB"
+      access_mode: "ReadWriteMany"
+      backup: true
+      
+    models:
+      tier: "nvme-hot"
+      size: "500GB"
+      access_mode: "ReadWriteMany"
+      backup: true
+      
+    experiments:
+      tier: "nvme-hot"
+      size: "200GB"
+      access_mode: "ReadWriteMany"
+      backup: true
+      
+    mlflow-artifacts:
+      tier: "ssd-warm"
+      size: "100GB"
+      access_mode: "ReadWriteMany"
+      backup: true
+      
+    tensorboard-logs:
+      tier: "ssd-warm"
+      size: "50GB"
+      access_mode: "ReadWriteMany"
+      backup: false
+      
+    training-data:
+      tier: "ssd-warm"
+      size: "2TB"
+      access_mode: "ReadOnlyMany"
+      backup: false
+      
+    model-outputs:
+      tier: "nvme-hot"
+      size: "1TB"
+      access_mode: "ReadWriteMany"
+      backup: true
+      
+    model-repository:
+      tier: "nvme-hot"
+      size: "200GB"
+      access_mode: "ReadWriteMany"
+      backup: true
+
+  # Networking
+  networking:
+    service_mesh:
+      enabled: true
+      ingress:
+        enabled: true
+        class: "nginx"
+        
+      load_balancing:
+        algorithm: "round_robin"
+        health_checks: true
+        
+    dns:
+      enabled: true
+      domain: "ai-research.local"
+      
+    security:
+      tls:
+        enabled: true
+        cert_manager: true
+        
+      network_policies:
+        enabled: true
+        default_deny: false
+
+  # Compute resources
+  compute:
+    gpu_pool:
+      type: "nvidia"
+      count: 8
+      memory: "32GB"
+      shared: true
+      
+    cpu_pool:
+      cores: 128
+      memory: "512GB"
+      
+    memory_pool:
+      total: "1TB"
+      shared: true
+
+# Security Configuration
+security:
+  level: "standard"
+  
+  authentication:
+    providers:
+      - "beardog"
+    
+    methods:
+      - "jwt"
+      - "certificates"
+      
+  authorization:
+    rbac:
+      enabled: true
+      
+    policies:
+      - name: "researcher"
+        subjects: ["group:researchers"]
+        resources: ["*"]
+        actions: ["read", "write", "execute"]
+        
+      - name: "guest"
+        subjects: ["group:guests"]
+        resources: ["jupyter-lab", "tensorboard"]
+        actions: ["read"]
+        
+  encryption:
+    at_rest: true
+    in_transit: true
+    
+  audit:
+    enabled: true
+    retention: "90d"
+
+# Monitoring & Observability
+monitoring:
+  metrics:
+    enabled: true
+    retention: "30d"
+    
+    collectors:
+      - "prometheus"
+      - "grafana"
+      
+  logging:
+    enabled: true
+    level: "info"
+    retention: "30d"
+    
+    aggregation:
+      enabled: true
+      backend: "elasticsearch"
+      
+  tracing:
+    enabled: true
+    backend: "jaeger"
+    
+  alerting:
+    enabled: true
+    
+    rules:
+      - name: "high_gpu_usage"
+        condition: "gpu_utilization > 90%"
+        duration: "5m"
+        severity: "warning"
+        
+      - name: "model_serving_errors"
+        condition: "error_rate > 5%"
+        duration: "2m"
+        severity: "critical"
+        
+      - name: "storage_full"
+        condition: "storage_usage > 95%"
+        duration: "1m"
+        severity: "critical"
+
+# Deployment Configuration
+deployment:
+  environment: "research"
+  
+  scaling:
+    auto_scaling:
+      enabled: true
+      min_replicas: 1
+      max_replicas: 10
+      
+    horizontal_pod_autoscaler:
+      enabled: true
+      target_cpu: "80%"
+      target_memory: "85%"
+      
+  updates:
+    strategy: "rolling"
+    max_unavailable: "25%"
+    max_surge: "25%"
+    
+  health_checks:
+    enabled: true
+    
+    startup_probe:
+      enabled: true
+      initial_delay: "30s"
+      timeout: "10s"
+      
+    liveness_probe:
+      enabled: true
+      interval: "30s"
+      timeout: "10s"
+      
+    readiness_probe:
+      enabled: true
+      interval: "10s"
+      timeout: "5s"
+
+# Backup & Disaster Recovery
+backup:
+  enabled: true
+  
+  schedule:
+    full_backup: "0 2 * * 0"  # Weekly on Sunday at 2 AM
+    incremental_backup: "0 2 * * 1-6"  # Daily at 2 AM
+    
+  retention:
+    daily: "7d"
+    weekly: "4w"
+    monthly: "12m"
+    
+  storage:
+    backend: "s3"
+    encryption: true
+    
+  disaster_recovery:
+    enabled: true
+    rpo: "1h"  # Recovery Point Objective
+    rto: "4h"  # Recovery Time Objective
+
+# Development Tools
+development:
+  tools:
+    - name: "code-server"
+      enabled: true
+      port: 8080
+      
+    - name: "git-server"
+      enabled: true
+      port: 3000
+      
+    - name: "docker-registry"
+      enabled: true
+      port: 5000
+      
+  ci_cd:
+    enabled: true
+    
+    pipelines:
+      - name: "model-training"
+        trigger: "push"
+        stages: ["test", "train", "validate", "deploy"]
+        
+      - name: "model-serving"
+        trigger: "model-ready"
+        stages: ["package", "test", "deploy"]
+        
+  integration:
+    external_services:
+      - name: "weights-and-biases"
+        enabled: true
+        
+      - name: "hugging-face"
+        enabled: true
+        
+      - name: "kaggle"
+        enabled: true
+
+# Cost Optimization
+cost_optimization:
+  enabled: true
+  
+  resource_optimization:
+    enabled: true
+    
+    cpu_optimization:
+      enabled: true
+      target_utilization: "80%"
+      
+    memory_optimization:
+      enabled: true
+      target_utilization: "85%"
+      
+    gpu_optimization:
+      enabled: true
+      target_utilization: "90%"
+      
+  spot_instances:
+    enabled: true
+    max_percentage: "50%"
+    
+  auto_shutdown:
+    enabled: true
+    idle_timeout: "2h"
+    
+  budget_alerts:
+    enabled: true
+    monthly_budget: "$5000"
+    alert_thresholds: [50, 80, 95]
+
+# Compliance & Governance
+compliance:
+  data_governance:
+    enabled: true
+    
+    data_classification:
+      enabled: true
+      levels: ["public", "internal", "confidential"]
+      
+    data_retention:
+      enabled: true
+      
+      policies:
+        - data_type: "training_data"
+          retention: "5y"
+          
+        - data_type: "experiment_logs"
+          retention: "2y"
+          
+        - data_type: "model_artifacts"
+          retention: "3y"
+          
+  privacy:
+    enabled: true
+    
+    anonymization:
+      enabled: true
+      
+    consent_management:
+      enabled: true
+      
+  regulatory:
+    frameworks: ["GDPR", "CCPA"]
+    
+    audit_trail:
+      enabled: true
+      immutable: true
+      
+    access_controls:
+      enabled: true
+      principle: "least_privilege" 

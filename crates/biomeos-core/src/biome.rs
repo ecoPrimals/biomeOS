@@ -3,10 +3,10 @@
 //! This module defines the core Biome type and its lifecycle management.
 //! A Biome represents a complete biomeOS instance with all its Primals.
 
-use crate::{BiomeId, PrimalId, PrimalType, BiomeResult, BiomeError, HealthStatus};
+use crate::{BiomeId, HealthStatus, PrimalId, PrimalType};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 /// Represents a complete biomeOS instance
@@ -37,13 +37,13 @@ pub struct Biome {
 pub struct BiomeMetadata {
     /// Biome name
     pub name: String,
-    
+
     /// Namespace
     pub namespace: Option<String>,
-    
+
     /// Labels
     pub labels: HashMap<String, String>,
-    
+
     /// Annotations
     pub annotations: HashMap<String, String>,
 }
@@ -225,16 +225,16 @@ pub struct BiomeMetrics {
 pub struct BiomeSpec {
     /// Biome metadata
     pub metadata: BiomeMetadata,
-    
+
     /// Primal configurations within this biome
     pub primals: Vec<PrimalSpec>,
-    
+
     /// Resource requirements
     pub resources: ResourceRequirements,
-    
+
     /// Networking configuration
     pub networking: NetworkingSpec,
-    
+
     /// Security requirements
     pub security: SecuritySpec,
 }
@@ -244,16 +244,16 @@ pub struct BiomeSpec {
 pub struct BiomeManifest {
     /// API version
     pub api_version: String,
-    
+
     /// Kind of manifest
     pub kind: String,
-    
+
     /// Metadata
     pub metadata: BiomeMetadata,
-    
+
     /// Specification
     pub spec: BiomeSpec,
-    
+
     /// Current status
     pub status: Option<BiomeStatus>,
 }
@@ -263,13 +263,13 @@ pub struct BiomeManifest {
 pub struct PrimalSpec {
     /// Primal name
     pub name: String,
-    
+
     /// Primal type
     pub primal_type: PrimalType,
-    
+
     /// Configuration
     pub config: HashMap<String, String>,
-    
+
     /// Dependencies
     pub dependencies: Vec<String>,
 }
@@ -279,13 +279,13 @@ pub struct PrimalSpec {
 pub struct ResourceRequirements {
     /// CPU requirements
     pub cpu: CpuRequirements,
-    
+
     /// Memory requirements
     pub memory: MemoryRequirements,
-    
+
     /// Storage requirements
     pub storage: StorageRequirements,
-    
+
     /// Network requirements
     pub network: NetworkRequirements,
 }
@@ -295,10 +295,10 @@ pub struct ResourceRequirements {
 pub struct CpuRequirements {
     /// Minimum cores
     pub min_cores: u32,
-    
+
     /// Maximum cores
     pub max_cores: Option<u32>,
-    
+
     /// Architecture preferences
     pub architectures: Vec<String>,
 }
@@ -308,7 +308,7 @@ pub struct CpuRequirements {
 pub struct MemoryRequirements {
     /// Minimum memory in MB
     pub min_mb: u64,
-    
+
     /// Maximum memory in MB
     pub max_mb: Option<u64>,
 }
@@ -318,7 +318,7 @@ pub struct MemoryRequirements {
 pub struct StorageRequirements {
     /// Minimum storage in GB
     pub min_gb: u64,
-    
+
     /// Storage type preferences
     pub storage_types: Vec<String>,
 }
@@ -328,7 +328,7 @@ pub struct StorageRequirements {
 pub struct NetworkRequirements {
     /// Required bandwidth in Mbps
     pub bandwidth_mbps: u64,
-    
+
     /// Latency requirements in milliseconds
     pub max_latency_ms: u32,
 }
@@ -338,10 +338,10 @@ pub struct NetworkRequirements {
 pub struct NetworkingSpec {
     /// Service mesh enabled
     pub service_mesh: bool,
-    
+
     /// Load balancing strategy
     pub load_balancing: String,
-    
+
     /// Service discovery
     pub service_discovery: bool,
 }
@@ -351,10 +351,10 @@ pub struct NetworkingSpec {
 pub struct SecuritySpec {
     /// Encryption requirements
     pub encryption: EncryptionSpec,
-    
+
     /// Access control
     pub access_control: AccessControlSpec,
-    
+
     /// Network policies
     pub network_policies: Vec<NetworkPolicy>,
 }
@@ -364,10 +364,10 @@ pub struct SecuritySpec {
 pub struct EncryptionSpec {
     /// Encrypt data at rest
     pub at_rest: bool,
-    
+
     /// Encrypt data in transit
     pub in_transit: bool,
-    
+
     /// Encryption algorithms
     pub algorithms: Vec<String>,
 }
@@ -377,10 +377,10 @@ pub struct EncryptionSpec {
 pub struct AccessControlSpec {
     /// RBAC enabled
     pub rbac: bool,
-    
+
     /// Authentication methods
     pub auth_methods: Vec<String>,
-    
+
     /// Authorization policies
     pub policies: Vec<String>,
 }
@@ -390,10 +390,10 @@ pub struct AccessControlSpec {
 pub struct NetworkPolicy {
     /// Policy name
     pub name: String,
-    
+
     /// Ingress rules
     pub ingress: Vec<String>,
-    
+
     /// Egress rules
     pub egress: Vec<String>,
 }
@@ -403,13 +403,13 @@ pub struct NetworkPolicy {
 pub struct BiomeStatus {
     /// Current phase
     pub phase: BiomePhase,
-    
+
     /// Status message
     pub message: Option<String>,
-    
+
     /// Ready condition
     pub ready: bool,
-    
+
     /// Last updated timestamp
     pub last_updated: chrono::DateTime<chrono::Utc>,
 }
@@ -609,11 +609,8 @@ mod tests {
 
     #[test]
     fn test_biome_creation() {
-        let biome = Biome::new(
-            "test-biome".to_string(),
-            "A test biome".to_string(),
-        );
-        
+        let biome = Biome::new("test-biome".to_string(), "A test biome".to_string());
+
         assert_eq!(biome.name, "test-biome");
         assert_eq!(biome.description, "A test biome");
         assert!(matches!(biome.state, BiomeState::Creating));
@@ -637,10 +634,7 @@ mod tests {
 
     #[test]
     fn test_biome_add_primal() {
-        let mut biome = Biome::new(
-            "test-biome".to_string(),
-            "A test biome".to_string(),
-        );
+        let mut biome = Biome::new("test-biome".to_string(), "A test biome".to_string());
 
         let primal = PrimalInstance::new(
             "toadstool-001".to_string(),
@@ -653,4 +647,4 @@ mod tests {
         assert_eq!(biome.primals.len(), 1);
         assert!(biome.get_primal(&"toadstool".to_string()).is_some());
     }
-} 
+}

@@ -3,7 +3,7 @@
 //! This example demonstrates the "grandma-safe", AI-first installation process
 //! that works across any platform where Toadstool can provide universal compute.
 
-use biomeos_core::{UniversalInstaller, BiomeResult};
+use biomeos_core::{BiomeResult, UniversalInstaller};
 
 #[tokio::main]
 async fn main() -> BiomeResult<()> {
@@ -16,13 +16,13 @@ async fn main() -> BiomeResult<()> {
     println!("• Primal agnostic: mix and match any Primals, new or old");
     println!("• Each layer adds more universality");
     println!();
-    
+
     // Create a new universal installer with grandma-safe defaults
     let mut installer = UniversalInstaller::new();
-    
+
     // Run the AI-guided installation process
     installer.install_with_ai_guidance().await?;
-    
+
     println!();
     println!("🎯 Key Universal Platform Features Demonstrated:");
     println!();
@@ -56,10 +56,10 @@ async fn main() -> BiomeResult<()> {
     println!("   • Personal digital sovereignty");
     println!("   • AI-native from the ground up");
     println!();
-    
+
     // Demonstrate the layered universality concept
     demonstrate_layered_universality().await?;
-    
+
     Ok(())
 }
 
@@ -67,14 +67,14 @@ async fn main() -> BiomeResult<()> {
 async fn demonstrate_layered_universality() -> BiomeResult<()> {
     println!("🏗️ Layered Universality Architecture:");
     println!();
-    
+
     println!("Layer 0: Hardware (Any Hardware)");
     println!("├─ 💻 Works on any CPU architecture");
     println!("├─ 🗄️ Supports any storage technology");
     println!("├─ 🌐 Uses any network interface");
     println!("└─ ⚡ Adapts to any power constraints");
     println!();
-    
+
     println!("Layer 1: Toadstool Universal Compute");
     println!("├─ 🐧 Linux: Native containers, systemd integration");
     println!("├─ 🪟 Windows: Process isolation, Service Manager");
@@ -83,7 +83,7 @@ async fn demonstrate_layered_universality() -> BiomeResult<()> {
     println!("├─ ☁️ Cloud: AWS, GCP, Azure, any provider");
     println!("└─ 🔩 Bare Metal: Direct hardware management");
     println!();
-    
+
     println!("Layer 2: Primal Ecosystem (Universal Services)");
     println!("├─ 🎼 Songbird: Universal service mesh");
     println!("├─ 🏰 NestGate: Universal storage management");
@@ -91,7 +91,7 @@ async fn demonstrate_layered_universality() -> BiomeResult<()> {
     println!("├─ 🐿️ Squirrel: Universal AI platform");
     println!("└─ 🔌 Any Primal: Community or enterprise extensions");
     println!();
-    
+
     println!("Layer 3: Application Universe");
     println!("├─ 🧬 Biological computing applications");
     println!("├─ 🤖 AI/ML workloads and agents");
@@ -100,13 +100,13 @@ async fn demonstrate_layered_universality() -> BiomeResult<()> {
     println!("├─ 🎮 Interactive and media applications");
     println!("└─ 🌟 Future applications we can't imagine yet");
     println!();
-    
+
     println!("🎯 The Result: True Universal Computing");
     println!("• Write once, run anywhere (any OS, any hardware)");
     println!("• Compose freely (any Primals, any services)");
     println!("• Scale infinitely (edge to cloud to quantum)");
     println!("• Secure by default (MYCORRHIZA protection)");
     println!("• AI-assisted everything (grandma to expert)");
-    
+
     Ok(())
-} 
+}

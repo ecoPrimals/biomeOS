@@ -3,20 +3,26 @@
 //! This module provides integration between biomeOS and the toadStool runtime,
 //! handling process management, deployment, and monitoring.
 
-use std::process::{Command, Stdio};
-use tokio::process::Command as TokioCommand;
-use tokio::sync::mpsc;
-use std::path::PathBuf;
-use std::time::Duration;
-use serde::{Deserialize, Serialize};
 use crate::errors::{BiomeError, BiomeResult};
 use crate::manifest::ToadStoolManifest;
+use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
+use std::process::Stdio;
+use std::time::Duration;
+use tokio::process::Command as TokioCommand;
+use tokio::sync::mpsc;
 
 /// Bridge to toadStool runtime
 pub struct ToadStoolBridge {
     toadstool_binary: String,
     working_directory: PathBuf,
     temp_dir: PathBuf,
+}
+
+impl Default for ToadStoolBridge {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ToadStoolBridge {
@@ -50,22 +56,26 @@ impl ToadStoolBridge {
     }
 
     /// Deploy a biome using toadStool
-    pub async fn deploy_biome(&self, manifest: &ToadStoolManifest) -> BiomeResult<DeploymentHandle> {
+    pub async fn deploy_biome(
+        &self,
+        manifest: &ToadStoolManifest,
+    ) -> BiomeResult<DeploymentHandle> {
         // Save manifest to temporary file
         let manifest_path = self.save_manifest(manifest).await?;
-        
+
         // Execute toadStool run command
         let mut cmd = TokioCommand::new(&self.toadstool_binary);
         cmd.arg("up")
-           .arg(&manifest_path)
-           .arg("--detached")
-           .stdout(Stdio::piped())
-           .stderr(Stdio::piped())
-           .current_dir(&self.working_directory);
-        
-        let child = cmd.spawn()
+            .arg(&manifest_path)
+            .arg("--detached")
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .current_dir(&self.working_directory);
+
+        let child = cmd
+            .spawn()
             .map_err(|e| BiomeError::RuntimeError(format!("Failed to start toadStool: {}", e)))?;
-        
+
         Ok(DeploymentHandle {
             process: Some(child),
             manifest_path,
@@ -83,14 +93,18 @@ impl ToadStoolBridge {
             .output()
             .await
             .map_err(|e| BiomeError::RuntimeError(format!("Failed to list biomes: {}", e)))?;
-        
+
         if output.status.success() {
-            let biomes: Vec<BiomeStatus> = serde_json::from_slice(&output.stdout)
-                .map_err(|e| BiomeError::ConfigError { message: format!("Failed to parse biome list: {}", e) })?;
+            let biomes: Vec<BiomeStatus> = serde_json::from_slice(&output.stdout).map_err(|e| {
+                BiomeError::ConfigError(format!("Failed to parse biome list: {}", e))
+            })?;
             Ok(biomes)
         } else {
             let error_msg = String::from_utf8_lossy(&output.stderr);
-            Err(BiomeError::RuntimeError(format!("toadStool ps failed: {}", error_msg)))
+            Err(BiomeError::RuntimeError(format!(
+                "toadStool ps failed: {}",
+                error_msg
+            )))
         }
     }
 
@@ -103,12 +117,15 @@ impl ToadStoolBridge {
             .output()
             .await
             .map_err(|e| BiomeError::RuntimeError(format!("Failed to get logs: {}", e)))?;
-        
+
         if output.status.success() {
             Ok(String::from_utf8_lossy(&output.stdout).to_string())
         } else {
             let error_msg = String::from_utf8_lossy(&output.stderr);
-            Err(BiomeError::RuntimeError(format!("toadStool logs failed: {}", error_msg)))
+            Err(BiomeError::RuntimeError(format!(
+                "toadStool logs failed: {}",
+                error_msg
+            )))
         }
     }
 
@@ -121,12 +138,15 @@ impl ToadStoolBridge {
             .output()
             .await
             .map_err(|e| BiomeError::RuntimeError(format!("Failed to stop biome: {}", e)))?;
-        
+
         if !output.status.success() {
             let error_msg = String::from_utf8_lossy(&output.stderr);
-            return Err(BiomeError::RuntimeError(format!("toadStool stop failed: {}", error_msg)));
+            return Err(BiomeError::RuntimeError(format!(
+                "toadStool stop failed: {}",
+                error_msg
+            )));
         }
-        
+
         Ok(())
     }
 
@@ -139,27 +159,35 @@ impl ToadStoolBridge {
             .current_dir(&self.working_directory)
             .output()
             .await
-            .map_err(|e| BiomeError::RuntimeError(format!("Failed to get federation status: {}", e)))?;
-        
+            .map_err(|e| {
+                BiomeError::RuntimeError(format!("Failed to get federation status: {}", e))
+            })?;
+
         if output.status.success() {
-            let status: FederationStatus = serde_json::from_slice(&output.stdout)
-                .map_err(|e| BiomeError::ConfigError { message: format!("Failed to parse federation status: {}", e) })?;
+            let status: FederationStatus = serde_json::from_slice(&output.stdout).map_err(|e| {
+                BiomeError::ConfigError(format!("Failed to parse federation status: {}", e))
+            })?;
             Ok(status)
         } else {
             let error_msg = String::from_utf8_lossy(&output.stderr);
-            Err(BiomeError::RuntimeError(format!("toadStool federation status failed: {}", error_msg)))
+            Err(BiomeError::RuntimeError(format!(
+                "toadStool federation status failed: {}",
+                error_msg
+            )))
         }
     }
 
     /// Save manifest to temporary file
     async fn save_manifest(&self, manifest: &ToadStoolManifest) -> BiomeResult<PathBuf> {
         let manifest_content = manifest.to_yaml_string()?;
-        let manifest_path = self.temp_dir.join(format!("{}.yaml", manifest.metadata.name));
-        
+        let manifest_path = self
+            .temp_dir
+            .join(format!("{}.yaml", manifest.metadata.name));
+
         tokio::fs::write(&manifest_path, manifest_content)
             .await
-            .map_err(|e| BiomeError::IoError { message: format!("Failed to save manifest: {}", e) })?;
-        
+            .map_err(BiomeError::IoError)?;
+
         Ok(manifest_path)
     }
 }
@@ -176,16 +204,18 @@ pub struct DeploymentHandle {
 impl DeploymentHandle {
     pub async fn wait_for_completion(&mut self) -> BiomeResult<()> {
         if let Some(mut process) = self.process.take() {
-            let status = process.wait().await
+            let status = process
+                .wait()
+                .await
                 .map_err(|e| BiomeError::RuntimeError(format!("Process wait failed: {}", e)))?;
-            
+
             if status.success() {
                 self.status = DeploymentStatus::Running;
             } else {
                 self.status = DeploymentStatus::Failed;
             }
         }
-        
+
         Ok(())
     }
 
@@ -195,11 +225,13 @@ impl DeploymentHandle {
 
     pub async fn stop(&mut self) -> BiomeResult<()> {
         if let Some(mut process) = self.process.take() {
-            process.kill().await
+            process
+                .kill()
+                .await
                 .map_err(|e| BiomeError::RuntimeError(format!("Failed to kill process: {}", e)))?;
             self.status = DeploymentStatus::Stopped;
         }
-        
+
         Ok(())
     }
 }
@@ -280,12 +312,15 @@ pub struct BiomeMonitor {
 impl BiomeMonitor {
     pub fn new(bridge: ToadStoolBridge) -> (Self, mpsc::Receiver<BiomeEvent>) {
         let (tx, rx) = mpsc::channel(100);
-        
-        (Self {
-            bridge,
-            status_tx: tx,
-            monitoring_interval: Duration::from_secs(5),
-        }, rx)
+
+        (
+            Self {
+                bridge,
+                status_tx: tx,
+                monitoring_interval: Duration::from_secs(5),
+            },
+            rx,
+        )
     }
 
     pub fn with_interval(mut self, interval: Duration) -> Self {
@@ -296,10 +331,10 @@ impl BiomeMonitor {
     /// Start monitoring specified biomes
     pub async fn start_monitoring(&self, biome_names: Vec<String>) {
         let mut interval = tokio::time::interval(self.monitoring_interval);
-        
+
         loop {
             interval.tick().await;
-            
+
             match self.bridge.list_biomes().await {
                 Ok(biomes) => {
                     for biome in biomes {
@@ -310,7 +345,7 @@ impl BiomeMonitor {
                                 resources: biome.resources,
                                 services: biome.services,
                             };
-                            
+
                             if let Err(e) = self.status_tx.send(event).await {
                                 eprintln!("Failed to send status update: {}", e);
                                 break;
@@ -322,7 +357,7 @@ impl BiomeMonitor {
                     let event = BiomeEvent::Error {
                         message: format!("Monitoring error: {}", e),
                     };
-                    
+
                     if let Err(e) = self.status_tx.send(event).await {
                         eprintln!("Failed to send error event: {}", e);
                         break;
@@ -336,22 +371,22 @@ impl BiomeMonitor {
     pub async fn monitor_logs(&self, biome_name: String) {
         let mut last_log_length = 0;
         let mut interval = tokio::time::interval(Duration::from_secs(2));
-        
+
         loop {
             interval.tick().await;
-            
+
             match self.bridge.get_logs(&biome_name).await {
                 Ok(logs) => {
                     if logs.len() > last_log_length {
                         let new_logs = &logs[last_log_length..];
                         last_log_length = logs.len();
-                        
+
                         let event = BiomeEvent::LogMessage {
                             biome_name: biome_name.clone(),
                             message: new_logs.to_string(),
                             timestamp: chrono::Utc::now(),
                         };
-                        
+
                         if let Err(e) = self.status_tx.send(event).await {
                             eprintln!("Failed to send log event: {}", e);
                             break;
@@ -362,7 +397,7 @@ impl BiomeMonitor {
                     let event = BiomeEvent::Error {
                         message: format!("Log monitoring error for {}: {}", biome_name, e),
                     };
-                    
+
                     if let Err(e) = self.status_tx.send(event).await {
                         eprintln!("Failed to send log error event: {}", e);
                         break;
@@ -410,7 +445,7 @@ mod tests {
     #[tokio::test]
     async fn test_manifest_save() {
         let bridge = ToadStoolBridge::new();
-        
+
         let manifest = ToadStoolManifest {
             api_version: "biomeOS/v1".to_string(),
             kind: "Biome".to_string(),
@@ -427,10 +462,10 @@ mod tests {
             resources: None,
             health_checks: None,
         };
-        
+
         let manifest_path = bridge.save_manifest(&manifest).await.unwrap();
         assert!(manifest_path.exists());
-        
+
         // Cleanup
         let _ = tokio::fs::remove_file(manifest_path).await;
     }
@@ -443,9 +478,9 @@ mod tests {
             biome_name: "test-biome".to_string(),
             status: DeploymentStatus::Starting,
         };
-        
+
         assert!(!handle.is_running());
-        
+
         handle.status = DeploymentStatus::Running;
         assert!(handle.is_running());
     }
@@ -464,7 +499,7 @@ mod tests {
             },
             services: vec![],
         };
-        
+
         // Test that event can be created and matched
         match event {
             BiomeEvent::StatusUpdate { name, .. } => {
@@ -473,4 +508,4 @@ mod tests {
             _ => panic!("Wrong event type"),
         }
     }
-} 
+}

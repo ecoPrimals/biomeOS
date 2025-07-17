@@ -1,8 +1,8 @@
 //! BYOB Testing CLI Tool
 
+use biomeos_core::BiomeResult;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
-use biomeos_core::{BiomeResult, BiomeManifest};
 
 #[derive(Parser)]
 #[command(name = "byob-test")]
@@ -10,7 +10,7 @@ use biomeos_core::{BiomeResult, BiomeManifest};
 struct Cli {
     #[command(subcommand)]
     command: Commands,
-    
+
     #[arg(short, long)]
     verbose: bool,
 }
@@ -30,7 +30,7 @@ enum Commands {
 #[tokio::main]
 async fn main() -> BiomeResult<()> {
     let cli = Cli::parse();
-    
+
     match cli.command {
         Commands::Validate { manifest } => {
             println!("🔍 Validating manifest: {}", manifest.display());
@@ -45,6 +45,6 @@ async fn main() -> BiomeResult<()> {
             println!("✅ Demo completed");
         }
     }
-    
+
     Ok(())
 }

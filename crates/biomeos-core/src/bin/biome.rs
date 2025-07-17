@@ -7,6 +7,11 @@
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
+use biomeos_core::{
+    byob::{ByobDeploymentManager, SimpleBiomeManifest},
+    BiomeOSConfig,
+};
+
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
@@ -64,27 +69,101 @@ enum Commands {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Initialize tracing
+    tracing_subscriber::fmt::init();
+
     let cli = Cli::parse();
 
     match cli.command {
         Commands::Deploy { manifest, team } => {
-            println!("🚀 Deploying biome from {} for team {}", manifest.display(), team);
-            println!("✅ Deployment successful! (simulated)");
-            println!("   Deployment ID: dep-{}", "simulated-id");
-            println!("   Team: {}", team);
-            println!("   Status: Pending");
+            let manifest_content = std::fs::read_to_string(&manifest)
+                .map_err(|e| format!("Failed to read manifest: {}", e))?;
+
+            let biome_manifest: SimpleBiomeManifest = serde_yaml::from_str(&manifest_content)
+                .map_err(|e| format!("Failed to parse manifest: {}", e))?;
+
+            let deployment_manager = ByobDeploymentManager::new(BiomeOSConfig::default());
+
+            // Ensure team workspace exists
+            if deployment_manager.get_team_workspace(&team).is_err() {
+                deployment_manager
+                    .create_team_workspace(&team)
+                    .map_err(|e| format!("Failed to create team workspace: {}", e))?;
+            }
+
+            match deployment_manager
+                .deploy_biome(&biome_manifest, &team)
+                .await
+            {
+                Ok(deployment_id) => {
+                    println!(
+                        "🚀 Deploying biome from {} for team {}",
+                        manifest.display(),
+                        team
+                    );
+                    println!("✅ Deployment successful!");
+                    println!("   Deployment ID: {}", deployment_id);
+                    println!("   Team: {}", team);
+                    println!("   Status: Running");
+                }
+                Err(e) => {
+                    println!("❌ Deployment failed: {}", e);
+                    std::process::exit(1);
+                }
+            }
         }
         Commands::List { team } => {
             println!("📋 Listing deployments for team: {}", team);
-            println!("   No deployments found for team {} (this is expected in demo mode)", team);
+            let deployment_manager = ByobDeploymentManager::new(BiomeOSConfig::default());
+            match deployment_manager.list_team_deployments(&team).await {
+                Ok(deployments) => {
+                    if deployments.is_empty() {
+                        println!("   No deployments found for team {}", team);
+                    } else {
+                        for deployment in deployments {
+                            println!(
+                                "   {} - {} ({:?})",
+                                deployment.deployment_id,
+                                deployment.biome_manifest.metadata.name,
+                                deployment.status
+                            );
+                        }
+                    }
+                }
+                Err(e) => {
+                    println!("❌ Failed to list deployments: {}", e);
+                    std::process::exit(1);
+                }
+            }
         }
         Commands::Status { deployment_id } => {
             println!("📊 Checking status for deployment: {}", deployment_id);
-            println!("   Status: Running (simulated)");
+            let deployment_manager = ByobDeploymentManager::new(BiomeOSConfig::default());
+            match deployment_manager
+                .get_deployment_status(&deployment_id)
+                .await
+            {
+                Ok(status) => {
+                    println!("   Status: {:?}", status);
+                }
+                Err(e) => {
+                    println!("❌ Failed to get deployment status: {}", e);
+                    std::process::exit(1);
+                }
+            }
         }
         Commands::Remove { deployment_id } => {
             println!("🗑️  Removing deployment: {}", deployment_id);
-            println!("✅ Deployment removed successfully! (simulated)");
+            let deployment_manager = ByobDeploymentManager::new(BiomeOSConfig::default());
+            match deployment_manager.remove_deployment(&deployment_id).await {
+                Ok(_) => {
+                    println!("✅ Deployment removed successfully!");
+                }
+                Err(e) => {
+                    println!("❌ Failed to remove deployment: {}", e);
+                    std::process::exit(1);
+                }
+            }
         }
         Commands::Workspace { team } => {
             println!("🏠 Team workspace for: {}", team);
@@ -102,7 +181,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Commands::Init { template, output } => {
             println!("📝 Initializing biome manifest with template: {}", template);
-            
+
             let manifest_content = match template.as_str() {
                 "basic" => create_basic_template(),
                 "webapp" => create_webapp_template(),
@@ -113,7 +192,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     std::process::exit(1);
                 }
             };
-            
+
             match std::fs::write(&output, manifest_content) {
                 Ok(_) => {
                     println!("✅ Manifest created: {}", output.display());
@@ -126,16 +205,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Commands::Validate { manifest } => {
             println!("🔍 Validating biome manifest: {}", manifest.display());
-            
+
             match std::fs::read_to_string(&manifest) {
                 Ok(content) => {
                     match serde_yaml::from_str::<serde_yaml::Value>(&content) {
                         Ok(parsed) => {
                             println!("✅ Manifest is valid YAML");
-                            
+
                             // Basic validation checks
                             if let Some(api_version) = parsed.get("apiVersion") {
-                                println!("   API Version: {}", api_version.as_str().unwrap_or("unknown"));
+                                println!(
+                                    "   API Version: {}",
+                                    api_version.as_str().unwrap_or("unknown")
+                                );
                             }
                             if let Some(kind) = parsed.get("kind") {
                                 println!("   Kind: {}", kind.as_str().unwrap_or("unknown"));
@@ -200,7 +282,8 @@ networking:
 security:
   network_policies: true
   resource_quotas: true
-"#.to_string()
+"#
+    .to_string()
 }
 
 fn create_webapp_template() -> String {
@@ -247,7 +330,8 @@ networking:
 scaling:
   min_replicas: 2
   max_replicas: 10
-"#.to_string()
+"#
+    .to_string()
 }
 
 fn create_ai_research_template() -> String {
@@ -288,7 +372,8 @@ networking:
 security:
   model_encryption: true
   access_control: "rbac"
-"#.to_string()
+"#
+    .to_string()
 }
 
 fn create_gaming_template() -> String {
@@ -332,5 +417,6 @@ scaling:
   auto_scaling: true
   min_game_servers: 2
   max_game_servers: 20
-"#.to_string()
-} 
+"#
+    .to_string()
+}

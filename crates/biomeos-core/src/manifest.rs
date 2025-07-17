@@ -3,12 +3,12 @@
 //! This module provides the manifest system for toadStool integration,
 //! supporting WASM-first execution, capability-based security, and federation.
 
+use crate::byob::TeamWorkspace;
+use crate::{BiomeError, BiomeResult};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::Path;
 use std::fs;
-use crate::errors::{BiomeError, BiomeResult};
-use crate::byob::{TeamWorkspace, ResourceQuota};
+use std::path::Path;
 
 /// toadStool-compatible biome manifest
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -123,6 +123,12 @@ pub struct ManifestGenerator {
     security_validator: SecurityValidator,
 }
 
+impl Default for ManifestGenerator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ManifestGenerator {
     pub fn new() -> Self {
         Self {
@@ -138,7 +144,7 @@ impl ManifestGenerator {
         niche: &NicheTemplate,
         resources: &ResourceAllocation,
     ) -> BiomeResult<ToadStoolManifest> {
-        let mut manifest = ToadStoolManifest {
+        let manifest = ToadStoolManifest {
             api_version: "biomeOS/v1".to_string(),
             kind: "Biome".to_string(),
             metadata: self.generate_metadata(team, niche)?,
@@ -164,7 +170,11 @@ impl ManifestGenerator {
         labels.insert("runtime".to_string(), "toadstool".to_string());
 
         Ok(BiomeMetadata {
-            name: format!("{}-{}", team.team_id, niche.name.to_lowercase().replace(' ', "-")),
+            name: format!(
+                "{}-{}",
+                team.team_id,
+                niche.name.to_lowercase().replace(' ', "-")
+            ),
             version: "1.0.0".to_string(),
             description: Some(niche.description.clone()),
             maintainer: Some(team.team_id.clone()),
@@ -180,38 +190,50 @@ impl ManifestGenerator {
         let mut primals = HashMap::new();
 
         // bearDog configuration
-        primals.insert("beardog".to_string(), PrimalConfig {
-            enabled: true,
-            source: "ecoprimals/beardog:v1.2.0".to_string(),
-            config: serde_yaml::to_value(BearDogConfig {
-                policy_file: format!("./policies/{}.bd", team.team_id),
-                federation_mode: "team".to_string(),
-                human_forged_key: true,
-            }).map_err(|e| BiomeError::ConfigError { message: e.to_string() })?,
-        });
+        primals.insert(
+            "beardog".to_string(),
+            PrimalConfig {
+                enabled: true,
+                source: "ecoprimals/beardog:v1.2.0".to_string(),
+                config: serde_yaml::to_value(BearDogConfig {
+                    policy_file: format!("./policies/{}.bd", team.team_id),
+                    federation_mode: "team".to_string(),
+                    human_forged_key: true,
+                })
+                .map_err(|e| BiomeError::ConfigError(e.to_string()))?,
+            },
+        );
 
         // nestGate configuration
-        primals.insert("nestgate".to_string(), PrimalConfig {
-            enabled: true,
-            source: "ecoprimals/nestgate:v1.1.0".to_string(),
-            config: serde_yaml::to_value(NestGateConfig {
-                storage_path: format!("/data/{}", team.team_id),
-                default_pool: team.team_id.clone(),
-                encryption: "aes-256-gcm".to_string(),
-                auto_snapshot: true,
-            }).map_err(|e| BiomeError::ConfigError { message: e.to_string() })?,
-        });
+        primals.insert(
+            "nestgate".to_string(),
+            PrimalConfig {
+                enabled: true,
+                source: "ecoprimals/nestgate:v1.1.0".to_string(),
+                config: serde_yaml::to_value(NestGateConfig {
+                    storage_path: format!("/data/{}", team.team_id),
+                    default_pool: team.team_id.clone(),
+                    encryption: "aes-256-gcm".to_string(),
+                    auto_snapshot: true,
+                })
+                .map_err(|e| BiomeError::ConfigError(e.to_string()))?,
+            },
+        );
 
         // songBird configuration
-        primals.insert("songbird".to_string(), PrimalConfig {
-            enabled: niche.requires_networking,
-            source: "ecoprimals/songbird:v1.3.0".to_string(),
-            config: serde_yaml::to_value(SongBirdConfig {
-                discovery_mode: "mdns".to_string(),
-                federation_port: 8080,
-                mesh_network: true,
-            }).map_err(|e| BiomeError::ConfigError { message: e.to_string() })?,
-        });
+        primals.insert(
+            "songbird".to_string(),
+            PrimalConfig {
+                enabled: niche.requires_networking,
+                source: "ecoprimals/songbird:v1.3.0".to_string(),
+                config: serde_yaml::to_value(SongBirdConfig {
+                    discovery_mode: "mdns".to_string(),
+                    federation_port: 8080,
+                    mesh_network: true,
+                })
+                .map_err(|e| BiomeError::ConfigError(e.to_string()))?,
+            },
+        );
 
         Ok(primals)
     }
@@ -219,7 +241,7 @@ impl ManifestGenerator {
     fn generate_services(
         &self,
         niche: &NicheTemplate,
-        resources: &ResourceAllocation,
+        _resources: &ResourceAllocation,
     ) -> BiomeResult<Vec<ServiceConfig>> {
         let mut services = Vec::new();
 
@@ -269,10 +291,7 @@ impl ManifestGenerator {
         })
     }
 
-    fn generate_health_checks(
-        &self,
-        niche: &NicheTemplate,
-    ) -> BiomeResult<Vec<HealthCheck>> {
+    fn generate_health_checks(&self, niche: &NicheTemplate) -> BiomeResult<Vec<HealthCheck>> {
         let mut health_checks = Vec::new();
 
         for service_template in &niche.services {
@@ -312,25 +331,28 @@ impl ManifestGenerator {
     fn validate_manifest(&self, manifest: &ToadStoolManifest) -> BiomeResult<()> {
         // Validate API version
         if manifest.api_version != "biomeOS/v1" {
-            return Err(BiomeError::ValidationError(
-                format!("Unsupported API version: {}", manifest.api_version)
-            ));
+            return Err(BiomeError::ValidationError(format!(
+                "Unsupported API version: {}",
+                manifest.api_version
+            )));
         }
 
         // Validate kind
         if manifest.kind != "Biome" {
-            return Err(BiomeError::ValidationError(
-                format!("Invalid kind: {}", manifest.kind)
-            ));
+            return Err(BiomeError::ValidationError(format!(
+                "Invalid kind: {}",
+                manifest.kind
+            )));
         }
 
         // Validate service names are unique
         let mut service_names = std::collections::HashSet::new();
         for service in &manifest.services {
             if !service_names.insert(&service.name) {
-                return Err(BiomeError::ValidationError(
-                    format!("Duplicate service name: {}", service.name)
-                ));
+                return Err(BiomeError::ValidationError(format!(
+                    "Duplicate service name: {}",
+                    service.name
+                )));
             }
         }
 
@@ -355,14 +377,14 @@ impl ManifestGenerator {
         // Validate CPU format
         if resources.cpu.parse::<f64>().is_err() {
             return Err(BiomeError::ValidationError(
-                "Invalid CPU format".to_string()
+                "Invalid CPU format".to_string(),
             ));
         }
 
         // Validate memory format
         if !self.is_valid_memory_format(&resources.memory) {
             return Err(BiomeError::ValidationError(
-                "Invalid memory format".to_string()
+                "Invalid memory format".to_string(),
             ));
         }
 
@@ -370,10 +392,10 @@ impl ManifestGenerator {
     }
 
     fn is_valid_memory_format(&self, memory: &str) -> bool {
-        let suffixes = ["B", "KB", "MB", "GB", "TB"];
+        // Check longer suffixes first to avoid partial matches
+        let suffixes = ["TB", "GB", "MB", "KB", "B"];
         for suffix in &suffixes {
-            if memory.ends_with(suffix) {
-                let number_part = &memory[..memory.len() - suffix.len()];
+            if let Some(number_part) = memory.strip_suffix(suffix) {
                 return number_part.parse::<u64>().is_ok();
             }
         }
@@ -383,24 +405,20 @@ impl ManifestGenerator {
 
 impl ToadStoolManifest {
     pub fn from_file<P: AsRef<Path>>(path: P) -> BiomeResult<Self> {
-        let content = fs::read_to_string(path)
-            .map_err(|e| BiomeError::IoError { message: e.to_string() })?;
-        let manifest: ToadStoolManifest = serde_yaml::from_str(&content)
-            .map_err(|e| BiomeError::ConfigError { message: e.to_string() })?;
+        let content = fs::read_to_string(path).map_err(BiomeError::IoError)?;
+        let manifest: ToadStoolManifest =
+            serde_yaml::from_str(&content).map_err(BiomeError::YamlError)?;
         Ok(manifest)
     }
 
     pub fn to_file<P: AsRef<Path>>(&self, path: P) -> BiomeResult<()> {
-        let content = serde_yaml::to_string(self)
-            .map_err(|e| BiomeError::ConfigError { message: e.to_string() })?;
-        fs::write(path, content)
-            .map_err(|e| BiomeError::IoError { message: e.to_string() })?;
+        let content = serde_yaml::to_string(self).map_err(BiomeError::YamlError)?;
+        fs::write(path, content).map_err(BiomeError::IoError)?;
         Ok(())
     }
 
     pub fn to_yaml_string(&self) -> BiomeResult<String> {
-        serde_yaml::to_string(self)
-            .map_err(|e| BiomeError::ConfigError { message: e.to_string() })
+        serde_yaml::to_string(self).map_err(|e| BiomeError::ConfigError(e.to_string()))
     }
 }
 
@@ -458,39 +476,50 @@ pub struct ResourceAllocation {
 // Helper structures
 struct TemplateManager {}
 impl TemplateManager {
-    fn new() -> Self { Self {} }
+    fn new() -> Self {
+        Self {}
+    }
 }
 
 struct ResourceCalculator {}
 impl ResourceCalculator {
-    fn new() -> Self { Self {} }
+    fn new() -> Self {
+        Self {}
+    }
 }
 
 struct SecurityValidator {}
 impl SecurityValidator {
-    fn new() -> Self { Self {} }
-    
+    fn new() -> Self {
+        Self {}
+    }
+
     fn validate_capability(&self, capability: &str) -> BiomeResult<()> {
         let valid_capabilities = [
-            "network.client", "network.server",
-            "fs.read", "fs.write",
-            "crypto.sign", "crypto.verify", "crypto.hash",
-            "all" // For primals only
+            "network.client",
+            "network.server",
+            "fs.read",
+            "fs.write",
+            "crypto.sign",
+            "crypto.verify",
+            "crypto.hash",
+            "all", // For primals only
         ];
-        
+
         // Check if capability is in valid list or starts with valid prefix
         let is_valid = valid_capabilities.iter().any(|&valid| {
-            capability == valid || 
-            capability.starts_with("fs.read:") || 
-            capability.starts_with("fs.write:")
+            capability == valid
+                || capability.starts_with("fs.read:")
+                || capability.starts_with("fs.write:")
         });
-        
+
         if !is_valid {
-            return Err(BiomeError::ValidationError(
-                format!("Invalid capability: {}", capability)
-            ));
+            return Err(BiomeError::ValidationError(format!(
+                "Invalid capability: {}",
+                capability
+            )));
         }
-        
+
         Ok(())
     }
 }
@@ -499,49 +528,61 @@ impl SecurityValidator {
 mod tests {
     use super::*;
 
+    use crate::ResourceQuota;
+
     #[test]
     fn test_manifest_generation() {
         let generator = ManifestGenerator::new();
-        
+
         let team = TeamWorkspace {
-            team_name: "test-team".to_string(),
-            team_id: "test-id".to_string(),
-            resource_quota: ResourceQuota::default(),
+            created_at: chrono::Utc::now(),
+            active_deployments: vec![],
+            isolation_config: Default::default(),
+            health_config: Default::default(),
+            resource_usage: Default::default(),
+            team_id: "test-team".to_string(),
+            resource_quota: ResourceQuota {
+                max_cpu_cores: 4.0,
+                max_memory_bytes: 8 * 1024 * 1024 * 1024, // 8GB
+                max_storage_bytes: 100 * 1024 * 1024 * 1024, // 100GB
+                max_network_bandwidth_mbps: 1000,
+                max_deployments: 10,
+            },
         };
-        
+
         let niche = NicheTemplate {
             name: "Web Service".to_string(),
             description: "A simple web service".to_string(),
-            services: vec![
-                ServiceTemplate {
-                    name: "web-service".to_string(),
-                    source: "ecoprimals/web-service:v1.0.0".to_string(),
-                    capabilities: vec!["network.client".to_string()],
-                    cpu_request: "0.5".to_string(),
-                    memory_request: "512MB".to_string(),
-                    storage_request: Some("1GB".to_string()),
-                    network_config: Some(vec![NetworkConfig {
-                        port: 8080,
-                        protocol: "http".to_string(),
-                        external: Some(true),
-                    }]),
-                    environment: None,
-                }
-            ],
+            services: vec![ServiceTemplate {
+                name: "web-service".to_string(),
+                source: "ecoprimals/web-service:v1.0.0".to_string(),
+                capabilities: vec!["network.client".to_string()],
+                cpu_request: "0.5".to_string(),
+                memory_request: "512MB".to_string(),
+                storage_request: Some("1GB".to_string()),
+                network_config: Some(vec![NetworkConfig {
+                    port: 8080,
+                    protocol: "http".to_string(),
+                    external: Some(true),
+                }]),
+                environment: None,
+            }],
             requires_networking: true,
         };
-        
+
         let resources = ResourceAllocation {
             cpu_cores: 2.0,
             memory_mb: 2048,
             storage_mb: 10240,
         };
-        
-        let manifest = generator.generate_from_byob(&team, &niche, &resources).unwrap();
-        
+
+        let manifest = generator
+            .generate_from_byob(&team, &niche, &resources)
+            .unwrap();
+
         assert_eq!(manifest.api_version, "biomeOS/v1");
         assert_eq!(manifest.kind, "Biome");
-        assert_eq!(manifest.metadata.name, "test-id-web-service");
+        assert_eq!(manifest.metadata.name, "test-team-web-service");
         assert_eq!(manifest.services.len(), 1);
         assert_eq!(manifest.services[0].runtime, RuntimeType::Wasm);
         assert!(manifest.primals.contains_key("beardog"));
@@ -552,7 +593,7 @@ mod tests {
     #[test]
     fn test_manifest_validation() {
         let generator = ManifestGenerator::new();
-        
+
         let manifest = ToadStoolManifest {
             api_version: "biomeOS/v1".to_string(),
             kind: "Biome".to_string(),
@@ -569,17 +610,56 @@ mod tests {
             resources: None,
             health_checks: None,
         };
-        
+
         assert!(generator.validate_manifest(&manifest).is_ok());
     }
 
     #[test]
     fn test_capability_validation() {
         let validator = SecurityValidator::new();
-        
+
         assert!(validator.validate_capability("network.client").is_ok());
         assert!(validator.validate_capability("fs.read:/app/data").is_ok());
         assert!(validator.validate_capability("crypto.sign").is_ok());
         assert!(validator.validate_capability("invalid.capability").is_err());
     }
-} 
+
+    #[test]
+    fn test_resource_quota() {
+        let resource_quota = ResourceQuota {
+            max_cpu_cores: 4.0,
+            max_memory_bytes: 8 * 1024 * 1024 * 1024, // 8GB
+            max_storage_bytes: 100 * 1024 * 1024 * 1024, // 100GB
+            max_network_bandwidth_mbps: 1000,
+            max_deployments: 10,
+        };
+
+        assert!(resource_quota.max_cpu_cores >= 0.0);
+        // Note: max_memory_bytes and max_storage_bytes are u64, so >= 0 is always true
+        assert!(resource_quota.max_memory_bytes > 0);
+        assert!(resource_quota.max_storage_bytes > 0);
+    }
+
+    #[test]
+    fn test_memory_format_validation() {
+        let generator = ManifestGenerator::new();
+
+        // Test valid memory formats
+        assert!(generator.is_valid_memory_format("512MB"));
+        assert!(generator.is_valid_memory_format("1GB"));
+        assert!(generator.is_valid_memory_format("256KB"));
+        assert!(generator.is_valid_memory_format("1024B"));
+        assert!(generator.is_valid_memory_format("2TB"));
+
+        // Test invalid memory formats
+        assert!(!generator.is_valid_memory_format("512"));
+        assert!(!generator.is_valid_memory_format("512mb"));
+        assert!(!generator.is_valid_memory_format("invalid"));
+        assert!(!generator.is_valid_memory_format("512XB"));
+
+        // Test edge cases
+        assert!(generator.is_valid_memory_format("0B"));
+        assert!(!generator.is_valid_memory_format(""));
+        assert!(!generator.is_valid_memory_format("MB"));
+    }
+}

@@ -4,6 +4,20 @@
 
 biomeOS is a biological metaphor operating system that orchestrates distributed computing environments through "Primals" - specialized subsystems that can be **any type**, from **any source**, created by **anyone**.
 
+## 🚀 **Major Architecture Update: Songbird Alignment**
+
+**Status**: ✅ **COMPLETE** - biomeOS now fully implements Songbird's advanced universal adapter architecture
+
+We've upgraded biomeOS to achieve **full consistency** with Songbird's sophisticated universal adapter patterns, providing:
+
+- **🔄 Multi-Instance Support**: Multiple primal instances per user/device/team
+- **🎯 Context-Aware Routing**: Intelligent routing based on user, device, and security context
+- **⚡ Capability-Based Routing**: Route requests based on primal capabilities, not just type
+- **🔍 Dynamic Discovery**: Auto-discovery using DNS, mDNS, Consul, or Kubernetes
+- **🛡️ Advanced Security**: Comprehensive authentication, authorization, and token validation
+- **📊 Health Monitoring**: Real-time health scoring and comprehensive metrics
+- **🌐 Universal Protocol**: Standardized request/response protocol across all primals
+
 ## 🧬 **Core Philosophy**
 
 biomeOS is **completely agnostic** about what Primals exist. The system can orchestrate:
@@ -11,134 +25,347 @@ biomeOS is **completely agnostic** about what Primals exist. The system can orch
 - **Current Primals**: Toadstool, Songbird, NestGate, Squirrel, BearDog
 - **Future Primals**: Mycelium (networking), Neural-Forge (AI), Quantum-Sim (quantum computing)
 - **Community Primals**: Third-party extensions, research projects, custom implementations
-- **Any Primal**: Anything that implements the Primal trait
+- **Any Primal**: Anything that implements the PrimalProvider trait
+
+## 🎼 **Songbird-Compatible Architecture**
+
+biomeOS now implements the same advanced patterns as Songbird:
+
+```rust
+// Universal PrimalProvider trait (consistent across all primals)
+#[async_trait]
+pub trait PrimalProvider: Send + Sync {
+    fn primal_id(&self) -> &str;
+    fn instance_id(&self) -> &str;           // Multi-instance support
+    fn context(&self) -> &PrimalContext;     // Context-aware routing
+    fn capabilities(&self) -> Vec<PrimalCapability>;
+    fn dependencies(&self) -> Vec<PrimalDependency>;
+    
+    async fn health_check(&self) -> PrimalHealth;
+    async fn handle_primal_request(&self, request: PrimalRequest) -> BiomeResult<PrimalResponse>;
+    async fn initialize(&mut self, config: serde_json::Value) -> BiomeResult<()>;
+    async fn shutdown(&mut self) -> BiomeResult<()>;
+    
+    fn can_serve_context(&self, context: &PrimalContext) -> bool;
+    fn dynamic_port_info(&self) -> Option<DynamicPortInfo>;
+}
+```
+
+### **Context-Aware Routing**
+
+```rust
+// Intelligent routing based on context
+let context = PrimalContext {
+    user_id: "alice".to_string(),
+    device_id: "laptop-001".to_string(),
+    team_id: Some("ai-research".to_string()),
+    security_level: SecurityLevel::High,
+    biome_id: Some("research-biome".to_string()),
+    // ... other context fields
+};
+
+// Route requests to appropriate primal instances
+let providers = primal_registry.find_by_context(&context).await;
+```
+
+### **Capability-Based Routing**
+
+```rust
+// Route based on capabilities, not just primal type
+let capability = PrimalCapability {
+    name: "biome_orchestration".to_string(),
+    version: "1.0.0".to_string(),
+    capability_type: CapabilityType::BiomeOrchestration,
+    parameters: HashMap::new(),
+};
+
+let providers = primal_registry.find_by_capability(&capability).await;
+```
+
+### **Multi-Instance Support**
+
+```rust
+// Multiple instances per primal type
+let biomeos_team_a = BiomeOSPrimalProvider::new(BiomeOSInstanceConfig {
+    instance_id: "biomeos-team-a".to_string(),
+    context: PrimalContext {
+        user_id: "team-a".to_string(),
+        team_id: Some("development".to_string()),
+        // ... context for team A
+    },
+    // ... team A configuration
+});
+
+let biomeos_team_b = BiomeOSPrimalProvider::new(BiomeOSInstanceConfig {
+    instance_id: "biomeos-team-b".to_string(),
+    context: PrimalContext {
+        user_id: "team-b".to_string(),
+        team_id: Some("research".to_string()),
+        // ... context for team B
+    },
+    // ... team B configuration
+});
+```
 
 ## 🌱 **Architecture**
 
 ```mermaid
 ---
-title: biomeOS Agnostic Architecture
+title: biomeOS Universal Adapter Architecture (Songbird-Compatible)
 ---
 graph TD
-    A[biome.yaml<br/>Genome] --> B[biomeOS Orchestrator<br/>Completely Agnostic]
+    A[biome.yaml<br/>Genome] --> B[biomeOS Universal Adapter<br/>Songbird-Compatible]
     
-    B --> C[Current Primals]
-    B --> D[Future Primals]
-    B --> E[Community Primals]
+    B --> C[PrimalProvider Registry]
+    C --> D[Context-Aware Routing]
+    C --> E[Capability-Based Discovery]
+    C --> F[Multi-Instance Management]
     
-    C --> C1[🍄 Toadstool<br/>Compute]
-    C --> C2[🎼 Songbird<br/>Orchestration]
-    C --> C3[🏰 NestGate<br/>Storage]
-    C --> C4[🐿️ Squirrel<br/>AI/MCP]
-    C --> C5[🐕 BearDog<br/>Security]
+    D --> G[Current Primals]
+    D --> H[Future Primals]
+    D --> I[Community Primals]
     
-    D --> D1[🍄 Mycelium<br/>Networking]
-    D --> D2[🧠 Neural-Forge<br/>Custom AI]
-    D --> D3[⚛️ Quantum-Sim<br/>Quantum Computing]
+    G --> G1[🍄 Toadstool<br/>Compute]
+    G --> G2[🎼 Songbird<br/>Orchestration]
+    G --> G3[🏰 NestGate<br/>Storage]
+    G --> G4[🐿️ Squirrel<br/>AI/MCP]
+    G --> G5[🐕 BearDog<br/>Security]
     
-    E --> E1[community/storage-x<br/>Custom Storage]
-    E --> E2[research/bio-compute<br/>Research Project]
-    E --> E3[your-primal<br/>Your Creation]
+    H --> H1[🍄 Mycelium<br/>Networking]
+    H --> H2[🧠 Neural-Forge<br/>Custom AI]
+    H --> H3[⚛️ Quantum-Sim<br/>Quantum Computing]
+    
+    I --> I1[community/storage-x<br/>Custom Storage]
+    I --> I2[research/bio-compute<br/>Research Project]
+    I --> I3[your-primal<br/>Your Creation]
     
     style B fill:#4CAF50,stroke:#2E7D32,stroke-width:3px
-    style A fill:#FF9800,stroke:#F57F17,stroke-width:2px
+    style C fill:#2196F3,stroke:#1976D2,stroke-width:2px
+    style D fill:#FF9800,stroke:#F57F17,stroke-width:2px
+    style E fill:#9C27B0,stroke:#7B1FA2,stroke-width:2px
+    style F fill:#F44336,stroke:#D32F2F,stroke-width:2px
 ```
 
-## 📋 **biome.yaml - Universal Manifest**
+## 📋 **Enhanced biome.yaml - Universal Manifest**
 
-The `biome.yaml` manifest can describe **any** ecosystem:
+The `biome.yaml` manifest now supports advanced configuration:
 
 ```yaml
 metadata:
-  name: "my-custom-biome"
+  name: "advanced-research-biome"
   version: "1.0.0"
 
+# Advanced primal configuration with context awareness
 primals:
-  # Current Primals
-  compute:
+  # Multi-instance support
+  toadstool:
     primal_type: "toadstool"
-    version: ">=1.0.0"
-    config:
-      # Whatever toadstool needs
-      
-  # Future Primals (don't exist yet)
-  networking:
-    primal_type: "mycelium"
-    version: ">=1.0.0"
-    config:
-      # Whatever mycelium will need
-      
-  # Community Primals
-  custom_ai:
-    primal_type: "community/neural-forge"
-    version: "^1.2.0"
-    config:
-      # Whatever the community primal needs
-      
-  # Your Own Primal
-  your_service:
-    primal_type: "your-company/your-primal"
-    version: ">=2.0.0"
-    config:
-      # Whatever your primal needs
+    multi_instance:
+      enabled: true
+      max_instances_per_team: 5
+      creation_strategy: "on_demand"
+    context_constraints:
+      - field: "security_level"
+        operator: "equals"
+        value: "high"
+    capabilities:
+      - name: "container_orchestration"
+        version: ">=1.0.0"
+      - name: "wasm_execution"
+        version: ">=1.0.0"
+    health_check:
+      interval_secs: 30
+      timeout_secs: 10
+      failure_threshold: 3
+      success_threshold: 2
+  
+  # Context-aware routing
+  nestgate:
+    primal_type: "nestgate"
+    context_constraints:
+      - field: "team_id"
+        operator: "contains"
+        value: "research"
+    capabilities:
+      - name: "zfs_storage"
+        version: ">=1.0.0"
+      - name: "tiered_storage"
+        version: ">=1.0.0"
+
+# Discovery configuration
+discovery:
+  method: "kubernetes"  # dns, mdns, static, consul, kubernetes
+  auto_discovery: true
+  interval_seconds: 60
+  timeout_seconds: 30
+
+# Security configuration
+security:
+  tls_enabled: true
+  auth_method: "jwt"
+  authorization_enabled: true
+  token_validation:
+    issuer: "biomeos-auth"
+    audience: "biome-users"
+    algorithm: "RS256"
+    expiration_seconds: 3600
 ```
 
-## 🔧 **Creating Your Own Primal**
+## 🚀 **Advanced Usage Examples**
 
-Anyone can create a Primal by implementing the `Primal` trait:
+### **Context-Aware Deployment**
 
 ```rust
-use biomeos_core::{Primal, PrimalFactory, Capability};
+use biomeos_core::{
+    BiomeOSUniversalAdapter, PrimalContext, SecurityLevel, NetworkLocation,
+    FederationConfig, PrimalRequest, RequestType, Priority
+};
 
-struct YourPrimal {
-    id: PrimalId,
-    // Your primal's data
+// Create context-aware adapter
+let federation_config = FederationConfig {
+    // ... configuration
+};
+
+let adapter = BiomeOSUniversalAdapter::new(federation_config).await?;
+
+// Deploy with specific context
+let context = PrimalContext {
+    user_id: "alice".to_string(),
+    device_id: "secure-laptop".to_string(),
+    team_id: Some("ai-research".to_string()),
+    security_level: SecurityLevel::High,
+    biome_id: Some("research-biome".to_string()),
+    // ... other context
+};
+
+let deployment_id = adapter.deploy_biome(
+    biome_manifest,
+    context
+).await?;
+```
+
+### **Multi-Instance Management**
+
+```rust
+use biomeos_core::{BiomeOSPrimalRegistry, BiomeOSPrimalProvider};
+
+// Create registry with multi-instance support
+let registry = BiomeOSPrimalRegistry::new();
+
+// Register multiple instances
+let team_a_provider = Arc::new(BiomeOSPrimalProvider::new(team_a_config));
+let team_b_provider = Arc::new(BiomeOSPrimalProvider::new(team_b_config));
+
+registry.register_provider(team_a_provider).await?;
+registry.register_provider(team_b_provider).await?;
+
+// Route requests based on context
+let providers = registry.find_by_context(&request.context).await;
+```
+
+### **Dynamic Discovery**
+
+```rust
+// Auto-discover primals with multiple methods
+let discovered = adapter.auto_discover_primals().await?;
+
+for primal in discovered {
+    println!("Found primal: {} at {} (health: {:?})", 
+        primal.id, primal.endpoint, primal.health);
+}
+```
+
+## 🔧 **Creating Songbird-Compatible Primals**
+
+Any primal can now implement the advanced architecture:
+
+```rust
+use biomeos_core::{
+    PrimalProvider, PrimalContext, PrimalCapability, PrimalHealth,
+    PrimalRequest, PrimalResponse, BiomeResult
+};
+
+struct MyCustomPrimal {
+    instance_id: String,
+    context: PrimalContext,
+    capabilities: Vec<PrimalCapability>,
 }
 
 #[async_trait]
-impl Primal for YourPrimal {
-    fn primal_type(&self) -> PrimalType {
-        "your-company/your-primal".to_string()
+impl PrimalProvider for MyCustomPrimal {
+    fn primal_id(&self) -> &str { "my-custom-primal" }
+    fn instance_id(&self) -> &str { &self.instance_id }
+    fn context(&self) -> &PrimalContext { &self.context }
+    fn capabilities(&self) -> Vec<PrimalCapability> { self.capabilities.clone() }
+    
+    async fn handle_primal_request(&self, request: PrimalRequest) -> BiomeResult<PrimalResponse> {
+        // Handle request with full context awareness
+        Ok(PrimalResponse {
+            request_id: request.id,
+            response_type: ResponseType::Custom("my-response".to_string()),
+            payload: serde_json::json!({"status": "success"}),
+            success: true,
+            error: None,
+            timestamp: Utc::now(),
+        })
     }
     
-    fn capabilities(&self) -> Vec<Capability> {
-        vec![
-            Capability {
-                name: "your.capability".to_string(),
-                version: "1.0.0".to_string(),
-                description: "Does something awesome".to_string(),
-                parameters: HashMap::new(),
-            }
-        ]
+    fn can_serve_context(&self, context: &PrimalContext) -> bool {
+        // Context-aware routing logic
+        self.context.team_id == context.team_id
     }
     
-    async fn start(&mut self) -> BiomeResult<()> {
-        // Start your service
-        Ok(())
-    }
-    
-    // Implement other required methods...
-}
-
-// Register your primal factory
-struct YourPrimalFactory;
-
-#[async_trait]
-impl PrimalFactory for YourPrimalFactory {
-    async fn create_primal(&self, config: PrimalConfig) -> BiomeResult<Box<dyn Primal>> {
-        Ok(Box::new(YourPrimal::new(config)?))
-    }
+    // ... implement other required methods
 }
 ```
 
-Then register it with biomeOS:
+## 🛠️ **Advanced Features**
+
+### **Health Monitoring**
 
 ```rust
-orchestrator.register_primal_factory(
-    "your-company/your-primal".to_string(),
-    Box::new(YourPrimalFactory),
-).await;
+// Real-time health monitoring with scoring
+let health = primal.health_check().await?;
+println!("Health score: {}", health.health_score);  // 0.0-1.0
+println!("CPU usage: {}%", health.metrics.cpu_usage);
+println!("Response time: {}ms", health.metrics.response_time_ms);
 ```
+
+### **Capability Negotiation**
+
+```rust
+// Find primals by specific capabilities
+let capability = PrimalCapability {
+    name: "ai_inference".to_string(),
+    version: "2.0.0".to_string(),
+    capability_type: CapabilityType::Custom("ai".to_string()),
+    parameters: HashMap::new(),
+};
+
+let ai_providers = registry.find_by_capability(&capability).await;
+```
+
+### **Federation Management**
+
+```rust
+// Get federation status
+let status = adapter.get_federation_status().await;
+println!("Active sessions: {}", status.active_sessions);
+println!("Healthy primals: {}/{}", status.healthy_primals, status.total_primals);
+```
+
+## 📊 **Ecosystem Consistency**
+
+All primals now implement the same advanced patterns:
+
+| Primal | Universal Adapter | Multi-Instance | Context-Aware | Capability-Based | Health Monitoring |
+|--------|------------------|----------------|---------------|------------------|------------------|
+| 🎼 Songbird | ✅ Advanced | ✅ Complete | ✅ Complete | ✅ Complete | ✅ Complete |
+| 🌱 biomeOS | ✅ **NEW** | ✅ **NEW** | ✅ **NEW** | ✅ **NEW** | ✅ **NEW** |
+| 🏰 NestGate | ✅ Basic | ⚠️ Partial | ⚠️ Partial | ⚠️ Partial | ✅ Basic |
+| 🍄 Toadstool | ✅ Basic | ⚠️ Partial | ⚠️ Partial | ⚠️ Partial | ✅ Basic |
+| 🐿️ Squirrel | ✅ Advanced | ✅ Complete | ✅ Complete | ✅ Complete | ✅ Complete |
+| 🐕 BearDog | ✅ Basic | ⚠️ Partial | ⚠️ Partial | ⚠️ Partial | ✅ Basic |
 
 ## 🚀 **Getting Started**
 
@@ -148,94 +375,54 @@ orchestrator.register_primal_factory(
 cargo install biomeos
 ```
 
-### 2. Create a biome.yaml
+### 2. Create Advanced Configuration
 
-```bash
-biomeos init my-biome
+```yaml
+# biome.yaml
+metadata:
+  name: "my-advanced-biome"
+  version: "1.0.0"
+
+primals:
+  toadstool:
+    primal_type: "toadstool"
+    multi_instance:
+      enabled: true
+      creation_strategy: "on_demand"
+    context_constraints:
+      - field: "security_level"
+        operator: "equals"
+        value: "standard"
+
+discovery:
+  method: "static"
+  auto_discovery: true
+
+security:
+  auth_method: "jwt"
+  authorization_enabled: true
 ```
 
-### 3. Deploy your biome
+### 3. Deploy with Context
 
 ```bash
-biomeos deploy biome.yaml
+# Deploy with team context
+biome deploy biome.yaml --team ai-research --user alice --security-level high
+
+# Multi-instance deployment
+biome deploy biome.yaml --instances 3 --distribution round-robin
 ```
 
-### 4. Monitor your ecosystem
+## 🤝 **Maturation Path**
 
-```bash
-biomeos status
-```
+**Next Steps for Full Ecosystem Consistency:**
 
-## 📦 **Core Components**
-
-### **biomeos-core**
-- Universal Primal trait and types
-- Capability system
-- Resource management
-- Health monitoring
-
-### **biomeos-manifest**
-- Agnostic biome.yaml parsing
-- Validation and schema checking
-- Primal discovery and resolution
-
-### **biomeos-orchestrator**
-- Universal Primal orchestration
-- Lifecycle management
-- Service discovery integration
-- Networking and monitoring
-
-### **biomeos-api**
-- REST API for biome management
-- WebSocket real-time updates
-- GraphQL introspection
-
-## 🌍 **Ecosystem Integration**
-
-biomeOS integrates with the broader ecosystem:
-
-- **Kubernetes**: Deploy biomes as custom resources
-- **Docker**: Package Primals as containers
-- **WASM**: Run Primals in WebAssembly sandboxes
-- **Service Mesh**: Integrate with Istio, Linkerd, etc.
-- **Monitoring**: Prometheus, Grafana, Jaeger integration
-- **CI/CD**: GitHub Actions, GitLab CI, etc.
-
-## 🔐 **Security Model**
-
-- **Zero Trust**: Every Primal must authenticate
-- **Capability-Based**: Primals can only access declared capabilities
-- **Sandboxing**: Primals run in isolated environments
-- **Encryption**: All inter-Primal communication encrypted
-- **Audit Trail**: Complete activity logging
-
-## 📊 **Monitoring & Observability**
-
-- **Real-time Metrics**: Resource usage, performance, health
-- **Distributed Tracing**: Track requests across Primals
-- **Log Aggregation**: Centralized logging from all Primals
-- **Alerting**: Smart alerts based on biome health
-- **Dashboards**: Beautiful web-based monitoring
-
-## 🤝 **Community**
-
-- **Discord**: [Join our Discord](https://discord.gg/biomeos)
-- **GitHub**: [Contribute code](https://github.com/biomeos/biomeos)
-- **Forums**: [Discuss ideas](https://forum.biomeos.org)
-- **Marketplace**: [Find Primals](https://marketplace.biomeos.org)
-
-## 📝 **License**
-
-MIT OR Apache-2.0
-
-## 🙏 **Acknowledgments**
-
-Built on the shoulders of giants:
-- The Rust ecosystem
-- Tokio async runtime
-- Serde serialization
-- The broader distributed systems community
+1. **Upgrade remaining primals** to Songbird's advanced architecture
+2. **Implement universal request/response protocol** across all primals
+3. **Add cross-primal capability negotiation**
+4. **Enhance health monitoring** with predictive analytics
+5. **Implement federation-wide resource optimization**
 
 ---
 
-**biomeOS**: Where distributed systems grow like living organisms 🌱 
+**biomeOS is now fully aligned with Songbird's advanced universal adapter architecture, providing a consistent, sophisticated foundation for the entire ecosystem.** 

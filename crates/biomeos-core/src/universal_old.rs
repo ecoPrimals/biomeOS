@@ -2,12 +2,22 @@
 //!
 //! This module implements the core "next era" platform capabilities that make
 //! biomeOS truly universal, grandma-safe, and AI-first.
+//!
+//! The functionality has been refactored into specialized modules for better
+//! maintainability and organization.
 
-use crate::{BiomeResult, PrimalType};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::path::PathBuf;
+mod energy_flow;
+mod platform_detection;
+mod ai_assistant;
+
+// Re-export all public items from the modules
+pub use energy_flow::*;
+pub use platform_detection::*;
+pub use ai_assistant::*;
+
+use crate::BiomeResult;
 use async_trait::async_trait;
+use std::collections::HashMap;
 
 /// MYCORRHIZA Energy Flow Management
 /// The universal energy flow management system that protects biomeOS ecosystems
@@ -1281,9 +1291,7 @@ impl UniversalPlatform {
             }
         }
         
-        Err(crate::BiomeError::Generic {
-            message: "NVIDIA GPU not detected".to_string()
-        })
+        Err(crate::BiomeError::Generic("NVIDIA GPU not detected".to_string()))
     }
     
     /// Detect AMD GPU using rocm-smi if available
@@ -1311,18 +1319,14 @@ impl UniversalPlatform {
             }
         }
         
-        Err(crate::BiomeError::Generic {
-            message: "AMD GPU not detected".to_string()
-        })
+        Err(crate::BiomeError::Generic("AMD GPU not detected".to_string()))
     }
     
     /// Detect Intel GPU
     async fn detect_intel_gpu(&self) -> BiomeResult<GpuInfo> {
         // Intel GPU detection would use Level Zero or other Intel APIs
         // For now, return error as not implemented
-        Err(crate::BiomeError::Generic {
-            message: "Intel GPU detection not implemented".to_string()
-        })
+        Err(crate::BiomeError::Generic("Intel GPU detection not implemented".to_string()))
     }
     
     /// Detect network interfaces

@@ -5,8 +5,6 @@
 
 use biomeos_core::BiomeResult;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::path::PathBuf;
 use std::time::Duration;
 use tokio::time::sleep;
 
@@ -155,8 +153,13 @@ impl BootManager {
 
     /// Initialize boot manager
     pub async fn initialize(&self) -> BiomeResult<()> {
-        self.log_boot_message(BootMessageLevel::Info, "boot", "Initializing biomeOS boot sequence").await;
-        
+        self.log_boot_message(
+            BootMessageLevel::Info,
+            "boot",
+            "Initializing biomeOS boot sequence",
+        )
+        .await;
+
         // Update boot phase
         {
             let mut state = self.boot_state.write().await;
@@ -168,23 +171,40 @@ impl BootManager {
 
     /// Start boot sequence
     pub async fn start_boot(&self) -> BiomeResult<()> {
-        self.log_boot_message(BootMessageLevel::Info, "boot", "Starting biomeOS boot sequence").await;
+        self.log_boot_message(
+            BootMessageLevel::Info,
+            "boot",
+            "Starting biomeOS boot sequence",
+        )
+        .await;
 
         // Execute boot sequence
         for step in &self.config.sequence {
             if let Err(e) = self.execute_boot_step(step).await {
                 if step.critical {
-                    self.log_boot_message(BootMessageLevel::Critical, "boot", &format!("Critical boot step failed: {}", e)).await;
-                    
+                    self.log_boot_message(
+                        BootMessageLevel::Critical,
+                        "boot",
+                        &format!("Critical boot step failed: {}", e),
+                    )
+                    .await;
+
                     // Update boot phase to failed
                     {
                         let mut state = self.boot_state.write().await;
-                        state.phase = BootPhase::Failed { reason: e.to_string() };
+                        state.phase = BootPhase::Failed {
+                            reason: e.to_string(),
+                        };
                     }
-                    
+
                     return Err(e);
                 } else {
-                    self.log_boot_message(BootMessageLevel::Warning, "boot", &format!("Non-critical boot step failed: {}", e)).await;
+                    self.log_boot_message(
+                        BootMessageLevel::Warning,
+                        "boot",
+                        &format!("Non-critical boot step failed: {}", e),
+                    )
+                    .await;
                 }
             }
         }
@@ -195,28 +215,40 @@ impl BootManager {
             state.phase = BootPhase::Complete;
         }
 
-        self.log_boot_message(BootMessageLevel::Info, "boot", "biomeOS boot sequence completed successfully").await;
+        self.log_boot_message(
+            BootMessageLevel::Info,
+            "boot",
+            "biomeOS boot sequence completed successfully",
+        )
+        .await;
         Ok(())
     }
 
     /// Execute a boot step
     async fn execute_boot_step(&self, step: &BootStep) -> BiomeResult<()> {
-        self.log_boot_message(BootMessageLevel::Info, "boot", &format!("Executing boot step: {}", step.name)).await;
+        self.log_boot_message(
+            BootMessageLevel::Info,
+            "boot",
+            &format!("Executing boot step: {}", step.name),
+        )
+        .await;
 
         // Check dependencies
         for dep in &step.dependencies {
             if !self.is_step_completed(dep).await {
-                return Err(biomeos_core::BiomeError::Generic {
-                    message: format!("Boot step dependency not met: {}", dep),
-                });
+                return Err(biomeos_core::BiomeError::Generic(format!(
+                    "Boot step dependency not met: {}",
+                    dep
+                )));
             }
         }
 
         // Execute step with timeout
         let result = tokio::time::timeout(
             Duration::from_secs(step.timeout_seconds),
-            self.execute_step_logic(step)
-        ).await;
+            self.execute_step_logic(step),
+        )
+        .await;
 
         match result {
             Ok(Ok(())) => {
@@ -225,7 +257,12 @@ impl BootManager {
                     let mut state = self.boot_state.write().await;
                     state.completed_steps.push(step.name.clone());
                 }
-                self.log_boot_message(BootMessageLevel::Info, "boot", &format!("Boot step completed: {}", step.name)).await;
+                self.log_boot_message(
+                    BootMessageLevel::Info,
+                    "boot",
+                    &format!("Boot step completed: {}", step.name),
+                )
+                .await;
                 Ok(())
             }
             Ok(Err(e)) => {
@@ -243,9 +280,10 @@ impl BootManager {
             }
             Err(_) => {
                 // Step timed out
-                let error = biomeos_core::BiomeError::Generic {
-                    message: format!("Boot step timed out: {}", step.name),
-                };
+                let error = biomeos_core::BiomeError::Generic(format!(
+                    "Boot step timed out: {}",
+                    step.name
+                ));
                 {
                     let mut state = self.boot_state.write().await;
                     state.failed_steps.push(BootFailure {
@@ -264,31 +302,48 @@ impl BootManager {
     async fn execute_step_logic(&self, step: &BootStep) -> BiomeResult<()> {
         match step.name.as_str() {
             "hardware_detection" => {
-                self.log_boot_message(BootMessageLevel::Info, "boot", "Detecting hardware...").await;
+                self.log_boot_message(BootMessageLevel::Info, "boot", "Detecting hardware...")
+                    .await;
                 // TODO: Implement hardware detection
                 sleep(Duration::from_millis(500)).await;
                 Ok(())
             }
             "system_services" => {
-                self.log_boot_message(BootMessageLevel::Info, "boot", "Starting system services...").await;
+                self.log_boot_message(
+                    BootMessageLevel::Info,
+                    "boot",
+                    "Starting system services...",
+                )
+                .await;
                 // TODO: Start system services
                 sleep(Duration::from_millis(1000)).await;
                 Ok(())
             }
             "primal_ecosystem" => {
-                self.log_boot_message(BootMessageLevel::Info, "boot", "Starting Primal ecosystem...").await;
+                self.log_boot_message(
+                    BootMessageLevel::Info,
+                    "boot",
+                    "Starting Primal ecosystem...",
+                )
+                .await;
                 // TODO: Start Primal ecosystem via orchestrator
                 sleep(Duration::from_millis(2000)).await;
                 Ok(())
             }
             "user_space" => {
-                self.log_boot_message(BootMessageLevel::Info, "boot", "Starting user space...").await;
+                self.log_boot_message(BootMessageLevel::Info, "boot", "Starting user space...")
+                    .await;
                 // TODO: Start user space services
                 sleep(Duration::from_millis(500)).await;
                 Ok(())
             }
             _ => {
-                self.log_boot_message(BootMessageLevel::Warning, "boot", &format!("Unknown boot step: {}", step.name)).await;
+                self.log_boot_message(
+                    BootMessageLevel::Warning,
+                    "boot",
+                    &format!("Unknown boot step: {}", step.name),
+                )
+                .await;
                 Ok(())
             }
         }
@@ -369,4 +424,4 @@ impl Default for BootConfig {
             target: BootTarget::Normal,
         }
     }
-} 
+}

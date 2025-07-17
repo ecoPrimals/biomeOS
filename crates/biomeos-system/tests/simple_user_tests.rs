@@ -6,7 +6,7 @@ use std::path::PathBuf;
 #[test]
 fn test_user_config_default() {
     let config = UserConfig::default();
-    
+
     assert!(config.user_db_path.ends_with("users.db"));
     assert!(config.home_dir_base.ends_with("home"));
     assert_eq!(config.default_shell, PathBuf::from("/bin/bash"));
@@ -21,7 +21,7 @@ fn test_user_config_default() {
 fn test_user_manager_creation() {
     let config = UserConfig::default();
     let user_manager = UserManager::new(config);
-    
+
     // Verify the user manager was created with the correct configuration
     assert_eq!(user_manager.config.default_group, "users");
     assert!(user_manager.config.enable_genetic_keys);
@@ -41,8 +41,14 @@ fn test_beardog_security_provider_creation() {
     };
 
     assert_eq!(provider.auth_endpoint, "https://beardog.test.local/auth");
-    assert_eq!(provider.key_management_endpoint, "https://beardog.test.local/keys");
-    assert_eq!(provider.secret_storage_endpoint, "https://beardog.test.local/secrets");
+    assert_eq!(
+        provider.key_management_endpoint,
+        "https://beardog.test.local/keys"
+    );
+    assert_eq!(
+        provider.secret_storage_endpoint,
+        "https://beardog.test.local/secrets"
+    );
     assert!(provider.genetic_keys_enabled);
     assert!(!provider.hsm_integration_enabled);
 }
@@ -61,8 +67,14 @@ fn test_session_status_variants() {
     // Test that enum variants are distinct
     assert_eq!(SessionStatus::Active as u8, SessionStatus::Active as u8);
     assert_ne!(SessionStatus::Active as u8, SessionStatus::Expired as u8);
-    assert_ne!(SessionStatus::Active as u8, SessionStatus::BeardogBlocked as u8);
-    assert_ne!(SessionStatus::Active as u8, SessionStatus::ThreatAssessment as u8);
+    assert_ne!(
+        SessionStatus::Active as u8,
+        SessionStatus::BeardogBlocked as u8
+    );
+    assert_ne!(
+        SessionStatus::Active as u8,
+        SessionStatus::ThreatAssessment as u8
+    );
 }
 
 #[test]
@@ -81,4 +93,4 @@ fn test_key_types() {
     assert_ne!(KeyType::Encryption as u8, KeyType::Authentication as u8);
     assert_ne!(KeyType::Encryption as u8, KeyType::Signing as u8);
     assert_ne!(KeyType::Encryption as u8, KeyType::GeneticKey as u8);
-} 
+}

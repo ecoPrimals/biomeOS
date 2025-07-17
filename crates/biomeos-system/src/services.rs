@@ -205,11 +205,12 @@ impl SystemServicesManager {
 
         // Start auto-start services in dependency order
         let start_order = self.calculate_start_order().await?;
-        
+
         for service_name in start_order {
             let should_start = {
                 let services = self.services.read().await;
-                services.get(&service_name)
+                services
+                    .get(&service_name)
                     .map(|s| s.config.auto_start)
                     .unwrap_or(false)
             };
@@ -217,19 +218,21 @@ impl SystemServicesManager {
             if should_start {
                 if let Err(e) = self.start_service(&service_name).await {
                     tracing::error!("Failed to start service {}: {}", service_name, e);
-                    
+
                     // Check if service is critical
                     let is_critical = {
                         let services = self.services.read().await;
-                        services.get(&service_name)
+                        services
+                            .get(&service_name)
                             .map(|s| s.config.critical)
                             .unwrap_or(false)
                     };
 
                     if is_critical {
-                        return Err(biomeos_core::BiomeError::Generic {
-                            message: format!("Critical service failed to start: {}", service_name),
-                        });
+                        return Err(biomeos_core::BiomeError::Generic(format!(
+                            "Critical service failed to start: {}",
+                            service_name
+                        )));
                     }
                 }
             }
@@ -245,19 +248,25 @@ impl SystemServicesManager {
 
         let config = {
             let services = self.services.read().await;
-            services.get(service_name)
-                .ok_or_else(|| biomeos_core::BiomeError::Generic {
-                    message: format!("Service not found: {}", service_name),
+            services
+                .get(service_name)
+                .ok_or_else(|| {
+                    biomeos_core::BiomeError::Generic(format!(
+                        "Service not found: {}",
+                        service_name
+                    ))
                 })?
-                .config.clone()
+                .config
+                .clone()
         };
 
         // Check dependencies
         for dep in &config.dependencies {
             if !self.is_service_running(dep).await? {
-                return Err(biomeos_core::BiomeError::Generic {
-                    message: format!("Service dependency not running: {}", dep),
-                });
+                return Err(biomeos_core::BiomeError::Generic(format!(
+                    "Service dependency not running: {}",
+                    dep
+                )));
             }
         }
 
@@ -280,10 +289,12 @@ impl SystemServicesManager {
             cmd.current_dir(working_dir);
         }
 
-        let child = cmd.spawn()
-            .map_err(|e| biomeos_core::BiomeError::Generic {
-                message: format!("Failed to start service {}: {}", service_name, e),
-            })?;
+        let child = cmd.spawn().map_err(|e| {
+            biomeos_core::BiomeError::Generic(format!(
+                "Failed to start service {}: {}",
+                service_name, e
+            ))
+        })?;
 
         let pid = child.id();
         let start_time = chrono::Utc::now();
@@ -310,10 +321,14 @@ impl SystemServicesManager {
 
         let pid = {
             let services = self.services.read().await;
-            services.get(service_name)
+            services
+                .get(service_name)
                 .and_then(|s| s.pid)
-                .ok_or_else(|| biomeos_core::BiomeError::Generic {
-                    message: format!("Service not running: {}", service_name),
+                .ok_or_else(|| {
+                    biomeos_core::BiomeError::Generic(format!(
+                        "Service not running: {}",
+                        service_name
+                    ))
                 })?
         };
 
@@ -352,7 +367,8 @@ impl SystemServicesManager {
     /// Check if a service is running
     async fn is_service_running(&self, service_name: &str) -> BiomeResult<bool> {
         let services = self.services.read().await;
-        Ok(services.get(service_name)
+        Ok(services
+            .get(service_name)
             .map(|s| matches!(s.status.state, ServiceState::Running))
             .unwrap_or(false))
     }
@@ -429,7 +445,8 @@ impl SystemServicesManager {
     /// Get all services status
     pub async fn get_all_services_status(&self) -> HashMap<String, SystemServiceStatus> {
         let services = self.services.read().await;
-        services.iter()
+        services
+            .iter()
             .map(|(name, instance)| (name.clone(), instance.status.clone()))
             .collect()
     }
@@ -442,22 +459,25 @@ impl Default for SystemServicesConfig {
             .join("biomeos/logs/services");
 
         let mut services = HashMap::new();
-        
+
         // Add default system services
-        services.insert("syslog".to_string(), SystemServiceConfig {
-            name: "syslog".to_string(),
-            description: "System logging service".to_string(),
-            executable: std::path::PathBuf::from("/usr/sbin/rsyslog"),
-            args: vec!["-n".to_string()],
-            environment: HashMap::new(),
-            working_dir: None,
-            user: None,
-            group: None,
-            dependencies: vec![],
-            critical: true,
-            auto_start: true,
-            restart_policy: RestartPolicy::Always,
-        });
+        services.insert(
+            "syslog".to_string(),
+            SystemServiceConfig {
+                name: "syslog".to_string(),
+                description: "System logging service".to_string(),
+                executable: std::path::PathBuf::from("/usr/sbin/rsyslog"),
+                args: vec!["-n".to_string()],
+                environment: HashMap::new(),
+                working_dir: None,
+                user: None,
+                group: None,
+                dependencies: vec![],
+                critical: true,
+                auto_start: true,
+                restart_policy: RestartPolicy::Always,
+            },
+        );
 
         Self {
             services,
@@ -466,4 +486,4 @@ impl Default for SystemServicesConfig {
             log_dir,
         }
     }
-} 
+}

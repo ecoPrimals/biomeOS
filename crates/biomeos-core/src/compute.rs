@@ -1,41 +1,45 @@
-use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
-use async_trait::async_trait;
 use crate::BiomeResult;
+use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// Universal Compute Interface - eliminates GPU/accelerator vendor lock-in
 #[async_trait]
 pub trait UniversalComputeInterface {
     /// Get compute provider information
     async fn provider_info(&self) -> BiomeResult<ComputeProviderInfo>;
-    
+
     /// List available compute devices
     async fn list_devices(&self) -> BiomeResult<Vec<ComputeDevice>>;
-    
+
     /// Get device information
     async fn device_info(&self, device_id: &str) -> BiomeResult<ComputeDevice>;
-    
+
     /// Allocate compute resources
-    async fn allocate_resources(&self, spec: &ComputeResourceSpec) -> BiomeResult<ComputeAllocation>;
-    
+    async fn allocate_resources(
+        &self,
+        spec: &ComputeResourceSpec,
+    ) -> BiomeResult<ComputeAllocation>;
+
     /// Release compute resources
     async fn release_resources(&self, allocation_id: &str) -> BiomeResult<()>;
-    
+
     /// Execute compute kernel/program
     async fn execute_kernel(&self, spec: &KernelSpec) -> BiomeResult<KernelResult>;
-    
+
     /// Copy data to device
-    async fn copy_to_device(&self, allocation_id: &str, data: &[u8]) -> BiomeResult<DeviceMemoryId>;
-    
+    async fn copy_to_device(&self, allocation_id: &str, data: &[u8])
+        -> BiomeResult<DeviceMemoryId>;
+
     /// Copy data from device
     async fn copy_from_device(&self, memory_id: &DeviceMemoryId) -> BiomeResult<Vec<u8>>;
-    
+
     /// Synchronize device operations
     async fn synchronize(&self, allocation_id: &str) -> BiomeResult<()>;
-    
+
     /// Get device utilization metrics
     async fn get_utilization(&self, device_id: &str) -> BiomeResult<ComputeUtilization>;
-    
+
     /// Profile kernel execution
     async fn profile_kernel(&self, spec: &KernelSpec) -> BiomeResult<KernelProfile>;
 }
@@ -54,37 +58,86 @@ pub struct ComputeProviderInfo {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ComputeProviderType {
     /// NVIDIA GPUs
-    Nvidia { driver_version: String, cuda_version: String },
+    Nvidia {
+        driver_version: String,
+        cuda_version: String,
+    },
     /// AMD GPUs
-    Amd { driver_version: String, rocm_version: String },
+    Amd {
+        driver_version: String,
+        rocm_version: String,
+    },
     /// Intel GPUs/CPUs
-    Intel { driver_version: String, oneapi_version: String },
+    Intel {
+        driver_version: String,
+        oneapi_version: String,
+    },
     /// Apple Silicon
-    Apple { metal_version: String, mlcompute_version: String },
+    Apple {
+        metal_version: String,
+        mlcompute_version: String,
+    },
     /// Qualcomm Adreno
-    Qualcomm { adreno_version: String, hexagon_version: String },
+    Qualcomm {
+        adreno_version: String,
+        hexagon_version: String,
+    },
     /// ARM Mali
-    Arm { mali_version: String, compute_library_version: String },
+    Arm {
+        mali_version: String,
+        compute_library_version: String,
+    },
     /// Google TPU
-    Google { tpu_version: String, jax_version: String },
+    Google {
+        tpu_version: String,
+        jax_version: String,
+    },
     /// Amazon Inferentia
-    Amazon { inferentia_version: String, neuron_version: String },
+    Amazon {
+        inferentia_version: String,
+        neuron_version: String,
+    },
     /// Cerebras Wafer Scale Engine
-    Cerebras { wse_version: String, sdk_version: String },
+    Cerebras {
+        wse_version: String,
+        sdk_version: String,
+    },
     /// Graphcore IPU
-    Graphcore { ipu_version: String, poplar_version: String },
+    Graphcore {
+        ipu_version: String,
+        poplar_version: String,
+    },
     /// SambaNova DataFlow
-    SambaNova { dataflow_version: String, snsdk_version: String },
+    SambaNova {
+        dataflow_version: String,
+        snsdk_version: String,
+    },
     /// Neuromorphic chips
-    Neuromorphic { chip_type: String, sdk_version: String },
+    Neuromorphic {
+        chip_type: String,
+        sdk_version: String,
+    },
     /// Quantum computers
-    Quantum { provider: String, api_version: String },
+    Quantum {
+        provider: String,
+        api_version: String,
+    },
     /// FPGA
-    Fpga { vendor: String, toolchain_version: String },
+    Fpga {
+        vendor: String,
+        toolchain_version: String,
+    },
     /// CPU-only fallback
-    Cpu { architecture: String, instruction_sets: Vec<String> },
+    Cpu {
+        architecture: String,
+        instruction_sets: Vec<String>,
+    },
     /// Custom/future compute providers
-    Custom { vendor: String, api_version: String, capabilities: Vec<String> },
+    Custom {
+        vendor: String,
+        api_version: String,
+        capabilities: Vec<String>,
+    },
 }
 
 /// Compute capabilities
@@ -93,21 +146,46 @@ pub enum ComputeCapability {
     /// Parallel processing
     Parallel { max_threads: u32, max_blocks: u32 },
     /// Tensor operations
-    Tensor { precision: Vec<TensorPrecision>, max_dimensions: u32 },
+    Tensor {
+        precision: Vec<TensorPrecision>,
+        max_dimensions: u32,
+    },
     /// Machine learning
-    MachineLearning { frameworks: Vec<String>, model_formats: Vec<String> },
+    MachineLearning {
+        frameworks: Vec<String>,
+        model_formats: Vec<String>,
+    },
     /// Image/video processing
-    MediaProcessing { codecs: Vec<String>, max_resolution: String },
+    MediaProcessing {
+        codecs: Vec<String>,
+        max_resolution: String,
+    },
     /// Cryptographic operations
-    Cryptography { algorithms: Vec<String>, key_sizes: Vec<u32> },
+    Cryptography {
+        algorithms: Vec<String>,
+        key_sizes: Vec<u32>,
+    },
     /// Scientific computing
-    Scientific { libraries: Vec<String>, precision: Vec<String> },
+    Scientific {
+        libraries: Vec<String>,
+        precision: Vec<String>,
+    },
     /// Ray tracing
-    RayTracing { rt_cores: u32, max_rays_per_second: u64 },
+    RayTracing {
+        rt_cores: u32,
+        max_rays_per_second: u64,
+    },
     /// Quantum operations
-    Quantum { qubits: u32, gate_fidelity: f64, coherence_time_ms: f64 },
+    Quantum {
+        qubits: u32,
+        gate_fidelity: f64,
+        coherence_time_ms: f64,
+    },
     /// Custom capability
-    Custom { name: String, parameters: HashMap<String, String> },
+    Custom {
+        name: String,
+        parameters: HashMap<String, String>,
+    },
 }
 
 /// Tensor precision support
@@ -292,7 +370,10 @@ pub enum KernelCode {
     /// Precompiled library
     Library { path: String, symbol: String },
     /// Graph definition
-    Graph { nodes: Vec<GraphNode>, edges: Vec<GraphEdge> },
+    Graph {
+        nodes: Vec<GraphNode>,
+        edges: Vec<GraphEdge>,
+    },
 }
 
 /// Graph node for dataflow kernels
@@ -348,8 +429,14 @@ pub enum DataType {
     Complex64,
     Complex128,
     String,
-    Tensor { element_type: Box<DataType>, shape: Vec<u32> },
-    Custom { name: String, size_bytes: u32 },
+    Tensor {
+        element_type: Box<DataType>,
+        shape: Vec<u32>,
+    },
+    Custom {
+        name: String,
+        size_bytes: u32,
+    },
 }
 
 /// Work size specification
@@ -358,9 +445,21 @@ pub enum WorkSize {
     /// 1D work size
     Linear { global: u32, local: Option<u32> },
     /// 2D work size
-    Grid2D { global_x: u32, global_y: u32, local_x: Option<u32>, local_y: Option<u32> },
+    Grid2D {
+        global_x: u32,
+        global_y: u32,
+        local_x: Option<u32>,
+        local_y: Option<u32>,
+    },
     /// 3D work size
-    Grid3D { global_x: u32, global_y: u32, global_z: u32, local_x: Option<u32>, local_y: Option<u32>, local_z: Option<u32> },
+    Grid3D {
+        global_x: u32,
+        global_y: u32,
+        global_z: u32,
+        local_x: Option<u32>,
+        local_y: Option<u32>,
+        local_z: Option<u32>,
+    },
     /// Automatic sizing
     Auto { hint: String },
 }
@@ -483,6 +582,12 @@ pub struct ComputeSovereigntyRequirements {
     pub require_local_execution: bool,
 }
 
+impl Default for UniversalComputeManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl UniversalComputeManager {
     /// Create new compute manager with sovereignty-first defaults
     pub fn new() -> Self {
@@ -490,11 +595,11 @@ impl UniversalComputeManager {
             providers: HashMap::new(),
             default_provider: None,
             provider_preference: vec![
-                "cpu".to_string(),          // Always available fallback
-                "intel".to_string(),        // Open source friendly
-                "amd".to_string(),          // ROCm is open source
-                "apple".to_string(),        // Good for Apple Silicon
-                "nvidia".to_string(),       // Widely used but proprietary
+                "cpu".to_string(),    // Always available fallback
+                "intel".to_string(),  // Open source friendly
+                "amd".to_string(),    // ROCm is open source
+                "apple".to_string(),  // Good for Apple Silicon
+                "nvidia".to_string(), // Widely used but proprietary
             ],
             sovereignty_requirements: ComputeSovereigntyRequirements {
                 require_sovereign_providers: false,
@@ -505,12 +610,12 @@ impl UniversalComputeManager {
             },
         }
     }
-    
+
     /// Add compute provider
     pub fn add_provider(&mut self, name: String, provider: Box<dyn UniversalComputeInterface>) {
         self.providers.insert(name, provider);
     }
-    
+
     /// Get best available compute provider based on sovereignty requirements
     pub async fn get_best_provider(&self) -> Option<&Box<dyn UniversalComputeInterface>> {
         for provider_name in &self.provider_preference {
@@ -525,12 +630,16 @@ impl UniversalComputeManager {
         }
         None
     }
-    
+
     fn meets_sovereignty_requirements(&self, compliance: &ComputeSovereignty) -> bool {
         match compliance {
             ComputeSovereignty::FullSovereignty => true,
-            ComputeSovereignty::PartialSovereignty { .. } => !self.sovereignty_requirements.require_sovereign_providers,
-            ComputeSovereignty::VendorLocked { .. } => self.sovereignty_requirements.allow_vendor_locked_providers,
+            ComputeSovereignty::PartialSovereignty { .. } => {
+                !self.sovereignty_requirements.require_sovereign_providers
+            }
+            ComputeSovereignty::VendorLocked { .. } => {
+                self.sovereignty_requirements.allow_vendor_locked_providers
+            }
         }
     }
-} 
+}

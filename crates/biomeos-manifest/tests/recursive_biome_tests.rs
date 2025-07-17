@@ -1,5 +1,5 @@
 //! Comprehensive tests for recursive BYOB functionality
-//! 
+//!
 //! This test suite validates the recursive biome architecture with focus on
 //! Songbird and NestGate as our first complete eco-primals.
 
@@ -53,16 +53,19 @@ fn test_biome_manifest_with_recursive_fields() {
 
     // Test recursive biome references
     let mut biomes = HashMap::new();
-    biomes.insert("orchestration-ring".to_string(), BiomeReference {
-        topology: TopologyPattern::Ring,
-        instances: 3,
-        regions: Some(vec!["us-east".to_string(), "eu-west".to_string()]),
-        template: "songbird-orchestrator".to_string(),
-        depends_on: None,
-        placement_strategy: Some("region_distributed".to_string()),
-        hosts: None,
-    });
-    
+    biomes.insert(
+        "orchestration-ring".to_string(),
+        BiomeReference {
+            topology: TopologyPattern::Ring,
+            instances: 3,
+            regions: Some(vec!["us-east".to_string(), "eu-west".to_string()]),
+            template: "songbird-orchestrator".to_string(),
+            depends_on: None,
+            placement_strategy: Some("region_distributed".to_string()),
+            hosts: None,
+        },
+    );
+
     manifest.biomes = Some(biomes);
 
     // Test topology configuration
@@ -72,7 +75,11 @@ fn test_biome_manifest_with_recursive_fields() {
         orchestration_ring: Some(BiomeReference {
             topology: TopologyPattern::Ring,
             instances: 3,
-            regions: Some(vec!["us-east".to_string(), "eu-west".to_string(), "ap-southeast".to_string()]),
+            regions: Some(vec![
+                "us-east".to_string(),
+                "eu-west".to_string(),
+                "ap-southeast".to_string(),
+            ]),
             template: "songbird-orchestrator".to_string(),
             depends_on: None,
             placement_strategy: Some("region_distributed".to_string()),
@@ -86,10 +93,10 @@ fn test_biome_manifest_with_recursive_fields() {
     assert_eq!(manifest.metadata.name, "test-recursive");
     assert!(manifest.biomes.is_some());
     assert!(manifest.topology.is_some());
-    
+
     let biomes = manifest.biomes.as_ref().unwrap();
     assert!(biomes.contains_key("orchestration-ring"));
-    
+
     let topology = manifest.topology.as_ref().unwrap();
     assert_eq!(topology.topology_type, "recursive");
     assert!(topology.orchestration_ring.is_some());
@@ -140,56 +147,62 @@ fn test_songbird_nestgate_orchestration() {
     };
 
     // Add Songbird primal (service mesh orchestration)
-    manifest.primals.insert("songbird".to_string(), PrimalSpec {
-        enabled: true,
-        primal_type: PrimalType::Songbird,
-        priority: 1,
-        version: Some("1.0.0".to_string()),
-        source: None,
-        depends_on: vec![],
-        startup_timeout: Some("30s".to_string()),
-        config: Some(json!({
-            "mode": "orchestrator",
-            "topology": "mesh",
-            "features": ["service_discovery", "load_balancing", "health_monitoring"]
-        })),
-        networking: None,
-        resources: None,
-        extensions: None,
-    });
+    manifest.primals.insert(
+        "songbird".to_string(),
+        PrimalSpec {
+            enabled: true,
+            primal_type: PrimalType::Songbird,
+            priority: 1,
+            version: Some("1.0.0".to_string()),
+            source: None,
+            depends_on: vec![],
+            startup_timeout: Some("30s".to_string()),
+            config: Some(json!({
+                "mode": "orchestrator",
+                "topology": "mesh",
+                "features": ["service_discovery", "load_balancing", "health_monitoring"]
+            })),
+            networking: None,
+            resources: None,
+            extensions: None,
+        },
+    );
 
     // Add NestGate primal (storage orchestration)
-    manifest.primals.insert("nestgate".to_string(), PrimalSpec {
-        enabled: true,
-        primal_type: PrimalType::NestGate,
-        priority: 2,
-        version: Some("1.0.0".to_string()),
-        source: None,
-        depends_on: vec!["songbird".to_string()],
-        startup_timeout: Some("45s".to_string()),
-        config: Some(json!({
-            "mode": "distributed",
-            "storage_type": "object",
-            "replication_factor": 3,
-            "features": ["encryption", "compression", "deduplication"]
-        })),
-        networking: None,
-        resources: None,
-        extensions: None,
-    });
+    manifest.primals.insert(
+        "nestgate".to_string(),
+        PrimalSpec {
+            enabled: true,
+            primal_type: PrimalType::NestGate,
+            priority: 2,
+            version: Some("1.0.0".to_string()),
+            source: None,
+            depends_on: vec!["songbird".to_string()],
+            startup_timeout: Some("45s".to_string()),
+            config: Some(json!({
+                "mode": "distributed",
+                "storage_type": "object",
+                "replication_factor": 3,
+                "features": ["encryption", "compression", "deduplication"]
+            })),
+            networking: None,
+            resources: None,
+            extensions: None,
+        },
+    );
 
     // Validate Songbird configuration
     let songbird = manifest.primals.get("songbird").unwrap();
     assert_eq!(songbird.primal_type, PrimalType::Songbird);
     assert_eq!(songbird.priority, 1);
     assert!(songbird.enabled);
-    
+
     // Validate NestGate configuration
     let nestgate = manifest.primals.get("nestgate").unwrap();
     assert_eq!(nestgate.primal_type, PrimalType::NestGate);
     assert_eq!(nestgate.priority, 2);
     assert!(nestgate.depends_on.contains(&"songbird".to_string()));
-    
+
     // Validate dependency chain
     assert!(songbird.depends_on.is_empty());
     assert!(!nestgate.depends_on.is_empty());
@@ -210,7 +223,7 @@ fn test_topology_patterns() {
     assert_eq!(cluster, TopologyPattern::Cluster);
     assert_eq!(hierarchy, TopologyPattern::Hierarchy);
     assert_eq!(singleton, TopologyPattern::Singleton);
-    
+
     match custom {
         TopologyPattern::Custom(ref name) => assert_eq!(name, "custom-pattern"),
         _ => panic!("Custom pattern not matched correctly"),
@@ -232,7 +245,7 @@ fn test_primal_type_enum() {
     assert_eq!(nestgate, PrimalType::NestGate);
     assert_eq!(toadstool, PrimalType::Toadstool);
     assert_eq!(squirrel, PrimalType::Squirrel);
-    
+
     match custom {
         PrimalType::Custom(ref name) => assert_eq!(name, "custom-primal"),
         _ => panic!("Custom primal type not matched correctly"),
@@ -275,7 +288,10 @@ fn test_byob_niche_classification() {
     let niche = NicheClassification {
         primary: "gaming-tournament".to_string(),
         secondary: vec!["esports".to_string(), "competitive-gaming".to_string()],
-        custom: vec!["physics-simulation".to_string(), "distributed-gaming".to_string()],
+        custom: vec![
+            "physics-simulation".to_string(),
+            "distributed-gaming".to_string(),
+        ],
     };
 
     assert_eq!(niche.primary, "gaming-tournament");
@@ -332,15 +348,15 @@ fn test_manifest_serialization() {
     // Test YAML serialization
     let yaml_result = serde_yaml::to_string(&manifest);
     assert!(yaml_result.is_ok());
-    
+
     let yaml_str = yaml_result.unwrap();
     assert!(yaml_str.contains("api_version: v1"));
     assert!(yaml_str.contains("name: test-manifest"));
-    
+
     // Test YAML deserialization
     let deserialized_result: Result<BiomeManifest, _> = serde_yaml::from_str(&yaml_str);
     assert!(deserialized_result.is_ok());
-    
+
     let deserialized = deserialized_result.unwrap();
     assert_eq!(deserialized.metadata.name, "test-manifest");
     assert_eq!(deserialized.api_version, "v1");

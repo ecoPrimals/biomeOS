@@ -18,17 +18,20 @@ use tracing::{info, warn};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt::init();
-    
+
     let port = std::env::args()
         .nth(1)
         .unwrap_or_else(|| "8080".to_string());
-    
+
     let primal_name = std::env::args()
         .nth(2)
         .unwrap_or_else(|| "mock-primal".to_string());
-    
-    info!("🚀 Starting Mock Primal Server: {} on port {}", primal_name, port);
-    
+
+    info!(
+        "🚀 Starting Mock Primal Server: {} on port {}",
+        primal_name, port
+    );
+
     let app = Router::new()
         .route("/health", get(health_check))
         .route("/api/v1/health", get(health_check))
@@ -42,10 +45,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/coordinate", post(coordinate_deployment))
         .route("/ping", get(ping))
         .route("/status", get(get_status));
-    
+
     let addr = format!("0.0.0.0:{}", port);
     let listener = TcpListener::bind(&addr).await?;
-    
+
     info!("✅ Mock Primal '{}' listening on {}", primal_name, addr);
     info!("📋 Available endpoints:");
     info!("  • GET  /health");
@@ -54,9 +57,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("  • GET  /api/v1/metrics");
     info!("  • GET  /api/v1/services");
     info!("  • POST /api/v1/coordinate");
-    
+
     axum::serve(listener, app).await?;
-    
+
     Ok(())
 }
 
@@ -268,24 +271,31 @@ async fn get_service(Path(service_id): Path<String>) -> Json<Value> {
         _ => json!({
             "error": "Service not found",
             "service_id": service_id
-        })
+        }),
     };
-    
+
     Json(service_data)
 }
 
-async fn scale_service(Path(service_id): Path<String>, Json(payload): Json<Value>) -> Result<Json<Value>, StatusCode> {
-    let replicas = payload.get("replicas")
+async fn scale_service(
+    Path(service_id): Path<String>,
+    Json(payload): Json<Value>,
+) -> Result<Json<Value>, StatusCode> {
+    let replicas = payload
+        .get("replicas")
         .and_then(|v| v.as_u64())
         .unwrap_or(1);
-    
+
     info!("🔄 Scaling service {} to {} replicas", service_id, replicas);
-    
+
     if replicas > 10 {
-        warn!("⚠️  Requested replica count {} exceeds maximum (10)", replicas);
+        warn!(
+            "⚠️  Requested replica count {} exceeds maximum (10)",
+            replicas
+        );
         return Err(StatusCode::BAD_REQUEST);
     }
-    
+
     Ok(Json(json!({
         "service_id": service_id,
         "old_replicas": 2,
@@ -296,15 +306,17 @@ async fn scale_service(Path(service_id): Path<String>, Json(payload): Json<Value
     })))
 }
 
-async fn get_logs(Path(service_id): Path<String>, Query(params): Query<HashMap<String, String>>) -> Json<Value> {
-    let lines = params.get("lines")
+async fn get_logs(
+    Path(service_id): Path<String>,
+    Query(params): Query<HashMap<String, String>>,
+) -> Json<Value> {
+    let lines = params
+        .get("lines")
         .and_then(|s| s.parse::<usize>().ok())
         .unwrap_or(100);
-    
-    let since = params.get("since")
-        .map(|s| s.as_str())
-        .unwrap_or("1h");
-    
+
+    let since = params.get("since").map(|s| s.as_str()).unwrap_or("1h");
+
     let logs = match service_id.as_str() {
         "web-service" => vec![
             "[2025-07-08T21:00:00Z] INFO: Starting nginx server",
@@ -330,13 +342,11 @@ async fn get_logs(Path(service_id): Path<String>, Query(params): Query<HashMap<S
             "[2025-07-08T21:02:00Z] INFO: 15 active connections",
             "[2025-07-08T21:03:00Z] INFO: Query performance optimal",
         ],
-        _ => vec!["Service not found"]
+        _ => vec!["Service not found"],
     };
-    
-    let limited_logs = logs.into_iter()
-        .take(lines)
-        .collect::<Vec<_>>();
-    
+
+    let limited_logs = logs.into_iter().take(lines).collect::<Vec<_>>();
+
     Json(json!({
         "service_id": service_id,
         "lines_requested": lines,
@@ -348,12 +358,13 @@ async fn get_logs(Path(service_id): Path<String>, Query(params): Query<HashMap<S
 }
 
 async fn coordinate_deployment(Json(payload): Json<Value>) -> Json<Value> {
-    let deployment_name = payload.get("name")
+    let deployment_name = payload
+        .get("name")
         .and_then(|v| v.as_str())
         .unwrap_or("unnamed-deployment");
-    
+
     info!("🚀 Coordinating deployment: {}", deployment_name);
-    
+
     Json(json!({
         "deployment_id": format!("deploy-{}", uuid::Uuid::new_v4()),
         "name": deployment_name,
@@ -383,4 +394,4 @@ async fn coordinate_deployment(Json(payload): Json<Value>) -> Json<Value> {
         "estimated_completion": "2025-07-08T21:08:00Z",
         "timestamp": chrono::Utc::now().to_rfc3339()
     }))
-} 
+}

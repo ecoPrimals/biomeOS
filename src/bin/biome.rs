@@ -68,15 +68,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match cli.command {
         Commands::Deploy { manifest, team } => {
-            println!("🚀 Deploying biome from {} for team {}", manifest.display(), team);
+            println!(
+                "🚀 Deploying biome from {} for team {}",
+                manifest.display(),
+                team
+            );
             println!("✅ Deployment successful! (simulated)");
-            println!("   Deployment ID: dep-{}", "simulated-id");
+            println!("   Deployment ID: dep-simulated-id");
             println!("   Team: {}", team);
             println!("   Status: Pending");
         }
         Commands::List { team } => {
             println!("📋 Listing deployments for team: {}", team);
-            println!("   No deployments found for team {} (this is expected in demo mode)", team);
+            println!(
+                "   No deployments found for team {} (this is expected in demo mode)",
+                team
+            );
         }
         Commands::Status { deployment_id } => {
             println!("📊 Checking status for deployment: {}", deployment_id);
@@ -102,7 +109,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Commands::Init { template, output } => {
             println!("📝 Initializing biome manifest with template: {}", template);
-            
+
             let manifest_content = match template.as_str() {
                 "basic" => create_basic_template(),
                 "webapp" => create_webapp_template(),
@@ -113,7 +120,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     std::process::exit(1);
                 }
             };
-            
+
             match std::fs::write(&output, manifest_content) {
                 Ok(_) => {
                     println!("✅ Manifest created: {}", output.display());
@@ -126,16 +133,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Commands::Validate { manifest } => {
             println!("🔍 Validating biome manifest: {}", manifest.display());
-            
+
             match std::fs::read_to_string(&manifest) {
                 Ok(content) => {
                     match serde_yaml::from_str::<serde_yaml::Value>(&content) {
                         Ok(parsed) => {
                             println!("✅ Manifest is valid YAML");
-                            
+
                             // Basic validation checks
                             if let Some(api_version) = parsed.get("apiVersion") {
-                                println!("   API Version: {}", api_version.as_str().unwrap_or("unknown"));
+                                println!(
+                                    "   API Version: {}",
+                                    api_version.as_str().unwrap_or("unknown")
+                                );
                             }
                             if let Some(kind) = parsed.get("kind") {
                                 println!("   Kind: {}", kind.as_str().unwrap_or("unknown"));
@@ -200,7 +210,8 @@ networking:
 security:
   network_policies: true
   resource_quotas: true
-"#.to_string()
+"#
+    .to_string()
 }
 
 fn create_webapp_template() -> String {
@@ -247,7 +258,8 @@ networking:
 scaling:
   min_replicas: 2
   max_replicas: 10
-"#.to_string()
+"#
+    .to_string()
 }
 
 fn create_ai_research_template() -> String {
@@ -288,7 +300,8 @@ networking:
 security:
   model_encryption: true
   access_control: "rbac"
-"#.to_string()
+"#
+    .to_string()
 }
 
 fn create_gaming_template() -> String {
@@ -332,5 +345,6 @@ scaling:
   auto_scaling: true
   min_game_servers: 2
   max_game_servers: 20
-"#.to_string()
-} 
+"#
+    .to_string()
+}

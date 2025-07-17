@@ -290,26 +290,32 @@ impl DeviceManager {
         // TODO: Implement driver loading
         // For now, add some default drivers
         let mut drivers = self.drivers.write().await;
-        
-        drivers.insert("generic_storage".to_string(), DeviceDriver {
-            name: "generic_storage".to_string(),
-            version: "1.0.0".to_string(),
-            description: "Generic storage device driver".to_string(),
-            path: PathBuf::from("/lib/drivers/generic_storage.so"),
-            supported_devices: vec!["storage".to_string()],
-            status: DriverStatus::Loaded,
-            config: HashMap::new(),
-        });
 
-        drivers.insert("generic_network".to_string(), DeviceDriver {
-            name: "generic_network".to_string(),
-            version: "1.0.0".to_string(),
-            description: "Generic network device driver".to_string(),
-            path: PathBuf::from("/lib/drivers/generic_network.so"),
-            supported_devices: vec!["network".to_string()],
-            status: DriverStatus::Loaded,
-            config: HashMap::new(),
-        });
+        drivers.insert(
+            "generic_storage".to_string(),
+            DeviceDriver {
+                name: "generic_storage".to_string(),
+                version: "1.0.0".to_string(),
+                description: "Generic storage device driver".to_string(),
+                path: PathBuf::from("/lib/drivers/generic_storage.so"),
+                supported_devices: vec!["storage".to_string()],
+                status: DriverStatus::Loaded,
+                config: HashMap::new(),
+            },
+        );
+
+        drivers.insert(
+            "generic_network".to_string(),
+            DeviceDriver {
+                name: "generic_network".to_string(),
+                version: "1.0.0".to_string(),
+                description: "Generic network device driver".to_string(),
+                path: PathBuf::from("/lib/drivers/generic_network.so"),
+                supported_devices: vec!["network".to_string()],
+                status: DriverStatus::Loaded,
+                config: HashMap::new(),
+            },
+        );
 
         tracing::info!("Device drivers loaded");
         Ok(())
@@ -341,7 +347,10 @@ impl DeviceManager {
             devices.insert(id, device);
         }
 
-        tracing::info!("Hardware detection complete, found {} devices", devices.len());
+        tracing::info!(
+            "Hardware detection complete, found {} devices",
+            devices.len()
+        );
         Ok(())
     }
 
@@ -413,34 +422,41 @@ impl DeviceManager {
     async fn detect_storage(&self) -> BiomeResult<HashMap<String, Device>> {
         // TODO: Implement real storage detection
         let mut devices = HashMap::new();
-        
-        devices.insert("storage0".to_string(), Device {
-            id: "storage0".to_string(),
-            name: "System Storage".to_string(),
-            device_type: DeviceType::Storage,
-            vendor: Some("Generic".to_string()),
-            model: Some("Generic Storage".to_string()),
-            serial: None,
-            version: None,
-            driver: Some("generic_storage".to_string()),
-            status: DeviceStatus {
-                state: DeviceState::Available,
-                health: DeviceHealth::Healthy,
-                temperature: None,
-                power_state: PowerState::On,
-                usage: DeviceUsage {
-                    usage_percent: 0.0,
-                    bytes_processed: 0,
-                    operations_per_second: 0.0,
-                    error_count: 0,
-                    uptime_seconds: 0,
+
+        devices.insert(
+            "storage0".to_string(),
+            Device {
+                id: "storage0".to_string(),
+                name: "System Storage".to_string(),
+                device_type: DeviceType::Storage,
+                vendor: Some("Generic".to_string()),
+                model: Some("Generic Storage".to_string()),
+                serial: None,
+                version: None,
+                driver: Some("generic_storage".to_string()),
+                status: DeviceStatus {
+                    state: DeviceState::Available,
+                    health: DeviceHealth::Healthy,
+                    temperature: None,
+                    power_state: PowerState::On,
+                    usage: DeviceUsage {
+                        usage_percent: 0.0,
+                        bytes_processed: 0,
+                        operations_per_second: 0.0,
+                        error_count: 0,
+                        uptime_seconds: 0,
+                    },
+                    last_error: None,
                 },
-                last_error: None,
+                capabilities: vec![
+                    DeviceCapability::Read,
+                    DeviceCapability::Write,
+                    DeviceCapability::Storage,
+                ],
+                properties: HashMap::new(),
+                path: Some(PathBuf::from("/dev/sda")),
             },
-            capabilities: vec![DeviceCapability::Read, DeviceCapability::Write, DeviceCapability::Storage],
-            properties: HashMap::new(),
-            path: Some(PathBuf::from("/dev/sda")),
-        });
+        );
 
         Ok(devices)
     }
@@ -449,34 +465,37 @@ impl DeviceManager {
     async fn detect_network(&self) -> BiomeResult<HashMap<String, Device>> {
         // TODO: Implement real network detection
         let mut devices = HashMap::new();
-        
-        devices.insert("network0".to_string(), Device {
-            id: "network0".to_string(),
-            name: "Network Interface".to_string(),
-            device_type: DeviceType::Network,
-            vendor: Some("Generic".to_string()),
-            model: Some("Generic Network".to_string()),
-            serial: None,
-            version: None,
-            driver: Some("generic_network".to_string()),
-            status: DeviceStatus {
-                state: DeviceState::Available,
-                health: DeviceHealth::Healthy,
-                temperature: None,
-                power_state: PowerState::On,
-                usage: DeviceUsage {
-                    usage_percent: 0.0,
-                    bytes_processed: 0,
-                    operations_per_second: 0.0,
-                    error_count: 0,
-                    uptime_seconds: 0,
+
+        devices.insert(
+            "network0".to_string(),
+            Device {
+                id: "network0".to_string(),
+                name: "Network Interface".to_string(),
+                device_type: DeviceType::Network,
+                vendor: Some("Generic".to_string()),
+                model: Some("Generic Network".to_string()),
+                serial: None,
+                version: None,
+                driver: Some("generic_network".to_string()),
+                status: DeviceStatus {
+                    state: DeviceState::Available,
+                    health: DeviceHealth::Healthy,
+                    temperature: None,
+                    power_state: PowerState::On,
+                    usage: DeviceUsage {
+                        usage_percent: 0.0,
+                        bytes_processed: 0,
+                        operations_per_second: 0.0,
+                        error_count: 0,
+                        uptime_seconds: 0,
+                    },
+                    last_error: None,
                 },
-                last_error: None,
+                capabilities: vec![DeviceCapability::Network],
+                properties: HashMap::new(),
+                path: Some(PathBuf::from("/dev/eth0")),
             },
-            capabilities: vec![DeviceCapability::Network],
-            properties: HashMap::new(),
-            path: Some(PathBuf::from("/dev/eth0")),
-        });
+        );
 
         Ok(devices)
     }
@@ -506,8 +525,11 @@ impl DeviceManager {
     /// Get devices by type
     pub async fn get_devices_by_type(&self, device_type: DeviceType) -> Vec<Device> {
         let devices = self.devices.read().await;
-        devices.values()
-            .filter(|d| std::mem::discriminant(&d.device_type) == std::mem::discriminant(&device_type))
+        devices
+            .values()
+            .filter(|d| {
+                std::mem::discriminant(&d.device_type) == std::mem::discriminant(&device_type)
+            })
             .cloned()
             .collect()
     }
@@ -541,4 +563,4 @@ impl Default for DeviceConfig {
             whitelist: Vec::new(),
         }
     }
-} 
+}

@@ -1,55 +1,62 @@
-use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
-use async_trait::async_trait;
 use crate::BiomeResult;
+use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// Universal Orchestration Interface - eliminates K8s/Nomad/Swarm vendor lock-in
 #[async_trait]
 pub trait UniversalOrchestrationInterface {
     /// Get orchestrator information
     async fn orchestrator_info(&self) -> BiomeResult<OrchestratorInfo>;
-    
+
     /// Deploy workload
     async fn deploy_workload(&self, spec: &WorkloadSpec) -> BiomeResult<WorkloadId>;
-    
+
     /// Update workload
     async fn update_workload(&self, id: &WorkloadId, spec: &WorkloadSpec) -> BiomeResult<()>;
-    
+
     /// Scale workload
     async fn scale_workload(&self, id: &WorkloadId, replicas: u32) -> BiomeResult<()>;
-    
+
     /// Stop workload
     async fn stop_workload(&self, id: &WorkloadId) -> BiomeResult<()>;
-    
+
     /// Delete workload
     async fn delete_workload(&self, id: &WorkloadId) -> BiomeResult<()>;
-    
+
     /// Get workload status
     async fn workload_status(&self, id: &WorkloadId) -> BiomeResult<WorkloadStatus>;
-    
+
     /// List all workloads
     async fn list_workloads(&self) -> BiomeResult<Vec<WorkloadInfo>>;
-    
+
     /// Create service
     async fn create_service(&self, spec: &ServiceSpec) -> BiomeResult<ServiceId>;
-    
+
     /// Delete service
     async fn delete_service(&self, id: &ServiceId) -> BiomeResult<()>;
-    
+
     /// Service discovery
     async fn discover_services(&self) -> BiomeResult<Vec<ServiceEndpoint>>;
-    
+
     /// Get cluster resources
     async fn cluster_resources(&self) -> BiomeResult<ClusterResources>;
-    
+
     /// Get cluster events
-    async fn cluster_events(&self, since: Option<chrono::DateTime<chrono::Utc>>) -> BiomeResult<Vec<ClusterEvent>>;
-    
+    async fn cluster_events(
+        &self,
+        since: Option<chrono::DateTime<chrono::Utc>>,
+    ) -> BiomeResult<Vec<ClusterEvent>>;
+
     /// Execute command in workload
     async fn exec_workload(&self, id: &WorkloadId, command: &[String]) -> BiomeResult<ExecResult>;
-    
+
     /// Get workload logs
-    async fn workload_logs(&self, id: &WorkloadId, options: &LogOptions) -> BiomeResult<Vec<LogEntry>>;
+    async fn workload_logs(
+        &self,
+        id: &WorkloadId,
+        options: &LogOptions,
+    ) -> BiomeResult<Vec<LogEntry>>;
 }
 
 /// Orchestrator information
@@ -67,23 +74,39 @@ pub struct OrchestratorInfo {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OrchestratorType {
     /// Kubernetes
-    Kubernetes { distribution: KubernetesDistribution },
+    Kubernetes {
+        distribution: KubernetesDistribution,
+    },
     /// HashiCorp Nomad
-    Nomad { enterprise: bool },
+    Nomad {
+        enterprise: bool,
+    },
     /// Docker Swarm
     DockerSwarm,
     /// Apache Mesos
-    Mesos { framework: String },
+    Mesos {
+        framework: String,
+    },
     /// Red Hat OpenShift
-    OpenShift { version: String },
+    OpenShift {
+        version: String,
+    },
     /// Rancher
-    Rancher { k8s_version: String },
+    Rancher {
+        k8s_version: String,
+    },
     /// Amazon EKS
-    Eks { aws_region: String },
+    Eks {
+        aws_region: String,
+    },
     /// Google GKE
-    Gke { gcp_region: String },
+    Gke {
+        gcp_region: String,
+    },
     /// Microsoft AKS
-    Aks { azure_region: String },
+    Aks {
+        azure_region: String,
+    },
     /// DigitalOcean Kubernetes
     DigitalOceanK8s,
     /// Lightweight orchestrators
@@ -91,22 +114,38 @@ pub enum OrchestratorType {
     K0s,
     MicroK8s,
     /// Service mesh orchestrators
-    Istio { version: String },
-    Linkerd { version: String },
-    Consul { connect_enabled: bool },
+    Istio {
+        version: String,
+    },
+    Linkerd {
+        version: String,
+    },
+    Consul {
+        connect_enabled: bool,
+    },
     /// Edge orchestrators
     KubeEdge,
     OpenYurt,
     SuperEdge,
     /// Container-native orchestrators
-    Podman { pods_enabled: bool },
-    Containerd { cri_enabled: bool },
+    Podman {
+        pods_enabled: bool,
+    },
+    Containerd {
+        cri_enabled: bool,
+    },
     /// Serverless orchestrators
-    Knative { serving_version: String, eventing_version: String },
+    Knative {
+        serving_version: String,
+        eventing_version: String,
+    },
     OpenFaas,
     Fission,
     /// Custom orchestrator
-    Custom { name: String, api_version: String },
+    Custom {
+        name: String,
+        api_version: String,
+    },
     /// No orchestrator (direct deployment)
     None,
 }
@@ -157,7 +196,10 @@ pub enum OrchestratorCapability {
     /// ML/AI workloads
     MachineLearning { frameworks: Vec<String> },
     /// Custom capability
-    Custom { name: String, parameters: HashMap<String, String> },
+    Custom {
+        name: String,
+        parameters: HashMap<String, String>,
+    },
 }
 
 /// Orchestration sovereignty compliance
@@ -168,7 +210,10 @@ pub enum OrchestrationSovereignty {
     /// Partial sovereignty - some cloud provider integration
     PartialSovereignty { cloud_dependencies: Vec<String> },
     /// Cloud managed - vendor controlled
-    CloudManaged { provider: String, control_plane_location: String },
+    CloudManaged {
+        provider: String,
+        control_plane_location: String,
+    },
 }
 
 /// Workload specification
@@ -207,17 +252,33 @@ pub enum WorkloadType {
     /// Batch processing
     Batch { parallelism: u32 },
     /// Custom workload type
-    Custom { type_name: String, parameters: HashMap<String, String> },
+    Custom {
+        type_name: String,
+        parameters: HashMap<String, String>,
+    },
 }
 
 /// Function triggers
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum FunctionTrigger {
-    Http { path: String, methods: Vec<String> },
-    Event { source: String, event_type: String },
-    Schedule { cron: String },
-    Queue { queue_name: String },
-    Custom { trigger_type: String, config: HashMap<String, String> },
+    Http {
+        path: String,
+        methods: Vec<String>,
+    },
+    Event {
+        source: String,
+        event_type: String,
+    },
+    Schedule {
+        cron: String,
+    },
+    Queue {
+        queue_name: String,
+    },
+    Custom {
+        trigger_type: String,
+        config: HashMap<String, String>,
+    },
 }
 
 /// Container specification (reusing from universal.rs)
@@ -312,10 +373,21 @@ pub struct ProbeSpec {
 /// Probe types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ProbeType {
-    Http { path: String, port: u16, headers: HashMap<String, String> },
-    Tcp { port: u16 },
-    Exec { command: Vec<String> },
-    Grpc { port: u16, service: Option<String> },
+    Http {
+        path: String,
+        port: u16,
+        headers: HashMap<String, String>,
+    },
+    Tcp {
+        port: u16,
+    },
+    Exec {
+        command: Vec<String>,
+    },
+    Grpc {
+        port: u16,
+        service: Option<String>,
+    },
 }
 
 /// Resource requirements
@@ -491,14 +563,33 @@ pub struct VolumeSpec {
 /// Volume sources
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum VolumeSource {
-    EmptyDir { size_limit: Option<String> },
-    HostPath { path: String },
-    PersistentVolumeClaim { claim_name: String },
-    ConfigMap { name: String },
-    Secret { name: String },
-    Nfs { server: String, path: String },
-    Ceph { monitors: Vec<String>, secret_ref: String },
-    Custom { volume_type: String, parameters: HashMap<String, String> },
+    EmptyDir {
+        size_limit: Option<String>,
+    },
+    HostPath {
+        path: String,
+    },
+    PersistentVolumeClaim {
+        claim_name: String,
+    },
+    ConfigMap {
+        name: String,
+    },
+    Secret {
+        name: String,
+    },
+    Nfs {
+        server: String,
+        path: String,
+    },
+    Ceph {
+        monitors: Vec<String>,
+        secret_ref: String,
+    },
+    Custom {
+        volume_type: String,
+        parameters: HashMap<String, String>,
+    },
 }
 
 /// Volume claim template
@@ -576,10 +667,21 @@ pub struct HealthCheckSpec {
 /// Health check types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum HealthCheckType {
-    Http { url: String, expected_status: u16 },
-    Tcp { host: String, port: u16 },
-    Command { command: Vec<String> },
-    Custom { checker: String, config: HashMap<String, String> },
+    Http {
+        url: String,
+        expected_status: u16,
+    },
+    Tcp {
+        host: String,
+        port: u16,
+    },
+    Command {
+        command: Vec<String>,
+    },
+    Custom {
+        checker: String,
+        config: HashMap<String, String>,
+    },
 }
 
 // Type aliases and additional types
@@ -929,6 +1031,12 @@ pub struct OrchestrationSovereigntyRequirements {
     pub require_air_gapped_deployment: bool,
 }
 
+impl Default for UniversalOrchestrationManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl UniversalOrchestrationManager {
     /// Create new orchestration manager with sovereignty-first defaults
     pub fn new() -> Self {
@@ -936,11 +1044,11 @@ impl UniversalOrchestrationManager {
             orchestrators: HashMap::new(),
             default_orchestrator: None,
             orchestrator_preference: vec![
-                "none".to_string(),          // Direct deployment (most sovereign)
-                "podman".to_string(),        // Container-native, no orchestrator
-                "k3s".to_string(),           // Lightweight K8s
-                "nomad".to_string(),         // Simple, sovereign-friendly
-                "kubernetes".to_string(),    // Full-featured
+                "none".to_string(),       // Direct deployment (most sovereign)
+                "podman".to_string(),     // Container-native, no orchestrator
+                "k3s".to_string(),        // Lightweight K8s
+                "nomad".to_string(),      // Simple, sovereign-friendly
+                "kubernetes".to_string(), // Full-featured
             ],
             sovereignty_requirements: OrchestrationSovereigntyRequirements {
                 require_sovereign_orchestrator: false,
@@ -951,12 +1059,16 @@ impl UniversalOrchestrationManager {
             },
         }
     }
-    
+
     /// Add orchestrator
-    pub fn add_orchestrator(&mut self, name: String, orchestrator: Box<dyn UniversalOrchestrationInterface>) {
+    pub fn add_orchestrator(
+        &mut self,
+        name: String,
+        orchestrator: Box<dyn UniversalOrchestrationInterface>,
+    ) {
         self.orchestrators.insert(name, orchestrator);
     }
-    
+
     /// Get best available orchestrator based on sovereignty requirements
     pub async fn get_best_orchestrator(&self) -> Option<&Box<dyn UniversalOrchestrationInterface>> {
         for orchestrator_name in &self.orchestrator_preference {
@@ -971,12 +1083,17 @@ impl UniversalOrchestrationManager {
         }
         None
     }
-    
+
     fn meets_sovereignty_requirements(&self, compliance: &OrchestrationSovereignty) -> bool {
         match compliance {
             OrchestrationSovereignty::FullSovereignty => true,
-            OrchestrationSovereignty::PartialSovereignty { .. } => !self.sovereignty_requirements.require_sovereign_orchestrator,
-            OrchestrationSovereignty::CloudManaged { .. } => self.sovereignty_requirements.allow_cloud_managed_orchestrator,
+            OrchestrationSovereignty::PartialSovereignty { .. } => {
+                !self.sovereignty_requirements.require_sovereign_orchestrator
+            }
+            OrchestrationSovereignty::CloudManaged { .. } => {
+                self.sovereignty_requirements
+                    .allow_cloud_managed_orchestrator
+            }
         }
     }
-} 
+}

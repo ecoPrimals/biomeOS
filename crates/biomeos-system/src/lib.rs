@@ -69,7 +69,7 @@ mod tests {
     #[test]
     fn test_system_config_default() {
         let config = SystemConfig::default();
-        
+
         assert_eq!(config.hostname, "biomeos-host");
         assert_eq!(config.data_dir, PathBuf::from("/var/lib/biomeos"));
         assert_eq!(config.config_dir, PathBuf::from("/etc/biomeos"));
@@ -91,7 +91,7 @@ mod tests {
             users: users::UserConfig::default(),
             packages: packages::PackageConfig::default(),
         };
-        
+
         assert_eq!(config.hostname, "custom-host");
         assert_eq!(config.data_dir, PathBuf::from("/custom/data"));
         assert_eq!(config.config_dir, PathBuf::from("/custom/config"));
@@ -102,11 +102,11 @@ mod tests {
     #[test]
     fn test_system_config_serialization() {
         let config = SystemConfig::default();
-        
+
         // Test that we can serialize and deserialize
         let serialized = serde_json::to_string(&config).unwrap();
         let deserialized: SystemConfig = serde_json::from_str(&serialized).unwrap();
-        
+
         assert_eq!(config.hostname, deserialized.hostname);
         assert_eq!(config.data_dir, deserialized.data_dir);
         assert_eq!(config.config_dir, deserialized.config_dir);
@@ -117,7 +117,7 @@ mod tests {
     #[test]
     fn test_system_config_path_validation() {
         let config = SystemConfig::default();
-        
+
         // Test that all paths are absolute
         assert!(config.data_dir.is_absolute());
         assert!(config.config_dir.is_absolute());
@@ -128,7 +128,7 @@ mod tests {
     #[test]
     fn test_system_config_field_access() {
         let config = SystemConfig::default();
-        
+
         // Test that we can access nested configurations with correct field names
         assert_eq!(config.boot.sequence.len(), 4);
         assert_eq!(config.services.startup_timeout_seconds, 60);
@@ -140,11 +140,11 @@ mod tests {
     #[test]
     fn test_system_config_hostname_validation() {
         let mut config = SystemConfig::default();
-        
+
         // Test hostname assignment
         config.hostname = "test-biomeos".to_string();
         assert_eq!(config.hostname, "test-biomeos");
-        
+
         // Test hostname with special characters
         config.hostname = "biomeos-01".to_string();
         assert_eq!(config.hostname, "biomeos-01");
@@ -153,7 +153,7 @@ mod tests {
     #[test]
     fn test_system_config_directory_structure() {
         let config = SystemConfig::default();
-        
+
         // Test that directories follow Linux FHS standards
         assert!(config.data_dir.starts_with("/var/lib"));
         assert!(config.config_dir.starts_with("/etc"));
@@ -165,7 +165,7 @@ mod tests {
     fn test_system_config_clone() {
         let config = SystemConfig::default();
         let cloned = config.clone();
-        
+
         assert_eq!(config.hostname, cloned.hostname);
         assert_eq!(config.data_dir, cloned.data_dir);
         assert_eq!(config.config_dir, cloned.config_dir);
@@ -177,7 +177,7 @@ mod tests {
     fn test_system_config_debug_format() {
         let config = SystemConfig::default();
         let debug_output = format!("{:?}", config);
-        
+
         assert!(debug_output.contains("hostname"));
         assert!(debug_output.contains("biomeos-host"));
         assert!(debug_output.contains("data_dir"));
@@ -189,7 +189,7 @@ mod tests {
     #[test]
     fn test_system_config_boot_component() {
         let config = SystemConfig::default();
-        
+
         // Test boot configuration
         assert_eq!(config.boot.timeout_seconds, 300);
         assert_eq!(config.boot.log_level, "info");
@@ -200,26 +200,28 @@ mod tests {
     #[test]
     fn test_system_config_services_component() {
         let config = SystemConfig::default();
-        
+
         // Test services configuration
         assert_eq!(config.services.startup_timeout_seconds, 60);
-        assert!(matches!(config.services.restart_policy, services::RestartPolicy::OnFailure));
+        assert!(matches!(
+            config.services.restart_policy,
+            services::RestartPolicy::OnFailure
+        ));
     }
 
     #[test]
     fn test_system_config_devices_component() {
         let config = SystemConfig::default();
-        
-        // Test devices configuration  
+
+        // Test devices configuration
         assert_eq!(config.devices.enable_detection, true);
         assert_eq!(config.devices.auto_configure, true);
-        
     }
 
     #[test]
     fn test_system_config_users_component() {
         let config = SystemConfig::default();
-        
+
         // Test users configuration
         assert_eq!(config.users.session_timeout_seconds, 3600);
         assert_eq!(config.users.default_shell, PathBuf::from("/bin/bash"));
@@ -229,17 +231,16 @@ mod tests {
     #[test]
     fn test_system_config_packages_component() {
         let config = SystemConfig::default();
-        
+
         // Test packages configuration
         assert_eq!(config.packages.update_interval_seconds, 86400);
         assert_eq!(config.packages.auto_update, false);
-        
     }
 
     #[test]
     fn test_system_config_path_components() {
         let config = SystemConfig::default();
-        
+
         // Test that path components are correct
         assert_eq!(config.data_dir.file_name().unwrap(), "biomeos");
         assert_eq!(config.config_dir.file_name().unwrap(), "biomeos");
@@ -250,11 +251,11 @@ mod tests {
     #[test]
     fn test_system_config_modification() {
         let mut config = SystemConfig::default();
-        
+
         // Test that we can modify configuration
         config.hostname = "modified-host".to_string();
         config.data_dir = PathBuf::from("/tmp/test");
-        
+
         assert_eq!(config.hostname, "modified-host");
         assert_eq!(config.data_dir, PathBuf::from("/tmp/test"));
     }
@@ -262,11 +263,11 @@ mod tests {
     #[test]
     fn test_system_config_json_compatibility() {
         let config = SystemConfig::default();
-        
+
         // Test JSON serialization/deserialization
         let json = serde_json::to_value(&config).unwrap();
         assert!(json.is_object());
-        
+
         let from_json: SystemConfig = serde_json::from_value(json).unwrap();
         assert_eq!(config.hostname, from_json.hostname);
     }
@@ -274,7 +275,7 @@ mod tests {
     #[test]
     fn test_system_config_memory_usage() {
         let config = SystemConfig::default();
-        
+
         // Test that config doesn't consume excessive memory
         let size = std::mem::size_of_val(&config);
         assert!(size < 10000); // Should be reasonable size
@@ -283,7 +284,7 @@ mod tests {
     #[test]
     fn test_system_config_nested_defaults() {
         let config = SystemConfig::default();
-        
+
         // Test that nested configurations have proper defaults
         assert_eq!(config.boot.sequence.len(), 4);
         assert_eq!(config.services.services.len(), 1);

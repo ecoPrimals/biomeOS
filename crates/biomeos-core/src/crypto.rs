@@ -1,52 +1,84 @@
-use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
-use async_trait::async_trait;
 use crate::BiomeResult;
+use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// Universal Cryptography Interface - eliminates crypto library vendor lock-in
 #[async_trait]
 pub trait UniversalCryptoInterface {
     /// Generate random bytes
     async fn random_bytes(&self, length: usize) -> BiomeResult<Vec<u8>>;
-    
+
     /// Hash data with specified algorithm
     async fn hash(&self, data: &[u8], algorithm: HashAlgorithm) -> BiomeResult<Vec<u8>>;
-    
+
     /// Generate key pair for specified algorithm
     async fn generate_key_pair(&self, algorithm: KeyAlgorithm) -> BiomeResult<KeyPair>;
-    
+
     /// Sign data with private key
     async fn sign(&self, data: &[u8], private_key: &PrivateKey) -> BiomeResult<Signature>;
-    
+
     /// Verify signature with public key
-    async fn verify(&self, data: &[u8], signature: &Signature, public_key: &PublicKey) -> BiomeResult<bool>;
-    
+    async fn verify(
+        &self,
+        data: &[u8],
+        signature: &Signature,
+        public_key: &PublicKey,
+    ) -> BiomeResult<bool>;
+
     /// Encrypt data with public key
     async fn encrypt(&self, data: &[u8], public_key: &PublicKey) -> BiomeResult<Vec<u8>>;
-    
+
     /// Decrypt data with private key
-    async fn decrypt(&self, encrypted_data: &[u8], private_key: &PrivateKey) -> BiomeResult<Vec<u8>>;
-    
+    async fn decrypt(
+        &self,
+        encrypted_data: &[u8],
+        private_key: &PrivateKey,
+    ) -> BiomeResult<Vec<u8>>;
+
     /// Symmetric encryption
-    async fn symmetric_encrypt(&self, data: &[u8], key: &SymmetricKey, algorithm: SymmetricAlgorithm) -> BiomeResult<Vec<u8>>;
-    
+    async fn symmetric_encrypt(
+        &self,
+        data: &[u8],
+        key: &SymmetricKey,
+        algorithm: SymmetricAlgorithm,
+    ) -> BiomeResult<Vec<u8>>;
+
     /// Symmetric decryption
-    async fn symmetric_decrypt(&self, encrypted_data: &[u8], key: &SymmetricKey, algorithm: SymmetricAlgorithm) -> BiomeResult<Vec<u8>>;
-    
+    async fn symmetric_decrypt(
+        &self,
+        encrypted_data: &[u8],
+        key: &SymmetricKey,
+        algorithm: SymmetricAlgorithm,
+    ) -> BiomeResult<Vec<u8>>;
+
     /// Key derivation
-    async fn derive_key(&self, password: &[u8], salt: &[u8], algorithm: KdfAlgorithm, iterations: u32) -> BiomeResult<SymmetricKey>;
-    
+    async fn derive_key(
+        &self,
+        password: &[u8],
+        salt: &[u8],
+        algorithm: KdfAlgorithm,
+        iterations: u32,
+    ) -> BiomeResult<SymmetricKey>;
+
     /// Generate certificate
     async fn generate_certificate(&self, spec: &CertificateSpec) -> BiomeResult<Certificate>;
-    
+
     /// Validate certificate
-    async fn validate_certificate(&self, certificate: &Certificate, trusted_roots: &[Certificate]) -> BiomeResult<bool>;
-    
+    async fn validate_certificate(
+        &self,
+        certificate: &Certificate,
+        trusted_roots: &[Certificate],
+    ) -> BiomeResult<bool>;
+
     /// TLS handshake
     async fn tls_handshake(&self, config: &TlsConfig) -> BiomeResult<TlsConnection>;
-    
+
     /// Quantum-resistant operations
-    async fn quantum_resistant_key_exchange(&self, algorithm: QuantumResistantAlgorithm) -> BiomeResult<KeyExchangeResult>;
+    async fn quantum_resistant_key_exchange(
+        &self,
+        algorithm: QuantumResistantAlgorithm,
+    ) -> BiomeResult<KeyExchangeResult>;
 }
 
 /// Hash algorithms - multiple implementations available
@@ -65,14 +97,18 @@ pub enum HashAlgorithm {
     /// Argon2 for password hashing
     Argon2id,
     /// Quantum-resistant
-    QuantumResistant { algorithm: String },
+    QuantumResistant {
+        algorithm: String,
+    },
 }
 
 /// Key algorithms with multiple backend support
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum KeyAlgorithm {
     /// RSA
-    Rsa { bits: u32 },
+    Rsa {
+        bits: u32,
+    },
     /// Elliptic Curve
     EccP256,
     EccP384,
@@ -89,7 +125,10 @@ pub enum KeyAlgorithm {
     Dilithium3,
     Dilithium5,
     /// Custom algorithm
-    Custom { algorithm: String, parameters: HashMap<String, String> },
+    Custom {
+        algorithm: String,
+        parameters: HashMap<String, String>,
+    },
 }
 
 /// Symmetric encryption algorithms
@@ -105,7 +144,9 @@ pub enum SymmetricAlgorithm {
     /// XSalsa20
     XSalsa20Poly1305,
     /// Quantum-resistant
-    QuantumResistant { algorithm: String },
+    QuantumResistant {
+        algorithm: String,
+    },
 }
 
 /// Key derivation function algorithms
@@ -133,7 +174,10 @@ pub enum QuantumResistantAlgorithm {
     Frodo,
     Saber,
     /// Custom implementation
-    Custom { name: String, parameters: HashMap<String, String> },
+    Custom {
+        name: String,
+        parameters: HashMap<String, String>,
+    },
 }
 
 /// Cryptographic keys
@@ -220,11 +264,29 @@ pub struct CertificateSubject {
 /// Certificate extensions
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum CertificateExtension {
-    KeyUsage { digital_signature: bool, key_encipherment: bool, data_encipherment: bool },
-    ExtendedKeyUsage { server_auth: bool, client_auth: bool, code_signing: bool },
-    SubjectAltName { dns_names: Vec<String>, ip_addresses: Vec<String> },
-    BasicConstraints { ca: bool, path_length: Option<u32> },
-    Custom { oid: String, critical: bool, value: Vec<u8> },
+    KeyUsage {
+        digital_signature: bool,
+        key_encipherment: bool,
+        data_encipherment: bool,
+    },
+    ExtendedKeyUsage {
+        server_auth: bool,
+        client_auth: bool,
+        code_signing: bool,
+    },
+    SubjectAltName {
+        dns_names: Vec<String>,
+        ip_addresses: Vec<String>,
+    },
+    BasicConstraints {
+        ca: bool,
+        path_length: Option<u32>,
+    },
+    Custom {
+        oid: String,
+        critical: bool,
+        value: Vec<u8>,
+    },
 }
 
 /// X.509 Certificate
@@ -285,9 +347,14 @@ pub enum CipherSuite {
     Tls13Aes256GcmSha384,
     Tls13ChaCha20Poly1305Sha256,
     /// Quantum-resistant
-    QuantumResistant { suite: String },
+    QuantumResistant {
+        suite: String,
+    },
     /// Custom
-    Custom { name: String, parameters: HashMap<String, String> },
+    Custom {
+        name: String,
+        parameters: HashMap<String, String>,
+    },
 }
 
 /// Client authentication modes
@@ -392,7 +459,16 @@ pub enum ComplianceFramework {
     Hipaa,
     Gdpr,
     Pci,
-    CustomFramework { name: String, requirements: Vec<String> },
+    CustomFramework {
+        name: String,
+        requirements: Vec<String>,
+    },
+}
+
+impl Default for UniversalCryptoManager {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl UniversalCryptoManager {
@@ -402,41 +478,41 @@ impl UniversalCryptoManager {
             providers: HashMap::new(),
             default_provider: None,
             fallback_chain: vec![
-                "rustls".to_string(),    // Pure Rust, no C dependencies
-                "ring".to_string(),      // Pure Rust, widely used
-                "sodium".to_string(),    // Battle-tested, good performance
-                "openssl".to_string(),   // Fallback to traditional
+                "rustls".to_string(),  // Pure Rust, no C dependencies
+                "ring".to_string(),    // Pure Rust, widely used
+                "sodium".to_string(),  // Battle-tested, good performance
+                "openssl".to_string(), // Fallback to traditional
             ],
             quantum_transition: QuantumTransitionConfig::default(),
         }
     }
-    
+
     /// Add crypto provider
     pub fn add_provider(&mut self, name: String, provider: Box<dyn UniversalCryptoInterface>) {
         self.providers.insert(name, provider);
     }
-    
+
     /// Set default provider with fallback chain
     pub fn set_default_provider(&mut self, name: String) {
         self.default_provider = Some(name);
     }
-    
+
     /// Get crypto provider with automatic fallback
-    pub fn get_provider(&self) -> Option<&Box<dyn UniversalCryptoInterface>> {
+    pub fn get_provider(&self) -> Option<&dyn UniversalCryptoInterface> {
         // Try default provider first
         if let Some(default) = &self.default_provider {
             if let Some(provider) = self.providers.get(default) {
-                return Some(provider);
+                return Some(provider.as_ref());
             }
         }
-        
+
         // Try fallback chain
         for provider_name in &self.fallback_chain {
             if let Some(provider) = self.providers.get(provider_name) {
-                return Some(provider);
+                return Some(provider.as_ref());
             }
         }
-        
+
         None
     }
 }
@@ -463,4 +539,38 @@ impl Default for QuantumTransitionConfig {
             },
         }
     }
-} 
+}
+
+/// Generate a new keypair
+pub fn generate_keypair() -> crate::BiomeResult<(PublicKey, PrivateKey)> {
+    // Placeholder implementation
+    let public_key = PublicKey {
+        algorithm: KeyAlgorithm::Ed25519,
+        key_data: vec![0u8; 32],
+        format: KeyFormat::Raw,
+    };
+
+    let private_key = PrivateKey {
+        algorithm: KeyAlgorithm::Ed25519,
+        key_data: vec![0u8; 32],
+        format: KeyFormat::Raw,
+        encrypted: false,
+    };
+
+    Ok((public_key, private_key))
+}
+
+/// Sign data with a private key
+pub fn sign_data<T: serde::Serialize>(
+    private_key: &PrivateKey,
+    _data: &T,
+) -> crate::BiomeResult<Signature> {
+    // Placeholder implementation
+    let signature = Signature {
+        algorithm: private_key.algorithm.clone(),
+        signature_data: vec![0u8; 64],
+        format: SignatureFormat::Raw,
+    };
+
+    Ok(signature)
+}

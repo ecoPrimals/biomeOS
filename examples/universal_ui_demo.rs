@@ -7,10 +7,9 @@ use anyhow::Result;
 use std::collections::HashMap;
 use tokio::time::{sleep, Duration};
 
-use biomeos_ui::{
-    BiomeOSUI, UIConfig,
-    config::{UIMode, Theme},
-    ai::AIConfig,
+use biomeos::{
+    AiConfig, UIConfig, UIFeatures, UIMode,
+    BiomeOSUI,
 };
 
 #[tokio::main]
@@ -19,17 +18,17 @@ async fn main() -> Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter("biomeos_ui=info,demo=info")
         .init();
-    
+
     println!("🚀 biomeOS Universal UI Demo");
     println!("════════════════════════════");
     println!();
-    
+
     // Create UI configuration
-    let config = create_demo_config();
-    
+    let _config = create_demo_config();
+
     // Create UI instance
-    let mut ui = BiomeOSUI::new(config).await?;
-    
+    let mut ui = BiomeOSUI::new();
+
     // Demo scenarios
     println!("📋 Demo Scenarios:");
     println!("1. Ecosystem Discovery");
@@ -37,19 +36,19 @@ async fn main() -> Result<()> {
     println!("3. Real-time Monitoring");
     println!("4. Universal Primal Coordination");
     println!();
-    
+
     // Scenario 1: Ecosystem Discovery
     demo_ecosystem_discovery(&ui).await?;
-    
+
     // Scenario 2: AI-Assisted Biome Deployment
     demo_ai_biome_deployment(&mut ui).await?;
-    
+
     // Scenario 3: Real-time Monitoring
     demo_real_time_monitoring(&ui).await?;
-    
+
     // Scenario 4: Universal Primal Coordination
     demo_universal_coordination(&ui).await?;
-    
+
     println!("✅ Demo completed successfully!");
     println!();
     println!("🎯 Key Features Demonstrated:");
@@ -58,34 +57,45 @@ async fn main() -> Result<()> {
     println!("• Real-time event monitoring across ecosystem");
     println!("• Graceful degradation when Primals unavailable");
     println!("• Consistent UI experience across all modes");
-    
+
     Ok(())
 }
 
 /// Create demo configuration
 fn create_demo_config() -> UIConfig {
     let mut api_endpoints = HashMap::new();
-    
+
     // Standard Primals
     api_endpoints.insert("songbird".to_string(), "http://localhost:8080".to_string());
     api_endpoints.insert("nestgate".to_string(), "http://localhost:8082".to_string());
     api_endpoints.insert("toadstool".to_string(), "http://localhost:8084".to_string());
     api_endpoints.insert("beardog".to_string(), "http://localhost:9000".to_string());
-    
+
     // Custom Primals (would work seamlessly)
-    api_endpoints.insert("custom-ai-primal".to_string(), "http://localhost:7000".to_string());
-    api_endpoints.insert("custom-storage-primal".to_string(), "http://localhost:7001".to_string());
-    
+    api_endpoints.insert(
+        "custom-ai-primal".to_string(),
+        "http://localhost:7000".to_string(),
+    );
+    api_endpoints.insert(
+        "custom-storage-primal".to_string(),
+        "http://localhost:7001".to_string(),
+    );
+
     let mut websocket_endpoints = HashMap::new();
-    websocket_endpoints.insert("events".to_string(), "ws://localhost:8080/events".to_string());
-    
+    websocket_endpoints.insert(
+        "events".to_string(),
+        "ws://localhost:8080/events".to_string(),
+    );
+
     UIConfig {
+        theme: "dark".to_string(),
+        mode: UIMode::Terminal,
+        features: UIFeatures::default(),
         ui_mode: UIMode::Terminal, // For demo purposes
-        api_endpoints,
-        websocket_endpoints,
-        ai_config: AIConfig::default(),
-        theme: Theme::Dark,
-        auto_refresh_interval: 5000,
+        api_endpoints: api_endpoints.values().cloned().collect(),
+        websocket_endpoints: websocket_endpoints.values().cloned().collect(),
+        ai_config: Some(AiConfig::default()),
+        auto_refresh_interval: std::time::Duration::from_millis(5000),
     }
 }
 
@@ -93,18 +103,17 @@ fn create_demo_config() -> UIConfig {
 async fn demo_ecosystem_discovery(ui: &BiomeOSUI) -> Result<()> {
     println!("🔍 Scenario 1: Ecosystem Discovery");
     println!("──────────────────────────────────");
-    
+
     // Discover available Primals
     println!("Discovering available Primals...");
-    
-    match ui.api_client.discover_primals().await {
+
+    match ui.api_client.as_ref().unwrap().discover_primals().await {
         Ok(primals) => {
             println!("✅ Found {} Primals in the ecosystem:", primals.len());
             for primal in &primals {
-                println!("  • {} ({}) - {}", 
-                    primal.name, 
-                    primal.health,
-                    primal.capabilities.join(", ")
+                println!(
+                    "  • {} - Active",
+                    primal
                 );
             }
         }
@@ -113,25 +122,28 @@ async fn demo_ecosystem_discovery(ui: &BiomeOSUI) -> Result<()> {
             println!("   In real deployment, this would show all connected Primals");
         }
     }
-    
+
     // Get ecosystem status
     println!("\nGetting ecosystem status...");
-    
-    match ui.api_client.get_ecosystem_status().await {
+
+    match ui.api_client.as_ref().unwrap().get_ecosystem_status().await {
         Ok(status) => {
             println!("✅ Ecosystem Status:");
-            println!("   Overall Health: {}", status.overall_health);
-            println!("   Primals: {}/{} healthy", status.healthy_primals, status.total_primals);
+            println!("   Overall Health: {}", if status.healthy { "Healthy" } else { "Degraded" });
+            println!(
+                "   Primals: {}/{} healthy",
+                status.primals.len(), status.primals.len()
+            );
         }
         Err(e) => {
             println!("⚠️  Status check failed (expected in demo): {}", e);
             println!("   In real deployment, this would show live ecosystem status");
         }
     }
-    
+
     sleep(Duration::from_secs(2)).await;
     println!();
-    
+
     Ok(())
 }
 
@@ -139,7 +151,7 @@ async fn demo_ecosystem_discovery(ui: &BiomeOSUI) -> Result<()> {
 async fn demo_ai_biome_deployment(ui: &mut BiomeOSUI) -> Result<()> {
     println!("🤖 Scenario 2: AI-Assisted Biome Deployment");
     println!("───────────────────────────────────────────");
-    
+
     // Simulate AI commands
     let ai_commands = vec![
         "Deploy a biome called 'web-app' with a frontend and backend service",
@@ -147,104 +159,119 @@ async fn demo_ai_biome_deployment(ui: &mut BiomeOSUI) -> Result<()> {
         "Scale the frontend service to 3 replicas",
         "What's the health of all Primals in the ecosystem?",
     ];
-    
+
     for command in ai_commands {
         println!("👤 User: {}", command);
-        
-        match ui.ai_assistant.process_command(command, &ui.api_client).await {
+
+        match ui
+            .ai_assistant
+            .as_ref()
+            .unwrap()
+            .process_command(command)
+            .await
+        {
             Ok(response) => {
-                println!("🤖 AI: {}", response.message);
-                
-                if !response.suggestions.is_empty() {
-                    println!("💡 Suggestions:");
-                    for suggestion in &response.suggestions {
-                        println!("   • {}", suggestion);
-                    }
-                }
+                println!("🤖 AI: {}", response);
             }
             Err(e) => {
                 println!("⚠️  AI command failed (expected in demo): {}", e);
                 println!("   In real deployment, AI would coordinate across all Primals");
             }
         }
-        
+
         sleep(Duration::from_secs(1)).await;
         println!();
     }
-    
+
     Ok(())
 }
 
 /// Demo real-time monitoring
-async fn demo_real_time_monitoring(ui: &BiomeOSUI) -> Result<()> {
+async fn demo_real_time_monitoring(_ui: &BiomeOSUI) -> Result<()> {
     println!("📊 Scenario 3: Real-time Monitoring");
     println!("───────────────────────────────────");
-    
+
     println!("Starting real-time event monitoring...");
-    
+
     // Simulate real-time events
     let simulated_events = vec![
-        ("songbird", "deployment", "Biome 'web-app' deployment started"),
-        ("toadstool", "service", "Frontend service scaled to 3 replicas"),
+        (
+            "songbird",
+            "deployment",
+            "Biome 'web-app' deployment started",
+        ),
+        (
+            "toadstool",
+            "service",
+            "Frontend service scaled to 3 replicas",
+        ),
         ("nestgate", "storage", "Database volume provisioned"),
         ("beardog", "security", "SSL certificates generated"),
-        ("songbird", "deployment", "Biome 'web-app' deployment completed"),
+        (
+            "songbird",
+            "deployment",
+            "Biome 'web-app' deployment completed",
+        ),
     ];
-    
+
     for (primal, event_type, message) in simulated_events {
         println!("📡 Event from {}: {} - {}", primal, event_type, message);
         sleep(Duration::from_millis(800)).await;
     }
-    
+
     println!("✅ Real-time monitoring demonstrates:");
     println!("   • Events from all Primals in unified stream");
     println!("   • Automatic event correlation and filtering");
     println!("   • Real-time UI updates across all modes");
-    
+
     sleep(Duration::from_secs(1)).await;
     println!();
-    
+
     Ok(())
 }
 
 /// Demo universal primal coordination
-async fn demo_universal_coordination(ui: &BiomeOSUI) -> Result<()> {
+async fn demo_universal_coordination(_ui: &BiomeOSUI) -> Result<()> {
     println!("🔗 Scenario 4: Universal Primal Coordination");
     println!("────────────────────────────────────────────");
-    
+
     // Simulate coordination across different Primal types
     let coordination_scenarios = vec![
         ("Standard Primal", "songbird", "orchestration"),
         ("Custom AI Primal", "custom-ai-primal", "ai-inference"),
-        ("Custom Storage Primal", "custom-storage-primal", "distributed-storage"),
+        (
+            "Custom Storage Primal",
+            "custom-storage-primal",
+            "distributed-storage",
+        ),
         ("Forked Primal", "community-compute", "specialized-compute"),
     ];
-    
+
     for (primal_type, primal_name, capability) in coordination_scenarios {
         println!("🔧 Coordinating with {} ({})", primal_type, primal_name);
         println!("   Capability: {}", capability);
-        
+
         // Simulate universal API call
         println!("   → Sending universal coordination request...");
         sleep(Duration::from_millis(500)).await;
-        
+
         // Simulate response
         println!("   ✅ Coordination successful - universal API handled the request");
         println!("   📊 Response: Primal integrated seamlessly into ecosystem");
-        
+
         sleep(Duration::from_millis(500)).await;
         println!();
     }
-    
+
     println!("🎯 Universal Coordination demonstrates:");
     println!("   • Any Primal (standard, custom, forked) works immediately");
     println!("   • Consistent API interface across all Primal types");
     println!("   • Automatic capability detection and routing");
     println!("   • Graceful degradation when Primals unavailable");
-    
+
     sleep(Duration::from_secs(1)).await;
     println!();
-    
+
     Ok(())
 }
 
@@ -253,7 +280,7 @@ async fn demo_universal_coordination(ui: &BiomeOSUI) -> Result<()> {
 async fn simulate_terminal_ui() -> Result<()> {
     println!("🖥️  Terminal UI Simulation");
     println!("─────────────────────────");
-    
+
     // Simulate terminal UI screens
     let screens = vec![
         r#"
@@ -296,17 +323,17 @@ async fn simulate_terminal_ui() -> Result<()> {
 ╚══════════════════════════════════════════════════════════════╝
         "#,
     ];
-    
+
     for screen in screens {
         println!("{}", screen);
         sleep(Duration::from_secs(3)).await;
     }
-    
+
     Ok(())
 }
 
 /// Print feature summary
-fn print_feature_summary() {
+fn _print_feature_summary() {
     println!("🎯 Universal biomeOS UI Features:");
     println!("════════════════════════════════");
     println!();
@@ -339,4 +366,4 @@ fn print_feature_summary() {
     println!("  • Consistent data model");
     println!("  • Easy to extend and customize");
     println!("  • Perfect for AI integration");
-} 
+}

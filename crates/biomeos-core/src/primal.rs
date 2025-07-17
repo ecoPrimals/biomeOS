@@ -4,11 +4,11 @@
 //! completely agnostic about which Primals exist. Any system that implements
 //! the Primal trait can participate in the biomeOS ecosystem.
 
-use crate::{PrimalId, BiomeResult, BiomeError, HealthStatus};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use crate::{BiomeError, BiomeResult, HealthStatus, PrimalId};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use uuid::Uuid;
 
 /// Universal Primal identifier - can be any string
@@ -47,44 +47,44 @@ pub struct CapabilityParameter {
 pub trait Primal: Send + Sync {
     /// Unique identifier for this primal instance
     fn id(&self) -> PrimalId;
-    
+
     /// Type identifier for this primal (e.g., "toadstool", "songbird", "custom-ai")
     fn primal_type(&self) -> PrimalType;
-    
+
     /// Human-readable name
     fn name(&self) -> String;
-    
+
     /// Version of this primal implementation
     fn version(&self) -> String;
-    
+
     /// Capabilities this primal provides
     fn capabilities(&self) -> Vec<Capability>;
-    
+
     /// Dependencies this primal requires from other primals
     fn dependencies(&self) -> Vec<PrimalDependency>;
-    
+
     /// Initialize the primal with configuration
     async fn initialize(&mut self, config: PrimalConfig) -> BiomeResult<()>;
-    
+
     /// Start the primal services
     async fn start(&mut self) -> BiomeResult<()>;
-    
+
     /// Stop the primal services gracefully
     async fn stop(&mut self) -> BiomeResult<()>;
-    
+
     /// Check health status
     async fn health_check(&self) -> BiomeResult<HealthStatus>;
-    
+
     /// Execute a capability request
     async fn execute_capability(
         &self,
         capability: &str,
         request: CapabilityRequest,
     ) -> BiomeResult<CapabilityResponse>;
-    
+
     /// Handle events from other primals
     async fn handle_event(&mut self, event: PrimalEvent) -> BiomeResult<()>;
-    
+
     /// Get current metrics/telemetry
     async fn get_metrics(&self) -> BiomeResult<PrimalMetrics>;
 }
@@ -286,7 +286,7 @@ pub struct PrimalRegistry {
 pub trait PrimalFactory: Send + Sync {
     /// Create a new instance of this primal type
     async fn create_primal(&self, config: PrimalConfig) -> BiomeResult<Box<dyn Primal>>;
-    
+
     /// Get metadata about this primal type
     fn get_metadata(&self) -> PrimalTypeMetadata;
 }
@@ -310,6 +310,12 @@ pub struct PrimalTypeMetadata {
     pub config_schema: serde_json::Value,
 }
 
+impl Default for PrimalRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PrimalRegistry {
     /// Create a new primal registry
     pub fn new() -> Self {
@@ -318,16 +324,12 @@ impl PrimalRegistry {
             instances: HashMap::new(),
         }
     }
-    
+
     /// Register a primal factory
-    pub fn register_factory(
-        &mut self,
-        primal_type: PrimalType,
-        factory: Box<dyn PrimalFactory>,
-    ) {
+    pub fn register_factory(&mut self, primal_type: PrimalType, factory: Box<dyn PrimalFactory>) {
         self.factories.insert(primal_type, factory);
     }
-    
+
     /// Create a new primal instance
     pub async fn create_primal(
         &mut self,
@@ -338,26 +340,24 @@ impl PrimalRegistry {
             .factories
             .get(primal_type)
             .ok_or_else(|| BiomeError::PrimalNotFound(primal_type.to_string()))?;
-        
+
         let mut primal = factory.create_primal(config.clone()).await?;
         primal.initialize(config).await?;
-        
+
         let primal_id = primal.id().clone();
         self.instances.insert(primal_id.clone(), primal);
-        
+
         Ok(primal_id)
     }
-    
+
     /// Get a reference to a running primal
     pub fn get_primal(&self, primal_id: &PrimalId) -> Option<&dyn Primal> {
         self.instances.get(primal_id).map(|p| p.as_ref())
     }
-    
+
     /// Get all available primal types
     pub fn get_available_types(&self) -> Vec<PrimalTypeMetadata> {
-        self.factories.values()
-            .map(|f| f.get_metadata())
-            .collect()
+        self.factories.values().map(|f| f.get_metadata()).collect()
     }
 }
 
@@ -380,4 +380,4 @@ impl Default for NetworkConfig {
             discovery: Vec::new(),
         }
     }
-} 
+}

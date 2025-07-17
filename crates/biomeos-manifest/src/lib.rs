@@ -1,11 +1,9 @@
 // biomeOS Manifest Library
 // Core types and structures for biome manifest files
 
-use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
-
-
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 // Error types
 pub type BiomeResult<T> = Result<T, BiomeError>;
@@ -35,79 +33,79 @@ pub struct BiomeManifest {
     /// API version for compatibility
     #[serde(default = "default_api_version")]
     pub api_version: String,
-    
+
     /// Resource kind (always "Biome")
     #[serde(default = "default_kind")]
     pub kind: String,
-    
+
     /// Manifest metadata
     pub metadata: ManifestMetadata,
-    
+
     /// Source management configuration
     #[serde(default)]
     pub sources: SourceConfig,
-    
+
     /// Primal component specifications
     #[serde(default)]
     pub primals: HashMap<String, PrimalSpec>,
-    
+
     /// Service definitions
     #[serde(default)]
     pub services: HashMap<String, ServiceSpec>,
-    
+
     /// MYCORRHIZA sovereignty configuration
     #[serde(default)]
     pub mycorrhiza: MycorrhizaConfig,
-    
+
     /// Volume definitions
     #[serde(default)]
     pub volumes: HashMap<String, VolumeSpec>,
-    
+
     /// Network definitions
     #[serde(default)]
     pub networks: HashMap<String, NetworkSpec>,
-    
+
     /// Global networking configuration
     pub networking: Option<NetworkingSpec>,
-    
+
     /// Global security configuration  
     pub security: Option<SecuritySpec>,
-    
+
     /// Resource allocation and limits
     pub resources: Option<ResourceSpec>,
-    
+
     /// BYOB: Scheduling configurations for dynamic biomes
     #[serde(default)]
     pub schedules: HashMap<String, ScheduleConfig>,
-    
+
     /// BYOB: Environment-specific configurations
     #[serde(default)]
     pub environments: HashMap<String, EnvironmentConfig>,
-    
+
     /// BYOB: Dependency management
     pub dependencies: Option<DependencyConfig>,
-    
+
     /// Custom extensions for future features
     pub extensions: Option<HashMap<String, serde_json::Value>>,
-    
+
     /// Recursive biome references for nested deployments
     pub biomes: Option<HashMap<String, BiomeReference>>,
-    
+
     /// Nested biome definitions
     pub nested_biomes: Option<HashMap<String, BiomeManifest>>,
-    
+
     /// Topology configuration for complex deployments
     pub topology: Option<TopologyConfig>,
-    
+
     /// Iterative deployment configurations
     pub iterative: Option<HashMap<String, IterativeDeployment>>,
-    
+
     /// Template composition for complex biomes
     pub templates: Option<HashMap<String, BiomeManifest>>,
-    
+
     /// Recursive monitoring configuration
     pub monitoring: Option<RecursiveMonitoring>,
-    
+
     /// Recursive scaling configuration
     pub scaling: Option<RecursiveScaling>,
 }
@@ -117,46 +115,46 @@ pub struct BiomeManifest {
 pub struct ManifestMetadata {
     /// Human-readable name for this biome
     pub name: String,
-    
+
     /// Semantic version
     pub version: String,
-    
+
     /// Description of this biome's purpose
     pub description: Option<String>,
-    
+
     /// Tags for categorization and discovery
     pub tags: Option<Vec<String>>,
-    
+
     /// Author/maintainer information
     pub author: Option<String>,
-    
+
     /// Creation timestamp
     pub created: Option<DateTime<Utc>>,
-    
+
     /// Biome specialization type
     pub specialization: Option<BiomeSpecialization>,
-    
+
     /// Source repository information
     pub repository: Option<String>,
-    
+
     /// License information
     pub license: Option<String>,
-    
+
     /// BYOB: Creator username for attribution
     pub created_by: Option<String>,
-    
+
     /// BYOB: Parent biome ID if this is a fork
     pub forked_from: Option<String>,
-    
+
     /// BYOB: Sharing configuration
     pub sharing: Option<SharingConfig>,
-    
+
     /// BYOB: Niche classifications
     pub niches: Option<NicheClassification>,
-    
+
     /// BYOB: Template metadata if this biome serves as a template
     pub template: Option<TemplateMetadata>,
-    
+
     /// Custom metadata extensions
     pub custom: Option<HashMap<String, serde_json::Value>>,
 }
@@ -167,36 +165,36 @@ pub struct PrimalSpec {
     /// Whether this primal is enabled
     #[serde(default = "default_true")]
     pub enabled: bool,
-    
+
     /// Type of this primal
     pub primal_type: PrimalType,
-    
+
     /// Priority for startup ordering (lower = earlier)
     #[serde(default = "default_priority")]
     pub priority: u32,
-    
+
     /// Version requirement
     pub version: Option<String>,
-    
+
     /// Source specification for this primal
     pub source: Option<SourceSpec>,
-    
+
     /// Dependencies on other primals
     #[serde(default)]
     pub depends_on: Vec<String>,
-    
+
     /// Startup timeout
     pub startup_timeout: Option<String>,
-    
+
     /// Primal-specific configuration
     pub config: Option<serde_json::Value>,
-    
+
     /// Networking configuration for this primal
     pub networking: Option<PrimalNetworking>,
-    
+
     /// Resource requirements for this primal
     pub resources: Option<PrimalResources>,
-    
+
     /// Custom primal extensions
     pub extensions: Option<HashMap<String, serde_json::Value>>,
 }
@@ -206,32 +204,32 @@ pub struct PrimalSpec {
 pub struct ServiceSpec {
     /// Runtime type for this service
     pub runtime: RuntimeType,
-    
+
     /// Source specification
     pub source: Option<SourceSpec>,
-    
+
     /// Responsible primal
     pub primal: String,
-    
+
     /// Container image (for container runtime)
     pub image: Option<String>,
-    
+
     /// Dependencies on other services
     #[serde(default)]
     pub depends_on: Vec<String>,
-    
+
     /// Port mappings
     #[serde(default)]
     pub ports: Vec<String>,
-    
+
     /// Volume mappings
     #[serde(default)]
     pub volumes: Vec<String>,
-    
+
     /// Environment variables
     #[serde(default)]
     pub environment: HashMap<String, String>,
-    
+
     /// Service configuration
     pub config: Option<serde_json::Value>,
 }
@@ -242,15 +240,15 @@ pub struct SourceConfig {
     /// Global source repositories
     #[serde(default)]
     pub repositories: HashMap<String, RepositorySpec>,
-    
+
     /// Authentication configurations
     #[serde(default)]
     pub auth: HashMap<String, AuthSpec>,
-    
+
     /// Build configurations
     #[serde(default)]
     pub build: BuildConfig,
-    
+
     /// Distribution configurations
     #[serde(default)]
     pub distribution: DistributionConfig,
@@ -262,19 +260,19 @@ pub struct MycorrhizaConfig {
     /// Energy flow state
     #[serde(default)]
     pub energy_flow: EnergyFlowState,
-    
+
     /// Personal AI configuration
     #[serde(default)]
     pub personal_ai: PersonalAiConfig,
-    
+
     /// Trusted externals configuration
     #[serde(default)]
     pub trusted_externals: TrustedExternalsConfig,
-    
+
     /// Commercial access configuration
     #[serde(default)]
     pub commercial_access: CommercialAccessConfig,
-    
+
     /// Enforcement configuration
     #[serde(default)]
     pub enforcement: EnforcementConfig,
@@ -909,4 +907,4 @@ impl Default for ValidationResults {
     fn default() -> Self {
         Self::new()
     }
-} 
+}

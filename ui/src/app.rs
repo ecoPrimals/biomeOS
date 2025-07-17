@@ -1,5 +1,5 @@
 //! Main biomeOS Application State and UI Orchestration
-//! 
+//!
 //! This module implements the core UI application following biomeOS design principles:
 //! - API-driven architecture
 //! - Universal/recursive patterns  
@@ -10,33 +10,26 @@ use eframe::egui;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
+use crate::api::BiomeOSApi;
 use crate::state::AppState;
 use crate::views::{
-    dashboard::DashboardView,
-    installation::InstallationView,
-    primals::PrimalsView,
-    sovereignty::SovereigntyView,
-    settings::SettingsView,
-    yaml_editor::YamlEditorView,
-    byob::ByobView,
-    iso_creator::IsoCreatorView,
-    niche_manager::NicheManagerView,
-    toadstool::ToadStoolView,
-    View,
+    byob::ByobView, dashboard::DashboardView, installation::InstallationView,
+    iso_creator::IsoCreatorView, niche_manager::NicheManagerView, primals::PrimalsView,
+    settings::SettingsView, sovereignty::SovereigntyView, toadstool::ToadStoolView,
+    yaml_editor::YamlEditorView, View,
 };
-use crate::api::BiomeOSApi;
 
 /// Main biomeOS UI Application
 pub struct BiomeOSApp {
     /// Application state (shared across views)
     state: Arc<Mutex<AppState>>,
-    
+
     /// API client for biomeOS core
     api: Arc<BiomeOSApi>,
-    
+
     /// Current active view
     current_view: AppView,
-    
+
     /// View instances
     dashboard_view: DashboardView,
     installation_view: InstallationView,
@@ -48,7 +41,7 @@ pub struct BiomeOSApp {
     iso_creator_view: IsoCreatorView,
     niche_manager_view: NicheManagerView,
     toadstool_view: ToadStoolView,
-    
+
     /// UI state
     show_dev_panel: bool,
     show_api_debug: bool,
@@ -69,10 +62,10 @@ pub enum AppView {
 }
 
 impl BiomeOSApp {
-    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+    pub fn new(_cc: &eframe::CreationContext<'_>) -> Self {
         let state = Arc::new(Mutex::new(AppState::new()));
         let api = Arc::new(BiomeOSApi::new());
-        
+
         Self {
             state: state.clone(),
             api: api.clone(),
@@ -83,7 +76,7 @@ impl BiomeOSApp {
             sovereignty_view: SovereigntyView::new(state.clone(), api.clone()),
             settings_view: SettingsView::new(state.clone(), api.clone()),
             yaml_editor_view: YamlEditorView::new(state.clone(), api.clone()),
-            byob_view: ByobView::new(state.clone(), api.clone()),
+            byob_view: ByobView::new(),
             iso_creator_view: IsoCreatorView::new(state.clone(), api.clone()),
             niche_manager_view: NicheManagerView::new(state.clone(), api.clone()),
             toadstool_view: ToadStoolView::new(state.clone(), api.clone()),
@@ -97,84 +90,87 @@ impl BiomeOSApp {
         ui.horizontal(|ui| {
             // biomeOS logo and title
             ui.heading("🌱 biomeOS");
-            
+
             ui.separator();
-            
+
             // Main navigation buttons
-            if ui.selectable_label(
-                self.current_view == AppView::Dashboard,
-                "🏠 Dashboard"
-            ).clicked() {
+            if ui
+                .selectable_label(self.current_view == AppView::Dashboard, "🏠 Dashboard")
+                .clicked()
+            {
                 self.current_view = AppView::Dashboard;
             }
-            
-            if ui.selectable_label(
-                self.current_view == AppView::YamlEditor,
-                "📝 YAML Editor"
-            ).clicked() {
+
+            if ui
+                .selectable_label(self.current_view == AppView::YamlEditor, "📝 YAML Editor")
+                .clicked()
+            {
                 self.current_view = AppView::YamlEditor;
             }
-            
-            if ui.selectable_label(
-                self.current_view == AppView::Byob,
-                "🧬 BYOB"
-            ).clicked() {
+
+            if ui
+                .selectable_label(self.current_view == AppView::Byob, "🧬 BYOB")
+                .clicked()
+            {
                 self.current_view = AppView::Byob;
             }
-            
-            if ui.selectable_label(
-                self.current_view == AppView::NicheManager,
-                "🎭 Niches"
-            ).clicked() {
+
+            if ui
+                .selectable_label(self.current_view == AppView::NicheManager, "🎭 Niches")
+                .clicked()
+            {
                 self.current_view = AppView::NicheManager;
             }
-            
-            if ui.selectable_label(
-                self.current_view == AppView::IsoCreator,
-                "💿 ISO Creator"
-            ).clicked() {
+
+            if ui
+                .selectable_label(self.current_view == AppView::IsoCreator, "💿 ISO Creator")
+                .clicked()
+            {
                 self.current_view = AppView::IsoCreator;
             }
-            
-            if ui.selectable_label(
-                self.current_view == AppView::Installation,
-                "🚀 Installation"
-            ).clicked() {
+
+            if ui
+                .selectable_label(
+                    self.current_view == AppView::Installation,
+                    "🚀 Installation",
+                )
+                .clicked()
+            {
                 self.current_view = AppView::Installation;
             }
-            
-            if ui.selectable_label(
-                self.current_view == AppView::Primals,
-                "🧬 Primals"
-            ).clicked() {
+
+            if ui
+                .selectable_label(self.current_view == AppView::Primals, "🧬 Primals")
+                .clicked()
+            {
                 self.current_view = AppView::Primals;
             }
-            
-            if ui.selectable_label(
-                self.current_view == AppView::Sovereignty,
-                "🔒 Sovereignty"
-            ).clicked() {
+
+            if ui
+                .selectable_label(self.current_view == AppView::Sovereignty, "🔒 Sovereignty")
+                .clicked()
+            {
                 self.current_view = AppView::Sovereignty;
             }
-            
-            if ui.selectable_label(
-                self.current_view == AppView::ToadStool,
-                "🍄 ToadStool"
-            ).clicked() {
+
+            if ui
+                .selectable_label(self.current_view == AppView::ToadStool, "🍄 ToadStool")
+                .clicked()
+            {
                 self.current_view = AppView::ToadStool;
             }
-            
+
             // Spacer to push settings to the right
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if ui.selectable_label(
-                    self.current_view == AppView::Settings,
-                    "⚙️ Settings"
-                ).clicked() {
+                if ui
+                    .selectable_label(self.current_view == AppView::Settings, "⚙️ Settings")
+                    .clicked()
+                {
                     self.current_view = AppView::Settings;
                 }
-                
+
                 ui.separator();
-                
+
                 // Developer tools toggle
                 ui.checkbox(&mut self.show_dev_panel, "🔧 Dev");
                 ui.checkbox(&mut self.show_api_debug, "🌐 API");
@@ -203,29 +199,29 @@ impl BiomeOSApp {
         if !self.show_dev_panel {
             return;
         }
-        
+
         ui.collapsing("🔧 Developer Panel", |ui| {
             ui.label("Bootstrap UI Controls:");
-            
+
             ui.horizontal(|ui| {
                 if ui.button("Reload State").clicked() {
                     // Trigger state reload
                 }
-                
+
                 if ui.button("Reset Config").clicked() {
                     // Reset configuration
                 }
-                
+
                 if ui.button("Export Logs").clicked() {
                     // Export debug logs
                 }
             });
-            
+
             ui.separator();
-            
+
             ui.label("View State:");
             ui.label(format!("Current: {:?}", self.current_view));
-            
+
             // Quick navigation for developers
             ui.separator();
             ui.label("Quick Navigation:");
@@ -251,7 +247,7 @@ impl BiomeOSApp {
                     self.current_view = AppView::Installation;
                 }
             });
-            
+
             if self.show_api_debug {
                 ui.separator();
                 ui.label("API Debug:");
@@ -270,19 +266,19 @@ impl BiomeOSApp {
         ui.horizontal(|ui| {
             // System status indicator
             ui.label("🟢 System: Online");
-            
+
             ui.separator();
-            
-            // API status  
+
+            // API status
             ui.label("🌐 API: Connected");
-            
+
             ui.separator();
-            
+
             // Sovereignty status
             ui.label("🔒 Sovereignty: 3/3");
-            
+
             ui.separator();
-            
+
             // Current view status
             match self.current_view {
                 AppView::YamlEditor => {
@@ -305,7 +301,7 @@ impl BiomeOSApp {
                 }
                 _ => {}
             }
-            
+
             // Right-aligned info
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 ui.label(format!("biomeOS v{}", env!("CARGO_PKG_VERSION")));
@@ -327,7 +323,7 @@ impl eframe::App for BiomeOSApp {
         } else if args.iter().any(|arg| arg == "--niche-manager") {
             self.current_view = AppView::NicheManager;
         }
-        
+
         // Main UI layout
         egui::TopBottomPanel::top("navigation")
             .resizable(false)
@@ -359,4 +355,4 @@ impl eframe::App for BiomeOSApp {
         // Auto-refresh the UI for real-time updates
         ctx.request_repaint_after(std::time::Duration::from_millis(100));
     }
-} 
+}

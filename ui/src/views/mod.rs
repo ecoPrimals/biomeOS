@@ -1,5 +1,5 @@
 //! biomeOS UI Views Module
-//! 
+//!
 //! This module contains all the UI views for the biomeOS bootstrap interface.
 //! Each view is responsible for a specific aspect of the system:
 //! - Dashboard: Overview and system status
@@ -13,23 +13,23 @@
 //! - Niche Manager: Manage and create niches
 //! - ToadStool: Compute orchestration and runtime management
 
+pub mod byob;
 pub mod dashboard;
 pub mod installation;
-pub mod primals;
-pub mod sovereignty;
-pub mod settings;
-pub mod yaml_editor;
-pub mod byob;
 pub mod iso_creator;
 pub mod niche_manager;
+pub mod primals;
+pub mod settings;
+pub mod sovereignty;
 pub mod toadstool;
+pub mod yaml_editor;
 
 use eframe::egui;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use crate::state::AppState;
 use crate::api::BiomeOSApi;
+use crate::state::AppState;
 
 /// Base trait for all UI views
 pub trait View {
@@ -81,7 +81,13 @@ impl BaseView {
     }
 
     /// Render a status indicator
-    pub fn render_status(&self, ui: &mut egui::Ui, label: &str, status: &str, color: egui::Color32) {
+    pub fn render_status(
+        &self,
+        ui: &mut egui::Ui,
+        label: &str,
+        status: &str,
+        color: egui::Color32,
+    ) {
         ui.horizontal(|ui| {
             ui.label(label);
             ui.colored_label(color, status);
@@ -151,7 +157,13 @@ impl BaseView {
     }
 
     /// Render a confirmation dialog
-    pub fn render_confirmation_dialog(&self, ui: &mut egui::Ui, title: &str, message: &str, on_confirm: impl FnOnce()) {
+    pub fn render_confirmation_dialog(
+        &self,
+        ui: &mut egui::Ui,
+        title: &str,
+        message: &str,
+        on_confirm: impl FnOnce(),
+    ) {
         egui::Window::new(title)
             .collapsible(false)
             .resizable(false)
@@ -168,4 +180,4 @@ impl BaseView {
                 });
             });
     }
-} 
+}
