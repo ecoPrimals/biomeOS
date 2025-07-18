@@ -3,7 +3,7 @@
 //! This module provides the manifest system for toadStool integration,
 //! supporting WASM-first execution, capability-based security, and federation.
 
-use crate::byob::TeamWorkspace;
+use crate::byob::{TeamWorkspace, ResourceQuota};
 use crate::{BiomeError, BiomeResult};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -401,6 +401,31 @@ impl ManifestGenerator {
         }
         false
     }
+
+    /// Get available templates from template manager
+    pub fn get_available_templates(&self) -> Vec<String> {
+        self.template_manager.list_templates()
+    }
+
+    /// Load template from template manager
+    pub fn load_template(&self, template_name: &str) -> BiomeResult<ServiceTemplate> {
+        self.template_manager.load_template(template_name)
+    }
+
+    /// Calculate resource requirements using resource calculator
+    pub fn calculate_resources(&self, workspace: &TeamWorkspace) -> BiomeResult<ResourceCalculation> {
+        self.resource_calculator.calculate_requirements(workspace)
+    }
+
+    /// Validate resource limits using resource calculator
+    pub fn validate_resource_limits(&self, requirements: &ResourceCalculation, quota: &ResourceQuota) -> bool {
+        self.resource_calculator.validate_against_quota(requirements, quota)
+    }
+
+    /// Get template recommendations based on resources
+    pub fn get_template_recommendations(&self, available_resources: &ResourceCalculation) -> Vec<String> {
+        self.template_manager.recommend_templates(available_resources)
+    }
 }
 
 impl ToadStoolManifest {
@@ -473,11 +498,55 @@ pub struct ResourceAllocation {
     pub storage_mb: u64,
 }
 
+#[derive(Debug, Clone)]
+pub struct ResourceCalculation {
+    pub cpu_cores: f64,
+    pub memory_bytes: u64,
+    pub storage_bytes: u64,
+    pub estimated_cost: f64,
+}
+
 // Helper structures
 struct TemplateManager {}
 impl TemplateManager {
     fn new() -> Self {
         Self {}
+    }
+
+    fn list_templates(&self) -> Vec<String> {
+        vec![
+            "web-service".to_string(),
+            "api-service".to_string(),
+            "database".to_string(),
+            "worker".to_string(),
+            "frontend".to_string(),
+        ]
+    }
+
+    fn load_template(&self, template_name: &str) -> BiomeResult<ServiceTemplate> {
+        // Mock implementation - in real system would load from storage
+        Ok(ServiceTemplate {
+            name: template_name.to_string(),
+            source: format!("biomeos/{}", template_name),
+            cpu_request: "0.5".to_string(),
+            memory_request: "512MB".to_string(),
+            storage_request: Some("1GB".to_string()),
+            capabilities: vec!["network.client".to_string()],
+                         network_config: Some(vec![NetworkConfig {
+                 port: 8080,
+                 external: Some(true),
+                 protocol: "http".to_string(),
+             }]),
+            environment: None,
+        })
+    }
+
+    fn recommend_templates(&self, _available_resources: &ResourceCalculation) -> Vec<String> {
+        // Mock implementation - in real system would analyze resource requirements
+        vec![
+            "web-service".to_string(),
+            "api-service".to_string(),
+        ]
     }
 }
 
@@ -485,6 +554,32 @@ struct ResourceCalculator {}
 impl ResourceCalculator {
     fn new() -> Self {
         Self {}
+    }
+
+    fn calculate_requirements(&self, workspace: &TeamWorkspace) -> BiomeResult<ResourceCalculation> {
+        // Calculate based on workspace deployments
+        let mut total_cpu = 0.0;
+        let mut total_memory = 0;
+        let mut total_storage = 0;
+
+        for _deployment in &workspace.active_deployments {
+            total_cpu += 0.5; // Default CPU per deployment
+            total_memory += 512 * 1024 * 1024; // 512MB per deployment
+            total_storage += 1024 * 1024 * 1024; // 1GB per deployment
+        }
+
+        Ok(ResourceCalculation {
+            cpu_cores: total_cpu,
+            memory_bytes: total_memory,
+            storage_bytes: total_storage,
+            estimated_cost: total_cpu * 0.10 + (total_memory as f64 / 1024.0 / 1024.0 / 1024.0) * 0.05,
+        })
+    }
+
+    fn validate_against_quota(&self, requirements: &ResourceCalculation, quota: &ResourceQuota) -> bool {
+        requirements.cpu_cores <= quota.max_cpu_cores
+            && requirements.memory_bytes <= quota.max_memory_bytes
+            && requirements.storage_bytes <= quota.max_storage_bytes
     }
 }
 
@@ -522,6 +617,8 @@ impl SecurityValidator {
 
         Ok(())
     }
+
+
 }
 
 #[cfg(test)]

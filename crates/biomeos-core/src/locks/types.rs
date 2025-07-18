@@ -100,6 +100,7 @@ pub enum ComplianceLevel {
     Commercial,
     /// Enterprise license required
     Enterprise,
+    High,
     /// Sovereign key required
     Sovereign,
     /// Prohibited for commercial use
@@ -167,6 +168,7 @@ pub enum RevenueTier {
     SmallBiz,   // $1M - $10M ARR
     MidMarket,  // $10M - $100M ARR
     Enterprise, // > $100M ARR
+    High,
 }
 
 /// Usage patterns
@@ -693,3 +695,48 @@ pub enum KeyStatus {
     Expired,
     PendingActivation,
 }
+
+impl Default for UsagePattern {
+    fn default() -> Self {
+        Self {
+            usage_frequency: 1,
+            concurrency_level: 1,
+            data_volume: 0,
+            integration_complexity: 1,
+        }
+    }
+}
+
+
+impl Default for AccessRequirements {
+    fn default() -> Self {
+        Self {
+            security_level: SecurityLevel::Standard,
+            data_residency: None,
+            encryption_requirements: None,
+        }
+    }
+}
+
+
+impl std::fmt::Display for DependencyType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DependencyType::External => write!(f, "external"),
+            DependencyType::Internal => write!(f, "internal"),
+            DependencyType::System => write!(f, "system"),
+            DependencyType::Network => write!(f, "network"),
+            DependencyType::Database => write!(f, "database"),
+            DependencyType::Storage => write!(f, "storage"),
+            DependencyType::Compute => write!(f, "compute"),
+            DependencyType::Api => write!(f, "api"),
+            DependencyType::Service => write!(f, "service"),
+            DependencyType::Library => write!(f, "library"),
+            DependencyType::Framework => write!(f, "framework"),
+            DependencyType::Tool => write!(f, "tool"),
+            DependencyType::Runtime => write!(f, "runtime"),
+            DependencyType::Other => write!(f, "other"),
+        }
+    }
+}
+

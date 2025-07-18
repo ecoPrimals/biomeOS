@@ -688,6 +688,38 @@ impl HealthMonitor {
             analysis_period: chrono::Duration::minutes(30),
         })
     }
+
+    /// Get metrics history for a component
+    pub async fn get_metrics_history(&self, component_id: &str) -> Option<Vec<HealthMetrics>> {
+        let history = self.metrics_history.read().await;
+        history.get(component_id).cloned()
+    }
+
+    /// Add metrics to history
+    pub async fn add_metrics_to_history(&self, component_id: &str, metrics: HealthMetrics) {
+        let mut history = self.metrics_history.write().await;
+        let component_history = history.entry(component_id.to_string()).or_insert_with(Vec::new);
+        component_history.push(metrics);
+
+        // Keep only recent entries
+        if component_history.len() > self.config.max_history_entries {
+            component_history.remove(0);
+        }
+    }
+
+    /// Clear old metrics history
+    pub async fn clear_old_metrics(&self, retention_hours: u64) {
+        let mut history = self.metrics_history.write().await;
+        let _cutoff = Utc::now() - chrono::Duration::hours(retention_hours as i64);
+        
+        for component_history in history.values_mut() {
+            // This is a simplified cleanup - in a real implementation,
+            // we'd store timestamps with metrics to do proper cleanup
+            if component_history.len() > 50 {
+                component_history.drain(0..25);
+            }
+        }
+    }
 }
 
 impl Default for HealthInfo {

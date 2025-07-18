@@ -229,6 +229,7 @@ impl LicensingManager {
                     RevenueTier::SmallBiz => 500.0,
                     RevenueTier::MidMarket => 2000.0,
                     RevenueTier::Enterprise => 10000.0,
+                    RevenueTier::High => 5000.0,
                 };
 
                 PricingCalculation::Commercial {

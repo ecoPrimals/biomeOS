@@ -31,7 +31,7 @@ impl Theme {
             secondary_color: "#2d2d2d".to_string(),
         }
     }
-    
+
     pub const DARK: &'static str = "dark";
 }
 

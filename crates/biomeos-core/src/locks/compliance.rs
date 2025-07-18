@@ -454,10 +454,7 @@ impl ComplianceEngine {
     }
 
     /// Generate compliance report
-    pub async fn generate_report(
-        &self,
-        dependencies: &[ExternalDependency],
-    ) -> BiomeResult<ComplianceReport> {
+    pub async fn generate_report(&self, dependencies: &[ExternalDependency]) -> BiomeResult<ComplianceReport> {
         let report_id = uuid::Uuid::new_v4().to_string();
         let generated_at = chrono::Utc::now();
 
@@ -466,35 +463,411 @@ impl ComplianceEngine {
             end_date: generated_at,
         };
 
+        // Calculate actual compliance metrics
+        let mut total_dependencies = dependencies.len() as u32;
+        let mut compliant_dependencies = 0u32;
+        let mut non_compliant_dependencies = 0u32;
+        let mut total_violations = 0u32;
+        let mut critical_violations = 0u32;
+        let mut detailed_findings = Vec::new();
+
+        // Analyze each dependency for compliance
+        for dependency in dependencies {
+            let dependency_compliance = self.analyze_dependency_compliance(dependency).await?;
+            
+            if dependency_compliance.compliant {
+                compliant_dependencies += 1;
+            } else {
+                non_compliant_dependencies += 1;
+            }
+
+            // Count violations
+            let violations = self.check_dependency_violations(dependency).await?;
+            total_violations += violations.len() as u32;
+            
+            for violation in &violations {
+                if violation.severity == ViolationSeverity::Critical {
+                    critical_violations += 1;
+                }
+                
+                detailed_findings.push(DetailedFinding {
+                    finding_id: uuid::Uuid::new_v4().to_string(),
+                    finding_type: self.violation_type_to_finding_type(&violation.violation_type),
+                    severity: violation.severity.clone(),
+                    title: format!("Optimize dependency"),
+                    description: violation.description.clone(),
+                    impact_assessment: self.calculate_violation_impact(&violation.violation_type, &violation.severity),
+                    recommended_actions: violation.suggested_actions.clone(),
+                    evidence: vec![format!("Detected at: {}", violation.detected_at)],
+                });
+            }
+        }
+
+        // Calculate sovereignty score
+        let sovereignty_score = self.calculate_sovereignty_score(dependencies).await?;
+
         let summary = ComplianceSummary {
-            total_dependencies: dependencies.len() as u32,
-            compliant_dependencies: 0,     // TODO: Calculate
-            non_compliant_dependencies: 0, // TODO: Calculate
-            total_violations: 0,           // TODO: Calculate
-            critical_violations: 0,        // TODO: Calculate
-            sovereignty_score: 0.8,        // TODO: Calculate
+            total_dependencies,
+            compliant_dependencies,
+            non_compliant_dependencies,
+            total_violations,
+            critical_violations,
+            sovereignty_score,
         };
 
+        // Generate recommendations
+        let recommendations = self.generate_compliance_recommendations(dependencies, &detailed_findings).await?;
+
+        // Calculate cost analysis
+        let cost_analysis = self.calculate_cost_analysis(dependencies).await?;
+
+        // Generate sovereignty analysis
         let sovereignty_analyzer = super::sovereignty::SovereigntyAnalyzer;
         let sovereignty_analysis = sovereignty_analyzer.analyze_sovereignty(dependencies);
+
+        // Determine overall status
+        let overall_status = if critical_violations > 0 {
+            OverallComplianceStatus::NonCompliant {
+                severity: ViolationSeverity::Critical,
+            }
+        } else if non_compliant_dependencies > 0 {
+            OverallComplianceStatus::NonCompliant {
+                severity: ViolationSeverity::High,
+            }
+        } else if total_violations > 0 {
+            OverallComplianceStatus::Warning {
+                issues: detailed_findings.iter().take(5).map(|f| f.description.clone()).collect(),
+            }
+        } else {
+            OverallComplianceStatus::Compliant
+        };
 
         Ok(ComplianceReport {
             report_id,
             generated_at,
             report_period,
-            overall_status: OverallComplianceStatus::Compliant,
+            overall_status,
             summary,
-            detailed_findings: Vec::new(),
-            recommendations: Vec::new(),
-            cost_analysis: CostAnalysis {
-                total_cost: 0.0,
-                currency: "USD".to_string(),
-                cost_breakdown: Vec::new(),
-                cost_trends: Vec::new(),
-                optimization_opportunities: Vec::new(),
-            },
+            detailed_findings,
+            recommendations,
+            cost_analysis,
             sovereignty_analysis,
         })
+    }
+
+    /// Analyze dependency compliance
+    async fn analyze_dependency_compliance(&self, dependency: &ExternalDependency) -> BiomeResult<DependencyCompliance> {
+        // Check license compliance
+        let license_compliance = self.check_license_compliance(&dependency.licensing, &UsagePattern::default())?;
+        
+        // Check usage compliance
+        let usage_compliance = self.check_usage_compliance(&AccessRequirements::default(), &UsagePattern::default())?;
+        
+        // Check sovereignty compliance
+        let sovereignty_compliance = self.check_sovereignty_compliance(&dependency.sovereignty_impact)?;
+        
+        let compliant = matches!(license_compliance, LicenseCompliance::Compliant) &&
+                       matches!(usage_compliance, UsageCompliance::WithinLimits) &&
+                       matches!(sovereignty_compliance, SovereigntyCompliance::FullySovereign | SovereigntyCompliance::PartiallySovereign { .. });
+
+        Ok(DependencyCompliance {
+            compliant,
+            license_compliance,
+            usage_compliance,
+            sovereignty_compliance,
+        })
+    }
+
+    /// Check license compliance
+
+    /// Check usage compliance
+
+    /// Check sovereignty compliance
+
+    /// Check dependency violations
+    async fn check_dependency_violations(&self, dependency: &ExternalDependency) -> BiomeResult<Vec<ComplianceViolation>> {
+        let mut violations = Vec::new();
+
+        // Check for vendor lock-in
+        if dependency.sovereignty_impact.vendor_lock_risk.risk_level as u8 >= RiskLevel::High as u8 {
+            violations.push(ComplianceViolation {
+                violation_id: uuid::Uuid::new_v4().to_string(),
+                violation_type: ViolationType::VendorLock,
+                severity: match dependency.sovereignty_impact.vendor_lock_risk.risk_level {
+                    RiskLevel::Critical => ViolationSeverity::Critical,
+                    RiskLevel::High => ViolationSeverity::High,
+                    RiskLevel::Medium => ViolationSeverity::Medium,
+                    RiskLevel::Low => ViolationSeverity::Low,
+                },
+                title: format!("Optimize dependency"),
+                description: format!("High vendor lock-in risk detected for {}", dependency.name),
+                detected_at: chrono::Utc::now(),
+                resolution_required: true,
+                suggested_actions: vec![
+                    "Evaluate alternatives".to_string(),
+                    "Implement exit strategy".to_string(),
+                    "Negotiate better terms".to_string(),
+                ],
+            });
+        }
+
+        // Check for data sovereignty violations
+        if !dependency.sovereignty_impact.data_residency_requirements.is_empty() {
+            violations.push(ComplianceViolation {
+                violation_id: uuid::Uuid::new_v4().to_string(),
+                violation_type: ViolationType::DataSovereignty,
+                severity: ViolationSeverity::High,
+                title: format!("Optimize dependency"),
+                description: format!("Data residency requirements not met for {}", dependency.name),
+                detected_at: chrono::Utc::now(),
+                resolution_required: true,
+                suggested_actions: vec![
+                    "Review data residency requirements".to_string(),
+                    "Implement data localization".to_string(),
+                    "Use regional providers".to_string(),
+                ],
+            });
+        }
+
+        // Check for missing exit strategies
+        if dependency.sovereignty_impact.exit_strategy.migration_checklist.is_empty() {
+            violations.push(ComplianceViolation {
+                violation_id: uuid::Uuid::new_v4().to_string(),
+                violation_type: ViolationType::NoExitStrategy,
+                severity: ViolationSeverity::Medium,
+                title: format!("Optimize dependency"),
+                description: format!("No exit strategy defined for {}", dependency.name),
+                detected_at: chrono::Utc::now(),
+                resolution_required: false,
+                suggested_actions: vec![
+                    "Develop migration plan".to_string(),
+                    "Document exit procedures".to_string(),
+                    "Test migration process".to_string(),
+                ],
+            });
+        }
+
+        Ok(violations)
+    }
+
+    /// Calculate sovereignty score
+    async fn calculate_sovereignty_score(&self, dependencies: &[ExternalDependency]) -> BiomeResult<f64> {
+        if dependencies.is_empty() {
+            return Ok(1.0); // Perfect sovereignty with no dependencies
+        }
+
+        let mut total_score = 0.0;
+        let mut weight_sum = 0.0;
+
+        for dependency in dependencies {
+            let dependency_score = self.calculate_dependency_sovereignty_score(dependency);
+            let weight = self.calculate_dependency_weight(dependency);
+            
+            total_score += dependency_score * weight;
+            weight_sum += weight;
+        }
+
+        Ok(if weight_sum > 0.0 {
+            total_score / weight_sum
+        } else {
+            0.0
+        })
+    }
+
+    /// Calculate sovereignty score for a single dependency
+    fn calculate_dependency_sovereignty_score(&self, dependency: &ExternalDependency) -> f64 {
+        let mut score: f64 = 1.0;
+
+        // Penalize based on sovereignty impact
+        score *= match dependency.sovereignty_impact.impact_level {
+            SovereigntyImpactLevel::None => 1.0,
+            SovereigntyImpactLevel::Minimal => 0.9,
+            SovereigntyImpactLevel::Moderate => 0.7,
+            SovereigntyImpactLevel::High => 0.4,
+            SovereigntyImpactLevel::Critical => 0.1,
+        };
+
+        // Penalize based on vendor lock risk
+        score *= match dependency.sovereignty_impact.vendor_lock_risk.risk_level {
+            RiskLevel::Low => 0.95,
+            RiskLevel::Medium => 0.8,
+            RiskLevel::High => 0.5,
+            RiskLevel::Critical => 0.2,
+        };
+
+        // Bonus for having alternatives
+        if dependency.sovereignty_impact.alternatives_available {
+            score *= 1.1;
+        }
+
+        // Bonus for good exit strategy
+        if dependency.sovereignty_impact.exit_strategy.estimated_migration_time_weeks < 4 {
+            score *= 1.05;
+        }
+
+        score.min(1.0).max(0.0)
+    }
+
+    /// Calculate dependency weight for scoring
+    fn calculate_dependency_weight(&self, dependency: &ExternalDependency) -> f64 {
+        match dependency.dependency_type {
+            DependencyType::CloudProvider { .. } => 1.0,
+            DependencyType::Database { .. } => 0.8,
+            DependencyType::AiService { .. } => 0.6,
+            DependencyType::Monitoring { .. } => 0.4,
+            DependencyType::AuthProvider { .. } => 0.9,
+            _ => 0.5,
+        }
+    }
+
+    /// Convert violation type to finding type
+    fn violation_type_to_finding_type(&self, violation_type: &ViolationType) -> FindingType {
+        match violation_type {
+            ViolationType::DataSovereignty => FindingType::DataSovereignty,
+            ViolationType::VendorLock => FindingType::VendorLock,
+            ViolationType::ExcessiveDependencies => FindingType::ExcessiveDependencies,
+            ViolationType::UnencryptedTransmission => FindingType::UnencryptedTransmission,
+            ViolationType::NoExitStrategy => FindingType::NoExitStrategy,
+            ViolationType::CostLimitExceeded => FindingType::CostLimitExceeded,
+            ViolationType::GeographicViolation => FindingType::GeographicViolation,
+            ViolationType::AiPolicyViolation => FindingType::AiPolicyViolation,
+        }
+    }
+
+    /// Calculate violation impact
+    fn calculate_violation_impact(&self, violation_type: &ViolationType, severity: &ViolationSeverity) -> String {
+        let base_impact = match violation_type {
+            ViolationType::DataSovereignty => "Data sovereignty compromise",
+            ViolationType::VendorLock => "Vendor lock-in risk",
+            ViolationType::ExcessiveDependencies => "Increased complexity and risk",
+            ViolationType::UnencryptedTransmission => "Security vulnerability",
+            ViolationType::NoExitStrategy => "Migration difficulty",
+            ViolationType::CostLimitExceeded => "Budget overrun",
+            ViolationType::GeographicViolation => "Legal compliance risk",
+            ViolationType::AiPolicyViolation => "AI governance violation",
+        };
+
+        let severity_modifier = match severity {
+            ViolationSeverity::Critical => " - immediate action required",
+            ViolationSeverity::High => " - action required soon",
+            ViolationSeverity::Medium => " - monitor closely",
+            ViolationSeverity::Low => " - low priority",
+        };
+
+        format!("{}{}", base_impact, severity_modifier)
+    }
+
+    /// Generate compliance recommendations
+    async fn generate_compliance_recommendations(&self, dependencies: &[ExternalDependency], findings: &[DetailedFinding]) -> BiomeResult<Vec<ComplianceRecommendation>> {
+        let mut recommendations = Vec::new();
+
+        // Analyze patterns in findings
+        let mut violation_counts = std::collections::HashMap::new();
+        for finding in findings {
+            *violation_counts.entry(finding.finding_type.clone()).or_insert(0) += 1;
+        }
+
+        // Generate recommendations based on patterns
+        for (finding_type, count) in violation_counts {
+            if count >= 3 {
+                recommendations.push(ComplianceRecommendation {
+                    recommendation_id: uuid::Uuid::new_v4().to_string(),
+                    priority: RecommendationPriority::High,
+                    category: RecommendationCategory::Compliance,
+                    title: format!("Address recurring {} issues", finding_type.to_string()),
+                    description: format!("Multiple {} violations detected across {} dependencies", finding_type.to_string(), count),
+                    impact: "Reduces overall compliance risk".to_string(),
+                    effort: ImplementationEffort::Medium,
+                    actions: vec![
+                        "Review affected dependencies".to_string(),
+                        "Implement systematic fixes".to_string(),
+                        "Add monitoring".to_string(),
+                    ],
+                });
+            }
+        }
+
+        // Add sovereignty-specific recommendations
+        if dependencies.iter().any(|d| d.sovereignty_impact.impact_level as u8 >= SovereigntyImpactLevel::High as u8) {
+            recommendations.push(ComplianceRecommendation {
+                recommendation_id: uuid::Uuid::new_v4().to_string(),
+                priority: RecommendationPriority::High,
+                category: RecommendationCategory::Sovereignty,
+                title: "Reduce high-impact dependencies".to_string(),
+                description: "Multiple dependencies with high sovereignty impact detected".to_string(),
+                impact: "Improves data sovereignty and reduces vendor lock-in".to_string(),
+                effort: ImplementationEffort::High,
+                actions: vec![
+                    "Evaluate alternatives".to_string(),
+                    "Implement phased migration".to_string(),
+                    "Negotiate better terms".to_string(),
+                ],
+            });
+        }
+
+        Ok(recommendations)
+    }
+
+    /// Calculate cost analysis
+    async fn calculate_cost_analysis(&self, dependencies: &[ExternalDependency]) -> BiomeResult<CostAnalysis> {
+        let mut total_cost = 0.0f64;
+        let mut cost_breakdown = Vec::new();
+
+        for dependency in dependencies {
+            if let Some(commercial_terms) = &dependency.licensing.commercial_terms {
+                let monthly_cost = self.estimate_monthly_cost(dependency, commercial_terms);
+                total_cost += monthly_cost;
+                
+                cost_breakdown.push(CostBreakdown {
+                    title: format!("Optimize dependency"),
+                    cost: percentage_of_total,
+                    percentage_of_total: 0.0,
+                    cost_type: CostType::Licensing,
+                    
+                });
+            }
+        }
+
+        Ok(CostAnalysis {
+            total_cost,
+            
+            cost_breakdown,
+            cost_trends: vec![], // Would be populated with historical data
+            optimization_opportunities: self.identify_cost_optimizations(dependencies).await?,
+        })
+    }
+
+    /// Estimate monthly cost for a dependency
+    fn estimate_monthly_cost(&self, dependency: &ExternalDependency, commercial_terms: &CommercialTerms) -> f64 {
+        // Use base price from commercial terms
+        commercial_terms.base_price
+    }
+
+    /// Identify cost optimization opportunities
+    async fn identify_cost_optimizations(&self, dependencies: &[ExternalDependency]) -> BiomeResult<Vec<CostOptimization>> {
+        let mut optimizations = Vec::new();
+
+        // Look for expensive dependencies with alternatives
+        for dependency in dependencies {
+            if let Some(commercial_terms) = &dependency.licensing.commercial_terms {
+                if !dependency.alternatives.is_empty() {
+                    let monthly_cost = self.estimate_monthly_cost(dependency, commercial_terms);
+                    if monthly_cost > 100.0 {
+                        optimizations.push(CostOptimization {
+                            optimization_id: uuid::Uuid::new_v4().to_string(),
+                            title: format!("Optimize dependency"),
+                            
+                            potential_savings: monthly_cost * 0.3, // Estimate 30% savings
+                            description: format!("Evaluate alternatives to {} to reduce costs", dependency.name),
+                            implementation_effort: ImplementationEffort::Medium,
+                            risk_level: RiskLevel::Medium,
+                        });
+                    }
+                }
+            }
+        }
+
+        Ok(optimizations)
     }
 
     /// Log audit event
@@ -520,3 +893,25 @@ impl ComplianceEngine {
         self.audit_log.push(record);
     }
 }
+
+impl std::fmt::Display for FindingType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FindingType::Critical => write!(f, "critical"),
+            FindingType::High => write!(f, "high"),
+            FindingType::Medium => write!(f, "medium"),
+            FindingType::Low => write!(f, "low"),
+            FindingType::Info => write!(f, "info"),
+            FindingType::Other => write!(f, "other"),
+            FindingType::DataSovereignty => write!(f, "data_sovereignty"),
+            FindingType::VendorLock => write!(f, "vendor_lock"),
+            FindingType::ExcessiveDependencies => write!(f, "excessive_dependencies"),
+            FindingType::UnencryptedTransmission => write!(f, "unencrypted_transmission"),
+            FindingType::NoExitStrategy => write!(f, "no_exit_strategy"),
+            FindingType::CostLimitExceeded => write!(f, "cost_limit_exceeded"),
+            FindingType::GeographicViolation => write!(f, "geographic_violation"),
+            FindingType::AiPolicyViolation => write!(f, "ai_policy_violation"),
+        }
+    }
+}
+

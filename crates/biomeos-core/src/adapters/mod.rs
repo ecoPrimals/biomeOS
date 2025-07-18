@@ -8,7 +8,7 @@ pub mod protocol;
 pub mod trpc;
 pub mod universal;
 
-use crate::{BiomeError, BiomeResult, PrimalCapability, PrimalContext, PrimalHealth};
+use crate::{BiomeError, BiomeResult, primal_clients::CapabilityResponse, PrimalHealth};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

@@ -9,9 +9,9 @@ pub mod universal_adapter;
 
 /// Universal UI types for examples - minimal implementation
 pub mod universal_ui {
-    use std::collections::HashMap;
     use serde::{Deserialize, Serialize};
-    
+    use std::collections::HashMap;
+
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct UIFeatures {
         pub ai_assistant: bool,
@@ -23,7 +23,7 @@ pub mod universal_ui {
         pub custom_dashboards: bool,
         pub multi_primal_coordination: bool,
     }
-    
+
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct CustomPrimalConfig {
         pub name: String,
@@ -34,7 +34,7 @@ pub mod universal_ui {
         pub description: String,
         pub ui_config: PrimalUIConfig,
     }
-    
+
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct UniversalUIConfig {
         pub theme: String,
@@ -43,7 +43,7 @@ pub mod universal_ui {
         pub custom_primals: std::collections::HashMap<String, CustomPrimalConfig>,
         pub primal_endpoints: std::collections::HashMap<String, String>,
     }
-    
+
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct PrimalUIConfig {
         pub name: String,
@@ -55,7 +55,7 @@ pub mod universal_ui {
         pub custom_actions: Vec<ActionConfig>,
         pub metrics_config: MetricsConfig,
     }
-    
+
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct WidgetConfig {
         pub widget_type: String,
@@ -64,7 +64,7 @@ pub mod universal_ui {
         pub refresh_interval_secs: u64,
         pub display_config: HashMap<String, serde_json::Value>,
     }
-    
+
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct ActionConfig {
         pub action_id: String,
@@ -77,7 +77,7 @@ pub mod universal_ui {
         pub confirmation_required: bool,
         pub display_name: String,
     }
-    
+
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct ParameterConfig {
         pub name: String,
@@ -87,7 +87,7 @@ pub mod universal_ui {
         pub default_value: Option<serde_json::Value>,
         pub validation: Option<String>,
     }
-    
+
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct MetricsConfig {
         pub enabled: bool,
@@ -95,7 +95,7 @@ pub mod universal_ui {
         pub metrics_endpoint: String,
         pub default_time_range: String,
     }
-    
+
     impl Default for ActionConfig {
         fn default() -> Self {
             Self {
@@ -111,7 +111,7 @@ pub mod universal_ui {
             }
         }
     }
-    
+
     impl Default for MetricsConfig {
         fn default() -> Self {
             Self {
@@ -122,7 +122,7 @@ pub mod universal_ui {
             }
         }
     }
-    
+
     impl Default for UniversalUIConfig {
         fn default() -> Self {
             Self {
@@ -134,13 +134,13 @@ pub mod universal_ui {
             }
         }
     }
-    
+
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct UniversalUIManager {
         pub config: UniversalUIConfig,
         pub status: crate::SystemStatus,
     }
-    
+
     impl UniversalUIManager {
         pub fn new(config: UniversalUIConfig) -> Self {
             Self {
@@ -156,19 +156,22 @@ pub mod universal_ui {
                 },
             }
         }
-        
-        pub async fn handle_user_input(&self, _input: crate::UserInput) -> Result<crate::UIResponse, anyhow::Error> {
+
+        pub async fn handle_user_input(
+            &self,
+            _input: crate::UserInput,
+        ) -> Result<crate::UIResponse, anyhow::Error> {
             Ok(crate::UIResponse {
                 success: true,
                 message: "Input processed".to_string(),
                 data: None,
             })
         }
-        
+
         pub async fn get_system_status(&self) -> Result<crate::SystemStatus, anyhow::Error> {
             Ok(self.status.clone())
         }
-        
+
         pub async fn start(&self) -> Result<(), anyhow::Error> {
             // Mock implementation for examples
             Ok(())
@@ -200,8 +203,10 @@ mod tests {
     use super::*;
 
     #[test]
+    #[allow(clippy::const_is_empty)]
     fn test_version() {
         assert!(!VERSION.is_empty());
+        assert!(VERSION.contains('.'));  // Version should contain dots
     }
 
     #[test]

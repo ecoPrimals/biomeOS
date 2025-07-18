@@ -660,6 +660,40 @@ impl BiomeOSPrimalProvider {
             }
         }))
     }
+
+    /// Get dynamic port information
+    pub async fn get_dynamic_ports(&self) -> HashMap<String, DynamicPortInfo> {
+        self.dynamic_ports.read().await.clone()
+    }
+
+    /// Add dynamic port information
+    pub async fn add_dynamic_port(&self, service_id: String, port_info: DynamicPortInfo) {
+        let mut ports = self.dynamic_ports.write().await;
+        ports.insert(service_id, port_info);
+    }
+
+    /// Remove dynamic port information
+    pub async fn remove_dynamic_port(&self, service_id: &str) -> Option<DynamicPortInfo> {
+        let mut ports = self.dynamic_ports.write().await;
+        ports.remove(service_id)
+    }
+
+    /// Get port info for a specific service
+    pub async fn get_port_info(&self, service_id: &str) -> Option<DynamicPortInfo> {
+        let ports = self.dynamic_ports.read().await;
+        ports.get(service_id).cloned()
+    }
+
+    /// Update port info for a service
+    pub async fn update_port_info(&self, service_id: &str, port_info: DynamicPortInfo) -> bool {
+        let mut ports = self.dynamic_ports.write().await;
+        if ports.contains_key(service_id) {
+            ports.insert(service_id.to_string(), port_info);
+            true
+        } else {
+            false
+        }
+    }
 }
 
 /// Universal Primal Registry for biomeOS
@@ -762,4 +796,6 @@ impl BiomeOSPrimalRegistry {
             .cloned()
             .collect()
     }
+
+
 }

@@ -493,3 +493,10 @@ pub struct AiUsageSummary {
     pub active_requests: u32,
     pub limits: PersonalAiLimits,
 }
+
+impl Default for PersonalAiLimits {
+    fn default() -> Self {
+        Self::grandma_safe_defaults()
+    }
+}
+

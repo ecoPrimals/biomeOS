@@ -4,9 +4,9 @@
 
 use anyhow::Result;
 use biomeos::{
-    ActionConfig, CustomPrimalConfig, DiscoveredPrimal, MetricsConfig, 
-    PrimalUIConfig, SystemStatus, UIFeatures, UIMode, UIResponse,
-    UniversalUIConfig, UniversalUIManager, UserInput, WidgetConfig,
+    ActionConfig, CustomPrimalConfig, DiscoveredPrimal, MetricsConfig, PrimalUIConfig,
+    SystemStatus, UIFeatures, UIMode, UIResponse, UniversalUIConfig, UniversalUIManager, UserInput,
+    WidgetConfig,
 };
 use std::collections::HashMap;
 use std::time::Duration;

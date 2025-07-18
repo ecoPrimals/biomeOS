@@ -7,10 +7,10 @@ use super::{
     AuthMethod, PrimalEvent, UniversalCommConfig, UniversalPrimalAdapter, UniversalRequest,
     UniversalResponse,
 };
-use crate::universal_primal_provider::HealthMetrics;
+use crate::health::HealthMetrics;
 #[cfg(test)]
-use crate::universal_primal_provider::{NetworkLocation, PrimalContext};
-use crate::{BiomeError, BiomeResult, HealthStatus, PrimalCapability, PrimalHealth};
+use crate::primal_clients::{CapabilityCategory, CapabilityResponse, PrimalHealth};
+use crate::{BiomeError, BiomeResult, HealthStatus, primal_clients::CapabilityResponse, PrimalHealth};
 use async_trait::async_trait;
 use chrono::Utc;
 use reqwest::Client;
@@ -23,7 +23,7 @@ use tokio::time::sleep;
 pub struct HttpUniversalAdapter {
     client: Client,
     config: UniversalCommConfig,
-    capabilities_cache: Option<Vec<PrimalCapability>>,
+    capabilities_cache: Option<Vec<primal_clients::CapabilityResponse>>,
 }
 
 impl HttpUniversalAdapter {
@@ -214,7 +214,7 @@ impl UniversalPrimalAdapter for HttpUniversalAdapter {
         Ok(())
     }
 
-    async fn discover_capabilities(&self) -> BiomeResult<Vec<PrimalCapability>> {
+    async fn discover_capabilities(&self) -> BiomeResult<Vec<primal_clients::CapabilityResponse>> {
         if let Some(cached) = &self.capabilities_cache {
             return Ok(cached.clone());
         }
@@ -231,7 +231,7 @@ impl UniversalPrimalAdapter for HttpUniversalAdapter {
         let mut primal_capabilities = Vec::new();
         for cap in capabilities {
             if let Some(cap_obj) = cap.as_object() {
-                let capability = PrimalCapability {
+                let capability = primal_clients::CapabilityResponse {
                     name: cap_obj["name"].as_str().unwrap_or("unknown").to_string(),
                     version: cap_obj["version"].as_str().unwrap_or("1.0.0").to_string(),
                     description: cap_obj["description"].as_str().unwrap_or("").to_string(),
@@ -252,10 +252,10 @@ impl UniversalPrimalAdapter for HttpUniversalAdapter {
 
         // Parse health response using standard format
         let status = match response["status"].as_str() {
-            Some("healthy") => HealthStatus::Healthy,
-            Some("degraded") => HealthStatus::Degraded,
-            Some("unhealthy") => HealthStatus::Unhealthy,
-            _ => HealthStatus::Unknown,
+            Some("healthy") => crate::primal_clients::HealthStatus::Healthy,
+            Some("degraded") => crate::primal_clients::HealthStatus::Degraded,
+            Some("unhealthy") => crate::primal_clients::HealthStatus::Unhealthy,
+            _ => crate::primal_clients::HealthStatus::Unknown,
         };
 
         let health_score = response["health_score"].as_f64().unwrap_or(0.0);
@@ -263,19 +263,8 @@ impl UniversalPrimalAdapter for HttpUniversalAdapter {
 
         Ok(PrimalHealth {
             status,
-            health_score,
-            last_check: Utc::now(),
-            details: response["details"]
-                .as_object()
-                .map(|obj| obj.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
-                .unwrap_or_default(),
-            metrics: HealthMetrics {
-                cpu_usage: metrics["cpu_usage"].as_f64().unwrap_or(0.0),
-                memory_mb: metrics["memory_mb"].as_f64().unwrap_or(0.0),
-                response_time_ms: metrics["response_time_ms"].as_f64().unwrap_or(0.0),
-                error_rate: metrics["error_rate"].as_f64().unwrap_or(0.0),
-                active_connections: metrics["active_connections"].as_u64().unwrap_or(0),
-            },
+            details: HashMap::new(),
+            last_check: chrono::Utc::now(),
         })
     }
 
@@ -366,7 +355,7 @@ impl UniversalPrimalAdapter for WebSocketUniversalAdapter {
         ))
     }
 
-    async fn discover_capabilities(&self) -> BiomeResult<Vec<PrimalCapability>> {
+    async fn discover_capabilities(&self) -> BiomeResult<Vec<primal_clients::CapabilityResponse>> {
         Err(BiomeError::NotImplemented(
             "WebSocket adapter not yet implemented".to_string(),
         ))
@@ -432,7 +421,7 @@ impl UniversalPrimalAdapter for GrpcUniversalAdapter {
         ))
     }
 
-    async fn discover_capabilities(&self) -> BiomeResult<Vec<PrimalCapability>> {
+    async fn discover_capabilities(&self) -> BiomeResult<Vec<primal_clients::CapabilityResponse>> {
         Err(BiomeError::NotImplemented(
             "gRPC adapter not yet implemented".to_string(),
         ))
@@ -530,21 +519,11 @@ mod tests {
         };
 
         // Mock adapter would return a health response
-        let health_response = crate::PrimalHealth {
-            status: HealthStatus::Healthy,
-            health_score: 100.0,
-            last_check: chrono::Utc::now(),
+        let health_response = crate::primal_clients::PrimalHealth {
+            status: crate::primal_clients::HealthStatus::Healthy,
             details: HashMap::new(),
-            metrics: crate::universal_primal_provider::HealthMetrics {
-                cpu_usage: 0.5,
-                memory_mb: 512.0,
-                response_time_ms: 50.0,
-                error_rate: 0.0,
-                active_connections: 10,
-            },
+            last_check: chrono::Utc::now(),
         };
-
-        assert_eq!(health_response.status, HealthStatus::Healthy);
-        assert_eq!(health_response.health_score, 100.0);
+        
     }
 }

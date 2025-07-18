@@ -32,6 +32,10 @@ pub enum BiomeError {
     InvalidInput(String),
     /// Invalid response error
     InvalidResponse(String),
+    /// Invalid request error
+    InvalidRequest(String),
+    /// API error
+    ApiError(String),
     /// Resource not found
     NotFound(String),
     /// Feature not implemented
@@ -48,20 +52,19 @@ pub enum BiomeError {
     ResourceExhausted(String),
     /// Sovereignty violation
     SovereigntyViolation(String),
-    /// Vendor lock-in detected
-    VendorLock(String),
-    /// Primal not found
-    PrimalNotFound(String),
+    /// Missing capabilities
+    MissingCapabilities(String),
+    /// Not initialized
+    NotInitialized(String),
     /// YAML parsing error
     YamlError(serde_yaml::Error),
-    /// JSON parsing error
-    JsonError(serde_json::Error),
-    /// Generic error
-    Generic(String),
+    /// Other error
+    Other(String),
+    PrimalNotFound(String),
 }
 
 impl fmt::Display for BiomeError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             BiomeError::Config(msg) => write!(f, "Configuration error: {}", msg),
             BiomeError::ConfigError(msg) => write!(f, "Configuration error: {}", msg),
@@ -77,6 +80,8 @@ impl fmt::Display for BiomeError {
             BiomeError::ValidationError(msg) => write!(f, "Validation error: {}", msg),
             BiomeError::InvalidInput(msg) => write!(f, "Invalid input: {}", msg),
             BiomeError::InvalidResponse(msg) => write!(f, "Invalid response: {}", msg),
+            BiomeError::InvalidRequest(msg) => write!(f, "Invalid request: {}", msg),
+            BiomeError::ApiError(msg) => write!(f, "API error: {}", msg),
             BiomeError::NotFound(msg) => write!(f, "Not found: {}", msg),
             BiomeError::NotImplemented(msg) => write!(f, "Not implemented: {}", msg),
             BiomeError::Timeout(msg) => write!(f, "Timeout: {}", msg),
@@ -85,11 +90,11 @@ impl fmt::Display for BiomeError {
             BiomeError::ResourceError(msg) => write!(f, "Resource error: {}", msg),
             BiomeError::ResourceExhausted(msg) => write!(f, "Resource exhausted: {}", msg),
             BiomeError::SovereigntyViolation(msg) => write!(f, "Sovereignty violation: {}", msg),
-            BiomeError::VendorLock(msg) => write!(f, "Vendor lock detected: {}", msg),
-            BiomeError::PrimalNotFound(msg) => write!(f, "Primal not found: {}", msg),
+            BiomeError::MissingCapabilities(msg) => write!(f, "Missing capabilities: {}", msg),
+            BiomeError::NotInitialized(msg) => write!(f, "Not initialized: {}", msg),
             BiomeError::YamlError(err) => write!(f, "YAML error: {}", err),
-            BiomeError::JsonError(err) => write!(f, "JSON error: {}", err),
-            BiomeError::Generic(msg) => write!(f, "Error: {}", msg),
+            BiomeError::Other(msg) => write!(f, "Other error: {}", msg),
+            BiomeError::PrimalNotFound(primal) => write!(f, "Primal not found: {}", primal),
         }
     }
 }
@@ -108,11 +113,26 @@ impl From<serde_yaml::Error> for BiomeError {
     }
 }
 
+impl From<reqwest::Error> for BiomeError {
+    fn from(err: reqwest::Error) -> Self {
+        BiomeError::Network(err.to_string())
+    }
+}
+
 impl From<serde_json::Error> for BiomeError {
     fn from(err: serde_json::Error) -> Self {
-        BiomeError::JsonError(err)
+        BiomeError::Serialization(err.to_string())
+    }
+}
+
+impl From<tokio::time::error::Elapsed> for BiomeError {
+    fn from(err: tokio::time::error::Elapsed) -> Self {
+        BiomeError::Timeout(err.to_string())
     }
 }
 
 /// Result type for biomeOS operations
-pub type BiomeResult<T> = Result<T, BiomeError>;
+pub type BiomeResult<T> = std::result::Result<T, BiomeError>;
+
+/// Shorthand for BiomeResult
+pub type Result<T> = BiomeResult<T>;

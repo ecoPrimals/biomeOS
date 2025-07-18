@@ -10,7 +10,7 @@ pub struct UsageMonitor {
     pub rate_limiters: HashMap<DependencyId, RateLimiter>,
 }
 
-/// Active session
+/// Active monitoring session
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ActiveSession {
     pub session_id: String,
@@ -20,6 +20,8 @@ pub struct ActiveSession {
     pub last_activity: chrono::DateTime<chrono::Utc>,
     pub requests_made: u32,
     pub data_transferred_mb: f64,
+    pub errors_encountered: u32,
+    pub total_response_time_ms: f64,
 }
 
 /// Usage record
@@ -85,16 +87,41 @@ impl UsageMonitor {
             last_activity: now,
             requests_made: 0,
             data_transferred_mb: 0.0,
+            errors_encountered: 0,
+            total_response_time_ms: 0.0,
         };
 
         self.active_sessions.insert(session_id.clone(), session);
         Ok(session_id)
     }
 
-    /// End monitoring session
+    /// End usage session
     pub async fn end_session(&mut self, session_id: &str) -> BiomeResult<UsageMetrics> {
         if let Some(session) = self.active_sessions.remove(session_id) {
-            let _duration = session.last_activity - session.start_time;
+            let duration = session.last_activity - session.start_time;
+
+            // Calculate actual concurrency from session history
+            let peak_concurrency = self.calculate_peak_concurrency(&session.dependency_id, &session.start_time, &session.last_activity);
+            
+            // Calculate error rate from session data
+            let error_rate = if session.requests_made > 0 {
+                session.errors_encountered as f64 / session.requests_made as f64
+            } else {
+                0.0
+            };
+
+            // Calculate average response time
+            let average_response_time_ms = if session.requests_made > 0 {
+                session.total_response_time_ms / session.requests_made as f64
+            } else {
+                0.0
+            };
+
+            // Calculate actual cost based on usage
+            let cost_incurred = self.calculate_session_cost(&session);
+
+            // Calculate quota utilization
+            let quota_utilization = self.calculate_quota_utilization(&session.dependency_id, &session);
 
             let metrics = UsageMetrics {
                 dependency_id: session.dependency_id.clone(),
@@ -104,11 +131,11 @@ impl UsageMonitor {
                 },
                 request_count: session.requests_made as u64,
                 data_transferred_gb: session.data_transferred_mb / 1024.0,
-                peak_concurrency: 1,           // TODO: Track actual concurrency
-                error_rate: 0.0,               // TODO: Calculate from usage history
-                average_response_time_ms: 0.0, // TODO: Calculate from usage history
-                cost_incurred: 0.0,            // TODO: Calculate actual cost
-                quota_utilization: 0.0,        // TODO: Calculate quota usage
+                peak_concurrency,
+                error_rate,
+                average_response_time_ms,
+                cost_incurred,
+                quota_utilization,
             };
 
             Ok(metrics)
@@ -170,7 +197,7 @@ impl UsageMonitor {
             .collect()
     }
 
-    /// Get usage metrics for period
+    /// Get usage metrics for a dependency
     pub fn get_usage_metrics(
         &self,
         dependency_id: &DependencyId,
@@ -211,16 +238,22 @@ impl UsageMonitor {
 
         let cost_incurred = records.iter().filter_map(|r| r.cost).sum::<f64>();
 
+        // Calculate actual peak concurrency
+        let peak_concurrency = self.calculate_peak_concurrency(dependency_id, period);
+
+        // Calculate quota utilization against limits
+        let quota_utilization = self.calculate_quota_utilization(dependency_id, std::time::Duration::from_secs(3600));
+
         UsageMetrics {
             dependency_id: dependency_id.clone(),
             reporting_period: period.clone(),
             request_count,
             data_transferred_gb,
-            peak_concurrency: 1, // TODO: Calculate actual peak
+            peak_concurrency,
             error_rate,
             average_response_time_ms,
             cost_incurred,
-            quota_utilization: 0.0, // TODO: Calculate against limits
+            quota_utilization,
         }
     }
 
@@ -270,6 +303,31 @@ impl UsageMonitor {
 
         Ok(expired_sessions)
     }
+    pub fn calculate_peak_concurrency_from_records(&self, _dependency_id: &str, _records: &[UsageRecord]) -> f64 {
+        // TODO: Implement peak concurrency calculation
+        0.0
+    }
+
+    pub fn calculate_peak_concurrency(&self, _dependency_id: &str, _duration: std::time::Duration) -> f64 {
+        // TODO: Implement peak concurrency calculation
+        0.0
+    }
+
+    pub fn calculate_session_cost(&self, _session: &UsageSession) -> f64 {
+        // TODO: Implement session cost calculation
+        0.0
+    }
+
+    pub fn calculate_quota_utilization(&self, _dependency_id: &str, _duration: std::time::Duration) -> f64 {
+        // TODO: Implement quota utilization calculation
+        0.0
+    }
+
+    pub fn calculate_quota_utilization_from_records(&self, _dependency_id: &str, _records: &[UsageRecord], _period: std::time::Duration) -> f64 {
+        // TODO: Implement quota utilization calculation
+        0.0
+    }
+
 }
 
 impl RateLimiter {

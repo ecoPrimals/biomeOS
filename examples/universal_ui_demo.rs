@@ -7,10 +7,7 @@ use anyhow::Result;
 use std::collections::HashMap;
 use tokio::time::{sleep, Duration};
 
-use biomeos::{
-    AiConfig, UIConfig, UIFeatures, UIMode,
-    BiomeOSUI,
-};
+use biomeos::{AiConfig, BiomeOSUI, UIConfig, UIFeatures, UIMode};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -111,10 +108,7 @@ async fn demo_ecosystem_discovery(ui: &BiomeOSUI) -> Result<()> {
         Ok(primals) => {
             println!("✅ Found {} Primals in the ecosystem:", primals.len());
             for primal in &primals {
-                println!(
-                    "  • {} - Active",
-                    primal
-                );
+                println!("  • {} - Active", primal);
             }
         }
         Err(e) => {
@@ -129,10 +123,18 @@ async fn demo_ecosystem_discovery(ui: &BiomeOSUI) -> Result<()> {
     match ui.api_client.as_ref().unwrap().get_ecosystem_status().await {
         Ok(status) => {
             println!("✅ Ecosystem Status:");
-            println!("   Overall Health: {}", if status.healthy { "Healthy" } else { "Degraded" });
+            println!(
+                "   Overall Health: {}",
+                if status.healthy {
+                    "Healthy"
+                } else {
+                    "Degraded"
+                }
+            );
             println!(
                 "   Primals: {}/{} healthy",
-                status.primals.len(), status.primals.len()
+                status.primals.len(),
+                status.primals.len()
             );
         }
         Err(e) => {

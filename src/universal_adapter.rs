@@ -23,8 +23,8 @@ use biomeos_core::{
         TeamWorkspaceConfig,
     },
     BiomeError, BiomeOSInstanceConfig, BiomeOSPrimalProvider, BiomeOSPrimalRegistry, BiomeResult,
-    DynamicPortInfo, NetworkLocation, PrimalCapability, PrimalContext, PrimalHealth,
-    PrimalRequest, PrimalResponse, Priority, RequestType, SecurityLevel,
+    DynamicPortInfo, NetworkLocation, PrimalCapability, PrimalContext, PrimalHealth, PrimalProvider, PrimalRequest,
+    PrimalResponse, Priority, RequestType, SecurityLevel,
 };
 
 /// Enhanced Universal Adapter for biomeOS (Songbird-compatible)
@@ -509,6 +509,42 @@ impl BiomeOSUniversalAdapter {
     }
 }
 
+impl BiomeOSUniversalAdapter {
+    /// Get biomeOS provider for external use
+    pub fn get_biomeos_provider(&self) -> Arc<BiomeOSPrimalProvider> {
+        self.biomeos_provider.clone()
+    }
+
+    /// Add context routing entry
+    pub async fn add_context_route(&self, context: String, targets: Vec<String>) {
+        let mut routing = self.context_routing.write().await;
+        routing.insert(context, targets);
+    }
+
+    /// Get context routes
+    pub async fn get_context_routes(&self) -> HashMap<String, Vec<String>> {
+        self.context_routing.read().await.clone()
+    }
+
+    /// Use biomeOS provider to handle requests
+    pub async fn handle_with_biomeos_provider(&self, request: PrimalRequest) -> BiomeResult<PrimalResponse> {
+        // Use biomeos_provider to handle specific requests
+        let provider = &self.biomeos_provider;
+        provider.handle_primal_request(request).await
+    }
+
+    /// Route context-aware requests  
+    pub async fn route_context_request(&self, context: &str, _request: PrimalRequest) -> BiomeResult<Vec<String>> {
+        // Use context_routing to determine appropriate targets
+        let routing = self.context_routing.read().await;
+        if let Some(targets) = routing.get(context) {
+            Ok(targets.clone())
+        } else {
+            Ok(vec!["default".to_string()])
+        }
+    }
+}
+
 /// Discovered primal information
 #[derive(Debug, Clone)]
 pub struct DiscoveredPrimal {
@@ -626,4 +662,6 @@ impl UniversalCoordination for BiomeOSUniversalAdapter {
         // Implementation would go here
         Ok(())
     }
+
+
 }

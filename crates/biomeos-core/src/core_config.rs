@@ -3,7 +3,7 @@
 //! This module contains the fundamental configuration structures for biomeOS,
 //! including global settings, network configuration, and telemetry settings.
 
-use crate::{PrimalType, SecurityConfig, StorageConfig};
+use crate::{PrimalType, security::SecurityConfig, storage::StorageConfig};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 

@@ -4,8 +4,17 @@
 //! including crypto locks, sovereignty settings, and provider configurations.
 
 use crate::{
-    AiPersonalityConfig, BiomeSpec, CloudProviderType, ComplianceLevel, ComputeProviderType,
-    CryptoProvider, DeploymentConfig, MycorrhizaConfig, OrchestratorType, PersonalAiLimits,
+    biome::BiomeSpec,
+    universal::{
+        energy_flow::{AiPersonalityConfig, MycorrhizaConfig},
+        platform_detection::DeploymentConfig,
+    },
+    locks::ai_cat_door::PersonalAiLimits,
+    cloud::CloudProviderType,
+    compute::ComputeProviderType,
+    crypto::CryptoProvider,
+    locks::ComplianceLevel,
+    orchestration::OrchestratorType,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -64,30 +73,36 @@ pub struct CryptoLockConfig {
 /// AI cat door configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AiCatDoorConfig {
-    /// Enable AI cat door for basic users
+    /// Enable AI cat door
     pub enabled: bool,
 
-    /// Allowed AI services for personal use
-    pub allowed_services: Vec<String>,
+    /// Monthly budget limit in USD
+    pub monthly_budget_usd: f64,
 
-    /// Usage limits for grandma-safe operation
-    pub usage_limits: PersonalAiLimits,
+    /// Request limit per month
+    pub monthly_request_limit: u32,
 
-    /// Cost limits to prevent surprise bills
-    pub cost_protection: CostProtectionConfig,
+    /// Allowed AI models
+    pub allowed_models: Vec<String>,
+
+    /// Auto-approval for requests under threshold
+    pub auto_approval_threshold_usd: f64,
+
+    /// Notification settings
+    pub notifications: AiNotificationConfig,
 }
 
-/// Cost protection for AI cat door
+/// AI notification configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CostProtectionConfig {
-    /// Maximum monthly cost in USD
-    pub max_monthly_cost: f64,
+pub struct AiNotificationConfig {
+    /// Email notifications
+    pub email_enabled: bool,
 
-    /// Alert thresholds
-    pub alert_thresholds: Vec<f64>,
+    /// SMS notifications
+    pub sms_enabled: bool,
 
-    /// Auto-disable when limit reached
-    pub auto_disable_on_limit: bool,
+    /// Budget threshold for notifications (percentage)
+    pub budget_threshold: f64,
 }
 
 /// Sovereign key configuration
@@ -96,285 +111,268 @@ pub struct SovereignKeyConfig {
     /// Key identifier
     pub key_id: String,
 
-    /// Grantee information
-    pub grantee: String,
+    /// Key type
+    pub key_type: String,
 
-    /// Access level granted
-    pub access_level: String,
+    /// Key material (encrypted)
+    pub key_material: String,
 
-    /// Dependencies this key unlocks
-    pub dependencies: Vec<String>,
-
-    /// Key validity period
-    pub validity_months: u32,
+    /// Key usage permissions
+    pub permissions: Vec<String>,
 }
 
-/// Licensing configuration (sovereignty-respecting)
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+/// Licensing configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LicensingConfig {
-    /// Personal use terms (always free and sovereign)
-    pub personal_use: PersonalLicenseConfig,
+    /// License type
+    pub license_type: LicenseType,
 
-    /// Commercial use terms (licensing OR partnership alternative)
-    pub commercial_use: CommercialLicenseConfig,
+    /// Commercial license terms
+    pub commercial_terms: Option<CommercialLicenseConfig>,
 
-    /// Voluntary partnership configuration (alternative to licensing)
-    pub partnership: PartnershipConfig,
+    /// Personal license terms
+    pub personal_terms: Option<PersonalLicenseConfig>,
+}
+
+/// License type
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum LicenseType {
+    Personal,
+    Commercial,
+    Enterprise,
+}
+
+/// Commercial license configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CommercialLicenseConfig {
+    /// Commercial model
+    pub model: CommercialModel,
+
+    /// Cost multipliers
+    pub cost_multipliers: BusinessCostMultipliers,
+
+    /// Partnership configuration
+    pub partnerships: Vec<PartnershipConfig>,
 }
 
 /// Personal license configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PersonalLicenseConfig {
-    /// AI cat door enabled
-    pub ai_cat_door_enabled: bool,
+    /// AI limits
+    pub ai_limits: PersonalAiLimits,
 
-    /// Rate limits for personal use
-    pub rate_limits: Vec<String>,
-
-    /// Data limits for personal use
-    pub data_limits: Vec<String>,
-
-    /// Attribution requirements
-    pub attribution_required: bool,
+    /// Cost protection
+    pub cost_protection: CostProtectionConfig,
 }
 
-/// Commercial usage configuration (licensing OR partnership)
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CommercialLicenseConfig {
-    /// Commercial model: Licensing, Partnership, or Both
-    pub commercial_model: CommercialModel,
-
-    /// Pricing tiers for licensing model
-    pub pricing_tiers: Vec<String>,
-
-    /// Enterprise features available
-    pub enterprise_features: Vec<String>,
-
-    /// Support included with licensing
-    pub support_included: bool,
-
-    /// Partnership alternative benefits
-    pub partnership_benefits: Vec<String>,
-}
-
-/// Commercial models available
+/// Commercial model
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum CommercialModel {
-    /// Traditional licensing only
-    LicensingOnly,
-    /// Partnership access via genetic beardog key
-    PartnershipAccess,
-    /// User choice: licensing OR partnership access
-    UserChoice,
-    /// Fully open (no commercial restrictions)
-    FullyOpen,
+    PayPerUse,
+    Monthly,
+    Annual,
+    Enterprise,
 }
 
-/// Partnership access configuration (sovereignty-first)
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PartnershipConfig {
-    /// Generation 1: Encrypted endpoint with genetic beardog key
-    pub gen1_endpoint: Option<String>,
-
-    /// Generation 2: Self-sustaining rhizoCrypt (future)
-    pub gen2_rhizo_enabled: bool,
-
-    /// Access tier priority: Sovereign > Humanity > Companies > Governments
-    pub access_priority: AccessPriority,
-
-    /// Inverse scale model for companies (bigger pays more)
-    pub inverse_scaling: InverseScaleConfig,
-
-    /// Partnership benefits unlocked
-    pub partnership_benefits: Vec<String>,
-}
-
-/// Access priority order (sovereignty-first)
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum AccessPriority {
-    /// Sovereign users (highest priority)
-    Sovereign,
-    /// Humanity/individuals (second priority)  
-    Humanity,
-    /// Companies (third priority, inverse scaling)
-    Companies,
-    /// Governments (lowest priority)
-    Governments,
-}
-
-/// Inverse scale configuration (bigger entities pay more)
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InverseScaleConfig {
-    /// Enable inverse scaling for burden sharing
-    pub enabled: bool,
-
-    /// Small business threshold (employees/revenue)
-    pub small_business_threshold: BusinessThreshold,
-
-    /// Enterprise threshold (Amazon-scale entities)
-    pub enterprise_threshold: BusinessThreshold,
-
-    /// Cost multipliers by business size
-    pub cost_multipliers: BusinessCostMultipliers,
-
-    /// Good faith model for Gen 1
-    pub good_faith_model: bool,
-}
-
-/// Business size thresholds
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BusinessThreshold {
-    pub max_employees: Option<u32>,
-    pub max_annual_revenue_usd: Option<u64>,
-    pub max_market_cap_usd: Option<u64>,
-}
-
-/// Cost multipliers for burden sharing
+/// Business cost multipliers
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BusinessCostMultipliers {
-    /// Small business: cheap access
-    pub small_business: f64, // e.g., 0.1x (very cheap)
+    /// Small business multiplier
+    pub small_business: f64,
 
-    /// Medium business: standard rate
-    pub medium_business: f64, // e.g., 1.0x (baseline)
+    /// Enterprise multiplier
+    pub enterprise: f64,
 
-    /// Large enterprise: carries the weight
-    pub large_enterprise: f64, // e.g., 10.0x (Amazon pays more)
+    /// Mega corporation multiplier
+    pub mega_corp: f64,
 
-    /// Mega corp: maximum burden sharing
-    pub mega_corp: f64, // e.g., 100.0x (carry the weight)
+    /// Business thresholds
+    pub thresholds: BusinessThreshold,
 }
 
-/// Genetic beardog key configuration
+/// Business threshold
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GeneticBeardogKey {
-    /// Key derivation from original beardog key
-    pub parent_key_fingerprint: String,
+pub struct BusinessThreshold {
+    /// Revenue threshold for small business
+    pub small_business_revenue: f64,
 
-    /// Genetic lineage for access verification
-    pub genetic_lineage: Vec<String>,
+    /// Revenue threshold for enterprise
+    pub enterprise_revenue: f64,
 
-    /// Access level granted by this key
-    pub access_level: BeardogAccessLevel,
-
-    /// Encrypted endpoint for Gen 1 access
-    pub encrypted_endpoint: Option<String>,
-
-    /// Key validity period
-    pub valid_until: Option<chrono::DateTime<chrono::Utc>>,
+    /// Revenue threshold for mega corp
+    pub mega_corp_revenue: f64,
 }
 
-/// Beardog access levels
+/// Partnership configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PartnershipConfig {
+    /// Partner name
+    pub partner_name: String,
+
+    /// Access priority
+    pub access_priority: AccessPriority,
+
+    /// BearDog access level
+    pub beardog_access: BeardogAccessLevel,
+
+    /// Genetic BearDog key
+    pub genetic_key: Option<GeneticBeardogKey>,
+}
+
+/// Access priority
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum AccessPriority {
+    Low,
+    Medium,
+    High,
+    Critical,
+}
+
+/// BearDog access level
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum BeardogAccessLevel {
-    /// Basic power user access
-    PowerUser,
-
-    /// Small business access (cheap)
-    SmallBusiness,
-
-    /// Medium business access (standard)
-    MediumBusiness,
-
-    /// Enterprise access (expensive, carries weight)
+    Basic,
+    Standard,
+    Premium,
     Enterprise,
+}
 
-    /// Mega corp access (maximum burden sharing)
-    MegaCorp,
+/// Genetic BearDog key
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GeneticBeardogKey {
+    /// Key sequence
+    pub sequence: String,
 
-    /// Research/humanitarian access
-    Research,
+    /// Key generation
+    pub generation: u32,
 
-    /// Government access (lowest priority)
-    Government,
+    /// Key fitness
+    pub fitness: f64,
+}
+
+/// Cost protection configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CostProtectionConfig {
+    /// Inverse scale configuration
+    pub inverse_scale: InverseScaleConfig,
+
+    /// Maximum monthly cost
+    pub max_monthly_cost: f64,
+
+    /// Warning threshold
+    pub warning_threshold: f64,
+}
+
+/// Inverse scale configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InverseScaleConfig {
+    /// Enable inverse scaling
+    pub enabled: bool,
+
+    /// Scale factor
+    pub scale_factor: f64,
+
+    /// Minimum cost
+    pub min_cost: f64,
+}
+
+/// Sovereignty level
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum SovereigntyLevel {
+    /// Closed system - completely sovereign
+    Closed,
+
+    /// Private open - trusted partners only
+    PrivateOpen,
+
+    /// Commercial open - pay-to-play
+    CommercialOpen,
+
+    /// Public open - open to all
+    PublicOpen,
 }
 
 /// Universal provider configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UniversalProviderConfig {
-    /// Container runtime providers
-    pub container_providers: Vec<ContainerProviderConfig>,
+    /// Cloud provider configurations
+    pub cloud: Vec<CloudProviderConfig>,
 
-    /// Cloud providers
-    pub cloud_providers: Vec<CloudProviderConfig>,
+    /// Compute provider configurations
+    pub compute: Vec<ComputeProviderConfig>,
 
-    /// Compute providers
-    pub compute_providers: Vec<ComputeProviderConfig>,
+    /// Storage provider configurations
+    pub storage: Vec<StorageProviderConfig>,
 
-    /// Orchestration providers
-    pub orchestration_providers: Vec<OrchestrationProviderConfig>,
+    /// Orchestration provider configurations
+    pub orchestration: Vec<OrchestrationProviderConfig>,
 
-    /// Crypto providers
-    pub crypto_providers: Vec<CryptoProviderConfig>,
-}
+    /// Crypto provider configurations
+    pub crypto: Vec<CryptoProviderConfig>,
 
-/// Container provider configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ContainerProviderConfig {
-    pub name: String,
-    pub provider_type: String,
-    pub enabled: bool,
-    pub priority: u32,
-    pub config: HashMap<String, String>,
+    /// Container provider configurations
+    pub container: Vec<ContainerProviderConfig>,
 }
 
 /// Cloud provider configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CloudProviderConfig {
-    pub name: String,
+    /// Provider type
     pub provider_type: CloudProviderType,
-    pub enabled: bool,
-    pub sovereignty_compliant: bool,
-    pub credentials: Option<String>,
-    pub regions: Vec<String>,
+
+    /// Provider configuration
+    pub config: HashMap<String, String>,
 }
 
 /// Compute provider configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ComputeProviderConfig {
-    pub name: String,
+    /// Provider type
     pub provider_type: ComputeProviderType,
-    pub enabled: bool,
-    pub sovereignty_impact: String,
-    pub device_preferences: Vec<String>,
+
+    /// Provider configuration
+    pub config: HashMap<String, String>,
+}
+
+/// Storage provider configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StorageProviderConfig {
+    /// Provider type
+    pub provider_type: String,
+
+    /// Provider configuration
+    pub config: HashMap<String, String>,
 }
 
 /// Orchestration provider configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OrchestrationProviderConfig {
-    pub name: String,
+    /// Orchestrator type
     pub orchestrator_type: OrchestratorType,
-    pub enabled: bool,
-    pub self_hosted: bool,
+
+    /// Provider configuration
     pub config: HashMap<String, String>,
 }
 
 /// Crypto provider configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CryptoProviderConfig {
-    pub name: String,
+    /// Provider type
     pub provider_type: CryptoProvider,
-    pub enabled: bool,
-    pub quantum_resistant: bool,
-    pub fallback_priority: u32,
+
+    /// Provider configuration
+    pub config: HashMap<String, String>,
 }
 
-/// Sovereignty levels
+/// Container provider configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum SovereigntyLevel {
-    /// Maximum sovereignty - air-gapped, zero external dependencies
-    Maximum,
-    /// High sovereignty - minimal external dependencies, all crypto-locked
-    High,
-    /// Medium sovereignty - some external dependencies with exit strategies
-    Medium,
-    /// Low sovereignty - standard external dependencies allowed
-    Low,
-    /// Minimal sovereignty - any external dependencies allowed
-    Minimal,
-}
+pub struct ContainerProviderConfig {
+    /// Provider type
+    pub provider_type: String,
 
-// Default implementations for grandma-safe operation
+    /// Provider configuration
+    pub config: HashMap<String, String>,
+}
 
 impl Default for UniversalPlatformConfig {
     fn default() -> Self {
@@ -382,7 +380,7 @@ impl Default for UniversalPlatformConfig {
             mycorrhiza: MycorrhizaConfig::default(),
             deployment: DeploymentConfig::default(),
             ai_assistant: AiPersonalityConfig::default(),
-            sovereignty_level: SovereigntyLevel::Medium,
+            sovereignty_level: SovereigntyLevel::Closed,
         }
     }
 }
@@ -390,16 +388,10 @@ impl Default for UniversalPlatformConfig {
 impl Default for CryptoLockConfig {
     fn default() -> Self {
         Self {
-            enabled: true, // Crypto locks enabled by default
+            enabled: true,
             ai_cat_door: AiCatDoorConfig::default(),
-            sovereign_keys: vec![SovereignKeyConfig {
-                key_id: "default-sovereign-key".to_string(),
-                grantee: "individual-user".to_string(),
-                access_level: "personal".to_string(),
-                dependencies: vec!["ai-services".to_string()],
-                validity_months: 12,
-            }],
-            compliance_level: ComplianceLevel::Personal,
+            sovereign_keys: Vec::new(),
+            compliance_level: ComplianceLevel::High,
             licensing: LicensingConfig::default(),
         }
     }
@@ -408,13 +400,40 @@ impl Default for CryptoLockConfig {
 impl Default for AiCatDoorConfig {
     fn default() -> Self {
         Self {
-            enabled: true, // AI cat door enabled for grandma-safe operation
-            allowed_services: vec![
-                "openai".to_string(),
-                "anthropic".to_string(),
-                "local-llama".to_string(),
-            ],
-            usage_limits: PersonalAiLimits::grandma_safe_defaults(),
+            enabled: false,
+            monthly_budget_usd: 50.0,
+            monthly_request_limit: 1000,
+            allowed_models: vec!["gpt-3.5-turbo".to_string()],
+            auto_approval_threshold_usd: 5.0,
+            notifications: AiNotificationConfig::default(),
+        }
+    }
+}
+
+impl Default for AiNotificationConfig {
+    fn default() -> Self {
+        Self {
+            email_enabled: true,
+            sms_enabled: false,
+            budget_threshold: 0.8,
+        }
+    }
+}
+
+impl Default for LicensingConfig {
+    fn default() -> Self {
+        Self {
+            license_type: LicenseType::Personal,
+            commercial_terms: None,
+            personal_terms: Some(PersonalLicenseConfig::default()),
+        }
+    }
+}
+
+impl Default for PersonalLicenseConfig {
+    fn default() -> Self {
+        Self {
+            ai_limits: PersonalAiLimits::default(),
             cost_protection: CostProtectionConfig::default(),
         }
     }
@@ -423,118 +442,9 @@ impl Default for AiCatDoorConfig {
 impl Default for CostProtectionConfig {
     fn default() -> Self {
         Self {
-            max_monthly_cost: 20.0,                   // $20/month limit for grandma safety
-            alert_thresholds: vec![10.0, 15.0, 18.0], // Alert at $10, $15, $18
-            auto_disable_on_limit: true,              // Auto-disable to prevent overage
-        }
-    }
-}
-
-impl Default for PersonalLicenseConfig {
-    fn default() -> Self {
-        Self {
-            ai_cat_door_enabled: true,
-            rate_limits: vec!["100 requests/hour".to_string()],
-            data_limits: vec!["1GB/month".to_string()],
-            attribution_required: false,
-        }
-    }
-}
-
-impl Default for CommercialLicenseConfig {
-    fn default() -> Self {
-        Self {
-            commercial_model: CommercialModel::UserChoice, // Let users choose sovereignty
-            pricing_tiers: vec![
-                "Startup".to_string(),
-                "Business".to_string(),
-                "Enterprise".to_string(),
-            ],
-            enterprise_features: vec![
-                "Priority Support".to_string(),
-                "Custom Integrations".to_string(),
-            ],
-            support_included: false,
-            partnership_benefits: vec![
-                "Development Influence".to_string(),
-                "Early Access Features".to_string(),
-                "Direct Developer Support".to_string(),
-                "Sovereign Partnership Status".to_string(),
-            ],
-        }
-    }
-}
-
-impl Default for PartnershipConfig {
-    fn default() -> Self {
-        Self {
-            gen1_endpoint: None, // User provides endpoint for genetic beardog key access
-            gen2_rhizo_enabled: false, // Future rhizoCrypt integration
-            access_priority: AccessPriority::Humanity, // Default to humanity priority
-            inverse_scaling: InverseScaleConfig::default(), // Burden sharing enabled
-            partnership_benefits: vec![
-                "Genetic beardog key access".to_string(),
-                "Priority support for sovereignty".to_string(),
-                "Direct development influence".to_string(),
-                "Good faith partnership model".to_string(),
-            ],
-        }
-    }
-}
-
-impl Default for UniversalProviderConfig {
-    fn default() -> Self {
-        Self {
-            container_providers: vec![
-                ContainerProviderConfig {
-                    name: "podman".to_string(),
-                    provider_type: "podman".to_string(),
-                    enabled: true,
-                    priority: 1,
-                    config: HashMap::new(),
-                },
-                ContainerProviderConfig {
-                    name: "docker".to_string(),
-                    provider_type: "docker".to_string(),
-                    enabled: true,
-                    priority: 2,
-                    config: HashMap::new(),
-                },
-            ],
-            cloud_providers: vec![CloudProviderConfig {
-                name: "local".to_string(),
-                provider_type: CloudProviderType::SelfHosted,
-                enabled: true,
-                sovereignty_compliant: true,
-                credentials: None,
-                regions: vec!["local".to_string()],
-            }],
-            compute_providers: vec![ComputeProviderConfig {
-                name: "cpu".to_string(),
-                provider_type: ComputeProviderType::Cpu {
-                    architecture: "x86_64".to_string(),
-                    instruction_sets: vec!["avx2".to_string()],
-                },
-                enabled: true,
-                sovereignty_impact: "none".to_string(),
-                device_preferences: vec!["cpu".to_string()],
-            }],
-            orchestration_providers: vec![OrchestrationProviderConfig {
-                name: "none".to_string(),
-                orchestrator_type: OrchestratorType::None,
-                enabled: true,
-                self_hosted: true,
-                config: HashMap::new(),
-            }],
-            crypto_providers: vec![CryptoProviderConfig {
-                name: "rustls".to_string(),
-                provider_type: CryptoProvider::Rustls {
-                    version: "0.21".to_string(),
-                },
-                enabled: true,
-                quantum_resistant: false,
-                fallback_priority: 1,
-            }],
+            inverse_scale: InverseScaleConfig::default(),
+            max_monthly_cost: 100.0,
+            warning_threshold: 80.0,
         }
     }
 }
@@ -542,36 +452,25 @@ impl Default for UniversalProviderConfig {
 impl Default for InverseScaleConfig {
     fn default() -> Self {
         Self {
-            enabled: true, // Burden sharing always enabled
-            small_business_threshold: BusinessThreshold {
-                max_employees: Some(50),
-                max_annual_revenue_usd: Some(1_000_000), // $1M annual revenue
-                max_market_cap_usd: None,
-            },
-            enterprise_threshold: BusinessThreshold {
-                max_employees: Some(10_000),
-                max_annual_revenue_usd: Some(1_000_000_000), // $1B annual revenue
-                max_market_cap_usd: Some(100_000_000_000),   // $100B market cap
-            },
-            cost_multipliers: BusinessCostMultipliers {
-                small_business: 0.1,    // 10x cheaper (Amazon subsidizes)
-                medium_business: 1.0,   // Baseline rate
-                large_enterprise: 10.0, // 10x more expensive
-                mega_corp: 100.0,       // 100x more (Amazon carries the weight)
-            },
-            good_faith_model: true, // Gen 1 operates on good faith
+            enabled: true,
+            scale_factor: 0.1,
+            min_cost: 0.01,
         }
     }
 }
 
-impl Default for GeneticBeardogKey {
+impl Default for UniversalProviderConfig {
     fn default() -> Self {
         Self {
-            parent_key_fingerprint: "genesis-key-fingerprint".to_string(),
-            genetic_lineage: vec!["genesis".to_string(), "first-generation".to_string()],
-            access_level: BeardogAccessLevel::PowerUser,
-            encrypted_endpoint: None,
-            valid_until: None,
+            cloud: Vec::new(),
+            compute: Vec::new(),
+            storage: Vec::new(),
+            orchestration: vec![OrchestrationProviderConfig {
+                orchestrator_type: OrchestratorType::None,
+                config: HashMap::new(),
+            }],
+            crypto: Vec::new(),
+            container: Vec::new(),
         }
     }
 }

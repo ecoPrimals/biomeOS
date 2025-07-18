@@ -4,12 +4,8 @@
 //! including standard primals, custom primals, and community-developed primals.
 
 use anyhow::Result;
-use biomeos::{
-    UIFeatures, UIMode,
-};
-use biomeos::universal_ui::{
-    UniversalUIConfig, UniversalUIManager,
-};
+use biomeos::universal_ui::{UniversalUIConfig, UniversalUIManager};
+use biomeos::{UIFeatures, UIMode};
 use std::collections::HashMap;
 use std::time::Duration;
 use tokio::time::sleep;
@@ -147,7 +143,9 @@ fn add_custom_primal_configs(config: &mut UniversalUIConfig) {
                     display_name: "Start Training".to_string(),
                     api_endpoint: "/api/v1/training/start".to_string(),
                     method: "POST".to_string(),
-                    confirmation_message: Some("Are you sure you want to start training?".to_string()),
+                    confirmation_message: Some(
+                        "Are you sure you want to start training?".to_string(),
+                    ),
                     confirmation_required: true,
                     parameters: vec![
                         ParameterConfig {
@@ -219,7 +217,9 @@ fn add_custom_primal_configs(config: &mut UniversalUIConfig) {
                     display_name: "Create Backup".to_string(),
                     api_endpoint: "/api/v1/backup/create".to_string(),
                     method: "POST".to_string(),
-                    confirmation_message: Some("Are you sure you want to create a backup?".to_string()),
+                    confirmation_message: Some(
+                        "Are you sure you want to create a backup?".to_string(),
+                    ),
                     confirmation_required: true,
                     parameters: vec![ParameterConfig {
                         name: "volume_id".to_string(),
@@ -278,7 +278,9 @@ fn add_custom_primal_configs(config: &mut UniversalUIConfig) {
                     display_name: "Submit Job".to_string(),
                     api_endpoint: "/api/v1/jobs/submit".to_string(),
                     method: "POST".to_string(),
-                    confirmation_message: Some("Are you sure you want to submit this job?".to_string()),
+                    confirmation_message: Some(
+                        "Are you sure you want to submit this job?".to_string(),
+                    ),
                     confirmation_required: true,
                     parameters: vec![
                         ParameterConfig {

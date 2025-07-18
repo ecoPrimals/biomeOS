@@ -4,84 +4,111 @@ use super::traits::*;
 use super::types::*;
 use super::validation::*;
 use crate::BiomeResult;
+use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
+use tokio::sync::RwLock;
 
-/// API contract enforcement middleware
+/// API contract middleware for request/response processing
 pub struct ApiContractMiddleware {
-    /// Validator
-    validator: ApiContractValidator,
+    /// Validator instance
+    validator: Arc<ApiContractValidator>,
     /// Metrics collector
-    metrics: Arc<dyn ApiMetricsCollector>,
+    metrics_collector: Arc<dyn ApiMetricsCollector>,
 }
 
-impl ApiContractMiddleware {
-    /// Create new middleware
-    pub fn new(validator: ApiContractValidator, metrics: Arc<dyn ApiMetricsCollector>) -> Self {
-        Self { validator, metrics }
+/// Metrics data structure
+#[derive(Debug, Clone)]
+pub struct ApiMetrics {
+    /// Total requests per endpoint
+    pub requests_per_endpoint: HashMap<String, u64>,
+    /// Total errors per endpoint
+    pub errors_per_endpoint: HashMap<String, u64>,
+    /// Average response time per endpoint
+    pub avg_response_time: HashMap<String, f64>,
+    /// Error categories
+    pub error_categories: HashMap<String, u64>,
+    /// Validation errors
+    pub validation_errors: HashMap<String, u64>,
+    /// Status code distribution
+    pub status_codes: HashMap<u16, u64>,
+    /// Request methods distribution
+    pub methods: HashMap<String, u64>,
+    /// Last update timestamp
+    pub last_updated: u64,
+}
+
+/// Default metrics collector implementation
+pub struct DefaultApiMetricsCollector {
+    /// Metrics storage
+    metrics: Arc<RwLock<ApiMetrics>>,
+    /// Request duration tracking
+    duration_tracker: Arc<RwLock<HashMap<String, Vec<u64>>>>,
+}
+
+impl DefaultApiMetricsCollector {
+    /// Create new metrics collector
+    pub fn new() -> Self {
+        Self {
+            metrics: Arc::new(RwLock::new(ApiMetrics {
+                requests_per_endpoint: HashMap::new(),
+                errors_per_endpoint: HashMap::new(),
+                avg_response_time: HashMap::new(),
+                error_categories: HashMap::new(),
+                validation_errors: HashMap::new(),
+                status_codes: HashMap::new(),
+                methods: HashMap::new(),
+                last_updated: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
+            })),
+            duration_tracker: Arc::new(RwLock::new(HashMap::new())),
+        }
     }
 
-    /// Process API request
-    pub async fn process_request(&self, request: &serde_json::Value) -> BiomeResult<()> {
-        // Validate request
-        let validation_result = self.validator.validate_request(request)?;
+    /// Get current metrics
+    pub async fn get_metrics(&self) -> ApiMetrics {
+        self.metrics.read().await.clone()
+    }
 
-        if !validation_result.valid {
-            return Err(crate::BiomeError::InvalidInput(format!(
-                "Request validation failed: {:?}",
-                validation_result.errors
-            )));
-        }
-
+    /// Reset metrics
+    pub async fn reset_metrics(&self) -> BiomeResult<()> {
+        let mut metrics = self.metrics.write().await;
+        *metrics = ApiMetrics {
+            requests_per_endpoint: HashMap::new(),
+            errors_per_endpoint: HashMap::new(),
+            avg_response_time: HashMap::new(),
+            error_categories: HashMap::new(),
+            validation_errors: HashMap::new(),
+            status_codes: HashMap::new(),
+            methods: HashMap::new(),
+            last_updated: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
+        };
+        
+        let mut duration_tracker = self.duration_tracker.write().await;
+        duration_tracker.clear();
+        
         Ok(())
     }
 
-    /// Process API response
-    pub async fn process_response(&self, response: &serde_json::Value) -> BiomeResult<()> {
-        // Validate response
-        let validation_result = self.validator.validate_response(response)?;
-
-        if !validation_result.valid {
-            return Err(crate::BiomeError::InvalidInput(format!(
-                "Response validation failed: {:?}",
-                validation_result.errors
-            )));
+    /// Update average response time
+    async fn update_average_response_time(&self, endpoint: &str, duration_ms: u64) {
+        let mut duration_tracker = self.duration_tracker.write().await;
+        let durations = duration_tracker.entry(endpoint.to_string()).or_insert_with(Vec::new);
+        durations.push(duration_ms);
+        
+        // Keep only last 100 measurements per endpoint
+        if durations.len() > 100 {
+            durations.remove(0);
         }
-
-        Ok(())
-    }
-
-    /// Record API metrics
-    pub async fn record_metrics(
-        &self,
-        endpoint: &str,
-        method: &str,
-        status_code: u16,
-        duration_ms: u64,
-    ) {
-        self.metrics
-            .record_api_call(endpoint, method, status_code, duration_ms)
-            .await;
-    }
-
-    /// Record API error
-    pub async fn record_error(&self, endpoint: &str, method: &str, error_category: &ErrorCategory) {
-        self.metrics
-            .record_api_error(endpoint, method, error_category)
-            .await;
-    }
-
-    /// Record validation error
-    pub async fn record_validation_error(&self, endpoint: &str, validation_type: &str) {
-        self.metrics
-            .record_validation_error(endpoint, validation_type)
-            .await;
+        
+        // Calculate average
+        let average = durations.iter().sum::<u64>() as f64 / durations.len() as f64;
+        
+        let mut metrics = self.metrics.write().await;
+        metrics.avg_response_time.insert(endpoint.to_string(), average);
+        metrics.last_updated = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
     }
 }
 
-/// Default API metrics collector implementation
-pub struct DefaultApiMetricsCollector;
-
-#[async_trait::async_trait]
 impl ApiMetricsCollector for DefaultApiMetricsCollector {
     async fn record_api_call(
         &self,
@@ -90,32 +117,96 @@ impl ApiMetricsCollector for DefaultApiMetricsCollector {
         status_code: u16,
         duration_ms: u64,
     ) {
-        // TODO: Implement actual metrics recording
+        // Update metrics with actual data collection
+        {
+            let mut metrics = self.metrics.write().await;
+            
+            // Increment request count per endpoint
+            *metrics.requests_per_endpoint.entry(endpoint.to_string()).or_insert(0) += 1;
+            
+            // Track status code distribution
+            *metrics.status_codes.entry(status_code).or_insert(0) += 1;
+            
+            // Track HTTP method distribution
+            *metrics.methods.entry(method.to_string()).or_insert(0) += 1;
+            
+            // Update last updated timestamp
+            metrics.last_updated = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        }
+        
+        // Update average response time
+        self.update_average_response_time(endpoint, duration_ms).await;
+        
+        // Log the event
         tracing::info!(
             endpoint = endpoint,
             method = method,
             status_code = status_code,
             duration_ms = duration_ms,
-            "API call recorded"
+            "API call recorded with metrics"
         );
     }
 
     async fn record_api_error(&self, endpoint: &str, method: &str, error_category: &ErrorCategory) {
-        // TODO: Implement actual error metrics recording
+        // Update error metrics with actual data collection
+        {
+            let mut metrics = self.metrics.write().await;
+            
+            // Increment error count per endpoint
+            *metrics.errors_per_endpoint.entry(endpoint.to_string()).or_insert(0) += 1;
+            
+            // Track error category distribution
+            let category_str = match error_category {
+                ErrorCategory::Validation => "validation",
+                ErrorCategory::Authentication => "authentication",
+                ErrorCategory::Authorization => "authorization",
+                ErrorCategory::NotFound => "not_found",
+                ErrorCategory::Conflict => "conflict",
+                ErrorCategory::RateLimit => "rate_limit",
+                ErrorCategory::ServiceUnavailable => "service_unavailable",
+                ErrorCategory::InternalError => "internal_error",
+                ErrorCategory::NetworkError => "network_error",
+                ErrorCategory::Timeout => "timeout",
+                ErrorCategory::Configuration => "configuration",
+                ErrorCategory::ResourceExhausted => "resource_exhausted",
+            };
+            
+            *metrics.error_categories.entry(category_str.to_string()).or_insert(0) += 1;
+            
+            // Update last updated timestamp
+            metrics.last_updated = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        }
+        
+        // Log the error
         tracing::error!(
             endpoint = endpoint,
             method = method,
             error_category = ?error_category,
-            "API error recorded"
+            "API error recorded with metrics"
         );
     }
 
     async fn record_validation_error(&self, endpoint: &str, validation_type: &str) {
-        // TODO: Implement actual validation error metrics recording
+        // Update validation error metrics with actual data collection
+        {
+            let mut metrics = self.metrics.write().await;
+            
+            // Track validation error types
+            let validation_key = format!("{}:{}", endpoint, validation_type);
+            *metrics.validation_errors.entry(validation_key).or_insert(0) += 1;
+            
+            // Also count as general error
+            *metrics.errors_per_endpoint.entry(endpoint.to_string()).or_insert(0) += 1;
+            
+            // Update last updated timestamp
+            metrics.last_updated = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        }
+        
+        // Log the validation error
         tracing::error!(
             endpoint = endpoint,
             validation_type = validation_type,
-            "Validation error recorded"
+            "Validation error recorded with metrics"
         );
     }
 }

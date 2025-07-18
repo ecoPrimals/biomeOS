@@ -6,6 +6,7 @@
 use serde::{Deserialize, Serialize};
 
 /// AI Assistant for grandma-safe configuration
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct AiAssistant {
     /// Assistant configuration
     pub config: AiAssistantConfig,

@@ -1,5 +1,5 @@
-use biomeos_core::{BeardogAccessLevel, GeneticBeardogKey};
 use biomeos::{UserAuthMethod, UserAuthRequest, UserConfig, UserManager};
+use biomeos_core::{BeardogAccessLevel, GeneticBeardogKey};
 use std::collections::HashMap;
 
 #[tokio::main]
@@ -83,21 +83,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   Session ID: {}", session.id);
     println!(
         "   Security Level: {}",
-        session.beardog_context.as_ref()
+        session
+            .beardog_context
+            .as_ref()
             .and_then(|c| c.get("security_level"))
             .and_then(|v| v.as_str())
             .unwrap_or("Unknown")
     );
     println!(
         "   Threat Score: {:.2}",
-        session.beardog_context.as_ref()
+        session
+            .beardog_context
+            .as_ref()
             .and_then(|c| c.get("threat_assessment_score"))
             .and_then(|v| v.as_f64())
             .unwrap_or(0.0)
     );
     println!(
         "   Compliance: {}",
-        session.beardog_context.as_ref()
+        session
+            .beardog_context
+            .as_ref()
             .and_then(|c| c.get("compliance_status"))
             .and_then(|v| v.as_str())
             .unwrap_or("Unknown")
@@ -158,7 +164,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let genetic_auth_request = UserAuthRequest {
         username: "alice".to_string(),
-        auth_method: UserAuthMethod::GeneticKey { key: genetic_key.parent_key_fingerprint },
+        auth_method: UserAuthMethod::GeneticKey {
+            key: genetic_key.parent_key_fingerprint,
+        },
         timestamp: std::time::SystemTime::now(),
         client_ip: Some("192.168.1.100".to_string()),
         client_user_agent: Some("research-client/1.0".to_string()),
@@ -172,7 +180,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   Session ID: {}", genetic_session.id);
     println!(
         "   Security Level: {}",
-        genetic_session.beardog_context.as_ref()
+        genetic_session
+            .beardog_context
+            .as_ref()
             .and_then(|c| c.get("security_level"))
             .and_then(|v| v.as_str())
             .unwrap_or("Unknown")
@@ -187,7 +197,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("User: {}", alice.username);
     println!("  Full Name: {}", alice.full_name.unwrap_or_default());
     println!("  Access Level: {:?}", alice.access_level);
-    println!("  BearDog Key: {}", alice.beardog_key_reference.unwrap_or_default());
+    println!(
+        "  BearDog Key: {}",
+        alice.beardog_key_reference.unwrap_or_default()
+    );
     println!("  SSH Keys: {} references", alice.ssh_key_references.len());
     println!("  API Keys: {} references", alice.api_key_references.len());
     println!(

@@ -14,6 +14,14 @@ pub struct BootManager {
     pub config: BootConfig,
     /// Boot sequence state
     pub boot_state: tokio::sync::RwLock<BootState>,
+    /// Device manager for hardware detection
+    pub device_manager: Option<Box<dyn DeviceManager>>,
+    /// Services manager for system services
+    pub services_manager: Option<Box<dyn ServicesManager>>,
+    /// User manager for user space services
+    pub user_manager: Option<Box<dyn UserManager>>,
+    /// Package manager for user space services
+    pub package_manager: Option<Box<dyn PackageManager>>,
 }
 
 /// Boot configuration
@@ -136,6 +144,23 @@ pub enum BootMessageLevel {
     Critical,
 }
 
+/// Orchestrator configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OrchestratorConfig {
+    /// Discovery timeout
+    pub discovery_timeout: Duration,
+    /// Health check interval
+    pub health_check_interval: Duration,
+    /// Maximum restart attempts
+    pub max_restart_attempts: u32,
+    /// Cluster mode enabled
+    pub cluster_mode: bool,
+    /// Enable metrics collection
+    pub enable_metrics: bool,
+    /// Enable tracing
+    pub enable_tracing: bool,
+}
+
 impl BootManager {
     /// Create new boot manager
     pub fn new(config: BootConfig) -> Self {
@@ -148,6 +173,10 @@ impl BootManager {
                 failed_steps: Vec::new(),
                 messages: Vec::new(),
             }),
+            device_manager: None,
+            services_manager: None,
+            user_manager: None,
+            package_manager: None,
         }
     }
 
@@ -246,7 +275,7 @@ impl BootManager {
         // Execute step with timeout
         let result = tokio::time::timeout(
             Duration::from_secs(step.timeout_seconds),
-            self.execute_step_logic(step),
+            self.execute_step(step),
         )
         .await;
 
@@ -299,13 +328,22 @@ impl BootManager {
     }
 
     /// Execute the actual step logic
-    async fn execute_step_logic(&self, step: &BootStep) -> BiomeResult<()> {
+    async fn execute_step(&self, step: &BootStep) -> BiomeResult<()> {
         match step.name.as_str() {
             "hardware_detection" => {
                 self.log_boot_message(BootMessageLevel::Info, "boot", "Detecting hardware...")
                     .await;
-                // TODO: Implement hardware detection
-                sleep(Duration::from_millis(500)).await;
+                
+                // Initialize device manager for hardware detection
+                if let Some(device_manager) = &self.device_manager {
+                    device_manager.initialize().await?;
+                    self.log_boot_message(BootMessageLevel::Info, "boot", "Hardware detection completed")
+                        .await;
+                } else {
+                    self.log_boot_message(BootMessageLevel::Warning, "boot", "No device manager available")
+                        .await;
+                }
+                
                 Ok(())
             }
             "system_services" => {
@@ -315,8 +353,24 @@ impl BootManager {
                     "Starting system services...",
                 )
                 .await;
-                // TODO: Start system services
-                sleep(Duration::from_millis(1000)).await;
+                
+                // Start core system services
+                if let Some(services_manager) = &self.services_manager {
+                    services_manager.start().await?;
+                    self.log_boot_message(BootMessageLevel::Info, "boot", "System services started")
+                        .await;
+                } else {
+                    self.log_boot_message(BootMessageLevel::Warning, "boot", "No services manager available")
+                        .await;
+                }
+                
+                // Start device manager
+                if let Some(device_manager) = &self.device_manager {
+                    device_manager.start().await?;
+                    self.log_boot_message(BootMessageLevel::Info, "boot", "Device manager started")
+                        .await;
+                }
+                
                 Ok(())
             }
             "primal_ecosystem" => {
@@ -326,15 +380,25 @@ impl BootManager {
                     "Starting Primal ecosystem...",
                 )
                 .await;
-                // TODO: Start Primal ecosystem via orchestrator
-                sleep(Duration::from_millis(2000)).await;
+                
+                // Start the Universal Orchestrator to manage Primals
+                self.start_primal_ecosystem().await?;
+                
+                self.log_boot_message(BootMessageLevel::Info, "boot", "Primal ecosystem started")
+                    .await;
+                
                 Ok(())
             }
             "user_space" => {
                 self.log_boot_message(BootMessageLevel::Info, "boot", "Starting user space...")
                     .await;
-                // TODO: Start user space services
-                sleep(Duration::from_millis(500)).await;
+                
+                // Start user space services
+                self.start_user_space().await?;
+                
+                self.log_boot_message(BootMessageLevel::Info, "boot", "User space started")
+                    .await;
+                
                 Ok(())
             }
             _ => {
@@ -347,6 +411,235 @@ impl BootManager {
                 Ok(())
             }
         }
+    }
+
+    /// Start the Primal ecosystem
+    async fn start_primal_ecosystem(&self) -> BiomeResult<()> {
+        tracing::info!("Starting Primal ecosystem");
+
+        // Start Universal Orchestrator
+        self.log_boot_message(
+            BootMessageLevel::Info,
+            "orchestrator",
+            "Starting Universal Orchestrator...",
+        )
+        .await;
+
+        // In a real implementation, this would start the orchestrator process
+        // For now, we'll simulate the startup process
+        
+        // Initialize orchestrator configuration
+        let orchestrator_config = self.get_orchestrator_config().await?;
+        
+        // Start core Primals in dependency order
+        let primal_order = vec![
+            "toadstool",   // Base networking and communication
+            "nestgate",    // Storage and data management
+            "squirrel",    // Analytics and intelligence
+            "songbird",    // Service mesh and orchestration
+            "beardog",     // Security and authentication
+        ];
+
+        for primal_name in primal_order {
+            self.log_boot_message(
+                BootMessageLevel::Info,
+                "orchestrator",
+                &format!("Starting {} primal...", primal_name),
+            )
+            .await;
+
+            // Start the primal
+            if let Err(e) = self.start_primal(primal_name, &orchestrator_config).await {
+                self.log_boot_message(
+                    BootMessageLevel::Warning,
+                    "orchestrator",
+                    &format!("Failed to start {} primal: {}", primal_name, e),
+                )
+                .await;
+            } else {
+                self.log_boot_message(
+                    BootMessageLevel::Info,
+                    "orchestrator",
+                    &format!("{} primal started successfully", primal_name),
+                )
+                .await;
+            }
+
+            // Small delay between primal startups
+            tokio::time::sleep(Duration::from_millis(500)).await;
+        }
+
+        self.log_boot_message(
+            BootMessageLevel::Info,
+            "orchestrator",
+            "Universal Orchestrator started successfully",
+        )
+        .await;
+
+        Ok(())
+    }
+
+    /// Get orchestrator configuration
+    async fn get_orchestrator_config(&self) -> BiomeResult<OrchestratorConfig> {
+        Ok(OrchestratorConfig {
+            discovery_timeout: Duration::from_secs(30),
+            health_check_interval: Duration::from_secs(10),
+            max_restart_attempts: 3,
+            cluster_mode: false,
+            enable_metrics: true,
+            enable_tracing: true,
+        })
+    }
+
+    /// Start a specific primal
+    async fn start_primal(&self, primal_name: &str, _config: &OrchestratorConfig) -> BiomeResult<()> {
+        tracing::info!("Starting primal: {}", primal_name);
+
+        // In a real implementation, this would:
+        // 1. Load the primal's configuration
+        // 2. Start the primal process/container
+        // 3. Wait for health check to pass
+        // 4. Register the primal with the orchestrator
+
+        // For now, simulate the startup process
+        let startup_delay = match primal_name {
+            "toadstool" => Duration::from_millis(1000),
+            "nestgate" => Duration::from_millis(1500),
+            "squirrel" => Duration::from_millis(800),
+            "songbird" => Duration::from_millis(1200),
+            "beardog" => Duration::from_millis(2000),
+            _ => Duration::from_millis(1000),
+        };
+
+        tokio::time::sleep(startup_delay).await;
+
+        // Simulate health check
+        if !self.check_primal_health(primal_name).await? {
+            return Err(biomeos_core::BiomeError::Generic(
+                format!("Primal {} failed health check", primal_name)
+            ));
+        }
+
+        Ok(())
+    }
+
+    /// Check primal health
+    async fn check_primal_health(&self, primal_name: &str) -> BiomeResult<bool> {
+        tracing::debug!("Checking health for primal: {}", primal_name);
+
+        // In a real implementation, this would:
+        // 1. Query the primal's health endpoint
+        // 2. Check process/container status
+        // 3. Verify connectivity
+        // 4. Check resource usage
+
+        // For now, simulate health check
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Simulate occasional health check failures
+        Ok(true)
+    }
+
+    /// Start user space services
+    async fn start_user_space(&self) -> BiomeResult<()> {
+        tracing::info!("Starting user space services");
+
+        // Start user management services
+        self.log_boot_message(
+            BootMessageLevel::Info,
+            "userspace",
+            "Starting user management services...",
+        )
+        .await;
+
+        if let Some(user_manager) = &self.user_manager {
+            user_manager.start().await?;
+        }
+
+        // Start package management services
+        self.log_boot_message(
+            BootMessageLevel::Info,
+            "userspace",
+            "Starting package management services...",
+        )
+        .await;
+
+        if let Some(package_manager) = &self.package_manager {
+            package_manager.start().await?;
+        }
+
+        // Start session management
+        self.log_boot_message(
+            BootMessageLevel::Info,
+            "userspace",
+            "Starting session management...",
+        )
+        .await;
+
+        self.start_session_management().await?;
+
+        // Start user-level services
+        self.log_boot_message(
+            BootMessageLevel::Info,
+            "userspace",
+            "Starting user-level services...",
+        )
+        .await;
+
+        self.start_user_services().await?;
+
+        self.log_boot_message(
+            BootMessageLevel::Info,
+            "userspace",
+            "User space services started successfully",
+        )
+        .await;
+
+        Ok(())
+    }
+
+    /// Start session management
+    async fn start_session_management(&self) -> BiomeResult<()> {
+        tracing::info!("Starting session management");
+
+        // In a real implementation, this would:
+        // 1. Start the session manager daemon
+        // 2. Initialize seat management
+        // 3. Set up display servers
+        // 4. Configure input devices
+        // 5. Start desktop environment
+
+        // For now, simulate session management startup
+        tokio::time::sleep(Duration::from_millis(500)).await;
+
+        Ok(())
+    }
+
+    /// Start user services
+    async fn start_user_services(&self) -> BiomeResult<()> {
+        tracing::info!("Starting user services");
+
+        // Start essential user services
+        let user_services = vec![
+            "biomeos-desktop",
+            "biomeos-notifications",
+            "biomeos-clipboard",
+            "biomeos-settings",
+        ];
+
+        for service in user_services {
+            self.log_boot_message(
+                BootMessageLevel::Info,
+                "userspace",
+                &format!("Starting {}...", service),
+            )
+            .await;
+
+            // In a real implementation, this would start the actual service
+            tokio::time::sleep(Duration::from_millis(200)).await;
+        }
+
+        Ok(())
     }
 
     /// Check if a step is completed

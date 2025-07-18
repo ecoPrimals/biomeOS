@@ -205,6 +205,16 @@ pub enum DashboardNotificationType {
 }
 
 impl NotificationManager {
+    pub async fn start(&mut self) -> crate::BiomeResult<()> {
+        // Start notification processing
+        Ok(())
+    }
+
+    pub async fn stop(&mut self) -> crate::BiomeResult<()> {
+        // Stop notification processing
+        Ok(())
+    }
+
     /// Create a new notification manager
     pub fn new() -> Self {
         Self {
@@ -536,3 +546,4 @@ impl Default for DashboardNotificationChannel {
         Self::new()
     }
 }
+

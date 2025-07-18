@@ -272,7 +272,7 @@ impl TrendAnalyzer {
         let std_dev = self.calculate_variance(&scores).sqrt();
 
         // Z-score based anomaly detection
-        for (_i, snapshot) in snapshots.iter().enumerate() {
+        for snapshot in snapshots.iter() {
             let z_score = (snapshot.health.health_score - mean) / std_dev;
 
             if z_score.abs() > 2.0 {
@@ -308,5 +308,140 @@ impl TrendAnalyzer {
     pub async fn clear_cache(&self) {
         let mut cache = self.trend_cache.write().await;
         cache.clear();
+    }
+
+    /// Get available analysis algorithms
+    pub fn get_available_algorithms(&self) -> &[AnalysisAlgorithm] {
+        &self.algorithms
+    }
+
+    /// Add analysis algorithm
+    pub fn add_algorithm(&mut self, algorithm: AnalysisAlgorithm) {
+        self.algorithms.push(algorithm);
+    }
+
+    /// Apply specific algorithm to analyze trends
+    pub async fn apply_algorithm(&self, algorithm_index: usize, snapshots: &[HealthSnapshot]) -> Option<TrendAnalysis> {
+        if let Some(algorithm) = self.algorithms.get(algorithm_index) {
+            // Apply the specific algorithm to analyze trends
+            match algorithm {
+                AnalysisAlgorithm::LinearRegression => self.apply_linear_regression(snapshots).await,
+                AnalysisAlgorithm::MovingAverage => self.apply_moving_average(snapshots).await,
+                AnalysisAlgorithm::ExponentialSmoothing => self.apply_exponential_analysis(snapshots).await,
+                AnalysisAlgorithm::SeasonalDecomposition => self.apply_seasonal_analysis(snapshots).await,
+                AnalysisAlgorithm::AnomalyDetection => self.apply_anomaly_analysis(snapshots).await,
+                AnalysisAlgorithm::ResourceCorrelation => self.apply_correlation_analysis(snapshots).await,
+            }
+        } else {
+            None
+        }
+    }
+
+    async fn apply_linear_regression(&self, _snapshots: &[HealthSnapshot]) -> Option<TrendAnalysis> {
+        // Mock implementation
+        Some(TrendAnalysis {
+            primal_id: "default".to_string(),
+            timestamp: chrono::Utc::now().timestamp() as u64,
+            trend_direction: TrendDirection::Stable,
+            trend_strength: 0.5,
+            components: crate::predictive_health_analytics::types::TrendComponents {
+                long_term: 0.0,
+                seasonal: 0.0,
+                cyclical: 0.0,
+                irregular: 0.0,
+            },
+            anomalies: Vec::new(),
+            confidence: 0.7,
+        })
+    }
+
+    async fn apply_moving_average(&self, _snapshots: &[HealthSnapshot]) -> Option<TrendAnalysis> {
+        // Mock implementation
+        Some(TrendAnalysis {
+            primal_id: "default".to_string(),
+            timestamp: chrono::Utc::now().timestamp() as u64,
+            trend_direction: TrendDirection::Improving,
+            trend_strength: 0.3,
+            components: crate::predictive_health_analytics::types::TrendComponents {
+                long_term: 0.1,
+                seasonal: 0.0,
+                cyclical: 0.0,
+                irregular: 0.0,
+            },
+            anomalies: Vec::new(),
+            confidence: 0.6,
+        })
+    }
+
+    async fn apply_exponential_analysis(&self, _snapshots: &[HealthSnapshot]) -> Option<TrendAnalysis> {
+        // Mock implementation
+        Some(TrendAnalysis {
+            primal_id: "default".to_string(),
+            timestamp: chrono::Utc::now().timestamp() as u64,
+            trend_direction: TrendDirection::Degrading,
+            trend_strength: 0.4,
+            components: crate::predictive_health_analytics::types::TrendComponents {
+                long_term: -0.1,
+                seasonal: 0.0,
+                cyclical: 0.0,
+                irregular: 0.0,
+            },
+            anomalies: Vec::new(),
+            confidence: 0.8,
+        })
+    }
+
+    async fn apply_seasonal_analysis(&self, _snapshots: &[HealthSnapshot]) -> Option<TrendAnalysis> {
+        // Mock implementation
+        Some(TrendAnalysis {
+            primal_id: "default".to_string(),
+            timestamp: chrono::Utc::now().timestamp() as u64,
+            trend_direction: TrendDirection::Stable,
+            trend_strength: 0.2,
+            components: crate::predictive_health_analytics::types::TrendComponents {
+                long_term: 0.0,
+                seasonal: 0.2,
+                cyclical: 0.0,
+                irregular: 0.0,
+            },
+            anomalies: Vec::new(),
+            confidence: 0.5,
+        })
+    }
+
+    async fn apply_anomaly_analysis(&self, _snapshots: &[HealthSnapshot]) -> Option<TrendAnalysis> {
+        // Mock implementation
+        Some(TrendAnalysis {
+            primal_id: "default".to_string(),
+            timestamp: chrono::Utc::now().timestamp() as u64,
+            trend_direction: TrendDirection::Stable,
+            trend_strength: 0.1,
+            components: crate::predictive_health_analytics::types::TrendComponents {
+                long_term: 0.0,
+                seasonal: 0.0,
+                cyclical: 0.0,
+                irregular: 0.1,
+            },
+            anomalies: Vec::new(),
+            confidence: 0.9,
+        })
+    }
+
+    async fn apply_correlation_analysis(&self, _snapshots: &[HealthSnapshot]) -> Option<TrendAnalysis> {
+        // Mock implementation
+        Some(TrendAnalysis {
+            primal_id: "default".to_string(),
+            timestamp: chrono::Utc::now().timestamp() as u64,
+            trend_direction: TrendDirection::Improving,
+            trend_strength: 0.6,
+            components: crate::predictive_health_analytics::types::TrendComponents {
+                long_term: 0.3,
+                seasonal: 0.0,
+                cyclical: 0.2,
+                irregular: 0.1,
+            },
+            anomalies: Vec::new(),
+            confidence: 0.7,
+        })
     }
 }

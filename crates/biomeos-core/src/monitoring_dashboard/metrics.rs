@@ -134,6 +134,16 @@ pub struct GroupKey {
 }
 
 impl MetricsProcessor {
+    pub async fn start(&mut self) -> crate::BiomeResult<()> {
+        // Start metrics processing
+        Ok(())
+    }
+
+    pub async fn stop(&mut self) -> crate::BiomeResult<()> {
+        // Stop metrics processing
+        Ok(())
+    }
+
     /// Create a new metrics processor
     pub fn new(retention_seconds: u64) -> Self {
         Self {
@@ -442,6 +452,54 @@ impl MetricsAggregator {
             0.0
         }
     }
+
+    /// Get available aggregation functions
+    pub fn get_available_functions(&self) -> Vec<String> {
+        self.functions.keys().cloned().collect()
+    }
+
+    /// Add aggregation function
+    pub fn add_function(&mut self, name: String, function: AggregationFunction) {
+        self.functions.insert(name, function);
+    }
+
+    /// Get aggregation function by name
+    pub fn get_function(&self, name: &str) -> Option<&AggregationFunction> {
+        self.functions.get(name)
+    }
+
+    /// Apply aggregation function to metrics
+    pub fn apply_function(&self, function_name: &str, values: &[f64]) -> Option<f64> {
+        if let Some(function) = self.functions.get(function_name) {
+            match function {
+                AggregationFunction::Average => Some(values.iter().sum::<f64>() / values.len() as f64),
+                AggregationFunction::Sum => Some(values.iter().sum()),
+                AggregationFunction::Max => values.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b)).into(),
+                AggregationFunction::Min => values.iter().fold(f64::INFINITY, |a, &b| a.min(b)).into(),
+                AggregationFunction::Count => Some(values.len() as f64),
+                AggregationFunction::Percentile(p) => {
+                    let mut sorted = values.to_vec();
+                    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+                    let index = ((*p / 100.0) * (sorted.len() - 1) as f64) as usize;
+                    Some(sorted[index.min(sorted.len() - 1)])
+                },
+                AggregationFunction::Rate => {
+                    // Simple rate calculation - in real implementation would use time windows
+                    Some(values.iter().sum::<f64>() / values.len() as f64)
+                },
+                AggregationFunction::Derivative => {
+                    // Simple derivative - difference between last and first values
+                    if values.len() >= 2 {
+                        Some(values[values.len() - 1] - values[0])
+                    } else {
+                        Some(0.0)
+                    }
+                },
+            }
+        } else {
+            None
+        }
+    }
 }
 
 impl Default for MetricsAggregator {
@@ -449,3 +507,4 @@ impl Default for MetricsAggregator {
         Self::new()
     }
 }
+

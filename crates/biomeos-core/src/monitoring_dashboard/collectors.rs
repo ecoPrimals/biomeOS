@@ -92,6 +92,16 @@ pub trait MetricSource: Send + Sync {
 }
 
 impl SystemMetricsCollector {
+    pub async fn start(&mut self) -> crate::BiomeResult<()> {
+        // Start system metrics collection
+        Ok(())
+    }
+
+    pub async fn stop(&mut self) -> crate::BiomeResult<()> {
+        // Stop system metrics collection
+        Ok(())
+    }
+
     /// Create a new system metrics collector
     pub fn new() -> Self {
         Self {
@@ -197,6 +207,16 @@ impl MetricCollector for SystemMetricsCollector {
 }
 
 impl SystemMetricsCollector {
+    pub async fn start(&mut self) -> crate::BiomeResult<()> {
+        // Start system metrics collection
+        Ok(())
+    }
+
+    pub async fn stop(&mut self) -> crate::BiomeResult<()> {
+        // Stop system metrics collection
+        Ok(())
+    }
+
     /// Get CPU usage percentage
     async fn get_cpu_usage(&self) -> BiomeResult<f64> {
         // Mock implementation - in real system would read from /proc/stat or similar

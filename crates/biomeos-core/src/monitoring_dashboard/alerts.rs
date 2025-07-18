@@ -134,6 +134,11 @@ pub struct NotificationRecord {
 }
 
 impl AlertManager {
+    pub async fn start(&mut self) -> crate::BiomeResult<()> {
+        // Start alert processing
+        Ok(())
+    }
+
     /// Create a new alert manager
     pub fn new() -> Self {
         Self {
@@ -250,6 +255,20 @@ impl AlertManager {
     pub async fn get_alert_history(&self) -> Vec<Alert> {
         self.alert_history.read().await.clone()
     }
+    pub async fn stop(&mut self) -> crate::BiomeResult<()> {
+        // Stop alert processing
+        Ok(())
+    }
+
+    pub async fn get_metrics(&self) -> crate::BiomeResult<crate::monitoring_dashboard::types::AlertMetrics> {
+        Ok(crate::monitoring_dashboard::types::AlertMetrics {
+            active_alerts: 0,
+            resolved_alerts: 0,
+            alert_rate: 0.0,
+            last_alert: None,
+        })
+    }
+
 }
 
 impl AlertEvaluator {
@@ -398,3 +417,5 @@ impl Default for AlertNotifier {
         Self::new()
     }
 }
+
+

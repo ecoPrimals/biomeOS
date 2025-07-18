@@ -18,6 +18,9 @@ pub struct DashboardConfig {
     pub update_frequency: u64,
     /// Enable real-time streaming
     pub real_time_streaming: bool,
+    /// Alert configuration
+    /// Notification configuration
+    /// Metrics configuration
     /// Alert configurations
     pub alert_configs: Vec<AlertConfig>,
     /// Visualization preferences
@@ -258,3 +261,48 @@ impl std::fmt::Display for AlertDestinationType {
         }
     }
 }
+
+
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+
+pub struct NotificationConfig {
+    pub enabled: bool,
+    pub channels: Vec<String>,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct MetricsConfig {
+    pub enabled: bool,
+    pub collection_interval: u64,
+}
+
+impl Default for NotificationConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            channels: vec![],
+        }
+    }
+}
+
+impl Default for MetricsConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            collection_interval: 60,
+        }
+    }
+}
+
+
+impl Default for AlertConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            severity_threshold: crate::monitoring_dashboard::types::AlertSeverity::Medium,
+            rate_limit: std::time::Duration::from_secs(60),
+        }
+    }
+}
+
