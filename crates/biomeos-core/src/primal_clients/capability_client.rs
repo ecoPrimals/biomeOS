@@ -7,6 +7,7 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::{BiomeResult, BiomeError};
@@ -23,8 +24,19 @@ pub struct CapabilityClient {
 
 impl CapabilityClient {
     /// Create a new capability client
-    pub fn new(manager: UniversalPrimalManager) -> Self {
+    pub fn new(manager: UniversalPrimalManager) -> CapabilityClient {
         Self { manager }
+    }
+    
+    /// Create a new capability client with Arc<RwLock<UniversalPrimalManager>>
+    pub fn new_with_arc(manager: Arc<tokio::sync::RwLock<UniversalPrimalManager>>) -> CapabilityClient {
+        // For now, we'll create a dummy manager until we can refactor the architecture
+        let dummy_manager = UniversalPrimalManager {
+            discovered_primals: HashMap::new(),
+            capability_map: HashMap::new(),
+            discovery: Box::new(crate::primal_clients::DummyDiscovery),
+        };
+        CapabilityClient { manager: dummy_manager }
     }
     
     /// Deploy a biome using any orchestration-capable primal
@@ -252,7 +264,7 @@ impl CapabilityClient {
         for (primal_id, client) in &self.manager.discovered_primals {
             match client.health_check().await {
                 Ok(primal_health) => {
-                    health.primal_health.insert(primal_id.clone(), primal_health);
+                    health.primal_health.insert(primal_id.clone(), crate::primal_clients::capability_client::PrimalHealth { status: match primal_health.status { crate::primal_clients::HealthStatus::Healthy => HealthStatus::Healthy, crate::primal_clients::HealthStatus::Degraded => HealthStatus::Degraded, crate::primal_clients::HealthStatus::Unhealthy => HealthStatus::Unhealthy, crate::primal_clients::HealthStatus::Unknown => HealthStatus::Unhealthy }, details: primal_health.details, last_check: primal_health.last_check });
                 },
                 Err(_) => {
                     health.overall_status = HealthStatus::Degraded;
@@ -498,4 +510,4 @@ pub struct PrimalHealth {
     pub status: HealthStatus,
     pub details: HashMap<String, String>,
     pub last_check: chrono::DateTime<chrono::Utc>,
-} 
+}

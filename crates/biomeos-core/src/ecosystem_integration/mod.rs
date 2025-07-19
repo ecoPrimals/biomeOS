@@ -178,3 +178,4 @@ mod tests {
         assert_eq!(health_status.primal_health.len(), 0);
     }
 }
+pub use types::EcosystemStatus;

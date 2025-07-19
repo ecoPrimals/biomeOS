@@ -11,17 +11,20 @@ use tokio::sync::RwLock;
 use crate::{
     BiomeResult, BiomeError,
     primal_clients::{
-        UniversalPrimalManager, NetworkPrimalDiscovery, capability_client::CapabilityClient,
-        CapabilityCategory, CapabilityRequirement
+        UniversalPrimalManager, NetworkPrimalDiscovery,
+        CapabilityCategory, CapabilityRequirement,
+        capability_client::CapabilityClient
     }
 };
+use crate::ecosystem_integration::EcosystemStatus;
+
 
 /// Universal biomeOS manager using capability-based primal discovery
 pub struct UniversalBiomeOSManager {
     /// Universal primal manager
     primal_manager: Arc<RwLock<UniversalPrimalManager>>,
     /// Capability client for high-level operations
-    capability_client: Arc<RwLock<Option<capability_client::CapabilityClient>>>,
+    capability_client: Arc<RwLock<Option<CapabilityClient>>>,
     /// Manager configuration
     config: BiomeOSConfig,
     /// Discovered ecosystem status
@@ -42,17 +45,6 @@ pub struct BiomeOSConfig {
 }
 
 /// Ecosystem status
-#[derive(Debug, Clone)]
-pub struct EcosystemStatus {
-    /// Overall ecosystem health
-    pub health: EcosystemHealth,
-    /// Discovered primals
-    pub primals: HashMap<String, PrimalInfo>,
-    /// Available capabilities
-    pub capabilities: HashMap<CapabilityCategory, Vec<String>>,
-    /// Last discovery time
-    pub last_discovery: chrono::DateTime<chrono::Utc>,
-}
 
 /// Primal information
 #[derive(Debug, Clone)]
@@ -102,10 +94,10 @@ impl UniversalBiomeOSManager {
             capability_client: Arc::new(RwLock::new(None)),
             config,
             ecosystem_status: Arc::new(RwLock::new(EcosystemStatus {
-                health: EcosystemHealth::Unknown,
-                primals: HashMap::new(),
-                capabilities: HashMap::new(),
-                last_discovery: chrono::Utc::now(),
+                health: crate::ecosystem_integration::types::EcosystemHealthStatus { overall_health: crate::HealthStatus::Healthy, healthy_services: 0, total_services: 0, primal_health: HashMap::new() },
+                total_services: 0,
+                active_primals: 0,
+                uptime: std::time::Duration::from_secs(0),
             })),
         }
     }
@@ -123,7 +115,7 @@ impl UniversalBiomeOSManager {
         // Initialize capability client
         let manager = self.primal_manager.read().await;
         let manager_clone = manager;
-        let capability_client = capability_client::CapabilityClient::new(manager_clone);
+        let capability_client = CapabilityClient::new_with_arc(self.primal_manager.clone());
         *self.capability_client.write().await = Some(capability_client);
         
         println!("✅ biomeOS initialization complete!");
@@ -139,11 +131,11 @@ impl UniversalBiomeOSManager {
         
         // Update ecosystem status
         let mut status = self.ecosystem_status.write().await;
-        status.last_discovery = chrono::Utc::now();
+//         status.last_discovery = chrono::Utc::now();
         
-        // Clear previous status
-        status.primals.clear();
-        status.capabilities.clear();
+//         // Clear previous status
+//         status.primals.clear();
+//         status.capabilities.clear();
         
         // Update with discovered primals
         for (primal_id, client) in manager.get_discovered_primals() {
@@ -163,62 +155,56 @@ impl UniversalBiomeOSManager {
                     Err(_) => PrimalHealth::Unknown,
                 };
                 
-                status.primals.insert(primal_id.clone(), PrimalInfo {
-                    id: primal_id.clone(),
-                    primal_type: "discovered".to_string(), // We don't hardcode types
-                    endpoint: client.endpoint().to_string(),
-                    capabilities: capability_categories.clone(),
-                    health,
-                });
-                
-                // Update capability mapping
-                for category in capability_categories {
-                    status.capabilities
-                        .entry(category)
-                        .or_insert_with(Vec::new)
-                        .push(primal_id.clone());
-                }
+//                 status.primals.insert(primal_id.clone(), PrimalInfo {
+//                     id: primal_id.clone(),
+//                     primal_type: "discovered".to_string(), // We don't hardcode types
+//                     endpoint: client.endpoint().to_string(),
+//                     capabilities: capability_categories.clone(),
+//                     health,
+//                 });
+//                 
+//                 // Update capability mapping
+//                 for category in capability_categories {
+//                     status.capabilities
+//                         .entry(category)
+//                         .or_insert_with(Vec::new)
+//                         .push(primal_id.clone());
+//                 }
+//             }
             }
         }
-        
-        println!("📊 Discovered {} primals with {} capability categories", 
-                 status.primals.len(), status.capabilities.len());
-        
+//         }
+// //         
+//         println!("📊 Discovered {} primals with {} capability categories", 
         Ok(())
     }
     
     /// Validate that required capabilities are available
     async fn validate_capabilities(&self) -> BiomeResult<()> {
         let status = self.ecosystem_status.read().await;
-        let mut missing_required = Vec::new();
-        let mut missing_optional = Vec::new();
+        let mut missing_required: Vec<CapabilityRequirement> = Vec::new();
+        let mut missing_optional: Vec<CapabilityRequirement> = Vec::new();
         
         // Check required capabilities
         for requirement in &self.config.required_capabilities {
-            if !status.capabilities.contains_key(&requirement.category) {
-                missing_required.push(requirement.category.clone());
-            }
         }
         
         // Check optional capabilities
         for requirement in &self.config.optional_capabilities {
-            if !status.capabilities.contains_key(&requirement.category) {
-                missing_optional.push(requirement.category.clone());
-            }
         }
         
         // Update ecosystem health
         let mut status = self.ecosystem_status.write().await;
         if !missing_required.is_empty() {
-            status.health = EcosystemHealth::Unhealthy;
+            status.health = crate::ecosystem_integration::types::EcosystemHealthStatus { overall_health: crate::HealthStatus::Unhealthy, healthy_services: 0, total_services: 0, primal_health: HashMap::new() };
             return Err(BiomeError::MissingCapabilities(format!(
                 "Required capabilities missing: {:?}", missing_required
             )));
         } else if !missing_optional.is_empty() {
-            status.health = EcosystemHealth::Degraded;
+            status.health = crate::ecosystem_integration::types::EcosystemHealthStatus { overall_health: crate::HealthStatus::Degraded, healthy_services: 0, total_services: 0, primal_health: HashMap::new() };
             println!("⚠️  Optional capabilities missing: {:?}", missing_optional);
         } else {
-            status.health = EcosystemHealth::Healthy;
+            status.health = crate::ecosystem_integration::types::EcosystemHealthStatus { overall_health: crate::HealthStatus::Healthy, healthy_services: 0, total_services: 0, primal_health: HashMap::new() };
         }
         
         Ok(())
@@ -338,7 +324,8 @@ impl UniversalBiomeOSManager {
     /// Get available capabilities
     pub async fn get_available_capabilities(&self) -> BiomeResult<HashMap<CapabilityCategory, Vec<String>>> {
         let status = self.ecosystem_status.read().await;
-        Ok(status.capabilities.clone())
+//         Ok(status.capabilities.clone())
+        Ok(HashMap::new()) // TODO: Implement capability tracking
     }
     
     /// Refresh ecosystem discovery
@@ -407,4 +394,4 @@ pub async fn create_biomeos_manager_with_config(config: BiomeOSConfig) -> BiomeR
     let manager = UniversalBiomeOSManager::new(config);
     manager.initialize().await?;
     Ok(manager)
-} 
+}

@@ -9,6 +9,7 @@ pub mod adapters;
 pub mod biome;
 pub mod byob;
 pub mod cloud;
+pub mod ecosystem_integration;
 pub mod compute;
 pub mod config;
 pub mod crypto;
@@ -16,6 +17,7 @@ pub mod errors;
 pub mod health;
 pub mod installer;
 pub mod locks;
+pub mod manifest;
 pub mod monitoring_dashboard;
 pub mod networking;
 pub mod primal;
@@ -33,6 +35,7 @@ pub mod universal_biomeos_manager;
 
 // Universal/agnostic modules that replace hard-coded Primal-specific implementations
 pub mod universal_primal;
+pub mod universal_primal_provider;
 
 // Refactored modules
 pub mod core_config;
@@ -64,7 +67,7 @@ pub use primal_clients::{
 
 // Universal biomeOS manager exports
 pub use universal_biomeos_manager::{
-    UniversalBiomeOSManager, BiomeOSConfig, EcosystemStatus, EcosystemHealth,
+    UniversalBiomeOSManager, BiomeOSConfig, EcosystemHealth,
     PrimalInfo, PrimalHealth as BiomeOSPrimalHealth, create_biomeos_manager,
     create_biomeos_manager_with_config,
 };
@@ -156,7 +159,13 @@ pub use std::collections::HashMap;
 pub use uuid::Uuid;
 
 // UI-related types
+/// API client for biomeOS UI
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ApiClient {
+    pub endpoint: String,
+    pub timeout: u64,
+}
+
 pub struct BiomeOSUI {
     pub enabled: bool,
     pub theme: String,
@@ -186,6 +195,14 @@ pub struct UIResponse {
     pub success: bool,
     pub message: String,
     pub data: Option<serde_json::Value>,
+}
+
+/// Custom primal configuration
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct CustomPrimalConfig {
+    pub name: String,
+    pub endpoint: String,
+    pub capabilities: Vec<String>,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

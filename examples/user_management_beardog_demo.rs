@@ -1,4 +1,4 @@
-use biomeos::{UserAuthMethod, UserAuthRequest, UserConfig, UserManager};
+use biomeos::{BiomeOSUI, UIFeatures};
 use biomeos_core::{BeardogAccessLevel, GeneticBeardogKey};
 use std::collections::HashMap;
 
@@ -67,7 +67,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🔐 DEMO 2: Authentication through BearDog");
     println!("=======================================");
 
-    let auth_request = UserAuthRequest {
+    let auth_request = BiomeOSConfig {
         username: "alice".to_string(),
         auth_method: UserAuthMethod::Password {
             password: "secure_password".to_string(),
@@ -162,7 +162,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         valid_until: Some(chrono::Utc::now() + chrono::Duration::days(365)),
     };
 
-    let genetic_auth_request = UserAuthRequest {
+    let genetic_auth_request = BiomeOSConfig {
         username: "alice".to_string(),
         auth_method: UserAuthMethod::GeneticKey {
             key: genetic_key.parent_key_fingerprint,

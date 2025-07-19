@@ -4,6 +4,7 @@
 //! handling process management, deployment, and monitoring.
 
 use crate::errors::{BiomeError, BiomeResult};
+use crate::manifest::ToadStoolManifest;
 
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;

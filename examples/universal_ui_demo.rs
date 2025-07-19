@@ -7,7 +7,7 @@ use anyhow::Result;
 use std::collections::HashMap;
 use tokio::time::{sleep, Duration};
 
-use biomeos::{AiConfig, BiomeOSUI, UIConfig, UIFeatures, UIMode};
+use biomeos::{BiomeOSUI, UIFeatures, UIMode};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -59,7 +59,7 @@ async fn main() -> Result<()> {
 }
 
 /// Create demo configuration
-fn create_demo_config() -> UIConfig {
+fn create_demo_config() -> BiomeOSConfig {
     let mut api_endpoints = HashMap::new();
 
     // Standard Primals
@@ -84,7 +84,7 @@ fn create_demo_config() -> UIConfig {
         "ws://localhost:8080/events".to_string(),
     );
 
-    UIConfig {
+    BiomeOSConfig {
         theme: "dark".to_string(),
         mode: UIMode::Terminal,
         features: UIFeatures::default(),

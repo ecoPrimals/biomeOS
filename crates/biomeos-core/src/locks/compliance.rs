@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Compliance status
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ComplianceStatus {
     pub overall_status: OverallComplianceStatus,
     pub dependency_compliance: HashMap<DependencyId, DependencyCompliance>,
@@ -14,7 +14,7 @@ pub struct ComplianceStatus {
 }
 
 /// Overall compliance status
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum OverallComplianceStatus {
     Compliant,
     NonCompliant { severity: ViolationSeverity },
@@ -23,7 +23,7 @@ pub enum OverallComplianceStatus {
 }
 
 /// Dependency compliance
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DependencyCompliance {
     pub compliant: bool,
     pub license_compliance: LicenseCompliance,
@@ -32,7 +32,7 @@ pub struct DependencyCompliance {
 }
 
 /// License compliance
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum LicenseCompliance {
     Compliant,
     NonCompliant { violations: Vec<String> },
@@ -40,7 +40,7 @@ pub enum LicenseCompliance {
 }
 
 /// Usage compliance
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum UsageCompliance {
     WithinLimits,
     ExceedsLimits { overages: Vec<String> },
@@ -48,7 +48,7 @@ pub enum UsageCompliance {
 }
 
 /// Sovereignty compliance
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum SovereigntyCompliance {
     FullySovereign,
     PartiallySovereign { dependencies: Vec<String> },
@@ -56,9 +56,10 @@ pub enum SovereigntyCompliance {
 }
 
 /// Compliance violation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ComplianceViolation {
     pub violation_id: String,
+    pub title: String,
     pub violation_type: ViolationType,
     pub severity: ViolationSeverity,
     pub dependency_id: DependencyId,
@@ -90,7 +91,7 @@ pub enum ViolationType {
 }
 
 /// Compliance recommendation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ComplianceRecommendation {
     pub recommendation_id: String,
     pub priority: RecommendationPriority,
@@ -103,7 +104,7 @@ pub struct ComplianceRecommendation {
 }
 
 /// Recommendation category
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum RecommendationCategory {
     Licensing,
     Security,
@@ -114,7 +115,7 @@ pub enum RecommendationCategory {
 }
 
 /// Compliance report
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ComplianceReport {
     pub report_id: String,
     pub generated_at: chrono::DateTime<chrono::Utc>,
@@ -128,7 +129,7 @@ pub struct ComplianceReport {
 }
 
 /// Compliance summary
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ComplianceSummary {
     pub total_dependencies: u32,
     pub compliant_dependencies: u32,
@@ -139,9 +140,10 @@ pub struct ComplianceSummary {
 }
 
 /// Detailed finding
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DetailedFinding {
     pub finding_id: String,
+    pub title: String,
     pub dependency_id: DependencyId,
     pub finding_type: FindingType,
     pub severity: ViolationSeverity,
@@ -152,18 +154,32 @@ pub struct DetailedFinding {
 }
 
 /// Finding types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum FindingType {
+    Critical,
+    High,
+    Medium,
+    Low,
+    Info,
+    Other,
     LicenseIssue,
     SecurityRisk,
     SovereigntyRisk,
     CostOverrun,
     PerformanceIssue,
     ComplianceGap,
+    DataSovereignty,
+    VendorLock,
+    ExcessiveDependencies,
+    UnencryptedTransmission,
+    NoExitStrategy,
+    CostLimitExceeded,
+    GeographicViolation,
+    AiPolicyViolation,
 }
 
 /// Cost analysis
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CostAnalysis {
     pub total_cost: f64,
     pub currency: String,
@@ -173,7 +189,7 @@ pub struct CostAnalysis {
 }
 
 /// Cost breakdown
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CostBreakdown {
     pub dependency_id: DependencyId,
     pub cost: f64,
@@ -182,7 +198,7 @@ pub struct CostBreakdown {
 }
 
 /// Cost types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum CostType {
     Licensing,
     Usage,
@@ -192,7 +208,7 @@ pub enum CostType {
 }
 
 /// Cost trend
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CostTrend {
     pub period: String,
     pub cost: f64,
@@ -200,7 +216,7 @@ pub struct CostTrend {
 }
 
 /// Cost optimization
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CostOptimization {
     pub optimization_id: String,
     pub title: String,
@@ -218,7 +234,7 @@ pub struct ComplianceEngine {
 }
 
 /// Compliance rule
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ComplianceRule {
     pub rule_id: String,
     pub rule_type: ComplianceRuleType,
@@ -228,7 +244,7 @@ pub struct ComplianceRule {
 }
 
 /// Compliance rule types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ComplianceRuleType {
     LicenseCheck,
     UsageLimit,
@@ -239,7 +255,7 @@ pub enum ComplianceRuleType {
 }
 
 /// Rule condition
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum RuleCondition {
     Always,
     UsageExceeds {
@@ -266,7 +282,7 @@ pub enum RuleCondition {
 }
 
 /// Rule action
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum RuleAction {
     Allow,
     Deny,
@@ -285,7 +301,7 @@ pub enum RuleAction {
 }
 
 /// Violation response
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ViolationResponse {
     pub action_taken: String,
     pub remediation_steps: Vec<String>,
@@ -294,7 +310,7 @@ pub struct ViolationResponse {
 }
 
 /// Audit record
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AuditRecord {
     pub record_id: String,
     pub timestamp: chrono::DateTime<chrono::Utc>,
@@ -307,7 +323,7 @@ pub struct AuditRecord {
 }
 
 /// Audit event types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum AuditEventType {
     AccessRequest,
     AccessGranted,
@@ -320,7 +336,7 @@ pub enum AuditEventType {
 }
 
 /// Audit result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum AuditResult {
     Success,
     Failure { reason: String },
@@ -492,9 +508,10 @@ impl ComplianceEngine {
                 
                 detailed_findings.push(DetailedFinding {
                     finding_id: uuid::Uuid::new_v4().to_string(),
+                    dependency_id: "default".to_string(),
                     finding_type: self.violation_type_to_finding_type(&violation.violation_type),
+                    title: format!("Compliance Issue: {}", "Compliance Issue".to_string()),
                     severity: violation.severity.clone(),
-                    title: format!("Optimize dependency"),
                     description: violation.description.clone(),
                     impact_assessment: self.calculate_violation_impact(&violation.violation_type, &violation.severity),
                     recommended_actions: violation.suggested_actions.clone(),
@@ -558,13 +575,13 @@ impl ComplianceEngine {
     /// Analyze dependency compliance
     async fn analyze_dependency_compliance(&self, dependency: &ExternalDependency) -> BiomeResult<DependencyCompliance> {
         // Check license compliance
-        let license_compliance = self.check_license_compliance(&dependency.licensing, &UsagePattern::default())?;
+        let license_compliance = self.check_license_compliance(&dependency.licensing, &UsagePattern::default());
         
         // Check usage compliance
-        let usage_compliance = self.check_usage_compliance(&AccessRequirements::default(), &UsagePattern::default())?;
+        let usage_compliance = self.check_usage_compliance(&AccessRequirements::default(), &UsagePattern::default());
         
         // Check sovereignty compliance
-        let sovereignty_compliance = self.check_sovereignty_compliance(&dependency.sovereignty_impact)?;
+        let sovereignty_compliance = self.check_sovereignty_compliance(&dependency.sovereignty_impact);
         
         let compliant = matches!(license_compliance, LicenseCompliance::Compliant) &&
                        matches!(usage_compliance, UsageCompliance::WithinLimits) &&
@@ -589,17 +606,18 @@ impl ComplianceEngine {
         let mut violations = Vec::new();
 
         // Check for vendor lock-in
-        if dependency.sovereignty_impact.vendor_lock_risk.risk_level as u8 >= RiskLevel::High as u8 {
+        if dependency.sovereignty_impact.vendor_lock_risk.risk_level.clone() as u8 >= RiskLevel::High as u8 {
             violations.push(ComplianceViolation {
                 violation_id: uuid::Uuid::new_v4().to_string(),
+                dependency_id: "default".to_string(),
                 violation_type: ViolationType::VendorLock,
+                title: format!("Compliance Violation"),
                 severity: match dependency.sovereignty_impact.vendor_lock_risk.risk_level {
                     RiskLevel::Critical => ViolationSeverity::Critical,
                     RiskLevel::High => ViolationSeverity::High,
                     RiskLevel::Medium => ViolationSeverity::Medium,
                     RiskLevel::Low => ViolationSeverity::Low,
                 },
-                title: format!("Optimize dependency"),
                 description: format!("High vendor lock-in risk detected for {}", dependency.name),
                 detected_at: chrono::Utc::now(),
                 resolution_required: true,
@@ -615,9 +633,10 @@ impl ComplianceEngine {
         if !dependency.sovereignty_impact.data_residency_requirements.is_empty() {
             violations.push(ComplianceViolation {
                 violation_id: uuid::Uuid::new_v4().to_string(),
+                dependency_id: "default".to_string(),
                 violation_type: ViolationType::DataSovereignty,
+                title: format!("Compliance Violation"),
                 severity: ViolationSeverity::High,
-                title: format!("Optimize dependency"),
                 description: format!("Data residency requirements not met for {}", dependency.name),
                 detected_at: chrono::Utc::now(),
                 resolution_required: true,
@@ -633,9 +652,10 @@ impl ComplianceEngine {
         if dependency.sovereignty_impact.exit_strategy.migration_checklist.is_empty() {
             violations.push(ComplianceViolation {
                 violation_id: uuid::Uuid::new_v4().to_string(),
+                dependency_id: "default".to_string(),
                 violation_type: ViolationType::NoExitStrategy,
+                title: format!("Compliance Violation"),
                 severity: ViolationSeverity::Medium,
-                title: format!("Optimize dependency"),
                 description: format!("No exit strategy defined for {}", dependency.name),
                 detected_at: chrono::Utc::now(),
                 resolution_required: false,
@@ -788,7 +808,7 @@ impl ComplianceEngine {
         }
 
         // Add sovereignty-specific recommendations
-        if dependencies.iter().any(|d| d.sovereignty_impact.impact_level as u8 >= SovereigntyImpactLevel::High as u8) {
+        if dependencies.iter().any(|d| d.sovereignty_impact.impact_level.clone() as u8 >= SovereigntyImpactLevel::High as u8) {
             recommendations.push(ComplianceRecommendation {
                 recommendation_id: uuid::Uuid::new_v4().to_string(),
                 priority: RecommendationPriority::High,
@@ -819,10 +839,10 @@ impl ComplianceEngine {
                 total_cost += monthly_cost;
                 
                 cost_breakdown.push(CostBreakdown {
-                    title: format!("Optimize dependency"),
-                    cost: percentage_of_total,
+                    cost: 0.0,
                     percentage_of_total: 0.0,
                     cost_type: CostType::Licensing,
+                    dependency_id: dependency.id.clone(),
                     
                 });
             }
@@ -830,6 +850,7 @@ impl ComplianceEngine {
 
         Ok(CostAnalysis {
             total_cost,
+            currency: "USD".to_string(),
             
             cost_breakdown,
             cost_trends: vec![], // Would be populated with historical data
@@ -855,7 +876,7 @@ impl ComplianceEngine {
                     if monthly_cost > 100.0 {
                         optimizations.push(CostOptimization {
                             optimization_id: uuid::Uuid::new_v4().to_string(),
-                            title: format!("Optimize dependency"),
+                            title: format!("Cost Optimization for {}", dependency.id),
                             
                             potential_savings: monthly_cost * 0.3, // Estimate 30% savings
                             description: format!("Evaluate alternatives to {} to reduce costs", dependency.name),
@@ -911,6 +932,12 @@ impl std::fmt::Display for FindingType {
             FindingType::CostLimitExceeded => write!(f, "cost_limit_exceeded"),
             FindingType::GeographicViolation => write!(f, "geographic_violation"),
             FindingType::AiPolicyViolation => write!(f, "ai_policy_violation"),
+            FindingType::LicenseIssue => write!(f, "license_issue"),
+            FindingType::SecurityRisk => write!(f, "security_risk"),
+            FindingType::SovereigntyRisk => write!(f, "sovereignty_risk"),
+            FindingType::CostOverrun => write!(f, "cost_overrun"),
+            FindingType::PerformanceIssue => write!(f, "performance_issue"),
+            FindingType::ComplianceGap => write!(f, "compliance_gap"),
         }
     }
 }

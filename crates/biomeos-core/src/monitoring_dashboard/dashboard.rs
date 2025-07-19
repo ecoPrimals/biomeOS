@@ -49,7 +49,7 @@ impl UniversalMonitoringDashboard {
         let alert_manager = AlertManager::new();
         let notification_manager = NotificationManager::new();
         let system_collector = SystemMetricsCollector::new();
-        let metrics_processor = MetricsProcessor::new();
+        let metrics_processor = MetricsProcessor::new(3600);
         
         Self {
             config,
@@ -115,7 +115,7 @@ impl UniversalMonitoringDashboard {
                             event_type: DashboardEventType::EcosystemHealthUpdate,
                             timestamp: chrono::Utc::now(),
                             details: format!("Ecosystem health: {:?}, Primals: {}", 
-                                ecosystem_status.health, ecosystem_status.primals.len()),
+                                ecosystem_status.health, ecosystem_status.active_primals),
                         };
                         
                         if let Err(e) = event_tx_clone.send(event) {

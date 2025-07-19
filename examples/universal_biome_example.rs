@@ -9,13 +9,11 @@
 //! - Discovering primals by capability
 //! - Bootstrapping an ecosystem
 
-mod universal_biome_example;
 
-use biomeos_core::UniversalBiomeCoordinator;
+use biomeos_core::UniversalBiomeOSManager;
 use std::collections::HashMap;
 use tokio;
 use tracing::{info, Level};
-use universal_biome_example::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -37,7 +35,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Created database manifest");
 
     // Example 4: Bootstrap ecosystems using universal coordinator
-    let _coordinator = UniversalBiomeCoordinator::new();
+    let _coordinator = UniversalBiomeOSManager::new();
 
     // Note: In a real implementation, you would have actual primals running
     // that implement the UniversalPrimalProvider trait. This example shows

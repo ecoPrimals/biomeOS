@@ -262,6 +262,8 @@ impl VisualizationEngine {
             TrendDirection::Degrading => (TrendArrow::Down, "#dc3545".to_string()),
             TrendDirection::Stable => (TrendArrow::Flat, "#6c757d".to_string()),
             TrendDirection::Unknown => (TrendArrow::Unknown, "#6c757d".to_string()),
+            TrendDirection::Up => (TrendArrow::Up, "#28a745".to_string()),
+            TrendDirection::Down => (TrendArrow::Down, "#dc3545".to_string()),
         };
 
         TrendVisualization {

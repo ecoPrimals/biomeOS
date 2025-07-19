@@ -1,13 +1,23 @@
 //! # biomeOS - Universal Biological Computing Platform
 //!
-//! biomeOS provides a unified platform for orchestrating the five Primals
-//! (Songbird, NestGate, Toadstool, BearDog, Squirrel) into a cohesive
-//! biological computing environment.
+//! biomeOS provides a universal orchestration platform that leverages the mature
+//! capabilities of existing primals rather than reimplementing core functionality:
+//! - Toadstool: Universal parser, validator, and executor
+//! - Songbird: Universal discovery, coordination, and routing
+//! - BiomeOS: Thin coordination layer providing universal adapter patterns
 
 pub use biomeos_core::*;
 pub mod universal_adapter;
 
-/// Universal UI types for examples - minimal implementation
+/// Universal adapter for coordinating between Toadstool and Songbird
+pub use universal_adapter::{
+    BiomeOSUniversalAdapter, ToadstoolClient, SongbirdClient, CapabilityRegistry,
+    UniversalHealthMonitor, DiscoveredPrimal, PrimalHealth, SystemHealth,
+    ServiceStatus, BiomeDeployment, DeployedService, ParsedManifest,
+    ManifestMetadata, PrimalSpec, ServiceSpec, ResolvedPrimal
+};
+
+/// Universal UI types for examples - simplified for the new architecture
 pub mod universal_ui {
     use serde::{Deserialize, Serialize};
     use std::collections::HashMap;
@@ -21,104 +31,132 @@ pub mod universal_ui {
         pub log_viewer: bool,
         pub metrics_dashboard: bool,
         pub custom_dashboards: bool,
-        pub multi_primal_coordination: bool,
+        pub primal_coordination: bool,
     }
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
-    pub struct CustomPrimalConfig {
-        pub name: String,
-        pub endpoints: Vec<String>,
+    pub struct DiscoveredPrimal {
+        pub id: String,
+        pub primal_type: String,
+        pub endpoint: String,
         pub capabilities: Vec<String>,
-        pub configuration: serde_json::Value,
-        pub auth_config: Option<serde_json::Value>,
-        pub description: String,
-        pub ui_config: PrimalUIConfig,
+        pub health: PrimalHealth,
+        pub metadata: HashMap<String, String>,
+    }
+
+    #[derive(Debug, Clone, Serialize, Deserialize)]
+    pub struct PrimalHealth {
+        pub status: String,
+        pub last_seen: chrono::DateTime<chrono::Utc>,
+        pub response_time_ms: u64,
     }
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct UniversalUIConfig {
         pub theme: String,
         pub mode: crate::UIMode,
-        pub features: crate::UIFeatures,
-        pub custom_primals: std::collections::HashMap<String, CustomPrimalConfig>,
-        pub primal_endpoints: std::collections::HashMap<String, String>,
+        pub features: UIFeatures,
+        pub discovered_primals: Vec<DiscoveredPrimal>,
+        pub toadstool_endpoint: Option<String>,
+        pub songbird_endpoint: Option<String>,
     }
 
-    #[derive(Debug, Clone, Serialize, Deserialize)]
-    pub struct PrimalUIConfig {
-        pub name: String,
-        pub enabled: bool,
-        pub display_name: String,
-        pub icon: String,
-        pub color: String,
-        pub dashboard_widgets: Vec<WidgetConfig>,
-        pub custom_actions: Vec<ActionConfig>,
-        pub metrics_config: MetricsConfig,
+    /// Universal UI Manager - Note: doesn't implement Clone/Serialize due to adapter
+    #[derive(Debug)]
+    pub struct UniversalUIManager {
+        pub config: UniversalUIConfig,
+        pub system_health: crate::SystemHealth,
+        pub adapter: Option<crate::BiomeOSUniversalAdapter>,
     }
 
-    #[derive(Debug, Clone, Serialize, Deserialize)]
-    pub struct WidgetConfig {
-        pub widget_type: String,
-        pub title: String,
-        pub api_endpoint: String,
-        pub refresh_interval_secs: u64,
-        pub display_config: HashMap<String, serde_json::Value>,
-    }
-
-    #[derive(Debug, Clone, Serialize, Deserialize)]
-    pub struct ActionConfig {
-        pub action_id: String,
-        pub label: String,
-        pub icon: String,
-        pub api_endpoint: String,
-        pub method: String,
-        pub parameters: Vec<ParameterConfig>,
-        pub confirmation_message: Option<String>,
-        pub confirmation_required: bool,
-        pub display_name: String,
-    }
-
-    #[derive(Debug, Clone, Serialize, Deserialize)]
-    pub struct ParameterConfig {
-        pub name: String,
-        pub param_type: String,
-        pub required: bool,
-        pub description: String,
-        pub default_value: Option<serde_json::Value>,
-        pub validation: Option<String>,
-    }
-
-    #[derive(Debug, Clone, Serialize, Deserialize)]
-    pub struct MetricsConfig {
-        pub enabled: bool,
-        pub chart_types: Vec<String>,
-        pub metrics_endpoint: String,
-        pub default_time_range: String,
-    }
-
-    impl Default for ActionConfig {
-        fn default() -> Self {
+    impl UniversalUIManager {
+        pub fn new(config: UniversalUIConfig) -> Self {
             Self {
-                action_id: String::new(),
-                label: String::new(),
-                icon: String::new(),
-                api_endpoint: String::new(),
-                method: "GET".to_string(),
-                parameters: Vec::new(),
-                confirmation_message: None,
-                confirmation_required: false,
-                display_name: String::new(),
+                config,
+                system_health: crate::SystemHealth {
+                    toadstool_status: crate::ServiceStatus {
+                        available: false,
+                        response_time_ms: 0,
+                        last_error: None,
+                    },
+                    songbird_status: crate::ServiceStatus {
+                        available: false,
+                        response_time_ms: 0,
+                        last_error: None,
+                    },
+                    discovered_primals: vec![],
+                    last_updated: chrono::Utc::now(),
+                },
+                adapter: None,
             }
+        }
+
+        pub async fn initialize_adapter(&mut self) -> Result<(), anyhow::Error> {
+            let adapter = crate::BiomeOSUniversalAdapter::new().await
+                .map_err(|e| anyhow::anyhow!("Failed to initialize adapter: {}", e))?;
+            self.adapter = Some(adapter);
+            Ok(())
+        }
+
+        pub async fn discover_primals(&self) -> Result<Vec<DiscoveredPrimal>, anyhow::Error> {
+            if let Some(adapter) = &self.adapter {
+                let primals = adapter.discover_primals().await
+                    .map_err(|e| anyhow::anyhow!("Failed to discover primals: {}", e))?;
+                Ok(primals.into_iter().map(|p| DiscoveredPrimal {
+                    id: p.id,
+                    primal_type: p.primal_type,
+                    endpoint: p.endpoint,
+                    capabilities: p.capabilities,
+                    health: PrimalHealth {
+                        status: p.health.status,
+                        last_seen: p.health.last_seen,
+                        response_time_ms: p.health.response_time_ms,
+                    },
+                    metadata: p.metadata,
+                }).collect())
+            } else {
+                Ok(vec![])
+            }
+        }
+
+        pub async fn get_system_health(&self) -> Result<crate::SystemHealth, anyhow::Error> {
+            if let Some(adapter) = &self.adapter {
+                adapter.get_system_health().await
+                    .map_err(|e| anyhow::anyhow!("Failed to get system health: {}", e))
+            } else {
+                Ok(self.system_health.clone())
+            }
+        }
+
+        pub async fn deploy_biome(&self, manifest_path: &str) -> Result<crate::BiomeDeployment, anyhow::Error> {
+            if let Some(adapter) = &self.adapter {
+                adapter.process_biome_manifest(manifest_path).await
+                    .map_err(|e| anyhow::anyhow!("Failed to deploy biome: {}", e))
+            } else {
+                Err(anyhow::anyhow!("Universal adapter not initialized"))
+            }
+        }
+
+        pub async fn start(&self) -> Result<(), anyhow::Error> {
+            // Universal UI manager now focuses on coordinating between Toadstool and Songbird
+            tracing::info!("Starting Universal UI Manager with delegation architecture");
+            tracing::info!("Toadstool endpoint: {:?}", self.config.toadstool_endpoint);
+            tracing::info!("Songbird endpoint: {:?}", self.config.songbird_endpoint);
+            Ok(())
         }
     }
 
-    impl Default for MetricsConfig {
+    impl Default for UIFeatures {
         fn default() -> Self {
             Self {
-                enabled: true,
-                chart_types: vec!["line".to_string(), "bar".to_string()],
-                metrics_endpoint: "/metrics".to_string(),
-                default_time_range: "1h".to_string(),
+                ai_assistant: true,
+                real_time_monitoring: true,
+                deployment_wizard: true,
+                service_management: true,
+                log_viewer: true,
+                metrics_dashboard: true,
+                custom_dashboards: true,
+                primal_coordination: true,
             }
         }
     }
@@ -128,53 +166,11 @@ pub mod universal_ui {
             Self {
                 theme: "default".to_string(),
                 mode: crate::UIMode::Auto,
-                features: crate::UIFeatures::default(),
-                custom_primals: std::collections::HashMap::new(),
-                primal_endpoints: std::collections::HashMap::new(),
+                features: UIFeatures::default(),
+                discovered_primals: vec![],
+                toadstool_endpoint: Some("http://localhost:8084".to_string()),
+                songbird_endpoint: Some("http://localhost:8080".to_string()),
             }
-        }
-    }
-
-    #[derive(Debug, Clone, Serialize, Deserialize)]
-    pub struct UniversalUIManager {
-        pub config: UniversalUIConfig,
-        pub status: crate::SystemStatus,
-    }
-
-    impl UniversalUIManager {
-        pub fn new(config: UniversalUIConfig) -> Self {
-            Self {
-                config,
-                status: crate::SystemStatus {
-                    healthy: true,
-                    uptime: std::time::Duration::from_secs(0),
-                    primals: vec![],
-                    total_primals: 0,
-                    healthy_primals: 0,
-                    ui_mode: crate::UIMode::Auto,
-                    last_discovery: None,
-                },
-            }
-        }
-
-        pub async fn handle_user_input(
-            &self,
-            _input: crate::UserInput,
-        ) -> Result<crate::UIResponse, anyhow::Error> {
-            Ok(crate::UIResponse {
-                success: true,
-                message: "Input processed".to_string(),
-                data: None,
-            })
-        }
-
-        pub async fn get_system_status(&self) -> Result<crate::SystemStatus, anyhow::Error> {
-            Ok(self.status.clone())
-        }
-
-        pub async fn start(&self) -> Result<(), anyhow::Error> {
-            // Mock implementation for examples
-            Ok(())
         }
     }
 }
@@ -184,11 +180,16 @@ pub mod ecosystem {
     pub use biomeos_core::ecosystem_integration::*;
 }
 
-/// Re-export universal adapter for federation coordination
-pub mod federation {
+/// Re-export universal adapter for primal coordination
+pub mod coordination {
+    pub use crate::universal_adapter::*;
+}
+
+/// Universal adapter pattern types
+pub mod universal {
     pub use crate::universal_adapter::{
-        BiomeOSUniversalAdapter, CoordinationSession, DeploymentStatus, FederationStatus,
-        SessionStatus, UniversalCoordination,
+        BiomeOSUniversalAdapter, ToadstoolClient, SongbirdClient,
+        CapabilityRegistry, UniversalHealthMonitor
     };
 }
 
@@ -196,7 +197,10 @@ pub mod federation {
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Build information
-pub const BUILD_INFO: &str = concat!("biomeOS v", env!("CARGO_PKG_VERSION"));
+pub const BUILD_INFO: &str = concat!("biomeOS v", env!("CARGO_PKG_VERSION"), " - Universal Adapter Architecture");
+
+/// Architecture description
+pub const ARCHITECTURE: &str = "Universal Adapter: Delegates to Toadstool (parsing) + Songbird (discovery)";
 
 #[cfg(test)]
 mod tests {
@@ -212,5 +216,31 @@ mod tests {
     #[test]
     fn test_build_info() {
         assert!(BUILD_INFO.contains("biomeOS"));
+        assert!(BUILD_INFO.contains("Universal Adapter"));
+    }
+
+    #[test]
+    fn test_architecture() {
+        assert!(ARCHITECTURE.contains("Toadstool"));
+        assert!(ARCHITECTURE.contains("Songbird"));
+        assert!(ARCHITECTURE.contains("Delegates"));
+    }
+
+    #[tokio::test]
+    async fn test_universal_ui_manager() {
+        let config = universal_ui::UniversalUIConfig::default();
+        let mut manager = universal_ui::UniversalUIManager::new(config);
+        
+        // Test initialization
+        assert!(manager.adapter.is_none());
+        
+        // Test discovery without adapter
+        let primals = manager.discover_primals().await.unwrap();
+        assert!(primals.is_empty());
+        
+        // Test health check without adapter
+        let health = manager.get_system_health().await.unwrap();
+        assert!(!health.toadstool_status.available);
+        assert!(!health.songbird_status.available);
     }
 }

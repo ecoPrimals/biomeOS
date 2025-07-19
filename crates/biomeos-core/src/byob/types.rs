@@ -1,3 +1,5 @@
+
+
 //! BYOB (Bring Your Own Biome) types and data structures
 //!
 //! This module contains all the type definitions for the BYOB functionality,
@@ -7,6 +9,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use crate::BiomeResult;
 use std::sync::{Arc, Mutex};
 use tokio::sync::RwLock;
 
@@ -346,3 +349,46 @@ pub struct SimpleBiomeResources {
     pub memory_mb: u64,
     pub storage_gb: u64,
 } 
+/// BiomeManifest definition for BYOB
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BiomeManifest {
+    pub name: String,
+    pub version: String,
+    pub services: Vec<Service>,
+    pub dependencies: Vec<String>,
+}
+
+/// Service definition
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Service {
+    pub name: String,
+    pub image: String,
+    pub ports: Vec<u16>,
+}
+
+/// Ecosystem coordinator placeholder
+#[derive(Debug, Clone)]
+pub struct EcosystemCoordinator {
+    pub coordinator_id: String,
+}
+
+/// Ecosystem health coordinator placeholder
+#[derive(Debug, Clone)]
+pub struct EcosystemHealthCoordinator {
+    pub coordinator_id: String,
+}
+
+
+impl EcosystemHealthCoordinator {
+    pub fn new() -> Self {
+        Self {
+            coordinator_id: "health-coordinator".to_string(),
+        }
+    }
+
+    pub async fn initialize(&self) -> BiomeResult<()> {
+        // TODO: Implement health coordinator initialization
+        Ok(())
+    }
+}
+

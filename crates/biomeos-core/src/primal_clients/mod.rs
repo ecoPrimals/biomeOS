@@ -122,6 +122,20 @@ pub trait PrimalDiscovery: Send + Sync {
     async fn create_client(&self, primal: &DiscoveredPrimal) -> BiomeResult<Box<dyn UniversalPrimalClient>>;
 }
 
+/// Dummy discovery implementation for testing
+pub struct DummyDiscovery;
+
+#[async_trait]
+impl PrimalDiscovery for DummyDiscovery {
+    async fn discover_primals(&self) -> BiomeResult<Vec<DiscoveredPrimal>> {
+        Ok(vec![])
+    }
+    
+    async fn create_client(&self, _primal: &DiscoveredPrimal) -> BiomeResult<Box<dyn UniversalPrimalClient>> {
+        Err(BiomeError::NotImplemented("DummyDiscovery".to_string()))
+    }
+}
+
 /// Discovered primal information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DiscoveredPrimal {

@@ -1,3 +1,12 @@
+/// Security level enumeration
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum SecurityLevel {
+    Low,
+    Standard,
+    High,
+    Critical,
+}
+
 use crate::crypto::{PrivateKey, PublicKey, Signature};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -6,7 +15,7 @@ use std::collections::HashMap;
 pub type DependencyId = String;
 
 /// Violation severity
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ViolationSeverity {
     Low,
     Medium,
@@ -15,7 +24,7 @@ pub enum ViolationSeverity {
 }
 
 /// Recommendation priority
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum RecommendationPriority {
     Low,
     Medium,
@@ -24,7 +33,7 @@ pub enum RecommendationPriority {
 }
 
 /// Implementation effort
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ImplementationEffort {
     Trivial,
     Low,
@@ -34,7 +43,7 @@ pub enum ImplementationEffort {
 }
 
 /// External dependency specification
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ExternalDependency {
     pub id: DependencyId,
     pub name: String,
@@ -48,7 +57,7 @@ pub struct ExternalDependency {
 }
 
 /// Dependency types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum DependencyType {
     /// Cloud providers
     CloudProvider { services: Vec<String> },
@@ -78,7 +87,7 @@ pub enum DependencyType {
 }
 
 /// Access requirements for dependencies
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AccessRequirements {
     pub crypto_lock_required: bool,
     pub sovereign_key_required: bool,
@@ -88,8 +97,9 @@ pub struct AccessRequirements {
 }
 
 /// Compliance levels
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ComplianceLevel {
+    Standard,
     /// No restrictions - open source friendly
     Open,
     /// Personal use only
@@ -108,7 +118,7 @@ pub enum ComplianceLevel {
 }
 
 /// Usage restrictions
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum UsageRestriction {
     /// Maximum requests per time period
     RateLimit { requests_per_hour: u32 },
@@ -128,7 +138,7 @@ pub enum UsageRestriction {
 }
 
 /// Access context for decision making
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AccessContext {
     pub user_type: UserType,
     pub usage_pattern: UsagePattern,
@@ -138,7 +148,7 @@ pub struct AccessContext {
 }
 
 /// User types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum UserType {
     /// Individual user (grandma-safe cat door allowed)
     Individual { verified: bool },
@@ -162,7 +172,7 @@ pub enum UserType {
 }
 
 /// Revenue tiers for commercial users
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum RevenueTier {
     Startup,    // < $1M ARR
     SmallBiz,   // $1M - $10M ARR
@@ -172,7 +182,7 @@ pub enum RevenueTier {
 }
 
 /// Usage patterns
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct UsagePattern {
     pub usage_type: UsageType,
     pub scale: UsageScale,
@@ -183,7 +193,7 @@ pub struct UsagePattern {
 }
 
 /// Usage types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum UsageType {
     Personal,
     Educational,
@@ -196,8 +206,9 @@ pub enum UsageType {
 }
 
 /// Usage scale
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum UsageScale {
+    Small,
     Individual,
     Team,
     Department,
@@ -206,8 +217,9 @@ pub enum UsageScale {
 }
 
 /// Usage frequency
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum UsageFrequency {
+    Monthly,
     Occasional,
     Regular,
     Heavy,
@@ -215,7 +227,7 @@ pub enum UsageFrequency {
 }
 
 /// Data sensitivity levels
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum DataSensitivity {
     Public,
     Internal,
@@ -225,7 +237,7 @@ pub enum DataSensitivity {
 }
 
 /// Current usage metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CurrentUsage {
     pub daily_requests: u32,
     pub monthly_data_gb: f64,
@@ -235,7 +247,7 @@ pub struct CurrentUsage {
 }
 
 /// biomeOS configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct BiomeConfiguration {
     pub energy_flow_state: EnergyFlowState,
     pub sovereignty_level: SovereigntyLevel,
@@ -245,7 +257,7 @@ pub struct BiomeConfiguration {
 }
 
 /// Energy flow states (from universal.rs)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum EnergyFlowState {
     Closed,
     PrivateOpen,
@@ -253,7 +265,7 @@ pub enum EnergyFlowState {
 }
 
 /// Sovereignty levels
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum SovereigntyLevel {
     Maximum, // Air-gapped, zero external deps
     High,    // Minimal external deps, all crypto-locked
@@ -263,7 +275,7 @@ pub enum SovereigntyLevel {
 }
 
 /// Access decision
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AccessDecision {
     pub decision: AccessVerdict,
     pub reasoning: String,
@@ -273,7 +285,7 @@ pub struct AccessDecision {
 }
 
 /// Access verdict
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum AccessVerdict {
     /// Full access granted
     Granted,
@@ -290,7 +302,7 @@ pub enum AccessVerdict {
 }
 
 /// Access conditions
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum AccessCondition {
     /// Rate limiting
     RateLimit { max_requests_per_hour: u32 },
@@ -311,7 +323,7 @@ pub enum AccessCondition {
 }
 
 /// Audit levels
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum AuditLevel {
     Basic,
     Detailed,
@@ -319,7 +331,7 @@ pub enum AuditLevel {
 }
 
 /// API signature for detection
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ApiSignature {
     pub service_name: String,
     pub api_patterns: Vec<ApiPattern>,
@@ -329,7 +341,7 @@ pub struct ApiSignature {
 }
 
 /// API patterns for detection
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ApiPattern {
     UrlPattern {
         regex: String,
@@ -347,7 +359,7 @@ pub enum ApiPattern {
 }
 
 /// Header patterns
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum HeaderPattern {
     Contains { key: String, value: String },
     StartsWith { key: String, prefix: String },
@@ -356,7 +368,7 @@ pub enum HeaderPattern {
 }
 
 /// Authentication patterns
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum AuthPattern {
     BearerToken,
     ApiKey { header_name: String },
@@ -367,7 +379,7 @@ pub enum AuthPattern {
 }
 
 /// Payload patterns
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum PayloadPattern {
     JsonSchema { schema: String },
     XmlSchema { schema: String },
@@ -376,7 +388,7 @@ pub enum PayloadPattern {
 }
 
 /// Alternative dependencies
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AlternativeDependency {
     pub name: String,
     pub vendor: String,
@@ -387,7 +399,7 @@ pub struct AlternativeDependency {
 }
 
 /// Migration difficulty
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum MigrationDifficulty {
     Trivial,  // Drop-in replacement available
     Easy,     // Some configuration changes needed
@@ -397,7 +409,7 @@ pub enum MigrationDifficulty {
 }
 
 /// Cost comparison
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum CostComparison {
     Cheaper { savings_percent: f64 },
     MoreExpensive { increase_percent: f64 },
@@ -406,7 +418,7 @@ pub enum CostComparison {
 }
 
 /// Licensing information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LicensingInfo {
     pub license_type: LicenseType,
     pub commercial_terms: Option<CommercialTerms>,
@@ -417,7 +429,7 @@ pub struct LicensingInfo {
 }
 
 /// License types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum LicenseType {
     /// Open source licenses
     OpenSource { license: OpenSourceLicense },
@@ -435,7 +447,7 @@ pub enum LicenseType {
 }
 
 /// Open source licenses
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum OpenSourceLicense {
     Mit,
     Apache2,
@@ -450,7 +462,7 @@ pub enum OpenSourceLicense {
 }
 
 /// Pricing models
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum PricingModel {
     PerUser,
     PerRequest,
@@ -463,7 +475,7 @@ pub enum PricingModel {
 }
 
 /// Commercial terms
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CommercialTerms {
     pub base_price: f64,
     pub currency: String,
@@ -474,14 +486,14 @@ pub struct CommercialTerms {
 }
 
 /// Volume discounts
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct VolumeDiscount {
     pub threshold: u64,
     pub discount_percent: f64,
 }
 
 /// Sovereignty impact assessment
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SovereigntyImpact {
     pub impact_level: SovereigntyImpactLevel,
     pub data_residency_requirements: Vec<String>,
@@ -491,7 +503,7 @@ pub struct SovereigntyImpact {
 }
 
 /// Sovereignty impact levels
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum SovereigntyImpactLevel {
     /// No impact on sovereignty
     None,
@@ -506,7 +518,7 @@ pub enum SovereigntyImpactLevel {
 }
 
 /// Vendor lock risk assessment
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct VendorLockRisk {
     pub risk_level: RiskLevel,
     pub lock_factors: Vec<LockFactor>,
@@ -515,7 +527,7 @@ pub struct VendorLockRisk {
 }
 
 /// Risk levels
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum RiskLevel {
     Low,
     Medium,
@@ -524,7 +536,7 @@ pub enum RiskLevel {
 }
 
 /// Lock-in factors
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum LockFactor {
     ProprietaryApi,
     ProprietaryDataFormat,
@@ -536,7 +548,7 @@ pub enum LockFactor {
 }
 
 /// Exit strategy
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ExitStrategy {
     pub data_portability: DataPortability,
     pub code_portability: CodePortability,
@@ -545,7 +557,7 @@ pub struct ExitStrategy {
 }
 
 /// Data portability assessment
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum DataPortability {
     FullyPortable,
     MostlyPortable { limitations: Vec<String> },
@@ -554,7 +566,7 @@ pub enum DataPortability {
 }
 
 /// Code portability assessment
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum CodePortability {
     FullyPortable,
     MostlyPortable {
@@ -569,14 +581,14 @@ pub enum CodePortability {
 }
 
 /// Report period
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ReportPeriod {
     pub start_date: chrono::DateTime<chrono::Utc>,
     pub end_date: chrono::DateTime<chrono::Utc>,
 }
 
 /// Usage metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct UsageMetrics {
     pub dependency_id: DependencyId,
     pub reporting_period: ReportPeriod,
@@ -590,7 +602,7 @@ pub struct UsageMetrics {
 }
 
 /// Sovereign key specification
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SovereignKeySpec {
     pub grantee: String,
     pub grantee_type: GranteeType,
@@ -601,7 +613,7 @@ pub struct SovereignKeySpec {
 }
 
 /// Grantee types
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum GranteeType {
     Individual {
         email: String,
@@ -622,7 +634,7 @@ pub enum GranteeType {
 }
 
 /// Sovereign access levels
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum SovereignAccessLevel {
     /// Read-only access
     ReadOnly,
@@ -637,7 +649,7 @@ pub enum SovereignAccessLevel {
 }
 
 /// Validity period
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ValidityPeriod {
     /// Specific duration
     Duration { months: u32 },
@@ -650,7 +662,7 @@ pub enum ValidityPeriod {
 }
 
 /// Key restrictions
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum KeyRestriction {
     IpWhitelist {
         ips: Vec<String>,
@@ -674,7 +686,7 @@ pub enum KeyRestriction {
 }
 
 /// Sovereign key
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SovereignKey {
     pub key_id: String,
     pub public_key: PublicKey,
@@ -687,7 +699,7 @@ pub struct SovereignKey {
 }
 
 /// Key status
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum KeyStatus {
     Active,
     Suspended { reason: String },
@@ -699,10 +711,12 @@ pub enum KeyStatus {
 impl Default for UsagePattern {
     fn default() -> Self {
         Self {
-            usage_frequency: 1,
-            concurrency_level: 1,
-            data_volume: 0,
-            integration_complexity: 1,
+            frequency: UsageFrequency::Monthly,
+            scale: UsageScale::Small,
+            data_sensitivity: DataSensitivity::Public,
+            commercial_purpose: false,
+            revenue_generating: false,
+            usage_type: UsageType::Development,
         }
     }
 }
@@ -711,9 +725,11 @@ impl Default for UsagePattern {
 impl Default for AccessRequirements {
     fn default() -> Self {
         Self {
-            security_level: SecurityLevel::Standard,
-            data_residency: None,
-            encryption_requirements: None,
+            compliance_level: ComplianceLevel::Standard,
+            crypto_lock_required: false,
+            sovereign_key_required: false,
+            usage_restrictions: vec![],
+            cat_door_allowed: false,
         }
     }
 }
@@ -722,20 +738,17 @@ impl Default for AccessRequirements {
 impl std::fmt::Display for DependencyType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            DependencyType::External => write!(f, "external"),
-            DependencyType::Internal => write!(f, "internal"),
-            DependencyType::System => write!(f, "system"),
-            DependencyType::Network => write!(f, "network"),
-            DependencyType::Database => write!(f, "database"),
-            DependencyType::Storage => write!(f, "storage"),
-            DependencyType::Compute => write!(f, "compute"),
-            DependencyType::Api => write!(f, "api"),
-            DependencyType::Service => write!(f, "service"),
-            DependencyType::Library => write!(f, "library"),
-            DependencyType::Framework => write!(f, "framework"),
-            DependencyType::Tool => write!(f, "tool"),
-            DependencyType::Runtime => write!(f, "runtime"),
-            DependencyType::Other => write!(f, "other"),
+            DependencyType::CloudProvider { .. } => write!(f, "cloud_provider"),
+            DependencyType::Orchestrator { .. } => write!(f, "orchestrator"),
+            DependencyType::Database { .. } => write!(f, "database"),
+            DependencyType::MessageQueue { .. } => write!(f, "message_queue"),
+            DependencyType::Monitoring { .. } => write!(f, "monitoring"),
+            DependencyType::AiService { .. } => write!(f, "ai_service"),
+            DependencyType::CryptoLibrary { .. } => write!(f, "crypto_library"),
+            DependencyType::PackageRegistry { .. } => write!(f, "package_registry"),
+            DependencyType::ContentDelivery { .. } => write!(f, "content_delivery"),
+            DependencyType::AuthProvider { .. } => write!(f, "auth_provider"),
+            DependencyType::Custom { .. } => write!(f, "custom"),
         }
     }
 }

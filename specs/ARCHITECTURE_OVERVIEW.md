@@ -1,27 +1,32 @@
-# `biomeOS` - Universal Architecture Overview v1
+# `biomeOS` - Universal Architecture Overview v2
 
 **Status:** Implementation Ready | **Author:** ecoPrimals Architecture Team | **Date:** January 2025
 
 ---
 
-## 1. Preamble: Universal Parser Architecture
+## 1. Preamble: Universal Adapter Architecture
 
-This document outlines the universal architecture for `biomeOS` with a fundamental principle: **toadstool serves as the universal parser** for all biomeOS operations. biomeOS employs toadstool's mature parsing capabilities using universal and agnostic patterns inspired by songbird's universal adapter architecture.
+This document outlines the universal architecture for `biomeOS` with fundamental principles:
+- **Toadstool serves as the universal parser** for all manifest operations
+- **Songbird serves as the universal coordinator** for all discovery and orchestration
+- **BiomeOS provides universal adapter patterns** for seamless integration
+- **Capability-based routing** eliminates hardcoded primal dependencies
 
 ### Core Design Philosophy
 
-- **Universal Parser**: toadstool provides the proven parsing foundation
+- **Universal Parser**: Delegate to Toadstool's proven parsing infrastructure
+- **Universal Coordinator**: Route through Songbird's discovery and orchestration hub
 - **Agnostic Integration**: Works with any current or future Primal
 - **Capability-Based**: Route functionality based on capabilities, not specific implementations
-- **Adapter Pattern**: Universal adapters handle Primal-specific integrations
+- **Adapter Pattern**: Universal adapters handle Primal-agnostic integrations
 
 ## 2. The Universal `biomeOS` Architecture
 
-The ecosystem is designed as a universal orchestration platform where toadstool serves as the parsing foundation and biomeOS provides universal adapter patterns for seamless Primal integration.
+BiomeOS acts as a universal orchestration platform that delegates core functionality to existing, mature primal services while providing universal adapter patterns for seamless integration.
 
 ```mermaid
 ---
-title: biomeOS Universal Architecture
+title: biomeOS Universal Adapter Architecture
 ---
 graph TB
     subgraph "User & Application Layer"
@@ -30,26 +35,34 @@ graph TB
         Y[biome.yaml]
     end
 
-    subgraph "biomeOS Universal Layer"
+    subgraph "biomeOS Universal Adapter Layer"
         UA[Universal Adapter]
-        PR[Primal Registry]
-        CM[Capability Matcher]
+        CR[Capability Registry]
         PM[Primal Manager]
+        HM[Health Monitor]
     end
 
-    subgraph "Universal Parser Layer"
-        TP[Toadstool Parser]
-        VP[Validation Pipeline]
-        EP[Execution Pipeline]
+    subgraph "Toadstool Universal Parser"
+        TP[Manifest Parser]
+        TV[Validator]
+        TE[Executor]
+        TR[Resource Manager]
+    end
+    
+    subgraph "Songbird Universal Coordinator"
+        SD[Service Discovery]
+        SR[Service Registry]
+        SL[Load Balancer]
+        SP[Protocol Router]
     end
 
-    subgraph "Universal Primal Layer"
+    subgraph "Universal Primal Ecosystem"
         subgraph "Standard Primals"
-            B[beardog]
-            S[songbird]
-            N[nestgate]
-            T[toadstool]
-            Q[squirrel]
+            BD[beardog]
+            SB[songbird]
+            NG[nestgate]
+            TS[toadstool]
+            SQ[squirrel]
         end
         
         subgraph "Future/Custom Primals"
@@ -64,89 +77,91 @@ graph TB
     end
 
     Y --> UA
-    UA --> PR
-    UA --> CM
-    UA --> PM
+    U --> UA
+    A --> UA
     
     UA --> TP
-    TP --> VP
-    VP --> EP
+    UA --> SD
     
-    EP --> B
-    EP --> S
-    EP --> N
-    EP --> T
-    EP --> Q
+    TP --> TV
+    TV --> TE
+    TE --> TR
     
-    EP --> FP
-    EP --> CP
-    EP --> TP2
+    SD --> SR
+    SR --> SL
+    SL --> SP
     
-    B --> H
-    S --> H
-    N --> H
-    T --> H
-    Q --> H
+    SP --> BD
+    SP --> SB
+    SP --> NG
+    SP --> TS
+    SP --> SQ
+    
+    SP --> FP
+    SP --> CP
+    SP --> TP2
+    
+    BD --> H
+    SB --> H
+    NG --> H
+    TS --> H
+    SQ --> H
     
     FP --> H
     CP --> H
     TP2 --> H
 
     style TP fill:#e8f5e8
-    style UA fill:#e1f5fe
-    style Y fill:#fff3e0
-    style PR fill:#f3e5f5
-    style CM fill:#fce4ec
+    style SD fill:#e1f5fe
+    style UA fill:#fff3e0
+    style SP fill:#f3e5f5
 ```
 
 ### **Layer 0: Physical Hardware**
-- The foundation. Consists of the raw compute, storage, and networking hardware.
+- The foundation: raw compute, storage, and networking hardware
 
-### **Layer 1: Universal Primal Layer**
+### **Layer 1: Universal Primal Ecosystem**
 - **Standard Primals**: Current ecosystem (beardog, songbird, nestgate, toadstool, squirrel)
-- **Future Primals**: Any new Primals that implement the universal interface
+- **Future Primals**: Any new Primals that implement universal interfaces
 - **Custom Primals**: Third-party and custom implementations
 - **Universal Interface**: Common API for all Primals regardless of implementation
 
-### **Layer 2: Universal Parser Layer**
-- **Toadstool Parser**: The proven parsing engine that handles all manifest processing
-- **Validation Pipeline**: Comprehensive validation using toadstool's mature validation system
-- **Execution Pipeline**: Orchestrates Primal deployment based on parsed manifests
+### **Layer 2: Toadstool Universal Parser + Songbird Universal Coordinator**
+- **Toadstool Parser**: Proven manifest parsing, validation, execution, and resource management
+- **Songbird Coordinator**: Service discovery, registry, load balancing, and protocol routing
+- **No Duplication**: BiomeOS delegates to these mature systems instead of reimplementing
 
-### **Layer 3: biomeOS Universal Layer**
-- **Universal Adapter**: Core component that abstracts Primal-specific details
-- **Primal Registry**: Dynamic registry of all available Primals
-- **Capability Matcher**: Routes functionality based on capabilities, not specific Primals
-- **Primal Manager**: Manages lifecycle and health of all Primals
+### **Layer 3: biomeOS Universal Adapter Layer**
+- **Universal Adapter**: Coordinates between Toadstool parser and Songbird coordinator
+- **Capability Registry**: Maps capabilities to available Primals via Songbird
+- **Primal Manager**: Manages lifecycle through Toadstool execution
+- **Health Monitor**: Monitors system health through both services
 
 ### **Layer 4: Applications & Workloads**
-- User-facing applications and services that benefit from universal orchestration
-- Transparent to the underlying Primal implementations
+- User-facing applications that benefit from universal orchestration
+- Transparent to underlying Primal implementations
 - Capability-based deployment for optimal performance
 
-## 3. Universal Adapter Pattern (Inspired by Songbird)
+## 3. Universal Adapter Pattern
 
-Following songbird's universal adapter architecture, biomeOS implements a universal adapter pattern that enables seamless integration with any Primal:
+BiomeOS implements a universal adapter that coordinates between Toadstool's parsing capabilities and Songbird's discovery/coordination capabilities:
 
 ### 3.1 Universal Adapter Structure
 
 ```rust
-// Universal Adapter Pattern (inspired by songbird)
+// Universal Adapter Pattern - delegates to mature primal services
 pub struct BiomeOSUniversalAdapter {
-    // Toadstool integration
-    toadstool_parser: ToadstoolManifestParser,
+    // Delegate parsing to Toadstool's proven parser
+    toadstool_client: ToadstoolClient,
     
-    // Universal registries
-    primal_registry: UniversalPrimalRegistry,
+    // Delegate coordination to Songbird's discovery system
+    songbird_client: SongbirdClient,
+    
+    // Universal registries (thin layer over Songbird)
     capability_registry: CapabilityRegistry,
     
-    // Matching and routing
-    capability_matcher: CapabilityMatcher,
-    primal_router: PrimalRouter,
-    
-    // Monitoring and health
+    // Monitoring and health (aggregates from both services)
     health_monitor: UniversalHealthMonitor,
-    metrics_collector: UniversalMetricsCollector,
 }
 
 impl BiomeOSUniversalAdapter {
@@ -154,275 +169,104 @@ impl BiomeOSUniversalAdapter {
         &self,
         manifest_path: &str
     ) -> Result<BiomeDeployment> {
-        // 1. Parse with toadstool (proven parser)
-        let parsed = self.toadstool_parser.parse(manifest_path).await?;
+        // 1. Delegate parsing to Toadstool
+        let parsed = self.toadstool_client.parse_manifest(manifest_path).await?;
         
-        // 2. Apply universal transformations
-        let universal = self.universalize_manifest(parsed).await?;
+        // 2. Delegate discovery to Songbird
+        let available_primals = self.songbird_client.discover_primals().await?;
         
-        // 3. Match capabilities to available Primals
-        let matched = self.capability_matcher.resolve_primals(&universal).await?;
+        // 3. Match capabilities (thin coordination layer)
+        let resolved = self.capability_registry
+            .resolve_capabilities(&parsed, &available_primals).await?;
         
-        // 4. Route to appropriate Primals
-        let deployment = self.primal_router.deploy(matched).await?;
+        // 4. Delegate execution to Toadstool
+        let deployment = self.toadstool_client
+            .execute_manifest(parsed, resolved).await?;
         
-        // 5. Monitor and maintain
-        self.health_monitor.start_monitoring(&deployment).await?;
+        // 5. Register with Songbird for coordination
+        self.songbird_client.register_deployment(&deployment).await?;
         
         Ok(deployment)
     }
 }
 ```
 
-### 3.2 Universal Primal Interface
+### 3.2 Delegation Strategy
 
-```rust
-// Universal Primal Interface (any Primal can implement)
-#[async_trait]
-pub trait UniversalPrimal: Send + Sync {
-    // Identity and capabilities
-    fn primal_id(&self) -> &str;
-    fn primal_type(&self) -> PrimalType;
-    fn capabilities(&self) -> Vec<String>;
-    fn version(&self) -> &str;
-    
-    // Lifecycle management
-    async fn initialize(&mut self, config: serde_json::Value) -> Result<()>;
-    async fn health_check(&self) -> HealthStatus;
-    async fn shutdown(&mut self) -> Result<()>;
-    
-    // Request handling
-    async fn handle_request(&self, request: UniversalRequest) -> Result<UniversalResponse>;
-    
-    // Capability-specific methods
-    async fn can_handle_capability(&self, capability: &str) -> bool;
-    async fn get_capability_metadata(&self, capability: &str) -> Option<CapabilityMetadata>;
-}
-```
+BiomeOS avoids reimplementing functionality that already exists in mature primals:
 
-## 4. Capability-Based Architecture
+**Toadstool Delegation:**
+- ✅ Manifest parsing and validation
+- ✅ Multi-runtime execution (Container, WASM, Native, GPU)
+- ✅ Resource management and scheduling
+- ✅ Security context enforcement
 
-### 4.1 Capability Registry System
+**Songbird Delegation:**
+- ✅ Service discovery across multiple backends
+- ✅ Protocol routing and load balancing  
+- ✅ Primal registration and health monitoring
+- ✅ Cross-primal communication coordination
 
-```rust
-pub struct CapabilityRegistry {
-    capabilities: HashMap<String, Vec<PrimalProvider>>,
-    priority_matrix: HashMap<String, Vec<String>>, // capability -> ordered primal preferences
-}
+**BiomeOS Coordination:**
+- ✅ Universal adapter between Toadstool and Songbird
+- ✅ Capability-based primal resolution
+- ✅ Unified API for universal orchestration
+- ✅ Cross-cutting concerns (logging, metrics, etc.)
 
-impl CapabilityRegistry {
-    pub async fn register_primal(&mut self, primal: Box<dyn UniversalPrimal>) -> Result<()> {
-        let primal_id = primal.primal_id().to_string();
-        let capabilities = primal.capabilities();
-        
-        for capability in capabilities {
-            self.capabilities
-                .entry(capability.clone())
-                .or_insert_with(Vec::new)
-                .push(PrimalProvider::new(primal_id.clone(), primal));
-        }
-        
-        Ok(())
-    }
-    
-    pub async fn resolve_capability(
-        &self, 
-        capability: &str, 
-        preferences: &[String]
-    ) -> Result<PrimalProvider> {
-        // Match based on preference order
-        for preference in preferences {
-            if let Some(providers) = self.capabilities.get(capability) {
-                if let Some(provider) = providers.iter().find(|p| p.id == *preference) {
-                    return Ok(provider.clone());
-                }
-            }
-        }
-        
-        // Fallback to any available provider
-        self.capabilities
-            .get(capability)
-            .and_then(|providers| providers.first())
-            .cloned()
-            .ok_or_else(|| CapabilityNotFoundError::new(capability))
-    }
-}
-```
+### 3.3 Benefits of Universal Adapter Architecture
 
-### 4.2 Capability Matching Examples
+1. **Mature Foundation**: Leverages battle-tested parsing (Toadstool) and discovery (Songbird)
+2. **Reduced Complexity**: No duplication of complex parsing or discovery logic
+3. **Better Reliability**: Uses proven, production-ready implementations
+4. **Future Compatibility**: Automatically benefits from Toadstool and Songbird improvements
+5. **Maintainability**: Smaller codebase focused on coordination rather than reimplementation
 
-```yaml
-# Capability-based Primal selection
-primals:
-  # Security capability - prefers beardog, falls back to custom
-  security:
-    capability_required: "encryption"
-    provider_preference: ["beardog", "custom_security", "fallback_security"]
-    
-  # Storage capability - prefers nestgate, falls back to alternatives
-  storage:
-    capability_required: "persistent_storage"
-    provider_preference: ["nestgate", "custom_storage", "basic_storage"]
-    
-  # Service mesh capability - prefers songbird, works with alternatives
-  networking:
-    capability_required: "service_discovery"
-    provider_preference: ["songbird", "custom_mesh", "basic_networking"]
-```
+## 4. Implementation Strategy
 
-## 5. Universal Primal Integration Process
+### 4.1 Phase 1: Universal Client Implementation
+1. **Toadstool Client**: HTTP/gRPC client for Toadstool's parsing and execution APIs
+2. **Songbird Client**: HTTP/WebSocket client for Songbird's discovery and coordination APIs
+3. **Capability Registry**: Thin mapping layer between capabilities and discovered primals
+4. **Universal Health Monitor**: Aggregated health monitoring from both services
 
-### 5.1 Standard Primal Integration
+### 4.2 Phase 2: Remove Hardcoded Implementations
+1. **Replace Mock Parsers**: Remove BiomeOS manifest parsing, delegate to Toadstool
+2. **Replace Mock Discovery**: Remove hardcoded primal references, use Songbird discovery
+3. **Replace Mock Execution**: Use Toadstool's execution engine instead of local mocks
+4. **Replace Mock Coordination**: Use Songbird's coordination instead of local registries
 
-```rust
-// Example: Integrating songbird as a universal primal
-pub struct SongbirdUniversalAdapter {
-    songbird_client: SongbirdClient,
-    capabilities: Vec<String>,
-}
+### 4.3 Phase 3: Universal Interface Layer
+1. **Unified API**: Single API that coordinates Toadstool and Songbird
+2. **Capability Abstraction**: Abstract away specific primal implementations
+3. **Universal UI**: Interface that works with any discovered primals
+4. **Migration Tools**: Help migrate from hardcoded to capability-based configurations
 
-impl UniversalPrimal for SongbirdUniversalAdapter {
-    fn primal_id(&self) -> &str { "songbird" }
-    fn primal_type(&self) -> PrimalType { PrimalType::ServiceMesh }
-    
-    fn capabilities(&self) -> Vec<String> {
-        vec![
-            "service_discovery".to_string(),
-            "load_balancing".to_string(),
-            "api_gateway".to_string(),
-            "protocol_translation".to_string(),
-        ]
-    }
-    
-    async fn handle_request(&self, request: UniversalRequest) -> Result<UniversalResponse> {
-        match request.capability.as_str() {
-            "service_discovery" => self.handle_service_discovery(request).await,
-            "load_balancing" => self.handle_load_balancing(request).await,
-            "api_gateway" => self.handle_api_gateway(request).await,
-            _ => Err(UnsupportedCapabilityError::new(&request.capability))
-        }
-    }
-}
-```
+## 5. Architecture Benefits
 
-### 5.2 Future Primal Integration
+### 5.1 Delegation Benefits
+- **Proven Stability**: Uses mature, battle-tested parsing and coordination
+- **Performance**: Optimized implementations instead of prototype code
+- **Feature Completeness**: Full feature sets from specialized services
+- **Reduced Maintenance**: Less code to maintain and debug
 
-```rust
-// Example: Hypothetical AI inference primal
-pub struct AIInferencePrimal {
-    model_cache: HashMap<String, Box<dyn AIModel>>,
-    capabilities: Vec<String>,
-}
-
-impl UniversalPrimal for AIInferencePrimal {
-    fn primal_id(&self) -> &str { "ai_inference_primal" }
-    fn primal_type(&self) -> PrimalType { PrimalType::Custom("ai_inference".to_string()) }
-    
-    fn capabilities(&self) -> Vec<String> {
-        vec![
-            "llm_inference".to_string(),
-            "embedding_generation".to_string(),
-            "vision_processing".to_string(),
-        ]
-    }
-    
-    async fn handle_request(&self, request: UniversalRequest) -> Result<UniversalResponse> {
-        match request.capability.as_str() {
-            "llm_inference" => self.handle_llm_inference(request).await,
-            "embedding_generation" => self.handle_embeddings(request).await,
-            "vision_processing" => self.handle_vision(request).await,
-            _ => Err(UnsupportedCapabilityError::new(&request.capability))
-        }
-    }
-}
-```
-
-## 6. Deployment Flow
-
-### 6.1 Universal Deployment Process
-
-```mermaid
----
-title: Universal Deployment Flow
----
-sequenceDiagram
-    participant User
-    participant biomeOS
-    participant ToadstoolParser
-    participant PrimalRegistry
-    participant Primals
-    
-    User->>biomeOS: Deploy biome.yaml
-    biomeOS->>ToadstoolParser: Parse manifest
-    ToadstoolParser->>biomeOS: Parsed structure
-    biomeOS->>PrimalRegistry: Resolve capabilities
-    PrimalRegistry->>biomeOS: Matched primals
-    biomeOS->>Primals: Initialize with config
-    Primals->>biomeOS: Deployment status
-    biomeOS->>User: Deployment complete
-```
-
-### 6.2 Capability Resolution Flow
-
-```mermaid
----
-title: Capability Resolution Flow
----
-graph TD
-    A[Capability Request] --> B{Check Preferences}
-    B -->|Preferred Available| C[Use Preferred Primal]
-    B -->|Preferred Unavailable| D[Check Alternatives]
-    D -->|Alternative Available| E[Use Alternative Primal]
-    D -->|No Alternatives| F[Capability Not Found Error]
-    C --> G[Deploy to Primal]
-    E --> G
-    G --> H[Monitor Health]
-    H --> I[Success]
-    
-    style A fill:#e1f5fe
-    style G fill:#e8f5e8
-    style I fill:#e8f5e8
-    style F fill:#ffebee
-```
-
-## 7. Benefits of Universal Architecture
-
-### 7.1 Immediate Benefits
-- **Proven Parser**: Leverages toadstool's mature, battle-tested parsing engine
-- **Seamless Integration**: Works with all current Primals without modification
-- **Capability Flexibility**: Choose best Primal for each capability
-- **Future-Proof**: Automatic support for new Primals through universal interface
-
-### 7.2 Long-term Benefits
+### 5.2 Universal Benefits
+- **Current Ecosystem**: Works seamlessly with all existing Primals
+- **Future Compatibility**: Automatically supports new Primals through Songbird discovery
+- **Third-Party Integration**: Easy integration of custom/third-party Primals
 - **Vendor Independence**: No lock-in to specific Primal implementations
-- **Ecosystem Growth**: Easy integration of third-party and custom Primals
-- **Performance Optimization**: Dynamic routing based on performance metrics
-- **Fault Tolerance**: Automatic failover between Primal providers
 
-### 7.3 Developer Benefits
-- **Unified API**: Single interface for all Primal interactions
-- **Simplified Testing**: Mock any Primal through universal interface
-- **Easy Extension**: Add new capabilities without changing core architecture
-- **Clear Patterns**: Consistent patterns for all Primal integrations
+### 5.3 Capability-Based Benefits
+- **Flexible Deployment**: Choose optimal Primal for each capability requirement
+- **Automatic Failover**: Switch between Primals based on availability and health
+- **Performance Optimization**: Route to best-performing Primal for each workload
+- **Gradual Migration**: Migrate between Primals without configuration changes
 
-## 8. Migration Strategy
+## 6. Conclusion
 
-### 8.1 Phase 1: Foundation (Current)
-- Implement universal adapter framework
-- Integrate toadstool parser as foundation
-- Create capability registry system
-- Build universal Primal interfaces
+The universal adapter architecture enables BiomeOS to provide comprehensive orchestration while:
+- **Delegating parsing to Toadstool**: Leveraging proven manifest processing
+- **Delegating coordination to Songbird**: Using mature discovery and routing
+- **Providing universal abstraction**: Capability-based primal interaction
+- **Maintaining simplicity**: Focused coordination layer instead of reimplementation
 
-### 8.2 Phase 2: Standard Primal Integration
-- Wrap existing Primals with universal adapters
-- Implement capability-based routing
-- Add health monitoring and metrics
-- Create migration tools
-
-### 8.3 Phase 3: Ecosystem Expansion
-- Define standards for third-party Primals
-- Implement advanced features (multi-provider, load balancing)
-- Add performance optimization
-- Create marketplace for Primal providers
-
-This universal architecture ensures that biomeOS remains agnostic, extensible, and future-proof while leveraging the proven capabilities of toadstool as the parsing foundation and songbird's universal adapter patterns as the integration model. 
+This approach delivers production-ready functionality faster and with higher reliability than reimplementing core primal capabilities. 

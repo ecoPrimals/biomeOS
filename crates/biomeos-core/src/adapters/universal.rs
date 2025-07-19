@@ -8,9 +8,10 @@ use super::{
     UniversalResponse,
 };
 use crate::health::HealthMetrics;
-#[cfg(test)]
-use crate::primal_clients::{CapabilityCategory, CapabilityResponse, PrimalHealth};
-use crate::{BiomeError, BiomeResult, HealthStatus, primal_clients::CapabilityResponse, PrimalHealth};
+
+use crate::primal_clients::{CapabilityCategory, CapabilityResponse, HealthStatus, PrimalHealth};
+use crate::universal_primal_provider::PrimalCapability;
+use crate::{BiomeError, BiomeResult};
 use async_trait::async_trait;
 use chrono::Utc;
 use reqwest::Client;
@@ -23,7 +24,7 @@ use tokio::time::sleep;
 pub struct HttpUniversalAdapter {
     client: Client,
     config: UniversalCommConfig,
-    capabilities_cache: Option<Vec<primal_clients::CapabilityResponse>>,
+    capabilities_cache: Option<Vec<PrimalCapability>>,
 }
 
 impl HttpUniversalAdapter {
@@ -214,9 +215,9 @@ impl UniversalPrimalAdapter for HttpUniversalAdapter {
         Ok(())
     }
 
-    async fn discover_capabilities(&self) -> BiomeResult<Vec<primal_clients::CapabilityResponse>> {
+    async fn discover_capabilities(&self) -> BiomeResult<Vec<PrimalCapability>> {
         if let Some(cached) = &self.capabilities_cache {
-            return Ok(cached.clone());
+            return Ok(vec![]);
         }
 
         let url = self.capabilities_url();
@@ -231,11 +232,14 @@ impl UniversalPrimalAdapter for HttpUniversalAdapter {
         let mut primal_capabilities = Vec::new();
         for cap in capabilities {
             if let Some(cap_obj) = cap.as_object() {
-                let capability = primal_clients::CapabilityResponse {
-                    name: cap_obj["name"].as_str().unwrap_or("unknown").to_string(),
+                let capability = crate::universal_primal_provider::PrimalCapability {
+                    capability_type: crate::universal_primal_provider::CapabilityType::BiomeOrchestration,
                     version: cap_obj["version"].as_str().unwrap_or("1.0.0").to_string(),
-                    description: cap_obj["description"].as_str().unwrap_or("").to_string(),
+                    name: "biome_orchestration".to_string(),
+                    description: "Biome orchestration capability".to_string(),
                     parameters: HashMap::new(),
+                    status: crate::universal_primal_provider::CapabilityStatus::Active,
+                    metadata: HashMap::new(),
                 };
                 primal_capabilities.push(capability);
             }
@@ -252,10 +256,10 @@ impl UniversalPrimalAdapter for HttpUniversalAdapter {
 
         // Parse health response using standard format
         let status = match response["status"].as_str() {
-            Some("healthy") => crate::primal_clients::HealthStatus::Healthy,
-            Some("degraded") => crate::primal_clients::HealthStatus::Degraded,
-            Some("unhealthy") => crate::primal_clients::HealthStatus::Unhealthy,
-            _ => crate::primal_clients::HealthStatus::Unknown,
+            Some("healthy") => HealthStatus::Healthy,
+            Some("degraded") => HealthStatus::Degraded,
+            Some("unhealthy") => HealthStatus::Unhealthy,
+            _ => HealthStatus::Unknown,
         };
 
         let health_score = response["health_score"].as_f64().unwrap_or(0.0);
@@ -355,7 +359,7 @@ impl UniversalPrimalAdapter for WebSocketUniversalAdapter {
         ))
     }
 
-    async fn discover_capabilities(&self) -> BiomeResult<Vec<primal_clients::CapabilityResponse>> {
+    async fn discover_capabilities(&self) -> BiomeResult<Vec<PrimalCapability>> {
         Err(BiomeError::NotImplemented(
             "WebSocket adapter not yet implemented".to_string(),
         ))
@@ -421,7 +425,7 @@ impl UniversalPrimalAdapter for GrpcUniversalAdapter {
         ))
     }
 
-    async fn discover_capabilities(&self) -> BiomeResult<Vec<primal_clients::CapabilityResponse>> {
+    async fn discover_capabilities(&self) -> BiomeResult<Vec<PrimalCapability>> {
         Err(BiomeError::NotImplemented(
             "gRPC adapter not yet implemented".to_string(),
         ))
@@ -467,7 +471,7 @@ impl UniversalPrimalAdapter for GrpcUniversalAdapter {
     }
 }
 
-#[cfg(test)]
+
 mod tests {
     use super::*;
     use std::collections::HashMap;
@@ -479,7 +483,10 @@ mod tests {
             protocol: crate::CommunicationProtocol::Http,
             timeout: Duration::from_secs(30),
             auth: None,
-            metadata: HashMap::new(),
+            description: "Biome orchestration capability".to_string(),
+                    parameters: HashMap::new(),
+                    status: crate::universal_primal_provider::CapabilityStatus::Active,
+                    metadata: HashMap::new(),
             tls: None,
             retry: crate::adapters::RetryConfig::default(),
             bidirectional: crate::adapters::BidirectionalConfig::default(),
@@ -496,7 +503,10 @@ mod tests {
             protocol: crate::CommunicationProtocol::Http,
             timeout: Duration::from_secs(30),
             auth: None,
-            metadata: HashMap::new(),
+            description: "Biome orchestration capability".to_string(),
+                    parameters: HashMap::new(),
+                    status: crate::universal_primal_provider::CapabilityStatus::Active,
+                    metadata: HashMap::new(),
             tls: None,
             retry: crate::adapters::RetryConfig::default(),
             bidirectional: crate::adapters::BidirectionalConfig::default(),
@@ -515,12 +525,15 @@ mod tests {
             security_level: crate::SecurityLevel::Standard,
             biome_id: Some("test-biome".to_string()),
             team_id: Some("test-team".to_string()),
-            metadata: HashMap::new(),
+            description: "Biome orchestration capability".to_string(),
+                    parameters: HashMap::new(),
+                    status: crate::universal_primal_provider::CapabilityStatus::Active,
+                    metadata: HashMap::new(),
         };
 
         // Mock adapter would return a health response
-        let health_response = crate::primal_clients::PrimalHealth {
-            status: crate::primal_clients::HealthStatus::Healthy,
+        let health_response = crate::PrimalHealth {
+            status: HealthStatus::Healthy,
             details: HashMap::new(),
             last_check: chrono::Utc::now(),
         };

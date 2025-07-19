@@ -351,19 +351,19 @@ async fn demo_system_status(ui_manager: &UniversalUIManager) -> Result<()> {
     match ui_manager.get_system_status().await {
         Ok(status) => {
             println!("✅ System Status Retrieved:");
-            println!("   📊 Total Primals: {}", status.total_primals);
-            println!("   💚 Healthy Primals: {}", status.healthy_primals);
-            println!("   🖥️  UI Mode: {:?}", status.ui_mode);
+            println!("   📊 Total Primals: {}", status.active_primals.len());
+            println!("   💚 Healthy Primals: {}", status.overall_health);
+            println!("   🖥️  UI Mode: {:?}", status.resource_usage);
 
-            if let Some(last_discovery) = status.last_discovery {
+            let last_discovery = status.last_updated; {
                 println!(
                     "   🕐 Last Discovery: {}",
                     last_discovery.format("%Y-%m-%d %H:%M:%S UTC")
                 );
             }
 
-            let health_percentage = if status.total_primals > 0 {
-                (status.healthy_primals as f64 / status.total_primals as f64) * 100.0
+            let health_percentage = if status.active_primals.len() > 0 {
+                (1.0 / status.active_primals.len() as f64) * 100.0
             } else {
                 0.0
             };

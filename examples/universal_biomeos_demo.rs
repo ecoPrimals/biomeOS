@@ -25,7 +25,7 @@ async fn main() -> BiomeResult<()> {
     println!("📊 Ecosystem Status:");
     let ecosystem = manager.get_ecosystem_health().await?;
     println!("   Health: {:?}", ecosystem.health);
-    println!("   Primals: {}", ecosystem.primals.len());
+    println!("   Primals: {}", ecosystem.active_primals);
     println!();
     
     // Show available capabilities
@@ -169,9 +169,9 @@ spec:
     println!("🏥 Final Ecosystem Health:");
     let final_ecosystem = manager.get_ecosystem_health().await?;
     println!("   Overall Health: {:?}", final_ecosystem.health);
-    println!("   Active Primals: {}", final_ecosystem.primals.len());
+    println!("   Active Primals: {}", final_ecosystem.active_primals);
     
-    for (id, primal) in final_ecosystem.primals {
+    for (id, primal) in final_ecosystem.active_primals {
         println!("     - {}: {:?} ({})", id, primal.health, primal.endpoint);
     }
     println!();
@@ -269,7 +269,7 @@ async fn demo_ecosystem_monitoring() -> BiomeResult<()> {
         
         let ecosystem = manager.get_ecosystem_health().await?;
         println!("   Health: {:?}", ecosystem.health);
-        println!("   Primals: {}", ecosystem.primals.len());
+        println!("   Primals: {}", ecosystem.active_primals);
         
         // Refresh discovery periodically
         if i % 2 == 0 {

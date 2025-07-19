@@ -19,6 +19,48 @@ use crate::{BiomeError, BiomeOSConfig, BiomeResult, HealthStatus};
 use super::types::*;
 
 impl ByobDeploymentManager {
+    /// Get deployment status by ID
+    pub async fn get_deployment_status(&self, deployment_id: &str) -> BiomeResult<DeploymentStatus> {
+        let deployments = self.deployments.read().await;
+        
+        if let Some(deployment) = deployments.get(deployment_id) {
+            Ok(deployment.status.clone())
+        } else {
+            Err(BiomeError::NotFound(format!("Deployment {} not found", deployment_id)))
+        }
+    }
+
+    /// List all deployments for a team
+    pub async fn list_team_deployments(&self, team_id: &str) -> BiomeResult<Vec<DeploymentInstance>> {
+        let deployments = self.deployments.read().await;
+        
+        let team_deployments: Vec<DeploymentInstance> = deployments
+            .values()
+            .filter(|deployment| deployment.team_id == team_id)
+            .cloned()
+            .collect();
+            
+        Ok(team_deployments)
+    }
+
+    /// Remove a deployment by ID
+    pub async fn remove_deployment(&self, deployment_id: &str) -> BiomeResult<()> {
+        let mut deployments = self.deployments.write().await;
+        
+        if deployments.remove(deployment_id).is_some() {
+            info!("Removed deployment: {}", deployment_id);
+            Ok(())
+        } else {
+            Err(BiomeError::NotFound(format!("Deployment {} not found", deployment_id)))
+        }
+    }
+
+    /// Check deployment quotas for a workspace
+    pub fn check_deployment_quotas(&self, _workspace: &TeamWorkspace, _manifest: &SimpleBiomeManifest) -> BiomeResult<()> {
+        // TODO: Implement quota checking logic
+        Ok(())
+    }
+
     /// Create new BYOB deployment manager with health monitoring
     pub fn new(config: BiomeOSConfig) -> Self {
         // Ecosystem coordinator removed - using universal primal manager
@@ -28,8 +70,8 @@ impl ByobDeploymentManager {
         Self {
             workspaces: Arc::new(Mutex::new(HashMap::new())),
             deployments: Arc::new(RwLock::new(HashMap::new())),
-            ecosystem_coordinator,
-            health_coordinator: Arc::new(health_coordinator),
+            ecosystem_coordinator: Arc::new(EcosystemCoordinator { coordinator_id: "universal".to_string() }),
+            health_coordinator: Arc::new(EcosystemHealthCoordinator { coordinator_id: "universal".to_string() }),
             health_monitor,
             config,
         }
@@ -356,7 +398,7 @@ impl ByobDeploymentManager {
             // TODO: Replace with universal primal manager service registration
         }
 
-        Ok(())
+        Ok(deployment_id)
     }
 }
 

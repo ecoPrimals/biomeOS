@@ -82,7 +82,7 @@ pub trait UniversalCryptoInterface {
 }
 
 /// Hash algorithms - multiple implementations available
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum HashAlgorithm {
     /// SHA family
     Sha256,
@@ -103,7 +103,7 @@ pub enum HashAlgorithm {
 }
 
 /// Key algorithms with multiple backend support
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum KeyAlgorithm {
     /// RSA
     Rsa {
@@ -132,7 +132,7 @@ pub enum KeyAlgorithm {
 }
 
 /// Symmetric encryption algorithms
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum SymmetricAlgorithm {
     /// AES
     Aes128Gcm,
@@ -150,7 +150,7 @@ pub enum SymmetricAlgorithm {
 }
 
 /// Key derivation function algorithms
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum KdfAlgorithm {
     Pbkdf2Sha256,
     Pbkdf2Sha512,
@@ -162,7 +162,7 @@ pub enum KdfAlgorithm {
 }
 
 /// Quantum-resistant algorithms
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum QuantumResistantAlgorithm {
     /// NIST Post-Quantum Cryptography Standards
     Kyber,
@@ -181,21 +181,21 @@ pub enum QuantumResistantAlgorithm {
 }
 
 /// Cryptographic keys
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct KeyPair {
     pub public_key: PublicKey,
     pub private_key: PrivateKey,
     pub algorithm: KeyAlgorithm,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct PublicKey {
     pub key_data: Vec<u8>,
     pub algorithm: KeyAlgorithm,
     pub format: KeyFormat,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct PrivateKey {
     pub key_data: Vec<u8>,
     pub algorithm: KeyAlgorithm,
@@ -203,14 +203,14 @@ pub struct PrivateKey {
     pub encrypted: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SymmetricKey {
     pub key_data: Vec<u8>,
     pub algorithm: SymmetricAlgorithm,
 }
 
 /// Key formats
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum KeyFormat {
     Pem,
     Der,
@@ -222,7 +222,7 @@ pub enum KeyFormat {
 }
 
 /// Digital signature
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Signature {
     pub signature_data: Vec<u8>,
     pub algorithm: KeyAlgorithm,
@@ -230,7 +230,7 @@ pub struct Signature {
 }
 
 /// Signature formats
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum SignatureFormat {
     Der,
     Raw,
@@ -239,7 +239,7 @@ pub enum SignatureFormat {
 }
 
 /// Certificate specification
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CertificateSpec {
     pub subject: CertificateSubject,
     pub issuer: Option<CertificateSubject>,
@@ -250,7 +250,7 @@ pub struct CertificateSpec {
 }
 
 /// Certificate subject/issuer information
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CertificateSubject {
     pub common_name: String,
     pub organization: Option<String>,
@@ -262,7 +262,7 @@ pub struct CertificateSubject {
 }
 
 /// Certificate extensions
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum CertificateExtension {
     KeyUsage {
         digital_signature: bool,
@@ -290,7 +290,7 @@ pub enum CertificateExtension {
 }
 
 /// X.509 Certificate
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Certificate {
     pub certificate_data: Vec<u8>,
     pub format: CertificateFormat,
@@ -302,7 +302,7 @@ pub struct Certificate {
 }
 
 /// Certificate formats
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum CertificateFormat {
     Pem,
     Der,
@@ -311,7 +311,7 @@ pub enum CertificateFormat {
 }
 
 /// TLS configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TlsConfig {
     pub protocol_versions: Vec<TlsVersion>,
     pub cipher_suites: Vec<CipherSuite>,
@@ -324,7 +324,7 @@ pub struct TlsConfig {
 }
 
 /// TLS protocol versions
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum TlsVersion {
     Tls10,
     Tls11,
@@ -335,7 +335,7 @@ pub enum TlsVersion {
 }
 
 /// TLS cipher suites
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum CipherSuite {
     /// Traditional cipher suites
     TlsRsaWithAes128GcmSha256,
@@ -358,7 +358,7 @@ pub enum CipherSuite {
 }
 
 /// Client authentication modes
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ClientAuthMode {
     None,
     Optional,
@@ -366,7 +366,7 @@ pub enum ClientAuthMode {
 }
 
 /// TLS connection
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TlsConnection {
     pub connection_id: String,
     pub protocol_version: TlsVersion,
@@ -376,7 +376,7 @@ pub struct TlsConnection {
 }
 
 /// Key exchange result
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct KeyExchangeResult {
     pub shared_secret: Vec<u8>,
     pub public_key: Vec<u8>,
@@ -384,7 +384,7 @@ pub struct KeyExchangeResult {
 }
 
 /// Crypto provider implementations
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum CryptoProvider {
     /// OpenSSL (traditional)
     OpenSsl { version: String },
@@ -421,7 +421,7 @@ pub struct UniversalCryptoManager {
 }
 
 /// Quantum transition configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct QuantumTransitionConfig {
     pub enabled: bool,
     pub hybrid_mode: bool,
@@ -431,7 +431,7 @@ pub struct QuantumTransitionConfig {
 }
 
 /// Quantum transition timeline
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct TransitionTimeline {
     pub start_hybrid_mode: chrono::DateTime<chrono::Utc>,
     pub deprecate_classical: chrono::DateTime<chrono::Utc>,
@@ -439,7 +439,7 @@ pub struct TransitionTimeline {
 }
 
 /// Crypto policy configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CryptoPolicyConfig {
     pub allowed_algorithms: Vec<KeyAlgorithm>,
     pub allowed_symmetric_algorithms: Vec<SymmetricAlgorithm>,
@@ -450,7 +450,7 @@ pub struct CryptoPolicyConfig {
 }
 
 /// Compliance frameworks
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ComplianceFramework {
     Fips140_2,
     Fips140_3,

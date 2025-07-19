@@ -5,6 +5,7 @@
 
 use anyhow::Result;
 use biomeos_core::*;
+use biomeos_core::byob::types::DeploymentInstance;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -16,7 +17,7 @@ use crate::views::byob::types::{HealthStatus, PrimalCapability};
 /// Main API client for biomeOS core integration
 pub struct BiomeOSApi {
     /// Core biomeOS manager
-    core: Arc<Mutex<Option<UniversalBiomeManager>>>,
+    core: Arc<Mutex<Option<UniversalBiomeOSManager>>>,
 
     /// API endpoints for different services
     endpoints: HashMap<String, String>,
@@ -48,7 +49,7 @@ impl BiomeOSApi {
     /// Initialize connection to biomeOS core
     pub async fn initialize(&self) -> Result<()> {
         let config = biomeos_core::BiomeOSConfig::default();
-        let manager = UniversalBiomeManager::new(config);
+        let manager = UniversalBiomeOSManager::new(config);
 
         {
             let mut core = self.core.lock().await;
@@ -63,562 +64,400 @@ impl BiomeOSApi {
         Ok(())
     }
 
-    /// Check if API is connected
+    /// Get connection status
     pub async fn is_connected(&self) -> bool {
-        *self.connected.lock().await
+        let connected = self.connected.lock().await;
+        *connected
     }
 
-    /// Get system status
-    pub async fn get_system_status(&self) -> Result<SystemStatusResponse> {
-        // For now, return mock data
-        // In real implementation, this would call biomeOS core APIs
-        Ok(SystemStatusResponse {
-            status: "online".to_string(),
-            uptime: std::time::Duration::from_secs(3600),
-            version: env!("CARGO_PKG_VERSION").to_string(),
-            platform: self.get_platform_info().await?,
-        })
-    }
-
-    /// Get platform information
-    pub async fn get_platform_info(&self) -> Result<PlatformInfoResponse> {
-        Ok(PlatformInfoResponse {
-            os_type: std::env::consts::OS.to_string(),
-            architecture: std::env::consts::ARCH.to_string(),
-            cores: num_cpus::get() as u32,
-            memory_gb: 8, // Mock data
-            container_runtime: self.detect_container_runtime().await,
-        })
-    }
-
-    /// Start installation process
-    pub async fn start_installation(&self, mode: InstallationMode) -> Result<InstallationResponse> {
-        // Initialize biomeOS if not already done
-        if !self.is_connected().await {
-            self.initialize().await?;
-        }
-
-        // Mock installation process
-        Ok(InstallationResponse {
-            installation_id: uuid::Uuid::new_v4().to_string(),
-            status: "started".to_string(),
-            estimated_duration: std::time::Duration::from_secs(300),
-        })
-    }
-
-    /// Get installation progress
-    pub async fn get_installation_progress(
-        &self,
-        installation_id: &str,
-    ) -> Result<InstallationProgress> {
-        // Mock progress data
-        Ok(InstallationProgress {
-            installation_id: installation_id.to_string(),
-            current_step: "Platform Detection".to_string(),
-            progress: 0.25,
-            status: "in_progress".to_string(),
-            ai_guidance: "Detecting your system capabilities...".to_string(),
-            errors: Vec::new(),
-        })
-    }
-
-    /// Discover available primals
-    pub async fn discover_primals(&self) -> Result<PrimalDiscoveryResponse> {
-        // Mock primal discovery
-        Ok(PrimalDiscoveryResponse {
-            discovered_primals: vec![
-                PrimalInfo {
-                    id: "toadstool".to_string(),
-                    name: "Toadstool".to_string(),
-                    description: "Universal compute runtime".to_string(),
-                    version: "1.0.0".to_string(),
-                    capabilities: vec![
-                        "containers".to_string(),
-                        "vms".to_string(),
-                        "native".to_string(),
-                    ],
-                    dependencies: vec![],
-                    api_endpoints: vec!["http://localhost:8080".to_string()],
-                    installation_status: PrimalInstallationStatus::Installed,
-                },
-                PrimalInfo {
-                    id: "songbird".to_string(),
-                    name: "Songbird".to_string(),
-                    description: "Service mesh and orchestration".to_string(),
-                    version: "1.0.0".to_string(),
-                    capabilities: vec![
-                        "mesh".to_string(),
-                        "discovery".to_string(),
-                        "routing".to_string(),
-                    ],
-                    dependencies: vec![],
-                    api_endpoints: vec!["http://localhost:8081".to_string()],
-                    installation_status: PrimalInstallationStatus::Installed,
-                },
-            ],
-            discovery_duration: std::time::Duration::from_secs(5),
-        })
-    }
-
-    /// Validate YAML content
-    pub async fn validate_yaml(&self, yaml_content: &str) -> Result<YamlValidationResponse> {
-        // Mock validation
-        let is_valid = !yaml_content.contains("invalid");
-
-        Ok(YamlValidationResponse {
-            is_valid,
-            errors: if is_valid {
-                Vec::new()
-            } else {
-                vec!["Invalid YAML syntax".to_string()]
-            },
-            warnings: Vec::new(),
-        })
-    }
-
-    /// BYOB API Methods
-
-    /// Create a new team workspace
-    pub async fn create_team(
-        &self,
-        team_name: &str,
-        description: &str,
-    ) -> Result<TeamCreationResponse> {
-        Ok(TeamCreationResponse {
-            team_id: uuid::Uuid::new_v4().to_string(),
-            team_name: team_name.to_string(),
-            status: "created".to_string(),
-            workspace_url: format!("http://localhost:8082/teams/{}", team_name),
-        })
-    }
-
-    /// Deploy a biome for a team
-    pub async fn deploy_biome(
-        &self,
-        team_id: &str,
-        manifest_path: &str,
-    ) -> Result<DeploymentResponse> {
-        Ok(DeploymentResponse {
-            deployment_id: uuid::Uuid::new_v4().to_string(),
-            team_id: team_id.to_string(),
-            status: "deploying".to_string(),
-            estimated_completion: std::time::Duration::from_secs(300),
-        })
-    }
-
-    /// Get team deployments
-    pub async fn get_team_deployments(&self, team_id: &str) -> Result<Vec<DeploymentInfo>> {
-        // Mock deployment data
-        Ok(vec![DeploymentInfo {
-            id: "dep-001".to_string(),
-            name: "webapp-production".to_string(),
-            team: team_id.to_string(),
-            status: DeploymentStatus::Running,
-            created_at: "2024-01-15 10:30:00".to_string(),
-            updated_at: "2024-01-15 14:22:00".to_string(),
-            last_updated: "2024-01-15 14:22:00".to_string(),
-            services: vec![],
-            resource_usage: ResourceUsage {
-                cpu_percent: 40.0,
-                memory_percent: 60.0,
-                storage_percent: 50.0,
-                network_mbps: 50.0,
-                cpu_cores: 8.0,
-                memory_gb: 16.0,
-                storage_gb: 100.0,
-            },
-            health_status: HealthStatus::Healthy,
-            primals: vec!["toadstool".to_string(), "nestgate".to_string()],
-            capabilities: [PrimalCapability::Compute, PrimalCapability::Storage]
-                .into_iter()
-                .collect(),
-            health_score: 0.95,
-        }])
-    }
-
-    /// Get team resource usage
-    pub async fn get_team_resources(&self, team_id: &str) -> Result<TeamResourceResponse> {
-        Ok(TeamResourceResponse {
-            team_id: team_id.to_string(),
-            quota: ResourceQuota {
-                max_memory_bytes: 40 * 1024 * 1024 * 1024,   // 40GB
-                max_storage_bytes: 200 * 1024 * 1024 * 1024, // 200GB
-                max_network_bandwidth_mbps: 1000.0,
-                used_cpu_cores: 12.0,
-                used_memory_gb: 24.0,
-                used_storage_gb: 150.0,
-                used_deployments: 3,
-            },
-            current_usage: ResourceUsage {
-                cpu_percent: 60.0,
-                memory_percent: 60.0,
-                storage_percent: 75.0,
-                network_mbps: 100.0,
-                cpu_cores: 12.0,
-                memory_gb: 24.0,
-                storage_gb: 150.0,
-            },
-        })
-    }
-
-    /// ISO Creator API Methods
-
-    /// Start ISO build process
-    pub async fn start_iso_build(&self, config: &IsoConfig) -> Result<IsoBuildResponse> {
-        Ok(IsoBuildResponse {
-            build_id: uuid::Uuid::new_v4().to_string(),
-            status: "started".to_string(),
-            estimated_duration: std::time::Duration::from_secs(1800), // 30 minutes
-            output_path: format!("/tmp/biomeos-isos/{}.iso", config.name),
-        })
-    }
-
-    /// Get ISO build progress
-    pub async fn get_iso_build_progress(&self, build_id: &str) -> Result<IsoBuildProgress> {
-        Ok(IsoBuildProgress {
-            build_id: build_id.to_string(),
-            status: "building".to_string(),
-            progress: 0.45,
-            current_step: "Packaging components".to_string(),
-            log_entries: vec![
-                "Starting ISO build...".to_string(),
-                "Collecting base components...".to_string(),
-                "Adding niche packages...".to_string(),
-                "Compressing filesystem...".to_string(),
-            ],
-        })
-    }
-
-    /// Get available niche packages for ISO
-    pub async fn get_available_niches(&self) -> Result<Vec<NichePackageInfo>> {
+    /// Get available primals
+    pub async fn get_primals(&self) -> Result<Vec<APIPrimalInfo>> {
+        // Return mock data for now - in real implementation this would call the universal adapter
         Ok(vec![
-            NichePackageInfo {
-                id: "gaming-tournament".to_string(),
-                name: "Gaming Tournament Platform".to_string(),
-                description: "Complete tournament management system".to_string(),
-                version: "1.5.0".to_string(),
-                size_mb: 450,
-                category: "Gaming".to_string(),
-                author: "Tournament Masters".to_string(),
+            APIPrimalInfo {
+                id: "toadstool".to_string(),
+                primal_type: "toadstool".to_string(),
+                endpoint: "http://localhost:8084".to_string(),
+                capabilities: vec!["container_orchestration".to_string(), "wasm_runtime".to_string()],
+                health: "healthy".to_string(),
             },
-            NichePackageInfo {
-                id: "ai-research".to_string(),
-                name: "AI Research Laboratory".to_string(),
-                description: "Machine learning research environment".to_string(),
-                version: "2.1.0".to_string(),
-                size_mb: 1200,
-                category: "Research".to_string(),
-                author: "Deep Learning Lab".to_string(),
+            APIPrimalInfo {
+                id: "songbird".to_string(),
+                primal_type: "songbird".to_string(),
+                endpoint: "http://localhost:8080".to_string(),
+                capabilities: vec!["service_discovery".to_string(), "load_balancing".to_string()],
+                health: "healthy".to_string(),
             },
         ])
     }
 
-    /// Niche Manager API Methods
-
-    /// Create a new niche package
-    pub async fn create_niche(&self, niche_yaml: &str) -> Result<NicheCreationResponse> {
-        Ok(NicheCreationResponse {
-            niche_id: uuid::Uuid::new_v4().to_string(),
-            status: "created".to_string(),
-            validation_results: vec![],
+    /// Get system status
+    pub async fn get_status(&self) -> Result<SystemStatus> {
+        Ok(SystemStatus {
+            overall_health: "healthy".to_string(),
+            active_primals: vec![],
+            resource_usage: ResourceUsage { cpu_percent: 0.0, memory_percent: 0.0, disk_percent: 0.0, network_bytes_per_sec: 0 },
+            last_updated: chrono::Utc::now(),
         })
     }
 
-    /// Validate niche package
-    pub async fn validate_niche(&self, niche_yaml: &str) -> Result<NicheValidationResponse> {
-        let is_valid = !niche_yaml.contains("invalid");
+    /// Install a Primal
+    pub async fn install_primal(
+        &self,
+        primal_name: &str,
+        mode: InstallationMode,
+    ) -> Result<InstallationResponse> {
+        let _mode = mode; // Silence unused variable warning
+        
+        // Mock implementation - in real system this would delegate to the universal adapter
+        Ok(InstallationResponse {
+            success: true,
+            message: format!("Primal {} installation queued", primal_name),
+            installation_id: uuid::Uuid::new_v4().to_string(),
+        })
+    }
 
-        Ok(NicheValidationResponse {
-            is_valid,
-            errors: if is_valid {
-                Vec::new()
-            } else {
-                vec!["Invalid niche syntax".to_string()]
+    /// Get system metrics
+    pub async fn get_metrics(&self) -> Result<SystemMetrics> {
+        Ok(SystemMetrics {
+            cpu_usage: 25.0,
+            memory_usage: 45.0,
+            disk_usage: 60.0,
+            network_io: 1024,
+            active_connections: 5,
+            uptime_seconds: 3600,
+        })
+    }
+
+    /// Shutdown the system
+    pub async fn shutdown(&self) -> Result<()> {
+        // Mock implementation
+        Ok(())
+    }
+
+    /// Get logs
+    pub async fn get_logs(&self) -> Result<Vec<LogEntry>> {
+        Ok(vec![
+            LogEntry {
+                timestamp: chrono::Utc::now(),
+                level: "INFO".to_string(),
+                message: "System started".to_string(),
+                component: "core".to_string(),
             },
-            warnings: vec![],
-            suggestions: vec!["Consider adding resource limits".to_string()],
+        ])
+    }
+
+    /// Deploy a biome
+    pub async fn deploy_biome(
+        &self,
+        _team_id: &str,
+        _biome_name: &str,
+        _description: &str,
+        _manifest_path: &str,
+    ) -> Result<DeploymentResponse> {
+        // Mock implementation
+        Ok(DeploymentResponse {
+            success: true,
+            message: "Biome deployment started".to_string(),
+            deployment_id: uuid::Uuid::new_v4().to_string(),
         })
     }
 
-    /// Test niche package
-    pub async fn test_niche(&self, niche_id: &str) -> Result<NicheTestResponse> {
-        Ok(NicheTestResponse {
-            test_id: uuid::Uuid::new_v4().to_string(),
-            niche_id: niche_id.to_string(),
+    /// Get deployments for a team
+    pub async fn get_team_deployments(&self, _team_id: &str) -> Result<Vec<DeploymentInstance>> {
+        // Mock implementation
+        Ok(vec![])
+    }
+
+    /// Get deployment status
+    pub async fn get_deployment_status(&self, _deployment_id: &str) -> Result<DeploymentStatusInfo> {
+        // Mock implementation
+        Ok(DeploymentStatusInfo {
             status: "running".to_string(),
-            test_results: vec![
-                NicheTestResult {
-                    test_name: "YAML Validation".to_string(),
-                    status: "passed".to_string(),
-                    message: "Niche YAML is valid".to_string(),
-                    duration_ms: 45,
+            message: "Deployment is running".to_string(),
+            progress: 100.0,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+        })
+    }
+
+    /// Stop a deployment
+    pub async fn stop_deployment(&self, _deployment_id: &str) -> Result<()> {
+        // Mock implementation
+        Ok(())
+    }
+
+    /// Remove a deployment
+    pub async fn remove_deployment(&self, _deployment_id: &str) -> Result<()> {
+        // Mock implementation
+        Ok(())
+    }
+
+    /// Get ISO creation status
+    pub async fn get_iso_status(&self) -> Result<ISOStatus> {
+        Ok(ISOStatus {
+            is_building: false,
+            progress: 0.0,
+            message: "Ready".to_string(),
+            output_path: None,
+            created_at: None,
+        })
+    }
+
+    /// Create ISO
+    pub async fn create_iso(&self, _config: ISOConfig) -> Result<ISOCreationResponse> {
+        Ok(ISOCreationResponse {
+            success: true,
+            message: "ISO creation started".to_string(),
+            job_id: uuid::Uuid::new_v4().to_string(),
+        })
+    }
+
+    /// Get available niches
+    pub async fn get_niches(&self) -> Result<Vec<NicheInfo>> {
+        Ok(vec![
+            NicheInfo {
+                id: "ai-research".to_string(),
+                name: "AI Research".to_string(),
+                description: "Optimized for AI research and development".to_string(),
+                category: "research".to_string(),
+                template_path: "templates/ai-research.yaml".to_string(),
+                requirements: vec!["gpu".to_string(), "memory_32gb".to_string()],
+                features: vec!["tensorflow".to_string(), "pytorch".to_string()],
+                status: "available".to_string(),
+            },
+        ])
+    }
+
+    /// Test a niche
+    pub async fn test_niche(&self, _niche_id: &str) -> Result<NicheTestResponse> {
+        Ok(NicheTestResponse {
+            success: true,
+            message: "Niche test completed".to_string(),
+            test_results: vec![],
+        })
+    }
+
+    /// Create a niche
+    pub async fn create_niche(&self, _niche_yaml: &str) -> Result<NicheCreationResponse> {
+        Ok(NicheCreationResponse {
+            success: true,
+            message: "Niche created successfully".to_string(),
+            niche_id: uuid::Uuid::new_v4().to_string(),
+        })
+    }
+
+    /// Get niche testing results
+    pub async fn get_niche_test_results(&self, _niche_id: &str) -> Result<Vec<NicheTestResult>> {
+        Ok(vec![])
+    }
+
+    /// Get niche template
+    pub async fn get_niche_template(&self, _niche_id: &str) -> Result<String> {
+        Ok("# Sample niche template\napiVersion: biomeOS/v1\nkind: Niche\n".to_string())
+    }
+
+    /// Update a niche
+    pub async fn update_niche(&self, _niche_id: &str, _niche_yaml: &str) -> Result<()> {
+        Ok(())
+    }
+
+    /// Delete a niche
+    pub async fn delete_niche(&self, _niche_id: &str) -> Result<()> {
+        Ok(())
+    }
+
+    /// Get marketplace info
+    pub async fn get_marketplace_info(&self) -> Result<MarketplaceInfo> {
+        Ok(MarketplaceInfo {
+            total_niches: 12,
+            featured_niches: vec!["ai-research".to_string(), "web-dev".to_string()],
+            categories: vec!["research".to_string(), "development".to_string()],
+            last_updated: chrono::Utc::now(),
+        })
+    }
+
+    /// Get YAML editor suggestions
+    pub async fn get_yaml_suggestions(&self, _content: &str) -> Result<Vec<YAMLSuggestion>> {
+        Ok(vec![])
+    }
+
+    /// Validate YAML
+    pub async fn validate_yaml(&self, _content: &str) -> Result<YAMLValidationResult> {
+        Ok(YAMLValidationResult {
+            valid: true,
+            errors: vec![],
+            warnings: vec![],
+        })
+    }
+
+    /// Format YAML
+    pub async fn format_yaml(&self, _content: &str) -> Result<String> {
+        Ok("# Formatted YAML\n".to_string())
+    }
+
+    /// Discover primals using the new universal adapter architecture
+    pub async fn discover_primals(&self) -> Result<PrimalDiscoveryResponse> {
+        // Mock discovery - in real implementation this would use the universal adapter
+        let config = biomeos_core::BiomeOSConfig::default();
+        let _manager = UniversalBiomeOSManager::new(config);
+        
+        // Return mock discovered primals using API-compatible types
+        Ok(PrimalDiscoveryResponse {
+            discovered_primals: vec![
+                APIPrimalInfo {
+                    id: "toadstool".to_string(),
+                    primal_type: "toadstool".to_string(),
+                    endpoint: "http://localhost:8084".to_string(),
+                    capabilities: vec!["container_orchestration".to_string(), "wasm_runtime".to_string()],
+                    health: "healthy".to_string(),
                 },
-                NicheTestResult {
-                    test_name: "Resource Requirements".to_string(),
-                    status: "passed".to_string(),
-                    message: "Resource requirements are reasonable".to_string(),
-                    duration_ms: 12,
+                APIPrimalInfo {
+                    id: "songbird".to_string(),
+                    primal_type: "songbird".to_string(),
+                    endpoint: "http://localhost:8080".to_string(),
+                    capabilities: vec!["service_discovery".to_string(), "load_balancing".to_string()],
+                    health: "healthy".to_string(),
                 },
             ],
-        })
-    }
-
-    /// Publish niche to marketplace
-    pub async fn publish_niche(&self, niche_id: &str) -> Result<NichePublishResponse> {
-        Ok(NichePublishResponse {
-            publication_id: uuid::Uuid::new_v4().to_string(),
-            niche_id: niche_id.to_string(),
-            status: "published".to_string(),
-            marketplace_url: format!("https://marketplace.biomeos.org/niches/{}", niche_id),
-        })
-    }
-
-    /// Get marketplace niches
-    pub async fn get_marketplace_niches(&self) -> Result<Vec<MarketplaceNicheInfo>> {
-        Ok(vec![MarketplaceNicheInfo {
-            package: NichePackageInfo {
-                id: "enterprise-crm".to_string(),
-                name: "Enterprise CRM Suite".to_string(),
-                description: "Complete customer relationship management system".to_string(),
-                version: "3.2.1".to_string(),
-                size_mb: 1500,
-                category: "Enterprise".to_string(),
-                author: "Enterprise Solutions Inc.".to_string(),
-            },
-            verified: true,
-            featured: true,
-            security_score: 9.2,
-            community_rating: 4.8,
-            downloads: 450,
-        }])
-    }
-
-    async fn detect_container_runtime(&self) -> Option<String> {
-        // Try to detect Docker
-        if let Ok(output) = tokio::process::Command::new("docker")
-            .arg("--version")
-            .output()
-            .await
-        {
-            if output.status.success() {
-                return Some("docker".to_string());
-            }
-        }
-
-        // Try to detect Podman
-        if let Ok(output) = tokio::process::Command::new("podman")
-            .arg("--version")
-            .output()
-            .await
-        {
-            if output.status.success() {
-                return Some("podman".to_string());
-            }
-        }
-
-        None
-    }
-
-    /// Initialize biomeOS with configuration
-    pub async fn initialize_biome(&self, mode: InstallationMode) -> Result<InitializationResponse> {
-        // Create a basic BiomeOSConfig for initialization
-        let config = biomeos_core::BiomeOSConfig::default();
-        let manager = UniversalBiomeManager::new(config);
-
-        {
-            let mut core = self.core.lock().await;
-            *core = Some(manager);
-        }
-
-        {
-            let mut connected = self.connected.lock().await;
-            *connected = true;
-        }
-
-        Ok(InitializationResponse {
-            status: "initialized".to_string(),
-            message: "BiomeOS initialized successfully".to_string(),
         })
     }
 }
 
 // API Response Types
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SystemStatusResponse {
-    pub status: String,
-    pub uptime: std::time::Duration,
-    pub version: String,
-    pub platform: PlatformInfoResponse,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PlatformInfoResponse {
-    pub os_type: String,
-    pub architecture: String,
-    pub cores: u32,
-    pub memory_gb: u32,
-    pub container_runtime: Option<String>,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InstallationResponse {
-    pub installation_id: String,
-    pub status: String,
-    pub estimated_duration: std::time::Duration,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InstallationProgress {
-    pub installation_id: String,
-    pub current_step: String,
-    pub progress: f32,
-    pub status: String,
-    pub ai_guidance: String,
-    pub errors: Vec<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PrimalDiscoveryResponse {
-    pub discovered_primals: Vec<PrimalInfo>,
-    pub discovery_duration: std::time::Duration,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct YamlValidationResponse {
-    pub is_valid: bool,
-    pub errors: Vec<String>,
-    pub warnings: Vec<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InitializationResponse {
-    pub status: String,
+    pub success: bool,
     pub message: String,
+    pub installation_id: String,
 }
 
-// BYOB API Response Types
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SystemMetrics {
+    pub cpu_usage: f64,
+    pub memory_usage: f64,
+    pub disk_usage: f64,
+    pub network_io: u64,
+    pub active_connections: u32,
+    pub uptime_seconds: u64,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TeamCreationResponse {
-    pub team_id: String,
-    pub team_name: String,
-    pub status: String,
-    pub workspace_url: String,
+pub struct LogEntry {
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+    pub level: String,
+    pub message: String,
+    pub component: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeploymentResponse {
+    pub success: bool,
+    pub message: String,
     pub deployment_id: String,
-    pub team_id: String,
+}
+
+/// Deployment status information (different from enum)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeploymentStatusInfo {
     pub status: String,
-    pub estimated_completion: std::time::Duration,
+    pub message: String,
+    pub progress: f64,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TeamResourceResponse {
-    pub team_id: String,
-    pub quota: ResourceQuota,
-    pub current_usage: ResourceUsage,
+pub struct ISOStatus {
+    pub is_building: bool,
+    pub progress: f64,
+    pub message: String,
+    pub output_path: Option<String>,
+    pub created_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
-// ISO Creator API Response Types
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct IsoConfig {
+pub struct ISOConfig {
     pub name: String,
     pub description: String,
-    pub version: String,
-    pub target_arch: String,
-    pub included_primals: Vec<String>,
-    pub included_niches: Vec<String>,
-    pub compression_level: u8,
+    pub primals: Vec<String>,
+    pub custom_packages: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct IsoBuildResponse {
-    pub build_id: String,
-    pub status: String,
-    pub estimated_duration: std::time::Duration,
-    pub output_path: String,
+pub struct ISOCreationResponse {
+    pub success: bool,
+    pub message: String,
+    pub job_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct IsoBuildProgress {
-    pub build_id: String,
-    pub status: String,
-    pub progress: f32,
-    pub current_step: String,
-    pub log_entries: Vec<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NichePackageInfo {
+pub struct NicheInfo {
     pub id: String,
     pub name: String,
     pub description: String,
-    pub version: String,
-    pub size_mb: u64,
     pub category: String,
-    pub author: String,
-}
-
-// Niche Manager API Response Types
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NicheCreationResponse {
-    pub niche_id: String,
+    pub template_path: String,
+    pub requirements: Vec<String>,
+    pub features: Vec<String>,
     pub status: String,
-    pub validation_results: Vec<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NicheValidationResponse {
-    pub is_valid: bool,
-    pub errors: Vec<String>,
-    pub warnings: Vec<String>,
-    pub suggestions: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NicheTestResponse {
-    pub test_id: String,
-    pub niche_id: String,
-    pub status: String,
+    pub success: bool,
+    pub message: String,
     pub test_results: Vec<NicheTestResult>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NicheTestResult {
     pub test_name: String,
-    pub status: String,
+    pub passed: bool,
     pub message: String,
     pub duration_ms: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NichePublishResponse {
-    pub publication_id: String,
+pub struct NicheCreationResponse {
+    pub success: bool,
+    pub message: String,
     pub niche_id: String,
-    pub status: String,
-    pub marketplace_url: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MarketplaceNicheInfo {
-    pub package: NichePackageInfo,
-    pub verified: bool,
-    pub featured: bool,
-    pub security_score: f32,
-    pub community_rating: f32,
-    pub downloads: u64,
+pub struct MarketplaceInfo {
+    pub total_niches: u32,
+    pub featured_niches: Vec<String>,
+    pub categories: Vec<String>,
+    pub last_updated: chrono::DateTime<chrono::Utc>,
 }
 
-// Import types from views for consistency
-use crate::views::byob::{DeploymentInfo, DeploymentStatus, ResourceQuota, ResourceUsage};
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct YAMLSuggestion {
+    pub text: String,
+    pub description: String,
+    pub category: String,
+}
 
-impl Default for BiomeOSApi {
-    fn default() -> Self {
-        Self::new()
-    }
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct YAMLValidationResult {
+    pub valid: bool,
+    pub errors: Vec<String>,
+    pub warnings: Vec<String>,
+}
+
+/// API version of PrimalInfo that can be serialized
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct APIPrimalInfo {
+    pub id: String,
+    pub primal_type: String,
+    pub endpoint: String,
+    pub capabilities: Vec<String>,
+    pub health: String, // Using string instead of enum for API compatibility
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PrimalDiscoveryResponse {
+    pub discovered_primals: Vec<APIPrimalInfo>,
 }

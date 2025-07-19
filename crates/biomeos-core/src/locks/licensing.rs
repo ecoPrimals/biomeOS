@@ -254,6 +254,7 @@ impl LicensingManager {
             UsageScale::Department => 2.0,
             UsageScale::Organization => 3.0,
             UsageScale::PublicService => 4.0,
+            UsageScale::Small => 0.5,
         };
 
         // Frequency multiplier
@@ -262,6 +263,7 @@ impl LicensingManager {
             UsageFrequency::Regular => 1.2,
             UsageFrequency::Heavy => 1.5,
             UsageFrequency::Continuous => 2.0,
+            UsageFrequency::Monthly => 1.0,
         };
 
         multiplier

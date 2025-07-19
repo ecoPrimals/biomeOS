@@ -290,7 +290,7 @@ impl Default for MetricsConfig {
     fn default() -> Self {
         Self {
             enabled: true,
-            collection_interval: 60,
+            collection_interval: 300,
         }
     }
 }
@@ -299,9 +299,18 @@ impl Default for MetricsConfig {
 impl Default for AlertConfig {
     fn default() -> Self {
         Self {
+            name: "default".to_string(),
+            condition: AlertCondition {
+                metric_name: "health".to_string(),
+                operator: ComparisonOperator::LessThan,
+                threshold: 0.5,
+                window: 300,
+                consecutive_evaluations: 1,
+            },
+            severity: AlertSeverity::Warning,
+            frequency: AlertFrequency::Once,
+            destinations: vec![],
             enabled: true,
-            severity_threshold: crate::monitoring_dashboard::types::AlertSeverity::Medium,
-            rate_limit: std::time::Duration::from_secs(60),
         }
     }
 }

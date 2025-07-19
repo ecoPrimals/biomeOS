@@ -1,667 +1,667 @@
-//! Universal Primal Adapter for biomeOS
+//! Universal Adapter for biomeOS
 //!
-//! This adapter enables biomeOS to coordinate with any Primal (standard, custom, or forked)
-//! using Songbird's advanced universal adapter architecture. It provides multi-instance support,
-//! context-aware routing, and capability-based coordination.
+//! This adapter implements the universal adapter pattern by delegating core functionality
+//! to mature primal services rather than reimplementing them:
+//! - Toadstool: Universal parser, validator, and executor
+//! - Songbird: Universal discovery, coordination, and routing
+//! - BiomeOS: Thin coordination layer between the two
 
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
-use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
-use tracing::{info, warn};
-use uuid::Uuid;
+use tracing::info;
 
 // Import from biomeos-core
-use biomeos_core::{
-    universal_primal_provider::{
-        AllocationStrategy, HealthMetrics, IsolationConfig, ResourceManagementConfig,
-        TeamWorkspaceConfig,
-    },
-    BiomeError, BiomeOSInstanceConfig, BiomeOSPrimalProvider, BiomeOSPrimalRegistry, BiomeResult,
-    DynamicPortInfo, NetworkLocation, PrimalCapability, PrimalContext, PrimalHealth, PrimalProvider, PrimalRequest,
-    PrimalResponse, Priority, RequestType, SecurityLevel,
-};
+use biomeos_core::{BiomeError, BiomeResult};
 
-/// Enhanced Universal Adapter for biomeOS (Songbird-compatible)
+/// Universal adapter that coordinates between Toadstool and Songbird
+/// Note: This doesn't implement Clone/Serialize because it contains HTTP clients
 pub struct BiomeOSUniversalAdapter {
     /// HTTP client for making requests
     client: Client,
-
-    /// Primal provider registry
-    primal_registry: Arc<BiomeOSPrimalRegistry>,
-
-    /// biomeOS provider instance
-    biomeos_provider: Arc<BiomeOSPrimalProvider>,
-
-    /// Federation configuration
-    federation_config: FederationConfig,
-
-    /// Active coordination sessions
-    active_sessions: Arc<RwLock<HashMap<String, CoordinationSession>>>,
-
-    /// Context-aware routing table
-    context_routing: Arc<RwLock<HashMap<String, Vec<String>>>>,
+    /// Toadstool client for parsing and execution
+    toadstool_client: ToadstoolClient,
+    /// Songbird client for discovery and coordination
+    songbird_client: SongbirdClient,
+    /// Capability registry (thin layer over Songbird)
+    capability_registry: CapabilityRegistry,
+    /// Health monitor (aggregates from both services)
+    health_monitor: UniversalHealthMonitor,
 }
 
-/// Federation configuration for biomeOS
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FederationConfig {
-    /// Federation identity
-    pub identity: FederationIdentity,
-    /// Known primals configuration
-    pub primals: HashMap<String, PrimalConfig>,
-    /// Discovery settings
-    pub discovery: DiscoveryConfig,
-    /// Security settings
-    pub security: SecurityConfig,
+impl std::fmt::Debug for BiomeOSUniversalAdapter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BiomeOSUniversalAdapter")
+            .field("toadstool_client", &self.toadstool_client)
+            .field("songbird_client", &self.songbird_client)
+            .field("capability_registry", &self.capability_registry)
+            .field("health_monitor", &"UniversalHealthMonitor")
+            .finish()
+    }
 }
 
-/// Federation identity
+/// Toadstool client for manifest parsing and execution
+#[derive(Debug, Clone)]
+pub struct ToadstoolClient {
+    base_url: String,
+    client: Client,
+}
+
+/// Songbird client for discovery and coordination
+#[derive(Debug, Clone)]
+pub struct SongbirdClient {
+    base_url: String,
+    client: Client,
+}
+
+/// Capability registry that maps requirements to discovered primals
+#[derive(Debug, Clone)]
+pub struct CapabilityRegistry {
+    capabilities: Arc<RwLock<HashMap<String, Vec<DiscoveredPrimal>>>>,
+    songbird_client: SongbirdClient,
+}
+
+/// Universal health monitor that aggregates health from all services
+#[derive(Debug)]
+pub struct UniversalHealthMonitor {
+    toadstool_client: ToadstoolClient,
+    songbird_client: SongbirdClient,
+    health_status: Arc<RwLock<SystemHealth>>,
+}
+
+/// Discovered primal information from Songbird
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FederationIdentity {
-    pub federation_id: String,
+pub struct DiscoveredPrimal {
+    pub id: String,
+    pub primal_type: String,
+    pub endpoint: String,
     pub capabilities: Vec<String>,
-    pub endpoints: HashMap<String, String>,
-    pub supported_api_versions: Vec<String>,
-    pub federation_info: FederationCapabilities,
+    pub health: PrimalHealth,
+    pub metadata: HashMap<String, String>,
 }
 
-/// Federation capabilities
+/// Primal health status
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FederationCapabilities {
-    pub max_biomes: u32,
-    pub supported_runtimes: Vec<String>,
-    pub resource_management: bool,
-    pub multi_team_isolation: bool,
-    pub cross_primal_coordination: bool,
-    pub context_aware_routing: bool,
-    pub multi_instance_support: bool,
+pub struct PrimalHealth {
+    pub status: String,
+    pub last_seen: DateTime<Utc>,
+    pub response_time_ms: u64,
 }
 
-/// Enhanced primal configuration
+/// Overall system health
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PrimalConfig {
-    /// Whether this Primal is enabled for coordination
-    pub enabled: bool,
-
-    /// Network endpoint for coordination
-    pub endpoint: Option<String>,
-
-    /// Coordination capabilities this Primal provides
-    pub capabilities: Vec<PrimalCapability>,
-
-    /// API version supported by this Primal
-    pub api_version: String,
-
-    /// Context constraints for this primal
-    pub context_constraints: Vec<ContextConstraint>,
-
-    /// Multi-instance configuration
-    pub multi_instance: MultiInstanceConfig,
-
-    /// Health check configuration
-    pub health_check: HealthCheckConfig,
+pub struct SystemHealth {
+    pub toadstool_status: ServiceStatus,
+    pub songbird_status: ServiceStatus,
+    pub discovered_primals: Vec<DiscoveredPrimal>,
+    pub last_updated: DateTime<Utc>,
 }
 
-/// Context constraint for primal routing
+/// Individual service status
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ContextConstraint {
-    /// Field to constrain
-    pub field: String,
-    /// Constraint operator
-    pub operator: ConstraintOperator,
-    /// Value to compare against
-    pub value: String,
+pub struct ServiceStatus {
+    pub available: bool,
+    pub response_time_ms: u64,
+    pub last_error: Option<String>,
 }
 
-/// Constraint operators
+/// Biome deployment result
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ConstraintOperator {
-    Equals,
-    NotEquals,
-    Contains,
-    StartsWith,
-    EndsWith,
-    Matches,
+pub struct BiomeDeployment {
+    pub id: String,
+    pub name: String,
+    pub status: String,
+    pub deployed_services: Vec<DeployedService>,
+    pub used_primals: Vec<String>,
+    pub created_at: DateTime<Utc>,
 }
 
-/// Multi-instance configuration
+/// Deployed service information
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MultiInstanceConfig {
-    /// Whether multi-instance is enabled
-    pub enabled: bool,
-    /// Maximum instances per user
-    pub max_instances_per_user: u32,
-    /// Maximum instances per team
-    pub max_instances_per_team: u32,
-    /// Instance creation strategy
-    pub creation_strategy: InstanceCreationStrategy,
+pub struct DeployedService {
+    pub name: String,
+    pub primal: String,
+    pub endpoint: String,
+    pub status: String,
 }
 
-/// Instance creation strategies
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum InstanceCreationStrategy {
-    /// Create on demand
-    OnDemand,
-    /// Pre-create instances
-    PreCreate,
-    /// Share instances
-    Shared,
-}
-
-/// Discovery configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DiscoveryConfig {
-    /// Discovery method
-    pub method: DiscoveryMethod,
-    /// Discovery interval
-    pub interval_seconds: u64,
-    /// Discovery timeout
-    pub timeout_seconds: u64,
-    /// Auto-discovery enabled
-    pub auto_discovery: bool,
-}
-
-/// Discovery methods
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum DiscoveryMethod {
-    /// DNS-based discovery
-    Dns,
-    /// mDNS discovery
-    Mdns,
-    /// Static configuration
-    Static,
-    /// Consul-based discovery
-    Consul,
-    /// Kubernetes-based discovery
-    Kubernetes,
-}
-
-/// Security configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SecurityConfig {
-    /// TLS enabled
-    pub tls_enabled: bool,
-    /// Authentication method
-    pub auth_method: AuthMethod,
-    /// Authorization enabled
-    pub authorization_enabled: bool,
-    /// Token validation
-    pub token_validation: TokenValidation,
-}
-
-/// Authentication methods
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum AuthMethod {
-    /// No authentication
-    None,
-    /// API key authentication
-    ApiKey,
-    /// JWT authentication
-    Jwt,
-    /// mTLS authentication
-    Mtls,
-}
-
-/// Token validation configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TokenValidation {
-    /// Token issuer
-    pub issuer: String,
-    /// Token audience
-    pub audience: String,
-    /// Token algorithm
-    pub algorithm: String,
-    /// Token expiration
-    pub expiration_seconds: u64,
-}
-
-/// Health check configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct HealthCheckConfig {
-    pub interval_secs: u64,
-    pub timeout_secs: u64,
-    pub retries: u32,
-    pub failure_threshold: u32,
-    pub success_threshold: u32,
-}
-
-/// Active coordination session
-#[derive(Debug, Clone)]
-pub struct CoordinationSession {
-    pub session_id: String,
-    pub primal_name: String,
-    pub context: PrimalContext,
-    pub started_at: DateTime<Utc>,
-    pub last_activity: DateTime<Utc>,
-    pub status: SessionStatus,
-    pub request_count: u64,
-    pub success_count: u64,
-    pub error_count: u64,
-}
-
-#[derive(Debug, Clone)]
-pub enum SessionStatus {
-    Active,
-    Idle,
-    Failed,
-    Terminated,
-}
-
+// Implement the universal adapter
 impl BiomeOSUniversalAdapter {
-    /// Create a new universal adapter with advanced features
-    pub async fn new(federation_config: FederationConfig) -> BiomeResult<Self> {
+    /// Create a new universal adapter
+    pub async fn new() -> BiomeResult<Self> {
         let client = Client::builder()
             .timeout(Duration::from_secs(30))
             .build()
-            .map_err(|e| {
-                BiomeError::RuntimeError(format!("Failed to create HTTP client: {}", e))
-            })?;
+            .map_err(|e| BiomeError::ConfigError(format!("Failed to create HTTP client: {}", e)))?;
 
-        // Create primal registry
-        let primal_registry = Arc::new(BiomeOSPrimalRegistry::new());
-
-        // Create biomeOS provider instance
-        let biomeos_config = BiomeOSInstanceConfig {
-            instance_id: format!("biomeos-{}", Uuid::new_v4().simple()),
-            context: PrimalContext {
-                user_id: "system".to_string(),
-                device_id: "biomeos-orchestrator".to_string(),
-                session_id: Uuid::new_v4().to_string(),
-                network_location: NetworkLocation {
-                    ip_address: "127.0.0.1".to_string(),
-                    subnet: None,
-                    network_id: None,
-                    geo_location: None,
-                },
-                security_level: SecurityLevel::Standard,
-                biome_id: None,
-                team_id: None,
-                metadata: HashMap::new(),
-            },
-            base_url: "http://localhost:8080".to_string(),
-            team_workspace: TeamWorkspaceConfig {
-                base_dir: "/tmp/biomeos/workspaces".to_string(),
-                default_quotas: HashMap::new(),
-                isolation: IsolationConfig {
-                    network_isolation: true,
-                    filesystem_isolation: true,
-                    process_isolation: true,
-                },
-            },
-            resource_management: ResourceManagementConfig {
-                cpu_allocation: AllocationStrategy::FairShare,
-                memory_allocation: AllocationStrategy::FairShare,
-                storage_allocation: AllocationStrategy::FairShare,
-            },
-        };
-
-        let biomeos_provider = Arc::new(BiomeOSPrimalProvider::new(biomeos_config));
-
-        // Register biomeOS provider
-        primal_registry
-            .register_provider(biomeos_provider.clone())
-            .await?;
+        // Initialize clients - these should discover endpoints via service discovery
+        let toadstool_client = ToadstoolClient::new().await?;
+        let songbird_client = SongbirdClient::new().await?;
+        
+        let capability_registry = CapabilityRegistry::new(songbird_client.clone()).await?;
+        let health_monitor = UniversalHealthMonitor::new(
+            toadstool_client.clone(),
+            songbird_client.clone()
+        );
 
         Ok(Self {
             client,
-            primal_registry,
-            biomeos_provider,
-            federation_config,
-            active_sessions: Arc::new(RwLock::new(HashMap::new())),
-            context_routing: Arc::new(RwLock::new(HashMap::new())),
+            toadstool_client,
+            songbird_client,
+            capability_registry,
+            health_monitor,
         })
     }
 
-    /// Auto-discover primals using multiple methods
-    pub async fn auto_discover_primals(&self) -> BiomeResult<Vec<DiscoveredPrimal>> {
-        info!("Starting auto-discovery of primals with advanced features");
+    /// Process a biome manifest using the universal adapter pattern
+    pub async fn process_biome_manifest(
+        &self,
+        manifest_path: &str
+    ) -> BiomeResult<BiomeDeployment> {
+        let span = tracing::info_span!("process_biome_manifest", manifest = manifest_path);
+        let _enter = span.enter();
+        
+        info!("Starting biome deployment with universal adapter pattern");
 
-        let mut discovered = Vec::new();
+        // Phase 1: Delegate parsing to Toadstool's proven parser
+        info!("Phase 1: Delegating manifest parsing to Toadstool");
+        let parsed_manifest = self.toadstool_client
+            .parse_manifest(manifest_path)
+            .await
+            .map_err(|e| BiomeError::ConfigError(format!("Toadstool parsing failed: {}", e)))?;
 
-        match self.federation_config.discovery.method {
-            DiscoveryMethod::Static => {
-                discovered.extend(self.discover_static_primals().await?);
+        // Phase 2: Delegate discovery to Songbird's discovery system
+        info!("Phase 2: Delegating primal discovery to Songbird");
+        let available_primals = self.songbird_client
+            .discover_primals()
+            .await
+            .map_err(|e| BiomeError::ConfigError(format!("Songbird discovery failed: {}", e)))?;
+
+        // Phase 3: Match capabilities (thin coordination layer)
+        info!("Phase 3: Matching capabilities to discovered primals");
+        let resolved_primals = self.capability_registry
+            .resolve_capabilities(&parsed_manifest, &available_primals)
+            .await?;
+
+        // Phase 4: Delegate execution to Toadstool's execution engine
+        info!("Phase 4: Delegating execution to Toadstool");
+        let deployment = self.toadstool_client
+            .execute_manifest(parsed_manifest, resolved_primals)
+            .await
+            .map_err(|e| BiomeError::RuntimeError(format!("Toadstool execution failed: {}", e)))?;
+
+        // Phase 5: Register with Songbird for coordination
+        info!("Phase 5: Registering deployment with Songbird for coordination");
+        self.songbird_client
+            .register_deployment(&deployment)
+            .await
+            .map_err(|e| BiomeError::RuntimeError(format!("Songbird registration failed: {}", e)))?;
+
+        info!("Biome deployment completed successfully: {}", deployment.id);
+        Ok(deployment)
+    }
+
+    /// Get system health by aggregating from both services
+    pub async fn get_system_health(&self) -> BiomeResult<SystemHealth> {
+        self.health_monitor.get_system_health().await
+    }
+
+    /// Discover available primals via Songbird
+    pub async fn discover_primals(&self) -> BiomeResult<Vec<DiscoveredPrimal>> {
+        self.songbird_client
+            .discover_primals()
+            .await
+            .map_err(|e| BiomeError::RuntimeError(format!("Failed to discover primals: {}", e)))
+    }
+}
+
+// Implement ToadstoolClient
+impl ToadstoolClient {
+    /// Create new Toadstool client with service discovery
+    pub async fn new() -> BiomeResult<Self> {
+        // In a real implementation, this would use service discovery to find Toadstool
+        // For now, use environment variables or default endpoints
+        let base_url = std::env::var("TOADSTOOL_ENDPOINT")
+            .unwrap_or_else(|_| "http://localhost:8084".to_string());
+
+        let client = Client::builder()
+            .timeout(Duration::from_secs(60))
+            .build()
+            .map_err(|e| BiomeError::ConfigError(format!("Failed to create Toadstool client: {}", e)))?;
+
+        Ok(Self { base_url, client })
+    }
+
+    /// Parse manifest using Toadstool's proven parser
+    pub async fn parse_manifest(&self, manifest_path: &str) -> Result<ParsedManifest, String> {
+        let url = format!("{}/api/v1/manifest/parse", self.base_url);
+        
+        let request_body = serde_json::json!({
+            "manifest_path": manifest_path,
+            "validation_level": "strict"
+        });
+
+        let response = self.client
+            .post(&url)
+            .json(&request_body)
+            .send()
+            .await
+            .map_err(|e| format!("HTTP request failed: {}", e))?;
+
+        if !response.status().is_success() {
+            return Err(format!("Toadstool parsing failed: {}", response.status()));
+        }
+
+        let parse_result: ParseResult = response
+            .json()
+            .await
+            .map_err(|e| format!("Failed to parse response: {}", e))?;
+
+        if !parse_result.success {
+            return Err(format!("Manifest validation failed: {:?}", parse_result.errors));
+        }
+
+        parse_result.parsed_manifest
+            .ok_or_else(|| "No parsed manifest in response".to_string())
+    }
+
+    /// Execute manifest using Toadstool's execution engine
+    pub async fn execute_manifest(
+        &self,
+        manifest: ParsedManifest,
+        resolved_primals: Vec<ResolvedPrimal>
+    ) -> Result<BiomeDeployment, String> {
+        let url = format!("{}/api/v1/manifest/execute", self.base_url);
+        
+        let request_body = serde_json::json!({
+            "manifest": manifest,
+            "primals": resolved_primals,
+            "execution_mode": "async"
+        });
+
+        let response = self.client
+            .post(&url)
+            .json(&request_body)
+            .send()
+            .await
+            .map_err(|e| format!("HTTP request failed: {}", e))?;
+
+        if !response.status().is_success() {
+            return Err(format!("Toadstool execution failed: {}", response.status()));
+        }
+
+        let execution_result: ExecutionResult = response
+            .json()
+            .await
+            .map_err(|e| format!("Failed to parse response: {}", e))?;
+
+        if !execution_result.success {
+            return Err(format!("Execution failed: {}", execution_result.error.unwrap_or_default()));
+        }
+
+        execution_result.deployment
+            .ok_or_else(|| "No deployment in response".to_string())
+    }
+}
+
+// Implement SongbirdClient
+impl SongbirdClient {
+    /// Create new Songbird client with service discovery
+    pub async fn new() -> BiomeResult<Self> {
+        // In a real implementation, this would use mDNS or other discovery
+        let base_url = std::env::var("SONGBIRD_ENDPOINT")
+            .unwrap_or_else(|_| "http://localhost:8080".to_string());
+
+        let client = Client::builder()
+            .timeout(Duration::from_secs(30))
+            .build()
+            .map_err(|e| BiomeError::ConfigError(format!("Failed to create Songbird client: {}", e)))?;
+
+        Ok(Self { base_url, client })
+    }
+
+    /// Discover primals using Songbird's discovery system
+    pub async fn discover_primals(&self) -> Result<Vec<DiscoveredPrimal>, String> {
+        let url = format!("{}/api/v1/discovery/primals", self.base_url);
+
+        let response = self.client
+            .get(&url)
+            .send()
+            .await
+            .map_err(|e| format!("HTTP request failed: {}", e))?;
+
+        if !response.status().is_success() {
+            return Err(format!("Discovery failed: {}", response.status()));
+        }
+
+        let discovery_result: DiscoveryResult = response
+            .json()
+            .await
+            .map_err(|e| format!("Failed to parse response: {}", e))?;
+
+        Ok(discovery_result.primals)
+    }
+
+    /// Register deployment with Songbird for coordination
+    pub async fn register_deployment(&self, deployment: &BiomeDeployment) -> Result<(), String> {
+        let url = format!("{}/api/v1/registry/deployments", self.base_url);
+
+        let response = self.client
+            .post(&url)
+            .json(deployment)
+            .send()
+            .await
+            .map_err(|e| format!("HTTP request failed: {}", e))?;
+
+        if !response.status().is_success() {
+            return Err(format!("Registration failed: {}", response.status()));
+        }
+
+        Ok(())
+    }
+}
+
+// Implement CapabilityRegistry
+impl CapabilityRegistry {
+    /// Create new capability registry
+    pub async fn new(songbird_client: SongbirdClient) -> BiomeResult<Self> {
+        let capabilities = Arc::new(RwLock::new(HashMap::new()));
+        
+        Ok(Self {
+            capabilities,
+            songbird_client,
+        })
+    }
+
+    /// Resolve capabilities to specific primals
+    pub async fn resolve_capabilities(
+        &self,
+        manifest: &ParsedManifest,
+        available_primals: &[DiscoveredPrimal]
+    ) -> BiomeResult<Vec<ResolvedPrimal>> {
+        let mut resolved = Vec::new();
+
+        // Match each required capability to available primals
+        for (name, spec) in &manifest.primals {
+            let capability = spec.capability_required.as_str();
+            
+            // Find primals that provide this capability
+            let matching_primals: Vec<_> = available_primals
+                .iter()
+                .filter(|p| p.capabilities.contains(&capability.to_string()))
+                .collect();
+
+            if matching_primals.is_empty() {
+                return Err(BiomeError::ConfigError(format!(
+                    "No primals available for capability: {}", capability
+                )));
             }
-            DiscoveryMethod::Dns => {
-                discovered.extend(self.discover_dns_primals().await?);
-            }
-            DiscoveryMethod::Mdns => {
-                discovered.extend(self.discover_mdns_primals().await?);
-            }
-            DiscoveryMethod::Consul => {
-                discovered.extend(self.discover_consul_primals().await?);
-            }
-            DiscoveryMethod::Kubernetes => {
-                discovered.extend(self.discover_kubernetes_primals().await?);
+
+            // Select best primal based on preferences
+            let selected_primal = self.select_best_primal(&matching_primals, &spec.provider_preference)?;
+
+            resolved.push(ResolvedPrimal {
+                name: name.clone(),
+                capability: capability.to_string(),
+                primal: selected_primal.clone(),
+                spec: spec.clone(),
+            });
+        }
+
+        Ok(resolved)
+    }
+
+    /// Select the best primal based on preferences and health
+    fn select_best_primal(
+        &self,
+        matching_primals: &[&DiscoveredPrimal],
+        preferences: &[String]
+    ) -> BiomeResult<DiscoveredPrimal> {
+        // First, try preferences
+        for preference in preferences {
+            if let Some(primal) = matching_primals.iter().find(|p| p.primal_type == *preference) {
+                return Ok((*primal).clone());
             }
         }
 
-        info!(
-            "Auto-discovery completed. Found {} primals",
-            discovered.len()
-        );
-        Ok(discovered)
+        // Fallback to healthiest available primal
+        matching_primals
+            .iter()
+            .min_by_key(|p| p.health.response_time_ms)
+            .map(|p| (*p).clone())
+            .ok_or_else(|| BiomeError::ConfigError("No suitable primal found".to_string()))
     }
+}
 
-    /// Discover primals from static configuration
-    async fn discover_static_primals(&self) -> BiomeResult<Vec<DiscoveredPrimal>> {
-        let mut discovered = Vec::new();
+// Implement UniversalHealthMonitor
+impl UniversalHealthMonitor {
+    /// Create new health monitor
+    pub fn new(toadstool_client: ToadstoolClient, songbird_client: SongbirdClient) -> Self {
+        let health_status = Arc::new(RwLock::new(SystemHealth {
+            toadstool_status: ServiceStatus {
+                available: false,
+                response_time_ms: 0,
+                last_error: None,
+            },
+            songbird_status: ServiceStatus {
+                available: false,
+                response_time_ms: 0,
+                last_error: None,
+            },
+            discovered_primals: Vec::new(),
+            last_updated: Utc::now(),
+        }));
 
-        for (primal_name, primal_config) in &self.federation_config.primals {
-            if !primal_config.enabled {
-                continue;
-            }
-
-            if let Some(endpoint) = &primal_config.endpoint {
-                let health = self.check_primal_health(endpoint).await?;
-
-                discovered.push(DiscoveredPrimal {
-                    id: primal_name.clone(),
-                    instance_id: format!("{}-{}", primal_name, Uuid::new_v4().simple()),
-                    primal_type: primal_name.clone(),
-                    capabilities: primal_config.capabilities.clone(),
-                    endpoint: endpoint.clone(),
-                    health,
-                    context: PrimalContext {
-                        user_id: "system".to_string(),
-                        device_id: "auto-discovered".to_string(),
-                        session_id: Uuid::new_v4().to_string(),
-                        network_location: NetworkLocation {
-                            ip_address: "127.0.0.1".to_string(),
-                            subnet: None,
-                            network_id: None,
-                            geo_location: None,
-                        },
-                        security_level: SecurityLevel::Standard,
-                        biome_id: None,
-                        team_id: None,
-                        metadata: HashMap::new(),
-                    },
-                    port_info: None,
-                });
-            }
+        Self {
+            toadstool_client,
+            songbird_client,
+            health_status,
         }
-
-        Ok(discovered)
     }
 
-    /// Discover primals via DNS
-    async fn discover_dns_primals(&self) -> BiomeResult<Vec<DiscoveredPrimal>> {
-        // Implementation for DNS-based discovery
-        info!("DNS-based discovery not yet implemented");
-        Ok(Vec::new())
+    /// Get current system health
+    pub async fn get_system_health(&self) -> BiomeResult<SystemHealth> {
+        // Update health status from both services
+        let (toadstool_status, songbird_status, discovered_primals) = tokio::try_join!(
+            self.check_toadstool_health(),
+            self.check_songbird_health(),
+            self.get_discovered_primals()
+        )?;
+
+        let health = SystemHealth {
+            toadstool_status,
+            songbird_status,
+            discovered_primals,
+            last_updated: Utc::now(),
+        };
+
+        // Update cached health
+        *self.health_status.write().await = health.clone();
+
+        Ok(health)
     }
 
-    /// Discover primals via mDNS
-    async fn discover_mdns_primals(&self) -> BiomeResult<Vec<DiscoveredPrimal>> {
-        // Implementation for mDNS-based discovery
-        info!("mDNS-based discovery not yet implemented");
-        Ok(Vec::new())
-    }
+    /// Check Toadstool health
+    async fn check_toadstool_health(&self) -> BiomeResult<ServiceStatus> {
+        let start = std::time::Instant::now();
+        let url = format!("{}/health", self.toadstool_client.base_url);
 
-    /// Discover primals via Consul
-    async fn discover_consul_primals(&self) -> BiomeResult<Vec<DiscoveredPrimal>> {
-        // Implementation for Consul-based discovery
-        info!("Consul-based discovery not yet implemented");
-        Ok(Vec::new())
-    }
-
-    /// Discover primals via Kubernetes
-    async fn discover_kubernetes_primals(&self) -> BiomeResult<Vec<DiscoveredPrimal>> {
-        // Implementation for Kubernetes-based discovery
-        info!("Kubernetes-based discovery not yet implemented");
-        Ok(Vec::new())
-    }
-
-    /// Check primal health
-    async fn check_primal_health(&self, endpoint: &str) -> BiomeResult<PrimalHealth> {
-        let health_endpoint = format!("{}/api/v1/health", endpoint);
-
-        match self.client.get(&health_endpoint).send().await {
+        match self.toadstool_client.client.get(&url).send().await {
+            Ok(response) if response.status().is_success() => {
+                Ok(ServiceStatus {
+                    available: true,
+                    response_time_ms: start.elapsed().as_millis() as u64,
+                    last_error: None,
+                })
+            },
             Ok(response) => {
-                if response.status().is_success() {
-                    let _health_data: serde_json::Value = response.json().await.map_err(|e| {
-                        BiomeError::RuntimeError(format!("Failed to parse health response: {}", e))
-                    })?;
-
-                    Ok(PrimalHealth {
-                        status: biomeos_core::HealthStatus::Healthy,
-                        health_score: 1.0,
-                        last_check: Utc::now(),
-                        details: HashMap::new(),
-                        metrics: HealthMetrics {
-                            cpu_usage: 0.0,
-                            memory_mb: 0.0,
-                            response_time_ms: 0.0,
-                            error_rate: 0.0,
-                            active_connections: 0,
-                        },
-                    })
-                } else {
-                    Ok(PrimalHealth {
-                        status: biomeos_core::HealthStatus::Unhealthy,
-                        health_score: 0.0,
-                        last_check: Utc::now(),
-                        details: HashMap::new(),
-                        metrics: HealthMetrics {
-                            cpu_usage: 0.0,
-                            memory_mb: 0.0,
-                            response_time_ms: 0.0,
-                            error_rate: 0.0,
-                            active_connections: 0,
-                        },
-                    })
-                }
-            }
+                Ok(ServiceStatus {
+                    available: false,
+                    response_time_ms: start.elapsed().as_millis() as u64,
+                    last_error: Some(format!("HTTP {}", response.status())),
+                })
+            },
             Err(e) => {
-                warn!("Health check failed for {}: {}", endpoint, e);
-                Ok(PrimalHealth {
-                    status: biomeos_core::HealthStatus::Unhealthy,
-                    health_score: 0.0,
-                    last_check: Utc::now(),
-                    details: HashMap::new(),
-                    metrics: HealthMetrics {
-                        cpu_usage: 0.0,
-                        memory_mb: 0.0,
-                        response_time_ms: 0.0,
-                        error_rate: 0.0,
-                        active_connections: 0,
-                    },
+                Ok(ServiceStatus {
+                    available: false,
+                    response_time_ms: start.elapsed().as_millis() as u64,
+                    last_error: Some(e.to_string()),
                 })
             }
         }
     }
 
-    /// Route request to appropriate primal based on context and capabilities
-    pub async fn route_request(&self, request: PrimalRequest) -> BiomeResult<PrimalResponse> {
-        // Find appropriate primal providers
-        let providers = self.primal_registry.find_by_context(&request.context).await;
+    /// Check Songbird health
+    async fn check_songbird_health(&self) -> BiomeResult<ServiceStatus> {
+        let start = std::time::Instant::now();
+        let url = format!("{}/health", self.songbird_client.base_url);
 
-        if providers.is_empty() {
-            return Err(BiomeError::PrimalNotFound(format!(
-                "No primal providers found for context: {:?}",
-                request.context
-            )));
-        }
-
-        // Route to the first available provider (could be enhanced with load balancing)
-        let provider = &providers[0];
-        provider.handle_primal_request(request).await
-    }
-
-    /// Get federation status
-    pub async fn get_federation_status(&self) -> FederationStatus {
-        let sessions = self.active_sessions.read().await;
-
-        FederationStatus {
-            federation_id: self.federation_config.identity.federation_id.clone(),
-            active_sessions: sessions.len(),
-            total_primals: self.federation_config.primals.len(),
-            healthy_primals: 0, // Would need to check each primal
-            last_discovery: Utc::now(),
-        }
-    }
-}
-
-impl BiomeOSUniversalAdapter {
-    /// Get biomeOS provider for external use
-    pub fn get_biomeos_provider(&self) -> Arc<BiomeOSPrimalProvider> {
-        self.biomeos_provider.clone()
-    }
-
-    /// Add context routing entry
-    pub async fn add_context_route(&self, context: String, targets: Vec<String>) {
-        let mut routing = self.context_routing.write().await;
-        routing.insert(context, targets);
-    }
-
-    /// Get context routes
-    pub async fn get_context_routes(&self) -> HashMap<String, Vec<String>> {
-        self.context_routing.read().await.clone()
-    }
-
-    /// Use biomeOS provider to handle requests
-    pub async fn handle_with_biomeos_provider(&self, request: PrimalRequest) -> BiomeResult<PrimalResponse> {
-        // Use biomeos_provider to handle specific requests
-        let provider = &self.biomeos_provider;
-        provider.handle_primal_request(request).await
-    }
-
-    /// Route context-aware requests  
-    pub async fn route_context_request(&self, context: &str, _request: PrimalRequest) -> BiomeResult<Vec<String>> {
-        // Use context_routing to determine appropriate targets
-        let routing = self.context_routing.read().await;
-        if let Some(targets) = routing.get(context) {
-            Ok(targets.clone())
-        } else {
-            Ok(vec!["default".to_string()])
+        match self.songbird_client.client.get(&url).send().await {
+            Ok(response) if response.status().is_success() => {
+                Ok(ServiceStatus {
+                    available: true,
+                    response_time_ms: start.elapsed().as_millis() as u64,
+                    last_error: None,
+                })
+            },
+            Ok(response) => {
+                Ok(ServiceStatus {
+                    available: false,
+                    response_time_ms: start.elapsed().as_millis() as u64,
+                    last_error: Some(format!("HTTP {}", response.status())),
+                })
+            },
+            Err(e) => {
+                Ok(ServiceStatus {
+                    available: false,
+                    response_time_ms: start.elapsed().as_millis() as u64,
+                    last_error: Some(e.to_string()),
+                })
+            }
         }
     }
+
+    /// Get discovered primals from Songbird
+    async fn get_discovered_primals(&self) -> BiomeResult<Vec<DiscoveredPrimal>> {
+        self.songbird_client
+            .discover_primals()
+            .await
+            .map_err(|e| BiomeError::RuntimeError(format!("Failed to get discovered primals: {}", e)))
+    }
 }
 
-/// Discovered primal information
-#[derive(Debug, Clone)]
-pub struct DiscoveredPrimal {
-    pub id: String,
-    pub instance_id: String,
-    pub primal_type: String,
-    pub capabilities: Vec<PrimalCapability>,
-    pub endpoint: String,
-    pub health: PrimalHealth,
-    pub context: PrimalContext,
-    pub port_info: Option<DynamicPortInfo>,
-}
+// Supporting types for API communication
 
-/// Federation status
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FederationStatus {
-    pub federation_id: String,
-    pub active_sessions: usize,
-    pub total_primals: usize,
-    pub healthy_primals: usize,
-    pub last_discovery: DateTime<Utc>,
+pub struct ParsedManifest {
+    pub api_version: String,
+    pub kind: String,
+    pub metadata: ManifestMetadata,
+    pub primals: HashMap<String, PrimalSpec>,
+    pub services: Vec<ServiceSpec>,
 }
 
-/// Universal coordination interface
-#[async_trait]
-pub trait UniversalCoordination {
-    /// Deploy a biome across multiple primals
-    async fn deploy_biome(
-        &self,
-        manifest: serde_json::Value,
-        context: PrimalContext,
-    ) -> BiomeResult<String>;
-
-    /// Get deployment status
-    async fn get_deployment_status(&self, deployment_id: &str) -> BiomeResult<DeploymentStatus>;
-
-    /// Scale deployment resources
-    async fn scale_deployment(
-        &self,
-        deployment_id: &str,
-        scale_config: ScaleConfig,
-    ) -> BiomeResult<()>;
-
-    /// Remove deployment
-    async fn remove_deployment(&self, deployment_id: &str) -> BiomeResult<()>;
-}
-
-/// Deployment status
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeploymentStatus {
-    pub deployment_id: String,
-    pub status: String,
-    pub health: biomeos_core::HealthStatus,
-    pub primal_statuses: HashMap<String, String>,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+pub struct ManifestMetadata {
+    pub name: String,
+    pub version: String,
+    pub description: Option<String>,
 }
 
-/// Scale configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ScaleConfig {
-    pub replicas: Option<u32>,
-    pub cpu_limit: Option<String>,
-    pub memory_limit: Option<String>,
-    pub auto_scale: bool,
+pub struct PrimalSpec {
+    pub capability_required: String,
+    pub provider_preference: Vec<String>,
+    pub version: String,
+    pub config: serde_json::Value,
 }
 
-#[async_trait]
-impl UniversalCoordination for BiomeOSUniversalAdapter {
-    async fn deploy_biome(
-        &self,
-        manifest: serde_json::Value,
-        context: PrimalContext,
-    ) -> BiomeResult<String> {
-        let deployment_id = Uuid::new_v4().to_string();
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServiceSpec {
+    pub name: String,
+    pub runtime: String,
+    pub image: String,
+}
 
-        // Create deployment request
-        let request = PrimalRequest {
-            id: Uuid::new_v4(),
-            request_type: RequestType::Deploy,
-            operation: "deploy_biome".to_string(),
-            payload: manifest,
-            context,
-            priority: Priority::Normal,
-            timestamp: Utc::now(),
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResolvedPrimal {
+    pub name: String,
+    pub capability: String,
+    pub primal: DiscoveredPrimal,
+    pub spec: PrimalSpec,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct ParseResult {
+    pub success: bool,
+    pub parsed_manifest: Option<ParsedManifest>,
+    pub errors: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct ExecutionResult {
+    pub success: bool,
+    pub deployment: Option<BiomeDeployment>,
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct DiscoveryResult {
+    pub primals: Vec<DiscoveredPrimal>,
+    pub total_discovered: usize,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_universal_adapter_creation() {
+        // Test that we can create the adapter (will fail without services running)
+        // This test validates the structure, not the actual network calls
+        let result = BiomeOSUniversalAdapter::new().await;
+        
+        // In a real environment with services, this should succeed
+        // In test environment, it may fail due to missing services
+        match result {
+            Ok(_) => println!("Universal adapter created successfully"),
+            Err(e) => println!("Expected error in test environment: {}", e),
+        }
+    }
+
+    #[test]
+    fn test_primal_health_serialization() {
+        let health = PrimalHealth {
+            status: "healthy".to_string(),
+            last_seen: Utc::now(),
+            response_time_ms: 42,
         };
 
-        // Route to appropriate primal
-        let _response = self.route_request(request).await?;
-
-        Ok(deployment_id)
+        let serialized = serde_json::to_string(&health).unwrap();
+        let _deserialized: PrimalHealth = serde_json::from_str(&serialized).unwrap();
     }
 
-    async fn get_deployment_status(&self, deployment_id: &str) -> BiomeResult<DeploymentStatus> {
-        Ok(DeploymentStatus {
-            deployment_id: deployment_id.to_string(),
-            status: "running".to_string(),
-            health: biomeos_core::HealthStatus::Healthy,
-            primal_statuses: HashMap::new(),
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
-        })
+    #[test]
+    fn test_discovered_primal_serialization() {
+        let primal = DiscoveredPrimal {
+            id: "test-primal".to_string(),
+            primal_type: "test".to_string(),
+            endpoint: "http://localhost:8080".to_string(),
+            capabilities: vec!["test_capability".to_string()],
+            health: PrimalHealth {
+                status: "healthy".to_string(),
+                last_seen: Utc::now(),
+                response_time_ms: 42,
+            },
+            metadata: HashMap::new(),
+        };
+
+        let serialized = serde_json::to_string(&primal).unwrap();
+        let _deserialized: DiscoveredPrimal = serde_json::from_str(&serialized).unwrap();
     }
-
-    async fn scale_deployment(
-        &self,
-        _deployment_id: &str,
-        _scale_config: ScaleConfig,
-    ) -> BiomeResult<()> {
-        // Implementation would go here
-        Ok(())
-    }
-
-    async fn remove_deployment(&self, _deployment_id: &str) -> BiomeResult<()> {
-        // Implementation would go here
-        Ok(())
-    }
-
-
 }

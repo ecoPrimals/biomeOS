@@ -8,7 +8,8 @@ pub mod protocol;
 pub mod trpc;
 pub mod universal;
 
-use crate::{BiomeError, BiomeResult, primal_clients::CapabilityResponse, PrimalHealth};
+use crate::{BiomeError, BiomeResult, PrimalHealth};
+use crate::universal_primal_provider::{PrimalContext, PrimalCapability};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -16,6 +17,8 @@ use std::time::Duration;
 
 /// Universal communication configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
+
+
 pub struct UniversalCommConfig {
     /// Base URL or connection string
     pub endpoint: String,

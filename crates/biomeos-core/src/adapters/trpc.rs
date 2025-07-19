@@ -4,11 +4,14 @@
 //! with any primal supporting tRPC protocol. This enables true bidirectional
 //! communication with real-time event streaming and subscription capabilities.
 
+use crate::primal_clients::CapabilityCategory;
+use crate::primal_clients::CapabilityResponse;
+use crate::universal_primal_provider::PrimalCapability;
 use crate::primal_clients;
 use super::{
     PrimalEvent, UniversalCommConfig, UniversalPrimalAdapter, UniversalRequest, UniversalResponse,
 };
-use crate::{BiomeError, BiomeResult, primal_clients::CapabilityResponse, PrimalHealth};
+use crate::{BiomeError, BiomeResult, PrimalHealth};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
@@ -54,7 +57,7 @@ pub struct TrpcError {
 /// tRPC Universal Adapter (simplified implementation)
 pub struct TrpcUniversalAdapter {
     config: UniversalCommConfig,
-    capabilities_cache: Option<Vec<primal_clients::CapabilityResponse>>,
+    capabilities_cache: Option<Vec<CapabilityResponse>>,
 }
 
 impl TrpcUniversalAdapter {
@@ -66,7 +69,7 @@ impl TrpcUniversalAdapter {
     }
 
     /// Get cached capabilities or fetch them if not cached
-    pub async fn get_capabilities(&mut self) -> BiomeResult<Vec<primal_clients::CapabilityResponse>> {
+    pub async fn get_capabilities(&mut self) -> BiomeResult<Vec<CapabilityResponse>> {
         if let Some(ref cached) = self.capabilities_cache {
             return Ok(cached.clone());
         }
@@ -78,15 +81,15 @@ impl TrpcUniversalAdapter {
     }
 
     /// Fetch capabilities from the remote primal
-    async fn fetch_capabilities(&self) -> BiomeResult<Vec<primal_clients::CapabilityResponse>> {
+    async fn fetch_capabilities(&self) -> BiomeResult<Vec<CapabilityResponse>> {
         // Implementation would make actual tRPC call to discover capabilities
         // For now, return default capabilities based on config
         Ok(vec![
-            primal_clients::CapabilityResponse {
-                name: "universal_parsing".to_string(),
+            CapabilityResponse {
+                category: CapabilityCategory::Orchestration,
+                operations: vec!["parse".to_string(), "validate".to_string()],
                 version: "1.0.0".to_string(),
-                description: "Universal parsing capability".to_string(),
-                parameters: std::collections::HashMap::new(),
+                metadata: std::collections::HashMap::new(),
             }
         ])
     }
@@ -107,7 +110,7 @@ impl UniversalPrimalAdapter for TrpcUniversalAdapter {
         ))
     }
 
-    async fn discover_capabilities(&self) -> BiomeResult<Vec<primal_clients::CapabilityResponse>> {
+    async fn discover_capabilities(&self) -> BiomeResult<Vec<PrimalCapability>> {
         Err(BiomeError::NotImplemented(
             "tRPC adapter not yet fully implemented".to_string(),
         ))

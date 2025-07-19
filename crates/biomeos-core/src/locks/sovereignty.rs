@@ -10,7 +10,7 @@ pub struct SovereignKeyManager {
 }
 
 /// Key history entry
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct KeyHistoryEntry {
     pub timestamp: chrono::DateTime<chrono::Utc>,
     pub key_id: String,
@@ -20,7 +20,7 @@ pub struct KeyHistoryEntry {
 }
 
 /// Key actions
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum KeyAction {
     Created,
     Activated,
@@ -299,7 +299,7 @@ impl From<u32> for MigrationDifficulty {
 }
 
 /// Exit strategy assessment
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ExitStrategyAssessment {
     pub dependency_id: DependencyId,
     pub exit_difficulty: MigrationDifficulty,
@@ -310,7 +310,7 @@ pub struct ExitStrategyAssessment {
 }
 
 /// Independence step
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct IndependenceStep {
     pub step_id: String,
     pub title: String,
@@ -324,7 +324,7 @@ pub struct IndependenceStep {
 // RecommendationPriority and ImplementationEffort are imported from types.rs
 
 /// Data residency issue
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DataResidencyIssue {
     pub issue_id: String,
     pub dependency_id: DependencyId,
@@ -337,7 +337,7 @@ pub struct DataResidencyIssue {
 // ViolationSeverity is imported from types.rs
 
 /// Sovereignty analysis
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SovereigntyAnalysis {
     pub sovereignty_score: f64,
     pub vendor_lock_risks: Vec<VendorLockRisk>,

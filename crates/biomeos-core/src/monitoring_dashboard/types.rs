@@ -1,4 +1,13 @@
-//! Monitoring dashboard types
+/// Alert severity enumeration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum AlertSeverity {
+    Low,
+    Medium,
+    High,
+    Critical,
+}
+
+/// Monitoring dashboard types
 
 use crate::{
     primal_clients::CapabilityCategory,
