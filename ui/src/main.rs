@@ -7,6 +7,7 @@ use eframe::egui;
 
 mod api;
 mod app;
+mod backend;
 mod state;
 mod views;
 

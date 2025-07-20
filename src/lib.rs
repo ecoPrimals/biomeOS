@@ -11,10 +11,10 @@ pub mod universal_adapter;
 
 /// Universal adapter for coordinating between Toadstool and Songbird
 pub use universal_adapter::{
-    BiomeOSUniversalAdapter, ToadstoolClient, SongbirdClient, CapabilityRegistry,
-    UniversalHealthMonitor, DiscoveredPrimal, PrimalHealth, SystemHealth,
-    ServiceStatus, BiomeDeployment, DeployedService, ParsedManifest,
-    ManifestMetadata, PrimalSpec, ServiceSpec, ResolvedPrimal
+    BiomeDeployment, BiomeOSUniversalAdapter, CapabilityRegistry, DeployedService,
+    DiscoveredPrimal, ManifestMetadata, ParsedManifest, PrimalHealth, PrimalSpec, ResolvedPrimal,
+    ServiceSpec, ServiceStatus, SongbirdClient, SystemHealth, ToadstoolClient,
+    UniversalHealthMonitor,
 };
 
 /// Universal UI types for examples - simplified for the new architecture
@@ -92,7 +92,8 @@ pub mod universal_ui {
         }
 
         pub async fn initialize_adapter(&mut self) -> Result<(), anyhow::Error> {
-            let adapter = crate::BiomeOSUniversalAdapter::new().await
+            let adapter = crate::BiomeOSUniversalAdapter::new()
+                .await
                 .map_err(|e| anyhow::anyhow!("Failed to initialize adapter: {}", e))?;
             self.adapter = Some(adapter);
             Ok(())
@@ -100,20 +101,25 @@ pub mod universal_ui {
 
         pub async fn discover_primals(&self) -> Result<Vec<DiscoveredPrimal>, anyhow::Error> {
             if let Some(adapter) = &self.adapter {
-                let primals = adapter.discover_primals().await
+                let primals = adapter
+                    .discover_primals()
+                    .await
                     .map_err(|e| anyhow::anyhow!("Failed to discover primals: {}", e))?;
-                Ok(primals.into_iter().map(|p| DiscoveredPrimal {
-                    id: p.id,
-                    primal_type: p.primal_type,
-                    endpoint: p.endpoint,
-                    capabilities: p.capabilities,
-                    health: PrimalHealth {
-                        status: p.health.status,
-                        last_seen: p.health.last_seen,
-                        response_time_ms: p.health.response_time_ms,
-                    },
-                    metadata: p.metadata,
-                }).collect())
+                Ok(primals
+                    .into_iter()
+                    .map(|p| DiscoveredPrimal {
+                        id: p.id,
+                        primal_type: p.primal_type,
+                        endpoint: p.endpoint,
+                        capabilities: p.capabilities,
+                        health: PrimalHealth {
+                            status: p.health.status,
+                            last_seen: p.health.last_seen,
+                            response_time_ms: p.health.response_time_ms,
+                        },
+                        metadata: p.metadata,
+                    })
+                    .collect())
             } else {
                 Ok(vec![])
             }
@@ -121,16 +127,23 @@ pub mod universal_ui {
 
         pub async fn get_system_health(&self) -> Result<crate::SystemHealth, anyhow::Error> {
             if let Some(adapter) = &self.adapter {
-                adapter.get_system_health().await
+                adapter
+                    .get_system_health()
+                    .await
                     .map_err(|e| anyhow::anyhow!("Failed to get system health: {}", e))
             } else {
                 Ok(self.system_health.clone())
             }
         }
 
-        pub async fn deploy_biome(&self, manifest_path: &str) -> Result<crate::BiomeDeployment, anyhow::Error> {
+        pub async fn deploy_biome(
+            &self,
+            manifest_path: &str,
+        ) -> Result<crate::BiomeDeployment, anyhow::Error> {
             if let Some(adapter) = &self.adapter {
-                adapter.process_biome_manifest(manifest_path).await
+                adapter
+                    .process_biome_manifest(manifest_path)
+                    .await
                     .map_err(|e| anyhow::anyhow!("Failed to deploy biome: {}", e))
             } else {
                 Err(anyhow::anyhow!("Universal adapter not initialized"))
@@ -188,8 +201,8 @@ pub mod coordination {
 /// Universal adapter pattern types
 pub mod universal {
     pub use crate::universal_adapter::{
-        BiomeOSUniversalAdapter, ToadstoolClient, SongbirdClient,
-        CapabilityRegistry, UniversalHealthMonitor
+        BiomeOSUniversalAdapter, CapabilityRegistry, SongbirdClient, ToadstoolClient,
+        UniversalHealthMonitor,
     };
 }
 
@@ -197,10 +210,15 @@ pub mod universal {
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Build information
-pub const BUILD_INFO: &str = concat!("biomeOS v", env!("CARGO_PKG_VERSION"), " - Universal Adapter Architecture");
+pub const BUILD_INFO: &str = concat!(
+    "biomeOS v",
+    env!("CARGO_PKG_VERSION"),
+    " - Universal Adapter Architecture"
+);
 
 /// Architecture description
-pub const ARCHITECTURE: &str = "Universal Adapter: Delegates to Toadstool (parsing) + Songbird (discovery)";
+pub const ARCHITECTURE: &str =
+    "Universal Adapter: Delegates to Toadstool (parsing) + Songbird (discovery)";
 
 #[cfg(test)]
 mod tests {
@@ -210,7 +228,7 @@ mod tests {
     #[allow(clippy::const_is_empty)]
     fn test_version() {
         assert!(!VERSION.is_empty());
-        assert!(VERSION.contains('.'));  // Version should contain dots
+        assert!(VERSION.contains('.')); // Version should contain dots
     }
 
     #[test]
@@ -230,14 +248,14 @@ mod tests {
     async fn test_universal_ui_manager() {
         let config = universal_ui::UniversalUIConfig::default();
         let mut manager = universal_ui::UniversalUIManager::new(config);
-        
+
         // Test initialization
         assert!(manager.adapter.is_none());
-        
+
         // Test discovery without adapter
         let primals = manager.discover_primals().await.unwrap();
         assert!(primals.is_empty());
-        
+
         // Test health check without adapter
         let health = manager.get_system_health().await.unwrap();
         assert!(!health.toadstool_status.available);

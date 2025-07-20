@@ -148,7 +148,7 @@ impl BuildStatus {
             Self::Preparing => egui::Color32::LIGHT_BLUE,
             Self::Building => egui::Color32::YELLOW,
             Self::Packaging => egui::Color32::from_rgb(255, 165, 0), // Orange
-            Self::Completing => egui::Color32::from_rgb(0, 255, 0), // Light Green
+            Self::Completing => egui::Color32::from_rgb(0, 255, 0),  // Light Green
             Self::Success => egui::Color32::GREEN,
             Self::Failed => egui::Color32::RED,
         }
@@ -365,14 +365,19 @@ pub enum TemplateDifficulty {
 impl TemplateDifficulty {
     /// Get all difficulty levels
     pub fn all() -> Vec<Self> {
-        vec![Self::Beginner, Self::Intermediate, Self::Advanced, Self::Expert]
+        vec![
+            Self::Beginner,
+            Self::Intermediate,
+            Self::Advanced,
+            Self::Expert,
+        ]
     }
 
     /// Get display name for difficulty
     pub fn display_name(&self) -> &str {
         match self {
             Self::Beginner => "Beginner",
-            Self::Intermediate => "Intermediate", 
+            Self::Intermediate => "Intermediate",
             Self::Advanced => "Advanced",
             Self::Expert => "Expert",
         }
@@ -422,7 +427,8 @@ impl BuildJob {
         self.progress = 1.0;
         self.completed_at = Some(chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string());
         self.output_path = Some(output_path);
-        self.build_log.push("✅ Build completed successfully".to_string());
+        self.build_log
+            .push("✅ Build completed successfully".to_string());
     }
 
     /// Fail the build job
@@ -430,7 +436,8 @@ impl BuildJob {
         self.status = BuildStatus::Failed;
         self.completed_at = Some(chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string());
         self.error_message = Some(error_message.clone());
-        self.build_log.push(format!("❌ Build failed: {}", error_message));
+        self.build_log
+            .push(format!("❌ Build failed: {}", error_message));
     }
 
     /// Update build progress
@@ -464,9 +471,15 @@ impl BuildStats {
     /// Calculate statistics from build jobs
     pub fn from_jobs(jobs: &[BuildJob]) -> Self {
         let total_builds = jobs.len();
-        let successful_builds = jobs.iter().filter(|job| job.status == BuildStatus::Success).count();
-        let failed_builds = jobs.iter().filter(|job| job.status == BuildStatus::Failed).count();
-        
+        let successful_builds = jobs
+            .iter()
+            .filter(|job| job.status == BuildStatus::Success)
+            .count();
+        let failed_builds = jobs
+            .iter()
+            .filter(|job| job.status == BuildStatus::Failed)
+            .count();
+
         let total_size: u64 = jobs.iter().map(|job| job.config.size_estimate).sum();
         let average_size = if total_builds > 0 {
             total_size / total_builds as u64
@@ -521,4 +534,4 @@ impl Default for IsoCreatorConfig {
             build_timeout_minutes: 60,
         }
     }
-} 
+}

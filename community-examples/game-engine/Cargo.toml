@@ -1,0 +1,42 @@
+[package]
+name = "game-engine"
+version = "0.1.0"
+edition = "2021"
+authors = ["GameDev <game@example.com>"]
+license = "MIT"
+description = "Lightweight game engine for BiomeOS"
+homepage = ""
+repository = ""
+keywords = ["biomeos", "primal"]
+
+[[bin]]
+name = "game-engine"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0"
+tracing = "0.1"
+tokio = "1.0"
+serde_json = "1.0"
+uuid = "1.0"
+async-trait = "0.1"
+biomeos-primal-sdk = "0.1.0"
+serde = "1.0"
+chrono = "0.4"
+
+[dev-dependencies]
+tempfile = "3.0"
+tokio-test = "0.4"
+
+[features]
+testing = []
+default = []
+
+[profile.release]
+opt-level = 2
+lto = true
+panic = "abort"
+
+[profile.dev]
+opt-level = 0
+debug = true

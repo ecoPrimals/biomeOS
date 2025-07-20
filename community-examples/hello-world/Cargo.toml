@@ -1,0 +1,45 @@
+[package]
+name = "hello-world"
+version = "0.1.0"
+edition = "2021"
+authors = ["Community Developer <dev@example.com>"]
+license = "MIT"
+description = "A simple hello world primal for demonstration"
+homepage = ""
+repository = ""
+keywords = ["biomeos", "primal"]
+
+# Standalone workspace
+[workspace]
+
+[[bin]]
+name = "hello-world"
+path = "src/main.rs"
+
+[dependencies]
+biomeos-primal-sdk = { path = "../../crates/biomeos-primal-sdk" }
+uuid = "1.0"
+chrono = "0.4"
+tokio = "1.0"
+tracing = "0.1"
+async-trait = "0.1"
+serde = "1.0"
+serde_json = "1.0"
+anyhow = "1.0"
+
+[dev-dependencies]
+tokio-test = "0.4"
+tempfile = "3.0"
+
+[features]
+testing = []
+default = []
+
+[profile.release]
+opt-level = 2
+lto = true
+panic = "abort"
+
+[profile.dev]
+opt-level = 0
+debug = true

@@ -113,7 +113,7 @@ impl BuildManager {
     /// Simulate build process (for development/testing)
     pub fn simulate_build(&mut self, config: IsoConfig) -> Result<(), String> {
         let _build_id = self.start_build(config)?;
-        
+
         // Simulate build phases
         let phases = vec![
             (0.1, "📋 Preparing build environment"),
@@ -130,15 +130,17 @@ impl BuildManager {
 
         for (progress, message) in phases {
             self.update_progress(progress, message.to_string())?;
-            
+
             // Simulate processing time
             std::thread::sleep(Duration::from_millis(500));
         }
 
-        let output_path = format!("{}/{}.iso", 
-            self.build_config.output_directory, 
-            self.current_build.as_ref().unwrap().config.name);
-        
+        let output_path = format!(
+            "{}/{}.iso",
+            self.build_config.output_directory,
+            self.current_build.as_ref().unwrap().config.name
+        );
+
         self.complete_build(output_path)?;
         Ok(())
     }
@@ -224,10 +226,10 @@ impl BuildPipeline {
         if self.total_stages == 0 {
             return 0.0;
         }
-        
+
         let stage_progress = self.current_stage as f32 / self.total_stages as f32;
         let current_stage_progress = self.current_stage().map(|s| s.progress).unwrap_or(0.0);
-        
+
         stage_progress + (current_stage_progress / self.total_stages as f32)
     }
 
@@ -319,10 +321,10 @@ impl BuildEnvironment {
         // Create directories
         std::fs::create_dir_all(&self.temp_dir)
             .map_err(|e| format!("Failed to create temp directory: {}", e))?;
-        
+
         std::fs::create_dir_all(&self.work_dir)
             .map_err(|e| format!("Failed to create work directory: {}", e))?;
-        
+
         std::fs::create_dir_all(&self.output_dir)
             .map_err(|e| format!("Failed to create output directory: {}", e))?;
 
@@ -376,9 +378,9 @@ impl BuildEnvironment {
     pub fn get_disk_space(&self) -> Result<DiskSpace, String> {
         // In a real implementation, this would check actual disk space
         Ok(DiskSpace {
-            total: 100 * 1024 * 1024 * 1024, // 100GB
+            total: 100 * 1024 * 1024 * 1024,    // 100GB
             available: 50 * 1024 * 1024 * 1024, // 50GB
-            used: 50 * 1024 * 1024 * 1024, // 50GB
+            used: 50 * 1024 * 1024 * 1024,      // 50GB
         })
     }
 }
@@ -454,7 +456,10 @@ impl BuildLogger {
 
     /// Get logs by level
     pub fn get_logs_by_level(&self, level: LogLevel) -> Vec<&LogEntry> {
-        self.logs.iter().filter(|entry| entry.level == level).collect()
+        self.logs
+            .iter()
+            .filter(|entry| entry.level == level)
+            .collect()
     }
 }
 
@@ -495,4 +500,4 @@ impl LogLevel {
             Self::Debug => "🔍",
         }
     }
-} 
+}

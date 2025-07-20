@@ -66,50 +66,53 @@ impl IsoCreatorUI {
 
     /// Render help panel
     fn render_help_panel(&self, ui: &mut egui::Ui) {
-        ui.collapsing("💡 Help", |ui| {
-            match self.selected_tab {
-                IsoCreatorTab::Configuration => {
-                    ui.label("Configuration tab allows you to:");
-                    ui.label("• Set basic ISO properties (name, description, version)");
-                    ui.label("• Choose target architecture and boot mode");
-                    ui.label("• Select which primals to include");
-                    ui.label("• Apply templates for quick setup");
-                    ui.label("• Configure compression settings");
-                },
-                IsoCreatorTab::Niches => {
-                    ui.label("Niches tab allows you to:");
-                    ui.label("• Browse available niche packages");
-                    ui.label("• Filter by category and features");
-                    ui.label("• Select niches for your ISO");
-                    ui.label("• View dependencies and size impact");
-                },
-                IsoCreatorTab::Components => {
-                    ui.label("Components tab allows you to:");
-                    ui.label("• Add custom components to your ISO");
-                    ui.label("• Configure component types and paths");
-                    ui.label("• Set component requirements");
-                    ui.label("• Manage component dependencies");
-                },
-                IsoCreatorTab::Build => {
-                    ui.label("Build tab allows you to:");
-                    ui.label("• Start the ISO build process");
-                    ui.label("• Monitor build progress");
-                    ui.label("• View build logs and errors");
-                    ui.label("• Access completed ISO files");
-                },
-                IsoCreatorTab::Queue => {
-                    ui.label("Queue tab allows you to:");
-                    ui.label("• View all queued builds");
-                    ui.label("• Manage build priorities");
-                    ui.label("• Monitor running builds");
-                    ui.label("• Review build history");
-                },
+        ui.collapsing("💡 Help", |ui| match self.selected_tab {
+            IsoCreatorTab::Configuration => {
+                ui.label("Configuration tab allows you to:");
+                ui.label("• Set basic ISO properties (name, description, version)");
+                ui.label("• Choose target architecture and boot mode");
+                ui.label("• Select which primals to include");
+                ui.label("• Apply templates for quick setup");
+                ui.label("• Configure compression settings");
+            }
+            IsoCreatorTab::Niches => {
+                ui.label("Niches tab allows you to:");
+                ui.label("• Browse available niche packages");
+                ui.label("• Filter by category and features");
+                ui.label("• Select niches for your ISO");
+                ui.label("• View dependencies and size impact");
+            }
+            IsoCreatorTab::Components => {
+                ui.label("Components tab allows you to:");
+                ui.label("• Add custom components to your ISO");
+                ui.label("• Configure component types and paths");
+                ui.label("• Set component requirements");
+                ui.label("• Manage component dependencies");
+            }
+            IsoCreatorTab::Build => {
+                ui.label("Build tab allows you to:");
+                ui.label("• Start the ISO build process");
+                ui.label("• Monitor build progress");
+                ui.label("• View build logs and errors");
+                ui.label("• Access completed ISO files");
+            }
+            IsoCreatorTab::Queue => {
+                ui.label("Queue tab allows you to:");
+                ui.label("• View all queued builds");
+                ui.label("• Manage build priorities");
+                ui.label("• Monitor running builds");
+                ui.label("• Review build history");
             }
         });
     }
 
     /// Render configuration tab
-    pub fn render_configuration_tab(&mut self, ui: &mut egui::Ui, config: &mut IsoConfig, templates: &[IsoTemplate]) {
+    pub fn render_configuration_tab(
+        &mut self,
+        ui: &mut egui::Ui,
+        config: &mut IsoConfig,
+        templates: &[IsoTemplate],
+    ) {
         ui.heading("⚙️ Configuration");
         ui.label("Configure your custom biomeOS ISO");
         ui.add_space(10.0);
@@ -117,11 +120,11 @@ impl IsoCreatorUI {
         ui.horizontal(|ui| {
             ui.vertical(|ui| {
                 ui.set_width(300.0);
-                
+
                 // Basic settings
                 ui.group(|ui| {
                     ui.label("📋 Basic Settings");
-                    
+
                     ui.horizontal(|ui| {
                         ui.label("Name:");
                         ui.text_edit_singleline(&mut config.name);
@@ -143,15 +146,27 @@ impl IsoCreatorUI {
                 // Architecture and boot settings
                 ui.group(|ui| {
                     ui.label("🏗️ Architecture & Boot");
-                    
+
                     ui.horizontal(|ui| {
                         ui.label("Architecture:");
                         egui::ComboBox::from_id_source("arch_combo")
                             .selected_text(&config.target_arch)
                             .show_ui(ui, |ui| {
-                                ui.selectable_value(&mut config.target_arch, "x86_64".to_string(), "x86_64");
-                                ui.selectable_value(&mut config.target_arch, "aarch64".to_string(), "aarch64");
-                                ui.selectable_value(&mut config.target_arch, "i686".to_string(), "i686");
+                                ui.selectable_value(
+                                    &mut config.target_arch,
+                                    "x86_64".to_string(),
+                                    "x86_64",
+                                );
+                                ui.selectable_value(
+                                    &mut config.target_arch,
+                                    "aarch64".to_string(),
+                                    "aarch64",
+                                );
+                                ui.selectable_value(
+                                    &mut config.target_arch,
+                                    "i686".to_string(),
+                                    "i686",
+                                );
                             });
                     });
 
@@ -161,7 +176,11 @@ impl IsoCreatorUI {
                             .selected_text(config.boot_mode.display_name())
                             .show_ui(ui, |ui| {
                                 for mode in BootMode::all() {
-                                    ui.selectable_value(&mut config.boot_mode, mode.clone(), mode.display_name());
+                                    ui.selectable_value(
+                                        &mut config.boot_mode,
+                                        mode.clone(),
+                                        mode.display_name(),
+                                    );
                                 }
                             });
                     });
@@ -172,7 +191,7 @@ impl IsoCreatorUI {
                 // Compression settings
                 ui.group(|ui| {
                     ui.label("🗜️ Compression");
-                    
+
                     ui.horizontal(|ui| {
                         ui.label("Level:");
                         ui.add(egui::Slider::new(&mut config.compression_level, 0..=9).text(""));
@@ -190,23 +209,33 @@ impl IsoCreatorUI {
 
             ui.vertical(|ui| {
                 ui.set_width(300.0);
-                
+
                 // Templates
                 ui.group(|ui| {
                     ui.label("📋 Templates");
                     ui.label("Quick start with pre-configured templates");
-                    
+
                     for template in templates {
                         let selected = self.selected_template.as_ref() == Some(&template.name);
-                        if ui.selectable_label(selected, &format!("{} {}", template.use_case_icon(), template.name)).clicked() {
+                        if ui
+                            .selectable_label(
+                                selected,
+                                &format!("{} {}", template.use_case_icon(), template.name),
+                            )
+                            .clicked()
+                        {
                             self.selected_template = Some(template.name.clone());
                             // Apply template to config
                             self.apply_template_to_config(template, config);
                         }
-                        
+
                         if selected {
                             ui.label(&format!("  {}", template.description));
-                            ui.label(&format!("  {} {}", template.difficulty_icon(), template.difficulty.display_name()));
+                            ui.label(&format!(
+                                "  {} {}",
+                                template.difficulty_icon(),
+                                template.difficulty.display_name()
+                            ));
                             ui.label(&format!("  📏 ~{} MB", template.size_estimate));
                         }
                     }
@@ -217,7 +246,7 @@ impl IsoCreatorUI {
                 // Advanced options
                 ui.collapsing("🔧 Advanced Options", |ui| {
                     ui.checkbox(&mut self.show_advanced_options, "Show advanced options");
-                    
+
                     if self.show_advanced_options {
                         ui.label("Additional configuration options would go here");
                     }
@@ -231,12 +260,20 @@ impl IsoCreatorUI {
         ui.group(|ui| {
             ui.label("🧩 Included Primals");
             ui.label("Select which primals to include in your ISO");
-            
+
             ui.horizontal_wrapped(|ui| {
                 let all_primals = vec![
-                    ("toadstool", "🍄 Toadstool", "Cooperative networking and communication"),
+                    (
+                        "toadstool",
+                        "🍄 Toadstool",
+                        "Cooperative networking and communication",
+                    ),
                     ("songbird", "🐦 Songbird", "Service mesh and orchestration"),
-                    ("nestgate", "🥚 NestGate", "Distributed storage and data management"),
+                    (
+                        "nestgate",
+                        "🥚 NestGate",
+                        "Distributed storage and data management",
+                    ),
                     ("squirrel", "🐿️ Squirrel", "Analytics and intelligence"),
                     ("beardog", "🐻 BearDog", "Security and authentication"),
                 ];
@@ -252,7 +289,7 @@ impl IsoCreatorUI {
                             config.included_primals.retain(|p| p != id);
                         }
                     }
-                    
+
                     if ui.is_rect_visible(ui.min_rect()) {
                         ui.label(&format!("  {}", description));
                     }
@@ -267,13 +304,22 @@ impl IsoCreatorUI {
             ui.label("📏 Size Estimation");
             let estimated_size = config.calculate_size_estimate();
             ui.label(&format!("Estimated size: {} MB", estimated_size));
-            
+
             ui.horizontal(|ui| {
                 ui.label("Breakdown:");
                 ui.label(&format!("Base: 500 MB"));
-                ui.label(&format!("Primals: {} MB", config.included_primals.len() * 150));
-                ui.label(&format!("Niches: {} MB", config.included_niches.len() * 400));
-                ui.label(&format!("Components: {} MB", config.custom_components.len() * 150));
+                ui.label(&format!(
+                    "Primals: {} MB",
+                    config.included_primals.len() * 150
+                ));
+                ui.label(&format!(
+                    "Niches: {} MB",
+                    config.included_niches.len() * 400
+                ));
+                ui.label(&format!(
+                    "Components: {} MB",
+                    config.custom_components.len() * 150
+                ));
             });
         });
     }
@@ -283,22 +329,22 @@ impl IsoCreatorUI {
         config.description = template.description.clone();
         config.included_primals = template.included_components.clone();
         config.size_estimate = template.size_estimate;
-        
+
         // Apply template-specific settings
         match template.use_case.to_lowercase().as_str() {
             s if s.contains("gaming") => {
                 config.boot_mode = BootMode::UEFI;
                 config.compression_level = 7;
-            },
+            }
             s if s.contains("research") => {
                 config.boot_mode = BootMode::Hybrid;
                 config.compression_level = 5;
-            },
+            }
             s if s.contains("minimal") => {
                 config.boot_mode = BootMode::Legacy;
                 config.compression_level = 9;
                 config.included_primals = vec!["toadstool".to_string()];
-            },
+            }
             _ => {
                 config.boot_mode = BootMode::Hybrid;
                 config.compression_level = 6;
@@ -307,7 +353,12 @@ impl IsoCreatorUI {
     }
 
     /// Render niches tab
-    pub fn render_niches_tab(&mut self, ui: &mut egui::Ui, niches: &[NichePackage], selected_niches: &mut Vec<String>) {
+    pub fn render_niches_tab(
+        &mut self,
+        ui: &mut egui::Ui,
+        niches: &[NichePackage],
+        selected_niches: &mut Vec<String>,
+    ) {
         ui.heading("🎭 Niches");
         ui.label("Browse and select niche packages for your ISO");
         ui.add_space(10.0);
@@ -316,7 +367,7 @@ impl IsoCreatorUI {
         ui.horizontal(|ui| {
             ui.label("🔍 Filter:");
             ui.text_edit_singleline(&mut self.filter_text);
-            
+
             if ui.button("Clear").clicked() {
                 self.filter_text.clear();
             }
@@ -325,79 +376,100 @@ impl IsoCreatorUI {
         ui.add_space(10.0);
 
         // Niche categories
-        let categories: Vec<String> = niches.iter()
+        let categories: Vec<String> = niches
+            .iter()
             .map(|n| n.category.clone())
             .collect::<std::collections::HashSet<_>>()
             .into_iter()
             .collect();
 
         for category in categories {
-            ui.collapsing(&format!("{} {}", 
-                match category.as_str() {
-                    "Gaming" => "🎮",
-                    "Research" => "🔬",
-                    "Development" => "💻",
-                    "Security" => "🔒",
-                    "Network" => "🌐",
-                    "Database" => "🗄️",
-                    "AI" => "🤖",
-                    _ => "📦",
-                }, category), |ui| {
-                
-                let category_niches: Vec<_> = niches.iter()
-                    .filter(|n| n.category == category)
-                    .filter(|n| {
-                        if self.filter_text.is_empty() {
-                            true
-                        } else {
-                            n.name.to_lowercase().contains(&self.filter_text.to_lowercase()) ||
-                            n.description.to_lowercase().contains(&self.filter_text.to_lowercase())
-                        }
-                    })
-                    .collect();
-
-                for niche in category_niches {
-                    let selected = selected_niches.contains(&niche.id);
-                    
-                    ui.group(|ui| {
-                        ui.horizontal(|ui| {
-                            let mut checked = selected;
-                            if ui.checkbox(&mut checked, "").clicked() {
-                                if checked {
-                                    selected_niches.push(niche.id.clone());
-                                } else {
-                                    selected_niches.retain(|id| id != &niche.id);
-                                }
+            ui.collapsing(
+                &format!(
+                    "{} {}",
+                    match category.as_str() {
+                        "Gaming" => "🎮",
+                        "Research" => "🔬",
+                        "Development" => "💻",
+                        "Security" => "🔒",
+                        "Network" => "🌐",
+                        "Database" => "🗄️",
+                        "AI" => "🤖",
+                        _ => "📦",
+                    },
+                    category
+                ),
+                |ui| {
+                    let category_niches: Vec<_> = niches
+                        .iter()
+                        .filter(|n| n.category == category)
+                        .filter(|n| {
+                            if self.filter_text.is_empty() {
+                                true
+                            } else {
+                                n.name
+                                    .to_lowercase()
+                                    .contains(&self.filter_text.to_lowercase())
+                                    || n.description
+                                        .to_lowercase()
+                                        .contains(&self.filter_text.to_lowercase())
                             }
-                            
-                            ui.vertical(|ui| {
-                                ui.label(&format!("{} {}", niche.category_icon(), niche.name));
-                                ui.label(&niche.description);
-                                ui.horizontal(|ui| {
-                                    ui.label(&format!("👤 {}", niche.author));
-                                    ui.label(&format!("📦 v{}", niche.version));
-                                    ui.label(&format!("📏 {} MB", niche.size_mb));
+                        })
+                        .collect();
+
+                    for niche in category_niches {
+                        let selected = selected_niches.contains(&niche.id);
+
+                        ui.group(|ui| {
+                            ui.horizontal(|ui| {
+                                let mut checked = selected;
+                                if ui.checkbox(&mut checked, "").clicked() {
+                                    if checked {
+                                        selected_niches.push(niche.id.clone());
+                                    } else {
+                                        selected_niches.retain(|id| id != &niche.id);
+                                    }
+                                }
+
+                                ui.vertical(|ui| {
+                                    ui.label(&format!("{} {}", niche.category_icon(), niche.name));
+                                    ui.label(&niche.description);
+                                    ui.horizontal(|ui| {
+                                        ui.label(&format!("👤 {}", niche.author));
+                                        ui.label(&format!("📦 v{}", niche.version));
+                                        ui.label(&format!("📏 {} MB", niche.size_mb));
+                                    });
+
+                                    if !niche.features.is_empty() {
+                                        ui.label(&format!(
+                                            "✨ Features: {}",
+                                            niche.features.join(", ")
+                                        ));
+                                    }
+
+                                    if !niche.dependencies.is_empty() {
+                                        ui.label(&format!(
+                                            "🔗 Dependencies: {}",
+                                            niche.dependencies.join(", ")
+                                        ));
+                                    }
                                 });
-                                
-                                if !niche.features.is_empty() {
-                                    ui.label(&format!("✨ Features: {}", niche.features.join(", ")));
-                                }
-                                
-                                if !niche.dependencies.is_empty() {
-                                    ui.label(&format!("🔗 Dependencies: {}", niche.dependencies.join(", ")));
-                                }
                             });
                         });
-                    });
-                    
-                    ui.add_space(5.0);
-                }
-            });
+
+                        ui.add_space(5.0);
+                    }
+                },
+            );
         }
     }
 
     /// Render components tab
-    pub fn render_components_tab(&mut self, ui: &mut egui::Ui, components: &mut Vec<CustomComponent>) {
+    pub fn render_components_tab(
+        &mut self,
+        ui: &mut egui::Ui,
+        components: &mut Vec<CustomComponent>,
+    ) {
         ui.heading("📦 Components");
         ui.label("Manage custom components for your ISO");
         ui.add_space(10.0);
@@ -415,32 +487,35 @@ impl IsoCreatorUI {
 
         // Component list
         let mut to_remove = Vec::new();
-        
+
         for (index, component) in components.iter_mut().enumerate() {
             ui.group(|ui| {
                 ui.horizontal(|ui| {
                     ui.label(&format!("{} {}", component.type_icon(), component.name));
-                    
+
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if ui.button("🗑️").clicked() {
                             to_remove.push(index);
                         }
-                        
+
                         if ui.button("✏️").clicked() {
                             // Edit component (in a real implementation, this would open a dialog)
                         }
                     });
                 });
-                
+
                 ui.label(&component.description);
-                ui.label(&format!("Type: {}", component.component_type.display_name()));
+                ui.label(&format!(
+                    "Type: {}",
+                    component.component_type.display_name()
+                ));
                 ui.label(&format!("Size: {} MB", component.size_mb));
-                
+
                 if component.required {
                     ui.label("⚠️ Required component");
                 }
             });
-            
+
             ui.add_space(5.0);
         }
 
@@ -451,7 +526,13 @@ impl IsoCreatorUI {
     }
 
     /// Render build tab
-    pub fn render_build_tab(&mut self, ui: &mut egui::Ui, build_status: &BuildStatus, build_progress: f32, build_log: &[String]) {
+    pub fn render_build_tab(
+        &mut self,
+        ui: &mut egui::Ui,
+        build_status: &BuildStatus,
+        build_progress: f32,
+        build_log: &[String],
+    ) {
         ui.heading("🔨 Build");
         ui.label("Build your custom biomeOS ISO");
         ui.add_space(10.0);
@@ -460,9 +541,12 @@ impl IsoCreatorUI {
         ui.group(|ui| {
             ui.horizontal(|ui| {
                 ui.label("Status:");
-                ui.colored_label(build_status.color(), &format!("{} {:?}", build_status.icon(), build_status));
+                ui.colored_label(
+                    build_status.color(),
+                    &format!("{} {:?}", build_status.icon(), build_status),
+                );
             });
-            
+
             if *build_status == BuildStatus::Building {
                 ui.add(egui::ProgressBar::new(build_progress).show_percentage());
             }
@@ -477,26 +561,26 @@ impl IsoCreatorUI {
                     if ui.button("🚀 Start Build").clicked() {
                         // Start build logic would go here
                     }
-                },
+                }
                 BuildStatus::Building => {
                     if ui.button("⏹️ Cancel Build").clicked() {
                         // Cancel build logic would go here
                     }
-                },
+                }
                 BuildStatus::Success => {
                     if ui.button("🔄 Build Again").clicked() {
                         // Restart build logic would go here
                     }
-                    
+
                     if ui.button("📁 Open Output").clicked() {
                         // Open output directory logic would go here
                     }
-                },
+                }
                 BuildStatus::Failed => {
                     if ui.button("🔄 Retry Build").clicked() {
                         // Retry build logic would go here
                     }
-                },
+                }
                 _ => {}
             }
         });
@@ -506,7 +590,7 @@ impl IsoCreatorUI {
         // Build log
         ui.group(|ui| {
             ui.label("📜 Build Log");
-            
+
             egui::ScrollArea::vertical()
                 .max_height(300.0)
                 .show(ui, |ui| {
@@ -531,30 +615,33 @@ impl IsoCreatorUI {
                     ui.horizontal(|ui| {
                         ui.label(&format!("🔨 {}", job.config.name));
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            ui.colored_label(job.status.color(), &format!("{} {:?}", job.status.icon(), job.status));
+                            ui.colored_label(
+                                job.status.color(),
+                                &format!("{} {:?}", job.status.icon(), job.status),
+                            );
                         });
                     });
-                    
+
                     ui.label(&job.config.description);
                     ui.label(&format!("Progress: {:.0}%", job.progress * 100.0));
-                    
+
                     if let Some(started) = &job.started_at {
                         ui.label(&format!("Started: {}", started));
                     }
-                    
+
                     if let Some(completed) = &job.completed_at {
                         ui.label(&format!("Completed: {}", completed));
                     }
-                    
+
                     if let Some(output) = &job.output_path {
                         ui.label(&format!("Output: {}", output));
                     }
-                    
+
                     if let Some(error) = &job.error_message {
                         ui.colored_label(egui::Color32::RED, &format!("Error: {}", error));
                     }
                 });
-                
+
                 ui.add_space(5.0);
             }
         }
@@ -569,4 +656,4 @@ impl IsoCreatorUI {
     pub fn set_selected_tab(&mut self, tab: IsoCreatorTab) {
         self.selected_tab = tab;
     }
-} 
+}

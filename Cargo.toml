@@ -2,6 +2,10 @@
 resolver = "2"
 members = [
     "crates/biomeos-core",
+    "crates/biomeos-manifest",
+    "crates/biomeos-system",
+    "crates/biomeos-primal-sdk",
+    "crates/biomeos-ui",
     "federation",
     "ui",
 ]
@@ -126,6 +130,7 @@ dotenvy.workspace = true
 
 # Local crates
 biomeos-core = { path = "crates/biomeos-core" }
+biomeos-primal-sdk = { path = "crates/biomeos-primal-sdk" }
 
 [dev-dependencies]
 mockall.workspace = true
@@ -143,6 +148,14 @@ path = "src/bin/mock_primal_server.rs"
 [[bin]]
 name = "songbird_universal_ui_demo"
 path = "src/bin/songbird_universal_ui_demo.rs"
+
+[[bin]]
+name = "ecosystem-integration-demo"
+path = "src/bin/ecosystem_integration_demo.rs"
+
+[[bin]]
+name = "simple-ecosystem-demo"
+path = "src/bin/simple_ecosystem_demo.rs"
 
 [features]
 default = ["full"]
@@ -186,3 +199,7 @@ panic = "unwind"
 incremental = true
 codegen-units = 256
 rpath = false 
+[[bin]]
+name = "live-integration-demo"
+path = "src/bin/live_integration_demo.rs"
+

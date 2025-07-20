@@ -9,7 +9,6 @@
 //! - Discovering primals by capability
 //! - Bootstrapping an ecosystem
 
-
 use biomeos_core::UniversalBiomeOSManager;
 use std::collections::HashMap;
 use tokio;

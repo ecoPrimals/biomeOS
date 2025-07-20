@@ -2,44 +2,6 @@
 name = "biomeos-system"
 version = "0.1.0"
 edition = "2021"
-authors = ["biomeOS Contributors"]
-description = "System management layer for biomeOS - provides OS-level services, boot/init, and system administration"
-license = "Apache-2.0"
-repository = "https://github.com/biomeOS/biomeOS"
 
 [dependencies]
-biomeos-core = { path = "../biomeos-core" }
-biomeos-manifest = { path = "../biomeos-manifest" }
-# biomeos-orchestrator = { path = "../biomeos-orchestrator" }
-tokio = { version = "1.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-serde_yaml = "0.9"
-anyhow = "1.0"
-thiserror = "1.0"
-tracing = "0.1"
-tracing-subscriber = "0.3"
-uuid = { version = "1.0", features = ["v4", "serde"] }
-chrono = { version = "0.4", features = ["serde"] }
-async-trait = "0.1"
-clap = { version = "4.0", features = ["derive"] }
-tonic = "0.10"
-tonic-build = "0.10"
-prost = "0.12"
-systemstat = "0.2"
-nix = "0.27"
-libc = "0.2"
-users = "0.11"
-dirs = "5.0"
-notify = "6.0"
-crossbeam-channel = "0.5"
-futures = "0.3"
-reqwest = { version = "0.11", features = ["json"] }
-tempfile = "3.0"
-
-[build-dependencies]
-tonic-build = "0.10"
-
-[dev-dependencies]
-tempfile = "3.0"
-tokio-test = "0.4" 

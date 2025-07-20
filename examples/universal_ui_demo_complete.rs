@@ -355,7 +355,8 @@ async fn demo_system_status(ui_manager: &UniversalUIManager) -> Result<()> {
             println!("   💚 Healthy Primals: {}", status.overall_health);
             println!("   🖥️  UI Mode: {:?}", status.resource_usage);
 
-            let last_discovery = status.last_updated; {
+            let last_discovery = status.last_updated;
+            {
                 println!(
                     "   🕐 Last Discovery: {}",
                     last_discovery.format("%Y-%m-%d %H:%M:%S UTC")

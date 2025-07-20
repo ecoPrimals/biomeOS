@@ -3,8 +3,8 @@
 //! This module handles the build queue, job scheduling, and managing
 //! multiple concurrent builds.
 
-use crate::views::iso_creator::types::*;
 use crate::views::iso_creator::build::BuildManager;
+use crate::views::iso_creator::types::*;
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -66,7 +66,7 @@ impl BuildQueue {
     /// Remove a job from the queue
     pub fn remove_job(&mut self, job_id: &str) -> Result<(), String> {
         let position = self.jobs.iter().position(|job| job.id == job_id);
-        
+
         if let Some(pos) = position {
             self.jobs.remove(pos);
             Ok(())
@@ -95,7 +95,7 @@ impl BuildQueue {
 
             let job_id = running_job.id.clone();
             self.running_jobs.push(running_job);
-            
+
             Some(job_id)
         } else {
             None
@@ -105,15 +105,15 @@ impl BuildQueue {
     /// Cancel a running job
     pub fn cancel_job(&mut self, job_id: &str) -> Result<(), String> {
         let position = self.running_jobs.iter().position(|job| job.id == job_id);
-        
+
         if let Some(pos) = position {
             let running_job = self.running_jobs.remove(pos);
-            
+
             // Cancel the actual build
             if let Ok(mut build_manager) = running_job.build_manager.lock() {
                 build_manager.cancel_build().ok();
             }
-            
+
             // Move to completed jobs as cancelled
             let completed_job = CompletedJob {
                 id: running_job.id,
@@ -127,12 +127,12 @@ impl BuildQueue {
                 output_path: None,
                 final_size: None,
             };
-            
+
             self.completed_jobs.push(completed_job);
-            
+
             // Try to start next job
             self.start_next_job();
-            
+
             Ok(())
         } else {
             Err(format!("Running job {} not found", job_id))
@@ -140,12 +140,17 @@ impl BuildQueue {
     }
 
     /// Complete a job
-    pub fn complete_job(&mut self, job_id: &str, output_path: Option<String>, final_size: Option<u64>) -> Result<(), String> {
+    pub fn complete_job(
+        &mut self,
+        job_id: &str,
+        output_path: Option<String>,
+        final_size: Option<u64>,
+    ) -> Result<(), String> {
         let position = self.running_jobs.iter().position(|job| job.id == job_id);
-        
+
         if let Some(pos) = position {
             let running_job = self.running_jobs.remove(pos);
-            
+
             let completed_job = CompletedJob {
                 id: running_job.id,
                 config: running_job.config,
@@ -158,12 +163,12 @@ impl BuildQueue {
                 output_path,
                 final_size,
             };
-            
+
             self.completed_jobs.push(completed_job);
-            
+
             // Try to start next job
             self.start_next_job();
-            
+
             Ok(())
         } else {
             Err(format!("Running job {} not found", job_id))
@@ -173,10 +178,10 @@ impl BuildQueue {
     /// Fail a job
     pub fn fail_job(&mut self, job_id: &str, error_message: String) -> Result<(), String> {
         let position = self.running_jobs.iter().position(|job| job.id == job_id);
-        
+
         if let Some(pos) = position {
             let running_job = self.running_jobs.remove(pos);
-            
+
             let completed_job = CompletedJob {
                 id: running_job.id,
                 config: running_job.config,
@@ -189,12 +194,12 @@ impl BuildQueue {
                 output_path: None,
                 final_size: None,
             };
-            
+
             self.completed_jobs.push(completed_job);
-            
+
             // Try to start next job
             self.start_next_job();
-            
+
             Ok(())
         } else {
             Err(format!("Running job {} not found", job_id))
@@ -210,7 +215,8 @@ impl BuildQueue {
     fn sort_queue(&mut self) {
         let mut jobs: Vec<_> = self.jobs.drain(..).collect();
         jobs.sort_by(|a, b| {
-            b.priority.cmp(&a.priority)
+            b.priority
+                .cmp(&a.priority)
                 .then_with(|| a.queued_at.cmp(&b.queued_at))
         });
         self.jobs.extend(jobs);
@@ -234,15 +240,21 @@ impl BuildQueue {
     /// Get queue statistics
     pub fn get_statistics(&self) -> QueueStatistics {
         let total_jobs = self.jobs.len() + self.running_jobs.len() + self.completed_jobs.len();
-        let successful_jobs = self.completed_jobs.iter()
+        let successful_jobs = self
+            .completed_jobs
+            .iter()
             .filter(|job| job.status == BuildStatus::Success)
             .count();
-        let failed_jobs = self.completed_jobs.iter()
+        let failed_jobs = self
+            .completed_jobs
+            .iter()
             .filter(|job| job.status == BuildStatus::Failed)
             .count();
-        
+
         let average_duration = if !self.completed_jobs.is_empty() {
-            let total_duration: Duration = self.completed_jobs.iter()
+            let total_duration: Duration = self
+                .completed_jobs
+                .iter()
                 .map(|job| job.completed_at.duration_since(job.started_at))
                 .sum();
             total_duration / self.completed_jobs.len() as u32
@@ -269,7 +281,7 @@ impl BuildQueue {
     /// Set auto-start mode
     pub fn set_auto_start(&mut self, auto_start: bool) {
         self.auto_start = auto_start;
-        
+
         if auto_start {
             // Try to start jobs if capacity is available
             while self.can_start_job() {
@@ -288,13 +300,15 @@ impl BuildQueue {
 
         let jobs_ahead = self.jobs.len();
         let available_slots = self.max_concurrent - self.running_jobs.len();
-        
+
         if available_slots > 0 {
             // Job can start immediately
             Duration::from_secs(0)
         } else {
             // Estimate based on running jobs
-            let avg_remaining_time = self.running_jobs.iter()
+            let avg_remaining_time = self
+                .running_jobs
+                .iter()
                 .map(|job| {
                     let elapsed = job.started_at.elapsed();
                     let estimated_total = job.estimated_duration();
@@ -304,8 +318,9 @@ impl BuildQueue {
                         Duration::from_secs(60) // Minimum 1 minute
                     }
                 })
-                .sum::<Duration>() / self.running_jobs.len() as u32;
-            
+                .sum::<Duration>()
+                / self.running_jobs.len() as u32;
+
             avg_remaining_time * ((jobs_ahead / self.max_concurrent.max(1)) as u32)
         }
     }
@@ -379,16 +394,16 @@ impl RunningJob {
     pub fn estimated_duration(&self) -> Duration {
         // Base duration estimate
         let mut duration = Duration::from_secs(300); // 5 minutes base
-        
+
         // Add time for each primal
         duration += Duration::from_secs(60 * self.config.included_primals.len() as u64);
-        
+
         // Add time for each niche
         duration += Duration::from_secs(120 * self.config.included_niches.len() as u64);
-        
+
         // Add time for each custom component
         duration += Duration::from_secs(30 * self.config.custom_components.len() as u64);
-        
+
         // Adjust for compression level
         match self.config.compression_level {
             0..=3 => duration += Duration::from_secs(60),
@@ -396,7 +411,7 @@ impl RunningJob {
             7..=9 => duration += Duration::from_secs(180),
             _ => duration += Duration::from_secs(240),
         }
-        
+
         duration
     }
 
@@ -409,7 +424,7 @@ impl RunningJob {
     pub fn estimated_remaining_time(&self) -> Duration {
         let elapsed = self.elapsed_time();
         let estimated_total = self.estimated_duration();
-        
+
         if elapsed < estimated_total {
             estimated_total - elapsed
         } else {
@@ -528,4 +543,4 @@ impl QueueEventHandler for SimpleEventHandler {
             QueueEvent::QueueFull => println!("Queue is full"),
         }
     }
-} 
+}

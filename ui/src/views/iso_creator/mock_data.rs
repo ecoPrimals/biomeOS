@@ -286,12 +286,8 @@ impl MockDataProvider {
                         "songbird".to_string(),
                         "nestgate".to_string(),
                     ],
-                    included_niches: vec![
-                        "gaming-tournament".to_string(),
-                    ],
-                    custom_components: vec![
-                        "game-server-tools".to_string(),
-                    ],
+                    included_niches: vec!["gaming-tournament".to_string()],
+                    custom_components: vec!["game-server-tools".to_string()],
                     compression_level: 7,
                     size_estimate: 2100,
                     created_at: "2024-01-15 10:30:00".to_string(),
@@ -325,9 +321,7 @@ impl MockDataProvider {
                         "squirrel".to_string(),
                         "nestgate".to_string(),
                     ],
-                    included_niches: vec![
-                        "ai-research".to_string(),
-                    ],
+                    included_niches: vec!["ai-research".to_string()],
                     custom_components: vec![
                         "cuda-toolkit".to_string(),
                         "pytorch-models".to_string(),
@@ -360,9 +354,7 @@ impl MockDataProvider {
                     version: "1.0.0".to_string(),
                     target_arch: "x86_64".to_string(),
                     boot_mode: BootMode::Legacy,
-                    included_primals: vec![
-                        "toadstool".to_string(),
-                    ],
+                    included_primals: vec!["toadstool".to_string()],
                     included_niches: vec![],
                     custom_components: vec![],
                     compression_level: 9,
@@ -400,9 +392,7 @@ impl MockDataProvider {
                     "songbird".to_string(),
                     "nestgate".to_string(),
                 ],
-                included_niches: vec![
-                    "gaming-tournament".to_string(),
-                ],
+                included_niches: vec!["gaming-tournament".to_string()],
                 custom_components: vec!["game-server-tools".to_string()],
                 compression_level: 7,
                 size_estimate: 2100,
@@ -521,7 +511,11 @@ impl MockDataProvider {
                 ],
                 size_estimate: 2800,
                 difficulty: TemplateDifficulty::Intermediate,
-                tags: vec!["web".to_string(), "development".to_string(), "fullstack".to_string()],
+                tags: vec![
+                    "web".to_string(),
+                    "development".to_string(),
+                    "fullstack".to_string(),
+                ],
                 author: "biomeOS Dev Team".to_string(),
                 version: "1.5.0".to_string(),
             },
@@ -538,7 +532,8 @@ impl MockDataProvider {
             },
             IsoTemplate {
                 name: "Security Audit Platform".to_string(),
-                description: "Security-focused distribution with penetration testing tools".to_string(),
+                description: "Security-focused distribution with penetration testing tools"
+                    .to_string(),
                 use_case: "security".to_string(),
                 included_components: vec![
                     "toadstool".to_string(),
@@ -547,7 +542,11 @@ impl MockDataProvider {
                 ],
                 size_estimate: 1950,
                 difficulty: TemplateDifficulty::Expert,
-                tags: vec!["security".to_string(), "audit".to_string(), "pentest".to_string()],
+                tags: vec![
+                    "security".to_string(),
+                    "audit".to_string(),
+                    "pentest".to_string(),
+                ],
                 author: "biomeOS Security Team".to_string(),
                 version: "1.0.0".to_string(),
             },
@@ -555,13 +554,14 @@ impl MockDataProvider {
                 name: "Media Production Studio".to_string(),
                 description: "Professional media production environment".to_string(),
                 use_case: "media".to_string(),
-                included_components: vec![
-                    "toadstool".to_string(),
-                    "nestgate".to_string(),
-                ],
+                included_components: vec!["toadstool".to_string(), "nestgate".to_string()],
                 size_estimate: 3200,
                 difficulty: TemplateDifficulty::Advanced,
-                tags: vec!["media".to_string(), "production".to_string(), "creative".to_string()],
+                tags: vec![
+                    "media".to_string(),
+                    "production".to_string(),
+                    "creative".to_string(),
+                ],
                 author: "biomeOS Media Team".to_string(),
                 version: "1.0.0".to_string(),
             },
@@ -621,4 +621,4 @@ impl MockDataProvider {
 
         entries
     }
-} 
+}

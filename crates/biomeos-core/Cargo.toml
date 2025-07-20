@@ -1,58 +1,11 @@
 [package]
 name = "biomeos-core"
-version.workspace = true
-edition.workspace = true
-description = "Core biomeOS types and functionality"
-license.workspace = true
-
-[[bin]]
-name = "biome"
-path = "src/bin/biome.rs"
+version = "0.1.0"
+edition = "2021"
 
 [dependencies]
-# Core dependencies
-serde = { workspace = true }
-serde_json = { workspace = true }
-serde_yaml = { workspace = true }
-uuid = { workspace = true }
-chrono = { workspace = true }
-anyhow = { workspace = true }
-thiserror = { workspace = true }
-tokio = { workspace = true }
-tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
-
-# HTTP and networking
-reqwest = { workspace = true }
-axum = { workspace = true }
-
-# Configuration
-config = { workspace = true }
-validator = { workspace = true }
-clap = { workspace = true }
-
-# System dependencies
-dirs = { workspace = true }
-libc = { workspace = true }
-num_cpus = { workspace = true }
-rand = { workspace = true }
-
-# Async
-async-trait = { workspace = true }
-futures = { workspace = true }
-
-# Crypto
-sha2 = { workspace = true }
-base64 = { workspace = true }
-
-# Note: Primal integrations will be added via HTTP APIs rather than build dependencies
-# This maintains sovereignty while enabling network effects
-
-[features]
-default = []
-# Future: API-based Primal integrations
-http-adapters = []
-
-[dev-dependencies]
-tokio-test = { workspace = true }
-tempfile = { workspace = true } 
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.9"
+tokio = { version = "1.0", features = ["full"] }
+anyhow = "1.0"
+tracing = "0.1"

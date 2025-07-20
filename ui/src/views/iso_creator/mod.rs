@@ -32,20 +32,20 @@ use crate::state::AppState;
 use crate::views::{BaseView, View};
 
 // Module declarations
-pub mod types;
-pub mod config;
 pub mod build;
-pub mod queue;
-pub mod ui;
+pub mod config;
 pub mod mock_data;
+pub mod queue;
+pub mod types;
+pub mod ui;
 
 // Re-export commonly used types
-pub use types::*;
-pub use config::ConfigManager;
 pub use build::BuildManager;
-pub use queue::BuildQueue;
-pub use ui::IsoCreatorUI;
+pub use config::ConfigManager;
 pub use mock_data::MockDataProvider;
+pub use queue::BuildQueue;
+pub use types::*;
+pub use ui::IsoCreatorUI;
 
 /// Main ISO Creator view implementation
 pub struct IsoCreatorView {
@@ -72,10 +72,10 @@ impl IsoCreatorView {
         let creator_config = MockDataProvider::get_default_creator_config();
         let build_manager = BuildManager::new(creator_config.clone());
         let build_queue = BuildQueue::new(creator_config.max_concurrent_builds);
-        
+
         // Load initial data
         config_manager.load_configurations().ok();
-        
+
         Self {
             base: BaseView::new(state, api),
             ui: IsoCreatorUI::new(),
@@ -104,7 +104,8 @@ impl IsoCreatorView {
 
     /// Save current configuration
     pub fn save_current_configuration(&mut self) -> Result<(), String> {
-        self.config_manager.save_configuration(self.current_config.clone())
+        self.config_manager
+            .save_configuration(self.current_config.clone())
     }
 
     /// Load configuration by name
@@ -136,11 +137,14 @@ impl IsoCreatorView {
         self.current_config.included_niches = self.selected_niches.clone();
 
         // Start the build
-        let build_id = self.build_manager.start_build(self.current_config.clone())?;
+        let build_id = self
+            .build_manager
+            .start_build(self.current_config.clone())?;
         self.build_status = BuildStatus::Building;
         self.build_progress = 0.0;
         self.build_log.clear();
-        self.build_log.push(format!("🚀 Started build: {}", build_id));
+        self.build_log
+            .push(format!("🚀 Started build: {}", build_id));
 
         // Simulate build process (in a real implementation, this would be async)
         self.simulate_build_progress();
@@ -152,15 +156,19 @@ impl IsoCreatorView {
     pub fn cancel_build(&mut self) -> Result<(), String> {
         self.build_manager.cancel_build()?;
         self.build_status = BuildStatus::Failed;
-        self.build_log.push("⏹️ Build cancelled by user".to_string());
+        self.build_log
+            .push("⏹️ Build cancelled by user".to_string());
         Ok(())
     }
 
     /// Add current configuration to build queue
     pub fn add_to_queue(&mut self, priority: queue::JobPriority) -> Result<String, String> {
         self.current_config.included_niches = self.selected_niches.clone();
-        let job_id = self.build_queue.add_job(self.current_config.clone(), priority);
-        self.build_log.push(format!("📋 Added to queue: {}", job_id));
+        let job_id = self
+            .build_queue
+            .add_job(self.current_config.clone(), priority);
+        self.build_log
+            .push(format!("📋 Added to queue: {}", job_id));
         Ok(job_id)
     }
 
@@ -173,19 +181,21 @@ impl IsoCreatorView {
     fn simulate_build_progress(&mut self) {
         // In a real implementation, this would be handled by a background thread
         // For now, we'll just update the progress based on the current state
-        
+
         if self.build_status == BuildStatus::Building {
             self.build_progress += 0.1;
-            
+
             if self.build_progress >= 1.0 {
                 self.build_progress = 1.0;
                 self.build_status = BuildStatus::Success;
-                self.build_log.push("✅ Build completed successfully".to_string());
-                
+                self.build_log
+                    .push("✅ Build completed successfully".to_string());
+
                 // Complete the build
-                let output_path = format!("{}/{}.iso", 
-                    self.creator_config.output_directory, 
-                    self.current_config.name);
+                let output_path = format!(
+                    "{}/{}.iso",
+                    self.creator_config.output_directory, self.current_config.name
+                );
                 self.build_manager.complete_build(output_path).ok();
             } else {
                 // Add progress log entries
@@ -202,16 +212,19 @@ impl IsoCreatorView {
     /// Get estimated build time
     pub fn get_estimated_build_time(&self) -> std::time::Duration {
         let mut duration = std::time::Duration::from_secs(300); // 5 minutes base
-        
+
         // Add time for each primal
-        duration += std::time::Duration::from_secs(60 * self.current_config.included_primals.len() as u64);
-        
+        duration +=
+            std::time::Duration::from_secs(60 * self.current_config.included_primals.len() as u64);
+
         // Add time for each niche
-        duration += std::time::Duration::from_secs(120 * self.current_config.included_niches.len() as u64);
-        
+        duration +=
+            std::time::Duration::from_secs(120 * self.current_config.included_niches.len() as u64);
+
         // Add time for each custom component
-        duration += std::time::Duration::from_secs(30 * self.current_config.custom_components.len() as u64);
-        
+        duration +=
+            std::time::Duration::from_secs(30 * self.current_config.custom_components.len() as u64);
+
         // Adjust for compression level
         match self.current_config.compression_level {
             0..=3 => duration += std::time::Duration::from_secs(60),
@@ -219,7 +232,7 @@ impl IsoCreatorView {
             7..=9 => duration += std::time::Duration::from_secs(180),
             _ => duration += std::time::Duration::from_secs(240),
         }
-        
+
         duration
     }
 
@@ -231,7 +244,8 @@ impl IsoCreatorView {
     /// Validate current configuration
     pub fn validate_current_config(&self) -> Result<(), String> {
         self.current_config.validate()?;
-        self.config_manager.validate_compatibility(&self.current_config)?;
+        self.config_manager
+            .validate_compatibility(&self.current_config)?;
         Ok(())
     }
 
@@ -242,7 +256,8 @@ impl IsoCreatorView {
 
     /// Export current configuration
     pub fn export_configuration(&self, path: &std::path::Path) -> Result<(), String> {
-        self.config_manager.export_configuration(&self.current_config, path)
+        self.config_manager
+            .export_configuration(&self.current_config, path)
     }
 
     /// Import configuration from file
@@ -356,7 +371,9 @@ impl IsoCreatorView {
 impl View for IsoCreatorView {
     fn render(&mut self, ui: &mut egui::Ui, _ctx: &egui::Context) {
         ui.heading("💿 ISO Creator");
-        ui.label("Create bootable biomeOS ISO images with custom configurations and niche packages");
+        ui.label(
+            "Create bootable biomeOS ISO images with custom configurations and niche packages",
+        );
         ui.separator();
 
         // Render tab bar
@@ -366,25 +383,17 @@ impl View for IsoCreatorView {
         // Render current tab
         match self.ui.get_selected_tab() {
             IsoCreatorTab::Configuration => {
-                self.ui.render_configuration_tab(
-                    ui,
-                    &mut self.current_config,
-                    &self.iso_templates,
-                );
-            },
+                self.ui
+                    .render_configuration_tab(ui, &mut self.current_config, &self.iso_templates);
+            }
             IsoCreatorTab::Niches => {
-                self.ui.render_niches_tab(
-                    ui,
-                    &self.available_niches,
-                    &mut self.selected_niches,
-                );
-            },
+                self.ui
+                    .render_niches_tab(ui, &self.available_niches, &mut self.selected_niches);
+            }
             IsoCreatorTab::Components => {
-                self.ui.render_components_tab(
-                    ui,
-                    &mut self.custom_components,
-                );
-            },
+                self.ui
+                    .render_components_tab(ui, &mut self.custom_components);
+            }
             IsoCreatorTab::Build => {
                 self.ui.render_build_tab(
                     ui,
@@ -392,25 +401,28 @@ impl View for IsoCreatorView {
                     self.build_progress,
                     &self.build_log,
                 );
-                
+
                 // Handle build actions
                 if self.build_status == BuildStatus::Idle {
                     ui.horizontal(|ui| {
                         if ui.button("🚀 Start Build").clicked() {
                             if let Err(e) = self.start_build() {
-                                self.build_log.push(format!("❌ Build failed to start: {}", e));
+                                self.build_log
+                                    .push(format!("❌ Build failed to start: {}", e));
                             }
                         }
-                        
+
                         if ui.button("📋 Add to Queue").clicked() {
                             if let Err(e) = self.add_to_queue(queue::JobPriority::Normal) {
-                                self.build_log.push(format!("❌ Failed to add to queue: {}", e));
+                                self.build_log
+                                    .push(format!("❌ Failed to add to queue: {}", e));
                             }
                         }
-                        
+
                         if ui.button("💾 Save Config").clicked() {
                             if let Err(e) = self.save_current_configuration() {
-                                self.build_log.push(format!("❌ Failed to save config: {}", e));
+                                self.build_log
+                                    .push(format!("❌ Failed to save config: {}", e));
                             } else {
                                 self.build_log.push("✅ Configuration saved".to_string());
                             }
@@ -419,16 +431,17 @@ impl View for IsoCreatorView {
                 } else if self.build_status == BuildStatus::Building {
                     if ui.button("⏹️ Cancel Build").clicked() {
                         if let Err(e) = self.cancel_build() {
-                            self.build_log.push(format!("❌ Failed to cancel build: {}", e));
+                            self.build_log
+                                .push(format!("❌ Failed to cancel build: {}", e));
                         }
                     }
                 }
-            },
+            }
             IsoCreatorTab::Queue => {
                 // Convert build manager history to build jobs for display
                 let build_jobs: Vec<BuildJob> = self.build_manager.get_build_history().to_vec();
                 self.ui.render_queue_tab(ui, &build_jobs);
-            },
+            }
         }
 
         // Update build progress if building
@@ -442,8 +455,7 @@ impl View for IsoCreatorView {
 impl IsoCreatorView {
     /// Check if build can be started
     pub fn can_start_build(&self) -> bool {
-        self.build_status == BuildStatus::Idle && 
-        self.current_config.validate().is_ok()
+        self.build_status == BuildStatus::Idle && self.current_config.validate().is_ok()
     }
 
     /// Get estimated completion time
@@ -452,7 +464,7 @@ impl IsoCreatorView {
             let remaining_time = self.get_estimated_build_time();
             let remaining_factor = 1.0 - self.build_progress;
             let adjusted_time = std::time::Duration::from_secs(
-                (remaining_time.as_secs() as f32 * remaining_factor) as u64
+                (remaining_time.as_secs() as f32 * remaining_factor) as u64,
             );
             Some(std::time::SystemTime::now() + adjusted_time)
         } else {
@@ -473,15 +485,18 @@ impl IsoCreatorView {
     /// Get validation errors
     pub fn get_validation_errors(&self) -> Vec<String> {
         let mut errors = Vec::new();
-        
+
         if let Err(e) = self.current_config.validate() {
             errors.push(e);
         }
-        
-        if let Err(e) = self.config_manager.validate_compatibility(&self.current_config) {
+
+        if let Err(e) = self
+            .config_manager
+            .validate_compatibility(&self.current_config)
+        {
             errors.push(e);
         }
-        
+
         errors
     }
-} 
+}

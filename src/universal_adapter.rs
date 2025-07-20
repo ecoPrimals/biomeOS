@@ -142,12 +142,10 @@ impl BiomeOSUniversalAdapter {
         // Initialize clients - these should discover endpoints via service discovery
         let toadstool_client = ToadstoolClient::new().await?;
         let songbird_client = SongbirdClient::new().await?;
-        
+
         let capability_registry = CapabilityRegistry::new(songbird_client.clone()).await?;
-        let health_monitor = UniversalHealthMonitor::new(
-            toadstool_client.clone(),
-            songbird_client.clone()
-        );
+        let health_monitor =
+            UniversalHealthMonitor::new(toadstool_client.clone(), songbird_client.clone());
 
         Ok(Self {
             client,
@@ -161,36 +159,39 @@ impl BiomeOSUniversalAdapter {
     /// Process a biome manifest using the universal adapter pattern
     pub async fn process_biome_manifest(
         &self,
-        manifest_path: &str
+        manifest_path: &str,
     ) -> BiomeResult<BiomeDeployment> {
         let span = tracing::info_span!("process_biome_manifest", manifest = manifest_path);
         let _enter = span.enter();
-        
+
         info!("Starting biome deployment with universal adapter pattern");
 
         // Phase 1: Delegate parsing to Toadstool's proven parser
         info!("Phase 1: Delegating manifest parsing to Toadstool");
-        let parsed_manifest = self.toadstool_client
+        let parsed_manifest = self
+            .toadstool_client
             .parse_manifest(manifest_path)
             .await
             .map_err(|e| BiomeError::ConfigError(format!("Toadstool parsing failed: {}", e)))?;
 
         // Phase 2: Delegate discovery to Songbird's discovery system
         info!("Phase 2: Delegating primal discovery to Songbird");
-        let available_primals = self.songbird_client
-            .discover_primals()
-            .await
-            .map_err(|e| BiomeError::ConfigError(format!("Songbird discovery failed: {}", e)))?;
+        let available_primals =
+            self.songbird_client.discover_primals().await.map_err(|e| {
+                BiomeError::ConfigError(format!("Songbird discovery failed: {}", e))
+            })?;
 
         // Phase 3: Match capabilities (thin coordination layer)
         info!("Phase 3: Matching capabilities to discovered primals");
-        let resolved_primals = self.capability_registry
+        let resolved_primals = self
+            .capability_registry
             .resolve_capabilities(&parsed_manifest, &available_primals)
             .await?;
 
         // Phase 4: Delegate execution to Toadstool's execution engine
         info!("Phase 4: Delegating execution to Toadstool");
-        let deployment = self.toadstool_client
+        let deployment = self
+            .toadstool_client
             .execute_manifest(parsed_manifest, resolved_primals)
             .await
             .map_err(|e| BiomeError::RuntimeError(format!("Toadstool execution failed: {}", e)))?;
@@ -200,7 +201,9 @@ impl BiomeOSUniversalAdapter {
         self.songbird_client
             .register_deployment(&deployment)
             .await
-            .map_err(|e| BiomeError::RuntimeError(format!("Songbird registration failed: {}", e)))?;
+            .map_err(|e| {
+                BiomeError::RuntimeError(format!("Songbird registration failed: {}", e))
+            })?;
 
         info!("Biome deployment completed successfully: {}", deployment.id);
         Ok(deployment)
@@ -232,7 +235,9 @@ impl ToadstoolClient {
         let client = Client::builder()
             .timeout(Duration::from_secs(60))
             .build()
-            .map_err(|e| BiomeError::ConfigError(format!("Failed to create Toadstool client: {}", e)))?;
+            .map_err(|e| {
+                BiomeError::ConfigError(format!("Failed to create Toadstool client: {}", e))
+            })?;
 
         Ok(Self { base_url, client })
     }
@@ -240,13 +245,14 @@ impl ToadstoolClient {
     /// Parse manifest using Toadstool's proven parser
     pub async fn parse_manifest(&self, manifest_path: &str) -> Result<ParsedManifest, String> {
         let url = format!("{}/api/v1/manifest/parse", self.base_url);
-        
+
         let request_body = serde_json::json!({
             "manifest_path": manifest_path,
             "validation_level": "strict"
         });
 
-        let response = self.client
+        let response = self
+            .client
             .post(&url)
             .json(&request_body)
             .send()
@@ -263,10 +269,14 @@ impl ToadstoolClient {
             .map_err(|e| format!("Failed to parse response: {}", e))?;
 
         if !parse_result.success {
-            return Err(format!("Manifest validation failed: {:?}", parse_result.errors));
+            return Err(format!(
+                "Manifest validation failed: {:?}",
+                parse_result.errors
+            ));
         }
 
-        parse_result.parsed_manifest
+        parse_result
+            .parsed_manifest
             .ok_or_else(|| "No parsed manifest in response".to_string())
     }
 
@@ -274,17 +284,18 @@ impl ToadstoolClient {
     pub async fn execute_manifest(
         &self,
         manifest: ParsedManifest,
-        resolved_primals: Vec<ResolvedPrimal>
+        resolved_primals: Vec<ResolvedPrimal>,
     ) -> Result<BiomeDeployment, String> {
         let url = format!("{}/api/v1/manifest/execute", self.base_url);
-        
+
         let request_body = serde_json::json!({
             "manifest": manifest,
             "primals": resolved_primals,
             "execution_mode": "async"
         });
 
-        let response = self.client
+        let response = self
+            .client
             .post(&url)
             .json(&request_body)
             .send()
@@ -301,10 +312,14 @@ impl ToadstoolClient {
             .map_err(|e| format!("Failed to parse response: {}", e))?;
 
         if !execution_result.success {
-            return Err(format!("Execution failed: {}", execution_result.error.unwrap_or_default()));
+            return Err(format!(
+                "Execution failed: {}",
+                execution_result.error.unwrap_or_default()
+            ));
         }
 
-        execution_result.deployment
+        execution_result
+            .deployment
             .ok_or_else(|| "No deployment in response".to_string())
     }
 }
@@ -320,7 +335,9 @@ impl SongbirdClient {
         let client = Client::builder()
             .timeout(Duration::from_secs(30))
             .build()
-            .map_err(|e| BiomeError::ConfigError(format!("Failed to create Songbird client: {}", e)))?;
+            .map_err(|e| {
+                BiomeError::ConfigError(format!("Failed to create Songbird client: {}", e))
+            })?;
 
         Ok(Self { base_url, client })
     }
@@ -329,7 +346,8 @@ impl SongbirdClient {
     pub async fn discover_primals(&self) -> Result<Vec<DiscoveredPrimal>, String> {
         let url = format!("{}/api/v1/discovery/primals", self.base_url);
 
-        let response = self.client
+        let response = self
+            .client
             .get(&url)
             .send()
             .await
@@ -351,7 +369,8 @@ impl SongbirdClient {
     pub async fn register_deployment(&self, deployment: &BiomeDeployment) -> Result<(), String> {
         let url = format!("{}/api/v1/registry/deployments", self.base_url);
 
-        let response = self.client
+        let response = self
+            .client
             .post(&url)
             .json(deployment)
             .send()
@@ -371,7 +390,7 @@ impl CapabilityRegistry {
     /// Create new capability registry
     pub async fn new(songbird_client: SongbirdClient) -> BiomeResult<Self> {
         let capabilities = Arc::new(RwLock::new(HashMap::new()));
-        
+
         Ok(Self {
             capabilities,
             songbird_client,
@@ -382,14 +401,14 @@ impl CapabilityRegistry {
     pub async fn resolve_capabilities(
         &self,
         manifest: &ParsedManifest,
-        available_primals: &[DiscoveredPrimal]
+        available_primals: &[DiscoveredPrimal],
     ) -> BiomeResult<Vec<ResolvedPrimal>> {
         let mut resolved = Vec::new();
 
         // Match each required capability to available primals
         for (name, spec) in &manifest.primals {
             let capability = spec.capability_required.as_str();
-            
+
             // Find primals that provide this capability
             let matching_primals: Vec<_> = available_primals
                 .iter()
@@ -398,12 +417,14 @@ impl CapabilityRegistry {
 
             if matching_primals.is_empty() {
                 return Err(BiomeError::ConfigError(format!(
-                    "No primals available for capability: {}", capability
+                    "No primals available for capability: {}",
+                    capability
                 )));
             }
 
             // Select best primal based on preferences
-            let selected_primal = self.select_best_primal(&matching_primals, &spec.provider_preference)?;
+            let selected_primal =
+                self.select_best_primal(&matching_primals, &spec.provider_preference)?;
 
             resolved.push(ResolvedPrimal {
                 name: name.clone(),
@@ -420,11 +441,14 @@ impl CapabilityRegistry {
     fn select_best_primal(
         &self,
         matching_primals: &[&DiscoveredPrimal],
-        preferences: &[String]
+        preferences: &[String],
     ) -> BiomeResult<DiscoveredPrimal> {
         // First, try preferences
         for preference in preferences {
-            if let Some(primal) = matching_primals.iter().find(|p| p.primal_type == *preference) {
+            if let Some(primal) = matching_primals
+                .iter()
+                .find(|p| p.primal_type == *preference)
+            {
                 return Ok((*primal).clone());
             }
         }
@@ -492,27 +516,21 @@ impl UniversalHealthMonitor {
         let url = format!("{}/health", self.toadstool_client.base_url);
 
         match self.toadstool_client.client.get(&url).send().await {
-            Ok(response) if response.status().is_success() => {
-                Ok(ServiceStatus {
-                    available: true,
-                    response_time_ms: start.elapsed().as_millis() as u64,
-                    last_error: None,
-                })
-            },
-            Ok(response) => {
-                Ok(ServiceStatus {
-                    available: false,
-                    response_time_ms: start.elapsed().as_millis() as u64,
-                    last_error: Some(format!("HTTP {}", response.status())),
-                })
-            },
-            Err(e) => {
-                Ok(ServiceStatus {
-                    available: false,
-                    response_time_ms: start.elapsed().as_millis() as u64,
-                    last_error: Some(e.to_string()),
-                })
-            }
+            Ok(response) if response.status().is_success() => Ok(ServiceStatus {
+                available: true,
+                response_time_ms: start.elapsed().as_millis() as u64,
+                last_error: None,
+            }),
+            Ok(response) => Ok(ServiceStatus {
+                available: false,
+                response_time_ms: start.elapsed().as_millis() as u64,
+                last_error: Some(format!("HTTP {}", response.status())),
+            }),
+            Err(e) => Ok(ServiceStatus {
+                available: false,
+                response_time_ms: start.elapsed().as_millis() as u64,
+                last_error: Some(e.to_string()),
+            }),
         }
     }
 
@@ -522,36 +540,29 @@ impl UniversalHealthMonitor {
         let url = format!("{}/health", self.songbird_client.base_url);
 
         match self.songbird_client.client.get(&url).send().await {
-            Ok(response) if response.status().is_success() => {
-                Ok(ServiceStatus {
-                    available: true,
-                    response_time_ms: start.elapsed().as_millis() as u64,
-                    last_error: None,
-                })
-            },
-            Ok(response) => {
-                Ok(ServiceStatus {
-                    available: false,
-                    response_time_ms: start.elapsed().as_millis() as u64,
-                    last_error: Some(format!("HTTP {}", response.status())),
-                })
-            },
-            Err(e) => {
-                Ok(ServiceStatus {
-                    available: false,
-                    response_time_ms: start.elapsed().as_millis() as u64,
-                    last_error: Some(e.to_string()),
-                })
-            }
+            Ok(response) if response.status().is_success() => Ok(ServiceStatus {
+                available: true,
+                response_time_ms: start.elapsed().as_millis() as u64,
+                last_error: None,
+            }),
+            Ok(response) => Ok(ServiceStatus {
+                available: false,
+                response_time_ms: start.elapsed().as_millis() as u64,
+                last_error: Some(format!("HTTP {}", response.status())),
+            }),
+            Err(e) => Ok(ServiceStatus {
+                available: false,
+                response_time_ms: start.elapsed().as_millis() as u64,
+                last_error: Some(e.to_string()),
+            }),
         }
     }
 
     /// Get discovered primals from Songbird
     async fn get_discovered_primals(&self) -> BiomeResult<Vec<DiscoveredPrimal>> {
-        self.songbird_client
-            .discover_primals()
-            .await
-            .map_err(|e| BiomeError::RuntimeError(format!("Failed to get discovered primals: {}", e)))
+        self.songbird_client.discover_primals().await.map_err(|e| {
+            BiomeError::RuntimeError(format!("Failed to get discovered primals: {}", e))
+        })
     }
 }
 
@@ -625,7 +636,7 @@ mod tests {
         // Test that we can create the adapter (will fail without services running)
         // This test validates the structure, not the actual network calls
         let result = BiomeOSUniversalAdapter::new().await;
-        
+
         // In a real environment with services, this should succeed
         // In test environment, it may fail due to missing services
         match result {

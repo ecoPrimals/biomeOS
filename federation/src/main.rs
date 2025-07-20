@@ -448,13 +448,253 @@ fn show_status(config: &FederationConfig, deployment: Option<String>, watch: boo
         Some(name) => {
             if watch {
                 info!("Watching deployment: {}", name);
-                // TODO: Implement watch functionality
+                // Implement watch functionality with real-time monitoring
+                watch_deployment_status(config, &name)?;
             } else {
                 show_deployment_status(config, &name)?;
             }
         }
         None => {
+            if watch {
+                info!("Watching federation status");
+                watch_federation_status(config)?;
+            } else {
             show_federation_status(config)?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn watch_deployment_status(config: &FederationConfig, deployment: &str) -> Result<()> {
+    use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
+    use std::time::Duration;
+    
+    println!("👁️  Watching deployment: {}", deployment);
+    println!("Press Ctrl+C to stop watching...\n");
+
+    // Setup graceful shutdown
+    let running = Arc::new(AtomicBool::new(true));
+    let r = running.clone();
+    
+    ctrlc::set_handler(move || {
+        println!("\n🛑 Stopping watch...");
+        r.store(false, Ordering::SeqCst);
+    }).context("Failed to set Ctrl+C handler")?;
+
+    let mut iteration = 0;
+    let mut last_status = String::new();
+    
+    while running.load(Ordering::SeqCst) {
+        // Clear screen and show current time
+        if iteration > 0 {
+            print!("\x1B[2J\x1B[1;1H"); // Clear screen and move cursor to top
+        }
+        
+        println!("📊 Live Deployment Status: {} ({})", deployment, chrono::Utc::now().format("%H:%M:%S UTC"));
+        println!("==================================");
+        
+        // Get current status
+        let current_status = get_deployment_status_string(config, deployment)?;
+        
+        // Show status
+        println!("{}", current_status);
+        
+        // Show change indicator
+        if iteration > 0 && current_status != last_status {
+            println!("🔄 Status changed at {}", chrono::Utc::now().format("%H:%M:%S UTC"));
+        }
+        
+        last_status = current_status;
+        
+        println!("\n⏱️  Next update in 5 seconds... (Ctrl+C to stop)");
+        
+        // Wait 5 seconds or until shutdown
+        for _ in 0..50 {  // 50 * 100ms = 5 seconds
+            if !running.load(Ordering::SeqCst) {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(100));
+        }
+        
+        iteration += 1;
+    }
+    
+    println!("\n✅ Stopped watching deployment: {}", deployment);
+    Ok(())
+}
+
+fn watch_federation_status(config: &FederationConfig) -> Result<()> {
+    use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
+    use std::time::Duration;
+    
+    println!("👁️  Watching federation status");
+    println!("Press Ctrl+C to stop watching...\n");
+
+    // Setup graceful shutdown
+    let running = Arc::new(AtomicBool::new(true));
+    let r = running.clone();
+    
+    ctrlc::set_handler(move || {
+        println!("\n🛑 Stopping watch...");
+        r.store(false, Ordering::SeqCst);
+    }).context("Failed to set Ctrl+C handler")?;
+
+    let mut iteration = 0;
+    
+    while running.load(Ordering::SeqCst) {
+        // Clear screen and show current time
+        if iteration > 0 {
+            print!("\x1B[2J\x1B[1;1H"); // Clear screen and move cursor to top
+        }
+        
+        println!("🌐 Live Federation Status ({})", chrono::Utc::now().format("%H:%M:%S UTC"));
+        println!("=========================");
+        
+        // Show federation status
+        show_federation_status_inline(config)?;
+        
+        println!("\n⏱️  Next update in 10 seconds... (Ctrl+C to stop)");
+        
+        // Wait 10 seconds or until shutdown
+        for _ in 0..100 {  // 100 * 100ms = 10 seconds
+            if !running.load(Ordering::SeqCst) {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(100));
+        }
+        
+        iteration += 1;
+    }
+    
+    println!("\n✅ Stopped watching federation status");
+    Ok(())
+}
+
+fn get_deployment_status_string(config: &FederationConfig, deployment: &str) -> Result<String> {
+    let mut status_output = String::new();
+
+    // Check if deployment exists
+    let deployment_path = config
+        .manifests
+        .manifest_dir
+        .join(format!("{}.yaml", deployment));
+    if !deployment_path.exists() {
+        return Ok(format!("❌ Deployment not found: {}", deployment));
+    }
+
+    // Load deployment manifest
+    let content = std::fs::read_to_string(&deployment_path)?;
+    let manifest: serde_yaml::Value = serde_yaml::from_str(&content)?;
+
+    // Extract deployment information
+    let name = manifest["metadata"]["name"].as_str().unwrap_or(deployment);
+    let kind = manifest["kind"].as_str().unwrap_or("Unknown");
+    let namespace = manifest["metadata"]["namespace"].as_str().unwrap_or("default");
+
+    status_output.push_str(&format!("Name: {}\n", name));
+    status_output.push_str(&format!("Kind: {}\n", kind));
+    status_output.push_str(&format!("Namespace: {}\n", namespace));
+
+    // Get dynamic status information
+    let status_info = get_dynamic_deployment_status(config, deployment)?;
+    status_output.push_str(&status_info);
+    
+    Ok(status_output)
+}
+
+fn get_dynamic_deployment_status(config: &FederationConfig, deployment: &str) -> Result<String> {
+    let status_file = config
+        .federation
+        .config_dir
+        .join("deployments")
+        .join(format!("{}.status", deployment));
+
+    if status_file.exists() {
+        let status_content = std::fs::read_to_string(&status_file)?;
+        let status: serde_json::Value = serde_json::from_str(&status_content)?;
+        
+        let status_str = status["status"].as_str().unwrap_or("unknown");
+        let services = status["services"].as_array().unwrap_or(&vec![]);
+        
+        let mut result = format!("Status: {}\n", match status_str {
+            "running" => "🟢 Running",
+            "pending" => "🟡 Pending", 
+            "failed" => "🔴 Failed",
+            "stopped" => "⚪ Stopped",
+            _ => "❓ Unknown"
+        });
+        
+        let healthy_count = services.iter()
+            .filter(|s| s["health"].as_str() == Some("healthy"))
+            .count();
+            
+        result.push_str(&format!("Services: {}/{} healthy\n", healthy_count, services.len()));
+        
+        if let Some(created_at) = status["created_at"].as_str() {
+            if let Ok(created) = chrono::DateTime::parse_from_rfc3339(created_at) {
+                let uptime = chrono::Utc::now().signed_duration_since(created.with_timezone(&chrono::Utc));
+                let hours = uptime.num_hours();
+                let minutes = uptime.num_minutes() % 60;
+                result.push_str(&format!("Uptime: {}h {}m\n", hours, minutes));
+            }
+        }
+
+        // Show individual service status
+        result.push_str("\nServices:\n");
+        for service in services {
+            let name = service["name"].as_str().unwrap_or("unknown");
+            let health = service["health"].as_str().unwrap_or("unknown");
+            let health_icon = match health {
+                "healthy" => "✅",
+                "unhealthy" => "❌", 
+                "pending" => "⏳",
+                _ => "❓"
+            };
+            result.push_str(&format!("  {} {} ({})\n", health_icon, name, health));
+        }
+        
+        Ok(result)
+    } else {
+        Ok(format!("Status: 🟡 Pending (initializing...)\nServices: 0/0 healthy\nUptime: 0h 0m\n"))
+    }
+}
+
+fn show_federation_status_inline(config: &FederationConfig) -> Result<()> {
+    println!("Tower: {}", config.tower.name);
+    println!("Location: {}", config.tower.location);
+    println!(
+        "Resources: {} CPU cores, {} GB RAM",
+        config.tower.resources.cpu_cores, config.tower.resources.memory_gb
+    );
+    println!(
+        "Federation: {}",
+        if config.federation.enabled {
+            "🟢 Enabled"
+        } else {
+            "🔴 Disabled"
+        }
+    );
+
+    // Add dynamic federation status
+    let federation_status_file = config.federation.config_dir.join("federation.json");
+    if federation_status_file.exists() {
+        if let Ok(content) = std::fs::read_to_string(&federation_status_file) {
+            if let Ok(status) = serde_json::from_str::<serde_json::Value>(&content) {
+                if let Some(peers) = status["peers"].as_array() {
+                    println!("Connected Peers: {}", peers.len());
+                }
+                if let Some(status_str) = status["status"].as_str() {
+                    let status_icon = match status_str {
+                        "initialized" => "🟢",
+                        "joined" => "🔗",
+                        "error" => "❌",
+                        _ => "❓"
+                    };
+                    println!("Federation Status: {} {}", status_icon, status_str);
+                }
+            }
         }
     }
 
@@ -465,132 +705,16 @@ fn show_deployment_status(config: &FederationConfig, deployment: &str) -> Result
     println!("📊 Deployment Status: {}", deployment);
     println!("====================");
 
-    // Check if deployment exists
-    let deployment_path = config
-        .manifests
-        .manifest_dir
-        .join(format!("{}.yaml", deployment));
-    if !deployment_path.exists() {
-        println!("❌ Deployment not found: {}", deployment);
-        return Ok(());
-    }
-
-    // Load deployment manifest
-    let content = std::fs::read_to_string(&deployment_path)?;
-    let manifest: serde_yaml::Value = serde_yaml::from_str(&content)?;
-
-    // Extract deployment information
-    let name = manifest["metadata"]["name"].as_str().unwrap_or(deployment);
-    let kind = manifest["kind"].as_str().unwrap_or("Unknown");
-    let namespace = manifest["metadata"]["namespace"]
-        .as_str()
-        .unwrap_or("default");
-
-    println!("Name: {}", name);
-    println!("Kind: {}", kind);
-    println!("Namespace: {}", namespace);
-
-    // Check deployment status (simulate real status checking)
-    let status_file = config
-        .federation
-        .config_dir
-        .join("deployments")
-        .join(format!("{}.status", deployment));
-
-    if status_file.exists() {
-        // Load cached status
-        let status_content = std::fs::read_to_string(&status_file)?;
-        let status: serde_json::Value =
-            serde_json::from_str(&status_content).unwrap_or_else(|_| {
-                serde_json::json!({
-                    "status": "unknown",
-                    "services": [],
-                    "created_at": chrono::Utc::now().to_rfc3339()
-                })
-            });
-
-        println!("Status: {}", status["status"].as_str().unwrap_or("unknown"));
-
-        // Show services if available
-        if let Some(services) = status["services"].as_array() {
-            let healthy_services = services.iter().filter(|s| s["health"] == "healthy").count();
-            println!("Services: {}/{} healthy", healthy_services, services.len());
-
-            for service in services {
-                let service_name = service["name"].as_str().unwrap_or("unknown");
-                let service_health = service["health"].as_str().unwrap_or("unknown");
-                let icon = if service_health == "healthy" {
-                    "✅"
-                } else {
-                    "❌"
-                };
-                println!("  {} {} ({})", icon, service_name, service_health);
-            }
-        }
-
-        // Calculate uptime
-        if let Some(created_at) = status["created_at"].as_str() {
-            if let Ok(created_time) = chrono::DateTime::parse_from_rfc3339(created_at) {
-                let now = chrono::Utc::now();
-                let duration = now.signed_duration_since(created_time.with_timezone(&chrono::Utc));
-                let hours = duration.num_hours();
-                let minutes = duration.num_minutes() % 60;
-                println!("Uptime: {}h {}m", hours, minutes);
-            }
-        }
-
-        println!(
-            "Last Updated: {}",
-            status["last_updated"].as_str().unwrap_or("unknown")
-        );
-    } else {
-        // Create initial status
-        let initial_status = serde_json::json!({
-            "status": "pending",
-            "services": [
-                {"name": "core", "health": "pending"},
-                {"name": "api", "health": "pending"},
-                {"name": "storage", "health": "pending"}
-            ],
-            "created_at": chrono::Utc::now().to_rfc3339(),
-            "last_updated": chrono::Utc::now().to_rfc3339()
-        });
-
-        // Ensure status directory exists
-        if let Some(parent) = status_file.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
-
-        // Write initial status
-        std::fs::write(&status_file, serde_json::to_string_pretty(&initial_status)?)?;
-
-        println!("Status: Pending (initializing...)");
-        println!("Services: 0/3 healthy");
-        println!("Uptime: 0h 0m");
-    }
-
+    let status_string = get_deployment_status_string(config, deployment)?;
+    println!("{}", status_string);
     Ok(())
 }
 
 fn show_federation_status(config: &FederationConfig) -> Result<()> {
     println!("🌐 Federation Status");
     println!("===================");
-
-    println!("Tower: {}", config.tower.name);
-    println!("Location: {}", config.tower.location);
-    println!(
-        "Resources: {} CPU cores, {} GB RAM",
-        config.tower.resources.cpu_cores, config.tower.resources.memory_gb
-    );
-    println!(
-        "Federation: {}",
-        if config.federation.enabled {
-            "Enabled ✅"
-        } else {
-            "Disabled ❌"
-        }
-    );
-
+    
+    show_federation_status_inline(config)?;
     Ok(())
 }
 
