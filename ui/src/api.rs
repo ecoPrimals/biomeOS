@@ -4,21 +4,22 @@
 //! with the core biomeOS system via live integration service. All data is real.
 
 use anyhow::Result;
+use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{Mutex, mpsc};
-use tracing::{info, warn, error, debug};
-use serde_json::Value;
+use tokio::sync::{mpsc, Mutex};
+use tracing::{debug, error, info, warn};
 
-use crate::backend::{LiveBackend, BackendEvent, DashboardMetrics};
+use crate::backend::{BackendEvent, DashboardMetrics, LiveBackend};
 use crate::state::*;
 
 /// LIVE API client for biomeOS core integration - NO MOCKS
+#[derive(Debug)]
 pub struct BiomeOSApi {
-    /// Live backend connection
-    backend: Arc<LiveBackend>,
+    /// Live backend interface - now safely using Option
+    backend: Arc<Mutex<Option<LiveBackend>>>,
 
-    /// Event receiver for live updates
+    /// Event receiver for real-time updates
     event_receiver: Arc<Mutex<Option<mpsc::UnboundedReceiver<BackendEvent>>>>,
 
     /// Connection status
@@ -32,9 +33,9 @@ impl BiomeOSApi {
     /// Create new LIVE API client
     pub fn new() -> Self {
         info!("🚀 Creating LIVE biomeOS API client");
-        
+
         Self {
-            backend: Arc::new(unsafe { std::mem::zeroed() }), // Will be initialized in initialize()
+            backend: Arc::new(Mutex::new(None)), // Safe initialization
             event_receiver: Arc::new(Mutex::new(None)),
             connected: Arc::new(Mutex::new(false)),
             last_error: Arc::new(Mutex::new(None)),
@@ -47,13 +48,9 @@ impl BiomeOSApi {
 
         // Initialize the live backend
         let backend = LiveBackend::new().await?;
-        
-        // Store the backend (unsafe because we can't reassign Arc contents normally)
-        // In a real implementation, we'd restructure to avoid this
-        let backend_ptr = Arc::as_ptr(&self.backend) as *mut LiveBackend;
-        unsafe {
-            std::ptr::write(backend_ptr, (*backend).clone());
-        }
+
+        // Store the backend safely
+        *self.backend.lock().await = Some(backend.clone());
 
         // Get event receiver
         let event_receiver = backend.take_event_receiver().await;
@@ -82,25 +79,37 @@ impl BiomeOSApi {
         *self.last_error.lock().await = Some(error);
     }
 
+    /// Get backend safely
+    async fn get_backend(&self) -> Result<LiveBackend> {
+        match self.backend.lock().await.as_ref() {
+            Some(backend) => Ok(backend.clone()),
+            None => {
+                let error = "Backend not initialized - call initialize() first".to_string();
+                self.set_error(error.clone()).await;
+                Err(anyhow::anyhow!(error))
+            }
+        }
+    }
+
     /// Process backend events (should be called regularly by UI)
     pub async fn process_events(&self) -> Vec<BackendEvent> {
         let mut events = Vec::new();
-        
+
         if let Some(receiver) = self.event_receiver.lock().await.as_mut() {
             while let Ok(event) = receiver.try_recv() {
                 debug!("Received backend event: {:?}", event);
-                
+
                 match &event {
                     BackendEvent::Error(error) => {
                         self.set_error(error.clone()).await;
                     }
                     _ => {}
                 }
-                
+
                 events.push(event);
             }
         }
-        
+
         events
     }
 
@@ -110,10 +119,11 @@ impl BiomeOSApi {
             return Err(anyhow::anyhow!("API not connected to live backend"));
         }
 
-        match self.backend.get_dashboard_metrics().await {
+        match self.get_backend().await?.get_dashboard_metrics().await {
             Ok(metrics) => Ok(metrics),
             Err(e) => {
-                self.set_error(format!("Failed to get system status: {}", e)).await;
+                self.set_error(format!("Failed to get system status: {}", e))
+                    .await;
                 Err(e)
             }
         }
@@ -125,13 +135,14 @@ impl BiomeOSApi {
             return Err(anyhow::anyhow!("API not connected to live backend"));
         }
 
-        match self.backend.get_yaml_files().await {
+        match self.get_backend().await?.get_yaml_files().await {
             Ok(files) => {
                 info!("📄 Loaded {} YAML files from filesystem", files.len());
                 Ok(files)
             }
             Err(e) => {
-                self.set_error(format!("Failed to get YAML files: {}", e)).await;
+                self.set_error(format!("Failed to get YAML files: {}", e))
+                    .await;
                 Err(e)
             }
         }
@@ -143,7 +154,7 @@ impl BiomeOSApi {
             return None;
         }
 
-        self.backend.get_yaml_content(file_name).await
+        self.get_backend().await?.get_yaml_content(file_name).await
     }
 
     /// Update YAML file content (REAL file I/O)
@@ -153,14 +164,20 @@ impl BiomeOSApi {
         }
 
         info!("✏️ API: Updating YAML file '{}' (LIVE I/O)", file_name);
-        
-        match self.backend.update_yaml_content(file_name, content).await {
+
+        match self
+            .get_backend()
+            .await?
+            .update_yaml_content(file_name, content)
+            .await
+        {
             Ok(_) => {
                 info!("✅ Successfully updated YAML file: {}", file_name);
                 Ok(())
             }
             Err(e) => {
-                self.set_error(format!("Failed to update YAML file '{}': {}", file_name, e)).await;
+                self.set_error(format!("Failed to update YAML file '{}': {}", file_name, e))
+                    .await;
                 Err(e)
             }
         }
@@ -173,14 +190,20 @@ impl BiomeOSApi {
         }
 
         info!("📝 API: Creating new YAML file '{}' (LIVE I/O)", file_name);
-        
-        match self.backend.create_yaml_file(file_name, content).await {
+
+        match self
+            .get_backend()
+            .await?
+            .create_yaml_file(file_name, content)
+            .await
+        {
             Ok(_) => {
                 info!("✅ Successfully created YAML file: {}", file_name);
                 Ok(())
             }
             Err(e) => {
-                self.set_error(format!("Failed to create YAML file '{}': {}", file_name, e)).await;
+                self.set_error(format!("Failed to create YAML file '{}': {}", file_name, e))
+                    .await;
                 Err(e)
             }
         }
@@ -193,22 +216,23 @@ impl BiomeOSApi {
         }
 
         info!("🗑️ API: Deleting YAML file '{}' (LIVE I/O)", file_name);
-        
-        match self.backend.delete_yaml_file(file_name).await {
+
+        match self.get_backend().await?.delete_yaml_file(file_name).await {
             Ok(_) => {
                 info!("✅ Successfully deleted YAML file: {}", file_name);
                 Ok(())
             }
             Err(e) => {
-                self.set_error(format!("Failed to delete YAML file '{}': {}", file_name, e)).await;
+                self.set_error(format!("Failed to delete YAML file '{}': {}", file_name, e))
+                    .await;
                 Err(e)
             }
         }
     }
 
     /// Validate YAML syntax
-    pub fn validate_yaml(&self, content: &str) -> Result<()> {
-        self.backend.validate_yaml(content)
+    pub async fn validate_yaml(&self, content: &str) -> Result<()> {
+        self.get_backend().await?.validate_yaml(content)
     }
 
     /// Start BYOB workflow (REAL workflow execution)
@@ -218,14 +242,20 @@ impl BiomeOSApi {
         }
 
         info!("🏗️ API: Starting BYOB workflow (LIVE execution)");
-        
-        match self.backend.start_byob_workflow(workflow_config).await {
+
+        match self
+            .get_backend()
+            .await?
+            .start_byob_workflow(workflow_config)
+            .await
+        {
             Ok(workflow_id) => {
                 info!("✅ Started BYOB workflow: {}", workflow_id);
                 Ok(workflow_id)
             }
             Err(e) => {
-                self.set_error(format!("Failed to start BYOB workflow: {}", e)).await;
+                self.set_error(format!("Failed to start BYOB workflow: {}", e))
+                    .await;
                 Err(e)
             }
         }
@@ -237,19 +267,23 @@ impl BiomeOSApi {
             return Err(anyhow::anyhow!("API not connected to live backend"));
         }
 
-        match self.backend.get_byob_workflow_status(workflow_id).await {
-            Ok(status) => {
-                Ok(WorkflowStatusInfo {
-                    id: status.id,
-                    state: status.state,
-                    progress: status.progress,
-                    current_step: status.current_step,
-                    started_at: status.started_at.timestamp() as u64,
-                    updated_at: status.updated_at.timestamp() as u64,
-                })
-            }
+        match self
+            .get_backend()
+            .await?
+            .get_byob_workflow_status(workflow_id)
+            .await
+        {
+            Ok(status) => Ok(WorkflowStatusInfo {
+                id: status.id,
+                state: status.state,
+                progress: status.progress,
+                current_step: status.current_step,
+                started_at: status.started_at.timestamp() as u64,
+                updated_at: status.updated_at.timestamp() as u64,
+            }),
             Err(e) => {
-                self.set_error(format!("Failed to get workflow status: {}", e)).await;
+                self.set_error(format!("Failed to get workflow status: {}", e))
+                    .await;
                 Err(e)
             }
         }
@@ -262,62 +296,74 @@ impl BiomeOSApi {
         }
 
         info!("⏹️ API: Stopping BYOB workflow: {}", workflow_id);
-        
-        match self.backend.stop_byob_workflow(workflow_id).await {
+
+        match self
+            .get_backend()
+            .await?
+            .stop_byob_workflow(workflow_id)
+            .await
+        {
             Ok(_) => {
                 info!("✅ Stopped BYOB workflow: {}", workflow_id);
                 Ok(())
             }
             Err(e) => {
-                self.set_error(format!("Failed to stop workflow: {}", e)).await;
+                self.set_error(format!("Failed to stop workflow: {}", e))
+                    .await;
                 Err(e)
             }
         }
     }
 
     /// Get all active workflow statuses
-    pub async fn get_all_workflow_statuses(&self) -> HashMap<String, WorkflowStatusInfo> {
+    pub async fn get_all_workflow_statuses(&self) -> Result<HashMap<String, WorkflowStatusInfo>> {
         if !self.is_connected().await {
-            return HashMap::new();
+            return Ok(HashMap::new());
         }
 
-        let statuses = self.backend.get_all_workflow_statuses().await;
+        let statuses = self.get_backend().await?.get_all_workflow_statuses().await;
         let mut status_info = HashMap::new();
 
         for (id, status) in statuses {
-            status_info.insert(id.clone(), WorkflowStatusInfo {
-                id: status.id,
-                state: status.state,
-                progress: status.progress,
-                current_step: status.current_step,
-                started_at: status.started_at.timestamp() as u64,
-                updated_at: status.updated_at.timestamp() as u64,
-            });
+            status_info.insert(
+                id.clone(),
+                WorkflowStatusInfo {
+                    id: status.id,
+                    state: status.state,
+                    progress: status.progress,
+                    current_step: status.current_step,
+                    started_at: status.started_at,
+                    updated_at: status.updated_at,
+                },
+            );
         }
 
-        status_info
+        Ok(status_info)
     }
 
     /// Get primal coordination status (REAL primal status)
-    pub async fn get_primal_status(&self) -> HashMap<String, PrimalStatusInfo> {
+    pub async fn get_primal_status(&self) -> Result<HashMap<String, PrimalStatusInfo>> {
         if !self.is_connected().await {
-            return HashMap::new();
+            return Ok(HashMap::new());
         }
 
-        let primal_status = self.backend.get_primal_coordination_status().await;
+        let primal_status = self.get_backend().await?.get_discovered_primals().await;
         let mut status_info = HashMap::new();
 
         for (id, status) in primal_status {
-            status_info.insert(id.clone(), PrimalStatusInfo {
-                id: status.id,
-                health: status.health,
-                capabilities: status.capabilities,
-                endpoint: status.endpoint,
-                last_seen: status.last_seen.timestamp() as u64,
-            });
+            status_info.insert(
+                id.clone(),
+                PrimalStatusInfo {
+                    id: status.id,
+                    health: status.health,
+                    capabilities: status.capabilities,
+                    endpoint: status.endpoint,
+                    last_seen: status.last_seen,
+                },
+            );
         }
 
-        status_info
+        Ok(status_info)
     }
 
     /// Get primal templates from filesystem
@@ -326,21 +372,23 @@ impl BiomeOSApi {
             return Err(anyhow::anyhow!("API not connected to live backend"));
         }
 
-        match self.backend.get_primal_templates().await {
+        match self.get_backend().await?.get_primal_templates().await {
             Ok(templates) => {
-                let template_info: Vec<PrimalTemplateInfo> = templates.into_iter().map(|t| {
-                    PrimalTemplateInfo {
+                let template_info: Vec<PrimalTemplateInfo> = templates
+                    .into_iter()
+                    .map(|t| PrimalTemplateInfo {
                         id: t.id,
                         name: t.name,
                         description: t.description,
                         content: t.content,
-                    }
-                }).collect();
-                
+                    })
+                    .collect();
+
                 Ok(template_info)
             }
             Err(e) => {
-                self.set_error(format!("Failed to get primal templates: {}", e)).await;
+                self.set_error(format!("Failed to get primal templates: {}", e))
+                    .await;
                 Err(e)
             }
         }
@@ -353,14 +401,15 @@ impl BiomeOSApi {
         }
 
         info!("🔄 API: Refreshing all data from live backend");
-        
-        match self.backend.refresh_caches().await {
+
+        match self.get_backend().await?.refresh_caches().await {
             Ok(_) => {
                 info!("✅ Data refreshed successfully");
                 Ok(())
             }
             Err(e) => {
-                self.set_error(format!("Failed to refresh data: {}", e)).await;
+                self.set_error(format!("Failed to refresh data: {}", e))
+                    .await;
                 Err(e)
             }
         }
@@ -393,7 +442,7 @@ impl BiomeOSApi {
         }
 
         // Test by getting system status
-        match self.backend.get_system_status().await {
+        match self.get_backend().await?.get_system_status().await {
             Some(_) => {
                 info!("✅ API connection test successful");
                 Ok(())

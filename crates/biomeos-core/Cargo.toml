@@ -1,11 +1,47 @@
 [package]
 name = "biomeos-core"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Core biomeOS functionality"
+
+# [[bin]]
+# name = "biome"
+# path = "src/bin/biome.rs"
 
 [dependencies]
-serde = { version = "1.0", features = ["derive"] }
-serde_yaml = "0.9"
-tokio = { version = "1.0", features = ["full"] }
-anyhow = "1.0"
-tracing = "0.1"
+# Core async and serialization
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+reqwest = { workspace = true }
+
+# Configuration and environment
+config = { workspace = true }
+dirs = { workspace = true }
+
+# Utilities
+itertools = { workspace = true }
+once_cell = { workspace = true }
+
+# biomeOS dependencies
+biomeos-primal-sdk = { path = "../biomeos-primal-sdk" }
+
+[dev-dependencies]
+# Testing framework
+mockall = { workspace = true }
+tokio-test = "0.4"
+wiremock = "0.6" 
+tempfile = { workspace = true }
+criterion = { workspace = true }
+
+# Test utilities
+serde_json = { workspace = true }
+tracing-test = "0.2"

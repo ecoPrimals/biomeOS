@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "crates/biomeos-core",
+    "crates/biomeos-cli",
     "crates/biomeos-manifest",
     "crates/biomeos-system",
     "crates/biomeos-primal-sdk",
@@ -33,7 +34,7 @@ chrono = { version = "0.4", features = ["serde"] }
 anyhow = "1.0"
 thiserror = "1.0"
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter", "std"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 clap = { version = "4.0", features = ["derive"] }
 axum = { version = "0.7", features = ["ws"] }
 tower = "0.4"
@@ -84,6 +85,7 @@ rfd = "0.14"
 image = { version = "0.24", features = ["png", "jpeg"] }
 env_logger = "0.11"
 regex = "1.10"
+gethostname = "0.5"
 
 [package]
 name = "biomeos"
@@ -99,107 +101,47 @@ keywords.workspace = true
 categories.workspace = true
 
 [dependencies]
-# Workspace dependencies
-tokio.workspace = true
-serde.workspace = true
-serde_json.workspace = true
-serde_yaml.workspace = true
-uuid.workspace = true
-chrono.workspace = true
-anyhow.workspace = true
-thiserror.workspace = true
-tracing.workspace = true
-tracing-subscriber.workspace = true
-clap.workspace = true
-axum.workspace = true
-tower.workspace = true
-tower-http.workspace = true
-reqwest.workspace = true
-futures.workspace = true
-async-trait.workspace = true
-toml.workspace = true
-bincode.workspace = true
-itertools.workspace = true
-once_cell.workspace = true
-dashmap.workspace = true
-hyper.workspace = true
-tungstenite.workspace = true
-tokio-tungstenite.workspace = true
-config.workspace = true
-dotenvy.workspace = true
-
-# Local crates
+# Core BiomeOS components
 biomeos-core = { path = "crates/biomeos-core" }
 biomeos-primal-sdk = { path = "crates/biomeos-primal-sdk" }
+biomeos-manifest = { path = "crates/biomeos-manifest" }
+biomeos-system = { path = "crates/biomeos-system" }
+biomeos-ui = { path = "crates/biomeos-ui" }
+
+# Async runtime
+tokio = { version = "1.0", features = ["full"] }
+async-trait = "0.1"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+uuid = { workspace = true }
+gethostname = "0.5"
+clap = { workspace = true }
+axum = { workspace = true }
+
+# Logging and tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# HTTP client
+reqwest = { version = "0.11", features = ["json"] }
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
 
 [dev-dependencies]
-mockall.workspace = true
-tempfile.workspace = true
-criterion.workspace = true
+tokio = { version = "1.0", features = ["full"] }
+tokio-test = "0.4"
+anyhow = "1.0"
+tempfile = "3.0"
+tracing-test = "0.2"
+wiremock = "0.6"
+rand = "0.8"
 
-[[bin]]
-name = "demo_live_universal_ui"
-path = "src/bin/demo_live_universal_ui.rs"
-
-[[bin]]
-name = "mock_primal_server"
-path = "src/bin/mock_primal_server.rs"
-
-[[bin]]
-name = "songbird_universal_ui_demo"
-path = "src/bin/songbird_universal_ui_demo.rs"
-
-[[bin]]
-name = "ecosystem-integration-demo"
-path = "src/bin/ecosystem_integration_demo.rs"
-
-[[bin]]
-name = "simple-ecosystem-demo"
-path = "src/bin/simple_ecosystem_demo.rs"
-
-[features]
-default = ["full"]
-full = ["ui", "federation", "monitoring", "ai"]
-ui = []
-federation = []
-monitoring = []
-ai = []
-
-[profile.dev]
-opt-level = 0
-debug = true
-split-debuginfo = "unpacked"
-debug-assertions = true
-overflow-checks = true
-lto = false
-panic = "unwind"
-incremental = true
-codegen-units = 256
-rpath = false
-
-[profile.release]
-opt-level = 3
-debug = false
-split-debuginfo = "packed"
-debug-assertions = false
-overflow-checks = false
-lto = true
-panic = "abort"
-incremental = false
-codegen-units = 1
-rpath = false
-
-[profile.test]
-opt-level = 0
-debug = true
-debug-assertions = true
-overflow-checks = true
-lto = false
-panic = "unwind"
-incremental = true
-codegen-units = 256
-rpath = false 
-[[bin]]
-name = "live-integration-demo"
-path = "src/bin/live_integration_demo.rs"
 

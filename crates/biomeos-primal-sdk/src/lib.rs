@@ -7,17 +7,21 @@ pub use types::*;
 /// Core trait for biomeOS primals
 #[async_trait::async_trait]
 pub trait EcoPrimal: Send + Sync {
-    type Config;
-    async fn initialize(&self, config: Self::Config) -> anyhow::Result<()>;
-    async fn handle_request(&self, request: serde_json::Value) -> anyhow::Result<serde_json::Value>;
-    async fn health_check(&self) -> anyhow::Result<PrimalHealth>;
-    async fn shutdown(&self) -> anyhow::Result<()>;
-}
+    /// Get primal metadata
+    fn metadata(&self) -> &PrimalMetadata;
 
-/// Primal health status
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub enum PrimalHealth {
-    Healthy,
-    Degraded, 
-    Unhealthy,
+    /// Get primal capabilities
+    fn capabilities(&self) -> &[PrimalCapability];
+
+    /// Initialize the primal
+    async fn initialize(&self, config: &PrimalConfig) -> PrimalResult<()>;
+
+    /// Handle a primal request
+    async fn handle_request(&self, request: PrimalRequest) -> PrimalResult<PrimalResponse>;
+
+    /// Get health status
+    async fn health_check(&self) -> PrimalResult<PrimalHealth>;
+
+    /// Shutdown the primal
+    async fn shutdown(&self) -> PrimalResult<()>;
 }

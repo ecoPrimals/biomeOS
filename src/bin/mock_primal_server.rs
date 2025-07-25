@@ -233,7 +233,7 @@ async fn get_service(Path(service_id): Path<String>) -> Json<Value> {
             "image": "api:v1.2.3",
             "ports": [8080],
             "environment": {
-                "DATABASE_URL": "postgres://localhost:5432/mydb",
+                "DATABASE_URL": std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost:5432/mydb".to_string()).as_str(),
                 "API_KEY": "***hidden***"
             },
             "resources": {

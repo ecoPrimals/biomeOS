@@ -1,9 +1,19 @@
 [package]
 name = "biomeos-primal-sdk"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Universal SDK for creating biomeOS Primals"
 
 [dependencies]
-serde = { version = "1.0", features = ["derive"] }
-anyhow = "1.0"
-async-trait = "0.1"
+# Core async and serialization
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+
+# Tokio for async runtime
+tokio = { workspace = true }

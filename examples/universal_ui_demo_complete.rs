@@ -4,7 +4,7 @@
 //! including standard primals, custom primals, and community-developed primals.
 
 use anyhow::Result;
-use biomeos::universal_ui::{UniversalUIConfig, UniversalUIManager};
+use biomeos::universal_ui::{create_ui_manager, BiomeOSUI, UIFeatures, UIMode};
 use biomeos::{UIFeatures, UIMode};
 use std::collections::HashMap;
 use std::time::Duration;
@@ -38,7 +38,7 @@ async fn load_demo_config() -> Result<UniversalUIConfig> {
     let mut config = UniversalUIConfig::default();
 
     // Configure for demo mode
-    config.mode = UIMode::CLI;
+    config.mode = UIMode::Terminal;
 
     // Add standard primals
     config

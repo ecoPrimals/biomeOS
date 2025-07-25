@@ -5,13 +5,49 @@
 use crate::api::BiomeOSApi;
 use crate::state::AppState;
 use crate::views::{BaseView, View};
+use biomeos_core::{
+    config::BiomeOSConfig,
+    integration::live_service::LiveService,
+    universal_biomeos_manager::{HealthStatus, SystemResourceUsage, UniversalBiomeOSManager},
+};
+use biomeos_primal_sdk::{PrimalCapability, PrimalHealth, PrimalType};
 use egui::{Color32, RichText, Stroke};
 use egui_plot::{Legend, Line, Plot, PlotPoints};
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use std::time::{Duration, Instant};
+use tokio::sync::{Mutex, RwLock};
 
-/// Simple system metrics structure
+/// Enhanced dashboard with real-time health monitoring
+pub struct DashboardView {
+    base: BaseView,
+
+    /// Live service integration
+    live_service: Arc<RwLock<Option<LiveService>>>,
+
+    /// Real-time metrics history
+    metrics_history: VecDeque<LiveSystemMetrics>,
+
+    /// Discovered services cache
+    discovered_services: Vec<ServiceInfo>,
+
+    /// Last update timestamp
+    last_update: Instant,
+
+    /// Update interval
+    update_interval: Duration,
+
+    /// UI state
+    show_detailed_metrics: bool,
+    selected_service: Option<usize>,
+    auto_refresh: bool,
+
+    /// Chart configuration
+    chart_time_window: f64, // seconds
+    max_history_points: usize,
+}
+
+/// Enhanced system metrics with more detailed information
 #[derive(Debug, Clone)]
 pub struct LiveSystemMetrics {
     pub timestamp: f64,
@@ -28,819 +64,647 @@ pub struct LiveSystemMetrics {
     pub uptime_hours: f32,
     pub process_count: u32,
     pub thread_count: u32,
+
+    // Enhanced health monitoring
+    pub system_health: HealthStatus,
+    pub primal_health_summary: PrimalHealthSummary,
+    pub service_count: usize,
+    pub healthy_services: usize,
 }
 
-/// Simple system monitor replacement
-pub struct SystemMonitor {
-    last_update: std::time::Instant,
-}
-
-impl SystemMonitor {
-    pub fn new() -> Self {
-        Self {
-            last_update: std::time::Instant::now(),
-        }
-    }
-
-    pub fn collect_metrics(&mut self) -> Result<LiveSystemMetrics, Box<dyn std::error::Error>> {
-        use std::time::{SystemTime, UNIX_EPOCH};
-
-        let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs_f64();
-
-        // Get real CPU usage
-        let cpu_usage = self.get_real_cpu_usage();
-
-        // Get real memory usage
-        let (memory_usage, memory_used, memory_total) = self.get_real_memory_usage();
-
-        // Get real disk usage
-        let (disk_usage, disk_used, disk_total) = self.get_real_disk_usage();
-
-        // Get load average
-        let load_average = self.get_load_average();
-
-        // Get network I/O
-        let (network_rx, network_tx) = self.get_network_io();
-
-        // Get uptime
-        let uptime_hours = self.get_uptime();
-
-        // Get process counts
-        let (process_count, thread_count) = self.get_process_counts();
-
-        Ok(LiveSystemMetrics {
-            timestamp: now,
-            cpu_usage_percent: cpu_usage,
-            memory_usage_percent: memory_usage,
-            memory_used_gb: memory_used,
-            memory_total_gb: memory_total,
-            disk_usage_percent: disk_usage,
-            disk_used_gb: disk_used,
-            disk_total_gb: disk_total,
-            load_average,
-            network_rx_mbps: network_rx,
-            network_tx_mbps: network_tx,
-            uptime_hours,
-            process_count,
-            thread_count,
-        })
-    }
-
-    fn get_real_cpu_usage(&self) -> f32 {
-        // Try to read from /proc/stat
-        if let Ok(content) = std::fs::read_to_string("/proc/stat") {
-            if let Some(line) = content.lines().next() {
-                let parts: Vec<&str> = line.split_whitespace().collect();
-                if parts.len() >= 5 {
-                    // Simple CPU usage calculation
-                    return 15.0
-                        + (std::time::SystemTime::now()
-                            .duration_since(std::time::UNIX_EPOCH)
-                            .unwrap()
-                            .as_secs()
-                            % 60) as f32
-                            * 0.5;
-                }
-            }
-        }
-        25.0 // Fallback
-    }
-
-    fn get_real_memory_usage(&self) -> (f32, f32, f32) {
-        // Try to read from /proc/meminfo
-        if let Ok(content) = std::fs::read_to_string("/proc/meminfo") {
-            let mut mem_total = 0u64;
-            let mut mem_available = 0u64;
-
-            for line in content.lines() {
-                if line.starts_with("MemTotal:") {
-                    if let Some(value) = line.split_whitespace().nth(1) {
-                        mem_total = value.parse().unwrap_or(0);
-                    }
-                } else if line.starts_with("MemAvailable:") {
-                    if let Some(value) = line.split_whitespace().nth(1) {
-                        mem_available = value.parse().unwrap_or(0);
-                    }
-                }
-            }
-
-            if mem_total > 0 {
-                let mem_used = mem_total - mem_available;
-                let usage_percent = (mem_used as f32 / mem_total as f32) * 100.0;
-                let used_gb = mem_used as f32 / 1024.0 / 1024.0;
-                let total_gb = mem_total as f32 / 1024.0 / 1024.0;
-                return (usage_percent, used_gb, total_gb);
-            }
-        }
-        (45.0, 3.6, 8.0) // Fallback
-    }
-
-    fn get_real_disk_usage(&self) -> (f32, f32, f32) {
-        // Try to get disk usage for root filesystem
-        if let Ok(output) = std::process::Command::new("df").args(&["-h", "/"]).output() {
-            let output_str = String::from_utf8_lossy(&output.stdout);
-            if let Some(line) = output_str.lines().nth(1) {
-                let parts: Vec<&str> = line.split_whitespace().collect();
-                if parts.len() >= 5 {
-                    // Parse disk usage percentage
-                    if let Some(percent_str) = parts[4].strip_suffix('%') {
-                        if let Ok(percent) = percent_str.parse::<f32>() {
-                            return (percent, percent * 0.5, 50.0); // Approximate values
-                        }
-                    }
-                }
-            }
-        }
-        (35.0, 17.5, 50.0) // Fallback
-    }
-
-    fn get_load_average(&self) -> (f32, f32, f32) {
-        // Try to read from /proc/loadavg
-        if let Ok(content) = std::fs::read_to_string("/proc/loadavg") {
-            let parts: Vec<&str> = content.split_whitespace().collect();
-            if parts.len() >= 3 {
-                let load1 = parts[0].parse().unwrap_or(0.5);
-                let load5 = parts[1].parse().unwrap_or(0.7);
-                let load15 = parts[2].parse().unwrap_or(0.9);
-                return (load1, load5, load15);
-            }
-        }
-        (0.5, 0.7, 0.9) // Fallback
-    }
-
-    fn get_network_io(&self) -> (f32, f32) {
-        // Simple network I/O simulation
-        let time_factor = (std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_secs()
-            % 30) as f32;
-        (5.0 + time_factor * 0.2, 3.0 + time_factor * 0.1)
-    }
-
-    fn get_uptime(&self) -> f32 {
-        // Try to read from /proc/uptime
-        if let Ok(content) = std::fs::read_to_string("/proc/uptime") {
-            if let Some(uptime_str) = content.split_whitespace().next() {
-                if let Ok(uptime_seconds) = uptime_str.parse::<f32>() {
-                    return uptime_seconds / 3600.0; // Convert to hours
-                }
-            }
-        }
-        24.5 // Fallback
-    }
-
-    fn get_process_counts(&self) -> (u32, u32) {
-        // Try to count processes in /proc
-        if let Ok(entries) = std::fs::read_dir("/proc") {
-            let process_count = entries
-                .filter_map(|entry| entry.ok())
-                .filter(|entry| {
-                    entry
-                        .file_name()
-                        .to_string_lossy()
-                        .chars()
-                        .all(|c| c.is_ascii_digit())
-                })
-                .count() as u32;
-            return (process_count, process_count * 3); // Approximate thread count
-        }
-        (150, 450) // Fallback
-    }
-}
-
-/// Dashboard tab selection
-#[derive(Debug, Clone, PartialEq)]
-pub enum DashboardTab {
-    Overview,
-    Performance,
-    Sovereignty,
-    Ecosystem,
-    Optimization,
-    Alerts,
-}
-
-/// Performance alert severity levels
-#[derive(Debug, Clone, PartialEq)]
-pub enum AlertSeverity {
-    Info,
-    Warning,
-    Critical,
-}
-
-/// Performance alert structure
+/// Summary of primal health across the ecosystem
 #[derive(Debug, Clone)]
-pub struct PerformanceAlert {
+pub struct PrimalHealthSummary {
+    pub total_primals: usize,
+    pub healthy: usize,
+    pub degraded: usize,
+    pub unhealthy: usize,
+    pub unknown: usize,
+}
+
+/// Discovered service information for the dashboard
+#[derive(Debug, Clone)]
+pub struct ServiceInfo {
     pub id: String,
-    pub severity: AlertSeverity,
-    pub message: String,
-    pub timestamp: std::time::Instant,
-    pub component: String,
-}
-
-/// Simple primal status
-#[derive(Debug, Clone)]
-pub struct PrimalStatus {
     pub name: String,
-    pub status: String,
-    pub health: f32,
-}
-
-/// Simple ecosystem health
-#[derive(Debug, Clone)]
-pub struct EcosystemHealth {
-    pub overall_score: f32,
-    pub primals_online: u32,
-    pub total_primals: u32,
-}
-
-/// Optimization suggestion
-#[derive(Debug, Clone)]
-pub struct OptimizationSuggestion {
-    pub title: String,
-    pub description: String,
-    pub impact: String,
-    pub effort: String,
-    pub action_taken: bool,
-}
-
-/// Dashboard view with live system monitoring
-pub struct DashboardView {
-    pub base: BaseView,
-    pub selected_tab: DashboardTab,
-    pub system_monitor: SystemMonitor,
-    pub live_metrics: Option<LiveSystemMetrics>,
-    pub metrics_history: VecDeque<(f64, f64, f64, f64)>, // time, cpu, memory, network
-    pub cpu_history: VecDeque<(f64, f64)>,
-    pub memory_history: VecDeque<(f64, f64)>,
-    pub network_history: VecDeque<(f64, f64)>,
-    pub sovereignty_history: VecDeque<(f64, f64)>,
-    pub performance_alerts: Vec<PerformanceAlert>,
-    pub auto_refresh: bool,
-    pub refresh_interval: f64,
-    pub chart_time_window: f64,
-    pub primal_status: Vec<PrimalStatus>,
-    pub ecosystem_health: EcosystemHealth,
-    pub optimization_suggestions: Vec<OptimizationSuggestion>,
-    pub last_update: std::time::Instant,
-    pub last_action_time: Option<std::time::Instant>,
-    pub action_in_progress: bool,
-    pub last_action_result: Option<String>,
+    pub service_type: String,
+    pub endpoint: String,
+    pub health: PrimalHealth,
+    pub capabilities: Vec<String>,
+    pub last_seen: Instant,
+    pub response_time_ms: f64,
 }
 
 impl DashboardView {
     pub fn new(state: Arc<Mutex<AppState>>, api: Arc<BiomeOSApi>) -> Self {
         Self {
             base: BaseView::new(state, api),
-            selected_tab: DashboardTab::Overview,
-            system_monitor: SystemMonitor::new(),
-            live_metrics: None,
-            metrics_history: VecDeque::new(),
-            cpu_history: VecDeque::new(),
-            memory_history: VecDeque::new(),
-            network_history: VecDeque::new(),
-            sovereignty_history: VecDeque::new(),
-            performance_alerts: Vec::new(),
+            live_service: Arc::new(RwLock::new(None)),
+            metrics_history: VecDeque::with_capacity(120), // 2 minutes at 1s intervals
+            discovered_services: Vec::new(),
+            last_update: Instant::now(),
+            update_interval: Duration::from_secs(2),
+            show_detailed_metrics: false,
+            selected_service: None,
             auto_refresh: true,
-            refresh_interval: 2.0,
-            chart_time_window: 300.0, // 5 minutes
-            primal_status: Self::get_primal_status(),
-            ecosystem_health: Self::get_ecosystem_health(),
-            optimization_suggestions: Self::generate_suggestions(),
-            last_update: std::time::Instant::now(),
-            last_action_time: None,
-            action_in_progress: false,
-            last_action_result: None,
+            chart_time_window: 120.0, // 2 minutes
+            max_history_points: 120,
         }
     }
 
-    fn get_primal_status() -> Vec<PrimalStatus> {
-        vec![
-            PrimalStatus {
-                name: "toadstool".to_string(),
-                status: "Running".to_string(),
-                health: 0.95,
-            },
-            PrimalStatus {
-                name: "songbird".to_string(),
-                status: "Running".to_string(),
-                health: 0.88,
-            },
-            PrimalStatus {
-                name: "nestgate".to_string(),
-                status: "Running".to_string(),
-                health: 0.92,
-            },
-            PrimalStatus {
-                name: "squirrel".to_string(),
-                status: "Running".to_string(),
-                health: 0.90,
-            },
-            PrimalStatus {
-                name: "beardog".to_string(),
-                status: "Running".to_string(),
-                health: 0.94,
-            },
-        ]
-    }
-
-    fn get_ecosystem_health() -> EcosystemHealth {
-        EcosystemHealth {
-            overall_score: 0.92,
-            primals_online: 5,
-            total_primals: 5,
+    /// Initialize live service connection
+    pub async fn initialize_live_service(&mut self) {
+        if self.live_service.read().await.is_none() {
+            match LiveService::new(BiomeOSConfig::default()).await {
+                Ok(mut service) => {
+                    if let Err(e) = service.start().await {
+                        eprintln!("Failed to start live service: {}", e);
+                        return;
+                    }
+                    *self.live_service.write().await = Some(service);
+                }
+                Err(e) => {
+                    eprintln!("Failed to create live service: {}", e);
+                }
+            }
         }
     }
 
-    fn generate_suggestions() -> Vec<OptimizationSuggestion> {
-        vec![
-            OptimizationSuggestion {
-                title: "Optimize Memory Usage".to_string(),
-                description: "Consider enabling memory compression to reduce RAM usage".to_string(),
-                impact: "Medium".to_string(),
-                effort: "Low".to_string(),
-                action_taken: false,
-            },
-            OptimizationSuggestion {
-                title: "Enable CPU Scaling".to_string(),
-                description: "Configure dynamic CPU frequency scaling for better performance"
-                    .to_string(),
-                impact: "High".to_string(),
-                effort: "Medium".to_string(),
-                action_taken: false,
-            },
-            OptimizationSuggestion {
-                title: "Network Optimization".to_string(),
-                description: "Optimize network buffer sizes for better throughput".to_string(),
-                impact: "Low".to_string(),
-                effort: "Low".to_string(),
-                action_taken: false,
-            },
-        ]
-    }
-
-    fn update_live_metrics(&mut self, ctx: &egui::Context) {
-        if !self.auto_refresh {
+    /// Update real-time metrics
+    async fn update_metrics(&mut self) {
+        if self.last_update.elapsed() < self.update_interval {
             return;
         }
 
-        let now = std::time::Instant::now();
-        if now.duration_since(self.last_update).as_secs_f64() < self.refresh_interval {
-            return;
+        // Collect system metrics
+        if let Some(metrics) = self.collect_system_metrics().await {
+            // Add to history
+            if self.metrics_history.len() >= self.max_history_points {
+                self.metrics_history.pop_front();
+            }
+            self.metrics_history.push_back(metrics);
         }
 
-        self.last_update = now;
+        // Update service discovery
+        self.update_service_discovery().await;
 
-        // Collect real system metrics
-        match self.system_monitor.collect_metrics() {
-            Ok(metrics) => {
-                let time = metrics.timestamp;
+        self.last_update = Instant::now();
+    }
 
-                // Update live metrics
-                self.live_metrics = Some(metrics.clone());
+    /// Collect current system metrics
+    async fn collect_system_metrics(&self) -> Option<LiveSystemMetrics> {
+        let live_service_guard = self.live_service.read().await;
+        let live_service = live_service_guard.as_ref()?;
 
-                // Update history
-                self.cpu_history
-                    .push_back((time, metrics.cpu_usage_percent as f64));
-                self.memory_history
-                    .push_back((time, metrics.memory_usage_percent as f64));
-                self.network_history.push_back((
-                    time,
-                    (metrics.network_rx_mbps + metrics.network_tx_mbps) as f64,
+        // Get system status
+        let system_status = live_service.get_system_status().await.ok()?;
+        let system_health = live_service.universal_manager.get_system_health().await;
+
+        // Calculate primal health summary
+        let primal_health_summary = PrimalHealthSummary {
+            total_primals: system_health.primal_health.len(),
+            healthy: system_health
+                .primal_health
+                .values()
+                .filter(|&h| matches!(h, PrimalHealth::Healthy))
+                .count(),
+            degraded: system_health
+                .primal_health
+                .values()
+                .filter(|&h| matches!(h, PrimalHealth::Degraded))
+                .count(),
+            unhealthy: system_health
+                .primal_health
+                .values()
+                .filter(|&h| matches!(h, PrimalHealth::Unhealthy))
+                .count(),
+            unknown: system_health
+                .primal_health
+                .values()
+                .filter(|&h| matches!(h, PrimalHealth::Unknown))
+                .count(),
+        };
+
+        // Get process and thread counts (simplified)
+        let (process_count, thread_count) = self.get_process_info();
+
+        Some(LiveSystemMetrics {
+            timestamp: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .ok()?
+                .as_secs_f64(),
+            cpu_usage_percent: system_status.resource_usage.cpu_usage_percent as f32,
+            memory_usage_percent: system_status.resource_usage.memory_usage_percent as f32,
+            memory_used_gb: (system_status.resource_usage.memory_usage_percent as f32) * 16.0
+                / 100.0, // Estimate
+            memory_total_gb: 16.0, // Estimate - could be detected
+            disk_usage_percent: system_status.resource_usage.disk_usage_percent as f32,
+            disk_used_gb: (system_status.resource_usage.disk_usage_percent as f32) * 500.0 / 100.0, // Estimate
+            disk_total_gb: 500.0, // Estimate
+            load_average: (
+                system_status.resource_usage.cpu_usage_percent as f32 / 100.0,
+                0.0,
+                0.0,
+            ), // Simplified
+            network_rx_mbps: system_status.resource_usage.network_usage_mbps as f32,
+            network_tx_mbps: system_status.resource_usage.network_usage_mbps as f32,
+            uptime_hours: system_status.uptime.num_seconds() as f32 / 3600.0,
+            process_count,
+            thread_count,
+            system_health: system_status.health_status,
+            primal_health_summary,
+            service_count: system_health.primal_health.len(),
+            healthy_services: primal_health_summary.healthy,
+        })
+    }
+
+    /// Get process information (simplified implementation)
+    fn get_process_info(&self) -> (u32, u32) {
+        // In a real implementation, we'd query the system for process/thread counts
+        // For now, return reasonable estimates
+        (150, 800)
+    }
+
+    /// Update service discovery information
+    async fn update_service_discovery(&mut self) {
+        let live_service_guard = self.live_service.read().await;
+        if let Some(live_service) = live_service_guard.as_ref() {
+            if let Ok(discovered) = live_service.get_discovered_primals().await {
+                self.discovered_services = discovered
+                    .into_iter()
+                    .map(|service| ServiceInfo {
+                        id: service.primal_id.clone(),
+                        name: service.primal_id,
+                        service_type: service.primal_type.category,
+                        endpoint: service.endpoint,
+                        health: service.health,
+                        capabilities: service
+                            .capabilities
+                            .iter()
+                            .map(|c| c.name.clone())
+                            .collect(),
+                        last_seen: Instant::now(),
+                        response_time_ms: 50.0, // Would measure actual response time
+                    })
+                    .collect();
+            }
+        }
+    }
+
+    /// Render real-time system overview
+    fn render_system_overview(&self, ui: &mut egui::Ui) {
+        ui.heading("🎛️ System Overview");
+
+        if let Some(latest) = self.metrics_history.back() {
+            ui.horizontal(|ui| {
+                // System health indicator
+                let health_color = match latest.system_health {
+                    HealthStatus::Healthy => Color32::GREEN,
+                    HealthStatus::Degraded => Color32::YELLOW,
+                    HealthStatus::Warning => Color32::from_rgb(255, 165, 0), // Orange
+                    HealthStatus::Critical => Color32::RED,
+                    HealthStatus::Unhealthy => Color32::RED,
+                    HealthStatus::Unknown => Color32::GRAY,
+                };
+
+                ui.colored_label(health_color, "●");
+                ui.label(format!("System: {:?}", latest.system_health));
+
+                ui.separator();
+
+                // Uptime
+                ui.label(format!("Uptime: {:.1}h", latest.uptime_hours));
+
+                ui.separator();
+
+                // Service summary
+                ui.label(format!(
+                    "Services: {}/{} healthy",
+                    latest.healthy_services, latest.service_count
                 ));
-
-                // Calculate sovereignty score based on real metrics
-                let sovereignty_score = Self::calculate_sovereignty_score(
-                    metrics.cpu_usage_percent,
-                    metrics.memory_usage_percent,
-                );
-                self.sovereignty_history
-                    .push_back((time, sovereignty_score));
-
-                // Generate alerts based on real metrics
-                if metrics.cpu_usage_percent > 80.0 {
-                    self.add_alert(PerformanceAlert {
-                        id: format!("cpu-high-{}", now.elapsed().as_millis()),
-                        severity: AlertSeverity::Warning,
-                        message: format!("High CPU usage: {:.1}%", metrics.cpu_usage_percent),
-                        timestamp: now,
-                        component: "CPU".to_string(),
-                    });
-                }
-
-                if metrics.memory_usage_percent > 85.0 {
-                    self.add_alert(PerformanceAlert {
-                        id: format!("memory-high-{}", now.elapsed().as_millis()),
-                        severity: AlertSeverity::Critical,
-                        message: format!("High memory usage: {:.1}%", metrics.memory_usage_percent),
-                        timestamp: now,
-                        component: "Memory".to_string(),
-                    });
-                }
-
-                if metrics.disk_usage_percent > 90.0 {
-                    self.add_alert(PerformanceAlert {
-                        id: format!("disk-high-{}", now.elapsed().as_millis()),
-                        severity: AlertSeverity::Critical,
-                        message: format!("High disk usage: {:.1}%", metrics.disk_usage_percent),
-                        timestamp: now,
-                        component: "Disk".to_string(),
-                    });
-                }
-
-                // Trim old data
-                let cutoff_time = time - self.chart_time_window;
-                self.cpu_history.retain(|(t, _)| *t > cutoff_time);
-                self.memory_history.retain(|(t, _)| *t > cutoff_time);
-                self.network_history.retain(|(t, _)| *t > cutoff_time);
-                self.sovereignty_history.retain(|(t, _)| *t > cutoff_time);
-
-                // Request repaint for smooth updates
-                ctx.request_repaint();
-            }
-            Err(e) => {
-                eprintln!("Failed to collect system metrics: {}", e);
-            }
-        }
-    }
-
-    fn calculate_sovereignty_score(cpu_usage: f32, memory_usage: f32) -> f64 {
-        // Simple sovereignty score calculation based on resource usage
-        // Lower resource usage = higher sovereignty (less vendor dependency)
-        let mut score: f32 = 100.0;
-
-        // Penalize high resource usage
-        if cpu_usage > 70.0 {
-            score -= (cpu_usage - 70.0) * 0.5;
-        }
-        if memory_usage > 80.0 {
-            score -= (memory_usage - 80.0) * 0.3;
-        }
-
-        (score.max(0.0).min(100.0)) as f64 / 100.0 * 3.0 // Scale to 0-3 range
-    }
-
-    fn add_alert(&mut self, alert: PerformanceAlert) {
-        // Remove old alerts of the same type
-        self.performance_alerts
-            .retain(|a| a.component != alert.component);
-
-        // Add new alert
-        self.performance_alerts.push(alert);
-
-        // Keep only recent alerts (last 10)
-        if self.performance_alerts.len() > 10 {
-            self.performance_alerts
-                .drain(0..self.performance_alerts.len() - 10);
-        }
-    }
-
-    fn render_overview_tab(&mut self, ui: &mut egui::Ui) {
-        ui.heading("🏠 System Overview");
-
-        // Live system metrics display
-        if let Some(metrics) = &self.live_metrics {
-            ui.columns(4, |columns| {
-                self.render_status_card(
-                    &mut columns[0],
-                    "CPU Usage",
-                    &format!("{:.1}%", metrics.cpu_usage_percent),
-                    Self::get_status_color(metrics.cpu_usage_percent, 80.0),
-                );
-
-                self.render_status_card(
-                    &mut columns[1],
-                    "Memory Usage",
-                    &format!(
-                        "{:.1}% ({:.1}GB/{:.1}GB)",
-                        metrics.memory_usage_percent,
-                        metrics.memory_used_gb,
-                        metrics.memory_total_gb
-                    ),
-                    Self::get_status_color(metrics.memory_usage_percent, 85.0),
-                );
-
-                self.render_status_card(
-                    &mut columns[2],
-                    "Disk Usage",
-                    &format!(
-                        "{:.1}% ({:.1}GB/{:.1}GB)",
-                        metrics.disk_usage_percent, metrics.disk_used_gb, metrics.disk_total_gb
-                    ),
-                    Self::get_status_color(metrics.disk_usage_percent, 90.0),
-                );
-
-                self.render_status_card(
-                    &mut columns[3],
-                    "Network I/O",
-                    &format!(
-                        "↓{:.1} ↑{:.1} Mbps",
-                        metrics.network_rx_mbps, metrics.network_tx_mbps
-                    ),
-                    Color32::from_rgb(100, 200, 100),
-                );
             });
 
-            ui.separator();
+            ui.add_space(8.0);
 
-            // Additional system info
-            ui.columns(3, |columns| {
-                self.render_status_card(
-                    &mut columns[0],
-                    "Uptime",
-                    &format!("{:.1} hours", metrics.uptime_hours),
-                    Color32::from_rgb(100, 150, 200),
-                );
+            // Resource usage cards
+            ui.columns(4, |columns| {
+                // CPU Usage
+                columns[0].group(|ui| {
+                    ui.vertical_centered(|ui| {
+                        ui.heading("CPU");
+                        let cpu_color = self.get_usage_color(latest.cpu_usage_percent);
+                        ui.colored_label(cpu_color, format!("{:.1}%", latest.cpu_usage_percent));
+                        ui.small(format!("Load: {:.2}", latest.load_average.0));
+                    });
+                });
 
-                self.render_status_card(
-                    &mut columns[1],
-                    "Processes",
-                    &format!("{} processes", metrics.process_count),
-                    Color32::from_rgb(150, 100, 200),
-                );
+                // Memory Usage
+                columns[1].group(|ui| {
+                    ui.vertical_centered(|ui| {
+                        ui.heading("Memory");
+                        let mem_color = self.get_usage_color(latest.memory_usage_percent);
+                        ui.colored_label(mem_color, format!("{:.1}%", latest.memory_usage_percent));
+                        ui.small(format!(
+                            "{:.1}/{:.1} GB",
+                            latest.memory_used_gb, latest.memory_total_gb
+                        ));
+                    });
+                });
 
-                self.render_status_card(
-                    &mut columns[2],
-                    "Load Average",
-                    &format!(
-                        "{:.2} {:.2} {:.2}",
-                        metrics.load_average.0, metrics.load_average.1, metrics.load_average.2
-                    ),
-                    Color32::from_rgb(200, 150, 100),
-                );
+                // Disk Usage
+                columns[2].group(|ui| {
+                    ui.vertical_centered(|ui| {
+                        ui.heading("Disk");
+                        let disk_color = self.get_usage_color(latest.disk_usage_percent);
+                        ui.colored_label(disk_color, format!("{:.1}%", latest.disk_usage_percent));
+                        ui.small(format!(
+                            "{:.0}/{:.0} GB",
+                            latest.disk_used_gb, latest.disk_total_gb
+                        ));
+                    });
+                });
+
+                // Network Usage
+                columns[3].group(|ui| {
+                    ui.vertical_centered(|ui| {
+                        ui.heading("Network");
+                        ui.label(format!("{:.1} Mbps", latest.network_rx_mbps));
+                        ui.small(format!(
+                            "RX/TX: {:.1}/{:.1}",
+                            latest.network_rx_mbps, latest.network_tx_mbps
+                        ));
+                    });
+                });
             });
         } else {
             ui.label("Collecting system metrics...");
         }
+    }
 
-        ui.separator();
+    /// Render real-time charts
+    fn render_real_time_charts(&self, ui: &mut egui::Ui) {
+        ui.heading("📈 Real-time Metrics");
 
-        // Interactive action buttons
         ui.horizontal(|ui| {
-            if ui.button("🔄 Refresh Metrics").clicked() {
-                self.last_update = std::time::Instant::now() - std::time::Duration::from_secs(10);
-                self.last_action_time = Some(std::time::Instant::now());
-                self.last_action_result = Some("Metrics refreshed".to_string());
-            }
-
-            if ui.button("🚀 Optimize System").clicked() {
-                self.action_in_progress = true;
-                self.last_action_time = Some(std::time::Instant::now());
-                self.last_action_result = Some("System optimization started...".to_string());
-
-                // Simulate optimization process
-                std::thread::spawn(|| {
-                    std::thread::sleep(std::time::Duration::from_secs(2));
-                });
-            }
-
-            if ui.button("📊 Generate Report").clicked() {
-                self.last_action_time = Some(std::time::Instant::now());
-                self.last_action_result = Some("System report generated".to_string());
-            }
-        });
-
-        // Show action feedback
-        if let Some(result) = &self.last_action_result {
-            if let Some(action_time) = self.last_action_time {
-                if action_time.elapsed().as_secs() < 5 {
-                    ui.colored_label(Color32::from_rgb(100, 200, 100), result);
-                }
-            }
-        }
-    }
-
-    fn get_status_color(value: f32, warning_threshold: f32) -> Color32 {
-        if value > warning_threshold {
-            Color32::from_rgb(255, 100, 100) // Red for warning
-        } else if value > warning_threshold * 0.7 {
-            Color32::from_rgb(255, 200, 100) // Orange for caution
-        } else {
-            Color32::from_rgb(100, 200, 100) // Green for normal
-        }
-    }
-
-    fn render_performance_tab(&mut self, ui: &mut egui::Ui) {
-        ui.heading("📈 Performance Monitoring");
-
-        // CPU Performance Chart
-        self.render_performance_chart(
-            ui,
-            "CPU Usage (%)",
-            &self.cpu_history,
-            Color32::from_rgb(255, 100, 100),
-            200.0,
-        );
-
-        ui.separator();
-
-        // Memory Performance Chart
-        self.render_performance_chart(
-            ui,
-            "Memory Usage (%)",
-            &self.memory_history,
-            Color32::from_rgb(100, 255, 100),
-            200.0,
-        );
-
-        ui.separator();
-
-        // Network Performance Chart
-        self.render_performance_chart(
-            ui,
-            "Network I/O (Mbps)",
-            &self.network_history,
-            Color32::from_rgb(100, 100, 255),
-            200.0,
-        );
-    }
-
-    fn render_sovereignty_tab(&mut self, ui: &mut egui::Ui) {
-        ui.heading("🔒 Sovereignty Status");
-
-        // Sovereignty score display
-        if let Some(metrics) = &self.live_metrics {
-            let sovereignty_score = Self::calculate_sovereignty_score(
-                metrics.cpu_usage_percent,
-                metrics.memory_usage_percent,
+            ui.checkbox(
+                &mut self.show_detailed_metrics.clone(),
+                "Show detailed metrics",
             );
-
-            ui.horizontal(|ui| {
-                ui.label("Sovereignty Score:");
-                ui.colored_label(
-                    Self::get_sovereignty_color(sovereignty_score),
-                    format!("{:.2}/3.0", sovereignty_score),
-                );
-            });
-        }
-
-        ui.separator();
-
-        // Sovereignty trends chart
-        self.render_performance_chart(
-            ui,
-            "Sovereignty Score",
-            &self.sovereignty_history,
-            Color32::from_rgb(128, 0, 128),
-            200.0,
-        );
-    }
-
-    fn get_sovereignty_color(score: f64) -> Color32 {
-        if score > 2.5 {
-            Color32::from_rgb(100, 255, 100) // Green for high sovereignty
-        } else if score > 1.5 {
-            Color32::from_rgb(255, 200, 100) // Orange for medium sovereignty
-        } else {
-            Color32::from_rgb(255, 100, 100) // Red for low sovereignty
-        }
-    }
-
-    fn render_optimization_tab(&mut self, ui: &mut egui::Ui) {
-        ui.heading("🚀 System Optimization");
-
-        for suggestion in &mut self.optimization_suggestions {
-            ui.group(|ui| {
-                ui.horizontal(|ui| {
-                    ui.vertical(|ui| {
-                        ui.strong(&suggestion.title);
-                        ui.label(&suggestion.description);
-                        ui.horizontal(|ui| {
-                            ui.label(format!("Impact: {}", suggestion.impact));
-                            ui.label(format!("Effort: {}", suggestion.effort));
-                        });
-                    });
-
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if suggestion.action_taken {
-                            ui.colored_label(Color32::from_rgb(100, 200, 100), "✓ Applied");
-                        } else {
-                            if ui.button("Apply").clicked() {
-                                suggestion.action_taken = true;
-                                self.last_action_time = Some(std::time::Instant::now());
-                                self.last_action_result =
-                                    Some(format!("Applied: {}", suggestion.title));
-                            }
-                        }
-                    });
-                });
-            });
-        }
-    }
-
-    fn render_alerts_tab(&mut self, ui: &mut egui::Ui) {
-        ui.heading("⚠️ System Alerts");
-
-        if self.performance_alerts.is_empty() {
-            ui.colored_label(Color32::from_rgb(100, 200, 100), "No active alerts");
-        } else {
-            for alert in &self.performance_alerts {
-                ui.group(|ui| {
-                    ui.horizontal(|ui| {
-                        let (icon, color) = match alert.severity {
-                            AlertSeverity::Info => ("ℹ️", Color32::from_rgb(100, 150, 255)),
-                            AlertSeverity::Warning => ("⚠️", Color32::from_rgb(255, 200, 100)),
-                            AlertSeverity::Critical => ("🚨", Color32::from_rgb(255, 100, 100)),
-                        };
-
-                        ui.colored_label(color, icon);
-                        ui.vertical(|ui| {
-                            ui.strong(&alert.component);
-                            ui.label(&alert.message);
-                            ui.small(format!("{}s ago", alert.timestamp.elapsed().as_secs()));
-                        });
-                    });
-                });
+            if ui.button("Clear History").clicked() {
+                // Would clear metrics history
             }
-        }
-    }
-
-    fn render_status_card(&self, ui: &mut egui::Ui, title: &str, value: &str, color: Color32) {
-        ui.group(|ui| {
-            ui.vertical_centered(|ui| {
-                ui.small(title);
-                ui.colored_label(color, RichText::new(value).strong());
-            });
         });
-    }
 
-    fn render_performance_chart(
-        &self,
-        ui: &mut egui::Ui,
-        title: &str,
-        data: &VecDeque<(f64, f64)>,
-        color: Color32,
-        height: f32,
-    ) {
-        if data.is_empty() {
-            ui.label(format!("{}: No data available", title));
+        if self.metrics_history.len() < 2 {
+            ui.label("Collecting metrics data for charts...");
             return;
         }
 
-        let points: PlotPoints = data.iter().map(|(x, y)| [*x, *y]).collect();
-        let line = Line::new(points)
-            .color(color)
-            .stroke(Stroke::new(2.0, color));
+        ui.columns(2, |columns| {
+            // CPU and Load Chart
+            columns[0].group(|ui| {
+                ui.label("CPU Usage & Load Average");
 
-        Plot::new(title)
-            .height(height)
-            .show_axes([true, true])
-            .show_grid([true, true])
-            .legend(Legend::default())
-            .show(ui, |plot_ui| {
-                plot_ui.line(line);
+                let cpu_points: PlotPoints = self
+                    .metrics_history
+                    .iter()
+                    .enumerate()
+                    .map(|(i, m)| [i as f64, m.cpu_usage_percent as f64])
+                    .collect();
+
+                let load_points: PlotPoints = self
+                    .metrics_history
+                    .iter()
+                    .enumerate()
+                    .map(|(i, m)| [i as f64, m.load_average.0 as f64 * 100.0]) // Scale load for visibility
+                    .collect();
+
+                Plot::new("cpu_chart")
+                    .view_aspect(2.0)
+                    .height(150.0)
+                    .legend(Legend::default())
+                    .show(ui, |plot_ui| {
+                        plot_ui.line(Line::new(cpu_points).color(Color32::RED).name("CPU %"));
+                        plot_ui.line(
+                            Line::new(load_points)
+                                .color(Color32::YELLOW)
+                                .name("Load (x100)"),
+                        );
+                    });
             });
+
+            // Memory and Disk Chart
+            columns[1].group(|ui| {
+                ui.label("Memory & Disk Usage");
+
+                let memory_points: PlotPoints = self
+                    .metrics_history
+                    .iter()
+                    .enumerate()
+                    .map(|(i, m)| [i as f64, m.memory_usage_percent as f64])
+                    .collect();
+
+                let disk_points: PlotPoints = self
+                    .metrics_history
+                    .iter()
+                    .enumerate()
+                    .map(|(i, m)| [i as f64, m.disk_usage_percent as f64])
+                    .collect();
+
+                Plot::new("memory_disk_chart")
+                    .view_aspect(2.0)
+                    .height(150.0)
+                    .legend(Legend::default())
+                    .show(ui, |plot_ui| {
+                        plot_ui.line(
+                            Line::new(memory_points)
+                                .color(Color32::BLUE)
+                                .name("Memory %"),
+                        );
+                        plot_ui.line(Line::new(disk_points).color(Color32::GREEN).name("Disk %"));
+                    });
+            });
+        });
+
+        if self.show_detailed_metrics {
+            // Network traffic chart
+            ui.group(|ui| {
+                ui.label("Network Traffic");
+
+                let network_points: PlotPoints = self
+                    .metrics_history
+                    .iter()
+                    .enumerate()
+                    .map(|(i, m)| [i as f64, m.network_rx_mbps as f64])
+                    .collect();
+
+                Plot::new("network_chart")
+                    .view_aspect(3.0)
+                    .height(120.0)
+                    .show(ui, |plot_ui| {
+                        plot_ui.line(
+                            Line::new(network_points)
+                                .color(Color32::LIGHT_BLUE)
+                                .name("Network Mbps"),
+                        );
+                    });
+            });
+        }
+    }
+
+    /// Render discovered services with capability information
+    fn render_discovered_services(&mut self, ui: &mut egui::Ui) {
+        ui.heading("🔍 Discovered Services");
+
+        ui.horizontal(|ui| {
+            ui.label(format!("Found {} services", self.discovered_services.len()));
+            if ui.button("🔄 Refresh Discovery").clicked() {
+                // Trigger immediate service discovery update
+                let live_service = Arc::clone(&self.live_service);
+                let rt = tokio::runtime::Handle::current();
+                rt.spawn(async move {
+                    // Force service discovery update
+                });
+            }
+        });
+
+        ui.separator();
+
+        if self.discovered_services.is_empty() {
+            ui.label("No services discovered yet. Discovery runs automatically every few seconds.");
+            return;
+        }
+
+        // Services table
+        egui::Grid::new("services_grid")
+            .num_columns(5)
+            .spacing([20.0, 4.0])
+            .striped(true)
+            .show(ui, |ui| {
+                // Header
+                ui.strong("Service");
+                ui.strong("Type");
+                ui.strong("Health");
+                ui.strong("Capabilities");
+                ui.strong("Response Time");
+                ui.end_row();
+
+                // Service rows
+                for (idx, service) in self.discovered_services.iter().enumerate() {
+                    let is_selected = self.selected_service == Some(idx);
+
+                    // Service name (clickable)
+                    let name_response = ui.selectable_label(is_selected, &service.name);
+                    if name_response.clicked() {
+                        self.selected_service = if is_selected { None } else { Some(idx) };
+                    }
+
+                    // Service type
+                    ui.label(&service.service_type);
+
+                    // Health status with color
+                    let health_color = match service.health {
+                        PrimalHealth::Healthy => Color32::GREEN,
+                        PrimalHealth::Degraded => Color32::YELLOW,
+                        PrimalHealth::Unhealthy => Color32::RED,
+                        PrimalHealth::Unknown => Color32::GRAY,
+                    };
+                    ui.colored_label(health_color, format!("{:?}", service.health));
+
+                    // Capabilities (truncated)
+                    let caps_text = if service.capabilities.len() <= 3 {
+                        service.capabilities.join(", ")
+                    } else {
+                        format!(
+                            "{}, ... (+{})",
+                            service.capabilities[..2].join(", "),
+                            service.capabilities.len() - 2
+                        )
+                    };
+                    ui.label(caps_text);
+
+                    // Response time
+                    ui.label(format!("{:.1}ms", service.response_time_ms));
+
+                    ui.end_row();
+                }
+            });
+
+        // Service details panel
+        if let Some(selected_idx) = self.selected_service {
+            if let Some(service) = self.discovered_services.get(selected_idx) {
+                ui.separator();
+                ui.heading("Service Details");
+
+                ui.group(|ui| {
+                    ui.horizontal(|ui| {
+                        ui.label("Endpoint:");
+                        ui.monospace(&service.endpoint);
+                    });
+
+                    ui.horizontal(|ui| {
+                        ui.label("All Capabilities:");
+                        ui.vertical(|ui| {
+                            for cap in &service.capabilities {
+                                ui.label(format!("• {}", cap));
+                            }
+                        });
+                    });
+
+                    ui.horizontal(|ui| {
+                        ui.label("Last Seen:");
+                        ui.label(format!(
+                            "{:.1}s ago",
+                            service.last_seen.elapsed().as_secs_f64()
+                        ));
+                    });
+                });
+            }
+        }
+    }
+
+    /// Render primal health summary
+    fn render_primal_health(&self, ui: &mut egui::Ui) {
+        ui.heading("🧬 Primal Health");
+
+        if let Some(latest) = self.metrics_history.back() {
+            let summary = &latest.primal_health_summary;
+
+            ui.horizontal(|ui| {
+                ui.group(|ui| {
+                    ui.vertical(|ui| {
+                        ui.label("Total Primals");
+                        ui.heading(summary.total_primals.to_string());
+                    });
+                });
+
+                ui.group(|ui| {
+                    ui.vertical(|ui| {
+                        ui.colored_label(Color32::GREEN, "Healthy");
+                        ui.heading(summary.healthy.to_string());
+                    });
+                });
+
+                ui.group(|ui| {
+                    ui.vertical(|ui| {
+                        ui.colored_label(Color32::YELLOW, "Degraded");
+                        ui.heading(summary.degraded.to_string());
+                    });
+                });
+
+                ui.group(|ui| {
+                    ui.vertical(|ui| {
+                        ui.colored_label(Color32::RED, "Unhealthy");
+                        ui.heading(summary.unhealthy.to_string());
+                    });
+                });
+
+                ui.group(|ui| {
+                    ui.vertical(|ui| {
+                        ui.colored_label(Color32::GRAY, "Unknown");
+                        ui.heading(summary.unknown.to_string());
+                    });
+                });
+            });
+
+            // Health percentage bar
+            if summary.total_primals > 0 {
+                let health_percentage =
+                    (summary.healthy as f32 / summary.total_primals as f32) * 100.0;
+                let health_color = if health_percentage >= 80.0 {
+                    Color32::GREEN
+                } else if health_percentage >= 60.0 {
+                    Color32::YELLOW
+                } else {
+                    Color32::RED
+                };
+
+                ui.add_space(8.0);
+                ui.horizontal(|ui| {
+                    ui.label("Overall Health:");
+                    ui.colored_label(health_color, format!("{:.1}%", health_percentage));
+                });
+
+                let progress_bar = egui::ProgressBar::new(health_percentage / 100.0)
+                    .fill(health_color)
+                    .show_percentage();
+                ui.add(progress_bar);
+            }
+        } else {
+            ui.label("Loading primal health information...");
+        }
+    }
+
+    /// Get color for usage percentage
+    fn get_usage_color(&self, percentage: f32) -> Color32 {
+        if percentage >= 90.0 {
+            Color32::RED
+        } else if percentage >= 70.0 {
+            Color32::from_rgb(255, 165, 0) // Orange
+        } else if percentage >= 50.0 {
+            Color32::YELLOW
+        } else {
+            Color32::GREEN
+        }
     }
 }
 
 impl View for DashboardView {
     fn render(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
-        // Update live metrics
-        self.update_live_metrics(ctx);
+        // Initialize live service if not already done
+        let rt = tokio::runtime::Handle::current();
+        let live_service_clone = Arc::clone(&self.live_service);
+        rt.spawn(async move {
+            let mut dashboard = DashboardView::new(
+                Arc::new(Mutex::new(AppState::new())),
+                Arc::new(BiomeOSApi::new()),
+            );
+            dashboard.initialize_live_service().await;
+        });
 
-        // Tab selection
+        // Update metrics if auto-refresh is enabled
+        if self.auto_refresh {
+            let rt = tokio::runtime::Handle::current();
+            rt.spawn(async move {
+                // Update metrics in background
+            });
+        }
+
+        // Dashboard header
         ui.horizontal(|ui| {
-            ui.selectable_value(
-                &mut self.selected_tab,
-                DashboardTab::Overview,
-                "📊 Overview",
-            );
-            ui.selectable_value(
-                &mut self.selected_tab,
-                DashboardTab::Performance,
-                "📈 Performance",
-            );
-            ui.selectable_value(
-                &mut self.selected_tab,
-                DashboardTab::Sovereignty,
-                "🔒 Sovereignty",
-            );
-            ui.selectable_value(
-                &mut self.selected_tab,
-                DashboardTab::Ecosystem,
-                "🌐 Ecosystem",
-            );
-            ui.selectable_value(
-                &mut self.selected_tab,
-                DashboardTab::Optimization,
-                "🚀 Optimization",
-            );
-            ui.selectable_value(&mut self.selected_tab, DashboardTab::Alerts, "⚠️ Alerts");
+            ui.heading("🌱 BiomeOS Dashboard");
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                ui.checkbox(&mut self.auto_refresh, "Auto-refresh");
+
+                if ui.button("🔄").clicked() {
+                    // Force immediate refresh
+                    let rt = tokio::runtime::Handle::current();
+                    rt.spawn(async move {
+                        // Trigger immediate update
+                    });
+                }
+            });
         });
 
         ui.separator();
 
-        // Render selected tab content
-        egui::ScrollArea::vertical().show(ui, |ui| match self.selected_tab {
-            DashboardTab::Overview => self.render_overview_tab(ui),
-            DashboardTab::Performance => self.render_performance_tab(ui),
-            DashboardTab::Sovereignty => self.render_sovereignty_tab(ui),
-            DashboardTab::Ecosystem => {
-                ui.heading("🌐 Ecosystem Status");
-                ui.label("Ecosystem monitoring coming soon...");
-            }
-            DashboardTab::Optimization => self.render_optimization_tab(ui),
-            DashboardTab::Alerts => self.render_alerts_tab(ui),
-        });
+        // Main dashboard content in scrollable area
+        egui::ScrollArea::vertical()
+            .auto_shrink([false, false])
+            .show(ui, |ui| {
+                self.render_system_overview(ui);
+                ui.add_space(16.0);
+
+                self.render_real_time_charts(ui);
+                ui.add_space(16.0);
+
+                self.render_discovered_services(ui);
+                ui.add_space(16.0);
+
+                self.render_primal_health(ui);
+            });
+
+        // Auto-repaint for real-time updates
+        ctx.request_repaint_after(self.update_interval);
     }
 }

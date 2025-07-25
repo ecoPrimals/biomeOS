@@ -19,7 +19,7 @@ async fn test_universal_ui_initialization() -> Result<()> {
 
     // Test that UI manager was created successfully
     let status = ui_manager.get_system_status().await?;
-    assert_eq!(status.ui_mode, UIMode::CLI);
+    assert_eq!(status.ui_mode, UIMode::Terminal);
 
     Ok(())
 }
@@ -69,7 +69,7 @@ async fn test_custom_primal_integration() -> Result<()> {
 
 #[tokio::test]
 async fn test_ui_mode_switching() -> Result<()> {
-    let ui_modes = vec![UIMode::Desktop, UIMode::Web, UIMode::Terminal, UIMode::CLI];
+    let ui_modes = vec![UIMode::Desktop, UIMode::Web, UIMode::Terminal];
 
     for mode in ui_modes {
         let mut config = create_test_config();
@@ -369,7 +369,7 @@ async fn test_performance_metrics() -> Result<()> {
 
 fn create_test_config() -> UniversalUIConfig {
     let mut config = UniversalUIConfig::default();
-    config.ui_mode = UIMode::CLI;
+    config.ui_mode = UIMode::Terminal;
     config.auto_discovery.enabled = false; // Disable for tests
     config
 }

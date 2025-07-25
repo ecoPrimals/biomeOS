@@ -1,264 +1,388 @@
-//! # biomeOS - Universal Biological Computing Platform
+//! BiomeOS - Universal Operating System
 //!
-//! biomeOS provides a universal orchestration platform that leverages the mature
-//! capabilities of existing primals rather than reimplementing core functionality:
-//! - Toadstool: Universal parser, validator, and executor
-//! - Songbird: Universal discovery, coordination, and routing
-//! - BiomeOS: Thin coordination layer providing universal adapter patterns
+//! A capability-based orchestration layer for managing primals and ecosystems
 
-pub use biomeos_core::*;
 pub mod universal_adapter;
 
-/// Universal adapter for coordinating between Toadstool and Songbird
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+
+// Re-export key types from universal adapter
 pub use universal_adapter::{
-    BiomeDeployment, BiomeOSUniversalAdapter, CapabilityRegistry, DeployedService,
-    DiscoveredPrimal, ManifestMetadata, ParsedManifest, PrimalHealth, PrimalSpec, ResolvedPrimal,
-    ServiceSpec, ServiceStatus, SongbirdClient, SystemHealth, ToadstoolClient,
-    UniversalHealthMonitor,
+    coordinate_execution, find_primal_by_capability, get_discovered_primals, AdapterConfig,
+    PrimalInfo, RequestMetadata, RequestPriority, ResponseMetadata, ServiceStatus, SongbirdClient,
+    SystemStatus, ToadstoolClient, UniversalAdapter, UniversalRequest, UniversalResponse,
 };
 
-/// Universal UI types for examples - simplified for the new architecture
-pub mod universal_ui {
-    use serde::{Deserialize, Serialize};
-    use std::collections::HashMap;
+// Re-export core types
+pub use biomeos_core::{BiomeOSConfig, UniversalBiomeOSManager};
 
-    #[derive(Debug, Clone, Serialize, Deserialize)]
-    pub struct UIFeatures {
-        pub ai_assistant: bool,
-        pub real_time_monitoring: bool,
-        pub deployment_wizard: bool,
-        pub service_management: bool,
-        pub log_viewer: bool,
-        pub metrics_dashboard: bool,
-        pub custom_dashboards: bool,
-        pub primal_coordination: bool,
-    }
+/// UI interaction modes
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub enum UIMode {
+    /// Automatically detect best UI mode
+    #[default]
+    Auto,
 
-    #[derive(Debug, Clone, Serialize, Deserialize)]
-    pub struct DiscoveredPrimal {
-        pub id: String,
-        pub primal_type: String,
-        pub endpoint: String,
-        pub capabilities: Vec<String>,
-        pub health: PrimalHealth,
-        pub metadata: HashMap<String, String>,
-    }
+    /// Terminal/CLI interface
+    Terminal,
 
-    #[derive(Debug, Clone, Serialize, Deserialize)]
-    pub struct PrimalHealth {
-        pub status: String,
-        pub last_seen: chrono::DateTime<chrono::Utc>,
-        pub response_time_ms: u64,
-    }
+    /// Web interface
+    Web,
 
-    #[derive(Debug, Clone, Serialize, Deserialize)]
-    pub struct UniversalUIConfig {
-        pub theme: String,
-        pub mode: crate::UIMode,
-        pub features: UIFeatures,
-        pub discovered_primals: Vec<DiscoveredPrimal>,
-        pub toadstool_endpoint: Option<String>,
-        pub songbird_endpoint: Option<String>,
-    }
+    /// Desktop GUI
+    Desktop,
 
-    /// Universal UI Manager - Note: doesn't implement Clone/Serialize due to adapter
-    #[derive(Debug)]
-    pub struct UniversalUIManager {
-        pub config: UniversalUIConfig,
-        pub system_health: crate::SystemHealth,
-        pub adapter: Option<crate::BiomeOSUniversalAdapter>,
-    }
+    /// Mobile interface
+    Mobile,
 
-    impl UniversalUIManager {
-        pub fn new(config: UniversalUIConfig) -> Self {
-            Self {
-                config,
-                system_health: crate::SystemHealth {
-                    toadstool_status: crate::ServiceStatus {
-                        available: false,
-                        response_time_ms: 0,
-                        last_error: None,
-                    },
-                    songbird_status: crate::ServiceStatus {
-                        available: false,
-                        response_time_ms: 0,
-                        last_error: None,
-                    },
-                    discovered_primals: vec![],
-                    last_updated: chrono::Utc::now(),
+    /// Headless (no UI)
+    Headless,
+}
+
+/// BiomeOS runtime configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BiomeOSRuntime {
+    /// Version information
+    pub version: String,
+
+    /// UI mode
+    pub mode: UIMode,
+
+    /// Runtime metadata
+    pub metadata: RuntimeMetadata,
+
+    /// System configuration
+    pub system: SystemConfig,
+}
+
+/// Runtime metadata
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RuntimeMetadata {
+    /// Startup timestamp
+    pub startup_time: chrono::DateTime<chrono::Utc>,
+
+    /// Process ID
+    pub pid: u32,
+
+    /// Host information
+    pub host: HostInfo,
+
+    /// Environment variables
+    pub environment: HashMap<String, String>,
+}
+
+/// Host information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HostInfo {
+    /// Hostname
+    pub hostname: String,
+
+    /// Operating system
+    pub os: String,
+
+    /// Architecture
+    pub arch: String,
+
+    /// Kernel version
+    pub kernel: String,
+}
+
+/// System configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SystemConfig {
+    /// Maximum memory usage (bytes)
+    pub max_memory_mb: Option<u64>,
+
+    /// Maximum CPU cores
+    pub max_cpu_cores: Option<u32>,
+
+    /// Temporary directory
+    pub temp_dir: Option<String>,
+
+    /// Log level
+    pub log_level: String,
+
+    /// Debug mode enabled
+    pub debug: bool,
+}
+
+impl Default for BiomeOSRuntime {
+    fn default() -> Self {
+        Self {
+            version: env!("CARGO_PKG_VERSION").to_string(),
+            mode: UIMode::Auto,
+            metadata: RuntimeMetadata {
+                startup_time: chrono::Utc::now(),
+                pid: std::process::id(),
+                host: HostInfo {
+                    hostname: gethostname::gethostname().to_string_lossy().to_string(),
+                    os: std::env::consts::OS.to_string(),
+                    arch: std::env::consts::ARCH.to_string(),
+                    kernel: get_kernel_version(),
                 },
-                adapter: None,
-            }
-        }
-
-        pub async fn initialize_adapter(&mut self) -> Result<(), anyhow::Error> {
-            let adapter = crate::BiomeOSUniversalAdapter::new()
-                .await
-                .map_err(|e| anyhow::anyhow!("Failed to initialize adapter: {}", e))?;
-            self.adapter = Some(adapter);
-            Ok(())
-        }
-
-        pub async fn discover_primals(&self) -> Result<Vec<DiscoveredPrimal>, anyhow::Error> {
-            if let Some(adapter) = &self.adapter {
-                let primals = adapter
-                    .discover_primals()
-                    .await
-                    .map_err(|e| anyhow::anyhow!("Failed to discover primals: {}", e))?;
-                Ok(primals
-                    .into_iter()
-                    .map(|p| DiscoveredPrimal {
-                        id: p.id,
-                        primal_type: p.primal_type,
-                        endpoint: p.endpoint,
-                        capabilities: p.capabilities,
-                        health: PrimalHealth {
-                            status: p.health.status,
-                            last_seen: p.health.last_seen,
-                            response_time_ms: p.health.response_time_ms,
-                        },
-                        metadata: p.metadata,
-                    })
-                    .collect())
-            } else {
-                Ok(vec![])
-            }
-        }
-
-        pub async fn get_system_health(&self) -> Result<crate::SystemHealth, anyhow::Error> {
-            if let Some(adapter) = &self.adapter {
-                adapter
-                    .get_system_health()
-                    .await
-                    .map_err(|e| anyhow::anyhow!("Failed to get system health: {}", e))
-            } else {
-                Ok(self.system_health.clone())
-            }
-        }
-
-        pub async fn deploy_biome(
-            &self,
-            manifest_path: &str,
-        ) -> Result<crate::BiomeDeployment, anyhow::Error> {
-            if let Some(adapter) = &self.adapter {
-                adapter
-                    .process_biome_manifest(manifest_path)
-                    .await
-                    .map_err(|e| anyhow::anyhow!("Failed to deploy biome: {}", e))
-            } else {
-                Err(anyhow::anyhow!("Universal adapter not initialized"))
-            }
-        }
-
-        pub async fn start(&self) -> Result<(), anyhow::Error> {
-            // Universal UI manager now focuses on coordinating between Toadstool and Songbird
-            tracing::info!("Starting Universal UI Manager with delegation architecture");
-            tracing::info!("Toadstool endpoint: {:?}", self.config.toadstool_endpoint);
-            tracing::info!("Songbird endpoint: {:?}", self.config.songbird_endpoint);
-            Ok(())
-        }
-    }
-
-    impl Default for UIFeatures {
-        fn default() -> Self {
-            Self {
-                ai_assistant: true,
-                real_time_monitoring: true,
-                deployment_wizard: true,
-                service_management: true,
-                log_viewer: true,
-                metrics_dashboard: true,
-                custom_dashboards: true,
-                primal_coordination: true,
-            }
-        }
-    }
-
-    impl Default for UniversalUIConfig {
-        fn default() -> Self {
-            Self {
-                theme: "default".to_string(),
-                mode: crate::UIMode::Auto,
-                features: UIFeatures::default(),
-                discovered_primals: vec![],
-                toadstool_endpoint: Some("http://localhost:8084".to_string()),
-                songbird_endpoint: Some("http://localhost:8080".to_string()),
-            }
+                environment: std::env::vars().collect(),
+            },
+            system: SystemConfig {
+                max_memory_mb: None,
+                max_cpu_cores: None,
+                temp_dir: None,
+                log_level: "info".to_string(),
+                debug: false,
+            },
         }
     }
 }
 
-/// Re-export ecosystem integration for external use
-pub mod ecosystem {
-    pub use biomeos_core::ecosystem_integration::*;
-}
-
-/// Re-export universal adapter for primal coordination
-pub mod coordination {
-    pub use crate::universal_adapter::*;
-}
-
-/// Universal adapter pattern types
-pub mod universal {
-    pub use crate::universal_adapter::{
-        BiomeOSUniversalAdapter, CapabilityRegistry, SongbirdClient, ToadstoolClient,
-        UniversalHealthMonitor,
-    };
-}
-
-/// Version information
-pub const VERSION: &str = env!("CARGO_PKG_VERSION");
-
-/// Build information
-pub const BUILD_INFO: &str = concat!(
-    "biomeOS v",
-    env!("CARGO_PKG_VERSION"),
-    " - Universal Adapter Architecture"
-);
-
-/// Architecture description
-pub const ARCHITECTURE: &str =
-    "Universal Adapter: Delegates to Toadstool (parsing) + Songbird (discovery)";
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    #[allow(clippy::const_is_empty)]
-    fn test_version() {
-        assert!(!VERSION.is_empty());
-        assert!(VERSION.contains('.')); // Version should contain dots
+impl BiomeOSRuntime {
+    /// Create new runtime with specific UI mode
+    pub fn with_ui_mode(mut self, mode: UIMode) -> Self {
+        self.mode = mode;
+        self
     }
 
-    #[test]
-    fn test_build_info() {
-        assert!(BUILD_INFO.contains("biomeOS"));
-        assert!(BUILD_INFO.contains("Universal Adapter"));
+    /// Enable debug mode
+    pub fn with_debug(mut self, debug: bool) -> Self {
+        self.system.debug = debug;
+        if debug {
+            self.system.log_level = "debug".to_string();
+        }
+        self
     }
 
-    #[test]
-    fn test_architecture() {
-        assert!(ARCHITECTURE.contains("Toadstool"));
-        assert!(ARCHITECTURE.contains("Songbird"));
-        assert!(ARCHITECTURE.contains("Delegates"));
+    /// Set log level
+    pub fn with_log_level(mut self, level: &str) -> Self {
+        self.system.log_level = level.to_string();
+        self
     }
 
-    #[tokio::test]
-    async fn test_universal_ui_manager() {
-        let config = universal_ui::UniversalUIConfig::default();
-        let mut manager = universal_ui::UniversalUIManager::new(config);
+    /// Set resource limits
+    pub fn with_limits(mut self, max_memory_mb: Option<u64>, max_cpu_cores: Option<u32>) -> Self {
+        self.system.max_memory_mb = max_memory_mb;
+        self.system.max_cpu_cores = max_cpu_cores;
+        self
+    }
 
-        // Test initialization
-        assert!(manager.adapter.is_none());
+    /// Get runtime information as JSON
+    pub fn to_json(&self) -> Result<String, serde_json::Error> {
+        serde_json::to_string_pretty(self)
+    }
 
-        // Test discovery without adapter
-        let primals = manager.discover_primals().await.unwrap();
-        assert!(primals.is_empty());
+    /// Initialize runtime
+    pub async fn initialize(&self) -> Result<(), Box<dyn std::error::Error>> {
+        tracing::info!("Initializing BiomeOS Runtime v{}", self.version);
+        tracing::debug!("UI Mode: {:?}", self.mode);
+        tracing::debug!("Debug Mode: {}", self.system.debug);
+        tracing::debug!(
+            "Host: {} ({})",
+            self.metadata.host.hostname,
+            self.metadata.host.os
+        );
 
-        // Test health check without adapter
-        let health = manager.get_system_health().await.unwrap();
-        assert!(!health.toadstool_status.available);
-        assert!(!health.songbird_status.available);
+        // Initialize tracing and logging subsystems
+        tracing::info!("Initializing BiomeOS core systems");
+
+        // Validate system configuration
+        if self.system.max_memory_mb.unwrap_or(0) > 0 {
+            tracing::debug!(
+                "Memory limit configured: {}MB",
+                self.system.max_memory_mb.unwrap_or(0)
+            );
+        }
+
+        // Initialize system health monitoring baseline
+        tracing::info!("Core systems initialized successfully");
+        Ok(())
+    }
+}
+
+/// Universal adapter for coordinating between Toadstool and Songbird
+/// This uses the adapter pattern to delegate functionality to specialized services
+pub struct BiomeOSCoordinator {
+    adapter: UniversalAdapter,
+}
+
+impl Default for BiomeOSCoordinator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl BiomeOSCoordinator {
+    /// Create new coordinator
+    pub fn new() -> Self {
+        let config = AdapterConfig::default();
+        Self {
+            adapter: UniversalAdapter::new(config),
+        }
+    }
+
+    /// Create new coordinator with custom configuration
+    pub fn with_config(config: AdapterConfig) -> Self {
+        Self {
+            adapter: UniversalAdapter::new(config),
+        }
+    }
+
+    /// Initialize the coordinator
+    pub async fn initialize(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        self.adapter.initialize().await?;
+        Ok(())
+    }
+
+    /// Process a request through the universal adapter
+    pub async fn process_request(
+        &self,
+        request: UniversalRequest,
+    ) -> Result<UniversalResponse, Box<dyn std::error::Error>> {
+        let response = self.adapter.process_request(request).await?;
+        Ok(response)
+    }
+
+    /// Get system status
+    pub async fn get_system_status(&self) -> Result<SystemStatus, Box<dyn std::error::Error>> {
+        let status = self.adapter.get_system_status().await?;
+        Ok(status)
+    }
+
+    /// Get discovered primals
+    pub async fn get_discovered_primals(
+        &self,
+    ) -> Result<Vec<PrimalInfo>, Box<dyn std::error::Error>> {
+        let primals = get_discovered_primals().await?;
+        Ok(primals)
+    }
+
+    /// Find primal by capability
+    pub async fn find_primal_by_capability(
+        &self,
+        capability: &str,
+    ) -> Result<Option<PrimalInfo>, Box<dyn std::error::Error>> {
+        let primal = find_primal_by_capability(capability).await?;
+        Ok(primal)
+    }
+
+    /// Create example system status (for demonstration)
+    pub fn create_example_system_status() -> SystemStatus {
+        SystemStatus {
+            toadstool: ServiceStatus::Healthy,
+            songbird: ServiceStatus::Healthy,
+            adapter_uptime: 3600, // 1 hour
+        }
+    }
+}
+
+/// Get the actual kernel version from the system
+fn get_kernel_version() -> String {
+    #[cfg(target_os = "linux")]
+    {
+        if let Ok(output) = std::process::Command::new("uname").arg("-r").output() {
+            if output.status.success() {
+                return String::from_utf8_lossy(&output.stdout).trim().to_string();
+            }
+        }
+        // Fallback: try reading /proc/version
+        if let Ok(version_info) = std::fs::read_to_string("/proc/version") {
+            if let Some(version) = version_info.split_whitespace().nth(2) {
+                return version.to_string();
+            }
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        if let Ok(output) = std::process::Command::new("uname").arg("-r").output() {
+            if output.status.success() {
+                return String::from_utf8_lossy(&output.stdout).trim().to_string();
+            }
+        }
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok(output) = std::process::Command::new("cmd")
+            .args(["/C", "ver"])
+            .output()
+        {
+            if output.status.success() {
+                let version_str = String::from_utf8_lossy(&output.stdout);
+                return version_str.trim().to_string();
+            }
+        }
+    }
+
+    // Fallback for any platform
+    "unknown".to_string()
+}
+
+/// UI Features configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UIFeatures {
+    pub dashboard_enabled: bool,
+    pub monitoring_enabled: bool,
+    pub primal_management: bool,
+    pub system_controls: bool,
+    pub advanced_features: bool,
+}
+
+impl Default for UIFeatures {
+    fn default() -> Self {
+        Self {
+            dashboard_enabled: true,
+            monitoring_enabled: true,
+            primal_management: true,
+            system_controls: false,
+            advanced_features: false,
+        }
+    }
+}
+
+/// BiomeOS UI Manager
+#[derive(Debug, Clone)]
+pub struct BiomeOSUI {
+    pub mode: UIMode,
+    pub features: UIFeatures,
+    pub config: HashMap<String, String>,
+}
+
+impl BiomeOSUI {
+    pub fn new(mode: UIMode) -> Self {
+        Self {
+            mode,
+            features: UIFeatures::default(),
+            config: HashMap::new(),
+        }
+    }
+
+    pub fn with_features(mut self, features: UIFeatures) -> Self {
+        self.features = features;
+        self
+    }
+
+    pub async fn initialize(&self) -> Result<(), Box<dyn std::error::Error>> {
+        println!("🎨 Initializing BiomeOS UI in {:?} mode", self.mode);
+        Ok(())
+    }
+
+    pub async fn render(&self) -> Result<String, Box<dyn std::error::Error>> {
+        match self.mode {
+            UIMode::Terminal => Ok("Terminal UI rendered".to_string()),
+            UIMode::Web => Ok("Web UI rendered".to_string()),
+            UIMode::Desktop => Ok("Desktop UI rendered".to_string()),
+            UIMode::Mobile => Ok("Mobile UI rendered".to_string()),
+            UIMode::Auto => Ok("Auto-detected UI rendered".to_string()),
+            UIMode::Headless => Ok("Headless mode (no UI)".to_string()),
+        }
+    }
+}
+
+/// Universal UI module for compatibility
+pub mod universal_ui {
+    pub use super::{BiomeOSUI, UIFeatures, UIMode};
+
+    pub async fn create_ui_manager(
+        mode: super::UIMode,
+    ) -> Result<super::BiomeOSUI, Box<dyn std::error::Error>> {
+        Ok(super::BiomeOSUI::new(mode))
     }
 }

@@ -172,7 +172,7 @@ impl SystemMonitor {
 
     fn get_disk_usage(&self) -> Result<(f32, f32, f32), Box<dyn std::error::Error>> {
         use std::ffi::CString;
-        use std::mem;
+        use std::mem::MaybeUninit;
 
         #[repr(C)]
         struct StatVfs {
@@ -194,19 +194,34 @@ impl SystemMonitor {
         }
 
         let path = CString::new("/")?;
-        let mut stat: StatVfs = unsafe { mem::zeroed() };
+        let mut stat = MaybeUninit::<StatVfs>::uninit();
         
-        let result = unsafe { statvfs(path.as_ptr(), &mut stat) };
+        // SAFETY: We're calling statvfs with a valid path and uninitialized buffer.
+        // The buffer will be initialized by the successful system call.
+        let result = unsafe { statvfs(path.as_ptr(), stat.as_mut_ptr()) };
         
         if result != 0 {
-            return Err("Failed to get filesystem stats".into());
+            return Err(format!("statvfs failed with code: {}", result).into());
+        }
+
+        // SAFETY: statvfs succeeded, so the buffer is now initialized
+        let stat = unsafe { stat.assume_init() };
+
+        // Validate that we got reasonable values to avoid division by zero
+        if stat.f_frsize == 0 || stat.f_blocks == 0 {
+            return Err("Invalid filesystem statistics returned".into());
         }
 
         let total_bytes = stat.f_blocks * stat.f_frsize;
         let available_bytes = stat.f_bavail * stat.f_frsize;
-        let used_bytes = total_bytes - available_bytes;
+        let used_bytes = total_bytes.saturating_sub(available_bytes);
 
-        let usage_percent = (used_bytes as f32 / total_bytes as f32) * 100.0;
+        let usage_percent = if total_bytes > 0 {
+            (used_bytes as f32 / total_bytes as f32) * 100.0
+        } else {
+            0.0
+        };
+        
         let used_gb = used_bytes as f32 / 1024.0 / 1024.0 / 1024.0;
         let total_gb = total_bytes as f32 / 1024.0 / 1024.0 / 1024.0;
 

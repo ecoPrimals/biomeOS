@@ -85,7 +85,7 @@ impl MockUniversalUIManager {
                 .values()
                 .filter(|p| p.health == "healthy")
                 .count(),
-            ui_mode: UIMode::CLI,
+            ui_mode: UIMode::Terminal,
         })
     }
 
@@ -767,7 +767,7 @@ mod edge_case_tests {
 
         // Should still work with minimal functionality
         let status = ui_manager.get_system_status().await?;
-        assert_eq!(status.ui_mode, UIMode::CLI);
+        assert_eq!(status.ui_mode, UIMode::Terminal);
 
         Ok(())
     }
