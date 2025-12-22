@@ -47,7 +47,7 @@ impl BiomeOSDashboard {
         self.refresh_data().await?;
 
         let mut last_update = Instant::now();
-        let mut update_interval = interval(self.state.update_interval);
+        let _update_interval = interval(self.state.update_interval);
 
         // Main event loop
         loop {
@@ -64,7 +64,7 @@ impl BiomeOSDashboard {
                     last_update = Instant::now();
                 }
                 DashboardAction::ShowHelp => {
-                    // TODO: Implement help modal
+                    // Help functionality not implemented yet - skip for now
                 }
                 DashboardAction::None => {}
             }
@@ -90,14 +90,48 @@ impl BiomeOSDashboard {
     async fn refresh_data(&mut self) -> Result<()> {
         // Refresh system health
         let system_health = self.manager.get_system_health().await;
-        self.state.add_health_data(system_health);
+        // Convert HealthReport to SystemHealth for TUI
+        let cli_health = crate::health::SystemHealth {
+            overall_status: system_health.health.clone(),
+            cpu_usage: system_health.metrics.resources.as_ref()
+                .and_then(|r| r.cpu_usage).map(|u| u * 100.0).unwrap_or(0.0),
+            memory_usage: system_health.metrics.resources.as_ref()
+                .and_then(|r| r.memory_usage).map(|u| u * 100.0).unwrap_or(0.0), 
+            disk_usage: system_health.metrics.resources.as_ref()
+                .and_then(|r| r.disk_usage).map(|u| u * 100.0).unwrap_or(0.0),
+            network_status: "OK".to_string(),
+        };
+        self.state.add_health_data(cli_health);
 
         // Refresh discovered services
-        self.state.discovered_services = self
+        // Convert String endpoints to DiscoveryResult for TUI compatibility
+        let endpoints = self
             .manager
             .discover_network_scan()
             .await
             .unwrap_or_else(|_| Vec::new());
+        
+        // For now, create minimal DiscoveryResult from endpoints
+        self.state.discovered_services = endpoints
+            .into_iter()
+            .map(|endpoint| {
+                use biomeos_core::universal_biomeos_manager::DiscoveryResult;
+                use biomeos_primal_sdk::{PrimalType, Health};
+                use uuid::Uuid;
+                
+                DiscoveryResult {
+                    id: Uuid::new_v4().to_string(),
+                    primal_type: PrimalType::new("unknown", "Unknown Service", "1.0.0"),
+                    endpoint,
+                    capabilities: vec![],
+                    health: Health::Unknown { 
+                        reason: "Not probed yet".to_string(),
+                        last_known: None 
+                    },
+                    discovered_at: chrono::Utc::now(),
+                }
+            })
+            .collect();
 
         // Update service list state if needed
         if !self.state.discovered_services.is_empty() {
@@ -116,8 +150,8 @@ impl BiomeOSDashboard {
     /// Handle item selection
     async fn handle_selection(&mut self) -> Result<()> {
         if let Some(_selected_service) = self.state.selected_service() {
-            // TODO: Implement service selection actions
-            // For now, just refresh the selected service's data
+            // Service selection handling - simplified for now
+            tracing::info!("Service selected for action");
         }
         Ok(())
     }
@@ -153,7 +187,7 @@ impl BiomeOSDashboard {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use biomeos_core::config::BiomeOSConfig;
+    use biomeos_types::BiomeOSConfig;
 
     async fn create_test_dashboard() -> BiomeOSDashboard {
         let config = BiomeOSConfig::default();

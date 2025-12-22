@@ -7,6 +7,9 @@ license.workspace = true
 description = "Universal SDK for creating biomeOS Primals"
 
 [dependencies]
+# biomeOS unified types
+biomeos-types = { path = "../biomeos-types" }
+
 # Core async and serialization
 anyhow = { workspace = true }
 async-trait = { workspace = true }
@@ -14,6 +17,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true }
+futures = "0.3"
 
 # Tokio for async runtime
 tokio = { workspace = true }

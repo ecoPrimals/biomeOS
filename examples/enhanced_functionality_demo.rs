@@ -5,7 +5,7 @@
 use anyhow::Result;
 use biomeos_core::universal_biomeos_manager::PrimalInfo;
 use biomeos_core::{BiomeOSConfig, UniversalBiomeOSManager};
-use biomeos_primal_sdk::{PrimalCapability, PrimalHealth, PrimalType};
+use biomeos_primal_sdk::{PrimalCapability, Health, PrimalType};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -32,7 +32,7 @@ async fn main() -> Result<()> {
             PrimalCapability::new("compute", "vm_management", "1.0"),
             PrimalCapability::new("system", "resource_management", "1.0"),
         ],
-        health: PrimalHealth::Healthy,
+        health: Health::Healthy,
         discovered_at: chrono::Utc::now(),
     };
 
@@ -44,7 +44,7 @@ async fn main() -> Result<()> {
             PrimalCapability::new("networking", "load_balancing", "2.0"),
             PrimalCapability::new("system", "orchestration", "2.0"),
         ],
-        health: PrimalHealth::Healthy,
+        health: Health::Healthy,
         discovered_at: chrono::Utc::now(),
     };
 
@@ -56,7 +56,7 @@ async fn main() -> Result<()> {
             PrimalCapability::new("storage", "file_systems", "1.5"),
             PrimalCapability::new("system", "data_management", "1.5"),
         ],
-        health: PrimalHealth::Healthy,
+        health: Health::Healthy,
         discovered_at: chrono::Utc::now(),
     };
 

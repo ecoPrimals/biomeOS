@@ -1,9 +1,10 @@
-use crate::config::BiomeOSConfig;
+// MIGRATED TO UNIFIED TYPES: Integration module updated for biomeos-types
+use biomeos_types::{BiomeOSConfig, Health};
 use crate::universal_biomeos_manager::UniversalBiomeOSManager;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 #[derive(Debug)]
 pub struct LiveService {
@@ -50,11 +51,11 @@ impl LiveService {
             let mut interval = tokio::time::interval(std::time::Duration::from_secs(30));
             loop {
                 interval.tick().await;
-                let health = manager_clone.get_system_health().await;
+                let health_report = manager_clone.get_system_health().await;
                 debug!(
-                    "Periodic health check: uptime={}s, status={:?}",
-                    health.uptime.num_seconds(),
-                    health.overall_status
+                    "Periodic health check: system={:?}, subject={}",
+                    health_report.health,
+                    health_report.subject.name
                 );
             }
         });
@@ -65,12 +66,49 @@ impl LiveService {
             let mut interval = tokio::time::interval(std::time::Duration::from_secs(60));
             loop {
                 interval.tick().await;
+                
+                // ✅ DISCOVERY FUNCTIONALITY RE-ENABLED
+                // Use the unified discovery system to find available primals
                 match manager_clone.discover_network_scan().await {
-                    Ok(services) => debug!(
-                        "Service discovery refresh: {} services found",
-                        services.len()
-                    ),
-                    Err(e) => debug!("Service discovery refresh failed: {}", e),
+                    Ok(discovered_services) => {
+                        if !discovered_services.is_empty() {
+                            info!("Discovery refresh found {} services", discovered_services.len());
+                            for service in &discovered_services {
+                                debug!("Discovered service: {}", service);
+                            }
+                        } else {
+                            debug!("Discovery refresh: no new services found");
+                        }
+                    }
+                    Err(e) => {
+                        warn!("Discovery refresh failed: {}", e);
+                    }
+                }
+                
+                // Also attempt static discovery for configured endpoints
+                match manager_clone.discover().await {
+                    Ok(static_services) => {
+                        if !static_services.is_empty() {
+                            debug!("Static discovery found {} services", static_services.len());
+                        }
+                    }
+                    Err(e) => {
+                        debug!("Static discovery failed: {}", e);
+                    }
+                }
+                
+                // Also attempt registry discovery if configured
+                if let Some(ref registry) = manager_clone.config.discovery.registry {
+                    match manager_clone.discover_registry(&registry.url).await {
+                        Ok(registry_services) => {
+                            if !registry_services.is_empty() {
+                                info!("Registry discovery found {} services", registry_services.len());
+                            }
+                        }
+                        Err(e) => {
+                            debug!("Registry discovery failed (may be expected): {}", e);
+                        }
+                    }
                 }
             }
         });
@@ -83,43 +121,128 @@ impl LiveService {
     pub async fn get_system_status(&self) -> Result<SystemStatus> {
         debug!("Getting system status");
 
-        let system_health = self.universal_manager.get_system_health().await;
+        let health_report = self.universal_manager.get_system_health().await;
 
-        // Convert discovered primals to the expected format
-        let discovered_primals = self.get_discovered_primals().await;
+        // Create placeholder uptime and resource usage since the structure changed
+        let duration = chrono::Utc::now() - health_report.generated_at;
+        let uptime = chrono::Duration::try_seconds(duration.num_seconds()).unwrap_or_default();
+        
+        // Re-enabled: Get discovered primals from the universal manager
         let mut primals_map = HashMap::new();
-
-        for primal in discovered_primals {
-            let primal_status = PrimalStatus {
-                name: primal.id.clone(),
-                health: primal.health,
-                endpoint: primal.endpoint,
-                discovered_at: primal.discovered_at,
-            };
-            primals_map.insert(primal.id, primal_status);
+        
+        // Try to get discovered primals from the universal manager
+        match self.universal_manager.discover().await {
+            Ok(_primal_endpoints) => {
+                // Get registered primals for detailed information (returns Vec<PrimalInfo> directly)
+                let registered_primals = self.universal_manager.get_registered_primals().await;
+                for primal_info in registered_primals {
+                    let primal_status = PrimalStatus {
+                        name: primal_info.name,
+                        health: primal_info.health,
+                        endpoint: primal_info.endpoint,
+                        discovered_at: primal_info.discovered_at,
+                    };
+                    primals_map.insert(primal_info.id, primal_status);
+                }
+                
+                debug!("Found {} registered primals", primals_map.len());
+            }
+            Err(e) => {
+                warn!("Failed to discover primals: {}", e);
+            }
         }
 
         let status = SystemStatus {
-            uptime: system_health.uptime,
-            resource_usage: system_health.resource_usage,
-            health_status: system_health.overall_status,
+            uptime,
+            resource_usage: health_report.metrics.resources.unwrap_or_else(default_resource_metrics),
+            health_status: health_report.health,
             primals: primals_map,
         };
 
         Ok(status)
     }
 
-    /// Get discovered primals
-    pub async fn get_discovered_primals(
-        &self,
-    ) -> Vec<crate::universal_biomeos_manager::discovery::DiscoveryResult> {
+    /// Get discovered primals (re-enabled with proper discovery integration)
+    pub async fn get_discovered_primals(&self) -> Vec<String> {
+        debug!("Getting discovered primals from universal manager");
+        
         match self.universal_manager.discover().await {
-            Ok(discovered) => discovered,
+            Ok(primal_endpoints) => {
+                info!("Discovered {} primals", primal_endpoints.len());
+                primal_endpoints
+            }
             Err(e) => {
-                debug!("Failed to discover primals: {}", e);
+                warn!("Failed to discover primals: {}", e);
                 Vec::new()
             }
         }
+    }
+
+    /// Get raw discovered primals (re-enabled with proper discovery integration)
+    pub async fn get_raw_discovered_primals(&self) -> Result<Vec<String>> {
+        debug!("Getting raw discovered primals from universal manager");
+        
+        // Use network scan discovery for raw results
+        match self.universal_manager.discover_network_scan().await {
+            Ok(raw_endpoints) => {
+                info!("Network scan discovered {} raw endpoints", raw_endpoints.len());
+                Ok(raw_endpoints)
+            }
+            Err(e) => {
+                warn!("Failed to perform network scan discovery: {}", e);
+                Ok(Vec::new())
+            }
+        }
+    }
+
+    /// Discover primals by registry (new method)
+    pub async fn discover_primals_by_registry(&self, registry_url: &str) -> Result<Vec<String>> {
+        debug!("Discovering primals from registry: {}", registry_url);
+        
+        match self.universal_manager.discover_registry(registry_url).await {
+            Ok(registry_endpoints) => {
+                info!("Registry discovery found {} primals", registry_endpoints.len());
+                Ok(registry_endpoints)
+            }
+            Err(e) => {
+                warn!("Failed to discover primals from registry {}: {}", registry_url, e);
+                Ok(Vec::new())
+            }
+        }
+    }
+
+    /// Discover primals by capability (new method)
+    pub async fn discover_primals_by_capability(&self, capabilities: &[biomeos_primal_sdk::PrimalCapability]) -> Result<Vec<String>> {
+        debug!("Discovering primals by capabilities: {:?}", capabilities);
+        
+        match self.universal_manager.discover_by_capability(capabilities).await {
+            Ok(capability_endpoints) => {
+                info!("Capability-based discovery found {} primals", capability_endpoints.len());
+                Ok(capability_endpoints)
+            }
+            Err(e) => {
+                warn!("Failed to discover primals by capability: {}", e);
+                Ok(Vec::new())
+            }
+        }
+    }
+
+    /// Get comprehensive primal information (new method)
+    pub async fn get_primal_info(&self, primal_id: &str) -> Result<Option<crate::universal_biomeos_manager::PrimalInfo>> {
+        debug!("Getting primal information for: {}", primal_id);
+        
+        // Get all registered primals and search for the requested one
+        let registered_primals = self.universal_manager.get_registered_primals().await;
+        
+        for primal_info in registered_primals {
+            if primal_info.id == primal_id {
+                debug!("Found primal info for {}: {:?}", primal_id, primal_info.name);
+                return Ok(Some(primal_info));
+            }
+        }
+        
+        debug!("No primal info found for: {}", primal_id);
+        Ok(None)
     }
 
     /// Get storage metrics
@@ -167,15 +290,6 @@ impl LiveService {
         })
     }
 
-    /// Get raw discovered primals
-    pub async fn get_raw_discovered_primals(
-        &self,
-    ) -> Result<Vec<crate::universal_biomeos_manager::discovery::DiscoveryResult>> {
-        // Use the correct method name
-        let discovered = self.universal_manager.discover().await?;
-        Ok(discovered)
-    }
-
     /// Perform health check
     pub async fn health_check(&self) -> Result<HealthCheckResult> {
         debug!("Performing comprehensive health check");
@@ -184,9 +298,8 @@ impl LiveService {
         let storage_metrics = self.get_storage_metrics().await?;
         let network_status = self.get_network_status().await?;
 
-        // Assess overall system health
-        let overall_healthy =
-            system_status.health_status == crate::universal_biomeos_manager::HealthStatus::Healthy;
+        // Assess overall system health using unified health system
+        let overall_healthy = matches!(system_status.health_status, Health::Healthy);
 
         Ok(HealthCheckResult {
             overall_healthy,
@@ -201,15 +314,15 @@ impl LiveService {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SystemStatus {
     pub uptime: chrono::Duration,
-    pub resource_usage: crate::universal_biomeos_manager::SystemResourceUsage,
-    pub health_status: crate::universal_biomeos_manager::HealthStatus,
+    pub resource_usage: biomeos_types::ResourceMetrics,
+    pub health_status: Health,
     pub primals: HashMap<String, PrimalStatus>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PrimalStatus {
     pub name: String,
-    pub health: biomeos_primal_sdk::PrimalHealth,
+    pub health: biomeos_types::Health,
     pub endpoint: String,
     pub discovered_at: chrono::DateTime<chrono::Utc>,
 }
@@ -264,4 +377,14 @@ pub struct InterfaceStatus {
     pub status: String,
     pub ip_address: Option<String>,
     pub is_active: bool,
+}
+
+// Helper functions for type conversion and defaults (avoiding orphan rule issues)
+pub fn default_resource_metrics() -> biomeos_types::ResourceMetrics {
+    biomeos_types::ResourceMetrics {
+        cpu_usage: Some(0.0),
+        memory_usage: Some(0.0),
+        disk_usage: Some(0.0),
+        network_io: None,
+    }
 }

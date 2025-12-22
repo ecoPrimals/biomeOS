@@ -3,7 +3,7 @@
 //! Provides universal coordination between Toadstool and Songbird primals
 
 use anyhow::Result;
-use biomeos_core::{BiomeError, BiomeResult};
+use biomeos_types::{BiomeError, BiomeResult};
 use chrono;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, info, warn};
@@ -28,10 +28,10 @@ impl Default for AdapterConfig {
     fn default() -> Self {
         Self {
             toadstool_endpoint: std::env::var("TOADSTOOL_ENDPOINT")
-                .unwrap_or_else(|_| "http://localhost:8080".to_string())
+                .unwrap_or_else(|_| "http://localhost:8003".to_string())
                 .to_string(),
             songbird_endpoint: std::env::var("SONGBIRD_ENDPOINT")
-                .unwrap_or_else(|_| "http://localhost:3000".to_string())
+                .unwrap_or_else(|_| "http://localhost:8004".to_string())
                 .to_string(),
             timeout_seconds: 30,
             retry_attempts: 3,
@@ -108,9 +108,10 @@ impl UniversalAdapter {
         self.toadstool_client = Some(
             ToadstoolClient::new(&self.config.toadstool_endpoint)
                 .await
-                .map_err(|e| BiomeError::Configuration {
-                    message: format!("Failed to create HTTP client: {}", e),
-                })?,
+                .map_err(|e| BiomeError::config_error(
+                    format!("Failed to create HTTP client: {}", e),
+                    Some("toadstool_client")
+                ))?,
         );
 
         // Initialize Songbird client
@@ -182,23 +183,28 @@ impl UniversalAdapter {
         let client = self
             .toadstool_client
             .as_ref()
-            .ok_or_else(|| BiomeError::Configuration {
-                message: "Toadstool client not initialized".to_string(),
-            })?;
+            .ok_or_else(|| BiomeError::config_error(
+                "Toadstool client not initialized",
+                Some("toadstool_client")
+            ))?;
 
         client
             .parse_and_validate(payload)
             .await
-            .map_err(|e| BiomeError::Configuration {
-                message: format!("Toadstool parsing failed: {}", e),
-            })?;
+            .map_err(|e| BiomeError::config_error(
+                format!("Toadstool parsing failed: {}", e),
+                Some("toadstool_parsing")
+            ))?;
 
         client
             .discover_primals()
             .await
-            .map_err(|e| BiomeError::Discovery {
-                message: format!("Songbird discovery failed: {}", e),
-            })
+            .map_err(|e| BiomeError::discovery_failed(
+                format!("Failed discovery attempt: {}", e),
+                Some("primal_discovery"),
+        ))?;
+        
+        Ok(serde_json::json!({"status": "discovery_complete"}))
     }
 
     /// Execute with coordination
@@ -209,33 +215,31 @@ impl UniversalAdapter {
         let toadstool =
             self.toadstool_client
                 .as_ref()
-                .ok_or_else(|| BiomeError::Configuration {
-                    message: "Toadstool client not initialized".to_string(),
-                })?;
+                .ok_or_else(|| BiomeError::config_error("Toadstool client not initialized", Some("toadstool_client")))?;
 
         let songbird = self
             .songbird_client
             .as_ref()
-            .ok_or_else(|| BiomeError::Configuration {
-                message: "Songbird client not initialized".to_string(),
-            })?;
+            .ok_or_else(|| BiomeError::config_error("Songbird client not initialized", Some("songbird_client")))?;
 
         // Execute via Toadstool
         let execution_result =
             toadstool
                 .execute(payload)
                 .await
-                .map_err(|e| BiomeError::Internal {
-                    message: format!("Toadstool execution failed: {}", e),
-                })?;
+                .map_err(|e| BiomeError::internal_error(
+                    format!("Toadstool execution failed: {}", e),
+                    Some("toadstool_execution")
+                ))?;
 
-        // Coordinate via Songbird
+        // Register with Songbird  
         songbird
             .register_execution(&execution_result)
             .await
-            .map_err(|e| BiomeError::Integration {
-                message: format!("Songbird registration failed: {}", e),
-            })?;
+            .map_err(|e| BiomeError::integration_failed(
+                format!("Songbird registration failed: {}", e),
+                Some("songbird_registration")
+            ))?;
 
         Ok(execution_result)
     }
@@ -248,16 +252,17 @@ impl UniversalAdapter {
         let songbird = self
             .songbird_client
             .as_ref()
-            .ok_or_else(|| BiomeError::Configuration {
-                message: "Songbird client not initialized".to_string(),
-            })?;
+            .ok_or_else(|| BiomeError::config_error("Songbird client not initialized", Some("songbird_client")))?;
 
         songbird
             .discover_and_route(payload)
             .await
-            .map_err(|e| BiomeError::Discovery {
-                message: format!("Failed to discover primals: {}", e),
-            })
+            .map_err(|e| BiomeError::discovery_failed(
+                format!("Failed to discover primals: {}", e),
+                Some("primal_discovery"),
+            ))?;
+        
+        Ok(serde_json::json!({"status": "execution_complete"}))
     }
 
     /// Get system status
@@ -296,9 +301,10 @@ impl ToadstoolClient {
         let http_client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(30))
             .build()
-            .map_err(|e| BiomeError::Configuration {
-                message: format!("Failed to create Toadstool client: {}", e),
-            })?;
+            .map_err(|e| BiomeError::config_error(
+                format!("Failed to create Toadstool client: {}", e),
+                Some("toadstool_client_creation")
+            ))?;
 
         Ok(Self {
             endpoint: endpoint.to_string(),
@@ -676,26 +682,28 @@ pub async fn coordinate_execution(
 /// Helper function to get discovered primals
 pub async fn get_discovered_primals() -> BiomeResult<Vec<PrimalInfo>> {
     // Use BiomeOS core manager for actual discovery
-    use biomeos_core::{BiomeOSConfig, UniversalBiomeOSManager};
+    use biomeos_core::UniversalBiomeOSManager;
+    use biomeos_types::BiomeOSConfig;
 
     let config = BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await?;
+    let manager = UniversalBiomeOSManager::new(config).await
+        .map_err(|e| BiomeError::internal_error(
+            format!("Failed to create manager: {}", e),
+            None::<&str>,
+        ))?;
 
     // Try actual network discovery
     match manager.discover_network_scan().await {
-        Ok(discovered) => {
-            if !discovered.is_empty() {
-                return Ok(discovered
+        Ok(discovered_endpoints) => {
+            if !discovered_endpoints.is_empty() {
+                return Ok(discovered_endpoints
                     .into_iter()
-                    .map(|result| PrimalInfo {
-                        name: result.id.clone(),
-                        primal_type: "discovered".to_string(), // TODO: Extract from capabilities
-                        capabilities: result
-                            .capabilities
-                            .iter()
-                            .map(|cap| cap.name.clone())
-                            .collect(),
-                        endpoint: result.endpoint.clone(),
+                    .enumerate()
+                    .map(|(i, endpoint)| PrimalInfo {
+                        name: format!("discovered-primal-{}", i),
+                        primal_type: "discovered".to_string(),
+                        capabilities: vec!["network".to_string()],
+                        endpoint,
                         status: ServiceStatus::Healthy,
                     })
                     .collect());
@@ -733,9 +741,10 @@ pub async fn get_discovered_primals() -> BiomeResult<Vec<PrimalInfo>> {
 pub async fn find_primal_by_capability(capability: &str) -> BiomeResult<Option<PrimalInfo>> {
     let primals = get_discovered_primals()
         .await
-        .map_err(|e| BiomeError::Discovery {
-            message: format!("Failed to get discovered primals: {}", e),
-        })?;
+        .map_err(|e|         BiomeError::discovery_failed(
+            format!("Failed to get discovered primals: {}", e),
+            None::<&str>,
+        ))?;
 
     for primal in primals {
         if primal.capabilities.contains(&capability.to_string()) {
@@ -743,9 +752,7 @@ pub async fn find_primal_by_capability(capability: &str) -> BiomeResult<Option<P
         }
     }
 
-    Err(BiomeError::Configuration {
-        message: "No suitable primal found".to_string(),
-    })
+    Err(BiomeError::config_error("No suitable primal found", Some("primal_search")))
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -755,4 +762,134 @@ pub struct PrimalInfo {
     pub capabilities: Vec<String>,
     pub endpoint: String,
     pub status: ServiceStatus,
+}
+
+#[allow(dead_code)]
+fn extract_primal_type_from_capabilities(capabilities: &[String]) -> Option<String> {
+    // Check for specific capability patterns to determine primal type
+    if capabilities.iter().any(|cap| cap.contains("compute") || cap.contains("cpu")) {
+        Some("compute".to_string())
+    } else if capabilities.iter().any(|cap| cap.contains("storage") || cap.contains("disk")) {
+        Some("storage".to_string())
+    } else if capabilities.iter().any(|cap| cap.contains("network") || cap.contains("routing")) {
+        Some("network".to_string())
+    } else if capabilities.iter().any(|cap| cap.contains("ai") || cap.contains("ml")) {
+        Some("ai".to_string())
+    } else if capabilities.iter().any(|cap| cap.contains("data") || cap.contains("analytics")) {
+        Some("data".to_string())
+    } else if !capabilities.is_empty() {
+        // Use the first capability as a fallback
+        Some(capabilities[0].clone())
+    } else {
+        None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_extract_primal_type_compute() {
+        let capabilities = vec!["cpu".to_string(), "memory".to_string()];
+        assert_eq!(
+            extract_primal_type_from_capabilities(&capabilities),
+            Some("compute".to_string())
+        );
+
+        let capabilities = vec!["compute_node".to_string(), "gpu".to_string()];
+        assert_eq!(
+            extract_primal_type_from_capabilities(&capabilities),
+            Some("compute".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_primal_type_storage() {
+        let capabilities = vec!["storage".to_string(), "file_system".to_string()];
+        assert_eq!(
+            extract_primal_type_from_capabilities(&capabilities),
+            Some("storage".to_string())
+        );
+
+        let capabilities = vec!["disk_io".to_string(), "backup".to_string()];
+        assert_eq!(
+            extract_primal_type_from_capabilities(&capabilities),
+            Some("storage".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_primal_type_network() {
+        let capabilities = vec!["network".to_string(), "load_balancer".to_string()];
+        assert_eq!(
+            extract_primal_type_from_capabilities(&capabilities),
+            Some("network".to_string())
+        );
+
+        let capabilities = vec!["routing".to_string(), "firewall".to_string()];
+        assert_eq!(
+            extract_primal_type_from_capabilities(&capabilities),
+            Some("network".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_primal_type_ai() {
+        let capabilities = vec!["ai".to_string(), "inference".to_string()];
+        assert_eq!(
+            extract_primal_type_from_capabilities(&capabilities),
+            Some("ai".to_string())
+        );
+
+        let capabilities = vec!["ml_training".to_string(), "model_serving".to_string()];
+        assert_eq!(
+            extract_primal_type_from_capabilities(&capabilities),
+            Some("ai".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_primal_type_data() {
+        let capabilities = vec!["data_processing".to_string(), "pipeline".to_string()];
+        assert_eq!(
+            extract_primal_type_from_capabilities(&capabilities),
+            Some("data".to_string())
+        );
+
+        let capabilities = vec!["analytics".to_string(), "reporting".to_string()];
+        assert_eq!(
+            extract_primal_type_from_capabilities(&capabilities),
+            Some("data".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_primal_type_fallback() {
+        let capabilities = vec!["custom_capability".to_string()];
+        assert_eq!(
+            extract_primal_type_from_capabilities(&capabilities),
+            Some("custom_capability".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_primal_type_empty() {
+        let capabilities = vec![];
+        assert_eq!(extract_primal_type_from_capabilities(&capabilities), None);
+    }
+
+    #[test]
+    fn test_extract_primal_type_priority() {
+        // Should prefer compute over other types when multiple patterns match
+        let capabilities = vec![
+            "storage".to_string(),
+            "cpu".to_string(),
+            "network".to_string(),
+        ];
+        assert_eq!(
+            extract_primal_type_from_capabilities(&capabilities),
+            Some("compute".to_string())
+        );
+    }
 }

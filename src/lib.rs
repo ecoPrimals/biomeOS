@@ -15,7 +15,8 @@ pub use universal_adapter::{
 };
 
 // Re-export core types
-pub use biomeos_core::{BiomeOSConfig, UniversalBiomeOSManager};
+pub use biomeos_core::UniversalBiomeOSManager;
+pub use biomeos_types::BiomeOSConfig;
 
 /// UI interaction modes
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -110,7 +111,7 @@ pub struct SystemConfig {
 impl Default for BiomeOSRuntime {
     fn default() -> Self {
         Self {
-            version: env!("CARGO_PKG_VERSION").to_string(),
+            version: biomeos_types::VERSION.to_string(),
             mode: UIMode::Auto,
             metadata: RuntimeMetadata {
                 startup_time: chrono::Utc::now(),

@@ -1,11 +1,25 @@
 //! AI-First Citizen API Standard Implementation
 //!
+//! ✅ MIGRATION NOTICE: Core AI types have been moved to biomeos-types
+//! This module now re-exports the unified AI-first system and provides
+//! backward compatibility for the biomeOS ecosystem.
+//!
 //! Implements the AI-First response format and human-AI collaboration context
 //! as defined in handOff/AI_FIRST_CITIZEN_API_STANDARD.md
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
+
+// Re-export unified AI-first types from biomeos-types
+pub use biomeos_types::{
+    BiomeError,                  // From unified error system
+    BiomeResult,                 // From unified error system  
+    Environment,                 // From unified config system
+    BiomeOSConfig,              // From unified config system
+    error::AIErrorCategory,      // From unified error system
+    error::ErrorSeverity,        // From unified error system
+};
 
 /// Universal AI-first response format - ALL ENDPOINTS MUST USE THIS
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -17,7 +31,7 @@ pub struct AIFirstResponse<T> {
     pub data: T,
 
     /// AI-optimized error information
-    pub error: Option<AIFirstError>,
+    pub error: Option<BiomeError>,
 
     /// Unique request identifier for tracing and correlation
     pub request_id: Uuid,
@@ -38,61 +52,10 @@ pub struct AIFirstResponse<T> {
     pub suggested_actions: Vec<SuggestedAction>,
 }
 
-/// AI-optimized error structure with automation hints
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AIFirstError {
-    /// Machine-readable error code (UPPER_SNAKE_CASE)
-    pub code: String,
-
-    /// Human-readable message (for logging/debugging)
-    pub message: String,
-
-    /// Error category for AI classification
-    pub category: AIErrorCategory,
-
-    /// Automated retry strategy
-    pub retry_strategy: RetryStrategy,
-
-    /// Actionable hints for AI automation
-    pub automation_hints: Vec<String>,
-
-    /// Severity level for prioritization
-    pub severity: ErrorSeverity,
-
-    /// Whether human intervention is required
-    pub requires_human_intervention: bool,
-
-    /// Related error context for debugging
-    pub context: HashMap<String, serde_json::Value>,
-}
-
-/// Error categories for AI classification
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum AIErrorCategory {
-    /// Insufficient computational resources
-    ResourceLimitation,
-
-    /// Configuration or parameter issues
-    ConfigurationIssue,
-
-    /// Authentication or authorization failures
-    SecurityViolation,
-
-    /// Network connectivity problems
-    NetworkFailure,
-
-    /// Runtime execution errors
-    RuntimeError,
-
-    /// Requires human decision or input
-    HumanInterventionRequired,
-
-    /// External dependency failures
-    DependencyFailure,
-
-    /// Rate limiting or throttling
-    RateLimiting,
-}
+// ✅ MIGRATED: AIFirstError is now BiomeError from biomeos-types
+// ✅ MIGRATED: AIErrorCategory is now unified in biomeos-types
+// The unified system provides comprehensive error context, retry strategies,
+// and AI-first features while maintaining backward compatibility.
 
 /// Automated retry strategy
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -125,15 +88,7 @@ pub enum BackoffType {
     Custom { formula: String },
 }
 
-/// Error severity levels
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ErrorSeverity {
-    Info,
-    Warning,
-    Error,
-    Critical,
-    Fatal,
-}
+// ✅ MIGRATED: ErrorSeverity is now unified in biomeos-types
 
 /// Metadata specifically designed for AI decision making
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -436,7 +391,7 @@ impl<T> AIFirstResponse<T> {
     /// Create a failed AI-first response
     pub fn error(
         request_id: Uuid,
-        error: AIFirstError,
+        error: BiomeError,
         processing_time_ms: u64,
         default_data: T,
     ) -> Self {

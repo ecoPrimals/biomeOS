@@ -7,7 +7,8 @@ use crate::api::BiomeOSApi;
 use crate::state::AppState;
 use crate::views::BaseView;
 use egui::{Context, Ui};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 /// View for managing and monitoring primals
 pub struct PrimalsView {
@@ -103,7 +104,12 @@ impl PrimalsView {
     }
 
     /// Render the primals view
-    pub fn show(&mut self, ctx: &Context, ui: &mut Ui) {
+    pub fn render(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
+        self.show(ctx, ui);
+    }
+
+    /// Render the primals view
+    pub fn show(&mut self, _ctx: &Context, ui: &mut Ui) {
         // Auto-refresh if needed
         if self.last_refresh.elapsed() >= self.refresh_interval {
             // In a real implementation, this would be async

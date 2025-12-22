@@ -9,6 +9,7 @@
 use super::data::get_primal_discovery;
 use super::types::*;
 use std::collections::{HashMap, HashSet};
+use biomeos_primal_sdk::PrimalCapability;
 use std::fs;
 use std::path::Path;
 
@@ -105,9 +106,9 @@ impl TemplateLoader {
                     "Load balancing".to_string(),
                 ],
                 required_capabilities: [
-                    PrimalCapability::Compute,
-                    PrimalCapability::WebDevelopment,
-                    PrimalCapability::Networking,
+                    PrimalCapability::compute(),
+                    PrimalCapability::web_development(),
+                    PrimalCapability::networking(),
                 ]
                 .into_iter()
                 .collect(),
@@ -181,7 +182,7 @@ deployment:
                         default_value: "React".to_string(),
                         required: true,
                         validation_regex: None,
-                        depends_on_capability: Some(PrimalCapability::WebDevelopment),
+                        depends_on_capability: Some(PrimalCapability::web_development()),
                     },
                 ],
                 metadata: [
@@ -205,10 +206,10 @@ deployment:
                     "Experiment tracking".to_string(),
                 ],
                 required_capabilities: [
-                    PrimalCapability::AI,
-                    PrimalCapability::MachineLearning,
-                    PrimalCapability::Compute,
-                    PrimalCapability::Analytics,
+                    PrimalCapability::ai(),
+                    PrimalCapability::machine_learning(),
+                    PrimalCapability::compute(),
+                    PrimalCapability::analytics(),
                 ]
                 .into_iter()
                 .collect(),
@@ -275,7 +276,7 @@ deployment:
                         default_value: "TensorFlow".to_string(),
                         required: true,
                         validation_regex: None,
-                        depends_on_capability: Some(PrimalCapability::MachineLearning),
+                        depends_on_capability: Some(PrimalCapability::machine_learning()),
                     },
                     CustomizationOption {
                         id: "gpu_enabled".to_string(),
@@ -285,7 +286,7 @@ deployment:
                         default_value: "true".to_string(),
                         required: false,
                         validation_regex: None,
-                        depends_on_capability: Some(PrimalCapability::Compute),
+                        depends_on_capability: Some(PrimalCapability::compute()),
                     },
                 ],
                 metadata: [
@@ -310,10 +311,10 @@ deployment:
                     "Anti-cheat systems".to_string(),
                 ],
                 required_capabilities: [
-                    PrimalCapability::Gaming,
-                    PrimalCapability::Compute,
-                    PrimalCapability::Networking,
-                    PrimalCapability::Security,
+                    PrimalCapability::gaming(),
+                    PrimalCapability::compute(),
+                    PrimalCapability::networking(),
+                    PrimalCapability::security(),
                 ]
                 .into_iter()
                 .collect(),
@@ -375,7 +376,7 @@ deployment:
                         default_value: "7777".to_string(),
                         required: true,
                         validation_regex: None,
-                        depends_on_capability: Some(PrimalCapability::Networking),
+                        depends_on_capability: Some(PrimalCapability::networking()),
                     },
                     CustomizationOption {
                         id: "max_players".to_string(),
@@ -388,7 +389,7 @@ deployment:
                         default_value: "32".to_string(),
                         required: true,
                         validation_regex: None,
-                        depends_on_capability: Some(PrimalCapability::Gaming),
+                        depends_on_capability: Some(PrimalCapability::gaming()),
                     },
                 ],
                 metadata: [

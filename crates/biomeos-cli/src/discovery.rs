@@ -3,18 +3,64 @@
 
 use anyhow::Result;
 use biomeos_core::{universal_biomeos_manager::DiscoveryResult, UniversalBiomeOSManager};
-use biomeos_primal_sdk::PrimalCapability;
+use biomeos_types::{Health, PrimalCapability, PrimalType};
+use uuid::Uuid;
 
 /// Extended discovery utilities
 pub struct DiscoveryUtils;
 
 impl DiscoveryUtils {
+    /// Convert String endpoints from discovery methods to full DiscoveryResult structures
+    /// This is a helper function to bridge the new unified discovery API (returning Vec<String>)
+    /// with the CLI's expectation of structured DiscoveryResult data
+    async fn endpoints_to_discovery_results(
+        manager: &UniversalBiomeOSManager,
+        endpoints: Vec<String>,
+    ) -> Result<Vec<DiscoveryResult>> {
+        let mut results = Vec::new();
+        
+        for endpoint in endpoints {
+            // Try to probe the endpoint to get detailed information
+            match manager.probe_endpoint(&endpoint).await {
+                Ok(_probe_result) => {
+                    // Create a DiscoveryResult from the probe result
+                    let discovery_result = DiscoveryResult {
+                        id: Uuid::new_v4().to_string(),
+                        primal_type: PrimalType::new("unknown", "Unknown Primal", "1.0.0"),
+                        endpoint: endpoint.clone(),
+                        capabilities: vec![PrimalCapability::new("basic", "basic", "1.0.0")],
+                        health: Health::Healthy,
+                        discovered_at: chrono::Utc::now(),
+                    };
+                    results.push(discovery_result);
+                }
+                Err(_) => {
+                    // Even if probing fails, create a basic DiscoveryResult
+                    let discovery_result = DiscoveryResult {
+                        id: Uuid::new_v4().to_string(),
+                        primal_type: PrimalType::new("unknown", "Unknown Primal", "1.0.0"),
+                        endpoint: endpoint.clone(),
+                        capabilities: vec![],
+                        health: Health::Unknown {
+                            reason: "Probe failed".to_string(),
+                            last_known: None,
+                        },
+                        discovered_at: chrono::Utc::now(),
+                    };
+                    results.push(discovery_result);
+                }
+            }
+        }
+        
+        Ok(results)
+    }
     /// Discover services by type with filtering
     pub async fn discover_by_type(
         manager: &UniversalBiomeOSManager,
         service_type: &str,
     ) -> Result<Vec<DiscoveryResult>> {
-        let all_services = manager.discover_network_scan().await?;
+        let all_endpoints = manager.discover_network_scan().await?;
+        let all_services = Self::endpoints_to_discovery_results(manager, all_endpoints).await?;
         let filtered: Vec<DiscoveryResult> = all_services
             .into_iter()
             .filter(|service| {
@@ -31,7 +77,8 @@ impl DiscoveryUtils {
         let start_time = std::time::Instant::now();
 
         // Discover all available services
-        let all_services = manager.discover_network_scan().await?;
+        let all_endpoints = manager.discover_network_scan().await?;
+        let all_services = Self::endpoints_to_discovery_results(manager, all_endpoints).await?;
 
         // Categorize services
         let mut by_type = std::collections::HashMap::new();
@@ -84,14 +131,15 @@ impl DiscoveryUtils {
     where
         F: Fn(&DiscoveryResult) -> bool,
     {
-        let all_services = manager.discover_network_scan().await?;
+        let all_endpoints = manager.discover_network_scan().await?;
+        let all_services = Self::endpoints_to_discovery_results(manager, all_endpoints).await?;
         let filtered: Vec<DiscoveryResult> = all_services.into_iter().filter(filter).collect();
         Ok(filtered)
     }
     /// Discover services with retry logic
     pub async fn discover_with_retry(
         manager: &UniversalBiomeOSManager,
-        endpoint: &str,
+        _endpoint: &str,
         capabilities: &[PrimalCapability],
         max_retries: usize,
     ) -> Result<Vec<DiscoveryResult>> {
@@ -99,7 +147,10 @@ impl DiscoveryUtils {
 
         for attempt in 0..=max_retries {
             match manager.discover_by_capability(capabilities).await {
-                Ok(results) => return Ok(results),
+                Ok(endpoints) => {
+                    let results = Self::endpoints_to_discovery_results(manager, endpoints).await?;
+                    return Ok(results);
+                },
                 Err(e) => {
                     last_error = Some(e);
                     if attempt < max_retries {

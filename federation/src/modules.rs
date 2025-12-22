@@ -5,7 +5,7 @@
 
 use anyhow::Result;
 use serde_json::{json, Value};
-use std::collections::HashMap;
+// Removed unused import: use std::collections::HashMap;
 
 /// Deploy a biome manifest to the federation
 pub async fn deploy_manifest(manifest_path: &str) -> Result<()> {

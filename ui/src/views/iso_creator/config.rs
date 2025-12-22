@@ -120,7 +120,7 @@ impl ConfigManager {
                 config.included_niches = vec!["web-development".to_string()];
             }
             s if s.contains("minimal") => {
-                config.boot_mode = BootMode::Legacy;
+                config.boot_mode = BootMode::BIOS;
                 config.compression_level = 9;
                 config.included_primals = vec!["toadstool".to_string()];
             }
@@ -198,7 +198,7 @@ impl ConfigManager {
                 description: "Minimal biomeOS installation".to_string(),
                 version: "1.0.0".to_string(),
                 target_arch: "x86_64".to_string(),
-                boot_mode: BootMode::Legacy,
+                boot_mode: BootMode::BIOS,
                 included_primals: vec!["toadstool".to_string()],
                 included_niches: Vec::new(),
                 custom_components: Vec::new(),

@@ -20,9 +20,9 @@ pub mod types;
 
 // Re-export types for convenience
 pub use editor::NicheEditor;
-pub use marketplace::{MarketplaceManager, MarketplaceStats};
+pub use marketplace::MarketplaceManager;
 pub use templates::TemplateManager;
-pub use testing::{NicheTester, TestStatistics};
+pub use testing::NicheTester;
 pub use types::*;
 
 /// Main Niche Manager view

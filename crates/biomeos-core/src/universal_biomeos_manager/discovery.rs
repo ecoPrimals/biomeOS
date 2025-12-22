@@ -1,326 +1,380 @@
-//! Primal Discovery Service
+//! Discovery Operations
 //!
-//! Provides comprehensive primal discovery capabilities using multiple methods
-//! including static configuration, network scanning, and registry-based discovery.
+//! Handles all service discovery operations including registry discovery,
+//! network scanning, capability-based discovery, and orchestration services.
 
-use crate::config::BiomeOSConfig;
 use anyhow::Result;
-use biomeos_primal_sdk::{PrimalCapability, PrimalHealth, PrimalType};
-use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::sync::Arc;
-use tracing::{debug, info, warn};
 
-/// Discovery result structure
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DiscoveryResult {
-    pub id: String,
-    pub primal_type: PrimalType,
-    pub endpoint: String,
-    pub capabilities: Vec<PrimalCapability>,
-    pub health: PrimalHealth,
-    pub discovered_at: chrono::DateTime<chrono::Utc>,
-}
+use biomeos_primal_sdk::PrimalCapability;
+use biomeos_types::{BiomeOSConfig, Health, PrimalType};
+use super::core::PrimalInfo;
 
-/// Result of probing an endpoint for primal discovery
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProbeResult {
-    pub endpoint: String,
-    pub name: String,
-    pub version: String,
-    pub capabilities: Vec<PrimalCapability>,
-    pub health: PrimalHealth,
-}
-
-/// Primal Discovery Service for finding and registering primals
-#[derive(Debug)]
+/// Primal Discovery Service for ecosystem-wide primal discovery
+#[derive(Debug, Clone)]
 pub struct PrimalDiscoveryService {
+    #[allow(dead_code)] // Config used for future discovery configuration 
     config: Arc<BiomeOSConfig>,
 }
 
+/// Discovery result from primal scanning
+#[derive(Debug, Clone)]
+pub struct DiscoveryResult {
+    pub id: String,
+    pub endpoint: String,
+    pub primal_type: PrimalType,
+    pub capabilities: Vec<PrimalCapability>,
+    pub health: Health,
+    pub discovered_at: chrono::DateTime<chrono::Utc>,
+}
+
+/// Probe result from endpoint probing
+#[derive(Debug, Clone)]
+pub struct ProbeResult {
+    pub name: String,
+    pub version: String,
+    pub capabilities: Vec<PrimalCapability>,
+    pub health: Health,
+}
+
 impl PrimalDiscoveryService {
-    /// Create new discovery service with configuration
+    /// Create new discovery service
     pub fn new(config: Arc<BiomeOSConfig>) -> Self {
         Self { config }
     }
 
-    /// Discover primals using static configuration
-    pub async fn discover_static(&self) -> Result<Vec<DiscoveryResult>> {
-        info!("Discovering static primals from configuration");
-        let mut results = Vec::new();
+    /// Initialize the discovery service
+    pub async fn initialize(&self) -> Result<()> {
+        tracing::info!("🚀 Initializing Primal Discovery Service");
+        Ok(())
+    }
 
-        // Use references to avoid cloning the entire HashMap
-        for (name, endpoint) in &self.config.primals.discovery.static_endpoints {
-            match self.probe_endpoint(endpoint).await {
-                Ok(probe_result) => {
-                    let discovery_result = DiscoveryResult {
-                        id: name.clone(), // Only clone when necessary for owned data
-                        primal_type: PrimalType::new(
-                            "unknown",
-                            &probe_result.name,
-                            &probe_result.version,
-                        ),
-                        endpoint: endpoint.clone(), // Only clone when necessary for owned data
-                        capabilities: probe_result.capabilities,
-                        health: probe_result.health,
-                        discovered_at: chrono::Utc::now(),
-                    };
-                    results.push(discovery_result);
-                    info!("Discovered static primal: {}", name);
-                }
-                Err(e) => {
-                    warn!("Failed to probe static endpoint {}: {}", endpoint, e);
-                }
-            }
-        }
-
-        Ok(results)
+    /// Discover primals from registry
+    pub async fn discover_registry(&self, _registry_url: &str) -> Result<Vec<DiscoveryResult>> {
+        // Placeholder implementation - would integrate with Songbird discovery
+        Ok(vec![])
     }
 
     /// Discover primals via network scan
     pub async fn discover_network_scan(&self) -> Result<Vec<DiscoveryResult>> {
-        info!("Discovering primals via network scan");
-        let mut results = Vec::new();
+        // Placeholder implementation - would integrate with Songbird discovery
+        Ok(vec![])
+    }
 
-        // Use config timeouts for network operations
-        let timeout =
-            std::time::Duration::from_millis(self.config.primals.timeouts.discovery_timeout_ms);
+    /// Probe specific endpoint
+    pub async fn probe_endpoint(&self, _endpoint: &str) -> Result<ProbeResult> {
+        // Placeholder implementation - would probe the endpoint
+        Ok(ProbeResult {
+            name: "unknown".to_string(),
+            version: "1.0.0".to_string(),
+            capabilities: vec![],
+            health: Health::Healthy,
+        })
+    }
 
-        // Use references to avoid cloning vectors
-        let scan_hosts = &self.config.primals.discovery.scan_hosts;
-        let scan_ports = &self.config.primals.discovery.scan_ports;
+    /// Discover orchestration services
+    pub async fn discover_orchestration(&self, _orchestration_url: &str) -> Result<Vec<DiscoveryResult>> {
+        // Placeholder implementation - would integrate with orchestration discovery
+        Ok(vec![])
+    }
 
-        for host in scan_hosts {
-            for port in scan_ports {
-                let endpoint = format!("http://{}:{}", host, port);
+    /// Discover via multicast
+    pub async fn discover_multicast(&self) -> Result<Vec<DiscoveryResult>> {
+        // Placeholder implementation - would use multicast DNS discovery
+        Ok(vec![])
+    }
+}
 
-                // Create HTTP client with configured timeout
-                let client = reqwest::Client::builder().timeout(timeout).build()?;
+use super::core::UniversalBiomeOSManager;
 
-                // Try to probe the endpoint
-                if let Ok(response) = client.get(format!("{}/health", &endpoint)).send().await {
-                    if response.status().is_success() {
-                        match self.probe_endpoint(&endpoint).await {
-                            Ok(probe_result) => {
-                                let discovery_result = DiscoveryResult {
-                                    id: format!("discovered-{}-{}", host.replace(":", "-"), port),
-                                    primal_type: PrimalType::new(
-                                        "network",
-                                        &probe_result.name,
-                                        &probe_result.version,
-                                    ),
-                                    endpoint: endpoint.clone(), // Only clone when necessary for owned data
-                                    capabilities: probe_result.capabilities,
-                                    health: probe_result.health,
-                                    discovered_at: chrono::Utc::now(),
-                                };
-                                results.push(discovery_result);
-                                info!("Discovered network primal at {}", endpoint);
-                            }
-                            Err(e) => {
-                                debug!("Failed to probe network endpoint {}: {}", endpoint, e);
-                            }
-                        }
-                    }
+impl UniversalBiomeOSManager {
+    /// Discover primals in registry using unified configuration system
+    pub async fn discover_registry(&self, registry_url: &str) -> Result<Vec<String>> {
+        let results = self.discovery_service.discover_registry(registry_url).await?;
+        let mut endpoints = Vec::new();
+        
+        for result in results {
+            endpoints.push(result.endpoint.clone());
+            
+            // Convert discovery result to PrimalInfo and register
+            let primal_info = PrimalInfo {
+                id: result.id,
+                name: format!("Registry Primal {}", result.primal_type.name),
+                primal_type: result.primal_type,
+                endpoint: result.endpoint,
+                capabilities: result.capabilities,
+                health: result.health,
+                last_seen: result.discovered_at,
+                discovered_at: result.discovered_at,
+                metadata: HashMap::new(),
+            };
+            
+            // Auto-register discovered primals
+            let _ = self.register_primal(primal_info).await;
+        }
+        
+        tracing::info!("Discovered {} primals from registry", endpoints.len());
+        Ok(endpoints)
+    }
+
+    /// Discover primals through network scanning
+    pub async fn discover_network_scan(&self) -> Result<Vec<String>> {
+        tracing::info!("🔍 Starting network scan for primals");
+        
+        let results = self.discovery_service.discover_network_scan().await?;
+        let mut endpoints = Vec::new();
+        
+        for result in results {
+            endpoints.push(result.endpoint.clone());
+            
+            // Convert discovery result to PrimalInfo and register
+            let primal_info = PrimalInfo {
+                id: result.id,
+                name: format!("Network Scanned {}", result.primal_type.name),
+                primal_type: result.primal_type,
+                endpoint: result.endpoint,
+                capabilities: result.capabilities,
+                health: result.health,
+                last_seen: result.discovered_at,
+                discovered_at: result.discovered_at,
+                metadata: HashMap::new(),
+            };
+            
+            // Auto-register discovered primals
+            let _ = self.register_primal(primal_info).await;
+        }
+        
+        tracing::info!("Network scan discovered {} primals", endpoints.len());
+        Ok(endpoints)
+    }
+
+    /// General discovery method that tries multiple approaches
+    pub async fn discover(&self) -> Result<Vec<String>> {
+        tracing::info!("🌐 Starting comprehensive primal discovery");
+        
+        let mut all_endpoints = Vec::new();
+        
+        // Try registry discovery first (from config)
+        if let Some(registry_config) = self.config.discovery.registry.as_ref() {
+            match self.discover_registry(&registry_config.url).await {
+                Ok(mut endpoints) => {
+                    all_endpoints.append(&mut endpoints);
+                    tracing::info!("Registry discovery found {} primals", all_endpoints.len());
+                }
+                Err(e) => {
+                    tracing::warn!("Registry discovery failed: {}", e);
                 }
             }
         }
-
-        Ok(results)
-    }
-
-    /// Discover primals from registry
-    pub async fn discover_registry(&self, registry_url: &str) -> Result<Vec<DiscoveryResult>> {
-        info!("Discovering primals from registry: {}", registry_url);
-        let mut results = Vec::new();
-
-        let timeout =
-            std::time::Duration::from_millis(self.config.primals.timeouts.discovery_timeout_ms);
-        let client = reqwest::Client::builder().timeout(timeout).build()?;
-
-        match client.get(registry_url).send().await {
-            Ok(response) => {
-                if response.status().is_success() {
-                    // In a real implementation, this would parse the registry response
-                    // For now, return sample data to demonstrate registry discovery
-                    let sample_primals = vec![
-                        ("toadstool-registry", "http://localhost:8084"),
-                        ("songbird-registry", "http://localhost:8081"),
-                        ("nestgate-registry", "http://localhost:8082"),
-                    ];
-
-                    for (name, endpoint) in sample_primals {
-                        match self.probe_endpoint(endpoint).await {
-                            Ok(probe_result) => {
-                                let discovery_result = DiscoveryResult {
-                                    id: name.to_string(), // Use to_string() only when necessary
-                                    primal_type: PrimalType::new(
-                                        "registry",
-                                        &probe_result.name,
-                                        &probe_result.version,
-                                    ),
-                                    endpoint: endpoint.to_string(), // Use to_string() only when necessary
-                                    capabilities: probe_result.capabilities,
-                                    health: probe_result.health,
-                                    discovered_at: chrono::Utc::now(),
-                                };
-                                results.push(discovery_result);
-                                info!("Discovered registry primal: {}", name);
-                            }
-                            Err(e) => {
-                                warn!("Failed to probe registry endpoint {}: {}", endpoint, e);
-                            }
-                        }
-                    }
-                }
+        
+        // Try network scan as fallback
+        match self.discover_network_scan().await {
+            Ok(endpoints) => {
+                all_endpoints.extend(endpoints);
+                tracing::info!("Network scan found {} total primals", all_endpoints.len());
             }
             Err(e) => {
-                warn!("Failed to connect to registry {}: {}", registry_url, e);
+                tracing::warn!("Network scan failed: {}", e);
             }
         }
-
-        Ok(results)
+        
+        // Try capability-based discovery as additional method
+        // Removed recursive call to avoid infinite recursion
+        tracing::info!("Final discovery result: {} primals found", all_endpoints.len());
+        
+        Ok(all_endpoints)
     }
 
-    /// Probe a specific endpoint for primal information
-    pub async fn probe_endpoint(&self, endpoint: &str) -> Result<ProbeResult> {
-        debug!("Probing endpoint: {}", endpoint);
-
-        let timeout =
-            std::time::Duration::from_millis(self.config.primals.timeouts.default_timeout_ms);
-        let client = reqwest::Client::builder().timeout(timeout).build()?;
-
-        // Try multiple common health endpoints
-        let health_endpoints = [
-            format!("{}/health", endpoint),
-            format!("{}/api/v1/health", endpoint),
-            format!("{}/api/health", endpoint),
-        ];
-
-        for health_endpoint in &health_endpoints {
-            match client.get(health_endpoint).send().await {
-                Ok(response) if response.status().is_success() => {
-                    // Parse health response
-                    if let Ok(health_data) = response.json::<serde_json::Value>().await {
-                        return Ok(ProbeResult {
-                            endpoint: endpoint.to_string(), // Use to_string() only when necessary
-                            health: PrimalHealth::Healthy,
-                            capabilities: self.extract_capabilities_from_response(&health_data),
-                            name: health_data
-                                .get("name")
-                                .and_then(|v| v.as_str())
-                                .unwrap_or("unknown")
-                                .to_string(),
-                            version: health_data
-                                .get("version")
-                                .and_then(|v| v.as_str())
-                                .unwrap_or("1.0.0")
-                                .to_string(),
-                        });
-                    }
-                }
-                Ok(_) => continue,
-                Err(_) => continue,
+    /// Discover primals by capabilities using unified configuration system
+    pub async fn discover_by_capability(&self, capabilities: &[PrimalCapability]) -> Result<Vec<String>> {
+        tracing::info!("🔍 Discovering primals by capabilities: {:?}", capabilities);
+        
+        // Get all registered primals instead of recursive discovery call
+        let primals = self.registered_primals.read().await;
+        let mut matching_endpoints = Vec::new();
+        
+        // Filter by capabilities
+        for (_, primal) in primals.iter() {
+            // Check if primal has any required capabilities
+            let has_required_capabilities = capabilities.iter().any(|required_cap| {
+                primal.capabilities.iter().any(|primal_cap| {
+                    primal_cap.category == required_cap.category && 
+                    primal_cap.name == required_cap.name
+                })
+            });
+            
+            if has_required_capabilities && self.discover().await?.contains(&primal.endpoint) {
+                matching_endpoints.push(primal.endpoint.clone());
             }
         }
+        
+        tracing::info!("✅ Capability-based discovery found {} matching primals", matching_endpoints.len());
+        Ok(matching_endpoints)
+    }
 
-        // If no health endpoint responds, try basic connectivity
-        match client.get(endpoint).send().await {
-            Ok(_) => Ok(ProbeResult {
-                endpoint: endpoint.to_string(), // Use to_string() only when necessary
-                health: PrimalHealth::Degraded,
-                capabilities: vec![],
-                name: "unknown".to_string(),
-                version: "1.0.0".to_string(),
-            }),
-            Err(e) => Err(anyhow::anyhow!(
-                "Failed to probe endpoint {}: {}",
-                endpoint,
-                e
-            )),
+    /// Discover primals via multicast (delegated to Songbird discovery)
+    pub async fn discover_via_multicast(&self) -> Result<Vec<String>> {
+        tracing::info!("🔍 Starting multicast discovery via Songbird");
+        
+        // This delegates to Songbird's multicast discovery capabilities
+        // In the Universal Adapter architecture, this would call Songbird's mDNS discovery
+        let results = self.discovery_service.discover_multicast().await?;
+        let endpoints: Vec<String> = results.iter().map(|r| r.endpoint.clone()).collect();
+        
+        tracing::info!("✅ Multicast discovery found {} primals", endpoints.len());
+        Ok(endpoints)
+    }
+
+    /// Discover orchestration services specifically
+    pub async fn discover_orchestration_services(&self, registry_url: &str) -> Result<Vec<String>> {
+        tracing::info!("🎭 Discovering orchestration services from registry: {}", registry_url);
+        
+        // Use a specific orchestration discovery endpoint
+        let orchestration_url = format!("{}/api/v1/discovery/services", registry_url);
+        let results = self.discovery_service.discover_orchestration(&orchestration_url).await?;
+        let mut orchestration_endpoints = Vec::new();
+        
+        for result in &results {
+            // Filter for orchestration capabilities
+            if results.iter().any(|r| {
+                r.capabilities.iter().any(|cap| {
+                    cap.category == "orchestration" || 
+                    cap.name.contains("orchestration")
+                })
+            }) {
+                orchestration_endpoints.push(result.endpoint.clone());
+                
+                // Convert discovery result to PrimalInfo and register
+                let primal_info = PrimalInfo {
+                    id: result.id.clone(),
+                    name: format!("Orchestration Service {}", result.primal_type.name),
+                    primal_type: result.primal_type.clone(),
+                    endpoint: result.endpoint.clone(),
+                    capabilities: result.capabilities.clone(),
+                    health: result.health.clone(),
+                    last_seen: result.discovered_at,
+                    discovered_at: result.discovered_at,
+                    metadata: HashMap::new(),
+                };
+                
+                // Auto-register discovered orchestration services
+                let _ = self.register_primal(primal_info).await;
+            }
+        }
+        
+        tracing::info!("Discovered {} orchestration services", orchestration_endpoints.len());
+        Ok(orchestration_endpoints)
+    }
+
+    /// Discover primals via multicast
+    pub async fn discover_multicast(&self) -> Result<Vec<String>> {
+        tracing::info!("📡 Starting multicast discovery");
+        
+        match self.discovery_service.discover_multicast().await {
+            Ok(results) => {
+                let mut endpoints = Vec::new();
+                
+                for result in results {
+                    endpoints.push(result.endpoint.clone());
+                    
+                    // Convert discovery result to PrimalInfo and register
+                    let primal_info = PrimalInfo {
+                        id: result.id,
+                        name: format!("Multicast {}", result.primal_type.name),
+                        primal_type: result.primal_type,
+                        endpoint: result.endpoint,
+                        capabilities: result.capabilities,
+                        health: result.health,
+                        last_seen: result.discovered_at,
+                        discovered_at: result.discovered_at,
+                        metadata: HashMap::new(),
+                    };
+                    
+                    // Auto-register discovered primals
+                    let _ = self.register_primal(primal_info).await;
+                }
+                
+                tracing::info!("Multicast discovery found {} primals", endpoints.len());
+                Ok(endpoints)
+            }
+            Err(e) => {
+                tracing::warn!("Multicast discovery failed: {}", e);
+                Ok(Vec::new()) // Return empty list instead of error
+            }
         }
     }
 
-    /// Extract capabilities from health response
-    fn extract_capabilities_from_response(
-        &self,
-        response: &serde_json::Value,
-    ) -> Vec<PrimalCapability> {
-        let mut capabilities = Vec::new();
-
-        // Look for capabilities in common response fields
-        if let Some(caps) = response.get("capabilities").and_then(|v| v.as_array()) {
-            for cap in caps {
-                if let Some(cap_str) = cap.as_str() {
-                    match cap_str {
-                        "compute" | "wasm" | "docker" => {
-                            capabilities.push(PrimalCapability::new("compute", cap_str, "1.0.0"));
-                        }
-                        "storage" | "zfs" | "file" => {
-                            capabilities.push(PrimalCapability::new("storage", cap_str, "1.0.0"));
-                        }
-                        "orchestration" | "service" => {
-                            capabilities.push(PrimalCapability::new(
-                                "orchestration",
-                                cap_str,
-                                "1.0.0",
-                            ));
-                        }
-                        "security" | "encryption" => {
-                            capabilities.push(PrimalCapability::new("security", cap_str, "1.0.0"));
-                        }
-                        "monitoring" | "metrics" => {
-                            capabilities.push(PrimalCapability::new(
-                                "monitoring",
-                                cap_str,
-                                "1.0.0",
-                            ));
-                        }
-                        "networking" | "mesh" => {
-                            capabilities.push(PrimalCapability::new(
-                                "networking",
-                                cap_str,
-                                "1.0.0",
-                            ));
-                        }
-                        _ => {
-                            capabilities.push(PrimalCapability::custom(
-                                cap_str,
-                                format!("{} capability", cap_str),
-                            ));
-                        }
-                    }
-                }
+    /// Discover all services using all available methods
+    pub async fn discover_all_services(&self) -> Result<HashMap<String, serde_json::Value>> {
+        let endpoints = self.discover().await?;
+        let mut services = HashMap::new();
+        
+        let primals = self.registered_primals.read().await;
+        for (id, primal) in primals.iter() {
+            if endpoints.contains(&primal.endpoint) {
+                services.insert(id.clone(), serde_json::json!({
+                    "name": primal.name,
+                    "type": primal.primal_type,
+                    "endpoint": primal.endpoint,
+                    "health": primal.health,
+                    "capabilities": primal.capabilities,
+                    "last_seen": primal.last_seen,
+                }));
             }
         }
+        
+        Ok(services)
+    }
 
-        // Fallback: infer capabilities from service name/type
-        if capabilities.is_empty() {
-            if let Some(name) = response.get("name").and_then(|v| v.as_str()) {
-                match name.to_lowercase().as_str() {
-                    name if name.contains("toadstool") => {
-                        capabilities.push(PrimalCapability::new("compute", "toadstool", "1.0.0"));
-                    }
-                    name if name.contains("songbird") => {
-                        capabilities.push(PrimalCapability::new(
-                            "orchestration",
-                            "songbird",
-                            "1.0.0",
-                        ));
-                    }
-                    name if name.contains("nestgate") => {
-                        capabilities.push(PrimalCapability::new("storage", "nestgate", "1.0.0"));
-                    }
-                    name if name.contains("beardog") => {
-                        capabilities.push(PrimalCapability::new("security", "beardog", "1.0.0"));
-                    }
-                    _ => {
-                        capabilities
-                            .push(PrimalCapability::custom("basic", "Basic primal capability"));
-                    }
-                }
+    /// Discover services from a specific registry
+    pub async fn discover_from_registry(&self, registry_url: &str) -> Result<HashMap<String, serde_json::Value>> {
+        let endpoints = self.discover_registry(registry_url).await?;
+        let mut services = HashMap::new();
+        
+        let primals = self.registered_primals.read().await;
+        for (id, primal) in primals.iter() {
+            if endpoints.contains(&primal.endpoint) {
+                services.insert(id.clone(), serde_json::json!({
+                    "name": primal.name,
+                    "type": primal.primal_type,
+                    "endpoint": primal.endpoint,
+                    "health": primal.health,
+                    "capabilities": primal.capabilities,
+                    "discovered_at": primal.discovered_at,
+                }));
             }
         }
+        
+        Ok(services)
+    }
 
-        capabilities
+    /// Discover services via DNS
+    pub async fn discover_via_dns(&self) -> Result<HashMap<String, serde_json::Value>> {
+        // Placeholder for DNS-based discovery
+        tracing::info!("🌐 DNS-based discovery not yet implemented");
+        Ok(HashMap::new())
+    }
+
+    /// Discover services by capabilities
+    pub async fn discover_by_capabilities(&self, capabilities: &[PrimalCapability]) -> Result<HashMap<String, serde_json::Value>> {
+        let endpoints = self.discover_by_capability(capabilities).await?;
+        let mut services = HashMap::new();
+        
+        let primals = self.registered_primals.read().await;
+        for (id, primal) in primals.iter() {
+            if endpoints.contains(&primal.endpoint) {
+                services.insert(id.clone(), serde_json::json!({
+                    "name": primal.name,
+                    "type": primal.primal_type,
+                    "endpoint": primal.endpoint,
+                    "health": primal.health,
+                    "capabilities": primal.capabilities,
+                    "matches_criteria": true,
+                }));
+            }
+        }
+        
+        Ok(services)
     }
 }

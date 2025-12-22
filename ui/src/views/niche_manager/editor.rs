@@ -38,10 +38,29 @@ impl NicheEditor {
         niche_manifest: &mut NicheManifest,
         ui: &mut egui::Ui,
     ) -> Option<NicheEditorMode> {
-        ui.label("Enhanced Visual Editor - Temporarily Disabled");
-        Self::render_visual_editor(niche_manifest, ui, |_ui, _title, _content| {
-            // Stub implementation
+        ui.heading("🎨 Enhanced Visual Niche Editor");
+        ui.separator();
+        
+        ui.label("Configure your niche with the unified BiomeOS architecture:");
+        
+        Self::render_visual_editor(niche_manifest, ui, |ui, title, _content| {
+            ui.collapsing(title, |ui| {
+                // Text editing temporarily disabled during refactoring
+                ui.label("Text editing is being refactored for the unified architecture");
+                
+                // Add helpful guidance for unified architecture
+                ui.separator();
+                ui.label("💡 Universal Adapter Guidelines:");
+                ui.label("• Delegate parsing to Toadstool");
+                ui.label("• Use Songbird for service discovery");
+                ui.label("• Leverage capability-based routing");
+            });
         });
+        
+        if ui.button("🔄 Switch to YAML Editor").clicked() {
+            return Some(NicheEditorMode::YAML);
+        }
+        
         None
     }
 

@@ -13,6 +13,7 @@ description = "Core biomeOS functionality"
 [dependencies]
 # Core async and serialization
 anyhow = { workspace = true }
+thiserror = { workspace = true }
 async-trait = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -32,6 +33,7 @@ itertools = { workspace = true }
 once_cell = { workspace = true }
 
 # biomeOS dependencies
+biomeos-types = { path = "../biomeos-types" }
 biomeos-primal-sdk = { path = "../biomeos-primal-sdk" }
 
 [dev-dependencies]

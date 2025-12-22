@@ -83,19 +83,19 @@ pub fn format_duration(seconds: i64) -> String {
 
 /// Format file size in human readable format
 pub fn format_file_size(bytes: u64) -> String {
-    const UNITS: &[&str] = &["B", "KB", "MB", "GB", "TB"];
+    use biomeos_types::files::SIZE_UNITS;
     let mut size = bytes as f64;
     let mut unit_index = 0;
 
-    while size >= 1024.0 && unit_index < UNITS.len() - 1 {
+    while size >= 1024.0 && unit_index < SIZE_UNITS.len() - 1 {
         size /= 1024.0;
         unit_index += 1;
     }
 
     if unit_index == 0 {
-        format!("{} {}", size as u64, UNITS[unit_index])
+        format!("{} {}", size as u64, SIZE_UNITS[unit_index])
     } else {
-        format!("{:.1} {}", size, UNITS[unit_index])
+        format!("{:.1} {}", size, SIZE_UNITS[unit_index])
     }
 }
 

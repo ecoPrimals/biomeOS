@@ -2,12 +2,13 @@
 //! 
 //! Collects real data about teams, deployments, and resources from the biomeOS system.
 
-use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use serde::{Deserialize, Serialize};
 
-use crate::views::byob::{TeamInfo, TeamStatus, DeploymentInfo, DeploymentStatus, ServiceInfo, ServiceStatus, HealthCheck, HealthStatus, ResourceUsage, ResourceQuota};
+use crate::views::byob::{TeamInfo, DeploymentInfo, DeploymentStatus, ServiceInfo, ServiceStatus, HealthCheck, ResourceUsage, ResourceQuota};
+use biomeos_types::Health;
+use biomeos_types::{HealthIssue, HealthIssueCategory, HealthIssueSeverity};
 
 #[derive(Debug, Clone)]
 pub struct ByobMonitor {
@@ -111,15 +112,11 @@ impl ByobMonitor {
             if entry.path().extension().and_then(|s| s.to_str()) == Some("yaml") {
                 let content = fs::read_to_string(entry.path())?;
                 if let Ok(team_config) = serde_yaml::from_str::<TeamConfig>(&content) {
-                    teams.push(TeamInfo {
-                        id: team_config.id,
-                        name: team_config.name,
-                        description: team_config.description,
-                        members: team_config.members,
-                        created_at: team_config.created_at,
-                        status: TeamStatus::Active, // Assume active if config exists
-                        workspace_url: team_config.workspace_url,
-                    });
+                    let mut team_info = TeamInfo::basic(team_config.id, team_config.name, team_config.description);
+                    team_info.members = team_config.members;
+                    team_info.created_at = team_config.created_at;
+                    team_info.workspace_url = Some(team_config.workspace_url);
+                    teams.push(team_info);
                 }
             }
         }
@@ -140,10 +137,11 @@ impl ByobMonitor {
             if entry.path().extension().and_then(|s| s.to_str()) == Some("yaml") {
                 let content = fs::read_to_string(entry.path())?;
                 if let Ok(deployment_config) = serde_yaml::from_str::<DeploymentConfig>(&content) {
-                    let services = deployment_config.services.into_iter().map(|s| {
+                    let services: Vec<ServiceInfo> = deployment_config.services.into_iter().map(|s| {
                         ServiceInfo {
                             name: s.name.clone(),
-                            primal: s.primal,
+                            primal: s.primal.clone(),
+                            primal_name: s.primal,
                             status: match s.status.as_str() {
                                 "running" => ServiceStatus::Running,
                                 "stopped" => ServiceStatus::Stopped,
@@ -152,7 +150,11 @@ impl ByobMonitor {
                                 "stopping" => ServiceStatus::Stopping,
                                 _ => ServiceStatus::Starting,
                             },
+                            port: s.port,
                             endpoints: s.endpoints,
+                            health: biomeos_types::Health::Healthy, // Default health
+                            uptime: "Unknown".to_string(), // Default uptime
+                            capabilities: std::collections::HashSet::new(), // Empty by default
                             health_check: self.check_service_health(&s.name, s.port),
                         }
                     }).collect();
@@ -160,8 +162,10 @@ impl ByobMonitor {
                     let resource_usage = self.calculate_deployment_resources(&deployment_config.id);
                     let health_score = self.calculate_deployment_health(&services);
 
+                    let service_names: Vec<String> = services.iter().map(|s| s.name.clone()).collect();
+                    
                     deployments.push(DeploymentInfo {
-                        id: deployment_config.id,
+                        id: deployment_config.id.clone(),
                         name: deployment_config.name,
                         team: deployment_config.team,
                         status: match deployment_config.status.as_str() {
@@ -171,11 +175,28 @@ impl ByobMonitor {
                             "pending" => DeploymentStatus::Pending,
                             _ => DeploymentStatus::Pending,
                         },
-                        created_at: deployment_config.created_at,
+                        created_at: deployment_config.created_at.clone(),
+                        last_updated: deployment_config.updated_at.clone(),
                         updated_at: deployment_config.updated_at,
-                        services,
+                        services: service_names,
                         resource_usage,
                         health_score,
+                        health_status: if health_score > 0.8 { 
+                            biomeos_types::Health::Healthy 
+                        } else if health_score > 0.5 { 
+                            biomeos_types::Health::Degraded { 
+                                issues: vec![], 
+                                impact_score: Some(1.0 - health_score) 
+                            } 
+                        } else { 
+                            biomeos_types::Health::Critical { 
+                                issues: vec![], 
+                                affected_capabilities: vec![] 
+                            } 
+                        },
+                        primals: services.iter().map(|s| s.primal.clone()).collect(),
+                        capabilities: services.iter().flat_map(|s| s.capabilities.iter().cloned()).collect(),
+                        manifest_path: format!("/deployments/{}.yaml", deployment_config.id.clone()),
                     });
                 }
             }
@@ -199,15 +220,16 @@ impl ByobMonitor {
                 if line.contains("biomeos-team-") {
                     // Extract team information from process
                     if let Some(team_name) = self.extract_team_from_process(line) {
-                        teams.push(TeamInfo {
-                            id: format!("team-{}", teams.len() + 1),
-                            name: team_name,
-                            description: "Active team detected from running processes".to_string(),
-                            members: vec!["system@biomeos.local".to_string()],
-                            created_at: chrono::Utc::now().format("%Y-%m-%d").to_string(),
-                            status: TeamStatus::Active,
-                            workspace_url: format!("https://{}.biomeos.local", team_name.to_lowercase()),
-                        });
+                        let mut team_info = TeamInfo::basic(
+                            format!("team-{}", teams.len() + 1),
+                            team_name.clone(),
+                            "Active team detected from running processes".to_string()
+                        );
+                        team_info.members = vec!["system@biomeos.local".to_string()];
+                        team_info.created_at = chrono::Utc::now().format("%Y-%m-%d").to_string();
+                        team_info.workspace_url = Some(format!("https://{}.biomeos.local", team_name.to_lowercase()));
+                        team_info.focus_area = "System Management".to_string();
+                        teams.push(team_info);
                     }
                 }
             }
@@ -215,15 +237,16 @@ impl ByobMonitor {
 
         // If no teams detected, provide at least one default team
         if teams.is_empty() {
-            teams.push(TeamInfo {
-                id: "default-team".to_string(),
-                name: "Default Team".to_string(),
-                description: "Default biomeOS team workspace".to_string(),
-                members: vec!["admin@biomeos.local".to_string()],
-                created_at: chrono::Utc::now().format("%Y-%m-%d").to_string(),
-                status: TeamStatus::Active,
-                workspace_url: "https://default.biomeos.local".to_string(),
-            });
+            let mut team_info = TeamInfo::basic(
+                "default-team".to_string(),
+                "Default Team".to_string(),
+                "Default biomeOS team workspace".to_string()
+            );
+            team_info.members = vec!["admin@biomeos.local".to_string()];
+            team_info.created_at = chrono::Utc::now().format("%Y-%m-%d").to_string();
+            team_info.workspace_url = Some("https://default.biomeos.local".to_string());
+            team_info.focus_area = "General Development".to_string();
+            teams.push(team_info);
         }
 
         teams
@@ -248,30 +271,22 @@ impl ByobMonitor {
 
         // If no deployments detected, create a sample based on current system
         if deployments.is_empty() {
-            deployments.push(DeploymentInfo {
-                id: "system-deployment".to_string(),
-                name: "biomeOS System".to_string(),
-                team: "default-team".to_string(),
-                status: DeploymentStatus::Running,
-                created_at: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
-                updated_at: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
-                services: vec![
-                    ServiceInfo {
-                        name: "ui-service".to_string(),
-                        primal: "toadstool".to_string(),
-                        status: ServiceStatus::Running,
-                        endpoints: vec!["http://localhost:8080".to_string()],
-                        health_check: HealthCheck {
-                            status: HealthStatus::Healthy,
-                            last_check: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
-                            response_time_ms: 50,
-                            error_message: None,
-                        },
-                    },
-                ],
-                resource_usage: self.get_current_system_usage(),
-                health_score: 0.95,
-            });
+            let mut deployment = DeploymentInfo::basic(
+                "system-deployment".to_string(),
+                "biomeOS System".to_string(),
+                "default-team".to_string()
+            );
+            let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
+            deployment.created_at = now.clone();
+            deployment.updated_at = now.clone();
+            deployment.last_updated = now;
+            
+            let service = ServiceInfo::basic("ui-service".to_string(), "toadstool".to_string());
+            deployment.services = vec![service.name.clone()];
+            deployment.resource_usage = self.get_current_system_usage();
+            deployment.health_score = 0.95;
+            deployment.manifest_path = "/system/deployment.yaml".to_string();
+            deployments.push(deployment);
         }
 
         deployments
@@ -343,67 +358,35 @@ impl ByobMonitor {
     }
 
     fn container_to_deployment(&self, container_name: String) -> DeploymentInfo {
-        DeploymentInfo {
-            id: format!("container-{}", container_name),
-            name: container_name.clone(),
-            team: "default-team".to_string(),
-            status: DeploymentStatus::Running,
-            created_at: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
-            updated_at: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
-            services: vec![
-                ServiceInfo {
-                    name: container_name,
-                    primal: "toadstool".to_string(),
-                    status: ServiceStatus::Running,
-                    endpoints: vec!["http://localhost:8080".to_string()],
-                    health_check: HealthCheck {
-                        status: HealthStatus::Healthy,
-                        last_check: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
-                        response_time_ms: 100,
-                        error_message: None,
-                    },
-                },
-            ],
-            resource_usage: ResourceUsage {
-                cpu_cores: 1.0,
-                memory_gb: 2.0,
-                storage_gb: 10.0,
-                network_mbps: 10.0,
-            },
-            health_score: 0.9,
-        }
+        let mut deployment = DeploymentInfo::basic(
+            format!("container-{}", container_name),
+            container_name.clone(),
+            "default-team".to_string()
+        );
+        let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
+        deployment.created_at = now.clone();
+        deployment.updated_at = now.clone();
+        deployment.last_updated = now;
+        deployment.services = vec![container_name];
+        deployment.health_score = 0.9;
+        deployment.manifest_path = "/containers/deployment.yaml".to_string();
+        deployment
     }
 
     fn service_to_deployment(&self, service_name: String) -> DeploymentInfo {
-        DeploymentInfo {
-            id: format!("service-{}", service_name),
-            name: service_name.clone(),
-            team: "default-team".to_string(),
-            status: DeploymentStatus::Running,
-            created_at: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
-            updated_at: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
-            services: vec![
-                ServiceInfo {
-                    name: service_name,
-                    primal: "nestgate".to_string(),
-                    status: ServiceStatus::Running,
-                    endpoints: vec!["internal://service".to_string()],
-                    health_check: HealthCheck {
-                        status: HealthStatus::Healthy,
-                        last_check: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
-                        response_time_ms: 25,
-                        error_message: None,
-                    },
-                },
-            ],
-            resource_usage: ResourceUsage {
-                cpu_cores: 0.5,
-                memory_gb: 1.0,
-                storage_gb: 5.0,
-                network_mbps: 5.0,
-            },
-            health_score: 0.95,
-        }
+        let mut deployment = DeploymentInfo::basic(
+            format!("service-{}", service_name),
+            service_name.clone(),
+            "default-team".to_string()
+        );
+        let now = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
+        deployment.created_at = now.clone();
+        deployment.updated_at = now.clone();
+        deployment.last_updated = now;
+        deployment.services = vec![service_name];
+        deployment.health_score = 0.95;
+        deployment.manifest_path = "/services/deployment.yaml".to_string();
+        deployment
     }
 
     fn check_service_health(&self, service_name: &str, port: Option<u16>) -> HealthCheck {
@@ -412,14 +395,25 @@ impl ByobMonitor {
             // Simple TCP connection test
             if std::net::TcpStream::connect(format!("127.0.0.1:{}", port)).is_ok() {
                 HealthCheck {
-                    status: HealthStatus::Healthy,
+                    status: biomeos_types::Health::Healthy,
                     last_check: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
                     response_time_ms: 50,
                     error_message: None,
                 }
             } else {
                 HealthCheck {
-                    status: HealthStatus::Unhealthy,
+                    status: biomeos_types::Health::Critical { 
+                        issues: vec![HealthIssue {
+                            id: "connection_refused".to_string(),
+                            category: HealthIssueCategory::Network,
+                            severity: HealthIssueSeverity::Critical,
+                            message: "Connection refused".to_string(),
+                            detected_at: chrono::Utc::now(),
+                            details: std::collections::HashMap::new(),
+                            remediation: vec![],
+                        }], 
+                        affected_capabilities: vec![] 
+                    },
                     last_check: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
                     response_time_ms: 0,
                     error_message: Some("Connection refused".to_string()),
@@ -428,7 +422,7 @@ impl ByobMonitor {
         } else {
             // Default healthy status for services without port
             HealthCheck {
-                status: HealthStatus::Healthy,
+                status: biomeos_types::Health::Healthy,
                 last_check: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
                 response_time_ms: 25,
                 error_message: None,
@@ -440,21 +434,23 @@ impl ByobMonitor {
         // Calculate actual resource usage for team
         // For now, return current system usage scaled down
         let system_usage = self.get_current_system_usage();
-        ResourceUsage {
-            cpu_cores: system_usage.cpu_cores * 0.3,
-            memory_gb: system_usage.memory_gb * 0.3,
-            storage_gb: system_usage.storage_gb * 0.3,
-            network_mbps: system_usage.network_mbps * 0.3,
-        }
+        let mut usage = ResourceUsage::default();
+        usage.cpu_cores = system_usage.cpu_cores * 0.3;
+        usage.memory_gb = system_usage.memory_gb * 0.3;
+        usage.storage_gb = system_usage.storage_gb * 0.3;
+        usage.network_mbps = system_usage.network_mbps * 0.3;
+        usage.cpu_percent = 30.0;
+        usage.memory_percent = 30.0;
+        usage.storage_percent = 30.0;
+        usage
     }
 
     fn get_team_quota_config(&self, _team_id: &str) -> ResourceQuota {
         // Get quota from configuration or use defaults
         ResourceQuota {
-            max_cpu_cores: 8.0,
-            max_memory_gb: 32.0,
-            max_storage_gb: 500.0,
-            max_deployments: 10,
+            max_memory_bytes: 32u64 * 1024 * 1024 * 1024, // 32 GB in bytes
+            max_storage_bytes: 500u64 * 1024 * 1024 * 1024, // 500 GB in bytes
+            max_network_bandwidth_mbps: 1000.0, // 1 Gbps
             used_cpu_cores: 2.0,
             used_memory_gb: 8.0,
             used_storage_gb: 100.0,
@@ -464,12 +460,15 @@ impl ByobMonitor {
 
     fn calculate_deployment_resources(&self, _deployment_id: &str) -> ResourceUsage {
         // Calculate actual resource usage for deployment
-        ResourceUsage {
-            cpu_cores: 2.0,
-            memory_gb: 4.0,
-            storage_gb: 50.0,
-            network_mbps: 20.0,
-        }
+        let mut usage = ResourceUsage::default();
+        usage.cpu_cores = 2.0;
+        usage.memory_gb = 4.0;
+        usage.storage_gb = 50.0;
+        usage.network_mbps = 20.0;
+        usage.cpu_percent = 50.0;
+        usage.memory_percent = 60.0;  
+        usage.storage_percent = 25.0;
+        usage
     }
 
     fn calculate_deployment_health(&self, services: &[ServiceInfo]) -> f64 {
@@ -478,7 +477,7 @@ impl ByobMonitor {
         }
 
         let healthy_count = services.iter().filter(|s| {
-            matches!(s.health_check.status, HealthStatus::Healthy)
+            matches!(s.health_check.status, Health::Healthy)
         }).count();
 
         healthy_count as f64 / services.len() as f64
@@ -486,11 +485,14 @@ impl ByobMonitor {
 
     fn get_current_system_usage(&self) -> ResourceUsage {
         // Get actual current system resource usage
-        ResourceUsage {
-            cpu_cores: 4.0,  // Will be replaced with real values
-            memory_gb: 8.0,
-            storage_gb: 100.0,
-            network_mbps: 25.0,
-        }
+        let mut usage = ResourceUsage::default();
+        usage.cpu_cores = 4.0;  // Will be replaced with real values
+        usage.memory_gb = 8.0;
+        usage.storage_gb = 100.0;
+        usage.network_mbps = 25.0;
+        usage.cpu_percent = 65.0;
+        usage.memory_percent = 75.0;
+        usage.storage_percent = 45.0;
+        usage
     }
 } 

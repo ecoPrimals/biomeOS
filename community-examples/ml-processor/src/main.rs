@@ -96,7 +96,8 @@ async fn start_health_server(
         let p = primal_clone.clone();
         async move {
             let health = p.health_check().await;
-            ResponseJson(serde_json::to_value(health).unwrap())
+            ResponseJson(serde_json::to_value(health).unwrap_or_else(|_| 
+            serde_json::json!({ "error": "serialization_failed" })))
         }
     });
     
@@ -105,7 +106,8 @@ async fn start_health_server(
         let p = primal_clone.clone();
         async move {
             match p.handle_request(payload).await {
-                Ok(response) => ResponseJson(serde_json::to_value(response).unwrap()),
+                Ok(response) => ResponseJson(serde_json::to_value(response).unwrap_or_else(|_| 
+            serde_json::json!({ "error": "response_serialization_failed" }))),
                 Err(e) => ResponseJson(serde_json::json!({"error": e.to_string()})),
             }
         }

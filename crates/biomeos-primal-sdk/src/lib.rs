@@ -1,27 +1,34 @@
-//! biomeOS Primal SDK
+//! BiomeOS Primal SDK
+//!
+//! This SDK provides a clean interface to the unified BiomeOS type system,
+//! optimized for primal development with direct access to all capabilities.
+//! 
+//! All legacy compatibility layers have been removed in favor of the unified
+//! UniversalPrimalService architecture from biomeos-types.
 
+// biomeOS unified types - direct re-exports
+pub use biomeos_types::{
+    // Core service interface
+    UniversalPrimalService, PrimalServiceMetadata, UniversalServiceRequest, UniversalServiceResponse,
+    UniversalServiceRegistration, ServiceStatus, ConfigValidationResult,
+    
+    // Error handling and results
+    BiomeResult, BiomeError,
+    
+    // Health system
+    Health, HealthReport, CapabilityMetadata,
+    
+    // Core primal types
+    PrimalType, PrimalCapability, PrimalConfiguration,
+    
+    // Resource monitoring
+    ResourceRequirements, ResourceMetrics, NetworkIoMetrics,
+};
+
+// Extended types module for primal-specific functionality
 pub mod types;
 
-pub use types::*;
+// Re-export extended types for convenience (only what exists)
+pub use types::{PrimalRequest, PrimalResponse, RequestPriority};
 
-/// Core trait for biomeOS primals
-#[async_trait::async_trait]
-pub trait EcoPrimal: Send + Sync {
-    /// Get primal metadata
-    fn metadata(&self) -> &PrimalMetadata;
-
-    /// Get primal capabilities
-    fn capabilities(&self) -> &[PrimalCapability];
-
-    /// Initialize the primal
-    async fn initialize(&self, config: &PrimalConfig) -> PrimalResult<()>;
-
-    /// Handle a primal request
-    async fn handle_request(&self, request: PrimalRequest) -> PrimalResult<PrimalResponse>;
-
-    /// Get health status
-    async fn health_check(&self) -> PrimalResult<PrimalHealth>;
-
-    /// Shutdown the primal
-    async fn shutdown(&self) -> PrimalResult<()>;
-}
+// No compatibility aliases needed - use unified types directly

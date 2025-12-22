@@ -12,7 +12,7 @@ use biomeos_core::{
     },
     BiomeError,
 };
-use biomeos_primal_sdk::{PrimalCapability, PrimalHealth, PrimalType};
+use biomeos_types::{PrimalCapability, Health, PrimalType};
 use std::time::Duration;
 use tokio::time::{sleep, timeout};
 use tracing_test::traced_test;
@@ -253,9 +253,9 @@ async fn test_primal_health_collection() -> Result<()> {
 
     // Register some test primals
     let test_primals = vec![
-        ("test-primal-1", PrimalHealth::Healthy),
-        ("test-primal-2", PrimalHealth::Degraded),
-        ("test-primal-3", PrimalHealth::Unknown),
+        ("test-primal-1", Health::Healthy),
+        ("test-primal-2", Health::Degraded),
+        ("test-primal-3", Health::Unknown),
     ];
 
     for (id, health) in &test_primals {
@@ -281,10 +281,10 @@ async fn test_primal_health_collection() -> Result<()> {
         assert!(!primal_id.is_empty());
         assert!(matches!(
             health,
-            PrimalHealth::Healthy
-                | PrimalHealth::Degraded
-                | PrimalHealth::Unhealthy
-                | PrimalHealth::Unknown
+            Health::Healthy
+                | Health::Degraded
+                | Health::Unhealthy
+                | Health::Unknown
         ));
     }
 

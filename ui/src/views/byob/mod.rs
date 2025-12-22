@@ -16,6 +16,7 @@ pub mod workflow;
 
 use data::get_primal_discovery;
 use rendering::*;
+use biomeos_types::PrimalCapability;
 use templates::get_template_loader;
 pub use types::*;
 
@@ -30,6 +31,7 @@ pub struct ByobView {
     deployment_data: DeploymentData,
     primal_discovery: data::PrimalDiscovery,
     template_loader: templates::TemplateLoader,
+    selected_primals: Vec<String>,
 }
 
 impl Default for ByobView {
@@ -50,6 +52,7 @@ impl ByobView {
             deployment_data: DeploymentData::new(),
             primal_discovery: get_primal_discovery(),
             template_loader: get_template_loader(),
+            selected_primals: Vec::new(),
         }
     }
 
@@ -62,6 +65,21 @@ impl ByobView {
         self.customizations.clear();
         self.generated_manifest.clear();
         self.deployment_data = DeploymentData::new();
+        self.selected_primals.clear();
+    }
+
+    /// Get capabilities for the given primals
+    pub fn get_capabilities_for_primals(&self, primals: &[String]) -> Vec<PrimalCapability> {
+        primals
+            .iter()
+            .flat_map(|primal_name| {
+                if let Some(primal) = self.primal_discovery.get_primal(primal_name) {
+                    primal.capabilities.clone().into_iter().collect()
+                } else {
+                    Vec::new()
+                }
+            })
+            .collect()
     }
 
     /// Get current workflow progress as percentage
@@ -322,7 +340,7 @@ pub fn get_available_primals_for_capabilities(
 /// Get all available capabilities in the system
 pub fn get_all_capabilities() -> std::collections::HashSet<PrimalCapability> {
     let discovery = get_primal_discovery();
-    discovery.get_registry().get_all_capabilities()
+    discovery.get_registry().get_all_capabilities().into_iter().collect()
 }
 
 /// Get compatible templates for a team's capabilities
@@ -351,7 +369,7 @@ pub fn validate_template_deployment(template: &NicheTemplate) -> Result<(), Stri
         if supporting_primals.is_empty() {
             return Err(format!(
                 "No primals available that support capability: {}",
-                required_capability.display_name()
+required_capability.display_name()
             ));
         }
     }
@@ -392,6 +410,7 @@ pub struct SystemStatistics {
 mod tests {
     use super::*;
     use crate::views::byob::types::*;
+    use crate::views::byob::templates::TemplateLoader;
 
     #[test]
     fn test_universal_primal_system() {
@@ -449,12 +468,12 @@ mod tests {
     fn test_capability_system() {
         // Test the capability-based system
         let capabilities = vec![
-            PrimalCapability::Compute,
-            PrimalCapability::Storage,
-            PrimalCapability::Networking,
-            PrimalCapability::Security,
-            PrimalCapability::AI,
-            PrimalCapability::Custom("future-capability".to_string()),
+            PrimalCapability::compute(),
+            PrimalCapability::storage(),
+            PrimalCapability::networking(),
+            PrimalCapability::security(),
+            PrimalCapability::ai(),
+            PrimalCapability::custom("future-capability".to_string()),
         ];
 
         for cap in capabilities {

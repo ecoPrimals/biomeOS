@@ -8,7 +8,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use crate::api::BiomeOSApi;
-use crate::state::{AppState, InstallationStatus, InstallationStep};
+use crate::state::AppState;
 use crate::views::{BaseView, View};
 
 pub struct InstallationView {

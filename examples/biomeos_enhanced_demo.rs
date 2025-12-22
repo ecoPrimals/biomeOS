@@ -1,12 +1,10 @@
 use anyhow::Result;
-use biomeos_core::{BiomeOSConfig, HealthStatus, UniversalBiomeOSManager};
-use biomeos_primal_sdk::{
-    EcoPrimal, PrimalCapability, PrimalError, PrimalHealth, PrimalRequest, PrimalResponse,
-    PrimalType,
-};
+use biomeos_core::{BiomeOSConfig, UniversalBiomeOSManager};
+use biomeos_primal_sdk::{PrimalCapability, Health, PrimalType};
 use std::collections::HashMap;
 use tokio::time::{sleep, Duration};
 use tracing::{error, info, warn};
+use async_trait::async_trait;
 
 /// Enhanced BiomeOS System Demo
 ///
@@ -26,13 +24,13 @@ async fn main() -> Result<()> {
 
     // 1. Initialize BiomeOS with enhanced configuration
     let config = BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config);
+    let manager = UniversalBiomeOSManager::new(config).await?;
 
     info!("✅ BiomeOS Universal Manager initialized");
 
     // 2. Demonstrate real-time health monitoring
     info!("\n📊 Starting Real-Time Health Monitoring...");
-    manager.start_monitoring().await?;
+    let _ = manager.start_monitoring().await;
 
     // Give monitoring a moment to collect initial data
     sleep(Duration::from_secs(2)).await;
@@ -136,35 +134,43 @@ async fn main() -> Result<()> {
     // 4. Demonstrate mock primal registration and management
     info!("\n🧬 Demonstrating Dynamic Primal Management...");
 
-    let mock_primal = MockEcoPrimal::new(
+    let mock_primal = MockUniversalPrimal::new(
         "demo-orchestrator".to_string(),
-        PrimalType::orchestration("Demo Orchestration Service"),
+        PrimalType::new("orchestration", "demo-service", "1.0.0"),
         vec![
-            PrimalCapability::orchestration("service_discovery", "Dynamic service discovery"),
-            PrimalCapability::orchestration("load_balancing", "Intelligent load balancing"),
-            PrimalCapability::communication("message_routing", "Secure message routing"),
+            PrimalCapability::new("orchestration", "service_discovery", "1.0.0"),
+            PrimalCapability::new("orchestration", "load_balancing", "1.0.0"),
+            PrimalCapability::new("communication", "message_routing", "1.0.0"),
         ],
     );
 
-    info!("   🎭 Created mock primal: {}", mock_primal.get_id());
+    info!("   🎭 Created mock primal: {}", mock_primal.primal_id());
     info!(
         "   📋 Capabilities: {}",
-        mock_primal.get_capabilities().len()
+        mock_primal.capabilities().len()
     );
-    info!("   🏥 Health: {:?}", mock_primal.get_health());
+    info!("   🏥 Health: {:?}", mock_primal.health_check().await?);
 
     // Test primal request/response cycle
-    let test_request = PrimalRequest::new(
-        "get_services".to_string(),
-        serde_json::json!({"filter": "active"}),
-    );
+    let test_request = UniversalServiceRequest {
+        request_id: uuid::Uuid::new_v4(),
+        method: "get_services".to_string(),
+        parameters: std::collections::HashMap::new(),
+        payload: serde_json::json!({"filter": "active"}),
+        context: biomeos_primal_sdk::UniversalServiceRequest::default_context(),
+        timestamp: chrono::Utc::now(),
+        required_capabilities: vec![],
+        timeout_ms: Some(30000),
+        priority: biomeos_primal_sdk::RequestPriority::Normal,
+    };
 
-    match mock_primal.handle_request(&test_request).await {
-        Ok(response) => {
-            info!("   ✅ Primal request successful: {}", response.success);
+    let response = mock_primal.handle_request(test_request).await;
+    match response.status {
+        biomeos_primal_sdk::ResponseStatus::Success => {
+            info!("   ✅ Primal request successful");
             info!("   📦 Response data: {}", response.data);
         }
-        Err(e) => info!("   ⚠️  Primal request failed: {:?}", e),
+        _ => info!("   ⚠️  Primal request failed: {:?}", response.error),
     }
 
     // 5. System stress test and resilience demonstration
@@ -232,83 +238,280 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-/// Mock EcoPrimal implementation for demonstration
+/// Mock Universal Primal implementation for demonstration
 #[derive(Clone, Debug)]
-struct MockEcoPrimal {
+struct MockUniversalPrimal {
     id: String,
     primal_type: PrimalType,
     capabilities: Vec<PrimalCapability>,
-    health: PrimalHealth,
+    health: Health,
+    metadata: PrimalServiceMetadata,
 }
 
-impl MockEcoPrimal {
+impl MockUniversalPrimal {
     fn new(id: String, primal_type: PrimalType, capabilities: Vec<PrimalCapability>) -> Self {
+        let metadata = PrimalServiceMetadata {
+            id: id.clone(),
+            name: format!("Mock Primal: {}", id),
+            description: "Mock primal for demonstration purposes".to_string(),
+            version: "1.0.0".to_string(),
+            author: "BiomeOS Demo".to_string(),
+            homepage: None,
+            documentation: None,
+            license: Some("MIT".to_string()),
+            keywords: vec!["demo".to_string(), "mock".to_string()],
+            endpoints: HashMap::new(),
+            custom: HashMap::new(),
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+        };
+
         Self {
             id,
             primal_type,
             capabilities,
-            health: PrimalHealth::Healthy,
+            health: Health::Healthy,
+            metadata,
         }
     }
 }
 
-#[async_trait::async_trait]
-impl EcoPrimal for MockEcoPrimal {
-    fn get_id(&self) -> String {
-        self.id.clone()
+#[async_trait]
+impl UniversalPrimalService for MockUniversalPrimal {
+    fn primal_id(&self) -> &str {
+        &self.id
     }
 
-    fn get_type(&self) -> PrimalType {
-        self.primal_type.clone()
+    fn primal_type(&self) -> &PrimalType {
+        &self.primal_type
     }
 
-    fn get_capabilities(&self) -> Vec<PrimalCapability> {
-        self.capabilities.clone()
+    fn metadata(&self) -> &PrimalServiceMetadata {
+        &self.metadata
     }
 
-    fn get_health(&self) -> PrimalHealth {
-        self.health.clone()
+    fn version(&self) -> &str {
+        &self.metadata.version
     }
 
-    async fn handle_request(&self, request: &PrimalRequest) -> Result<PrimalResponse, PrimalError> {
-        // Mock implementation for demo purposes
-        match request.action.as_str() {
+    fn capabilities(&self) -> &[PrimalCapability] {
+        &self.capabilities
+    }
+
+    async fn can_handle_capability(&self, capability: &PrimalCapability) -> bool {
+        self.capabilities.contains(capability)
+    }
+
+    async fn get_capability_metadata(&self, _capability: &str) -> Option<biomeos_primal_sdk::CapabilityMetadata> {
+        None
+    }
+
+    async fn initialize(&mut self, _config: &PrimalConfiguration) -> BiomeResult<()> {
+        info!("🔧 Mock primal '{}' initialized successfully", self.id);
+        self.health = Health::Healthy;
+        Ok(())
+    }
+
+    async fn shutdown(&mut self) -> BiomeResult<()> {
+        info!("🛑 Mock primal '{}' shutting down gracefully", self.id);
+        self.health = Health::Unknown { 
+            reason: "Service shutdown".to_string(), 
+            last_known: Some(Box::new(Health::Healthy)) 
+        };
+        Ok(())
+    }
+
+    async fn update_configuration(&mut self, _config: serde_json::Value) -> BiomeResult<()> {
+        info!("⚙️ Mock primal '{}' configuration updated", self.id);
+        Ok(())
+    }
+
+    async fn handle_request(&self, request: UniversalServiceRequest) -> UniversalServiceResponse {
+        use biomeos_primal_sdk::*;
+        
+        match request.method.as_str() {
             "get_services" => {
                 let response_data = serde_json::json!({
                     "services": [
-                        {"name": "service-1", "status": "active"},
-                        {"name": "service-2", "status": "active"},
-                        {"name": "service-3", "status": "maintenance"}
+                        {"name": "auth-service", "status": "healthy", "version": "1.0.0"},
+                        {"name": "data-service", "status": "healthy", "version": "2.1.0"},
+                        {"name": "compute-service", "status": "degraded", "version": "1.5.0"}
                     ],
-                    "total": 3
+                    "total": 3,
+                    "filter": request.payload.get("filter")
                 });
 
-                Ok(PrimalResponse::success(response_data))
+                UniversalServiceResponse {
+                    request_id: request.request_id,
+                    status: biomeos_types::primal::ResponseStatus::Success,
+                    data: response_data,
+                    metadata: biomeos_types::primal::ServiceResponseMetadata {
+                        processing_time_ms: 15,
+                        resource_usage: HashMap::new(),
+                        warnings: vec![],
+                        debug_info: Some("Mock response".to_string()),
+                        custom: HashMap::new(),
+                    },
+                    timestamp: chrono::Utc::now(),
+                    capabilities_used: vec![],
+                    error: None,
+                }
             }
-            "health_check" => Ok(PrimalResponse::success(serde_json::json!({
-                "status": "healthy",
-                "uptime": "2h 30m",
-                "version": "1.0.0"
-            }))),
-            _ => Err(PrimalError::unsupported_operation(&format!(
-                "Action '{}' not supported by mock primal",
-                request.action
-            ))),
+            "health_check" => {
+                UniversalServiceResponse {
+                    request_id: request.request_id,
+                    status: biomeos_types::primal::ResponseStatus::Success,
+                    data: serde_json::json!({
+                        "status": "healthy",
+                        "uptime": "2h 30m",
+                        "version": "1.0.0"
+                    }),
+                    metadata: biomeos_types::primal::ServiceResponseMetadata {
+                        processing_time_ms: 5,
+                        resource_usage: HashMap::new(),
+                        warnings: vec![],
+                        debug_info: None,
+                        custom: HashMap::new(),
+                    },
+                    timestamp: chrono::Utc::now(),
+                    capabilities_used: vec![],
+                    error: None,
+                }
+            }
+            _ => {
+                UniversalServiceResponse {
+                    request_id: request.request_id,
+                    status: biomeos_types::primal::ResponseStatus::Error,
+                    data: serde_json::Value::Null,
+                    metadata: biomeos_types::primal::ServiceResponseMetadata {
+                        processing_time_ms: 1,
+                        resource_usage: HashMap::new(),
+                        warnings: vec![],
+                        debug_info: Some(format!("Unsupported method: {}", request.method)),
+                        custom: HashMap::new(),
+                    },
+                    timestamp: chrono::Utc::now(),
+                    capabilities_used: vec![],
+                    error: Some(BiomeError::config_error(
+                        format!("Method '{}' not supported by mock primal", request.method),
+                        Some("unsupported_method")
+                    )),
+                }
+            }
         }
     }
 
-    async fn initialize(
-        &mut self,
-        _config: HashMap<String, serde_json::Value>,
-    ) -> Result<(), PrimalError> {
-        info!("🔧 Mock primal '{}' initialized successfully", self.id);
-        self.health = PrimalHealth::Healthy;
+    async fn health_check(&self) -> BiomeResult<Health> {
+        Ok(self.health.clone())
+    }
+
+    async fn health_report(&self) -> BiomeResult<biomeos_primal_sdk::HealthReport> {
+        Ok(biomeos_primal_sdk::HealthReport {
+            id: uuid::Uuid::new_v4(),
+            subject: biomeos_types::HealthSubject {
+                id: self.id.clone(),
+                subject_type: biomeos_types::HealthSubjectType::Service,
+                name: self.metadata.name.clone(),
+                version: self.metadata.version.clone(),
+            },
+            health: self.health.clone(),
+            metrics: biomeos_types::health::HealthMetrics {
+                response_time: Some(biomeos_types::ResponseTimeMetrics {
+                    average_ms: 12.5,
+                    p95_ms: 25.0,
+                    p99_ms: 50.0,
+                }),
+                resources: None,
+                errors: None,
+                availability: None,
+                custom: HashMap::new(),
+            },
+            history: vec![],
+            components: HashMap::new(),
+            generated_at: chrono::Utc::now(),
+            next_check_at: Some(chrono::Utc::now() + chrono::Duration::minutes(5)),
+        })
+    }
+
+    async fn resource_metrics(&self) -> BiomeResult<biomeos_primal_sdk::ResourceMetrics> {
+        Ok(biomeos_primal_sdk::ResourceMetrics {
+            cpu_usage: Some(15.5),
+            memory_usage: Some(45.2),
+            disk_usage: Some(78.1),
+            network_io: Some(biomeos_primal_sdk::NetworkIoMetrics {
+                bytes_in_per_sec: 1024.0,
+                bytes_out_per_sec: 2048.0,
+                packets_in_per_sec: 10.0,
+                packets_out_per_sec: 12.0,
+            }),
+        })
+    }
+
+    fn get_registration(&self) -> biomeos_primal_sdk::UniversalServiceRegistration {
+        use biomeos_primal_sdk::*;
+        
+        UniversalServiceRegistration {
+            metadata: self.metadata.clone(),
+            capabilities: self.capabilities.clone(),
+            endpoints: vec![],
+            health_check: biomeos_types::primal::HealthCheckConfig {
+                path: "/health".to_string(),
+                interval_secs: 30,
+                timeout_secs: 10,
+                healthy_threshold: 2,
+                unhealthy_threshold: 3,
+            },
+            constraints: biomeos_types::primal::ServiceConstraints {
+                min_resources: ResourceRequirements::default(),
+                max_resources: Some(ResourceRequirements::default()),
+                network: biomeos_types::primal::NetworkRequirements {
+                    required_ports: vec![8080],
+                    security: biomeos_types::primal::NetworkSecurity {
+                        tls_required: false,
+                        allowed_origins: vec![],
+                        rate_limiting: HashMap::new(),
+                    },
+                    bandwidth_requirements: HashMap::new(),
+                },
+                security: biomeos_types::primal::SecurityRequirements {
+                    authentication_required: false,
+                    authorization_scopes: vec![],
+                    encryption: biomeos_types::primal::EncryptionRequirements {
+                        at_rest: false,
+                        in_transit: false,
+                        key_management: None,
+                    },
+                    compliance_requirements: vec![],
+                },
+                deployment_constraints: HashMap::new(),
+            },
+            registered_at: chrono::Utc::now(),
+        }
+    }
+
+    async fn register_with_ecosystem(&self, _discovery_endpoint: &str) -> BiomeResult<()> {
+        info!("📡 Mock primal '{}' registered with ecosystem", self.id);
         Ok(())
     }
 
-    async fn shutdown(&mut self) -> Result<(), PrimalError> {
-        info!("🛑 Mock primal '{}' shutting down gracefully", self.id);
-        self.health = PrimalHealth::Unknown;
+    async fn notify_status_change(&self, _status: biomeos_primal_sdk::ServiceStatus) -> BiomeResult<()> {
+        info!("📢 Mock primal '{}' status change notified", self.id);
         Ok(())
+    }
+
+    fn get_dynamic_config(&self) -> Option<serde_json::Value> {
+        Some(serde_json::json!({
+            "mock_mode": true,
+            "demo_version": "1.0.0"
+        }))
+    }
+
+    async fn validate_config_change(&self, _config: &serde_json::Value) -> BiomeResult<biomeos_primal_sdk::ConfigValidationResult> {
+        Ok(biomeos_primal_sdk::ConfigValidationResult {
+            valid: true,
+            errors: vec![],
+            warnings: vec!["This is a mock primal - validation is simulated".to_string()],
+            suggestions: vec!["Consider using a real primal implementation for production".to_string()],
+        })
     }
 }

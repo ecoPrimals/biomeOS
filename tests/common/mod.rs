@@ -4,10 +4,10 @@
 //! that align with the refactored biomeOS architecture.
 
 use anyhow::Result;
-use biomeos_core::{BiomeOSConfig, UniversalBiomeOSManager};
-use biomeos_core::config::*;
+use biomeos_core::UniversalBiomeOSManager;
 use biomeos_core::universal_biomeos_manager::{PrimalInfo, discovery::DiscoveryResult};
-use biomeos_primal_sdk::{PrimalCapability, PrimalHealth, PrimalType};
+use biomeos_types::{BiomeOSConfig, SystemConfig, Environment, PrimalCapability, Health as PrimalHealth, PrimalType};
+use biomeos_types::config::*;
 use std::collections::HashMap;
 
 

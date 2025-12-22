@@ -10,6 +10,10 @@ description = "biomeOS Bootstrap UI - Sovereignty-first ecosystem management int
 name = "biomeos-ui"
 path = "src/main.rs"
 
+[[bin]]
+name = "biomeos-desktop"
+path = "src/minimal_main.rs"
+
 [dependencies]
 # Core dependencies
 anyhow = { workspace = true }
@@ -17,7 +21,7 @@ tokio = { version = "1.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = { workspace = true }
-chrono = { version = "0.4", features = ["serde"] }
+chrono = { version = "0.4", features = ["serde", "clock"] }
 uuid = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
@@ -32,6 +36,8 @@ rfd = { workspace = true }
 # biomeOS integration
 biomeos-core = { path = "../crates/biomeos-core" }
 biomeos-primal-sdk = { path = "../crates/biomeos-primal-sdk" }
+biomeos-ui = { path = "../crates/biomeos-ui" }
+biomeos-types = { path = "../crates/biomeos-types" }
 
 # System information
 num_cpus = { workspace = true }

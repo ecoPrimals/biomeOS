@@ -107,7 +107,7 @@ impl IsoConfig {
 /// Boot mode for ISO
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum BootMode {
-    Legacy,
+    BIOS,
     UEFI,
     Hybrid,
 }
@@ -115,13 +115,13 @@ pub enum BootMode {
 impl BootMode {
     /// Get all available boot modes
     pub fn all() -> Vec<Self> {
-        vec![Self::Legacy, Self::UEFI, Self::Hybrid]
+        vec![Self::BIOS, Self::UEFI, Self::Hybrid]
     }
 
     /// Get display name for boot mode
     pub fn display_name(&self) -> &str {
         match self {
-            Self::Legacy => "Legacy BIOS",
+            Self::BIOS => "Legacy BIOS",
             Self::UEFI => "UEFI",
             Self::Hybrid => "Hybrid (BIOS + UEFI)",
         }
@@ -169,7 +169,7 @@ impl BuildStatus {
 }
 
 /// Niche package specification
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Deserialize)]
 pub struct NichePackage {
     pub id: String,
     pub name: String,
@@ -300,7 +300,7 @@ impl ComponentType {
 }
 
 /// ISO template specification
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Deserialize)]
 pub struct IsoTemplate {
     pub name: String,
     pub description: String,
@@ -354,7 +354,7 @@ impl IsoTemplate {
 }
 
 /// Template difficulty level
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Deserialize)]
 pub enum TemplateDifficulty {
     Beginner,
     Intermediate,

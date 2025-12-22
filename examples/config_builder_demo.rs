@@ -18,46 +18,40 @@ async fn main() -> Result<()> {
 
     println!("  Environment: {:?}", dev_config.system.environment);
     println!(
-        "  Discovery hosts: {:?}",
-        dev_config.primals.discovery.scan_hosts
+        "  Discovery methods: {:?}",
+        dev_config.discovery.methods
     );
     println!(
-        "  Discovery ports: {:?}",
-        dev_config.primals.discovery.scan_ports
+        "  Network binding: {}",
+        dev_config.network.bind_address
     );
     println!(
-        "  Auto-discovery: {}",
-        dev_config.primals.discovery.auto_discovery
+        "  Organization scale: {:?}",
+        dev_config.system.organization_scale
     );
 
-    let dev_manager = UniversalBiomeOSManager::new(dev_config);
-    dev_manager.initialize().await?;
+    let dev_manager = UniversalBiomeOSManager::new(dev_config).await?;
     println!("  ✅ Manager created with development configuration\n");
 
-    // Demo 2: Production Configuration with Custom Hosts/Ports
+    // Demo 2: Production Configuration
     println!("🏭 Demo 2: Production Configuration");
-    let prod_hosts = vec![
-        "10.0.1.10".to_string(),
-        "10.0.1.11".to_string(),
-        "10.0.1.12".to_string(),
-    ];
-    let prod_ports = vec![9090, 9091, 9092];
-
-    let prod_config =
-        BiomeOSConfigBuilder::for_production(prod_hosts.clone(), prod_ports.clone()).build();
+    let prod_config = BiomeOSConfigBuilder::for_production().build();
 
     println!("  Environment: {:?}", prod_config.system.environment);
     println!(
-        "  Discovery hosts: {:?}",
-        prod_config.primals.discovery.scan_hosts
+        "  Discovery methods: {:?}",
+        prod_config.discovery.methods
     );
     println!(
-        "  Discovery ports: {:?}",
-        prod_config.primals.discovery.scan_ports
+        "  Organization scale: {:?}",
+        prod_config.system.organization_scale
+    );
+    println!(
+        "  Network binding: {}",
+        prod_config.network.bind_address
     );
 
-    let prod_manager = UniversalBiomeOSManager::new(prod_config);
-    prod_manager.initialize().await?;
+    let prod_manager = UniversalBiomeOSManager::new(prod_config).await?;
     println!("  ✅ Manager created with production configuration\n");
 
     // Demo 3: Testing Configuration (Fast timeouts, static discovery)
@@ -66,80 +60,60 @@ async fn main() -> Result<()> {
 
     println!("  Environment: {:?}", test_config.system.environment);
     println!(
-        "  Discovery method: {:?}",
-        test_config.primals.discovery.method
+        "  Discovery methods: {:?}",
+        test_config.discovery.methods
     );
     println!(
-        "  Auto-discovery: {}",
-        test_config.primals.discovery.auto_discovery
+        "  Organization scale: {:?}",
+        test_config.system.organization_scale
     );
 
-    let test_manager = UniversalBiomeOSManager::new(test_config);
-    test_manager.initialize().await?;
+    let test_manager = UniversalBiomeOSManager::new(test_config).await?;
     println!("  ✅ Manager created with testing configuration\n");
 
     // Demo 4: Registry-based Configuration
     println!("📋 Demo 4: Registry-based Configuration");
-    let registry_url = "http://consul.example.com:8500".to_string();
-    let registry_config = BiomeOSConfigBuilder::with_registry(registry_url.clone()).build();
+    let registry_url = "http://consul.example.com:8500";
+    let registry_config = BiomeOSConfigBuilder::new()
+        .with_registry_discovery(registry_url, None)
+        .build();
 
     println!("  Registry URL: {}", registry_url);
     println!(
-        "  Discovery method: {:?}",
-        registry_config.primals.discovery.method
+        "  Discovery methods: {:?}",
+        registry_config.discovery.methods
     );
 
-    let registry_manager = UniversalBiomeOSManager::new(registry_config);
-    registry_manager.initialize().await?;
+    let registry_manager = UniversalBiomeOSManager::new(registry_config).await?;
     println!("  ✅ Manager created with registry configuration\n");
 
-    // Demo 5: Custom Configuration with Static Endpoints
-    println!("⚙️ Demo 5: Custom Configuration with Static Endpoints");
+    // Demo 5: Custom Configuration with DNS Discovery
+    println!("⚙️ Demo 5: Custom Configuration with DNS Discovery");
     let custom_config = BiomeOSConfigBuilder::new()
-        .with_discovery_hosts(vec![
+        .with_dns_discovery(vec![
             "api-server-1.company.com".to_string(),
             "api-server-2.company.com".to_string(),
         ])
-        .with_discovery_ports(vec![8443, 9443])
-        .with_static_endpoint(
-            "toadstool".to_string(),
-            "https://compute.company.com:8080".to_string(),
-        )
-        .with_static_endpoint(
-            "songbird".to_string(),
-            "https://mesh.company.com:3000".to_string(),
-        )
-        .with_static_endpoint(
-            "nestgate".to_string(),
-            "https://storage.company.com:8082".to_string(),
-        )
-        .with_auto_discovery(false) // Rely only on static endpoints
-        .with_crypto_locks(true)
         .build();
 
     println!(
-        "  Discovery hosts: {:?}",
-        custom_config.primals.discovery.scan_hosts
+        "  Discovery methods: {:?}",
+        custom_config.discovery.methods
     );
     println!(
-        "  Discovery ports: {:?}",
-        custom_config.primals.discovery.scan_ports
+        "  DNS servers: {:?}",
+        custom_config.discovery.dns.as_ref().map(|d| &d.servers)
     );
     println!(
-        "  Static endpoints: {:?}",
-        custom_config.primals.discovery.static_endpoints
+        "  Environment: {:?}",
+        custom_config.system.environment
     );
     println!(
-        "  Auto-discovery: {}",
-        custom_config.primals.discovery.auto_discovery
-    );
-    println!(
-        "  Crypto locks enabled: {}",
-        custom_config.security.enable_crypto_locks
+        "  Network binding: {}",
+        custom_config.network.bind_address
     );
 
-    let custom_manager = UniversalBiomeOSManager::new(custom_config);
-    custom_manager.initialize().await?;
+    let custom_manager = UniversalBiomeOSManager::new(custom_config).await?;
     println!("  ✅ Manager created with custom configuration\n");
 
     // Demo 6: Show the difference from hardcoded approach
@@ -170,7 +144,7 @@ async fn main() -> Result<()> {
 
     for (name, manager) in configs {
         let health = manager.get_system_health().await;
-        println!("  {} health: {:?}", name, health.overall_status);
+        println!("  {} health: {:?}", name, health.health);
     }
 
     println!("\n✨ Configuration builder demo completed successfully!");

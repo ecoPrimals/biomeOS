@@ -9,6 +9,14 @@
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
+// Use unified types from biomeos-types instead of duplicating
+use biomeos_types::{
+    PrimalCapability, ResourceRequirements, HealthCheckConfig,
+    service::networking::PortProtocol,
+    // Removed unused imports
+    Health,
+};
+
 /// Workflow state for the BYOB process
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum WorkflowState {
@@ -22,6 +30,7 @@ pub enum WorkflowState {
 }
 
 /// Universal primal definition - completely agnostic to specific names
+/// This uses unified types from biomeos-types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PrimalDefinition {
     pub name: String,
@@ -34,66 +43,14 @@ pub struct PrimalDefinition {
     pub metadata: HashMap<String, String>,
 }
 
-/// Universal capability system - extensible for any functionality
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum PrimalCapability {
-    // Core capabilities
-    Compute,
-    Storage,
-    Networking,
-    Security,
-    AI,
-    Orchestration,
-
-    // Advanced capabilities
-    Encryption,
-    Authentication,
-    LoadBalancing,
-    ServiceDiscovery,
-    Monitoring,
-    Analytics,
-
-    // Specialized capabilities
-    Gaming,
-    WebDevelopment,
-    MachineLearning,
-    DataProcessing,
-    Federation,
-
-    // Custom capability for extensibility
-    Custom(String),
-}
-
-/// Service provided by a primal
+/// Service provided by a primal - using unified protocol type
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PrimalService {
     pub name: String,
     pub port: Option<u16>,
-    pub protocol: ServiceProtocol,
-    pub health_check: Option<HealthCheck>,
+    pub protocol: PortProtocol,  // Now using unified type
+    pub health_check: Option<HealthCheckConfig>,  // Now using unified type
     pub capabilities: HashSet<PrimalCapability>,
-}
-
-/// Service protocol
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ServiceProtocol {
-    HTTP,
-    HTTPS,
-    TCP,
-    UDP,
-    WebSocket,
-    gRPC,
-    Custom(String),
-}
-
-/// Health check configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct HealthCheck {
-    pub endpoint: String,
-    pub interval_seconds: u64,
-    pub timeout_seconds: u64,
-    pub healthy_threshold: u32,
-    pub unhealthy_threshold: u32,
 }
 
 /// Niche template definition - now completely universal
@@ -122,6 +79,20 @@ pub enum NicheCategory {
     DevOps,
     Security,
     Custom(String),
+}
+
+impl NicheCategory {
+    pub fn display_name(&self) -> &str {
+        match self {
+            NicheCategory::WebDevelopment => "Web Development",
+            NicheCategory::AIResearch => "AI Research",
+            NicheCategory::Gaming => "Gaming",
+            NicheCategory::DataScience => "Data Science",
+            NicheCategory::DevOps => "DevOps",
+            NicheCategory::Security => "Security",
+            NicheCategory::Custom(name) => name,
+        }
+    }
 }
 
 /// Niche difficulty level
@@ -160,8 +131,13 @@ pub enum CustomizationType {
 /// Team information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TeamInfo {
+    pub id: String,
     pub name: String,
     pub description: String,
+    pub members: Vec<String>,
+    pub created_at: String,
+    pub status: TeamStatus,
+    pub workspace_url: Option<String>,
     pub size: TeamSize,
     pub focus_area: String,
     pub experience_level: ExperienceLevel,
@@ -169,33 +145,34 @@ pub struct TeamInfo {
     pub preferred_primals: Vec<String>,
 }
 
+/// Team status
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum TeamStatus {
+    Active,
+    Inactive,
+    Configuring,
+    Deploying,
+    Archived,
+}
+
 /// Team size classification
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum TeamSize {
+    Individual,
     Solo,
     Small,  // 2-5 people
     Medium, // 6-15 people
     Large,  // 16+ people
+    Enterprise,
 }
 
-/// Experience level
+/// Experience level classification
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ExperienceLevel {
     Beginner,
     Intermediate,
     Advanced,
     Expert,
-}
-
-/// Deployment status
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum DeploymentStatus {
-    NotStarted,
-    Preparing,
-    Deploying,
-    Running,
-    Failed,
-    Completed,
 }
 
 /// Deployment information
@@ -206,46 +183,64 @@ pub struct DeploymentInfo {
     pub status: DeploymentStatus,
     pub created_at: String,
     pub last_updated: String,
-    pub resource_usage: ResourceUsage,
-    pub health_status: HealthStatus,
     pub primals: Vec<String>,
-    pub capabilities: HashSet<PrimalCapability>,
-    // Compatibility fields
+    pub capabilities: Vec<PrimalCapability>,
+    pub resource_usage: ResourceUsage,
+    pub manifest_path: String,
+    // Additional fields needed by data.rs
+    pub health_status: Health,
     pub team: String,
     pub updated_at: String,
     pub services: Vec<String>,
     pub health_score: f64,
 }
 
-/// Resource usage metrics
+/// Deployment status
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum DeploymentStatus {
+    Pending,
+    Preparing,
+    Deploying,
+    Running,
+    Stopped,
+    Failed,
+    Error,
+    Updating,
+}
+
+/// Resource usage information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourceUsage {
     pub cpu_percent: f64,
     pub memory_percent: f64,
     pub storage_percent: f64,
     pub network_mbps: f64,
-    // Compatibility fields
     pub cpu_cores: f64,
     pub memory_gb: f64,
     pub storage_gb: f64,
 }
 
-/// Health status
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum HealthStatus {
-    Healthy,
-    Warning,
-    Critical,
-    Unknown,
+// Health status - now directly uses the unified Health type from biomeos-types
+
+/// Health check result for services
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HealthCheck {
+    pub status: Health,
+    pub last_check: String,
+    pub response_time_ms: u64,
+    pub error_message: Option<String>,
 }
 
 /// Service information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServiceInfo {
     pub name: String,
+    pub primal: String,
     pub status: ServiceStatus,
+    pub endpoints: Vec<String>,
+    pub health_check: HealthCheck,
     pub port: Option<u16>,
-    pub health: HealthStatus,
+    pub health: Health,
     pub uptime: String,
     pub primal_name: String,
     pub capabilities: HashSet<PrimalCapability>,
@@ -258,6 +253,7 @@ pub enum ServiceStatus {
     Stopped,
     Starting,
     Stopping,
+    Failed,
     Error,
 }
 
@@ -282,17 +278,6 @@ pub struct ResourceQuota {
     pub used_deployments: usize,
 }
 
-/// Resource requirements
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ResourceRequirements {
-    pub cpu_cores: f64,
-    pub memory_gb: f64,
-    pub storage_gb: f64,
-    pub gpu_required: bool,
-    pub network_bandwidth_mbps: f64,
-    pub required_capabilities: HashSet<PrimalCapability>,
-}
-
 /// Deployment data container
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeploymentData {
@@ -315,8 +300,13 @@ impl TeamData {
     pub fn new() -> Self {
         Self {
             team_info: TeamInfo {
+                id: String::new(),
                 name: String::new(),
                 description: String::new(),
+                members: Vec::new(),
+                created_at: chrono::Utc::now().to_rfc3339(),
+                status: TeamStatus::Active,
+                workspace_url: None,
                 size: TeamSize::Solo,
                 focus_area: String::new(),
                 experience_level: ExperienceLevel::Beginner,
@@ -325,15 +315,14 @@ impl TeamData {
             },
             selected_primals: Vec::new(),
             available_primals: Vec::new(),
-            resource_requirements: ResourceRequirements {
-                cpu_cores: 1.0,
-                memory_gb: 2.0,
-                storage_gb: 10.0,
-                gpu_required: false,
-                network_bandwidth_mbps: 10.0,
-                required_capabilities: HashSet::new(),
-            },
+            resource_requirements: ResourceRequirements::default(),
         }
+    }
+}
+
+impl Default for TeamData {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -357,6 +346,12 @@ impl DeploymentData {
     }
 }
 
+impl Default for DeploymentData {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PrimalRegistry {
     pub fn new() -> Self {
         Self {
@@ -366,23 +361,7 @@ impl PrimalRegistry {
         }
     }
 
-    pub fn register_primal(&mut self, primal: PrimalDefinition) {
-        // Update capability index
-        for capability in &primal.capabilities {
-            self.capabilities
-                .entry(capability.clone())
-                .or_insert_with(Vec::new)
-                .push(primal.name.clone());
-        }
-
-        self.primals.insert(primal.name.clone(), primal);
-        self.last_updated = chrono::Utc::now().to_rfc3339();
-    }
-
-    pub fn find_primals_by_capability(
-        &self,
-        capability: &PrimalCapability,
-    ) -> Vec<&PrimalDefinition> {
+    pub fn find_primals_by_capability(&self, capability: &PrimalCapability) -> Vec<&PrimalDefinition> {
         if let Some(primal_names) = self.capabilities.get(capability) {
             primal_names
                 .iter()
@@ -393,10 +372,7 @@ impl PrimalRegistry {
         }
     }
 
-    pub fn find_primals_by_capabilities(
-        &self,
-        capabilities: &HashSet<PrimalCapability>,
-    ) -> Vec<&PrimalDefinition> {
+    pub fn find_primals_by_capabilities(&self, capabilities: &HashSet<PrimalCapability>) -> Vec<&PrimalDefinition> {
         self.primals
             .values()
             .filter(|primal| {
@@ -407,79 +383,22 @@ impl PrimalRegistry {
             .collect()
     }
 
-    pub fn get_all_capabilities(&self) -> HashSet<PrimalCapability> {
+    pub fn get_all_capabilities(&self) -> Vec<PrimalCapability> {
         self.capabilities.keys().cloned().collect()
     }
-}
 
-// Helper implementations for UI display
-impl PrimalCapability {
-    pub fn display_name(&self) -> String {
-        match self {
-            PrimalCapability::Compute => "Compute".to_string(),
-            PrimalCapability::Storage => "Storage".to_string(),
-            PrimalCapability::Networking => "Networking".to_string(),
-            PrimalCapability::Security => "Security".to_string(),
-            PrimalCapability::AI => "AI/ML".to_string(),
-            PrimalCapability::Orchestration => "Orchestration".to_string(),
-            PrimalCapability::Encryption => "Encryption".to_string(),
-            PrimalCapability::Authentication => "Authentication".to_string(),
-            PrimalCapability::LoadBalancing => "Load Balancing".to_string(),
-            PrimalCapability::ServiceDiscovery => "Service Discovery".to_string(),
-            PrimalCapability::Monitoring => "Monitoring".to_string(),
-            PrimalCapability::Analytics => "Analytics".to_string(),
-            PrimalCapability::Gaming => "Gaming".to_string(),
-            PrimalCapability::WebDevelopment => "Web Development".to_string(),
-            PrimalCapability::MachineLearning => "Machine Learning".to_string(),
-            PrimalCapability::DataProcessing => "Data Processing".to_string(),
-            PrimalCapability::Federation => "Federation".to_string(),
-            PrimalCapability::Custom(name) => name.clone(),
+    pub fn register_primal(&mut self, primal: PrimalDefinition) {
+        // Update capabilities index
+        for capability in &primal.capabilities {
+            self.capabilities
+                .entry(capability.clone())
+                .or_insert_with(Vec::new)
+                .push(primal.name.clone());
         }
-    }
-
-    pub fn description(&self) -> String {
-        match self {
-            PrimalCapability::Compute => "Computational processing and task execution".to_string(),
-            PrimalCapability::Storage => "Data storage and retrieval services".to_string(),
-            PrimalCapability::Networking => "Network communication and routing".to_string(),
-            PrimalCapability::Security => "Security services and protection".to_string(),
-            PrimalCapability::AI => "Artificial intelligence and machine learning".to_string(),
-            PrimalCapability::Orchestration => "Service orchestration and management".to_string(),
-            PrimalCapability::Encryption => {
-                "Data encryption and cryptographic services".to_string()
-            }
-            PrimalCapability::Authentication => "User authentication and authorization".to_string(),
-            PrimalCapability::LoadBalancing => {
-                "Load balancing and traffic distribution".to_string()
-            }
-            PrimalCapability::ServiceDiscovery => "Service discovery and registration".to_string(),
-            PrimalCapability::Monitoring => "System monitoring and observability".to_string(),
-            PrimalCapability::Analytics => "Data analytics and insights".to_string(),
-            PrimalCapability::Gaming => "Gaming-specific services and features".to_string(),
-            PrimalCapability::WebDevelopment => "Web development tools and services".to_string(),
-            PrimalCapability::MachineLearning => {
-                "Machine learning training and inference".to_string()
-            }
-            PrimalCapability::DataProcessing => "Data processing and transformation".to_string(),
-            PrimalCapability::Federation => {
-                "Cross-system federation and interoperability".to_string()
-            }
-            PrimalCapability::Custom(name) => format!("Custom capability: {}", name),
-        }
-    }
-}
-
-impl NicheCategory {
-    pub fn display_name(&self) -> String {
-        match self {
-            NicheCategory::WebDevelopment => "Web Development".to_string(),
-            NicheCategory::AIResearch => "AI Research".to_string(),
-            NicheCategory::Gaming => "Gaming".to_string(),
-            NicheCategory::DataScience => "Data Science".to_string(),
-            NicheCategory::DevOps => "DevOps".to_string(),
-            NicheCategory::Security => "Security".to_string(),
-            NicheCategory::Custom(name) => name.clone(),
-        }
+        
+        // Register the primal
+        self.primals.insert(primal.name.clone(), primal);
+        self.last_updated = chrono::Utc::now().to_rfc3339();
     }
 }
 
@@ -489,14 +408,82 @@ impl Default for PrimalRegistry {
     }
 }
 
-impl Default for TeamData {
-    fn default() -> Self {
-        Self::new()
+impl TeamInfo {
+    /// Create a basic TeamInfo with minimal required fields
+    pub fn basic(id: String, name: String, description: String) -> Self {
+        Self {
+            id,
+            name,
+            description,
+            members: Vec::new(),
+            created_at: chrono::Utc::now().to_rfc3339(),
+            status: TeamStatus::Active,
+            workspace_url: None,
+            size: TeamSize::Small,
+            focus_area: "Development".to_string(),
+            experience_level: ExperienceLevel::Intermediate,
+            required_capabilities: std::collections::HashSet::new(),
+            preferred_primals: Vec::new(),
+        }
     }
 }
 
-impl Default for DeploymentData {
+impl ServiceInfo {
+    /// Create a basic ServiceInfo with minimal required fields
+    pub fn basic(name: String, primal: String) -> Self {
+        Self {
+            name: name.clone(),
+            primal: primal.clone(),
+            primal_name: primal,
+            status: ServiceStatus::Running,
+            port: Some(8080),
+            endpoints: vec!["http://localhost:8080".to_string()],
+            health: biomeos_types::Health::Healthy,
+            uptime: "Unknown".to_string(),
+            capabilities: std::collections::HashSet::new(),
+            health_check: HealthCheck {
+                status: biomeos_types::Health::Healthy,
+                last_check: chrono::Utc::now().to_rfc3339(),
+                response_time_ms: 50,
+                error_message: None,
+            },
+        }
+    }
+}
+
+impl DeploymentInfo {
+    /// Create a basic DeploymentInfo with minimal required fields
+    pub fn basic(id: String, name: String, team: String) -> Self {
+        let now = chrono::Utc::now().to_rfc3339();
+        Self {
+            id,
+            name,
+            status: DeploymentStatus::Running,
+            created_at: now.clone(),
+            last_updated: now.clone(),
+            primals: Vec::new(),
+            capabilities: Vec::new(),
+            resource_usage: ResourceUsage::default(),
+            manifest_path: "/unknown".to_string(),
+            health_status: biomeos_types::Health::Healthy,
+            team,
+            updated_at: now,
+            services: Vec::new(),
+            health_score: 0.9,
+        }
+    }
+}
+
+impl Default for ResourceUsage {
     fn default() -> Self {
-        Self::new()
+        Self {
+            cpu_percent: 0.0,
+            memory_percent: 0.0,
+            storage_percent: 0.0,
+            network_mbps: 0.0,
+            cpu_cores: 1.0,
+            memory_gb: 2.0,
+            storage_gb: 10.0,
+        }
     }
 }

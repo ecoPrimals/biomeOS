@@ -363,7 +363,7 @@ impl SongbirdClient {
         let client = reqwest::Client::new();
         let discovery_request = serde_json::json!({
             "capability": _capability.name,
-            "domain": _capability.domain
+            "category": _capability.category
         });
 
         match client

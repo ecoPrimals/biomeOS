@@ -9,7 +9,7 @@ use biomeos_core::{
     integration::live_service::LiveService,
     universal_biomeos_manager::{HealthStatus, PrimalInfo, UniversalBiomeOSManager},
 };
-use biomeos_primal_sdk::{PrimalCapability, PrimalHealth, PrimalType};
+use biomeos_types::{PrimalCapability, Health, PrimalType};
 use serde_json::json;
 use std::collections::HashMap;
 use std::sync::Arc;

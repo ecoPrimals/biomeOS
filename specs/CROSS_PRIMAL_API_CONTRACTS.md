@@ -207,8 +207,22 @@ pub enum SecurityLevel {
 
 ```rust
 // Universal trait that all Primals must implement
+// 
+// ✅ IMPLEMENTATION COMPLETE: Use the unified trait from biomeos-types
+//
+// Import and use the production-ready implementation:
+use biomeos_types::UniversalPrimalService;
+
+// All Primals should implement this comprehensive trait that provides:
+// - Standardized service lifecycle management
+// - Unified health monitoring and metrics
+// - Consistent capability registration and discovery
+// - AI-first error handling with rich context
+// - Cross-primal communication standards
+//
+// Example implementation:
 #[async_trait]
-pub trait UniversalPrimal: Send + Sync {
+impl UniversalPrimalService for MyPrimal {
     /// Unique identifier for this Primal
     fn primal_id(&self) -> &str;
     
@@ -249,7 +263,18 @@ pub trait UniversalPrimal: Send + Sync {
     async fn notify_parser_status(&self, status: PrimalStatus) -> Result<()>;
 }
 
-// Primal types
+// Primal types - USE UNIFIED PRIMAL TYPE FROM biomeos-types
+//
+// NOTE: This enum is DEPRECATED. Use the comprehensive PrimalType struct from biomeos-types instead:
+//   pub struct PrimalType {
+//       pub category: String,    // e.g., "security", "storage", "orchestration"
+//       pub name: String,        // e.g., "beardog", "nestgate", "songbird"  
+//       pub version: String,     // semantic versioning
+//       pub metadata: HashMap<String, String>,
+//   }
+//
+// Import and use: pub use biomeos_types::PrimalType;
+#[deprecated(since = "0.1.0", note = "Use biomeos_types::PrimalType instead")]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum PrimalType {
     Security,
@@ -260,14 +285,23 @@ pub enum PrimalType {
     Custom(String),
 }
 
-// Health status
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum HealthStatus {
-    Healthy,
-    Degraded,
-    Unhealthy,
-    Unknown,
-}
+// Health status - UNIFIED IMPLEMENTATION FROM biomeos-types
+// 
+// ✅ PRODUCTION READY: Use the comprehensive Health enum from biomeos-types:
+use biomeos_types::Health;
+
+// The unified Health enum provides:
+//   - Detailed health states with rich context
+//   - AI-first error reporting with suggested actions
+//   - Lifecycle state tracking (Starting, Stopping, Maintenance)
+//   - Impact scoring for degraded states
+//   - Historical health state tracking
+//
+// Example usage:
+// let health = Health::Degraded { 
+//     issues: vec![HealthIssue::high_cpu_usage()], 
+//     impact_score: Some(0.7) 
+// };
 
 // Primal status
 #[derive(Debug, Clone, Serialize, Deserialize)]

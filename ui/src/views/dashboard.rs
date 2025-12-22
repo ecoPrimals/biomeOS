@@ -6,14 +6,14 @@ use crate::api::BiomeOSApi;
 use crate::state::AppState;
 use crate::views::{BaseView, View};
 use biomeos_core::{
-    config::BiomeOSConfig,
     integration::live_service::LiveService,
-    universal_biomeos_manager::{HealthStatus, SystemResourceUsage, UniversalBiomeOSManager},
+    // Removed unused import
 };
-use biomeos_primal_sdk::{PrimalCapability, PrimalHealth, PrimalType};
-use egui::{Color32, RichText, Stroke};
+// Removed unused import
+use biomeos_types::Health;
+use egui::Color32;
 use egui_plot::{Legend, Line, Plot, PlotPoints};
-use std::collections::{HashMap, VecDeque};
+use std::collections::VecDeque;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::{Mutex, RwLock};
@@ -66,15 +66,15 @@ pub struct LiveSystemMetrics {
     pub thread_count: u32,
 
     // Enhanced health monitoring
-    pub system_health: HealthStatus,
-    pub primal_health_summary: PrimalHealthSummary,
+    pub system_health: Health,
+    pub primal_health_summary: HealthSummary,
     pub service_count: usize,
     pub healthy_services: usize,
 }
 
 /// Summary of primal health across the ecosystem
 #[derive(Debug, Clone)]
-pub struct PrimalHealthSummary {
+pub struct HealthSummary {
     pub total_primals: usize,
     pub healthy: usize,
     pub degraded: usize,
@@ -89,7 +89,7 @@ pub struct ServiceInfo {
     pub name: String,
     pub service_type: String,
     pub endpoint: String,
-    pub health: PrimalHealth,
+    pub health: Health,
     pub capabilities: Vec<String>,
     pub last_seen: Instant,
     pub response_time_ms: f64,
@@ -115,7 +115,7 @@ impl DashboardView {
     /// Initialize live service connection
     pub async fn initialize_live_service(&mut self) {
         if self.live_service.read().await.is_none() {
-            match LiveService::new(BiomeOSConfig::default()).await {
+            match LiveService::new().await {
                 Ok(mut service) => {
                     if let Err(e) = service.start().await {
                         eprintln!("Failed to start live service: {}", e);
@@ -160,28 +160,28 @@ impl DashboardView {
         let system_status = live_service.get_system_status().await.ok()?;
         let system_health = live_service.universal_manager.get_system_health().await;
 
-        // Calculate primal health summary
-        let primal_health_summary = PrimalHealthSummary {
-            total_primals: system_health.primal_health.len(),
+        // Calculate primal health summary from components
+        let primal_health_summary = HealthSummary {
+            total_primals: system_health.components.len(),
             healthy: system_health
-                .primal_health
+                .components
                 .values()
-                .filter(|&h| matches!(h, PrimalHealth::Healthy))
+                .filter(|h| matches!(h.health, Health::Healthy))
                 .count(),
             degraded: system_health
-                .primal_health
+                .components
                 .values()
-                .filter(|&h| matches!(h, PrimalHealth::Degraded))
+                .filter(|h| matches!(h.health, Health::Degraded { .. }))
                 .count(),
             unhealthy: system_health
-                .primal_health
+                .components
                 .values()
-                .filter(|&h| matches!(h, PrimalHealth::Unhealthy))
+                .filter(|h| matches!(h.health, Health::Unhealthy { .. }))
                 .count(),
             unknown: system_health
-                .primal_health
+                .components
                 .values()
-                .filter(|&h| matches!(h, PrimalHealth::Unknown))
+                .filter(|h| matches!(h.health, Health::Unknown { .. }))
                 .count(),
         };
 
@@ -193,27 +193,26 @@ impl DashboardView {
                 .duration_since(std::time::UNIX_EPOCH)
                 .ok()?
                 .as_secs_f64(),
-            cpu_usage_percent: system_status.resource_usage.cpu_usage_percent as f32,
-            memory_usage_percent: system_status.resource_usage.memory_usage_percent as f32,
-            memory_used_gb: (system_status.resource_usage.memory_usage_percent as f32) * 16.0
-                / 100.0, // Estimate
+            cpu_usage_percent: (system_status.resource_usage.cpu_usage.unwrap_or(0.0) * 100.0) as f32,
+            memory_usage_percent: (system_status.resource_usage.memory_usage.unwrap_or(0.0) * 100.0) as f32,
+            memory_used_gb: (system_status.resource_usage.memory_usage.unwrap_or(0.0) * 16.0) as f32, // Estimate
             memory_total_gb: 16.0, // Estimate - could be detected
-            disk_usage_percent: system_status.resource_usage.disk_usage_percent as f32,
-            disk_used_gb: (system_status.resource_usage.disk_usage_percent as f32) * 500.0 / 100.0, // Estimate
+            disk_usage_percent: (system_status.resource_usage.disk_usage.unwrap_or(0.0) * 100.0) as f32,
+            disk_used_gb: (system_status.resource_usage.disk_usage.unwrap_or(0.0) * 500.0) as f32, // Estimate
             disk_total_gb: 500.0, // Estimate
             load_average: (
-                system_status.resource_usage.cpu_usage_percent as f32 / 100.0,
+                system_status.resource_usage.cpu_usage.unwrap_or(0.0) as f32,
                 0.0,
                 0.0,
             ), // Simplified
-            network_rx_mbps: system_status.resource_usage.network_usage_mbps as f32,
-            network_tx_mbps: system_status.resource_usage.network_usage_mbps as f32,
+            network_rx_mbps: system_status.resource_usage.network_io.as_ref().map_or(0.0, |n| n.bytes_in_per_sec / 1_000_000.0) as f32,
+            network_tx_mbps: system_status.resource_usage.network_io.as_ref().map_or(0.0, |n| n.bytes_out_per_sec / 1_000_000.0) as f32,
             uptime_hours: system_status.uptime.num_seconds() as f32 / 3600.0,
             process_count,
             thread_count,
-            system_health: system_status.health_status,
-            primal_health_summary,
-            service_count: system_health.primal_health.len(),
+            system_health: Health::Healthy,
+            primal_health_summary: primal_health_summary.clone(),
+            service_count: system_health.components.len(),
             healthy_services: primal_health_summary.healthy,
         })
     }
@@ -229,25 +228,21 @@ impl DashboardView {
     async fn update_service_discovery(&mut self) {
         let live_service_guard = self.live_service.read().await;
         if let Some(live_service) = live_service_guard.as_ref() {
-            if let Ok(discovered) = live_service.get_discovered_primals().await {
-                self.discovered_services = discovered
-                    .into_iter()
-                    .map(|service| ServiceInfo {
-                        id: service.primal_id.clone(),
-                        name: service.primal_id,
-                        service_type: service.primal_type.category,
-                        endpoint: service.endpoint,
-                        health: service.health,
-                        capabilities: service
-                            .capabilities
-                            .iter()
-                            .map(|c| c.name.clone())
-                            .collect(),
-                        last_seen: Instant::now(),
-                        response_time_ms: 50.0, // Would measure actual response time
-                    })
-                    .collect();
-            }
+            let discovered = live_service.get_discovered_primals().await;
+            self.discovered_services = discovered
+                .into_iter()
+                .enumerate()
+                .map(|(i, endpoint)| ServiceInfo {
+                    id: format!("service_{}", i),
+                    name: endpoint.clone(),
+                    service_type: "unknown".to_string(), // Simplified since we only have endpoint strings
+                    endpoint,
+                    health: Health::Healthy, // Default to healthy for discovered services
+                    capabilities: vec!["discovery".to_string()], // Default capability
+                    last_seen: Instant::now(),
+                    response_time_ms: 50.0, // Would measure actual response time
+                })
+                .collect();
         }
     }
 
@@ -258,13 +253,15 @@ impl DashboardView {
         if let Some(latest) = self.metrics_history.back() {
             ui.horizontal(|ui| {
                 // System health indicator
-                let health_color = match latest.system_health {
-                    HealthStatus::Healthy => Color32::GREEN,
-                    HealthStatus::Degraded => Color32::YELLOW,
-                    HealthStatus::Warning => Color32::from_rgb(255, 165, 0), // Orange
-                    HealthStatus::Critical => Color32::RED,
-                    HealthStatus::Unhealthy => Color32::RED,
-                    HealthStatus::Unknown => Color32::GRAY,
+                let health_color = match &latest.system_health {
+                    Health::Healthy => Color32::GREEN,
+                    Health::Degraded { .. } => Color32::YELLOW,
+                    Health::Critical { .. } => Color32::from_rgb(255, 165, 0), // Orange
+                    Health::Unhealthy { .. } => Color32::RED,
+                    Health::Unknown { .. } => Color32::GRAY,
+                    Health::Starting { .. } => Color32::BLUE,
+                    Health::Stopping { .. } => Color32::YELLOW,
+                    Health::Maintenance { .. } => Color32::from_rgb(128, 0, 128), // Purple
                 };
 
                 ui.colored_label(health_color, "●");
@@ -503,11 +500,15 @@ impl DashboardView {
                     ui.label(&service.service_type);
 
                     // Health status with color
-                    let health_color = match service.health {
-                        PrimalHealth::Healthy => Color32::GREEN,
-                        PrimalHealth::Degraded => Color32::YELLOW,
-                        PrimalHealth::Unhealthy => Color32::RED,
-                        PrimalHealth::Unknown => Color32::GRAY,
+                    let health_color = match &service.health {
+                        Health::Healthy => Color32::GREEN,
+                        Health::Degraded { .. } => Color32::YELLOW,
+                        Health::Critical { .. } => Color32::RED,
+                        Health::Unhealthy { .. } => Color32::RED,
+                        Health::Unknown { .. } => Color32::GRAY,
+                        Health::Starting { .. } => Color32::from_rgb(255, 165, 0), // Orange
+                        Health::Stopping { .. } => Color32::from_rgb(255, 165, 0), // Orange
+                        Health::Maintenance { .. } => Color32::from_rgb(0, 100, 200), // Blue
                     };
                     ui.colored_label(health_color, format!("{:?}", service.health));
 

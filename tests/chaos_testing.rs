@@ -9,7 +9,7 @@ use biomeos_core::{
     integration::live_service::LiveService,
     universal_biomeos_manager::{HealthStatus, PrimalInfo, UniversalBiomeOSManager},
 };
-use biomeos_primal_sdk::{PrimalCapability, PrimalHealth, PrimalType};
+use biomeos_types::{PrimalCapability, Health, PrimalType};
 use serde_json::json;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
@@ -713,7 +713,7 @@ async fn test_health_monitoring_under_chaos() -> Result<()> {
         id: "chaos-test-service".to_string(),
         primal_type: PrimalType::new("chaos", "test", "1.0.0"),
         capabilities: vec![PrimalCapability::custom("chaos", "Chaos testing")],
-        health: PrimalHealth::Healthy,
+        health: Health::Healthy,
         endpoint: format!("{}/api/v1/health", chaos_server.uri()),
     };
 

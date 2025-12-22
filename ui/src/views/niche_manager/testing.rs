@@ -4,7 +4,7 @@
 //! including syntax validation, resource checks, and deployment testing.
 
 use crate::views::niche_manager::types::*;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 /// Niche testing functionality
 pub struct NicheTester;

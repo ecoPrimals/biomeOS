@@ -1,6 +1,6 @@
 //! BYOB Testing CLI Tool
 
-use biomeos_core::BiomeResult;
+use biomeos_types::BiomeResult;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 

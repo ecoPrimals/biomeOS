@@ -4,12 +4,25 @@
 //! 
 //! This primal was generated using the BiomeOS Primal SDK.
 
-use biomeos_primal_sdk::*;
+use biomeos_primal_sdk::{
+    PrimalRequest, PrimalResponse, PrimalResult, EcoPrimal,
+    PrimalMetadata, PrimalCapability, PrimalConfig, PrimalHealth,
+    PrimalType, PrimalError
+};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use chrono::Utc;
 use axum::{routing::get, Router};
+use serde_json;
+
+/// Utility function for safe JSON serialization with fallback
+fn safe_json_serialize<T: Serialize>(value: &T) -> serde_json::Value {
+    serde_json::to_value(value).unwrap_or_else(|e| {
+        tracing::warn!("JSON serialization failed: {}", e);
+        serde_json::json!({ "error": "serialization_failed", "details": e.to_string() })
+    })
+}
 
 /// Configuration for this primal
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -90,12 +103,13 @@ impl EcoPrimal for ApiGateway {
             "get_config" => {
                 Ok(PrimalResponse::success(
                     request.request_id,
-                    serde_json::to_value(&self.config).unwrap()
+                    safe_json_serialize(&self.config)
                 ))
             }
             _ => {
-                Err(PrimalError::InvalidRequest(
-                    format!("Unknown method: {}", request.method)
+                Err(PrimalError::validation_error(
+                    format!("Unknown method: {}", request.method),
+                    vec![]
                 ))
             }
         }
@@ -132,7 +146,15 @@ mod tests {
         let primal = ApiGateway::new(config);
         
         let request = PrimalRequest::new("ping", serde_json::json!({}));
-        let response = primal.handle_request(request).await.unwrap();
+                        let response = primal.handle_request(request).await
+                    .unwrap_or_else(|e| {
+                        tracing::error!("Request handling failed: {}", e);
+                        PrimalResponse::error(
+                            request.request_id,
+                            "internal_error".to_string(),
+                            Some(e.to_string())
+                        )
+                    });
         
         assert_eq!(response.status, ResponseStatus::Success);
     }

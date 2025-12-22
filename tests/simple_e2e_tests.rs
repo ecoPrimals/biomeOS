@@ -9,7 +9,7 @@ use biomeos_core::{
     integration::live_service::LiveService,
     universal_biomeos_manager::{HealthStatus, UniversalBiomeOSManager},
 };
-use biomeos_primal_sdk::PrimalCapability;
+use biomeos_types::PrimalCapability;
 use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{info, warn};

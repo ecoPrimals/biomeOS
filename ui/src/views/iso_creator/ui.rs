@@ -4,9 +4,9 @@
 //! including tab management, forms, and progress displays.
 
 use crate::views::iso_creator::types::*;
-use crate::views::BaseView;
+// Removed unused import: BaseView
 use eframe::egui;
-use std::collections::HashMap;
+// Removed unused import: HashMap
 
 /// UI renderer for ISO Creator
 pub struct IsoCreatorUI {
@@ -341,7 +341,7 @@ impl IsoCreatorUI {
                 config.compression_level = 5;
             }
             s if s.contains("minimal") => {
-                config.boot_mode = BootMode::Legacy;
+                config.boot_mode = BootMode::BIOS;
                 config.compression_level = 9;
                 config.included_primals = vec!["toadstool".to_string()];
             }

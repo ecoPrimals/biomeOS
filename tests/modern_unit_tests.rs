@@ -5,7 +5,7 @@
 
 use anyhow::Result;
 
-use biomeos_primal_sdk::{PrimalCapability, PrimalHealth};
+use biomeos_types::{PrimalCapability, Health};
 use std::time::Duration;
 
 mod common;
@@ -112,7 +112,7 @@ mod primal_registration_tests {
         manager.register_primal(initial_primal.clone()).await?;
         
         // Register updated primal with same ID
-        initial_primal.health = PrimalHealth::Degraded;
+        initial_primal.health = Health::Degraded;
         initial_primal.name = "Updated Test Primal".to_string();
         manager.register_primal(initial_primal).await?;
         
@@ -120,7 +120,7 @@ mod primal_registration_tests {
         let registered_primals = manager.get_registered_primals().await;
         assert_eq!(registered_primals.len(), 1);
         assert_eq!(registered_primals[0].name, "Updated Test Primal");
-        assert_eq!(registered_primals[0].health, PrimalHealth::Degraded);
+        assert_eq!(registered_primals[0].health, Health::Degraded);
         
         Ok(())
     }

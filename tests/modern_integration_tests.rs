@@ -8,7 +8,7 @@ use biomeos_core::{BiomeOSConfig, UniversalBiomeOSManager};
 use biomeos_core::config::*;
 use biomeos_core::universal_biomeos_manager::{PrimalInfo, discovery::DiscoveryResult};
 use biomeos_core::integration::live_service::LiveService;
-use biomeos_primal_sdk::{PrimalCapability, PrimalHealth, PrimalType};
+use biomeos_types::{PrimalCapability, Health, PrimalType};
 use std::collections::HashMap;
 use std::time::Duration;
 use tokio::time::timeout;
@@ -299,9 +299,9 @@ mod primal_sdk_integration {
 
         // Test different health states
         let health_states = vec![
-            PrimalHealth::Healthy,
-            PrimalHealth::Degraded,
-            PrimalHealth::Unhealthy,
+            Health::Healthy,
+            Health::Degraded,
+            Health::Unhealthy,
         ];
 
         for (i, health_state) in health_states.into_iter().enumerate() {
@@ -315,13 +315,13 @@ mod primal_sdk_integration {
         let registered = manager.get_registered_primals().await;
         assert_eq!(registered.len(), 3);
 
-        let health_states: Vec<&PrimalHealth> = registered.iter()
+        let health_states: Vec<&Health> = registered.iter()
             .map(|p| &p.health)
             .collect();
         
-        assert!(health_states.contains(&&PrimalHealth::Healthy));
-        assert!(health_states.contains(&&PrimalHealth::Degraded));
-        assert!(health_states.contains(&&PrimalHealth::Unhealthy));
+        assert!(health_states.contains(&&Health::Healthy));
+        assert!(health_states.contains(&&Health::Degraded));
+        assert!(health_states.contains(&&Health::Unhealthy));
 
         Ok(())
     }
@@ -344,7 +344,7 @@ mod error_resilience_integration {
         // Register some unhealthy primals
         for i in 0..2 {
             let mut primal = MockPrimalFactory::create_storage_primal(&format!("unhealthy-{}", i));
-            primal.health = PrimalHealth::Unhealthy;
+            primal.health = Health::Unhealthy;
             manager.register_primal(primal).await?;
         }
 
@@ -399,7 +399,7 @@ mod error_resilience_integration {
                 primal_type: PrimalType::new("test", "empty-id", "1.0.0"),
                 endpoint: "http://localhost:8080".to_string(),
                 capabilities: vec![],
-                health: PrimalHealth::Healthy,
+                health: Health::Healthy,
                 last_seen: chrono::Utc::now(),
                 discovered_at: chrono::Utc::now(),
                 metadata: HashMap::new(),
@@ -411,7 +411,7 @@ mod error_resilience_integration {
                 primal_type: PrimalType::new("test", "long-id", "1.0.0"),
                 endpoint: "http://localhost:8080".to_string(),
                 capabilities: vec![],
-                health: PrimalHealth::Healthy,
+                health: Health::Healthy,
                 last_seen: chrono::Utc::now(),
                 discovered_at: chrono::Utc::now(),
                 metadata: HashMap::new(),

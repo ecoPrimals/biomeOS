@@ -3,8 +3,8 @@
 //! Demonstrates basic BiomeOS functionality with actual working APIs
 
 use anyhow::Result;
-use biomeos::universal_ui::{BiomeOSUI, UIFeatures, UIMode};
-use biomeos_core::{BiomeOSConfig, UniversalBiomeOSManager};
+use biomeos_core::UniversalBiomeOSManager;
+use biomeos_types::BiomeOSConfig;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -13,15 +13,12 @@ async fn main() -> Result<()> {
 
     // Initialize BiomeOS with default configuration
     let config = BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config);
-
-    // Initialize the manager
-    manager.initialize().await?;
+    let manager = UniversalBiomeOSManager::new(config.clone()).await?;
     println!("✅ BiomeOS manager initialized");
 
     // Test system health
     let health = manager.get_system_health().await;
-    println!("🏥 System Health: {:?}", health.overall_status);
+    println!("🏥 System Health: {:?}", health.health);
 
     // Test network discovery (will return empty for now, but won't error)
     match manager.discover_network_scan().await {
@@ -36,27 +33,17 @@ async fn main() -> Result<()> {
         }
     }
 
-    // Test UI initialization
-    let ui = BiomeOSUI::new(UIMode::Terminal);
-    match ui.initialize().await {
-        Ok(_) => println!("🎨 UI system initialized in Terminal mode"),
-        Err(e) => println!("⚠️ UI initialization failed: {}", e),
-    }
+    // Test primal registration
+    println!("📋 Testing primal registration...");
+    let primals = manager.get_registered_primals().await;
+    println!("📊 Currently registered primals: {}", primals.len());
 
-    let features = UIFeatures {
-        dashboard_enabled: true,
-        monitoring_enabled: true,
-        primal_management: true,
-        system_controls: false,
-        advanced_features: false,
-    };
-
-    let ui_with_features = BiomeOSUI::new(UIMode::Auto).with_features(features);
-    match ui_with_features.render().await {
-        Ok(output) => println!("🖥️ UI rendered: {}", output),
-        Err(e) => println!("⚠️ UI render failed: {}", e),
-    }
-
+    // Test configuration
+    println!("⚙️ Testing configuration system...");
+    println!("🔧 System configured for: {:?}", config.system.environment);
+    println!("🌐 Network binding: {}", config.network.bind_address);
+    
     println!("\n✨ Demo completed successfully!");
+    println!("🎯 All core BiomeOS systems are operational!");
     Ok(())
 }

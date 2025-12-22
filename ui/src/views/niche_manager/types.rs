@@ -16,7 +16,7 @@ pub enum NicheManagerTab {
 }
 
 /// Complete niche package definition
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Deserialize)]
 pub struct NichePackage {
     pub id: String,
     pub name: String,
@@ -39,7 +39,7 @@ pub struct NichePackage {
 }
 
 /// Categories for organizing niche packages
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Deserialize)]
 pub enum NicheCategory {
     Gaming,
     Research,
@@ -54,7 +54,7 @@ pub enum NicheCategory {
 }
 
 /// Difficulty levels for niche packages
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Deserialize)]
 pub enum NicheDifficulty {
     Beginner,
     Intermediate,
@@ -63,7 +63,7 @@ pub enum NicheDifficulty {
 }
 
 /// Status of a niche package
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Deserialize)]
 pub enum NicheStatus {
     Draft,
     Testing,
@@ -73,7 +73,7 @@ pub enum NicheStatus {
 }
 
 /// System requirements for running a niche
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Deserialize)]
 pub struct SystemRequirements {
     pub min_cpu_cores: u32,
     pub min_memory_gb: u32,
@@ -83,7 +83,7 @@ pub struct SystemRequirements {
 }
 
 /// Template for creating new niches
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Deserialize)]
 pub struct NicheTemplate {
     pub id: String,
     pub name: String,
@@ -96,7 +96,7 @@ pub struct NicheTemplate {
 }
 
 /// Parameter definition for niche templates
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Deserialize)]
 pub struct TemplateParameter {
     pub name: String,
     pub description: String,
@@ -107,7 +107,7 @@ pub struct TemplateParameter {
 }
 
 /// Types of parameters supported in templates
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Deserialize)]
 pub enum ParameterType {
     String,
     Number,
@@ -117,7 +117,7 @@ pub enum ParameterType {
 }
 
 /// Example configuration for a template
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Deserialize)]
 pub struct TemplateExample {
     pub name: String,
     pub description: String,
@@ -246,8 +246,16 @@ pub enum PublishingStatus {
     Failed,
 }
 
-/// Marketplace niche with additional metadata
+/// Publishing statistics for niches
 #[derive(Debug, Clone)]
+pub struct PublishingStats {
+    pub downloads: u64,
+    pub rating: f32,
+    pub reviews: u32,
+}
+
+/// Marketplace niche with additional metadata
+#[derive(Debug, Clone, serde::Deserialize)]
 pub struct MarketplaceNiche {
     pub package: NichePackage,
     pub verified: bool,

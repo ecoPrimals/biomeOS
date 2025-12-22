@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "crates/biomeos-types",
     "crates/biomeos-core",
     "crates/biomeos-cli",
     "crates/biomeos-manifest",
@@ -103,6 +104,7 @@ categories.workspace = true
 [dependencies]
 # Core BiomeOS components
 biomeos-core = { path = "crates/biomeos-core" }
+biomeos-types = { path = "crates/biomeos-types" }
 biomeos-primal-sdk = { path = "crates/biomeos-primal-sdk" }
 biomeos-manifest = { path = "crates/biomeos-manifest" }
 biomeos-system = { path = "crates/biomeos-system" }
@@ -143,5 +145,19 @@ tempfile = "3.0"
 tracing-test = "0.2"
 wiremock = "0.6"
 rand = "0.8"
+
+# Demo binaries disabled - require extensive type alignment beyond core unification scope
+# These can be updated in a future iteration focused on demo and example alignment
+# [[bin]]
+# name = "byob-test"
+# path = "src/bin/byob-test.rs"
+
+# [[bin]]
+# name = "clean_ecosystem_demo"
+# path = "src/bin/clean_ecosystem_demo.rs"
+
+[[example]]
+name = "working_unified_demo"
+path = "examples/working_unified_demo.rs"
 
 

@@ -8,7 +8,7 @@ use biomeos_core::{
     config::{BiomeOSConfig, DiscoveryMethod, Environment},
     universal_biomeos_manager::{DiscoveryResult, UniversalBiomeOSManager},
 };
-use biomeos_primal_sdk::{PrimalCapability, PrimalHealth, PrimalType};
+use biomeos_types::{PrimalCapability, Health, PrimalType};
 use serde_json::json;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -188,7 +188,7 @@ async fn test_successful_service_discovery() -> Result<()> {
         .iter()
         .find(|s| s.primal_id.contains("toadstool"))
         .expect("Should find toadstool service");
-    assert_eq!(toadstool.health, PrimalHealth::Healthy);
+    assert_eq!(toadstool.health, Health::Healthy);
     assert!(toadstool
         .capabilities
         .iter()
@@ -199,7 +199,7 @@ async fn test_successful_service_discovery() -> Result<()> {
         .iter()
         .find(|s| s.primal_id.contains("songbird"))
         .expect("Should find songbird service");
-    assert_eq!(songbird.health, PrimalHealth::Healthy);
+    assert_eq!(songbird.health, Health::Healthy);
     assert!(songbird
         .capabilities
         .iter()
@@ -210,7 +210,7 @@ async fn test_successful_service_discovery() -> Result<()> {
         .iter()
         .find(|s| s.primal_id.contains("beardog"))
         .expect("Should find beardog service");
-    assert_eq!(beardog.health, PrimalHealth::Degraded);
+    assert_eq!(beardog.health, Health::Degraded);
     assert!(beardog
         .capabilities
         .iter()
@@ -601,26 +601,26 @@ async fn test_service_health_status_mapping() -> Result<()> {
         .await?;
 
     // Verify health status mapping
-    let health_statuses: HashMap<String, PrimalHealth> = services
+    let health_statuses: HashMap<String, Health> = services
         .iter()
         .map(|s| (s.primal_id.clone(), s.health.clone()))
         .collect();
 
     assert_eq!(
         health_statuses.get("healthy-service"),
-        Some(&PrimalHealth::Healthy)
+        Some(&Health::Healthy)
     );
     assert_eq!(
         health_statuses.get("degraded-service"),
-        Some(&PrimalHealth::Degraded)
+        Some(&Health::Degraded)
     );
     assert_eq!(
         health_statuses.get("unhealthy-service"),
-        Some(&PrimalHealth::Unhealthy)
+        Some(&Health::Unhealthy)
     );
     assert_eq!(
         health_statuses.get("unknown-service"),
-        Some(&PrimalHealth::Unknown)
+        Some(&Health::Unknown)
     );
 
     Ok(())

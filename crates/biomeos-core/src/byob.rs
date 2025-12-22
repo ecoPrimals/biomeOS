@@ -1,6 +1,6 @@
 //! Bring Your Own Beardog (BYOB) Manager
 
-use crate::BiomeOSConfig;
+use biomeos_types::BiomeOSConfig;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

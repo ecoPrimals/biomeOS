@@ -36,8 +36,8 @@ async fn test_invalid_request() {
     
     assert!(result.is_err());
     match result.unwrap_err() {
-        PrimalError::InvalidRequest(_) => {},
-        _ => panic!("Expected InvalidRequest error"),
+        PrimalError::Validation { .. } => {},
+        _ => panic!("Expected Validation error"),
     }
 }
 

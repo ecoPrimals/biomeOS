@@ -13,5 +13,5 @@ pub mod types;
 pub mod validation;
 
 // Re-export main types
-pub use editor::*;
+// Removed unused import: editor::*
 pub use types::*;

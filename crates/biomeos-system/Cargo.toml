@@ -2,6 +2,33 @@
 name = "biomeos-system"
 version = "0.1.0"
 edition = "2021"
+authors = ["biomeOS Team"]
+description = "System information and monitoring utilities for biomeOS using the unified type system"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/your-org/biomeos"
 
 [dependencies]
+# Unified types from biomeos ecosystem
+biomeos-types = { path = "../biomeos-types" }
+
+# Serialization
 serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Date/time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# UUID support
+uuid = { version = "1.6", features = ["v4", "serde"] }
+
+# Async runtime
+tokio = { version = "1.0", features = ["full"] }
+
+# System information utilities
+hostname = "0.3"
+
+[dev-dependencies]
+tokio-test = "0.4"
+
+[features]
+default = []

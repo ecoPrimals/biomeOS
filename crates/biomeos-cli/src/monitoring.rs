@@ -28,8 +28,8 @@ impl MonitoringUtils {
                 Ok(probe_result) => {
                     services.push(ServiceStatus {
                         endpoint: endpoint.clone(),
-                        name: probe_result.name,
-                        health: biomeos_primal_sdk::PrimalHealth::Healthy, // Successfully probed, assume healthy
+                        name: probe_result, // probe_result is already a String
+                        health: biomeos_types::Health::Healthy, // Successfully probed, assume healthy
                         response_time_ms: start_time.elapsed().as_millis() as u64,
                     });
                 }
@@ -37,7 +37,10 @@ impl MonitoringUtils {
                     services.push(ServiceStatus {
                         endpoint: endpoint.clone(),
                         name: "Unknown".to_string(),
-                        health: biomeos_primal_sdk::PrimalHealth::Unknown,
+                        health: biomeos_types::Health::Unknown { 
+                            reason: "Connection failed".to_string(),
+                            last_known: None 
+                        },
                         response_time_ms: 0,
                     });
                 }
@@ -57,7 +60,7 @@ impl MonitoringUtils {
 #[derive(Debug)]
 pub struct MonitoringSnapshot {
     pub timestamp: chrono::DateTime<chrono::Utc>,
-    pub system_health: biomeos_core::SystemHealth,
+    pub system_health: biomeos_types::HealthReport,
     pub services: Vec<ServiceStatus>,
 }
 
@@ -65,7 +68,7 @@ pub struct MonitoringSnapshot {
 pub struct ServiceStatus {
     pub endpoint: String,
     pub name: String,
-    pub health: biomeos_primal_sdk::PrimalHealth,
+    pub health: biomeos_primal_sdk::Health,
     pub response_time_ms: u64,
 }
 
@@ -124,10 +127,26 @@ impl MonitoringUtils {
             let health = manager.get_system_health().await;
             snapshots.push(ResourceSnapshot {
                 timestamp: chrono::Utc::now(),
-                cpu_percent: health.resource_usage.cpu_usage_percent,
-                memory_percent: health.resource_usage.memory_usage_percent,
-                disk_percent: health.resource_usage.disk_usage_percent,
-                network_mbps: health.resource_usage.network_usage_mbps,
+                cpu_percent: health.metrics.resources
+                    .as_ref()
+                    .and_then(|r| r.cpu_usage)
+                    .map(|u| u * 100.0)
+                    .unwrap_or(0.0),
+                memory_percent: health.metrics.resources
+                    .as_ref()
+                    .and_then(|r| r.memory_usage)
+                    .map(|u| u * 100.0)
+                    .unwrap_or(0.0),
+                disk_percent: health.metrics.resources
+                    .as_ref()
+                    .and_then(|r| r.disk_usage)
+                    .map(|u| u * 100.0)
+                    .unwrap_or(0.0),
+                network_mbps: health.metrics.resources
+                    .as_ref()
+                    .and_then(|r| r.network_io.as_ref())
+                    .map(|n| (n.bytes_in_per_sec + n.bytes_out_per_sec) / (1024.0 * 1024.0))
+                    .unwrap_or(0.0),
             });
         }
 
@@ -171,9 +190,21 @@ impl MonitoringUtils {
 
         for condition in conditions {
             let current_value = match condition.metric.as_str() {
-                "cpu_percent" => snapshot.system_health.resource_usage.cpu_usage_percent,
-                "memory_percent" => snapshot.system_health.resource_usage.memory_usage_percent,
-                "disk_percent" => snapshot.system_health.resource_usage.disk_usage_percent,
+                "cpu_percent" => snapshot.system_health.metrics.resources
+                    .as_ref()
+                    .and_then(|r| r.cpu_usage)
+                    .map(|u| u * 100.0)
+                    .unwrap_or(0.0),
+                "memory_percent" => snapshot.system_health.metrics.resources
+                    .as_ref()
+                    .and_then(|r| r.memory_usage)
+                    .map(|u| u * 100.0)
+                    .unwrap_or(0.0),
+                "disk_percent" => snapshot.system_health.metrics.resources
+                    .as_ref()
+                    .and_then(|r| r.disk_usage)
+                    .map(|u| u * 100.0)
+                    .unwrap_or(0.0),
                 _ => 0.0,
             };
 

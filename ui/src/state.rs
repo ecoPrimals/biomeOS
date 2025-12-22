@@ -7,6 +7,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
+use biomeos_types::Health as BiomeHealth;
 
 /// Main application state
 #[derive(Debug, Clone)]
@@ -95,7 +96,7 @@ pub struct PlatformInfo {
 pub struct PrimalsState {
     pub available_primals: HashMap<String, PrimalInfo>,
     pub active_primals: HashMap<String, PrimalStatus>,
-    pub primal_health: HashMap<String, HealthStatus>,
+    pub primal_health: HashMap<String, BiomeHealth>,
     pub ecosystem_graph: EcosystemGraph,
     pub discovery_status: DiscoveryStatus,
 }
@@ -128,14 +129,14 @@ pub enum PrimalInstallationStatus {
 pub struct PrimalStatus {
     pub id: String,
     pub status: PrimalInstallationStatus,
-    pub health: HealthStatus,
+    pub health: BiomeHealth,
     pub last_heartbeat: DateTime<Utc>,
     pub metrics: PrimalMetrics,
     pub endpoints: Vec<ApiEndpoint>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum HealthStatus {
+pub enum Health {
     Healthy,
     Warning,
     Critical,
@@ -182,7 +183,7 @@ pub struct GraphNode {
     pub name: String,
     pub node_type: NodeType,
     pub position: (f32, f32),
-    pub status: HealthStatus,
+    pub status: Health,
 }
 
 #[derive(Debug, Clone)]

@@ -123,7 +123,7 @@ impl IsoMonitor {
             let entry = entry?;
             if entry.path().is_dir() {
                 let component_name = entry.file_name().to_string_lossy().to_string();
-                let size_mb = self.calculate_directory_size(&entry.path())?;
+                let size_mb = self.calculate_directory_size(&entry.path())? as u64;
                 
                 components.push(CustomComponent {
                     name: component_name.clone(),
@@ -249,7 +249,7 @@ impl IsoMonitor {
                         component_type: comp_type,
                         source_path: path.to_string(),
                         destination_path: path.to_string(),
-                        size_mb,
+                        size_mb: size_mb as u64,
                         required: false,
                     });
                 }
@@ -268,6 +268,9 @@ impl IsoMonitor {
                 included_components: vec!["core".to_string()],
                 size_estimate: 800,
                 difficulty: TemplateDifficulty::Beginner,
+                author: "biomeOS Team".to_string(),
+                version: "1.0.0".to_string(),
+                tags: vec!["minimal".to_string(), "core".to_string()],
             },
             IsoTemplate {
                 name: "Full biomeOS".to_string(),
@@ -276,6 +279,9 @@ impl IsoMonitor {
                 included_components: vec!["all-primals".to_string()],
                 size_estimate: 2500,
                 difficulty: TemplateDifficulty::Intermediate,
+                author: "biomeOS Team".to_string(),
+                version: "1.0.0".to_string(),
+                tags: vec!["full".to_string(), "development".to_string(), "all-primals".to_string()],
             },
         ]
     }

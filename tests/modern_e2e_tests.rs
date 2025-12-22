@@ -9,7 +9,7 @@ use biomeos_core::{BiomeOSConfig, UniversalBiomeOSManager};
 use biomeos_core::config::*;
 use biomeos_core::universal_biomeos_manager::PrimalInfo;
 use biomeos_core::integration::live_service::LiveService;
-use biomeos_primal_sdk::{PrimalCapability, PrimalHealth, PrimalType};
+use biomeos_types::{PrimalCapability, Health, PrimalType};
 use std::collections::HashMap;
 use std::time::Duration;
 use tokio::time::sleep;
@@ -254,7 +254,7 @@ async fn test_primal_ecosystem_workflow() -> Result<()> {
     
     // Simulate health state changes
     let mut unhealthy_primal = MockPrimalFactory::create_storage_primal("storage-failing");
-    unhealthy_primal.health = PrimalHealth::Unhealthy;
+    unhealthy_primal.health = Health::Unhealthy;
     manager.register_primal(unhealthy_primal).await?;
 
     let ecosystem_health = manager.get_system_health().await;
@@ -267,7 +267,7 @@ async fn test_primal_ecosystem_workflow() -> Result<()> {
     // Update an existing primal
     let mut updated_primal = MockPrimalFactory::create_compute_primal("compute-primary");
     updated_primal.name = "Updated Compute Primary".to_string();
-    updated_primal.health = PrimalHealth::Degraded;
+    updated_primal.health = Health::Degraded;
     updated_primal.metadata.insert("updated".to_string(), "true".to_string());
     
     manager.register_primal(updated_primal).await?;
@@ -279,7 +279,7 @@ async fn test_primal_ecosystem_workflow() -> Result<()> {
         .expect("Updated primal should exist");
     
     assert_eq!(updated_entry.name, "Updated Compute Primary");
-    assert_eq!(updated_entry.health, PrimalHealth::Degraded);
+    assert_eq!(updated_entry.health, Health::Degraded);
     assert_eq!(updated_entry.metadata.get("updated"), Some(&"true".to_string()));
     
     println!("   🔄 Primal lifecycle management working correctly");

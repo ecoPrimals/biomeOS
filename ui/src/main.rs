@@ -1,68 +1,98 @@
-//! biomeOS Bootstrap UI
+//! biomeOS Bootstrap UI - Unified Architecture
 //!
-//! A foundational, API-driven UI for biomeOS installation and primal management.
-//! Built with sovereignty-first principles: universal, recursive, agnostic, iterative.
+//! A unified UI application that can operate in multiple modes:
+//! - Full: Complete feature set with all views
+//! - Minimal: Clean desktop focused on orchestration
+//! - Hybrid: Best of both worlds
 
 use eframe::egui;
 
-mod api;
+// Use the new unified app architecture
 mod app;
+mod api;
 mod backend;
 mod state;
 mod views;
 
 use app::BiomeOSApp;
 
+/// Application mode selection
+#[derive(Debug, Clone, Copy)]
+pub enum AppMode {
+    Minimal,
+    Full,
+    Hybrid,
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     // Initialize tracing for debugging
     tracing_subscriber::fmt::init();
 
+    println!("🌱 Starting BiomeOS Unified Interface...");
+
+    // Determine mode from command line arguments or environment
+    let mode = determine_app_mode();
+    
+    println!("🔧 Running in {:?} mode", mode);
+
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_inner_size([1200.0, 800.0])
-            .with_title("🌱 biomeOS - Sovereign Computing Platform")
+            .with_inner_size(match mode {
+                AppMode::Minimal => [1200.0, 800.0],
+                AppMode::Full => [1400.0, 900.0],
+                AppMode::Hybrid => [1300.0, 850.0],
+            })
+            .with_title(match mode {
+                AppMode::Minimal => "🌱 BiomeOS - Desktop",
+                AppMode::Full => "🌱 BiomeOS - Control Center",
+                AppMode::Hybrid => "🌱 BiomeOS - Hybrid Interface",
+            })
             .with_icon(eframe::icon_data::from_png_bytes(&[]).unwrap_or_default()),
         ..Default::default()
     };
 
     eframe::run_native(
-        "biomeOS Bootstrap UI",
+        "BiomeOS Unified Interface",
         options,
-        Box::new(|cc| {
-            // Configure egui visuals for biomeOS theme
-            configure_theme(&cc.egui_ctx);
-
-            // Create the main application
-            let app = BiomeOSApp::new(cc);
+        Box::new(move |cc| {
+            // Create the unified application in the specified mode
+            let app = match mode {
+                AppMode::Minimal => BiomeOSApp::new_minimal(cc),
+                AppMode::Full => BiomeOSApp::new_full(cc),
+                AppMode::Hybrid => BiomeOSApp::new_hybrid(cc),
+            };
+            
             Box::new(app)
         }),
     )
-    .map_err(|e| anyhow::anyhow!("Failed to run native application: {}", e))
+    .map_err(|e| anyhow::anyhow!("Failed to run BiomeOS interface: {}", e))
 }
 
-/// Configure the biomeOS visual theme
-fn configure_theme(ctx: &egui::Context) {
-    let mut visuals = egui::Visuals::default();
-
-    // biomeOS color scheme - sovereignty-first theme
-    visuals.override_text_color = Some(egui::Color32::from_rgb(240, 240, 240));
-    visuals.panel_fill = egui::Color32::from_rgb(30, 35, 40);
-    visuals.window_fill = egui::Color32::from_rgb(25, 30, 35);
-    visuals.extreme_bg_color = egui::Color32::from_rgb(15, 20, 25);
-
-    // biomeOS accent colors - organic/biological
-    visuals.selection.bg_fill = egui::Color32::from_rgb(60, 120, 80); // Forest green
-    visuals.selection.stroke.color = egui::Color32::from_rgb(80, 160, 100);
-
-    // Sovereignty indicators
-    visuals.warn_fg_color = egui::Color32::from_rgb(255, 180, 60); // Amber warning
-    visuals.error_fg_color = egui::Color32::from_rgb(255, 100, 100); // Coral error
-
-    ctx.set_visuals(visuals);
-
-    // Custom fonts for biomeOS (using default for now)
-    // TODO: Add custom fonts when available
-    // let mut fonts = egui::FontDefinitions::default();
-    // ctx.set_fonts(fonts);
+/// Determine application mode from environment or arguments
+fn determine_app_mode() -> AppMode {
+    // Check command line arguments
+    let args: Vec<String> = std::env::args().collect();
+    
+    for arg in &args {
+        match arg.as_str() {
+            "--minimal" => return AppMode::Minimal,
+            "--full" => return AppMode::Full, 
+            "--hybrid" => return AppMode::Hybrid,
+            _ => {}
+        }
+    }
+    
+    // Check environment variable
+    if let Ok(mode_str) = std::env::var("BIOMEOS_UI_MODE") {
+        match mode_str.to_lowercase().as_str() {
+            "minimal" => return AppMode::Minimal,
+            "full" => return AppMode::Full,
+            "hybrid" => return AppMode::Hybrid,
+            _ => {}
+        }
+    }
+    
+    // Default to hybrid mode for best of both worlds
+    AppMode::Hybrid
 }

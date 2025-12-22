@@ -3,11 +3,22 @@
 //! Implements the universal API standards for ecosystem integration
 //! as defined in handOff/ECOSYSTEM_API_STANDARDIZATION_GUIDE_UNIVERSAL.md
 
+use std::collections::HashMap;
 use biomeos_primal_sdk::{PrimalCapability, PrimalType};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use uuid::Uuid;
+use biomeos_types::primal::HealthCheckConfig;
+
+// Re-export the unified primal service trait from biomeos-types
+pub use biomeos_types::{
+    UniversalPrimalService,
+    UniversalServiceRequest as UnifiedRequest,
+    UniversalServiceResponse as UnifiedResponse,
+    UniversalServiceRegistration as UnifiedRegistration,
+    PrimalServiceMetadata,
+    ServiceStatus as UnifiedServiceStatus,
+};
 
 /// Universal Service Registration - ALL PARTICIPANTS MUST IMPLEMENT
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -49,7 +60,7 @@ pub struct UniversalServiceRegistration {
     pub primal_type: PrimalType,
 }
 
-/// Service metadata with open categorization
+/// Service metadata for legacy services transitioning to unified system
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServiceMetadata {
     /// Human-readable service name
@@ -294,16 +305,7 @@ pub struct ProtocolSpec {
     pub extensions: HashMap<String, serde_json::Value>,
 }
 
-/// Health check configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct HealthCheckConfig {
-    pub enabled: bool,
-    pub path: Option<String>,
-    pub interval_seconds: u32,
-    pub timeout_seconds: u32,
-    pub healthy_threshold: u32,
-    pub unhealthy_threshold: u32,
-}
+// Removed conflicting HealthCheckConfig - using unified type from biomeos-types::primal::HealthCheckConfig
 
 /// Endpoint security configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -419,117 +421,4 @@ pub struct RetryPolicy {
     pub retryable_errors: Vec<String>,
 }
 
-/// Universal Service Provider trait for implementation
-#[allow(async_fn_in_trait)] // Async traits are acceptable for our internal API design
-pub trait UniversalServiceProvider: Send + Sync {
-    /// Get service registration information
-    fn get_registration(&self) -> UniversalServiceRegistration;
-
-    /// Get current capabilities
-    fn get_capabilities(&self) -> Vec<PrimalCapability>;
-
-    /// Handle universal request
-    async fn handle_request(&self, request: UniversalRequest) -> UniversalResponse;
-
-    /// Get service health
-    async fn get_health(&self) -> ServiceHealth;
-
-    /// Update service configuration
-    async fn update_configuration(&mut self, config: serde_json::Value) -> Result<(), String>;
-}
-
-/// Universal request format
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UniversalRequest {
-    pub request_id: Uuid,
-    pub operation: String,
-    pub parameters: HashMap<String, serde_json::Value>,
-    pub context: RequestContext,
-    pub timestamp: DateTime<Utc>,
-    pub required_capabilities: Vec<PrimalCapability>,
-}
-
-/// Request context
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RequestContext {
-    pub user_id: Option<String>,
-    pub session_id: Option<Uuid>,
-    pub source_service: Option<String>,
-    pub trace_id: Option<String>,
-    pub security_context: SecurityContext,
-}
-
-/// Security context
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SecurityContext {
-    pub authentication_token: Option<String>,
-    pub permissions: Vec<String>,
-    pub access_level: AccessLevel,
-}
-
-/// Access levels
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum AccessLevel {
-    Public,
-    Authenticated,
-    Authorized,
-    Administrative,
-}
-
-/// Universal response format
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UniversalResponse {
-    pub request_id: Uuid,
-    pub success: bool,
-    pub data: Option<serde_json::Value>,
-    pub error: Option<String>,
-    pub metadata: ResponseMetadata,
-    pub timestamp: DateTime<Utc>,
-    pub provided_capabilities: Vec<PrimalCapability>,
-}
-
-/// Response metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ResponseMetadata {
-    pub processing_time_ms: u64,
-    pub resource_usage: HashMap<String, f64>,
-    pub cache_info: Option<String>,
-    pub warnings: Vec<String>,
-}
-
-/// Service health information
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ServiceHealth {
-    pub status: HealthStatus,
-    pub components: HashMap<String, ComponentHealth>,
-    pub metrics: HealthMetrics,
-    pub last_updated: DateTime<Utc>,
-}
-
-/// Health status levels
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum HealthStatus {
-    Healthy,
-    Degraded,
-    Unhealthy,
-    Unknown,
-}
-
-/// Component health
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ComponentHealth {
-    pub status: HealthStatus,
-    pub message: String,
-    pub last_check: DateTime<Utc>,
-}
-
-/// Health metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct HealthMetrics {
-    pub uptime_seconds: u64,
-    pub cpu_usage_percent: f64,
-    pub memory_usage_percent: f64,
-    pub active_connections: u64,
-    pub requests_per_second: f64,
-    pub error_rate_percent: f64,
-}
+// Legacy types have been removed - use UniversalServiceRequest/Response from biomeos-types instead
