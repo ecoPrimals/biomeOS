@@ -1,0 +1,199 @@
+niche:
+  id: "ai-research"
+  name: "AI Research"
+  description: "Machine learning and AI research environment with GPU support"
+  category: "ai_research"
+  difficulty: "intermediate"
+  version: "1.0.0"
+  author: "biomeOS Team"
+  
+  features:
+    - "GPU acceleration support"
+    - "Python ML ecosystem"
+    - "Jupyter notebooks"
+    - "Model training pipelines"
+    - "Dataset management"
+    - "Experiment tracking"
+    - "Distributed computing"
+  
+  required_primals:
+    - "toadstool"  # For compute/containers
+    - "nestgate"   # For storage/datasets
+  
+  optional_primals:
+    - "songbird"   # For networking
+    - "squirrel"   # For AI/MCP capabilities
+    - "beardog"    # For security
+  
+  customization_options:
+    - id: "ml_framework"
+      name: "ML Framework"
+      description: "Choose your machine learning framework"
+      type: "select"
+      options:
+        - "PyTorch"
+        - "TensorFlow"
+        - "JAX"
+        - "Scikit-learn"
+        - "Hugging Face"
+        - "Lightning"
+      default: "PyTorch"
+      required: true
+      
+    - id: "gpu_support"
+      name: "GPU Support"
+      description: "Enable GPU acceleration"
+      type: "boolean"
+      default: true
+      required: false
+      
+    - id: "notebook_type"
+      name: "Notebook Environment"
+      description: "Choose your notebook environment"
+      type: "select"
+      options:
+        - "Jupyter Lab"
+        - "Jupyter Notebook"
+        - "VS Code"
+        - "Google Colab"
+      default: "Jupyter Lab"
+      required: false
+      
+    - id: "project_name"
+      name: "Research Project Name"
+      description: "Name of your research project"
+      type: "text"
+      default: "ml-research"
+      required: true
+      validation_regex: "^[a-zA-Z0-9-_]+$"
+      
+    - id: "dataset_size"
+      name: "Dataset Storage"
+      description: "Expected dataset storage size"
+      type: "select"
+      options:
+        - "Small (< 1GB)"
+        - "Medium (1-10GB)"
+        - "Large (10-100GB)"
+        - "Huge (100GB+)"
+      default: "Medium (1-10GB)"
+      required: true
+
+  manifest_template: |
+    metadata:
+      version: "1.0.0"
+      name: "{{project_name}}-ai-biome"
+      description: "{{ml_framework}} AI research environment"
+      tags: ["ai", "research", "{{ml_framework}}", "gpu"]
+      
+    primals:
+      compute:
+        primal_type: "toadstool"
+        version: ">=1.0.0"
+        name: "ai-compute"
+        required: true
+        config:
+          container_runtime: "podman"
+          images:
+            - "pytorch/pytorch:latest"
+            {{#if_eq ml_framework "TensorFlow"}}
+            - "tensorflow/tensorflow:latest-gpu"
+            {{/if_eq}}
+            {{#if_eq ml_framework "JAX"}}
+            - "python:3.11-slim"
+            {{/if_eq}}
+          {{#if gpu_support}}
+          gpu_support: true
+          nvidia_runtime: true
+          {{/if}}
+          resource_pools:
+            cpu: 8
+            memory: "32GB"
+            storage: "200GB"
+            {{#if gpu_support}}
+            gpu: 1
+            {{/if}}
+        networking:
+          host: "0.0.0.0"
+          port: 8888
+        expose: ["ai.notebooks", "ai.api"]
+        
+             storage:
+         primal_type: "nestgate"
+         version: ">=1.0.0"
+         name: "ai-storage"
+         required: true
+         config:
+           storage_type: "block"
+           backup_enabled: true
+           versioning: true
+          {{#if_eq dataset_size "Small (< 1GB)"}}
+          initial_size: "10GB"
+          {{/if_eq}}
+          {{#if_eq dataset_size "Medium (1-10GB)"}}
+          initial_size: "50GB"
+          {{/if_eq}}
+          {{#if_eq dataset_size "Large (10-100GB)"}}
+          initial_size: "500GB"
+          {{/if_eq}}
+          {{#if_eq dataset_size "Huge (100GB+)"}}
+          initial_size: "2TB"
+          {{/if_eq}}
+        dependencies: ["compute"]
+        
+    services:
+      notebook:
+        name: "{{project_name}}-notebook"
+        description: "{{notebook_type}} environment"
+        primal: "compute"
+        config:
+          notebook_type: "{{notebook_type}}"
+          password_protected: true
+          extensions_enabled: true
+          
+      training:
+        name: "{{project_name}}-training"
+        description: "Model training service"
+        primal: "compute"
+        config:
+          framework: "{{ml_framework}}"
+          distributed: false
+          checkpointing: true
+          
+      storage:
+        name: "{{project_name}}-datasets"
+        description: "Dataset and model storage"
+        primal: "storage"
+        config:
+          dataset_management: true
+          model_registry: true
+          
+    workflows:
+      research:
+        name: "Research Workflow"
+        steps:
+          - name: "Setup Environment"
+            type: "setup"
+            config:
+              install_packages: true
+              setup_notebooks: true
+              
+          - name: "Data Preparation"
+            type: "data"
+            config:
+              download_datasets: true
+              preprocessing: true
+              
+          - name: "Model Training"
+            type: "train"
+            config:
+              {{#if gpu_support}}
+              gpu_enabled: true
+              {{/if}}
+              checkpointing: true
+              
+          - name: "Evaluation"
+            type: "evaluate"
+            config:
+              metrics_tracking: true
+              visualization: true 

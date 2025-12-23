@@ -13,6 +13,7 @@ path = "src/bin/main.rs"
 biomeos-core = { path = "../biomeos-core" }
 biomeos-primal-sdk = { path = "../biomeos-primal-sdk" }
 biomeos-types = { path = "../biomeos-types" }
+biomeos-chimera = { path = "../biomeos-chimera" }
 clap = { version = "4.4", features = ["derive", "color"] }
 tokio = { version = "1.0", features = ["full"] }
 anyhow = "1.0"

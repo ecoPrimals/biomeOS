@@ -1,0 +1,28 @@
+# Example: Minimal P2P Niche
+# The simplest possible secure P2P biome
+
+niche:
+  id: "minimal-p2p"
+  name: "Minimal Secure P2P"
+  version: "1.0.0"
+  description: "Just secure P2P - nothing else"
+
+organisms:
+  chimeras:
+    # One chimera, zero standalone primals
+    secure_mesh:
+      type: "p2p-secure"
+      required: true
+      config:
+        # Use all defaults
+
+# No interactions needed - the chimera handles everything internally
+
+customization: []
+
+resources:
+  base:
+    cpu_cores: 1
+    memory_mb: 256
+    storage_mb: 100
+

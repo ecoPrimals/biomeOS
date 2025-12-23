@@ -1,0 +1,170 @@
+# Chimera: Gaming-Mesh
+# A low-latency gaming infrastructure organism
+# Combines: Songbird[] (federation) + BearDog (BTSP) + ToadStool (GPU compute)
+
+chimera:
+  id: "gaming-mesh"
+  name: "Gaming Mesh"
+  version: "1.0.0"
+  description: |
+    A chimera optimized for competitive gaming: sub-millisecond latency,
+    encrypted matchmaking, and GPU-accelerated game logic.
+    
+    Can deploy an ARRAY of Songbirds for tournament brackets while
+    maintaining unified crypto and compute.
+
+# Components pulled from each primal
+components:
+  songbird:
+    source: "primals/songbird"
+    version: ">=2.0.0"
+    # NOTE: Can be arrayed - multiple instances for tournament tiers
+    array:
+      enabled: true
+      min: 1
+      max: 64  # Up to 64 brackets
+    modules:
+      - name: "federation"
+        description: "Multi-tower federation"
+        features: ["discovery", "sync", "heartbeat"]
+      - name: "matchmaking"
+        description: "Player matching"
+        features: ["skill_match", "latency_aware", "region_lock"]
+      - name: "relay"
+        description: "Low-latency relay"
+        features: ["udp_relay", "tcp_relay", "protocol_escalation"]
+
+  beardog:
+    source: "primals/beardog"
+    version: ">=2.0.0"
+    modules:
+      - name: "btsp"
+        description: "Secure transport"
+        features: ["tunnel", "encryption"]
+        config:
+          # Gaming-optimized: minimal overhead
+          cipher: "ChaCha20-Poly1305"
+          overhead_budget_us: 50  # Max 50μs crypto overhead
+      - name: "anti_cheat"
+        description: "Cryptographic anti-cheat"
+        features: ["action_signing", "replay_detection", "integrity_verify"]
+
+  toadstool:
+    source: "primals/toadstool"
+    version: ">=1.0.0"
+    modules:
+      - name: "gpu"
+        description: "GPU compute for game logic"
+        features: ["physics", "ai_npc", "rendering_prep"]
+      - name: "deterministic"
+        description: "Deterministic execution"
+        features: ["lockstep", "rollback", "state_hash"]
+
+# How components are fused
+fusion:
+  bindings:
+    # Songbird array handles tournament structure
+    tournament_federation:
+      provider: "songbird[].federation"
+      config:
+        topology: "bracket_tree"
+        tier_assignment: "skill_based"
+        promotion_rules: "winner_advances"
+    
+    # BearDog secures all Songbird traffic
+    secure_relay:
+      provider: "beardog.btsp"
+      consumers: ["songbird[].relay"]
+      config:
+        latency_priority: true
+        max_overhead_us: 50
+    
+    # BearDog anti-cheat validates game actions
+    action_integrity:
+      provider: "beardog.anti_cheat"
+      consumers: ["toadstool.deterministic"]
+      config:
+        sign_every_action: true
+        verify_on_conflict: true
+    
+    # ToadStool runs authoritative game logic
+    game_authority:
+      provider: "toadstool.gpu"
+      consumers: ["songbird[].matchmaking"]
+      config:
+        gpu_required: true
+        frame_budget_ms: 16  # 60fps
+
+  # Unified API surface
+  api:
+    endpoints:
+      - name: "create_tournament"
+        description: "Create tournament with bracket structure"
+        params: ["name", "bracket_size", "rules"]
+        returns: "Tournament"
+      
+      - name: "join_match"
+        description: "Join matchmaking queue"
+        params: ["player_id", "skill_rating", "region"]
+        returns: "MatchTicket"
+      
+      - name: "submit_action"
+        description: "Submit signed game action"
+        params: ["match_id", "action", "signature"]
+        returns: "ActionReceipt"
+      
+      - name: "get_state"
+        description: "Get authoritative game state"
+        params: ["match_id", "tick"]
+        returns: "GameState"
+
+# Resource requirements (per Songbird instance)
+resources:
+  per_songbird:
+    cpu_cores: 1
+    memory_mb: 512
+  base:
+    cpu_cores: 2
+    memory_mb: 2048
+  gpu:
+    required: true
+    min_vram_mb: 2048
+  network:
+    ports:
+      - 8443      # BTSP
+      - 8444      # Songbird array base port (8444-8508 dynamically)
+      - 7878      # ToadStool GPU
+    latency_target_ms: 5
+    jitter_tolerance_ms: 2
+
+# Deployment hints
+deployment:
+  singleton: false
+  requires_gpu: true
+  can_federate: true
+  scaling:
+    # Scale Songbird array based on player count
+    metric: "concurrent_players"
+    thresholds:
+      - players: 100
+        songbirds: 1
+      - players: 1000
+        songbirds: 8
+      - players: 10000
+        songbirds: 64
+  
+# Health and monitoring  
+health:
+  checks:
+    - name: "latency_target"
+      type: "network.round_trip"
+      max_ms: 10
+    - name: "gpu_available"
+      type: "toadstool.gpu_ready"
+    - name: "federation_healthy"
+      type: "songbird.peer_count"
+      min_peers: 2
+    - name: "crypto_overhead"
+      type: "beardog.encrypt_latency"
+      max_us: 50
+

@@ -7,6 +7,8 @@ members = [
     "crates/biomeos-manifest",
     "crates/biomeos-system",
     "crates/biomeos-primal-sdk",
+    "crates/biomeos-chimera",
+    "crates/biomeos-niche",
     "crates/biomeos-ui",
     "federation",
     "ui",
@@ -108,6 +110,8 @@ biomeos-types = { path = "crates/biomeos-types" }
 biomeos-primal-sdk = { path = "crates/biomeos-primal-sdk" }
 biomeos-manifest = { path = "crates/biomeos-manifest" }
 biomeos-system = { path = "crates/biomeos-system" }
+biomeos-chimera = { path = "crates/biomeos-chimera" }
+biomeos-niche = { path = "crates/biomeos-niche" }
 biomeos-ui = { path = "crates/biomeos-ui" }
 
 # Async runtime
@@ -159,5 +163,13 @@ rand = "0.8"
 [[example]]
 name = "working_unified_demo"
 path = "examples/working_unified_demo.rs"
+
+[[example]]
+name = "chimera_registry_demo"
+path = "examples/chimera_registry_demo.rs"
+
+[[example]]
+name = "full_ecosystem_demo"
+path = "examples/full_ecosystem_demo.rs"
 
 

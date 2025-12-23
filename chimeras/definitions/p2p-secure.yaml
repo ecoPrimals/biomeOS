@@ -1,0 +1,111 @@
+# Chimera: P2P-Secure
+# A tightly integrated P2P mesh with sovereign cryptography
+# Combines: BearDog (crypto/identity) + Songbird (mesh/discovery)
+
+chimera:
+  id: "p2p-secure"
+  name: "P2P Secure Mesh"
+  version: "1.0.0"
+  description: |
+    A chimera that fuses BearDog's genetic cryptography with Songbird's 
+    mesh networking into a single, tightly-coupled P2P organism.
+    
+    Use when you need secure peer-to-peer communication without 
+    deploying separate BearDog and Songbird instances.
+
+# Components pulled from each primal
+components:
+  beardog:
+    source: "primals/beardog"
+    version: ">=2.0.0"
+    modules:
+      - name: "btsp"
+        description: "BearDog Transport Security Protocol"
+        features: ["tunnel", "encryption", "tofu"]
+      - name: "genetic_crypto"
+        description: "Genetic key management"
+        features: ["key_generation", "lineage", "mixing"]
+      - name: "identity"
+        description: "DID-based identity"
+        features: ["did_create", "did_resolve", "signing"]
+
+  songbird:
+    source: "primals/songbird"
+    version: ">=2.0.0"
+    modules:
+      - name: "birdsong"
+        description: "P2P messaging protocol"
+        features: ["broadcast", "whisper", "flock"]
+      - name: "discovery"
+        description: "Service discovery"
+        features: ["mdns", "upa", "capability_query"]
+      - name: "mesh"
+        description: "Mesh topology management"
+        features: ["peer_management", "routing", "gossip"]
+
+# How components are fused
+fusion:
+  bindings:
+    # BearDog BTSP encrypts all Songbird mesh traffic
+    encryption_layer:
+      provider: "beardog.btsp"
+      consumers: ["songbird.mesh", "songbird.birdsong"]
+      config:
+        cipher: "ChaCha20-Poly1305"
+        key_exchange: "genetic_tofu"
+    
+    # Songbird discovery uses BearDog identity
+    identity_binding:
+      provider: "beardog.identity"
+      consumers: ["songbird.discovery"]
+      config:
+        peer_verification: "did_signature"
+        trust_model: "tofu_with_lineage"
+
+  # Unified API surface
+  api:
+    # Chimera exposes a unified API, not separate primal APIs
+    endpoints:
+      - name: "connect"
+        description: "Connect to peer with automatic crypto"
+        params: ["peer_did", "trust_policy"]
+        returns: "SecureChannel"
+      
+      - name: "broadcast"
+        description: "Encrypted broadcast to mesh"
+        params: ["message", "scope"]
+        returns: "BroadcastReceipt"
+      
+      - name: "discover"
+        description: "Find peers with capability"
+        params: ["capability", "trust_level"]
+        returns: "Vec<VerifiedPeer>"
+
+# Resource requirements
+resources:
+  cpu_cores: 1
+  memory_mb: 256
+  storage_mb: 100
+  network:
+    ports:
+      - 8443  # BTSP tunnel
+      - 8444  # BirdSong P2P
+      - 5353  # mDNS discovery
+
+# Deployment hints
+deployment:
+  singleton: false  # Can run multiple instances
+  requires_network: true
+  can_federate: true
+  
+# Health and monitoring  
+health:
+  checks:
+    - name: "crypto_ready"
+      type: "beardog.key_available"
+    - name: "mesh_connected"
+      type: "songbird.peer_count"
+      min_peers: 1
+    - name: "btsp_tunnel"
+      type: "beardog.tunnel_established"
+

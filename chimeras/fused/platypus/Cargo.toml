@@ -1,0 +1,59 @@
+[package]
+name = "platypus"
+version = "0.1.0"
+edition = "2021"
+description = """
+Platypus - A fused chimera demonstrating deep genetic mixing.
+
+Not BearDog + Songbird orchestrated together.
+A genuinely new organism with mixed genetic material.
+
+Niche: Aquatic secure mesh - environments requiring both
+cryptographic trust AND mesh networking as inseparable traits.
+"""
+authors = ["ecoPrimals Team"]
+license = "MIT"
+publish = false
+
+# This is a fused chimera - standalone workspace
+[workspace]
+
+[dependencies]
+# ═══════════════════════════════════════════════════════════════════
+# PARENT GENETICS - Crates from ancestor primals
+# ═══════════════════════════════════════════════════════════════════
+
+# From BearDog (cryptography lineage)
+# beardog-crypto = { path = "../../../../beardog/crates/beardog-crypto" }
+# beardog-identity = { path = "../../../../beardog/crates/beardog-identity" }
+
+# From Songbird (networking lineage)
+# songbird-mesh = { path = "../../../../songbird/crates/songbird-mesh" }  
+# songbird-discovery = { path = "../../../../songbird/crates/songbird-discovery" }
+
+# ═══════════════════════════════════════════════════════════════════
+# OWN MUTATIONS - Dependencies unique to this chimera
+# ═══════════════════════════════════════════════════════════════════
+tokio = { version = "1.0", features = ["full"] }
+anyhow = "1.0"
+tracing = "0.1"
+serde = { version = "1.0", features = ["derive"] }
+
+# Crypto (standalone until beardog crates are wired)
+ed25519-dalek = { version = "2.0", features = ["rand_core"] }
+rand = "0.8"
+blake3 = "1.5"
+thiserror = "1.0"
+tracing-subscriber = "0.3"
+
+# Networking (standalone until songbird crates are wired)  
+# libp2p = "0.53"
+
+[[bin]]
+name = "platypus"
+path = "src/main.rs"
+
+[lib]
+name = "platypus"
+path = "src/lib.rs"
+

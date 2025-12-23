@@ -1,0 +1,135 @@
+# Chimera: ML-Pipeline
+# A unified machine learning pipeline organism
+# Combines: ToadStool (compute) + NestGate (storage) + Squirrel (AI routing)
+
+chimera:
+  id: "ml-pipeline"
+  name: "ML Pipeline"
+  version: "1.0.0"
+  description: |
+    A chimera that fuses compute, storage, and AI routing into a 
+    single machine learning pipeline organism.
+    
+    Use when you need an integrated ML workflow without 
+    coordinating separate ToadStool, NestGate, and Squirrel instances.
+
+# Components pulled from each primal
+components:
+  toadstool:
+    source: "primals/toadstool"
+    version: ">=1.0.0"
+    modules:
+      - name: "compute"
+        description: "Universal compute substrate"
+        features: ["container", "native", "gpu"]
+      - name: "workload"
+        description: "Workload management"
+        features: ["spawn", "monitor", "cancel"]
+      - name: "capability"
+        description: "Hardware capability detection"
+        features: ["gpu_detect", "cpu_features", "memory_info"]
+
+  nestgate:
+    source: "primals/nestgate"
+    version: ">=3.0.0"
+    modules:
+      - name: "storage"
+        description: "Content-addressed storage"
+        features: ["put", "get", "hash_verify"]
+      - name: "datasets"
+        description: "Dataset management"
+        features: ["versioning", "streaming", "chunking"]
+      - name: "checkpoints"
+        description: "ML checkpoint storage"
+        features: ["save", "restore", "prune"]
+
+  squirrel:
+    source: "primals/squirrel"
+    version: ">=1.5.0"
+    modules:
+      - name: "routing"
+        description: "AI request routing"
+        features: ["capability_match", "cost_optimize", "privacy_aware"]
+      - name: "mcp"
+        description: "MCP protocol support"
+        features: ["tools", "resources", "prompts"]
+      - name: "agents"
+        description: "Agent orchestration"
+        features: ["spawn", "coordinate", "supervise"]
+
+# How components are fused
+fusion:
+  bindings:
+    # ToadStool compute writes results to NestGate storage
+    compute_storage:
+      provider: "toadstool.compute"
+      consumers: ["nestgate.storage", "nestgate.checkpoints"]
+      config:
+        auto_checkpoint: true
+        checkpoint_interval: "5m"
+        result_storage: "content_addressed"
+    
+    # Squirrel routes to ToadStool based on capability
+    ai_compute:
+      provider: "squirrel.routing"
+      consumers: ["toadstool.workload"]
+      config:
+        gpu_preference: "local_first"
+        fallback_strategy: "queue"
+    
+    # NestGate datasets stream to ToadStool compute
+    data_pipeline:
+      provider: "nestgate.datasets"
+      consumers: ["toadstool.compute"]
+      config:
+        streaming: true
+        prefetch_chunks: 4
+
+  # Unified API surface
+  api:
+    endpoints:
+      - name: "train"
+        description: "Run training job with auto storage"
+        params: ["model_spec", "dataset_id", "hyperparams"]
+        returns: "TrainingJob"
+      
+      - name: "infer"
+        description: "Run inference with optimal routing"
+        params: ["model_id", "input_data", "constraints"]
+        returns: "InferenceResult"
+      
+      - name: "checkpoint"
+        description: "Save/restore model state"
+        params: ["job_id", "action"]
+        returns: "CheckpointInfo"
+
+# Resource requirements
+resources:
+  cpu_cores: 4
+  memory_mb: 8192
+  storage_mb: 50000
+  gpu:
+    optional: true
+    min_vram_mb: 4096
+  network:
+    ports:
+      - 8080  # ToadStool compute
+      - 8082  # NestGate storage
+      - 8083  # Squirrel MCP
+
+# Deployment hints
+deployment:
+  singleton: false
+  requires_gpu: false  # Works without, better with
+  can_federate: true
+  
+# Health and monitoring  
+health:
+  checks:
+    - name: "compute_ready"
+      type: "toadstool.runtime_available"
+    - name: "storage_accessible"
+      type: "nestgate.pool_healthy"
+    - name: "ai_routing"
+      type: "squirrel.providers_available"
+

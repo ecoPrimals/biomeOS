@@ -1,0 +1,92 @@
+# Chimera Registry
+# Tracks all available chimera definitions and their metadata
+
+registry:
+  version: "1.0.0"
+  last_updated: "2025-12-22"
+
+chimeras:
+  
+  p2p-secure:
+    definition: "../definitions/p2p-secure.yaml"
+    status: "stable"
+    description: "Secure P2P mesh (BearDog + Songbird)"
+    components: ["beardog", "songbird"]
+    use_cases:
+      - "Secure messaging"
+      - "Peer-to-peer file sharing"
+      - "Decentralized applications"
+    complexity: "low"
+    resource_class: "light"
+  
+  ml-pipeline:
+    definition: "../definitions/ml-pipeline.yaml"
+    status: "stable"
+    description: "ML training/inference pipeline (ToadStool + NestGate + Squirrel)"
+    components: ["toadstool", "nestgate", "squirrel"]
+    use_cases:
+      - "Model training"
+      - "Inference serving"
+      - "Experiment tracking"
+    complexity: "medium"
+    resource_class: "heavy"
+  
+  gaming-mesh:
+    definition: "../definitions/gaming-mesh.yaml"
+    status: "stable"
+    description: "Gaming infrastructure (Songbird[] + BearDog + ToadStool)"
+    components: ["songbird", "beardog", "toadstool"]
+    use_cases:
+      - "Competitive gaming"
+      - "Tournament hosting"
+      - "Multiplayer servers"
+    complexity: "high"
+    resource_class: "heavy"
+    special_features:
+      - "Component arrays (multiple Songbirds)"
+      - "GPU required"
+      - "Sub-millisecond latency"
+
+# Component compatibility matrix
+compatibility:
+  beardog:
+    compatible_with: ["songbird", "nestgate", "toadstool", "squirrel"]
+    provides: ["encryption", "identity", "signing", "anti_cheat"]
+  
+  songbird:
+    compatible_with: ["beardog", "nestgate", "toadstool", "squirrel"]
+    provides: ["discovery", "mesh", "federation", "routing"]
+  
+  toadstool:
+    compatible_with: ["beardog", "songbird", "nestgate", "squirrel"]
+    provides: ["compute", "container", "gpu", "workload"]
+  
+  nestgate:
+    compatible_with: ["beardog", "songbird", "toadstool", "squirrel"]
+    provides: ["storage", "persistence", "replication", "streaming"]
+  
+  squirrel:
+    compatible_with: ["beardog", "songbird", "toadstool", "nestgate"]
+    provides: ["ai_routing", "mcp", "agents", "inference"]
+
+# Future chimeras (planned)
+planned:
+  
+  sovereign-stack:
+    description: "Complete sovereign computing stack"
+    components: ["beardog", "songbird", "toadstool", "nestgate", "squirrel"]
+    status: "design"
+    eta: "Q2 2026"
+  
+  edge-ai:
+    description: "Edge AI inference with local-first privacy"
+    components: ["squirrel", "toadstool", "beardog"]
+    status: "design"
+    eta: "Q1 2026"
+  
+  data-vault:
+    description: "Encrypted data vault with access control"
+    components: ["nestgate", "beardog"]
+    status: "design"
+    eta: "Q1 2026"
+

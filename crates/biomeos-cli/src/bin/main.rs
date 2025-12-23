@@ -3,6 +3,48 @@ use biomeos_cli::{commands::*, CliUtils, OutputFormat};
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
+/// Chimera subcommands
+#[derive(Subcommand)]
+enum ChimeraAction {
+    /// List all chimera definitions
+    List,
+    /// Show details for a chimera
+    Show {
+        /// Chimera ID
+        id: String,
+    },
+    /// Build a chimera binary
+    Build {
+        /// Chimera ID
+        id: String,
+    },
+}
+
+/// Niche subcommands
+#[derive(Subcommand)]
+enum NicheAction {
+    /// List available niche templates
+    List,
+    /// Show details for a niche template
+    Show {
+        /// Niche template ID
+        id: String,
+    },
+}
+
+/// Primal subcommands
+#[derive(Subcommand)]
+enum PrimalAction {
+    /// List installed primal binaries
+    List,
+    /// Pull/build primal from parent repo
+    Pull {
+        /// Primal name (beardog, songbird, etc.) or --all
+        #[arg(default_value = "--all")]
+        name: String,
+    },
+}
+
 #[derive(Parser)]
 #[command(name = "biomeos")]
 #[command(about = "🌱 BiomeOS Universal System Management CLI")]
@@ -20,6 +62,24 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Manage chimera definitions (mixed-boundary primal amalgams)
+    Chimera {
+        #[command(subcommand)]
+        action: ChimeraAction,
+    },
+
+    /// Manage niche templates (biome environments)
+    Niche {
+        #[command(subcommand)]
+        action: NicheAction,
+    },
+
+    /// Manage primal binaries
+    Primal {
+        #[command(subcommand)]
+        action: PrimalAction,
+    },
+
     /// Discover services by capability or method
     Discover {
         /// Discovery endpoint to query
@@ -222,6 +282,28 @@ async fn main() -> Result<()> {
     println!();
 
     match cli.command {
+        Commands::Chimera { action } => {
+            match action {
+                ChimeraAction::List => handle_chimera_list().await?,
+                ChimeraAction::Show { id } => handle_chimera_show(&id).await?,
+                ChimeraAction::Build { id } => handle_chimera_build(&id).await?,
+            }
+        }
+        Commands::Niche { action } => {
+            match action {
+                NicheAction::List => handle_niche_list().await?,
+                NicheAction::Show { id } => handle_niche_show(&id).await?,
+            }
+        }
+        Commands::Primal { action } => {
+            match action {
+                PrimalAction::List => handle_primal_list().await?,
+                PrimalAction::Pull { name } => {
+                    println!("🔨 Building primal: {}", name);
+                    println!("   Run: ./bin/pull-primals.sh {}", name);
+                }
+            }
+        }
         Commands::Discover { endpoint, capabilities, method, registry, detailed } => {
             handle_discover(endpoint, capabilities, method, registry, detailed).await?;
         }

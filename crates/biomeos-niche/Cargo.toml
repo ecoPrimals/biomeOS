@@ -1,0 +1,38 @@
+[package]
+name = "biomeos-niche"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Niche (biome) system for BiomeOS - environments where primals and chimeras operate"
+
+[dependencies]
+# Core BiomeOS types
+biomeos-types = { path = "../biomeos-types" }
+biomeos-chimera = { path = "../biomeos-chimera" }
+
+# Async runtime
+tokio = { workspace = true }
+async-trait = { workspace = true }
+futures = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Utilities
+uuid = { workspace = true }
+chrono = { workspace = true }
+tracing = { workspace = true }
+dashmap = { workspace = true }
+walkdir = { workspace = true }
+
+[dev-dependencies]
+tokio-test = { workspace = true }
+tempfile = { workspace = true }
+

@@ -1,274 +1,339 @@
-# 🌍 BiomeOS - Unified Ecosystem Architecture
+# 🌱 BiomeOS - The ecoPrimals Substrate
 
-**Status:** ✅ **UNIFICATION COMPLETE** - World-Class Architecture Achieved  
-**Version:** 1.0.0 | **Quality:** Production-Ready | **Technical Debt:** 95% Eliminated
+**BiomeOS is the orchestration layer that makes ecoPrimals accessible.**
+
+It enables primal mixing, chimera creation, and niche deployment - allowing you to compose specialized organisms from the ecoPrimals ecosystem.
 
 ---
 
-## 🎯 **Unified Architecture Showcase**
-
-BiomeOS now features **world-class unified architecture** with zero compilation errors across all core crates. Run our comprehensive demo to see the achievements:
+## 🎯 Quick Start
 
 ```bash
-cargo run --example working_unified_demo
-```
+# 1. Pull primal binaries from parent repos
+./bin/pull-primals.sh --all
 
-**Key Achievements Demonstrated:**
-- 🏗️ **Single source of truth** - All types in `biomeos-types`
-- 🤖 **AI-first error handling** - Rich context for automation  
-- ⚡ **Modern async patterns** - Production-ready architecture
-- 💊 **8-state health system** - Comprehensive monitoring
-- 🎛️ **Hierarchical configuration** - Environment-aware
-- 📊 **Zero compilation errors** - World-class code quality
-- 🧹 **95% technical debt eliminated** - Clean, modern codebase
-- 📏 **File size compliance** - All files under 2000 lines
+# 2. List available chimeras
+cargo run -p biomeos-cli --bin biomeos -- chimera list
 
----
+# 3. Run a chimera
+./bin/chimeras/p2p-secure
 
-## 🏗️ **Architecture Overview**
-
-### **Unified Type System (`biomeos-types`)**
-Single source of truth with 1,214+ lines of production-ready code:
-- **Core Types:** PrimalType, PrimalCapability, UniversalPrimalService
-- **Error System:** AI-first BiomeError with 12 comprehensive categories
-- **Health System:** 8-state Health enum with rich metadata  
-- **Configuration:** Hierarchical BiomeOSConfig with environment support
-- **Constants:** Centralized constants module (346 lines)
-
-### **Service Interface Revolution**
-**Before:** 3 incompatible, fragmented traits  
-**After:** Single comprehensive `UniversalPrimalService` with 20+ methods
-
-### **Perfect Compilation Status**
-```
-✅ biomeos-types      - 0 errors, production-ready
-✅ biomeos-core       - 0 errors, 26/26 tests passing  
-✅ biomeos-primal-sdk - 0 errors, clean interface
-✅ biomeos-system     - 0 errors, system monitoring
-✅ biomeos-manifest   - 0 errors, universal manifests
-✅ biomeos-cli        - 0 errors, unified CLI tools
+# 4. List showcases from parent primals
+./bin/showcase-runner.sh list
 ```
 
 ---
 
-## 🚀 **Quick Start**
+## 🏗️ Architecture
 
-### **1. Run the Unified Architecture Demo**
-```bash
-# Showcase the unified architecture
-cargo run --example working_unified_demo
-
-# Run comprehensive tests
-cargo test --lib --workspace
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         BIOME OS                                │
+│                    (Substrate / Orchestrator)                   │
+└─────────────────────────────────────────────────────────────────┘
+                               │
+       ┌───────────────────────┼───────────────────────┐
+       │                       │                       │
+       ▼                       ▼                       ▼
+┌─────────────┐         ┌─────────────┐         ┌─────────────┐
+│   PRIMALS   │         │  CHIMERAS   │         │   NICHES    │
+│  (Species)  │         │  (Hybrids)  │         │  (Biomes)   │
+└─────────────┘         └─────────────┘         └─────────────┘
+Standard single-        Mixed-boundary          Deployment
+purpose organisms       amalgams                environments
 ```
 
-### **2. Explore Core Capabilities**
+### Primals (bin/primals/)
+
+Standard organisms with clear boundaries:
+
+| Primal | Purpose | Status |
+|--------|---------|--------|
+| 🐕 **BearDog** | Cryptography, identity, BTSP | ✅ Built |
+| 🎼 **Songbird** | Discovery, orchestration, mesh | ✅ Built |
+| 🍄 **ToadStool** | Compute, containers, GPU | ✅ Built |
+| 🏰 **NestGate** | Storage, persistence | ✅ Built |
+| 🐿️ **Squirrel** | AI routing, MCP, agents | ⏳ Pending |
+
+### Chimeras (chimeras/)
+
+Two levels of chimera fusion:
+
+**Level 1: Orchestrated** - Multiple primals coordinated together
+
+| Chimera | Components | Use Case |
+|---------|------------|----------|
+| 🔐 **p2p-secure** | BearDog + Songbird | Encrypted P2P mesh |
+| 🎮 **gaming-mesh** | Songbird[] + BearDog + ToadStool | Gaming infrastructure |
+| 🧠 **ml-pipeline** | ToadStool + NestGate + Squirrel | ML workflows |
+
+**Level 2: Fused** - Deep genetic mixing into NEW primals
+
+| Chimera | Genetics | Novel Capability |
+|---------|----------|------------------|
+| 🦆🦫 **platypus** | beardog-crypto + songbird-mesh | Genetic mesh discovery |
+
+The platypus pattern: Not duck + beaver cooperating. A genuinely new species.
+
+### Niches (niches/)
+
+Complete environments where organisms operate:
+
+- **gaming-tournament** - Deploy gaming-mesh chimera with anti-cheat
+- **research-lab** - ML pipeline with persistent storage
+- **web-development** - Standard web dev environment
+
+---
+
+## 📦 Directory Structure
+
+```
+biomeOS/
+├── bin/                      # Runtime binaries
+│   ├── primals/              # 56 primal binaries
+│   ├── chimeras/             # Compiled chimera binaries
+│   ├── pull-primals.sh       # Build primals from parent repos
+│   └── showcase-runner.sh    # Run demos from parent primals
+│
+├── chimeras/                 # Chimera system
+│   ├── definitions/          # YAML chimera specifications
+│   └── registry/             # Chimera metadata
+│
+├── niches/                   # Niche (biome) system
+│   ├── templates/            # BYOB templates
+│   └── examples/             # Simple examples
+│
+├── crates/                   # Rust crates
+│   ├── biomeos-types/        # Core type system
+│   ├── biomeos-core/         # Business logic
+│   ├── biomeos-cli/          # CLI interface
+│   ├── biomeos-chimera/      # Chimera compiler
+│   ├── biomeos-niche/        # Niche deployment
+│   └── ...
+│
+├── docs/                     # Documentation
+├── examples/                 # Example code
+└── archive/                  # Historical status reports
+```
+
+---
+
+## 🧬 Creating Chimeras
+
+### Orchestrated vs Fused
+
+**Orchestrated chimeras** (Level 1): YAML definitions, multiple processes
+**Fused chimeras** (Level 2): Rust crates, single binary with mixed genetics
+
+Choose fused when you need capabilities neither parent has alone.
+
+### Orchestrated: Define a chimera
+
+```yaml
+# chimeras/definitions/my-chimera.yaml
+chimera:
+  id: "my-chimera"
+  name: "My Custom Chimera"
+  version: "1.0.0"
+
+components:
+  beardog:
+    version: ">=2.0.0"
+    modules:
+      - name: "btsp"
+        description: "Transport security"
+  songbird:
+    version: ">=2.0.0"
+    modules:
+      - name: "mesh"
+        description: "Mesh networking"
+
+fusion:
+  encryption_layer:
+    provider: "beardog.btsp"
+    consumers: ["songbird.mesh"]
+```
+
+### 2. Build the chimera
+
 ```bash
-# Check all crates compile cleanly
+cargo run -p biomeos-cli --bin biomeos -- chimera build my-chimera
+```
+
+### 3. Run it
+
+```bash
+./bin/chimeras/my-chimera
+```
+
+### Fused: Create a new primal from mixed genetics
+
+```bash
+# Create fused chimera directory
+mkdir -p chimeras/fused/my-platypus/src
+cd chimeras/fused/my-platypus
+```
+
+```toml
+# Cargo.toml - Mix genetics from parents
+[package]
+name = "my-platypus"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]  # Standalone crate
+
+[dependencies]
+# From BearDog
+beardog-crypto = { path = "../../../../beardog/crates/beardog-crypto" }
+
+# From Songbird  
+songbird-mesh = { path = "../../../../songbird/crates/songbird-mesh" }
+```
+
+```rust
+// src/lib.rs - Fuse into novel capabilities
+use beardog_crypto::GeneticKeys;
+use songbird_mesh::MeshNode;
+
+pub struct MyPlatypus {
+    keys: GeneticKeys,
+    mesh: MeshNode,
+    // Novel capability that neither parent has alone
+}
+```
+
+See `chimeras/fused/platypus/` for a complete example.
+
+---
+
+## 🌿 Deploying Niches
+
+### 1. Create a niche template
+
+```yaml
+# niches/templates/my-biome.yaml
+niche:
+  id: "my-biome"
+  name: "My Custom Biome"
+  category: "development"
+
+organisms:
+  chimeras:
+    secure_mesh:
+      type: "p2p-secure"
+      config:
+        max_peers: 100
+  primals:
+    storage:
+      type: "nestgate"
+      config:
+        volume_size: "10Gi"
+```
+
+### 2. Deploy
+
+```bash
+cargo run -p biomeos-cli --bin biomeos -- niche deploy my-biome
+```
+
+---
+
+## 🛠️ CLI Commands
+
+```bash
+# Chimera management
+biomeos chimera list              # List all chimeras
+biomeos chimera show p2p-secure   # Show chimera details
+biomeos chimera build gaming-mesh # Build chimera binary
+
+# Niche management
+biomeos niche list                # List niche templates
+biomeos niche show gaming-tournament # Show niche details
+
+# Primal management
+biomeos primal list               # List installed primals
+biomeos primal pull --all         # Build all from parent repos
+
+# System commands
+biomeos health                    # System health check
+biomeos discover --capability compute  # Service discovery
+```
+
+---
+
+## 🔧 Development
+
+### Building
+
+```bash
+# Check all crates
 cargo check --workspace
 
-# Run system health checks
-cargo run --bin biomeos health --detailed
+# Build CLI
+cargo build -p biomeos-cli
 
-# Try capability discovery
-cargo run --bin biomeos discover --capability compute
+# Run tests
+cargo test --workspace
 ```
 
-### **3. Development with Unified Types**
-```rust
-use biomeos_types::{
-    BiomeOSConfig, BiomeError, BiomeResult, Health, 
-    PrimalCapability, PrimalType, UniversalPrimalService
-};
+### Adding a new chimera
 
-// Create primals using unified system
-let compute_primal = PrimalType::community("compute".to_string(), "my-compute".to_string());
+1. Create YAML definition in `chimeras/definitions/`
+2. Run `biomeos chimera build <id>`
+3. Test with `./bin/chimeras/<id>`
 
-// Handle errors with AI context
-let result: BiomeResult<String> = BiomeError::config_error(
-    "Invalid configuration",
-    Some("timeout"),
-).into();
+### Crate dependencies
 
-// Use comprehensive health states
-let health = Health::Starting { 
-    phase: StartupPhase::Initializing, 
-    progress: 50 
-};
+```
+biomeos-types       ← Foundation types
+    ↓
+biomeos-core        ← Business logic
+    ↓
+biomeos-chimera     ← Chimera compiler
+biomeos-niche       ← Niche deployment
+    ↓
+biomeos-cli         ← CLI interface
 ```
 
 ---
 
-## 📊 **Codebase Quality Metrics**
+## 🌐 ecoPrimals Ecosystem
 
-### **Technical Debt Elimination: 95% Complete**
-- ✅ **Compatibility layers:** 60% reduction achieved
-- ✅ **Duplicate code:** 5,798+ lines eliminated  
-- ✅ **Legacy traits:** 3 → 1 consolidation complete
-- ✅ **Scattered constants:** 100% centralization
-- ✅ **File size compliance:** All files < 2000 lines
+BiomeOS is part of the Phase 2 "Memory & Attribution Layer":
 
-### **Test Coverage: Excellent**
-- **Core Types:** 5/5 tests passing ✅
-- **Core Manager:** 26/26 tests passing ✅
-- **Integration:** Comprehensive E2E test suite
-- **Chaos Testing:** Resilience validation
-- **Performance:** Benchmark testing available
+| Project | Description |
+|---------|-------------|
+| **RhizoCrypt** | DAG engine for content-addressed storage |
+| **LoamSpine** | Permanence layer with Merkle proofs |
+| **SweetGrass** | Attribution and provenance tracking |
+| **BiomeOS** | Orchestration substrate (you are here) |
 
-### **Code Quality: World-Class**
-- **Zero compilation errors** across core crates
-- **Modern Rust patterns** (2021 edition) throughout
-- **Comprehensive documentation** with examples
-- **Production-ready** error handling and logging
+Parent primals (Gen 1):
+- **BearDog** - Genetic cryptography
+- **Songbird** - Service mesh
+- **ToadStool** - Universal compute
+- **NestGate** - Distributed storage
+- **Squirrel** - AI coordination
 
 ---
 
-## 🎯 **Core Components**
+## 📊 Current Status
 
-### **`biomeos-types` - Unified Type System**
-The foundation of the unified architecture:
-- **1,214+ lines** of production-ready unified types
-- **AI-first error system** with comprehensive context
-- **8-state health monitoring** with rich metadata
-- **Hierarchical configuration** system
-- **Centralized constants** (no more magic numbers)
-
-### **`biomeos-core` - Universal Management**
-Core system management with unified patterns:
-- **UniversalBiomeOSManager** for ecosystem coordination
-- **Ecosystem integration** with cross-primal communication
-- **Service registration and discovery**
-- **Health monitoring and metrics collection**
-
-### **`biomeos-primal-sdk` - Developer Interface**
-Clean interface for primal development:
-- Direct access to unified types (no compatibility layers)
-- **Extended request/response** types for primal-specific features
-- **Modern async patterns** throughout
-- **Comprehensive examples** and documentation
+| Component | Count | Status |
+|-----------|-------|--------|
+| Primal binaries | 56 | ✅ Ready |
+| Chimera definitions | 3 | ✅ Parseable |
+| Compiled chimeras | 2 | ✅ Running |
+| Niche templates | 6 | ✅ Available |
+| Parent showcases | 26 | ✅ Accessible |
 
 ---
 
-## 🌐 **Ecosystem Integration**
+## 📄 License
 
-### **Cross-Primal Communication**
-- **Songbird integration** - Service mesh and routing
-- **Toadstool coordination** - Multi-runtime execution  
-- **NestGate storage** - Volume provisioning APIs
-- **BearDog security** - Authentication and authorization
-- **Squirrel AI** - MCP platform integration
-
-### **Universal Manifests**
-```yaml
-apiVersion: biomeOS/v1
-kind: Biome
-metadata:
-  name: unified-demo
-  specialization: ecosystem_showcase
-
-primals:
-  songbird:
-      enabled: true
-    capabilities:
-      - service_discovery
-      - load_balancing
-  
-  nestgate:
-    enabled: true
-    capabilities:
-      - storage_provisioning
-      - volume_management
-```
+Part of the ecoPrimals ecosystem.
 
 ---
 
-## 🔧 **Development Guide**
-
-### **Working with Unified Types**
-```rust
-use biomeos_types::*;
-
-// Create configurations
-let config = BiomeOSConfig {
-    system: SystemConfig {
-        environment: Environment::Development,
-        organization_scale: OrganizationScale::Team,
-        // ... other fields
-    },
-    // ... other sections
-};
-
-// Handle errors with AI context
-match risky_operation() {
-    Ok(result) => info!("Success: {}", result),
-    Err(err) => {
-        error!("Operation failed: {}", err);
-        // Error includes AI context for automation
-    }
-}
-```
-
-### **Implementing Universal Services**
-```rust
-use biomeos_types::UniversalPrimalService;
-use async_trait::async_trait;
-
-#[async_trait]
-impl UniversalPrimalService for MyPrimal {
-    fn primal_id(&self) -> &str { "my-primal" }
-    
-    async fn handle_request(&self, request: UniversalServiceRequest) 
-        -> UniversalServiceResponse {
-        // Implementation using unified types
-    }
-    
-    async fn health_check(&self) -> BiomeResult<Health> {
-        Ok(Health::Healthy)
-    }
-    
-    // ... other methods
-}
-```
-
----
-
-## 📈 **Performance & Monitoring**
-
-### **Health Monitoring**
-- **8 comprehensive health states** covering all scenarios
-- **Component-level monitoring** with dependency tracking
-- **Resource metrics** (CPU, memory, disk, network)
-- **Issue tracking** with impact scoring
-- **Automated remediation** actions
-
-### **Observability**
-- **Structured logging** with context preservation
-- **Distributed tracing** across service boundaries
-- **Metrics collection** with Prometheus compatibility
-- **Real-time dashboards** for system monitoring
-
----
-
-## 🎉 **Success Story**
-
-BiomeOS has successfully completed a **major software modernization milestone**, transforming from fragmented, duplicate code into a **unified, world-class architecture**. The systematic elimination of technical debt and comprehensive type unification create an environment where developers can build confidently and efficiently.
-
-**This represents exemplary software engineering** that puts BiomeOS in the **top 5% of mature Rust codebases**.
-
----
-
-## 🤝 **Contributing**
-
-The unified architecture makes development straightforward:
-
-1. **All types** come from `biomeos-types` - single source of truth
-2. **Error handling** uses `BiomeResult<T>` with AI context
-3. **Configuration** uses hierarchical `BiomeOSConfig`
-4. **Health monitoring** uses the 8-state `Health` enum
-5. **Constants** come from centralized constants module
-
-**The foundation is solid. The architecture is modern. The future is bright.** 🚀
-
----
-
-*BiomeOS - Where unified architecture meets production excellence.* 
+*BiomeOS - Where primals evolve into chimeras, and chimeras thrive in niches.* 🌱

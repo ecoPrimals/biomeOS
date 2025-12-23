@@ -1,0 +1,8 @@
+# Binaries are not committed - pulled/built at deploy time
+primals/*
+chimeras/*
+
+# Keep the directories
+!primals/.gitkeep
+!chimeras/.gitkeep
+
