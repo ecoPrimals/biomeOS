@@ -55,7 +55,7 @@ cargo run --example full_integration_test
 **Documentation:**
 - 📖 [Validation Report](VALIDATION_COMPLETE_DEC_26_2025.md) - Complete validation results
 - 🎯 [Production Patterns](PRODUCTION_PATTERNS.md) - Best practices
-- 🧪 [benchScale README](benchscale/README.md) - Lab environment
+- 🧪 [benchScale README](../benchscale/README.md) - Lab environment (now parallel repo)
 
 ---
 

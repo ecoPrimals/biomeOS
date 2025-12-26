@@ -19,16 +19,17 @@ pub struct LabManager {
 impl LabManager {
     /// Create a new lab manager
     pub fn new() -> Self {
-        // Default to benchscale/ directory relative to workspace root
+        // Default to ../benchscale/ directory (parallel to biomeOS)
         // Get current directory and find workspace root
         let current = std::env::current_dir().unwrap_or_default();
         let benchscale_root = if current.ends_with("biomeOS") {
-            current.join("benchscale")
-        } else if current.join("benchscale").exists() {
-            current.join("benchscale")
+            // We're in biomeOS root, go up one level and into benchscale
+            current.parent().unwrap().join("benchscale")
         } else {
             // Try to find it relative to cargo manifest dir
             PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .parent()
+                .unwrap()
                 .parent()
                 .unwrap()
                 .parent()

@@ -29,8 +29,9 @@
 ### 2. benchScale v2.0 🧪 PURE RUST!
 **Status:** ✅ Production Ready
 
-- **[benchscale/README.md](benchscale/README.md)** - Main documentation
+- **[benchScale README](../benchscale/README.md)** - Main documentation (now parallel repo)
 - **Repository:** `git@github.com:ecoPrimals/benchScale.git`
+- **Location:** `../benchscale/` (parallel to biomeOS)
 - **Features:** Docker-based, network simulation, hardened images
 
 ### 3. Primal Registry ⭐ NEW!
@@ -67,7 +68,7 @@
 - **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - Quick lookups
 
 ### Feature Documentation
-- **[benchscale/README.md](benchscale/README.md)** - Lab environment system
+- **[benchScale README](../benchscale/README.md)** - Lab environment system (parallel repo)
 - **[crates/biomeos-core/src/primal_registry/](crates/biomeos-core/src/primal_registry/)** - Primal registry
 - **[showcase/03-p2p-coordination/](showcase/03-p2p-coordination/)** - P2P coordination demos
 - **[docs/](docs/)** - Comprehensive documentation
@@ -125,21 +126,15 @@ biomeOS/
 │
 ├── crates/                         📦 Rust crates
 │   ├── biomeos-core/              🎯 Core functionality
-│   │   ├── src/lab/               🧪 Lab integration (NEW!)
-│   │   ├── src/p2p_coordination/  🌐 P2P coordination (NEW!)
+│   │   ├── src/lab/               🧪 Lab integration (benchScale)
+│   │   ├── src/p2p_coordination/  🌐 P2P coordination
 │   │   └── src/api_adapter/       🔌 API adapters
 │   ├── biomeos-types/             📐 Type definitions
 │   ├── biomeos-cli/               💻 CLI interface
 │   └── biomeos-chimera/           🔗 Composition layer
 │
-├── benchscale/                     🧪 Lab environment (NEW!)
-│   ├── README.md                  📖 Main docs
-│   ├── QUICKSTART.md              🚀 Getting started
-│   ├── topologies/                🏗️ Network topologies (3)
-│   └── scripts/                   🔧 Management scripts (4)
-│
 ├── showcase/                       🎭 Demos & testing
-│   ├── 03-p2p-coordination/       🌐 P2P demos (5) (NEW!)
+│   ├── 03-p2p-coordination/       🌐 P2P demos (5)
 │   ├── 00-local-capabilities/     ✅ Local demos
 │   └── 04-complete-ecosystem/     🌟 Full ecosystem
 │
@@ -148,6 +143,11 @@ biomeOS/
 ├── specs/                          📋 Specifications (31)
 ├── docs/                           📚 Documentation
 └── archive/                        📦 Historical docs
+
+../benchscale/                      🧪 Lab environment (parallel repo)
+├── README.md                       📖 Main docs
+├── topologies/                     🏗️ Network topologies (4)
+└── src/                            🦀 Pure Rust implementation
 ```
 
 ---

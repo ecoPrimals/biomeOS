@@ -78,6 +78,7 @@ Find services by capability, not location:
 - 📖 [Showcase Demos](showcase/03-p2p-coordination/) - 5 working demonstrations
 - 🎯 [Production Patterns](PRODUCTION_PATTERNS.md) - Best practices
 - 📊 [Validation Report](VALIDATION_COMPLETE_DEC_26_2025.md) - Complete validation
+- 🧪 [benchScale](../benchscale/) - Lab environment (separate repository)
 
 ### 5. Pure Delegation
 BiomeOS orchestrates by delegating, never reimplementing:
@@ -188,7 +189,7 @@ cat showcase/START_HERE.md
 ### Recent Achievements (Dec 26, 2025) ✨
 - [**Validation Report**](VALIDATION_COMPLETE_DEC_26_2025.md) - Complete production validation
 - [**Production Patterns**](PRODUCTION_PATTERNS.md) - Idiomatic Rust patterns
-- [**benchScale Summary**](benchscale/README.md) - Pure Rust lab environment
+- [**benchScale**](../benchscale/README.md) - Pure Rust lab environment (now parallel repo)
 
 ### API Reference
 - [BiomeOS Primal SDK](docs/api/biomeos-primal-sdk.md)
