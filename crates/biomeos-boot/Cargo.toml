@@ -47,7 +47,7 @@ walkdir = "2"
 tempfile = "3"
 
 # CLI parsing
-clap = { version = "4", features = ["derive"] }
+clap = { version = "4", features = ["derive", "cargo"] }
 
 # Date/time
 chrono = "0.4"
@@ -61,6 +61,8 @@ biomeos-core = { path = "../biomeos-core" }
 
 [dev-dependencies]
 tokio-test = "0.4"
+assert_cmd = "2"
+predicates = "3"
 
 [[bin]]
 name = "biomeos-init"
