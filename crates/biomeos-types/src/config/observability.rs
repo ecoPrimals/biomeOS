@@ -706,4 +706,4 @@ impl Default for MetricsConfig {
             custom: Vec::new(),
         }
     }
-} 
+}

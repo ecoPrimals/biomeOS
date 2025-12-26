@@ -13,7 +13,7 @@ use tracing::{debug, info, warn};
 use uuid::Uuid;
 
 use crate::definition::NicheDefinition;
-use crate::error::{NicheError, NicheResult};
+use crate::error::NicheResult;
 
 /// A deployed niche instance
 #[derive(Debug)]
@@ -58,15 +58,16 @@ pub enum DeploymentStatus {
 #[derive(Debug)]
 struct OrganismHandle {
     /// Organism name
-    name: String,
+    _name: String,
     /// Process ID if running
-    pid: Option<u32>,
+    _pid: Option<u32>,
     /// Status
     status: OrganismStatus,
 }
 
 /// Organism status
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)] // Status variants for future use
 enum OrganismStatus {
     Pending,
     Starting,
@@ -78,6 +79,7 @@ enum OrganismStatus {
 
 impl NicheDeployment {
     /// Create a new deployment
+    #[must_use]
     pub fn new(definition: Arc<NicheDefinition>, deploy_dir: PathBuf) -> Self {
         Self {
             id: Uuid::new_v4(),
@@ -95,6 +97,9 @@ impl NicheDeployment {
     }
 
     /// Start the deployment
+    ///
+    /// # Errors
+    /// Returns an error if organisms fail to start.
     pub async fn start(&self) -> NicheResult<()> {
         info!("Starting niche deployment: {}", self.definition.niche.id);
 
@@ -105,13 +110,13 @@ impl NicheDeployment {
         std::fs::create_dir_all(&self.deploy_dir)?;
 
         // Start chimeras first
-        for (name, _chimera) in &self.definition.organisms.chimeras {
+        for name in self.definition.organisms.chimeras.keys() {
             debug!("Starting chimera: {}", name);
             self.start_organism(name).await?;
         }
 
         // Then start primals
-        for (name, _primal) in &self.definition.organisms.primals {
+        for name in self.definition.organisms.primals.keys() {
             debug!("Starting primal: {}", name);
             self.start_organism(name).await?;
         }
@@ -125,12 +130,12 @@ impl NicheDeployment {
     /// Start a single organism
     async fn start_organism(&self, name: &str) -> NicheResult<()> {
         let mut organisms = self.organisms.write().await;
-        
+
         organisms.insert(
             name.to_string(),
             OrganismHandle {
-                name: name.to_string(),
-                pid: None, // Would be set when actually spawning process
+                _name: name.to_string(),
+                _pid: None, // Would be set when actually spawning process
                 status: OrganismStatus::Running,
             },
         );
@@ -139,6 +144,9 @@ impl NicheDeployment {
     }
 
     /// Stop the deployment
+    ///
+    /// # Errors
+    /// Returns an error if organisms fail to stop.
     pub async fn stop(&self) -> NicheResult<()> {
         info!("Stopping niche deployment: {}", self.definition.niche.id);
 
@@ -166,7 +174,9 @@ impl NicheDeployment {
     /// Check if all organisms are healthy
     pub async fn is_healthy(&self) -> bool {
         let organisms = self.organisms.read().await;
-        organisms.values().all(|h| h.status == OrganismStatus::Running)
+        organisms
+            .values()
+            .all(|h| h.status == OrganismStatus::Running)
     }
 }
 
@@ -179,21 +189,28 @@ pub struct DeploymentManager {
 
 impl DeploymentManager {
     /// Create a new deployment manager
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Deploy a niche
+    ///
+    /// # Errors
+    /// Returns an error if deployment fails.
     pub async fn deploy(
         &self,
         definition: NicheDefinition,
         deploy_dir: PathBuf,
     ) -> NicheResult<Arc<NicheDeployment>> {
         let deployment = Arc::new(NicheDeployment::new(Arc::new(definition), deploy_dir));
-        
+
         deployment.start().await?;
 
-        self.deployments.write().await.insert(deployment.id, Arc::clone(&deployment));
+        self.deployments
+            .write()
+            .await
+            .insert(deployment.id, Arc::clone(&deployment));
 
         Ok(deployment)
     }
@@ -204,6 +221,9 @@ impl DeploymentManager {
     }
 
     /// Stop and remove a deployment
+    ///
+    /// # Errors
+    /// Returns an error if the deployment fails to stop.
     pub async fn undeploy(&self, id: Uuid) -> NicheResult<()> {
         if let Some(deployment) = self.deployments.write().await.remove(&id) {
             deployment.stop().await?;
@@ -215,7 +235,7 @@ impl DeploymentManager {
     pub async fn list(&self) -> Vec<(Uuid, String, DeploymentStatus)> {
         let deployments = self.deployments.read().await;
         let mut result = Vec::new();
-        
+
         for (id, deployment) in deployments.iter() {
             result.push((
                 *id,
@@ -223,11 +243,14 @@ impl DeploymentManager {
                 deployment.status().await,
             ));
         }
-        
+
         result
     }
 
     /// Stop all deployments
+    ///
+    /// # Errors
+    /// Returns an error if any deployment fails to stop.
     pub async fn stop_all(&self) -> NicheResult<()> {
         let deployments = self.deployments.read().await;
         for deployment in deployments.values() {
@@ -242,8 +265,8 @@ impl DeploymentManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::organism::{OrganismSpec, ChimeraOrganism};
-    use crate::definition::NicheMetadata;
+    use crate::definition::{NicheMetadata, NicheNetworking, NicheResources, NicheSecurity};
+    use crate::organism::{ChimeraOrganism, OrganismSpec};
     use tempfile::TempDir;
 
     fn create_test_niche() -> NicheDefinition {
@@ -258,13 +281,12 @@ mod tests {
                 author: String::new(),
                 features: Vec::new(),
             },
-            organisms: OrganismSpec::new()
-                .with_chimera("mesh", ChimeraOrganism::new("p2p-secure")),
+            organisms: OrganismSpec::new().with_chimera("mesh", ChimeraOrganism::new("p2p-secure")),
             interactions: Vec::new(),
             customization: Vec::new(),
-            resources: Default::default(),
-            networking: Default::default(),
-            security: Default::default(),
+            resources: NicheResources::default(),
+            networking: NicheNetworking::default(),
+            security: NicheSecurity::default(),
         }
     }
 
@@ -272,11 +294,8 @@ mod tests {
     async fn test_deployment_lifecycle() {
         let temp_dir = TempDir::new().unwrap();
         let definition = create_test_niche();
-        
-        let deployment = NicheDeployment::new(
-            Arc::new(definition),
-            temp_dir.path().to_path_buf(),
-        );
+
+        let deployment = NicheDeployment::new(Arc::new(definition), temp_dir.path().to_path_buf());
 
         assert_eq!(deployment.status().await, DeploymentStatus::Preparing);
 
@@ -288,4 +307,3 @@ mod tests {
         assert_eq!(deployment.status().await, DeploymentStatus::Stopped);
     }
 }
-

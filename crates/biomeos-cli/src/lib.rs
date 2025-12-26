@@ -41,7 +41,10 @@ impl CliUtils {
     }
 
     /// Format output based on output format
-    pub fn format_output<T: serde::Serialize>(data: &T, format: &OutputFormat) -> anyhow::Result<String> {
+    pub fn format_output<T: serde::Serialize>(
+        data: &T,
+        format: &OutputFormat,
+    ) -> anyhow::Result<String> {
         match format {
             OutputFormat::Json => Ok(serde_json::to_string_pretty(data)?),
             OutputFormat::Yaml => Ok(serde_yaml::to_string(data)?),

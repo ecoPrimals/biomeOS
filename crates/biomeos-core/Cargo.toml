@@ -31,6 +31,8 @@ dirs = { workspace = true }
 # Utilities
 itertools = { workspace = true }
 once_cell = { workspace = true }
+base64 = "0.22"
+sha2 = "0.10"
 
 # biomeOS dependencies
 biomeos-types = { path = "../biomeos-types" }

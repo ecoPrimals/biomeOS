@@ -1,0 +1,149 @@
+# biomeOS BYOB Manifest: lineage-gated-relay.biome.yaml
+#
+# Deploys lineage-gated relay coordination for NAT traversal
+# with family-based access control.
+#
+# This manifest demonstrates BiomeOS's capability-based orchestration
+# of security and routing primals for lineage-gated relay.
+#
+# Version: 1.0
+# Date: December 26, 2025
+#
+apiVersion: biomeos.io/v1alpha1
+kind: BiomeManifest
+metadata:
+  name: lineage-gated-relay
+  description: "NAT traversal with lineage-based relay access control."
+  tags: ["relay", "nat-traversal", "lineage", "security", "routing"]
+  authors: ["biomeOS Team"]
+
+spec:
+  # Define the services required for lineage-gated relay
+  services:
+    - name: beardog-security-primal
+      primal_type: security
+      description: "BearDog security primal for lineage verification."
+      image: "beardog/core:latest" # Placeholder, replace with actual image/binary path
+      capabilities:
+        - name: "security:lineage-verification"
+          description: "Verify lineage relationships between nodes"
+        - name: "security:lineage-proof"
+          description: "Generate and validate lineage proofs"
+        - name: "crypto:signing"
+          description: "Cryptographic signing for lineage proofs"
+      resources:
+        cpu: "500m"
+        memory: "256Mi"
+      networking:
+        ports:
+          - port: 9000
+            protocol: "tcp"
+            description: "Security API endpoint"
+      security:
+        isolation_level: "high"
+        access_control:
+          - rule: "allow"
+            source: "songbird-routing-primal"
+            action: "lineage-verification"
+
+    - name: songbird-routing-primal
+      primal_type: routing
+      description: "Songbird routing primal for relay coordination."
+      image: "songbird/orchestrator:latest" # Placeholder, replace with actual image/binary path
+      capabilities:
+        - name: "routing:relay"
+          description: "Coordinate relay offers and connections"
+        - name: "routing:nat-traversal"
+          description: "NAT traversal coordination"
+        - name: "discovery:relay-offers"
+          description: "Discover and publish relay offers"
+      resources:
+        cpu: "500m"
+        memory: "256Mi"
+      networking:
+        ports:
+          - port: 3000
+            protocol: "tcp"
+            description: "Routing API endpoint"
+          - port: 5353
+            protocol: "udp"
+            description: "mDNS for local relay discovery"
+      security:
+        isolation_level: "medium"
+        access_control:
+          - rule: "allow"
+            source: "beardog-security-primal"
+            action: "relay-coordination"
+
+  # Define how these services interact for lineage-gated relay
+  orchestration:
+    startup_sequence:
+      - service: beardog-security-primal
+        depends_on: []
+        health_check:
+          path: "/status"
+          port: 9000
+          interval_seconds: 5
+          timeout_seconds: 2
+      - service: songbird-routing-primal
+        depends_on: ["beardog-security-primal"]
+        health_check:
+          path: "/health"
+          port: 3000
+          interval_seconds: 5
+          timeout_seconds: 2
+
+    # Define relay coordination configuration
+    relay_coordination:
+      enabled: true
+      
+      # Lineage gate configuration
+      lineage_gate:
+        enabled: true
+        root_lineage: "family-root"
+        verification_required: true
+        security_primal_ref: "beardog-security-primal"
+      
+      # Relay policies
+      policies:
+        bandwidth_limit: "10 Mbps"
+        connection_limit: 5
+        time_limit_seconds: 3600
+        require_encryption: true
+      
+      # Relay discovery
+      discovery:
+        routing_primal_ref: "songbird-routing-primal"
+        announce_interval_seconds: 60
+        ttl_seconds: 300
+      
+      # NAT traversal
+      nat_traversal:
+        enabled: true
+        stun_servers:
+          - "stun.l.google.com:19302"
+          - "stun1.l.google.com:19302"
+        relay_fallback: true
+
+  # Environment-specific overrides (optional)
+  environments:
+    development:
+      resources:
+        cpu: "250m"
+        memory: "128Mi"
+      policies:
+        bandwidth_limit: "5 Mbps"
+        connection_limit: 2
+    
+    production:
+      resources:
+        cpu: "1000m"
+        memory: "1024Mi"
+      security:
+        isolation_level: "strict"
+      policies:
+        bandwidth_limit: "100 Mbps"
+        connection_limit: 50
+        require_encryption: true
+        enable_audit_log: true
+

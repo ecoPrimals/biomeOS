@@ -3,8 +3,8 @@
 //! This module contains networking-related service types including PortSpec,
 //! LoadBalancerSpec, and related networking configurations.
 
-use serde::{Deserialize, Serialize};
 use crate::health::HealthCheckConfig;
+use serde::{Deserialize, Serialize};
 
 /// Port specification
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -139,4 +139,4 @@ pub struct PortHealthCheckSpec {
 
     /// Unhealthy threshold
     pub unhealthy_threshold: u32,
-} 
+}

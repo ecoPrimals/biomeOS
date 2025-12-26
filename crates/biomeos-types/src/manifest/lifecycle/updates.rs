@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;
 
-use super::hooks::{LifecycleAction, HttpMethod};
+use super::hooks::{HttpMethod, LifecycleAction};
 
 /// Update strategy specification
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -355,4 +355,4 @@ pub enum UpdatePhase {
     PostUpdate,
     PreRollback,
     PostRollback,
-} 
+}

@@ -7,14 +7,14 @@
 
 // Import unified types from biomeos-types
 use biomeos_types::{
-    BiomeOSConfig, Environment, OrganizationScale,
     config::{
-        security::{DataAtRestConfig, DataInTransitConfig, EncryptionAlgorithm, AuthMethod},
-        network::TlsConfig,
-        resources::{RegistryConfig, RegistryAuth, DnsConfig, DiscoveryMethod},
         features::UITheme,
+        network::TlsConfig,
+        resources::{DiscoveryMethod, DnsConfig, RegistryAuth, RegistryConfig},
+        security::{AuthMethod, DataAtRestConfig, DataInTransitConfig, EncryptionAlgorithm},
         TlsVersion,
     },
+    BiomeOSConfig, Environment, OrganizationScale,
 };
 use std::time::Duration;
 use tracing::warn;
@@ -51,12 +51,10 @@ impl BiomeOSConfigBuilder {
         builder.config.system.environment = Environment::Development;
         builder.config.network.bind_address = "127.0.0.1".to_string();
         builder.config.network.port = 8080;
-        
+
         // Configure DNS discovery for localhost
-        builder.config.discovery.methods = vec![
-            DiscoveryMethod::Dns
-        ];
-        
+        builder.config.discovery.methods = vec![DiscoveryMethod::Dns];
+
         builder
     }
 
@@ -66,14 +64,14 @@ impl BiomeOSConfigBuilder {
         builder.config.system.environment = Environment::Production;
         builder.config.system.organization_scale = OrganizationScale::Enterprise;
         builder.config.network.bind_address = "0.0.0.0".to_string();
-        
+
         // Enable multiple discovery methods for production
         builder.config.discovery.methods = vec![
             DiscoveryMethod::Registry,
             DiscoveryMethod::Dns,
             DiscoveryMethod::Consul,
         ];
-        
+
         builder
     }
 
@@ -83,17 +81,17 @@ impl BiomeOSConfigBuilder {
         builder.config.system.environment = Environment::Testing;
         builder.config.network.bind_address = "localhost".to_string();
         builder.config.network.port = 8083;
-        
+
         // Use static discovery for testing
         builder.config.discovery.methods = vec![DiscoveryMethod::Dns];
-        
+
         builder
     }
 
     /// Configure for registry-based discovery
     pub fn for_registry_discovery(registry_endpoint: &str) -> Self {
         let mut builder = Self::for_production();
-        
+
         // Configure registry discovery
         builder.config.discovery.methods = vec![DiscoveryMethod::Registry];
         builder.config.discovery.registry = Some(RegistryConfig {
@@ -101,7 +99,7 @@ impl BiomeOSConfigBuilder {
             auth: None,
             health_check_interval: std::time::Duration::from_secs(30),
         });
-        
+
         builder
     }
 
@@ -145,13 +143,13 @@ impl BiomeOSConfigBuilder {
 
     /// Configure registry discovery
     pub fn with_registry_discovery(mut self, url: &str, auth: Option<(String, String)>) -> Self {
-        self.config.discovery.methods.push(DiscoveryMethod::Registry);
+        self.config
+            .discovery
+            .methods
+            .push(DiscoveryMethod::Registry);
         self.config.discovery.registry = Some(RegistryConfig {
             url: url.to_string(),
-            auth: auth.map(|(username, password)| RegistryAuth {
-                username,
-                password,
-            }),
+            auth: auth.map(|(username, password)| RegistryAuth { username, password }),
             health_check_interval: std::time::Duration::from_secs(30),
         });
         self
@@ -197,10 +195,8 @@ impl BiomeOSConfigBuilder {
         if enabled {
             // Enable authentication with API key as default
             self.config.security.authentication.default_method = AuthMethod::ApiKey;
-            self.config.security.authentication.methods = vec![
-                AuthMethod::ApiKey,
-            ];
-            
+            self.config.security.authentication.methods = vec![AuthMethod::ApiKey];
+
             // Enable encryption at rest and in transit
             self.config.security.encryption.at_rest = DataAtRestConfig {
                 enabled: true,
@@ -216,7 +212,7 @@ impl BiomeOSConfigBuilder {
             // Disable authentication
             self.config.security.authentication.default_method = AuthMethod::None;
             self.config.security.authentication.methods = vec![AuthMethod::None];
-            
+
             // Disable encryption
             self.config.security.encryption.at_rest = DataAtRestConfig {
                 enabled: false,
@@ -229,7 +225,7 @@ impl BiomeOSConfigBuilder {
                 cipher_suites: vec![],
             };
         }
-        
+
         self
     }
 
@@ -272,8 +268,6 @@ impl BiomeOSConfigBuilder {
         self
     }
 
-
-
     /// Enable feature flag
     pub fn with_feature(self, _feature: &str, _enabled: bool) -> Self {
         // This is a simplified feature flag system - in reality, you'd want
@@ -315,10 +309,7 @@ impl BiomeOSConfigBuilder {
         Self::for_production()
             .with_organization_scale(OrganizationScale::Enterprise)
             .with_security_enabled(true)
-            .with_discovery_methods(vec![
-                DiscoveryMethod::Consul,
-                DiscoveryMethod::Kubernetes,
-            ])
+            .with_discovery_methods(vec![DiscoveryMethod::Consul, DiscoveryMethod::Kubernetes])
     }
 
     /// Create configuration for development with all features enabled
@@ -363,7 +354,10 @@ mod tests {
             .build();
 
         assert_eq!(config.discovery.methods.len(), 2);
-        assert!(config.discovery.methods.contains(&DiscoveryMethod::Registry));
+        assert!(config
+            .discovery
+            .methods
+            .contains(&DiscoveryMethod::Registry));
         assert!(config.discovery.methods.contains(&DiscoveryMethod::Dns));
     }
 
@@ -373,7 +367,10 @@ mod tests {
             .with_security_enabled(true)
             .build();
 
-        assert!(matches!(config.security.authentication.default_method, AuthMethod::ApiKey));
+        assert!(matches!(
+            config.security.authentication.default_method,
+            AuthMethod::ApiKey
+        ));
         assert!(config.security.encryption.at_rest.enabled);
         assert!(config.security.encryption.in_transit.enabled);
     }
@@ -384,7 +381,10 @@ mod tests {
 
         assert_eq!(config.system.environment, Environment::Development);
         assert!(config.ui.enabled);
-        assert!(matches!(config.ui.theme, biomeos_types::config::features::UITheme::Dark));
+        assert!(matches!(
+            config.ui.theme,
+            biomeos_types::config::features::UITheme::Dark
+        ));
         assert!(config.observability.metrics.enabled);
         assert!(config.observability.tracing.enabled);
     }
@@ -394,16 +394,25 @@ mod tests {
         let config = BiomeOSConfigBuilder::for_production().build();
 
         assert_eq!(config.system.environment, Environment::Production);
-        assert_eq!(config.system.organization_scale, OrganizationScale::Enterprise);
-        assert!(config.discovery.methods.contains(&DiscoveryMethod::Registry));
+        assert_eq!(
+            config.system.organization_scale,
+            OrganizationScale::Enterprise
+        );
+        assert!(config
+            .discovery
+            .methods
+            .contains(&DiscoveryMethod::Registry));
     }
 
     #[test]
     fn test_registry_discovery() {
-        let config = BiomeOSConfigBuilder::for_registry_discovery("http://registry.example.com")
-            .build();
+        let config =
+            BiomeOSConfigBuilder::for_registry_discovery("http://registry.example.com").build();
 
-        assert!(config.discovery.methods.contains(&DiscoveryMethod::Registry));
+        assert!(config
+            .discovery
+            .methods
+            .contains(&DiscoveryMethod::Registry));
         assert!(config.discovery.registry.is_some());
         assert_eq!(
             config.discovery.registry.as_ref().unwrap().url,

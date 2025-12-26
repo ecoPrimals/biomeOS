@@ -1,0 +1,11 @@
+{
+  "demo": "primal-status",
+  "timestamp": "2025-12-22T21:39:41-05:00",
+  "status": "success",
+  "host": "pop-os",
+  "user": "eastgate",
+  "biomeOS_version": "1.0.0",
+  "output_hash": "ca8ad9b3e966d102ff27ae0a5641dd798d3d33089e81d87273ed5d7fd90a84fb",
+  "output_lines": 21,
+  "replication_command": "./bin/live-demo.sh primal-status"
+}

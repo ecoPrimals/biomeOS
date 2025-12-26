@@ -3,22 +3,22 @@
 //! This module contains the fundamental service types including UniversalService,
 //! ServiceMetadata, ServiceSpec, and various service type classifications.
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
-use crate::primal::{PrimalType, PrimalCapability, ResourceRequirements};
 use crate::health::Health;
+use crate::primal::{PrimalCapability, PrimalType, ResourceRequirements};
 
 // Re-export from other service modules for convenience
-pub use super::runtime::ServiceRuntime;
-pub use super::security::ServiceSecurity;
 pub use super::health::ServiceHealth;
 pub use super::networking::ServiceNetworking;
+pub use super::runtime::ServiceRuntime;
+pub use super::security::ServiceSecurity;
 
 /// Universal Service Definition
-/// 
+///
 /// This represents any service in the biomeOS ecosystem, whether it's a
 /// primal, application service, infrastructure component, etc.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -696,10 +696,10 @@ impl Default for UniversalService {
                 primal_type: None,
                 capabilities: vec![],
                 runtime: ServiceRuntime::default(),
-                resources:                 ResourceRequirements {
+                resources: ResourceRequirements {
                     cpu: Some(1),
                     memory: Some(100), // 100 MB
-                    disk: Some(1000), // 1000 MB = 1 GB
+                    disk: Some(1000),  // 1000 MB = 1 GB
                     network: None,
                     gpu: None,
                     additional: Vec::new(),
@@ -765,4 +765,4 @@ impl Default for ServiceLifecycle {
             termination_grace_period: 30,
         }
     }
-} 
+}

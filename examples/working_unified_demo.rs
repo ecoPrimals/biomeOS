@@ -2,19 +2,19 @@
 //!
 //! This demo showcases the unified BiomeOS architecture achievements:
 //! - Unified type system from biomeos-types
-//! - AI-first error handling 
+//! - AI-first error handling
 //! - Modern configuration system
 //! - Comprehensive health monitoring
 //! - Clean compilation across all core crates
 
 use anyhow::Result;
 use biomeos_types::{
-    BiomeOSConfig, BiomeError, BiomeResult, Health, PrimalCapability, PrimalType,
-    SystemConfig, Environment, OrganizationScale,
+    BiomeError, BiomeOSConfig, BiomeResult, Environment, Health, OrganizationScale,
+    PrimalCapability, PrimalType, SystemConfig,
 };
 use std::time::Duration;
 use tokio::time::sleep;
-use tracing::{info, error};
+use tracing::{error, info};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -68,8 +68,14 @@ async fn demo_unified_types() -> Result<()> {
     let ai_primal = PrimalType::community("ai".to_string(), "demo-ai".to_string());
 
     info!("✅ Created primal types using unified system:");
-    info!("   Compute: {} / {}", compute_primal.category, compute_primal.name);
-    info!("   Storage: {} / {}", storage_primal.category, storage_primal.name);
+    info!(
+        "   Compute: {} / {}",
+        compute_primal.category, compute_primal.name
+    );
+    info!(
+        "   Storage: {} / {}",
+        storage_primal.category, storage_primal.name
+    );
     info!("   AI: {} / {}", ai_primal.category, ai_primal.name);
 
     // Create capabilities using unified system
@@ -94,10 +100,8 @@ async fn demo_error_system() -> Result<()> {
     println!("─────────────────────────");
 
     // Demonstrate comprehensive error creation with AI context
-    let _config_error = BiomeError::config_error(
-        "Invalid configuration detected",
-        Some("http_port"),
-    );
+    let _config_error =
+        BiomeError::config_error("Invalid configuration detected", Some("http_port"));
 
     let _network_error = BiomeError::network_error(
         "Service discovery timeout",
@@ -126,7 +130,7 @@ async fn demo_error_system() -> Result<()> {
 async fn simulate_operation() -> BiomeResult<String> {
     // Simulate an operation that demonstrates error handling
     sleep(Duration::from_millis(100)).await;
-    
+
     // Return success to show the system working
     Ok("Demo operation completed successfully".to_string())
 }
@@ -140,7 +144,10 @@ async fn demo_configuration_system() -> Result<()> {
 
     info!("✅ Created unified configuration:");
     info!("   Environment: {:?}", config.system.environment);
-    info!("   Organization scale: {:?}", config.system.organization_scale);
+    info!(
+        "   Organization scale: {:?}",
+        config.system.organization_scale
+    );
     info!("   System name: {}", config.system.name);
 
     // Show configuration features
@@ -196,19 +203,19 @@ async fn demo_health_system() -> Result<()> {
     println!("─────────────────────────────");
 
     // Demonstrate the 8-state health system
-    let health_states = vec![
+    let health_states = [
         Health::Healthy,
-        Health::Starting { 
-            phase: biomeos_types::StartupPhase::Initializing, 
-            progress: 75 
+        Health::Starting {
+            phase: biomeos_types::StartupPhase::Initializing,
+            progress: 75,
         },
-        Health::Degraded { 
+        Health::Degraded {
             issues: vec![],
-            impact_score: Some(0.3)
+            impact_score: Some(0.3),
         },
-        Health::Maintenance { 
+        Health::Maintenance {
             maintenance_type: biomeos_types::MaintenanceType::Planned,
-            estimated_completion: Some(chrono::Utc::now() + chrono::Duration::seconds(300))
+            estimated_completion: Some(chrono::Utc::now() + chrono::Duration::seconds(300)),
         },
     ];
 
@@ -237,9 +244,18 @@ async fn demo_constants_system() -> Result<()> {
     // Show unified constants usage
     info!("✅ Unified constants available:");
     info!("   Default HTTP port: {}", biomeos_types::DEFAULT_HTTP_PORT);
-    info!("   Default HTTPS port: {}", biomeos_types::DEFAULT_HTTPS_PORT);
-    info!("   Connection timeout: {:?}", biomeos_types::DEFAULT_CONNECTION_TIMEOUT);
-    info!("   Request timeout: {:?}", biomeos_types::DEFAULT_REQUEST_TIMEOUT);
+    info!(
+        "   Default HTTPS port: {}",
+        biomeos_types::DEFAULT_HTTPS_PORT
+    );
+    info!(
+        "   Connection timeout: {:?}",
+        biomeos_types::DEFAULT_CONNECTION_TIMEOUT
+    );
+    info!(
+        "   Request timeout: {:?}",
+        biomeos_types::DEFAULT_REQUEST_TIMEOUT
+    );
 
     // Show version information
     info!("✅ Version information:");
@@ -250,4 +266,4 @@ async fn demo_constants_system() -> Result<()> {
     println!();
 
     Ok(())
-} 
+}

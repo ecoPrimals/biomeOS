@@ -607,9 +607,7 @@ pub enum RetryCondition {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum BackoffStrategy {
     /// Fixed backoff
-    Fixed {
-        delay: u32,
-    },
+    Fixed { delay: u32 },
 
     /// Exponential backoff
     Exponential {
@@ -619,16 +617,10 @@ pub enum BackoffStrategy {
     },
 
     /// Linear backoff
-    Linear {
-        base_delay: u32,
-        increment: u32,
-    },
+    Linear { base_delay: u32, increment: u32 },
 
     /// Random backoff
-    Random {
-        min_delay: u32,
-        max_delay: u32,
-    },
+    Random { min_delay: u32, max_delay: u32 },
 }
 
 /// Default implementation for ServiceNetworking
@@ -655,4 +647,4 @@ impl Default for ServiceNetworking {
             policies: vec![],
         }
     }
-} 
+}

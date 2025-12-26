@@ -3,113 +3,112 @@
 //! This module provides comprehensive configuration management for BiomeOS,
 //! supporting all system components with proper validation and inheritance.
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use chrono::{DateTime, Utc};
 
-use crate::error::{BiomeResult, BiomeError};
+use crate::error::{BiomeError, BiomeResult};
 
 // Sub-modules for organized configuration
 pub mod features;
 pub mod network;
-pub mod resources;
-pub mod system;
-pub mod security;
 pub mod observability;
+pub mod resources;
+pub mod security;
+pub mod system;
 
 // Re-export main configuration types - using what actually exists
-pub use system::{SystemConfig, Environment, OrganizationScale, TimeoutConfig, WorkerConfig, SystemLimits};
-pub use network::{NetworkConfig, TlsConfig, HttpConfig, TlsVersion};
-pub use resources::{ResourceConfig, ResourceLimits, CpuConfig, MemoryConfig, DiscoveryConfig, HealthMonitoringConfig};
-pub use security::{SecurityConfig, AuthenticationConfig, AuthorizationConfig, EncryptionConfig};
-pub use observability::{ObservabilityConfig, LoggingConfig, TracingConfig, AlertingConfig};
-pub use features::{FeatureFlags, EnvironmentConfig, UIConfig};
+pub use features::{EnvironmentConfig, FeatureFlags, UIConfig};
+pub use network::{HttpConfig, NetworkConfig, TlsConfig, TlsVersion};
+pub use observability::{AlertingConfig, LoggingConfig, ObservabilityConfig, TracingConfig};
+pub use resources::{
+    CpuConfig, DiscoveryConfig, HealthMonitoringConfig, MemoryConfig, ResourceConfig,
+    ResourceLimits,
+};
+pub use security::{AuthenticationConfig, AuthorizationConfig, EncryptionConfig, SecurityConfig};
+pub use system::{
+    Environment, OrganizationScale, SystemConfig, SystemLimits, TimeoutConfig, WorkerConfig,
+};
 
 /// Universal biomeOS Configuration
-/// 
+///
 /// This is the master configuration structure that unifies all configuration
 /// aspects of the biomeOS ecosystem. It provides a single source of truth
 /// for all system, network, security, and operational configurations.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct BiomeOSConfig {
     /// Configuration metadata
+    #[serde(default)]
     pub metadata: ConfigMetadata,
-    
+
     /// System-level configuration
+    #[serde(default)]
     pub system: SystemConfig,
-    
+
     /// Network configuration
+    #[serde(default)]
     pub network: NetworkConfig,
-    
+
     /// Security configuration  
+    #[serde(default)]
     pub security: SecurityConfig,
-    
+
     /// Resource management configuration
+    #[serde(default)]
     pub resources: ResourceConfig,
-    
+
     /// Service discovery configuration
+    #[serde(default)]
     pub discovery: DiscoveryConfig,
-    
+
     /// Health monitoring configuration
+    #[serde(default)]
     pub health: HealthMonitoringConfig,
-    
+
     /// Observability configuration
+    #[serde(default)]
     pub observability: ObservabilityConfig,
-    
+
     /// UI configuration
+    #[serde(default)]
     pub ui: UIConfig,
-    
+
     /// Environment-specific configurations
+    #[serde(default)]
     pub environments: HashMap<String, EnvironmentConfig>,
-    
+
     /// Feature flags
+    #[serde(default)]
     pub features: FeatureFlags,
 }
-
-impl Default for BiomeOSConfig {
-    fn default() -> Self {
-        Self {
-            metadata: ConfigMetadata::default(),
-            system: SystemConfig::default(),
-            network: NetworkConfig::default(),
-            security: SecurityConfig::default(),
-            resources: ResourceConfig::default(),
-            discovery: DiscoveryConfig::default(),
-            health: HealthMonitoringConfig::default(),
-            observability: ObservabilityConfig::default(),
-            ui: UIConfig::default(),
-            environments: HashMap::new(),
-            features: FeatureFlags::default(),
-        }
-    }
-}
+// BiomeOSConfig Default derived via #[derive(Default)]
 
 /// Configuration metadata
-/// 
+///
 /// Provides versioning, authoring, and lifecycle information for configurations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConfigMetadata {
     /// Configuration version using semantic versioning
     pub version: String,
-    
+
     /// Configuration name/identifier  
     pub name: String,
-    
+
     /// Configuration description
     pub description: Option<String>,
-    
+
     /// Configuration author
     pub author: Option<String>,
-    
+
     /// When this configuration was created
     pub created_at: DateTime<Utc>,
-    
+
     /// When this configuration was last modified
     pub modified_at: DateTime<Utc>,
-    
+
     /// Configuration tags for organization
     pub tags: Vec<String>,
-    
+
     /// Custom metadata fields
     pub custom: HashMap<String, serde_json::Value>,
 }
@@ -133,42 +132,52 @@ impl Default for ConfigMetadata {
 impl BiomeOSConfig {
     /// Load configuration from file
     pub fn from_file(path: impl AsRef<std::path::Path>) -> BiomeResult<Self> {
-        let content = std::fs::read_to_string(path)
-            .map_err(|e| BiomeError::config_error(format!("Failed to read config file: {}", e), None::<String>))?;
-        
-        let config: Self = serde_yaml::from_str(&content)
-            .map_err(|e| BiomeError::config_error(format!("Failed to parse config file: {}", e), None::<String>))?;
-        
+        let content = std::fs::read_to_string(path).map_err(|e| {
+            BiomeError::config_error(format!("Failed to read config file: {}", e), None::<String>)
+        })?;
+
+        let config: Self = serde_yaml::from_str(&content).map_err(|e| {
+            BiomeError::config_error(
+                format!("Failed to parse config file: {}", e),
+                None::<String>,
+            )
+        })?;
+
         config.validate()?;
         Ok(config)
     }
 
     /// Save configuration to file
     pub fn to_file(&self, path: impl AsRef<std::path::Path>) -> BiomeResult<()> {
-        let content = serde_yaml::to_string(self)
-            .map_err(|e| BiomeError::config_error(format!("Failed to serialize config: {}", e), None::<String>))?;
-        
-        std::fs::write(path, content)
-            .map_err(|e| BiomeError::config_error(format!("Failed to write config file: {}", e), None::<String>))?;
-        
+        let content = serde_yaml::to_string(self).map_err(|e| {
+            BiomeError::config_error(format!("Failed to serialize config: {}", e), None::<String>)
+        })?;
+
+        std::fs::write(path, content).map_err(|e| {
+            BiomeError::config_error(
+                format!("Failed to write config file: {}", e),
+                None::<String>,
+            )
+        })?;
+
         Ok(())
     }
 
     /// Load configuration from environment variables
     pub fn from_env() -> Self {
         let mut config = Self::default();
-        
+
         // Apply environment variable overrides
         if let Ok(port) = std::env::var("BIOMEOS_PORT") {
             if let Ok(port_num) = port.parse::<u16>() {
                 config.network.port = port_num;
             }
         }
-        
+
         if let Ok(bind_addr) = std::env::var("BIOMEOS_BIND_ADDRESS") {
             config.network.bind_address = bind_addr;
         }
-        
+
         if let Ok(log_level) = std::env::var("BIOMEOS_LOG_LEVEL") {
             config.observability.logging.level = match log_level.to_lowercase().as_str() {
                 "trace" => observability::LogLevel::Trace,
@@ -188,7 +197,7 @@ impl BiomeOSConfig {
         if let Ok(experimental) = std::env::var("BIOMEOS_EXPERIMENTAL") {
             config.features.experimental = experimental.to_lowercase() == "true";
         }
-        
+
         config
     }
 
@@ -196,29 +205,45 @@ impl BiomeOSConfig {
     pub fn validate(&self) -> BiomeResult<()> {
         // Validate port ranges
         if self.network.port == 0 {
-            return Err(BiomeError::config_error("Port cannot be 0", Some("network.port")));
+            return Err(BiomeError::config_error(
+                "Port cannot be 0",
+                Some("network.port"),
+            ));
         }
-        
+
         // Validate timeouts
         if self.system.timeouts.default_request_timeout.as_secs() == 0 {
-            return Err(BiomeError::config_error("Request timeout cannot be 0", Some("system.timeouts.default_request_timeout")));
+            return Err(BiomeError::config_error(
+                "Request timeout cannot be 0",
+                Some("system.timeouts.default_request_timeout"),
+            ));
         }
-        
+
         // Validate resource limits
         if self.system.limits.max_connections == 0 {
-            return Err(BiomeError::config_error("Max connections cannot be 0", Some("system.limits.max_connections")));
+            return Err(BiomeError::config_error(
+                "Max connections cannot be 0",
+                Some("system.limits.max_connections"),
+            ));
         }
 
         // Validate observability settings
-        if self.observability.metrics.enabled && self.observability.metrics.interval.as_secs() == 0 {
-            return Err(BiomeError::config_error("Metrics interval cannot be 0", Some("observability.metrics.interval")));
+        if self.observability.metrics.enabled && self.observability.metrics.interval.as_secs() == 0
+        {
+            return Err(BiomeError::config_error(
+                "Metrics interval cannot be 0",
+                Some("observability.metrics.interval"),
+            ));
         }
 
         // Validate security settings
         if self.security.session.timeout.as_secs() == 0 {
-            return Err(BiomeError::config_error("Session timeout cannot be 0", Some("security.session.timeout")));
+            return Err(BiomeError::config_error(
+                "Session timeout cannot be 0",
+                Some("security.session.timeout"),
+            ));
         }
-        
+
         Ok(())
     }
 
@@ -227,7 +252,7 @@ impl BiomeOSConfig {
         // Update metadata
         self.metadata.modified_at = Utc::now();
         self.metadata.version = other.metadata.version;
-        
+
         // Merge configurations
         self.system = other.system;
         self.network = other.network;
@@ -238,17 +263,17 @@ impl BiomeOSConfig {
         self.observability = other.observability;
         self.ui = other.ui;
         self.features = other.features;
-        
+
         // Merge environments
         for (name, env) in other.environments {
             self.environments.insert(name, env);
         }
-        
+
         // Merge extensions
         for (key, value) in other.metadata.custom {
             self.metadata.custom.insert(key, value);
         }
-        
+
         self.validate()?;
         Ok(())
     }
@@ -256,27 +281,27 @@ impl BiomeOSConfig {
     /// Get environment-specific configuration
     pub fn for_environment(&self, env: &str) -> BiomeResult<Self> {
         let mut config = self.clone();
-        
+
         if let Some(env_config) = self.environments.get(env) {
             // Apply environment-specific overrides
             config.features = env_config.features.clone();
-            
+
             // Apply environment variables
             for (key, value) in &env_config.variables {
                 std::env::set_var(key, value);
             }
-            
+
             // Apply environment-specific endpoints
             for (service, endpoint) in &env_config.endpoints {
                 config.metadata.custom.insert(
                     format!("{}_endpoint", service),
-                    serde_json::Value::String(endpoint.clone())
+                    serde_json::Value::String(endpoint.clone()),
                 );
             }
-            
+
             config.metadata.modified_at = Utc::now();
         }
-        
+
         Ok(config)
     }
 
@@ -348,7 +373,11 @@ impl BiomeOSConfigBuilder {
     }
 
     /// Add environment configuration
-    pub fn add_environment(mut self, name: impl Into<String>, env_config: EnvironmentConfig) -> Self {
+    pub fn add_environment(
+        mut self,
+        name: impl Into<String>,
+        env_config: EnvironmentConfig,
+    ) -> Self {
         self.config.environments.insert(name.into(), env_config);
         self
     }
@@ -371,4 +400,4 @@ impl Default for BiomeOSConfigBuilder {
     fn default() -> Self {
         Self::new()
     }
-} 
+}

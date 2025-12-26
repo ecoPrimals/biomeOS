@@ -9,22 +9,20 @@
 //! - `environment`: Environment variables, volumes, and dependencies
 
 pub mod core;
-pub mod networking;
 pub mod environment;
+pub mod networking;
 
 // Re-export all types for compatibility
 pub use core::{
-    ServiceSpec, ServiceMetadata, ImageSpec, ImagePullPolicy,
-    WasmRuntimeSpec, FunctionCodeSpec, RestartPolicy,
+    FunctionCodeSpec, ImagePullPolicy, ImageSpec, RestartPolicy, ServiceMetadata, ServiceSpec,
+    WasmRuntimeSpec,
 };
 
 pub use networking::{
-    PortSpec, PortProtocol, LoadBalancerSpec, LoadBalancingAlgorithm,
-    SessionAffinity, AffinityType, AffinityCookieSpec,
-    LoadBalancerTimeouts, PortHealthCheckSpec,
+    AffinityCookieSpec, AffinityType, LoadBalancerSpec, LoadBalancerTimeouts,
+    LoadBalancingAlgorithm, PortHealthCheckSpec, PortProtocol, PortSpec, SessionAffinity,
 };
 
 pub use environment::{
-    EnvVarSpec, VolumeMountSpec, MountPropagation,
-    ServiceDependency, DependencyCondition,
-}; 
+    DependencyCondition, EnvVarSpec, MountPropagation, ServiceDependency, VolumeMountSpec,
+};

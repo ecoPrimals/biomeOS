@@ -1,0 +1,21 @@
+total 219228
+drwxrwxr-x  2 eastgate eastgate     4096 Dec 22 19:29 .
+drwxrwxr-x 10 eastgate eastgate     4096 Dec 22 21:39 ..
+-rwxrwxr-x  1 eastgate eastgate  4657512 Dec 22 19:29 beardog
+-rw-rw-r--  1 eastgate eastgate        0 Dec 22 15:25 .gitkeep
+-rwxrwxr-x  1 eastgate eastgate  3539768 Dec 22 19:22 nestgate
+-rwxrwxr-x  1 eastgate eastgate  6324648 Dec 22 19:24 songbird-agent
+-rwxrwxr-x  1 eastgate eastgate   776392 Dec 22 19:24 songbird-bench-all
+-rwxrwxr-x  1 eastgate eastgate  5105000 Dec 22 19:24 songbird-bench-http
+-rwxrwxr-x  1 eastgate eastgate  5265040 Dec 22 19:24 songbird-bench-jsonrpc
+-rwxrwxr-x  1 eastgate eastgate  2480920 Dec 22 19:24 songbird-bench-tarpc-multiplex
+-rwxrwxr-x  1 eastgate eastgate  2412232 Dec 22 19:24 songbird-bench-tarpc-single
+-rwxrwxr-x  1 eastgate eastgate  3037368 Dec 22 19:24 songbird-gaming-demo
+-rwxrwxr-x  1 eastgate eastgate  4734024 Dec 22 19:24 songbird-songbird-cli
+-rwxrwxr-x  1 eastgate eastgate 11656120 Dec 22 19:24 songbird-songbird-compute-bridge
+-rwxrwxr-x  1 eastgate eastgate 10062040 Dec 22 19:24 songbird-songbird-deploy
+-rwxrwxr-x  1 eastgate eastgate 21808256 Dec 22 19:24 songbird-songbird-orchestrator
+-rwxrwxr-x  1 eastgate eastgate  4670432 Dec 22 19:24 songbird-songbird-rendezvous
+-rwxrwxr-x  1 eastgate eastgate  5986368 Dec 22 19:24 songbird-squirrel
+-rwxrwxr-x  1 eastgate eastgate  3591032 Dec 22 19:24 songbird-tarpc-server
+

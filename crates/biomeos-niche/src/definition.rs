@@ -5,9 +5,9 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-use crate::organism::OrganismSpec;
-use crate::interaction::Interaction;
 use crate::error::{NicheError, NicheResult};
+use crate::interaction::Interaction;
+use crate::organism::OrganismSpec;
 
 /// Complete niche (biome) definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -207,6 +207,9 @@ pub struct NicheSecurity {
 
 impl NicheDefinition {
     /// Load from YAML file
+    ///
+    /// # Errors
+    /// Returns an error if the file cannot be read or parsed.
     pub fn from_file(path: impl AsRef<Path>) -> NicheResult<Self> {
         let path = path.as_ref();
         let content = std::fs::read_to_string(path)?;
@@ -214,6 +217,9 @@ impl NicheDefinition {
     }
 
     /// Load from YAML string
+    ///
+    /// # Errors
+    /// Returns an error if the YAML cannot be parsed or validation fails.
     pub fn from_yaml(yaml: &str) -> NicheResult<Self> {
         let def: Self = serde_yaml::from_str(yaml)?;
         def.validate()?;
@@ -221,6 +227,9 @@ impl NicheDefinition {
     }
 
     /// Validate the niche definition
+    ///
+    /// # Errors
+    /// Returns an error if validation fails.
     pub fn validate(&self) -> NicheResult<()> {
         // Check we have at least one organism
         if self.organisms.chimeras.is_empty() && self.organisms.primals.is_empty() {
@@ -233,8 +242,16 @@ impl NicheDefinition {
         // Validate interactions reference existing organisms
         for interaction in &self.interactions {
             // Extract organism name from "category.name" format
-            let from_name = interaction.from.split('.').last().unwrap_or(&interaction.from);
-            let to_name = interaction.to.split('.').last().unwrap_or(&interaction.to);
+            let from_name = interaction
+                .from
+                .split('.')
+                .next_back()
+                .unwrap_or(&interaction.from);
+            let to_name = interaction
+                .to
+                .split('.')
+                .next_back()
+                .unwrap_or(&interaction.to);
 
             let organism_exists = |name: &str| {
                 self.organisms.chimeras.contains_key(name)
@@ -260,7 +277,13 @@ impl NicheDefinition {
     }
 
     /// Apply customization values
-    pub fn apply_customization(&mut self, values: &HashMap<String, serde_json::Value>) -> NicheResult<()> {
+    ///
+    /// # Errors
+    /// Returns an error if required customization values are missing.
+    pub fn apply_customization(
+        &mut self,
+        values: &HashMap<String, serde_json::Value>,
+    ) -> NicheResult<()> {
         // This would apply template substitution
         // For now, just validate the values exist
         for custom in &self.customization {
@@ -301,4 +324,3 @@ interactions: []
         assert_eq!(def.niche.id, "test-niche");
     }
 }
-

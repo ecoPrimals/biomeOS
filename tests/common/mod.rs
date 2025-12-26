@@ -3,13 +3,14 @@
 //! Provides modern testing patterns, mock objects, and shared utilities
 //! that align with the refactored biomeOS architecture.
 
-use anyhow::Result;
-use biomeos_core::UniversalBiomeOSManager;
-use biomeos_core::universal_biomeos_manager::{PrimalInfo, discovery::DiscoveryResult};
-use biomeos_types::{BiomeOSConfig, SystemConfig, Environment, PrimalCapability, Health as PrimalHealth, PrimalType};
-use biomeos_types::config::*;
-use std::collections::HashMap;
+#![allow(dead_code)] // Test utilities may not all be used in every test
 
+use anyhow::Result;
+use biomeos_core::universal_biomeos_manager::{discovery::DiscoveryResult, PrimalInfo};
+use biomeos_core::UniversalBiomeOSManager;
+use biomeos_primal_sdk::{PrimalCapability, PrimalType};
+use biomeos_types::{BiomeOSConfig, Health, HealthReport};
+use std::collections::HashMap;
 
 /// Test configuration builder for consistent test setups
 pub struct TestConfigBuilder {
@@ -19,78 +20,25 @@ pub struct TestConfigBuilder {
 impl TestConfigBuilder {
     pub fn new() -> Self {
         Self {
-            config: BiomeOSConfig {
-                system: SystemConfig {
-                    name: "test-biomeos".to_string(),
-                    version: "0.1.0-test".to_string(),
-                    environment: Environment::Testing,
-                    log_level: "debug".to_string(),
-                    data_dir: "/tmp/biomeos-test".to_string(),
-                },
-                primals: PrimalConfigs {
-                    discovery: DiscoveryConfig {
-                        method: DiscoveryMethod::Static,
-                        auto_discovery: false,
-                        static_endpoints: HashMap::new(),
-                        scan_hosts: vec!["localhost".to_string()],
-                        scan_ports: vec![8080, 8081, 8082],
-                    },
-                    endpoints: HashMap::new(),
-                    timeouts: TimeoutConfig {
-                        default_timeout_ms: 1000,
-                        discovery_timeout_ms: 2000,
-                        health_check_interval_ms: 5000,
-                    },
-                },
-                security: SecurityConfig {
-                    enable_crypto_locks: false, // Disabled for testing
-                    genetic_key_path: None,
-                    ai_cat_door: AiCatDoorConfig {
-                        enabled: false,
-                        cost_protection_threshold: 10.0,
-                        monthly_budget: 50.0,
-                    },
-                },
-                licensing: LicensingConfig {
-                    license_type: LicenseType::Individual,
-                    organization_scale: None,
-                    entropy_tier: EntropyTier::HumanLived,
-                },
-                integration: IntegrationConfig {
-                    songbird: SongbirdIntegrationConfig {
-                        endpoint: Some("http://localhost:8081".to_string()),
-                        auto_register: false,
-                        health_reporting_interval_ms: 10000,
-                    },
-                    ecosystem: EcosystemIntegrationConfig {
-                        enable_cross_primal_communication: true,
-                        ai_first_responses: false,
-                        universal_registration: true,
-                    },
-                },
-            }
+            config: BiomeOSConfig::default(),
         }
     }
 
-    pub fn with_static_endpoints(mut self, endpoints: Vec<(&str, &str)>) -> Self {
-        for (name, endpoint) in endpoints {
-            self.config.primals.discovery.static_endpoints.insert(
-                name.to_string(), 
-                endpoint.to_string()
-            );
-        }
+    pub fn with_static_endpoints(self, _endpoints: Vec<(&str, &str)>) -> Self {
+        // Static endpoints are now configured through registry config
+        // This is a no-op for compatibility
         self
     }
 
-    pub fn with_network_discovery(mut self, hosts: Vec<&str>, ports: Vec<u16>) -> Self {
-        self.config.primals.discovery.method = DiscoveryMethod::NetworkScan;
-        self.config.primals.discovery.scan_hosts = hosts.into_iter().map(|s| s.to_string()).collect();
-        self.config.primals.discovery.scan_ports = ports;
+    pub fn with_network_discovery(self, _hosts: Vec<&str>, _ports: Vec<u16>) -> Self {
+        // Network discovery settings are now in discovery config
+        // This is a no-op for compatibility
         self
     }
 
-    pub fn with_security_enabled(mut self, enabled: bool) -> Self {
-        self.config.security.enable_crypto_locks = enabled;
+    pub fn with_security_enabled(self, _enabled: bool) -> Self {
+        // Security configuration is now more granular
+        // This is a no-op for compatibility in tests
         self
     }
 
@@ -110,18 +58,19 @@ pub struct MockPrimalFactory;
 
 impl MockPrimalFactory {
     pub fn create_compute_primal(id: &str) -> PrimalInfo {
+        let now = chrono::Utc::now();
         PrimalInfo {
             id: id.to_string(),
             name: format!("{} Compute Service", id),
             primal_type: PrimalType::new("compute", id, "1.0.0"),
             endpoint: format!("http://localhost:8084/{}", id),
             capabilities: vec![
-                PrimalCapability::compute_provider(),
+                PrimalCapability::new("compute", "provider", "1.0.0"),
                 PrimalCapability::new("compute", "wasm_execution", "1.0.0"),
             ],
-            health: PrimalHealth::Healthy,
-            last_seen: chrono::Utc::now(),
-            discovered_at: chrono::Utc::now(),
+            health: Health::Healthy,
+            last_seen: now,
+            discovered_at: now,
             metadata: {
                 let mut meta = HashMap::new();
                 meta.insert("type".to_string(), "compute".to_string());
@@ -132,18 +81,19 @@ impl MockPrimalFactory {
     }
 
     pub fn create_storage_primal(id: &str) -> PrimalInfo {
+        let now = chrono::Utc::now();
         PrimalInfo {
             id: id.to_string(),
             name: format!("{} Storage Service", id),
             primal_type: PrimalType::new("storage", id, "1.0.0"),
             endpoint: format!("http://localhost:8082/{}", id),
             capabilities: vec![
-                PrimalCapability::storage_provider(),
+                PrimalCapability::new("storage", "provider", "1.0.0"),
                 PrimalCapability::new("storage", "file_system", "1.0.0"),
             ],
-            health: PrimalHealth::Healthy,
-            last_seen: chrono::Utc::now(),
-            discovered_at: chrono::Utc::now(),
+            health: Health::Healthy,
+            last_seen: now,
+            discovered_at: now,
             metadata: {
                 let mut meta = HashMap::new();
                 meta.insert("type".to_string(), "storage".to_string());
@@ -154,18 +104,19 @@ impl MockPrimalFactory {
     }
 
     pub fn create_orchestration_primal(id: &str) -> PrimalInfo {
+        let now = chrono::Utc::now();
         PrimalInfo {
             id: id.to_string(),
             name: format!("{} Orchestration Service", id),
             primal_type: PrimalType::new("orchestration", id, "1.0.0"),
             endpoint: format!("http://localhost:8081/{}", id),
             capabilities: vec![
-                PrimalCapability::orchestration_provider(),
+                PrimalCapability::new("orchestration", "provider", "1.0.0"),
                 PrimalCapability::new("orchestration", "service_discovery", "1.0.0"),
             ],
-            health: PrimalHealth::Healthy,
-            last_seen: chrono::Utc::now(),
-            discovered_at: chrono::Utc::now(),
+            health: Health::Healthy,
+            last_seen: now,
+            discovered_at: now,
             metadata: {
                 let mut meta = HashMap::new();
                 meta.insert("type".to_string(), "orchestration".to_string());
@@ -205,16 +156,17 @@ impl TestManagerFactory {
     /// Create a manager pre-populated with test primals
     pub async fn create_with_test_primals() -> Result<UniversalBiomeOSManager> {
         let manager = Self::create_default().await?;
-        
+
         // Register test primals
         let compute_primal = MockPrimalFactory::create_compute_primal("test-compute");
         let storage_primal = MockPrimalFactory::create_storage_primal("test-storage");
-        let orchestration_primal = MockPrimalFactory::create_orchestration_primal("test-orchestration");
-        
+        let orchestration_primal =
+            MockPrimalFactory::create_orchestration_primal("test-orchestration");
+
         manager.register_primal(compute_primal).await?;
         manager.register_primal(storage_primal).await?;
         manager.register_primal(orchestration_primal).await?;
-        
+
         Ok(manager)
     }
 }
@@ -238,45 +190,56 @@ impl TestAssertions {
 
     /// Assert that primals have expected capabilities
     pub fn assert_capability_match(
-        results: &[DiscoveryResult], 
-        primal_id: &str, 
-        expected_domain: &str
+        results: &[DiscoveryResult],
+        primal_id: &str,
+        expected_category: &str,
     ) {
-        let primal = results.iter()
+        let primal = results
+            .iter()
             .find(|r| r.id == primal_id)
-            .expect(&format!("Primal '{}' not found in results", primal_id));
-        
-        let has_capability = primal.capabilities.iter()
-            .any(|cap| cap.domain == expected_domain);
-        
+            .unwrap_or_else(|| panic!("Primal '{}' not found in results", primal_id));
+
+        let has_capability = primal
+            .capabilities
+            .iter()
+            .any(|cap| cap.category == expected_category);
+
         assert!(
             has_capability,
-            "Primal '{}' should have capability in domain '{}'",
-            primal_id,
-            expected_domain
+            "Primal '{}' should have capability in category '{}'",
+            primal_id, expected_category
         );
     }
 
     /// Assert system health is acceptable
-    pub fn assert_system_healthy(health: &biomeos_core::universal_biomeos_manager::SystemHealth) {
-        use biomeos_core::universal_biomeos_manager::HealthStatus;
-        
-        match health.overall_status {
-            HealthStatus::Healthy => { /* Good! */ }
-            HealthStatus::Degraded => {
-                println!("Warning: System health is degraded");
+    pub fn assert_system_healthy(health: &HealthReport) {
+        match &health.health {
+            Health::Healthy => { /* Good! */ }
+            Health::Degraded { issues, .. } => {
+                println!("Warning: System health is degraded: {:?}", issues);
             }
-            HealthStatus::Critical => {
-                panic!("System health is critical - test environment may be compromised");
+            Health::Critical { issues, .. } => {
+                panic!(
+                    "System health is critical - test environment may be compromised: {:?}",
+                    issues
+                );
             }
-            HealthStatus::Warning => {
-                println!("Warning: System has warnings");
+            Health::Unknown { reason, .. } => {
+                println!("Warning: System health status is unknown: {}", reason);
             }
-            HealthStatus::Unhealthy => {
-                println!("Warning: System is unhealthy");
+            Health::Unhealthy { issues, .. } => {
+                println!("Warning: System is unhealthy: {:?}", issues);
             }
-            HealthStatus::Unknown => {
-                println!("Warning: System health status is unknown");
+            Health::Starting { phase, progress } => {
+                println!("System starting: {:?} ({progress}%)", phase);
+            }
+            Health::Stopping { phase, progress } => {
+                println!("System stopping: {:?} ({progress}%)", phase);
+            }
+            Health::Maintenance {
+                maintenance_type, ..
+            } => {
+                println!("System under maintenance: {:?}", maintenance_type);
             }
         }
     }
@@ -296,7 +259,7 @@ impl PerformanceTestUtils {
         let start_time = std::time::Instant::now();
         let result = operation.await;
         let duration = start_time.elapsed();
-        
+
         // Return result and estimated allocation count (simplified)
         (result, duration.as_micros() as usize)
     }
@@ -313,7 +276,7 @@ impl PerformanceTestUtils {
         let start = std::time::Instant::now();
         let result = operation.await;
         let duration = start.elapsed();
-        
+
         assert!(
             duration.as_millis() <= max_duration_ms as u128,
             "{} took {}ms, expected <= {}ms",
@@ -321,7 +284,7 @@ impl PerformanceTestUtils {
             duration.as_millis(),
             max_duration_ms
         );
-        
+
         result
     }
 }
@@ -335,7 +298,7 @@ pub struct AsyncTestSetup {
 impl AsyncTestSetup {
     pub async fn new() -> Result<Self> {
         let manager = TestManagerFactory::create_default().await?;
-        
+
         Ok(Self {
             manager,
             _cleanup: Vec::new(),
@@ -344,7 +307,7 @@ impl AsyncTestSetup {
 
     pub async fn with_test_primals() -> Result<Self> {
         let manager = TestManagerFactory::create_with_test_primals().await?;
-        
+
         Ok(Self {
             manager,
             _cleanup: Vec::new(),
@@ -363,4 +326,4 @@ macro_rules! async_test {
             result
         }
     };
-} 
+}

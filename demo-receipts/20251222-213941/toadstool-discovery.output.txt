@@ -1,0 +1,21 @@
+🔍 Discovering services by capability...
+
+✅ Found orchestration service:
+   URL: http://localhost:8080
+   Discovered via: Configuration
+   Trust level: Local
+
+✅ Found security service:
+   URL: http://localhost:8081
+   Discovered via: Configuration
+
+✅ Found storage service:
+   URL: http://localhost:8082
+   Discovered via: Configuration
+
+🎉 Benefits of discovery-based approach:
+   • Zero compile-time coupling
+   • Works in any environment
+   • Handles dynamic topologies
+   • Container-friendly
+   • Auto-scales

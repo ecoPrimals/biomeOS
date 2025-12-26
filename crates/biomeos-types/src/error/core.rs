@@ -7,12 +7,16 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use super::ai_context::AIErrorContext;
-use super::operations::{NetworkOperation, SecurityViolationType, ResourceOperation, DataOperation};
+use super::operations::{
+    DataOperation, NetworkOperation, ResourceOperation, SecurityViolationType,
+};
 
 /// Universal biomeOS Error
-/// 
+///
 /// This consolidates all error types from across the ecosystem into a single,
 /// comprehensive error system that supports both human and AI interaction.
+///
+/// Note: AIErrorContext is boxed to reduce enum size (clippy::result_large_err).
 #[derive(Error, Debug, Clone, Serialize, Deserialize)]
 pub enum BiomeError {
     /// Configuration error with context
@@ -24,9 +28,9 @@ pub enum BiomeError {
         key: Option<String>,
         /// Configuration file path
         config_path: Option<String>,
-        /// AI-specific context
+        /// AI-specific context (boxed to reduce enum size)
         #[serde(flatten)]
-        ai_context: AIErrorContext,
+        ai_context: Box<AIErrorContext>,
     },
 
     /// Invalid input error
@@ -40,9 +44,9 @@ pub enum BiomeError {
         expected: Option<String>,
         /// Actual value received
         actual: Option<String>,
-        /// AI-specific context
+        /// AI-specific context (boxed to reduce enum size)
         #[serde(flatten)]
-        ai_context: AIErrorContext,
+        ai_context: Box<AIErrorContext>,
     },
 
     /// Primal discovery error
@@ -56,9 +60,9 @@ pub enum BiomeError {
         status_code: Option<u16>,
         /// Discovery method used
         discovery_method: Option<String>,
-        /// AI-specific context
+        /// AI-specific context (boxed to reduce enum size)
         #[serde(flatten)]
-        ai_context: AIErrorContext,
+        ai_context: Box<AIErrorContext>,
     },
 
     /// Network communication error
@@ -74,9 +78,9 @@ pub enum BiomeError {
         timeout_ms: Option<u64>,
         /// Network operation type
         operation: Option<NetworkOperation>,
-        /// AI-specific context
+        /// AI-specific context (boxed to reduce enum size)
         #[serde(flatten)]
-        ai_context: AIErrorContext,
+        ai_context: Box<AIErrorContext>,
     },
 
     /// Security/authentication error
@@ -90,9 +94,9 @@ pub enum BiomeError {
         auth_method: Option<String>,
         /// Security violation type
         violation_type: Option<SecurityViolationType>,
-        /// AI-specific context
+        /// AI-specific context (boxed to reduce enum size)
         #[serde(flatten)]
-        ai_context: AIErrorContext,
+        ai_context: Box<AIErrorContext>,
     },
 
     /// Resource management error
@@ -108,9 +112,9 @@ pub enum BiomeError {
         available: Option<String>,
         /// Resource operation
         operation: Option<ResourceOperation>,
-        /// AI-specific context
+        /// AI-specific context (boxed to reduce enum size)
         #[serde(flatten)]
-        ai_context: AIErrorContext,
+        ai_context: Box<AIErrorContext>,
     },
 
     /// Integration error
@@ -122,9 +126,9 @@ pub enum BiomeError {
         component: Option<String>,
         /// Integration type
         integration_type: Option<String>,
-        /// AI-specific context
+        /// AI-specific context (boxed to reduce enum size)
         #[serde(flatten)]
-        ai_context: AIErrorContext,
+        ai_context: Box<AIErrorContext>,
     },
 
     /// Internal system error
@@ -136,9 +140,9 @@ pub enum BiomeError {
         error_code: Option<String>,
         /// Stack trace if available
         stack_trace: Option<String>,
-        /// AI-specific context
+        /// AI-specific context (boxed to reduce enum size)
         #[serde(flatten)]
-        ai_context: AIErrorContext,
+        ai_context: Box<AIErrorContext>,
     },
 
     /// Timeout error
@@ -150,9 +154,9 @@ pub enum BiomeError {
         timeout_ms: u64,
         /// Operation that timed out
         operation: Option<String>,
-        /// AI-specific context
+        /// AI-specific context (boxed to reduce enum size)
         #[serde(flatten)]
-        ai_context: AIErrorContext,
+        ai_context: Box<AIErrorContext>,
     },
 
     /// Authorization error
@@ -164,9 +168,9 @@ pub enum BiomeError {
         required_permission: Option<String>,
         /// User or service identifier
         subject: Option<String>,
-        /// AI-specific context
+        /// AI-specific context (boxed to reduce enum size)
         #[serde(flatten)]
-        ai_context: AIErrorContext,
+        ai_context: Box<AIErrorContext>,
     },
 
     /// Validation error
@@ -180,9 +184,9 @@ pub enum BiomeError {
         rule: Option<String>,
         /// All validation errors
         errors: Vec<ValidationError>,
-        /// AI-specific context
+        /// AI-specific context (boxed to reduce enum size)
         #[serde(flatten)]
-        ai_context: AIErrorContext,
+        ai_context: Box<AIErrorContext>,
     },
 
     /// External service error
@@ -196,9 +200,9 @@ pub enum BiomeError {
         endpoint: Option<String>,
         /// HTTP status code
         status_code: Option<u16>,
-        /// AI-specific context
+        /// AI-specific context (boxed to reduce enum size)
         #[serde(flatten)]
-        ai_context: AIErrorContext,
+        ai_context: Box<AIErrorContext>,
     },
 
     /// Data error (corruption, inconsistency, etc.)
@@ -212,9 +216,9 @@ pub enum BiomeError {
         data_id: Option<String>,
         /// Operation that failed
         operation: Option<DataOperation>,
-        /// AI-specific context
+        /// AI-specific context (boxed to reduce enum size)
         #[serde(flatten)]
-        ai_context: AIErrorContext,
+        ai_context: Box<AIErrorContext>,
     },
 
     /// Unknown error
@@ -222,9 +226,9 @@ pub enum BiomeError {
     Unknown {
         /// Error message
         message: String,
-        /// AI-specific context
+        /// AI-specific context (boxed to reduce enum size)
         #[serde(flatten)]
-        ai_context: AIErrorContext,
+        ai_context: Box<AIErrorContext>,
     },
 }
 
@@ -233,13 +237,13 @@ pub enum BiomeError {
 pub struct ValidationError {
     /// Field that failed validation
     pub field: String,
-    
+
     /// Error message
     pub message: String,
-    
+
     /// Validation code
     pub code: String,
-    
+
     /// Rejected value
     pub rejected_value: Option<serde_json::Value>,
-} 
+}

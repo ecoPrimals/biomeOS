@@ -18,7 +18,7 @@ impl DiscoveryUtils {
         endpoints: Vec<String>,
     ) -> Result<Vec<DiscoveryResult>> {
         let mut results = Vec::new();
-        
+
         for endpoint in endpoints {
             // Try to probe the endpoint to get detailed information
             match manager.probe_endpoint(&endpoint).await {
@@ -51,7 +51,7 @@ impl DiscoveryUtils {
                 }
             }
         }
-        
+
         Ok(results)
     }
     /// Discover services by type with filtering
@@ -112,15 +112,26 @@ impl DiscoveryUtils {
         })
     }
 
-    /// Find services near a geographical location (mock implementation)
+    /// Find services near a geographical location
+    ///
+    /// REMOVED: Mock implementation
+    /// BiomeOS should NOT implement geolocation - that's Songbird's job
+    ///
+    /// TODO: Delegate to Songbird:
+    /// ```rust,ignore
+    /// let songbird = manager.discover_primal("discovery").await?;
+    /// songbird.query_services_by_location(latitude, longitude, radius_km).await
+    /// ```
     pub async fn discover_by_location(
         _manager: &UniversalBiomeOSManager,
         _latitude: f64,
         _longitude: f64,
         _radius_km: f64,
     ) -> Result<Vec<DiscoveryResult>> {
-        // Mock implementation - in production would use geolocation data
-        Ok(vec![])
+        Err(anyhow::anyhow!(
+            "Geolocation discovery requires Songbird primal. \
+             BiomeOS delegates this functionality to Songbird."
+        ))
     }
 
     /// Discover services with advanced filtering
@@ -150,7 +161,7 @@ impl DiscoveryUtils {
                 Ok(endpoints) => {
                     let results = Self::endpoints_to_discovery_results(manager, endpoints).await?;
                     return Ok(results);
-                },
+                }
                 Err(e) => {
                     last_error = Some(e);
                     if attempt < max_retries {

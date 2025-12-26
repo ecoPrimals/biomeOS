@@ -2,6 +2,7 @@
 //!
 //! Compiles chimera definitions into deployable units.
 
+use std::fmt::Write;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -44,6 +45,7 @@ pub struct BuildResult {
 
 impl ChimeraBuilder {
     /// Create a new builder for a chimera definition
+    #[must_use]
     pub fn new(definition: Arc<ChimeraDefinition>) -> Self {
         Self {
             definition,
@@ -54,31 +56,38 @@ impl ChimeraBuilder {
     }
 
     /// Set the output directory
+    #[must_use]
     pub fn output_dir(mut self, dir: impl Into<PathBuf>) -> Self {
         self.output_dir = dir.into();
         self
     }
 
     /// Set the primals directory
+    #[must_use]
     pub fn primals_dir(mut self, dir: impl Into<PathBuf>) -> Self {
         self.primals_dir = dir.into();
         self
     }
 
     /// Set release mode
+    #[must_use]
     pub fn release(mut self, release: bool) -> Self {
         self.release = release;
         self
     }
 
     /// Check that all required primals are available
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if any required primal is not found in the primals directory
     pub fn check_primals(&self) -> ChimeraResult<Vec<PathBuf>> {
         let mut primal_paths = Vec::new();
 
         for primal in self.definition.required_primals() {
             // First try exact match
             let exact_path = self.primals_dir.join(primal);
-            
+
             if exact_path.exists() {
                 primal_paths.push(exact_path);
                 continue;
@@ -92,7 +101,7 @@ impl ChimeraBuilder {
                         .filter_map(Result::ok)
                         .find(|e| {
                             let name = e.file_name().to_string_lossy().to_string();
-                            name == primal || name.starts_with(&format!("{}-", primal))
+                            name == primal || name.starts_with(&format!("{primal}-"))
                         })
                         .map(|e| e.path())
                 });
@@ -112,7 +121,14 @@ impl ChimeraBuilder {
     }
 
     /// Build the chimera
-    pub async fn build(&self) -> ChimeraResult<BuildResult> {
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the build fails due to:
+    /// - Missing primals
+    /// - Script generation failure
+    /// - Build process errors
+    pub fn build(&self) -> ChimeraResult<BuildResult> {
         let start = std::time::Instant::now();
         let mut warnings = Vec::new();
 
@@ -126,8 +142,11 @@ impl ChimeraBuilder {
         std::fs::create_dir_all(&self.output_dir)?;
 
         // 3. Generate chimera orchestrator code
-        let generated_code = self.generate_orchestrator()?;
-        debug!("Generated {} bytes of orchestrator code", generated_code.len());
+        let generated_code = self.generate_orchestrator();
+        debug!(
+            "Generated {} bytes of orchestrator code",
+            generated_code.len()
+        );
 
         // 4. For now, create a shell script launcher
         // In the future, this will be a compiled Rust binary
@@ -135,9 +154,14 @@ impl ChimeraBuilder {
         self.write_launcher(&output_path, &primal_paths)?;
 
         // 5. Also write the generated code for inspection
-        let code_path = self.output_dir.join(format!("{}.rs", self.definition.chimera.id));
+        let code_path = self
+            .output_dir
+            .join(format!("{}.rs", self.definition.chimera.id));
         std::fs::write(&code_path, &generated_code)?;
-        warnings.push(format!("Generated code written to {:?} (not yet compiled)", code_path));
+        warnings.push(format!(
+            "Generated code written to {} (not yet compiled)",
+            code_path.display()
+        ));
 
         let duration = start.elapsed();
         info!(
@@ -154,49 +178,42 @@ impl ChimeraBuilder {
     }
 
     /// Generate the chimera orchestrator Rust code
-    fn generate_orchestrator(&self) -> ChimeraResult<String> {
+    fn generate_orchestrator(&self) -> String {
         let def = &self.definition;
-        
+
         let mut code = String::new();
-        
+
         // Header
-        code.push_str(&format!(
-            r#"//! Auto-generated chimera orchestrator: {}
-//! 
-//! {}
-//!
-//! Components: {}
-
-use std::process::Command;
-use std::sync::Arc;
-use tokio::sync::RwLock;
-
-"#,
+        writeln!(
+            code,
+            "//! Auto-generated chimera orchestrator: {}\n//! \n//! {}\n//!\n//! Components: {}\n\nuse std::process::Command;\nuse std::sync::Arc;\nuse tokio::sync::RwLock;\n",
             def.chimera.id,
             def.chimera.description.lines().next().unwrap_or(""),
             def.required_primals().join(", ")
-        ));
+        ).expect("write to String cannot fail");
 
         // Component state struct
-        code.push_str(&format!(
-            r#"
-/// State for chimera: {}
-pub struct ChimeraState {{
-"#,
+        writeln!(
+            code,
+            "\n/// State for chimera: {}\npub struct ChimeraState {{",
             def.chimera.id
-        ));
+        )
+        .expect("write to String cannot fail");
 
         for (name, component) in &def.components {
-            if component.is_array() {
-                let array = component.array.as_ref().unwrap();
-                code.push_str(&format!(
-                    "    /// {} instances (min: {}, max: {})\n",
-                    name, array.min, array.max
-                ));
-                code.push_str(&format!("    pub {name}_instances: Vec<ComponentInstance>,\n"));
+            if let Some(array) = &component.array {
+                writeln!(
+                    code,
+                    "    /// {name} instances (min: {}, max: {})",
+                    array.min, array.max
+                )
+                .expect("write to String cannot fail");
+                writeln!(code, "    pub {name}_instances: Vec<ComponentInstance>,")
+                    .expect("write to String cannot fail");
             } else {
-                code.push_str(&format!("    /// {name} component\n"));
-                code.push_str(&format!("    pub {name}: ComponentInstance,\n"));
+                writeln!(code, "    /// {name} component").expect("write to String cannot fail");
+                writeln!(code, "    pub {name}: ComponentInstance,")
+                    .expect("write to String cannot fail");
             }
         }
 
@@ -204,7 +221,7 @@ pub struct ChimeraState {{
 
         // Component instance struct
         code.push_str(
-            r#"
+            "
 /// A running component instance
 pub struct ComponentInstance {
     /// Process handle
@@ -240,24 +257,20 @@ impl ComponentInstance {
         Ok(())
     }
 }
-"#,
+",
         );
 
         // API endpoints
         if !def.fusion.api.endpoints.is_empty() {
             code.push_str("\n/// Unified API endpoints\n");
             code.push_str("pub mod api {\n");
-            
+
             for endpoint in &def.fusion.api.endpoints {
-                code.push_str(&format!(
-                    "    /// {}\n",
-                    endpoint.description
-                ));
-                code.push_str(&format!(
-                    "    pub async fn {}(",
-                    endpoint.name
-                ));
-                
+                writeln!(code, "    /// {}", endpoint.description)
+                    .expect("write to String cannot fail");
+                write!(code, "    pub async fn {}(", endpoint.name)
+                    .expect("write to String cannot fail");
+
                 // Parameters
                 let params: Vec<String> = endpoint
                     .params
@@ -265,65 +278,65 @@ impl ComponentInstance {
                     .map(|p| format!("{p}: &str"))
                     .collect();
                 code.push_str(&params.join(", "));
-                
-                code.push_str(&format!(
-                    ") -> Result<{}, Box<dyn std::error::Error>> {{\n",
-                    if endpoint.returns.is_empty() {
-                        "()"
-                    } else {
-                        &endpoint.returns
-                    }
-                ));
-                code.push_str("        todo!(\"Implement fusion logic\")\n");
+
+                let return_type = if endpoint.returns.is_empty() {
+                    "()"
+                } else {
+                    &endpoint.returns
+                };
+                writeln!(
+                    code,
+                    ") -> Result<{return_type}, Box<dyn std::error::Error>> {{"
+                )
+                .expect("write to String cannot fail");
+                code.push_str("        Err(\"Fusion logic not implemented\".into())\n");
                 code.push_str("    }\n\n");
             }
-            
+
             code.push_str("}\n");
         }
 
-        Ok(code)
+        code
     }
 
     /// Write a shell launcher script
     fn write_launcher(&self, output_path: &Path, primal_paths: &[PathBuf]) -> ChimeraResult<()> {
         let def = &self.definition;
-        
+
         let mut script = String::new();
         script.push_str("#!/usr/bin/env bash\n");
-        script.push_str(&format!("# Chimera launcher: {}\n", def.chimera.id));
-        script.push_str(&format!("# {}\n\n", def.chimera.name));
-        
+        writeln!(script, "# Chimera launcher: {}", def.chimera.id)
+            .expect("write to String cannot fail");
+        writeln!(script, "# {}\n", def.chimera.name).expect("write to String cannot fail");
+
         script.push_str("set -euo pipefail\n\n");
-        
-        script.push_str("echo \"🧬 Starting chimera: ");
-        script.push_str(&def.chimera.id);
-        script.push_str("\"\n\n");
+
+        writeln!(script, "echo \"🧬 Starting chimera: {}\"\n", def.chimera.id)
+            .expect("write to String cannot fail");
 
         // Start each primal
         for (i, primal_path) in primal_paths.iter().enumerate() {
-            let primal_name = primal_path.file_name()
+            let primal_name = primal_path
+                .file_name()
                 .and_then(|s| s.to_str())
                 .unwrap_or("unknown");
-            
-            script.push_str(&format!(
-                "echo \"  Starting component: {}\"\n",
-                primal_name
-            ));
-            script.push_str(&format!(
-                "\"{}\" &\n",
-                primal_path.display()
-            ));
-            script.push_str(&format!("PID_{}=$!\n\n", i));
+
+            writeln!(script, "echo \"  Starting component: {primal_name}\"")
+                .expect("write to String cannot fail");
+            writeln!(script, "\"{}\" &", primal_path.display())
+                .expect("write to String cannot fail");
+            writeln!(script, "PID_{i}=$!\n").expect("write to String cannot fail");
         }
 
         // Cleanup on exit
         script.push_str("cleanup() {\n");
         script.push_str("    echo \"Stopping chimera...\"\n");
         for i in 0..primal_paths.len() {
-            script.push_str(&format!("    kill $PID_{} 2>/dev/null || true\n", i));
+            writeln!(script, "    kill $PID_{i} 2>/dev/null || true")
+                .expect("write to String cannot fail");
         }
         script.push_str("}\n\n");
-        
+
         script.push_str("trap cleanup EXIT\n\n");
         script.push_str("echo \"✅ Chimera running. Press Ctrl+C to stop.\"\n");
         script.push_str("wait\n");
@@ -378,12 +391,11 @@ fusion:
 
         let def = ChimeraDefinition::from_yaml(yaml).unwrap();
         let builder = ChimeraBuilder::new(Arc::new(def));
-        
-        let code = builder.generate_orchestrator().unwrap();
-        
+
+        let code = builder.generate_orchestrator();
+
         assert!(code.contains("test-chimera"));
         assert!(code.contains("pub struct ChimeraState"));
         assert!(code.contains("pub async fn connect"));
     }
 }
-

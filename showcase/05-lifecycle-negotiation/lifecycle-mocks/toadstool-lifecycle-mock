@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# Mock ToadStool with lifecycle negotiation - refuses on critical work
+
+PORT=${PORT:-9030}
+
+if [ "$1" = "--version" ]; then
+    echo "toadstool-lifecycle-mock 1.0.0"
+    exit 0
+fi
+
+echo "🍄 ToadStool (Lifecycle Mock) starting on port $PORT"
+echo "   Lifecycle behavior: Refuses (critical compute job running)"
+echo ""
+
+python3 -c "
+import http.server
+import socketserver
+import json
+
+PORT = $PORT
+
+class LifecycleHandler(http.server.SimpleHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == '/health':
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            response = {
+                'status': 'healthy',
+                'primal': 'toadstool',
+                'capabilities': ['compute', 'orchestration', 'lifecycle']
+            }
+            self.wfile.write(json.dumps(response).encode())
+        elif self.path == '/lifecycle/request':
+            # ToadStool refuses (simulating critical work)
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            response = {
+                'status': 'refused',
+                'reason': 'Running critical compute job, ETA 5 minutes. Cannot interrupt.'
+            }
+            self.wfile.write(json.dumps(response).encode())
+        else:
+            self.send_response(200)
+            self.send_header('Content-type', 'text/plain')
+            self.end_headers()
+            self.wfile.write(b'ToadStool Lifecycle Mock')
+    
+    def log_message(self, format, *args):
+        return
+
+with socketserver.TCPServer(('', PORT), LifecycleHandler) as httpd:
+    print(f'✅ ToadStool listening on port {PORT}')
+    print(f'   Health: http://localhost:{PORT}/health')
+    print(f'   Lifecycle: http://localhost:{PORT}/lifecycle/request')
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        print('\n✅ ToadStool stopped')
+"
+

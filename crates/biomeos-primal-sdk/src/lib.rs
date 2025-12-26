@@ -2,27 +2,39 @@
 //!
 //! This SDK provides a clean interface to the unified BiomeOS type system,
 //! optimized for primal development with direct access to all capabilities.
-//! 
+//!
 //! All legacy compatibility layers have been removed in favor of the unified
 //! UniversalPrimalService architecture from biomeos-types.
 
 // biomeOS unified types - direct re-exports
 pub use biomeos_types::{
-    // Core service interface
-    UniversalPrimalService, PrimalServiceMetadata, UniversalServiceRequest, UniversalServiceResponse,
-    UniversalServiceRegistration, ServiceStatus, ConfigValidationResult,
-    
+    BiomeError,
+
     // Error handling and results
-    BiomeResult, BiomeError,
-    
+    BiomeResult,
+    CapabilityMetadata,
+
+    ConfigValidationResult,
+
     // Health system
-    Health, HealthReport, CapabilityMetadata,
-    
+    Health,
+    HealthReport,
+    NetworkIoMetrics,
+    PrimalCapability,
+    PrimalConfiguration,
+
+    PrimalServiceMetadata,
     // Core primal types
-    PrimalType, PrimalCapability, PrimalConfiguration,
-    
+    PrimalType,
+    ResourceMetrics,
     // Resource monitoring
-    ResourceRequirements, ResourceMetrics, NetworkIoMetrics,
+    ResourceRequirements,
+    ServiceStatus,
+    // Core service interface
+    UniversalPrimalService,
+    UniversalServiceRegistration,
+    UniversalServiceRequest,
+    UniversalServiceResponse,
 };
 
 // Extended types module for primal-specific functionality

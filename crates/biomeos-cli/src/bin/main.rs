@@ -270,8 +270,6 @@ enum Commands {
     },
 }
 
-
-
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
@@ -282,53 +280,83 @@ async fn main() -> Result<()> {
     println!();
 
     match cli.command {
-        Commands::Chimera { action } => {
-            match action {
-                ChimeraAction::List => handle_chimera_list().await?,
-                ChimeraAction::Show { id } => handle_chimera_show(&id).await?,
-                ChimeraAction::Build { id } => handle_chimera_build(&id).await?,
+        Commands::Chimera { action } => match action {
+            ChimeraAction::List => handle_chimera_list().await?,
+            ChimeraAction::Show { id } => handle_chimera_show(&id).await?,
+            ChimeraAction::Build { id } => handle_chimera_build(&id).await?,
+        },
+        Commands::Niche { action } => match action {
+            NicheAction::List => handle_niche_list().await?,
+            NicheAction::Show { id } => handle_niche_show(&id).await?,
+        },
+        Commands::Primal { action } => match action {
+            PrimalAction::List => handle_primal_list().await?,
+            PrimalAction::Pull { name } => {
+                println!("🔨 Building primal: {}", name);
+                println!("   Run: ./bin/pull-primals.sh {}", name);
             }
-        }
-        Commands::Niche { action } => {
-            match action {
-                NicheAction::List => handle_niche_list().await?,
-                NicheAction::Show { id } => handle_niche_show(&id).await?,
-            }
-        }
-        Commands::Primal { action } => {
-            match action {
-                PrimalAction::List => handle_primal_list().await?,
-                PrimalAction::Pull { name } => {
-                    println!("🔨 Building primal: {}", name);
-                    println!("   Run: ./bin/pull-primals.sh {}", name);
-                }
-            }
-        }
-        Commands::Discover { endpoint, capabilities, method, registry, detailed } => {
+        },
+        Commands::Discover {
+            endpoint,
+            capabilities,
+            method,
+            registry,
+            detailed,
+        } => {
             handle_discover(endpoint, capabilities, method, registry, detailed).await?;
         }
-        Commands::Deploy { manifest, validate_only } => {
+        Commands::Deploy {
+            manifest,
+            validate_only,
+        } => {
             handle_deploy(manifest, validate_only).await?;
         }
-        Commands::Create { service_type, name, config, dry_run } => {
+        Commands::Create {
+            service_type,
+            name,
+            config,
+            dry_run,
+        } => {
             handle_create(service_type, name, config, dry_run).await?;
         }
-        Commands::Logs { service, follow, tail, since } => {
+        Commands::Logs {
+            service,
+            follow,
+            tail,
+            since,
+        } => {
             handle_logs(service, follow, tail, since).await?;
         }
-        Commands::Exec { service, command, interactive } => {
+        Commands::Exec {
+            service,
+            command,
+            interactive,
+        } => {
             handle_exec(service, command, interactive).await?;
         }
-        Commands::Scale { service, replicas, auto } => {
+        Commands::Scale {
+            service,
+            replicas,
+            auto,
+        } => {
             handle_scale(service, replicas, auto).await?;
         }
         Commands::Ai { query, context } => {
             handle_ai_command(query, context).await?;
         }
-        Commands::Health { service, detailed, continuous, interval } => {
+        Commands::Health {
+            service,
+            detailed,
+            continuous,
+            interval,
+        } => {
             handle_health(service, detailed, continuous, interval).await?;
         }
-        Commands::Monitor { service, interval, duration } => {
+        Commands::Monitor {
+            service,
+            interval,
+            duration,
+        } => {
             handle_monitor(service, interval, duration).await?;
         }
         Commands::Dashboard { interval, refresh } => {
@@ -340,7 +368,11 @@ async fn main() -> Result<()> {
         Commands::Scan { quick, format } => {
             handle_scan(quick, format).await?;
         }
-        Commands::Status { service, format, metrics } => {
+        Commands::Status {
+            service,
+            format,
+            metrics,
+        } => {
             handle_status(service, format, metrics).await?;
         }
     }
@@ -351,14 +383,18 @@ async fn main() -> Result<()> {
 /// Handle AI command
 async fn handle_ai_command(query: String, context: Option<String>) -> anyhow::Result<()> {
     use colored::*;
-    
+
     println!("{}", "🤖 BiomeOS AI Assistant".bright_cyan().bold());
-    println!("{} {}", "Query:".bright_white().bold(), query.bright_yellow());
-    
+    println!(
+        "{} {}",
+        "Query:".bright_white().bold(),
+        query.bright_yellow()
+    );
+
     if let Some(ctx) = context {
         println!("{} {}", "Context:".bright_white().bold(), ctx.bright_blue());
     }
-    
+
     // Basic AI command processing - integrated with universal adapter architecture
     match query.to_lowercase().as_str() {
         q if q.contains("health") => {
@@ -386,7 +422,10 @@ async fn handle_ai_command(query: String, context: Option<String>) -> anyhow::Re
             println!("• Try: 'biomeos ai \"deploy help\"' for deployment guidance");
         }
     }
-    
-    println!("\n{}", "✨ BiomeOS AI is continuously learning from the ecosystem!".bright_cyan());
+
+    println!(
+        "\n{}",
+        "✨ BiomeOS AI is continuously learning from the ecosystem!".bright_cyan()
+    );
     Ok(())
 }

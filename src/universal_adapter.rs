@@ -108,10 +108,12 @@ impl UniversalAdapter {
         self.toadstool_client = Some(
             ToadstoolClient::new(&self.config.toadstool_endpoint)
                 .await
-                .map_err(|e| BiomeError::config_error(
-                    format!("Failed to create HTTP client: {}", e),
-                    Some("toadstool_client")
-                ))?,
+                .map_err(|e| {
+                    BiomeError::config_error(
+                        format!("Failed to create HTTP client: {}", e),
+                        Some("toadstool_client"),
+                    )
+                })?,
         );
 
         // Initialize Songbird client
@@ -180,30 +182,24 @@ impl UniversalAdapter {
         &self,
         payload: serde_json::Value,
     ) -> BiomeResult<serde_json::Value> {
-        let client = self
-            .toadstool_client
-            .as_ref()
-            .ok_or_else(|| BiomeError::config_error(
-                "Toadstool client not initialized",
-                Some("toadstool_client")
-            ))?;
+        let client = self.toadstool_client.as_ref().ok_or_else(|| {
+            BiomeError::config_error("Toadstool client not initialized", Some("toadstool_client"))
+        })?;
 
-        client
-            .parse_and_validate(payload)
-            .await
-            .map_err(|e| BiomeError::config_error(
+        client.parse_and_validate(payload).await.map_err(|e| {
+            BiomeError::config_error(
                 format!("Toadstool parsing failed: {}", e),
-                Some("toadstool_parsing")
-            ))?;
+                Some("toadstool_parsing"),
+            )
+        })?;
 
-        client
-            .discover_primals()
-            .await
-            .map_err(|e| BiomeError::discovery_failed(
+        client.discover_primals().await.map_err(|e| {
+            BiomeError::discovery_failed(
                 format!("Failed discovery attempt: {}", e),
                 Some("primal_discovery"),
-        ))?;
-        
+            )
+        })?;
+
         Ok(serde_json::json!({"status": "discovery_complete"}))
     }
 
@@ -212,34 +208,32 @@ impl UniversalAdapter {
         &self,
         payload: serde_json::Value,
     ) -> BiomeResult<serde_json::Value> {
-        let toadstool =
-            self.toadstool_client
-                .as_ref()
-                .ok_or_else(|| BiomeError::config_error("Toadstool client not initialized", Some("toadstool_client")))?;
+        let toadstool = self.toadstool_client.as_ref().ok_or_else(|| {
+            BiomeError::config_error("Toadstool client not initialized", Some("toadstool_client"))
+        })?;
 
-        let songbird = self
-            .songbird_client
-            .as_ref()
-            .ok_or_else(|| BiomeError::config_error("Songbird client not initialized", Some("songbird_client")))?;
+        let songbird = self.songbird_client.as_ref().ok_or_else(|| {
+            BiomeError::config_error("Songbird client not initialized", Some("songbird_client"))
+        })?;
 
         // Execute via Toadstool
-        let execution_result =
-            toadstool
-                .execute(payload)
-                .await
-                .map_err(|e| BiomeError::internal_error(
-                    format!("Toadstool execution failed: {}", e),
-                    Some("toadstool_execution")
-                ))?;
+        let execution_result = toadstool.execute(payload).await.map_err(|e| {
+            BiomeError::internal_error(
+                format!("Toadstool execution failed: {}", e),
+                Some("toadstool_execution"),
+            )
+        })?;
 
-        // Register with Songbird  
+        // Register with Songbird
         songbird
             .register_execution(&execution_result)
             .await
-            .map_err(|e| BiomeError::integration_failed(
-                format!("Songbird registration failed: {}", e),
-                Some("songbird_registration")
-            ))?;
+            .map_err(|e| {
+                BiomeError::integration_failed(
+                    format!("Songbird registration failed: {}", e),
+                    Some("songbird_registration"),
+                )
+            })?;
 
         Ok(execution_result)
     }
@@ -249,19 +243,17 @@ impl UniversalAdapter {
         &self,
         payload: serde_json::Value,
     ) -> BiomeResult<serde_json::Value> {
-        let songbird = self
-            .songbird_client
-            .as_ref()
-            .ok_or_else(|| BiomeError::config_error("Songbird client not initialized", Some("songbird_client")))?;
+        let songbird = self.songbird_client.as_ref().ok_or_else(|| {
+            BiomeError::config_error("Songbird client not initialized", Some("songbird_client"))
+        })?;
 
-        songbird
-            .discover_and_route(payload)
-            .await
-            .map_err(|e| BiomeError::discovery_failed(
+        songbird.discover_and_route(payload).await.map_err(|e| {
+            BiomeError::discovery_failed(
                 format!("Failed to discover primals: {}", e),
                 Some("primal_discovery"),
-            ))?;
-        
+            )
+        })?;
+
         Ok(serde_json::json!({"status": "execution_complete"}))
     }
 
@@ -301,10 +293,12 @@ impl ToadstoolClient {
         let http_client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(30))
             .build()
-            .map_err(|e| BiomeError::config_error(
-                format!("Failed to create Toadstool client: {}", e),
-                Some("toadstool_client_creation")
-            ))?;
+            .map_err(|e| {
+                BiomeError::config_error(
+                    format!("Failed to create Toadstool client: {}", e),
+                    Some("toadstool_client_creation"),
+                )
+            })?;
 
         Ok(Self {
             endpoint: endpoint.to_string(),
@@ -686,11 +680,9 @@ pub async fn get_discovered_primals() -> BiomeResult<Vec<PrimalInfo>> {
     use biomeos_types::BiomeOSConfig;
 
     let config = BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config).await
-        .map_err(|e| BiomeError::internal_error(
-            format!("Failed to create manager: {}", e),
-            None::<&str>,
-        ))?;
+    let manager = UniversalBiomeOSManager::new(config).await.map_err(|e| {
+        BiomeError::internal_error(format!("Failed to create manager: {}", e), None::<&str>)
+    })?;
 
     // Try actual network discovery
     match manager.discover_network_scan().await {
@@ -739,12 +731,12 @@ pub async fn get_discovered_primals() -> BiomeResult<Vec<PrimalInfo>> {
 
 /// Find primal by capability
 pub async fn find_primal_by_capability(capability: &str) -> BiomeResult<Option<PrimalInfo>> {
-    let primals = get_discovered_primals()
-        .await
-        .map_err(|e|         BiomeError::discovery_failed(
+    let primals = get_discovered_primals().await.map_err(|e| {
+        BiomeError::discovery_failed(
             format!("Failed to get discovered primals: {}", e),
             None::<&str>,
-        ))?;
+        )
+    })?;
 
     for primal in primals {
         if primal.capabilities.contains(&capability.to_string()) {
@@ -752,7 +744,10 @@ pub async fn find_primal_by_capability(capability: &str) -> BiomeResult<Option<P
         }
     }
 
-    Err(BiomeError::config_error("No suitable primal found", Some("primal_search")))
+    Err(BiomeError::config_error(
+        "No suitable primal found",
+        Some("primal_search"),
+    ))
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -767,15 +762,30 @@ pub struct PrimalInfo {
 #[allow(dead_code)]
 fn extract_primal_type_from_capabilities(capabilities: &[String]) -> Option<String> {
     // Check for specific capability patterns to determine primal type
-    if capabilities.iter().any(|cap| cap.contains("compute") || cap.contains("cpu")) {
+    if capabilities
+        .iter()
+        .any(|cap| cap.contains("compute") || cap.contains("cpu"))
+    {
         Some("compute".to_string())
-    } else if capabilities.iter().any(|cap| cap.contains("storage") || cap.contains("disk")) {
+    } else if capabilities
+        .iter()
+        .any(|cap| cap.contains("storage") || cap.contains("disk"))
+    {
         Some("storage".to_string())
-    } else if capabilities.iter().any(|cap| cap.contains("network") || cap.contains("routing")) {
+    } else if capabilities
+        .iter()
+        .any(|cap| cap.contains("network") || cap.contains("routing"))
+    {
         Some("network".to_string())
-    } else if capabilities.iter().any(|cap| cap.contains("ai") || cap.contains("ml")) {
+    } else if capabilities
+        .iter()
+        .any(|cap| cap.contains("ai") || cap.contains("ml"))
+    {
         Some("ai".to_string())
-    } else if capabilities.iter().any(|cap| cap.contains("data") || cap.contains("analytics")) {
+    } else if capabilities
+        .iter()
+        .any(|cap| cap.contains("data") || cap.contains("analytics"))
+    {
         Some("data".to_string())
     } else if !capabilities.is_empty() {
         // Use the first capability as a fallback

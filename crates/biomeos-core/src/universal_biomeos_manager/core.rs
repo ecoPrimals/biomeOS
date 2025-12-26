@@ -9,9 +9,10 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use biomeos_primal_sdk::{PrimalCapability, PrimalType};
-use biomeos_types::{Health, BiomeOSConfig};
+use crate::universal_biomeos_manager::client_registry::ClientRegistry;
 use crate::universal_biomeos_manager::discovery::PrimalDiscoveryService;
+use biomeos_primal_sdk::{PrimalCapability, PrimalType};
+use biomeos_types::{BiomeOSConfig, Health};
 
 /// Primary primal info for discovery results
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -33,6 +34,7 @@ pub struct UniversalBiomeOSManager {
     pub config: Arc<BiomeOSConfig>,
     pub(crate) discovery_service: Arc<PrimalDiscoveryService>,
     pub(crate) registered_primals: Arc<RwLock<HashMap<String, PrimalInfo>>>,
+    pub(crate) clients: Arc<ClientRegistry>,
 }
 
 impl UniversalBiomeOSManager {
@@ -41,11 +43,13 @@ impl UniversalBiomeOSManager {
         let config_arc = Arc::new(config);
         let registered_primals = Arc::new(RwLock::new(HashMap::new()));
         let discovery_service = Arc::new(PrimalDiscoveryService::new(config_arc.clone()));
-        
+        let clients = Arc::new(ClientRegistry::new());
+
         Ok(Self {
             config: config_arc,
             registered_primals,
             discovery_service,
+            clients,
         })
     }
 
@@ -58,10 +62,13 @@ impl UniversalBiomeOSManager {
     /// Initialize the manager
     pub async fn initialize(&self) -> Result<()> {
         tracing::info!("🚀 Initializing Universal BiomeOS Manager");
-        
+
         // Initialize discovery service
         self.discovery_service.initialize().await?;
-        
+
+        // Initialize primal clients through zero-knowledge discovery
+        self.clients.initialize().await?;
+
         tracing::info!("✅ Universal BiomeOS Manager initialized successfully");
         Ok(())
     }
@@ -69,7 +76,7 @@ impl UniversalBiomeOSManager {
     /// Start health monitoring
     pub async fn start_monitoring(&self) -> Result<()> {
         tracing::info!("🏥 Starting health monitoring");
-        
+
         // Start background monitoring tasks
         tokio::spawn({
             let manager = self.clone();
@@ -79,13 +86,13 @@ impl UniversalBiomeOSManager {
                     if let Err(e) = manager.perform_health_check().await {
                         tracing::warn!("Health check failed: {}", e);
                     }
-                    
+
                     // Wait 30 seconds between checks
                     tokio::time::sleep(tokio::time::Duration::from_secs(30)).await;
                 }
             }
         });
-        
+
         tracing::info!("✅ Health monitoring started");
         Ok(())
     }
@@ -94,25 +101,25 @@ impl UniversalBiomeOSManager {
     async fn perform_health_check(&self) -> Result<()> {
         let primals = self.registered_primals.read().await;
         let mut tasks = Vec::new();
-        
+
         for (id, primal) in primals.iter() {
             let endpoint = primal.endpoint.clone();
             let id = id.clone();
-            
+
             let task = tokio::spawn(async move {
                 // Simple health check - in practice would probe the endpoint
                 tracing::debug!("Health check for primal {}: {}", id, endpoint);
                 Ok::<(), anyhow::Error>(())
             });
-            
+
             tasks.push(task);
         }
-        
+
         // Wait for all health checks to complete
         for task in tasks {
             let _ = task.await;
         }
-        
+
         Ok(())
     }
 
@@ -131,16 +138,21 @@ impl UniversalBiomeOSManager {
         &self.registered_primals
     }
 
+    /// Get client registry reference
+    pub fn clients(&self) -> &Arc<ClientRegistry> {
+        &self.clients
+    }
+
     /// Shutdown the manager gracefully
     pub async fn shutdown(&self) -> Result<()> {
         tracing::info!("🛑 Shutting down Universal BiomeOS Manager");
-        
+
         // Graceful shutdown logic would go here
         // - Stop monitoring tasks
         // - Clean up resources
         // - Notify registered primals
-        
+
         tracing::info!("✅ Universal BiomeOS Manager shutdown complete");
         Ok(())
     }
-} 
+}

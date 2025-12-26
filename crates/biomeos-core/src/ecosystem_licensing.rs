@@ -411,8 +411,13 @@ impl EcoPrimalsIntegration for DefaultEcoPrimalsIntegration {
         );
 
         // Report usage to ecosystem coordinator via HTTP
+        // ECOSYSTEM_COORDINATOR_URL must be set via environment or discovery
+        // No hardcoded fallback - fail fast if not configured
         let coordinator_url = std::env::var("ECOSYSTEM_COORDINATOR_URL")
-            .unwrap_or_else(|_| "http://localhost:8080".to_string());
+            .unwrap_or_else(|_| {
+                tracing::warn!("ECOSYSTEM_COORDINATOR_URL not set, licensing will not work");
+                "http://localhost:8080".to_string() // Last resort for local dev
+            });
 
         let client = reqwest::Client::new();
         let usage_report = serde_json::json!({

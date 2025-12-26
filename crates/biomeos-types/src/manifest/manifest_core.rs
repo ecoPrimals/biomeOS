@@ -3,25 +3,25 @@
 //! This module contains the fundamental manifest types including BiomeManifest,
 //! ManifestMetadata, BiomeSpec, and BiomeType definitions.
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use chrono::{DateTime, Utc};
 
 use crate::config::Environment;
 use crate::primal::ResourceRequirements;
 
 // Re-export from other modules for use in core structures
-pub use super::service::ServiceSpec;
-pub use super::networking_core::NetworkSpec;
-pub use super::storage::VolumeSpec;
-pub use super::manifest_security::BiomeSecuritySpec;
 pub use super::manifest_extensions::{
-    BiomeDependency, ConfigSpec, SecretSpec, HealthMonitoringSpec, 
-    BiomeNetworkingSpec, ScalingSpec, LifecycleSpec
+    BiomeDependency, BiomeNetworkingSpec, ConfigSpec, HealthMonitoringSpec, LifecycleSpec,
+    ScalingSpec, SecretSpec,
 };
+pub use super::manifest_security::BiomeSecuritySpec;
+pub use super::networking_core::NetworkSpec;
+pub use super::service::ServiceSpec;
+pub use super::storage::VolumeSpec;
 
 /// Universal Biome Manifest
-/// 
+///
 /// This is the unified structure for all biome manifests, consolidating
 /// the various manifest formats across the ecosystem.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -238,4 +238,4 @@ impl Default for BiomeSpec {
             config: HashMap::new(),
         }
     }
-} 
+}

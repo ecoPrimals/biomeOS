@@ -7,6 +7,24 @@
 // Core universal manager (now modular)
 pub mod universal_biomeos_manager;
 
+// Primal adapter pattern (CLI-agnostic integration)
+pub mod primal_adapter;
+
+// API adapter pattern (API-agnostic integration)
+pub mod api_adapter;
+
+// Primal client infrastructure
+pub mod clients;
+pub mod discovery_bootstrap;
+pub mod primal_client;
+
+// P2P coordination (BiomeOS's killer feature!)
+pub mod p2p_coordination;
+pub mod primal_registry;
+
+// Lab integration module (benchScale)
+pub mod lab;
+
 // Legacy support - keep existing modules for compatibility
 pub mod ai_first_api;
 pub mod byob;
@@ -16,17 +34,11 @@ pub mod integration;
 
 // Re-export the main manager and types for easy access
 pub use universal_biomeos_manager::{
-    UniversalBiomeOSManager, 
-    PrimalInfo,
-    PrimalStatistics,
-    GeneticAccessKey,
+    GeneticAccessKey, PrimalInfo, PrimalStatistics, UniversalBiomeOSManager,
 };
 
 // Re-export core services
-pub use universal_biomeos_manager::{
-    PrimalDiscoveryService,
-    HealthMonitor,
-};
+pub use universal_biomeos_manager::{HealthMonitor, PrimalDiscoveryService};
 
 // Legacy re-exports for backwards compatibility
 pub use universal_biomeos_manager as manager;
@@ -36,9 +48,11 @@ pub use UniversalBiomeOSManager as Manager;
 
 // AI-first API exports
 pub use ai_first_api::{
-    AIFirstResponse, AIResponseMetadata, HumanInteractionContext,
-    SuggestedAction,
+    AIFirstResponse, AIResponseMetadata, HumanInteractionContext, SuggestedAction,
 };
+
+// Configuration builder exports
+pub use config_builder::BiomeOSConfigBuilder;
 
 // ✅ MIGRATION NOTE: The following types are now imported from biomeos-types:
 // - BiomeMetadata -> ManifestMetadata
@@ -62,12 +76,17 @@ pub use biomeos_types::BUILD_INFO;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use biomeos_types::BiomeOSConfig;
 
     #[tokio::test]
     async fn test_config_creation() {
         let config = BiomeOSConfig::default();
         assert!(!config.discovery.methods.is_empty());
-        assert!(config.discovery.default_method == biomeos_types::config::resources::DiscoveryMethod::Static);
+        // Default method is Static
+        assert!(matches!(
+            config.discovery.default_method,
+            biomeos_types::config::resources::DiscoveryMethod::Static
+        ));
     }
 
     #[tokio::test]

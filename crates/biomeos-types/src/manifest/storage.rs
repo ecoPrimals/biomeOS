@@ -144,10 +144,10 @@ pub enum VolumeType {
         fs_type: Option<String>,
     },
 
-    /// Ephemeral
+    /// Ephemeral (boxed to reduce enum size - clippy::large_enum_variant)
     Ephemeral {
-        /// Volume claim template
-        volume_claim_template: PersistentVolumeClaimTemplate,
+        /// Volume claim template (boxed to reduce enum size)
+        volume_claim_template: Box<PersistentVolumeClaimTemplate>,
     },
 
     /// AWS Elastic Block Store
@@ -567,27 +567,15 @@ pub struct ExternalSecretRef {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SecretProvider {
     /// AWS Secrets Manager
-    AwsSecretsManager {
-        region: String,
-    },
+    AwsSecretsManager { region: String },
     /// Azure Key Vault
-    AzureKeyVault {
-        vault_url: String,
-    },
+    AzureKeyVault { vault_url: String },
     /// Google Secret Manager
-    GoogleSecretManager {
-        project_id: String,
-    },
+    GoogleSecretManager { project_id: String },
     /// HashiCorp Vault
-    Vault {
-        address: String,
-        path: String,
-    },
+    Vault { address: String, path: String },
     /// Kubernetes secret
-    Kubernetes {
-        namespace: String,
-        name: String,
-    },
+    Kubernetes { namespace: String, name: String },
     /// Custom provider
     Custom {
         provider_name: String,
@@ -596,18 +584,22 @@ pub enum SecretProvider {
 }
 
 /// Config specification
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ConfigSpec {
     /// Config metadata
+    #[serde(default)]
     pub metadata: ConfigMetadata,
 
     /// Config data
+    #[serde(default)]
     pub data: HashMap<String, ConfigData>,
 
     /// Binary data
+    #[serde(default)]
     pub binary_data: HashMap<String, Vec<u8>>,
 
     /// Immutable
+    #[serde(default)]
     pub immutable: bool,
 }
 
@@ -766,17 +758,6 @@ impl Default for SecretMetadata {
     }
 }
 
-impl Default for ConfigSpec {
-    fn default() -> Self {
-        Self {
-            metadata: ConfigMetadata::default(),
-            data: HashMap::new(),
-            binary_data: HashMap::new(),
-            immutable: false,
-        }
-    }
-}
-
 impl Default for ConfigMetadata {
     fn default() -> Self {
         Self {
@@ -786,4 +767,4 @@ impl Default for ConfigMetadata {
             annotations: HashMap::new(),
         }
     }
-} 
+}

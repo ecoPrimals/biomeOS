@@ -71,22 +71,16 @@ pub struct ScalingMetric {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ScalingMetricType {
     /// Resource metrics (CPU, Memory)
-    Resource {
-        name: ResourceName,
-    },
+    Resource { name: ResourceName },
     /// Pod metrics
-    Pods {
-        metric_name: String,
-    },
+    Pods { metric_name: String },
     /// Object metrics
     Object {
         metric_name: String,
         target: ObjectTarget,
     },
     /// External metrics
-    External {
-        metric_name: String,
-    },
+    External { metric_name: String },
 }
 
 /// Resource names
@@ -278,4 +272,4 @@ impl Default for ScalingSpec {
             custom: None,
         }
     }
-} 
+}

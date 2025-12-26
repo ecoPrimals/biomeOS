@@ -1,0 +1,11 @@
+{
+  "demo": "beardog-crypto",
+  "timestamp": "2025-12-22T21:39:41-05:00",
+  "status": "success",
+  "host": "pop-os",
+  "user": "eastgate",
+  "biomeOS_version": "1.0.0",
+  "output_hash": "4f154fa803d8ca44f640f013c5aedcc805cb98902fc773986b5eb221c09efe76",
+  "output_lines": 20,
+  "replication_command": "./bin/live-demo.sh beardog-crypto"
+}

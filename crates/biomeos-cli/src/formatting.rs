@@ -38,7 +38,7 @@ pub fn format_table<T: serde::Serialize>(data: &[T]) -> String {
             // Get headers from first item
             if let Some(first) = items.first() {
                 if let Some(obj) = first.as_object() {
-                    let headers: Vec<String> = obj.keys().map(|k| k.clone()).collect();
+                    let headers: Vec<String> = obj.keys().cloned().collect();
                     result.push_str(&headers.join("\t"));
                     result.push('\n');
                     result.push_str(&"-".repeat(headers.join("\t").len()));

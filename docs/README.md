@@ -1,338 +1,241 @@
-# 🌱 BiomeOS Documentation Hub
+# 📚 BiomeOS Documentation Index
 
-## 🎯 **Universal, Capability-Based Distributed Systems**
-
-Welcome to the BiomeOS documentation! BiomeOS enables **truly universal distributed systems** through **capability-based architecture** that works with any ecosystem configuration - from monolithic to microservices to community-driven architectures.
-
----
-
-## 🚀 **Quick Start**
-
-### **For Developers**
-1. 📖 [Primal Integration Guide](guides/primal-integration-guide.md) - Build your first universal service
-2. 🛠️ [CLI Tools](../CLI_TOOLS_README.md) - Master the development tools
-3. 📐 [API Documentation](api/) - Comprehensive API references
-
-### **For Teams & Organizations**  
-1. 🌍 [Ecosystem Participation Guide](guides/ecosystem-participation-guide.md) - Join the BiomeOS ecosystem
-2. 🏗️ [Architecture Decision Records](adrs/) - Understand design principles
-3. 🎯 Choose your [participation level](#participation-levels)
+**Last Updated**: December 24, 2025  
+**Status**: Architecture evolved - Primal Adapter Pattern
 
 ---
 
-## 📚 **Documentation Structure**
+## 🚀 Quick Start
 
-### **📖 Guides** - Step-by-Step Learning
-| Guide | Description | Audience | Time |
-|-------|-------------|----------|------|
-| [**Primal Integration Guide**](guides/primal-integration-guide.md) | Build universal services with zero hardcoded dependencies | Developers | 2-4 hours |
-| [**Ecosystem Participation Guide**](guides/ecosystem-participation-guide.md) | Join and contribute to the BiomeOS ecosystem | Teams & Organizations | 1-2 hours |
-
-### **📐 API Documentation** - Technical References
-| API | Description | Use Cases |
-|-----|-------------|-----------|
-| [**BiomeOS Primal SDK**](api/biomeos-primal-sdk.md) | Core SDK for building universal services | Service development, capability implementation |
-| [**Discovery & Health Monitoring**](api/discovery-and-health-monitoring.md) | Universal discovery and health APIs | Service integration, monitoring, debugging |
-
-### **🏛️ Architecture Decision Records (ADRs)** - Design Decisions
-| ADR | Decision | Impact |
-|-----|----------|--------|
-| [**ADR-001**](adrs/ADR-001-universal-capability-based-architecture.md) | Universal Capability-Based Architecture | 🌟 **Core** - Enables true universality |
-| [**ADR-002**](adrs/ADR-002-universal-discovery-system.md) | Universal Discovery System Design | 🔍 **Discovery** - Works with any ecosystem |
-
-### **🛠️ Tools & Utilities**
-| Tool | Description | Usage |
-|------|-------------|-------|
-| [**CLI Tools**](../CLI_TOOLS_README.md) | Command-line tools for system management | Development, operations, monitoring |
+- **New to BiomeOS?** → [`guides/ecosystem-participation-guide.md`](guides/ecosystem-participation-guide.md)
+- **Integrating a Primal?** → [`guides/primal-integration-guide.md`](guides/primal-integration-guide.md)
+- **Phase 1 Team?** → [`PHASE1_TEAM_BLURB.md`](PHASE1_TEAM_BLURB.md) (quick read)
 
 ---
 
-## 🌟 **Core Concepts**
+## 🌱 Core Architecture (Dec 2025)
 
-### **Universal Architecture Principles**
-- **🚫 Zero Hardcoded Dependencies**: No service names or endpoints hardcoded in application logic
-- **🎯 Capability-Driven Discovery**: Services found by what they can do, not what they're called
-- **🌐 Architecture Agnostic**: Same code works with monolithic, microservice, or hybrid ecosystems
-- **🔧 Future-Proof Design**: Systems adapt automatically as ecosystems evolve
+### New Primal Integration Architecture
+- **[Primal Integration Architecture](PRIMAL_INTEGRATION_ARCHITECTURE.md)** ⭐ **NEW**
+  - Primal Adapter Pattern (CLI agnostic)
+  - Cell Senescence Model (negotiated lifecycle)
+  - Songbird Port Manager (dynamic allocation)
+  - Implementation roadmap (6-8 weeks)
 
-### **Key Components**
+### Phase 1 Integration
+- **[Phase 1 Integration Gaps](PHASE1_INTEGRATION_GAPS.md)** - Comprehensive analysis
+- **[Phase 1 Team Blurb](PHASE1_TEAM_BLURB.md)** ⭐ **SEND TO TEAMS**
+  - Quick summary for Phase 1 primal teams
+  - Documentation requests
+  - Collaboration model
 
-#### **EcoPrimal Trait** 🧬
-The core interface that all BiomeOS services implement:
-```rust
-#[async_trait::async_trait]
-pub trait EcoPrimal: Send + Sync {
-    fn capabilities(&self) -> &[PrimalCapability];
-    async fn handle_request(&self, request: PrimalRequest) -> PrimalResult<PrimalResponse>;
-    async fn health_check(&self) -> PrimalResult<PrimalHealth>;
-}
-```
-
-#### **PrimalCapability System** ⚡
-Universal capability declaration:
-```rust
-pub struct PrimalCapability {
-    pub domain: String,      // e.g., "ai", "networking", "storage"  
-    pub name: String,        // e.g., "inference", "routing", "persistence"
-    pub version: String,     // e.g., "v1.0", "v2.1"
-    pub parameters: HashMap<String, serde_json::Value>,
-}
-```
-
-#### **Universal Discovery** 🔍
-Find services by capability, not by name:
-```rust
-let ai_services = manager.discover_by_capability(
-    "http://discovery:8080",
-    &[PrimalCapability::new("ai", "inference", "v1")]
-).await?;
-```
+### Universal Adapter System
+- **[Universal Adapter Migration Summary](UNIVERSAL_ADAPTER_MIGRATION_SUMMARY.md)**
+- **[Universal Migration Guide](UNIVERSAL_MIGRATION_GUIDE.md)**
 
 ---
 
-## 🎯 **Participation Levels**
+## 📖 Guides
 
-### **🥉 Bronze: Service Consumer**
-- **Goal**: Use BiomeOS services in your applications
-- **Time**: 1-2 weeks
-- **Benefits**: Access to universal service ecosystem
-- **Start**: [CLI Tools](../CLI_TOOLS_README.md)
+### For Developers
+- **[Primal Integration Guide](guides/primal-integration-guide.md)**
+  - How to integrate with BiomeOS
+  - API reference
+  - Best practices
 
-### **🥈 Silver: Service Provider**
-- **Goal**: Contribute services to the ecosystem  
-- **Time**: 1-3 months
-- **Benefits**: Ecosystem visibility, user base growth
-- **Start**: [Primal Integration Guide](guides/primal-integration-guide.md)
+- **[Delegation Implementation Guide](guides/DELEGATION_IMPLEMENTATION_GUIDE.md)**
+  - Pure orchestration pattern
+  - How BiomeOS delegates to primals
+  - Example flows
 
-### **🥇 Gold: Ecosystem Architect**
-- **Goal**: Help design ecosystem standards
-- **Time**: Ongoing collaboration
-- **Benefits**: Influence ecosystem direction
-- **Start**: [Ecosystem Participation Guide](guides/ecosystem-participation-guide.md)
+- **[Zero-Knowledge Evolution Plan](guides/ZERO_KNOWLEDGE_EVOLUTION_PLAN.md)**
+  - Zero-dependency startup
+  - Discovery mechanisms
+  - Bootstrap patterns
 
-### **💎 Platinum: Ecosystem Steward**
-- **Goal**: Lead ecosystem initiatives
-- **Time**: Significant ongoing commitment
-- **Benefits**: Ecosystem leadership role
-- **Start**: Contact the BiomeOS team
+### For Ecosystem
+- **[Ecosystem Participation Guide](guides/ecosystem-participation-guide.md)**
+  - How to join the ecosystem
+  - Requirements and standards
+  - Community norms
 
 ---
 
-## 🌐 **Real-World Examples**
+## 🏗️ Architecture Decision Records (ADRs)
 
-### **Scenario 1: Traditional Setup**
-```bash
-# CLI works perfectly with existing Songbird
-biomeos discover --endpoint "http://songbird:8080"
-# → Discovers Songbird's orchestration capabilities
-```
+- **[ADR-001: Universal Capability-Based Architecture](adrs/ADR-001-universal-capability-based-architecture.md)**
+  - Why capability-based discovery
+  - Design rationale
+  - Trade-offs
 
-### **Scenario 2: Split Architecture** 
-```bash
-# Team splits Songbird functionality
-biomeos discover --capabilities "routing"        # → Finds routing services
-biomeos discover --capabilities "load-balancing" # → Finds load balancers
-biomeos discover --capabilities "service-discovery" # → Finds discovery services
-```
-
-### **Scenario 3: Community Innovation**
-```bash
-# Community builds enhanced services
-biomeos discover --capabilities "ai-orchestration,chaos-engineering"
-# → Discovers AI-driven orchestration and chaos engineering services
-```
+- **[ADR-002: Universal Discovery System](adrs/ADR-002-universal-discovery-system.md)**
+  - Discovery architecture
+  - Bootstrap mechanisms
+  - Future-proofing
 
 ---
 
-## 🛠️ **Development Workflow**
+## 🔌 API Documentation
 
-### **1. Development Environment Setup**
-```bash
-# Clone BiomeOS
-git clone https://github.com/biomeOS/biomeOS.git
-cd biomeOS
+### Core APIs
+- **[BiomeOS Primal SDK](api/biomeos-primal-sdk.md)**
+  - Client libraries for each primal
+  - Usage examples
+  - Type definitions
 
-# Install CLI tools
-cargo install --path crates/biomeos-cli
+- **[Discovery and Health Monitoring](api/discovery-and-health-monitoring.md)**
+  - Discovery protocols
+  - Health check patterns
+  - Monitoring APIs
 
-# Test your setup
-biomeos status --system
+---
+
+## 🤝 Ecosystem Integration
+
+### Integration Deep-Dives
+- **[Ecosystem Integration Guide](ECOSYSTEM_INTEGRATION_GUIDE.md)**
+- **[Ecosystem Alignment Summary](ECOSYSTEM_ALIGNMENT_SUMMARY.md)**
+
+### Primal-Specific Handoffs
+- **[Songbird: Service Discovery Architecture](ecoSystemHandOff/songbird/SERVICE_DISCOVERY_ARCHITECTURE.md)**
+- **[ToadStool: Manifest Parsing Capabilities](ecoSystemHandOff/toadstool/MANIFEST_PARSING_CAPABILITIES.md)**
+- **[NestGate: Storage Provisioning APIs](ecoSystemHandOff/nestgate/STORAGE_PROVISIONING_APIS.md)**
+- **[BearDog: Security Framework Analysis](ecoSystemHandOff/beardog/SECURITY_FRAMEWORK_ANALYSIS.md)**
+- **[Squirrel: MCP Platform Analysis](ecoSystemHandOff/squirrel/MCP_PLATFORM_ANALYSIS.md)**
+
+### Integration Points
+- **[Critical Integration Points](ecoSystemHandOff/integration/CRITICAL_INTEGRATION_POINTS.md)**
+- **[Ecosystem Readiness Summary](ecoSystemHandOff/ECOSYSTEM_READINESS_SUMMARY.md)**
+- **[Implementation Readiness Assessment](ecoSystemHandOff/IMPLEMENTATION_READINESS_ASSESSMENT.md)**
+
+---
+
+## 📊 Recent Reports (Dec 2025)
+
+### Latest (Dec 24, 2025)
+- **[Comprehensive Final Audit](reports/dec-24-2025/COMPREHENSIVE_FINAL_AUDIT_DEC_24_2025.md)** - Full codebase audit
+- **[Grade A Achieved](reports/dec-24-2025/GRADE_A_ACHIEVED_DEC_24_2025.md)** - Zero warnings, all tests passing
+- **[Zero Knowledge Complete](reports/dec-24-2025/ZERO_KNOWLEDGE_COMPLETE_DEC_24_2025.md)** - No hardcoded dependencies
+- **[Production Ready Report](reports/dec-24-2025/PRODUCTION_READY_REPORT_DEC_24_2025.md)** - Ready for deployment
+- **[BiomeOS Evolution Plan](reports/dec-24-2025/BIOMEOS_EVOLUTION_PLAN_DEC_24_2025.md)** - Roadmap ahead
+
+### Previous (Dec 23, 2025)
+- **[Modernization Complete](reports/dec-23-2025/MODERNIZATION_COMPLETE_DEC_23_2025.md)**
+- **[Phase 1 Binaries Ready](reports/dec-23-2025/PHASE1_BINARIES_READY.md)**
+- **[PetalTongue Primal Recommendation](reports/dec-23-2025/PETALTONGUE_PRIMAL_RECOMMENDATION.md)**
+
+### Audit & Analysis
+- **[Mock Scope Analysis](MOCK_SCOPE_ANALYSIS.md)** - Test mocks inventory
+- **[Audit and Pruning Index](guides/AUDIT_AND_PRUNING_INDEX.md)** - Code quality review
+
+---
+
+## 🎯 Current Focus (December 2025)
+
+### In Progress
+1. **Primal Adapter Pattern** (Week 1-2)
+   - CLI-agnostic interface discovery
+   - Adapter cache implementation
+   - Test with Squirrel
+
+2. **Phase 1 Documentation Collection** (Ongoing)
+   - Waiting on primal team responses
+   - CLI interface documentation
+   - Integration patterns
+
+### Coming Soon
+1. **Lifecycle Negotiation Protocol** (Week 3-4)
+2. **Songbird Port Manager Integration** (Week 5-6)
+3. **Advanced Showcase Scenarios** (Week 7-8)
+
+---
+
+## 📂 Documentation Structure
+
 ```
-
-### **2. Build Your First Service**
-```bash
-# Create a new service
-cargo new my-universal-service --lib
-cd my-universal-service
-
-# Add BiomeOS dependencies
-# Follow: guides/primal-integration-guide.md
-```
-
-### **3. Test Universal Compatibility**
-```bash
-# Test capability-based discovery
-biomeos discover --capabilities "your-domain/your-capability"
-
-# Test health monitoring
-biomeos health --endpoint "http://your-service:8080"
-
-# Test integration
-biomeos probe "http://your-service:8080" --metadata
+docs/
+├── README.md (this file)
+├── PRIMAL_INTEGRATION_ARCHITECTURE.md ⭐ NEW
+├── PHASE1_INTEGRATION_GAPS.md ⭐ NEW
+├── PHASE1_TEAM_BLURB.md ⭐ NEW
+├── adrs/                   # Architecture decisions
+├── api/                    # API documentation
+├── guides/                 # How-to guides
+├── ecoSystemHandOff/       # Primal integration docs
+└── reports/                # Status reports & audits
+    ├── dec-24-2025/       # Latest reports
+    └── dec-23-2025/       # Previous reports
 ```
 
 ---
 
-## 🏥 **System Health & Monitoring**
+## 🔍 Finding What You Need
 
-### **Real-Time Monitoring**
-```bash
-# System overview
-biomeos status --detailed
+### I want to...
 
-# Continuous monitoring
-biomeos monitor --interval 5
+**Integrate a new primal with BiomeOS**
+→ [`PRIMAL_INTEGRATION_ARCHITECTURE.md`](PRIMAL_INTEGRATION_ARCHITECTURE.md) (new approach)
+→ [`guides/primal-integration-guide.md`](guides/primal-integration-guide.md) (detailed guide)
 
-# Health checks  
-biomeos health --system --resources --watch 30
-```
+**Understand BiomeOS architecture**
+→ [`adrs/`](adrs/) (architecture decisions)
+→ [`UNIVERSAL_ADAPTER_MIGRATION_SUMMARY.md`](UNIVERSAL_ADAPTER_MIGRATION_SUMMARY.md) (system overview)
 
-### **Service Discovery**
-```bash
-# Find all services
-biomeos discover --method network-scan
+**Use BiomeOS APIs**
+→ [`api/biomeos-primal-sdk.md`](api/biomeos-primal-sdk.md) (SDK reference)
+→ [`api/discovery-and-health-monitoring.md`](api/discovery-and-health-monitoring.md) (protocols)
 
-# Find by capability
-biomeos discover --capabilities "ai/inference,compute/gpu"
+**Understand Phase 1 integration**
+→ [`PHASE1_TEAM_BLURB.md`](PHASE1_TEAM_BLURB.md) (quick summary)
+→ [`PHASE1_INTEGRATION_GAPS.md`](PHASE1_INTEGRATION_GAPS.md) (detailed analysis)
 
-# Registry-based discovery
-biomeos discover --method registry --registry "http://registry:8080"
-```
+**Join the ecosystem**
+→ [`guides/ecosystem-participation-guide.md`](guides/ecosystem-participation-guide.md)
+→ [`ECOSYSTEM_INTEGRATION_GUIDE.md`](ECOSYSTEM_INTEGRATION_GUIDE.md)
 
----
-
-## 📊 **Success Metrics**
-
-### **Technical Metrics**
-- **Service Discovery Latency**: < 100ms for capability-based discovery
-- **Health Check Response**: < 3s for comprehensive health assessment
-- **Ecosystem Compatibility**: 100% compatibility across architecture types
-- **Zero Hardcoded Dependencies**: No service names in application code
-
-### **Ecosystem Metrics**
-- **Service Diversity**: Services across multiple capability domains
-- **Community Growth**: Active contributors and service providers
-- **Innovation Rate**: New capabilities added per quarter
-- **User Satisfaction**: Developer experience scores
+**Check project status**
+→ [`reports/dec-24-2025/`](reports/dec-24-2025/) (latest reports)
+→ [`../showcase/STATUS.md`](../showcase/STATUS.md) (showcase progress)
 
 ---
 
-## 🤝 **Community & Support**
+## 🌱 Philosophy
 
-### **Getting Help**
-- 💬 [Discord Community](https://discord.gg/biomeos) - Real-time chat and support
-- 🐙 [GitHub Discussions](https://github.com/biomeOS/biomeOS/discussions) - Technical discussions
-- 📞 **Monthly Community Calls** - First Friday of each month, 3 PM UTC
-- 📧 **Working Groups** - Domain-specific technical collaboration
+### BiomeOS Principles
+1. **Primal Sovereignty**: Primals are autonomous, not managed
+2. **Ecological Substrate**: BiomeOS facilitates, doesn't control
+3. **CLI Agnostic**: Adapt to primals, don't dictate interfaces
+4. **Cell Senescence**: Request transitions, don't command
+5. **Zero Hardcoding**: Songbird manages all port allocation
 
-### **Contributing**
-- 🐛 [Bug Reports](https://github.com/biomeOS/biomeOS/issues) - Report issues and bugs
-- 🚀 [Feature Requests](https://github.com/biomeOS/biomeOS/issues) - Suggest new features  
-- 🔧 [Pull Requests](https://github.com/biomeOS/biomeOS/pulls) - Contribute code and documentation
-- 📝 **RFC Process** - Propose new standards and capabilities
-
-### **Recognition**
-- 🏆 **Quarterly Awards** - Outstanding ecosystem contributions
-- 🎤 **Conference Speaking** - Priority speaking opportunities
-- 🎯 **Early Access** - Beta access to new features
-- 👥 **Mentorship Programs** - Guide newcomers to the ecosystem
+### Design Goals
+- Pure orchestration (delegation, not reimplementation)
+- Capability-based discovery (dynamic topology)
+- Zero-knowledge startup (no hardcoded dependencies)
+- Graceful degradation (missing primals = no crashes)
+- Future-proof evolution (handle primal changes)
 
 ---
 
-## 🗺️ **Roadmap & Future**
+## 📞 Contributing
 
-### **Current Focus (Q3 2025)**
-- ✅ Universal capability-based architecture
-- ✅ Comprehensive CLI tools
-- ✅ API documentation and developer guides
-- 🚧 Enhanced TUI monitoring dashboard
-- 🚧 Performance optimization and caching
+### Documentation
+- Keep docs up-to-date with code changes
+- Use clear examples
+- Document design rationale
+- Date stamp all reports
 
-### **Near-term (Q4 2025)**
-- 📋 Standard capability registry
-- 📋 Cross-ecosystem compatibility bridges  
-- 📋 AI-powered capability matching
-- 📋 Enhanced developer tooling and IDE integration
-
-### **Long-term (2026+)**
-- 🔮 Capability marketplace and ratings
-- 🔮 Semantic capability discovery  
-- 🔮 Multi-cloud ecosystem federation
-- 🔮 AI-driven ecosystem optimization
+### Questions?
+- Open issue in BiomeOS repo
+- Tag @biomeOS-team
+- Join ecosystem sync calls
 
 ---
 
-## 🎉 **Why BiomeOS Matters**
-
-BiomeOS represents a **fundamental shift** in distributed systems architecture:
-
-### **From Brittle Dependencies** ❌
-```rust
-// Old way: hardcoded, fragile
-let response = reqwest::get("http://songbird:8080/route").await?;
-let result = reqwest::post("http://toadstool:8080/execute", &data).await?;
-```
-
-### **To Universal Compatibility** ✅
-```rust
-// BiomeOS way: capability-based, universal
-let routing_services = manager.discover_by_capability(
-    "http://discovery:8080", 
-    &[PrimalCapability::message_routing()]
-).await?;
-```
-
-### **The Impact** 🌟
-- **🌍 Works Everywhere**: Same code works in any ecosystem architecture
-- **🚀 Future-Proof**: Automatically adapts as ecosystems evolve  
-- **🤝 Community-Driven**: Anyone can contribute compatible services
-- **⚡ Innovation Accelerated**: New capabilities integrate seamlessly
-- **🛡️ Team Sovereignty**: Full control while maintaining compatibility
+**Last Review**: December 24, 2025  
+**Next Review**: January 2026  
+**Maintainer**: BiomeOS Core Team
 
 ---
 
-## 📝 **Documentation Conventions**
-
-### **Code Examples**
-- ✅ **Good examples** are marked with green checkmarks  
-- ❌ **Anti-patterns** are marked with red X's
-- 🎯 **Key concepts** are highlighted with target emojis
-- 💡 **Tips and insights** use lightbulb emojis
-
-### **Documentation Structure**
-- **Guides**: Step-by-step tutorials with complete examples
-- **API References**: Comprehensive technical documentation
-- **ADRs**: Architectural decisions with rationale and consequences
-- **Examples**: Real-world usage patterns and scenarios
-
----
-
-## 🚀 **Get Started Today**
-
-### **Ready to Build?**
-1. 📖 **Read**: [Primal Integration Guide](guides/primal-integration-guide.md)
-2. 🛠️ **Install**: BiomeOS CLI tools
-3. 🏗️ **Build**: Your first universal service
-4. 🌍 **Deploy**: Join the ecosystem
-
-### **Ready to Learn More?**
-1. 🎯 **Understand**: [Architecture Decisions](adrs/)
-2. 📐 **Explore**: [API Documentation](api/)  
-3. 🤝 **Connect**: [Community Channels](#community--support)
-4. 🌟 **Contribute**: Make BiomeOS even better
-
----
-
-**Welcome to the future of universal, capability-based distributed systems!** 
-
-**BiomeOS: Build once, run anywhere, evolve forever.** 🌱✨ 
+*"BiomeOS is the soil, not the gardener. Primals are the organisms, not the plants we tend."* 🌱✨

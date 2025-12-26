@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# Mock Songbird - Subcommand pattern (start)
+
+if [ "$1" = "--version" ]; then
+    echo "songbird-mock 1.0.0"
+    exit 0
+fi
+
+if [ "$1" = "--help" ]; then
+    echo "Songbird Service Mesh Primal (Mock)"
+    echo "Usage: songbird-mock start"
+    exit 0
+fi
+
+if [ "$1" != "start" ]; then
+    echo "Error: unrecognized subcommand '$1'"
+    echo "Usage: songbird-mock start"
+    exit 1
+fi
+
+PORT=${PORT:-9050}
+
+echo "🐦 Songbird Service Mesh Primal (Mock) starting on port $PORT"
+echo "   Interface: Subcommand (start)"
+echo ""
+
+python3 -c "
+import http.server
+import socketserver
+import json
+
+PORT = $PORT
+
+class HealthHandler(http.server.SimpleHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == '/health':
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            response = {
+                'status': 'healthy',
+                'primal': 'songbird',
+                'version': '1.0.0',
+                'capabilities': ['service-mesh', 'discovery']
+            }
+            self.wfile.write(json.dumps(response).encode())
+        else:
+            self.send_response(200)
+            self.send_header('Content-type', 'text/plain')
+            self.end_headers()
+            self.wfile.write(b'Songbird Service Mesh Primal (Mock)')
+    
+    def log_message(self, format, *args):
+        return
+
+with socketserver.TCPServer(('', PORT), HealthHandler) as httpd:
+    print(f'✅ Songbird listening on port {PORT}')
+    print(f'   Health check: http://localhost:{PORT}/health')
+    httpd.serve_forever()
+"
+

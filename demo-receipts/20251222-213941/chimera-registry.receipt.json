@@ -1,0 +1,11 @@
+{
+  "demo": "chimera-registry",
+  "timestamp": "2025-12-22T21:39:46-05:00",
+  "status": "success",
+  "host": "pop-os",
+  "user": "eastgate",
+  "biomeOS_version": "1.0.0",
+  "output_hash": "f158ebb3844f1c159e097d20d10b774d5428835d3a23797db602e79857b61648",
+  "output_lines": 30,
+  "replication_command": "./bin/live-demo.sh chimera-registry"
+}

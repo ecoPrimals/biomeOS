@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# Mock Squirrel with lifecycle negotiation support
+
+PORT=${PORT:-9010}
+
+if [ "$1" = "--version" ]; then
+    echo "squirrel-lifecycle-mock 1.0.0"
+    exit 0
+fi
+
+if [ "$1" = "--help" ]; then
+    echo "Squirrel AI/MCP Primal with Lifecycle Support (Mock)"
+    echo "Usage: squirrel-lifecycle-mock [OPTIONS]"
+    echo "Environment: PORT (default: 9010)"
+    exit 0
+fi
+
+echo "🐿️  Squirrel (Lifecycle Mock) starting on port $PORT"
+echo "   Lifecycle behavior: Accepts gracefully"
+echo ""
+
+python3 -c "
+import http.server
+import socketserver
+import json
+import signal
+import sys
+
+PORT = $PORT
+shutdown_requested = False
+
+def signal_handler(sig, frame):
+    global shutdown_requested
+    shutdown_requested = True
+    print('\n✅ Squirrel received SIGTERM - stopping gracefully')
+    sys.exit(0)
+
+signal.signal(signal.SIGTERM, signal_handler)
+
+class LifecycleHandler(http.server.SimpleHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == '/health':
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            response = {
+                'status': 'healthy',
+                'primal': 'squirrel',
+                'version': '1.0.0',
+                'capabilities': ['ai', 'mcp', 'lifecycle']
+            }
+            self.wfile.write(json.dumps(response).encode())
+        elif self.path == '/lifecycle/request':
+            # Squirrel always accepts gracefully
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            response = {
+                'status': 'accepted',
+                'message': 'Squirrel ready to stop gracefully'
+            }
+            self.wfile.write(json.dumps(response).encode())
+        else:
+            self.send_response(200)
+            self.send_header('Content-type', 'text/plain')
+            self.end_headers()
+            self.wfile.write(b'Squirrel Lifecycle Mock')
+    
+    def log_message(self, format, *args):
+        return
+
+with socketserver.TCPServer(('', PORT), LifecycleHandler) as httpd:
+    print(f'✅ Squirrel listening on port {PORT}')
+    print(f'   Health: http://localhost:{PORT}/health')
+    print(f'   Lifecycle: http://localhost:{PORT}/lifecycle/request')
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        print('\n✅ Squirrel stopped')
+"
+

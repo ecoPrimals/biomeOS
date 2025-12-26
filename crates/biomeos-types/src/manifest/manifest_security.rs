@@ -280,12 +280,8 @@ pub struct TlsSpec {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum CertificateSource {
     SelfSigned,
-    CertManager {
-        issuer: String,
-    },
-    External {
-        secret_name: String,
-    },
+    CertManager { issuer: String },
+    External { secret_name: String },
 }
 
 /// TLS versions
@@ -368,4 +364,4 @@ pub struct AuditRetentionPolicy {
 
     /// Maximum number of backup files
     pub max_backups: u32,
-} 
+}

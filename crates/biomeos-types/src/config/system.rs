@@ -87,7 +87,7 @@ pub struct TimeoutConfig {
 }
 
 /// Worker configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct WorkerConfig {
     /// Number of worker threads
     pub worker_threads: Option<usize>,
@@ -162,28 +162,18 @@ impl Default for TimeoutConfig {
     }
 }
 
-impl Default for WorkerConfig {
-    fn default() -> Self {
-        Self {
-            worker_threads: None,
-            max_blocking_threads: None,
-            thread_stack_size: None,
-            thread_keep_alive: None,
-            queue_size: None,
-        }
-    }
-}
+// WorkerConfig Default derived via #[derive(Default)]
 
 impl Default for SystemLimits {
     fn default() -> Self {
         Self {
             max_connections: 1000,
-            max_request_size: 1024 * 1024 * 10, // 10MB
+            max_request_size: 1024 * 1024 * 10,  // 10MB
             max_response_size: 1024 * 1024 * 10, // 10MB
-            max_upload_size: 1024 * 1024 * 100, // 100MB
+            max_upload_size: 1024 * 1024 * 100,  // 100MB
             max_memory_usage: None,
             max_cpu_usage: None,
             max_disk_usage: None,
         }
     }
-} 
+}

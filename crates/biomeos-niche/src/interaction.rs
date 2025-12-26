@@ -40,22 +40,26 @@ impl Interaction {
     }
 
     /// Add configuration
+    #[must_use]
     pub fn with_config(mut self, key: impl Into<String>, value: serde_json::Value) -> Self {
         self.config.insert(key.into(), value);
         self
     }
 
     /// Get the source organism name (without category prefix)
+    #[must_use]
     pub fn from_name(&self) -> &str {
-        self.from.split('.').last().unwrap_or(&self.from)
+        self.from.split('.').next_back().unwrap_or(&self.from)
     }
 
     /// Get the target organism name (without category prefix)
+    #[must_use]
     pub fn to_name(&self) -> &str {
-        self.to.split('.').last().unwrap_or(&self.to)
+        self.to.split('.').next_back().unwrap_or(&self.to)
     }
 
     /// Get the source category if specified
+    #[must_use]
     pub fn from_category(&self) -> Option<&str> {
         let parts: Vec<&str> = self.from.split('.').collect();
         if parts.len() > 1 {
@@ -66,6 +70,7 @@ impl Interaction {
     }
 
     /// Get the target category if specified
+    #[must_use]
     pub fn to_category(&self) -> Option<&str> {
         let parts: Vec<&str> = self.to.split('.').collect();
         if parts.len() > 1 {
@@ -80,22 +85,22 @@ impl Interaction {
 pub mod types {
     /// Data streaming between organisms
     pub const STREAM: &str = "stream";
-    
+
     /// Request/response pattern
     pub const REQUEST: &str = "request";
-    
+
     /// Event notification
     pub const EVENT: &str = "event";
-    
+
     /// Encryption layer
     pub const ENCRYPTION: &str = "encryption_layer";
-    
+
     /// Identity binding
     pub const IDENTITY: &str = "identity_binding";
-    
+
     /// State synchronization
     pub const SYNC: &str = "state_sync";
-    
+
     /// Action verification
     pub const VERIFY: &str = "action_verification";
 }
@@ -106,12 +111,9 @@ mod tests {
 
     #[test]
     fn test_interaction() {
-        let interaction = Interaction::new(
-            "chimeras.gaming_mesh",
-            "primals.anti_cheat",
-            types::VERIFY,
-        )
-        .with_config("verify_before_apply", serde_json::Value::Bool(true));
+        let interaction =
+            Interaction::new("chimeras.gaming_mesh", "primals.anti_cheat", types::VERIFY)
+                .with_config("verify_before_apply", serde_json::Value::Bool(true));
 
         assert_eq!(interaction.from_name(), "gaming_mesh");
         assert_eq!(interaction.to_name(), "anti_cheat");
@@ -119,4 +121,3 @@ mod tests {
         assert_eq!(interaction.to_category(), Some("primals"));
     }
 }
-

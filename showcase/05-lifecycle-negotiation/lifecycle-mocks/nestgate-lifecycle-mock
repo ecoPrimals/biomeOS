@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+# Mock NestGate with lifecycle negotiation - defers on first request
+
+PORT=${PORT:-9020}
+
+if [ "$1" = "--version" ]; then
+    echo "nestgate-lifecycle-mock 1.0.0"
+    exit 0
+fi
+
+if [ "$1" != "service" ] && [ "$1" != "--help" ]; then
+    echo "Usage: nestgate-lifecycle-mock service"
+    exit 1
+fi
+
+if [ "$1" = "--help" ]; then
+    echo "NestGate Storage with Lifecycle Support (Mock)"
+    exit 0
+fi
+
+echo "🪺 NestGate (Lifecycle Mock) starting on port $PORT"
+echo "   Lifecycle behavior: Defers (active operations), then accepts"
+echo ""
+
+python3 -c "
+import http.server
+import socketserver
+import json
+import time
+
+PORT = $PORT
+lifecycle_request_count = 0
+
+class LifecycleHandler(http.server.SimpleHTTPRequestHandler):
+    def do_GET(self):
+        global lifecycle_request_count
+        
+        if self.path == '/health':
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            response = {
+                'status': 'healthy',
+                'primal': 'nestgate',
+                'capabilities': ['storage', 'sovereignty', 'lifecycle']
+            }
+            self.wfile.write(json.dumps(response).encode())
+        elif self.path == '/lifecycle/request':
+            lifecycle_request_count += 1
+            
+            if lifecycle_request_count == 1:
+                # First request: defer (simulating active operations)
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                response = {
+                    'status': 'deferred',
+                    'duration_secs': 10,
+                    'reason': 'Completing 3 active write operations'
+                }
+                self.wfile.write(json.dumps(response).encode())
+            else:
+                # Subsequent requests: accept
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                response = {
+                    'status': 'accepted',
+                    'message': 'Operations complete, ready to stop'
+                }
+                self.wfile.write(json.dumps(response).encode())
+        else:
+            self.send_response(200)
+            self.send_header('Content-type', 'text/plain')
+            self.end_headers()
+            self.wfile.write(b'NestGate Lifecycle Mock')
+    
+    def log_message(self, format, *args):
+        return
+
+with socketserver.TCPServer(('', PORT), LifecycleHandler) as httpd:
+    print(f'✅ NestGate listening on port {PORT}')
+    print(f'   Health: http://localhost:{PORT}/health')
+    print(f'   Lifecycle: http://localhost:{PORT}/lifecycle/request')
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        print('\n✅ NestGate stopped')
+"
+

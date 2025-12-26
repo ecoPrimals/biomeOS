@@ -1,0 +1,30 @@
+
+✅ Loaded 3 chimera definitions:
+
+🧬 ml-pipeline
+   Name: ML Pipeline
+   Version: 1.0.0
+   Primals: squirrel, toadstool, nestgate
+   Uses Arrays: false
+
+🧬 p2p-secure
+   Name: P2P Secure Mesh
+   Version: 1.0.0
+   Primals: beardog, songbird
+   Uses Arrays: false
+
+🧬 gaming-mesh
+   Name: Gaming Mesh
+   Version: 1.0.0
+   Primals: toadstool, songbird, beardog
+   Uses Arrays: true
+
+📋 Details for p2p-secure:
+   Description: A chimera that fuses BearDog's genetic cryptography with Songbird's 
+   Fusion bindings: 2
+   API endpoints: 3
+     - connect(peer_did, trust_policy)
+     - broadcast(message, scope)
+     - discover(capability, trust_level)
+
+🌱 Demo complete!

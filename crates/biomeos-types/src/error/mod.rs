@@ -10,24 +10,22 @@
 //! - `operations`: Operation types for error context
 //! - `conversions`: Error constructor methods and From implementations
 
-pub mod core;
 pub mod ai_context;
-pub mod operations;
 pub mod conversions;
+pub mod core;
+pub mod operations;
 
 // Re-export core types
 pub use core::{BiomeError, ValidationError};
 
 // Re-export AI context types
 pub use ai_context::{
-    AIErrorContext, AIErrorCategory, RetryStrategy, BackoffType,
-    ErrorSeverity, SuggestedAction, ActionType, ActionRiskLevel,
+    AIErrorCategory, AIErrorContext, ActionRiskLevel, ActionType, BackoffType, ErrorSeverity,
+    RetryStrategy, SuggestedAction,
 };
 
 // Re-export operation types
-pub use operations::{
-    NetworkOperation, SecurityViolationType, ResourceOperation, DataOperation,
-};
+pub use operations::{DataOperation, NetworkOperation, ResourceOperation, SecurityViolationType};
 
 // Re-export conversions
-pub use conversions::BiomeResult; 
+pub use conversions::BiomeResult;

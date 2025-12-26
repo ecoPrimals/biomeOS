@@ -265,15 +265,9 @@ pub struct TracingSpec {
 /// Tracing exporters
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TracingExporter {
-    Jaeger {
-        endpoint: String,
-    },
-    Zipkin {
-        endpoint: String,
-    },
-    Otlp {
-        endpoint: String,
-    },
+    Jaeger { endpoint: String },
+    Zipkin { endpoint: String },
+    Otlp { endpoint: String },
 }
 
 /// Alerting specification
@@ -448,4 +442,4 @@ pub enum EnforcementMode {
     Enforce,
     Warn,
     Disabled,
-} 
+}

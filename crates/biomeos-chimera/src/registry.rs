@@ -25,6 +25,7 @@ pub struct ChimeraRegistry {
 
 impl ChimeraRegistry {
     /// Create a new empty registry
+    #[must_use]
     pub fn new() -> Self {
         Self {
             definitions: DashMap::new(),
@@ -33,6 +34,10 @@ impl ChimeraRegistry {
     }
 
     /// Create a registry from a definitions directory
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the directory cannot be read or contains invalid chimera definitions
     pub fn from_directory(path: impl AsRef<Path>) -> ChimeraResult<Self> {
         let mut registry = Self::new();
         registry.load_directory(path)?;
@@ -40,9 +45,13 @@ impl ChimeraRegistry {
     }
 
     /// Load chimera definitions from a directory
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the directory cannot be read or any chimera definition is invalid
     pub fn load_directory(&mut self, path: impl AsRef<Path>) -> ChimeraResult<usize> {
         let path = path.as_ref();
-        
+
         if !path.exists() {
             return Err(ChimeraError::DefinitionNotFound {
                 path: path.to_path_buf(),
@@ -58,11 +67,14 @@ impl ChimeraRegistry {
             .filter_map(Result::ok)
         {
             let file_path = entry.path();
-            
+
             // Only process YAML files
-            if file_path.extension().map_or(false, |ext| ext == "yaml" || ext == "yml") {
+            if file_path
+                .extension()
+                .is_some_and(|ext| ext == "yaml" || ext == "yml")
+            {
                 match self.load_file(file_path) {
-                    Ok(_) => count += 1,
+                    Ok(()) => count += 1,
                     Err(e) => {
                         warn!("Failed to load chimera from {:?}: {}", file_path, e);
                     }
@@ -75,13 +87,17 @@ impl ChimeraRegistry {
     }
 
     /// Load a single chimera definition file
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file cannot be read or parsed as a valid chimera definition
     pub fn load_file(&mut self, path: impl AsRef<Path>) -> ChimeraResult<()> {
         let path = path.as_ref();
         debug!("Loading chimera from {:?}", path);
 
         let definition = ChimeraDefinition::from_file(path)?;
         let id = definition.chimera.id.clone();
-        
+
         self.definitions.insert(id.clone(), Arc::new(definition));
         debug!("Registered chimera: {}", id);
 
@@ -89,24 +105,25 @@ impl ChimeraRegistry {
     }
 
     /// Get a chimera by ID
+    #[must_use]
     pub fn get(&self, id: &str) -> Option<Arc<ChimeraDefinition>> {
         self.definitions.get(id).map(|r| Arc::clone(r.value()))
     }
 
     /// Check if a chimera exists
+    #[must_use]
     pub fn contains(&self, id: &str) -> bool {
         self.definitions.contains_key(id)
     }
 
     /// List all chimera IDs
+    #[must_use]
     pub fn list(&self) -> Vec<String> {
-        self.definitions
-            .iter()
-            .map(|r| r.key().clone())
-            .collect()
+        self.definitions.iter().map(|r| r.key().clone()).collect()
     }
 
     /// Get all chimera definitions
+    #[must_use]
     pub fn all(&self) -> Vec<Arc<ChimeraDefinition>> {
         self.definitions
             .iter()
@@ -115,22 +132,28 @@ impl ChimeraRegistry {
     }
 
     /// Number of registered chimeras
+    #[must_use]
     pub fn len(&self) -> usize {
         self.definitions.len()
     }
 
     /// Check if registry is empty
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.definitions.is_empty()
     }
 
     /// Reload all definitions from source directories
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if any source directory cannot be read or contains invalid definitions
     pub fn reload(&mut self) -> ChimeraResult<usize> {
         self.definitions.clear();
-        
+
         let dirs: Vec<_> = self.source_dirs.clone();
         let mut total = 0;
-        
+
         for dir in dirs {
             // Temporarily remove from source_dirs to avoid double-adding
             self.source_dirs.retain(|d| d != &dir);
@@ -141,6 +164,7 @@ impl ChimeraRegistry {
     }
 
     /// Get chimeras by required primal
+    #[must_use]
     pub fn by_primal(&self, primal: &str) -> Vec<Arc<ChimeraDefinition>> {
         self.definitions
             .iter()
@@ -150,6 +174,7 @@ impl ChimeraRegistry {
     }
 
     /// Get summary information
+    #[must_use]
     pub fn summary(&self) -> HashMap<String, ChimeraSummary> {
         self.definitions
             .iter()
@@ -160,7 +185,11 @@ impl ChimeraRegistry {
                     ChimeraSummary {
                         name: def.chimera.name.clone(),
                         version: def.chimera.version.clone(),
-                        primals: def.required_primals().iter().map(|s| (*s).to_string()).collect(),
+                        primals: def
+                            .required_primals()
+                            .iter()
+                            .map(|s| (*s).to_string())
+                            .collect(),
                         uses_arrays: def.uses_arrays(),
                     },
                 )
@@ -229,7 +258,7 @@ fusion:
         create_test_chimera(temp_dir.path(), "chimera-b");
 
         let registry = ChimeraRegistry::from_directory(temp_dir.path()).unwrap();
-        
+
         assert_eq!(registry.len(), 2);
         assert!(registry.contains("chimera-a"));
         assert!(registry.contains("chimera-b"));
@@ -241,7 +270,7 @@ fusion:
         create_test_chimera(temp_dir.path(), "test-chimera");
 
         let registry = ChimeraRegistry::from_directory(temp_dir.path()).unwrap();
-        
+
         let beardog_chimeras = registry.by_primal("beardog");
         assert_eq!(beardog_chimeras.len(), 1);
 
@@ -249,4 +278,3 @@ fusion:
         assert!(songbird_chimeras.is_empty());
     }
 }
-

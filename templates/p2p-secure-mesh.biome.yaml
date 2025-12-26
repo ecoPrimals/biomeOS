@@ -1,0 +1,179 @@
+# P2P Secure Mesh Biome Configuration
+# 
+# This biome demonstrates BiomeOS coordinating BTSP and BirdSong
+# for privacy-preserving, peer-to-peer mesh networking.
+#
+# Use Case: Decentralized mesh network with genetic cryptography
+# - BTSP tunnels for secure communication
+# - BirdSong for privacy-preserving discovery
+# - Lineage-gated relay for NAT traversal (no TURN servers!)
+
+version: "1.0"
+name: "p2p-secure-mesh"
+description: "Privacy-preserving P2P mesh with BTSP and BirdSong"
+
+metadata:
+  author: "BiomeOS Team"
+  category: "networking"
+  tags: ["p2p", "btsp", "birdsong", "privacy", "mesh"]
+  created: "2025-12-26"
+
+# Primal Requirements (capability-based, not name-based!)
+primals:
+  # Any security primal that provides genetic cryptography
+  - capability: "security"
+    features:
+      - "btsp"          # BearDog Transport Security Protocol
+      - "birdsong"      # Privacy-preserving discovery
+      - "lineage"       # Lineage verification
+      - "genetic-keys"  # Self-enforcing key constraints
+    
+    # Preferred implementation (but not required!)
+    preferred: "beardog"
+    
+    # Configuration
+    config:
+      hsm_discovery: true
+      entropy_mixing: "hardware+human"
+      key_rotation_interval: "24h"
+
+  # Any discovery primal that provides mesh networking
+  - capability: "discovery"
+    features:
+      - "mesh"          # Multi-node mesh networking
+      - "federation"    # Multi-tower federation
+      - "encrypted"     # Encrypted discovery mode
+      - "relay"         # Lineage-gated relay
+    
+    # Preferred implementation (but not required!)
+    preferred: "songbird"
+    
+    # Configuration
+    config:
+      discovery_mode: "birdsong"  # Encrypted by default
+      mesh_protocol: "mdns"       # Local discovery
+      federation: true
+
+# P2P Coordination Configuration
+coordination:
+  # BTSP tunnel configuration
+  btsp:
+    enabled: true
+    auto_create: true
+    forward_secrecy: true
+    key_rotation: "1h"
+    
+    # Tunnel endpoints
+    endpoints:
+      - node_id: "node-a"
+        address: "discover"  # Auto-discover via mesh
+      - node_id: "node-b"
+        address: "discover"  # Auto-discover via mesh
+
+  # BirdSong encrypted discovery
+  birdsong:
+    enabled: true
+    family_id: "my-family"
+    lineage_depth: 3
+    
+    # Privacy settings
+    privacy:
+      encrypt_broadcasts: true
+      hide_ip_addresses: true
+      filter_by_lineage: true
+
+  # Lineage-gated relay (NAT traversal without TURN!)
+  relay:
+    enabled: true
+    volunteer_as_relay: true
+    max_relay_connections: 10
+    
+    # Only relay for verified lineage
+    lineage_requirement:
+      verify: true
+      max_depth: 5
+
+# Services to deploy in the mesh
+services:
+  # Example: Secure chat service
+  - name: "secure-chat"
+    primal: "discovery"
+    type: "mesh-service"
+    
+    config:
+      transport: "btsp"      # Use BTSP tunnel
+      discovery: "birdsong"  # Use BirdSong discovery
+      port: 9001
+
+  # Example: File sharing service
+  - name: "file-share"
+    primal: "storage"
+    type: "mesh-service"
+    
+    config:
+      transport: "btsp"
+      discovery: "birdsong"
+      encryption: true
+      port: 9002
+
+# Resource Configuration
+resources:
+  # Lightweight - designed for distributed mesh
+  compute:
+    cpu: "1"
+    memory: "512Mi"
+  
+  networking:
+    bandwidth: "10Mbps"
+    latency_target: "100ms"
+
+# Security Configuration
+security:
+  # Everything encrypted by default
+  encryption:
+    at_rest: true
+    in_transit: true
+    end_to_end: true
+  
+  # Lineage-based trust
+  trust_model: "lineage"
+  
+  # No Certificate Authorities!
+  certificate_authority: false
+
+# Health Monitoring
+monitoring:
+  health_checks:
+    interval: "30s"
+    
+  metrics:
+    - "tunnel_health"
+    - "discovery_mode"
+    - "relay_connections"
+    - "lineage_verifications"
+
+# Deployment Strategy
+deployment:
+  # Gradual mesh expansion
+  strategy: "mesh-expansion"
+  
+  # Start with 2 nodes, scale to N
+  initial_nodes: 2
+  auto_scale: true
+  
+  # Node discovery
+  discovery:
+    method: "birdsong"
+    timeout: "30s"
+
+# Notes for BiomeOS
+# 
+# BiomeOS will:
+# 1. Discover primals by capability (security + discovery)
+# 2. Coordinate BTSP tunnel creation between them
+# 3. Enable BirdSong encrypted discovery
+# 4. Set up lineage-gated relay for NAT traversal
+# 5. Monitor health and handle failover
+# 
+# All in pure Rust! No shell scripts, no hardcoded primal names.
+

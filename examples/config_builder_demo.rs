@@ -17,14 +17,8 @@ async fn main() -> Result<()> {
     let dev_config = BiomeOSConfigBuilder::for_local_development().build();
 
     println!("  Environment: {:?}", dev_config.system.environment);
-    println!(
-        "  Discovery methods: {:?}",
-        dev_config.discovery.methods
-    );
-    println!(
-        "  Network binding: {}",
-        dev_config.network.bind_address
-    );
+    println!("  Discovery methods: {:?}", dev_config.discovery.methods);
+    println!("  Network binding: {}", dev_config.network.bind_address);
     println!(
         "  Organization scale: {:?}",
         dev_config.system.organization_scale
@@ -38,18 +32,12 @@ async fn main() -> Result<()> {
     let prod_config = BiomeOSConfigBuilder::for_production().build();
 
     println!("  Environment: {:?}", prod_config.system.environment);
-    println!(
-        "  Discovery methods: {:?}",
-        prod_config.discovery.methods
-    );
+    println!("  Discovery methods: {:?}", prod_config.discovery.methods);
     println!(
         "  Organization scale: {:?}",
         prod_config.system.organization_scale
     );
-    println!(
-        "  Network binding: {}",
-        prod_config.network.bind_address
-    );
+    println!("  Network binding: {}", prod_config.network.bind_address);
 
     let prod_manager = UniversalBiomeOSManager::new(prod_config).await?;
     println!("  ✅ Manager created with production configuration\n");
@@ -59,10 +47,7 @@ async fn main() -> Result<()> {
     let test_config = BiomeOSConfigBuilder::for_testing().build();
 
     println!("  Environment: {:?}", test_config.system.environment);
-    println!(
-        "  Discovery methods: {:?}",
-        test_config.discovery.methods
-    );
+    println!("  Discovery methods: {:?}", test_config.discovery.methods);
     println!(
         "  Organization scale: {:?}",
         test_config.system.organization_scale
@@ -96,22 +81,13 @@ async fn main() -> Result<()> {
         ])
         .build();
 
-    println!(
-        "  Discovery methods: {:?}",
-        custom_config.discovery.methods
-    );
+    println!("  Discovery methods: {:?}", custom_config.discovery.methods);
     println!(
         "  DNS servers: {:?}",
         custom_config.discovery.dns.as_ref().map(|d| &d.servers)
     );
-    println!(
-        "  Environment: {:?}",
-        custom_config.system.environment
-    );
-    println!(
-        "  Network binding: {}",
-        custom_config.network.bind_address
-    );
+    println!("  Environment: {:?}", custom_config.system.environment);
+    println!("  Network binding: {}", custom_config.network.bind_address);
 
     let custom_manager = UniversalBiomeOSManager::new(custom_config).await?;
     println!("  ✅ Manager created with custom configuration\n");

@@ -1,0 +1,34 @@
+{
+  "biomeOS_live_demo": {
+    "timestamp": "2025-12-22T21:39:46-05:00",
+    "host": "pop-os",
+    "user": "eastgate",
+    "receipt_dir": "/home/eastgate/Development/ecoPrimals/phase2/biomeOS/demo-receipts/20251222-213941",
+    "demos_run": 10,
+    "all_passed": true
+  },
+  "receipt_hashes": {
+    "beardog-crypto.receipt.json": "2ac926d9bcb23e15514f1077740cbda75b4d68ae52c014f83d730e9d53fee3f1",
+"chimera-registry.receipt.json": "1afd292f77b30bd8b33996c6a0af0a49eecc81edc7c8cab69e03572436a35cd6",
+"full-ecosystem.receipt.json": "286dac2cb393aec30c3f8a885d3b128fd74695506e4c9e89595c6fed255c5a9e",
+"gaming-mesh-chimera.receipt.json": "a922e5764a5f9d95bc625ceaabd2c7e01796f5005e12abeb94ebf552c71fab62",
+"nestgate-storage.receipt.json": "2c88802332d40cec41c3b1269d670b20a7f6cc1c7b8da15294bf47fa8ea736fc",
+"p2p-secure-chimera.receipt.json": "f24a6ca138f98137122d9b49c0d39eda003fcde2f2b9ac14a0c9f91d4cfa8e56",
+"platypus-fused.receipt.json": "1b82518834ae5a5ec4f0fb03aee0e11d2d5f3a135deec69b7fba6e01750a6689",
+"primal-status.receipt.json": "68bab25c039d7e3ec98334f56401c225cc7d0d7b2fb7e2a476a0fedd3d12a8dd",
+"songbird-gaming.receipt.json": "fdee2df39015ceabd3259f97d543f941f34baacec2c0b3bb8d41b60fa254da57",
+"toadstool-discovery.receipt.json": "4503f311e396ef3d42219f41205248636f79d890cc3399646fcbd7203e04b1cd",
+
+  },
+  "replication": {
+    "command": "./bin/live-demo.sh all",
+    "requirements": [
+      "Rust toolchain",
+      "Parent primals built (./bin/pull-primals.sh --all)",
+      "Chimeras compiled"
+    ]
+  },
+  "verification": {
+    "master_hash": "45dbd2f840f91a44cad2acb8076bb24dd1863a3504521e0f22ef6719cb018c04"
+  }
+}

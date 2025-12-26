@@ -145,15 +145,15 @@ pub async fn validate_config(config_path: &str) -> Result<()> {
     // Validate required fields
     let mut errors = Vec::new();
 
-    if !config.get("federation").is_some() {
+    if config.get("federation").is_none() {
         errors.push("Missing 'federation' section");
     }
 
     if let Some(discovery) = config.get("federation").and_then(|f| f.get("discovery")) {
-        if !discovery.get("method").is_some() {
+        if discovery.get("method").is_none() {
             errors.push("Missing 'discovery.method'");
         }
-        if !discovery.get("timeout").is_some() {
+        if discovery.get("timeout").is_none() {
             errors.push("Missing 'discovery.timeout'");
         }
     } else {

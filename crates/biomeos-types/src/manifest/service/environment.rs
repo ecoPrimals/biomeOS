@@ -12,21 +12,13 @@ pub enum EnvVarSpec {
     Value(String),
 
     /// Reference to secret
-    Secret {
-        name: String,
-        key: String,
-    },
+    Secret { name: String, key: String },
 
     /// Reference to config
-    Config {
-        name: String,
-        key: String,
-    },
+    Config { name: String, key: String },
 
     /// Field reference
-    FieldRef {
-        field_path: String,
-    },
+    FieldRef { field_path: String },
 
     /// Resource field reference
     ResourceFieldRef {
@@ -83,4 +75,4 @@ pub enum DependencyCondition {
     ServiceHealthy,
     ServiceCompleted,
     Custom(String),
-} 
+}

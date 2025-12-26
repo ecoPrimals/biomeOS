@@ -1,0 +1,11 @@
+{
+  "demo": "toadstool-discovery",
+  "timestamp": "2025-12-22T21:39:45-05:00",
+  "status": "success",
+  "host": "pop-os",
+  "user": "eastgate",
+  "biomeOS_version": "1.0.0",
+  "output_hash": "c11c8abe94d3fb9baaa3d85e7ad575b9a87e03e488e1a0c959bb4de2703ba9c6",
+  "output_lines": 21,
+  "replication_command": "./bin/live-demo.sh toadstool-discovery"
+}

@@ -26,13 +26,13 @@ pub fn create_spinner(message: &str) -> ProgressBar {
 /// Parse comma-separated capabilities string into PrimalCapability vector
 pub fn parse_capabilities(caps_str: &str) -> Result<Vec<PrimalCapability>> {
     let mut capabilities = Vec::new();
-    
+
     for cap_str in caps_str.split(',') {
         let trimmed = cap_str.trim();
         if trimmed.is_empty() {
             continue;
         }
-        
+
         // Parse category/name format
         if let Some((category, name)) = trimmed.split_once('/') {
             capabilities.push(PrimalCapability {
@@ -53,11 +53,14 @@ pub fn parse_capabilities(caps_str: &str) -> Result<Vec<PrimalCapability>> {
             });
         }
     }
-    
+
     if capabilities.is_empty() {
-        return Err(anyhow::anyhow!("No valid capabilities found in: {}", caps_str));
+        return Err(anyhow::anyhow!(
+            "No valid capabilities found in: {}",
+            caps_str
+        ));
     }
-    
+
     Ok(capabilities)
 }
 
@@ -77,7 +80,7 @@ pub async fn display_results(
 
     for (key, value) in results {
         println!("🔹 {}", key);
-        
+
         if show_details {
             if let Ok(pretty) = serde_json::to_string_pretty(value) {
                 // Indent the JSON output
@@ -119,15 +122,15 @@ pub fn format_bytes(bytes: u64) -> String {
     const UNITS: &[&str] = &["B", "KB", "MB", "GB", "TB"];
     let mut size = bytes as f64;
     let mut unit_index = 0;
-    
+
     while size >= 1024.0 && unit_index < UNITS.len() - 1 {
         size /= 1024.0;
         unit_index += 1;
     }
-    
+
     if unit_index == 0 {
         format!("{} {}", bytes, UNITS[unit_index])
     } else {
         format!("{:.1} {}", size, UNITS[unit_index])
     }
-} 
+}

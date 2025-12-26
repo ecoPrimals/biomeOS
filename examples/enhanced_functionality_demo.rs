@@ -4,8 +4,10 @@
 
 use anyhow::Result;
 use biomeos_core::universal_biomeos_manager::PrimalInfo;
-use biomeos_core::{BiomeOSConfig, UniversalBiomeOSManager};
-use biomeos_primal_sdk::{PrimalCapability, Health, PrimalType};
+use biomeos_core::UniversalBiomeOSManager;
+use biomeos_primal_sdk::{PrimalCapability, PrimalType};
+use biomeos_types::{BiomeOSConfig, Health};
+use std::collections::HashMap;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -17,168 +19,144 @@ async fn main() -> Result<()> {
 
     // Initialize BiomeOS with default configuration
     let config = BiomeOSConfig::default();
-    let manager = UniversalBiomeOSManager::new(config);
+    let manager = UniversalBiomeOSManager::new(config).await?;
 
-    // Initialize the manager
-    manager.initialize().await?;
     println!("✅ BiomeOS manager initialized");
 
     // Create some example primals to register
+    let now = chrono::Utc::now();
+
     let toadstool_primal = PrimalInfo {
         id: "toadstool-001".to_string(),
+        name: "ToadStool Container Manager".to_string(),
         primal_type: PrimalType::new("compute", "toadstool", "1.0.0"),
         capabilities: vec![
-            PrimalCapability::new("compute", "container_orchestration", "1.0"),
-            PrimalCapability::new("compute", "vm_management", "1.0"),
-            PrimalCapability::new("system", "resource_management", "1.0"),
+            PrimalCapability::new("compute", "container_orchestration", "1.0.0"),
+            PrimalCapability::new("compute", "vm_management", "1.0.0"),
+            PrimalCapability::new("system", "resource_management", "1.0.0"),
         ],
         health: Health::Healthy,
-        discovered_at: chrono::Utc::now(),
+        endpoint: "http://localhost:8084".to_string(),
+        last_seen: now,
+        discovered_at: now,
+        metadata: HashMap::new(),
     };
 
     let songbird_primal = PrimalInfo {
         id: "songbird-001".to_string(),
+        name: "Songbird Service Discovery".to_string(),
         primal_type: PrimalType::new("networking", "songbird", "2.0.0"),
         capabilities: vec![
-            PrimalCapability::new("networking", "service_discovery", "2.0"),
-            PrimalCapability::new("networking", "load_balancing", "2.0"),
-            PrimalCapability::new("system", "orchestration", "2.0"),
+            PrimalCapability::new("networking", "service_discovery", "2.0.0"),
+            PrimalCapability::new("networking", "load_balancing", "2.0.0"),
+            PrimalCapability::new("system", "orchestration", "2.0.0"),
         ],
         health: Health::Healthy,
-        discovered_at: chrono::Utc::now(),
+        endpoint: "http://localhost:8080".to_string(),
+        last_seen: now,
+        discovered_at: now,
+        metadata: HashMap::new(),
     };
 
     let nestgate_primal = PrimalInfo {
         id: "nestgate-001".to_string(),
+        name: "NestGate Storage Manager".to_string(),
         primal_type: PrimalType::new("storage", "nestgate", "1.5.0"),
         capabilities: vec![
-            PrimalCapability::new("storage", "persistent_volumes", "1.5"),
-            PrimalCapability::new("storage", "file_systems", "1.5"),
-            PrimalCapability::new("system", "data_management", "1.5"),
+            PrimalCapability::new("storage", "persistent_volumes", "1.5.0"),
+            PrimalCapability::new("storage", "file_systems", "1.5.0"),
+            PrimalCapability::new("system", "data_management", "1.5.0"),
         ],
         health: Health::Healthy,
-        discovered_at: chrono::Utc::now(),
+        endpoint: "http://localhost:8082".to_string(),
+        last_seen: now,
+        discovered_at: now,
+        metadata: HashMap::new(),
     };
 
     // Register the primals
     println!("\n🔧 Registering Primals:");
-    manager
-        .register_primal("toadstool-001".to_string(), toadstool_primal)
-        .await?;
+    manager.register_primal(toadstool_primal).await?;
     println!("  ✅ Registered Toadstool compute primal");
 
-    manager
-        .register_primal("songbird-001".to_string(), songbird_primal)
-        .await?;
+    manager.register_primal(songbird_primal).await?;
     println!("  ✅ Registered Songbird networking primal");
 
-    manager
-        .register_primal("nestgate-001".to_string(), nestgate_primal)
-        .await?;
+    manager.register_primal(nestgate_primal).await?;
     println!("  ✅ Registered NestGate storage primal");
 
     // Test getting all registered primals
-    let registered = manager.get_registered_primals();
-    println!("\n📋 Registered Primals: {} total", registered.len());
-    for primal in &registered {
+    println!("\n📋 Currently Registered Primals:");
+    let primals = manager.get_registered_primals().await;
+    for primal in &primals {
         println!(
-            "  🎯 {}: {} capabilities",
-            primal.id,
-            primal.capabilities.len()
+            "  - {} ({:?}): {:?}",
+            primal.name, primal.primal_type, primal.health
         );
+        println!("    Capabilities:");
+        for cap in &primal.capabilities {
+            println!("      • {:?}", cap);
+        }
     }
 
     // Test capability-based discovery
     println!("\n🔍 Testing Capability-Based Discovery:");
 
-    // Look for compute capabilities
-    let compute_capabilities = vec![PrimalCapability::new(
+    // Find compute primals
+    let compute_caps = vec![PrimalCapability::new(
         "compute",
         "container_orchestration",
-        "1.0",
+        "1.0.0",
     )];
+    let compute_primals = manager.discover_by_capability(&compute_caps).await?;
+    println!(
+        "  Compute primals (container orchestration): {} found",
+        compute_primals.len()
+    );
 
-    match manager.discover_by_capability(&compute_capabilities).await {
-        Ok(results) => {
-            println!(
-                "  ✅ Found {} primals with compute capabilities:",
-                results.len()
-            );
-            for result in results {
-                println!("    - {}: {}", result.id, result.endpoint);
-            }
-        }
-        Err(e) => println!("  ❌ Compute discovery failed: {}", e),
-    }
-
-    // Look for networking capabilities
-    let networking_capabilities = vec![PrimalCapability::new(
-        "networking",
-        "service_discovery",
-        "2.0",
-    )];
-
-    match manager
-        .discover_by_capability(&networking_capabilities)
-        .await
-    {
-        Ok(results) => {
-            println!(
-                "  ✅ Found {} primals with networking capabilities:",
-                results.len()
-            );
-            for result in results {
-                println!("    - {}: {}", result.id, result.endpoint);
-            }
-        }
-        Err(e) => println!("  ❌ Networking discovery failed: {}", e),
-    }
-
-    // Look for storage capabilities
-    let storage_capabilities = vec![PrimalCapability::new(
+    // Find storage primals
+    let storage_caps = vec![PrimalCapability::new(
         "storage",
         "persistent_volumes",
-        "1.5",
+        "1.5.0",
     )];
+    let storage_primals = manager.discover_by_capability(&storage_caps).await?;
+    println!(
+        "  Storage primals (persistent volumes): {} found",
+        storage_primals.len()
+    );
 
-    match manager.discover_by_capability(&storage_capabilities).await {
-        Ok(results) => {
-            println!(
-                "  ✅ Found {} primals with storage capabilities:",
-                results.len()
-            );
-            for result in results {
-                println!("    - {}: {}", result.id, result.endpoint);
-            }
-        }
-        Err(e) => println!("  ❌ Storage discovery failed: {}", e),
-    }
+    // Find network primals
+    let network_caps = vec![PrimalCapability::new(
+        "networking",
+        "service_discovery",
+        "2.0.0",
+    )];
+    let network_primals = manager.discover_by_capability(&network_caps).await?;
+    println!(
+        "  Network primals (service discovery): {} found",
+        network_primals.len()
+    );
 
-    // Test complex capability requirements (multiple capabilities)
-    let complex_capabilities = vec![
-        PrimalCapability::new("system", "resource_management", "1.0"),
-        PrimalCapability::new("compute", "container_orchestration", "1.0"),
-    ];
+    // Test discovery for a capability no primal has
+    let ai_caps = vec![PrimalCapability::new("ai", "ml_inference", "1.0.0")];
+    let ai_primals = manager.discover_by_capability(&ai_caps).await?;
+    println!("  AI primals (ML inference): {} found", ai_primals.len());
 
-    match manager.discover_by_capability(&complex_capabilities).await {
-        Ok(results) => {
-            println!(
-                "  ✅ Found {} primals with complex capabilities (compute + system):",
-                results.len()
-            );
-            for result in results {
-                println!("    - {}: {}", result.id, result.endpoint);
-            }
-        }
-        Err(e) => println!("  ❌ Complex discovery failed: {}", e),
-    }
-
-    // Test system health
+    // Get system health
+    println!("\n💚 System Health:");
     let health = manager.get_system_health().await;
-    println!("\n🏥 System Health: {:?}", health.overall_status);
+    println!("  Overall status: {:?}", health.health);
 
-    println!("\n✨ Enhanced functionality demo completed successfully!");
-    println!("   Demonstrated: Registration, capability discovery, health monitoring");
+    // Get primal statistics
+    println!("\n📈 Primal Statistics:");
+    let stats = manager.get_primal_statistics().await;
+    println!("  Total: {}", stats.total);
+    println!("  Healthy: {}", stats.healthy);
+    println!("  Degraded: {}", stats.degraded);
+    println!("  Unhealthy: {}", stats.unhealthy);
+
+    println!("\n✨ Demo completed successfully!");
 
     Ok(())
 }

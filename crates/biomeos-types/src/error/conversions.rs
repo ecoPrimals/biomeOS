@@ -3,8 +3,8 @@
 //! This module contains BiomeError constructor methods, trait implementations,
 //! and conversions from standard Rust error types.
 
+use super::ai_context::{AIErrorCategory, AIErrorContext, ErrorSeverity, RetryStrategy};
 use super::core::{BiomeError, ValidationError};
-use super::ai_context::{AIErrorContext, AIErrorCategory, ErrorSeverity, RetryStrategy};
 use super::operations::SecurityViolationType;
 
 /// Standard result type for biomeOS operations
@@ -12,15 +12,12 @@ pub type BiomeResult<T> = Result<T, BiomeError>;
 
 impl BiomeError {
     /// Create a configuration error with context
-    pub fn config_error(
-        message: impl Into<String>,
-        key: Option<impl Into<String>>,
-    ) -> Self {
+    pub fn config_error(message: impl Into<String>, key: Option<impl Into<String>>) -> Self {
         Self::Configuration {
             message: message.into(),
             key: key.map(|k| k.into()),
             config_path: None,
-            ai_context: AIErrorContext::new(AIErrorCategory::ConfigurationIssue),
+            ai_context: Box::new(AIErrorContext::new(AIErrorCategory::ConfigurationIssue)),
         }
     }
 
@@ -36,7 +33,7 @@ impl BiomeError {
             status_code,
             timeout_ms: None,
             operation: None,
-            ai_context: AIErrorContext::new(AIErrorCategory::NetworkFailure),
+            ai_context: Box::new(AIErrorContext::new(AIErrorCategory::NetworkFailure)),
         }
     }
 
@@ -50,7 +47,7 @@ impl BiomeError {
             context: None,
             auth_method: None,
             violation_type,
-            ai_context: AIErrorContext::new(AIErrorCategory::SecurityViolation),
+            ai_context: Box::new(AIErrorContext::new(AIErrorCategory::SecurityViolation)),
         }
     }
 
@@ -67,24 +64,23 @@ impl BiomeError {
             requested: requested.map(|s| s.into()),
             available: available.map(|s| s.into()),
             operation: None,
-            ai_context: AIErrorContext::new(AIErrorCategory::ResourceLimitation),
+            ai_context: Box::new(AIErrorContext::new(AIErrorCategory::ResourceLimitation)),
         }
     }
 
-    pub fn discovery_failed(
-        message: impl Into<String>,
-        target: Option<impl Into<String>>,
-    ) -> Self {
+    /// Create a discovery error
+    pub fn discovery_failed(message: impl Into<String>, target: Option<impl Into<String>>) -> Self {
         Self::Network {
             message: message.into(),
             endpoint: target.map(|s| s.into()),
             status_code: None,
             timeout_ms: None,
             operation: None,
-            ai_context: AIErrorContext::new(AIErrorCategory::NetworkFailure),
+            ai_context: Box::new(AIErrorContext::new(AIErrorCategory::NetworkFailure)),
         }
     }
 
+    /// Create an integration error
     pub fn integration_failed(
         message: impl Into<String>,
         service: Option<impl Into<String>>,
@@ -93,7 +89,7 @@ impl BiomeError {
             message: message.into(),
             component: service.map(|s| s.into()),
             integration_type: None,
-            ai_context: AIErrorContext::new(AIErrorCategory::DependencyFailure),
+            ai_context: Box::new(AIErrorContext::new(AIErrorCategory::DependencyFailure)),
         }
     }
 
@@ -106,7 +102,7 @@ impl BiomeError {
             message: message.into(),
             error_code: error_code.map(|c| c.into()),
             stack_trace: None,
-            ai_context: AIErrorContext::new(AIErrorCategory::SystemError),
+            ai_context: Box::new(AIErrorContext::new(AIErrorCategory::SystemError)),
         }
     }
 
@@ -120,104 +116,101 @@ impl BiomeError {
             message: message.into(),
             timeout_ms,
             operation: operation.map(|o| o.into()),
-            ai_context: AIErrorContext::with_retry(
+            ai_context: Box::new(AIErrorContext::with_retry(
                 AIErrorCategory::NetworkFailure,
                 RetryStrategy::exponential_backoff(3, 1000, 10000),
-            ),
+            )),
         }
     }
 
     /// Create a validation error
-    pub fn validation_error(
-        message: impl Into<String>,
-        errors: Vec<ValidationError>,
-    ) -> Self {
+    pub fn validation_error(message: impl Into<String>, errors: Vec<ValidationError>) -> Self {
         Self::Validation {
             message: message.into(),
             field: None,
             rule: None,
             errors,
-            ai_context: AIErrorContext::new(AIErrorCategory::UserError),
+            ai_context: Box::new(AIErrorContext::new(AIErrorCategory::UserError)),
         }
     }
 
     /// Get the error category
     pub fn category(&self) -> &AIErrorCategory {
         match self {
-            Self::Configuration { ai_context, .. } |
-            Self::InvalidInput { ai_context, .. } |
-            Self::Discovery { ai_context, .. } |
-            Self::Network { ai_context, .. } |
-            Self::Security { ai_context, .. } |
-            Self::Resource { ai_context, .. } |
-            Self::Integration { ai_context, .. } |
-            Self::Internal { ai_context, .. } |
-            Self::Timeout { ai_context, .. } |
-            Self::Authorization { ai_context, .. } |
-            Self::Validation { ai_context, .. } |
-            Self::ExternalService { ai_context, .. } |
-            Self::Data { ai_context, .. } |
-            Self::Unknown { ai_context, .. } => &ai_context.category,
+            Self::Configuration { ai_context, .. }
+            | Self::InvalidInput { ai_context, .. }
+            | Self::Discovery { ai_context, .. }
+            | Self::Network { ai_context, .. }
+            | Self::Security { ai_context, .. }
+            | Self::Resource { ai_context, .. }
+            | Self::Integration { ai_context, .. }
+            | Self::Internal { ai_context, .. }
+            | Self::Timeout { ai_context, .. }
+            | Self::Authorization { ai_context, .. }
+            | Self::Validation { ai_context, .. }
+            | Self::ExternalService { ai_context, .. }
+            | Self::Data { ai_context, .. }
+            | Self::Unknown { ai_context, .. } => &ai_context.category,
         }
     }
 
     /// Get the error severity
     pub fn severity(&self) -> &ErrorSeverity {
         match self {
-            Self::Configuration { ai_context, .. } |
-            Self::InvalidInput { ai_context, .. } |
-            Self::Discovery { ai_context, .. } |
-            Self::Network { ai_context, .. } |
-            Self::Security { ai_context, .. } |
-            Self::Resource { ai_context, .. } |
-            Self::Integration { ai_context, .. } |
-            Self::Internal { ai_context, .. } |
-            Self::Timeout { ai_context, .. } |
-            Self::Authorization { ai_context, .. } |
-            Self::Validation { ai_context, .. } |
-            Self::ExternalService { ai_context, .. } |
-            Self::Data { ai_context, .. } |
-            Self::Unknown { ai_context, .. } => &ai_context.severity,
+            Self::Configuration { ai_context, .. }
+            | Self::InvalidInput { ai_context, .. }
+            | Self::Discovery { ai_context, .. }
+            | Self::Network { ai_context, .. }
+            | Self::Security { ai_context, .. }
+            | Self::Resource { ai_context, .. }
+            | Self::Integration { ai_context, .. }
+            | Self::Internal { ai_context, .. }
+            | Self::Timeout { ai_context, .. }
+            | Self::Authorization { ai_context, .. }
+            | Self::Validation { ai_context, .. }
+            | Self::ExternalService { ai_context, .. }
+            | Self::Data { ai_context, .. }
+            | Self::Unknown { ai_context, .. } => &ai_context.severity,
         }
     }
 
     /// Check if automatic retry is recommended
     pub fn should_retry(&self) -> bool {
         match self {
-            Self::Configuration { ai_context, .. } |
-            Self::InvalidInput { ai_context, .. } |
-            Self::Discovery { ai_context, .. } |
-            Self::Network { ai_context, .. } |
-            Self::Security { ai_context, .. } |
-            Self::Resource { ai_context, .. } |
-            Self::Integration { ai_context, .. } |
-            Self::Internal { ai_context, .. } |
-            Self::Timeout { ai_context, .. } |
-            Self::Authorization { ai_context, .. } |
-            Self::Validation { ai_context, .. } |
-            Self::ExternalService { ai_context, .. } |
-            Self::Data { ai_context, .. } |
-            Self::Unknown { ai_context, .. } => ai_context.retry_strategy.should_retry,
+            Self::Configuration { ai_context, .. }
+            | Self::InvalidInput { ai_context, .. }
+            | Self::Discovery { ai_context, .. }
+            | Self::Network { ai_context, .. }
+            | Self::Security { ai_context, .. }
+            | Self::Resource { ai_context, .. }
+            | Self::Integration { ai_context, .. }
+            | Self::Internal { ai_context, .. }
+            | Self::Timeout { ai_context, .. }
+            | Self::Authorization { ai_context, .. }
+            | Self::Validation { ai_context, .. }
+            | Self::ExternalService { ai_context, .. }
+            | Self::Data { ai_context, .. }
+            | Self::Unknown { ai_context, .. } => ai_context.retry_strategy.should_retry,
         }
     }
 
     /// Get the AI error context
     pub fn ai_context(&self) -> &AIErrorContext {
         match self {
-            Self::Configuration { ai_context, .. } |
-            Self::InvalidInput { ai_context, .. } |
-            Self::Discovery { ai_context, .. } |
-            Self::Network { ai_context, .. } |
-            Self::Security { ai_context, .. } |
-            Self::Resource { ai_context, .. } |
-            Self::Integration { ai_context, .. } |
-            Self::Internal { ai_context, .. } |
-            Self::Timeout { ai_context, .. } |
-            Self::Authorization { ai_context, .. } |
-            Self::Validation { ai_context, .. } |
-            Self::ExternalService { ai_context, .. } |
-            Self::Data { ai_context, .. } |
-            Self::Unknown { ai_context, .. } => ai_context,
+            Self::Configuration { ai_context, .. }
+            | Self::InvalidInput { ai_context, .. }
+            | Self::Discovery { ai_context, .. }
+            | Self::Network { ai_context, .. }
+            | Self::Security { ai_context, .. }
+            | Self::Resource { ai_context, .. }
+            | Self::Integration { ai_context, .. }
+            | Self::Internal { ai_context, .. }
+            | Self::Timeout { ai_context, .. }
+            | Self::Authorization { ai_context, .. }
+            | Self::Validation { ai_context, .. }
+            | Self::ExternalService { ai_context, .. }
+            | Self::Data { ai_context, .. }
+            | Self::Unknown { ai_context, .. } => ai_context,
         }
     }
 
@@ -232,7 +225,7 @@ impl From<std::io::Error> for BiomeError {
     fn from(err: std::io::Error) -> Self {
         BiomeError::internal_error(
             format!("IO error: {}", err),
-            Some(format!("io_error_{}", err.kind() as u8))
+            Some(format!("io_error_{}", err.kind() as u8)),
         )
     }
 }
@@ -246,7 +239,7 @@ impl From<serde_json::Error> for BiomeError {
                 message: err.to_string(),
                 code: "invalid_json".to_string(),
                 rejected_value: None,
-            }]
+            }],
         )
     }
 }
@@ -260,7 +253,7 @@ impl From<uuid::Error> for BiomeError {
                 message: err.to_string(),
                 code: "invalid_uuid".to_string(),
                 rejected_value: None,
-            }]
+            }],
         )
     }
 }
@@ -291,4 +284,4 @@ mod tests {
         assert!(ErrorSeverity::Error > ErrorSeverity::Warning);
         assert!(ErrorSeverity::Warning > ErrorSeverity::Info);
     }
-} 
+}

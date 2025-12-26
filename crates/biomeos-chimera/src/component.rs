@@ -27,7 +27,7 @@ pub struct Component {
 /// A module from a primal
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ComponentModule {
-    /// Module name (e.g., "btsp", "genetic_crypto")
+    /// Module name (e.g., "btsp", "`genetic_crypto`")
     pub name: String,
 
     /// Human-readable description
@@ -95,12 +95,14 @@ impl Component {
     }
 
     /// Add a module to this component
+    #[must_use]
     pub fn with_module(mut self, module: ComponentModule) -> Self {
         self.modules.push(module);
         self
     }
 
     /// Enable array mode
+    #[must_use]
     pub fn with_array(mut self, min: u32, max: u32) -> Self {
         self.array = Some(ArraySpec {
             enabled: true,
@@ -111,16 +113,19 @@ impl Component {
     }
 
     /// Check if this component is in array mode
+    #[must_use]
     pub fn is_array(&self) -> bool {
-        self.array.as_ref().map_or(false, |a| a.enabled)
+        self.array.as_ref().is_some_and(|a| a.enabled)
     }
 
     /// Get the module names
+    #[must_use]
     pub fn module_names(&self) -> Vec<&str> {
         self.modules.iter().map(|m| m.name.as_str()).collect()
     }
 
     /// Get a specific module by name
+    #[must_use]
     pub fn get_module(&self, name: &str) -> Option<&ComponentModule> {
         self.modules.iter().find(|m| m.name == name)
     }
@@ -138,12 +143,14 @@ impl ComponentModule {
     }
 
     /// Add a description
+    #[must_use]
     pub fn with_description(mut self, desc: impl Into<String>) -> Self {
         self.description = desc.into();
         self
     }
 
     /// Add features
+    #[must_use]
     pub fn with_features(mut self, features: Vec<String>) -> Self {
         self.features = features;
         self
@@ -168,4 +175,3 @@ mod tests {
         assert_eq!(component.module_names(), vec!["btsp"]);
     }
 }
-

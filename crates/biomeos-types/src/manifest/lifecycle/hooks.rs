@@ -134,10 +134,7 @@ pub enum WaitCondition {
     /// Wait for port to be available
     PortAvailable(u16),
     /// Wait for HTTP endpoint to respond
-    HttpResponse {
-        url: String,
-        expected_status: u16,
-    },
+    HttpResponse { url: String, expected_status: u16 },
     /// Wait for file to exist
     FileExists(String),
     /// Wait for process to exit
@@ -203,4 +200,4 @@ pub enum ConditionOperator {
     LessThan,
     Exists,
     NotExists,
-} 
+}

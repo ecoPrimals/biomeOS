@@ -24,16 +24,31 @@ impl HealthUtils {
         manager: &UniversalBiomeOSManager,
     ) -> Result<CLIHealthReport> {
         let health_report = manager.get_system_health().await;
-        
+
         // Convert unified health report to CLI format
         let system_health = SystemHealth {
             overall_status: health_report.health.clone(),
-            cpu_usage: health_report.metrics.resources.as_ref()
-                .and_then(|r| r.cpu_usage).map(|u| u * 100.0).unwrap_or(0.0),
-            memory_usage: health_report.metrics.resources.as_ref()
-                .and_then(|r| r.memory_usage).map(|u| u * 100.0).unwrap_or(0.0), 
-            disk_usage: health_report.metrics.resources.as_ref()
-                .and_then(|r| r.disk_usage).map(|u| u * 100.0).unwrap_or(0.0),
+            cpu_usage: health_report
+                .metrics
+                .resources
+                .as_ref()
+                .and_then(|r| r.cpu_usage)
+                .map(|u| u * 100.0)
+                .unwrap_or(0.0),
+            memory_usage: health_report
+                .metrics
+                .resources
+                .as_ref()
+                .and_then(|r| r.memory_usage)
+                .map(|u| u * 100.0)
+                .unwrap_or(0.0),
+            disk_usage: health_report
+                .metrics
+                .resources
+                .as_ref()
+                .and_then(|r| r.disk_usage)
+                .map(|u| u * 100.0)
+                .unwrap_or(0.0),
             network_status: "OK".to_string(),
         };
 
@@ -41,36 +56,33 @@ impl HealthUtils {
         let mut services = Vec::new();
 
         // Discover available services
-        match manager.discover_network_scan().await {
-            Ok(discovered_endpoints) => {
-                for endpoint in discovered_endpoints {
-                    // Probe each service for detailed health info
-                    let start_time = std::time::Instant::now();
-                    match manager.probe_endpoint(&endpoint).await {
-                        Ok(probe_result) => {
-                            let response_time = start_time.elapsed().as_millis() as u64;
-                            services.push(ServiceHealth {
-                                name: probe_result, // probe_result is the service name/description
-                                endpoint: endpoint.clone(),
-                                status: biomeos_types::Health::Healthy,
-                                response_time_ms: response_time,
-                            });
-                        }
-                        Err(_) => {
-                            services.push(ServiceHealth {
-                                name: "Unknown Service".to_string(),
-                                endpoint: endpoint.clone(),
-                                status: biomeos_types::Health::Unhealthy {
-                            issues: vec![],
-                            failed_at: chrono::Utc::now(),
-                        },
-                                response_time_ms: 0,
-                            });
-                        }
+        if let Ok(discovered_endpoints) = manager.discover_network_scan().await {
+            for endpoint in discovered_endpoints {
+                // Probe each service for detailed health info
+                let start_time = std::time::Instant::now();
+                match manager.probe_endpoint(&endpoint).await {
+                    Ok(probe_result) => {
+                        let response_time = start_time.elapsed().as_millis() as u64;
+                        services.push(ServiceHealth {
+                            name: probe_result, // probe_result is the service name/description
+                            endpoint: endpoint.clone(),
+                            status: biomeos_types::Health::Healthy,
+                            response_time_ms: response_time,
+                        });
+                    }
+                    Err(_) => {
+                        services.push(ServiceHealth {
+                            name: "Unknown Service".to_string(),
+                            endpoint: endpoint.clone(),
+                            status: biomeos_types::Health::Unhealthy {
+                                issues: vec![],
+                                failed_at: chrono::Utc::now(),
+                            },
+                            response_time_ms: 0,
+                        });
                     }
                 }
             }
-            Err(_) => {}
         };
 
         Ok(CLIHealthReport {
@@ -108,12 +120,27 @@ impl HealthUtils {
         // Convert to CLI SystemHealth format
         let system_health = SystemHealth {
             overall_status: health_report.health.clone(),
-            cpu_usage: health_report.metrics.resources.as_ref()
-                .and_then(|r| r.cpu_usage).map(|u| u * 100.0).unwrap_or(0.0),
-            memory_usage: health_report.metrics.resources.as_ref()
-                .and_then(|r| r.memory_usage).map(|u| u * 100.0).unwrap_or(0.0), 
-            disk_usage: health_report.metrics.resources.as_ref()
-                .and_then(|r| r.disk_usage).map(|u| u * 100.0).unwrap_or(0.0),
+            cpu_usage: health_report
+                .metrics
+                .resources
+                .as_ref()
+                .and_then(|r| r.cpu_usage)
+                .map(|u| u * 100.0)
+                .unwrap_or(0.0),
+            memory_usage: health_report
+                .metrics
+                .resources
+                .as_ref()
+                .and_then(|r| r.memory_usage)
+                .map(|u| u * 100.0)
+                .unwrap_or(0.0),
+            disk_usage: health_report
+                .metrics
+                .resources
+                .as_ref()
+                .and_then(|r| r.disk_usage)
+                .map(|u| u * 100.0)
+                .unwrap_or(0.0),
             network_status: "OK".to_string(),
         };
 
@@ -161,16 +188,16 @@ impl HealthUtils {
         if health.memory_usage > 75.0 {
             score -= (health.memory_usage - 75.0) * 2.0;
         }
-        
+
         if health.cpu_usage > 75.0 {
             score -= (health.cpu_usage - 75.0) * 1.5;
         }
-        
+
         if health.disk_usage > 85.0 {
             score -= (health.disk_usage - 85.0) * 3.0;
         }
 
-        score.max(0.0).min(100.0)
+        score.clamp(0.0, 100.0)
     }
 
     /// Get health trend analysis
@@ -208,9 +235,10 @@ impl HealthUtils {
 
         // Check resource patterns
         let total_usage = if let Some(resources) = &health_report.metrics.resources {
-            (resources.memory_usage.unwrap_or(0.0) + 
-             resources.cpu_usage.unwrap_or(0.0) + 
-             resources.disk_usage.unwrap_or(0.0)) * 100.0  // Convert to percentage
+            (resources.memory_usage.unwrap_or(0.0)
+                + resources.cpu_usage.unwrap_or(0.0)
+                + resources.disk_usage.unwrap_or(0.0))
+                * 100.0 // Convert to percentage
         } else {
             0.0
         };

@@ -9,42 +9,38 @@
 //! - `configuration`: Configuration, network, and security settings
 //! - `service`: Service interfaces and request/response handling
 
-pub mod core;
 pub mod capabilities;
 pub mod configuration;
+pub mod core;
 pub mod service;
 
 // Re-export core types
-pub use core::{
-    PrimalType, ResourceRequirements, PrimalMetadata,
-};
+pub use core::{PrimalMetadata, PrimalType, ResourceRequirements};
 
 // Re-export capability types
 pub use capabilities::{
-    CapabilityMetadata, CapabilityParameter, PrimalCapability,
-    CapabilityPerformance, LatencyCharacteristics,
+    CapabilityMetadata, CapabilityParameter, CapabilityPerformance, LatencyCharacteristics,
+    PrimalCapability,
 };
 
-// Re-export configuration types  
+// Re-export configuration types
 pub use configuration::{
-    PrimalConfiguration, ConfigurationParameters, PrimalDependency,
-    NetworkConfiguration, PortConfiguration, IngressConfiguration,
-    TlsConfiguration, CertificateSource, NetworkPolicy, NetworkPolicyType,
-    NetworkRule, NetworkTarget, LoadBalancingConfig, LoadBalancingAlgorithm,
-    HealthCheckConfig, SecurityConfiguration, AuthenticationConfig,
-    AuthenticationMethod, TokenConfig, AuthorizationConfig, AuthorizationModel,
-    AuthorizationPolicy, EncryptionConfig, KeyManagementConfig, KeySource,
-    AuditConfig, AuditDestination, AuditEvent,
+    AuditConfig, AuditDestination, AuditEvent, AuthenticationConfig, AuthenticationMethod,
+    AuthorizationConfig, AuthorizationModel, AuthorizationPolicy, CertificateSource,
+    ConfigurationParameters, EncryptionConfig, HealthCheckConfig, IngressConfiguration,
+    KeyManagementConfig, KeySource, LoadBalancingAlgorithm, LoadBalancingConfig,
+    NetworkConfiguration, NetworkPolicy, NetworkPolicyType, NetworkRule, NetworkTarget,
+    PortConfiguration, PrimalConfiguration, PrimalDependency, SecurityConfiguration,
+    TlsConfiguration, TokenConfig,
 };
 
 // Re-export service types
 pub use service::{
-    UniversalPrimalService, PrimalServiceMetadata, UniversalServiceRequest,
-    ServiceRequestContext, SecurityContext, AccessLevel, RequestPriority,
-    UniversalServiceResponse, ServiceResponseMetadata, ResponseStatus,
-    UniversalServiceRegistration, ServiceEndpoint, ServiceConstraints,
-    NetworkRequirements, NetworkSecurity, SecurityRequirements,
-    EncryptionRequirements, ServiceStatus, ConfigValidationResult,
+    AccessLevel, ConfigValidationResult, EncryptionRequirements, NetworkRequirements,
+    NetworkSecurity, PrimalServiceMetadata, RequestPriority, ResponseStatus, SecurityContext,
+    SecurityRequirements, ServiceConstraints, ServiceEndpoint, ServiceRequestContext,
+    ServiceResponseMetadata, ServiceStatus, UniversalPrimalService, UniversalServiceRegistration,
+    UniversalServiceRequest, UniversalServiceResponse,
 };
 
-// All legacy types have been unified - use UniversalServiceRequest/Response instead 
+// All legacy types have been unified - use UniversalServiceRequest/Response instead

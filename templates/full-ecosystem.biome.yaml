@@ -1,0 +1,327 @@
+# biomeOS BYOB Manifest: full-ecosystem.biome.yaml
+#
+# Deploys the complete BiomeOS ecosystem with all 5 primals working together.
+#
+# This manifest demonstrates the full power of BiomeOS: capability-based
+# orchestration of security, discovery, compute, storage, and AI primals.
+#
+# Version: 1.0
+# Date: December 26, 2025
+#
+apiVersion: biomeos.io/v1alpha1
+kind: BiomeManifest
+metadata:
+  name: full-ecosystem
+  description: "Complete BiomeOS ecosystem with all 5 primals."
+  tags: ["ecosystem", "security", "discovery", "compute", "storage", "ai"]
+  authors: ["biomeOS Team"]
+
+spec:
+  # Define all 5 primals in the ecosystem
+  primals:
+    # Security Primal: BearDog
+    - name: beardog-security
+      primal_type: security
+      description: "BearDog security primal for encryption and BTSP."
+      image: "beardog/core:latest"
+      
+      capabilities:
+        - name: "security:btsp"
+          description: "BearDog Transport Security Protocol"
+        - name: "security:lineage"
+          description: "Genetic cryptography and lineage verification"
+        - name: "crypto:encryption"
+          description: "AES-256 encryption/decryption"
+        - name: "crypto:signing"
+          description: "Ed25519 signing/verification"
+      
+      resources:
+        cpu: "1000m"
+        memory: "512Mi"
+      
+      networking:
+        ports:
+          - port: 9000
+            protocol: "tcp"
+            description: "Security API endpoint"
+      
+      security:
+        isolation_level: "high"
+
+    # Discovery Primal: Songbird
+    - name: songbird-discovery
+      primal_type: discovery
+      description: "Songbird discovery primal for service mesh and federation."
+      image: "songbird/orchestrator:latest"
+      
+      capabilities:
+        - name: "discovery:services"
+          description: "Service discovery by capability"
+        - name: "discovery:federation"
+          description: "Multi-tower federation"
+        - name: "routing:p2p"
+          description: "P2P connection brokering"
+        - name: "health:monitoring"
+          description: "Service health monitoring"
+      
+      resources:
+        cpu: "500m"
+        memory: "256Mi"
+      
+      networking:
+        ports:
+          - port: 3000
+            protocol: "tcp"
+            description: "Songbird API endpoint"
+          - port: 5353
+            protocol: "udp"
+            description: "mDNS for local discovery"
+          - port: 7000
+            protocol: "tcp"
+            description: "Federation endpoint"
+      
+      federation:
+        enabled: true
+
+    # Compute Primal: ToadStool
+    - name: toadstool-compute
+      primal_type: compute
+      description: "ToadStool compute primal for job scheduling and execution."
+      image: "toadstool/compute:latest"
+      
+      capabilities:
+        - name: "compute:scheduling"
+          description: "Distributed job scheduling"
+        - name: "compute:containers"
+          description: "Rootless containerization"
+        - name: "compute:orchestration"
+          description: "Resource management and scaling"
+      
+      resources:
+        cpu: "2000m"
+        memory: "2Gi"
+      
+      networking:
+        ports:
+          - port: 8080
+            protocol: "tcp"
+            description: "Compute API endpoint"
+      
+      security:
+        isolation_level: "medium"
+
+    # Storage Primal: NestGate
+    - name: nestgate-storage
+      primal_type: storage
+      description: "NestGate storage primal for distributed data storage."
+      image: "nestgate/storage:latest"
+      
+      capabilities:
+        - name: "storage:distributed"
+          description: "Multi-node distributed storage"
+        - name: "storage:replication"
+          description: "Data replication and redundancy"
+        - name: "storage:versioning"
+          description: "Time-travel queries and versioning"
+        - name: "storage:encryption"
+          description: "At-rest encryption"
+      
+      resources:
+        cpu: "1000m"
+        memory: "1Gi"
+        storage: "100Gi"
+      
+      networking:
+        ports:
+          - port: 5000
+            protocol: "tcp"
+            description: "Storage API endpoint"
+      
+      storage:
+        mount_path: "/data"
+        replication_factor: 3
+
+    # AI Primal: Squirrel
+    - name: squirrel-ai
+      primal_type: ai
+      description: "Squirrel AI primal for LLM inference and embeddings."
+      image: "squirrel/ai:latest"
+      
+      capabilities:
+        - name: "ai:llm"
+          description: "Large language model inference"
+        - name: "ai:embeddings"
+          description: "Generate vector embeddings"
+        - name: "ai:fine-tuning"
+          description: "Model adaptation and fine-tuning"
+      
+      resources:
+        cpu: "4000m"
+        memory: "8Gi"
+        gpu: "1"  # Optional: GPU acceleration
+      
+      networking:
+        ports:
+          - port: 7000
+            protocol: "tcp"
+            description: "AI API endpoint"
+      
+      ai:
+        models:
+          - "llama-3-70b"
+          - "llama-3-8b"
+        cache_size: "20Gi"
+
+  # Define orchestration behavior
+  orchestration:
+    # Startup sequence with health checks
+    startup_sequence:
+      # 1. Security comes first
+      - service: beardog-security
+        depends_on: []
+        health_check:
+          path: "/status"
+          port: 9000
+          interval_seconds: 5
+          timeout_seconds: 2
+      
+      # 2. Discovery enables everything else
+      - service: songbird-discovery
+        depends_on: ["beardog-security"]
+        health_check:
+          path: "/health"
+          port: 3000
+          interval_seconds: 5
+          timeout_seconds: 2
+      
+      # 3. Infrastructure primals (can start in parallel)
+      - service: toadstool-compute
+        depends_on: ["songbird-discovery"]
+        health_check:
+          path: "/health"
+          port: 8080
+          interval_seconds: 10
+          timeout_seconds: 3
+      
+      - service: nestgate-storage
+        depends_on: ["songbird-discovery"]
+        health_check:
+          path: "/health"
+          port: 5000
+          interval_seconds: 10
+          timeout_seconds: 3
+      
+      # 4. AI primal (may take longer to load models)
+      - service: squirrel-ai
+        depends_on: ["songbird-discovery"]
+        health_check:
+          path: "/health"
+          port: 7000
+          interval_seconds: 15
+          timeout_seconds: 5
+
+    # Default behaviors
+    defaults:
+      security: "btsp"  # All inter-primal communication uses BTSP
+      discovery: "songbird-discovery"
+      compute: "toadstool-compute"
+      storage: "nestgate-storage"
+      ai: "squirrel-ai"
+    
+    # Coordination policies
+    coordination:
+      # Capability-based discovery
+      discovery_mode: "capability"  # "capability" or "name"
+      prefer_local: true
+      
+      # Security policies
+      security:
+        enforce_btsp: true
+        require_lineage: false  # Set to true for lineage-gated access
+        encryption_at_rest: true
+      
+      # Resource management
+      resources:
+        enable_auto_scaling: true
+        scale_up_threshold: 80  # %
+        scale_down_threshold: 20  # %
+      
+      # Health monitoring
+      health:
+        check_interval_seconds: 30
+        unhealthy_threshold: 3
+        auto_recovery: true
+
+  # Environment-specific overrides
+  environments:
+    development:
+      primals:
+        - name: beardog-security
+          resources:
+            cpu: "250m"
+            memory: "128Mi"
+        - name: songbird-discovery
+          resources:
+            cpu: "250m"
+            memory: "128Mi"
+        - name: toadstool-compute
+          resources:
+            cpu: "500m"
+            memory: "512Mi"
+        - name: nestgate-storage
+          resources:
+            cpu: "250m"
+            memory: "256Mi"
+            storage: "10Gi"
+        - name: squirrel-ai
+          resources:
+            cpu: "1000m"
+            memory: "2Gi"
+            gpu: "0"  # No GPU in dev
+      
+      ai:
+        models: ["llama-3-8b"]  # Smaller model for dev
+    
+    production:
+      primals:
+        - name: beardog-security
+          resources:
+            cpu: "2000m"
+            memory: "2Gi"
+          replicas: 3  # HA
+        - name: songbird-discovery
+          resources:
+            cpu: "2000m"
+            memory: "2Gi"
+          replicas: 3  # HA
+          federation:
+            enabled: true
+            towers: ["tower-sf", "tower-ny", "tower-lon"]
+        - name: toadstool-compute
+          resources:
+            cpu: "8000m"
+            memory: "16Gi"
+          replicas: 5  # Scale for compute
+        - name: nestgate-storage
+          resources:
+            cpu: "4000m"
+            memory: "8Gi"
+            storage: "1Ti"
+          replicas: 5  # Scale for storage
+          storage:
+            replication_factor: 5
+        - name: squirrel-ai
+          resources:
+            cpu: "16000m"
+            memory: "64Gi"
+            gpu: "4"  # Multi-GPU
+          replicas: 3  # Multiple AI nodes
+      
+      orchestration:
+        coordination:
+          security:
+            require_lineage: true  # Enforce lineage in prod
+          health:
+            check_interval_seconds: 10
+            unhealthy_threshold: 5
+

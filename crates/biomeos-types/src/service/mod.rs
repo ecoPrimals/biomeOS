@@ -14,17 +14,17 @@
 
 // Re-export all service modules
 pub mod core;
-pub mod runtime;
-pub mod security;
 pub mod health;
 pub mod networking;
+pub mod runtime;
+pub mod security;
 
 // Re-export all types for convenience
 pub use core::*;
-pub use runtime::*;
-pub use security::*;
 pub use health::*;
 pub use networking::*;
+pub use runtime::*;
+pub use security::*;
 
 // Additional test module
 #[cfg(test)]
@@ -85,4 +85,4 @@ mod tests {
         assert!(networking.discovery.enabled);
         assert!(networking.ports.is_empty());
     }
-} 
+}

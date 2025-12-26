@@ -13,12 +13,12 @@ use uuid::Uuid;
 
 // Re-export unified AI-first types from biomeos-types
 pub use biomeos_types::{
-    BiomeError,                  // From unified error system
-    BiomeResult,                 // From unified error system  
-    Environment,                 // From unified config system
-    BiomeOSConfig,              // From unified config system
-    error::AIErrorCategory,      // From unified error system
-    error::ErrorSeverity,        // From unified error system
+    error::AIErrorCategory, // From unified error system
+    error::ErrorSeverity,   // From unified error system
+    BiomeError,             // From unified error system
+    BiomeOSConfig,          // From unified config system
+    BiomeResult,            // From unified error system
+    Environment,            // From unified config system
 };
 
 /// Universal AI-first response format - ALL ENDPOINTS MUST USE THIS
@@ -440,5 +440,308 @@ impl Default for QualityMetrics {
             reliability_score: 1.0,
             freshness_timestamp: chrono::Utc::now(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_ai_first_response_success() {
+        let request_id = Uuid::new_v4();
+        let response: AIFirstResponse<String> =
+            AIFirstResponse::success(request_id, "test data".to_string(), 100, 0.95);
+
+        assert!(response.success);
+        assert!(response.error.is_none());
+        assert_eq!(response.data, "test data");
+        assert_eq!(response.processing_time_ms, 100);
+        assert_eq!(response.confidence_score, 0.95);
+    }
+
+    #[test]
+    fn test_ai_first_response_error() {
+        let request_id = Uuid::new_v4();
+        let error = BiomeError::internal_error("Test error", Some("ERR001"));
+        let response: AIFirstResponse<String> =
+            AIFirstResponse::error(request_id, error, 50, "default".to_string());
+
+        assert!(!response.success);
+        assert!(response.error.is_some());
+        assert_eq!(response.confidence_score, 0.0);
+    }
+
+    #[test]
+    fn test_retry_strategy() {
+        let strategy = RetryStrategy {
+            should_retry: true,
+            delay_ms: 1000,
+            max_attempts: 3,
+            backoff_strategy: BackoffType::Exponential { base: 2.0 },
+            retry_conditions: vec!["network_error".to_string()],
+            success_probability: 0.8,
+        };
+
+        assert!(strategy.should_retry);
+        assert_eq!(strategy.max_attempts, 3);
+        assert_eq!(strategy.success_probability, 0.8);
+    }
+
+    #[test]
+    fn test_backoff_types() {
+        let types = [
+            BackoffType::Linear,
+            BackoffType::Exponential { base: 2.0 },
+            BackoffType::Fibonacci,
+            BackoffType::Custom {
+                formula: "x^2".to_string(),
+            },
+        ];
+
+        for backoff in types {
+            let json = serde_json::to_string(&backoff).unwrap();
+            let _: BackoffType = serde_json::from_str(&json).unwrap();
+        }
+    }
+
+    #[test]
+    fn test_performance_metrics_default() {
+        let metrics = PerformanceMetrics::default();
+        assert_eq!(metrics.cpu_usage_percent, 0.0);
+        assert_eq!(metrics.memory_usage_mb, 0.0);
+        assert_eq!(metrics.io_operations, 0);
+    }
+
+    #[test]
+    fn test_ai_resource_usage_default() {
+        let usage = AIResourceUsage::default();
+        assert_eq!(usage.compute_units_used, 0.0);
+        assert_eq!(usage.storage_bytes_used, 0);
+    }
+
+    #[test]
+    fn test_quality_metrics_default() {
+        let metrics = QualityMetrics::default();
+        assert!(metrics.accuracy_score.is_none());
+        assert_eq!(metrics.completeness_score, 1.0);
+        assert_eq!(metrics.reliability_score, 1.0);
+    }
+
+    #[test]
+    fn test_cache_info_default() {
+        let cache = CacheInfo::default();
+        assert!(!cache.is_cached);
+        assert!(cache.cache_hit_ratio.is_none());
+    }
+
+    #[test]
+    fn test_rate_limit_status_default() {
+        let status = RateLimitStatus::default();
+        assert!(status.limit.is_none());
+        assert!(status.remaining.is_none());
+    }
+
+    #[test]
+    fn test_interaction_modes() {
+        let modes = [
+            InteractionMode::FullyAutonomous,
+            InteractionMode::HumanApproval,
+            InteractionMode::Collaborative,
+            InteractionMode::HumanDirected,
+            InteractionMode::HumanSupervised,
+            InteractionMode::Emergency,
+        ];
+
+        for mode in modes {
+            let json = serde_json::to_string(&mode).unwrap();
+            let _: InteractionMode = serde_json::from_str(&json).unwrap();
+        }
+    }
+
+    #[test]
+    fn test_notification_urgency_levels() {
+        let levels = [
+            NotificationUrgency::Low,
+            NotificationUrgency::Medium,
+            NotificationUrgency::High,
+            NotificationUrgency::Critical,
+        ];
+
+        for level in levels {
+            let json = serde_json::to_string(&level).unwrap();
+            let _: NotificationUrgency = serde_json::from_str(&json).unwrap();
+        }
+    }
+
+    #[test]
+    fn test_priority_levels() {
+        let levels = [
+            PriorityLevel::Low,
+            PriorityLevel::Normal,
+            PriorityLevel::High,
+            PriorityLevel::Critical,
+        ];
+
+        for level in levels {
+            let json = serde_json::to_string(&level).unwrap();
+            let _: PriorityLevel = serde_json::from_str(&json).unwrap();
+        }
+    }
+
+    #[test]
+    fn test_data_sharing_levels() {
+        let levels = [
+            DataSharingLevel::None,
+            DataSharingLevel::Anonymous,
+            DataSharingLevel::Aggregated,
+            DataSharingLevel::Full,
+        ];
+
+        for level in levels {
+            let json = serde_json::to_string(&level).unwrap();
+            let _: DataSharingLevel = serde_json::from_str(&json).unwrap();
+        }
+    }
+
+    #[test]
+    fn test_contact_types() {
+        let types = [
+            ContactType::Email,
+            ContactType::SMS,
+            ContactType::Slack,
+            ContactType::Teams,
+            ContactType::Webhook,
+        ];
+
+        for contact_type in types {
+            let json = serde_json::to_string(&contact_type).unwrap();
+            let _: ContactType = serde_json::from_str(&json).unwrap();
+        }
+    }
+
+    #[test]
+    fn test_action_results() {
+        let results = [
+            ActionResult::Success,
+            ActionResult::Failure,
+            ActionResult::PartialSuccess,
+            ActionResult::Skipped,
+        ];
+
+        for result in results {
+            let json = serde_json::to_string(&result).unwrap();
+            let _: ActionResult = serde_json::from_str(&json).unwrap();
+        }
+    }
+
+    #[test]
+    fn test_risk_levels() {
+        let levels = [
+            RiskLevel::VeryLow,
+            RiskLevel::Low,
+            RiskLevel::Medium,
+            RiskLevel::High,
+            RiskLevel::VeryHigh,
+        ];
+
+        for level in levels {
+            let json = serde_json::to_string(&level).unwrap();
+            let _: RiskLevel = serde_json::from_str(&json).unwrap();
+        }
+    }
+
+    #[test]
+    fn test_suggested_action() {
+        let action = SuggestedAction {
+            action_type: "restart".to_string(),
+            description: "Restart the service".to_string(),
+            confidence: 0.9,
+            estimated_duration_ms: Some(5000),
+            estimated_cost_usd: Some(0.01),
+            prerequisites: vec!["backup".to_string()],
+            risk_level: RiskLevel::Low,
+        };
+
+        assert_eq!(action.confidence, 0.9);
+        assert!(action.estimated_duration_ms.is_some());
+    }
+
+    #[test]
+    fn test_quiet_hours() {
+        let hours = QuietHours {
+            start_hour: 22,
+            end_hour: 7,
+            timezone: "America/New_York".to_string(),
+        };
+
+        assert_eq!(hours.start_hour, 22);
+        assert_eq!(hours.end_hour, 7);
+    }
+
+    #[test]
+    fn test_ai_resource_limits() {
+        let limits = AIResourceLimits {
+            max_cost_per_operation_usd: 1.0,
+            max_processing_time_ms: 30000,
+            max_memory_usage_mb: 1024,
+            priority_level: PriorityLevel::High,
+        };
+
+        assert_eq!(limits.max_cost_per_operation_usd, 1.0);
+    }
+
+    #[test]
+    fn test_risk_tolerance() {
+        let tolerance = RiskTolerance {
+            financial_risk_tolerance: 0.5,
+            operational_risk_tolerance: 0.3,
+            data_sharing_tolerance: DataSharingLevel::Aggregated,
+            experimental_features_enabled: false,
+        };
+
+        assert!(!tolerance.experimental_features_enabled);
+    }
+
+    #[test]
+    fn test_escalation_contact() {
+        let contact = EscalationContact {
+            contact_type: ContactType::Slack,
+            address: "#alerts".to_string(),
+            urgency_level: NotificationUrgency::High,
+        };
+
+        assert_eq!(contact.address, "#alerts");
+    }
+
+    #[test]
+    fn test_session_context() {
+        let context = SessionContext {
+            session_id: Uuid::new_v4(),
+            started_at: chrono::Utc::now(),
+            previous_actions: vec![],
+            current_goal: "Deploy application".to_string(),
+            context_variables: HashMap::new(),
+        };
+
+        assert_eq!(context.current_goal, "Deploy application");
+    }
+
+    #[test]
+    fn test_action_history() {
+        let history = ActionHistory {
+            action: "create_container".to_string(),
+            timestamp: chrono::Utc::now(),
+            result: ActionResult::Success,
+            confidence_score: 0.95,
+        };
+
+        assert_eq!(history.action, "create_container");
+    }
+
+    #[test]
+    fn test_ai_response_metadata_default() {
+        let metadata = AIResponseMetadata::default();
+        assert!(metadata.dependencies.is_empty());
     }
 }

@@ -1,0 +1,11 @@
+{
+  "demo": "full-ecosystem",
+  "timestamp": "2025-12-22T21:39:46-05:00",
+  "status": "success",
+  "host": "pop-os",
+  "user": "eastgate",
+  "biomeOS_version": "1.0.0",
+  "output_hash": "92821f8bab771831b0282e24b77b756682f41bad65d222e86ba86f85da03c134",
+  "output_lines": 50,
+  "replication_command": "./bin/live-demo.sh full-ecosystem"
+}

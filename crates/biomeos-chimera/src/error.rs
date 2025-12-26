@@ -140,3 +140,110 @@ impl ChimeraError {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_definition_not_found_error() {
+        let err = ChimeraError::DefinitionNotFound {
+            path: PathBuf::from("/path/to/chimera.yaml"),
+        };
+        let msg = err.to_string();
+        assert!(msg.contains("not found"));
+        assert!(msg.contains("/path/to/chimera.yaml"));
+    }
+
+    #[test]
+    fn test_parse_error() {
+        let err = ChimeraError::parse("test-chimera", "invalid syntax");
+        let msg = err.to_string();
+        assert!(msg.contains("test-chimera"));
+        assert!(msg.contains("invalid syntax"));
+    }
+
+    #[test]
+    fn test_parse_error_with_source() {
+        let err =
+            ChimeraError::parse_with_source("test-chimera", "missing field", "/path/to/file.yaml");
+        match err {
+            ChimeraError::ParseError {
+                id,
+                message,
+                source_file,
+            } => {
+                assert_eq!(id, "test-chimera");
+                assert_eq!(message, "missing field");
+                assert!(source_file.is_some());
+            }
+            _ => panic!("Expected ParseError"),
+        }
+    }
+
+    #[test]
+    fn test_primal_not_available_error() {
+        let err = ChimeraError::PrimalNotAvailable {
+            chimera: "my-chimera".to_string(),
+            primal: "beardog".to_string(),
+        };
+        let msg = err.to_string();
+        assert!(msg.contains("beardog"));
+        assert!(msg.contains("my-chimera"));
+    }
+
+    #[test]
+    fn test_module_not_found_error() {
+        let err = ChimeraError::ModuleNotFound {
+            primal: "toadstool".to_string(),
+            module: "gpu-compute".to_string(),
+        };
+        let msg = err.to_string();
+        assert!(msg.contains("gpu-compute"));
+        assert!(msg.contains("toadstool"));
+    }
+
+    #[test]
+    fn test_fusion_error() {
+        let err = ChimeraError::fusion("chimera-1", "api-fusion", "binding mismatch");
+        let msg = err.to_string();
+        assert!(msg.contains("chimera-1"));
+        assert!(msg.contains("api-fusion"));
+        assert!(msg.contains("binding mismatch"));
+    }
+
+    #[test]
+    fn test_build_error() {
+        let err = ChimeraError::build("gaming-mesh", "compilation failed");
+        let msg = err.to_string();
+        assert!(msg.contains("gaming-mesh"));
+        assert!(msg.contains("compilation failed"));
+    }
+
+    #[test]
+    fn test_version_mismatch_error() {
+        let err = ChimeraError::VersionMismatch {
+            primal: "beardog".to_string(),
+            required: ">=2.0.0".to_string(),
+            found: "1.5.0".to_string(),
+        };
+        let msg = err.to_string();
+        assert!(msg.contains("beardog"));
+        assert!(msg.contains(">=2.0.0"));
+        assert!(msg.contains("1.5.0"));
+    }
+
+    #[test]
+    fn test_registry_error() {
+        let err = ChimeraError::RegistryError("connection refused".to_string());
+        let msg = err.to_string();
+        assert!(msg.contains("connection refused"));
+    }
+
+    #[test]
+    fn test_io_error_conversion() {
+        let io_err = std::io::Error::new(std::io::ErrorKind::NotFound, "file not found");
+        let err: ChimeraError = io_err.into();
+        let msg = err.to_string();
+        assert!(msg.contains("file not found"));
+    }
+}

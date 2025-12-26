@@ -1,0 +1,11 @@
+{
+  "demo": "platypus-fused",
+  "timestamp": "2025-12-22T21:39:45-05:00",
+  "status": "success",
+  "host": "pop-os",
+  "user": "eastgate",
+  "biomeOS_version": "1.0.0",
+  "output_hash": "a6b4b45fc8f27eb3ceb637efb6b38c78504d962d0a776e079eb52df22774953c",
+  "output_lines": 87,
+  "replication_command": "./bin/live-demo.sh platypus-fused"
+}

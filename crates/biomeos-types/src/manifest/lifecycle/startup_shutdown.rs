@@ -80,18 +80,11 @@ pub enum HealthCheckType {
         headers: HashMap<String, String>,
     },
     /// TCP health check
-    Tcp {
-        port: u16,
-    },
+    Tcp { port: u16 },
     /// Command health check
-    Exec {
-        command: Vec<String>,
-    },
+    Exec { command: Vec<String> },
     /// gRPC health check
-    Grpc {
-        port: u16,
-        service: Option<String>,
-    },
+    Grpc { port: u16, service: Option<String> },
 }
 
 /// HTTP schemes
@@ -99,4 +92,4 @@ pub enum HealthCheckType {
 pub enum HttpScheme {
     Http,
     Https,
-} 
+}

@@ -9,27 +9,34 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 /// Security configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct SecurityConfig {
     /// Authentication configuration
+    #[serde(default)]
     pub authentication: AuthenticationConfig,
 
     /// Authorization configuration
+    #[serde(default)]
     pub authorization: AuthorizationConfig,
 
     /// Encryption configuration
+    #[serde(default)]
     pub encryption: EncryptionConfig,
 
     /// Audit configuration
+    #[serde(default)]
     pub audit: AuditConfig,
 
     /// Session configuration
+    #[serde(default)]
     pub session: SessionConfig,
 
     /// CSRF protection
+    #[serde(default)]
     pub csrf: CsrfConfig,
 
     /// Security headers
+    #[serde(default)]
     pub headers: SecurityHeaders,
 }
 
@@ -301,15 +308,18 @@ pub enum AuthorizationAction {
 }
 
 /// Encryption configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct EncryptionConfig {
     /// Data at rest encryption
+    #[serde(default)]
     pub at_rest: DataAtRestConfig,
 
     /// Data in transit encryption
+    #[serde(default)]
     pub in_transit: DataInTransitConfig,
 
     /// Key management
+    #[serde(default)]
     pub key_management: KeyManagementConfig,
 }
 
@@ -604,19 +614,7 @@ pub struct HstsConfig {
     pub preload: bool,
 }
 
-impl Default for SecurityConfig {
-    fn default() -> Self {
-        Self {
-            authentication: AuthenticationConfig::default(),
-            authorization: AuthorizationConfig::default(),
-            encryption: EncryptionConfig::default(),
-            audit: AuditConfig::default(),
-            session: SessionConfig::default(),
-            csrf: CsrfConfig::default(),
-            headers: SecurityHeaders::default(),
-        }
-    }
-}
+// SecurityConfig Default derived via #[derive(Default)]
 
 impl Default for AuthenticationConfig {
     fn default() -> Self {
@@ -641,15 +639,7 @@ impl Default for AuthorizationConfig {
     }
 }
 
-impl Default for EncryptionConfig {
-    fn default() -> Self {
-        Self {
-            at_rest: DataAtRestConfig::default(),
-            in_transit: DataInTransitConfig::default(),
-            key_management: KeyManagementConfig::default(),
-        }
-    }
-}
+// EncryptionConfig Default derived via #[derive(Default)]
 
 impl Default for DataAtRestConfig {
     fn default() -> Self {
@@ -760,4 +750,4 @@ impl Default for SecurityHeaders {
             referrer_policy: Some("strict-origin-when-cross-origin".to_string()),
         }
     }
-} 
+}

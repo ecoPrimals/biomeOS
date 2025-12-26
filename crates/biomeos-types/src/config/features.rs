@@ -298,14 +298,20 @@ impl Default for DashboardConfig {
                     id: "system_stats".to_string(),
                     widget_type: WidgetType::SystemStats,
                     position: WidgetPosition { row: 0, column: 0 },
-                    size: WidgetSize { width: 2, height: 1 },
+                    size: WidgetSize {
+                        width: 2,
+                        height: 1,
+                    },
                     config: HashMap::new(),
                 },
                 WidgetConfig {
                     id: "service_status".to_string(),
                     widget_type: WidgetType::ServiceStatus,
                     position: WidgetPosition { row: 0, column: 2 },
-                    size: WidgetSize { width: 2, height: 1 },
+                    size: WidgetSize {
+                        width: 2,
+                        height: 1,
+                    },
                     config: HashMap::new(),
                 },
             ],
@@ -357,4 +363,4 @@ impl Default for EnvironmentLimits {
             storage_limit: None,
         }
     }
-} 
+}

@@ -1,6 +1,6 @@
 //! Network Services Specifications
 //!
-//! This module contains network service types including DNS, IPAM, 
+//! This module contains network service types including DNS, IPAM,
 //! Service Mesh, and advanced networking configurations.
 
 use serde::{Deserialize, Serialize};
@@ -769,4 +769,4 @@ pub struct RingHashSpec {
 
     /// Maximum ring size
     pub maximum_ring_size: Option<u64>,
-} 
+}

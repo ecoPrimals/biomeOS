@@ -249,4 +249,4 @@ impl Default for HttpConfig {
             request_timeout: Duration::from_secs(60),
         }
     }
-} 
+}

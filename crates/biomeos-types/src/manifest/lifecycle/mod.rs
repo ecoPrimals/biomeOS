@@ -13,38 +13,34 @@ use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
 pub mod hooks;
+pub mod scaling;
 pub mod startup_shutdown;
 pub mod updates;
-pub mod scaling;
 
 // Re-export main types from each module
 pub use hooks::{
-    LifecycleHook, LifecyclePhase, LifecycleAction, LifecycleFailureAction,
-    LifecycleCondition, LifecycleConditionType, ConditionOperator,
-    HttpMethod, Signal, SignalTarget, WaitCondition,
+    ConditionOperator, HttpMethod, LifecycleAction, LifecycleCondition, LifecycleConditionType,
+    LifecycleFailureAction, LifecycleHook, LifecyclePhase, Signal, SignalTarget, WaitCondition,
 };
 
 pub use startup_shutdown::{
-    StartupSpec, ShutdownSpec, StartupHealthCheck, HealthCheckType, HttpScheme,
+    HealthCheckType, HttpScheme, ShutdownSpec, StartupHealthCheck, StartupSpec,
 };
 
 pub use updates::{
-    UpdateStrategySpec, UpdateType, RollingUpdateSpec, RollingUpdateValue,
-    CanaryUpdateSpec, CanaryStep, BlueGreenUpdateSpec, UpdateHook, UpdatePhase,
-    StepAnalysis, AnalysisCriteria, ThresholdOperator, CanaryAnalysis,
-    AnalysisTemplate, MetricsProvider, TrafficSplittingSpec, TrafficRouter,
-    HeaderRoutingSpec, CookieRoutingSpec, PromotionCriteria, PromotionCondition,
-    PromotionConditionType, PreviewTest, PreviewTestType,
+    AnalysisCriteria, AnalysisTemplate, BlueGreenUpdateSpec, CanaryAnalysis, CanaryStep,
+    CanaryUpdateSpec, CookieRoutingSpec, HeaderRoutingSpec, MetricsProvider, PreviewTest,
+    PreviewTestType, PromotionCondition, PromotionConditionType, PromotionCriteria,
+    RollingUpdateSpec, RollingUpdateValue, StepAnalysis, ThresholdOperator, TrafficRouter,
+    TrafficSplittingSpec, UpdateHook, UpdatePhase, UpdateStrategySpec, UpdateType,
 };
 
 pub use scaling::{
-    ScalingSpec, ScalingType, HorizontalScalingSpec, VerticalScalingSpec,
-    CustomScalingSpec, ScalingMetric, ScalingMetricType, ResourceName,
-    ObjectTarget, ScalingTargetValue, MetricSelector, ScalingPolicy,
-    ScalingPolicyType, ScalingBehavior, ScalingDirectionBehavior,
-    ScalingPolicySelect, VerticalScalingMode, VerticalResourcePolicy,
-    ContainerResourcePolicy, ControlledValue, VerticalRecommender,
-    CustomMetric,
+    ContainerResourcePolicy, ControlledValue, CustomMetric, CustomScalingSpec,
+    HorizontalScalingSpec, MetricSelector, ObjectTarget, ResourceName, ScalingBehavior,
+    ScalingDirectionBehavior, ScalingMetric, ScalingMetricType, ScalingPolicy, ScalingPolicySelect,
+    ScalingPolicyType, ScalingSpec, ScalingTargetValue, ScalingType, VerticalRecommender,
+    VerticalResourcePolicy, VerticalScalingMode, VerticalScalingSpec,
 };
 
 /// Main Lifecycle specification
@@ -76,4 +72,4 @@ impl Default for LifecycleSpec {
             update_strategy: None,
         }
     }
-} 
+}

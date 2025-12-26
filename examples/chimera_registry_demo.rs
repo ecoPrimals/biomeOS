@@ -2,7 +2,7 @@
 //!
 //! Demonstrates loading and inspecting chimera definitions.
 
-use biomeos_chimera::{ChimeraRegistry, ChimeraDefinition};
+use biomeos_chimera::ChimeraRegistry;
 use std::path::Path;
 
 fn main() {
@@ -15,9 +15,12 @@ fn main() {
     println!("=================================\n");
 
     let definitions_dir = Path::new("chimeras/definitions");
-    
+
     if !definitions_dir.exists() {
-        println!("❌ Chimera definitions directory not found: {:?}", definitions_dir);
+        println!(
+            "❌ Chimera definitions directory not found: {:?}",
+            definitions_dir
+        );
         println!("   Run from biomeOS root directory");
         return;
     }
@@ -26,7 +29,7 @@ fn main() {
     match ChimeraRegistry::from_directory(definitions_dir) {
         Ok(registry) => {
             println!("✅ Loaded {} chimera definitions:\n", registry.len());
-            
+
             for (id, summary) in registry.summary() {
                 println!("🧬 {}", id);
                 println!("   Name: {}", summary.name);
@@ -39,10 +42,13 @@ fn main() {
             // Test getting specific chimera
             if let Some(p2p) = registry.get("p2p-secure") {
                 println!("📋 Details for p2p-secure:");
-                println!("   Description: {}", p2p.chimera.description.lines().next().unwrap_or(""));
+                println!(
+                    "   Description: {}",
+                    p2p.chimera.description.lines().next().unwrap_or("")
+                );
                 println!("   Fusion bindings: {}", p2p.fusion.bindings.len());
                 println!("   API endpoints: {}", p2p.fusion.api.endpoints.len());
-                
+
                 for endpoint in &p2p.fusion.api.endpoints {
                     println!("     - {}({})", endpoint.name, endpoint.params.join(", "));
                 }
@@ -55,4 +61,3 @@ fn main() {
 
     println!("\n🌱 Demo complete!");
 }
-

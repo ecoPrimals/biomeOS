@@ -1,0 +1,50 @@
+2025-12-23T02:39:46.509240Z  INFO biomeos_chimera::registry: Loaded 3 chimera definitions from "chimeras/definitions"
+   🧬 p2p-secure
+      Name: P2P Secure Mesh
+      Primals: beardog + songbird
+
+   🧬 ml-pipeline
+      Name: ML Pipeline
+      Primals: nestgate + squirrel + toadstool
+
+   🧬 gaming-mesh
+      Name: Gaming Mesh
+      Primals: songbird + beardog + toadstool
+      Arrays: ✅ (multiple instances supported)
+
+🌿 NICHE TEMPLATES (BYOB)
+=========================
+   Build Your Own Biome - environments for primals & chimeras
+
+   🌿 Web Development (web-development)
+   🌿 Gaming Tournament (gaming-tournament)
+   🌿 AI Research (ai-research)
+   🌿 Custom Generic (custom-generic)
+   🌿 Research Lab (research-lab)
+   🌿 Federation-Aware Deployment (federation-aware)
+
+🚀 WHAT YOU CAN DO
+==================
+
+   1. BUILD CHIMERAS:
+      biomeos chimera build p2p-secure
+      # Creates: BearDog + Songbird unified binary
+
+   2. DEPLOY NICHES:
+      biomeos niche deploy gaming-tournament
+      # Starts: gaming-mesh chimera + standalone primals
+
+   3. MIX PRIMALS:
+      biomeos byob create my-biome
+      # Interactive: Select chimeras, primals, configure
+
+   4. RUN SHOWCASES:
+      biomeos showcase run songbird/federation
+      # Executes demos from parent primals
+
+   Current Status:
+   ✅ 55 primal binaries available (nestgate, songbird, toadstool)
+   ✅ 3 chimera definitions (p2p-secure, ml-pipeline, gaming-mesh)
+   ✅ 6 niche templates (gaming, research, web-dev, etc.)
+
+🌱 BiomeOS: Ready to mix primals into chimeras and deploy niches!

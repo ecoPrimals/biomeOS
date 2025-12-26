@@ -2,16 +2,19 @@
 //!
 //! Commands for managing chimera definitions and builds.
 
+use biomeos_chimera::{ChimeraBuilder, ChimeraRegistry};
 use std::path::Path;
-use biomeos_chimera::{ChimeraRegistry, ChimeraBuilder};
 use std::sync::Arc;
 
 /// List all available chimera definitions
 pub async fn handle_chimera_list() -> anyhow::Result<()> {
     let definitions_dir = Path::new("chimeras/definitions");
-    
+
     if !definitions_dir.exists() {
-        println!("❌ Chimera definitions directory not found: {:?}", definitions_dir);
+        println!(
+            "❌ Chimera definitions directory not found: {:?}",
+            definitions_dir
+        );
         println!("   Run from biomeOS root directory");
         return Ok(());
     }
@@ -20,7 +23,7 @@ pub async fn handle_chimera_list() -> anyhow::Result<()> {
         Ok(registry) => {
             println!("🧬 Available Chimeras ({}):", registry.len());
             println!();
-            
+
             for (id, summary) in registry.summary() {
                 println!("  {} {}", if summary.uses_arrays { "🔄" } else { "🧬" }, id);
                 println!("     Name: {}", summary.name);
@@ -43,9 +46,9 @@ pub async fn handle_chimera_list() -> anyhow::Result<()> {
 /// Show details for a specific chimera
 pub async fn handle_chimera_show(id: &str) -> anyhow::Result<()> {
     let definitions_dir = Path::new("chimeras/definitions");
-    
+
     let registry = ChimeraRegistry::from_directory(definitions_dir)?;
-    
+
     match registry.get(id) {
         Some(def) => {
             println!("🧬 Chimera: {}", def.chimera.id);
@@ -57,7 +60,7 @@ pub async fn handle_chimera_show(id: &str) -> anyhow::Result<()> {
                 println!("     {}", line);
             }
             println!();
-            
+
             println!("   Components:");
             for (name, component) in &def.components {
                 println!("     📦 {} ({})", name, component.version);
@@ -66,20 +69,22 @@ pub async fn handle_chimera_show(id: &str) -> anyhow::Result<()> {
                 }
             }
             println!();
-            
+
             println!("   Fusion Bindings:");
             for (name, binding) in &def.fusion.bindings {
                 let provider = binding.provider.as_deref().unwrap_or("(none)");
                 println!("     🔗 {}: {} → {:?}", name, provider, binding.consumers);
             }
             println!();
-            
+
             println!("   API Endpoints:");
             for endpoint in &def.fusion.api.endpoints {
-                println!("     📡 {}({}) -> {}", 
-                    endpoint.name, 
+                println!(
+                    "     📡 {}({}) -> {}",
+                    endpoint.name,
                     endpoint.params.join(", "),
-                    endpoint.returns);
+                    endpoint.returns
+                );
             }
         }
         None => {
@@ -95,15 +100,15 @@ pub async fn handle_chimera_show(id: &str) -> anyhow::Result<()> {
 pub async fn handle_chimera_build(id: &str) -> anyhow::Result<()> {
     let definitions_dir = Path::new("chimeras/definitions");
     let registry = ChimeraRegistry::from_directory(definitions_dir)?;
-    
+
     match registry.get(id) {
         Some(def) => {
             println!("🔨 Building chimera: {}", id);
-            
+
             let builder = ChimeraBuilder::new(Arc::clone(&def))
                 .output_dir("bin/chimeras")
                 .primals_dir("bin/primals");
-            
+
             // Check primals first
             match builder.check_primals() {
                 Ok(paths) => {
@@ -115,9 +120,9 @@ pub async fn handle_chimera_build(id: &str) -> anyhow::Result<()> {
                     return Ok(());
                 }
             }
-            
+
             // Build
-            match builder.build().await {
+            match builder.build() {
                 Ok(result) => {
                     println!("   ✅ Built in {:?}", result.duration);
                     println!("   📦 Output: {:?}", result.binary_path);
@@ -137,4 +142,3 @@ pub async fn handle_chimera_build(id: &str) -> anyhow::Result<()> {
 
     Ok(())
 }
-

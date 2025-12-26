@@ -6,14 +6,17 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::primal::{PrimalType, PrimalCapability, ResourceRequirements};
 use crate::health::HealthCheckConfig;
+use crate::primal::{PrimalCapability, PrimalType, ResourceRequirements};
 
 // Forward declarations for types defined in other modules
 use super::{
-    PortSpec, EnvVarSpec, VolumeMountSpec, ServiceDependency,
+    EnvVarSpec,
+    PortSpec,
+    ServiceDependency,
     // Note: Scaling, security, and deployment modules will be implemented
     // as part of the Universal Adapter architecture integration
+    VolumeMountSpec,
 };
 
 /// Service specification
@@ -184,4 +187,4 @@ pub enum RestartPolicy {
     OnFailure,
     Never,
     UnlessStopped,
-} 
+}

@@ -42,7 +42,7 @@ async fn main() -> Result<()> {
     println!("⚙️ Testing configuration system...");
     println!("🔧 System configured for: {:?}", config.system.environment);
     println!("🌐 Network binding: {}", config.network.bind_address);
-    
+
     println!("\n✨ Demo completed successfully!");
     println!("🎯 All core BiomeOS systems are operational!");
     Ok(())

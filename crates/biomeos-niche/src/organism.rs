@@ -82,17 +82,20 @@ pub struct PrimalOrganism {
 
 impl OrganismSpec {
     /// Create an empty organism spec
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Add a chimera
+    #[must_use]
     pub fn with_chimera(mut self, name: impl Into<String>, chimera: ChimeraOrganism) -> Self {
         self.chimeras.insert(name.into(), chimera);
         self
     }
 
     /// Add a primal
+    #[must_use]
     pub fn with_primal(mut self, name: impl Into<String>, primal: PrimalOrganism) -> Self {
         self.primals.insert(name.into(), primal);
         self
@@ -106,6 +109,7 @@ impl OrganismSpec {
     }
 
     /// Get an organism by name
+    #[must_use]
     pub fn get(&self, name: &str) -> Option<Organism> {
         if let Some(chimera) = self.chimeras.get(name) {
             return Some(Organism::Chimera(chimera.clone()));
@@ -117,36 +121,40 @@ impl OrganismSpec {
     }
 
     /// Check if an organism exists
+    #[must_use]
     pub fn contains(&self, name: &str) -> bool {
         self.chimeras.contains_key(name) || self.primals.contains_key(name)
     }
 
     /// Total organism count
+    #[must_use]
     pub fn len(&self) -> usize {
         self.chimeras.len() + self.primals.len()
     }
 
     /// Check if empty
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.chimeras.is_empty() && self.primals.is_empty()
     }
 
     /// Get required organisms
+    #[must_use]
     pub fn required(&self) -> Vec<(&str, OrganismType)> {
         let mut required = Vec::new();
-        
+
         for (name, chimera) in &self.chimeras {
             if chimera.required {
                 required.push((name.as_str(), OrganismType::Chimera));
             }
         }
-        
+
         for (name, primal) in &self.primals {
             if primal.required {
                 required.push((name.as_str(), OrganismType::Primal));
             }
         }
-        
+
         required
     }
 }
@@ -163,12 +171,14 @@ impl ChimeraOrganism {
     }
 
     /// Set as required
+    #[must_use]
     pub fn required(mut self) -> Self {
         self.required = true;
         self
     }
 
     /// Add configuration
+    #[must_use]
     pub fn with_config(mut self, key: impl Into<String>, value: serde_json::Value) -> Self {
         self.config.insert(key.into(), value);
         self
@@ -188,18 +198,21 @@ impl PrimalOrganism {
     }
 
     /// Set as required
+    #[must_use]
     pub fn required(mut self) -> Self {
         self.required = true;
         self
     }
 
     /// Set the role
+    #[must_use]
     pub fn with_role(mut self, role: impl Into<String>) -> Self {
         self.role = role.into();
         self
     }
 
     /// Add dependencies
+    #[must_use]
     pub fn with_dependencies(mut self, deps: Vec<String>) -> Self {
         self.dependencies = deps;
         self
@@ -214,15 +227,17 @@ mod tests {
     fn test_organism_spec() {
         let spec = OrganismSpec::new()
             .with_chimera("mesh", ChimeraOrganism::new("p2p-secure").required())
-            .with_primal("storage", PrimalOrganism::new("nestgate").with_role("replays"));
+            .with_primal(
+                "storage",
+                PrimalOrganism::new("nestgate").with_role("replays"),
+            );
 
         assert_eq!(spec.len(), 2);
         assert!(spec.contains("mesh"));
         assert!(spec.contains("storage"));
-        
+
         let required = spec.required();
         assert_eq!(required.len(), 1);
         assert_eq!(required[0].0, "mesh");
     }
 }
-

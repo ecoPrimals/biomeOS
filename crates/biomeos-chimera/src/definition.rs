@@ -8,8 +8,8 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 
 use crate::component::Component;
-use crate::fusion::Fusion;
 use crate::error::{ChimeraError, ChimeraResult};
+use crate::fusion::Fusion;
 
 /// Complete chimera definition loaded from YAML
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -119,21 +119,29 @@ pub struct DeploymentSpec {
     #[serde(default)]
     pub singleton: bool,
 
-    /// Whether network access is required
+    /// Resource requirements for the deployment
     #[serde(default)]
-    pub requires_network: bool,
-
-    /// Whether GPU is required
-    #[serde(default)]
-    pub requires_gpu: bool,
-
-    /// Whether the chimera can participate in federation
-    #[serde(default)]
-    pub can_federate: bool,
+    pub requirements: DeploymentRequirements,
 
     /// Scaling configuration
     #[serde(default)]
     pub scaling: Option<ScalingSpec>,
+}
+
+/// Resource requirements for deployment
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct DeploymentRequirements {
+    /// Whether network access is required
+    #[serde(default)]
+    pub network: bool,
+
+    /// Whether GPU is required
+    #[serde(default)]
+    pub gpu: bool,
+
+    /// Whether the chimera can participate in federation
+    #[serde(default)]
+    pub federation: bool,
 }
 
 /// Scaling specification
@@ -169,7 +177,7 @@ pub struct HealthCheck {
     /// Check name
     pub name: String,
 
-    /// Check type (e.g., "beardog.key_available")
+    /// Check type (e.g., "`beardog.key_available`")
     #[serde(rename = "type")]
     pub check_type: String,
 
@@ -180,24 +188,38 @@ pub struct HealthCheck {
 
 impl ChimeraDefinition {
     /// Load a chimera definition from a YAML file
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - File cannot be read
+    /// - YAML parsing fails
+    /// - Validation fails
     pub fn from_file(path: impl AsRef<Path>) -> ChimeraResult<Self> {
         let path = path.as_ref();
         let content = std::fs::read_to_string(path)?;
-        
-        let def: Self = serde_yaml::from_str(&content)
-            .map_err(|e| ChimeraError::parse_with_source(
+
+        let def: Self = serde_yaml::from_str(&content).map_err(|e| {
+            ChimeraError::parse_with_source(
                 path.file_stem()
                     .and_then(|s| s.to_str())
                     .unwrap_or("unknown"),
                 e.to_string(),
                 path,
-            ))?;
+            )
+        })?;
 
         def.validate()?;
         Ok(def)
     }
 
     /// Load from YAML string
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - YAML parsing fails
+    /// - Validation fails
     pub fn from_yaml(yaml: &str) -> ChimeraResult<Self> {
         let def: Self = serde_yaml::from_str(yaml)?;
         def.validate()?;
@@ -205,6 +227,13 @@ impl ChimeraDefinition {
     }
 
     /// Validate the chimera definition
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - No components are defined
+    /// - Fusion bindings reference non-existent components
+    /// - Duplicate component names exist
     pub fn validate(&self) -> ChimeraResult<()> {
         // Ensure we have at least one component
         if self.components.is_empty() {
@@ -239,6 +268,7 @@ impl ChimeraDefinition {
     }
 
     /// Check if this chimera uses arrays (multiple instances of a component)
+    #[must_use]
     pub fn uses_arrays(&self) -> bool {
         self.components.values().any(|c| c.array.is_some())
     }
@@ -273,4 +303,3 @@ fusion:
         assert_eq!(def.required_primals(), vec!["beardog"]);
     }
 }
-

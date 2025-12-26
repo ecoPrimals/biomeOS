@@ -12,19 +12,19 @@ use super::core::ResourceRequirements;
 pub struct CapabilityMetadata {
     /// Capability name
     pub name: String,
-    
+
     /// Capability version
     pub version: String,
-    
+
     /// Capability description
     pub description: String,
-    
+
     /// Required parameters
     pub parameters: Vec<CapabilityParameter>,
-    
+
     /// Security requirements
     pub security_requirements: Vec<String>,
-    
+
     /// Resource requirements
     pub resource_requirements: ResourceRequirements,
 }
@@ -34,22 +34,22 @@ pub struct CapabilityMetadata {
 pub struct CapabilityParameter {
     /// Parameter name
     pub name: String,
-    
+
     /// Parameter type
     pub param_type: String,
-    
+
     /// Whether parameter is required
     pub required: bool,
-    
+
     /// Default value if any
     pub default_value: Option<serde_json::Value>,
-    
+
     /// Parameter description
     pub description: Option<String>,
 }
 
 /// Universal Primal Capabilities - fully extensible
-/// 
+///
 /// This replaces the old Vec<String> capabilities with a structured approach.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct PrimalCapability {
@@ -71,7 +71,11 @@ pub struct PrimalCapability {
 
 impl PrimalCapability {
     /// Create a new capability
-    pub fn new(category: impl Into<String>, name: impl Into<String>, version: impl Into<String>) -> Self {
+    pub fn new(
+        category: impl Into<String>,
+        name: impl Into<String>,
+        version: impl Into<String>,
+    ) -> Self {
         Self {
             category: category.into(),
             name: name.into(),
@@ -143,7 +147,7 @@ impl PrimalCapability {
     pub fn icon(&self) -> &'static str {
         match self.category.as_str() {
             "compute" => "💻",
-            "storage" => "💾", 
+            "storage" => "💾",
             "networking" => "🌐",
             "security" => "🔐",
             "ai" => "🤖",
@@ -241,4 +245,207 @@ impl PrimalCapability {
     pub fn custom(name: impl Into<String>) -> Self {
         Self::new("custom", name, "1.0")
     }
-} 
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_primal_capability_new() {
+        let cap = PrimalCapability::new("compute", "test-cap", "1.0.0");
+        assert_eq!(cap.category, "compute");
+        assert_eq!(cap.name, "test-cap");
+        assert_eq!(cap.version, "1.0.0");
+        assert!(cap.parameters.is_empty());
+        assert!(cap.performance.is_none());
+    }
+
+    #[test]
+    fn test_primal_capability_with_parameters() {
+        let params = vec![("key".to_string(), "value".to_string())];
+        let cap = PrimalCapability::with_parameters("storage", "blob-storage", "2.0", params);
+        assert_eq!(cap.category, "storage");
+        assert_eq!(cap.parameters.len(), 1);
+    }
+
+    #[test]
+    fn test_primal_capability_identifier() {
+        let cap = PrimalCapability::new("compute", "gpu-compute", "1.5.0");
+        assert_eq!(cap.identifier(), "compute:gpu-compute:1.5.0");
+    }
+
+    #[test]
+    fn test_primal_capability_matches() {
+        let cap = PrimalCapability::new("security", "encryption", "1.0");
+        assert!(cap.matches("security", "encryption"));
+        assert!(!cap.matches("security", "auth"));
+        assert!(!cap.matches("compute", "encryption"));
+    }
+
+    #[test]
+    fn test_primal_capability_display_name() {
+        let cap = PrimalCapability::new("ai", "ml-inference", "2.0");
+        assert_eq!(cap.display_name(), "ml-inference 2.0");
+    }
+
+    #[test]
+    fn test_primal_capability_icons() {
+        assert_eq!(PrimalCapability::compute().icon(), "💻");
+        assert_eq!(PrimalCapability::storage().icon(), "💾");
+        assert_eq!(PrimalCapability::networking().icon(), "🌐");
+        assert_eq!(PrimalCapability::security().icon(), "🔐");
+        assert_eq!(PrimalCapability::ai().icon(), "🤖");
+        assert_eq!(PrimalCapability::machine_learning().icon(), "🧠");
+        assert_eq!(PrimalCapability::analytics().icon(), "📊");
+        assert_eq!(PrimalCapability::gaming().icon(), "🎮");
+        assert_eq!(PrimalCapability::web_development().icon(), "🌍");
+        assert_eq!(PrimalCapability::orchestration().icon(), "🎵");
+        assert_eq!(PrimalCapability::authentication().icon(), "🔑");
+        assert_eq!(PrimalCapability::encryption().icon(), "🔒");
+        assert_eq!(PrimalCapability::custom("test").icon(), "⚙️");
+    }
+
+    #[test]
+    fn test_primal_capability_descriptions() {
+        assert!(!PrimalCapability::compute().description().is_empty());
+        assert!(!PrimalCapability::storage().description().is_empty());
+        assert!(!PrimalCapability::security().description().is_empty());
+        assert!(!PrimalCapability::ai().description().is_empty());
+        assert!(!PrimalCapability::custom("x").description().is_empty());
+    }
+
+    #[test]
+    fn test_convenience_constructors() {
+        let cap = PrimalCapability::compute();
+        assert_eq!(cap.category, "compute");
+
+        let cap = PrimalCapability::storage();
+        assert_eq!(cap.category, "storage");
+
+        let cap = PrimalCapability::networking();
+        assert_eq!(cap.category, "networking");
+
+        let cap = PrimalCapability::security();
+        assert_eq!(cap.category, "security");
+
+        let cap = PrimalCapability::ai();
+        assert_eq!(cap.category, "ai");
+
+        let cap = PrimalCapability::machine_learning();
+        assert_eq!(cap.category, "ml");
+
+        let cap = PrimalCapability::analytics();
+        assert_eq!(cap.category, "analytics");
+
+        let cap = PrimalCapability::gaming();
+        assert_eq!(cap.category, "gaming");
+
+        let cap = PrimalCapability::web_development();
+        assert_eq!(cap.category, "web");
+
+        let cap = PrimalCapability::orchestration();
+        assert_eq!(cap.category, "orchestration");
+
+        let cap = PrimalCapability::authentication();
+        assert_eq!(cap.category, "authentication");
+
+        let cap = PrimalCapability::encryption();
+        assert_eq!(cap.category, "encryption");
+
+        let cap = PrimalCapability::data_processing();
+        assert_eq!(cap.category, "data");
+
+        let cap = PrimalCapability::service_discovery();
+        assert_eq!(cap.category, "networking");
+        assert_eq!(cap.name, "service-discovery");
+
+        let cap = PrimalCapability::load_balancing();
+        assert_eq!(cap.category, "networking");
+        assert_eq!(cap.name, "load-balancing");
+
+        let cap = PrimalCapability::custom("my-custom");
+        assert_eq!(cap.category, "custom");
+        assert_eq!(cap.name, "my-custom");
+    }
+
+    #[test]
+    fn test_capability_metadata() {
+        let meta = CapabilityMetadata {
+            name: "test-capability".to_string(),
+            version: "1.0.0".to_string(),
+            description: "A test capability".to_string(),
+            parameters: vec![CapabilityParameter {
+                name: "input".to_string(),
+                param_type: "string".to_string(),
+                required: true,
+                default_value: None,
+                description: Some("Input parameter".to_string()),
+            }],
+            security_requirements: vec!["tls".to_string()],
+            resource_requirements: ResourceRequirements::default(),
+        };
+
+        assert_eq!(meta.name, "test-capability");
+        assert_eq!(meta.parameters.len(), 1);
+        assert_eq!(meta.security_requirements.len(), 1);
+    }
+
+    #[test]
+    fn test_capability_parameter() {
+        let param = CapabilityParameter {
+            name: "count".to_string(),
+            param_type: "integer".to_string(),
+            required: false,
+            default_value: Some(serde_json::json!(10)),
+            description: Some("Number of items".to_string()),
+        };
+
+        assert_eq!(param.name, "count");
+        assert!(!param.required);
+        assert!(param.default_value.is_some());
+    }
+
+    #[test]
+    fn test_capability_performance() {
+        let perf = CapabilityPerformance {
+            throughput_ops_per_sec: Some(10000),
+            latency_ms: Some(LatencyCharacteristics {
+                p50_ms: 5,
+                p95_ms: 15,
+                p99_ms: 50,
+                max_ms: 200,
+            }),
+            resource_requirements: None,
+            availability_sla: Some(9999), // 99.99%
+        };
+
+        assert_eq!(perf.throughput_ops_per_sec, Some(10000));
+        assert_eq!(perf.availability_sla, Some(9999));
+        let latency = perf.latency_ms.unwrap();
+        assert_eq!(latency.p50_ms, 5);
+        assert_eq!(latency.p99_ms, 50);
+    }
+
+    #[test]
+    fn test_latency_characteristics() {
+        let latency = LatencyCharacteristics {
+            p50_ms: 10,
+            p95_ms: 25,
+            p99_ms: 100,
+            max_ms: 500,
+        };
+
+        assert!(latency.p50_ms < latency.p95_ms);
+        assert!(latency.p95_ms < latency.p99_ms);
+        assert!(latency.p99_ms < latency.max_ms);
+    }
+
+    #[test]
+    fn test_primal_capability_serialization() {
+        let cap = PrimalCapability::new("compute", "gpu-compute", "1.0");
+        let json = serde_json::to_string(&cap).unwrap();
+        let deserialized: PrimalCapability = serde_json::from_str(&json).unwrap();
+        assert_eq!(cap, deserialized);
+    }
+}

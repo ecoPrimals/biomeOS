@@ -32,7 +32,7 @@ pub struct ResourceConfig {
 }
 
 /// CPU resource configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct CpuConfig {
     /// CPU cores limit
     pub cores: Option<u32>,
@@ -51,7 +51,7 @@ pub struct CpuConfig {
 }
 
 /// Memory resource configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct MemoryConfig {
     /// Memory limit in bytes
     pub limit: Option<u64>,
@@ -66,11 +66,12 @@ pub struct MemoryConfig {
     pub swappiness: Option<u32>,
 
     /// OOM kill disable
+    #[serde(default)]
     pub oom_kill_disable: bool,
 }
 
 /// Disk resource configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct DiskConfig {
     /// Disk space limit in bytes
     pub space_limit: Option<u64>,
@@ -89,7 +90,7 @@ pub struct DiskConfig {
 }
 
 /// Network resource configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct NetworkResourceConfig {
     /// Network bandwidth limit (bytes per second)
     pub bandwidth_limit: Option<u64>,
@@ -118,7 +119,7 @@ pub struct NetworkRateLimit {
 }
 
 /// Resource limits
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ResourceLimits {
     /// Maximum file descriptors
     pub max_file_descriptors: Option<u64>,
@@ -366,64 +367,7 @@ impl Default for ResourceConfig {
     }
 }
 
-impl Default for CpuConfig {
-    fn default() -> Self {
-        Self {
-            cores: None,
-            shares: None,
-            period: None,
-            quota: None,
-            affinity: None,
-        }
-    }
-}
-
-impl Default for MemoryConfig {
-    fn default() -> Self {
-        Self {
-            limit: None,
-            reservation: None,
-            swap_limit: None,
-            swappiness: None,
-            oom_kill_disable: false,
-        }
-    }
-}
-
-impl Default for DiskConfig {
-    fn default() -> Self {
-        Self {
-            space_limit: None,
-            read_bps_limit: None,
-            write_bps_limit: None,
-            read_iops_limit: None,
-            write_iops_limit: None,
-        }
-    }
-}
-
-impl Default for NetworkResourceConfig {
-    fn default() -> Self {
-        Self {
-            bandwidth_limit: None,
-            burst_limit: None,
-            connection_limit: None,
-            rate_limit: None,
-        }
-    }
-}
-
-impl Default for ResourceLimits {
-    fn default() -> Self {
-        Self {
-            max_file_descriptors: None,
-            max_processes: None,
-            max_threads: None,
-            max_memory_mappings: None,
-            max_stack_size: None,
-        }
-    }
-}
+// Default impls now derived via #[derive(Default)] on structs above
 
 impl Default for ResourceAllocation {
     fn default() -> Self {
@@ -472,4 +416,4 @@ impl Default for MetricsConfig {
             retention: Duration::from_secs(24 * 60 * 60), // 24 hours
         }
     }
-} 
+}

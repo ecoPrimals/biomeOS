@@ -3,13 +3,13 @@
 //! This module contains configuration types for primals including
 //! network configuration, security settings, and dependency management.
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
-use super::core::{PrimalType, ResourceRequirements, PrimalMetadata};
 use super::capabilities::PrimalCapability;
+use super::core::{PrimalMetadata, PrimalType, ResourceRequirements};
 
 /// Primal configuration structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -398,4 +398,4 @@ pub enum AuditEvent {
     DataAccess,
     Administrative,
     All,
-} 
+}

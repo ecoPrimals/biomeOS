@@ -3,21 +3,15 @@
 //! ✅ UNIFICATION COMPLETE: Configuration types now use the unified system from biomeos-types
 //! ✅ All configuration types have been consolidated in biomeos-types
 
-use biomeos_types::{
-    BiomeOSConfig, Environment, OrganizationScale,
-    config::resources::DiscoveryMethod,
-    BiomeResult,
-};
 use biomeos_types::config::features::EnvironmentLimits;
 use biomeos_types::config::resources::RegistryConfig;
+use biomeos_types::{
+    config::resources::DiscoveryMethod, BiomeOSConfig, BiomeResult, Environment, OrganizationScale,
+};
 
 // All configuration types are now properly unified in biomeos-types
 
-/// Standard Result type for configuration operations
-// Removed: ConfigResult type alias - use BiomeResult<T> directly
-
-/// Standard Error type for configuration operations
-// Removed: ConfigError type alias - use BiomeError directly
+// Note: Use BiomeResult<T> and BiomeError from biomeos-types for consistency
 
 /// Configuration builder for easy setup
 pub struct BiomeOSConfigBuilder {
@@ -31,25 +25,25 @@ impl BiomeOSConfigBuilder {
             config: BiomeOSConfig::default(),
         }
     }
-    
+
     /// Set the configuration name
     pub fn name(mut self, name: impl Into<String>) -> Self {
         self.config.metadata.name = name.into();
         self
     }
-    
+
     /// Set the environment
     pub fn environment(mut self, env: Environment) -> Self {
         self.config.system.environment = env;
         self
     }
-    
+
     /// Set organization scale
     pub fn organization_scale(mut self, scale: OrganizationScale) -> Self {
         self.config.system.organization_scale = scale;
         self
     }
-    
+
     /// Add discovery endpoint  
     pub fn discovery_endpoint(mut self, endpoint: impl Into<String>) -> Self {
         // Updated to use the correct structure from unified types
@@ -62,13 +56,13 @@ impl BiomeOSConfigBuilder {
         }
         self
     }
-    
+
     /// Set discovery method
     pub fn discovery_method(mut self, method: DiscoveryMethod) -> Self {
         self.config.discovery.default_method = method;
         self
     }
-    
+
     /// Enable feature flag
     pub fn enable_feature(mut self, feature: impl Into<String>) -> Self {
         match feature.into().as_str() {
@@ -79,38 +73,42 @@ impl BiomeOSConfigBuilder {
             "advanced_networking" | "networking" => {
                 // networking maps to experimental for advanced features
                 self.config.features.experimental = true;
-            },
+            }
             "multi_tenant" => {
                 // multi_tenant maps to experimental feature set
                 self.config.features.experimental = true;
                 self.config.features.debug = true; // Enable debug for multi-tenant testing
-            },
+            }
             _ => {} // Unknown feature, ignore
         }
         self
     }
-    
+
     /// Set system limits
     pub fn max_workers(mut self, max_workers: u32) -> Self {
         // WorkerConfig uses worker_threads instead of max_workers
         self.config.system.workers.worker_threads = Some(max_workers as usize);
         self
     }
-    
+
     /// Set connection timeout
     pub fn connection_timeout(mut self, timeout_ms: u64) -> Self {
         // connection_timeout expects Duration
-        self.config.system.timeouts.connection_timeout = std::time::Duration::from_millis(timeout_ms);
+        self.config.system.timeouts.connection_timeout =
+            std::time::Duration::from_millis(timeout_ms);
         self
     }
-    
+
     /// Add environment variable
     pub fn env_var(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
         let env_name = format!("{:?}", self.config.system.environment).to_lowercase();
         let env_config = self.config.environments.entry(env_name).or_insert_with(|| {
             biomeos_types::config::EnvironmentConfig {
                 name: format!("{:?}", self.config.system.environment),
-                description: Some(format!("Environment configuration for {:?}", self.config.system.environment)),
+                description: Some(format!(
+                    "Environment configuration for {:?}",
+                    self.config.system.environment
+                )),
                 features: biomeos_types::FeatureFlags::default(),
                 limits: EnvironmentLimits {
                     max_users: None,
@@ -126,7 +124,7 @@ impl BiomeOSConfigBuilder {
         env_config.variables.insert(key.into(), value.into());
         self
     }
-    
+
     /// Build the final configuration
     pub fn build(self) -> BiomeResult<BiomeOSConfig> {
         let mut config = self.config;
@@ -145,7 +143,7 @@ impl Default for BiomeOSConfigBuilder {
 /// Configuration presets for common scenarios
 pub mod presets {
     use super::*;
-    
+
     /// Development configuration preset
     pub fn development() -> BiomeResult<BiomeOSConfig> {
         BiomeOSConfigBuilder::new()
@@ -158,7 +156,7 @@ pub mod presets {
             .connection_timeout(5000)
             .build()
     }
-    
+
     /// Production configuration preset
     pub fn production() -> BiomeResult<BiomeOSConfig> {
         BiomeOSConfigBuilder::new()
@@ -176,7 +174,7 @@ pub mod presets {
             .connection_timeout(10000)
             .build()
     }
-    
+
     /// Testing configuration preset
     pub fn testing() -> BiomeResult<BiomeOSConfig> {
         BiomeOSConfigBuilder::new()
@@ -189,15 +187,19 @@ pub mod presets {
             .connection_timeout(3000)
             .build()
     }
-    
+
     /// Local development configuration
+    ///
+    /// NOTE: Uses fallback endpoint for development when discovery unavailable.
+    /// Production should use discovery-based endpoint resolution.
     pub fn local() -> BiomeResult<BiomeOSConfig> {
+        #[allow(deprecated)]
         BiomeOSConfigBuilder::new()
             .name("local-biome")
             .environment(Environment::Development)
             .organization_scale(OrganizationScale::Individual)
             .discovery_method(DiscoveryMethod::Static)
-            .discovery_endpoint("http://localhost:8001")
+            .discovery_endpoint("http://localhost:8001") // Development fallback only
             .enable_feature("real_time_monitoring")
             .max_workers(2)
             .connection_timeout(5000)
@@ -209,33 +211,36 @@ pub mod presets {
 /// Configuration validation utilities
 pub mod validation {
     use super::*;
-    
+
     /// Validate configuration for common issues
     pub fn validate_config(config: &BiomeOSConfig) -> BiomeResult<Vec<String>> {
         let mut warnings = Vec::new();
-        
+
         // Check for development settings in production
         if config.system.environment == Environment::Production {
             if let Some(ref registry) = config.discovery.registry {
                 if registry.url.contains("localhost") {
-                    warnings.push("Production environment contains localhost endpoints".to_string());
+                    warnings
+                        .push("Production environment contains localhost endpoints".to_string());
                 }
             }
-            
-            // Check worker thread count 
+
+            // Check worker thread count
             let worker_count = config.system.workers.worker_threads.unwrap_or(1);
             if worker_count < 4 {
                 warnings.push("Production environment has low worker count".to_string());
             }
         }
-        
+
         // Check discovery configuration
         let has_registry = config.discovery.registry.is_some();
-            
+
         if !has_registry {
             match config.discovery.default_method {
                 DiscoveryMethod::Registry => {
-                    warnings.push("Registry discovery method requires registry configuration".to_string());
+                    warnings.push(
+                        "Registry discovery method requires registry configuration".to_string(),
+                    );
                 }
                 DiscoveryMethod::Consul | DiscoveryMethod::Kubernetes => {
                     warnings.push("Discovery method requires additional configuration".to_string());
@@ -243,33 +248,35 @@ pub mod validation {
                 _ => {} // Static and DNS methods don't require registry
             }
         }
-        
+
         // Check security settings
         if config.system.environment == Environment::Production && !config.features.crypto_locks {
             warnings.push("Production environment should enable crypto locks".to_string());
         }
-        
+
         // Check resource limits - connection_timeout is Duration
         if config.system.timeouts.connection_timeout < std::time::Duration::from_millis(1000) {
             warnings.push("Connection timeout is very low and may cause issues".to_string());
         }
-        
+
         Ok(warnings)
     }
-    
+
     /// Check if configuration is suitable for production
     pub fn is_production_ready(config: &BiomeOSConfig) -> bool {
-        let has_localhost = config.discovery.registry
+        let has_localhost = config
+            .discovery
+            .registry
             .as_ref()
             .map(|r| r.url.contains("localhost"))
             .unwrap_or(false);
-            
+
         let worker_count = config.system.workers.worker_threads.unwrap_or(1);
-            
-        config.system.environment == Environment::Production &&
-        config.features.crypto_locks &&
-        worker_count >= 4 &&
-        !has_localhost
+
+        config.system.environment == Environment::Production
+            && config.features.crypto_locks
+            && worker_count >= 4
+            && !has_localhost
     }
 }
 
@@ -287,27 +294,33 @@ mod tests {
             .max_workers(8)
             .build()
             .unwrap();
-        
+
         assert_eq!(config.metadata.name, "test-config");
         assert_eq!(config.system.environment, Environment::Testing);
         assert_eq!(config.system.organization_scale, OrganizationScale::Team);
         assert!(config.features.telemetry);
         assert_eq!(config.system.workers.worker_threads, Some(8));
     }
-    
+
     #[test]
     fn test_development_preset() {
         let config = presets::development().unwrap();
         assert_eq!(config.system.environment, Environment::Development);
-        assert_eq!(config.system.organization_scale, OrganizationScale::Individual);
+        assert_eq!(
+            config.system.organization_scale,
+            OrganizationScale::Individual
+        );
         assert!(config.features.telemetry);
     }
-    
+
     #[test]
     fn test_production_preset() {
         let config = presets::production().unwrap();
         assert_eq!(config.system.environment, Environment::Production);
-        assert_eq!(config.system.organization_scale, OrganizationScale::Enterprise);
+        assert_eq!(
+            config.system.organization_scale,
+            OrganizationScale::Enterprise
+        );
         assert!(config.features.ai_first);
         assert!(config.features.crypto_locks);
         assert!(config.features.auto_scaling);
@@ -316,7 +329,7 @@ mod tests {
     #[test]
     fn test_config_validation() {
         let config = presets::production().unwrap();
-        let warnings = validation::validate_config(&config).unwrap();
+        let _warnings = validation::validate_config(&config).unwrap();
         // Production config may have some warnings, that's expected
         assert!(validation::is_production_ready(&config));
     }
@@ -326,4 +339,4 @@ mod tests {
         let config = presets::development().unwrap();
         assert!(!validation::is_production_ready(&config));
     }
-} 
+}

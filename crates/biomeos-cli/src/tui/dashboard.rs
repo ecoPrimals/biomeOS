@@ -93,12 +93,27 @@ impl BiomeOSDashboard {
         // Convert HealthReport to SystemHealth for TUI
         let cli_health = crate::health::SystemHealth {
             overall_status: system_health.health.clone(),
-            cpu_usage: system_health.metrics.resources.as_ref()
-                .and_then(|r| r.cpu_usage).map(|u| u * 100.0).unwrap_or(0.0),
-            memory_usage: system_health.metrics.resources.as_ref()
-                .and_then(|r| r.memory_usage).map(|u| u * 100.0).unwrap_or(0.0), 
-            disk_usage: system_health.metrics.resources.as_ref()
-                .and_then(|r| r.disk_usage).map(|u| u * 100.0).unwrap_or(0.0),
+            cpu_usage: system_health
+                .metrics
+                .resources
+                .as_ref()
+                .and_then(|r| r.cpu_usage)
+                .map(|u| u * 100.0)
+                .unwrap_or(0.0),
+            memory_usage: system_health
+                .metrics
+                .resources
+                .as_ref()
+                .and_then(|r| r.memory_usage)
+                .map(|u| u * 100.0)
+                .unwrap_or(0.0),
+            disk_usage: system_health
+                .metrics
+                .resources
+                .as_ref()
+                .and_then(|r| r.disk_usage)
+                .map(|u| u * 100.0)
+                .unwrap_or(0.0),
             network_status: "OK".to_string(),
         };
         self.state.add_health_data(cli_health);
@@ -110,23 +125,23 @@ impl BiomeOSDashboard {
             .discover_network_scan()
             .await
             .unwrap_or_else(|_| Vec::new());
-        
+
         // For now, create minimal DiscoveryResult from endpoints
         self.state.discovered_services = endpoints
             .into_iter()
             .map(|endpoint| {
                 use biomeos_core::universal_biomeos_manager::DiscoveryResult;
-                use biomeos_primal_sdk::{PrimalType, Health};
+                use biomeos_primal_sdk::{Health, PrimalType};
                 use uuid::Uuid;
-                
+
                 DiscoveryResult {
                     id: Uuid::new_v4().to_string(),
                     primal_type: PrimalType::new("unknown", "Unknown Service", "1.0.0"),
                     endpoint,
                     capabilities: vec![],
-                    health: Health::Unknown { 
+                    health: Health::Unknown {
                         reason: "Not probed yet".to_string(),
-                        last_known: None 
+                        last_known: None,
                     },
                     discovered_at: chrono::Utc::now(),
                 }
@@ -134,11 +149,11 @@ impl BiomeOSDashboard {
             .collect();
 
         // Update service list state if needed
-        if !self.state.discovered_services.is_empty() {
-            if self.state.selected_service >= self.state.discovered_services.len() {
-                self.state.selected_service = 0;
-                self.state.service_list_state.select(Some(0));
-            }
+        if !self.state.discovered_services.is_empty()
+            && self.state.selected_service >= self.state.discovered_services.len()
+        {
+            self.state.selected_service = 0;
+            self.state.service_list_state.select(Some(0));
         }
 
         // Update capability statistics

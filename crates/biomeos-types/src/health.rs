@@ -3,13 +3,13 @@
 //! This module consolidates all health-related types that were previously
 //! scattered across multiple crates (PrimalHealth, HealthStatus, SystemHealth, etc.).
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 /// Universal Health Status
-/// 
+///
 /// This replaces PrimalHealth, HealthStatus, and other health enums
 /// with a unified, comprehensive health status system.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -18,7 +18,7 @@ pub enum Health {
     Healthy,
 
     /// System is operational but with degraded performance
-    Degraded { 
+    Degraded {
         /// Issues affecting performance
         issues: Vec<HealthIssue>,
         /// Performance impact score (0.0-1.0)
@@ -26,7 +26,7 @@ pub enum Health {
     },
 
     /// System is experiencing critical issues but still partially functional
-    Critical { 
+    Critical {
         /// Critical issues
         issues: Vec<HealthIssue>,
         /// Affected capabilities
@@ -34,7 +34,7 @@ pub enum Health {
     },
 
     /// System is completely non-functional
-    Unhealthy { 
+    Unhealthy {
         /// Issues causing system failure
         issues: Vec<HealthIssue>,
         /// Time when system became unhealthy
@@ -42,7 +42,7 @@ pub enum Health {
     },
 
     /// Health status cannot be determined
-    Unknown { 
+    Unknown {
         /// Reason why health is unknown
         reason: String,
         /// Last known health status
@@ -50,7 +50,7 @@ pub enum Health {
     },
 
     /// System is starting up
-    Starting { 
+    Starting {
         /// Startup phase
         phase: StartupPhase,
         /// Progress percentage (0-100)
@@ -58,7 +58,7 @@ pub enum Health {
     },
 
     /// System is shutting down
-    Stopping { 
+    Stopping {
         /// Shutdown phase
         phase: ShutdownPhase,
         /// Progress percentage (0-100)
@@ -66,7 +66,7 @@ pub enum Health {
     },
 
     /// System is under maintenance
-    Maintenance { 
+    Maintenance {
         /// Maintenance type
         maintenance_type: MaintenanceType,
         /// Estimated completion time
@@ -83,32 +83,32 @@ impl Health {
     /// Create a degraded status with issues
     pub fn degraded(issues: Vec<HealthIssue>) -> Self {
         let impact_score = Self::calculate_impact_score(&issues);
-        Self::Degraded { 
-            issues, 
+        Self::Degraded {
+            issues,
             impact_score: Some(impact_score),
         }
     }
 
     /// Create a critical status
     pub fn critical(issues: Vec<HealthIssue>, affected_capabilities: Vec<String>) -> Self {
-        Self::Critical { 
-            issues, 
+        Self::Critical {
+            issues,
             affected_capabilities,
         }
     }
 
     /// Create an unhealthy status
     pub fn unhealthy(issues: Vec<HealthIssue>) -> Self {
-        Self::Unhealthy { 
-            issues, 
+        Self::Unhealthy {
+            issues,
             failed_at: Utc::now(),
         }
     }
 
     /// Create an unknown status
     pub fn unknown(reason: impl Into<String>) -> Self {
-        Self::Unknown { 
-            reason: reason.into(), 
+        Self::Unknown {
+            reason: reason.into(),
             last_known: None,
         }
     }
@@ -137,9 +137,7 @@ impl Health {
     pub fn score(&self) -> f64 {
         match self {
             Self::Healthy => 1.0,
-            Self::Degraded { impact_score, .. } => {
-                1.0 - impact_score.unwrap_or(0.3)
-            },
+            Self::Degraded { impact_score, .. } => 1.0 - impact_score.unwrap_or(0.3),
             Self::Critical { .. } => 0.2,
             Self::Unhealthy { .. } => 0.0,
             Self::Unknown { .. } => 0.5,
@@ -152,9 +150,9 @@ impl Health {
     /// Get all issues affecting this health status
     pub fn issues(&self) -> Vec<&HealthIssue> {
         match self {
-            Self::Degraded { issues, .. } |
-            Self::Critical { issues, .. } |
-            Self::Unhealthy { issues, .. } => issues.iter().collect(),
+            Self::Degraded { issues, .. }
+            | Self::Critical { issues, .. }
+            | Self::Unhealthy { issues, .. } => issues.iter().collect(),
             _ => vec![],
         }
     }
@@ -165,7 +163,8 @@ impl Health {
             return 0.0;
         }
 
-        let total_impact: f64 = issues.iter()
+        let total_impact: f64 = issues
+            .iter()
             .map(|issue| issue.severity.impact_score())
             .sum();
 
@@ -603,16 +602,18 @@ pub struct HealthCheckConfig {
 
 impl Default for HealthCheckConfig {
     fn default() -> Self {
-        use crate::constants::timeouts::{DEFAULT_HEALTH_CHECK_INTERVAL, DEFAULT_HEALTH_CHECK_TIMEOUT};
-        
+        use crate::constants::timeouts::{
+            DEFAULT_HEALTH_CHECK_INTERVAL, DEFAULT_HEALTH_CHECK_TIMEOUT,
+        };
+
         Self {
             interval_secs: DEFAULT_HEALTH_CHECK_INTERVAL.as_secs() as u32,
             timeout_secs: DEFAULT_HEALTH_CHECK_TIMEOUT.as_secs() as u32,
             failure_threshold: 3,
             success_threshold: 1,
-            check_target: HealthCheckTarget::Http { 
+            check_target: HealthCheckTarget::Http {
                 url: "/health".to_string(),
-                method: "GET".to_string()
+                method: "GET".to_string(),
             },
             expected_response: Some("OK".to_string()),
             metric_thresholds: HashMap::new(),
@@ -681,27 +682,5 @@ pub enum ThresholdAction {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_health_score_calculation() {
-        assert_eq!(Health::healthy().score(), 1.0);
-        assert_eq!(Health::unhealthy(vec![]).score(), 0.0);
-        assert!(Health::degraded(vec![]).score() > 0.5);
-        assert!(Health::critical(vec![], vec![]).score() < 0.5);
-    }
-
-    #[test]
-    fn test_health_status_checks() {
-        let healthy = Health::healthy();
-        assert!(healthy.is_healthy());
-        assert!(healthy.is_operational());
-        assert!(!healthy.is_terminal());
-
-        let unhealthy = Health::unhealthy(vec![]);
-        assert!(!unhealthy.is_healthy());
-        assert!(!unhealthy.is_operational());
-        assert!(unhealthy.is_terminal());
-    }
-} 
+#[path = "health_tests.rs"]
+mod tests;

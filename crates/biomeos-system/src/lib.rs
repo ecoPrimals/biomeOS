@@ -8,9 +8,8 @@ use std::fs;
 
 // Import unified types from biomeos-types
 use biomeos_types::{
-    Health, HealthReport, ComponentHealth, ResourceMetrics, NetworkIoMetrics,
-    AvailabilityMetrics, BiomeResult, HealthSubject, HealthSubjectType,
-    health::HealthMetrics,
+    health::HealthMetrics, AvailabilityMetrics, BiomeResult, ComponentHealth, Health, HealthReport,
+    HealthSubject, HealthSubjectType, NetworkIoMetrics, ResourceMetrics,
 };
 
 /// System information inspector
@@ -27,7 +26,7 @@ impl SystemInspector {
         let network_info = Self::get_network_info().await?;
         let uptime = Self::get_uptime()?;
         let load_average = Self::get_load_average()?;
-        
+
         Ok(SystemInfo {
             hostname,
             kernel_info,
@@ -40,14 +39,14 @@ impl SystemInspector {
             timestamp: chrono::Utc::now(),
         })
     }
-    
+
     /// Get current resource usage metrics
     pub async fn get_resource_usage() -> BiomeResult<ResourceMetrics> {
         let cpu_usage = Self::get_cpu_usage().await?;
         let memory_usage = Self::get_memory_usage()?;
         let disk_usage = Self::get_disk_usage().await?;
         let network_io = Self::get_network_io().await?;
-        
+
         Ok(ResourceMetrics {
             cpu_usage: Some(cpu_usage),
             memory_usage: Some(memory_usage),
@@ -55,15 +54,15 @@ impl SystemInspector {
             network_io: Some(network_io),
         })
     }
-    
+
     /// Get system health report
     pub async fn get_system_health() -> BiomeResult<HealthReport> {
         let resource_metrics = Self::get_resource_usage().await?;
         let system_info = Self::get_system_info().await?;
-        
+
         // Determine overall health based on resource usage
         let health = Self::determine_health_from_metrics(&resource_metrics);
-        
+
         // Create health subject
         let subject = HealthSubject {
             id: system_info.hostname.clone(),
@@ -71,10 +70,10 @@ impl SystemInspector {
             name: "biomeOS System".to_string(),
             version: env!("CARGO_PKG_VERSION").to_string(),
         };
-        
+
         // Build component health map
         let mut components = HashMap::new();
-        
+
         // Add CPU component
         let cpu_health = if resource_metrics.cpu_usage.unwrap_or(0.0) > 0.9 {
             Health::Critical {
@@ -105,20 +104,26 @@ impl SystemInspector {
         } else {
             Health::Healthy
         };
-        
-        components.insert("cpu".to_string(), ComponentHealth {
-            name: "CPU".to_string(),
-            health: cpu_health,
-            metrics: {
-                let mut metrics = HashMap::new();
-                if let Some(usage) = resource_metrics.cpu_usage {
-                    metrics.insert("usage_percent".to_string(), serde_json::json!(usage * 100.0));
-                }
-                metrics
+
+        components.insert(
+            "cpu".to_string(),
+            ComponentHealth {
+                name: "CPU".to_string(),
+                health: cpu_health,
+                metrics: {
+                    let mut metrics = HashMap::new();
+                    if let Some(usage) = resource_metrics.cpu_usage {
+                        metrics.insert(
+                            "usage_percent".to_string(),
+                            serde_json::json!(usage * 100.0),
+                        );
+                    }
+                    metrics
+                },
+                last_check: chrono::Utc::now(),
             },
-            last_check: chrono::Utc::now(),
-        });
-        
+        );
+
         // Add Memory component
         let memory_health = if resource_metrics.memory_usage.unwrap_or(0.0) > 0.95 {
             Health::Critical {
@@ -149,20 +154,26 @@ impl SystemInspector {
         } else {
             Health::Healthy
         };
-        
-        components.insert("memory".to_string(), ComponentHealth {
-            name: "Memory".to_string(),
-            health: memory_health,
-            metrics: {
-                let mut metrics = HashMap::new();
-                if let Some(usage) = resource_metrics.memory_usage {
-                    metrics.insert("usage_percent".to_string(), serde_json::json!(usage * 100.0));
-                }
-                metrics
+
+        components.insert(
+            "memory".to_string(),
+            ComponentHealth {
+                name: "Memory".to_string(),
+                health: memory_health,
+                metrics: {
+                    let mut metrics = HashMap::new();
+                    if let Some(usage) = resource_metrics.memory_usage {
+                        metrics.insert(
+                            "usage_percent".to_string(),
+                            serde_json::json!(usage * 100.0),
+                        );
+                    }
+                    metrics
+                },
+                last_check: chrono::Utc::now(),
             },
-            last_check: chrono::Utc::now(),
-        });
-        
+        );
+
         // Build health metrics
         let health_metrics = HealthMetrics {
             response_time: None,
@@ -177,7 +188,7 @@ impl SystemInspector {
             }),
             custom: HashMap::new(),
         };
-        
+
         Ok(HealthReport {
             id: uuid::Uuid::new_v4(),
             subject,
@@ -189,7 +200,7 @@ impl SystemInspector {
             next_check_at: Some(chrono::Utc::now() + chrono::Duration::minutes(5)),
         })
     }
-    
+
     /// Get hostname
     fn get_hostname() -> BiomeResult<String> {
         if let Ok(hostname) = std::env::var("HOSTNAME") {
@@ -200,7 +211,7 @@ impl SystemInspector {
             Ok("unknown".to_string())
         }
     }
-    
+
     /// Get kernel information
     fn get_kernel_info() -> BiomeResult<KernelInfo> {
         // Try to read from /proc/version on Linux
@@ -219,14 +230,14 @@ impl SystemInspector {
             })
         }
     }
-    
+
     /// Get CPU information
     fn get_cpu_info() -> BiomeResult<CpuInfo> {
         // Try to read from /proc/cpuinfo on Linux
         if let Ok(cpuinfo) = fs::read_to_string("/proc/cpuinfo") {
             let mut model_name = "Unknown".to_string();
             let mut cores = 0;
-            
+
             for line in cpuinfo.lines() {
                 if line.starts_with("model name") {
                     if let Some(name) = line.split(':').nth(1) {
@@ -236,7 +247,7 @@ impl SystemInspector {
                     cores += 1;
                 }
             }
-            
+
             Ok(CpuInfo {
                 model: model_name,
                 cores,
@@ -251,14 +262,14 @@ impl SystemInspector {
             })
         }
     }
-    
+
     /// Get memory information
     fn get_memory_info() -> BiomeResult<MemoryInfo> {
         // Try to read from /proc/meminfo on Linux
         if let Ok(meminfo) = fs::read_to_string("/proc/meminfo") {
             let mut total_kb = 0;
             let mut available_kb = 0;
-            
+
             for line in meminfo.lines() {
                 if line.starts_with("MemTotal:") {
                     if let Some(value) = line.split_whitespace().nth(1) {
@@ -270,11 +281,11 @@ impl SystemInspector {
                     }
                 }
             }
-            
+
             let total_gb = total_kb as f64 / 1024.0 / 1024.0;
             let available_gb = available_kb as f64 / 1024.0 / 1024.0;
             let used_gb = total_gb - available_gb;
-            
+
             Ok(MemoryInfo {
                 total_gb,
                 used_gb,
@@ -291,56 +302,110 @@ impl SystemInspector {
             })
         }
     }
-    
-    /// Get disk information
+
+    /// Get disk information using sysinfo for cross-platform support
     async fn get_disk_info() -> BiomeResult<Vec<DiskInfo>> {
-        let mut disks = Vec::new();
-        
-        // Simple implementation - in production would use proper system APIs
-        if let Ok(_entries) = fs::read_dir("/") {
-            let mut _total_gb = 0.0;
-            let mut _used_gb = 0.0;
-            
-            // This is a simplified implementation
-            // In production, would use statvfs or similar system calls
-            _total_gb = 100.0; // Placeholder
-            _used_gb = 50.0;   // Placeholder
-            
-            disks.push(DiskInfo {
-                device: "/dev/root".to_string(),
-                mount_point: "/".to_string(),
-                filesystem: "ext4".to_string(),
-                total_gb: _total_gb,
-                used_gb: _used_gb,
-                available_gb: _total_gb - _used_gb,
-                usage_percent: _used_gb / _total_gb,
+        use sysinfo::Disks;
+
+        let disks_info = Disks::new_with_refreshed_list();
+        let mut result = Vec::new();
+
+        for disk in &disks_info {
+            let total_bytes = disk.total_space();
+            let available_bytes = disk.available_space();
+            let used_bytes = total_bytes.saturating_sub(available_bytes);
+
+            let total_gb = total_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
+            let used_gb = used_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
+            let available_gb = available_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
+
+            let usage_percent = if total_gb > 0.0 {
+                used_gb / total_gb
+            } else {
+                0.0
+            };
+
+            result.push(DiskInfo {
+                device: disk.name().to_string_lossy().to_string(),
+                mount_point: disk.mount_point().to_string_lossy().to_string(),
+                filesystem: disk.file_system().to_string_lossy().to_string(),
+                total_gb,
+                used_gb,
+                available_gb,
+                usage_percent,
             });
         }
-        
-        Ok(disks)
+
+        // Ensure at least one disk entry for systems where detection fails
+        if result.is_empty() {
+            result.push(DiskInfo {
+                device: "unknown".to_string(),
+                mount_point: "/".to_string(),
+                filesystem: "unknown".to_string(),
+                total_gb: 0.0,
+                used_gb: 0.0,
+                available_gb: 0.0,
+                usage_percent: 0.0,
+            });
+        }
+
+        Ok(result)
     }
-    
-    /// Get network information
+
+    /// Get network information using sysinfo for cross-platform support
     async fn get_network_info() -> BiomeResult<Vec<NetworkInterface>> {
-        let mut interfaces = Vec::new();
-        
-        // Simplified implementation - would use proper network APIs in production
-        interfaces.push(NetworkInterface {
-            name: "lo".to_string(),
-            interface_type: NetworkInterfaceType::Loopback,
-            status: NetworkInterfaceStatus::Up,
-            addresses: vec!["127.0.0.1".to_string()],
-            mac_address: None,
-            mtu: 65536,
-            bytes_sent: 0,
-            bytes_received: 0,
-            packets_sent: 0,
-            packets_received: 0,
-        });
-        
-        Ok(interfaces)
+        use sysinfo::Networks;
+
+        let networks = Networks::new_with_refreshed_list();
+        let mut result = Vec::new();
+
+        for (interface_name, network) in &networks {
+            // Determine interface type based on name
+            let interface_type = if interface_name.starts_with("lo") {
+                NetworkInterfaceType::Loopback
+            } else if interface_name.starts_with("eth") || interface_name.starts_with("enp") {
+                NetworkInterfaceType::Ethernet
+            } else if interface_name.starts_with("wlan") || interface_name.starts_with("wlp") {
+                NetworkInterfaceType::Wireless
+            } else if interface_name.starts_with("docker") || interface_name.starts_with("br") {
+                NetworkInterfaceType::Bridge
+            } else {
+                NetworkInterfaceType::Other(interface_name.clone())
+            };
+
+            result.push(NetworkInterface {
+                name: interface_name.clone(),
+                interface_type,
+                status: NetworkInterfaceStatus::Up, // sysinfo only shows active interfaces
+                addresses: vec![], // IP addresses not directly available in sysinfo
+                mac_address: Some(format!("{:?}", network.mac_address())),
+                mtu: 0, // MTU not available in sysinfo
+                bytes_sent: network.total_transmitted(),
+                bytes_received: network.total_received(),
+                packets_sent: network.total_packets_transmitted(),
+                packets_received: network.total_packets_received(),
+            });
+        }
+
+        // Ensure at least loopback interface for systems where detection fails
+        if result.is_empty() {
+            result.push(NetworkInterface {
+                name: "lo".to_string(),
+                interface_type: NetworkInterfaceType::Loopback,
+                status: NetworkInterfaceStatus::Up,
+                addresses: vec!["127.0.0.1".to_string()],
+                mac_address: None,
+                mtu: 65536,
+                bytes_sent: 0,
+                bytes_received: 0,
+                packets_sent: 0,
+                packets_received: 0,
+            });
+        }
+
+        Ok(result)
     }
-    
+
     /// Get system uptime
     fn get_uptime() -> BiomeResult<std::time::Duration> {
         // Try to read from /proc/uptime on Linux
@@ -351,11 +416,11 @@ impl SystemInspector {
                 }
             }
         }
-        
+
         // Fallback
         Ok(std::time::Duration::from_secs(3600)) // 1 hour placeholder
     }
-    
+
     /// Get load average
     fn get_load_average() -> BiomeResult<LoadAverage> {
         // Try to read from /proc/loadavg on Linux
@@ -369,7 +434,7 @@ impl SystemInspector {
                 });
             }
         }
-        
+
         // Fallback
         Ok(LoadAverage {
             load_1m: 0.1,
@@ -377,49 +442,88 @@ impl SystemInspector {
             load_15m: 0.1,
         })
     }
-    
-    /// Get current CPU usage (simplified implementation)
+
+    /// Get current CPU usage using sysinfo
     async fn get_cpu_usage() -> BiomeResult<f64> {
-        // Simplified CPU usage calculation
-        // In production, would read from /proc/stat and calculate properly
-        Ok(0.15) // 15% placeholder
+        use sysinfo::{CpuRefreshKind, RefreshKind, System};
+
+        let mut sys =
+            System::new_with_specifics(RefreshKind::new().with_cpu(CpuRefreshKind::everything()));
+
+        // Need to refresh twice for accurate CPU usage
+        sys.refresh_cpu();
+        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+        sys.refresh_cpu();
+
+        let global_cpu = sys.global_cpu_info();
+        Ok(f64::from(global_cpu.cpu_usage()) / 100.0)
     }
-    
+
     /// Get current memory usage
     fn get_memory_usage() -> BiomeResult<f64> {
         let memory_info = Self::get_memory_info()?;
         Ok(memory_info.usage_percent)
     }
-    
+
     /// Get current disk usage (average across all disks)
     async fn get_disk_usage() -> BiomeResult<f64> {
         let disks = Self::get_disk_info().await?;
         if disks.is_empty() {
             return Ok(0.0);
         }
-        
+
         let total_usage: f64 = disks.iter().map(|d| d.usage_percent).sum();
         Ok(total_usage / disks.len() as f64)
     }
-    
-    /// Get current network I/O
+
+    /// Get current network I/O using sysinfo
     async fn get_network_io() -> BiomeResult<NetworkIoMetrics> {
-        // Simplified network I/O metrics
-        // In production, would read from /proc/net/dev and calculate rates
+        use sysinfo::Networks;
+
+        let mut networks = Networks::new_with_refreshed_list();
+
+        // First measurement
+        let initial_rx: u64 = networks.values().map(|data| data.total_received()).sum();
+        let initial_tx: u64 = networks.values().map(|data| data.total_transmitted()).sum();
+        let initial_rx_packets: u64 = networks
+            .values()
+            .map(|data| data.total_packets_received())
+            .sum();
+        let initial_tx_packets: u64 = networks
+            .values()
+            .map(|data| data.total_packets_transmitted())
+            .sum();
+
+        // Wait 1 second
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+
+        // Second measurement
+        networks.refresh();
+        let final_rx: u64 = networks.values().map(|data| data.total_received()).sum();
+        let final_tx: u64 = networks.values().map(|data| data.total_transmitted()).sum();
+        let final_rx_packets: u64 = networks
+            .values()
+            .map(|data| data.total_packets_received())
+            .sum();
+        let final_tx_packets: u64 = networks
+            .values()
+            .map(|data| data.total_packets_transmitted())
+            .sum();
+
         Ok(NetworkIoMetrics {
-            bytes_in_per_sec: 1000.0,
-            bytes_out_per_sec: 500.0,
-            packets_in_per_sec: 10.0,
-            packets_out_per_sec: 8.0,
+            bytes_in_per_sec: (final_rx.saturating_sub(initial_rx)) as f64,
+            bytes_out_per_sec: (final_tx.saturating_sub(initial_tx)) as f64,
+            packets_in_per_sec: (final_rx_packets.saturating_sub(initial_rx_packets)) as f64,
+            packets_out_per_sec: (final_tx_packets.saturating_sub(initial_tx_packets)) as f64,
         })
     }
-    
+
     /// Determine health from resource metrics
     fn determine_health_from_metrics(metrics: &ResourceMetrics) -> Health {
         let cpu_usage = metrics.cpu_usage.unwrap_or(0.0);
         let memory_usage = metrics.memory_usage.unwrap_or(0.0);
         let disk_usage = metrics.disk_usage.unwrap_or(0.0);
-        
+
         if cpu_usage > 0.95 || memory_usage > 0.95 || disk_usage > 0.95 {
             Health::Critical {
                 issues: vec![biomeos_types::HealthIssue {
@@ -450,7 +554,7 @@ impl SystemInspector {
             Health::Healthy
         }
     }
-    
+
     /// Calculate uptime percentage
     fn calculate_uptime_percentage(system_info: &SystemInfo) -> f64 {
         // Simplified calculation - in production would track actual downtime
@@ -568,17 +672,17 @@ impl SystemMonitor {
             monitoring_interval,
         }
     }
-    
+
     /// Start continuous system monitoring
     pub async fn start_monitoring<F>(&self, callback: F) -> BiomeResult<()>
     where
         F: Fn(HealthReport) + Send + Sync + 'static,
     {
         let mut interval = tokio::time::interval(self.monitoring_interval);
-        
+
         loop {
             interval.tick().await;
-            
+
             match SystemInspector::get_system_health().await {
                 Ok(health_report) => {
                     callback(health_report);
@@ -594,60 +698,59 @@ impl SystemMonitor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tokio;
-    
+
     #[tokio::test]
     async fn test_system_info_collection() {
         let system_info = SystemInspector::get_system_info().await;
         assert!(system_info.is_ok());
-        
+
         let info = system_info.unwrap();
         assert!(!info.hostname.is_empty());
         assert!(!info.kernel_info.name.is_empty());
     }
-    
+
     #[tokio::test]
     async fn test_resource_usage() {
         let resource_usage = SystemInspector::get_resource_usage().await;
         assert!(resource_usage.is_ok());
-        
+
         let usage = resource_usage.unwrap();
         assert!(usage.cpu_usage.is_some());
         assert!(usage.memory_usage.is_some());
     }
-    
+
     #[tokio::test]
     async fn test_system_health() {
         let health_report = SystemInspector::get_system_health().await;
         assert!(health_report.is_ok());
-        
+
         let report = health_report.unwrap();
         assert_eq!(report.subject.subject_type, HealthSubjectType::System);
         assert!(!report.components.is_empty());
     }
-    
+
     #[test]
     fn test_hostname_retrieval() {
         let hostname = SystemInspector::get_hostname();
         assert!(hostname.is_ok());
         assert!(!hostname.unwrap().is_empty());
     }
-    
+
     #[test]
     fn test_kernel_info() {
         let kernel_info = SystemInspector::get_kernel_info();
         assert!(kernel_info.is_ok());
-        
+
         let info = kernel_info.unwrap();
         assert!(!info.name.is_empty());
         assert!(!info.architecture.is_empty());
     }
-    
+
     #[test]
     fn test_load_average() {
         let load_avg = SystemInspector::get_load_average();
         assert!(load_avg.is_ok());
-        
+
         let avg = load_avg.unwrap();
         assert!(avg.load_1m >= 0.0);
         assert!(avg.load_5m >= 0.0);

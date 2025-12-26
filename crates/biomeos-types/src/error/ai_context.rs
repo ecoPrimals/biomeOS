@@ -3,10 +3,10 @@
 //! This module contains AI-specific error context, retry strategies,
 //! suggested actions, and automation features for intelligent error handling.
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
 /// AI-specific error context for automation and decision making
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -310,12 +310,19 @@ impl RetryStrategy {
     }
 
     /// Create exponential backoff retry strategy
-    pub fn exponential_backoff(max_attempts: u32, initial_delay_ms: u64, max_delay_ms: u64) -> Self {
+    pub fn exponential_backoff(
+        max_attempts: u32,
+        initial_delay_ms: u64,
+        max_delay_ms: u64,
+    ) -> Self {
         Self {
             should_retry: true,
             delay_ms: initial_delay_ms,
             max_attempts,
-            backoff_strategy: BackoffType::Exponential { base: 2.0, max_delay_ms },
+            backoff_strategy: BackoffType::Exponential {
+                base: 2.0,
+                max_delay_ms,
+            },
             retry_conditions: vec![],
             success_probability: 0.7,
             max_retry_time_ms: Some(max_delay_ms * max_attempts as u64),
@@ -331,7 +338,9 @@ impl RetryStrategy {
             backoff_strategy: BackoffType::Linear { increment_ms },
             retry_conditions: vec![],
             success_probability: 0.6,
-            max_retry_time_ms: Some((delay_ms + increment_ms * max_attempts as u64) * max_attempts as u64),
+            max_retry_time_ms: Some(
+                (delay_ms + increment_ms * max_attempts as u64) * max_attempts as u64,
+            ),
         }
     }
 }
@@ -340,4 +349,4 @@ impl Default for RetryStrategy {
     fn default() -> Self {
         Self::no_retry()
     }
-} 
+}

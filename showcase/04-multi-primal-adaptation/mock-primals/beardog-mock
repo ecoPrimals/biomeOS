@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# Mock BearDog - Subcommand pattern (serve)
+
+if [ "$1" = "--version" ]; then
+    echo "beardog-mock 1.0.0"
+    exit 0
+fi
+
+if [ "$1" = "--help" ]; then
+    echo "BearDog Security Primal (Mock)"
+    echo "Usage: beardog-mock serve"
+    exit 0
+fi
+
+if [ "$1" != "serve" ]; then
+    echo "Error: unrecognized subcommand '$1'"
+    echo "Usage: beardog-mock serve"
+    exit 1
+fi
+
+PORT=${PORT:-9040}
+
+echo "🐻 BearDog Security Primal (Mock) starting on port $PORT"
+echo "   Interface: Subcommand (serve)"
+echo ""
+
+python3 -c "
+import http.server
+import socketserver
+import json
+
+PORT = $PORT
+
+class HealthHandler(http.server.SimpleHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == '/health':
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            response = {
+                'status': 'healthy',
+                'primal': 'beardog',
+                'version': '1.0.0',
+                'capabilities': ['security', 'protection']
+            }
+            self.wfile.write(json.dumps(response).encode())
+        else:
+            self.send_response(200)
+            self.send_header('Content-type', 'text/plain')
+            self.end_headers()
+            self.wfile.write(b'BearDog Security Primal (Mock)')
+    
+    def log_message(self, format, *args):
+        return
+
+with socketserver.TCPServer(('', PORT), HealthHandler) as httpd:
+    print(f'✅ BearDog listening on port {PORT}')
+    print(f'   Health check: http://localhost:{PORT}/health')
+    httpd.serve_forever()
+"
+

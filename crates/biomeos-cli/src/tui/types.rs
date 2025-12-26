@@ -3,9 +3,9 @@
 //! Comprehensive types for BiomeOS as the human/AI interface to a headless, AI-first ecosystem.
 //! Supports API ingestion from all primals and deployment orchestration.
 
+use crate::health::SystemHealth;
 use biomeos_core::universal_biomeos_manager::DiscoveryResult;
 use biomeos_types::{Health, PrimalCapability, PrimalType};
-use crate::health::SystemHealth;
 use ratatui::widgets::ListState;
 // Remove unused serde imports
 use std::collections::{HashMap, VecDeque};
@@ -26,15 +26,15 @@ pub enum TabId {
     EcosystemOverview,
     PrimalStatus,
     DeploymentOrchestration,
-    
+
     // Operational views
     Services,
     Health,
-    
+
     // AI-first interfaces
     AiAssistant,
     AiInsights,
-    
+
     // Advanced features
     ApiIngestion,
     Metrics,
@@ -115,7 +115,7 @@ pub struct DashboardState {
     pub discovered_services: Vec<DiscoveryResult>,
     pub active_deployments: Vec<DeploymentStatus>,
     pub ecosystem_health: EcosystemHealth,
-    
+
     // Historical data for analytics
     pub system_health_history: VecDeque<(Instant, SystemHealth)>,
     pub primal_health_history: HashMap<String, VecDeque<(Instant, Health)>>,
@@ -383,6 +383,12 @@ pub struct LogFilter {
     pub time_range: Option<(Instant, Instant)>,
 }
 
+impl Default for DashboardState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DashboardState {
     /// Create new comprehensive dashboard state
     pub fn new() -> Self {
@@ -394,40 +400,40 @@ impl DashboardState {
             service_list_state: ListState::default(),
             primal_list_state: ListState::default(),
             deployment_list_state: ListState::default(),
-            
+
             primal_states: HashMap::new(),
             discovered_services: Vec::new(),
             active_deployments: Vec::new(),
             ecosystem_health: EcosystemHealth::default(),
-            
+
             system_health_history: VecDeque::new(),
             primal_health_history: HashMap::new(),
             capability_stats: HashMap::new(),
             deployment_history: VecDeque::new(),
-            
+
             ai_chat_history: VecDeque::new(),
             ai_suggestions: Vec::new(),
             ai_insights: Vec::new(),
             ai_input_buffer: String::new(),
-            
+
             api_endpoints: HashMap::new(),
             last_api_sync: HashMap::new(),
             api_errors: VecDeque::new(),
-            
+
             log_streams: HashMap::new(),
             active_log_filters: Vec::new(),
-            
+
             update_interval: Duration::from_secs(5),
             max_history_points: 100,
             ai_enabled: true,
             auto_refresh: true,
         };
-        
+
         // Initialize with first tab selected
         state.service_list_state.select(Some(0));
         state.primal_list_state.select(Some(0));
         state.deployment_list_state.select(Some(0));
-        
+
         state
     }
 
@@ -455,18 +461,24 @@ impl DashboardState {
     /// Update capability statistics from current data
     pub fn update_capability_stats(&mut self) {
         self.capability_stats.clear();
-        
+
         // Count capabilities from discovered services
         for service in &self.discovered_services {
             for capability in &service.capabilities {
-                *self.capability_stats.entry(format!("{:?}", capability)).or_insert(0) += 1;
+                *self
+                    .capability_stats
+                    .entry(format!("{:?}", capability))
+                    .or_insert(0) += 1;
             }
         }
-        
+
         // Count capabilities from primal states
         for primal_state in self.primal_states.values() {
             for capability in &primal_state.capabilities {
-                *self.capability_stats.entry(format!("{:?}", capability)).or_insert(0) += 1;
+                *self
+                    .capability_stats
+                    .entry(format!("{:?}", capability))
+                    .or_insert(0) += 1;
             }
         }
     }
@@ -479,7 +491,7 @@ impl DashboardState {
             content,
             context,
         });
-        
+
         // Keep history manageable
         while self.ai_chat_history.len() > 100 {
             self.ai_chat_history.pop_front();
@@ -497,13 +509,14 @@ impl DashboardState {
         } else {
             let mut history = VecDeque::new();
             history.push_back((Instant::now(), state.health.clone()));
-            self.primal_health_history.insert(primal_id.clone(), history);
+            self.primal_health_history
+                .insert(primal_id.clone(), history);
         }
-        
+
         // Update primal state
         self.primal_states.insert(primal_id.clone(), state);
         self.last_api_sync.insert(primal_id, Instant::now());
-        
+
         // Update ecosystem health
         self.update_ecosystem_health();
     }
@@ -511,15 +524,17 @@ impl DashboardState {
     /// Update overall ecosystem health
     pub fn update_ecosystem_health(&mut self) {
         let primal_count = self.primal_states.len();
-        let healthy_primals = self.primal_states.values()
+        let healthy_primals = self
+            .primal_states
+            .values()
             .filter(|p| matches!(p.health, Health::Healthy))
             .count();
-        
-        let total_services: usize = self.primal_states.values()
-            .map(|p| p.services.len())
-            .sum();
-        
-        let healthy_services: usize = self.primal_states.values()
+
+        let total_services: usize = self.primal_states.values().map(|p| p.services.len()).sum();
+
+        let healthy_services: usize = self
+            .primal_states
+            .values()
             .flat_map(|p| &p.services)
             .filter(|s| matches!(s.status, ServiceStatus::Running))
             .count();
@@ -527,17 +542,17 @@ impl DashboardState {
         let overall_status = if healthy_primals == primal_count && primal_count > 0 {
             Health::Healthy
         } else if healthy_primals > 0 {
-            Health::Degraded { 
-                issues: vec![], 
-                impact_score: Some(1.0 - (healthy_primals as f64 / primal_count as f64))
+            Health::Degraded {
+                issues: vec![],
+                impact_score: Some(1.0 - (healthy_primals as f64 / primal_count as f64)),
             }
         } else {
             use biomeos_types::{HealthIssue, HealthIssueCategory, HealthIssueSeverity};
-            use std::collections::HashMap;
             use chrono::Utc;
+            use std::collections::HashMap;
             use uuid::Uuid;
-            
-            Health::Critical { 
+
+            Health::Critical {
                 issues: vec![HealthIssue {
                     id: Uuid::new_v4().to_string(),
                     category: HealthIssueCategory::Software,
@@ -547,7 +562,7 @@ impl DashboardState {
                     details: HashMap::new(),
                     remediation: vec![],
                 }],
-                affected_capabilities: vec!["All".to_string()]
+                affected_capabilities: vec!["All".to_string()],
             }
         };
 
@@ -613,9 +628,9 @@ impl DashboardState {
 impl Default for EcosystemHealth {
     fn default() -> Self {
         Self {
-            overall_status: Health::Unknown { 
-                reason: "No data available".to_string(), 
-                last_known: None 
+            overall_status: Health::Unknown {
+                reason: "No data available".to_string(),
+                last_known: None,
             },
             primal_count: 0,
             healthy_primals: 0,

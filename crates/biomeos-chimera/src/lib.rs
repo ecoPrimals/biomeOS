@@ -1,4 +1,4 @@
-//! # BiomeOS Chimera System
+//! # `biomeOS` Chimera System
 //!
 //! Chimeras are **mixed-boundary primal amalgams** - custom organisms that fuse
 //! components from multiple standard primals into a single deployable unit.
@@ -41,18 +41,17 @@
 #![warn(clippy::pedantic)]
 #![allow(clippy::module_name_repetitions)]
 
-pub mod definition;
+pub mod builder;
 pub mod component;
+pub mod definition;
+pub mod error;
 pub mod fusion;
 pub mod registry;
-pub mod builder;
-pub mod error;
 
 // Re-exports
-pub use definition::{ChimeraDefinition, ChimeraMetadata};
+pub use builder::ChimeraBuilder;
 pub use component::{Component, ComponentModule, PrimalSource};
+pub use definition::{ChimeraDefinition, ChimeraMetadata};
+pub use error::{ChimeraError, ChimeraResult};
 pub use fusion::{Fusion, FusionBinding, FusionEndpoint};
 pub use registry::ChimeraRegistry;
-pub use builder::ChimeraBuilder;
-pub use error::{ChimeraError, ChimeraResult};
-

@@ -6,8 +6,9 @@
 //! It can discover and work with any primal (current or future) that provides
 //! the needed capabilities.
 
-use biomeos_core::{UniversalBiomeOSManager, BiomeOSConfig};
 use anyhow::Result;
+use biomeos_core::UniversalBiomeOSManager;
+use biomeos_types::BiomeOSConfig;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -21,7 +22,7 @@ async fn main() -> Result<()> {
         Ok(manager) => {
             println!("✅ biomeOS Manager initialized successfully");
             manager
-        },
+        }
         Err(e) => {
             println!("❌ Failed to initialize: {}", e);
             return Err(e);
@@ -36,7 +37,7 @@ async fn main() -> Result<()> {
 
             for endpoint in &endpoints {
                 println!("  🔗 Network endpoint: {}", endpoint);
-                
+
                 // Test endpoint probing for each discovered endpoint
                 match manager.probe_endpoint(endpoint).await {
                     Ok(probe_result) => {
@@ -50,7 +51,9 @@ async fn main() -> Result<()> {
             }
 
             if endpoints.is_empty() {
-                println!("  ℹ️  No endpoints discovered - this is normal for isolated environments");
+                println!(
+                    "  ℹ️  No endpoints discovered - this is normal for isolated environments"
+                );
             }
         }
         Err(e) => println!("❌ Discovery failed: {}", e),

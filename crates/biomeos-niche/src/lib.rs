@@ -1,4 +1,4 @@
-//! # BiomeOS Niche System
+//! # `BiomeOS` Niche System
 //!
 //! Niches are **biomes** - complete environments where primals and chimeras
 //! operate together. The BYOB (Build Your Own Biome) system creates niches.
@@ -26,15 +26,14 @@
 #![allow(clippy::module_name_repetitions)]
 
 pub mod definition;
-pub mod organism;
-pub mod interaction;
 pub mod deployment;
 pub mod error;
+pub mod interaction;
+pub mod organism;
 
 // Re-exports
-pub use definition::{NicheDefinition, NicheMetadata, NicheCustomization};
-pub use organism::{Organism, OrganismType, ChimeraOrganism, PrimalOrganism};
-pub use interaction::Interaction;
-pub use deployment::{NicheDeployment, DeploymentStatus};
+pub use definition::{NicheCustomization, NicheDefinition, NicheMetadata};
+pub use deployment::{DeploymentStatus, NicheDeployment};
 pub use error::{NicheError, NicheResult};
-
+pub use interaction::Interaction;
+pub use organism::{ChimeraOrganism, Organism, OrganismType, PrimalOrganism};

@@ -1,0 +1,24 @@
+🏠 NestGate - Sovereign Storage System
+NestGate provides ZFS capabilities through a modern API-based architecture:
+• Universal ZFS features accessible via REST API
+• Works with any storage backend (local, cloud, network, memory)
+• Copy-on-Write, compression, checksumming, snapshots
+• Intelligent auto-configuration and optimization
+• Production-ready performance and reliability
+
+EXAMPLES:
+  # Start NestGate service
+  nestgate service start --port $NESTGATE_API_PORT
+
+  # Check system health
+  nestgate doctor --comprehensive
+
+  # Configure storage backend
+  nestgate storage configure --backend filesystem
+
+  # Access ZFS features via API:
+  curl -X POST $NESTGATE_API_ENDPOINT/api/v1/zfs/datasets \
+    -H 'Content-Type: application/json' \
+    -d '{"name": "tank/data", "compression": true}'
+
+For more information: https://github.com/your-org/nestgate

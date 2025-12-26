@@ -2,15 +2,19 @@
 //!
 //! Handles primal registration, management, and status tracking.
 
+use super::core::{PrimalInfo, UniversalBiomeOSManager};
 use anyhow::Result;
-use super::core::{UniversalBiomeOSManager, PrimalInfo};
 
 impl UniversalBiomeOSManager {
     /// Register a primal with the manager
     pub async fn register_primal(&self, primal_info: PrimalInfo) -> Result<()> {
         let mut registry = self.registered_primals.write().await;
         registry.insert(primal_info.id.clone(), primal_info.clone());
-        tracing::info!("📝 Registered primal: {} ({})", primal_info.name, primal_info.id);
+        tracing::info!(
+            "📝 Registered primal: {} ({})",
+            primal_info.name,
+            primal_info.id
+        );
         Ok(())
     }
 
@@ -51,7 +55,10 @@ impl UniversalBiomeOSManager {
     }
 
     /// Get primals by type
-    pub async fn get_primals_by_type(&self, primal_type: &biomeos_primal_sdk::PrimalType) -> Vec<PrimalInfo> {
+    pub async fn get_primals_by_type(
+        &self,
+        primal_type: &biomeos_primal_sdk::PrimalType,
+    ) -> Vec<PrimalInfo> {
         let registry = self.registered_primals.read().await;
         registry
             .values()
@@ -83,7 +90,11 @@ impl UniversalBiomeOSManager {
     }
 
     /// Update primal health status
-    pub async fn update_primal_health(&self, id: &str, health: biomeos_types::Health) -> Result<()> {
+    pub async fn update_primal_health(
+        &self,
+        id: &str,
+        health: biomeos_types::Health,
+    ) -> Result<()> {
         let mut registry = self.registered_primals.write().await;
         if let Some(primal) = registry.get_mut(id) {
             primal.health = health;
@@ -107,8 +118,8 @@ impl UniversalBiomeOSManager {
                 // Check if this primal has the required capabilities
                 let has_capability = primal.capabilities.iter().any(|primal_cap| {
                     capabilities.iter().any(|required_cap| {
-                        primal_cap.category == required_cap.category &&
-                        primal_cap.name == required_cap.name
+                        primal_cap.category == required_cap.category
+                            && primal_cap.name == required_cap.name
                     })
                 });
                 has_capability
@@ -121,7 +132,7 @@ impl UniversalBiomeOSManager {
     pub async fn get_primal_statistics(&self) -> PrimalStatistics {
         let registry = self.registered_primals.read().await;
         let total = registry.len();
-        
+
         let mut healthy = 0;
         let mut degraded = 0;
         let mut unhealthy = 0;
@@ -168,4 +179,4 @@ pub struct PrimalStatistics {
     pub unhealthy: usize,
     pub unknown: usize,
     pub by_type: std::collections::HashMap<String, usize>,
-} 
+}

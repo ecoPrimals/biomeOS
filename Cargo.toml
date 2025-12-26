@@ -9,9 +9,14 @@ members = [
     "crates/biomeos-primal-sdk",
     "crates/biomeos-chimera",
     "crates/biomeos-niche",
-    "crates/biomeos-ui",
+    # "crates/biomeos-ui",  # Archived 2025-12-23: Legacy UI crate, moved to archive/
     "federation",
-    "ui",
+    # "ui",  # Archived 2025-12-23: UI evolved into petalTongue primal (../petalTongue/)
+    "showcase/03-p2p-coordination/01-btsp-tunnel-coordination",
+    "showcase/03-p2p-coordination/02-birdsong-encryption",
+    "showcase/03-p2p-coordination/03-lineage-gated-relay",
+    "showcase/03-p2p-coordination/04-multi-tower-federation",
+    "showcase/03-p2p-coordination/05-full-ecosystem-integration",
 ]
 
 [workspace.package]
@@ -112,7 +117,7 @@ biomeos-manifest = { path = "crates/biomeos-manifest" }
 biomeos-system = { path = "crates/biomeos-system" }
 biomeos-chimera = { path = "crates/biomeos-chimera" }
 biomeos-niche = { path = "crates/biomeos-niche" }
-biomeos-ui = { path = "crates/biomeos-ui" }
+# biomeos-ui = { path = "crates/biomeos-ui" }  # Archived 2025-12-23
 
 # Async runtime
 tokio = { version = "1.0", features = ["full"] }
@@ -173,3 +178,7 @@ name = "full_ecosystem_demo"
 path = "examples/full_ecosystem_demo.rs"
 
 
+
+[[example]]
+name = "benchscale_p2p_test"
+path = "examples/benchscale_p2p_test.rs"

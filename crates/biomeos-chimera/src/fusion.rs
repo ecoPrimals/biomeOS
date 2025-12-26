@@ -25,7 +25,7 @@ pub struct FusionBinding {
     #[serde(default)]
     pub provider: Option<String>,
 
-    /// Consumer component.modules (e.g., ["songbird.mesh", "songbird.birdsong"])
+    /// Consumer component.modules (e.g., `["songbird.mesh", "songbird.birdsong"]`)
     #[serde(default)]
     pub consumers: Vec<String>,
 
@@ -63,23 +63,27 @@ pub struct FusionEndpoint {
 
 impl Fusion {
     /// Create an empty fusion configuration
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Add a binding
+    #[must_use]
     pub fn with_binding(mut self, name: impl Into<String>, binding: FusionBinding) -> Self {
         self.bindings.insert(name.into(), binding);
         self
     }
 
     /// Add an API endpoint
+    #[must_use]
     pub fn with_endpoint(mut self, endpoint: FusionEndpoint) -> Self {
         self.api.endpoints.push(endpoint);
         self
     }
 
     /// Get all provider references
+    #[must_use]
     pub fn providers(&self) -> Vec<&str> {
         self.bindings
             .values()
@@ -88,6 +92,7 @@ impl Fusion {
     }
 
     /// Get all consumer references
+    #[must_use]
     pub fn consumers(&self) -> Vec<&str> {
         self.bindings
             .values()
@@ -96,6 +101,10 @@ impl Fusion {
     }
 
     /// Validate that all references exist
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if any binding references a primal that is not in the `available_primals` list
     pub fn validate_references(&self, available_primals: &[&str]) -> Result<(), String> {
         for (name, binding) in &self.bindings {
             // Check provider
@@ -126,6 +135,7 @@ impl Fusion {
 
 impl FusionBinding {
     /// Create a new binding
+    #[must_use]
     pub fn new() -> Self {
         Self {
             provider: None,
@@ -135,18 +145,21 @@ impl FusionBinding {
     }
 
     /// Set the provider
+    #[must_use]
     pub fn with_provider(mut self, provider: impl Into<String>) -> Self {
         self.provider = Some(provider.into());
         self
     }
 
     /// Add consumers
+    #[must_use]
     pub fn with_consumers(mut self, consumers: Vec<String>) -> Self {
         self.consumers = consumers;
         self
     }
 
     /// Add configuration
+    #[must_use]
     pub fn with_config(mut self, key: impl Into<String>, value: serde_json::Value) -> Self {
         self.config.insert(key.into(), value);
         self
@@ -171,18 +184,21 @@ impl FusionEndpoint {
     }
 
     /// Add description
+    #[must_use]
     pub fn with_description(mut self, desc: impl Into<String>) -> Self {
         self.description = desc.into();
         self
     }
 
     /// Add parameters
+    #[must_use]
     pub fn with_params(mut self, params: Vec<String>) -> Self {
         self.params = params;
         self
     }
 
     /// Set return type
+    #[must_use]
     pub fn with_returns(mut self, returns: impl Into<String>) -> Self {
         self.returns = returns.into();
         self
@@ -215,13 +231,10 @@ mod tests {
 
     #[test]
     fn test_validate_references() {
-        let fusion = Fusion::new().with_binding(
-            "test",
-            FusionBinding::new().with_provider("beardog.btsp"),
-        );
+        let fusion =
+            Fusion::new().with_binding("test", FusionBinding::new().with_provider("beardog.btsp"));
 
         assert!(fusion.validate_references(&["beardog", "songbird"]).is_ok());
         assert!(fusion.validate_references(&["songbird"]).is_err());
     }
 }
-

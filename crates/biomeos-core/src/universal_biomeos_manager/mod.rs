@@ -4,26 +4,30 @@
 //! with the 2000-line file size limit.
 
 // Core functionality and initialization
+pub mod ai;
+pub mod client_registry;
 pub mod core;
 pub mod discovery;
 pub mod health;
-pub mod primals;
 pub mod operations;
-pub mod ai;
+pub mod primals;
 
-// Re-export from discovery module  
-pub use discovery::{PrimalDiscoveryService, DiscoveryResult, ProbeResult};
+// Re-export from discovery module
+pub use discovery::{DiscoveryResult, PrimalDiscoveryService, ProbeResult};
 
 // Re-export from health module
 pub use health::HealthMonitor;
 
 // Re-export from core module
-pub use core::{UniversalBiomeOSManager, PrimalInfo};
+pub use core::{PrimalInfo, UniversalBiomeOSManager};
 
 // Re-export from primals module
 pub use primals::PrimalStatistics;
 
 // Re-export from ai module
-pub use ai::{AIRecommendation, Priority, GeneticAccessKey};
+pub use ai::{AIRecommendation, GeneticAccessKey, Priority};
 
-// Legacy type aliases for backwards compatibility - REMOVED duplicate GeneticAccessKey 
+// Re-export from client_registry module
+pub use client_registry::ClientRegistry;
+
+// Legacy type aliases for backwards compatibility - REMOVED duplicate GeneticAccessKey
