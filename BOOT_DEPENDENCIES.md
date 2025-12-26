@@ -1,6 +1,34 @@
-# BiomeOS Bootable Media - Dependencies
+# BiomeOS Bootable Media - Dependencies & Multi-Tier Strategy
 
-## Required Tools
+## Strategic Approach
+
+BiomeOS supports **multi-tier bootloader architecture**:
+
+- **Tier 1 (Current)**: GRUB + xorriso - Industry standard, proven, robust
+- **Tier 2 (Future)**: Rust ISO builder + GRUB data - Eliminate xorriso
+- **Tier 3 (Future)**: Pure Rust bootloader - Complete sovereignty
+
+See `BOOTLOADER_STRATEGY.md` for complete architecture.
+
+## Tier 1: GRUB Support (Current)
+
+### Why GRUB + xorriso?
+
+**Strategic Decision**: "Choose the wider more robust solution, then evolve to pure Rust"
+
+✅ **Benefits**:
+- Industry standard (billions of deployments)
+- BIOS + UEFI support (mature, proven)
+- Secure Boot compatible
+- Immediate NUC deployment
+- Wide hardware compatibility
+- Well-documented, battle-tested
+
+⚠️ **Trade-off**:
+- External C tool dependency (xorriso)
+- Acceptable for Tier 1 (robust deployment)
+
+### Required Tools
 
 To create bootable ISO/USB images, you need:
 
