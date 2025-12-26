@@ -1,0 +1,77 @@
+[package]
+name = "biomeos-boot"
+version = "0.1.0"
+edition = "2021"
+authors = ["BiomeOS Contributors"]
+description = "Pure Rust boot infrastructure for BiomeOS"
+license = "AGPL-3.0"
+
+[dependencies]
+# Core async runtime
+tokio = { version = "1", features = ["full"] }
+anyhow = "1"
+thiserror = "1"
+
+# Structured logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Serialization for manifests and configs
+serde = { version = "1", features = ["derive"] }
+serde_yaml = "0.9"
+toml = "0.8"
+
+# System interaction (pure Rust)
+nix = { version = "0.29", features = ["mount", "fs", "process", "net", "ioctl", "reboot", "hostname"] }
+
+# Hardware detection (pure Rust)
+sysinfo = "0.31"
+libc = "0.2"
+
+# UUID for device identification
+uuid = { version = "1", features = ["v4", "serde"] }
+
+# Filesystem operations
+tar = "0.4"
+flate2 = "1.0"
+
+# Network discovery
+mdns-sd = "0.11"
+
+# Cryptographic operations
+sha2 = "0.10"
+hex = "0.4"
+
+# Path and file utilities
+walkdir = "2"
+tempfile = "3"
+
+# CLI parsing
+clap = { version = "4", features = ["derive"] }
+
+# Date/time
+chrono = "0.4"
+
+# Process utilities
+which = "6"
+
+# BiomeOS crates
+biomeos-types = { path = "../biomeos-types" }
+biomeos-core = { path = "../biomeos-core" }
+
+[dev-dependencies]
+tokio-test = "0.4"
+
+[[bin]]
+name = "biomeos-init"
+path = "src/bin/init.rs"
+
+[[bin]]
+name = "biomeos-mkboot"
+path = "src/bin/mkboot.rs"
+
+[features]
+default = []
+# Hardware-specific features
+efi = []
+bios = ["default"]

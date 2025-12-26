@@ -16,7 +16,7 @@ members = [
     "showcase/03-p2p-coordination/02-birdsong-encryption",
     "showcase/03-p2p-coordination/03-lineage-gated-relay",
     "showcase/03-p2p-coordination/04-multi-tower-federation",
-    "showcase/03-p2p-coordination/05-full-ecosystem-integration",
+    "showcase/03-p2p-coordination/05-full-ecosystem-integration", "crates/biomeos-boot",
 ]
 
 [workspace.package]
