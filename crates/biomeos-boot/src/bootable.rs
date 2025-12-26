@@ -124,10 +124,19 @@ impl BootableMediaBuilder {
         let grub_dir = boot_dir.join("boot/grub");
         std::fs::create_dir_all(&grub_dir)?;
 
-        // Copy kernel
+        // Copy kernel (may need root access for /boot/vmlinuz)
         let kernel_dest = boot_dir.join("boot/vmlinuz");
         std::fs::copy(kernel.kernel_path(), &kernel_dest)
-            .context("Failed to copy kernel")?;
+            .with_context(|| format!(
+                "Failed to copy kernel from {}\n\
+                 Hint: Kernel files in /boot/ typically require root access.\n\
+                 Solutions:\n\
+                 1. Run with sudo: sudo -E cargo run ...\n\
+                 2. Copy kernel manually: sudo cp {} /tmp/vmlinuz && chmod 644 /tmp/vmlinuz\n\
+                 3. Use custom kernel: --kernel /path/to/accessible/vmlinuz",
+                kernel.kernel_path().display(),
+                kernel.kernel_path().display()
+            ))?;
         info!("  • Kernel: {}", kernel_dest.display());
 
         // Copy initramfs

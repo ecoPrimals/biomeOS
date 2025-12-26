@@ -211,6 +211,22 @@ impl KernelManager {
             });
         }
 
+        // Check environment variable first
+        if let Ok(env_kernel) = std::env::var("BIOMEOS_KERNEL") {
+            let kernel_path = PathBuf::from(&env_kernel);
+            if kernel_path.exists() {
+                info!("Using kernel from BIOMEOS_KERNEL: {}", kernel_path.display());
+                let initramfs = kernel_path.with_file_name("biomeos-initramfs.img");
+                
+                return Ok(Self {
+                    kernel_path,
+                    initramfs_path: initramfs,
+                });
+            } else {
+                warn!("BIOMEOS_KERNEL set but file not found: {}", env_kernel);
+            }
+        }
+
         // Try to find system kernel
         let kernel_paths = vec![
             "/boot/vmlinuz",
@@ -232,7 +248,11 @@ impl KernelManager {
             }
         }
 
-        anyhow::bail!("No kernel found. Please specify a custom kernel path.")
+        anyhow::bail!(
+            "No kernel found. Please specify a kernel:\n\
+             1. Set BIOMEOS_KERNEL environment variable: export BIOMEOS_KERNEL=/path/to/vmlinuz\n\
+             2. Or run scripts/prepare-kernel.sh to copy system kernel to accessible location"
+        )
     }
 
     fn find_matching_initramfs(kernel: &Path) -> Result<PathBuf> {
