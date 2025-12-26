@@ -7,12 +7,12 @@
 //! - Hardware detection
 //! - Network configuration
 //! 
-//! Zero bash scripts. Zero external dependencies. 100% Rust.
+//! Zero bash scripts. Zero external dependencies (except kernel). 100% Rust.
 
 #![deny(unsafe_code)]
 
 pub mod bootable;
 pub mod initramfs;
 
-pub use bootable::BootableMediaBuilder;
+pub use bootable::{BootableMediaBuilder, BootTarget};
 pub use initramfs::{InitramfsBuilder, KernelManager};

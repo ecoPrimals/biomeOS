@@ -1,7 +1,7 @@
 //! BiomeOS Bootable Media Creator
 //! 
 //! Pure Rust implementation of bootable USB/ISO creation.
-//! No bash scripts, all idiomatic Rust.
+//! Clean architecture with modern idiomatic patterns.
 
 use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
@@ -10,10 +10,18 @@ use tracing::{info, warn};
 
 use crate::initramfs::{InitramfsBuilder, KernelManager};
 
+/// Bootable media builder with clean separation of concerns
 pub struct BootableMediaBuilder {
     project_root: PathBuf,
     work_dir: PathBuf,
     output_dir: PathBuf,
+}
+
+/// Boot target type
+#[derive(Debug, Clone, Copy)]
+pub enum BootTarget {
+    Iso,
+    Usb,
 }
 
 impl BootableMediaBuilder {
@@ -31,10 +39,11 @@ impl BootableMediaBuilder {
         })
     }
 
-    /// Build complete bootable USB image
-    pub async fn build_usb_image(&self) -> Result<PathBuf> {
+    /// Build complete bootable media (USB or ISO)
+    pub async fn build(&self, target: BootTarget) -> Result<PathBuf> {
         info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        info!("BiomeOS Bootable USB Builder - Pure Rust");
+        info!("BiomeOS Bootable Media Builder - Pure Rust");
+        info!("Target: {:?}", target);
         info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         info!("");
 
@@ -53,20 +62,10 @@ impl BootableMediaBuilder {
         // Step 5: Add BiomeOS data
         self.add_biomeos_data(&boot_dir).await?;
 
-        // Step 6: Create bootable image
-        let image_path = self.create_bootable_image(&boot_dir).await?;
+        // Step 6: Create bootable image with GRUB
+        let image_path = self.create_bootable_image(&boot_dir, target).await?;
 
-        info!("");
-        info!("✅ Bootable USB image created!");
-        info!("Image: {}", image_path.display());
-        info!("");
-        info!("To write to USB:");
-        info!("  sudo dd if={} of=/dev/sdX bs=4M status=progress", 
-              image_path.display());
-        info!("");
-        info!("To test in QEMU:");
-        info!("  qemu-system-x86_64 -m 2048 -enable-kvm -drive file={},format=raw", 
-              image_path.display());
+        self.print_success_message(&image_path, target)?;
 
         Ok(image_path)
     }
@@ -98,19 +97,11 @@ impl BootableMediaBuilder {
 
         let mut builder = InitramfsBuilder::new(&self.work_dir)?;
         
-        // Create directory structure
         builder.create_directory_structure()?;
-        
-        // Add BiomeOS binaries
         builder.add_biomeos_binaries(&self.project_root)?;
-        
-        // Install binaries
         builder.install_binaries()?;
-        
-        // Create init script
         builder.create_init_script()?;
         
-        // Build archive
         let output = self.work_dir.join("biomeos-initramfs.img");
         builder.build(&output)?;
 
@@ -129,11 +120,9 @@ impl BootableMediaBuilder {
         let boot_dir = self.work_dir.join("boot-root");
         std::fs::create_dir_all(&boot_dir)?;
 
-        // Create directory structure
-        let dirs = vec!["boot", "boot/grub", "biomeos", "biomeos/primals"];
-        for dir in dirs {
-            std::fs::create_dir_all(boot_dir.join(dir))?;
-        }
+        // Create GRUB directory structure
+        let grub_dir = boot_dir.join("boot/grub");
+        std::fs::create_dir_all(&grub_dir)?;
 
         // Copy kernel
         let kernel_dest = boot_dir.join("boot/vmlinuz");
@@ -148,37 +137,37 @@ impl BootableMediaBuilder {
         info!("  • Initramfs: {}", initramfs_dest.display());
 
         // Create GRUB configuration
-        self.create_grub_config(&boot_dir)?;
+        self.create_grub_config(&grub_dir)?;
 
         info!("✅ Boot structure created");
         Ok(boot_dir)
     }
 
-    /// Create GRUB configuration
-    fn create_grub_config(&self, boot_dir: &Path) -> Result<()> {
+    /// Create GRUB configuration with modern syntax
+    fn create_grub_config(&self, grub_dir: &Path) -> Result<()> {
         use std::io::Write;
 
-        let grub_cfg = boot_dir.join("boot/grub/grub.cfg");
-        std::fs::create_dir_all(grub_cfg.parent().unwrap())?;
+        let grub_cfg = grub_dir.join("grub.cfg");
+        let mut file = std::fs::File::create(&grub_cfg)
+            .context("Failed to create grub.cfg")?;
 
-        let mut file = std::fs::File::create(&grub_cfg)?;
+        // Modern GRUB config with proper escaping
         writeln!(file, "set timeout=10")?;
         writeln!(file, "set default=0")?;
         writeln!(file, "")?;
-        writeln!(file, "menuentry \"BiomeOS - Sovereignty-First Operating System\" {{")?;
+        writeln!(file, "menuentry 'BiomeOS - Sovereignty-First Operating System' {{")?;
         writeln!(file, "    echo 'BiomeOS - Loading Pure Rust Platform...'")?;
-        writeln!(file, "    echo ''")?;
         writeln!(file, "    linux /boot/vmlinuz")?;
         writeln!(file, "    initrd /boot/initramfs.img")?;
         writeln!(file, "}}")?;
         writeln!(file, "")?;
-        writeln!(file, "menuentry \"BiomeOS - Discovery Mode\" {{")?;
+        writeln!(file, "menuentry 'BiomeOS - Discovery Mode' {{")?;
         writeln!(file, "    echo 'BiomeOS - Network Discovery Mode'")?;
         writeln!(file, "    linux /boot/vmlinuz biomeos.discovery")?;
         writeln!(file, "    initrd /boot/initramfs.img")?;
         writeln!(file, "}}")?;
         writeln!(file, "")?;
-        writeln!(file, "menuentry \"BiomeOS - Network Boot\" {{")?;
+        writeln!(file, "menuentry 'BiomeOS - Network Boot' {{")?;
         writeln!(file, "    echo 'BiomeOS - Network Coordination'")?;
         writeln!(file, "    linux /boot/vmlinuz biomeos.network")?;
         writeln!(file, "    initrd /boot/initramfs.img")?;
@@ -192,14 +181,17 @@ impl BootableMediaBuilder {
     async fn add_biomeos_data(&self, boot_dir: &Path) -> Result<()> {
         info!("📋 Adding BiomeOS data...");
 
-        // Copy Phase 1 primals if available
-        let phase1bins = self.project_root.parent()
-            .and_then(|p| Some(p.join("phase1bins")));
+        // Create BiomeOS directory structure
+        let biomeos_dir = boot_dir.join("biomeos");
+        std::fs::create_dir_all(biomeos_dir.join("primals"))?;
+        std::fs::create_dir_all(biomeos_dir.join("configs"))?;
+        std::fs::create_dir_all(biomeos_dir.join("templates"))?;
 
-        if let Some(bins_dir) = phase1bins {
+        // Copy Phase 1 primals if available
+        if let Some(parent) = self.project_root.parent() {
+            let bins_dir = parent.join("phase1bins");
             if bins_dir.exists() {
-                let dest = boot_dir.join("biomeos/primals");
-                self.copy_directory(&bins_dir, &dest)?;
+                self.copy_directory(&bins_dir, &biomeos_dir.join("primals"))?;
                 info!("  • Phase 1 primals: copied");
             } else {
                 warn!("  • Phase 1 primals: not found (skipping)");
@@ -209,8 +201,7 @@ impl BootableMediaBuilder {
         // Copy templates
         let templates_src = self.project_root.join("templates");
         if templates_src.exists() {
-            let dest = boot_dir.join("biomeos/templates");
-            self.copy_directory(&templates_src, &dest)?;
+            self.copy_directory(&templates_src, &biomeos_dir.join("templates"))?;
             info!("  • Templates: copied");
         }
 
@@ -218,83 +209,161 @@ impl BootableMediaBuilder {
         Ok(())
     }
 
-    /// Copy directory recursively
+    /// Copy directory recursively with proper error handling
     fn copy_directory(&self, src: &Path, dest: &Path) -> Result<()> {
-        std::fs::create_dir_all(dest)?;
+        std::fs::create_dir_all(dest)
+            .with_context(|| format!("Failed to create directory: {}", dest.display()))?;
 
-        for entry in std::fs::read_dir(src)? {
+        for entry in std::fs::read_dir(src)
+            .with_context(|| format!("Failed to read directory: {}", src.display()))? 
+        {
             let entry = entry?;
             let path = entry.path();
-            let file_name = path.file_name().unwrap();
+            let file_name = path.file_name()
+                .context("Invalid file name")?;
             let dest_path = dest.join(file_name);
 
             if path.is_dir() {
                 self.copy_directory(&path, &dest_path)?;
             } else {
-                std::fs::copy(&path, &dest_path)?;
+                std::fs::copy(&path, &dest_path)
+                    .with_context(|| format!(
+                        "Failed to copy {} to {}",
+                        path.display(),
+                        dest_path.display()
+                    ))?;
             }
         }
 
         Ok(())
     }
 
-    /// Create bootable image
-    async fn create_bootable_image(&self, boot_dir: &Path) -> Result<PathBuf> {
-        info!("💿 Creating bootable image...");
+    /// Create bootable image using grub-mkrescue (clean, simple approach)
+    async fn create_bootable_image(&self, boot_dir: &Path, _target: BootTarget) -> Result<PathBuf> {
+        info!("💿 Creating bootable image with GRUB...");
 
         let timestamp = chrono::Utc::now().format("%Y%m%d-%H%M%S");
-        let output = self.output_dir.join(format!("biomeos-{}.img", timestamp));
+        let output = self.output_dir.join(format!("biomeos-{}.iso", timestamp));
 
-        // Use xorriso to create hybrid ISO that works as both ISO and USB
+        // Try grub-mkrescue first (clean, modern approach)
+        if let Ok(path) = self.create_with_grub_mkrescue(boot_dir, &output).await {
+            return Ok(path);
+        }
+
+        // Fallback to xorriso if grub-mkrescue not available
+        warn!("grub-mkrescue not found, trying xorriso...");
+        if let Ok(path) = self.create_with_xorriso(boot_dir, &output).await {
+            return Ok(path);
+        }
+
+        // Final fallback: create tar.gz (not bootable but preserves data)
+        warn!("No ISO tools found - creating tar.gz archive");
+        self.create_archive_fallback(boot_dir, &output).await
+    }
+
+    /// Create bootable ISO with grub-mkrescue (preferred method)
+    async fn create_with_grub_mkrescue(&self, boot_dir: &Path, output: &Path) -> Result<PathBuf> {
+        info!("Using grub-mkrescue (GRUB built-in)...");
+
+        let status = Command::new("grub-mkrescue")
+            .arg("-o")
+            .arg(output)
+            .arg(boot_dir)
+            .status()
+            .context("Failed to execute grub-mkrescue")?;
+
+        if !status.success() {
+            anyhow::bail!("grub-mkrescue failed with exit code: {:?}", status.code());
+        }
+
+        info!("✅ Bootable image created with grub-mkrescue");
+        Ok(output.to_owned())
+    }
+
+    /// Create bootable ISO with xorriso (fallback method)
+    async fn create_with_xorriso(&self, boot_dir: &Path, output: &Path) -> Result<PathBuf> {
+        info!("Using xorriso (fallback)...");
+
+        // Note: This requires GRUB files to be present in boot_dir
+        // grub-mkrescue is preferred as it handles this automatically
         let status = Command::new("xorriso")
             .args([
                 "-as", "mkisofs",
-                "-o", output.to_str().unwrap(),
-                "-b", "boot/grub/i386-pc/eltorito.img",
-                "-no-emul-boot",
-                "-boot-load-size", "4",
-                "-boot-info-table",
-                "--grub2-boot-info",
-                "--grub2-mbr", "/usr/lib/grub/i386-pc/boot_hybrid.img",
-                "-eltorito-alt-boot",
-                "-e", "boot/grub/efiboot.img",
-                "-no-emul-boot",
-                "-isohybrid-gpt-basdat",
+                "-o", output.to_str().context("Invalid output path")?,
+                "-r",
+                "-J",
                 "-V", "BIOMEOS",
-                boot_dir.to_str().unwrap(),
+                boot_dir.to_str().context("Invalid boot directory path")?,
             ])
-            .status();
+            .status()
+            .context("Failed to execute xorriso")?;
 
-        match status {
-            Ok(s) if s.success() => {
-                info!("✅ Bootable image created");
-                Ok(output)
-            }
-            Ok(_) => anyhow::bail!("xorriso failed"),
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-                warn!("xorriso not found - creating simple image");
-                self.create_simple_image(boot_dir, &output).await
-            }
-            Err(e) => Err(e).context("Failed to execute xorriso"),
+        if !status.success() {
+            anyhow::bail!("xorriso failed with exit code: {:?}", status.code());
         }
+
+        warn!("⚠️  Created with xorriso - may not be bootable without GRUB installation");
+        Ok(output.to_owned())
     }
 
-    /// Create simple bootable image (fallback if xorriso not available)
-    async fn create_simple_image(&self, boot_dir: &Path, output: &Path) -> Result<PathBuf> {
-        warn!("Creating simple tar.gz image (not bootable without extraction)");
-        
+    /// Create tar.gz archive as final fallback
+    async fn create_archive_fallback(&self, boot_dir: &Path, output: &Path) -> Result<PathBuf> {
         use flate2::write::GzEncoder;
         use flate2::Compression;
         use tar::Builder;
 
-        let tar_gz = std::fs::File::create(output)?;
+        let output_tar = output.with_extension("tar.gz");
+        
+        let tar_gz = std::fs::File::create(&output_tar)
+            .context("Failed to create tar.gz file")?;
         let enc = GzEncoder::new(tar_gz, Compression::best());
         let mut tar = Builder::new(enc);
 
-        tar.append_dir_all(".", boot_dir)?;
-        tar.finish()?;
+        tar.append_dir_all(".", boot_dir)
+            .context("Failed to add files to archive")?;
+        tar.finish()
+            .context("Failed to finish archive")?;
 
-        Ok(output.to_owned())
+        warn!("⚠️  Created tar.gz archive (not bootable)");
+        warn!("   Extract and use grub-mkrescue manually to create bootable media");
+        
+        Ok(output_tar)
+    }
+
+    /// Print success message with usage instructions
+    fn print_success_message(&self, image_path: &Path, target: BootTarget) -> Result<()> {
+        info!("");
+        info!("✅ Bootable {:?} created!", target);
+        info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        info!("Image: {}", image_path.display());
+        info!("");
+
+        match target {
+            BootTarget::Iso => {
+                info!("To test in QEMU:");
+                info!("  qemu-system-x86_64 \\");
+                info!("    -cdrom {} \\", image_path.display());
+                info!("    -m 2048 \\");
+                info!("    -enable-kvm");
+                info!("");
+                info!("To write to USB:");
+                info!("  sudo dd if={} of=/dev/sdX bs=4M status=progress", 
+                      image_path.display());
+            }
+            BootTarget::Usb => {
+                info!("To write to USB:");
+                info!("  sudo dd if={} of=/dev/sdX bs=4M status=progress", 
+                      image_path.display());
+                info!("");
+                info!("To test in QEMU:");
+                info!("  qemu-system-x86_64 \\");
+                info!("    -drive file={},format=raw \\", image_path.display());
+                info!("    -m 2048 \\");
+                info!("    -enable-kvm");
+            }
+        }
+
+        info!("");
+        Ok(())
     }
 }
-

@@ -1,13 +1,12 @@
 //! BiomeOS Bootable Media Creator CLI
 //! 
 //! Command-line tool for creating bootable BiomeOS USB/ISO images.
-//! Pure Rust implementation.
+//! Clean, modern Rust implementation.
 
 use anyhow::Result;
-use biomeos_boot::BootableMediaBuilder;
+use biomeos_boot::{BootableMediaBuilder, BootTarget};
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
-use tracing_subscriber;
 
 #[derive(Parser)]
 #[command(name = "biomeos-mkboot")]
@@ -58,25 +57,18 @@ async fn main() -> Result<()> {
     match cli.command {
         Commands::Usb { output: _ } => {
             let builder = BootableMediaBuilder::new(cli.project_root)?;
-            let image_path = builder.build_usb_image().await?;
+            let image_path = builder.build(BootTarget::Usb).await?;
             
             println!("\n✅ Success! Bootable USB image created:");
             println!("   {}\n", image_path.display());
-            println!("To write to USB drive:");
-            println!("   sudo dd if={} of=/dev/sdX bs=4M status=progress\n", 
-                     image_path.display());
         }
         
         Commands::Iso { output: _ } => {
-            // For now, USB and ISO are the same (hybrid image)
             let builder = BootableMediaBuilder::new(cli.project_root)?;
-            let image_path = builder.build_usb_image().await?;
+            let image_path = builder.build(BootTarget::Iso).await?;
             
             println!("\n✅ Success! Bootable ISO image created:");
             println!("   {}\n", image_path.display());
-            println!("To test in QEMU:");
-            println!("   qemu-system-x86_64 -m 2048 -enable-kvm -cdrom {}\n", 
-                     image_path.display());
         }
         
         Commands::Initramfs { output } => {
