@@ -166,19 +166,19 @@ impl BootableMediaBuilder {
         writeln!(file, "")?;
         writeln!(file, "menuentry 'BiomeOS - Sovereignty-First Operating System' {{")?;
         writeln!(file, "    echo 'BiomeOS - Loading Pure Rust Platform...'")?;
-        writeln!(file, "    linux /boot/vmlinuz")?;
+        writeln!(file, "    linux /boot/vmlinuz init=/init rw")?;
         writeln!(file, "    initrd /boot/initramfs.img")?;
         writeln!(file, "}}")?;
         writeln!(file, "")?;
         writeln!(file, "menuentry 'BiomeOS - Discovery Mode' {{")?;
         writeln!(file, "    echo 'BiomeOS - Network Discovery Mode'")?;
-        writeln!(file, "    linux /boot/vmlinuz biomeos.discovery")?;
+        writeln!(file, "    linux /boot/vmlinuz init=/init rw biomeos.discovery")?;
         writeln!(file, "    initrd /boot/initramfs.img")?;
         writeln!(file, "}}")?;
         writeln!(file, "")?;
         writeln!(file, "menuentry 'BiomeOS - Network Boot' {{")?;
         writeln!(file, "    echo 'BiomeOS - Network Coordination'")?;
-        writeln!(file, "    linux /boot/vmlinuz biomeos.network")?;
+        writeln!(file, "    linux /boot/vmlinuz init=/init rw biomeos.network")?;
         writeln!(file, "    initrd /boot/initramfs.img")?;
         writeln!(file, "}}")?;
 
