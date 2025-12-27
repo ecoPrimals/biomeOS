@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# Setup VM Disk for BiomeOS
+
+set -euo pipefail
+
+if [ $# -ne 2 ]; then
+    echo "Usage: $0 <vm-number> <disk-path>"
+    exit 1
+fi
+
+VM_NUM="$1"
+DISK_PATH="$2"
+PROJECT_ROOT="/home/eastgate/Development/ecoPrimals/phase2/biomeOS"
+NBD_DEVICE="/dev/nbd${VM_NUM}"
+
+echo "🔧 Setting up VM${VM_NUM} disk..."
+
+# Ensure NBD module loaded
+sudo modprobe nbd max_part=8
+
+# Connect disk
+sudo qemu-nbd --connect="$NBD_DEVICE" "$DISK_PATH"
+sleep 2
+
+# Format
+sudo mkfs.ext4 -F "$NBD_DEVICE" > /dev/null 2>&1
+
+# Mount
+MOUNT_POINT="/tmp/biomeos-vm${VM_NUM}"
+sudo mkdir -p "$MOUNT_POINT"
+sudo mount "$NBD_DEVICE" "$MOUNT_POINT"
+
+# Create structure
+sudo mkdir -p "$MOUNT_POINT"/{bin,dev,etc,home,lib,lib64,proc,root,sys,tmp,usr,var}
+sudo mkdir -p "$MOUNT_POINT/biomeos"/{primals,configs,data}
+
+# Install BiomeOS
+sudo cp "$PROJECT_ROOT/target/release/biomeos-init" "$MOUNT_POINT/init"
+sudo chmod +x "$MOUNT_POINT/init"
+
+# Copy libraries  
+LDD_OUTPUT=$(ldd "$PROJECT_ROOT/target/release/biomeos-init")
+echo "$LDD_OUTPUT" | while read -r line; do
+    if [[ "$line" =~ =>\ (/.*)\ \(0x[0-9a-f]+\) ]]; then
+        LIB_PATH="${BASH_REMATCH[1]}"
+        DEST_DIR="$MOUNT_POINT/$(dirname "$LIB_PATH")"
+        sudo mkdir -p "$DEST_DIR"
+        sudo cp "$LIB_PATH" "$DEST_DIR/"
+    elif [[ "$line" =~ (/.*/ld-linux-x86-64.so.2)\ \(0x[0-9a-f]+\) ]]; then
+        LIB_PATH="${BASH_REMATCH[1]}"
+        DEST_DIR="$MOUNT_POINT/$(dirname "$LIB_PATH")"
+        sudo mkdir -p "$DEST_DIR"
+        sudo cp "$LIB_PATH" "$DEST_DIR/"
+    fi
+done
+
+# Copy busybox if available
+if command -v busybox &> /dev/null; then
+    sudo cp "$(which busybox)" "$MOUNT_POINT/bin/busybox"
+    sudo chmod +x "$MOUNT_POINT/bin/busybox"
+fi
+
+echo "  ✓ VM${VM_NUM} disk configured"
+
+# Unmount
+sudo umount "$MOUNT_POINT"
+sudo qemu-nbd --disconnect "$NBD_DEVICE"
+
+echo "✅ VM${VM_NUM} ready!"
+

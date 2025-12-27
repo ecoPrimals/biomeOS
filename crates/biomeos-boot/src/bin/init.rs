@@ -6,6 +6,7 @@
 //! sovereignty-preserving initialization system.
 
 use anyhow::{Context, Result};
+use biomeos_boot::{BootLogger, BootStage};
 use nix::mount::{mount, MsFlags};
 use nix::unistd::getpid;
 use std::path::Path;
@@ -14,29 +15,64 @@ use tracing::{error, info, warn};
 
 #[tokio::main]
 async fn main() -> ExitCode {
-    // Initialize logging ASAP
-    tracing_subscriber::fmt()
-        .with_env_filter("biomeos_boot=info")
-        .with_target(false)
-        .with_ansi(true)
-        .init();
+    // Initialize BootLogger FIRST - direct serial access for guaranteed visibility
+    let mut boot_logger = match BootLogger::new() {
+        Ok(logger) => {
+            let mut l = logger;
+            l.checkpoint(BootStage::InitStart);
+            l.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            l.info("BiomeOS Init - Pure Rust PID 1");
+            l.info("BootLogger: Direct serial access enabled");
+            l.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            Some(l)
+        }
+        Err(e) => {
+            // Fallback to stdout if BootLogger fails
+            use std::io::Write;
+            let _ = std::io::stderr().write_all(format!("BootLogger init failed: {}\n", e).as_bytes());
+            let _ = std::io::stdout().write_all(b"\n[BiomeOS] Init - Fallback mode\n");
+            None
+        }
+    };
 
     // Verify we're PID 1
     let pid = getpid();
+    
+    if let Some(ref mut logger) = boot_logger {
+        logger.info(&format!("PID: {}", pid));
+    }
+    
     if pid.as_raw() != 1 {
-        error!("biomeos-init must run as PID 1 (current: {})", pid);
+        if let Some(ref mut logger) = boot_logger {
+            logger.critical(&format!("Must run as PID 1, got {}", pid));
+        }
         return ExitCode::FAILURE;
     }
 
+    // Initialize tracing (secondary logging)
+    tracing_subscriber::fmt()
+        .with_writer(std::io::stdout)
+        .with_env_filter("info")
+        .with_target(false)
+        .with_ansi(false)
+        .try_init()
+        .ok();
+
+    if let Some(ref mut logger) = boot_logger {
+        logger.info("Sovereignty-First | Zero Dependencies | Pure Rust");
+        logger.checkpoint(BootStage::FilesystemMount);
+    }
+    
     info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     info!("BiomeOS Init - Pure Rust Initialization System");
     info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     info!("PID: {}", pid);
-    info!("Sovereignty-First | Zero Dependencies | Pure Rust");
-    info!("");
 
     // Run initialization sequence
     if let Err(e) = initialize().await {
+        if let Some(ref mut logger) = boot_logger {
+            logger.critical(&format!("Initialization failed: {:#}", e));
+        }
         error!("Initialization failed: {:#}", e);
         error!("Entering emergency mode...");
         
@@ -47,10 +83,47 @@ async fn main() -> ExitCode {
         return ExitCode::FAILURE;
     }
 
+    if let Some(ref mut logger) = boot_logger {
+        logger.checkpoint(BootStage::Complete);
+        logger.info("✅ BiomeOS initialization complete!");
+        logger.info("Sovereignty preserved. Human dignity intact.");
+        
+        // Show logger stats
+        let stats = logger.stats();
+        logger.info(&format!("BootLogger stats: {} messages, {}ms uptime", 
+                            stats.log_count, stats.uptime_ms));
+    }
+    
     info!("✅ BiomeOS initialization complete!");
-    info!("Sovereignty preserved. Human dignity intact.");
+    
+    // PID 1 must never exit - spawn a shell or wait forever
+    spawn_shell().await;
     
     ExitCode::SUCCESS
+}
+
+/// Spawn a shell for user interaction
+async fn spawn_shell() {
+    info!("🐚 Spawning shell...");
+    info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    info!("");
+    
+    // Try to spawn busybox sh
+    if let Err(e) = std::process::Command::new("/bin/busybox")
+        .arg("sh")
+        .stdin(std::process::Stdio::inherit())
+        .stdout(std::process::Stdio::inherit())
+        .stderr(std::process::Stdio::inherit())
+        .status()
+    {
+        error!("Failed to spawn shell: {}", e);
+        error!("Entering infinite wait loop to prevent kernel panic...");
+        
+        // If shell fails, just wait forever (PID 1 must not exit)
+        loop {
+            tokio::time::sleep(tokio::time::Duration::from_secs(3600)).await;
+        }
+    }
 }
 
 /// Main initialization sequence
@@ -149,16 +222,27 @@ fn mount_filesystem(
     std::fs::create_dir_all(target)
         .with_context(|| format!("Failed to create directory: {}", target))?;
 
-    mount(
+    // Try to mount - if already mounted (EBUSY), that's OK
+    match mount(
         Some(source),
         target,
         Some(fstype),
         flags,
         None::<&str>,
-    )
-    .with_context(|| format!("Failed to mount {} on {}", source, target))?;
-
-    Ok(())
+    ) {
+        Ok(_) => {
+            info!("  ✓ {}", target);
+            Ok(())
+        }
+        Err(nix::errno::Errno::EBUSY) => {
+            // Already mounted - this is fine
+            info!("  ✓ {} (already mounted)", target);
+            Ok(())
+        }
+        Err(e) => {
+            Err(anyhow::anyhow!("Failed to mount {} on {}: {}", source, target, e))
+        }
+    }
 }
 
 /// Detect hardware capabilities
@@ -225,8 +309,12 @@ async fn detect_biomeos_usb() -> Result<Option<std::path::PathBuf>> {
 async fn mount_biomeos_usb(device: &Path) -> Result<()> {
     info!("💾 Mounting BiomeOS USB: {}", device.display());
 
+    let device_str = device
+        .to_str()
+        .ok_or_else(|| anyhow::anyhow!("Invalid UTF-8 in device path"))?;
+
     mount_filesystem(
-        device.to_str().unwrap(),
+        device_str,
         "/biomeos",
         "auto",
         MsFlags::MS_RDONLY,

@@ -1,0 +1,25 @@
+[Unit]
+Description=NestGate Lineage-Gated Relay Service
+Documentation=https://github.com/ecoPrimals/nestgate
+After=network.target beardog.service songbird.service
+Wants=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/nestgate serve
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+
+# Environment
+Environment="RUST_LOG=info"
+Environment="NESTGATE_DISCOVERY=runtime"
+
+[Install]
+WantedBy=multi-user.target
+

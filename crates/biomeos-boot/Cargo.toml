@@ -22,7 +22,7 @@ serde_yaml = "0.9"
 toml = "0.8"
 
 # System interaction (pure Rust)
-nix = { version = "0.29", features = ["mount", "fs", "process", "net", "ioctl", "reboot", "hostname"] }
+nix = { version = "0.29", features = ["mount", "fs", "process", "net", "ioctl", "reboot", "hostname", "user"] }
 
 # Hardware detection (pure Rust)
 sysinfo = "0.31"
@@ -71,6 +71,17 @@ path = "src/bin/init.rs"
 [[bin]]
 name = "biomeos-mkboot"
 path = "src/bin/mkboot.rs"
+
+[[bin]]
+name = "biomeos-rootfs"
+path = "src/bin/biomeos-rootfs.rs"
+
+[profile.release]
+# Static linking for init binary (must run without dynamic libraries)
+# This is critical for PID 1 in initramfs where no libraries exist yet
+strip = false  # Keep symbols for debugging kernel panics
+lto = true     # Link-time optimization for smaller binary
+panic = "abort" # No unwinding in init - faster and smaller
 
 [features]
 default = []

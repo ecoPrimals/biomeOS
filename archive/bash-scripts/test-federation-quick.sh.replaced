@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+# Quick BiomeOS Federation Test - Simplified
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+ISO="${1:-$PROJECT_ROOT/dist/biomeos-20251227-143804.iso}"
+
+echo "🚀 BiomeOS Quick Federation Test"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "ISO: $ISO"
+echo ""
+
+# Kill existing
+pkill -9 qemu-system-x86_64 2>/dev/null || true
+sleep 1
+
+echo "Launching 3 VMs..."
+echo ""
+
+# VM 1
+rm -f /tmp/vm1-serial.log
+qemu-system-x86_64 \
+  -name "BiomeOS-vm1" \
+  -cdrom "$ISO" \
+  -drive file="$PROJECT_ROOT/vm-testing/biomeos-root.qcow2",format=qcow2,if=ide \
+  -m 512 -smp 1 \
+  -netdev user,id=net0 \
+  -device virtio-net-pci,netdev=net0 \
+  -serial file:/tmp/vm1-serial.log \
+  -display none -nographic &
+VM1=$!
+echo "✅ VM1 launched (PID: $VM1)"
+
+# VM 2
+rm -f /tmp/vm2-serial.log
+qemu-system-x86_64 \
+  -name "BiomeOS-vm2" \
+  -cdrom "$ISO" \
+  -drive file="$PROJECT_ROOT/vm-testing/vm2.qcow2",format=qcow2,if=ide \
+  -m 512 -smp 1 \
+  -netdev user,id=net0,hostfwd=tcp::2222-:22 \
+  -device virtio-net-pci,netdev=net0 \
+  -serial file:/tmp/vm2-serial.log \
+  -display none -nographic &
+VM2=$!
+echo "✅ VM2 launched (PID: $VM2)"
+
+# VM 3
+rm -f /tmp/vm3-serial.log
+qemu-system-x86_64 \
+  -name "BiomeOS-vm3" \
+  -cdrom "$ISO" \
+  -drive file="$PROJECT_ROOT/vm-testing/vm1.qcow2",format=qcow2,if=ide \
+  -m 512 -smp 1 \
+  -netdev user,id=net0,hostfwd=tcp::2223-:22 \
+  -device virtio-net-pci,netdev=net0 \
+  -serial file:/tmp/vm3-serial.log \
+  -display none -nographic &
+VM3=$!
+echo "✅ VM3 launched (PID: $VM3)"
+
+echo ""
+echo "⏱️  Waiting 20s for boot..."
+sleep 20
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "📊 Federation Status:"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+RUNNING=0
+
+for i in 1 2 3; do
+    VM_PID=$(eval echo \$VM$i)
+    echo "[VM$i]"
+    
+    if ps -p $VM_PID > /dev/null 2>&1; then
+        echo "  ✅ Running (PID: $VM_PID)"
+        RUNNING=$((RUNNING + 1))
+        
+        LOG="/tmp/vm${i}-serial.log"
+        if [ -f "$LOG" ]; then
+            LINES=$(wc -l < "$LOG")
+            echo "  📋 Log: $LINES lines"
+            
+            if grep -q "BiomeOS" "$LOG" 2>/dev/null; then
+                echo "  ✅ BiomeOS detected"
+            fi
+        fi
+    else
+        echo "  ❌ Not running"
+    fi
+    echo ""
+done
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "🎯 Result: $RUNNING/3 VMs running"
+echo ""
+
+if [ $RUNNING -eq 3 ]; then
+    echo "✅ SUCCESS! All 3 VMs running"
+    echo ""
+    echo "Monitor: tail -f /tmp/vm1-serial.log"
+    echo "Stop: kill $VM1 $VM2 $VM3"
+elif [ $RUNNING -gt 0 ]; then
+    echo "⚠️  Partial: $RUNNING/3 running"
+else
+    echo "❌ Failed"
+fi
+
+echo ""
+

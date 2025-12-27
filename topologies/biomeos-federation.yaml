@@ -1,0 +1,68 @@
+# BiomeOS 3-VM Federation Topology
+# Uses benchScale format for VM orchestration
+
+topology:
+  name: biomeos-primal-federation
+  backend: qemu  # Will evolve to biomeos_vm when benchScale team completes
+
+nodes:
+  - name: tower1
+    type: biomeos
+    image: vm-testing/biomeos-with-primals.qcow2
+    memory: 1G
+    vcpus: 2
+    network:
+      bridge: biome-br0
+      ip: 10.42.0.10/24
+      gateway: 10.42.0.1
+    services:
+      - beardog
+      - songbird
+      - toadstool
+    
+  - name: tower2
+    type: biomeos
+    image: vm-testing/biomeos-with-primals.qcow2
+    memory: 1G
+    vcpus: 2
+    network:
+      bridge: biome-br0
+      ip: 10.42.0.11/24
+      gateway: 10.42.0.1
+    services:
+      - beardog
+      - nestgate
+      - loamspine
+    
+  - name: tower3
+    type: biomeos
+    image: vm-testing/biomeos-with-primals.qcow2
+    memory: 1G
+    vcpus: 2
+    network:
+      bridge: biome-br0
+      ip: 10.42.0.12/24
+      gateway: 10.42.0.1
+    services:
+      - songbird
+      - toadstool
+      - nestgate
+
+network:
+  type: bridge
+  name: biome-br0
+  subnet: 10.42.0.0/24
+  
+tests:
+  - name: boot_time
+    type: performance
+    threshold: 200ms
+    
+  - name: primal_discovery
+    type: functional
+    expect: "All primals discovered via mDNS"
+    
+  - name: p2p_coordination
+    type: integration
+    expect: "Primals establish P2P mesh"
+

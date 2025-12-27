@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+#
+# Install BiomeOS services into root filesystem
+#
+
+set -euo pipefail
+
+ROOT_DIR="${1:-biomeos-root}"
+SERVICES_DIR="services"
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🔧 Installing BiomeOS Service Files"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+if [[ ! -d "$ROOT_DIR" ]]; then
+    echo "❌ Root directory not found: $ROOT_DIR"
+    exit 1
+fi
+
+# Create systemd directories
+mkdir -p "$ROOT_DIR/etc/systemd/system"
+mkdir -p "$ROOT_DIR/etc/systemd/system/multi-user.target.wants"
+
+# Copy service files
+echo "📦 Installing service files..."
+for service in "$SERVICES_DIR"/*.service; do
+    if [[ -f "$service" ]]; then
+        name=$(basename "$service")
+        cp "$service" "$ROOT_DIR/etc/systemd/system/"
+        
+        # Enable service (create symlink)
+        ln -sf "../$name" "$ROOT_DIR/etc/systemd/system/multi-user.target.wants/$name"
+        
+        echo "  ✓ $name"
+    fi
+done
+
+# Create primal discovery configuration
+echo "⚙️  Configuring primal discovery..."
+mkdir -p "$ROOT_DIR/etc/biomeos"
+cat > "$ROOT_DIR/etc/biomeos/primal-discovery.toml" << 'EOF'
+# BiomeOS Primal Discovery Configuration
+# Primals discover each other at runtime - no hardcoded addresses
+
+[discovery]
+method = "mdns"  # mDNS for local network discovery
+broadcast_interval = 5000  # milliseconds
+ttl = 60  # seconds
+
+[network]
+# Network interface (auto-detect by default)
+interface = "auto"
+
+[primals]
+# Primal capabilities are discovered at runtime
+# No hardcoding - each primal announces its capabilities
+auto_discover = true
+EOF
+
+echo "  ✓ primal-discovery.toml"
+
+# Create systemd target for BiomeOS
+cat > "$ROOT_DIR/etc/systemd/system/biomeos.target" << 'EOF'
+[Unit]
+Description=BiomeOS Primal Ecosystem
+Documentation=https://biomeos.earth
+After=multi-user.target
+Requires=multi-user.target
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+echo "  ✓ biomeos.target"
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "✅ Service installation complete!"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "📋 Installed Services:"
+ls -1 "$ROOT_DIR/etc/systemd/system"/*.service | xargs -n1 basename
+echo ""
+echo "🚀 Services will auto-start on next boot!"
+

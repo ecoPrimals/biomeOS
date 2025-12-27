@@ -1,0 +1,143 @@
+#!/usr/bin/env bash
+#
+# Deploy BiomeOS 3-VM Federation
+# (Wrapper for benchScale until VM backend is complete)
+#
+
+set -euo pipefail
+
+TOPOLOGY="${1:-topologies/biomeos-federation.yaml}"
+ISO="dist/biomeos-20251227-165759.iso"
+ROOTFS="vm-testing/biomeos-with-primals.qcow2"
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🚀 Deploying BiomeOS 3-VM Federation"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  Topology: $TOPOLOGY"
+echo "  ISO: $ISO"
+echo "  Root FS: $ROOTFS"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+# Create VM-specific root disks
+echo "📦 Creating VM-specific root disks..."
+ROOTFS_ABS="$(cd "$(dirname "$ROOTFS")" && pwd)/$(basename "$ROOTFS")"
+for vm in tower1 tower2 tower3; do
+    if [[ ! -f "vm-testing/${vm}-primal.qcow2" ]]; then
+        echo "  → Creating $vm disk..."
+        qemu-img create -f qcow2 -b "$ROOTFS_ABS" -F qcow2 "vm-testing/${vm}-primal.qcow2" 8G
+    else
+        echo "  ✓ $vm disk exists"
+    fi
+done
+
+# Setup network bridge
+echo ""
+echo "🌐 Setting up network bridge..."
+if ! ip link show biome-br0 >/dev/null 2>&1; then
+    echo "  → Creating biome-br0..."
+    pkexec bash -c "
+        ip link add name biome-br0 type bridge
+        ip addr add 10.42.0.1/24 dev biome-br0
+        ip link set biome-br0 up
+    "
+    echo "  ✓ Bridge created"
+else
+    echo "  ✓ Bridge exists"
+fi
+
+# Launch VMs
+echo ""
+echo "🚀 Launching VMs..."
+
+# VM 1: tower1
+echo "  → Launching tower1 (10.42.0.10)..."
+qemu-system-x86_64 \
+    -name "BiomeOS-Tower1" \
+    -cdrom "$ISO" \
+    -drive file="vm-testing/tower1-primal.qcow2",format=qcow2,if=ide \
+    -m 1G -smp 2 \
+    -netdev user,id=net0,hostfwd=tcp::5101-:22 \
+    -device e1000,netdev=net0 \
+    -serial file:/tmp/tower1.log \
+    -display none -nographic &
+TOWER1_PID=$!
+
+sleep 2
+
+# VM 2: tower2
+echo "  → Launching tower2 (10.42.0.11)..."
+qemu-system-x86_64 \
+    -name "BiomeOS-Tower2" \
+    -cdrom "$ISO" \
+    -drive file="vm-testing/tower2-primal.qcow2",format=qcow2,if=ide \
+    -m 1G -smp 2 \
+    -netdev user,id=net0,hostfwd=tcp::5102-:22 \
+    -device e1000,netdev=net0 \
+    -serial file:/tmp/tower2.log \
+    -display none -nographic &
+TOWER2_PID=$!
+
+sleep 2
+
+# VM 3: tower3
+echo "  → Launching tower3 (10.42.0.12)..."
+qemu-system-x86_64 \
+    -name "BiomeOS-Tower3" \
+    -cdrom "$ISO" \
+    -drive file="vm-testing/tower3-primal.qcow2",format=qcow2,if=ide \
+    -m 1G -smp 2 \
+    -netdev user,id=net0,hostfwd=tcp::5103-:22 \
+    -device e1000,netdev=net0 \
+    -serial file:/tmp/tower3.log \
+    -display none -nographic &
+TOWER3_PID=$!
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "✅ Federation Deployed!"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "📊 VM Status:"
+echo "  Tower1: PID $TOWER1_PID | SSH: localhost:5101 | Log: /tmp/tower1.log"
+echo "  Tower2: PID $TOWER2_PID | SSH: localhost:5102 | Log: /tmp/tower2.log"
+echo "  Tower3: PID $TOWER3_PID | SSH: localhost:5103 | Log: /tmp/tower3.log"
+echo ""
+echo "🔍 Monitor Logs:"
+echo "  tail -f /tmp/tower{1,2,3}.log"
+echo ""
+echo "🛑 Stop Federation:"
+echo "  kill $TOWER1_PID $TOWER2_PID $TOWER3_PID"
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# Save PIDs
+echo "$TOWER1_PID $TOWER2_PID $TOWER3_PID" > /tmp/biomeos-federation.pids
+echo "💾 PIDs saved to /tmp/biomeos-federation.pids"
+echo ""
+echo "Waiting for boot (15 seconds)..."
+sleep 15
+
+# Check boot status
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "📊 Boot Status:"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+for vm in tower1 tower2 tower3; do
+    echo ""
+    echo "🖥️  $vm:"
+    if grep -q "BiomeOS initialization complete" "/tmp/${vm}.log" 2>/dev/null; then
+        echo "  ✅ Booted successfully"
+        BOOT_TIME=$(grep "BootLogger stats" "/tmp/${vm}.log" | grep -oP '\d+ms' || echo "unknown")
+        echo "  ⏱️  Boot time: $BOOT_TIME"
+    else
+        echo "  ⚠️  Still booting or failed"
+    fi
+done
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🎯 Federation is running!"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+

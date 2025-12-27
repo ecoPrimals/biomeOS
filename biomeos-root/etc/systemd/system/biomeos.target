@@ -1,0 +1,8 @@
+[Unit]
+Description=BiomeOS Primal Ecosystem
+Documentation=https://biomeos.earth
+After=multi-user.target
+Requires=multi-user.target
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+#
+# Quick test: Boot BiomeOS and verify primals
+#
+
+ISO="${1:-dist/biomeos-20251227-165759.iso}"
+ROOTFS="${2:-vm-testing/biomeos-with-primals.qcow2}"
+LOG="/tmp/biomeos-primals-verify.log"
+
+rm -f "$LOG"
+
+echo "🚀 Booting BiomeOS to verify primals..."
+
+# Boot and wait for shell
+timeout 30 qemu-system-x86_64 \
+    -name "BiomeOS-Primal-Test" \
+    -cdrom "$ISO" \
+    -drive file="$ROOTFS",format=qcow2,if=ide \
+    -m 1G -smp 2 \
+    -serial file:"$LOG" \
+    -display none -nographic &
+
+QEMU_PID=$!
+sleep 15  # Wait for boot
+
+# Kill QEMU
+kill $QEMU_PID 2>/dev/null || true
+wait $QEMU_PID 2>/dev/null || true
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "✅ Boot Log Analysis"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+# Check boot success
+if grep -q "BiomeOS initialization complete" "$LOG"; then
+    echo "✅ BiomeOS booted successfully"
+else
+    echo "❌ Boot failed"
+    exit 1
+fi
+
+# Check shell spawned
+if grep -q "Spawning shell" "$LOG"; then
+    echo "✅ Shell spawned"
+else
+    echo "⚠️  Shell not detected"
+fi
+
+# Check boot time
+BOOT_TIME=$(grep "BootLogger stats" "$LOG" | grep -oP '\d+ms' || echo "unknown")
+echo "⏱️  Boot time: $BOOT_TIME"
+
+echo ""
+echo "📦 Primal Installation Check:"
+echo ""
+
+# In a real test we'd need to send commands to the VM
+# For now, let's verify the root filesystem directly
+echo "Checking primals in root filesystem..."
+if [[ -d biomeos-root/usr/local/bin ]]; then
+    ls -lh biomeos-root/usr/local/bin/ | tail -6
+    echo ""
+    PRIMAL_COUNT=$(ls biomeos-root/usr/local/bin/ | wc -l)
+    echo "✅ Found $PRIMAL_COUNT primals"
+else
+    echo "⚠️  Root directory not preserved"
+fi
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🎯 Next: Runtime primal discovery test"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+

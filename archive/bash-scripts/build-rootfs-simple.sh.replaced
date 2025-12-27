@@ -1,0 +1,177 @@
+#!/usr/bin/env bash
+#
+# BiomeOS Root Filesystem Builder (Simplified - Dir to qcow2)
+# Creates a directory with BiomeOS + primals, then converts to qcow2
+#
+
+set -euo pipefail
+
+ROOT_DIR="${1:-biomeos-root}"
+OUTPUT_QCOW2="${2:-vm-testing/biomeos-with-primals.qcow2}"
+SIZE="${3:-8G}"
+PRIMALS_DIR="${4:-primals}"
+BIOMEOS_INIT="target/release/biomeos-init"
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🏗️  Building BiomeOS Root Filesystem"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  Root Dir: $ROOT_DIR"
+echo "  Output: $OUTPUT_QCOW2"
+echo "  Size: $SIZE"
+echo "  Primals: $PRIMALS_DIR"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# Check prerequisites
+if [[ ! -f "$BIOMEOS_INIT" ]]; then
+    echo "❌ BiomeOS init not found: $BIOMEOS_INIT"
+    exit 1
+fi
+
+if [[ ! -d "$PRIMALS_DIR" ]]; then
+    echo "❌ Primals directory not found: $PRIMALS_DIR"
+    exit 1
+fi
+
+# Create root directory structure
+echo "🌱 Creating root directory structure..."
+rm -rf "$ROOT_DIR"
+mkdir -p "$ROOT_DIR"/{bin,sbin,usr/{bin,sbin,local/bin},etc/systemd/system,var/{log,lib},tmp,run,proc,sys,dev,home,root,lib,lib64,usr/lib}
+
+# Install BusyBox
+echo "🔧 Installing BusyBox..."
+BUSYBOX_PATH="$(which busybox)"
+cp "$BUSYBOX_PATH" "$ROOT_DIR/bin/busybox"
+for util in sh ls cat echo mkdir rm cp mv grep ps top mount umount ip ping chmod chown; do
+    ln -sf busybox "$ROOT_DIR/bin/$util"
+done
+
+# Install BiomeOS init
+echo "🦀 Installing BiomeOS init..."
+cp "$BIOMEOS_INIT" "$ROOT_DIR/sbin/init"
+chmod +x "$ROOT_DIR/sbin/init"
+
+# Copy required libraries
+echo "  ✓ Copying required libraries..."
+for lib in $(ldd "$BIOMEOS_INIT" | grep -oP '=> \K/[^ ]+'); do
+    if [[ -f "$lib" ]]; then
+        dest="$ROOT_DIR${lib}"
+        mkdir -p "$(dirname "$dest")"
+        cp "$lib" "$dest" 2>/dev/null || true
+    fi
+done
+
+# Copy dynamic linker
+LINKER=$(ldd "$BIOMEOS_INIT" | grep -oP '^\s+\K/[^ ]+')
+if [[ -n "$LINKER" && -f "$LINKER" ]]; then
+    dest="$ROOT_DIR${LINKER}"
+    mkdir -p "$(dirname "$dest")"
+    cp "$LINKER" "$dest"
+fi
+
+# Install primals
+echo "🔧 Installing primal binaries..."
+primal_count=0
+for primal in "$PRIMALS_DIR"/*; do
+    if [[ -f "$primal" && -x "$primal" ]]; then
+        name=$(basename "$primal")
+        echo "  → Installing $name ($(ls -lh "$primal" | awk '{print $5}'))..."
+        cp "$primal" "$ROOT_DIR/usr/local/bin/$name"
+        chmod +x "$ROOT_DIR/usr/local/bin/$name"
+        
+        # Copy required libraries (with timeout protection)
+        echo "    → Copying libraries..."
+        timeout 30 bash -c "
+            for lib in \$(ldd '$primal' 2>/dev/null | grep -oP '=> \K/[^ ]+' || true); do
+                if [[ -f \"\$lib\" ]]; then
+                    dest='$ROOT_DIR'\${lib}
+                    mkdir -p \"\$(dirname \"\$dest\")\"
+                    cp \"\$lib\" \"\$dest\" 2>/dev/null || true
+                fi
+            done
+        " || echo "    ⚠️  Library copy timeout (continuing...)"
+        
+        # Copy dynamic linker
+        LINKER=$(timeout 5 ldd "$primal" 2>/dev/null | grep -oP '^\s+\K/[^ ]+' || true)
+        if [[ -n "$LINKER" && -f "$LINKER" ]]; then
+            dest="$ROOT_DIR${LINKER}"
+            mkdir -p "$(dirname "$dest")"
+            cp "$LINKER" "$dest" 2>/dev/null || true
+        fi
+        
+        echo "    ✓ Installed $name"
+        ((primal_count++))
+    fi
+done
+
+echo "  ✓ Installed $primal_count primal(s)"
+
+# Configure system
+echo "⚙️  Configuring system..."
+echo 'biomeos' > "$ROOT_DIR/etc/hostname"
+cat > "$ROOT_DIR/etc/hosts" << 'EOHOSTS'
+127.0.0.1	localhost
+::1		localhost
+127.0.1.1	biomeos
+EOHOSTS
+
+cat > "$ROOT_DIR/etc/resolv.conf" << 'EORESOLV'
+nameserver 8.8.8.8
+nameserver 8.8.4.4
+EORESOLV
+
+cat > "$ROOT_DIR/etc/fstab" << 'EOFSTAB'
+# BiomeOS fstab
+proc	/proc	proc	defaults	0	0
+sysfs	/sys	sysfs	defaults	0	0
+devpts	/dev/pts	devpts	defaults	0	0
+tmpfs	/tmp	tmpfs	defaults	0	0
+tmpfs	/run	tmpfs	defaults	0	0
+EOFSTAB
+
+chmod 1777 "$ROOT_DIR/tmp"
+
+echo "  ✓ System configured"
+
+# Convert to qcow2 using virt-make-fs
+echo "📦 Converting to qcow2..."
+mkdir -p "$(dirname "$OUTPUT_QCOW2")"
+
+if command -v virt-make-fs >/dev/null 2>&1; then
+    echo "  Using virt-make-fs..."
+    virt-make-fs --format=qcow2 --size="$SIZE" "$ROOT_DIR" "$OUTPUT_QCOW2"
+else
+    echo "  Using manual method (requires sudo)..."
+    # Create raw image
+    TMP_RAW=$(mktemp /tmp/biomeos-XXXXXX.img)
+    trap "rm -f $TMP_RAW" EXIT
+    
+    dd if=/dev/zero of="$TMP_RAW" bs=1M count=8192 status=progress
+    mkfs.ext4 "$TMP_RAW"
+    
+    MOUNT_POINT="/tmp/biomeos-mount-$$"
+    mkdir -p "$MOUNT_POINT"
+    
+    pkexec bash -c "
+        mount -o loop '$TMP_RAW' '$MOUNT_POINT' && \
+        cp -a '$ROOT_DIR'/* '$MOUNT_POINT'/ && \
+        umount '$MOUNT_POINT'
+    "
+    
+    # Convert to qcow2
+    qemu-img convert -f raw -O qcow2 "$TMP_RAW" "$OUTPUT_QCOW2"
+    rm -f "$TMP_RAW"
+    rmdir "$MOUNT_POINT"
+fi
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "✅ Root filesystem built: $OUTPUT_QCOW2"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "📊 Details:"
+echo "  Size: $(ls -lh "$OUTPUT_QCOW2" 2>/dev/null | awk '{print $5}' || echo 'N/A')"
+echo "  Primals: $primal_count binaries"
+echo "  Init: biomeos-init (pure Rust)"
+echo "  Root Dir: $ROOT_DIR (preserved for inspection)"
+echo ""
+echo "🚀 Ready to boot!"
+

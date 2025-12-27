@@ -1,0 +1,77 @@
+#!/bin/bash
+set -e
+
+DISK_PATH="$1"
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🔧 Setting up BiomeOS Root Filesystem"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "Disk: $DISK_PATH"
+echo ""
+
+# Load NBD module
+modprobe nbd max_part=8
+
+# Connect disk
+echo "Connecting disk..."
+qemu-nbd --connect=/dev/nbd0 "$DISK_PATH"
+sleep 2
+
+# Create filesystem
+echo "Creating ext4 filesystem..."
+mkfs.ext4 -F -L "BiomeOS-Root" /dev/nbd0
+
+# Mount
+echo "Mounting..."
+mkdir -p /tmp/biomeos-mount
+mount /dev/nbd0 /tmp/biomeos-mount
+
+# Create structure
+echo "Creating directory structure..."
+mkdir -p /tmp/biomeos-mount/{bin,lib,lib64,proc,sys,dev,tmp,etc,root,home,usr/bin,var}
+
+# Copy BiomeOS files
+echo "Installing BiomeOS..."
+BIOMEOS_DIR="/home/eastgate/Development/ecoPrimals/phase2/biomeOS"
+
+# Copy init
+if [ -f "$BIOMEOS_DIR/target/release/biomeos-init" ]; then
+    cp "$BIOMEOS_DIR/target/release/biomeos-init" /tmp/biomeos-mount/init
+    chmod +x /tmp/biomeos-mount/init
+    echo "  ✓ biomeos-init"
+fi
+
+# Copy libraries
+if [ -d "$BIOMEOS_DIR/build/boot-media/initramfs-root/lib" ]; then
+    mkdir -p /tmp/biomeos-mount/lib/x86_64-linux-gnu
+    cp -a "$BIOMEOS_DIR/build/boot-media/initramfs-root/lib/"* /tmp/biomeos-mount/lib/x86_64-linux-gnu/ 2>/dev/null || true
+    # Also copy to /lib for compatibility
+    cp -a "$BIOMEOS_DIR/build/boot-media/initramfs-root/lib/"* /tmp/biomeos-mount/lib/ 2>/dev/null || true
+    echo "  ✓ libraries"
+fi
+
+if [ -d "$BIOMEOS_DIR/build/boot-media/initramfs-root/lib64" ]; then
+    cp -a "$BIOMEOS_DIR/build/boot-media/initramfs-root/lib64/"* /tmp/biomeos-mount/lib64/ 2>/dev/null || true
+    echo "  ✓ lib64"
+fi
+
+# Copy busybox if available
+if [ -f "$BIOMEOS_DIR/build/boot-media/initramfs-root/bin/busybox" ]; then
+    cp "$BIOMEOS_DIR/build/boot-media/initramfs-root/bin/busybox" /tmp/biomeos-mount/bin/
+    echo "  ✓ busybox"
+fi
+
+echo ""
+echo "Root filesystem contents:"
+ls -lh /tmp/biomeos-mount/
+echo ""
+
+# Cleanup
+echo "Unmounting..."
+umount /tmp/biomeos-mount
+qemu-nbd --disconnect /dev/nbd0
+
+echo ""
+echo "✅ BiomeOS installed to disk!"
+

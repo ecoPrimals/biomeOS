@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+# Setup all VM disks for BiomeOS Federation
+
+set -euo pipefail
+
+PROJECT_ROOT="/home/eastgate/Development/ecoPrimals/phase2/biomeOS"
+cd "$PROJECT_ROOT"
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🔧 BiomeOS VM Disk Setup"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+# Single pkexec for all operations
+pkexec bash << 'EOFROOT'
+set -euo pipefail
+
+PROJECT_ROOT="/home/eastgate/Development/ecoPrimals/phase2/biomeOS"
+cd "$PROJECT_ROOT"
+
+# Ensure NBD module loaded
+modprobe nbd max_part=8
+
+# Setup each VM disk
+for i in 1 2 3; do
+    echo "Setting up VM${i}..."
+    
+    DISK_PATH="$PROJECT_ROOT/vm-testing/vm${i}-tower${i}.qcow2"
+    NBD_DEVICE="/dev/nbd${i}"
+    MOUNT_POINT="/tmp/biomeos-vm${i}"
+    
+    # Connect
+    qemu-nbd --connect="$NBD_DEVICE" "$DISK_PATH"
+    sleep 1
+    
+    # Format
+    mkfs.ext4 -F "$NBD_DEVICE" > /dev/null 2>&1
+    
+    # Mount
+    mkdir -p "$MOUNT_POINT"
+    mount "$NBD_DEVICE" "$MOUNT_POINT"
+    
+    # Create structure
+    mkdir -p "$MOUNT_POINT"/{bin,dev,etc,home,lib,lib64,proc,root,sys,tmp,usr,var}
+    mkdir -p "$MOUNT_POINT/biomeos"/{primals,configs,data}
+    
+    # Install BiomeOS
+    cp "$PROJECT_ROOT/target/release/biomeos-init" "$MOUNT_POINT/init"
+    chmod +x "$MOUNT_POINT/init"
+    
+    # Copy libraries
+    ldd "$PROJECT_ROOT/target/release/biomeos-init" | while read -r line; do
+        if [[ "$line" =~ =>\ (/.*)\ \(0x[0-9a-f]+\) ]]; then
+            LIB_PATH="${BASH_REMATCH[1]}"
+            DEST_DIR="$MOUNT_POINT/$(dirname "$LIB_PATH")"
+            mkdir -p "$DEST_DIR"
+            cp "$LIB_PATH" "$DEST_DIR/" 2>/dev/null || true
+        elif [[ "$line" =~ (/.*/ld-linux-x86-64.so.2)\ \(0x[0-9a-f]+\) ]]; then
+            LIB_PATH="${BASH_REMATCH[1]}"
+            DEST_DIR="$MOUNT_POINT/$(dirname "$LIB_PATH")"
+            mkdir -p "$DEST_DIR"
+            cp "$LIB_PATH" "$DEST_DIR/" 2>/dev/null || true
+        fi
+    done
+    
+    # Copy busybox
+    if command -v busybox &> /dev/null; then
+        cp "$(which busybox)" "$MOUNT_POINT/bin/busybox"
+        chmod +x "$MOUNT_POINT/bin/busybox"
+    fi
+    
+    echo "  ✓ VM${i} configured"
+    
+    # Unmount
+    umount "$MOUNT_POINT"
+    qemu-nbd --disconnect "$NBD_DEVICE"
+done
+
+echo ""
+echo "✅ All VM disks ready!"
+EOFROOT
+
+echo ""
+echo "VM Disks:"
+ls -lh vm-testing/vm*.qcow2
+

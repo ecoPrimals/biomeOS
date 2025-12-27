@@ -18,14 +18,27 @@ pub struct InitramfsBuilder {
     directories: Vec<String>,
 }
 
+/// Specification for a binary to include in the initramfs
 #[derive(Debug, Clone)]
 pub struct BinarySpec {
+    /// Source path on the host system
     pub source: PathBuf,
+    /// Destination path in the initramfs (e.g., "/bin/busybox")
     pub dest: String,
+    /// Unix permissions (e.g., 0o755 for executable)
     pub permissions: u32,
 }
 
 impl InitramfsBuilder {
+    /// Creates a new initramfs builder
+    ///
+    /// # Arguments
+    ///
+    /// * `work_dir` - Working directory for building the initramfs
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the working directory cannot be created.
     pub fn new<P: AsRef<Path>>(work_dir: P) -> Result<Self> {
         let root = work_dir.as_ref().join("initramfs-root");
         fs::create_dir_all(&root)
@@ -42,7 +55,7 @@ impl InitramfsBuilder {
     pub fn add_biomeos_binaries(&mut self, project_root: &Path) -> Result<()> {
         info!("📦 Adding BiomeOS binaries...");
 
-        // BiomeOS init (PID 1)
+        // BiomeOS init (PID 1) - this is the actual init binary
         self.add_binary(BinarySpec {
             source: project_root.join("target/release/biomeos-init"),
             dest: "/init".to_string(),
@@ -65,6 +78,75 @@ impl InitramfsBuilder {
             })?;
         } else {
             warn!("busybox not found - some utilities may not be available");
+        }
+
+        Ok(())
+    }
+
+    /// Copy required dynamic libraries for binaries
+    /// This is needed when binaries are dynamically linked
+    pub fn add_required_libraries(&self, binary_path: &Path) -> Result<()> {
+        use std::process::Command;
+        
+        info!("📚 Adding required libraries for {}...", binary_path.display());
+
+        // Use ldd to find required libraries
+        let output = Command::new("ldd")
+            .arg(binary_path)
+            .output()
+            .context("Failed to run ldd")?;
+
+        if !output.status.success() {
+            // Binary might be statically linked or ldd not available
+            warn!("ldd failed for {} - assuming statically linked", binary_path.display());
+            return Ok(());
+        }
+
+        let ldd_output = String::from_utf8_lossy(&output.stdout);
+        
+        for line in ldd_output.lines() {
+            // Parse lines like: "libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x...)"
+            if let Some(lib_path) = line.split("=>").nth(1) {
+                let lib_path = lib_path.split_whitespace().next();
+                if let Some(lib_path_str) = lib_path {
+                    let lib_src = Path::new(lib_path_str);
+                    if lib_src.exists() && lib_src.is_absolute() {
+                        // Preserve the full directory structure (e.g., /lib/x86_64-linux-gnu/)
+                        let dest_full = self.root.join(lib_src.strip_prefix("/").unwrap());
+
+                        // Create parent directories
+                        if let Some(parent) = dest_full.parent() {
+                            fs::create_dir_all(parent)?;
+                        }
+
+                        // Copy library
+                        if !dest_full.exists() {
+                            fs::copy(lib_src, &dest_full)
+                                .with_context(|| format!("Failed to copy library: {}", lib_src.display()))?;
+                            info!("  ✓ Copied: {}", lib_src.display());
+                        }
+                    }
+                }
+            }
+            
+            // Also handle dynamic linker (e.g., /lib64/ld-linux-x86-64.so.2)
+            if line.contains("ld-linux") && line.starts_with("\t/") {
+                let ld_path_str = line.split_whitespace().next().unwrap();
+                let ld_src = Path::new(ld_path_str);
+                if ld_src.exists() {
+                    let dest_full = self.root.join(ld_src.strip_prefix("/").unwrap());
+                    
+                    if let Some(parent) = dest_full.parent() {
+                        fs::create_dir_all(parent)?;
+                    }
+                    
+                    if !dest_full.exists() {
+                        fs::copy(ld_src, &dest_full)
+                            .with_context(|| format!("Failed to copy dynamic linker: {}", ld_src.display()))?;
+                        info!("  ✓ Copied dynamic linker: {}", ld_src.display());
+                    }
+                }
+            }
         }
 
         Ok(())
@@ -171,18 +253,32 @@ impl InitramfsBuilder {
             fs::create_dir_all(parent)?;
         }
 
-        // Create tar.gz archive
-        let tar_gz = File::create(output)
+        // Create CPIO archive (newc format) compressed with gzip
+        // The kernel expects a gzipped CPIO archive, not tar.gz
+        let output_file = File::create(output)
             .with_context(|| format!("Failed to create output file: {}", output.display()))?;
-        let enc = GzEncoder::new(tar_gz, Compression::best());
-        let mut tar = Builder::new(enc);
+        
+        let mut encoder = GzEncoder::new(output_file, Compression::best());
 
-        // Add all files from initramfs root
-        tar.append_dir_all(".", &self.root)
-            .context("Failed to add files to archive")?;
+        // Use find + cpio to create proper CPIO archive
+        // This is more reliable than trying to create CPIO in pure Rust
+        let status = std::process::Command::new("sh")
+            .arg("-c")
+            .arg(format!(
+                "cd {} && find . | cpio -o -H newc 2>/dev/null",
+                self.root.display()
+            ))
+            .stdout(std::process::Stdio::piped())
+            .spawn()
+            .context("Failed to spawn cpio command")?;
 
-        tar.finish()
-            .context("Failed to finish tar archive")?;
+        // Pipe cpio output to gzip encoder
+        if let Some(mut stdout) = status.stdout {
+            std::io::copy(&mut stdout, &mut encoder)
+                .context("Failed to compress CPIO archive")?;
+        }
+
+        encoder.finish().context("Failed to finish gzip compression")?;
 
         let size = fs::metadata(output)?.len();
         info!("✅ Initramfs built: {} bytes ({:.2} MB)", 

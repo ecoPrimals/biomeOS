@@ -97,11 +97,26 @@ impl BootableMediaBuilder {
 
         let mut builder = InitramfsBuilder::new(&self.work_dir)?;
         
+        // Create directory structure
         builder.create_directory_structure()?;
-        builder.add_biomeos_binaries(&self.project_root)?;
-        builder.install_binaries()?;
-        builder.create_init_script()?;
         
+        // Add BiomeOS binaries (including biomeos-init as /init)
+        builder.add_biomeos_binaries(&self.project_root)?;
+        
+        // Install binaries into initramfs root
+        builder.install_binaries()?;
+        
+        // Copy required dynamic libraries for biomeos-init
+        // This is needed because the binary is dynamically linked
+        let init_binary = self.project_root.join("target/release/biomeos-init");
+        if init_binary.exists() {
+            builder.add_required_libraries(&init_binary)?;
+        }
+        
+        // Note: We don't need create_init_script() anymore since biomeos-init
+        // is copied directly as /init and is already executable
+        
+        // Build the initramfs archive
         let output = self.work_dir.join("biomeos-initramfs.img");
         builder.build(&output)?;
 
@@ -163,22 +178,27 @@ impl BootableMediaBuilder {
         // Modern GRUB config with proper escaping
         writeln!(file, "set timeout=10")?;
         writeln!(file, "set default=0")?;
-        writeln!(file, "")?;
+        writeln!(file, "serial --unit=0 --speed=115200")?;
+        writeln!(file, "terminal_input console serial")?;
+        writeln!(file, "terminal_output console serial")?;
+        writeln!(file)?;
         writeln!(file, "menuentry 'BiomeOS - Sovereignty-First Operating System' {{")?;
         writeln!(file, "    echo 'BiomeOS - Loading Pure Rust Platform...'")?;
-        writeln!(file, "    linux /boot/vmlinuz init=/init rw")?;
+        writeln!(file, "    echo ''")?;
+        // Boot from initramfs - no root filesystem needed
+        writeln!(file, "    linux /boot/vmlinuz rdinit=/init rootfstype=rootfs rw console=tty0 console=ttyS0,115200")?;
         writeln!(file, "    initrd /boot/initramfs.img")?;
         writeln!(file, "}}")?;
-        writeln!(file, "")?;
+        writeln!(file)?;
         writeln!(file, "menuentry 'BiomeOS - Discovery Mode' {{")?;
         writeln!(file, "    echo 'BiomeOS - Network Discovery Mode'")?;
-        writeln!(file, "    linux /boot/vmlinuz init=/init rw biomeos.discovery")?;
+        writeln!(file, "    linux /boot/vmlinuz rootfstype=rootfs rdinit=/init rw biomeos.discovery")?;
         writeln!(file, "    initrd /boot/initramfs.img")?;
         writeln!(file, "}}")?;
-        writeln!(file, "")?;
+        writeln!(file)?;
         writeln!(file, "menuentry 'BiomeOS - Network Boot' {{")?;
         writeln!(file, "    echo 'BiomeOS - Network Coordination'")?;
-        writeln!(file, "    linux /boot/vmlinuz init=/init rw biomeos.network")?;
+        writeln!(file, "    linux /boot/vmlinuz rootfstype=rootfs rdinit=/init rw biomeos.network")?;
         writeln!(file, "    initrd /boot/initramfs.img")?;
         writeln!(file, "}}")?;
 

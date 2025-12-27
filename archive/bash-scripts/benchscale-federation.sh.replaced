@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+# BiomeOS VM Federation - Using benchScale Libvirt Backend
+#
+# This script demonstrates using benchScale to manage a BiomeOS VM federation
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+BENCHSCALE_ROOT="$PROJECT_ROOT/../benchscale"
+
+FEDERATION_NAME="biomeos-test-federation"
+TOPOLOGY="$PROJECT_ROOT/topologies/vm-federation.yaml"
+
+echo "🚀 BiomeOS VM Federation (benchScale Integration)"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "Using benchScale libvirt backend for native VM management"
+echo ""
+echo "Federation: $FEDERATION_NAME"
+echo "Topology: $TOPOLOGY"
+echo ""
+
+# Check if benchscale is available
+if [ ! -d "$BENCHSCALE_ROOT" ]; then
+    echo "❌ benchScale not found at: $BENCHSCALE_ROOT"
+    echo ""
+    echo "Please clone benchScale:"
+    echo "  cd $(dirname $PROJECT_ROOT)"
+    echo "  git clone https://github.com/ecoPrimals/benchScale.git"
+    exit 1
+fi
+
+# Check if libvirt is available (optional)
+if ! command -v virsh &> /dev/null; then
+    echo "⚠️  libvirt not detected - will use Docker backend as fallback"
+    echo ""
+    BACKEND="docker"
+else
+    echo "✅ libvirt detected - will use VM backend"
+    echo ""
+    BACKEND="libvirt"
+fi
+
+COMMAND="${1:-help}"
+
+case "$COMMAND" in
+    create)
+        echo "Creating VM federation..."
+        cd "$BENCHSCALE_ROOT"
+        cargo run --release -- create "$FEDERATION_NAME" \
+            --topology "$TOPOLOGY" \
+            --backend "$BACKEND"
+        ;;
+    
+    start)
+        echo "Starting VM federation..."
+        cd "$BENCHSCALE_ROOT"
+        cargo run --release -- start "$FEDERATION_NAME"
+        ;;
+    
+    test)
+        echo "Running federation tests..."
+        cd "$BENCHSCALE_ROOT"
+        cargo run --release -- test "$FEDERATION_NAME"
+        ;;
+    
+    status)
+        echo "Checking federation status..."
+        cd "$BENCHSCALE_ROOT"
+        cargo run --release -- status "$FEDERATION_NAME"
+        ;;
+    
+    stop)
+        echo "Stopping VM federation..."
+        cd "$BENCHSCALE_ROOT"
+        cargo run --release -- stop "$FEDERATION_NAME"
+        ;;
+    
+    destroy)
+        echo "Destroying VM federation..."
+        cd "$BENCHSCALE_ROOT"
+        cargo run --release -- destroy "$FEDERATION_NAME"
+        ;;
+    
+    full)
+        echo "Running full lifecycle test..."
+        echo ""
+        $0 create
+        echo ""
+        $0 start
+        echo ""
+        sleep 10
+        $0 test
+        echo ""
+        $0 status
+        echo ""
+        read -p "Press enter to tear down..."
+        $0 stop
+        $0 destroy
+        ;;
+    
+    *)
+        echo "Usage: $0 {create|start|test|status|stop|destroy|full}"
+        echo ""
+        echo "Commands:"
+        echo "  create  - Create VM federation from topology"
+        echo "  start   - Start all VMs"
+        echo "  test    - Run validation tests"
+        echo "  status  - Show federation status"
+        echo "  stop    - Stop all VMs"
+        echo "  destroy - Remove federation"
+        echo "  full    - Run complete lifecycle"
+        echo ""
+        exit 1
+        ;;
+esac
+
+echo ""
+echo "✅ Complete!"
+

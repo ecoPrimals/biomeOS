@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+# BiomeOS VM Federation Launcher
+# Launches a 3-VM federation for testing P2P coordination
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Configuration
+BRIDGE_NAME="virbr-biomeos"
+ISO="${1:-$PROJECT_ROOT/dist/biomeos-20251227-144233.iso}"
+MODE="${2:-serial}"  # serial or gui
+
+# VM Configuration
+declare -A VMS=(
+    ["vm1"]="192.168.100.11"
+    ["vm2"]="192.168.100.12"
+    ["vm3"]="192.168.100.13"
+)
+
+echo "🚀 BiomeOS VM Federation Launcher"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "ISO: $ISO"
+echo "Mode: $MODE"
+echo "Bridge: $BRIDGE_NAME"
+echo ""
+
+# Verify ISO exists
+if [ ! -f "$ISO" ]; then
+    echo "❌ Error: ISO not found: $ISO"
+    exit 1
+fi
+
+# Check if bridge exists
+if ! ip link show "$BRIDGE_NAME" &>/dev/null; then
+    echo "⚠️  Network bridge not found"
+    echo ""
+    echo "Setting up network..."
+    "$SCRIPT_DIR/setup-vm-network.sh"
+    echo ""
+fi
+
+# Stop any existing VMs
+echo "🧹 Cleaning up existing VMs..."
+pkill -9 qemu-system-x86_64 2>/dev/null || true
+sleep 1
+
+# Prepare VM disks
+echo ""
+echo "💾 Preparing VM disks..."
+for vm in "${!VMS[@]}"; do
+    DISK="$PROJECT_ROOT/vm-testing/${vm}.qcow2"
+    
+    if [ ! -f "$DISK" ]; then
+        echo "  Creating $vm disk (2GB)..."
+        qemu-img create -f qcow2 "$DISK" 2G
+        echo "  Setting up $vm..."
+        "$SCRIPT_DIR/setup-root-disk.sh" "$DISK"
+    else
+        echo "  ✅ $vm disk ready"
+    fi
+done
+
+echo ""
+echo "🚀 Launching VMs..."
+echo ""
+
+# Launch each VM
+for vm in "${!VMS[@]}"; do
+    IP="${VMS[$vm]}"
+    DISK="$PROJECT_ROOT/vm-testing/${vm}.qcow2"
+    SERIAL_LOG="/tmp/${vm}-serial.log"
+    MAC=$(printf "52:54:00:00:00:%02x" "${IP##*.}")
+    
+    rm -f "$SERIAL_LOG"
+    
+    # Build QEMU command
+    QEMU_CMD=(
+        qemu-system-x86_64
+        -name "BiomeOS-$vm"
+        -cdrom "$ISO"
+        -drive "file=$DISK,format=qcow2,if=ide"
+        -m 512
+        -smp 1
+        -netdev "bridge,id=net0,br=$BRIDGE_NAME"
+        -device "virtio-net-pci,netdev=net0,mac=$MAC"
+        -serial "file:$SERIAL_LOG"
+    )
+    
+    if [ "$MODE" = "gui" ]; then
+        QEMU_CMD+=(-display gtk)
+    else
+        QEMU_CMD+=(-nographic)
+    fi
+    
+    # Launch VM
+    "${QEMU_CMD[@]}" &
+    VM_PID=$!
+    
+    echo "✅ $vm launched (PID: $VM_PID, IP: $IP, MAC: $MAC)"
+    echo "   Serial: $SERIAL_LOG"
+    
+    # Brief pause between launches
+    sleep 1
+done
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "✅ Federation Running"
+echo ""
+echo "VMs:"
+for vm in "${!VMS[@]}"; do
+    IP="${VMS[$vm]}"
+    echo "  • $vm - $IP"
+done
+echo ""
+echo "Monitor logs:"
+echo "  tail -f /tmp/vm1-serial.log"
+echo "  tail -f /tmp/vm2-serial.log"
+echo "  tail -f /tmp/vm3-serial.log"
+echo ""
+echo "Stop all VMs:"
+echo "  pkill -9 qemu-system-x86_64"
+echo ""
+echo "Next steps:"
+echo "  1. Wait ~30s for boot"
+echo "  2. Deploy primals to VMs"
+echo "  3. Test P2P coordination"
+echo ""

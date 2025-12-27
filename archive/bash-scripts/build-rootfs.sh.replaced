@@ -1,0 +1,197 @@
+#!/usr/bin/env bash
+#
+# BiomeOS Root Filesystem Builder
+# Creates a qcow2 disk image with BiomeOS + primals
+#
+# Usage: ./build-rootfs.sh [output.qcow2] [size] [primals_dir]
+
+set -euo pipefail
+
+OUTPUT="${1:-vm-testing/biomeos-primals.qcow2}"
+SIZE="${2:-8G}"
+PRIMALS_DIR="${3:-primals}"
+BIOMEOS_INIT="target/release/biomeos-init"
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🏗️  Building BiomeOS Root Filesystem"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  Output: $OUTPUT"
+echo "  Size: $SIZE"
+echo "  Primals: $PRIMALS_DIR"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# Check prerequisites
+if [[ ! -f "$BIOMEOS_INIT" ]]; then
+    echo "❌ BiomeOS init not found: $BIOMEOS_INIT"
+    echo "   Run: cargo build --release -p biomeos-boot --bin biomeos-init"
+    exit 1
+fi
+
+if [[ ! -d "$PRIMALS_DIR" ]]; then
+    echo "❌ Primals directory not found: $PRIMALS_DIR"
+    exit 1
+fi
+
+# Create output directory
+mkdir -p "$(dirname "$OUTPUT")"
+
+# Create qcow2 image
+echo "📦 Creating qcow2 image ($SIZE)..."
+qemu-img create -f qcow2 "$OUTPUT" "$SIZE"
+
+# Format and populate the image
+echo "💾 Formatting and populating filesystem..."
+echo "   (This will request sudo access)"
+
+# Use pkexec if available, otherwise sudo
+if command -v pkexec >/dev/null 2>&1; then
+    SUDO_CMD="pkexec"
+else
+    SUDO_CMD="sudo"
+    sudo -v  # Request sudo early
+fi
+
+# Cleanup function
+cleanup() {
+    echo "🧹 Cleaning up..."
+    $SUDO_CMD umount /mnt/biomeos-build 2>/dev/null || true
+    $SUDO_CMD qemu-nbd -d /dev/nbd0 2>/dev/null || true
+}
+
+trap cleanup EXIT
+
+# Load NBD module
+$SUDO_CMD modprobe nbd max_part=8
+
+# Disconnect any existing NBD
+$SUDO_CMD qemu-nbd -d /dev/nbd0 2>/dev/null || true
+sleep 0.5
+
+# Connect NBD
+$SUDO_CMD qemu-nbd -c /dev/nbd0 "$OUTPUT"
+sleep 2
+
+# Format
+echo "  ✓ Formatting ext4..."
+$SUDO_CMD mkfs.ext4 -L BIOMEOS /dev/nbd0
+
+# Mount
+echo "  ✓ Mounting..."
+$SUDO_CMD mkdir -p /mnt/biomeos-build
+$SUDO_CMD mount /dev/nbd0 /mnt/biomeos-build
+
+# Create directory structure
+echo "🌱 Creating directory structure..."
+$SUDO_CMD mkdir -p /mnt/biomeos-build/{bin,sbin,usr/{bin,sbin,local/bin},etc/systemd/system,var/{log,lib},tmp,run,proc,sys,dev,home,root,lib,lib64,usr/lib}
+
+# Install BusyBox
+echo "🔧 Installing BusyBox..."
+BUSYBOX_PATH="$(which busybox)"
+$SUDO_CMD cp "$BUSYBOX_PATH" /mnt/biomeos-build/bin/busybox
+for util in sh ls cat echo mkdir rm cp mv grep ps top mount umount ip ping chmod chown; do
+    $SUDO_CMD ln -sf busybox /mnt/biomeos-build/bin/$util
+done
+
+# Install BiomeOS init
+echo "🦀 Installing BiomeOS init..."
+$SUDO_CMD cp "$BIOMEOS_INIT" /mnt/biomeos-build/sbin/init
+$SUDO_CMD chmod +x /mnt/biomeos-build/sbin/init
+
+# Copy required libraries for init
+echo "  ✓ Copying required libraries..."
+for lib in $(ldd "$BIOMEOS_INIT" | grep -oP '=> \K/[^ ]+'); do
+    if [[ -f "$lib" ]]; then
+        # Preserve directory structure
+        dest="/mnt/biomeos-build${lib}"
+        $SUDO_CMD mkdir -p "$(dirname "$dest")"
+        $SUDO_CMD cp "$lib" "$dest" 2>/dev/null || true
+    fi
+done
+
+# Copy dynamic linker
+LINKER=$(ldd "$BIOMEOS_INIT" | grep -oP '^\s+\K/[^ ]+')
+if [[ -n "$LINKER" && -f "$LINKER" ]]; then
+    dest="/mnt/biomeos-build${LINKER}"
+    $SUDO_CMD mkdir -p "$(dirname "$dest")"
+    $SUDO_CMD cp "$LINKER" "$dest"
+fi
+
+# Install primals
+echo "🔧 Installing primal binaries..."
+primal_count=0
+for primal in "$PRIMALS_DIR"/*; do
+    if [[ -f "$primal" && -x "$primal" ]]; then
+        name=$(basename "$primal")
+        $SUDO_CMD cp "$primal" "/mnt/biomeos-build/usr/local/bin/$name"
+        $SUDO_CMD chmod +x "/mnt/biomeos-build/usr/local/bin/$name"
+        
+        # Copy required libraries
+        for lib in $(ldd "$primal" 2>/dev/null | grep -oP '=> \K/[^ ]+' || true); do
+            if [[ -f "$lib" ]]; then
+                dest="/mnt/biomeos-build${lib}"
+                $SUDO_CMD mkdir -p "$(dirname "$dest")"
+                $SUDO_CMD cp "$lib" "$dest" 2>/dev/null || true
+            fi
+        done
+        
+        # Copy dynamic linker
+        LINKER=$(ldd "$primal" 2>/dev/null | grep -oP '^\s+\K/[^ ]+' || true)
+        if [[ -n "$LINKER" && -f "$LINKER" ]]; then
+            dest="/mnt/biomeos-build${LINKER}"
+            $SUDO_CMD mkdir -p "$(dirname "$dest")"
+            $SUDO_CMD cp "$LINKER" "$dest" 2>/dev/null || true
+        fi
+        
+        echo "  ✓ Installed $name"
+        ((primal_count++))
+    fi
+done
+
+echo "  ✓ Installed $primal_count primal(s)"
+
+# Configure system
+echo "⚙️  Configuring system..."
+$SUDO_CMD bash -c "echo 'biomeos' > /mnt/biomeos-build/etc/hostname"
+$SUDO_CMD bash -c "cat > /mnt/biomeos-build/etc/hosts << 'EOHOSTS'
+127.0.0.1	localhost
+::1		localhost
+127.0.1.1	biomeos
+EOHOSTS"
+
+$SUDO_CMD bash -c "cat > /mnt/biomeos-build/etc/resolv.conf << 'EORESOLV'
+nameserver 8.8.8.8
+nameserver 8.8.4.4
+EORESOLV"
+
+$SUDO_CMD bash -c "cat > /mnt/biomeos-build/etc/fstab << 'EOFSTAB'
+# BiomeOS fstab
+proc	/proc	proc	defaults	0	0
+sysfs	/sys	sysfs	defaults	0	0
+devpts	/dev/pts	devpts	defaults	0	0
+tmpfs	/tmp	tmpfs	defaults	0	0
+tmpfs	/run	tmpfs	defaults	0	0
+EOFSTAB"
+
+# Set permissions
+$SUDO_CMD chmod 1777 /mnt/biomeos-build/tmp
+
+echo "  ✓ System configured"
+
+# Unmount and disconnect
+echo "📤 Finalizing..."
+$SUDO_CMD umount /mnt/biomeos-build
+$SUDO_CMD qemu-nbd -d /dev/nbd0
+
+trap - EXIT
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "✅ Root filesystem built: $OUTPUT"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "📊 Details:"
+echo "  Size: $(ls -lh "$OUTPUT" | awk '{print $5}')"
+echo "  Primals: $primal_count binaries"
+echo "  Init: biomeos-init (pure Rust)"
+echo ""
+echo "🚀 Ready to boot!"
+
