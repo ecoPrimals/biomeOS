@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # BiomeOS USB Bootable Creator
 # Creates a bootable USB drive with BiomeOS
+# Uses pkexec for GUI password prompts
 
 set -e
 
@@ -9,11 +10,21 @@ echo "🚀 BiomeOS USB Bootable Creator"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
+# Detect sudo method (prefer pkexec for GUI)
+if command -v pkexec &> /dev/null; then
+    SUDO="pkexec"
+    echo "Using pkexec for GUI password prompts"
+else
+    SUDO="sudo"
+    echo "Using sudo for terminal password prompts"
+fi
+echo ""
+
 # Step 1: Install xorriso
 echo "Step 1: Installing dependencies..."
 if ! command -v xorriso &> /dev/null; then
-    echo "  Installing xorriso..."
-    sudo apt update && sudo apt install -y xorriso
+    echo "  Installing xorriso (GUI password prompt will appear)..."
+    $SUDO apt update && $SUDO apt install -y xorriso
 else
     echo "  ✅ xorriso already installed"
 fi
@@ -22,9 +33,9 @@ echo ""
 # Step 2: Prepare kernel
 echo "Step 2: Preparing kernel..."
 if [ ! -f "/tmp/vmlinuz-biomeos" ]; then
-    echo "  Copying system kernel to accessible location..."
-    sudo cp /boot/vmlinuz /tmp/vmlinuz-biomeos
-    sudo chmod 644 /tmp/vmlinuz-biomeos
+    echo "  Copying system kernel to accessible location (GUI password prompt)..."
+    $SUDO cp /boot/vmlinuz /tmp/vmlinuz-biomeos
+    $SUDO chmod 644 /tmp/vmlinuz-biomeos
     echo "  ✅ Kernel ready at /tmp/vmlinuz-biomeos"
 else
     echo "  ✅ Kernel already prepared at /tmp/vmlinuz-biomeos"
@@ -93,17 +104,17 @@ fi
 
 # Step 6: Write to USB
 echo ""
-echo "Step 5: Writing to USB..."
+echo "Step 5: Writing to USB (GUI password prompt)..."
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  This may take a few minutes..."
 echo ""
 
-sudo dd if="$ISO_FILE" of="$USB_PATH" bs=4M status=progress oflag=sync
+$SUDO dd if="$ISO_FILE" of="$USB_PATH" bs=4M status=progress oflag=sync
 
 echo ""
 echo "✅ Write complete!"
 echo ""
-sudo sync
+$SUDO sync
 echo "✅ Sync complete!"
 echo ""
 
@@ -117,7 +128,7 @@ echo "ISO: $ISO_FILE"
 echo "Size: $ISO_SIZE"
 echo ""
 echo "Next Steps:"
-echo "  1. Safely eject USB: sudo eject $USB_PATH"
+echo "  1. Safely eject USB: $SUDO eject $USB_PATH"
 echo "  2. Insert into NUC"
 echo "  3. Boot from USB (F10/F12 for boot menu)"
 echo "  4. Select 'BiomeOS - Sovereignty-First Operating System'"
