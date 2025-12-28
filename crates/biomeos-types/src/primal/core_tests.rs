@@ -1,5 +1,7 @@
 // Unit tests for primal core types
 use super::*;
+use chrono::Utc;
+use uuid::Uuid;
 use std::collections::HashMap;
 
 #[cfg(test)]
