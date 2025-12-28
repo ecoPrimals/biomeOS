@@ -18,3 +18,6 @@ target/
 *.swp
 *.swo
 *~
+vm-images/*.img
+*.qcow2
+*.iso
