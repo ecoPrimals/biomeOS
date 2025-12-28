@@ -1,2 +1,20 @@
 vm-testing/*.qcow2
 *.log
+
+# Rust build artifacts
+/target/
+target/
+**/*.rs.bk
+*.pdb
+
+# Coverage
+*.profraw
+*.profdata
+/coverage/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
