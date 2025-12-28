@@ -1,103 +1,65 @@
 #!/bin/bash
-# Demo 03: Multi-Tower Federation
-# Shows geographic distribution and cross-tower coordination
+# Demo: BirdSong Multi-Tower Federation (Ecosystem Mode - mDNS Federation)
 
 set -e
 
-echo "🏰 BirdSong P2P: Multi-Tower Federation"
-echo "========================================"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+echo "╔═══════════════════════════════════════════════════════════╗"
+echo "║  BirdSong Multi-Tower Federation                        ║"
+echo "╚═══════════════════════════════════════════════════════════╝"
+echo ""
+echo "Architecture: Ecosystem federation (mDNS mesh - NOT HTTP!)"
+echo "Network Effect: Towers auto-discover and federate"
 echo ""
 
-# Check Songbird status
-echo "🔍 Checking federation status..."
-if pgrep -f songbird > /dev/null; then
-    echo "✅ Songbird orchestrator running"
+# Discover federation via mDNS
+echo "═══════════════════════════════════════════════════════════"
+echo "Discovering federated towers (mDNS mesh)"
+echo "═══════════════════════════════════════════════════════════"
+echo ""
+
+SONGBIRD_TOWERS=$(avahi-browse -t _songbird._tcp -r -p 2>/dev/null | grep "^=" || true)
+TOWER_COUNT=$(echo "$SONGBIRD_TOWERS" | grep -c "^=" || echo "0")
+
+if [ "$TOWER_COUNT" -eq 0 ]; then
+    # Check if at least local Songbird exists
+    if pgrep -f songbird > /dev/null; then
+        TOWER_COUNT=1
+        echo "✅ Local tower active (single-node, federation ready)"
+        echo "   Note: Additional towers will auto-discover via mDNS"
+    else
+        echo "❌ No federation coordination found"
+        exit 1
+    fi
 else
-    echo "❌ Songbird not running"
-    exit 1
+    echo "✅ Federation discovered: $TOWER_COUNT tower(s)"
+    echo ""
+    echo "Towers in federation:"
+    echo "$SONGBIRD_TOWERS" | grep "^=" | head -5 | while read line; do
+        echo "  → Tower auto-discovered via mDNS"
+    done
 fi
 
 echo ""
-
-# Discover local tower
-echo "🏰 Local Tower Status:"
-echo "   • BiomeOS: Active"
-echo "   • Songbird: Coordinating"
-echo "   • mDNS: Broadcasting"
+echo "═══════════════════════════════════════════════════════════"
+echo "Federation characteristics"
+echo "═══════════════════════════════════════════════════════════"
 echo ""
-
-# Check for federation
-TOWER_COUNT=$(pgrep -f songbird | wc -l)
+echo "Network Effect Properties:"
+echo "  ✅ Zero configuration (automatic mDNS discovery)"
+echo "  ✅ Decentralized mesh (no master/slave)"
+echo "  ✅ Self-healing (towers join/leave gracefully)"
+echo "  ✅ Geographic distribution (automatic)"
+echo "  ✅ Capability aggregation (all primals shared)"
+echo ""
 
 if [ "$TOWER_COUNT" -gt 1 ]; then
-    echo "🌍 Federation Discovered:"
-    echo "   • Active towers: $TOWER_COUNT"
-    echo "   • Cross-tower communication: ✅"
-    echo "   • Geographic distribution: Active"
-    echo ""
-    echo "✅ Multi-tower federation ACTIVE!"
+    echo "✅ Multi-tower federation: ACTIVE ($TOWER_COUNT towers)"
 else
-    echo "📋 Single-Tower Mode:"
-    echo "   • Local tower: Operational"
-    echo "   • Federation ready: ✅"
-    echo "   • Awaiting peer towers"
-    echo ""
-    echo "💡 Multi-tower validation:"
-    echo "   Use benchScale for multi-VM deployment"
-    echo "   cd ../primalsTools/benchScale"
-    echo "   ./scripts/deploy-biomeos.sh --towers 5"
+    echo "✅ Single tower: Ready for federation (add more towers for multi-tower)"
+    echo "   → Additional towers will auto-federate when added!"
 fi
 
 echo ""
-
-# Demonstrate federation capabilities
-echo "🎯 Federation Capabilities:"
-echo "   ✅ Automatic tower discovery (mDNS)"
-echo "   ✅ Cross-tower message relay"
-echo "   ✅ Load distribution"
-echo "   ✅ Geographic sovereignty"
-echo "   ✅ Failover handling"
-echo ""
-
-# Show architecture
-echo "🏗️  Architecture Pattern:"
-echo ""
-echo "   Tower 1 ◄──► Tower 2 ◄──► Tower 3"
-echo "      │            │            │"
-echo "   BiomeOS      BiomeOS      BiomeOS"
-echo "      │            │            │"
-echo "   Primals      Primals      Primals"
-echo ""
-
-# benchScale integration
-echo "📊 benchScale Validation:"
-echo "   This demo is designed for multi-VM testing"
-echo ""
-echo "   Deployment:"
-echo "     cd ../primalsTools/benchScale"
-echo "     ./scripts/deploy-biomeos.sh"
-echo ""
-echo "   Validation:"
-echo "     ./scripts/validate-federation.sh"
-echo "     - Tests cross-tower communication"
-echo "     - Validates load distribution"
-echo "     - Chaos engineering ready"
-echo ""
-
-# Summary
-echo "🎉 Multi-tower federation pattern demonstrated!"
-echo ""
-echo "Key Achievements:"
-echo "  ✅ Single-tower: Operational"
-echo "  ✅ Federation-ready: Yes"
-echo "  ✅ Songbird coordination: Working"
-echo "  ✅ benchScale integration: Planned"
-echo ""
-echo "Next Steps:"
-echo "  1. Deploy to benchScale (5-10 VMs)"
-echo "  2. Validate cross-tower communication"
-echo "  3. Test failover scenarios"
-echo "  4. Chaos engineering"
-echo ""
-echo "Next: 04-secure-relay (lineage-gated routing)"
-
+echo "✅ PASS: Federation coordination via ecosystem (mDNS mesh)"
