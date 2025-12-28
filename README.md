@@ -63,6 +63,7 @@ bash showcase/03-p2p-coordination/05-full-ecosystem-integration/demo.sh
 - ✅ Multi-architecture support (REST, CLI, mDNS/UDP)
 - ✅ Dynamic primal composition
 - ✅ Graceful degradation
+- ✅ Agnostic tool consumption (benchScale, petalTongue)
 
 ### **P2P Coordination**
 - ✅ **BTSP Tunnels** - Complete lifecycle with auto-recovery
@@ -70,16 +71,23 @@ bash showcase/03-p2p-coordination/05-full-ecosystem-integration/demo.sh
 - ✅ **Lineage-Gated Relay** - Sovereign data routing
 - ✅ **Multi-Tower Federation** - Geographic distribution
 
+### **Niche Composition**
+- ✅ **BYOB (Build Your Own Biome)** - YAML manifests
+- ✅ **RootPulse** - Emergent version control niche
+- ✅ **One-Touch Deployment** - Automated niche setup
+- ✅ **Custom Primals** - User-defined capabilities
+
 ### **Testing & Validation**
 - ✅ **365+ Tests** - Unit + integration (100% passing)
 - ✅ **15 E2E Tests** - Real primal validation (no mocks!)
 - ✅ **20 Showcase Demos** - Complete capabilities
 - ✅ **Automated Suite** - Continuous validation
+- ✅ **benchScale Integration** - Live YAML deployments
 
 ### **Deployment Pipeline**
 - ✅ **Tier 1: Development** - Local testing
 - ✅ **Tier 2: benchScale** - Multi-VM validation
-- ✅ **Tier 3: NUC USB** - Hardware deployment
+- ✅ **Tier 3: NUC USB** - Hardware deployment (next)
 
 ---
 
