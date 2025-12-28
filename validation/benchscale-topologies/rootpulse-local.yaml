@@ -1,0 +1,159 @@
+metadata:
+  name: rootpulse-local-validation
+  description: "Local RootPulse niche validation"
+  version: "2.0"
+  tags: ["biomeos", "rootpulse", "niche", "validation", "mdns"]
+  updated: "2025-12-28"
+  architecture: "mDNS/UDP ecosystem coordination"
+
+# Single-node validation for RootPulse niche
+# Tests primal coordination via mDNS/UDP (not HTTP!)
+# Validates correct ecosystem architecture
+
+network:
+  name: rootpulse-local
+  subnet: "10.60.0.0/24"
+
+nodes:
+  - name: biomeos-rootpulse
+    image: ubuntu:22.04
+    ram_mb: 4096
+    vcpus: 2
+    disk_gb: 25
+    
+    # Environment for BiomeOS
+    env:
+      # BiomeOS configuration
+      BIOMEOS_MODE: production
+      BIOMEOS_LOG_LEVEL: info
+      
+      # Niche to deploy
+      BIOMEOS_NICHE: rootpulse
+      BIOMEOS_NICHE_MANIFEST: /opt/biomeos/niches/rootpulse/rootpulse-niche.yaml
+      
+      # Runtime discovery (mDNS/UDP - NO hardcoding!)
+      PRIMAL_DISCOVERY: mdns
+      DISCOVERY_PROTOCOL: udp
+      
+      # Ecosystem coordination (not HTTP!)
+      COORDINATION_MODE: ecosystem  # mDNS/UDP
+      STANDALONE_HTTP: disabled  # No HTTP for inter-primal!
+    
+    # Network conditions (local, low latency)
+    network_conditions:
+      latency_ms: 1
+      packet_loss_percent: 0.0
+      bandwidth_kbps: 1000000  # 1Gbps
+    
+    # Services to deploy
+    services:
+      # NestGate: HTTP (standalone) + mDNS/UDP (ecosystem)
+      - name: nestgate
+        health_check:
+          type: http  # Standalone mode only
+          endpoint: /health
+          port: 9020
+        ecosystem:
+          discovery: mdns
+          service: _nestgate._tcp
+          coordination: udp
+      
+      # BearDog: CLI (standalone) + mDNS/UDP (ecosystem)
+      - name: beardog
+        health_check:
+          type: cli
+          command: beardog --version
+        ecosystem:
+          discovery: mdns
+          service: _beardog._tcp
+          coordination: udp
+      
+      # Songbird: mDNS/UDP ONLY (no HTTP!)
+      - name: songbird
+        health_check:
+          type: mdns  # NOT HTTP!
+          service: _songbird._tcp
+          timeout: 10
+        ecosystem:
+          discovery: mdns
+          coordination: udp
+          note: "Pure ecosystem primal - no HTTP endpoint!"
+    
+    # Validation tests
+    validation:
+      tests:
+        - name: primal_discovery_mdns
+          description: "BiomeOS discovers all primals via mDNS (not HTTP!)"
+          command: |
+            # Discover via mDNS (correct method)
+            avahi-browse -t _nestgate._tcp -r -p | grep "^=" && \
+            avahi-browse -t _beardog._tcp -r -p | grep "^=" && \
+            avahi-browse -t _songbird._tcp -r -p | grep "^="
+          expect_exit_code: 0
+        
+        - name: no_http_coordination
+          description: "Verify primals use mDNS/UDP, not HTTP for coordination"
+          command: |
+            # Check that primals are NOT using HTTP for inter-primal comms
+            ! netstat -an | grep -E "ESTABLISHED.*:(2300|9020|9000)" | grep -v "127.0.0.1"
+          expect_exit_code: 0
+        
+        - name: niche_deployment
+          description: "RootPulse niche deploys successfully"
+          command: |
+            biomeos niche deploy /opt/biomeos/niches/rootpulse/rootpulse-niche.yaml
+          expect_exit_code: 0
+        
+        - name: rootpulse_init
+          description: "RootPulse can initialize repository"
+          command: |
+            cd /tmp/test-repo
+            rootpulse init
+          expect_exit_code: 0
+        
+        - name: rootpulse_commit
+          description: "RootPulse can make commits"
+          command: |
+            cd /tmp/test-repo
+            echo "test" > file.txt
+            rootpulse commit -m "Test commit"
+          expect_exit_code: 0
+        
+        - name: primal_health_standalone
+          description: "Standalone HTTP APIs healthy (NOT ecosystem comms!)"
+          command: |
+            # Test standalone HTTP APIs only
+            curl -f http://localhost:9020/health && \
+            beardog --version
+          expect_exit_code: 0
+        
+        - name: ecosystem_coordination
+          description: "Primals coordinating via mDNS/UDP"
+          command: |
+            # Check Songbird logs for UDP coordination (not HTTP!)
+            grep -i "udp" /opt/biomeos/logs/primals/songbird.log | grep -i "coord" || \
+            grep -i "mdns" /opt/biomeos/logs/primals/songbird.log | grep -i "discover"
+          expect_exit_code: 0
+      
+      # Success criteria
+      success:
+        - all_primals_discovered_via_mdns: true
+        - no_http_ecosystem_coordination: true  # Critical!
+        - niche_deployed: true
+        - tests_passed: 7
+        - services_healthy: true
+        - mdns_discovery_working: true
+        - udp_coordination_active: true
+
+# Security validation
+security:
+  - name: verify_ecosystem_security
+    description: "Confirm mDNS/UDP used (more secure than HTTP)"
+    tests:
+      - no_http_between_primals: true
+      - mdns_local_only: true
+      - udp_encrypted: true  # Application-layer encryption
+      - lineage_verified: true
+      - no_exposed_endpoints: true
+
+
