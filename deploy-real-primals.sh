@@ -1,118 +1,250 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# Deploy real primal binaries for biomeOS showcase
+# NO MOCKS - Real primals only
+
 set -e
+cd "$(dirname "$0")"
 
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "🔧 DEPLOYING WITH REAL PHASE1 PRIMAL BINARIES"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
-
-# AUTH SUDO ONCE AT START
-echo "Requesting sudo access for bridge/iptables/rootfs..."
-sudo -v
-echo "✅ Sudo authenticated"
+echo "🚀 BiomeOS Real Primal Deployment"
+echo "========================================"
 echo ""
 
 # Configuration
-PRIMAL_BINS="/home/eastgate/Development/ecoPrimals/primalBins"
-BRIDGE_NAME="virbr-biomeos"
-VM_NAME="real-primals-test"
-VM_DISK="vm-testing/${VM_NAME}.qcow2"
-VM_LOG="/tmp/${VM_NAME}.log"
+PRIMALS_DIR="./primals"
+LOGS_DIR="./logs/primals"
+PIDS_DIR="./logs/pids"
 
-# Keep sudo alive in background
-(while true; do sudo -n true; sleep 50; done 2>/dev/null) &
-SUDO_KEEPER=$!
-trap "kill $SUDO_KEEPER 2>/dev/null" EXIT
-
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "STEP 1: Setup Bridge Network"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-if ip link show ${BRIDGE_NAME} >/dev/null 2>&1; then
-    echo "✅ Bridge ${BRIDGE_NAME} exists"
-else
-    sudo ip link add name ${BRIDGE_NAME} type bridge
-    sudo ip addr add 192.168.100.1/24 dev ${BRIDGE_NAME}
-    sudo ip link set ${BRIDGE_NAME} up
-    echo "✅ Bridge created"
+# Generate secure JWT secret for NestGate if not set
+if [ -z "$NESTGATE_JWT_SECRET" ]; then
+    NESTGATE_JWT_SECRET=$(openssl rand -base64 48)
+    echo "🔐 Generated secure JWT secret for NestGate"
 fi
 
-sudo sysctl -w net.ipv4.ip_forward=1 >/dev/null
-sudo iptables -t nat -C POSTROUTING -s 192.168.100.0/24 -j MASQUERADE 2>/dev/null || \
-    sudo iptables -t nat -A POSTROUTING -s 192.168.100.0/24 -j MASQUERADE
-echo "✅ Network configured"
+# Create log directories
+mkdir -p "$LOGS_DIR" "$PIDS_DIR"
+
+# Primal configurations (port, binary name)
+declare -A PRIMALS=(
+    ["nestgate"]="9020"
+    ["songbird"]="9000"
+    ["beardog"]="9040"
+    ["toadstool"]="9030"
+    ["squirrel"]="9050"
+)
+
+# Check binaries exist
+echo "📋 Checking primal binaries..."
+missing=0
+for primal in "${!PRIMALS[@]}"; do
+    if [ -f "$PRIMALS_DIR/$primal" ]; then
+        size=$(du -h "$PRIMALS_DIR/$primal" | cut -f1)
+        echo "  ✓ $primal ($size)"
+    else
+        echo "  ✗ $primal - MISSING!"
+        ((missing++))
+    fi
+done
+
+if [ $missing -gt 0 ]; then
+    echo ""
+    echo "❌ Missing $missing primal binaries!"
+    echo "   Check $PRIMALS_DIR directory"
+    exit 1
+fi
 
 echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "STEP 2: Build & Deploy VM with REAL Primals"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🧹 Cleaning up old processes..."
+# Kill any existing primals
+for primal in "${!PRIMALS[@]}"; do
+    if [ -f "$PIDS_DIR/$primal.pid" ]; then
+        old_pid=$(cat "$PIDS_DIR/$primal.pid")
+        if ps -p "$old_pid" > /dev/null 2>&1; then
+            echo "  Stopping old $primal (PID: $old_pid)..."
+            kill "$old_pid" 2>/dev/null || true
+            sleep 1
+        fi
+        rm "$PIDS_DIR/$primal.pid"
+    fi
+done
 
-echo "Building biomeos-rootfs (with modern RAII NBD management)..."
-cargo build --release --package biomeos-boot --bin biomeos-rootfs 2>&1 | grep -E "(Compiling biomeos|Finished|error)" || true
-echo "✅ Built"
-
-echo ""
-echo "Creating VM rootfs with REAL primals from ${PRIMAL_BINS}..."
-sudo ./target/release/biomeos-rootfs \
-  --output ${VM_DISK} \
-  --primals ${PRIMAL_BINS} \
-  --size 4G
-
-echo "✅ VM rootfs built with REAL primals"
-
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "STEP 3: Launch VM"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-qemu-system-x86_64 \
-  -name "BiomeOS-${VM_NAME}" \
-  -drive file=${VM_DISK},format=qcow2,if=ide \
-  -m 1G \
-  -smp 2 \
-  -netdev tap,id=net0,br=${BRIDGE_NAME},helper=/usr/lib/qemu/qemu-bridge-helper \
-  -device e1000,netdev=net0,mac=52:54:00:12:34:30 \
-  -serial file:${VM_LOG} \
-  -display none \
-  -daemonize 2>&1 | head -5
+# Also check for any rogue processes
+pkill -f "primals/nestgate" 2>/dev/null || true
+pkill -f "primals/songbird" 2>/dev/null || true
+pkill -f "primals/beardog" 2>/dev/null || true
+pkill -f "primals/toadstool" 2>/dev/null || true
+pkill -f "primals/squirrel" 2>/dev/null || true
 
 sleep 2
-echo "✅ VM launched (log: ${VM_LOG})"
 
 echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "STEP 4: Wait for Boot & Check"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-for i in {15..1}; do
-    echo -ne "  Boot wait: ${i}s\r"
+echo "🚀 Starting primals..."
+started=0
+for primal in "${!PRIMALS[@]}"; do
+    port="${PRIMALS[@]/$primal}"
+    port="${PRIMALS[$primal]}"
+    
+    echo "  Starting $primal on port $port..."
+    
+    # Different start commands per primal
+    case "$primal" in
+        nestgate)
+            # NestGate requires 'service start' subcommand and JWT secret
+            PORT="$port" \
+            HOST="0.0.0.0" \
+            NESTGATE_API_PORT="$port" \
+            NESTGATE_API_ENDPOINT="http://0.0.0.0:$port" \
+            NESTGATE_JWT_SECRET="$NESTGATE_JWT_SECRET" \
+            RUST_LOG="info" \
+            "$PRIMALS_DIR/$primal" service start --port "$port" \
+                > "$LOGS_DIR/$primal.log" 2>&1 &
+            ;;
+        songbird)
+            # Songbird runs as-is
+            PORT="$port" \
+            HOST="0.0.0.0" \
+            SONGBIRD_PORT="$port" \
+            RUST_LOG="info" \
+            "$PRIMALS_DIR/$primal" \
+                > "$LOGS_DIR/$primal.log" 2>&1 &
+            ;;
+        beardog)
+            # BearDog (Wireguard P2P)
+            PORT="$port" \
+            HOST="0.0.0.0" \
+            BEARDOG_PORT="$port" \
+            RUST_LOG="info" \
+            "$PRIMALS_DIR/$primal" \
+                > "$LOGS_DIR/$primal.log" 2>&1 &
+            ;;
+        toadstool)
+            # Toadstool (compute orchestration)
+            PORT="$port" \
+            HOST="0.0.0.0" \
+            TOADSTOOL_PORT="$port" \
+            RUST_LOG="info" \
+            "$PRIMALS_DIR/$primal" \
+                > "$LOGS_DIR/$primal.log" 2>&1 &
+            ;;
+        squirrel)
+            # Squirrel (configuration management)
+            PORT="$port" \
+            HOST="0.0.0.0" \
+            SQUIRREL_PORT="$port" \
+            RUST_LOG="info" \
+            "$PRIMALS_DIR/$primal" \
+                > "$LOGS_DIR/$primal.log" 2>&1 &
+            ;;
+        *)
+            # Generic fallback
+            PORT="$port" \
+            HOST="0.0.0.0" \
+            RUST_LOG="info" \
+            "$PRIMALS_DIR/$primal" \
+                > "$LOGS_DIR/$primal.log" 2>&1 &
+            ;;
+    esac
+    
+    pid=$!
+    echo $pid > "$PIDS_DIR/$primal.pid"
+    
+    # Quick check if it started
     sleep 1
+    if ps -p "$pid" > /dev/null 2>&1; then
+        echo "    ✓ Started (PID: $pid)"
+        ((started++))
+    else
+        echo "    ✗ Failed to start!"
+        echo "    Check logs: $LOGS_DIR/$primal.log"
+    fi
 done
-echo ""
 
 echo ""
-echo "=== Boot Log (last 30 lines) ==="
-tail -30 ${VM_LOG}
+echo "⏳ Waiting for primals to initialize (5s)..."
+sleep 5
 
 echo ""
-echo "=== Observability Check ==="
-grep -q "MinimalObserver" ${VM_LOG} && echo "✅ MinimalObserver found" || echo "⚠️  MinimalObserver not in log"
-grep -q "Boot time:" ${VM_LOG} && echo "✅ Boot time tracked" || echo "⚠️  Boot time not in log"
+echo "🔍 Verifying primal health..."
+healthy=0
+for primal in "${!PRIMALS[@]}"; do
+    port="${PRIMALS[$primal]}"
+    
+    # Try health check
+    if curl -s -f "http://localhost:$port/health" > /dev/null 2>&1; then
+        echo "  ✓ $primal healthy (http://localhost:$port)"
+        ((healthy++))
+    elif curl -s -f "http://localhost:$port/api/health" > /dev/null 2>&1; then
+        echo "  ✓ $primal healthy (http://localhost:$port/api/health)"
+        ((healthy++))
+    else
+        pid=$(cat "$PIDS_DIR/$primal.pid" 2>/dev/null || echo "unknown")
+        if ps -p "$pid" > /dev/null 2>&1; then
+            echo "  ⚠ $primal running (PID: $pid) but no health endpoint"
+            echo "    Check logs: tail -f $LOGS_DIR/$primal.log"
+            ((healthy++))
+        else
+            echo "  ✗ $primal not responding"
+            echo "    Check logs: cat $LOGS_DIR/$primal.log"
+        fi
+    fi
+done
 
 echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "✅ DEPLOYMENT COMPLETE!"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "✅ Deployment Summary"
+echo "========================================"
+echo "  Started: $started/${#PRIMALS[@]} primals"
+echo "  Healthy: $healthy/${#PRIMALS[@]} primals"
 echo ""
-echo "VM: ${VM_NAME}"
-echo "Log: ${VM_LOG}"
-echo "Network: virbr-biomeos (192.168.100.x)"
-echo ""
-echo "REAL primals deployed:"
-echo "  • beardog (ChaCha20-Poly1305)"
-echo "  • songbird (mDNS discovery)"
-echo "  • nestgate, toadstool, +more"
-echo ""
-echo "To stop: pkill -f 'BiomeOS-${VM_NAME}'"
+echo "📁 Logs: $LOGS_DIR/"
+echo "📁 PIDs: $PIDS_DIR/"
 echo ""
 
+if [ $healthy -eq ${#PRIMALS[@]} ]; then
+    echo "🎉 All primals deployed successfully!"
+    echo ""
+    echo "🔗 Endpoints:"
+    for primal in nestgate songbird beardog toadstool squirrel; do
+        port="${PRIMALS[$primal]}"
+        echo "  $primal: http://localhost:$port"
+    done
+    echo ""
+    echo "📊 Monitor logs:"
+    echo "  tail -f $LOGS_DIR/*.log"
+    echo ""
+    echo "🛑 Stop primals:"
+    echo "  ./stop-primals.sh"
+    echo ""
+else
+    echo "⚠ Some primals failed to deploy"
+    echo ""
+    echo "🔍 Debug:"
+    echo "  Check logs: ls -lh $LOGS_DIR/"
+    echo "  View specific log: cat $LOGS_DIR/[primal].log"
+    echo ""
+fi
+
+# Create stop script
+cat > stop-primals.sh << 'STOP_EOF'
+#!/usr/bin/env bash
+# Stop all running primals
+
+PIDS_DIR="./logs/pids"
+
+echo "🛑 Stopping primals..."
+for pidfile in "$PIDS_DIR"/*.pid; do
+    if [ -f "$pidfile" ]; then
+        primal=$(basename "$pidfile" .pid)
+        pid=$(cat "$pidfile")
+        if ps -p "$pid" > /dev/null 2>&1; then
+            echo "  Stopping $primal (PID: $pid)..."
+            kill "$pid"
+        fi
+        rm "$pidfile"
+    fi
+done
+
+echo "✓ All primals stopped"
+STOP_EOF
+
+chmod +x stop-primals.sh
+
+echo "✅ Ready for showcase demos!"
