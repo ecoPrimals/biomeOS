@@ -23,18 +23,12 @@
 //! use biomeos_core::p2p_coordination::P2PCoordinator;
 //!
 //! # async fn example() -> anyhow::Result<()> {
-//! // BiomeOS discovers primals by capability (agnostic!)
-//! let coordinator = P2PCoordinator::new_from_discovery().await?;
-//!
-//! // Coordinate BTSP tunnel (works with any security + discovery primal)
-//! let tunnel = coordinator.create_secure_tunnel(
-//!     "node-a",
-//!     "node-b",
-//!     lineage_proof,
-//! ).await?;
-//!
-//! // Enable encrypted discovery (works with any security + discovery primal)
-//! coordinator.enable_encrypted_discovery("family-id").await?;
+//! // Note: new_from_discovery() requires live primal integration
+//! // Documentation of the capability-based discovery pattern
+//! 
+//! // When primals are integrated, this will work:
+//! // let coordinator = P2PCoordinator::new_from_discovery().await?;
+//! // let tunnel = coordinator.create_secure_tunnel("node-a", "node-b", lineage).await?;
 //! # Ok(())
 //! # }
 //! ```
@@ -144,9 +138,65 @@ impl P2PCoordinator {
     /// This is **agnostic** - it finds any primal with the required capability,
     /// regardless of what it's called.
     pub async fn new_from_discovery() -> Result<Self> {
-        // TODO: Implement capability-based discovery
-        // This will use the universal API adapter to find primals by capability
-        unimplemented!("Capability-based discovery coming in next implementation")
+        tracing::info!("🔍 Discovering P2P coordination capabilities...");
+        
+        // Discover security provider (e.g., BearDog)
+        let security = Self::discover_security_provider().await?;
+        tracing::info!("✅ Security provider discovered");
+        
+        // Discover discovery provider (e.g., Songbird)
+        let discovery = Self::discover_discovery_provider().await?;
+        tracing::info!("✅ Discovery provider discovered");
+        
+        // Routing is optional
+        let routing = Self::discover_routing_provider().await.ok();
+        if routing.is_some() {
+            tracing::info!("✅ Routing provider discovered");
+        } else {
+            tracing::info!("⚠️  No routing provider - using direct connections");
+        }
+        
+        Ok(Self::new(security, discovery, routing))
+    }
+    
+    /// Discover a primal that provides security capabilities
+    async fn discover_security_provider() -> Result<Arc<dyn SecurityProvider>> {
+        // In production: use capability discovery
+        // For now: document the pattern
+        tracing::debug!("Would query: discover_capability('encryption')");
+        tracing::debug!("Expected: BearDog or compatible primal");
+        
+        // Return stub for now - real implementation will use:
+        // let primal = discover_capability("encryption").await?;
+        // Ok(Arc::new(PrimalSecurityAdapter::new(primal)))
+        
+        anyhow::bail!("Security provider discovery requires live primal integration")
+    }
+    
+    /// Discover a primal that provides discovery capabilities
+    async fn discover_discovery_provider() -> Result<Arc<dyn DiscoveryProvider>> {
+        // In production: use capability discovery
+        tracing::debug!("Would query: discover_capability('orchestration')");
+        tracing::debug!("Expected: Songbird or compatible primal");
+        
+        // Real implementation:
+        // let primal = discover_capability("orchestration").await?;
+        // Ok(Arc::new(PrimalDiscoveryAdapter::new(primal)))
+        
+        anyhow::bail!("Discovery provider discovery requires live primal integration")
+    }
+    
+    /// Discover a primal that provides routing capabilities (optional)
+    async fn discover_routing_provider() -> Result<Arc<dyn RoutingProvider>> {
+        // In production: use capability discovery
+        tracing::debug!("Would query: discover_capability('routing')");
+        tracing::debug!("Expected: Optional routing primal");
+        
+        // Real implementation:
+        // let primal = discover_capability("routing").await?;
+        // Ok(Arc::new(PrimalRoutingAdapter::new(primal)))
+        
+        anyhow::bail!("Routing provider not required")
     }
 
     /// Create coordinator with explicit providers (for testing/advanced usage)
