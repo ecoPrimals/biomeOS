@@ -14,6 +14,9 @@ pub mod configuration;
 pub mod core;
 pub mod service;
 
+#[cfg(test)]
+mod core_tests;
+
 // Re-export core types
 pub use core::{PrimalMetadata, PrimalType, ResourceRequirements};
 
