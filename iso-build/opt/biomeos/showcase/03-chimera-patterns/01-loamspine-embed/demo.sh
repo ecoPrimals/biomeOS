@@ -1,0 +1,221 @@
+#!/usr/bin/env bash
+# Demo: loamSpine Embedded Integration
+# Shows loamSpine library used directly in BiomeOS (chimera pattern)
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BIOMEOS_ROOT="$SCRIPT_DIR/../../.."
+
+# Colors
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+echo "╔════════════════════════════════════════════════════════╗"
+echo "║  Chimera Pattern Demo: loamSpine Embedded             ║"
+echo "║  Permanence Layer - Direct Integration                ║"
+echo "╚════════════════════════════════════════════════════════╝"
+echo ""
+
+echo -e "${GREEN}Step 1: Understanding the Chimera Pattern${NC}"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+echo -e "${BLUE}What is a Chimera?${NC}"
+echo ""
+echo "A chimera is a BiomeOS service that EMBEDS primal functionality"
+echo "as a library instead of calling it over the network."
+echo ""
+echo "  Standalone Pattern:          Chimera/Embedded Pattern:"
+echo "  ┌──────────┐                 ┌─────────────────────┐"
+echo "  │ BiomeOS  │                 │ BiomeOS + loamSpine │"
+echo "  └────┬─────┘                 │  (same process)     │"
+echo "       │ HTTP                  │                     │"
+echo "       ↓                        │  Direct calls:      │"
+echo "  ┌──────────┐                 │  spine.commit()     │"
+echo "  │loamSpine │                 │  spine.query()      │"
+echo "  │ Service  │                 │  (no network!)      │"
+echo "  └──────────┘                 └─────────────────────┘"
+echo ""
+
+echo -e "${GREEN}Step 2: Why Embedded/Chimera?${NC}"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+echo -e "${BLUE}Benefits:${NC}"
+echo "  ✓ Zero network latency"
+echo "  ✓ Zero-copy possible (shared memory)"
+echo "  ✓ Simpler deployment (one process)"
+echo "  ✓ Tighter integration"
+echo "  ✓ Better performance for critical paths"
+echo ""
+
+echo -e "${BLUE}Trade-offs:${NC}"
+echo "  ⚠ Tighter coupling"
+echo "  ⚠ Can't scale independently"
+echo "  ⚠ Same process space"
+echo "  ⚠ Version management more complex"
+echo ""
+
+echo -e "${GREEN}Step 3: loamSpine Architecture${NC}"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+echo -e "${BLUE}loamSpine Purpose:${NC}"
+echo "  'The immutable, permanent ledger of the ecoPrimals ecosystem'"
+echo ""
+echo "  Named after loam - the slow, anaerobic soil layer where"
+echo "  organic matter compresses into permanent geological record."
+echo ""
+
+echo -e "${BLUE}Key Features:${NC}"
+echo "  • Selective permanence (deliberate commits)"
+echo "  • Sovereign spines (user-controlled history)"
+echo "  • Loam certificates (digital ownership)"
+echo "  • Recursive stacking (spines reference spines)"
+echo "  • Zero-copy buffers (efficient operations)"
+echo ""
+
+echo -e "${BLUE}Production Status:${NC}"
+echo "  ✅ 332 tests passing (100%)"
+echo "  ✅ 90.72% code coverage"
+echo "  ✅ Zero clippy warnings"
+echo "  ✅ Zero unsafe code"
+echo "  ✅ Zero hardcoded endpoints"
+echo "  ✅ Grade: A+ (98/100)"
+echo ""
+
+echo -e "${GREEN}Step 4: Integration Pattern${NC}"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+echo -e "${BLUE}Cargo.toml (BiomeOS):${NC}"
+echo "  [dependencies]"
+echo "  loam-spine-core = { path = \"../loamSpine/crates/loam-spine-core\" }"
+echo "  loam-spine-api = { path = \"../loamSpine/crates/loam-spine-api\" }"
+echo ""
+
+echo -e "${BLUE}BiomeOS Code Example:${NC}"
+echo "  use loam_spine_core::{Spine, Certificate};"
+echo ""
+echo "  // Create spine (permanence layer)"
+echo "  let spine = Spine::new(\"my-spine\").await?;"
+echo ""
+echo "  // Commit data (make it permanent)"
+echo "  let cert = spine.commit("
+echo "      data,                    // What to store"
+echo "      \"event-description\",  // Why"
+echo "      user_signature           // Who"
+echo "  ).await?;"
+echo ""
+echo "  // Query history"
+echo "  let events = spine.query()"
+echo "      .after(timestamp)"
+echo "      .by_agent(user_id)"
+echo "      .execute()"
+echo "      .await?;"
+echo ""
+echo "  // All in same process - zero network overhead!"
+echo ""
+
+echo -e "${GREEN}Step 5: Performance Comparison${NC}"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+echo -e "${BLUE}Hypothetical Latency:${NC}"
+echo ""
+echo "  Network Call (Standalone):   Embedded (Chimera):"
+echo "  ────────────────────────────────────────────────"
+echo "  TCP handshake:     ~1-3ms    Function call:  <1µs"
+echo "  HTTP request:      ~1-5ms    Direct access:  <1µs"
+echo "  Serialization:     ~1-10ms   Zero-copy:      0ms"
+echo "  Network transfer:  ~1-10ms   Same memory:    0ms"
+echo "  Deserialization:   ~1-10ms   (none needed)"
+echo "  ────────────────────────────────────────────────"
+echo "  TOTAL:            ~5-38ms    TOTAL:         ~1µs"
+echo ""
+echo "  Speed up: ~5,000 to 38,000x faster! ⚡"
+echo ""
+
+echo -e "${YELLOW}Note: These are illustrative numbers. Real measurements needed!${NC}"
+echo ""
+
+echo -e "${GREEN}Step 6: When to Use Chimera Pattern${NC}"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+echo -e "${BLUE}Use Embedded/Chimera When:${NC}"
+echo "  ✓ Performance is critical"
+echo "  ✓ High-frequency operations"
+echo "  ✓ Shared memory needed"
+echo "  ✓ Zero-copy beneficial"
+echo "  ✓ Tight coupling acceptable"
+echo ""
+echo "  Examples:"
+echo "  • loamSpine (persistence layer)"
+echo "  • rhizoCrypt (ephemeral memory)"
+echo "  • Performance-critical algorithms"
+echo ""
+
+echo -e "${BLUE}Use Standalone When:${NC}"
+echo "  ✓ Horizontal scaling needed"
+echo "  ✓ Service isolation required"
+echo "  ✓ Multi-language clients"
+echo "  ✓ Independent deployment"
+echo "  ✓ Network API makes sense"
+echo ""
+echo "  Examples:"
+echo "  • Songbird (service mesh)"
+echo "  • NestGate (storage service)"
+echo "  • ToadStool (compute orchestration)"
+echo ""
+
+echo -e "${GREEN}Step 7: Testing loamSpine Integration${NC}"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+LOAMSPINE_DIR="$BIOMEOS_ROOT/../loamSpine"
+
+if [ -d "$LOAMSPINE_DIR" ]; then
+    echo -e "${GREEN}✓ loamSpine crates found${NC}"
+    echo "  Location: $LOAMSPINE_DIR"
+    echo ""
+    
+    echo "Available crates:"
+    ls "$LOAMSPINE_DIR/crates/" 2>/dev/null | while read crate; do
+        echo "  • $crate"
+    done
+    echo ""
+    
+    echo "To integrate loamSpine into BiomeOS:"
+    echo "  1. Add to BiomeOS Cargo.toml:"
+    echo "     loam-spine-core = { path = \"../loamSpine/crates/loam-spine-core\" }"
+    echo ""
+    echo "  2. Use in BiomeOS code:"
+    echo "     use loam_spine_core::Spine;"
+    echo ""
+    echo "  3. Call directly (no network):"
+    echo "     let spine = Spine::new(\"my-spine\").await?;"
+    echo "     spine.commit(data, desc, sig).await?;"
+    echo ""
+else
+    echo -e "${YELLOW}⚠ loamSpine not found at expected location${NC}"
+    echo "  Expected: $LOAMSPINE_DIR"
+    echo "  Current: Available for review as library"
+fi
+echo ""
+
+echo -e "${GREEN}Demo Complete!${NC}"
+echo ""
+echo -e "${BLUE}Key Takeaways:${NC}"
+echo "  • Chimera pattern = embedded library in BiomeOS"
+echo "  • loamSpine provides permanence without network overhead"
+echo "  • ~5,000-38,000x faster than network calls (theoretical)"
+echo "  • Use for performance-critical, high-frequency operations"
+echo "  • Both patterns valid - choose based on needs!"
+echo ""
+echo "Next: Run ../02-rhizocrypt-embed/demo.sh"
+echo ""
+

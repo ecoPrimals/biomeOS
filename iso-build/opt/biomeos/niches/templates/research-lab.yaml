@@ -1,0 +1,142 @@
+# Niche Template: Research Lab
+# An ML research and experimentation biome
+
+niche:
+  id: "research-lab"
+  name: "Research Lab"
+  version: "1.0.0"
+  description: |
+    Complete ML research environment with training, inference,
+    experiment tracking, and reproducible workflows.
+  
+  category: "ai_research"
+  difficulty: "intermediate"
+  author: "biomeOS Team"
+  
+  features:
+    - "GPU-accelerated training"
+    - "Automatic checkpointing"
+    - "Experiment versioning"
+    - "Multi-provider AI routing"
+    - "Privacy-first local inference"
+    - "Collaborative notebooks"
+
+organisms:
+  
+  chimeras:
+    ml_pipeline:
+      type: "ml-pipeline"
+      required: true
+      config:
+        gpu_enabled: "{{gpu_enabled}}"
+        checkpoint_interval: "{{checkpoint_interval}}"
+        storage_quota_gb: "{{storage_quota_gb}}"
+  
+  primals:
+    
+    # Additional Squirrel for inference routing
+    inference_router:
+      type: "squirrel"
+      required: true
+      config:
+        purpose: "inference_routing"
+        providers:
+          local:
+            enabled: true
+            priority: 1
+          cloud:
+            enabled: "{{allow_cloud_inference}}"
+            priority: 2
+            budget_limit: "{{cloud_budget}}"
+        privacy:
+          local_first: true
+          sensitive_data_local_only: true
+    
+    # BearDog for data encryption
+    data_security:
+      type: "beardog"
+      required: "{{encryption_required}}"
+      config:
+        purpose: "data_encryption"
+        encrypt_at_rest: true
+        encrypt_in_transit: true
+        key_rotation_days: 90
+    
+    # Songbird for collaboration
+    collaboration:
+      type: "songbird"
+      required: false
+      config:
+        purpose: "collaboration"
+        features:
+          - "notebook_sharing"
+          - "experiment_sync"
+          - "team_discovery"
+        federation:
+          enabled: "{{enable_federation}}"
+
+interactions:
+  
+  - from: "chimeras.ml_pipeline"
+    to: "primals.inference_router"
+    type: "inference_requests"
+  
+  - from: "primals.data_security"
+    to: "chimeras.ml_pipeline"
+    type: "encryption_layer"
+  
+  - from: "primals.collaboration"
+    to: "chimeras.ml_pipeline"
+    type: "experiment_sync"
+
+customization:
+  
+  - id: "gpu_enabled"
+    name: "GPU Support"
+    type: "boolean"
+    default: true
+  
+  - id: "checkpoint_interval"
+    name: "Checkpoint Interval"
+    type: "select"
+    options: ["1m", "5m", "15m", "30m", "1h"]
+    default: "5m"
+  
+  - id: "storage_quota_gb"
+    name: "Storage Quota (GB)"
+    type: "number"
+    min: 50
+    max: 10000
+    default: 500
+  
+  - id: "allow_cloud_inference"
+    name: "Allow Cloud AI"
+    type: "boolean"
+    default: false
+  
+  - id: "cloud_budget"
+    name: "Cloud Budget ($/month)"
+    type: "number"
+    min: 0
+    max: 1000
+    default: 20
+  
+  - id: "encryption_required"
+    name: "Data Encryption"
+    type: "boolean"
+    default: true
+  
+  - id: "enable_federation"
+    name: "Team Collaboration"
+    type: "boolean"
+    default: false
+
+resources:
+  base:
+    cpu_cores: 8
+    memory_gb: 32
+    storage_gb: 500
+  gpu:
+    required: false
+    recommended_vram_gb: 8
+
