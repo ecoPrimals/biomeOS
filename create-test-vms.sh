@@ -66,7 +66,12 @@ packages:
   - gzip
   - openssh-server
 
+ssh_pwauth: true
+
 runcmd:
+  - sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
+  - sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+  - systemctl restart sshd
   - systemctl enable ssh
   - systemctl start ssh
   - systemctl enable avahi-daemon
@@ -86,7 +91,8 @@ users:
     sudo: ALL=(ALL) NOPASSWD:ALL
     shell: /bin/bash
     lock_passwd: false
-    passwd: $6$rounds=4096$saltsalt$3yGZ8.RvJ4VBqnm7xRVYVq8VZ7XVVXVXVXVXVXVXVXVXVXVXVXVXVXVXVXVXVXVXVXVXVXV
+    plain_text_passwd: biomeos
+    ssh_pwauth: true
 
 packages:
   - avahi-daemon
@@ -96,7 +102,12 @@ packages:
   - gzip
   - openssh-server
 
+ssh_pwauth: true
+
 runcmd:
+  - sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
+  - sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+  - systemctl restart sshd
   - systemctl enable ssh
   - systemctl start ssh
   - systemctl enable avahi-daemon
