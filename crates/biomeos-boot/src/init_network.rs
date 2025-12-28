@@ -32,7 +32,7 @@ impl NetworkManager {
 
         // Placeholder for future implementation
         // Will integrate with netlink/rtnetlink for interface management
-        
+
         self.configured = true;
         info!("✅ Network configuration complete");
         Ok(())
@@ -84,4 +84,3 @@ mod tests {
         assert!(result.is_ok());
     }
 }
-

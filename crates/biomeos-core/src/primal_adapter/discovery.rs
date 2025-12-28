@@ -4,6 +4,8 @@ use super::types::*;
 use anyhow::Result;
 use std::path::Path;
 use std::time::Duration;
+use tokio::process::Command;
+use tracing::debug;
 
 /// Discover how to interact with a primal
 pub async fn discover_primal_interface(binary: &Path) -> Result<PrimalAdapter> {
@@ -57,7 +59,7 @@ pub async fn probe_interface_patterns(binary: &Path) -> Vec<PrimalInterface> {
             patterns.push(InterfacePattern::SubcommandService);
             patterns.push(InterfacePattern::SubcommandStart);
             patterns.push(InterfacePattern::SubcommandRun);
-            
+
             discovered.push(PrimalInterface::Unknown {
                 attempted_patterns: patterns,
             });
@@ -79,7 +81,9 @@ async fn try_direct_execution(binary: &Path) -> Result<PrimalInterface> {
     .await;
 
     match output {
-        Ok(Ok(output)) if output.status.success() => Ok(PrimalInterface::Direct { args: Vec::new() }),
+        Ok(Ok(output)) if output.status.success() => {
+            Ok(PrimalInterface::Direct { args: Vec::new() })
+        }
         _ => Err(anyhow::anyhow!("Not a direct execution interface")),
     }
 }
@@ -98,9 +102,12 @@ async fn try_subcommand(binary: &Path, cmd: &str) -> Result<PrimalInterface> {
 
     match output {
         Ok(Ok(output)) if output.status.success() => {
+            // Try to discover stop command
+            let stop_cmd = discover_stop_command(binary).await;
+            
             Ok(PrimalInterface::Subcommand {
                 start_cmd: cmd.to_string(),
-                stop_cmd: None, // TODO: Discover stop command
+                stop_cmd,
             })
         }
         _ => Err(anyhow::anyhow!("Subcommand {} not found", cmd)),
@@ -190,4 +197,41 @@ async fn detect_port_config(binary: &Path) -> PortConfigMethod {
 
     // Default fallback: try env var PORT
     PortConfigMethod::EnvVar("PORT".to_string())
+}
+
+/// Discover stop command for a primal
+///
+/// Tries common stop subcommands to see if the primal supports graceful shutdown.
+/// Returns None if no stop command is found (fallback to SIGTERM).
+async fn discover_stop_command(binary: &Path) -> Option<String> {
+    const STOP_COMMANDS: &[&str] = &["stop", "shutdown", "halt", "quit"];
+    
+    for stop_cmd in STOP_COMMANDS {
+        let result = tokio::time::timeout(
+            Duration::from_secs(2),
+            Command::new(binary)
+                .arg(stop_cmd)
+                .arg("--help")
+                .output(),
+        )
+        .await;
+        
+        if let Ok(Ok(output)) = result {
+            if output.status.success() {
+                debug!(
+                    "Discovered stop command '{}' for {}",
+                    stop_cmd,
+                    binary.display()
+                );
+                return Some(stop_cmd.to_string());
+            }
+        }
+    }
+    
+    // No stop command found - will use SIGTERM
+    debug!(
+        "No stop command found for {}, will use SIGTERM",
+        binary.display()
+    );
+    None
 }

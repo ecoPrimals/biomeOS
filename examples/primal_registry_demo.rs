@@ -49,7 +49,7 @@ async fn main() -> anyhow::Result<()> {
         info!("");
         info!("For now, simulating with mock data...");
         info!("");
-        
+
         // Mock demonstration
         demonstrate_mock_registry();
     } else {
@@ -124,4 +124,3 @@ fn demonstrate_mock_registry() {
     info!("  5. System running!");
     info!("");
 }
-

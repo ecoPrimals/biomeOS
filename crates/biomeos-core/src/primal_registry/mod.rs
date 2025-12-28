@@ -8,10 +8,10 @@
 //!
 //! This is the foundation for BiomeOS as a "PopOS/Windows bootloader" for primals.
 
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use anyhow::Result;
 
 /// Primal binary metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -77,24 +77,30 @@ impl PrimalRegistry {
     /// Scan local directory for primal binaries
     pub async fn scan_local(&mut self) -> Result<()> {
         if !self.local_dir.exists() {
-            tracing::warn!("Local binary directory does not exist: {:?}", self.local_dir);
+            tracing::warn!(
+                "Local binary directory does not exist: {:?}",
+                self.local_dir
+            );
             return Ok(());
         }
 
         // Scan for binaries
         let entries = std::fs::read_dir(&self.local_dir)?;
-        
+
         for entry in entries {
             let entry = entry?;
             let path = entry.path();
-            
+
             // Check if it's an executable
             if path.is_file() {
                 if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
                     // Try to detect primal type from name
                     let primal_name = self.detect_primal_name(name);
-                    let version = self.detect_version(&path).await.unwrap_or_else(|| "unknown".to_string());
-                    
+                    let version = self
+                        .detect_version(&path)
+                        .await
+                        .unwrap_or_else(|| "unknown".to_string());
+
                     let binary = PrimalBinary {
                         name: primal_name.clone(),
                         version,
@@ -102,20 +108,23 @@ impl PrimalRegistry {
                         checksum: self.compute_checksum(&path).await.ok(),
                         metadata: self.default_metadata(&primal_name),
                     };
-                    
+
                     self.binaries.entry(primal_name).or_default().push(binary);
                 }
             }
         }
 
-        tracing::info!("Scanned local directory, found {} primal types", self.binaries.len());
+        tracing::info!(
+            "Scanned local directory, found {} primal types",
+            self.binaries.len()
+        );
         Ok(())
     }
 
     /// Fetch available binaries from GitHub releases
     pub async fn fetch_from_github(&mut self, org: &str, repos: &[&str]) -> Result<()> {
         tracing::info!("Fetching primal binaries from GitHub: {}", org);
-        
+
         for repo in repos {
             // TODO: Implement GitHub API integration
             // For now, just log the intent
@@ -127,7 +136,10 @@ impl PrimalRegistry {
 
     /// Get all available versions of a primal
     pub fn get_primal_versions(&self, name: &str) -> Vec<&PrimalBinary> {
-        self.binaries.get(name).map(|v| v.iter().collect()).unwrap_or_default()
+        self.binaries
+            .get(name)
+            .map(|v| v.iter().collect())
+            .unwrap_or_default()
     }
 
     /// Get latest version of a primal
@@ -153,7 +165,8 @@ impl PrimalRegistry {
         target: &str,
     ) -> Result<PathBuf> {
         let binary = if let Some(v) = version {
-            self.binaries.get(primal_name)
+            self.binaries
+                .get(primal_name)
                 .and_then(|versions| versions.iter().find(|b| b.version == v))
                 .ok_or_else(|| anyhow::anyhow!("Primal {} version {} not found", primal_name, v))?
         } else {
@@ -161,7 +174,12 @@ impl PrimalRegistry {
                 .ok_or_else(|| anyhow::anyhow!("Primal {} not found", primal_name))?
         };
 
-        tracing::info!("Deploying {} v{} to {}", primal_name, binary.version, target);
+        tracing::info!(
+            "Deploying {} v{} to {}",
+            primal_name,
+            binary.version,
+            target
+        );
 
         match &binary.path {
             BinaryLocation::Local(path) => {
@@ -169,9 +187,20 @@ impl PrimalRegistry {
                 tracing::info!("Copying from local: {:?}", path);
                 Ok(path.clone())
             }
-            BinaryLocation::GitHub { org, repo, tag, asset } => {
+            BinaryLocation::GitHub {
+                org,
+                repo,
+                tag,
+                asset,
+            } => {
                 // Download from GitHub
-                tracing::info!("Would download from GitHub: {}/{} @ {} ({})", org, repo, tag, asset);
+                tracing::info!(
+                    "Would download from GitHub: {}/{} @ {} ({})",
+                    org,
+                    repo,
+                    tag,
+                    asset
+                );
                 // TODO: Implement actual download
                 Err(anyhow::anyhow!("GitHub download not yet implemented"))
             }
@@ -192,7 +221,7 @@ impl PrimalRegistry {
             .trim_end_matches("-linux")
             .trim_end_matches("-macos")
             .trim_end_matches("-windows");
-        
+
         // Known primal names
         let known = ["beardog", "songbird", "toadstool", "nestgate", "squirrel"];
         for primal in known {
@@ -200,7 +229,7 @@ impl PrimalRegistry {
                 return primal.to_string();
             }
         }
-        
+
         name.to_string()
     }
 
@@ -212,8 +241,8 @@ impl PrimalRegistry {
 
     /// Compute SHA256 checksum
     async fn compute_checksum(&self, path: &Path) -> Result<String> {
-        use sha2::{Sha256, Digest};
-        
+        use sha2::{Digest, Sha256};
+
         let contents = tokio::fs::read(path).await?;
         let hash = Sha256::digest(&contents);
         Ok(format!("{:x}", hash))
@@ -224,13 +253,21 @@ impl PrimalRegistry {
         match name {
             "beardog" => PrimalMetadata {
                 description: "Cryptography & Security primal".to_string(),
-                capabilities: vec!["crypto".to_string(), "security".to_string(), "btsp".to_string()],
+                capabilities: vec![
+                    "crypto".to_string(),
+                    "security".to_string(),
+                    "btsp".to_string(),
+                ],
                 default_ports: [("api".to_string(), 9000)].into(),
                 config_hints: HashMap::new(),
             },
             "songbird" => PrimalMetadata {
                 description: "Service Mesh & Federation primal".to_string(),
-                capabilities: vec!["discovery".to_string(), "federation".to_string(), "mesh".to_string()],
+                capabilities: vec![
+                    "discovery".to_string(),
+                    "federation".to_string(),
+                    "mesh".to_string(),
+                ],
                 default_ports: [("api".to_string(), 8000)].into(),
                 config_hints: HashMap::new(),
             },
@@ -280,4 +317,3 @@ mod tests {
         assert_eq!(registry.detect_primal_name("songbird.exe"), "songbird");
     }
 }
-

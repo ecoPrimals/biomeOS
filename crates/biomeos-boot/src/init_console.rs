@@ -27,10 +27,7 @@ impl ConsoleWriter {
     ///
     /// Returns an error if stdout or stderr cannot be locked.
     pub fn new() -> io::Result<Self> {
-        let console_device = OpenOptions::new()
-            .write(true)
-            .open("/dev/console")
-            .ok(); // Gracefully handle if /dev/console not available
+        let console_device = OpenOptions::new().write(true).open("/dev/console").ok(); // Gracefully handle if /dev/console not available
 
         Ok(Self {
             stdout: io::stdout(),
@@ -56,7 +53,7 @@ impl ConsoleWriter {
     /// Returns an error if writing fails.
     pub fn write_error(&mut self, msg: &str) -> io::Result<()> {
         let line = format!("[ERROR] {}\n", msg);
-        
+
         self.stderr.write_all(line.as_bytes())?;
         self.stderr.flush()?;
 
@@ -123,4 +120,3 @@ mod tests {
         Ok(())
     }
 }
-

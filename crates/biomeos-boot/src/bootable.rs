@@ -1,5 +1,5 @@
 //! BiomeOS Bootable Media Creator
-//! 
+//!
 //! Pure Rust implementation of bootable USB/ISO creation.
 //! Clean architecture with modern idiomatic patterns.
 
@@ -96,26 +96,26 @@ impl BootableMediaBuilder {
         info!("📦 Building initramfs...");
 
         let mut builder = InitramfsBuilder::new(&self.work_dir)?;
-        
+
         // Create directory structure
         builder.create_directory_structure()?;
-        
+
         // Add BiomeOS binaries (including biomeos-init as /init)
         builder.add_biomeos_binaries(&self.project_root)?;
-        
+
         // Install binaries into initramfs root
         builder.install_binaries()?;
-        
+
         // Copy required dynamic libraries for biomeos-init
         // This is needed because the binary is dynamically linked
         let init_binary = self.project_root.join("target/release/biomeos-init");
         if init_binary.exists() {
             builder.add_required_libraries(&init_binary)?;
         }
-        
+
         // Note: We don't need create_init_script() anymore since biomeos-init
         // is copied directly as /init and is already executable
-        
+
         // Build the initramfs archive
         let output = self.work_dir.join("biomeos-initramfs.img");
         builder.build(&output)?;
@@ -141,8 +141,8 @@ impl BootableMediaBuilder {
 
         // Copy kernel (may need root access for /boot/vmlinuz)
         let kernel_dest = boot_dir.join("boot/vmlinuz");
-        std::fs::copy(kernel.kernel_path(), &kernel_dest)
-            .with_context(|| format!(
+        std::fs::copy(kernel.kernel_path(), &kernel_dest).with_context(|| {
+            format!(
                 "Failed to copy kernel from {}\n\
                  Hint: Kernel files in /boot/ typically require root access.\n\
                  Solutions:\n\
@@ -151,13 +151,13 @@ impl BootableMediaBuilder {
                  3. Use custom kernel: --kernel /path/to/accessible/vmlinuz",
                 kernel.kernel_path().display(),
                 kernel.kernel_path().display()
-            ))?;
+            )
+        })?;
         info!("  • Kernel: {}", kernel_dest.display());
 
         // Copy initramfs
         let initramfs_dest = boot_dir.join("boot/initramfs.img");
-        std::fs::copy(initramfs, &initramfs_dest)
-            .context("Failed to copy initramfs")?;
+        std::fs::copy(initramfs, &initramfs_dest).context("Failed to copy initramfs")?;
         info!("  • Initramfs: {}", initramfs_dest.display());
 
         // Create GRUB configuration
@@ -172,8 +172,7 @@ impl BootableMediaBuilder {
         use std::io::Write;
 
         let grub_cfg = grub_dir.join("grub.cfg");
-        let mut file = std::fs::File::create(&grub_cfg)
-            .context("Failed to create grub.cfg")?;
+        let mut file = std::fs::File::create(&grub_cfg).context("Failed to create grub.cfg")?;
 
         // Modern GRUB config with proper escaping
         writeln!(file, "set timeout=10")?;
@@ -182,7 +181,10 @@ impl BootableMediaBuilder {
         writeln!(file, "terminal_input console serial")?;
         writeln!(file, "terminal_output console serial")?;
         writeln!(file)?;
-        writeln!(file, "menuentry 'BiomeOS - Sovereignty-First Operating System' {{")?;
+        writeln!(
+            file,
+            "menuentry 'BiomeOS - Sovereignty-First Operating System' {{"
+        )?;
         writeln!(file, "    echo 'BiomeOS - Loading Pure Rust Platform...'")?;
         writeln!(file, "    echo ''")?;
         // Boot from initramfs - no root filesystem needed
@@ -192,13 +194,19 @@ impl BootableMediaBuilder {
         writeln!(file)?;
         writeln!(file, "menuentry 'BiomeOS - Discovery Mode' {{")?;
         writeln!(file, "    echo 'BiomeOS - Network Discovery Mode'")?;
-        writeln!(file, "    linux /boot/vmlinuz rootfstype=rootfs rdinit=/init rw biomeos.discovery")?;
+        writeln!(
+            file,
+            "    linux /boot/vmlinuz rootfstype=rootfs rdinit=/init rw biomeos.discovery"
+        )?;
         writeln!(file, "    initrd /boot/initramfs.img")?;
         writeln!(file, "}}")?;
         writeln!(file)?;
         writeln!(file, "menuentry 'BiomeOS - Network Boot' {{")?;
         writeln!(file, "    echo 'BiomeOS - Network Coordination'")?;
-        writeln!(file, "    linux /boot/vmlinuz rootfstype=rootfs rdinit=/init rw biomeos.network")?;
+        writeln!(
+            file,
+            "    linux /boot/vmlinuz rootfstype=rootfs rdinit=/init rw biomeos.network"
+        )?;
         writeln!(file, "    initrd /boot/initramfs.img")?;
         writeln!(file, "}}")?;
 
@@ -244,23 +252,23 @@ impl BootableMediaBuilder {
             .with_context(|| format!("Failed to create directory: {}", dest.display()))?;
 
         for entry in std::fs::read_dir(src)
-            .with_context(|| format!("Failed to read directory: {}", src.display()))? 
+            .with_context(|| format!("Failed to read directory: {}", src.display()))?
         {
             let entry = entry?;
             let path = entry.path();
-            let file_name = path.file_name()
-                .context("Invalid file name")?;
+            let file_name = path.file_name().context("Invalid file name")?;
             let dest_path = dest.join(file_name);
 
             if path.is_dir() {
                 self.copy_directory(&path, &dest_path)?;
             } else {
-                std::fs::copy(&path, &dest_path)
-                    .with_context(|| format!(
+                std::fs::copy(&path, &dest_path).with_context(|| {
+                    format!(
                         "Failed to copy {} to {}",
                         path.display(),
                         dest_path.display()
-                    ))?;
+                    )
+                })?;
             }
         }
 
@@ -317,11 +325,14 @@ impl BootableMediaBuilder {
         // grub-mkrescue is preferred as it handles this automatically
         let status = Command::new("xorriso")
             .args([
-                "-as", "mkisofs",
-                "-o", output.to_str().context("Invalid output path")?,
+                "-as",
+                "mkisofs",
+                "-o",
+                output.to_str().context("Invalid output path")?,
                 "-r",
                 "-J",
-                "-V", "BIOMEOS",
+                "-V",
+                "BIOMEOS",
                 boot_dir.to_str().context("Invalid boot directory path")?,
             ])
             .status()
@@ -342,20 +353,18 @@ impl BootableMediaBuilder {
         use tar::Builder;
 
         let output_tar = output.with_extension("tar.gz");
-        
-        let tar_gz = std::fs::File::create(&output_tar)
-            .context("Failed to create tar.gz file")?;
+
+        let tar_gz = std::fs::File::create(&output_tar).context("Failed to create tar.gz file")?;
         let enc = GzEncoder::new(tar_gz, Compression::best());
         let mut tar = Builder::new(enc);
 
         tar.append_dir_all(".", boot_dir)
             .context("Failed to add files to archive")?;
-        tar.finish()
-            .context("Failed to finish archive")?;
+        tar.finish().context("Failed to finish archive")?;
 
         warn!("⚠️  Created tar.gz archive (not bootable)");
         warn!("   Extract and use grub-mkrescue manually to create bootable media");
-        
+
         Ok(output_tar)
     }
 
@@ -376,13 +385,17 @@ impl BootableMediaBuilder {
                 info!("    -enable-kvm");
                 info!("");
                 info!("To write to USB:");
-                info!("  sudo dd if={} of=/dev/sdX bs=4M status=progress", 
-                      image_path.display());
+                info!(
+                    "  sudo dd if={} of=/dev/sdX bs=4M status=progress",
+                    image_path.display()
+                );
             }
             BootTarget::Usb => {
                 info!("To write to USB:");
-                info!("  sudo dd if={} of=/dev/sdX bs=4M status=progress", 
-                      image_path.display());
+                info!(
+                    "  sudo dd if={} of=/dev/sdX bs=4M status=progress",
+                    image_path.display()
+                );
                 info!("");
                 info!("To test in QEMU:");
                 info!("  qemu-system-x86_64 \\");

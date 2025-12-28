@@ -1,7 +1,7 @@
 //! BiomeOS VM Verification CLI
 //!
 //! Modern idiomatic Rust replacement for verify-primals.sh
-//! 
+//!
 //! Usage:
 //!   biomeos-verify --serial-log /tmp/vm1-serial.log
 //!   biomeos-verify --serial-log /tmp/vm1-serial.log --rootfs biomeos-root/
@@ -76,9 +76,9 @@ async fn main() -> anyhow::Result<()> {
 
     // Run verification
     let verifier = VmVerifier::new(config);
-    
+
     println!("🚀 Verifying VM boot...\n");
-    
+
     match verifier.verify_boot().await {
         Ok(result) => {
             // Print summary
@@ -103,4 +103,3 @@ async fn main() -> anyhow::Result<()> {
         }
     }
 }
-

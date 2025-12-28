@@ -168,4 +168,3 @@ impl Drop for NetworkBridge {
         }
     }
 }
-

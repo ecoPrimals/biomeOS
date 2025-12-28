@@ -81,31 +81,28 @@ pub async fn parse() -> Result<BootParams> {
 /// Returns an error if the command line contains invalid parameters.
 pub fn parse_cmdline(cmdline: &str) -> Result<BootParams> {
     let params: Vec<&str> = cmdline.split_whitespace().collect();
-    
+
     let mode = if params.iter().any(|p| p.starts_with("biomeos.discovery")) {
         BootMode::Discovery
     } else if params.iter().any(|p| p.starts_with("biomeos.install")) {
         let target = params
             .iter()
-            .find_map(|p| {
-                p.strip_prefix("biomeos.install=")
-                    .map(|t| PathBuf::from(t))
-            });
+            .find_map(|p| p.strip_prefix("biomeos.install=").map(|t| PathBuf::from(t)));
         BootMode::Install { target }
     } else if params.iter().any(|p| p.starts_with("biomeos.network")) {
         let server = params
             .iter()
             .find_map(|p| p.strip_prefix("biomeos.network=").map(String::from));
         BootMode::Network { server }
-    } else if params.iter().any(|p| p.starts_with("biomeos.recovery") || *p == "recovery") {
+    } else if params
+        .iter()
+        .any(|p| p.starts_with("biomeos.recovery") || *p == "recovery")
+    {
         BootMode::Recovery
     } else {
         let config = params
             .iter()
-            .find_map(|p| {
-                p.strip_prefix("biomeos.config=")
-                    .map(|c| PathBuf::from(c))
-            });
+            .find_map(|p| p.strip_prefix("biomeos.config=").map(|c| PathBuf::from(c)));
         BootMode::Standard { config }
     };
 
@@ -170,7 +167,10 @@ mod tests {
             BootMode::Standard { config: None }.description(),
             "Standard (load biome.yaml)"
         );
-        assert_eq!(BootMode::Discovery.description(), "Discovery (scan network)");
+        assert_eq!(
+            BootMode::Discovery.description(),
+            "Discovery (scan network)"
+        );
     }
 
     #[test]
@@ -181,4 +181,3 @@ mod tests {
         assert!(!BootMode::Discovery.is_interactive());
     }
 }
-

@@ -229,4 +229,3 @@ pub struct FederationStatus {
     pub running_vms: usize,
     pub vm_health: Vec<VmHealth>,
 }
-

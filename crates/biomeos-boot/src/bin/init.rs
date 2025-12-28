@@ -1,20 +1,25 @@
 #!/usr/bin/env -S cargo +nightly -Zscript
 //! BiomeOS Init - Pure Rust PID 1
-//! 
+//!
 //! This is the first userspace process that runs when BiomeOS boots.
 //! It replaces traditional init systems with a pure Rust, async-first,
 //! sovereignty-preserving initialization system.
 
 use anyhow::{Context, Result};
 use biomeos_boot::{BootLogger, BootStage};
+use biomeos_core::observability::MinimalObserver;
 use nix::mount::{mount, MsFlags};
 use nix::unistd::getpid;
 use std::path::Path;
 use std::process::ExitCode;
+use std::time::Instant;
 use tracing::{error, info, warn};
 
 #[tokio::main]
 async fn main() -> ExitCode {
+    // Start boot timer for observability
+    let boot_start = Instant::now();
+
     // Initialize BootLogger FIRST - direct serial access for guaranteed visibility
     let mut boot_logger = match BootLogger::new() {
         Ok(logger) => {
@@ -29,7 +34,8 @@ async fn main() -> ExitCode {
         Err(e) => {
             // Fallback to stdout if BootLogger fails
             use std::io::Write;
-            let _ = std::io::stderr().write_all(format!("BootLogger init failed: {}\n", e).as_bytes());
+            let _ =
+                std::io::stderr().write_all(format!("BootLogger init failed: {}\n", e).as_bytes());
             let _ = std::io::stdout().write_all(b"\n[BiomeOS] Init - Fallback mode\n");
             None
         }
@@ -37,11 +43,11 @@ async fn main() -> ExitCode {
 
     // Verify we're PID 1
     let pid = getpid();
-    
+
     if let Some(ref mut logger) = boot_logger {
         logger.info(&format!("PID: {}", pid));
     }
-    
+
     if pid.as_raw() != 1 {
         if let Some(ref mut logger) = boot_logger {
             logger.critical(&format!("Must run as PID 1, got {}", pid));
@@ -58,11 +64,26 @@ async fn main() -> ExitCode {
         .try_init()
         .ok();
 
+    // Initialize MinimalObserver (sovereignty-respecting observability)
+    let observer = match MinimalObserver::local_only() {
+        Ok(obs) => {
+            if let Some(ref mut logger) = boot_logger {
+                logger.info("MinimalObserver initialized (local-only, zero network)");
+            }
+            info!("🔍 MinimalObserver: local-only mode (sovereignty-respecting)");
+            Some(obs)
+        }
+        Err(e) => {
+            warn!("MinimalObserver initialization failed: {}", e);
+            None
+        }
+    };
+
     if let Some(ref mut logger) = boot_logger {
         logger.info("Sovereignty-First | Zero Dependencies | Pure Rust");
         logger.checkpoint(BootStage::FilesystemMount);
     }
-    
+
     info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     info!("BiomeOS Init - Pure Rust Initialization System");
     info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -75,30 +96,52 @@ async fn main() -> ExitCode {
         }
         error!("Initialization failed: {:#}", e);
         error!("Entering emergency mode...");
-        
+
         if let Err(recovery_error) = emergency_mode().await {
             error!("Emergency mode failed: {:#}", recovery_error);
         }
-        
+
         return ExitCode::FAILURE;
+    }
+
+    // Record boot time in observer
+    let boot_time = boot_start.elapsed();
+    if let Some(ref observer) = observer {
+        observer.record_boot_time(boot_time);
+        if let Some(ref mut logger) = boot_logger {
+            logger.info(&format!("Boot time recorded: {:?}", boot_time));
+        }
+        info!("📊 Boot time: {:?}", boot_time);
     }
 
     if let Some(ref mut logger) = boot_logger {
         logger.checkpoint(BootStage::Complete);
         logger.info("✅ BiomeOS initialization complete!");
         logger.info("Sovereignty preserved. Human dignity intact.");
-        
+
         // Show logger stats
         let stats = logger.stats();
-        logger.info(&format!("BootLogger stats: {} messages, {}ms uptime", 
-                            stats.log_count, stats.uptime_ms));
+        logger.info(&format!(
+            "BootLogger stats: {} messages, {}ms uptime",
+            stats.log_count, stats.uptime_ms
+        ));
     }
-    
+
     info!("✅ BiomeOS initialization complete!");
-    
+
+    // Show observability metrics
+    if let Some(ref observer) = observer {
+        let metrics = observer.get_local_metrics();
+        info!("📊 Observability Metrics:");
+        if let Some(boot_duration) = metrics.boot_time {
+            info!("   Boot time: {}ms", boot_duration.as_millis());
+        }
+        info!("   Primals monitored: {}", metrics.primal_health.len());
+    }
+
     // PID 1 must never exit - spawn a shell or wait forever
     spawn_shell().await;
-    
+
     ExitCode::SUCCESS
 }
 
@@ -107,7 +150,7 @@ async fn spawn_shell() {
     info!("🐚 Spawning shell...");
     info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     info!("");
-    
+
     // Try to spawn busybox sh
     if let Err(e) = std::process::Command::new("/bin/busybox")
         .arg("sh")
@@ -118,7 +161,7 @@ async fn spawn_shell() {
     {
         error!("Failed to spawn shell: {}", e);
         error!("Entering infinite wait loop to prevent kernel panic...");
-        
+
         // If shell fails, just wait forever (PID 1 must not exit)
         loop {
             tokio::time::sleep(tokio::time::Duration::from_secs(3600)).await;
@@ -139,8 +182,10 @@ async fn initialize() -> Result<()> {
     let hardware = detect_hardware()
         .await
         .context("Failed to detect hardware")?;
-    info!("Hardware detected: {} cores, {} GB RAM", 
-          hardware.cpu_count, hardware.total_memory_gb);
+    info!(
+        "Hardware detected: {} cores, {} GB RAM",
+        hardware.cpu_count, hardware.total_memory_gb
+    );
 
     // Phase 3: Network Configuration
     configure_network()
@@ -151,7 +196,7 @@ async fn initialize() -> Result<()> {
     let usb_device = detect_biomeos_usb()
         .await
         .context("Failed to detect BiomeOS USB")?;
-    
+
     if let Some(usb) = usb_device {
         info!("✅ BiomeOS USB detected: {}", usb.display());
         mount_biomeos_usb(&usb)
@@ -180,12 +225,10 @@ async fn mount_essential_filesystems() -> Result<()> {
     info!("📁 Mounting essential filesystems...");
 
     // /proc - Process information
-    mount_filesystem("proc", "/proc", "proc", MsFlags::empty())
-        .context("Failed to mount /proc")?;
+    mount_filesystem("proc", "/proc", "proc", MsFlags::empty()).context("Failed to mount /proc")?;
 
     // /sys - Kernel and device information
-    mount_filesystem("sysfs", "/sys", "sysfs", MsFlags::empty())
-        .context("Failed to mount /sys")?;
+    mount_filesystem("sysfs", "/sys", "sysfs", MsFlags::empty()).context("Failed to mount /sys")?;
 
     // /dev - Device files
     mount_filesystem("devtmpfs", "/dev", "devtmpfs", MsFlags::empty())
@@ -200,36 +243,23 @@ async fn mount_essential_filesystems() -> Result<()> {
         .context("Failed to mount /dev/shm")?;
 
     // /run - Runtime data
-    mount_filesystem("tmpfs", "/run", "tmpfs", MsFlags::empty())
-        .context("Failed to mount /run")?;
+    mount_filesystem("tmpfs", "/run", "tmpfs", MsFlags::empty()).context("Failed to mount /run")?;
 
     // /tmp - Temporary files
-    mount_filesystem("tmpfs", "/tmp", "tmpfs", MsFlags::empty())
-        .context("Failed to mount /tmp")?;
+    mount_filesystem("tmpfs", "/tmp", "tmpfs", MsFlags::empty()).context("Failed to mount /tmp")?;
 
     info!("✅ Essential filesystems mounted");
     Ok(())
 }
 
 /// Mount a single filesystem (helper)
-fn mount_filesystem(
-    source: &str,
-    target: &str,
-    fstype: &str,
-    flags: MsFlags,
-) -> Result<()> {
+fn mount_filesystem(source: &str, target: &str, fstype: &str, flags: MsFlags) -> Result<()> {
     // Create mount point if it doesn't exist
     std::fs::create_dir_all(target)
         .with_context(|| format!("Failed to create directory: {}", target))?;
 
     // Try to mount - if already mounted (EBUSY), that's OK
-    match mount(
-        Some(source),
-        target,
-        Some(fstype),
-        flags,
-        None::<&str>,
-    ) {
+    match mount(Some(source), target, Some(fstype), flags, None::<&str>) {
         Ok(_) => {
             info!("  ✓ {}", target);
             Ok(())
@@ -239,9 +269,12 @@ fn mount_filesystem(
             info!("  ✓ {} (already mounted)", target);
             Ok(())
         }
-        Err(e) => {
-            Err(anyhow::anyhow!("Failed to mount {} on {}: {}", source, target, e))
-        }
+        Err(e) => Err(anyhow::anyhow!(
+            "Failed to mount {} on {}: {}",
+            source,
+            target,
+            e
+        )),
     }
 }
 
@@ -287,11 +320,7 @@ async fn detect_biomeos_usb() -> Result<Option<std::path::PathBuf>> {
     info!("🔍 Scanning for BiomeOS USB drive...");
 
     // Look for USB devices with BiomeOS marker
-    let usb_paths = vec![
-        "/dev/sda1",
-        "/dev/sdb1",
-        "/dev/sdc1",
-    ];
+    let usb_paths = vec!["/dev/sda1", "/dev/sdb1", "/dev/sdc1"];
 
     for path in usb_paths {
         let path_buf = std::path::PathBuf::from(path);
@@ -313,13 +342,8 @@ async fn mount_biomeos_usb(device: &Path) -> Result<()> {
         .to_str()
         .ok_or_else(|| anyhow::anyhow!("Invalid UTF-8 in device path"))?;
 
-    mount_filesystem(
-        device_str,
-        "/biomeos",
-        "auto",
-        MsFlags::MS_RDONLY,
-    )
-    .context("Failed to mount BiomeOS USB")?;
+    mount_filesystem(device_str, "/biomeos", "auto", MsFlags::MS_RDONLY)
+        .context("Failed to mount BiomeOS USB")?;
 
     info!("✅ BiomeOS USB mounted at /biomeos");
     Ok(())
@@ -409,4 +433,3 @@ async fn emergency_mode() -> Result<()> {
 
     Ok(())
 }
-

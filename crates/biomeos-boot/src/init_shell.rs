@@ -80,4 +80,3 @@ mod tests {
         // Just verify it can be created
     }
 }
-

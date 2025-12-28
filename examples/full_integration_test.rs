@@ -11,11 +11,11 @@
 //! Modern, idiomatic Rust with proper error handling throughout.
 
 use anyhow::{Context, Result};
-use biomeos_core::primal_registry::{PrimalRegistry, BinaryLocation};
+use biomeos_core::primal_registry::{BinaryLocation, PrimalRegistry};
 use std::path::PathBuf;
 use std::time::Duration;
 use tokio::time::sleep;
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -56,7 +56,7 @@ async fn main() -> Result<()> {
 /// Check system prerequisites
 async fn check_prerequisites() -> Result<Prerequisites> {
     info!("📋 Checking prerequisites...");
-    
+
     let docker_available = check_docker().await;
     let phase1bins_available = check_phase1bins().await;
     let benchscale_available = check_benchscale().await;
@@ -67,9 +67,30 @@ async fn check_prerequisites() -> Result<Prerequisites> {
         benchscale_available,
     };
 
-    info!("  • Docker: {}", if prereqs.docker_available { "✅" } else { "❌" });
-    info!("  • Phase 1 binaries: {}", if prereqs.phase1bins_available { "✅" } else { "❌" });
-    info!("  • benchScale: {}", if prereqs.benchscale_available { "✅" } else { "❌" });
+    info!(
+        "  • Docker: {}",
+        if prereqs.docker_available {
+            "✅"
+        } else {
+            "❌"
+        }
+    );
+    info!(
+        "  • Phase 1 binaries: {}",
+        if prereqs.phase1bins_available {
+            "✅"
+        } else {
+            "❌"
+        }
+    );
+    info!(
+        "  • benchScale: {}",
+        if prereqs.benchscale_available {
+            "✅"
+        } else {
+            "❌"
+        }
+    );
     info!("");
 
     Ok(prereqs)
@@ -97,43 +118,47 @@ async fn run_full_integration() -> Result<()> {
     // Step 1: Discover primal binaries
     info!("📦 Step 1: Discovering primal binaries");
     info!("======================================");
-    let registry = discover_primals().await
+    let registry = discover_primals()
+        .await
         .context("Failed to discover primal binaries")?;
     info!("");
 
     // Step 2: Create lab environment
     info!("🧪 Step 2: Creating lab environment");
     info!("===================================");
-    let lab = create_lab().await
+    let lab = create_lab()
+        .await
         .context("Failed to create lab environment")?;
     info!("");
 
     // Step 3: Deploy primals to lab
     info!("🚀 Step 3: Deploying primals to lab");
     info!("===================================");
-    deploy_primals_to_lab(&registry, &lab).await
+    deploy_primals_to_lab(&registry, &lab)
+        .await
         .context("Failed to deploy primals")?;
     info!("");
 
     // Step 4: Start primal services
     info!("⚙️  Step 4: Starting primal services");
     info!("====================================");
-    start_primal_services(&lab).await
+    start_primal_services(&lab)
+        .await
         .context("Failed to start primal services")?;
     info!("");
 
     // Step 5: Run P2P coordination tests
     info!("🔗 Step 5: Running P2P coordination tests");
     info!("==========================================");
-    run_p2p_tests(&lab).await
+    run_p2p_tests(&lab)
+        .await
         .context("Failed to run P2P tests")?;
     info!("");
 
     // Step 6: Cleanup
     info!("🧹 Step 6: Cleaning up");
     info!("======================");
-    cleanup_lab(&lab).await
-        .context("Failed to cleanup lab")?;
+    cleanup_lab(&lab).await.context("Failed to cleanup lab")?;
     info!("");
 
     Ok(())
@@ -145,7 +170,9 @@ async fn discover_primals() -> Result<PrimalRegistry> {
     let mut registry = PrimalRegistry::new(&phase1bins);
 
     info!("Scanning: {:?}", phase1bins);
-    registry.scan_local().await
+    registry
+        .scan_local()
+        .await
         .context("Failed to scan local directory")?;
 
     let primals = registry.list_primals();
@@ -169,15 +196,15 @@ async fn discover_primals() -> Result<PrimalRegistry> {
 async fn create_lab() -> Result<Lab> {
     // For now, create a mock lab since we're building the integration
     // In production, this would use benchScale's Rust API directly
-    
+
     info!("Creating 3-node P2P test topology...");
     info!("  • node-1: BearDog + Songbird (5ms latency)");
     info!("  • node-2: BearDog + Songbird (50ms latency)");
     info!("  • node-3: Behind NAT (100ms latency)");
-    
+
     // Simulate lab creation delay
     sleep(Duration::from_millis(500)).await;
-    
+
     Ok(Lab {
         name: "biomeos-p2p-integration".to_string(),
         nodes: vec![
@@ -205,22 +232,24 @@ async fn deploy_primals_to_lab(registry: &PrimalRegistry, lab: &Lab) -> Result<(
     // Deploy BearDog and Songbird to each node
     for node in &lab.nodes {
         info!("Deploying to {}:", node.name);
-        
+
         // Deploy BearDog
         if let Some(beardog) = registry.get_latest("beardog") {
-            deploy_binary_to_node(&beardog.path, node, "beardog").await
+            deploy_binary_to_node(&beardog.path, node, "beardog")
+                .await
                 .with_context(|| format!("Failed to deploy BearDog to {}", node.name))?;
         }
-        
+
         // Deploy Songbird
         if let Some(songbird) = registry.get_latest("songbird") {
-            deploy_binary_to_node(&songbird.path, node, "songbird").await
+            deploy_binary_to_node(&songbird.path, node, "songbird")
+                .await
                 .with_context(|| format!("Failed to deploy Songbird to {}", node.name))?;
         }
-        
+
         info!("  ✅ Deployed to {}", node.name);
     }
-    
+
     Ok(())
 }
 
@@ -233,22 +262,25 @@ async fn deploy_binary_to_node(
     match binary_location {
         BinaryLocation::Local(path) => {
             info!("  • Copying {} from {:?}", primal_name, path);
-            
+
             // In production, this would use Docker cp or benchScale's Lab::deploy_to_node()
             // For now, simulate the deployment
             sleep(Duration::from_millis(100)).await;
-            
+
             Ok(())
         }
         BinaryLocation::GitHub { org, repo, tag, .. } => {
-            info!("  • Downloading {} from GitHub: {}/{} @ {}", primal_name, org, repo, tag);
-            
+            info!(
+                "  • Downloading {} from GitHub: {}/{} @ {}",
+                primal_name, org, repo, tag
+            );
+
             // TODO: Implement GitHub download
             Err(anyhow::anyhow!("GitHub download not yet implemented"))
         }
         BinaryLocation::Remote(url) => {
             info!("  • Downloading {} from: {}", primal_name, url);
-            
+
             // TODO: Implement remote download
             Err(anyhow::anyhow!("Remote download not yet implemented"))
         }
@@ -259,46 +291,50 @@ async fn deploy_binary_to_node(
 async fn start_primal_services(lab: &Lab) -> Result<()> {
     for node in &lab.nodes {
         info!("Starting services on {}:", node.name);
-        
+
         // Start BearDog
-        start_service(node, "beardog", &["--port", "9000"]).await
+        start_service(node, "beardog", &["--port", "9000"])
+            .await
             .with_context(|| format!("Failed to start BearDog on {}", node.name))?;
-        
+
         // Start Songbird
-        start_service(node, "songbird", &["--port", "8000"]).await
+        start_service(node, "songbird", &["--port", "8000"])
+            .await
             .with_context(|| format!("Failed to start Songbird on {}", node.name))?;
-        
+
         // Wait for services to be ready
-        wait_for_service(node, "beardog", 9000).await
+        wait_for_service(node, "beardog", 9000)
+            .await
             .with_context(|| format!("BearDog failed to start on {}", node.name))?;
-        wait_for_service(node, "songbird", 8000).await
+        wait_for_service(node, "songbird", 8000)
+            .await
             .with_context(|| format!("Songbird failed to start on {}", node.name))?;
-        
+
         info!("  ✅ Services ready on {}", node.name);
     }
-    
+
     Ok(())
 }
 
 /// Start a service on a node
 async fn start_service(_node: &LabNode, service: &str, args: &[&str]) -> Result<()> {
     info!("  • Starting {} {}", service, args.join(" "));
-    
+
     // In production, this would execute in the container
     // docker exec -d <container> /usr/local/bin/<service> <args>
     sleep(Duration::from_millis(200)).await;
-    
+
     Ok(())
 }
 
 /// Wait for a service to be ready
 async fn wait_for_service(_node: &LabNode, service: &str, port: u16) -> Result<()> {
     info!("  • Waiting for {} on port {}...", service, port);
-    
+
     // In production, this would health-check the service
     // Poll http://<ip>:<port>/health until success
     sleep(Duration::from_millis(500)).await;
-    
+
     Ok(())
 }
 
@@ -307,7 +343,8 @@ async fn run_p2p_tests(lab: &Lab) -> Result<()> {
     // Test 1: BTSP Tunnel Creation
     info!("Test 1: BTSP Tunnel Creation");
     info!("  Creating tunnel: node-1 → node-2");
-    create_btsp_tunnel(&lab.nodes[0], &lab.nodes[1]).await
+    create_btsp_tunnel(&lab.nodes[0], &lab.nodes[1])
+        .await
         .context("Failed to create BTSP tunnel")?;
     info!("  ✅ BTSP tunnel established");
     info!("");
@@ -315,7 +352,8 @@ async fn run_p2p_tests(lab: &Lab) -> Result<()> {
     // Test 2: BirdSong Encrypted Discovery
     info!("Test 2: BirdSong Encrypted Discovery");
     info!("  Broadcasting from node-1...");
-    test_birdsong_discovery(&lab.nodes[0], &[&lab.nodes[1], &lab.nodes[2]]).await
+    test_birdsong_discovery(&lab.nodes[0], &[&lab.nodes[1], &lab.nodes[2]])
+        .await
         .context("Failed BirdSong discovery test")?;
     info!("  ✅ Encrypted discovery successful");
     info!("");
@@ -323,14 +361,16 @@ async fn run_p2p_tests(lab: &Lab) -> Result<()> {
     // Test 3: NAT Traversal
     info!("Test 3: NAT Traversal (node-3 behind NAT)");
     info!("  Establishing connection via relay...");
-    test_nat_traversal(&lab.nodes[2], &lab.nodes[0]).await
+    test_nat_traversal(&lab.nodes[2], &lab.nodes[0])
+        .await
         .context("Failed NAT traversal test")?;
     info!("  ✅ NAT traversal successful");
     info!("");
 
     // Test 4: P2P Health Check
     info!("Test 4: P2P Health Check");
-    check_p2p_health(lab).await
+    check_p2p_health(lab)
+        .await
         .context("P2P health check failed")?;
     info!("  ✅ All P2P connections healthy");
     info!("");
@@ -345,12 +385,12 @@ async fn create_btsp_tunnel(source: &LabNode, target: &LabNode) -> Result<()> {
     // 2. Provide target node info
     // 3. Verify tunnel establishment
     // 4. Check tunnel health
-    
+
     sleep(Duration::from_millis(300)).await;
     info!("    Tunnel ID: btsp-{}-{}", source.name, target.name);
     info!("    Status: ESTABLISHED");
     info!("    Latency: 50ms");
-    
+
     Ok(())
 }
 
@@ -360,12 +400,12 @@ async fn test_birdsong_discovery(_broadcaster: &LabNode, receivers: &[&LabNode])
     // 1. Call Songbird API on broadcaster: POST /broadcast
     // 2. Verify receivers can decrypt
     // 3. Check discovery records
-    
+
     sleep(Duration::from_millis(300)).await;
     for receiver in receivers {
         info!("    {} received and decrypted", receiver.name);
     }
-    
+
     Ok(())
 }
 
@@ -376,12 +416,12 @@ async fn test_nat_traversal(nat_node: &LabNode, relay: &LabNode) -> Result<()> {
     // 2. Attempt connection from NAT node
     // 3. Verify connection through relay
     // 4. Test data transfer
-    
+
     sleep(Duration::from_millis(300)).await;
     info!("    Relay: {}", relay.name);
     info!("    Client: {}", nat_node.name);
     info!("    Connection: ESTABLISHED");
-    
+
     Ok(())
 }
 
@@ -392,7 +432,7 @@ async fn check_p2p_health(lab: &Lab) -> Result<()> {
         sleep(Duration::from_millis(100)).await;
         info!("    {}: HEALTHY", node.name);
     }
-    
+
     Ok(())
 }
 
@@ -404,13 +444,13 @@ async fn cleanup_lab(lab: &Lab) -> Result<()> {
         sleep(Duration::from_millis(100)).await;
         info!("  • Stopped services on {}", node.name);
     }
-    
+
     info!("Destroying lab '{}'...", lab.name);
     // In production: benchScale Lab::destroy()
     sleep(Duration::from_millis(300)).await;
-    
+
     info!("✅ Lab cleaned up");
-    
+
     Ok(())
 }
 
@@ -455,7 +495,7 @@ async fn run_simulation_mode() -> Result<()> {
     info!("  1. Install Docker: https://docs.docker.com/get-docker/");
     info!("  2. Start Docker daemon");
     info!("  3. Run: cargo run --example full_integration_test");
-    
+
     Ok(())
 }
 
@@ -484,4 +524,3 @@ struct LabNode {
     #[allow(dead_code)]
     container_id: String,
 }
-

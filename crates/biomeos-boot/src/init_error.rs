@@ -31,10 +31,7 @@ pub enum BootError {
     AlreadyMounted(String),
 
     #[error("failed to create directory {path}: {error}")]
-    DirectoryCreation {
-        path: PathBuf,
-        error: String,
-    },
+    DirectoryCreation { path: PathBuf, error: String },
 
     /// Hardware detection errors
     #[error("hardware detection failed: {0}")]
@@ -99,35 +96,28 @@ pub enum BootError {
     /// Initialization errors
     #[error("initialization failed: {0}")]
     InitializationFailed(String),
-    
+
     // Device management errors (new for boot_logger)
     #[error("device not found: {device}")]
-    DeviceNotFound {
-        device: String,
-    },
-    
+    DeviceNotFound { device: String },
+
     #[error("failed to open device {device}: {error}")]
-    DeviceOpen {
-        device: String,
-        error: String,
-    },
-    
+    DeviceOpen { device: String, error: String },
+
     #[error("failed to create device {device}: {error}")]
-    DeviceCreation {
-        device: String,
-        error: String,
-    },
-    
+    DeviceCreation { device: String, error: String },
+
     #[error("I/O error during {operation}: {error}")]
-    IoError {
-        operation: String,
-        error: String,
-    },
+    IoError { operation: String, error: String },
 }
 
 impl BootError {
     /// Create a mount failed error
-    pub fn mount_failed(target: impl Into<String>, fs_source: impl Into<String>, errno: nix::errno::Errno) -> Self {
+    pub fn mount_failed(
+        target: impl Into<String>,
+        fs_source: impl Into<String>,
+        errno: nix::errno::Errno,
+    ) -> Self {
         Self::MountFailed {
             target: target.into(),
             fs_source: fs_source.into(),
@@ -139,9 +129,7 @@ impl BootError {
     pub fn is_recoverable(&self) -> bool {
         matches!(
             self,
-            Self::AlreadyMounted(_)
-                | Self::BiomeOsUsbNotFound
-                | Self::NetworkInterfaceDetection
+            Self::AlreadyMounted(_) | Self::BiomeOsUsbNotFound | Self::NetworkInterfaceDetection
         )
     }
 
@@ -209,4 +197,3 @@ mod tests {
         assert_eq!(err.to_string(), "not running as PID 1 (current PID: 42)");
     }
 }
-

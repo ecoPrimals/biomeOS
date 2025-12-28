@@ -200,16 +200,17 @@ async fn test_service_scaling_real_http_success() {
 
     // Verify we got scaling results
     assert!(scale_result.contains_key("status"));
-    assert_eq!(scale_result.get("status").and_then(|v| v.as_str()), Some("success"));
-    
+    assert_eq!(
+        scale_result.get("status").and_then(|v| v.as_str()),
+        Some("success")
+    );
+
     // current_replicas might be "unknown" if ToadStool isn't available
     assert!(scale_result.contains_key("current_replicas"));
-    
+
     // target_replicas should be set
     assert!(scale_result.contains_key("target_replicas"));
-    let target = scale_result
-        .get("target_replicas")
-        .and_then(|v| v.as_u64());
+    let target = scale_result.get("target_replicas").and_then(|v| v.as_u64());
     assert_eq!(target, Some(3));
 }
 

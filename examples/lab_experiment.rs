@@ -5,7 +5,6 @@
 
 use anyhow::Result;
 use biomeos_core::lab::LabManager;
-use tracing_subscriber;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -35,7 +34,10 @@ async fn main() -> Result<()> {
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!();
 
-    let lab = match lab_manager.create_lab("simple-lan", "biomeos-experiment-01").await {
+    let lab = match lab_manager
+        .create_lab("simple-lan", "biomeos-experiment-01")
+        .await
+    {
         Ok(lab) => {
             println!("✅ Lab created successfully!");
             println!("   Name:     {}", lab.name());
@@ -126,7 +128,10 @@ async fn main() -> Result<()> {
     println!("Summary:");
     println!("  ✅ Lab created");
     println!("  ✅ Primals deployed");
-    println!("  {} Test executed", if test_result.passed() { "✅" } else { "❌" });
+    println!(
+        "  {} Test executed",
+        if test_result.passed() { "✅" } else { "❌" }
+    );
     println!("  ✅ Lab cleaned up");
     println!();
 
@@ -143,4 +148,3 @@ async fn main() -> Result<()> {
     println!();
     Ok(())
 }
-

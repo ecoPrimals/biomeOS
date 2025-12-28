@@ -5,7 +5,6 @@
 
 use anyhow::Result;
 use biomeos_core::lab::LabManager;
-use tracing_subscriber;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -36,7 +35,10 @@ async fn main() -> Result<()> {
     match run_experiment(&lab_manager, "simple-lan", "exp1-simple", "btsp-tunnels").await {
         Ok(success) => {
             results.push(("Simple LAN", success));
-            println!("✅ Experiment 1 complete: {}", if success { "PASSED" } else { "FAILED" });
+            println!(
+                "✅ Experiment 1 complete: {}",
+                if success { "PASSED" } else { "FAILED" }
+            );
         }
         Err(e) => {
             results.push(("Simple LAN", false));
@@ -51,10 +53,20 @@ async fn main() -> Result<()> {
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!();
 
-    match run_experiment(&lab_manager, "p2p-3-tower", "exp2-multi", "p2p-coordination").await {
+    match run_experiment(
+        &lab_manager,
+        "p2p-3-tower",
+        "exp2-multi",
+        "p2p-coordination",
+    )
+    .await
+    {
         Ok(success) => {
             results.push(("Multi-Tower", success));
-            println!("✅ Experiment 2 complete: {}", if success { "PASSED" } else { "FAILED" });
+            println!(
+                "✅ Experiment 2 complete: {}",
+                if success { "PASSED" } else { "FAILED" }
+            );
         }
         Err(e) => {
             results.push(("Multi-Tower", false));
@@ -72,7 +84,10 @@ async fn main() -> Result<()> {
     match run_experiment(&lab_manager, "nat-traversal", "exp3-nat", "nat-traversal").await {
         Ok(success) => {
             results.push(("NAT Traversal", success));
-            println!("✅ Experiment 3 complete: {}", if success { "PASSED" } else { "FAILED" });
+            println!(
+                "✅ Experiment 3 complete: {}",
+                if success { "PASSED" } else { "FAILED" }
+            );
         }
         Err(e) => {
             results.push(("NAT Traversal", false));
@@ -137,7 +152,11 @@ async fn run_experiment(
     println!("Running test: {}", test);
     let result = lab.run_test(test).await?;
     let success = result.passed();
-    println!("{} Test {}", if success { "✅" } else { "❌" }, if success { "passed" } else { "failed" });
+    println!(
+        "{} Test {}",
+        if success { "✅" } else { "❌" },
+        if success { "passed" } else { "failed" }
+    );
 
     println!("Cleaning up...");
     lab.destroy().await?;
@@ -145,4 +164,3 @@ async fn run_experiment(
 
     Ok(success)
 }
-

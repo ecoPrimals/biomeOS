@@ -74,7 +74,7 @@ impl std::fmt::Display for BootStage {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_log_level_ordering() {
         assert!(LogLevel::Debug < LogLevel::Info);
@@ -83,17 +83,16 @@ mod tests {
         assert!(LogLevel::Error < LogLevel::Critical);
         assert!(LogLevel::Critical < LogLevel::Emergency);
     }
-    
+
     #[test]
     fn test_log_level_display() {
         assert_eq!(LogLevel::Info.to_string(), "INFO");
         assert_eq!(LogLevel::Error.to_string(), "ERROR");
     }
-    
+
     #[test]
     fn test_boot_stage_display() {
         assert_eq!(BootStage::InitStart.to_string(), "Init Start");
         assert_eq!(BootStage::Complete.to_string(), "Boot Complete");
     }
 }
-

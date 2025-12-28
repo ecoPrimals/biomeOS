@@ -174,10 +174,7 @@ impl P2PCoordinator {
         node_b: &str,
         proof: LineageProof,
     ) -> Result<TunnelInfo> {
-        let coordinator = BtspCoordinator::new(
-            self.security.clone(),
-            self.discovery.clone(),
-        );
+        let coordinator = BtspCoordinator::new(self.security.clone(), self.discovery.clone());
 
         coordinator.create_tunnel(node_a, node_b, proof).await
     }
@@ -189,10 +186,7 @@ impl P2PCoordinator {
     /// 2. Discovery provider switches to encrypted mode
     /// 3. Tests encryption is working
     pub async fn enable_encrypted_discovery(&self, family_id: &str) -> Result<DiscoveryMode> {
-        let coordinator = BirdSongCoordinator::new(
-            self.security.clone(),
-            self.discovery.clone(),
-        );
+        let coordinator = BirdSongCoordinator::new(self.security.clone(), self.discovery.clone());
 
         coordinator.enable_encrypted_discovery(family_id).await
     }
@@ -200,36 +194,35 @@ impl P2PCoordinator {
     /// Coordinate lineage-gated relay for NAT traversal
     ///
     /// This requires a routing provider (optional capability)
-    pub async fn coordinate_relay(
-        &self,
-        requester: &str,
-        target: &str,
-    ) -> Result<RelayInfo> {
-        let routing = self.routing.as_ref()
+    pub async fn coordinate_relay(&self, requester: &str, target: &str) -> Result<RelayInfo> {
+        let routing = self
+            .routing
+            .as_ref()
             .context("No routing provider available for relay coordination")?;
 
-        let coordinator = BirdSongCoordinator::new(
-            self.security.clone(),
-            self.discovery.clone(),
-        );
+        let coordinator = BirdSongCoordinator::new(self.security.clone(), self.discovery.clone());
 
-        coordinator.coordinate_relay(requester, target, routing.clone()).await
+        coordinator
+            .coordinate_relay(requester, target, routing.clone())
+            .await
     }
 
     /// Monitor tunnel health
     pub async fn monitor_tunnel(&self, tunnel_id: &str) -> Result<OverallHealth> {
-        let security_health = self.security
+        let security_health = self
+            .security
             .check_tunnel_health(tunnel_id)
             .await
             .context("Failed to check tunnel health from security provider")?;
 
-        let transport_health = self.discovery
+        let transport_health = self
+            .discovery
             .check_transport_health(tunnel_id)
             .await
             .context("Failed to check transport health from discovery provider")?;
 
         let status = Self::compute_status(&security_health, &transport_health);
-        
+
         Ok(OverallHealth {
             tunnel_id: tunnel_id.to_string(),
             security_health,
@@ -241,7 +234,9 @@ impl P2PCoordinator {
     fn compute_status(security: &TunnelHealth, transport: &TransportHealth) -> HealthStatus {
         if security.status == HealthStatus::Healthy && transport.status == HealthStatus::Healthy {
             HealthStatus::Healthy
-        } else if security.status == HealthStatus::Degraded || transport.status == HealthStatus::Degraded {
+        } else if security.status == HealthStatus::Degraded
+            || transport.status == HealthStatus::Degraded
+        {
             HealthStatus::Degraded
         } else {
             HealthStatus::Unhealthy
@@ -260,4 +255,3 @@ mod tests {
         assert_eq!(CAPABILITY_ROUTING, "routing");
     }
 }
-

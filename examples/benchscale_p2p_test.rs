@@ -172,12 +172,18 @@ async fn run_real_lab_test(benchscale_path: &PathBuf) -> Result<()> {
                 info!("✅ Lab destroyed successfully!");
             } else {
                 warn!("Lab destruction may have had issues (manual cleanup may be needed)");
-                warn!("Run: docker ps | grep {} | awk '{{print $1}}' | xargs docker rm -f", lab_name);
+                warn!(
+                    "Run: docker ps | grep {} | awk '{{print $1}}' | xargs docker rm -f",
+                    lab_name
+                );
             }
         }
         Err(e) => {
             warn!("Could not destroy lab: {}", e);
-            warn!("Manual cleanup: docker rm -f $(docker ps -a | grep {} | awk '{{print $1}}')", lab_name);
+            warn!(
+                "Manual cleanup: docker rm -f $(docker ps -a | grep {} | awk '{{print $1}}')",
+                lab_name
+            );
         }
     }
 

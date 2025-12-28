@@ -3,10 +3,10 @@
 //! Provides direct access to /dev/ttyS0 (COM1) for boot logging,
 //! bypassing kernel console abstractions.
 
+use crate::init_error::{BootError, Result};
 use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::path::Path;
-use crate::init_error::{BootError, Result};
 
 /// Direct serial port channel
 ///
@@ -31,24 +31,25 @@ impl SerialChannel {
     /// - Device is already open exclusively
     pub fn new() -> Result<Self> {
         let path = "/dev/ttyS0";
-        
+
         if !Path::new(path).exists() {
             return Err(BootError::DeviceNotFound {
                 device: path.to_string(),
             });
         }
-        
-        let device = OpenOptions::new()
-            .write(true)
-            .open(path)
-            .map_err(|e| BootError::DeviceOpen {
-                device: path.to_string(),
-                error: e.to_string(),
-            })?;
-        
+
+        let device =
+            OpenOptions::new()
+                .write(true)
+                .open(path)
+                .map_err(|e| BootError::DeviceOpen {
+                    device: path.to_string(),
+                    error: e.to_string(),
+                })?;
+
         Ok(Self { device })
     }
-    
+
     /// Write bytes to serial port
     ///
     /// Writes raw bytes directly to the serial port and flushes immediately
@@ -58,28 +59,28 @@ impl SerialChannel {
     ///
     /// Returns an error if the write or flush operation fails.
     pub fn write(&mut self, data: &[u8]) -> Result<()> {
-        self.device.write_all(data)
+        self.device
+            .write_all(data)
             .map_err(|e| BootError::IoError {
                 operation: "serial write".to_string(),
                 error: e.to_string(),
             })?;
-        
+
         self.flush()?;
         Ok(())
     }
-    
+
     /// Flush the serial port buffer
     ///
     /// Ensures all buffered data is written to the device immediately.
     pub fn flush(&mut self) -> Result<()> {
-        self.device.flush()
-            .map_err(|e| BootError::IoError {
-                operation: "serial flush".to_string(),
-                error: e.to_string(),
-            })?;
+        self.device.flush().map_err(|e| BootError::IoError {
+            operation: "serial flush".to_string(),
+            error: e.to_string(),
+        })?;
         Ok(())
     }
-    
+
     /// Check if serial device is available
     ///
     /// Returns true if `/dev/ttyS0` exists and is accessible.
@@ -91,14 +92,14 @@ impl SerialChannel {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_serial_availability() {
         // Test device availability check
         // (may be false in test environment, which is fine)
         let _ = SerialChannel::available();
     }
-    
+
     #[test]
     fn test_serial_channel_creation() {
         // Only test if device exists
@@ -112,4 +113,3 @@ mod tests {
         }
     }
 }
-

@@ -12,8 +12,8 @@
 //! It doesn't care if the security provider is BearDog or something else!
 
 use super::{
-    DiscoveryProvider, LineageProof, SecurityProvider, TunnelHealth, TunnelInfo, TunnelStatus,
-    TransportHealth,
+    DiscoveryProvider, LineageProof, SecurityProvider, TransportHealth, TunnelHealth, TunnelInfo,
+    TunnelStatus,
 };
 use anyhow::{Context, Result};
 use std::sync::Arc;
@@ -44,10 +44,7 @@ impl BtspCoordinator {
     ///
     /// This constructor is **agnostic** - it accepts any primal that implements
     /// the required traits, regardless of what it's called.
-    pub fn new(
-        security: Arc<dyn SecurityProvider>,
-        discovery: Arc<dyn DiscoveryProvider>,
-    ) -> Self {
+    pub fn new(security: Arc<dyn SecurityProvider>, discovery: Arc<dyn DiscoveryProvider>) -> Self {
         Self {
             security,
             discovery,
@@ -156,12 +153,12 @@ impl BtspCoordinator {
         match health.status {
             super::HealthStatus::Healthy => {
                 // Already healthy, nothing to do
-                return Ok(TunnelInfo {
+                Ok(TunnelInfo {
                     tunnel_id: tunnel_id.to_string(),
                     status: TunnelStatus::Active,
                     endpoints: vec![],
                     established_at: SystemTime::now(),
-                });
+                })
             }
             super::HealthStatus::Degraded => {
                 // Attempt graceful recovery
@@ -236,4 +233,3 @@ mod tests {
         );
     }
 }
-

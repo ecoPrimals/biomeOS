@@ -22,8 +22,7 @@ async fn main() -> Result<()> {
     let subscriber = FmtSubscriber::builder()
         .with_max_level(Level::INFO)
         .finish();
-    tracing::subscriber::set_global_default(subscriber)
-        .expect("setting default subscriber failed");
+    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 
     info!("🌱 BiomeOS P2P Coordination Demo: Multi-Tower Federation");
     info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -44,21 +43,21 @@ async fn main() -> Result<()> {
     info!("");
 
     let mut towers = HashMap::new();
-    
+
     let tower_a = Tower {
         name: "tower-sf".to_string(),
         location: "San Francisco, US".to_string(),
         nodes: vec!["alice".to_string(), "bob".to_string(), "carol".to_string()],
         federated_with: vec!["tower-ny".to_string(), "tower-lon".to_string()],
     };
-    
+
     let tower_b = Tower {
         name: "tower-ny".to_string(),
         location: "New York, US".to_string(),
         nodes: vec!["dave".to_string(), "eve".to_string()],
         federated_with: vec!["tower-sf".to_string(), "tower-lon".to_string()],
     };
-    
+
     let tower_c = Tower {
         name: "tower-lon".to_string(),
         location: "London, UK".to_string(),
@@ -240,4 +239,3 @@ struct Tower {
     nodes: Vec<String>,
     federated_with: Vec<String>,
 }
-

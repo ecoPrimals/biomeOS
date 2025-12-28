@@ -1,5 +1,5 @@
 //! BiomeOS Initramfs Builder
-//! 
+//!
 //! Pure Rust initramfs generation. No shell scripts, no external dependencies.
 //! Creates a minimal boot environment with BiomeOS binaries.
 
@@ -41,8 +41,7 @@ impl InitramfsBuilder {
     /// Returns an error if the working directory cannot be created.
     pub fn new<P: AsRef<Path>>(work_dir: P) -> Result<Self> {
         let root = work_dir.as_ref().join("initramfs-root");
-        fs::create_dir_all(&root)
-            .context("Failed to create initramfs work directory")?;
+        fs::create_dir_all(&root).context("Failed to create initramfs work directory")?;
 
         Ok(Self {
             root,
@@ -87,8 +86,11 @@ impl InitramfsBuilder {
     /// This is needed when binaries are dynamically linked
     pub fn add_required_libraries(&self, binary_path: &Path) -> Result<()> {
         use std::process::Command;
-        
-        info!("📚 Adding required libraries for {}...", binary_path.display());
+
+        info!(
+            "📚 Adding required libraries for {}...",
+            binary_path.display()
+        );
 
         // Use ldd to find required libraries
         let output = Command::new("ldd")
@@ -98,12 +100,15 @@ impl InitramfsBuilder {
 
         if !output.status.success() {
             // Binary might be statically linked or ldd not available
-            warn!("ldd failed for {} - assuming statically linked", binary_path.display());
+            warn!(
+                "ldd failed for {} - assuming statically linked",
+                binary_path.display()
+            );
             return Ok(());
         }
 
         let ldd_output = String::from_utf8_lossy(&output.stdout);
-        
+
         for line in ldd_output.lines() {
             // Parse lines like: "libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x...)"
             if let Some(lib_path) = line.split("=>").nth(1) {
@@ -121,28 +126,30 @@ impl InitramfsBuilder {
 
                         // Copy library
                         if !dest_full.exists() {
-                            fs::copy(lib_src, &dest_full)
-                                .with_context(|| format!("Failed to copy library: {}", lib_src.display()))?;
+                            fs::copy(lib_src, &dest_full).with_context(|| {
+                                format!("Failed to copy library: {}", lib_src.display())
+                            })?;
                             info!("  ✓ Copied: {}", lib_src.display());
                         }
                     }
                 }
             }
-            
+
             // Also handle dynamic linker (e.g., /lib64/ld-linux-x86-64.so.2)
             if line.contains("ld-linux") && line.starts_with("\t/") {
                 let ld_path_str = line.split_whitespace().next().unwrap();
                 let ld_src = Path::new(ld_path_str);
                 if ld_src.exists() {
                     let dest_full = self.root.join(ld_src.strip_prefix("/").unwrap());
-                    
+
                     if let Some(parent) = dest_full.parent() {
                         fs::create_dir_all(parent)?;
                     }
-                    
+
                     if !dest_full.exists() {
-                        fs::copy(ld_src, &dest_full)
-                            .with_context(|| format!("Failed to copy dynamic linker: {}", ld_src.display()))?;
+                        fs::copy(ld_src, &dest_full).with_context(|| {
+                            format!("Failed to copy dynamic linker: {}", ld_src.display())
+                        })?;
                         info!("  ✓ Copied dynamic linker: {}", ld_src.display());
                     }
                 }
@@ -169,11 +176,24 @@ impl InitramfsBuilder {
         info!("📁 Creating directory structure...");
 
         let dirs = vec![
-            "bin", "sbin", "usr/bin", "usr/sbin",
-            "proc", "sys", "dev", "dev/pts",
-            "tmp", "run", "var", "var/log",
-            "biomeos", "biomeos/primals", "biomeos/configs",
-            "etc", "root", "home",
+            "bin",
+            "sbin",
+            "usr/bin",
+            "usr/sbin",
+            "proc",
+            "sys",
+            "dev",
+            "dev/pts",
+            "tmp",
+            "run",
+            "var",
+            "var/log",
+            "biomeos",
+            "biomeos/primals",
+            "biomeos/configs",
+            "etc",
+            "root",
+            "home",
         ];
 
         for dir in dirs {
@@ -193,19 +213,20 @@ impl InitramfsBuilder {
 
         for binary in &self.binaries {
             let dest_path = self.root.join(binary.dest.trim_start_matches('/'));
-            
+
             // Create parent directory
             if let Some(parent) = dest_path.parent() {
                 fs::create_dir_all(parent)?;
             }
 
             // Copy binary
-            fs::copy(&binary.source, &dest_path)
-                .with_context(|| format!(
+            fs::copy(&binary.source, &dest_path).with_context(|| {
+                format!(
                     "Failed to copy {} to {}",
                     binary.source.display(),
                     dest_path.display()
-                ))?;
+                )
+            })?;
 
             // Set permissions
             #[cfg(unix)]
@@ -257,7 +278,7 @@ impl InitramfsBuilder {
         // The kernel expects a gzipped CPIO archive, not tar.gz
         let output_file = File::create(output)
             .with_context(|| format!("Failed to create output file: {}", output.display()))?;
-        
+
         let mut encoder = GzEncoder::new(output_file, Compression::best());
 
         // Use find + cpio to create proper CPIO archive
@@ -274,15 +295,19 @@ impl InitramfsBuilder {
 
         // Pipe cpio output to gzip encoder
         if let Some(mut stdout) = status.stdout {
-            std::io::copy(&mut stdout, &mut encoder)
-                .context("Failed to compress CPIO archive")?;
+            std::io::copy(&mut stdout, &mut encoder).context("Failed to compress CPIO archive")?;
         }
 
-        encoder.finish().context("Failed to finish gzip compression")?;
+        encoder
+            .finish()
+            .context("Failed to finish gzip compression")?;
 
         let size = fs::metadata(output)?.len();
-        info!("✅ Initramfs built: {} bytes ({:.2} MB)", 
-              size, size as f64 / 1024.0 / 1024.0);
+        info!(
+            "✅ Initramfs built: {} bytes ({:.2} MB)",
+            size,
+            size as f64 / 1024.0 / 1024.0
+        );
 
         Ok(())
     }
@@ -300,7 +325,7 @@ impl KernelManager {
         if let Some(kernel) = custom {
             info!("Using custom kernel: {}", kernel.display());
             let initramfs = kernel.with_file_name("initramfs.img");
-            
+
             return Ok(Self {
                 kernel_path: kernel,
                 initramfs_path: initramfs,
@@ -311,9 +336,12 @@ impl KernelManager {
         if let Ok(env_kernel) = std::env::var("BIOMEOS_KERNEL") {
             let kernel_path = PathBuf::from(&env_kernel);
             if kernel_path.exists() {
-                info!("Using kernel from BIOMEOS_KERNEL: {}", kernel_path.display());
+                info!(
+                    "Using kernel from BIOMEOS_KERNEL: {}",
+                    kernel_path.display()
+                );
                 let initramfs = kernel_path.with_file_name("biomeos-initramfs.img");
-                
+
                 return Ok(Self {
                     kernel_path,
                     initramfs_path: initramfs,
@@ -324,19 +352,15 @@ impl KernelManager {
         }
 
         // Try to find system kernel
-        let kernel_paths = vec![
-            "/boot/vmlinuz",
-            "/boot/vmlinuz-linux",
-            "/vmlinuz",
-        ];
+        let kernel_paths = vec!["/boot/vmlinuz", "/boot/vmlinuz-linux", "/vmlinuz"];
 
         for path in kernel_paths {
             let path_buf = PathBuf::from(path);
             if path_buf.exists() {
                 info!("Found system kernel: {}", path);
-                
+
                 let initramfs = Self::find_matching_initramfs(&path_buf)?;
-                
+
                 return Ok(Self {
                     kernel_path: path_buf,
                     initramfs_path: initramfs,
@@ -353,14 +377,9 @@ impl KernelManager {
 
     fn find_matching_initramfs(kernel: &Path) -> Result<PathBuf> {
         // Try to find initramfs matching kernel
-        let kernel_dir = kernel.parent()
-            .context("Kernel has no parent directory")?;
-        
-        let initramfs_paths = vec![
-            "initramfs.img",
-            "initrd.img",
-            "initramfs-linux.img",
-        ];
+        let kernel_dir = kernel.parent().context("Kernel has no parent directory")?;
+
+        let initramfs_paths = vec!["initramfs.img", "initrd.img", "initramfs-linux.img"];
 
         for name in initramfs_paths {
             let path = kernel_dir.join(name);
@@ -381,4 +400,3 @@ impl KernelManager {
         &self.initramfs_path
     }
 }
-

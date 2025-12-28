@@ -118,7 +118,11 @@ impl LabManager {
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
 
-        info!("Test {} {}", test_name, if success { "PASSED" } else { "FAILED" });
+        info!(
+            "Test {} {}",
+            test_name,
+            if success { "PASSED" } else { "FAILED" }
+        );
 
         Ok(TestResult {
             test_name: test_name.to_string(),
@@ -225,7 +229,10 @@ mod tests {
     #[test]
     fn test_lab_manager_creation() {
         let manager = LabManager::new();
-        assert!(manager.scripts_dir().to_string_lossy().contains("benchscale/scripts"));
+        assert!(manager
+            .scripts_dir()
+            .to_string_lossy()
+            .contains("benchscale/scripts"));
     }
 
     #[test]
@@ -241,4 +248,3 @@ mod tests {
         assert_eq!(handle.topology(), "simple-lan");
     }
 }
-

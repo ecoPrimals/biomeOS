@@ -275,4 +275,3 @@ pub struct RelayInfo {
     /// Current status
     pub status: RelayStatus,
 }
-

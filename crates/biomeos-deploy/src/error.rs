@@ -67,4 +67,3 @@ pub enum DeployError {
     #[error("Process execution error: {0}")]
     Process(#[from] nix::errno::Errno),
 }
-

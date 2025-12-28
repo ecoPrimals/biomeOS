@@ -21,8 +21,7 @@ async fn main() -> Result<()> {
     let subscriber = FmtSubscriber::builder()
         .with_max_level(Level::INFO)
         .finish();
-    tracing::subscriber::set_global_default(subscriber)
-        .expect("setting default subscriber failed");
+    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 
     info!("🌱 BiomeOS P2P Coordination Demo: Full Ecosystem Integration");
     info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -46,7 +45,7 @@ async fn main() -> Result<()> {
     // Step 1: Initialize BiomeOS
     info!("🏗️  Step 1: Initializing BiomeOS ecosystem...");
     info!("");
-    
+
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
     info!("✅ BiomeOS initialized");
@@ -290,4 +289,3 @@ async fn main() -> Result<()> {
 
     Ok(())
 }
-

@@ -56,12 +56,13 @@ impl HealthCheck {
             });
         }
 
-        let contents = tokio::fs::read_to_string(log_path)
-            .await
-            .map_err(|e| DeployError::HealthCheck {
-                vm_name: vm_name.to_string(),
-                message: format!("Failed to read serial log: {}", e),
-            })?;
+        let contents =
+            tokio::fs::read_to_string(log_path)
+                .await
+                .map_err(|e| DeployError::HealthCheck {
+                    vm_name: vm_name.to_string(),
+                    message: format!("Failed to read serial log: {}", e),
+                })?;
 
         // Check for boot completion indicators
         let boot_completed = contents.contains("BiomeOS Init Complete")
@@ -142,4 +143,3 @@ impl HealthCheck {
         }
     }
 }
-

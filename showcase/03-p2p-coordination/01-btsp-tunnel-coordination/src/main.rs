@@ -10,7 +10,7 @@
 
 use anyhow::Result;
 use biomeos_core::p2p_coordination::{
-    BtspCoordinator, LineageProof, SecurityProvider, DiscoveryProvider,
+    BtspCoordinator, DiscoveryProvider, LineageProof, SecurityProvider,
 };
 use std::sync::Arc;
 use std::time::SystemTime;
@@ -64,7 +64,10 @@ async fn main() -> Result<()> {
     println!("   Verifying tunnel health...");
     println!();
 
-    match coordinator.create_tunnel("alice", "bob", lineage_proof).await {
+    match coordinator
+        .create_tunnel("alice", "bob", lineage_proof)
+        .await
+    {
         Ok(tunnel) => {
             println!("✅ BTSP tunnel created successfully!");
             println!();
@@ -138,7 +141,7 @@ impl SecurityProvider for MockSecurityProvider {
         node_b: &str,
         _proof: &LineageProof,
     ) -> Result<biomeos_core::p2p_coordination::TunnelRequest> {
-        use biomeos_core::p2p_coordination::{TunnelRequest, TransportEndpoint};
+        use biomeos_core::p2p_coordination::{TransportEndpoint, TunnelRequest};
 
         Ok(TunnelRequest {
             id: format!("tunnel-{}-{}", node_a, node_b),
@@ -165,7 +168,7 @@ impl SecurityProvider for MockSecurityProvider {
         &self,
         _tunnel_id: &str,
     ) -> Result<biomeos_core::p2p_coordination::TunnelHealth> {
-        use biomeos_core::p2p_coordination::{TunnelHealth, HealthStatus};
+        use biomeos_core::p2p_coordination::{HealthStatus, TunnelHealth};
 
         Ok(TunnelHealth {
             encryption_status: HealthStatus::Healthy,
@@ -235,7 +238,7 @@ impl DiscoveryProvider for MockDiscoveryProvider {
         &self,
         _transport_id: &str,
     ) -> Result<biomeos_core::p2p_coordination::TransportHealth> {
-        use biomeos_core::p2p_coordination::{TransportHealth, HealthStatus};
+        use biomeos_core::p2p_coordination::{HealthStatus, TransportHealth};
 
         Ok(TransportHealth {
             connection_status: HealthStatus::Healthy,
@@ -257,4 +260,3 @@ impl DiscoveryProvider for MockDiscoveryProvider {
         })
     }
 }
-

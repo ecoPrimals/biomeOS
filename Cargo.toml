@@ -18,7 +18,7 @@ members = [
     "showcase/03-p2p-coordination/04-multi-tower-federation",
     "showcase/03-p2p-coordination/05-full-ecosystem-integration",
     "crates/biomeos-boot",
-    "crates/biomeos-deploy",
+    "crates/biomeos-deploy", "crates/biomeos-test-utils",
 ]
 
 [workspace.package]

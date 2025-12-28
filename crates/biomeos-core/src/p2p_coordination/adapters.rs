@@ -23,8 +23,8 @@
 //! - **Error Handling**: Proper error propagation
 //! - **Health Monitoring**: Real-time health checks
 
-use super::{DiscoveryProvider, SecurityProvider};
 use super::types::{BroadcastKeys, EncryptedDiscoveryConfig, TransportHealth, TunnelHealth};
+use super::{DiscoveryProvider, SecurityProvider};
 use crate::api_adapter::cli_adapter::CliAdapter;
 use crate::clients::songbird::SongbirdClient;
 use anyhow::{Context, Result};
@@ -86,7 +86,7 @@ impl SecurityProvider for BeardogSecurityAdapter {
         let output = result.stdout();
 
         // Parse BearDog's output
-        let tunnel_id = Self::parse_tunnel_id(&output)?;
+        let tunnel_id = Self::parse_tunnel_id(output)?;
         let endpoint_a = super::TransportEndpoint {
             node_id: node_a.to_string(),
             address: format!("btsp://{}", node_a),
@@ -166,7 +166,7 @@ impl SecurityProvider for BeardogSecurityAdapter {
         let output = result.stdout();
 
         // Parse keys from output
-        let broadcast_key = Self::parse_broadcast_key(&output)?;
+        let broadcast_key = Self::parse_broadcast_key(output)?;
 
         Ok(BroadcastKeys {
             broadcast_key,
@@ -180,11 +180,7 @@ impl SecurityProvider for BeardogSecurityAdapter {
         })
     }
 
-    async fn verify_lineage(
-        &self,
-        requester: &str,
-        target: &str,
-    ) -> Result<super::LineageInfo> {
+    async fn verify_lineage(&self, requester: &str, target: &str) -> Result<super::LineageInfo> {
         debug!(
             "BeardogAdapter: Verifying lineage between {} and {}",
             requester, target
@@ -308,7 +304,10 @@ impl DiscoveryProvider for SongbirdDiscoveryAdapter {
         // For now, we'll log that it would happen
         info!("SongbirdAdapter: Encrypted mode would be enabled here");
         info!("   Mode: {:?}", config.mode);
-        info!("   Encryption key size: {} bytes", config.encryption_key.len());
+        info!(
+            "   Encryption key size: {} bytes",
+            config.encryption_key.len()
+        );
 
         Ok(())
     }

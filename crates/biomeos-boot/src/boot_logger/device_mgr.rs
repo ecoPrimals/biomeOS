@@ -2,9 +2,9 @@
 //!
 //! Creates and manages device nodes required for boot logging.
 
-use std::path::Path;
-use nix::sys::stat::{mknod, Mode, SFlag, makedev};
 use crate::init_error::{BootError, Result};
+use nix::sys::stat::{makedev, mknod, Mode, SFlag};
+use std::path::Path;
 
 /// Manages device node creation and permissions
 pub struct DeviceManager;
@@ -28,12 +28,12 @@ impl DeviceManager {
     /// - mknod system call fails
     pub fn ensure_serial_device() -> Result<()> {
         let path = "/dev/ttyS0";
-        
+
         // Check if already exists
         if Path::new(path).exists() {
             return Ok(());
         }
-        
+
         // Ensure /dev directory exists
         if !Path::new("/dev").exists() {
             return Err(BootError::DirectoryCreation {
@@ -41,26 +41,27 @@ impl DeviceManager {
                 error: "Directory doesn't exist".to_string(),
             });
         }
-        
+
         // Create character device
         // Major 4 = TTY devices, Minor 64 = ttyS0 (COM1)
         mknod(
             path,
             SFlag::S_IFCHR,
             Mode::S_IRUSR | Mode::S_IWUSR | Mode::S_IRGRP | Mode::S_IWGRP,
-            makedev(4, 64)
-        ).map_err(|e| BootError::DeviceCreation {
+            makedev(4, 64),
+        )
+        .map_err(|e| BootError::DeviceCreation {
             device: path.to_string(),
             error: format!("mknod failed: {}", e),
         })?;
-        
+
         // Note: chown requires additional nix features
         // For now, device is created with current user permissions
         // In production (as root), this will be root-owned automatically
-        
+
         Ok(())
     }
-    
+
     /// Ensure VGA console device exists
     ///
     /// Creates `/dev/tty0` if it doesn't exist.
@@ -70,25 +71,26 @@ impl DeviceManager {
     /// - Minor: 0 (tty0/VGA console)
     pub fn ensure_vga_device() -> Result<()> {
         let path = "/dev/tty0";
-        
+
         if Path::new(path).exists() {
             return Ok(());
         }
-        
+
         // Major 4, Minor 0 = tty0 (VGA console)
         mknod(
             path,
             SFlag::S_IFCHR,
             Mode::S_IRUSR | Mode::S_IWUSR | Mode::S_IRGRP | Mode::S_IWGRP,
-            makedev(4, 0)
-        ).map_err(|e| BootError::DeviceCreation {
+            makedev(4, 0),
+        )
+        .map_err(|e| BootError::DeviceCreation {
             device: path.to_string(),
             error: format!("mknod failed: {}", e),
         })?;
-        
+
         Ok(())
     }
-    
+
     /// Setup /dev/console symlink
     ///
     /// Creates a symlink from `/dev/console` to `/dev/ttyS0`, ensuring
@@ -96,20 +98,20 @@ impl DeviceManager {
     pub fn setup_console_symlink() -> Result<()> {
         let console_path = "/dev/console";
         let target = "/dev/ttyS0";
-        
+
         // Remove existing console device/symlink if present
         if Path::new(console_path).exists() {
-            std::fs::remove_file(console_path)
-                .ok(); // Ignore errors, may not have permission
+            std::fs::remove_file(console_path).ok(); // Ignore errors, may not have permission
         }
-        
+
         // Create symlink
-        std::os::unix::fs::symlink(target, console_path)
-            .map_err(|e| BootError::DeviceCreation {
+        std::os::unix::fs::symlink(target, console_path).map_err(|e| {
+            BootError::DeviceCreation {
                 device: console_path.to_string(),
                 error: format!("symlink failed: {}", e),
-            })?;
-        
+            }
+        })?;
+
         Ok(())
     }
 }
@@ -117,14 +119,14 @@ impl DeviceManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_device_manager_safe() {
         // Test that DeviceManager can be constructed
         // (actual device creation requires root, so just test structure)
         let _ = DeviceManager;
     }
-    
+
     #[test]
     fn test_device_paths() {
         // Verify device paths are correct
@@ -132,4 +134,3 @@ mod tests {
         assert_eq!("/dev/tty0".len(), 9);
     }
 }
-

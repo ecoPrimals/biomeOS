@@ -4,14 +4,11 @@
 
 use anyhow::Result;
 use biomeos_core::vm_federation::VmFederationManager;
-use tracing_subscriber;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize logging
-    tracing_subscriber::fmt()
-        .with_env_filter("info")
-        .init();
+    tracing_subscriber::fmt().with_env_filter("info").init();
 
     println!("🚀 BiomeOS VM Federation Example");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -34,7 +31,7 @@ async fn main() -> Result<()> {
                 println!();
                 println!("Federation not found. Creating new one...");
                 println!();
-                
+
                 // Create federation
                 println!("Step 1: Creating federation...");
                 manager.create(federation_name).await?;
@@ -88,4 +85,3 @@ async fn main() -> Result<()> {
 
     Ok(())
 }
-

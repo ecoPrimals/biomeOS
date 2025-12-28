@@ -18,8 +18,8 @@
 //! - `RoutingProvider` (optional) - Provides lineage-gated relay
 
 use super::{
-    DiscoveryMode, DiscoveryProvider, EncryptedDiscoveryConfig,
-    RelayInfo, RelayStatus, RoutingProvider, SecurityProvider,
+    DiscoveryMode, DiscoveryProvider, EncryptedDiscoveryConfig, RelayInfo, RelayStatus,
+    RoutingProvider, SecurityProvider,
 };
 use anyhow::{Context, Result};
 use std::sync::Arc;
@@ -50,10 +50,7 @@ impl BirdSongCoordinator {
     ///
     /// This constructor is **agnostic** - it accepts any primal that implements
     /// the required traits, regardless of what it's called.
-    pub fn new(
-        security: Arc<dyn SecurityProvider>,
-        discovery: Arc<dyn DiscoveryProvider>,
-    ) -> Self {
+    pub fn new(security: Arc<dyn SecurityProvider>, discovery: Arc<dyn DiscoveryProvider>) -> Self {
         Self {
             security,
             discovery,
@@ -222,4 +219,3 @@ mod tests {
         assert_ne!(DiscoveryMode::Plaintext, DiscoveryMode::Encrypted);
     }
 }
-

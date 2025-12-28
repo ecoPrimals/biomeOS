@@ -28,6 +28,9 @@ pub mod lab;
 // VM Federation (benchScale + libvirt)
 pub mod vm_federation;
 
+// Observability (sovereignty-respecting)
+pub mod observability;
+
 // Legacy support - keep existing modules for compatibility
 pub mod ai_first_api;
 pub mod byob;

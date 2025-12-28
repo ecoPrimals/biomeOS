@@ -12,9 +12,7 @@
 //! - Privacy-preserving service discovery
 
 use anyhow::Result;
-use biomeos_core::p2p_coordination::{
-    BirdSongCoordinator, SecurityProvider, DiscoveryProvider,
-};
+use biomeos_core::p2p_coordination::{BirdSongCoordinator, DiscoveryProvider, SecurityProvider};
 use std::sync::Arc;
 use std::time::SystemTime;
 
@@ -247,4 +245,3 @@ impl DiscoveryProvider for MockDiscoveryProvider {
         })
     }
 }
-

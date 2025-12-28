@@ -82,12 +82,11 @@ impl Topology {
             message: format!("Failed to read topology file {}: {}", path_ref.display(), e),
         })?;
 
-        let topology: Topology = serde_yaml::from_str(&contents).map_err(|e| {
-            DeployError::TopologyParse {
+        let topology: Topology =
+            serde_yaml::from_str(&contents).map_err(|e| DeployError::TopologyParse {
                 path: path_ref.to_path_buf(),
                 source: e,
-            }
-        })?;
+            })?;
 
         topology.validate()?;
         Ok(topology)
@@ -185,4 +184,3 @@ mod tests {
         assert!(topology.get_vm("vm1").is_some());
     }
 }
-

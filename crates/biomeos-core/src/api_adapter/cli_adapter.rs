@@ -183,7 +183,7 @@ impl CliAdapter {
     }
 
     /// Check if the binary exists and is executable
-    /// 
+    ///
     /// Supports both full paths and command names (searched in PATH)
     pub fn verify_binary(&self) -> Result<()> {
         // Check if it's a full path or contains path separators
@@ -196,8 +196,8 @@ impl CliAdapter {
             #[cfg(unix)]
             {
                 use std::os::unix::fs::PermissionsExt;
-                let metadata =
-                    std::fs::metadata(&self.binary_path).context("Failed to read binary metadata")?;
+                let metadata = std::fs::metadata(&self.binary_path)
+                    .context("Failed to read binary metadata")?;
                 let permissions = metadata.permissions();
                 if permissions.mode() & 0o111 == 0 {
                     anyhow::bail!("Binary is not executable: {:?}", self.binary_path);
@@ -212,7 +212,7 @@ impl CliAdapter {
                 .stdout(Stdio::null())
                 .stderr(Stdio::null())
                 .status();
-            
+
             match result {
                 Ok(_) => Ok(()), // Command executed, so it exists
                 Err(e) if e.kind() == std::io::ErrorKind::NotFound => {

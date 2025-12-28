@@ -4,20 +4,20 @@
 //! Replaces bash scripts with type-safe, async Rust implementation.
 
 pub mod error;
+pub mod federation;
+pub mod health;
 pub mod network;
 pub mod qemu;
 pub mod topology;
-pub mod federation;
-pub mod health;
 pub mod verify;
 
 pub use error::{DeployError, Result};
 pub use federation::{Federation, FederationConfig};
 pub use health::{HealthCheck, HealthStatus, VmHealth};
-pub use network::{NetworkBridge, BridgeConfig};
-pub use qemu::{QemuInstance, QemuConfig};
+pub use network::{BridgeConfig, NetworkBridge};
+pub use qemu::{QemuConfig, QemuInstance};
 pub use topology::{Topology, VmTopology};
-pub use verify::{VmVerifier, VerifyConfig, VerifyResult};
+pub use verify::{VerifyConfig, VerifyResult, VmVerifier};
 
 /// Re-export commonly used types
 pub mod prelude {
@@ -28,4 +28,3 @@ pub mod prelude {
     pub use crate::qemu::QemuInstance;
     pub use crate::topology::Topology;
 }
-

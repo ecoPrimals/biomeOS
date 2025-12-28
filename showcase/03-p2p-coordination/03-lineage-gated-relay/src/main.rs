@@ -21,8 +21,7 @@ async fn main() -> Result<()> {
     let subscriber = FmtSubscriber::builder()
         .with_max_level(Level::INFO)
         .finish();
-    tracing::subscriber::set_global_default(subscriber)
-        .expect("setting default subscriber failed");
+    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 
     info!("🌱 BiomeOS P2P Coordination Demo: Lineage-Gated Relay");
     info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -84,15 +83,15 @@ async fn main() -> Result<()> {
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
     let carol_lineage_valid = true; // Mock: Carol is family
-    
+
     if carol_lineage_valid {
         info!("✅ Lineage verified: Carol is family!");
         info!("   Carol can use Bob's relay");
         info!("");
-        
+
         info!("🔗 Establishing relay connection...");
         tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-        
+
         info!("✅ Relay connection established!");
         info!("   Carol → Bob → Internet");
         info!("   Status: Active");
@@ -110,7 +109,7 @@ async fn main() -> Result<()> {
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
     let dave_lineage_valid = false; // Mock: Dave is not family
-    
+
     if !dave_lineage_valid {
         info!("❌ Lineage verification failed: Dave is not family");
         info!("   Dave cannot use Bob's relay");
@@ -190,4 +189,3 @@ struct RelayOffer {
     bandwidth_limit: Option<String>,
     expires_at: SystemTime,
 }
-

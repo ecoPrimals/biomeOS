@@ -112,7 +112,10 @@ mod tests {
         // Should return something valid
         assert!(matches!(
             arch,
-            Architecture::X86_64 | Architecture::Aarch64 | Architecture::Riscv64 | Architecture::Unknown
+            Architecture::X86_64
+                | Architecture::Aarch64
+                | Architecture::Riscv64
+                | Architecture::Unknown
         ));
     }
 
@@ -128,7 +131,7 @@ mod tests {
         let result = detect().await;
         // Should succeed on any system
         assert!(result.is_ok());
-        
+
         if let Ok(hw) = result {
             assert!(hw.cpu_count.get() > 0);
             // Memory might be 0 in some test environments
@@ -136,4 +139,3 @@ mod tests {
         }
     }
 }
-

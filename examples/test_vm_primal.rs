@@ -48,12 +48,17 @@ async fn main() -> Result<()> {
 
     let status = tokio::process::Command::new("qemu-system-x86_64")
         .args([
-            "-name", vm_name,
-            "-drive", &format!("file={},format=qcow2,if=ide", disk_image.display()),
-            "-m", "2G",
-            "-smp", "2",
+            "-name",
+            vm_name,
+            "-drive",
+            &format!("file={},format=qcow2,if=ide", disk_image.display()),
+            "-m",
+            "2G",
+            "-smp",
+            "2",
             "-enable-kvm",
-            "-serial", &format!("file:{}", serial_log.display()),
+            "-serial",
+            &format!("file:{}", serial_log.display()),
             "-nographic",
         ])
         .status()
@@ -68,5 +73,3 @@ async fn main() -> Result<()> {
 
     Ok(())
 }
-
-

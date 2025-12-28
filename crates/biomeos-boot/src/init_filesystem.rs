@@ -33,25 +33,32 @@ impl FilesystemManager {
         info!("📁 Mounting essential filesystems...");
 
         // /proc - Process information
-        self.mount_if_needed("/proc", "proc", "proc", MsFlags::empty()).await?;
+        self.mount_if_needed("/proc", "proc", "proc", MsFlags::empty())
+            .await?;
 
         // /sys - Kernel and device information
-        self.mount_if_needed("/sys", "sysfs", "sysfs", MsFlags::empty()).await?;
+        self.mount_if_needed("/sys", "sysfs", "sysfs", MsFlags::empty())
+            .await?;
 
         // /dev - Device files (may already be mounted by kernel)
-        self.mount_if_needed("/dev", "devtmpfs", "devtmpfs", MsFlags::empty()).await?;
+        self.mount_if_needed("/dev", "devtmpfs", "devtmpfs", MsFlags::empty())
+            .await?;
 
         // /dev/pts - Pseudo-terminals
-        self.mount_if_needed("/dev/pts", "devpts", "devpts", MsFlags::empty()).await?;
+        self.mount_if_needed("/dev/pts", "devpts", "devpts", MsFlags::empty())
+            .await?;
 
         // /dev/shm - Shared memory
-        self.mount_if_needed("/dev/shm", "tmpfs", "tmpfs", MsFlags::empty()).await?;
+        self.mount_if_needed("/dev/shm", "tmpfs", "tmpfs", MsFlags::empty())
+            .await?;
 
         // /run - Runtime data
-        self.mount_if_needed("/run", "tmpfs", "tmpfs", MsFlags::empty()).await?;
+        self.mount_if_needed("/run", "tmpfs", "tmpfs", MsFlags::empty())
+            .await?;
 
         // /tmp - Temporary files
-        self.mount_if_needed("/tmp", "tmpfs", "tmpfs", MsFlags::empty()).await?;
+        self.mount_if_needed("/tmp", "tmpfs", "tmpfs", MsFlags::empty())
+            .await?;
 
         info!("✅ Essential filesystems mounted");
         Ok(())
@@ -85,12 +92,12 @@ impl FilesystemManager {
         }
 
         // Create mount point if it doesn't exist
-        tokio::fs::create_dir_all(&target_path)
-            .await
-            .map_err(|e| BootError::DirectoryCreation {
+        tokio::fs::create_dir_all(&target_path).await.map_err(|e| {
+            BootError::DirectoryCreation {
                 path: target_path.clone(),
                 error: e.to_string(),
-            })?;
+            }
+        })?;
 
         // Try to mount
         match mount(
@@ -154,4 +161,3 @@ mod tests {
         assert!(mgr.is_mounted("/proc"));
     }
 }
-

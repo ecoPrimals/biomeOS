@@ -32,7 +32,9 @@ async fn main() -> Result<()> {
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!();
     println!("📝 Would execute:");
-    println!("   benchscale/scripts/create-lab.sh --topology simple-lan --name biomeos-experiment-01");
+    println!(
+        "   benchscale/scripts/create-lab.sh --topology simple-lan --name biomeos-experiment-01"
+    );
     println!();
     sleep(Duration::from_millis(500)).await;
     println!("✅ Lab created successfully! (mock)");
@@ -157,4 +159,3 @@ async fn main() -> Result<()> {
 
     Ok(())
 }
-

@@ -105,10 +105,8 @@ impl QemuInstance {
         ));
 
         // Network (bridge mode)
-        cmd.arg("-netdev").arg(format!(
-            "bridge,id=net0,br={}",
-            self.config.bridge_name
-        ));
+        cmd.arg("-netdev")
+            .arg(format!("bridge,id=net0,br={}", self.config.bridge_name));
         cmd.arg("-device").arg(format!(
             "virtio-net-pci,netdev=net0,mac={}",
             self.config.mac_address
@@ -143,7 +141,10 @@ impl QemuInstance {
 
         self.process = Some(child);
 
-        info!("✅ QEMU instance {} started (ID: {})", self.config.name, self.id);
+        info!(
+            "✅ QEMU instance {} started (ID: {})",
+            self.config.name, self.id
+        );
 
         Ok(())
     }
@@ -180,7 +181,10 @@ impl QemuInstance {
                     }
                     Ok(None) => {
                         if start.elapsed() > timeout {
-                            warn!("QEMU instance {} did not stop gracefully, killing", self.config.name);
+                            warn!(
+                                "QEMU instance {} did not stop gracefully, killing",
+                                self.config.name
+                            );
                             process.kill().map_err(|e| DeployError::QemuProcess {
                                 message: format!("Failed to kill QEMU process: {}", e),
                             })?;
@@ -216,4 +220,3 @@ impl Drop for QemuInstance {
         }
     }
 }
-

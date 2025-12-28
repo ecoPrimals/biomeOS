@@ -143,3 +143,16 @@ async fn test_health_check_config() {
     let url = config.url_pattern.replace("PORT", "9010");
     assert_eq!(url, "http://localhost:9010/health");
 }
+
+#[tokio::test]
+async fn test_stop_command_discovery() {
+    use super::discovery::discover_stop_command;
+    use std::path::PathBuf;
+    
+    // Test with a binary that doesn't exist (should return None)
+    let fake_binary = PathBuf::from("/tmp/nonexistent-primal");
+    let stop_cmd = discover_stop_command(&fake_binary).await;
+    
+    // Should return None when no stop command found
+    assert!(stop_cmd.is_none(), "Non-existent binary should have no stop command");
+}
