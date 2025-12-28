@@ -294,21 +294,22 @@ impl MinimalObserver {
         debug!("📊 Preparing metrics for secure sharing");
 
         // Serialize metrics for transmission
-        let metrics_json = serde_json::to_string(metrics)
-            .context("Failed to serialize metrics")?;
+        let metrics_json = serde_json::to_string(metrics).context("Failed to serialize metrics")?;
 
         // Step 1: Encrypt via BearDog (if available)
         let _encrypted_payload = if let Ok(beardog_endpoint) = std::env::var("BEARDOG_ENDPOINT") {
             debug!("🔒 Encrypting metrics via BearDog at {}", beardog_endpoint);
-            
+
             // In production, this would:
             // 1. Call BearDog's encryption API
             // 2. Use lineage-based keys
             // 3. Return encrypted payload
-            
+
             // For now, we prepare the structure for encryption
-            format!("{{\"encrypted\": true, \"lineage\": \"{}\", \"data\": \"<encrypted>\"}}", 
-                    family.lineage_id)
+            format!(
+                "{{\"encrypted\": true, \"lineage\": \"{}\", \"data\": \"<encrypted>\"}}",
+                family.lineage_id
+            )
         } else {
             // Without BearDog, we can't share securely (sovereignty principle)
             warn!("⚠️  BearDog not available - cannot share metrics securely");
@@ -317,13 +318,16 @@ impl MinimalObserver {
 
         // Step 2: Route via Songbird (if available)
         if let Ok(songbird_endpoint) = std::env::var("SONGBIRD_ENDPOINT") {
-            debug!("📡 Routing encrypted metrics via Songbird at {}", songbird_endpoint);
-            
+            debug!(
+                "📡 Routing encrypted metrics via Songbird at {}",
+                songbird_endpoint
+            );
+
             // In production, this would:
             // 1. Call Songbird's routing API
             // 2. Send to family endpoint
             // 3. Verify delivery
-            
+
             info!(
                 "✅ Metrics shared securely with family {} via Songbird",
                 family.endpoint.as_deref().unwrap_or("unknown")

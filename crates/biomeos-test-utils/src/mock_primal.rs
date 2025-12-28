@@ -71,10 +71,10 @@ impl MockPrimal {
             .context("Failed to bind mock server")?;
 
         let actual_addr = listener.local_addr()?;
-        
+
         // Update addr to reflect actual bound address (important for port 0)
         self.addr = actual_addr;
-        
+
         let handle = tokio::spawn(async move {
             axum::serve(listener, app).await.ok();
         });
@@ -84,11 +84,7 @@ impl MockPrimal {
             *handle_lock = Some(handle);
         }
 
-        tracing::info!(
-            "Mock primal '{}' started on {}",
-            self.name,
-            actual_addr
-        );
+        tracing::info!("Mock primal '{}' started on {}", self.name, actual_addr);
 
         Ok(self)
     }
@@ -286,4 +282,3 @@ mod tests {
         mock.stop().await.ok();
     }
 }
-

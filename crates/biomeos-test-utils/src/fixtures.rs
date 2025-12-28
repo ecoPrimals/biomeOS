@@ -65,4 +65,3 @@ mod tests {
         assert_eq!(manifest["version"], "1.0.0");
     }
 }
-

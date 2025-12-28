@@ -104,7 +104,7 @@ async fn try_subcommand(binary: &Path, cmd: &str) -> Result<PrimalInterface> {
         Ok(Ok(output)) if output.status.success() => {
             // Try to discover stop command
             let stop_cmd = discover_stop_command(binary).await;
-            
+
             Ok(PrimalInterface::Subcommand {
                 start_cmd: cmd.to_string(),
                 stop_cmd,
@@ -205,17 +205,14 @@ async fn detect_port_config(binary: &Path) -> PortConfigMethod {
 /// Returns None if no stop command is found (fallback to SIGTERM).
 pub(crate) async fn discover_stop_command(binary: &Path) -> Option<String> {
     const STOP_COMMANDS: &[&str] = &["stop", "shutdown", "halt", "quit"];
-    
+
     for stop_cmd in STOP_COMMANDS {
         let result = tokio::time::timeout(
             Duration::from_secs(2),
-            Command::new(binary)
-                .arg(stop_cmd)
-                .arg("--help")
-                .output(),
+            Command::new(binary).arg(stop_cmd).arg("--help").output(),
         )
         .await;
-        
+
         if let Ok(Ok(output)) = result {
             if output.status.success() {
                 debug!(
@@ -227,7 +224,7 @@ pub(crate) async fn discover_stop_command(binary: &Path) -> Option<String> {
             }
         }
     }
-    
+
     // No stop command found - will use SIGTERM
     debug!(
         "No stop command found for {}, will use SIGTERM",

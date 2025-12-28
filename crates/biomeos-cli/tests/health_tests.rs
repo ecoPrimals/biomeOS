@@ -17,10 +17,7 @@ async fn test_health_command_basic() -> Result<()> {
 
     // Mock primal should respond to health checks
     let client = reqwest::Client::new();
-    let response = client
-        .get(format!("{}/health", mock.url()))
-        .send()
-        .await?;
+    let response = client.get(format!("{}/health", mock.url())).send().await?;
 
     assert!(response.status().is_success());
 
@@ -50,7 +47,7 @@ async fn test_health_command_detailed() -> Result<()> {
         .await?;
 
     assert!(response.status().is_success());
-    
+
     let capabilities: Vec<String> = response.json().await?;
     assert_eq!(capabilities.len(), 2);
     assert!(capabilities.contains(&"health".to_string()));
@@ -79,7 +76,7 @@ async fn test_health_command_multiple_services() -> Result<()> {
 
     // Both should respond to health
     let client = reqwest::Client::new();
-    
+
     let resp1 = client.get(format!("{}/health", mock1.url())).send().await?;
     let resp2 = client.get(format!("{}/health", mock2.url())).send().await?;
 
@@ -106,10 +103,7 @@ async fn test_health_probe_timeout() -> Result<()> {
         .timeout(std::time::Duration::from_secs(5))
         .build()?;
 
-    let response = client
-        .get(format!("{}/health", mock.url()))
-        .send()
-        .await?;
+    let response = client.get(format!("{}/health", mock.url())).send().await?;
 
     assert!(response.status().is_success());
 
@@ -144,10 +138,7 @@ async fn test_health_scan_discovery() -> Result<()> {
     // All services should be discoverable
     for mock in &mocks {
         let client = reqwest::Client::new();
-        let response = client
-            .get(format!("{}/health", mock.url()))
-            .send()
-            .await?;
+        let response = client.get(format!("{}/health", mock.url())).send().await?;
         assert!(response.status().is_success());
     }
 
@@ -158,4 +149,3 @@ async fn test_health_scan_discovery() -> Result<()> {
 
     Ok(())
 }
-

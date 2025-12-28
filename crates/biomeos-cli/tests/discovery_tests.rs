@@ -24,7 +24,7 @@ async fn test_discovery_capability_based() -> Result<()> {
         .await?;
 
     assert!(response.status().is_success());
-    
+
     let capabilities: Vec<String> = response.json().await?;
     assert_eq!(capabilities.len(), 2);
     assert!(capabilities.contains(&"compute".to_string()));
@@ -88,10 +88,7 @@ async fn test_discovery_endpoint_probe() -> Result<()> {
 
     // Probe the endpoint
     let client = reqwest::Client::new();
-    let response = client
-        .get(format!("{}/health", mock.url()))
-        .send()
-        .await?;
+    let response = client.get(format!("{}/health", mock.url())).send().await?;
 
     assert!(response.status().is_success());
 
@@ -113,10 +110,7 @@ async fn test_discovery_detailed_info() -> Result<()> {
 
     // Get health (basic info)
     let client = reqwest::Client::new();
-    let health_response = client
-        .get(format!("{}/health", mock.url()))
-        .send()
-        .await?;
+    let health_response = client.get(format!("{}/health", mock.url())).send().await?;
 
     assert!(health_response.status().is_success());
 
@@ -127,7 +121,7 @@ async fn test_discovery_detailed_info() -> Result<()> {
         .await?;
 
     assert!(caps_response.status().is_success());
-    
+
     let capabilities: Vec<String> = caps_response.json().await?;
     assert_eq!(capabilities.len(), 3);
 
@@ -164,20 +158,16 @@ async fn test_discovery_registry_based() -> Result<()> {
 async fn test_discovery_no_services() -> Result<()> {
     // Test behavior when no services are available
     // This tests graceful handling of empty discovery
-    
+
     // Try to connect to non-existent service
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_millis(100))
         .build()?;
 
-    let result = client
-        .get("http://localhost:9999/health")
-        .send()
-        .await;
+    let result = client.get("http://localhost:9999/health").send().await;
 
     // Should fail to connect (no service running)
     assert!(result.is_err());
 
     Ok(())
 }
-

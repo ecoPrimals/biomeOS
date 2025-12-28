@@ -10,10 +10,10 @@
 
 #![deny(unsafe_code)]
 
-pub mod mock_primal;
-pub mod fixtures;
 pub mod assertions;
+pub mod fixtures;
+pub mod mock_primal;
 
+pub use fixtures::{create_test_config, create_test_manifest};
 /// Re-export commonly used test utilities
 pub use mock_primal::{MockPrimal, MockPrimalBuilder};
-pub use fixtures::{create_test_config, create_test_manifest};
