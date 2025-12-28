@@ -298,7 +298,7 @@ impl MinimalObserver {
             .context("Failed to serialize metrics")?;
 
         // Step 1: Encrypt via BearDog (if available)
-        let encrypted_payload = if let Ok(beardog_endpoint) = std::env::var("BEARDOG_ENDPOINT") {
+        let _encrypted_payload = if let Ok(beardog_endpoint) = std::env::var("BEARDOG_ENDPOINT") {
             debug!("🔒 Encrypting metrics via BearDog at {}", beardog_endpoint);
             
             // In production, this would:

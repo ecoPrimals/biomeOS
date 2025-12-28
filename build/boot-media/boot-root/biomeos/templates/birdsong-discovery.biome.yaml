@@ -1,0 +1,77 @@
+# BirdSong Encrypted Discovery Configuration
+#
+# This biome demonstrates BiomeOS coordinating BirdSong
+# for privacy-preserving service discovery.
+#
+# "A broadcast that is obvious to family and noise otherwise"
+
+version: "1.0"
+name: "birdsong-discovery"
+description: "Privacy-preserving discovery with BirdSong"
+
+metadata:
+  author: "BiomeOS Team"
+  category: "networking"
+  tags: ["birdsong", "privacy", "discovery"]
+
+# Capability-based primal discovery
+primals:
+  # Any security primal with BirdSong support
+  - capability: "security"
+    features:
+      - "birdsong"
+      - "lineage"
+      - "genetic-keys"
+    preferred: "beardog"
+    
+    config:
+      lineage_id: "demo-family"
+
+  # Any discovery primal with encrypted mode
+  - capability: "discovery"
+    features:
+      - "encrypted"
+      - "mesh"
+    preferred: "songbird"
+    
+    config:
+      discovery_mode: "birdsong"
+
+# BirdSong coordination
+coordination:
+  birdsong:
+    enabled: true
+    family_id: "demo-family"
+    
+    # Privacy controls
+    privacy:
+      encrypt_broadcasts: true
+      hide_ip_addresses: true
+      filter_by_lineage: true
+      
+    # Lineage filter
+    lineage:
+      verify: true
+      max_depth: 5
+
+# Example services using BirdSong discovery
+services:
+  - name: "demo-service"
+    primal: "discovery"
+    type: "mesh-service"
+    
+    config:
+      discovery: "birdsong"
+      visibility: "family-only"
+
+# Resources
+resources:
+  compute:
+    cpu: "0.5"
+    memory: "256Mi"
+
+# Notes:
+# Run this biome to see BiomeOS coordinate BirdSong encrypted discovery.
+# Only family members (verified lineage) can see services!
+# Perfect for showcase demo #2!
+

@@ -1,0 +1,541 @@
+# Songbird Coordination BYOB Manifest
+# Demonstrates Songbird's coordination and orchestration capabilities
+# Pure Rust implementation for deployment across basement towers
+
+name: songbird-coordination
+description: "Songbird coordination and orchestration demonstration"
+version: "1.0.0"
+
+# Team workspace
+team:
+  id: songbird-coordination
+  name: "Songbird Coordination Team"
+  description: "Demonstrating Songbird's coordination capabilities"
+
+# Coordination-specific configuration
+coordination:
+  enabled: true
+  mode: "distributed"
+  consensus: "raft"
+  leader_election: "automatic"
+  
+  # Orchestration settings
+  orchestration:
+    placement_strategy: "optimal"
+    load_balancing: "intelligent"
+    scaling_policy: "adaptive"
+    failure_recovery: "automatic"
+    
+  # Service mesh configuration
+  service_mesh:
+    enabled: true
+    protocol: "grpc"
+    encryption: "beardog"
+    load_balancing: "round_robin"
+    circuit_breaker: "enabled"
+
+# Resource allocation
+quotas:
+  max_cpu_cores: 16
+  max_memory_gb: 64
+  max_storage_gb: 200
+  max_network_mbps: 2000
+  max_services: 10
+
+# Songbird coordination services
+services:
+  # Main coordination engine
+  songbird-coordinator:
+    image: "songbird-core:latest"
+    build:
+      context: "songbird"
+      dockerfile: "Dockerfile.coordinator"
+      
+    resources:
+      cpu: 4
+      memory: 8GB
+      storage: 20GB
+      
+    placement:
+      strategy: "leader_eligible"
+      prefer_capabilities: ["coordination", "orchestration"]
+      anti_affinity: ["songbird-coordinator"]
+      
+    environment:
+      RUST_LOG: "debug"
+      SONGBIRD_MODE: "coordinator"
+      COORDINATION_PROTOCOL: "raft"
+      PLACEMENT_STRATEGY: "optimal"
+      LOAD_BALANCING: "intelligent"
+      BEARDOG_INTEGRATION: "enabled"
+      
+    ports:
+      - "8090:8090"   # Coordination API
+      - "8091:8091"   # Raft consensus
+      - "8092:8092"   # Service mesh
+      
+    volumes:
+      - name: "coordination-state"
+        mount: "/var/lib/songbird/state"
+        size: "10GB"
+        
+    health:
+      check: "curl -f http://localhost:8090/coordination/health"
+      interval: "5s"
+      timeout: "3s"
+      retries: 3
+
+  # Service registry and discovery
+  songbird-registry:
+    image: "songbird-registry:latest"
+    build:
+      context: "songbird"
+      dockerfile: "Dockerfile.registry"
+      
+    resources:
+      cpu: 2
+      memory: 4GB
+      storage: 10GB
+      
+    placement:
+      strategy: "replicated"
+      replicas: 3
+      prefer_capabilities: ["service_registry", "discovery"]
+      
+    environment:
+      RUST_LOG: "info"
+      REGISTRY_MODE: "distributed"
+      CONSISTENCY_LEVEL: "strong"
+      REPLICATION_FACTOR: "3"
+      COORDINATOR_ENDPOINT: "http://songbird-coordinator:8090"
+      
+    ports:
+      - "8100:8100"   # Registry API
+      - "8101:8101"   # Discovery service
+      
+    volumes:
+      - name: "registry-data"
+        mount: "/var/lib/registry"
+        size: "5GB"
+        
+    health:
+      check: "curl -f http://localhost:8100/registry/health"
+      interval: "10s"
+      timeout: "5s"
+      retries: 3
+
+  # Load balancer
+  songbird-balancer:
+    image: "songbird-balancer:latest"
+    build:
+      context: "songbird"
+      dockerfile: "Dockerfile.balancer"
+      
+    resources:
+      cpu: 2
+      memory: 4GB
+      storage: 5GB
+      
+    placement:
+      strategy: "edge_optimized"
+      prefer_capabilities: ["load_balancing", "networking"]
+      prefer_nodes: ["tower-1", "tower-2"]
+      
+    environment:
+      RUST_LOG: "info"
+      BALANCER_MODE: "intelligent"
+      ALGORITHM: "weighted_round_robin"
+      HEALTH_CHECK_INTERVAL: "5s"
+      COORDINATOR_ENDPOINT: "http://songbird-coordinator:8090"
+      REGISTRY_ENDPOINT: "http://songbird-registry:8100"
+      
+    ports:
+      - "8110:8110"   # Load balancer
+      - "8111:8111"   # Admin interface
+      
+    volumes:
+      - name: "balancer-config"
+        mount: "/etc/balancer"
+        size: "1GB"
+        
+    health:
+      check: "curl -f http://localhost:8110/balancer/health"
+      interval: "10s"
+      timeout: "5s"
+      retries: 3
+
+  # Scaling engine
+  songbird-scaler:
+    image: "songbird-scaler:latest"
+    build:
+      context: "songbird"
+      dockerfile: "Dockerfile.scaler"
+      
+    resources:
+      cpu: 1
+      memory: 2GB
+      storage: 5GB
+      
+    placement:
+      strategy: "monitoring_optimized"
+      prefer_capabilities: ["scaling", "monitoring"]
+      collocate_with: ["songbird-coordinator"]
+      
+    environment:
+      RUST_LOG: "info"
+      SCALER_MODE: "adaptive"
+      SCALING_POLICY: "predictive"
+      MIN_SCALE_INTERVAL: "30s"
+      COORDINATOR_ENDPOINT: "http://songbird-coordinator:8090"
+      REGISTRY_ENDPOINT: "http://songbird-registry:8100"
+      
+    ports:
+      - "8120:8120"   # Scaling API
+      - "8121:8121"   # Metrics endpoint
+      
+    volumes:
+      - name: "scaler-metrics"
+        mount: "/var/lib/metrics"
+        size: "5GB"
+        
+    health:
+      check: "curl -f http://localhost:8120/scaler/health"
+      interval: "15s"
+      timeout: "5s"
+      retries: 3
+
+  # Demo application tier
+  demo-frontend:
+    image: "songbird-demo-frontend:latest"
+    build:
+      context: "songbird"
+      dockerfile: "Dockerfile.demo-frontend"
+      
+    resources:
+      cpu: 1
+      memory: 2GB
+      storage: 2GB
+      
+    placement:
+      strategy: "user_facing"
+      prefer_capabilities: ["frontend", "web"]
+      prefer_nodes: ["tower-1"]
+      
+    environment:
+      RUST_LOG: "info"
+      DEMO_MODE: "coordination"
+      COORDINATOR_ENDPOINT: "http://songbird-coordinator:8090"
+      REGISTRY_ENDPOINT: "http://songbird-registry:8100"
+      
+    ports:
+      - "3010:3010"   # Web interface
+      
+    volumes:
+      - name: "frontend-assets"
+        mount: "/var/www"
+        size: "1GB"
+        
+    health:
+      check: "curl -f http://localhost:3010/health"
+      interval: "30s"
+      timeout: "10s"
+      retries: 3
+
+  # Demo backend services
+  demo-backend:
+    image: "songbird-demo-backend:latest"
+    build:
+      context: "songbird"
+      dockerfile: "Dockerfile.demo-backend"
+      
+    resources:
+      cpu: 2
+      memory: 4GB
+      storage: 10GB
+      
+    placement:
+      strategy: "compute_optimized"
+      prefer_capabilities: ["backend", "compute"]
+      replicas: 3
+      distribute_across: ["all_towers"]
+      
+    environment:
+      RUST_LOG: "info"
+      DEMO_MODE: "backend"
+      WORKLOAD_TYPE: "cpu_intensive"
+      COORDINATOR_ENDPOINT: "http://songbird-coordinator:8090"
+      
+    ports:
+      - "8200:8200"   # Backend API
+      
+    volumes:
+      - name: "backend-data"
+        mount: "/var/lib/backend"
+        size: "5GB"
+        
+    health:
+      check: "curl -f http://localhost:8200/api/health"
+      interval: "20s"
+      timeout: "5s"
+      retries: 3
+
+  # Demo database
+  demo-database:
+    image: "songbird-demo-db:latest"
+    build:
+      context: "songbird"
+      dockerfile: "Dockerfile.demo-db"
+      
+    resources:
+      cpu: 2
+      memory: 4GB
+      storage: 20GB
+      
+    placement:
+      strategy: "storage_optimized"
+      prefer_capabilities: ["database", "storage"]
+      prefer_nodes: ["tower-3"]
+      
+    environment:
+      RUST_LOG: "info"
+      DATABASE_MODE: "replicated"
+      REPLICATION_FACTOR: "2"
+      COORDINATOR_ENDPOINT: "http://songbird-coordinator:8090"
+      
+    ports:
+      - "5432:5432"   # Database port
+      
+    volumes:
+      - name: "database-data"
+        mount: "/var/lib/postgresql"
+        size: "15GB"
+        
+    health:
+      check: "pg_isready -h localhost -p 5432"
+      interval: "15s"
+      timeout: "5s"
+      retries: 3
+
+# Service dependencies
+dependencies:
+  demo-frontend:
+    depends_on: ["songbird-registry", "songbird-balancer"]
+    
+  demo-backend:
+    depends_on: ["songbird-coordinator", "demo-database"]
+    
+  songbird-balancer:
+    depends_on: ["songbird-coordinator", "songbird-registry"]
+    
+  songbird-scaler:
+    depends_on: ["songbird-coordinator", "songbird-registry"]
+
+# Networking configuration
+networking:
+  # Service mesh
+  mesh:
+    enabled: true
+    protocol: "grpc"
+    encryption: "beardog"
+    
+  # Load balancing
+  load_balancing:
+    algorithm: "intelligent"
+    health_check_interval: "5s"
+    failure_threshold: 3
+    
+  # Ingress configuration
+  ingress:
+    enabled: true
+    endpoints:
+      - name: "coordination-dashboard"
+        service: "demo-frontend"
+        port: 3010
+        path: "/"
+        
+      - name: "coordination-api"
+        service: "songbird-coordinator"
+        port: 8090
+        path: "/api"
+        
+      - name: "registry-api"
+        service: "songbird-registry"
+        port: 8100
+        path: "/registry"
+
+# Storage configuration
+storage:
+  # Coordination state
+  coordination-state:
+    type: "state"
+    size: "10GB"
+    replication: "cross_tower"
+    consistency: "strong"
+    
+  # Registry data
+  registry-data:
+    type: "data"
+    size: "5GB"
+    replication: "cross_tower"
+    consistency: "eventual"
+    
+  # Metrics and monitoring
+  scaler-metrics:
+    type: "metrics"
+    size: "5GB"
+    tier: "hot"
+    retention: "30d"
+    
+  # Application data
+  backend-data:
+    type: "data"
+    size: "5GB"
+    tier: "warm"
+    replication: "local"
+    
+  # Database storage
+  database-data:
+    type: "database"
+    size: "15GB"
+    tier: "hot"
+    replication: "cross_tower"
+    backup: "enabled"
+
+# Monitoring configuration
+monitoring:
+  # Service health
+  health_checks:
+    interval: "10s"
+    timeout: "5s"
+    retries: 3
+    
+  # Performance metrics
+  metrics:
+    coordination_latency: "1s"
+    service_response_time: "5s"
+    resource_utilization: "10s"
+    
+  # Alerts
+  alerts:
+    - name: "coordinator_failure"
+      condition: "coordinator_health == false"
+      action: "failover_to_backup"
+      
+    - name: "high_coordination_latency"
+      condition: "coordination_latency > 100ms"
+      action: "optimize_placement"
+      
+    - name: "service_overload"
+      condition: "cpu_usage > 80%"
+      action: "scale_up"
+
+# Demonstration scenarios
+scenarios:
+  # Basic coordination
+  basic_coordination:
+    description: "Demonstrate basic coordination capabilities"
+    duration: "5m"
+    steps:
+      - "start_coordinator"
+      - "register_services"
+      - "demonstrate_placement"
+      - "show_load_balancing"
+      
+  # Scaling demonstration
+  scaling_demo:
+    description: "Show adaptive scaling capabilities"
+    duration: "10m"
+    steps:
+      - "start_with_minimal_scale"
+      - "generate_increasing_load"
+      - "observe_auto_scaling"
+      - "demonstrate_scale_down"
+      
+  # Failure recovery
+  failure_recovery:
+    description: "Demonstrate failure recovery and resilience"
+    duration: "15m"
+    steps:
+      - "establish_baseline"
+      - "simulate_service_failure"
+      - "observe_automatic_recovery"
+      - "verify_service_continuity"
+      
+  # Multi-tower coordination
+  multi_tower_coordination:
+    description: "Show coordination across multiple towers"
+    duration: "20m"
+    steps:
+      - "deploy_across_towers"
+      - "demonstrate_cross_tower_coordination"
+      - "show_intelligent_placement"
+      - "verify_network_optimization"
+
+# Build configuration
+build:
+  rust:
+    version: "1.70+"
+    features: ["coordination", "service-mesh", "beardog-integration"]
+    
+  docker:
+    base_image: "rust:1.70-slim"
+    optimization: "release"
+    
+  dependencies:
+    - "tokio"
+    - "serde"
+    - "tonic"
+    - "raft"
+    - "beardog-client"
+
+# Deployment configuration
+deployment:
+  strategy: "rolling"
+  parallelism: 2
+  max_unavailable: 1
+  
+  # Health check configuration
+  health_check:
+    initial_delay: "30s"
+    period: "10s"
+    timeout: "5s"
+    failure_threshold: 3
+    
+  # Resource limits
+  limits:
+    cpu: "4"
+    memory: "8Gi"
+    storage: "20Gi"
+
+# Documentation
+documentation:
+  description: |
+    This BYOB manifest demonstrates Songbird's coordination and orchestration
+    capabilities in a pure Rust implementation. It showcases:
+    
+    - Distributed coordination using Raft consensus
+    - Intelligent service placement and load balancing
+    - Adaptive scaling based on real-time metrics
+    - Failure recovery and resilience
+    - Multi-tower coordination
+    
+  usage: |
+    # Deploy the coordination demo
+    biome deploy songbird-coordination.yaml
+    
+    # Monitor coordination status
+    biome exec songbird-coordination songbird-coordinator -- /coordination/status
+    
+    # Access the demo frontend
+    open http://localhost:3010
+    
+    # View coordination metrics
+    biome exec songbird-coordination songbird-coordinator -- /metrics
+
+# Metadata
+metadata:
+  author: "Songbird Team"
+  category: "coordination"
+  tags: ["songbird", "coordination", "orchestration", "rust"]
+  license: "MIT"
+  rust_version: "1.70+" 

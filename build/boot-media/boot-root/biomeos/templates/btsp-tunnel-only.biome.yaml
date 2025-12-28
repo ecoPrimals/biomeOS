@@ -1,0 +1,51 @@
+# BTSP Tunnel Only - Minimal P2P Configuration
+#
+# This is a minimal biome for just BTSP tunnel coordination.
+# Perfect for learning and testing.
+
+version: "1.0"
+name: "btsp-tunnel-minimal"
+description: "Minimal BTSP tunnel demonstration"
+
+metadata:
+  author: "BiomeOS Team"
+  category: "networking"
+  tags: ["btsp", "minimal", "learning"]
+
+# Capability-based primal discovery
+primals:
+  # Any security primal with BTSP
+  - capability: "security"
+    features: ["btsp"]
+    preferred: "beardog"
+
+  # Any discovery primal with transport
+  - capability: "discovery"
+    features: ["transport"]
+    preferred: "songbird"
+
+# Simple BTSP configuration
+coordination:
+  btsp:
+    enabled: true
+    
+    endpoints:
+      - node_id: "alice"
+        address: "localhost:9100"
+      - node_id: "bob"
+        address: "localhost:9101"
+    
+    # Security settings
+    forward_secrecy: true
+    key_rotation: "1h"
+
+# Minimal resources
+resources:
+  compute:
+    cpu: "0.5"
+    memory: "256Mi"
+
+# Notes:
+# Run this biome to see BiomeOS coordinate a simple BTSP tunnel.
+# Perfect for showcase demo #1!
+

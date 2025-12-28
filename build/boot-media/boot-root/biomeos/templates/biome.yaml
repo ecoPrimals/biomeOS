@@ -1,0 +1,197 @@
+# biome.yaml - Completely Agnostic biomeOS Manifest
+# This can define ANY Primal types - current, future, or community-created
+
+metadata:
+  version: "1.0.0"
+  name: "sovereign-dev-biome" 
+  description: "Development environment with sovereignty features"
+  tags: ["development", "sovereign", "ai", "storage"]
+  author: "biomeOS Team"
+  created: "2025-01-15T10:00:00Z"
+
+# Primals section - completely open to any type
+primals:
+  
+  # Current Primals - these exist today
+  compute:
+    primal_type: "toadstool"
+    version: ">=1.0.0"
+    name: "primary-compute"
+    required: true
+    config:
+      # Toadstool-specific config - whatever it needs
+      container_runtime: "podman"
+      vm_engine: "qemu"
+      resource_pools:
+        cpu: 8
+        memory: "16GB"
+        storage: "500GB"
+    networking:
+      host: "0.0.0.0" 
+      port: 8080
+    expose: ["compute.vm", "compute.container"]
+
+  orchestration:
+    primal_type: "songbird"
+    version: "^2.0.0"
+    name: "service-mesh"
+    required: true
+    config:
+      # Songbird-specific config
+      service_discovery: true
+      load_balancing: "round_robin"
+      health_checks: true
+      plugins:
+        - "metrics"
+        - "tracing"
+    networking:
+      port: 8081
+    dependencies: ["compute"]
+    expose: ["orchestration.service", "orchestration.mesh"]
+
+  storage:
+    primal_type: "nestgate"
+    version: ">=3.0.0" 
+    name: "sovereign-nas"
+    required: true
+    config:
+      # NestGate-specific config
+      zfs_pools:
+        - name: "rpool"
+          devices: ["/dev/sda", "/dev/sdb"]
+          raid_level: "mirror"
+      protocols: ["nfs", "smb", "s3"]
+      encryption: "beardog"
+    networking:
+      port: 8082
+    expose: ["storage.zfs", "storage.protocols"]
+
+  ai_platform:
+    primal_type: "squirrel"
+    version: ">=1.5.0"
+    name: "mcp-agents"
+    required: false
+    config:
+      # Squirrel-specific config
+      mcp_protocol: "latest"
+      plugin_system: true
+      ai_models:
+        - "claude-3-sonnet"
+        - "gpt-4"
+      sandboxing: "secure"
+    networking:
+      port: 8083
+    dependencies: ["compute", "orchestration"]
+    expose: ["ai.mcp", "ai.agents", "ai.plugins"]
+
+  security:
+    primal_type: "beardog"
+    version: ">=2.0.0"
+    name: "crypto-security"
+    required: true
+    config:
+      # BearDog-specific config
+      encryption_algorithms: ["ChaCha20-Poly1305", "AES-256-GCM"]
+      key_management: "sovereign"
+      authentication: "biometric+token"
+    networking:
+      port: 8084
+    expose: ["security.encryption", "security.auth"]
+
+  # Future Primals - these don't exist yet but the system can handle them
+  network_mesh:
+    primal_type: "mycelium"  # Future networking primal
+    version: ">=1.0.0"
+    name: "distributed-network"
+    required: false
+    config:
+      # Whatever mycelium needs
+      mesh_topology: "hyperbolic"
+      routing_algorithm: "ant_colony"
+      encryption: "quantum_resistant"
+    expose: ["network.mesh", "network.routing"]
+
+  # Community Primals - third-party extensions
+  custom_ai:
+    primal_type: "community/neural-forge"  # Community-created primal
+    version: "^1.2.0"
+    name: "custom-neural-net"
+    required: false
+    config:
+      # Whatever this community primal needs
+      model_type: "transformer"
+      training_data: "private"
+      inference_mode: "edge"
+    dependencies: ["ai_platform"]
+    expose: ["ai.custom", "ai.neural"]
+
+  experimental:
+    primal_type: "research/quantum-sim"  # Research primal
+    version: ">=0.1.0"
+    name: "quantum-simulator"
+    required: false
+    config:
+      # Experimental config
+      qubit_count: 64
+      noise_model: "realistic"
+      backends: ["qasm", "statevector"]
+    expose: ["quantum.simulation", "quantum.compute"]
+
+# Global networking configuration
+networking:
+  mode: "bridge"
+  discovery:
+    method: "dns"
+    config:
+      domain: "biome.local"
+  ports:
+    web_ui:
+      internal: 3000
+      external: 3000
+      protocol: "tcp"
+      description: "Web UI access"
+
+# Global security configuration  
+security:
+  auth:
+    method: "beardog_unified"
+    config:
+      biometric_required: true
+      token_expiry: "24h"
+  tls:
+    enabled: true
+    certificates:
+      auto_generate: true
+      ca: "biome_ca"
+
+# Global resource limits
+resources:
+  cpu:
+    max_cores: 16
+  memory:
+    max_mb: 32768
+  storage:
+    max_mb: 1048576  # 1TB
+  network:
+    max_bandwidth_mbps: 1000
+
+# Extensions for future features
+extensions:
+  monitoring:
+    enabled: true
+    metrics_endpoint: "/metrics"
+    log_level: "info"
+  
+  backup:
+    enabled: true
+    schedule: "0 2 * * *"  # Daily at 2 AM
+    retention: "30d"
+  
+  updates:
+    auto_update: false
+    check_interval: "24h"
+    
+  custom_hooks:
+    pre_start: ["./scripts/pre-start.sh"]
+    post_start: ["./scripts/post-start.sh"]
+    pre_stop: ["./scripts/pre-stop.sh"] 

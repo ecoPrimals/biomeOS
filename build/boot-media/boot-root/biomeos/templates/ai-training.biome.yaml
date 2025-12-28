@@ -1,0 +1,37 @@
+apiVersion: biomeOS/v1
+kind: Biome
+metadata:
+  name: ai-research-biome
+  description: "AI research template"
+  version: "1.0.0"
+
+services:
+  gpu-trainer:
+    primal: toadstool
+    runtime: GPU
+    image: pytorch/pytorch:latest
+    resources:
+      cpu: 16.0
+      memory: 68719476736  # 64GB
+      gpu: 4
+
+  data-storage:
+    primal: nestgate
+    runtime: Native
+    resources:
+      storage: 1099511627776  # 1TB
+
+  coordinator:
+    primal: songbird
+    runtime: Native
+    resources:
+      cpu: 4.0
+      memory: 17179869184  # 16GB
+
+networking:
+  high_bandwidth: true
+  multi_node: true
+
+security:
+  model_encryption: true
+  access_control: "rbac"

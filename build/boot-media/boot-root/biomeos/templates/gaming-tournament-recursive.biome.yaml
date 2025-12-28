@@ -1,0 +1,255 @@
+# Gaming Tournament Recursive Architecture Example
+# This demonstrates your "ring of songbirds hosted on a toadstool to manage multiregion, 
+# and then another toadstool for the server physics and stuff hosting" scenario
+
+apiVersion: v1
+kind: Biome
+metadata:
+  name: "gaming-tournament-recursive"
+  version: "1.0.0"
+  description: "Multi-region gaming tournament with recursive Songbird orchestration and dedicated physics computation"
+  specialization: "gaming-server"
+  author: "biomeOS Gaming Team"
+
+# Root topology definition - this orchestrates the entire tournament
+topology:
+  topology_type: "recursive"
+  
+  # Ring of Songbirds for multi-region orchestration
+  orchestration_ring:
+    topology: "ring"
+    instances: 3
+    regions: ["us-east", "eu-west", "ap-southeast"]
+    template: "songbird-orchestrator"
+    placement_strategy: "region_distributed"
+    
+    # Each Songbird hosts regional game servers
+    hosts:
+      - topology: "cluster"
+        instances: 4
+        template: "game-server-cluster"
+        placement_strategy: "local_region"
+        
+  # Dedicated physics computation layer
+  physics_layer:
+    topology: "singleton"
+    instances: 1
+    template: "physics-toadstool"
+    placement_strategy: "central"
+    depends_on: ["orchestration_ring"]
+
+# Recursive biome references
+biomes:
+  # Multi-region orchestration ring
+  orchestration-ring:
+    topology: "ring"
+    instances: 3
+    regions: ["us-east", "eu-west", "ap-southeast"]
+    template: "songbird-orchestrator"
+    
+  # Physics computation cluster
+  physics-cluster:
+    topology: "cluster"
+    instances: 1
+    template: "physics-toadstool"
+    depends_on: ["orchestration-ring"]
+
+# Nested biome definitions - the actual templates
+nested_biomes:
+  # Songbird orchestrator hosted on Toadstool
+  songbird-orchestrator:
+    apiVersion: v1
+    kind: Biome
+    metadata:
+      name: "songbird-orchestrator"
+      specialization: "networking-lab"
+      description: "Songbird service mesh orchestrator hosted on Toadstool"
+      
+    primals:
+      # Toadstool hosts the Songbird
+      toadstool:
+        primal_type: "toadstool"
+        priority: 1
+        config:
+          mode: "host"
+          resources:
+            cpu: "4"
+            memory: "16GB"
+            storage: "100GB"
+          features:
+            - "container_runtime"
+            - "service_mesh"
+            - "load_balancing"
+            
+      # Songbird provides orchestration
+      songbird:
+        primal_type: "songbird"
+        priority: 2
+        depends_on: ["toadstool"]
+        config:
+          mode: "orchestrator"
+          topology: "ring"
+          features:
+            - "service_discovery"
+            - "load_balancing"
+            - "health_monitoring"
+            - "cross_region_routing"
+            - "tournament_coordination"
+          ring_config:
+            peer_discovery: true
+            multi_region: true
+            consensus: "raft"
+            
+    networking:
+      inter_region_vpn: true
+      low_latency_routing: true
+      discovery:
+        method: "consul"
+        
+    resources:
+      cpu:
+        max_cores: 4
+      memory:
+        max_mb: 16384
+      storage:
+        max_mb: 102400
+        
+  # Physics computation Toadstool
+  physics-toadstool:
+    apiVersion: v1
+    kind: Biome
+    metadata:
+      name: "physics-toadstool"
+      specialization: "gaming-development"
+      description: "Dedicated physics computation engine"
+      
+    primals:
+      toadstool:
+        primal_type: "toadstool"
+        priority: 1
+        config:
+          mode: "compute"
+          specialization: "physics"
+          resources:
+            cpu: "32"
+            memory: "128GB"
+            gpu: "rtx-4090"
+            storage: "1TB"
+          features:
+            - "physics_simulation"
+            - "collision_detection"
+            - "networking_interpolation"
+            - "state_synchronization"
+            - "anti_cheat_validation"
+            
+    services:
+      physics-engine:
+        runtime: "Native"
+        primal: "toadstool"
+        config:
+          engine: "bullet3"
+          tick_rate: 120
+          world_scale: "large"
+          collision_margin: 0.01
+          
+      sync-service:
+        runtime: "Native"
+        primal: "toadstool"
+        config:
+          protocol: "udp"
+          compression: "lz4"
+          prediction: true
+          
+    resources:
+      cpu:
+        max_cores: 32
+      memory:
+        max_mb: 131072
+      storage:
+        max_mb: 1048576
+
+# Iterative deployment patterns
+iterative:
+  # Ring formation pattern
+  ring-formation:
+    pattern: "ring"
+    instances: 3
+    configuration:
+      ring_size: 3
+      redundancy: 2
+      leader_election: true
+      
+    iteration:
+      variables:
+        ring_position: "{{ index }}"
+        next_peer: "{{ (index + 1) % ring_size }}"
+        prev_peer: "{{ (index - 1 + ring_size) % ring_size }}"
+        region: "{{ regions[index] }}"
+
+# Recursive monitoring configuration
+monitoring:
+  recursive: true
+  aggregation: "hierarchical"
+  
+  metrics:
+    - layer: "orchestration_ring"
+      collect: ["latency", "throughput", "peer_health", "ring_integrity"]
+      thresholds:
+        latency: "< 50ms"
+        throughput: "> 1000 rps"
+        
+    - layer: "physics_layer"
+      collect: ["cpu_usage", "physics_fps", "simulation_quality", "sync_latency"]
+      thresholds:
+        cpu_usage: "< 80%"
+        physics_fps: "> 120"
+        sync_latency: "< 16ms"
+
+# Recursive scaling configuration
+scaling:
+  triggers:
+    - metric: "player_count"
+      threshold: "> 800"
+      action:
+        scale_up:
+          component: "game-server-cluster"
+          instances: "+25%"
+          
+    - metric: "physics_load"
+      threshold: "> 85%"
+      action:
+        scale_up:
+          component: "physics-toadstool"
+          resources:
+            cpu: "+50%"
+            memory: "+50%"
+            
+  constraints:
+    max_instances: 50
+    min_instances: 3
+    cooldown_period: "5m"
+
+# Dependencies for the tournament system
+dependencies:
+  requires:
+    - name: "nvidia-drivers"
+      version: ">=470"
+      reason: "GPU acceleration for physics"
+    - name: "network-tools"
+      version: ">=1.0"
+      reason: "Network optimization"
+      
+  suggests:
+    - name: "monitoring-dashboard"
+      version: ">=2.0"
+      reason: "Tournament monitoring"
+    - name: "anti-cheat-system"
+      version: ">=1.5"
+      reason: "Fair play enforcement"
+      
+  features:
+    spectator-mode:
+      description: "Enable spectator streaming"
+      dependencies: ["streaming-service"]
+      services: ["spectator-api"]
+      default_enabled: true

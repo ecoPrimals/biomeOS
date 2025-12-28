@@ -96,7 +96,8 @@ impl Drop for QemuVm {
 #[test]
 #[ignore] // Requires built ISO
 fn test_qemu_boot_iso() -> Result<()> {
-    let project_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+    let binding = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let project_root = binding
         .parent()
         .unwrap()
         .parent()

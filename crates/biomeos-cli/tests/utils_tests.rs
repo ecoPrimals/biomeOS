@@ -65,7 +65,6 @@ fn format_bytes(bytes: u64) -> String {
 #[test]
 fn test_format_duration() {
     use std::time::Duration;
-    use std::time::Duration;
     
     // Test duration formatting
     assert_eq!(format_duration(Duration::from_secs(0)), "0s");
@@ -75,7 +74,7 @@ fn test_format_duration() {
     assert_eq!(format_duration(Duration::from_secs(3661)), "1h 1m 1s");
 }
 
-fn format_duration(duration: Duration) -> String {
+fn format_duration(duration: std::time::Duration) -> String {
     let total_secs = duration.as_secs();
     
     let hours = total_secs / 3600;
