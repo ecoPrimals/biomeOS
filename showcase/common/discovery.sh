@@ -165,10 +165,18 @@ discover_capability() {
             ;;
             
         orchestration)
-            # Check for Songbird
-            for port in 9000 8080 3000; do
+            # Check for Songbird via UDP discovery (port 2300)
+            # Songbird broadcasts its HTTPS endpoint via mDNS
+            echo -e "${BLUE}  Searching for Songbird via discovery...${NC}" >&2
+            
+            # Try common Songbird ports
+            for port in 8080 9000 3000; do
                 if check_health "http://localhost:$port" "songbird" 2>/dev/null; then
                     echo "http://localhost:$port"
+                    return 0
+                fi
+                if check_health "https://localhost:$port" "songbird" 2>/dev/null; then
+                    echo "https://localhost:$port"
                     return 0
                 fi
             done
@@ -181,7 +189,23 @@ discover_capability() {
                 fi
             fi
             
-            echo -e "${YELLOW}⚠ Orchestration capability not available${NC}"
+            # Check if Songbird process is running and extract port
+            if songbird_pid=$(pgrep -f songbird-orchestrator 2>/dev/null); then
+                echo -e "${BLUE}  Found Songbird process (PID: $songbird_pid)${NC}" >&2
+                # Try to get port from lsof
+                if command -v lsof &> /dev/null; then
+                    songbird_port=$(sudo lsof -i -P -n 2>/dev/null | grep "$songbird_pid" | grep TCP | grep LISTEN | head -1 | awk '{print $9}' | cut -d':' -f2 || echo "")
+                    if [ -n "$songbird_port" ]; then
+                        echo -e "${GREEN}  Detected Songbird on port $songbird_port${NC}" >&2
+                        echo "https://localhost:$songbird_port"
+                        return 0
+                    fi
+                fi
+            fi
+            
+            echo -e "${YELLOW}⚠ Orchestration capability not available${NC}" >&2
+            echo -e "${YELLOW}  Songbird uses mDNS/UDP discovery (port 2300)${NC}" >&2
+            echo -e "${YELLOW}  It may be running but port not yet bound${NC}" >&2
             return 1
             ;;
             

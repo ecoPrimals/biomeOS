@@ -26,10 +26,10 @@ mkdir -p "$LOGS_DIR" "$PIDS_DIR"
 # Primal configurations (port, binary name)
 declare -A PRIMALS=(
     ["nestgate"]="9020"
-    ["songbird"]="9000"
-    ["beardog"]="9040"
-    ["toadstool"]="9030"
-    ["squirrel"]="9050"
+    ["songbird"]="auto"  # Songbird handles its own port discovery
+    ["beardog"]="cli"    # CLI tool, not a server
+    ["toadstool"]="cli"  # CLI tool, not a server
+    ["squirrel"]="cli"   # CLI tool, not a server
 )
 
 # Check binaries exist
@@ -80,8 +80,20 @@ echo ""
 echo "🚀 Starting primals..."
 started=0
 for primal in "${!PRIMALS[@]}"; do
-    port="${PRIMALS[@]/$primal}"
     port="${PRIMALS[$primal]}"
+    
+    # Skip CLI tools (not servers)
+    if [ "$port" = "cli" ]; then
+        echo "  $primal: CLI tool (available at $PRIMALS_DIR/$primal)"
+        continue
+    fi
+    
+    # Skip if auto-discovery (like songbird)
+    if [ "$port" = "auto" ]; then
+        echo "  $primal: Uses auto-discovery (skipping manual start)"
+        echo "    Use Songbird's start-tower.sh directly"
+        continue
+    fi
     
     echo "  Starting $primal on port $port..."
     
@@ -97,55 +109,22 @@ for primal in "${!PRIMALS[@]}"; do
             RUST_LOG="info" \
             "$PRIMALS_DIR/$primal" service start --port "$port" \
                 > "$LOGS_DIR/$primal.log" 2>&1 &
-            ;;
-        songbird)
-            # Songbird runs as-is
-            PORT="$port" \
-            HOST="0.0.0.0" \
-            SONGBIRD_PORT="$port" \
-            RUST_LOG="info" \
-            "$PRIMALS_DIR/$primal" \
-                > "$LOGS_DIR/$primal.log" 2>&1 &
-            ;;
-        beardog)
-            # BearDog (Wireguard P2P)
-            PORT="$port" \
-            HOST="0.0.0.0" \
-            BEARDOG_PORT="$port" \
-            RUST_LOG="info" \
-            "$PRIMALS_DIR/$primal" \
-                > "$LOGS_DIR/$primal.log" 2>&1 &
-            ;;
-        toadstool)
-            # Toadstool (compute orchestration)
-            PORT="$port" \
-            HOST="0.0.0.0" \
-            TOADSTOOL_PORT="$port" \
-            RUST_LOG="info" \
-            "$PRIMALS_DIR/$primal" \
-                > "$LOGS_DIR/$primal.log" 2>&1 &
-            ;;
-        squirrel)
-            # Squirrel (configuration management)
-            PORT="$port" \
-            HOST="0.0.0.0" \
-            SQUIRREL_PORT="$port" \
-            RUST_LOG="info" \
-            "$PRIMALS_DIR/$primal" \
-                > "$LOGS_DIR/$primal.log" 2>&1 &
+            
+            pid=$!
+            echo $pid > "$PIDS_DIR/$primal.pid"
             ;;
         *)
-            # Generic fallback
+            # Generic server start
             PORT="$port" \
             HOST="0.0.0.0" \
             RUST_LOG="info" \
             "$PRIMALS_DIR/$primal" \
                 > "$LOGS_DIR/$primal.log" 2>&1 &
+            
+            pid=$!
+            echo $pid > "$PIDS_DIR/$primal.pid"
             ;;
     esac
-    
-    pid=$!
-    echo $pid > "$PIDS_DIR/$primal.pid"
     
     # Quick check if it started
     sleep 1
