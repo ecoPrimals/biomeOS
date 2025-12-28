@@ -1,226 +1,280 @@
+# 01 - BTSP Tunnel Coordination
+
+**Demonstrates**: Complete BTSP tunnel lifecycle management  
+**Status**: Ready to implement  
+**Prerequisites**: BiomeOS, BearDog, Songbird  
+
+---
+
+## What This Demonstrates
+
+- BTSP tunnel establishment between peers
+- Real-time health monitoring
+- Automatic recovery from degradation
+- Key rotation for security
+- Graceful tunnel shutdown
+- BiomeOS as BTSP coordinator
+
+---
+
+## Architecture
+
+```
+┌─────────┐                  ┌─────────┐
+│ Peer A  │                  │ Peer B  │
+└────┬────┘                  └────┬────┘
+     │                            │
+     │    ┌──────────────┐       │
+     └───►│   BiomeOS    │◄──────┘
+          │ BTSP Coord.  │
+          └──────┬───────┘
+                 │
+        ┌────────┴────────┐
+        │                 │
+    ┌───▼────┐      ┌────▼────┐
+    │BearDog │      │Songbird │
+    │Crypto  │      │Discovery│
+    └────────┘      └─────────┘
+```
+
+---
+
+## BTSP Tunnel Lifecycle
+
+### 1. Discovery Phase
+```bash
+# Songbird discovers peers
+peers=$(songbird discover)
+# Result: peer-a, peer-b found
+```
+
+### 2. Establishment Phase
+```bash
+# BiomeOS establishes tunnel
+tunnel_id=$(biomeos btsp establish peer-a peer-b)
+# Result: Tunnel established with BearDog encryption
+```
+
+### 3. Monitoring Phase
+```bash
+# BiomeOS monitors tunnel health
+health=$(biomeos btsp health $tunnel_id)
+# Result: Healthy | Degraded | Unhealthy
+```
+
+### 4. Recovery Phase (if degraded)
+```bash
+# BiomeOS automatically recovers
+biomeos btsp recover $tunnel_id
+# Actions: Key rotation, transport optimization, path reestablishment
+```
+
+### 5. Shutdown Phase
+```bash
+# BiomeOS graceful shutdown
+biomeos btsp shutdown $tunnel_id
+# Result: Clean termination, resources released
+```
+
+---
+
+## Key Capabilities
+
+### Tunnel Establishment
+- Peer discovery via Songbird
+- Automatic endpoint negotiation
+- BearDog encryption integration
+- Tunnel ID generation
+- State tracking
+
+### Health Monitoring
+- Real-time status checks
+- Security health (key expiration, rotation status)
+- Transport health (latency, packet loss)
+- Overall status computation
+- Alert generation
+
+### Automatic Recovery
+- Degradation diagnosis
+- Recovery strategy selection
+  - Key rotation (security issues)
+  - Transport optimization (performance issues)
+  - Path reestablishment (connectivity issues)
+- Recovery verification
+- Success/failure reporting
+
+### Key Rotation
+- Automatic expiration detection
+- Coordinate with BearDog
+- Zero-downtime rotation
+- Verification of new keys
+
+### Graceful Shutdown
+- Clean tunnel termination
+- Resource cleanup
+- State persistence
+- Notification to peers
+
+---
+
+## Demo Script Structure
+
+```bash
+#!/bin/bash
 # Demo 01: BTSP Tunnel Coordination
 
-**Time:** 30 minutes  
-**Difficulty:** 🔴 Advanced  
-**Status:** ✅ Ready to run
+echo "🌐 BTSP Tunnel: Complete Lifecycle"
+echo "==================================="
 
----
+# 1. Discovery
+echo "🔍 Discovering peers..."
+# Use Songbird to find available peers
 
-## 🎯 What This Demo Shows
+# 2. Establishment
+echo "🔗 Establishing BTSP tunnel..."
+# BiomeOS coordinates tunnel setup
 
-This demo demonstrates **BiomeOS coordinating BTSP tunnel creation in pure Rust**.
+# 3. Health Check
+echo "💓 Monitoring tunnel health..."
+# Real-time health status
 
-### Key Features
+# 4. Simulate Degradation
+echo "⚠️  Simulating degradation..."
+# Inject latency or security issue
 
-1. **Capability-Based Discovery**
-   - BiomeOS discovers primals by capability (not by name!)
-   - "I need security capability" (not "I need BearDog")
-   - "I need discovery capability" (not "I need Songbird")
+# 5. Automatic Recovery
+echo "🔄 Automatic recovery..."
+# BiomeOS diagnoses and repairs
 
-2. **Pure Rust Coordination**
-   - All coordination logic in Rust
-   - No shell scripts calling CLIs
-   - Type-safe, production-ready code
+# 6. Verify Recovery
+echo "✅ Verifying recovery..."
+# Confirm tunnel healthy again
 
-3. **Agnostic Architecture**
-   - Works with any primal implementing `SecurityProvider`
-   - Works with any primal implementing `DiscoveryProvider`
-   - BearDog + Songbird today, YourPrimal tomorrow
+# 7. Graceful Shutdown
+echo "👋 Graceful shutdown..."
+# Clean termination
 
-4. **Real Error Handling**
-   - Proper `Result` types
-   - Context on failures
-   - Graceful degradation
-
----
-
-## 🚀 Run the Demo
-
-```bash
-cargo run
+echo "🎉 BTSP tunnel lifecycle complete!"
 ```
 
 ---
 
-## 📊 Expected Output
+## Testing Scenarios
 
-```
-🌱 BiomeOS P2P Coordination Demo: BTSP Tunnel
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+### Happy Path
+1. Establish tunnel ✅
+2. Monitor health (Healthy) ✅
+3. Send data ✅
+4. Shutdown gracefully ✅
 
-🔍 Step 1: Discovering primals by capability...
-   Looking for: security capability (BTSP support)
-   Looking for: discovery capability (transport registration)
+### Degradation - Security
+1. Establish tunnel ✅
+2. Key approaching expiration ⚠️
+3. Auto-recovery (key rotation) 🔄
+4. Verify healthy ✅
 
-⚠️  Note: Using mock providers for demonstration
-   In production, BiomeOS discovers real primals by capability
+### Degradation - Transport
+1. Establish tunnel ✅
+2. High latency detected ⚠️
+3. Auto-recovery (optimize path) 🔄
+4. Verify healthy ✅
 
-✅ Found security primal: MockSecurity (demonstrates BearDog)
-✅ Found discovery primal: MockDiscovery (demonstrates Songbird)
-
-🔐 Step 2: Creating BTSP tunnel coordinator...
-✅ Coordinator created
-
-🔗 Step 3: Coordinating BTSP tunnel creation...
-   Node A: alice
-   Node B: bob
-
-   Requesting tunnel from security primal...
-   Registering endpoints with discovery primal...
-   Verifying tunnel health...
-
-✅ BTSP tunnel created successfully!
-
-📊 Tunnel Information:
-   Tunnel ID: tunnel-alice-bob
-   Status: Active
-   Endpoints: 2 nodes
-   Established: 2025-12-26 10:30:45
-
-📊 Step 4: Monitoring tunnel health...
-✅ Health check complete:
-   Security: Healthy
-   Transport: Healthy
-   Overall: Healthy
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎉 Demo complete!
-
-Key Takeaways:
-  ✅ BiomeOS discovered primals by capability (not by name)
-  ✅ Pure Rust coordination (no shell scripts)
-  ✅ Agnostic architecture (works with any compatible primals)
-  ✅ Real error handling and health monitoring
-
-Next Steps:
-  - Run demo 02: BirdSong Encryption
-  - Deploy with BYOB: templates/btsp-tunnel-only.biome.yaml
-  - Test with real BearDog + Songbird
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-```
+### Degradation - Connectivity
+1. Establish tunnel ✅
+2. Peer unreachable ⚠️
+3. Auto-recovery (reestablish) 🔄
+4. Verify healthy ✅
 
 ---
 
-## 🏗️ Architecture
+## Success Criteria
 
-### Coordination Flow
+### Establishment
+- ✅ Tunnel created successfully
+- ✅ Encryption active (BearDog)
+- ✅ Peers connected
+- ✅ Health status: Healthy
 
-```
-BiomeOS
-   │
-   ├─► Discover "security" capability
-   │   └─► Find primal (e.g., BearDog)
-   │
-   ├─► Discover "discovery" capability
-   │   └─► Find primal (e.g., Songbird)
-   │
-   ├─► Create BtspCoordinator(security, discovery)
-   │
-   ├─► coordinator.create_tunnel("alice", "bob", proof)
-   │   ├─► security.request_tunnel()
-   │   ├─► discovery.register_transport(endpoint_a)
-   │   ├─► discovery.register_transport(endpoint_b)
-   │   └─► coordinator.monitor_tunnel()
-   │
-   └─► Return TunnelInfo
-```
+### Monitoring
+- ✅ Real-time health updates
+- ✅ Security status tracked
+- ✅ Transport metrics available
+- ✅ Overall status computed
 
-### Code Structure
+### Recovery
+- ✅ Degradation detected
+- ✅ Root cause diagnosed
+- ✅ Recovery strategy executed
+- ✅ Tunnel restored to healthy
 
+### Shutdown
+- ✅ Clean termination
+- ✅ Resources released
+- ✅ No leaked connections
+- ✅ State cleaned up
+
+---
+
+## Implementation Notes
+
+### BiomeOS BTSP Coordinator
+
+**Already Implemented** (from earlier session):
 ```rust
-// Capability-based discovery (agnostic!)
-let security = biome.discover_primal("security").await?;
-let discovery = biome.discover_primal("discovery").await?;
-
-// Pure Rust coordination
-let coordinator = BtspCoordinator::new(security, discovery);
-let tunnel = coordinator.create_tunnel("alice", "bob", proof).await?;
-
-// Health monitoring
-let health = coordinator.monitor_tunnel(&tunnel.id).await?;
-```
-
----
-
-## 🔧 Extending This Demo
-
-### Connect to Real Primals
-
-Replace mock providers with real adapters:
-
-```rust
-// Real BearDog adapter
-let security = Arc::new(BearDogAdapter::new("/path/to/beardog")?);
-
-// Real Songbird adapter
-let discovery = Arc::new(SongbirdAdapter::new("http://localhost:3000")?);
-
-let coordinator = BtspCoordinator::new(security, discovery);
-```
-
-### Add Custom Security Provider
-
-Implement your own security primal:
-
-```rust
-struct MySecurityPrimal;
-
-#[async_trait]
-impl SecurityProvider for MySecurityPrimal {
-    async fn request_tunnel(...) -> Result<TunnelRequest> {
-        // Your implementation
+// btsp.rs - Recovery implementation
+async fn recover_degraded_tunnel(&self, tunnel_id: &str) -> Result<TunnelInfo> {
+    // Diagnose degradation
+    let cause = self.diagnose_degradation(tunnel_id).await?;
+    
+    // Apply recovery strategy
+    match cause {
+        DegradationCause::SecurityKeyExpiring => self.rotate_tunnel_keys(tunnel_id).await?,
+        DegradationCause::TransportLatency => self.optimize_transport_path(tunnel_id).await?,
+        DegradationCause::PartialConnectivity => self.reestablish_transport(tunnel_id).await?,
     }
+    
+    // Verify recovery
+    let health = self.security.check_tunnel_health(tunnel_id).await?;
+    // ...
 }
 ```
+
+**What the Demo Will Show**:
+- This code running with real primals
+- Actual recovery in action
+- Real health monitoring
+- Honest gap reporting if issues
 
 ---
 
-## 📚 Key Concepts
+## Validation
 
-### 1. Capability-Based Discovery
-
-**Traditional:**
-```rust
-let beardog = find_beardog();  // Hardcoded!
-```
-
-**BiomeOS:**
-```rust
-let security = discover_primal("security").await?;  // Agnostic!
-```
-
-### 2. Trait-Based Coordination
-
-```rust
-pub trait SecurityProvider {
-    async fn request_tunnel(...) -> Result<TunnelRequest>;
-}
-```
-
-Works with **any** primal implementing this trait!
-
-### 3. Pure Rust (Not Shell Scripts)
-
-**Traditional:**
+### E2E Test
 ```bash
-beardog create-tunnel alice bob
+# Will be added to run-e2e-tests.sh
+run_demo_test "showcase/03-p2p-coordination/01-btsp-tunnel-coordination/demo.sh"
+
+# Expected: PASS (if all primals available)
+# Expected: Graceful skip/gap report (if missing)
 ```
 
-**BiomeOS:**
-```rust
-coordinator.create_tunnel("alice", "bob", proof).await?
+### Manual Validation
+```bash
+# Run demo
+bash showcase/03-p2p-coordination/01-btsp-tunnel-coordination/demo.sh
+
+# Verify:
+# - Tunnel established
+# - Health monitoring active
+# - Recovery triggered
+# - Tunnel restored
+# - Clean shutdown
 ```
 
 ---
 
-## 🎯 Next Steps
+**Status**: 📋 Planned, Ready to Implement  
+**Next**: Build demo.sh script  
+**Integration**: Real primals, no mocks  
 
-1. **Run demo 02:** BirdSong Encryption
-2. **Deploy with BYOB:** `templates/btsp-tunnel-only.biome.yaml`
-3. **Test with real primals:** Connect to actual BearDog + Songbird
-4. **Implement custom provider:** Create your own security primal
-
----
-
-**This is BiomeOS's killer feature: Pure Rust P2P coordination!** 🚀
-
+🌐 **BTSP: Production-Grade P2P Tunnel Coordination**
