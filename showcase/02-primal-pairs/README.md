@@ -1,355 +1,362 @@
-# 02 - Multi-Primal Orchestration
+# BiomeOS Showcase: Primal Pairs
 
-**Demonstrate BiomeOS orchestrating multiple primals together**
+**Cross-primal orchestration demonstrating capability-based composition**
 
-**Duration**: 20-30 minutes  
-**Primals Required**: 2-5 from `../phase1bins/`  
-**Complexity**: Medium-High
+## Philosophy
 
----
+BiomeOS orchestrates multiple primals WITHOUT direct knowledge of their identities. Instead, it uses **capability-based discovery** and **dynamic adaptation** to compose workflows.
 
-## 🎯 Purpose
+Key principles:
+- **Indirection is power**: BiomeOS → Service Registry → Target Primal
+- **Capability over identity**: Ask for "encryption" not "BearDog"
+- **Zero coordination needed**: New primals auto-discovered
+- **Sovereignty preserved**: Each primal controls its implementation
 
-This scenario demonstrates BiomeOS's **CORE VALUE**: orchestrating multiple primals together in coordinated workflows!
+## Demonstrations
 
-1. **Storage + Discovery** - NestGate + Songbird coordination
-2. **Compute + Discovery** - ToadStool + Songbird coordination  
-3. **Full Ecosystem** - All 5 primals orchestrated together
-4. **Real Composition** - BiomeOS managing live primal interactions
+### 1. Songbird + Toadstool: Universal Port Authority
 
-**This is where BiomeOS shines: making primals work together!**
+**Pattern**: Service registry + dynamic compute allocation
 
----
-
-## 🚀 Quick Start
-
-### Run Full Stack Demo (Recommended)
 ```bash
-./full-stack.sh
+./songbird-toadstool-distributed-compute.sh
 ```
 
-This starts ALL 5 primals and shows BiomeOS orchestrating them!
+**What it shows:**
+- Songbird assigns ALL ports (zero conflicts)
+- Toadstool registers "compute" capability
+- BiomeOS discovers compute WITHOUT knowing "Toadstool"
+- Task routing via capability, not name
+- Multiple compute instances load balanced automatically
 
-### Run Individual Combinations
+**Architecture:**
+```
+BiomeOS (only knows Songbird)
+   ↓
+Songbird (port authority + service registry)
+   ↓ (discovers "compute" capability)
+Toadstool (assigned port dynamically)
+```
+
+**Key insight from Songbird showcase:**
+> "Once primals understand Songbird, they never set their own ports"
+
+**Evolution scenarios:**
+1. **Multiple Toadstool instances**: Each registers, gets unique port, auto load-balanced
+2. **Alternate compute primal**: Registers "compute", BiomeOS uses immediately
+3. **Toadstool API changes**: Re-registers with new capabilities, transparent to BiomeOS
+4. **Multi-tower federation**: Cross-tower routing automatic, BiomeOS unchanged
+
+---
+
+### 2. BearDog + Toadstool: Encrypted Workload Execution
+
+**Pattern**: Capability-based encryption + compute
+
 ```bash
-./storage-plus-discovery.sh   # NestGate + Songbird
-./compute-plus-discovery.sh   # ToadStool + Songbird
+./beardog-toadstool-encrypted-workload.sh
 ```
+
+**What it shows:**
+- BiomeOS discovers "encryption" capability (not "BearDog")
+- BearDog's entropy hierarchy (ephemeral → session → persistent)
+- Encrypted task submission to compute
+- Zero-knowledge execution (compute never sees plaintext)
+- Secure result return
+
+**Architecture:**
+```
+BiomeOS
+   ↓
+BearDog (encrypt task)
+   ↓
+Toadstool (execute encrypted)
+   ↓
+BearDog (decrypt result)
+   ↓
+BiomeOS (receives plaintext result)
+```
+
+**Evolution scenarios:**
+1. **Alternate encryption**: CloudHSM, YubiKey, etc. - BiomeOS adapts
+2. **New algorithms**: Discovered via capability query
+3. **Encryption unavailable**: Graceful degradation to OS-level crypto
+4. **Zero-knowledge compute**: Homomorphic encryption (future)
 
 ---
 
-## 📋 Demonstrations
+### 3. Nestgate + BearDog: Encrypted Sovereign Storage
 
-### 1. Storage + Discovery (NestGate + Songbird) ✅
+**Pattern**: Lineage-aware encrypted persistence
 
-**Script**: `./storage-plus-discovery.sh`
-
-**What it demonstrates**:
-- Start Songbird (service discovery)
-- Start NestGate (storage)
-- BiomeOS discovers both
-- BiomeOS registers NestGate with Songbird
-- BiomeOS coordinates storage operations through discovered service
-- **Cross-primal coordination!**
-
-**Workflow**:
-```
-1. Songbird starts (port 8081)
-2. NestGate starts (port 8082)
-3. BiomeOS discovers both by capability
-4. BiomeOS: Register NestGate → Songbird
-5. BiomeOS: Store data → NestGate (discovered via Songbird)
-6. BiomeOS: Query storage services → Songbird
-7. Show coordinated workflow complete
-```
-
----
-
-### 2. Compute + Discovery (ToadStool + Songbird) ✅
-
-**Script**: `./compute-plus-discovery.sh`
-
-**What it demonstrates**:
-- Start Songbird (service discovery)
-- Start ToadStool (compute)
-- BiomeOS discovers both
-- BiomeOS registers ToadStool with Songbird
-- BiomeOS deploys workload to discovered compute
-- **Service mesh coordination!**
-
-**Workflow**:
-```
-1. Songbird starts (port 8081)
-2. ToadStool starts (port 8080)
-3. BiomeOS discovers both by capability
-4. BiomeOS: Register ToadStool → Songbird
-5. BiomeOS: Deploy workload → ToadStool (discovered via Songbird)
-6. BiomeOS: Query compute status → Songbird
-7. Show mesh coordination complete
-```
-
----
-
-### 3. Full Ecosystem (All 5 Primals) ✅✅✅
-
-**Script**: `./full-stack.sh`
-
-**What it demonstrates**:
-- **THE COMPLETE ECOSYSTEM!**
-- All 5 primals working together
-- BiomeOS orchestrating everything
-- Real multi-primal workflows
-- **This is BiomeOS's purpose!**
-
-**Primals Started**:
-1. **Songbird** (8081) - Service discovery & mesh
-2. **ToadStool** (8080) - Compute orchestration
-3. **NestGate** (8082) - Storage management
-4. **BearDog** (9000) - Security & crypto
-5. **Squirrel** (9010) - AI capabilities
-
-**Workflow**:
-```
-Phase 1: Startup & Discovery
-1. Start all 5 primals
-2. BiomeOS discovers all by capability
-3. BiomeOS builds capability map
-
-Phase 2: Service Mesh
-4. BiomeOS → Songbird: Register all services
-5. BiomeOS builds service topology
-6. Show complete mesh
-
-Phase 3: Coordinated Workflow
-7. BiomeOS → BearDog: Encrypt data
-8. BiomeOS → NestGate: Store encrypted data (via Songbird)
-9. BiomeOS → ToadStool: Deploy processing workload
-10. BiomeOS → Squirrel: Analyze system state
-11. BiomeOS → Songbird: Query all service health
-12. Show complete orchestration!
-
-Phase 4: Demonstrate Composition
-13. BiomeOS coordinates multi-primal workflow:
-    - Security (BearDog) + Storage (NestGate)
-    - Discovery (Songbird) + Compute (ToadStool)
-    - AI (Squirrel) + All others
-14. Show true ecosystem composition
-```
-
----
-
-## 🎓 What You'll Learn
-
-### BiomeOS's Core Value
-- **Composition**: Makes primals work together
-- **Coordination**: Orchestrates workflows across primals
-- **Discovery**: Finds services dynamically
-- **Delegation**: Each primal does what it's best at
-
-### Multi-Primal Patterns
-- **Service Registration**: Register with discovery
-- **Service Query**: Find services by capability
-- **Cross-Primal Calls**: Primal A → Primal B (via BiomeOS)
-- **Workflow Chains**: Multi-step operations
-
-### Real Production Patterns
-- **Service Mesh**: Songbird coordinates routing
-- **Secure Storage**: BearDog + NestGate
-- **Compute Orchestration**: Songbird + ToadStool
-- **AI Integration**: Squirrel + All others
-
----
-
-## 📊 Expected Output (Full Stack)
-
-```
-🌱 BiomeOS Full Ecosystem Orchestration
-========================================
-
-Phase 1: Starting Primals
-   ✅ Songbird started (8081) - Discovery
-   ✅ ToadStool started (8080) - Compute
-   ✅ NestGate started (8082) - Storage
-   ✅ BearDog started (9000) - Security
-   ✅ Squirrel started (9010) - AI
-
-Phase 2: BiomeOS Discovery
-   ✅ Discovering primals by capability...
-   ✅ Found 5 primals:
-      - Songbird (discovery, service-mesh)
-      - ToadStool (compute, execution)
-      - NestGate (storage, persistence)
-      - BearDog (security, crypto)
-      - Squirrel (ai, inference)
-   ✅ Capability map complete
-
-Phase 3: Service Mesh Setup
-   ✅ BiomeOS → Songbird: Register ToadStool
-   ✅ BiomeOS → Songbird: Register NestGate
-   ✅ BiomeOS → Songbird: Register BearDog
-   ✅ BiomeOS → Songbird: Register Squirrel
-   ✅ Service mesh: 4 services registered
-   ✅ Topology: Complete
-
-Phase 4: Coordinated Workflow
-   ✅ BiomeOS workflow: Secure Data Storage
-      1. BearDog: Encrypt("test data")
-      2. NestGate: Store(encrypted) [via Songbird]
-      3. NestGate: Verify storage
-   ✅ Encrypted data stored securely!
-
-   ✅ BiomeOS workflow: Compute Orchestration
-      4. ToadStool: Deploy workload [via Songbird]
-      5. ToadStool: Monitor resources
-   ✅ Workload deployed and monitored!
-
-   ✅ BiomeOS workflow: AI Analysis
-      6. Squirrel: Analyze system state
-      7. Squirrel: Provide optimization suggestions
-   ✅ System analyzed and optimized!
-
-Phase 5: Health & Status
-   ✅ BiomeOS → Songbird: Query all service health
-   ✅ All services: Healthy
-   ✅ Mesh status: Operational
-   ✅ Ecosystem: Coordinated
-
-🎉 Full Ecosystem Orchestration Complete!
-
-What you just saw:
-  • BiomeOS orchestrated 5 primals simultaneously
-  • Each primal did what it's best at (delegation)
-  • Multi-step workflows across primals
-  • Service mesh coordination (via Songbird)
-  • Secure data handling (BearDog + NestGate)
-  • Compute orchestration (via ToadStool)
-  • AI integration (via Squirrel)
-  • REAL ecosystem composition!
-
-This is BiomeOS's purpose: making primals work together! 🌱
-```
-
----
-
-## ⚙️ Prerequisites
-
-### 1. All Binaries Available
 ```bash
-ls -lh ../../phase1bins/{songbird,toadstool,nestgate,beardog,squirrel}-bin
+./nestgate-beardog-encrypted-storage.sh
 ```
 
-### 2. BiomeOS Built
+**What it shows:**
+- Nestgate's lineage tracking (who, what, when, why)
+- Encryption at rest via BearDog
+- Sovereignty enforcement (data never leaves without consent)
+- Audit trail with cryptographic attestation
+
+---
+
+### 4. Songbird + Nestgate: Federated Data Retrieval
+
+**Pattern**: Service discovery + distributed storage
+
 ```bash
-cd ../..
-cargo build --release
+./songbird-nestgate-federated-data.sh
 ```
 
-### 3. Ports Available
-- 8080 (ToadStool)
-- 8081 (Songbird)
-- 8082 (NestGate)
-- 9000 (BearDog)
-- 9010 (Squirrel)
+**What it shows:**
+- Multi-tower data federation
+- Capability-based storage discovery
+- Cross-tower lineage preservation
+- Sovereignty across federation boundaries
 
 ---
 
-## 🔧 Troubleshooting
+### 5. Squirrel + Toadstool: AI-Driven Compute Optimization
 
-### Port conflicts
+**Pattern**: MCP agents + dynamic workload placement
+
 ```bash
-# Check what's running
-netstat -tulpn | grep -E "8080|8081|8082|9000|9010"
-
-# Kill all primals
-pkill -f "songbird|toadstool|nestgate|beardog|squirrel"
+./squirrel-toadstool-ai-compute.sh
 ```
 
-### Primal won't start
+**What it shows:**
+- Squirrel MCP agents analyze workload
+- Dynamic compute resource selection
+- Multi-agent coordination via Songbird
+- Adaptive optimization over time
+
+---
+
+## Common Patterns
+
+### Capability-Based Discovery
+
+All demos follow this pattern:
+
+```rust
+// BiomeOS doesn't know "BearDog", asks for capability
+let encryption_service = discover_by_capability("encryption").await?;
+
+// Works with BearDog, CloudHSM, YubiKey, or future primals
+let encrypted = encryption_service.encrypt(data).await?;
+```
+
+### Interface Adaptation
+
+BiomeOS probes for interface patterns:
+
+```rust
+// Try common interface patterns
+for path in ["/api/v1/encrypt", "/api/encrypt", "/encrypt"] {
+    if endpoint_exists(path).await {
+        return Ok(path);
+    }
+}
+```
+
+### Graceful Degradation
+
+When capabilities unavailable:
+
+```rust
+let encryption_service = match discover_by_capability("encryption").await {
+    Ok(svc) => svc,
+    Err(_) => {
+        warn!("No encryption service, using OS-level crypto");
+        return fallback_encryption();
+    }
+};
+```
+
+---
+
+## Running the Demos
+
+### Prerequisites
+
 ```bash
-# Check logs
-tail -f /tmp/songbird.log
-tail -f /tmp/toadstool.log
-# etc...
+# Ensure primals available (will auto-discover)
+ls ../../../phase1/{songbird,toadstool,beardog,nestgate,squirrel}/target/release/
+
+# Or set explicit endpoints
+export SONGBIRD_ENDPOINT="http://localhost:8080"
+export TOADSTOOL_ENDPOINT="http://localhost:8081"
 ```
 
-### BiomeOS can't discover
+### Run All Demos
+
 ```bash
-# Check primals are running
-for port in 8080 8081 8082 9000 9010; do
-    curl -s http://localhost:$port/health || echo "Port $port not responding"
-done
+./run-all-pair-demos.sh
 ```
 
----
+### Run Specific Demo
 
-## 🎯 Success Criteria
+```bash
+./songbird-toadstool-distributed-compute.sh
+```
 
-✅ **All primals start successfully**  
-✅ **BiomeOS discovers all primals**  
-✅ **Service mesh is established**  
-✅ **Cross-primal workflows complete**  
-✅ **No direct primal-to-primal calls** (all via BiomeOS)  
-✅ **Clean orchestration demonstrated**
+Each demo generates a gap report in `gaps/` documenting what worked, what didn't, and where BiomeOS needed to adapt.
 
 ---
 
-## 💡 Key Concepts Demonstrated
+## Gap Reports
 
-### 1. Pure Orchestration
-- BiomeOS doesn't implement features
-- BiomeOS delegates to specialists
-- Each primal does what it's best at
+Each demo creates a detailed gap report:
 
-### 2. Service Mesh
-- Songbird provides discovery
-- BiomeOS coordinates routing
-- Dynamic topology
+```
+gaps/
+├── songbird-toadstool-orchestration-gaps.md
+├── beardog-toadstool-encryption-gaps.md
+├── nestgate-beardog-storage-gaps.md
+├── songbird-nestgate-federation-gaps.md
+└── squirrel-toadstool-optimization-gaps.md
+```
 
-### 3. Capability-Based
-- Discover by "what" not "who"
-- No hardcoded dependencies
-- Flexible composition
-
-### 4. Real Production
-- Actual primal binaries
-- Real API calls
-- Production patterns
+These reports show:
+- ✓ What worked out of the box
+- ⚠ Where BiomeOS adapted/probed
+- ✗ What failed gracefully
+- → What evolution would improve
 
 ---
 
-## 📚 What Makes This Special
+## Evolution Strategy
 
-### Before BiomeOS
-- Manual primal coordination
-- Hardcoded endpoints
-- Complex integration code
-- Tight coupling
+### When Primals Change
 
-### With BiomeOS
-- ✅ Automatic discovery
-- ✅ Dynamic routing
-- ✅ Simple orchestration
-- ✅ Loose coupling
-- ✅ **Primals just work together!**
+1. **API versioning**: BiomeOS probes for v1, v2, v3, etc.
+2. **Capability changes**: Re-query capabilities, adapt
+3. **New endpoints**: Interface probing discovers them
+4. **Breaking changes**: Graceful degradation, log warnings
 
----
+### When Ecosystem Grows
 
-## 🎯 Next Steps
+1. **New primals**: Auto-discovered via capability
+2. **Multiple instances**: Songbird load balances
+3. **Multi-tower**: Federation transparent to BiomeOS
+4. **Alternate implementations**: Work via same capabilities
 
-After completing this scenario:
+### When Requirements Change
 
-1. **Understand** multi-primal orchestration
-2. **See** real ecosystem composition
-3. **Appreciate** BiomeOS's core value
-4. **Move to** `../03-chimera-composition/` for advanced fusion
+1. **New capability needed**: Discover or gracefully degrade
+2. **Performance constraints**: Query resource availability
+3. **Security requirements**: Probe for encryption levels
+4. **Compliance needs**: Lineage tracking via Nestgate
 
 ---
 
-**Status**: Ready for full ecosystem demonstration  
-**Prerequisites**: All phase1bins binaries, BiomeOS built  
-**Learning Value**: **CRITICAL** (This is BiomeOS's purpose!)
+## Sovereignty Preservation
+
+Every demo maintains digital sovereignty:
+
+1. **Local-first**: Primals run locally, no cloud required
+2. **Consent-based sharing**: Data stays unless explicitly shared
+3. **Lineage tracking**: Full audit trail of all operations
+4. **No telemetry**: Zero metrics sent without explicit opt-in
+5. **Runtime discovery**: No hardcoded primal endpoints
 
 ---
 
-*"BiomeOS makes primals work together. This is our reason to exist."* 🌱✨
+## Next Steps
 
+After exploring primal pairs:
+
+1. **Full Ecosystem Demo**: All 5 primals orchestrated (`../03-full-ecosystem/`)
+2. **BiomeOS Features**: Multi-tower federation, primal adapter evolution (`../04-biomeos-features/`)
+3. **Phase2 Primals**: loamSpine, rhizoCrypt, sweetGrass, petalTongue integration
+
+---
+
+## Architecture Diagram
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                       BiomeOS                           │
+│                                                         │
+│  • Capability-based discovery                          │
+│  • Interface adaptation                                │
+│  • Orchestration logic                                 │
+│  • Graceful degradation                                │
+└────────────┬───────────────────────────┬────────────────┘
+             │                           │
+     ┌───────▼────────┐         ┌───────▼────────┐
+     │   Songbird     │         │   BearDog      │
+     │                │         │                │
+     │ • Port authority│        │ • Encryption   │
+     │ • Service reg.  │        │ • Entropy mgmt │
+     │ • Federation    │        │ • Key lifecycle│
+     └────────┬────────┘        └────────────────┘
+              │
+      ┌───────▼────────┬────────────┬─────────────┐
+      │                │            │             │
+┌─────▼─────┐  ┌──────▼──────┐ ┌───▼────┐  ┌────▼─────┐
+│ Toadstool │  │  Nestgate   │ │Squirrel│  │ Phase2   │
+│           │  │             │ │        │  │ Primals  │
+│ • Compute │  │ • Storage   │ │ • AI   │  │          │
+│ • GPU     │  │ • Lineage   │ │ • MCP  │  │ • loam   │
+│ • Distrib.│  │ • Sovereign │ │ • Agent│  │ • rhizo  │
+└───────────┘  └─────────────┘ └────────┘  └──────────┘
+```
+
+**Key insight**: BiomeOS only directly knows Songbird and BearDog (core capabilities). All other primals discovered via capability queries through Songbird.
+
+---
+
+## Lessons from Phase1 Primals
+
+### From Songbird
+- Universal Port Authority pattern prevents all conflicts
+- Multi-tower federation enables geographic distribution
+- Service registry + capability query = zero-coordination ecosystem
+
+### From Toadstool
+- GPU compute + distributed execution = serious workloads
+- Resource-aware scheduling improves utilization
+- Pluggable compute backends (local, cloud, hybrid)
+
+### From BearDog
+- Entropy hierarchy (ephemeral → session → persistent) = security + performance
+- Capability-based crypto = works with any provider
+- Zero-knowledge patterns enable private compute
+
+### From Nestgate
+- Lineage tracking = full audit trail
+- Sovereignty enforcement = data control
+- CALM federation = conflict-free replication
+
+### From Squirrel
+- MCP agent pattern = composable AI workflows
+- Multi-agent coordination = complex reasoning
+- Adaptive optimization = learning systems
+
+---
+
+## Contributing New Pair Demos
+
+Template:
+
+```bash
+#!/usr/bin/env bash
+# PrimalA + PrimalB: <Purpose>
+
+set -e
+source ../01-single-primal/common/capability-discovery.sh
+
+# 1. Discover PrimalA by capability (not name)
+PRIMAL_A=$(discover_primal_by_capability "capability_x")
+
+# 2. Discover PrimalB by capability (not name)  
+PRIMAL_B=$(discover_primal_by_capability "capability_y")
+
+# 3. Compose workflow using adapted interfaces
+# 4. Document gaps and evolution scenarios
+# 5. Demonstrate resilience to changes
+```
+
+See existing demos for full pattern.

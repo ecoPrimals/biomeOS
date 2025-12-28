@@ -48,7 +48,7 @@ cargo run --bin biomeos-cli -- health --detailed
    - Stop command discovery
    - mDNS/Broadcast/Multicast discovery
    - Observability sharing (BearDog + Songbird)
-   
+
 2. **Professional Test Infrastructure**
    - biomeos-test-utils crate (200+ lines)
    - Mock primal HTTP server (axum)
