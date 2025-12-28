@@ -25,9 +25,9 @@
 //! ```rust,no_run
 //! use biomeos_boot::boot_logger::{BootLogger, LogLevel};
 //!
-//! let mut logger = BootLogger::new()?;
+//! let mut logger = BootLogger::new().expect("Failed to initialize logger");
 //! logger.log(LogLevel::Info, "BiomeOS initialization starting");
-//! logger.checkpoint(BootStage::InitStart);
+//! // logger.checkpoint(BootStage::InitStart);  // Requires full boot context
 //! ```
 
 pub mod device_mgr;
