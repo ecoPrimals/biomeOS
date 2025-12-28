@@ -416,3 +416,4 @@ Examples of new demos:
 
 The pattern is: BiomeOS orchestrates, primals provide capabilities, ecosystem evolves.
 
+

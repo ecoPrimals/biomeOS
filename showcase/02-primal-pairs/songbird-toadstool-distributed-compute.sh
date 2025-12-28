@@ -407,3 +407,4 @@ echo "Next: ./beardog-toadstool-encrypted-workload.sh"
 echo "  (Demonstrates encryption + compute orchestration)"
 echo ""
 
+

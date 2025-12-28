@@ -473,3 +473,4 @@ echo "  • Persistent keys in secure storage"
 echo "  • BiomeOS never stores keys, only uses them"
 echo ""
 
+
