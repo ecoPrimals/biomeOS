@@ -40,6 +40,9 @@ mod types;
 #[cfg(test)]
 mod tests;
 
+#[cfg(test)]
+mod tests_extended;
+
 pub use cache::{load_adapter, save_adapter, AdapterCache};
 pub use discovery::{discover_primal_interface, probe_interface_patterns};
 pub use lifecycle::{LifecycleRequest, LifecycleResponse, TransitionReason};
