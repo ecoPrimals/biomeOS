@@ -4,12 +4,14 @@
 
 pub mod vm_types;
 pub mod deployment;
+pub mod capabilities;
 
 use anyhow::{Context, Result};
 use std::path::PathBuf;
 
 pub use vm_types::{Topology, VmConfig, VmType};
 pub use deployment::{BiomeOsDeployment, DeployedVm};
+pub use capabilities::{Capability, CapabilityProfile, PrimalBinary};
 
 /// Get the path to the agentReagents template
 #[must_use]

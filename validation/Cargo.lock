@@ -194,6 +194,7 @@ dependencies = [
  "anyhow",
  "benchscale",
  "dirs",
+ "serde",
  "tempfile",
  "tokio",
  "tracing",

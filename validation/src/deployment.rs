@@ -96,14 +96,25 @@ impl DeployedVm {
 #[derive(Debug, Clone)]
 pub struct BiomeOsDeployment {
     pub install_path: PathBuf,
-    pub primals: Vec<String>,
+    pub capability_profile: Option<crate::capabilities::CapabilityProfile>,
 }
 
 impl Default for BiomeOsDeployment {
     fn default() -> Self {
         Self {
             install_path: PathBuf::from("/opt/biomeos"),
-            primals: vec!["songbird".to_string()],
+            capability_profile: Some(crate::capabilities::CapabilityProfile::minimal_federation()),
+        }
+    }
+}
+
+impl BiomeOsDeployment {
+    /// Create deployment with specific capability profile
+    #[must_use]
+    pub fn with_profile(profile: crate::capabilities::CapabilityProfile) -> Self {
+        Self {
+            install_path: PathBuf::from("/opt/biomeos"),
+            capability_profile: Some(profile),
         }
     }
 }
@@ -135,7 +146,7 @@ impl BiomeOsDeployment {
             .parent()
             .context("No parent")?;
         
-        // For now, just create a marker file
+        // Deploy biomeOS core
         println!("    • Deploying biomeOS core...");
         vm.ssh_exec(&format!(
             "echo 'biomeOS deployed' > {}/biomeos.marker",
@@ -143,17 +154,32 @@ impl BiomeOsDeployment {
         ))?;
         println!("    ✅ biomeOS core deployed");
 
-        // Deploy primals
-        for primal in &self.primals {
-            println!("    • Deploying {}...", primal);
+        // Deploy based on capability profile
+        if let Some(profile) = &self.capability_profile {
+            println!("    • Deploying capability profile: {}", profile.name);
+            
+            // Create capability manifest
+            let manifest = format!(
+                "Profile: {}\nRequired capabilities: {}\nOptional capabilities: {}",
+                profile.name,
+                profile.required_capabilities.len(),
+                profile.optional_capabilities.len()
+            );
+            
             vm.ssh_exec(&format!(
-                "echo '{} deployed' > {}/{}.marker",
-                primal,
-                self.install_path.display(),
-                primal
+                "echo '{}' > {}/capabilities.manifest",
+                manifest.replace('\n', "\\n"),
+                self.install_path.display()
             ))?;
-            println!("    ✅ {} deployed", primal);
+            
+            println!("    ✅ Capability manifest deployed");
+            println!("       Profile: {}", profile.name);
+            println!("       Required: {} capabilities", profile.required_capabilities.len());
+            println!("       Optional: {} capabilities", profile.optional_capabilities.len());
         }
+
+        // Note: Actual primal binaries will be discovered and started by biomeOS
+        // based on available capabilities in primalBins/
 
         println!("  ✅ Deployment complete for {}", vm.name);
         Ok(())
@@ -185,16 +211,15 @@ impl BiomeOsDeployment {
             return Ok(false);
         }
 
-        // Check primals
-        for primal in &self.primals {
+        // Check capability manifest
+        if self.capability_profile.is_some() {
             let result = vm.ssh_exec(&format!(
-                "test -f {}/{}.marker && echo 'exists'",
-                self.install_path.display(),
-                primal
+                "test -f {}/capabilities.manifest && echo 'exists'",
+                self.install_path.display()
             ))?;
 
             if !result.contains("exists") {
-                println!("  ❌ {} not found", primal);
+                println!("  ❌ Capability manifest not found");
                 return Ok(false);
             }
         }
@@ -218,8 +243,14 @@ mod tests {
     fn test_deployment_config() {
         let deployment = BiomeOsDeployment::default();
         assert_eq!(deployment.install_path, PathBuf::from("/opt/biomeos"));
-        assert_eq!(deployment.primals.len(), 1);
-        assert_eq!(deployment.primals[0], "songbird");
+        assert!(deployment.capability_profile.is_some());
+    }
+
+    #[test]
+    fn test_deployment_with_profile() {
+        let profile = crate::capabilities::CapabilityProfile::minimal_federation();
+        let deployment = BiomeOsDeployment::with_profile(profile);
+        assert!(deployment.capability_profile.is_some());
     }
 }
 

@@ -18,6 +18,10 @@ name = "provision-topology"
 path = "src/bin/provision_topology.rs"
 
 [[bin]]
+name = "provision-with-capabilities"
+path = "src/bin/provision_with_capabilities.rs"
+
+[[bin]]
 name = "validate-federation"
 path = "src/bin/validate_federation.rs"
 
@@ -32,6 +36,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 dirs = "5.0"
 whoami = "1.6.1"
+serde = { version = "1.0.228", features = ["derive"] }
 
 [dev-dependencies]
 tempfile = "3.8"
