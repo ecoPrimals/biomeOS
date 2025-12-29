@@ -76,7 +76,12 @@ impl AdapterCache {
 
 impl Default for AdapterCache {
     fn default() -> Self {
-        Self::new().expect("Failed to create adapter cache")
+        // Use panicking default since this is called implicitly
+        // Production code should explicitly call new() and handle errors
+        Self::new().unwrap_or_else(|e| {
+            tracing::error!("Failed to create adapter cache: {}", e);
+            panic!("Could not initialize adapter cache: {}", e)
+        })
     }
 }
 

@@ -57,7 +57,9 @@ impl VmFederationManager {
                 "create",
                 name,
                 "--topology",
-                self.topology_path.to_str().unwrap(),
+                self.topology_path
+                    .to_str()
+                    .ok_or_else(|| anyhow::anyhow!("Topology path contains invalid UTF-8"))?,
                 "--backend",
                 "libvirt",
             ])
@@ -214,10 +216,11 @@ mod tests {
         let name = "test-federation";
 
         // This would actually create VMs if libvirt is available
-        manager.create(name).await.expect("Create federation");
-        manager.start(name).await.expect("Start federation");
-        manager.test(name).await.expect("Test federation");
-        manager.stop(name).await.expect("Stop federation");
-        manager.destroy(name).await.expect("Destroy federation");
+        manager.create(name).await?;
+        manager.start(name).await?;
+        manager.test(name).await?;
+        manager.stop(name).await?;
+        manager.destroy(name).await?;
+        Ok(())
     }
 }
