@@ -27,6 +27,7 @@ tokio = { version = "1.35", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 dirs = "5.0"
+whoami = "1.6.1"
 
 [dev-dependencies]
 tempfile = "3.8"
