@@ -3,11 +3,13 @@
 //! This module provides shared utilities for VM provisioning and federation validation.
 
 pub mod vm_types;
+pub mod deployment;
 
 use anyhow::{Context, Result};
 use std::path::PathBuf;
 
 pub use vm_types::{Topology, VmConfig, VmType};
+pub use deployment::{BiomeOsDeployment, DeployedVm};
 
 /// Get the path to the agentReagents template
 #[must_use]
