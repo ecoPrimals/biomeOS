@@ -1,42 +1,60 @@
 # biomeOS Status
 
 **Date**: December 29, 2025  
-**Session**: 84 commits 🎉  
+**Session**: 92 commits 🎉  
 **Status**: Production-Ready 🌟  
 
 ---
 
-## Current Status: Phase 1 Complete ✅
+## Current Status: Validation Substrate Complete ✅
 
-### Phase 1: VM Provisioning (COMPLETE)
-**Goal**: Validate testing substrate using benchScale + agentReagents
+### Validation Substrate (COMPLETE) ✅
+
+**Goal**: Reliable VM provisioning with capability-based deployment
 
 **Results**:
-- ✅ 2 VMs created successfully
-- ✅ VMs boot in ~5 seconds (agentReagents template)
-- ✅ VMs get DHCP IPs automatically
-- ✅ SSH access validated
-- ✅ benchScale LibvirtBackend integrated
+- ✅ 4 VM types (Desktop, Server, Federation, Compute)
+- ✅ 4 topologies (simple, 2-node, 3-node, mixed)
+- ✅ Capability-based deployment (agnostic!)
+- ✅ 5 capability profiles ready
+- ✅ BiomeOS deployment system
+- ✅ SSH-based operations
 
-**Infrastructure**:
-```rust
-test-vm-provisioning (Rust binary)
-    └─> benchscale::LibvirtBackend
-          └─> agentReagents template (2.9GB)
-                └─> VMs ready in 5 seconds! ⚡
+**Architecture**:
+```
+validation/ workspace (independent)
+    ├─> VM types & topologies (type-safe)
+    ├─> Capability profiles (agnostic)
+    ├─> Deployment system (SSH)
+    └─> benchScale v2.0.0 (as tool)
 ```
 
-### Next: Phase 2 (Ready to Execute)
-**Goal**: Deploy biomeOS USB to VMs and validate Songbird P2P
+### Validation Pipeline
 
-**Plan**:
-1. Deploy biomeOS USB package to VMs
-2. Extract to `/opt/biomeos`
-3. Start Songbird orchestrate
-4. Validate mDNS/UDP discovery
-5. Confirm P2P federation
+**Phase 1: Provision VMs** ✅ COMPLETE
+- Multiple VM types
+- Topology-based provisioning
+- Type-safe configurations
 
-**Then**: Phase 3 (NUC joins federation automatically)
+**Phase 2: Deploy biomeOS** ✅ COMPLETE
+- Capability-based (no hardcoded names!)
+- SSH deployment
+- Verification
+
+**Phase 3: Start Songbird P2P** 🚧 TODO
+- SSH to VMs
+- Start primals based on capabilities
+- Wait for initialization
+
+**Phase 4: Validate mDNS** 🚧 TODO
+- Query service discovery
+- Verify peer discovery
+- Confirm coordination
+
+**Phase 5: Confirm Federation** 🚧 TODO
+- Test P2P communication
+- Verify data replication
+- Validate fault tolerance
 
 ---
 
@@ -90,6 +108,14 @@ Production (NUC USB)
 - LibvirtBackend for VMs
 - Evolution gaps documented
 - Handoff: EVOLUTION_GAPS_FROM_BIOMEOS.md
+- syntheticChemistry evolved to v2.0.0
+
+### 5. Capability-Based Deployment ✅
+- No hardcoded primal names
+- Agnostic orchestration
+- 5 capability profiles
+- Runtime discovery architecture
+- Evolution-friendly
 
 ---
 
@@ -122,18 +148,29 @@ Production (NUC USB)
 cargo run --release
 ```
 
-### Option 2: VM Testing (benchScale)
+### Option 2: VM Validation (benchScale + agentReagents)
 ```bash
-cargo run --release --bin test-vm-provisioning
-# Creates 2 VMs, validates substrate
+cd validation
+
+# Basic provisioning
+cargo run --bin provision-vms
+
+# Topology-based
+cargo run --bin provision-topology federation-2node
+
+# Capability-based (agnostic!)
+cargo run --bin provision-with-capabilities minimal-federation
+
+# Full validation pipeline
+cargo run --bin validate-federation
 ```
 
 ### Option 3: NUC USB (Hardware)
 ```bash
 # Boot from USB
-# Songbird P2P auto-starts
-# mDNS discovery automatic
-# Federation forms
+# Capability-based deployment
+# Primals discovered at runtime
+# Federation forms automatically
 ```
 
 ---
@@ -182,33 +219,34 @@ cargo run --release --bin test-vm-provisioning
 
 | Metric | Status |
 |--------|--------|
-| **Commits** | 84 🎉 |
+| **Commits** | 92 🎉 |
 | **Test Coverage** | 90%+ ✅ |
 | **Tests Passing** | 380+ (100%) ✅ |
 | **Showcases** | 20/20 (100%) ✅ |
 | **Technical Debt** | ZERO ✅ |
-| **Phase 1** | COMPLETE ✅ |
+| **Validation Substrate** | COMPLETE ✅ |
+| **Agnostic Deployment** | YES ✅ |
 | **Quality** | A++ 🌟 |
 
 ---
 
 ## Next Actions
 
-### Immediate
-1. **Phase 2**: Deploy biomeOS to VMs
-2. Start Songbird P2P on VMs
-3. Validate mDNS discovery
-4. Confirm federation
+### Immediate (Phases 3-5)
+1. **Phase 3**: Implement Songbird P2P startup
+2. **Phase 4**: Validate mDNS/UDP discovery
+3. **Phase 5**: Confirm federation coordination
 
 ### Short Term
-5. Boot NUC from USB
-6. Validate 3-node federation
-7. Full ecosystem validation
+4. NUC USB deployment testing
+5. Multi-node federation validation
+6. Full ecosystem testing
 
 ### Long Term
-8. Performance benchmarking
-9. Chaos testing
-10. Production deployment
+7. Performance benchmarking
+8. Chaos/fault testing
+9. Production hardening
+10. Documentation polish
 
 ---
 
