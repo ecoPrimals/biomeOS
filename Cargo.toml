@@ -20,6 +20,9 @@ members = [
     "crates/biomeos-boot",
     "crates/biomeos-deploy", "crates/biomeos-test-utils",
 ]
+exclude = [
+    "validation",  # Independent workspace for validation tools using benchScale
+]
 
 [workspace.package]
 version = "0.1.0"

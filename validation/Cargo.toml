@@ -1,0 +1,33 @@
+[workspace]
+# Independent workspace for validation tools
+# Uses benchScale v2.0.0 as a tool (not embedded in biomeOS core)
+
+[package]
+name = "biomeos-validation"
+version = "1.0.0"
+edition = "2021"
+authors = ["ecoPrimals Team"]
+description = "Validation tools for biomeOS - using benchScale v2.0.0"
+
+[[bin]]
+name = "provision-vms"
+path = "src/bin/provision_vms.rs"
+
+[[bin]]
+name = "validate-federation"
+path = "src/bin/validate_federation.rs"
+
+[dependencies]
+# benchScale v2.0.0 - Production-ready with cloud-init validation
+benchscale = { path = "../../../primalTools/benchscale", features = ["libvirt"] }
+
+# Standard dependencies
+anyhow = "1.0"
+tokio = { version = "1.35", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+dirs = "5.0"
+
+[dev-dependencies]
+tempfile = "3.8"
+
