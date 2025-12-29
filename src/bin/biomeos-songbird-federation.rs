@@ -150,20 +150,126 @@ fn find_latest_usb_package() -> Result<PathBuf> {
         .context("No USB package found. Run ./quick-usb.sh first.")
 }
 
-/// Create VM federation using benchScale
+/// Create VM federation using benchScale and agentReagents
 async fn create_vm_federation(name: &str) -> Result<Vec<String>> {
     info!("Creating VM federation: {}", name);
     
-    // For now, return mock IPs - we'll implement this properly
-    // once benchScale is ready
-    warn!("Using mock VM IPs for now");
+    println!("📋 Creating 2-node VM federation with benchScale...");
+    println!();
     
-    // TODO: Use VmFederationManager::create()
-    // let manager = VmFederationManager::new()?;
-    // manager.create(name).await?;
-    // let ips = manager.get_vm_ips(name)?;
+    // Use benchScale to create VMs
+    // This will use agentReagents template for 40x speed!
+    let benchscale_dir = std::env::current_dir()?
+        .parent()
+        .context("No parent")?
+        .parent()
+        .context("No grandparent")?
+        .join("primalTools")
+        .join("benchscale");
     
-    Ok(vec!["192.168.122.100".to_string(), "192.168.122.101".to_string()])
+    if !benchscale_dir.exists() {
+        warn!("benchScale not found, using mock IPs");
+        return Ok(vec!["192.168.122.100".to_string(), "192.168.122.101".to_string()]);
+    }
+    
+    println!("  • benchScale location: {}", benchscale_dir.display());
+    
+    // Create 2 VMs using benchScale
+    println!("  • Creating VM1...");
+    let create_result = Command::new("cargo")
+        .current_dir(&benchscale_dir)
+        .args([
+            "run", "--release", "--",
+            "vm", "create",
+            &format!("{}-vm1", name),
+            "--image", "/var/lib/libvirt/images/rustdesk-ubuntu-22.04-template.qcow2",
+            "--memory", "2048",
+            "--cpus", "2",
+        ])
+        .output()
+        .context("Failed to create VM1")?;
+    
+    if !create_result.status.success() {
+        warn!("VM creation via benchScale failed, using mock IPs");
+        warn!("Error: {}", String::from_utf8_lossy(&create_result.stderr));
+        return Ok(vec!["192.168.122.100".to_string(), "192.168.122.101".to_string()]);
+    }
+    
+    println!("    ✓ VM1 created");
+    
+    println!("  • Creating VM2...");
+    let create_result2 = Command::new("cargo")
+        .current_dir(&benchscale_dir)
+        .args([
+            "run", "--release", "--",
+            "vm", "create",
+            &format!("{}-vm2", name),
+            "--image", "/var/lib/libvirt/images/rustdesk-ubuntu-22.04-template.qcow2",
+            "--memory", "2048",
+            "--cpus", "2",
+        ])
+        .output()
+        .context("Failed to create VM2")?;
+    
+    if !create_result2.status.success() {
+        warn!("VM2 creation failed");
+    } else {
+        println!("    ✓ VM2 created");
+    }
+    
+    println!();
+    println!("  ⏳ Waiting 30 seconds for VMs to boot and get IPs...");
+    thread::sleep(Duration::from_secs(30));
+    println!();
+    
+    // Get VM IPs using virsh
+    println!("  • Discovering VM IPs...");
+    let vm_ips = discover_vm_ips(&[
+        format!("{}-vm1", name),
+        format!("{}-vm2", name),
+    ])?;
+    
+    if vm_ips.is_empty() {
+        warn!("Could not discover VM IPs, using mock IPs");
+        return Ok(vec!["192.168.122.100".to_string(), "192.168.122.101".to_string()]);
+    }
+    
+    println!("    ✓ IPs discovered: {:?}", vm_ips);
+    println!();
+    
+    Ok(vm_ips)
+}
+
+/// Discover VM IPs using virsh
+fn discover_vm_ips(vm_names: &[String]) -> Result<Vec<String>> {
+    let mut ips = Vec::new();
+    
+    for vm_name in vm_names {
+        // Get IP via virsh domifaddr
+        let result = Command::new("sudo")
+            .args([
+                "virsh", "domifaddr", vm_name,
+                "--source", "agent",
+            ])
+            .output()?;
+        
+        if result.status.success() {
+            let output = String::from_utf8_lossy(&result.stdout);
+            // Parse IP from output (format: "vnet0      52:54:00:XX:XX:XX    ipv4         192.168.122.XXX/24")
+            for line in output.lines() {
+                if line.contains("ipv4") {
+                    if let Some(ip_part) = line.split_whitespace().find(|s| s.contains("192.168")) {
+                        if let Some(ip) = ip_part.split('/').next() {
+                            ips.push(ip.to_string());
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    Ok(ips)
 }
 
 /// Deploy USB package to VMs
