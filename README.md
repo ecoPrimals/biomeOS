@@ -1,11 +1,20 @@
 # biomeOS - Primal Substrate & Federation
 
 **Status**: Production-Ready 🌟  
+**Phase**: 1 Complete, 2 Ready 🚀  
 **Architecture**: Modern Idiomatic Rust 🦀  
-**Deep Debt**: SOLVED ✅  
 **Quality**: A++ ⚡  
 
 > **biomeOS** is a declarative, capability-based substrate for deploying and federating ecoPrimals. It discovers primals at runtime, adapts to their APIs agnostically, and orchestrates them into emergent "niches" - all without hardcoded dependencies.
+
+---
+
+## ⚡ Quick Links
+
+- **[STATUS.md](STATUS.md)** - Current status, metrics, next steps
+- **[START_HERE.md](START_HERE.md)** - New user onboarding
+- **[ROOT_INDEX.md](ROOT_INDEX.md)** - Complete documentation index
+- **[SESSION_SUMMARY.md](SESSION_SUMMARY.md)** - Latest session achievements
 
 ---
 
