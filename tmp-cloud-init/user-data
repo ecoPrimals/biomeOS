@@ -1,0 +1,17 @@
+#cloud-config
+users:
+  - name: biomeos
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC06cBdHiWZ15lQQQVE2mSxSto1H83JR+ttBRm9IMHFy7QUMoN0PkL5TPV2dFhsyIiVowTt73u/gj9qkRwQgjbLjMvk/8AtIAIutRFM4rfMOsMfkcuPHw0hTET0IVAZgwEGBXi8yMcTLK5nd9kYKCVnOwNTxOn2w7UWHAQR48tCds9aITZysrH3cnO/LYaTLBofKnxwGnMPiEsDKpc+v35+Sle0mfE7WrQ+KUB5T4nAnB1jEz9m73HWfLwMKIIpV41iHUgEaGlxDONCi7bOLk004WQ3ACclXQs69QPQRvM3y9t8896aHDKG0A6nh0yT+9Ut2AM8DWG5sNA1kCB99zauOnNX4BC6D0k5CXeecGOLbrmbNjMLRQ2zoUYTxKGwHMEbdJ+BEer69yAL6VOPjqxzVjXDT4WBhG04wQf5Hpj1+EInuFNPM2yKPiI+d/7+i2d1pYrOrFlWz2rVVYaSkhNuSzwcXM2jneQM6o3boycUY4OpzMzrvEZdcWu/0rCRwzzSRoPU7tIvB5pz26RJsVQCXGO/xpOx8BUMRbiwzs+b8wFw0L2pPT+cnwGN6wDk0doA1IV9AaK6ICXuCIFy90+xla6sNXIjZPHLbBT/vhO5O7s7qh9Fpnqryw3KCLqtPXfD/yNN1ZwaUt6GpCv/1OcPE/fVLXD2+3TZYQErYYDHxQ== eastgate@pop-os
+
+packages:
+  - avahi-daemon
+  - avahi-utils
+  - curl
+
+runcmd:
+  - systemctl enable avahi-daemon
+  - systemctl start avahi-daemon
+  - mkdir -p /opt/biomeos

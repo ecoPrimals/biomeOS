@@ -1,246 +1,429 @@
 #!/bin/bash
-# USB Federation Validation Pipeline
-# 
-# Tests USB deployment in 2-VM federation before NUC deployment
+# Validate USB BiomeOS deployment in 2-VM federation using benchScale
 
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BENCHSCALE_DIR="$(cd "$SCRIPT_DIR/../../primalTools/benchscale" && pwd)"
-USB_PACKAGE="$SCRIPT_DIR/biomeos-20251228-163320.tar.gz"
-
 echo "╔═══════════════════════════════════════════════════════════╗"
-echo "║  🔬 USB Federation Validation Pipeline 🔬               ║"
+echo "║  🧪 USB Federation Validation with benchScale 🧪         ║"
 echo "╚═══════════════════════════════════════════════════════════╝"
 echo ""
+echo "Goal: Use benchScale to deploy BiomeOS USB in 2-VM federation"
+echo ""
 
-# Check prerequisites
-echo "📋 Checking prerequisites..."
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+USB_PACKAGE="$SCRIPT_DIR/biomeos-20251228-181049.tar.gz"
+BENCHSCALE_BIN="/home/eastgate/Development/ecoPrimals/primalTools/benchscale/target/release/benchscale"
+TOPOLOGY_FILE="$SCRIPT_DIR/validation/benchscale-topologies/usb-federation-test.yaml"
 
-# Check USB package exists
+# Phase 1: Prerequisites
+echo "═══════════════════════════════════════════════════════════"
+echo "Phase 1: Prerequisites"
+echo "═══════════════════════════════════════════════════════════"
+echo ""
+
 if [ ! -f "$USB_PACKAGE" ]; then
     echo "❌ USB package not found: $USB_PACKAGE"
+    exit 1
+fi
+echo "✅ USB package: $USB_PACKAGE ($(du -h "$USB_PACKAGE" | cut -f1))"
+
+if [ ! -f "$BENCHSCALE_BIN" ]; then
+    echo "❌ benchScale binary not found: $BENCHSCALE_BIN"
+    echo "   Building benchScale..."
+    cd /home/eastgate/Development/ecoPrimals/primalTools/benchscale
+    cargo build --release --features libvirt
+    cd "$SCRIPT_DIR"
+fi
+echo "✅ benchScale: $BENCHSCALE_BIN"
+
+if [ ! -f "$TOPOLOGY_FILE" ]; then
+    echo "❌ Topology file not found: $TOPOLOGY_FILE"
+    echo "   Creating topology..."
+    mkdir -p "$(dirname "$TOPOLOGY_FILE")"
+    
+    cat > "$TOPOLOGY_FILE" << 'EOF'
+# BiomeOS USB Federation Test Topology
+# 2 VMs for validating mDNS/UDP federation
+
+name: biomeos-usb-federation
+description: 2-VM federation for testing BiomeOS USB deployment
+version: "2.0"
+
+backend: libvirt
+
+# Shared network for mDNS discovery
+networks:
+  - name: biomeos-lan
+    subnet: 192.168.100.0/24
+    gateway: 192.168.100.1
+    dhcp: true
+
+# Two BiomeOS towers
+nodes:
+  - name: tower-alpha
+    image: ubuntu-22.04-cloudimg
+    memory: 4096  # 4GB RAM
+    cpus: 2
+    disk: 30      # 30GB disk
+    networks:
+      - name: biomeos-lan
+        ip: dhcp
+    cloud_init:
+      users:
+        - name: biomeos
+          sudo: ALL=(ALL) NOPASSWD:ALL
+          shell: /bin/bash
+          ssh_authorized_keys: []  # Will be injected at runtime
+      packages:
+        - avahi-daemon
+        - avahi-utils
+        - curl
+        - build-essential
+      runcmd:
+        - systemctl enable avahi-daemon
+        - systemctl start avahi-daemon
+        - mkdir -p /opt/biomeos
+
+  - name: tower-beta
+    image: ubuntu-22.04-cloudimg
+    memory: 4096
+    cpus: 2
+    disk: 30
+    networks:
+      - name: biomeos-lan
+        ip: dhcp
+    cloud_init:
+      users:
+        - name: biomeos
+          sudo: ALL=(ALL) NOPASSWD:ALL
+          shell: /bin/bash
+          ssh_authorized_keys: []
+      packages:
+        - avahi-daemon
+        - avahi-utils
+        - curl
+        - build-essential
+      runcmd:
+        - systemctl enable avahi-daemon
+        - systemctl start avahi-daemon
+        - mkdir -p /opt/biomeos
+
+# Validation tests
+validation:
+  - name: mdns_discovery
+    description: Verify mDNS service discovery works
+    nodes:
+      - tower-alpha
+      - tower-beta
+    commands:
+      - avahi-browse -t _songbird._tcp -r -p
+  
+  - name: primal_status
+    description: Check primals are running
+    nodes:
+      - tower-alpha
+      - tower-beta
+    commands:
+      - pgrep -f songbird
+      - pgrep -f nestgate
+EOF
+    
+    echo "✅ Created topology: $TOPOLOGY_FILE"
+fi
+echo "✅ Topology: $TOPOLOGY_FILE"
+
+echo ""
+
+# Phase 2: Create lab with benchScale
+echo "═══════════════════════════════════════════════════════════"
+echo "Phase 2: Creating 2-VM Lab with benchScale"
+echo "═══════════════════════════════════════════════════════════"
+echo ""
+
+LAB_NAME="biomeos-usb-test"
+
+# Check if lab already exists
+if "$BENCHSCALE_BIN" list 2>/dev/null | grep -q "$LAB_NAME"; then
+    echo "🧹 Cleaning up existing lab..."
+    "$BENCHSCALE_BIN" destroy "$LAB_NAME" || true
+fi
+
+echo "🚀 Creating lab: $LAB_NAME"
+echo "   Using benchScale's CloudInit + libvirt provisioning..."
+echo ""
+
+# Note: benchScale's 'create' command is not yet fully implemented
+# We'll use the underlying Rust API approach
+echo "⚠️  Note: benchScale CLI 'create' is pending implementation"
+echo "   Using manual benchScale API approach..."
+echo ""
+
+# Instead, let's use benchScale's scripts which leverage the API
+if [ -f "/home/eastgate/Development/ecoPrimals/primalTools/benchscale/scripts/create-lab.sh" ]; then
+    echo "📝 Using benchScale's create-lab.sh script..."
+    cd /home/eastgate/Development/ecoPrimals/primalTools/benchscale
+    ./scripts/create-lab.sh "$LAB_NAME" "$TOPOLOGY_FILE" || {
+        echo "⚠️  benchScale script approach needs adaptation"
+        echo "   Falling back to direct Rust API usage..."
+    }
+    cd "$SCRIPT_DIR"
+else
+    echo "⚠️  benchScale scripts not available"
+    echo "   Creating a Rust program to use benchScale API..."
+    
+    # Create a temporary Rust program that uses benchScale's API
+    cat > /tmp/biomeos_federation_test.rs << 'RUST_EOF'
+use benchscale::{LibvirtBackend, CloudInit, Backend};
+use std::path::Path;
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    println!("🚀 Using benchScale LibvirtBackend to create VMs...");
+    
+    let backend = LibvirtBackend::new()?;
+    
+    // Read user's SSH public key
+    let ssh_key = std::fs::read_to_string(
+        std::env::var("HOME")? + "/.ssh/id_rsa.pub"
+    )?;
+    
+    // Configure CloudInit for both VMs
+    let cloud_init = CloudInit::builder()
+        .add_user("biomeos", &ssh_key.trim())
+        .package("avahi-daemon")
+        .package("avahi-utils")
+        .package("curl")
+        .package("build-essential")
+        .package_update(true)
+        .runcmd("systemctl enable avahi-daemon")
+        .runcmd("systemctl start avahi-daemon")
+        .runcmd("mkdir -p /opt/biomeos")
+        .build();
+    
+    // Create tower-alpha
+    println!("📦 Creating tower-alpha...");
+    let alpha = backend.create_desktop_vm(
+        "biomeos-tower-alpha",
+        Path::new("/var/lib/libvirt/images/ubuntu-22.04-cloudimg.img"),
+        &cloud_init,
+        4096,  // 4GB RAM
+        2,     // 2 vCPUs
+        30,    // 30GB disk
+    ).await?;
+    println!("✅ tower-alpha: {}", alpha.ip_address);
+    
+    // Create tower-beta
+    println!("📦 Creating tower-beta...");
+    let beta = backend.create_desktop_vm(
+        "biomeos-tower-beta",
+        Path::new("/var/lib/libvirt/images/ubuntu-22.04-cloudimg.img"),
+        &cloud_init,
+        4096,
+        2,
+        30,
+    ).await?;
+    println!("✅ tower-beta: {}", beta.ip_address);
+    
+    // Write IPs to file for shell script to use
+    std::fs::write("/tmp/tower-alpha-ip", &alpha.ip_address)?;
+    std::fs::write("/tmp/tower-beta-ip", &beta.ip_address)?;
+    
+    println!("\n✅ Both VMs created successfully!");
+    println!("   tower-alpha: {}", alpha.ip_address);
+    println!("   tower-beta: {}", beta.ip_address);
+    
+    Ok(())
+}
+RUST_EOF
+    
+    echo "📝 Created Rust program using benchScale API"
+    echo "🔨 Compiling with benchScale dependency..."
+    
+    # Create a temp Cargo project
+    mkdir -p /tmp/biomeos-federation-test
+    cd /tmp/biomeos-federation-test
+    
+    if [ ! -f Cargo.toml ]; then
+        cargo init --name biomeos-federation-test
+        cat > Cargo.toml << 'CARGO_EOF'
+[package]
+name = "biomeos-federation-test"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+benchscale = { path = "/home/eastgate/Development/ecoPrimals/primalTools/benchscale", features = ["libvirt"] }
+tokio = { version = "1", features = ["full"] }
+anyhow = "1.0"
+CARGO_EOF
+    fi
+    
+    cp /tmp/biomeos_federation_test.rs src/main.rs
+    
+    echo "🔨 Building benchScale-powered federation creator..."
+    cargo build --release 2>&1 | grep -E "(Compiling|Finished|error)" || true
+    
+    if [ -f target/release/biomeos-federation-test ]; then
+        echo "✅ Built successfully!"
+        echo ""
+        echo "🚀 Creating VMs with benchScale..."
+        sudo ./target/release/biomeos-federation-test
+        
+        # Get IPs from the Rust program's output
+        VM1_IP=$(cat /tmp/tower-alpha-ip)
+        VM2_IP=$(cat /tmp/tower-beta-ip)
+        
+        echo ""
+        echo "✅ VMs created:"
+        echo "   tower-alpha: $VM1_IP"
+        echo "   tower-beta: $VM2_IP"
+    else
+        echo "❌ Build failed, check errors above"
+        exit 1
+    fi
+    
+    cd "$SCRIPT_DIR"
+fi
+
+# If we got here via any method, VMs should be running
+# Discover their IPs
+VM1_IP=$(sudo virsh domifaddr biomeos-tower-alpha 2>/dev/null | grep -oP '(\d+\.){3}\d+' | head -1)
+VM2_IP=$(sudo virsh domifaddr biomeos-tower-beta 2>/dev/null | grep -oP '(\d+\.){3}\d+' | head -1)
+
+if [ -z "$VM1_IP" ] || [ -z "$VM2_IP" ]; then
+    # Try reading from temp files (if created by Rust program)
+    VM1_IP=$(cat /tmp/tower-alpha-ip 2>/dev/null || echo "")
+    VM2_IP=$(cat /tmp/tower-beta-ip 2>/dev/null || echo "")
+fi
+
+if [ -z "$VM1_IP" ] || [ -z "$VM2_IP" ]; then
+    echo "❌ Could not get VM IPs"
+    exit 1
+fi
+
+echo ""
+echo "📊 VM IPs:"
+echo "   tower-alpha: $VM1_IP"
+echo "   tower-beta: $VM2_IP"
+echo ""
+
+# Phase 3: Deploy BiomeOS USB package
+echo "═══════════════════════════════════════════════════════════"
+echo "Phase 3: Deploying BiomeOS USB Package"
+echo "═══════════════════════════════════════════════════════════"
+echo ""
+
+SSH_OPTS="-o StrictHostKeyChecking=no -o ConnectTimeout=5"
+
+echo "⏳ Waiting for SSH (60s for cloud-init)..."
+sleep 60
+
+echo "📦 Copying USB package to both VMs..."
+scp $SSH_OPTS "$USB_PACKAGE" biomeos@$VM1_IP:/tmp/ &
+scp $SSH_OPTS "$USB_PACKAGE" biomeos@$VM2_IP:/tmp/ &
+wait
+echo "✅ Packages copied"
+
+echo "📂 Extracting on both VMs..."
+ssh $SSH_OPTS biomeos@$VM1_IP "cd /tmp && tar -xzf biomeos-20251228-181049.tar.gz && sudo mv opt/biomeos /opt/ && sudo chown -R biomeos:biomeos /opt/biomeos" &
+ssh $SSH_OPTS biomeos@$VM2_IP "cd /tmp && tar -xzf biomeos-20251228-181049.tar.gz && sudo mv opt/biomeos /opt/ && sudo chown -R biomeos:biomeos /opt/biomeos" &
+wait
+echo "✅ BiomeOS extracted on both VMs"
+echo ""
+
+# Phase 4: Start primals
+echo "═══════════════════════════════════════════════════════════"
+echo "Phase 4: Starting Primals"
+echo "═══════════════════════════════════════════════════════════"
+echo ""
+
+echo "🚀 Starting Songbird on both VMs..."
+ssh $SSH_OPTS biomeos@$VM1_IP "cd /opt/biomeos && nohup ./start-songbird.sh > /tmp/songbird.log 2>&1 &"
+ssh $SSH_OPTS biomeos@$VM2_IP "cd /opt/biomeos && nohup ./start-songbird.sh > /tmp/songbird.log 2>&1 &"
+sleep 10
+echo "✅ Songbird started on both VMs"
+
+echo "🚀 Starting NestGate on both VMs..."
+ssh $SSH_OPTS biomeos@$VM1_IP "cd /opt/biomeos && export NESTGATE_JWT_SECRET=\$(openssl rand -base64 48) && nohup ./primals/nestgate service start > /tmp/nestgate.log 2>&1 &"
+ssh $SSH_OPTS biomeos@$VM2_IP "cd /opt/biomeos && export NESTGATE_JWT_SECRET=\$(openssl rand -base64 48) && nohup ./primals/nestgate service start > /tmp/nestgate.log 2>&1 &"
+sleep 5
+echo "✅ NestGate started on both VMs"
+echo ""
+
+# Phase 5: Verify federation
+echo "═══════════════════════════════════════════════════════════"
+echo "Phase 5: Verifying mDNS/UDP Federation"
+echo "═══════════════════════════════════════════════════════════"
+echo ""
+
+echo "🔍 Checking mDNS discovery on tower-alpha..."
+ALPHA_MDNS=$(ssh $SSH_OPTS biomeos@$VM1_IP "avahi-browse -t _songbird._tcp -r -p 2>/dev/null | grep 'Songbird Orchestrator' | wc -l")
+echo "   Found $ALPHA_MDNS Songbird tower(s)"
+
+echo "🔍 Checking mDNS discovery on tower-beta..."
+BETA_MDNS=$(ssh $SSH_OPTS biomeos@$VM2_IP "avahi-browse -t _songbird._tcp -r -p 2>/dev/null | grep 'Songbird Orchestrator' | wc -l")
+echo "   Found $BETA_MDNS Songbird tower(s)"
+
+echo ""
+
+if [ "$ALPHA_MDNS" -ge 2 ] && [ "$BETA_MDNS" -ge 2 ]; then
+    echo "✅ FEDERATION SUCCESS!"
+    echo "   Both VMs discovered each other via mDNS/UDP!"
+    echo "   This confirms NUC will auto-discover over LAN!"
+    FEDERATION_STATUS="SUCCESS"
+else
+    echo "⚠️  Partial federation (found: alpha=$ALPHA_MDNS, beta=$BETA_MDNS)"
+    echo "   Expected: Both should see 2 towers"
+    FEDERATION_STATUS="PARTIAL"
+fi
+
+echo ""
+echo "📊 Primal Status:"
+echo ""
+echo "--- tower-alpha ---"
+ssh $SSH_OPTS biomeos@$VM1_IP "pgrep -f songbird && echo '✅ Songbird running' || echo '❌ Songbird not running'"
+ssh $SSH_OPTS biomeos@$VM1_IP "pgrep -f nestgate && echo '✅ NestGate running' || echo '❌ NestGate not running'"
+echo ""
+echo "--- tower-beta ---"
+ssh $SSH_OPTS biomeos@$VM2_IP "pgrep -f songbird && echo '✅ Songbird running' || echo '❌ Songbird not running'"
+ssh $SSH_OPTS biomeos@$VM2_IP "pgrep -f nestgate && echo '✅ NestGate running' || echo '❌ NestGate not running'"
+echo ""
+
+# Summary
+echo "╔═══════════════════════════════════════════════════════════╗"
+echo "║  📊 Federation Validation Complete 📊                    ║"
+echo "╚═══════════════════════════════════════════════════════════╝"
+echo ""
+echo "Deployment Method: benchScale (libvirt + CloudInit)"
+echo "Lab Name: $LAB_NAME"
+echo ""
+echo "VMs:"
+echo "  tower-alpha: $VM1_IP"
+echo "  tower-beta:  $VM2_IP"
+echo ""
+echo "mDNS Discovery:"
+echo "  Tower Alpha: $ALPHA_MDNS tower(s) visible"
+echo "  Tower Beta:  $BETA_MDNS tower(s) visible"
+echo "  Status: $FEDERATION_STATUS"
+echo ""
+
+if [ "$FEDERATION_STATUS" = "SUCCESS" ]; then
+    echo "✅ USB package validated in 2-VM federation!"
+    echo "✅ Ready to deploy to NUC with confidence!"
     echo ""
-    echo "Create it first:"
-    echo "  cd $SCRIPT_DIR"
-    echo "  AUTO_CONFIRM=1 ./quick-usb.sh"
-    exit 1
+    echo "🚀 Next: Deploy USB to NUC"
+    echo "   NUC will auto-discover these VMs + any other NUCs on LAN!"
+else
+    echo "⚠️  Federation needs tuning"
+    echo "   Check: mDNS config, network isolation, firewall rules"
 fi
 
-USB_SIZE=$(du -h "$USB_PACKAGE" | cut -f1)
-echo "✅ USB package: $USB_SIZE"
-
-# Check benchScale
-if [ ! -f "$BENCHSCALE_DIR/target/release/benchscale" ]; then
-    echo "❌ benchScale not built"
-    echo ""
-    echo "Build it:"
-    echo "  cd $BENCHSCALE_DIR"
-    echo "  cargo build --release --features libvirt"
-    exit 1
-fi
-
-echo "✅ benchScale: available"
 echo ""
-
-# Topology file
-TOPOLOGY="$BENCHSCALE_DIR/topologies/biomeos-usb-federation-test.yaml"
-
-if [ ! -f "$TOPOLOGY" ]; then
-    echo "❌ Topology not found: $TOPOLOGY"
-    exit 1
-fi
-
-echo "✅ Topology: ready"
+echo "📝 VM Access:"
+echo "  ssh biomeos@$VM1_IP"
+echo "  ssh biomeos@$VM2_IP"
 echo ""
-
-# Phase 1: Create VMs
-echo "═══════════════════════════════════════════════════════════"
-echo "PHASE 1: Create 2-VM Federation Test Lab"
-echo "═══════════════════════════════════════════════════════════"
+echo "🧹 Cleanup:"
+echo "  sudo virsh destroy biomeos-tower-alpha && sudo virsh undefine biomeos-tower-alpha --remove-all-storage"
+echo "  sudo virsh destroy biomeos-tower-beta && sudo virsh undefine biomeos-tower-beta --remove-all-storage"
 echo ""
-
-LAB_NAME="biomeos-usb-federation-$(date +%Y%m%d-%H%M%S)"
-
-echo "🏗️  Creating lab: $LAB_NAME"
-echo "   Topology: $TOPOLOGY"
-echo "   VMs: 2 (tower-alpha, tower-beta)"
-echo ""
-
-# Note: This is a simulation - actual benchScale integration pending
-echo "📋 Lab creation steps:"
-echo "   1. Create 2 Ubuntu 22.04 VMs"
-echo "   2. Attach USB package as mounted volume"
-echo "   3. Configure network (10.70.0.0/24)"
-echo "   4. Install avahi-daemon (mDNS)"
-echo ""
-
-# Phase 2: Deploy BiomeOS from USB
-echo "═══════════════════════════════════════════════════════════"
-echo "PHASE 2: Deploy BiomeOS from USB (Both VMs)"
-echo "═══════════════════════════════════════════════════════════"
-echo ""
-
-echo "🚀 Deployment sequence:"
-echo ""
-echo "Tower Alpha:"
-echo "  1. Mount USB package"
-echo "  2. Extract to /mnt/usb"
-echo "  3. Run /mnt/usb/install/install-biomeos.sh"
-echo "  4. Start primals: /opt/biomeos/deploy-real-primals.sh"
-echo "  5. Verify: curl http://localhost:9020/health"
-echo ""
-
-echo "Tower Beta:"
-echo "  1. Mount USB package (same)"
-echo "  2. Extract to /mnt/usb"
-echo "  3. Run /mnt/usb/install/install-biomeos.sh"
-echo "  4. Start primals: /opt/biomeos/deploy-real-primals.sh"
-echo "  5. Verify: curl http://localhost:9020/health"
-echo ""
-
-# Phase 3: Validate Federation
-echo "═══════════════════════════════════════════════════════════"
-echo "PHASE 3: Validate Federation (mDNS Discovery)"
-echo "═══════════════════════════════════════════════════════════"
-echo ""
-
-echo "🔍 Federation tests:"
-echo ""
-echo "Test 1: Mutual Discovery"
-echo "  - Alpha discovers Beta via Songbird mDNS"
-echo "  - Beta discovers Alpha via Songbird mDNS"
-echo "  - Wait 30s for mDNS propagation"
-echo ""
-
-echo "Test 2: Data Replication"
-echo "  - Store data on Alpha (NestGate)"
-echo "  - Retrieve from Beta (federation sync)"
-echo "  - Verify data integrity"
-echo ""
-
-echo "Test 3: Sovereignty"
-echo "  - Unauthorized access rejected"
-echo "  - Lineage enforcement working"
-echo "  - Cross-tower security maintained"
-echo ""
-
-# Phase 4: Run E2E Tests
-echo "═══════════════════════════════════════════════════════════"
-echo "PHASE 4: Run E2E Tests (Both VMs)"
-echo "═══════════════════════════════════════════════════════════"
-echo ""
-
-echo "🧪 Running test suites:"
-echo "   Alpha: /opt/biomeos/run-e2e-tests.sh"
-echo "   Beta: /opt/biomeos/run-e2e-tests.sh"
-echo ""
-echo "   Expected: 12/15 passing on each"
-echo "   (3 Songbird HTTP endpoint tests known to fail)"
-echo ""
-
-# Phase 5: Collect Results
-echo "═══════════════════════════════════════════════════════════"
-echo "PHASE 5: Collect Validation Results"
-echo "═══════════════════════════════════════════════════════════"
-echo ""
-
-echo "📊 Validation criteria:"
-echo "   ✅ Both VMs deployed from USB"
-echo "   ✅ All primals running (10 total: 5 per VM)"
-echo "   ✅ Mutual mDNS discovery working"
-echo "   ✅ Federation established"
-echo "   ✅ Data replication functional"
-echo "   ✅ Sovereignty enforced"
-echo "   ✅ E2E tests: 12/15 (expected)"
-echo ""
-
-# Manual execution instructions
-echo "═══════════════════════════════════════════════════════════"
-echo "📋 MANUAL EXECUTION GUIDE"
-echo "═══════════════════════════════════════════════════════════"
-echo ""
-echo "Since benchScale VM creation isn't automated yet,"
-echo "here's how to run this test manually:"
-echo ""
-
-echo "1️⃣  Create 2 Ubuntu 22.04 VMs:"
-echo "   - VM1: tower-alpha (4GB RAM, 2 vCPUs)"
-echo "   - VM2: tower-beta (4GB RAM, 2 vCPUs)"
-echo "   - Network: Bridge mode (so they can see each other)"
-echo ""
-
-echo "2️⃣  Copy USB package to both VMs:"
-echo "   scp $USB_PACKAGE user@tower-alpha:/tmp/"
-echo "   scp $USB_PACKAGE user@tower-beta:/tmp/"
-echo ""
-
-echo "3️⃣  On BOTH VMs, run installation:"
-echo "   sudo mkdir -p /mnt/usb"
-echo "   cd /tmp && tar -xzf biomeos-*.tar.gz -C /mnt/usb"
-echo "   cd /mnt/usb/install"
-echo "   ./install-biomeos.sh"
-echo ""
-
-echo "4️⃣  Install avahi (mDNS) on BOTH VMs:"
-echo "   sudo apt update"
-echo "   sudo apt install -y avahi-daemon avahi-utils"
-echo "   sudo systemctl start avahi-daemon"
-echo ""
-
-echo "5️⃣  Start BiomeOS on BOTH VMs:"
-echo "   cd /opt/biomeos"
-echo "   ./deploy-real-primals.sh"
-echo ""
-
-echo "6️⃣  Wait 30s, then verify federation:"
-echo "   # On tower-alpha:"
-echo "   tail -f /opt/biomeos/logs/primals/songbird.log | grep -i beta"
-echo ""
-echo "   # On tower-beta:"
-echo "   tail -f /opt/biomeos/logs/primals/songbird.log | grep -i alpha"
-echo ""
-
-echo "7️⃣  Test data replication:"
-echo "   # On alpha:"
-echo "   curl -X POST http://localhost:9020/api/store -d '{\"key\":\"test\",\"data\":\"hello\"}'"
-echo ""
-echo "   # On beta (wait 5s):"
-echo "   curl http://localhost:9020/api/retrieve/test"
-echo ""
-
-echo "8️⃣  Run E2E tests on both:"
-echo "   cd /opt/biomeos && ./run-e2e-tests.sh"
-echo "   Expected: 12/15 PASS on each VM"
-echo ""
-
-echo "═══════════════════════════════════════════════════════════"
-echo "🎯 SUCCESS CRITERIA"
-echo "═══════════════════════════════════════════════════════════"
-echo ""
-echo "Federation validated when:"
-echo "   ✅ Both VMs running BiomeOS from USB"
-echo "   ✅ Songbird logs show peer discovery"
-echo "   ✅ 10 total primal processes (5 per VM)"
-echo "   ✅ Data replicates between towers"
-echo "   ✅ E2E: 24/30 total (12/15 per VM)"
-echo ""
-
-echo "🚀 Then proceed to NUC deployment!"
-echo ""
-
-echo "═══════════════════════════════════════════════════════════"
-echo "Next: NUC Deployment"
-echo "═══════════════════════════════════════════════════════════"
-echo ""
-echo "After VM validation succeeds:"
-echo "   1. Write USB: sudo dd if=$USB_PACKAGE of=/dev/sdX"
-echo "   2. Boot NUC from USB"
-echo "   3. Install: Same steps as VMs"
-echo "   4. NUC will discover VM federation automatically"
-echo "   5. Result: 3-node federation (alpha, beta, NUC)"
-echo ""
-
-echo "📄 Validation complete! See manual steps above."
-echo ""
-
