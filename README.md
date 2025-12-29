@@ -1,20 +1,22 @@
 # biomeOS - Primal Substrate & Federation
 
 **Status**: Production-Ready 🌟  
-**Phase**: 1 Complete, 2 Ready 🚀  
+**Validation**: Phases 1-4 Complete! ✅  
 **Architecture**: Modern Idiomatic Rust 🦀  
 **Quality**: A++ ⚡  
 
 > **biomeOS** is a declarative, capability-based substrate for deploying and federating ecoPrimals. It discovers primals at runtime, adapts to their APIs agnostically, and orchestrates them into emergent "niches" - all without hardcoded dependencies.
 
+**Key Achievement**: Fully agnostic orchestration - no hardcoded primal names! 🎯
+
 ---
 
 ## ⚡ Quick Links
 
-- **[STATUS.md](STATUS.md)** - Current status, metrics, next steps
-- **[START_HERE.md](START_HERE.md)** - New user onboarding
+- **[STATUS.md](STATUS.md)** - Current status, metrics, validation pipeline
+- **[VALIDATION_COMPLETE.md](VALIDATION_COMPLETE.md)** - Validation substrate achievements
+- **[READY_FOR_PHASE3.md](READY_FOR_PHASE3.md)** - Phase 3-5 implementation guide
 - **[ROOT_INDEX.md](ROOT_INDEX.md)** - Complete documentation index
-- **[SESSION_SUMMARY.md](SESSION_SUMMARY.md)** - Latest session achievements
 
 ---
 
@@ -26,14 +28,19 @@
 cargo run --release
 ```
 
-### Validate VM Federation (Rust)
+### Validation System (Phases 1-4 Complete!)
 
 ```bash
-# Type-safe, testable validation
-cargo run --bin biomeos-validate-federation
+cd validation
 
-# Or via wrapper
-./validate-federation-rust.sh
+# Provision VMs (topology-based)
+cargo run --release --bin provision-topology federation-2node
+
+# Provision with capability profile (AGNOSTIC!)
+cargo run --release --bin provision-with-capabilities minimal-federation
+
+# Full validation pipeline (Phases 1-4)
+cargo run --release --bin validate-federation
 ```
 
 ### Deploy a Niche
