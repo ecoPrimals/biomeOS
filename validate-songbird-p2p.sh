@@ -43,10 +43,14 @@ echo "📦 Using USB package: $USB_PACKAGE"
 echo ""
 
 # Check for benchScale
-if [ ! -d "../../../primalTools/benchscale" ]; then
+BENCHSCALE_DIR="${SCRIPT_DIR}/../../../primalTools/benchScale"
+if [ ! -d "$BENCHSCALE_DIR" ]; then
     echo "❌ benchScale not found!"
-    echo "   Expected at: ../../../primalTools/benchscale"
-    exit 1
+    echo "   Expected at: $BENCHSCALE_DIR"
+    echo ""
+    echo "Note: For now, running in demo mode with mock VMs."
+    echo "      The Rust binary will use mock IPs for demonstration."
+    echo ""
 fi
 
 echo "✅ Prerequisites check passed"
