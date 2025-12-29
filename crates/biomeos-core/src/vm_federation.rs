@@ -198,18 +198,18 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_full_lifecycle() {
+    async fn test_full_lifecycle() -> Result<()> {
         // Only run if benchscale is available AND libvirt testing is enabled
         if std::env::var("BENCHSCALE_TEST_LIBVIRT").is_err() {
             // Skip test if libvirt testing not enabled
-            return;
+            return Ok(());
         }
 
         let manager = match VmFederationManager::new() {
             Ok(m) => m,
             Err(_) => {
                 // benchscale not available, skip test
-                return;
+                return Ok(());
             }
         };
 
