@@ -29,6 +29,14 @@ pub struct PrimalType {
 
 impl PrimalType {
     /// Create a new primal type
+    ///
+    /// # Example
+    /// ```
+    /// use biomeos_types::primal::PrimalType;
+    /// let primal = PrimalType::new("compute", "toadstool", "1.0.0");
+    /// assert_eq!(primal.category, "compute");
+    /// ```
+    #[must_use]
     pub fn new(
         category: impl Into<String>,
         name: impl Into<String>,
