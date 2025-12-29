@@ -5,6 +5,8 @@
 pub mod vm_types;
 pub mod deployment;
 pub mod capabilities;
+pub mod primal_startup;
+pub mod mdns_validation;
 
 use anyhow::{Context, Result};
 use std::path::PathBuf;
@@ -12,6 +14,8 @@ use std::path::PathBuf;
 pub use vm_types::{Topology, VmConfig, VmType};
 pub use deployment::{BiomeOsDeployment, DeployedVm};
 pub use capabilities::{Capability, CapabilityProfile, PrimalBinary};
+pub use primal_startup::{DiscoveredPrimal, PrimalMatch, PrimalStartup, StartedPrimal};
+pub use mdns_validation::{DiscoveredService, MdnsValidator, ValidationResult};
 
 /// Get the path to the agentReagents template
 #[must_use]

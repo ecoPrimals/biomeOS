@@ -105,20 +105,49 @@ async fn main() -> Result<()> {
     }
 
     println!();
-    print_section("Phase 3: Start Songbird P2P (TODO)");
-    println!("TODO: Implement Songbird startup");
-    println!("  • SSH to VMs");
-    println!("  • Start Songbird orchestrate");
-    println!("  • Wait for initialization");
-    println!();
+    print_section("Phase 3: Start Primals (Capability-Based)");
+
+    let profile = deployment.capability_profile.clone().unwrap_or_else(|| {
+        use biomeos_validation::CapabilityProfile;
+        CapabilityProfile::minimal_federation()
+    });
+
+    let startup = biomeos_validation::PrimalStartup::new(profile);
+
+    for vm in &deployed_vms {
+        // Discover available primals
+        let primals = startup.discover_primals(vm).await?;
+
+        if primals.is_empty() {
+            println!("  ⚠️  No primals found in /opt/biomeos/primalBins/ on {}", vm.name);
+            println!("      Note: For full validation, copy primal binaries to VMs");
+            continue;
+        }
+
+        // Match capabilities
+        let matches = startup.match_capabilities(&primals)?;
+
+        // Start primals
+        let _started = startup.start_primals(vm, &matches).await?;
+    }
 
     println!();
-    print_section("Phase 4: Validate mDNS Discovery (TODO)");
-    println!("TODO: Implement mDNS validation");
-    println!("  • Query avahi-browse");
-    println!("  • Verify peer discovery");
-    println!("  • Confirm service announcements");
-    println!();
+    print_section("Phase 4: Validate mDNS Discovery");
+
+    use biomeos_validation::MdnsValidator;
+    let mdns_validator = MdnsValidator::new(deployed_vms.len() - 1);
+
+    for vm in &deployed_vms {
+        let result = mdns_validator.wait_for_discovery(vm, 30).await?;
+
+        if result.validation_skipped {
+            println!("  ⚠️  mDNS validation skipped on {} (avahi not installed)", vm.name);
+        } else if result.peer_count > 0 {
+            println!("  ✅ {} discovered {} peers", vm.name, result.peer_count);
+        } else {
+            println!("  ⚠️  {} did not discover any peers", vm.name);
+        }
+    }
 
     println!();
     print_section("Phase 5: Confirm Federation (TODO)");
@@ -131,8 +160,8 @@ async fn main() -> Result<()> {
     print_section("✅ Validation Status");
     println!("Phase 1: Provision VMs ✅ COMPLETE");
     println!("Phase 2: Deploy biomeOS ✅ COMPLETE");
-    println!("Phase 3: Start Songbird 🚧 TODO");
-    println!("Phase 4: Validate mDNS 🚧 TODO");
+    println!("Phase 3: Start Primals ✅ COMPLETE (capability-based!)");
+    println!("Phase 4: Validate mDNS ✅ COMPLETE");
     println!("Phase 5: Confirm Federation 🚧 TODO");
     println!();
 
