@@ -14,6 +14,10 @@ name = "provision-vms"
 path = "src/bin/provision_vms.rs"
 
 [[bin]]
+name = "provision-topology"
+path = "src/bin/provision_topology.rs"
+
+[[bin]]
 name = "validate-federation"
 path = "src/bin/validate_federation.rs"
 

@@ -29,17 +29,36 @@ validation/
 
 ## Usage
 
-### Provision VMs (Phase 1)
+### Basic: Provision 2 VMs
 
 ```bash
 cd validation
 cargo run --bin provision-vms
 ```
 
-**Uses**: `benchscale::LibvirtBackend::create_desktop_vm_ready()`
-- Guaranteed SSH-ready VMs
-- Cloud-init validation built-in
-- No workarounds needed
+**Result**: 2 desktop VMs for basic testing
+
+### Advanced: Provision Topologies
+
+```bash
+cd validation
+
+# Simple test (2 VMs)
+cargo run --bin provision-topology simple-test
+
+# Federation (2 nodes)
+cargo run --bin provision-topology federation-2node
+
+# Federation (3 nodes)
+cargo run --bin provision-topology federation-3node
+
+# Mixed ecosystem (2 federation + 1 compute)
+cargo run --bin provision-topology mixed-ecosystem
+```
+
+**Result**: Multiple VMs of different types configured for specific scenarios
+
+See: [TOPOLOGIES.md](TOPOLOGIES.md) for details
 
 ### Validate Federation (Phase 2)
 
@@ -49,7 +68,7 @@ cargo run --bin validate-federation
 ```
 
 **Validates**:
-1. VM provisioning
+1. VM provisioning ✅
 2. biomeOS deployment
 3. Songbird P2P startup
 4. mDNS/UDP discovery

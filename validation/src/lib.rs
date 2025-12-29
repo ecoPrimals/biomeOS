@@ -2,8 +2,12 @@
 //!
 //! This module provides shared utilities for VM provisioning and federation validation.
 
+pub mod vm_types;
+
 use anyhow::{Context, Result};
 use std::path::PathBuf;
+
+pub use vm_types::{Topology, VmConfig, VmType};
 
 /// Get the path to the agentReagents template
 #[must_use]
