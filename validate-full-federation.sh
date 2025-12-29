@@ -7,7 +7,8 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIOMEOS_USB_PACKAGE="$SCRIPT_DIR/biomeos-20251228-181049.tar.gz"
 AGENTREAGENTS_ROOT="/home/eastgate/Development/ecoPrimals/primalTools/agentReagents"
-TEMPLATE_IMAGE="$AGENTREAGENTS_ROOT/images/templates/rustdesk-ubuntu-22.04-template.qcow2"
+# Use template from libvirt directory (accessible by qemu)
+TEMPLATE_IMAGE="/var/lib/libvirt/images/rustdesk-ubuntu-22.04-template.qcow2"
 
 echo "╔═══════════════════════════════════════════════════════════╗"
 echo "║  🚀 Full BiomeOS Validation Pipeline 🚀                  ║"
