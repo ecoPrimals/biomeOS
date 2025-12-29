@@ -142,7 +142,7 @@ impl BiomeOsDeployment {
         println!("    ✅ Install directory ready");
 
         // Get biomeOS binaries path
-        let biomeos_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        let _biomeos_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .parent()
             .context("No parent")?;
         

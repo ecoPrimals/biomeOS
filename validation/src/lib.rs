@@ -7,6 +7,7 @@ pub mod deployment;
 pub mod capabilities;
 pub mod primal_startup;
 pub mod mdns_validation;
+pub mod federation_validation;
 
 use anyhow::{Context, Result};
 use std::path::PathBuf;
