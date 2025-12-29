@@ -315,8 +315,52 @@ echo ""
 
 SSH_OPTS="-o StrictHostKeyChecking=no -o ConnectTimeout=5"
 
-echo "⏳ Waiting for SSH (60s for cloud-init)..."
-sleep 60
+echo "⏳ Waiting for cloud-init to complete (up to 10 minutes)..."
+echo "   Cloud-init installs packages which can take time..."
+echo ""
+
+# Wait for cloud-init with exponential backoff
+for i in {1..10}; do
+    WAIT_TIME=$((i * 30))
+    echo "Attempt $i/10: Waiting ${WAIT_TIME}s before checking..."
+    sleep $WAIT_TIME
+    
+    # Try SSH to tower-alpha
+    if ssh $SSH_OPTS biomeos@$VM1_IP "echo 'SSH works!'" 2>/dev/null; then
+        echo "✅ tower-alpha SSH ready!"
+        ALPHA_READY=true
+    else
+        echo "⏳ tower-alpha still provisioning..."
+        ALPHA_READY=false
+    fi
+    
+    # Try SSH to tower-beta
+    if ssh $SSH_OPTS biomeos@$VM2_IP "echo 'SSH works!'" 2>/dev/null; then
+        echo "✅ tower-beta SSH ready!"
+        BETA_READY=true
+    else
+        echo "⏳ tower-beta still provisioning..."
+        BETA_READY=false
+    fi
+    
+    # If both ready, break
+    if [ "$ALPHA_READY" = true ] && [ "$BETA_READY" = true ]; then
+        echo ""
+        echo "✅ Both VMs ready! Cloud-init completed successfully!"
+        break
+    fi
+    
+    echo ""
+done
+
+if [ "$ALPHA_READY" != true ] || [ "$BETA_READY" != true ]; then
+    echo "❌ Timeout waiting for VMs to be SSH-accessible"
+    echo "   This likely means cloud-init is still running or failed."
+    echo "   Check VM_FEDERATION_TROUBLESHOOTING.md for manual access."
+    exit 1
+fi
+
+echo ""
 
 echo "📦 Copying USB package to both VMs..."
 scp $SSH_OPTS "$USB_PACKAGE" biomeos@$VM1_IP:/tmp/ &
