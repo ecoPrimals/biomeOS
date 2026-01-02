@@ -14,7 +14,8 @@ pub mod primal_adapter;
 pub mod api_adapter;
 
 // Primal client infrastructure
-pub mod clients;
+// Legacy primal-specific clients (deprecated - use Universal Primal Client instead)
+// pub mod clients;
 pub mod discovery_bootstrap;
 pub mod primal_client;
 

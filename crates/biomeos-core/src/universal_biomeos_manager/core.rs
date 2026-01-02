@@ -9,7 +9,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use crate::universal_biomeos_manager::client_registry::ClientRegistry;
+// Legacy import - client_registry depends on legacy clients module
+// use crate::universal_biomeos_manager::client_registry::ClientRegistry;
 use crate::universal_biomeos_manager::discovery::PrimalDiscoveryService;
 use biomeos_primal_sdk::{PrimalCapability, PrimalType};
 use biomeos_types::{BiomeOSConfig, Health};
@@ -34,7 +35,8 @@ pub struct UniversalBiomeOSManager {
     pub config: Arc<BiomeOSConfig>,
     pub(crate) discovery_service: Arc<PrimalDiscoveryService>,
     pub(crate) registered_primals: Arc<RwLock<HashMap<String, PrimalInfo>>>,
-    pub(crate) clients: Arc<ClientRegistry>,
+    // Legacy field - ClientRegistry depends on old clients module
+    // pub(crate) clients: Arc<ClientRegistry>,
 }
 
 impl UniversalBiomeOSManager {
@@ -43,13 +45,14 @@ impl UniversalBiomeOSManager {
         let config_arc = Arc::new(config);
         let registered_primals = Arc::new(RwLock::new(HashMap::new()));
         let discovery_service = Arc::new(PrimalDiscoveryService::new(config_arc.clone()));
-        let clients = Arc::new(ClientRegistry::new());
+        // Legacy ClientRegistry initialization removed
+        // let clients = Arc::new(ClientRegistry::new());
 
         Ok(Self {
             config: config_arc,
             registered_primals,
             discovery_service,
-            clients,
+            // clients,  // Removed
         })
     }
 
@@ -66,8 +69,9 @@ impl UniversalBiomeOSManager {
         // Initialize discovery service
         self.discovery_service.initialize().await?;
 
+        // Legacy client initialization removed
         // Initialize primal clients through zero-knowledge discovery
-        self.clients.initialize().await?;
+        // self.clients.initialize().await?;
 
         tracing::info!("✅ Universal BiomeOS Manager initialized successfully");
         Ok(())
@@ -139,9 +143,10 @@ impl UniversalBiomeOSManager {
     }
 
     /// Get client registry reference
-    pub fn clients(&self) -> &Arc<ClientRegistry> {
-        &self.clients
-    }
+    // Legacy method - ClientRegistry removed
+    // pub fn clients(&self) -> &Arc<ClientRegistry> {
+    //     &self.clients
+    // }
 
     /// Shutdown the manager gracefully
     pub async fn shutdown(&self) -> Result<()> {

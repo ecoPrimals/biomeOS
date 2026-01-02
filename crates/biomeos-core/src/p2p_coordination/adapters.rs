@@ -26,7 +26,8 @@
 use super::types::{BroadcastKeys, EncryptedDiscoveryConfig, TransportHealth, TunnelHealth};
 use super::{DiscoveryProvider, SecurityProvider};
 use crate::api_adapter::cli_adapter::CliAdapter;
-use crate::clients::songbird::SongbirdClient;
+// Legacy client imports - commented out
+// use crate::clients::songbird::SongbirdClient;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use std::time::SystemTime;

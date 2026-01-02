@@ -13,6 +13,7 @@ members = [
     "crates/biomeos-types",
     "crates/biomeos-core",
     "crates/biomeos-cli",
+    "crates/biomeos-api",
     "crates/biomeos-manifest",
     "crates/biomeos-system",
     "crates/biomeos-primal-sdk",
