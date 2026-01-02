@@ -350,31 +350,41 @@ Instead of hardcoded clients, biomeOS:
 
 ---
 
-## 📁 Documentation Archives
+## 📁 Fossil Record (Historical Archive)
 
-All historical development documents have been organized for reference:
+All historical development artifacts have been moved to the parent directory fossil record:
 
-| Archive | Documents | Purpose |
-|---------|-----------|---------|
-| [docs/archive/usb-deployment-jan-2026/](docs/archive/usb-deployment-jan-2026/) | 29 | USB deployment iterations (v1-v6) |
-| [docs/archive/trust-enforcement-jan-2026/](docs/archive/trust-enforcement-jan-2026/) | 6 | Trust enforcement development |
-| [docs/archive/federation-jan-2026/](docs/archive/federation-jan-2026/) | 2 | Federation interim status |
-| [docs/archive/sessions-dec-2025/](docs/archive/sessions-dec-2025/) | 6 | December session summaries |
-| [docs/archive/api-integration-dec-2025/](docs/archive/api-integration-dec-2025/) | 4 | API integration work |
-| [docs/archive/production-debt-dec-2025/](docs/archive/production-debt-dec-2025/) | 3 | Production debt (resolved) |
-| [docs/archive/old-indices/](docs/archive/old-indices/) | 2 | Superseded indices |
-| [docs/archive/session-summaries/](docs/archive/session-summaries/) | 51 | Historical sessions |
-| [docs/archive/deployment/](docs/archive/deployment/) | 11 | Deployment history |
-| [docs/archive/debt-evolution/](docs/archive/debt-evolution/) | 8 | Technical debt evolution |
-| [docs/archive/audits/](docs/archive/audits/) | 4 | Audit reports |
-| [docs/archive/benchscale-handoffs/](docs/archive/benchscale-handoffs/) | 6 | benchScale team handoffs |
-| [scripts/archive/development-dec-2025/](scripts/archive/development-dec-2025/) | 18 | Development scripts |
-| [logs/archive/testing-dec-2025/](logs/archive/testing-dec-2025/) | 10 | Testing logs |
-| [backups/archive/dec-2025/](backups/archive/dec-2025/) | 4 | Backup tarballs (180MB) |
+**Location**: `../archive/biomeOS-fossil-record/`
 
-**Total Archived**: 164 files (132 docs + 18 scripts + 10 logs + 4 backups)
+| Archive Category | Files | Purpose |
+|-----------------|-------|---------|
+| **📚 Documentation** | **132 docs** | Complete development history |
+| • usb-deployment-jan-2026 | 29 | USB deployment iterations (v1-v6) |
+| • trust-enforcement-jan-2026 | 6 | Trust enforcement development |
+| • federation-jan-2026 | 2 | Federation interim status |
+| • sessions-dec-2025 | 6 | December session summaries |
+| • api-integration-dec-2025 | 4 | API integration work |
+| • production-debt-dec-2025 | 3 | Production debt (resolved) |
+| • old-indices | 2 | Superseded indices |
+| • session-summaries | 51 | Historical sessions |
+| • deployment | 11 | Deployment history |
+| • debt-evolution | 8 | Technical debt evolution |
+| • audits | 4 | Audit reports |
+| • benchscale-handoffs | 6 | benchScale team handoffs |
+| **📜 Scripts** | **18 scripts** | Development and testing utilities |
+| • development-dec-2025 | 18 | USB creation, testing, validation |
+| **📋 Logs** | **10 logs** | Testing and deployment logs |
+| • testing-dec-2025 | 10 | E2E, federation, VM logs |
+| **💾 Backups** | **4 tarballs** | Historical snapshots (180MB) |
+| • dec-2025 | 4 | Old biomeos backups |
 
-**Note**: Archives preserve the complete development history while keeping the root directory clean and focused on current/active documentation.
+**Total Fossil Record**: 164 files (132 docs + 18 scripts + 10 logs + 4 backups)
+
+**Benefits**:
+- ✅ **Clean Workspace**: 86% reduction in root files (70+ → 10)
+- ✅ **Reduced False Positives**: Faster searches and better grep results
+- ✅ **Complete History Preserved**: All development context available
+- ✅ **Professional Appearance**: Production-ready repository structure
 
 ---
 
