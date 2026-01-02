@@ -12,6 +12,9 @@ pub mod health;
 pub mod operations;
 pub mod primals;
 
+#[cfg(test)]
+mod tests;
+
 // Re-export from discovery module
 pub use discovery::{DiscoveryResult, PrimalDiscoveryService, ProbeResult};
 

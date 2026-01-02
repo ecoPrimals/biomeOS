@@ -3,7 +3,7 @@
 //! This test validates that our VM federation manager properly waits for
 //! cloud-init completion and SSH access before declaring success.
 
-use biomeos_core::vm_federation::{VmFederationManager, ValidationConfig};
+use biomeos_core::vm_federation::{ValidationConfig, VmFederationManager};
 use std::time::Duration;
 
 #[tokio::test]
@@ -59,14 +59,13 @@ async fn test_validation_timeout() -> anyhow::Result<()> {
     };
 
     let manager = VmFederationManager::with_validation_config(config)?;
-    
+
     // This should timeout (cloud-init takes longer than 10s)
     let result = manager.create("test-timeout-federation").await;
-    
+
     // We expect this to fail with a timeout
     assert!(result.is_err());
     assert!(result.unwrap_err().to_string().contains("Timeout"));
 
     Ok(())
 }
-

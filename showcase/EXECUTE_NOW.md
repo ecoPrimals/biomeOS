@@ -12,7 +12,7 @@
 
 **Working Demo**:
 - `./songbird-discovery.sh` - Complete demonstration
-- Starts Songbird from phase1bins
+- Starts Songbird from primalBins
 - BiomeOS discovers by capability
 - Demonstrates delegation pattern
 - Clean shutdown
@@ -24,7 +24,7 @@
 
 **Working Demo**:
 - `./full-stack.sh` - **THE SHOWCASE!**
-- Starts ALL 5 primals from phase1bins
+- Starts ALL 5 primals from primalBins
 - BiomeOS discovers all by capability
 - Demonstrates service mesh via Songbird
 - Shows cross-primal workflows
@@ -78,7 +78,7 @@ cd showcase/02-multi-primal/
 
 ### 1. Phase1bins Available
 ```bash
-ls -lh ../phase1bins/{songbird,toadstool,nestgate,beardog,squirrel}-bin
+ls -lh ../primalBins/{songbird,toadstool,nestgate,beardog,squirrel}-bin
 ```
 
 All 5 binaries should be present.
@@ -190,7 +190,7 @@ After running these demos, you'll understand:
 
 ### Binary not found
 ```bash
-cd ../phase1bins/
+cd ../primalBins/
 ./pull-phase1-bins.sh
 ```
 
@@ -210,7 +210,7 @@ tail -f /tmp/songbird.log
 tail -f /tmp/toadstool.log
 
 # Try manual start
-../phase1bins/songbird-bin --help
+../primalBins/songbird-bin --help
 ```
 
 ### BiomeOS can't discover

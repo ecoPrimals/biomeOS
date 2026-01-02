@@ -10,7 +10,8 @@ use std::process::Command;
 #[derive(Debug, Clone)]
 pub struct DeployedVm {
     pub name: String,
-    pub ip_address: String,
+    pub ip: String,  // Renamed from ip_address for consistency
+    pub ip_address: String,  // Keep for backward compatibility
     pub ssh_user: String,
 }
 
@@ -20,6 +21,7 @@ impl DeployedVm {
     pub fn new(name: String, ip_address: String) -> Self {
         Self {
             name,
+            ip: ip_address.clone(),
             ip_address,
             ssh_user: "biomeos".to_string(),
         }

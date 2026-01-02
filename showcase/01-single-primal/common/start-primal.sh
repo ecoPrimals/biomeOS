@@ -16,7 +16,7 @@ if [ -z "$PRIMAL_NAME" ] || [ -z "$PORT" ]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PHASE1_BINS="$SCRIPT_DIR/../../../phase1bins"
+PHASE1_BINS="$SCRIPT_DIR/../../../primalBins"
 BINARY="$PHASE1_BINS/${PRIMAL_NAME}-bin"
 LOG_DIR="$SCRIPT_DIR/../logs"
 PID_DIR="$SCRIPT_DIR/../pids"

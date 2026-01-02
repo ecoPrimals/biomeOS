@@ -504,4 +504,3 @@ async fn test_adapter_serialization() {
     let deserialized_adapter = deserialized.unwrap();
     assert_eq!(deserialized_adapter.name, "test");
 }
-

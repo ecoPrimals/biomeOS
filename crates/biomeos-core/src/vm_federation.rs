@@ -185,11 +185,10 @@ impl VmFederationManager {
                 let parts: Vec<&str> = line.split_whitespace().collect();
                 if parts.len() >= 2 {
                     let vm_name = parts[1];
-                    
+
                     // Get IP for this VM
-                    if let Ok(ip_output) = Command::new("virsh")
-                        .args(["domifaddr", vm_name])
-                        .output()
+                    if let Ok(ip_output) =
+                        Command::new("virsh").args(["domifaddr", vm_name]).output()
                     {
                         let ip_text = String::from_utf8_lossy(&ip_output.stdout);
                         for ip_line in ip_text.lines() {
@@ -226,8 +225,13 @@ impl VmFederationManager {
         let timeout = self.validation_config.cloud_init_timeout;
 
         for (idx, ip) in vm_ips.iter().enumerate() {
-            info!("Waiting for VM {}/{} ({}) to be ready", idx + 1, vm_ips.len(), ip);
-            
+            info!(
+                "Waiting for VM {}/{} ({}) to be ready",
+                idx + 1,
+                vm_ips.len(),
+                ip
+            );
+
             let mut attempt = 0;
             loop {
                 if start.elapsed() >= timeout {
@@ -239,14 +243,20 @@ impl VmFederationManager {
                 }
 
                 attempt += 1;
-                debug!("SSH attempt {}/{} to {}", attempt, self.validation_config.ssh_max_retries, ip);
+                debug!(
+                    "SSH attempt {}/{} to {}",
+                    attempt, self.validation_config.ssh_max_retries, ip
+                );
 
                 // Try SSH connection
                 let ssh_test = Command::new("ssh")
                     .args([
-                        "-o", "ConnectTimeout=5",
-                        "-o", "StrictHostKeyChecking=no",
-                        "-o", "BatchMode=yes",
+                        "-o",
+                        "ConnectTimeout=5",
+                        "-o",
+                        "StrictHostKeyChecking=no",
+                        "-o",
+                        "BatchMode=yes",
                         &format!("biomeos@{}", ip),
                         "echo 'SSH ready'",
                     ])
@@ -282,8 +292,10 @@ impl VmFederationManager {
         for ip in vm_ips {
             let output = Command::new("ssh")
                 .args([
-                    "-o", "ConnectTimeout=5",
-                    "-o", "StrictHostKeyChecking=no",
+                    "-o",
+                    "ConnectTimeout=5",
+                    "-o",
+                    "StrictHostKeyChecking=no",
                     &format!("biomeos@{}", ip),
                     "hostname && uptime",
                 ])
@@ -294,7 +306,11 @@ impl VmFederationManager {
                 anyhow::bail!("SSH validation failed for {}", ip);
             }
 
-            info!("✅ VM {} validated: {}", ip, String::from_utf8_lossy(&output.stdout).trim());
+            info!(
+                "✅ VM {} validated: {}",
+                ip,
+                String::from_utf8_lossy(&output.stdout).trim()
+            );
         }
 
         Ok(())

@@ -30,6 +30,9 @@ pub use system::{
     Environment, OrganizationScale, SystemConfig, SystemLimits, TimeoutConfig, WorkerConfig,
 };
 
+#[cfg(test)]
+mod mod_tests;
+
 /// Universal biomeOS Configuration
 ///
 /// This is the master configuration structure that unifies all configuration

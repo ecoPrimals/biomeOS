@@ -25,6 +25,10 @@ path = "src/bin/provision_with_capabilities.rs"
 name = "validate-federation"
 path = "src/bin/validate_federation.rs"
 
+[[bin]]
+name = "validate-single-vm"
+path = "src/bin/validate_single_vm.rs"
+
 [dependencies]
 # benchScale v2.0.0 - Production-ready with cloud-init validation
 benchscale = { path = "../../../primalTools/benchscale", features = ["libvirt"] }

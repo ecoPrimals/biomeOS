@@ -78,8 +78,31 @@ impl VmConfig {
     }
 
     /// Get the appropriate template path for this VM type
+    /// 
+    /// Uses benchScale's template discovery system with graceful fallback to agentReagents.
+    /// Set BENCHSCALE_TEMPLATE_PATH environment variable for custom locations.
     pub fn template_path(&self) -> Result<PathBuf> {
-        let base = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        // Let benchScale handle template discovery
+        // It will auto-discover from agentReagents if available
+        let template_name = match self.vm_type {
+            VmType::Desktop | VmType::FederationNode | VmType::ComputeNode => {
+                "rustdesk-ubuntu-22.04-template.qcow2"
+            }
+            VmType::Server => {
+                "rustdesk-ubuntu-22.04-template.qcow2"
+            }
+        };
+
+        // Try environment variable first (benchScale standard)
+        if let Ok(template_dir) = std::env::var("BENCHSCALE_TEMPLATE_PATH") {
+            let path = PathBuf::from(template_dir).join(template_name);
+            if path.exists() {
+                return Ok(path);
+            }
+        }
+
+        // Fallback: check agentReagents standard location
+        let agentreagents_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .parent()
             .expect("validation/ should have parent")
             .parent()
@@ -89,26 +112,21 @@ impl VmConfig {
             .join("primalTools")
             .join("agentReagents")
             .join("images")
-            .join("templates");
+            .join("templates")
+            .join(template_name);
 
-        let template = match self.vm_type {
-            VmType::Desktop | VmType::FederationNode | VmType::ComputeNode => {
-                base.join("rustdesk-ubuntu-22.04-template.qcow2")
-            }
-            VmType::Server => {
-                // For now use same template, but could have different ones
-                base.join("rustdesk-ubuntu-22.04-template.qcow2")
-            }
-        };
-
-        if !template.exists() {
-            anyhow::bail!(
-                "Template not found: {}. See AGENTREAGENTS_INTEGRATION.md",
-                template.display()
-            );
+        if agentreagents_path.exists() {
+            return Ok(agentreagents_path);
         }
 
-        Ok(template)
+        anyhow::bail!(
+            "Template '{}' not found. Please either:\n\
+             1. Set BENCHSCALE_TEMPLATE_PATH environment variable, or\n\
+             2. Ensure agentReagents templates are built (see AGENTREAGENTS_INTEGRATION.md)\n\
+             \n\
+             benchScale will auto-discover templates from agentReagents when available.",
+            template_name
+        )
     }
 
     /// Human-readable description

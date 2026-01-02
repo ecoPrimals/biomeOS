@@ -1,8 +1,8 @@
 // Unit tests for primal core types
 use super::*;
 use chrono::Utc;
-use uuid::Uuid;
 use std::collections::HashMap;
+use uuid::Uuid;
 
 #[cfg(test)]
 mod tests {
@@ -58,7 +58,7 @@ mod tests {
     #[test]
     fn test_primal_metadata_creation() {
         let primal_type = PrimalType::new("storage", "test-primal", "1.0.0");
-        
+
         let metadata = PrimalMetadata {
             id: Uuid::new_v4(),
             primal_type,
@@ -155,11 +155,11 @@ mod tests {
     #[test]
     fn test_metadata_modification() {
         let mut primal = PrimalType::new("storage", "nestgate", "1.0.0");
-        primal.metadata.insert("key".to_string(), "value".to_string());
+        primal
+            .metadata
+            .insert("key".to_string(), "value".to_string());
 
         assert_eq!(primal.metadata.get("key"), Some(&"value".to_string()));
         assert_eq!(primal.metadata.len(), 1);
     }
 }
-
-

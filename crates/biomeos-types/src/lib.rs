@@ -6,6 +6,7 @@
 use std::collections::HashMap;
 
 // Core unified modules
+pub mod api_schema;
 pub mod config;
 pub mod constants;
 pub mod error;
@@ -15,6 +16,10 @@ pub mod primal;
 pub mod service;
 
 // Re-export key types from each module
+pub use api_schema::{
+    ApiSchemaResponse, ApiSchemaType, OperationMetadata, ParameterMetadata, PrimalInfo,
+    SchemaDiscoveryConfig,
+};
 pub use constants::*;
 pub use error::{BiomeError, BiomeResult};
 

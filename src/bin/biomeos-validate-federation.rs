@@ -93,7 +93,7 @@ async fn main() -> Result<()> {
     println!("═══════════════════════════════════════════════════════════");
     println!();
     println!("Stopping and destroying federation...");
-    
+
     manager.stop(federation_name).await?;
     manager.destroy(federation_name).await?;
 
@@ -114,4 +114,3 @@ async fn main() -> Result<()> {
 
     Ok(())
 }
-

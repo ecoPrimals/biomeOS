@@ -119,8 +119,8 @@ SONGBIRD_PORT=8080
 # Check multiple possible locations
 POSSIBLE_LOCATIONS=(
     "$SCRIPT_DIR/../../../../primalBins/songbird"
-    "$SCRIPT_DIR/../../../phase1bins/songbird-cli-dec-25-2025-standalone"
-    "$SCRIPT_DIR/../../../phase1bins/songbird"
+    "$SCRIPT_DIR/../../../primalBins/songbird-cli-dec-25-2025-standalone"
+    "$SCRIPT_DIR/../../../primalBins/songbird"
     "$(which songbird 2>/dev/null)"
 )
 

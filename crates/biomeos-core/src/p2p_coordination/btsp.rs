@@ -174,10 +174,10 @@ impl BtspCoordinator {
     /// Recover a degraded tunnel through diagnosis and repair
     async fn recover_degraded_tunnel(&self, tunnel_id: &str) -> Result<TunnelInfo> {
         tracing::info!("Attempting graceful recovery for tunnel: {}", tunnel_id);
-        
+
         // Diagnose the issue
         let degradation_cause = self.diagnose_degradation(tunnel_id).await?;
-        
+
         // Apply appropriate recovery strategy
         match degradation_cause {
             DegradationCause::SecurityKeyExpiring => {
@@ -193,7 +193,7 @@ impl BtspCoordinator {
                 self.reestablish_transport(tunnel_id).await?;
             }
         }
-        
+
         // Verify recovery via security provider (which has check_tunnel_health)
         let health = self.security.check_tunnel_health(tunnel_id).await?;
         if health.status == super::HealthStatus::Healthy {
@@ -208,7 +208,7 @@ impl BtspCoordinator {
             anyhow::bail!("Recovery failed - tunnel still degraded");
         }
     }
-    
+
     /// Diagnose why a tunnel is degraded
     async fn diagnose_degradation(&self, _tunnel_id: &str) -> Result<DegradationCause> {
         // In production, this would check:
@@ -218,21 +218,21 @@ impl BtspCoordinator {
         // For now, return a safe default
         Ok(DegradationCause::TransportLatency)
     }
-    
+
     /// Rotate security keys for a tunnel
     async fn rotate_tunnel_keys(&self, _tunnel_id: &str) -> Result<()> {
         // In production: coordinate with BearDog to rotate keys
         tracing::debug!("Key rotation completed");
         Ok(())
     }
-    
+
     /// Optimize the transport path
     async fn optimize_transport_path(&self, _tunnel_id: &str) -> Result<()> {
         // In production: query alternative routes, select best path
         tracing::debug!("Transport path optimized");
         Ok(())
     }
-    
+
     /// Re-establish transport connection
     async fn reestablish_transport(&self, _tunnel_id: &str) -> Result<()> {
         // In production: tear down and rebuild transport layer

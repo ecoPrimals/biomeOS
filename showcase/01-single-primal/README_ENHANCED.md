@@ -360,7 +360,7 @@ These document:
 
 1. **Primal binaries** in one of:
    - `../../../../primalBins/`
-   - `../../../phase1bins/`
+   - `../../../primalBins/`
    - System PATH
 
 2. **Required tools:**

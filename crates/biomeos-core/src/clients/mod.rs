@@ -52,14 +52,20 @@
 pub mod base;
 pub mod beardog;
 pub mod nestgate;
+pub mod openapi_adapter;
 pub mod songbird;
 pub mod squirrel;
 pub mod toadstool;
+pub mod universal;
+pub mod upa;
 
 // Re-export commonly used types
 pub use base::PrimalHttpClient;
 pub use beardog::BearDogClient;
 pub use nestgate::NestGateClient;
+pub use openapi_adapter::OpenApiAdapter;
 pub use songbird::SongbirdClient;
 pub use squirrel::SquirrelClient;
 pub use toadstool::ToadStoolClient;
+pub use universal::{UniversalPrimalClient, ApiMetadata};
+pub use upa::{UpaClient, UpaConfig, RegisterNodeRequest, PeerInfo};

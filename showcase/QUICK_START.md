@@ -36,7 +36,7 @@ Tests BiomeOS with real Phase 1 binaries (25 min)
 
 **Get Phase 1 binaries:**
 ```bash
-cd ../phase1bins/
+cd ../primalBins/
 ./pull-phase1-bins.sh
 ```
 
@@ -145,7 +145,7 @@ cat songbird-gaps.md
 
 **Check binary exists:**
 ```bash
-ls -lh ../phase1bins/*-bin
+ls -lh ../primalBins/*-bin
 ```
 
 **Check port available:**

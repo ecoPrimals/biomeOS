@@ -6,7 +6,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIOMEOS_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
-PHASE1BINS="$(cd "$BIOMEOS_DIR/../phase1bins" && pwd)"
+PHASE1BINS="$(cd "$BIOMEOS_DIR/../primalBins" && pwd)"
 
 # Colors
 GREEN='\033[0;32m'

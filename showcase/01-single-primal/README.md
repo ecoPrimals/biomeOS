@@ -23,7 +23,7 @@ BiomeOS can discover and interact with each Phase 1 primal individually:
 ### 1. Phase 1 Binaries Available
 
 ```bash
-cd ../../phase1bins/
+cd ../../primalBins/
 ls -lh *-bin
 
 # Should see:
@@ -36,7 +36,7 @@ ls -lh *-bin
 
 If binaries are missing:
 ```bash
-cd ../../phase1bins/
+cd ../../primalBins/
 ./pull-phase1-bins.sh
 ```
 
@@ -302,7 +302,7 @@ ps aux | grep [primal-name]
 netstat -tulpn | grep [port]
 
 # Check binary permissions
-ls -l ../../phase1bins/[primal]-bin
+ls -l ../../primalBins/[primal]-bin
 
 # Check for error logs
 ./common/check-primal-logs.sh [primal-name]

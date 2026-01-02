@@ -35,7 +35,10 @@ fn find_primal_binary(name: &str) -> Option<std::path::PathBuf> {
     let locations = vec![
         format!("primals/{}", name),
         format!("../phase1/{}/target/release/{}", name, name),
-        format!("/home/eastgate/Development/ecoPrimals/phase2/biomeOS/primals/{}", name),
+        format!(
+            "/home/eastgate/Development/ecoPrimals/phase2/biomeOS/primals/{}",
+            name
+        ),
     ];
 
     for location in locations {
@@ -56,7 +59,7 @@ async fn test_discover_nestgate_if_available() {
     // Test discovering NestGate if it's available
     if let Some(nestgate_path) = find_primal_binary("nestgate") {
         let result = discover_primal_interface(&nestgate_path).await;
-        
+
         match result {
             Ok(adapter) => {
                 println!("✅ Discovered NestGate: {:?}", adapter.name);
@@ -78,7 +81,7 @@ async fn test_discover_beardog_if_available() {
     // Test discovering BearDog if it's available
     if let Some(beardog_path) = find_primal_binary("beardog") {
         let result = discover_primal_interface(&beardog_path).await;
-        
+
         match result {
             Ok(adapter) => {
                 println!("✅ Discovered BearDog: {:?}", adapter.name);
@@ -100,7 +103,7 @@ async fn test_discover_toadstool_if_available() {
     // Test discovering Toadstool if it's available
     if let Some(toadstool_path) = find_primal_binary("toadstool") {
         let result = discover_primal_interface(&toadstool_path).await;
-        
+
         match result {
             Ok(adapter) => {
                 println!("✅ Discovered Toadstool: {:?}", adapter.name);
@@ -121,7 +124,7 @@ async fn test_discover_squirrel_if_available() {
     // Test discovering Squirrel if it's available
     if let Some(squirrel_path) = find_primal_binary("squirrel") {
         let result = discover_primal_interface(&squirrel_path).await;
-        
+
         match result {
             Ok(adapter) => {
                 println!("✅ Discovered Squirrel: {:?}", adapter.name);
@@ -155,14 +158,17 @@ async fn test_discover_multiple_primals() {
     }
 
     println!("✅ Discovered {} primals", discovered.len());
-    
+
     // We should discover at least some primals if they're available
     // This is not a hard requirement as primals might not be built
     if !discovered.is_empty() {
         // Verify all discovered primals have known interfaces
         for adapter in discovered {
-            assert!(adapter.interface.is_known(), 
-                "Primal {} should have known interface", adapter.name);
+            assert!(
+                adapter.interface.is_known(),
+                "Primal {} should have known interface",
+                adapter.name
+            );
         }
     } else {
         println!("⚠️  No primals discovered - binaries may not be built yet");
@@ -177,7 +183,7 @@ async fn test_discover_multiple_primals() {
 async fn test_discover_running_nestgate() {
     // Check if NestGate is running on default port
     let nestgate_url = "http://localhost:9020/health";
-    
+
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(2))
         .build()
@@ -187,14 +193,17 @@ async fn test_discover_running_nestgate() {
         Ok(response) => {
             if response.status().is_success() {
                 println!("✅ NestGate is running and responsive");
-                
+
                 // Verify health response
                 if let Ok(body) = response.text().await {
                     assert!(!body.is_empty(), "Health response should not be empty");
                     println!("   Health response: {}", body);
                 }
             } else {
-                println!("⚠️  NestGate returned non-success status: {}", response.status());
+                println!(
+                    "⚠️  NestGate returned non-success status: {}",
+                    response.status()
+                );
             }
         }
         Err(e) => {
@@ -207,11 +216,11 @@ async fn test_discover_running_nestgate() {
 async fn test_capability_based_discovery() {
     // Test that we can discover primals by capability type
     // This validates the core BiomeOS discovery philosophy
-    
+
     let storage_primals = vec!["nestgate"];
     let encryption_primals = vec!["beardog"];
     let compute_primals = vec!["toadstool"];
-    
+
     let mut found_storage = false;
     let mut found_encryption = false;
     let mut found_compute = false;
@@ -241,9 +250,12 @@ async fn test_capability_based_discovery() {
     // Log discovery results
     println!("\n📊 Capability Discovery Summary:");
     println!("   Storage:    {}", if found_storage { "✅" } else { "❌" });
-    println!("   Encryption: {}", if found_encryption { "✅" } else { "❌" });
+    println!(
+        "   Encryption: {}",
+        if found_encryption { "✅" } else { "❌" }
+    );
     println!("   Compute:    {}", if found_compute { "✅" } else { "❌" });
-    
+
     // This test passes if we can discover at least one capability
     // (or if none are available, which is also valid)
     assert!(true, "Capability-based discovery validated");
@@ -257,7 +269,7 @@ async fn test_capability_based_discovery() {
 async fn test_rest_api_architecture() {
     // Test discovery of REST API-based primals (like NestGate)
     let nestgate_url = "http://localhost:9020/health";
-    
+
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(2))
         .build()
@@ -285,7 +297,7 @@ async fn test_cli_tool_architecture() {
             if let Ok(adapter) = discover_primal_interface(&path).await {
                 println!("✅ CLI primal discovered: {}", name);
                 found_cli = true;
-                
+
                 // Verify it's a Direct or Subcommand interface
                 use biomeos_core::primal_adapter::PrimalInterface;
                 match adapter.interface {
@@ -318,7 +330,7 @@ async fn test_mdns_architecture() {
     match output {
         Ok(status) if status.success() => {
             println!("✅ mDNS primal discovered (Songbird running)");
-            
+
             // Songbird uses UDP port 2300 for discovery
             println!("   Songbird federation active (mDNS/UDP)");
         }
@@ -336,18 +348,18 @@ async fn test_mdns_architecture() {
 async fn test_no_hardcoded_endpoints() {
     // Validate that discovery doesn't rely on hardcoded endpoints
     // This is a philosophical test - BiomeOS should discover, not assume
-    
+
     println!("🔍 Validating zero-hardcoding principle...");
-    
+
     // Discovery should work by:
     // 1. Scanning for binaries
     // 2. Querying capabilities
     // 3. Testing health endpoints
     // NOT by having a list of hardcoded URLs
-    
+
     // If we can discover ANY primal without hardcoded knowledge,
     // the zero-hardcoding principle is validated
-    
+
     let primal_names = vec!["nestgate", "beardog", "toadstool", "squirrel"];
     let mut discovered_without_hardcoding = false;
 
@@ -366,7 +378,7 @@ async fn test_no_hardcoded_endpoints() {
     } else {
         println!("⚠️  No primals available to test zero-hardcoding");
     }
-    
+
     assert!(true, "Zero-hardcoding validation complete");
 }
 
@@ -378,7 +390,7 @@ async fn test_no_hardcoded_endpoints() {
 async fn test_graceful_degradation_missing_primal() {
     // Test that system gracefully handles missing primals
     let result = discover_primal_interface(Path::new("/nonexistent/primal")).await;
-    
+
     // Should either fail or return a result indicating unknown interface
     match result {
         Err(_) => {
@@ -387,8 +399,10 @@ async fn test_graceful_degradation_missing_primal() {
         Ok(adapter) => {
             // If it doesn't error, it should at least indicate unknown interface
             println!("✅ Graceful degradation: missing primal handled (unknown interface)");
-            assert!(!adapter.interface.is_known() || adapter.capabilities.lifecycle.can_start == false,
-                "Missing primal should have unknown interface or no capabilities");
+            assert!(
+                !adapter.interface.is_known() || adapter.capabilities.lifecycle.can_start == false,
+                "Missing primal should have unknown interface or no capabilities"
+            );
         }
     }
 }
@@ -402,8 +416,11 @@ async fn test_graceful_degradation_unreachable_service() {
         .unwrap();
 
     let result = client.get("http://localhost:9999/health").send().await;
-    
-    assert!(result.is_err(), "Should fail gracefully for unreachable service");
+
+    assert!(
+        result.is_err(),
+        "Should fail gracefully for unreachable service"
+    );
     println!("✅ Graceful degradation: unreachable service handled");
 }
 
@@ -415,7 +432,7 @@ async fn test_graceful_degradation_unreachable_service() {
 async fn test_federation_discovery() {
     // Test that we can discover federated towers
     // Check if Songbird is running (indicates federation capability)
-    
+
     let output = Command::new("pgrep")
         .arg("-f")
         .arg("songbird-orchestrator")
@@ -426,17 +443,21 @@ async fn test_federation_discovery() {
         Ok(output) if output.status.success() => {
             let pid = String::from_utf8_lossy(&output.stdout);
             println!("✅ Federation orchestrator running (PID: {})", pid.trim());
-            
+
             // Check Songbird logs for peer discoveries
-            let log_path = "/home/eastgate/Development/ecoPrimals/phase2/biomeOS/logs/primals/songbird.log";
+            let log_path =
+                "/home/eastgate/Development/ecoPrimals/phase2/biomeOS/logs/primals/songbird.log";
             if Path::new(log_path).exists() {
                 if let Ok(contents) = std::fs::read_to_string(log_path) {
-                    let peer_count = contents.lines()
-                        .filter(|line| line.contains("Discovered peer") || line.contains("joined federation"))
+                    let peer_count = contents
+                        .lines()
+                        .filter(|line| {
+                            line.contains("Discovered peer") || line.contains("joined federation")
+                        })
                         .count();
-                    
+
                     println!("   Peer discoveries in logs: {}", peer_count);
-                    
+
                     if peer_count > 0 {
                         println!("✅ Federation peers discovered!");
                     } else {
@@ -462,7 +483,7 @@ async fn test_discovery_integration_summary() {
     println!("╚══════════════════════════════════════════════════════════╝\n");
 
     let mut summary = vec![];
-    
+
     // Check for available primals
     let primals = vec!["nestgate", "beardog", "toadstool", "squirrel", "songbird"];
     for name in primals {
@@ -493,15 +514,20 @@ async fn test_discovery_integration_summary() {
     for (name, available) in summary {
         println!("     • {}: {}", name, if available { "✅" } else { "❌" });
     }
-    
+
     println!("\n   Running Services:");
-    println!("     • NestGate: {}", if nestgate_running { "✅" } else { "❌" });
-    println!("     • Songbird: {}", if songbird_running { "✅" } else { "❌" });
-    
+    println!(
+        "     • NestGate: {}",
+        if nestgate_running { "✅" } else { "❌" }
+    );
+    println!(
+        "     • Songbird: {}",
+        if songbird_running { "✅" } else { "❌" }
+    );
+
     println!("\n✅ Discovery integration validated");
     println!("   - Binary discovery: Working");
     println!("   - Capability discovery: Working");
     println!("   - Architecture adaptation: Working");
     println!("   - Graceful degradation: Working\n");
 }
-

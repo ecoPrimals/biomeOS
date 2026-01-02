@@ -11,6 +11,8 @@
 //! - Capability-based service queries
 //! - Health monitoring
 //! - Service metadata management
+//!
+//! Based on confirmed Songbird API (HTTP REST on port 8080)
 
 use crate::clients::base::PrimalHttpClient;
 use crate::primal_client::{HealthStatus, PrimalClient};
@@ -27,7 +29,7 @@ use serde_json::Value;
 ///
 /// #[tokio::main]
 /// async fn main() -> anyhow::Result<()> {
-///     let songbird = SongbirdClient::new("http://localhost:3000");
+///     let songbird = SongbirdClient::new("http://localhost:8080");
 ///
 ///     // Discover compute services
 ///     let services = songbird.discover_by_capability("compute").await?;
@@ -48,7 +50,10 @@ impl SongbirdClient {
     /// Create a new Songbird client
     ///
     /// # Arguments
-    /// * `endpoint` - Songbird endpoint URL (e.g., `http://localhost:3000`)
+    /// * `endpoint` - Songbird endpoint URL (e.g., `http://localhost:8080`)
+    ///
+    /// # Note
+    /// Default Songbird port is 8080 (confirmed from Songbird team)
     pub fn new(endpoint: impl Into<String>) -> Self {
         let endpoint = endpoint.into();
         Self {
@@ -60,9 +65,10 @@ impl SongbirdClient {
     /// Discover services by capability
     ///
     /// Query Songbird for all services that provide a specific capability.
+    /// Uses the confirmed Songbird API: POST /api/v1/registry/find_peer
     ///
     /// # Arguments
-    /// * `capability` - Capability to search for (e.g., "compute", "storage", "ai")
+    /// * `capability` - Capability to search for (e.g., "compute", "storage", "ai", "p2p")
     ///
     /// # Errors
     /// Returns an error if the request fails or the response cannot be parsed.
@@ -72,22 +78,35 @@ impl SongbirdClient {
     /// # use biomeos_core::clients::songbird::SongbirdClient;
     /// # #[tokio::main]
     /// # async fn main() -> anyhow::Result<()> {
-    /// let songbird = SongbirdClient::new("http://localhost:3000");
+    /// let songbird = SongbirdClient::new("http://localhost:8080");
     /// let compute_services = songbird.discover_by_capability("compute").await?;
     /// # Ok(())
     /// # }
     /// ```
     pub async fn discover_by_capability(&self, capability: &str) -> Result<Vec<ServiceInfo>> {
+        let body = serde_json::json!({
+            "capability": capability
+        });
         let response = self
             .http
-            .get(&format!("/api/v1/services/query/{}", capability))
+            .post("/api/v1/registry/find_peer", body) // Updated to confirmed Songbird API
             .await?;
 
-        serde_json::from_value(response)
-            .map_err(|e| anyhow::anyhow!("Failed to parse service list: {}", e))
+        // Songbird returns a "peers" array
+        if let Some(peers) = response.get("peers") {
+            serde_json::from_value(peers.clone())
+                .map_err(|e| anyhow::anyhow!("Failed to parse peer list: {}", e))
+        } else {
+            // Fallback: try to parse the response directly as a single peer
+            let peer: ServiceInfo = serde_json::from_value(response)
+                .map_err(|e| anyhow::anyhow!("Failed to parse service info: {}", e))?;
+            Ok(vec![peer])
+        }
     }
 
     /// Register a service with Songbird
+    ///
+    /// Uses the confirmed Songbird API: POST /api/v1/registry/register
     ///
     /// # Arguments
     /// * `service` - Service registration information
@@ -97,16 +116,38 @@ impl SongbirdClient {
     ///
     /// # Errors
     /// Returns an error if registration fails.
+    ///
+    /// # Example
+    /// ```no_run
+    /// # use biomeos_core::clients::songbird::{SongbirdClient, ServiceRegistration, ServiceMetadata};
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// let songbird = SongbirdClient::new("http://localhost:8080");
+    /// let service_id = songbird.register_service(&ServiceRegistration {
+    ///     service_name: "my-service".to_string(),
+    ///     capabilities: vec!["compute".to_string()],
+    ///     endpoint: "http://localhost:8081".to_string(),
+    ///     metadata: ServiceMetadata {
+    ///         version: "1.0.0".to_string(),
+    ///         location: None,
+    ///         tags: vec![],
+    ///     },
+    /// }).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
     pub async fn register_service(&self, service: &ServiceRegistration) -> Result<String> {
         let response = self
             .http
-            .post("/api/v1/services/register", serde_json::to_value(service)?)
+            .post("/api/v1/registry/register", serde_json::to_value(service)?) // Updated to confirmed Songbird API
             .await?;
 
-        response["service_id"]
+        // Songbird returns "registered_id"
+        response["registered_id"]
             .as_str()
+            .or_else(|| response["service_id"].as_str()) // Fallback to service_id for compatibility
             .map(|s| s.to_string())
-            .ok_or_else(|| anyhow::anyhow!("No service_id in registration response"))
+            .ok_or_else(|| anyhow::anyhow!("No registered_id or service_id in registration response"))
     }
 
     /// Get health status for a specific service
@@ -218,9 +259,9 @@ impl PrimalClient for SongbirdClient {
     }
 
     async fn health_check(&self) -> Result<HealthStatus> {
-        let response = self.http.get("/health").await?;
+        let response = self.http.get("/api/v1/health").await?; // Updated to confirmed Songbird API
         Ok(HealthStatus {
-            healthy: response["status"] == "healthy",
+            healthy: response["status"] == "healthy" || response["status"] == "ok",
             message: response["message"]
                 .as_str()
                 .unwrap_or("Unknown")

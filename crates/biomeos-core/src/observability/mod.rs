@@ -351,7 +351,16 @@ impl MinimalObserver {
 
 impl Default for MinimalObserver {
     fn default() -> Self {
-        Self::local_only().expect("Failed to create default observer")
+        // Graceful degradation: If local_only fails, use disabled mode
+        Self::local_only().unwrap_or_else(|e| {
+            eprintln!("Warning: Failed to create observer: {}, using disabled mode", e);
+            // Fallback to disabled mode
+            Self {
+                mode: ObservabilityMode::Disabled,
+                metrics: Arc::new(RwLock::new(LocalMetrics::default())),
+                family_share: None,
+            }
+        })
     }
 }
 

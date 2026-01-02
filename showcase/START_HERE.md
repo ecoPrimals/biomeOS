@@ -158,7 +158,7 @@ showcase/
 
 **Issue**: Some scripts look for binaries in wrong location  
 **Status**: Fixed in `songbird-discovery.sh`, needs fixing in others  
-**Details**: Binaries are in `../../../phase1bins`, not `../../phase1bins`
+**Details**: Binaries are in `../../../primalBins`, not `../../primalBins`
 
 ---
 

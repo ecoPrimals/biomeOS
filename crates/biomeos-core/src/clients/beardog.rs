@@ -4,17 +4,51 @@
 // Licensed under the Affero General Public License v3.0 or later with Sovran Exemption 1.0.
 // See LICENSE file in the project root or visit https://www.gnu.org/licenses/agpl-3.0.html
 
-//! BearDog client for security and cryptography
+//! BearDog client for security, cryptography, and BTSP tunneling
 //!
 //! BearDog is the security and cryptography primal. It provides:
 //! - Encryption and decryption
 //! - Key management
 //! - Digital signatures
 //! - Access control validation
+//! - BTSP (BirdSong Tunnel Protocol) tunnel management
+//! - BirdSong genetic cryptography (lineage-aware encryption)
+//!
+//! # API Support
+//!
+//! BearDog provides multiple integration methods:
+//! - **HTTP REST API** (port 9000, production-ready) ← **PRIMARY**
+//! - gRPC/tarpc RPC API
+//! - CLI wrapper (optional fallback)
+//! - Direct Rust library integration
+//!
+//! # BTSP Tunnel Support (HTTP API)
+//!
+//! ```no_run
+//! use biomeos_core::clients::beardog::BearDogClient;
+//!
+//! #[tokio::main]
+//! async fn main() -> anyhow::Result<()> {
+//!     let beardog = BearDogClient::new("http://localhost:9000");
+//!     
+//!     // Establish tunnel
+//!     let tunnel = beardog.establish_tunnel("peer-node-1", "192.168.1.100:9091").await?;
+//!     println!("Tunnel created: {}", tunnel.tunnel_id);
+//!     
+//!     // Check status
+//!     let status = beardog.get_tunnel_status(&tunnel.tunnel_id).await?;
+//!     println!("Tunnel state: {}", status.state);
+//!     
+//!     // Close tunnel
+//!     beardog.close_tunnel(&tunnel.tunnel_id).await?;
+//!     
+//!     Ok(())
+//! }
+//! ```
 
 use crate::clients::base::PrimalHttpClient;
 use crate::primal_client::{HealthStatus, PrimalClient};
-use anyhow::Result;
+use anyhow::{Context, Result};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -230,6 +264,173 @@ impl BearDogClient {
         serde_json::from_value(response["entries"].clone())
             .map_err(|e| anyhow::anyhow!("Failed to parse audit log: {}", e))
     }
+
+    // ========================================================================
+    // BTSP Tunnel Management (HTTP REST API)
+    // ========================================================================
+
+    /// Establish a BTSP tunnel to a peer
+    ///
+    /// Uses BearDog's HTTP REST API: POST /api/v1/tunnel/establish
+    ///
+    /// # Arguments
+    /// * `peer_id` - Peer node identifier
+    /// * `endpoint` - Peer endpoint (e.g., "192.168.1.100:9091")
+    ///
+    /// # Returns
+    /// Tunnel information including tunnel_id
+    ///
+    /// # Errors
+    /// Returns an error if tunnel establishment fails.
+    ///
+    /// # Example
+    /// ```no_run
+    /// # use biomeos_core::clients::beardog::BearDogClient;
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// let beardog = BearDogClient::new("http://localhost:9000");
+    /// let tunnel = beardog.establish_tunnel("peer-node-1", "192.168.1.100:9091").await?;
+    /// println!("Tunnel ID: {}", tunnel.tunnel_id);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn establish_tunnel(&self, peer_id: &str, endpoint: &str) -> Result<TunnelInfo> {
+        let body = serde_json::json!({
+            "peer_id": peer_id,
+            "endpoint": endpoint
+        });
+
+        let response = self
+            .http
+            .post("/api/v1/tunnel/establish", body)
+            .await
+            .context("Failed to establish BTSP tunnel")?;
+
+        // BearDog returns { "success": true, "data": {...} }
+        if let Some(data) = response.get("data") {
+            serde_json::from_value(data.clone())
+                .context("Failed to parse tunnel info from response")
+        } else {
+            // Fallback: try to parse response directly
+            serde_json::from_value(response)
+                .context("Failed to parse tunnel info")
+        }
+    }
+
+    /// Get BTSP tunnel status
+    ///
+    /// Uses BearDog's HTTP REST API: GET /api/v1/tunnel/status/{tunnel_id}
+    ///
+    /// # Arguments
+    /// * `tunnel_id` - Tunnel identifier
+    ///
+    /// # Returns
+    /// Detailed tunnel status including state, statistics, and security info
+    ///
+    /// # Errors
+    /// Returns an error if the tunnel doesn't exist or status check fails.
+    ///
+    /// # Example
+    /// ```no_run
+    /// # use biomeos_core::clients::beardog::BearDogClient;
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// let beardog = BearDogClient::new("http://localhost:9000");
+    /// let status = beardog.get_tunnel_status("btsp_abc123xyz").await?;
+    /// println!("Tunnel state: {}", status.state);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn get_tunnel_status(&self, tunnel_id: &str) -> Result<TunnelStatus> {
+        let path = format!("/api/v1/tunnel/status/{}", tunnel_id);
+        let response = self
+            .http
+            .get(&path)
+            .await
+            .with_context(|| format!("Failed to get status for tunnel {}", tunnel_id))?;
+
+        // BearDog returns { "success": true, "data": {...} }
+        if let Some(data) = response.get("data") {
+            serde_json::from_value(data.clone())
+                .context("Failed to parse tunnel status from response")
+        } else {
+            serde_json::from_value(response)
+                .context("Failed to parse tunnel status")
+        }
+    }
+
+    /// Close a BTSP tunnel
+    ///
+    /// Uses BearDog's HTTP REST API: POST /api/v1/tunnel/close
+    ///
+    /// # Arguments
+    /// * `tunnel_id` - Tunnel identifier
+    ///
+    /// # Errors
+    /// Returns an error if tunnel closure fails.
+    ///
+    /// # Example
+    /// ```no_run
+    /// # use biomeos_core::clients::beardog::BearDogClient;
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// let beardog = BearDogClient::new("http://localhost:9000");
+    /// beardog.close_tunnel("btsp_abc123xyz").await?;
+    /// println!("Tunnel closed");
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn close_tunnel(&self, tunnel_id: &str) -> Result<()> {
+        let body = serde_json::json!({
+            "tunnel_id": tunnel_id
+        });
+
+        self.http
+            .post("/api/v1/tunnel/close", body)
+            .await
+            .with_context(|| format!("Failed to close tunnel {}", tunnel_id))?;
+
+        Ok(())
+    }
+}
+
+/// BTSP Tunnel information (from establish_tunnel)
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct TunnelInfo {
+    /// Unique tunnel identifier
+    pub tunnel_id: String,
+    /// Peer node ID
+    pub peer_id: String,
+    /// Tunnel establishment timestamp
+    pub established_at: String,
+}
+
+/// BTSP Tunnel status (from get_tunnel_status)
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct TunnelStatus {
+    /// Tunnel identifier
+    pub tunnel_id: String,
+    /// Tunnel state (active, idle, establishing, closing, closed, failed)
+    pub state: String,
+    /// Peer node ID
+    pub peer_id: String,
+    /// Peer endpoint
+    #[serde(default)]
+    pub peer_endpoint: Option<String>,
+    /// Local endpoint
+    #[serde(default)]
+    pub local_endpoint: Option<String>,
+    /// Bytes sent
+    #[serde(default)]
+    pub bytes_sent: u64,
+    /// Bytes received
+    #[serde(default)]
+    pub bytes_received: u64,
+    /// Last activity timestamp
+    #[serde(default)]
+    pub last_activity: Option<String>,
+    /// Establishment timestamp
+    pub established_at: String,
 }
 
 #[async_trait]
@@ -371,6 +572,251 @@ pub struct AuditEntry {
     pub metadata: Value,
 }
 
+/// BTSP (BirdSong Tunnel Protocol) tunnel management via BearDog CLI
+///
+/// BearDog is CLI-only by design for security. This module provides a Rust
+/// interface to the BearDog CLI for BTSP tunnel operations.
+///
+/// # Example
+/// ```no_run
+/// use biomeos_core::clients::beardog::btsp::BtspTunnel;
+///
+/// #[tokio::main]
+/// async fn main() -> anyhow::Result<()> {
+///     // Create a BTSP tunnel to a peer
+///     let tunnel = BtspTunnel::create("peer-node-1", "http://192.168.1.100:8080").await?;
+///     println!("Tunnel created: {}", tunnel.tunnel_id);
+///     
+///     // Check tunnel status
+///     let status = tunnel.status().await?;
+///     println!("Tunnel status: {}", status.state);
+///     
+///     // Destroy tunnel when done
+///     tunnel.destroy().await?;
+///     
+///     Ok(())
+/// }
+/// ```
+pub mod btsp {
+    use anyhow::{Context, Result};
+    use serde::{Deserialize, Serialize};
+    use std::process::Command;
+
+    /// BTSP tunnel instance
+    #[derive(Debug, Clone)]
+    pub struct BtspTunnel {
+        /// Unique tunnel identifier
+        pub tunnel_id: String,
+        /// Peer node ID
+        pub peer_id: String,
+        /// Peer endpoint
+        pub peer_endpoint: String,
+    }
+
+    impl BtspTunnel {
+        /// Create a new BTSP tunnel to a peer
+        ///
+        /// Executes: `beardog tunnel create --peer <id> --endpoint <endpoint>`
+        ///
+        /// # Arguments
+        /// * `peer_id` - Peer node identifier
+        /// * `peer_endpoint` - Peer endpoint URL
+        ///
+        /// # Errors
+        /// Returns an error if the BearDog CLI is not available or tunnel creation fails.
+        pub async fn create(peer_id: &str, peer_endpoint: &str) -> Result<Self> {
+            let output = Command::new("beardog")
+                .arg("tunnel")
+                .arg("create")
+                .arg("--peer")
+                .arg(peer_id)
+                .arg("--endpoint")
+                .arg(peer_endpoint)
+                .arg("--output")
+                .arg("json")
+                .output()
+                .context("Failed to execute beardog tunnel create. Is beardog installed?")?;
+
+            if !output.status.success() {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                anyhow::bail!("beardog tunnel create failed: {}", stderr);
+            }
+
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let response: CreateTunnelResponse = serde_json::from_str(&stdout)
+                .context("Failed to parse beardog tunnel create response")?;
+
+            Ok(Self {
+                tunnel_id: response.tunnel_id,
+                peer_id: peer_id.to_string(),
+                peer_endpoint: peer_endpoint.to_string(),
+            })
+        }
+
+        /// Get tunnel status
+        ///
+        /// Executes: `beardog tunnel status <tunnel-id>`
+        ///
+        /// # Errors
+        /// Returns an error if the status check fails.
+        pub async fn status(&self) -> Result<TunnelStatus> {
+            let output = Command::new("beardog")
+                .arg("tunnel")
+                .arg("status")
+                .arg(&self.tunnel_id)
+                .arg("--output")
+                .arg("json")
+                .output()
+                .context("Failed to execute beardog tunnel status")?;
+
+            if !output.status.success() {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                anyhow::bail!("beardog tunnel status failed: {}", stderr);
+            }
+
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            serde_json::from_str(&stdout)
+                .context("Failed to parse beardog tunnel status response")
+        }
+
+        /// Destroy the tunnel
+        ///
+        /// Executes: `beardog tunnel destroy <tunnel-id>`
+        ///
+        /// # Errors
+        /// Returns an error if tunnel destruction fails.
+        pub async fn destroy(self) -> Result<()> {
+            let output = Command::new("beardog")
+                .arg("tunnel")
+                .arg("destroy")
+                .arg(&self.tunnel_id)
+                .output()
+                .context("Failed to execute beardog tunnel destroy")?;
+
+            if !output.status.success() {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                anyhow::bail!("beardog tunnel destroy failed: {}", stderr);
+            }
+
+            Ok(())
+        }
+
+        /// List all active tunnels
+        ///
+        /// Executes: `beardog tunnel list`
+        ///
+        /// # Errors
+        /// Returns an error if listing fails.
+        pub async fn list_all() -> Result<Vec<TunnelInfo>> {
+            let output = Command::new("beardog")
+                .arg("tunnel")
+                .arg("list")
+                .arg("--output")
+                .arg("json")
+                .output()
+                .context("Failed to execute beardog tunnel list")?;
+
+            if !output.status.success() {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                anyhow::bail!("beardog tunnel list failed: {}", stderr);
+            }
+
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let response: ListTunnelsResponse = serde_json::from_str(&stdout)
+                .context("Failed to parse beardog tunnel list response")?;
+
+            Ok(response.tunnels)
+        }
+    }
+
+    /// Response from `beardog tunnel create`
+    #[derive(Debug, Clone, Deserialize, Serialize)]
+    struct CreateTunnelResponse {
+        tunnel_id: String,
+        #[serde(default)]
+        status: String,
+    }
+
+    /// Tunnel status information
+    #[derive(Debug, Clone, Deserialize, Serialize)]
+    pub struct TunnelStatus {
+        /// Tunnel identifier
+        pub tunnel_id: String,
+        /// Tunnel state (e.g., "active", "pending", "failed")
+        pub state: String,
+        /// Peer node ID
+        pub peer_id: String,
+        /// Local port
+        #[serde(default)]
+        pub local_port: Option<u16>,
+        /// Remote port
+        #[serde(default)]
+        pub remote_port: Option<u16>,
+        /// Creation timestamp
+        pub created_at: String,
+        /// Last activity timestamp
+        #[serde(default)]
+        pub last_activity: Option<String>,
+    }
+
+    /// Tunnel information
+    #[derive(Debug, Clone, Deserialize, Serialize)]
+    pub struct TunnelInfo {
+        /// Tunnel identifier
+        pub tunnel_id: String,
+        /// Tunnel state
+        pub state: String,
+        /// Peer node ID
+        pub peer_id: String,
+        /// Peer endpoint
+        pub peer_endpoint: String,
+    }
+
+    /// Response from `beardog tunnel list`
+    #[derive(Debug, Clone, Deserialize, Serialize)]
+    struct ListTunnelsResponse {
+        tunnels: Vec<TunnelInfo>,
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn test_tunnel_info_deserialization() {
+            let json = serde_json::json!({
+                "tunnel_id": "btsp-abc123",
+                "state": "active",
+                "peer_id": "node-456",
+                "peer_endpoint": "http://192.168.1.100:8080"
+            });
+
+            let info: TunnelInfo = serde_json::from_value(json).unwrap();
+            assert_eq!(info.tunnel_id, "btsp-abc123");
+            assert_eq!(info.state, "active");
+            assert_eq!(info.peer_id, "node-456");
+        }
+
+        #[test]
+        fn test_tunnel_status_deserialization() {
+            let json = serde_json::json!({
+                "tunnel_id": "btsp-abc123",
+                "state": "active",
+                "peer_id": "node-456",
+                "local_port": 9090,
+                "remote_port": 9091,
+                "created_at": "2026-01-01T12:00:00Z",
+                "last_activity": "2026-01-01T12:05:00Z"
+            });
+
+            let status: TunnelStatus = serde_json::from_value(json).unwrap();
+            assert_eq!(status.tunnel_id, "btsp-abc123");
+            assert_eq!(status.state, "active");
+            assert_eq!(status.local_port, Some(9090));
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -408,5 +854,42 @@ mod tests {
         let json = serde_json::to_value(&request).unwrap();
         assert_eq!(json["subject"], "user123");
         assert_eq!(json["action"], "read");
+    }
+
+    #[test]
+    fn test_tunnel_info_deserialization() {
+        let json = serde_json::json!({
+            "tunnel_id": "btsp_abc123xyz",
+            "peer_id": "node-456",
+            "established_at": "2026-01-01T12:00:00Z"
+        });
+
+        let info: TunnelInfo = serde_json::from_value(json).unwrap();
+        assert_eq!(info.tunnel_id, "btsp_abc123xyz");
+        assert_eq!(info.peer_id, "node-456");
+        assert_eq!(info.established_at, "2026-01-01T12:00:00Z");
+    }
+
+    #[test]
+    fn test_tunnel_status_deserialization() {
+        let json = serde_json::json!({
+            "tunnel_id": "btsp_abc123xyz",
+            "state": "active",
+            "peer_id": "node-456",
+            "peer_endpoint": "192.168.1.100:9091",
+            "local_endpoint": "192.168.1.50:9090",
+            "bytes_sent": 1024000,
+            "bytes_received": 2048000,
+            "last_activity": "2026-01-01T12:05:30Z",
+            "established_at": "2026-01-01T12:00:00Z"
+        });
+
+        let status: TunnelStatus = serde_json::from_value(json).unwrap();
+        assert_eq!(status.tunnel_id, "btsp_abc123xyz");
+        assert_eq!(status.state, "active");
+        assert_eq!(status.peer_id, "node-456");
+        assert_eq!(status.bytes_sent, 1024000);
+        assert_eq!(status.bytes_received, 2048000);
+        assert_eq!(status.peer_endpoint, Some("192.168.1.100:9091".to_string()));
     }
 }

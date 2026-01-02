@@ -52,7 +52,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 
 SONGBIRD_PORT=8080
-PHASE1_BINS="$SCRIPT_DIR/../../../phase1bins"
+PHASE1_BINS="$SCRIPT_DIR/../../../primalBins"
 SONGBIRD_CLI="$PHASE1_BINS/songbird-cli-dec-25-2025-standalone"
 
 echo "Using Songbird CLI (Dec 25 fix - fully standalone!)"

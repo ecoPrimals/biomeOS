@@ -19,7 +19,7 @@
 ### Showcase Framework
 - ✅ Main README.md with all 11 scenarios defined
 - ✅ Clear learning path (beginner → advanced)
-- ✅ Integration with ../phase1bins/ binaries
+- ✅ Integration with ../primalBins/ binaries
 - ✅ Inspired by petalTongue's excellent structure
 - ✅ Inspired by Songbird's federation demos
 - ✅ Inspired by ToadStool's compute showcases
@@ -93,7 +93,7 @@
 ## 💡 Key Design Decisions
 
 ### 1. Use Phase1bins Binaries
-- ✅ All scenarios use `../phase1bins/*-bin`
+- ✅ All scenarios use `../primalBins/*-bin`
 - ✅ No need to rebuild primals
 - ✅ Stable release versions
 - ✅ Easy to update
@@ -241,7 +241,7 @@ main "$@"
 - [ ] Demo scripts executable and tested
 - [ ] Expected outputs documented
 - [ ] Troubleshooting guide included
-- [ ] Integration with phase1bins verified
+- [ ] Integration with primalBins verified
 
 ### Overall
 - [x] Framework established
@@ -284,7 +284,7 @@ main "$@"
 ## 📝 Notes
 
 ### Phase1bins Integration
-- All scenarios use `../phase1bins/*-bin`
+- All scenarios use `../primalBins/*-bin`
 - Verified binaries exist:
   - `beardog-bin` ✅
   - `songbird-bin` ✅
@@ -307,7 +307,7 @@ main "$@"
 - ✅ Showcase framework complete
 - ✅ First scenario (00-local) complete
 - ✅ Clear path forward
-- ✅ Integration with phase1bins
+- ✅ Integration with primalBins
 - ✅ Inspired by best practices
 
 ### What's Next

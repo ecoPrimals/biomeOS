@@ -233,8 +233,8 @@ start_primal_smart() {
     # Search for binary
     local possible_locations=(
         "../../../../primalBins/$primal_name"
-        "../../../phase1bins/$primal_name"
-        "../../../phase1bins/${primal_name}-cli-dec-25-2025-standalone"
+        "../../../primalBins/$primal_name"
+        "../../../primalBins/${primal_name}-cli-dec-25-2025-standalone"
         "$(which $primal_name 2>/dev/null)"
     )
     

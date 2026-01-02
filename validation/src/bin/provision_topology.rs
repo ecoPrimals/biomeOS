@@ -79,21 +79,25 @@ async fn main() -> Result<()> {
 
         let template_path = vm_config.template_path()?;
         println!("Template: {}", template_path.display());
+        println!("Waiting for cloud-init and SSH...");
         println!();
 
         let vm = backend
-            .create_desktop_vm(
+            .create_desktop_vm_ready(
                 &vm_config.name,
                 &template_path,
                 &cloud_init,
                 vm_config.memory_mb,
                 vm_config.vcpus,
                 vm_config.disk_size_gb,
+                "biomeos",                           // SSH username
+                "",                                  // SSH password (empty = key auth)
+                std::time::Duration::from_secs(600), // 10 minute timeout
             )
             .await
             .with_context(|| format!("Failed to create VM: {}", vm_config.name))?;
 
-        println!("✅ {} created!", vm_config.name);
+        println!("✅ {} ready with SSH access!", vm_config.name);
         println!("   • Name: {}", vm.name);
         println!("   • IP: {}", vm.ip_address);
         println!("   • Resources: {}MB RAM, {} CPUs, {}GB disk", 

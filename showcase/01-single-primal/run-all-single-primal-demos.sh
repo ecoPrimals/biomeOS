@@ -23,7 +23,7 @@ echo ""
 echo "Total duration: ~25 minutes"
 echo ""
 echo "Prerequisites:"
-echo "  - Phase 1 binaries in ../../phase1bins/"
+echo "  - Phase 1 binaries in ../../primalBins/"
 echo "  - Ports 3000, 8080, 8002, 9000, 8001 available"
 echo ""
 

@@ -91,21 +91,25 @@ async fn main() -> Result<()> {
     let mut deployed_vms = Vec::new();
     for (i, vm_config) in topology.vms.iter().enumerate() {
         println!("Creating VM {} of {}: {}", i + 1, topology.vms.len(), vm_config.name);
+        println!("  • Waiting for cloud-init and SSH...");
 
         let template_path = vm_config.template_path()?;
         let vm = backend
-            .create_desktop_vm(
+            .create_desktop_vm_ready(
                 &vm_config.name,
                 &template_path,
                 &cloud_init,
                 vm_config.memory_mb,
                 vm_config.vcpus,
                 vm_config.disk_size_gb,
+                "biomeos",                           // SSH username
+                "",                                  // SSH password (empty = key auth)
+                std::time::Duration::from_secs(600), // 10 minute timeout
             )
             .await
             .with_context(|| format!("Failed to create VM: {}", vm_config.name))?;
 
-        println!("✅ {} created ({})", vm.name, vm.ip_address);
+        println!("✅ {} ready with SSH access ({})", vm.name, vm.ip_address);
         deployed_vms.push(DeployedVm::new(vm.name, vm.ip_address));
 
         if i < topology.vms.len() - 1 {

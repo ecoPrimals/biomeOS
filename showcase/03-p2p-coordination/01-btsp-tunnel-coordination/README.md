@@ -1,280 +1,312 @@
-# 01 - BTSP Tunnel Coordination
+# 🔒 BTSP Tunnel Coordination Demo
 
-**Demonstrates**: Complete BTSP tunnel lifecycle management  
-**Status**: Ready to implement  
-**Prerequisites**: BiomeOS, BearDog, Songbird  
+**Status**: 📚 Gap Discovery Phase  
+**Date**: December 31, 2025  
+**Goal**: Document real APIs needed for BTSP tunnel coordination  
 
 ---
 
-## What This Demonstrates
+## What This Demo Does
 
-- BTSP tunnel establishment between peers
-- Real-time health monitoring
-- Automatic recovery from degradation
-- Key rotation for security
-- Graceful tunnel shutdown
-- BiomeOS as BTSP coordinator
+This demo **discovers and documents** the actual APIs needed to establish a BTSP (BearDog Secure Tunnel Protocol) tunnel between Songbird (orchestration) and BearDog (encryption).
+
+**Approach**: Gap discovery (not full implementation yet)
+- ✅ Discovers available primals
+- ✅ Documents expected APIs
+- ✅ Identifies missing pieces
+- ✅ Based on proven phase1 implementation
+
+---
+
+## Quick Start
+
+```bash
+./demo.sh
+```
+
+**Expected**: Demo will identify what's working and what gaps remain.
 
 ---
 
 ## Architecture
 
 ```
-┌─────────┐                  ┌─────────┐
-│ Peer A  │                  │ Peer B  │
-└────┬────┘                  └────┬────┘
-     │                            │
-     │    ┌──────────────┐       │
-     └───►│   BiomeOS    │◄──────┘
-          │ BTSP Coord.  │
-          └──────┬───────┘
-                 │
-        ┌────────┴────────┐
-        │                 │
-    ┌───▼────┐      ┌────▼────┐
-    │BearDog │      │Songbird │
-    │Crypto  │      │Discovery│
-    └────────┘      └─────────┘
+┌──────────────────┐
+│ Songbird Tower   │ ← Orchestration (mDNS/UDP)
+│ (orchestration)  │   Coordinates peer discovery
+└────────┬─────────┘
+         │
+    ┌────┴────┐
+    │         │
+┌───▼───┐ ┌──▼─────┐
+│ Node  │ │  Node  │
+│ Alice │ │   Bob  │
+└───┬───┘ └───┬────┘
+    └─────┬───┘
+      BTSP Tunnel
+     (via BearDog)
 ```
+
+### Components
+
+1. **Songbird**: Orchestration service
+   - Handles node registration
+   - Coordinates peer discovery
+   - Uses mDNS/UDP (not HTTP!)
+
+2. **BearDog**: Encryption service
+   - Establishes BTSP tunnels
+   - Provides Perfect Forward Secrecy
+   - Encrypts all messages
+
+3. **biomeOS**: Coordinator
+   - Discovers primals by capability
+   - Orchestrates tunnel establishment
+   - Demonstrates integration
 
 ---
 
-## BTSP Tunnel Lifecycle
+## Expected Flow
 
 ### 1. Discovery Phase
 ```bash
-# Songbird discovers peers
-peers=$(songbird discover)
-# Result: peer-a, peer-b found
+# Discover orchestration service (Songbird)
+export PRIMAL_SONGBIRD_ENDPOINT="mdns://songbird-tower.local"
+export PRIMAL_SONGBIRD_CAPABILITIES="orchestration,p2p"
+
+# Discover encryption service (BearDog)
+export PRIMAL_BEARDOG_ENDPOINT="http://localhost:9091"
+export PRIMAL_BEARDOG_CAPABILITIES="encryption,btsp"
 ```
 
-### 2. Establishment Phase
-```bash
-# BiomeOS establishes tunnel
-tunnel_id=$(biomeos btsp establish peer-a peer-b)
-# Result: Tunnel established with BearDog encryption
+### 2. Registration Phase
+```
+Alice → Songbird: Register as "alice" with capabilities
+Bob → Songbird: Register as "bob" with capabilities
 ```
 
-### 3. Monitoring Phase
-```bash
-# BiomeOS monitors tunnel health
-health=$(biomeos btsp health $tunnel_id)
-# Result: Healthy | Degraded | Unhealthy
+### 3. Peer Discovery
+```
+Alice → Songbird: Find peer "bob"
+Songbird → Alice: Bob's endpoint: 127.0.0.1:8082
 ```
 
-### 4. Recovery Phase (if degraded)
-```bash
-# BiomeOS automatically recovers
-biomeos btsp recover $tunnel_id
-# Actions: Key rotation, transport optimization, path reestablishment
+### 4. Tunnel Establishment
+```
+Alice → BearDog: Establish BTSP tunnel to Bob
+BearDog: Creates tunnel with Perfect Forward Secrecy
+BearDog → Alice: Tunnel ID
 ```
 
-### 5. Shutdown Phase
-```bash
-# BiomeOS graceful shutdown
-biomeos btsp shutdown $tunnel_id
-# Result: Clean termination, resources released
+### 5. Encrypted Communication
 ```
-
----
-
-## Key Capabilities
-
-### Tunnel Establishment
-- Peer discovery via Songbird
-- Automatic endpoint negotiation
-- BearDog encryption integration
-- Tunnel ID generation
-- State tracking
-
-### Health Monitoring
-- Real-time status checks
-- Security health (key expiration, rotation status)
-- Transport health (latency, packet loss)
-- Overall status computation
-- Alert generation
-
-### Automatic Recovery
-- Degradation diagnosis
-- Recovery strategy selection
-  - Key rotation (security issues)
-  - Transport optimization (performance issues)
-  - Path reestablishment (connectivity issues)
-- Recovery verification
-- Success/failure reporting
-
-### Key Rotation
-- Automatic expiration detection
-- Coordinate with BearDog
-- Zero-downtime rotation
-- Verification of new keys
-
-### Graceful Shutdown
-- Clean tunnel termination
-- Resource cleanup
-- State persistence
-- Notification to peers
-
----
-
-## Demo Script Structure
-
-```bash
-#!/bin/bash
-# Demo 01: BTSP Tunnel Coordination
-
-echo "🌐 BTSP Tunnel: Complete Lifecycle"
-echo "==================================="
-
-# 1. Discovery
-echo "🔍 Discovering peers..."
-# Use Songbird to find available peers
-
-# 2. Establishment
-echo "🔗 Establishing BTSP tunnel..."
-# BiomeOS coordinates tunnel setup
-
-# 3. Health Check
-echo "💓 Monitoring tunnel health..."
-# Real-time health status
-
-# 4. Simulate Degradation
-echo "⚠️  Simulating degradation..."
-# Inject latency or security issue
-
-# 5. Automatic Recovery
-echo "🔄 Automatic recovery..."
-# BiomeOS diagnoses and repairs
-
-# 6. Verify Recovery
-echo "✅ Verifying recovery..."
-# Confirm tunnel healthy again
-
-# 7. Graceful Shutdown
-echo "👋 Graceful shutdown..."
-# Clean termination
-
-echo "🎉 BTSP tunnel lifecycle complete!"
+Alice → BearDog: Send message via tunnel
+BearDog: Encrypts with ChaCha20-Poly1305
+BearDog → Bob: Encrypted message
+Bob → BearDog: Decrypt message
 ```
 
 ---
 
-## Testing Scenarios
+## Current Status
 
-### Happy Path
-1. Establish tunnel ✅
-2. Monitor health (Healthy) ✅
-3. Send data ✅
-4. Shutdown gracefully ✅
+### ✅ What Works
+- Runtime capability-based discovery
+- Environment variable detection
+- Gap identification and documentation
 
-### Degradation - Security
-1. Establish tunnel ✅
-2. Key approaching expiration ⚠️
-3. Auto-recovery (key rotation) 🔄
-4. Verify healthy ✅
+### 📚 What's Documented
+- Songbird registration API (from phase1)
+- BearDog BTSP API (from phase1)
+- UPA (Universal Primal Adapter) pattern
+- Complete API flow
 
-### Degradation - Transport
-1. Establish tunnel ✅
-2. High latency detected ⚠️
-3. Auto-recovery (optimize path) 🔄
-4. Verify healthy ✅
-
-### Degradation - Connectivity
-1. Establish tunnel ✅
-2. Peer unreachable ⚠️
-3. Auto-recovery (reestablish) 🔄
-4. Verify healthy ✅
+### ❌ What's Missing
+1. Running primal instances (Songbird, BearDog)
+2. UPA client in biomeOS
+3. BTSP methods in BearDog client wrapper
+4. Full integration testing
 
 ---
 
-## Success Criteria
+## Gap Documentation
 
-### Establishment
-- ✅ Tunnel created successfully
-- ✅ Encryption active (BearDog)
-- ✅ Peers connected
-- ✅ Health status: Healthy
-
-### Monitoring
-- ✅ Real-time health updates
-- ✅ Security status tracked
-- ✅ Transport metrics available
-- ✅ Overall status computed
-
-### Recovery
-- ✅ Degradation detected
-- ✅ Root cause diagnosed
-- ✅ Recovery strategy executed
-- ✅ Tunnel restored to healthy
-
-### Shutdown
-- ✅ Clean termination
-- ✅ Resources released
-- ✅ No leaked connections
-- ✅ State cleaned up
+See `GAPS_DOCUMENTED.md` for complete API details including:
+- Exact API calls from proven phase1 implementation
+- UPA (Universal Primal Adapter) explanation
+- Environment variable patterns
+- Implementation path forward
 
 ---
 
-## Implementation Notes
+## Reference Implementation
 
-### BiomeOS BTSP Coordinator
+This demo is based on the **proven working** phase1 implementation:
 
-**Already Implemented** (from earlier session):
+```
+phase1/beardog/showcase/02-ecosystem-integration/01-songbird-btsp/
+```
+
+That demo:
+- ✅ Actually establishes BTSP tunnels
+- ✅ Coordinates via Songbird
+- ✅ Sends encrypted messages
+- ✅ Uses capability-based discovery
+- ✅ No hardcoded service names
+
+---
+
+## Running the Demo
+
+### Prerequisites
+
+#### Option 1: With Real Primals
+```bash
+# Terminal 1: Start Songbird
+cd /home/eastgate/Development/ecoPrimals/primalBins/
+./songbird-orchestrator
+
+# Terminal 2: Start BearDog
+./beardog-hsm --btsp-enabled
+
+# Terminal 3: Set environment and run demo
+export PRIMAL_SONGBIRD_ENDPOINT="mdns://songbird-tower.local"
+export PRIMAL_SONGBIRD_CAPABILITIES="orchestration,p2p"
+export PRIMAL_BEARDOG_ENDPOINT="http://localhost:9091"
+export PRIMAL_BEARDOG_CAPABILITIES="encryption,btsp"
+
+cd /home/eastgate/Development/ecoPrimals/phase2/biomeOS/showcase/03-p2p-coordination/01-btsp-tunnel-coordination/
+./demo.sh
+```
+
+#### Option 2: Gap Discovery Only
+```bash
+# Just run the demo - it will document what's missing
+./demo.sh
+```
+
+---
+
+## Expected Output
+
+### With Primals Running
+```
+🔒 BTSP Tunnel Coordination Demo
+════════════════════════════════════════════════════════
+
+Step 1: Discover Orchestration Service (Songbird)
+✅ Found orchestration service
+  Name: songbird
+  Endpoint: mdns://songbird-tower.local
+  Capabilities: orchestration,p2p
+
+Step 2: Discover Encryption Service (BearDog)
+✅ Found encryption service
+  Name: beardog
+  Endpoint: http://localhost:9091
+  Capabilities: encryption,btsp
+
+Step 3: Verify BTSP Capability
+✅ BTSP capability confirmed
+
+Step 4: Establish BTSP Tunnel
+[API documentation and expected flow]
+
+✨ Gap Discovery Complete
+```
+
+### Without Primals (Gap Discovery)
+```
+🔒 BTSP Tunnel Coordination Demo
+════════════════════════════════════════════════════════
+
+Step 1: Discover Orchestration Service (Songbird)
+⚠️  No orchestration service discovered
+
+═══ GAP IDENTIFIED ═══
+📋 Songbird Discovery:
+  • Expected: Songbird running with orchestration capability
+  • Actual: Not found
+  • Action: Start Songbird or set environment variables
+
+[... rest of gap documentation ...]
+```
+
+---
+
+## Next Steps
+
+### Phase 1: Complete Gap Documentation ✅
+- Study phase1 implementation
+- Document actual APIs
+- Understand UPA abstraction
+
+### Phase 2: Implement UPA Client
 ```rust
-// btsp.rs - Recovery implementation
-async fn recover_degraded_tunnel(&self, tunnel_id: &str) -> Result<TunnelInfo> {
-    // Diagnose degradation
-    let cause = self.diagnose_degradation(tunnel_id).await?;
-    
-    // Apply recovery strategy
-    match cause {
-        DegradationCause::SecurityKeyExpiring => self.rotate_tunnel_keys(tunnel_id).await?,
-        DegradationCause::TransportLatency => self.optimize_transport_path(tunnel_id).await?,
-        DegradationCause::PartialConnectivity => self.reestablish_transport(tunnel_id).await?,
-    }
-    
-    // Verify recovery
-    let health = self.security.check_tunnel_health(tunnel_id).await?;
-    // ...
+// biomeOS/src/primal_clients/upa_client.rs
+pub struct UpaClient {
+    endpoint: String,
+}
+
+impl UpaClient {
+    pub async fn register_node(&self, req: RegisterRequest) -> Result<String>;
+    pub async fn find_peer(&self, name: &str) -> Result<PeerInfo>;
 }
 ```
 
-**What the Demo Will Show**:
-- This code running with real primals
-- Actual recovery in action
-- Real health monitoring
-- Honest gap reporting if issues
+### Phase 3: Extend BearDog Client
+```rust
+// biomeOS/src/primal_clients/beardog_client.rs
+impl BeardogClient {
+    pub async fn establish_btsp_tunnel(&self, peer: PeerEndpoint) -> Result<TunnelId>;
+    pub async fn send_btsp_message(&self, tunnel_id: &str, data: &[u8]) -> Result<()>;
+}
+```
+
+### Phase 4: Integration Testing
+- Start Songbird tower (mDNS/UDP)
+- Start BearDog instances
+- Run complete demo
+- Send encrypted messages
 
 ---
 
-## Validation
+## Files
 
-### E2E Test
-```bash
-# Will be added to run-e2e-tests.sh
-run_demo_test "showcase/03-p2p-coordination/01-btsp-tunnel-coordination/demo.sh"
-
-# Expected: PASS (if all primals available)
-# Expected: Graceful skip/gap report (if missing)
-```
-
-### Manual Validation
-```bash
-# Run demo
-bash showcase/03-p2p-coordination/01-btsp-tunnel-coordination/demo.sh
-
-# Verify:
-# - Tunnel established
-# - Health monitoring active
-# - Recovery triggered
-# - Tunnel restored
-# - Clean shutdown
-```
+- `demo.sh` - Main demo script (gap discovery)
+- `GAPS_DOCUMENTED.md` - Complete API documentation (★ READ THIS)
+- `README.md` - This file
+- `../../common/discovery.sh` - Runtime discovery library
 
 ---
 
-**Status**: 📋 Planned, Ready to Implement  
-**Next**: Build demo.sh script  
-**Integration**: Real primals, no mocks  
+## Key Insights
 
-🌐 **BTSP: Production-Grade P2P Tunnel Coordination**
+### 1. Songbird Uses mDNS/UDP
+**Not HTTP!** The phase1 implementation uses UPA (Universal Primal Adapter) to abstract the protocol.
+
+### 2. Capability-Based Discovery Works
+Environment variables `PRIMAL_*_ENDPOINT` and `PRIMAL_*_CAPABILITIES` enable runtime discovery without hardcoding.
+
+### 3. BTSP is Real
+Phase1 has a complete, working BTSP implementation. We just need to integrate it properly in biomeOS.
+
+### 4. No Hardcoding
+Following the architecture: primals only know themselves, discover others by capability at runtime.
+
+---
+
+## References
+
+- `phase1/beardog/showcase/02-ecosystem-integration/01-songbird-btsp/` - Full working code
+- `phase1/beardog/showcase/00-local-primal/06-btsp-tunnel/` - BTSP concepts
+- `PRIMAL_GAPS.md` - Known integration gaps
+- `specs/UNIVERSAL_ADAPTER_SPECIFICATION.md` - UPA design
+
+---
+
+**Status**: Gap discovery phase complete  
+**Next**: Implement UPA client or HTTP wrappers  
+**Estimated Time**: 2-4 hours for basic implementation  
+
+🔍 **Understanding first, implementation second!**

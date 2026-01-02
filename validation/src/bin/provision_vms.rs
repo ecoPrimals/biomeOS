@@ -49,53 +49,55 @@ async fn main() -> Result<()> {
     println!();
 
     print_section("Creating VM 1");
-    println!("Using: create_desktop_vm()");
+    println!("Using: create_desktop_vm_ready()");
     println!("  • Provisions VM");
     println!("  • Applies cloud-init");
-    println!("  • Returns VM info");
-    println!();
-    println!("Note: Using base API for Phase 1");
-    println!("      create_desktop_vm_ready() available for Phase 2");
+    println!("  • Waits for SSH access");
+    println!("  • Returns when fully ready");
     println!();
 
-    // Note: Using create_desktop_vm() for now
-    // create_desktop_vm_ready() requires additional parameters we'll add in Phase 2
     let vm1 = backend
-        .create_desktop_vm(
+        .create_desktop_vm_ready(
             "biomeos-test-vm1",
             &template_path,
             &cloud_init,
             2048, // 2GB RAM
             2,    // 2 CPUs
             25,   // 25GB disk
+            "biomeos",                           // SSH username
+            "",                                  // SSH password (empty = key auth)
+            std::time::Duration::from_secs(600), // 10 minute timeout
         )
         .await
         .context("Failed to create VM1")?;
 
-    println!("✅ VM1 created!");
+    println!("✅ VM1 ready with SSH access!");
     println!("   • Name: {}", vm1.name);
     println!("   • IP: {}", vm1.ip_address);
-    println!("   • Status: Running");
+    println!("   • Status: Running (SSH ready)");
     println!();
 
     print_section("Creating VM 2");
 
     let vm2 = backend
-        .create_desktop_vm(
+        .create_desktop_vm_ready(
             "biomeos-test-vm2",
             &template_path,
             &cloud_init,
             2048, // 2GB RAM
             2,    // 2 CPUs
             25,   // 25GB disk
+            "biomeos",                           // SSH username
+            "",                                  // SSH password (empty = key auth)
+            std::time::Duration::from_secs(600), // 10 minute timeout
         )
         .await
         .context("Failed to create VM2")?;
 
-    println!("✅ VM2 created!");
+    println!("✅ VM2 ready with SSH access!");
     println!("   • Name: {}", vm2.name);
     println!("   • IP: {}", vm2.ip_address);
-    println!("   • Status: Running");
+    println!("   • Status: Running (SSH ready)");
     println!();
 
     print_section("Phase 1: SUCCESS! ✅");

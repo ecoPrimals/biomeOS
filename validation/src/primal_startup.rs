@@ -5,7 +5,6 @@
 use crate::capabilities::{Capability, CapabilityProfile, PrimalBinary};
 use crate::deployment::DeployedVm;
 use anyhow::{Context, Result};
-use std::path::Path;
 
 /// Primal startup manager
 #[derive(Debug)]

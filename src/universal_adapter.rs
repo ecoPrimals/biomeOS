@@ -648,7 +648,7 @@ pub struct SystemStatus {
     pub adapter_uptime: u64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ServiceStatus {
     Healthy,
     Degraded,
@@ -901,5 +901,181 @@ mod tests {
             extract_primal_type_from_capabilities(&capabilities),
             Some("compute".to_string())
         );
+    }
+
+    #[test]
+    fn test_adapter_config_default() {
+        let config = AdapterConfig::default();
+        assert_eq!(config.timeout_seconds, 30);
+        assert_eq!(config.retry_attempts, 3);
+        assert!(config.toadstool_endpoint.contains("localhost") || config.toadstool_endpoint.contains("8003"));
+        assert!(config.songbird_endpoint.contains("localhost") || config.songbird_endpoint.contains("8004"));
+    }
+
+    #[test]
+    fn test_adapter_config_from_env() {
+        std::env::set_var("TOADSTOOL_ENDPOINT", "http://toadstool.test:9000");
+        std::env::set_var("SONGBIRD_ENDPOINT", "http://songbird.test:9001");
+        
+        let config = AdapterConfig::default();
+        
+        assert_eq!(config.toadstool_endpoint, "http://toadstool.test:9000");
+        assert_eq!(config.songbird_endpoint, "http://songbird.test:9001");
+        
+        std::env::remove_var("TOADSTOOL_ENDPOINT");
+        std::env::remove_var("SONGBIRD_ENDPOINT");
+    }
+
+    #[test]
+    fn test_adapter_creation() {
+        let config = AdapterConfig {
+            toadstool_endpoint: "http://test:8003".to_string(),
+            songbird_endpoint: "http://test:8004".to_string(),
+            timeout_seconds: 10,
+            retry_attempts: 2,
+        };
+        
+        let adapter = UniversalAdapter::new(config.clone());
+        assert_eq!(adapter.config.timeout_seconds, 10);
+        assert_eq!(adapter.config.retry_attempts, 2);
+        assert!(adapter.toadstool_client.is_none());
+        assert!(adapter.songbird_client.is_none());
+    }
+
+    #[test]
+    fn test_request_priority_variants() {
+        // Ensure all priority variants can be created
+        let _low = RequestPriority::Low;
+        let _normal = RequestPriority::Normal;
+        let _high = RequestPriority::High;
+        let _critical = RequestPriority::Critical;
+    }
+
+    #[test]
+    fn test_universal_request_serialization() {
+        let request = UniversalRequest {
+            operation: "test_op".to_string(),
+            payload: serde_json::json!({"key": "value"}),
+            metadata: RequestMetadata {
+                request_id: "test-123".to_string(),
+                timestamp: chrono::Utc::now(),
+                source: "test".to_string(),
+                priority: RequestPriority::Normal,
+            },
+        };
+        
+        let serialized = serde_json::to_string(&request).unwrap();
+        let deserialized: UniversalRequest = serde_json::from_str(&serialized).unwrap();
+        
+        assert_eq!(deserialized.operation, "test_op");
+        assert_eq!(deserialized.metadata.request_id, "test-123");
+    }
+
+    #[test]
+    fn test_universal_response_success() {
+        let response = UniversalResponse {
+            success: true,
+            data: serde_json::json!({"result": "ok"}),
+            error: None,
+            metadata: ResponseMetadata {
+                request_id: "req-456".to_string(),
+                processing_time_ms: 42,
+                timestamp: chrono::Utc::now(),
+                source: "adapter".to_string(),
+            },
+        };
+        
+        assert!(response.success);
+        assert!(response.error.is_none());
+        assert_eq!(response.metadata.processing_time_ms, 42);
+    }
+
+    #[test]
+    fn test_universal_response_error() {
+        let response = UniversalResponse {
+            success: false,
+            data: serde_json::Value::Null,
+            error: Some("Test error".to_string()),
+            metadata: ResponseMetadata {
+                request_id: "req-789".to_string(),
+                processing_time_ms: 10,
+                timestamp: chrono::Utc::now(),
+                source: "adapter".to_string(),
+            },
+        };
+        
+        assert!(!response.success);
+        assert!(response.error.is_some());
+        assert_eq!(response.error.as_ref().unwrap(), "Test error");
+    }
+
+    #[test]
+    fn test_primal_info_creation() {
+        let primal = PrimalInfo {
+            name: "TestPrimal".to_string(),
+            primal_type: "storage".to_string(),
+            endpoint: "http://test.local:8080".to_string(),
+            capabilities: vec!["storage:zfs".to_string(), "backup:snapshot".to_string()],
+            status: ServiceStatus::Healthy,
+        };
+        
+        assert_eq!(primal.name, "TestPrimal");
+        assert_eq!(primal.primal_type, "storage");
+        assert!(primal.endpoint.contains("test.local"));
+        assert_eq!(primal.capabilities.len(), 2);
+        assert_eq!(primal.status, ServiceStatus::Healthy);
+    }
+
+    #[test]
+    fn test_service_status_variants() {
+        // Ensure all status variants can be created and compared
+        let healthy = ServiceStatus::Healthy;
+        let degraded = ServiceStatus::Degraded;
+        let unavailable = ServiceStatus::Unavailable;
+        let not_init = ServiceStatus::NotInitialized;
+        
+        assert_eq!(healthy, ServiceStatus::Healthy);
+        assert_eq!(degraded, ServiceStatus::Degraded);
+        assert_eq!(unavailable, ServiceStatus::Unavailable);
+        assert_eq!(not_init, ServiceStatus::NotInitialized);
+    }
+
+    #[test]
+    fn test_system_status_creation() {
+        let system_status = SystemStatus {
+            toadstool: ServiceStatus::Healthy,
+            songbird: ServiceStatus::Healthy,
+            adapter_uptime: 3600,
+        };
+        
+        assert_eq!(system_status.toadstool, ServiceStatus::Healthy);
+        assert_eq!(system_status.songbird, ServiceStatus::Healthy);
+        assert_eq!(system_status.adapter_uptime, 3600);
+    }
+
+    #[test]
+    fn test_adapter_config_clone() {
+        let config = AdapterConfig::default();
+        let cloned = config.clone();
+        
+        assert_eq!(config.timeout_seconds, cloned.timeout_seconds);
+        assert_eq!(config.retry_attempts, cloned.retry_attempts);
+    }
+
+    #[test]
+    fn test_adapter_config_serde() {
+        let config = AdapterConfig {
+            toadstool_endpoint: "http://toadstool:8003".to_string(),
+            songbird_endpoint: "http://songbird:8004".to_string(),
+            timeout_seconds: 45,
+            retry_attempts: 5,
+        };
+        
+        let json = serde_json::to_string(&config).unwrap();
+        let deserialized: AdapterConfig = serde_json::from_str(&json).unwrap();
+        
+        assert_eq!(deserialized.timeout_seconds, 45);
+        assert_eq!(deserialized.retry_attempts, 5);
+        assert_eq!(deserialized.toadstool_endpoint, "http://toadstool:8003");
     }
 }
