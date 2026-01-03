@@ -5,7 +5,6 @@
 use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
-use std::sync::Arc;
 use std::time::Duration;
 
 /// QEMU VM instance for testing

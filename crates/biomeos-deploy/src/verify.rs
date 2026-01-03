@@ -90,7 +90,7 @@ impl VerifyResult {
         }
 
         if let Some(count) = self.primal_count {
-            summary.push_str(&format!("\n📦 Primal Installation Check:\n\n"));
+            summary.push_str("\n📦 Primal Installation Check:\n\n");
             summary.push_str(&format!("✅ Found {} primals\n", count));
 
             if !self.primals.is_empty() {

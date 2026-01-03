@@ -2,7 +2,7 @@
 //!
 //! Configures network interfaces during boot.
 
-use crate::init_error::{BootError, Result};
+use crate::init_error::Result;
 use tracing::info;
 
 /// Network configuration manager

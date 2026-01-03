@@ -67,12 +67,10 @@ async fn test_adapter_cache() {
 #[tokio::test]
 async fn test_interface_patterns() {
     // Test that we have all the expected patterns
-    let patterns = vec![
-        InterfacePattern::Direct,
+    let patterns = [InterfacePattern::Direct,
         InterfacePattern::SubcommandServe,
         InterfacePattern::SubcommandService,
-        InterfacePattern::SubcommandStart,
-    ];
+        InterfacePattern::SubcommandStart];
 
     assert!(patterns.len() >= 4);
 }

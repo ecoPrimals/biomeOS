@@ -2,7 +2,7 @@
 //!
 //! Spawns and manages the interactive shell.
 
-use crate::init_error::{BootError, Result};
+use crate::init_error::Result;
 use std::time::Duration;
 use tracing::{error, info};
 

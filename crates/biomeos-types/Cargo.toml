@@ -19,6 +19,9 @@ chrono = { version = "0.4", features = ["serde"] }
 # UUID support
 uuid = { version = "1.6", features = ["v4", "serde"] }
 
+# URL parsing and validation
+url = { version = "2.5", features = ["serde"] }
+
 # Error handling
 thiserror = "1.0"
 

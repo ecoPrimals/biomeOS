@@ -166,7 +166,7 @@ impl QemuInstance {
                 use nix::unistd::Pid;
 
                 let pid = Pid::from_raw(process.id() as i32);
-                kill(pid, Signal::SIGTERM).map_err(|e| DeployError::Process(e))?;
+                kill(pid, Signal::SIGTERM).map_err(DeployError::Process)?;
             }
 
             // Wait for process to exit (with timeout)

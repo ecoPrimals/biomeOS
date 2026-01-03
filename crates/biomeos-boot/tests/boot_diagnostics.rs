@@ -12,7 +12,7 @@ fn test_initramfs_structure() -> Result<()> {
     let temp_dir = tempfile::tempdir()?;
 
     // Build initramfs using our builder
-    let mut builder = biomeos_boot::InitramfsBuilder::new(temp_dir.path().to_path_buf())?;
+    let mut builder = biomeos_boot::InitramfsBuilder::new(temp_dir.path())?;
     builder.create_directory_structure()?;
 
     // Verify essential directories exist (in the initramfs-root subdirectory)
@@ -34,7 +34,7 @@ fn test_kernel_detection() -> Result<()> {
     assert!(kernel.exists(), "Kernel not found: {}", kernel.display());
 
     // Kernel should be readable
-    let metadata = std::fs::metadata(&kernel)?;
+    let metadata = std::fs::metadata(kernel)?;
     assert!(
         metadata.len() > 1_000_000,
         "Kernel too small: {} bytes",
@@ -67,9 +67,9 @@ fn test_full_initramfs_build() -> Result<()> {
     let binding = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let project_root = binding.parent().unwrap().parent().unwrap();
 
-    let mut builder = biomeos_boot::InitramfsBuilder::new(temp_dir.path().to_path_buf())?;
+    let mut builder = biomeos_boot::InitramfsBuilder::new(temp_dir.path())?;
     builder.create_directory_structure()?;
-    builder.add_biomeos_binaries(&project_root)?;
+    builder.add_biomeos_binaries(project_root)?;
 
     let initramfs = temp_dir.path().join("initramfs.cpio.gz");
     builder.build(&initramfs)?;

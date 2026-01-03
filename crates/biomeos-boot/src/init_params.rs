@@ -87,7 +87,7 @@ pub fn parse_cmdline(cmdline: &str) -> Result<BootParams> {
     } else if params.iter().any(|p| p.starts_with("biomeos.install")) {
         let target = params
             .iter()
-            .find_map(|p| p.strip_prefix("biomeos.install=").map(|t| PathBuf::from(t)));
+            .find_map(|p| p.strip_prefix("biomeos.install=").map(PathBuf::from));
         BootMode::Install { target }
     } else if params.iter().any(|p| p.starts_with("biomeos.network")) {
         let server = params
@@ -102,7 +102,7 @@ pub fn parse_cmdline(cmdline: &str) -> Result<BootParams> {
     } else {
         let config = params
             .iter()
-            .find_map(|p| p.strip_prefix("biomeos.config=").map(|c| PathBuf::from(c)));
+            .find_map(|p| p.strip_prefix("biomeos.config=").map(PathBuf::from));
         BootMode::Standard { config }
     };
 

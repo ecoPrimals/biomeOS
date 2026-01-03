@@ -458,15 +458,19 @@ name = "biomeos-api"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "axum",
  "biomeos-core",
+ "biomeos-types",
  "config",
+ "futures 0.3.31",
  "reqwest 0.11.27",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
  "thiserror",
  "tokio",
+ "tokio-stream",
  "tower 0.4.13",
  "tower-http 0.5.2",
  "tracing",
@@ -572,10 +576,13 @@ dependencies = [
  "config",
  "criterion",
  "dirs",
+ "futures 0.3.31",
  "itertools 0.12.1",
  "mockall",
  "once_cell",
+ "rand 0.8.5",
  "reqwest 0.11.27",
+ "semver 1.0.27",
  "serde",
  "serde_json",
  "serde_yaml",
@@ -586,8 +593,10 @@ dependencies = [
  "tokio-test",
  "tracing",
  "tracing-test",
+ "url",
  "uuid",
  "wiremock",
+ "zeroize",
 ]
 
 [[package]]
@@ -714,6 +723,7 @@ dependencies = [
  "serde_yaml",
  "thiserror",
  "tokio",
+ "url",
  "uuid",
 ]
 
@@ -4777,6 +4787,10 @@ name = "semver"
 version = "1.0.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d767eb0aabc880b29956c35734170f26ed551a859dbd361d140cdbeca61ab1e2"
+dependencies = [
+ "serde",
+ "serde_core",
+]
 
 [[package]]
 name = "semver-parser"

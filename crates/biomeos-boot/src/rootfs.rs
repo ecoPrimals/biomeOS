@@ -284,7 +284,7 @@ impl RootFsBuilder {
         // Use RAII guard for automatic cleanup
         let mut nbd = NbdGuard::attach(&self.config.output)?;
 
-        let status = Command::new(&format!("mkfs.{}", self.config.fs_type))
+        let status = Command::new(format!("mkfs.{}", self.config.fs_type))
             .arg(nbd.device())
             .arg("-L")
             .arg("BIOMEOS") // Label
@@ -550,7 +550,7 @@ impl RootFsBuilder {
             let entry = entry?;
             let path = entry.path();
 
-            if path.is_file() && path.extension().map_or(false, |ext| ext == "service") {
+            if path.is_file() && path.extension().is_some_and(|ext| ext == "service") {
                 let filename = path.file_name().unwrap();
                 let dest = systemd_dir.join(filename);
 

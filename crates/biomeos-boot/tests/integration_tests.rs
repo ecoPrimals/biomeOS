@@ -218,7 +218,7 @@ async fn test_initramfs_reproducible_builds() -> Result<()> {
     // Sizes should be similar (within 10%)
     let size1 = fs::metadata(&output1)?.len();
     let size2 = fs::metadata(&output2)?.len();
-    let diff = (size1 as i64 - size2 as i64).abs() as u64;
+    let diff = (size1 as i64 - size2 as i64).unsigned_abs();
     let percent_diff = (diff * 100) / size1.max(size2);
 
     assert!(percent_diff < 10, "Builds differ by {}%", percent_diff);

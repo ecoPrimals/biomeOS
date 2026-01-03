@@ -49,14 +49,14 @@ impl EnvDiscoveryClient {
         // Check for well-known environment variables
         if let Ok(beardog_url) = std::env::var("BEARDOG_ENDPOINT") {
             endpoints.insert("beardog".to_string(), beardog_url);
-        } else if let Ok(_) = std::env::var("BEARDOG_API_BIND_ADDR") {
+        } else if std::env::var("BEARDOG_API_BIND_ADDR").is_ok() {
             // Default beardog endpoint
             endpoints.insert("beardog".to_string(), "http://localhost:9000".to_string());
         }
         
         if let Ok(songbird_url) = std::env::var("SONGBIRD_ENDPOINT") {
             endpoints.insert("songbird".to_string(), songbird_url);
-        } else if let Ok(_) = std::env::var("SONGBIRD_ORCHESTRATOR_PORT") {
+        } else if std::env::var("SONGBIRD_ORCHESTRATOR_PORT").is_ok() {
             // Default songbird endpoint
             endpoints.insert("songbird".to_string(), "http://localhost:8080".to_string());
         }

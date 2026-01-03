@@ -1,0 +1,504 @@
+//! Retry Logic and Circuit Breaker Patterns
+//!
+//! This module provides fault tolerance patterns for resilient primal communication.
+//!
+//! ## Retry Logic
+//!
+//! Implements exponential backoff with jitter for transient failures.
+//!
+//! ## Circuit Breaker
+//!
+//! Prevents cascade failures by opening circuit after sustained errors,
+//! allowing system to recover before retrying.
+//!
+//! ## Usage
+//!
+//! ```ignore
+//! use biomeos_core::retry::{RetryPolicy, CircuitBreaker};
+//!
+//! // Configure retry policy
+//! let policy = RetryPolicy::exponential(3, Duration::from_millis(100));
+//!
+//! // Execute with retries
+//! let result = policy.execute(|| async {
+//!     // Your async operation
+//!     Ok::<_, Error>(response)
+//! }).await;
+//!
+//! // Use circuit breaker
+//! let breaker = CircuitBreaker::new(5, Duration::from_secs(30));
+//! let result = breaker.call(|| async {
+//!     // Your async operation
+//!     Ok::<_, Error>(response)
+//! }).await;
+//! ```
+
+use crate::adaptive_client::BirdSongError;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
+use tokio::sync::RwLock;
+use tracing::{debug, warn};
+
+/// Retry policy configuration
+#[derive(Debug, Clone)]
+pub struct RetryPolicy {
+    /// Maximum number of retry attempts
+    max_attempts: usize,
+    
+    /// Initial delay before first retry
+    initial_delay: Duration,
+    
+    /// Maximum delay between retries
+    max_delay: Duration,
+    
+    /// Backoff multiplier (e.g., 2.0 for exponential)
+    multiplier: f64,
+    
+    /// Add random jitter to prevent thundering herd
+    jitter: bool,
+}
+
+impl RetryPolicy {
+    /// Create a new retry policy with exponential backoff
+    pub fn exponential(max_attempts: usize, initial_delay: Duration) -> Self {
+        Self {
+            max_attempts,
+            initial_delay,
+            max_delay: Duration::from_secs(60),
+            multiplier: 2.0,
+            jitter: true,
+        }
+    }
+
+    /// Create a new retry policy with fixed delays
+    pub fn fixed(max_attempts: usize, delay: Duration) -> Self {
+        Self {
+            max_attempts,
+            initial_delay: delay,
+            max_delay: delay,
+            multiplier: 1.0,
+            jitter: false,
+        }
+    }
+
+    /// Create a new retry policy with no retries
+    pub fn no_retry() -> Self {
+        Self {
+            max_attempts: 1,
+            initial_delay: Duration::from_secs(0),
+            max_delay: Duration::from_secs(0),
+            multiplier: 1.0,
+            jitter: false,
+        }
+    }
+
+    /// Builder: Set maximum delay
+    pub fn with_max_delay(mut self, max_delay: Duration) -> Self {
+        self.max_delay = max_delay;
+        self
+    }
+
+    /// Builder: Set backoff multiplier
+    pub fn with_multiplier(mut self, multiplier: f64) -> Self {
+        self.multiplier = multiplier;
+        self
+    }
+
+    /// Builder: Enable/disable jitter
+    pub fn with_jitter(mut self, jitter: bool) -> Self {
+        self.jitter = jitter;
+        self
+    }
+
+    /// Calculate delay for a given attempt
+    fn calculate_delay(&self, attempt: usize) -> Duration {
+        if attempt == 0 {
+            return Duration::from_secs(0);
+        }
+
+        let base_delay = self.initial_delay.as_millis() as f64 
+            * self.multiplier.powi((attempt - 1) as i32);
+        
+        let delay_ms = base_delay.min(self.max_delay.as_millis() as f64);
+
+        let final_delay = if self.jitter {
+            // Add up to 25% jitter
+            let jitter_factor = 1.0 + (rand::random::<f64>() * 0.25);
+            (delay_ms * jitter_factor) as u64
+        } else {
+            delay_ms as u64
+        };
+
+        Duration::from_millis(final_delay)
+    }
+
+    /// Execute operation with retries
+    pub async fn execute<F, Fut, T, E>(&self, mut operation: F) -> Result<T, E>
+    where
+        F: FnMut() -> Fut,
+        Fut: std::future::Future<Output = Result<T, E>>,
+        E: std::fmt::Display,
+    {
+        let mut last_error = None;
+
+        for attempt in 0..self.max_attempts {
+            if attempt > 0 {
+                let delay = self.calculate_delay(attempt);
+                debug!("Retry attempt {}/{}, delay: {:?}", attempt + 1, self.max_attempts, delay);
+                tokio::time::sleep(delay).await;
+            }
+
+            match operation().await {
+                Ok(result) => return Ok(result),
+                Err(e) => {
+                    if attempt < self.max_attempts - 1 {
+                        debug!("Operation failed (attempt {}/{}): {}", attempt + 1, self.max_attempts, e);
+                    }
+                    last_error = Some(e);
+                }
+            }
+        }
+
+        Err(last_error.unwrap())
+    }
+}
+
+impl Default for RetryPolicy {
+    fn default() -> Self {
+        Self::exponential(3, Duration::from_millis(100))
+    }
+}
+
+/// Circuit breaker state
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CircuitState {
+    /// Circuit is closed, requests flow normally
+    Closed,
+    
+    /// Circuit is open, requests fail immediately
+    Open {
+        opened_at: Instant,
+        failure_count: usize,
+    },
+    
+    /// Circuit is half-open, testing if service recovered
+    HalfOpen,
+}
+
+/// Circuit breaker for preventing cascade failures
+pub struct CircuitBreaker {
+    /// Current state
+    state: Arc<RwLock<CircuitState>>,
+    
+    /// Number of failures before opening circuit
+    failure_threshold: usize,
+    
+    /// Duration to keep circuit open before testing recovery
+    timeout: Duration,
+    
+    /// Current failure count (in closed state)
+    failure_count: Arc<RwLock<usize>>,
+    
+    /// Current success count (in half-open state)
+    success_count: Arc<RwLock<usize>>,
+    
+    /// Number of successes needed to close circuit from half-open
+    success_threshold: usize,
+}
+
+impl CircuitBreaker {
+    /// Create a new circuit breaker
+    pub fn new(failure_threshold: usize, timeout: Duration) -> Self {
+        Self {
+            state: Arc::new(RwLock::new(CircuitState::Closed)),
+            failure_threshold,
+            timeout,
+            failure_count: Arc::new(RwLock::new(0)),
+            success_count: Arc::new(RwLock::new(0)),
+            success_threshold: 2, // Default: 2 successes to close
+        }
+    }
+
+    /// Builder: Set success threshold for half-open → closed transition
+    pub fn with_success_threshold(mut self, threshold: usize) -> Self {
+        self.success_threshold = threshold;
+        self
+    }
+
+    /// Get current circuit state
+    pub async fn state(&self) -> CircuitState {
+        self.state.read().await.clone()
+    }
+
+    /// Check if circuit is open
+    pub async fn is_open(&self) -> bool {
+        matches!(*self.state.read().await, CircuitState::Open { .. })
+    }
+
+    /// Check if circuit should transition from open to half-open
+    async fn should_attempt_reset(&self) -> bool {
+        let state = self.state.read().await;
+        if let CircuitState::Open { opened_at, .. } = *state {
+            Instant::now().duration_since(opened_at) >= self.timeout
+        } else {
+            false
+        }
+    }
+
+    /// Record a successful call
+    async fn record_success(&self) {
+        let mut state = self.state.write().await;
+        
+        match *state {
+            CircuitState::Closed => {
+                // Reset failure count on success
+                *self.failure_count.write().await = 0;
+            }
+            CircuitState::HalfOpen => {
+                let mut success_count = self.success_count.write().await;
+                *success_count += 1;
+                
+                if *success_count >= self.success_threshold {
+                    // Enough successes, close the circuit
+                    *state = CircuitState::Closed;
+                    *self.failure_count.write().await = 0;
+                    *success_count = 0;
+                    debug!("Circuit breaker closed (service recovered)");
+                }
+            }
+            CircuitState::Open { .. } => {
+                // Shouldn't happen, but reset to closed if we get a success
+                *state = CircuitState::Closed;
+                *self.failure_count.write().await = 0;
+            }
+        }
+    }
+
+    /// Record a failed call
+    async fn record_failure(&self) {
+        let mut state = self.state.write().await;
+        
+        match *state {
+            CircuitState::Closed => {
+                let mut failure_count = self.failure_count.write().await;
+                *failure_count += 1;
+                
+                if *failure_count >= self.failure_threshold {
+                    // Too many failures, open the circuit
+                    *state = CircuitState::Open {
+                        opened_at: Instant::now(),
+                        failure_count: *failure_count,
+                    };
+                    warn!("Circuit breaker opened ({} failures)", *failure_count);
+                }
+            }
+            CircuitState::HalfOpen => {
+                // Failure in half-open, go back to open
+                *state = CircuitState::Open {
+                    opened_at: Instant::now(),
+                    failure_count: self.failure_threshold,
+                };
+                *self.success_count.write().await = 0;
+                warn!("Circuit breaker re-opened (half-open test failed)");
+            }
+            CircuitState::Open { .. } => {
+                // Already open, nothing to do
+            }
+        }
+    }
+
+    /// Execute operation through circuit breaker
+    pub async fn call<F, Fut, T>(&self, operation: F) -> Result<T, BirdSongError>
+    where
+        F: FnOnce() -> Fut,
+        Fut: std::future::Future<Output = Result<T, BirdSongError>>,
+    {
+        // Check if we should attempt reset
+        if self.should_attempt_reset().await {
+            let mut state = self.state.write().await;
+            if matches!(*state, CircuitState::Open { .. }) {
+                *state = CircuitState::HalfOpen;
+                debug!("Circuit breaker half-open (testing recovery)");
+            }
+        }
+
+        // Check if circuit is open
+        {
+            let state = self.state.read().await;
+            if let CircuitState::Open { opened_at, failure_count } = *state {
+                let elapsed = Instant::now().duration_since(opened_at);
+                return Err(BirdSongError::CircuitBreakerOpen(
+                    format!(
+                        "Circuit open for {:?} ({} failures, timeout: {:?})",
+                        elapsed, failure_count, self.timeout
+                    )
+                ));
+            }
+        }
+
+        // Execute operation
+        match operation().await {
+            Ok(result) => {
+                self.record_success().await;
+                Ok(result)
+            }
+            Err(e) => {
+                self.record_failure().await;
+                Err(e)
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_retry_policy_exponential() {
+        let policy = RetryPolicy::exponential(3, Duration::from_millis(100));
+        assert_eq!(policy.max_attempts, 3);
+        assert_eq!(policy.initial_delay, Duration::from_millis(100));
+    }
+
+    #[test]
+    fn test_retry_policy_delay_calculation() {
+        let policy = RetryPolicy::exponential(5, Duration::from_millis(100))
+            .with_jitter(false);
+
+        let delay0 = policy.calculate_delay(0);
+        let delay1 = policy.calculate_delay(1);
+        let delay2 = policy.calculate_delay(2);
+        let delay3 = policy.calculate_delay(3);
+
+        assert_eq!(delay0, Duration::from_millis(0));
+        assert_eq!(delay1, Duration::from_millis(100));
+        assert_eq!(delay2, Duration::from_millis(200));
+        assert_eq!(delay3, Duration::from_millis(400));
+    }
+
+    #[test]
+    fn test_retry_policy_max_delay() {
+        let policy = RetryPolicy::exponential(10, Duration::from_millis(100))
+            .with_max_delay(Duration::from_millis(500))
+            .with_jitter(false);
+
+        let delay5 = policy.calculate_delay(5);
+        let delay10 = policy.calculate_delay(10);
+
+        assert!(delay5 <= Duration::from_millis(500));
+        assert!(delay10 <= Duration::from_millis(500));
+    }
+
+    #[tokio::test]
+    async fn test_retry_policy_execute_success() {
+        let policy = RetryPolicy::exponential(3, Duration::from_millis(10));
+        let mut attempts = 0;
+
+        let result = policy.execute(|| {
+            attempts += 1;
+            async move {
+                if attempts < 2 {
+                    Err("transient error")
+                } else {
+                    Ok("success")
+                }
+            }
+        }).await;
+
+        assert_eq!(result, Ok("success"));
+        assert_eq!(attempts, 2);
+    }
+
+    #[tokio::test]
+    async fn test_retry_policy_execute_all_fail() {
+        let policy = RetryPolicy::exponential(3, Duration::from_millis(10));
+        let mut attempts = 0;
+
+        let result = policy.execute(|| {
+            attempts += 1;
+            async move {
+                Err::<(), _>("permanent error")
+            }
+        }).await;
+
+        assert!(result.is_err());
+        assert_eq!(attempts, 3);
+    }
+
+    #[tokio::test]
+    async fn test_circuit_breaker_closed_to_open() {
+        let breaker = CircuitBreaker::new(3, Duration::from_secs(1));
+
+        // First 2 failures should keep circuit closed
+        for _ in 0..2 {
+            let _ = breaker.call(|| async {
+                Err::<(), _>(BirdSongError::Integration("test failure".to_string()))
+            }).await;
+        }
+
+        assert!(!breaker.is_open().await);
+
+        // 3rd failure should open circuit
+        let _ = breaker.call(|| async {
+            Err::<(), _>(BirdSongError::Integration("test failure".to_string()))
+        }).await;
+
+        assert!(breaker.is_open().await);
+    }
+
+    #[tokio::test]
+    async fn test_circuit_breaker_open_rejects() {
+        let breaker = CircuitBreaker::new(2, Duration::from_secs(60));
+
+        // Open the circuit
+        for _ in 0..2 {
+            let _ = breaker.call(|| async {
+                Err::<(), _>(BirdSongError::Integration("test failure".to_string()))
+            }).await;
+        }
+
+        // Next call should fail immediately
+        let result = breaker.call(|| async {
+            Ok::<_, BirdSongError>("should not reach here")
+        }).await;
+
+        assert!(matches!(result, Err(BirdSongError::CircuitBreakerOpen(_))));
+    }
+
+    #[tokio::test]
+    async fn test_circuit_breaker_half_open_recovery() {
+        let breaker = CircuitBreaker::new(2, Duration::from_millis(100))
+            .with_success_threshold(2);
+
+        // Open the circuit
+        for _ in 0..2 {
+            let _ = breaker.call(|| async {
+                Err::<(), _>(BirdSongError::Integration("test".to_string()))
+            }).await;
+        }
+
+        assert!(breaker.is_open().await);
+
+        // Wait for timeout
+        tokio::time::sleep(Duration::from_millis(150)).await;
+
+        // First success in half-open
+        let _ = breaker.call(|| async {
+            Ok::<_, BirdSongError>("success")
+        }).await;
+
+        // Should still be half-open (need 2 successes)
+        let state = breaker.state().await;
+        assert_eq!(state, CircuitState::HalfOpen);
+
+        // Second success should close circuit
+        let _ = breaker.call(|| async {
+            Ok::<_, BirdSongError>("success")
+        }).await;
+
+        let state = breaker.state().await;
+        assert_eq!(state, CircuitState::Closed);
+    }
+}
+

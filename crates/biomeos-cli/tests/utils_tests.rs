@@ -2,7 +2,6 @@
 //!
 //! Tests utility functions used across commands.
 
-use anyhow::Result;
 
 #[test]
 fn test_parse_capabilities() {
@@ -108,8 +107,8 @@ fn is_valid_endpoint(endpoint: &str) -> bool {
 #[test]
 fn test_capability_matching() {
     // Test capability matching logic
-    let available = vec!["compute", "storage", "network"];
-    let required = vec!["compute", "storage"];
+    let available = ["compute", "storage", "network"];
+    let required = ["compute", "storage"];
 
     let has_all = required.iter().all(|r| available.contains(r));
     assert!(has_all);
@@ -118,8 +117,8 @@ fn test_capability_matching() {
 #[test]
 fn test_capability_matching_missing() {
     // Test when capability is missing
-    let available = vec!["compute", "storage"];
-    let required = vec!["compute", "storage", "network"];
+    let available = ["compute", "storage"];
+    let required = ["compute", "storage", "network"];
 
     let has_all = required.iter().all(|r| available.contains(r));
     assert!(!has_all);

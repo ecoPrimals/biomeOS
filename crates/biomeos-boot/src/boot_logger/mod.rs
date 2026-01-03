@@ -65,8 +65,7 @@ impl BootLogger {
         let serial = SerialChannel::new().ok();
 
         if serial.is_none() {
-            return Err(BootError::ConsoleInit(std::io::Error::new(
-                std::io::ErrorKind::Other,
+            return Err(BootError::ConsoleInit(std::io::Error::other(
                 "Failed to open any output channels",
             )));
         }

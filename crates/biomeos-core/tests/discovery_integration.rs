@@ -400,7 +400,7 @@ async fn test_graceful_degradation_missing_primal() {
             // If it doesn't error, it should at least indicate unknown interface
             println!("✅ Graceful degradation: missing primal handled (unknown interface)");
             assert!(
-                !adapter.interface.is_known() || adapter.capabilities.lifecycle.can_start == false,
+                !adapter.interface.is_known() || !adapter.capabilities.lifecycle.can_start,
                 "Missing primal should have unknown interface or no capabilities"
             );
         }

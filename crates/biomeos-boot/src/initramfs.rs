@@ -9,7 +9,6 @@ use flate2::Compression;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use tar::Builder;
 use tracing::{info, warn};
 
 pub struct InitramfsBuilder {

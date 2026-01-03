@@ -16,8 +16,17 @@ pub mod api_adapter;
 // Primal client infrastructure
 // Legacy primal-specific clients (deprecated - use Universal Primal Client instead)
 // pub mod clients;
+pub mod adaptive_client; // Adaptive HTTP client with version tolerance
+pub mod capabilities; // Capability-based architecture (zero hardcoding)
 pub mod discovery_bootstrap;
+pub mod discovery_http; // HTTP-based discovery implementation
+pub mod discovery_modern; // Modern trait-based discovery
+pub mod family_credentials; // Secure family seed management
 pub mod primal_client;
+pub mod primal_health; // Primal health monitoring
+pub mod primal_impls; // Concrete primal implementations
+pub mod primal_orchestrator; // Async primal lifecycle orchestration
+pub mod retry; // Retry logic and circuit breaker
 
 // P2P coordination (BiomeOS's killer feature!)
 pub mod p2p_coordination;
@@ -46,6 +55,41 @@ pub use universal_biomeos_manager::{
 
 // Re-export core services
 pub use universal_biomeos_manager::{HealthMonitor, PrimalDiscoveryService};
+
+// Modern discovery system re-exports
+pub use discovery_modern::{
+    Capability, CompositeDiscovery, DiscoveredPrimal, DiscoveryError, DiscoveryResult,
+    HealthStatus, PrimalDiscovery, PrimalType,
+};
+pub use discovery_http::{create_local_discovery, HttpDiscovery, HttpDiscoveryBuilder};
+
+// Adaptive client infrastructure re-exports
+pub use adaptive_client::{
+    AdaptiveHttpClient, AdaptiveResponse, ApiVersion, BearDogResponse, BirdSongClient,
+    BirdSongDecryptRequest, BirdSongDecryptResponse, BirdSongEncryptRequest,
+    BirdSongEncryptResponse,
+};
+
+// Primal orchestration re-exports
+pub use capabilities::{Capability, PrimalConfig};
+pub use primal_orchestrator::{ManagedPrimal, PrimalOrchestrator, PrimalState};
+pub use primal_impls::{
+    // New generic primal system
+    GenericManagedPrimal,
+    PrimalBuilder,
+    // Convenience builders
+    create_ai_service,
+    create_compute_provider,
+    create_discovery_orchestrator,
+    create_security_provider,
+    create_storage_provider,
+    // Legacy type aliases (deprecated)
+    BearDogConfig,
+    ManagedBearDog,
+    ManagedSongbird,
+    SongbirdConfig,
+    TowerBuilder,
+};
 
 // Legacy re-exports for backwards compatibility
 pub use universal_biomeos_manager as manager;

@@ -35,7 +35,7 @@ impl NetworkBridge {
     /// Check if bridge exists
     pub fn exists(&self) -> bool {
         Command::new("ip")
-            .args(&["link", "show", &self.config.name])
+            .args(["link", "show", &self.config.name])
             .output()
             .map(|output| output.status.success())
             .unwrap_or(false)
@@ -53,7 +53,7 @@ impl NetworkBridge {
 
         // Create bridge
         let output = Command::new("sudo")
-            .args(&["ip", "link", "add", &self.config.name, "type", "bridge"])
+            .args(["ip", "link", "add", &self.config.name, "type", "bridge"])
             .output()
             .map_err(|e| DeployError::NetworkBridge {
                 message: format!("Failed to create bridge: {}", e),
@@ -70,7 +70,7 @@ impl NetworkBridge {
 
         // Set IP address
         let output = Command::new("sudo")
-            .args(&[
+            .args([
                 "ip",
                 "addr",
                 "add",
@@ -94,7 +94,7 @@ impl NetworkBridge {
 
         // Bring up bridge
         let output = Command::new("sudo")
-            .args(&["ip", "link", "set", &self.config.name, "up"])
+            .args(["ip", "link", "set", &self.config.name, "up"])
             .output()
             .map_err(|e| DeployError::NetworkBridge {
                 message: format!("Failed to bring up bridge: {}", e),
@@ -132,7 +132,7 @@ impl NetworkBridge {
         info!("Destroying network bridge {}...", self.config.name);
 
         let output = Command::new("sudo")
-            .args(&["ip", "link", "delete", &self.config.name])
+            .args(["ip", "link", "delete", &self.config.name])
             .output()
             .map_err(|e| DeployError::NetworkBridge {
                 message: format!("Failed to destroy bridge: {}", e),

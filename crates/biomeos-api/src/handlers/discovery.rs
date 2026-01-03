@@ -50,7 +50,7 @@ pub async fn get_discovered_primals(
 ) -> Result<Json<DiscoveredPrimalsResponse>, ApiError> {
     info!("🔍 Discovering primals...");
 
-    if state.mock_mode {
+    if state.is_mock_mode() {
         // Mock mode: Return hardcoded test data
         info!("   Using mock data (BIOMEOS_MOCK_MODE=true)");
         let primals = get_mock_primals();
@@ -61,51 +61,64 @@ pub async fn get_discovered_primals(
         }));
     }
 
-    // Live mode: Discover real primals
-    info!("   Live mode: Querying real BearDog and Songbird");
+    // Live mode: Use modern discovery system
+    info!("   Live mode: Using modern trait-based discovery");
     
-    let live_primals = super::live_discovery::discover_all_primals().await;
-    
-    if live_primals.is_empty() {
-        info!("   No live primals found, falling back to mock");
-        let primals = get_mock_primals();
-        return Ok(Json(DiscoveredPrimalsResponse {
-            count: primals.len(),
-            mode: "mock_fallback".to_string(),
-            primals,
-        }));
+    match state.discovery().discover_all().await {
+        Ok(discovered) => {
+            info!("   Discovered {} primals via modern discovery", discovered.len());
+            
+            // Convert to API format
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs();
+            
+            let primals: Vec<DiscoveredPrimal> = discovered
+                .into_iter()
+                .map(|primal| {
+                    let health = match primal.health {
+                        biomeos_core::HealthStatus::Healthy => "healthy",
+                        biomeos_core::HealthStatus::Degraded => "degraded",
+                        biomeos_core::HealthStatus::Unhealthy => "unhealthy",
+                        biomeos_core::HealthStatus::Unknown => "unknown",
+                    };
+                    
+                    let primal_type = format!("{:?}", primal.primal_type).to_lowercase();
+                    
+                    DiscoveredPrimal {
+                        id: primal.id.as_str().to_string(),
+                        name: primal.name,
+                        primal_type,
+                        version: primal.version.to_string(),
+                        health: health.to_string(),
+                        capabilities: primal.capabilities.iter().map(|c| c.as_str().to_string()).collect(),
+                        endpoint: primal.endpoint.as_str().to_string(),
+                        last_seen: now,
+                        trust_level: if primal.family_id.is_some() { Some(3) } else { Some(1) },
+                        family_id: primal.family_id.map(|f| f.as_str().to_string()),
+                        allowed_capabilities: Some(vec!["*".to_string()]),
+                        denied_capabilities: Some(vec![]),
+                    }
+                })
+                .collect();
+            
+            Ok(Json(DiscoveredPrimalsResponse {
+                count: primals.len(),
+                mode: "live".to_string(),
+                primals,
+            }))
+        }
+        Err(e) => {
+            tracing::warn!("   Discovery failed: {}, using mock fallback", e);
+            let primals = get_mock_primals();
+            Ok(Json(DiscoveredPrimalsResponse {
+                count: primals.len(),
+                mode: "mock_fallback".to_string(),
+                primals,
+            }))
+        }
     }
-    
-    // Convert LivePrimalInfo to DiscoveredPrimal
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
-    
-    let primals: Vec<DiscoveredPrimal> = live_primals
-        .into_iter()
-        .map(|live| DiscoveredPrimal {
-            id: live.id,
-            name: live.name,
-            primal_type: live.primal_type,
-            version: live.version,
-            health: live.health,
-            capabilities: live.capabilities,
-            endpoint: live.endpoint,
-            last_seen: now,
-            trust_level: Some(3), // Assume highest for local primals (TODO: query BearDog)
-            family_id: live.family_id,
-            allowed_capabilities: Some(vec!["*".to_string()]),
-            denied_capabilities: Some(vec![]),
-        })
-        .collect();
-    
-    info!("   Discovered {} live primals", primals.len());
-    Ok(Json(DiscoveredPrimalsResponse {
-        count: primals.len(),
-        mode: "live".to_string(),
-        primals,
-    }))
 }
 
 /// Generate mock primal data for testing

@@ -150,16 +150,14 @@ async fn test_interface_unknown() {
 
 #[tokio::test]
 async fn test_interface_patterns_all_variants() {
-    let patterns = vec![
-        InterfacePattern::Direct,
+    let patterns = [InterfacePattern::Direct,
         InterfacePattern::SubcommandServe,
         InterfacePattern::SubcommandService,
         InterfacePattern::SubcommandStart,
         InterfacePattern::SubcommandRun,
         InterfacePattern::Systemd,
         InterfacePattern::Docker,
-        InterfacePattern::ApiLifecycle,
-    ];
+        InterfacePattern::ApiLifecycle];
 
     assert_eq!(patterns.len(), 8);
 }

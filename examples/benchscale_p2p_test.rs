@@ -65,14 +65,14 @@ async fn run_real_lab_test(benchscale_path: &PathBuf) -> Result<()> {
     // Build benchScale if not already built
     info!("Building benchScale...");
     let build_output = Command::new("cargo")
-        .args(&["build", "--release"])
+        .args(["build", "--release"])
         .current_dir(benchscale_path)
         .output()?;
 
     if !build_output.status.success() {
         warn!("benchScale build failed, trying debug build...");
         Command::new("cargo")
-            .args(&["build"])
+            .args(["build"])
             .current_dir(benchscale_path)
             .output()?;
     }
@@ -93,7 +93,7 @@ async fn run_real_lab_test(benchscale_path: &PathBuf) -> Result<()> {
     // Create lab
     info!("Creating lab '{}' from topology...", lab_name);
     let create_output = Command::new(&benchscale_bin)
-        .args(&["create", lab_name, topology_path.to_str().unwrap()])
+        .args(["create", lab_name, topology_path.to_str().unwrap()])
         .output()?;
 
     if !create_output.status.success() {
@@ -113,7 +113,7 @@ async fn run_real_lab_test(benchscale_path: &PathBuf) -> Result<()> {
 
     // List Docker containers to verify
     let docker_ps = Command::new("docker")
-        .args(&["ps", "--filter", &format!("name={}", lab_name)])
+        .args(["ps", "--filter", &format!("name={}", lab_name)])
         .output()?;
 
     info!("Lab nodes:");
@@ -134,7 +134,7 @@ async fn run_real_lab_test(benchscale_path: &PathBuf) -> Result<()> {
     // Test connectivity between nodes
     info!("Testing ping between nodes...");
     let ping_output = Command::new("docker")
-        .args(&[
+        .args([
             "exec",
             &format!("{}-node-1-beardog-songbird", lab_name),
             "ping",
@@ -163,7 +163,7 @@ async fn run_real_lab_test(benchscale_path: &PathBuf) -> Result<()> {
     info!("Destroying lab...");
 
     let destroy_output = Command::new(&benchscale_bin)
-        .args(&["destroy", lab_name])
+        .args(["destroy", lab_name])
         .output();
 
     match destroy_output {
@@ -257,7 +257,7 @@ async fn run_mock_test() -> Result<()> {
 
 fn check_docker_available() -> bool {
     Command::new("docker")
-        .args(&["ps"])
+        .args(["ps"])
         .output()
         .map(|output| output.status.success())
         .unwrap_or(false)

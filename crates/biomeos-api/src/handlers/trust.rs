@@ -49,7 +49,7 @@ pub async fn evaluate_trust(
 ) -> Result<Json<TrustEvaluationResponse>, crate::ApiError> {
     info!("🔒 Evaluating trust for peer: {}", request.peer_id);
 
-    if state.mock_mode {
+    if state.is_mock_mode() {
         info!("   Using mock trust evaluation (BIOMEOS_MOCK_MODE=true)");
         return Ok(Json(TrustEvaluationResponse {
             decision: "allow".to_string(),
@@ -88,7 +88,7 @@ pub async fn get_identity(
 ) -> Result<Json<IdentityResponse>, crate::ApiError> {
     info!("📋 Getting local identity from BearDog");
 
-    if state.mock_mode {
+    if state.is_mock_mode() {
         info!("   Using mock identity (BIOMEOS_MOCK_MODE=true)");
         return Ok(Json(IdentityResponse {
             encryption_tag: "beardog:family:mock:tower1".to_string(),

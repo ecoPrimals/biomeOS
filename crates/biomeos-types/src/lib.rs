@@ -11,6 +11,7 @@ pub mod config;
 pub mod constants;
 pub mod error;
 pub mod health;
+pub mod identifiers;
 pub mod manifest;
 pub mod primal;
 pub mod service;
@@ -52,6 +53,9 @@ pub use service::core::{ServiceDependency, ServiceEndpoint, ServiceMetadata, Uni
 
 // Manifest system exports - using module paths to avoid conflicts
 pub use manifest::{BiomeManifest, BiomeSpec, BiomeType, ManifestMetadata};
+
+// Identifier exports - strong-typed domain IDs
+pub use identifiers::{Endpoint, FamilyId, IdError, PrimalId, SessionId, TowerId};
 
 // Additional commonly used types
 pub use chrono::{DateTime, Utc};

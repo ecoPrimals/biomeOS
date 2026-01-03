@@ -5,7 +5,6 @@
 
 use anyhow::Result;
 use biomeos_core::vm_federation::VmFederationManager;
-use tracing_subscriber;
 
 #[tokio::main]
 async fn main() -> Result<()> {

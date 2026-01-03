@@ -7,7 +7,6 @@ use crate::qemu::{QemuConfig, QemuInstance};
 use crate::topology::{Topology, VmTopology};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::PathBuf;
 use tracing::{info, warn};
 
 /// Federation configuration

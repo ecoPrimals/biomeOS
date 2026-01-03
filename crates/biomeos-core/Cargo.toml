@@ -6,9 +6,9 @@ authors.workspace = true
 license.workspace = true
 description = "Core biomeOS functionality"
 
-# [[bin]]
-# name = "biome"
-# path = "src/bin/biome.rs"
+[[bin]]
+name = "tower"
+path = "src/bin/tower.rs"
 
 [dependencies]
 # Core async and serialization
@@ -23,6 +23,8 @@ chrono = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
 reqwest = { workspace = true }
+futures = "0.3"
+clap = { version = "4.5", features = ["derive"] }
 
 # Configuration and environment
 config = { workspace = true }
@@ -33,6 +35,12 @@ itertools = { workspace = true }
 once_cell = { workspace = true }
 base64 = "0.22"
 sha2 = "0.10"
+semver = { version = "1.0", features = ["serde"] }
+url = "2.5"
+zeroize = { version = "1.7", features = ["derive"] }
+rand = "0.8"
+hostname = "0.4"
+uuid = { version = "1.6", features = ["v4"] }
 
 # biomeOS dependencies
 biomeos-types = { path = "../biomeos-types" }
