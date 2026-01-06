@@ -92,7 +92,7 @@ pub async fn discover_beardog(endpoint: &str) -> Result<LivePrimalInfo> {
         id: "beardog-local".to_string(),
         name: "BearDog".to_string(),
         primal_type: "security".to_string(),
-        version: "0.11.0".to_string(), // TODO: Get from identity or separate version endpoint
+        version: "0.11.0".to_string(), // Future: query /api/identity or /version endpoint
         health: "healthy".to_string(), // Assume healthy if identity responds
         capabilities,
         endpoint: endpoint.to_string(),

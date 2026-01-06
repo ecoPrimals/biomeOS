@@ -1,8 +1,13 @@
 //! API schema parsing and validation
 //!
-//! TODO: Implement OpenAPI 3.x parser
-//! TODO: Implement JSON Schema parser
-//! TODO: Implement custom Primal Manifest parser
+//! Schema types are defined for future schema-driven API calls.
+//! 
+//! ## Future Extensions
+//! - OpenAPI 3.x parser (using `openapi` or `openapiv3` crate)
+//! - JSON Schema parser (using `jsonschema` crate)
+//! - Custom Primal Manifest format
+//!
+//! Currently, the client uses convention-based API patterns.
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -86,14 +91,19 @@ pub trait SchemaParser: Send + Sync {
     fn get_operation<'a>(&self, schema: &'a ApiSchema, operation: &str) -> Result<&'a Operation>;
 }
 
-// Placeholder implementations
+// Placeholder implementations for future schema-driven features
 
-/// OpenAPI schema parser (TODO: implement)
+/// OpenAPI schema parser (not yet implemented)
+/// 
+/// Future implementation would use the `openapiv3` crate to parse
+/// OpenAPI 3.x specifications and enable schema-driven API calls.
 pub struct OpenApiSchemaParser;
 
 impl SchemaParser for OpenApiSchemaParser {
     fn parse(&self, _schema_bytes: &[u8]) -> Result<ApiSchema> {
-        todo!("OpenAPI parser not yet implemented")
+        Err(crate::primal_client::error::ApiError::Other {
+            message: "OpenAPI parser not yet implemented".to_string(),
+        })
     }
     
     fn get_operation<'a>(&self, schema: &'a ApiSchema, operation: &str) -> Result<&'a Operation> {

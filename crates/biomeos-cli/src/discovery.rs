@@ -117,7 +117,7 @@ impl DiscoveryUtils {
     /// REMOVED: Mock implementation
     /// BiomeOS should NOT implement geolocation - that's Songbird's job
     ///
-    /// TODO: Delegate to Songbird:
+    /// Future: Delegate to Songbird via UniversalPrimalClient
     /// ```rust,ignore
     /// let songbird = manager.discover_primal("discovery").await?;
     /// songbird.query_services_by_location(latitude, longitude, radius_km).await

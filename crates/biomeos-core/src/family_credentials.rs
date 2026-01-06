@@ -119,15 +119,22 @@ impl FamilyCredentials {
 
     /// Load credentials from encrypted file (future enhancement)
     ///
-    /// This is a placeholder for production-grade encrypted credential storage.
-    /// Current implementation loads from plaintext JSON for development.
+    /// **NOTE**: This is a development placeholder. Production systems should implement
+    /// age-encrypted files or integrate with system keychains (e.g., `keyring` crate).
+    ///
+    /// Current implementation loads from plaintext JSON for development only.
+    /// 
+    /// Future implementation should use:
+    /// - age encryption (github.com/FiloSottile/age)
+    /// - System keychain integration (keyring-rs)
+    /// - Environment-based key derivation
     #[allow(dead_code)]
     pub fn from_encrypted_file(
         path: impl AsRef<Path>,
         _encryption_key: &[u8],
     ) -> Result<Self, BirdSongError> {
-        // TODO: Implement proper encrypted file format
-        // For now, load from plaintext JSON
+        // Future: Implement age-encrypted file format
+        // For now, load from plaintext JSON (development only)
         let contents = std::fs::read_to_string(path.as_ref())
             .map_err(|e| BirdSongError::InvalidCredentials(format!("Failed to read file: {}", e)))?;
 

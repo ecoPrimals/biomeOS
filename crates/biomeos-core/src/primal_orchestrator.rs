@@ -29,7 +29,7 @@ use biomeos_types::{
 use crate::{
     capabilities::{Capability, PrimalConfig},
     family_credentials::FamilyCredentials,
-    primal_health::{HealthChecker, PrimalHealthMonitor, PrimalHealthStatus},
+    primal_health::{HealthStatus, PrimalHealthMonitor},
     retry::RetryPolicy,
 };
 
@@ -72,7 +72,7 @@ pub trait ManagedPrimal: Send + Sync {
     async fn stop(&self) -> BiomeResult<()>;
 
     /// Check if the primal is healthy
-    async fn health_check(&self) -> BiomeResult<PrimalHealthStatus>;
+    async fn health_check(&self) -> BiomeResult<HealthStatus>;
 
     /// Get the startup timeout
     fn startup_timeout(&self) -> Duration {
@@ -87,7 +87,6 @@ pub struct PrimalOrchestrator {
     retry_policy: RetryPolicy,
 }
 
-#[derive(Debug)]
 struct PrimalRecord {
     primal: Arc<dyn ManagedPrimal>,
     state: PrimalState,
@@ -151,7 +150,7 @@ impl PrimalOrchestrator {
             let primals = self.primals.read().await;
             let record = primals
                 .get(id)
-                .ok_or_else(|| BiomeError::not_found(format!("Primal not found: {}", id)))?;
+                .ok_or_else(|| BiomeError::discovery_failed(format!("Primal not found: {}", id), Some(id.to_string())))?;
 
             if record.state == PrimalState::Running {
                 info!("Primal {} already running", id);
@@ -217,7 +216,7 @@ impl PrimalOrchestrator {
                         let msg = format!("Startup timeout after {:?}", primal.startup_timeout());
                         error!("Primal {} {}", id, msg);
                         self.mark_failed(id, msg.clone()).await;
-                        Err(BiomeError::timeout(msg))
+                        Err(BiomeError::timeout_error(msg, 30000, Some("primal_start")))
                     }
                 }
             }
@@ -227,60 +226,65 @@ impl PrimalOrchestrator {
                 Err(BiomeError::internal_error(format!(
                     "Failed to start {}: {}",
                     id, e
-                )))
+                ), Some("primal_start_failure")))
             }
         }
     }
 
     /// Ensure at least one provider for a capability is running
-    async fn ensure_capability_provider(&self, capability: &Capability) -> BiomeResult<()> {
-        let primals = self.primals.read().await;
+    fn ensure_capability_provider<'a>(
+        &'a self,
+        capability: &'a Capability,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = BiomeResult<()>> + Send + 'a>> {
+        Box::pin(async move {
+            let primals = self.primals.read().await;
 
-        // Find primals that provide this capability
-        let providers: Vec<_> = primals
-            .iter()
-            .filter(|(_, record)| record.primal.provides().contains(capability))
-            .map(|(id, _)| id.clone())
-            .collect();
+            // Find primals that provide this capability
+            let providers: Vec<_> = primals
+                .iter()
+                .filter(|(_, record)| record.primal.provides().contains(capability))
+                .map(|(id, _)| id.clone())
+                .collect();
 
-        if providers.is_empty() {
-            return Err(BiomeError::not_found(format!(
-                "No provider found for capability: {}",
-                capability
-            )));
-        }
-
-        drop(primals); // Release read lock before starting
-
-        // Start first available provider (TODO: could implement load balancing here)
-        for provider_id in providers {
-            // Check if already running
-            let state = self.get_state(&provider_id).await;
-            if state == Some(PrimalState::Running) {
-                debug!("Capability {} already provided by {}", capability, provider_id);
-                return Ok(());
+            if providers.is_empty() {
+                return Err(BiomeError::discovery_failed(format!(
+                    "No provider found for capability: {}",
+                    capability
+                ), Some(format!("capability:{:?}", capability))));
             }
 
-            // Try to start this provider
-            match self.start_primal(&provider_id).await {
-                Ok(_) => {
-                    info!("✅ Started capability provider {} for {}", provider_id, capability);
+            drop(primals); // Release read lock before starting
+
+            // Start first available provider (could extend with load balancing/health-based selection)
+            for provider_id in providers {
+                // Check if already running
+                let state = self.get_state(&provider_id).await;
+                if state == Some(PrimalState::Running) {
+                    debug!("Capability {} already provided by {}", capability, provider_id);
                     return Ok(());
                 }
-                Err(e) => {
-                    warn!(
-                        "Failed to start provider {} for {}: {}",
-                        provider_id, capability, e
-                    );
-                    // Continue to next provider
+
+                // Try to start this provider
+                match self.start_primal(&provider_id).await {
+                    Ok(_) => {
+                        info!("✅ Started capability provider {} for {}", provider_id, capability);
+                        return Ok(());
+                    }
+                    Err(e) => {
+                        warn!(
+                            "Failed to start provider {} for {}: {}",
+                            provider_id, capability, e
+                        );
+                        // Continue to next provider
+                    }
                 }
             }
-        }
 
-        Err(BiomeError::internal_error(format!(
-            "All providers for capability {} failed to start",
-            capability
-        )))
+            Err(BiomeError::internal_error(format!(
+                "All providers for capability {} failed to start",
+                capability
+            ), Some("capability_startup_failure")))
+        })
     }
 
     /// Stop a specific primal
@@ -292,7 +296,7 @@ impl PrimalOrchestrator {
             let primals = self.primals.read().await;
             let record = primals
                 .get(id)
-                .ok_or_else(|| BiomeError::not_found(format!("Primal not found: {}", id)))?;
+                .ok_or_else(|| BiomeError::discovery_failed(format!("Primal not found: {}", id), Some(id.to_string())))?;
 
             if record.state == PrimalState::Stopped {
                 info!("Primal {} already stopped", id);
@@ -309,7 +313,10 @@ impl PrimalOrchestrator {
         primal
             .stop()
             .await
-            .context(format!("Failed to stop primal: {}", id))?;
+            .map_err(|e| BiomeError::internal_error(
+                format!("Failed to stop primal {}: {}", id, e),
+                Some("primal_stop_failure")
+            ))?;
 
         // Update state
         let mut primals = self.primals.write().await;
@@ -428,8 +435,9 @@ impl PrimalOrchestrator {
         }
 
         if result.len() != primals.len() {
-            return Err(BiomeError::configuration_error(
-                "Circular capability dependencies detected".to_string(),
+            return Err(BiomeError::config_error(
+                "Circular capability dependencies detected",
+                Some("capability_deps"),
             ));
         }
 
@@ -450,7 +458,7 @@ impl PrimalOrchestrator {
             );
 
             match primal.health_check().await {
-                Ok(PrimalHealthStatus::Healthy) => {
+                Ok(status) if status.is_healthy() => {
                     debug!("Primal {} is healthy", primal.id());
                     return Ok(());
                 }
@@ -463,10 +471,10 @@ impl PrimalOrchestrator {
             }
 
             if attempts >= max_attempts {
-                return Err(BiomeError::timeout(format!(
+                return Err(BiomeError::timeout_error(format!(
                     "Health check timeout for {}",
                     primal.id()
-                )));
+                ), 30000, Some("health_check")));
             }
 
             sleep(Duration::from_secs(2)).await;
@@ -517,8 +525,14 @@ mod tests {
             Ok(())
         }
 
-        async fn health_check(&self) -> BiomeResult<PrimalHealthStatus> {
-            Ok(PrimalHealthStatus::Healthy)
+        async fn health_check(&self) -> BiomeResult<HealthStatus> {
+            Ok(HealthStatus::Healthy {
+                last_check: std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs(),
+                consecutive_successes: 1,
+            })
         }
     }
 
@@ -526,11 +540,9 @@ mod tests {
     async fn test_capability_based_resolution() {
         let health_monitor = Arc::new(
             PrimalHealthMonitor::builder()
-                .health_checker(Arc::new(crate::primal_health::HttpHealthChecker))
-                .build()
-                .unwrap(),
+                .build(),
         );
-        let retry_policy = RetryPolicy::builder().max_attempts(1).build();
+        let retry_policy = RetryPolicy::exponential(1, Duration::from_millis(100));
 
         let orchestrator = PrimalOrchestrator::new(health_monitor, retry_policy);
 
@@ -538,19 +550,19 @@ mod tests {
         // crypto_provider (provides Security) <- discovery (requires Security) <- app (requires Discovery)
         
         let crypto_provider = Arc::new(MockPrimal {
-            id: PrimalId::new("crypto-provider-1".to_string()),
+            id: PrimalId::new("crypto-provider-1".to_string()).unwrap(),
             provides: vec![Capability::Security],
             requires: vec![],
         });
 
         let discovery = Arc::new(MockPrimal {
-            id: PrimalId::new("discovery-service-1".to_string()),
+            id: PrimalId::new("discovery-service-1".to_string()).unwrap(),
             provides: vec![Capability::Discovery],
             requires: vec![Capability::Security],
         });
 
         let app = Arc::new(MockPrimal {
-            id: PrimalId::new("app-1".to_string()),
+            id: PrimalId::new("app-1".to_string()).unwrap(),
             provides: vec![],
             requires: vec![Capability::Discovery],
         });

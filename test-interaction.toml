@@ -1,0 +1,42 @@
+# Test Configuration for BearDog + Songbird + ToadStool Interaction
+[tower]
+family = "nat0"
+concurrent_startup = true
+
+# Wave 1: Security (no dependencies)
+[[primals]]
+id = "beardog"
+binary = "./primals/beardog"
+http_port = 9000
+provides = ["Security", "Encryption", "Trust"]
+requires = []
+
+[primals.env]
+BEARDOG_FAMILY_ID = "nat0"
+BEARDOG_API_BIND_ADDR = "0.0.0.0:9000"
+BEARDOG_DISCOVERY_MODE = "birdsong"
+
+# Wave 2: Discovery (requires Security)
+[[primals]]
+id = "songbird"
+binary = "./primals/songbird"
+http_port = 9001
+provides = ["Discovery"]
+requires = ["Security"]
+
+[primals.env]
+SONGBIRD_FAMILY_ID = "nat0"
+SONGBIRD_API_BIND_ADDR = "0.0.0.0:9001"
+
+# Wave 3: Orchestration (requires Discovery + Security)
+[[primals]]
+id = "toadstool"
+binary = "./primals/toadstool"
+http_port = 9002
+provides = ["Compute", "Storage", "Orchestration"]
+requires = ["Security", "Discovery"]
+
+[primals.env]
+TOADSTOOL_FAMILY_ID = "nat0"
+TOADSTOOL_SECURITY_WARNING_ACKNOWLEDGED = "1"
+

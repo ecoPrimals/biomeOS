@@ -18,17 +18,19 @@ async-trait = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 serde_yaml = { workspace = true }
-uuid = { workspace = true }
+uuid = { version = "1.6", features = ["v4", "serde"] }
 chrono = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
+tracing-subscriber = "0.3"
 reqwest = { workspace = true }
 futures = "0.3"
-clap = { version = "4.5", features = ["derive"] }
+clap = { version = "4.5", features = ["derive", "env"] }
 
 # Configuration and environment
 config = { workspace = true }
 dirs = { workspace = true }
+toml = "0.8"
 
 # Utilities
 itertools = { workspace = true }
@@ -40,7 +42,6 @@ url = "2.5"
 zeroize = { version = "1.7", features = ["derive"] }
 rand = "0.8"
 hostname = "0.4"
-uuid = { version = "1.6", features = ["v4"] }
 
 # biomeOS dependencies
 biomeos-types = { path = "../biomeos-types" }

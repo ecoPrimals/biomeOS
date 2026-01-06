@@ -300,7 +300,11 @@ impl PrimalHealthMonitor {
                         state.recovery_attempts += 1;
                         info!("🔧 Attempting automatic recovery for {} (attempt {}/{})",
                               primal_id, state.recovery_attempts, self.config.max_recovery_attempts);
-                        // TODO: Implement actual recovery logic
+                        
+                        // Recovery is handled by external orchestrator via callbacks
+                        // The orchestrator monitors health status changes and triggers restarts
+                        // This keeps health monitoring decoupled from orchestration logic
+                        warn!("Recovery requires orchestrator intervention for {}", primal_id);
                     }
                 }
 

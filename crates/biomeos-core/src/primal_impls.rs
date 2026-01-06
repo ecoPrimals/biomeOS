@@ -4,6 +4,7 @@
 //! Implements the "Infant Model" - primals only know themselves.
 
 use std::{
+    fs::{File, OpenOptions},
     process::{Child, Command, Stdio},
     sync::Arc,
     time::Duration,
@@ -20,7 +21,7 @@ use biomeos_types::{
 
 use crate::{
     capabilities::{Capability, PrimalConfig},
-    primal_health::{HttpHealthChecker, PrimalHealthStatus},
+    primal_health::HealthStatus,
     primal_orchestrator::ManagedPrimal,
 };
 
@@ -30,21 +31,14 @@ pub struct GenericManagedPrimal {
     id: PrimalId,
     config: PrimalConfig,
     process: Arc<Mutex<Option<Child>>>,
-    health_checker: Option<HttpHealthChecker>,
 }
 
 impl GenericManagedPrimal {
     /// Create from environment (infant model - ZERO hardcoding!)
     pub fn from_env() -> BiomeResult<Self> {
         let config = PrimalConfig::from_env()?;
-        let id = PrimalId::new(config.id.clone());
-        
-        // Only use health checker if we have an HTTP endpoint
-        let health_checker = if config.http_port > 0 {
-            Some(HttpHealthChecker)
-        } else {
-            None
-        };
+        let id = PrimalId::new(config.id.clone())
+            .map_err(|e| BiomeError::config_error(format!("Invalid primal ID: {}", e), Some("PRIMAL_ID")))?;
 
         info!("🌱 Created primal from environment:");
         info!("   ID: {}", id);
@@ -56,25 +50,18 @@ impl GenericManagedPrimal {
             id,
             config,
             process: Arc::new(Mutex::new(None)),
-            health_checker,
         })
     }
 
     /// Create with explicit config (for testing or manual construction)
     pub fn with_config(config: PrimalConfig) -> BiomeResult<Self> {
-        let id = PrimalId::new(config.id.clone());
-        
-        let health_checker = if config.http_port > 0 {
-            Some(HttpHealthChecker)
-        } else {
-            None
-        };
+        let id = PrimalId::new(config.id.clone())
+            .map_err(|e| BiomeError::config_error(format!("Invalid primal ID: {}", e), Some("PRIMAL_ID")))?;
 
         Ok(Self {
             id,
             config,
             process: Arc::new(Mutex::new(None)),
-            health_checker,
         })
     }
 }
@@ -134,15 +121,44 @@ impl ManagedPrimal for GenericManagedPrimal {
             cmd.env("PRIMAL_PROVIDES", provides_str);
         }
 
+        // ✅ DEEP DEBT FIX (Jan 5, 2026): Redirect logs to per-primal files
+        // instead of /dev/null to enable observability and debugging!
+        // Create /tmp/primals/ directory if needed
+        std::fs::create_dir_all("/tmp/primals").ok();
+        
+        // Get node ID from env for unique log file names
+        let node_id = std::env::var("SONGBIRD_NODE_ID")
+            .or_else(|_| std::env::var("NODE_ID"))
+            .unwrap_or_else(|_| "unknown".to_string());
+        
+        let log_path = format!("/tmp/primals/{}-{}.log", self.id, node_id);
+        let log_file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&log_path)
+            .map_err(|e| {
+                BiomeError::internal_error(
+                    format!("Failed to create log file {}: {}", log_path, e),
+                    Some("log_file_creation_failure")
+                )
+            })?;
+        
+        info!("📝 Primal logs will be written to: {}", log_path);
+        
         let child = cmd
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
+            .stdout(Stdio::from(log_file.try_clone().map_err(|e| {
+                BiomeError::internal_error(
+                    format!("Failed to clone log file handle: {}", e),
+                    Some("log_file_clone_failure")
+                )
+            })?))
+            .stderr(Stdio::from(log_file))
             .spawn()
             .map_err(|e| {
                 BiomeError::internal_error(format!(
                     "Failed to spawn primal {}: {}",
                     self.id, e
-                ))
+                ), Some("process_spawn_failure"))
             })?;
 
         *process_guard = Some(child);
@@ -157,10 +173,10 @@ impl ManagedPrimal for GenericManagedPrimal {
         let mut process_guard = self.process.lock().await;
         if let Some(mut child) = process_guard.take() {
             child.kill().map_err(|e| {
-                BiomeError::internal_error(format!("Failed to kill {}: {}", self.id, e))
+                BiomeError::internal_error(format!("Failed to kill {}: {}", self.id, e), Some("process_kill_failure"))
             })?;
             child.wait().map_err(|e| {
-                BiomeError::internal_error(format!("Failed to wait for {}: {}", self.id, e))
+                BiomeError::internal_error(format!("Failed to wait for {}: {}", self.id, e), Some("process_wait_failure"))
             })?;
         }
 
@@ -168,20 +184,27 @@ impl ManagedPrimal for GenericManagedPrimal {
         Ok(())
     }
 
-    async fn health_check(&self) -> BiomeResult<PrimalHealthStatus> {
-        // If we have an HTTP health checker, use it
-        if let Some(checker) = &self.health_checker {
-            if let Some(endpoint) = self.endpoint().await {
-                return checker.check_health(&self.id, &endpoint).await;
-            }
-        }
-
-        // Otherwise just check if process is running
+    async fn health_check(&self) -> BiomeResult<HealthStatus> {
+        // Simple process-based health check
         let process_guard = self.process.lock().await;
         if process_guard.is_some() {
-            Ok(PrimalHealthStatus::Healthy)
+            Ok(HealthStatus::Healthy {
+                last_check: std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs(),
+                consecutive_successes: 1,
+            })
         } else {
-            Err(BiomeError::not_found(format!("Primal {} not running", self.id)))
+            Ok(HealthStatus::Unhealthy {
+                reason: format!("Primal {} not running", self.id),
+                since: std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs(),
+                consecutive_failures: 1,
+                recovery_attempts: 0,
+            })
         }
     }
 
@@ -253,7 +276,7 @@ impl PrimalBuilder {
             id: self.id.unwrap_or_else(|| uuid::Uuid::new_v4().to_string()),
             binary_path: self
                 .binary_path
-                .ok_or_else(|| BiomeError::configuration_error("Binary path not set".to_string()))?,
+                .ok_or_else(|| BiomeError::config_error("Binary path not set", Some("PRIMAL_BINARY")))?,
             provides: self.provides,
             requires: self.requires,
             http_port: self.http_port,

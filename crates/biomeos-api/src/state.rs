@@ -229,7 +229,10 @@ mod tests {
             &self,
             _endpoint: &biomeos_types::Endpoint,
         ) -> DiscoveryResult<biomeos_core::DiscoveredPrimal> {
-            unimplemented!()
+            Err(biomeos_core::BiomeError::discovery_failed(
+                "MockDiscovery::discover not implemented".to_string(),
+                Some("test_mock".to_string())
+            ))
         }
         
         async fn discover_all(&self) -> DiscoveryResult<Vec<biomeos_core::DiscoveredPrimal>> {

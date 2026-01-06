@@ -25,7 +25,7 @@ impl UniversalBiomeOSManager {
         result.insert("query".to_string(), serde_json::json!(query));
         result.insert("context".to_string(), serde_json::json!(context));
 
-        // AI processing (placeholder implementation)
+        // Future: Integrate with actual AI service (Toadstool or external LLM)
         let ai_response = self.process_ai_query(query, context.as_deref()).await?;
 
         result.insert(

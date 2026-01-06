@@ -18,6 +18,7 @@
 //!
 //! ```rust,no_run
 //! use biomeos_core::primal_client::UniversalPrimalClient;
+//! use biomeos_core::discovery_http::IdentityResponse;
 //!
 //! # async fn example() -> anyhow::Result<()> {
 //! // Create client

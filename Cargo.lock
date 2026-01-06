@@ -573,10 +573,12 @@ dependencies = [
  "biomeos-primal-sdk",
  "biomeos-types",
  "chrono",
+ "clap",
  "config",
  "criterion",
  "dirs",
  "futures 0.3.31",
+ "hostname 0.4.2",
  "itertools 0.12.1",
  "mockall",
  "once_cell",
@@ -591,7 +593,9 @@ dependencies = [
  "thiserror",
  "tokio",
  "tokio-test",
+ "toml",
  "tracing",
+ "tracing-subscriber",
  "tracing-test",
  "url",
  "uuid",
@@ -681,7 +685,7 @@ version = "0.1.0"
 dependencies = [
  "biomeos-types",
  "chrono",
- "hostname",
+ "hostname 0.3.1",
  "libc",
  "serde",
  "serde_json",
@@ -2305,6 +2309,17 @@ dependencies = [
  "libc",
  "match_cfg",
  "winapi 0.3.9",
+]
+
+[[package]]
+name = "hostname"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "617aaa3557aef3810a6369d0a99fac8a080891b68bd9f9812a1eeda0c0730cbd"
+dependencies = [
+ "cfg-if 1.0.4",
+ "libc",
+ "windows-link",
 ]
 
 [[package]]

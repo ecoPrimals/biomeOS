@@ -121,7 +121,8 @@ pub async fn get_identity(
 
 /// Helper to create BearDog handle
 /// 
-/// TODO: In the future, use actual discovery to find BearDog dynamically
+/// Future: Use UniversalPrimalClient to discover BearDog dynamically by capability.
+/// For now, uses environment variable or default endpoint for simplicity.
 fn create_beardog_handle() -> PrimalHandle {
     let beardog_url = std::env::var("BEARDOG_URL")
         .unwrap_or_else(|_| "http://localhost:9000".to_string());

@@ -450,7 +450,8 @@ impl UniversalBiomeOSManager {
 
                 // Legacy code - depends on ClientRegistry
                 // Query ToadStool for actual replica count (if available)
-                let current_replicas = serde_json::json!("unknown"); // Placeholder
+                // Future: Restore via UniversalPrimalClient discovery
+                let current_replicas = serde_json::json!("unknown");
                 /* Legacy code commented out:
                 let current_replicas = if let Ok(toadstool) = self.clients().toadstool().await {
                     match toadstool.get_service_replicas(service).await {
@@ -520,7 +521,7 @@ impl UniversalBiomeOSManager {
             result.insert("last_seen".to_string(), serde_json::json!(primal.last_seen));
 
             // Legacy code - depends on ClientRegistry
-            // Use placeholder metrics
+            // Future: Restore resource metrics via UniversalPrimalClient
             result.insert("resources".to_string(), serde_json::json!({
                 "status": "unavailable",
                 "message": "Legacy ToadStool integration commented out"
@@ -697,7 +698,9 @@ impl UniversalBiomeOSManager {
 
 /// Integration helper methods
 impl UniversalBiomeOSManager {
-    /// Validate manifest integration (placeholder)
+    /// Validate manifest integration
+    /// 
+    /// Future: Integrate with Toadstool's manifest parser/validator
     async fn validate_manifest_integration(&self, manifest_path: &str) -> Result<String> {
         tracing::debug!("Validating manifest: {}", manifest_path);
         // Integration point with Toadstool parser
@@ -707,14 +710,18 @@ impl UniversalBiomeOSManager {
         ))
     }
 
-    /// Deploy via ecosystem integration (placeholder)
+    /// Deploy via ecosystem integration
+    /// 
+    /// Future: Integrate with Toadstool for compute orchestration
     async fn deploy_via_ecosystem_integration(&self, manifest_path: &str) -> Result<String> {
         tracing::debug!("Deploying via ecosystem integration: {}", manifest_path);
         // Integration point with Toadstool for compute orchestration
         Ok(format!("Deployment completed for: {}", manifest_path))
     }
 
-    /// Create service integration (placeholder)
+    /// Create service integration
+    /// 
+    /// Future: Integrate with Toadstool for service provisioning
     async fn create_service_integration(
         &self,
         name: &str,

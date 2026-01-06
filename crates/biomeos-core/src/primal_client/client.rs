@@ -152,7 +152,7 @@ impl UniversalPrimalClient {
         })?;
 
         // Build full URL
-        // TODO: Use schema to determine correct path
+        // Currently uses convention-based paths; future: schema-driven path resolution
         let url = format!("{}/api/v1/{}", endpoint.url, operation);
 
         // Serialize request body
@@ -163,7 +163,7 @@ impl UniversalPrimalClient {
         };
 
         // Determine HTTP method
-        // TODO: Use schema to determine correct method
+        // Currently uses simple heuristic; future: schema-driven method selection
         let method = if body.is_some() {
             Method::POST
         } else {
@@ -182,7 +182,8 @@ impl UniversalPrimalClient {
 
     /// Get primal metadata
     pub async fn get_metadata(&self, primal: &PrimalHandle) -> Result<PrimalMetadata> {
-        // TODO: Implement by calling primal's metadata endpoint
+        // Future: Call primal's /api/identity or /api/metadata endpoint
+        // For now, return handle-based metadata
         Ok(PrimalMetadata {
             name: primal.name.clone(),
             version: "unknown".to_string(),

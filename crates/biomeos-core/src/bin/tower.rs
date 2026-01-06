@@ -1,17 +1,20 @@
 //! Tower CLI - Capability-Based Primal Orchestration
 //!
-//! Zero-hardcoding, environment-driven primal management.
-//! Uses the "Infant Model" - discovers everything at runtime!
+//! Modern, idiomatic, platform-agnostic primal management.
+//! Supports config files, auto-discovery, and concurrent startup!
 
+use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Duration;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use biomeos_core::{
-    create_discovery_orchestrator, create_security_provider, Capability, PrimalBuilder,
-    PrimalHealthMonitor, PrimalOrchestrator, RetryPolicy,
+    create_discovery_orchestrator, create_security_provider, discover_primals, start_in_waves,
+    Capability, PrimalBuilder, TowerPrimalConfig, PrimalHealthMonitor, PrimalMetadata,
+    PrimalOrchestrator, RetryPolicy, TowerConfig,
 };
 use clap::{Parser, Subcommand};
-use tracing::{error, info};
+use tracing::{error, info, warn};
 use tracing_subscriber;
 
 #[derive(Parser)]
@@ -24,7 +27,22 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Start a tower with primals discovered from environment
+    /// Start tower from config file (modern, idiomatic way!)
+    Run {
+        /// Config file path (default: tower.toml)
+        #[arg(short, long, default_value = "tower.toml")]
+        config: PathBuf,
+
+        /// Override: scan directory for primals
+        #[arg(long)]
+        scan: Option<PathBuf>,
+        
+        /// Enable concurrent wave-based startup
+        #[arg(long, default_value_t = true)]
+        concurrent: bool,
+    },
+
+    /// Start a tower with primals discovered from environment (legacy)
     Start {
         /// Security provider binary path (e.g., /path/to/beardog-server)
         #[arg(long, env = "SECURITY_PROVIDER_BINARY")]
@@ -54,6 +72,13 @@ enum Commands {
 
     /// List available capabilities
     Capabilities,
+    
+    /// Scan directory and list discovered primals
+    Discover {
+        /// Directory to scan
+        #[arg(default_value = "./primals")]
+        directory: PathBuf,
+    },
 }
 
 #[tokio::main]
@@ -63,6 +88,105 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
+        Commands::Run {
+            config,
+            scan,
+            concurrent,
+        } => {
+            info!("🚀 Starting tower with modern config-driven orchestration");
+            
+            // Load config
+            let tower_config = if config.exists() {
+                info!("📋 Loading configuration from: {}", config.display());
+                TowerConfig::from_file(&config)
+                    .context("Failed to load tower config")?
+            } else {
+                warn!("⚠️  Config file not found, using defaults");
+                TowerConfig::default_config()
+            };
+            
+            // Create health monitor
+            let health_monitor = Arc::new(
+                PrimalHealthMonitor::builder()
+                    .build(),
+            );
+            
+            // Create retry policy
+            let retry_policy = RetryPolicy::exponential(
+                tower_config.health.recovery_attempts as usize,
+                Duration::from_millis(100),
+            );
+            
+            // Create orchestrator
+            let orchestrator = Arc::new(PrimalOrchestrator::new(
+                health_monitor.clone(),
+                retry_policy,
+            ));
+            
+            // Collect all primals
+            let mut all_primals: Vec<Arc<dyn biomeos_core::ManagedPrimal>> = Vec::new();
+            
+            // Discover from scan directory if specified
+            if let Some(scan_dir) = scan {
+                info!("🔍 Auto-discovering primals from: {}", scan_dir.display());
+                let discovered = discover_primals(&scan_dir).await?;
+                info!("✅ Discovered {} primals", discovered.len());
+                
+                for metadata in discovered {
+                    let primal = metadata_to_primal(metadata)?;
+                    all_primals.push(primal);
+                }
+            }
+            
+            // Load primals from config
+            for primal_config in &tower_config.primals {
+                info!("📦 Loading primal from config: {}", primal_config.binary.display());
+                let primal = config_to_primal(primal_config).await?;
+                all_primals.push(primal);
+            }
+            
+            if all_primals.is_empty() {
+                error!("❌ No primals configured or discovered!");
+                error!("💡 Either:");
+                error!("   1. Add [[primals]] sections to {}", config.display());
+                error!("   2. Use --scan ./primals to auto-discover");
+                error!("   3. Ensure config file exists with primal definitions");
+                return Ok(());
+            }
+            
+            // Register all primals
+            info!("📋 Registering {} primals with orchestrator", all_primals.len());
+            for primal in &all_primals {
+                orchestrator.register(primal.clone()).await;
+            }
+            
+            // Start primals - concurrent or sequential
+            if concurrent && tower_config.tower.concurrent_startup {
+                info!("🌊 Starting primals with concurrent wave-based orchestration");
+                start_in_waves(&orchestrator, all_primals.clone()).await?;
+            } else {
+                info!("🔄 Starting primals sequentially");
+                orchestrator.start_all().await?;
+            }
+            
+            info!("✅ Tower started successfully!");
+            info!("🌸 {} primals running with modern idiomatic Rust!", all_primals.len());
+            
+            // Start health monitoring
+            tokio::spawn(async move {
+                if let Err(e) = health_monitor.start_monitoring().await {
+                    error!("Health monitoring failed: {}", e);
+                }
+            });
+            
+            // Wait for interrupt
+            tokio::signal::ctrl_c().await?;
+            info!("🛑 Received shutdown signal, stopping tower...");
+            
+            orchestrator.stop_all().await?;
+            info!("✅ Tower stopped gracefully.");
+        }
+
         Commands::Start {
             security_binary,
             security_port,
@@ -74,14 +198,11 @@ async fn main() -> Result<()> {
             // Create health monitor
             let health_monitor = Arc::new(
                 PrimalHealthMonitor::builder()
-                    .health_checker(Arc::new(biomeos_core::HttpHealthChecker))
-                    .build()?,
+                    .build(),
             );
 
             // Create retry policy
-            let retry_policy = RetryPolicy::builder()
-                .max_attempts(3)
-                .build();
+            let retry_policy = RetryPolicy::exponential(3, Duration::from_millis(100));
 
             // Create orchestrator
             let orchestrator = PrimalOrchestrator::new(health_monitor.clone(), retry_policy);
@@ -126,7 +247,9 @@ async fn main() -> Result<()> {
 
             // Start health monitoring
             tokio::spawn(async move {
-                health_monitor.start_monitoring().await;
+                if let Err(e) = health_monitor.start_monitoring().await {
+                    error!("Health monitoring failed: {}", e);
+                }
             });
 
             // Wait for interrupt
@@ -148,10 +271,9 @@ async fn main() -> Result<()> {
             // Create orchestrator
             let health_monitor = Arc::new(
                 PrimalHealthMonitor::builder()
-                    .health_checker(Arc::new(biomeos_core::HttpHealthChecker))
-                    .build()?,
+                    .build(),
             );
-            let retry_policy = RetryPolicy::builder().max_attempts(3).build();
+            let retry_policy = RetryPolicy::exponential(3, Duration::from_millis(100));
             let orchestrator = PrimalOrchestrator::new(health_monitor.clone(), retry_policy);
 
             // Discover and register primal from environment
@@ -166,7 +288,9 @@ async fn main() -> Result<()> {
 
                     // Start health monitoring
                     tokio::spawn(async move {
-                        health_monitor.start_monitoring().await;
+                        if let Err(e) = health_monitor.start_monitoring().await {
+                            error!("Health monitoring failed: {}", e);
+                        }
                     });
 
                     // Wait for interrupt
@@ -187,14 +311,19 @@ async fn main() -> Result<()> {
 
         Commands::Stop => {
             info!("🛑 Stopping all primals...");
-            // TODO: Implement persistent orchestrator state
-            error!("❌ Not implemented yet - need persistent orchestrator");
+            error!("❌ Not implemented yet - requires persistent orchestrator state");
+            error!("   Rationale: Stop command needs a shared state mechanism (e.g., Unix socket, Redis, or file-based PID tracking)");
+            error!("   Workaround: Use Ctrl+C to stop the tower process, or kill individual primal PIDs");
+            std::process::exit(1);
         }
 
         Commands::Status => {
             info!("📊 Primal Status:");
-            // TODO: Implement persistent orchestrator state
-            error!("❌ Not implemented yet - need persistent orchestrator");
+            error!("❌ Not implemented yet - requires persistent orchestrator state");
+            error!("   Rationale: Status command needs to query the running orchestrator instance");
+            error!("   Future: Implement via Unix socket or HTTP status endpoint on tower process");
+            error!("   Workaround: Check process list (ps aux | grep primal) or use health monitor logs");
+            std::process::exit(1);
         }
 
         Commands::Capabilities => {
@@ -213,7 +342,127 @@ async fn main() -> Result<()> {
             info!("   Example: export PRIMAL_PROVIDES=security,crypto");
             info!("   Example: export PRIMAL_REQUIRES=storage");
         }
+        
+        Commands::Discover { directory } => {
+            info!("🔍 Scanning directory for primals: {}", directory.display());
+            
+            match discover_primals(&directory).await {
+                Ok(primals) => {
+                    info!("✅ Discovered {} primal(s)", primals.len());
+                    info!("");
+                    
+                    for (i, primal) in primals.iter().enumerate() {
+                        info!("📦 Primal #{}", i + 1);
+                        info!("   ID:       {}", primal.id);
+                        info!("   Binary:   {}", primal.binary.display());
+                        info!("   Provides: {:?}", primal.provides);
+                        info!("   Requires: {:?}", primal.requires);
+                        if let Some(version) = &primal.version {
+                            info!("   Version:  {}", version);
+                        }
+                        if let Some(name) = &primal.name {
+                            info!("   Name:     {}", name);
+                        }
+                        info!("");
+                    }
+                    
+                    info!("💡 To use these primals:");
+                    info!("   tower run --scan {}", directory.display());
+                }
+                Err(e) => {
+                    error!("❌ Failed to discover primals: {}", e);
+                    std::process::exit(1);
+                }
+            }
+        }
     }
 
     Ok(())
+}
+
+// Helper: Convert PrimalMetadata to ManagedPrimal
+fn metadata_to_primal(
+    metadata: PrimalMetadata,
+) -> Result<Arc<dyn biomeos_core::ManagedPrimal>> {
+    use biomeos_core::PrimalBuilder;
+    
+    let provides: Vec<Capability> = metadata.provides.iter()
+        .map(|s| Capability::Custom(s.clone()))
+        .collect();
+    
+    let requires: Vec<Capability> = metadata.requires.iter()
+        .map(|s| Capability::Custom(s.clone()))
+        .collect();
+    
+    let primal = PrimalBuilder::new()
+        .binary_path(metadata.binary.display().to_string())
+        .provides(provides)
+        .requires(requires)
+        .build()?;
+    
+    Ok(primal)
+}
+
+// Helper: Convert TowerConfig PrimalConfig to ManagedPrimal
+async fn config_to_primal(
+    config: &TowerPrimalConfig,
+) -> Result<Arc<dyn biomeos_core::ManagedPrimal>> {
+    use biomeos_core::PrimalBuilder;
+    
+    // Auto-discover capabilities if enabled and not specified
+    let (provides_str, requires_str) = if config.auto_discover
+        && config.provides.is_empty()
+        && config.requires.is_empty()
+    {
+        let id = config
+            .id
+            .clone()
+            .or_else(|| {
+                config
+                    .binary
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .map(|s| s.to_string())
+            })
+            .unwrap_or_else(|| "unknown".to_string());
+        
+        info!("🔍 Auto-discovering capabilities for {}", id);
+        match biomeos_core::query_primal_metadata(&config.binary).await {
+            Ok(metadata) => (metadata.provides, metadata.requires),
+            Err(e) => {
+                warn!("⚠️  Could not auto-discover capabilities: {}", e);
+                (config.provides.clone(), config.requires.clone())
+            }
+        }
+    } else {
+        (config.provides.clone(), config.requires.clone())
+    };
+    
+    let provides: Vec<Capability> = provides_str.iter()
+        .map(|s| Capability::Custom(s.clone()))
+        .collect();
+    
+    let requires: Vec<Capability> = requires_str.iter()
+        .map(|s| Capability::Custom(s.clone()))
+        .collect();
+    
+    // CRITICAL FIX: Pass environment variables from config to primal
+    let mut builder = PrimalBuilder::new()
+        .binary_path(config.binary.display().to_string())
+        .provides(provides)
+        .requires(requires);
+    
+    // Add all env vars from tower.toml [primals.env] section
+    for (key, value) in &config.env {
+        builder = builder.env_var(key.clone(), value.clone());
+    }
+    
+    // Add HTTP port if specified
+    if config.http_port > 0 {
+        builder = builder.http_port(config.http_port);
+    }
+    
+    let primal = builder.build()?;
+    
+    Ok(primal)
 }

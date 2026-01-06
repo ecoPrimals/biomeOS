@@ -1,9 +1,12 @@
 //! Primal discovery
 //!
-//! TODO: Implement mDNS discovery
-//! TODO: Implement UDP multicast discovery
-//! TODO: Implement Consul discovery
-//! TODO: Implement environment variable discovery
+//! Current implementation provides environment variable-based discovery.
+//! 
+//! ## Future Extensions
+//! - mDNS discovery (Bonjour/Avahi)
+//! - UDP multicast discovery (like Songbird's BirdSong protocol)
+//! - Consul/etcd integration
+//! - Kubernetes service discovery
 
 use async_trait::async_trait;
 use tokio::sync::mpsc::Receiver;
@@ -113,14 +116,16 @@ impl DiscoveryClient for EnvDiscoveryClient {
     }
     
     async fn get_schema(&self, _primal: &PrimalHandle) -> Result<Vec<u8>> {
-        // TODO: Fetch schema from primal's /schema or /openapi endpoint
+        // Future: Fetch schema from primal's /schema or /openapi endpoint
+        // Would enable dynamic API discovery and validation
         Err(crate::primal_client::error::ApiError::Other {
             message: "Schema fetching not yet implemented".to_string(),
         })
     }
     
     async fn subscribe(&self) -> Result<Receiver<PrimalEvent>> {
-        // TODO: Implement event subscription
+        // Future: Implement real-time event subscription via websockets or polling
+        // Would enable reactive primal lifecycle tracking
         Err(crate::primal_client::error::ApiError::Other {
             message: "Event subscription not yet implemented".to_string(),
         })

@@ -1,8 +1,0 @@
-metadata:
-  # Missing required 'name' field
-  version: "1.0.0"
-
-services:
-  invalid:
-    # Invalid YAML syntax below
-    - INVALID YAML [ here

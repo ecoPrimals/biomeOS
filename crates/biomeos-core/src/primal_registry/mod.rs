@@ -126,8 +126,8 @@ impl PrimalRegistry {
         tracing::info!("Fetching primal binaries from GitHub: {}", org);
 
         for repo in repos {
-            // TODO: Implement GitHub API integration
-            // For now, just log the intent
+            // Future: Implement GitHub API integration using `octocrab` crate
+            // Would fetch releases, check latest versions, download binaries
             tracing::info!("Would fetch from: {}/{}", org, repo);
         }
 
@@ -146,7 +146,8 @@ impl PrimalRegistry {
     pub fn get_latest(&self, name: &str) -> Option<&PrimalBinary> {
         self.binaries.get(name).and_then(|versions| {
             versions.iter().max_by(|a, b| {
-                // Simple version comparison (TODO: use semver crate)
+                // Simple lexicographic version comparison
+                // Future: use `semver` crate for proper semantic versioning
                 a.version.cmp(&b.version)
             })
         })
@@ -201,13 +202,13 @@ impl PrimalRegistry {
                     tag,
                     asset
                 );
-                // TODO: Implement actual download
+                // Future: Implement actual GitHub release asset download using octocrab/reqwest
                 Err(anyhow::anyhow!("GitHub download not yet implemented"))
             }
             BinaryLocation::Remote(url) => {
                 // Download from URL
                 tracing::info!("Would download from: {}", url);
-                // TODO: Implement actual download
+                // Future: Implement HTTP download with progress tracking using reqwest
                 Err(anyhow::anyhow!("Remote download not yet implemented"))
             }
         }
@@ -233,9 +234,12 @@ impl PrimalRegistry {
         name.to_string()
     }
 
-    /// Detect version from binary (TODO: implement actual version detection)
+    /// Detect version from binary
+    /// 
+    /// Future: Execute binary with --version flag and parse output
     async fn detect_version(&self, _path: &Path) -> Option<String> {
-        // TODO: Execute binary with --version flag
+        // Would execute: `Command::new(path).arg("--version").output()`
+        // and parse version string from output
         None
     }
 

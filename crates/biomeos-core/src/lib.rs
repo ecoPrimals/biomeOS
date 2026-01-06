@@ -18,15 +18,19 @@ pub mod api_adapter;
 // pub mod clients;
 pub mod adaptive_client; // Adaptive HTTP client with version tolerance
 pub mod capabilities; // Capability-based architecture (zero hardcoding)
+pub mod concurrent_startup; // Wave-based concurrent primal startup
 pub mod discovery_bootstrap;
 pub mod discovery_http; // HTTP-based discovery implementation
 pub mod discovery_modern; // Modern trait-based discovery
 pub mod family_credentials; // Secure family seed management
 pub mod primal_client;
+pub mod primal_discovery; // Auto-discovery of primals from directories
 pub mod primal_health; // Primal health monitoring
 pub mod primal_impls; // Concrete primal implementations
 pub mod primal_orchestrator; // Async primal lifecycle orchestration
 pub mod retry; // Retry logic and circuit breaker
+pub mod tower_config; // Tower configuration (TOML-based)
+pub mod capability_registry; // Central capability registry with Unix socket IPC
 
 // P2P coordination (BiomeOS's killer feature!)
 pub mod p2p_coordination;
@@ -58,9 +62,11 @@ pub use universal_biomeos_manager::{HealthMonitor, PrimalDiscoveryService};
 
 // Modern discovery system re-exports
 pub use discovery_modern::{
-    Capability, CompositeDiscovery, DiscoveredPrimal, DiscoveryError, DiscoveryResult,
-    HealthStatus, PrimalDiscovery, PrimalType,
+    Capability as DiscoveryCapability, CompositeDiscovery, DiscoveredPrimal, DiscoveryError, DiscoveryResult,
+    HealthStatus as DiscoveryHealthStatus, PrimalType, PrimalDiscovery,
 };
+// Convenience alias for the most commonly used HealthStatus
+pub use discovery_modern::HealthStatus;
 pub use discovery_http::{create_local_discovery, HttpDiscovery, HttpDiscoveryBuilder};
 
 // Adaptive client infrastructure re-exports
@@ -70,9 +76,17 @@ pub use adaptive_client::{
     BirdSongEncryptResponse,
 };
 
-// Primal orchestration re-exports
-pub use capabilities::{Capability, PrimalConfig};
+// Primal orchestration re-exports (primary Capability enum for orchestration)
+pub use concurrent_startup::{start_in_waves, DependencyGraph};
+pub use family_credentials::FamilyCredentials;
+pub use primal_discovery::{discover_primals, query_primal_metadata, PrimalMetadata};
+pub use tower_config::{TowerConfig, DiscoveryConfig, HealthConfig};
+pub use tower_config::PrimalConfig as TowerPrimalConfig;
+pub use capabilities::{Capability, PrimalConfig as CapabilitiesPrimalConfig};
 pub use primal_orchestrator::{ManagedPrimal, PrimalOrchestrator, PrimalState};
+pub use primal_health::{PrimalHealthMonitor, HealthStatus as PrimalHealthStatus, RecoveryStrategy};
+pub use retry::{RetryPolicy, CircuitBreaker};
+pub use capability_registry::{CapabilityRegistry, PrimalInfo as RegistryPrimalInfo, RegisterParams};
 pub use primal_impls::{
     // New generic primal system
     GenericManagedPrimal,

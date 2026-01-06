@@ -1,24 +1,62 @@
-# Primal Binaries - Testing Versions
+# Primal Binaries - Production Ready
 
-**⚠️ FOR TESTING PURPOSES ONLY**
+**✅ PRODUCTION BINARIES**
 
-These binaries are **test versions** copied from the main primal teams for biomeOS integration testing and showcase demonstrations.
+These binaries are **production-ready server versions** for deployment and testing.
 
 ---
 
-## Current Versions (Dec 28, 2025)
+## ⚠️ CRITICAL: Binary Types
 
-| Primal | Version | Size | Source | Last Updated |
-|--------|---------|------|--------|--------------|
-| beardog | 0.9.0 | 4.6M | ../../primalBins/ | Dec 28, 2025 |
-| nestgate | ? | 3.4M | ../../primalBins/ | Dec 28, 2025 |
-| songbird | ? | 24M | ../../primalBins/songbird-orchestrator | Dec 28, 2025 |
-| squirrel | ? | 2.9M | ../../primalBins/squirrel-cli | Dec 28, 2025 |
-| toadstool | ? | 20M | ../../primalBins/toadstool-cli | Dec 28, 2025 |
-| petaltongue | ? | 16M | ../../primalBins/petal-tongue | Dec 28, 2025 |
-| loamspine | ? | 9.2M | (legacy) | Dec 27, 2025 |
+### Server vs CLI Binaries
+- **Server Binaries**: Run as API servers (HTTP/gRPC endpoints)
+- **CLI Binaries**: Command-line tools (encryption, keys, etc.)
 
-**Total**: 79M
+**For biomeOS deployment, ALWAYS use SERVER binaries!**
+
+---
+
+## Current Versions (Jan 3, 2026)
+
+| Primal | Version | Type | Size | Source | Last Updated |
+|--------|---------|------|------|--------|--------------|
+| beardog | 0.15.0 | **SERVER** | 6.1M | phase1/beardog/target/release/beardog-server | Jan 3, 2026 |
+| nestgate | ? | ? | 3.4M | ../../primalBins/ | Dec 28, 2025 |
+| songbird | v3.6 | orchestrator | 25M | ../../primalBins/songbird-orchestrator-v3.6-api-wrapper | Jan 3, 2026 |
+| squirrel | ? | ? | 2.9M | ../../primalBins/squirrel-cli | Dec 28, 2025 |
+| toadstool | ? | ? | 20M | ../../primalBins/toadstool-cli | Dec 28, 2025 |
+| petaltongue | ? | ? | 16M | ../../primalBins/petal-tongue | Dec 28, 2025 |
+
+**Total**: ~73M
+
+---
+
+## Binary Sources & Build Instructions
+
+### BearDog Server
+**CRITICAL**: Use `beardog-server`, NOT `beardog` (CLI)!
+
+```bash
+# Build from source (RECOMMENDED)
+cd /home/eastgate/Development/ecoPrimals/phase1/beardog
+cargo build --release --bin beardog-server
+
+# Binary location
+/home/eastgate/Development/ecoPrimals/phase1/beardog/target/release/beardog-server
+
+# Test before deploying
+./target/release/beardog-server --version  # Should start server, not show CLI help
+```
+
+**Pre-built versions**:
+- ❌ `/primalBins/beardog-v0.15.0-zero-hardcoding-v2api` - CLI tool (DO NOT USE)
+- ✅ `/phase1/beardog/target/release/beardog-server` - API server (USE THIS)
+
+### Songbird Orchestrator
+```bash
+# Pre-built binary
+cp /home/eastgate/Development/ecoPrimals/primalBins/songbird-orchestrator-v3.6-api-wrapper ./primals/songbird
+```
 
 ---
 
@@ -33,34 +71,38 @@ These binaries are **test versions** copied from the main primal teams for biome
 ### How to Update
 
 ```bash
-# 1. Check for new binaries
-ls -lh ../../primalBins/
+# 1. Build beardog server from source (REQUIRED)
+cd /home/eastgate/Development/ecoPrimals/phase1/beardog
+cargo build --release --bin beardog-server
 
 # 2. Backup current versions
 mkdir -p ../archive/primals-backup-$(date +%Y%m%d)
 cp primals/* ../archive/primals-backup-$(date +%Y%m%d)/
 
-# 3. Copy new binaries
-cp ../../primalBins/beardog primals/
-cp ../../primalBins/nestgate primals/
-cp ../../primalBins/songbird-orchestrator primals/songbird
-cp ../../primalBins/squirrel-cli primals/squirrel
-cp ../../primalBins/toadstool-cli primals/toadstool
-cp ../../primalBins/petal-tongue primals/petaltongue
+# 3. Copy SERVER binaries (not CLI tools!)
+cp /home/eastgate/Development/ecoPrimals/phase1/beardog/target/release/beardog-server primals/beardog
+cp /home/eastgate/Development/ecoPrimals/primalBins/songbird-orchestrator-v3.6-api-wrapper primals/songbird
 
 # 4. Test updated binaries
-./primals/beardog --version
-./primals/songbird --version
-# ... test each one
+# BearDog should start server, not show CLI help
+cd primals
+./beardog --version  # Should initialize server
 
-# 5. Run showcase to verify
-cd showcase/01-single-primal/
-./songbird-discovery.sh
+# Songbird should show version
+./songbird --version
+
+# 5. Run health check
+# Start beardog in background
+BEARDOG_API_BIND_ADDR="0.0.0.0:9000" ./beardog &
+sleep 3
+curl http://localhost:9000/health  # Should return JSON
+pkill beardog
 
 # 6. Update this README with new versions and date
+
 # 7. Commit with message:
 git add primals/ primals/README.md
-git commit -m "chore: Update primal binaries from main teams (YYYY-MM-DD)"
+git commit -m "chore: Update primal binaries - SERVER versions (YYYY-MM-DD)"
 ```
 
 ---
@@ -181,6 +223,14 @@ Current approach: Direct tracking for simplicity.
 
 ## Changelog
 
+### Jan 3, 2026 - CRITICAL FIX
+- **FIXED**: Replaced CLI binary with SERVER binary for beardog
+- Built fresh `beardog-server` v0.15.0 from source
+- Updated `songbird` to v3.6 orchestrator with API wrapper
+- **Issue**: Was deploying `beardog` (CLI) causing `<defunct>` processes
+- **Solution**: Deploy `beardog-server` (API server) from phase1/beardog/target/release/
+- USB Spore validated and ready for deployment
+
 ### Dec 28, 2025
 - Updated all 5 main primals from primalBins
 - Added petaltongue (UI primal)
@@ -196,24 +246,28 @@ Current approach: Direct tracking for simplicity.
 ## Quick Reference
 
 ```bash
-# Update binaries
-./scripts/update-primal-binaries.sh  # (TODO: create script)
+# Build beardog server from source
+cd /home/eastgate/Development/ecoPrimals/phase1/beardog && cargo build --release --bin beardog-server
 
 # Check versions
-./primals/beardog --version
+./primals/beardog --version  # Should start server
 
-# Test health
-curl http://localhost:9040/health  # (when running)
+# Test health (when running)
+curl http://localhost:9000/health
 
-# Run showcase
-cd showcase/01-single-primal/
-./songbird-discovery.sh
+# Deploy via tower
+cd /media/eastgate/biomeOS1/biomeOS
+source config/tower.env
+./bin/tower start-from-env
 ```
 
 ---
 
-**⚠️ REMINDER**: These are TEST BINARIES. Check with main primal teams for latest versions regularly!
+**⚠️ CRITICAL REMINDER**: 
+- ALWAYS use `beardog-server` (API server), NOT `beardog` (CLI tool)
+- Test binaries with health checks before deployment
+- Build from source for latest stable versions
 
-**Last Updated**: December 28, 2025  
-**Next Update Check**: January 4, 2026 (weekly)
+**Last Updated**: January 3, 2026  
+**Next Update Check**: January 10, 2026 (weekly)
 

@@ -119,7 +119,7 @@ impl PrimalConfig {
                 std::env::current_exe()
                     .ok()
                     .and_then(|p| p.to_str().map(String::from))
-                    .ok_or_else(|| BiomeError::configuration_error("Cannot determine binary path".to_string()))
+                    .ok_or_else(|| BiomeError::config_error("Cannot determine binary path", Some("PRIMAL_BINARY")))
             })?;
         
         // Load capabilities

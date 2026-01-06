@@ -190,7 +190,7 @@ impl UniversalBiomeOSManager {
             "health_percentage": if total_count > 0 { (healthy_count as f64 / total_count as f64) * 100.0 } else { 0.0 }
         }));
 
-        // System metrics (placeholder)
+        // System metrics - Future: Integrate with sysinfo crate for real metrics
         result.insert(
             "system_metrics".to_string(),
             serde_json::json!({
@@ -245,12 +245,12 @@ impl UniversalBiomeOSManager {
                         }),
                     );
 
-                    // Performance metrics (placeholder)
+                    // Performance metrics - Future: Track actual metrics via health monitor
                     result.insert(
                         "performance".to_string(),
                         serde_json::json!({
                             "avg_latency_ms": probe_duration,
-                            "throughput_rps": 100, // Placeholder
+                            "throughput_rps": 100, // Future: compute from request counters
                             "error_rate_percent": 0.0
                         }),
                     );

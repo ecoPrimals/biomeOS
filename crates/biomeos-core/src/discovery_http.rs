@@ -36,9 +36,10 @@
 //! well-known local primals (BearDog on :9000, Songbird on :8080).
 
 use super::{
-    Capability, DiscoveredPrimal, DiscoveryError, DiscoveryResult, HealthStatus, PrimalDiscovery,
+    DiscoveredPrimal, DiscoveryError, DiscoveryResult, PrimalDiscovery,
     PrimalType,
 };
+use super::discovery_modern::{Capability, HealthStatus};
 use async_trait::async_trait;
 use biomeos_types::{Endpoint, FamilyId, PrimalId};
 use reqwest::Client;
