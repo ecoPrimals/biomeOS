@@ -9,6 +9,7 @@ pub mod discover;
 pub mod health;
 pub mod monitor;
 pub mod niche;
+pub mod spore;
 pub mod utils;
 
 // Re-export command handlers
@@ -23,3 +24,9 @@ pub use chimera::{handle_chimera_build, handle_chimera_list, handle_chimera_show
 
 // Niche commands
 pub use niche::{handle_niche_list, handle_niche_show, handle_primal_list};
+
+// Spore commands
+pub use spore::{
+    handle_spore_clone, handle_spore_create, handle_spore_info,
+    handle_spore_list, handle_spore_verify,
+};

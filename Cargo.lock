@@ -540,6 +540,7 @@ dependencies = [
  "biomeos-chimera",
  "biomeos-core",
  "biomeos-primal-sdk",
+ "biomeos-spore",
  "biomeos-test-utils",
  "biomeos-types",
  "chrono",
@@ -680,6 +681,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "biomeos-spore"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "biomeos-types",
+ "chrono",
+ "gethostname",
+ "rand 0.8.5",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tokio-test",
+ "tracing",
+]
+
+[[package]]
 name = "biomeos-system"
 version = "0.1.0"
 dependencies = [
@@ -729,19 +749,6 @@ dependencies = [
  "tokio",
  "url",
  "uuid",
-]
-
-[[package]]
-name = "birdsong-encryption-demo"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "biomeos-core",
- "biomeos-types",
- "serde",
- "serde_json",
- "tokio",
 ]
 
 [[package]]
@@ -867,19 +874,6 @@ dependencies = [
  "memchr",
  "regex-automata",
  "serde",
-]
-
-[[package]]
-name = "btsp-tunnel-coordination-demo"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "biomeos-core",
- "biomeos-types",
- "serde",
- "serde_json",
- "tokio",
 ]
 
 [[package]]
@@ -1927,20 +1921,6 @@ name = "fuchsia-zircon-sys"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3dcaa9ae7725d12cdb85b3ad99a434db70b468c09ded17e012d86b5c1010f7a7"
-
-[[package]]
-name = "full-ecosystem-integration-demo"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "biomeos-core",
- "biomeos-types",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
 
 [[package]]
 name = "futures"
@@ -3032,18 +3012,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lineage-gated-relay-demo"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "biomeos-core",
- "biomeos-types",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "linux-raw-sys"
 version = "0.4.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3294,18 +3262,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "multi-tower-federation-demo"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "biomeos-core",
- "biomeos-types",
- "tokio",
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]

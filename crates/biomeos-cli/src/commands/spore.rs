@@ -1,0 +1,186 @@
+//! Spore management commands
+
+use std::path::PathBuf;
+
+use anyhow::Result;
+use biomeos_spore::{Spore, SporeConfig, SporeVerification};
+use tracing::info;
+
+/// Create a new USB spore
+pub async fn handle_spore_create(
+    mount: PathBuf,
+    label: String,
+    node_id: String,
+) -> Result<()> {
+    println!("🔐 Creating USB spore...");
+    println!("   Label: {}", label);
+    println!("   Node ID: {}", node_id);
+    println!("   Mount: {}", mount.display());
+
+    let config = SporeConfig {
+        label: label.clone(),
+        node_id: node_id.clone(),
+    };
+
+    let spore = Spore::create(mount, config).await?;
+
+    println!("\n✅ Spore created successfully!");
+    println!("   Location: {}", spore.root_path().display());
+    println!("\n📋 What was created:");
+    println!("   • Directory structure (bin/, primals/, secrets/, logs/)");
+    println!("   • Family seed file (.family.seed)");
+    println!("   • Tower configuration (tower.toml)");
+    println!("   • Primal binaries (if available)");
+    println!("\n🔐 Security:");
+    println!("   • Seed file permissions: 0600 (owner only)");
+    println!("   • BearDog will handle all cryptography");
+    println!("   • No secrets exposed in configuration");
+
+    Ok(())
+}
+
+/// Clone an existing spore to create a sibling
+pub async fn handle_spore_clone(
+    from: PathBuf,
+    to: PathBuf,
+    node_id: String,
+) -> Result<()> {
+    println!("🔄 Cloning spore to create sibling...");
+    println!("   Source: {}", from.display());
+    println!("   Target: {}", to.display());
+    println!("   New Node ID: {}", node_id);
+
+    // Load source spore
+    let source = Spore::from_path(from)?;
+    println!("   Source label: {}", source.config().label);
+
+    // Clone to create sibling
+    let new_config = SporeConfig {
+        label: format!("biomeOS-{}", node_id),
+        node_id: node_id.clone(),
+    };
+
+    let sibling = source.clone_sibling(to, new_config).await?;
+
+    println!("\n✅ Sibling spore created!");
+    println!("   Location: {}", sibling.root_path().display());
+    println!("\n🧬 Genetic Lineage:");
+    println!("   • Same family seed (siblings!)");
+    println!("   • BearDog will recognize as family");
+    println!("   • Cryptographic trust enabled");
+
+    Ok(())
+}
+
+/// Verify spore integrity
+pub async fn handle_spore_verify(mount: PathBuf) -> Result<()> {
+    println!("🔍 Verifying spore...");
+    println!("   Path: {}", mount.display());
+
+    let spore_path = mount.join("biomeOS");
+    let result = SporeVerification::verify(&spore_path).await?;
+
+    println!();
+    result.print_summary();
+
+    if !result.valid {
+        println!("\n⚠️  Some checks failed. Review the details above.");
+        std::process::exit(1);
+    }
+
+    Ok(())
+}
+
+/// Show spore information
+pub async fn handle_spore_info(mount: PathBuf) -> Result<()> {
+    println!("📊 Spore Information");
+    println!("   Path: {}", mount.display());
+
+    let spore = Spore::from_path(mount)?;
+
+    println!("\n📝 Configuration:");
+    println!("   Label: {}", spore.config().label);
+    println!("   Node ID: {}", spore.config().node_id);
+    println!("   Root: {}", spore.root_path().display());
+
+    println!("\n📁 Structure:");
+    let paths = [
+        ".family.seed",
+        "tower.toml",
+        "bin/tower",
+        "primals/beardog",
+        "primals/songbird",
+    ];
+
+    for path in &paths {
+        let full_path = spore.root_path().join(path);
+        let exists = full_path.exists();
+        let icon = if exists { "✅" } else { "❌" };
+        println!("   {} {}", icon, path);
+
+        if exists {
+            if let Ok(metadata) = tokio::fs::metadata(&full_path).await {
+                println!("      Size: {} bytes", metadata.len());
+
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::PermissionsExt;
+                    let perms = metadata.permissions();
+                    let mode = perms.mode() & 0o777;
+                    println!("      Permissions: {:o}", mode);
+                }
+            }
+        }
+    }
+
+    println!("\n🏗️  Architecture:");
+    println!("   • biomeOS: Orchestration layer (this spore)");
+    println!("   • BearDog: Security layer (handles crypto)");
+    println!("   • Songbird: Discovery layer (UDP multicast)");
+
+    Ok(())
+}
+
+/// List available USB devices
+pub async fn handle_spore_list() -> Result<()> {
+    use biomeos_spore::usb;
+
+    println!("🔍 Discovering USB devices...\n");
+
+    let devices = usb::discover_usb_devices().await?;
+
+    if devices.is_empty() {
+        println!("No USB devices found.");
+        println!("\nCheck that your USB drive is:");
+        println!("  • Properly inserted");
+        println!("  • Mounted (e.g., /media/usb)");
+        println!("  • Accessible to your user");
+        return Ok(());
+    }
+
+    println!("Found {} device(s):\n", devices.len());
+
+    for device in &devices {
+        println!("📱 Device:");
+        println!("   Mount: {}", device.mount_point.display());
+        if let Some(ref label) = device.label {
+            println!("   Label: {}", label);
+        }
+        println!(
+            "   Space: {:.2} GB available / {:.2} GB total ({:.1}% used)",
+            device.available_space as f64 / 1_000_000_000.0,
+            device.total_space as f64 / 1_000_000_000.0,
+            device.utilization_percent()
+        );
+
+        // Check if it has a spore
+        let spore_path = device.mount_point.join("biomeOS");
+        if spore_path.exists() {
+            println!("   🎯 Contains spore!");
+        }
+        println!();
+    }
+
+    Ok(())
+}
+

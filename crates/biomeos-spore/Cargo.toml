@@ -1,0 +1,38 @@
+[package]
+name = "biomeos-spore"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "biomeOS USB spore management - orchestration layer only"
+
+[dependencies]
+# Core async and serialization
+tokio = { workspace = true }
+async-trait = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# File I/O and system
+rand = { workspace = true }  # For entropy generation only
+gethostname = { workspace = true }  # For node identification
+
+# biomeOS dependencies
+biomeos-types = { path = "../biomeos-types" }
+
+# Logging
+tracing = { workspace = true }
+
+# NO crypto dependencies!
+# BearDog handles all cryptography.
+# biomeOS-spore only does file management.
+
+[dev-dependencies]
+tokio-test = "0.4"
+tempfile = { workspace = true }
+

@@ -45,6 +45,55 @@ enum PrimalAction {
     },
 }
 
+/// Spore subcommands
+#[derive(Subcommand)]
+enum SporeAction {
+    /// Create new USB spore
+    Create {
+        /// USB mount point (e.g., /media/usb)
+        #[arg(short, long)]
+        mount: PathBuf,
+        
+        /// Spore label (e.g., biomeOS1)
+        #[arg(short, long)]
+        label: String,
+        
+        /// Node ID for this tower (e.g., tower1)
+        #[arg(short, long)]
+        node: String,
+    },
+    
+    /// Clone spore to create sibling
+    Clone {
+        /// Source spore mount point
+        #[arg(short, long)]
+        from: PathBuf,
+        
+        /// Target spore mount point
+        #[arg(short, long)]
+        to: PathBuf,
+        
+        /// New node ID for sibling
+        #[arg(short, long)]
+        node: String,
+    },
+    
+    /// Verify spore integrity
+    Verify {
+        /// Spore mount point
+        mount: PathBuf,
+    },
+    
+    /// Show spore information
+    Info {
+        /// Spore mount point
+        mount: PathBuf,
+    },
+    
+    /// List available USB devices
+    List,
+}
+
 #[derive(Parser)]
 #[command(name = "biomeos")]
 #[command(about = "🌱 BiomeOS Universal System Management CLI")]
@@ -78,6 +127,12 @@ enum Commands {
     Primal {
         #[command(subcommand)]
         action: PrimalAction,
+    },
+
+    /// Manage USB spores (biomeOS deployment packages)
+    Spore {
+        #[command(subcommand)]
+        action: SporeAction,
     },
 
     /// Discover services by capability or method
@@ -294,6 +349,23 @@ async fn main() -> Result<()> {
             PrimalAction::Pull { name } => {
                 println!("🔨 Building primal: {}", name);
                 println!("   Run: ./bin/pull-primals.sh {}", name);
+            }
+        },
+        Commands::Spore { action } => match action {
+            SporeAction::Create { mount, label, node } => {
+                handle_spore_create(mount, label, node).await?
+            }
+            SporeAction::Clone { from, to, node } => {
+                handle_spore_clone(from, to, node).await?
+            }
+            SporeAction::Verify { mount } => {
+                handle_spore_verify(mount).await?
+            }
+            SporeAction::Info { mount } => {
+                handle_spore_info(mount).await?
+            }
+            SporeAction::List => {
+                handle_spore_list().await?
             }
         },
         Commands::Discover {
