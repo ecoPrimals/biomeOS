@@ -1,8 +1,8 @@
 # biomeOS - Production Status
 
-**Status**: 🦀 **Spore System Production-Ready** - Self-Propagating Deployment Live!  
-**Version**: 0.4.0 - Modern Rust USB Spore System  
-**Updated**: January 7, 2026, 23:45 UTC
+**Status**: 🎊 **FEDERATION SUCCESS** - Genetic Trust Verified!  
+**Version**: 0.4.1 - Deep Debt Evolution Complete  
+**Updated**: January 7, 2026 (Post-Reboot & Federation)
 
 ---
 
@@ -10,44 +10,59 @@
 
 ### ✅ What's Working
 
-#### 1. USB Spore System ✅ **NEW!**
-- **Status**: Production-ready, committed & pushed to GitHub
-- **Achievement**: Complete rewrite from bash to modern idiomatic Rust
-- **Commit**: b30274b (21 files, 5,407 insertions)
-- **Impact**: Self-propagating USB deployment with type safety
+#### 1. Genetic Trust Federation ✅ **NEW!**
+- **Status**: Production-verified, both towers auto-accepting
+- **Achievement**: Genetic trust via cryptographic family lineage working live
+- **Commit**: 4e48d4b (14 files, +2,712/-935 lines)
+- **Evidence**: `🏷️ Peer family extracted from tags: nat0` → `✅ AUTO-ACCEPT (same_genetic_family)`
+- **Impact**: Zero-trust federation with BearDog cryptographic verification
 
-**Features**:
-- Type-safe spore management (~1,200 LOC)
-- Zero unsafe code (100% memory-safe)
-- Composable architecture (biomeOS ← BearDog)
-- 15 comprehensive tests (all passing)
-- 5 CLI commands (create, clone, verify, info, list)
-- Cross-platform compatible
-
-**CLI**:
-```bash
-biomeos spore create --mount /media/usb --label biomeOS1 --node tower1
-biomeos spore clone --from /usb1 --to /usb2 --node tower2
-biomeos spore verify /media/usb1
+**Live Federation**:
+```
+Tower1 (nat0:tower1) ←→ Tower2 (nat0:tower2)
+✅ Auto-accepting via beardog:family:nat0
+✅ UDP discovery: 224.0.0.251:2300
+✅ Connections established (Trust Level 1)
 ```
 
-#### 2. Tag-Based Genetic Lineage ✅
-- **Status**: Fully operational with Songbird v3.14.1
-- **Achievement**: Towers discover and trust peers based on genetic family tags
-- **Evidence**: `family extracted from tags: nat0` → `AUTO-ACCEPT (same_genetic_family)`
-- **Impact**: Zero-trust federation with cryptographic family verification
+#### 2. Deep Debt Evolution ✅ **NEW!**
+- **Status**: Production-ready, modern idiomatic Rust
+- **Achievement**: Smart refactoring by responsibility, zero unsafe code
+- **Refactored**: operations.rs (922 LOC) → 4 focused modules (manifest, service, runtime, deployment)
+- **Validated**: BearDog client & AI-First API (already excellent architecture)
+- **Impact**: Cleaner codebase, easier maintenance, composable design
 
-#### 3. Local Federation ✅
-- **Status**: Two towers federating successfully on localhost
-- **Configuration**: Genetically distinct siblings (tower1, tower2, family: nat0)
-- **Discovery**: UDP multicast working perfectly
-- **Trust**: BearDog genetic lineage evaluation working
+**Code Quality**:
+- ✅ Zero unsafe blocks in production
+- ✅ 5 crates with #![deny(unsafe_code)]
+- ✅ 176 tests passing (3 pre-existing failures documented)
+- ✅ Full workspace builds successfully
 
-#### 4. Protocol Stack ✅
-- **Inter-Primal IPC**: Unix Socket + JSON-RPC (port-free) ✅
+#### 3. Process Lifecycle Evolution ✅ **NEW!**
+- **Status**: Complete 6-phase design documented
+- **Achievement**: Root cause analysis + robust solution for production
+- **Documentation**: PROCESS_LIFECYCLE_EVOLUTION_JAN7.md (1,049 lines)
+- **Impact**: Graceful takeover, zombie detection, intentional healthy takeover
+
+**Phases Designed**:
+1. Phase 1: Documentation ✅ (complete)
+2. Phase 2: Zombie detection (Songbird)
+3. Phase 3: Pre-deployment cleanup (biomeOS)
+4. Phase 4: Signal handlers
+5. Phase 5: Intentional healthy takeover
+6. Phase 6: Zero-downtime blue-green
+
+#### 4. USB Spore System ✅
+- **Status**: Production-ready, modern Rust
+- **Achievement**: Complete rewrite from bash to type-safe Rust
+- **Features**: biomeos-spore crate, CLI integration, 15 tests passing
+- **Impact**: Self-propagating USB deployment with genetic lineage
+
+#### 5. Protocol Stack ✅
+- **BearDog**: 100% port-free (Unix sockets only) ✅
 - **Discovery**: UDP Multicast (tag broadcasting) ✅
-- **Federation**: HTTPS (legacy, working) ⚠️
-- **Future**: BTSP tunnels + tarpc (in progress) 🎯
+- **Federation**: HTTPS (working, migrating to BTSP) ⚠️
+- **Future**: BTSP tunnels (Songbird v3.17+) 📋
 
 ---
 
