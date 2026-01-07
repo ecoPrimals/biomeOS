@@ -25,8 +25,8 @@ pub enum SporeError {
     #[error("Invalid path: cannot convert to UTF-8")]
     InvalidPath,
 
-    /// Binary not found
-    #[error("Binary not found: {0}")]
+    /// Binary not found (genetic material missing)
+    #[error("Genetic material not found: {0}")]
     BinaryNotFound(String),
 
     /// Invalid configuration

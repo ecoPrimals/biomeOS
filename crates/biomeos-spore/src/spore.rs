@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use tokio::fs as async_fs;
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 
 use crate::error::{SporeError, SporeResult};
 use crate::seed::FamilySeed;
@@ -81,14 +81,16 @@ impl Spore {
 
         let spore = Self { root_path, config };
 
-        // Execute creation steps
+        // Execute creation steps (like cell division)
         spore.create_directory_structure().await?;
         spore.generate_seed_file().await?;
         spore.create_tower_config().await?;
         spore.copy_binaries().await?;
+        spore.create_deployment_script().await?;
         spore.create_readme().await?;
 
-        info!("Spore creation complete: {}", spore.root_path.display());
+        info!("🌱 Spore creation complete: {}", spore.root_path.display());
+        info!("   Self-contained, bootable, genetically complete!");
         Ok(spore)
     }
 
@@ -155,11 +157,12 @@ impl Spore {
         // Create sibling's config with new node_id
         sibling.create_tower_config().await?;
 
-        // Copy binaries
+        // Copy binaries (genetic material from parent)
         sibling.copy_binaries().await?;
+        sibling.create_deployment_script().await?;
         sibling.create_readme().await?;
 
-        info!("Sibling spore created successfully");
+        info!("🌱 Sibling spore created successfully (same genetic lineage)");
         Ok(sibling)
     }
 
@@ -243,38 +246,42 @@ impl Spore {
     /// Generate tower.toml content
     fn generate_tower_toml(&self) -> String {
         format!(
-            r#"# BiomeOS Tower Configuration
+            r#"# BiomeOS Tower Configuration v0.4.0
 # Generated spore: {}
 # Port-Free Architecture - Unix Sockets + UDP Multicast
+# Secure Genetic Lineage - File-based seed (not exposed in config)
 
 [tower]
-# Family ID will be extracted by BearDog from seed file
+family = "nat0"
 concurrent_startup = true
 
-# BearDog - Security Primal (Port-Free!)
+# BearDog v0.15.0 - Security Primal (Port-Free!)
 [[primals]]
-binary = "./primals/beardog"
+binary = "./primals/beardog-server"
 provides = ["Security", "Encryption", "Trust"]
 requires = []
 
 [primals.env]
-# biomeOS provides the FILE PATH
-# BearDog handles ALL crypto processing
-BEARDOG_FAMILY_SEED_FILE = "${{USB_ROOT}}/.family.seed"
+# ✅ SECURE: File-based seed (BearDog v0.15.0 reads the file)
+BEARDOG_FAMILY_SEED_FILE = "./.family.seed"
+BEARDOG_FAMILY_ID = "nat0"
 BEARDOG_NODE_ID = "{node_id}"
 RUST_LOG = "info"
 
-# Songbird - Discovery Orchestrator (UDP Multicast)
+# Songbird v3.19.0 - Discovery Orchestrator (UDP Multicast + BTSP)
 [[primals]]
 binary = "./primals/songbird"
 provides = ["Discovery"]
 requires = ["Security"]
 
 [primals.env]
-# Songbird discovers its family through BearDog
-# No hardcoded family ID needed!
+SONGBIRD_FAMILY_ID = "nat0"
 SONGBIRD_NODE_ID = "{node_id}"
-SECURITY_ENDPOINT = "unix:///tmp/beardog-${{FAMILY}}-{node_id}.sock"
+SONGBIRD_TAGS = "btsp_enabled"
+# Protocol-aware endpoint URLs:
+#   - "unix://..." = Auto-detect (server determines protocol)
+SECURITY_ENDPOINT = "unix:///tmp/beardog-nat0-{node_id}.sock"
+SONGBIRD_SECURITY_PROVIDER = "unix:///tmp/beardog-nat0-{node_id}.sock"
 RUST_LOG = "info"
 "#,
             self.config.label,
@@ -282,43 +289,119 @@ RUST_LOG = "info"
         )
     }
 
-    /// Copy primal binaries to spore
-    async fn copy_binaries(&self) -> SporeResult<()> {
-        info!("Copying primal binaries");
+    /// Create deployment script for spore
+    ///
+    /// Makes the spore immediately bootable from USB
+    async fn create_deployment_script(&self) -> SporeResult<()> {
+        info!("Creating deployment script");
 
-        // Source directory (relative to workspace root)
-        let source_dir = PathBuf::from("primalBins");
-        let target_dir = self.root_path.join("primals");
+        let script = format!(
+            r#"#!/usr/bin/env bash
+#
+# BiomeOS USB Spore Deployment
+# Generated for: {}
+# Node ID: {}
+#
+# This spore is self-contained and ready to deploy!
+#
 
-        // Copy each primal binary
-        for binary in &["beardog", "songbird"] {
-            let src = source_dir.join(binary);
-            let dst = target_dir.join(binary);
+set -euo pipefail
 
-            if src.exists() {
-                async_fs::copy(&src, &dst).await?;
-                debug!("Copied binary: {} -> {}", src.display(), dst.display());
+SCRIPT_DIR="$(cd "$(dirname "${{BASH_SOURCE[0]}}")" && pwd)"
+cd "$SCRIPT_DIR"
 
-                // Set executable permissions
-                #[cfg(unix)]
-                {
-                    use std::os::unix::fs::PermissionsExt;
-                    let mut perms = async_fs::metadata(&dst).await?.permissions();
-                    perms.set_mode(0o755);
-                    async_fs::set_permissions(&dst, perms).await?;
-                }
-            } else {
-                warn!("Binary not found (skipping): {}", src.display());
-            }
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🌱 biomeOS Spore Deployment"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "Spore: {}"
+echo "Node:  {}"
+echo "Family: nat0 (genetic lineage)"
+echo ""
+
+# Verify genetic material (3 core binaries)
+if [ ! -f "bin/tower" ]; then
+    echo "❌ Error: tower orchestrator not found"
+    exit 1
+fi
+
+if [ ! -f "primals/beardog-server" ]; then
+    echo "❌ Error: beardog-server not found"
+    exit 1
+fi
+
+if [ ! -f "primals/songbird" ]; then
+    echo "❌ Error: songbird not found"
+    exit 1
+fi
+
+# Verify genetic lineage
+if [ ! -f ".family.seed" ]; then
+    echo "❌ Error: .family.seed not found"
+    echo "   This spore has no genetic lineage!"
+    exit 1
+fi
+
+echo "✅ Genetic material verified (3/3 binaries)"
+echo "✅ Genetic lineage present (.family.seed)"
+echo ""
+
+# Display configuration
+echo "📋 Configuration:"
+echo "  • Config: tower.toml"
+echo "  • Family: nat0"
+echo "  • Concurrent: true"
+echo ""
+
+# Start tower with modern orchestration
+echo "🌊 Starting tower with genetic lineage..."
+echo ""
+
+exec ./bin/tower run --config tower.toml
+"#,
+            self.config.label,
+            self.config.node_id,
+            self.config.label,
+            self.config.node_id,
+        );
+
+        let script_path = self.root_path.join("deploy.sh");
+        async_fs::write(&script_path, script).await?;
+
+        // Make executable
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = async_fs::metadata(&script_path).await?.permissions();
+            perms.set_mode(0o755);
+            async_fs::set_permissions(&script_path, perms).await?;
         }
 
-        // Copy tower orchestrator
-        let tower_src = PathBuf::from("target/release/tower");
+        info!("✅ Created deploy.sh (self-bootable)");
+        Ok(())
+    }
+
+    /// Copy primal binaries to spore
+    ///
+    /// The 3 core binaries (genetic material):
+    /// 1. `tower` - biomeOS orchestrator (nucleus)
+    /// 2. `beardog-server` - Security primal
+    /// 3. `songbird` - Discovery primal
+    ///
+    /// These binaries come from the "genetic material nucleus" (`primalBins/`)
+    async fn copy_binaries(&self) -> SporeResult<()> {
+        info!("Copying genetic material (3 core binaries)");
+
+        // Source: Genetic material nucleus
+        let nucleus_dir = PathBuf::from("primalBins");
+        
+        // 1. Copy tower orchestrator (nucleus)
+        let tower_src = PathBuf::from("bin/tower");
         let tower_dst = self.root_path.join("bin/tower");
 
         if tower_src.exists() {
             async_fs::copy(&tower_src, &tower_dst).await?;
-            debug!("Copied tower orchestrator");
+            info!("✅ Copied tower orchestrator (nucleus)");
 
             #[cfg(unix)]
             {
@@ -328,9 +411,50 @@ RUST_LOG = "info"
                 async_fs::set_permissions(&tower_dst, perms).await?;
             }
         } else {
-            warn!("Tower binary not found at: {}", tower_src.display());
+            return Err(SporeError::BinaryNotFound(
+                "tower orchestrator (nucleus)".to_string(),
+            ));
         }
 
+        // 2. Copy beardog-server (security primal)
+        let beardog_src = nucleus_dir.join("beardog-server");
+        let beardog_dst = self.root_path.join("primals/beardog-server");
+
+        if beardog_src.exists() {
+            async_fs::copy(&beardog_src, &beardog_dst).await?;
+            info!("✅ Copied beardog-server");
+
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                let mut perms = async_fs::metadata(&beardog_dst).await?.permissions();
+                perms.set_mode(0o755);
+                async_fs::set_permissions(&beardog_dst, perms).await?;
+            }
+        } else {
+            return Err(SporeError::BinaryNotFound("beardog-server".to_string()));
+        }
+
+        // 3. Copy songbird (discovery primal)
+        let songbird_src = nucleus_dir.join("songbird");
+        let songbird_dst = self.root_path.join("primals/songbird");
+
+        if songbird_src.exists() {
+            async_fs::copy(&songbird_src, &songbird_dst).await?;
+            info!("✅ Copied songbird");
+
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                let mut perms = async_fs::metadata(&songbird_dst).await?.permissions();
+                perms.set_mode(0o755);
+                async_fs::set_permissions(&songbird_dst, perms).await?;
+            }
+        } else {
+            return Err(SporeError::BinaryNotFound("songbird".to_string()));
+        }
+
+        info!("✅ Genetic material copied (3/3 core binaries)");
         Ok(())
     }
 
@@ -477,8 +601,9 @@ mod tests {
         // Verify key elements
         assert!(toml.contains("BEARDOG_FAMILY_SEED_FILE"));
         assert!(toml.contains("tower1"));
-        assert!(toml.contains("./primals/beardog"));
+        assert!(toml.contains("./primals/beardog-server")); // Server binary, not CLI
         assert!(toml.contains("./primals/songbird"));
+        assert!(toml.contains("btsp_enabled")); // BTSP support
         assert!(!toml.contains("BEARDOG_FAMILY_SEED =")); // Should NOT have raw seed
     }
 }
