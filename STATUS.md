@@ -1,8 +1,8 @@
 # biomeOS - Production Status
 
-**Status**: 🎊 **FEDERATION SUCCESS** - Genetic Trust Verified!  
+**Status**: ✅ **PRODUCTION READY** - Awaiting Songbird v3.18.2  
 **Version**: 0.4.1 - Deep Debt Evolution Complete  
-**Updated**: January 7, 2026 (Post-Reboot & Federation)
+**Updated**: January 7, 2026 (Post-v3.18.x Testing)
 
 ---
 
@@ -61,8 +61,8 @@ Tower1 (nat0:tower1) ←→ Tower2 (nat0:tower2)
 #### 5. Protocol Stack ✅
 - **BearDog**: 100% port-free (Unix sockets only) ✅
 - **Discovery**: UDP Multicast (tag broadcasting) ✅
-- **Federation**: HTTPS (working, migrating to BTSP) ⚠️
-- **Future**: BTSP tunnels (Songbird v3.17+) 📋
+- **Federation**: HTTPS (v3.17.0 stable) ✅
+- **BTSP Tunnels**: Infrastructure complete, integration pending (v3.18.2) ⏳
 
 ---
 
@@ -178,10 +178,13 @@ Benefit: Encrypted + High-performance
 
 | Component | Version | Status | Notes |
 |-----------|---------|--------|-------|
-| biomeOS | 0.4.0 | ✅ Stable | Spore system live! |
-| biomeos-spore | 0.1.0 | ✅ NEW | Production-ready |
-| BearDog | v0.15.0 | ✅ Stable | Port-free, genetic lineage ready |
-| Songbird | v3.14.1 | ✅ Stable | Tag-based identity working |
+| biomeOS | 0.4.1 | ✅ Production | Deep debt evolution complete |
+| biomeos-spore | 0.1.0 | ✅ Production | USB deployment ready |
+| BearDog | v0.15.0 | ✅ Production | BTSP API complete, port-free |
+| Songbird | v3.17.0 | ✅ Stable | Federation working (HTTPS) |
+| Songbird | v3.18.0 | ❌ Failed | Runtime panic (documented) |
+| Songbird | v3.18.1 | ❌ Failed | Immediate exit (documented) |
+| Songbird | v3.18.2 | ⏳ Pending | BTSP integration fix |
 | ToadStool | v1.0 | ✅ Stable | Workload orchestration |
 
 ---
@@ -210,13 +213,27 @@ Benefit: Encrypted + High-performance
 
 ## 🔍 Known Issues
 
-### None! 🎊
+### Songbird v3.18.x Testing Complete ⚠️
+
+**v3.18.0**: ❌ Runtime panic (documented, fixed in v3.18.1)  
+**v3.18.1**: ❌ Immediate exit after startup (documented, needs v3.18.2)
+
+**Documentation**:
+- [SONGBIRD_V3_18_0_RUNTIME_BUG_JAN7.md](docs/jan4-session/SONGBIRD_V3_18_0_RUNTIME_BUG_JAN7.md)
+- [SONGBIRD_V3_18_1_IMMEDIATE_EXIT_JAN7.md](docs/jan4-session/SONGBIRD_V3_18_1_IMMEDIATE_EXIT_JAN7.md)
+- [BTSP_GAP_HANDOFF_TO_SONGBIRD_JAN7.md](docs/jan4-session/BTSP_GAP_HANDOFF_TO_SONGBIRD_JAN7.md)
+
+**Fallback**: Songbird v3.17.0 (stable, production-ready)
+
+### biomeOS Issues: None! ✅
 All blocking issues resolved:
-- ✅ "unknown_family" → Fixed with tag extraction (v3.14.1)
+- ✅ "unknown_family" → Fixed with tag extraction
 - ✅ Peer discovery → Working perfectly (UDP multicast)
 - ✅ Trust evaluation → Genetic lineage operational
-- ✅ Federation → Established locally
+- ✅ Federation → Established locally (v3.17.0)
 - ✅ USB deployment → Spore system production-ready
+- ✅ Deep debt → Evolved to modern idiomatic Rust
+- ✅ Process lifecycle → Comprehensive design complete
 
 ---
 
@@ -237,8 +254,10 @@ All blocking issues resolved:
 - [x] Comprehensive testing
 
 ### In Progress 🎯
-- [ ] BTSP tunnel establishment (Songbird team)
-- [ ] tarpc P2P communication (Songbird team)
+- [x] BTSP infrastructure complete (BearDog API, Songbird client code) **NEW!**
+- [x] Connection manager analysis (HTTPS currently used) **NEW!**
+- [ ] Connection manager BTSP integration (Songbird v3.18.2) ⏳
+- [ ] tarpc over BTSP tunnels (Songbird v3.18.2) ⏳
 - [ ] Physical USB testing (biomeOS)
 
 ### Upcoming ⏭️
@@ -286,22 +305,31 @@ All blocking issues resolved:
 
 ## 🎊 Recent Achievements
 
-### January 7, 2026
+### January 7, 2026 (Evening)
+- 🔍 **Songbird v3.18.x Testing Complete** - Comprehensive bug reports
+- ✅ Tested v3.18.0 (runtime panic documented)
+- ✅ Tested v3.18.1 (immediate exit documented)
+- ✅ Created 3 handoff documents for Songbird team
+- ✅ Identified BTSP integration gap in connection manager
+- ✅ All findings committed & pushed to GitHub
+
+### January 7, 2026 (Morning)
 - 🦀 **Spore System Complete** - Production-ready USB deployment
 - ✅ Type-safe Rust implementation
 - ✅ Composable architecture
 - ✅ Zero unsafe code
 - ✅ 15 tests passing
+- ✅ Deep debt evolution complete
 - ✅ Committed & pushed to GitHub
 
-### January 6, 2026
+### January 6-7, 2026
 - 🎊 **Federation Complete** - Tag-based genetic lineage
 - ✅ UDP multicast discovery
 - ✅ Trust evaluation working
-- ✅ Local dual-tower federation
+- ✅ Local dual-tower federation (v3.17.0)
 
 ---
 
-**Last Updated**: January 7, 2026, 23:45 UTC  
-**Next Update**: After physical USB testing or BTSP integration  
-**Status**: 🦀 **Production-ready and evolving!**
+**Last Updated**: January 7, 2026, 19:20 EST (00:20 UTC Jan 8)  
+**Next Update**: After Songbird v3.18.2 release or physical USB testing  
+**Status**: ✅ **Production-ready, awaiting Songbird v3.18.2 for BTSP!**
