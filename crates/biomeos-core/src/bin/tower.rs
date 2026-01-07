@@ -457,6 +457,11 @@ async fn config_to_primal(
         builder = builder.env_var(key.clone(), value.clone());
     }
     
+    // Add protocol if specified (tarpc, jsonrpc, or auto-detect)
+    if let Some(protocol) = &config.protocol {
+        builder = builder.env_var("IPC_PROTOCOL".to_string(), protocol.clone());
+    }
+    
     // Add HTTP port if specified
     if config.http_port > 0 {
         builder = builder.http_port(config.http_port);

@@ -1,0 +1,183 @@
+# biomeOS Tower Configuration - Dual Protocol Example
+# 
+# This example demonstrates tarpc + JSON-RPC protocol selection
+# for fractal and isomorphic deployments
+
+[tower]
+family = "nat0"
+concurrent_startup = true
+
+# ═══════════════════════════════════════════════════════════════════
+# OPTION 1: Production Deployment (tarpc - Type-Safe)
+# ═══════════════════════════════════════════════════════════════════
+# Use this for:
+#   - Production environments
+#   - High-performance requirements
+#   - Rust ↔ Rust communication
+#   - Security-critical paths
+
+[[primals]]
+binary = "./primals/beardog"
+provides = ["Security", "Encryption", "Trust"]
+requires = []
+protocol = "tarpc"  # Type-safe, high-performance
+
+[primals.env]
+BEARDOG_FAMILY_SEED = "Nat0C/G/b4B7u06n0r14SuZXrp/IZ/38fZHh8aJQMVg="
+BEARDOG_FAMILY_ID = "nat0"
+BEARDOG_NODE_ID = "tower1"
+RUST_LOG = "info"
+
+[[primals]]
+binary = "./primals/songbird"
+provides = ["Discovery"]
+requires = ["Security"]
+protocol = "tarpc"  # Type-safe communication with BearDog
+
+[primals.env]
+SONGBIRD_FAMILY_ID = "nat0"
+SONGBIRD_NODE_ID = "tower1"
+SECURITY_ENDPOINT = "tarpc+unix:///tmp/beardog-nat0-tower1.sock"
+RUST_LOG = "info"
+
+# ═══════════════════════════════════════════════════════════════════
+# OPTION 2: Development Deployment (JSON-RPC - Flexible)
+# ═══════════════════════════════════════════════════════════════════
+# Use this for:
+#   - Development environments
+#   - Debugging and testing
+#   - Cross-language clients
+#   - Easy monitoring
+
+# [[primals]]
+# binary = "./primals/beardog"
+# provides = ["Security", "Encryption", "Trust"]
+# requires = []
+# protocol = "jsonrpc"  # Human-readable, debuggable
+# 
+# [primals.env]
+# BEARDOG_FAMILY_SEED = "Nat0C/G/b4B7u06n0r14SuZXrp/IZ/38fZHh8aJQMVg="
+# BEARDOG_FAMILY_ID = "nat0"
+# BEARDOG_NODE_ID = "tower1"
+# RUST_LOG = "info"
+# 
+# [[primals]]
+# binary = "./primals/songbird"
+# provides = ["Discovery"]
+# requires = ["Security"]
+# protocol = "jsonrpc"  # Flexible, easy debugging
+# 
+# [primals.env]
+# SONGBIRD_FAMILY_ID = "nat0"
+# SONGBIRD_NODE_ID = "tower1"
+# SECURITY_ENDPOINT = "jsonrpc+unix:///tmp/beardog-nat0-tower1.sock"
+# RUST_LOG = "info"
+
+# ═══════════════════════════════════════════════════════════════════
+# OPTION 3: Auto-Detect (Recommended for Flexibility)
+# ═══════════════════════════════════════════════════════════════════
+# Use this for:
+#   - Mixed deployments
+#   - Runtime flexibility
+#   - Server auto-detects protocol
+
+# [[primals]]
+# binary = "./primals/beardog"
+# provides = ["Security", "Encryption", "Trust"]
+# requires = []
+# # No protocol specified - BearDog accepts both tarpc and JSON-RPC
+# 
+# [primals.env]
+# BEARDOG_FAMILY_SEED = "Nat0C/G/b4B7u06n0r14SuZXrp/IZ/38fZHh8aJQMVg="
+# BEARDOG_FAMILY_ID = "nat0"
+# BEARDOG_NODE_ID = "tower1"
+# RUST_LOG = "info"
+# 
+# [[primals]]
+# binary = "./primals/songbird"
+# provides = ["Discovery"]
+# requires = ["Security"]
+# protocol = "tarpc"  # Client chooses protocol
+# 
+# [primals.env]
+# SONGBIRD_FAMILY_ID = "nat0"
+# SONGBIRD_NODE_ID = "tower1"
+# SECURITY_ENDPOINT = "unix:///tmp/beardog-nat0-tower1.sock"  # Server auto-detects
+# RUST_LOG = "info"
+
+# ═══════════════════════════════════════════════════════════════════
+# OPTION 4: Fractal Deployment (Mixed Protocols)
+# ═══════════════════════════════════════════════════════════════════
+# Use this for:
+#   - Optimize per component
+#   - Core primals: tarpc (performance)
+#   - Edge primals: JSON-RPC (flexibility)
+
+# [[primals]]
+# binary = "./primals/beardog"
+# provides = ["Security"]
+# protocol = "tarpc"  # Core primal - performance critical
+# 
+# [primals.env]
+# BEARDOG_FAMILY_ID = "nat0"
+# BEARDOG_NODE_ID = "tower1"
+# 
+# [[primals]]
+# binary = "./primals/songbird"
+# provides = ["Discovery"]
+# requires = ["Security"]
+# protocol = "tarpc"  # Rust ↔ Rust - use tarpc
+# 
+# [primals.env]
+# SONGBIRD_NODE_ID = "tower1"
+# SECURITY_ENDPOINT = "tarpc+unix:///tmp/beardog-nat0-tower1.sock"
+# 
+# [[primals]]
+# binary = "./primals/toadstool"
+# provides = ["Workload"]
+# protocol = "jsonrpc"  # Edge primal - flexibility for cross-language
+# 
+# [primals.env]
+# TOADSTOOL_NODE_ID = "tower1"
+
+# ═══════════════════════════════════════════════════════════════════
+# Protocol Selection Guide
+# ═══════════════════════════════════════════════════════════════════
+#
+# Protocol Field:
+#   - "tarpc": Type-safe, high-performance (bincode serialization)
+#   - "jsonrpc": Flexible, human-readable (JSON serialization)
+#   - Omit: Auto-detect based on first bytes received
+#
+# Endpoint URL Schemes:
+#   - "tarpc+unix:///path/to/socket" - Explicit tarpc over Unix socket
+#   - "jsonrpc+unix:///path/to/socket" - Explicit JSON-RPC over Unix socket
+#   - "unix:///path/to/socket" - Auto-detect protocol
+#   - "http://host:port" - HTTP (legacy, not port-free)
+#
+# Environment Variables (alternative to protocol field):
+#   IPC_PROTOCOL=tarpc    # or jsonrpc
+#   SECURITY_PROTOCOL=tarpc
+#   
+# Performance Comparison:
+#   tarpc:    0.05ms latency, 20,000 ops/s, 2MB memory
+#   JSON-RPC: 0.2ms latency, 5,000 ops/s, 8MB memory
+#   HTTP:     2ms latency, 500 ops/s, 15MB memory
+#
+# Security Considerations:
+#   tarpc: Type safety prevents injection, less attack surface
+#   JSON-RPC: Human-readable (easier auditing), schema validation
+#
+# Debugging:
+#   tarpc: Binary protocol (requires tools like hexdump)
+#   JSON-RPC: Human-readable (curl, nc, jq work perfectly)
+#
+# Cross-Language Support:
+#   tarpc: Rust only (native)
+#   JSON-RPC: Any language (Python, JS, Go, etc.)
+
+[health]
+interval_secs = 30
+timeout_secs = 5
+recovery_attempts = 3
+
