@@ -292,6 +292,7 @@ RUST_LOG = "info"
     /// Create deployment script for spore
     ///
     /// Makes the spore immediately bootable from USB
+    /// Handles FAT32 filesystem limitations (no execute permissions)
     async fn create_deployment_script(&self) -> SporeResult<()> {
         info!("Creating deployment script");
 
@@ -317,6 +318,14 @@ echo ""
 echo "Spore: {}"
 echo "Node:  {}"
 echo "Family: nat0 (genetic lineage)"
+echo ""
+
+# Fix permissions (FAT32 USB drives don't preserve execute bits)
+echo "🔧 Preparing genetic material for execution..."
+chmod -R +x bin/ primals/ 2>/dev/null || true
+chmod 600 .family.seed 2>/dev/null || true
+chmod 700 secrets/ 2>/dev/null || true
+echo "✅ Permissions set"
 echo ""
 
 # Verify genetic material (3 core binaries)
@@ -357,7 +366,21 @@ echo ""
 echo "🌊 Starting tower with genetic lineage..."
 echo ""
 
-exec ./bin/tower run --config tower.toml
+# Use bash to execute (works on FAT32 where execute bit doesn't work)
+if [ -x "./bin/tower" ]; then
+    exec ./bin/tower run --config tower.toml
+else
+    # FAT32 fallback: Copy to temp location with proper permissions
+    TEMP_DIR=$(mktemp -d)
+    echo "ℹ️  FAT32 detected - copying to temporary location..."
+    cp -r . "$TEMP_DIR/spore"
+    cd "$TEMP_DIR/spore"
+    chmod -R +x bin/ primals/
+    chmod 600 .family.seed
+    chmod 700 secrets/
+    echo "✅ Prepared in: $TEMP_DIR/spore"
+    exec ./bin/tower run --config tower.toml
+fi
 "#,
             self.config.label,
             self.config.node_id,
@@ -368,7 +391,7 @@ exec ./bin/tower run --config tower.toml
         let script_path = self.root_path.join("deploy.sh");
         async_fs::write(&script_path, script).await?;
 
-        // Make executable
+        // Make executable (will work on ext4, not on FAT32, but deploy.sh handles this)
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
@@ -377,7 +400,7 @@ exec ./bin/tower run --config tower.toml
             async_fs::set_permissions(&script_path, perms).await?;
         }
 
-        info!("✅ Created deploy.sh (self-bootable)");
+        info!("✅ Created deploy.sh (self-bootable, FAT32-aware)");
         Ok(())
     }
 
