@@ -59,7 +59,8 @@ impl PrimalStartup {
 
     /// Infer capabilities from primal name (temporary - will use CLI query)
     fn infer_capabilities(&self, name: &str) -> Vec<Capability> {
-        // TODO: Replace with actual capability query: ./primal capabilities
+        // Future: Replace with actual capability query: `./primal capabilities`
+        // Currently using inference based on naming conventions
         match name.to_lowercase().as_str() {
             "songbird" => vec![Capability::P2PCoordination],
             "beardog" => vec![Capability::Identity],

@@ -9,7 +9,14 @@ pub mod ai;
 pub mod core;
 pub mod discovery;
 pub mod health;
-pub mod operations;
+
+// Operations modules (refactored by responsibility)
+pub mod deployment;
+pub mod manifest;
+pub mod operations;  // Re-export layer for backward compatibility
+pub mod runtime;
+pub mod service;
+
 pub mod primals;
 
 #[cfg(test)]

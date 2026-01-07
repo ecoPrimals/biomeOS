@@ -154,8 +154,8 @@ async fn main() -> Result<()> {
     }
 
     println!();
-    print_section("Phase 5: Confirm Federation (TODO)");
-    println!("TODO: Implement federation validation");
+    print_section("Phase 5: Confirm Federation (Future Enhancement)");
+    println!("Future: Implement automated federation validation via Songbird API");
     println!("  • Test P2P communication");
     println!("  • Verify coordination");
     println!("  • Validate data replication");

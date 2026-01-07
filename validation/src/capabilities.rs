@@ -206,8 +206,10 @@ pub struct PrimalBinary {
 impl PrimalBinary {
     /// Discover primals in a directory
     pub fn discover_in(_dir: &std::path::Path) -> Vec<Self> {
-        // TODO: Implement actual capability discovery
-        // For now, return empty - primals will be discovered at runtime
+        // Future: Implement filesystem-based capability discovery
+        // Currently, primals are discovered at runtime via Songbird
+        // This method will be enhanced once the primal CLI supports
+        // the `capabilities` subcommand for static discovery
         Vec::new()
     }
 

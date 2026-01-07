@@ -60,7 +60,7 @@ async fn main() -> Result<()> {
     println!("Phase 2: Deploy BiomeOS USB Package");
     println!("═══════════════════════════════════════════════════════════");
     println!();
-    println!("TODO: Implement BiomeOS deployment");
+    println!("Future: Implement BiomeOS deployment automation");
     println!("  • Get VM IPs from manager");
     println!("  • SCP USB package to VMs");
     println!("  • Extract and configure");
@@ -70,7 +70,7 @@ async fn main() -> Result<()> {
     println!("Phase 3: Start Songbird P2P");
     println!("═══════════════════════════════════════════════════════════");
     println!();
-    println!("TODO: Implement Songbird startup");
+    println!("Future: Implement Songbird startup automation");
     println!("  • SSH to VMs");
     println!("  • Start Songbird orchestrate");
     println!("  • Wait for mDNS discovery");
@@ -80,7 +80,7 @@ async fn main() -> Result<()> {
     println!("Phase 4: Validate mDNS Federation");
     println!("═══════════════════════════════════════════════════════════");
     println!();
-    println!("TODO: Implement mDNS validation");
+    println!("Future: Implement mDNS validation automation");
     println!("  • Query avahi-browse on VMs");
     println!("  • Verify peer discovery");
     println!("  • Confirm P2P coordination");
