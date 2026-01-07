@@ -22,7 +22,7 @@
 //! ## Usage
 //!
 //! ```rust,no_run
-//! use biomeos_spore::{Spore, SporeConfig};
+//! use biomeos_spore::{Spore, SporeConfig, SporeType};
 //! use std::path::PathBuf;
 //!
 //! #[tokio::main]
@@ -31,6 +31,7 @@
 //!     let config = SporeConfig {
 //!         label: "biomeOS1".to_string(),
 //!         node_id: "tower1".to_string(),
+//!         spore_type: SporeType::Live,
 //!     };
 //!     
 //!     let spore = Spore::create(
@@ -50,9 +51,17 @@ pub mod spore_types;
 pub mod usb;
 pub mod verify;
 
+// Test support - available in dev/test builds
+#[doc(hidden)]
+pub mod test_support;
+
 pub use error::{SporeError, SporeResult};
 pub use seed::FamilySeed;
 pub use spore::{Spore, SporeConfig};
 pub use spore_types::SporeType;
 pub use verify::{SporeVerification, VerificationResult};
+
+// Re-export for integration tests
+#[doc(hidden)]
+pub use test_support::setup_test_binaries;
 

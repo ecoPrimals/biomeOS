@@ -60,13 +60,14 @@ impl Spore {
     /// # Example
     ///
     /// ```rust,no_run
-    /// use biomeos_spore::{Spore, SporeConfig};
+    /// use biomeos_spore::{Spore, SporeConfig, SporeType};
     /// use std::path::PathBuf;
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// let config = SporeConfig {
     ///     label: "biomeOS1".to_string(),
     ///     node_id: "tower1".to_string(),
+    ///     spore_type: SporeType::Live,
     /// };
     ///
     /// let spore = Spore::create(
@@ -662,6 +663,7 @@ mod tests {
         let config = SporeConfig {
             label: "test_spore".to_string(),
             node_id: "tower1".to_string(),
+            spore_type: SporeType::default(),
         };
 
         // Note: This will fail without actual binaries, but tests the structure
@@ -683,6 +685,7 @@ mod tests {
         let config = SporeConfig {
             label: "test".to_string(),
             node_id: "tower1".to_string(),
+            spore_type: SporeType::default(),
         };
 
         let spore = Spore {
@@ -705,6 +708,7 @@ mod tests {
         let config = SporeConfig {
             label: "test_spore".to_string(),
             node_id: "tower1".to_string(),
+            spore_type: SporeType::default(),
         };
 
         let spore = Spore {

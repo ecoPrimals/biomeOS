@@ -688,6 +688,7 @@ dependencies = [
  "async-trait",
  "biomeos-types",
  "chrono",
+ "futures 0.3.31",
  "gethostname",
  "rand 0.8.5",
  "serde",
