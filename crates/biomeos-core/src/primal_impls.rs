@@ -185,17 +185,53 @@ impl ManagedPrimal for GenericManagedPrimal {
     }
 
     async fn health_check(&self) -> BiomeResult<HealthStatus> {
-        // Simple process-based health check
-        let process_guard = self.process.lock().await;
-        if process_guard.is_some() {
-            Ok(HealthStatus::Healthy {
-                last_check: std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
-                    .as_secs(),
-                consecutive_successes: 1,
-            })
+        // Process-based health check with proper zombie reaping
+        let mut process_guard = self.process.lock().await;
+        
+        if let Some(child) = process_guard.as_mut() {
+            // Check if process actually exited (and reap zombie if it did)
+            match child.try_wait() {
+                Ok(Some(exit_status)) => {
+                    // Process exited! Reap the zombie and mark unhealthy
+                    info!("⚠️  Primal {} exited with status: {:?}", self.id, exit_status);
+                    *process_guard = None;  // Clear the handle
+                    
+                    Ok(HealthStatus::Unhealthy {
+                        reason: format!("Primal {} exited: {:?}", self.id, exit_status),
+                        since: std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap()
+                            .as_secs(),
+                        consecutive_failures: 1,
+                        recovery_attempts: 0,
+                    })
+                },
+                Ok(None) => {
+                    // Process still running - healthy
+                    Ok(HealthStatus::Healthy {
+                        last_check: std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap()
+                            .as_secs(),
+                        consecutive_successes: 1,
+                    })
+                },
+                Err(e) => {
+                    // Error checking process status
+                    warn!("Failed to check process status for {}: {}", self.id, e);
+                    Ok(HealthStatus::Unhealthy {
+                        reason: format!("Failed to check status: {}", e),
+                        since: std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap()
+                            .as_secs(),
+                        consecutive_failures: 1,
+                        recovery_attempts: 0,
+                    })
+                }
+            }
         } else {
+            // No process handle - unhealthy
             Ok(HealthStatus::Unhealthy {
                 reason: format!("Primal {} not running", self.id),
                 since: std::time::SystemTime::now()
