@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
-use biomeos_spore::{Spore, SporeConfig, SporeVerification};
+use biomeos_spore::{Spore, SporeConfig, SporeType, SporeVerification};
 use tracing::info;
 
 /// Create a new USB spore
@@ -11,15 +11,28 @@ pub async fn handle_spore_create(
     mount: PathBuf,
     label: String,
     node_id: String,
+    spore_type_str: String,
 ) -> Result<()> {
-    println!("🔐 Creating USB spore...");
+    let spore_type = match spore_type_str.to_lowercase().as_str() {
+        "live" => SporeType::Live,
+        "cold" => SporeType::Cold,
+        _ => {
+            eprintln!("❌ Invalid spore type: {}", spore_type_str);
+            eprintln!("   Valid types: 'live' (deployable) or 'cold' (storage)");
+            std::process::exit(1);
+        }
+    };
+
+    println!("🔐 Creating {} USB spore...", spore_type);
     println!("   Label: {}", label);
     println!("   Node ID: {}", node_id);
     println!("   Mount: {}", mount.display());
+    println!("   Type: {} {}", spore_type.emoji(), spore_type);
 
     let config = SporeConfig {
         label: label.clone(),
         node_id: node_id.clone(),
+        spore_type,
     };
 
     let spore = Spore::create(mount, config).await?;
@@ -58,6 +71,7 @@ pub async fn handle_spore_clone(
     let new_config = SporeConfig {
         label: format!("biomeOS-{}", node_id),
         node_id: node_id.clone(),
+        spore_type: SporeType::default(), // Inherit from parent in clone_sibling
     };
 
     let sibling = source.clone_sibling(to, new_config).await?;

@@ -46,11 +46,13 @@
 pub mod error;
 pub mod seed;
 pub mod spore;
+pub mod spore_types;
 pub mod usb;
 pub mod verify;
 
 pub use error::{SporeError, SporeResult};
 pub use seed::FamilySeed;
 pub use spore::{Spore, SporeConfig};
+pub use spore_types::SporeType;
 pub use verify::{SporeVerification, VerificationResult};
 

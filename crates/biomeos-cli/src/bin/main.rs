@@ -61,6 +61,10 @@ enum SporeAction {
         /// Node ID for this tower (e.g., tower1)
         #[arg(short, long)]
         node: String,
+
+        /// Spore type: 'live' (FAT32-aware, deployable) or 'cold' (storage only)
+        #[arg(short = 't', long, default_value = "live")]
+        spore_type: String,
     },
     
     /// Clone spore to create sibling
@@ -352,8 +356,13 @@ async fn main() -> Result<()> {
             }
         },
         Commands::Spore { action } => match action {
-            SporeAction::Create { mount, label, node } => {
-                handle_spore_create(mount, label, node).await?
+            SporeAction::Create {
+                mount,
+                label,
+                node,
+                spore_type,
+            } => {
+                handle_spore_create(mount, label, node, spore_type).await?
             }
             SporeAction::Clone { from, to, node } => {
                 handle_spore_clone(from, to, node).await?
