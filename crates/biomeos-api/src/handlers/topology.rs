@@ -55,12 +55,12 @@ pub async fn get_topology(
     info!("🌐 Building topology...");
 
     if state.is_mock_mode() {
-        info!("   Using mock topology (BIOMEOS_MOCK_MODE=true)");
-        let (nodes, edges) = get_mock_topology();
+        info!("   Using standalone topology (BIOMEOS_MOCK_MODE=true) - works without primals");
+        let (nodes, edges) = get_standalone_topology();
         return Ok(Json(TopologyResponse {
             nodes,
             edges,
-            mode: "mock".to_string(),
+            mode: "standalone".to_string(),
         }));
     }
 
@@ -77,19 +77,23 @@ pub async fn get_topology(
             }))
         }
         Err(e) => {
-            tracing::warn!("   Failed to build live topology: {}, using mock fallback", e);
-            let (nodes, edges) = get_mock_topology();
+            tracing::warn!("   Failed to build live topology: {}, using standalone fallback", e);
+            let (nodes, edges) = get_standalone_topology();
             Ok(Json(TopologyResponse {
                 nodes,
                 edges,
-                mode: "mock_fallback".to_string(),
+                mode: "standalone_fallback".to_string(),
             }))
         }
     }
 }
 
 /// Generate mock topology for testing
-fn get_mock_topology() -> (Vec<TopologyNode>, Vec<TopologyEdge>) {
+/// Get standalone topology (works without primals)
+///
+/// This provides a basic topology for development and demos
+/// when the full primal stack is not available.
+fn get_standalone_topology() -> (Vec<TopologyNode>, Vec<TopologyEdge>) {
     let nodes = vec![
         TopologyNode {
             id: "beardog-local".to_string(),

@@ -50,13 +50,13 @@ pub async fn evaluate_trust(
     info!("🔒 Evaluating trust for peer: {}", request.peer_id);
 
     if state.is_mock_mode() {
-        info!("   Using mock trust evaluation (BIOMEOS_MOCK_MODE=true)");
+        info!("   Using standalone trust evaluation (BIOMEOS_MOCK_MODE=true) - works without primals");
         return Ok(Json(TrustEvaluationResponse {
             decision: "allow".to_string(),
             confidence: 0.9,
-            reason: "mock_mode_always_trusts".to_string(),
+            reason: "standalone_mode_demo".to_string(),
             trust_level: "elevated".to_string(),
-            metadata: serde_json::json!({"provider": "mock"}),
+            metadata: serde_json::json!({"provider": "standalone"}),
         }));
     }
 
@@ -89,11 +89,11 @@ pub async fn get_identity(
     info!("📋 Getting local identity from BearDog");
 
     if state.is_mock_mode() {
-        info!("   Using mock identity (BIOMEOS_MOCK_MODE=true)");
+        info!("   Using standalone identity (BIOMEOS_MOCK_MODE=true) - works without primals");
         return Ok(Json(IdentityResponse {
-            encryption_tag: "beardog:family:mock:tower1".to_string(),
+            encryption_tag: "beardog:family:standalone:demo".to_string(),
             capabilities: vec!["btsp".to_string(), "birdsong".to_string(), "lineage".to_string()],
-            family_id: "mock".to_string(),
+            family_id: "standalone".to_string(),
             identity_attestations: Some(serde_json::json!({
                 "family_id": "mock",
                 "node_role": "tower"

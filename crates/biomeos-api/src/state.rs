@@ -107,7 +107,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             mock_mode: false,
-            bind_addr: "127.0.0.1:3000".parse().unwrap(),
+            bind_addr: "0.0.0.0:3000".parse().expect("Default bind address is valid"),
             request_timeout: std::time::Duration::from_secs(30),
             enable_cors: true,
         }
@@ -125,7 +125,7 @@ impl Config {
         let bind_addr = std::env::var("BIOMEOS_API_BIND_ADDR")
             .ok()
             .and_then(|v| v.parse().ok())
-            .unwrap_or_else(|| "127.0.0.1:3000".parse().unwrap());
+            .unwrap_or_else(|| "0.0.0.0:3000".parse().expect("Default bind address is valid"));
         
         Self {
             mock_mode,
