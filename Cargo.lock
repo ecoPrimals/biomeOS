@@ -630,6 +630,8 @@ dependencies = [
  "anyhow",
  "async-trait",
  "base64 0.22.1",
+ "biomeos-graph",
+ "biomeos-manifest",
  "biomeos-primal-sdk",
  "biomeos-types",
  "chrono",

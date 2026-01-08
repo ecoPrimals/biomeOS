@@ -46,6 +46,8 @@ hostname = "0.4"
 # biomeOS dependencies
 biomeos-types = { path = "../biomeos-types" }
 biomeos-primal-sdk = { path = "../biomeos-primal-sdk" }
+biomeos-graph = { path = "../biomeos-graph" }
+biomeos-manifest = { path = "../biomeos-manifest" }
 
 [dev-dependencies]
 # Testing framework

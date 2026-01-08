@@ -52,6 +52,7 @@ pub mod config;
 pub mod config_builder;
 pub mod integration;
 pub mod log_session;
+pub mod graph_deployment;  // Neural API integration
 
 // Re-export the main manager and types for easy access
 pub use universal_biomeos_manager::{
