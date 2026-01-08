@@ -65,10 +65,24 @@ pub struct SporeVerifier {
 impl SporeVerifier {
     /// Create a new verifier from nucleusBin
     pub fn from_nucleus(nucleus_path: impl AsRef<Path>) -> Result<Self> {
-        let nucleus_manifest = BinaryManifest::load(nucleus_path.as_ref())
-            .with_context(|| format!("Failed to load nucleus manifest from {}", nucleus_path.as_ref().display()))?;
+        let nucleus_path = nucleus_path.as_ref();
         
-        info!("Loaded nucleus manifest with {} binaries", nucleus_manifest.binaries.len());
+        // Try to load existing manifest, generate if not found
+        let nucleus_manifest = match BinaryManifest::load(nucleus_path) {
+            Ok(manifest) => {
+                info!("Loaded existing nucleus manifest with {} binaries", manifest.binaries.len());
+                manifest
+            }
+            Err(_) => {
+                info!("Generating nucleus manifest from binaries");
+                let manifest = BinaryManifest::from_nucleus(nucleus_path)?;
+                // Save for next time
+                if let Err(e) = manifest.save(nucleus_path.join("MANIFEST.toml")) {
+                    warn!("Failed to save generated manifest: {}", e);
+                }
+                manifest
+            }
+        };
         
         Ok(Self { nucleus_manifest })
     }
@@ -258,13 +272,23 @@ impl SporeVerifier {
         // Parse as TOML
         let tower_toml: toml::Value = toml::from_str(&tower_toml_str)?;
         
-        // Extract node_id
+        // Try multiple locations for node_id (evolved config format)
         let node_id = tower_toml
-            .get("tower")
-            .and_then(|t| t.get("NODE_ID"))
-            .or_else(|| tower_toml.get("node_id"))
+            .get("primals")
+            .and_then(|p| p.as_array())
+            .and_then(|arr| arr.first())
+            .and_then(|primal| primal.get("env"))
+            .and_then(|env| env.get("BEARDOG_NODE_ID").or_else(|| env.get("SONGBIRD_NODE_ID")))
             .and_then(|v| v.as_str())
-            .ok_or_else(|| anyhow::anyhow!("node_id not found in tower.toml"))?
+            .or_else(|| {
+                // Fallback: try old format
+                tower_toml
+                    .get("tower")
+                    .and_then(|t| t.get("NODE_ID"))
+                    .or_else(|| tower_toml.get("node_id"))
+                    .and_then(|v| v.as_str())
+            })
+            .ok_or_else(|| anyhow::anyhow!("node_id not found in tower.toml (tried primals.env.BEARDOG_NODE_ID, tower.NODE_ID, node_id)"))?
             .to_string();
         
         Ok(node_id)

@@ -139,6 +139,9 @@ enum Commands {
         action: SporeAction,
     },
 
+    /// Verify nucleusBin binaries and deployed spores
+    Verify(verify::VerifyArgs),
+
     /// Discover services by capability or method
     Discover {
         /// Discovery endpoint to query
@@ -377,6 +380,10 @@ async fn main() -> Result<()> {
                 handle_spore_list().await?
             }
         },
+
+        Commands::Verify(args) => {
+            verify::run(args).await?;
+        }
         Commands::Discover {
             endpoint,
             capabilities,

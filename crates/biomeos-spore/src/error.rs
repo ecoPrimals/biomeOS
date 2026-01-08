@@ -52,5 +52,9 @@ pub enum SporeError {
     /// Serialization error
     #[error("Serialization error: {0}")]
     Serialization(#[from] serde_json::Error),
+
+    /// Anyhow error (for generic fallback)
+    #[error("{0}")]
+    Anyhow(#[from] anyhow::Error),
 }
 

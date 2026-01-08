@@ -10,6 +10,7 @@ pub mod health;
 pub mod monitor;
 pub mod niche;
 pub mod spore;
+pub mod verify;
 pub mod utils;
 
 // Re-export command handlers
