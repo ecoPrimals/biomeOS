@@ -1,0 +1,8 @@
+# NucleusBin Version Manifest
+# Updated: Thu Jan  8 09:17:09 AM EST 2026
+
+tower: git:a65de7b
+beardog-server: git:dc9b4426c  
+songbird: git:c77684cd2
+
+# Harvested with: scripts/harvest-primals.sh
