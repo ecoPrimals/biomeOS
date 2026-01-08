@@ -45,8 +45,10 @@
 //! ```
 
 pub mod error;
+pub mod manifest;
 pub mod seed;
 pub mod spore;
+pub mod verification;
 pub mod spore_types;
 pub mod usb;
 pub mod verify;
