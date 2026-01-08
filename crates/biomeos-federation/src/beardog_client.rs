@@ -5,10 +5,11 @@
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use std::path::PathBuf;
 
 use crate::discovery::{PrimalDiscovery, PrimalEndpoint};
-use crate::FederationResult;
+use crate::unix_socket_client::UnixSocketClient;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KeyDerivationRequest {
@@ -22,6 +23,13 @@ pub struct KeyDerivationResponse {
     pub key_ref: String,
     pub algorithm: String,
     pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EncryptResponse {
+    pub encrypted_data: String,
+    pub nonce: String,
+    pub tag: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -133,18 +141,29 @@ impl BearDogClient {
         family_id: &str,
         seed_hash: &str,
     ) -> Result<bool> {
-        let request = LineageVerificationRequest {
-            family_id: family_id.to_string(),
-            seed_hash: seed_hash.to_string(),
-        };
-        
         match &self.endpoint {
-            BearDogEndpoint::UnixSocket(_path) => {
-                // TODO: Implement Unix socket client
-                // For now, return an error
-                Err(anyhow::anyhow!("Unix socket lineage verification not yet implemented"))
+            BearDogEndpoint::UnixSocket(path) => {
+                let client = UnixSocketClient::new(path);
+                
+                let params = json!({
+                    "family_id": family_id,
+                    "seed_hash": seed_hash,
+                    "node_id": std::env::var("NODE_ID").unwrap_or_else(|_| "unknown".to_string()),
+                });
+                
+                let result = client
+                    .call_method("federation.verify_family_member", params)
+                    .await
+                    .context("Failed to call federation.verify_family_member")?;
+                
+                Ok(result["is_family_member"].as_bool().unwrap_or(false))
             }
             BearDogEndpoint::Http(url) => {
+                let request = LineageVerificationRequest {
+                    family_id: family_id.to_string(),
+                    seed_hash: seed_hash.to_string(),
+                };
+                
                 let client = reqwest::Client::new();
                 let response: LineageVerificationResponse = client
                     .post(format!("{}/api/v1/lineage/verify_family", url))
@@ -167,9 +186,26 @@ impl BearDogClient {
         request: KeyDerivationRequest,
     ) -> Result<KeyDerivationResponse> {
         match &self.endpoint {
-            BearDogEndpoint::UnixSocket(_path) => {
-                // TODO: Implement Unix socket client
-                Err(anyhow::anyhow!("Unix socket key derivation not yet implemented"))
+            BearDogEndpoint::UnixSocket(path) => {
+                let client = UnixSocketClient::new(path);
+                
+                let params = json!({
+                    "parent_family": request.parent_family,
+                    "subfed_name": request.subfed_name,
+                    "purpose": request.purpose,
+                    "derivation_info": format!("{}-{}", request.subfed_name, chrono::Utc::now().format("%Y-%m-%d")),
+                });
+                
+                let result = client
+                    .call_method("federation.derive_subfed_key", params)
+                    .await
+                    .context("Failed to call federation.derive_subfed_key")?;
+                
+                Ok(KeyDerivationResponse {
+                    key_ref: result["key_ref"].as_str().unwrap_or("").to_string(),
+                    algorithm: result["algorithm"].as_str().unwrap_or("AES-256-GCM").to_string(),
+                    created_at: result["created_at"].as_str().unwrap_or("").to_string(),
+                })
             }
             BearDogEndpoint::Http(url) => {
                 let client = reqwest::Client::new();
@@ -193,25 +229,44 @@ impl BearDogClient {
         &self,
         data: &[u8],
         key_ref: &str,
-    ) -> Result<Vec<u8>> {
+    ) -> Result<EncryptResponse> {
         match &self.endpoint {
-            BearDogEndpoint::UnixSocket(_path) => {
-                Err(anyhow::anyhow!("Unix socket encryption not yet implemented"))
+            BearDogEndpoint::UnixSocket(path) => {
+                let client = UnixSocketClient::new(path);
+                
+                use base64::Engine;
+                let engine = base64::engine::general_purpose::STANDARD;
+                let data_b64 = engine.encode(data);
+                
+                let params = json!({
+                    "data": data_b64,
+                    "key_ref": key_ref,
+                    "algorithm": "AES-256-GCM",
+                });
+                
+                let result = client
+                    .call_method("encryption.encrypt", params)
+                    .await
+                    .context("Failed to call encryption.encrypt")?;
+                
+                Ok(EncryptResponse {
+                    encrypted_data: result["encrypted_data"].as_str().unwrap_or("").to_string(),
+                    nonce: result["nonce"].as_str().unwrap_or("").to_string(),
+                    tag: result["tag"].as_str().unwrap_or("").to_string(),
+                })
             }
             BearDogEndpoint::Http(url) => {
                 #[derive(Serialize)]
-                struct EncryptRequest {
+                struct HttpEncryptRequest {
                     data: String,
                     key_ref: String,
                 }
                 
-                #[derive(Deserialize)]
-                struct EncryptResponse {
-                    encrypted_data: String,
-                }
+                use base64::Engine;
+                let engine = base64::engine::general_purpose::STANDARD;
                 
-                let request = EncryptRequest {
-                    data: base64::encode(data),
+                let request = HttpEncryptRequest {
+                    data: engine.encode(data),
                     key_ref: key_ref.to_string(),
                 };
                 
@@ -226,8 +281,75 @@ impl BearDogClient {
                     .await
                     .context("Failed to parse encryption response")?;
                 
-                base64::decode(&response.encrypted_data)
-                    .context("Failed to decode encrypted data")
+                Ok(response)
+            }
+        }
+    }
+    
+    /// Decrypt data using BearDog's HSM
+    pub async fn decrypt_data(
+        &self,
+        encrypted_data: &str,
+        nonce: &str,
+        tag: &str,
+        key_ref: &str,
+    ) -> Result<Vec<u8>> {
+        match &self.endpoint {
+            BearDogEndpoint::UnixSocket(path) => {
+                let client = UnixSocketClient::new(path);
+                
+                let params = json!({
+                    "encrypted_data": encrypted_data,
+                    "nonce": nonce,
+                    "tag": tag,
+                    "key_ref": key_ref,
+                });
+                
+                let result = client
+                    .call_method("encryption.decrypt", params)
+                    .await
+                    .context("Failed to call encryption.decrypt")?;
+                
+                use base64::Engine;
+                let engine = base64::engine::general_purpose::STANDARD;
+                let data_b64 = result["data"].as_str().unwrap_or("");
+                engine.decode(data_b64).context("Failed to decode decrypted data")
+            }
+            BearDogEndpoint::Http(url) => {
+                #[derive(Serialize)]
+                struct DecryptRequest {
+                    encrypted_data: String,
+                    nonce: String,
+                    tag: String,
+                    key_ref: String,
+                }
+                
+                #[derive(Deserialize)]
+                struct DecryptResponse {
+                    data: String,
+                }
+                
+                let request = DecryptRequest {
+                    encrypted_data: encrypted_data.to_string(),
+                    nonce: nonce.to_string(),
+                    tag: tag.to_string(),
+                    key_ref: key_ref.to_string(),
+                };
+                
+                let client = reqwest::Client::new();
+                let response: DecryptResponse = client
+                    .post(format!("{}/api/v1/decrypt", url))
+                    .json(&request)
+                    .send()
+                    .await
+                    .context("Failed to send decryption request")?
+                    .json()
+                    .await
+                    .context("Failed to parse decryption response")?;
+                
+                use base64::Engine;
+                let engine = base64::engine::general_purpose::STANDARD;
+                engine.decode(&response.data).context("Failed to decode decrypted data")
             }
         }
     }

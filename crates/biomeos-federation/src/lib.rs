@@ -10,11 +10,13 @@ pub mod subfederation;
 pub mod capability;
 pub mod discovery;
 pub mod beardog_client;
+pub mod unix_socket_client;
 
 pub use subfederation::{SubFederation, SubFederationManager, IsolationLevel};
 pub use capability::{Capability, CapabilitySet};
 pub use discovery::{PrimalDiscovery, DiscoveredPrimal};
 pub use beardog_client::BearDogClient;
+pub use unix_socket_client::{UnixSocketClient, JsonRpcRequest, JsonRpcResponse};
 
 use thiserror::Error;
 
