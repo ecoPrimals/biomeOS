@@ -1,0 +1,227 @@
+# =============================================================================
+# NORTHGATE - Flagship AI/LLM Hub
+# =============================================================================
+#
+# Hardware: Intel i9-14900K, RTX 5090, 192GB DDR5, 1TB+4TB NVMe
+# Location: Basement HPC - LAN
+# Purpose: Primary AI/LLM training and inference
+#
+# Deployment:
+#   - 1 Tower (communication, discovery, federation)
+#   - 2 Compute Nodes (RTX 5090 GPU + i9-14900K CPU)
+#
+# Created: January 8, 2026
+# Status: Production Ready
+#
+# =============================================================================
+
+[deployment]
+hostname = "northgate"
+location = "basement-lan"
+family_id = "nat0"
+deployment_type = "tower-plus-compute"
+
+# =============================================================================
+# TOWER DEPLOYMENT (Communication Stack)
+# =============================================================================
+
+[tower]
+enabled = true
+node_id = "tower-northgate"
+niche = "tower"  # Uses niches/tower.toml
+
+# Tower-specific configuration
+[tower.config]
+# Songbird
+songbird_role = "coordinator"  # Hub for LAN federation
+songbird_capabilities = ["discovery", "p2p", "coordination"]
+
+# BearDog
+beardog_mode = "full"  # Complete crypto suite
+beardog_hsm = "software"  # Or "solokey" if connected
+
+# biomeOS
+biomeos_role = "orchestrator"  # Manages compute nodes
+
+# Genetic lineage
+family_seed_file = "./.family.seed"
+sub_federations = ["lan-hpc", "ai-cluster", "gaming"]
+
+# =============================================================================
+# COMPUTE NODES
+# =============================================================================
+
+# GPU Compute Node (RTX 5090)
+[[compute_nodes]]
+enabled = true
+node_id = "compute-northgate-rtx5090"
+niche = "compute-node"  # Uses niches/compute-node.toml
+
+[compute_nodes.config]
+# Resource binding
+resource_type = "gpu"
+resource_id = 0
+gpu_model = "RTX 5090"
+gpu_memory_gb = 24
+
+# Capacity
+max_concurrent_workloads = 8
+memory_limit_gb = 96  # Half of system RAM
+cpu_cores = 16  # Half of i9-14900K
+
+# Execution
+runtimes = ["native", "wasm", "container"]
+isolation_mode = "process"
+sandbox_enabled = true
+
+# Security
+toadstool_secure_mode = true  # Enable BearDog crypto lock
+crypto_lock_enabled = true
+encrypted_memory = true
+verify_workload_signatures = true
+
+# Monitoring
+prometheus_enabled = true
+prometheus_port = 9091
+
+# CPU Compute Node (i9-14900K)
+[[compute_nodes]]
+enabled = true
+node_id = "compute-northgate-i9"
+niche = "compute-node"
+
+[compute_nodes.config]
+# Resource binding
+resource_type = "cpu"
+resource_id = "pool-0"
+cpu_model = "i9-14900K"
+cpu_cores = 16  # Other half
+
+# Capacity
+max_concurrent_workloads = 16
+memory_limit_gb = 96  # Other half of RAM
+
+# Execution
+runtimes = ["native", "wasm", "python"]
+isolation_mode = "process"
+sandbox_enabled = true
+
+# Security
+toadstool_secure_mode = false  # GPU has crypto lock
+crypto_lock_enabled = false
+
+# Monitoring
+prometheus_enabled = true
+prometheus_port = 9092
+
+# =============================================================================
+# NETWORK CONFIGURATION
+# =============================================================================
+
+[network]
+# LAN settings
+interface = "auto"  # Auto-detect primary interface
+lan_enabled = true
+udp_multicast = true
+
+# Internet (for remote nodes)
+internet_enabled = true
+nat_traversal = "btsp-genetic"
+
+# Discovery
+discovery_methods = ["mdns", "udp-multicast", "songbird"]
+
+# =============================================================================
+# STORAGE CONFIGURATION
+# =============================================================================
+
+[storage]
+# NVMe drives
+nvme_primary = "/dev/nvme0n1"  # 1TB 990 Pro (OS + hot data)
+nvme_secondary = "/dev/nvme1n1"  # 4TB 990 EVO (datasets)
+
+# Mount points
+data_dir = "/data/northgate"
+cache_dir = "/cache/northgate"
+logs_dir = "/var/log/northgate"
+
+# ZFS (optional)
+zfs_enabled = false
+
+# =============================================================================
+# WORKLOAD POLICIES
+# =============================================================================
+
+[workloads]
+# Prioritization
+priority_enabled = true
+default_priority = "normal"
+allow_preemption = false
+
+# Resource limits
+max_gpu_utilization = 95
+max_cpu_utilization = 90
+max_memory_utilization = 90
+
+# Scheduling
+fair_scheduling = true
+gpu_time_slicing = true
+cpu_pinning = false
+
+# Trusted deployers (genetic lineage)
+trusted_families = ["nat0"]
+trusted_sub_feds = ["lan-hpc", "ai-cluster"]
+
+# =============================================================================
+# MONITORING & OBSERVABILITY
+# =============================================================================
+
+[monitoring]
+# Metrics
+prometheus_enabled = true
+prometheus_scrape_interval = 15
+
+# Logging
+log_level = "info"
+log_fossil_enabled = true
+log_rotation_mb = 100
+
+# Health checks
+health_check_interval = 30
+health_check_timeout = 5
+
+# Alerting (future)
+alert_on_gpu_utilization = 98
+alert_on_memory_pressure = 95
+
+# =============================================================================
+# DEPLOYMENT COMMANDS
+# =============================================================================
+
+# Step 1: Prepare LiveSpore with genetic seed
+# cargo run --bin biomeos-spore -- build \
+#   --family-seed .family.seed \
+#   --niche tower \
+#   --output /media/liveSpore1 \
+#   --fresh-bins
+
+# Step 2: Deploy Tower on Northgate
+# export NODE_ID=tower-northgate
+# export FAMILY_ID=nat0
+# biomeos deploy --niche tower --config deployments/basement-hpc/northgate.toml
+
+# Step 3: Deploy GPU Compute Node
+# export NODE_ID=compute-northgate-rtx5090
+# export RESOURCE_TYPE=gpu
+# export RESOURCE_ID=0
+# biomeos deploy --niche compute-node --config deployments/basement-hpc/northgate.toml
+
+# Step 4: Deploy CPU Compute Node
+# export NODE_ID=compute-northgate-i9
+# export RESOURCE_TYPE=cpu
+# biomeos deploy --niche compute-node --config deployments/basement-hpc/northgate.toml
+
+# Step 5: Verify deployment
+# curl --unix-socket /tmp/songbird-tower-northgate.sock \
+#   -d '{"jsonrpc":"2.0","method":"discover_by_family","params":{"family_tags":["nat0"]},"id":1}'
+

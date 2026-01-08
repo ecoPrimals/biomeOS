@@ -1,0 +1,274 @@
+# =============================================================================
+# PIXEL 8A - Mobile HSM & Mesh Node
+# =============================================================================
+#
+# Hardware: Google Tensor G2, Android
+# Location: Mobile (Phone)
+# Purpose: BearDog HSM seed storage, mobile mesh participation, 2FA
+#
+# Deployment:
+#   - 1 Tower Lite (lightweight communication stack)
+#   - No compute nodes (phone is for comms only)
+#
+# Created: January 8, 2026
+# Status: Production Ready
+#
+# =============================================================================
+
+[deployment]
+hostname = "pixel8a"
+location = "mobile"
+family_id = "nat0"
+deployment_type = "tower-lite"
+mobile_mode = true
+device_type = "android"
+
+# =============================================================================
+# TOWER LITE DEPLOYMENT (Minimal Communication Stack)
+# =============================================================================
+
+[tower]
+enabled = true
+node_id = "tower-pixel8a"
+niche = "tower-lite"  # Lightweight version
+
+[tower.config]
+# Songbird (minimal)
+songbird_role = "observer"  # Participates but doesn't route
+songbird_capabilities = ["discovery", "p2p", "mobile"]
+
+# BearDog (HSM mode)
+beardog_mode = "hsm-only"  # Hardware security module only
+beardog_hsm = "hardware"  # Use Android Keystore
+
+# biomeOS (minimal)
+biomeos_role = "participant"  # No orchestration
+
+# Genetic lineage
+family_seed_file = "./.family.seed"
+sub_federations = ["mobile"]
+
+# Android-specific
+[tower.config.android]
+# Use Android services
+use_android_keystore = true
+use_android_connectivity = true
+use_android_location = false  # Privacy
+
+# Power management
+battery_aware = true
+doze_compatible = true  # Android Doze mode
+wakelock_minimal = true
+
+# Background service
+run_as_foreground_service = true
+persistent_notification = true
+
+# =============================================================================
+# BEARDOG HSM CONFIGURATION
+# =============================================================================
+
+[beardog_hsm]
+# Hardware security
+mode = "hsm-only"
+provider = "android-keystore"
+strongbox_preferred = true  # Use StrongBox if available
+
+# Key storage
+master_seed_in_keystore = true
+subfed_keys_in_keystore = true
+signing_keys_in_keystore = true
+
+# Security features
+require_user_authentication = true
+require_screen_lock = true
+biometric_authentication = true  # Fingerprint/face unlock
+
+# Key attestation
+key_attestation_enabled = true
+verify_device_integrity = true
+
+# SoloKey integration
+[beardog_hsm.solokey]
+# Use SoloKey as root of trust
+enabled = true
+use_for_master_seed = true
+usb_otg_enabled = true
+
+# =============================================================================
+# NETWORK CONFIGURATION
+# =============================================================================
+
+[network]
+# Mobile networks
+interfaces = "auto"
+lan_enabled = true  # WiFi
+internet_enabled = true
+mobile_data_enabled = true
+
+# Discovery (lightweight)
+discovery_methods = ["songbird", "btsp"]  # Skip mDNS on mobile
+
+# Mobile data limits
+[network.mobile]
+auto_switch = true
+prefer_wifi = true
+allow_mobile_data = true  # For mesh participation
+
+# Data usage (strict limits)
+limit_mobile_data_usage = true
+max_mobile_data_mb_per_hour = 10  # Very conservative
+pause_on_metered = true
+
+# Battery-aware networking
+reduce_polling_on_battery = true
+background_network_minimal = true
+
+# =============================================================================
+# STORAGE CONFIGURATION
+# =============================================================================
+
+[storage]
+# Android app storage
+data_dir = "/data/data/bio.eco.primals.pixel8a"
+cache_dir = "/data/data/bio.eco.primals.pixel8a/cache"
+logs_dir = "/data/data/bio.eco.primals.pixel8a/logs"
+
+# Encrypted storage
+encrypted_storage = true
+use_android_encryption = true
+
+# Minimal storage
+cache_size_limit_mb = 50
+log_rotation_mb = 10
+keep_logs_days = 7
+
+# =============================================================================
+# SECURITY POLICIES
+# =============================================================================
+
+[security]
+# HSM-only mode
+hsm_mode = true
+hardware_backed = true
+strongbox_required = false  # Prefer but don't require
+
+# Authentication
+require_unlock = true
+require_biometric = true
+lockout_after_failed_attempts = 5
+
+# Device integrity
+verify_safetynet = true  # Google SafetyNet
+verify_device_not_rooted = true
+
+# Seed management
+[security.seed]
+master_seed_in_keystore = true
+never_export_seed = true
+require_user_auth_for_derivation = true
+
+# 2FA
+[security.twofa]
+enabled = true
+totp_backup_codes = true
+require_for_sensitive_ops = true
+
+# =============================================================================
+# MOBILE-SPECIFIC FEATURES
+# =============================================================================
+
+[mobile]
+# Power management
+battery_aware = true
+doze_compatible = true
+optimize_for_battery = true
+
+# Background execution
+run_as_foreground_service = true
+persistent_notification = true
+notification_priority = "low"
+
+# Connectivity
+auto_reconnect = true
+reconnect_on_network_change = true
+maintain_connections = false  # Don't keep persistent
+
+# UI (optional Android app)
+[mobile.ui]
+show_status = true
+show_federation_count = true
+show_hsm_operations = false  # Privacy
+quick_settings_tile = true
+
+# =============================================================================
+# MONITORING (Minimal)
+# =============================================================================
+
+[monitoring]
+# Metrics (minimal)
+prometheus_enabled = false  # Too heavy for phone
+log_level = "warn"  # Only warnings and errors
+log_fossil_enabled = false
+
+# Health checks (infrequent)
+health_check_interval = 300  # 5 minutes
+health_check_timeout = 30
+
+# Battery monitoring
+track_battery_level = true
+track_network_type = true
+track_hsm_operations = true
+
+# =============================================================================
+# USE CASES
+# =============================================================================
+
+# Use Case 1: HSM Root of Trust
+# - Store master .family.seed in Android Keystore
+# - Require biometric unlock for seed derivation
+# - Never export seed (HSM-only operations)
+
+# Use Case 2: 2FA for Deployments
+# - Approve new node deployments via phone
+# - Sign deployment manifests
+# - Verify genetic lineage
+
+# Use Case 3: Mobile Mesh Participant
+# - Participate in federation discovery
+# - Bridge LAN ↔ Internet when on-the-go
+# - Emergency federation backup
+
+# Use Case 4: SoloKey Integration
+# - USB OTG connection to SoloKey
+# - Use SoloKey as ultimate root of trust
+# - Hierarchical HSM: SoloKey → Android Keystore → derived keys
+
+# =============================================================================
+# DEPLOYMENT COMMANDS
+# =============================================================================
+
+# Step 1: Install Android App (Termux or custom app)
+# pkg install rust proot-distro
+# proot-distro install ubuntu
+# proot-distro login ubuntu
+
+# Step 2: Deploy Tower Lite
+# export NODE_ID=tower-pixel8a
+# export FAMILY_ID=nat0
+# export MOBILE_MODE=true
+# export BEARDOG_HSM_MODE=hardware
+# biomeos deploy --niche tower-lite --config deployments/basement-hpc/pixel8a.toml --usb /storage/emulated/0/liveSpore5
+
+# Step 3: Verify HSM
+# curl --unix-socket /tmp/beardog-nat0-tower-pixel8a.sock \
+#   -d '{"jsonrpc":"2.0","method":"hsm.get_capabilities","params":{},"id":1}'
+
+# Expected: Android Keystore + StrongBox (if available)
+
+# Step 4: Test 2FA
+# curl --unix-socket /tmp/beardog-nat0-tower-pixel8a.sock \
+#   -d '{"jsonrpc":"2.0","method":"federation.sign_deployment","params":{"deployment_manifest":"..."},"id":1}'
+
+# Expected: Biometric prompt on phone
+

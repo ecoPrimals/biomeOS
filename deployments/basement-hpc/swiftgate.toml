@@ -1,0 +1,270 @@
+# =============================================================================
+# SWIFTGATE - Mobile Bridge & Portable Compute
+# =============================================================================
+#
+# Hardware: Ryzen 5800X, RTX 3070 FE, 64GB DDR4, NVMe
+# Location: Mobile (Laptop/Portable)
+# Purpose: Bridge LAN ↔ Internet, portable demos, backup federation
+#
+# Deployment:
+#   - 1 Tower (communication, discovery, federation)
+#   - 2 Compute Nodes (RTX 3070 GPU + 5800X CPU)
+#
+# Created: January 8, 2026
+# Status: Production Ready
+#
+# =============================================================================
+
+[deployment]
+hostname = "swiftgate"
+location = "mobile"
+family_id = "nat0"
+deployment_type = "tower-plus-compute"
+mobile_mode = true
+
+# =============================================================================
+# TOWER DEPLOYMENT (Communication Stack)
+# =============================================================================
+
+[tower]
+enabled = true
+node_id = "tower-swiftgate"
+niche = "tower"
+
+[tower.config]
+# Songbird
+songbird_role = "bridge"  # Bridge between LAN and Internet
+songbird_capabilities = ["discovery", "p2p", "nat-traversal", "mobile"]
+
+# BearDog
+beardog_mode = "full"
+beardog_hsm = "software"  # Or "hardware" if phone connected
+
+# biomeOS
+biomeos_role = "coordinator"  # Can coordinate when disconnected
+
+# Genetic lineage
+family_seed_file = "./.family.seed"
+sub_federations = ["lan-hpc", "mobile", "demos"]
+
+# Mobile-specific
+[tower.config.mobile]
+# Network switching
+auto_switch_network = true  # LAN → WiFi → Mobile data
+reconnect_on_network_change = true
+keepalive_interval = 30
+
+# Power management
+battery_aware = true
+reduce_resources_on_battery = true
+suspend_on_low_battery = true
+
+# Discovery
+discover_on_all_interfaces = true
+prefer_lan_when_available = true
+
+# =============================================================================
+# COMPUTE NODES
+# =============================================================================
+
+# GPU Compute Node (RTX 3070 FE)
+[[compute_nodes]]
+enabled = true
+node_id = "compute-swiftgate-rtx3070"
+niche = "compute-node"
+
+[compute_nodes.config]
+# Resource binding
+resource_type = "gpu"
+resource_id = 0
+gpu_model = "RTX 3070 FE"
+gpu_memory_gb = 8
+
+# Capacity (reduced for mobile)
+max_concurrent_workloads = 2  # Battery-friendly
+memory_limit_gb = 16
+cpu_cores = 4
+
+# Execution
+runtimes = ["native", "wasm"]  # Skip container for speed
+isolation_mode = "process"
+sandbox_enabled = true
+
+# Security
+toadstool_secure_mode = true
+crypto_lock_enabled = true
+encrypted_memory = true
+
+# Mobile power management
+[compute_nodes.config.mobile]
+battery_aware = true
+max_gpu_utilization_on_battery = 70
+suspend_workloads_on_low_battery = true
+
+# Monitoring
+prometheus_enabled = true
+prometheus_port = 9091
+
+# CPU Compute Node (Ryzen 5800X)
+[[compute_nodes]]
+enabled = true
+node_id = "compute-swiftgate-5800x"
+niche = "compute-node"
+
+[compute_nodes.config]
+# Resource binding
+resource_type = "cpu"
+resource_id = "pool-0"
+cpu_model = "Ryzen 5800X"
+cpu_cores = 8  # Half for compute, half for system
+
+# Capacity
+max_concurrent_workloads = 4
+memory_limit_gb = 32  # Half of RAM
+
+# Execution
+runtimes = ["native", "wasm", "python"]
+isolation_mode = "process"
+sandbox_enabled = true
+
+# Security
+toadstool_secure_mode = false
+crypto_lock_enabled = false
+
+# Mobile power management
+[compute_nodes.config.mobile]
+battery_aware = true
+max_cpu_utilization_on_battery = 60
+
+# Monitoring
+prometheus_enabled = true
+prometheus_port = 9092
+
+# =============================================================================
+# NETWORK CONFIGURATION
+# =============================================================================
+
+[network]
+# Multi-network support
+interfaces = "auto"  # Detect all interfaces
+lan_enabled = true
+internet_enabled = true
+mobile_data_enabled = true
+
+# Discovery (multi-strategy)
+discovery_methods = ["mdns", "udp-multicast", "songbird", "btsp"]
+
+# Mobile-specific
+[network.mobile]
+# Network switching
+auto_switch = true
+prefer_lan = true
+prefer_wifi = true
+allow_mobile_data = true
+
+# Reconnection
+reconnect_attempts = 10
+reconnect_backoff_ms = 1000
+maintain_connections_across_switches = true
+
+# Data usage
+limit_mobile_data_usage = true
+max_mobile_data_mb_per_hour = 100
+
+# =============================================================================
+# STORAGE CONFIGURATION
+# =============================================================================
+
+[storage]
+# NVMe drive
+nvme_primary = "/dev/nvme0n1"
+
+# Mount points
+data_dir = "/data/swiftgate"
+cache_dir = "/cache/swiftgate"
+logs_dir = "/var/log/swiftgate"
+
+# Mobile-friendly
+cache_size_limit_gb = 10  # Small cache
+log_rotation_mb = 50  # Frequent rotation
+
+# =============================================================================
+# WORKLOAD POLICIES
+# =============================================================================
+
+[workloads]
+# Prioritization
+priority_enabled = true
+default_priority = "low"  # Mobile is lower priority
+allow_preemption = true  # Preempt for LAN nodes
+
+# Resource limits (battery-friendly)
+max_gpu_utilization = 80
+max_cpu_utilization = 70
+max_memory_utilization = 80
+
+# Scheduling
+fair_scheduling = true
+gpu_time_slicing = true
+cpu_pinning = false
+
+# Trusted deployers
+trusted_families = ["nat0"]
+trusted_sub_feds = ["lan-hpc", "mobile", "demos"]
+
+# Battery management
+[workloads.battery]
+pause_on_low_battery = true
+low_battery_threshold = 20
+resume_on_charger = true
+
+# =============================================================================
+# MONITORING & OBSERVABILITY
+# =============================================================================
+
+[monitoring]
+# Metrics
+prometheus_enabled = true
+prometheus_scrape_interval = 30  # Longer for mobile
+
+# Logging
+log_level = "info"
+log_fossil_enabled = true
+log_rotation_mb = 50
+
+# Health checks
+health_check_interval = 60
+health_check_timeout = 10
+
+# Battery monitoring
+track_battery_level = true
+track_network_type = true
+track_location = false  # Privacy
+
+# =============================================================================
+# DEPLOYMENT COMMANDS
+# =============================================================================
+
+# Step 1: Deploy Tower
+# export NODE_ID=tower-swiftgate
+# export FAMILY_ID=nat0
+# export MOBILE_MODE=true
+# biomeos deploy --niche tower --config deployments/basement-hpc/swiftgate.toml --usb /media/liveSpore4
+
+# Step 2: Deploy GPU Compute Node
+# export NODE_ID=compute-swiftgate-rtx3070
+# export RESOURCE_TYPE=gpu
+# export RESOURCE_ID=0
+# export MOBILE_MODE=true
+# biomeos deploy --niche compute-node --config deployments/basement-hpc/swiftgate.toml
+
+# Step 3: Deploy CPU Compute Node
+# export NODE_ID=compute-swiftgate-5800x
+# export RESOURCE_TYPE=cpu
+# export MOBILE_MODE=true
+# biomeos deploy --niche compute-node --config deployments/basement-hpc/swiftgate.toml
+
+# Step 4: Verify federation (from any network)
+# curl --unix-socket /tmp/songbird-tower-swiftgate.sock \
+#   -d '{"jsonrpc":"2.0","method":"discover_by_family","params":{"family_tags":["nat0"]},"id":1}'
+

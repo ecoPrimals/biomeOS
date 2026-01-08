@@ -1,0 +1,225 @@
+# =============================================================================
+# STRANDGATE - Bio Pipeline & Alignment Node
+# =============================================================================
+#
+# Hardware: Dual EPYC 7452 (64 cores), RTX 3070 FE, 256GB ECC DDR4, 14TB NVMe
+# Location: Basement HPC - LAN
+# Purpose: Genomics alignment, Kraken2, pre-AI pipelines
+#
+# Deployment:
+#   - 1 Tower (communication, discovery, federation)
+#   - 2 Compute Nodes (Pooled CPU + GPU)
+#
+# Created: January 8, 2026
+# Status: Production Ready
+#
+# =============================================================================
+
+[deployment]
+hostname = "strandgate"
+location = "basement-lan"
+family_id = "nat0"
+deployment_type = "tower-plus-compute"
+
+# =============================================================================
+# TOWER DEPLOYMENT (Communication Stack)
+# =============================================================================
+
+[tower]
+enabled = true
+node_id = "tower-strandgate"
+niche = "tower"
+
+[tower.config]
+# Songbird
+songbird_role = "member"  # Member of LAN federation
+songbird_capabilities = ["discovery", "p2p"]
+
+# BearDog
+beardog_mode = "full"
+beardog_hsm = "software"
+
+# biomeOS
+biomeos_role = "orchestrator"
+
+# Genetic lineage
+family_seed_file = "./.family.seed"
+sub_federations = ["lan-hpc", "bio-pipeline"]
+
+# =============================================================================
+# COMPUTE NODES
+# =============================================================================
+
+# Pooled CPU Node (Dual EPYC 7452 - 64 cores)
+[[compute_nodes]]
+enabled = true
+node_id = "compute-strandgate-epyc-pool"
+niche = "compute-node"
+
+[compute_nodes.config]
+# Resource binding
+resource_type = "cpu"
+resource_id = "epyc-pool-0"
+cpu_model = "Dual EPYC 7452"
+cpu_cores = 64  # All cores
+
+# Pooled configuration
+topology = "pooled"
+pooled_enabled = true
+pool_coordinator = true
+pool_id = "strandgate-epyc-pool"
+
+# Capacity
+max_concurrent_workloads = 32  # High parallelism
+memory_limit_gb = 240  # Most of 256GB ECC
+
+# Execution
+runtimes = ["native", "container"]  # Bio tools
+isolation_mode = "container"  # Isolate pipeline jobs
+sandbox_enabled = true
+
+# Security
+toadstool_secure_mode = true
+crypto_lock_enabled = true  # Genomics data is sensitive
+encrypted_memory = true
+
+# Monitoring
+prometheus_enabled = true
+prometheus_port = 9091
+
+# GPU Compute Node (RTX 3070 FE - for GPU-accelerated tools)
+[[compute_nodes]]
+enabled = true
+node_id = "compute-strandgate-rtx3070"
+niche = "compute-node"
+
+[compute_nodes.config]
+# Resource binding
+resource_type = "gpu"
+resource_id = 0
+gpu_model = "RTX 3070 FE"
+gpu_memory_gb = 8
+
+# Capacity
+max_concurrent_workloads = 4
+memory_limit_gb = 16
+
+# Execution
+runtimes = ["native", "container"]
+isolation_mode = "container"
+sandbox_enabled = true
+
+# Security
+toadstool_secure_mode = true
+crypto_lock_enabled = true
+
+# Monitoring
+prometheus_enabled = true
+prometheus_port = 9092
+
+# =============================================================================
+# NETWORK CONFIGURATION
+# =============================================================================
+
+[network]
+interface = "auto"
+lan_enabled = true
+udp_multicast = true
+internet_enabled = false  # LAN-only for security
+
+discovery_methods = ["mdns", "udp-multicast", "songbird"]
+
+# =============================================================================
+# STORAGE CONFIGURATION
+# =============================================================================
+
+[storage]
+# NVMe drives (Hyper M.2 card)
+nvme_drives = [
+    "/dev/nvme0n1",  # 2TB
+    "/dev/nvme1n1",  # 2TB
+    "/dev/nvme2n1",  # 4TB
+    "/dev/nvme3n1",  # 4TB
+    "/dev/nvme4n1",  # 4TB
+    "/dev/nvme5n1",  # 4TB
+]
+
+# Mount points
+data_dir = "/data/strandgate"
+bio_pipeline_dir = "/data/bio-pipeline"
+cache_dir = "/cache/strandgate"
+logs_dir = "/var/log/strandgate"
+
+# ZFS (recommended for bio data)
+zfs_enabled = true
+zfs_pool = "strandpool"
+zfs_compression = "lz4"
+zfs_dedup = false  # Too expensive for this workload
+
+# =============================================================================
+# WORKLOAD POLICIES (Bio-specific)
+# =============================================================================
+
+[workloads]
+# Prioritization
+priority_enabled = true
+default_priority = "high"  # Bio pipelines are time-sensitive
+allow_preemption = false  # Don't interrupt long-running jobs
+
+# Resource limits
+max_cpu_utilization = 95  # Use all cores
+max_memory_utilization = 95  # ECC RAM is precious
+max_gpu_utilization = 90
+
+# Scheduling
+fair_scheduling = false  # FIFO for pipeline jobs
+cpu_pinning = true  # NUMA-aware for EPYC
+
+# Trusted deployers
+trusted_families = ["nat0"]
+trusted_sub_feds = ["lan-hpc", "bio-pipeline"]
+
+# Bio-specific
+[workloads.bio_pipeline]
+alignment_tools = ["bwa", "bowtie2", "minimap2"]
+kraken2_enabled = true
+kraken2_db_path = "/data/bio-pipeline/kraken2-db"
+preprocessing_enabled = true
+
+# =============================================================================
+# MONITORING & OBSERVABILITY
+# =============================================================================
+
+[monitoring]
+prometheus_enabled = true
+prometheus_scrape_interval = 30  # Longer for batch jobs
+
+log_level = "info"
+log_fossil_enabled = true
+log_rotation_mb = 500  # Large logs for pipelines
+
+health_check_interval = 60
+health_check_timeout = 10
+
+# =============================================================================
+# DEPLOYMENT COMMANDS
+# =============================================================================
+
+# Step 1: Deploy Tower
+# export NODE_ID=tower-strandgate
+# export FAMILY_ID=nat0
+# biomeos deploy --niche tower --config deployments/basement-hpc/strandgate.toml
+
+# Step 2: Deploy Pooled CPU Compute Node
+# export NODE_ID=compute-strandgate-epyc-pool
+# export RESOURCE_TYPE=cpu
+# export CPU_CORES=64
+# export POOLED_ENABLED=true
+# biomeos deploy --niche compute-node --config deployments/basement-hpc/strandgate.toml
+
+# Step 3: Deploy GPU Compute Node
+# export NODE_ID=compute-strandgate-rtx3070
+# export RESOURCE_TYPE=gpu
+# export RESOURCE_ID=0
+# biomeos deploy --niche compute-node --config deployments/basement-hpc/strandgate.toml
+
