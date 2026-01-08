@@ -1,0 +1,198 @@
+# =============================================================================
+# NEST NICHE - Data Federation with Provenance & Ownership
+# =============================================================================
+#
+# Purpose: Data storage, provenance, ownership, sharding, federation
+# Philosophy: Data is physical (has location), Compute is energy (moves to data)
+#
+# Components:
+#   - NestGate: Storage gateway with adaptive compression & provenance
+#   - BearDog: Encryption & access control (MANDATORY)
+#   - Songbird: Federation & discovery
+#
+# Paradigm Inversion:
+#   Traditional: Data cheap/replicated, Compute expensive
+#   ecoPrimals: Data physical/stays-put, Compute energy/moves-to-data
+#
+# Created: January 8, 2026
+# Status: Production Ready
+#
+# =============================================================================
+
+[niche]
+name = "nest"
+version = "1.0.0"
+type = "data"
+description = "Data federation with provenance, ownership, and sharding"
+architecture = "physical"  # Data bound to physical location
+
+# Genetic lineage (from parent spore or tower)
+family_seed_file = "./.family.seed"
+
+# =============================================================================
+# PRIMALS CONFIGURATION
+# =============================================================================
+
+# Core: NestGate (Storage Gateway)
+[[primals]]
+binary = "./primals/nestgate"
+provides = [
+    "storage",
+    "data-provenance",
+    "adaptive-compression",
+    "zero-copy-operations",
+    "data-federation",
+    "shard-management",
+    "ownership-tracking"
+]
+requires = ["security", "federation"]  # Needs BearDog + Songbird
+
+[primals.env]
+NESTGATE_NODE_ID = "${NODE_ID}"
+NESTGATE_FAMILY_ID = "${FAMILY_ID}"
+NESTGATE_STORAGE_PATH = "${STORAGE_PATH:-/data/nest}"
+NESTGATE_CACHE_PATH = "${CACHE_PATH:-/cache/nest}"
+NESTGATE_COMPRESSION_ENABLED = "${COMPRESSION_ENABLED:-true}"
+NESTGATE_PROVENANCE_ENABLED = "true"
+NESTGATE_UNIX_SOCKET = "/tmp/nestgate-${NODE_ID}.sock"
+RUST_LOG = "${LOG_LEVEL:-info}"
+
+# Mandatory: BearDog (Encryption & Security)
+[[primals]]
+binary = "./primals/beardog-server"
+provides = [
+    "encryption",
+    "decryption",
+    "access-control",
+    "ownership-verification",
+    "genetic-lineage"
+]
+requires = []
+
+[primals.env]
+BEARDOG_NODE_ID = "${NODE_ID}"
+BEARDOG_FAMILY_ID = "${FAMILY_ID}"
+BEARDOG_FAMILY_SEED_FILE = "./.family.seed"
+BEARDOG_MODE = "data-vault"
+BEARDOG_HSM_MODE = "software"
+BEARDOG_HTTP_ENABLED = "false"
+RUST_LOG = "${LOG_LEVEL:-info}"
+
+# Federation: Songbird (Discovery & Transfer)
+[[primals]]
+binary = "./primals/songbird-orchestrator"
+provides = [
+    "discovery",
+    "federation",
+    "p2p",
+    "encrypted-transfer"
+]
+requires = ["security"]
+
+[primals.env]
+SONGBIRD_NODE_ID = "${NODE_ID}"
+SONGBIRD_FAMILY_ID = "${FAMILY_ID}"
+SONGBIRD_UDP_MULTICAST = "${UDP_MULTICAST:-true}"
+SONGBIRD_BTSP_ENABLED = "true"
+RUST_LOG = "${LOG_LEVEL:-info}"
+
+# =============================================================================
+# NEST CONFIGURATION
+# =============================================================================
+
+[nest]
+storage_type = "${STORAGE_TYPE:-zfs}"
+storage_path = "${STORAGE_PATH:-/data/nest}"
+total_capacity_gb = "${TOTAL_CAPACITY_GB:-1000}"
+versioning_enabled = "${VERSIONING:-true}"
+deduplication_enabled = "${DEDUP:-true}"
+
+# =============================================================================
+# DATA PROVENANCE (Core Feature)
+# =============================================================================
+
+[provenance]
+enabled = true
+track_creator = true
+track_creation_time = true
+track_modifications = true
+track_access = true
+track_transfers = true
+genetic_lineage_required = true
+ownership_verification = true
+metadata_backend = "sqlite"
+metadata_path = "${STORAGE_PATH}/provenance.db"
+
+# =============================================================================
+# SHARDING & FEDERATION
+# =============================================================================
+
+[sharding]
+enabled = "${SHARDING_ENABLED:-false}"
+threshold_gb = "${SHARD_THRESHOLD_GB:-100}"
+shard_size_gb = "${SHARD_SIZE_GB:-256}"
+placement_strategy = "${PLACEMENT_STRATEGY:-round-robin}"
+replication_enabled = "${REPLICATION_ENABLED:-true}"
+replication_factor = "${REPLICATION_FACTOR:-3}"
+
+# =============================================================================
+# COMPRESSION (Adaptive - 8:1 for genomics)
+# =============================================================================
+
+[compression]
+enabled = true
+mode = "adaptive"
+entropy_threshold = 6.0
+format_detection = true
+algorithm_genomic = "zstd"
+algorithm_text = "lz4"
+algorithm_binary = "none"
+
+# =============================================================================
+# ENCRYPTION (Always On)
+# =============================================================================
+
+[encryption]
+enabled = true
+algorithm = "AES-256-GCM"
+encrypt_all = true
+encrypt_metadata = true
+encrypt_shards = true
+key_rotation_days = 90
+
+# =============================================================================
+# FEDERATION
+# =============================================================================
+
+[federation]
+discover_other_nests = true
+advertise_capacity = true
+advertise_shards = true
+family_seed_file = "./.family.seed"
+family_id = "${FAMILY_ID}"
+require_genetic_verification = true
+
+# =============================================================================
+# MONITORING
+# =============================================================================
+
+[monitoring]
+prometheus_enabled = "${PROMETHEUS_ENABLED:-true}"
+prometheus_port = "${PROMETHEUS_PORT:-9093}"
+track_storage_utilization = true
+track_compression_ratio = true
+log_level = "${LOG_LEVEL:-info}"
+log_fossil_enabled = true
+
+# =============================================================================
+# COMPUTE-TO-DATA (Allow nodes to execute on data in-place)
+# =============================================================================
+
+[compute_to_data]
+enabled = "${COMPUTE_TO_DATA:-true}"
+sandbox_enabled = true
+isolation_mode = "container"
+max_cpu_percent = 50
+require_genetic_lineage = true
+verify_workload_signature = true
+
