@@ -210,7 +210,7 @@ async fn test_invalid_node_id() {
         "../../../etc/passwd",  // Path traversal
         "node/with/slashes",     // Invalid characters
         "",                      // Empty
-        "a".repeat(256),        // Too long
+        &"a".repeat(256),        // Too long
     ] {
         let config = SporeConfig {
             label: "test-spore".to_string(),

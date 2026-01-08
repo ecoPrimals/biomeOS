@@ -6,6 +6,7 @@
 pub mod chimera;
 pub mod deploy;
 pub mod discover;
+pub mod fossil;
 pub mod health;
 pub mod monitor;
 pub mod niche;

@@ -53,6 +53,14 @@ pub enum SporeError {
     #[error("Serialization error: {0}")]
     Serialization(#[from] serde_json::Error),
 
+    /// TOML deserialization error
+    #[error("TOML deserialization error: {0}")]
+    TomlDe(#[from] toml::de::Error),
+
+    /// TOML serialization error
+    #[error("TOML serialization error: {0}")]
+    TomlSer(#[from] toml::ser::Error),
+
     /// Anyhow error (for generic fallback)
     #[error("{0}")]
     Anyhow(#[from] anyhow::Error),

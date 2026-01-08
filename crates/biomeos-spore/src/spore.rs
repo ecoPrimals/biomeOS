@@ -10,8 +10,9 @@ use tokio::fs as async_fs;
 use tracing::{debug, info};
 
 use crate::error::{SporeError, SporeResult};
-use crate::seed::FamilySeed;
+use crate::seed::{FamilySeed};
 use crate::spore_types::SporeType;
+use crate::spore_log_tracker::SporeLogTracker;
 
 /// USB Spore - A self-contained biomeOS deployment
 ///

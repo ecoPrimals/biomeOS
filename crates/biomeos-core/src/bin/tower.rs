@@ -10,7 +10,7 @@ use std::time::Duration;
 use anyhow::{Context, Result};
 use biomeos_core::{
     create_discovery_orchestrator, create_security_provider, discover_primals, start_in_waves,
-    Capability, PrimalBuilder, TowerPrimalConfig, PrimalHealthMonitor, PrimalMetadata,
+    Capability, LogSessionTracker, PrimalBuilder, TowerPrimalConfig, PrimalHealthMonitor, PrimalMetadata,
     PrimalOrchestrator, RetryPolicy, TowerConfig,
 };
 use clap::{Parser, Subcommand};
@@ -179,9 +179,20 @@ async fn main() -> Result<()> {
                 }
             });
             
+            // Create log session tracker
+            let node_id = std::env::var("NODE_ID")
+                .or_else(|_| std::env::var("BEARDOG_NODE_ID"))
+                .unwrap_or_else(|_| "unknown-node".to_string());
+            let log_tracker = Arc::new(LogSessionTracker::new(node_id));
+            
             // Wait for interrupt
             tokio::signal::ctrl_c().await?;
             info!("🛑 Received shutdown signal, stopping tower...");
+            
+            // Archive logs before stopping
+            if let Err(e) = log_tracker.archive_all_sessions("graceful_shutdown").await {
+                warn!("Failed to archive log sessions: {}", e);
+            }
             
             orchestrator.stop_all().await?;
             info!("✅ Tower stopped gracefully.");
@@ -252,9 +263,20 @@ async fn main() -> Result<()> {
                 }
             });
 
+            // Create log session tracker
+            let node_id = std::env::var("NODE_ID")
+                .or_else(|_| std::env::var("BEARDOG_NODE_ID"))
+                .unwrap_or_else(|_| "unknown-node".to_string());
+            let log_tracker = Arc::new(LogSessionTracker::new(node_id));
+            
             // Wait for interrupt
             tokio::signal::ctrl_c().await?;
             info!("🛑 Received shutdown signal, stopping tower...");
+
+            // Archive logs before stopping
+            if let Err(e) = log_tracker.archive_all_sessions("graceful_shutdown").await {
+                warn!("Failed to archive log sessions: {}", e);
+            }
 
             orchestrator.stop_all().await?;
             info!("✅ Tower stopped gracefully.");
@@ -293,9 +315,21 @@ async fn main() -> Result<()> {
                         }
                     });
 
+                    // Create log session tracker
+                    let node_id = std::env::var("NODE_ID")
+                        .or_else(|_| std::env::var("BEARDOG_NODE_ID"))
+                        .unwrap_or_else(|_| "unknown-node".to_string());
+                    let log_tracker = Arc::new(LogSessionTracker::new(node_id));
+                    
                     // Wait for interrupt
                     tokio::signal::ctrl_c().await?;
                     info!("🛑 Stopping tower...");
+                    
+                    // Archive logs before stopping
+                    if let Err(e) = log_tracker.archive_all_sessions("graceful_shutdown").await {
+                        warn!("Failed to archive log sessions: {}", e);
+                    }
+                    
                     orchestrator.stop_all().await?;
                 }
                 Err(e) => {

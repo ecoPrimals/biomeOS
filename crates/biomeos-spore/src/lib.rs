@@ -45,6 +45,8 @@
 //! ```
 
 pub mod error;
+pub mod logs;
+pub mod spore_log_tracker;
 pub mod manifest;
 pub mod refresh;
 pub mod seed;

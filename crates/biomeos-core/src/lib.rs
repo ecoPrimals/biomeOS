@@ -51,6 +51,7 @@ pub mod byob;
 pub mod config;
 pub mod config_builder;
 pub mod integration;
+pub mod log_session;
 
 // Re-export the main manager and types for easy access
 pub use universal_biomeos_manager::{
@@ -79,6 +80,7 @@ pub use adaptive_client::{
 // Primal orchestration re-exports (primary Capability enum for orchestration)
 pub use concurrent_startup::{start_in_waves, DependencyGraph};
 pub use family_credentials::FamilyCredentials;
+pub use log_session::{LogSessionTracker, PrimalSession};
 pub use primal_discovery::{discover_primals, query_primal_metadata, PrimalMetadata};
 pub use tower_config::{TowerConfig, DiscoveryConfig, HealthConfig};
 pub use tower_config::PrimalConfig as TowerPrimalConfig;
