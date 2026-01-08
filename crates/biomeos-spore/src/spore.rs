@@ -150,35 +150,52 @@ impl Spore {
 
     /// Clone this spore to create a sibling
     ///
-    /// Siblings share the same family seed, making them cryptographically
-    /// related. BearDog will recognize them as family members.
+    /// Creates a genetically RELATED but individually UNIQUE sibling.
+    /// The sibling derives its seed from the parent, making them:
+    /// - Related by lineage (share parent DNA)
+    /// - Individually unique (each has own seed)
+    /// - Batch-trackable (know deployment cohort)
+    ///
+    /// This reflects real biology: siblings are NOT perfect clones!
     pub async fn clone_sibling(
         &self,
         target_mount: PathBuf,
         new_config: SporeConfig,
     ) -> SporeResult<Spore> {
         info!(
-            "Cloning spore to create sibling '{}' from '{}'",
+            "🧬 Creating sibling '{}' from parent '{}' (genetic derivation)",
             new_config.node_id, self.config.node_id
         );
 
-        // Read the family seed from source (verify it exists)
-        let source_seed = self.root_path.join(".family.seed");
-        let _seed = FamilySeed::from_file(&source_seed)?;
+        // Read the parent seed (verify it exists)
+        let parent_seed_path = self.root_path.join(".family.seed");
+        let _parent = FamilySeed::from_file(&parent_seed_path)?;
 
         // Create new spore
         let sibling = Self {
             root_path: target_mount.join("biomeOS"),
-            config: new_config,
+            config: new_config.clone(),
         };
 
         // Create structure
         sibling.create_directory_structure().await?;
 
-        // Copy the same family seed (siblings!)
+        // Derive UNIQUE child seed from parent (genetic mixing!)
+        // This makes sibling related but unique - like real DNA
         let target_seed = sibling.root_path.join(".family.seed");
-        async_fs::copy(&source_seed, &target_seed).await?;
-        debug!("Copied family seed to sibling");
+        let deployment_batch = chrono::Utc::now().format("%Y%m%d").to_string();
+        
+        FamilySeed::derive_sibling(
+            &parent_seed_path,
+            &target_seed,
+            &new_config.node_id,
+            Some(&deployment_batch),
+        )?;
+        
+        info!(
+            "🌱 Derived unique seed for sibling '{}' (batch: {})",
+            new_config.node_id, deployment_batch
+        );
 
         // Create sibling's config with new node_id
         sibling.create_tower_config().await?;
@@ -188,7 +205,7 @@ impl Spore {
         sibling.create_deployment_script().await?;
         sibling.create_readme().await?;
 
-        info!("🌱 Sibling spore created successfully (same genetic lineage)");
+        info!("✅ Sibling spore created (related but unique!)");
         Ok(sibling)
     }
 
@@ -667,7 +684,7 @@ mod tests {
         };
 
         // Note: This will fail without actual binaries, but tests the structure
-        let result = Spore::create(mount_point.clone(), config).await;
+        let _result = Spore::create(mount_point.clone(), config).await;
 
         // Should create directory structure even if binary copy fails
         let root_path = mount_point.join("biomeOS");

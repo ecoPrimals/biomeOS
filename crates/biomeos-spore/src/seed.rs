@@ -1,27 +1,36 @@
 //! Family seed file management
 //!
-//! **IMPORTANT**: This module only handles FILE operations.
-//! All cryptographic processing is delegated to BearDog.
+//! **IMPORTANT**: This module only handles FILE operations and seed DERIVATION.
+//! BearDog performs cryptographic family ID extraction and key derivation.
 //!
 //! ## Responsibility Boundary
 //!
 //! ### biomeOS (This Module)
-//! - Generate entropy (random bytes)
-//! - Write seed file to disk
+//! - Generate genesis entropy (random bytes)
+//! - Derive child seeds (SHA256-based genetic mixing)
+//! - Write seed files to disk
 //! - Set file permissions
 //! - Verify file exists and has correct size
 //! - Provide file path to BearDog
 //!
 //! ### BearDog (Security Primal)
 //! - Read seed file contents
-//! - HKDF-SHA256 key derivation
-//! - Extract family ID
-//! - Generate child keys
+//! - HKDF-SHA256 for family ID extraction
+//! - Generate operational keys
 //! - Zeroize sensitive data
-//! - All cryptographic operations
+//! - Trust evaluation
+//!
+//! ## Genetic Model
+//!
+//! Siblings are NOT perfect clones - they are genetically related but unique:
+//! - Genesis: Creates parent seed (32 random bytes)
+//! - Sibling: Derives child seed from parent + node_id + batch
+//! - Formula: child = SHA256(parent || node_id || batch)
 
 use std::fs;
 use std::path::{Path, PathBuf};
+
+use sha2::{Digest, Sha256};
 
 use crate::error::{SporeError, SporeResult};
 use tracing::{debug, info};
@@ -37,42 +46,149 @@ pub struct FamilySeed {
 }
 
 impl FamilySeed {
-    /// Generate random entropy and write to file
+    /// Generate genesis seed (parent DNA for a new family)
     ///
-    /// **Note**: This generates 256 bits of cryptographically secure random
-    /// bytes and writes them to disk. It does NOT perform any cryptographic
-    /// processing - that's BearDog's job.
+    /// Creates 256 bits of cryptographically secure random bytes to serve as
+    /// the "parent DNA" for a new genetic family. All siblings will derive
+    /// their unique seeds from this parent.
     ///
     /// # Security
     ///
     /// - Uses OS-level cryptographic RNG (`rand::thread_rng()`)
     /// - Sets file permissions to 0600 (owner read/write only) on Unix
-    /// - Does NOT process or derive keys from the seed
+    /// - Creates new genetic lineage (not derived from anything)
     ///
     /// # Arguments
     ///
     /// * `path` - Where to write the seed file (typically `.family.seed`)
-    pub fn generate_and_write<P: AsRef<Path>>(path: P) -> SporeResult<Self> {
+    pub fn generate_genesis<P: AsRef<Path>>(path: P) -> SporeResult<Self> {
         use rand::RngCore;
 
         let path = path.as_ref().to_path_buf();
-        info!("Generating family seed file at: {}", path.display());
+        info!("🧬 Generating genesis seed (parent DNA) at: {}", path.display());
 
-        // Generate 256 bits of entropy (32 bytes)
+        // Generate 256 bits of entropy (32 bytes) - the "parent DNA"
         let mut bytes = [0u8; 32];
         rand::thread_rng().fill_bytes(&mut bytes);
 
-        debug!("Generated 32 bytes of entropy");
+        debug!("Generated 32 bytes of genesis entropy");
 
         // Write to file
         fs::write(&path, bytes)?;
-        info!("Wrote seed to file: {}", path.display());
+        info!("Wrote genesis seed to file: {}", path.display());
 
         // Set secure permissions on Unix
         #[cfg(unix)]
         Self::set_secure_permissions(&path)?;
 
         Ok(Self { file_path: path })
+    }
+
+    /// Derive sibling seed from parent (genetic mixing)
+    ///
+    /// Creates a UNIQUE seed for a sibling by mixing:
+    /// - Parent seed (shared family DNA)
+    /// - Node ID (individual identity)
+    /// - Deployment batch (birth cohort)
+    ///
+    /// This makes siblings genetically RELATED but individually UNIQUE,
+    /// just like real biology!
+    ///
+    /// # Formula
+    ///
+    /// ```text
+    /// child_seed = SHA256(parent_seed || node_id || deployment_batch)
+    /// ```
+    ///
+    /// # Security
+    ///
+    /// - SHA256 ensures unique, unpredictable output
+    /// - Same inputs always produce same output (deterministic)
+    /// - Different node_id produces different seed
+    /// - Cannot reverse to find parent seed
+    ///
+    /// # Arguments
+    ///
+    /// * `parent_path` - Path to parent's .family.seed file
+    /// * `target_path` - Where to write child's seed
+    /// * `node_id` - Individual identity (e.g., "node-alpha")
+    /// * `deployment_batch` - Birth cohort (e.g., "20260107")
+    pub fn derive_sibling<P: AsRef<Path>>(
+        parent_path: P,
+        target_path: P,
+        node_id: &str,
+        deployment_batch: Option<&str>,
+    ) -> SporeResult<Self> {
+        let parent_path = parent_path.as_ref();
+        let target_path = target_path.as_ref().to_path_buf();
+
+        info!(
+            "🧬 Deriving sibling seed for '{}' from parent",
+            node_id
+        );
+
+        // Read parent seed (the "parent DNA")
+        let parent_seed = fs::read(parent_path)?;
+        if parent_seed.len() != 32 {
+            return Err(SporeError::InvalidSeedLength {
+                expected: 32,
+                found: parent_seed.len() as u64,
+            });
+        }
+
+        // Derive child seed using genetic mixing
+        let child_seed = Self::genetic_mix(&parent_seed, node_id, deployment_batch);
+
+        debug!(
+            "Derived unique child seed for '{}' (batch: {:?})",
+            node_id, deployment_batch
+        );
+
+        // Write child's unique genetic identity
+        fs::write(&target_path, child_seed)?;
+        info!("Wrote sibling seed to file: {}", target_path.display());
+
+        // Set secure permissions on Unix
+        #[cfg(unix)]
+        Self::set_secure_permissions(&target_path)?;
+
+        Ok(Self {
+            file_path: target_path,
+        })
+    }
+
+    /// Genetic mixing: combine parent DNA with individual traits
+    ///
+    /// Formula: child_seed = SHA256(parent_seed || node_id || batch_id)
+    ///
+    /// This creates unique individuals who share family traits:
+    /// - Same parent + different node_id = siblings (related but unique)
+    /// - Same batch_id = from same deployment (like twins/triplets)
+    fn genetic_mix(parent_seed: &[u8], node_id: &str, deployment_batch: Option<&str>) -> [u8; 32] {
+        let mut hasher = Sha256::new();
+
+        // Parent genetic material (shared by all siblings)
+        hasher.update(parent_seed);
+
+        // Individual identity (unique to this sibling)
+        hasher.update(node_id.as_bytes());
+
+        // Deployment batch (shared by siblings "born together")
+        if let Some(batch) = deployment_batch {
+            hasher.update(batch.as_bytes());
+        }
+
+        let result = hasher.finalize();
+        let mut child_seed = [0u8; 32];
+        child_seed.copy_from_slice(&result);
+        child_seed
+    }
+
+    /// Legacy: Generate and write (backward compatibility)
+    ///
+    /// Wraps `generate_genesis` for existing code.
+    pub fn generate_and_write<P: AsRef<Path>>(path: P) -> SporeResult<Self> {
+        Self::generate_genesis(path)
     }
 
     /// Load existing seed file

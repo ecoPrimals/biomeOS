@@ -22,15 +22,17 @@ anyhow = { workspace = true }
 rand = { workspace = true }  # For entropy generation only
 gethostname = { workspace = true }  # For node identification
 
+# Genetic derivation (sibling seeds)
+sha2 = { workspace = true }  # For SHA256-based seed derivation
+
 # biomeOS dependencies
 biomeos-types = { path = "../biomeos-types" }
 
 # Logging
 tracing = { workspace = true }
 
-# NO crypto dependencies!
-# BearDog handles all cryptography.
-# biomeOS-spore only does file management.
+# NOTE: Genetic derivation uses SHA256 for seed mixing
+# BearDog still handles all cryptographic operations on the seeds
 
 [dev-dependencies]
 tokio-test = "0.4"
