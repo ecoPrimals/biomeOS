@@ -449,25 +449,39 @@ fi
 
     /// Copy primal binaries to spore
     ///
-    /// The 3 core binaries (genetic material):
-    /// 1. `tower` - biomeOS orchestrator (nucleus)
-    /// 2. `beardog-server` - Security primal
-    /// 3. `songbird` - Discovery primal
+    /// **Capability-Based Copying** (NOT hardcoded!)
+    /// 
+    /// Copies ALL binaries from nucleusBin/:
+    /// - `tower/` - biomeOS orchestrator (always required)
+    /// - `primals/*` - ALL primal binaries (agnostic, discovered at runtime)
     ///
-    /// These binaries come from the "genetic material nucleus" (`primalBins/`)
+    /// This enables:
+    /// - New primals without code changes
+    /// - Chimeras (embedded primals)
+    /// - Name changes (beardog → beardog-v2)
+    /// - BYOB (Bring Your Own Biome) manifest system
+    ///
+    /// The tower.toml manifest determines which primals are actually used.
     async fn copy_binaries(&self) -> SporeResult<()> {
-        info!("Copying genetic material (3 core binaries)");
+        info!("Copying genetic material from nucleusBin/ (capability-based, agnostic)");
 
-        // Source: Genetic material nucleus
-        let nucleus_dir = PathBuf::from("primalBins");
+        // Source: NucleusBin - Single source of truth for stable binaries
+        let nucleus_dir = PathBuf::from("nucleusBin");
         
-        // 1. Copy tower orchestrator (nucleus)
-        let tower_src = PathBuf::from("bin/tower");
+        // Verify nucleus exists
+        if !nucleus_dir.exists() {
+            return Err(SporeError::BinaryNotFound(
+                "nucleusBin/ directory not found - run scripts/harvest-primals.sh first".to_string()
+            ));
+        }
+        
+        // 1. Copy tower orchestrator (always required)
+        let tower_src = nucleus_dir.join("tower/tower");
         let tower_dst = self.root_path.join("bin/tower");
 
         if tower_src.exists() {
             async_fs::copy(&tower_src, &tower_dst).await?;
-            info!("✅ Copied tower orchestrator (nucleus)");
+            info!("✅ Copied tower orchestrator from nucleusBin/tower/");
 
             #[cfg(unix)]
             {
@@ -478,49 +492,64 @@ fi
             }
         } else {
             return Err(SporeError::BinaryNotFound(
-                "tower orchestrator (nucleus)".to_string(),
+                format!("tower orchestrator not found at: {}", tower_src.display()),
             ));
         }
 
-        // 2. Copy beardog-server (security primal)
-        let beardog_src = nucleus_dir.join("beardog-server");
-        let beardog_dst = self.root_path.join("primals/beardog-server");
-
-        if beardog_src.exists() {
-            async_fs::copy(&beardog_src, &beardog_dst).await?;
-            info!("✅ Copied beardog-server");
-
-            #[cfg(unix)]
-            {
-                use std::os::unix::fs::PermissionsExt;
-                let mut perms = async_fs::metadata(&beardog_dst).await?.permissions();
-                perms.set_mode(0o755);
-                async_fs::set_permissions(&beardog_dst, perms).await?;
+        // 2. Copy ALL primals from nucleusBin/primals/ (capability-based, agnostic)
+        let primals_src_dir = nucleus_dir.join("primals");
+        let primals_dst_dir = self.root_path.join("primals");
+        
+        if !primals_src_dir.exists() {
+            return Err(SporeError::BinaryNotFound(
+                format!("primals/ directory not found at: {}", primals_src_dir.display())
+            ));
+        }
+        
+        let mut primal_count = 0;
+        let mut entries = async_fs::read_dir(&primals_src_dir).await?;
+        
+        while let Some(entry) = entries.next_entry().await? {
+            let path = entry.path();
+            
+            // Skip .gitkeep and other dotfiles
+            if let Some(name) = path.file_name() {
+                let name_str = name.to_string_lossy();
+                if name_str.starts_with('.') {
+                    continue;
+                }
             }
-        } else {
-            return Err(SporeError::BinaryNotFound("beardog-server".to_string()));
+            
+            // Only copy files (not directories)
+            if path.is_file() {
+                let file_name = path.file_name().unwrap();
+                let dst_path = primals_dst_dir.join(file_name);
+                
+                async_fs::copy(&path, &dst_path).await?;
+                primal_count += 1;
+                
+                info!("✅ Copied primal: {}", file_name.to_string_lossy());
+                
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::PermissionsExt;
+                    let mut perms = async_fs::metadata(&dst_path).await?.permissions();
+                    perms.set_mode(0o755);
+                    async_fs::set_permissions(&dst_path, perms).await?;
+                }
+            }
+        }
+        
+        if primal_count == 0 {
+            return Err(SporeError::BinaryNotFound(
+                "No primal binaries found in nucleusBin/primals/".to_string()
+            ));
         }
 
-        // 3. Copy songbird (discovery primal)
-        let songbird_src = nucleus_dir.join("songbird");
-        let songbird_dst = self.root_path.join("primals/songbird");
-
-        if songbird_src.exists() {
-            async_fs::copy(&songbird_src, &songbird_dst).await?;
-            info!("✅ Copied songbird");
-
-            #[cfg(unix)]
-            {
-                use std::os::unix::fs::PermissionsExt;
-                let mut perms = async_fs::metadata(&songbird_dst).await?.permissions();
-                perms.set_mode(0o755);
-                async_fs::set_permissions(&songbird_dst, perms).await?;
-            }
-        } else {
-            return Err(SporeError::BinaryNotFound("songbird".to_string()));
-        }
-
-        info!("✅ Genetic material copied (3/3 core binaries)");
+        info!(
+            "✅ Genetic material copied from nucleusBin/ (tower + {} primals, capability-based)",
+            primal_count
+        );
         Ok(())
     }
 

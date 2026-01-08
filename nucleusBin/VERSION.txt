@@ -1,7 +1,7 @@
 # NucleusBin Version Manifest
-# Updated: Thu Jan  8 09:17:09 AM EST 2026
+# Updated: Thu Jan  8 09:29:25 AM EST 2026
 
-tower: git:a65de7b
+tower: git:5d1d1ca
 beardog-server: git:dc9b4426c  
 songbird: git:c77684cd2
 
