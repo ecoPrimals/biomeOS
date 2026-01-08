@@ -606,6 +606,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "biomeos-compute"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "futures 0.3.31",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tokio-test",
+ "toml",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "biomeos-core"
 version = "0.1.0"
 dependencies = [

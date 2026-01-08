@@ -21,6 +21,7 @@ members = [
     "crates/biomeos-niche",
     "crates/biomeos-spore",  # USB spore system (orchestration only, BearDog handles crypto)
     "crates/biomeos-federation",  # Hierarchical federation and sub-federation management
+    "crates/biomeos-compute",  # Isomorphic & fractal compute architecture
     # "crates/biomeos-ui",  # Archived 2025-12-23: Legacy UI crate, moved to archive/
     "federation",
     # "ui",  # Archived 2025-12-23: UI evolved into petalTongue primal (../petalTongue/)
