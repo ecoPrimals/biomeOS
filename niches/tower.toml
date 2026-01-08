@@ -1,0 +1,271 @@
+# =============================================================================
+# TOWER NICHE - Communication Stack with Graph Orchestration
+# =============================================================================
+#
+# Purpose: P2P communication, discovery, genetic federation
+# Architecture: Vertical (communication) vs Horizontal (compute)
+#
+# Components:
+#   - Songbird: Discovery, P2P tunneling, BTSP protocol
+#   - BearDog: Encryption, genetic lineage verification
+#   - biomeOS: Orchestration (minimal footprint)
+#
+# Use Cases:
+#   - LAN/WAN federation
+#   - Genetic family discovery
+#   - Encrypted P2P tunnels
+#   - Multi-tower coordination
+#
+# Created: January 8, 2026
+# Status: Production Ready (with Neural API graphs!)
+#
+# =============================================================================
+
+[niche]
+name = "tower"
+version = "1.0.0"
+type = "communication"
+description = "Vertical communication stack for P2P federation"
+architecture = "vertical"  # Communication tower vs compute node
+
+# Genetic lineage (from parent spore or seed)
+family_seed_file = "./.family.seed"
+
+# =============================================================================
+# PRIMALS CONFIGURATION
+# =============================================================================
+
+# Discovery & Federation: Songbird
+[[primals]]
+binary = "./primals/songbird-orchestrator"
+provides = [
+    "discovery",
+    "federation",
+    "p2p",
+    "tunneling",
+    "btsp-protocol",
+    "encrypted-transfer",
+    "nat-traversal"
+]
+requires = ["security"]  # Needs BearDog for encryption
+
+[primals.env]
+# Identity
+SONGBIRD_NODE_ID = "${NODE_ID}"
+SONGBIRD_FAMILY_ID = "${FAMILY_ID}"
+SONGBIRD_NODE_NAME = "${NODE_NAME:-tower-${NODE_ID}}"
+
+# Discovery
+SONGBIRD_UDP_MULTICAST = "${UDP_MULTICAST:-true}"
+SONGBIRD_UDP_MULTICAST_ADDR = "${UDP_MULTICAST_ADDR:-239.255.42.1:4242}"
+SONGBIRD_DISCOVERY_INTERVAL_MS = "${DISCOVERY_INTERVAL_MS:-5000}"
+
+# BTSP (BirdSong Tunnel Protocol)
+SONGBIRD_BTSP_ENABLED = "true"
+SONGBIRD_BTSP_UDP_PORT = "${BTSP_UDP_PORT:-4433}"
+
+# HTTP Fallback (for legacy or NAT traversal)
+SONGBIRD_HTTP_ENABLED = "${HTTP_ENABLED:-false}"
+SONGBIRD_HTTP_PORT = "${HTTP_PORT:-8081}"
+
+# Unix Socket (primary IPC)
+# Auto-created at: /tmp/songbird-${NODE_ID}.sock
+
+# Logging
+RUST_LOG = "${LOG_LEVEL:-info}"
+
+# Security & Encryption: BearDog
+[[primals]]
+binary = "./primals/beardog-server"
+provides = [
+    "security",           # Core capability for other primals
+    "encryption",
+    "decryption",
+    "genetic-lineage",
+    "crypto-lock",
+    "key-derivation",
+    "access-control"
+]
+requires = []  # Self-sufficient
+
+[primals.env]
+# Identity
+BEARDOG_NODE_ID = "${NODE_ID}"
+BEARDOG_FAMILY_ID = "${FAMILY_ID}"
+BEARDOG_FAMILY_SEED_FILE = "./.family.seed"
+
+# Mode
+BEARDOG_MODE = "federation"  # Optimized for tower use
+BEARDOG_HSM_MODE = "software"  # Or "hardware" if available
+
+# Communication
+BEARDOG_HTTP_ENABLED = "false"  # Unix socket only
+# Auto-created at: /tmp/beardog-${FAMILY_ID}-${NODE_ID}.sock
+
+# Logging
+RUST_LOG = "${LOG_LEVEL:-info}"
+
+# =============================================================================
+# NEURAL API: GRAPH-BASED ORCHESTRATION
+# =============================================================================
+
+# Deploy Graph: Complete tower deployment
+[[graphs]]
+name = "deploy"
+path = "../graphs/tower_deploy.toml"
+description = "Deploy complete tower stack with federation"
+default = true  # Use this graph for 'biomeos deploy --niche tower'
+
+# Health Check Graph: Parallel health verification
+[[graphs]]
+name = "health_check"
+path = "../graphs/tower_health_check.toml"
+description = "Verify tower health (parallel execution)"
+
+# Shutdown Graph: Graceful shutdown
+[[graphs]]
+name = "shutdown"
+path = "../graphs/tower_shutdown.toml"
+description = "Gracefully shutdown tower components"
+
+# =============================================================================
+# TOWER CONFIGURATION
+# =============================================================================
+
+[tower]
+# Mode
+mode = "${TOWER_MODE:-p2p}"  # p2p|relay|hybrid
+
+# Federation
+federation_enabled = true
+discovery_enabled = true
+nat_traversal_enabled = true
+
+# =============================================================================
+# DISCOVERY
+# =============================================================================
+
+[discovery]
+# UDP Multicast (default for LAN)
+udp_multicast = "${UDP_MULTICAST:-true}"
+udp_multicast_addr = "${UDP_MULTICAST_ADDR:-239.255.42.1:4242}"
+discovery_interval_ms = "${DISCOVERY_INTERVAL_MS:-5000}"
+
+# Family tags to discover
+family_tags = ["${FAMILY_ID}"]  # From genetic lineage
+
+# Additional discovery mechanisms
+mdns_enabled = "${MDNS_ENABLED:-true}"
+upnp_enabled = "${UPNP_ENABLED:-false}"
+
+# =============================================================================
+# FEDERATION
+# =============================================================================
+
+[federation]
+# Genetic lineage for trust
+family_seed_file = "./.family.seed"
+family_id = "${FAMILY_ID}"
+require_genetic_verification = true
+
+# Sub-federations (granular access control)
+# Example: ["gaming", "family", "work"]
+sub_federations = "${SUB_FEDERATIONS:-}"
+
+# Capabilities to announce
+announce_capabilities = "${ANNOUNCE_CAPABILITIES:-storage,compute}"
+
+# =============================================================================
+# ENCRYPTION & SECURITY
+# =============================================================================
+
+[security]
+# Encryption (always on)
+encryption_enabled = true
+algorithm = "AES-256-GCM"  # Via BearDog
+
+# BTSP (BirdSong Tunnel Protocol)
+btsp_enabled = true
+btsp_udp_port = "${BTSP_UDP_PORT:-4433}"
+
+# Genetic lineage verification
+verify_genetic_lineage = true
+trusted_families = ["${FAMILY_ID}"]
+
+# =============================================================================
+# COMMUNICATION
+# =============================================================================
+
+[communication]
+# Primary protocol
+primary_protocol = "btsp"  # btsp|https
+
+# BTSP (BirdSong Tunnel Protocol) - UDP-based P2P
+[communication.btsp]
+enabled = true
+udp_port = "${BTSP_UDP_PORT:-4433}"
+nat_traversal = true
+hole_punching_enabled = true
+
+# HTTP Fallback (for legacy/NAT)
+[communication.http]
+enabled = "${HTTP_ENABLED:-false}"
+port = "${HTTP_PORT:-8081}"
+tls_enabled = true
+
+# Unix Sockets (local IPC)
+[communication.unix]
+enabled = true
+songbird_socket = "/tmp/songbird-${NODE_ID}.sock"
+beardog_socket = "/tmp/beardog-${FAMILY_ID}-${NODE_ID}.sock"
+
+# =============================================================================
+# MONITORING
+# =============================================================================
+
+[monitoring]
+# Metrics
+prometheus_enabled = "${PROMETHEUS_ENABLED:-true}"
+prometheus_port = "${PROMETHEUS_PORT:-9092}"
+
+# Health checks
+health_check_interval_seconds = 30
+
+# Logging
+log_level = "${LOG_LEVEL:-info}"
+log_file = "/var/log/tower-${NODE_ID}.log"
+log_fossil_enabled = true  # Integrate with biomeOS log fossil
+
+# =============================================================================
+# EXAMPLE DEPLOYMENT SCENARIOS
+# =============================================================================
+
+# Scenario 1: Simple LAN Tower
+# export NODE_ID=tower-alpha
+# export NODE_NAME=northgate
+# export FAMILY_ID=nat0
+# biomeos deploy --niche tower
+# (Uses default "deploy" graph automatically!)
+
+# Scenario 2: WAN Tower with Multiple Sub-Federations
+# export NODE_ID=tower-beta
+# export NODE_NAME=strandgate
+# export FAMILY_ID=nat0
+# export SUB_FEDERATIONS=gaming,family,work
+# export ANNOUNCE_CAPABILITIES=storage,compute,ai
+# biomeos deploy --niche tower --graph deploy
+
+# Scenario 3: Mobile Tower (Minimal)
+# export NODE_ID=tower-mobile
+# export NODE_NAME=swiftgate
+# export FAMILY_ID=nat0
+# export PROMETHEUS_ENABLED=false
+# export UDP_MULTICAST=false  # Save battery
+# biomeos deploy --niche tower
+
+# Scenario 4: Health Check Existing Tower
+# biomeos run --niche tower --graph health_check
+
+# Scenario 5: Graceful Shutdown
+# biomeos run --niche tower --graph shutdown
+

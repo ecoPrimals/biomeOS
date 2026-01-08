@@ -3,6 +3,8 @@
 //! This crate provides comprehensive manifest parsing, validation, and management
 //! capabilities for biomeOS.
 
+pub mod niche;  // TOML-based niche manifests with graph support
+
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;

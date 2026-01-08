@@ -61,6 +61,7 @@ RUST_LOG = "${LOG_LEVEL:-info}"
 [[primals]]
 binary = "./primals/beardog-server"
 provides = [
+    "security",           # Core capability for other primals
     "encryption",
     "decryption",
     "access-control",

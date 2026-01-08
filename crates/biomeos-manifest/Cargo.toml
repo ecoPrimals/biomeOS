@@ -15,6 +15,7 @@ biomeos-types = { path = "../biomeos-types" }
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9"
 serde_json = "1.0"
+toml = { workspace = true }
 
 # Date/time handling
 chrono = { version = "0.4", features = ["serde"] }
@@ -24,6 +25,7 @@ uuid = { version = "1.0", features = ["v4", "serde"] }
 
 # Error handling
 anyhow = "1.0"
+thiserror = { workspace = true }
 
 # File I/O and path utilities
 # (using std library - no external dependency needed)
