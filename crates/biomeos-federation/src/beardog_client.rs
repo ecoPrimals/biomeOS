@@ -135,12 +135,13 @@ impl BearDogClient {
         }
     }
     
-    /// Verify if a seed is part of a family
+    /// Verify if a seed is part of a family (BearDog v0.15.2+)
     pub async fn verify_same_family(
         &self,
         family_id: &str,
         seed_hash: &str,
-    ) -> Result<bool> {
+        node_id: &str,
+    ) -> Result<LineageVerificationResponse> {
         match &self.endpoint {
             BearDogEndpoint::UnixSocket(path) => {
                 let client = UnixSocketClient::new(path);
@@ -148,7 +149,7 @@ impl BearDogClient {
                 let params = json!({
                     "family_id": family_id,
                     "seed_hash": seed_hash,
-                    "node_id": std::env::var("NODE_ID").unwrap_or_else(|_| "unknown".to_string()),
+                    "node_id": node_id,
                 });
                 
                 let result = client
@@ -156,12 +157,24 @@ impl BearDogClient {
                     .await
                     .context("Failed to call federation.verify_family_member")?;
                 
-                Ok(result["is_family_member"].as_bool().unwrap_or(false))
+                Ok(LineageVerificationResponse {
+                    is_family_member: result["is_family_member"].as_bool().unwrap_or(false),
+                    parent_seed_hash: result["parent_seed_hash"].as_str().unwrap_or("").to_string(),
+                    relationship: result["relationship"].as_str().unwrap_or("unknown").to_string(),
+                })
             }
             BearDogEndpoint::Http(url) => {
-                let request = LineageVerificationRequest {
+                #[derive(Serialize)]
+                struct HttpRequest {
+                    family_id: String,
+                    seed_hash: String,
+                    node_id: String,
+                }
+                
+                let request = HttpRequest {
                     family_id: family_id.to_string(),
                     seed_hash: seed_hash.to_string(),
+                    node_id: node_id.to_string(),
                 };
                 
                 let client = reqwest::Client::new();
@@ -175,7 +188,7 @@ impl BearDogClient {
                     .await
                     .context("Failed to parse lineage verification response")?;
                 
-                Ok(response.is_family_member)
+                Ok(response)
             }
         }
     }
