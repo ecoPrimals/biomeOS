@@ -1,0 +1,44 @@
+# =============================================================================
+# Tower Health Check Graph
+# =============================================================================
+#
+# Verify all tower components are healthy and responding
+#
+# =============================================================================
+
+[graph]
+name = "tower-health-check"
+description = "Verify tower health across all components"
+version = "1.0.0"
+coordination = "Parallel"
+
+[[nodes]]
+id = "check-songbird"
+primal = { by_capability = "discovery" }
+operation = { name = "health_check" }
+output = "songbird_status"
+parallel_group = 1
+
+[nodes.constraints]
+timeout_ms = 3000
+
+[[nodes]]
+id = "check-beardog"
+primal = { by_capability = "encryption" }
+operation = { name = "health_check" }
+output = "beardog_status"
+parallel_group = 1
+
+[nodes.constraints]
+timeout_ms = 3000
+
+[[nodes]]
+id = "check-federation"
+primal = { by_capability = "discovery" }
+operation = { name = "get_federation_status" }
+output = "federation_status"
+parallel_group = 1
+
+[nodes.constraints]
+timeout_ms = 5000
+

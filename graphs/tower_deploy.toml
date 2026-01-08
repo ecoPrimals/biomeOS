@@ -1,0 +1,175 @@
+# =============================================================================
+# Tower Deployment Graph - Phase 1 Neural API
+# =============================================================================
+#
+# This graph deploys a complete Tower niche:
+# - Songbird (discovery + P2P tunneling)
+# - BearDog (encryption + genetic lineage)
+# - biomeOS (orchestration)
+#
+# Deep Debt Principles:
+# - Capability-based discovery (no hardcoding!)
+# - Runtime primal resolution
+# - Self-knowledge only
+#
+# =============================================================================
+
+[graph]
+name = "deploy-tower"
+description = "Deploy a complete Tower communication stack"
+version = "1.0.0"
+coordination = "Sequential"
+
+# =============================================================================
+# Discovery Phase - Find Available Primals
+# =============================================================================
+
+[[nodes]]
+id = "discover-songbird"
+primal = { by_capability = "discovery" }
+operation = { name = "health_check" }
+output = "songbird_healthy"
+
+[nodes.constraints]
+timeout_ms = 5000
+
+[[nodes]]
+id = "discover-beardog"
+primal = { by_capability = "encryption" }
+operation = { name = "health_check" }
+output = "beardog_healthy"
+
+[nodes.constraints]
+timeout_ms = 5000
+
+# =============================================================================
+# Startup Phase - Launch Primals
+# =============================================================================
+
+[[nodes]]
+id = "start-songbird"
+primal = { by_capability = "discovery" }
+output = "songbird_started"
+
+[nodes.operation]
+name = "start"
+[nodes.operation.params]
+mode = "daemon"
+
+[nodes.constraints]
+timeout_ms = 30000
+[nodes.constraints.retry]
+max_attempts = 3
+backoff_ms = 1000
+
+[[nodes]]
+id = "start-beardog"
+primal = { by_capability = "encryption" }
+output = "beardog_started"
+
+[nodes.operation]
+name = "start"
+[nodes.operation.params]
+mode = "daemon"
+
+[nodes.constraints]
+timeout_ms = 30000
+[nodes.constraints.retry]
+max_attempts = 3
+backoff_ms = 1000
+
+# =============================================================================
+# Verification Phase - Ensure Federation Ready
+# =============================================================================
+
+[[nodes]]
+id = "verify-genetic-lineage"
+primal = { by_capability = "encryption" }
+output = "lineage_verified"
+
+[nodes.operation]
+name = "verify_family_member"
+[nodes.operation.params]
+family_id = "nat0"
+
+[nodes.constraints]
+timeout_ms = 5000
+
+[[nodes]]
+id = "discover-peers"
+primal = { by_capability = "discovery" }
+output = "peers_discovered"
+
+[nodes.operation]
+name = "discover_by_family"
+[nodes.operation.params]
+family_tags = ["nat0"]
+timeout_ms = 5000
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# =============================================================================
+# Federation Phase - Establish Tunnels
+# =============================================================================
+
+[[nodes]]
+id = "create-genetic-tunnels"
+primal = { by_capabilities = ["discovery", "tunneling"] }
+operation = { name = "create_tunnels_to_peers" }
+output = "tunnels_established"
+
+[nodes.constraints]
+timeout_ms = 15000
+
+# =============================================================================
+# Announcement Phase - Broadcast Capabilities
+# =============================================================================
+
+[[nodes]]
+id = "announce-capabilities"
+primal = { by_capability = "discovery" }
+output = "capabilities_announced"
+
+[nodes.operation]
+name = "announce_capabilities"
+[nodes.operation.params]
+capabilities = ["storage", "compute"]
+sub_federations = ["gaming", "family"]
+genetic_families = ["nat0"]
+
+[nodes.constraints]
+timeout_ms = 5000
+
+# =============================================================================
+# Dependencies (Explicit Ordering)
+# =============================================================================
+
+[[edges]]
+from = "discover-songbird"
+to = "start-songbird"
+
+[[edges]]
+from = "discover-beardog"
+to = "start-beardog"
+
+[[edges]]
+from = "start-songbird"
+to = "verify-genetic-lineage"
+
+[[edges]]
+from = "start-beardog"
+to = "verify-genetic-lineage"
+
+[[edges]]
+from = "verify-genetic-lineage"
+to = "discover-peers"
+
+[[edges]]
+from = "discover-peers"
+to = "create-genetic-tunnels"
+
+[[edges]]
+from = "create-genetic-tunnels"
+to = "announce-capabilities"
+

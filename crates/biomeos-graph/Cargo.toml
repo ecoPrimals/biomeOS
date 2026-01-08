@@ -1,0 +1,45 @@
+[package]
+name = "biomeos-graph"
+version = "0.1.0"
+edition = "2021"
+authors = ["biomeOS Team"]
+description = "Graph-based orchestration for adaptive primal coordination"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+# Async runtime
+tokio = { workspace = true }
+async-trait = { workspace = true }
+futures = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+toml = { workspace = true }
+
+# Error handling
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+
+# UUID for graph IDs
+uuid = { workspace = true }
+
+# Time
+chrono = { workspace = true }
+
+# Graph algorithms (for cycle detection, topological sort)
+petgraph = "0.6"
+
+# biomeOS dependencies
+biomeos-types = { path = "../biomeos-types" }
+
+[dev-dependencies]
+tokio-test = { workspace = true }
+
+[lib]
+name = "biomeos_graph"
+path = "src/lib.rs"
+
