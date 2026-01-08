@@ -15,6 +15,7 @@ biomeos-primal-sdk = { path = "../biomeos-primal-sdk" }
 biomeos-types = { path = "../biomeos-types" }
 biomeos-chimera = { path = "../biomeos-chimera" }
 biomeos-spore = { path = "../biomeos-spore" }
+biomeos-federation = { path = "../biomeos-federation" }
 clap = { version = "4.4", features = ["derive", "color"] }
 tokio = { version = "1.0", features = ["full"] }
 anyhow = "1.0"

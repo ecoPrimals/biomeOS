@@ -7,6 +7,8 @@ pub mod chimera;
 pub mod deploy;
 pub mod discover;
 pub mod fossil;
+pub mod incubation;
+pub mod federation;
 pub mod health;
 pub mod monitor;
 pub mod niche;
@@ -31,4 +33,19 @@ pub use niche::{handle_niche_list, handle_niche_show, handle_primal_list};
 pub use spore::{
     handle_spore_clone, handle_spore_create, handle_spore_info,
     handle_spore_list, handle_spore_refresh, handle_spore_verify,
+};
+
+// Verify commands
+pub use verify::run as verify_run;
+
+// Fossil commands
+pub use fossil::run as fossil_run;
+
+// Incubation commands
+pub use incubation::{handle_spore_incubate, handle_node_list_local};
+
+// Federation commands
+pub use federation::{
+    handle_federation_create_subfed, handle_federation_list_subfeds,
+    handle_federation_join_subfed, handle_federation_check_access,
 };

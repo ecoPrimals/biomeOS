@@ -45,9 +45,31 @@ enum PrimalAction {
     },
 }
 
+/// Federation subcommands
+#[derive(Subcommand)]
+enum FederationAction {
+    /// Create a new sub-federation
+    CreateSubfed(federation::CreateSubfedArgs),
+    /// List all sub-federations
+    ListSubfeds(federation::ListSubfedsArgs),
+    /// Join a sub-federation
+    JoinSubfed(federation::JoinSubfedArgs),
+    /// Check node access to capabilities
+    CheckAccess(federation::CheckAccessArgs),
+}
+
+/// Node subcommands
+#[derive(Subcommand)]
+enum NodeAction {
+    /// List locally incubated nodes
+    ListLocal(incubation::ListLocalArgs),
+}
+
 /// Spore subcommands
 #[derive(Subcommand)]
 enum SporeAction {
+    /// Incubate spore on local computer
+    Incubate(incubation::IncubateArgs),
     /// Create new USB spore
     Create {
         /// USB mount point (e.g., /media/usb)
@@ -341,6 +363,18 @@ enum Commands {
         #[arg(short, long)]
         metrics: bool,
     },
+
+    /// Manage sub-federations (hierarchical trust networks)
+    Federation {
+        #[command(subcommand)]
+        action: FederationAction,
+    },
+
+    /// Manage local nodes (incubated spores)
+    Node {
+        #[command(subcommand)]
+        action: NodeAction,
+    },
 }
 
 #[tokio::main]
@@ -370,6 +404,9 @@ async fn main() -> Result<()> {
             }
         },
         Commands::Spore { action } => match action {
+            SporeAction::Incubate(args) => {
+                handle_spore_incubate(&args).await?
+            }
             SporeAction::Create {
                 mount,
                 label,
@@ -477,6 +514,25 @@ async fn main() -> Result<()> {
         } => {
             handle_status(service, format, metrics).await?;
         }
+        Commands::Federation { action } => match action {
+            FederationAction::CreateSubfed(args) => {
+                handle_federation_create_subfed(&args).await?;
+            }
+            FederationAction::ListSubfeds(args) => {
+                handle_federation_list_subfeds(&args).await?;
+            }
+            FederationAction::JoinSubfed(args) => {
+                handle_federation_join_subfed(&args).await?;
+            }
+            FederationAction::CheckAccess(args) => {
+                handle_federation_check_access(&args).await?;
+            }
+        },
+        Commands::Node { action } => match action {
+            NodeAction::ListLocal(args) => {
+                handle_node_list_local(&args).await?;
+            }
+        },
     }
 
     Ok(())
