@@ -1,0 +1,320 @@
+# =============================================================================
+# COMPUTE NODE NICHE - Horizontal Compute Architecture
+# =============================================================================
+#
+# Purpose: Distributed workload execution and resource management
+# Architecture: Horizontal (computation) vs Tower (communication)
+#
+# Components:
+#   - Toadstool: Universal compute platform (workload manager)
+#   - BearDog: Optional crypto lock for secure workloads
+#   - Songbird: Conditional, spawned only if complex comms needed
+#
+# Use Cases:
+#   - Multi-GPU compute on same machine
+#   - Nested nodes (parent → sub-nodes)
+#   - Pooled resources (multiple CPUs act as one)
+#   - Spread compute (one logical node across machines)
+#
+# Created: January 8, 2026
+# Status: Production Ready
+#
+# =============================================================================
+
+[niche]
+name = "compute-node"
+version = "1.0.0"
+type = "compute"
+description = "Horizontal compute architecture for workload execution"
+architecture = "horizontal"  # vs "vertical" for towers
+
+# Genetic lineage (from parent spore or tower)
+family_seed_file = "./.family.seed"
+
+# =============================================================================
+# PRIMALS CONFIGURATION
+# =============================================================================
+
+# Core: Toadstool (Universal Compute)
+[[primals]]
+binary = "./primals/toadstool"
+provides = [
+    "universal-compute",
+    "workload-scheduling",
+    "multi-runtime-execution",
+    "gpu-compute",
+    "native-execution",
+    "wasm-execution",
+    "container-execution",
+    "resource-management",
+    "monitoring"
+]
+requires = []  # Self-sufficient compute node
+
+[primals.env]
+# Node identity
+TOADSTOOL_NODE_ID = "${NODE_ID}"
+TOADSTOOL_FAMILY_ID = "${FAMILY_ID}"
+
+# Resource configuration
+TOADSTOOL_RESOURCE_TYPE = "${RESOURCE_TYPE:-hybrid}"  # gpu|cpu|wasm|container|hybrid
+TOADSTOOL_RESOURCE_ID = "${RESOURCE_ID:-0}"  # Device ID or pool ID
+TOADSTOOL_MODE = "compute"  # Compute mode vs daemon mode
+
+# Capacity
+TOADSTOOL_MAX_CONCURRENT = "${MAX_CONCURRENT:-4}"
+TOADSTOOL_MEMORY_LIMIT_GB = "${MEMORY_LIMIT_GB:-16}"
+TOADSTOOL_CPU_CORES = "${CPU_CORES:-8}"
+
+# Execution
+TOADSTOOL_RUNTIMES = "${RUNTIMES:-native,wasm,container}"
+TOADSTOOL_ISOLATION = "${ISOLATION_MODE:-process}"  # process|container|vm|none
+TOADSTOOL_SANDBOX = "${SANDBOX_ENABLED:-true}"
+
+# Communication (minimal)
+TOADSTOOL_UNIX_SOCKET = "/tmp/compute-node-${NODE_ID}.sock"
+TOADSTOOL_HTTP_ENABLED = "${HTTP_ENABLED:-false}"  # Only for metrics
+TOADSTOOL_HTTP_PORT = "${HTTP_PORT:-9090}"  # Prometheus
+
+# Logging
+RUST_LOG = "${LOG_LEVEL:-info}"
+
+# Optional: BearDog (Crypto Lock for Secure Workloads)
+[[primals]]
+binary = "./primals/beardog-server"
+provides = [
+    "security",
+    "encryption",
+    "crypto-lock",
+    "encrypted-memory",
+    "workload-verification"
+]
+requires = []
+optional = true  # Only enabled if TOADSTOOL_SECURE_MODE=true
+
+[primals.env]
+# Identity
+BEARDOG_NODE_ID = "${NODE_ID}"
+BEARDOG_FAMILY_ID = "${FAMILY_ID}"
+BEARDOG_FAMILY_SEED_FILE = "./.family.seed"
+
+# Mode
+BEARDOG_MODE = "crypto-lock"  # Minimal mode for compute nodes
+BEARDOG_HSM_MODE = "software"  # Or "hardware" if available
+
+# Communication
+BEARDOG_HTTP_ENABLED = "false"  # Unix socket only
+# Socket auto-created at: /tmp/beardog-${FAMILY_ID}-${NODE_ID}.sock
+
+# Logging
+RUST_LOG = "${LOG_LEVEL:-info}"
+
+# =============================================================================
+# NODE CONFIGURATION
+# =============================================================================
+
+[node]
+# Topology
+topology = "${TOPOLOGY:-standalone}"  # standalone|nested|pooled|spread
+
+# Resource binding
+resource_type = "${RESOURCE_TYPE:-hybrid}"
+resource_id = "${RESOURCE_ID:-0}"
+
+# Capacity
+max_concurrent_workloads = "${MAX_CONCURRENT:-4}"
+memory_limit_gb = "${MEMORY_LIMIT_GB:-16}"
+cpu_cores = "${CPU_CORES:-8}"
+gpu_memory_gb = "${GPU_MEMORY_GB:-0}"  # 0 = no GPU
+
+# Isolation
+isolation_mode = "${ISOLATION_MODE:-process}"
+sandbox_enabled = "${SANDBOX_ENABLED:-true}"
+
+# =============================================================================
+# WORKLOAD EXECUTION
+# =============================================================================
+
+[execution]
+# Runtimes to enable
+runtimes = "${RUNTIMES:-native,wasm,container}"
+
+# Execution policy
+preemption_enabled = "${PREEMPTION:-false}"
+priority_scheduling = "${PRIORITY_SCHEDULING:-true}"
+fair_scheduling = "${FAIR_SCHEDULING:-true}"
+
+# Resource limits per workload
+[execution.limits]
+max_cpu_percent = 80
+max_memory_percent = 90
+max_execution_time_seconds = 3600
+max_gpu_memory_percent = 95
+
+# =============================================================================
+# COMMUNICATION (Minimal)
+# =============================================================================
+
+[communication]
+# Node communication strategy
+strategy = "minimal"  # minimal|local|mesh
+
+# Unix socket for local IPC
+unix_socket = "/tmp/compute-node-${NODE_ID}.sock"
+
+# HTTP only for monitoring
+http_enabled = "${HTTP_ENABLED:-false}"
+http_port = "${HTTP_PORT:-9090}"
+
+# When to spawn Songbird (conditional)
+spawn_songbird_if = [
+    "multi_machine_coordination",
+    "p2p_data_transfer",
+    "discovery_needed"
+]
+
+# =============================================================================
+# MONITORING
+# =============================================================================
+
+[monitoring]
+# Resource tracking
+track_cpu = true
+track_memory = true
+track_gpu = true
+track_disk_io = true
+track_network_io = false  # Compute nodes don't network much
+
+# Metrics
+prometheus_enabled = "${PROMETHEUS_ENABLED:-true}"
+prometheus_port = "${HTTP_PORT:-9090}"
+
+# Logging
+log_level = "${LOG_LEVEL:-info}"
+log_file = "/var/log/compute-node-${NODE_ID}.log"
+log_fossil_enabled = true  # Integrate with biomeOS log fossil
+
+# =============================================================================
+# SECURITY (if BearDog enabled)
+# =============================================================================
+
+[security]
+# Crypto Lock for sensitive workloads
+enabled = "${TOADSTOOL_SECURE_MODE:-false}"
+crypto_lock_enabled = true
+encrypted_memory = true
+secure_enclave = false  # Requires hardware support
+
+# Workload verification
+verify_workload_signatures = true
+trusted_deployers = ["${FAMILY_ID}"]  # From genetic lineage
+
+# =============================================================================
+# FEDERATION (Tower Spawning)
+# =============================================================================
+
+[federation]
+# Genetic lineage for trust
+family_seed_file = "./.family.seed"
+family_id = "${FAMILY_ID}"
+
+# When to spawn a Tower for communication
+spawn_tower_if = [
+    "remote_coordination_needed",
+    "p2p_federation_required",
+    "discovery_beyond_local"
+]
+
+# Tower configuration (if spawned)
+[federation.tower]
+songbird_enabled = true
+beardog_enabled = true
+biomeos_enabled = false  # Lightweight tower
+
+# =============================================================================
+# ADVANCED: NESTED NODES
+# =============================================================================
+
+[nested]
+# Enable nested sub-nodes
+enabled = "${NESTED_ENABLED:-false}"
+
+# Sub-node configuration
+[nested.sub_nodes]
+count = "${SUB_NODE_COUNT:-4}"
+resource_split = "${RESOURCE_SPLIT:-equal}"  # equal|weighted|dynamic
+
+# Sub-node naming
+naming_pattern = "${NODE_ID}-sub{index}"
+
+# =============================================================================
+# ADVANCED: POOLED NODES
+# =============================================================================
+
+[pooled]
+# Enable pooling with other nodes
+enabled = "${POOLED_ENABLED:-false}"
+
+# Pool configuration
+pool_id = "${POOL_ID:-cpu-pool-1}"
+coordinator = "${POOL_COORDINATOR:-false}"
+
+# Pool members (if coordinator)
+[pooled.members]
+nodes = []  # Populate if coordinator
+
+# =============================================================================
+# ADVANCED: SPREAD NODES
+# =============================================================================
+
+[spread]
+# Enable spreading across machines
+enabled = "${SPREAD_ENABLED:-false}"
+
+# Spread configuration
+logical_node_id = "${LOGICAL_NODE_ID:-}"
+physical_node_id = "${NODE_ID}"
+
+# Coordinator node
+coordinator_endpoint = "${COORDINATOR_ENDPOINT:-}"
+
+# Resource contribution
+[spread.contribution]
+resource_type = "${RESOURCE_TYPE:-cpu}"
+resource_amount = "${RESOURCE_AMOUNT:-8 cores}"
+
+# =============================================================================
+# EXAMPLE DEPLOYMENT SCENARIOS
+# =============================================================================
+
+# Scenario 1: Simple GPU Compute Node
+# export NODE_ID=compute-gpu0
+# export FAMILY_ID=nat0
+# export RESOURCE_TYPE=gpu
+# export RESOURCE_ID=0
+# biomeos deploy --niche compute-node
+
+# Scenario 2: Secure CPU Pool Coordinator
+# export NODE_ID=cpu-pool-coordinator
+# export FAMILY_ID=nat0
+# export TOADSTOOL_SECURE_MODE=true
+# export POOLED_ENABLED=true
+# export POOL_COORDINATOR=true
+# biomeos deploy --niche compute-node
+
+# Scenario 3: Nested GPU with Sub-Nodes
+# export NODE_ID=gpu-nested-parent
+# export FAMILY_ID=nat0
+# export RESOURCE_TYPE=gpu
+# export NESTED_ENABLED=true
+# export SUB_NODE_COUNT=4
+# biomeos deploy --niche compute-node
+
+# Scenario 4: Spread ML Training Node
+# export NODE_ID=ml-train-physical-alpha
+# export LOGICAL_NODE_ID=ml-train-distributed
+# export FAMILY_ID=nat0
+# export SPREAD_ENABLED=true
+# export COORDINATOR_ENDPOINT=udp://192.168.1.100:4433
+# biomeos deploy --niche compute-node
+
