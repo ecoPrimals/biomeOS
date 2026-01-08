@@ -46,6 +46,7 @@
 
 pub mod error;
 pub mod manifest;
+pub mod refresh;
 pub mod seed;
 pub mod spore;
 pub mod verification;

@@ -94,6 +94,17 @@ enum SporeAction {
         mount: PathBuf,
     },
     
+    /// Refresh spore binaries from nucleusBin
+    Refresh {
+        /// Spore mount point (e.g., /media/usb/biomeOS)
+        #[arg(value_name = "MOUNT_POINT")]
+        mount: PathBuf,
+        
+        /// Dry run - show what would be updated without actually updating
+        #[arg(short = 'n', long)]
+        dry_run: bool,
+    },
+    
     /// List available USB devices
     List,
 }
@@ -375,6 +386,9 @@ async fn main() -> Result<()> {
             }
             SporeAction::Info { mount } => {
                 handle_spore_info(mount).await?
+            }
+            SporeAction::Refresh { mount, dry_run } => {
+                handle_spore_refresh(mount, dry_run).await?
             }
             SporeAction::List => {
                 handle_spore_list().await?

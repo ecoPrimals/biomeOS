@@ -29,5 +29,5 @@ pub use niche::{handle_niche_list, handle_niche_show, handle_primal_list};
 // Spore commands
 pub use spore::{
     handle_spore_clone, handle_spore_create, handle_spore_info,
-    handle_spore_list, handle_spore_verify,
+    handle_spore_list, handle_spore_refresh, handle_spore_verify,
 };

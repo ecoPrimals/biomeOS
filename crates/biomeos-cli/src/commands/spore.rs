@@ -4,6 +4,7 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use biomeos_spore::{Spore, SporeConfig, SporeType, SporeVerification};
+use biomeos_spore::refresh::SporeRefresher;
 use tracing::info;
 
 /// Create a new USB spore
@@ -198,3 +199,113 @@ pub async fn handle_spore_list() -> Result<()> {
     Ok(())
 }
 
+
+/// Refresh spore binaries from nucleusBin
+pub async fn handle_spore_refresh(mount: PathBuf, dry_run: bool) -> Result<()> {
+    use biomeos_spore::refresh::SporeRefresher;
+    use biomeos_spore::verification::{SporeVerifier, VerificationStatus};
+    
+    println!("╔════════════════════════════════════════════════════════════════╗");
+    println!("║                                                                ║");
+    println!("║         🔄 Spore Refresh                                       ║");
+    println!("║                                                                ║");
+    println!("╚════════════════════════════════════════════════════════════════╝");
+    println!();
+    
+    if dry_run {
+        println!("🔍 DRY RUN MODE - No changes will be made");
+        println!();
+    }
+    
+    println!("Spore: {}", mount.display());
+    println!();
+    
+    // Load nucleus
+    let nucleus_path = PathBuf::from("nucleusBin");
+    if !nucleus_path.exists() {
+        eprintln!("❌ Error: nucleusBin not found");
+        eprintln!("   Expected at: {}", nucleus_path.display());
+        eprintln!();
+        eprintln!("💡 Run './scripts/harvest-primals.sh' to build binaries first");
+        std::process::exit(1);
+    }
+    
+    let refresher = SporeRefresher::from_nucleus(&nucleus_path)?;
+    
+    if dry_run {
+        // Dry run: just verify what would be updated
+        let verifier = SporeVerifier::from_nucleus(&nucleus_path)?;
+        let report = verifier.verify_spore(&mount)?;
+        
+        println!("📋 Binaries that would be refreshed:");
+        println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        
+        let mut would_refresh = false;
+        for binary in &report.binaries {
+            if !matches!(binary.status, VerificationStatus::Fresh) {
+                would_refresh = true;
+                println!("🔄 {}", binary.name);
+                println!("   Current: v{}", binary.actual_version.as_ref().unwrap_or(&"unknown".to_string()));
+                println!("   New:     v{}", binary.expected_version);
+                println!();
+            }
+        }
+        
+        if !would_refresh {
+            println!("✅ No binaries need refreshing - spore is already fresh!");
+        } else {
+            println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            println!();
+            println!("💡 Run without --dry-run to apply these updates");
+        }
+    } else {
+        // Actual refresh
+        println!("🔄 Refreshing binaries...");
+        println!();
+        
+        let report = refresher.refresh_spore(&mount)?;
+        
+        if report.refreshed_binaries.is_empty() && report.failed_binaries.is_empty() {
+            println!("✅ Spore is already fresh - no updates needed!");
+        } else {
+            if !report.refreshed_binaries.is_empty() {
+                println!("✅ Successfully Refreshed:");
+                println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+                for binary in &report.refreshed_binaries {
+                    println!("✅ {}", binary.name);
+                    if let Some(ref old_ver) = binary.old_version {
+                        println!("   {} → v{}", old_ver, binary.new_version);
+                    } else {
+                        println!("   v{} (newly installed)", binary.new_version);
+                    }
+                    println!("   SHA256: {}...", &binary.new_sha256[..16]);
+                    println!();
+                }
+                println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            }
+            
+            if !report.failed_binaries.is_empty() {
+                println!();
+                println!("❌ Failed to Refresh:");
+                println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+                for failed in &report.failed_binaries {
+                    println!("❌ {}: {}", failed.name, failed.error);
+                }
+                println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            }
+            
+            println!();
+            if report.is_success() {
+                println!("🎊 Spore refresh complete! {} binaries updated.", report.refreshed_binaries.len());
+            } else {
+                println!("⚠️  Spore refresh partially complete. {} succeeded, {} failed.",
+                    report.refreshed_binaries.len(),
+                    report.failed_binaries.len()
+                );
+            }
+        }
+    }
+    
+    println!();
+    Ok(())
+}
