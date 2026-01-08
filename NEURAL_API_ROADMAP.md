@@ -167,15 +167,17 @@ assert!(new_manifest.graphs.len() > 0);
 
 ---
 
-### **Phase 1.4: Integration & Deployment** ⏳
+### **Phase 1.4: Integration & Deployment** 🎯 **IN PROGRESS**
 
 **Tasks:**
-- [ ] Integrate `GraphExecutor` with `BiomeOS::deploy_niche()`
-- [ ] Update `biomeos-spore` to use graph executor
-- [ ] Test tower deployment via graphs on local machine
+- [x] Create `PrimalRegistry` for runtime discovery
+- [x] Integrate `GraphExecutor` with biomeOS core
+- [x] Create `GraphDeploymentCoordinator`  
+- [x] Unit tests for integration layer
+- [ ] CLI command integration (`biomeos deploy`)
+- [ ] Test with real primals (Songbird + BearDog)
 - [ ] Deploy to liveSpore USB
-- [ ] Verify federation still works
-- [ ] Compare performance vs old wave system
+- [ ] Full E2E federation test
 
 **Acceptance Criteria:**
 ```bash
@@ -416,7 +418,7 @@ println!("Bottleneck: {} took {}ms", bottleneck.node_id, bottleneck.duration_ms)
 
 | Milestone | Status | Progress | Est. Sessions |
 |-----------|--------|----------|---------------|
-| **M1: Tower** | 🎯 In Progress | 43% | 7-11 (3/7 done) |
+| **M1: Tower** | 🎯 In Progress | 57% | 7-11 (4/7 done) |
 | **M2: Node** | 🔜 Next | 0% | 5-8 |
 | **M3: Nest** | 🔮 Future | 0% | 8-11 |
 | **M4: Backbone** | 🔮 Future | 0% | 6-9 |
@@ -545,8 +547,8 @@ FUTURE (RootPulse):
   Universal time tracking
 ```
 
-**Status:** 🎊 **Phase 1.1, 1.2 & 1.3 COMPLETE!**  
-**Next:** Phase 1.4 - Integration & Deployment
+**Status:** 🎯 **Phase 1.4 IN PROGRESS** (Integration layer complete!)  
+**Next:** CLI integration & real deployment testing
 
 🧠 **From static waves → adaptive intelligence!** 🎊
 
