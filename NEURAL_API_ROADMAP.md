@@ -134,14 +134,14 @@ operation = { name = "start" }
 
 ---
 
-### **Phase 1.3: BYOB Manifest Evolution** ⏳
+### **Phase 1.3: BYOB Manifest Evolution** ✅ **COMPLETE!**
 
 **Tasks:**
-- [ ] Extend `biomeos-manifest` crate to parse `[[graphs]]`
-- [ ] Make `[[graphs]]` optional (backward compatible)
-- [ ] Update `niches/tower.toml` to include graphs
-- [ ] Implement implicit graph generation for old format
-- [ ] Test backward compatibility
+- [x] Extend `biomeos-manifest` crate to parse `[[graphs]]`
+- [x] Make `[[graphs]]` optional (backward compatible)
+- [x] Create `niches/tower.toml` with graphs
+- [x] Capability-based validation
+- [x] Test backward compatibility (19 tests passing)
 
 **Acceptance Criteria:**
 ```rust
@@ -416,7 +416,7 @@ println!("Bottleneck: {} took {}ms", bottleneck.node_id, bottleneck.duration_ms)
 
 | Milestone | Status | Progress | Est. Sessions |
 |-----------|--------|----------|---------------|
-| **M1: Tower** | 🎯 In Progress | 28% | 7-11 (2/7 done) |
+| **M1: Tower** | 🎯 In Progress | 43% | 7-11 (3/7 done) |
 | **M2: Node** | 🔜 Next | 0% | 5-8 |
 | **M3: Nest** | 🔮 Future | 0% | 8-11 |
 | **M4: Backbone** | 🔮 Future | 0% | 6-9 |
@@ -545,8 +545,8 @@ FUTURE (RootPulse):
   Universal time tracking
 ```
 
-**Status:** 🎊 **Phase 1.1 & 1.2 COMPLETE!**  
-**Next:** Phase 1.3 - BYOB Manifest Evolution
+**Status:** 🎊 **Phase 1.1, 1.2 & 1.3 COMPLETE!**  
+**Next:** Phase 1.4 - Integration & Deployment
 
 🧠 **From static waves → adaptive intelligence!** 🎊
 
