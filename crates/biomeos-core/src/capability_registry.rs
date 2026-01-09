@@ -434,11 +434,21 @@ impl CapabilityRegistry {
             
             RegistryRequest::GetProvider { request_id, capability } => {
                 match self.get_provider(&capability).await {
-                    Ok(Some(info)) => RegistryResponse {
-                        request_id,
-                        status: ResponseStatus::Success,
-                        data: Some(serde_json::to_value(info).unwrap()),
-                        error: None,
+                    Ok(Some(info)) => {
+                        match serde_json::to_value(info) {
+                            Ok(data) => RegistryResponse {
+                                request_id,
+                                status: ResponseStatus::Success,
+                                data: Some(data),
+                                error: None,
+                            },
+                            Err(e) => RegistryResponse {
+                                request_id,
+                                status: ResponseStatus::Error,
+                                data: None,
+                                error: Some(format!("Failed to serialize provider info: {}", e)),
+                            },
+                        }
                     },
                     Ok(None) => RegistryResponse {
                         request_id,
@@ -457,11 +467,19 @@ impl CapabilityRegistry {
             
             RegistryRequest::ListPrimals { request_id } => {
                 let primals = self.list_primals().await;
-                RegistryResponse {
-                    request_id,
-                    status: ResponseStatus::Success,
-                    data: Some(serde_json::to_value(primals).unwrap()),
-                    error: None,
+                match serde_json::to_value(primals) {
+                    Ok(data) => RegistryResponse {
+                        request_id,
+                        status: ResponseStatus::Success,
+                        data: Some(data),
+                        error: None,
+                    },
+                    Err(e) => RegistryResponse {
+                        request_id,
+                        status: ResponseStatus::Error,
+                        data: None,
+                        error: Some(format!("Failed to serialize primals list: {}", e)),
+                    },
                 }
             }
             

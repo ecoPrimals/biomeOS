@@ -120,12 +120,16 @@ pub async fn event_stream(
     
     let stream = FuturesStreamExt::flat_map(stream, |events| stream::iter(events));
     let stream = TokioStreamExt::throttle(stream, Duration::from_secs(5));
-    let stream = FuturesStreamExt::map(stream, |event| {
-        // SAFE: BiomeEvent serialization is infallible (all fields are serializable)
-        // SSE requires Result<Event, Infallible>, so unwrap is appropriate here
-        Ok(Event::default()
-            .json_data(&event)
-            .unwrap())
+    let stream = FuturesStreamExt::filter_map(stream, |event| async move {
+        // Attempt to serialize the event to JSON for SSE
+        // If serialization fails (highly unlikely), skip the event and log the error
+        match Event::default().json_data(&event) {
+            Ok(sse_event) => Some(Ok(sse_event)),
+            Err(e) => {
+                tracing::error!("Failed to serialize BiomeEvent to SSE: {}", e);
+                None // Skip this event
+            }
+        }
     });
     
     Sse::new(stream).keep_alive(KeepAlive::default())
