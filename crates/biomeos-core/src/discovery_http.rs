@@ -310,27 +310,61 @@ impl Default for HttpDiscoveryBuilder {
 }
 
 /// Create discovery for well-known local primals
+/// 
+/// Uses environment variables for endpoints, with dev-only localhost fallbacks:
+/// - BEARDOG_ENDPOINT (default: http://localhost:9000 in debug)
+/// - SONGBIRD_ENDPOINT (default: http://localhost:8080 in debug)
+/// 
+/// Production builds require explicit environment variables.
 pub fn create_local_discovery() -> DiscoveryResult<Vec<Box<dyn PrimalDiscovery>>> {
     let mut builder = HttpDiscoveryBuilder::new();
     
     // BearDog (Security)
-    if let Ok(endpoint) = Endpoint::new("http://localhost:9000") {
-        builder = builder.add_primal(
-            endpoint,
-            PrimalId::new_unchecked("beardog-local"),
-            "BearDog".to_string(),
-            PrimalType::Security,
-        );
+    let beardog_url = std::env::var("BEARDOG_ENDPOINT")
+        .unwrap_or_else(|_| {
+            #[cfg(debug_assertions)]
+            {
+                "http://localhost:9000".to_string()
+            }
+            #[cfg(not(debug_assertions))]
+            {
+                String::new() // Empty string will be skipped
+            }
+        });
+    
+    if !beardog_url.is_empty() {
+        if let Ok(endpoint) = Endpoint::new(&beardog_url) {
+            builder = builder.add_primal(
+                endpoint,
+                PrimalId::new_unchecked("beardog-local"),
+                "BearDog".to_string(),
+                PrimalType::Security,
+            );
+        }
     }
     
     // Songbird (Orchestration)
-    if let Ok(endpoint) = Endpoint::new("http://localhost:8080") {
-        builder = builder.add_primal(
-            endpoint,
-            PrimalId::new_unchecked("songbird-local"),
-            "Songbird".to_string(),
-            PrimalType::Orchestration,
-        );
+    let songbird_url = std::env::var("SONGBIRD_ENDPOINT")
+        .unwrap_or_else(|_| {
+            #[cfg(debug_assertions)]
+            {
+                "http://localhost:8080".to_string()
+            }
+            #[cfg(not(debug_assertions))]
+            {
+                String::new() // Empty string will be skipped
+            }
+        });
+    
+    if !songbird_url.is_empty() {
+        if let Ok(endpoint) = Endpoint::new(&songbird_url) {
+            builder = builder.add_primal(
+                endpoint,
+                PrimalId::new_unchecked("songbird-local"),
+                "Songbird".to_string(),
+                PrimalType::Orchestration,
+            );
+        }
     }
     
     Ok(builder.build())

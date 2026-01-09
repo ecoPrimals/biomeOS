@@ -193,13 +193,27 @@ pub mod presets {
     /// NOTE: Uses fallback endpoint for development when discovery unavailable.
     /// Production should use discovery-based endpoint resolution.
     pub fn local() -> BiomeResult<BiomeOSConfig> {
+        // Development-only preset - uses env vars or localhost fallback
+        // Production must use explicit configuration with discovery
+        let discovery_endpoint = std::env::var("DISCOVERY_ENDPOINT")
+            .unwrap_or_else(|_| {
+                #[cfg(debug_assertions)]
+                {
+                    "http://localhost:8001".to_string()
+                }
+                #[cfg(not(debug_assertions))]
+                {
+                    panic!("DISCOVERY_ENDPOINT must be set in release builds")
+                }
+            });
+        
         #[allow(deprecated)]
         BiomeOSConfigBuilder::new()
             .name("local-biome")
             .environment(Environment::Development)
             .organization_scale(OrganizationScale::Individual)
             .discovery_method(DiscoveryMethod::Static)
-            .discovery_endpoint("http://localhost:8001") // Development fallback only
+            .discovery_endpoint(discovery_endpoint) // From env or localhost (dev only)
             .enable_feature("real_time_monitoring")
             .max_workers(2)
             .connection_timeout(5000)
