@@ -95,8 +95,9 @@ pub async fn get_identity(
             capabilities: vec!["btsp".to_string(), "birdsong".to_string(), "lineage".to_string()],
             family_id: "standalone".to_string(),
             identity_attestations: Some(serde_json::json!({
-                "family_id": "mock",
-                "node_role": "tower"
+                "family_id": "standalone",  // Consistent with parent family_id
+                "node_role": "tower",
+                "mode": "standalone"  // Clear indicator this is standalone mode
             })),
         }));
     }

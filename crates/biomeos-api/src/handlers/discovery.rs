@@ -51,12 +51,12 @@ pub async fn get_discovered_primals(
     info!("🔍 Discovering primals...");
 
     if state.is_standalone_mode() {
-        // Standalone mode: Return hardcoded test data
-        info!("   Using standalone data (BIOMEOS_STANDALONE_MODE=true)");
-        let primals = get_mock_primals();
+        // Standalone mode: Return demo data for development/testing without live primals
+        info!("   Using standalone data (BIOMEOS_STANDALONE_MODE=true) - works without primals");
+        let primals = get_standalone_primals();
         return Ok(Json(DiscoveredPrimalsResponse {
             count: primals.len(),
-            mode: "mock".to_string(),
+            mode: "standalone".to_string(),
             primals,
         }));
     }
@@ -110,19 +110,26 @@ pub async fn get_discovered_primals(
             }))
         }
         Err(e) => {
-            tracing::warn!("   Discovery failed: {}, using mock fallback", e);
-            let primals = get_mock_primals();
+            // Live mode discovery failed - return empty list, don't mask with fake data
+            tracing::warn!("   Discovery failed in live mode: {}", e);
+            tracing::warn!("   Returning empty primal list. Start primals or enable standalone mode.");
             Ok(Json(DiscoveredPrimalsResponse {
-                count: primals.len(),
-                mode: "mock_fallback".to_string(),
-                primals,
+                count: 0,
+                mode: "live_failed".to_string(),
+                primals: vec![],
             }))
         }
     }
 }
 
-/// Generate mock primal data for testing
-fn get_mock_primals() -> Vec<DiscoveredPrimal> {
+/// Generate standalone primal data for development/demo mode
+/// 
+/// This is NOT a production mock - it's a valid operational mode that allows
+/// biomeOS to run standalone for development, testing, and demonstrations
+/// without requiring live primals.
+/// 
+/// To use: Set BIOMEOS_STANDALONE_MODE=true
+fn get_standalone_primals() -> Vec<DiscoveredPrimal> {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or(std::time::Duration::from_secs(0)) // Safe fallback: epoch time
