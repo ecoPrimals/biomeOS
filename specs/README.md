@@ -14,12 +14,12 @@
 - Metrics & learning
 
 ### **Phase 2: Secure Discovery** ✅ SPEC COMPLETE
-- SPDP (Secure Primal Discovery Protocol)
+- NUCLEUS (Secure Primal Discovery Protocol)
 - Multi-niche integration (Tower, Node, Nest)
 - All Phase 1 primals integrated
 
 ### **Phase 3: Implementation** 🚧 IN PROGRESS
-- Implement SPDP in biomeos-federation
+- Implement NUCLEUS in biomeos-federation
 - Evolve primal APIs (Toadstool, NestGate)
 - E2E testing with real hardware
 
@@ -43,12 +43,12 @@
 
 ---
 
-### **🔒 Secure Discovery** (SPDP)
+### **🔒 Secure Discovery** (NUCLEUS)
 | Spec | Status | Description |
 |------|--------|-------------|
 | [SECURE_PRIMAL_DISCOVERY_PROTOCOL.md](SECURE_PRIMAL_DISCOVERY_PROTOCOL.md) | ✅ Spec Complete | 5-layer secure discovery |
-| [NEURAL_API_SPDP_BTSP_INTEGRATION.md](NEURAL_API_SPDP_BTSP_INTEGRATION.md) | ✅ Spec Complete | Neural API + BTSP integration |
-| [COMPLETE_ECOSYSTEM_SPDP_INTEGRATION.md](COMPLETE_ECOSYSTEM_SPDP_INTEGRATION.md) | ✅ Spec Complete | All primals integrated |
+| [NEURAL_API_NUCLEUS_BTSP_INTEGRATION.md](NEURAL_API_NUCLEUS_BTSP_INTEGRATION.md) | ✅ Spec Complete | Neural API + BTSP integration |
+| [COMPLETE_ECOSYSTEM_NUCLEUS_INTEGRATION.md](COMPLETE_ECOSYSTEM_NUCLEUS_INTEGRATION.md) | ✅ Spec Complete | All primals integrated |
 
 **Key Features**:
 - Layer 1: Physical discovery (Songbird/BirdSong P2P)
@@ -151,7 +151,7 @@
    - Node graphs (foundation)
    - Nest graphs (foundation)
 
-3. SPDP Architecture
+3. NUCLEUS Architecture
    - Complete specification
    - Multi-niche integration
    - All Phase 1 primals
@@ -160,7 +160,7 @@
 
 ### **🚧 In Progress (Phase 2)**
 
-#### **Week 1-2: SPDP Implementation**
+#### **Week 1-2: NUCLEUS Implementation**
 - [ ] Implement `SecurePrimalDiscovery` in `biomeos-federation`
 - [ ] Add authentication (socket owner, signatures)
 - [ ] Add multiple instance support
@@ -173,9 +173,9 @@
 - [ ] Verify all primals on port-free architecture
 
 #### **Week 4: E2E Testing**
-- [ ] Deploy Tower + SPDP on USB spores
-- [ ] Deploy Node + SPDP (local compute)
-- [ ] Deploy Nest + SPDP (local data)
+- [ ] Deploy Tower + NUCLEUS on USB spores
+- [ ] Deploy Node + NUCLEUS (local compute)
+- [ ] Deploy Nest + NUCLEUS (local data)
 - [ ] Test complete ecosystem
 
 ---
@@ -207,7 +207,7 @@
 | Category | Total | Complete | In Progress | Future |
 |----------|-------|----------|-------------|--------|
 | **Neural API** | 4 | 4 | 0 | 0 |
-| **SPDP** | 3 | 3 | 0 | 0 |
+| **NUCLEUS** | 3 | 3 | 0 | 0 |
 | **Ecosystem** | 4 | 4 | 0 | 0 |
 | **Security** | 4 | 4 | 0 | 0 |
 | **Niches** | 2 | 2 | 0 | 0 |
@@ -245,12 +245,12 @@ Superseded or archived specifications have been moved to `archive/specs-fossil-r
 
 ### **For Developers**
 - Start here: [NEURAL_API_IMPLEMENTATION_PHASES.md](NEURAL_API_IMPLEMENTATION_PHASES.md)
-- SPDP: [SECURE_PRIMAL_DISCOVERY_PROTOCOL.md](SECURE_PRIMAL_DISCOVERY_PROTOCOL.md)
-- Complete ecosystem: [COMPLETE_ECOSYSTEM_SPDP_INTEGRATION.md](COMPLETE_ECOSYSTEM_SPDP_INTEGRATION.md)
+- NUCLEUS: [SECURE_PRIMAL_DISCOVERY_PROTOCOL.md](SECURE_PRIMAL_DISCOVERY_PROTOCOL.md)
+- Complete ecosystem: [COMPLETE_ECOSYSTEM_NUCLEUS_INTEGRATION.md](COMPLETE_ECOSYSTEM_NUCLEUS_INTEGRATION.md)
 
 ### **For Primal Teams**
-- Songbird: See SPDP Layer 1 (discovery)
-- BearDog: See SPDP Layers 2 & 4 (identity & trust)
+- Songbird: See NUCLEUS Layer 1 (discovery)
+- BearDog: See NUCLEUS Layers 2 & 4 (identity & trust)
 - Toadstool: See Node niche + compute enclaves
 - NestGate: See Nest niche + data federation
 
@@ -261,7 +261,7 @@ Superseded or archived specifications have been moved to `archive/specs-fossil-r
 
 ---
 
-**Last Major Update**: Neural API Phase 1 Complete + SPDP Specification  
-**Next Milestone**: SPDP Implementation (Week 1-2)
+**Last Major Update**: Neural API Phase 1 Complete + NUCLEUS Specification  
+**Next Milestone**: NUCLEUS Implementation (Week 1-2)
 
 🌱 **The specifications are complete. Now we implement!** 🚀

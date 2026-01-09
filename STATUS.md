@@ -12,7 +12,7 @@
 
 **What We Built**:
 - 🧠 Graph-based orchestration system
-- 🔒 Secure primal discovery protocol (SPDP)
+- 🔒 Secure primal discovery protocol (NUCLEUS)
 - 🗼 Tower niche (Songbird + BearDog)
 - 🍄 Node niche (Toadstool + BearDog)
 - 🏠 Nest niche (NestGate + BearDog + Songbird)
@@ -52,7 +52,7 @@
 
 ## 🚧 Phase 2: Secure Discovery (Weeks 1-4)
 
-### **Current Focus**: SPDP Implementation + petalTongue Integration
+### **Current Focus**: NUCLEUS Implementation + petalTongue Integration
 
 **This Week**:
 1. 🔴 Implement `SecurePrimalDiscovery` in `biomeos-federation`
@@ -78,7 +78,7 @@
 |-----------|--------|------------|
 | **biomeos-graph** | ✅ Phase 1 Complete | 100% |
 | **biomeos-manifest** | ✅ Complete | 100% |
-| **biomeos-federation** | 🚧 SPDP Implementation | 25% |
+| **biomeos-federation** | 🚧 NUCLEUS Implementation | 25% |
 | **biomeos-core** | ✅ Graph integration | 100% |
 | **biomeos-cli** | ✅ Graph commands | 100% |
 | **biomeos-spore** | ✅ USB deployment | 100% |
@@ -111,7 +111,7 @@
 ## 🗺️ Roadmap
 
 ### **Phase 2: Secure Discovery** (Jan 2026 - Weeks 1-4)
-- Week 1-2: SPDP implementation (biomeOS)
+- Week 1-2: NUCLEUS implementation (biomeOS)
 - Week 2-3: **NEW** petalTongue UI integration
 - Week 3: Primal API evolution (Toadstool, NestGate, petalTongue)
 - Week 4: E2E testing (USB spores, LAN federation, UI)
@@ -161,7 +161,7 @@
 - ✅ Metrics collection foundation
 - ✅ Tower, Node, Nest graph foundations
 
-**SPDP**:
+**NUCLEUS**:
 - ✅ Complete specification (5-layer protocol)
 - ✅ All Phase 1 primals integrated
 - ✅ Multi-niche architecture defined
@@ -187,17 +187,17 @@
 ## 🤝 Team Status
 
 ### **biomeOS Team**
-- **Focus**: SPDP implementation + petalTongue topology API
+- **Focus**: NUCLEUS implementation + petalTongue topology API
 - **Current**: Starting `SecurePrimalDiscovery` + topology API
 - **Blockers**: None
 
 ### **Songbird Team**
 - **Status**: ✅ Production ready (v3.19.0)
-- **Next**: Support SPDP Layer 1 (already functional)
+- **Next**: Support NUCLEUS Layer 1 (already functional)
 
 ### **BearDog Team**
 - **Status**: ✅ Production ready (v0.15.2)
-- **Next**: Support SPDP Layers 2 & 4 (already functional)
+- **Next**: Support NUCLEUS Layers 2 & 4 (already functional)
 
 ### **Toadstool Team**
 - **Status**: ⏳ Needs Unix socket evolution
@@ -211,7 +211,7 @@
 
 ### **petalTongue Team** (**NEW!**)
 - **Status**: ✅ Production ready (v0.4.0)
-- **Next**: Unix socket evolution, SPDP integration
+- **Next**: Unix socket evolution, NUCLEUS integration
 - **Handoff**: `docs/PETALTONGUE_BIOMEOS_INTEGRATION_PLAN.md`
 - **Priority**: 🟡 MEDIUM
 
@@ -231,7 +231,7 @@
 1. Hand off Unix socket evolution to Toadstool team
 2. Hand off Unix socket evolution to NestGate team
 3. **NEW**: Hand off Unix socket evolution to petalTongue team
-4. Update `verify-lineage` tool to use SPDP
+4. Update `verify-lineage` tool to use NUCLEUS
 5. Begin E2E testing with USB spores
 6. **NEW**: Begin E2E UI testing with petalTongue
 
@@ -282,12 +282,12 @@
 
 **Phase 1**: ✅ **COMPLETE**
 - Neural API foundation built
-- SPDP fully specified
+- NUCLEUS fully specified
 - All primals integrated
 - Hardware ready
 
 **Phase 2**: 🚧 **STARTING**
-- SPDP implementation (this week)
+- NUCLEUS implementation (this week)
 - **NEW**: petalTongue UI integration (week 2-3)
 - Primal evolution (next 2 weeks)
 - E2E testing (week 4)
@@ -317,12 +317,12 @@
 - **Roadmap**: [ROADMAP.md](ROADMAP.md)
 - **Specs**: [specs/README.md](specs/README.md)
 - **Neural API**: [specs/NEURAL_API_IMPLEMENTATION_PHASES.md](specs/NEURAL_API_IMPLEMENTATION_PHASES.md)
-- **SPDP**: [specs/SECURE_PRIMAL_DISCOVERY_PROTOCOL.md](specs/SECURE_PRIMAL_DISCOVERY_PROTOCOL.md)
-- **Complete Ecosystem**: [specs/COMPLETE_ECOSYSTEM_SPDP_INTEGRATION.md](specs/COMPLETE_ECOSYSTEM_SPDP_INTEGRATION.md)
+- **NUCLEUS**: [specs/SECURE_PRIMAL_DISCOVERY_PROTOCOL.md](specs/SECURE_PRIMAL_DISCOVERY_PROTOCOL.md)
+- **Complete Ecosystem**: [specs/COMPLETE_ECOSYSTEM_NUCLEUS_INTEGRATION.md](specs/COMPLETE_ECOSYSTEM_NUCLEUS_INTEGRATION.md)
 - **petalTongue Integration**: [docs/PETALTONGUE_BIOMEOS_INTEGRATION_PLAN.md](docs/PETALTONGUE_BIOMEOS_INTEGRATION_PLAN.md)
 - **Session Notes**: [docs/jan4-session/](docs/jan4-session/)
 
 ---
 
 **Last Updated**: January 9, 2026  
-**Next Review**: End of Week 2 (SPDP + UI integration complete)
+**Next Review**: End of Week 2 (NUCLEUS + UI integration complete)

@@ -17,7 +17,7 @@
 - ✅ Metrics collection & learning foundation
 - ✅ Real primal testing (BearDog verified via Unix socket)
 - ✅ Tower, Node, Nest niche foundations
-- ✅ SPDP complete specification (all primals integrated)
+- ✅ NUCLEUS complete specification (all primals integrated)
 
 **Statistics**:
 - **Crates**: 15+ implemented
@@ -32,9 +32,9 @@
 ## 🚀 Phase 2: Secure Discovery & Primal Evolution
 
 **Timeline**: Weeks 1-4 (January 2026)  
-**Goal**: Implement SPDP, evolve primal APIs, achieve E2E federation
+**Goal**: Implement NUCLEUS, evolve primal APIs, achieve E2E federation
 
-### **Week 1-2: SPDP Implementation** 🚧 **CURRENT FOCUS**
+### **Week 1-2: NUCLEUS Implementation** 🚧 **CURRENT FOCUS**
 
 #### **biomeOS Tasks**
 
@@ -107,10 +107,10 @@
 
 | Test Scenario | Hardware | Priority | Status |
 |---------------|----------|----------|--------|
-| Tower + SPDP on USB spores | 3x USB spores | 🔴 HIGH | ✅ Hardware available |
+| Tower + NUCLEUS on USB spores | 3x USB spores | 🔴 HIGH | ✅ Hardware available |
 | LAN federation (2 nodes) | 2x computers | 🔴 HIGH | ✅ Hardware available |
-| Node + SPDP (local compute) | Local machine | 🟡 MEDIUM | ✅ Hardware available |
-| Nest + SPDP (local data) | Local machine | 🟡 MEDIUM | ✅ Hardware available |
+| Node + NUCLEUS (local compute) | Local machine | 🟡 MEDIUM | ✅ Hardware available |
+| Nest + NUCLEUS (local data) | Local machine | 🟡 MEDIUM | ✅ Hardware available |
 | Complete ecosystem (Tower+Node+Nest) | All hardware | 🟢 LOW | ✅ Hardware available |
 
 **Hardware Available**:
@@ -119,7 +119,7 @@
 - ✅ Multiple computers for LAN testing
 
 **Test Scenarios**:
-1. **Secure Discovery**: SPDP discovers all primals, verifies identities
+1. **Secure Discovery**: NUCLEUS discovers all primals, verifies identities
 2. **Genetic Lineage**: All spores verified as siblings (family: nat0)
 3. **BTSP Tunnels**: Encrypted P2P communication established
 4. **Multi-Niche**: Tower + Node + Nest deployed and federated
@@ -155,7 +155,7 @@
 | Verify Unix socket evolution | petalTongue Team | 🟡 MEDIUM | ⏳ Pending |
 | Add JSON-RPC server | petalTongue Team | 🟡 MEDIUM | ⏳ Pending |
 | Test with biomeOS topology data | petalTongue Team | 🟡 MEDIUM | ⏳ Pending |
-| SPDP integration | petalTongue Team | 🟡 MEDIUM | ⏳ Pending |
+| NUCLEUS integration | petalTongue Team | 🟡 MEDIUM | ⏳ Pending |
 
 **Use Cases**:
 - Universal user interface for ecosystem
@@ -314,7 +314,7 @@
 ### **Short-Term (Next 2 Weeks)**
 1. 🔴 Toadstool Unix socket evolution (handoff to team)
 2. 🔴 NestGate Unix socket evolution (handoff to team)
-3. 🔴 Update `verify-lineage` to use SPDP
+3. 🔴 Update `verify-lineage` to use NUCLEUS
 4. 🟡 E2E testing with USB spores
 
 ### **Medium-Term (Next Month)**
@@ -328,7 +328,7 @@
 ## 🤝 Team Coordination
 
 ### **biomeOS Team**
-**Focus**: SPDP implementation, Neural API evolution  
+**Focus**: NUCLEUS implementation, Neural API evolution  
 **Current**: Implementing `SecurePrimalDiscovery`  
 **Blockers**: None (specs complete)
 
@@ -358,8 +358,8 @@
 ## 📈 Success Metrics
 
 ### **Phase 2 Success Criteria**
-- ✅ SPDP implemented with 5-layer verification
-- ✅ All primals discoverable via SPDP
+- ✅ NUCLEUS implemented with 5-layer verification
+- ✅ All primals discoverable via NUCLEUS
 - ✅ Socket hijacking prevented (security tests pass)
 - ✅ Multiple instance selection working
 - ✅ Toadstool + NestGate on Unix sockets
@@ -384,7 +384,7 @@
 **Current Status**: Phase 1 Complete, Phase 2 Starting
 
 **Immediate Focus**:
-1. Implement SPDP (biomeOS)
+1. Implement NUCLEUS (biomeOS)
 2. Evolve Toadstool to Unix sockets (Toadstool Team)
 3. Evolve NestGate to Unix sockets (NestGate Team)
 

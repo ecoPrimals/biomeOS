@@ -57,7 +57,7 @@
                   ▼                       ▼
          ┌────────────────┐      ┌────────────────┐
          │    biomeOS     │      │  Any Primal    │
-         │  (via SPDP)    │      │ (via Songbird) │
+         │  (via NUCLEUS)    │      │ (via Songbird) │
          └────────────────┘      └────────────────┘
 ```
 
@@ -106,7 +106,7 @@
 **Use Case**: petalTongue as independent UI service
 
 ```
-biomeOS → SPDP → Discover petalTongue → Use UI APIs
+biomeOS → NUCLEUS → Discover petalTongue → Use UI APIs
 ```
 
 **Advantages**:
@@ -117,7 +117,7 @@ biomeOS → SPDP → Discover petalTongue → Use UI APIs
 
 **Implementation**:
 1. petalTongue runs as standalone primal
-2. biomeOS discovers via SPDP (capability: "ui.desktop-interface")
+2. biomeOS discovers via NUCLEUS (capability: "ui.desktop-interface")
 3. biomeOS provides topology data via HTTP/Unix socket
 4. petalTongue renders and displays
 
@@ -159,7 +159,7 @@ petalTongue → Toadstool → GPU rendering → Return result
 - ✅ Leverage Toadstool's multi-runtime (GPU/CPU/WASM)
 
 **Implementation**:
-1. petalTongue discovers Toadstool via SPDP
+1. petalTongue discovers Toadstool via NUCLEUS
 2. Sends rendering workload to Toadstool
 3. Receives rendered frames back
 4. Displays to user
@@ -179,7 +179,7 @@ petalTongue → Toadstool → GPU rendering → Return result
 | Task | Owner | Priority | Status |
 |------|-------|----------|--------|
 | Add petalTongue to `PrimalRegistry` | biomeOS | 🔴 HIGH | ⏳ Pending |
-| Discover petalTongue via SPDP | biomeOS | 🔴 HIGH | ⏳ Pending |
+| Discover petalTongue via NUCLEUS | biomeOS | 🔴 HIGH | ⏳ Pending |
 | Provide topology data API | biomeOS | 🔴 HIGH | ⏳ Pending |
 | Test with real petalTongue binary | biomeOS | 🔴 HIGH | ⏳ Pending |
 
@@ -270,12 +270,12 @@ for hint in hints.split(',') {
 }
 ```
 
-**Future Method**: SPDP
+**Future Method**: NUCLEUS
 
 ```rust
 // In petalTongue discovery
-let spdp = SecurePrimalDiscovery::new(songbird, beardog);
-let biomeos = spdp.discover_by_capability("topology.provider").await?;
+let nucleus = SecurePrimalDiscovery::new(songbird, beardog);
+let biomeos = nucleus.discover_by_capability("topology.provider").await?;
 ```
 
 ---
@@ -327,7 +327,7 @@ export PETALTONGUE_DISCOVERY_HINTS="http://localhost:3000"
 
 ```rust
 // In petalTongue
-let toadstool = spdp.discover_by_capability("compute.gpu").await?;
+let toadstool = nucleus.discover_by_capability("compute.gpu").await?;
 let workload = RenderWorkload {
     scene: topology_to_3d_scene(),
     quality: RenderQuality::High,
@@ -397,7 +397,7 @@ for modality in modalities {
 
 ### **Phase 2 Success Criteria**
 - ✅ petalTongue on Unix socket JSON-RPC
-- ✅ biomeOS discovers petalTongue via SPDP
+- ✅ biomeOS discovers petalTongue via NUCLEUS
 - ✅ Port-free architecture working
 - ✅ Integration tests passing
 
@@ -412,12 +412,12 @@ for modality in modalities {
 ## 🤝 **Team Coordination**
 
 ### **biomeOS Team**
-**Focus**: Provide topology data, integrate with SPDP  
+**Focus**: Provide topology data, integrate with NUCLEUS  
 **Current**: Need to implement topology API  
 **Blockers**: None
 
 ### **petalTongue Team**
-**Focus**: Unix socket evolution, SPDP integration  
+**Focus**: Unix socket evolution, NUCLEUS integration  
 **Current**: Production ready (HTTP mode)  
 **Blockers**: 🔴 Unix socket handoff needed
 
@@ -432,7 +432,7 @@ for modality in modalities {
 
 ### **Next 2 Weeks (petalTongue)**
 1. 🔴 Unix socket JSON-RPC server
-2. 🔴 SPDP integration
+2. 🔴 NUCLEUS integration
 3. 🔴 Integration tests with biomeOS
 
 ### **Week 4 (Both Teams)**
@@ -452,7 +452,7 @@ for modality in modalities {
 
 ### **biomeOS**
 - Location: `/home/eastgate/Development/ecoPrimals/phase2/biomeOS`
-- SPDP: `specs/SECURE_PRIMAL_DISCOVERY_PROTOCOL.md`
+- NUCLEUS: `specs/SECURE_PRIMAL_DISCOVERY_PROTOCOL.md`
 - Neural API: `specs/NEURAL_API_IMPLEMENTATION_PHASES.md`
 - Roadmap: `ROADMAP.md`
 

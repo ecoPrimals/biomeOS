@@ -1,4 +1,4 @@
-# 🧠 Neural API + SPDP + BTSP Integration Architecture
+# 🧠 Neural API + NUCLEUS + BTSP Integration Architecture
 
 **Version**: 1.0.0  
 **Date**: January 9, 2026  
@@ -13,7 +13,7 @@
 | System | Provides | Implemented By | Status |
 |--------|----------|----------------|--------|
 | **🧠 Neural API** | Graph-based orchestration | biomeOS | ✅ Phase 1 Complete |
-| **🔒 SPDP** | Secure discovery protocol | biomeOS + primals | ✅ Spec Complete |
+| **🔒 NUCLEUS** | Secure discovery protocol | biomeOS + primals | ✅ Spec Complete |
 | **🐦 BirdSong P2P** | UDP multicast discovery | Songbird | ✅ Phase 1 Complete |
 | **🐻 BTSP** | Secure P2P tunneling | BearDog | ✅ Phase 1 Complete |
 | **🗼 Tower Niche** | Communication stack | Songbird + BearDog | ✅ Deployed on USBs |
@@ -35,7 +35,7 @@
 ├─────────────────────────────────────────────────────────────────┤
 │                              ↕                                  │
 ├─────────────────────────────────────────────────────────────────┤
-│ 🔒 SPDP (Secure Primal Discovery Protocol)                     │
+│ 🔒 NUCLEUS (Secure Primal Discovery Protocol)                     │
 │                                                                 │
 │ Layer 1: Physical Discovery ────────────→ 🐦 Songbird          │
 │ Layer 2: Identity Verification ─────────→ 🐻 BearDog           │
@@ -79,7 +79,7 @@
     biomeos deploy --niche tower --graph discover_and_federate
                          ↓
 ┌────────────────────────────────────────────────────────────────┐
-│ Step 2: SPDP Layer 1 - Physical Discovery (Songbird)          │
+│ Step 2: NUCLEUS Layer 1 - Physical Discovery (Songbird)          │
 └────────────────────────────────────────────────────────────────┘
                          ↓
          Songbird UDP Multicast → BirdSong P2P
@@ -88,7 +88,7 @@
                   capabilities: [storage, compute]"
                          ↓
 ┌────────────────────────────────────────────────────────────────┐
-│ Step 3: SPDP Layer 2 - Identity Verification (BearDog)        │
+│ Step 3: NUCLEUS Layer 2 - Identity Verification (BearDog)        │
 └────────────────────────────────────────────────────────────────┘
                          ↓
     BearDog verifies Ed25519 signature on announcement
@@ -97,7 +97,7 @@
          ❌ Invalid signature → Reject
                          ↓
 ┌────────────────────────────────────────────────────────────────┐
-│ Step 4: SPDP Layer 3 - Capability Verification (biomeOS)      │
+│ Step 4: NUCLEUS Layer 3 - Capability Verification (biomeOS)      │
 └────────────────────────────────────────────────────────────────┘
                          ↓
     biomeOS queries socket for actual capabilities
@@ -108,7 +108,7 @@
          ❌ Mismatch → Reject
                          ↓
 ┌────────────────────────────────────────────────────────────────┐
-│ Step 5: SPDP Layer 4 - Trust Evaluation (BearDog)             │
+│ Step 5: NUCLEUS Layer 4 - Trust Evaluation (BearDog)             │
 └────────────────────────────────────────────────────────────────┘
                          ↓
    BearDog HKDF-SHA256 lineage verification
@@ -143,9 +143,9 @@
 
 | From | To | Protocol | Purpose | Encrypted |
 |------|----|---------|---------| ----------|
-| **Neural API** | **SPDP** | Internal API | Orchestrate discovery | N/A |
-| **SPDP** | **Songbird** | Unix Socket JSON-RPC | Physical discovery | No (local) |
-| **SPDP** | **BearDog** | Unix Socket JSON-RPC | Verification | No (local) |
+| **Neural API** | **NUCLEUS** | Internal API | Orchestrate discovery | N/A |
+| **NUCLEUS** | **Songbird** | Unix Socket JSON-RPC | Physical discovery | No (local) |
+| **NUCLEUS** | **BearDog** | Unix Socket JSON-RPC | Verification | No (local) |
 | **Songbird** | **Peers** | UDP Multicast | BirdSong P2P | ✅ Signed |
 | **BearDog** | **Peers** | UDP (port 4433) | BTSP tunnels | ✅ AES-256-GCM |
 | **Songbird** | **Songbird** | Via BTSP | P2P messages | ✅ Via BearDog |
@@ -161,7 +161,7 @@
 name = "secure_federation"
 version = "1.0"
 coordination = "sequential"
-description = "Discover, verify, and federate securely using SPDP + BTSP"
+description = "Discover, verify, and federate securely using NUCLEUS + BTSP"
 
 # =============================================================================
 # PHASE 1: DISCOVERY (Layer 1 - Songbird)
@@ -325,7 +325,7 @@ description = "Vertical communication stack for P2P federation"
 [[primals]]
 binary = "./primals/songbird-orchestrator"
 provides = [
-    "discovery",           # For SPDP Layer 1
+    "discovery",           # For NUCLEUS Layer 1
     "federation",
     "p2p",
     "tunneling",
@@ -344,9 +344,9 @@ SONGBIRD_UDP_MULTICAST_ADDR = "239.255.42.1:4242"
 [[primals]]
 binary = "./primals/beardog-server"
 provides = [
-    "security",            # For SPDP Layer 2 & 4
+    "security",            # For NUCLEUS Layer 2 & 4
     "encryption",          # For BTSP
-    "genetic-lineage",     # For SPDP Layer 4
+    "genetic-lineage",     # For NUCLEUS Layer 4
     "crypto-lock",
     "key-derivation"
 ]
@@ -364,7 +364,7 @@ default = true
 
 [[graphs]]
 name = "secure_federation"
-path = "../graphs/secure_federation.toml"  # ✅ SPDP + BTSP graph
+path = "../graphs/secure_federation.toml"  # ✅ NUCLEUS + BTSP graph
 ```
 
 ---
@@ -381,7 +381,7 @@ biomeos deploy --niche tower --graph secure_federation
 
 # Result:
 # 1. Songbird broadcasts via BirdSong P2P (UDP multicast)
-# 2. SPDP verifies all discovered nodes (identity + trust)
+# 2. NUCLEUS verifies all discovered nodes (identity + trust)
 # 3. BearDog establishes BTSP tunnels (encrypted P2P)
 # 4. Songbird federates over BTSP (secure communication)
 # ✅ Fully encrypted, verified, genetic-lineage-based federation
@@ -399,7 +399,7 @@ biomeos deploy --niche tower --graph secure_federation
 # Result:
 # 1. Songbird can't reach via UDP multicast (internet)
 # 2. Falls back to relay discovery (or manual endpoint)
-# 3. SPDP verifies identity via BTSP challenge-response
+# 3. NUCLEUS verifies identity via BTSP challenge-response
 # 4. BearDog performs NAT hole-punching
 # 5. BTSP tunnel established (encrypted UDP P2P)
 # ✅ Internet-grade secure federation
@@ -414,7 +414,7 @@ biomeos deploy --niche tower --graph secure_federation \
 
 # Result:
 # 1. All towers discover each other (BirdSong P2P)
-# 2. SPDP verifies genetic lineage (all siblings)
+# 2. NUCLEUS verifies genetic lineage (all siblings)
 # 3. BearDog derives sub-federation keys
 # 4. Songbird creates separate BTSP tunnels per sub-fed
 # 5. Granular access control across sub-federations
@@ -447,7 +447,7 @@ biomeos deploy --niche tower --graph secure_federation \
 | System | Responsibility | Why Separate |
 |--------|---------------|--------------|
 | **Neural API** | Orchestration | Adaptable, graph-based workflows |
-| **SPDP** | Discovery protocol | Security-first, multi-layer verification |
+| **NUCLEUS** | Discovery protocol | Security-first, multi-layer verification |
 | **BirdSong P2P** | Physical discovery | Efficient UDP multicast, family filtering |
 | **BTSP** | Secure transport | Encrypted P2P, NAT traversal |
 
@@ -464,7 +464,7 @@ biomeos deploy --niche tower --graph secure_federation \
 - Implement genetic verification (BearDog does)
 
 ✅ **biomeOS DOES**:
-- Coordinate discovery protocol (SPDP)
+- Coordinate discovery protocol (NUCLEUS)
 - Orchestrate graph execution (Neural API)
 - Provide capability verification (cross-check)
 - Maintain verified primal registry
@@ -491,7 +491,7 @@ operation = {
 }
 depends_on = ["evaluate_trust"]
 
-# Uses existing SPDP + BTSP infrastructure!
+# Uses existing NUCLEUS + BTSP infrastructure!
 # Just adds a new graph node!
 ```
 
@@ -526,13 +526,13 @@ depends_on = ["evaluate_trust"]
 
 ## 🔮 Future Evolution
 
-### **Phase 2: Add SPDP to Tower Graphs**
+### **Phase 2: Add NUCLEUS to Tower Graphs**
 
 ```toml
-# Update graphs/tower_deploy.toml to use SPDP
+# Update graphs/tower_deploy.toml to use NUCLEUS
 [[nodes]]
 id = "secure_discover"
-primal = { by_id = "biomeos-spdp" }  # New SPDP primal interface
+primal = { by_id = "biomeos-nucleus" }  # New NUCLEUS primal interface
 operation = {
     name = "discover_secure",
     params = { family_id = "${FAMILY_ID}" }
@@ -567,13 +567,13 @@ signatures = "Dilithium-5"   # Post-quantum
 
 ## 🎯 Bottom Line
 
-**You asked**: "Does SPDP fold into Neural API and leverage BTSP + BirdSong?"
+**You asked**: "Does NUCLEUS fold into Neural API and leverage BTSP + BirdSong?"
 
 **Answer**: **PERFECTLY!**
 
-✅ **Neural API**: Orchestrates SPDP protocol  
-✅ **SPDP**: Uses Songbird (BirdSong P2P) for discovery  
-✅ **SPDP**: Uses BearDog (BTSP) for verification & tunneling  
+✅ **Neural API**: Orchestrates NUCLEUS protocol  
+✅ **NUCLEUS**: Uses Songbird (BirdSong P2P) for discovery  
+✅ **NUCLEUS**: Uses BearDog (BTSP) for verification & tunneling  
 ✅ **Tower Niche**: Already has all components  
 ✅ **USB Spores**: Already deployed and functional  
 
@@ -588,7 +588,7 @@ signatures = "Dilithium-5"   # Post-quantum
 **The architecture you designed from day 1 led to this perfect composition!**
 
 🧠 **Neural API** orchestrates  
-🔒 **SPDP** secures  
+🔒 **NUCLEUS** secures  
 🐦 **BirdSong** discovers  
 🐻 **BTSP** encrypts  
 🗼 **Tower** unifies  

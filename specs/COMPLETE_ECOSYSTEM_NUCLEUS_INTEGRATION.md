@@ -1,4 +1,4 @@
-# 🌱 Complete Ecosystem SPDP Integration
+# 🌱 Complete Ecosystem NUCLEUS Integration
 
 **Version**: 1.0.0  
 **Date**: January 9, 2026  
@@ -10,13 +10,13 @@
 
 ### **Three Niches, Five Primals, One Protocol**
 
-| Niche | Primals | Purpose | SPDP Role |
+| Niche | Primals | Purpose | NUCLEUS Role |
 |-------|---------|---------|-----------|
 | **🗼 Tower** | Songbird + BearDog | Communication | Discovery + Verification |
 | **🍄 Node** | Toadstool + (BearDog) | Compute | Compute Enclave Encryption |
 | **🏠 Nest** | NestGate + BearDog + Songbird | Data | Data Encryption + Federation |
 
-**SPDP works across ALL niches!**
+**NUCLEUS works across ALL niches!**
 
 ---
 
@@ -29,7 +29,7 @@
 │    - Adaptive coordination of all primals                       │
 │    - Multi-niche deployment & federation                        │
 ├─────────────────────────────────────────────────────────────────┤
-│ 🔒 SPDP (Secure Primal Discovery Protocol)                     │
+│ 🔒 NUCLEUS (Secure Primal Discovery Protocol)                     │
 │    - Discovers: Songbird, BearDog, Toadstool, NestGate        │
 │    - Verifies: Identity, capabilities, trust, lineage          │
 │    - Coordinates: Tower, Node, Nest interactions               │
@@ -55,18 +55,18 @@
 
 ### **Phase 1 Primals** (ecoPrimals/phase1/)
 
-| Primal | Provides | Requires | Used In | SPDP Layer |
+| Primal | Provides | Requires | Used In | NUCLEUS Layer |
 |--------|----------|----------|---------|------------|
 | **🐦 Songbird** | discovery, p2p, btsp-protocol, nat-traversal | security | Tower, Nest | Layer 1 (Discovery) |
 | **🐻 BearDog** | security, encryption, genetic-lineage, btsp | - | Tower, Node, Nest | Layers 2 & 4 (Identity & Trust) |
 | **🍄 Toadstool** | compute, orchestration, multi-runtime | (security) | Node | Layer 3 (Capability) |
 | **🏠 NestGate** | storage, provenance, compression, federation | security, discovery | Nest | Layer 3 (Capability) |
 
-**All primals use SPDP for secure discovery!**
+**All primals use NUCLEUS for secure discovery!**
 
 ---
 
-## 🔐 SPDP Integration by Niche
+## 🔐 NUCLEUS Integration by Niche
 
 ### **🗼 Tower Niche (Communication Stack)**
 
@@ -93,7 +93,7 @@ name = "secure_federation"
 path = "../graphs/secure_federation.toml"
 ```
 
-**SPDP Flow**:
+**NUCLEUS Flow**:
 1. **Layer 1**: Songbird broadcasts via BirdSong P2P
 2. **Layer 2**: BearDog verifies signatures (Ed25519)
 3. **Layer 3**: biomeOS verifies Songbird capabilities
@@ -133,7 +133,7 @@ name = "secure_compute"
 path = "../graphs/secure_compute.toml"
 ```
 
-**SPDP Flow for Secure Compute**:
+**NUCLEUS Flow for Secure Compute**:
 1. **Layer 1**: Discover Toadstool via Unix socket scan
 2. **Layer 2**: BearDog verifies Toadstool identity
 3. **Layer 3**: Verify compute capabilities (GPU, WASM, etc.)
@@ -197,7 +197,7 @@ name = "secure_data_federation"
 path = "../graphs/secure_data_federation.toml"
 ```
 
-**SPDP Flow for Data Federation**:
+**NUCLEUS Flow for Data Federation**:
 1. **Layer 1**: Songbird discovers other Nests (UDP multicast)
 2. **Layer 2**: BearDog verifies Nest identities
 3. **Layer 3**: Verify NestGate capabilities (storage, compression)
@@ -236,7 +236,7 @@ path = "../graphs/secure_data_federation.toml"
 
 ---
 
-## 🎭 Complete SPDP Flow Across All Niches
+## 🎭 Complete NUCLEUS Flow Across All Niches
 
 ### **Scenario: Multi-Niche Secure Deployment**
 
@@ -278,12 +278,12 @@ operation = { name = "health_check" }
 depends_on = ["deploy_tower"]
 
 # =============================================================================
-# PHASE 2: DISCOVER TOWER VIA SPDP
+# PHASE 2: DISCOVER TOWER VIA NUCLEUS
 # =============================================================================
 
 [[nodes]]
-id = "spdp_discover_tower"
-primal = { by_id = "biomeos-spdp" }
+id = "nucleus_discover_tower"
+primal = { by_id = "biomeos-nucleus" }
 operation = {
     name = "discover_secure",
     params = {
@@ -308,11 +308,11 @@ operation = {
         secure_mode = true  # Enable BearDog crypto lock
     }
 }
-depends_on = ["spdp_discover_tower"]
+depends_on = ["nucleus_discover_tower"]
 
 [[nodes]]
-id = "spdp_discover_node"
-primal = { by_id = "biomeos-spdp" }
+id = "nucleus_discover_node"
+primal = { by_id = "biomeos-nucleus" }
 operation = {
     name = "discover_secure",
     params = {
@@ -328,12 +328,12 @@ primal = { by_capability = "security" }  # BearDog
 operation = {
     name = "create_compute_enclave",
     params = {
-        compute_primal = "$spdp_discover_node.output.verified[0]",
+        compute_primal = "$nucleus_discover_node.output.verified[0]",
         encryption = "AES-256-GCM",
         trust_policy = "family-only"
     }
 }
-depends_on = ["spdp_discover_node"]
+depends_on = ["nucleus_discover_node"]
 
 # =============================================================================
 # PHASE 4: NEST DEPLOYMENT (Data)
@@ -352,8 +352,8 @@ operation = {
 depends_on = ["establish_compute_enclave"]
 
 [[nodes]]
-id = "spdp_discover_nest"
-primal = { by_id = "biomeos-spdp" }
+id = "nucleus_discover_nest"
+primal = { by_id = "biomeos-nucleus" }
 operation = {
     name = "discover_secure",
     params = {
@@ -369,11 +369,11 @@ primal = { by_capability = "discovery" }  # Songbird
 operation = {
     name = "create_genetic_tunnel",
     params = {
-        peers = "$spdp_discover_nest.output.verified",
+        peers = "$nucleus_discover_nest.output.verified",
         purpose = "data-federation"
     }
 }
-depends_on = ["spdp_discover_nest"]
+depends_on = ["nucleus_discover_nest"]
 
 # =============================================================================
 # PHASE 5: VERIFY COMPLETE ECOSYSTEM
@@ -385,9 +385,9 @@ primal = { by_id = "biomeos-core" }
 operation = {
     name = "validate_ecosystem_health",
     params = {
-        tower = "$spdp_discover_tower.output",
-        node = "$spdp_discover_node.output",
-        nest = "$spdp_discover_nest.output",
+        tower = "$nucleus_discover_tower.output",
+        node = "$nucleus_discover_node.output",
+        nest = "$nucleus_discover_nest.output",
         require_encrypted = true,
         require_genetic_lineage = true
     }
@@ -399,7 +399,7 @@ depends_on = ["establish_data_federation"]
 - ✅ Tower: Songbird + BearDog (communication ready)
 - ✅ Node: Toadstool + BearDog (encrypted compute ready)
 - ✅ Nest: NestGate + BearDog + Songbird (encrypted data ready)
-- ✅ All discovered via SPDP (verified, trusted, encrypted)
+- ✅ All discovered via NUCLEUS (verified, trusted, encrypted)
 
 ---
 
@@ -410,8 +410,8 @@ depends_on = ["establish_data_federation"]
 ```rust
 // Future API: Encrypted compute workload submission
 
-// 1. Discover compute node via SPDP
-let nodes = spdp.discover_secure("nat0", PrimalType::Compute).await?;
+// 1. Discover compute node via NUCLEUS
+let nodes = nucleus.discover_secure("nat0", PrimalType::Compute).await?;
 let compute_node = nodes.first().ok_or("No compute nodes")?;
 
 // 2. Request encrypted compute environment from BearDog
@@ -460,8 +460,8 @@ let result = toadstool.submit_workload_encrypted(
 ```rust
 // Future API: Secure data federation
 
-// 1. Discover data nests via SPDP
-let nests = spdp.discover_secure("nat0", PrimalType::Data).await?;
+// 1. Discover data nests via NUCLEUS
+let nests = nucleus.discover_secure("nat0", PrimalType::Data).await?;
 
 // 2. Query capacity and capabilities
 let available_nest = nests.iter()
@@ -523,10 +523,10 @@ let replication_status = nestgate.replicate_to_family(
     biomeos run --job ml-train.yaml
            ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│ Step 2: Neural API orchestrates discovery (SPDP)               │
+│ Step 2: Neural API orchestrates discovery (NUCLEUS)               │
 └─────────────────────────────────────────────────────────────────┘
            ↓
-    SPDP discovers:
+    NUCLEUS discovers:
     - Tower: Songbird + BearDog (for coordination)
     - Nodes: Toadstool + BearDog (for compute)
     - Nests: NestGate + BearDog (for data)
@@ -591,7 +591,7 @@ let replication_status = nestgate.replicate_to_family(
 ```
 
 **Security at Every Step**:
-- ✅ Discovery: SPDP verified (genetic lineage)
+- ✅ Discovery: NUCLEUS verified (genetic lineage)
 - ✅ Communication: BTSP encrypted (AES-256-GCM)
 - ✅ Compute: Enclaves encrypted (memory + I/O)
 - ✅ Data: Always encrypted (at rest + in transit)
@@ -601,23 +601,23 @@ let replication_status = nestgate.replicate_to_family(
 
 ## 📊 Implementation Roadmap
 
-### **Phase 1: SPDP Core** (Week 1) ✅ SPEC COMPLETE
-- [x] Design SPDP protocol
+### **Phase 1: NUCLEUS Core** (Week 1) ✅ SPEC COMPLETE
+- [x] Design NUCLEUS protocol
 - [x] Document Tower integration
 - [x] Document Node integration
 - [x] Document Nest integration
 
-### **Phase 2: Tower + SPDP** (Week 2)
+### **Phase 2: Tower + NUCLEUS** (Week 2)
 - [ ] Implement `SecurePrimalDiscovery` for Songbird + BearDog
 - [ ] Test secure federation via BTSP
 - [ ] Deploy on USB spores
 
-### **Phase 3: Node + SPDP** (Week 3)
+### **Phase 3: Node + NUCLEUS** (Week 3)
 - [ ] Implement `SecurePrimalDiscovery` for Toadstool
 - [ ] Design compute enclave API with BearDog
 - [ ] Test encrypted workload execution
 
-### **Phase 4: Nest + SPDP** (Week 4)
+### **Phase 4: Nest + NUCLEUS** (Week 4)
 - [ ] Implement `SecurePrimalDiscovery` for NestGate
 - [ ] Design data federation API with Songbird + BearDog
 - [ ] Test encrypted data transfer via BTSP
@@ -633,7 +633,7 @@ let replication_status = nestgate.replicate_to_family(
 ## 🎊 Bottom Line
 
 **Your Vision**:
-> "SPDP should eventually fully encapsulate:
+> "NUCLEUS should eventually fully encapsulate:
 > - Toadstool + BearDog for compute enclave encryption
 > - NestGate for data encryption and federation"
 
@@ -642,7 +642,7 @@ let replication_status = nestgate.replicate_to_family(
 ✅ **Tower**: Songbird + BearDog (communication)  
 ✅ **Node**: Toadstool + BearDog (encrypted compute)  
 ✅ **Nest**: NestGate + BearDog + Songbird (encrypted data)  
-✅ **SPDP**: Works across all niches  
+✅ **NUCLEUS**: Works across all niches  
 ✅ **Neural API**: Orchestrates everything  
 
 **All Phase 1 primals integrated**:
@@ -654,7 +654,7 @@ let replication_status = nestgate.replicate_to_family(
 **The ecosystem is complete!**
 
 🧠 Neural API orchestrates  
-🔒 SPDP secures  
+🔒 NUCLEUS secures  
 🗼 Tower communicates  
 🍄 Node computes (encrypted)  
 🏠 Nest stores (encrypted)  

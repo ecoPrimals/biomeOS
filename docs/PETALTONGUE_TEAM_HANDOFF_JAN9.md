@@ -227,8 +227,8 @@ impl PetalTongueServer {
 ```rust
 // In petalTongue
 pub async fn render_with_gpu(&self, topology: &Topology) -> Result<RenderedFrame> {
-    // 1. Discover Toadstool via SPDP
-    let toadstool = self.spdp.discover_by_capability("compute.gpu").await?;
+    // 1. Discover Toadstool via NUCLEUS
+    let toadstool = self.nucleus.discover_by_capability("compute.gpu").await?;
     
     // 2. Create render workload
     let workload = RenderWorkload {
@@ -327,7 +327,7 @@ pub async fn subscribe_to_topology_updates(&self) -> Result<()> {
    - Unix socket (Phase 2)
    - WebSocket (Phase 3)
 
-2. **SPDP Integration**
+2. **NUCLEUS Integration**
    - petalTongue discovered via capability: `"ui.desktop-interface"`
    - Secure discovery with BearDog verification
 
@@ -363,7 +363,7 @@ pub async fn subscribe_to_topology_updates(&self) -> Result<()> {
 
 ### **Phase 2 Complete When**:
 - ✅ petalTongue on Unix socket JSON-RPC
-- ✅ biomeOS discovers petalTongue via SPDP
+- ✅ biomeOS discovers petalTongue via NUCLEUS
 - ✅ Port-free architecture working
 - ✅ Integration tests passing
 
@@ -387,7 +387,7 @@ pub async fn subscribe_to_topology_updates(&self) -> Result<()> {
 - **Location**: `/home/eastgate/Development/ecoPrimals/phase2/biomeOS`
 - **Integration Plan**: `docs/PETALTONGUE_BIOMEOS_INTEGRATION_PLAN.md`
 - **UI Niche**: `niches/ui.toml`
-- **SPDP**: `specs/SECURE_PRIMAL_DISCOVERY_PROTOCOL.md`
+- **NUCLEUS**: `specs/SECURE_PRIMAL_DISCOVERY_PROTOCOL.md`
 - **Neural API**: `specs/NEURAL_API_IMPLEMENTATION_PHASES.md`
 
 ### **Toadstool** (for GPU rendering)
@@ -409,7 +409,7 @@ pub async fn subscribe_to_topology_updates(&self) -> Result<()> {
 **What We Need**:
 1. Test HTTP discovery with biomeOS
 2. Evolve to Unix socket JSON-RPC (port-free)
-3. Integrate with SPDP (secure discovery)
+3. Integrate with NUCLEUS (secure discovery)
 
 **Timeline**: 3-4 weeks to full integration
 

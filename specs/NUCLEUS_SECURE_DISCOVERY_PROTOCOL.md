@@ -1,4 +1,4 @@
-# 🔒 Secure Primal Discovery Protocol (SPDP)
+# 🔒 Secure Primal Discovery Protocol (NUCLEUS)
 
 **Version**: 1.0.0  
 **Date**: January 9, 2026  
