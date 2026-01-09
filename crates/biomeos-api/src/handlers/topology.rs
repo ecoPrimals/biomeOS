@@ -13,17 +13,44 @@ use crate::{ApiError, AppState};
 pub struct TopologyNode {
     pub id: String,
     pub name: String,
+    #[serde(rename = "type")]
     pub primal_type: String,
     pub health: String,
+    pub capabilities: Vec<String>,
     
-    // Trust information
+    // Endpoints
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub trust_level: Option<u8>,
+    pub endpoints: Option<NodeEndpoints>,
+    
+    // Metadata
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<NodeMetadata>,
+}
+
+/// Primal endpoints
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NodeEndpoints {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub unix_socket: Option<String>,
+    
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub http: Option<String>,
+}
+
+/// Primal metadata
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NodeMetadata {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<String>,
     
     #[serde(skip_serializing_if = "Option::is_none")]
     pub family_id: Option<String>,
     
-    pub capabilities: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub node_id: Option<String>,
+    
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub trust_level: Option<u8>,
 }
 
 /// Topology edge (connection between primals)
@@ -31,21 +58,40 @@ pub struct TopologyNode {
 pub struct TopologyEdge {
     pub from: String,
     pub to: String,
-    pub edge_type: String, // "federation", "api_call", "trust_relationship"
+    #[serde(rename = "type")]
+    pub edge_type: String, // "capability_invocation", "data_flow", "discovery", "federation"
     
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub protocol: Option<String>, // "http", "tarpc", "grpc"
+    pub capability: Option<String>,
     
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub trust: Option<String>, // "limited", "elevated", "highest"
+    pub metrics: Option<EdgeMetrics>,
+}
+
+/// Edge metrics
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EdgeMetrics {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub request_count: Option<u64>,
+    
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub avg_latency_ms: Option<f64>,
 }
 
 /// Topology response
 #[derive(Debug, Serialize)]
 pub struct TopologyResponse {
-    pub nodes: Vec<TopologyNode>,
-    pub edges: Vec<TopologyEdge>,
-    pub mode: String,
+    pub primals: Vec<TopologyNode>,
+    pub connections: Vec<TopologyEdge>,
+    pub health_status: HealthStatus,
+}
+
+/// Overall health status
+#[derive(Debug, Serialize)]
+pub struct HealthStatus {
+    pub overall: String,
+    pub primals_healthy: usize,
+    pub primals_total: usize,
 }
 
 /// GET /api/v1/topology
@@ -56,11 +102,12 @@ pub async fn get_topology(
 
     if state.is_mock_mode() {
         info!("   Using standalone topology (BIOMEOS_MOCK_MODE=true) - works without primals");
-        let (nodes, edges) = get_standalone_topology();
+        let (primals, connections) = get_standalone_topology();
+        let health_status = calculate_health_status(&primals);
         return Ok(Json(TopologyResponse {
-            nodes,
-            edges,
-            mode: "standalone".to_string(),
+            primals,
+            connections,
+            health_status,
         }));
     }
 
@@ -68,21 +115,23 @@ pub async fn get_topology(
     info!("   Live mode: Building topology from discovered primals");
     
     match build_live_topology(state.discovery()).await {
-        Ok((nodes, edges)) => {
-            info!("   Built topology with {} nodes, {} edges", nodes.len(), edges.len());
+        Ok((primals, connections)) => {
+            info!("   Built topology with {} primals, {} connections", primals.len(), connections.len());
+            let health_status = calculate_health_status(&primals);
             Ok(Json(TopologyResponse {
-                nodes,
-                edges,
-                mode: "live".to_string(),
+                primals,
+                connections,
+                health_status,
             }))
         }
         Err(e) => {
             tracing::warn!("   Failed to build live topology: {}, using standalone fallback", e);
-            let (nodes, edges) = get_standalone_topology();
+            let (primals, connections) = get_standalone_topology();
+            let health_status = calculate_health_status(&primals);
             Ok(Json(TopologyResponse {
-                nodes,
-                edges,
-                mode: "standalone_fallback".to_string(),
+                primals,
+                connections,
+                health_status,
             }))
         }
     }
@@ -94,77 +143,75 @@ pub async fn get_topology(
 /// This provides a basic topology for development and demos
 /// when the full primal stack is not available.
 fn get_standalone_topology() -> (Vec<TopologyNode>, Vec<TopologyEdge>) {
-    let nodes = vec![
+    let primals = vec![
         TopologyNode {
-            id: "beardog-local".to_string(),
-            name: "BearDog".to_string(),
-            primal_type: "security".to_string(),
+            id: "beardog-node-alpha".to_string(),
+            name: "beardog".to_string(),
+            primal_type: "beardog".to_string(),
             health: "healthy".to_string(),
-            trust_level: Some(3),
-            family_id: Some("iidn".to_string()),
-            capabilities: vec!["security".to_string(), "trust_evaluation".to_string()],
+            capabilities: vec!["security".to_string(), "encryption".to_string(), "identity".to_string()],
+            endpoints: Some(NodeEndpoints {
+                unix_socket: Some("/tmp/beardog-node-alpha.sock".to_string()),
+                http: None,
+            }),
+            metadata: Some(NodeMetadata {
+                version: Some("v0.15.2".to_string()),
+                family_id: Some("nat0".to_string()),
+                node_id: Some("node-alpha".to_string()),
+                trust_level: Some(3),
+            }),
         },
         TopologyNode {
-            id: "songbird-local".to_string(),
-            name: "Songbird".to_string(),
-            primal_type: "orchestration".to_string(),
+            id: "songbird-node-alpha".to_string(),
+            name: "songbird".to_string(),
+            primal_type: "songbird".to_string(),
             health: "healthy".to_string(),
-            trust_level: Some(3),
-            family_id: Some("iidn".to_string()),
-            capabilities: vec!["orchestration".to_string(), "discovery".to_string()],
-        },
-        TopologyNode {
-            id: "tower2-remote".to_string(),
-            name: "tower2".to_string(),
-            primal_type: "tower".to_string(),
-            health: "healthy".to_string(),
-            trust_level: Some(1),
-            family_id: Some("iidn".to_string()),
-            capabilities: vec!["orchestration".to_string()],
-        },
-        TopologyNode {
-            id: "nestgate-local".to_string(),
-            name: "NestGate".to_string(),
-            primal_type: "storage".to_string(),
-            health: "healthy".to_string(),
-            trust_level: Some(2),
-            family_id: Some("iidn".to_string()),
-            capabilities: vec!["storage".to_string()],
+            capabilities: vec!["discovery".to_string(), "p2p".to_string(), "btsp".to_string()],
+            endpoints: Some(NodeEndpoints {
+                unix_socket: Some("/tmp/songbird-node-alpha.sock".to_string()),
+                http: None,
+            }),
+            metadata: Some(NodeMetadata {
+                version: Some("v3.19.0".to_string()),
+                family_id: Some("nat0".to_string()),
+                node_id: Some("node-alpha".to_string()),
+                trust_level: Some(3),
+            }),
         },
     ];
 
-    let edges = vec![
+    let connections = vec![
         TopologyEdge {
-            from: "songbird-local".to_string(),
-            to: "beardog-local".to_string(),
-            edge_type: "api_call".to_string(),
-            protocol: Some("http".to_string()),
-            trust: Some("highest".to_string()),
-        },
-        TopologyEdge {
-            from: "songbird-local".to_string(),
-            to: "tower2-remote".to_string(),
-            edge_type: "federation".to_string(),
-            protocol: Some("tarpc".to_string()),
-            trust: Some("limited".to_string()),
-        },
-        TopologyEdge {
-            from: "songbird-local".to_string(),
-            to: "nestgate-local".to_string(),
-            edge_type: "federation".to_string(),
-            protocol: Some("http".to_string()),
-            trust: Some("elevated".to_string()),
-        },
-        TopologyEdge {
-            from: "beardog-local".to_string(),
-            to: "tower2-remote".to_string(),
-            edge_type: "trust_relationship".to_string(),
-            protocol: None,
-            trust: Some("limited".to_string()),
+            from: "songbird-node-alpha".to_string(),
+            to: "beardog-node-alpha".to_string(),
+            edge_type: "capability_invocation".to_string(),
+            capability: Some("encryption".to_string()),
+            metrics: Some(EdgeMetrics {
+                request_count: Some(42),
+                avg_latency_ms: Some(2.3),
+            }),
         },
     ];
 
-    (nodes, edges)
+    (primals, connections)
+}
+
+/// Calculate overall health status
+fn calculate_health_status(primals: &[TopologyNode]) -> HealthStatus {
+    let healthy_count = primals.iter().filter(|p| p.health == "healthy").count();
+    let overall = if healthy_count == primals.len() {
+        "healthy"
+    } else if healthy_count > 0 {
+        "degraded"
+    } else {
+        "unhealthy"
+    };
+    
+    HealthStatus {
+        overall: overall.to_string(),
+        primals_healthy: healthy_count,
+        primals_total: primals.len(),
+    }
 }
 
 /// Build live topology from discovered primals
@@ -172,12 +219,12 @@ async fn build_live_topology(
     discovery: &dyn biomeos_core::PrimalDiscovery,
 ) -> Result<(Vec<TopologyNode>, Vec<TopologyEdge>), Box<dyn std::error::Error + Send + Sync>> {
     // Discover all primals
-    let primals = discovery.discover_all().await?;
+    let discovered = discovery.discover_all().await?;
     
-    info!("   Discovered {} primals for topology", primals.len());
+    info!("   Discovered {} primals for topology", discovered.len());
     
-    // Build nodes from discovered primals
-    let nodes: Vec<TopologyNode> = primals
+    // Build primals from discovered primals
+    let primals: Vec<TopologyNode> = discovered
         .iter()
         .map(|primal| {
             let health = match primal.health {
@@ -188,14 +235,30 @@ async fn build_live_topology(
             };
             
             let primal_type = match primal.primal_type {
-                biomeos_core::PrimalType::Security => "security",
-                biomeos_core::PrimalType::Orchestration => "orchestration",
-                biomeos_core::PrimalType::Storage => "storage",
-                biomeos_core::PrimalType::Compute => "compute",
+                biomeos_core::PrimalType::Security => "beardog",
+                biomeos_core::PrimalType::Orchestration => "songbird",
+                biomeos_core::PrimalType::Storage => "nestgate",
+                biomeos_core::PrimalType::Compute => "toadstool",
                 biomeos_core::PrimalType::Ai => "ai",
                 biomeos_core::PrimalType::Tower => "tower",
-                biomeos_core::PrimalType::Visualization => "visualization",
-                biomeos_core::PrimalType::Custom => "custom",
+                biomeos_core::PrimalType::Visualization => "petaltongue",
+                biomeos_core::PrimalType::Custom => primal.name.as_str(),
+            };
+            
+            // Extract endpoints
+            let endpoint_str = primal.endpoint.as_str();
+            let endpoints = if endpoint_str.starts_with("unix://") {
+                Some(NodeEndpoints {
+                    unix_socket: Some(endpoint_str.trim_start_matches("unix://").to_string()),
+                    http: None,
+                })
+            } else if endpoint_str.starts_with("http") {
+                Some(NodeEndpoints {
+                    unix_socket: None,
+                    http: Some(endpoint_str.to_string()),
+                })
+            } else {
+                None
             };
             
             TopologyNode {
@@ -203,54 +266,42 @@ async fn build_live_topology(
                 name: primal.name.clone(),
                 primal_type: primal_type.to_string(),
                 health: health.to_string(),
-                trust_level: if primal.family_id.is_some() { Some(3) } else { Some(1) },
-                family_id: primal.family_id.as_ref().map(|f| f.as_str().to_string()),
                 capabilities: primal
                     .capabilities
                     .iter()
                     .map(|c| c.as_str().to_string())
                     .collect(),
+                endpoints,
+                metadata: Some(NodeMetadata {
+                    version: Some(primal.version.to_string()),
+                    family_id: primal.family_id.as_ref().map(|f| f.as_str().to_string()),
+                    node_id: None, // TODO: Extract from primal ID
+                    trust_level: if primal.family_id.is_some() { Some(3) } else { Some(1) },
+                }),
             }
         })
         .collect();
     
-    // Build edges based on relationships
-    let mut edges = Vec::new();
+    // Build connections based on relationships
+    let mut connections = Vec::new();
     
-    // For each orchestration primal (Songbird), create edges to other primals
-    for primal in &primals {
+    // For each orchestration primal (Songbird), create connections to other primals
+    for primal in &discovered {
         if matches!(primal.primal_type, biomeos_core::PrimalType::Orchestration) {
-            // Orchestration connects to security for trust evaluation
-            for target in &primals {
+            // Orchestration connects to security for encryption
+            for target in &discovered {
                 if matches!(target.primal_type, biomeos_core::PrimalType::Security) {
-                    edges.push(TopologyEdge {
+                    connections.push(TopologyEdge {
                         from: primal.id.as_str().to_string(),
                         to: target.id.as_str().to_string(),
-                        edge_type: "api_call".to_string(),
-                        protocol: Some("http".to_string()),
-                        trust: Some("highest".to_string()),
+                        edge_type: "capability_invocation".to_string(),
+                        capability: Some("encryption".to_string()),
+                        metrics: None, // TODO: Collect real metrics
                     });
                 }
             }
         }
     }
     
-    // Add trust relationships between primals with same family
-    for (i, primal) in primals.iter().enumerate() {
-        if let Some(family) = &primal.family_id {
-            for (j, target) in primals.iter().enumerate() {
-                if i != j && target.family_id.as_ref() == Some(family) {
-                    edges.push(TopologyEdge {
-                        from: primal.id.as_str().to_string(),
-                        to: target.id.as_str().to_string(),
-                        edge_type: "trust_relationship".to_string(),
-                        protocol: None,
-                        trust: Some("highest".to_string()),
-                    });
-                }
-            }
-        }
-    }
-    
-    Ok((nodes, edges))
+    Ok((primals, connections))
 }
