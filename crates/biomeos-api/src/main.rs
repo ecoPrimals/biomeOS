@@ -60,7 +60,7 @@ async fn health(State(state): State<Arc<AppState>>) -> Json<HealthResponse> {
     Json(HealthResponse {
         status: "healthy".to_string(),
         version: env!("CARGO_PKG_VERSION").to_string(),
-        mode: if state.is_mock_mode() { "mock" } else { "live" }.to_string(),
+        mode: if state.is_standalone_mode() { "standalone" } else { "live" }.to_string(),
     })
 }
 
@@ -83,11 +83,11 @@ async fn main() -> anyhow::Result<()> {
     
     let config = state.config().clone();
     
-    if config.mock_mode {
-        warn!("⚠️  Running in MOCK MODE - using hardcoded test data");
-        warn!("   Set BIOMEOS_MOCK_MODE=false for live primal discovery");
+    if config.standalone_mode {
+        warn!("⚠️  Running in STANDALONE MODE - graceful degradation without primals");
+        warn!("   Set BIOMEOS_STANDALONE_MODE=false for live primal discovery");
     } else {
-        info!("✅ Running in LIVE MODE - discovering real primals via HTTP");
+        info!("✅ Running in LIVE MODE - discovering real primals");
     }
     
     let state = Arc::new(state);

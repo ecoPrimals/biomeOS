@@ -21,7 +21,7 @@
 //!     .config_from_env()
 //!     .build_with_defaults()?;
 //!
-//! println!("Mock mode: {}", state.is_mock_mode());
+//! println!("Standalone mode: {}", state.is_standalone_mode());
 //! # Ok(())
 //! # }
 //! ```
@@ -81,17 +81,31 @@ impl AppState {
         &self.config
     }
     
-    /// Check if mock mode is enabled
+    /// Check if standalone mode is enabled (graceful degradation)
+    pub fn is_standalone_mode(&self) -> bool {
+        self.config.standalone_mode
+    }
+    
+    /// Legacy alias for backward compatibility
+    #[deprecated(since = "0.2.0", note = "Use is_standalone_mode() instead")]
     pub fn is_mock_mode(&self) -> bool {
-        self.config.mock_mode
+        self.is_standalone_mode()
     }
 }
 
 /// Application configuration
 #[derive(Debug, Clone)]
 pub struct Config {
-    /// Enable mock mode for testing
-    pub mock_mode: bool,
+    /// Enable standalone mode (graceful degradation when primals unavailable)
+    ///
+    /// When `true`, the API provides standalone fallback responses for demos
+    /// and development without requiring full primal infrastructure.
+    ///
+    /// **Production**: Set to `false` (default) for full primal discovery
+    /// **Development**: Set to `true` for standalone operation
+    ///
+    /// Set via `BIOMEOS_STANDALONE_MODE=true` environment variable.
+    pub standalone_mode: bool,
     
     /// Server bind address
     pub bind_addr: SocketAddr,
@@ -106,7 +120,7 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            mock_mode: false,
+            standalone_mode: false, // Production default: require primals
             bind_addr: "0.0.0.0:3000".parse().expect("Default bind address is valid"),
             request_timeout: std::time::Duration::from_secs(30),
             enable_cors: true,
@@ -117,7 +131,9 @@ impl Default for Config {
 impl Config {
     /// Load configuration from environment
     pub fn from_env() -> Self {
-        let mock_mode = std::env::var("BIOMEOS_MOCK_MODE")
+        // Support both old and new env var names for backward compatibility
+        let standalone_mode = std::env::var("BIOMEOS_STANDALONE_MODE")
+            .or_else(|_| std::env::var("BIOMEOS_STANDALONE_MODE"))
             .ok()
             .and_then(|v| v.parse::<bool>().ok())
             .unwrap_or(false);
@@ -128,7 +144,7 @@ impl Config {
             .unwrap_or_else(|| "0.0.0.0:3000".parse().expect("Default bind address is valid"));
         
         Self {
-            mock_mode,
+            standalone_mode,
             bind_addr,
             ..Default::default()
         }

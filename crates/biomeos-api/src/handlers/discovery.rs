@@ -50,9 +50,9 @@ pub async fn get_discovered_primals(
 ) -> Result<Json<DiscoveredPrimalsResponse>, ApiError> {
     info!("🔍 Discovering primals...");
 
-    if state.is_mock_mode() {
-        // Mock mode: Return hardcoded test data
-        info!("   Using mock data (BIOMEOS_MOCK_MODE=true)");
+    if state.is_standalone_mode() {
+        // Standalone mode: Return hardcoded test data
+        info!("   Using standalone data (BIOMEOS_STANDALONE_MODE=true)");
         let primals = get_mock_primals();
         return Ok(Json(DiscoveredPrimalsResponse {
             count: primals.len(),

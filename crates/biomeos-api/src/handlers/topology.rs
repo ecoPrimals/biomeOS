@@ -100,8 +100,8 @@ pub async fn get_topology(
 ) -> Result<Json<TopologyResponse>, ApiError> {
     info!("🌐 Building topology...");
 
-    if state.is_mock_mode() {
-        info!("   Using standalone topology (BIOMEOS_MOCK_MODE=true) - works without primals");
+    if state.is_standalone_mode() {
+        info!("   Using standalone topology (BIOMEOS_STANDALONE_MODE=true) - works without primals");
         let (primals, connections) = get_standalone_topology();
         let health_status = calculate_health_status(&primals);
         return Ok(Json(TopologyResponse {
