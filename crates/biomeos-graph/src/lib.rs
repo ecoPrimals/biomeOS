@@ -18,6 +18,7 @@ pub mod validator;
 pub mod executor;
 pub mod context;
 pub mod error;
+pub mod metrics;
 
 // Re-export core types
 pub use graph::{
@@ -40,4 +41,5 @@ pub use validator::GraphValidator;
 pub use executor::GraphExecutor;
 pub use context::ExecutionContext;
 pub use error::{GraphError, Result};
+pub use metrics::{MetricsCollector, GraphMetrics, NodeMetricsAggregate, ExecutionRecord};
 

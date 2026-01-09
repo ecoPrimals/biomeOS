@@ -16,7 +16,15 @@ pub async fn handle_health(
     detailed: bool,
     continuous: bool,
     interval: u64,
+    use_graph: bool,
+    niche_path: Option<std::path::PathBuf>,
 ) -> Result<()> {
+    // Graph-based health check (Neural API)
+    if use_graph {
+        return handle_graph_health_check(niche_path, continuous, interval).await;
+    }
+    
+    // Legacy health check
     let config = biomeos_types::BiomeOSConfig::default();
     let manager = UniversalBiomeOSManager::new(config).await?;
 
@@ -36,6 +44,93 @@ pub async fn handle_health(
         perform_health_check(&manager, service.as_deref(), detailed).await?;
     }
 
+    Ok(())
+}
+
+/// Handle graph-based health check (Neural API)
+async fn handle_graph_health_check(
+    niche_path: Option<std::path::PathBuf>,
+    continuous: bool,
+    interval: u64,
+) -> Result<()> {
+    use biomeos_core::graph_deployment::GraphDeploymentCoordinator;
+    use super::create_spinner;
+    
+    let niche = niche_path.ok_or_else(|| {
+        anyhow::anyhow!("--niche required for graph-based health check")
+    })?;
+    
+    if continuous {
+        println!("🔄 Starting continuous health monitoring via Neural API (interval: {}s)", interval);
+        println!("Press Ctrl+C to stop");
+        
+        loop {
+            perform_graph_health_check(&niche).await?;
+            tokio::time::sleep(std::time::Duration::from_secs(interval)).await;
+            println!("\n{}", "─".repeat(80));
+        }
+    } else {
+        perform_graph_health_check(&niche).await?;
+    }
+    
+    Ok(())
+}
+
+/// Perform a single graph-based health check
+async fn perform_graph_health_check(niche_path: &std::path::Path) -> Result<()> {
+    use biomeos_core::graph_deployment::GraphDeploymentCoordinator;
+    
+    let spinner = create_spinner("🧠 Running health check via Neural API...");
+    
+    let coordinator = GraphDeploymentCoordinator::new();
+    
+    // Execute the health_check graph
+    let result = coordinator
+        .deploy_niche_with_graph(niche_path, "health_check")
+        .await?;
+    
+    spinner.finish_and_clear();
+    
+    if result.success {
+        println!("✅ Health Check: ALL PRIMALS HEALTHY");
+        println!("📊 Check results:");
+        
+        for metric in &result.metrics {
+            let status_icon = if metric.success { "✅" } else { "❌" };
+            let health_status = if metric.success { "HEALTHY" } else { "UNHEALTHY" };
+            
+            println!(
+                "  {} {} → {} ({}ms)",
+                status_icon,
+                metric.primal_id,
+                health_status,
+                metric.duration_ms
+            );
+            
+            if let Some(error) = &metric.error {
+                println!("     ⚠️  Error: {}", error);
+            }
+        }
+        
+        let total_duration: u64 = result.metrics.iter().map(|m| m.duration_ms).sum();
+        println!("\n⏱️  Total check time: {}ms", total_duration);
+    } else {
+        let failed: Vec<_> = result.metrics.iter().filter(|m| !m.success).collect();
+        
+        println!("❌ Health Check: {} PRIMAL(S) UNHEALTHY", failed.len());
+        println!("📊 Failed checks:");
+        
+        for metric in &failed {
+            println!("  ❌ {} → UNHEALTHY ({}ms)", metric.primal_id, metric.duration_ms);
+            
+            if let Some(error) = &metric.error {
+                println!("     Error: {}", error);
+            }
+        }
+        
+        anyhow::bail!("Health check failed: {} unhealthy primal(s)", failed.len());
+    }
+    
     Ok(())
 }
 

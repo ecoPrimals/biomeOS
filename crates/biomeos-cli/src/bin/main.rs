@@ -308,6 +308,14 @@ enum Commands {
         /// Monitoring interval in seconds
         #[arg(short, long, default_value = "30")]
         interval: u64,
+        
+        /// Use graph-based health check (Neural API)
+        #[arg(short, long)]
+        graph: bool,
+        
+        /// Niche manifest for graph-based check
+        #[arg(long, requires = "graph")]
+        niche: Option<PathBuf>,
     },
 
     /// Monitor system resources and services
@@ -498,8 +506,10 @@ async fn main() -> Result<()> {
             detailed,
             continuous,
             interval,
+            graph,
+            niche,
         } => {
-            handle_health(service, detailed, continuous, interval).await?;
+            handle_health(service, detailed, continuous, interval, graph, niche).await?;
         }
         Commands::Monitor {
             service,
