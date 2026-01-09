@@ -200,7 +200,7 @@ impl ManagedPrimal for GenericManagedPrimal {
                         reason: format!("Primal {} exited: {:?}", self.id, exit_status),
                         since: std::time::SystemTime::now()
                             .duration_since(std::time::UNIX_EPOCH)
-                            .unwrap()
+                            .unwrap_or(std::time::Duration::from_secs(0))
                             .as_secs(),
                         consecutive_failures: 1,
                         recovery_attempts: 0,
@@ -211,7 +211,7 @@ impl ManagedPrimal for GenericManagedPrimal {
                     Ok(HealthStatus::Healthy {
                         last_check: std::time::SystemTime::now()
                             .duration_since(std::time::UNIX_EPOCH)
-                            .unwrap()
+                            .unwrap_or(std::time::Duration::from_secs(0))
                             .as_secs(),
                         consecutive_successes: 1,
                     })
@@ -223,7 +223,7 @@ impl ManagedPrimal for GenericManagedPrimal {
                         reason: format!("Failed to check status: {}", e),
                         since: std::time::SystemTime::now()
                             .duration_since(std::time::UNIX_EPOCH)
-                            .unwrap()
+                            .unwrap_or(std::time::Duration::from_secs(0))
                             .as_secs(),
                         consecutive_failures: 1,
                         recovery_attempts: 0,
@@ -236,7 +236,7 @@ impl ManagedPrimal for GenericManagedPrimal {
                 reason: format!("Primal {} not running", self.id),
                 since: std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
+                    .unwrap_or(std::time::Duration::from_secs(0))
                     .as_secs(),
                 consecutive_failures: 1,
                 recovery_attempts: 0,

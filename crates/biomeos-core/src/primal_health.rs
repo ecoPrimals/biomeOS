@@ -222,7 +222,9 @@ impl PrimalHealthMonitor {
         let health_url = format!("{}/health", endpoint.as_str());
         let result = self.http_client.get(&health_url).send().await;
 
-        let is_healthy = result.is_ok() && result.as_ref().unwrap().status().is_success();
+        let is_healthy = result.as_ref()
+            .map(|response| response.status().is_success())
+            .unwrap_or(false);
 
         // Update state
         let mut states = self.health_states.write().await;
@@ -243,7 +245,7 @@ impl PrimalHealthMonitor {
                 state.status = HealthStatus::Healthy {
                     last_check: std::time::SystemTime::now()
                         .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap()
+                        .unwrap_or(std::time::Duration::from_secs(0))
                         .as_secs(),
                     consecutive_successes: state.consecutive_successes,
                 };
@@ -268,7 +270,7 @@ impl PrimalHealthMonitor {
                         reason: reason.clone(),
                         since: std::time::SystemTime::now()
                             .duration_since(std::time::UNIX_EPOCH)
-                            .unwrap()
+                            .unwrap_or(std::time::Duration::from_secs(0))
                             .as_secs(),
                         consecutive_failures: state.consecutive_failures,
                         recovery_attempts: state.recovery_attempts,
@@ -281,7 +283,7 @@ impl PrimalHealthMonitor {
                         reason: reason.clone(),
                         since: std::time::SystemTime::now()
                             .duration_since(std::time::UNIX_EPOCH)
-                            .unwrap()
+                            .unwrap_or(std::time::Duration::from_secs(0))
                             .as_secs(),
                         consecutive_failures: state.consecutive_failures,
                     }
