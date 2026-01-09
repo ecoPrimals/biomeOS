@@ -1,192 +1,280 @@
 # 📚 biomeOS Documentation Index
 
-**Last Updated**: January 8, 2026 (Evening)  
-**Status**: Neural API Foundation Complete ✅ → Phase 1.4 Integration
+**Last Updated**: January 9, 2026  
+**Status**: Production-Ready (Phases 1 & 2 Complete)
 
 ---
 
-## 🆕 **Neural API Foundation** (Jan 8, 2026) 🧠⭐
+## 🎊 **START HERE**
 
-**Revolutionary milestone**: Graph-based adaptive orchestration system!
-
-### **Quick Start**
-1. **[NEURAL_API_ROADMAP.md](../NEURAL_API_ROADMAP.md)** ⭐ Complete roadmap
-2. **[specs/GRAPH_BASED_ORCHESTRATION_SPEC.md](../specs/GRAPH_BASED_ORCHESTRATION_SPEC.md)** - Technical spec
-3. **[graphs/README.md](../graphs/README.md)** - Graph definition guide
-4. **[SESSION_COMPLETE_JAN8.md](jan4-session/SESSION_COMPLETE_JAN8.md)** - Session summary
-
-### **Key Achievements**
-✅ Phase 1.1: Graph Executor Foundation (100%)  
-✅ Phase 1.2: Tower Graph Definition (100%)  
-✅ Phase 1.3: BYOB Manifest Evolution (100%)  
-🎯 Phase 1.4: Integration & Deployment (50% - Core Complete)
-
-**Statistics**:
-- 5,200 lines of code written
-- 39 tests passing (100%)
-- 0 unsafe blocks
-- 0 technical debt
-- 57% progress to Milestone 1
+### **New to biomeOS?**
+1. **[../README.md](../README.md)** - Overview, architecture, quick start
+2. **[../START_HERE.md](../START_HERE.md)** - Quick start guide
+3. **[../STATUS.md](../STATUS.md)** - Current status & metrics
+4. **[../ROADMAP.md](../ROADMAP.md)** - Future plans
 
 ---
 
-## 🚀 Getting Started
+## 📖 **Deep Debt Evolution** (January 9, 2026)
 
-**New to biomeOS?** Start here:
+### **Production-Ready Status** ✅✅✅
+- **[DEEP_DEBT_FINAL_STATUS_JAN9.md](DEEP_DEBT_FINAL_STATUS_JAN9.md)** (600+ lines)
+  - Complete summary of Phases 1 & 2
+  - 43 production fixes
+  - 1,900+ lines of documentation
+  - Evolution patterns
 
-1. **[README.md](../README.md)** - Project overview and architecture
-2. **[START_HERE.md](../START_HERE.md)** - Current session status
-3. **[STATUS.md](../STATUS.md)** - Production status
-4. **[MASTER_DOCUMENTATION_INDEX.md](../MASTER_DOCUMENTATION_INDEX.md)** - Complete doc index
+- **[DEEP_DEBT_EXECUTION_PLAN_JAN9.md](DEEP_DEBT_EXECUTION_PLAN_JAN9.md)** (430 lines)
+  - Complete analysis
+  - Prioritized action items
+  - Success criteria
 
----
+- **[DEEP_DEBT_SESSION_PROGRESS_JAN9.md](DEEP_DEBT_SESSION_PROGRESS_JAN9.md)** (240 lines)
+  - Session tracking
+  - Progress metrics
 
-## 🎯 For Different Audiences
+- **[DEEP_DEBT_COMPLETE_JAN9.md](DEEP_DEBT_COMPLETE_JAN9.md)** (400 lines)
+  - Phase 1 complete summary
 
-### For Developers 💻
-**Building with biomeOS?**
-- **[graphs/README.md](../graphs/README.md)** - Graph definition guide
-- **[niches/README.md](../niches/README.md)** - Niche system guide
-- **[specs/](../specs/)** - Technical specifications
-- **[NEURAL_API_ROADMAP.md](../NEURAL_API_ROADMAP.md)** - Development roadmap
+- **[DEEP_DEBT_EVOLUTION_JAN9.md](DEEP_DEBT_EVOLUTION_JAN9.md)**
+  - Earlier tracking document
 
-### For Architects 🏗️
-**Understanding the system?**
-- **[specs/GRAPH_BASED_ORCHESTRATION_SPEC.md](../specs/GRAPH_BASED_ORCHESTRATION_SPEC.md)** - Graph orchestration
-- **[specs/BYOB_NEURAL_API_EVOLUTION_SPEC.md](../specs/BYOB_NEURAL_API_EVOLUTION_SPEC.md)** - BYOB evolution
-- **[COMPLETE_ECOSYSTEM_ARCHITECTURE_JAN8.md](jan4-session/COMPLETE_ECOSYSTEM_ARCHITECTURE_JAN8.md)** - Full ecosystem
-- **[adrs/](adrs/)** - Architecture decision records
-
-### For Primal Teams 🐾
-**Integrating a primal?**
-- **[PRIMAL_API_HANDOFF_TO_BEARDOG_SONGBIRD_JAN8.md](jan4-session/PRIMAL_API_HANDOFF_TO_BEARDOG_SONGBIRD_JAN8.md)** - API requirements
-- **[E2E_TESTING_WITH_REAL_PRIMALS_JAN8.md](jan4-session/E2E_TESTING_WITH_REAL_PRIMALS_JAN8.md)** - Testing guide
-- **[guides/primal-integration-guide.md](guides/primal-integration-guide.md)** - Integration guide
+- **[UNWRAP_EVOLUTION_PLAN_JAN9.md](UNWRAP_EVOLUTION_PLAN_JAN9.md)**
+  - Unwrap evolution patterns
 
 ---
 
-## 📖 Core Documentation
+## 🧬 **NUCLEUS & Discovery**
 
-### Neural API & Graph Orchestration (NEW!)
-- **[NEURAL_API_ROADMAP.md](../NEURAL_API_ROADMAP.md)** - Complete roadmap
-- **[specs/GRAPH_BASED_ORCHESTRATION_SPEC.md](../specs/GRAPH_BASED_ORCHESTRATION_SPEC.md)** - Technical spec
-- **[specs/BYOB_NEURAL_API_EVOLUTION_SPEC.md](../specs/BYOB_NEURAL_API_EVOLUTION_SPEC.md)** - BYOB evolution
-- **[specs/NEURAL_API_IMPLEMENTATION_PHASES.md](../specs/NEURAL_API_IMPLEMENTATION_PHASES.md)** - Phases
-- **[graphs/README.md](../graphs/README.md)** - Graph guide
-- **[SESSION_COMPLETE_JAN8.md](jan4-session/SESSION_COMPLETE_JAN8.md)** - Session report
+- **[EMERGENT_BEHAVIOR_AND_CONTROL_GAP_JAN9.md](EMERGENT_BEHAVIOR_AND_CONTROL_GAP_JAN9.md)**
+  - Emergent discovery behavior analysis
+  - Security considerations
 
-### Ecosystem Architecture
-- **[COMPLETE_ECOSYSTEM_ARCHITECTURE_JAN8.md](jan4-session/COMPLETE_ECOSYSTEM_ARCHITECTURE_JAN8.md)** - Full design
-- **[LATE_STAGE_NEURAL_ROOTPULSE_JAN8.md](jan4-session/LATE_STAGE_NEURAL_ROOTPULSE_JAN8.md)** - Future RootPulse
-- **[ARCHITECTURE_LAYERS.md](ARCHITECTURE_LAYERS.md)** - Two-level orchestration
+- **[RUNTIME_DISCOVERY_IN_ACTION_JAN9.md](RUNTIME_DISCOVERY_IN_ACTION_JAN9.md)**
+  - Runtime discovery mechanisms
 
-### Niches (Tower, Node, Nest)
-- **[COMPUTE_NODE_NICHE_DESIGN_JAN8.md](jan4-session/COMPUTE_NODE_NICHE_DESIGN_JAN8.md)** - Compute nodes
-- **[ISOMORPHIC_FRACTAL_COMPUTE_JAN8.md](jan4-session/ISOMORPHIC_FRACTAL_COMPUTE_JAN8.md)** - Fractal arch
-- **[NEST_NICHE_DATA_FEDERATION_JAN8.md](jan4-session/NEST_NICHE_DATA_FEDERATION_JAN8.md)** - Data nests
-- **[niches/README.md](../niches/README.md)** - Niche system
+- **[RUST_VS_SOCAT_WHY_RUST_WINS_JAN9.md](RUST_VS_SOCAT_WHY_RUST_WINS_JAN9.md)**
+  - Native Rust vs external tools
 
-### Primal Integration
-- **[PRIMAL_API_HANDOFF_TO_BEARDOG_SONGBIRD_JAN8.md](jan4-session/PRIMAL_API_HANDOFF_TO_BEARDOG_SONGBIRD_JAN8.md)** - API requirements
-- **[E2E_TESTING_WITH_REAL_PRIMALS_JAN8.md](jan4-session/E2E_TESTING_WITH_REAL_PRIMALS_JAN8.md)** - E2E testing
-- **[BEARDOG_INTEGRATION_PLAN_JAN8.md](jan4-session/BEARDOG_INTEGRATION_PLAN_JAN8.md)** - BearDog
-- **[SONGBIRD_INTEGRATION_PLAN_JAN8.md](jan4-session/SONGBIRD_INTEGRATION_PLAN_JAN8.md)** - Songbird
-
-### Spore System & Genetic Lineage
-- **[SPORE_INCUBATION_HIERARCHICAL_FEDERATION_JAN8.md](jan4-session/SPORE_INCUBATION_HIERARCHICAL_FEDERATION_JAN8.md)** - Incubation
-- **[GENETIC_LINEAGE_NOT_CLONES_JAN7.md](jan4-session/GENETIC_LINEAGE_NOT_CLONES_JAN7.md)** - Genetic model
-- **[SELF_PROPAGATION_SYSTEM_JAN7.md](jan4-session/SELF_PROPAGATION_SYSTEM_JAN7.md)** - Self-propagation
-- **[FIVE_SPORE_DEPLOYMENT_SUCCESS_JAN7.md](jan4-session/FIVE_SPORE_DEPLOYMENT_SUCCESS_JAN7.md)** - Multi-spore
-
-### Log Management & Forensics
-- **[LOG_FOSSIL_PHASE1_COMPLETE_JAN8.md](jan4-session/LOG_FOSSIL_PHASE1_COMPLETE_JAN8.md)** - Fossil record
-- **[LOG_FOSSIL_RECORD_EVOLUTION_JAN8.md](jan4-session/LOG_FOSSIL_RECORD_EVOLUTION_JAN8.md)** - Evolution
-
-### Federation & Deployment
-- **[LAN_FEDERATION_SUCCESS_JAN8.md](jan4-session/LAN_FEDERATION_SUCCESS_JAN8.md)** - LAN success
-- **[LAN_DEPLOYMENT_GUIDE_JAN8.md](jan4-session/LAN_DEPLOYMENT_GUIDE_JAN8.md)** - Deployment
-- **[DUAL_LOCAL_DEPLOYMENT_SUCCESS_JAN8.md](jan4-session/DUAL_LOCAL_DEPLOYMENT_SUCCESS_JAN8.md)** - Local
+- **[SPORE_GENETIC_LINEAGE_ANALYSIS_JAN9.md](SPORE_GENETIC_LINEAGE_ANALYSIS_JAN9.md)**
+  - Genetic lineage verification
 
 ---
 
-## 🏗️ Architecture Decision Records (ADRs)
+## 🎨 **UI Integration (petalTongue)**
 
-- **[ADR-001: Universal Capability-Based Architecture](adrs/ADR-001-universal-capability-based-architecture.md)**
-- **[ADR-002: Universal Discovery System](adrs/ADR-002-universal-discovery-system.md)**
+- **[PETALTONGUE_TEAM_HANDOFF_JAN9.md](PETALTONGUE_TEAM_HANDOFF_JAN9.md)** (424 lines)
+  - Complete handoff document
+  - Integration patterns
+  - Action items
 
----
+- **[PETALTONGUE_BIOMEOS_INTEGRATION_PLAN.md](PETALTONGUE_BIOMEOS_INTEGRATION_PLAN.md)** (489 lines)
+  - Comprehensive integration plan
+  - Phase 1-3 roadmap
 
-## 🔌 API Documentation
+- **[PETALTONGUE_GUI_USER_GUIDE.md](PETALTONGUE_GUI_USER_GUIDE.md)**
+  - User guide for UI
 
-### Core APIs
-- **[api/biomeos-primal-sdk.md](api/biomeos-primal-sdk.md)** - SDK reference
-- **[api/discovery-and-health-monitoring.md](api/discovery-and-health-monitoring.md)** - Discovery API
-- **[API_ADAPTER_QUICK_REF.md](API_ADAPTER_QUICK_REF.md)** - Quick reference
-
-### Guides
-- **[guides/primal-integration-guide.md](guides/primal-integration-guide.md)** - Integration
-- **[guides/ecosystem-participation-guide.md](guides/ecosystem-participation-guide.md)** - Participation
-- **[guides/DELEGATION_IMPLEMENTATION_GUIDE.md](guides/DELEGATION_IMPLEMENTATION_GUIDE.md)** - Delegation
-- **[guides/ZERO_KNOWLEDGE_EVOLUTION_PLAN.md](guides/ZERO_KNOWLEDGE_EVOLUTION_PLAN.md)** - Zero-knowledge
+- **[PETALTONGUE_INTEGRATION_SUCCESS_JAN9.md](PETALTONGUE_INTEGRATION_SUCCESS_JAN9.md)**
+  - Integration success report
 
 ---
 
-## 📊 Testing & Quality
+## 🐿️ **AI Integration (Squirrel)**
 
-### Deep Debt & Quality
-- **[DEEP_DEBT_AUDIT_JAN7.md](jan4-session/DEEP_DEBT_AUDIT_JAN7.md)** - Comprehensive audit
-- **[DEEP_DEBT_EVOLUTION_COMPLETE_JAN7.md](jan4-session/DEEP_DEBT_EVOLUTION_COMPLETE_JAN7.md)** - Evolution
-- **[EVOLUTION_COMPLETE_JAN8.md](jan4-session/EVOLUTION_COMPLETE_JAN8.md)** - Summary
+- **[SQUIRREL_TEAM_HANDOFF_JAN9.md](SQUIRREL_TEAM_HANDOFF_JAN9.md)** (522 lines)
+  - Complete handoff document
+  - MCP integration
+  - Agent capabilities
 
-### Testing
-- **[E2E_TESTING_WITH_REAL_PRIMALS_JAN8.md](jan4-session/E2E_TESTING_WITH_REAL_PRIMALS_JAN8.md)** - E2E guide
-- **[COMPREHENSIVE_TEST_COVERAGE_JAN7.md](jan4-session/COMPREHENSIVE_TEST_COVERAGE_JAN7.md)** - Coverage
-
----
-
-## 🗺️ Deployment Targets
-
-### Basement HPC
-- **[deployments/basement-hpc/README.md](../deployments/basement-hpc/README.md)** - HPC plan
-- **[BASEMENT_HPC_DEPLOYMENT_PLAN_JAN8.md](jan4-session/BASEMENT_HPC_DEPLOYMENT_PLAN_JAN8.md)** - Detailed plan
+- **[SQUIRREL_BIOMEOS_INTEGRATION_ANALYSIS.md](SQUIRREL_BIOMEOS_INTEGRATION_ANALYSIS.md)** (496 lines)
+  - Integration analysis
+  - Architecture patterns
 
 ---
 
-## 📖 Session History
+## 🏗️ **Architecture**
 
-### Recent Sessions (Jan 8, 2026)
-- **[SESSION_COMPLETE_JAN8.md](jan4-session/SESSION_COMPLETE_JAN8.md)** - Neural API (CURRENT)
-- **[FINAL_SESSION_COMPLETE_JAN8_EVENING.md](jan4-session/FINAL_SESSION_COMPLETE_JAN8_EVENING.md)** - Log fossil
-- **[SESSION_COMPLETE_JAN7_EVENING.md](jan4-session/SESSION_COMPLETE_JAN7_EVENING.md)** - Deep debt
+### **Core Architecture**
+- **[ARCHITECTURE_LAYERS.md](ARCHITECTURE_LAYERS.md)**
+  - Complete layer breakdown
 
-### Complete History
-- See **[jan4-session/](jan4-session/)** for all 161 session documents
+- **[architecture/BEARDOG_SOVEREIGNTY_MODEL.md](architecture/BEARDOG_SOVEREIGNTY_MODEL.md)**
+  - BearDog sovereignty
 
----
+- **[architecture/BIOMEOS_ENCRYPTION_ARCHITECTURE.md](architecture/BIOMEOS_ENCRYPTION_ARCHITECTURE.md)**
+  - Encryption design
 
-## 🎯 Current Status
+- **[architecture/SOVEREIGNTY_CLARIFICATION_SUMMARY.md](architecture/SOVEREIGNTY_CLARIFICATION_SUMMARY.md)**
+  - Sovereignty clarification
 
-**Production Ready**: ✅
-- Neural API Foundation (57% to Milestone 1)
-- Graph orchestration engine
-- BYOB manifest system
-- Log fossil record
-- Spore incubation
-- LAN federation
+### **Decision Records**
+- **[adrs/ADR-001-universal-capability-based-architecture.md](adrs/ADR-001-universal-capability-based-architecture.md)**
+  - Capability-based design
 
-**In Progress**: 🎯
-- Phase 1.4: CLI integration (50%)
-- Real primal testing
-- LiveSpore deployment
-
-**Next Steps**: 🚀
-1. Complete Phase 1.4
-2. Real primal E2E tests
-3. USB hardware testing
-4. E2E federation validation
+- **[adrs/ADR-002-universal-discovery-system.md](adrs/ADR-002-universal-discovery-system.md)**
+  - Discovery system design
 
 ---
 
-**Last Updated**: January 8, 2026 (Evening)  
-**Maintainer**: biomeOS Team  
-**Status**: ✅ Neural API Foundation Complete
+## 📚 **API Documentation**
+
+- **[API_ADAPTER_QUICK_REF.md](API_ADAPTER_QUICK_REF.md)**
+  - Quick reference
+
+- **[api/biomeos-primal-sdk.md](api/biomeos-primal-sdk.md)**
+  - Primal SDK docs
+
+- **[api/discovery-and-health-monitoring.md](api/discovery-and-health-monitoring.md)**
+  - Discovery & health
+
+- **[api/DYNAMIC_API_SCHEMA_DISCOVERY.md](api/DYNAMIC_API_SCHEMA_DISCOVERY.md)**
+  - Dynamic schema discovery
+
+- **[api/PRIMAL_SCHEMA_INTEGRATION_GUIDE.md](api/PRIMAL_SCHEMA_INTEGRATION_GUIDE.md)**
+  - Schema integration
+
+---
+
+## 📖 **Guides**
+
+- **[guides/ecosystem-participation-guide.md](guides/ecosystem-participation-guide.md)**
+  - How to participate
+
+- **[guides/primal-integration-guide.md](guides/primal-integration-guide.md)**
+  - Integrate new primals
+
+- **[guides/DELEGATION_IMPLEMENTATION_GUIDE.md](guides/DELEGATION_IMPLEMENTATION_GUIDE.md)**
+  - Delegation patterns
+
+- **[guides/AUDIT_AND_PRUNING_INDEX.md](guides/AUDIT_AND_PRUNING_INDEX.md)**
+  - Audit & pruning
+
+- **[guides/ZERO_KNOWLEDGE_EVOLUTION_PLAN.md](guides/ZERO_KNOWLEDGE_EVOLUTION_PLAN.md)**
+  - Zero-knowledge evolution
+
+---
+
+## 🛠️ **Hardware & Testing**
+
+- **[HARDWARE_TESTING_GUIDE.md](HARDWARE_TESTING_GUIDE.md)**
+  - Hardware testing procedures
+
+- **[HARDWARE_AVAILABLE_STATUS_JAN9.md](HARDWARE_AVAILABLE_STATUS_JAN9.md)**
+  - Available hardware status
+
+---
+
+## 🗄️ **Evolution Plans**
+
+- **[TOWER_EVOLUTION_PLAN.md](TOWER_EVOLUTION_PLAN.md)**
+  - Tower evolution roadmap
+
+- **[../NEURAL_API_STATUS.md](../NEURAL_API_STATUS.md)**
+  - Neural API current status
+
+- **[../NEURAL_API_ROADMAP.md](../NEURAL_API_ROADMAP.md)**
+  - Neural API future phases
+
+---
+
+## 🗂️ **Additional Documentation**
+
+### **Root Level**
+- **[ROOT_DOCUMENTATION.md](ROOT_DOCUMENTATION.md)** - Root doc overview
+- **[README.md](README.md)** - Docs README
+
+### **Specifications**
+- **[../specs/](../specs/)** - 30+ technical specifications
+  - NUCLEUS, Neural API, BYOB, Federation, etc.
+
+### **Examples**
+- **[../examples/](../examples/)** - Demo applications
+  - Config examples, integration demos
+
+### **Graphs**
+- **[../graphs/](../graphs/)** - Deployment graphs
+  - Tower, Node, Nest, UI deployment patterns
+
+---
+
+## 📦 **Archive (Fossil Record)**
+
+### **Old Sessions** (Moved to Archive)
+- **[../archive/docs-fossil-record/jan4-session/](../archive/docs-fossil-record/jan4-session/)** (125 files)
+  - January 4, 2026 session documents
+  - Kept for historical reference
+
+### **Legacy Code**
+- **[../archive/legacy_code/](../archive/legacy_code/)**
+  - universal_adapter.rs (1,081 lines)
+
+### **Old Specs**
+- **[../archive/specs-fossil-record/](../archive/specs-fossil-record/)** (11 specs)
+  - Deprecated specifications
+
+---
+
+## 🔍 **Finding What You Need**
+
+### **For New Users**
+1. [../START_HERE.md](../START_HERE.md) - Quick start
+2. [../README.md](../README.md) - Overview
+3. [../STATUS.md](../STATUS.md) - Current state
+
+### **For Developers**
+1. [DEEP_DEBT_FINAL_STATUS_JAN9.md](DEEP_DEBT_FINAL_STATUS_JAN9.md) - Production status
+2. [../specs/](../specs/) - Technical specs
+3. [api/](api/) - API documentation
+
+### **For Integrators**
+1. [PETALTONGUE_TEAM_HANDOFF_JAN9.md](PETALTONGUE_TEAM_HANDOFF_JAN9.md) - UI integration
+2. [SQUIRREL_TEAM_HANDOFF_JAN9.md](SQUIRREL_TEAM_HANDOFF_JAN9.md) - AI integration
+3. [guides/primal-integration-guide.md](guides/primal-integration-guide.md) - New primal
+
+### **For Contributors**
+1. [DEEP_DEBT_FINAL_STATUS_JAN9.md](DEEP_DEBT_FINAL_STATUS_JAN9.md) - Deep debt principles
+2. [DEEP_DEBT_EXECUTION_PLAN_JAN9.md](DEEP_DEBT_EXECUTION_PLAN_JAN9.md) - Evolution patterns
+3. [adrs/](adrs/) - Architecture decisions
+
+---
+
+## 📊 **Documentation Statistics**
+
+### **Deep Debt Evolution**
+- Total documentation: **1,900+ lines**
+- Major docs: 5 documents
+- Session commits: 25 total
+
+### **Integration Handoffs**
+- petalTongue: 424 + 489 = 913 lines
+- Squirrel: 522 + 496 = 1,018 lines
+- **Total**: 1,931 lines of handoff documentation
+
+### **Technical Specs**
+- Specs directory: 30+ specifications
+- Architecture docs: 7 documents
+- API docs: 5 documents
+
+### **Total Documentation**
+- **~6,000+ lines** of comprehensive documentation
+- **200+ files** across all categories
+- **100% production-ready**
+
+---
+
+## 🎊 **Quick Links**
+
+**Production Status**: [DEEP_DEBT_FINAL_STATUS_JAN9.md](DEEP_DEBT_FINAL_STATUS_JAN9.md)  
+**Start Here**: [../START_HERE.md](../START_HERE.md)  
+**Current Status**: [../STATUS.md](../STATUS.md)  
+**Roadmap**: [../ROADMAP.md](../ROADMAP.md)  
+**Specs**: [../specs/](../specs/)  
+
+---
+
+**Last Updated**: January 9, 2026  
+**Documentation Status**: ✅ Production-Ready  
+**Deep Debt**: ✅✅✅ Phases 1 & 2 Complete
+
+🌱 **Welcome to the biomeOS ecosystem!** ✨
