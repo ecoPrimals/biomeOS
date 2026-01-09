@@ -5,16 +5,19 @@
 //! - Sub-federations (capability-based granular access)
 //! - Runtime primal discovery (no hardcoding)
 //! - BearDog integration for all cryptographic operations
+//! - NUCLEUS secure discovery protocol (5-layer verification)
 
 pub mod subfederation;
 pub mod capability;
 pub mod discovery;
+pub mod nucleus;
 pub mod beardog_client;
 pub mod unix_socket_client;
 
 pub use subfederation::{SubFederation, SubFederationManager, IsolationLevel};
 pub use capability::{Capability, CapabilitySet};
 pub use discovery::{PrimalDiscovery, DiscoveredPrimal};
+pub use nucleus::{SecureNucleusDiscovery, VerifiedPrimal, TrustLevel, SelectionCriteria, IdentityProof};
 pub use beardog_client::BearDogClient;
 pub use unix_socket_client::{UnixSocketClient, JsonRpcRequest, JsonRpcResponse};
 
