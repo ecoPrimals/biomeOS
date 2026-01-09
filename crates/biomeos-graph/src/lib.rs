@@ -16,7 +16,6 @@ pub mod graph;
 pub mod parser;
 pub mod validator;
 pub mod executor;
-pub mod parallel_executor;
 pub mod context;
 pub mod error;
 pub mod metrics;
@@ -40,7 +39,6 @@ pub use graph::{
 pub use parser::GraphParser;
 pub use validator::GraphValidator;
 pub use executor::GraphExecutor;
-pub use parallel_executor::{ParallelGraphExecutor, PrimalOperationExecutor};
 pub use context::ExecutionContext;
 pub use error::{GraphError, Result};
 pub use metrics::{MetricsCollector, GraphMetrics, NodeMetricsAggregate, ExecutionRecord};

@@ -577,6 +577,7 @@ name = "biomeos-cli"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "base64 0.22.1",
  "biomeos-chimera",
  "biomeos-core",
  "biomeos-federation",
@@ -599,6 +600,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml",
+ "sha2 0.10.9",
  "sysinfo 0.29.11",
  "tempfile",
  "tokio",
