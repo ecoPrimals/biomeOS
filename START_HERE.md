@@ -1,431 +1,250 @@
-# 🌱 biomeOS - Start Here
+# 🌱 START HERE - biomeOS Quick Start
 
-**Last Updated:** January 8, 2026 (Evening)  
-**Version:** v0.7.0  
-**Status:** Neural API Phase 1 Complete (Phases 1.1-1.5) - 85% to Milestone 1  
-**Current Focus:** Production Testing & Deployment
+**Welcome to biomeOS!** This guide will get you up and running quickly.
 
 ---
 
-## 🎯 What is biomeOS?
+## 🎊 Current Status
 
-**biomeOS** is an adaptive orchestration system for distributed primals (microservices) featuring:
+**Phase 1.5 COMPLETE** - Production Ready for LAN Deployment
 
-- **🧠 Neural API** - Graph-based adaptive orchestration (NEW!)
-- **🌱 Genetic Federation** - Trust via cryptographic lineage
-- **🔐 Port-Free Architecture** - Unix sockets + UDP multicast
-- **📊 Isomorphic Compute** - Fractal node architecture
-- **🗄️ Data Provenance** - Physical data with ownership
-- **🚀 USB Spore Deployment** - Portable, self-propagating systems
+✅ Core infrastructure  
+✅ NUCLEUS secure discovery  
+✅ Topology API  
+✅ Zero unsafe code  
+✅ Comprehensive documentation  
 
 ---
 
-## 🎊 Recent Achievement: Neural API Phase 1 COMPLETE! (Jan 8, 2026)
+## 📚 Essential Documents
 
-Completed **all 5 phases** (1.1-1.5) of Neural API Phase 1 in a single epic session:
+### **New to biomeOS?**
+1. **[README.md](README.md)** - Overview, architecture, quick start
+2. **[STATUS.md](STATUS.md)** - Current status, statistics, next steps
+3. **[ROADMAP.md](ROADMAP.md)** - Phased implementation plan
 
-### **✅ What's New**
+### **Deep Dive**
+- **[docs/DEEP_DEBT_EVOLUTION_JAN9.md](docs/DEEP_DEBT_EVOLUTION_JAN9.md)** - Recent evolution summary
+- **[SESSION_SUMMARY_JAN9.md](SESSION_SUMMARY_JAN9.md)** - Latest session accomplishments
+- **[specs/](specs/)** - 30+ technical specifications
 
-1. **Graph-Based Orchestration**
-   - Declarative TOML graphs for primal coordination
-   - Capability-based primal discovery (no hardcoding!)
-   - Sequential execution (parallel & DAG coming soon)
-   
-2. **BYOB Manifest Evolution**
-   - Extended niche manifests with `[[graphs]]` support
-   - 100% backward compatible (old format works!)
-   - Capability-based dependency validation
-
-3. **Tower Niche**
-   - Complete tower definition (`niches/tower.toml`)
-   - 3 production graphs (deploy, health_check, shutdown)
-   - Songbird + BearDog coordination
-
-4. **Integration Layer** (Phase 1.4)
-   - `PrimalRegistry` with real Unix socket discovery
-   - `GraphDeploymentCoordinator` with JSON-RPC communication
-   - CLI integration complete (`biomeos deploy --graph`)
-   - Process spawning and lifecycle management
-
-5. **Learning System** (Phase 1.5)
-   - SQLite-backed metrics collection
-   - Historical execution tracking
-   - Bottleneck identification
-   - Graph-based health checks
-
-### **📊 Session Stats**
-- **~12,000 lines** of code + documentation
-- **48 tests** passing (100% success rate)
-- **9 commits** pushed to master
-- **Zero** unsafe blocks, hardcoded names, or production mocks
-- **100%** backward compatible
-
-**Full Details:** `docs/jan4-session/SESSION_COMPLETE_JAN8.md`
+### **Integration**
+- **[docs/PETALTONGUE_TEAM_HANDOFF_JAN9.md](docs/PETALTONGUE_TEAM_HANDOFF_JAN9.md)** - UI integration plan
+- **[NEURAL_API_STATUS.md](NEURAL_API_STATUS.md)** - Neural API progress
+- **[NEURAL_API_ROADMAP.md](NEURAL_API_ROADMAP.md)** - Neural API phases
 
 ---
 
 ## 🚀 Quick Start
 
-### **1. Build the Project**
-
+### **1. Build Everything**
 ```bash
-# Clone the repository
-cd ecoPrimals/phase2/biomeOS
-
-# Build all crates
 cargo build --workspace
+```
 
-# Run tests
+### **2. Run Tests**
+```bash
+# All tests
 cargo test --workspace
+
+# NUCLEUS tests
+cargo test --package biomeos-federation nucleus_tests
 ```
 
-### **2. Explore the Neural API**
-
+### **3. Start API Server**
 ```bash
-# View the roadmap
-cat NEURAL_API_ROADMAP.md
+# Standalone mode (demo, no primals required)
+BIOMEOS_STANDALONE_MODE=true cargo run --package biomeos-api
 
-# Examine a niche definition
-cat niches/tower.toml
-
-# Check a graph definition
-cat graphs/tower_deploy.toml
-
-# Run graph executor tests
-cargo test --package biomeos-graph
+# Live mode (discovers real primals)
+cargo run --package biomeos-api
 ```
 
-### **3. Deploy a Niche** (Coming in Phase 1.4!)
-
+### **4. Test Endpoints**
 ```bash
-# Deploy tower using default graph
-biomeos deploy --niche tower
+# Health check
+curl http://localhost:3000/api/v1/health | jq '.'
 
-# Deploy with specific graph
-biomeos deploy --niche tower --graph health_check
-
-# Deploy to USB spore
-biomeos deploy --niche tower --usb /media/liveSpore1
+# Topology (for petalTongue)
+curl http://localhost:3000/api/v1/topology | jq '.'
 ```
 
 ---
 
-## 📚 Documentation Structure
+## 🏗️ Architecture Overview
 
-### **Core Documentation**
-- `NEURAL_API_ROADMAP.md` - Complete implementation roadmap
-- `START_HERE.md` - This file
-- `README.md` - Project overview
+### **Primals** (Sovereign Services)
+- **biomeOS**: Orchestrator (this project)
+- **Songbird**: P2P, discovery, BTSP
+- **BearDog**: Security, encryption, identity
+- **Toadstool**: Compute, workload management
+- **NestGate**: Storage, provenance
+- **petalTongue**: Universal UI
+
+### **Niches** (Deployment Patterns)
+- **Tower**: Communication (biomeOS + Songbird + BearDog)
+- **Node**: Compute (Toadstool + optional BearDog)
+- **Nest**: Data (NestGate + BearDog + Songbird)
+- **UI**: Interface (petalTongue + biomeOS)
+
+### **Communication**
+- **Primary**: Unix sockets (JSON-RPC)
+- **Discovery**: UDP multicast (Songbird)
+- **Secure**: BTSP tunnels (BearDog + Songbird)
+
+---
+
+## 🧬 NUCLEUS (Secure Discovery)
+
+5-layer verification protocol:
+
+1. **Physical Discovery** (Songbird) - UDP multicast
+2. **Identity Verification** (BearDog) - Ed25519 signatures
+3. **Capability Verification** (biomeOS) - Query primal
+4. **Trust Evaluation** (BearDog) - Genetic lineage
+5. **Registration** (biomeOS) - Add to registry
+
+**Trust Levels**: 0 (Unknown) → 4 (Highest/Sibling)
+
+---
+
+## 📋 Common Tasks
+
+### **Deploy a Tower (USB Spore)**
+```bash
+cargo run --bin biomeos-spore -- create \
+  --niche tower \
+  --output /path/to/usb
+```
+
+### **Run NUCLEUS Tests**
+```bash
+cargo test --package biomeos-federation nucleus_tests
+```
+
+### **Check Unwraps (Deep Debt)**
+```bash
+grep -r "\.unwrap()\|\.expect(" \
+  --include="*.rs" \
+  --exclude="*test*.rs" \
+  crates/ | wc -l
+```
+
+### **Build Specific Crate**
+```bash
+cargo build --package biomeos-api
+cargo build --package biomeos-federation
+cargo build --package biomeos-spore
+```
+
+---
+
+## 🔍 Finding Things
 
 ### **Specifications**
-- `specs/GRAPH_BASED_ORCHESTRATION_SPEC.md` - Graph system design
-- `specs/BYOB_NEURAL_API_EVOLUTION_SPEC.md` - Manifest evolution
-- `specs/NEURAL_API_IMPLEMENTATION_PHASES.md` - Implementation details
-
-### **Session Reports** (`docs/jan4-session/`)
-- `SESSION_COMPLETE_JAN8.md` - Complete session summary
-- `PHASE_1_1_COMPLETE_JAN8.md` - Graph executor foundation
-- `PHASE_1_3_COMPLETE_JAN8.md` - BYOB manifest evolution
-- `PHASE_1_4_PROGRESS_JAN8.md` - Integration layer
-- `LATE_STAGE_NEURAL_ROOTPULSE_JAN8.md` - Future evolution
-
-### **User Guides**
-- `graphs/README.md` - How to use graphs
-- `niches/README.md` - Niche system overview
-
----
-
-## 🏗️ Project Structure
-
-```
-biomeOS/
-├── crates/
-│   ├── biomeos-graph/          # NEW! Graph execution engine
-│   │   ├── src/
-│   │   │   ├── graph.rs        # Core data structures
-│   │   │   ├── parser.rs       # TOML → Graph
-│   │   │   ├── validator.rs    # Structure validation
-│   │   │   ├── executor.rs     # Sequential execution
-│   │   │   └── context.rs      # Runtime state
-│   │   └── tests/              # 15 unit + 3 integration tests
-│   │
-│   ├── biomeos-manifest/       # EVOLVED! Graph support added
-│   │   ├── src/
-│   │   │   ├── lib.rs          # YAML manifest (legacy)
-│   │   │   └── niche.rs        # NEW! TOML niche parser
-│   │   └── tests/              # 14 unit + 5 integration tests
-│   │
-│   ├── biomeos-core/           # EVOLVED! Graph integration
-│   │   ├── src/
-│   │   │   ├── graph_deployment.rs  # NEW! Integration layer
-│   │   │   └── ...
-│   │   └── ...
-│   │
-│   ├── biomeos-compute/        # Fractal compute architecture
-│   ├── biomeos-federation/     # Hierarchical federation
-│   ├── biomeos-spore/          # USB spore deployment
-│   └── ...
-│
-├── graphs/                     # NEW! Graph definitions
-│   ├── tower_deploy.toml       # Complete tower deployment
-│   ├── tower_health_check.toml # Parallel health checks
-│   ├── tower_shutdown.toml     # Graceful shutdown
-│   └── README.md               # Usage guide
-│
-├── niches/                     # NEW! Niche definitions
-│   ├── tower.toml              # Tower niche (with graphs!)
-│   ├── compute-node.toml       # Compute niche
-│   ├── nest.toml               # Data nest niche
-│   └── ...
-│
-├── specs/                      # Technical specifications
-│   ├── GRAPH_BASED_ORCHESTRATION_SPEC.md
-│   ├── BYOB_NEURAL_API_EVOLUTION_SPEC.md
-│   └── NEURAL_API_IMPLEMENTATION_PHASES.md
-│
-├── docs/jan4-session/          # Session documentation
-│   ├── SESSION_COMPLETE_JAN8.md
-│   └── ...
-│
-├── NEURAL_API_ROADMAP.md       # Implementation roadmap
-└── START_HERE.md               # This file
-```
-
----
-
-## 🧠 Neural API Overview
-
-### **What It Is**
-
-A graph-based orchestration system for adaptive primal coordination:
-
-```
-User Command
-    ↓
-NicheManifest (tower.toml)
-    ↓
-GraphDefinition (tower_deploy.toml)
-    ↓
-GraphExecutor
-    ↓
-PrimalRegistry (capability-based discovery!)
-    ↓
-Real Primals (Songbird, BearDog, etc.)
-```
-
-### **Key Innovations**
-
-1. **Capability-Based Discovery**
-   ```toml
-   # Not hardcoded!
-   primal = { by_capability = "discovery" }
-   ```
-
-2. **Declarative Orchestration**
-   ```toml
-   [[nodes]]
-   id = "start-songbird"
-   primal = { by_capability = "discovery" }
-   operation = { name = "start" }
-   ```
-
-3. **Progressive Enhancement**
-   - Old niches (without graphs) still work
-   - New niches (with graphs) get adaptive orchestration
-   - 100% backward compatible
-
----
-
-## 📊 Current Status
-
-### **Milestone 1: Tower Niche** (57% Complete)
-
-```
-✅ Phase 1.1: Graph Executor Foundation
-✅ Phase 1.2: Tower Graph Definition
-✅ Phase 1.3: BYOB Manifest Evolution
-🎯 Phase 1.4: Integration & Deployment (50%)
-🔜 Phase 1.5: Metrics Collection
-```
-
-### **What Works Now**
-- ✅ Parse graph definitions from TOML
-- ✅ Validate graph structure (cycles, refs)
-- ✅ Parse niche manifests with graph support
-- ✅ Capability-based dependency validation
-- ✅ Sequential graph execution
-- ✅ Runtime primal discovery
-- ✅ 39 tests passing
-
-### **What's Coming Next**
-- ⏳ CLI integration (`biomeos deploy`)
-- ⏳ Real primal discovery (Unix sockets)
-- ⏳ LiveSpore deployment
-- ⏳ Parallel execution
-- ⏳ DAG execution
-- ⏳ Metrics collection
-
----
-
-## 🎯 Example: Deploy a Tower
-
-### **1. Define the Niche** (`niches/tower.toml`)
-
-```toml
-[niche]
-name = "tower"
-type = "communication"
-
-[[primals]]
-binary = "./primals/songbird-orchestrator"
-provides = ["discovery", "federation"]
-requires = ["security"]
-
-[[primals]]
-binary = "./primals/beardog-server"
-provides = ["security", "encryption"]
-
-[[graphs]]
-name = "deploy"
-path = "../graphs/tower_deploy.toml"
-default = true
-```
-
-### **2. Define the Graph** (`graphs/tower_deploy.toml`)
-
-```toml
-[graph]
-name = "deploy-tower"
-coordination = "Sequential"
-
-[[nodes]]
-id = "start-songbird"
-primal = { by_capability = "discovery" }
-operation = { name = "start" }
-
-[[nodes]]
-id = "start-beardog"
-primal = { by_capability = "security" }
-operation = { name = "start" }
-```
-
-### **3. Deploy** (Coming Soon!)
-
 ```bash
-biomeos deploy --niche tower
+ls specs/
+# 30+ specs: NUCLEUS, Neural API, BYOB, Federation, etc.
+```
+
+### **Documentation**
+```bash
+ls docs/
+# Guides, architecture, evolution plans, handoffs
+```
+
+### **Examples**
+```bash
+ls examples/
+# Demo applications, config examples
+```
+
+### **Graphs**
+```bash
+ls graphs/
+# Deployment graphs for tower, node, nest, ui
 ```
 
 ---
 
-## 🧪 Testing
+## 🎯 Next Steps
 
-### **Run All Tests**
-```bash
-cargo test --workspace
-```
+### **For Developers**
+1. Read [README.md](README.md) for architecture
+2. Check [STATUS.md](STATUS.md) for current state
+3. Review [ROADMAP.md](ROADMAP.md) for phases
+4. Explore [specs/](specs/) for deep dives
 
-### **Test Specific Crates**
-```bash
-# Graph executor
-cargo test --package biomeos-graph
+### **For Contributors**
+1. Review deep debt principles in [docs/DEEP_DEBT_EVOLUTION_JAN9.md](docs/DEEP_DEBT_EVOLUTION_JAN9.md)
+2. Check [docs/UNWRAP_EVOLUTION_PLAN_JAN9.md](docs/UNWRAP_EVOLUTION_PLAN_JAN9.md) for current work
+3. Follow modern Rust patterns (see any recent commits)
 
-# Manifest parser
-cargo test --package biomeos-manifest
-
-# Core integration
-cargo test --package biomeos-core --lib graph_deployment
-```
-
-### **Test Coverage**
-- **Unit Tests:** 31 passing
-- **Integration Tests:** 8 passing
-- **Total:** 39 passing (100%)
-- **Linter Errors:** 0
+### **For Integrators**
+1. Read [docs/PETALTONGUE_TEAM_HANDOFF_JAN9.md](docs/PETALTONGUE_TEAM_HANDOFF_JAN9.md) for UI
+2. Check topology API: `http://localhost:3000/api/v1/topology`
+3. Review [specs/NUCLEUS_SECURE_DISCOVERY_PROTOCOL.md](specs/NUCLEUS_SECURE_DISCOVERY_PROTOCOL.md)
 
 ---
 
-## 🤝 Contributing
+## 🆘 Troubleshooting
 
-### **Deep Debt Principles**
+### **Build Fails**
+```bash
+# Clean and rebuild
+cargo clean
+cargo build --workspace
+```
 
-1. **Modern Idiomatic Rust**
-   - No unsafe blocks
-   - Async/await throughout
-   - `Result<T, E>` + `thiserror`
+### **Tests Fail**
+```bash
+# Run specific test
+cargo test --package biomeos-federation nucleus_tests -- --nocapture
+```
 
-2. **No Hardcoding**
-   - Capability-based discovery
-   - Runtime resolution
-   - Self-knowledge only
+### **API Won't Start**
+```bash
+# Check if port 3000 is in use
+lsof -i :3000
 
-3. **No Production Mocks**
-   - Mocks in `#[cfg(test)]` only
-   - Trait-based abstraction
-   - Real implementations
-
-4. **Backward Compatible**
-   - Old code continues working
-   - Progressive enhancement
-   - No breaking changes
-
-5. **Evolvable**
-   - Large files refactored smartly
-   - Unsafe code evolved to safe
-   - Clear separation of concerns
+# Use standalone mode
+BIOMEOS_STANDALONE_MODE=true cargo run --package biomeos-api
+```
 
 ---
 
 ## 📞 Getting Help
 
-### **Documentation**
-- Read `NEURAL_API_ROADMAP.md` for the big picture
-- Check `docs/jan4-session/SESSION_COMPLETE_JAN8.md` for latest updates
-- Explore `specs/` for technical details
-
-### **Code Examples**
-- `graphs/` - Working graph definitions
-- `niches/` - Niche configurations
-- `crates/*/tests/` - Unit and integration tests
+- **Documentation**: Check [docs/](docs/) and [specs/](specs/)
+- **Status**: See [STATUS.md](STATUS.md)
+- **Recent Work**: See [SESSION_SUMMARY_JAN9.md](SESSION_SUMMARY_JAN9.md)
+- **Issues**: Check build logs, test output
 
 ---
 
-## 🗺️ Roadmap
+## 🎊 Quick Wins
 
-### **Current Focus** (Phase 1.4)
-- CLI integration
-- Real primal testing
-- LiveSpore deployment
+**Want to see it work right now?**
 
-### **Next Milestone** (Milestone 2 - Nodes)
-- Parallel execution
-- Toadstool integration
-- Multi-node coordination
+```bash
+# 1. Start API server (standalone mode)
+BIOMEOS_STANDALONE_MODE=true cargo run --package biomeos-api &
 
-### **Future** (Milestones 3-4)
-- DAG execution
-- NestGate data federation
-- Complete backbone (Tower + Node + Nest)
-- Learning engine
-- RootPulse coordination
+# 2. Test it (in another terminal)
+curl http://localhost:3000/api/v1/health | jq '.'
+curl http://localhost:3000/api/v1/topology | jq '.primals[] | {id, type, health}'
 
-**See:** `NEURAL_API_ROADMAP.md` for complete roadmap
+# 3. Stop it
+pkill biomeos-api
+```
 
----
-
-## 🎊 Recent Achievements
-
-- ✅ Neural API foundation complete (Jan 8, 2026)
-- ✅ 3.5 phases in single session
-- ✅ 5,200 lines written
-- ✅ 39 tests passing
-- ✅ Zero technical debt
-- ✅ Production-ready graph execution
+**See tests pass:**
+```bash
+cargo test --package biomeos-federation nucleus_tests
+```
 
 ---
 
-**Status:** 🎊 **Neural API Foundation Complete!**  
-**Next:** Phase 1.4 completion (CLI + deployment)  
-**See Also:** `NEURAL_API_ROADMAP.md`, `docs/jan4-session/SESSION_COMPLETE_JAN8.md`
+**Welcome to the ecosystem!** 🌱✨
 
-🧠 **Welcome to the future of adaptive orchestration!** 🚀
-
+For more details, see [README.md](README.md) and [STATUS.md](STATUS.md).
