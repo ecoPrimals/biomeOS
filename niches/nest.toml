@@ -197,3 +197,26 @@ max_cpu_percent = 50
 require_genetic_lineage = true
 verify_workload_signature = true
 
+# =============================================================================
+# GRAPHS (Neural API Orchestration)
+# =============================================================================
+
+# Default deployment graph
+[[graphs]]
+name = "deploy"
+path = "./graphs/nest_deploy.toml"
+description = "Deploy data nest with encryption and federation"
+default = true
+
+# Health check graph
+[[graphs]]
+name = "health_check"
+path = "./graphs/nest_health_check.toml"
+description = "Parallel health check for data nest"
+
+# Graceful shutdown graph
+[[graphs]]
+name = "shutdown"
+path = "./graphs/nest_shutdown.toml"
+description = "Graceful shutdown with data sync"
+

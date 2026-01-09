@@ -1,0 +1,76 @@
+# Data Nest Deployment Graph - Simplified
+# Full version to be expanded in future sessions
+
+[graph]
+name = "nest_deploy"
+version = "1.0.0"
+description = "Deploy data nest"
+coordination_pattern = "sequential"
+
+[[nodes]]
+id = "discover-primals"
+primal = { by_capability = "storage" }
+operation = { name = "discover_primals" }
+
+[nodes.constraints]
+timeout_ms = 5000
+
+[[nodes]]
+id = "start-beardog"
+primal = { by_capability = "security" }
+
+[nodes.operation]
+name = "start"
+[nodes.operation.params]
+mode = "data-vault"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[[nodes]]
+id = "start-songbird"
+primal = { by_capability = "discovery" }
+
+[nodes.operation]
+name = "start"
+[nodes.operation.params]
+mode = "daemon"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[[nodes]]
+id = "start-nestgate"
+primal = { by_capability = "storage" }
+
+[nodes.operation]
+name = "start"
+[nodes.operation.params]
+provenance_enabled = true
+
+[nodes.constraints]
+timeout_ms = 60000
+
+[[nodes]]
+id = "verify-nest"
+primal = { by_capability = "storage" }
+operation = { name = "health_check" }
+
+[nodes.constraints]
+timeout_ms = 10000
+
+[[edges]]
+from = "discover-primals"
+to = "start-beardog"
+
+[[edges]]
+from = "start-beardog"
+to = "start-songbird"
+
+[[edges]]
+from = "start-songbird"
+to = "start-nestgate"
+
+[[edges]]
+from = "start-nestgate"
+to = "verify-nest"

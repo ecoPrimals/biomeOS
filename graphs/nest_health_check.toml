@@ -1,0 +1,34 @@
+# Data Nest Health Check Graph
+
+[graph]
+name = "nest_health_check"
+version = "1.0.0"
+description = "Health check for data nest"
+coordination_pattern = "parallel"
+
+[[nodes]]
+id = "check-nestgate"
+primal = { by_capability = "storage" }
+operation = { name = "health_check" }
+parallel_group = 1
+
+[nodes.constraints]
+timeout_ms = 15000
+
+[[nodes]]
+id = "check-beardog"
+primal = { by_capability = "security" }
+operation = { name = "health_check" }
+parallel_group = 1
+
+[nodes.constraints]
+timeout_ms = 10000
+
+[[nodes]]
+id = "check-songbird"
+primal = { by_capability = "discovery" }
+operation = { name = "health_check" }
+parallel_group = 1
+
+[nodes.constraints]
+timeout_ms = 10000

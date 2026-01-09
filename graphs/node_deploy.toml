@@ -1,0 +1,44 @@
+# Compute Node Deployment Graph - Simplified
+# Full version to be expanded in future sessions
+
+[graph]
+name = "node_deploy"
+version = "1.0.0"
+description = "Deploy compute node"
+coordination_pattern = "sequential"
+
+[[nodes]]
+id = "discover-primals"
+primal = { by_capability = "universal-compute" }
+operation = { name = "discover_primals" }
+
+[nodes.constraints]
+timeout_ms = 5000
+
+[[nodes]]
+id = "start-toadstool"
+primal = { by_capability = "universal-compute" }
+
+[nodes.operation]
+name = "start"
+[nodes.operation.params]
+mode = "compute"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[[nodes]]
+id = "verify-toadstool"
+primal = { by_capability = "universal-compute" }
+operation = { name = "health_check" }
+
+[nodes.constraints]
+timeout_ms = 10000
+
+[[edges]]
+from = "discover-primals"
+to = "start-toadstool"
+
+[[edges]]
+from = "start-toadstool"
+to = "verify-toadstool"

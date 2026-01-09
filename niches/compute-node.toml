@@ -284,6 +284,29 @@ resource_type = "${RESOURCE_TYPE:-cpu}"
 resource_amount = "${RESOURCE_AMOUNT:-8 cores}"
 
 # =============================================================================
+# GRAPHS (Neural API Orchestration)
+# =============================================================================
+
+# Default deployment graph
+[[graphs]]
+name = "deploy"
+path = "./graphs/node_deploy.toml"
+description = "Deploy compute node with optional crypto lock"
+default = true
+
+# Health check graph
+[[graphs]]
+name = "health_check"
+path = "./graphs/node_health_check.toml"
+description = "Parallel health check for compute node"
+
+# Graceful shutdown graph
+[[graphs]]
+name = "shutdown"
+path = "./graphs/node_shutdown.toml"
+description = "Graceful shutdown with workload draining"
+
+# =============================================================================
 # EXAMPLE DEPLOYMENT SCENARIOS
 # =============================================================================
 

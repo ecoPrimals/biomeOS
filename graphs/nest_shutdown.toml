@@ -1,0 +1,55 @@
+# Data Nest Shutdown Graph
+
+[graph]
+name = "nest_shutdown"
+version = "1.0.0"
+description = "Graceful shutdown of data nest"
+coordination_pattern = "sequential"
+
+[[nodes]]
+id = "drain-nestgate"
+primal = { by_capability = "storage" }
+
+[nodes.operation]
+name = "drain"
+[nodes.operation.params]
+timeout_seconds = 600
+
+[nodes.constraints]
+timeout_ms = 620000
+
+[[nodes]]
+id = "shutdown-nestgate"
+primal = { by_capability = "storage" }
+operation = { name = "shutdown" }
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[[nodes]]
+id = "shutdown-songbird"
+primal = { by_capability = "discovery" }
+operation = { name = "shutdown" }
+
+[nodes.constraints]
+timeout_ms = 20000
+
+[[nodes]]
+id = "shutdown-beardog"
+primal = { by_capability = "security" }
+operation = { name = "shutdown" }
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[[edges]]
+from = "drain-nestgate"
+to = "shutdown-nestgate"
+
+[[edges]]
+from = "shutdown-nestgate"
+to = "shutdown-songbird"
+
+[[edges]]
+from = "shutdown-songbird"
+to = "shutdown-beardog"

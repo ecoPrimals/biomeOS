@@ -56,3 +56,87 @@ fn test_parse_tower_shutdown_graph() {
     GraphValidator::validate(&graph).expect("Graph validation failed");
 }
 
+#[test]
+fn test_parse_node_deploy_graph() {
+    let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().parent().unwrap();
+    let graph_path = workspace_root.join("graphs/node_deploy.toml");
+    
+    let graph = GraphParser::parse_file(&graph_path)
+        .expect("Failed to parse node_deploy.toml");
+    
+    assert_eq!(graph.name, "node_deploy");
+    assert_eq!(graph.nodes.len(), 3);  // Simplified version
+    
+    GraphValidator::validate(&graph).expect("Graph validation failed");
+}
+
+#[test]
+fn test_parse_node_health_check_graph() {
+    let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().parent().unwrap();
+    let graph_path = workspace_root.join("graphs/node_health_check.toml");
+    
+    let graph = GraphParser::parse_file(&graph_path)
+        .expect("Failed to parse node_health_check.toml");
+    
+    assert_eq!(graph.name, "node_health_check");
+    assert_eq!(graph.nodes.len(), 1);  // Simplified version
+    
+    GraphValidator::validate(&graph).expect("Graph validation failed");
+}
+
+#[test]
+fn test_parse_node_shutdown_graph() {
+    let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().parent().unwrap();
+    let graph_path = workspace_root.join("graphs/node_shutdown.toml");
+    
+    let graph = GraphParser::parse_file(&graph_path)
+        .expect("Failed to parse node_shutdown.toml");
+    
+    assert_eq!(graph.name, "node_shutdown");
+    assert_eq!(graph.nodes.len(), 2);  // Simplified version
+    
+    GraphValidator::validate(&graph).expect("Graph validation failed");
+}
+
+#[test]
+fn test_parse_nest_deploy_graph() {
+    let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().parent().unwrap();
+    let graph_path = workspace_root.join("graphs/nest_deploy.toml");
+    
+    let graph = GraphParser::parse_file(&graph_path)
+        .expect("Failed to parse nest_deploy.toml");
+    
+    assert_eq!(graph.name, "nest_deploy");
+    assert_eq!(graph.nodes.len(), 5);  // Simplified version
+    
+    GraphValidator::validate(&graph).expect("Graph validation failed");
+}
+
+#[test]
+fn test_parse_nest_health_check_graph() {
+    let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().parent().unwrap();
+    let graph_path = workspace_root.join("graphs/nest_health_check.toml");
+    
+    let graph = GraphParser::parse_file(&graph_path)
+        .expect("Failed to parse nest_health_check.toml");
+    
+    assert_eq!(graph.name, "nest_health_check");
+    assert_eq!(graph.nodes.len(), 3);
+    
+    GraphValidator::validate(&graph).expect("Graph validation failed");
+}
+
+#[test]
+fn test_parse_nest_shutdown_graph() {
+    let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().parent().unwrap();
+    let graph_path = workspace_root.join("graphs/nest_shutdown.toml");
+    
+    let graph = GraphParser::parse_file(&graph_path)
+        .expect("Failed to parse nest_shutdown.toml");
+    
+    assert_eq!(graph.name, "nest_shutdown");
+    assert_eq!(graph.nodes.len(), 4);  // Simplified version
+    
+    GraphValidator::validate(&graph).expect("Graph validation failed");
+}
+
