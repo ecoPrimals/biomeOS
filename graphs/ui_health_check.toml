@@ -1,0 +1,42 @@
+# UI Niche Health Check Graph
+
+[graph]
+id = "ui_health_check"
+name = "UI Niche Health Check"
+description = "Verify health of petalTongue and biomeOS"
+version = "1.0.0"
+coordination_pattern = "Parallel"
+
+# Check biomeOS health
+[[nodes]]
+id = "check_biomeos"
+description = "Check biomeOS health and topology API"
+
+[nodes.primal_selector]
+type = "ByCapability"
+capability = "topology.provider"
+
+[nodes.operation]
+type = "HealthCheck"
+
+[nodes.operation.params]
+check_api = true
+check_topology_endpoint = true
+
+# Check petalTongue health
+[[nodes]]
+id = "check_petaltongue"
+description = "Check petalTongue health and rendering"
+
+[nodes.primal_selector]
+type = "ByCapability"
+capability = "ui.desktop-interface"
+
+[nodes.operation]
+type = "HealthCheck"
+
+[nodes.operation.params]
+check_modalities = true
+check_discovery = true
+check_rendering = true
+

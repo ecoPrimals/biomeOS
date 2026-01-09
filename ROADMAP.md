@@ -132,6 +132,46 @@
 
 ---
 
+## 🎨 Phase 2.5: petalTongue UI Integration
+
+**Timeline**: Week 2-3 (January 2026)  
+**Goal**: Integrate petalTongue as universal user interface
+
+### **petalTongue Integration** (biomeOS + petalTongue)
+
+#### **biomeOS Tasks**
+
+| Task | Owner | Priority | Status |
+|------|-------|----------|--------|
+| Add topology data API | biomeOS Team | 🔴 HIGH | ⏳ Pending |
+| Implement `/api/v1/topology` endpoint | biomeOS Team | 🔴 HIGH | ⏳ Pending |
+| Test with petalTongue binary | biomeOS Team | 🔴 HIGH | ⏳ Pending |
+| Document topology data format | biomeOS Team | 🟡 MEDIUM | ⏳ Pending |
+
+#### **petalTongue Tasks**
+
+| Task | Owner | Priority | Status |
+|------|-------|----------|--------|
+| Verify Unix socket evolution | petalTongue Team | 🟡 MEDIUM | ⏳ Pending |
+| Add JSON-RPC server | petalTongue Team | 🟡 MEDIUM | ⏳ Pending |
+| Test with biomeOS topology data | petalTongue Team | 🟡 MEDIUM | ⏳ Pending |
+| SPDP integration | petalTongue Team | 🟡 MEDIUM | ⏳ Pending |
+
+**Use Cases**:
+- Universal user interface for ecosystem
+- Real-time topology visualization
+- Multi-modal rendering (visual + audio + text)
+- Network to Toadstool for GPU rendering (future)
+
+**Deliverables**:
+- ✅ petalTongue binary in `nucleusBins/`
+- ✅ UI niche manifest (`niches/ui.toml`)
+- ✅ UI deployment graphs
+- ✅ Integration plan document
+- ✅ E2E UI testing
+
+---
+
 ## 🔮 Phase 3: Compute Enclaves & Data Federation
 
 **Timeline**: Weeks 5-8 (February 2026)  

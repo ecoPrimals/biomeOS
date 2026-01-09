@@ -1,0 +1,112 @@
+# UI Niche Manifest
+# Universal User Interface with petalTongue
+
+[niche]
+name = "ui"
+version = "1.0.0"
+description = "Universal User Interface niche with petalTongue for visualization and interaction"
+
+[[primals]]
+name = "petaltongue"
+binary = "petal-tongue"
+required = true
+provides = [
+    "ui.desktop-interface",
+    "ui.primal-interaction",
+    "visualization.graph-rendering",
+    "visualization.real-time-topology",
+    "visualization.flow-animation",
+    "ui.multi-modal",
+    "ui.awakening-experience"
+]
+requires = [
+    "topology.provider",  # Needs topology data from biomeOS or other primals
+]
+
+[primals.env]
+# Discovery hints (optional, for manual configuration)
+# PETALTONGUE_DISCOVERY_HINTS = "http://localhost:3000"
+
+# Enable/disable mDNS auto-discovery (default: true)
+# PETALTONGUE_ENABLE_MDNS = "true"
+
+# Mock mode for testing (default: false)
+# PETALTONGUE_MOCK_MODE = "false"
+
+# Startup music path (optional)
+# PETALTONGUE_STARTUP_MUSIC = "/path/to/music.mp3"
+
+# Showcase/tutorial mode (default: false)
+# SHOWCASE_MODE = "false"
+
+# Node ID for Unix socket (future)
+NODE_ID = "${NODE_ID}"
+
+[[primals]]
+name = "biomeos"
+binary = "biomeos"
+required = true
+provides = [
+    "topology.provider",
+    "orchestration",
+    "discovery",
+    "health-monitoring"
+]
+requires = []
+
+[primals.env]
+NODE_ID = "${NODE_ID}"
+FAMILY_ID = "${FAMILY_ID}"
+
+# Optional: Provide topology data on HTTP (current)
+# BIOMEOS_HTTP_PORT = "3000"
+
+# Future: Unix socket for topology data
+# BIOMEOS_SOCKET = "/tmp/biomeos-${NODE_ID}.sock"
+
+[[primals]]
+name = "songbird"
+binary = "songbird"
+required = false  # Optional for UI niche (needed for federation)
+provides = [
+    "discovery",
+    "p2p",
+    "btsp"
+]
+requires = []
+
+[primals.env]
+NODE_ID = "${NODE_ID}"
+FAMILY_ID = "${FAMILY_ID}"
+
+[[primals]]
+name = "beardog-server"
+binary = "beardog-server"
+required = false  # Optional for UI niche (needed for security)
+provides = [
+    "security",
+    "encryption",
+    "identity"
+]
+requires = []
+
+[primals.env]
+NODE_ID = "${NODE_ID}"
+FAMILY_ID = "${FAMILY_ID}"
+
+# Graphs for UI niche lifecycle
+[[graphs]]
+name = "ui_deploy"
+path = "graphs/ui_deploy.toml"
+description = "Deploy UI niche with petalTongue and biomeOS"
+
+[[graphs]]
+name = "ui_health_check"
+path = "graphs/ui_health_check.toml"
+description = "Health check for UI niche"
+
+[[graphs]]
+name = "ui_shutdown"
+path = "graphs/ui_shutdown.toml"
+description = "Graceful shutdown of UI niche"
+

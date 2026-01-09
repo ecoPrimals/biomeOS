@@ -1,0 +1,135 @@
+# UI Niche Deployment Graph
+# Deploys petalTongue + biomeOS for universal user interface
+
+[graph]
+id = "ui_deploy"
+name = "UI Niche Deployment"
+description = "Deploy petalTongue and biomeOS for universal user interface"
+version = "1.0.0"
+coordination_pattern = "Sequential"
+
+# Node 1: Start biomeOS (topology provider)
+[[nodes]]
+id = "start_biomeos"
+description = "Start biomeOS to provide topology data"
+
+[nodes.primal_selector]
+type = "ByCapability"
+capability = "topology.provider"
+
+[nodes.operation]
+type = "Start"
+
+[nodes.operation.params]
+wait_for_ready = true
+timeout_seconds = 30
+
+[[nodes.constraints]]
+type = "RequiresCapability"
+capability = "orchestration"
+
+# Node 2: Verify biomeOS topology API
+[[nodes]]
+id = "verify_topology_api"
+description = "Verify biomeOS topology API is accessible"
+depends_on = ["start_biomeos"]
+
+[nodes.primal_selector]
+type = "ByCapability"
+capability = "topology.provider"
+
+[nodes.operation]
+type = "HealthCheck"
+
+[nodes.operation.params]
+endpoint = "/api/v1/topology"
+expected_status = 200
+
+# Node 3: Start petalTongue (UI)
+[[nodes]]
+id = "start_petaltongue"
+description = "Start petalTongue universal user interface"
+depends_on = ["verify_topology_api"]
+
+[nodes.primal_selector]
+type = "ByCapability"
+capability = "ui.desktop-interface"
+
+[nodes.operation]
+type = "Start"
+
+[nodes.operation.params]
+wait_for_ready = true
+timeout_seconds = 30
+
+[[nodes.constraints]]
+type = "RequiresCapability"
+capability = "visualization.graph-rendering"
+
+# Node 4: Verify petalTongue discovery
+[[nodes]]
+id = "verify_petaltongue_discovery"
+description = "Verify petalTongue discovered biomeOS"
+depends_on = ["start_petaltongue"]
+
+[nodes.primal_selector]
+type = "ByCapability"
+capability = "ui.desktop-interface"
+
+[nodes.operation]
+type = "Query"
+
+[nodes.operation.params]
+query = "discovered_providers"
+expected_count_min = 1
+
+# Node 5: Display awakening experience
+[[nodes]]
+id = "display_awakening"
+description = "Display petalTongue awakening experience"
+depends_on = ["verify_petaltongue_discovery"]
+
+[nodes.primal_selector]
+type = "ByCapability"
+capability = "ui.awakening-experience"
+
+[nodes.operation]
+type = "Invoke"
+
+[nodes.operation.params]
+method = "show_awakening"
+duration_seconds = 12
+
+# Node 6: Render topology
+[[nodes]]
+id = "render_topology"
+description = "Render ecosystem topology in petalTongue"
+depends_on = ["display_awakening"]
+
+[nodes.primal_selector]
+type = "ByCapability"
+capability = "visualization.graph-rendering"
+
+[nodes.operation]
+type = "Invoke"
+
+[nodes.operation.params]
+method = "render_topology"
+mode = "auto"  # Auto-select best modality
+
+# Success criteria
+[[nodes]]
+id = "deployment_complete"
+description = "UI niche deployment complete"
+depends_on = ["render_topology"]
+
+[nodes.primal_selector]
+type = "ByCapability"
+capability = "ui.desktop-interface"
+
+[nodes.operation]
+type = "HealthCheck"
+
+[nodes.operation.params]
+verify_all_modalities = true
+
