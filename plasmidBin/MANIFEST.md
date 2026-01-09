@@ -1,6 +1,6 @@
 # 🧬 plasmidBin Manifest
 
-**Version**: v0.8.1  
+**Version**: v0.8.2  
 **Date**: January 9, 2026  
 **Purpose**: Stable deployment binaries for spore creation
 
@@ -103,10 +103,10 @@ cargo run --bin biomeos -- spore create /media/user/USB/biomeOS
 
 | Binary | Primal | Version | Status | Size |
 |--------|--------|---------|--------|------|
-| `petal-tongue` | petalTongue | v0.4.0 | ✅ Production | 21MB |
-| `petal-tongue-headless` | petalTongue | v0.4.0 | ✅ Production | 3.1MB |
+| `petal-tongue` | petalTongue | v0.5.0 | ✅ Production | 21MB |
+| `petal-tongue-headless` | petalTongue | v0.5.0 | ✅ Production | 3.1MB |
 | `beardog-server` | BearDog | v0.15.2 | ⏳ Pending harvest | - |
-| `songbird` | Songbird | v3.19.0 | ⏳ Pending harvest | - |
+| `songbird` | Songbird | v3.19.3 | ⏳ Pending harvest | - |
 | `toadstool` | Toadstool | - | ⏳ Pending harvest | - |
 | `nestgate` | NestGate | - | ⏳ Pending harvest | - |
 
