@@ -16,6 +16,8 @@ biomeos-types = { path = "../biomeos-types" }
 biomeos-chimera = { path = "../biomeos-chimera" }
 biomeos-spore = { path = "../biomeos-spore" }
 biomeos-federation = { path = "../biomeos-federation" }
+biomeos-graph = { path = "../biomeos-graph" }
+biomeos-manifest = { path = "../biomeos-manifest" }
 clap = { version = "4.4", features = ["derive", "color"] }
 tokio = { version = "1.0", features = ["full"] }
 anyhow = "1.0"

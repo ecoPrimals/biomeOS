@@ -12,7 +12,18 @@ use std::path::PathBuf;
 use super::utils::create_spinner;
 
 /// Handle deployment command
-pub async fn handle_deploy(manifest: PathBuf, validate_only: bool) -> Result<()> {
+pub async fn handle_deploy(
+    manifest: PathBuf,
+    validate_only: bool,
+    use_graph: bool,
+    graph_name: Option<String>,
+) -> Result<()> {
+    // Graph-based deployment (Neural API)
+    if use_graph {
+        return handle_graph_deploy(manifest, validate_only, graph_name).await;
+    }
+    
+    // Legacy deployment
     let action = if validate_only {
         "Validating"
     } else {
@@ -44,6 +55,100 @@ pub async fn handle_deploy(manifest: PathBuf, validate_only: bool) -> Result<()>
         println!("📋 Deployment ID: {}", deployment_id);
     }
 
+    Ok(())
+}
+
+/// Handle graph-based deployment (Neural API)
+async fn handle_graph_deploy(
+    niche_path: PathBuf,
+    validate_only: bool,
+    graph_name: Option<String>,
+) -> Result<()> {
+    use biomeos_core::graph_deployment::GraphDeploymentCoordinator;
+    
+    let action = if validate_only {
+        "Validating"
+    } else {
+        "Deploying"
+    };
+    
+    let graph_desc = graph_name.as_ref()
+        .map(|n| format!(" with graph '{}'", n))
+        .unwrap_or_default();
+    
+    let spinner = create_spinner(&format!("🧠 {} niche via Neural API{}...", action, graph_desc));
+    
+    // Create coordinator
+    let coordinator = GraphDeploymentCoordinator::new();
+    
+    // Discover primals first
+    let discovered = coordinator.registry().discover_primals().await?;
+    println!("🔍 Discovered {} primals", discovered.len());
+    for (primal_id, capabilities) in &discovered {
+        println!("  • {} → {:?}", primal_id, capabilities);
+    }
+    
+    if validate_only {
+        // Just validate the niche and graph structure
+        use biomeos_manifest::niche::NicheManifest;
+        use biomeos_graph::{GraphParser, GraphValidator};
+        
+        let manifest = NicheManifest::from_file(&niche_path)?;
+        
+        let graph_ref = if let Some(name) = &graph_name {
+            manifest.get_graph(name)
+                .ok_or_else(|| anyhow::anyhow!("Graph '{}' not found in niche", name))?
+        } else {
+            manifest.get_default_graph()
+                .ok_or_else(|| anyhow::anyhow!("Niche has no default graph"))?
+        };
+        
+        let graph = GraphParser::parse_file(std::path::Path::new(&graph_ref.path))?;
+        GraphValidator::validate(&graph)?;
+        
+        spinner.finish_with_message("✅ Validation completed");
+        println!("🎉 Niche '{}' is valid!", manifest.niche.name);
+        println!("📊 Graph '{}': {} nodes, {} edges", 
+            graph.name, graph.nodes.len(), graph.edges.len());
+    } else {
+        // Execute deployment
+        let result = if let Some(name) = graph_name {
+            coordinator.deploy_niche_with_graph(&niche_path, &name).await?
+        } else {
+            coordinator.deploy_niche(&niche_path).await?
+        };
+        
+        spinner.finish_with_message("✅ Deployment completed");
+        
+        if result.success {
+            println!("🎉 Niche deployed successfully via Neural API!");
+            println!("📊 Execution metrics:");
+            println!("  • Nodes executed: {}", result.metrics.len());
+            
+            let mut total_duration_ms = 0u64;
+            for metric in &result.metrics {
+                let status = if metric.success { "✅" } else { "❌" };
+                println!("  {} {} → {}ms", status, metric.node_id, metric.duration_ms);
+                total_duration_ms += metric.duration_ms;
+                
+                if let Some(error) = &metric.error {
+                    println!("     Error: {}", error);
+                }
+            }
+            
+            println!("  • Total time: {}ms", total_duration_ms);
+        } else {
+            let failed_nodes: Vec<_> = result.metrics.iter()
+                .filter(|m| !m.success)
+                .collect();
+            
+            anyhow::bail!(
+                "Deployment failed: {} node(s) failed execution",
+                failed_nodes.len()
+            );
+        }
+    }
+    
     Ok(())
 }
 

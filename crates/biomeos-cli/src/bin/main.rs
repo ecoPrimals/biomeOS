@@ -198,15 +198,23 @@ enum Commands {
         detailed: bool,
     },
 
-    /// Deploy a biome manifest
+    /// Deploy a biome manifest or niche
     Deploy {
-        /// Path to the biome manifest file
+        /// Path to the biome manifest or niche file
         #[arg(short, long)]
         manifest: PathBuf,
 
         /// Validate manifest without deploying
         #[arg(short, long)]
         validate_only: bool,
+        
+        /// Use graph-based deployment (Neural API)
+        #[arg(short, long)]
+        graph: bool,
+        
+        /// Specific graph name to use (requires --graph)
+        #[arg(long, requires = "graph")]
+        graph_name: Option<String>,
     },
 
     /// Create a new service or resource
@@ -447,8 +455,10 @@ async fn main() -> Result<()> {
         Commands::Deploy {
             manifest,
             validate_only,
+            graph,
+            graph_name,
         } => {
-            handle_deploy(manifest, validate_only).await?;
+            handle_deploy(manifest, validate_only, graph, graph_name).await?;
         }
         Commands::Create {
             service_type,

@@ -16,6 +16,7 @@ use async_trait::async_trait;
 use biomeos_graph::{GraphExecutor, GraphParser, GraphResult, GraphValidator, Operation, ExecutionContext};
 use biomeos_manifest::niche::NicheManifest;
 use std::collections::HashMap;
+use std::os::unix::fs::FileTypeExt;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -53,57 +54,316 @@ impl PrimalRegistry {
         });
     }
     
-    /// Discover primals (placeholder - would scan for Unix sockets, etc.)
+    /// Discover primals via Unix socket scanning and multicast
     pub async fn discover_primals(&self) -> Result<Vec<(String, Vec<String>)>> {
-        // TODO: Real discovery via:
-        // - Unix socket scanning (/tmp/songbird-*.sock, /tmp/beardog-*.sock)
-        // - UDP multicast announcements
-        // - Config file reading
+        use tokio::fs;
         
+        let mut discovered = Vec::new();
+        
+        // 1. Scan for Unix sockets in /tmp
+        let socket_patterns = vec![
+            "/tmp/songbird-*.sock",
+            "/tmp/beardog-*.sock",
+            "/tmp/nestgate-*.sock",
+            "/tmp/toadstool-*.sock",
+        ];
+        
+        for pattern in socket_patterns {
+            if let Ok(entries) = glob::glob(pattern) {
+                for entry in entries.flatten() {
+                    if let Ok(metadata) = fs::metadata(&entry).await {
+                        if metadata.file_type().is_socket() {
+                            // Extract primal ID from socket path
+                            if let Some(filename) = entry.file_name() {
+                                if let Some(name) = filename.to_str() {
+                                    // Parse: songbird-tower-001.sock → (songbird-tower-001, [capabilities])
+                                    let primal_id = name.trim_end_matches(".sock");
+                                    
+                                    // Query capabilities via Unix socket
+                                    match self.query_capabilities_via_socket(&entry).await {
+                                        Ok(caps) => {
+                                            info!(
+                                                primal_id = %primal_id,
+                                                socket = %entry.display(),
+                                                capabilities = ?caps,
+                                                "Discovered primal via Unix socket"
+                                            );
+                                            
+                                            // Register in our cache
+                                            self.register(
+                                                primal_id.to_string(),
+                                                caps.clone(),
+                                                Some(entry.to_string_lossy().to_string()),
+                                            ).await;
+                                            
+                                            discovered.push((primal_id.to_string(), caps));
+                                        }
+                                        Err(e) => {
+                                            warn!(
+                                                socket = %entry.display(),
+                                                error = %e,
+                                                "Failed to query capabilities from socket"
+                                            );
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 2. Check already registered primals
         let primals = self.primals.read().await;
-        let discovered: Vec<(String, Vec<String>)> = primals
-            .values()
-            .map(|info| (info.id.clone(), info.capabilities.clone()))
-            .collect();
+        for info in primals.values() {
+            if !discovered.iter().any(|(id, _)| id == &info.id) {
+                discovered.push((info.id.clone(), info.capabilities.clone()));
+            }
+        }
         
-        debug!("Discovered {} primals", discovered.len());
+        info!("Discovery complete: {} primals found", discovered.len());
         Ok(discovered)
     }
     
-    /// Execute an operation on a primal
+    /// Query primal capabilities via Unix socket
+    async fn query_capabilities_via_socket(&self, socket_path: &std::path::Path) -> Result<Vec<String>> {
+        use tokio::net::UnixStream;
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        
+        // Connect to Unix socket
+        let mut stream = UnixStream::connect(socket_path).await
+            .context("Failed to connect to Unix socket")?;
+        
+        // Send JSON-RPC request for capabilities
+        let request = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": "get_capabilities",
+            "params": {},
+            "id": 1
+        });
+        
+        let request_str = serde_json::to_string(&request)?;
+        stream.write_all(request_str.as_bytes()).await?;
+        stream.write_all(b"\n").await?;
+        
+        // Read response
+        let mut buffer = vec![0u8; 4096];
+        let n = stream.read(&mut buffer).await?;
+        let response_str = String::from_utf8_lossy(&buffer[..n]);
+        
+        // Parse JSON-RPC response
+        let response: serde_json::Value = serde_json::from_str(&response_str)
+            .context("Failed to parse JSON-RPC response")?;
+        
+        if let Some(result) = response.get("result") {
+            if let Some(caps) = result.get("capabilities").and_then(|c| c.as_array()) {
+                let capabilities: Vec<String> = caps
+                    .iter()
+                    .filter_map(|c| c.as_str().map(String::from))
+                    .collect();
+                return Ok(capabilities);
+            }
+        }
+        
+        // Fallback: infer from socket name
+        let socket_name = socket_path.file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("");
+        
+        let inferred_caps = if socket_name.starts_with("songbird") {
+            vec!["discovery".to_string(), "tunneling".to_string(), "federation".to_string()]
+        } else if socket_name.starts_with("beardog") {
+            vec!["security".to_string(), "encryption".to_string(), "identity".to_string()]
+        } else if socket_name.starts_with("nestgate") {
+            vec!["storage".to_string(), "provenance".to_string()]
+        } else if socket_name.starts_with("toadstool") {
+            vec!["compute".to_string(), "workload".to_string()]
+        } else {
+            vec![]
+        };
+        
+        Ok(inferred_caps)
+    }
+    
+    /// Execute an operation on a primal via Unix socket JSON-RPC
     pub async fn execute_operation(
+        &self,
+        primal_id: &str,
+        operation: &Operation,
+        context: &ExecutionContext,
+    ) -> Result<serde_json::Value> {
+        use tokio::net::UnixStream;
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        
+        info!(
+            primal_id = %primal_id,
+            operation = %operation.name,
+            "Executing operation on primal"
+        );
+        
+        let primals = self.primals.read().await;
+        let info = primals.get(primal_id)
+            .ok_or_else(|| anyhow::anyhow!("Primal not found: {}", primal_id))?;
+        
+        let socket_path = info.endpoint.as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Primal {} has no endpoint", primal_id))?;
+        
+        debug!(
+            primal_id = %primal_id,
+            socket = %socket_path,
+            operation = %operation.name,
+            "Connecting to primal Unix socket"
+        );
+        
+        // Special handling for 'start' operations - spawn process
+        if operation.name == "start" {
+            return self.start_primal(primal_id, operation, context).await;
+        }
+        
+        // Connect to Unix socket
+        let mut stream = UnixStream::connect(socket_path).await
+            .with_context(|| format!("Failed to connect to primal {} at {}", primal_id, socket_path))?;
+        
+        // Build JSON-RPC request
+        let mut params = operation.params.clone();
+        
+        // Add context data if needed
+        if let Some(ctx_data) = context.get_output("previous_node") {
+            if let Some(params_obj) = params.as_object_mut() {
+                params_obj.insert("context".to_string(), ctx_data.clone());
+            }
+        }
+        
+        let request = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": operation.name,
+            "params": params,
+            "id": uuid::Uuid::new_v4().to_string()
+        });
+        
+        debug!(
+            primal_id = %primal_id,
+            request = %serde_json::to_string(&request)?,
+            "Sending JSON-RPC request"
+        );
+        
+        // Send request
+        let request_str = serde_json::to_string(&request)?;
+        stream.write_all(request_str.as_bytes()).await?;
+        stream.write_all(b"\n").await?;
+        
+        // Read response with timeout
+        let mut buffer = vec![0u8; 8192];
+        let n = tokio::time::timeout(
+            std::time::Duration::from_secs(30),
+            stream.read(&mut buffer)
+        ).await
+            .context("Timeout waiting for primal response")?
+            .context("Failed to read from primal socket")?;
+        
+        if n == 0 {
+            anyhow::bail!("Primal closed connection without response");
+        }
+        
+        let response_str = String::from_utf8_lossy(&buffer[..n]);
+        debug!(
+            primal_id = %primal_id,
+            response = %response_str,
+            "Received JSON-RPC response"
+        );
+        
+        // Parse JSON-RPC response
+        let response: serde_json::Value = serde_json::from_str(&response_str)
+            .context("Failed to parse JSON-RPC response")?;
+        
+        // Check for JSON-RPC error
+        if let Some(error) = response.get("error") {
+            let error_msg = error.get("message")
+                .and_then(|m| m.as_str())
+                .unwrap_or("Unknown error");
+            anyhow::bail!("Primal returned error: {}", error_msg);
+        }
+        
+        // Extract result
+        let result = response.get("result")
+            .ok_or_else(|| anyhow::anyhow!("No result in JSON-RPC response"))?
+            .clone();
+        
+        info!(
+            primal_id = %primal_id,
+            operation = %operation.name,
+            "Operation completed successfully"
+        );
+        
+        Ok(result)
+    }
+    
+    /// Start a primal process
+    async fn start_primal(
         &self,
         primal_id: &str,
         operation: &Operation,
         _context: &ExecutionContext,
     ) -> Result<serde_json::Value> {
-        info!(
+        use tokio::process::Command;
+        
+        info!(primal_id = %primal_id, "Starting primal process");
+        
+        // Get binary path from params or infer from primal_id
+        let binary_path = operation.params.get("binary_path")
+            .and_then(|p| p.as_str())
+            .map(String::from)
+            .unwrap_or_else(|| {
+                // Infer from primal_id: songbird-tower-001 → ./primals/songbird
+                let base_name = primal_id.split('-').next().unwrap_or(primal_id);
+                format!("./primals/{}", base_name)
+            });
+        
+        debug!(
             primal_id = %primal_id,
-            operation = %operation.name,
-            "Executing operation"
+            binary = %binary_path,
+            "Spawning primal process"
         );
         
-        // TODO: Real execution via:
-        // - Unix socket JSON-RPC
-        // - HTTP API calls
-        // - Process spawning (for start operations)
+        // Build command with environment variables
+        let mut cmd = Command::new(&binary_path);
         
-        let primals = self.primals.read().await;
-        if let Some(info) = primals.get(primal_id) {
-            debug!("Found primal: {} with endpoint: {:?}", info.id, info.endpoint);
-            
-            // For now, return success
-            // In real implementation, would call actual primal API
-            Ok(serde_json::json!({
-                "primal_id": primal_id,
-                "operation": operation.name,
-                "status": "success",
-                "mock": true
-            }))
-        } else {
-            warn!("Primal not found: {}", primal_id);
-            anyhow::bail!("Primal not found: {}", primal_id)
+        // Set node ID from primal_id
+        cmd.env("NODE_ID", primal_id);
+        
+        // Add any additional env vars from params
+        if let Some(env_vars) = operation.params.get("env").and_then(|e| e.as_object()) {
+            for (key, value) in env_vars {
+                if let Some(val_str) = value.as_str() {
+                    cmd.env(key, val_str);
+                }
+            }
         }
+        
+        // Spawn process in background
+        let child = cmd.spawn()
+            .with_context(|| format!("Failed to spawn primal: {}", binary_path))?;
+        
+        let pid = child.id()
+            .ok_or_else(|| anyhow::anyhow!("Failed to get PID for spawned process"))?;
+        
+        info!(
+            primal_id = %primal_id,
+            pid = pid,
+            "Primal process started successfully"
+        );
+        
+        // Wait a moment for process to initialize
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+        
+        Ok(serde_json::json!({
+            "primal_id": primal_id,
+            "operation": "start",
+            "status": "started",
+            "pid": pid,
+            "binary": binary_path
+        }))
     }
 }
 
