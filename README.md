@@ -1,455 +1,222 @@
-# 🌱 biomeOS - Universal Orchestration Platform
+# 🌱 biomeOS - Universal Operating System
 
-**Version**: v0.7.0  
-**Status**: ✅ **PRODUCTION READY - Neural API Foundation Complete**  
-**Architecture**: Port-Free, Type-Safe, Graph-Based, Genetically-Linked
+**Production-Ready** | **Modern Rust** | **Zero Unsafe Code** | **Port-Free Architecture**
 
----
-
-## 🎊 Latest: Neural API Phase 1 Complete + Ready for Hardware Testing! (Jan 8-9, 2026)
-
-biomeOS has achieved an **unprecedented milestone** - complete Neural API foundation spanning THREE niche architectures, with ALL independent work complete!
-
-### 🧠 Neural API - Phase 1 Complete (Phases 1.1-1.5)
-- ✅ **Graph Orchestration Engine** - Complete `biomeos-graph` crate (2,300 lines)
-- ✅ **Real Unix Socket Discovery** - Capability-based primal selection  
-- ✅ **Real JSON-RPC Communication** - Process spawning & lifecycle
-- ✅ **SQLite Learning System** - Historical metrics & bottleneck detection
-- ✅ **CLI Integration** - `biomeos deploy --graph` and health checks
-- ✅ **9 Production Graphs** - Tower, Node, and Nest orchestration
-- ✅ **First Real Primal Test** - BearDog proven working via Unix socket!
-
-### 📊 Milestone Progress  
-- **Milestone 1 (Tower)**: 90% complete - Communication stack proven ✅
-- **Milestone 2 (Node)**: 30% complete - Compute foundation ready ⏳
-- **Milestone 3 (Nest)**: 30% complete - Data federation foundation ready ⏳
-
-### 🏗️ 3 Niche Architectures
-1. **Tower** - Vertical communication (Songbird + BearDog)
-2. **Node** - Horizontal compute (Toadstool + optional BearDog)
-3. **Nest** - Physical data federation (NestGate + BearDog + Songbird)
-
-### 💯 Code Quality - Perfect Score
-- **~6,500 lines** of production Rust delivered  
-- **~9,500 lines** of comprehensive documentation
-- **57 tests** - All passing (100%)
-- **25 commits** pushed to master (Jan 8-9)
-- **Zero** `unsafe` blocks
-- **Zero** hardcoded names
-- **Zero** production mocks
-- **Zero** technical debt
-- **Grade**: A+ (Perfect)
-
-### 🚀 Production Features
-- ✅ **Graph-Based Deployment** - Declarative TOML orchestration
-- ✅ **Capability Discovery** - Runtime primal discovery via Unix sockets
-- ✅ **Metrics & Learning** - SQLite-backed execution tracking
-- ✅ **Log Fossil Record** - Automated log management
-- ✅ **Spore Incubation** - Hierarchical genetic federation
-- ✅ **LAN Federation** - Multi-node mesh operational
-- ✅ **Port-Free Architecture** - Unix sockets + UDP multicast
-
-**Neural API Status**: ✅ All independent work complete  
-**Hardware Testing**: ⏳ Ready when hardware available (guide provided)  
-**Overall Progress**: 50% (M1:90%, M2:30%, M3:30%)
+biomeOS is a capability-based orchestration layer for managing primals and ecosystems. It provides secure, adaptive coordination through the NUCLEUS discovery protocol and Neural API.
 
 ---
 
-## 🚀 Quick Start - Neural API
+## 🎊 Current Status: Phase 1.5 Complete (January 9, 2026)
 
-### Deploy Niches via Graph Orchestration
-```bash
-# Deploy Tower (communication stack)
-biomeos deploy --graph --manifest niches/tower.toml
+✅ **Core Infrastructure** - BYOB, graphs, discovery, federation  
+✅ **NUCLEUS** - 5-layer secure discovery (14 tests passing)  
+✅ **Topology API** - Ready for petalTongue UI integration  
+✅ **Zero Unsafe Code** - 100% safe Rust throughout  
+✅ **Deep Debt Evolved** - Modern idiomatic patterns  
+✅ **LAN Federation** - Working and verified  
 
-# Deploy Node (compute platform)
-biomeos deploy --graph --manifest niches/compute-node.toml
-
-# Deploy Nest (data federation)
-biomeos deploy --graph --manifest niches/nest.toml
-
-# Health check with continuous monitoring
-biomeos health --graph --niche niches/tower.toml --continuous
-```
-
-### Traditional Commands (Still Available)
-
-### View Active Logs
-```bash
-# See what's currently running
-./target/release/biomeos fossil active
-
-# View fossil record (archived logs)
-./target/release/biomeos fossil fossil
-
-# Clean old logs
-./target/release/biomeos fossil clean --older-than 30d
-```
-
-### Verify Your System
-```bash
-# Check plasmidBin binaries
-./target/release/biomeos verify nucleus
-
-# Verify all mounted USB spores
-./target/release/biomeos verify all
-
-# Check specific spore
-./target/release/biomeos verify spore /media/usb/biomeOS
-```
-
-### Refresh Stale Spores
-```bash
-# Preview updates (dry-run)
-./target/release/biomeos spore refresh /media/usb/biomeOS --dry-run
-
-# Apply updates
-./target/release/biomeos spore refresh /media/usb/biomeOS
-```
-
-### Create New Spore
-```bash
-# Create LiveSpore (deployable, FAT32-aware, self-tracking)
-./target/release/biomeos spore create \
-  --mount /media/usb \
-  --label biomeOS1 \
-  --node node-alpha \
-  --spore-type live
-```
-
-### Deploy Locally
-```bash
-# Start from USB spore
-cd /media/usb/biomeOS
-./bin/tower run --config tower.toml
-```
+🚧 **In Progress** - petalTongue UI integration  
+⏳ **Next** - Internet deployment with full encryption  
 
 ---
 
 ## 🏗️ Architecture
 
-### Neural API Foundation (NEW - Jan 8, 2026)
-```
-┌───────────────────────────────────────────────┐
-│         biomeOS Neural API (v0.7.0)           │
-│     Graph-Based Adaptive Orchestration        │
-│  • PrimalGraph Definitions (TOML)             │
-│  • GraphExecutor Engine (Sequential/Parallel)  │
-│  • Capability-Based Primal Selection          │
-│  • BYOB Niche Manifests with Graphs           │
-└───────────────────────────────────────────────┘
-              │
-              ├─→ Niche: Tower (comms stack)
-              ├─→ Niche: Node (compute platform)
-              ├─→ Niche: Nest (data federation)
-              └─→ Niche: Custom (user-defined)
-```
+### **Primals** (Sovereign Services)
+- **biomeOS**: Orchestrator (this project)
+- **Songbird**: P2P communication, discovery, BTSP
+- **BearDog**: Security, encryption, identity, trust
+- **Toadstool**: Compute, workload management
+- **NestGate**: Storage, provenance, compression
+- **petalTongue**: Universal UI (visual, audio, text)
 
-### Port-Free Design
-```
-┌─────────────────────────────────────────┐
-│          biomeOS Tower (v0.7.0)         │
-│     Capability-Based Orchestration      │
-│      + Neural API + Log Fossil          │
-└─────────────────────────────────────────┘
-              │
-              ├──────────────────────────┐
-              │                          │
-    ┌─────────▼────────┐      ┌─────────▼────────┐
-    │   BearDog        │      │   Songbird       │
-    │   v0.15.0        │      │   v3.19.0        │
-    │                  │      │                  │
-    │ • Unix sockets   │      │ • UDP multicast  │
-    │ • BTSP tunnels   │      │ • Port-free P2P  │
-    │ • Genetic auth   │      │ • Discovery      │
-    └──────────────────┘      └──────────────────┘
-```
+### **Niches** (Deployment Patterns)
+- **Tower**: Communication stack (biomeOS + Songbird + BearDog)
+- **Node**: Compute (Toadstool + optional BearDog + conditional Songbird)
+- **Nest**: Data federation (NestGate + BearDog + Songbird)
+- **UI**: Interface (petalTongue + biomeOS)
 
-**No HTTP ports!** All communication via:
-- Unix sockets for local IPC
-- UDP multicast for discovery
-- BTSP encrypted tunnels for federation
-
-### Genetic Lineage
-```
-Parent Seed (genesis)
-  │
-  ├─ SHA256(parent || node-alpha || batch)  → node-alpha
-  ├─ SHA256(parent || node-beta || batch)   → node-beta
-  ├─ SHA256(parent || node-gamma || batch)  → node-gamma
-  ├─ SHA256(parent || node-delta || batch)  → node-delta
-  └─ SHA256(parent || node-epsilon || batch) → node-epsilon
-
-Each sibling: Unique identity + Family trust
-```
+### **Communication**
+- **Primary**: Unix sockets (JSON-RPC)
+- **Discovery**: UDP multicast (Songbird/BirdSong P2P)
+- **Secure Tunnels**: BTSP (BirdSong Tunnel Protocol)
+- **Fallback**: HTTP (legacy, being deprecated)
 
 ---
 
-## ✨ Key Features
+## 🧬 NUCLEUS (Secure Discovery Protocol)
 
-### 🦴 Log Fossil Record (NEW!)
-- **Automated Log Management**: Active sessions → Fossil archive
-- **Forensic Tracking**: Complete lifecycle history
-- **CLI Commands**: `active`, `fossil`, `archive`, `clean`, `migrate`
-- **Tower Integration**: Auto-archival on shutdown
-- **Spore Self-Tracking**: USB drives track their own history
-- **Future**: BearDog encryption (parent-seed-only access)
+5-layer verification for primal discovery:
 
-### 🔒 Security
-- **Genetic Lineage**: Cryptographic family verification via BearDog
-- **Zero Hardcoding**: Capability-based discovery at runtime
-- **Encrypted P2P**: BTSP tunnels for inter-tower communication
-- **Unix Sockets**: Local IPC without network exposure
+1. **Physical Discovery** (Songbird) - UDP multicast, socket scanning
+2. **Identity Verification** (BearDog) - Ed25519 challenge-response
+3. **Capability Verification** (biomeOS) - Query primal directly
+4. **Trust Evaluation** (BearDog) - Genetic lineage, family membership
+5. **Registration** (biomeOS) - Add to verified registry
 
-### 🔄 Verification & Refresh
-- **SHA256 Validation**: Automatic binary integrity checks
-- **Manifest System**: TOML-based tracking for all binaries
-- **Fresh/Stale Detection**: Instant spore status verification
-- **Automated Refresh**: One-command binary updates
-- **~80% Test Coverage**: Production-grade testing
-
-### 🌱 Self-Propagation
-- **USB Spores**: Portable deployment packages
-- **LiveSpores**: FAT32-aware, directly deployable
-- **ColdSpores**: Archive/backup format
-- **Sibling Derivation**: Unique but related genetic seeds
-- **Self-Tracking**: Spores record their own lifecycle
-
-### 🧬 Composability
-- **BYOB Manifests**: Build Your Own Biome configurations
-- **Capability-Based**: Primals discover each other at runtime
-- **Chimera Support**: Future tight-coupling patterns
-- **Primal Sovereignty**: Each primal maintains self-knowledge only
+### Trust Levels
+- **0 - Unknown**: Unverified
+- **1 - Basic**: Discovered + identity verified
+- **2 - Elevated**: Capabilities verified
+- **3 - High**: Same family
+- **4 - Highest**: Sibling node
 
 ---
 
-## 📊 Current Status
+## 🚀 Quick Start
 
-### Production Components
-| Component | Version | Status | Key Features |
-|-----------|---------|--------|--------------|
-| biomeOS | v0.6.0 | ✅ Ready | Logs, Verification, Refresh, Testing |
-| BearDog | v0.15.0 | ✅ Ready | Unix sockets, BTSP, Genetic auth |
-| Songbird | v3.19.0 | ✅ Ready | UDP multicast, Port-free P2P |
+### **Prerequisites**
+- Rust 1.75+ (nightly recommended)
+- USB drives (optional, for spore deployment)
+- BearDog, Songbird binaries (in `plasmidBin/primals/`)
 
-### USB Spores (5 Total)
-```
-✅ node-alpha   (biomeOS1)    - Fresh, Local, Self-tracking
-✅ node-beta    (biomeOS21)   - Fresh, Local, Self-tracking
-✅ node-gamma   (BEA6-BBCE)   - Fresh, ColdSpore
-✅ node-delta   (BEA6-BBCE1)  - Fresh, ColdSpore
-✅ node-epsilon (BEA6-BBCE2)  - Fresh, LAN deployed
-```
-
-### Test Coverage
-- ✅ **Unit Tests**: 60+ tests passing (manifest, verification, refresh, logs)
-- ✅ **E2E Tests**: 5 workflow tests
-- ✅ **Chaos Tests**: 5 resilience tests
-- ✅ **Fault Tests**: 4 injection tests
-- ✅ **Coverage**: ~80% overall
-- ✅ **Production Tests**: 3-node LAN mesh validated
-
----
-
-## 🛠️ Development
-
-### Build
+### **Build & Test**
 ```bash
-# Build all components
-cargo build --release
+# Build all crates
+cargo build --workspace
 
-# Build specific component
-cargo build -p biomeos-cli --release
-cargo build -p biomeos-core --release
-cargo build -p biomeos-spore --release
+# Run tests
+cargo test --workspace
+
+# Run NUCLEUS tests
+cargo test --package biomeos-federation nucleus_tests
 ```
 
-### Test
+### **Deploy a Tower (Communication Stack)**
 ```bash
-# Run all tests
-cargo test
+# Create a tower spore
+cargo run --bin biomeos-spore -- create --niche tower --output /path/to/usb
 
-# Run specific test suite
-cargo test --package biomeos-spore
-cargo test --package biomeos-core
-
-# With output
-cargo test -- --nocapture
+# Or run locally
+cargo run --bin biome
 ```
 
-### Harvest Fresh Binaries
+### **Start API Server**
 ```bash
-# Pull, build, and copy primal binaries to plasmidBin/
-./scripts/harvest-primals.sh
+# Live mode (discovers real primals)
+cargo run --bin biomeos-api
 
-# Verify harvested binaries
-./target/release/biomeos verify nucleus
-```
-
-### Migrate Legacy Logs
-```bash
-# Migrate old UUID logs to fossil record
-./scripts/migrate-logs-to-fossil.sh
+# Standalone mode (graceful degradation for demos)
+BIOMEOS_STANDALONE_MODE=true cargo run --bin biomeos-api
 ```
 
 ---
 
 ## 📚 Documentation
 
-### Start Here
-- **[START_HERE_JAN9_2026.md](START_HERE_JAN9_2026.md)** - Quick start guide
-- **[STATUS.md](STATUS.md)** - Detailed status report
+### **Key Documents**
+- [`ROADMAP.md`](ROADMAP.md) - Phased implementation plan
+- [`STATUS.md`](STATUS.md) - Current status and statistics
+- [`docs/DEEP_DEBT_EVOLUTION_JAN9.md`](docs/DEEP_DEBT_EVOLUTION_JAN9.md) - Deep debt work summary
+- [`plasmidBin/MANIFEST.md`](plasmidBin/MANIFEST.md) - Binary deployment guide
 
-### Session Reports
-- [All TODOs Complete](docs/jan4-session/ALL_TODOS_COMPLETE_JAN8.md) - Final achievement summary
-- [Log Fossil Record](docs/jan4-session/LOG_FOSSIL_PHASE1_COMPLETE_JAN8.md) - Log system deep dive
-- [Testing Complete](docs/jan4-session/TESTING_COMPLETE_JAN8.md) - Test suite overview
-- [LAN Federation](docs/jan4-session/LAN_FEDERATION_SUCCESS_JAN8.md) - 3-node validation
-- [Session Handoff](docs/jan4-session/SESSION_HANDOFF_JAN8_FINAL.md) - Comprehensive handoff
+### **Specifications** (`specs/`)
+- 30+ active specifications
+- NUCLEUS, Neural API, BYOB, Federation, Deployment
+- All production-ready and up-to-date
 
-### Technical Docs
-- [Deep Debt Evolution](docs/jan4-session/DEEP_DEBT_SPORE_VERIFICATION_EVOLUTION_JAN8.md) - Verification system
-- [Genetic Lineage](docs/jan4-session/GENETIC_LINEAGE_NOT_CLONES_JAN7.md) - Sibling derivation
-- [PlasmidBin Pipeline](docs/jan4-session/NUCLEUS_BIN_PIPELINE_JAN8.md) - Binary management
-- [Capability-Based Evolution](docs/jan4-session/CAPABILITY_BASED_SPORE_EVOLUTION_JAN8.md) - Architecture
+### **Guides** (`docs/guides/`)
+- Federation setup
+- Spore deployment
+- Niche configuration
+- Testing strategies
 
 ---
 
-## 🔧 Configuration
+## 🧪 Testing
 
-### Tower Configuration (tower.toml)
-```toml
-[tower]
-family = "nat0"
-concurrent_startup = true
+We maintain comprehensive test coverage:
 
-[[primals]]
-binary = "./primals/beardog-server"
-provides = ["Security", "Encryption", "Trust"]
-requires = []
+- **Unit Tests**: Core functionality (200+)
+- **Integration Tests**: Primal coordination
+- **E2E Tests**: Full deployment scenarios
+- **Chaos Tests**: Fault injection and recovery
+- **NUCLEUS Tests**: 14 tests covering secure discovery
 
-[primals.env]
-BEARDOG_FAMILY_SEED_FILE = "./.family.seed"
-BEARDOG_FAMILY_ID = "nat0"
-BEARDOG_NODE_ID = "node-alpha"
+```bash
+# Run all tests
+cargo test --workspace
 
-[[primals]]
-binary = "./primals/songbird"
-provides = ["Discovery", "Federation"]
-requires = ["Security"]
-
-[primals.env]
-SONGBIRD_NODE_ID = "node-alpha"
-SONGBIRD_FAMILY_ID = "nat0"
+# Run specific test suites
+cargo test --package biomeos-federation nucleus_tests
+cargo test --package biomeos-spore
+cargo test --package biomeos-graph
 ```
 
 ---
 
-## 🌟 Achievements
+## 🌱 Key Features
 
-### Deep Debt Evolution (100% Complete)
-✅ **Log Fossil Record** - Automated log management system  
-✅ **Spore Self-Tracking** - Lifecycle event tracking  
-✅ **Verification System** - Type-safe SHA256 validation  
-✅ **Refresh System** - Automated binary updates  
-✅ **Comprehensive Testing** - 60+ tests, ~80% coverage  
-✅ **Production Deployment** - 3-node LAN mesh validated  
+### **BYOB (Build Your Own Biome)**
+User-driven manifest system for defining custom biome configurations. Define niches, primals, graphs, and dependencies in TOML.
 
-### Code Quality
-- **Type Safety**: 100% (all Rust, zero `unsafe` blocks)
-- **Performance**: 10x faster than bash
-- **Test Coverage**: ~80% overall
-- **Documentation**: 5,000+ lines
-- **Deep Debt**: 100% principles applied
+### **Neural API**
+Adaptive, learning-based orchestration through multi-layer graph execution. Evolves from static workflows to intelligent coordination.
 
-### Production Metrics
-- **All 5 Spores**: ✅ Fresh and verified
-- **LAN Federation**: ✅ 3-node mesh operational
-- **Port-Free Architecture**: ✅ Unix sockets + UDP only
-- **Self-Tracking**: ✅ Spores record lifecycle
-- **Log Management**: ✅ Automated fossil record
+### **Genetic Lineage**
+Cryptographic verification of family membership using BearDog's HKDF-SHA256 derivation. Enables hierarchical federation with trust levels.
+
+### **USB Spore Deployment**
+Portable deployment via USB "spores" with:
+- Unique genetic seeds (siblings, not clones)
+- Self-propagation capability
+- Encrypted with BearDog
+- Fossil record for tracking
+
+### **Port-Free Architecture**
+Unix sockets for local IPC, UDP multicast for discovery. HTTP only as legacy fallback.
 
 ---
 
-## 🎯 Roadmap
+## 🔒 Security
 
-### Completed ✅
-- [x] Port-free architecture
-- [x] Genetic lineage system
-- [x] USB spore deployment
-- [x] Verification system (SHA256)
-- [x] Refresh system (automated updates)
-- [x] Log fossil record (Phase 1)
-- [x] Spore self-tracking
-- [x] Comprehensive testing (60+ tests)
-- [x] Production validation (3-node LAN)
+- **Zero Unsafe Code**: 100% safe Rust throughout
+- **BearDog Integration**: All crypto delegated to BearDog
+- **NUCLEUS**: 5-layer verification for primal discovery
+- **BTSP**: Encrypted P2P tunnels via BearDog + Songbird
+- **Genetic Lineage**: Cryptographic family verification
 
-### Future 🔮
-- [ ] BearDog log encryption (Phase 2)
-- [ ] Distributed forensics
-- [ ] Version compatibility matrix
-- [ ] Binary signatures
-- [ ] Automated rollbacks
-- [ ] Chimera patterns (embedded primals)
+---
+
+## 📊 Statistics
+
+- **~95,000** lines of Rust
+- **15+** crates
+- **200+** tests (unit, integration, E2E, chaos)
+- **0** unsafe blocks
+- **5+** crates with `#![deny(unsafe_code)]`
+- **30+** active specifications
 
 ---
 
 ## 🤝 Contributing
 
-biomeOS follows modern Rust best practices:
-- **Type-safe**: No `unsafe` blocks
-- **Composable**: Modular primal architecture
-- **Tested**: 60+ tests, ~80% coverage
-- **Documented**: Inline docs + comprehensive guides
-- **Agnostic**: Capability-based, zero hardcoding
+biomeOS is part of the ecoPrimals ecosystem. Each primal is sovereign and evolves independently:
 
-### Code Style
+- **biomeOS**: This repository (orchestration)
+- **Songbird**: `ecoPrimals/phase1/songbird/` (P2P, BTSP)
+- **BearDog**: `ecoPrimals/phase1/beardog/` (security, crypto)
+- **Toadstool**: `ecoPrimals/phase1/toadstool/` (compute)
+- **NestGate**: `ecoPrimals/phase1/nestgate/` (storage)
+- **petalTongue**: `ecoPrimals/phase2/petalTongue/` (UI)
+
+Contributions welcome! Follow deep debt principles:
 - Modern idiomatic Rust
-- Smart refactoring (not just splitting files)
-- Safe Rust evolution (no unsafe shortcuts)
-- Capability-based discovery
-- Mocks isolated to tests only
+- No unsafe code
+- Capability-based, not hardcoded
+- Delegates to primals, doesn't reimplement
+- Comprehensive tests
 
 ---
 
-## 📖 Philosophy
+## 📝 License
 
-### Primal Sovereignty
-Each primal maintains only self-knowledge and discovers others at runtime. No hardcoding, no central registry, pure capability-based composition.
-
-### Genetic Trust
-Family membership verified cryptographically via BearDog. Each sibling has unique identity but shared lineage for zero-config trust.
-
-### Evolution Over Revolution
-Technical debt addressed strategically through architectural evolution, not quick fixes. Today's "bugs" become tomorrow's architectural improvements.
-
-### Self-Awareness
-The ecosystem tracks itself through log fossil records and spore lifecycle events, enabling forensic analysis and distributed debugging.
+[Add your license here]
 
 ---
 
-## 📜 License
+## 🌟 Acknowledgments
 
-[Your License Here]
+Built with Rust 🦀, inspired by nature 🌱, powered by the ecoPrimals ecosystem.
 
----
-
-## 🙏 Acknowledgments
-
-Built with:
-- **Rust** - For type safety and performance
-- **Tokio** - For async runtime
-- **Serde** - For serialization
-- **TOML** - For human-readable configs
-- **SHA256** - For cryptographic verification
-- **Chrono** - For timestamp tracking
-
----
-
-**🦀 Fast, Safe, Modern Rust - biomeOS v0.6.0** 🌱
-
-*From bash "jelly strings" to production-ready Rust with comprehensive log management and self-tracking spores!*
-
-**🎊 11/11 TODOs Complete - Production Ready - 60+ Tests Passing**
-
-Last updated: January 8, 2026
+**The ecosystem is alive and evolving!** ✨
