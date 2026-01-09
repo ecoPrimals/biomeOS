@@ -18,6 +18,9 @@ pub use subfederation::{SubFederation, SubFederationManager, IsolationLevel};
 pub use capability::{Capability, CapabilitySet};
 pub use discovery::{PrimalDiscovery, DiscoveredPrimal};
 pub use nucleus::{SecureNucleusDiscovery, VerifiedPrimal, TrustLevel, SelectionCriteria, IdentityProof};
+
+// Re-export PrimalEndpoint for tests
+pub use discovery::PrimalEndpoint;
 pub use beardog_client::BearDogClient;
 pub use unix_socket_client::{UnixSocketClient, JsonRpcRequest, JsonRpcResponse};
 

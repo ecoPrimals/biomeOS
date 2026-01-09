@@ -513,3 +513,18 @@ impl Default for SecureNucleusDiscovery {
     }
 }
 
+impl SecureNucleusDiscovery {
+    /// Test-only method to inject a verified primal
+    ///
+    /// This method is only available in test builds and allows
+    /// injecting verified primals directly into the registry for testing.
+    #[doc(hidden)]
+    pub fn inject_primal_for_testing(mut self, primal: VerifiedPrimal) -> Self {
+        self.verified_primals
+            .entry(primal.name.clone())
+            .or_insert_with(Vec::new)
+            .push(primal);
+        self
+    }
+}
+
