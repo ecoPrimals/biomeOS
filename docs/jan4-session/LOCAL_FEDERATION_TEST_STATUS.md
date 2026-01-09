@@ -18,9 +18,9 @@
   - SHA256: `a8a8c6ce6b953a069042cf62a58be7ab895c063c549e8227843ec3270257ac11`
   - Dual representation working
 
-### 2. primalBins/ Cleanup ✅
+### 2. plasmidBin/ Cleanup ✅
 ```bash
-/home/eastgate/Development/ecoPrimals/primalBins/
+/home/eastgate/Development/ecoPrimals/plasmidBin/
 ├── beardog (6.4M, SHA256: a8a8c6ce...)
 └── songbird (26M, SHA256: 7b6289a5...)
 ```

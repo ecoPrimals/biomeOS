@@ -261,14 +261,14 @@ let peer_family = "nat0";  // Or read from config
 ## 📁 Deployment Details
 
 ### BearDog v0.15.0
-- **Binary**: `/home/eastgate/Development/ecoPrimals/primalBins/beardog`
+- **Binary**: `/home/eastgate/Development/ecoPrimals/plasmidBin/beardog`
 - **MD5**: `3f299e9385daae9149e6e7720051f4ef`
 - **SHA256**: `be5e936f7156eb1ff2ee754d5acc5f325989dc504615c4a041122773ecca7db2`
 - **Deployed**: Both spores (biomeOS1 + biomeOS21)
 - **Status**: ✅ Working perfectly
 
 ### Songbird v3.13.2
-- **Binary**: `/home/eastgate/Development/ecoPrimals/primalBins/songbird`
+- **Binary**: `/home/eastgate/Development/ecoPrimals/plasmidBin/songbird`
 - **SHA256**: `7b6289a564322da78cbd336a7aeda041cf6e156f87a0a45227a66f570fdc14f0`
 - **Deployed**: Both spores (biomeOS1 + biomeOS21)
 - **Status**: ✅ Parsing working, ⚠️ needs peer family logic

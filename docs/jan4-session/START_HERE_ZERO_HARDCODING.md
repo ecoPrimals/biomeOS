@@ -38,7 +38,7 @@ cargo test --all
 
 # Start from pure environment (Infant Model!)
 export PRIMAL_PROVIDES=security
-export PRIMAL_BINARY=/home/eastgate/Development/ecoPrimals/phase1/beardog/primalBins/beardog-server-v0.15.0-with-v2-api
+export PRIMAL_BINARY=/home/eastgate/Development/ecoPrimals/phase1/beardog/plasmidBin/beardog-server-v0.15.0-with-v2-api
 export HTTP_PORT=9000
 ./target/release/tower start-from-env
 ```

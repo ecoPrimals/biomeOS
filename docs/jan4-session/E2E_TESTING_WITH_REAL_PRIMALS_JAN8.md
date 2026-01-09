@@ -7,7 +7,7 @@
 
 ## 🌟 Overview
 
-Successfully implemented and tested BearDog client integration with real BearDog instances running from `nucleusBin`. All discovery, health checks, and workflow tests passing!
+Successfully implemented and tested BearDog client integration with real BearDog instances running from `plasmidBin`. All discovery, health checks, and workflow tests passing!
 
 ---
 

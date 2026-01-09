@@ -17,7 +17,7 @@ pub struct SporeRefresher {
 }
 
 impl SporeRefresher {
-    /// Create a new refresher from nucleusBin
+    /// Create a new refresher from plasmidBin
     pub fn from_nucleus(nucleus_path: impl AsRef<Path>) -> Result<Self> {
         let nucleus_path = nucleus_path.as_ref().to_path_buf();
         
@@ -104,7 +104,7 @@ impl SporeRefresher {
                     warn!("Binary {} not found in nucleus", binary_verification.name);
                     failed_binaries.push(FailedBinary {
                         name: binary_verification.name.clone(),
-                        error: "Not found in nucleusBin".to_string(),
+                        error: "Not found in plasmidBin".to_string(),
                     });
                 }
             }

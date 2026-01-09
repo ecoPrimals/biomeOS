@@ -237,24 +237,24 @@ ps aux | grep -E '(tower|beardog|songbird)' | grep -v grep
 
 #### **Update Binaries**:
 ```bash
-# Copy to primalBins
+# Copy to plasmidBin
 cp /home/eastgate/Development/ecoPrimals/phase1/beardog/target/release/beardog-server \
-   /home/eastgate/Development/ecoPrimals/phase2/biomeOS/primalBins/beardog
+   /home/eastgate/Development/ecoPrimals/phase2/biomeOS/plasmidBin/beardog
 
 cp /home/eastgate/Development/ecoPrimals/phase1/songbird/target/release/songbird-orchestrator \
-   /home/eastgate/Development/ecoPrimals/phase2/biomeOS/primalBins/songbird
+   /home/eastgate/Development/ecoPrimals/phase2/biomeOS/plasmidBin/songbird
 
 # Update USB spores
-cp /home/eastgate/Development/ecoPrimals/phase2/biomeOS/primalBins/beardog \
+cp /home/eastgate/Development/ecoPrimals/phase2/biomeOS/plasmidBin/beardog \
    /media/eastgate/biomeOS1/biomeOS/primals/beardog
 
-cp /home/eastgate/Development/ecoPrimals/phase2/biomeOS/primalBins/songbird \
+cp /home/eastgate/Development/ecoPrimals/phase2/biomeOS/plasmidBin/songbird \
    /media/eastgate/biomeOS1/biomeOS/primals/songbird
 
-cp /home/eastgate/Development/ecoPrimals/phase2/biomeOS/primalBins/beardog \
+cp /home/eastgate/Development/ecoPrimals/phase2/biomeOS/plasmidBin/beardog \
    /media/eastgate/biomeOS21/biomeOS/primals/beardog
 
-cp /home/eastgate/Development/ecoPrimals/phase2/biomeOS/primalBins/songbird \
+cp /home/eastgate/Development/ecoPrimals/phase2/biomeOS/plasmidBin/songbird \
    /media/eastgate/biomeOS21/biomeOS/primals/songbird
 ```
 
@@ -386,8 +386,8 @@ grep -i "parse.*error\|failed.*parse" /tmp/primals/*tower*.log
 **Check**:
 ```bash
 # Verify binary versions
-/home/eastgate/Development/ecoPrimals/phase2/biomeOS/primalBins/beardog --version
-/home/eastgate/Development/ecoPrimals/phase2/biomeOS/primalBins/songbird --version
+/home/eastgate/Development/ecoPrimals/phase2/biomeOS/plasmidBin/beardog --version
+/home/eastgate/Development/ecoPrimals/phase2/biomeOS/plasmidBin/songbird --version
 ```
 
 **Fix**: Rebuild and redeploy binaries

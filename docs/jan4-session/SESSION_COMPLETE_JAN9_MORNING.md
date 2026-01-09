@@ -91,7 +91,7 @@ $ cat /tmp/toadstool-daemon-neural.log
 ### **Issue 2: Songbird Tower Startup**
 **Current State**:
 ```bash
-$ ./primalBins/songbird tower start --daemon
+$ ./plasmidBin/songbird tower start --daemon
 error: unexpected argument '--daemon' found
 ```
 

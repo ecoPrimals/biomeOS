@@ -74,14 +74,14 @@ Result: All 5 spores have OLD BearDog binary
 ```
 BearDog team fixed Unix socket creation bug
 We ran: harvest-primals.sh
-Result: nucleusBin/ now has FRESH BearDog binary
+Result: plasmidBin/ now has FRESH BearDog binary
 ```
 
 **Step 3: Local Re-deployment** (Jan 8, evening)
 ```
 Action: Cleaned and RE-CREATED node-alpha (biomeOS1)
 Action: Cleaned and RE-CREATED node-beta (biomeOS21)
-Result: alpha/beta got FRESH BearDog from nucleusBin
+Result: alpha/beta got FRESH BearDog from plasmidBin
 Verification: Unix sockets working! ✅
 ```
 
@@ -100,7 +100,7 @@ Symptom: Unix socket not created ❌
 │                  BearDog Fix Event                      │
 └────────────────────┬────────────────────────────────────┘
                      │
-                     ├─► harvest-primals.sh (✅ Updated nucleusBin)
+                     ├─► harvest-primals.sh (✅ Updated plasmidBin)
                      │
                      ├─► Re-create alpha (✅ Got fresh binary)
                      ├─► Re-create beta  (✅ Got fresh binary)
@@ -118,13 +118,13 @@ Symptom: Unix socket not created ❌
 
 ### Expected MD5 (Fresh):
 ```
-nucleusBin/primals/beardog-server: b10fd19491c04e9adff5b683e6553aca
+plasmidBin/primals/beardog-server: b10fd19491c04e9adff5b683e6553aca
 ```
 
 ### Actual MD5 (Per Spore):
 ```
-✅ node-alpha:   b10fd19491c04e9a... (FRESH - matches nucleusBin)
-✅ node-beta:    b10fd19491c04e9a... (FRESH - matches nucleusBin)
+✅ node-alpha:   b10fd19491c04e9a... (FRESH - matches plasmidBin)
+✅ node-beta:    b10fd19491c04e9a... (FRESH - matches plasmidBin)
 ❌ node-gamma:   [OLD_MD5] (STALE - pre-fix binary)
 ❌ node-delta:   [OLD_MD5] (STALE - pre-fix binary)
 ❌ node-epsilon: [OLD_MD5] (STALE - pre-fix binary)
@@ -155,7 +155,7 @@ nucleusBin/primals/beardog-server: b10fd19491c04e9adff5b683e6553aca
 **Commands**:
 ```bash
 # On current machine:
-cp nucleusBin/primals/beardog-server /media/eastgate/BEA6-BBCE2/biomeOS/primals/
+cp plasmidBin/primals/beardog-server /media/eastgate/BEA6-BBCE2/biomeOS/primals/
 
 # On LAN machine:
 pkill -f "tower|beardog|songbird"
@@ -171,7 +171,7 @@ cd /media/.../biomeOS
 1. Re-create node-gamma with fresh binaries
 2. Re-create node-delta with fresh binaries
 3. Re-create node-epsilon with fresh binaries
-4. Verify MD5 checksums match nucleusBin
+4. Verify MD5 checksums match plasmidBin
 5. Redeploy epsilon to LAN machine
 
 **Pros**:
@@ -211,7 +211,7 @@ cargo run --release -p biomeos-cli --bin biomeos -- spore create \
     --node "node-epsilon"
 
 # Verify MD5 matches:
-md5sum nucleusBin/primals/beardog-server
+md5sum plasmidBin/primals/beardog-server
 md5sum /media/eastgate/BEA6-BBCE/biomeOS/primals/beardog-server
 md5sum /media/eastgate/BEA6-BBCE1/biomeOS/primals/beardog-server
 md5sum /media/eastgate/BEA6-BBCE2/biomeOS/primals/beardog-server
@@ -247,14 +247,14 @@ md5sum /media/eastgate/BEA6-BBCE2/biomeOS/primals/beardog-server
 
 ```bash
 #!/usr/bin/env bash
-# Verify all spores have fresh binaries matching nucleusBin
+# Verify all spores have fresh binaries matching plasmidBin
 
 set -euo pipefail
 
 echo "🔍 Verifying spore binary freshness..."
 
-NUCLEUS_BEARDOG_MD5=$(md5sum nucleusBin/primals/beardog-server | cut -d' ' -f1)
-NUCLEUS_SONGBIRD_MD5=$(md5sum nucleusBin/primals/songbird | cut -d' ' -f1)
+NUCLEUS_BEARDOG_MD5=$(md5sum plasmidBin/primals/beardog-server | cut -d' ' -f1)
+NUCLEUS_SONGBIRD_MD5=$(md5sum plasmidBin/primals/songbird | cut -d' ' -f1)
 
 echo "Fresh BearDog:  $NUCLEUS_BEARDOG_MD5"
 echo "Fresh Songbird: $NUCLEUS_SONGBIRD_MD5"
@@ -293,7 +293,7 @@ fi
 ### Updated Deployment Checklist:
 
 1. ✅ Run `harvest-primals.sh` (get fresh binaries)
-2. ✅ Run `verify-nucleus.sh` (verify nucleusBin integrity)
+2. ✅ Run `verify-nucleus.sh` (verify plasmidBin integrity)
 3. **✅ Run `verify-spore-freshness.sh` (NEW!)**
 4. ❌ If any spores stale → Re-create them
 5. ✅ Deploy to LAN

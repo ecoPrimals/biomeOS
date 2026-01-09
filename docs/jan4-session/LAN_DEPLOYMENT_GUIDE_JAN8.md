@@ -23,7 +23,7 @@
 - 🔒 node-beta (biomeOS21) - Running locally
 
 ### Pipeline Validated ✅
-- ✅ NucleusBin build system working
+- ✅ PlasmidBin build system working
 - ✅ Capability-based deployment
 - ✅ Self-contained USB spores
 - ✅ deploy.sh tested and working

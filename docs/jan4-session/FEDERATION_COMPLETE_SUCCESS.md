@@ -223,7 +223,7 @@
 - Version: v3.10.3-evolved
 - SHA256: `4944c62851a543e3598b152815623af91970db60e54cfd750a6da9eeeca1fa8b`
 - Size: 25MB
-- Location: `primalBins/songbird-orchestrator-v3.10.3`
+- Location: `plasmidBin/songbird-orchestrator-v3.10.3`
 
 **USB Spores**:
 - biomeOS1: Updated ✅

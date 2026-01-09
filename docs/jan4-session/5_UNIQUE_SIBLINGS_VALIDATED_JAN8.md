@@ -175,7 +175,7 @@ BearDog is running in **standalone port-free mode**:
 ```bash
 # 1. Harvest fresh binaries
 ./scripts/harvest-primals.sh
-  → nucleusBin/primals/ populated
+  → plasmidBin/primals/ populated
 
 # 2. Create spores (capability-based)
 biomeos spore create --mount /media/eastgate/biomeOS1 --node node-alpha
@@ -242,7 +242,7 @@ cd /media/eastgate/biomeOS1/biomeOS
 1. Investigate BearDog Unix socket visibility
 2. Test BearDog lineage API (JSON-RPC via Unix socket)
 3. Deploy multiple LiveSpores for LAN federation testing
-4. Add encrypted seed support to nucleusBin
+4. Add encrypted seed support to plasmidBin
 5. Multi-node deployment and federation validation
 
 ---

@@ -16,10 +16,10 @@ pub struct VerifyArgs {
 
 #[derive(Subcommand)]
 pub enum VerifyTarget {
-    /// Verify nucleusBin integrity
+    /// Verify plasmidBin integrity
     Nucleus {
-        /// Path to nucleusBin directory
-        #[arg(short, long, default_value = "nucleusBin")]
+        /// Path to plasmidBin directory
+        #[arg(short, long, default_value = "plasmidBin")]
         path: PathBuf,
     },
     
@@ -55,21 +55,21 @@ pub async fn run(args: VerifyArgs) -> Result<()> {
 }
 
 async fn verify_nucleus(nucleus_path: &PathBuf) -> Result<()> {
-    info!("Verifying nucleusBin at: {}", nucleus_path.display());
+    info!("Verifying plasmidBin at: {}", nucleus_path.display());
     
     println!("╔════════════════════════════════════════════════════════════════╗");
     println!("║                                                                ║");
-    println!("║         🔍 NucleusBin Verification                            ║");
+    println!("║         🔍 PlasmidBin Verification                            ║");
     println!("║                                                                ║");
     println!("╚════════════════════════════════════════════════════════════════╝");
     println!();
     
-    // Check if nucleusBin exists
+    // Check if plasmidBin exists
     if !nucleus_path.exists() {
-        println!("❌ Error: nucleusBin not found at: {}", nucleus_path.display());
+        println!("❌ Error: plasmidBin not found at: {}", nucleus_path.display());
         println!();
         println!("Expected structure:");
-        println!("  nucleusBin/");
+        println!("  plasmidBin/");
         println!("    tower/");
         println!("      tower (binary)");
         println!("    primals/");
@@ -114,7 +114,7 @@ async fn verify_nucleus(nucleus_path: &PathBuf) -> Result<()> {
         println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         println!("Total binaries: {}", manifest.binaries.len());
         println!();
-        println!("✅ NucleusBin is valid and ready for deployment");
+        println!("✅ PlasmidBin is valid and ready for deployment");
     }
     
     Ok(())
@@ -131,9 +131,9 @@ async fn verify_single_spore(mount_point: &PathBuf) -> Result<()> {
     println!();
     
     // Load nucleus manifest
-    let nucleus_path = PathBuf::from("nucleusBin");
+    let nucleus_path = PathBuf::from("plasmidBin");
     if !nucleus_path.exists() {
-        println!("❌ Error: nucleusBin not found (required for comparison)");
+        println!("❌ Error: plasmidBin not found (required for comparison)");
         println!("   Expected at: {}", nucleus_path.display());
         return Ok(());
     }
@@ -149,7 +149,7 @@ async fn verify_single_spore(mount_point: &PathBuf) -> Result<()> {
     match report.overall_status {
         VerificationStatus::Fresh => {
             println!("✅ Status: FRESH");
-            println!("   All binaries match nucleusBin exactly");
+            println!("   All binaries match plasmidBin exactly");
         }
         VerificationStatus::Stale => {
             println!("⚠️  Status: STALE");
@@ -221,9 +221,9 @@ async fn verify_all_spores(verbose: bool) -> Result<()> {
     println!();
     
     // Load nucleus manifest
-    let nucleus_path = PathBuf::from("nucleusBin");
+    let nucleus_path = PathBuf::from("plasmidBin");
     if !nucleus_path.exists() {
-        println!("❌ Error: nucleusBin not found (required for comparison)");
+        println!("❌ Error: plasmidBin not found (required for comparison)");
         println!("   Expected at: {}", nucleus_path.display());
         return Ok(());
     }
@@ -301,7 +301,7 @@ async fn verify_all_spores(verbose: bool) -> Result<()> {
     if stale_count > 0 {
         println!("💡 Recommendation:");
         println!("   Run 'biomeos spore refresh <mount>' to update stale spores");
-        println!("   Or re-create spores with fresh binaries from nucleusBin");
+        println!("   Or re-create spores with fresh binaries from plasmidBin");
         println!();
     }
     

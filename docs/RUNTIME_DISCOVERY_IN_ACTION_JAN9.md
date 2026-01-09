@@ -19,8 +19,8 @@
 
 ```bash
 $ ps aux | grep beardog
-eastgate 2465350  ... ./nucleusBin/primals/beardog-server  # Federation instance (PID 2465350)
-eastgate 3000324  ... ./primalBins/beardog-server          # Manual instance (PID 3000324)
+eastgate 2465350  ... ./plasmidBin/primals/beardog-server  # Federation instance (PID 2465350)
+eastgate 3000324  ... ./plasmidBin/beardog-server          # Manual instance (PID 3000324)
 ```
 
 ### **Available Unix Sockets**

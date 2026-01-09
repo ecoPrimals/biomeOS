@@ -173,7 +173,7 @@ To properly verify the spore relationships, we need to:
 
 ### **Step 1: Ensure BearDog v0.15.2+** ✅
 ```bash
-./primalBins/beardog-server --version
+./plasmidBin/beardog-server --version
 # Should show v0.15.2 or later
 ```
 
@@ -195,7 +195,7 @@ sudo apt install socat
 export BIOMEOS_HSM_MODE=software
 export NODE_ID=lineage-check
 export BEARDOG_FAMILY_ID=test
-./primalBins/beardog-server
+./plasmidBin/beardog-server
 ```
 
 **Status**: ✅ Already running at `/tmp/beardog-test-lineage-check.sock`

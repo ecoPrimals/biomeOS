@@ -48,10 +48,10 @@ async fn test_minimal_rootfs_build() -> Result<()> {
 #[tokio::test]
 #[ignore] // Requires sudo
 async fn test_rootfs_with_primals() -> Result<()> {
-    // Skip if primalBins doesn't exist
-    let primals_dir = PathBuf::from("../../primalBins");
+    // Skip if plasmidBin doesn't exist
+    let primals_dir = PathBuf::from("../../plasmidBin");
     if !primals_dir.exists() {
-        eprintln!("Skipping: ../../primalBins not found");
+        eprintln!("Skipping: ../../plasmidBin not found");
         return Ok(());
     }
     

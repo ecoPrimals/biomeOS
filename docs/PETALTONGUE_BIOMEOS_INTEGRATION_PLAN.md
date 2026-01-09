@@ -8,7 +8,7 @@
 
 ## 🎯 **Overview**
 
-**petalTongue** is a mature Phase 1 primal (v0.4.0 - Production Ready) that provides the **Universal User Interface (UUI)** for the ecoPrimals ecosystem. It's the "face" of ecoPrimals, enabling ANY user, anywhere, with any capability to interact with the ecosystem.
+**petalTongue** is a mature Phase 2 primal (v0.4.0 - Production Ready) that provides the **Universal User Interface (UUI)** for the ecoPrimals ecosystem. It's the "face" of ecoPrimals, enabling ANY user, anywhere, with any capability to interact with the ecosystem.
 
 **Current Status**:
 - ✅ v0.4.0 Production Ready (A+ 9.5/10)
@@ -200,10 +200,10 @@ petalTongue → Toadstool → GPU rendering → Return result
 cd /home/eastgate/Development/ecoPrimals/phase2/biomeOS
 
 # Run petalTongue (GUI mode)
-./nucleusBins/petal-tongue
+./plasmidBins/petal-tongue
 
 # OR run headless (terminal mode)
-./nucleusBins/petal-tongue-headless --mode terminal
+./plasmidBins/petal-tongue-headless --mode terminal
 ```
 
 **Expected Behavior**:
@@ -289,7 +289,7 @@ cargo run --bin biomeos -- serve --port 3000
 
 # Terminal 2: Start petalTongue (with discovery hint)
 export PETALTONGUE_DISCOVERY_HINTS="http://localhost:3000"
-./nucleusBins/petal-tongue
+./plasmidBins/petal-tongue
 
 # Expected: petalTongue discovers biomeOS, fetches topology, displays UI
 ```
@@ -446,7 +446,7 @@ for modality in modalities {
 
 ### **petalTongue**
 - Location: `/home/eastgate/Development/ecoPrimals/phase2/petalTongue`
-- Binaries: `nucleusBins/petal-tongue`, `nucleusBins/petal-tongue-headless`
+- Binaries: `plasmidBins/petal-tongue`, `plasmidBins/petal-tongue-headless`
 - Spec: `specs/PETALTONGUE_UI_AND_VISUALIZATION_SPECIFICATION.md`
 - Status: v0.4.0 Production Ready (A+ 9.5/10)
 

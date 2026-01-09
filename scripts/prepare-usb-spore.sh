@@ -14,7 +14,7 @@ echo ""
 # Configuration
 USB_ROOT="/media/eastgate/BEA6-BBCE"
 BIOMEOS_DIR="/home/eastgate/Development/ecoPrimals/phase2/biomeOS"
-BEARDOG_BIN="/home/eastgate/Development/ecoPrimals/phase1/beardog/primalBins/beardog-server-v0.15.0-with-v2-api"
+BEARDOG_BIN="/home/eastgate/Development/ecoPrimals/phase1/beardog/plasmidBin/beardog-server-v0.15.0-with-v2-api"
 SONGBIRD_BIN="/home/eastgate/Development/ecoPrimals/phase1/songbird/target/release/songbird-orchestrator"
 TOWER_BIN="$BIOMEOS_DIR/target/release/tower"
 

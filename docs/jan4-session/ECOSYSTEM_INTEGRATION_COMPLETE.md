@@ -192,7 +192,7 @@
 2. `DAEMON_MODE_IMPLEMENTATION_SUMMARY.md` (10 KB)
 3. `LATEST_SESSION.md` - Current status
 
-### primalBins
+### plasmidBin
 1. `INTEGRATION_COMPLETE_JAN_4_2026.md` - Binary status
 
 **Grand Total**: ~250 KB of comprehensive documentation
@@ -206,7 +206,7 @@
 ```bash
 # Terminal 1: Songbird (discovery)
 export SONGBIRD_FAMILY_ID="nat0"
-cd /home/eastgate/Development/ecoPrimals/primalBins
+cd /home/eastgate/Development/ecoPrimals/plasmidBin
 ./songbird-orchestrator
 
 # Terminal 2: BearDog (security)
@@ -347,7 +347,7 @@ Same BearDog binary, zero changes!
 
 ## 📦 Production Binaries
 
-**Location**: `/home/eastgate/Development/ecoPrimals/primalBins/`
+**Location**: `/home/eastgate/Development/ecoPrimals/plasmidBin/`
 
 | Binary | Version | Size | Tests |
 |--------|---------|------|-------|
@@ -392,7 +392,7 @@ Same BearDog binary, zero changes!
 ---
 
 *For primal teams: All integration complete!*  
-*For deployment: Binaries ready in `primalBins/`*  
+*For deployment: Binaries ready in `plasmidBin/`*  
 *For documentation: See `docs/jan4-session/`*
 
 **Grade**: A++ (World-Class Production System)

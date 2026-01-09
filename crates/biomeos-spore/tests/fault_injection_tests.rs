@@ -11,8 +11,8 @@ use tempfile::TempDir;
 async fn test_seed_generation_failure() {
     let temp_dir = TempDir::new().unwrap();
     
-    // Create nucleusBin
-    let nucleus_dir = temp_dir.path().join("nucleusBin");
+    // Create plasmidBin
+    let nucleus_dir = temp_dir.path().join("plasmidBin");
     fs::create_dir_all(nucleus_dir.join("tower")).unwrap();
     fs::create_dir_all(nucleus_dir.join("primals")).unwrap();
     
@@ -82,8 +82,8 @@ async fn test_seed_generation_failure() {
 async fn test_config_creation_failure() {
     let temp_dir = TempDir::new().unwrap();
     
-    // Create nucleusBin
-    let nucleus_dir = temp_dir.path().join("nucleusBin");
+    // Create plasmidBin
+    let nucleus_dir = temp_dir.path().join("plasmidBin");
     fs::create_dir_all(nucleus_dir.join("tower")).unwrap();
     fs::create_dir_all(nucleus_dir.join("primals")).unwrap();
     
@@ -125,8 +125,8 @@ async fn test_config_creation_failure() {
 async fn test_partial_binary_copy() {
     let temp_dir = TempDir::new().unwrap();
     
-    // Create nucleusBin with only partial binaries
-    let nucleus_dir = temp_dir.path().join("nucleusBin");
+    // Create plasmidBin with only partial binaries
+    let nucleus_dir = temp_dir.path().join("plasmidBin");
     fs::create_dir_all(nucleus_dir.join("tower")).unwrap();
     fs::create_dir_all(nucleus_dir.join("primals")).unwrap();
     
@@ -178,8 +178,8 @@ async fn test_partial_binary_copy() {
 async fn test_invalid_node_id() {
     let temp_dir = TempDir::new().unwrap();
     
-    // Create nucleusBin
-    let nucleus_dir = temp_dir.path().join("nucleusBin");
+    // Create plasmidBin
+    let nucleus_dir = temp_dir.path().join("plasmidBin");
     fs::create_dir_all(nucleus_dir.join("tower")).unwrap();
     fs::create_dir_all(nucleus_dir.join("primals")).unwrap();
     

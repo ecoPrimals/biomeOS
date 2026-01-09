@@ -116,7 +116,7 @@ enum SporeAction {
         mount: PathBuf,
     },
     
-    /// Refresh spore binaries from nucleusBin
+    /// Refresh spore binaries from plasmidBin
     Refresh {
         /// Spore mount point (e.g., /media/usb/biomeOS)
         #[arg(value_name = "MOUNT_POINT")]
@@ -172,7 +172,7 @@ enum Commands {
         action: SporeAction,
     },
 
-    /// Verify nucleusBin binaries and deployed spores
+    /// Verify plasmidBin binaries and deployed spores
     Verify(verify::VerifyArgs),
 
     /// Discover services by capability or method

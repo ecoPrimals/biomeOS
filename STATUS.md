@@ -42,7 +42,7 @@
 - ✅ In-code rendering + network to Toadstool for GPU!
 
 **Integration Status**:
-- ✅ Binaries copied to `nucleusBins/`
+- ✅ Binaries copied to `plasmidBins/`
 - ✅ UI niche manifest created (`niches/ui.toml`)
 - ✅ UI deployment graphs created (deploy, health, shutdown)
 - ✅ Comprehensive integration plan documented
@@ -140,7 +140,7 @@
 - ✅ 536+ tests passing
 - ✅ Multi-modal rendering (visual + audio + text)
 - ✅ 6 display backends working
-- ✅ Binaries copied to `nucleusBins/`
+- ✅ Binaries copied to `plasmidBins/`
 
 **Integration**:
 - ✅ UI niche manifest created (`niches/ui.toml`)
@@ -268,7 +268,7 @@
 - **Status**: ✅ Ready for testing
 
 ### **Binaries** (**NEW!**)
-- **nucleusBins/**: 7 binaries
+- **plasmidBins/**: 7 binaries
   - beardog-server (BearDog)
   - songbird (Songbird)
   - toadstool (Toadstool)
@@ -294,7 +294,7 @@
 
 **Phase 2.5**: 🎨 **NEW - UI INTEGRATION**
 - petalTongue v0.4.0 Production Ready
-- Binaries in `nucleusBins/`
+- Binaries in `plasmidBins/`
 - UI niche manifest + graphs
 - Integration plan complete
 

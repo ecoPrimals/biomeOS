@@ -15,8 +15,8 @@ async fn test_readonly_filesystem() {
     
     let temp_dir = TempDir::new().unwrap();
     
-    // Create nucleusBin
-    let nucleus_dir = temp_dir.path().join("nucleusBin");
+    // Create plasmidBin
+    let nucleus_dir = temp_dir.path().join("plasmidBin");
     fs::create_dir_all(nucleus_dir.join("tower")).unwrap();
     fs::create_dir_all(nucleus_dir.join("primals")).unwrap();
     
@@ -67,8 +67,8 @@ async fn test_disk_full_simulation() {
     
     let temp_dir = TempDir::new().unwrap();
     
-    // Create nucleusBin with "large" binaries
-    let nucleus_dir = temp_dir.path().join("nucleusBin");
+    // Create plasmidBin with "large" binaries
+    let nucleus_dir = temp_dir.path().join("plasmidBin");
     fs::create_dir_all(nucleus_dir.join("tower")).unwrap();
     fs::create_dir_all(nucleus_dir.join("primals")).unwrap();
     
@@ -117,8 +117,8 @@ async fn test_disk_full_simulation() {
 async fn test_corrupt_binaries() {
     let temp_dir = TempDir::new().unwrap();
     
-    // Create nucleusBin with corrupt binaries
-    let nucleus_dir = temp_dir.path().join("nucleusBin");
+    // Create plasmidBin with corrupt binaries
+    let nucleus_dir = temp_dir.path().join("plasmidBin");
     fs::create_dir_all(nucleus_dir.join("tower")).unwrap();
     fs::create_dir_all(nucleus_dir.join("primals")).unwrap();
     
@@ -163,8 +163,8 @@ async fn test_corrupt_binaries() {
 async fn test_fat32_limitations() {
     let temp_dir = TempDir::new().unwrap();
     
-    // Create nucleusBin
-    let nucleus_dir = temp_dir.path().join("nucleusBin");
+    // Create plasmidBin
+    let nucleus_dir = temp_dir.path().join("plasmidBin");
     fs::create_dir_all(nucleus_dir.join("tower")).unwrap();
     fs::create_dir_all(nucleus_dir.join("primals")).unwrap();
     
@@ -213,8 +213,8 @@ async fn test_fat32_limitations() {
 async fn test_concurrent_spore_creation() {
     let temp_dir = TempDir::new().unwrap();
     
-    // Create nucleusBin
-    let nucleus_dir = temp_dir.path().join("nucleusBin");
+    // Create plasmidBin
+    let nucleus_dir = temp_dir.path().join("plasmidBin");
     fs::create_dir_all(nucleus_dir.join("tower")).unwrap();
     fs::create_dir_all(nucleus_dir.join("primals")).unwrap();
     

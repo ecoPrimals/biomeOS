@@ -49,7 +49,7 @@ async fn test_beardog_discovery() {
         None => {
             println!("⚠️  BearDog not found - skipping integration tests");
             println!("   To run these tests, start BearDog with:");
-            println!("   ./nucleusBin/primals/beardog-server");
+            println!("   ./plasmidBin/primals/beardog-server");
         }
     }
 }

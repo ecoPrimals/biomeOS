@@ -187,7 +187,7 @@ fn test_binary_manifest_load_missing_file() {
 #[test]
 fn test_binary_manifest_default() {
     // from_nucleus() panics on missing directory, which is expected behavior
-    // since it should only be called on valid nucleusBin directories
+    // since it should only be called on valid plasmidBin directories
     // This test just confirms the struct can be created manually
     let manifest = BinaryManifest {
         manifest: ManifestMeta {

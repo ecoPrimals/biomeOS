@@ -47,8 +47,8 @@ songbird.protocols = "tarpc (detection), JSON-RPC (detection), HTTP (fallback)"
 - ✅ Build dates documented
 
 **3. Single Source of Truth**:
-- ✅ primalBins/ contains canonical binaries
-- ✅ Both USB spores updated from primalBins/
+- ✅ plasmidBin/ contains canonical binaries
+- ✅ Both USB spores updated from plasmidBin/
 - ✅ No multiple versions on USB
 
 **Verification**:

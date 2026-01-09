@@ -20,7 +20,7 @@
 **Goal**: Replace manual bash checks with type-safe Rust verification
 
 **Delivered**:
-- ✅ `BinaryManifest` - Track nucleusBin with SHA256 checksums (200 lines)
+- ✅ `BinaryManifest` - Track plasmidBin with SHA256 checksums (200 lines)
 - ✅ `SporeManifest` - Track deployments with genetic lineage (200 lines)
 - ✅ `SporeVerifier` - Type-safe verification engine (300 lines)
 - ✅ CLI commands: `biomeos verify nucleus/spore/all` (450 lines)
@@ -103,7 +103,7 @@
 - ✅ Songbird UDP multicast
 - ✅ Dual local deployment
 - ✅ Genetic lineage (5 unique siblings)
-- ✅ NucleusBin pipeline
+- ✅ PlasmidBin pipeline
 - ✅ **Verification system (NEW!)**
 - ✅ **Refresh system (NEW!)**
 

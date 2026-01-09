@@ -301,7 +301,7 @@ Songbird: 1/2 working ⚠️ (blocked by singleton check)
 Songbird v3.7.2's singleton check prevents multiple instances with different `NODE_ID`s from running on the same machine, blocking multi-spore deployment—please scope the check per `NODE_ID` or use socket binding as the singleton enforcer.
 
 **Binary Details**:
-- Path: `/home/eastgate/Development/ecoPrimals/primalBins/songbird-orchestrator-v3.7.2-complete`
+- Path: `/home/eastgate/Development/ecoPrimals/plasmidBin/songbird-orchestrator-v3.7.2-complete`
 - SHA256: `fda781508a3a3b326266f9fa4d4c6ed0b2097b74a467f970e0ed091e1a73c150`
 - Size: 25MB
 - Version: v3.7.2-complete

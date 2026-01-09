@@ -48,8 +48,8 @@
 
 **Problem Solved:** True genetic diversity while maintaining family trust.
 
-### 5. 📦 **NucleusBin Pipeline: Complete**
-- ✅ `nucleusBin/` directory structure
+### 5. 📦 **PlasmidBin Pipeline: Complete**
+- ✅ `plasmidBin/` directory structure
 - ✅ Automated `harvest-primals.sh` script
 - ✅ SHA256 manifest generation
 - ✅ Version tracking (`VERSION.txt`)
@@ -59,7 +59,7 @@
 
 ### 6. 🏗️ **Capability-Based Spore Evolution**
 - ✅ Removed hardcoded primal names
-- ✅ Dynamic binary copying from `nucleusBin/primals/`
+- ✅ Dynamic binary copying from `plasmidBin/primals/`
 - ✅ BYOB (Build Your Own Biome) manifest integration
 - ✅ `tower.toml` as first BYOB niche
 - ✅ Future chimera support ready
@@ -191,7 +191,7 @@ Trust Flow:
 2. **Genetic Lineage** - Cryptographic family trust
 3. **Port-Free Architecture** - Unix socket + UDP multicast
 4. **USB Spore System** - Self-deploying, portable
-5. **NucleusBin Pipeline** - Automated binary management
+5. **PlasmidBin Pipeline** - Automated binary management
 6. **Log Fossil Record** - Automated archival and forensics
 7. **Verification System** - SHA256 integrity checks
 8. **Refresh System** - Stale binary updates

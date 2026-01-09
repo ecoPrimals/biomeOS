@@ -164,7 +164,7 @@
 - Network to Toadstool for GPU rendering (future)
 
 **Deliverables**:
-- ✅ petalTongue binary in `nucleusBins/`
+- ✅ petalTongue binary in `plasmidBins/`
 - ✅ UI niche manifest (`niches/ui.toml`)
 - ✅ UI deployment graphs
 - ✅ Integration plan document

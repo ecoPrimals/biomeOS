@@ -122,7 +122,7 @@ fn detect_protocol(first_bytes: &[u8]) -> Protocol {
 ### Current Binary
 
 **Location**: 
-- `primalBins/beardog`
+- `plasmidBin/beardog`
 - `/media/eastgate/biomeOS1/biomeOS/primals/beardog`
 - `/media/eastgate/biomeOS21/biomeOS/primals/beardog`
 
@@ -441,7 +441,7 @@ SECURITY_ENDPOINT = "unix:///tmp/beardog.sock"
 
 ### Binary Update ✅
 
-- [x] BearDog binary copied to primalBins/
+- [x] BearDog binary copied to plasmidBin/
 - [x] BearDog binary copied to biomeOS1
 - [x] BearDog binary copied to biomeOS21
 - [x] Checksums verified (all match)

@@ -14,7 +14,7 @@ async fn test_e2e_verify_fresh_spore() {
     let temp_dir = TempDir::new().unwrap();
     
     // Setup nucleus with binaries
-    let nucleus_path = temp_dir.path().join("nucleusBin");
+    let nucleus_path = temp_dir.path().join("plasmidBin");
     fs::create_dir_all(nucleus_path.join("tower")).await.unwrap();
     fs::create_dir_all(nucleus_path.join("primals")).await.unwrap();
     
@@ -87,7 +87,7 @@ async fn test_e2e_detect_and_refresh_stale() {
     let temp_dir = TempDir::new().unwrap();
     
     // Setup nucleus with NEW binary
-    let nucleus_path = temp_dir.path().join("nucleusBin");
+    let nucleus_path = temp_dir.path().join("plasmidBin");
     fs::create_dir_all(nucleus_path.join("tower")).await.unwrap();
     
     let new_content = b"tower binary v2 - FRESH";
@@ -175,7 +175,7 @@ async fn test_e2e_multi_binary_refresh() {
     let temp_dir = TempDir::new().unwrap();
     
     // Setup nucleus with multiple fresh binaries
-    let nucleus_path = temp_dir.path().join("nucleusBin");
+    let nucleus_path = temp_dir.path().join("plasmidBin");
     fs::create_dir_all(nucleus_path.join("tower")).await.unwrap();
     fs::create_dir_all(nucleus_path.join("primals")).await.unwrap();
     
@@ -263,7 +263,7 @@ async fn test_e2e_verify_all_spores() {
     let temp_dir = TempDir::new().unwrap();
     
     // Setup nucleus
-    let nucleus_path = temp_dir.path().join("nucleusBin");
+    let nucleus_path = temp_dir.path().join("plasmidBin");
     fs::create_dir_all(nucleus_path.join("tower")).await.unwrap();
     fs::write(nucleus_path.join("tower/tower"), b"tower").await.unwrap();
     
@@ -294,7 +294,7 @@ async fn test_e2e_manifest_generation() {
     let temp_dir = TempDir::new().unwrap();
     
     // Create nucleus WITHOUT manifest
-    let nucleus_path = temp_dir.path().join("nucleusBin");
+    let nucleus_path = temp_dir.path().join("plasmidBin");
     fs::create_dir_all(nucleus_path.join("tower")).await.unwrap();
     fs::create_dir_all(nucleus_path.join("primals")).await.unwrap();
     fs::write(nucleus_path.join("tower/tower"), b"tower").await.unwrap();

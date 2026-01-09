@@ -88,7 +88,7 @@ biomeos health --graph --niche niches/tower.toml --continuous
 
 ### Verify Your System
 ```bash
-# Check nucleusBin binaries
+# Check plasmidBin binaries
 ./target/release/biomeos verify nucleus
 
 # Verify all mounted USB spores
@@ -279,7 +279,7 @@ cargo test -- --nocapture
 
 ### Harvest Fresh Binaries
 ```bash
-# Pull, build, and copy primal binaries to nucleusBin/
+# Pull, build, and copy primal binaries to plasmidBin/
 ./scripts/harvest-primals.sh
 
 # Verify harvested binaries
@@ -310,7 +310,7 @@ cargo test -- --nocapture
 ### Technical Docs
 - [Deep Debt Evolution](docs/jan4-session/DEEP_DEBT_SPORE_VERIFICATION_EVOLUTION_JAN8.md) - Verification system
 - [Genetic Lineage](docs/jan4-session/GENETIC_LINEAGE_NOT_CLONES_JAN7.md) - Sibling derivation
-- [NucleusBin Pipeline](docs/jan4-session/NUCLEUS_BIN_PIPELINE_JAN8.md) - Binary management
+- [PlasmidBin Pipeline](docs/jan4-session/NUCLEUS_BIN_PIPELINE_JAN8.md) - Binary management
 - [Capability-Based Evolution](docs/jan4-session/CAPABILITY_BASED_SPORE_EVOLUTION_JAN8.md) - Architecture
 
 ---

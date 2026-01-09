@@ -38,7 +38,7 @@
 
 #### **Morning: Cleanup**
 - Moved 45 old session docs to fossil record
-- Cleaned nucleusBin backups
+- Cleaned plasmidBin backups
 - Updated root documentation
 
 #### **Afternoon: Core Implementation**

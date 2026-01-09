@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Verify Nucleus - Check integrity of nucleusBin binaries
+# Verify Nucleus - Check integrity of plasmidBin binaries
 #
 # This script verifies:
 # 1. All binaries exist
@@ -14,11 +14,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIOMEOS_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-NUCLEUS_PATH="$BIOMEOS_ROOT/nucleusBin"
+NUCLEUS_PATH="$BIOMEOS_ROOT/plasmidBin"
 
-# Check if nucleusBin exists
+# Check if plasmidBin exists
 if [ ! -d "$NUCLEUS_PATH" ]; then
-    echo "❌ nucleusBin/ not found!"
+    echo "❌ plasmidBin/ not found!"
     exit 1
 fi
 

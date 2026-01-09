@@ -12,15 +12,15 @@ use crate::manifest::{BinaryManifest, SporeManifest};
 /// Verification status for a binary or spore
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum VerificationStatus {
-    /// Binary matches nucleusBin exactly
+    /// Binary matches plasmidBin exactly
     Fresh,
-    /// Binary is older than nucleusBin
+    /// Binary is older than plasmidBin
     Stale,
     /// Binary has different hash (manual edit or corruption?)
     Modified,
     /// Binary file not found
     Missing,
-    /// Binary is newer than nucleusBin (unusual)
+    /// Binary is newer than plasmidBin (unusual)
     Newer,
 }
 
@@ -63,7 +63,7 @@ pub struct SporeVerifier {
 }
 
 impl SporeVerifier {
-    /// Create a new verifier from nucleusBin
+    /// Create a new verifier from plasmidBin
     pub fn from_nucleus(nucleus_path: impl AsRef<Path>) -> Result<Self> {
         let nucleus_path = nucleus_path.as_ref();
         
@@ -87,7 +87,7 @@ impl SporeVerifier {
         Ok(Self { nucleus_manifest })
     }
     
-    /// Verify a single spore against nucleusBin
+    /// Verify a single spore against plasmidBin
     pub fn verify_spore(&self, spore_path: impl AsRef<Path>) -> Result<VerificationReport> {
         let spore_path = spore_path.as_ref();
         

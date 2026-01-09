@@ -129,7 +129,7 @@ $ echo '{"jsonrpc":"2.0","method":"discovery.list_peers","id":1}' | \
 ## 📊 Deployment Details
 
 ### Binary Information
-- **Source**: `/home/eastgate/Development/ecoPrimals/phase1/songbird/primalBins/songbird-orchestrator`
+- **Source**: `/home/eastgate/Development/ecoPrimals/phase1/songbird/plasmidBin/songbird-orchestrator`
 - **SHA256**: `6bffc0c08ff575c365db04a675103c5d73ec411e4bcbdfeff543f221d090713b` ✅
 - **Version**: v3.10.2-tested
 - **Size**: 25MB
@@ -234,10 +234,10 @@ Then redeploy and check for:
 ## 📝 Files Modified
 
 ### biomeOS
-- `primalBins/songbird-orchestrator` → v3.10.2
-- `primalBins/songbird-orchestrator-v3.10.2` (new)
-- `primalBins/songbird-orchestrator-v3.10.2.sha256` (new)
-- `primalBins/archive/songbird/` (3 old versions archived)
+- `plasmidBin/songbird-orchestrator` → v3.10.2
+- `plasmidBin/songbird-orchestrator-v3.10.2` (new)
+- `plasmidBin/songbird-orchestrator-v3.10.2.sha256` (new)
+- `plasmidBin/archive/songbird/` (3 old versions archived)
 
 ### USB Spores
 - `/media/eastgate/biomeOS1/biomeOS/primals/songbird` → v3.10.2 ✅

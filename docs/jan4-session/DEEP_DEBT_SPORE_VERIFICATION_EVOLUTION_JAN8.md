@@ -24,7 +24,7 @@
    - ❌ No pre-deployment validation
    - ❌ Manual process
 
-2. **`verify-nucleus.sh`** - Checks nucleusBin integrity
+2. **`verify-nucleus.sh`** - Checks plasmidBin integrity
    - ✅ Works but basic checks
    - ❌ Only checks existence and permissions
    - ❌ No version manifest
@@ -51,7 +51,7 @@
    - Gradual upgrade testing
 
 3. **Composable CLI tools**
-   - `biomeos verify nucleus` - Check nucleusBin
+   - `biomeos verify nucleus` - Check plasmidBin
    - `biomeos verify spore <path>` - Check spore freshness
    - `biomeos verify all` - Check all mounted spores
    - `biomeos deploy plan` - Preview deployment changes
@@ -62,7 +62,7 @@
 
 ### 1. Binary Manifest (TOML)
 
-**Location**: `nucleusBin/MANIFEST.toml`
+**Location**: `plasmidBin/MANIFEST.toml`
 
 ```toml
 [manifest]
@@ -127,21 +127,21 @@ derivation_method = "SHA256(parent || node_id || batch)"
 name = "tower"
 version = "0.6.0"
 sha256 = "d9a15b5665695161..."
-source_manifest = "nucleusBin/MANIFEST.toml"
+source_manifest = "plasmidBin/MANIFEST.toml"
 copied_at = "2026-01-08T15:31:09Z"
 
 [binaries.beardog]
 name = "beardog-server"
 version = "0.15.0"
 sha256 = "b10fd19491c04e9adff5b683e6553aca"
-source_manifest = "nucleusBin/MANIFEST.toml"
+source_manifest = "plasmidBin/MANIFEST.toml"
 copied_at = "2026-01-08T15:31:12Z"
 
 [binaries.songbird]
 name = "songbird"
 version = "3.19.0"
 sha256 = "c8d5cf77af4129c9..."
-source_manifest = "nucleusBin/MANIFEST.toml"
+source_manifest = "plasmidBin/MANIFEST.toml"
 copied_at = "2026-01-08T15:31:15Z"
 
 [deployment_history]
@@ -184,11 +184,11 @@ pub struct SporeManifest {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum VerificationStatus {
-    Fresh,      // Binary matches nucleusBin
-    Stale,      // Binary is older than nucleusBin
+    Fresh,      // Binary matches plasmidBin
+    Stale,      // Binary is older than plasmidBin
     Modified,   // Binary has different hash (manual edit?)
     Missing,    // Binary not found
-    Newer,      // Binary is newer than nucleusBin (???)
+    Newer,      // Binary is newer than plasmidBin (???)
 }
 
 #[derive(Debug)]
@@ -215,7 +215,7 @@ pub struct SporeVerifier {
 }
 
 impl SporeVerifier {
-    /// Load nucleus manifest from nucleusBin/
+    /// Load nucleus manifest from plasmidBin/
     pub fn from_nucleus(nucleus_path: impl AsRef<Path>) -> Result<Self> {
         let manifest_path = nucleus_path.as_ref().join("MANIFEST.toml");
         let manifest_str = std::fs::read_to_string(manifest_path)?;
@@ -224,7 +224,7 @@ impl SporeVerifier {
         Ok(Self { nucleus_manifest })
     }
     
-    /// Verify a single spore against nucleusBin
+    /// Verify a single spore against plasmidBin
     pub fn verify_spore(&self, spore_path: impl AsRef<Path>) -> Result<VerificationReport> {
         let spore_path = spore_path.as_ref();
         
@@ -358,7 +358,7 @@ pub struct VerifyArgs {
 
 #[derive(Subcommand)]
 pub enum VerifyTarget {
-    /// Verify nucleusBin integrity
+    /// Verify plasmidBin integrity
     Nucleus,
     
     /// Verify a specific spore
@@ -399,7 +399,7 @@ pub async fn run(args: VerifyArgs) -> Result<()> {
 }
 
 async fn verify_single_spore(mount_point: &Path) -> Result<()> {
-    let verifier = SporeVerifier::from_nucleus("nucleusBin")?;
+    let verifier = SporeVerifier::from_nucleus("plasmidBin")?;
     let report = verifier.verify_spore(mount_point)?;
     
     println!("╔════════════════════════════════════════════════════════════════╗");
@@ -414,7 +414,7 @@ async fn verify_single_spore(mount_point: &Path) -> Result<()> {
     
     match report.overall_status {
         VerificationStatus::Fresh => {
-            println!("✅ Status: FRESH (all binaries match nucleusBin)");
+            println!("✅ Status: FRESH (all binaries match plasmidBin)");
         }
         VerificationStatus::Stale => {
             println!("⚠️  Status: STALE (some binaries need update)");
@@ -465,7 +465,7 @@ async fn verify_single_spore(mount_point: &Path) -> Result<()> {
 }
 
 async fn verify_all_spores() -> Result<()> {
-    let verifier = SporeVerifier::from_nucleus("nucleusBin")?;
+    let verifier = SporeVerifier::from_nucleus("plasmidBin")?;
     let reports = verifier.verify_all_spores()?;
     
     println!("╔════════════════════════════════════════════════════════════════╗");
@@ -523,7 +523,7 @@ async fn verify_all_spores() -> Result<()> {
 **Scenario**: New BearDog version with experimental feature
 
 ```bash
-# Step 1: Update nucleusBin with new version
+# Step 1: Update plasmidBin with new version
 ./scripts/harvest-primals.sh
 
 # Step 2: Verify current state
@@ -560,7 +560,7 @@ biomeos verify compare /media/eastgate/BEA6-BBCE \
 
 ### Compatibility Matrix
 
-**Location**: `nucleusBin/COMPATIBILITY.toml`
+**Location**: `plasmidBin/COMPATIBILITY.toml`
 
 ```toml
 [versions]
@@ -683,8 +683,8 @@ enum Commands {
 echo "📝 Generating binary manifest..."
 cargo run --release -p biomeos-cli --bin biomeos -- \
     manifest generate \
-    --nucleus nucleusBin/ \
-    --output nucleusBin/MANIFEST.toml
+    --nucleus plasmidBin/ \
+    --output plasmidBin/MANIFEST.toml
 ```
 
 ### Step 5: Evolve to Pure Rust (Future)

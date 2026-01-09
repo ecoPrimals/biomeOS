@@ -1,17 +1,17 @@
-//! Integration tests for nucleusBin deployment
+//! Integration tests for plasmidBin deployment
 //!
-//! Tests the complete pipeline from nucleusBin/ to spore creation
+//! Tests the complete pipeline from plasmidBin/ to spore creation
 
 use biomeos_spore::{Spore, SporeConfig, SporeType};
 use std::path::PathBuf;
 use tempfile::TempDir;
 
-/// Test that spore creation fails gracefully if nucleusBin is missing
+/// Test that spore creation fails gracefully if plasmidBin is missing
 #[tokio::test]
 async fn test_missing_nucleus_bin() {
     let temp_dir = TempDir::new().unwrap();
     
-    // Change to temp dir where nucleusBin doesn't exist
+    // Change to temp dir where plasmidBin doesn't exist
     std::env::set_current_dir(temp_dir.path()).unwrap();
     
     let mount_point = temp_dir.path().join("usb");
@@ -24,24 +24,24 @@ async fn test_missing_nucleus_bin() {
     };
     
     let result = Spore::create(mount_point, config).await;
-    assert!(result.is_err(), "Should fail when nucleusBin is missing");
+    assert!(result.is_err(), "Should fail when plasmidBin is missing");
     
     let err = result.unwrap_err();
     let err_msg = format!("{}", err);
     assert!(
-        err_msg.contains("nucleusBin"),
-        "Error should mention nucleusBin: {}",
+        err_msg.contains("plasmidBin"),
+        "Error should mention plasmidBin: {}",
         err_msg
     );
 }
 
-/// Test that spore creation succeeds with nucleusBin present
+/// Test that spore creation succeeds with plasmidBin present
 #[tokio::test]
 async fn test_nucleus_bin_deployment() {
     let temp_dir = TempDir::new().unwrap();
     
-    // Create mock nucleusBin structure
-    let nucleus_dir = temp_dir.path().join("nucleusBin");
+    // Create mock plasmidBin structure
+    let nucleus_dir = temp_dir.path().join("plasmidBin");
     std::fs::create_dir_all(nucleus_dir.join("tower")).unwrap();
     std::fs::create_dir_all(nucleus_dir.join("primals")).unwrap();
     
@@ -89,7 +89,7 @@ async fn test_nucleus_bin_deployment() {
     };
     
     let result = Spore::create(mount_point.clone(), config).await;
-    assert!(result.is_ok(), "Should succeed with nucleusBin present: {:?}", result);
+    assert!(result.is_ok(), "Should succeed with plasmidBin present: {:?}", result);
     
     // Verify binaries were copied
     let spore_root = mount_point.join("biomeOS");
@@ -103,8 +103,8 @@ async fn test_nucleus_bin_deployment() {
 async fn test_version_tracking() {
     let temp_dir = TempDir::new().unwrap();
     
-    // Create mock nucleusBin with VERSION.txt
-    let nucleus_dir = temp_dir.path().join("nucleusBin");
+    // Create mock plasmidBin with VERSION.txt
+    let nucleus_dir = temp_dir.path().join("plasmidBin");
     std::fs::create_dir_all(nucleus_dir.join("tower")).unwrap();
     std::fs::create_dir_all(nucleus_dir.join("primals")).unwrap();
     

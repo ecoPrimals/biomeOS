@@ -66,7 +66,7 @@ This session achieved **exceptional results** with 100% TODO completion, deliver
 4. **`crates/biomeos-spore/src/refresh.rs`** (~200 lines)
    - Automated binary refresh system
    - `SporeRefresher`, `RefreshReport`
-   - Compares against `nucleusBin/MANIFEST.toml`
+   - Compares against `plasmidBin/MANIFEST.toml`
    - Updates stale binaries automatically
 
 5. **`crates/biomeos-spore/src/manifest.rs`** (~200 lines)
@@ -108,7 +108,7 @@ This session achieved **exceptional results** with 100% TODO completion, deliver
    - Version tracking
 
 3. **`scripts/verify-nucleus.sh`**
-   - Validates `nucleusBin` integrity
+   - Validates `plasmidBin` integrity
    - Checks for required binaries
    - ELF validation
 
@@ -219,7 +219,7 @@ biomeos fossil clean --older-than 30d    # Clean old fossils
 
 **Usage:**
 ```bash
-biomeos verify nucleus                    # Verify nucleusBin
+biomeos verify nucleus                    # Verify plasmidBin
 biomeos verify spore /media/usb/biomeOS   # Verify specific spore
 biomeos verify all                        # Verify all spores
 biomeos spore refresh <path> --dry-run    # Preview refresh
@@ -227,7 +227,7 @@ biomeos spore refresh <path>              # Actually refresh
 ```
 
 **Detection:**
-- **Fresh:** SHA256 matches nucleusBin
+- **Fresh:** SHA256 matches plasmidBin
 - **Stale:** Different SHA256 (older version)
 - **Modified:** Manual changes detected
 - **Missing:** Binary not found
@@ -320,7 +320,7 @@ cd /home/eastgate/Development/ecoPrimals/phase2/biomeOS
 
 ### Spore Verification
 
-**Check if nucleusBin is healthy:**
+**Check if plasmidBin is healthy:**
 ```bash
 biomeos verify nucleus
 ```
@@ -469,7 +469,7 @@ TOTAL:                      60/60 ✅ 100%
 ✅ Songbird - P2P federation working  
 ✅ Tower - Auto-archival integrated  
 ✅ BYOB - Manifest system ready  
-✅ NucleusBin - Pipeline operational  
+✅ PlasmidBin - Pipeline operational  
 
 ### Documentation
 ✅ 18+ Comprehensive Guides  

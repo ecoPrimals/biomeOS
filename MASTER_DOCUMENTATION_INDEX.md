@@ -207,7 +207,7 @@
 
 ### Reference
 - [docs/INDEX.md](docs/INDEX.md) - Documentation index
-- [nucleusBin/MANIFEST.md](nucleusBin/MANIFEST.md) - Binary manifest
+- [plasmidBin/MANIFEST.md](plasmidBin/MANIFEST.md) - Binary manifest
 - [crates/](crates/) - Source code
 
 ---

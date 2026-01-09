@@ -48,7 +48,7 @@ async fn copy_binaries(&self) -> SporeResult<()> {
     // Copy tower (always required)
     async_fs::copy(nucleus_dir.join("tower/tower"), dst).await?;
     
-    // Copy ALL primals from nucleusBin/primals/ (agnostic!)
+    // Copy ALL primals from plasmidBin/primals/ (agnostic!)
     let mut entries = async_fs::read_dir(nucleus_dir.join("primals")).await?;
     
     while let Some(entry) = entries.next_entry().await? {
@@ -61,7 +61,7 @@ async fn copy_binaries(&self) -> SporeResult<()> {
         }
     }
     
-    // ✅ Works with ANY primals in nucleusBin/
+    // ✅ Works with ANY primals in plasmidBin/
     // ✅ No code changes needed for new primals
     // ✅ Supports chimeras, renames, evolution
 }
@@ -73,7 +73,7 @@ async fn copy_binaries(&self) -> SporeResult<()> {
 
 ### 1. Self-Knowledge Only
 **Spore knows**:
-- ✅ Where to find binaries (`nucleusBin/`)
+- ✅ Where to find binaries (`plasmidBin/`)
 - ✅ How to copy files
 - ✅ How to set permissions
 
@@ -85,7 +85,7 @@ async fn copy_binaries(&self) -> SporeResult<()> {
 ### 2. Capability-Based Discovery
 ```
 Spore Creation (Agnostic):
-  nucleusBin/primals/
+  plasmidBin/primals/
     ├─ beardog-server    ← Copied
     ├─ songbird          ← Copied
     └─ toadstool         ← Copied (NEW!)
@@ -113,7 +113,7 @@ Runtime (tower.toml decides):
 ### 3. BYOB (Bring Your Own Biome) Integration
 ```toml
 # tower.toml is the SOURCE OF TRUTH
-# Spore just copies everything from nucleusBin/
+# Spore just copies everything from plasmidBin/
 # Tower decides what to run
 
 [[primals]]
@@ -140,18 +140,18 @@ requires = []  # Self-contained
 ### Evolution-Friendly
 ```bash
 # Scenario 1: New primal (toadstool)
-./scripts/harvest-primals.sh  # Adds toadstool to nucleusBin/
+./scripts/harvest-primals.sh  # Adds toadstool to plasmidBin/
 biomeos spore create ...       # Copies toadstool automatically
 # Edit tower.toml to use it    # ✅ No code changes!
 
 # Scenario 2: Rename (beardog-server → beardog-v2)
-mv nucleusBin/primals/beardog-server nucleusBin/primals/beardog-v2
+mv plasmidBin/primals/beardog-server plasmidBin/primals/beardog-v2
 biomeos spore create ...       # Copies beardog-v2 automatically
 # Update tower.toml binary path # ✅ No code changes!
 
 # Scenario 3: Chimera (songbird embeds beardog)
 # Build songbird-beardog-chimera
-cp target/release/songbird-beardog-chimera nucleusBin/primals/
+cp target/release/songbird-beardog-chimera plasmidBin/primals/
 biomeos spore create ...       # Copies chimera automatically
 # tower.toml uses chimera       # ✅ No code changes!
 ```
@@ -175,7 +175,7 @@ biomeos spore create ...       # Copies chimera automatically
 ### Changes to `biomeos-spore/src/spore.rs`
 
 ```rust
-/// Copy ALL primals from nucleusBin/ (agnostic)
+/// Copy ALL primals from plasmidBin/ (agnostic)
 async fn copy_binaries(&self) -> SporeResult<()> {
     // 1. Copy tower (always required)
     async_fs::copy(
@@ -224,7 +224,7 @@ async fn copy_binaries(&self) -> SporeResult<()> {
 ## 🔮 Future: Enhanced BYOB Integration
 
 ### Phase 1: Agnostic Copying (✅ COMPLETE)
-- Copy ALL binaries from nucleusBin/
+- Copy ALL binaries from plasmidBin/
 - No hardcoded primal names
 - tower.toml decides what runs
 
@@ -284,7 +284,7 @@ async fn check_capabilities(&self) -> SporeResult<()> {
 ## 🎓 Key Insights
 
 ### Biological Metaphor
-- **Nucleus** = Contains all genetic material (nucleusBin/)
+- **Nucleus** = Contains all genetic material (plasmidBin/)
 - **Spore** = Carries complete genome (ALL primals)
 - **Expression** = Runtime decides which genes activate (tower.toml)
 - **Evolution** = New genes can be added without changing spore mechanism
@@ -292,7 +292,7 @@ async fn check_capabilities(&self) -> SporeResult<()> {
 ### Architectural Principles
 1. **Separation of Concerns**:
    - Spore: Transport mechanism (agnostic)
-   - NucleusBin: Genetic library (complete)
+   - PlasmidBin: Genetic library (complete)
    - Tower.toml: Expression manifest (specific)
 
 2. **Primal Sovereignty**:
@@ -331,7 +331,7 @@ Spore Creation:
   ✅ Agnostic, discovered
 
 Add New Primal:
-  1. Add to nucleusBin/primals/
+  1. Add to plasmidBin/primals/
   2. Update tower.toml (if needed)
   ✅ Spore creation unchanged!
 ```

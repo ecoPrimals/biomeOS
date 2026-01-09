@@ -133,7 +133,7 @@ beardog/
 │   ├── beardog-genetics/    → Seed derivation, lineage
 │   ├── beardog-trust/       → Trust evaluation
 │   └── beardog-api/         → HTTP API (optional)
-└── primalBins/              → Compiled binaries
+└── plasmidBin/              → Compiled binaries
     └── beardog-server       → Production server binary
 ```
 
@@ -204,7 +204,7 @@ songbird/
 │   ├── songbird-protocol/   → BirdSong packet format
 │   ├── songbird-registry/   → Peer registry
 │   └── songbird-api/        → HTTP API (optional)
-└── primalBins/              → Compiled binaries
+└── plasmidBin/              → Compiled binaries
     └── songbird-orchestrator → Production server binary
 ```
 

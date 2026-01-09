@@ -12,7 +12,7 @@
 
 1. ✅ **Root Documentation Cleanup**
    - Moved 45 old session docs to fossil record
-   - Cleaned nucleusBin backups
+   - Cleaned plasmidBin backups
    - Updated all root documentation
    - Zero duplicates remaining
 
@@ -257,7 +257,7 @@ The following require actual hardware/binaries:
 ## 🚀 Next Steps (When Hardware Available)
 
 ### **Session Prep**
-1. ✅ Verify nucleusBin has fresh binaries
+1. ✅ Verify plasmidBin has fresh binaries
 2. ✅ USB spores formatted and ready
 3. ✅ Network connectivity for LAN testing
 4. ✅ BearDog + Songbird configs

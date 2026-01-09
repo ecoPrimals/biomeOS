@@ -27,7 +27,7 @@ echo ""
 
 # Copy correct beardog (v0.15.0 with v2 API)
 echo "🐻 Updating BearDog to v0.15.0 (v2 API)..."
-cp /home/eastgate/Development/ecoPrimals/primalBins/beardog-v0.15.0-zero-hardcoding-v2api \
+cp /home/eastgate/Development/ecoPrimals/plasmidBin/beardog-v0.15.0-zero-hardcoding-v2api \
    "$USB_PATH/primals/beardog"
 chmod +x "$USB_PATH/primals/beardog"
 echo "✅ BearDog v0.15.0 installed"
@@ -35,7 +35,7 @@ echo ""
 
 # Copy correct songbird (v3.6)
 echo "🐦 Updating Songbird to v3.6..."
-cp /home/eastgate/Development/ecoPrimals/primalBins/songbird-orchestrator-v3.6-api-wrapper \
+cp /home/eastgate/Development/ecoPrimals/plasmidBin/songbird-orchestrator-v3.6-api-wrapper \
    "$USB_PATH/primals/songbird"
 chmod +x "$USB_PATH/primals/songbird"
 echo "✅ Songbird v3.6 installed"

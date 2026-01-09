@@ -29,7 +29,7 @@
 
 #### 1. Manifest Types (manifest.rs)
 ```rust
-✅ BinaryManifest - nucleusBin with SHA256 checksums
+✅ BinaryManifest - plasmidBin with SHA256 checksums
 ✅ SporeManifest - deployed spores + genetic lineage
 ✅ TOML serialization/deserialization
 ✅ Version tracking with semver
@@ -48,7 +48,7 @@
 
 #### 3. CLI Commands (verify.rs)
 ```bash
-✅ biomeos verify nucleus      - Check nucleusBin
+✅ biomeos verify nucleus      - Check plasmidBin
 ✅ biomeos verify spore <path> - Check single spore
 ✅ biomeos verify all          - Check all mounted spores
 ✅ Beautiful formatted output
@@ -70,7 +70,7 @@
 
 ### `biomeos verify nucleus`:
 ```
-✅ NucleusBin Verification
+✅ PlasmidBin Verification
 
 📋 Binary Inventory:
 ✅ tower     (v0.1.0,  6.98 MB, SHA256: 2aa8bb3...)
@@ -78,7 +78,7 @@
 ✅ beardog   (v0.15.0,  5.51 MB, SHA256: 0318b38...)
 
 Total binaries: 3
-✅ NucleusBin is valid and ready for deployment
+✅ PlasmidBin is valid and ready for deployment
 ```
 
 ### `biomeos verify all`:
@@ -168,7 +168,7 @@ Summary:
    - Clear status reports (Fresh/Stale)
 
 2. **Manifest System** ✅
-   - MANIFEST.toml auto-generated in nucleusBin/
+   - MANIFEST.toml auto-generated in plasmidBin/
    - .manifest.toml created in every spore
    - Version tracking
    - Deployment history
@@ -191,7 +191,7 @@ Summary:
 - `crates/biomeos-spore/src/manifest.rs` (200 lines)
 - `crates/biomeos-spore/src/verification.rs` (300 lines)
 - `crates/biomeos-cli/src/commands/verify.rs` (450 lines)
-- `nucleusBin/MANIFEST.toml` (generated)
+- `plasmidBin/MANIFEST.toml` (generated)
 
 ### Modified:
 - `crates/biomeos-spore/src/lib.rs` (added modules)
@@ -255,7 +255,7 @@ Summary:
 ✅ Dual local deployment (node-alpha, node-beta)
 ✅ UDP multicast discovery
 ✅ Genetic lineage system
-✅ NucleusBin pipeline
+✅ PlasmidBin pipeline
 ✅ Capability-based deployment
 ✅ **Verification system (NEW!)**
 
@@ -268,7 +268,7 @@ Summary:
 ```bash
 # Copy fresh binaries to stale spores:
 for spore in BEA6-BBCE BEA6-BBCE1 BEA6-BBCE2; do
-    cp nucleusBin/primals/beardog-server /media/eastgate/$spore/biomeOS/primals/
+    cp plasmidBin/primals/beardog-server /media/eastgate/$spore/biomeOS/primals/
 done
 ```
 

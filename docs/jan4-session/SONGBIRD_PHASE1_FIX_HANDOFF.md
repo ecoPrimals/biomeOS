@@ -237,7 +237,7 @@ cargo test --package songbird-types trust_level
 cargo test --package songbird-universal trust_types
 
 # 3. Copy binary
-cp target/release/songbird-orchestrator /path/to/primalBins/songbird
+cp target/release/songbird-orchestrator /path/to/plasmidBin/songbird
 
 # 4. Deploy and verify federation
 # (biomeOS team will handle deployment)

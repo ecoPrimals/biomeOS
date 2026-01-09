@@ -25,7 +25,7 @@
 - Verification system complete
 - Refresh system complete
 - Genetic siblings validated
-- NucleusBin pipeline operational
+- PlasmidBin pipeline operational
 - Capability-based architecture
 
 ### 4. ✅ Testing Evolution - IN PROGRESS
@@ -119,7 +119,7 @@ Total:              19/19 passing (100%)
 1. **Genetic Siblings** - Unique seeds, shared family trust
 2. **Log Fossil Record** - Automated forensic tracking
 3. **Port-Free Federation** - Unix sockets + UDP only
-4. **NucleusBin Pipeline** - Automated binary management
+4. **PlasmidBin Pipeline** - Automated binary management
 5. **Capability-Based Spores** - Zero hardcoding
 
 ### Technical

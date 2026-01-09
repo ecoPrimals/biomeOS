@@ -356,7 +356,7 @@ tower (PID: xxxx)
 - **Port-Free Mode:** ✅ Working
 
 ### biomeOS Pipeline Confirmed
-- **nucleusBin Harvesting:** ✅ Working
+- **plasmidBin Harvesting:** ✅ Working
 - **Spore Creation:** ✅ Working
 - **Binary Deployment:** ✅ Working
 - **Manifest Generation:** ✅ Working
@@ -367,7 +367,7 @@ tower (PID: xxxx)
 
 ### What Worked Well
 1. **Genetic sibling derivation:** Unique seeds, shared family
-2. **nucleusBin pipeline:** Fresh binaries every time
+2. **plasmidBin pipeline:** Fresh binaries every time
 3. **Capability-based spore creation:** No hardcoded primals
 4. **BYOB manifest system:** tower.toml defines the stack
 5. **Family tag broadcasting:** Seamless trust propagation

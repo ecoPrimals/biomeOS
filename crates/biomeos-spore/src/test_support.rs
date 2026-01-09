@@ -6,7 +6,7 @@ use crate::error::SporeResult;
 
 /// Setup mock genetic material for testing
 ///
-/// Creates minimal mock binaries in primalBins/ AND bin/ for test purposes
+/// Creates minimal mock binaries in plasmidBin/ AND bin/ for test purposes
 pub fn setup_test_binaries() -> SporeResult<PathBuf> {
     let project_root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
@@ -17,8 +17,8 @@ pub fn setup_test_binaries() -> SporeResult<PathBuf> {
     // Change to project root so relative paths work
     std::env::set_current_dir(project_root)?;
     
-    // Setup primalBins/
-    let primal_bins = project_root.join("primalBins");
+    // Setup plasmidBin/
+    let primal_bins = project_root.join("plasmidBin");
     fs::create_dir_all(&primal_bins)?;
     
     // Setup bin/ (for tower orchestrator)
@@ -87,7 +87,7 @@ pub fn cleanup_test_binaries() -> SporeResult<()> {
         .parent()
         .unwrap();
     
-    let primal_bins = project_root.join("primalBins");
+    let primal_bins = project_root.join("plasmidBin");
     
     // Only remove if they're mock files
     let tower_bin = primal_bins.join("tower");

@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-/// Manifest for nucleusBin binaries
+/// Manifest for plasmidBin binaries
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BinaryManifest {
     pub manifest: ManifestMeta,
@@ -96,7 +96,7 @@ pub struct DeploymentRecord {
 }
 
 impl BinaryManifest {
-    /// Load binary manifest from nucleusBin/MANIFEST.toml
+    /// Load binary manifest from plasmidBin/MANIFEST.toml
     pub fn load(nucleus_path: impl AsRef<Path>) -> Result<Self> {
         let manifest_path = nucleus_path.as_ref().join("MANIFEST.toml");
         let manifest_str = std::fs::read_to_string(manifest_path)?;
@@ -111,7 +111,7 @@ impl BinaryManifest {
         Ok(())
     }
     
-    /// Create a new binary manifest from nucleusBin directory
+    /// Create a new binary manifest from plasmidBin directory
     pub fn from_nucleus(nucleus_path: impl AsRef<Path>) -> Result<Self> {
         use sha2::{Digest, Sha256};
         use std::fs;
@@ -265,7 +265,7 @@ impl SporeManifest {
                 name,
                 version,
                 sha256,
-                source_manifest: "nucleusBin/MANIFEST.toml".to_string(),
+                source_manifest: "plasmidBin/MANIFEST.toml".to_string(),
                 copied_at: Utc::now(),
             },
         );

@@ -11,7 +11,7 @@ use tokio::fs;
 #[tokio::test]
 async fn test_verifier_from_nucleus_with_manifest() {
     let temp_dir = TempDir::new().unwrap();
-    let nucleus_path = temp_dir.path().join("nucleusBin");
+    let nucleus_path = temp_dir.path().join("plasmidBin");
     
     // Create nucleus directory structure
     fs::create_dir_all(nucleus_path.join("tower")).await.unwrap();
@@ -57,7 +57,7 @@ async fn test_verifier_from_nucleus_with_manifest() {
 #[tokio::test]
 async fn test_verifier_from_nucleus_without_manifest() {
     let temp_dir = TempDir::new().unwrap();
-    let nucleus_path = temp_dir.path().join("nucleusBin");
+    let nucleus_path = temp_dir.path().join("plasmidBin");
     
     // Create nucleus directory structure with actual binaries
     fs::create_dir_all(nucleus_path.join("tower")).await.unwrap();
@@ -81,7 +81,7 @@ async fn test_verify_spore_fresh() {
     let temp_dir = TempDir::new().unwrap();
     
     // Create nucleus with manifest
-    let nucleus_path = temp_dir.path().join("nucleusBin");
+    let nucleus_path = temp_dir.path().join("plasmidBin");
     fs::create_dir_all(nucleus_path.join("tower")).await.unwrap();
     fs::create_dir_all(nucleus_path.join("primals")).await.unwrap();
     
@@ -165,7 +165,7 @@ async fn test_verify_spore_missing_tower_toml() {
     let temp_dir = TempDir::new().unwrap();
     
     // Create nucleus
-    let nucleus_path = temp_dir.path().join("nucleusBin");
+    let nucleus_path = temp_dir.path().join("plasmidBin");
     fs::create_dir_all(nucleus_path.join("tower")).await.unwrap();
     fs::write(nucleus_path.join("tower/tower"), b"tower").await.unwrap();
     
@@ -184,7 +184,7 @@ async fn test_verify_spore_missing_tower_toml() {
 #[tokio::test]
 async fn test_verifier_handles_empty_nucleus() {
     let temp_dir = TempDir::new().unwrap();
-    let nucleus_path = temp_dir.path().join("nucleusBin");
+    let nucleus_path = temp_dir.path().join("plasmidBin");
     
     // Create empty nucleus directory
     fs::create_dir_all(&nucleus_path).await.unwrap();

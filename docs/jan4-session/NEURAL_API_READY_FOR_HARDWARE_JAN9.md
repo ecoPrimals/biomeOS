@@ -117,11 +117,11 @@ $ cat /tmp/toadstool-daemon-neural.log
 
 **Discovery**:
 ```bash
-$ ./primalBins/songbird tower start --daemon
+$ ./plasmidBin/songbird tower start --daemon
 error: unexpected argument '--daemon' found
   tip: a similar argument exists: '--federation'
 
-$ ./primalBins/songbird tower start --help
+$ ./plasmidBin/songbird tower start --help
 # Need to determine correct invocation
 ```
 

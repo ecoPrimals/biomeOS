@@ -21,11 +21,11 @@ These binaries are **production-ready server versions** for deployment and testi
 | Primal | Version | Type | Size | Source | Last Updated |
 |--------|---------|------|------|--------|--------------|
 | beardog | 0.15.0 | **SERVER** | 6.1M | phase1/beardog/target/release/beardog-server | Jan 3, 2026 |
-| nestgate | ? | ? | 3.4M | ../../primalBins/ | Dec 28, 2025 |
-| songbird | v3.6 | orchestrator | 25M | ../../primalBins/songbird-orchestrator-v3.6-api-wrapper | Jan 3, 2026 |
-| squirrel | ? | ? | 2.9M | ../../primalBins/squirrel-cli | Dec 28, 2025 |
-| toadstool | ? | ? | 20M | ../../primalBins/toadstool-cli | Dec 28, 2025 |
-| petaltongue | ? | ? | 16M | ../../primalBins/petal-tongue | Dec 28, 2025 |
+| nestgate | ? | ? | 3.4M | ../../plasmidBin/ | Dec 28, 2025 |
+| songbird | v3.6 | orchestrator | 25M | ../../plasmidBin/songbird-orchestrator-v3.6-api-wrapper | Jan 3, 2026 |
+| squirrel | ? | ? | 2.9M | ../../plasmidBin/squirrel-cli | Dec 28, 2025 |
+| toadstool | ? | ? | 20M | ../../plasmidBin/toadstool-cli | Dec 28, 2025 |
+| petaltongue | ? | ? | 16M | ../../plasmidBin/petal-tongue | Dec 28, 2025 |
 
 **Total**: ~73M
 
@@ -49,13 +49,13 @@ cargo build --release --bin beardog-server
 ```
 
 **Pre-built versions**:
-- ❌ `/primalBins/beardog-v0.15.0-zero-hardcoding-v2api` - CLI tool (DO NOT USE)
+- ❌ `/plasmidBin/beardog-v0.15.0-zero-hardcoding-v2api` - CLI tool (DO NOT USE)
 - ✅ `/phase1/beardog/target/release/beardog-server` - API server (USE THIS)
 
 ### Songbird Orchestrator
 ```bash
 # Pre-built binary
-cp /home/eastgate/Development/ecoPrimals/primalBins/songbird-orchestrator-v3.6-api-wrapper ./primals/songbird
+cp /home/eastgate/Development/ecoPrimals/plasmidBin/songbird-orchestrator-v3.6-api-wrapper ./primals/songbird
 ```
 
 ---
@@ -81,7 +81,7 @@ cp primals/* ../archive/primals-backup-$(date +%Y%m%d)/
 
 # 3. Copy SERVER binaries (not CLI tools!)
 cp /home/eastgate/Development/ecoPrimals/phase1/beardog/target/release/beardog-server primals/beardog
-cp /home/eastgate/Development/ecoPrimals/primalBins/songbird-orchestrator-v3.6-api-wrapper primals/songbird
+cp /home/eastgate/Development/ecoPrimals/plasmidBin/songbird-orchestrator-v3.6-api-wrapper primals/songbird
 
 # 4. Test updated binaries
 # BearDog should start server, not show CLI help
@@ -137,7 +137,7 @@ songbird 0.x.x
 
 ### Primary Source
 ```
-/home/eastgate/Development/ecoPrimals/primalBins/
+/home/eastgate/Development/ecoPrimals/plasmidBin/
 ```
 
 This directory contains the latest **stable test builds** from each primal team.
@@ -195,7 +195,7 @@ Current approach: Direct tracking for simplicity.
 
 ### Update Request Process
 1. **Check main team channels** - Discord/Slack for releases
-2. **Request latest test build** - Ask team for primalBins update
+2. **Request latest test build** - Ask team for plasmidBin update
 3. **Test locally first** - Verify before committing
 4. **Report issues** - If new version breaks integration
 
@@ -232,7 +232,7 @@ Current approach: Direct tracking for simplicity.
 - USB Spore validated and ready for deployment
 
 ### Dec 28, 2025
-- Updated all 5 main primals from primalBins
+- Updated all 5 main primals from plasmidBin
 - Added petaltongue (UI primal)
 - Created this README
 - Backed up old versions to ../archive/old-primals-dec28/

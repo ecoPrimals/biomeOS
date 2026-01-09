@@ -272,13 +272,13 @@ cargo build --release --bin beardog-server -p beardog-tunnel --features btsp-api
 
 ### 2. Deploy to biomeOS:
 ```bash
-cp target/release/beardog-server ../phase2/biomeOS/nucleusBin/primals/
+cp target/release/beardog-server ../phase2/biomeOS/plasmidBin/primals/
 ```
 
 ### 3. Create spore and deploy:
 ```bash
 cd ../phase2/biomeOS
-./scripts/harvest-primals.sh  # Updates nucleusBin
+./scripts/harvest-primals.sh  # Updates plasmidBin
 cargo run --release -p biomeos-cli --bin biomeos -- spore create \
     --mount /media/eastgate/biomeOS1 \
     --node node-alpha

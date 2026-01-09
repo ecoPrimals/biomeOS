@@ -200,7 +200,7 @@
 - ✅ Songbird - P2P federation working
 - ✅ Tower - Auto-archival integrated
 - ✅ BYOB - Manifest system ready
-- ✅ NucleusBin - Pipeline operational
+- ✅ PlasmidBin - Pipeline operational
 
 ---
 
@@ -221,7 +221,7 @@
 5. **Structured Logging** - `tracing` spans
 
 ### Operational
-1. **NucleusBin Pipeline** - Automated binary management
+1. **PlasmidBin Pipeline** - Automated binary management
 2. **Auto-Manifest Generation** - Zero manual config
 3. **Dry-Run Support** - Safe testing
 4. **Graceful Degradation** - Handles errors elegantly

@@ -15,7 +15,7 @@
    ↓
 2. Build Fresh Binary (5.6M)
    ↓
-3. harvest-primals.sh Pulls to nucleusBin/
+3. harvest-primals.sh Pulls to plasmidBin/
    ↓
 4. Verify Integrity (MD5 checksums)
    ↓
@@ -40,10 +40,10 @@ Build Time: 30.34s
 Status: ✅ Success
 ```
 
-### 2. NucleusBin Harvest ✅
+### 2. PlasmidBin Harvest ✅
 ```bash
 Source: /home/eastgate/Development/ecoPrimals/phase1/beardog
-Destination: nucleusBin/primals/beardog-server
+Destination: plasmidBin/primals/beardog-server
 MD5: b10fd19491c04e9adff5b683e6553aca
 Status: ✅ Verified
 ```
@@ -131,7 +131,7 @@ Unix Socket: /tmp/beardog-nat0-node-alpha.sock (ACTIVE)
 - Graceful lifecycle (stays running)
 - Environment variable configuration working
 
-### 2. NucleusBin Pipeline ✅
+### 2. PlasmidBin Pipeline ✅
 - Automated binary harvesting
 - MD5 verification
 - Version tracking
@@ -182,7 +182,7 @@ BearDog: Configured with BEARDOG_FAMILY_SEED_FILE
 | Stage | Duration | Status |
 |-------|----------|--------|
 | BearDog Build | 30.34s | ✅ |
-| Harvest to nucleusBin | ~45s | ✅ |
+| Harvest to plasmidBin | ~45s | ✅ |
 | Spore Creation | ~25s | ✅ |
 | Deployment | ~5s | ✅ |
 | Unix Socket Creation | <1s | ✅ |
@@ -209,7 +209,7 @@ BearDog: Configured with BEARDOG_FAMILY_SEED_FILE
 
 ### 2. Complete Pipeline Automation ✅
 **Problem**: Manual binary copying, prone to errors  
-**Solution**: nucleusBin pipeline with harvest-primals.sh  
+**Solution**: plasmidBin pipeline with harvest-primals.sh  
 **Result**: Automated, verified, single source of truth
 
 ### 3. Capability-Based Evolution ✅
@@ -256,7 +256,7 @@ BearDog: Configured with BEARDOG_FAMILY_SEED_FILE
 | **BearDog** | ✅ 100% | Unix socket working! |
 | **Songbird** | ✅ 100% | Unix socket + UDP |
 | **Tower** | ✅ 100% | Orchestration working |
-| **NucleusBin** | ✅ 100% | Pipeline automated |
+| **PlasmidBin** | ✅ 100% | Pipeline automated |
 | **Spore System** | ✅ 100% | Capability-based |
 | **Deployment** | ✅ 100% | End-to-end validated |
 | **Port-Free** | ✅ 100% | **COMPLETE!** |
@@ -325,7 +325,7 @@ BearDog: Configured with BEARDOG_FAMILY_SEED_FILE
 1. ✅ BearDog Unix socket created and serving
 2. ✅ Songbird Unix socket created and serving
 3. ✅ Port-free architecture complete
-4. ✅ NucleusBin pipeline automated
+4. ✅ PlasmidBin pipeline automated
 5. ✅ Capability-based deployment working
 6. ✅ End-to-end validation successful
 7. ✅ 5 unique genetic siblings ready

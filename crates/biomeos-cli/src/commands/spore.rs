@@ -198,7 +198,7 @@ pub async fn handle_spore_list() -> Result<()> {
 }
 
 
-/// Refresh spore binaries from nucleusBin
+/// Refresh spore binaries from plasmidBin
 pub async fn handle_spore_refresh(mount: PathBuf, dry_run: bool) -> Result<()> {
     use biomeos_spore::refresh::SporeRefresher;
     use biomeos_spore::verification::{SporeVerifier, VerificationStatus};
@@ -219,9 +219,9 @@ pub async fn handle_spore_refresh(mount: PathBuf, dry_run: bool) -> Result<()> {
     println!();
     
     // Load nucleus
-    let nucleus_path = PathBuf::from("nucleusBin");
+    let nucleus_path = PathBuf::from("plasmidBin");
     if !nucleus_path.exists() {
-        eprintln!("❌ Error: nucleusBin not found");
+        eprintln!("❌ Error: plasmidBin not found");
         eprintln!("   Expected at: {}", nucleus_path.display());
         eprintln!();
         eprintln!("💡 Run './scripts/harvest-primals.sh' to build binaries first");

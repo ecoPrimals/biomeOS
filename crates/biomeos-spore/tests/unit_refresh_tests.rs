@@ -11,7 +11,7 @@ use tokio::fs;
 #[tokio::test]
 async fn test_refresher_creation() {
     let temp_dir = TempDir::new().unwrap();
-    let nucleus_path = temp_dir.path().join("nucleusBin");
+    let nucleus_path = temp_dir.path().join("plasmidBin");
     
     // Create nucleus structure
     fs::create_dir_all(nucleus_path.join("tower")).await.unwrap();
@@ -29,7 +29,7 @@ async fn test_refresh_spore_with_stale_binary() {
     let temp_dir = TempDir::new().unwrap();
     
     // Create nucleus with fresh binary
-    let nucleus_path = temp_dir.path().join("nucleusBin");
+    let nucleus_path = temp_dir.path().join("plasmidBin");
     fs::create_dir_all(nucleus_path.join("tower")).await.unwrap();
     
     let fresh_content = b"fresh tower binary v2";
@@ -107,7 +107,7 @@ async fn test_refresh_spore_already_fresh() {
     let temp_dir = TempDir::new().unwrap();
     
     // Create nucleus
-    let nucleus_path = temp_dir.path().join("nucleusBin");
+    let nucleus_path = temp_dir.path().join("plasmidBin");
     fs::create_dir_all(nucleus_path.join("tower")).await.unwrap();
     
     let content = b"same tower binary";
@@ -185,7 +185,7 @@ async fn test_refresher_dry_run_doesnt_modify() {
     let temp_dir = TempDir::new().unwrap();
     
     // Create nucleus with new binary
-    let nucleus_path = temp_dir.path().join("nucleusBin");
+    let nucleus_path = temp_dir.path().join("plasmidBin");
     fs::create_dir_all(nucleus_path.join("primals")).await.unwrap();
     fs::write(nucleus_path.join("primals/beardog-server"), b"new beardog").await.unwrap();
     
@@ -224,7 +224,7 @@ BEARDOG_NODE_ID = "test-node"
 #[tokio::test]
 async fn test_refresher_handles_missing_spore() {
     let temp_dir = TempDir::new().unwrap();
-    let nucleus_path = temp_dir.path().join("nucleusBin");
+    let nucleus_path = temp_dir.path().join("plasmidBin");
     let spore_path = temp_dir.path().join("nonexistent/biomeOS");
     
     fs::create_dir_all(&nucleus_path).await.unwrap();

@@ -22,14 +22,14 @@ vm-images/*.img
 *.qcow2
 *.iso
 
-# NucleusBin - Stable deployment binaries (not tracked in git)
-nucleusBin/tower/*
-nucleusBin/primals/*
-nucleusBin/archive/**/*
+# PlasmidBin - Stable deployment binaries (not tracked in git)
+plasmidBin/tower/*
+plasmidBin/primals/*
+plasmidBin/archive/**/*
 
 # EXCEPT: Keep structure and version manifest
-!nucleusBin/tower/.gitkeep
-!nucleusBin/primals/.gitkeep
-!nucleusBin/archive/.gitkeep
-!nucleusBin/VERSION.txt
-!nucleusBin/MANIFEST.md
+!plasmidBin/tower/.gitkeep
+!plasmidBin/primals/.gitkeep
+!plasmidBin/archive/.gitkeep
+!plasmidBin/VERSION.txt
+!plasmidBin/MANIFEST.md

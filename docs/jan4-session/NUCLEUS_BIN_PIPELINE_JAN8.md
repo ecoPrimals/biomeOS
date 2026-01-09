@@ -1,4 +1,4 @@
-# 🧬 NucleusBin Pipeline - Stable Binary Management
+# 🧬 PlasmidBin Pipeline - Stable Binary Management
 
 **Date**: January 8, 2026  
 **Status**: 🎯 **EVOLUTION** - From Manual Debt to Automated Pipeline  
@@ -28,13 +28,13 @@
 
 ---
 
-## ✅ The Solution: NucleusBin Pipeline
+## ✅ The Solution: PlasmidBin Pipeline
 
 ### Concept: Single Source of Stable Binaries
 
 ```
 biomeOS/
-  nucleusBin/           ← NEW: Stable deployment binaries
+  plasmidBin/           ← NEW: Stable deployment binaries
     tower/
       tower             ← biomeOS orchestrator
     primals/
@@ -50,7 +50,7 @@ biomeOS/
 
 ### Philosophy
 
-**NucleusBin = Genetic Nucleus**
+**PlasmidBin = Genetic Nucleus**
 - Single source of truth for deployment binaries
 - Stable, tested, ready-to-deploy
 - Version tracked via git + timestamps
@@ -72,10 +72,10 @@ biomeOS/
 cd ../../../phase1/beardog && git pull && cargo build --release
 cd ../songbird && git pull && cargo build --release
 
-# Harvest to nucleusBin
-cp phase1/beardog/target/release/beardog-server nucleusBin/primals/
-cp phase1/songbird/target/release/songbird nucleusBin/primals/
-cp target/release/tower nucleusBin/tower/
+# Harvest to plasmidBin
+cp phase1/beardog/target/release/beardog-server plasmidBin/primals/
+cp phase1/songbird/target/release/songbird plasmidBin/primals/
+cp target/release/tower plasmidBin/tower/
 
 # Verify and stamp
 ./scripts/verify-nucleus.sh
@@ -86,9 +86,9 @@ cp target/release/tower nucleusBin/tower/
 ```bash
 # scripts/verify-nucleus.sh
 #!/usr/bin/env bash
-# Verify all binaries in nucleusBin are valid
+# Verify all binaries in plasmidBin are valid
 
-for bin in nucleusBin/tower/* nucleusBin/primals/*; do
+for bin in plasmidBin/tower/* plasmidBin/primals/*; do
     if [ -f "$bin" ] && [ -x "$bin" ]; then
         echo "✅ $bin"
         md5sum "$bin"
@@ -107,12 +107,12 @@ done
 # Archive current nucleus to timestamped folder
 
 DATE=$(date +%Y-%m-%d_%H-%M-%S)
-mkdir -p nucleusBin/archive/$DATE
+mkdir -p plasmidBin/archive/$DATE
 
-cp nucleusBin/tower/* nucleusBin/archive/$DATE/
-cp nucleusBin/primals/* nucleusBin/archive/$DATE/
+cp plasmidBin/tower/* plasmidBin/archive/$DATE/
+cp plasmidBin/primals/* plasmidBin/archive/$DATE/
 
-echo "📦 Archived to: nucleusBin/archive/$DATE"
+echo "📦 Archived to: plasmidBin/archive/$DATE"
 ```
 
 ### Stage 4: Deploy (Spore Creation)
@@ -121,8 +121,8 @@ echo "📦 Archived to: nucleusBin/archive/$DATE"
 # Updated: crates/biomeos-spore/src/spore.rs
 impl Spore {
     async fn copy_binaries(&self) -> SporeResult<()> {
-        // ✅ NEW: Copy from nucleusBin
-        let nucleus_path = PathBuf::from("nucleusBin");
+        // ✅ NEW: Copy from plasmidBin
+        let nucleus_path = PathBuf::from("plasmidBin");
         
         // Copy tower
         fs::copy(
@@ -150,19 +150,19 @@ impl Spore {
 ### Binary Management in Git
 
 ```gitignore
-# NucleusBin - Track directory structure, ignore binaries
-nucleusBin/tower/*
-nucleusBin/primals/*
-nucleusBin/archive/**/*
+# PlasmidBin - Track directory structure, ignore binaries
+plasmidBin/tower/*
+plasmidBin/primals/*
+plasmidBin/archive/**/*
 
 # EXCEPT: Keep .gitkeep files
-!nucleusBin/tower/.gitkeep
-!nucleusBin/primals/.gitkeep
-!nucleusBin/archive/.gitkeep
+!plasmidBin/tower/.gitkeep
+!plasmidBin/primals/.gitkeep
+!plasmidBin/archive/.gitkeep
 
 # Optional: Track version manifest
-!nucleusBin/VERSION.txt
-!nucleusBin/MANIFEST.md
+!plasmidBin/VERSION.txt
+!plasmidBin/MANIFEST.md
 ```
 
 ### Why NOT Commit Binaries?
@@ -175,7 +175,7 @@ nucleusBin/archive/**/*
 ### Alternative: Track Versions
 
 ```
-# nucleusBin/VERSION.txt
+# plasmidBin/VERSION.txt
 beardog-server: v0.15.1 (git: dc9b4426c)
 songbird: v3.19.0 (git: a1b2c3d)
 tower: v0.4.0 (git: e13b20b)
@@ -185,7 +185,7 @@ tower: v0.4.0 (git: e13b20b)
 
 ## 🎯 Evolution Path: LiveSpore & ColdSpore
 
-### Phase 1: NucleusBin (Current)
+### Phase 1: PlasmidBin (Current)
 - ✅ Single source of stable binaries
 - ✅ Manual harvest + verify
 - ✅ Spores copy from nucleus
@@ -231,7 +231,7 @@ impl LiveSpore {
 impl ColdSpore {
     fn freeze(&self) -> Result<()> {
         // 1. Stop all primals
-        // 2. Archive to nucleusBin/archive/
+        // 2. Archive to plasmidBin/archive/
         // 3. Create manifest
         // 4. Mark as hibernated
     }
@@ -251,11 +251,11 @@ impl ColdSpore {
 
 ### Today (Immediate)
 
-1. ✅ Create `nucleusBin/` structure
+1. ✅ Create `plasmidBin/` structure
 2. ✅ Update `.gitignore`
 3. ✅ Create `scripts/harvest-primals.sh`
 4. ✅ Create `scripts/verify-nucleus.sh`
-5. ✅ Update `biomeos-spore` to use `nucleusBin/`
+5. ✅ Update `biomeos-spore` to use `plasmidBin/`
 
 ### This Week
 
@@ -282,7 +282,7 @@ impl ColdSpore {
 - ❌ Time-consuming
 - ❌ Deep debt
 
-### After (NucleusBin Pipeline)
+### After (PlasmidBin Pipeline)
 - ✅ Single source of truth
 - ✅ Always fresh binaries
 - ✅ Version tracked
@@ -313,5 +313,5 @@ impl ColdSpore {
 **Next**: Implement harvest + verify scripts  
 **Goal**: Automated LiveSpore/ColdSpore system
 
-🧬 **NucleusBin - The Genetic Nucleus of biomeOS!** 🌱
+🧬 **PlasmidBin - The Genetic Nucleus of biomeOS!** 🌱
 

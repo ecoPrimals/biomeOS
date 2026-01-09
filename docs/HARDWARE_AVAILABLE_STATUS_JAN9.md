@@ -161,7 +161,7 @@ toadstool-cli         # Main CLI
 toadstool-byob-server # Server mode
 ```
 
-**Location**: `biomeOS/primalBins/`
+**Location**: `biomeOS/plasmidBin/`
 
 **Status**: Ready for Node niche testing (when Unix socket evolution complete)
 
