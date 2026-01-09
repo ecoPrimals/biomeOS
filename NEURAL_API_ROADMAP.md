@@ -424,10 +424,10 @@ println!("Bottleneck: {} took {}ms", bottleneck.node_id, bottleneck.duration_ms)
 
 | Milestone | Status | Progress | Est. Sessions |
 |-----------|--------|----------|---------------|
-| **M1: Tower** | 🎯 Nearly Complete | **85%** ⬆️ | 7-11 (6/7 done) |
-| **M2: Node** | 🔜 Next | 0% | 5-8 |
-| **M3: Nest** | 🔮 Future | 0% | 8-11 |
-| **M4: Backbone** | 🔮 Future | 0% | 6-9 |
+| **M1: Tower** | 🎯 Nearly Complete | **85%** | 7-11 (6/7 done) |
+| **M2: Node** | 🎯 In Progress | **30%** ⬆️ | 5-8 (started!) |
+| **M3: Nest** | 🎯 In Progress | **30%** ⬆️ | 8-11 (started!) |
+| **M4: Backbone** | 🔜 Next | 0% | 6-9 |
 | **RootPulse** | 🔮 Long-term | 0% | TBD |
 
 **Total Estimated:** 26-39 sessions before RootPulse
@@ -553,9 +553,9 @@ FUTURE (RootPulse):
   Universal time tracking
 ```
 
-**Status:** 🎊 **Phase 1.5 COMPLETE!** (Learning system operational!)  
-**Next:** Real deployment testing with Songbird + BearDog  
-**Progress:** 85% to Milestone 1 (Tower Niche)
+**Status:** 🎊 **Phase 1.5 COMPLETE + Node & Nest Foundations Added!**  
+**Next:** Real deployment testing with all primals  
+**Progress:** M1:85% (Tower), M2:30% (Node), M3:30% (Nest)
 
 🧠 **From static waves → adaptive intelligence!** 🎊
 
