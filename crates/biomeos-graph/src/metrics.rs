@@ -20,7 +20,7 @@ use std::time::Duration;
 use tokio::sync::RwLock;
 use std::sync::Arc;
 
-use crate::graph::{GraphResult, NodeMetrics};
+use crate::graph::GraphResult;
 
 /// Metrics collector for graph executions
 #[derive(Clone)]

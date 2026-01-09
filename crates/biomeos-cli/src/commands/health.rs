@@ -53,8 +53,8 @@ async fn handle_graph_health_check(
     continuous: bool,
     interval: u64,
 ) -> Result<()> {
-    use biomeos_core::graph_deployment::GraphDeploymentCoordinator;
-    use super::create_spinner;
+    
+    
     
     let niche = niche_path.ok_or_else(|| {
         anyhow::anyhow!("--niche required for graph-based health check")

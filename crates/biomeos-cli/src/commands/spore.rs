@@ -4,8 +4,6 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use biomeos_spore::{Spore, SporeConfig, SporeType, SporeVerification};
-use biomeos_spore::refresh::SporeRefresher;
-use tracing::info;
 
 /// Create a new USB spore
 pub async fn handle_spore_create(

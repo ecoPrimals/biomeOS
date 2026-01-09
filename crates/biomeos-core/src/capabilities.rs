@@ -149,7 +149,7 @@ impl PrimalConfig {
     
     /// Discover own identity (infant model)
     fn discover_identity() -> biomeos_types::error::BiomeResult<String> {
-        use biomeos_types::error::BiomeError;
+        
         
         // 1. Check PRIMAL_ID env var
         if let Ok(id) = std::env::var("PRIMAL_ID") {

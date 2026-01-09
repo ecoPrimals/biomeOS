@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use tokio::process::Command;
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 
 /// Primal metadata discovered from binary
 #[derive(Debug, Clone, Serialize, Deserialize)]

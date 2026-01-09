@@ -4,7 +4,7 @@
 //! Implements the "Infant Model" - primals only know themselves.
 
 use std::{
-    fs::{File, OpenOptions},
+    fs::OpenOptions,
     process::{Child, Command, Stdio},
     sync::Arc,
     time::Duration,
@@ -12,7 +12,7 @@ use std::{
 
 use async_trait::async_trait;
 use tokio::sync::Mutex;
-use tracing::{debug, info, warn};
+use tracing::{info, warn};
 
 use biomeos_types::{
     error::{BiomeError, BiomeResult},

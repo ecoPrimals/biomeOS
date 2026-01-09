@@ -13,7 +13,6 @@ use std::{
     time::Duration,
 };
 
-use anyhow::{Context, Result};
 use async_trait::async_trait;
 use tokio::{
     sync::RwLock,
@@ -27,8 +26,7 @@ use biomeos_types::{
 };
 
 use crate::{
-    capabilities::{Capability, PrimalConfig},
-    family_credentials::FamilyCredentials,
+    capabilities::Capability,
     primal_health::{HealthStatus, PrimalHealthMonitor},
     retry::RetryPolicy,
 };

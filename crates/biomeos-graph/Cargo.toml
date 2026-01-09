@@ -41,6 +41,7 @@ biomeos-types = { path = "../biomeos-types" }
 
 [dev-dependencies]
 tokio-test = { workspace = true }
+tempfile = "3.8"
 
 [lib]
 name = "biomeos_graph"
