@@ -71,7 +71,7 @@ pub async fn get_discovered_primals(
             // Convert to API format
             let now = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
+                .unwrap_or(std::time::Duration::from_secs(0)) // Safe fallback: epoch time
                 .as_secs();
             
             let primals: Vec<DiscoveredPrimal> = discovered
@@ -125,7 +125,7 @@ pub async fn get_discovered_primals(
 fn get_mock_primals() -> Vec<DiscoveredPrimal> {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
+        .unwrap_or(std::time::Duration::from_secs(0)) // Safe fallback: epoch time
         .as_secs();
     
     vec![

@@ -58,6 +58,9 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use thiserror::Error;
 
+/// Default bind address (const to avoid parsing at runtime)
+const DEFAULT_BIND_ADDR: &str = "0.0.0.0:3000";
+
 /// Application state (shared across handlers)
 #[derive(Clone)]
 pub struct AppState {
@@ -121,7 +124,9 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             standalone_mode: false, // Production default: require primals
-            bind_addr: "0.0.0.0:3000".parse().expect("Default bind address is valid"),
+            bind_addr: DEFAULT_BIND_ADDR
+                .parse()
+                .expect("DEFAULT_BIND_ADDR is a valid socket address"),
             request_timeout: std::time::Duration::from_secs(30),
             enable_cors: true,
         }
@@ -141,7 +146,11 @@ impl Config {
         let bind_addr = std::env::var("BIOMEOS_API_BIND_ADDR")
             .ok()
             .and_then(|v| v.parse().ok())
-            .unwrap_or_else(|| "0.0.0.0:3000".parse().expect("Default bind address is valid"));
+            .unwrap_or_else(|| {
+                DEFAULT_BIND_ADDR
+                    .parse()
+                    .expect("DEFAULT_BIND_ADDR is a valid socket address")
+            });
         
         Self {
             standalone_mode,

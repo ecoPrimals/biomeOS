@@ -121,6 +121,8 @@ pub async fn event_stream(
     let stream = FuturesStreamExt::flat_map(stream, |events| stream::iter(events));
     let stream = TokioStreamExt::throttle(stream, Duration::from_secs(5));
     let stream = FuturesStreamExt::map(stream, |event| {
+        // SAFE: BiomeEvent serialization is infallible (all fields are serializable)
+        // SSE requires Result<Event, Infallible>, so unwrap is appropriate here
         Ok(Event::default()
             .json_data(&event)
             .unwrap())
@@ -276,7 +278,7 @@ async fn detect_and_emit_changes(
 fn current_timestamp() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
+        .unwrap_or(std::time::Duration::from_secs(0)) // Safe fallback: epoch time
         .as_secs()
 }
 
