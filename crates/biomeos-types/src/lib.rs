@@ -7,6 +7,7 @@ use std::collections::HashMap;
 
 // Core unified modules
 pub mod api_schema;
+pub mod capability_taxonomy;  // Well-known capability taxonomy for discovery
 pub mod config;
 pub mod constants;
 pub mod error;
