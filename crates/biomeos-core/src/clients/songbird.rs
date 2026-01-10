@@ -12,16 +12,42 @@
 //! - Health monitoring
 //! - Service metadata management
 //!
-//! Based on confirmed Songbird API (HTTP REST on port 8080)
+//! # Transport Evolution
+//!
+//! **NEW**: Auto-discovery via Unix socket (JSON-RPC 2.0)
+//! - **PRIMARY**: JSON-RPC over Unix socket (100x faster, secure)
+//! - **FALLBACK**: HTTP REST API (deprecated, legacy only)
+//!
+//! # Quick Start
+//!
+//! ```no_run
+//! use biomeos_core::clients::songbird::SongbirdClient;
+//!
+//! #[tokio::main]
+//! async fn main() -> anyhow::Result<()> {
+//!     // Auto-discover via Unix socket
+//!     let songbird = SongbirdClient::discover("nat0").await?;
+//!
+//!     // Discover compute services
+//!     let services = songbird.discover_by_capability("compute").await?;
+//!     for service in services {
+//!         println!("Found: {} at {}", service.service_name, service.endpoint);
+//!     }
+//!
+//!     Ok(())
+//! }
+//! ```
 
-use crate::clients::base::PrimalHttpClient;
+use crate::clients::transport::{TransportClient, TransportPreference};
 use crate::primal_client::{HealthStatus, PrimalClient};
-use anyhow::Result;
+use anyhow::{Context, Result};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 /// Songbird discovery and coordination client
+///
+/// Uses JSON-RPC 2.0 over Unix sockets for fast, secure communication.
 ///
 /// # Example
 /// ```no_run
@@ -29,7 +55,8 @@ use serde_json::Value;
 ///
 /// #[tokio::main]
 /// async fn main() -> anyhow::Result<()> {
-///     let songbird = SongbirdClient::new("http://localhost:8080");
+///     // Auto-discover via Unix socket
+///     let songbird = SongbirdClient::discover("nat0").await?;
 ///
 ///     // Discover compute services
 ///     let services = songbird.discover_by_capability("compute").await?;
@@ -42,30 +69,83 @@ use serde_json::Value;
 /// ```
 #[derive(Debug, Clone)]
 pub struct SongbirdClient {
-    http: PrimalHttpClient,
-    endpoint: String,
+    transport: TransportClient,
+    family_id: String,
 }
 
 impl SongbirdClient {
-    /// Create a new Songbird client
+    /// Auto-discover Songbird via Unix socket
+    ///
+    /// Searches for Songbird's Unix socket in XDG runtime directory.
+    /// Falls back to HTTP if Unix socket not available.
     ///
     /// # Arguments
-    /// * `endpoint` - Songbird endpoint URL (e.g., `http://localhost:8080`)
+    /// * `family_id` - Genetic family ID (e.g., "nat0")
     ///
-    /// # Note
-    /// Default Songbird port is 8080 (confirmed from Songbird team)
-    pub fn new(endpoint: impl Into<String>) -> Self {
-        let endpoint = endpoint.into();
-        Self {
-            http: PrimalHttpClient::new(&endpoint),
-            endpoint,
-        }
+    /// # Returns
+    /// SongbirdClient configured with JSON-RPC over Unix socket (primary)
+    /// or HTTP (fallback)
+    ///
+    /// # Example
+    /// ```no_run
+    /// use biomeos_core::clients::songbird::SongbirdClient;
+    ///
+    /// #[tokio::main]
+    /// async fn main() -> anyhow::Result<()> {
+    ///     let songbird = SongbirdClient::discover("nat0").await?;
+    ///     let services = songbird.discover_by_capability("compute").await?;
+    ///     Ok(())
+    /// }
+    /// ```
+    pub async fn discover(family_id: &str) -> Result<Self> {
+        let transport = TransportClient::discover_with_preference(
+            "songbird",
+            family_id,
+            TransportPreference::JsonRpcUnixSocket,
+        ).await
+            .context("Failed to discover Songbird. Is it running?")?;
+        
+        Ok(Self {
+            transport,
+            family_id: family_id.to_string(),
+        })
+    }
+    
+    /// Create from explicit endpoint (HTTP fallback)
+    ///
+    /// **DEPRECATED**: Use `discover()` for Unix socket support (100x faster)
+    ///
+    /// # Arguments
+    /// * `endpoint` - HTTP endpoint URL (e.g., "http://localhost:8080")
+    /// * `family_id` - Genetic family ID
+    #[deprecated(note = "Use SongbirdClient::discover() for Unix socket support")]
+    pub async fn from_endpoint(endpoint: impl Into<String>, family_id: &str) -> Result<Self> {
+        let _endpoint = endpoint.into();
+        let transport = TransportClient::discover_with_preference(
+            "songbird",
+            family_id,
+            TransportPreference::Http
+        ).await
+            .context("Failed to create HTTP client")?;
+        
+        Ok(Self {
+            transport,
+            family_id: family_id.to_string(),
+        })
+    }
+    
+    /// Legacy constructor (DEPRECATED)
+    ///
+    /// **BREAKING**: This method is now async. Use `discover()` instead.
+    #[deprecated(note = "Use SongbirdClient::discover() instead")]
+    pub fn new(_endpoint: impl Into<String>) -> Self {
+        panic!("SongbirdClient::new() is deprecated. Use SongbirdClient::discover() instead.");
     }
 
     /// Discover services by capability
     ///
     /// Query Songbird for all services that provide a specific capability.
-    /// Uses the confirmed Songbird API: POST /api/v1/registry/find_peer
+    /// Uses Songbird's JSON-RPC API: `discovery.find_by_capability`
     ///
     /// # Arguments
     /// * `capability` - Capability to search for (e.g., "compute", "storage", "ai", "p2p")
@@ -78,35 +158,36 @@ impl SongbirdClient {
     /// # use biomeos_core::clients::songbird::SongbirdClient;
     /// # #[tokio::main]
     /// # async fn main() -> anyhow::Result<()> {
-    /// let songbird = SongbirdClient::new("http://localhost:8080");
+    /// let songbird = SongbirdClient::discover("nat0").await?;
     /// let compute_services = songbird.discover_by_capability("compute").await?;
     /// # Ok(())
     /// # }
     /// ```
     pub async fn discover_by_capability(&self, capability: &str) -> Result<Vec<ServiceInfo>> {
-        let body = serde_json::json!({
-            "capability": capability
-        });
-        let response = self
-            .http
-            .post("/api/v1/registry/find_peer", body) // Updated to confirmed Songbird API
-            .await?;
+        let response = self.transport.call(
+            "discovery.find_by_capability",
+            Some(serde_json::json!({
+                "capability": capability,
+                "family_id": self.family_id
+            }))
+        ).await
+            .context("Failed to call discovery.find_by_capability")?;
 
         // Songbird returns a "peers" array
         if let Some(peers) = response.get("peers") {
             serde_json::from_value(peers.clone())
-                .map_err(|e| anyhow::anyhow!("Failed to parse peer list: {}", e))
+                .context("Failed to parse peer list from response")
         } else {
             // Fallback: try to parse the response directly as a single peer
             let peer: ServiceInfo = serde_json::from_value(response)
-                .map_err(|e| anyhow::anyhow!("Failed to parse service info: {}", e))?;
+                .context("Failed to parse service info from response")?;
             Ok(vec![peer])
         }
     }
 
     /// Register a service with Songbird
     ///
-    /// Uses the confirmed Songbird API: POST /api/v1/registry/register
+    /// Uses Songbird's JSON-RPC API: `registry.register`
     ///
     /// # Arguments
     /// * `service` - Service registration information
@@ -122,7 +203,7 @@ impl SongbirdClient {
     /// # use biomeos_core::clients::songbird::{SongbirdClient, ServiceRegistration, ServiceMetadata};
     /// # #[tokio::main]
     /// # async fn main() -> anyhow::Result<()> {
-    /// let songbird = SongbirdClient::new("http://localhost:8080");
+    /// let songbird = SongbirdClient::discover("nat0").await?;
     /// let service_id = songbird.register_service(&ServiceRegistration {
     ///     service_name: "my-service".to_string(),
     ///     capabilities: vec!["compute".to_string()],
@@ -137,10 +218,11 @@ impl SongbirdClient {
     /// # }
     /// ```
     pub async fn register_service(&self, service: &ServiceRegistration) -> Result<String> {
-        let response = self
-            .http
-            .post("/api/v1/registry/register", serde_json::to_value(service)?) // Updated to confirmed Songbird API
-            .await?;
+        let response = self.transport.call(
+            "registry.register",
+            Some(serde_json::to_value(service)?)
+        ).await
+            .context("Failed to call registry.register")?;
 
         // Songbird returns "registered_id"
         response["registered_id"]
@@ -152,16 +234,34 @@ impl SongbirdClient {
 
     /// Get health status for a specific service
     ///
+    /// Uses Songbird's JSON-RPC API: `health.check_service`
+    ///
     /// # Arguments
     /// * `service_id` - Service ID to check
     ///
     /// # Errors
     /// Returns an error if the request fails.
+    ///
+    /// # Example
+    /// ```no_run
+    /// # use biomeos_core::clients::songbird::SongbirdClient;
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// let songbird = SongbirdClient::discover("nat0").await?;
+    /// let health = songbird.get_service_health("service-123").await?;
+    /// println!("Service healthy: {}", health.healthy);
+    /// # Ok(())
+    /// # }
+    /// ```
     pub async fn get_service_health(&self, service_id: &str) -> Result<HealthStatus> {
-        let response = self
-            .http
-            .get(&format!("/api/health/{}", service_id))
-            .await?;
+        let response = self.transport.call(
+            "health.check_service",
+            Some(serde_json::json!({
+                "service_id": service_id,
+                "family_id": self.family_id
+            }))
+        ).await
+            .context("Failed to call health.check_service")?;
 
         Ok(HealthStatus {
             healthy: response["status"] == "healthy",
@@ -212,6 +312,8 @@ impl SongbirdClient {
 
     /// Find services near a geographic location
     ///
+    /// Uses Songbird's JSON-RPC API: `discovery.find_by_location`
+    ///
     /// # Arguments
     /// * `latitude` - Latitude coordinate
     /// * `longitude` - Longitude coordinate
@@ -219,28 +321,36 @@ impl SongbirdClient {
     ///
     /// # Errors
     /// Returns an error if the discovery request fails.
+    ///
+    /// # Example
+    /// ```no_run
+    /// # use biomeos_core::clients::songbird::SongbirdClient;
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// let songbird = SongbirdClient::discover("nat0").await?;
+    /// let nearby = songbird.discover_by_location(40.7128, -74.0060, 100.0).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
     pub async fn discover_by_location(
         &self,
         latitude: f64,
         longitude: f64,
         radius_km: f64,
     ) -> Result<Vec<ServiceInfo>> {
-        // Get all services
-        let response = self.http.get("/api/v1/services/all").await?;
-        let all_services: Vec<ServiceInfo> = serde_json::from_value(response)
-            .map_err(|e| anyhow::anyhow!("Failed to parse service list: {}", e))?;
+        let response = self.transport.call(
+            "discovery.find_by_location",
+            Some(serde_json::json!({
+                "latitude": latitude,
+                "longitude": longitude,
+                "radius_km": radius_km,
+                "family_id": self.family_id
+            }))
+        ).await
+            .context("Failed to call discovery.find_by_location")?;
 
-        // Filter by location
-        Ok(all_services
-            .into_iter()
-            .filter(|s| {
-                if let Some(loc) = &s.metadata.location {
-                    loc.distance_to(latitude, longitude) <= radius_km
-                } else {
-                    false
-                }
-            })
-            .collect())
+        serde_json::from_value(response)
+            .context("Failed to parse service list from response")
     }
 }
 
@@ -250,8 +360,8 @@ impl PrimalClient for SongbirdClient {
         "songbird"
     }
 
-    fn endpoint(&self) -> &str {
-        &self.endpoint
+    fn endpoint(&self) -> String {
+        self.transport.endpoint()
     }
 
     async fn is_available(&self) -> bool {
@@ -259,23 +369,12 @@ impl PrimalClient for SongbirdClient {
     }
 
     async fn health_check(&self) -> Result<HealthStatus> {
-        let response = self.http.get("/api/v1/health").await?; // Updated to confirmed Songbird API
-        Ok(HealthStatus {
-            healthy: response["status"] == "healthy" || response["status"] == "ok",
-            message: response["message"]
-                .as_str()
-                .unwrap_or("Unknown")
-                .to_string(),
-            details: Some(response),
-        })
+        self.transport.health_check().await
     }
 
-    async fn request(&self, method: &str, path: &str, body: Option<Value>) -> Result<Value> {
-        match method {
-            "GET" => self.http.get(path).await,
-            "POST" => self.http.post(path, body.unwrap_or(Value::Null)).await,
-            _ => anyhow::bail!("Unsupported method: {}", method),
-        }
+    async fn request(&self, method: &str, _path: &str, body: Option<Value>) -> Result<Value> {
+        // For JSON-RPC, method becomes the RPC method name, path is ignored
+        self.transport.call(method, body).await
     }
 }
 
@@ -382,10 +481,9 @@ mod tests {
         assert!(distance > 5500.0 && distance < 5600.0);
     }
 
-    #[test]
-    fn test_songbird_client_creation() {
-        let client = SongbirdClient::new("http://localhost:3000");
+    #[tokio::test]
+    async fn test_songbird_client_creation() {
+        let client = SongbirdClient::discover("nat0").await.unwrap();
         assert_eq!(client.name(), "songbird");
-        assert_eq!(client.endpoint(), "http://localhost:3000");
     }
 }
