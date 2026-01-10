@@ -19,7 +19,7 @@
 //! │                                         │
 //! │  ┌──────────────────────────────────┐  │
 //! │  │   Unix Socket IPC Server          │  │
-//! │  │  • /tmp/biomeos-registry-{fam}.sock│ │
+//! │  │  • XDG runtime dir/registry.sock  │ │
 //! │  │  • JSON-RPC protocol              │  │
 //! │  │  • Async connection handling      │  │
 //! │  └──────────────────────────────────┘  │
@@ -45,6 +45,7 @@
 //! }
 //! ```
 
+use biomeos_types::paths::SystemPaths;
 use biomeos_types::{BiomeError, PrimalId};
 use crate::Capability;
 use serde::{Deserialize, Serialize};
@@ -167,7 +168,9 @@ pub struct CapabilityRegistry {
 impl CapabilityRegistry {
     /// Create a new capability registry
     pub fn new(family_id: String) -> Self {
-        let socket_path = PathBuf::from(format!("/tmp/biomeos-registry-{}.sock", family_id));
+        // Use SystemPaths for XDG-compliant socket path
+        let paths = SystemPaths::new().expect("Failed to initialize SystemPaths");
+        let socket_path = paths.runtime_dir().join(format!("biomeos-registry-{}.sock", family_id));
         
         info!("🔧 Creating biomeOS capability registry");
         info!("   Family: {}", family_id);
