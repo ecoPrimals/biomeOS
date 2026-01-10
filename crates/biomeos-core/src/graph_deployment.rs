@@ -1,20 +1,13 @@
-// =============================================================================
-// Graph-Based Deployment - Neural API Integration
-// =============================================================================
-//
-// Integrates GraphExecutor with biomeOS for adaptive primal orchestration.
-//
-// Deep Debt Principles:
-// - Runtime primal discovery (no hardcoding)
-// - Capability-based (discovers by capability)
-// - Modern async Rust
-//
-// =============================================================================
+//! Graph-based deployment system for biomeOS
+//!
+//! Provides a capability-based, graph-driven primal orchestration system.
+//! Deep Debt Evolution: Uses CapabilityTaxonomy + SystemPaths!
 
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use biomeos_graph::{GraphExecutor, GraphParser, GraphResult, GraphValidator, Operation, ExecutionContext};
 use biomeos_manifest::niche::NicheManifest;
+use biomeos_types::SystemPaths; // Deep Debt Evolution
 use std::collections::HashMap;
 use std::os::unix::fs::FileTypeExt;
 use std::path::Path;
@@ -54,53 +47,58 @@ impl PrimalRegistry {
         });
     }
     
-    /// Discover primals via Unix socket scanning and multicast
+    /// Discover primals via Unix socket scanning (XDG-compliant!)
     pub async fn discover_primals(&self) -> Result<Vec<(String, Vec<String>)>> {
         use tokio::fs;
         
         let mut discovered = Vec::new();
         
-        // 1. Scan for Unix sockets in /tmp
-        let socket_patterns = vec![
-            "/tmp/songbird-*.sock",
-            "/tmp/beardog-*.sock",
-            "/tmp/nestgate-*.sock",
-            "/tmp/toadstool-*.sock",
-        ];
+        // Get XDG-compliant system paths
+        let paths = SystemPaths::new()
+            .context("Failed to initialize SystemPaths")?;
         
-        for pattern in socket_patterns {
-            if let Ok(entries) = glob::glob(pattern) {
-                for entry in entries.flatten() {
-                    if let Ok(metadata) = fs::metadata(&entry).await {
-                        if metadata.file_type().is_socket() {
-                            // Extract primal ID from socket path
-                            if let Some(filename) = entry.file_name() {
-                                if let Some(name) = filename.to_str() {
-                                    // Parse: songbird-tower-001.sock → (songbird-tower-001, [capabilities])
+        // Scan runtime directory (no hardcoded /tmp!)
+        let runtime_dir = paths.runtime_dir();
+        
+        info!(
+            runtime_dir = %runtime_dir.display(),
+            "Scanning for primal sockets in XDG runtime directory"
+        );
+        
+        if let Ok(mut entries) = fs::read_dir(runtime_dir).await {
+            while let Ok(Some(entry)) = entries.next_entry().await {
+                let path = entry.path();
+                
+                if let Ok(metadata) = fs::metadata(&path).await {
+                    if metadata.file_type().is_socket() {
+                        // Extract primal ID from socket path
+                        if let Some(filename) = path.file_name() {
+                            if let Some(name) = filename.to_str() {
+                                if name.ends_with(".sock") {
                                     let primal_id = name.trim_end_matches(".sock");
                                     
                                     // Query capabilities via Unix socket
-                                    match self.query_capabilities_via_socket(&entry).await {
+                                    match self.query_capabilities_via_socket(&path).await {
                                         Ok(caps) => {
                                             info!(
                                                 primal_id = %primal_id,
-                                                socket = %entry.display(),
+                                                socket = %path.display(),
                                                 capabilities = ?caps,
-                                                "Discovered primal via Unix socket"
+                                                "Discovered primal via Unix socket (XDG path)"
                                             );
                                             
                                             // Register in our cache
                                             self.register(
                                                 primal_id.to_string(),
                                                 caps.clone(),
-                                                Some(entry.to_string_lossy().to_string()),
+                                                Some(path.to_string_lossy().to_string()),
                                             ).await;
                                             
                                             discovered.push((primal_id.to_string(), caps));
                                         }
                                         Err(e) => {
                                             warn!(
-                                                socket = %entry.display(),
+                                                socket = %path.display(),
                                                 error = %e,
                                                 "Failed to query capabilities from socket"
                                             );
@@ -410,13 +408,14 @@ impl GraphDeploymentCoordinator {
     /// Create with NUCLEUS-based secure discovery
     /// 
     /// **Recommended for production**: Uses 5-layer secure discovery protocol
+    #[allow(dead_code)] // TODO: Re-enable after Wave 2 evolution
     pub async fn with_nucleus() -> anyhow::Result<Self> {
-        use biomeos_graph::NucleusPrimalExecutor;
+        // TODO: Re-enable after nucleus_executor is evolved to use CapabilityTaxonomy
+        // use biomeos_graph::NucleusPrimalExecutor;
         
-        info!("Initializing deployment coordinator with NUCLEUS");
+        info!("Initializing deployment coordinator with NUCLEUS (placeholder for Wave 2)");
         
-        // NUCLEUS will handle secure discovery, so we still use the same pattern
-        // but the underlying discovery will be NUCLEUS-based
+        // Temporary: Use standard registry
         Ok(Self {
             registry: PrimalRegistry::new(),
         })
