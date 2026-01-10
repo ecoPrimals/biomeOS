@@ -270,6 +270,118 @@ async fn display_deploy_result(result: &HashMap<String, Value>, validate_only: b
     Ok(())
 }
 
+/// Handle direct graph deployment (no niche manifest)
+pub async fn handle_deploy_graph_direct(
+    graph_path: PathBuf,
+    validate_only: bool,
+) -> Result<()> {
+    use biomeos_core::graph_deployment::GraphDeploymentCoordinator;
+    use biomeos_graph::{GraphParser, GraphValidator};
+    
+    let action = if validate_only {
+        "Validating"
+    } else {
+        "Executing"
+    };
+    
+    let spinner = create_spinner(&format!("🧠 {} graph via Neural API...", action));
+    
+    // Parse graph
+    let graph = GraphParser::parse_file(&graph_path)?;
+    
+    // Validate graph
+    GraphValidator::validate(&graph)?;
+    
+    if validate_only {
+        spinner.finish_with_message("✅ Validation completed");
+        println!("🎉 Graph '{}' is valid!", graph.name);
+        println!("📊 Graph structure:");
+        println!("  • Nodes: {}", graph.nodes.len());
+        println!("  • Edges: {}", graph.edges.len());
+        println!("  • Coordination: {:?}", graph.coordination);
+        
+        println!("\n📋 Nodes:");
+        for node in &graph.nodes {
+            println!("  • {} → {} (timeout: {}ms)", 
+                node.id, 
+                node.operation.name,
+                node.constraints.timeout_ms.unwrap_or(30000)
+            );
+        }
+        
+        return Ok(());
+    }
+    
+    // Create coordinator
+    let coordinator = GraphDeploymentCoordinator::new();
+    
+    // Discover primals first
+    println!("🔍 Discovering primals...");
+    let discovered = coordinator.registry().discover_primals().await?;
+    println!("   Found {} primals", discovered.len());
+    for (primal_id, capabilities) in &discovered {
+        println!("   • {} → {:?}", primal_id, capabilities);
+    }
+    
+    // Execute graph
+    use biomeos_graph::GraphExecutor;
+    let executor = GraphExecutor::new(coordinator.registry().clone());
+    let result = executor.execute(graph).await?;
+    
+    spinner.finish_with_message("✅ Execution completed");
+    
+    if result.success {
+        println!("🎉 Graph executed successfully via Neural API!");
+        println!("📊 Execution metrics:");
+        println!("  • Nodes executed: {}", result.metrics.len());
+        
+        let mut total_duration_ms = 0u64;
+        let mut successful = 0;
+        let mut failed = 0;
+        
+        for metric in &result.metrics {
+            let status = if metric.success { 
+                successful += 1;
+                "✅" 
+            } else { 
+                failed += 1;
+                "❌" 
+            };
+            println!("  {} {} ({}) → {}ms", 
+                status, 
+                metric.node_id,
+                metric.operation,
+                metric.duration_ms
+            );
+            total_duration_ms += metric.duration_ms;
+            
+            if let Some(error) = &metric.error {
+                println!("     ❌ Error: {}", error);
+            }
+        }
+        
+        println!("\n📈 Summary:");
+        println!("  • Total nodes: {}", result.metrics.len());
+        println!("  • Successful: {} ✅", successful);
+        println!("  • Failed: {} ❌", failed);
+        println!("  • Total time: {}ms ({:.2}s)", total_duration_ms, total_duration_ms as f64 / 1000.0);
+        println!("  • Average time per node: {}ms", 
+            if result.metrics.is_empty() { 0 } else { total_duration_ms / result.metrics.len() as u64 }
+        );
+    } else {
+        let failed_nodes: Vec<_> = result.metrics.iter()
+            .filter(|m| !m.success)
+            .collect();
+        
+        anyhow::bail!(
+            "Graph execution failed: {} node(s) failed execution",
+            failed_nodes.len()
+        );
+    }
+    
+    Ok(())
+}
+
 /// Display service creation results
 async fn display_create_result(result: &HashMap<String, Value>, dry_run: bool) -> Result<()> {
     let title = if dry_run {

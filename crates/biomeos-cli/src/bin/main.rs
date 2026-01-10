@@ -217,6 +217,16 @@ enum Commands {
         graph_name: Option<String>,
     },
 
+    /// Deploy using a graph directly (Neural API)
+    DeployGraph {
+        /// Path to the graph file (.toml)
+        graph: PathBuf,
+        
+        /// Validate graph without deploying
+        #[arg(short, long)]
+        validate_only: bool,
+    },
+
     /// Create a new service or resource
     Create {
         /// Type of service to create
@@ -467,6 +477,12 @@ async fn main() -> Result<()> {
             graph_name,
         } => {
             handle_deploy(manifest, validate_only, graph, graph_name).await?;
+        }
+        Commands::DeployGraph {
+            graph,
+            validate_only,
+        } => {
+            handle_deploy_graph_direct(graph, validate_only).await?;
         }
         Commands::Create {
             service_type,

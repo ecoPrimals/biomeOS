@@ -17,7 +17,7 @@ pub mod verify;
 pub mod utils;
 
 // Re-export command handlers
-pub use deploy::{handle_create, handle_deploy};
+pub use deploy::{handle_create, handle_deploy, handle_deploy_graph_direct};
 pub use discover::handle_discover;
 pub use health::{handle_health, handle_probe, handle_scan, handle_status};
 pub use monitor::{handle_dashboard, handle_exec, handle_logs, handle_monitor, handle_scale};
