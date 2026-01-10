@@ -20,11 +20,12 @@
 - Quick Win #3: ✅ Capability-based PrimalRegistry methods
 - **Result**: 6 new tests passing, 3% path reduction
 
-### **Phase 2 Wave 2: Transport Evolution** ⏳ **READY TO START**
-- **Priority**: HTTP → tarpc/JSON-RPC migration
-- **Issue**: 116 HTTP references (insecure, non-isomorphic)
-- **Target**: JSON-RPC over Unix sockets (primary)
-- **Timeline**: 4-5 weeks
+### **Phase 2 Wave 2: Transport Evolution** ⏳ **Week 1 COMPLETE!**
+- **Week 1**: ✅ Transport abstraction (747 lines, 11 tests)
+- **Weeks 2-3**: ⏳ Client migration (10 files, 116 HTTP refs)
+- **Week 4**: ⏳ Testing & validation
+- **Priority**: Security (HTTP → JSON-RPC/tarpc)
+- **Status**: On schedule! 🎊
 
 ---
 
