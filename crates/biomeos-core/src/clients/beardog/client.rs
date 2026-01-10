@@ -11,7 +11,12 @@ use crate::primal_client::{HealthStatus, PrimalClient};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use serde_json::Value;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
+
+use crate::clients::transport::{TransportClient, TransportPreference};
+use crate::primal_client::{HealthStatus, PrimalClient as CorePrimalClient};
+
+use super::{access::AccessClient, btsp::BtspClient, crypto::CryptoClient, keys::KeysClient, tunnels::TunnelsClient};
 
 /// BearDog client for security and cryptography operations
 ///

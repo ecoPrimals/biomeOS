@@ -13,6 +13,7 @@
 
 use super::client::BearDogClient;
 use super::types::KeyInfo;
+use crate::clients::transport::TransportClient;
 use anyhow::{Context, Result};
 use serde_json::json;
 use tracing::{debug, info};

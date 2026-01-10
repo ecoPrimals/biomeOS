@@ -20,6 +20,7 @@
 
 use super::client::BearDogClient;
 use super::types::{AccessRequest, AccessDecision, AuditEntry};
+use crate::clients::transport::TransportClient;
 use anyhow::{Context, Result};
 use serde_json::{json, Value};
 use tracing::{debug, info};
