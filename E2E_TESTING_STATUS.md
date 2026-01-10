@@ -5,65 +5,60 @@ Test NUCLEUS with real Songbird and BearDog instances to validate the 5-layer se
 
 ---
 
-## 📊 **Current Situation**
+## ✅ **BINARIES UPDATED!**
 
-### **Available Binaries**
-- ✅ BearDog: `primals/beardog-server` (5.9M, older version)
-- ✅ Songbird: `primals/songbird` (24M, older version)
+### **Fresh Binaries Pulled** (January 10, 2026)
 
-### **Issue Discovered**
-The current binaries in `primals/` are **outdated**:
-- **BearDog** is using HTTP (port 9000) instead of Unix sockets
-- **Songbird** is not starting properly (empty log)
+1. **BearDog v0.9.0** ✅
+   - Source: `ecoPrimals/phase1/beardog`
+   - Binary: `plasmidBin/primals/beardog-server` (5.6M)
+   - Built: January 9, 2026, 21:40
+   - Features: Unix socket JSON-RPC, port-free architecture
+   - Latest commit: `95537362` - "docs: Add biomeOS 100% integration ready guide"
 
-These binaries predate the port-free architecture evolution.
-
----
-
-## 🔄 **What We Need**
-
-### **Updated Binaries Required**
-According to recent team reports:
-
-1. **BearDog v0.15.2+**
-   - ✅ Unix socket JSON-RPC server
-   - ✅ Port-free architecture
-   - ✅ `federation.verify_family_member` API
-   - ✅ `federation.derive_subfed_key` API
-   - Socket location: `/tmp/beardog-{family}-{node}.sock`
-
-2. **Songbird v3.19.3+**
-   - ✅ Unix socket JSON-RPC server  
-   - ✅ Port-free P2P federation
-   - ✅ `discover_by_family` API
-   - ✅ `create_genetic_tunnel` API
-   - ✅ `announce_capabilities` API
-   - Socket location: `/tmp/songbird-{family}-{node}.sock`
+2. **Songbird (orchestrator)** ✅
+   - Source: `ecoPrimals/phase1/songbird`
+   - Binary: `plasmidBin/primals/songbird-orchestrator` (28M)
+   - Built: January 8, 2026, 14:27
+   - Features: P2P federation, Unix socket JSON-RPC
+   - Latest commit: `d3eb5501` - "docs: final status summary 🎊"
 
 ---
 
-## 📝 **Action Items**
+## 📊 **Binary Verification**
 
-### **Option A: Pull Fresh Binaries** (30 min)
 ```bash
-# Pull latest from phase1 projects
-cd ../../../phase1/beardog && cargo build --release
-cp target/release/beardog-server ../../phase2/biomeOS/plasmidBin/primals/
+# BearDog
+plasmidBin/primals/beardog-server
+- Size: 5.6M
+- Type: ELF 64-bit LSB pie executable
+- Modified: 2026-01-09 21:40:44
+- Status: ✅ Ready
 
-cd ../songbird && cargo build --release
-cp target/release/songbird ../../phase2/biomeOS/plasmidBin/primals/
+# Songbird
+plasmidBin/primals/songbird-orchestrator
+- Size: 28M
+- Type: ELF 64-bit LSB pie executable
+- Modified: 2026-01-09 21:41:13
+- Status: ✅ Ready
 ```
 
-### **Option B: Manual Testing with Mock** (1 hour)
-Test NUCLEUS layers independently:
-1. Test Layer 1 (Physical Discovery) with socket scanning
-2. Test Layer 2-4 with mock responses
-3. Test Layer 5 (Registry) in isolation
+---
 
-### **Option C: Document and Continue** (Current)
-- ✅ Document the binary version issue
-- ✅ Proceed with other Neural API work
-- ⏳ Wait for phase1 team to provide updated binaries
+## 🔄 **Previous Issue: RESOLVED ✅**
+
+### **What Was Wrong**
+Old binaries in `primals/` were **outdated**:
+- BearDog was using HTTP (port 9000) instead of Unix sockets
+- Songbird wasn't starting properly
+
+### **What We Did**
+1. ✅ Rebuilt BearDog from phase1/beardog (v0.9.0)
+2. ✅ Rebuilt Songbird from phase1/songbird
+3. ✅ Copied fresh binaries to `plasmidBin/primals/`
+4. ✅ Verified binary versions and timestamps
+
+**Result**: Both binaries now use port-free architecture with Unix sockets!
 
 ---
 
