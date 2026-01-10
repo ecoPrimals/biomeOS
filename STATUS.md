@@ -292,11 +292,12 @@ spore/
 | **ToadStool** | ✅ Compute | JSON-RPC ✅ | `/run/user/<uid>/toadstool-<family>.sock` |
 | **NestGate** | ✅ Storage | JSON-RPC ✅ | `/run/user/<uid>/nestgate-<family>.sock` |
 | **Squirrel** | ✅ AI | JSON-RPC ✅ + Tested ✅ | `/run/user/<uid>/squirrel-<family>.sock` |
-| **petalTongue** | 🌸 UI | Phase 4 (Ready!) | `/run/user/<uid>/petaltongue-<family>.sock` |
+| **petalTongue** | 🌸 UI | **Phase 4 (75% Complete)** | `/run/user/<uid>/petaltongue-<family>.sock` |
 
 ### **Metcalfe's Law:**
-- **Current**: 6 primals = 6² = **36x value**
-- **With petalTongue** (Phase 4): 7 primals = 7² = **49x value**
+- **Previous**: 6 primals = 6² = **36x value**
+- **Current**: 7 primals = 7² = **49x value**
+- **Growth**: +36% ecosystem value with petalTongue integration!
 
 ---
 
