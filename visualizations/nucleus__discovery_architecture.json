@@ -1,0 +1,151 @@
+{
+  "title": "NUCLEUS - Discovery Architecture",
+  "nodes": [
+    {
+      "id": "nucleus",
+      "label": "NUCLEUS\n(Coordination)",
+      "type": "core",
+      "layer": "orchestration",
+      "responsibilities": [
+        "Discovery",
+        "Health",
+        "Routing"
+      ]
+    },
+    {
+      "id": "songbird",
+      "label": "Songbird\n(Discovery)",
+      "type": "primal",
+      "capabilities": [
+        "discovery",
+        "p2p_federation",
+        "tunneling"
+      ],
+      "socket": "/run/user/1000/songbird-*.sock"
+    },
+    {
+      "id": "capability_taxonomy",
+      "label": "CapabilityTaxonomy\n(50+ capabilities)",
+      "type": "taxonomy",
+      "categories": 8,
+      "enables": "Zero hardcoding"
+    },
+    {
+      "id": "discover_by_capability",
+      "label": "discover_by_capability()\n(Runtime Query)",
+      "type": "method",
+      "input": "capability: String",
+      "output": "Vec<PrimalEndpoint>"
+    },
+    {
+      "id": "beardog",
+      "label": "BearDog\n(Security)",
+      "type": "primal",
+      "capabilities": [
+        "encryption",
+        "identity",
+        "trust"
+      ],
+      "socket": "/run/user/1000/beardog-*.sock"
+    },
+    {
+      "id": "petaltongue",
+      "label": "petalTongue\n(UI)",
+      "type": "primal",
+      "capabilities": [
+        "visualization",
+        "multi_modal"
+      ],
+      "socket": "/run/user/1000/petaltongue-*.sock"
+    },
+    {
+      "id": "squirrel",
+      "label": "Squirrel\n(AI)",
+      "type": "primal",
+      "capabilities": [
+        "ai_coordination",
+        "mcp_server"
+      ],
+      "socket": "/run/user/1000/squirrel-*.sock"
+    },
+    {
+      "id": "jsonrpc",
+      "label": "JSON-RPC 2.0\n(Unix Sockets)",
+      "type": "transport",
+      "performance": "100x faster than HTTP",
+      "security": "File system permissions"
+    },
+    {
+      "id": "app",
+      "label": "Application\n(Needs Security)",
+      "type": "client",
+      "query": "Find encryption provider"
+    }
+  ],
+  "edges": [
+    {
+      "source": "nucleus",
+      "target": "songbird",
+      "label": "Uses"
+    },
+    {
+      "source": "nucleus",
+      "target": "capability_taxonomy",
+      "label": "Queries"
+    },
+    {
+      "source": "nucleus",
+      "target": "discover_by_capability",
+      "label": "Calls"
+    },
+    {
+      "source": "beardog",
+      "target": "songbird",
+      "label": "Registers",
+      "style": "dashed"
+    },
+    {
+      "source": "petaltongue",
+      "target": "songbird",
+      "label": "Registers",
+      "style": "dashed"
+    },
+    {
+      "source": "squirrel",
+      "target": "songbird",
+      "label": "Registers",
+      "style": "dashed"
+    },
+    {
+      "source": "discover_by_capability",
+      "target": "jsonrpc",
+      "label": "Via"
+    },
+    {
+      "source": "jsonrpc",
+      "target": "beardog",
+      "label": "Connects"
+    },
+    {
+      "source": "jsonrpc",
+      "target": "petaltongue",
+      "label": "Connects"
+    },
+    {
+      "source": "jsonrpc",
+      "target": "squirrel",
+      "label": "Connects"
+    },
+    {
+      "source": "app",
+      "target": "nucleus",
+      "label": "Query"
+    },
+    {
+      "source": "nucleus",
+      "target": "beardog",
+      "label": "Returns",
+      "style": "bold"
+    }
+  ]
+}

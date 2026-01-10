@@ -1,0 +1,127 @@
+{
+  "title": "Live USB Spore - Deployment Lifecycle",
+  "nodes": [
+    {
+      "id": "parent_spore",
+      "label": "Parent Spore\n(Desktop)",
+      "type": "spore",
+      "status": "live",
+      "metadata": {
+        "node_id": "tower1",
+        "family_seed": "abc123...",
+        "location": "/dev/sda"
+      }
+    },
+    {
+      "id": "clone_sibling",
+      "label": "Clone Sibling\n(USB Creation)",
+      "type": "process",
+      "operation": "clone_sibling()"
+    },
+    {
+      "id": "usb_spore",
+      "label": "USB Spore\n(Cold/Live)",
+      "type": "spore",
+      "status": "cold",
+      "metadata": {
+        "node_id": "usb-portable",
+        "family_seed": "abc123... (SAME)",
+        "location": "/dev/sdb"
+      }
+    },
+    {
+      "id": "family_seed",
+      "label": ".family.seed\n(Shared Lineage)",
+      "type": "genetic",
+      "shared": true
+    },
+    {
+      "id": "fresh_pc",
+      "label": "Fresh PC\n(No OS)",
+      "type": "hardware",
+      "status": "empty"
+    },
+    {
+      "id": "boot",
+      "label": "Boot USB\n(Spore Awakens)",
+      "type": "process",
+      "operation": "awakening"
+    },
+    {
+      "id": "deployed",
+      "label": "biomeOS\n(Deployed)",
+      "type": "ecosystem",
+      "status": "live",
+      "primals": 7
+    },
+    {
+      "id": "encrypted_keys",
+      "label": "Encrypted Keys\n(BearDog)",
+      "type": "security",
+      "contents": [
+        "Claude API",
+        "SSH Keys",
+        "Credentials"
+      ]
+    },
+    {
+      "id": "agentic",
+      "label": "Agentic USB\n(End-to-End)",
+      "type": "capability",
+      "features": [
+        "AI-powered",
+        "Self-configuring",
+        "Autonomous"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "parent_spore",
+      "target": "clone_sibling",
+      "label": "Clone"
+    },
+    {
+      "source": "clone_sibling",
+      "target": "usb_spore",
+      "label": "Sibling Created"
+    },
+    {
+      "source": "parent_spore",
+      "target": "family_seed",
+      "label": "Shares",
+      "style": "dashed"
+    },
+    {
+      "source": "usb_spore",
+      "target": "family_seed",
+      "label": "Shares",
+      "style": "dashed"
+    },
+    {
+      "source": "usb_spore",
+      "target": "fresh_pc",
+      "label": "Insert USB"
+    },
+    {
+      "source": "fresh_pc",
+      "target": "boot",
+      "label": "Power On"
+    },
+    {
+      "source": "boot",
+      "target": "deployed",
+      "label": "Awakening"
+    },
+    {
+      "source": "usb_spore",
+      "target": "encrypted_keys",
+      "label": "Contains"
+    },
+    {
+      "source": "deployed",
+      "target": "agentic",
+      "label": "Enables"
+    }
+  ]
+}

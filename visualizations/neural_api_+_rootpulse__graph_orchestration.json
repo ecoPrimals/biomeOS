@@ -1,0 +1,182 @@
+{
+  "title": "Neural API + RootPulse - Graph Orchestration",
+  "nodes": [
+    {
+      "id": "rootpulse",
+      "label": "RootPulse\n(Neural Coordinator)",
+      "type": "coordinator",
+      "status": "phase_3",
+      "intelligence": "Graph-based routing"
+    },
+    {
+      "id": "neural_api",
+      "label": "Neural API\n(Intent Interface)",
+      "type": "api",
+      "capabilities": [
+        "Intent parsing",
+        "Graph optimization",
+        "Workflow coordination"
+      ]
+    },
+    {
+      "id": "user_intent",
+      "label": "User Intent\n('Secure my data')",
+      "type": "intent",
+      "input": "Natural language or structured"
+    },
+    {
+      "id": "graph_planner",
+      "label": "Graph Planner\n(Optimize Route)",
+      "type": "planner",
+      "algorithm": "Cost-based optimization"
+    },
+    {
+      "id": "songbird_discover",
+      "label": "Songbird\n(Discover)",
+      "type": "primal",
+      "step": 1,
+      "action": "Find available storage"
+    },
+    {
+      "id": "beardog_encrypt",
+      "label": "BearDog\n(Encrypt)",
+      "type": "primal",
+      "step": 2,
+      "action": "Generate keys & encrypt"
+    },
+    {
+      "id": "nestgate_store",
+      "label": "NestGate\n(Store)",
+      "type": "primal",
+      "step": 3,
+      "action": "Persist encrypted data"
+    },
+    {
+      "id": "petaltongue_visualize",
+      "label": "petalTongue\n(Visualize)",
+      "type": "primal",
+      "step": 4,
+      "action": "Show security status"
+    },
+    {
+      "id": "squirrel_monitor",
+      "label": "Squirrel\n(Monitor)",
+      "type": "primal",
+      "step": 5,
+      "action": "AI-powered insights"
+    },
+    {
+      "id": "execution_graph",
+      "label": "Execution Graph\n(DAG)",
+      "type": "graph",
+      "nodes": 5,
+      "edges": 6,
+      "optimized": true
+    },
+    {
+      "id": "result",
+      "label": "Result\n(Encrypted & Monitored)",
+      "type": "output",
+      "status": "Success",
+      "time_ms": 234
+    },
+    {
+      "id": "vcs_capability",
+      "label": "VCS Capability\n(Future)",
+      "type": "capability",
+      "phase": "Phase 3",
+      "providers": [
+        "git",
+        "mercurial",
+        "fossil"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "source": "user_intent",
+      "target": "neural_api",
+      "label": "Submit"
+    },
+    {
+      "source": "neural_api",
+      "target": "rootpulse",
+      "label": "Parse"
+    },
+    {
+      "source": "rootpulse",
+      "target": "graph_planner",
+      "label": "Plan"
+    },
+    {
+      "source": "graph_planner",
+      "target": "execution_graph",
+      "label": "Build DAG"
+    },
+    {
+      "source": "execution_graph",
+      "target": "songbird_discover",
+      "label": "Step 1"
+    },
+    {
+      "source": "execution_graph",
+      "target": "beardog_encrypt",
+      "label": "Step 2"
+    },
+    {
+      "source": "execution_graph",
+      "target": "nestgate_store",
+      "label": "Step 3"
+    },
+    {
+      "source": "execution_graph",
+      "target": "petaltongue_visualize",
+      "label": "Step 4"
+    },
+    {
+      "source": "execution_graph",
+      "target": "squirrel_monitor",
+      "label": "Step 5"
+    },
+    {
+      "source": "songbird_discover",
+      "target": "beardog_encrypt",
+      "label": "Then",
+      "style": "dashed"
+    },
+    {
+      "source": "beardog_encrypt",
+      "target": "nestgate_store",
+      "label": "Then",
+      "style": "dashed"
+    },
+    {
+      "source": "nestgate_store",
+      "target": "petaltongue_visualize",
+      "label": "Then",
+      "style": "dashed"
+    },
+    {
+      "source": "nestgate_store",
+      "target": "squirrel_monitor",
+      "label": "Then",
+      "style": "dashed"
+    },
+    {
+      "source": "petaltongue_visualize",
+      "target": "result",
+      "label": "Contributes"
+    },
+    {
+      "source": "squirrel_monitor",
+      "target": "result",
+      "label": "Contributes"
+    },
+    {
+      "source": "rootpulse",
+      "target": "vcs_capability",
+      "label": "Will Support",
+      "style": "dotted"
+    }
+  ]
+}
