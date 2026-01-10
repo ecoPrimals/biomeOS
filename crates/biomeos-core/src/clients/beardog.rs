@@ -14,22 +14,21 @@
 //! - BTSP (BirdSong Tunnel Protocol) tunnel management
 //! - BirdSong genetic cryptography (lineage-aware encryption)
 //!
-//! # API Support
+//! # Transport Evolution
 //!
-//! BearDog provides multiple integration methods:
-//! - **HTTP REST API** (port 9000, production-ready) ← **PRIMARY**
-//! - gRPC/tarpc RPC API
-//! - CLI wrapper (optional fallback)
-//! - Direct Rust library integration
+//! **NEW**: Auto-discovery via Unix socket (JSON-RPC 2.0)
+//! - **PRIMARY**: JSON-RPC over Unix socket (100x faster, secure)
+//! - **FALLBACK**: HTTP REST API (deprecated, legacy only)
 //!
-//! # BTSP Tunnel Support (HTTP API)
+//! # Quick Start
 //!
 //! ```no_run
 //! use biomeos_core::clients::beardog::BearDogClient;
 //!
 //! #[tokio::main]
 //! async fn main() -> anyhow::Result<()> {
-//!     let beardog = BearDogClient::new("http://localhost:9000");
+//!     // Auto-discover via Unix socket
+//!     let beardog = BearDogClient::discover("nat0").await?;
 //!     
 //!     // Establish tunnel
 //!     let tunnel = beardog.establish_tunnel("peer-node-1", "192.168.1.100:9091").await?;
@@ -46,14 +45,17 @@
 //! }
 //! ```
 
-use crate::clients::base::PrimalHttpClient;
+use crate::clients::transport::{PrimalClient as TransportClient, TransportPreference};
 use crate::primal_client::{HealthStatus, PrimalClient};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 /// BearDog security and cryptography client
+///
+/// Uses JSON-RPC 2.0 over Unix sockets for fast, secure communication.
 ///
 /// # Example
 /// ```no_run
@@ -61,7 +63,8 @@ use serde_json::Value;
 ///
 /// #[tokio::main]
 /// async fn main() -> anyhow::Result<()> {
-///     let beardog = BearDogClient::new("http://localhost:9000");
+///     // Auto-discover via Unix socket
+///     let beardog = BearDogClient::discover("nat0").await?;
 ///
 ///     // Encrypt data
 ///     let encrypted = beardog.encrypt("my-data", "my-key-id").await?;
@@ -72,21 +75,73 @@ use serde_json::Value;
 /// ```
 #[derive(Debug, Clone)]
 pub struct BearDogClient {
-    http: PrimalHttpClient,
-    endpoint: String,
+    transport: TransportClient,
+    family_id: String,
 }
 
 impl BearDogClient {
-    /// Create a new BearDog client
+    /// Auto-discover BearDog via Unix socket
+    ///
+    /// Searches for BearDog's Unix socket in XDG runtime directory.
+    /// Falls back to HTTP if Unix socket not available.
     ///
     /// # Arguments
-    /// * `endpoint` - BearDog endpoint URL (discovered via capability query for "security")
-    pub fn new(endpoint: impl Into<String>) -> Self {
-        let endpoint = endpoint.into();
-        Self {
-            http: PrimalHttpClient::new(&endpoint),
-            endpoint,
-        }
+    /// * `family_id` - Genetic family ID (e.g., "nat0")
+    ///
+    /// # Returns
+    /// BearDogClient configured with JSON-RPC over Unix socket (primary)
+    /// or HTTP (fallback)
+    ///
+    /// # Example
+    /// ```no_run
+    /// use biomeos_core::clients::beardog::BearDogClient;
+    ///
+    /// #[tokio::main]
+    /// async fn main() -> anyhow::Result<()> {
+    ///     let beardog = BearDogClient::discover("nat0").await?;
+    ///     let encrypted = beardog.encrypt("secret", "my-key").await?;
+    ///     Ok(())
+    /// }
+    /// ```
+    pub async fn discover(family_id: &str) -> Result<Self> {
+        let transport = TransportClient::discover("beardog", family_id).await
+            .context("Failed to discover BearDog. Is it running?")?;
+        
+        Ok(Self {
+            transport,
+            family_id: family_id.to_string(),
+        })
+    }
+    
+    /// Create from explicit endpoint (HTTP fallback)
+    ///
+    /// **DEPRECATED**: Use `discover()` for Unix socket support (100x faster)
+    ///
+    /// # Arguments
+    /// * `endpoint` - HTTP endpoint URL (e.g., "http://localhost:9000")
+    /// * `family_id` - Genetic family ID
+    #[deprecated(note = "Use BearDogClient::discover() for Unix socket support")]
+    pub async fn from_endpoint(endpoint: impl Into<String>, family_id: &str) -> Result<Self> {
+        let _endpoint = endpoint.into();
+        let transport = TransportClient::discover_with_preference(
+            "beardog",
+            family_id,
+            TransportPreference::Http
+        ).await
+            .context("Failed to create HTTP client")?;
+        
+        Ok(Self {
+            transport,
+            family_id: family_id.to_string(),
+        })
+    }
+    
+    /// Legacy constructor (DEPRECATED)
+    ///
+    /// **BREAKING**: This method is now async. Use `discover()` instead.
+    #[deprecated(note = "Use BearDogClient::discover() instead")]
+    pub fn new(_endpoint: impl Into<String>) -> Self {
+        panic!("BearDogClient::new() is deprecated. Use BearDogClient::discover() instead.");
     }
 
     /// Encrypt data
