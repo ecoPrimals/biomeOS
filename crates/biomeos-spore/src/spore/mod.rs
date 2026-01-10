@@ -71,4 +71,3 @@ pub mod types;
 // Re-export main types
 pub use core::Spore;
 pub use types::SporeConfig;
-

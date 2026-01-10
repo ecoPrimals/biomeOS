@@ -23,3 +23,4 @@ pub struct SporeConfig {
     pub spore_type: SporeType,
 }
 
+

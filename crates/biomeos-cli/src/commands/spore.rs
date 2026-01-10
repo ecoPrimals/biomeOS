@@ -66,14 +66,8 @@ pub async fn handle_spore_clone(
     let source = Spore::from_path(from)?;
     println!("   Source label: {}", source.config().label);
 
-    // Clone to create sibling
-    let new_config = SporeConfig {
-        label: format!("biomeOS-{}", node_id),
-        node_id: node_id.clone(),
-        spore_type: SporeType::default(), // Inherit from parent in clone_sibling
-    };
-
-    let sibling = source.clone_sibling(to, new_config).await?;
+    // Clone to create sibling (same family, different node_id)
+    let sibling = source.clone_sibling(to, &node_id).await?;
 
     println!("\n✅ Sibling spore created!");
     println!("   Location: {}", sibling.root_path().display());
