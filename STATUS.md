@@ -1,21 +1,31 @@
 # 📊 biomeOS Status - January 10, 2026
 
 **Current Phase**: Phase 2 - Core Evolution  
-**Wave**: Wave 1 (Capability-Based Discovery)  
-**Progress**: 50% complete (1.5/3 Quick Wins)  
-**Status**: ✅ Ahead of schedule
+**Wave**: Wave 1 ✅ Complete | Wave 2 ⏳ Ready  
+**Priority**: Transport Evolution (HTTP → tarpc/JSON-RPC)  
+**Status**: ✅ Wave 1 Complete (ahead of schedule!)
 
 ---
 
-## 🎯 **Current Focus: Phase 2 Wave 1**
+## 🎯 **Current Focus: Phase 2 Wave 2**
 
-### **Quick Wins Progress**
+### **Wave 1: Capability-Based Discovery** ✅ **COMPLETE**
 
-| Task | Status | Time | Details |
-|------|--------|------|---------|
-| Quick Win #1: CapabilityTaxonomy in NUCLEUS | ✅ COMPLETE | 25 min | All tests passing |
-| Quick Win #2: SystemPaths for socket discovery | 🔄 50% | 35 min | 2 files remaining |
-| Quick Win #3: PrimalRegistry evolution | ⏳ PENDING | Est. 1h | Scheduled next |
+| Task | Status | Time | Result |
+|------|--------|------|--------|
+| Quick Win #1: CapabilityTaxonomy in NUCLEUS | ✅ COMPLETE | 25 min | Type-safe capabilities |
+| Quick Win #2: SystemPaths in capability_registry | ✅ COMPLETE | 15 min | XDG-compliant paths |
+| Quick Win #3: PrimalRegistry capability methods | ✅ COMPLETE | 50 min | 6 tests passing |
+
+**Total Time**: 1.5 hours (18% ahead of schedule!)
+
+### **Wave 2: Transport Evolution** ⏳ **READY**
+
+**Priority**: Fix insecure HTTP architecture
+- 116 HTTP references across 10 files
+- Target: JSON-RPC over Unix sockets (primary)
+- HTTP becomes fallback only (deprecated)
+- Timeline: 4-5 weeks
 
 ---
 
@@ -23,13 +33,14 @@
 
 ### **Deep Debt Evolution**
 
-| Metric | Start | Phase 1 | Current | Target | Progress |
-|--------|-------|---------|---------|---------|----------|
+| Metric | Start | Phase 1 | Wave 1 | Target | Progress |
+|--------|-------|---------|--------|--------|----------|
 | **Hardcoded Primal Names** | 120 | 120 | ~115 | <20 | 4% ↓ |
-| **Hardcoded Paths** | 183 | 183 | ~178 | <30 | 3% ↓ |
+| **Hardcoded Paths** | 183 | 183 | 177 | <30 | 3% ↓ |
+| **HTTP References** | 116 | 116 | 116 | 0 | ⏳ Wave 2 |
 | **Unsafe Blocks** | Unknown | 0 | 0 | 0 | ✅ 100% |
 | **Mock Isolation** | Unknown | 100% | 100% | 100% | ✅ 100% |
-| **Large Files (>500 lines)** | 20 | 20 | 20 | 0 | 0% |
+| **Transport Abstraction** | ❌ | ❌ | ❌ | ✅ | ⏳ Wave 2 |
 
 ### **Foundation (Phase 1)**
 
@@ -71,31 +82,36 @@
 
 ## 🎯 **Next Steps**
 
-### **Immediate (Next Session)**
-1. ✅ Finish Quick Win #2 (15-20 min)
-   - Update `capability_registry.rs`
-   - Clean up test mocks
+### **Immediate: Wave 2A - Transport Abstraction** (Week 1)
+1. Create transport module structure
+   - `crates/biomeos-core/src/clients/transport/mod.rs`
+   - `transport/jsonrpc.rs` (JSON-RPC over Unix socket)
+   - `transport/http.rs` (legacy fallback)
+   - `transport/tarpc.rs` (stub for future)
 
-2. ⏳ Quick Win #3 (1 hour)
-   - Add capability-based methods to PrimalRegistry
-   - Update callers
+2. Implement JSON-RPC over Unix socket
+   - Primary transport mechanism
+   - Secure, fast, isomorphic
+   
+3. Create PrimalClient abstraction
+   - Protocol-agnostic
+   - Auto-discover best transport
+   - Capability-based
 
-3. 📊 Complete Wave 1 (30 min)
-   - Final testing
-   - Documentation update
-   - Commit & push
+### **Short-Term: Wave 2B - Client Migration** (Weeks 2-3)
+- Migrate all 10 client files to use PrimalClient
+- Deprecate HTTP as fallback only
+- Update tests
 
-### **Wave 2: Planned**
-- Evolve nucleus_executor.rs to use CapabilityTaxonomy
-- Smart refactor biomeos-core/clients/beardog.rs (895 lines)
-- Modular structure: identity, security, federation, trust
-- **Estimated Time**: 4-5 hours
+### **Medium-Term: Wave 2C - Testing** (Week 4)
+- E2E tests with Unix sockets
+- Performance benchmarks
+- Security validation
 
-### **Wave 3: Planned**
-- Smart refactor biomeos-spore/spore.rs (807 lines)
-- Path-agnostic deployment with SystemPaths
-- Capability-based primal discovery
-- **Estimated Time**: 4-5 hours
+### **Long-Term: Phase 3 - Neural API Maturation** (3-4 months)
+- Production hardening
+- Advanced coordination patterns
+- RootPulse preparation
 
 ---
 

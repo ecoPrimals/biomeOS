@@ -1,37 +1,48 @@
 # 🎯 START HERE - biomeOS Phase 2
 
 **Last Updated**: January 10, 2026  
-**Current Phase**: Phase 2 - Core Evolution (Wave 1 in progress)  
-**Status**: ✅ Excellent progress - 1.5/3 Quick Wins complete
+**Current Phase**: Phase 2 - Core Evolution (Wave 1 complete, Wave 2 ready)  
+**Status**: ✅ Wave 1 Complete! Ready for Wave 2 Transport Evolution
 
 ---
 
 ## 📊 **Quick Status**
 
 ### **Phase 1: Foundation** ✅ **COMPLETE**
-- Capability Taxonomy (489 lines, 5 tests)
-- SystemPaths for XDG (354 lines, 6 tests)
+- Capability Taxonomy (50+ capabilities, 8 categories)
+- SystemPaths for XDG compliance
 - Zero unsafe code verified
 - Mock isolation confirmed
 
-### **Phase 2: Core Evolution** 🔄 **IN PROGRESS**
-- **Wave 1**: Capability-based discovery (50% complete)
-  - Quick Win #1: ✅ COMPLETE (CapabilityTaxonomy + SystemPaths in NUCLEUS)
-  - Quick Win #2: 🔄 50% COMPLETE (SystemPaths in graph_deployment)
-  - Quick Win #3: ⏳ PENDING (PrimalRegistry evolution)
+### **Phase 2 Wave 1: Capability-Based Discovery** ✅ **COMPLETE**
+- Quick Win #1: ✅ CapabilityTaxonomy in NUCLEUS
+- Quick Win #2: ✅ SystemPaths in capability_registry.rs
+- Quick Win #3: ✅ Capability-based PrimalRegistry methods
+- **Result**: 6 new tests passing, 3% path reduction
+
+### **Phase 2 Wave 2: Transport Evolution** ⏳ **READY TO START**
+- **Priority**: HTTP → tarpc/JSON-RPC migration
+- **Issue**: 116 HTTP references (insecure, non-isomorphic)
+- **Target**: JSON-RPC over Unix sockets (primary)
+- **Timeline**: 4-5 weeks
 
 ---
 
 ## 📁 **Key Documents**
 
-### **Current Work** (Start here!)
-1. **[PHASE2_EXECUTION_PLAN.md](PHASE2_EXECUTION_PLAN.md)** - Detailed Wave 1-4 strategy
-2. **[WAVE1_PROGRESS.md](WAVE1_PROGRESS.md)** - Real-time progress tracking
-3. **[PHASE1_COMPLETE.md](PHASE1_COMPLETE.md)** - Foundation achievements
+### **Strategic Planning** ⭐ (Start here!)
+1. **[REFINED_ROADMAP.md](REFINED_ROADMAP.md)** - Complete Phase 2 → 5 strategy
+2. **[docs/NEURAL_API_ROOTPULSE_EVOLUTION.md](docs/NEURAL_API_ROOTPULSE_EVOLUTION.md)** - RootPulse integration
+3. **[STRATEGIC_SUMMARY_JAN10.md](STRATEGIC_SUMMARY_JAN10.md)** - Key insights & vision
 
-### **Session Summaries**
-- **[SESSION_FINAL_JAN10.md](SESSION_FINAL_JAN10.md)** - Latest session complete summary
-- **[SESSION_SUMMARY_JAN10.md](SESSION_SUMMARY_JAN10.md)** - Earlier session notes
+### **Wave 1 Complete** ✅
+1. **[WAVE1_COMPLETE.md](WAVE1_COMPLETE.md)** - Full Wave 1 report
+2. **[PHASE1_COMPLETE.md](PHASE1_COMPLETE.md)** - Foundation achievements
+3. **[SESSION_FINAL_COMPLETE_JAN10.md](SESSION_FINAL_COMPLETE_JAN10.md)** - Session stats
+
+### **Wave 2 Planning** 🚀
+1. **[WAVE2_TRANSPORT_EVOLUTION.md](WAVE2_TRANSPORT_EVOLUTION.md)** - ⭐ PRIORITY!
+2. **[WAVE2_BEARDOG_PLAN.md](WAVE2_BEARDOG_PLAN.md)** - Refactoring plan
 
 ### **Deep Debt Evolution**
 - **[DEEP_DEBT_EVOLUTION_PLAN.md](DEEP_DEBT_EVOLUTION_PLAN.md)** - Master evolution plan (520 lines)
@@ -55,25 +66,26 @@
 
 ## 🚀 **Quick Start for Next Session**
 
-### **1. Review Current Progress**
+### **1. Review Strategic Vision**
 ```bash
-# Check Wave 1 progress
-cat WAVE1_PROGRESS.md
+# Understand the big picture
+cat REFINED_ROADMAP.md
 
-# Review execution plan
-cat PHASE2_EXECUTION_PLAN.md
+# See RootPulse evolution path
+cat docs/NEURAL_API_ROOTPULSE_EVOLUTION.md
+
+# Review Wave 1 achievements
+cat WAVE1_COMPLETE.md
 ```
 
-### **2. Continue Wave 1 Work**
+### **2. Start Wave 2A: Transport Evolution**
 
-**Next Task**: Finish Quick Win #2 (15-20 min remaining)
-- File: `crates/biomeos-core/src/capability_registry.rs`
-- Line 170: Update `/tmp/biomeos-registry-{}.sock` to use SystemPaths
-- Test files: Optional cleanup
+**Priority Task**: Create transport abstraction (Week 1)
+- Create `crates/biomeos-core/src/clients/transport/` module
+- Implement JSON-RPC over Unix socket
+- Create protocol-agnostic PrimalClient
 
-**Then**: Quick Win #3 (1 hour)
-- Add capability-based methods to `PrimalRegistry`
-- Use `CapabilityTaxonomy` for discovery
+**See**: `WAVE2_TRANSPORT_EVOLUTION.md` for detailed plan
 
 ### **3. Build & Test**
 ```bash
@@ -89,14 +101,14 @@ cargo test -p biomeos-types
 
 ## 📊 **Current Metrics**
 
-| Metric | Before | After Phase 1 | Current (Wave 1) |
-|--------|--------|---------------|------------------|
-| Hardcoded Primal Names | 120 | 120 | ~115 |
-| Hardcoded Paths | 183 | 183 | ~178 |
-| Unsafe Blocks | Unknown | 0 ✅ | 0 ✅ |
-| Mock Isolation | Unknown | 100% ✅ | 100% ✅ |
-| Capability Taxonomy | None | 50+ ✅ | 50+ ✅ |
-| SystemPaths | None | Complete ✅ | Complete ✅ |
+| Metric | Start | After Phase 1 | After Wave 1 | Target |
+|--------|-------|---------------|--------------|--------|
+| Hardcoded Primal Names | 120 | 120 | ~115 | <20 |
+| Hardcoded Paths | 183 | 183 | 177 | <30 |
+| HTTP References | 116 | 116 | 116 | 0 |
+| Unsafe Blocks | Unknown | 0 ✅ | 0 ✅ | 0 |
+| Capability Taxonomy | None | 50+ ✅ | 50+ ✅ | Extended |
+| Transport Abstraction | None | None | None | Complete |
 
 ---
 
