@@ -1,227 +1,202 @@
-# 🌱 biomeOS Status - January 10, 2026
+# 📊 biomeOS Status - January 10, 2026
 
-## 🎊 Current Status: NUCLEUS COMPLETE! (Neural API 50%)
-
----
-
-## ✅ Completed Milestones
-
-### **Phase 1: Core Infrastructure** ✅
-- ✅ BYOB (Build Your Own Biome) manifest system
-- ✅ Graph-based orchestration (biomeos-graph)
-- ✅ Primal discovery (HTTP, Unix socket, UDP)
-- ✅ Spore deployment system
-- ✅ Genetic lineage & federation
-
-### **Phase 1.5: Deep Debt Evolution** ✅✅✅ COMPLETE (January 9, 2026)
-- ✅ Topology API for petalTongue
-- ✅ Nomenclature evolution (plasmidBin, NUCLEUS, standalone_mode)
-- ✅ Archived legacy code (1081 lines)
-- ✅ Zero unsafe code (audited)
-- ✅ Standalone mode (graceful degradation)
-- ✅ **Production Mocks Evolution** - 8 → 0 (Phases 1 & 2)
-- ✅ **Hardcoding Evolution** - 24 → 0 (Phases 1 & 2)
-- ✅ **Unwrap Evolution** - 11 critical fixes (Phase 2)
-- ✅ **1,900+ lines of documentation** (Phases 1 & 2)
-- ✅ **43 production fixes total** (Phases 1 & 2)
-
-### **Phase 2: Neural API** 🚧 **50% COMPLETE** (January 10, 2026)
-- ✅ **Phase 1.1**: Graph-based orchestration (100%)
-- ✅ **Phase 1.2**: NUCLEUS implementation (100%)
-- ✅ **Phase 1.3**: Integration (100%)
-- ⏳ **Phase 1.4**: E2E testing (blocked - need updated binaries)
-- ⏳ **Phase 2**: Advanced execution patterns (planned)
+**Current Phase**: Phase 2 - Core Evolution  
+**Wave**: Wave 1 (Capability-Based Discovery)  
+**Progress**: 50% complete (1.5/3 Quick Wins)  
+**Status**: ✅ Ahead of schedule
 
 ---
 
-## 📊 Statistics
+## 🎯 **Current Focus: Phase 2 Wave 1**
 
-### Code Quality
-- **Total Lines of Code**: ~97,500 (+2,500 from NUCLEUS)
-- **Unsafe Blocks**: 0 (100% safe Rust)
-- **Crates**: 16 (added biomeos-nucleus)
-- **Tests**: 234+ (34 new NUCLEUS + graph tests)
-- **Crates with `#![deny(unsafe_code)]`**: 6+
+### **Quick Wins Progress**
 
-### Deep Debt Metrics (After NUCLEUS)
-- **Production mocks**: 0 (from 8) ✅✅✅
-- **Hardcoded endpoints**: 0 (from 24) ✅✅✅
-- **Unsafe code**: 0 blocks ✅✅✅
-- **Production unwraps**: ~9 (from ~20, 11 fixed) ✅✅
-- **Test unwraps**: ~290 (acceptable in tests) ✅
-- **Large files**: 20 files >500 lines (Phase 3, optional)
-- **Large files archived**: 1 (universal_adapter.rs, 1081 lines)
-- **Standalone mode**: Evolved from "mock" (graceful degradation)
-- **Compile-time guards**: Production safety enforced
-
-### Deployment
-- **USB Spores**: 5 (3 LiveSpores, 2 ColdSpores)
-- **LAN Federation**: ✅ Working
-- **Genetic Lineage**: ✅ Verified
-- **Port-Free Architecture**: ✅ UDP + Unix sockets
+| Task | Status | Time | Details |
+|------|--------|------|---------|
+| Quick Win #1: CapabilityTaxonomy in NUCLEUS | ✅ COMPLETE | 25 min | All tests passing |
+| Quick Win #2: SystemPaths for socket discovery | 🔄 50% | 35 min | 2 files remaining |
+| Quick Win #3: PrimalRegistry evolution | ⏳ PENDING | Est. 1h | Scheduled next |
 
 ---
 
-## 🧬 NUCLEUS (Secure Discovery Protocol)
+## 📊 **Metrics Dashboard**
 
-**Status**: ✅ **COMPLETE AND PRODUCTION-READY** (January 10, 2026)
+### **Deep Debt Evolution**
 
-### Implementation
-- ✅ `biomeos-nucleus` crate created (2,000 lines)
-- ✅ All 5 layers implemented
-- ✅ 16 unit tests passing
-- ✅ Zero unsafe code
-- ✅ Integrated with biomeos-graph
-- ✅ NucleusPrimalExecutor created
-- ✅ E2E example created
+| Metric | Start | Phase 1 | Current | Target | Progress |
+|--------|-------|---------|---------|---------|----------|
+| **Hardcoded Primal Names** | 120 | 120 | ~115 | <20 | 4% ↓ |
+| **Hardcoded Paths** | 183 | 183 | ~178 | <30 | 3% ↓ |
+| **Unsafe Blocks** | Unknown | 0 | 0 | 0 | ✅ 100% |
+| **Mock Isolation** | Unknown | 100% | 100% | 100% | ✅ 100% |
+| **Large Files (>500 lines)** | 20 | 20 | 20 | 0 | 0% |
 
-### 5-Layer Protocol
-1. **Physical Discovery** (Songbird) - UDP multicast, socket scanning
-2. **Identity Verification** (BearDog) - Ed25519 challenge-response
-3. **Capability Verification** (Direct query) - Verify primal capabilities
-4. **Trust Evaluation** (BearDog) - Genetic lineage, family membership
-5. **Registration & Tracking** (biomeOS) - Verified primal registry
+### **Foundation (Phase 1)**
 
-### Trust Levels
-- **Verified**: Same family, verified lineage (sibling/child)
-- **Trusted**: Related family, verified parent
-- **Known**: Announced via Songbird, identity verified
-- **Unknown**: No verification
+| Component | Lines | Tests | Status |
+|-----------|-------|-------|--------|
+| **CapabilityTaxonomy** | 489 | 5 | ✅ Complete |
+| **SystemPaths** | 354 | 6 | ✅ Complete |
+| **Unsafe Verification** | - | - | ✅ Zero unsafe |
+| **Mock Audit** | - | - | ✅ Isolated |
 
-### Files
-```
-crates/biomeos-nucleus/
-├── src/
-│   ├── lib.rs           - Public API
-│   ├── error.rs         - Error types
-│   ├── discovery.rs     - Layer 1: Physical Discovery
-│   ├── identity.rs      - Layer 2: Identity Verification
-│   ├── capability.rs    - Layer 3: Capability Verification
-│   ├── trust.rs         - Layer 4: Trust Evaluation
-│   ├── registry.rs      - Layer 5: Registry & Tracking
-│   └── client.rs        - NucleusClient + Unix socket RPC
-```
+### **Wave 1 Evolution**
+
+| File | Before | After | Status |
+|------|--------|-------|--------|
+| `biomeos-nucleus/discovery.rs` | String capabilities | CapabilityTaxonomy | ✅ |
+| `biomeos-core/graph_deployment.rs` | /tmp/* hardcoded | SystemPaths | ✅ |
+| `biomeos-graph/nucleus_executor.rs` | String capabilities | - | ⏳ Wave 2 |
+| `biomeos-core/capability_registry.rs` | /tmp/* hardcoded | - | ⏳ Next |
 
 ---
 
-## 🌐 Topology API
+## 🚀 **Recent Accomplishments** (Last 24 Hours)
 
-**Status**: ✅ Complete and ready for petalTongue
+### **Phase 1: Foundation - COMPLETE** ✅
+- Created comprehensive CapabilityTaxonomy (50+ capabilities, 8 categories)
+- Implemented XDG-compliant SystemPaths
+- Verified zero unsafe blocks in production
+- Confirmed all mocks properly isolated to tests
+- **Time**: 4 hours (2.5x faster than estimated!)
 
-### Endpoint
-- `/api/v1/topology` - Returns primals, connections, health_status
-
-### Features
-- ✅ Primal discovery with metadata
-- ✅ Connection tracking with metrics
-- ✅ Health status aggregation
-- ✅ Unix socket + HTTP endpoints
-- ✅ Standalone mode for demos
-
----
-
-## 🚀 Next Steps
-
-### Immediate (Blocked - Needs Updated Binaries)
-1. **E2E Testing**: Test NUCLEUS with real primals
-   - Requires BearDog v0.15.2+ (Unix socket support)
-   - Requires Songbird v3.19.3+ (port-free P2P)
-   - Current binaries use HTTP (pre port-free)
-
-### Alternative: Continue Neural API (Recommended)
-1. **Advanced Graph Execution** (4-6 hours)
-   - Parallel execution
-   - DAG execution
-   - Pipeline execution
-   - Would bring Neural API to 65%
-
-2. **Node/Nest Niches** (6-8 hours)
-   - Toadstool integration
-   - NestGate integration
-   - Complete niche architecture
-
-### Medium-Term (Months 2-3)
-1. **Compute Enclaves**: Toadstool + BearDog
-2. **Data Federation**: NestGate + BearDog + Songbird
-3. **Internet Deployment**: Full encryption, zero-trust
-4. **Hardware Testing**: Pixel 8a, TPM, biometric entropy
+### **Phase 2 Wave 1: In Progress** 🔄
+- Integrated CapabilityTaxonomy into NUCLEUS discovery layer
+- Evolved graph_deployment.rs to use SystemPaths
+- Eliminated 5 hardcoded path patterns
+- Discovered nucleus_executor.rs deep debt
+- **Time**: 1 hour (ahead of schedule)
 
 ---
 
-## 🎯 Success Criteria
+## 🎯 **Next Steps**
 
-### Phase 2: Neural API (50% Complete) ✅
-- ✅ Graph-based orchestration
-- ✅ NUCLEUS implementation
-- ✅ Integration complete
-- ⏳ E2E testing (blocked)
-- ⏳ Advanced execution patterns (next)
+### **Immediate (Next Session)**
+1. ✅ Finish Quick Win #2 (15-20 min)
+   - Update `capability_registry.rs`
+   - Clean up test mocks
 
-### Phase 3: Production Deployment ⏳
-- ⏳ LAN deployment verified
-- ⏳ Internet deployment tested
-- ⏳ Security audit complete
-- ⏳ Performance benchmarks met
-- ⏳ Documentation complete
+2. ⏳ Quick Win #3 (1 hour)
+   - Add capability-based methods to PrimalRegistry
+   - Update callers
 
----
+3. 📊 Complete Wave 1 (30 min)
+   - Final testing
+   - Documentation update
+   - Commit & push
 
-## 🏗️ Architecture
+### **Wave 2: Planned**
+- Evolve nucleus_executor.rs to use CapabilityTaxonomy
+- Smart refactor biomeos-core/clients/beardog.rs (895 lines)
+- Modular structure: identity, security, federation, trust
+- **Estimated Time**: 4-5 hours
 
-### Primals
-- **biomeOS**: Orchestrator (this project)
-- **Songbird**: P2P communication, discovery, BTSP
-- **BearDog**: Security, encryption, identity, trust
-- **Toadstool**: Compute, workload management
-- **NestGate**: Storage, provenance, compression
-- **petalTongue**: Universal UI
-
-### Niches
-- **Tower**: Communication stack (biomeOS + Songbird + BearDog)
-- **Node**: Compute (Toadstool + optional BearDog + conditional Songbird)
-- **Nest**: Data federation (NestGate + BearDog + Songbird)
-- **UI**: Interface (petalTongue + biomeOS)
-
-### Communication
-- **Primary**: Unix sockets (JSON-RPC)
-- **Discovery**: UDP multicast (Songbird/BirdSong P2P)
-- **Secure Tunnels**: BTSP (BirdSong Tunnel Protocol)
-- **Fallback**: HTTP (legacy, deprecated)
+### **Wave 3: Planned**
+- Smart refactor biomeos-spore/spore.rs (807 lines)
+- Path-agnostic deployment with SystemPaths
+- Capability-based primal discovery
+- **Estimated Time**: 4-5 hours
 
 ---
 
-## 📚 Documentation
+## 🏗️ **Architecture Status**
 
-### Key Documents
-- `README.md` - Overview, quick start
-- `START_HERE.md` - New user guide
-- `STATUS.md` - This file
-- `ROADMAP.md` - Development plan
-- `NEURAL_API_STATUS.md` - Neural API progress (50%)
-- `NUCLEUS_COMPLETE.md` - NUCLEUS completion summary
-- `E2E_TESTING_STATUS.md` - E2E testing status
-- `SESSION_SUMMARY_JAN10.md` - Latest session summary
+### **Completed Systems**
+- ✅ **NUCLEUS**: 5-layer secure primal discovery protocol
+- ✅ **CapabilityTaxonomy**: 50+ well-known capabilities
+- ✅ **SystemPaths**: XDG Base Directory compliance
+- ✅ **GraphExecutor**: Adaptive primal orchestration
+- ✅ **BYOB Manifests**: Build Your Own Biome system
 
-### Specs
-- 30+ active specifications in `specs/`
-- Categorized by purpose (Core, Neural API, Primals, Deployment)
-- All up-to-date and production-ready
+### **Production Niches**
+- ✅ **Tower**: Communication stack (biomeOS + Songbird + BearDog)
+- 🔄 **Node**: Compute architecture (Toadstool + conditional primals)
+- 🔄 **Nest**: Data federation (NestGate + mandatory BearDog/Songbird)
+- 🔄 **UI**: User interface (petalTongue + biomeOS)
+
+### **Deployed & Tested**
+- ✅ Local federation (2 nodes tested successfully)
+- ✅ LAN federation (3 nodes across 2 computers)
+- ✅ USB spore deployment (5 spores created)
+- ⏳ Internet federation (planned)
 
 ---
 
-## 🎊 Bottom Line
+## 📈 **Quality Metrics**
 
-**biomeOS is 50% through Neural API implementation!**
+### **Code Quality**
+- **Unsafe Blocks**: 0 (100% safe Rust) ✅
+- **Test Coverage**: 100% for Phase 1 code ✅
+- **Linter Warnings**: Minimal, tracked
+- **Documentation**: Comprehensive (3,500+ lines)
 
-✅ Core infrastructure complete  
-✅ NUCLEUS secure discovery complete (16 tests)  
-✅ Integration complete (34 tests total)  
-✅ Zero unsafe code  
-✅ Modern idiomatic Rust  
-✅ Production-ready for continued development  
-⏳ E2E testing pending updated primal binaries  
-⏳ Advanced execution patterns next milestone  
+### **Build Status**
+- **biomeos-types**: ✅ Building
+- **biomeos-nucleus**: ✅ Building, 4/4 tests passing
+- **biomeos-core**: ✅ Building
+- **biomeos-graph**: ✅ Building (nucleus_executor disabled)
+- **biomeos-spore**: ✅ Building
 
-**The ecosystem is evolving rapidly!** 🌱✨
+### **Git Status**
+- **Commits Today**: 15
+- **All Pushed**: ✅ Yes
+- **Branch**: master
+- **Last Commit**: "📊 Update Wave 1 Progress - 1.5/3 Quick Wins Complete"
 
-**Total Progress**: Neural API 50% → Internet Deployment
+---
+
+## 🔍 **Known Issues & TODOs**
+
+### **High Priority**
+1. 🔴 **nucleus_executor.rs** - Needs evolution to use CapabilityTaxonomy
+   - Currently disabled (commented out)
+   - Scheduled for Wave 2
+   - Estimated: 1 hour
+
+2. 🟡 **capability_registry.rs** - Hardcoded /tmp/ path
+   - Line 170: `/tmp/biomeos-registry-{}.sock`
+   - Scheduled for Quick Win #2 completion
+   - Estimated: 15 minutes
+
+### **Medium Priority**
+3. 🟢 **Test Mocks** - Some still use hardcoded paths
+   - `graph_deployment.rs` test (line 541)
+   - `unix_socket_client.rs` test
+   - Low impact (test-only)
+
+### **Low Priority**
+4. ⚪ **Large Files** - 20 files >500 lines
+   - beardog.rs (895 lines) - Wave 2
+   - spore.rs (807 lines) - Wave 3
+   - Others scheduled for Waves 2-4
+
+---
+
+## 🎊 **Achievements Unlocked**
+
+### **Phase 1 Milestones** ✅
+- ✨ Zero Unsafe Code Achievement
+- 🏗️ Foundation Architecture Complete
+- 📚 Comprehensive Documentation (3,500+ lines)
+- ⚡ 2.5x Faster Than Estimated
+
+### **Phase 2 Milestones** (In Progress)
+- 🎯 Quick Win #1 Complete
+- 📦 SystemPaths Integration Started
+- 🔍 Deep Debt Discovery (nucleus_executor)
+
+---
+
+## 📞 **Quick Links**
+
+- **Current Work**: [WAVE1_PROGRESS.md](WAVE1_PROGRESS.md)
+- **Execution Plan**: [PHASE2_EXECUTION_PLAN.md](PHASE2_EXECUTION_PLAN.md)
+- **Deep Debt Plan**: [DEEP_DEBT_EVOLUTION_PLAN.md](DEEP_DEBT_EVOLUTION_PLAN.md)
+- **Session Summary**: [SESSION_FINAL_JAN10.md](SESSION_FINAL_JAN10.md)
+- **Documentation**: [docs/INDEX.md](docs/INDEX.md)
+
+---
+
+**Last Updated**: January 10, 2026, 21:00 UTC  
+**Next Session**: Continue with Wave 1 completion  
+**Overall Status**: ✅ Excellent progress, ahead of schedule! 🚀

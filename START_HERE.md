@@ -1,279 +1,204 @@
-# 🌱 START HERE - biomeOS Quick Start
+# 🎯 START HERE - biomeOS Phase 2
 
-**Welcome to biomeOS!** This guide will get you up and running quickly.
-
----
-
-## 🎊 Current Status
-
-**NUCLEUS COMPLETE!** (January 10, 2026)
-
-✅ Core infrastructure  
-✅ NUCLEUS secure discovery (34 tests passing!)  
-✅ Neural API - 50% complete  
-✅ Topology API  
-✅ Zero unsafe code  
-✅ Deep Debt Evolution Complete (Phases 1 & 2)  
-✅ Zero production mocks  
-✅ Zero hardcoded endpoints  
-✅ LAN Federation working  
-
-🚧 **In Progress**: E2E testing with real primals  
+**Last Updated**: January 10, 2026  
+**Current Phase**: Phase 2 - Core Evolution (Wave 1 in progress)  
+**Status**: ✅ Excellent progress - 1.5/3 Quick Wins complete
 
 ---
 
-## 📚 Essential Documents
+## 📊 **Quick Status**
 
-### **New to biomeOS?**
-1. **[README.md](README.md)** - Overview, architecture, quick start
-2. **[STATUS.md](STATUS.md)** - Current status, statistics, next steps
-3. **[ROADMAP.md](ROADMAP.md)** - Phased implementation plan
+### **Phase 1: Foundation** ✅ **COMPLETE**
+- Capability Taxonomy (489 lines, 5 tests)
+- SystemPaths for XDG (354 lines, 6 tests)
+- Zero unsafe code verified
+- Mock isolation confirmed
 
-### **Deep Dive**
-- **[docs/DEEP_DEBT_FINAL_STATUS_JAN9.md](docs/DEEP_DEBT_FINAL_STATUS_JAN9.md)** - Production-ready status (600+ lines)
-- **[docs/DEEP_DEBT_EXECUTION_PLAN_JAN9.md](docs/DEEP_DEBT_EXECUTION_PLAN_JAN9.md)** - Complete analysis (430 lines)
-- **[specs/](specs/)** - 30+ technical specifications
-- **[SESSION_SUMMARY_JAN9_FINAL.md](SESSION_SUMMARY_JAN9_FINAL.md)** - Session summary
-
-### **Integration**
-- **[docs/PETALTONGUE_TEAM_HANDOFF_JAN9.md](docs/PETALTONGUE_TEAM_HANDOFF_JAN9.md)** - UI integration plan
-- **[NEURAL_API_STATUS.md](NEURAL_API_STATUS.md)** - Neural API progress
-- **[NEURAL_API_ROADMAP.md](NEURAL_API_ROADMAP.md)** - Neural API phases
+### **Phase 2: Core Evolution** 🔄 **IN PROGRESS**
+- **Wave 1**: Capability-based discovery (50% complete)
+  - Quick Win #1: ✅ COMPLETE (CapabilityTaxonomy + SystemPaths in NUCLEUS)
+  - Quick Win #2: 🔄 50% COMPLETE (SystemPaths in graph_deployment)
+  - Quick Win #3: ⏳ PENDING (PrimalRegistry evolution)
 
 ---
 
-## 🚀 Quick Start
+## 📁 **Key Documents**
 
-### **1. Build Everything**
+### **Current Work** (Start here!)
+1. **[PHASE2_EXECUTION_PLAN.md](PHASE2_EXECUTION_PLAN.md)** - Detailed Wave 1-4 strategy
+2. **[WAVE1_PROGRESS.md](WAVE1_PROGRESS.md)** - Real-time progress tracking
+3. **[PHASE1_COMPLETE.md](PHASE1_COMPLETE.md)** - Foundation achievements
+
+### **Session Summaries**
+- **[SESSION_FINAL_JAN10.md](SESSION_FINAL_JAN10.md)** - Latest session complete summary
+- **[SESSION_SUMMARY_JAN10.md](SESSION_SUMMARY_JAN10.md)** - Earlier session notes
+
+### **Deep Debt Evolution**
+- **[DEEP_DEBT_EVOLUTION_PLAN.md](DEEP_DEBT_EVOLUTION_PLAN.md)** - Master evolution plan (520 lines)
+- **[DEEP_DEBT_STATUS.md](DEEP_DEBT_STATUS.md)** - Current status tracker
+
+### **Neural API & Testing**
+- **[NEURAL_API_ROADMAP.md](NEURAL_API_ROADMAP.md)** - Neural API development plan
+- **[NEURAL_API_STATUS.md](NEURAL_API_STATUS.md)** - Current implementation status
+- **[E2E_TESTING_STATUS.md](E2E_TESTING_STATUS.md)** - End-to-end testing status
+
+### **Long-Term Planning**
+- **[ROADMAP.md](ROADMAP.md)** - Overall project roadmap
+- **[STATUS.md](STATUS.md)** - General project status
+
+### **Documentation Index**
+- **[MASTER_DOCUMENTATION_INDEX.md](MASTER_DOCUMENTATION_INDEX.md)** - Complete doc inventory
+- **[docs/INDEX.md](docs/INDEX.md)** - Organized docs directory
+- **[docs/ROOT_DOCUMENTATION.md](docs/ROOT_DOCUMENTATION.md)** - Root doc overview
+
+---
+
+## 🚀 **Quick Start for Next Session**
+
+### **1. Review Current Progress**
 ```bash
+# Check Wave 1 progress
+cat WAVE1_PROGRESS.md
+
+# Review execution plan
+cat PHASE2_EXECUTION_PLAN.md
+```
+
+### **2. Continue Wave 1 Work**
+
+**Next Task**: Finish Quick Win #2 (15-20 min remaining)
+- File: `crates/biomeos-core/src/capability_registry.rs`
+- Line 170: Update `/tmp/biomeos-registry-{}.sock` to use SystemPaths
+- Test files: Optional cleanup
+
+**Then**: Quick Win #3 (1 hour)
+- Add capability-based methods to `PrimalRegistry`
+- Use `CapabilityTaxonomy` for discovery
+
+### **3. Build & Test**
+```bash
+# Ensure everything builds
 cargo build --workspace
-```
 
-### **2. Run Tests**
-```bash
-# All tests (34 passing!)
-cargo test --workspace
-
-# NUCLEUS tests (16 tests)
+# Run tests
 cargo test -p biomeos-nucleus
-
-# Graph tests (18 tests)
-cargo test -p biomeos-graph
-
-# E2E example (requires Songbird + BearDog running)
-cargo run --example nucleus_graph_e2e
-```
-
-### **3. Start API Server**
-```bash
-# Standalone mode (demo, no primals required)
-BIOMEOS_STANDALONE_MODE=true cargo run --package biomeos-api
-
-# Live mode (discovers real primals)
-cargo run --package biomeos-api
-```
-
-### **4. Test Endpoints**
-```bash
-# Health check
-curl http://localhost:3000/api/v1/health | jq '.'
-
-# Topology (for petalTongue)
-curl http://localhost:3000/api/v1/topology | jq '.'
+cargo test -p biomeos-types
 ```
 
 ---
 
-## 🏗️ Architecture Overview
+## 📊 **Current Metrics**
 
-### **Primals** (Sovereign Services)
-- **biomeOS**: Orchestrator (this project)
-- **Songbird**: P2P, discovery, BTSP
-- **BearDog**: Security, encryption, identity
-- **Toadstool**: Compute, workload management
-- **NestGate**: Storage, provenance
-- **petalTongue**: Universal UI
-
-### **Niches** (Deployment Patterns)
-- **Tower**: Communication (biomeOS + Songbird + BearDog)
-- **Node**: Compute (Toadstool + optional BearDog)
-- **Nest**: Data (NestGate + BearDog + Songbird)
-- **UI**: Interface (petalTongue + biomeOS)
-
-### **Communication**
-- **Primary**: Unix sockets (JSON-RPC)
-- **Discovery**: UDP multicast (Songbird)
-- **Secure**: BTSP tunnels (BearDog + Songbird)
+| Metric | Before | After Phase 1 | Current (Wave 1) |
+|--------|--------|---------------|------------------|
+| Hardcoded Primal Names | 120 | 120 | ~115 |
+| Hardcoded Paths | 183 | 183 | ~178 |
+| Unsafe Blocks | Unknown | 0 ✅ | 0 ✅ |
+| Mock Isolation | Unknown | 100% ✅ | 100% ✅ |
+| Capability Taxonomy | None | 50+ ✅ | 50+ ✅ |
+| SystemPaths | None | Complete ✅ | Complete ✅ |
 
 ---
 
-## 🧬 NUCLEUS (Secure Discovery)
+## 🎯 **Deep Debt Principles**
 
-5-layer verification protocol (biomeos-nucleus):
+All work follows these principles:
 
-1. **Physical Discovery** (Songbird) - UDP multicast
-2. **Identity Verification** (BearDog) - Ed25519 signatures
-3. **Capability Verification** (Direct query) - Verify claims
-4. **Trust Evaluation** (BearDog) - Genetic lineage
-5. **Registration & Tracking** (biomeOS) - Verified registry
-
-**Trust Levels**: Unknown → Known → Trusted → Verified
-
-**Status**: ✅ 16 tests passing, production-ready
+1. ✅ **Fast AND Safe** - Zero unsafe code
+2. ✅ **Agnostic & Capability-Based** - No hardcoded names
+3. ✅ **Self-Knowledge Only** - Runtime discovery
+4. ✅ **Mocks in Testing** - Properly isolated
+5. ✅ **Smart Refactoring** - Domain-based, not just splitting
+6. ✅ **XDG Compliance** - Portable paths
+7. ✅ **Test Coverage** - 100% of new code
+8. ✅ **Documentation** - Comprehensive
 
 ---
 
-## 📋 Common Tasks
+## 📂 **Repository Structure**
 
-### **Deploy a Tower (USB Spore)**
-```bash
-cargo run --bin biomeos-spore -- create \
-  --niche tower \
-  --output /path/to/usb
 ```
-
-### **Run NUCLEUS Tests**
-```bash
-cargo test -p biomeos-nucleus
-cargo test -p biomeos-graph
-```
-
-### **Run E2E Example**
-```bash
-# Requires Songbird + BearDog running
-cargo run --example nucleus_graph_e2e
-```
-
-### **Check Unwraps (Deep Debt)**
-```bash
-grep -r "\.unwrap()\|\.expect(" \
-  --include="*.rs" \
-  --exclude="*test*.rs" \
-  crates/ | wc -l
-```
-
-### **Build Specific Crate**
-```bash
-cargo build --package biomeos-api
-cargo build --package biomeos-federation
-cargo build --package biomeos-spore
+biomeOS/
+├── crates/              # All Rust crates
+│   ├── biomeos-nucleus/ # NEW: Secure primal discovery (NUCLEUS)
+│   ├── biomeos-types/   # EVOLVED: CapabilityTaxonomy + SystemPaths
+│   ├── biomeos-core/    # Core orchestration (being evolved)
+│   ├── biomeos-graph/   # Graph-based execution
+│   └── ...
+├── docs/                # Organized documentation
+│   ├── INDEX.md         # Documentation index
+│   ├── architecture/    # Architecture docs
+│   ├── guides/          # User guides
+│   └── api/             # API documentation
+├── specs/               # Technical specifications
+├── niches/              # Niche manifests (tower, node, nest, ui)
+├── graphs/              # Graph definitions for deployment
+├── plasmidBin/          # Stable primal binaries for deployment
+├── archive/             # Fossil record of old docs/code
+└── [This file]          # START_HERE.md
 ```
 
 ---
 
-## 🔍 Finding Things
+## 🛠️ **Tools & Commands**
 
-### **Specifications**
+### **Development**
 ```bash
-ls specs/
-# 30+ specs: NUCLEUS, Neural API, BYOB, Federation, etc.
-```
-
-### **Documentation**
-```bash
-ls docs/
-# Guides, architecture, evolution plans, handoffs
-```
-
-### **Examples**
-```bash
-ls examples/
-# Demo applications, config examples
-```
-
-### **Graphs**
-```bash
-ls graphs/
-# Deployment graphs for tower, node, nest, ui
-```
-
----
-
-## 🎯 Next Steps
-
-### **For Developers**
-1. Read [README.md](README.md) for architecture
-2. Check [STATUS.md](STATUS.md) for current state
-3. Review [ROADMAP.md](ROADMAP.md) for phases
-4. Explore [specs/](specs/) for deep dives
-
-### **For Contributors**
-1. Review deep debt principles in [docs/DEEP_DEBT_FINAL_STATUS_JAN9.md](docs/DEEP_DEBT_FINAL_STATUS_JAN9.md)
-2. See evolution patterns (mocks, hardcoding, unwraps)
-3. Follow modern Rust patterns (zero unsafe, graceful errors, capability-based)
-
-### **For Integrators**
-1. Read [docs/PETALTONGUE_TEAM_HANDOFF_JAN9.md](docs/PETALTONGUE_TEAM_HANDOFF_JAN9.md) for UI
-2. Check topology API: `http://localhost:3000/api/v1/topology`
-3. Review [specs/NUCLEUS_SECURE_DISCOVERY_PROTOCOL.md](specs/NUCLEUS_SECURE_DISCOVERY_PROTOCOL.md)
-
----
-
-## 🆘 Troubleshooting
-
-### **Build Fails**
-```bash
-# Clean and rebuild
-cargo clean
+# Build all crates
 cargo build --workspace
+
+# Run specific tests
+cargo test -p <crate-name>
+
+# Check for issues
+cargo clippy --workspace
+
+# Format code
+cargo fmt --all
 ```
 
-### **Tests Fail**
+### **Primal Management**
 ```bash
-# Run specific test
-cargo test --package biomeos-federation nucleus_tests -- --nocapture
+# Pull fresh primal binaries
+./bin/pull-primals.sh
+
+# Deploy a niche
+cargo run --bin biomeos-cli -- deploy-niche niches/tower.toml
 ```
 
-### **API Won't Start**
+### **Spore Management**
 ```bash
-# Check if port 3000 is in use
-lsof -i :3000
-
-# Use standalone mode
-BIOMEOS_STANDALONE_MODE=true cargo run --package biomeos-api
+# Create a USB spore
+cargo run --bin biomeos-cli -- create-spore --niche tower --device /dev/sdX
 ```
 
 ---
 
-## 📞 Getting Help
+## 🎊 **Recent Achievements**
 
-- **Documentation**: Check [docs/](docs/) and [specs/](specs/)
-- **Status**: See [STATUS.md](STATUS.md)
-- **Recent Work**: See [SESSION_SUMMARY_JAN9.md](SESSION_SUMMARY_JAN9.md)
-- **Issues**: Check build logs, test output
+### **Phase 1** (4 hours - Completed Jan 10, 2026)
+- Created CapabilityTaxonomy (50+ capabilities, 8 categories)
+- Implemented SystemPaths (XDG-compliant)
+- Verified zero unsafe blocks
+- Confirmed proper mock isolation
 
----
-
-## 🎊 Quick Wins
-
-**Want to see it work right now?**
-
-```bash
-# 1. Start API server (standalone mode)
-BIOMEOS_STANDALONE_MODE=true cargo run --package biomeos-api &
-
-# 2. Test it (in another terminal)
-curl http://localhost:3000/api/v1/health | jq '.'
-curl http://localhost:3000/api/v1/topology | jq '.primals[] | {id, type, health}'
-
-# 3. Stop it
-pkill biomeos-api
-```
-
-**See tests pass:**
-```bash
-# NUCLEUS tests (16 passing)
-cargo test -p biomeos-nucleus
-
-# Graph tests (18 passing)
-cargo test -p biomeos-graph
-
-# All together (34 tests)
-cargo test -p biomeos-nucleus -p biomeos-graph
-```
+### **Phase 2 Wave 1** (1 hour - In Progress)
+- Integrated CapabilityTaxonomy into NUCLEUS
+- Evolved graph_deployment.rs to use SystemPaths
+- Eliminated 5 hardcoded path patterns
+- Discovered and documented nucleus_executor.rs debt
 
 ---
 
-**Welcome to the ecosystem!** 🌱✨
+## 📞 **Need Help?**
 
-For more details, see [README.md](README.md) and [STATUS.md](STATUS.md).
+1. **Current Work**: See [WAVE1_PROGRESS.md](WAVE1_PROGRESS.md)
+2. **Execution Plan**: See [PHASE2_EXECUTION_PLAN.md](PHASE2_EXECUTION_PLAN.md)
+3. **Architecture**: See [docs/ARCHITECTURE_LAYERS.md](docs/ARCHITECTURE_LAYERS.md)
+4. **API Reference**: See [docs/api/](docs/api/)
+5. **Guides**: See [docs/guides/](docs/guides/)
+
+---
+
+**Last Updated**: January 10, 2026  
+**All work committed and pushed to GitHub!** 🚀
