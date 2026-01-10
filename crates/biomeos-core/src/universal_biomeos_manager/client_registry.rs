@@ -63,21 +63,24 @@ impl ClientRegistry {
         let bootstrap = DiscoveryBootstrap::new("universal-adapter");
 
         match bootstrap.find_universal_adapter().await {
-            Ok(endpoint) => {
-                tracing::info!("✅ Found universal adapter at: {}", endpoint);
+            Ok(_endpoint) => {
+                tracing::info!("✅ Found universal adapter, initializing Songbird client...");
 
-                // Initialize Songbird client
-                let songbird_client = SongbirdClient::new(endpoint);
+                // Initialize Songbird client using capability-based discovery
+                // Note: We assume family_id from environment or use default "nat0"
+                let family_id = std::env::var("FAMILY_ID").unwrap_or_else(|_| "nat0".to_string());
+                
+                match SongbirdClient::discover(&family_id).await {
+                    Ok(songbird_client) => {
+                        tracing::info!("✅ Songbird client initialized via discovery");
+                        *self.songbird.write().await = Some(songbird_client.clone());
 
-                // Verify Songbird is available
-                if songbird_client.is_available().await {
-                    *self.songbird.write().await = Some(songbird_client.clone());
-                    tracing::info!("✅ Songbird client initialized");
-
-                    // Step 2: Use Songbird to discover other primals
-                    self.discover_and_initialize_primals(&songbird_client).await;
-                } else {
-                    tracing::warn!("⚠️ Songbird endpoint found but not responding");
+                        // Step 2: Use Songbird to discover other primals
+                        self.discover_and_initialize_primals(&songbird_client).await;
+                    }
+                    Err(e) => {
+                        tracing::warn!("⚠️ Songbird discovery failed: {}", e);
+                    }
                 }
             }
             Err(e) => {
@@ -99,11 +102,17 @@ impl ClientRegistry {
     async fn discover_and_initialize_primals(&self, songbird: &SongbirdClient) {
         // Discover ToadStool (compute)
         if let Ok(services) = songbird.discover_by_capability(capabilities::COMPUTE).await {
-            if let Some(service) = services.first() {
-                let client = ToadStoolClient::new(&service.endpoint);
-                if client.is_available().await {
-                    *self.toadstool.write().await = Some(client);
-                    tracing::info!("✅ ToadStool client initialized at {}", service.endpoint);
+            if !services.is_empty() {
+                // Use capability-based discovery instead of hardcoded endpoint
+                let family_id = std::env::var("FAMILY_ID").unwrap_or_else(|_| "nat0".to_string());
+                match ToadStoolClient::discover(&family_id).await {
+                    Ok(client) => {
+                        *self.toadstool.write().await = Some(client);
+                        tracing::info!("✅ ToadStool client initialized via discovery");
+                    }
+                    Err(e) => {
+                        tracing::debug!("ToadStool discovery failed: {}", e);
+                    }
                 }
             }
         } else {
@@ -112,11 +121,17 @@ impl ClientRegistry {
 
         // Discover Squirrel (AI)
         if let Ok(services) = songbird.discover_by_capability(capabilities::AI).await {
-            if let Some(service) = services.first() {
-                let client = SquirrelClient::new(&service.endpoint);
-                if client.is_available().await {
-                    *self.squirrel.write().await = Some(client);
-                    tracing::info!("✅ Squirrel client initialized at {}", service.endpoint);
+            if !services.is_empty() {
+                // Use capability-based discovery instead of hardcoded endpoint
+                let family_id = std::env::var("FAMILY_ID").unwrap_or_else(|_| "nat0".to_string());
+                match SquirrelClient::discover(&family_id).await {
+                    Ok(client) => {
+                        *self.squirrel.write().await = Some(client);
+                        tracing::info!("✅ Squirrel client initialized via discovery");
+                    }
+                    Err(e) => {
+                        tracing::debug!("Squirrel discovery failed: {}", e);
+                    }
                 }
             }
         } else {
@@ -125,11 +140,17 @@ impl ClientRegistry {
 
         // Discover NestGate (storage)
         if let Ok(services) = songbird.discover_by_capability(capabilities::STORAGE).await {
-            if let Some(service) = services.first() {
-                let client = NestGateClient::new(&service.endpoint);
-                if client.is_available().await {
-                    *self.nestgate.write().await = Some(client);
-                    tracing::info!("✅ NestGate client initialized at {}", service.endpoint);
+            if !services.is_empty() {
+                // Use capability-based discovery instead of hardcoded endpoint
+                let family_id = std::env::var("FAMILY_ID").unwrap_or_else(|_| "nat0".to_string());
+                match NestGateClient::discover(&family_id).await {
+                    Ok(client) => {
+                        *self.nestgate.write().await = Some(client);
+                        tracing::info!("✅ NestGate client initialized via discovery");
+                    }
+                    Err(e) => {
+                        tracing::debug!("NestGate discovery failed: {}", e);
+                    }
                 }
             }
         } else {
@@ -141,11 +162,17 @@ impl ClientRegistry {
             .discover_by_capability(capabilities::SECURITY)
             .await
         {
-            if let Some(service) = services.first() {
-                let client = BearDogClient::new(&service.endpoint);
-                if client.is_available().await {
-                    *self.beardog.write().await = Some(client);
-                    tracing::info!("✅ BearDog client initialized at {}", service.endpoint);
+            if !services.is_empty() {
+                // Use capability-based discovery instead of hardcoded endpoint
+                let family_id = std::env::var("FAMILY_ID").unwrap_or_else(|_| "nat0".to_string());
+                match BearDogClient::discover(&family_id).await {
+                    Ok(client) => {
+                        *self.beardog.write().await = Some(client);
+                        tracing::info!("✅ BearDog client initialized via discovery");
+                    }
+                    Err(e) => {
+                        tracing::debug!("BearDog discovery failed: {}", e);
+                    }
                 }
             }
         } else {

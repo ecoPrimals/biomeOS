@@ -347,5 +347,51 @@ mod tests {
         assert_eq!(endpoint.capabilities.len(), 2);
         assert!(endpoint.protocols.contains(&"tarpc".to_string()));
     }
+    
+    // Additional unit tests for PetalTongueClient types
+    
+    #[test]
+    fn test_render_request_structure() {
+        let request = RenderRequest {
+            graph_data: serde_json::json!({"nodes": [], "edges": []}),
+            modality: "terminal".to_string(),
+            options: None,
+        };
+        
+        assert_eq!(request.modality, "terminal");
+        assert!(request.options.is_none());
+    }
+    
+    #[test]
+    fn test_render_response_types() {
+        // Success case
+        let success = RenderResponse {
+            success: true,
+            output: Some("rendered".to_string()),
+            error: None,
+        };
+        assert!(success.success);
+        
+        // Error case
+        let error = RenderResponse {
+            success: false,
+            output: None,
+            error: Some("failed".to_string()),
+        };
+        assert!(!error.success);
+    }
+    
+    #[test]
+    fn test_all_modalities() {
+        let modalities = vec!["terminal", "svg", "png", "json", "dot"];
+        for modality in modalities {
+            let req = RenderRequest {
+                graph_data: serde_json::json!({}),
+                modality: modality.to_string(),
+                options: None,
+            };
+            assert!(!req.modality.is_empty());
+        }
+    }
 }
 

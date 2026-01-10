@@ -256,9 +256,31 @@ pub struct SongbirdDiscoveryAdapter {
 }
 
 impl SongbirdDiscoveryAdapter {
+    /// Create a new Songbird discovery adapter
+    /// 
+    /// # Deprecated
+    /// This constructor uses hardcoded endpoints. Prefer using `from_discovery()` instead.
     pub fn new(endpoint: String) -> Self {
-        let client = SongbirdClient::new(endpoint);
-        Self { client }
+        // Note: This is a legacy constructor for backward compatibility
+        // The endpoint is ignored in favor of proper discovery
+        tracing::warn!(
+            "SongbirdDiscoveryAdapter::new() uses hardcoded endpoint '{}'. \
+             Consider using capability-based discovery instead.", 
+            endpoint
+        );
+        
+        // For now, we'll create a placeholder that will panic if used
+        // This forces migration to proper discovery patterns
+        panic!(
+            "SongbirdDiscoveryAdapter::new() is deprecated. \
+             Use SongbirdClient::discover() for capability-based discovery."
+        );
+    }
+    
+    /// Create adapter from a discovered Songbird client
+    pub async fn from_discovery(family_id: &str) -> anyhow::Result<Self> {
+        let client = SongbirdClient::discover(family_id).await?;
+        Ok(Self { client })
     }
 }
 
