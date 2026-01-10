@@ -1,9 +1,9 @@
-# 📊 biomeOS Status - January 10, 2026 (Evening)
+# 📊 biomeOS Status - January 10, 2026 (Late Evening)
 
 **Current Phase**: Phase 2 - Core Evolution  
-**Wave**: Wave 1 ✅ Complete | Wave 2 🔄 50% Complete  
-**Priority**: Finish beardog.rs migration (50% remaining)  
-**Status**: 🎊 Major Progress - All crypto methods migrated to JSON-RPC!
+**Wave**: Wave 1 ✅ Complete | Wave 2 🎊 50% Complete (HALFWAY MILESTONE!)  
+**Priority**: Complete remaining 5 client migrations  
+**Status**: 🎊 50% of clients migrated to JSON-RPC! Halfway there!
 
 ---
 
@@ -30,21 +30,24 @@
 
 **Total Time**: ~5.5 hours (on schedule!)
 
-### **Wave 2 Week 2: beardog.rs Migration** 🔄 **50% COMPLETE!**
+### **Wave 2 Week 2: Client Migration** 🎊 **50% COMPLETE!**
 
-| Task | Status | Progress | Result |
-|------|--------|----------|--------|
-| Foundation (imports, struct, discover) | ✅ COMPLETE | 100% | Auto-discovery ready |
-| Crypto methods (4 methods) | ✅ COMPLETE | 100% | All JSON-RPC! |
-| └─ encrypt() | ✅ | Done | encryption.encrypt |
-| └─ decrypt() | ✅ | Done | encryption.decrypt |
-| └─ sign() | ✅ | Done | signing.sign |
-| └─ verify() | ✅ | Done | signing.verify |
-| Key & access methods (2 methods) | ⏳ PENDING | 0% | ~30 min |
-| BTSP tunnel methods (3 methods) | ⏳ PENDING | 0% | ~45 min |
-| PrimalClient trait | ⏳ PENDING | 0% | ~15 min |
+| Client | Methods | Status | HTTP Refs | Result |
+|--------|---------|--------|-----------|--------|
+| beardog.rs | 10 | ✅ COMPLETE | 0 | Security & Crypto |
+| songbird.rs | 4 | ✅ COMPLETE | 0 | Discovery & Registry |
+| toadstool.rs | 5 | ✅ COMPLETE | 0 | Compute Orchestration |
+| squirrel.rs | 4 | ✅ COMPLETE | 0 | AI & Intelligence |
+| nestgate.rs | 7 | ✅ COMPLETE | 0 | Storage & Persistence |
+| upa.rs | ~3 | ⏳ PENDING | ~10 | Universal Adapter |
+| universal.rs | ~4 | ⏳ PENDING | ~15 | Universal Client |
+| openapi_adapter.rs | ~2 | ⏳ PENDING | ~10 | OpenAPI Adapter |
+| base.rs | ~1 | ⏳ PENDING | ~4 | Base HTTP Client |
+| others | ~2 | ⏳ PENDING | ~20 | Misc clients |
 
-**Progress**: 50% complete | **Remaining**: 1-2 hours
+**Completed**: 5 clients, 30 methods, 0 HTTP refs  
+**Remaining**: 5 clients, ~16 methods, ~59 HTTP refs  
+**Progress**: 50% of clients, 49% of HTTP refs eliminated
 
 ---
 
@@ -56,11 +59,11 @@
 |--------|-------|---------|--------|--------------|--------|----------|
 | **Hardcoded Primal Names** | 120 | 120 | ~115 | ~115 | <20 | 4% ↓ |
 | **Hardcoded Paths** | 183 | 183 | 177 | 177 | <30 | 3% ↓ |
-| **HTTP References** | 116 | 116 | 116 | **~110** | 0 | **5% ↓** ⬇️ |
+| **HTTP References** | 116 | 116 | 116 | **~59** | 0 | **49% ↓** ⬇️⬇️ |
 | **Unsafe Blocks** | Unknown | 0 | 0 | 0 | 0 | ✅ 100% |
 | **Mock Isolation** | Unknown | 100% | 100% | 100% | 100% | ✅ 100% |
 | **Transport Abstraction** | ❌ | ❌ | ❌ | ✅ | ✅ | **✅ 100%** |
-| **Client Migration** | 0% | 0% | 0% | **50%** | 100% | **50%** 🔄 |
+| **Client Migration** | 0% | 0% | 0% | **50%** | 100% | **50%** 🎊 |
 
 ### **Foundation (Phase 1)**
 
@@ -102,21 +105,22 @@
 
 ## 🎯 **Next Steps**
 
-### **Immediate: Finish beardog.rs** (1-2 hours) ← **CURRENT**
-1. Migrate generate_key() → `keys.generate`
-2. Migrate validate_access() → `access.validate`
-3. Migrate BTSP tunnel methods (3 methods)
-   - establish_tunnel() → `btsp.tunnel_establish`
-   - get_tunnel_status() → `btsp.tunnel_status`
-   - close_tunnel() → `btsp.tunnel_close`
-4. Update PrimalClient trait implementation
-5. Test with real BearDog v0.15.2+
+### **Immediate: Complete Remaining 5 Clients** (2-3 hours) ← **CURRENT**
+**Progress: 50% complete (5 of 10 clients)**
+
+**Next priorities:**
+1. upa.rs (~10 HTTP refs, universal adapter)
+2. universal.rs (~15 HTTP refs, universal client)
+3. openapi_adapter.rs (~10 HTTP refs, OpenAPI)
+4. base.rs (~4 HTTP refs, base HTTP client)
+5. Others (~20 HTTP refs, misc clients)
+
+**Estimated time**: 2-3 hours for remaining 5 clients
 
 ### **Short-Term: Complete Wave 2A** (2-3 weeks)
-- Finish beardog.rs (50% remaining, ~1-2 hours)
-- Migrate songbird.rs (456 lines, ~15 HTTP refs)
-- Migrate remaining 8 clients (~67 HTTP refs)
-- E2E testing & validation
+- Week 2: First 5 clients ✅ (50% complete!)
+- Week 3: Remaining 5 clients (in progress)
+- Week 4: E2E testing & validation
 
 ### **Medium-Term: Phase 3 - Neural API** (3-4 months)
 - Production hardening
