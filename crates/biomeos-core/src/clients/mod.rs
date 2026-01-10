@@ -15,6 +15,13 @@
 //! - **NestGate**: Storage and persistence
 //! - **BearDog**: Cryptography and security
 //!
+//! # Transport Evolution (Wave 2A - IN PROGRESS)
+//!
+//! All clients are being migrated to use the unified `transport` abstraction:
+//! - **PRIMARY**: JSON-RPC over Unix sockets (fast, secure)
+//! - **FUTURE**: tarpc (type-safe, bidirectional)
+//! - **FALLBACK**: HTTP/HTTPS (deprecated, insecure)
+//!
 //! # Architecture
 //!
 //! All clients implement the `PrimalClient` trait and use the shared HTTP client
@@ -48,6 +55,9 @@
 //!     Ok(())
 //! }
 //! ```
+
+// NEW: Protocol-agnostic transport abstraction (Wave 2A)
+pub mod transport;
 
 pub mod base;
 pub mod beardog;
