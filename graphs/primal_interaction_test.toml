@@ -1,0 +1,455 @@
+# =============================================================================
+# Primal Interaction Test Graph - Neural API Live Testing
+# =============================================================================
+#
+# This graph tests live interactions between operational primals:
+# - BearDog (security provider, starts first)
+# - Songbird (discovery, needs BearDog)
+# - NestGate (storage, registers with Songbird)
+# - Squirrel (AI, registers with Songbird)
+#
+# Deep Debt Principles:
+# - Capability-based discovery (zero hardcoding!)
+# - Proper startup sequence (BearDog → Songbird → others)
+# - Inter-primal coordination testing
+# - Metrics collection for learning
+#
+# Created: January 10, 2026
+# Status: Neural API Evolution
+#
+# =============================================================================
+
+[graph]
+name = "primal-interaction-test"
+description = "Test live interactions between operational primals"
+version = "1.0.0"
+coordination = "Sequential"
+
+# =============================================================================
+# Phase 1: Start Security Provider (BearDog MUST start first!)
+# =============================================================================
+
+[[nodes]]
+id = "start-beardog"
+primal = { by_capability = "security" }
+output = "beardog_started"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+# BearDog environment
+mode = "daemon"
+family_id = "nat0"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[nodes.constraints.retry]
+max_attempts = 3
+backoff_ms = 2000
+
+# =============================================================================
+# Phase 2: Start Discovery Service (Songbird needs BearDog)
+# =============================================================================
+
+[[nodes]]
+id = "start-songbird"
+primal = { by_capability = "discovery" }
+output = "songbird_started"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "daemon"
+family_id = "nat0"
+# Songbird will auto-discover BearDog via capability
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[nodes.constraints.retry]
+max_attempts = 3
+backoff_ms = 2000
+
+# =============================================================================
+# Phase 3: Start Storage Primal (NestGate registers with Songbird)
+# =============================================================================
+
+[[nodes]]
+id = "start-nestgate"
+primal = { by_capability = "storage" }
+output = "nestgate_started"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "daemon"
+family_id = "nat0"
+# NestGate will:
+# 1. Discover Songbird via capability
+# 2. Auto-register with Songbird
+# 3. Report 6 capabilities (storage, persistence, key-value, blob-storage, json-rpc, unix-socket)
+
+[nodes.constraints]
+timeout_ms = 60000
+
+[nodes.constraints.retry]
+max_attempts = 3
+backoff_ms = 2000
+
+# =============================================================================
+# Phase 4: Start AI Primal (Squirrel registers with Songbird)
+# =============================================================================
+
+[[nodes]]
+id = "start-squirrel"
+primal = { by_capability = "ai" }
+output = "squirrel_started"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "daemon"
+family_id = "nat0"
+# Squirrel will:
+# 1. Discover Songbird via capability
+# 2. Auto-register with Songbird
+# 3. Report AI capabilities
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[nodes.constraints.retry]
+max_attempts = 3
+backoff_ms = 2000
+
+# =============================================================================
+# Phase 5: Verify All Registered with Songbird
+# =============================================================================
+
+[[nodes]]
+id = "verify-songbird-discovery"
+primal = { by_capability = "discovery" }
+output = "all_primals_discovered"
+
+[nodes.operation]
+name = "discover_by_capability"
+
+[nodes.operation.params]
+capability = "*"  # Discover all registered primals
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# =============================================================================
+# Phase 6: Test NestGate Storage Operations
+# =============================================================================
+
+[[nodes]]
+id = "test-nestgate-store"
+primal = { by_capability = "storage" }
+output = "store_result"
+
+[nodes.operation]
+name = "store"
+
+[nodes.operation.params]
+key = "test:primal-interaction"
+data = { test = "neural-api-graph", timestamp = "2026-01-10", primals = 4 }
+
+[nodes.constraints]
+timeout_ms = 5000
+
+[[nodes]]
+id = "test-nestgate-retrieve"
+primal = { by_capability = "storage" }
+output = "retrieve_result"
+
+[nodes.operation]
+name = "retrieve"
+
+[nodes.operation.params]
+key = "test:primal-interaction"
+
+[nodes.constraints]
+timeout_ms = 5000
+
+[[nodes]]
+id = "test-nestgate-stats"
+primal = { by_capability = "storage" }
+output = "storage_stats"
+
+[nodes.operation]
+name = "stats"
+
+[nodes.operation.params]
+
+[nodes.constraints]
+timeout_ms = 5000
+
+# =============================================================================
+# Phase 7: Test Squirrel AI Operations
+# =============================================================================
+
+[[nodes]]
+id = "test-squirrel-infer"
+primal = { by_capability = "ai" }
+output = "inference_result"
+
+[nodes.operation]
+name = "infer"
+
+[nodes.operation.params]
+model = "default"
+prompt = "What is the biomeOS ecosystem?"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+# =============================================================================
+# Phase 8: Test BearDog Security Operations
+# =============================================================================
+
+[[nodes]]
+id = "test-beardog-encrypt"
+primal = { by_capability = "security" }
+output = "encrypted_data"
+
+[nodes.operation]
+name = "encrypt"
+
+[nodes.operation.params]
+data = "sensitive test data"
+algorithm = "aes256"
+
+[nodes.constraints]
+timeout_ms = 5000
+
+[[nodes]]
+id = "test-beardog-decrypt"
+primal = { by_capability = "security" }
+output = "decrypted_data"
+
+[nodes.operation]
+name = "decrypt"
+
+[nodes.operation.params]
+# Will use output from previous node
+encrypted_data = "{{nodes.test-beardog-encrypt.output}}"
+
+[nodes.constraints]
+timeout_ms = 5000
+
+# =============================================================================
+# Phase 9: Test Inter-Primal Coordination
+# =============================================================================
+
+[[nodes]]
+id = "test-encrypted-storage"
+primal = { by_capability = "storage" }
+output = "encrypted_storage_result"
+
+[nodes.operation]
+name = "store_blob"
+
+[nodes.operation.params]
+key = "encrypted:test-data"
+# Store the encrypted data from BearDog
+blob = "{{nodes.test-beardog-encrypt.output}}"
+
+[nodes.constraints]
+timeout_ms = 5000
+
+[[nodes]]
+id = "test-retrieve-encrypted"
+primal = { by_capability = "storage" }
+output = "retrieved_encrypted"
+
+[nodes.operation]
+name = "retrieve_blob"
+
+[nodes.operation.params]
+key = "encrypted:test-data"
+
+[nodes.constraints]
+timeout_ms = 5000
+
+# =============================================================================
+# Phase 10: Health Check All Primals
+# =============================================================================
+
+[[nodes]]
+id = "health-check-beardog"
+primal = { by_capability = "security" }
+output = "beardog_health"
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.operation.params]
+
+[nodes.constraints]
+timeout_ms = 5000
+
+[[nodes]]
+id = "health-check-songbird"
+primal = { by_capability = "discovery" }
+output = "songbird_health"
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.operation.params]
+
+[nodes.constraints]
+timeout_ms = 5000
+
+[[nodes]]
+id = "health-check-nestgate"
+primal = { by_capability = "storage" }
+output = "nestgate_health"
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.operation.params]
+
+[nodes.constraints]
+timeout_ms = 5000
+
+[[nodes]]
+id = "health-check-squirrel"
+primal = { by_capability = "ai" }
+output = "squirrel_health"
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.operation.params]
+
+[nodes.constraints]
+timeout_ms = 5000
+
+# =============================================================================
+# Phase 11: Final Verification
+# =============================================================================
+
+[[nodes]]
+id = "verify-all-healthy"
+primal = { by_capability = "discovery" }
+output = "ecosystem_status"
+
+[nodes.operation]
+name = "get_service_health"
+
+[nodes.operation.params]
+# Check health of all registered services
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# =============================================================================
+# Dependencies (Explicit Ordering for Sequential Execution)
+# =============================================================================
+
+# Phase 1 → Phase 2 (BearDog MUST start before Songbird)
+[[edges]]
+from = "start-beardog"
+to = "start-songbird"
+
+# Phase 2 → Phase 3 (Songbird MUST be running for NestGate registration)
+[[edges]]
+from = "start-songbird"
+to = "start-nestgate"
+
+# Phase 3 → Phase 4 (NestGate → Squirrel, sequential startup)
+[[edges]]
+from = "start-nestgate"
+to = "start-squirrel"
+
+# Phase 4 → Phase 5 (All primals started → verify discovery)
+[[edges]]
+from = "start-squirrel"
+to = "verify-songbird-discovery"
+
+# Phase 5 → Phase 6 (Discovery verified → test operations)
+[[edges]]
+from = "verify-songbird-discovery"
+to = "test-nestgate-store"
+
+[[edges]]
+from = "test-nestgate-store"
+to = "test-nestgate-retrieve"
+
+[[edges]]
+from = "test-nestgate-retrieve"
+to = "test-nestgate-stats"
+
+# Phase 6 → Phase 7 (Storage tests → AI tests)
+[[edges]]
+from = "test-nestgate-stats"
+to = "test-squirrel-infer"
+
+# Phase 7 → Phase 8 (AI tests → Security tests)
+[[edges]]
+from = "test-squirrel-infer"
+to = "test-beardog-encrypt"
+
+[[edges]]
+from = "test-beardog-encrypt"
+to = "test-beardog-decrypt"
+
+# Phase 8 → Phase 9 (Security tests → Inter-primal coordination)
+[[edges]]
+from = "test-beardog-decrypt"
+to = "test-encrypted-storage"
+
+[[edges]]
+from = "test-encrypted-storage"
+to = "test-retrieve-encrypted"
+
+# Phase 9 → Phase 10 (Coordination tests → Health checks)
+[[edges]]
+from = "test-retrieve-encrypted"
+to = "health-check-beardog"
+
+[[edges]]
+from = "health-check-beardog"
+to = "health-check-songbird"
+
+[[edges]]
+from = "health-check-songbird"
+to = "health-check-nestgate"
+
+[[edges]]
+from = "health-check-nestgate"
+to = "health-check-squirrel"
+
+# Phase 10 → Phase 11 (Health checks → Final verification)
+[[edges]]
+from = "health-check-squirrel"
+to = "verify-all-healthy"
+
+# =============================================================================
+# Expected Metrics Collection
+# =============================================================================
+#
+# Neural API will collect:
+# - Startup times for each primal
+# - Operation execution times
+# - Success/failure rates
+# - Inter-primal communication latency
+# - Discovery resolution times
+#
+# These metrics enable:
+# - Performance optimization
+# - Bottleneck identification
+# - Adaptive pathway selection
+# - Learning from execution patterns
+#
+# =============================================================================
+
