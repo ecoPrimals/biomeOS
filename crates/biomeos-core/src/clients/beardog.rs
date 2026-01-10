@@ -294,6 +294,8 @@ impl BearDogClient {
 
     /// Verify signature
     ///
+    /// Uses BearDog's JSON-RPC API: `signing.verify`
+    ///
     /// # Arguments
     /// * `data` - Original data
     /// * `signature` - Signature to verify
@@ -310,23 +312,31 @@ impl BearDogClient {
         signature: &str,
         key_id: &str,
     ) -> Result<bool> {
-        let body = serde_json::json!({
-            "data": data,
-            "signature": signature,
-            "key_id": key_id
-        });
-
-        let response = self.http.post("/api/v1/crypto/verify", body).await?;
+        // BearDog expects base64-encoded message
+        let message_b64 = BASE64.encode(data.as_bytes());
+        
+        let response = self.transport.call_method(
+            "signing.verify",
+            serde_json::json!({
+                "message": message_b64,
+                "signature": signature,
+                "key_ref": key_id,
+                "algorithm": "Ed25519"
+            })
+        ).await
+            .context("Failed to call signing.verify")?;
 
         response["valid"]
             .as_bool()
-            .ok_or_else(|| anyhow::anyhow!("No valid field in response"))
+            .ok_or_else(|| anyhow::anyhow!("Missing valid field in response"))
     }
 
     /// Generate a new cryptographic key
     ///
+    /// Uses BearDog's JSON-RPC API: `keys.generate`
+    ///
     /// # Arguments
-    /// * `key_type` - Type of key to generate (e.g., "rsa", "ed25519")
+    /// * `key_type` - Type of key to generate (e.g., "AES", "Ed25519")
     /// * `key_id` - Identifier for the new key
     ///
     /// # Returns
@@ -334,19 +344,36 @@ impl BearDogClient {
     ///
     /// # Errors
     /// Returns an error if key generation fails.
+    ///
+    /// # Example
+    /// ```no_run
+    /// # use biomeos_core::clients::beardog::BearDogClient;
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// let beardog = BearDogClient::discover("nat0").await?;
+    /// let key = beardog.generate_key("Ed25519", "signing-key-1").await?;
+    /// println!("Generated key: {}", key.key_id);
+    /// # Ok(())
+    /// # }
+    /// ```
     pub async fn generate_key(&self, key_type: &str, key_id: &str) -> Result<KeyInfo> {
-        let body = serde_json::json!({
-            "key_type": key_type,
-            "key_id": key_id
-        });
-
-        let response = self.http.post("/api/v1/crypto/generate-key", body).await?;
+        let response = self.transport.call_method(
+            "keys.generate",
+            serde_json::json!({
+                "key_type": key_type,
+                "key_ref": key_id,
+                "options": {}
+            })
+        ).await
+            .context("Failed to call keys.generate")?;
 
         serde_json::from_value(response)
-            .map_err(|e| anyhow::anyhow!("Failed to parse key info: {}", e))
+            .context("Failed to parse key info from response")
     }
 
     /// Validate access control
+    ///
+    /// Uses BearDog's JSON-RPC API: `access.validate`
     ///
     /// # Arguments
     /// * `request` - Access control request
@@ -356,42 +383,77 @@ impl BearDogClient {
     ///
     /// # Errors
     /// Returns an error if validation fails.
+    ///
+    /// # Example
+    /// ```no_run
+    /// # use biomeos_core::clients::beardog::{BearDogClient, AccessRequest};
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// let beardog = BearDogClient::discover("nat0").await?;
+    /// let request = AccessRequest {
+    ///     identity_id: "user-alpha".to_string(),
+    ///     resource_id: "data-beta".to_string(),
+    ///     action: "read".to_string(),
+    /// };
+    /// let decision = beardog.validate_access(&request).await?;
+    /// println!("Access granted: {}", decision.granted);
+    /// # Ok(())
+    /// # }
+    /// ```
     pub async fn validate_access(&self, request: &AccessRequest) -> Result<AccessDecision> {
-        let response = self
-            .http
-            .post("/api/v1/security/access", serde_json::to_value(request)?)
-            .await?;
+        let response = self.transport.call_method(
+            "access.validate",
+            serde_json::to_value(request)?
+        ).await
+            .context("Failed to call access.validate")?;
 
         serde_json::from_value(response)
-            .map_err(|e| anyhow::anyhow!("Failed to parse access decision: {}", e))
+            .context("Failed to parse access decision from response")
     }
 
     /// Get security audit log
+    ///
+    /// Uses BearDog's JSON-RPC API: `security.audit_log`
     ///
     /// # Arguments
     /// * `filters` - Optional filters for the audit log
     ///
     /// # Errors
     /// Returns an error if the request fails.
+    ///
+    /// # Example
+    /// ```no_run
+    /// # use biomeos_core::clients::beardog::BearDogClient;
+    /// # use serde_json::json;
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// let beardog = BearDogClient::discover("nat0").await?;
+    /// let filters = json!({"limit": 100, "level": "warning"});
+    /// let entries = beardog.get_audit_log(Some(&filters)).await?;
+    /// println!("Found {} audit entries", entries.len());
+    /// # Ok(())
+    /// # }
+    /// ```
     pub async fn get_audit_log(&self, filters: Option<&Value>) -> Result<Vec<AuditEntry>> {
-        let path = "/api/v1/security/audit";
-        let response = if let Some(filters) = filters {
-            self.http.post(path, filters.clone()).await?
-        } else {
-            self.http.get(path).await?
-        };
+        let params = filters.cloned().unwrap_or(serde_json::json!({}));
+        
+        let response = self.transport.call_method(
+            "security.audit_log",
+            params
+        ).await
+            .context("Failed to call security.audit_log")?;
 
         serde_json::from_value(response["entries"].clone())
-            .map_err(|e| anyhow::anyhow!("Failed to parse audit log: {}", e))
+            .context("Failed to parse audit log entries from response")
     }
 
     // ========================================================================
-    // BTSP Tunnel Management (HTTP REST API)
+    // BTSP Tunnel Management (JSON-RPC 2.0)
     // ========================================================================
 
     /// Establish a BTSP tunnel to a peer
     ///
-    /// Uses BearDog's HTTP REST API: POST /api/v1/tunnel/establish
+    /// Uses BearDog's JSON-RPC API: `btsp.tunnel_establish`
     ///
     /// # Arguments
     /// * `peer_id` - Peer node identifier
@@ -408,38 +470,30 @@ impl BearDogClient {
     /// # use biomeos_core::clients::beardog::BearDogClient;
     /// # #[tokio::main]
     /// # async fn main() -> anyhow::Result<()> {
-    /// let beardog = BearDogClient::new("http://localhost:9000");
+    /// let beardog = BearDogClient::discover("nat0").await?;
     /// let tunnel = beardog.establish_tunnel("peer-node-1", "192.168.1.100:9091").await?;
     /// println!("Tunnel ID: {}", tunnel.tunnel_id);
     /// # Ok(())
     /// # }
     /// ```
     pub async fn establish_tunnel(&self, peer_id: &str, endpoint: &str) -> Result<TunnelInfo> {
-        let body = serde_json::json!({
-            "peer_id": peer_id,
-            "endpoint": endpoint
-        });
+        let response = self.transport.call_method(
+            "btsp.tunnel_establish",
+            serde_json::json!({
+                "peer_id": peer_id,
+                "endpoint": endpoint,
+                "family_id": self.family_id
+            })
+        ).await
+            .context("Failed to call btsp.tunnel_establish")?;
 
-        let response = self
-            .http
-            .post("/api/v1/tunnel/establish", body)
-            .await
-            .context("Failed to establish BTSP tunnel")?;
-
-        // BearDog returns { "success": true, "data": {...} }
-        if let Some(data) = response.get("data") {
-            serde_json::from_value(data.clone())
-                .context("Failed to parse tunnel info from response")
-        } else {
-            // Fallback: try to parse response directly
-            serde_json::from_value(response)
-                .context("Failed to parse tunnel info")
-        }
+        serde_json::from_value(response)
+            .context("Failed to parse tunnel info from response")
     }
 
     /// Get BTSP tunnel status
     ///
-    /// Uses BearDog's HTTP REST API: GET /api/v1/tunnel/status/{tunnel_id}
+    /// Uses BearDog's JSON-RPC API: `btsp.tunnel_status`
     ///
     /// # Arguments
     /// * `tunnel_id` - Tunnel identifier
@@ -455,33 +509,33 @@ impl BearDogClient {
     /// # use biomeos_core::clients::beardog::BearDogClient;
     /// # #[tokio::main]
     /// # async fn main() -> anyhow::Result<()> {
-    /// let beardog = BearDogClient::new("http://localhost:9000");
+    /// let beardog = BearDogClient::discover("nat0").await?;
     /// let status = beardog.get_tunnel_status("btsp_abc123xyz").await?;
     /// println!("Tunnel state: {}", status.state);
     /// # Ok(())
     /// # }
     /// ```
     pub async fn get_tunnel_status(&self, tunnel_id: &str) -> Result<TunnelStatus> {
-        let path = format!("/api/v1/tunnel/status/{}", tunnel_id);
-        let response = self
-            .http
-            .get(&path)
-            .await
+        let response = self.transport.call_method(
+            "btsp.tunnel_status",
+            serde_json::json!({
+                "tunnel_id": tunnel_id,
+                "family_id": self.family_id
+            })
+        ).await
             .with_context(|| format!("Failed to get status for tunnel {}", tunnel_id))?;
 
-        // BearDog returns { "success": true, "data": {...} }
-        if let Some(data) = response.get("data") {
-            serde_json::from_value(data.clone())
-                .context("Failed to parse tunnel status from response")
-        } else {
-            serde_json::from_value(response)
-                .context("Failed to parse tunnel status")
-        }
+        serde_json::from_value(response)
+            .context("Failed to parse tunnel status from response")
     }
 
     /// Close a BTSP tunnel
     ///
     /// Uses BearDog's HTTP REST API: POST /api/v1/tunnel/close
+    ///
+    /// Close a BTSP tunnel
+    ///
+    /// Uses BearDog's JSON-RPC API: `btsp.tunnel_close`
     ///
     /// # Arguments
     /// * `tunnel_id` - Tunnel identifier
@@ -494,20 +548,20 @@ impl BearDogClient {
     /// # use biomeos_core::clients::beardog::BearDogClient;
     /// # #[tokio::main]
     /// # async fn main() -> anyhow::Result<()> {
-    /// let beardog = BearDogClient::new("http://localhost:9000");
+    /// let beardog = BearDogClient::discover("nat0").await?;
     /// beardog.close_tunnel("btsp_abc123xyz").await?;
     /// println!("Tunnel closed");
     /// # Ok(())
     /// # }
     /// ```
     pub async fn close_tunnel(&self, tunnel_id: &str) -> Result<()> {
-        let body = serde_json::json!({
-            "tunnel_id": tunnel_id
-        });
-
-        self.http
-            .post("/api/v1/tunnel/close", body)
-            .await
+        self.transport.call_method(
+            "btsp.tunnel_close",
+            serde_json::json!({
+                "tunnel_id": tunnel_id,
+                "family_id": self.family_id
+            })
+        ).await
             .with_context(|| format!("Failed to close tunnel {}", tunnel_id))?;
 
         Ok(())
@@ -559,8 +613,8 @@ impl PrimalClient for BearDogClient {
         "beardog"
     }
 
-    fn endpoint(&self) -> &str {
-        &self.endpoint
+    fn endpoint(&self) -> String {
+        self.transport.endpoint()
     }
 
     async fn is_available(&self) -> bool {
@@ -568,21 +622,14 @@ impl PrimalClient for BearDogClient {
     }
 
     async fn health_check(&self) -> Result<HealthStatus> {
-        let response = self.http.get("/health").await?;
-        Ok(HealthStatus {
-            healthy: response["status"] == "healthy",
-            message: response["message"]
-                .as_str()
-                .unwrap_or("Unknown")
-                .to_string(),
-            details: Some(response),
-        })
+        self.transport.health_check().await
     }
 
-    async fn request(&self, method: &str, path: &str, body: Option<Value>) -> Result<Value> {
-        match method {
-            "GET" => self.http.get(path).await,
-            "POST" => self.http.post(path, body.unwrap_or(Value::Null)).await,
+    async fn request(&self, method: &str, _path: &str, body: Option<Value>) -> Result<Value> {
+        // For JSON-RPC, method becomes the RPC method name, path is ignored
+        self.transport.call(method, body).await
+    }
+}
             _ => anyhow::bail!("Unsupported method: {}", method),
         }
     }
