@@ -146,37 +146,68 @@ impl BearDogClient {
 
     /// Encrypt data
     ///
+    /// Uses BearDog's JSON-RPC API: `encryption.encrypt`
+    ///
     /// # Arguments
-    /// * `data` - Data to encrypt
+    /// * `data` - Data to encrypt (will be base64-encoded)
     /// * `key_id` - Encryption key identifier
     ///
     /// # Returns
-    /// Encrypted data
+    /// Encrypted data with ciphertext, nonce, and authentication tag
     ///
     /// # Errors
-    /// Returns an error if encryption fails.
+    /// Returns an error if encryption fails or BearDog is unavailable.
     ///
     /// # Example
     /// ```no_run
     /// # use biomeos_core::clients::beardog::BearDogClient;
     /// # #[tokio::main]
     /// # async fn main() -> anyhow::Result<()> {
-    /// let beardog = BearDogClient::new("http://localhost:9000");
+    /// let beardog = BearDogClient::discover("nat0").await?;
     /// let encrypted = beardog.encrypt("secret data", "my-key").await?;
     /// println!("Encrypted: {}", encrypted.ciphertext);
     /// # Ok(())
     /// # }
     /// ```
     pub async fn encrypt(&self, data: &str, key_id: &str) -> Result<EncryptedData> {
-        let body = serde_json::json!({
-            "data": data,
-            "key_id": key_id
-        });
+        // BearDog expects base64-encoded plaintext
+        let plaintext_b64 = BASE64.encode(data.as_bytes());
+        
+        let response = self.transport.call_method(
+            "encryption.encrypt",
+            serde_json::json!({
+                "plaintext": plaintext_b64,
+                "key_ref": key_id,
+                "algorithm": "AES-256-GCM"
+            })
+        ).await
+            .context("Failed to call encryption.encrypt")?;
 
-        let response = self.http.post("/api/v1/crypto/encrypt", body).await?;
-
-        serde_json::from_value(response)
-            .map_err(|e| anyhow::anyhow!("Failed to parse encrypted data: {}", e))
+        // Parse JSON-RPC response
+        let ciphertext = response["ciphertext"]
+            .as_str()
+            .ok_or_else(|| anyhow::anyhow!("Missing ciphertext in response"))?
+            .to_string();
+        
+        let nonce = response["nonce"]
+            .as_str()
+            .ok_or_else(|| anyhow::anyhow!("Missing nonce in response"))?
+            .to_string();
+        
+        let tag = response["tag"]
+            .as_str()
+            .ok_or_else(|| anyhow::anyhow!("Missing tag in response"))?
+            .to_string();
+        
+        Ok(EncryptedData {
+            ciphertext,
+            key_id: key_id.to_string(),
+            algorithm: response["algorithm"]
+                .as_str()
+                .unwrap_or("AES-256-GCM")
+                .to_string(),
+            iv: Some(nonce),
+        })
     }
 
     /// Decrypt data
