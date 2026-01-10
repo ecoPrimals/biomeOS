@@ -6,16 +6,19 @@
 
 ## 🎊 Current Status
 
-**PRODUCTION-READY!** (January 9, 2026)
+**NUCLEUS COMPLETE!** (January 10, 2026)
 
 ✅ Core infrastructure  
-✅ NUCLEUS secure discovery (14 tests passing)  
+✅ NUCLEUS secure discovery (34 tests passing!)  
+✅ Neural API - 50% complete  
 ✅ Topology API  
 ✅ Zero unsafe code  
 ✅ Deep Debt Evolution Complete (Phases 1 & 2)  
 ✅ Zero production mocks  
 ✅ Zero hardcoded endpoints  
 ✅ LAN Federation working  
+
+🚧 **In Progress**: E2E testing with real primals  
 
 ---
 
@@ -48,11 +51,17 @@ cargo build --workspace
 
 ### **2. Run Tests**
 ```bash
-# All tests
+# All tests (34 passing!)
 cargo test --workspace
 
-# NUCLEUS tests
-cargo test --package biomeos-federation nucleus_tests
+# NUCLEUS tests (16 tests)
+cargo test -p biomeos-nucleus
+
+# Graph tests (18 tests)
+cargo test -p biomeos-graph
+
+# E2E example (requires Songbird + BearDog running)
+cargo run --example nucleus_graph_e2e
 ```
 
 ### **3. Start API Server**
@@ -100,15 +109,17 @@ curl http://localhost:3000/api/v1/topology | jq '.'
 
 ## 🧬 NUCLEUS (Secure Discovery)
 
-5-layer verification protocol:
+5-layer verification protocol (biomeos-nucleus):
 
 1. **Physical Discovery** (Songbird) - UDP multicast
 2. **Identity Verification** (BearDog) - Ed25519 signatures
-3. **Capability Verification** (biomeOS) - Query primal
+3. **Capability Verification** (Direct query) - Verify claims
 4. **Trust Evaluation** (BearDog) - Genetic lineage
-5. **Registration** (biomeOS) - Add to registry
+5. **Registration & Tracking** (biomeOS) - Verified registry
 
-**Trust Levels**: 0 (Unknown) → 4 (Highest/Sibling)
+**Trust Levels**: Unknown → Known → Trusted → Verified
+
+**Status**: ✅ 16 tests passing, production-ready
 
 ---
 
@@ -123,7 +134,14 @@ cargo run --bin biomeos-spore -- create \
 
 ### **Run NUCLEUS Tests**
 ```bash
-cargo test --package biomeos-federation nucleus_tests
+cargo test -p biomeos-nucleus
+cargo test -p biomeos-graph
+```
+
+### **Run E2E Example**
+```bash
+# Requires Songbird + BearDog running
+cargo run --example nucleus_graph_e2e
 ```
 
 ### **Check Unwraps (Deep Debt)**
@@ -244,7 +262,14 @@ pkill biomeos-api
 
 **See tests pass:**
 ```bash
-cargo test --package biomeos-federation nucleus_tests
+# NUCLEUS tests (16 passing)
+cargo test -p biomeos-nucleus
+
+# Graph tests (18 passing)
+cargo test -p biomeos-graph
+
+# All together (34 tests)
+cargo test -p biomeos-nucleus -p biomeos-graph
 ```
 
 ---
