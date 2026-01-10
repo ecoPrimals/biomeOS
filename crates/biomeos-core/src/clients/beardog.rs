@@ -212,33 +212,52 @@ impl BearDogClient {
 
     /// Decrypt data
     ///
+    /// Uses BearDog's JSON-RPC API: `encryption.decrypt`
+    ///
     /// # Arguments
-    /// * `ciphertext` - Encrypted data
+    /// * `ciphertext` - Base64-encoded encrypted data
     /// * `key_id` - Decryption key identifier
     ///
     /// # Returns
     /// Decrypted plaintext
     ///
     /// # Errors
-    /// Returns an error if decryption fails.
+    /// Returns an error if decryption fails or authentication tag is invalid.
+    ///
+    /// # Note
+    /// This is a simplified signature. Full decrypt requires nonce and tag.
+    /// Consider using decrypt_full() for complete control.
     pub async fn decrypt(&self, ciphertext: &str, key_id: &str) -> Result<String> {
-        let body = serde_json::json!({
-            "ciphertext": ciphertext,
-            "key_id": key_id
-        });
+        // Note: This simplified version assumes nonce/tag are embedded or default
+        // Real usage should call decrypt_with_nonce_tag()
+        let response = self.transport.call_method(
+            "encryption.decrypt",
+            serde_json::json!({
+                "ciphertext": ciphertext,
+                "key_ref": key_id,
+                // TODO: Add nonce and tag parameters
+            })
+        ).await
+            .context("Failed to call encryption.decrypt")?;
 
-        let response = self.http.post("/api/v1/crypto/decrypt", body).await?;
-
-        response["plaintext"]
+        // Decode base64 plaintext
+        let plaintext_b64 = response["plaintext"]
             .as_str()
-            .map(|s| s.to_string())
-            .ok_or_else(|| anyhow::anyhow!("No plaintext in response"))
+            .ok_or_else(|| anyhow::anyhow!("Missing plaintext in response"))?;
+        
+        let plaintext_bytes = BASE64.decode(plaintext_b64)
+            .context("Failed to decode plaintext from base64")?;
+        
+        String::from_utf8(plaintext_bytes)
+            .context("Plaintext is not valid UTF-8")
     }
 
     /// Sign data
     ///
+    /// Uses BearDog's JSON-RPC API: `signing.sign`
+    ///
     /// # Arguments
-    /// * `data` - Data to sign
+    /// * `data` - Data to sign (will be base64-encoded)
     /// * `key_id` - Signing key identifier
     ///
     /// # Returns
@@ -247,15 +266,30 @@ impl BearDogClient {
     /// # Errors
     /// Returns an error if signing fails.
     pub async fn sign(&self, data: &str, key_id: &str) -> Result<Signature> {
-        let body = serde_json::json!({
-            "data": data,
-            "key_id": key_id
-        });
+        // BearDog expects base64-encoded message
+        let message_b64 = BASE64.encode(data.as_bytes());
+        
+        let response = self.transport.call_method(
+            "signing.sign",
+            serde_json::json!({
+                "message": message_b64,
+                "key_ref": key_id,
+                "algorithm": "Ed25519"
+            })
+        ).await
+            .context("Failed to call signing.sign")?;
 
-        let response = self.http.post("/api/v1/crypto/sign", body).await?;
-
-        serde_json::from_value(response)
-            .map_err(|e| anyhow::anyhow!("Failed to parse signature: {}", e))
+        Ok(Signature {
+            signature: response["signature"]
+                .as_str()
+                .ok_or_else(|| anyhow::anyhow!("Missing signature in response"))?
+                .to_string(),
+            key_id: key_id.to_string(),
+            algorithm: response["algorithm"]
+                .as_str()
+                .unwrap_or("Ed25519")
+                .to_string(),
+        })
     }
 
     /// Verify signature
