@@ -9,23 +9,52 @@
 //! - Network topology
 //!
 //! This layer just coordinates Songbird's existing APIs.
+//!
+//! **Deep Debt Evolution**:
+//! - Uses CapabilityTaxonomy (enum) instead of strings
+//! - Uses SystemPaths for XDG compliance
+//! - Runtime discovery, no hardcoded paths
 
 use async_trait::async_trait;
+use biomeos_types::{CapabilityTaxonomy, SystemPaths};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tracing::{debug, info, warn};
 
-use crate::{Endpoint, EndpointType, Error, Result};
+use crate::{Endpoint, Error, Result};
 
 /// Discovery request
 #[derive(Debug, Clone)]
 pub struct DiscoveryRequest {
-    /// Capability to search for (e.g., "encryption", "compute")
-    pub capability: String,
+    /// Capability to search for (using taxonomy!)
+    pub capability: CapabilityTaxonomy,
     /// Optional family ID filter
     pub family: Option<String>,
     /// Optional timeout
     pub timeout: Option<Duration>,
+}
+
+impl DiscoveryRequest {
+    /// Create a new discovery request
+    pub fn new(capability: CapabilityTaxonomy) -> Self {
+        Self {
+            capability,
+            family: None,
+            timeout: None,
+        }
+    }
+    
+    /// Set family filter
+    pub fn with_family(mut self, family: impl Into<String>) -> Self {
+        self.family = Some(family.into());
+        self
+    }
+    
+    /// Set timeout
+    pub fn with_timeout(mut self, timeout: Duration) -> Self {
+        self.timeout = Some(timeout);
+        self
+    }
 }
 
 /// Discovered primal (from Songbird)
@@ -70,6 +99,8 @@ pub trait PhysicalDiscovery: Send + Sync {
 pub struct DiscoveryLayer {
     /// Songbird Unix socket path (discovered at runtime, not hardcoded!)
     songbird_socket: Option<String>,
+    /// System paths (XDG-compliant)
+    paths: SystemPaths,
 }
 
 impl DiscoveryLayer {
@@ -79,24 +110,29 @@ impl DiscoveryLayer {
     pub async fn new() -> Result<Self> {
         info!("Initializing NUCLEUS Discovery Layer (delegating to Songbird)");
         
+        // Get XDG-compliant paths
+        let paths = SystemPaths::new()
+            .map_err(|e| Error::discovery_failed(format!("Failed to initialize SystemPaths: {}", e), None))?;
+        
         // Discover Songbird socket (no hardcoded paths!)
-        let songbird_socket = Self::discover_songbird_socket().await?;
+        let songbird_socket = Self::discover_songbird_socket(&paths).await?;
         
         Ok(Self {
             songbird_socket: Some(songbird_socket),
+            paths,
         })
     }
 
     /// Discover Songbird's Unix socket
     ///
-    /// **Deep Debt Principle**: Runtime discovery, not hardcoded!
+    /// **Deep Debt Evolution**: Uses SystemPaths, not hardcoded paths!
     ///
     /// Checks in order:
     /// 1. Environment variable SONGBIRD_SOCKET
-    /// 2. Standard runtime directory (/run/user/{uid}/songbird/)
-    /// 3. Tmp directory (/tmp/songbird-*.sock)
-    async fn discover_songbird_socket() -> Result<String> {
-        debug!("Discovering Songbird socket (no hardcoded paths)");
+    /// 2. XDG runtime directory (SystemPaths)
+    /// 3. Scan runtime directory for songbird-*.sock
+    async fn discover_songbird_socket(paths: &SystemPaths) -> Result<String> {
+        debug!("Discovering Songbird socket (XDG-compliant, no hardcoded paths)");
 
         // 1. Check environment variable
         if let Ok(socket) = std::env::var("SONGBIRD_SOCKET") {
@@ -104,22 +140,19 @@ impl DiscoveryLayer {
             return Ok(socket);
         }
 
-        // 2. Check runtime directory
-        if let Ok(uid) = std::env::var("UID") {
-            let runtime_path = format!("/run/user/{}/songbird/songbird.sock", uid);
-            if tokio::fs::metadata(&runtime_path).await.is_ok() {
-                debug!("Found Songbird socket in runtime directory: {}", runtime_path);
-                return Ok(runtime_path);
-            }
+        // 2. Try standard songbird socket in runtime directory
+        let standard_socket = paths.primal_socket("songbird-orchestrator");
+        if tokio::fs::metadata(&standard_socket).await.is_ok() {
+            debug!("Found Songbird socket at XDG location: {}", standard_socket.display());
+            return Ok(standard_socket.to_string_lossy().to_string());
         }
 
-        // 3. Check tmp directory (with glob pattern)
-        let tmp_pattern = "/tmp/songbird-*.sock";
-        debug!("Searching for Songbird socket: {}", tmp_pattern);
+        // 3. Scan runtime directory for any songbird-*.sock
+        let runtime_dir = paths.runtime_dir();
+        debug!("Scanning runtime directory for Songbird socket: {}", runtime_dir.display());
         
-        // Use tokio::fs to read directory
-        let mut read_dir = tokio::fs::read_dir("/tmp").await
-            .map_err(|e| Error::discovery_failed(format!("Failed to read /tmp: {}", e), None))?;
+        let mut read_dir = tokio::fs::read_dir(runtime_dir).await
+            .map_err(|e| Error::discovery_failed(format!("Failed to read runtime dir: {}", e), None))?;
 
         while let Some(entry) = read_dir.next_entry().await
             .map_err(|e| Error::discovery_failed(format!("Failed to read directory entry: {}", e), None))? 
@@ -171,8 +204,11 @@ impl PhysicalDiscovery for DiscoveryLayer {
             "Discovering primals by capability (via Songbird)"
         );
 
+        // Convert taxonomy to string for Songbird API
+        let capability_str = request.capability.to_string();
+
         let params = serde_json::json!({
-            "capability": request.capability,
+            "capability": capability_str,
             "family_id": request.family,
         });
 
@@ -187,7 +223,12 @@ impl PhysicalDiscovery for DiscoveryLayer {
                 .clone()
         )?;
 
-        info!(count = primals.len(), "Discovered {} primals", primals.len());
+        info!(
+            count = primals.len(),
+            capability = %request.capability,
+            "Discovered {} primals with capability",
+            primals.len()
+        );
         Ok(primals)
     }
 
@@ -237,17 +278,36 @@ impl PhysicalDiscovery for DiscoveryLayer {
 mod tests {
     use super::*;
 
-    /// Test discovery request creation
+    /// Test discovery request creation with taxonomy
     #[test]
-    fn test_discovery_request() {
-        let request = DiscoveryRequest {
-            capability: "encryption".to_string(),
-            family: Some("nat0".to_string()),
-            timeout: Some(Duration::from_secs(5)),
-        };
+    fn test_discovery_request_with_taxonomy() {
+        let request = DiscoveryRequest::new(CapabilityTaxonomy::Encryption)
+            .with_family("nat0")
+            .with_timeout(Duration::from_secs(5));
 
-        assert_eq!(request.capability, "encryption");
+        assert!(matches!(request.capability, CapabilityTaxonomy::Encryption));
         assert_eq!(request.family, Some("nat0".to_string()));
+        assert_eq!(request.timeout, Some(Duration::from_secs(5)));
+    }
+
+    /// Test discovery request builder pattern
+    #[test]
+    fn test_discovery_request_builder() {
+        let request = DiscoveryRequest::new(CapabilityTaxonomy::Discovery);
+        assert!(matches!(request.capability, CapabilityTaxonomy::Discovery));
+        assert_eq!(request.family, None);
+    }
+
+    /// Test capability taxonomy to string conversion
+    #[test]
+    fn test_capability_taxonomy_conversion() {
+        let cap = CapabilityTaxonomy::Encryption;
+        let s = format!("{:?}", cap);
+        assert_eq!(s, "Encryption");
+        
+        let cap2 = CapabilityTaxonomy::P2PFederation;
+        let s2 = format!("{:?}", cap2);
+        assert_eq!(s2, "P2PFederation");
     }
 
     /// Test discovered primal parsing
@@ -268,6 +328,8 @@ mod tests {
         let primal: DiscoveredPrimal = serde_json::from_str(json).unwrap();
         assert_eq!(primal.primal, "beardog");
         assert_eq!(primal.capabilities.len(), 2);
+        assert!(primal.capabilities.contains(&"encryption".to_string()));
+        assert!(primal.capabilities.contains(&"identity".to_string()));
     }
 }
 

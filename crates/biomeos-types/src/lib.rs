@@ -23,8 +23,10 @@ pub use api_schema::{
     ApiSchemaResponse, ApiSchemaType, OperationMetadata, ParameterMetadata, PrimalInfo,
     SchemaDiscoveryConfig,
 };
+pub use capability_taxonomy::CapabilityTaxonomy; // Well-known capability taxonomy (enum)
 pub use constants::*;
 pub use error::{BiomeError, BiomeResult};
+pub use paths::SystemPaths; // XDG-compliant paths
 
 // Health system exports
 pub use health::{

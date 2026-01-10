@@ -31,14 +31,14 @@ use std::fmt;
 /// # Examples
 ///
 /// ```
-/// use biomeos_types::CapabilityTaxonomy;
+/// use biomeos_types::capabilities::PrimalCapability;
 ///
 /// // Discover by capability, not name
-/// let security_providers = registry.find_by_capability(CapabilityTaxonomy::Encryption);
+/// let security_providers = registry.find_by_capability(PrimalCapability::Encryption);
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum CapabilityTaxonomy {
+pub enum PrimalCapability {
     // =============================================================================
     // Security & Cryptography
     // =============================================================================
@@ -244,7 +244,7 @@ pub enum CapabilityTaxonomy {
     Custom(String),
 }
 
-impl CapabilityTaxonomy {
+impl PrimalCapability {
     /// Get a human-readable description of this capability
     pub fn description(&self) -> &'static str {
         match self {
@@ -398,7 +398,7 @@ impl CapabilityTaxonomy {
     }
 }
 
-impl fmt::Display for CapabilityTaxonomy {
+impl fmt::Display for PrimalCapability {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Custom(name) => write!(f, "custom:{}", name),
