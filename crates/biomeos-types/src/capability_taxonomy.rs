@@ -370,7 +370,7 @@ impl CapabilityTaxonomy {
             "deduplication" | "dedup" => Some(Self::Deduplication),
             "content_addressed" | "contentaddressed" => Some(Self::ContentAddressed),
             
-            "visual_rendering" | "visualrendering" | "rendering" => Some(Self::VisualRendering),
+            "visual_rendering" | "visualrendering" | "rendering" | "visualization" => Some(Self::VisualRendering),
             "input_handling" | "inputhandling" | "input" => Some(Self::InputHandling),
             "multi_modal" | "multimodal" => Some(Self::MultiModal),
             "topology_visualization" | "topologyvisualization" => Some(Self::TopologyVisualization),
