@@ -142,13 +142,13 @@ impl SongbirdClient {
         panic!("SongbirdClient::new() is deprecated. Use SongbirdClient::discover() instead.");
     }
 
-    /// Discover services by capability
+    /// Discover services by capability (v3.20.0)
     ///
     /// Query Songbird for all services that provide a specific capability.
-    /// Uses Songbird's JSON-RPC API: `discovery.find_by_capability`
+    /// Uses Songbird's JSON-RPC API: `discover_by_capability`
     ///
     /// # Arguments
-    /// * `capability` - Capability to search for (e.g., "compute", "storage", "ai", "p2p")
+    /// * `capability` - Capability to search for (e.g., "compute", "storage", "ai", "encryption")
     ///
     /// # Errors
     /// Returns an error if the request fails or the response cannot be parsed.
@@ -165,29 +165,45 @@ impl SongbirdClient {
     /// ```
     pub async fn discover_by_capability(&self, capability: &str) -> Result<Vec<ServiceInfo>> {
         let response = self.transport.call(
-            "discovery.find_by_capability",
+            "discover_by_capability",  // NEW: Direct method name
             Some(serde_json::json!({
                 "capability": capability,
-                "family_id": self.family_id
+                "protocol": "json-rpc"  // Optional protocol filter
             }))
         ).await
-            .context("Failed to call discovery.find_by_capability")?;
+            .context("Failed to call discover_by_capability")?;
 
-        // Songbird returns a "peers" array
-        if let Some(peers) = response.get("peers") {
-            serde_json::from_value(peers.clone())
-                .context("Failed to parse peer list from response")
+        // v3.20.0 returns {"primals": [...]}
+        if let Some(primals) = response.get("primals") {
+            let endpoints: Vec<PrimalEndpoint> = serde_json::from_value(primals.clone())
+                .context("Failed to parse primal endpoints")?;
+            
+            // Convert PrimalEndpoint to ServiceInfo for backward compatibility
+            Ok(endpoints.into_iter().map(|p| ServiceInfo {
+                service_id: p.service_id,
+                service_name: p.primal_name,
+                endpoint: p.endpoint,
+                capabilities: p.capabilities,
+                metadata: ServiceMetadata {
+                    version: "unknown".to_string(),
+                    location: None,
+                    tags: vec![],
+                },
+            }).collect())
         } else {
-            // Fallback: try to parse the response directly as a single peer
-            let peer: ServiceInfo = serde_json::from_value(response)
-                .context("Failed to parse service info from response")?;
-            Ok(vec![peer])
+            // Fallback for old format
+            if let Some(peers) = response.get("peers") {
+                serde_json::from_value(peers.clone())
+                    .context("Failed to parse peer list from response")
+            } else {
+                Ok(vec![])
+            }
         }
     }
 
-    /// Register a service with Songbird
+    /// Register a service with Songbird (v3.20.0)
     ///
-    /// Uses Songbird's JSON-RPC API: `registry.register`
+    /// Uses Songbird's JSON-RPC API: `register_service`
     ///
     /// # Arguments
     /// * `service` - Service registration information
@@ -219,22 +235,27 @@ impl SongbirdClient {
     /// ```
     pub async fn register_service(&self, service: &ServiceRegistration) -> Result<String> {
         let response = self.transport.call(
-            "registry.register",
-            Some(serde_json::to_value(service)?)
+            "register_service",  // NEW: Direct method name
+            Some(serde_json::json!({
+                "primal_name": service.service_name,
+                "capabilities": service.capabilities,
+                "endpoint": service.endpoint,
+                "protocol": "json-rpc",
+                "health_check_interval": 30
+            }))
         ).await
-            .context("Failed to call registry.register")?;
+            .context("Failed to call register_service")?;
 
-        // Songbird returns "registered_id"
-        response["registered_id"]
+        // v3.20.0 returns {"service_id": "...", "status": "...", "registered_at": "..."}
+        response["service_id"]
             .as_str()
-            .or_else(|| response["service_id"].as_str()) // Fallback to service_id for compatibility
             .map(|s| s.to_string())
-            .ok_or_else(|| anyhow::anyhow!("No registered_id or service_id in registration response"))
+            .ok_or_else(|| anyhow::anyhow!("No service_id in registration response"))
     }
 
-    /// Get health status for a specific service
+    /// Get health status for a specific service (v3.20.0)
     ///
-    /// Uses Songbird's JSON-RPC API: `health.check_service`
+    /// Uses Songbird's JSON-RPC API: `get_service_health`
     ///
     /// # Arguments
     /// * `service_id` - Service ID to check
@@ -255,22 +276,35 @@ impl SongbirdClient {
     /// ```
     pub async fn get_service_health(&self, service_id: &str) -> Result<HealthStatus> {
         let response = self.transport.call(
-            "health.check_service",
+            "get_service_health",  // NEW: Direct method name
             Some(serde_json::json!({
-                "service_id": service_id,
-                "family_id": self.family_id
+                "service_id": service_id
             }))
         ).await
-            .context("Failed to call health.check_service")?;
+            .context("Failed to call get_service_health")?;
 
-        Ok(HealthStatus {
-            healthy: response["status"] == "healthy",
-            message: response["message"]
-                .as_str()
-                .unwrap_or("Unknown")
-                .to_string(),
-            details: Some(response),
-        })
+        // v3.20.0 returns {"health": {"service_id": "...", "status": "...", ...}}
+        if let Some(health) = response.get("health") {
+            let status = health["status"].as_str().unwrap_or("unknown");
+            Ok(HealthStatus {
+                healthy: status == "healthy",
+                message: health["message"]
+                    .as_str()
+                    .unwrap_or("Unknown")
+                    .to_string(),
+                details: Some(response),
+            })
+        } else {
+            // Fallback for old format
+            Ok(HealthStatus {
+                healthy: response["status"] == "healthy",
+                message: response["message"]
+                    .as_str()
+                    .unwrap_or("Unknown")
+                    .to_string(),
+                details: Some(response),
+            })
+        }
     }
 
     /// Query services with metadata filter
@@ -378,7 +412,32 @@ impl PrimalClient for SongbirdClient {
     }
 }
 
-/// Service information from Songbird
+/// Primal endpoint information (v3.20.0)
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct PrimalEndpoint {
+    /// Unique service identifier
+    pub service_id: String,
+
+    /// Primal name (e.g., "BearDog")
+    pub primal_name: String,
+
+    /// Capabilities provided
+    pub capabilities: Vec<String>,
+
+    /// Endpoint (Unix socket or URL)
+    pub endpoint: String,
+
+    /// Protocol (json-rpc, tarpc, http)
+    pub protocol: String,
+
+    /// Last health check timestamp (ISO 8601)
+    pub last_health_check: String,
+
+    /// Health status (healthy, unhealthy, unknown)
+    pub health_status: String,
+}
+
+/// Service information from Songbird (legacy)
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ServiceInfo {
     /// Unique service identifier
@@ -395,6 +454,49 @@ pub struct ServiceInfo {
 
     /// Service metadata
     pub metadata: ServiceMetadata,
+}
+
+/// Response from discover_by_capability (v3.20.0)
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct DiscoverByCapabilityResponse {
+    /// Array of discovered primals
+    pub primals: Vec<PrimalEndpoint>,
+}
+
+/// Response from register_service (v3.20.0)
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct RegisterServiceResponse {
+    /// Assigned service ID
+    pub service_id: String,
+
+    /// Status (registered or updated)
+    pub status: String,
+
+    /// Registration timestamp (ISO 8601)
+    pub registered_at: String,
+}
+
+/// Response from get_service_health (v3.20.0)
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ServiceHealthResponse {
+    /// Health status information
+    pub health: ServiceHealthStatus,
+}
+
+/// Health status information (v3.20.0)
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ServiceHealthStatus {
+    /// Service identifier
+    pub service_id: String,
+
+    /// Status (healthy, unhealthy, unknown)
+    pub status: String,
+
+    /// Optional status message
+    pub message: Option<String>,
+
+    /// Timestamp (ISO 8601)
+    pub timestamp: String,
 }
 
 /// Service metadata
