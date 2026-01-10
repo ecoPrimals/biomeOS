@@ -1,0 +1,51 @@
+[package]
+name = "biomeos-nucleus"
+version = "0.1.0"
+edition = "2021"
+authors = ["ecoPrimals Project"]
+description = "Secure Primal Discovery Protocol (NUCLEUS) for biomeOS"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+# Async runtime
+tokio = { workspace = true }
+async-trait = { workspace = true }
+futures = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Error handling
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+
+# Time
+chrono = { workspace = true }
+
+# UUID
+uuid = { workspace = true }
+
+# Cryptography (for verification, not implementation)
+ed25519-dalek = "2.1"
+sha2 = "0.10"
+hex = "0.4"
+
+# Unix socket client
+tokio-serde = "0.9"
+tokio-util = { version = "0.7", features = ["codec"] }
+
+# biomeOS dependencies
+biomeos-types = { path = "../biomeos-types" }
+
+[dev-dependencies]
+tokio-test = { workspace = true }
+tempfile = "3.8"
+
+[features]
+default = []
+# For testing without real primals (capability-based mocks, isolated to tests)
+test-utils = []
