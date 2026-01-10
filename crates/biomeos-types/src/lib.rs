@@ -14,6 +14,7 @@ pub mod error;
 pub mod health;
 pub mod identifiers;
 pub mod manifest;
+pub mod paths;  // XDG-compliant system paths
 pub mod primal;
 pub mod service;
 
