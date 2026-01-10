@@ -46,6 +46,18 @@ pub enum GraphError {
     #[error("Primal capability not found: {0}")]
     CapabilityNotFound(String),
     
+    #[error("Primal not found: {primal_id} - {reason}")]
+    PrimalNotFound {
+        primal_id: String,
+        reason: String,
+    },
+    
+    #[error("Execution failed for node {node}: {reason}")]
+    ExecutionFailed {
+        node: String,
+        reason: String,
+    },
+    
     #[error(transparent)]
     Other(#[from] anyhow::Error),
 }

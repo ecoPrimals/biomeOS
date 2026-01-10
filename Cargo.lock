@@ -636,6 +636,7 @@ dependencies = [
  "base64 0.22.1",
  "biomeos-graph",
  "biomeos-manifest",
+ "biomeos-nucleus",
  "biomeos-primal-sdk",
  "biomeos-types",
  "chrono",
@@ -719,6 +720,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "biomeos-nucleus",
  "biomeos-types",
  "chrono",
  "futures 0.3.31",

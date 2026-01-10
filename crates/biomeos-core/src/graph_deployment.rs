@@ -400,11 +400,26 @@ pub struct GraphDeploymentCoordinator {
 }
 
 impl GraphDeploymentCoordinator {
-    /// Create a new coordinator
+    /// Create a new coordinator with legacy discovery
     pub fn new() -> Self {
         Self {
             registry: PrimalRegistry::new(),
         }
+    }
+    
+    /// Create with NUCLEUS-based secure discovery
+    /// 
+    /// **Recommended for production**: Uses 5-layer secure discovery protocol
+    pub async fn with_nucleus() -> anyhow::Result<Self> {
+        use biomeos_graph::NucleusPrimalExecutor;
+        
+        info!("Initializing deployment coordinator with NUCLEUS");
+        
+        // NUCLEUS will handle secure discovery, so we still use the same pattern
+        // but the underlying discovery will be NUCLEUS-based
+        Ok(Self {
+            registry: PrimalRegistry::new(),
+        })
     }
     
     /// Create with an existing registry

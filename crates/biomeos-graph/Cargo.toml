@@ -38,6 +38,7 @@ rusqlite = { version = "0.32", features = ["bundled"] }
 
 # biomeOS dependencies
 biomeos-types = { path = "../biomeos-types" }
+biomeos-nucleus = { path = "../biomeos-nucleus" }
 
 [dev-dependencies]
 tokio-test = { workspace = true }

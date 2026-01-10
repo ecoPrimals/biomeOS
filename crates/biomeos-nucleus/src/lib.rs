@@ -42,12 +42,12 @@
 //! let primals = client.discover(DiscoveryRequest {
 //!     capability: "encryption".to_string(),
 //!     family: Some("nat0".to_string()),
-//!     trust_level: TrustLevel::Verified,
+//!     timeout: None,
 //! }).await?;
 //!
 //! // Use discovered primal
 //! for primal in primals {
-//!     println!("Found: {} at {}", primal.name, primal.endpoint);
+//!     println!("Found: {} at {}", primal.name, primal.endpoint.address);
 //! }
 //! # Ok(())
 //! # }
