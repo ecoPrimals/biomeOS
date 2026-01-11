@@ -17,6 +17,7 @@ pub mod parser;
 pub mod validator;
 pub mod executor;
 pub mod modification;
+pub mod events;
 // pub mod nucleus_executor; // TODO: Re-enable after Wave 2 evolution to use CapabilityTaxonomy
 pub mod context;
 pub mod error;
@@ -42,6 +43,7 @@ pub use parser::GraphParser;
 pub use validator::GraphValidator;
 pub use executor::{GraphExecutor, PrimalOperationExecutor};
 pub use modification::{GraphModification, GraphModificationHandler, ModificationResult};
+pub use events::{GraphEvent, GraphEventBroadcaster, EventCollector};
 // pub use nucleus_executor::NucleusPrimalExecutor; // TODO: Re-enable after Wave 2 evolution
 pub use context::ExecutionContext;
 pub use error::{GraphError, Result};
