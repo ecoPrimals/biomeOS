@@ -35,7 +35,7 @@ family_seed_file = "./.family.seed"
 
 # Core: NestGate (Storage Gateway)
 [[primals]]
-binary = "./primals/nestgate"
+binary = "nestgate"  # Will be resolved via PATH or plasmidBin/
 provides = [
     "storage",
     "data-provenance",
@@ -59,7 +59,7 @@ RUST_LOG = "${LOG_LEVEL:-info}"
 
 # Mandatory: BearDog (Encryption & Security)
 [[primals]]
-binary = "./primals/beardog-server"
+binary = "beardog"  # Will be resolved via PATH or plasmidBin/
 provides = [
     "security",           # Core capability for other primals
     "encryption",
@@ -81,7 +81,7 @@ RUST_LOG = "${LOG_LEVEL:-info}"
 
 # Federation: Songbird (Discovery & Transfer)
 [[primals]]
-binary = "./primals/songbird-orchestrator"
+binary = "songbird"  # Multi-functional binary
 provides = [
     "discovery",
     "federation",
@@ -95,6 +95,50 @@ SONGBIRD_NODE_ID = "${NODE_ID}"
 SONGBIRD_FAMILY_ID = "${FAMILY_ID}"
 SONGBIRD_UDP_MULTICAST = "${UDP_MULTICAST:-true}"
 SONGBIRD_BTSP_ENABLED = "true"
+RUST_LOG = "${LOG_LEVEL:-info}"
+
+# AI & Intelligence: Squirrel (Data Analysis & Optimization)
+[[primals]]
+binary = "squirrel"  # Multi-functional binary
+provides = [
+    "ai",
+    "intelligence",
+    "pattern-detection",
+    "data-analysis",
+    "optimization",
+    "capacity-prediction",
+    "compression-tuning"
+]
+requires = ["storage"]  # Needs NestGate for data access
+optional = true  # Optional but highly recommended
+
+[primals.env]
+SQUIRREL_NODE_ID = "${NODE_ID}"
+SQUIRREL_FAMILY_ID = "${FAMILY_ID}"
+SQUIRREL_MODE = "data-analysis"
+SQUIRREL_FOCUS = "storage-optimization,capacity-prediction,compression-tuning,provenance-analysis"
+RUST_LOG = "${LOG_LEVEL:-info}"
+
+# Human Interface: petalTongue (Visualization & Monitoring)
+[[primals]]
+binary = "petaltongue"  # Multi-functional binary
+provides = [
+    "ui",
+    "visualization",
+    "monitoring",
+    "ui.render",
+    "ui.graph",
+    "ui.terminal"
+]
+requires = ["discovery"]  # Needs Songbird for primal discovery
+optional = true  # Optional (headless mode works without)
+
+[primals.env]
+PETALTONGUE_NODE_ID = "${NODE_ID}"
+FAMILY_ID = "${FAMILY_ID}"
+PETALTONGUE_MODE = "nest-monitoring"
+PETALTONGUE_FOCUS = "data-provenance,shard-distribution,federation-health,storage-utilization"
+SHOWCASE_MODE = "false"  # Live mode
 RUST_LOG = "${LOG_LEVEL:-info}"
 
 # =============================================================================

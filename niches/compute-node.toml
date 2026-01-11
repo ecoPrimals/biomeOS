@@ -37,7 +37,7 @@ family_seed_file = "./.family.seed"
 
 # Core: Toadstool (Universal Compute)
 [[primals]]
-binary = "./primals/toadstool"
+binary = "toadstool"  # Multi-functional binary
 provides = [
     "universal-compute",
     "workload-scheduling",
@@ -81,7 +81,7 @@ RUST_LOG = "${LOG_LEVEL:-info}"
 
 # Optional: BearDog (Crypto Lock for Secure Workloads)
 [[primals]]
-binary = "./primals/beardog-server"
+binary = "beardog"  # Multi-functional binary
 provides = [
     "security",
     "encryption",
@@ -107,6 +107,68 @@ BEARDOG_HTTP_ENABLED = "false"  # Unix socket only
 # Socket auto-created at: /tmp/beardog-${FAMILY_ID}-${NODE_ID}.sock
 
 # Logging
+RUST_LOG = "${LOG_LEVEL:-info}"
+
+# AI & Intelligence: Squirrel (Workload Optimization)
+[[primals]]
+binary = "squirrel"  # Multi-functional binary
+provides = [
+    "ai",
+    "intelligence",
+    "workload-optimization",
+    "resource-prediction",
+    "scheduling-optimization",
+    "performance-tuning"
+]
+requires = ["compute"]  # Needs ToadStool for workload data
+optional = true  # Optional but highly recommended
+
+[primals.env]
+SQUIRREL_NODE_ID = "${NODE_ID}"
+SQUIRREL_FAMILY_ID = "${FAMILY_ID}"
+SQUIRREL_MODE = "compute-optimization"
+SQUIRREL_FOCUS = "workload-scheduling,resource-prediction,performance-tuning,bottleneck-detection"
+RUST_LOG = "${LOG_LEVEL:-info}"
+
+# Human Interface: petalTongue (Resource Monitoring)
+[[primals]]
+binary = "petaltongue"  # Multi-functional binary
+provides = [
+    "ui",
+    "visualization",
+    "monitoring",
+    "ui.render",
+    "ui.graph",
+    "ui.terminal"
+]
+requires = ["discovery"]  # Needs Songbird for primal discovery (optional)
+optional = true  # Optional (headless mode works without)
+
+[primals.env]
+PETALTONGUE_NODE_ID = "${NODE_ID}"
+FAMILY_ID = "${FAMILY_ID}"
+PETALTONGUE_MODE = "compute-monitoring"
+PETALTONGUE_FOCUS = "resource-utilization,workload-status,performance-metrics,gpu-monitoring"
+SHOWCASE_MODE = "false"  # Live mode
+RUST_LOG = "${LOG_LEVEL:-info}"
+
+# Optional: NestGate (Compute-to-Data Paradigm)
+[[primals]]
+binary = "nestgate"  # Multi-functional binary
+provides = [
+    "storage",
+    "data-local-compute",
+    "zero-copy-operations"
+]
+requires = ["security"]  # Needs BearDog
+optional = true  # Only for compute-to-data scenarios
+
+[primals.env]
+NESTGATE_NODE_ID = "${NODE_ID}"
+NESTGATE_FAMILY_ID = "${FAMILY_ID}"
+NESTGATE_MODE = "compute-local"  # Minimal mode for compute nodes
+NESTGATE_STORAGE_PATH = "${STORAGE_PATH:-/data/compute}"
+NESTGATE_CACHE_PATH = "${CACHE_PATH:-/cache/compute}"
 RUST_LOG = "${LOG_LEVEL:-info}"
 
 # =============================================================================

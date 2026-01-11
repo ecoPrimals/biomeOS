@@ -37,7 +37,7 @@ family_seed_file = "./.family.seed"
 
 # Discovery & Federation: Songbird
 [[primals]]
-binary = "./primals/songbird-orchestrator"
+binary = "songbird"  # Multi-functional binary
 provides = [
     "discovery",
     "federation",
@@ -76,7 +76,7 @@ RUST_LOG = "${LOG_LEVEL:-info}"
 
 # Security & Encryption: BearDog
 [[primals]]
-binary = "./primals/beardog-server"
+binary = "beardog"  # Multi-functional binary
 provides = [
     "security",           # Core capability for other primals
     "encryption",
@@ -103,6 +103,49 @@ BEARDOG_HTTP_ENABLED = "false"  # Unix socket only
 # Auto-created at: /tmp/beardog-${FAMILY_ID}-${NODE_ID}.sock
 
 # Logging
+RUST_LOG = "${LOG_LEVEL:-info}"
+
+# AI & Intelligence: Squirrel (Network Optimization)
+[[primals]]
+binary = "squirrel"  # Multi-functional binary
+provides = [
+    "ai",
+    "intelligence",
+    "network-optimization",
+    "route-prediction",
+    "anomaly-detection",
+    "congestion-prediction"
+]
+requires = ["discovery"]  # Needs Songbird for network data
+optional = true  # Optional but highly recommended
+
+[primals.env]
+SQUIRREL_NODE_ID = "${NODE_ID}"
+SQUIRREL_FAMILY_ID = "${FAMILY_ID}"
+SQUIRREL_MODE = "network-optimization"
+SQUIRREL_FOCUS = "route-optimization,congestion-prediction,anomaly-detection,tunnel-tuning"
+RUST_LOG = "${LOG_LEVEL:-info}"
+
+# Human Interface: petalTongue (Federation Visualization)
+[[primals]]
+binary = "petaltongue"  # Multi-functional binary
+provides = [
+    "ui",
+    "visualization",
+    "monitoring",
+    "ui.render",
+    "ui.graph",
+    "ui.terminal"
+]
+requires = ["discovery"]  # Needs Songbird for primal discovery
+optional = true  # Optional (headless mode works without)
+
+[primals.env]
+PETALTONGUE_NODE_ID = "${NODE_ID}"
+FAMILY_ID = "${FAMILY_ID}"
+PETALTONGUE_MODE = "tower-monitoring"
+PETALTONGUE_FOCUS = "federation-topology,tunnel-status,peer-health,network-performance"
+SHOWCASE_MODE = "false"  # Live mode
 RUST_LOG = "${LOG_LEVEL:-info}"
 
 # =============================================================================
