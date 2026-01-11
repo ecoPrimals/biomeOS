@@ -23,7 +23,7 @@ members = [
     "crates/biomeos-federation",  # Hierarchical federation and sub-federation management
     "crates/biomeos-compute",  # Isomorphic & fractal compute architecture
     "crates/biomeos-graph",  # Graph-based orchestration for Neural API
-    # "crates/biomeos-ui",  # Archived 2025-12-23: Legacy UI crate, moved to archive/
+    "crates/biomeos-ui",  # Interactive UI orchestration - network effect of multiple primals
     "federation",
     # "ui",  # Archived 2025-12-23: UI evolved into petalTongue primal (../petalTongue/)
     # Showcase crates archived - moved to showcase/ directory history
