@@ -402,24 +402,13 @@ impl PrimalRegistry {
                 default_ports: [("api".to_string(), 6000)].into(),
                 config_hints: HashMap::new(),
             }),
-            _ => None,
-        }
-    }
-                default_ports: [("api".to_string(), 6000)].into(),
-                config_hints: HashMap::new(),
-            },
-            "squirrel" => PrimalMetadata {
+            "squirrel" => Some(PrimalMetadata {
                 description: "AI & Intelligence primal".to_string(),
                 capabilities: vec!["ai".to_string(), "ml".to_string()],
                 default_ports: [("api".to_string(), 5000)].into(),
                 config_hints: HashMap::new(),
-            },
-            _ => PrimalMetadata {
-                description: format!("Custom primal: {}", name),
-                capabilities: vec![],
-                default_ports: HashMap::new(),
-                config_hints: HashMap::new(),
-            },
+            }),
+            _ => None,
         }
     }
 }
