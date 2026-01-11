@@ -19,6 +19,7 @@ pub mod executor;
 pub mod modification;
 pub mod events;
 pub mod validation;
+pub mod ai_advisor;
 // pub mod nucleus_executor; // TODO: Re-enable after Wave 2 evolution to use CapabilityTaxonomy
 pub mod context;
 pub mod error;
@@ -48,6 +49,10 @@ pub use events::{GraphEvent, GraphEventBroadcaster, EventCollector};
 pub use validation::{
     EnhancedGraphValidator, ValidationReport, ValidationError, 
     ValidationWarning, ValidationSuggestion, PrimalAvailability
+};
+pub use ai_advisor::{
+    AiGraphAdvisor, AiSuggestion, SuggestionType, ImpactEstimate,
+    SuggestionFeedback, FeedbackOutcome, LearningEvent, GraphSnapshot
 };
 // pub use nucleus_executor::NucleusPrimalExecutor; // TODO: Re-enable after Wave 2 evolution
 pub use context::ExecutionContext;
