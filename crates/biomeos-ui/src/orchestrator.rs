@@ -180,7 +180,7 @@ impl InteractiveUIOrchestrator {
     async fn discover_active_primals(&self) -> Result<()> {
         info!("Discovering active primals...");
         
-        if let Some(songbird) = &self.songbird {
+        if self.songbird.is_some() {
             // Query Songbird for all registered primals
             // TODO: Implement get_all_primals method in SongbirdClient
             info!("Querying Songbird for active primals");
@@ -195,18 +195,10 @@ impl InteractiveUIOrchestrator {
     async fn load_saved_state(&self) -> Result<()> {
         info!("Loading saved UI state...");
         
-        if let Some(nestgate) = &self.nestgate {
+        if self.nestgate.is_some() {
             // Try to load previous assignments and configuration
-            match nestgate.retrieve("ui:state", &self.family_id).await {
-                Ok(data) => {
-                    info!("✅ Loaded saved UI state");
-                    // TODO: Deserialize and apply state
-                    debug!("Saved state: {:?}", data);
-                }
-                Err(e) => {
-                    debug!("No saved state found: {}", e);
-                }
-            }
+            // TODO: Implement when NestGateClient is available
+            info!("Storage primal available - would load saved state");
         } else {
             info!("No storage primal available, starting with fresh state");
         }
