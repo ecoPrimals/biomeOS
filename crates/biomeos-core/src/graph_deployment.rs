@@ -164,24 +164,14 @@ impl PrimalRegistry {
             }
         }
         
-        // Fallback: infer from socket name
-        let socket_name = socket_path.file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("");
+        // TRUE PRIMAL: Cannot infer capabilities from name
+        // If primal doesn't respond to capability query, it's unavailable
+        warn!(
+            socket = %socket_path.display(),
+            "Primal did not respond to capability query - may be offline or incompatible"
+        );
         
-        let inferred_caps = if socket_name.starts_with("songbird") {
-            vec!["discovery".to_string(), "tunneling".to_string(), "federation".to_string()]
-        } else if socket_name.starts_with("beardog") {
-            vec!["security".to_string(), "encryption".to_string(), "identity".to_string()]
-        } else if socket_name.starts_with("nestgate") {
-            vec!["storage".to_string(), "provenance".to_string()]
-        } else if socket_name.starts_with("toadstool") {
-            vec!["compute".to_string(), "workload".to_string()]
-        } else {
-            vec![]
-        };
-        
-        Ok(inferred_caps)
+        Ok(vec![])
     }
     
     /// Execute an operation on a primal via Unix socket JSON-RPC

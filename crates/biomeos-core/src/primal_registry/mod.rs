@@ -313,22 +313,21 @@ impl PrimalRegistry {
     }
 
     /// Detect primal name from filename
+    /// TRUE PRIMAL: No hardcoded list - accept any binary
     fn detect_primal_name(&self, filename: &str) -> String {
         // Remove common suffixes
         let name = filename
             .trim_end_matches(".exe")
             .trim_end_matches("-linux")
             .trim_end_matches("-macos")
-            .trim_end_matches("-windows");
+            .trim_end_matches("-windows")
+            .trim_start_matches("biomeos-")
+            .trim_end_matches("-bin")
+            .trim_end_matches("-server")
+            .trim_end_matches("-cli");
 
-        // Known primal names
-        let known = ["beardog", "songbird", "toadstool", "nestgate", "squirrel"];
-        for primal in known {
-            if name.to_lowercase().contains(primal) {
-                return primal.to_string();
-            }
-        }
-
+        // TRUE PRIMAL: No hardcoded list of known primals
+        // Accept any binary and query it for capabilities at runtime
         name.to_string()
     }
 
@@ -351,9 +350,27 @@ impl PrimalRegistry {
     }
 
     /// Get default metadata for a primal
+    /// TRUE PRIMAL: No hardcoded metadata - primals announce their own capabilities
     fn default_metadata(&self, name: &str) -> PrimalMetadata {
+        // Return minimal metadata - primal should announce its own capabilities
+        // This is only used as a fallback for legacy primals that don't support
+        // capability announcement
+        PrimalMetadata {
+            description: format!("{} primal (query for capabilities)", name),
+            capabilities: vec![], // Will be discovered at runtime via JSON-RPC
+            default_ports: HashMap::new(), // Will be discovered or configured
+            config_hints: HashMap::new(),
+        }
+    }
+    
+    /// Legacy metadata (deprecated - for backward compatibility only)
+    /// This should NOT be used in production - primals should announce capabilities
+    #[allow(dead_code)]
+    #[deprecated(note = "Primals should announce their own capabilities via JSON-RPC")]
+    fn legacy_hardcoded_metadata(&self, name: &str) -> Option<PrimalMetadata> {
+        // Only kept for reference - DO NOT USE
         match name {
-            "beardog" => PrimalMetadata {
+            "beardog" => Some(PrimalMetadata {
                 description: "Cryptography & Security primal".to_string(),
                 capabilities: vec![
                     "crypto".to_string(),
@@ -362,8 +379,8 @@ impl PrimalRegistry {
                 ],
                 default_ports: [("api".to_string(), 9000)].into(),
                 config_hints: HashMap::new(),
-            },
-            "songbird" => PrimalMetadata {
+            }),
+            "songbird" => Some(PrimalMetadata {
                 description: "Service Mesh & Federation primal".to_string(),
                 capabilities: vec![
                     "discovery".to_string(),
@@ -372,16 +389,22 @@ impl PrimalRegistry {
                 ],
                 default_ports: [("api".to_string(), 8000)].into(),
                 config_hints: HashMap::new(),
-            },
-            "toadstool" => PrimalMetadata {
+            }),
+            "toadstool" => Some(PrimalMetadata {
                 description: "Compute & Orchestration primal".to_string(),
                 capabilities: vec!["compute".to_string(), "orchestration".to_string()],
                 default_ports: [("api".to_string(), 7000)].into(),
                 config_hints: HashMap::new(),
-            },
-            "nestgate" => PrimalMetadata {
+            }),
+            "nestgate" => Some(PrimalMetadata {
                 description: "Storage & Data primal".to_string(),
                 capabilities: vec!["storage".to_string(), "data".to_string()],
+                default_ports: [("api".to_string(), 6000)].into(),
+                config_hints: HashMap::new(),
+            }),
+            _ => None,
+        }
+    }
                 default_ports: [("api".to_string(), 6000)].into(),
                 config_hints: HashMap::new(),
             },
