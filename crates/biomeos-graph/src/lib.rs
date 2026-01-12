@@ -20,10 +20,13 @@ pub mod modification;
 pub mod events;
 pub mod validation;
 pub mod ai_advisor;
+pub mod templates;
 // pub mod nucleus_executor; // TODO: Re-enable after Wave 2 evolution to use CapabilityTaxonomy
 pub mod context;
 pub mod error;
 pub mod metrics;
+
+// Neural API modules moved to biomeos-atomic-deploy to avoid circular dependency
 
 // Re-export core types
 pub use graph::{
@@ -54,8 +57,11 @@ pub use ai_advisor::{
     AiGraphAdvisor, AiSuggestion, SuggestionType, ImpactEstimate,
     SuggestionFeedback, FeedbackOutcome, LearningEvent, GraphSnapshot
 };
+pub use templates::{GraphTemplate, GraphTemplateManager, TemplateParameter, ParameterType};
 // pub use nucleus_executor::NucleusPrimalExecutor; // TODO: Re-enable after Wave 2 evolution
 pub use context::ExecutionContext;
 pub use error::{GraphError, Result};
 pub use metrics::{MetricsCollector, GraphMetrics, NodeMetricsAggregate, ExecutionRecord};
+
+// Neural API moved to biomeos-atomic-deploy crate
 

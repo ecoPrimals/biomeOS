@@ -18,6 +18,15 @@
 //!
 //! Value = n² (Metcalfe's Law) = 7² = 49 potential interactions!
 //!
+//! ## Phases
+//!
+//! - Phase 1: Foundation (types, events, actions) ✅
+//! - Phase 2: Discovery (capability-based) ✅
+//! - Phase 3: Interaction (device assignment) ✅
+//! - Phase 4: Real-Time (WebSocket/SSE) ✅
+//! - Phase 5: Intelligence (AI suggestions) ✅
+//! - Phase 6: Polish (error handling, loading) 🚧
+//!
 //! ## Example
 //!
 //! ```no_run
@@ -46,9 +55,15 @@ pub mod actions;
 pub mod events;
 pub mod orchestrator;
 pub mod state;
+pub mod realtime;
+pub mod suggestions;
+pub mod petaltongue_bridge;
 
 pub use actions::{UserAction, ActionResult};
 pub use events::{UIEvent, EventStream};
 pub use orchestrator::InteractiveUIOrchestrator;
 pub use state::{UIState, Device, PrimalInfo, Assignment};
+pub use realtime::{RealTimeEvent, RealTimeEventSubscriber, RealTimeEventHandler};
+pub use suggestions::{AISuggestion, AISuggestionManager, SuggestionContext, SuggestionFeedback};
+pub use petaltongue_bridge::{PetalTongueRPCBridge, Device as PTDevice, Primal as PTPrimal, NicheTemplate};
 

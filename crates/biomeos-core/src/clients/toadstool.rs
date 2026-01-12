@@ -325,6 +325,166 @@ impl ToadStoolClient {
         serde_json::from_value(response)
             .context("Failed to parse service status from response")
     }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Collaborative Intelligence API
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /// Estimate resource requirements for an execution graph
+    ///
+    /// Analyzes the graph structure and provides estimates for:
+    /// - CPU cores required
+    /// - Memory (MB) required
+    /// - GPU count (if applicable)
+    /// - Estimated execution duration
+    ///
+    /// Performance: <1ms for 100+ node graphs (100x better than target)
+    ///
+    /// # Arguments
+    /// * `graph` - Execution graph with nodes and edges
+    ///
+    /// # Returns
+    /// Resource estimates including CPU, memory, GPU, and duration
+    ///
+    /// # Errors
+    /// Returns an error if the graph is invalid or estimation fails.
+    ///
+    /// # Example
+    /// ```no_run
+    /// # use biomeos_core::clients::toadstool::{ToadStoolClient, ExecutionGraph, GraphNode, GraphEdge, EdgeType};
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// let toadstool = ToadStoolClient::discover("nat0").await?;
+    /// 
+    /// let graph = ExecutionGraph {
+    ///     nodes: vec![
+    ///         GraphNode::new("load_data", "nestgate", vec!["storage".to_string()]),
+    ///         GraphNode::new("process", "toadstool", vec!["compute".to_string()]),
+    ///     ],
+    ///     edges: vec![
+    ///         GraphEdge::data_flow("load_data", "process", "raw_data"),
+    ///     ],
+    /// };
+    ///
+    /// let estimate = toadstool.estimate_resources(&graph).await?;
+    /// println!("Estimated CPU: {} cores", estimate.cpu_cores);
+    /// println!("Estimated duration: {} seconds", estimate.duration_seconds);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn estimate_resources(&self, graph: &ExecutionGraph) -> Result<ResourceEstimate> {
+        let response = self.transport.call(
+            "resources.estimate",
+            Some(serde_json::to_value(graph)?)
+        ).await
+            .context("Failed to call resources.estimate")?;
+
+        serde_json::from_value(response)
+            .context("Failed to parse resource estimate from response")
+    }
+
+    /// Validate if system resources are available for an execution graph
+    ///
+    /// Queries the actual system capabilities and compares them against
+    /// the estimated requirements. Provides warnings if utilization will
+    /// exceed 80%.
+    ///
+    /// # Arguments
+    /// * `graph` - Execution graph to validate
+    ///
+    /// # Returns
+    /// Validation result with availability status and warnings
+    ///
+    /// # Errors
+    /// Returns an error if validation fails or the graph is invalid.
+    ///
+    /// # Example
+    /// ```no_run
+    /// # use biomeos_core::clients::toadstool::{ToadStoolClient, ExecutionGraph, GraphNode};
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// let toadstool = ToadStoolClient::discover("nat0").await?;
+    /// let graph = ExecutionGraph {
+    ///     nodes: vec![GraphNode::new("task", "toadstool", vec!["compute".to_string()])],
+    ///     edges: vec![],
+    /// };
+    ///
+    /// let validation = toadstool.validate_availability(&graph).await?;
+    /// if validation.available {
+    ///     println!("✅ Resources available!");
+    ///     if !validation.warnings.is_empty() {
+    ///         println!("⚠️ Warnings: {:?}", validation.warnings);
+    ///     }
+    /// } else {
+    ///     println!("❌ Insufficient resources: {:?}", validation.gaps);
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn validate_availability(&self, graph: &ExecutionGraph) -> Result<AvailabilityValidation> {
+        let response = self.transport.call(
+            "resources.validate_availability",
+            Some(serde_json::to_value(graph)?)
+        ).await
+            .context("Failed to call resources.validate_availability")?;
+
+        serde_json::from_value(response)
+            .context("Failed to parse availability validation from response")
+    }
+
+    /// Suggest optimizations for an execution graph
+    ///
+    /// Analyzes the graph for bottlenecks and optimization opportunities:
+    /// - Parallelization opportunities
+    /// - GPU acceleration candidates
+    /// - Memory optimization strategies
+    /// - Coordination overhead reduction
+    ///
+    /// # Arguments
+    /// * `graph` - Execution graph to analyze
+    ///
+    /// # Returns
+    /// List of optimization suggestions with confidence scores
+    ///
+    /// # Errors
+    /// Returns an error if analysis fails or the graph is invalid.
+    ///
+    /// # Example
+    /// ```no_run
+    /// # use biomeos_core::clients::toadstool::{ToadStoolClient, ExecutionGraph, GraphNode, GraphEdge};
+    /// # #[tokio::main]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// let toadstool = ToadStoolClient::discover("nat0").await?;
+    /// let graph = ExecutionGraph {
+    ///     nodes: vec![
+    ///         GraphNode::new("load", "nestgate", vec!["storage".to_string()]),
+    ///         GraphNode::new("transform1", "toadstool", vec!["compute".to_string()]),
+    ///         GraphNode::new("transform2", "toadstool", vec!["compute".to_string()]),
+    ///     ],
+    ///     edges: vec![
+    ///         GraphEdge::data_flow("load", "transform1", "data"),
+    ///         GraphEdge::data_flow("load", "transform2", "data"),
+    ///     ],
+    /// };
+    ///
+    /// let suggestions = toadstool.suggest_optimizations(&graph).await?;
+    /// for suggestion in suggestions.suggestions {
+    ///     println!("💡 {}: {} (confidence: {:.0}%)",
+    ///         suggestion.category, suggestion.description, suggestion.confidence * 100.0);
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn suggest_optimizations(&self, graph: &ExecutionGraph) -> Result<OptimizationSuggestions> {
+        let response = self.transport.call(
+            "resources.suggest_optimizations",
+            Some(serde_json::to_value(graph)?)
+        ).await
+            .context("Failed to call resources.suggest_optimizations")?;
+
+        serde_json::from_value(response)
+            .context("Failed to parse optimization suggestions from response")
+    }
 }
 
 #[async_trait]
@@ -446,6 +606,265 @@ pub struct ServiceStatus {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub endpoint: Option<String>,
 }
+
+// ═══════════════════════════════════════════════════════════════════════
+// Collaborative Intelligence Types
+// ═══════════════════════════════════════════════════════════════════════
+
+/// Execution graph for resource planning
+///
+/// Represents a directed acyclic graph (DAG) of operations to be executed.
+/// Used by Collaborative Intelligence API for resource estimation and optimization.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExecutionGraph {
+    /// Graph nodes (operations/tasks)
+    pub nodes: Vec<GraphNode>,
+
+    /// Graph edges (dependencies/data flow)
+    pub edges: Vec<GraphEdge>,
+}
+
+/// Graph node representing a single operation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GraphNode {
+    /// Unique node identifier
+    pub id: String,
+
+    /// Primal responsible for execution (e.g., "toadstool", "nestgate")
+    pub primal: String,
+
+    /// Required capabilities (e.g., "compute", "storage", "gpu")
+    pub capabilities: Vec<String>,
+
+    /// Estimated resource requirements (optional, for fine-tuning)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resources: Option<NodeResources>,
+}
+
+impl GraphNode {
+    /// Create a new graph node
+    pub fn new(id: impl Into<String>, primal: impl Into<String>, capabilities: Vec<String>) -> Self {
+        Self {
+            id: id.into(),
+            primal: primal.into(),
+            capabilities,
+            resources: None,
+        }
+    }
+
+    /// Create a node with explicit resource requirements
+    pub fn with_resources(
+        id: impl Into<String>,
+        primal: impl Into<String>,
+        capabilities: Vec<String>,
+        resources: NodeResources,
+    ) -> Self {
+        Self {
+            id: id.into(),
+            primal: primal.into(),
+            capabilities,
+            resources: Some(resources),
+        }
+    }
+}
+
+/// Resource requirements for a single node
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NodeResources {
+    /// CPU cores required
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cpu_cores: Option<f64>,
+
+    /// Memory in megabytes
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub memory_mb: Option<u64>,
+
+    /// GPU count required
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub gpu_count: Option<u32>,
+
+    /// Estimated duration in seconds
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duration_seconds: Option<f64>,
+}
+
+/// Graph edge representing a dependency or data flow
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GraphEdge {
+    /// Source node ID
+    pub from: String,
+
+    /// Target node ID
+    pub to: String,
+
+    /// Edge type
+    pub edge_type: EdgeType,
+}
+
+impl GraphEdge {
+    /// Create a data flow edge (data transfer between nodes)
+    pub fn data_flow(from: impl Into<String>, to: impl Into<String>, data: impl Into<String>) -> Self {
+        Self {
+            from: from.into(),
+            to: to.into(),
+            edge_type: EdgeType::DataFlow { data_flow: data.into() },
+        }
+    }
+
+    /// Create a control edge (execution dependency)
+    pub fn control(from: impl Into<String>, to: impl Into<String>) -> Self {
+        Self {
+            from: from.into(),
+            to: to.into(),
+            edge_type: EdgeType::Control,
+        }
+    }
+}
+
+/// Edge type for graph dependencies
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum EdgeType {
+    /// Data flow between nodes
+    DataFlow {
+        /// Data identifier being transferred
+        data_flow: String,
+    },
+    /// Control dependency (execution order)
+    Control,
+}
+
+/// Resource estimate for an execution graph
+#[derive(Debug, Clone, Deserialize)]
+pub struct ResourceEstimate {
+    /// Total CPU cores required
+    pub cpu_cores: f64,
+
+    /// Total memory in megabytes
+    pub memory_mb: u64,
+
+    /// Total GPU count required
+    pub gpu_count: u32,
+
+    /// Estimated execution duration in seconds
+    pub duration_seconds: f64,
+
+    /// Estimated parallelism factor (1.0 = fully sequential, higher = more parallel)
+    pub parallelism: f64,
+
+    /// Breakdown by node
+    pub node_estimates: Vec<NodeEstimate>,
+}
+
+/// Resource estimate for a single node
+#[derive(Debug, Clone, Deserialize)]
+pub struct NodeEstimate {
+    /// Node ID
+    pub node_id: String,
+
+    /// CPU cores for this node
+    pub cpu_cores: f64,
+
+    /// Memory for this node
+    pub memory_mb: u64,
+
+    /// GPU count for this node
+    pub gpu_count: u32,
+
+    /// Duration for this node
+    pub duration_seconds: f64,
+}
+
+/// Availability validation result
+#[derive(Debug, Clone, Deserialize)]
+pub struct AvailabilityValidation {
+    /// Whether resources are available
+    pub available: bool,
+
+    /// Current system capacity
+    pub system_capacity: SystemCapacity,
+
+    /// Required resources
+    pub required: ResourceSummary,
+
+    /// Resource gaps (if any)
+    pub gaps: Vec<ResourceGap>,
+
+    /// Warnings about high utilization
+    pub warnings: Vec<String>,
+}
+
+/// System capacity information
+#[derive(Debug, Clone, Deserialize)]
+pub struct SystemCapacity {
+    /// Total CPU cores
+    pub cpu_cores: f64,
+
+    /// Total memory in megabytes
+    pub memory_mb: u64,
+
+    /// Total GPU count
+    pub gpu_count: u32,
+}
+
+/// Resource summary
+#[derive(Debug, Clone, Deserialize)]
+pub struct ResourceSummary {
+    /// CPU cores required
+    pub cpu_cores: f64,
+
+    /// Memory required
+    pub memory_mb: u64,
+
+    /// GPU count required
+    pub gpu_count: u32,
+}
+
+/// Resource gap (insufficient resources)
+#[derive(Debug, Clone, Deserialize)]
+pub struct ResourceGap {
+    /// Resource type (e.g., "cpu", "memory", "gpu")
+    pub resource: String,
+
+    /// Required amount
+    pub required: f64,
+
+    /// Available amount
+    pub available: f64,
+
+    /// Gap amount (required - available)
+    pub gap: f64,
+}
+
+/// Optimization suggestions for a graph
+#[derive(Debug, Clone, Deserialize)]
+pub struct OptimizationSuggestions {
+    /// List of suggestions
+    pub suggestions: Vec<Suggestion>,
+
+    /// Estimated speedup if all suggestions applied
+    pub estimated_speedup: f64,
+}
+
+/// Individual optimization suggestion
+#[derive(Debug, Clone, Deserialize)]
+pub struct Suggestion {
+    /// Suggestion category (e.g., "parallelization", "gpu_acceleration")
+    pub category: String,
+
+    /// Human-readable description
+    pub description: String,
+
+    /// Node IDs affected by this suggestion
+    pub affected_nodes: Vec<String>,
+
+    /// Confidence score (0.0-1.0)
+    pub confidence: f64,
+
+    /// Estimated speedup for this suggestion
+    pub estimated_speedup: f64,
+}
+
 
 #[cfg(test)]
 mod tests {

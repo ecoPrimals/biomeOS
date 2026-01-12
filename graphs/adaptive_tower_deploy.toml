@@ -1,0 +1,155 @@
+# 🧠 Adaptive Tower Deployment Graph
+# Neural API + DeploymentMode Integration
+#
+# This graph adapts to the deployment mode:
+# - Cold Spore: Optimizes for portable execution
+# - Live Spore: Optimizes for full performance
+# - Sibling Spore: Optimizes for coexistence
+
+[graph]
+name = "adaptive_tower_deploy"
+version = "1.0.0"
+description = "AI-driven Tower atomic deployment with deployment mode awareness"
+
+# Phase 1: Detect Deployment Mode
+[[nodes]]
+id = "detect_mode"
+name = "Detect Deployment Mode"
+capability = "system.detect"
+implementation = "biomeOS"
+parallel_group = 1
+
+[nodes.params]
+detection_type = "deployment_mode"
+
+[nodes.metrics]
+expected_duration_ms = 50
+criticality = "high"
+
+# Phase 2: Estimate Resources (using ToadStool)
+[[nodes]]
+id = "estimate_resources"
+name = "Estimate Tower Resources"
+capability = "compute.estimate"
+implementation = "toadstool"
+parallel_group = 2
+dependencies = ["detect_mode"]
+
+[nodes.params]
+operation = "atomic_deployment"
+atomic_type = "tower"
+primals = ["beardog", "songbird"]
+
+[nodes.metrics]
+expected_duration_ms = 100
+criticality = "high"
+
+# Phase 3: Launch BearDog (encryption foundation)
+[[nodes]]
+id = "launch_beardog"
+name = "Launch BearDog"
+capability = "security.encryption"
+implementation = "biomeOS"
+parallel_group = 3
+dependencies = ["estimate_resources"]
+
+[nodes.params]
+primal = "beardog"
+family_id = "nat0"
+mode_aware = true
+
+[nodes.metrics]
+expected_duration_ms = 2000
+criticality = "critical"
+
+[nodes.retry]
+max_attempts = 3
+backoff_ms = 1000
+
+# Phase 4: Launch Songbird (discovery foundation)
+[[nodes]]
+id = "launch_songbird"
+name = "Launch Songbird"
+capability = "discovery.federation"
+implementation = "biomeOS"
+parallel_group = 3
+dependencies = ["estimate_resources"]
+
+[nodes.params]
+primal = "songbird"
+family_id = "nat0"
+mode_aware = true
+security_provider = "beardog"
+
+[nodes.metrics]
+expected_duration_ms = 2000
+criticality = "critical"
+
+[nodes.retry]
+max_attempts = 3
+backoff_ms = 1000
+
+# Phase 5: Verify Tower Atomic
+[[nodes]]
+id = "verify_tower"
+name = "Verify Tower Health"
+capability = "system.verify"
+implementation = "biomeOS"
+parallel_group = 4
+dependencies = ["launch_beardog", "launch_songbird"]
+
+[nodes.params]
+atomic_type = "tower"
+health_checks = ["beardog_socket", "songbird_socket", "beardog_api", "songbird_api"]
+
+[nodes.metrics]
+expected_duration_ms = 1000
+criticality = "high"
+
+# Phase 6: Get AI Optimization Suggestions
+[[nodes]]
+id = "ai_optimize"
+name = "AI Optimization Suggestions"
+capability = "ai.optimize"
+implementation = "squirrel"
+parallel_group = 5
+dependencies = ["verify_tower"]
+
+[nodes.params]
+target = "tower_atomic"
+metrics_source = "verify_tower"
+
+[nodes.metrics]
+expected_duration_ms = 500
+criticality = "medium"
+
+# Phase 7: Apply Optimizations
+[[nodes]]
+id = "apply_optimizations"
+name = "Apply AI Suggestions"
+capability = "system.optimize"
+implementation = "biomeOS"
+parallel_group = 6
+dependencies = ["ai_optimize"]
+
+[nodes.params]
+suggestions_source = "ai_optimize"
+auto_apply = false  # User confirmation required
+
+[nodes.metrics]
+expected_duration_ms = 1000
+criticality = "low"
+
+# Execution metadata
+[execution]
+timeout_ms = 30000
+parallel_execution = true
+collect_metrics = true
+learning_enabled = true
+
+[execution.adaptive]
+# Deployment mode affects execution
+cold_spore_timeout_multiplier = 1.5  # USB is slower
+live_spore_timeout_multiplier = 1.0  # Full performance
+sibling_spore_timeout_multiplier = 1.2  # Shared resources
+

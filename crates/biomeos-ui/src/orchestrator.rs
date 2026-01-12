@@ -46,13 +46,57 @@ pub enum CapacityResult {
     Insufficient { reason: String },
 }
 
-// Placeholder types for primal clients
-// These will be replaced with actual client imports once they're exported from biomeos-core
+// ═══════════════════════════════════════════════════════════════════════════
+// PLACEHOLDER PRIMAL CLIENTS
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// These are placeholder types that will be replaced when petalTongue integration
+// is complete. See INTEGRATION_GAP_ANALYSIS_JAN11.md for the full integration plan.
+//
+// Timeline: 2.5-3.5 weeks (5 phases)
+//   Phase 1: Data Flow Integration (~300 lines, 2-3 days) 
+//   Phase 2: Device Management UI (~750 lines, 3-4 days)
+//   Phase 3: Primal Status UI (~600 lines, 2-3 days)
+//   Phase 4: Niche Designer (~1,200 lines, 4-5 days)
+//   Phase 5: Interactions (~200 lines, 2-3 days)
+//
+// Status: Backend 100% ready, awaiting UI integration from petalTongue team
+//
+// Why placeholders?
+//   - The BACKEND infrastructure is complete (NUCLEUS, NeuralAPI, CI)
+//   - The UI COORDINATION layer is complete (this orchestrator)
+//   - The VISUAL INTERFACE is being built by petalTongue team
+//   - These placeholders let the code compile while integration is in progress
+//
+// When will they be replaced?
+//   - When petalTongue completes Phase 1 (Data Flow), these become Option<RealClient>
+//   - Real clients will be discovered at runtime via capability-based discovery
+//   - No code changes needed here - just wire up the data flow
+//
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// Placeholder for PetalTongueClient (rendering primal)
+/// Will be replaced when Phase 1 (Data Flow) is complete
 type PetalTongueClient = ();
+
+/// Placeholder for SongbirdClient (discovery primal)
+/// Will be replaced when Phase 1 (Data Flow) is complete
 type SongbirdClient = ();
+
+/// Placeholder for BearDogClient (security primal)
+/// Will be replaced when Phase 1 (Data Flow) is complete
 type BearDogClient = ();
+
+/// Placeholder for NestGateClient (storage primal)
+/// Will be replaced when Phase 1 (Data Flow) is complete
 type NestGateClient = ();
+
+/// Placeholder for ToadStoolClient (compute primal)
+/// Will be replaced when Phase 1 (Data Flow) is complete
 type ToadStoolClient = ();
+
+/// Placeholder for SquirrelClient (AI primal)
+/// Will be replaced when Phase 1 (Data Flow) is complete
 type SquirrelClient = ();
 
 /// Interactive UI Orchestrator

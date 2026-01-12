@@ -84,6 +84,11 @@ pub struct PrimalClient {
     timeout: Duration,
 }
 
+/// Type alias for backward compatibility
+/// 
+/// TODO: Rename all usages to `PrimalClient` and remove this alias
+pub type TransportClient = PrimalClient;
+
 /// Internal transport implementation
 enum Transport {
     UnixSocket(jsonrpc::JsonRpcUnixClient),

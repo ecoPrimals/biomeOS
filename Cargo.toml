@@ -34,6 +34,7 @@ members = [
     # "showcase/03-p2p-coordination/05-full-ecosystem-integration",
     "crates/biomeos-boot",
     "crates/biomeos-deploy", "crates/biomeos-test-utils", "crates/biomeos-nucleus",
+    "crates/biomeos-atomic-deploy",  # Genetic lineage atomic deployment (modern Rust, no bash)
 ]
 exclude = [
     "validation",  # Independent workspace for validation tools using benchScale
@@ -140,6 +141,7 @@ biomeos-manifest = { path = "crates/biomeos-manifest" }
 biomeos-system = { path = "crates/biomeos-system" }
 biomeos-chimera = { path = "crates/biomeos-chimera" }
 biomeos-niche = { path = "crates/biomeos-niche" }
+biomeos-graph = { path = "crates/biomeos-graph" }  # Neural API graph orchestration
 # biomeos-ui = { path = "crates/biomeos-ui" }  # Archived 2025-12-23
 
 # Async runtime
@@ -153,6 +155,7 @@ thiserror = "1.0"
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+toml = "0.8"
 serde_yaml = "0.9"
 uuid = { workspace = true }
 gethostname = "0.5"

@@ -1,0 +1,417 @@
+# Neural API Graph: Genetic Lineage Full NUCLEUS Deployment
+# Deterministic deployment of all 3 atomics from USB seed
+# Replaces bash scripts with graph-orchestrated Rust
+
+[graph]
+id = "genetic_lineage_full_nucleus"
+version = "1.0.0"
+description = "Deploy Tower, Node, Nest atomics from USB seed with genetic lineage"
+deterministic = true
+
+# Phase 1: USB Seed Verification
+[[nodes]]
+id = "verify_usb_seed"
+type = "filesystem.check_exists"
+description = "Verify USB parent seed exists and is readable"
+
+[nodes.config]
+path = "${USB_SEED_PATH}"
+expected_size = 32  # 256-bit seed
+permissions = "0600"  # Owner read/write only
+
+[[nodes.outputs]]
+name = "usb_seed_verified"
+type = "bool"
+
+# Phase 2: Derive Child Seeds (Parallel)
+[[nodes]]
+id = "derive_tower_seed"
+type = "crypto.derive_child_seed"
+dependencies = ["verify_usb_seed"]
+description = "Derive Tower-specific seed via SHA256 genetic mixing"
+
+[nodes.config]
+parent_seed = "${USB_SEED_PATH}"
+node_id = "tower"
+family_id = "${FAMILY_ID}"
+deployment_batch = "${DEPLOYMENT_BATCH}"
+algorithm = "SHA256"
+output_path = "${RUNTIME_DIR}/.family-tower-${FAMILY_ID}.seed"
+
+[[nodes.outputs]]
+name = "tower_seed_path"
+type = "path"
+
+[[nodes]]
+id = "derive_node_seed"
+type = "crypto.derive_child_seed"
+dependencies = ["verify_usb_seed"]
+description = "Derive Node-specific seed via SHA256 genetic mixing"
+
+[nodes.config]
+parent_seed = "${USB_SEED_PATH}"
+node_id = "node"
+family_id = "${FAMILY_ID}"
+deployment_batch = "${DEPLOYMENT_BATCH}"
+algorithm = "SHA256"
+output_path = "${RUNTIME_DIR}/.family-node-${FAMILY_ID}.seed"
+
+[[nodes.outputs]]
+name = "node_seed_path"
+type = "path"
+
+[[nodes]]
+id = "derive_nest_seed"
+type = "crypto.derive_child_seed"
+dependencies = ["verify_usb_seed"]
+description = "Derive Nest-specific seed via SHA256 genetic mixing"
+
+[nodes.config]
+parent_seed = "${USB_SEED_PATH}"
+node_id = "nest"
+family_id = "${FAMILY_ID}"
+deployment_batch = "${DEPLOYMENT_BATCH}"
+algorithm = "SHA256"
+output_path = "${RUNTIME_DIR}/.family-nest-${FAMILY_ID}.seed"
+
+[[nodes.outputs]]
+name = "nest_seed_path"
+type = "path"
+
+# Phase 3: Deploy Tower Atomic
+[[nodes]]
+id = "deploy_tower_beardog"
+type = "primal.launch"
+dependencies = ["derive_tower_seed"]
+description = "Launch Tower BearDog with genetic lineage"
+
+[nodes.config]
+primal = "beardog-server"
+binary_path = "${BINARY_DIR}/primals/beardog-server"
+socket_path = "${RUNTIME_DIR}/beardog-tower.sock"
+
+[nodes.config.env]
+BEARDOG_FAMILY_SEED_FILE = "${tower_seed_path}"
+BEARDOG_FAMILY_ID = "${FAMILY_ID}"
+BEARDOG_NODE_ID = "tower"
+BEARDOG_SOCKET = "${RUNTIME_DIR}/beardog-tower.sock"
+
+[[nodes.outputs]]
+name = "tower_beardog_pid"
+type = "u32"
+
+[[nodes]]
+id = "deploy_tower_songbird"
+type = "primal.launch"
+dependencies = ["deploy_tower_beardog"]
+description = "Launch Tower Songbird (waits for BearDog)"
+
+[nodes.config]
+primal = "songbird-orchestrator"
+binary_path = "${BINARY_DIR}/primals/songbird-orchestrator"
+socket_path = "${RUNTIME_DIR}/songbird-tower.sock"
+wait_for_dependency = true
+dependency_socket = "${RUNTIME_DIR}/beardog-tower.sock"
+
+[nodes.config.env]
+SONGBIRD_SOCKET = "${RUNTIME_DIR}/songbird-tower.sock"
+SONGBIRD_FAMILY_ID = "${FAMILY_ID}"
+SONGBIRD_SECURITY_PROVIDER = "${RUNTIME_DIR}/beardog-tower.sock"
+
+[[nodes.outputs]]
+name = "tower_songbird_pid"
+type = "u32"
+
+[[nodes]]
+id = "verify_tower_health"
+type = "health.check_atomic"
+dependencies = ["deploy_tower_songbird"]
+description = "Verify Tower atomic operational"
+
+[nodes.config]
+atomic_type = "tower"
+required_sockets = [
+    "${RUNTIME_DIR}/beardog-tower.sock",
+    "${RUNTIME_DIR}/songbird-tower.sock"
+]
+timeout_ms = 5000
+
+[[nodes.outputs]]
+name = "tower_healthy"
+type = "bool"
+
+# Phase 4: Deploy Node Atomic
+[[nodes]]
+id = "deploy_node_beardog"
+type = "primal.launch"
+dependencies = ["derive_node_seed"]
+description = "Launch Node BearDog with genetic lineage"
+
+[nodes.config]
+primal = "beardog-server"
+binary_path = "${BINARY_DIR}/primals/beardog-server"
+socket_path = "${RUNTIME_DIR}/beardog-node.sock"
+
+[nodes.config.env]
+BEARDOG_FAMILY_SEED_FILE = "${node_seed_path}"
+BEARDOG_FAMILY_ID = "${FAMILY_ID}"
+BEARDOG_NODE_ID = "node"
+BEARDOG_SOCKET = "${RUNTIME_DIR}/beardog-node.sock"
+
+[[nodes.outputs]]
+name = "node_beardog_pid"
+type = "u32"
+
+[[nodes]]
+id = "deploy_node_songbird"
+type = "primal.launch"
+dependencies = ["deploy_node_beardog"]
+description = "Launch Node Songbird"
+
+[nodes.config]
+primal = "songbird-orchestrator"
+binary_path = "${BINARY_DIR}/primals/songbird-orchestrator"
+socket_path = "${RUNTIME_DIR}/songbird-node.sock"
+wait_for_dependency = true
+dependency_socket = "${RUNTIME_DIR}/beardog-node.sock"
+
+[nodes.config.env]
+SONGBIRD_SOCKET = "${RUNTIME_DIR}/songbird-node.sock"
+SONGBIRD_FAMILY_ID = "${FAMILY_ID}"
+SONGBIRD_SECURITY_PROVIDER = "${RUNTIME_DIR}/beardog-node.sock"
+
+[[nodes.outputs]]
+name = "node_songbird_pid"
+type = "u32"
+
+[[nodes]]
+id = "deploy_node_toadstool"
+type = "primal.launch"
+dependencies = ["deploy_node_songbird"]
+description = "Launch Node ToadStool (resource management)"
+
+[nodes.config]
+primal = "toadstool"
+binary_path = "${BINARY_DIR}/toadstool"
+socket_path = "${RUNTIME_DIR}/toadstool-node.sock"
+optional = true  # Degraded mode if unavailable
+
+[nodes.config.env]
+TOADSTOOL_SOCKET = "${RUNTIME_DIR}/toadstool-node.sock"
+TOADSTOOL_FAMILY_ID = "${FAMILY_ID}"
+
+[[nodes.outputs]]
+name = "node_toadstool_pid"
+type = "Option<u32>"
+
+[[nodes]]
+id = "verify_node_health"
+type = "health.check_atomic"
+dependencies = ["deploy_node_toadstool"]
+description = "Verify Node atomic operational"
+
+[nodes.config]
+atomic_type = "node"
+required_sockets = [
+    "${RUNTIME_DIR}/beardog-node.sock",
+    "${RUNTIME_DIR}/songbird-node.sock"
+]
+optional_sockets = [
+    "${RUNTIME_DIR}/toadstool-node.sock"
+]
+timeout_ms = 5000
+
+[[nodes.outputs]]
+name = "node_healthy"
+type = "bool"
+
+# Phase 5: Deploy Nest Atomic
+[[nodes]]
+id = "deploy_nest_beardog"
+type = "primal.launch"
+dependencies = ["derive_nest_seed"]
+description = "Launch Nest BearDog with genetic lineage"
+
+[nodes.config]
+primal = "beardog-server"
+binary_path = "${BINARY_DIR}/primals/beardog-server"
+socket_path = "${RUNTIME_DIR}/beardog-nest.sock"
+
+[nodes.config.env]
+BEARDOG_FAMILY_SEED_FILE = "${nest_seed_path}"
+BEARDOG_FAMILY_ID = "${FAMILY_ID}"
+BEARDOG_NODE_ID = "nest"
+BEARDOG_SOCKET = "${RUNTIME_DIR}/beardog-nest.sock"
+
+[[nodes.outputs]]
+name = "nest_beardog_pid"
+type = "u32"
+
+[[nodes]]
+id = "deploy_nest_songbird"
+type = "primal.launch"
+dependencies = ["deploy_nest_beardog"]
+description = "Launch Nest Songbird"
+
+[nodes.config]
+primal = "songbird-orchestrator"
+binary_path = "${BINARY_DIR}/primals/songbird-orchestrator"
+socket_path = "${RUNTIME_DIR}/songbird-nest.sock"
+wait_for_dependency = true
+dependency_socket = "${RUNTIME_DIR}/beardog-nest.sock"
+
+[nodes.config.env]
+SONGBIRD_SOCKET = "${RUNTIME_DIR}/songbird-nest.sock"
+SONGBIRD_FAMILY_ID = "${FAMILY_ID}"
+SONGBIRD_SECURITY_PROVIDER = "${RUNTIME_DIR}/beardog-nest.sock"
+
+[[nodes.outputs]]
+name = "nest_songbird_pid"
+type = "u32"
+
+[[nodes]]
+id = "deploy_nest_nestgate"
+type = "primal.launch"
+dependencies = ["deploy_nest_songbird"]
+description = "Launch Nest NestGate (storage management)"
+
+[nodes.config]
+primal = "nestgate"
+binary_path = "${BINARY_DIR}/primals/nestgate"
+socket_path = "${RUNTIME_DIR}/nestgate-nest.sock"
+
+[nodes.config.env]
+NESTGATE_SOCKET = "${RUNTIME_DIR}/nestgate-nest.sock"
+NESTGATE_FAMILY_ID = "${FAMILY_ID}"
+
+[[nodes.outputs]]
+name = "nest_nestgate_pid"
+type = "u32"
+
+[[nodes]]
+id = "verify_nest_health"
+type = "health.check_atomic"
+dependencies = ["deploy_nest_nestgate"]
+description = "Verify Nest atomic operational"
+
+[nodes.config]
+atomic_type = "nest"
+required_sockets = [
+    "${RUNTIME_DIR}/beardog-nest.sock",
+    "${RUNTIME_DIR}/songbird-nest.sock",
+    "${RUNTIME_DIR}/nestgate-nest.sock"
+]
+timeout_ms = 5000
+
+[[nodes.outputs]]
+name = "nest_healthy"
+type = "bool"
+
+# Phase 6: Verify Cross-Atomic Lineage Recognition
+[[nodes]]
+id = "verify_tower_node_lineage"
+type = "lineage.verify_siblings"
+dependencies = ["verify_tower_health", "verify_node_health"]
+description = "Verify Tower and Node recognize shared lineage"
+
+[nodes.config]
+atomic_a = "tower"
+atomic_b = "node"
+beardog_a_socket = "${RUNTIME_DIR}/beardog-tower.sock"
+beardog_b_socket = "${RUNTIME_DIR}/beardog-node.sock"
+family_id = "${FAMILY_ID}"
+
+[[nodes.outputs]]
+name = "tower_node_siblings"
+type = "bool"
+
+[[nodes]]
+id = "verify_tower_nest_lineage"
+type = "lineage.verify_siblings"
+dependencies = ["verify_tower_health", "verify_nest_health"]
+description = "Verify Tower and Nest recognize shared lineage"
+
+[nodes.config]
+atomic_a = "tower"
+atomic_b = "nest"
+beardog_a_socket = "${RUNTIME_DIR}/beardog-tower.sock"
+beardog_b_socket = "${RUNTIME_DIR}/beardog-nest.sock"
+family_id = "${FAMILY_ID}"
+
+[[nodes.outputs]]
+name = "tower_nest_siblings"
+type = "bool"
+
+[[nodes]]
+id = "verify_node_nest_lineage"
+type = "lineage.verify_siblings"
+dependencies = ["verify_node_health", "verify_nest_health"]
+description = "Verify Node and Nest recognize shared lineage"
+
+[nodes.config]
+atomic_a = "node"
+atomic_b = "nest"
+beardog_a_socket = "${RUNTIME_DIR}/beardog-node.sock"
+beardog_b_socket = "${RUNTIME_DIR}/beardog-nest.sock"
+family_id = "${FAMILY_ID}"
+
+[[nodes.outputs]]
+name = "node_nest_siblings"
+type = "bool"
+
+# Phase 7: Final Verification
+[[nodes]]
+id = "deployment_complete"
+type = "report.deployment_success"
+dependencies = [
+    "verify_tower_node_lineage",
+    "verify_tower_nest_lineage",
+    "verify_node_nest_lineage"
+]
+description = "Report successful NUCLEUS deployment with genetic lineage"
+
+[nodes.config]
+atomics_deployed = ["tower", "node", "nest"]
+lineage_verified = true
+family_id = "${FAMILY_ID}"
+
+[[nodes.outputs]]
+name = "deployment_successful"
+type = "bool"
+
+[[nodes.outputs]]
+name = "deployment_report"
+type = "json"
+
+# Execution Configuration
+[execution]
+mode = "deterministic"
+parallel_phases = true  # Phases run sequentially, but within phases run parallel
+max_parallelism = 3  # Max 3 primals launching simultaneously
+timeout_total_ms = 60000  # 60 second total timeout
+checkpoint_enabled = true  # Save state at phase boundaries
+rollback_on_failure = true  # Automatic rollback if any phase fails
+
+# Environment Variables (defaults)
+[env]
+USB_SEED_PATH = "/tmp/biomeos-test/.family.seed"
+FAMILY_ID = "nat0"
+DEPLOYMENT_BATCH = "auto"  # Auto-generates YYYYMMDD
+BINARY_DIR = "/home/eastgate/Development/ecoPrimals/phase2/biomeOS/plasmidBin"
+RUNTIME_DIR = "${XDG_RUNTIME_DIR}"
+
+# Monitoring & Logging
+[monitoring]
+enable_metrics = true
+enable_tracing = true
+log_level = "info"
+checkpoint_dir = "${RUNTIME_DIR}/checkpoints"
+
+# Rollback Strategy
+[rollback]
+strategy = "graceful_shutdown"
+kill_signal = "SIGTERM"
+kill_timeout_ms = 5000
+cleanup_sockets = true
+cleanup_derived_seeds = true
+

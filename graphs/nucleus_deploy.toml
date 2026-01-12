@@ -1,0 +1,130 @@
+# NUCLEUS Deployment Graph
+# The complete biomeOS system - Node + Tower + Nest on a single gate (liveSpore)
+
+[metadata]
+name = "NUCLEUS"
+description = "Complete biomeOS deployment: compute (node) + security (tower) + storage (nest)"
+version = "1.0.0"
+estimated_time_seconds = 45
+
+[graph]
+name = "nucleus_deploy"
+description = "Full NUCLEUS deployment on a gate"
+execution_mode = "parallel_where_possible"
+
+# Phase 1: Verify Prerequisites
+[[nodes]]
+id = "verify_gate"
+name = "Verify Gate Hardware"
+primal = "biomeos"
+method = "verify_gate_capabilities"
+description = "Ensure the gate (computer) has required resources"
+
+[nodes.params]
+required_cpu_cores = 4
+required_memory_gb = 8
+required_storage_gb = 50
+required_network = true
+
+[[nodes.dependencies]]
+
+# Phase 2: Deploy Core Security (Tower)
+[[nodes]]
+id = "deploy_tower"
+name = "Deploy Tower (Security)"
+primal = "beardog"
+method = "deploy_tower"
+description = "Set up secure communications and BTSP tunneling"
+
+[nodes.params]
+template = "tower"
+family_id = "nucleus"
+
+[[nodes.dependencies]]
+depends_on = ["verify_gate"]
+
+# Phase 3: Deploy Compute (Node) - Parallel with Tower
+[[nodes]]
+id = "deploy_node"
+name = "Deploy Node (Compute)"
+primal = "toadstool"
+method = "deploy_node"
+description = "Set up compute orchestration with AI assistance"
+
+[nodes.params]
+template = "node"
+ai_enabled = true
+family_id = "nucleus"
+
+[[nodes.dependencies]]
+depends_on = ["verify_gate"]
+
+# Phase 4: Deploy Storage (Nest) - Parallel with Tower/Node
+[[nodes]]
+id = "deploy_nest"
+name = "Deploy Nest (Storage)"
+primal = "nestgate"
+method = "deploy_nest"
+description = "Set up secure data storage and persistence"
+
+[nodes.params]
+template = "nest"
+encryption_enabled = true
+family_id = "nucleus"
+
+[[nodes.dependencies]]
+depends_on = ["verify_gate"]
+
+# Phase 5: Register with Songbird
+[[nodes]]
+id = "register_nucleus"
+name = "Register NUCLEUS with Songbird"
+primal = "songbird"
+method = "register_niche"
+description = "Advertise NUCLEUS capabilities to ecosystem"
+
+[nodes.params]
+niche_id = "{{outputs.deploy_tower.niche_id}}"
+capabilities = ["compute", "security", "storage", "complete_system"]
+
+[[nodes.dependencies]]
+depends_on = ["deploy_tower", "deploy_node", "deploy_nest"]
+
+# Phase 6: AI Optimization
+[[nodes]]
+id = "optimize_nucleus"
+name = "AI-Powered Optimization"
+primal = "squirrel"
+method = "optimize_niche_deployment"
+description = "Let Squirrel analyze and optimize the deployment"
+
+[nodes.params]
+niche_id = "{{outputs.deploy_tower.niche_id}}"
+optimization_goals = ["performance", "security", "efficiency"]
+
+[[nodes.dependencies]]
+depends_on = ["register_nucleus"]
+
+# Phase 7: Verify Complete System
+[[nodes]]
+id = "verify_nucleus"
+name = "Verify NUCLEUS Deployment"
+primal = "biomeos"
+method = "verify_niche_health"
+description = "Comprehensive health check of all components"
+
+[nodes.params]
+niche_id = "nucleus"
+components = ["tower", "node", "nest"]
+
+[[nodes.dependencies]]
+depends_on = ["optimize_nucleus"]
+
+# Success criteria
+[success]
+all_nodes_complete = true
+tower_healthy = true
+node_healthy = true
+nest_healthy = true
+registration_successful = true
+

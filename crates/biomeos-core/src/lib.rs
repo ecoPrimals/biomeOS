@@ -14,8 +14,10 @@ pub mod primal_adapter;
 pub mod api_adapter;
 
 // Primal client infrastructure
-// Legacy primal-specific clients (deprecated - use Universal Primal Client instead)
-// pub mod clients;
+// NOTE: clients module disabled - needs transport layer completion (see DEEP_DEBT_COMPREHENSIVE_AUDIT_JAN11.md)
+// Issues: E0252 (duplicate names), E0432 (missing imports), E0404 (trait/struct confusion)
+// Estimated fix: 2-3 hours - see client module evolution plan
+// pub mod clients; // Modern client implementations (JSON-RPC, Unix sockets)
 pub mod adaptive_client; // Adaptive HTTP client with version tolerance
 pub mod capabilities; // Capability-based architecture (zero hardcoding)
 pub mod concurrent_startup; // Wave-based concurrent primal startup
@@ -31,6 +33,7 @@ pub mod primal_orchestrator; // Async primal lifecycle orchestration
 pub mod retry; // Retry logic and circuit breaker
 pub mod tower_config; // Tower configuration (TOML-based)
 pub mod capability_registry; // Central capability registry with Unix socket IPC
+pub mod deployment_mode; // LiveSpore deployment mode detection
 
 // P2P coordination (BiomeOS's killer feature!)
 pub mod p2p_coordination;

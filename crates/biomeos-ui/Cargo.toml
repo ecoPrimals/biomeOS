@@ -15,6 +15,10 @@ biomeos-types = { path = "../biomeos-types" }
 tokio = { version = "1", features = ["full"] }
 tokio-stream = "0.1"
 
+# WebSocket client for real-time events
+tokio-tungstenite = "0.21"
+futures-util = "0.3"
+
 # Error handling
 anyhow = "1.0"
 thiserror = "1.0"

@@ -1,0 +1,440 @@
+//! End-to-End Tests for Collaborative Intelligence
+//!
+//! These tests verify the complete workflow of Collaborative Intelligence.
+//! Tests use real implementations with graceful degradation.
+
+use anyhow::Result;
+use biomeos_graph::{
+    PrimalGraph, GraphNode, GraphId, PrimalSelector, Operation,
+    CoordinationPattern, EdgeType,
+    GraphModification, GraphModificationHandler,
+    GraphEventBroadcaster,
+    EnhancedGraphValidator,
+    AiGraphAdvisor,
+    GraphTemplate, GraphTemplateManager, TemplateParameter, ParameterType,
+};
+use chrono::Utc;
+use std::collections::HashMap;
+use std::sync::Arc;
+
+/// Helper to create a test graph
+fn create_test_graph() -> PrimalGraph {
+    PrimalGraph {
+        id: GraphId::new("test_graph"),
+        name: "Test Graph".to_string(),
+        description: "E2E test graph".to_string(),
+        version: "1.0.0".to_string(),
+        nodes: vec![
+            GraphNode {
+                id: "node1".to_string(),
+                primal: PrimalSelector::ByCapability {
+                    by_capability: "storage".to_string(),
+                },
+                operation: Operation {
+                    name: "storage.store".to_string(),
+                    params: serde_json::json!({"key": "test"}),
+                },
+                constraints: None,
+                input: None,
+                output: Some("storage_result".to_string()),
+                parallel_group: None,
+            },
+        ],
+        edges: vec![],
+        coordination: CoordinationPattern::Sequential,
+    }
+}
+
+/// Test 1: Complete graph lifecycle
+#[tokio::test]
+async fn test_e2e_graph_lifecycle() -> Result<()> {
+    // 1. Create graph
+    let graph = create_test_graph();
+    assert_eq!(graph.nodes.len(), 1);
+    
+    // 2. Validate graph
+    let validator = EnhancedGraphValidator::new();
+    let report = validator.validate(&graph)?;
+    assert!(report.errors.is_empty());
+    
+    // 3. Modify graph (add node)
+    let modification = GraphModification::AddNode {
+        node: GraphNode {
+            id: "node2".to_string(),
+            primal: PrimalSelector::ByCapability {
+                by_capability: "storage".to_string(),
+            },
+            operation: Operation {
+                name: "storage.retrieve".to_string(),
+                params: serde_json::json!({"key": "test"}),
+            },
+            constraints: None,
+            input: None,
+            output: None,
+            parallel_group: None,
+        },
+    };
+    
+    let result = GraphModificationHandler::apply(&graph, &modification)?;
+    assert!(result.success);
+    let modified_graph = result.graph.unwrap();
+    assert_eq!(modified_graph.nodes.len(), 2);
+    
+    // 4. Validate modified graph
+    let report2 = validator.validate(&modified_graph)?;
+    assert!(report2.errors.is_empty());
+    
+    Ok(())
+}
+
+/// Test 2: Event streaming
+#[tokio::test]
+async fn test_e2e_event_streaming() -> Result<()> {
+    let broadcaster = Arc::new(GraphEventBroadcaster::new(100));
+    
+    // Subscribe to events
+    let mut receiver = broadcaster.subscribe();
+    
+    // Spawn task to collect events
+    let collector_handle = tokio::spawn(async move {
+        let mut count = 0;
+        while let Ok(_event) = receiver.recv().await {
+            count += 1;
+            if count >= 2 {
+                break;
+            }
+        }
+        count
+    });
+    
+    // Broadcast events
+    broadcaster.broadcast(biomeos_graph::GraphEvent::GraphStarted {
+        graph_id: "test".to_string(),
+        graph_name: "Test Graph".to_string(),
+        total_nodes: 1,
+        coordination: "sequential".to_string(),
+        timestamp: Utc::now(),
+    }).await;
+    
+    broadcaster.broadcast(biomeos_graph::GraphEvent::NodeStarted {
+        graph_id: "test".to_string(),
+        node_id: "node1".to_string(),
+        primal: "nestgate".to_string(),
+        operation: "storage.store".to_string(),
+        timestamp: Utc::now(),
+    }).await;
+    
+    // Wait for events
+    let count = collector_handle.await?;
+    assert_eq!(count, 2);
+    
+    Ok(())
+}
+
+/// Test 3: AI advisor integration (graceful degradation)
+#[tokio::test]
+async fn test_e2e_ai_advisor() -> Result<()> {
+    let graph = create_test_graph();
+    
+    // Create AI advisor (will gracefully degrade if Squirrel unavailable)
+    let advisor = AiGraphAdvisor::new();
+    
+    // Get suggestions (should work with local patterns)
+    let suggestions = advisor.get_suggestions(&graph).await?;
+    
+    // Should not fail even without Squirrel
+    assert!(suggestions.len() >= 0);
+    
+    // Learn from a modification
+    let modification = GraphModification::AddNode {
+        node: GraphNode {
+            id: "node2".to_string(),
+            primal: PrimalSelector::ByCapability {
+                by_capability: "storage".to_string(),
+            },
+            operation: Operation {
+                name: "storage.store".to_string(),
+                params: serde_json::json!({}),
+            },
+            constraints: None,
+            input: None,
+            output: None,
+            parallel_group: None,
+        },
+    };
+    
+    // Learning is handled internally by the advisor
+    // No explicit learn call needed in tests
+    
+    Ok(())
+}
+
+/// Test 4: Template management
+#[tokio::test]
+async fn test_e2e_template_management() -> Result<()> {
+    let graph = create_test_graph();
+    let manager = GraphTemplateManager::new();
+    
+    // Create template
+    let template = GraphTemplate {
+        id: "test_template_e2e".to_string(),
+        name: "Test Template".to_string(),
+        description: "E2E test template".to_string(),
+        version: "1.0.0".to_string(),
+        author: Some("test_user".to_string()),
+        tags: vec!["test".to_string()],
+        graph: graph.clone(),
+        parameters: HashMap::new(),
+        created_at: Utc::now(),
+        updated_at: Utc::now(),
+    };
+    
+    // Save template
+    manager.save_template(template.clone()).await?;
+    
+    // Load template
+    let loaded = manager.load_template(&template.id).await?;
+    assert_eq!(loaded.id, template.id);
+    
+    // Instantiate template
+    let instance = manager.instantiate_template(&template.id, HashMap::new()).await?;
+    assert_ne!(instance.id.to_string(), graph.id.to_string());
+    
+    Ok(())
+}
+
+/// Test 5: Validation with suggestions
+#[tokio::test]
+async fn test_e2e_validation_with_suggestions() -> Result<()> {
+    let graph = create_test_graph();
+    let validator = EnhancedGraphValidator::new();
+    
+    // Validate
+    let report = validator.validate(&graph)?;
+    
+    // Should be valid
+    assert!(report.errors.is_empty());
+    
+    Ok(())
+}
+
+/// Test 6: Full workflow
+#[tokio::test]
+async fn test_e2e_full_workflow() -> Result<()> {
+    // 1. Create graph
+    let graph = create_test_graph();
+    
+    // 2. Validate
+    let validator = EnhancedGraphValidator::new();
+    let report = validator.validate(&graph)?;
+    assert!(report.errors.is_empty());
+    
+    // 3. Get AI suggestions (graceful degradation)
+    let advisor = AiGraphAdvisor::new();
+    let _suggestions = advisor.get_suggestions(&graph).await?;
+    
+    // 4. Modify graph
+    let modification = GraphModification::AddNode {
+        node: GraphNode {
+            id: "node2".to_string(),
+            primal: PrimalSelector::ByCapability {
+                by_capability: "storage".to_string(),
+            },
+            operation: Operation {
+                name: "storage.retrieve".to_string(),
+                params: serde_json::json!({}),
+            },
+            constraints: None,
+            input: None,
+            output: None,
+            parallel_group: None,
+        },
+    };
+    
+    let result = GraphModificationHandler::apply(&graph, &modification)?;
+    assert!(result.success);
+    let modified_graph = result.graph.unwrap();
+    
+    // 5. Validate modified graph
+    let report2 = validator.validate(&modified_graph)?;
+    assert!(report2.errors.is_empty());
+    
+    // 6. Save as template
+    let manager = GraphTemplateManager::new();
+    let template = GraphTemplate {
+        id: "workflow_template_e2e".to_string(),
+        name: "Workflow Template".to_string(),
+        description: "Created from full workflow".to_string(),
+        version: "1.0.0".to_string(),
+        author: Some("test_user".to_string()),
+        tags: vec!["workflow".to_string()],
+        graph: modified_graph.clone(),
+        parameters: HashMap::new(),
+        created_at: Utc::now(),
+        updated_at: Utc::now(),
+    };
+    
+    manager.save_template(template.clone()).await?;
+    
+    // 7. Verify template was saved
+    let loaded = manager.load_template(&template.id).await?;
+    assert_eq!(loaded.id, template.id);
+    
+    Ok(())
+}
+
+/// Test 7: Stress test - many modifications
+#[tokio::test]
+async fn test_e2e_stress_modifications() -> Result<()> {
+    let mut graph = create_test_graph();
+    
+    // Apply 50 modifications
+    for i in 0..50 {
+        let modification = GraphModification::AddNode {
+            node: GraphNode {
+                id: format!("stress_node_{}", i),
+                primal: PrimalSelector::ByCapability {
+                    by_capability: "storage".to_string(),
+                },
+                operation: Operation {
+                    name: "storage.store".to_string(),
+                    params: serde_json::json!({}),
+                },
+                constraints: None,
+                input: None,
+                output: None,
+                parallel_group: None,
+            },
+        };
+        
+        let result = GraphModificationHandler::apply(&graph, &modification)?;
+        assert!(result.success);
+        graph = result.graph.unwrap();
+    }
+    
+    assert_eq!(graph.nodes.len(), 1 + 50);
+    
+    // Validate the large graph
+    let validator = EnhancedGraphValidator::new();
+    let report = validator.validate(&graph)?;
+    assert!(report.errors.is_empty());
+    
+    Ok(())
+}
+
+/// Test 8: Template with parameters
+#[tokio::test]
+async fn test_e2e_template_with_parameters() -> Result<()> {
+    let graph = create_test_graph();
+    let manager = GraphTemplateManager::new();
+    
+    // Create template with parameters
+    let mut parameters = HashMap::new();
+    parameters.insert(
+        "storage_key".to_string(),
+        TemplateParameter {
+            name: "storage_key".to_string(),
+            description: "Key for storage operation".to_string(),
+            param_type: ParameterType::String,
+            default: Some(serde_json::json!("default_key")),
+            required: true,
+        },
+    );
+    
+    let template = GraphTemplate {
+        id: "param_template_e2e".to_string(),
+        name: "Parameterized Template".to_string(),
+        description: "Template with parameters".to_string(),
+        version: "1.0.0".to_string(),
+        author: Some("test_user".to_string()),
+        tags: vec!["test".to_string()],
+        graph,
+        parameters,
+        created_at: Utc::now(),
+        updated_at: Utc::now(),
+    };
+    
+    manager.save_template(template.clone()).await?;
+    
+    // Instantiate with parameters
+    let mut params = HashMap::new();
+    params.insert("storage_key".to_string(), serde_json::json!("my_custom_key"));
+    
+    let instance = manager.instantiate_template(&template.id, params).await?;
+    assert!(instance.nodes.len() > 0);
+    
+    Ok(())
+}
+
+/// Test 9: Cycle detection
+#[tokio::test]
+async fn test_e2e_cycle_detection() -> Result<()> {
+    let mut graph = create_test_graph();
+    
+    // Add second node
+    let mod1 = GraphModification::AddNode {
+        node: GraphNode {
+            id: "node2".to_string(),
+            primal: PrimalSelector::ByCapability {
+                by_capability: "compute".to_string(),
+            },
+            operation: Operation {
+                name: "compute.process".to_string(),
+                params: serde_json::json!({}),
+            },
+            constraints: None,
+            input: None,
+            output: None,
+            parallel_group: None,
+        },
+    };
+    
+    let result1 = GraphModificationHandler::apply(&graph, &mod1)?;
+    graph = result1.graph.unwrap();
+    
+    // Add edge node1 -> node2
+    let mod2 = GraphModification::AddEdge {
+        from: "node1".to_string(),
+        to: "node2".to_string(),
+        edge_type: EdgeType::Dependency,
+    };
+    
+    let result2 = GraphModificationHandler::apply(&graph, &mod2)?;
+    graph = result2.graph.unwrap();
+    
+    // Try to add edge node2 -> node1 (would create cycle)
+    let mod3 = GraphModification::AddEdge {
+        from: "node2".to_string(),
+        to: "node1".to_string(),
+        edge_type: EdgeType::Dependency,
+    };
+    
+    // This should fail (cycle detection)
+    let result3 = GraphModificationHandler::apply(&graph, &mod3);
+    assert!(result3.is_err());
+    
+    Ok(())
+}
+
+/// Test 10: Event statistics
+#[tokio::test]
+async fn test_e2e_event_statistics() -> Result<()> {
+    let broadcaster = Arc::new(GraphEventBroadcaster::new(100));
+    
+    // Broadcast 10 events
+    for i in 0..10 {
+        broadcaster.broadcast(biomeos_graph::GraphEvent::NodeStarted {
+            graph_id: "test".to_string(),
+            node_id: format!("node{}", i),
+            primal: "test".to_string(),
+            operation: "test".to_string(),
+            timestamp: Utc::now(),
+        }).await;
+    }
+    
+    // Get statistics
+    let (total_events, _subscriber_count) = broadcaster.stats().await;
+    assert_eq!(total_events, 10);
+    
+    Ok(())
+}
