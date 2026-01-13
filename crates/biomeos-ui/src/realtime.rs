@@ -136,16 +136,25 @@ impl RealTimeEventSubscriber {
     pub async fn discover_endpoints(&mut self) -> Result<()> {
         info!("🔍 Discovering real-time event endpoints...");
 
-        // TODO: Use actual Songbird client to discover endpoints
-        // For now, use default endpoints (will be evolved to capability-based)
+        // EVOLUTION: Discover from environment, no hardcoded fallbacks
+        // biomeOS primals announce themselves via discovery
+        
+        // WebSocket endpoint discovery
+        self.websocket_url = std::env::var("BIOMEOS_WS_ENDPOINT")
+            .or_else(|_| std::env::var("BIOMEOS_API_WS"))
+            .ok();
+        
+        // SSE endpoint discovery  
+        self.sse_url = std::env::var("BIOMEOS_SSE_ENDPOINT")
+            .or_else(|_| std::env::var("BIOMEOS_API_SSE"))
+            .ok();
 
-        // Default WebSocket endpoint (from biomeos-api)
-        self.websocket_url = Some("ws://localhost:8080/api/v1/events/ws".to_string());
-
-        // Default SSE endpoint (from biomeos-api)
-        self.sse_url = Some("http://localhost:8080/api/v1/events/stream".to_string());
-
-        info!("✅ Event endpoints discovered");
+        if self.websocket_url.is_some() || self.sse_url.is_some() {
+            info!("✅ Event endpoints discovered from environment");
+        } else {
+            info!("ℹ️  No event endpoints configured (set BIOMEOS_WS_ENDPOINT or BIOMEOS_SSE_ENDPOINT)");
+        }
+        
         Ok(())
     }
 

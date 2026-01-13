@@ -148,8 +148,10 @@ impl DiscoveryBootstrap {
             \n\
             Quick fix:\n\
             1. Start Songbird: cd ../songbird && cargo run\n\
-            2. Set endpoint: export DISCOVERY_ENDPOINT=\"http://localhost:3000\"\n\
-            3. Or use phase1bins: export SONGBIRD_ENDPOINT=\"http://localhost:3000\""
+            2. Set endpoint: export DISCOVERY_ENDPOINT=\"unix:///tmp/songbird.sock\"\n\
+            3. Or HTTP: export SONGBIRD_ENDPOINT=\"http://127.0.0.1:3000\"\n\
+            \n\
+            Note: Unix sockets are preferred for local communication (faster, more secure)"
         ))
     }
 

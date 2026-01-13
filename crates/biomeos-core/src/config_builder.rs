@@ -49,10 +49,18 @@ impl BiomeOSConfigBuilder {
     pub fn for_local_development() -> Self {
         let mut builder = Self::new();
         builder.config.system.environment = Environment::Development;
-        builder.config.network.bind_address = "127.0.0.1".to_string();
-        builder.config.network.port = 8080;
+        
+        // EVOLUTION: Discover bind address from environment
+        // Default to loopback only if explicitly requested
+        builder.config.network.bind_address = std::env::var("BIOMEOS_BIND_ADDRESS")
+            .unwrap_or_else(|_| "127.0.0.1".to_string());
+        
+        builder.config.network.port = std::env::var("BIOMEOS_PORT")
+            .ok()
+            .and_then(|p| p.parse().ok())
+            .unwrap_or(8080);
 
-        // Configure DNS discovery for localhost
+        // Configure DNS discovery for local dev
         builder.config.discovery.methods = vec![DiscoveryMethod::Dns];
 
         builder
@@ -79,8 +87,16 @@ impl BiomeOSConfigBuilder {
     pub fn for_testing() -> Self {
         let mut builder = Self::new();
         builder.config.system.environment = Environment::Testing;
-        builder.config.network.bind_address = "localhost".to_string();
-        builder.config.network.port = 8083;
+        
+        // EVOLUTION: Test configuration also uses environment
+        // Unix sockets preferred over network for tests
+        builder.config.network.bind_address = std::env::var("BIOMEOS_TEST_BIND")
+            .unwrap_or_else(|_| "127.0.0.1".to_string());
+        
+        builder.config.network.port = std::env::var("BIOMEOS_TEST_PORT")
+            .ok()
+            .and_then(|p| p.parse().ok())
+            .unwrap_or(8083);
 
         // Use static discovery for testing
         builder.config.discovery.methods = vec![DiscoveryMethod::Dns];

@@ -193,18 +193,18 @@ pub mod presets {
     /// NOTE: Uses fallback endpoint for development when discovery unavailable.
     /// Production should use discovery-based endpoint resolution.
     pub fn local() -> BiomeResult<BiomeOSConfig> {
-        // Development-only preset - uses env vars or localhost fallback
-        // Production must use explicit configuration with discovery
-        let discovery_endpoint = std::env::var("DISCOVERY_ENDPOINT").unwrap_or_else(|_| {
-            #[cfg(debug_assertions)]
-            {
-                "http://localhost:8001".to_string()
-            }
-            #[cfg(not(debug_assertions))]
-            {
-                panic!("DISCOVERY_ENDPOINT must be set in release builds")
-            }
-        });
+        // EVOLUTION: Environment-only, no localhost fallbacks
+        // Primals discover each other via Unix sockets (preferred) or environment
+        let discovery_endpoint = std::env::var("DISCOVERY_ENDPOINT")
+            .or_else(|_| std::env::var("BIOMEOS_DISCOVERY_ENDPOINT"))
+            .unwrap_or_else(|_| {
+                // No hardcoded fallback! Fail explicitly.
+                panic!(
+                    "Discovery endpoint not configured!\n\
+                     Set DISCOVERY_ENDPOINT or BIOMEOS_DISCOVERY_ENDPOINT\n\
+                     Example: export BIOMEOS_DISCOVERY_ENDPOINT=unix:///tmp/songbird.sock"
+                )
+            });
 
         #[allow(deprecated)]
         BiomeOSConfigBuilder::new()
