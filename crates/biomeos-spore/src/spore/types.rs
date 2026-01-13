@@ -6,15 +6,15 @@
 
 //! Shared types for spore operations
 
-use serde::{Deserialize, Serialize};
 use crate::spore_types::SporeType;
+use serde::{Deserialize, Serialize};
 
 /// Configuration for spore creation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SporeConfig {
     /// Human-readable label for this spore
     pub label: String,
-    
+
     /// Node ID for this tower (e.g., "tower1")
     pub node_id: String,
 
@@ -22,5 +22,3 @@ pub struct SporeConfig {
     #[serde(default)]
     pub spore_type: SporeType,
 }
-
-

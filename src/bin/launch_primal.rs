@@ -29,7 +29,7 @@ use anyhow::{Context, Result};
 use std::path::PathBuf;
 use std::process::Stdio;
 use tokio::process::Command;
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -96,7 +96,7 @@ async fn launch_atomic_primals(primals: &[&str], family_id: &str) -> Result<()> 
     }
 
     info!("✅ All primals launched for family {}", family_id);
-    
+
     Ok(())
 }
 
@@ -107,7 +107,7 @@ async fn launch_primal(primal: &str, family_id: &str) -> Result<()> {
 
     // Get primal binary path
     let bin_path = get_primal_binary_path(primal)?;
-    
+
     if !bin_path.exists() {
         error!("❌ Primal binary not found: {:?}", bin_path);
         error!("   Expected location: plasmidBin/{}", primal);
@@ -124,56 +124,40 @@ async fn launch_primal(primal: &str, family_id: &str) -> Result<()> {
     let log_path = get_log_path(primal, family_id);
     info!("📝 Log path: {}", log_path);
 
-    // Build command based on primal type
+    // Build command - EVOLVED to agnostic pattern
+    // No hardcoded primal knowledge! Use environment for configuration.
     let mut cmd = Command::new(&bin_path);
     
-    match primal {
-        "beardog" => {
-            // BearDog: Provide family_id via env var
-            cmd.env("BEARDOG_FAMILY_ID", family_id);
-            cmd.env("BEARDOG_SOCKET", &socket_path);
-        }
-        "songbird" => {
-            // Songbird: Provide family_id via env var
-            cmd.env("SONGBIRD_FAMILY_ID", family_id);
-            cmd.env("SONGBIRD_SOCKET", &socket_path);
-            // Songbird needs to discover BearDog for security
-            // Use capability-based discovery
-            cmd.env("SONGBIRD_SECURITY_PROVIDER", "beardog");
-        }
-        "toadstool" => {
-            // ToadStool: Uses default socket already (toadstool-default.jsonrpc.sock)
-            cmd.env("TOADSTOOL_FAMILY_ID", family_id);
-        }
-        "nestgate" => {
-            // NestGate: Use service start command
-            cmd.arg("service");
-            cmd.arg("start");
-            cmd.env("NESTGATE_FAMILY_ID", family_id);
-            cmd.env("SONGBIRD_FAMILY_ID", family_id);  // For Songbird discovery
-        }
-        "squirrel" => {
-            // Squirrel: Provide socket path
-            cmd.env("SQUIRREL_FAMILY_ID", family_id);
-            cmd.env("SQUIRREL_SOCKET", &socket_path);
-        }
-        _ => {
-            warn!("Unknown primal: {}", primal);
+    // Universal environment: All primals get these
+    cmd.env("BIOMEOS_FAMILY_ID", family_id);
+    cmd.env("BIOMEOS_SOCKET_PATH", &socket_path);
+    
+    // Also set primal-specific variants for backward compat
+    // (primals should migrate to BIOMEOS_* prefix)
+    let primal_upper = primal.to_uppercase();
+    cmd.env(format!("{}_FAMILY_ID", primal_upper), family_id);
+    cmd.env(format!("{}_SOCKET", primal_upper), &socket_path);
+    
+    // Check if binary needs special args (from manifest/config)
+    // Instead of hardcoding per primal, check if there's a start command
+    if let Some(start_cmd) = std::env::var(format!("{}_START_CMD", primal_upper)).ok() {
+        for arg in start_cmd.split_whitespace() {
+            cmd.arg(arg);
         }
     }
 
     // Redirect stdout/stderr to log file
-    let log_file = std::fs::File::create(&log_path)
-        .context("Failed to create log file")?;
-    
+    let log_file = std::fs::File::create(&log_path).context("Failed to create log file")?;
+
     cmd.stdout(Stdio::from(log_file.try_clone()?));
     cmd.stderr(Stdio::from(log_file));
     cmd.stdin(Stdio::null());
 
     // Spawn the process
     info!("▶️  Spawning process...");
-    
-    let mut child = cmd.spawn()
+
+    let mut child = cmd
+        .spawn()
         .with_context(|| format!("Failed to spawn {} process", primal))?;
 
     // Wait briefly to see if it crashes immediately
@@ -189,7 +173,7 @@ async fn launch_primal(primal: &str, family_id: &str) -> Result<()> {
             let pid = child.id().unwrap_or(0);
             info!("✅ {} started successfully (PID: {})", primal, pid);
             info!("   Log: {}", log_path);
-            
+
             // Don't wait for the process - let it run in background
             // The process will be reaped by init
             std::mem::forget(child);
@@ -201,7 +185,7 @@ async fn launch_primal(primal: &str, family_id: &str) -> Result<()> {
 
 fn get_primal_binary_path(primal: &str) -> Result<PathBuf> {
     let bin_dir = PathBuf::from("plasmidBin");
-    
+
     // Songbird uses songbird-orchestrator binary
     if primal == "songbird" {
         let bin_path = PathBuf::from("plasmidBin/primals/songbird-orchestrator");
@@ -214,7 +198,7 @@ fn get_primal_binary_path(primal: &str) -> Result<PathBuf> {
             return Ok(fallback);
         }
     }
-    
+
     let bin_path = bin_dir.join(primal);
     Ok(bin_path)
 }
@@ -223,15 +207,14 @@ fn get_socket_path(primal: &str, family_id: &str) -> Result<String> {
     let uid = std::env::var("UID")
         .or_else(|_| std::env::var("USER").map(|_| "1000".to_string()))
         .unwrap_or_else(|_| "1000".to_string());
-    
+
     let socket_dir = format!("/run/user/{}", uid);
     let socket_name = format!("{}-{}.sock", primal, family_id);
     let socket_path = format!("{}/{}", socket_dir, socket_name);
-    
+
     Ok(socket_path)
 }
 
 fn get_log_path(primal: &str, family_id: &str) -> String {
     format!("/tmp/{}-{}.log", primal, family_id)
 }
-

@@ -1,0 +1,583 @@
+// SPDX-License-Identifier: APGL-3.0-or-later WITH Sovran-Exemption-1.0
+//
+// Copyright 2025 ecoPrimals Project
+// Licensed under the Affero General Public License v3.0 or later with Sovran Exemption 1.0.
+// See LICENSE file in the project root or visit https://www.gnu.org/licenses/agpl-3.0.html
+
+//! Chaos Engineering and Fault Injection Tests
+//!
+//! These tests verify BiomeOS resilience under adverse conditions:
+//! - Network failures and timeouts
+//! - Partial service outages
+//! - Invalid data and malformed responses
+//! - Race conditions and concurrency issues
+//! - Resource exhaustion scenarios
+
+use biomeos_core::clients::songbird::*;
+use biomeos_core::discovery_bootstrap::DiscoveryBootstrap;
+use biomeos_core::primal_client::PrimalClient;
+use serde_json::json;
+use std::time::Duration;
+use wiremock::{
+    matchers::{method, path},
+    Mock, MockServer, ResponseTemplate,
+};
+
+// ============================================================================
+// Chaos: Network Failures
+// ============================================================================
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn test_chaos_service_completely_unavailable() {
+    // No mock server running - service unavailable
+    let client = SongbirdClient::new("http://localhost:99999"); // Invalid port
+
+    let result = client.health_check().await;
+    assert!(result.is_err());
+
+    assert!(!client.is_available().await);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn test_chaos_network_timeout() {
+    let mock_server = MockServer::start().await;
+
+    // Simulate slow/hanging endpoint
+    Mock::given(method("GET"))
+        .and(path("/health"))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_delay(Duration::from_secs(30)) // Very slow
+                .set_body_json(json!({"status": "healthy"})),
+        )
+        .mount(&mock_server)
+        .await;
+
+    let client = SongbirdClient::new(mock_server.uri());
+
+    // Request with short timeout should fail
+    let result = tokio::time::timeout(Duration::from_millis(100), client.health_check()).await;
+
+    assert!(result.is_err()); // Should timeout
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn test_chaos_intermittent_connectivity() {
+    let _mock_server = MockServer::start().await;
+
+    // Test intermittent connectivity with two separate servers
+    let mock_server_fail = MockServer::start().await;
+    let _mock_server_ok = MockServer::start().await;
+
+    // First server fails (network blip)
+    Mock::given(method("GET"))
+        .and(path("/api/v1/services/query/compute"))
+        .respond_with(ResponseTemplate::new(503)) // Service unavailable
+        .mount(&mock_server_fail)
+        .await;
+
+    // Second server succeeds
+    Mock::given(method("GET"))
+        .and(path("/api/v1/services/query/compute"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!([])))
+        .mount(&_mock_server_ok)
+        .await;
+
+    // First attempt with failing server
+    let client_fail = SongbirdClient::new(mock_server_fail.uri());
+    let first = client_fail.discover_by_capability("compute").await;
+    assert!(first.is_err());
+
+    // Retry with working server (simulates recovery)
+    let client_ok = SongbirdClient::new(_mock_server_ok.uri());
+    let second = client_ok.discover_by_capability("compute").await;
+    assert!(second.is_ok());
+}
+
+// ============================================================================
+// Chaos: Malformed Responses
+// ============================================================================
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn test_chaos_malformed_json() {
+    let mock_server = MockServer::start().await;
+
+    Mock::given(method("GET"))
+        .and(path("/api/v1/services/query/compute"))
+        .respond_with(ResponseTemplate::new(200).set_body_string("not valid json {{{"))
+        .mount(&mock_server)
+        .await;
+
+    let client = SongbirdClient::new(mock_server.uri());
+    let result = client.discover_by_capability("compute").await;
+
+    assert!(result.is_err());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn test_chaos_missing_required_fields() {
+    let mock_server = MockServer::start().await;
+
+    // Response missing required fields
+    Mock::given(method("GET"))
+        .and(path("/api/v1/services/query/compute"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!([
+                {
+                    "service_id": "incomplete",
+                    // Missing: service_name, endpoint, capabilities, metadata
+                }
+        ])))
+        .mount(&mock_server)
+        .await;
+
+    let client = SongbirdClient::new(mock_server.uri());
+    let result = client.discover_by_capability("compute").await;
+
+    assert!(result.is_err());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn test_chaos_wrong_data_types() {
+    let mock_server = MockServer::start().await;
+
+    // Fields have wrong types
+    Mock::given(method("GET"))
+        .and(path("/api/v1/services/query/compute"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!([
+                {
+                    "service_id": 12345, // Should be string
+                    "service_name": true, // Should be string
+                    "endpoint": ["array"], // Should be string
+                    "capabilities": "string", // Should be array
+                    "metadata": "not-an-object" // Should be object
+                }
+        ])))
+        .mount(&mock_server)
+        .await;
+
+    let client = SongbirdClient::new(mock_server.uri());
+    let result = client.discover_by_capability("compute").await;
+
+    assert!(result.is_err());
+}
+
+// ============================================================================
+// Chaos: Partial Service Outages
+// ============================================================================
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn test_chaos_some_services_down() {
+    let mock_server = MockServer::start().await;
+
+    // Discovery returns mix of healthy and unhealthy services
+    Mock::given(method("GET"))
+        .and(path("/api/v1/services/query/compute"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!([
+                {
+                    "service_id": "compute-healthy",
+                    "service_name": "healthy-service",
+                    "endpoint": "http://healthy:8080",
+                    "capabilities": ["compute"],
+                    "metadata": {"version": "1.0.0", "tags": []}
+                },
+                {
+                    "service_id": "compute-unhealthy",
+                    "service_name": "unhealthy-service",
+                    "endpoint": "http://unreachable:8080", // This endpoint doesn't exist
+                    "capabilities": ["compute"],
+                    "metadata": {"version": "1.0.0", "tags": []}
+                }
+        ])))
+        .mount(&mock_server)
+        .await;
+
+    let client = SongbirdClient::new(mock_server.uri());
+    let services = client.discover_by_capability("compute").await.unwrap();
+
+    // Discovery succeeds, returns all services (health check is separate)
+    assert_eq!(services.len(), 2);
+
+    // Client code must handle individual service failures
+    // (This test verifies discovery doesn't fail if some services are down)
+}
+
+// ============================================================================
+// Chaos: Race Conditions and Concurrency
+// ============================================================================
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn test_chaos_concurrent_registrations() {
+    let mock_server = MockServer::start().await;
+
+    // Simple mock that always succeeds (testing client concurrency handling)
+    Mock::given(method("POST"))
+        .and(path("/api/v1/services/register"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "service_id": "service-concurrent"
+        })))
+        .mount(&mock_server)
+        .await;
+
+    let client = SongbirdClient::new(mock_server.uri());
+
+    // Spawn multiple concurrent registration requests
+    let mut handles = vec![];
+    for i in 0..10 {
+        let client_clone = client.clone();
+        let handle = tokio::spawn(async move {
+            let registration = ServiceRegistration {
+                service_name: format!("concurrent-service-{}", i),
+                capabilities: vec!["test".to_string()],
+                endpoint: format!("http://service-{}:8080", i),
+                metadata: ServiceMetadata {
+                    version: "1.0.0".to_string(),
+                    location: None,
+                    tags: vec![],
+                },
+            };
+            client_clone.register_service(&registration).await
+        });
+        handles.push(handle);
+    }
+
+    // All should succeed without race conditions
+    for handle in handles {
+        let result = handle.await.unwrap();
+        assert!(result.is_ok());
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn test_chaos_concurrent_discoveries() {
+    let mock_server = MockServer::start().await;
+
+    Mock::given(method("GET"))
+        .and(path("/api/v1/services/query/compute"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!([
+            {
+                "service_id": "compute-1",
+                "service_name": "compute-service",
+                "endpoint": "http://compute:8080",
+                "capabilities": ["compute"],
+                "metadata": {"version": "1.0.0", "tags": []}
+            }
+        ])))
+        .mount(&mock_server)
+        .await;
+
+    let client = SongbirdClient::new(mock_server.uri());
+
+    // Spawn many concurrent discovery requests
+    let mut handles = vec![];
+    for _ in 0..50 {
+        let client_clone = client.clone();
+        let handle =
+            tokio::spawn(async move { client_clone.discover_by_capability("compute").await });
+        handles.push(handle);
+    }
+
+    // All should succeed without conflicts
+    for handle in handles {
+        let result = handle.await.unwrap();
+        assert!(result.is_ok());
+        let services = result.unwrap();
+        assert_eq!(services.len(), 1);
+    }
+}
+
+// ============================================================================
+// Chaos: Resource Exhaustion
+// ============================================================================
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn test_chaos_large_service_list() {
+    let mock_server = MockServer::start().await;
+
+    // Generate large list of services
+    let large_list: Vec<_> = (0..1000)
+        .map(|i| {
+            json!({
+                "service_id": format!("service-{}", i),
+                "service_name": format!("service-name-{}", i),
+                "endpoint": format!("http://service-{}:8080", i),
+                "capabilities": ["compute"],
+                "metadata": {"version": "1.0.0", "tags": []}
+            })
+        })
+        .collect();
+
+    Mock::given(method("GET"))
+        .and(path("/api/v1/services/query/compute"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(large_list))
+        .mount(&mock_server)
+        .await;
+
+    let client = SongbirdClient::new(mock_server.uri());
+    let services = client.discover_by_capability("compute").await.unwrap();
+
+    // Should handle large lists without issues
+    assert_eq!(services.len(), 1000);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn test_chaos_deeply_nested_metadata() {
+    let mock_server = MockServer::start().await;
+
+    // Service with complex nested metadata
+    Mock::given(method("GET"))
+        .and(path("/api/v1/services/query/compute"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!([
+                {
+                    "service_id": "complex",
+                    "service_name": "complex-service",
+                    "endpoint": "http://complex:8080",
+                    "capabilities": ["compute"],
+                    "metadata": {
+                        "version": "1.0.0",
+                        "tags": vec!["a"; 100], // Many tags
+                        "custom_field": json!({"nested": {"deeply": {"value": "test"}}})
+                    }
+                }
+        ])))
+        .mount(&mock_server)
+        .await;
+
+    let client = SongbirdClient::new(mock_server.uri());
+    let result = client.discover_by_capability("compute").await;
+
+    // Should handle complex metadata gracefully
+    assert!(result.is_ok());
+}
+
+// ============================================================================
+// Chaos: Bootstrap Discovery Failures
+// ============================================================================
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn test_chaos_no_discovery_methods_available() {
+    // Clear all environment variables
+    let saved_discovery = std::env::var("DISCOVERY_ENDPOINT").ok();
+    let saved_songbird = std::env::var("SONGBIRD_ENDPOINT").ok();
+
+    std::env::remove_var("DISCOVERY_ENDPOINT");
+    std::env::remove_var("SONGBIRD_ENDPOINT");
+
+    let bootstrap = DiscoveryBootstrap::new("universal-adapter");
+    let result = bootstrap.find_universal_adapter().await;
+
+    // Restore
+    if let Some(val) = saved_discovery {
+        std::env::set_var("DISCOVERY_ENDPOINT", val);
+    }
+    if let Some(val) = saved_songbird {
+        std::env::set_var("SONGBIRD_ENDPOINT", val);
+    }
+
+    // Should fail gracefully with helpful error
+    assert!(result.is_err());
+    let error = result.unwrap_err().to_string();
+    assert!(error.contains("No universal adapter found"));
+    assert!(error.contains("DISCOVERY_ENDPOINT"));
+}
+
+// ============================================================================
+// Chaos: HTTP Error Codes
+// ============================================================================
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn test_chaos_401_unauthorized() {
+    let mock_server = MockServer::start().await;
+
+    Mock::given(method("GET"))
+        .and(path("/api/v1/services/query/compute"))
+        .respond_with(ResponseTemplate::new(401))
+        .mount(&mock_server)
+        .await;
+
+    let client = SongbirdClient::new(mock_server.uri());
+    let result = client.discover_by_capability("compute").await;
+
+    assert!(result.is_err());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn test_chaos_403_forbidden() {
+    let mock_server = MockServer::start().await;
+
+    Mock::given(method("GET"))
+        .and(path("/api/v1/services/query/compute"))
+        .respond_with(ResponseTemplate::new(403))
+        .mount(&mock_server)
+        .await;
+
+    let client = SongbirdClient::new(mock_server.uri());
+    let result = client.discover_by_capability("compute").await;
+
+    assert!(result.is_err());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn test_chaos_404_not_found() {
+    let mock_server = MockServer::start().await;
+
+    Mock::given(method("GET"))
+        .and(path("/api/v1/services/query/nonexistent"))
+        .respond_with(ResponseTemplate::new(404))
+        .mount(&mock_server)
+        .await;
+
+    let client = SongbirdClient::new(mock_server.uri());
+    let result = client.discover_by_capability("nonexistent").await;
+
+    assert!(result.is_err());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn test_chaos_500_internal_error() {
+    let mock_server = MockServer::start().await;
+
+    Mock::given(method("GET"))
+        .and(path("/api/v1/services/query/compute"))
+        .respond_with(ResponseTemplate::new(500))
+        .mount(&mock_server)
+        .await;
+
+    let client = SongbirdClient::new(mock_server.uri());
+    let result = client.discover_by_capability("compute").await;
+
+    assert!(result.is_err());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn test_chaos_502_bad_gateway() {
+    let mock_server = MockServer::start().await;
+
+    Mock::given(method("GET"))
+        .and(path("/health"))
+        .respond_with(ResponseTemplate::new(502))
+        .mount(&mock_server)
+        .await;
+
+    let client = SongbirdClient::new(mock_server.uri());
+    assert!(!client.is_available().await);
+}
+
+// ============================================================================
+// Chaos: Empty and Edge Cases
+// ============================================================================
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn test_chaos_empty_service_list() {
+    let mock_server = MockServer::start().await;
+
+    Mock::given(method("GET"))
+        .and(path("/api/v1/services/query/rare-capability"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!([])))
+        .mount(&mock_server)
+        .await;
+
+    let client = SongbirdClient::new(mock_server.uri());
+    let services = client
+        .discover_by_capability("rare-capability")
+        .await
+        .unwrap();
+
+    // Empty list is valid response
+    assert_eq!(services.len(), 0);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn test_chaos_service_registration_missing_service_id() {
+    let mock_server = MockServer::start().await;
+
+    // Response missing service_id
+    Mock::given(method("POST"))
+        .and(path("/api/v1/services/register"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "status": "registered"
+            // Missing: service_id
+        })))
+        .mount(&mock_server)
+        .await;
+
+    let client = SongbirdClient::new(mock_server.uri());
+    let registration = ServiceRegistration {
+        service_name: "test".to_string(),
+        capabilities: vec!["test".to_string()],
+        endpoint: "http://test:8080".to_string(),
+        metadata: ServiceMetadata {
+            version: "1.0.0".to_string(),
+            location: None,
+            tags: vec![],
+        },
+    };
+
+    let result = client.register_service(&registration).await;
+    assert!(result.is_err());
+}
+
+// ============================================================================
+// Chaos: Geographic Edge Cases
+// ============================================================================
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn test_chaos_location_at_poles() {
+    // Test distance calculation at extreme latitudes
+    let north_pole = Location {
+        latitude: 90.0,
+        longitude: 0.0,
+    };
+
+    // Distance between poles should be roughly half Earth's circumference
+    let distance = north_pole.distance_to(-90.0, 0.0);
+    assert!(distance > 19000.0 && distance < 21000.0); // ~20,000 km
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn test_chaos_location_across_date_line() {
+    // Test distance across international date line
+    let west = Location {
+        latitude: 0.0,
+        longitude: 179.0,
+    };
+
+    // Should be ~222 km apart, not 358 degrees
+    let distance = west.distance_to(0.0, -179.0);
+    assert!(distance < 500.0); // Should be small
+}
+
+// ============================================================================
+// Chaos: Stress Test
+// ============================================================================
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn test_chaos_rapid_fire_requests() {
+    let mock_server = MockServer::start().await;
+
+    Mock::given(method("GET"))
+        .and(path("/health"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"status": "healthy"})))
+        .mount(&mock_server)
+        .await;
+
+    let client = SongbirdClient::new(mock_server.uri());
+
+    // Fire 100 requests as fast as possible
+    let mut handles = vec![];
+    for _ in 0..100 {
+        let client_clone = client.clone();
+        let handle = tokio::spawn(async move { client_clone.health_check().await });
+        handles.push(handle);
+    }
+
+    // All should complete successfully
+    let mut success_count = 0;
+    for handle in handles {
+        if let Ok(Ok(_)) = handle.await {
+            success_count += 1;
+        }
+    }
+
+    // Most should succeed (allow some to fail under extreme load)
+    assert!(success_count >= 90);
+}

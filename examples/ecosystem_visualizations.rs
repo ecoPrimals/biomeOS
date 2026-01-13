@@ -139,8 +139,14 @@ async fn render_spore_lifecycle() -> Result<(), Box<dyn Error>> {
     });
 
     println!("🌸 Rendering graph:");
-    println!("   Nodes: {}", graph_data["nodes"].as_array().unwrap().len());
-    println!("   Edges: {}", graph_data["edges"].as_array().unwrap().len());
+    println!(
+        "   Nodes: {}",
+        graph_data["nodes"].as_array().unwrap().len()
+    );
+    println!(
+        "   Edges: {}",
+        graph_data["edges"].as_array().unwrap().len()
+    );
 
     // In production, this would call:
     // let client = PetalTongueClient::discover().await?;
@@ -230,8 +236,14 @@ async fn render_nucleus() -> Result<(), Box<dyn Error>> {
     });
 
     println!("🌸 Rendering graph:");
-    println!("   Nodes: {}", graph_data["nodes"].as_array().unwrap().len());
-    println!("   Edges: {}", graph_data["edges"].as_array().unwrap().len());
+    println!(
+        "   Nodes: {}",
+        graph_data["nodes"].as_array().unwrap().len()
+    );
+    println!(
+        "   Edges: {}",
+        graph_data["edges"].as_array().unwrap().len()
+    );
     println!("   ✅ Visualization ready (scaffolded)");
     println!("\n💡 Key Concepts:");
     println!("   • Zero Hardcoding: discover_by_capability('encryption')");
@@ -318,8 +330,14 @@ async fn render_neural_api() -> Result<(), Box<dyn Error>> {
     });
 
     println!("🌸 Rendering graph:");
-    println!("   Nodes: {}", graph_data["nodes"].as_array().unwrap().len());
-    println!("   Edges: {}", graph_data["edges"].as_array().unwrap().len());
+    println!(
+        "   Nodes: {}",
+        graph_data["nodes"].as_array().unwrap().len()
+    );
+    println!(
+        "   Edges: {}",
+        graph_data["edges"].as_array().unwrap().len()
+    );
     println!("   ✅ Visualization ready (scaffolded)");
     println!("\n💡 Key Concepts:");
     println!("   • Intent → DAG: Natural language to execution graph");
@@ -329,4 +347,3 @@ async fn render_neural_api() -> Result<(), Box<dyn Error>> {
 
     Ok(())
 }
-

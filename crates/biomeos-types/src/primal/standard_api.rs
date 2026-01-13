@@ -1,0 +1,179 @@
+//! BiomeOS Standard Primal API
+//!
+//! All primals MUST implement these standard methods to enable
+//! infant bootstrapping and capability-based discovery.
+//!
+//! ## Philosophy
+//!
+//! "Each primal is born knowing only itself. Through the standard API,
+//! it can answer fundamental questions about its identity and capabilities,
+//! enabling others to discover and compose with it."
+//!
+//! ## Standard Methods
+//!
+//! All primals expose these via JSON-RPC:
+//!
+//! - `biomeos.identity` - Who am I?
+//! - `biomeos.capabilities` - What can I do?
+//! - `biomeos.health` - How am I?
+//! - `biomeos.peers` - Who do I know?
+//!
+//! ## Example
+//!
+//! ```rust,no_run
+//! use biomeos_types::primal::standard_api::{BiomeOSStandardAPI, PrimalIdentity};
+//! use biomeos_types::capability_taxonomy::PrimalCapability;
+//!
+//! struct MyPrimal;
+//!
+//! #[async_trait::async_trait]
+//! impl BiomeOSStandardAPI for MyPrimal {
+//!     async fn biomeos_identity(&self) -> Result<PrimalIdentity, Box<dyn std::error::Error + Send + Sync>> {
+//!         Ok(PrimalIdentity {
+//!             name: "my-primal".to_string(),
+//!             version: env!("CARGO_PKG_VERSION").to_string(),
+//!             capabilities: vec![],
+//!             description: Some("My example primal".to_string()),
+//!         })
+//!     }
+//!     
+//!     // ... implement other methods
+//! }
+//! ```
+
+use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
+
+// Re-use existing capability type
+// TODO: Import from unified capabilities module when available
+/// Placeholder for primal capabilities
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum PrimalCapability {
+    /// Custom capability
+    Custom(String),
+}
+
+/// Standard BiomeOS primal API
+///
+/// All primals MUST implement these methods to participate in
+/// capability-based discovery and composition.
+#[async_trait]
+pub trait BiomeOSStandardAPI: Send + Sync {
+    /// Get primal identity (who am I?)
+    ///
+    /// Returns the primal's self-reported identity, including
+    /// its name, version, and capabilities.
+    ///
+    /// **JSON-RPC**: `biomeos.identity`
+    async fn biomeos_identity(&self) -> Result<PrimalIdentity, Box<dyn std::error::Error + Send + Sync>>;
+
+    /// Get capabilities (what can I do?)
+    ///
+    /// Returns the list of capabilities this primal provides.
+    ///
+    /// **JSON-RPC**: `biomeos.capabilities`
+    async fn biomeos_capabilities(&self) -> Result<Vec<PrimalCapability>, Box<dyn std::error::Error + Send + Sync>>;
+
+    /// Health check (how am I?)
+    ///
+    /// Returns the primal's current health status.
+    ///
+    /// **JSON-RPC**: `biomeos.health`
+    async fn biomeos_health(&self) -> Result<HealthStatus, Box<dyn std::error::Error + Send + Sync>>;
+
+    /// Get known peers (who do I know?)
+    ///
+    /// Returns the list of other primals this primal has discovered.
+    ///
+    /// **JSON-RPC**: `biomeos.peers`
+    async fn biomeos_peers(&self) -> Result<Vec<PeerInfo>, Box<dyn std::error::Error + Send + Sync>>;
+}
+
+/// Primal identity information
+///
+/// Self-reported identity of a primal, used for discovery and composition.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct PrimalIdentity {
+    /// Primal's self-reported name
+    pub name: String,
+
+    /// Primal's version (semantic versioning recommended)
+    pub version: String,
+
+    /// Capabilities this primal provides
+    pub capabilities: Vec<PrimalCapability>,
+
+    /// Optional human-readable description
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+}
+
+/// Health status
+///
+/// Standard health status for all primals
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum HealthStatus {
+    /// Primal is healthy and operational
+    Healthy,
+    
+    /// Primal is degraded but functional
+    Degraded,
+    
+    /// Primal is unhealthy
+    Unhealthy,
+    
+    /// Health status unknown
+    Unknown,
+}
+
+impl Default for HealthStatus {
+    fn default() -> Self {
+        Self::Unknown
+    }
+}
+
+/// Peer information
+///
+/// Information about a discovered peer primal
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct PeerInfo {
+    /// Peer's name
+    pub name: String,
+
+    /// Peer's capabilities
+    pub capabilities: Vec<PrimalCapability>,
+
+    /// How to connect to this peer (Unix socket path or URL)
+    pub endpoint: String,
+
+    /// Last time we successfully communicated with this peer
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_seen: Option<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_primal_identity_serialization() {
+        let identity = PrimalIdentity {
+            name: "test-primal".to_string(),
+            version: "1.0.0".to_string(),
+            capabilities: vec![],
+            description: Some("Test primal".to_string()),
+        };
+
+        let json = serde_json::to_string(&identity).unwrap();
+        let deserialized: PrimalIdentity = serde_json::from_str(&json).unwrap();
+        
+        assert_eq!(identity, deserialized);
+    }
+
+    #[test]
+    fn test_health_status_default() {
+        assert_eq!(HealthStatus::default(), HealthStatus::Unknown);
+    }
+}
+

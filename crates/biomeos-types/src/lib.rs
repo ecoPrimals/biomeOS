@@ -7,14 +7,14 @@ use std::collections::HashMap;
 
 // Core unified modules
 pub mod api_schema;
-pub mod capability_taxonomy;  // Well-known capability taxonomy for discovery
+pub mod capability_taxonomy; // Well-known capability taxonomy for discovery
 pub mod config;
 pub mod constants;
 pub mod error;
 pub mod health;
 pub mod identifiers;
 pub mod manifest;
-pub mod paths;  // XDG-compliant system paths
+pub mod paths; // XDG-compliant system paths
 pub mod primal;
 pub mod service;
 

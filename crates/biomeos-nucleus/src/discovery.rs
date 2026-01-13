@@ -43,13 +43,13 @@ impl DiscoveryRequest {
             timeout: None,
         }
     }
-    
+
     /// Set family filter
     pub fn with_family(mut self, family: impl Into<String>) -> Self {
         self.family = Some(family.into());
         self
     }
-    
+
     /// Set timeout
     pub fn with_timeout(mut self, timeout: Duration) -> Self {
         self.timeout = Some(timeout);
@@ -82,7 +82,10 @@ pub trait PhysicalDiscovery: Send + Sync {
     /// Discover primals by capability
     ///
     /// This delegates to Songbird's `discover_by_capability` API
-    async fn discover_by_capability(&self, request: &DiscoveryRequest) -> Result<Vec<DiscoveredPrimal>>;
+    async fn discover_by_capability(
+        &self,
+        request: &DiscoveryRequest,
+    ) -> Result<Vec<DiscoveredPrimal>>;
 
     /// Discover primals by family
     ///
@@ -109,14 +112,15 @@ impl DiscoveryLayer {
     /// **Deep Debt Principle**: Discovers Songbird at runtime, no hardcoding!
     pub async fn new() -> Result<Self> {
         info!("Initializing NUCLEUS Discovery Layer (delegating to Songbird)");
-        
+
         // Get XDG-compliant paths
-        let paths = SystemPaths::new()
-            .map_err(|e| Error::discovery_failed(format!("Failed to initialize SystemPaths: {}", e), None))?;
-        
+        let paths = SystemPaths::new().map_err(|e| {
+            Error::discovery_failed(format!("Failed to initialize SystemPaths: {}", e), None)
+        })?;
+
         // Discover Songbird socket (no hardcoded paths!)
         let songbird_socket = Self::discover_songbird_socket(&paths).await?;
-        
+
         Ok(Self {
             songbird_socket: Some(songbird_socket),
             paths,
@@ -136,27 +140,37 @@ impl DiscoveryLayer {
 
         // 1. Check environment variable
         if let Ok(socket) = std::env::var("SONGBIRD_SOCKET") {
-            debug!("Found Songbird socket via SONGBIRD_SOCKET env var: {}", socket);
+            debug!(
+                "Found Songbird socket via SONGBIRD_SOCKET env var: {}",
+                socket
+            );
             return Ok(socket);
         }
 
         // 2. Try standard songbird socket in runtime directory
         let standard_socket = paths.primal_socket("songbird-orchestrator");
         if tokio::fs::metadata(&standard_socket).await.is_ok() {
-            debug!("Found Songbird socket at XDG location: {}", standard_socket.display());
+            debug!(
+                "Found Songbird socket at XDG location: {}",
+                standard_socket.display()
+            );
             return Ok(standard_socket.to_string_lossy().to_string());
         }
 
         // 3. Scan runtime directory for any songbird-*.sock
         let runtime_dir = paths.runtime_dir();
-        debug!("Scanning runtime directory for Songbird socket: {}", runtime_dir.display());
-        
-        let mut read_dir = tokio::fs::read_dir(runtime_dir).await
-            .map_err(|e| Error::discovery_failed(format!("Failed to read runtime dir: {}", e), None))?;
+        debug!(
+            "Scanning runtime directory for Songbird socket: {}",
+            runtime_dir.display()
+        );
 
-        while let Some(entry) = read_dir.next_entry().await
-            .map_err(|e| Error::discovery_failed(format!("Failed to read directory entry: {}", e), None))? 
-        {
+        let mut read_dir = tokio::fs::read_dir(runtime_dir).await.map_err(|e| {
+            Error::discovery_failed(format!("Failed to read runtime dir: {}", e), None)
+        })?;
+
+        while let Some(entry) = read_dir.next_entry().await.map_err(|e| {
+            Error::discovery_failed(format!("Failed to read directory entry: {}", e), None)
+        })? {
             let path = entry.path();
             if let Some(filename) = path.file_name().and_then(|n| n.to_str()) {
                 if filename.starts_with("songbird-") && filename.ends_with(".sock") {
@@ -186,7 +200,7 @@ impl DiscoveryLayer {
         params: serde_json::Value,
     ) -> Result<T> {
         let socket_path = self.songbird_socket()?;
-        
+
         debug!("Calling Songbird RPC: {} at {}", method, socket_path);
 
         // Use crate::client::unix_socket_client for actual implementation
@@ -197,7 +211,10 @@ impl DiscoveryLayer {
 
 #[async_trait]
 impl PhysicalDiscovery for DiscoveryLayer {
-    async fn discover_by_capability(&self, request: &DiscoveryRequest) -> Result<Vec<DiscoveredPrimal>> {
+    async fn discover_by_capability(
+        &self,
+        request: &DiscoveryRequest,
+    ) -> Result<Vec<DiscoveredPrimal>> {
         info!(
             capability = %request.capability,
             family = ?request.family,
@@ -218,9 +235,10 @@ impl PhysicalDiscovery for DiscoveryLayer {
 
         // Parse response
         let primals: Vec<DiscoveredPrimal> = serde_json::from_value(
-            response.get("primals")
+            response
+                .get("primals")
                 .ok_or_else(|| Error::invalid_response("songbird", "Missing 'primals' field"))?
-                .clone()
+                .clone(),
         )?;
 
         info!(
@@ -239,18 +257,22 @@ impl PhysicalDiscovery for DiscoveryLayer {
             "family_id": family_id,
         });
 
-        let response: serde_json::Value = self
-            .call_songbird_rpc("discover_by_family", params)
-            .await?;
+        let response: serde_json::Value =
+            self.call_songbird_rpc("discover_by_family", params).await?;
 
         // Parse response
         let primals: Vec<DiscoveredPrimal> = serde_json::from_value(
-            response.get("primals")
+            response
+                .get("primals")
                 .ok_or_else(|| Error::invalid_response("songbird", "Missing 'primals' field"))?
-                .clone()
+                .clone(),
         )?;
 
-        info!(count = primals.len(), "Discovered {} primals in family", primals.len());
+        info!(
+            count = primals.len(),
+            "Discovered {} primals in family",
+            primals.len()
+        );
         Ok(primals)
     }
 
@@ -304,7 +326,7 @@ mod tests {
         let cap = CapabilityTaxonomy::Encryption;
         let s = format!("{:?}", cap);
         assert_eq!(s, "Encryption");
-        
+
         let cap2 = CapabilityTaxonomy::P2PFederation;
         let s2 = format!("{:?}", cap2);
         assert_eq!(s2, "P2PFederation");
@@ -332,4 +354,3 @@ mod tests {
         assert!(primal.capabilities.contains(&"identity".to_string()));
     }
 }
-

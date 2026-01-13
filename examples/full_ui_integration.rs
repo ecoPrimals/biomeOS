@@ -193,8 +193,8 @@ async fn run_server() -> Result<()> {
 async fn run_ui() -> Result<()> {
     info!("🌸 Launching petalTongue GUI");
 
-    let petaltongue_bin = std::env::var("PETALTONGUE_BIN")
-        .unwrap_or_else(|_| "plasmidBin/petaltongue".to_string());
+    let petaltongue_bin =
+        std::env::var("PETALTONGUE_BIN").unwrap_or_else(|_| "plasmidBin/petaltongue".to_string());
 
     if !std::path::Path::new(&petaltongue_bin).exists() {
         warn!("⚠️  petalTongue binary not found at {}", petaltongue_bin);
@@ -318,10 +318,7 @@ async fn run_demo() -> Result<()> {
     let templates = get_demo_templates();
     for template in &templates {
         println!("  • {} - {}", template.name, template.description);
-        println!(
-            "    Required: {} primals",
-            template.required_primals.len()
-        );
+        println!("    Required: {} primals", template.required_primals.len());
         println!(
             "    Resources: {} CPU cores, {} MB RAM, {} GB storage",
             template.estimated_resources.cpu_cores,
@@ -563,4 +560,3 @@ fn get_demo_templates() -> Vec<NicheTemplate> {
         },
     ]
 }
-

@@ -10,14 +10,14 @@
 //! - **Capability-based**: Query capabilities, don't assume
 
 use crate::{
-    actions::{UserAction, ActionResult},
+    actions::{ActionResult, UserAction},
     events::EventBroadcaster,
     state::UIState,
 };
 use anyhow::Result;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, debug, warn};
+use tracing::{debug, info, warn};
 
 /// Result of authorization check
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -47,56 +47,48 @@ pub enum CapacityResult {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// PLACEHOLDER PRIMAL CLIENTS
+// PRIMAL CLIENTS - AWAITING MODULE EXPORT
 // ═══════════════════════════════════════════════════════════════════════════
 //
-// These are placeholder types that will be replaced when petalTongue integration
-// is complete. See INTEGRATION_GAP_ANALYSIS_JAN11.md for the full integration plan.
+// ⏳ STATUS: Clients exist but module not exported (Jan 13, 2026)
 //
-// Timeline: 2.5-3.5 weeks (5 phases)
-//   Phase 1: Data Flow Integration (~300 lines, 2-3 days) 
-//   Phase 2: Device Management UI (~750 lines, 3-4 days)
-//   Phase 3: Primal Status UI (~600 lines, 2-3 days)
-//   Phase 4: Niche Designer (~1,200 lines, 4-5 days)
-//   Phase 5: Interactions (~200 lines, 2-3 days)
+// The client implementations are complete in `crates/biomeos-core/src/clients/`:
+//   - ✅ BearDogClient::discover() - Security & crypto
+//   - ✅ SongbirdClient::discover() - Service discovery
+//   - ✅ NestGateClient::discover() - Storage
+//   - ✅ ToadStoolClient::discover() - Compute
+//   - ✅ SquirrelClient::discover() - AI
+//   - ✅ PetalTongueClient::discover() - UI
 //
-// Status: Backend 100% ready, awaiting UI integration from petalTongue team
+// All use capability-based discovery via Unix sockets (XDG-compliant).
 //
-// Why placeholders?
-//   - The BACKEND infrastructure is complete (NUCLEUS, NeuralAPI, CI)
-//   - The UI COORDINATION layer is complete (this orchestrator)
-//   - The VISUAL INTERFACE is being built by petalTongue team
-//   - These placeholders let the code compile while integration is in progress
+// BLOCKER: `pub mod clients;` is commented out in biomeos-core/src/lib.rs:20
+//   Reason: "needs transport layer completion" (see line 17-20)
+//   Issues: E0252 (duplicate names), E0432 (missing imports), E0404 (trait/struct confusion)
+//   Estimated fix: 2-3 hours
 //
-// When will they be replaced?
-//   - When petalTongue completes Phase 1 (Data Flow), these become Option<RealClient>
-//   - Real clients will be discovered at runtime via capability-based discovery
-//   - No code changes needed here - just wire up the data flow
+// WORKAROUND: Using placeholder types until module is exported
+//
+// ACTION NEEDED: Uncomment `pub mod clients;` in biomeos-core/src/lib.rs after fixing transport layer
 //
 // ═══════════════════════════════════════════════════════════════════════════
 
-/// Placeholder for PetalTongueClient (rendering primal)
-/// Will be replaced when Phase 1 (Data Flow) is complete
+/// Placeholder for PetalTongueClient (real impl exists, awaiting export)
 type PetalTongueClient = ();
 
-/// Placeholder for SongbirdClient (discovery primal)
-/// Will be replaced when Phase 1 (Data Flow) is complete
+/// Placeholder for SongbirdClient (real impl exists, awaiting export)
 type SongbirdClient = ();
 
-/// Placeholder for BearDogClient (security primal)
-/// Will be replaced when Phase 1 (Data Flow) is complete
+/// Placeholder for BearDogClient (real impl exists, awaiting export)
 type BearDogClient = ();
 
-/// Placeholder for NestGateClient (storage primal)
-/// Will be replaced when Phase 1 (Data Flow) is complete
+/// Placeholder for NestGateClient (real impl exists, awaiting export)
 type NestGateClient = ();
 
-/// Placeholder for ToadStoolClient (compute primal)
-/// Will be replaced when Phase 1 (Data Flow) is complete
+/// Placeholder for ToadStoolClient (real impl exists, awaiting export)
 type ToadStoolClient = ();
 
-/// Placeholder for SquirrelClient (AI primal)
-/// Will be replaced when Phase 1 (Data Flow) is complete
+/// Placeholder for SquirrelClient (real impl exists, awaiting export)
 type SquirrelClient = ();
 
 /// Interactive UI Orchestrator
@@ -121,10 +113,10 @@ type SquirrelClient = ();
 pub struct InteractiveUIOrchestrator {
     /// UI state
     state: Arc<RwLock<UIState>>,
-    
+
     /// Event broadcaster
     events: EventBroadcaster,
-    
+
     /// Primal clients (discovered at runtime via capabilities)
     petaltongue: Option<PetalTongueClient>,
     songbird: Option<SongbirdClient>,
@@ -132,7 +124,7 @@ pub struct InteractiveUIOrchestrator {
     nestgate: Option<NestGateClient>,
     toadstool: Option<ToadStoolClient>,
     squirrel: Option<SquirrelClient>,
-    
+
     /// Family ID for primal discovery
     family_id: String,
 }
@@ -153,9 +145,12 @@ impl InteractiveUIOrchestrator {
         let family_id = family_id.into();
         let state = Arc::new(RwLock::new(UIState::new()));
         let events = EventBroadcaster::new();
-        
-        info!("Creating Interactive UI Orchestrator for family: {}", family_id);
-        
+
+        info!(
+            "Creating Interactive UI Orchestrator for family: {}",
+            family_id
+        );
+
         Ok(Self {
             state,
             events,
@@ -168,47 +163,47 @@ impl InteractiveUIOrchestrator {
             family_id,
         })
     }
-    
+
     /// Discover and connect to all primals
     ///
     /// Uses capability-based discovery to find primals. No hardcoded assumptions!
     async fn discover_primals(&mut self) -> Result<()> {
         info!("Discovering primals via capability-based discovery...");
-        
+
         // Try to discover each primal by capability
         // Note: These discoveries are independent and fail gracefully
         // TRUE PRIMAL: Uses XDG-compliant Unix socket discovery
-        
+
         // 1. Discover visualization primal (petalTongue)
-        // TODO: Implement discovery method in PetalTongueClient
+        // ⏳ READY: PetalTongueClient::discover() exists, awaiting module export
         info!("Attempting to discover visualization primal...");
-        // self.petaltongue = PetalTongueClient::discover(&self.family_id).await.ok();
-        
+        // self.petaltongue = PetalTongueClient::discover().await.ok();
+
         // 2. Discover service registry primal (Songbird)
-        // TODO: Implement discovery method in SongbirdClient  
+        // ⏳ READY: SongbirdClient::discover(&family_id) exists, awaiting module export
         info!("Attempting to discover service registry primal...");
         // self.songbird = SongbirdClient::discover(&self.family_id).await.ok();
-        
+
         // 3. Discover security primal (BearDog)
-        // TODO: Implement discovery method in BearDogClient
+        // ⏳ READY: BearDogClient::discover(&family_id) exists, awaiting module export
         info!("Attempting to discover security primal...");
         // self.beardog = BearDogClient::discover(&self.family_id).await.ok();
-        
+
         // 4. Discover storage primal (NestGate)
-        // TODO: Implement discovery method in NestGateClient
+        // ⏳ READY: NestGateClient::discover(&family_id) exists, awaiting module export
         info!("Attempting to discover storage primal...");
         // self.nestgate = NestGateClient::discover(&self.family_id).await.ok();
-        
+
         // 5. Discover compute primal (ToadStool)
-        // TODO: Implement discovery method in ToadStoolClient
+        // ⏳ READY: ToadStoolClient::discover(&family_id) exists, awaiting module export
         info!("Attempting to discover compute primal...");
         // self.toadstool = ToadStoolClient::discover(&self.family_id).await.ok();
-        
+
         // 6. Discover AI primal (Squirrel)
-        // TODO: Implement discovery method in SquirrelClient
+        // ⏳ READY: SquirrelClient::discover(&family_id) exists, awaiting module export
         info!("Attempting to discover AI primal...");
         // self.squirrel = SquirrelClient::discover(&self.family_id).await.ok();
-        
+
         let discovered_count = [
             self.petaltongue.is_some(),
             self.songbird.is_some(),
@@ -220,37 +215,37 @@ impl InteractiveUIOrchestrator {
         .iter()
         .filter(|&&x| x)
         .count();
-        
+
         info!("Discovered {}/6 primals", discovered_count);
-        
+
         if discovered_count == 0 {
             warn!("No primals discovered! UI will have limited functionality.");
         }
-        
+
         Ok(())
     }
-    
+
     /// Discover devices from available primals
     ///
     /// Uses Songbird's device registry if available. Falls back gracefully.
     async fn discover_devices(&self) -> Result<()> {
         info!("Discovering devices...");
-        
+
         // TODO: Implement device discovery via Songbird
         // This will be implemented when Songbird adds device registry API
-        
+
         // For now, log that device discovery is pending Songbird extension
         info!("Device discovery pending Songbird device registry implementation");
-        
+
         Ok(())
     }
-    
+
     /// Discover active primals
     ///
     /// Uses Songbird's primal registry to get list of active primals.
     async fn discover_active_primals(&self) -> Result<()> {
         info!("Discovering active primals...");
-        
+
         if self.songbird.is_some() {
             // Query Songbird for all registered primals
             // TODO: Implement get_all_primals method in SongbirdClient
@@ -258,14 +253,14 @@ impl InteractiveUIOrchestrator {
         } else {
             info!("No Songbird available, cannot discover other primals");
         }
-        
+
         Ok(())
     }
-    
+
     /// Load saved state from NestGate
     async fn load_saved_state(&self) -> Result<()> {
         info!("Loading saved UI state...");
-        
+
         if self.nestgate.is_some() {
             // Try to load previous assignments and configuration
             // TODO: Implement when NestGateClient is available
@@ -273,10 +268,10 @@ impl InteractiveUIOrchestrator {
         } else {
             info!("No storage primal available, starting with fresh state");
         }
-        
+
         Ok(())
     }
-    
+
     /// Start the orchestrator
     ///
     /// This will:
@@ -287,98 +282,96 @@ impl InteractiveUIOrchestrator {
     /// 5. Sync initial state to UI
     pub async fn start(&mut self) -> Result<()> {
         info!("🚀 Starting Interactive UI Orchestrator...");
-        
+
         // Phase 1: Discover all primals (TRUE PRIMAL - runtime discovery!)
         self.discover_primals().await?;
-        
+
         // Phase 2: Discover devices and primals
         self.discover_devices().await?;
         self.discover_active_primals().await?;
-        
+
         // Phase 3: Load saved state
         self.load_saved_state().await?;
-        
+
         // Phase 4: Launch UI if petalTongue is available
         if self.petaltongue.is_some() {
             info!("✅ petalTongue available - UI will be rendered");
         } else {
             warn!("⚠️  No petalTongue available - running headless");
         }
-        
+
         // Phase 5: Sync initial state
         // TODO: Push initial state to petalTongue
-        
+
         info!("✅ Interactive UI Orchestrator started successfully!");
-        
+
         Ok(())
     }
-    
+
     /// Handle a user action
     ///
     /// Actions come from the UI (petalTongue) and are processed here.
     /// The orchestrator coordinates between multiple primals to fulfill the action.
     pub async fn handle_user_action(&self, action: UserAction) -> Result<ActionResult> {
         debug!(?action, "Handling user action");
-        
+
         match action {
-            UserAction::AssignDevice { device_id, primal_id } => {
-                self.handle_assign_device(&device_id, &primal_id).await
-            }
-            
+            UserAction::AssignDevice {
+                device_id,
+                primal_id,
+            } => self.handle_assign_device(&device_id, &primal_id).await,
+
             UserAction::UnassignDevice { device_id } => {
                 self.handle_unassign_device(&device_id).await
             }
-            
-            UserAction::StartPrimal { primal_name } => {
-                self.handle_start_primal(&primal_name).await
-            }
-            
-            UserAction::StopPrimal { primal_id } => {
-                self.handle_stop_primal(&primal_id).await
-            }
-            
-            UserAction::RestartPrimal { primal_id } => {
-                self.handle_restart_primal(&primal_id).await
-            }
-            
+
+            UserAction::StartPrimal { primal_name } => self.handle_start_primal(&primal_name).await,
+
+            UserAction::StopPrimal { primal_id } => self.handle_stop_primal(&primal_id).await,
+
+            UserAction::RestartPrimal { primal_id } => self.handle_restart_primal(&primal_id).await,
+
             UserAction::AcceptSuggestion { suggestion_id } => {
                 self.handle_accept_suggestion(&suggestion_id).await
             }
-            
+
             UserAction::DismissSuggestion { suggestion_id } => {
                 self.handle_dismiss_suggestion(&suggestion_id).await
             }
-            
-            UserAction::Refresh => {
-                self.handle_refresh().await
-            }
+
+            UserAction::Refresh => self.handle_refresh().await,
         }
     }
-    
+
     /// Handle device assignment
     ///
     /// Network effect: Coordinates 6 primals for a single user action!
-    /// 
+    ///
     /// ## Multi-Primal Coordination Flow
-    /// 
+    ///
     /// 1. **BearDog**: Authorization (user permissions, primal policy)
     /// 2. **Songbird**: Validation (device availability, primal health)
     /// 3. **ToadStool**: Capacity check (resource availability)
     /// 4. **Songbird**: Register assignment (service registry)
     /// 5. **NestGate**: Persist assignment (recovery after restart)
     /// 6. **petalTongue**: Update UI (visual feedback)
-    /// 
+    ///
     /// This is the network effect in action!
     async fn handle_assign_device(&self, device_id: &str, primal_id: &str) -> Result<ActionResult> {
-        info!("🎯 Device assignment requested: {} → {}", device_id, primal_id);
-        
+        info!(
+            "🎯 Device assignment requested: {} → {}",
+            device_id, primal_id
+        );
+
         // Phase 1: Authorization via BearDog
-        let auth_result = self.authorize_device_assignment(
-            "current_user", // TODO: Get from session/context
-            device_id,
-            primal_id,
-        ).await;
-        
+        let auth_result = self
+            .authorize_device_assignment(
+                "current_user", // TODO: Get from session/context
+                device_id,
+                primal_id,
+            )
+            .await;
+
         match auth_result {
             Ok(AuthorizationResult::Authorized) => {
                 info!("✅ Authorization: Approved");
@@ -398,10 +391,10 @@ impl InteractiveUIOrchestrator {
                 )));
             }
         }
-        
+
         // Phase 2: Validation via Songbird
         let validation_result = self.validate_device_assignment(device_id, primal_id).await;
-        
+
         match validation_result {
             Ok(ValidationResult::Valid) => {
                 info!("✅ Validation: Passed");
@@ -421,10 +414,10 @@ impl InteractiveUIOrchestrator {
                 )));
             }
         }
-        
+
         // Phase 3: Capacity check via ToadStool
         let capacity_result = self.check_primal_capacity(device_id, primal_id).await;
-        
+
         match capacity_result {
             Ok(CapacityResult::Available) => {
                 info!("✅ Capacity: Available");
@@ -441,7 +434,7 @@ impl InteractiveUIOrchestrator {
                 // Non-critical: continue without capacity check
             }
         }
-        
+
         // Phase 4: Register assignment via Songbird
         let assignment_id = match self.register_assignment(device_id, primal_id).await {
             Ok(id) => {
@@ -456,15 +449,18 @@ impl InteractiveUIOrchestrator {
                 )));
             }
         };
-        
+
         // Phase 5: Persist assignment via NestGate (non-critical)
-        if let Err(e) = self.persist_assignment(&assignment_id, device_id, primal_id).await {
+        if let Err(e) = self
+            .persist_assignment(&assignment_id, device_id, primal_id)
+            .await
+        {
             warn!("⚠️ Failed to persist assignment: {}, continuing", e);
             // Non-critical: assignment still works, just won't survive restart
         } else {
             info!("✅ Assignment persisted");
         }
-        
+
         // Phase 6: Update UI via petalTongue (non-critical)
         if let Err(e) = self.update_ui_after_assignment(device_id, primal_id).await {
             warn!("⚠️ Failed to update UI: {}, continuing", e);
@@ -472,15 +468,18 @@ impl InteractiveUIOrchestrator {
         } else {
             info!("✅ UI updated");
         }
-        
-        info!("🎉 Device assignment complete: {} → {}", device_id, primal_id);
-        
+
+        info!(
+            "🎉 Device assignment complete: {} → {}",
+            device_id, primal_id
+        );
+
         Ok(ActionResult::success(format!(
             "Device {} successfully assigned to primal {}",
             device_id, primal_id
         )))
     }
-    
+
     /// Authorize device assignment via BearDog
     ///
     /// ## Network Effect Phase 1: Authorization
@@ -506,19 +505,19 @@ impl InteractiveUIOrchestrator {
             "Authorizing device assignment: user={}, device={}, primal={}",
             user_id, device_id, primal_id
         );
-        
+
         // Check if BearDog is available
         if self.beardog.is_some() {
             info!("🔒 BearDog available - checking authorization");
-            
+
             // TODO: Implement actual BearDog client calls when client supports these methods
             // For now, return authorized (will be implemented in Task 1, Day 2)
-            
+
             // Placeholder logic:
             // 1. Check user permissions: beardog.check_permission(user_id, permission)
             // 2. Check primal policy: beardog.get_device_policy(primal_id)
             // 3. Verify device type acceptance
-            
+
             info!("✅ BearDog authorization: Approved (placeholder)");
             Ok(AuthorizationResult::Authorized)
         } else {
@@ -528,7 +527,7 @@ impl InteractiveUIOrchestrator {
             Ok(AuthorizationResult::Authorized)
         }
     }
-    
+
     /// Validate device assignment via Songbird
     ///
     /// ## Network Effect Phase 2: Validation
@@ -550,15 +549,15 @@ impl InteractiveUIOrchestrator {
             "Validating device assignment: device={}, primal={}",
             device_id, primal_id
         );
-        
+
         if self.songbird.is_some() {
             info!("🎵 Songbird available - checking validation");
-            
+
             // TODO: Implement actual Songbird client calls when available
             // 1. Check device status: songbird.get_device_status(device_id)
             // 2. Check primal health: songbird.get_service_health(primal_id)
             // 3. Check conflicts: songbird.check_device_conflicts(device_id, primal_id)
-            
+
             info!("✅ Songbird validation: Passed (placeholder)");
             Ok(ValidationResult::Valid)
         } else {
@@ -568,7 +567,7 @@ impl InteractiveUIOrchestrator {
             Ok(ValidationResult::Valid)
         }
     }
-    
+
     /// Check primal capacity via ToadStool
     ///
     /// ## Network Effect Phase 3: Capacity Check
@@ -589,14 +588,14 @@ impl InteractiveUIOrchestrator {
             "Checking primal capacity: device={}, primal={}",
             device_id, primal_id
         );
-        
+
         if self.toadstool.is_some() {
             info!("🍄 ToadStool available - checking capacity");
-            
+
             // TODO: Implement actual ToadStool client calls when available
             // 1. Get resource usage: toadstool.get_resource_usage(primal_id)
             // 2. Check if can accommodate device
-            
+
             info!("✅ ToadStool capacity: Available (placeholder)");
             Ok(CapacityResult::Available)
         } else {
@@ -606,7 +605,7 @@ impl InteractiveUIOrchestrator {
             Ok(CapacityResult::Available)
         }
     }
-    
+
     /// Register assignment via Songbird
     ///
     /// ## Network Effect Phase 4: Register Assignment
@@ -617,22 +616,18 @@ impl InteractiveUIOrchestrator {
     /// ## Graceful Degradation
     ///
     /// If Songbird is not available, generates local assignment ID.
-    async fn register_assignment(
-        &self,
-        device_id: &str,
-        primal_id: &str,
-    ) -> Result<String> {
+    async fn register_assignment(&self, device_id: &str, primal_id: &str) -> Result<String> {
         debug!(
             "Registering assignment: device={}, primal={}",
             device_id, primal_id
         );
-        
+
         if self.songbird.is_some() {
             info!("🎵 Songbird available - registering assignment");
-            
+
             // TODO: Implement actual Songbird client calls when available
             // Register device → primal assignment in service registry
-            
+
             let assignment_id = format!("songbird-{}-{}", device_id, primal_id);
             info!("✅ Registered via Songbird: {}", assignment_id);
             Ok(assignment_id)
@@ -643,7 +638,7 @@ impl InteractiveUIOrchestrator {
             Ok(assignment_id)
         }
     }
-    
+
     /// Persist assignment via NestGate
     ///
     /// ## Network Effect Phase 5: Persist Assignment
@@ -664,13 +659,13 @@ impl InteractiveUIOrchestrator {
             "Persisting assignment: id={}, device={}, primal={}",
             assignment_id, device_id, primal_id
         );
-        
+
         if self.nestgate.is_some() {
             info!("🏠 NestGate available - persisting assignment");
-            
+
             // TODO: Implement actual NestGate client calls when available
             // Store assignment data for recovery
-            
+
             info!("✅ Persisted via NestGate");
             Ok(())
         } else {
@@ -678,7 +673,7 @@ impl InteractiveUIOrchestrator {
             Err(anyhow::anyhow!("No storage primal available"))
         }
     }
-    
+
     /// Update UI via petalTongue
     ///
     /// ## Network Effect Phase 6: Update UI
@@ -689,22 +684,15 @@ impl InteractiveUIOrchestrator {
     ///
     /// If petalTongue is not available, UI is not updated
     /// but the operation continues successfully.
-    async fn update_ui_after_assignment(
-        &self,
-        device_id: &str,
-        primal_id: &str,
-    ) -> Result<()> {
-        debug!(
-            "Updating UI: device={}, primal={}",
-            device_id, primal_id
-        );
-        
+    async fn update_ui_after_assignment(&self, device_id: &str, primal_id: &str) -> Result<()> {
+        debug!("Updating UI: device={}, primal={}", device_id, primal_id);
+
         if self.petaltongue.is_some() {
             info!("🌸 petalTongue available - updating UI");
-            
+
             // TODO: Implement actual petalTongue client calls when available
             // Push topology update and show notification
-            
+
             info!("✅ UI updated via petalTongue");
             Ok(())
         } else {
@@ -712,111 +700,111 @@ impl InteractiveUIOrchestrator {
             Err(anyhow::anyhow!("No visualization primal available"))
         }
     }
-    
+
     /// Handle device unassignment
     async fn handle_unassign_device(&self, device_id: &str) -> Result<ActionResult> {
         info!("Unassigning device {}", device_id);
-        
+
         // TODO: Phase 3 implementation
-        
+
         Ok(ActionResult::success(format!(
             "Device {} unassigned (Phase 3 implementation pending)",
             device_id
         )))
     }
-    
+
     /// Handle primal start
     async fn handle_start_primal(&self, primal_name: &str) -> Result<ActionResult> {
         info!("Starting primal {}", primal_name);
-        
+
         // TODO: Phase 3 implementation
-        
+
         Ok(ActionResult::success(format!(
             "Primal {} start requested (Phase 3 implementation pending)",
             primal_name
         )))
     }
-    
+
     /// Handle primal stop
     async fn handle_stop_primal(&self, primal_id: &str) -> Result<ActionResult> {
         info!("Stopping primal {}", primal_id);
-        
+
         // TODO: Phase 3 implementation
-        
+
         Ok(ActionResult::success(format!(
             "Primal {} stop requested (Phase 3 implementation pending)",
             primal_id
         )))
     }
-    
+
     /// Handle primal restart
     async fn handle_restart_primal(&self, primal_id: &str) -> Result<ActionResult> {
         info!("Restarting primal {}", primal_id);
-        
+
         // TODO: Phase 3 implementation
-        
+
         Ok(ActionResult::success(format!(
             "Primal {} restart requested (Phase 3 implementation pending)",
             primal_id
         )))
     }
-    
+
     /// Handle AI suggestion acceptance
     async fn handle_accept_suggestion(&self, suggestion_id: &str) -> Result<ActionResult> {
         info!("Accepting suggestion {}", suggestion_id);
-        
+
         // TODO: Phase 4 implementation (Squirrel integration)
-        
+
         Ok(ActionResult::success(format!(
             "Suggestion {} accepted (Phase 4 implementation pending)",
             suggestion_id
         )))
     }
-    
+
     /// Handle AI suggestion dismissal
     async fn handle_dismiss_suggestion(&self, suggestion_id: &str) -> Result<ActionResult> {
         info!("Dismissing suggestion {}", suggestion_id);
-        
+
         // TODO: Phase 4 implementation (Squirrel integration)
-        
+
         Ok(ActionResult::success(format!(
             "Suggestion {} dismissed (Phase 4 implementation pending)",
             suggestion_id
         )))
     }
-    
+
     /// Handle UI refresh
     async fn handle_refresh(&self) -> Result<ActionResult> {
         info!("Refreshing UI state");
-        
+
         // Re-discover everything
         // TODO: Implement refresh logic
-        
+
         Ok(ActionResult::success("UI refreshed".to_string()))
     }
-    
+
     /// Run the orchestrator event loop
     ///
     /// This listens for events from primals and pushes updates to the UI.
     pub async fn run(&mut self) -> Result<()> {
         info!("Running Interactive UI Orchestrator event loop...");
-        
+
         // TODO: Phase 4 implementation
         // - Subscribe to Songbird events
         // - Listen for device/primal changes
         // - Push updates to petalTongue
         // - Handle user actions from UI
-        
+
         info!("Event loop implementation pending (Phase 4)");
-        
+
         Ok(())
     }
-    
+
     /// Get a reference to the UI state
     pub fn state(&self) -> &Arc<RwLock<UIState>> {
         &self.state
     }
-    
+
     /// Get a reference to the event broadcaster
     pub fn events(&self) -> &EventBroadcaster {
         &self.events
@@ -826,37 +814,33 @@ impl InteractiveUIOrchestrator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_orchestrator_creation() {
         let orchestrator = InteractiveUIOrchestrator::new("test-family").await;
         assert!(orchestrator.is_ok());
     }
-    
+
     #[tokio::test]
     async fn test_orchestrator_start_graceful_degradation() {
         // Should start even with no primals available
-        let mut orchestrator = InteractiveUIOrchestrator::new("test-family")
-            .await
-            .unwrap();
-        
+        let mut orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+
         let result = orchestrator.start().await;
         assert!(result.is_ok());
     }
-    
+
     #[tokio::test]
     async fn test_handle_user_action_assign_device() {
-        let orchestrator = InteractiveUIOrchestrator::new("test-family")
-            .await
-            .unwrap();
-        
+        let orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+
         let result = orchestrator
             .handle_user_action(UserAction::AssignDevice {
                 device_id: "test-device".to_string(),
                 primal_id: "test-primal".to_string(),
             })
             .await;
-        
+
         assert!(result.is_ok());
         assert!(result.unwrap().is_success());
     }

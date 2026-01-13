@@ -155,6 +155,14 @@ pub struct TunnelStatus {
     /// Current state
     pub state: String,
 
+    /// Peer node ID
+    #[serde(default)]
+    pub peer_id: Option<String>,
+
+    /// Encryption algorithm
+    #[serde(default)]
+    pub encryption_algorithm: Option<String>,
+
     /// Bytes sent
     #[serde(default)]
     pub bytes_sent: u64,

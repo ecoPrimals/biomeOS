@@ -241,7 +241,7 @@ impl CompositeDiscovery {
         self.sources.push(Box::new(source));
         self
     }
-    
+
     /// Add a boxed discovery source
     pub fn add_boxed_source(mut self, source: Box<dyn PrimalDiscovery>) -> Self {
         self.sources.push(source);
@@ -326,11 +326,12 @@ mod tests {
     #[async_trait]
     impl PrimalDiscovery for MockDiscovery {
         async fn discover(&self, _endpoint: &Endpoint) -> DiscoveryResult<DiscoveredPrimal> {
-            self.primals.first().cloned().ok_or_else(|| {
-                DiscoveryError::NotFound {
+            self.primals
+                .first()
+                .cloned()
+                .ok_or_else(|| DiscoveryError::NotFound {
                     endpoint: "mock".to_string(),
-                }
-            })
+                })
         }
 
         async fn discover_all(&self) -> DiscoveryResult<Vec<DiscoveredPrimal>> {
@@ -391,4 +392,3 @@ mod tests {
         assert!(!HealthStatus::Degraded.is_healthy());
     }
 }
-

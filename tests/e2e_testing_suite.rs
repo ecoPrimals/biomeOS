@@ -82,7 +82,7 @@ fn is_valid_health(health: &Health) -> bool {
 }
 
 /// Integration test for system initialization
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[traced_test]
 async fn test_e2e_system_initialization() -> Result<()> {
     info!("🚀 Testing system initialization");
@@ -98,7 +98,7 @@ async fn test_e2e_system_initialization() -> Result<()> {
 }
 
 /// Integration test for primal discovery
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[traced_test]
 async fn test_e2e_primal_discovery() -> Result<()> {
     info!("🔍 Testing primal discovery");
@@ -119,7 +119,7 @@ async fn test_e2e_primal_discovery() -> Result<()> {
 }
 
 /// Integration test for capability matching
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[traced_test]
 async fn test_e2e_capability_matching() -> Result<()> {
     info!("🎯 Testing capability matching");
@@ -140,7 +140,7 @@ async fn test_e2e_capability_matching() -> Result<()> {
 }
 
 /// Integration test for health monitoring
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[traced_test]
 async fn test_e2e_health_monitoring() -> Result<()> {
     info!("💚 Testing health monitoring");
@@ -161,7 +161,7 @@ async fn test_e2e_health_monitoring() -> Result<()> {
 }
 
 /// Integration test for live service
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[traced_test]
 async fn test_e2e_live_service_integration() -> Result<()> {
     info!("🔗 Testing live service integration");
@@ -177,7 +177,7 @@ async fn test_e2e_live_service_integration() -> Result<()> {
 }
 
 /// Integration test for biome deployment workflow
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[traced_test]
 async fn test_e2e_biome_deployment_workflow() -> Result<()> {
     info!("📦 Testing biome deployment workflow");
@@ -215,7 +215,7 @@ async fn test_e2e_biome_deployment_workflow() -> Result<()> {
 }
 
 /// Integration test for concurrent operations
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[traced_test]
 async fn test_e2e_concurrent_operations() -> Result<()> {
     info!("⚡ Testing concurrent operations");
@@ -254,7 +254,7 @@ async fn test_e2e_concurrent_operations() -> Result<()> {
 }
 
 /// Integration test for recovery scenarios
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[traced_test]
 async fn test_e2e_recovery_scenarios() -> Result<()> {
     info!("🔄 Testing recovery scenarios");
@@ -280,7 +280,7 @@ async fn test_e2e_recovery_scenarios() -> Result<()> {
 }
 
 /// Full E2E test suite runner
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[traced_test]
 async fn test_complete_e2e_suite() -> Result<()> {
     info!("🧪 Starting comprehensive E2E test suite");

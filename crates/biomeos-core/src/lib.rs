@@ -14,13 +14,14 @@ pub mod primal_adapter;
 pub mod api_adapter;
 
 // Primal client infrastructure
-// NOTE: clients module disabled - needs transport layer completion (see DEEP_DEBT_COMPREHENSIVE_AUDIT_JAN11.md)
-// Issues: E0252 (duplicate names), E0432 (missing imports), E0404 (trait/struct confusion)
-// Estimated fix: 2-3 hours - see client module evolution plan
-// pub mod clients; // Modern client implementations (JSON-RPC, Unix sockets)
+// TEMP DISABLED: Being refactored to proper concurrent architecture (see DEEP_DEBT_CONCURRENT_EVOLUTION_PLAN_JAN13.md)
+// Will re-enable after concurrent evolution is complete (91 errors need systematic fix)
+pub mod clients; // Modern client implementations (JSON-RPC, Unix sockets) - DEEP DEBT FIX IN PROGRESS
 pub mod adaptive_client; // Adaptive HTTP client with version tolerance
 pub mod capabilities; // Capability-based architecture (zero hardcoding)
+pub mod capability_registry; // Central capability registry with Unix socket IPC
 pub mod concurrent_startup; // Wave-based concurrent primal startup
+pub mod deployment_mode;
 pub mod discovery_bootstrap;
 pub mod discovery_http; // HTTP-based discovery implementation
 pub mod discovery_modern; // Modern trait-based discovery
@@ -31,9 +32,7 @@ pub mod primal_health; // Primal health monitoring
 pub mod primal_impls; // Concrete primal implementations
 pub mod primal_orchestrator; // Async primal lifecycle orchestration
 pub mod retry; // Retry logic and circuit breaker
-pub mod tower_config; // Tower configuration (TOML-based)
-pub mod capability_registry; // Central capability registry with Unix socket IPC
-pub mod deployment_mode; // LiveSpore deployment mode detection
+pub mod tower_config; // Tower configuration (TOML-based) // LiveSpore deployment mode detection
 
 // P2P coordination (BiomeOS's killer feature!)
 pub mod p2p_coordination;
@@ -55,7 +54,6 @@ pub mod config;
 pub mod config_builder;
 pub mod integration;
 pub mod log_session;
-pub mod graph_deployment;  // Neural API integration
 
 // Re-export the main manager and types for easy access
 pub use universal_biomeos_manager::{
@@ -67,12 +65,12 @@ pub use universal_biomeos_manager::{HealthMonitor, PrimalDiscoveryService};
 
 // Modern discovery system re-exports
 pub use discovery_modern::{
-    Capability as DiscoveryCapability, CompositeDiscovery, DiscoveredPrimal, DiscoveryError, DiscoveryResult,
-    HealthStatus as DiscoveryHealthStatus, PrimalType, PrimalDiscovery,
+    Capability as DiscoveryCapability, CompositeDiscovery, DiscoveredPrimal, DiscoveryError,
+    DiscoveryResult, HealthStatus as DiscoveryHealthStatus, PrimalDiscovery, PrimalType,
 };
 // Convenience alias for the most commonly used HealthStatus
-pub use discovery_modern::HealthStatus;
 pub use discovery_http::{create_local_discovery, HttpDiscovery, HttpDiscoveryBuilder};
+pub use discovery_modern::HealthStatus;
 
 // Adaptive client infrastructure re-exports
 pub use adaptive_client::{
@@ -82,21 +80,18 @@ pub use adaptive_client::{
 };
 
 // Primal orchestration re-exports (primary Capability enum for orchestration)
+pub use capabilities::{Capability, PrimalConfig as CapabilitiesPrimalConfig};
+pub use capability_registry::{
+    CapabilityRegistry, PrimalInfo as RegistryPrimalInfo, RegisterParams,
+};
 pub use concurrent_startup::{start_in_waves, DependencyGraph};
 pub use family_credentials::FamilyCredentials;
 pub use log_session::{LogSessionTracker, PrimalSession};
 pub use primal_discovery::{discover_primals, query_primal_metadata, PrimalMetadata};
-pub use tower_config::{TowerConfig, DiscoveryConfig, HealthConfig};
-pub use tower_config::PrimalConfig as TowerPrimalConfig;
-pub use capabilities::{Capability, PrimalConfig as CapabilitiesPrimalConfig};
-pub use primal_orchestrator::{ManagedPrimal, PrimalOrchestrator, PrimalState};
-pub use primal_health::{PrimalHealthMonitor, HealthStatus as PrimalHealthStatus, RecoveryStrategy};
-pub use retry::{RetryPolicy, CircuitBreaker};
-pub use capability_registry::{CapabilityRegistry, PrimalInfo as RegistryPrimalInfo, RegisterParams};
+pub use primal_health::{
+    HealthStatus as PrimalHealthStatus, PrimalHealthMonitor, RecoveryStrategy,
+};
 pub use primal_impls::{
-    // New generic primal system
-    GenericManagedPrimal,
-    PrimalBuilder,
     // Convenience builders
     create_ai_service,
     create_compute_provider,
@@ -105,11 +100,18 @@ pub use primal_impls::{
     create_storage_provider,
     // Legacy type aliases (deprecated)
     BearDogConfig,
+    // New generic primal system
+    GenericManagedPrimal,
     ManagedBearDog,
     ManagedSongbird,
+    PrimalBuilder,
     SongbirdConfig,
     TowerBuilder,
 };
+pub use primal_orchestrator::{ManagedPrimal, PrimalOrchestrator, PrimalState};
+pub use retry::{CircuitBreaker, RetryPolicy};
+pub use tower_config::PrimalConfig as TowerPrimalConfig;
+pub use tower_config::{DiscoveryConfig, HealthConfig, TowerConfig};
 
 // Legacy re-exports for backwards compatibility
 pub use universal_biomeos_manager as manager;

@@ -248,7 +248,7 @@ impl ChaosMockServer {
 }
 
 #[traced_test]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_network_partition_resilience() -> Result<()> {
     let chaos_server = ChaosMockServer::new().await;
     chaos_server.setup_chaos_responses().await;
@@ -301,7 +301,7 @@ async fn test_network_partition_resilience() -> Result<()> {
 }
 
 #[traced_test]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_service_degradation_handling() -> Result<()> {
     let chaos_server = ChaosMockServer::new().await;
     chaos_server.setup_chaos_responses().await;
@@ -329,7 +329,7 @@ async fn test_service_degradation_handling() -> Result<()> {
 }
 
 #[traced_test]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_intermittent_failures() -> Result<()> {
     let chaos_server = ChaosMockServer::new().await;
     chaos_server.setup_chaos_responses().await;
@@ -375,7 +375,7 @@ async fn test_intermittent_failures() -> Result<()> {
 }
 
 #[traced_test]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_recovery_after_cascade_failure() -> Result<()> {
     let chaos_server = ChaosMockServer::new().await;
     chaos_server.setup_chaos_responses().await;
@@ -429,7 +429,7 @@ async fn test_recovery_after_cascade_failure() -> Result<()> {
 }
 
 #[traced_test]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_health_monitoring_during_chaos() -> Result<()> {
     let chaos_server = ChaosMockServer::new().await;
     chaos_server.setup_chaos_responses().await;
@@ -500,7 +500,7 @@ async fn test_health_monitoring_during_chaos() -> Result<()> {
 }
 
 #[traced_test]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_request_counting_under_load() -> Result<()> {
     let chaos_server = ChaosMockServer::new().await;
     chaos_server.setup_chaos_responses().await;

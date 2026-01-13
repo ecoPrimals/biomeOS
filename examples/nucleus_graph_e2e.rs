@@ -12,8 +12,8 @@
 //! ```
 
 use biomeos_graph::{
-    GraphExecutor, NucleusPrimalExecutor, PrimalGraph, GraphNode, GraphId,
-    CoordinationPattern, PrimalSelector, Operation,
+    CoordinationPattern, GraphExecutor, GraphId, GraphNode, NucleusPrimalExecutor, Operation,
+    PrimalGraph, PrimalSelector,
 };
 
 #[tokio::main]
@@ -24,18 +24,18 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     println!("🔒 NUCLEUS + Graph E2E Example");
-    println!("=" .repeat(60));
+    println!("=".repeat(60));
     println!();
 
     // Step 1: Initialize NUCLEUS executor
     println!("📡 Step 1: Initializing NUCLEUS executor...");
     println!("   (This will discover Songbird & BearDog via 5-layer protocol)");
-    
+
     let nucleus_executor = match NucleusPrimalExecutor::new().await {
         Ok(executor) => {
             println!("   ✅ NUCLEUS executor initialized!");
             executor
-        },
+        }
         Err(e) => {
             eprintln!("   ❌ Failed to initialize NUCLEUS: {}", e);
             eprintln!();
@@ -46,12 +46,12 @@ async fn main() -> anyhow::Result<()> {
             return Err(e.into());
         }
     };
-    
+
     println!();
 
     // Step 2: Create a simple test graph
     println!("📊 Step 2: Creating test graph...");
-    
+
     let graph = PrimalGraph {
         id: GraphId::new("nucleus_test"),
         name: "NUCLEUS Integration Test".to_string(),
@@ -90,7 +90,7 @@ async fn main() -> anyhow::Result<()> {
         ],
         edges: vec![],
     };
-    
+
     println!("   ✅ Graph created: {} nodes", graph.nodes.len());
     println!();
 
@@ -98,9 +98,9 @@ async fn main() -> anyhow::Result<()> {
     println!("🚀 Step 3: Executing graph via NUCLEUS...");
     println!("   (NUCLEUS will verify identity, capabilities, and trust)");
     println!();
-    
+
     let executor = GraphExecutor::new(nucleus_executor);
-    
+
     match executor.execute(graph).await {
         Ok(result) => {
             println!("✅ Graph execution complete!");
@@ -109,7 +109,7 @@ async fn main() -> anyhow::Result<()> {
             println!("  Success: {}", result.success);
             println!("  Nodes executed: {}", result.metrics.len());
             println!();
-            
+
             for metric in &result.metrics {
                 println!("  Node: {}", metric.node_id);
                 println!("    Primal: {}", metric.primal_id);
@@ -121,9 +121,9 @@ async fn main() -> anyhow::Result<()> {
                 }
                 println!();
             }
-            
+
             println!("🎊 NUCLEUS Integration Test Successful!");
-        },
+        }
         Err(e) => {
             eprintln!("❌ Graph execution failed: {}", e);
             eprintln!();
@@ -137,4 +137,3 @@ async fn main() -> anyhow::Result<()> {
 
     Ok(())
 }
-

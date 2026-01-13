@@ -5,13 +5,7 @@
 // This is a simple mock server that implements /api/schema
 // to demonstrate biomeOS's dynamic API discovery.
 
-use axum::{
-    extract::Path,
-    http::StatusCode,
-    response::Json,
-    routing::get,
-    Router,
-};
+use axum::{extract::Path, http::StatusCode, response::Json, routing::get, Router};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::net::SocketAddr;
@@ -165,27 +159,23 @@ async fn api_schema() -> Json<Value> {
 
 /// GET /api/v1/buckets - List buckets
 async fn list_buckets() -> Json<Vec<Bucket>> {
-    Json(vec![
-        Bucket {
-            id: "bucket-001".to_string(),
-            name: "example-bucket".to_string(),
-            compression: "lz4".to_string(),
-            created_at: "2026-01-02T00:00:00Z".to_string(),
-        }
-    ])
+    Json(vec![Bucket {
+        id: "bucket-001".to_string(),
+        name: "example-bucket".to_string(),
+        compression: "lz4".to_string(),
+        created_at: "2026-01-02T00:00:00Z".to_string(),
+    }])
 }
 
 /// POST /api/v1/buckets - Create bucket
-async fn create_bucket(
-    Json(payload): Json<CreateBucketRequest>,
-) -> (StatusCode, Json<Bucket>) {
+async fn create_bucket(Json(payload): Json<CreateBucketRequest>) -> (StatusCode, Json<Bucket>) {
     let bucket = Bucket {
         id: format!("bucket-{:x}", rand::random::<u32>()),
         name: payload.name,
         compression: payload.compression.unwrap_or_else(|| "lz4".to_string()),
         created_at: chrono::Utc::now().to_rfc3339(),
     };
-    
+
     (StatusCode::OK, Json(bucket))
 }
 
@@ -219,16 +209,15 @@ async fn main() {
 
     // Bind to address
     let addr = SocketAddr::from(([127, 0, 0, 1], 9876));
-    
+
     println!("🚀 Mock Primal Server starting...");
     println!("   Listening on: http://{}", addr);
     println!("   Schema: http://{}/api/schema", addr);
     println!("   Health: http://{}/health", addr);
     println!();
     println!("Press Ctrl+C to stop");
-    
+
     // Run server
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }
-

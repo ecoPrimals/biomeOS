@@ -12,6 +12,7 @@
 pub mod capabilities;
 pub mod configuration;
 pub mod core;
+pub mod standard_api;
 pub mod service;
 
 #[cfg(test)]

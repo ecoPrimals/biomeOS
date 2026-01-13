@@ -23,7 +23,7 @@ pub async fn handle_health(
     if use_graph {
         return handle_graph_health_check(niche_path, continuous, interval).await;
     }
-    
+
     // Legacy health check
     let config = biomeos_types::BiomeOSConfig::default();
     let manager = UniversalBiomeOSManager::new(config).await?;
@@ -53,17 +53,16 @@ async fn handle_graph_health_check(
     continuous: bool,
     interval: u64,
 ) -> Result<()> {
-    
-    
-    
-    let niche = niche_path.ok_or_else(|| {
-        anyhow::anyhow!("--niche required for graph-based health check")
-    })?;
-    
+    let niche = niche_path
+        .ok_or_else(|| anyhow::anyhow!("--niche required for graph-based health check"))?;
+
     if continuous {
-        println!("🔄 Starting continuous health monitoring via Neural API (interval: {}s)", interval);
+        println!(
+            "🔄 Starting continuous health monitoring via Neural API (interval: {}s)",
+            interval
+        );
         println!("Press Ctrl+C to stop");
-        
+
         loop {
             perform_graph_health_check(&niche).await?;
             tokio::time::sleep(std::time::Duration::from_secs(interval)).await;
@@ -72,66 +71,20 @@ async fn handle_graph_health_check(
     } else {
         perform_graph_health_check(&niche).await?;
     }
-    
+
     Ok(())
 }
 
 /// Perform a single graph-based health check
-async fn perform_graph_health_check(niche_path: &std::path::Path) -> Result<()> {
-    use biomeos_core::graph_deployment::GraphDeploymentCoordinator;
-    
-    let spinner = create_spinner("🧠 Running health check via Neural API...");
-    
-    let coordinator = GraphDeploymentCoordinator::new();
-    
-    // Execute the health_check graph
-    let result = coordinator
-        .deploy_niche_with_graph(niche_path, "health_check")
-        .await?;
-    
-    spinner.finish_and_clear();
-    
-    if result.success {
-        println!("✅ Health Check: ALL PRIMALS HEALTHY");
-        println!("📊 Check results:");
-        
-        for metric in &result.metrics {
-            let status_icon = if metric.success { "✅" } else { "❌" };
-            let health_status = if metric.success { "HEALTHY" } else { "UNHEALTHY" };
-            
-            println!(
-                "  {} {} → {} ({}ms)",
-                status_icon,
-                metric.primal_id,
-                health_status,
-                metric.duration_ms
-            );
-            
-            if let Some(error) = &metric.error {
-                println!("     ⚠️  Error: {}", error);
-            }
-        }
-        
-        let total_duration: u64 = result.metrics.iter().map(|m| m.duration_ms).sum();
-        println!("\n⏱️  Total check time: {}ms", total_duration);
-    } else {
-        let failed: Vec<_> = result.metrics.iter().filter(|m| !m.success).collect();
-        
-        println!("❌ Health Check: {} PRIMAL(S) UNHEALTHY", failed.len());
-        println!("📊 Failed checks:");
-        
-        for metric in &failed {
-            println!("  ❌ {} → UNHEALTHY ({}ms)", metric.primal_id, metric.duration_ms);
-            
-            if let Some(error) = &metric.error {
-                println!("     Error: {}", error);
-            }
-        }
-        
-        anyhow::bail!("Health check failed: {} unhealthy primal(s)", failed.len());
-    }
-    
-    Ok(())
+///
+/// ⚠️ DEPRECATED: This uses the old graph_deployment module.
+async fn perform_graph_health_check(_niche_path: &std::path::Path) -> Result<()> {
+    println!("⚠️  DEPRECATED: Graph-based health checks via CLI are deprecated.");
+    println!("📖 Please use:");
+    println!("  • biomeos-api health endpoints");
+    println!("  • Individual primal health checks via their APIs");
+
+    anyhow::bail!("Graph-based health check is deprecated. Use biomeos-api instead.");
 }
 
 /// Handle probe command for deep health diagnostics

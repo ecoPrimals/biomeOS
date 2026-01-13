@@ -115,7 +115,10 @@ impl Error {
     }
 
     /// Create an identity verification failed error
-    pub fn identity_verification_failed(primal: impl Into<String>, reason: impl Into<String>) -> Self {
+    pub fn identity_verification_failed(
+        primal: impl Into<String>,
+        reason: impl Into<String>,
+    ) -> Self {
         Self::IdentityVerificationFailed {
             primal: primal.into(),
             reason: reason.into(),
@@ -128,7 +131,10 @@ impl Error {
     }
 
     /// Create a trust evaluation failed error
-    pub fn trust_evaluation_failed(reason: impl Into<String>, achieved_level: Option<String>) -> Self {
+    pub fn trust_evaluation_failed(
+        reason: impl Into<String>,
+        achieved_level: Option<String>,
+    ) -> Self {
         Self::TrustEvaluationFailed {
             reason: reason.into(),
             achieved_level,
@@ -174,4 +180,3 @@ impl Error {
         }
     }
 }
-

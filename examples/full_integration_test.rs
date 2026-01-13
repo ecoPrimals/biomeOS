@@ -277,14 +277,18 @@ async fn deploy_binary_to_node(
 
             // Future: Implement GitHub release download
             // Will use reqwest + tar extraction
-            Err(anyhow::anyhow!("GitHub download not yet implemented - use local binaries"))
+            Err(anyhow::anyhow!(
+                "GitHub download not yet implemented - use local binaries"
+            ))
         }
         BinaryLocation::Remote(url) => {
             info!("  • Downloading {} from: {}", primal_name, url);
 
             // Future: Implement remote binary download with checksum verification
             // Will support HTTP/HTTPS downloads with integrity checks
-            Err(anyhow::anyhow!("Remote download not yet implemented - use local binaries"))
+            Err(anyhow::anyhow!(
+                "Remote download not yet implemented - use local binaries"
+            ))
         }
     }
 }

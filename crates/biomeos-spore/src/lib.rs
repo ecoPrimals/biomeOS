@@ -45,16 +45,16 @@
 //! ```
 
 pub mod error;
-pub mod logs;
-pub mod spore_log_tracker;
 pub mod incubation;
+pub mod logs;
 pub mod manifest;
 pub mod refresh;
 pub mod seed;
 pub mod spore;
-pub mod verification;
+pub mod spore_log_tracker;
 pub mod spore_types;
 pub mod usb;
+pub mod verification;
 pub mod verify;
 
 // Test support - available in dev/test builds
@@ -70,4 +70,3 @@ pub use verify::{SporeVerification, VerificationResult};
 // Re-export for integration tests
 #[doc(hidden)]
 pub use test_support::setup_test_binaries;
-

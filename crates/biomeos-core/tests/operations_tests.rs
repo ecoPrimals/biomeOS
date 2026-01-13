@@ -48,7 +48,7 @@ async fn setup_test_manager() -> (UniversalBiomeOSManager, MockServer) {
     (manager, mock_server)
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_service_logs_real_http_success() {
     let (manager, mock_server) = setup_test_manager().await;
 
@@ -87,7 +87,7 @@ async fn test_service_logs_real_http_success() {
     assert_eq!(logs_array.len(), 2, "Expected 2 log entries");
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_service_logs_graceful_degradation() {
     let (manager, mock_server) = setup_test_manager().await;
 
@@ -114,7 +114,7 @@ async fn test_service_logs_graceful_degradation() {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_command_execution_real_http_success() {
     let (manager, mock_server) = setup_test_manager().await;
 
@@ -149,7 +149,7 @@ async fn test_command_execution_real_http_success() {
     );
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_command_execution_with_error() {
     let (manager, mock_server) = setup_test_manager().await;
 
@@ -173,7 +173,7 @@ async fn test_command_execution_with_error() {
     assert!(result.is_err(), "Expected command execution to fail");
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_service_scaling_real_http_success() {
     let (manager, mock_server) = setup_test_manager().await;
 
@@ -214,7 +214,7 @@ async fn test_service_scaling_real_http_success() {
     assert_eq!(target, Some(3));
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_service_scaling_with_error() {
     let (manager, mock_server) = setup_test_manager().await;
 
@@ -232,7 +232,7 @@ async fn test_service_scaling_with_error() {
     assert!(result.is_err(), "Expected scaling to fail");
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_capability_based_discovery() {
     let (manager, _mock_server) = setup_test_manager().await;
 
@@ -254,7 +254,7 @@ async fn test_capability_based_discovery() {
     );
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_capability_discovery_no_match() {
     let (manager, _mock_server) = setup_test_manager().await;
 
@@ -272,7 +272,7 @@ async fn test_capability_discovery_no_match() {
     assert!(discovered.is_empty(), "Expected no primals to match");
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_concurrent_operations() {
     let (manager, mock_server) = setup_test_manager().await;
 
@@ -321,7 +321,7 @@ async fn test_concurrent_operations() {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_service_not_found() {
     let config = BiomeOSConfig::default();
     let manager = UniversalBiomeOSManager::new(config)
@@ -338,7 +338,7 @@ async fn test_service_not_found() {
     assert!(result.is_err(), "Expected error for non-existent service");
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_timeout_handling() {
     let (manager, mock_server) = setup_test_manager().await;
 

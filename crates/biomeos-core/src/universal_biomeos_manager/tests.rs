@@ -32,5 +32,3 @@ mod manager_basic_tests {
 
 // More tests will be added as we implement functionality
 // For now, these verify the basic infrastructure compiles and runs
-
-

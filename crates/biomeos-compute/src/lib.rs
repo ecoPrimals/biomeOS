@@ -9,32 +9,14 @@
 //
 // =============================================================================
 
-pub mod node;
 pub mod fractal;
+pub mod node;
 
 // Re-export core types
 pub use node::{
-    ComputeNode,
-    NodeTopology,
-    Workload,
-    WorkloadId,
-    WorkloadStatus,
-    WorkloadInfo,
-    Runtime,
-    ResourceInfo,
-    CapacityInfo,
-    UtilizationInfo,
-    NodeConfig,
-    ResourceType,
-    ResourceAllocation,
-    HealthStatus,
-    NodeMetrics,
-    TreeMetrics,
+    CapacityInfo, ComputeNode, HealthStatus, NodeConfig, NodeMetrics, NodeTopology,
+    ResourceAllocation, ResourceInfo, ResourceType, Runtime, TreeMetrics, UtilizationInfo,
+    Workload, WorkloadId, WorkloadInfo, WorkloadStatus,
 };
 
-pub use fractal::{
-    FractalBuilder,
-    LeafNode,
-    ParentNode,
-};
-
+pub use fractal::{FractalBuilder, LeafNode, ParentNode};

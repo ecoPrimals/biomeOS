@@ -8,7 +8,7 @@ use serde_json::{json, Value};
 use std::path::{Path, PathBuf};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
-use tracing::{debug, error, info};
+use tracing::{debug, error};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JsonRpcRequest {
@@ -22,7 +22,7 @@ impl JsonRpcRequest {
     pub fn new(method: impl Into<String>, params: Value) -> Self {
         use std::sync::atomic::{AtomicU64, Ordering};
         static REQUEST_ID: AtomicU64 = AtomicU64::new(1);
-        
+
         Self {
             jsonrpc: "2.0".to_string(),
             method: method.into(),
@@ -62,50 +62,49 @@ impl UnixSocketClient {
             socket_path: socket_path.as_ref().to_path_buf(),
         }
     }
-    
+
     /// Check if the socket exists
     pub fn is_available(&self) -> bool {
         self.socket_path.exists()
     }
-    
+
     /// Send a JSON-RPC request and receive response
     pub async fn call(&self, request: JsonRpcRequest) -> Result<JsonRpcResponse> {
-        debug!(
-            "Connecting to Unix socket: {}",
-            self.socket_path.display()
-        );
-        
+        debug!("Connecting to Unix socket: {}", self.socket_path.display());
+
         let mut stream = UnixStream::connect(&self.socket_path)
             .await
             .context(format!(
                 "Failed to connect to Unix socket: {}",
                 self.socket_path.display()
             ))?;
-        
+
         // Serialize request
-        let request_str = serde_json::to_string(&request)
-            .context("Failed to serialize JSON-RPC request")?;
-        
+        let request_str =
+            serde_json::to_string(&request).context("Failed to serialize JSON-RPC request")?;
+
         debug!("Sending JSON-RPC request: {}", request_str);
-        
+
         // Send request (newline-delimited)
         stream.write_all(request_str.as_bytes()).await?;
         stream.write_all(b"\n").await?;
         stream.flush().await?;
-        
+
         // Read response (newline-delimited)
         let (reader, _writer) = stream.split();
         let mut reader = BufReader::new(reader);
         let mut line = String::new();
-        reader.read_line(&mut line).await
+        reader
+            .read_line(&mut line)
+            .await
             .context("Failed to read JSON-RPC response")?;
-        
+
         debug!("Received JSON-RPC response: {}", line);
-        
+
         // Parse response
-        let response: JsonRpcResponse = serde_json::from_str(&line)
-            .context("Failed to parse JSON-RPC response")?;
-        
+        let response: JsonRpcResponse =
+            serde_json::from_str(&line).context("Failed to parse JSON-RPC response")?;
+
         // Check for errors
         if let Some(error) = &response.error {
             error!(
@@ -118,29 +117,26 @@ impl UnixSocketClient {
                 error.code
             ));
         }
-        
+
         Ok(response)
     }
-    
+
     /// Helper to call a method and extract result
-    pub async fn call_method(
-        &self,
-        method: impl Into<String>,
-        params: Value,
-    ) -> Result<Value> {
+    pub async fn call_method(&self, method: impl Into<String>, params: Value) -> Result<Value> {
         let request = JsonRpcRequest::new(method, params);
         let response = self.call(request).await?;
-        
-        response.result.ok_or_else(|| {
-            anyhow::anyhow!("JSON-RPC response missing result field")
-        })
+
+        response
+            .result
+            .ok_or_else(|| anyhow::anyhow!("JSON-RPC response missing result field"))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+    use serde_json::json;
+
     #[test]
     fn test_json_rpc_request_creation() {
         let request = JsonRpcRequest::new("test.method", json!({"key": "value"}));
@@ -149,17 +145,16 @@ mod tests {
         assert_eq!(request.params["key"], "value");
         assert!(request.id > 0);
     }
-    
+
     #[test]
     fn test_unix_socket_client_creation() {
         let client = UnixSocketClient::new("/tmp/test.sock");
         assert_eq!(client.socket_path, PathBuf::from("/tmp/test.sock"));
     }
-    
+
     #[test]
     fn test_socket_availability() {
         let client = UnixSocketClient::new("/tmp/nonexistent.sock");
         assert!(!client.is_available());
     }
 }
-

@@ -16,7 +16,7 @@ mod common;
 use common::*;
 
 /// Complete system lifecycle workflow test
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_complete_system_lifecycle() -> Result<()> {
     println!("🚀 Starting Complete System Lifecycle Test");
 
@@ -222,7 +222,7 @@ async fn test_complete_system_lifecycle() -> Result<()> {
 }
 
 /// Primal ecosystem workflow test
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_primal_ecosystem_workflow() -> Result<()> {
     println!("🌱 Starting Primal Ecosystem Workflow Test");
 
@@ -356,7 +356,7 @@ async fn test_primal_ecosystem_workflow() -> Result<()> {
 }
 
 /// High-load concurrent workflow test
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_high_load_concurrent_workflow() -> Result<()> {
     println!("⚡ Starting High-Load Concurrent Workflow Test");
 
@@ -515,7 +515,7 @@ async fn test_high_load_concurrent_workflow() -> Result<()> {
 }
 
 /// Error recovery workflow test
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_error_recovery_workflow() -> Result<()> {
     println!("🛠️  Starting Error Recovery Workflow Test");
 

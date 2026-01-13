@@ -103,22 +103,22 @@ impl BinaryManifest {
         let manifest: BinaryManifest = toml::from_str(&manifest_str)?;
         Ok(manifest)
     }
-    
+
     /// Save binary manifest to file
     pub fn save(&self, path: impl AsRef<Path>) -> Result<()> {
         let manifest_str = toml::to_string_pretty(self)?;
         std::fs::write(path.as_ref(), manifest_str)?;
         Ok(())
     }
-    
+
     /// Create a new binary manifest from plasmidBin directory
     pub fn from_nucleus(nucleus_path: impl AsRef<Path>) -> Result<Self> {
         use sha2::{Digest, Sha256};
         use std::fs;
-        
+
         let nucleus_path = nucleus_path.as_ref();
         let mut binaries = HashMap::new();
-        
+
         // Scan tower binary
         let tower_path = nucleus_path.join("tower").join("tower");
         if tower_path.exists() {
@@ -126,7 +126,7 @@ impl BinaryManifest {
             let mut hasher = Sha256::new();
             hasher.update(&bytes);
             let sha256 = format!("{:x}", hasher.finalize());
-            
+
             binaries.insert(
                 "tower".to_string(),
                 BinaryInfo {
@@ -141,26 +141,26 @@ impl BinaryManifest {
                 },
             );
         }
-        
+
         // Scan primals directory
         let primals_dir = nucleus_path.join("primals");
         if primals_dir.exists() {
             for entry in fs::read_dir(&primals_dir)? {
                 let entry = entry?;
                 let path = entry.path();
-                
+
                 if path.is_file() {
                     let bytes = fs::read(&path)?;
                     let mut hasher = Sha256::new();
                     hasher.update(&bytes);
                     let sha256 = format!("{:x}", hasher.finalize());
-                    
+
                     let file_name = path
                         .file_name()
                         .and_then(|n| n.to_str())
                         .unwrap_or("unknown")
                         .to_string();
-                    
+
                     let (key, binary_info) = match file_name.as_str() {
                         "beardog-server" => (
                             "beardog".to_string(),
@@ -190,12 +190,12 @@ impl BinaryManifest {
                         ),
                         _ => continue, // Skip unknown binaries
                     };
-                    
+
                     binaries.insert(key, binary_info);
                 }
             }
         }
-        
+
         Ok(BinaryManifest {
             manifest: ManifestMeta {
                 version: "1.0".to_string(),
@@ -220,7 +220,7 @@ impl SporeManifest {
         let manifest: SporeManifest = toml::from_str(&manifest_str)?;
         Ok(manifest)
     }
-    
+
     /// Save spore manifest to file
     pub fn save(&self, spore_path: impl AsRef<Path>) -> Result<()> {
         let manifest_path = spore_path.as_ref().join(".manifest.toml");
@@ -228,7 +228,7 @@ impl SporeManifest {
         std::fs::write(manifest_path, manifest_str)?;
         Ok(())
     }
-    
+
     /// Create a new spore manifest
     pub fn new(
         node_id: String,
@@ -256,7 +256,7 @@ impl SporeManifest {
             deployment_history: vec![],
         }
     }
-    
+
     /// Add a binary to the spore manifest
     pub fn add_binary(&mut self, name: String, version: String, sha256: String) {
         self.binaries.insert(
@@ -270,7 +270,7 @@ impl SporeManifest {
             },
         );
     }
-    
+
     /// Record a deployment event
     pub fn record_deployment(&mut self, deployed_to: String, deployed_by: String, success: bool) {
         self.deployment_history.push(DeploymentRecord {
@@ -286,7 +286,7 @@ impl SporeManifest {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_binary_manifest_creation() {
         let manifest = BinaryManifest {
@@ -302,10 +302,10 @@ mod tests {
                 min_songbird_version: "3.19.0".to_string(),
             },
         };
-        
+
         assert_eq!(manifest.manifest.version, "1.0");
     }
-    
+
     #[test]
     fn test_spore_manifest_creation() {
         let mut manifest = SporeManifest::new(
@@ -316,15 +316,14 @@ mod tests {
             "parent_hash".to_string(),
             "child_hash".to_string(),
         );
-        
+
         manifest.add_binary(
             "beardog-server".to_string(),
             "0.15.0".to_string(),
             "abc123".to_string(),
         );
-        
+
         assert_eq!(manifest.spore.node_id, "node-alpha");
         assert_eq!(manifest.binaries.len(), 1);
     }
 }
-

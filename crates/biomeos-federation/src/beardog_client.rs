@@ -59,32 +59,30 @@ impl BearDogClient {
     /// Create a BearDog client from runtime discovery
     pub async fn from_discovery() -> Result<Self> {
         let mut discovery = PrimalDiscovery::new();
-        discovery.discover().await
+        discovery
+            .discover()
+            .await
             .context("Failed to discover primals")?;
-        
+
         let beardog = discovery
             .get("beardog")
             .ok_or_else(|| anyhow::anyhow!("BearDog not found via discovery"))?;
-        
+
         if beardog.endpoints.is_empty() {
             return Err(anyhow::anyhow!("BearDog has no endpoints"));
         }
-        
+
         let endpoint = match &beardog.endpoints[0] {
-            PrimalEndpoint::UnixSocket { path } => {
-                BearDogEndpoint::UnixSocket(path.clone())
-            }
-            PrimalEndpoint::Http { url } => {
-                BearDogEndpoint::Http(url.clone())
-            }
+            PrimalEndpoint::UnixSocket { path } => BearDogEndpoint::UnixSocket(path.clone()),
+            PrimalEndpoint::Http { url } => BearDogEndpoint::Http(url.clone()),
             PrimalEndpoint::Udp { .. } => {
                 return Err(anyhow::anyhow!("BearDog UDP endpoint not supported yet"));
             }
         };
-        
+
         Ok(Self { endpoint })
     }
-    
+
     /// Create a BearDog client with explicit endpoint
     pub fn with_endpoint(endpoint: String) -> Result<Self> {
         let endpoint = if endpoint.starts_with("unix://") {
@@ -95,10 +93,10 @@ impl BearDogClient {
         } else {
             return Err(anyhow::anyhow!("Invalid endpoint format: {}", endpoint));
         };
-        
+
         Ok(Self { endpoint })
     }
-    
+
     /// Check if BearDog is available
     pub async fn is_available(&self) -> bool {
         match &self.endpoint {
@@ -109,7 +107,7 @@ impl BearDogClient {
             }
         }
     }
-    
+
     /// Health check
     pub async fn health_check(&self) -> Result<()> {
         match &self.endpoint {
@@ -125,16 +123,19 @@ impl BearDogClient {
                     .send()
                     .await
                     .context("Failed to connect to BearDog")?;
-                
+
                 if response.status().is_success() {
                     Ok(())
                 } else {
-                    Err(anyhow::anyhow!("BearDog health check failed: {}", response.status()))
+                    Err(anyhow::anyhow!(
+                        "BearDog health check failed: {}",
+                        response.status()
+                    ))
                 }
             }
         }
     }
-    
+
     /// Verify if a seed is part of a family (BearDog v0.15.2+)
     pub async fn verify_same_family(
         &self,
@@ -145,22 +146,28 @@ impl BearDogClient {
         match &self.endpoint {
             BearDogEndpoint::UnixSocket(path) => {
                 let client = UnixSocketClient::new(path);
-                
+
                 let params = json!({
                     "family_id": family_id,
                     "seed_hash": seed_hash,
                     "node_id": node_id,
                 });
-                
+
                 let result = client
                     .call_method("federation.verify_family_member", params)
                     .await
                     .context("Failed to call federation.verify_family_member")?;
-                
+
                 Ok(LineageVerificationResponse {
                     is_family_member: result["is_family_member"].as_bool().unwrap_or(false),
-                    parent_seed_hash: result["parent_seed_hash"].as_str().unwrap_or("").to_string(),
-                    relationship: result["relationship"].as_str().unwrap_or("unknown").to_string(),
+                    parent_seed_hash: result["parent_seed_hash"]
+                        .as_str()
+                        .unwrap_or("")
+                        .to_string(),
+                    relationship: result["relationship"]
+                        .as_str()
+                        .unwrap_or("unknown")
+                        .to_string(),
                 })
             }
             BearDogEndpoint::Http(url) => {
@@ -170,13 +177,13 @@ impl BearDogClient {
                     seed_hash: String,
                     node_id: String,
                 }
-                
+
                 let request = HttpRequest {
                     family_id: family_id.to_string(),
                     seed_hash: seed_hash.to_string(),
                     node_id: node_id.to_string(),
                 };
-                
+
                 let client = reqwest::Client::new();
                 let response: LineageVerificationResponse = client
                     .post(format!("{}/api/v1/lineage/verify_family", url))
@@ -187,12 +194,12 @@ impl BearDogClient {
                     .json()
                     .await
                     .context("Failed to parse lineage verification response")?;
-                
+
                 Ok(response)
             }
         }
     }
-    
+
     /// Derive a sub-federation encryption key
     pub async fn derive_subfed_key(
         &self,
@@ -201,22 +208,25 @@ impl BearDogClient {
         match &self.endpoint {
             BearDogEndpoint::UnixSocket(path) => {
                 let client = UnixSocketClient::new(path);
-                
+
                 let params = json!({
                     "parent_family": request.parent_family,
                     "subfed_name": request.subfed_name,
                     "purpose": request.purpose,
                     "derivation_info": format!("{}-{}", request.subfed_name, chrono::Utc::now().format("%Y-%m-%d")),
                 });
-                
+
                 let result = client
                     .call_method("federation.derive_subfed_key", params)
                     .await
                     .context("Failed to call federation.derive_subfed_key")?;
-                
+
                 Ok(KeyDerivationResponse {
                     key_ref: result["key_ref"].as_str().unwrap_or("").to_string(),
-                    algorithm: result["algorithm"].as_str().unwrap_or("AES-256-GCM").to_string(),
+                    algorithm: result["algorithm"]
+                        .as_str()
+                        .unwrap_or("AES-256-GCM")
+                        .to_string(),
                     created_at: result["created_at"].as_str().unwrap_or("").to_string(),
                 })
             }
@@ -231,37 +241,33 @@ impl BearDogClient {
                     .json()
                     .await
                     .context("Failed to parse key derivation response")?;
-                
+
                 Ok(response)
             }
         }
     }
-    
+
     /// Encrypt data using BearDog's HSM
-    pub async fn encrypt_data(
-        &self,
-        data: &[u8],
-        key_ref: &str,
-    ) -> Result<EncryptResponse> {
+    pub async fn encrypt_data(&self, data: &[u8], key_ref: &str) -> Result<EncryptResponse> {
         match &self.endpoint {
             BearDogEndpoint::UnixSocket(path) => {
                 let client = UnixSocketClient::new(path);
-                
+
                 use base64::Engine;
                 let engine = base64::engine::general_purpose::STANDARD;
                 let data_b64 = engine.encode(data);
-                
+
                 let params = json!({
                     "data": data_b64,
                     "key_ref": key_ref,
                     "algorithm": "AES-256-GCM",
                 });
-                
+
                 let result = client
                     .call_method("encryption.encrypt", params)
                     .await
                     .context("Failed to call encryption.encrypt")?;
-                
+
                 Ok(EncryptResponse {
                     encrypted_data: result["encrypted_data"].as_str().unwrap_or("").to_string(),
                     nonce: result["nonce"].as_str().unwrap_or("").to_string(),
@@ -274,15 +280,15 @@ impl BearDogClient {
                     data: String,
                     key_ref: String,
                 }
-                
+
                 use base64::Engine;
                 let engine = base64::engine::general_purpose::STANDARD;
-                
+
                 let request = HttpEncryptRequest {
                     data: engine.encode(data),
                     key_ref: key_ref.to_string(),
                 };
-                
+
                 let client = reqwest::Client::new();
                 let response: EncryptResponse = client
                     .post(format!("{}/api/v1/encrypt", url))
@@ -293,12 +299,12 @@ impl BearDogClient {
                     .json()
                     .await
                     .context("Failed to parse encryption response")?;
-                
+
                 Ok(response)
             }
         }
     }
-    
+
     /// Decrypt data using BearDog's HSM
     pub async fn decrypt_data(
         &self,
@@ -310,23 +316,25 @@ impl BearDogClient {
         match &self.endpoint {
             BearDogEndpoint::UnixSocket(path) => {
                 let client = UnixSocketClient::new(path);
-                
+
                 let params = json!({
                     "encrypted_data": encrypted_data,
                     "nonce": nonce,
                     "tag": tag,
                     "key_ref": key_ref,
                 });
-                
+
                 let result = client
                     .call_method("encryption.decrypt", params)
                     .await
                     .context("Failed to call encryption.decrypt")?;
-                
+
                 use base64::Engine;
                 let engine = base64::engine::general_purpose::STANDARD;
                 let data_b64 = result["data"].as_str().unwrap_or("");
-                engine.decode(data_b64).context("Failed to decode decrypted data")
+                engine
+                    .decode(data_b64)
+                    .context("Failed to decode decrypted data")
             }
             BearDogEndpoint::Http(url) => {
                 #[derive(Serialize)]
@@ -336,19 +344,19 @@ impl BearDogClient {
                     tag: String,
                     key_ref: String,
                 }
-                
+
                 #[derive(Deserialize)]
                 struct DecryptResponse {
                     data: String,
                 }
-                
+
                 let request = DecryptRequest {
                     encrypted_data: encrypted_data.to_string(),
                     nonce: nonce.to_string(),
                     tag: tag.to_string(),
                     key_ref: key_ref.to_string(),
                 };
-                
+
                 let client = reqwest::Client::new();
                 let response: DecryptResponse = client
                     .post(format!("{}/api/v1/decrypt", url))
@@ -359,10 +367,12 @@ impl BearDogClient {
                     .json()
                     .await
                     .context("Failed to parse decryption response")?;
-                
+
                 use base64::Engine;
                 let engine = base64::engine::general_purpose::STANDARD;
-                engine.decode(&response.data).context("Failed to decode decrypted data")
+                engine
+                    .decode(&response.data)
+                    .context("Failed to decode decrypted data")
             }
         }
     }
@@ -371,20 +381,19 @@ impl BearDogClient {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_beardog_client_creation() {
         let client = BearDogClient::with_endpoint("http://localhost:9000".to_string()).unwrap();
         assert!(matches!(client.endpoint, BearDogEndpoint::Http(_)));
-        
+
         let client = BearDogClient::with_endpoint("unix:///tmp/beardog.sock".to_string()).unwrap();
         assert!(matches!(client.endpoint, BearDogEndpoint::UnixSocket(_)));
     }
-    
+
     #[test]
     fn test_invalid_endpoint() {
         let result = BearDogClient::with_endpoint("invalid://endpoint".to_string());
         assert!(result.is_err());
     }
 }
-

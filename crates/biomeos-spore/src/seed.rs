@@ -65,7 +65,10 @@ impl FamilySeed {
         use rand::RngCore;
 
         let path = path.as_ref().to_path_buf();
-        info!("🧬 Generating genesis seed (parent DNA) at: {}", path.display());
+        info!(
+            "🧬 Generating genesis seed (parent DNA) at: {}",
+            path.display()
+        );
 
         // Generate 256 bits of entropy (32 bytes) - the "parent DNA"
         let mut bytes = [0u8; 32];
@@ -122,10 +125,7 @@ impl FamilySeed {
         let parent_path = parent_path.as_ref();
         let target_path = target_path.as_ref().to_path_buf();
 
-        info!(
-            "🧬 Deriving sibling seed for '{}' from parent",
-            node_id
-        );
+        info!("🧬 Deriving sibling seed for '{}' from parent", node_id);
 
         // Read parent seed (the "parent DNA")
         let parent_seed = fs::read(parent_path)?;
@@ -233,10 +233,7 @@ impl FamilySeed {
     /// knows where to find the seed file. BearDog will then read and process
     /// the file using its cryptographic functions.
     pub fn configure_beardog_env(&self) -> SporeResult<()> {
-        let path_str = self
-            .file_path
-            .to_str()
-            .ok_or(SporeError::InvalidPath)?;
+        let path_str = self.file_path.to_str().ok_or(SporeError::InvalidPath)?;
 
         std::env::set_var("BEARDOG_FAMILY_SEED_FILE", path_str);
         debug!("Set BEARDOG_FAMILY_SEED_FILE={}", path_str);
@@ -321,7 +318,10 @@ mod tests {
         assert!(result.is_err());
         assert!(matches!(
             result,
-            Err(SporeError::InvalidSeedLength { expected: 32, found: 16 })
+            Err(SporeError::InvalidSeedLength {
+                expected: 32,
+                found: 16
+            })
         ));
     }
 
@@ -337,4 +337,3 @@ mod tests {
         assert_eq!(env_value, seed_path.to_str().unwrap());
     }
 }
-

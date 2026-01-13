@@ -28,6 +28,7 @@ use tracing::warn;
 /// HTTP client for legacy primal communication
 ///
 /// **DEPRECATED**: Use `JsonRpcUnixClient` instead.
+#[derive(Debug, Clone)]
 pub struct HttpClient {
     base_url: String,
     client: Client,

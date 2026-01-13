@@ -1,7 +1,7 @@
 //! API schema parsing and validation
 //!
 //! Schema types are defined for future schema-driven API calls.
-//! 
+//!
 //! ## Future Extensions
 //! - OpenAPI 3.x parser (using `openapi` or `openapiv3` crate)
 //! - JSON Schema parser (using `jsonschema` crate)
@@ -19,13 +19,13 @@ use crate::primal_client::error::Result;
 pub struct ApiSchema {
     /// Schema version
     pub version: String,
-    
+
     /// Schema format
     pub format: SchemaFormat,
-    
+
     /// Available operations
     pub operations: HashMap<String, Operation>,
-    
+
     /// Type definitions
     pub types: HashMap<String, TypeDefinition>,
 }
@@ -35,10 +35,10 @@ pub struct ApiSchema {
 pub enum SchemaFormat {
     /// OpenAPI 3.x
     OpenApi3,
-    
+
     /// JSON Schema
     JsonSchema,
-    
+
     /// Custom format
     Custom(String),
 }
@@ -48,16 +48,16 @@ pub enum SchemaFormat {
 pub struct Operation {
     /// HTTP method (GET, POST, etc.)
     pub method: String,
-    
+
     /// Path template
     pub path: String,
-    
+
     /// Request type (optional)
     pub request_type: Option<String>,
-    
+
     /// Response type
     pub response_type: String,
-    
+
     /// Error type (optional)
     pub error_type: Option<String>,
 }
@@ -67,7 +67,7 @@ pub struct Operation {
 pub struct TypeDefinition {
     /// Type name
     pub name: String,
-    
+
     /// Fields/properties
     pub fields: HashMap<String, FieldDefinition>,
 }
@@ -77,7 +77,7 @@ pub struct TypeDefinition {
 pub struct FieldDefinition {
     /// Field type
     pub field_type: String,
-    
+
     /// Is required
     pub required: bool,
 }
@@ -86,7 +86,7 @@ pub struct FieldDefinition {
 pub trait SchemaParser: Send + Sync {
     /// Parse schema from bytes
     fn parse(&self, schema_bytes: &[u8]) -> Result<ApiSchema>;
-    
+
     /// Get operation information
     fn get_operation<'a>(&self, schema: &'a ApiSchema, operation: &str) -> Result<&'a Operation>;
 }
@@ -94,7 +94,7 @@ pub trait SchemaParser: Send + Sync {
 // Placeholder implementations for future schema-driven features
 
 /// OpenAPI schema parser (not yet implemented)
-/// 
+///
 /// Future implementation would use the `openapiv3` crate to parse
 /// OpenAPI 3.x specifications and enable schema-driven API calls.
 pub struct OpenApiSchemaParser;
@@ -105,7 +105,7 @@ impl SchemaParser for OpenApiSchemaParser {
             message: "OpenAPI parser not yet implemented".to_string(),
         })
     }
-    
+
     fn get_operation<'a>(&self, schema: &'a ApiSchema, operation: &str) -> Result<&'a Operation> {
         schema.operations.get(operation).ok_or_else(|| {
             crate::primal_client::error::ApiError::NotFound {
@@ -114,4 +114,3 @@ impl SchemaParser for OpenApiSchemaParser {
         })
     }
 }
-

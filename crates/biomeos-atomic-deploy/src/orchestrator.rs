@@ -9,8 +9,8 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use tracing::{debug, info, warn};
 
-use crate::primal_launcher::{PrimalLauncher, PrimalInstance};
 use crate::health_check::HealthChecker;
+use crate::primal_launcher::{PrimalInstance, PrimalLauncher};
 
 /// Atomic type for deployment
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -71,20 +71,30 @@ pub struct DeploymentConfig {
 impl DeploymentConfig {
     /// Create default config for testing
     pub fn test_config(usb_seed_path: PathBuf) -> Self {
+        use biomeos_types::identifiers::FamilyId;
+        
         Self {
             usb_seed_path,
-            family_id: "nat0".to_string(),
+            family_id: FamilyId::new_for_test().to_string(),
             deployment_batch: chrono::Utc::now().format("%Y%m%d").to_string(),
-            binary_dir: PathBuf::from("/home/eastgate/Development/ecoPrimals/phase2/biomeOS/plasmidBin"),
+            binary_dir: PathBuf::from(
+                "/home/eastgate/Development/ecoPrimals/phase2/biomeOS/plasmidBin",
+            ),
             runtime_dir: std::env::var("XDG_RUNTIME_DIR")
                 .map(PathBuf::from)
-                .unwrap_or_else(|_| PathBuf::from(format!("/run/user/{}", unsafe { libc::getuid() }))),
-            deployment_mode: DeploymentMode::detect().unwrap_or_else(|_| DeploymentMode::SiblingSpore {
-                host_os: biomeos_core::deployment_mode::HostOS::Linux {
-                    distro: "Unknown".to_string(),
-                },
-                install_dir: PathBuf::from("/tmp/biomeos"),
-                isolation: biomeos_core::deployment_mode::IsolationLevel::Shared,
+                .unwrap_or_else(|_| {
+                    // Use nix crate for safe UID retrieval (no unsafe code needed)
+                    use nix::unistd::getuid;
+                    PathBuf::from(format!("/run/user/{}", getuid()))
+                }),
+            deployment_mode: DeploymentMode::detect().unwrap_or_else(|_| {
+                DeploymentMode::SiblingSpore {
+                    host_os: biomeos_core::deployment_mode::HostOS::Linux {
+                        distro: "Unknown".to_string(),
+                    },
+                    install_dir: PathBuf::from("/tmp/biomeos"),
+                    isolation: biomeos_core::deployment_mode::IsolationLevel::Shared,
+                }
             }),
             neural_api_enabled: false,
             neural_api_endpoint: None,
@@ -102,10 +112,7 @@ pub struct DeploymentOrchestrator {
 impl DeploymentOrchestrator {
     /// Create new orchestrator
     pub fn new(config: DeploymentConfig) -> Result<Self> {
-        let launcher = PrimalLauncher::new(
-            config.binary_dir.clone(),
-            config.runtime_dir.clone(),
-        )?;
+        let launcher = PrimalLauncher::new(config.binary_dir.clone(), config.runtime_dir.clone())?;
 
         let health_checker = HealthChecker::new(config.runtime_dir.clone());
 
@@ -122,13 +129,20 @@ impl DeploymentOrchestrator {
 
         // Step 1: Verify USB seed exists
         if !self.config.usb_seed_path.exists() {
-            anyhow::bail!("USB seed not found: {}", self.config.usb_seed_path.display());
+            anyhow::bail!(
+                "USB seed not found: {}",
+                self.config.usb_seed_path.display()
+            );
         }
 
-        info!("   ✅ USB seed verified: {}", self.config.usb_seed_path.display());
+        info!(
+            "   ✅ USB seed verified: {}",
+            self.config.usb_seed_path.display()
+        );
 
         // Step 2: Derive child seed for this atomic
-        let child_seed_path = self.derive_child_seed(atomic_type)
+        let child_seed_path = self
+            .derive_child_seed(atomic_type)
             .context("Failed to derive child seed")?;
 
         info!("   🧬 Child seed derived: {}", child_seed_path.display());
@@ -137,11 +151,10 @@ impl DeploymentOrchestrator {
         let mut instances = Vec::new();
 
         for primal_name in atomic_type.required_primals() {
-            match self.launch_primal_with_lineage(
-                primal_name,
-                atomic_type,
-                &child_seed_path,
-            ).await {
+            match self
+                .launch_primal_with_lineage(primal_name, atomic_type, &child_seed_path)
+                .await
+            {
                 Ok(instance) => {
                     info!("   ✅ {} launched (PID: {})", primal_name, instance.pid);
                     instances.push(instance);
@@ -176,7 +189,9 @@ impl DeploymentOrchestrator {
                 result.success_count += 1;
             }
             Err(e) => {
-                result.errors.push(format!("Tower deployment failed: {}", e));
+                result
+                    .errors
+                    .push(format!("Tower deployment failed: {}", e));
             }
         }
 
@@ -203,7 +218,10 @@ impl DeploymentOrchestrator {
         }
 
         info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        info!("✅ Deployment complete: {}/3 atomics operational", result.success_count);
+        info!(
+            "✅ Deployment complete: {}/3 atomics operational",
+            result.success_count
+        );
         info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
         Ok(result)
@@ -214,8 +232,7 @@ impl DeploymentOrchestrator {
         let node_id = atomic_type.node_id();
         let child_seed_path = self.config.runtime_dir.join(format!(
             ".family-{}-{}.seed",
-            node_id,
-            self.config.family_id
+            node_id, self.config.family_id
         ));
 
         FamilySeed::derive_sibling(
@@ -237,15 +254,26 @@ impl DeploymentOrchestrator {
     ) -> Result<PrimalInstance> {
         let socket_path = self.config.runtime_dir.join(format!(
             "{}-{}.sock",
-            primal_name.replace("-server", "").replace("-orchestrator", ""),
+            primal_name
+                .replace("-server", "")
+                .replace("-orchestrator", ""),
             atomic_type.node_id()
         ));
 
         // Build environment with genetic lineage
         let mut env = std::collections::HashMap::new();
-        env.insert("BEARDOG_FAMILY_SEED_FILE".to_string(), child_seed_path.display().to_string());
-        env.insert("BEARDOG_FAMILY_ID".to_string(), self.config.family_id.clone());
-        env.insert("BEARDOG_NODE_ID".to_string(), atomic_type.node_id().to_string());
+        env.insert(
+            "BEARDOG_FAMILY_SEED_FILE".to_string(),
+            child_seed_path.display().to_string(),
+        );
+        env.insert(
+            "BEARDOG_FAMILY_ID".to_string(),
+            self.config.family_id.clone(),
+        );
+        env.insert(
+            "BEARDOG_NODE_ID".to_string(),
+            atomic_type.node_id().to_string(),
+        );
 
         // Primal-specific socket env vars
         let socket_env = match primal_name {
@@ -260,11 +288,14 @@ impl DeploymentOrchestrator {
 
         // For Songbird, set security provider (BearDog)
         if primal_name == "songbird-orchestrator" {
-            let beardog_socket = self.config.runtime_dir.join(format!(
-                "beardog-{}.sock",
-                atomic_type.node_id()
-            ));
-            env.insert("SONGBIRD_SECURITY_PROVIDER".to_string(), beardog_socket.display().to_string());
+            let beardog_socket = self
+                .config
+                .runtime_dir
+                .join(format!("beardog-{}.sock", atomic_type.node_id()));
+            env.insert(
+                "SONGBIRD_SECURITY_PROVIDER".to_string(),
+                beardog_socket.display().to_string(),
+            );
         }
 
         self.launcher.launch(primal_name, env).await
@@ -279,7 +310,10 @@ impl DeploymentOrchestrator {
         debug!("   🔍 Health check: {:?} atomic", atomic_type);
 
         for instance in instances {
-            let health = self.health_checker.check_primal(&instance.socket_path).await?;
+            let health = self
+                .health_checker
+                .check_primal(&instance.socket_path)
+                .await?;
 
             if !health.is_healthy {
                 anyhow::bail!(
@@ -374,20 +408,21 @@ mod tests {
         let tower = AtomicType::Tower;
         let json = serde_json::to_string(&tower).unwrap();
         assert_eq!(json, "\"Tower\"");
-        
+
         let deserialized: AtomicType = serde_json::from_str(&json).unwrap();
         assert_eq!(deserialized, AtomicType::Tower);
     }
 
     #[test]
     fn test_deployment_config_creation() {
+        use biomeos_types::identifiers::FamilyId;
         let temp_dir = TempDir::new().unwrap();
         let seed_path = temp_dir.path().join("test.seed");
-        
+
         let config = DeploymentConfig::test_config(seed_path.clone());
-        
+
         assert_eq!(config.usb_seed_path, seed_path);
-        assert_eq!(config.family_id, "nat0");
+        assert_eq!(config.family_id, FamilyId::new_for_test().to_string());
         assert!(!config.neural_api_enabled);
         assert!(config.neural_api_endpoint.is_none());
     }
@@ -397,10 +432,10 @@ mod tests {
         let mut result = DeploymentResult::new();
         assert_eq!(result.success_count, 0);
         assert!(!result.is_success());
-        
+
         result.success_count = 3;
         assert!(result.is_success());
-        
+
         result.errors.push("test error".to_string());
         assert!(!result.is_success()); // Errors mean failure
     }
@@ -408,33 +443,36 @@ mod tests {
     #[test]
     fn test_deployment_result_all_instances() {
         let mut result = DeploymentResult::new();
-        
+
         // Empty at start
         assert_eq!(result.all_instances().len(), 0);
-        
+
         // Add tower instance
         result.tower = Some(vec![PrimalInstance {
             primal_name: "beardog-server".to_string(),
             pid: 1234,
             socket_path: PathBuf::from("/tmp/test.sock"),
+            started_at: chrono::Utc::now(),
         }]);
-        
+
         assert_eq!(result.all_instances().len(), 1);
-        
+
         // Add node instances
         result.node = Some(vec![
             PrimalInstance {
                 primal_name: "beardog-server".to_string(),
                 pid: 2345,
                 socket_path: PathBuf::from("/tmp/test2.sock"),
+                started_at: chrono::Utc::now(),
             },
             PrimalInstance {
                 primal_name: "songbird-orchestrator".to_string(),
                 pid: 3456,
                 socket_path: PathBuf::from("/tmp/test3.sock"),
+                started_at: chrono::Utc::now(),
             },
         ]);
-        
+
         assert_eq!(result.all_instances().len(), 3);
     }
 
@@ -442,14 +480,13 @@ mod tests {
     fn test_deployment_config_serialization() {
         let temp_dir = TempDir::new().unwrap();
         let config = DeploymentConfig::test_config(temp_dir.path().join("test.seed"));
-        
+
         // Test JSON round-trip
         let json = serde_json::to_string(&config).unwrap();
         let deserialized: DeploymentConfig = serde_json::from_str(&json).unwrap();
-        
+
         assert_eq!(config.family_id, deserialized.family_id);
         assert_eq!(config.deployment_batch, deserialized.deployment_batch);
         assert_eq!(config.neural_api_enabled, deserialized.neural_api_enabled);
     }
 }
-

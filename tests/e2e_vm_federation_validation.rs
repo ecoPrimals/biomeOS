@@ -6,7 +6,7 @@
 use biomeos_core::vm_federation::{ValidationConfig, VmFederationManager};
 use std::time::Duration;
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_vm_federation_with_validation() -> anyhow::Result<()> {
     // Only run if libvirt testing is explicitly enabled
     if std::env::var("BENCHSCALE_TEST_LIBVIRT").is_err() {
@@ -43,7 +43,7 @@ async fn test_vm_federation_with_validation() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_validation_timeout() -> anyhow::Result<()> {
     // Only run if libvirt testing is explicitly enabled
     if std::env::var("BENCHSCALE_TEST_LIBVIRT").is_err() {

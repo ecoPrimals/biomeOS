@@ -252,7 +252,7 @@ impl UniversalBiomeOSManager {
 
     /// Enable AI-powered system optimization
     /// NOTE: Commented out - depends on legacy ClientRegistry
-    /* 
+    /*
     pub async fn enable_ai_optimization(&self) -> Result<HashMap<String, serde_json::Value>> {
         tracing::info!("🧠 Enabling AI-powered system optimization");
 

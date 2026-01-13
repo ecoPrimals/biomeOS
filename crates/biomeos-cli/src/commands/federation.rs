@@ -12,23 +12,23 @@ pub struct CreateSubfedArgs {
     /// Sub-federation name
     #[arg(long)]
     pub name: String,
-    
+
     /// Parent family ID (genetic lineage)
     #[arg(long)]
     pub parent_family: String,
-    
+
     /// Member node IDs (comma-separated, supports wildcards like "node-*")
     #[arg(long)]
     pub members: String,
-    
+
     /// Capabilities (comma-separated: storage,compute,gaming,sync,voice,video,discovery)
     #[arg(long)]
     pub capabilities: String,
-    
+
     /// Isolation level (none,low,medium,high,critical)
     #[arg(long, default_value = "low")]
     pub isolation: String,
-    
+
     /// Configuration directory
     #[arg(long, default_value = "/var/biomeos/federation")]
     pub config_dir: PathBuf,
@@ -39,11 +39,11 @@ pub struct ListSubfedsArgs {
     /// Configuration directory
     #[arg(long, default_value = "/var/biomeos/federation")]
     pub config_dir: PathBuf,
-    
+
     /// Filter by family ID
     #[arg(long)]
     pub family: Option<String>,
-    
+
     /// Show detailed information
     #[arg(long, default_value = "false")]
     pub detailed: bool,
@@ -54,11 +54,11 @@ pub struct JoinSubfedArgs {
     /// Sub-federation name
     #[arg(long)]
     pub name: String,
-    
+
     /// Node ID to add
     #[arg(long)]
     pub node: String,
-    
+
     /// Configuration directory
     #[arg(long, default_value = "/var/biomeos/federation")]
     pub config_dir: PathBuf,
@@ -69,15 +69,15 @@ pub struct CheckAccessArgs {
     /// Node ID
     #[arg(long)]
     pub node: String,
-    
+
     /// Capability to check
     #[arg(long)]
     pub capability: String,
-    
+
     /// Sub-federation name (optional, checks all if not provided)
     #[arg(long)]
     pub subfed: Option<String>,
-    
+
     /// Configuration directory
     #[arg(long, default_value = "/var/biomeos/federation")]
     pub config_dir: PathBuf,
@@ -86,14 +86,14 @@ pub struct CheckAccessArgs {
 /// Handle `biomeos federation create-subfed` command
 pub async fn handle_federation_create_subfed(args: &CreateSubfedArgs) -> Result<()> {
     info!("Creating sub-federation: {}", args.name);
-    
+
     // Parse members
     let members: Vec<String> = args
         .members
         .split(',')
         .map(|s| s.trim().to_string())
         .collect();
-    
+
     // Parse capabilities
     let capabilities: Vec<Capability> = args
         .capabilities
@@ -101,7 +101,7 @@ pub async fn handle_federation_create_subfed(args: &CreateSubfedArgs) -> Result<
         .map(|s| Capability::from_str(s.trim()))
         .collect();
     let capability_set = CapabilitySet::from_vec(capabilities);
-    
+
     // Parse isolation level
     let isolation_level = match args.isolation.to_lowercase().as_str() {
         "none" => IsolationLevel::None,
@@ -116,11 +116,11 @@ pub async fn handle_federation_create_subfed(args: &CreateSubfedArgs) -> Result<
             ));
         }
     };
-    
+
     // Create manager
     let mut manager = SubFederationManager::new(args.config_dir.clone());
     manager.load().await?;
-    
+
     // Create sub-federation
     let subfed = manager
         .create(
@@ -131,18 +131,21 @@ pub async fn handle_federation_create_subfed(args: &CreateSubfedArgs) -> Result<
             isolation_level.clone(),
         )
         .await?;
-    
+
     println!("\n🌐 Sub-Federation Created!");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("  Name:              {}", subfed.name);
     println!("  Parent Family:     {}", subfed.parent_family);
     println!("  Members:           {}", members.join(", "));
-    println!("  Capabilities:      {}", format_capabilities(&capability_set));
+    println!(
+        "  Capabilities:      {}",
+        format_capabilities(&capability_set)
+    );
     println!("  Isolation:         {:?}", isolation_level);
     println!("  Created At:        {}", subfed.created_at.to_rfc3339());
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("\n✅ Sub-federation ready! Members can now access granted capabilities.");
-    
+
     Ok(())
 }
 
@@ -150,14 +153,14 @@ pub async fn handle_federation_create_subfed(args: &CreateSubfedArgs) -> Result<
 pub async fn handle_federation_list_subfeds(args: &ListSubfedsArgs) -> Result<()> {
     let mut manager = SubFederationManager::new(args.config_dir.clone());
     manager.load().await?;
-    
+
     let subfeds = manager.all();
-    
+
     if subfeds.is_empty() {
         println!("No sub-federations found.");
         return Ok(());
     }
-    
+
     // Filter if requested
     let filtered: Vec<_> = subfeds
         .iter()
@@ -167,17 +170,20 @@ pub async fn handle_federation_list_subfeds(args: &ListSubfedsArgs) -> Result<()
                 .map_or(true, |f| sf.parent_family.contains(f))
         })
         .collect();
-    
+
     if filtered.is_empty() {
         println!("No sub-federations found matching criteria.");
         return Ok(());
     }
-    
+
     println!("\n🌐 Sub-Federations:");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    println!("{:<20} {:<20} {:<10} {:<15} {:<20}", "NAME", "FAMILY", "MEMBERS", "ISOLATION", "CAPABILITIES");
+    println!(
+        "{:<20} {:<20} {:<10} {:<15} {:<20}",
+        "NAME", "FAMILY", "MEMBERS", "ISOLATION", "CAPABILITIES"
+    );
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    
+
     for subfed in &filtered {
         println!(
             "{:<20} {:<20} {:<10} {:<15} {:<20}",
@@ -187,7 +193,7 @@ pub async fn handle_federation_list_subfeds(args: &ListSubfedsArgs) -> Result<()
             format!("{:?}", subfed.isolation_level),
             truncate(&format_capabilities(&subfed.capabilities), 19),
         );
-        
+
         if args.detailed {
             println!("  Members:");
             for member in &subfed.members {
@@ -196,24 +202,27 @@ pub async fn handle_federation_list_subfeds(args: &ListSubfedsArgs) -> Result<()
             println!();
         }
     }
-    
+
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("Total: {} sub-federation(s)", filtered.len());
-    
+
     Ok(())
 }
 
 /// Handle `biomeos federation join-subfed` command
 pub async fn handle_federation_join_subfed(args: &JoinSubfedArgs) -> Result<()> {
     info!("Adding node {} to sub-federation {}", args.node, args.name);
-    
+
     let mut manager = SubFederationManager::new(args.config_dir.clone());
     manager.load().await?;
-    
+
     manager.add_member(&args.name, args.node.clone()).await?;
-    
-    println!("✅ Node {} added to sub-federation {}", args.node, args.name);
-    
+
+    println!(
+        "✅ Node {} added to sub-federation {}",
+        args.node, args.name
+    );
+
     Ok(())
 }
 
@@ -221,23 +230,30 @@ pub async fn handle_federation_join_subfed(args: &JoinSubfedArgs) -> Result<()> 
 pub async fn handle_federation_check_access(args: &CheckAccessArgs) -> Result<()> {
     let mut manager = SubFederationManager::new(args.config_dir.clone());
     manager.load().await?;
-    
+
     let capability = Capability::from_str(&args.capability);
-    
+
     if let Some(ref subfed_name) = args.subfed {
         // Check specific sub-federation
         let subfed = manager
             .get(subfed_name)
             .context(format!("Sub-federation '{}' not found", subfed_name))?;
-        
+
         let has_access = subfed.has_capability(&args.node, &capability);
-        
+
         println!("\n🔍 Access Check:");
         println!("  Node:              {}", args.node);
         println!("  Capability:        {}", capability);
         println!("  Sub-Federation:    {}", subfed_name);
-        println!("  Access:            {}", if has_access { "✅ GRANTED" } else { "❌ DENIED" });
-        
+        println!(
+            "  Access:            {}",
+            if has_access {
+                "✅ GRANTED"
+            } else {
+                "❌ DENIED"
+            }
+        );
+
         if !has_access {
             println!("\n  Reason:");
             if !subfed.is_member(&args.node) {
@@ -253,12 +269,19 @@ pub async fn handle_federation_check_access(args: &CheckAccessArgs) -> Result<()
     } else {
         // Check all sub-federations
         let has_access = manager.has_access(&args.node, &capability);
-        
+
         println!("\n🔍 Access Check:");
         println!("  Node:              {}", args.node);
         println!("  Capability:        {}", capability);
-        println!("  Access:            {}", if has_access { "✅ GRANTED (at least one sub-federation)" } else { "❌ DENIED (no sub-federations)" });
-        
+        println!(
+            "  Access:            {}",
+            if has_access {
+                "✅ GRANTED (at least one sub-federation)"
+            } else {
+                "❌ DENIED (no sub-federations)"
+            }
+        );
+
         if has_access {
             println!("\n  Granted by:");
             for subfed in manager.all() {
@@ -268,7 +291,7 @@ pub async fn handle_federation_check_access(args: &CheckAccessArgs) -> Result<()
             }
         }
     }
-    
+
     Ok(())
 }
 
@@ -289,4 +312,3 @@ fn truncate(s: &str, max: usize) -> String {
         format!("{}...", &s[..max.saturating_sub(3)])
     }
 }
-

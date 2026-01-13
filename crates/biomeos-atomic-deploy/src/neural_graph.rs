@@ -26,27 +26,32 @@ impl Graph {
         let value: toml::Value = toml::from_str(toml)?;
 
         // Extract graph metadata
-        let graph_table = value.get("graph")
+        let graph_table = value
+            .get("graph")
             .and_then(|v| v.as_table())
             .ok_or_else(|| anyhow::anyhow!("Missing [graph] section"))?;
 
-        let id = graph_table.get("id")
+        let id = graph_table
+            .get("id")
             .and_then(|v| v.as_str())
             .unwrap_or("unknown")
             .to_string();
 
-        let version = graph_table.get("version")
+        let version = graph_table
+            .get("version")
             .and_then(|v| v.as_str())
             .unwrap_or("0.0.0")
             .to_string();
 
-        let description = graph_table.get("description")
+        let description = graph_table
+            .get("description")
             .and_then(|v| v.as_str())
             .unwrap_or("")
             .to_string();
 
         // Extract nodes
-        let nodes_array = value.get("nodes")
+        let nodes_array = value
+            .get("nodes")
             .and_then(|v| v.as_array())
             .ok_or_else(|| anyhow::anyhow!("Missing [[nodes]] array"))?;
 
@@ -59,23 +64,29 @@ impl Graph {
         // Extract execution config
         let config = if let Some(exec_table) = value.get("execution").and_then(|v| v.as_table()) {
             GraphConfig {
-                deterministic: exec_table.get("mode")
+                deterministic: exec_table
+                    .get("mode")
                     .and_then(|v| v.as_str())
                     .map(|s| s == "deterministic")
                     .unwrap_or(true),
-                parallel_phases: exec_table.get("parallel_phases")
+                parallel_phases: exec_table
+                    .get("parallel_phases")
                     .and_then(|v| v.as_bool())
                     .unwrap_or(true),
-                max_parallelism: exec_table.get("max_parallelism")
+                max_parallelism: exec_table
+                    .get("max_parallelism")
                     .and_then(|v| v.as_integer())
                     .unwrap_or(3) as usize,
-                timeout_total_ms: exec_table.get("timeout_total_ms")
+                timeout_total_ms: exec_table
+                    .get("timeout_total_ms")
                     .and_then(|v| v.as_integer())
                     .unwrap_or(60000) as u64,
-                checkpoint_enabled: exec_table.get("checkpoint_enabled")
+                checkpoint_enabled: exec_table
+                    .get("checkpoint_enabled")
                     .and_then(|v| v.as_bool())
                     .unwrap_or(false),
-                rollback_on_failure: exec_table.get("rollback_on_failure")
+                rollback_on_failure: exec_table
+                    .get("rollback_on_failure")
                     .and_then(|v| v.as_bool())
                     .unwrap_or(true),
             }
@@ -152,11 +163,13 @@ description = "Test graph"
 
 [[nodes]]
 id = "node1"
+node_type = "primal"
 type = "test.node"
 dependencies = []
 
 [[nodes]]
 id = "node2"
+node_type = "primal"
 type = "test.node"
 dependencies = ["node1"]
 

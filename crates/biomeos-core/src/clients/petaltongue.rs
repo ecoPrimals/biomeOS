@@ -30,8 +30,12 @@
 //! # }
 //! ```
 
-use crate::clients::transport::{PrimalClient, TransportClient, TransportError};
+use crate::clients::transport::{TransportClient, TransportError};
+use crate::primal_client::{HealthStatus, PrimalClient};
+use anyhow::Result;
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::HashMap;
 
 /// petalTongue client for Universal User Interface operations
@@ -60,37 +64,49 @@ use std::collections::HashMap;
 ///     Ok(())
 /// }
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PetalTongueClient {
     transport: TransportClient,
 }
 
+#[async_trait]
 impl PrimalClient for PetalTongueClient {
-    fn new(transport: TransportClient) -> Self {
-        Self { transport }
+    fn name(&self) -> &str {
+        "petaltongue"
     }
 
-    fn transport(&self) -> &TransportClient {
-        &self.transport
+    fn endpoint(&self) -> String {
+        self.transport.endpoint().to_string()
+    }
+
+    async fn is_available(&self) -> bool {
+        self.health_check().await.is_ok()
+    }
+
+    async fn health_check(&self) -> Result<HealthStatus> {
+        self.transport.health_check().await
+    }
+
+    async fn request(&self, method: &str, _path: &str, body: Option<Value>) -> Result<Value> {
+        self.transport.call(method, body).await
     }
 }
 
 impl PetalTongueClient {
-    /// Discover petalTongue via capability-based lookup
-    ///
-    /// Queries Songbird for a service providing "visualization" capability.
+    /// Discover petalTongue via Unix socket
     ///
     /// # Returns
     /// A connected petalTongue client
     ///
     /// # Errors
     /// Returns error if:
-    /// - Songbird is not reachable
-    /// - No visualization service is registered
+    /// - petalTongue is not running
     /// - Transport connection fails
-    pub async fn discover() -> Result<Self, TransportError> {
-        let transport = TransportClient::discover_by_capability("visualization").await?;
-        Ok(Self::new(transport))
+    pub async fn discover(family_id: &str) -> Result<Self, TransportError> {
+        let transport = TransportClient::discover("petaltongue", family_id)
+            .await
+            .map_err(|e| TransportError::Other(e))?;
+        Ok(Self { transport })
     }
 
     /// Check health status
@@ -99,8 +115,9 @@ impl PetalTongueClient {
     ///
     /// # Returns
     /// Health status with version, uptime, and metrics
-    pub async fn health(&self) -> Result<HealthStatus, TransportError> {
-        self.transport.call("health", serde_json::json!({})).await
+    pub async fn health(&self) -> Result<PetalTongueHealthResponse> {
+        let v = self.transport.call("health", Some(serde_json::json!({}))).await?;
+        Ok(serde_json::from_value(v)?)
     }
 
     /// Get primal capabilities
@@ -109,10 +126,9 @@ impl PetalTongueClient {
     ///
     /// # Returns
     /// List of capability strings (e.g., "visualization", "gpu-rendering")
-    pub async fn get_capabilities(&self) -> Result<Vec<String>, TransportError> {
-        self.transport
-            .call("get_capabilities", serde_json::json!({}))
-            .await
+    pub async fn get_capabilities(&self) -> Result<Vec<String>> {
+        let v = self.transport.call("get_capabilities", Some(serde_json::json!({}))).await?;
+        Ok(serde_json::from_value(v)?)
     }
 
     /// Render a graph or visualization
@@ -142,8 +158,9 @@ impl PetalTongueClient {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn render(&self, request: RenderRequest) -> Result<RenderResponse, TransportError> {
-        self.transport.call("render", serde_json::json!(request)).await
+    pub async fn render(&self, request: RenderRequest) -> Result<RenderResponse> {
+        let v = self.transport.call("render", Some(serde_json::json!(request))).await?;
+        Ok(serde_json::from_value(v)?)
     }
 
     /// Query graph metrics
@@ -152,10 +169,9 @@ impl PetalTongueClient {
     ///
     /// # Returns
     /// Graph metrics including node count, edge count, layout time
-    pub async fn graph_metrics(&self) -> Result<GraphMetrics, TransportError> {
-        self.transport
-            .call("graph_metrics", serde_json::json!({}))
-            .await
+    pub async fn graph_metrics(&self) -> Result<GraphMetrics> {
+        let v = self.transport.call("graph_metrics", Some(serde_json::json!({}))).await?;
+        Ok(serde_json::from_value(v)?)
     }
 
     /// List available output modalities
@@ -164,10 +180,9 @@ impl PetalTongueClient {
     ///
     /// # Returns
     /// List of supported modalities (e.g., "terminal", "svg", "png", "audio")
-    pub async fn list_modalities(&self) -> Result<Vec<String>, TransportError> {
-        self.transport
-            .call("list_modalities", serde_json::json!({}))
-            .await
+    pub async fn list_modalities(&self) -> Result<Vec<String>> {
+        let v = self.transport.call("list_modalities", Some(serde_json::json!({}))).await?;
+        Ok(serde_json::from_value(v)?)
     }
 
     /// Discover primal by capability
@@ -182,13 +197,12 @@ impl PetalTongueClient {
     pub async fn discover_capability(
         &self,
         capability: &str,
-    ) -> Result<Vec<PrimalEndpoint>, TransportError> {
-        self.transport
-            .call(
-                "discover_capability",
-                serde_json::json!({ "capability": capability }),
-            )
-            .await
+    ) -> Result<Vec<PrimalEndpoint>> {
+        let v = self.transport.call(
+            "discover_capability",
+            Some(serde_json::json!({ "capability": capability })),
+        ).await?;
+        Ok(serde_json::from_value(v)?)
     }
 }
 
@@ -196,9 +210,9 @@ impl PetalTongueClient {
 // Types
 // ============================================================================
 
-/// Health status response
+/// petalTongue health status response (detailed)
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct HealthStatus {
+pub struct PetalTongueHealthResponse {
     /// Current status: "healthy", "degraded", "unhealthy"
     pub status: String,
 
@@ -326,7 +340,7 @@ mod tests {
             "metrics": {}
         }"#;
 
-        let health: HealthStatus = serde_json::from_str(json).unwrap();
+        let health: PetalTongueHealthResponse = serde_json::from_str(json).unwrap();
         assert_eq!(health.status, "healthy");
         assert_eq!(health.version, "1.3.0");
         assert_eq!(health.uptime_secs, 3600);
@@ -353,13 +367,15 @@ mod tests {
     #[test]
     fn test_render_request_structure() {
         let request = RenderRequest {
-            graph_data: serde_json::json!({"nodes": [], "edges": []}),
-            modality: "terminal".to_string(),
-            options: None,
+            mode: "terminal".to_string(),
+            data: serde_json::json!({"nodes": [], "edges": []}),
+            width: None,
+            height: None,
+            output_path: None,
         };
         
-        assert_eq!(request.modality, "terminal");
-        assert!(request.options.is_none());
+        assert_eq!(request.mode, "terminal");
+        assert!(request.width.is_none());
     }
     
     #[test]
@@ -367,16 +383,18 @@ mod tests {
         // Success case
         let success = RenderResponse {
             success: true,
-            output: Some("rendered".to_string()),
-            error: None,
+            data: Some(serde_json::json!("rendered")),
+            output_path: Some("/tmp/out.png".to_string()),
+            render_time_ms: 42,
         };
         assert!(success.success);
         
         // Error case
         let error = RenderResponse {
             success: false,
-            output: None,
-            error: Some("failed".to_string()),
+            data: None,
+            output_path: None,
+            render_time_ms: 0,
         };
         assert!(!error.success);
     }
@@ -386,11 +404,13 @@ mod tests {
         let modalities = vec!["terminal", "svg", "png", "json", "dot"];
         for modality in modalities {
             let req = RenderRequest {
-                graph_data: serde_json::json!({}),
-                modality: modality.to_string(),
-                options: None,
+                mode: modality.to_string(),
+                data: serde_json::json!({}),
+                width: None,
+                height: None,
+                output_path: None,
             };
-            assert!(!req.modality.is_empty());
+            assert!(!req.mode.is_empty());
         }
     }
 }

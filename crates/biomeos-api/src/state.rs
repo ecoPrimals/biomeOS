@@ -73,22 +73,22 @@ impl AppState {
     pub fn builder() -> AppStateBuilder {
         AppStateBuilder::default()
     }
-    
+
     /// Get the discovery service
     pub fn discovery(&self) -> &dyn PrimalDiscovery {
         &*self.discovery
     }
-    
+
     /// Get the configuration
     pub fn config(&self) -> &Config {
         &self.config
     }
-    
+
     /// Check if standalone mode is enabled (graceful degradation)
     pub fn is_standalone_mode(&self) -> bool {
         self.config.standalone_mode
     }
-    
+
     /// Legacy alias for backward compatibility
     #[deprecated(since = "0.2.0", note = "Use is_standalone_mode() instead")]
     pub fn is_mock_mode(&self) -> bool {
@@ -109,13 +109,13 @@ pub struct Config {
     ///
     /// Set via `BIOMEOS_STANDALONE_MODE=true` environment variable.
     pub standalone_mode: bool,
-    
+
     /// Server bind address
     pub bind_addr: SocketAddr,
-    
+
     /// Request timeout
     pub request_timeout: std::time::Duration,
-    
+
     /// Enable CORS
     pub enable_cors: bool,
 }
@@ -142,7 +142,7 @@ impl Config {
             .ok()
             .and_then(|v| v.parse::<bool>().ok())
             .unwrap_or(false);
-        
+
         let bind_addr = std::env::var("BIOMEOS_API_BIND_ADDR")
             .ok()
             .and_then(|v| v.parse().ok())
@@ -151,7 +151,7 @@ impl Config {
                     .parse()
                     .expect("DEFAULT_BIND_ADDR is a valid socket address")
             });
-        
+
         Self {
             standalone_mode,
             bind_addr,
@@ -173,36 +173,34 @@ impl AppStateBuilder {
         self.discovery = Some(Arc::new(discovery));
         self
     }
-    
+
     /// Set the discovery service from an Arc
     pub fn discovery_arc(mut self, discovery: Arc<dyn PrimalDiscovery>) -> Self {
         self.discovery = Some(discovery);
         self
     }
-    
+
     /// Set the configuration
     pub fn config(mut self, config: Config) -> Self {
         self.config = Some(config);
         self
     }
-    
+
     /// Load config from environment
     pub fn config_from_env(mut self) -> Self {
         self.config = Some(Config::from_env());
         self
     }
-    
+
     /// Build the AppState
     pub fn build(self) -> Result<AppState, BuildError> {
-        let discovery = self
-            .discovery
-            .ok_or(BuildError::MissingDiscovery)?;
-        
+        let discovery = self.discovery.ok_or(BuildError::MissingDiscovery)?;
+
         let config = self.config.unwrap_or_default();
-        
+
         Ok(AppState { discovery, config })
     }
-    
+
     /// Build with default local discovery if none provided
     pub fn build_with_defaults(self) -> Result<AppState, BuildError> {
         let discovery = match self.discovery {
@@ -211,18 +209,18 @@ impl AppStateBuilder {
                 tracing::info!("📡 Creating default local discovery (BearDog + Songbird)");
                 let sources = biomeos_core::create_local_discovery()
                     .map_err(|e| BuildError::DiscoveryError(e.to_string()))?;
-                
+
                 let mut composite = CompositeDiscovery::new();
                 for source in sources {
                     composite = composite.add_boxed_source(source);
                 }
-                
+
                 Arc::new(composite)
             }
         };
-        
+
         let config = self.config.unwrap_or_default();
-        
+
         Ok(AppState { discovery, config })
     }
 }
@@ -232,10 +230,10 @@ impl AppStateBuilder {
 pub enum BuildError {
     #[error("Discovery service not configured")]
     MissingDiscovery,
-    
+
     #[error("Discovery configuration error: {0}")]
     DiscoveryError(String),
-    
+
     #[error("Configuration error: {0}")]
     ConfigError(String),
 }
@@ -245,9 +243,9 @@ mod tests {
     use super::*;
     use biomeos_core::{DiscoveryResult, HealthStatus};
     use biomeos_types::PrimalId;
-    
+
     struct MockDiscovery;
-    
+
     #[async_trait::async_trait]
     impl PrimalDiscovery for MockDiscovery {
         async fn discover(
@@ -256,33 +254,31 @@ mod tests {
         ) -> DiscoveryResult<biomeos_core::DiscoveredPrimal> {
             Err(biomeos_core::BiomeError::discovery_failed(
                 "MockDiscovery::discover not implemented".to_string(),
-                Some("test_mock".to_string())
+                Some("test_mock".to_string()),
             ))
         }
-        
+
         async fn discover_all(&self) -> DiscoveryResult<Vec<biomeos_core::DiscoveredPrimal>> {
             Ok(vec![])
         }
-        
+
         async fn check_health(&self, _id: &PrimalId) -> DiscoveryResult<HealthStatus> {
             Ok(HealthStatus::Healthy)
         }
     }
-    
+
     #[test]
     fn test_builder_requires_discovery() {
         let result = AppStateBuilder::default().build();
         assert!(result.is_err());
     }
-    
+
     #[test]
     fn test_builder_with_discovery() {
-        let result = AppStateBuilder::default()
-            .discovery(MockDiscovery)
-            .build();
+        let result = AppStateBuilder::default().discovery(MockDiscovery).build();
         assert!(result.is_ok());
     }
-    
+
     #[test]
     fn test_config_from_env() {
         let config = Config::from_env();
@@ -290,4 +286,3 @@ mod tests {
         assert_eq!(config.bind_addr.port(), 3000);
     }
 }
-

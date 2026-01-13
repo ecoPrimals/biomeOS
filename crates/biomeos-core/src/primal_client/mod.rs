@@ -45,15 +45,16 @@ pub mod discovery;
 pub mod error;
 pub mod handle;
 pub mod schema;
+pub mod traits;
 
 pub use client::UniversalPrimalClient;
 pub use config::{ClientConfig, TrustPolicy};
 pub use error::{ApiError, Result};
 pub use handle::{Capability, Endpoint, PrimalHandle, PrimalId, PrimalMetadata};
+pub use traits::{HealthStatus, PrimalClient};
 
 // Re-export commonly used types
 pub use adapters::format::FormatAdapter;
 pub use adapters::protocol::ProtocolAdapter;
 pub use discovery::DiscoveryClient;
 pub use schema::{ApiSchema, SchemaParser};
-

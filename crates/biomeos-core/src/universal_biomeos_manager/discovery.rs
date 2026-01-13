@@ -405,7 +405,7 @@ impl UniversalBiomeOSManager {
     }
 
     /// Discover services via DNS
-    /// 
+    ///
     /// Future: Implement DNS-SD (Service Discovery) or SRV record lookups
     pub async fn discover_via_dns(&self) -> Result<HashMap<String, serde_json::Value>> {
         tracing::info!("🌐 DNS-based discovery not yet implemented");

@@ -73,9 +73,7 @@ pub async fn detect() -> Result<HardwareInfo> {
 
     // Detect CPU count
     let cpu_count = NonZeroUsize::new(sys.cpus().len()).ok_or_else(|| {
-        BootError::HardwareDetection(Box::new(std::io::Error::other(
-            "No CPUs detected",
-        )))
+        BootError::HardwareDetection(Box::new(std::io::Error::other("No CPUs detected")))
     })?;
 
     // Detect memory

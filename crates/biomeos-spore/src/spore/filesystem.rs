@@ -12,14 +12,16 @@ use std::path::PathBuf;
 use tokio::fs as async_fs;
 use tracing::{debug, info};
 
-use crate::error::{SporeError, SporeResult};
 use super::core::Spore;
+use crate::error::{SporeError, SporeResult};
 
 /// Trait for filesystem operations on spores
 pub(super) trait FilesystemOps {
     /// Create directory structure on USB
-    fn create_directory_structure(&self) -> impl std::future::Future<Output = SporeResult<()>> + Send;
-    
+    fn create_directory_structure(
+        &self,
+    ) -> impl std::future::Future<Output = SporeResult<()>> + Send;
+
     /// Copy binaries from plasmidBin
     fn copy_binaries(&self) -> impl std::future::Future<Output = SporeResult<()>> + Send;
 }
@@ -79,14 +81,15 @@ impl FilesystemOps for Spore {
 
         // Source: PlasmidBin - Single source of truth for stable binaries
         let nucleus_dir = PathBuf::from("plasmidBin");
-        
+
         // Verify nucleus exists
         if !nucleus_dir.exists() {
             return Err(SporeError::BinaryNotFound(
-                "plasmidBin/ directory not found - run scripts/harvest-primals.sh first".to_string()
+                "plasmidBin/ directory not found - run scripts/harvest-primals.sh first"
+                    .to_string(),
             ));
         }
-        
+
         // 1. Copy tower orchestrator (always required)
         let tower_src = nucleus_dir.join("tower/tower");
         let tower_dst = self.root_path.join("bin/tower");
@@ -103,27 +106,29 @@ impl FilesystemOps for Spore {
                 async_fs::set_permissions(&tower_dst, perms).await?;
             }
         } else {
-            return Err(SporeError::BinaryNotFound(
-                format!("tower orchestrator not found at: {}", tower_src.display()),
-            ));
+            return Err(SporeError::BinaryNotFound(format!(
+                "tower orchestrator not found at: {}",
+                tower_src.display()
+            )));
         }
 
         // 2. Copy ALL primals from plasmidBin/primals/ (capability-based, agnostic)
         let primals_src_dir = nucleus_dir.join("primals");
         let primals_dst_dir = self.root_path.join("primals");
-        
+
         if !primals_src_dir.exists() {
-            return Err(SporeError::BinaryNotFound(
-                format!("primals/ directory not found at: {}", primals_src_dir.display())
-            ));
+            return Err(SporeError::BinaryNotFound(format!(
+                "primals/ directory not found at: {}",
+                primals_src_dir.display()
+            )));
         }
-        
+
         let mut primal_count = 0;
         let mut entries = async_fs::read_dir(&primals_src_dir).await?;
-        
+
         while let Some(entry) = entries.next_entry().await? {
             let path = entry.path();
-            
+
             // Skip .gitkeep and other dotfiles
             if let Some(name) = path.file_name() {
                 let name_str = name.to_string_lossy();
@@ -131,17 +136,17 @@ impl FilesystemOps for Spore {
                     continue;
                 }
             }
-            
+
             // Only copy files (not directories)
             if path.is_file() {
                 let file_name = path.file_name().unwrap();
                 let dst_path = primals_dst_dir.join(file_name);
-                
+
                 async_fs::copy(&path, &dst_path).await?;
                 primal_count += 1;
-                
+
                 info!("✅ Copied primal: {}", file_name.to_string_lossy());
-                
+
                 #[cfg(unix)]
                 {
                     use std::os::unix::fs::PermissionsExt;
@@ -151,10 +156,10 @@ impl FilesystemOps for Spore {
                 }
             }
         }
-        
+
         if primal_count == 0 {
             return Err(SporeError::BinaryNotFound(
-                "No primal binaries found in plasmidBin/primals/".to_string()
+                "No primal binaries found in plasmidBin/primals/".to_string(),
             ));
         }
 
@@ -165,5 +170,3 @@ impl FilesystemOps for Spore {
         Ok(())
     }
 }
-
-

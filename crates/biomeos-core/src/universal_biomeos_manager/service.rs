@@ -280,7 +280,7 @@ impl UniversalBiomeOSManager {
     }
 
     /// Create service integration
-    /// 
+    ///
     /// Future: Integrate with Toadstool for service provisioning
     pub(super) async fn create_service_integration(
         &self,
@@ -361,4 +361,3 @@ pub(super) struct ScaleResult {
     target_replicas: u32,
     status: String,
 }
-

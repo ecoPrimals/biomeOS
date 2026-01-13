@@ -7,7 +7,7 @@ use std::path::Path;
 use std::time::Duration;
 use tempfile::TempDir;
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_discover_direct_interface() {
     // Test with a real binary if available
     let squirrel_path = Path::new("../phase1bins/squirrel-bin");
@@ -29,7 +29,7 @@ async fn test_discover_direct_interface() {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_adapter_cache() {
     let temp_dir = TempDir::new().unwrap();
     let cache_dir = temp_dir.path().join(".biomeos/primal_adapters");
@@ -64,18 +64,20 @@ async fn test_adapter_cache() {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_interface_patterns() {
     // Test that we have all the expected patterns
-    let patterns = [InterfacePattern::Direct,
+    let patterns = [
+        InterfacePattern::Direct,
         InterfacePattern::SubcommandServe,
         InterfacePattern::SubcommandService,
-        InterfacePattern::SubcommandStart];
+        InterfacePattern::SubcommandStart,
+    ];
 
     assert!(patterns.len() >= 4);
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_lifecycle_request() {
     let request = LifecycleRequest::new(LifecycleTransition::Start, TransitionReason::UserRequest);
 
@@ -83,7 +85,7 @@ async fn test_lifecycle_request() {
     assert_eq!(request.requestor, "BiomeOS");
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_lifecycle_response() {
     let accepted = LifecycleResponse::Accepted;
     assert!(accepted.is_success());
@@ -97,7 +99,7 @@ async fn test_lifecycle_response() {
     assert!(deferred.should_retry());
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_primal_capabilities_default() {
     let caps = PrimalCapabilities::default();
 
@@ -107,7 +109,7 @@ async fn test_primal_capabilities_default() {
     assert!(caps.lifecycle.can_refuse); // Always true - sovereignty!
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_port_config_methods() {
     let env_var = PortConfigMethod::EnvVar("PORT".to_string());
     let cli_flag = PortConfigMethod::CliFlag("--port".to_string());
@@ -122,7 +124,7 @@ async fn test_port_config_methods() {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_compatibility_check() {
     // Test with non-existent binary
     let result = check_compatibility(Path::new("/nonexistent")).await;
@@ -130,7 +132,7 @@ async fn test_compatibility_check() {
     assert!(!result.unwrap()); // Should return false for non-existent
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_health_check_config() {
     let config = HealthCheckConfig {
         url_pattern: "http://localhost:PORT/health".to_string(),
@@ -142,7 +144,7 @@ async fn test_health_check_config() {
     assert_eq!(url, "http://localhost:9010/health");
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_stop_command_discovery() {
     use super::discovery::discover_stop_command;
     use std::path::PathBuf;

@@ -11,10 +11,10 @@
 //
 // =============================================================================
 
+use anyhow::Result;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use anyhow::Result;
 use uuid::Uuid;
 
 // =============================================================================
@@ -27,84 +27,84 @@ pub trait ComputeNode: Send + Sync {
     // =========================================================================
     // IDENTITY (same at every level)
     // =========================================================================
-    
+
     /// Unique node identifier
     fn node_id(&self) -> &str;
-    
+
     /// Parent node ID (None if root)
     fn parent_id(&self) -> Option<&str>;
-    
+
     /// Depth in fractal tree (0 = root)
     fn depth(&self) -> usize;
-    
+
     /// Node topology type
     fn topology(&self) -> NodeTopology;
-    
+
     /// Is this a leaf node?
     fn is_leaf(&self) -> bool {
         self.get_child_count() == 0
     }
-    
+
     /// Number of direct children
     fn get_child_count(&self) -> usize;
-    
+
     // =========================================================================
     // RESOURCES (recursive aggregation)
     // =========================================================================
-    
+
     /// Get resources (own + children if parent)
     async fn get_resources(&self) -> Result<ResourceInfo>;
-    
+
     /// Get current capacity
     async fn get_capacity(&self) -> Result<CapacityInfo>;
-    
+
     /// Get current utilization
     async fn get_utilization(&self) -> Result<UtilizationInfo>;
-    
+
     // =========================================================================
     // WORKLOAD EXECUTION (same API, different implementation)
     // =========================================================================
-    
+
     /// Submit workload for execution
     async fn submit_workload(&self, workload: Workload) -> Result<WorkloadId>;
-    
+
     /// Cancel a workload
     async fn cancel_workload(&self, id: &WorkloadId) -> Result<()>;
-    
+
     /// Get workload status
     async fn get_workload_status(&self, id: &WorkloadId) -> Result<WorkloadStatus>;
-    
+
     /// List all workloads
     async fn list_workloads(&self) -> Result<Vec<WorkloadInfo>>;
-    
+
     // =========================================================================
     // FRACTAL OPERATIONS (recursive)
     // =========================================================================
-    
+
     /// Spawn a sub-node (fractal recursion)
     async fn spawn_sub_node(&self, config: NodeConfig) -> Result<Arc<dyn ComputeNode>>;
-    
+
     /// Get direct children
     async fn get_children(&self) -> Result<Vec<Arc<dyn ComputeNode>>>;
-    
+
     /// Get all descendants (recursive)
     async fn get_all_descendants(&self) -> Result<Vec<Arc<dyn ComputeNode>>>;
-    
+
     /// Get total node count (self + descendants)
     async fn get_node_count(&self) -> Result<usize> {
         Ok(1 + self.get_all_descendants().await?.len())
     }
-    
+
     // =========================================================================
     // HEALTH & MONITORING (recursive rollup)
     // =========================================================================
-    
+
     /// Health check (own + children)
     async fn health_check(&self) -> Result<HealthStatus>;
-    
+
     /// Get metrics for this node
     async fn get_metrics(&self) -> Result<NodeMetrics>;
-    
+
     /// Get metrics for entire subtree
     async fn get_subtree_metrics(&self) -> Result<TreeMetrics>;
 }
@@ -354,32 +354,32 @@ impl WorkloadBuilder {
             workload: Workload::new(name, runtime),
         }
     }
-    
+
     pub fn code(mut self, code: Vec<u8>) -> Self {
         self.workload.code = code;
         self
     }
-    
+
     pub fn parallelizable(mut self, parallelizable: bool) -> Self {
         self.workload.parallelizable = parallelizable;
         self
     }
-    
+
     pub fn cpu_cores(mut self, cores: usize) -> Self {
         self.workload.resource_requirements.cpu_cores = Some(cores);
         self
     }
-    
+
     pub fn memory_mb(mut self, mb: usize) -> Self {
         self.workload.resource_requirements.memory_mb = Some(mb);
         self
     }
-    
+
     pub fn priority(mut self, priority: WorkloadPriority) -> Self {
         self.workload.priority = priority;
         self
     }
-    
+
     pub fn build(self) -> Workload {
         self.workload
     }
@@ -390,4 +390,3 @@ impl Workload {
         WorkloadBuilder::new(name, runtime)
     }
 }
-

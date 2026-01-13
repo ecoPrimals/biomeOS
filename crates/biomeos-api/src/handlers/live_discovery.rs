@@ -44,11 +44,11 @@ pub struct LivePrimalInfo {
 /// Query BearDog for its identity and health
 pub async fn discover_beardog(endpoint: &str) -> Result<LivePrimalInfo> {
     info!("🐻 Discovering BearDog at {}", endpoint);
-    
+
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(5))
         .build()?;
-    
+
     // Query identity (BearDog's primary endpoint)
     let identity_url = format!("{}/api/v1/trust/identity", endpoint);
     let identity_response = match client.get(&identity_url).send().await {
@@ -56,7 +56,10 @@ pub async fn discover_beardog(endpoint: &str) -> Result<LivePrimalInfo> {
             if resp.status().is_success() {
                 match resp.json::<BeardogIdentity>().await {
                     Ok(i) => {
-                        info!("✅ BearDog identity: family={:?}, tag={}", i.family_id, i.encryption_tag);
+                        info!(
+                            "✅ BearDog identity: family={:?}, tag={}",
+                            i.family_id, i.encryption_tag
+                        );
                         Some(i)
                     }
                     Err(e) => {
@@ -74,20 +77,22 @@ pub async fn discover_beardog(endpoint: &str) -> Result<LivePrimalInfo> {
             return Err(e.into());
         }
     };
-    
+
     // Extract capabilities from identity or use defaults
     let capabilities = identity_response
         .as_ref()
         .and_then(|i| i.capabilities.clone())
-        .unwrap_or_else(|| vec![
-            "security".to_string(),
-            "trust_evaluation".to_string(),
-            "genetic_lineage".to_string(),
-            "hsm".to_string(),
-        ]);
-    
+        .unwrap_or_else(|| {
+            vec![
+                "security".to_string(),
+                "trust_evaluation".to_string(),
+                "genetic_lineage".to_string(),
+                "hsm".to_string(),
+            ]
+        });
+
     let family_id = identity_response.and_then(|i| i.family_id);
-    
+
     Ok(LivePrimalInfo {
         id: "beardog-local".to_string(),
         name: "BearDog".to_string(),
@@ -104,14 +109,14 @@ pub async fn discover_beardog(endpoint: &str) -> Result<LivePrimalInfo> {
 /// Note: Songbird uses tarpc, not HTTP REST, so this is limited for now
 pub async fn discover_songbird(endpoint: &str) -> Result<LivePrimalInfo> {
     info!("🐦 Discovering Songbird at {}", endpoint);
-    
+
     // For now, Songbird doesn't have HTTP health endpoint
     // It uses tarpc RPC, which we'll need to integrate later
     // Return basic info for now
-    
+
     warn!("⚠️  Songbird uses tarpc RPC, not HTTP REST");
     warn!("   Returning basic info. Full integration requires tarpc client.");
-    
+
     Ok(LivePrimalInfo {
         id: "songbird-local".to_string(),
         name: "Songbird".to_string(),
@@ -132,11 +137,11 @@ pub async fn discover_songbird(endpoint: &str) -> Result<LivePrimalInfo> {
 /// Discover all configured primals
 pub async fn discover_all_primals() -> Vec<LivePrimalInfo> {
     let mut primals = Vec::new();
-    
+
     // Discover BearDog
-    let beardog_endpoint = std::env::var("BEARDOG_ENDPOINT")
-        .unwrap_or_else(|_| "http://localhost:9000".to_string());
-    
+    let beardog_endpoint =
+        std::env::var("BEARDOG_ENDPOINT").unwrap_or_else(|_| "http://localhost:9000".to_string());
+
     match discover_beardog(&beardog_endpoint).await {
         Ok(primal) => {
             info!("✅ Discovered BearDog: {} ({})", primal.name, primal.health);
@@ -146,21 +151,23 @@ pub async fn discover_all_primals() -> Vec<LivePrimalInfo> {
             error!("❌ Failed to discover BearDog: {}", e);
         }
     }
-    
+
     // Discover Songbird
-    let songbird_endpoint = std::env::var("SONGBIRD_ENDPOINT")
-        .unwrap_or_else(|_| "http://localhost:8080".to_string());
-    
+    let songbird_endpoint =
+        std::env::var("SONGBIRD_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_string());
+
     match discover_songbird(&songbird_endpoint).await {
         Ok(primal) => {
-            info!("✅ Discovered Songbird: {} ({})", primal.name, primal.health);
+            info!(
+                "✅ Discovered Songbird: {} ({})",
+                primal.name, primal.health
+            );
             primals.push(primal);
         }
         Err(e) => {
             error!("❌ Failed to discover Songbird: {}", e);
         }
     }
-    
+
     primals
 }
-

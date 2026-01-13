@@ -37,14 +37,22 @@ impl GenericManagedPrimal {
     /// Create from environment (infant model - ZERO hardcoding!)
     pub fn from_env() -> BiomeResult<Self> {
         let config = PrimalConfig::from_env()?;
-        let id = PrimalId::new(config.id.clone())
-            .map_err(|e| BiomeError::config_error(format!("Invalid primal ID: {}", e), Some("PRIMAL_ID")))?;
+        let id = PrimalId::new(config.id.clone()).map_err(|e| {
+            BiomeError::config_error(format!("Invalid primal ID: {}", e), Some("PRIMAL_ID"))
+        })?;
 
         info!("🌱 Created primal from environment:");
         info!("   ID: {}", id);
         info!("   Provides: {:?}", config.provides);
         info!("   Requires: {:?}", config.requires);
-        info!("   HTTP Port: {}", if config.http_port == 0 { "auto".to_string() } else { config.http_port.to_string() });
+        info!(
+            "   HTTP Port: {}",
+            if config.http_port == 0 {
+                "auto".to_string()
+            } else {
+                config.http_port.to_string()
+            }
+        );
 
         Ok(Self {
             id,
@@ -55,8 +63,9 @@ impl GenericManagedPrimal {
 
     /// Create with explicit config (for testing or manual construction)
     pub fn with_config(config: PrimalConfig) -> BiomeResult<Self> {
-        let id = PrimalId::new(config.id.clone())
-            .map_err(|e| BiomeError::config_error(format!("Invalid primal ID: {}", e), Some("PRIMAL_ID")))?;
+        let id = PrimalId::new(config.id.clone()).map_err(|e| {
+            BiomeError::config_error(format!("Invalid primal ID: {}", e), Some("PRIMAL_ID"))
+        })?;
 
         Ok(Self {
             id,
@@ -100,20 +109,22 @@ impl ManagedPrimal for GenericManagedPrimal {
 
         // Build environment variables from config
         let mut cmd = Command::new(&self.config.binary_path);
-        
+
         // Add HTTP port if specified
         if self.config.http_port > 0 {
             cmd.env("HTTP_PORT", self.config.http_port.to_string());
         }
-        
+
         // Add all primal-specific environment variables
         for (key, value) in &self.config.env_config {
             cmd.env(key, value);
         }
-        
+
         // Add capabilities for downstream discovery
         if !self.config.provides.is_empty() {
-            let provides_str = self.config.provides
+            let provides_str = self
+                .config
+                .provides
                 .iter()
                 .map(|c| c.to_string())
                 .collect::<Vec<_>>()
@@ -125,12 +136,12 @@ impl ManagedPrimal for GenericManagedPrimal {
         // instead of /dev/null to enable observability and debugging!
         // Create /tmp/primals/ directory if needed
         std::fs::create_dir_all("/tmp/primals").ok();
-        
+
         // Get node ID from env for unique log file names
         let node_id = std::env::var("SONGBIRD_NODE_ID")
             .or_else(|_| std::env::var("NODE_ID"))
             .unwrap_or_else(|_| "unknown".to_string());
-        
+
         let log_path = format!("/tmp/primals/{}-{}.log", self.id, node_id);
         let log_file = OpenOptions::new()
             .create(true)
@@ -139,26 +150,26 @@ impl ManagedPrimal for GenericManagedPrimal {
             .map_err(|e| {
                 BiomeError::internal_error(
                     format!("Failed to create log file {}: {}", log_path, e),
-                    Some("log_file_creation_failure")
+                    Some("log_file_creation_failure"),
                 )
             })?;
-        
+
         info!("📝 Primal logs will be written to: {}", log_path);
-        
+
         let child = cmd
             .stdout(Stdio::from(log_file.try_clone().map_err(|e| {
                 BiomeError::internal_error(
                     format!("Failed to clone log file handle: {}", e),
-                    Some("log_file_clone_failure")
+                    Some("log_file_clone_failure"),
                 )
             })?))
             .stderr(Stdio::from(log_file))
             .spawn()
             .map_err(|e| {
-                BiomeError::internal_error(format!(
-                    "Failed to spawn primal {}: {}",
-                    self.id, e
-                ), Some("process_spawn_failure"))
+                BiomeError::internal_error(
+                    format!("Failed to spawn primal {}: {}", self.id, e),
+                    Some("process_spawn_failure"),
+                )
             })?;
 
         *process_guard = Some(child);
@@ -173,10 +184,16 @@ impl ManagedPrimal for GenericManagedPrimal {
         let mut process_guard = self.process.lock().await;
         if let Some(mut child) = process_guard.take() {
             child.kill().map_err(|e| {
-                BiomeError::internal_error(format!("Failed to kill {}: {}", self.id, e), Some("process_kill_failure"))
+                BiomeError::internal_error(
+                    format!("Failed to kill {}: {}", self.id, e),
+                    Some("process_kill_failure"),
+                )
             })?;
             child.wait().map_err(|e| {
-                BiomeError::internal_error(format!("Failed to wait for {}: {}", self.id, e), Some("process_wait_failure"))
+                BiomeError::internal_error(
+                    format!("Failed to wait for {}: {}", self.id, e),
+                    Some("process_wait_failure"),
+                )
             })?;
         }
 
@@ -187,15 +204,18 @@ impl ManagedPrimal for GenericManagedPrimal {
     async fn health_check(&self) -> BiomeResult<HealthStatus> {
         // Process-based health check with proper zombie reaping
         let mut process_guard = self.process.lock().await;
-        
+
         if let Some(child) = process_guard.as_mut() {
             // Check if process actually exited (and reap zombie if it did)
             match child.try_wait() {
                 Ok(Some(exit_status)) => {
                     // Process exited! Reap the zombie and mark unhealthy
-                    info!("⚠️  Primal {} exited with status: {:?}", self.id, exit_status);
-                    *process_guard = None;  // Clear the handle
-                    
+                    info!(
+                        "⚠️  Primal {} exited with status: {:?}",
+                        self.id, exit_status
+                    );
+                    *process_guard = None; // Clear the handle
+
                     Ok(HealthStatus::Unhealthy {
                         reason: format!("Primal {} exited: {:?}", self.id, exit_status),
                         since: std::time::SystemTime::now()
@@ -205,7 +225,7 @@ impl ManagedPrimal for GenericManagedPrimal {
                         consecutive_failures: 1,
                         recovery_attempts: 0,
                     })
-                },
+                }
                 Ok(None) => {
                     // Process still running - healthy
                     Ok(HealthStatus::Healthy {
@@ -215,7 +235,7 @@ impl ManagedPrimal for GenericManagedPrimal {
                             .as_secs(),
                         consecutive_successes: 1,
                     })
-                },
+                }
                 Err(e) => {
                     // Error checking process status
                     warn!("Failed to check process status for {}: {}", self.id, e);
@@ -310,9 +330,9 @@ impl PrimalBuilder {
     pub fn build(self) -> BiomeResult<Arc<GenericManagedPrimal>> {
         let config = PrimalConfig {
             id: self.id.unwrap_or_else(|| uuid::Uuid::new_v4().to_string()),
-            binary_path: self
-                .binary_path
-                .ok_or_else(|| BiomeError::config_error("Binary path not set", Some("PRIMAL_BINARY")))?,
+            binary_path: self.binary_path.ok_or_else(|| {
+                BiomeError::config_error("Binary path not set", Some("PRIMAL_BINARY"))
+            })?,
             provides: self.provides,
             requires: self.requires,
             http_port: self.http_port,
@@ -330,7 +350,10 @@ impl Default for PrimalBuilder {
 }
 
 /// Convenience function: Create a security provider (e.g., BearDog-like)
-pub fn create_security_provider(binary_path: String, http_port: u16) -> BiomeResult<Arc<GenericManagedPrimal>> {
+pub fn create_security_provider(
+    binary_path: String,
+    http_port: u16,
+) -> BiomeResult<Arc<GenericManagedPrimal>> {
     PrimalBuilder::new()
         .binary_path(binary_path)
         .provides(vec![Capability::Security])
@@ -340,17 +363,22 @@ pub fn create_security_provider(binary_path: String, http_port: u16) -> BiomeRes
 }
 
 /// Convenience function: Create a discovery orchestrator (e.g., Songbird-like)
-pub fn create_discovery_orchestrator(binary_path: String) -> BiomeResult<Arc<GenericManagedPrimal>> {
+pub fn create_discovery_orchestrator(
+    binary_path: String,
+) -> BiomeResult<Arc<GenericManagedPrimal>> {
     PrimalBuilder::new()
         .binary_path(binary_path)
         .provides(vec![Capability::Discovery])
-        .requires(vec![Capability::Security])  // Needs a security provider
-        .http_port(0)  // No HTTP port (uses UDP)
+        .requires(vec![Capability::Security]) // Needs a security provider
+        .http_port(0) // No HTTP port (uses UDP)
         .build()
 }
 
 /// Convenience function: Create a compute provider (e.g., Toadstool-like)
-pub fn create_compute_provider(binary_path: String, http_port: u16) -> BiomeResult<Arc<GenericManagedPrimal>> {
+pub fn create_compute_provider(
+    binary_path: String,
+    http_port: u16,
+) -> BiomeResult<Arc<GenericManagedPrimal>> {
     PrimalBuilder::new()
         .binary_path(binary_path)
         .provides(vec![Capability::Compute])
@@ -360,7 +388,10 @@ pub fn create_compute_provider(binary_path: String, http_port: u16) -> BiomeResu
 }
 
 /// Convenience function: Create an AI service (e.g., Squirrel-like)
-pub fn create_ai_service(binary_path: String, http_port: u16) -> BiomeResult<Arc<GenericManagedPrimal>> {
+pub fn create_ai_service(
+    binary_path: String,
+    http_port: u16,
+) -> BiomeResult<Arc<GenericManagedPrimal>> {
     PrimalBuilder::new()
         .binary_path(binary_path)
         .provides(vec![Capability::AI])
@@ -370,7 +401,10 @@ pub fn create_ai_service(binary_path: String, http_port: u16) -> BiomeResult<Arc
 }
 
 /// Convenience function: Create a storage provider (e.g., NestGate-like)
-pub fn create_storage_provider(binary_path: String, http_port: u16) -> BiomeResult<Arc<GenericManagedPrimal>> {
+pub fn create_storage_provider(
+    binary_path: String,
+    http_port: u16,
+) -> BiomeResult<Arc<GenericManagedPrimal>> {
     PrimalBuilder::new()
         .binary_path(binary_path)
         .provides(vec![Capability::Storage])
@@ -386,7 +420,9 @@ pub type ManagedSongbird = GenericManagedPrimal;
 #[deprecated(note = "Use PrimalBuilder::new().provides(Security).build() instead")]
 pub type BearDogConfig = PrimalConfig;
 
-#[deprecated(note = "Use PrimalBuilder::new().provides(Discovery).requires(Security).build() instead")]
+#[deprecated(
+    note = "Use PrimalBuilder::new().provides(Discovery).requires(Security).build() instead"
+)]
 pub type SongbirdConfig = PrimalConfig;
 
 #[deprecated(note = "Use PrimalBuilder directly instead")]

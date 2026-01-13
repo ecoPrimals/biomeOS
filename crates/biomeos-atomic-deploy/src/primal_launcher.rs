@@ -27,15 +27,21 @@ impl PrimalInstance {
     }
 
     /// Check if process is still running
+    ///
+    /// Uses signal 0 (null signal) to test process existence without affecting it.
+    /// This is safe and idiomatic using the nix crate's signal handling.
     pub fn is_running(&self) -> bool {
-        // Send signal 0 to check if process exists
-        unsafe {
-            libc::kill(self.pid as i32, 0) == 0
-        }
+        use nix::sys::signal::{kill, Signal};
+        use nix::unistd::Pid;
+
+        // Signal 0 checks process existence without sending an actual signal
+        // Returns Ok if process exists and we have permission to signal it
+        kill(Pid::from_raw(self.pid as i32), None).is_ok()
     }
 }
 
 /// Primal launcher - manages primal lifecycle
+#[derive(Debug)]
 pub struct PrimalLauncher {
     binary_dir: PathBuf,
     runtime_dir: PathBuf,
@@ -48,8 +54,7 @@ impl PrimalLauncher {
             anyhow::bail!("Binary directory not found: {}", binary_dir.display());
         }
 
-        std::fs::create_dir_all(&runtime_dir)
-            .context("Failed to create runtime directory")?;
+        std::fs::create_dir_all(&runtime_dir).context("Failed to create runtime directory")?;
 
         Ok(Self {
             binary_dir,
@@ -77,8 +82,7 @@ impl PrimalLauncher {
         // Clean up old socket if it exists
         let socket_path_buf = PathBuf::from(&socket_path);
         if socket_path_buf.exists() {
-            std::fs::remove_file(&socket_path_buf)
-                .context("Failed to remove old socket")?;
+            std::fs::remove_file(&socket_path_buf).context("Failed to remove old socket")?;
         }
 
         // Build command
@@ -94,15 +98,19 @@ impl PrimalLauncher {
         cmd.stderr(Stdio::piped());
 
         // Spawn process
-        let child = cmd.spawn()
+        let child = cmd
+            .spawn()
             .context(format!("Failed to spawn {}", primal_name))?;
 
-        let pid = child.id().ok_or_else(|| anyhow::anyhow!("Failed to get PID"))?;
+        let pid = child
+            .id()
+            .ok_or_else(|| anyhow::anyhow!("Failed to get PID"))?;
 
         info!("   Launched {} (PID: {})", primal_name, pid);
 
         // Wait for socket to appear
-        self.wait_for_socket(&socket_path_buf, Duration::from_secs(5)).await?;
+        self.wait_for_socket(&socket_path_buf, Duration::from_secs(5))
+            .await?;
 
         // Detach child (let it run independently)
         std::mem::forget(child);
@@ -161,10 +169,7 @@ impl PrimalLauncher {
             sleep(Duration::from_millis(100)).await;
         }
 
-        anyhow::bail!(
-            "Timeout waiting for socket: {}",
-            socket_path.display()
-        )
+        anyhow::bail!("Timeout waiting for socket: {}", socket_path.display())
     }
 }
 
@@ -181,7 +186,10 @@ mod tests {
         };
 
         assert_eq!(launcher.socket_env_key("beardog-server"), "BEARDOG_SOCKET");
-        assert_eq!(launcher.socket_env_key("songbird-orchestrator"), "SONGBIRD_SOCKET");
+        assert_eq!(
+            launcher.socket_env_key("songbird-orchestrator"),
+            "SONGBIRD_SOCKET"
+        );
         assert_eq!(launcher.socket_env_key("toadstool"), "TOADSTOOL_SOCKET");
         assert_eq!(launcher.socket_env_key("nestgate"), "NESTGATE_SOCKET");
         assert_eq!(launcher.socket_env_key("unknown"), "PRIMAL_SOCKET");
@@ -211,7 +219,10 @@ mod tests {
 
         let result = PrimalLauncher::new(binary_dir, runtime_dir);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Binary directory not found"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Binary directory not found"));
     }
 
     #[test]
@@ -280,7 +291,9 @@ mod tests {
         let launcher = PrimalLauncher::new(binary_dir, runtime_dir).unwrap();
 
         let socket_path = temp_dir.path().join("nonexistent.sock");
-        let result = launcher.wait_for_socket(&socket_path, Duration::from_millis(100)).await;
+        let result = launcher
+            .wait_for_socket(&socket_path, Duration::from_millis(100))
+            .await;
 
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Timeout"));
@@ -297,7 +310,7 @@ mod tests {
         let launcher = PrimalLauncher::new(binary_dir, runtime_dir).unwrap();
 
         let socket_path = temp_dir.path().join("test.sock");
-        
+
         // Create socket in background after 100ms
         let socket_path_clone = socket_path.clone();
         tokio::spawn(async move {
@@ -305,8 +318,9 @@ mod tests {
             std::fs::write(&socket_path_clone, "").unwrap();
         });
 
-        let result = launcher.wait_for_socket(&socket_path, Duration::from_secs(1)).await;
+        let result = launcher
+            .wait_for_socket(&socket_path, Duration::from_secs(1))
+            .await;
         assert!(result.is_ok());
     }
 }
-

@@ -154,8 +154,11 @@ async fn show_status() -> Result<()> {
     let mut entries = tokio::fs::read_dir(&socket_dir).await?;
     while let Some(entry) = entries.next_entry().await? {
         if let Some(name) = entry.file_name().to_str() {
-            if name.contains("beardog") || name.contains("toadstool") || 
-               name.contains("nestgate") || name.contains("biomeos") {
+            if name.contains("beardog")
+                || name.contains("toadstool")
+                || name.contains("nestgate")
+                || name.contains("biomeos")
+            {
                 info!("  {}", name);
             }
         }
@@ -172,9 +175,12 @@ async fn launch_ui() -> Result<()> {
     info!("🌸 Launching petalTongue UI...");
 
     let petaltongue_bin = "plasmidBin/petaltongue";
-    
+
     if !tokio::fs::metadata(petaltongue_bin).await.is_ok() {
-        return Err(anyhow::anyhow!("petalTongue binary not found at {}", petaltongue_bin));
+        return Err(anyhow::anyhow!(
+            "petalTongue binary not found at {}",
+            petaltongue_bin
+        ));
     }
 
     let uid = std::env::var("UID").unwrap_or_else(|_| "1000".to_string());
@@ -189,7 +195,7 @@ async fn launch_ui() -> Result<()> {
         .context("Failed to launch petalTongue")?;
 
     info!("✅ petalTongue launched (PID: {})", child.id().unwrap_or(0));
-    
+
     // Wait for process
     child.wait().await?;
 
@@ -213,4 +219,3 @@ async fn deploy_and_launch() -> Result<()> {
 
     Ok(())
 }
-

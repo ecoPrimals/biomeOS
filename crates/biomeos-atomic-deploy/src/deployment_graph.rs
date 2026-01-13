@@ -162,7 +162,9 @@ mod tests {
 
         assert!(!graph.nodes.is_empty());
         assert!(graph.nodes.iter().any(|n| n.id == "verify_usb_seed"));
-        assert!(graph.nodes.iter().any(|n| n.id == "verify_lineage_recognition"));
+        assert!(graph
+            .nodes
+            .iter()
+            .any(|n| n.id == "verify_lineage_recognition"));
     }
 }
-

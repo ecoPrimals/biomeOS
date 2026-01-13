@@ -11,10 +11,10 @@ use crate::primal_client::schema::ApiSchema;
 pub struct ClientCache {
     /// Cached schemas with timestamps
     schemas: HashMap<PrimalId, (ApiSchema, Instant)>,
-    
+
     /// Cached format hints with timestamps
     formats: HashMap<PrimalId, (FormatHint, Instant)>,
-    
+
     /// Cached discovered primals with timestamps
     primals: HashMap<String, (Vec<PrimalHandle>, Instant)>,
 }
@@ -29,11 +29,7 @@ impl ClientCache {
     }
 
     /// Get cached schema if not expired
-    pub fn get_schema(
-        &self,
-        primal_id: &PrimalId,
-        ttl: std::time::Duration,
-    ) -> Option<&ApiSchema> {
+    pub fn get_schema(&self, primal_id: &PrimalId, ttl: std::time::Duration) -> Option<&ApiSchema> {
         self.schemas.get(primal_id).and_then(|(schema, timestamp)| {
             if timestamp.elapsed() < ttl {
                 Some(schema)
@@ -49,11 +45,7 @@ impl ClientCache {
     }
 
     /// Get cached format hint if not expired
-    pub fn get_format(
-        &self,
-        primal_id: &PrimalId,
-        ttl: std::time::Duration,
-    ) -> Option<FormatHint> {
+    pub fn get_format(&self, primal_id: &PrimalId, ttl: std::time::Duration) -> Option<FormatHint> {
         self.formats.get(primal_id).and_then(|(hint, timestamp)| {
             if timestamp.elapsed() < ttl {
                 Some(*hint)
@@ -92,9 +84,12 @@ impl ClientCache {
 
     /// Clear expired entries
     pub fn clear_expired(&mut self, ttl: std::time::Duration) {
-        self.schemas.retain(|_, (_, timestamp)| timestamp.elapsed() < ttl);
-        self.formats.retain(|_, (_, timestamp)| timestamp.elapsed() < ttl);
-        self.primals.retain(|_, (_, timestamp)| timestamp.elapsed() < ttl);
+        self.schemas
+            .retain(|_, (_, timestamp)| timestamp.elapsed() < ttl);
+        self.formats
+            .retain(|_, (_, timestamp)| timestamp.elapsed() < ttl);
+        self.primals
+            .retain(|_, (_, timestamp)| timestamp.elapsed() < ttl);
     }
 }
 
@@ -103,4 +98,3 @@ impl Default for ClientCache {
         Self::new()
     }
 }
-

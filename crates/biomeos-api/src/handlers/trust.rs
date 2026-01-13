@@ -1,17 +1,14 @@
 //! Trust API handlers
-//! 
+//!
 //! Proxies trust-related requests to BearDog via Universal Primal Client
 
-use axum::{
-    extract::State,
-    Json,
-};
+use axum::{extract::State, Json};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tracing::{info, error};
+use tracing::{error, info};
 
 use biomeos_core::primal_client::{
-    UniversalPrimalClient, ClientConfig, PrimalHandle, PrimalId, Endpoint,
+    ClientConfig, Endpoint, PrimalHandle, PrimalId, UniversalPrimalClient,
 };
 
 use crate::AppState;
@@ -66,18 +63,24 @@ pub async fn evaluate_trust(
     let client = UniversalPrimalClient::new(ClientConfig::default());
     let beardog = create_beardog_handle();
 
-    match client.call::<TrustEvaluationRequest, TrustEvaluationResponse>(
-        &beardog,
-        "trust/evaluate",
-        request,
-    ).await {
+    match client
+        .call::<TrustEvaluationRequest, TrustEvaluationResponse>(
+            &beardog,
+            "trust/evaluate",
+            request,
+        )
+        .await
+    {
         Ok(response) => {
             info!("   ✅ Trust evaluated: {}", response.trust_level);
             Ok(Json(response))
         }
         Err(e) => {
             error!("   ❌ Trust evaluation failed: {}", e);
-            Err(crate::ApiError::Internal(format!("Failed to evaluate trust: {}", e)))
+            Err(crate::ApiError::Internal(format!(
+                "Failed to evaluate trust: {}",
+                e
+            )))
         }
     }
 }
@@ -89,10 +92,16 @@ pub async fn get_identity(
     info!("📋 Getting local identity from BearDog");
 
     if state.is_standalone_mode() {
-        info!("   Using standalone identity (BIOMEOS_STANDALONE_MODE=true) - works without primals");
+        info!(
+            "   Using standalone identity (BIOMEOS_STANDALONE_MODE=true) - works without primals"
+        );
         return Ok(Json(IdentityResponse {
             encryption_tag: "beardog:family:standalone:demo".to_string(),
-            capabilities: vec!["btsp".to_string(), "birdsong".to_string(), "lineage".to_string()],
+            capabilities: vec![
+                "btsp".to_string(),
+                "birdsong".to_string(),
+                "lineage".to_string(),
+            ],
             family_id: "standalone".to_string(),
             identity_attestations: Some(serde_json::json!({
                 "family_id": "standalone",  // Consistent with parent family_id
@@ -108,44 +117,47 @@ pub async fn get_identity(
     let client = UniversalPrimalClient::new(ClientConfig::default());
     let beardog = create_beardog_handle();
 
-    match client.call::<(), IdentityResponse>(&beardog, "trust/identity", ()).await {
+    match client
+        .call::<(), IdentityResponse>(&beardog, "trust/identity", ())
+        .await
+    {
         Ok(response) => {
             info!("   ✅ Identity retrieved: {}", response.encryption_tag);
             Ok(Json(response))
         }
         Err(e) => {
             error!("   ❌ Identity retrieval failed: {}", e);
-            Err(crate::ApiError::Internal(format!("Failed to get identity: {}", e)))
+            Err(crate::ApiError::Internal(format!(
+                "Failed to get identity: {}",
+                e
+            )))
         }
     }
 }
 
 /// Helper to create BearDog handle
-/// 
+///
 /// Future: Use UniversalPrimalClient to discover BearDog dynamically by capability.
 /// For now, uses environment variable BEARDOG_URL (required in production).
-/// 
+///
 /// # Panics
 /// Panics in release builds if BEARDOG_URL is not set (production safety).
 fn create_beardog_handle() -> PrimalHandle {
-    let beardog_url = std::env::var("BEARDOG_URL")
-        .unwrap_or_else(|_| {
-            #[cfg(debug_assertions)]
-            {
-                "http://localhost:9000".to_string()
-            }
-            #[cfg(not(debug_assertions))]
-            {
-                panic!("BEARDOG_URL environment variable must be set in production builds")
-            }
-        });
+    let beardog_url = std::env::var("BEARDOG_URL").unwrap_or_else(|_| {
+        #[cfg(debug_assertions)]
+        {
+            "http://localhost:9000".to_string()
+        }
+        #[cfg(not(debug_assertions))]
+        {
+            panic!("BEARDOG_URL environment variable must be set in production builds")
+        }
+    });
 
     PrimalHandle {
         id: PrimalId::new("beardog"),
         name: "BearDog".to_string(),
-        endpoints: vec![
-            Endpoint::new(beardog_url, "http").with_priority(1),
-        ],
+        endpoints: vec![Endpoint::new(beardog_url, "http").with_priority(1)],
         capabilities: vec!["trust".to_string(), "identity".to_string()],
         schema: None,
         protocol: "http".to_string(),

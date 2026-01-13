@@ -85,8 +85,14 @@ impl HealthStatus {
     /// Get consecutive failure count
     pub fn consecutive_failures(&self) -> usize {
         match self {
-            HealthStatus::Degraded { consecutive_failures, .. } => *consecutive_failures,
-            HealthStatus::Unhealthy { consecutive_failures, .. } => *consecutive_failures,
+            HealthStatus::Degraded {
+                consecutive_failures,
+                ..
+            } => *consecutive_failures,
+            HealthStatus::Unhealthy {
+                consecutive_failures,
+                ..
+            } => *consecutive_failures,
             _ => 0,
         }
     }
@@ -205,7 +211,10 @@ impl PrimalHealthMonitor {
     pub async fn unregister(&self, primal_id: &PrimalId) {
         let mut states = self.health_states.write().await;
         states.remove(primal_id);
-        info!("📊 Unregistered primal from health monitoring: {}", primal_id);
+        info!(
+            "📊 Unregistered primal from health monitoring: {}",
+            primal_id
+        );
     }
 
     /// Check health of a specific primal
@@ -222,7 +231,8 @@ impl PrimalHealthMonitor {
         let health_url = format!("{}/health", endpoint.as_str());
         let result = self.http_client.get(&health_url).send().await;
 
-        let is_healthy = result.as_ref()
+        let is_healthy = result
+            .as_ref()
             .map(|response| response.status().is_success())
             .unwrap_or(false);
 
@@ -237,8 +247,10 @@ impl PrimalHealthMonitor {
 
                 // Transition to healthy if was degraded/unhealthy
                 if !state.status.is_healthy() {
-                    info!("✅ Primal recovered: {} (after {} failures)", 
-                          primal_id, state.consecutive_failures);
+                    info!(
+                        "✅ Primal recovered: {} (after {} failures)",
+                        primal_id, state.consecutive_failures
+                    );
                     state.recovery_attempts = 0;
                 }
 
@@ -263,8 +275,10 @@ impl PrimalHealthMonitor {
 
                 // Determine new status based on failure count
                 let new_status = if state.consecutive_failures >= self.config.unhealthy_threshold {
-                    warn!("❌ Primal unhealthy: {} ({} consecutive failures)", 
-                          primal_id, state.consecutive_failures);
+                    warn!(
+                        "❌ Primal unhealthy: {} ({} consecutive failures)",
+                        primal_id, state.consecutive_failures
+                    );
 
                     HealthStatus::Unhealthy {
                         reason: reason.clone(),
@@ -276,8 +290,10 @@ impl PrimalHealthMonitor {
                         recovery_attempts: state.recovery_attempts,
                     }
                 } else if state.consecutive_failures >= self.config.degraded_threshold {
-                    warn!("⚠️  Primal degraded: {} ({} consecutive failures)", 
-                          primal_id, state.consecutive_failures);
+                    warn!(
+                        "⚠️  Primal degraded: {} ({} consecutive failures)",
+                        primal_id, state.consecutive_failures
+                    );
 
                     HealthStatus::Degraded {
                         reason: reason.clone(),
@@ -289,24 +305,33 @@ impl PrimalHealthMonitor {
                     }
                 } else {
                     // Still healthy, but noted failure
-                    debug!("Health check failed for {} (attempt {}/{})", 
-                           primal_id, state.consecutive_failures, self.config.degraded_threshold);
+                    debug!(
+                        "Health check failed for {} (attempt {}/{})",
+                        primal_id, state.consecutive_failures, self.config.degraded_threshold
+                    );
                     state.status.clone()
                 };
 
                 state.status = new_status.clone();
 
                 // Attempt recovery if configured
-                if state.status.is_unhealthy() && self.config.recovery_strategy == RecoveryStrategy::Automatic {
+                if state.status.is_unhealthy()
+                    && self.config.recovery_strategy == RecoveryStrategy::Automatic
+                {
                     if state.recovery_attempts < self.config.max_recovery_attempts {
                         state.recovery_attempts += 1;
-                        info!("🔧 Attempting automatic recovery for {} (attempt {}/{})",
-                              primal_id, state.recovery_attempts, self.config.max_recovery_attempts);
-                        
+                        info!(
+                            "🔧 Attempting automatic recovery for {} (attempt {}/{})",
+                            primal_id, state.recovery_attempts, self.config.max_recovery_attempts
+                        );
+
                         // Recovery is handled by external orchestrator via callbacks
                         // The orchestrator monitors health status changes and triggers restarts
                         // This keeps health monitoring decoupled from orchestration logic
-                        warn!("Recovery requires orchestrator intervention for {}", primal_id);
+                        warn!(
+                            "Recovery requires orchestrator intervention for {}",
+                            primal_id
+                        );
                     }
                 }
 
@@ -339,8 +364,10 @@ impl PrimalHealthMonitor {
     pub fn start_monitoring(self: Arc<Self>) -> tokio::task::JoinHandle<()> {
         let monitor = self.clone();
         tokio::spawn(async move {
-            info!("📊 Starting continuous health monitoring (interval: {:?})", 
-                  monitor.config.check_interval);
+            info!(
+                "📊 Starting continuous health monitoring (interval: {:?})",
+                monitor.config.check_interval
+            );
 
             let mut interval = tokio::time::interval(monitor.config.check_interval);
             interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
@@ -501,4 +528,3 @@ mod tests {
         assert_eq!(monitor.config.recovery_strategy, RecoveryStrategy::Manual);
     }
 }
-

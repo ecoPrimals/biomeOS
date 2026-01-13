@@ -22,7 +22,7 @@ pub async fn handle_deploy(
     if use_graph {
         return handle_graph_deploy(manifest, validate_only, graph_name).await;
     }
-    
+
     // Legacy deployment
     let action = if validate_only {
         "Validating"
@@ -59,97 +59,27 @@ pub async fn handle_deploy(
 }
 
 /// Handle graph-based deployment (Neural API)
+///
+/// ⚠️ DEPRECATED: This function uses the old graph_deployment module.
+/// Please use `biomeos-atomic-deploy` instead.
 async fn handle_graph_deploy(
-    niche_path: PathBuf,
+    _niche_path: PathBuf,
     validate_only: bool,
-    graph_name: Option<String>,
+    _graph_name: Option<String>,
 ) -> Result<()> {
-    use biomeos_core::graph_deployment::GraphDeploymentCoordinator;
-    
-    let action = if validate_only {
-        "Validating"
-    } else {
-        "Deploying"
-    };
-    
-    let graph_desc = graph_name.as_ref()
-        .map(|n| format!(" with graph '{}'", n))
-        .unwrap_or_default();
-    
-    let spinner = create_spinner(&format!("🧠 {} niche via Neural API{}...", action, graph_desc));
-    
-    // Create coordinator
-    let coordinator = GraphDeploymentCoordinator::new();
-    
-    // Discover primals first
-    let discovered = coordinator.registry().discover_primals().await?;
-    println!("🔍 Discovered {} primals", discovered.len());
-    for (primal_id, capabilities) in &discovered {
-        println!("  • {} → {:?}", primal_id, capabilities);
-    }
-    
     if validate_only {
-        // Just validate the niche and graph structure
-        use biomeos_manifest::niche::NicheManifest;
-        use biomeos_graph::{GraphParser, GraphValidator};
-        
-        let manifest = NicheManifest::from_file(&niche_path)?;
-        
-        let graph_ref = if let Some(name) = &graph_name {
-            manifest.get_graph(name)
-                .ok_or_else(|| anyhow::anyhow!("Graph '{}' not found in niche", name))?
-        } else {
-            manifest.get_default_graph()
-                .ok_or_else(|| anyhow::anyhow!("Niche has no default graph"))?
-        };
-        
-        let graph = GraphParser::parse_file(std::path::Path::new(&graph_ref.path))?;
-        GraphValidator::validate(&graph)?;
-        
-        spinner.finish_with_message("✅ Validation completed");
-        println!("🎉 Niche '{}' is valid!", manifest.niche.name);
-        println!("📊 Graph '{}': {} nodes, {} edges", 
-            graph.name, graph.nodes.len(), graph.edges.len());
-    } else {
-        // Execute deployment
-        let result = if let Some(name) = graph_name {
-            coordinator.deploy_niche_with_graph(&niche_path, &name).await?
-        } else {
-            coordinator.deploy_niche(&niche_path).await?
-        };
-        
-        spinner.finish_with_message("✅ Deployment completed");
-        
-        if result.success {
-            println!("🎉 Niche deployed successfully via Neural API!");
-            println!("📊 Execution metrics:");
-            println!("  • Nodes executed: {}", result.metrics.len());
-            
-            let mut total_duration_ms = 0u64;
-            for metric in &result.metrics {
-                let status = if metric.success { "✅" } else { "❌" };
-                println!("  {} {} → {}ms", status, metric.node_id, metric.duration_ms);
-                total_duration_ms += metric.duration_ms;
-                
-                if let Some(error) = &metric.error {
-                    println!("     Error: {}", error);
-                }
-            }
-            
-            println!("  • Total time: {}ms", total_duration_ms);
-        } else {
-            let failed_nodes: Vec<_> = result.metrics.iter()
-                .filter(|m| !m.success)
-                .collect();
-            
-            anyhow::bail!(
-                "Deployment failed: {} node(s) failed execution",
-                failed_nodes.len()
-            );
-        }
+        println!("⚠️  DEPRECATED: Niche/graph validation via CLI is deprecated.");
+        println!("📖 Use biomeos-graph and biomeos-manifest APIs directly.");
+        println!("💡 Example: cargo run --bin biomeos-api");
+        return Ok(());
     }
-    
-    Ok(())
+
+    anyhow::bail!(
+        "⚠️  DEPRECATED: Graph-based niche deployment via CLI is deprecated.\n\
+         📖 Please use:\n\
+         • biomeos-atomic-deploy for orchestrated deployments\n\
+         • biomeos-api for graph execution via REST API"
+    );
 }
 
 /// Handle service creation command
@@ -271,115 +201,28 @@ async fn display_deploy_result(result: &HashMap<String, Value>, validate_only: b
 }
 
 /// Handle direct graph deployment (no niche manifest)
-pub async fn handle_deploy_graph_direct(
-    graph_path: PathBuf,
-    validate_only: bool,
-) -> Result<()> {
-    use biomeos_core::graph_deployment::GraphDeploymentCoordinator;
-    use biomeos_graph::{GraphParser, GraphValidator};
-    
-    let action = if validate_only {
-        "Validating"
-    } else {
-        "Executing"
-    };
-    
-    let spinner = create_spinner(&format!("🧠 {} graph via Neural API...", action));
-    
-    // Parse graph
-    let graph = GraphParser::parse_file(&graph_path)?;
-    
-    // Validate graph
-    GraphValidator::validate(&graph)?;
-    
+///
+/// ⚠️ DEPRECATED: This function uses the old graph_deployment module.
+/// Please use `biomeos-atomic-deploy` and `launch_primal` instead.
+///
+/// Migration path:
+/// - For graph validation: Use biomeos-graph APIs directly
+/// - For deployment: Use biomeos-atomic-deploy crate
+pub async fn handle_deploy_graph_direct(_graph_path: PathBuf, validate_only: bool) -> Result<()> {
     if validate_only {
-        spinner.finish_with_message("✅ Validation completed");
-        println!("🎉 Graph '{}' is valid!", graph.name);
-        println!("📊 Graph structure:");
-        println!("  • Nodes: {}", graph.nodes.len());
-        println!("  • Edges: {}", graph.edges.len());
-        println!("  • Coordination: {:?}", graph.coordination);
-        
-        println!("\n📋 Nodes:");
-        for node in &graph.nodes {
-            println!("  • {} → {} (timeout: {}ms)", 
-                node.id, 
-                node.operation.name,
-                node.constraints.timeout_ms.unwrap_or(30000)
-            );
-        }
-        
+        println!("⚠️  DEPRECATED: Graph validation via CLI is deprecated.");
+        println!("📖 Use biomeos-graph APIs directly for validation.");
+        println!("💡 Example: cargo run --bin biomeos-api");
         return Ok(());
     }
-    
-    // Create coordinator
-    let coordinator = GraphDeploymentCoordinator::new();
-    
-    // Discover primals first
-    println!("🔍 Discovering primals...");
-    let discovered = coordinator.registry().discover_primals().await?;
-    println!("   Found {} primals", discovered.len());
-    for (primal_id, capabilities) in &discovered {
-        println!("   • {} → {:?}", primal_id, capabilities);
-    }
-    
-    // Execute graph
-    use biomeos_graph::GraphExecutor;
-    let executor = GraphExecutor::new(coordinator.registry().clone());
-    let result = executor.execute(graph).await?;
-    
-    spinner.finish_with_message("✅ Execution completed");
-    
-    if result.success {
-        println!("🎉 Graph executed successfully via Neural API!");
-        println!("📊 Execution metrics:");
-        println!("  • Nodes executed: {}", result.metrics.len());
-        
-        let mut total_duration_ms = 0u64;
-        let mut successful = 0;
-        let mut failed = 0;
-        
-        for metric in &result.metrics {
-            let status = if metric.success { 
-                successful += 1;
-                "✅" 
-            } else { 
-                failed += 1;
-                "❌" 
-            };
-            println!("  {} {} ({}) → {}ms", 
-                status, 
-                metric.node_id,
-                metric.operation,
-                metric.duration_ms
-            );
-            total_duration_ms += metric.duration_ms;
-            
-            if let Some(error) = &metric.error {
-                println!("     ❌ Error: {}", error);
-            }
-        }
-        
-        println!("\n📈 Summary:");
-        println!("  • Total nodes: {}", result.metrics.len());
-        println!("  • Successful: {} ✅", successful);
-        println!("  • Failed: {} ❌", failed);
-        println!("  • Total time: {}ms ({:.2}s)", total_duration_ms, total_duration_ms as f64 / 1000.0);
-        println!("  • Average time per node: {}ms", 
-            if result.metrics.is_empty() { 0 } else { total_duration_ms / result.metrics.len() as u64 }
-        );
-    } else {
-        let failed_nodes: Vec<_> = result.metrics.iter()
-            .filter(|m| !m.success)
-            .collect();
-        
-        anyhow::bail!(
-            "Graph execution failed: {} node(s) failed execution",
-            failed_nodes.len()
-        );
-    }
-    
-    Ok(())
+
+    anyhow::bail!(
+        "⚠️  DEPRECATED: Direct graph deployment via CLI is deprecated.\n\
+         📖 Please use:\n\
+         • biomeos-atomic-deploy for orchestrated deployments\n\
+         • launch_primal for individual primal launches\n\
+         • biomeos-api for graph execution via REST API"
+    );
 }
 
 /// Display service creation results

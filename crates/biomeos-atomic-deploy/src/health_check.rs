@@ -41,8 +41,8 @@ impl HealthChecker {
         #[cfg(unix)]
         {
             use std::os::unix::fs::FileTypeExt;
-            let metadata = std::fs::metadata(socket_path)
-                .context("Failed to get socket metadata")?;
+            let metadata =
+                std::fs::metadata(socket_path).context("Failed to get socket metadata")?;
 
             if !metadata.file_type().is_socket() {
                 return Ok(HealthStatus {
@@ -70,8 +70,8 @@ impl HealthChecker {
     pub async fn check_all(&self, pattern: &str) -> Result<Vec<(PathBuf, HealthStatus)>> {
         let mut results = Vec::new();
 
-        let entries = std::fs::read_dir(&self.runtime_dir)
-            .context("Failed to read runtime directory")?;
+        let entries =
+            std::fs::read_dir(&self.runtime_dir).context("Failed to read runtime directory")?;
 
         for entry in entries {
             let entry = entry?;
@@ -92,8 +92,8 @@ impl HealthChecker {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::TempDir;
     use std::os::unix::net::UnixListener;
+    use tempfile::TempDir;
 
     #[tokio::test]
     async fn test_health_check_nonexistent_socket() {
@@ -115,7 +115,7 @@ mod tests {
         let checker = HealthChecker::new(temp_dir.path().to_path_buf());
 
         let socket_path = temp_dir.path().join("test.sock");
-        
+
         // Create a real Unix socket
         let _listener = UnixListener::bind(&socket_path).unwrap();
 
@@ -132,7 +132,7 @@ mod tests {
         let checker = HealthChecker::new(temp_dir.path().to_path_buf());
 
         let socket_path = temp_dir.path().join("not_a_socket.txt");
-        
+
         // Create a regular file (not a socket)
         std::fs::write(&socket_path, "test").unwrap();
 
@@ -156,7 +156,7 @@ mod tests {
 
         // Check all beardog sockets
         let results = checker.check_all("beardog").await.unwrap();
-        
+
         assert_eq!(results.len(), 2);
         for (_, status) in &results {
             assert!(status.is_healthy);
@@ -181,4 +181,3 @@ mod tests {
         assert_eq!(status.message, deserialized.message);
     }
 }
-

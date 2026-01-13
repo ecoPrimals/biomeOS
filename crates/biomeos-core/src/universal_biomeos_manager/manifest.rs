@@ -58,9 +58,12 @@ impl UniversalBiomeOSManager {
     }
 
     /// Validate manifest integration
-    /// 
+    ///
     /// Future: Integrate with Toadstool's manifest parser/validator
-    pub(super) async fn validate_manifest_integration(&self, manifest_path: &str) -> Result<String> {
+    pub(super) async fn validate_manifest_integration(
+        &self,
+        manifest_path: &str,
+    ) -> Result<String> {
         tracing::debug!("Validating manifest: {}", manifest_path);
         // Integration point with Toadstool parser
         Ok(format!(
@@ -70,12 +73,14 @@ impl UniversalBiomeOSManager {
     }
 
     /// Deploy via ecosystem integration
-    /// 
+    ///
     /// Future: Integrate with Toadstool for compute orchestration
-    pub(super) async fn deploy_via_ecosystem_integration(&self, manifest_path: &str) -> Result<String> {
+    pub(super) async fn deploy_via_ecosystem_integration(
+        &self,
+        manifest_path: &str,
+    ) -> Result<String> {
         tracing::debug!("Deploying via ecosystem integration: {}", manifest_path);
         // Integration point with Toadstool for compute orchestration
         Ok(format!("Deployment completed for: {}", manifest_path))
     }
 }
-

@@ -36,7 +36,7 @@ impl AutoFormatAdapter {
             wrapped: WrappedFormatAdapter::new(),
         }
     }
-    
+
     /// Parse response with automatic format detection
     pub async fn parse<T>(&self, response: Response) -> Result<T>
     where
@@ -46,11 +46,7 @@ impl AutoFormatAdapter {
     }
 
     /// Try parsing with a hint
-    async fn try_with_hint<T>(
-        &self,
-        response: Response,
-        hint: FormatHint,
-    ) -> Result<T>
+    async fn try_with_hint<T>(&self, response: Response, hint: FormatHint) -> Result<T>
     where
         T: DeserializeOwned + Send,
     {
@@ -77,10 +73,13 @@ impl AutoFormatAdapter {
         let url = response.url().clone();
 
         // Clone body for multiple attempts
-        let body = response.bytes().await.map_err(|e| ApiError::RequestFailed {
-            message: format!("Failed to read response body: {}", e),
-            source: Some(Box::new(e)),
-        })?;
+        let body = response
+            .bytes()
+            .await
+            .map_err(|e| ApiError::RequestFailed {
+                message: format!("Failed to read response body: {}", e),
+                source: Some(Box::new(e)),
+            })?;
 
         // Try unwrapped first (modern REST pattern)
         debug!("Attempting unwrapped format for {}", url);
@@ -132,11 +131,9 @@ impl AutoFormatAdapter {
 
 #[cfg(test)]
 mod tests {
-    
 
     #[tokio::test]
     async fn test_auto_detect() {
         // Placeholder for tests
     }
 }
-

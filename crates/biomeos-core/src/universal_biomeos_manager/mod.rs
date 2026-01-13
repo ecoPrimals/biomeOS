@@ -13,7 +13,7 @@ pub mod health;
 // Operations modules (refactored by responsibility)
 pub mod deployment;
 pub mod manifest;
-pub mod operations;  // Re-export layer for backward compatibility
+pub mod operations; // Re-export layer for backward compatibility
 pub mod runtime;
 pub mod service;
 

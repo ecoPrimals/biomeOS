@@ -12,15 +12,15 @@
 //
 // =============================================================================
 
-pub mod graph;
-pub mod parser;
-pub mod validator;
-pub mod executor;
-pub mod modification;
-pub mod events;
-pub mod validation;
 pub mod ai_advisor;
+pub mod events;
+pub mod executor;
+pub mod graph;
+pub mod modification;
+pub mod parser;
 pub mod templates;
+pub mod validation;
+pub mod validator;
 // pub mod nucleus_executor; // TODO: Re-enable after Wave 2 evolution to use CapabilityTaxonomy
 pub mod context;
 pub mod error;
@@ -30,38 +30,28 @@ pub mod metrics;
 
 // Re-export core types
 pub use graph::{
-    PrimalGraph,
-    GraphNode,
-    GraphEdge,
-    GraphId,
-    CoordinationPattern,
-    PrimalSelector,
-    Operation,
-    NodeConstraints,
+    CoordinationPattern, EdgeType, Graph, GraphConfig, GraphEdge, GraphId, GraphNode, GraphResult,
+    NodeConstraints, NodeMetrics, NodeOutput, Operation, PrimalGraph, PrimalNode, PrimalSelector,
     RetryPolicy,
-    EdgeType,
-    GraphResult,
-    NodeMetrics,
 };
 
-pub use parser::GraphParser;
-pub use validator::GraphValidator;
+pub use ai_advisor::{
+    AiGraphAdvisor, AiSuggestion, FeedbackOutcome, GraphSnapshot, ImpactEstimate, LearningEvent,
+    SuggestionFeedback, SuggestionType,
+};
+pub use events::{EventCollector, GraphEvent, GraphEventBroadcaster};
 pub use executor::{GraphExecutor, PrimalOperationExecutor};
 pub use modification::{GraphModification, GraphModificationHandler, ModificationResult};
-pub use events::{GraphEvent, GraphEventBroadcaster, EventCollector};
+pub use parser::GraphParser;
+pub use templates::{GraphTemplate, GraphTemplateManager, ParameterType, TemplateParameter};
 pub use validation::{
-    EnhancedGraphValidator, ValidationReport, ValidationError, 
-    ValidationWarning, ValidationSuggestion, PrimalAvailability
+    EnhancedGraphValidator, PrimalAvailability, ValidationError, ValidationReport,
+    ValidationSuggestion, ValidationWarning,
 };
-pub use ai_advisor::{
-    AiGraphAdvisor, AiSuggestion, SuggestionType, ImpactEstimate,
-    SuggestionFeedback, FeedbackOutcome, LearningEvent, GraphSnapshot
-};
-pub use templates::{GraphTemplate, GraphTemplateManager, TemplateParameter, ParameterType};
+pub use validator::GraphValidator;
 // pub use nucleus_executor::NucleusPrimalExecutor; // TODO: Re-enable after Wave 2 evolution
 pub use context::ExecutionContext;
 pub use error::{GraphError, Result};
-pub use metrics::{MetricsCollector, GraphMetrics, NodeMetricsAggregate, ExecutionRecord};
+pub use metrics::{ExecutionRecord, GraphMetrics, MetricsCollector, NodeMetricsAggregate};
 
 // Neural API moved to biomeos-atomic-deploy crate
-

@@ -21,61 +21,37 @@ pub enum ApiError {
     },
 
     /// Primal not found
-    PrimalNotFound {
-        capability: String,
-    },
+    PrimalNotFound { capability: String },
 
     /// Unauthorized access
-    Unauthorized {
-        message: String,
-    },
+    Unauthorized { message: String },
 
     /// Forbidden
-    Forbidden {
-        message: String,
-    },
+    Forbidden { message: String },
 
     /// Resource not found
-    NotFound {
-        resource: String,
-    },
+    NotFound { resource: String },
 
     /// Server error
-    ServerError {
-        status: u16,
-        message: String,
-    },
+    ServerError { status: u16, message: String },
 
     /// Timeout
-    Timeout {
-        operation: String,
-    },
+    Timeout { operation: String },
 
     /// Schema error
-    SchemaError {
-        message: String,
-    },
+    SchemaError { message: String },
 
     /// Discovery error
-    DiscoveryError {
-        message: String,
-    },
+    DiscoveryError { message: String },
 
     /// Trust verification failed
-    TrustVerificationFailed {
-        primal_id: String,
-        reason: String,
-    },
+    TrustVerificationFailed { primal_id: String, reason: String },
 
     /// Configuration error
-    ConfigError {
-        message: String,
-    },
+    ConfigError { message: String },
 
     /// Generic error
-    Other {
-        message: String,
-    },
+    Other { message: String },
 }
 
 impl fmt::Display for ApiError {
@@ -127,9 +103,9 @@ impl fmt::Display for ApiError {
 impl std::error::Error for ApiError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            Self::RequestFailed { source, .. } => {
-                source.as_ref().map(|e| e.as_ref() as &(dyn std::error::Error + 'static))
-            }
+            Self::RequestFailed { source, .. } => source
+                .as_ref()
+                .map(|e| e.as_ref() as &(dyn std::error::Error + 'static)),
             _ => None,
         }
     }
@@ -152,4 +128,3 @@ impl From<serde_json::Error> for ApiError {
         }
     }
 }
-

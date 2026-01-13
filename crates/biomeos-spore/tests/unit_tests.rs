@@ -32,7 +32,7 @@ fn test_spore_type_description() {
     assert!(SporeType::Live.description().contains("executable"));
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_spore_directory_structure() {
     let temp_dir = TempDir::new().unwrap();
     let config = SporeConfig {
@@ -55,7 +55,7 @@ async fn test_spore_directory_structure() {
     assert!(root_path.join("config").exists());
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_cold_spore_no_deploy_script() {
     let temp_dir = TempDir::new().unwrap();
     let config = SporeConfig {
@@ -67,12 +67,12 @@ async fn test_cold_spore_no_deploy_script() {
     let _ = Spore::create(temp_dir.path().to_path_buf(), config).await;
 
     let root_path = temp_dir.path().join("biomeOS");
-    
+
     // ColdSpore should NOT have deploy.sh
     assert!(!root_path.join("deploy.sh").exists());
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_live_spore_has_deploy_script() {
     setup_test_binaries().expect("Failed to setup test binaries");
     let temp_dir = TempDir::new().unwrap();
@@ -85,12 +85,12 @@ async fn test_live_spore_has_deploy_script() {
     let _ = Spore::create(temp_dir.path().to_path_buf(), config).await;
 
     let root_path = temp_dir.path().join("biomeOS");
-    
+
     // LiveSpore should have deploy.sh
     assert!(root_path.join("deploy.sh").exists());
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_spore_manifest_creation() {
     setup_test_binaries().expect("Failed to setup test binaries");
     let temp_dir = TempDir::new().unwrap();
@@ -104,7 +104,7 @@ async fn test_spore_manifest_creation() {
 
     let root_path = temp_dir.path().join("biomeOS");
     let manifest_path = root_path.join(".spore.json");
-    
+
     // Should have manifest
     assert!(manifest_path.exists());
 
@@ -116,7 +116,7 @@ async fn test_spore_manifest_creation() {
     assert!(manifest_content.contains("\"genetic_material\":"));
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_family_seed_generation() {
     let temp_dir = TempDir::new().unwrap();
     let seed_path = temp_dir.path().join("test.seed");
@@ -132,16 +132,16 @@ async fn test_family_seed_generation() {
 
     // Should be able to read it back
     let loaded_seed = FamilySeed::from_file(&seed_path).unwrap();
-    
+
     // Both should reference same file
     assert_eq!(seed.file_path(), loaded_seed.file_path());
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_spore_readme_differentiation() {
     setup_test_binaries().expect("Failed to setup test binaries");
     let temp_dir = TempDir::new().unwrap();
-    
+
     // Create cold spore
     let cold_config = SporeConfig {
         label: "cold_readme".to_string(),
@@ -149,13 +149,11 @@ async fn test_spore_readme_differentiation() {
         spore_type: SporeType::Cold,
     };
     let _ = Spore::create(temp_dir.path().to_path_buf(), cold_config).await;
-    let cold_readme = std::fs::read_to_string(
-        temp_dir.path().join("biomeOS/README.md")
-    ).unwrap();
-    
+    let cold_readme = std::fs::read_to_string(temp_dir.path().join("biomeOS/README.md")).unwrap();
+
     // Clean up
     std::fs::remove_dir_all(temp_dir.path().join("biomeOS")).unwrap();
-    
+
     // Create live spore
     let live_config = SporeConfig {
         label: "live_readme".to_string(),
@@ -163,17 +161,15 @@ async fn test_spore_readme_differentiation() {
         spore_type: SporeType::Live,
     };
     let _ = Spore::create(temp_dir.path().to_path_buf(), live_config).await;
-    let live_readme = std::fs::read_to_string(
-        temp_dir.path().join("biomeOS/README.md")
-    ).unwrap();
-    
+    let live_readme = std::fs::read_to_string(temp_dir.path().join("biomeOS/README.md")).unwrap();
+
     // READMEs should be different
     assert_ne!(cold_readme, live_readme);
-    
+
     // Cold README should mention storage
     assert!(cold_readme.contains("ColdSpore"));
     assert!(cold_readme.contains("storage"));
-    
+
     // Live README should mention deployment
     assert!(live_readme.contains("LiveSpore"));
     assert!(live_readme.contains("deploy.sh"));
@@ -208,7 +204,7 @@ fn test_spore_type_equality() {
 }
 
 #[cfg(unix)]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_secrets_directory_permissions() {
     let temp_dir = TempDir::new().unwrap();
     let config = SporeConfig {
@@ -220,13 +216,12 @@ async fn test_secrets_directory_permissions() {
     let _ = Spore::create(temp_dir.path().to_path_buf(), config).await;
 
     let secrets_dir = temp_dir.path().join("biomeOS/secrets");
-    
+
     // Check permissions (should be 700)
     use std::os::unix::fs::PermissionsExt;
     let metadata = std::fs::metadata(secrets_dir).unwrap();
     let mode = metadata.permissions().mode();
-    
+
     // Last 3 octal digits should be 700
     assert_eq!(mode & 0o777, 0o700);
 }
-

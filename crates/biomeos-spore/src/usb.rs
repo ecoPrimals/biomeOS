@@ -12,13 +12,13 @@ use crate::error::{SporeError, SporeResult};
 pub struct UsbDevice {
     /// Mount point (e.g., `/media/usb`)
     pub mount_point: PathBuf,
-    
+
     /// Device label (if available)
     pub label: Option<String>,
-    
+
     /// Available space in bytes
     pub available_space: u64,
-    
+
     /// Total space in bytes
     pub total_space: u64,
 }
@@ -45,15 +45,11 @@ impl UsbDevice {
 /// Checks common mount points and verifies they're writable.
 pub async fn discover_usb_devices() -> SporeResult<Vec<UsbDevice>> {
     info!("Discovering USB devices");
-    
+
     let mut devices = Vec::new();
 
     // Common mount point patterns (capability-based, not hardcoded)
-    let mount_prefixes = [
-        "/media",
-        "/mnt",
-        "/run/media",
-    ];
+    let mount_prefixes = ["/media", "/mnt", "/run/media"];
 
     for prefix in &mount_prefixes {
         if let Ok(entries) = tokio::fs::read_dir(prefix).await {
@@ -111,9 +107,7 @@ pub async fn find_device_by_label(label: &str) -> SporeResult<UsbDevice> {
     devices
         .into_iter()
         .find(|d| d.label.as_deref() == Some(label))
-        .ok_or_else(|| {
-            SporeError::DeviceNotFound(PathBuf::from(format!("label:{}", label)))
-        })
+        .ok_or_else(|| SporeError::DeviceNotFound(PathBuf::from(format!("label:{}", label))))
 }
 
 #[cfg(test)]
@@ -154,4 +148,3 @@ mod tests {
         assert!((util - 75.0).abs() < 0.1);
     }
 }
-

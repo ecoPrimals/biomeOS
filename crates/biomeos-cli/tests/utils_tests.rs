@@ -2,7 +2,6 @@
 //!
 //! Tests utility functions used across commands.
 
-
 #[test]
 fn test_parse_capabilities() {
     // Test parsing capability strings

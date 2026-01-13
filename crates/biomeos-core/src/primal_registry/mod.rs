@@ -170,9 +170,12 @@ impl PrimalRegistry {
         for binaries in self.binaries.values() {
             for binary in binaries {
                 // Check if this primal provides the requested capability
-                if binary.metadata.capabilities.iter().any(|c| {
-                    c == &capability_str || self.capability_matches(c, &capability_str)
-                }) {
+                if binary
+                    .metadata
+                    .capabilities
+                    .iter()
+                    .any(|c| c == &capability_str || self.capability_matches(c, &capability_str))
+                {
                     results.push(binary);
                 }
             }
@@ -199,9 +202,11 @@ impl PrimalRegistry {
                 // Check if this primal provides ALL requested capabilities
                 let provides_all = capabilities.iter().all(|cap| {
                     let cap_str = cap.to_string();
-                    binary.metadata.capabilities.iter().any(|c| {
-                        c == &cap_str || self.capability_matches(c, &cap_str)
-                    })
+                    binary
+                        .metadata
+                        .capabilities
+                        .iter()
+                        .any(|c| c == &cap_str || self.capability_matches(c, &cap_str))
                 });
 
                 if provides_all {
@@ -332,7 +337,7 @@ impl PrimalRegistry {
     }
 
     /// Detect version from binary
-    /// 
+    ///
     /// Future: Execute binary with --version flag and parse output
     async fn detect_version(&self, _path: &Path) -> Option<String> {
         // Would execute: `Command::new(path).arg("--version").output()`
@@ -362,7 +367,7 @@ impl PrimalRegistry {
             config_hints: HashMap::new(),
         }
     }
-    
+
     /// Legacy metadata (deprecated - for backward compatibility only)
     /// This should NOT be used in production - primals should announce capabilities
     #[allow(dead_code)]
@@ -462,8 +467,12 @@ mod tests {
             },
         };
 
-        registry.binaries.insert("beardog".to_string(), vec![beardog]);
-        registry.binaries.insert("songbird".to_string(), vec![songbird]);
+        registry
+            .binaries
+            .insert("beardog".to_string(), vec![beardog]);
+        registry
+            .binaries
+            .insert("songbird".to_string(), vec![songbird]);
 
         // Test finding by capability
         let encryption_primals = registry.find_by_capability(CapabilityTaxonomy::Encryption);
@@ -501,7 +510,9 @@ mod tests {
             },
         };
 
-        registry.binaries.insert("multi".to_string(), vec![multi_cap]);
+        registry
+            .binaries
+            .insert("multi".to_string(), vec![multi_cap]);
 
         // Test finding by multiple capabilities (all match)
         let primals = registry.find_by_capabilities(&[
@@ -550,7 +561,9 @@ mod tests {
             },
         };
 
-        registry.binaries.insert("beardog".to_string(), vec![v1, v2]);
+        registry
+            .binaries
+            .insert("beardog".to_string(), vec![v1, v2]);
 
         // Get best (should return v2.0.0)
         let best = registry.get_best_for_capability(CapabilityTaxonomy::Encryption);

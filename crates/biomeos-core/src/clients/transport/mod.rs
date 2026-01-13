@@ -73,31 +73,30 @@ impl Default for TransportPreference {
     }
 }
 
-/// Protocol-agnostic primal client
+/// Protocol-agnostic primal transport client
 ///
 /// Automatically selects the best available transport protocol:
 /// 1. Unix socket (fast, secure, preferred)
 /// 2. tarpc (future - type-safe RPC)
 /// 3. HTTP (fallback - legacy)
-pub struct PrimalClient {
+#[derive(Debug, Clone)]
+pub struct PrimalTransport {
+    primal_name: String,
+    endpoint: String,
     transport: Transport,
     timeout: Duration,
 }
 
-/// Type alias for backward compatibility
-/// 
-/// TODO: Rename all usages to `PrimalClient` and remove this alias
-pub type TransportClient = PrimalClient;
-
 /// Internal transport implementation
+#[derive(Debug, Clone)]
 enum Transport {
     UnixSocket(jsonrpc::JsonRpcUnixClient),
     Http(http::HttpClient),
     // Future: Tarpc(tarpc::TarpcClient),
 }
 
-impl PrimalClient {
-    /// Create a client by auto-discovering the primal's transport
+impl PrimalTransport {
+    /// Create a transport client by auto-discovering the primal's transport
     ///
     /// Searches in XDG runtime directory for Unix sockets, falls back to HTTP.
     ///
@@ -179,6 +178,8 @@ impl PrimalClient {
         );
 
         Ok(Self {
+            primal_name: primal_name.to_string(),
+            endpoint: format!("unix://{}", socket_path.display()),
             transport: Transport::UnixSocket(client),
             timeout: Duration::from_secs(5),
         })
@@ -204,6 +205,8 @@ impl PrimalClient {
         let client = http::HttpClient::new(&base_url)?;
 
         Ok(Self {
+            primal_name: primal_name.to_string(),
+            endpoint: base_url.clone(),
             transport: Transport::Http(client),
             timeout: Duration::from_secs(5),
         })
@@ -250,18 +253,18 @@ impl PrimalClient {
     /// # Arguments
     ///
     /// * `method` - Method name (e.g., "evaluate_trust")
-    /// * `params` - Method parameters (JSON object or array)
+    /// * `params` - Optional method parameters (JSON object or array)
     ///
     /// # Returns
     ///
     /// * `Result<Value>` - Method result
-    pub async fn call_method(&self, method: &str, params: Value) -> Result<Value> {
+    pub async fn call_method(&self, method: &str, params: Option<Value>) -> Result<Value> {
         match &self.transport {
             Transport::UnixSocket(client) => {
-                client.call_method(method, Some(params)).await
+                client.call_method(method, params).await
             }
             Transport::Http(client) => {
-                client.call_method(method, params).await
+                client.call_method(method, params.unwrap_or(Value::Null)).await
             }
         }
     }
@@ -278,6 +281,34 @@ impl PrimalClient {
     pub fn with_timeout(mut self, timeout: Duration) -> Self {
         self.timeout = timeout;
         self
+    }
+
+    /// Get the primal name
+    pub fn primal_name(&self) -> &str {
+        &self.primal_name
+    }
+
+    /// Get the endpoint
+    pub fn endpoint(&self) -> &str {
+        &self.endpoint
+    }
+
+    /// Perform health check
+    pub async fn health_check(&self) -> Result<crate::primal_client::HealthStatus> {
+        match self.call_method("health", None).await {
+            Ok(_) => Ok(crate::primal_client::HealthStatus::Healthy),
+            Err(_) => Ok(crate::primal_client::HealthStatus::Unhealthy),
+        }
+    }
+
+    /// Alias for call_method (for compatibility with PrimalClient trait)
+    pub async fn call(&self, method: &str, params: Option<Value>) -> Result<Value> {
+        self.call_method(method, params).await
+    }
+
+    /// Make a request (alias for call_method for trait compatibility)
+    pub async fn request(&self, method: &str, params: Option<Value>) -> Result<Value> {
+        self.call_method(method, params).await
     }
 }
 
@@ -300,7 +331,7 @@ mod tests {
         
         // We can't test actual file existence without creating sockets,
         // but we can verify the search order logic is sound
-        let result = PrimalClient::discover_socket_path("beardog", "nat0");
+        let result = PrimalTransport::discover_socket_path("beardog", "nat0");
         
         // Should fail if no sockets exist (expected in test environment)
         assert!(result.is_err());
@@ -308,9 +339,35 @@ mod tests {
 
     #[test]
     fn test_transport_type() {
-        // We can't create real clients in unit tests without actual services,
+        // We can't create real transports in unit tests without actual services,
         // but we can verify the transport_type method works correctly
-        // Integration tests will cover actual client creation
+        // Integration tests will cover actual transport creation
     }
 }
+
+// Re-export for public API
+pub use PrimalTransport as TransportClient;
+
+/// Transport layer errors
+#[derive(Debug, thiserror::Error)]
+pub enum TransportError {
+    /// Connection failed
+    #[error("Connection failed: {0}")]
+    ConnectionFailed(String),
+    
+    /// Request timeout
+    #[error("Request timeout")]
+    Timeout,
+    
+    /// Invalid response
+    #[error("Invalid response: {0}")]
+    InvalidResponse(String),
+    
+    /// Other error
+    #[error(transparent)]
+    Other(#[from] anyhow::Error),
+}
+
+// Re-export TransportError for clients
+pub use TransportError as Error;
 

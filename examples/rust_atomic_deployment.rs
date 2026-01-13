@@ -2,7 +2,7 @@
 //!
 //! Replaces bash "jelly strings" with idiomatic Rust + Neural API
 
-use biomeos_atomic_deploy::{DeploymentOrchestrator, DeploymentConfig, AtomicType};
+use biomeos_atomic_deploy::{AtomicType, DeploymentConfig, DeploymentOrchestrator};
 use biomeos_spore::seed::FamilySeed;
 use std::path::PathBuf;
 use tempfile::TempDir;
@@ -53,7 +53,8 @@ async fn main() -> anyhow::Result<()> {
             println!("   ✅ Tower deployed successfully!");
             println!("   Primals launched:");
             for instance in &instances {
-                println!("      • {} (PID: {}, Socket: {})",
+                println!(
+                    "      • {} (PID: {}, Socket: {})",
                     instance.primal_name,
                     instance.pid,
                     instance.socket_path.display()
@@ -66,7 +67,7 @@ async fn main() -> anyhow::Result<()> {
             for instance in &instances {
                 let _ = nix::sys::signal::kill(
                     nix::unistd::Pid::from_raw(instance.pid as i32),
-                    nix::sys::signal::Signal::SIGTERM
+                    nix::sys::signal::Signal::SIGTERM,
                 );
             }
             println!("   ✅ Cleanup complete\n");
@@ -124,4 +125,3 @@ async fn main() -> anyhow::Result<()> {
 
     Ok(())
 }
-

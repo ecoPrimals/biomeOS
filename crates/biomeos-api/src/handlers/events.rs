@@ -8,12 +8,7 @@ use axum::{
 };
 use futures::stream::{self, Stream, StreamExt as FuturesStreamExt};
 use serde::Serialize;
-use std::{
-    collections::HashMap,
-    convert::Infallible,
-    sync::Arc,
-    time::Duration,
-};
+use std::{collections::HashMap, convert::Infallible, sync::Arc, time::Duration};
 use tokio::sync::RwLock;
 use tokio_stream::StreamExt as TokioStreamExt;
 use tracing::{info, warn};
@@ -33,7 +28,7 @@ pub enum EcosystemEvent {
         family_id: Option<String>,
         capabilities: Vec<String>,
     },
-    
+
     /// A primal's health changed
     HealthChanged {
         primal_id: String,
@@ -41,28 +36,28 @@ pub enum EcosystemEvent {
         old_health: String,
         new_health: String,
     },
-    
+
     /// Topology changed (new connection)
     TopologyChanged {
         nodes: usize,
         edges: usize,
         change: String, // "primal_added", "primal_removed", "edge_added"
     },
-    
+
     /// Family relationship established
     FamilyJoined {
         primal_id: String,
         name: String,
         family_id: String,
     },
-    
+
     /// Trust level updated
     TrustUpdated {
         primal_id: String,
         name: String,
         trust_level: u8,
     },
-    
+
     /// Periodic heartbeat with full state
     Heartbeat {
         timestamp: u64,
@@ -87,9 +82,9 @@ struct PrimalSnapshot {
 }
 
 /// GET /api/v1/events/stream
-/// 
+///
 /// Server-Sent Events endpoint for real-time updates
-/// 
+///
 /// Streams ecosystem changes including:
 /// - New primal discoveries
 /// - Health status changes
@@ -100,24 +95,22 @@ pub async fn event_stream(
     State(state): State<Arc<AppState>>,
 ) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
     info!("📡 New SSE client connected");
-    
+
     // Track previous state for change detection
     let previous_state = Arc::new(RwLock::new(EcosystemState {
         primals: HashMap::new(),
     }));
-    
+
     let stream = FuturesStreamExt::then(
         stream::repeat_with(move || {
             let state = state.clone();
             let previous_state = previous_state.clone();
-            
-            async move {
-                detect_and_emit_changes(state, previous_state).await
-            }
+
+            async move { detect_and_emit_changes(state, previous_state).await }
         }),
-        |fut| fut
+        |fut| fut,
     );
-    
+
     let stream = FuturesStreamExt::flat_map(stream, |events| stream::iter(events));
     let stream = TokioStreamExt::throttle(stream, Duration::from_secs(5));
     let stream = FuturesStreamExt::filter_map(stream, |event| async move {
@@ -131,7 +124,7 @@ pub async fn event_stream(
             }
         }
     });
-    
+
     Sse::new(stream).keep_alive(KeepAlive::default())
 }
 
@@ -141,7 +134,7 @@ async fn detect_and_emit_changes(
     previous_state: Arc<RwLock<EcosystemState>>,
 ) -> Vec<EcosystemEvent> {
     let mut events = Vec::new();
-    
+
     // Discover current primals
     let current_primals = match state.discovery().discover_all().await {
         Ok(primals) => primals,
@@ -155,14 +148,14 @@ async fn detect_and_emit_changes(
             }];
         }
     };
-    
+
     // Lock previous state
     let mut prev = previous_state.write().await;
-    
+
     // Detect changes
     for primal in &current_primals {
         let primal_id = primal.id.to_string();
-        
+
         match prev.primals.get(&primal_id) {
             None => {
                 // New primal discovered!
@@ -172,11 +165,13 @@ async fn detect_and_emit_changes(
                     name: primal.name.clone(),
                     primal_type: format!("{:?}", primal.primal_type),
                     family_id: primal.family_id.as_ref().map(|f| f.to_string()),
-                    capabilities: primal.capabilities.iter()
+                    capabilities: primal
+                        .capabilities
+                        .iter()
                         .map(|c| format!("{:?}", c))
                         .collect(),
                 });
-                
+
                 // If it has a family, emit family joined event
                 if let Some(family_id) = &primal.family_id {
                     events.push(EcosystemEvent::FamilyJoined {
@@ -189,8 +184,10 @@ async fn detect_and_emit_changes(
             Some(prev_snapshot) => {
                 // Check for health changes
                 if prev_snapshot.health != primal.health {
-                    info!("💊 SSE: Health changed for {}: {:?} -> {:?}", 
-                        primal.name, prev_snapshot.health, primal.health);
+                    info!(
+                        "💊 SSE: Health changed for {}: {:?} -> {:?}",
+                        primal.name, prev_snapshot.health, primal.health
+                    );
                     events.push(EcosystemEvent::HealthChanged {
                         primal_id: primal_id.clone(),
                         name: primal.name.clone(),
@@ -198,12 +195,14 @@ async fn detect_and_emit_changes(
                         new_health: format!("{:?}", primal.health),
                     });
                 }
-                
+
                 // Check for capability changes (could indicate trust changes)
                 let cap_count = primal.capabilities.len();
                 if prev_snapshot.capabilities_count != cap_count {
-                    info!("🔒 SSE: Capabilities updated for {}: {} -> {}", 
-                        primal.name, prev_snapshot.capabilities_count, cap_count);
+                    info!(
+                        "🔒 SSE: Capabilities updated for {}: {} -> {}",
+                        primal.name, prev_snapshot.capabilities_count, cap_count
+                    );
                     // Emit as trust update (more capabilities = higher trust)
                     events.push(EcosystemEvent::TrustUpdated {
                         primal_id: primal_id.clone(),
@@ -211,11 +210,11 @@ async fn detect_and_emit_changes(
                         trust_level: cap_count as u8,
                     });
                 }
-                
+
                 // Check for family changes
                 let prev_family = prev_snapshot.family_id.as_ref().map(|s| s.as_str());
                 let curr_family = primal.family_id.as_ref().map(|f| f.as_str());
-                
+
                 if prev_family != curr_family {
                     if let Some(family_id) = &primal.family_id {
                         info!("👨‍👩‍👧‍👦 SSE: Family joined for {}: {}", primal.name, family_id);
@@ -228,21 +227,23 @@ async fn detect_and_emit_changes(
                 }
             }
         }
-        
+
         // Update snapshot
-        prev.primals.insert(primal_id, PrimalSnapshot {
-            name: primal.name.clone(),
-            health: primal.health.clone(),
-            family_id: primal.family_id.as_ref().map(|f| f.to_string()),
-            capabilities_count: primal.capabilities.len(),
-        });
+        prev.primals.insert(
+            primal_id,
+            PrimalSnapshot {
+                name: primal.name.clone(),
+                health: primal.health.clone(),
+                family_id: primal.family_id.as_ref().map(|f| f.to_string()),
+                capabilities_count: primal.capabilities.len(),
+            },
+        );
     }
-    
+
     // Check for removed primals
-    let current_ids: std::collections::HashSet<_> = current_primals.iter()
-        .map(|p| p.id.to_string())
-        .collect();
-    
+    let current_ids: std::collections::HashSet<_> =
+        current_primals.iter().map(|p| p.id.to_string()).collect();
+
     prev.primals.retain(|id, snapshot| {
         if !current_ids.contains(id) {
             info!("👋 SSE: Primal removed: {}", snapshot.name);
@@ -256,25 +257,27 @@ async fn detect_and_emit_changes(
             true
         }
     });
-    
+
     // Always end with heartbeat
-    let healthy_count = current_primals.iter()
+    let healthy_count = current_primals
+        .iter()
         .filter(|p| matches!(p.health, HealthStatus::Healthy))
         .count();
-    
-    let families: Vec<String> = current_primals.iter()
+
+    let families: Vec<String> = current_primals
+        .iter()
         .filter_map(|p| p.family_id.as_ref().map(|f| f.to_string()))
         .collect::<std::collections::HashSet<_>>()
         .into_iter()
         .collect();
-    
+
     events.push(EcosystemEvent::Heartbeat {
         timestamp: current_timestamp(),
         primals_count: current_primals.len(),
         healthy_count,
         families,
     });
-    
+
     events
 }
 
@@ -289,7 +292,7 @@ fn current_timestamp() -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_primal_discovered_event() {
         let event = EcosystemEvent::PrimalDiscovered {
@@ -299,14 +302,14 @@ mod tests {
             family_id: Some("test-family".to_string()),
             capabilities: vec!["btsp".to_string(), "birdsong".to_string()],
         };
-        
+
         let json = serde_json::to_string(&event).unwrap();
         assert!(json.contains("primal_discovered"));
         assert!(json.contains("test-primal"));
         assert!(json.contains("test-family"));
         assert!(json.contains("btsp"));
     }
-    
+
     #[test]
     fn test_health_changed_event() {
         let event = EcosystemEvent::HealthChanged {
@@ -315,13 +318,13 @@ mod tests {
             old_health: "healthy".to_string(),
             new_health: "degraded".to_string(),
         };
-        
+
         let json = serde_json::to_string(&event).unwrap();
         assert!(json.contains("health_changed"));
         assert!(json.contains("healthy"));
         assert!(json.contains("degraded"));
     }
-    
+
     #[test]
     fn test_heartbeat_event() {
         let event = EcosystemEvent::Heartbeat {
@@ -330,7 +333,7 @@ mod tests {
             healthy_count: 4,
             families: vec!["iidn".to_string(), "test-family".to_string()],
         };
-        
+
         let json = serde_json::to_string(&event).unwrap();
         assert!(json.contains("heartbeat"));
         assert!(json.contains("1234567890"));
@@ -338,7 +341,7 @@ mod tests {
         assert!(json.contains("\"healthy_count\":4"));
         assert!(json.contains("iidn"));
     }
-    
+
     #[test]
     fn test_family_joined_event() {
         let event = EcosystemEvent::FamilyJoined {
@@ -346,12 +349,12 @@ mod tests {
             name: "Test".to_string(),
             family_id: "iidn".to_string(),
         };
-        
+
         let json = serde_json::to_string(&event).unwrap();
         assert!(json.contains("family_joined"));
         assert!(json.contains("iidn"));
     }
-    
+
     #[test]
     fn test_trust_updated_event() {
         let event = EcosystemEvent::TrustUpdated {
@@ -359,12 +362,12 @@ mod tests {
             name: "Test".to_string(),
             trust_level: 3,
         };
-        
+
         let json = serde_json::to_string(&event).unwrap();
         assert!(json.contains("trust_updated"));
         assert!(json.contains("\"trust_level\":3"));
     }
-    
+
     #[test]
     fn test_topology_changed_event() {
         let event = EcosystemEvent::TopologyChanged {
@@ -372,11 +375,10 @@ mod tests {
             edges: 3,
             change: "primal_added".to_string(),
         };
-        
+
         let json = serde_json::to_string(&event).unwrap();
         assert!(json.contains("topology_changed"));
         assert!(json.contains("\"nodes\":5"));
         assert!(json.contains("primal_added"));
     }
 }
-

@@ -7,7 +7,7 @@ use anyhow::Result;
 use serde_json::json;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
-use tracing::{info, error};
+use tracing::{error, info};
 
 #[derive(serde::Serialize)]
 struct JsonRpcRequest {
@@ -34,9 +34,9 @@ struct JsonRpcError {
 async fn call_toadstool_rpc(method: &str, params: serde_json::Value) -> Result<serde_json::Value> {
     let uid = std::env::var("UID").unwrap_or_else(|_| "1000".to_string());
     let socket_path = format!("/run/user/{}/toadstool-default.jsonrpc.sock", uid);
-    
+
     info!("Connecting to ToadStool at {}", socket_path);
-    
+
     let stream = UnixStream::connect(&socket_path).await?;
     let (reader, mut writer) = stream.into_split();
     let mut reader = BufReader::new(reader);
@@ -58,7 +58,11 @@ async fn call_toadstool_rpc(method: &str, params: serde_json::Value) -> Result<s
     let response: JsonRpcResponse = serde_json::from_str(&line)?;
 
     if let Some(error) = response.error {
-        return Err(anyhow::anyhow!("RPC error {}: {}", error.code, error.message));
+        return Err(anyhow::anyhow!(
+            "RPC error {}: {}",
+            error.code,
+            error.message
+        ));
     }
 
     Ok(response.result.unwrap_or(json!(null)))
@@ -125,7 +129,10 @@ async fn main() -> Result<()> {
             println!("  Result: {}", serde_json::to_string_pretty(&result)?);
         }
         Err(e) => {
-            println!("  ⚠️  Resource estimation failed: {} (method may not exist)", e);
+            println!(
+                "  ⚠️  Resource estimation failed: {} (method may not exist)",
+                e
+            );
         }
     }
 
@@ -140,4 +147,3 @@ async fn main() -> Result<()> {
 
     Ok(())
 }
-

@@ -9,7 +9,7 @@ pub mod http;
 pub use http::HttpProtocolAdapter;
 
 /// Protocol adapter enum (concrete types, not trait object)
-/// 
+///
 /// Supports generic methods without dyn compatibility issues.
 #[derive(Clone, Debug)]
 pub enum ProtocolAdapter {
@@ -53,4 +53,3 @@ impl Default for ProtocolAdapter {
         Self::Http(HttpProtocolAdapter::default())
     }
 }
-

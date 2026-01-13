@@ -19,17 +19,17 @@ pub struct DiscoveredPrimal {
     pub capabilities: Vec<String>,
     pub endpoint: String,
     pub last_seen: u64, // Unix timestamp - REQUIRED by PetalTongue
-    
+
     // Trust information (NEW - progressive trust model)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub trust_level: Option<u8>,
-    
+
     #[serde(skip_serializing_if = "Option::is_none")]
     pub family_id: Option<String>,
-    
+
     #[serde(skip_serializing_if = "Option::is_none")]
     pub allowed_capabilities: Option<Vec<String>>,
-    
+
     #[serde(skip_serializing_if = "Option::is_none")]
     pub denied_capabilities: Option<Vec<String>>,
 }
@@ -63,17 +63,20 @@ pub async fn get_discovered_primals(
 
     // Live mode: Use modern discovery system
     info!("   Live mode: Using modern trait-based discovery");
-    
+
     match state.discovery().discover_all().await {
         Ok(discovered) => {
-            info!("   Discovered {} primals via modern discovery", discovered.len());
-            
+            info!(
+                "   Discovered {} primals via modern discovery",
+                discovered.len()
+            );
+
             // Convert to API format
             let now = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap_or(std::time::Duration::from_secs(0)) // Safe fallback: epoch time
                 .as_secs();
-            
+
             let primals: Vec<DiscoveredPrimal> = discovered
                 .into_iter()
                 .map(|primal| {
@@ -83,26 +86,34 @@ pub async fn get_discovered_primals(
                         biomeos_core::HealthStatus::Unhealthy => "unhealthy",
                         biomeos_core::HealthStatus::Unknown => "unknown",
                     };
-                    
+
                     let primal_type = format!("{:?}", primal.primal_type).to_lowercase();
-                    
+
                     DiscoveredPrimal {
                         id: primal.id.as_str().to_string(),
                         name: primal.name,
                         primal_type,
                         version: primal.version.to_string(),
                         health: health.to_string(),
-                        capabilities: primal.capabilities.iter().map(|c| c.as_str().to_string()).collect(),
+                        capabilities: primal
+                            .capabilities
+                            .iter()
+                            .map(|c| c.as_str().to_string())
+                            .collect(),
                         endpoint: primal.endpoint.as_str().to_string(),
                         last_seen: now,
-                        trust_level: if primal.family_id.is_some() { Some(3) } else { Some(1) },
+                        trust_level: if primal.family_id.is_some() {
+                            Some(3)
+                        } else {
+                            Some(1)
+                        },
                         family_id: primal.family_id.map(|f| f.as_str().to_string()),
                         allowed_capabilities: Some(vec!["*".to_string()]),
                         denied_capabilities: Some(vec![]),
                     }
                 })
                 .collect();
-            
+
             Ok(Json(DiscoveredPrimalsResponse {
                 count: primals.len(),
                 mode: "live".to_string(),
@@ -112,7 +123,9 @@ pub async fn get_discovered_primals(
         Err(e) => {
             // Live mode discovery failed - return empty list, don't mask with fake data
             tracing::warn!("   Discovery failed in live mode: {}", e);
-            tracing::warn!("   Returning empty primal list. Start primals or enable standalone mode.");
+            tracing::warn!(
+                "   Returning empty primal list. Start primals or enable standalone mode."
+            );
             Ok(Json(DiscoveredPrimalsResponse {
                 count: 0,
                 mode: "live_failed".to_string(),
@@ -123,18 +136,18 @@ pub async fn get_discovered_primals(
 }
 
 /// Generate standalone primal data for development/demo mode
-/// 
+///
 /// This is NOT a production mock - it's a valid operational mode that allows
 /// biomeOS to run standalone for development, testing, and demonstrations
 /// without requiring live primals.
-/// 
+///
 /// To use: Set BIOMEOS_STANDALONE_MODE=true
 fn get_standalone_primals() -> Vec<DiscoveredPrimal> {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or(std::time::Duration::from_secs(0)) // Safe fallback: epoch time
         .as_secs();
-    
+
     vec![
         DiscoveredPrimal {
             id: "beardog-local".to_string(),
@@ -180,12 +193,9 @@ fn get_standalone_primals() -> Vec<DiscoveredPrimal> {
             primal_type: "tower".to_string(),
             version: "1.0.0".to_string(),
             health: "healthy".to_string(),
-            capabilities: vec![
-                "orchestration".to_string(),
-                "federation".to_string(),
-            ],
+            capabilities: vec!["orchestration".to_string(), "federation".to_string()],
             endpoint: "https://192.168.1.134:8080".to_string(),
-            last_seen: now - 5, // 5 seconds ago
+            last_seen: now - 5,   // 5 seconds ago
             trust_level: Some(1), // Limited (same family, not elevated)
             family_id: Some("iidn".to_string()),
             allowed_capabilities: Some(vec![
@@ -211,7 +221,7 @@ fn get_standalone_primals() -> Vec<DiscoveredPrimal> {
                 "encryption".to_string(),
             ],
             endpoint: "http://localhost:3002".to_string(),
-            last_seen: now - 2, // 2 seconds ago
+            last_seen: now - 2,   // 2 seconds ago
             trust_level: Some(2), // Elevated (human approved)
             family_id: Some("iidn".to_string()),
             allowed_capabilities: Some(vec![
@@ -220,11 +230,7 @@ fn get_standalone_primals() -> Vec<DiscoveredPrimal> {
                 "storage/read".to_string(),
                 "storage/write".to_string(),
             ]),
-            denied_capabilities: Some(vec![
-                "storage/admin".to_string(),
-                "keys/*".to_string(),
-            ]),
+            denied_capabilities: Some(vec!["storage/admin".to_string(), "keys/*".to_string()]),
         },
     ]
 }
-

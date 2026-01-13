@@ -13,17 +13,17 @@
 
 use std::fs;
 use std::path::{Path, PathBuf};
-use tracing::{info, debug};
+use tracing::{debug, info};
 
 use crate::error::{SporeError, SporeResult};
 use crate::spore_types::SporeType;
 
-use super::types::SporeConfig;
-use super::filesystem::FilesystemOps;
 use super::config::ConfigOps;
-use super::genetics::GeneticsOps;
 use super::deployment::DeploymentOps;
 use super::documentation::DocumentationOps;
+use super::filesystem::FilesystemOps;
+use super::genetics::GeneticsOps;
+use super::types::SporeConfig;
 
 /// USB Spore - A self-contained biomeOS deployment
 ///
@@ -98,12 +98,12 @@ impl Spore {
         spore.generate_seed_file().await?;
         spore.create_tower_config().await?;
         spore.copy_binaries().await?;
-        
+
         // Only create deployment script for LiveSpores
         if spore.config.spore_type.requires_execution_env() {
             spore.create_deployment_script().await?;
         }
-        
+
         spore.create_readme().await?;
         spore.create_spore_manifest().await?;
 
@@ -135,10 +135,10 @@ impl Spore {
         // Read config from tower.toml to extract node_id
         let config_path = root_path.join("tower.toml");
         let config_str = fs::read_to_string(&config_path)?;
-        
+
         // Parse to extract node_id (simplified)
-        let node_id = Self::extract_node_id_from_config(&config_str)
-            .unwrap_or_else(|| "unknown".to_string());
+        let node_id =
+            Self::extract_node_id_from_config(&config_str).unwrap_or_else(|| "unknown".to_string());
 
         let config = SporeConfig {
             label: root_path
@@ -171,8 +171,7 @@ impl Spore {
     ) -> SporeResult<Self> {
         info!(
             "Cloning sibling spore: {} -> {}",
-            self.config.node_id,
-            sibling_node_id
+            self.config.node_id, sibling_node_id
         );
 
         // Create sibling config (same family, different node_id)
@@ -188,7 +187,7 @@ impl Spore {
         // Copy the original family seed (shared lineage)
         let source_seed = self.root_path.join(".family.seed");
         let target_seed = sibling.root_path.join(".family.seed");
-        
+
         if source_seed.exists() {
             tokio::fs::copy(&source_seed, &target_seed).await?;
             debug!(
@@ -200,8 +199,7 @@ impl Spore {
 
         info!(
             "Sibling spore created: {} (shares genetic lineage with {})",
-            sibling_node_id,
-            self.config.node_id
+            sibling_node_id, self.config.node_id
         );
 
         Ok(sibling)
@@ -238,4 +236,3 @@ impl Spore {
 }
 
 // Note: Trait implementations are in their respective domain modules
-

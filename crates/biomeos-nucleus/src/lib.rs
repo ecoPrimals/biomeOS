@@ -58,22 +58,22 @@
 #![warn(clippy::all)]
 #![warn(clippy::pedantic)]
 
-pub mod discovery;
-pub mod identity;
 pub mod capability;
-pub mod trust;
-pub mod registry;
 pub mod client;
+pub mod discovery;
 pub mod error;
+pub mod identity;
+pub mod registry;
+pub mod trust;
 
 // Re-export core types
-pub use discovery::{DiscoveryLayer, DiscoveryRequest, PhysicalDiscovery};
-pub use identity::{IdentityLayer, IdentityProof, IdentityVerification};
-pub use capability::{CapabilityLayer, CapabilityInfo, CapabilityVerification};
-pub use trust::{TrustLayer, TrustLevel, TrustEvaluation};
-pub use registry::{Registry, PrimalInfo, RegisteredPrimal};
+pub use capability::{CapabilityInfo, CapabilityLayer, CapabilityVerification};
 pub use client::{NucleusClient, NucleusClientBuilder};
+pub use discovery::{DiscoveryLayer, DiscoveryRequest, PhysicalDiscovery};
 pub use error::{Error, Result};
+pub use identity::{IdentityLayer, IdentityProof, IdentityVerification};
+pub use registry::{PrimalInfo, RegisteredPrimal, Registry};
+pub use trust::{TrustEvaluation, TrustLayer, TrustLevel};
 
 /// Primal endpoint information (discovered via Songbird)
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

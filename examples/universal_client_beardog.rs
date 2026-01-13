@@ -3,7 +3,7 @@
 //! Tests the enum-based Universal Client with live BearDog integration.
 
 use biomeos_core::primal_client::{
-    UniversalPrimalClient, ClientConfig, PrimalHandle, PrimalId, Endpoint,
+    ClientConfig, Endpoint, PrimalHandle, PrimalId, UniversalPrimalClient,
 };
 use serde::{Deserialize, Serialize};
 
@@ -45,9 +45,7 @@ async fn main() -> anyhow::Result<()> {
     let beardog = PrimalHandle {
         id: PrimalId::new("beardog"),
         name: "BearDog".to_string(),
-        endpoints: vec![
-            Endpoint::new("http://localhost:9000", "http").with_priority(1),
-        ],
+        endpoints: vec![Endpoint::new("http://localhost:9000", "http").with_priority(1)],
         capabilities: vec!["trust".to_string(), "identity".to_string()],
         schema: None,
         protocol: "http".to_string(),
@@ -58,8 +56,11 @@ async fn main() -> anyhow::Result<()> {
     // Test 1: Query Identity
     println!("\n📋 Test 1: Query BearDog Identity");
     println!("──────────────────────────────────────────────────────────────────");
-    
-    match client.call::<(), IdentityResponse>(&beardog, "trust/identity", ()).await {
+
+    match client
+        .call::<(), IdentityResponse>(&beardog, "trust/identity", ())
+        .await
+    {
         Ok(identity) => {
             println!("✅ Identity retrieved:");
             println!("   Encryption Tag: {}", identity.encryption_tag);
@@ -75,17 +76,20 @@ async fn main() -> anyhow::Result<()> {
     // Test 2: Evaluate Trust
     println!("\n🔒 Test 2: Evaluate Trust for Peer");
     println!("──────────────────────────────────────────────────────────────────");
-    
+
     let trust_request = TrustEvaluationRequest {
         peer_id: "tower2".to_string(),
         peer_tags: vec!["family:abc123".to_string()],
     };
 
-    match client.call::<TrustEvaluationRequest, TrustEvaluationResponse>(
-        &beardog,
-        "trust/evaluate",
-        trust_request,
-    ).await {
+    match client
+        .call::<TrustEvaluationRequest, TrustEvaluationResponse>(
+            &beardog,
+            "trust/evaluate",
+            trust_request,
+        )
+        .await
+    {
         Ok(trust) => {
             println!("✅ Trust evaluation successful:");
             println!("   Decision: {}", trust.decision);

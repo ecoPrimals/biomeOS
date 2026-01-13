@@ -38,7 +38,9 @@ pub enum SporeError {
     DeviceNotFound(PathBuf),
 
     /// Insufficient space
-    #[error("Insufficient space on device: required {required} bytes, available {available} bytes")]
+    #[error(
+        "Insufficient space on device: required {required} bytes, available {available} bytes"
+    )]
     InsufficientSpace { required: u64, available: u64 },
 
     /// Mount error
@@ -65,4 +67,3 @@ pub enum SporeError {
     #[error("{0}")]
     Anyhow(#[from] anyhow::Error),
 }
-

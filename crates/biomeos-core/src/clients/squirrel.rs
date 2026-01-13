@@ -100,7 +100,7 @@ impl SquirrelClient {
         let transport = TransportClient::discover_with_preference(
             "squirrel",
             family_id,
-            TransportPreference::JsonRpcUnixSocket,
+            TransportPreference::UnixSocket,
         ).await
             .context("Failed to discover Squirrel. Is it running?")?;
         
@@ -293,7 +293,7 @@ impl PrimalClient for SquirrelClient {
     }
 
     fn endpoint(&self) -> String {
-        self.transport.endpoint()
+        self.transport.endpoint().to_string()
     }
 
     async fn is_available(&self) -> bool {
@@ -305,7 +305,6 @@ impl PrimalClient for SquirrelClient {
     }
 
     async fn request(&self, method: &str, _path: &str, body: Option<Value>) -> Result<Value> {
-        // For JSON-RPC, method becomes the RPC method name, path is ignored
         self.transport.call(method, body).await
     }
 }
@@ -395,6 +394,13 @@ pub struct Recommendation {
 mod tests {
     use super::*;
 
+    /// Integration test using harvested binary from plasmidBin/
+    ///
+    /// Start Squirrel manually:
+    /// ```bash
+    /// ./plasmidBin/primals/squirrel --family nat0
+    /// ```
+    #[ignore = "Requires running Squirrel from plasmidBin/primals/squirrel"]
     #[tokio::test]
     async fn test_squirrel_client_creation() {
         let client = SquirrelClient::discover("nat0").await.unwrap();

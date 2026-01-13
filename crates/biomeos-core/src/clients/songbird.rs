@@ -101,7 +101,7 @@ impl SongbirdClient {
         let transport = TransportClient::discover_with_preference(
             "songbird",
             family_id,
-            TransportPreference::JsonRpcUnixSocket,
+            TransportPreference::UnixSocket,
         ).await
             .context("Failed to discover Songbird. Is it running?")?;
         
@@ -286,24 +286,19 @@ impl SongbirdClient {
         // v3.20.0 returns {"health": {"service_id": "...", "status": "...", ...}}
         if let Some(health) = response.get("health") {
             let status = health["status"].as_str().unwrap_or("unknown");
-            Ok(HealthStatus {
-                healthy: status == "healthy",
-                message: health["message"]
-                    .as_str()
-                    .unwrap_or("Unknown")
-                    .to_string(),
-                details: Some(response),
-            })
+            match status {
+                "healthy" => Ok(HealthStatus::Healthy),
+                "degraded" => Ok(HealthStatus::Degraded),
+                "unhealthy" => Ok(HealthStatus::Unhealthy),
+                _ => Ok(HealthStatus::Unknown),
+            }
         } else {
             // Fallback for old format
-            Ok(HealthStatus {
-                healthy: response["status"] == "healthy",
-                message: response["message"]
-                    .as_str()
-                    .unwrap_or("Unknown")
-                    .to_string(),
-                details: Some(response),
-            })
+            let status = response["status"].as_str().unwrap_or("unknown");
+            match status {
+                "healthy" => Ok(HealthStatus::Healthy),
+                _ => Ok(HealthStatus::Unhealthy),
+            }
         }
     }
 
@@ -395,7 +390,7 @@ impl PrimalClient for SongbirdClient {
     }
 
     fn endpoint(&self) -> String {
-        self.transport.endpoint()
+        self.transport.endpoint().to_string()
     }
 
     async fn is_available(&self) -> bool {
@@ -583,6 +578,13 @@ mod tests {
         assert!(distance > 5500.0 && distance < 5600.0);
     }
 
+    /// Integration test using harvested binary from plasmidBin/
+    ///
+    /// Start Songbird manually:
+    /// ```bash
+    /// ./plasmidBin/primals/songbird-orchestrator --family nat0
+    /// ```
+    #[ignore = "Requires running Songbird from plasmidBin/primals/songbird-orchestrator"]
     #[tokio::test]
     async fn test_songbird_client_creation() {
         let client = SongbirdClient::discover("nat0").await.unwrap();

@@ -9,14 +9,14 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SporeType {
     /// Cold spore - genetic material only, for storage/archival
-    /// 
+    ///
     /// Like seeds in storage - dormant, preserved, can be stored indefinitely.
     /// No execution environment, just the genetic material and configuration.
     /// Ideal for backup, distribution, long-term storage.
     Cold,
 
     /// Live spore - ready for immediate deployment
-    /// 
+    ///
     /// Like seeds ready to germinate - active, executable, ready to grow.
     /// Includes execution environment, handles filesystem limitations.
     /// Ideal for USB deployment, rapid activation.
@@ -91,4 +91,3 @@ mod tests {
         assert_eq!(SporeType::default(), SporeType::Live);
     }
 }
-

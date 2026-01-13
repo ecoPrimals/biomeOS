@@ -54,16 +54,17 @@
 pub mod actions;
 pub mod events;
 pub mod orchestrator;
-pub mod state;
-pub mod realtime;
-pub mod suggestions;
 pub mod petaltongue_bridge;
+pub mod realtime;
+pub mod state;
+pub mod suggestions;
 
-pub use actions::{UserAction, ActionResult};
-pub use events::{UIEvent, EventStream};
+pub use actions::{ActionResult, UserAction};
+pub use events::{EventStream, UIEvent};
 pub use orchestrator::InteractiveUIOrchestrator;
-pub use state::{UIState, Device, PrimalInfo, Assignment};
-pub use realtime::{RealTimeEvent, RealTimeEventSubscriber, RealTimeEventHandler};
+pub use petaltongue_bridge::{
+    Device as PTDevice, NicheTemplate, PetalTongueRPCBridge, Primal as PTPrimal,
+};
+pub use realtime::{RealTimeEvent, RealTimeEventHandler, RealTimeEventSubscriber};
+pub use state::{Assignment, Device, PrimalInfo, UIState};
 pub use suggestions::{AISuggestion, AISuggestionManager, SuggestionContext, SuggestionFeedback};
-pub use petaltongue_bridge::{PetalTongueRPCBridge, Device as PTDevice, Primal as PTPrimal, NicheTemplate};
-

@@ -136,11 +136,14 @@ impl UniversalBiomeOSManager {
 
             // Legacy code - depends on ClientRegistry
             // Future: Restore resource metrics via UniversalPrimalClient
-            result.insert("resources".to_string(), serde_json::json!({
-                "status": "unavailable",
-                "message": "Legacy ToadStool integration commented out"
-            }));
-            
+            result.insert(
+                "resources".to_string(),
+                serde_json::json!({
+                    "status": "unavailable",
+                    "message": "Legacy ToadStool integration commented out"
+                }),
+            );
+
             /* Legacy code commented out:
             // Query ToadStool for real resource metrics (if available)
             if let Ok(toadstool) = self.clients().toadstool().await {
@@ -390,4 +393,3 @@ pub(super) struct ExecutionResult {
     pub stdout: String,
     pub stderr: String,
 }
-

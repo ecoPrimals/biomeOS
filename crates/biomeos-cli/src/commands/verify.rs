@@ -22,14 +22,14 @@ pub enum VerifyTarget {
         #[arg(short, long, default_value = "plasmidBin")]
         path: PathBuf,
     },
-    
+
     /// Verify a specific spore
     Spore {
         /// Path to spore mount point
         #[arg(value_name = "MOUNT_POINT")]
         mount_point: PathBuf,
     },
-    
+
     /// Verify all mounted spores
     All {
         /// Show detailed binary information
@@ -50,23 +50,26 @@ pub async fn run(args: VerifyArgs) -> Result<()> {
             verify_all_spores(verbose).await?;
         }
     }
-    
+
     Ok(())
 }
 
 async fn verify_nucleus(nucleus_path: &PathBuf) -> Result<()> {
     info!("Verifying plasmidBin at: {}", nucleus_path.display());
-    
+
     println!("╔════════════════════════════════════════════════════════════════╗");
     println!("║                                                                ║");
     println!("║         🔍 PlasmidBin Verification                            ║");
     println!("║                                                                ║");
     println!("╚════════════════════════════════════════════════════════════════╝");
     println!();
-    
+
     // Check if plasmidBin exists
     if !nucleus_path.exists() {
-        println!("❌ Error: plasmidBin not found at: {}", nucleus_path.display());
+        println!(
+            "❌ Error: plasmidBin not found at: {}",
+            nucleus_path.display()
+        );
         println!();
         println!("Expected structure:");
         println!("  plasmidBin/");
@@ -79,7 +82,7 @@ async fn verify_nucleus(nucleus_path: &PathBuf) -> Result<()> {
         println!();
         return Ok(());
     }
-    
+
     // Check for MANIFEST.toml
     let manifest_path = nucleus_path.join("MANIFEST.toml");
     let manifest = if manifest_path.exists() {
@@ -89,18 +92,19 @@ async fn verify_nucleus(nucleus_path: &PathBuf) -> Result<()> {
         println!("⚠️  MANIFEST.toml not found (generating from binaries)");
         Some(BinaryManifest::from_nucleus(nucleus_path)?)
     };
-    
+
     println!();
-    
+
     if let Some(manifest) = manifest {
         println!("📋 Binary Inventory:");
         println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        
+
         for (name, binary) in &manifest.binaries {
             println!("✅ {}", name);
             println!("   Version:    {}", binary.version);
-            println!("   Size:       {} bytes ({:.2} MB)", 
-                binary.size_bytes, 
+            println!(
+                "   Size:       {} bytes ({:.2} MB)",
+                binary.size_bytes,
                 binary.size_bytes as f64 / 1_048_576.0
             );
             println!("   SHA256:     {}...", &binary.sha256[..16]);
@@ -110,26 +114,26 @@ async fn verify_nucleus(nucleus_path: &PathBuf) -> Result<()> {
             }
             println!();
         }
-        
+
         println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         println!("Total binaries: {}", manifest.binaries.len());
         println!();
         println!("✅ PlasmidBin is valid and ready for deployment");
     }
-    
+
     Ok(())
 }
 
 async fn verify_single_spore(mount_point: &PathBuf) -> Result<()> {
     info!("Verifying spore at: {}", mount_point.display());
-    
+
     println!("╔════════════════════════════════════════════════════════════════╗");
     println!("║                                                                ║");
     println!("║         🔍 Spore Verification Report                          ║");
     println!("║                                                                ║");
     println!("╚════════════════════════════════════════════════════════════════╝");
     println!();
-    
+
     // Load nucleus manifest
     let nucleus_path = PathBuf::from("plasmidBin");
     if !nucleus_path.exists() {
@@ -137,14 +141,14 @@ async fn verify_single_spore(mount_point: &PathBuf) -> Result<()> {
         println!("   Expected at: {}", nucleus_path.display());
         return Ok(());
     }
-    
+
     let verifier = SporeVerifier::from_nucleus(&nucleus_path)?;
     let report = verifier.verify_spore(mount_point)?;
-    
+
     println!("Node ID: {}", report.node_id);
     println!("Path:    {}", report.spore_path.display());
     println!();
-    
+
     // Overall status with color
     match report.overall_status {
         VerificationStatus::Fresh => {
@@ -163,11 +167,11 @@ async fn verify_single_spore(mount_point: &PathBuf) -> Result<()> {
             println!("❌ Status: {:?}", report.overall_status);
         }
     }
-    
+
     println!();
     println!("Binary Status:");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    
+
     for binary in &report.binaries {
         let (status_icon, status_text) = match binary.status {
             VerificationStatus::Fresh => ("✅", "Fresh"),
@@ -176,16 +180,18 @@ async fn verify_single_spore(mount_point: &PathBuf) -> Result<()> {
             VerificationStatus::Modified => ("⚠️ ", "Modified"),
             VerificationStatus::Newer => ("❓", "Newer"),
         };
-        
+
         println!("{} {}: {}", status_icon, binary.name, status_text);
-        println!("   Expected: v{} (SHA256: {}...)", 
-            binary.expected_version, 
+        println!(
+            "   Expected: v{} (SHA256: {}...)",
+            binary.expected_version,
             &binary.expected_sha256[..16]
         );
-        
+
         if let Some(ref actual_version) = binary.actual_version {
             if let Some(ref actual_sha256) = binary.actual_sha256 {
-                println!("   Actual:   v{} (SHA256: {}...)", 
+                println!(
+                    "   Actual:   v{} (SHA256: {}...)",
                     actual_version,
                     &actual_sha256[..16]
                 );
@@ -197,7 +203,7 @@ async fn verify_single_spore(mount_point: &PathBuf) -> Result<()> {
         }
         println!();
     }
-    
+
     if !report.recommendations.is_empty() {
         println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         println!("💡 Recommendations:");
@@ -206,20 +212,20 @@ async fn verify_single_spore(mount_point: &PathBuf) -> Result<()> {
         }
         println!();
     }
-    
+
     Ok(())
 }
 
 async fn verify_all_spores(verbose: bool) -> Result<()> {
     info!("Verifying all mounted spores");
-    
+
     println!("╔════════════════════════════════════════════════════════════════╗");
     println!("║                                                                ║");
     println!("║         🔍 All Spores Verification Report                     ║");
     println!("║                                                                ║");
     println!("╚════════════════════════════════════════════════════════════════╝");
     println!();
-    
+
     // Load nucleus manifest
     let nucleus_path = PathBuf::from("plasmidBin");
     if !nucleus_path.exists() {
@@ -227,10 +233,10 @@ async fn verify_all_spores(verbose: bool) -> Result<()> {
         println!("   Expected at: {}", nucleus_path.display());
         return Ok(());
     }
-    
+
     let verifier = SporeVerifier::from_nucleus(&nucleus_path)?;
     let reports = verifier.verify_all_spores()?;
-    
+
     if reports.is_empty() {
         println!("⚠️  No spores found");
         println!();
@@ -244,15 +250,15 @@ async fn verify_all_spores(verbose: bool) -> Result<()> {
         println!("  - primals/");
         return Ok(());
     }
-    
+
     let mut fresh_count = 0;
     let mut stale_count = 0;
     let mut other_count = 0;
-    
+
     println!("Found {} spore(s):", reports.len());
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!();
-    
+
     for report in &reports {
         let (status_icon, status_text) = match report.overall_status {
             VerificationStatus::Fresh => {
@@ -268,14 +274,15 @@ async fn verify_all_spores(verbose: bool) -> Result<()> {
                 ("❌", "Issue")
             }
         };
-        
-        println!("{} {} ({}): {}", 
-            status_icon, 
-            report.node_id, 
+
+        println!(
+            "{} {} ({}): {}",
+            status_icon,
+            report.node_id,
             report.spore_path.display(),
             status_text
         );
-        
+
         if verbose {
             for binary in &report.binaries {
                 let bin_icon = match binary.status {
@@ -286,10 +293,10 @@ async fn verify_all_spores(verbose: bool) -> Result<()> {
                 println!("   {} {}: {:?}", bin_icon, binary.name, binary.status);
             }
         }
-        
+
         println!();
     }
-    
+
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("Summary:");
     println!("  ✅ Fresh:  {}", fresh_count);
@@ -297,29 +304,28 @@ async fn verify_all_spores(verbose: bool) -> Result<()> {
     println!("  ❌ Issues: {}", other_count);
     println!("  📊 Total:  {}", reports.len());
     println!();
-    
+
     if stale_count > 0 {
         println!("💡 Recommendation:");
         println!("   Run 'biomeos spore refresh <mount>' to update stale spores");
         println!("   Or re-create spores with fresh binaries from plasmidBin");
         println!();
     }
-    
+
     if fresh_count == reports.len() {
         println!("✅ All spores are fresh and ready for deployment!");
     }
-    
+
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_verify_args_parsing() {
         // Test that the command structure is valid
         // Actual verification logic is tested in biomeos-spore
     }
 }
-

@@ -1,7 +1,7 @@
 //! Primal discovery
 //!
 //! Current implementation provides environment variable-based discovery.
-//! 
+//!
 //! ## Future Extensions
 //! - mDNS discovery (Bonjour/Avahi)
 //! - UDP multicast discovery (like Songbird's BirdSong protocol)
@@ -19,10 +19,10 @@ use crate::primal_client::handle::PrimalHandle;
 pub enum PrimalEvent {
     /// Primal discovered
     Discovered(PrimalHandle),
-    
+
     /// Primal updated
     Updated(PrimalHandle),
-    
+
     /// Primal lost
     Lost(String), // primal_id
 }
@@ -32,10 +32,10 @@ pub enum PrimalEvent {
 pub trait DiscoveryClient: Send + Sync {
     /// Discover primals with given capability
     async fn discover(&self, capability: &str) -> Result<Vec<PrimalHandle>>;
-    
+
     /// Get primal schema (if available)
     async fn get_schema(&self, primal: &PrimalHandle) -> Result<Vec<u8>>;
-    
+
     /// Subscribe to primal lifecycle events
     async fn subscribe(&self) -> Result<Receiver<PrimalEvent>>;
 }
@@ -48,7 +48,7 @@ pub struct EnvDiscoveryClient {
 impl EnvDiscoveryClient {
     pub fn new() -> Self {
         let mut endpoints = std::collections::HashMap::new();
-        
+
         // Check for well-known environment variables
         if let Ok(beardog_url) = std::env::var("BEARDOG_ENDPOINT") {
             endpoints.insert("beardog".to_string(), beardog_url);
@@ -56,14 +56,14 @@ impl EnvDiscoveryClient {
             // Default beardog endpoint
             endpoints.insert("beardog".to_string(), "http://localhost:9000".to_string());
         }
-        
+
         if let Ok(songbird_url) = std::env::var("SONGBIRD_ENDPOINT") {
             endpoints.insert("songbird".to_string(), songbird_url);
         } else if std::env::var("SONGBIRD_ORCHESTRATOR_PORT").is_ok() {
             // Default songbird endpoint
             endpoints.insert("songbird".to_string(), "http://localhost:8080".to_string());
         }
-        
+
         Self { endpoints }
     }
 }
@@ -79,7 +79,7 @@ impl DiscoveryClient for EnvDiscoveryClient {
     async fn discover(&self, capability: &str) -> Result<Vec<PrimalHandle>> {
         // Simple capability matching for known primals
         let mut handles = Vec::new();
-        
+
         match capability {
             "security" => {
                 if let Some(url) = self.endpoints.get("beardog") {
@@ -87,10 +87,12 @@ impl DiscoveryClient for EnvDiscoveryClient {
                         crate::primal_client::handle::PrimalId::new("beardog"),
                         "BearDog".to_string(),
                     );
-                    handle.endpoints.push(crate::primal_client::handle::Endpoint::new(
-                        url.clone(),
-                        "http",
-                    ));
+                    handle
+                        .endpoints
+                        .push(crate::primal_client::handle::Endpoint::new(
+                            url.clone(),
+                            "http",
+                        ));
                     handle.capabilities.push("security".to_string());
                     handles.push(handle);
                 }
@@ -101,20 +103,22 @@ impl DiscoveryClient for EnvDiscoveryClient {
                         crate::primal_client::handle::PrimalId::new("songbird"),
                         "Songbird".to_string(),
                     );
-                    handle.endpoints.push(crate::primal_client::handle::Endpoint::new(
-                        url.clone(),
-                        "http",
-                    ));
+                    handle
+                        .endpoints
+                        .push(crate::primal_client::handle::Endpoint::new(
+                            url.clone(),
+                            "http",
+                        ));
                     handle.capabilities.push("orchestration".to_string());
                     handles.push(handle);
                 }
             }
             _ => {}
         }
-        
+
         Ok(handles)
     }
-    
+
     async fn get_schema(&self, _primal: &PrimalHandle) -> Result<Vec<u8>> {
         // Future: Fetch schema from primal's /schema or /openapi endpoint
         // Would enable dynamic API discovery and validation
@@ -122,7 +126,7 @@ impl DiscoveryClient for EnvDiscoveryClient {
             message: "Schema fetching not yet implemented".to_string(),
         })
     }
-    
+
     async fn subscribe(&self) -> Result<Receiver<PrimalEvent>> {
         // Future: Implement real-time event subscription via websockets or polling
         // Would enable reactive primal lifecycle tracking
@@ -131,4 +135,3 @@ impl DiscoveryClient for EnvDiscoveryClient {
         })
     }
 }
-

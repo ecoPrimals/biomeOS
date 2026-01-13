@@ -7,11 +7,7 @@
 //! - Concurrent health monitoring
 //! - Automatic recovery
 
-use std::{
-    collections::HashMap,
-    sync::Arc,
-    time::Duration,
-};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use async_trait::async_trait;
 use tokio::{
@@ -92,10 +88,7 @@ struct PrimalRecord {
 
 impl PrimalOrchestrator {
     /// Create a new orchestrator
-    pub fn new(
-        health_monitor: Arc<PrimalHealthMonitor>,
-        retry_policy: RetryPolicy,
-    ) -> Self {
+    pub fn new(health_monitor: Arc<PrimalHealthMonitor>, retry_policy: RetryPolicy) -> Self {
         Self {
             primals: Arc::new(RwLock::new(HashMap::new())),
             health_monitor,
@@ -146,9 +139,12 @@ impl PrimalOrchestrator {
         // Get primal and its capability requirements
         let (primal, required_caps) = {
             let primals = self.primals.read().await;
-            let record = primals
-                .get(id)
-                .ok_or_else(|| BiomeError::discovery_failed(format!("Primal not found: {}", id), Some(id.to_string())))?;
+            let record = primals.get(id).ok_or_else(|| {
+                BiomeError::discovery_failed(
+                    format!("Primal not found: {}", id),
+                    Some(id.to_string()),
+                )
+            })?;
 
             if record.state == PrimalState::Running {
                 info!("Primal {} already running", id);
@@ -221,10 +217,10 @@ impl PrimalOrchestrator {
             Err(e) => {
                 error!("Failed to start primal {}: {}", id, e);
                 self.mark_failed(id, e.to_string()).await;
-                Err(BiomeError::internal_error(format!(
-                    "Failed to start {}: {}",
-                    id, e
-                ), Some("primal_start_failure")))
+                Err(BiomeError::internal_error(
+                    format!("Failed to start {}: {}", id, e),
+                    Some("primal_start_failure"),
+                ))
             }
         }
     }
@@ -245,10 +241,10 @@ impl PrimalOrchestrator {
                 .collect();
 
             if providers.is_empty() {
-                return Err(BiomeError::discovery_failed(format!(
-                    "No provider found for capability: {}",
-                    capability
-                ), Some(format!("capability:{:?}", capability))));
+                return Err(BiomeError::discovery_failed(
+                    format!("No provider found for capability: {}", capability),
+                    Some(format!("capability:{:?}", capability)),
+                ));
             }
 
             drop(primals); // Release read lock before starting
@@ -258,14 +254,20 @@ impl PrimalOrchestrator {
                 // Check if already running
                 let state = self.get_state(&provider_id).await;
                 if state == Some(PrimalState::Running) {
-                    debug!("Capability {} already provided by {}", capability, provider_id);
+                    debug!(
+                        "Capability {} already provided by {}",
+                        capability, provider_id
+                    );
                     return Ok(());
                 }
 
                 // Try to start this provider
                 match self.start_primal(&provider_id).await {
                     Ok(_) => {
-                        info!("✅ Started capability provider {} for {}", provider_id, capability);
+                        info!(
+                            "✅ Started capability provider {} for {}",
+                            provider_id, capability
+                        );
                         return Ok(());
                     }
                     Err(e) => {
@@ -278,10 +280,13 @@ impl PrimalOrchestrator {
                 }
             }
 
-            Err(BiomeError::internal_error(format!(
-                "All providers for capability {} failed to start",
-                capability
-            ), Some("capability_startup_failure")))
+            Err(BiomeError::internal_error(
+                format!(
+                    "All providers for capability {} failed to start",
+                    capability
+                ),
+                Some("capability_startup_failure"),
+            ))
         })
     }
 
@@ -292,9 +297,12 @@ impl PrimalOrchestrator {
 
         let primal = {
             let primals = self.primals.read().await;
-            let record = primals
-                .get(id)
-                .ok_or_else(|| BiomeError::discovery_failed(format!("Primal not found: {}", id), Some(id.to_string())))?;
+            let record = primals.get(id).ok_or_else(|| {
+                BiomeError::discovery_failed(
+                    format!("Primal not found: {}", id),
+                    Some(id.to_string()),
+                )
+            })?;
 
             if record.state == PrimalState::Stopped {
                 info!("Primal {} already stopped", id);
@@ -308,13 +316,12 @@ impl PrimalOrchestrator {
         self.health_monitor.unregister(id).await;
 
         // Stop the primal
-        primal
-            .stop()
-            .await
-            .map_err(|e| BiomeError::internal_error(
+        primal.stop().await.map_err(|e| {
+            BiomeError::internal_error(
                 format!("Failed to stop primal {}: {}", id, e),
-                Some("primal_stop_failure")
-            ))?;
+                Some("primal_stop_failure"),
+            )
+        })?;
 
         // Update state
         let mut primals = self.primals.write().await;
@@ -469,10 +476,11 @@ impl PrimalOrchestrator {
             }
 
             if attempts >= max_attempts {
-                return Err(BiomeError::timeout_error(format!(
-                    "Health check timeout for {}",
-                    primal.id()
-                ), 30000, Some("health_check")));
+                return Err(BiomeError::timeout_error(
+                    format!("Health check timeout for {}", primal.id()),
+                    30000,
+                    Some("health_check"),
+                ));
             }
 
             sleep(Duration::from_secs(2)).await;
@@ -536,17 +544,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_capability_based_resolution() {
-        let health_monitor = Arc::new(
-            PrimalHealthMonitor::builder()
-                .build(),
-        );
+        let health_monitor = Arc::new(PrimalHealthMonitor::builder().build());
         let retry_policy = RetryPolicy::exponential(1, Duration::from_millis(100));
 
         let orchestrator = PrimalOrchestrator::new(health_monitor, retry_policy);
 
         // Create dependency chain by capability:
         // crypto_provider (provides Security) <- discovery (requires Security) <- app (requires Discovery)
-        
+
         let crypto_provider = Arc::new(MockPrimal {
             id: PrimalId::new("crypto-provider-1".to_string()).unwrap(),
             provides: vec![Capability::Security],
@@ -577,4 +582,3 @@ mod tests {
         assert_eq!(order[2].to_string(), "app-1");
     }
 }
-

@@ -3,7 +3,7 @@
 //! Tests live interaction with the petalTongue binary over JSON-RPC.
 //! These tests require the petalTongue binary to be available in bin/primals/.
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore] // Requires live petalTongue binary
 async fn test_petaltongue_discovery() {
     // Test that we can discover and connect to petalTongue
@@ -13,11 +13,10 @@ async fn test_petaltongue_discovery() {
     println!("   Run with: cargo test --test petaltongue_integration_test -- --ignored");
 }
 
-#[tokio::test]
-#[ignore] // Requires live petalTongue binary  
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore] // Requires live petalTongue binary
 async fn test_petaltongue_ecosystem() {
     // Test ecosystem interaction between petalTongue and other primals
     println!("🌸🐿️ petalTongue + Squirrel ecosystem test");
     println!("   Requires both binaries running");
 }
-

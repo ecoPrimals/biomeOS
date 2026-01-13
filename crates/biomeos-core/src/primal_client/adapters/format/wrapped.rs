@@ -38,7 +38,7 @@ impl WrappedFormatAdapter {
     pub fn new() -> Self {
         Self
     }
-    
+
     /// Parse response into expected type
     pub async fn parse<T>(&self, response: Response) -> Result<T>
     where
@@ -49,25 +49,27 @@ impl WrappedFormatAdapter {
             message: format!("Failed to read response body: {}", e),
             body: None,
         })?;
-        
+
         // Parse as generic JSON first
-        let json: serde_json::Value = serde_json::from_str(&text).map_err(|e| ApiError::ParseError {
-            message: format!("Failed to parse wrapped response: {}", e),
-            body: Some(text.clone()),
-        })?;
-        
+        let json: serde_json::Value =
+            serde_json::from_str(&text).map_err(|e| ApiError::ParseError {
+                message: format!("Failed to parse wrapped response: {}", e),
+                body: Some(text.clone()),
+            })?;
+
         // Extract fields manually
-        let success = json.get("success")
+        let success = json
+            .get("success")
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
-        
+
         if success {
             // Success - extract and parse data
             let data_value = json.get("data").ok_or_else(|| ApiError::ParseError {
                 message: "Response marked as success but no data field present".to_string(),
                 body: Some(text.clone()),
             })?;
-            
+
             serde_json::from_value::<T>(data_value.clone()).map_err(|e| ApiError::ParseError {
                 message: format!("Failed to parse data field: {}", e),
                 body: Some(text),
@@ -97,7 +99,6 @@ impl WrappedFormatAdapter {
 
 #[cfg(test)]
 mod tests {
-    
 
     #[tokio::test]
     async fn test_wrapped_success() {
@@ -109,4 +110,3 @@ mod tests {
         // Placeholder for tests
     }
 }
-

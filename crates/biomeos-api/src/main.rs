@@ -19,17 +19,19 @@ mod state;
 mod websocket;
 
 pub use state::{AppState, Config};
-pub use websocket::{GraphEventWebSocketServer, JsonRpcRequest, JsonRpcResponse, JsonRpcError, SubscriptionFilter};
+pub use websocket::{
+    GraphEventWebSocketServer, JsonRpcError, JsonRpcRequest, JsonRpcResponse, SubscriptionFilter,
+};
 
 /// API error type
 #[derive(Debug, thiserror::Error)]
 pub enum ApiError {
     #[error("Internal server error: {0}")]
     Internal(String),
-    
+
     #[error("Primal discovery failed: {0}")]
     DiscoveryFailed(String),
-    
+
     #[error("Not found: {0}")]
     NotFound(String),
 }
@@ -41,11 +43,11 @@ impl IntoResponse for ApiError {
             ApiError::DiscoveryFailed(msg) => (StatusCode::SERVICE_UNAVAILABLE, msg),
             ApiError::NotFound(msg) => (StatusCode::NOT_FOUND, msg),
         };
-        
+
         let body = Json(serde_json::json!({
             "error": message,
         }));
-        
+
         (status, body).into_response()
     }
 }
@@ -63,7 +65,12 @@ async fn health(State(state): State<Arc<AppState>>) -> Json<HealthResponse> {
     Json(HealthResponse {
         status: "healthy".to_string(),
         version: env!("CARGO_PKG_VERSION").to_string(),
-        mode: if state.is_standalone_mode() { "standalone" } else { "live" }.to_string(),
+        mode: if state.is_standalone_mode() {
+            "standalone"
+        } else {
+            "live"
+        }
+        .to_string(),
     })
 }
 
@@ -76,14 +83,11 @@ async fn websocket_handler(
 }
 
 /// Handle WebSocket connection
-async fn handle_websocket(
-    socket: axum::extract::ws::WebSocket,
-    _state: Arc<AppState>,
-) {
+async fn handle_websocket(socket: axum::extract::ws::WebSocket, _state: Arc<AppState>) {
     use axum::extract::ws::Message;
-    
+
     let (mut sender, mut receiver) = socket.split();
-    
+
     // TODO: Integrate with GraphEventBroadcaster from state
     // For now, send a welcome message
     let welcome = serde_json::json!({
@@ -94,11 +98,15 @@ async fn handle_websocket(
             "version": env!("CARGO_PKG_VERSION"),
         }
     });
-    
-    if sender.send(Message::Text(welcome.to_string())).await.is_err() {
+
+    if sender
+        .send(Message::Text(welcome.to_string()))
+        .await
+        .is_err()
+    {
         return;
     }
-    
+
     // Handle incoming messages
     while let Some(Ok(msg)) = receiver.next().await {
         if let Message::Text(text) = msg {
@@ -119,45 +127,39 @@ async fn handle_websocket(
                                 id: req.id,
                             }
                         }
-                        "events.list_subscriptions" => {
-                            JsonRpcResponse {
-                                jsonrpc: "2.0".to_string(),
-                                result: Some(serde_json::json!({
-                                    "subscriptions": [],
-                                    "count": 0,
-                                })),
-                                error: None,
-                                id: req.id,
-                            }
-                        }
-                        _ => {
-                            JsonRpcResponse {
-                                jsonrpc: "2.0".to_string(),
-                                result: None,
-                                error: Some(JsonRpcError {
-                                    code: -32601,
-                                    message: "Method not found".to_string(),
-                                    data: None,
-                                }),
-                                id: req.id,
-                            }
-                        }
+                        "events.list_subscriptions" => JsonRpcResponse {
+                            jsonrpc: "2.0".to_string(),
+                            result: Some(serde_json::json!({
+                                "subscriptions": [],
+                                "count": 0,
+                            })),
+                            error: None,
+                            id: req.id,
+                        },
+                        _ => JsonRpcResponse {
+                            jsonrpc: "2.0".to_string(),
+                            result: None,
+                            error: Some(JsonRpcError {
+                                code: -32601,
+                                message: "Method not found".to_string(),
+                                data: None,
+                            }),
+                            id: req.id,
+                        },
                     }
                 }
-                Err(_) => {
-                    JsonRpcResponse {
-                        jsonrpc: "2.0".to_string(),
-                        result: None,
-                        error: Some(JsonRpcError {
-                            code: -32700,
-                            message: "Parse error".to_string(),
-                            data: None,
-                        }),
-                        id: None,
-                    }
-                }
+                Err(_) => JsonRpcResponse {
+                    jsonrpc: "2.0".to_string(),
+                    result: None,
+                    error: Some(JsonRpcError {
+                        code: -32700,
+                        message: "Parse error".to_string(),
+                        data: None,
+                    }),
+                    id: None,
+                },
             };
-            
+
             if let Ok(json) = serde_json::to_string(&response) {
                 let _ = sender.send(Message::Text(json)).await;
             }
@@ -175,45 +177,72 @@ async fn main() -> anyhow::Result<()> {
         )
         .init();
 
-    info!("🏗️  Starting biomeOS API Server v{}", env!("CARGO_PKG_VERSION"));
+    info!(
+        "🏗️  Starting biomeOS API Server v{}",
+        env!("CARGO_PKG_VERSION")
+    );
 
     // Build application state using modern builder pattern
     let state = AppState::builder()
         .config_from_env()
         .build_with_defaults()?;
-    
+
     let config = state.config().clone();
-    
+
     if config.standalone_mode {
         warn!("⚠️  Running in STANDALONE MODE - graceful degradation without primals");
         warn!("   Set BIOMEOS_STANDALONE_MODE=false for live primal discovery");
     } else {
         info!("✅ Running in LIVE MODE - discovering real primals");
     }
-    
+
     let state = Arc::new(state);
 
     // Build router
     let app = Router::new()
         .route("/api/v1/health", get(health))
-        .route("/api/v1/primals/discovered", get(handlers::discovery::get_discovered_primals))
-        .route("/api/v1/primals/list", get(handlers::discovery::get_discovered_primals))
-        .route("/api/v1/primals", get(handlers::discovery::get_discovered_primals))
+        .route(
+            "/api/v1/primals/discovered",
+            get(handlers::discovery::get_discovered_primals),
+        )
+        .route(
+            "/api/v1/primals/list",
+            get(handlers::discovery::get_discovered_primals),
+        )
+        .route(
+            "/api/v1/primals",
+            get(handlers::discovery::get_discovered_primals),
+        )
         .route("/api/v1/topology", get(handlers::topology::get_topology))
-        .route("/api/v1/events/stream", get(handlers::events::event_stream))  // SSE endpoint
-        .route("/api/v1/events/ws", get(websocket_handler))  // WebSocket endpoint (JSON-RPC 2.0)
-        .route("/api/v1/trust/evaluate", post(handlers::trust::evaluate_trust))
+        .route("/api/v1/events/stream", get(handlers::events::event_stream)) // SSE endpoint
+        .route("/api/v1/events/ws", get(websocket_handler)) // WebSocket endpoint (JSON-RPC 2.0)
+        .route(
+            "/api/v1/trust/evaluate",
+            post(handlers::trust::evaluate_trust),
+        )
         .route("/api/v1/trust/identity", get(handlers::trust::get_identity))
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http())
         .with_state(state.clone());
 
-    info!("🚀 biomeOS API Server listening on http://{}", config.bind_addr);
+    info!(
+        "🚀 biomeOS API Server listening on http://{}",
+        config.bind_addr
+    );
     info!("   Health: http://{}/api/v1/health", config.bind_addr);
-    info!("   Discovery: http://{}/api/v1/primals/discovered", config.bind_addr);
+    info!(
+        "   Discovery: http://{}/api/v1/primals/discovered",
+        config.bind_addr
+    );
     info!("   Topology: http://{}/api/v1/topology", config.bind_addr);
-    info!("   Events (SSE): http://{}/api/v1/events/stream", config.bind_addr);
-    info!("   Events (WebSocket JSON-RPC 2.0): ws://{}/api/v1/events/ws", config.bind_addr);
+    info!(
+        "   Events (SSE): http://{}/api/v1/events/stream",
+        config.bind_addr
+    );
+    info!(
+        "   Events (WebSocket JSON-RPC 2.0): ws://{}/api/v1/events/ws",
+        config.bind_addr
+    );
 
     // Start server
     let listener = tokio::net::TcpListener::bind(config.bind_addr).await?;
@@ -221,4 +250,3 @@ async fn main() -> anyhow::Result<()> {
 
     Ok(())
 }
-

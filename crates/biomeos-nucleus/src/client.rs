@@ -57,7 +57,7 @@ pub async fn call_unix_socket_rpc<T: serde::de::DeserializeOwned>(
     params: serde_json::Value,
 ) -> Result<T> {
     let socket_path = socket_path.as_ref();
-    
+
     debug!(
         socket = %socket_path.display(),
         method = %method,
@@ -83,7 +83,7 @@ pub async fn call_unix_socket_rpc<T: serde::de::DeserializeOwned>(
     // Serialize and send request
     let request_json = serde_json::to_string(&request)?;
     debug!(request = %request_json, "Sending JSON-RPC request");
-    
+
     write_half.write_all(request_json.as_bytes()).await?;
     write_half.write_all(b"\n").await?; // Newline delimiter
     write_half.flush().await?;
@@ -96,11 +96,12 @@ pub async fn call_unix_socket_rpc<T: serde::de::DeserializeOwned>(
     debug!(response = %response_line, "Received JSON-RPC response");
 
     // Parse response
-    let response: JsonRpcResponse = serde_json::from_str(&response_line)
-        .map_err(|e| Error::invalid_response(
+    let response: JsonRpcResponse = serde_json::from_str(&response_line).map_err(|e| {
+        Error::invalid_response(
             socket_path.display().to_string(),
-            format!("Invalid JSON-RPC response: {}", e)
-        ))?;
+            format!("Invalid JSON-RPC response: {}", e),
+        )
+    })?;
 
     // Check for error
     if let Some(error) = response.error {
@@ -111,18 +112,20 @@ pub async fn call_unix_socket_rpc<T: serde::de::DeserializeOwned>(
     }
 
     // Extract result
-    let result = response.result
-        .ok_or_else(|| Error::invalid_response(
+    let result = response.result.ok_or_else(|| {
+        Error::invalid_response(
             socket_path.display().to_string(),
-            "Missing 'result' field in JSON-RPC response"
-        ))?;
+            "Missing 'result' field in JSON-RPC response",
+        )
+    })?;
 
     // Deserialize result
-    serde_json::from_value(result)
-        .map_err(|e| Error::invalid_response(
+    serde_json::from_value(result).map_err(|e| {
+        Error::invalid_response(
             socket_path.display().to_string(),
-            format!("Failed to deserialize result: {}", e)
-        ))
+            format!("Failed to deserialize result: {}", e),
+        )
+    })
 }
 
 //
@@ -192,7 +195,11 @@ impl NucleusClient {
 
         // Layer 1: Physical Discovery (Songbird)
         let discovered = self.discovery.discover_by_capability(&request).await?;
-        info!(count = discovered.len(), "Layer 1: Discovered {} primals", discovered.len());
+        info!(
+            count = discovered.len(),
+            "Layer 1: Discovered {} primals",
+            discovered.len()
+        );
 
         let mut verified_primals = Vec::new();
 
@@ -212,7 +219,11 @@ impl NucleusClient {
             };
 
             // Layer 3: Capability Verification
-            let _capability = match self.capability.verify_capabilities(&primal, &identity.proof).await {
+            let _capability = match self
+                .capability
+                .verify_capabilities(&primal, &identity.proof)
+                .await
+            {
                 Ok(cap) => {
                     info!(primal = %primal.primal, "Layer 3: Capabilities verified ✓");
                     cap
@@ -226,7 +237,11 @@ impl NucleusClient {
             // Layer 4: Trust Evaluation (BearDog)
             // TODO: Get family seed from secure storage
             let family_seed = vec![]; // Placeholder
-            let trust = match self.trust.evaluate_trust(&primal, &identity.proof, &family_seed).await {
+            let trust = match self
+                .trust
+                .evaluate_trust(&primal, &identity.proof, &family_seed)
+                .await
+            {
                 Ok(trust) => {
                     info!(primal = %primal.primal, level = ?trust.level, "Layer 4: Trust evaluated ✓");
                     trust
@@ -322,7 +337,7 @@ mod tests {
     fn test_jsonrpc_response_deserialization() {
         let json = r#"{"jsonrpc":"2.0","result":{"success":true},"id":1}"#;
         let response: JsonRpcResponse = serde_json::from_str(json).unwrap();
-        
+
         assert_eq!(response.jsonrpc, "2.0");
         assert_eq!(response.id, 1);
         assert!(response.result.is_some());
@@ -331,13 +346,13 @@ mod tests {
 
     #[test]
     fn test_jsonrpc_error_response() {
-        let json = r#"{"jsonrpc":"2.0","error":{"code":-32600,"message":"Invalid request"},"id":1}"#;
+        let json =
+            r#"{"jsonrpc":"2.0","error":{"code":-32600,"message":"Invalid request"},"id":1}"#;
         let response: JsonRpcResponse = serde_json::from_str(json).unwrap();
-        
+
         assert!(response.error.is_some());
         let error = response.error.unwrap();
         assert_eq!(error.code, -32600);
         assert_eq!(error.message, "Invalid request");
     }
 }
-

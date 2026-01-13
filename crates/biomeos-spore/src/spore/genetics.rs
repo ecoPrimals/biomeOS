@@ -10,9 +10,9 @@
 
 use tracing::{debug, info};
 
+use super::core::Spore;
 use crate::error::{SporeError, SporeResult};
 use crate::seed::FamilySeed;
-use super::core::Spore;
 
 /// Trait for genetic seed operations on spores
 pub(super) trait GeneticsOps {
@@ -26,18 +26,14 @@ impl GeneticsOps for Spore {
         info!("Generating family seed");
 
         let seed_path = self.root_path.join(".family.seed");
-        
+
         // Use tokio::task::spawn_blocking for sync operation
         let seed_path_clone = seed_path.clone();
-        tokio::task::spawn_blocking(move || {
-            FamilySeed::generate_and_write(&seed_path_clone)
-        })
-        .await
-        .map_err(|e| SporeError::InvalidConfig(format!("Task join error: {}", e)))??;
+        tokio::task::spawn_blocking(move || FamilySeed::generate_and_write(&seed_path_clone))
+            .await
+            .map_err(|e| SporeError::InvalidConfig(format!("Task join error: {}", e)))??;
 
         debug!("Family seed generated at: {}", seed_path.display());
         Ok(())
     }
 }
-
-

@@ -15,10 +15,10 @@ use biomeos_types::PrimalId;
 pub struct DependencyGraph {
     /// Primal ID -> set of capability names it provides
     pub provides: HashMap<PrimalId, HashSet<String>>,
-    
+
     /// Primal ID -> set of capability names it requires
     pub requires: HashMap<PrimalId, HashSet<String>>,
-    
+
     /// Capability name -> primal ID that provides it
     pub capability_providers: HashMap<String, PrimalId>,
 }
@@ -31,15 +31,19 @@ impl DependencyGraph {
             requires: HashMap::new(),
             capability_providers: HashMap::new(),
         };
-        
+
         for primal in primals {
             let id = primal.id().clone();
             let provided = primal.provides();
             let required = primal.requires();
-            
-            graph.provides.insert(id.clone(), provided.iter().map(|c| c.to_string()).collect());
-            graph.requires.insert(id.clone(), required.iter().map(|c| c.to_string()).collect());
-            
+
+            graph
+                .provides
+                .insert(id.clone(), provided.iter().map(|c| c.to_string()).collect());
+            graph
+                .requires
+                .insert(id.clone(), required.iter().map(|c| c.to_string()).collect());
+
             // Map capabilities to providers
             for cap in provided {
                 let cap_str = cap.to_string();
@@ -52,33 +56,39 @@ impl DependencyGraph {
                 graph.capability_providers.insert(cap_str, id.clone());
             }
         }
-        
+
         Ok(graph)
     }
-    
+
     /// Topological sort into waves (primals that can start in parallel)
     pub fn topological_waves(&self) -> Result<Vec<Vec<PrimalId>>> {
         let mut waves = Vec::new();
         let mut started = HashSet::new();
         let mut remaining: HashSet<_> = self.provides.keys().cloned().collect();
-        
+
         while !remaining.is_empty() {
             // Find primals with all dependencies satisfied
             let mut wave: Vec<PrimalId> = remaining
                 .iter()
                 .filter(|id| {
-                    let required = self.requires.get(*id).unwrap();
-                    required.iter().all(|cap| {
-                        // Check if capability provider has started
-                        self.capability_providers
-                            .get(cap)
-                            .map(|provider| started.contains(provider))
-                            .unwrap_or(false)
-                    }) || required.is_empty()
+                    // Get requirements, or empty set if not present
+                    let required = self.requires.get(*id);
+                    match required {
+                        None => true, // No requirements means ready to start
+                        Some(req) => {
+                            req.iter().all(|cap| {
+                            // Check if capability provider has started
+                            self.capability_providers
+                                .get(cap)
+                                .map(|provider| started.contains(provider))
+                                .unwrap_or(false)
+                        }) || req.is_empty()
+                        }
+                    }
                 })
                 .cloned()
                 .collect();
-            
+
             if wave.is_empty() {
                 // No progress - circular dependency or missing capability
                 let unmet: Vec<_> = remaining
@@ -88,7 +98,8 @@ impl DependencyGraph {
                         let missing: Vec<_> = required
                             .iter()
                             .filter(|cap| {
-                                !self.capability_providers
+                                !self
+                                    .capability_providers
                                     .get(*cap)
                                     .map(|p| started.contains(p))
                                     .unwrap_or(false)
@@ -98,22 +109,22 @@ impl DependencyGraph {
                         (id.clone(), missing)
                     })
                     .collect();
-                
+
                 anyhow::bail!("Circular dependency or missing capabilities: {:?}", unmet);
             }
-            
+
             // Sort wave for deterministic ordering (by display string)
             wave.sort_by(|a, b| a.to_string().cmp(&b.to_string()));
-            
+
             // Mark as started
             for id in &wave {
                 started.insert(id.clone());
                 remaining.remove(id);
             }
-            
+
             waves.push(wave);
         }
-        
+
         Ok(waves)
     }
 }
@@ -124,19 +135,20 @@ pub async fn start_in_waves(
     primals: Vec<Arc<dyn ManagedPrimal>>,
 ) -> Result<()> {
     info!("🌊 Starting primals with concurrent wave-based orchestration");
-    
+
     // Build dependency graph
     let graph = DependencyGraph::build(&primals)?;
-    
+
     // Get startup waves
-    let waves = graph.topological_waves()
+    let waves = graph
+        .topological_waves()
         .context("Failed to resolve dependencies")?;
-    
+
     info!("📋 Resolved {} startup waves", waves.len());
     for (i, wave) in waves.iter().enumerate() {
         debug!("   Wave {}: {} primals", i + 1, wave.len());
     }
-    
+
     // Start each wave concurrently
     for (wave_num, wave) in waves.iter().enumerate() {
         info!(
@@ -144,34 +156,34 @@ pub async fn start_in_waves(
             wave_num + 1,
             wave.len()
         );
-        
+
         // Collect primals for this wave
         let wave_primals: Vec<_> = wave
             .iter()
             .filter_map(|id| primals.iter().find(|p| p.id() == id).cloned())
             .collect();
-        
+
         // Start all primals in this wave concurrently
         let mut tasks = Vec::new();
         for primal in wave_primals {
             let orch = Arc::clone(orchestrator);
             let id = primal.id().clone();
-            
+
             let task = tokio::spawn(async move {
                 debug!("🚀 Starting primal: {}", id);
                 orch.start_primal(&id).await?;
                 debug!("✅ Primal started: {}", id);
                 Ok::<_, anyhow::Error>(())
             });
-            
+
             tasks.push(task);
         }
-        
+
         // Wait for all tasks in this wave to complete
         let results = futures::future::join_all(tasks).await;
-        
+
         // Check for errors
-        for (i, result) in results.into_iter().enumerate() {
+        for (_i, result) in results.into_iter().enumerate() {
             match result {
                 Ok(Ok(())) => {}
                 Ok(Err(e)) => {
@@ -182,10 +194,10 @@ pub async fn start_in_waves(
                 }
             }
         }
-        
+
         info!("✅ Wave {} complete", wave_num + 1);
     }
-    
+
     info!("🎉 All primals started successfully!");
     Ok(())
 }
@@ -193,7 +205,7 @@ pub async fn start_in_waves(
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_empty_graph() {
         let graph = DependencyGraph {
@@ -201,29 +213,28 @@ mod tests {
             requires: HashMap::new(),
             capability_providers: HashMap::new(),
         };
-        
+
         let waves = graph.topological_waves().unwrap();
         assert_eq!(waves.len(), 0);
     }
-    
+
     #[test]
     fn test_single_wave() {
         let id1 = PrimalId::new("primal1").unwrap();
         let id2 = PrimalId::new("primal2").unwrap();
-        
+
         let mut provides = HashMap::new();
         provides.insert(id1.clone(), HashSet::new());
         provides.insert(id2.clone(), HashSet::new());
-        
+
         let graph = DependencyGraph {
             provides,
             requires: HashMap::new(),
             capability_providers: HashMap::new(),
         };
-        
+
         let waves = graph.topological_waves().unwrap();
         assert_eq!(waves.len(), 1);
         assert_eq!(waves[0].len(), 2);
     }
 }
-

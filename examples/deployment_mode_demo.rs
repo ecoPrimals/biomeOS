@@ -22,55 +22,89 @@ use biomeos_core::deployment_mode::DeploymentMode;
 fn main() {
     println!("🌱 LiveSpore Deployment Mode Detection Demo\n");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
-    
+
     // Detect the current deployment mode
     match DeploymentMode::detect() {
         Ok(mode) => {
             println!("✅ Deployment Mode Detected:");
             println!("   {}\n", mode.description());
-            
+
             // Show socket configuration
             let socket_prefix = mode.socket_prefix();
             println!("🔌 Socket Configuration:");
             println!("   Base Path: {}", socket_prefix.display());
             println!("   Example Sockets:");
-            println!("     - beardog:   {}/beardog-nat0.sock", socket_prefix.display());
-            println!("     - songbird:  {}/songbird-nat0.sock", socket_prefix.display());
-            println!("     - toadstool: {}/toadstool-nat0.sock", socket_prefix.display());
-            println!("     - nestgate:  {}/nestgate-nat0.sock\n", socket_prefix.display());
-            
+            println!(
+                "     - beardog:   {}/beardog-nat0.sock",
+                socket_prefix.display()
+            );
+            println!(
+                "     - songbird:  {}/songbird-nat0.sock",
+                socket_prefix.display()
+            );
+            println!(
+                "     - toadstool: {}/toadstool-nat0.sock",
+                socket_prefix.display()
+            );
+            println!(
+                "     - nestgate:  {}/nestgate-nat0.sock\n",
+                socket_prefix.display()
+            );
+
             // Show mode-specific information
             match mode {
-                DeploymentMode::ColdSpore { media_path, persistence, host_os } => {
+                DeploymentMode::ColdSpore {
+                    media_path,
+                    persistence,
+                    host_os,
+                } => {
                     println!("📦 Cold Spore Details:");
                     println!("   Media Path: {}", media_path.display());
-                    println!("   Persistence: {}", if persistence { "Enabled" } else { "Ephemeral" });
+                    println!(
+                        "   Persistence: {}",
+                        if persistence { "Enabled" } else { "Ephemeral" }
+                    );
                     println!("   Host OS: {}\n", host_os.name());
-                    
+
                     println!("💡 Cold Spore Mode:");
                     println!("   - Running from removable media (USB/SD)");
                     println!("   - No installation required");
-                    println!("   - {} data storage", if persistence { "Persistent" } else { "Ephemeral" });
+                    println!(
+                        "   - {} data storage",
+                        if persistence {
+                            "Persistent"
+                        } else {
+                            "Ephemeral"
+                        }
+                    );
                     println!("   - Portable across machines\n");
                 }
-                DeploymentMode::LiveSpore { root_partition, boot_partition, installed_version } => {
+                DeploymentMode::LiveSpore {
+                    root_partition,
+                    boot_partition,
+                    installed_version,
+                } => {
                     println!("💿 Live Spore Details:");
                     println!("   Root: {}", root_partition.display());
                     println!("   Boot: {}", boot_partition.display());
                     println!("   Version: {}\n", installed_version);
-                    
+
                     println!("💡 Live Spore Mode:");
                     println!("   - Installed to bare metal");
                     println!("   - Full hardware access");
                     println!("   - Maximum performance");
                     println!("   - Persistent storage on disk\n");
                 }
-                DeploymentMode::SiblingSpore { host_os, install_dir, isolation } => {
+                DeploymentMode::SiblingSpore {
+                    host_os,
+                    install_dir,
+                    isolation,
+                } => {
                     println!("🤝 Sibling Spore Details:");
                     println!("   Host OS: {}", host_os.name());
                     println!("   Install Dir: {}", install_dir.display());
                     println!("   Isolation: {:?}\n", isolation);
-                    
+
                     println!("💡 Sibling Spore Mode:");
                     println!("   - Running on top of existing OS");
                     println!("   - No repartitioning required");
@@ -87,7 +121,7 @@ fn main() {
             println!("  - Environment variables misconfigured\n");
         }
     }
-    
+
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
     println!("💡 Environment Variable Overrides:");
     println!("   BIOMEOS_DEPLOYMENT_MODE=cold|live|sibling");
@@ -95,7 +129,6 @@ fn main() {
     println!("   BIOMEOS_PERSISTENCE=true        (for cold)");
     println!("   BIOMEOS_INSTALL_DIR=~/biomeos   (for sibling)");
     println!("   BIOMEOS_ISOLATION=sandboxed|shared|full\n");
-    
+
     println!("Different orders of the same architecture. 🍄🐸🌱\n");
 }
-

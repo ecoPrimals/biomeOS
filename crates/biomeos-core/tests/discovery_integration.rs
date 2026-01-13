@@ -54,7 +54,7 @@ fn find_primal_binary(name: &str) -> Option<std::path::PathBuf> {
 // Discovery System Integration Tests
 // ============================================================================
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_discover_nestgate_if_available() {
     // Test discovering NestGate if it's available
     if let Some(nestgate_path) = find_primal_binary("nestgate") {
@@ -76,7 +76,7 @@ async fn test_discover_nestgate_if_available() {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_discover_beardog_if_available() {
     // Test discovering BearDog if it's available
     if let Some(beardog_path) = find_primal_binary("beardog") {
@@ -98,7 +98,7 @@ async fn test_discover_beardog_if_available() {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_discover_toadstool_if_available() {
     // Test discovering Toadstool if it's available
     if let Some(toadstool_path) = find_primal_binary("toadstool") {
@@ -119,7 +119,7 @@ async fn test_discover_toadstool_if_available() {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_discover_squirrel_if_available() {
     // Test discovering Squirrel if it's available
     if let Some(squirrel_path) = find_primal_binary("squirrel") {
@@ -144,7 +144,7 @@ async fn test_discover_squirrel_if_available() {
 // Multi-Primal Discovery Tests
 // ============================================================================
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_discover_multiple_primals() {
     let primal_names = vec!["nestgate", "beardog", "toadstool", "squirrel"];
     let mut discovered = Vec::new();
@@ -179,7 +179,7 @@ async fn test_discover_multiple_primals() {
 // Live Service Discovery Tests
 // ============================================================================
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_discover_running_nestgate() {
     // Check if NestGate is running on default port
     let nestgate_url = "http://localhost:9020/health";
@@ -212,7 +212,7 @@ async fn test_discover_running_nestgate() {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_capability_based_discovery() {
     // Test that we can discover primals by capability type
     // This validates the core BiomeOS discovery philosophy
@@ -265,7 +265,7 @@ async fn test_capability_based_discovery() {
 // Architecture Adaptation Tests
 // ============================================================================
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_rest_api_architecture() {
     // Test discovery of REST API-based primals (like NestGate)
     let nestgate_url = "http://localhost:9020/health";
@@ -286,7 +286,7 @@ async fn test_rest_api_architecture() {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_cli_tool_architecture() {
     // Test discovery of CLI-based primals (like BearDog, Toadstool)
     let cli_primals = vec!["beardog", "toadstool"];
@@ -317,7 +317,7 @@ async fn test_cli_tool_architecture() {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_mdns_architecture() {
     // Test discovery of mDNS-based primals (like Songbird)
     // Check if Songbird process is running
@@ -344,7 +344,7 @@ async fn test_mdns_architecture() {
 // Zero-Hardcoding Validation Tests
 // ============================================================================
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_no_hardcoded_endpoints() {
     // Validate that discovery doesn't rely on hardcoded endpoints
     // This is a philosophical test - BiomeOS should discover, not assume
@@ -386,7 +386,7 @@ async fn test_no_hardcoded_endpoints() {
 // Graceful Degradation Tests
 // ============================================================================
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_graceful_degradation_missing_primal() {
     // Test that system gracefully handles missing primals
     let result = discover_primal_interface(Path::new("/nonexistent/primal")).await;
@@ -407,7 +407,7 @@ async fn test_graceful_degradation_missing_primal() {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_graceful_degradation_unreachable_service() {
     // Test that system gracefully handles unreachable services
     let client = reqwest::Client::builder()
@@ -428,7 +428,7 @@ async fn test_graceful_degradation_unreachable_service() {
 // Federation Discovery Tests
 // ============================================================================
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_federation_discovery() {
     // Test that we can discover federated towers
     // Check if Songbird is running (indicates federation capability)
@@ -476,7 +476,7 @@ async fn test_federation_discovery() {
 // Integration Summary Test
 // ============================================================================
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_discovery_integration_summary() {
     println!("\n╔══════════════════════════════════════════════════════════╗");
     println!("║     🔍 Discovery Integration Test Summary               ║");

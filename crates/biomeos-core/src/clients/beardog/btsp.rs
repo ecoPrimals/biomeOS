@@ -220,7 +220,7 @@ impl BtspClient {
              Encryption: {}",
             tunnel_id,
             status.state,
-            status.peer_id,
+            status.peer_id.as_deref().unwrap_or("unknown"),
             status.bytes_sent,
             status.bytes_sent / 1_000_000,
             status.bytes_received,

@@ -8,7 +8,7 @@ use std::time::Duration;
 // PrimalAdapter Tests
 // ============================================================================
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_primal_adapter_new() {
     let adapter = PrimalAdapter::new("test".to_string(), PathBuf::from("/bin/test"));
 
@@ -20,7 +20,7 @@ async fn test_primal_adapter_new() {
     assert!(adapter.capabilities.lifecycle.can_refuse);
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_primal_adapter_state_transitions() {
     let mut adapter = PrimalAdapter::new("test".to_string(), PathBuf::from("/bin/test"));
 
@@ -52,7 +52,7 @@ async fn test_primal_adapter_state_transitions() {
     assert!(matches!(adapter.state, PrimalState::Stopped));
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_primal_adapter_with_version() {
     let mut adapter = PrimalAdapter::new("test".to_string(), PathBuf::from("/bin/test"));
     adapter.version = Some("1.2.3".to_string());
@@ -60,7 +60,7 @@ async fn test_primal_adapter_with_version() {
     assert_eq!(adapter.version, Some("1.2.3".to_string()));
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_primal_adapter_health_check_no_config() {
     let mut adapter = PrimalAdapter::new("test".to_string(), PathBuf::from("/bin/test"));
     adapter.state = PrimalState::Running {
@@ -73,7 +73,7 @@ async fn test_primal_adapter_health_check_no_config() {
     assert!(result);
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_primal_adapter_health_check_not_running() {
     let adapter = PrimalAdapter::new("test".to_string(), PathBuf::from("/bin/test"));
 
@@ -86,7 +86,7 @@ async fn test_primal_adapter_health_check_not_running() {
 // PrimalInterface Tests
 // ============================================================================
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_interface_direct() {
     let interface = PrimalInterface::Direct {
         args: vec!["--config".to_string(), "test.yaml".to_string()],
@@ -95,7 +95,7 @@ async fn test_interface_direct() {
     assert!(interface.is_known());
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_interface_subcommand() {
     let interface = PrimalInterface::Subcommand {
         start_cmd: "serve".to_string(),
@@ -105,7 +105,7 @@ async fn test_interface_subcommand() {
     assert!(interface.is_known());
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_interface_service() {
     let interface = PrimalInterface::Service {
         service_name: "biomeos-nestgate".to_string(),
@@ -114,7 +114,7 @@ async fn test_interface_service() {
     assert!(interface.is_known());
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_interface_docker() {
     let interface = PrimalInterface::Docker {
         image: "biomeos/nestgate:latest".to_string(),
@@ -124,7 +124,7 @@ async fn test_interface_docker() {
     assert!(interface.is_known());
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_interface_api() {
     let interface = PrimalInterface::Api {
         endpoint: "http://localhost:9000".to_string(),
@@ -135,7 +135,7 @@ async fn test_interface_api() {
     assert!(interface.is_known());
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_interface_unknown() {
     let interface = PrimalInterface::Unknown {
         attempted_patterns: vec![InterfacePattern::Direct, InterfacePattern::SubcommandServe],
@@ -148,16 +148,18 @@ async fn test_interface_unknown() {
 // InterfacePattern Tests
 // ============================================================================
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_interface_patterns_all_variants() {
-    let patterns = [InterfacePattern::Direct,
+    let patterns = [
+        InterfacePattern::Direct,
         InterfacePattern::SubcommandServe,
         InterfacePattern::SubcommandService,
         InterfacePattern::SubcommandStart,
         InterfacePattern::SubcommandRun,
         InterfacePattern::Systemd,
         InterfacePattern::Docker,
-        InterfacePattern::ApiLifecycle];
+        InterfacePattern::ApiLifecycle,
+    ];
 
     assert_eq!(patterns.len(), 8);
 }
@@ -166,7 +168,7 @@ async fn test_interface_patterns_all_variants() {
 // PrimalCapabilities Tests
 // ============================================================================
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_capabilities_full() {
     let caps = PrimalCapabilities {
         lifecycle: LifecycleCapabilities {
@@ -195,7 +197,7 @@ async fn test_capabilities_full() {
     assert!(caps.has_fast_help);
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_lifecycle_capabilities_minimal() {
     let caps = LifecycleCapabilities {
         can_start: true,
@@ -216,7 +218,7 @@ async fn test_lifecycle_capabilities_minimal() {
 // PortConfigMethod Tests
 // ============================================================================
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_port_config_env_var() {
     let config = PortConfigMethod::EnvVar("PRIMAL_PORT".to_string());
 
@@ -228,7 +230,7 @@ async fn test_port_config_env_var() {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_port_config_cli_flag() {
     let config = PortConfigMethod::CliFlag("--port".to_string());
 
@@ -240,7 +242,7 @@ async fn test_port_config_cli_flag() {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_port_config_config_file() {
     let config = PortConfigMethod::ConfigFile {
         path: "/etc/primal/config.yaml".to_string(),
@@ -256,7 +258,7 @@ async fn test_port_config_config_file() {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_port_config_multiple() {
     let methods = vec![
         PortConfigMethod::EnvVar("PORT".to_string()),
@@ -277,7 +279,7 @@ async fn test_port_config_multiple() {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_port_config_unknown() {
     let config = PortConfigMethod::Unknown;
     assert!(matches!(config, PortConfigMethod::Unknown));
@@ -287,7 +289,7 @@ async fn test_port_config_unknown() {
 // HealthCheckConfig Tests
 // ============================================================================
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_health_check_config_url_replacement() {
     let config = HealthCheckConfig {
         url_pattern: "http://localhost:PORT/health".to_string(),
@@ -302,7 +304,7 @@ async fn test_health_check_config_url_replacement() {
     assert_eq!(url_9010, "http://localhost:9010/health");
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_health_check_config_status_codes() {
     let config_200 = HealthCheckConfig {
         url_pattern: "http://localhost:PORT/health".to_string(),
@@ -320,7 +322,7 @@ async fn test_health_check_config_status_codes() {
     assert_eq!(config_204.expected_status, 204);
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_health_check_config_timeout() {
     let config = HealthCheckConfig {
         url_pattern: "http://localhost:PORT/health".to_string(),
@@ -335,13 +337,13 @@ async fn test_health_check_config_timeout() {
 // PrimalState Tests
 // ============================================================================
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_primal_state_not_started() {
     let state = PrimalState::NotStarted;
     assert!(matches!(state, PrimalState::NotStarted));
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_primal_state_starting() {
     let state = PrimalState::Starting {
         started_at: chrono::Utc::now(),
@@ -349,7 +351,7 @@ async fn test_primal_state_starting() {
     assert!(matches!(state, PrimalState::Starting { .. }));
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_primal_state_running() {
     let state = PrimalState::Running {
         pid: Some(12345),
@@ -365,7 +367,7 @@ async fn test_primal_state_running() {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_primal_state_unhealthy() {
     let state = PrimalState::Unhealthy {
         port: 9000,
@@ -381,19 +383,19 @@ async fn test_primal_state_unhealthy() {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_primal_state_stopping() {
     let state = PrimalState::Stopping;
     assert!(matches!(state, PrimalState::Stopping));
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_primal_state_stopped() {
     let state = PrimalState::Stopped;
     assert!(matches!(state, PrimalState::Stopped));
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_primal_state_unknown() {
     let state = PrimalState::Unknown;
     assert!(matches!(state, PrimalState::Unknown));
@@ -403,13 +405,13 @@ async fn test_primal_state_unknown() {
 // Default Implementation Tests
 // ============================================================================
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_primal_state_default() {
     let state = PrimalState::default();
     assert!(matches!(state, PrimalState::NotStarted));
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_primal_capabilities_default_sovereignty() {
     let caps = PrimalCapabilities::default();
 
@@ -420,7 +422,7 @@ async fn test_primal_capabilities_default_sovereignty() {
     );
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_lifecycle_capabilities_default_sovereignty() {
     let caps = LifecycleCapabilities::default();
 
@@ -441,7 +443,7 @@ async fn test_lifecycle_capabilities_default_sovereignty() {
 // Integration Tests
 // ============================================================================
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_adapter_with_all_capabilities() {
     let mut adapter = PrimalAdapter::new("full_featured".to_string(), PathBuf::from("/bin/primal"));
 
@@ -486,7 +488,7 @@ async fn test_adapter_with_all_capabilities() {
     assert_eq!(adapter.version, Some("2.1.0".to_string()));
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_adapter_serialization() {
     let adapter = PrimalAdapter::new("test".to_string(), PathBuf::from("/bin/test"));
 

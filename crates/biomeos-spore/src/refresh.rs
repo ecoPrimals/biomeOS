@@ -20,7 +20,7 @@ impl SporeRefresher {
     /// Create a new refresher from plasmidBin
     pub fn from_nucleus(nucleus_path: impl AsRef<Path>) -> Result<Self> {
         let nucleus_path = nucleus_path.as_ref().to_path_buf();
-        
+
         // Load or generate nucleus manifest
         let nucleus_manifest = match BinaryManifest::load(&nucleus_path) {
             Ok(manifest) => {
@@ -37,35 +37,40 @@ impl SporeRefresher {
                 manifest
             }
         };
-        
+
         Ok(Self {
             nucleus_manifest,
             nucleus_path,
         })
     }
-    
+
     /// Refresh a single spore (update stale binaries)
     pub fn refresh_spore(&self, spore_path: impl AsRef<Path>) -> Result<RefreshReport> {
         let spore_path = spore_path.as_ref();
-        
+
         info!("Refreshing spore at: {}", spore_path.display());
-        
+
         // First verify to see what needs updating
         let verifier = SporeVerifier::from_nucleus(&self.nucleus_path)?;
         let verification = verifier.verify_spore(spore_path)?;
-        
+
         let mut refreshed_binaries = Vec::new();
         let mut failed_binaries = Vec::new();
-        
+
         // Update each stale or missing binary
         for binary_verification in &verification.binaries {
             if matches!(
                 binary_verification.status,
-                VerificationStatus::Stale | VerificationStatus::Missing | VerificationStatus::Modified
+                VerificationStatus::Stale
+                    | VerificationStatus::Missing
+                    | VerificationStatus::Modified
             ) {
                 // Get expected binary info from nucleus
-                let nucleus_binary = self.nucleus_manifest.binaries.get(&binary_verification.name);
-                
+                let nucleus_binary = self
+                    .nucleus_manifest
+                    .binaries
+                    .get(&binary_verification.name);
+
                 if let Some(nucleus_binary) = nucleus_binary {
                     // Determine source and destination paths
                     let (source_path, dest_path) = if binary_verification.name == "tower" {
@@ -79,7 +84,7 @@ impl SporeRefresher {
                             spore_path.join("primals").join(&nucleus_binary.name),
                         )
                     };
-                    
+
                     // Copy binary
                     match self.copy_binary(&source_path, &dest_path) {
                         Ok(_) => {
@@ -109,14 +114,14 @@ impl SporeRefresher {
                 }
             }
         }
-        
+
         // Update spore manifest if any binaries were refreshed
         if !refreshed_binaries.is_empty() {
             if let Err(e) = self.update_spore_manifest(spore_path, &refreshed_binaries) {
                 warn!("Failed to update spore manifest: {}", e);
             }
         }
-        
+
         Ok(RefreshReport {
             spore_path: spore_path.to_path_buf(),
             node_id: verification.node_id,
@@ -124,26 +129,30 @@ impl SporeRefresher {
             failed_binaries,
         })
     }
-    
+
     /// Copy a binary file with verification
     fn copy_binary(&self, source: &Path, dest: &Path) -> Result<()> {
         // Read source
         let source_bytes = std::fs::read(source)?;
-        
+
         // Verify source SHA256 matches expected
         let mut hasher = Sha256::new();
         hasher.update(&source_bytes);
         let source_sha256 = format!("{:x}", hasher.finalize());
-        
+
         // Find expected SHA256 from nucleus manifest
-        let source_name = source.file_name()
+        let source_name = source
+            .file_name()
             .and_then(|n| n.to_str())
             .ok_or_else(|| anyhow::anyhow!("Invalid source filename"))?;
-        
-        let expected_sha256 = self.nucleus_manifest.binaries.values()
+
+        let expected_sha256 = self
+            .nucleus_manifest
+            .binaries
+            .values()
             .find(|b| b.name == source_name)
             .map(|b| b.sha256.as_str());
-        
+
         if let Some(expected) = expected_sha256 {
             if source_sha256 != expected {
                 return Err(anyhow::anyhow!(
@@ -153,10 +162,10 @@ impl SporeRefresher {
                 ));
             }
         }
-        
+
         // Write to destination
         std::fs::write(dest, &source_bytes)?;
-        
+
         // Set executable permissions on Unix
         #[cfg(unix)]
         {
@@ -165,12 +174,16 @@ impl SporeRefresher {
             perms.set_mode(0o755);
             std::fs::set_permissions(dest, perms)?;
         }
-        
-        info!("Copied and verified: {} → {}", source.display(), dest.display());
-        
+
+        info!(
+            "Copied and verified: {} → {}",
+            source.display(),
+            dest.display()
+        );
+
         Ok(())
     }
-    
+
     /// Update spore manifest after refresh
     fn update_spore_manifest(
         &self,
@@ -178,7 +191,7 @@ impl SporeRefresher {
         refreshed_binaries: &[RefreshedBinary],
     ) -> Result<()> {
         let manifest_path = spore_path.join(".manifest.toml");
-        
+
         // Load existing manifest or create new one
         let mut manifest = match SporeManifest::load(spore_path) {
             Ok(m) => m,
@@ -188,7 +201,7 @@ impl SporeRefresher {
                 return Ok(());
             }
         };
-        
+
         // Update binary information
         for refreshed in refreshed_binaries {
             if let Some(binary_info) = manifest.binaries.get_mut(&refreshed.name) {
@@ -197,12 +210,15 @@ impl SporeRefresher {
                 binary_info.copied_at = chrono::Utc::now();
             }
         }
-        
+
         // Save updated manifest
         manifest.save(spore_path)?;
-        
-        info!("Updated spore manifest with {} refreshed binaries", refreshed_binaries.len());
-        
+
+        info!(
+            "Updated spore manifest with {} refreshed binaries",
+            refreshed_binaries.len()
+        );
+
         Ok(())
     }
 }
@@ -238,7 +254,7 @@ impl RefreshReport {
     pub fn is_success(&self) -> bool {
         self.failed_binaries.is_empty()
     }
-    
+
     /// Check if any binaries were refreshed
     pub fn has_changes(&self) -> bool {
         !self.refreshed_binaries.is_empty()
@@ -248,26 +264,23 @@ impl RefreshReport {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_refresh_report_success() {
         let report = RefreshReport {
             spore_path: PathBuf::from("/test"),
             node_id: "test-node".to_string(),
-            refreshed_binaries: vec![
-                RefreshedBinary {
-                    name: "beardog".to_string(),
-                    old_version: Some("0.14.0".to_string()),
-                    new_version: "0.15.0".to_string(),
-                    old_sha256: Some("old_hash".to_string()),
-                    new_sha256: "new_hash".to_string(),
-                },
-            ],
+            refreshed_binaries: vec![RefreshedBinary {
+                name: "beardog".to_string(),
+                old_version: Some("0.14.0".to_string()),
+                new_version: "0.15.0".to_string(),
+                old_sha256: Some("old_hash".to_string()),
+                new_sha256: "new_hash".to_string(),
+            }],
             failed_binaries: vec![],
         };
-        
+
         assert!(report.is_success());
         assert!(report.has_changes());
     }
 }
-

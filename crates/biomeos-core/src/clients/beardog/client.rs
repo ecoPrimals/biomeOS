@@ -13,9 +13,6 @@ use async_trait::async_trait;
 use serde_json::Value;
 use tracing::{debug, info, warn};
 
-use crate::clients::transport::{TransportClient, TransportPreference};
-use crate::primal_client::{HealthStatus, PrimalClient as CorePrimalClient};
-
 use super::{access::AccessClient, btsp::BtspClient, crypto::CryptoClient, keys::KeysClient, tunnels::TunnelsClient};
 
 /// BearDog client for security and cryptography operations
@@ -47,15 +44,14 @@ impl BearDogClient {
     pub async fn discover(family_id: &str) -> Result<Self> {
         info!("🐻 Discovering BearDog primal for family '{}'", family_id);
 
-        let transport = TransportClient::discover_with_preference(
+        let transport = TransportClient::discover(
             "beardog",
             family_id,
-            TransportPreference::JsonRpcUnixSocket,
         )
         .await
         .context("Failed to discover BearDog primal")?;
 
-        debug!("✅ BearDog discovered: {}", transport.endpoint());
+        debug!("✅ BearDog discovered via {}", transport.transport_type());
 
         Ok(Self {
             transport,
@@ -95,12 +91,54 @@ impl BearDogClient {
 
     /// Get the endpoint this client is connected to
     pub fn endpoint(&self) -> String {
-        self.transport.endpoint()
+        self.transport.endpoint().to_string()
     }
 
     /// Get the family ID
     pub fn family_id(&self) -> &str {
         &self.family_id
+    }
+
+    /// Establish a BTSP tunnel to a peer
+    pub async fn establish_tunnel(&self, peer_id: &str, endpoint: &str) -> Result<super::types::TunnelInfo> {
+        let response = self.transport.call(
+            "btsp.establish_tunnel",
+            Some(serde_json::json!({
+                "peer_id": peer_id,
+                "endpoint": endpoint,
+                "family_id": self.family_id
+            }))
+        ).await?;
+        serde_json::from_value(response).context("Failed to parse tunnel info")
+    }
+
+    /// Close a BTSP tunnel
+    pub async fn close_tunnel(&self, tunnel_id: &str) -> Result<()> {
+        self.transport.call(
+            "btsp.close_tunnel",
+            Some(serde_json::json!({
+                "tunnel_id": tunnel_id,
+                "family_id": self.family_id
+            }))
+        ).await?;
+        Ok(())
+    }
+
+    /// Get tunnel status
+    pub async fn get_tunnel_status(&self, tunnel_id: &str) -> Result<super::types::TunnelStatus> {
+        let response = self.transport.call(
+            "btsp.get_tunnel_status",
+            Some(serde_json::json!({
+                "tunnel_id": tunnel_id,
+                "family_id": self.family_id
+            }))
+        ).await?;
+        serde_json::from_value(response).context("Failed to parse tunnel status")
+    }
+
+    /// Get high-level BTSP API client
+    pub fn btsp(&self) -> super::btsp::BtspClient {
+        super::btsp::BtspClient::new(self.clone())
     }
 }
 
@@ -111,7 +149,7 @@ impl PrimalClient for BearDogClient {
     }
 
     fn endpoint(&self) -> String {
-        self.transport.endpoint()
+        self.transport.endpoint().to_string()
     }
 
     async fn is_available(&self) -> bool {

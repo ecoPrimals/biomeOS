@@ -60,12 +60,12 @@
 //! ```
 
 // Module declarations
-pub mod core;
-pub mod filesystem;
 pub mod config;
-pub mod genetics;
+pub mod core;
 pub mod deployment;
 pub mod documentation;
+pub mod filesystem;
+pub mod genetics;
 pub mod types;
 
 // Re-export main types

@@ -29,7 +29,7 @@ fn is_valid_health(health: &Health) -> bool {
 }
 
 /// Test system initialization
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[traced_test]
 async fn test_system_initialization() -> Result<()> {
     info!("🚀 Testing system initialization");
@@ -46,7 +46,7 @@ async fn test_system_initialization() -> Result<()> {
 }
 
 /// Test primal discovery functionality
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[traced_test]
 async fn test_primal_discovery() -> Result<()> {
     info!("🔍 Testing primal discovery");
@@ -63,7 +63,7 @@ async fn test_primal_discovery() -> Result<()> {
 }
 
 /// Test health monitoring system
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[traced_test]
 async fn test_health_monitoring() -> Result<()> {
     info!("💚 Testing health monitoring");
@@ -89,7 +89,7 @@ async fn test_health_monitoring() -> Result<()> {
 }
 
 /// Test live service integration
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[traced_test]
 async fn test_live_service_integration() -> Result<()> {
     info!("🔗 Testing live service integration");
@@ -106,7 +106,7 @@ async fn test_live_service_integration() -> Result<()> {
 }
 
 /// Test configuration loading
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[traced_test]
 async fn test_configuration_loading() -> Result<()> {
     info!("⚙️ Testing configuration loading");
@@ -120,7 +120,7 @@ async fn test_configuration_loading() -> Result<()> {
 }
 
 /// Test continuous health checks
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[traced_test]
 async fn test_continuous_health_checks() -> Result<()> {
     info!("🔄 Testing continuous health checks");
@@ -145,7 +145,7 @@ async fn test_continuous_health_checks() -> Result<()> {
 }
 
 /// Test manager state management
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[traced_test]
 async fn test_manager_state_management() -> Result<()> {
     info!("📊 Testing manager state management");

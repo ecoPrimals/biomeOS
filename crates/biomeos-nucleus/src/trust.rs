@@ -160,7 +160,9 @@ impl TrustLayer for TrustLayerImpl {
 
         // Determine trust level
         let level = if is_family_member {
-            if relationship.as_deref() == Some("sibling") || relationship.as_deref() == Some("child") {
+            if relationship.as_deref() == Some("sibling")
+                || relationship.as_deref() == Some("child")
+            {
                 TrustLevel::Verified
             } else {
                 TrustLevel::Trusted
@@ -224,4 +226,3 @@ mod tests {
         assert!(eval.lineage_verified);
     }
 }
-

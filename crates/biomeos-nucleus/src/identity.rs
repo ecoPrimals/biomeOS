@@ -109,7 +109,10 @@ impl IdentityLayerImpl {
 
         // 1. Check environment variable
         if let Ok(socket) = std::env::var("BEARDOG_SOCKET") {
-            debug!("Found BearDog socket via BEARDOG_SOCKET env var: {}", socket);
+            debug!(
+                "Found BearDog socket via BEARDOG_SOCKET env var: {}",
+                socket
+            );
             return Ok(socket);
         }
 
@@ -117,18 +120,22 @@ impl IdentityLayerImpl {
         if let Ok(uid) = std::env::var("UID") {
             let runtime_path = format!("/run/user/{}/beardog/beardog.sock", uid);
             if tokio::fs::metadata(&runtime_path).await.is_ok() {
-                debug!("Found BearDog socket in runtime directory: {}", runtime_path);
+                debug!(
+                    "Found BearDog socket in runtime directory: {}",
+                    runtime_path
+                );
                 return Ok(runtime_path);
             }
         }
 
         // 3. Check tmp directory
-        let mut read_dir = tokio::fs::read_dir("/tmp").await
+        let mut read_dir = tokio::fs::read_dir("/tmp")
+            .await
             .map_err(|e| Error::discovery_failed(format!("Failed to read /tmp: {}", e), None))?;
 
-        while let Some(entry) = read_dir.next_entry().await
-            .map_err(|e| Error::discovery_failed(format!("Failed to read directory entry: {}", e), None))?
-        {
+        while let Some(entry) = read_dir.next_entry().await.map_err(|e| {
+            Error::discovery_failed(format!("Failed to read directory entry: {}", e), None)
+        })? {
             let path = entry.path();
             if let Some(filename) = path.file_name().and_then(|n| n.to_str()) {
                 if filename.starts_with("beardog-") && filename.ends_with(".sock") {
@@ -182,12 +189,8 @@ impl IdentityLayer for IdentityLayerImpl {
             "challenge": challenge,
         });
 
-        let response: serde_json::Value = crate::client::call_unix_socket_rpc(
-            endpoint,
-            "identity.get_proof",
-            params,
-        )
-        .await?;
+        let response: serde_json::Value =
+            crate::client::call_unix_socket_rpc(endpoint, "identity.get_proof", params).await?;
 
         // Parse proof
         let proof: IdentityProof = serde_json::from_value(response)?;
@@ -230,7 +233,10 @@ impl IdentityLayer for IdentityLayerImpl {
             .to_string();
 
         if !verified {
-            return Err(Error::identity_verification_failed(&proof.primal_name, &message));
+            return Err(Error::identity_verification_failed(
+                &proof.primal_name,
+                &message,
+            ));
         }
 
         info!(primal = %proof.primal_name, "Identity verification successful");
@@ -280,4 +286,3 @@ mod tests {
         assert_eq!(proof.process_id, 12345);
     }
 }
-

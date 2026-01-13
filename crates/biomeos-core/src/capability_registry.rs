@@ -45,9 +45,9 @@
 //! }
 //! ```
 
+use crate::Capability;
 use biomeos_types::paths::SystemPaths;
 use biomeos_types::{BiomeError, PrimalId};
-use crate::Capability;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -62,25 +62,25 @@ use tracing::{debug, error, info, warn};
 pub struct PrimalInfo {
     /// Primal ID
     pub id: PrimalId,
-    
+
     /// Capabilities this primal provides
     pub provides: Vec<Capability>,
-    
+
     /// Capabilities this primal requires
     pub requires: Vec<Capability>,
-    
+
     /// Unix socket path for IPC
     pub socket_path: Option<String>,
-    
+
     /// HTTP endpoint (if any)
     pub http_endpoint: Option<String>,
-    
+
     /// Additional metadata
     pub metadata: HashMap<String, String>,
-    
+
     /// Registration timestamp
     pub registered_at: chrono::DateTime<chrono::Utc>,
-    
+
     /// Last heartbeat timestamp
     pub last_heartbeat: chrono::DateTime<chrono::Utc>,
 }
@@ -95,24 +95,22 @@ pub enum RegistryRequest {
         request_id: String,
         params: RegisterParams,
     },
-    
+
     /// Query for capability provider
     GetProvider {
         request_id: String,
         capability: Capability,
     },
-    
+
     /// List all registered primals
-    ListPrimals {
-        request_id: String,
-    },
-    
+    ListPrimals { request_id: String },
+
     /// Heartbeat
     Heartbeat {
         request_id: String,
         primal_id: String,
     },
-    
+
     /// Unregister a primal
     Unregister {
         request_id: String,
@@ -154,13 +152,13 @@ pub enum ResponseStatus {
 pub struct CapabilityRegistry {
     /// Family ID
     family_id: String,
-    
+
     /// Registered primals (PrimalId -> PrimalInfo)
     primals: Arc<RwLock<HashMap<PrimalId, PrimalInfo>>>,
-    
+
     /// Capability index (Capability -> Vec<PrimalId>)
     capability_index: Arc<RwLock<HashMap<Capability, Vec<PrimalId>>>>,
-    
+
     /// Unix socket path
     socket_path: PathBuf,
 }
@@ -170,12 +168,14 @@ impl CapabilityRegistry {
     pub fn new(family_id: String) -> Self {
         // Use SystemPaths for XDG-compliant socket path
         let paths = SystemPaths::new().expect("Failed to initialize SystemPaths");
-        let socket_path = paths.runtime_dir().join(format!("biomeos-registry-{}.sock", family_id));
-        
+        let socket_path = paths
+            .runtime_dir()
+            .join(format!("biomeos-registry-{}.sock", family_id));
+
         info!("🔧 Creating biomeOS capability registry");
         info!("   Family: {}", family_id);
         info!("   Socket: {:?}", socket_path);
-        
+
         Self {
             family_id,
             primals: Arc::new(RwLock::new(HashMap::new())),
@@ -183,19 +183,15 @@ impl CapabilityRegistry {
             socket_path,
         }
     }
-    
+
     /// Register a primal
-    pub async fn register(
-        &self,
-        id: PrimalId,
-        params: RegisterParams,
-    ) -> Result<(), BiomeError> {
+    pub async fn register(&self, id: PrimalId, params: RegisterParams) -> Result<(), BiomeError> {
         info!("📝 Registering primal: {:?}", id);
         debug!("   Provides: {:?}", params.provides);
         debug!("   Requires: {:?}", params.requires);
-        
+
         let now = chrono::Utc::now();
-        
+
         let info = PrimalInfo {
             id: id.clone(),
             provides: params.provides.clone(),
@@ -206,13 +202,13 @@ impl CapabilityRegistry {
             registered_at: now,
             last_heartbeat: now,
         };
-        
+
         // Add to primals map
         {
             let mut primals = self.primals.write().await;
             primals.insert(id.clone(), info);
         }
-        
+
         // Update capability index
         {
             let mut index = self.capability_index.write().await;
@@ -223,21 +219,21 @@ impl CapabilityRegistry {
                     .push(id.clone());
             }
         }
-        
+
         info!("✅ Primal registered: {:?}", id);
-        
+
         Ok(())
     }
-    
+
     /// Get provider for a capability
     pub async fn get_provider(
         &self,
         capability: &Capability,
     ) -> Result<Option<PrimalInfo>, BiomeError> {
         debug!("🔍 Looking for provider of: {:?}", capability);
-        
+
         let index = self.capability_index.read().await;
-        
+
         if let Some(providers) = index.get(capability) {
             if let Some(primal_id) = providers.first() {
                 let primals = self.primals.read().await;
@@ -247,21 +243,21 @@ impl CapabilityRegistry {
                 }
             }
         }
-        
+
         warn!("❌ No provider found for: {:?}", capability);
         Ok(None)
     }
-    
+
     /// List all registered primals
     pub async fn list_primals(&self) -> Vec<PrimalInfo> {
         let primals = self.primals.read().await;
         primals.values().cloned().collect()
     }
-    
+
     /// Update heartbeat for a primal
     pub async fn heartbeat(&self, primal_id: &PrimalId) -> Result<(), BiomeError> {
         let mut primals = self.primals.write().await;
-        
+
         if let Some(info) = primals.get_mut(primal_id) {
             info.last_heartbeat = chrono::Utc::now();
             debug!("💓 Heartbeat received from: {:?}", primal_id);
@@ -275,17 +271,17 @@ impl CapabilityRegistry {
             ))
         }
     }
-    
+
     /// Unregister a primal
     pub async fn unregister(&self, primal_id: &PrimalId) -> Result<(), BiomeError> {
         info!("🗑️  Unregistering primal: {:?}", primal_id);
-        
+
         // Remove from primals map
         let info = {
             let mut primals = self.primals.write().await;
             primals.remove(primal_id)
         };
-        
+
         if let Some(info) = info {
             // Remove from capability index
             let mut index = self.capability_index.write().await;
@@ -297,7 +293,7 @@ impl CapabilityRegistry {
                     }
                 }
             }
-            
+
             info!("✅ Primal unregistered: {:?}", primal_id);
             Ok(())
         } else {
@@ -309,7 +305,7 @@ impl CapabilityRegistry {
             ))
         }
     }
-    
+
     /// Start Unix socket IPC server
     pub async fn serve(&self) -> Result<(), BiomeError> {
         // Remove existing socket if present
@@ -323,7 +319,7 @@ impl CapabilityRegistry {
                 )
             })?;
         }
-        
+
         // Create Unix listener
         let listener = UnixListener::bind(&self.socket_path).map_err(|e| {
             BiomeError::resource_error(
@@ -333,15 +329,18 @@ impl CapabilityRegistry {
                 None::<String>,
             )
         })?;
-        
-        info!("🔌 biomeOS capability registry listening on {:?}", self.socket_path);
-        
+
+        info!(
+            "🔌 biomeOS capability registry listening on {:?}",
+            self.socket_path
+        );
+
         // Accept connections
         loop {
             match listener.accept().await {
                 Ok((stream, _addr)) => {
                     let registry = self.clone();
-                    
+
                     tokio::spawn(async move {
                         if let Err(e) = registry.handle_connection(stream).await {
                             error!("Connection error: {}", e);
@@ -354,13 +353,13 @@ impl CapabilityRegistry {
             }
         }
     }
-    
+
     /// Handle a single connection
     async fn handle_connection(&self, stream: UnixStream) -> Result<(), BiomeError> {
         let (reader, mut writer) = stream.into_split();
         let mut reader = BufReader::new(reader);
         let mut line = String::new();
-        
+
         loop {
             line.clear();
             match reader.read_line(&mut line).await {
@@ -377,23 +376,40 @@ impl CapabilityRegistry {
                             continue;
                         }
                     };
-                    
+
                     // Handle request
                     let response = self.handle_request(request).await;
-                    
+
                     // Send response
-                    let response_json = serde_json::to_string(&response)
-                        .map_err(|e| BiomeError::resource_error(e.to_string(), "registry", None::<String>, None::<String>))?;
-                    
+                    let response_json = serde_json::to_string(&response).map_err(|e| {
+                        BiomeError::resource_error(
+                            e.to_string(),
+                            "registry",
+                            None::<String>,
+                            None::<String>,
+                        )
+                    })?;
+
                     writer
                         .write_all(response_json.as_bytes())
                         .await
-                        .map_err(|e| BiomeError::resource_error(e.to_string(), "registry_socket", None::<String>, None::<String>))?;
-                    
-                    writer
-                        .write_all(b"\n")
-                        .await
-                        .map_err(|e| BiomeError::resource_error(e.to_string(), "registry_socket", None::<String>, None::<String>))?;
+                        .map_err(|e| {
+                            BiomeError::resource_error(
+                                e.to_string(),
+                                "registry_socket",
+                                None::<String>,
+                                None::<String>,
+                            )
+                        })?;
+
+                    writer.write_all(b"\n").await.map_err(|e| {
+                        BiomeError::resource_error(
+                            e.to_string(),
+                            "registry_socket",
+                            None::<String>,
+                            None::<String>,
+                        )
+                    })?;
                 }
                 Err(e) => {
                     error!("Failed to read from stream: {}", e);
@@ -401,63 +417,26 @@ impl CapabilityRegistry {
                 }
             }
         }
-        
+
         Ok(())
     }
-    
+
     /// Handle a registry request
     async fn handle_request(&self, request: RegistryRequest) -> RegistryResponse {
         match request {
-            RegistryRequest::Register { id, request_id, params } => {
-                match PrimalId::new(&id) {
-                    Ok(primal_id) => match self.register(primal_id, params).await {
-                        Ok(_) => RegistryResponse {
-                            request_id,
-                            status: ResponseStatus::Success,
-                            data: Some(serde_json::json!({
-                                "message": "Primal registered successfully"
-                            })),
-                            error: None,
-                        },
-                        Err(e) => RegistryResponse {
-                            request_id,
-                            status: ResponseStatus::Error,
-                            data: None,
-                            error: Some(e.to_string()),
-                        },
-                    },
-                    Err(e) => RegistryResponse {
+            RegistryRequest::Register {
+                id,
+                request_id,
+                params,
+            } => match PrimalId::new(&id) {
+                Ok(primal_id) => match self.register(primal_id, params).await {
+                    Ok(_) => RegistryResponse {
                         request_id,
-                        status: ResponseStatus::Error,
-                        data: None,
-                        error: Some(format!("Invalid primal ID: {}", e)),
-                    },
-                }
-            }
-            
-            RegistryRequest::GetProvider { request_id, capability } => {
-                match self.get_provider(&capability).await {
-                    Ok(Some(info)) => {
-                        match serde_json::to_value(info) {
-                            Ok(data) => RegistryResponse {
-                                request_id,
-                                status: ResponseStatus::Success,
-                                data: Some(data),
-                                error: None,
-                            },
-                            Err(e) => RegistryResponse {
-                                request_id,
-                                status: ResponseStatus::Error,
-                                data: None,
-                                error: Some(format!("Failed to serialize provider info: {}", e)),
-                            },
-                        }
-                    },
-                    Ok(None) => RegistryResponse {
-                        request_id,
-                        status: ResponseStatus::NotFound,
-                        data: None,
-                        error: Some(format!("No provider found for: {:?}", capability)),
+                        status: ResponseStatus::Success,
+                        data: Some(serde_json::json!({
+                            "message": "Primal registered successfully"
+                        })),
+                        error: None,
                     },
                     Err(e) => RegistryResponse {
                         request_id,
@@ -465,9 +444,47 @@ impl CapabilityRegistry {
                         data: None,
                         error: Some(e.to_string()),
                     },
-                }
-            }
-            
+                },
+                Err(e) => RegistryResponse {
+                    request_id,
+                    status: ResponseStatus::Error,
+                    data: None,
+                    error: Some(format!("Invalid primal ID: {}", e)),
+                },
+            },
+
+            RegistryRequest::GetProvider {
+                request_id,
+                capability,
+            } => match self.get_provider(&capability).await {
+                Ok(Some(info)) => match serde_json::to_value(info) {
+                    Ok(data) => RegistryResponse {
+                        request_id,
+                        status: ResponseStatus::Success,
+                        data: Some(data),
+                        error: None,
+                    },
+                    Err(e) => RegistryResponse {
+                        request_id,
+                        status: ResponseStatus::Error,
+                        data: None,
+                        error: Some(format!("Failed to serialize provider info: {}", e)),
+                    },
+                },
+                Ok(None) => RegistryResponse {
+                    request_id,
+                    status: ResponseStatus::NotFound,
+                    data: None,
+                    error: Some(format!("No provider found for: {:?}", capability)),
+                },
+                Err(e) => RegistryResponse {
+                    request_id,
+                    status: ResponseStatus::Error,
+                    data: None,
+                    error: Some(e.to_string()),
+                },
+            },
+
             RegistryRequest::ListPrimals { request_id } => {
                 let primals = self.list_primals().await;
                 match serde_json::to_value(primals) {
@@ -485,60 +502,62 @@ impl CapabilityRegistry {
                     },
                 }
             }
-            
-            RegistryRequest::Heartbeat { request_id, primal_id } => {
-                match PrimalId::new(&primal_id) {
-                    Ok(id) => match self.heartbeat(&id).await {
-                        Ok(_) => RegistryResponse {
-                            request_id,
-                            status: ResponseStatus::Success,
-                            data: Some(serde_json::json!({
-                                "message": "Heartbeat received"
-                            })),
-                            error: None,
-                        },
-                        Err(e) => RegistryResponse {
-                            request_id,
-                            status: ResponseStatus::Error,
-                            data: None,
-                            error: Some(e.to_string()),
-                        },
+
+            RegistryRequest::Heartbeat {
+                request_id,
+                primal_id,
+            } => match PrimalId::new(&primal_id) {
+                Ok(id) => match self.heartbeat(&id).await {
+                    Ok(_) => RegistryResponse {
+                        request_id,
+                        status: ResponseStatus::Success,
+                        data: Some(serde_json::json!({
+                            "message": "Heartbeat received"
+                        })),
+                        error: None,
                     },
                     Err(e) => RegistryResponse {
                         request_id,
                         status: ResponseStatus::Error,
                         data: None,
-                        error: Some(format!("Invalid primal ID: {}", e)),
+                        error: Some(e.to_string()),
                     },
-                }
-            }
-            
-            RegistryRequest::Unregister { request_id, primal_id } => {
-                match PrimalId::new(&primal_id) {
-                    Ok(id) => match self.unregister(&id).await {
-                        Ok(_) => RegistryResponse {
-                            request_id,
-                            status: ResponseStatus::Success,
-                            data: Some(serde_json::json!({
-                                "message": "Primal unregistered successfully"
-                            })),
-                            error: None,
-                        },
-                        Err(e) => RegistryResponse {
-                            request_id,
-                            status: ResponseStatus::Error,
-                            data: None,
-                            error: Some(e.to_string()),
-                        },
+                },
+                Err(e) => RegistryResponse {
+                    request_id,
+                    status: ResponseStatus::Error,
+                    data: None,
+                    error: Some(format!("Invalid primal ID: {}", e)),
+                },
+            },
+
+            RegistryRequest::Unregister {
+                request_id,
+                primal_id,
+            } => match PrimalId::new(&primal_id) {
+                Ok(id) => match self.unregister(&id).await {
+                    Ok(_) => RegistryResponse {
+                        request_id,
+                        status: ResponseStatus::Success,
+                        data: Some(serde_json::json!({
+                            "message": "Primal unregistered successfully"
+                        })),
+                        error: None,
                     },
                     Err(e) => RegistryResponse {
                         request_id,
                         status: ResponseStatus::Error,
                         data: None,
-                        error: Some(format!("Invalid primal ID: {}", e)),
+                        error: Some(e.to_string()),
                     },
-                }
-            }
+                },
+                Err(e) => RegistryResponse {
+                    request_id,
+                    status: ResponseStatus::Error,
+                    data: None,
+                    error: Some(format!("Invalid primal ID: {}", e)),
+                },
+            },
         }
     }
 }
@@ -557,12 +576,12 @@ impl Clone for CapabilityRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_register_and_get_provider() {
         let registry = CapabilityRegistry::new("test".to_string());
-        
-        let primal_id = PrimalId::new("beardog@localhost").unwrap();
+
+        let primal_id = PrimalId::new("beardog-localhost").unwrap();
         let params = RegisterParams {
             provides: vec![Capability::Security],
             requires: vec![],
@@ -570,19 +589,19 @@ mod tests {
             http_endpoint: None,
             metadata: None,
         };
-        
+
         registry.register(primal_id.clone(), params).await.unwrap();
-        
+
         let provider = registry.get_provider(&Capability::Security).await.unwrap();
         assert!(provider.is_some());
         assert_eq!(provider.unwrap().id, primal_id);
     }
-    
+
     #[tokio::test]
     async fn test_unregister() {
         let registry = CapabilityRegistry::new("test".to_string());
-        
-        let primal_id = PrimalId::new("beardog@localhost").unwrap();
+
+        let primal_id = PrimalId::new("beardog-localhost").unwrap();
         let params = RegisterParams {
             provides: vec![Capability::Security],
             requires: vec![],
@@ -590,12 +609,11 @@ mod tests {
             http_endpoint: None,
             metadata: None,
         };
-        
+
         registry.register(primal_id.clone(), params).await.unwrap();
         registry.unregister(&primal_id).await.unwrap();
-        
+
         let provider = registry.get_provider(&Capability::Security).await.unwrap();
         assert!(provider.is_none());
     }
 }
-

@@ -44,9 +44,10 @@ impl SecretSeed {
     /// Create a new secret seed from base64 string
     pub fn new(seed: String) -> Result<Self, BirdSongError> {
         // Validate base64 format
-        base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &seed)
-            .map_err(|e| BirdSongError::InvalidCredentials(format!("Invalid base64 seed: {}", e)))?;
-        
+        base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &seed).map_err(|e| {
+            BirdSongError::InvalidCredentials(format!("Invalid base64 seed: {}", e))
+        })?;
+
         Ok(Self { seed })
     }
 
@@ -57,14 +58,16 @@ impl SecretSeed {
 
     /// Validate seed format and length
     pub fn validate(&self) -> Result<(), BirdSongError> {
-        let decoded = base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &self.seed)
-            .map_err(|e| BirdSongError::InvalidCredentials(format!("Invalid base64: {}", e)))?;
+        let decoded =
+            base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &self.seed)
+                .map_err(|e| BirdSongError::InvalidCredentials(format!("Invalid base64: {}", e)))?;
 
         // Require minimum seed length (32 bytes = 256 bits)
         if decoded.len() < 32 {
-            return Err(BirdSongError::InvalidCredentials(
-                format!("Seed too short: {} bytes (minimum 32)", decoded.len())
-            ));
+            return Err(BirdSongError::InvalidCredentials(format!(
+                "Seed too short: {} bytes (minimum 32)",
+                decoded.len()
+            )));
         }
 
         Ok(())
@@ -100,15 +103,19 @@ impl FamilyCredentials {
     pub fn from_env() -> Result<Self, BirdSongError> {
         let family_id_str = std::env::var("FAMILY_ID")
             .or_else(|_| std::env::var("BEARDOG_FAMILY_ID"))
-            .map_err(|_| BirdSongError::InvalidCredentials(
-                "Missing FAMILY_ID or BEARDOG_FAMILY_ID environment variable".to_string()
-            ))?;
+            .map_err(|_| {
+                BirdSongError::InvalidCredentials(
+                    "Missing FAMILY_ID or BEARDOG_FAMILY_ID environment variable".to_string(),
+                )
+            })?;
 
         let family_seed = std::env::var("FAMILY_SEED")
             .or_else(|_| std::env::var("BEARDOG_FAMILY_SEED"))
-            .map_err(|_| BirdSongError::InvalidCredentials(
-                "Missing FAMILY_SEED or BEARDOG_FAMILY_SEED environment variable".to_string()
-            ))?;
+            .map_err(|_| {
+                BirdSongError::InvalidCredentials(
+                    "Missing FAMILY_SEED or BEARDOG_FAMILY_SEED environment variable".to_string(),
+                )
+            })?;
 
         let family_id = FamilyId::new(family_id_str);
 
@@ -123,7 +130,7 @@ impl FamilyCredentials {
     /// age-encrypted files or integrate with system keychains (e.g., `keyring` crate).
     ///
     /// Current implementation loads from plaintext JSON for development only.
-    /// 
+    ///
     /// Future implementation should use:
     /// - age encryption (github.com/FiloSottile/age)
     /// - System keychain integration (keyring-rs)
@@ -135,8 +142,9 @@ impl FamilyCredentials {
     ) -> Result<Self, BirdSongError> {
         // Future: Implement age-encrypted file format
         // For now, load from plaintext JSON (development only)
-        let contents = std::fs::read_to_string(path.as_ref())
-            .map_err(|e| BirdSongError::InvalidCredentials(format!("Failed to read file: {}", e)))?;
+        let contents = std::fs::read_to_string(path.as_ref()).map_err(|e| {
+            BirdSongError::InvalidCredentials(format!("Failed to read file: {}", e))
+        })?;
 
         #[derive(Deserialize)]
         struct FileFormat {
@@ -169,7 +177,7 @@ impl FamilyCredentials {
         // Validate family ID format
         if self.family_id.as_str().is_empty() {
             return Err(BirdSongError::InvalidCredentials(
-                "Family ID cannot be empty".to_string()
+                "Family ID cannot be empty".to_string(),
             ));
         }
 
@@ -205,10 +213,8 @@ mod tests {
         assert!(SecretSeed::new(invalid_seed.to_string()).is_err());
 
         // Too short (less than 32 bytes)
-        let short_seed = base64::Engine::encode(
-            &base64::engine::general_purpose::STANDARD,
-            b"short"
-        );
+        let short_seed =
+            base64::Engine::encode(&base64::engine::general_purpose::STANDARD, b"short");
         let seed = SecretSeed::new(short_seed).unwrap();
         assert!(seed.validate().is_err());
     }
@@ -216,7 +222,8 @@ mod tests {
     #[test]
     fn test_family_credentials_validation() {
         let family_id = FamilyId::new("test-family");
-        let valid_seed = SecretSeed::new("iIDnVX3Tein1LFkrkkq7Wo3wsxPNek9XZqp0VL4Kn88=".to_string()).unwrap();
+        let valid_seed =
+            SecretSeed::new("iIDnVX3Tein1LFkrkkq7Wo3wsxPNek9XZqp0VL4Kn88=".to_string()).unwrap();
 
         let creds = FamilyCredentials::new(family_id, valid_seed).unwrap();
         assert_eq!(creds.family_id().as_str(), "test-family");
@@ -225,7 +232,8 @@ mod tests {
 
     #[test]
     fn test_secret_seed_debug() {
-        let seed = SecretSeed::new("iIDnVX3Tein1LFkrkkq7Wo3wsxPNek9XZqp0VL4Kn88=".to_string()).unwrap();
+        let seed =
+            SecretSeed::new("iIDnVX3Tein1LFkrkkq7Wo3wsxPNek9XZqp0VL4Kn88=".to_string()).unwrap();
         let debug_str = format!("{:?}", seed);
         assert!(debug_str.contains("REDACTED"));
         assert!(!debug_str.contains("iIDn"));
@@ -234,7 +242,8 @@ mod tests {
     #[test]
     fn test_family_credentials_debug() {
         let family_id = FamilyId::new("test-family");
-        let seed = SecretSeed::new("iIDnVX3Tein1LFkrkkq7Wo3wsxPNek9XZqp0VL4Kn88=".to_string()).unwrap();
+        let seed =
+            SecretSeed::new("iIDnVX3Tein1LFkrkkq7Wo3wsxPNek9XZqp0VL4Kn88=".to_string()).unwrap();
         let creds = FamilyCredentials::new(family_id, seed).unwrap();
 
         let debug_str = format!("{:?}", creds);
@@ -257,7 +266,10 @@ mod tests {
     #[test]
     fn test_from_env_success() {
         std::env::set_var("FAMILY_ID", "test-family");
-        std::env::set_var("FAMILY_SEED", "iIDnVX3Tein1LFkrkkq7Wo3wsxPNek9XZqp0VL4Kn88=");
+        std::env::set_var(
+            "FAMILY_SEED",
+            "iIDnVX3Tein1LFkrkkq7Wo3wsxPNek9XZqp0VL4Kn88=",
+        );
 
         let creds = FamilyCredentials::from_env().unwrap();
         assert_eq!(creds.family_id().as_str(), "test-family");
@@ -267,4 +279,3 @@ mod tests {
         std::env::remove_var("FAMILY_SEED");
     }
 }
-

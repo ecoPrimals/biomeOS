@@ -70,10 +70,7 @@ pub trait CapabilityLayer: Send + Sync {
             .collect();
 
         if !missing.is_empty() {
-            return Err(Error::capability_mismatch(
-                expected.clone(),
-                actual.clone(),
-            ));
+            return Err(Error::capability_mismatch(expected.clone(), actual.clone()));
         }
 
         info!(
@@ -115,12 +112,8 @@ impl CapabilityLayer for CapabilityLayerImpl {
 
         let params = serde_json::json!({});
 
-        let response: serde_json::Value = crate::client::call_unix_socket_rpc(
-            endpoint,
-            "get_capabilities",
-            params,
-        )
-        .await?;
+        let response: serde_json::Value =
+            crate::client::call_unix_socket_rpc(endpoint, "get_capabilities", params).await?;
 
         // Parse capability info
         let cap_info: CapabilityInfo = serde_json::from_value(response)?;
@@ -187,4 +180,3 @@ mod tests {
         assert_eq!(missing[0], &"identity".to_string());
     }
 }
-

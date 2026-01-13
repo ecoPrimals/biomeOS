@@ -21,7 +21,7 @@ use super::{
 pub struct UniversalPrimalClient {
     config: ClientConfig,
     format_adapter: FormatAdapter,     // ✅ Concrete enum, not Arc<dyn>
-    protocol_adapter: ProtocolAdapter,  // ✅ Concrete enum, not Arc<dyn>
+    protocol_adapter: ProtocolAdapter, // ✅ Concrete enum, not Arc<dyn>
     discovery: Arc<dyn DiscoveryClient>,
     cache: Arc<RwLock<ClientCache>>,
 }
@@ -31,13 +31,13 @@ impl UniversalPrimalClient {
     pub fn new(config: ClientConfig) -> Self {
         Self {
             config,
-            format_adapter: FormatAdapter::default(),     // ✅ Use enum default
-            protocol_adapter: ProtocolAdapter::default(),  // ✅ Use enum default
+            format_adapter: FormatAdapter::default(), // ✅ Use enum default
+            protocol_adapter: ProtocolAdapter::default(), // ✅ Use enum default
             discovery: Arc::new(EnvDiscoveryClient::new()),
             cache: Arc::new(RwLock::new(ClientCache::new())),
         }
     }
-    
+
     /// Set format adapter
     pub fn with_format_adapter(mut self, adapter: FormatAdapter) -> Self {
         self.format_adapter = adapter;
@@ -79,14 +79,10 @@ impl UniversalPrimalClient {
         // Check explicit endpoints
         if let Some(endpoint) = self.config.endpoints.get(capability) {
             debug!("Using explicit endpoint for {}: {}", capability, endpoint);
-            let mut handle = PrimalHandle::new(
-                PrimalId::new(capability),
-                capability.to_string(),
-            );
-            handle.endpoints.push(super::handle::Endpoint::new(
-                endpoint.clone(),
-                "http",
-            ));
+            let mut handle = PrimalHandle::new(PrimalId::new(capability), capability.to_string());
+            handle
+                .endpoints
+                .push(super::handle::Endpoint::new(endpoint.clone(), "http"));
             handle.capabilities.push(capability.to_string());
             return Ok(handle);
         }
@@ -219,4 +215,3 @@ mod tests {
         let _client = UniversalPrimalClient::new(ClientConfig::default());
     }
 }
-

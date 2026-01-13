@@ -1,0 +1,494 @@
+// SPDX-License-Identifier: APGL-3.0-or-later WITH Sovran-Exemption-1.0
+//
+// Copyright 2025 ecoPrimals Project
+// Licensed under the Affero General Public License v3.0 or later with Sovran Exemption 1.0.
+// See LICENSE file in the project root or visit https://www.gnu.org/licenses/agpl-3.0.html
+
+//! End-to-End Tests for BiomeOS
+//!
+//! These tests verify complete user workflows and system behaviors,
+//! ensuring all components work together correctly.
+
+use biomeos_core::clients::songbird::*;
+use biomeos_core::discovery_bootstrap::DiscoveryBootstrap;
+use biomeos_core::primal_client::PrimalClient;
+use biomeos_types::primal::PrimalType;
+use serde_json::json;
+use wiremock::{
+    matchers::{method, path},
+    Mock, MockServer, ResponseTemplate,
+};
+
+// ============================================================================
+// E2E: Complete Discovery Workflow
+// ============================================================================
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn test_e2e_discovery_workflow() {
+    // Setup mock Songbird (universal adapter)
+    let mock_songbird = MockServer::start().await;
+
+    // Step 1: Health check
+    Mock::given(method("GET"))
+        .and(path("/health"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "status": "healthy",
+            "message": "Songbird operational"
+        })))
+        .mount(&mock_songbird)
+        .await;
+
+    // Step 2: Service discovery
+    Mock::given(method("GET"))
+        .and(path("/api/v1/services/query/compute"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!([
+            {
+                "service_id": "toadstool-1",
+                "service_name": "toadstool",
+                "endpoint": "http://localhost:8080",
+                "capabilities": ["compute", "ai"],
+                "metadata": {
+                    "version": "1.0.0",
+                    "tags": ["gpu"]
+                }
+            }
+        ])))
+        .mount(&mock_songbird)
+        .await;
+
+    // Step 3: Register new service
+    Mock::given(method("POST"))
+        .and(path("/api/v1/services/register"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "service_id": "new-service-123"
+        })))
+        .mount(&mock_songbird)
+        .await;
+
+    // Execute workflow
+    let client = SongbirdClient::new(mock_songbird.uri());
+
+    // 1. Verify Songbird is healthy
+    let health = client.health_check().await.unwrap();
+    assert!(health.healthy);
+
+    // 2. Discover compute services
+    let compute_services = client.discover_by_capability("compute").await.unwrap();
+    assert_eq!(compute_services.len(), 1);
+    assert_eq!(compute_services[0].service_name, "toadstool");
+
+    // 3. Register a new service
+    let registration = ServiceRegistration {
+        service_name: "my-service".to_string(),
+        capabilities: vec!["storage".to_string()],
+        endpoint: "http://localhost:9000".to_string(),
+        metadata: ServiceMetadata {
+            version: "1.0.0".to_string(),
+            location: None,
+            tags: vec![],
+        },
+    };
+    let service_id = client.register_service(&registration).await.unwrap();
+    assert_eq!(service_id, "new-service-123");
+}
+
+// ============================================================================
+// E2E: Bootstrap Discovery Flow
+// ============================================================================
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn test_e2e_bootstrap_discovery() {
+    // Create bootstrap with environment variable
+    std::env::set_var("DISCOVERY_ENDPOINT", "http://test-adapter:3000");
+
+    let bootstrap = DiscoveryBootstrap::new("universal-adapter");
+    let endpoint = bootstrap.find_universal_adapter().await.unwrap();
+
+    assert_eq!(endpoint, "http://test-adapter:3000");
+
+    // Cleanup
+    std::env::remove_var("DISCOVERY_ENDPOINT");
+}
+
+// ============================================================================
+// E2E: Multi-Stage Service Discovery
+// ============================================================================
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn test_e2e_multi_stage_discovery() {
+    let mock_songbird = MockServer::start().await;
+
+    // Stage 1: Discover all services
+    Mock::given(method("GET"))
+        .and(path("/api/v1/services/query/compute"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!([
+            {
+                "service_id": "compute-1",
+                "service_name": "toadstool-east",
+                "endpoint": "http://east:8080",
+                "capabilities": ["compute"],
+                "metadata": {
+                    "version": "1.0.0",
+                    "location": {
+                        "latitude": 40.7128,
+                        "longitude": -74.0060
+                    },
+                    "tags": ["cpu"]
+                }
+            },
+            {
+                "service_id": "compute-2",
+                "service_name": "toadstool-west",
+                "endpoint": "http://west:8080",
+                "capabilities": ["compute"],
+                "metadata": {
+                    "version": "2.0.0",
+                    "location": {
+                        "latitude": 37.7749,
+                        "longitude": -122.4194
+                    },
+                    "tags": ["gpu"]
+                }
+            }
+        ])))
+        .mount(&mock_songbird)
+        .await;
+
+    let client = SongbirdClient::new(mock_songbird.uri());
+
+    // Stage 1: Get all compute services
+    let all_compute = client.discover_by_capability("compute").await.unwrap();
+    assert_eq!(all_compute.len(), 2);
+
+    // Stage 2: Filter by version
+    let v2_services = all_compute
+        .iter()
+        .filter(|s| s.metadata.version.starts_with("2."))
+        .collect::<Vec<_>>();
+    assert_eq!(v2_services.len(), 1);
+    assert_eq!(v2_services[0].service_name, "toadstool-west");
+
+    // Stage 3: Filter by tags
+    let gpu_services = all_compute
+        .iter()
+        .filter(|s| s.metadata.tags.contains(&"gpu".to_string()))
+        .collect::<Vec<_>>();
+    assert_eq!(gpu_services.len(), 1);
+    assert_eq!(gpu_services[0].service_name, "toadstool-west");
+}
+
+// ============================================================================
+// E2E: Service Registration and Health Monitoring
+// ============================================================================
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn test_e2e_service_lifecycle() {
+    let mock_songbird = MockServer::start().await;
+
+    // Registration
+    Mock::given(method("POST"))
+        .and(path("/api/v1/services/register"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "service_id": "lifecycle-test-001"
+        })))
+        .mount(&mock_songbird)
+        .await;
+
+    // Health check (initially healthy)
+    Mock::given(method("GET"))
+        .and(path("/api/health/lifecycle-test-001"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "status": "healthy",
+            "message": "Service operational"
+        })))
+        .mount(&mock_songbird)
+        .await;
+
+    let client = SongbirdClient::new(mock_songbird.uri());
+
+    // 1. Register service
+    let registration = ServiceRegistration {
+        service_name: "lifecycle-test".to_string(),
+        capabilities: vec!["compute".to_string()],
+        endpoint: "http://localhost:9999".to_string(),
+        metadata: ServiceMetadata {
+            version: "1.0.0".to_string(),
+            location: None,
+            tags: vec![],
+        },
+    };
+
+    let service_id = client.register_service(&registration).await.unwrap();
+    assert_eq!(service_id, "lifecycle-test-001");
+
+    // 2. Check health
+    let health = client.get_service_health(&service_id).await.unwrap();
+    assert!(health.healthy);
+}
+
+// ============================================================================
+// E2E: Geographic Discovery
+// ============================================================================
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn test_e2e_geographic_discovery() {
+    let mock_songbird = MockServer::start().await;
+
+    Mock::given(method("GET"))
+        .and(path("/api/v1/services/all"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!([
+            {
+                "service_id": "nyc-1",
+                "service_name": "nyc-compute",
+                "endpoint": "http://nyc:8080",
+                "capabilities": ["compute"],
+                "metadata": {
+                    "version": "1.0.0",
+                    "location": {
+                        "latitude": 40.7128,
+                        "longitude": -74.0060
+                    },
+                    "tags": []
+                }
+            },
+            {
+                "service_id": "sf-1",
+                "service_name": "sf-compute",
+                "endpoint": "http://sf:8080",
+                "capabilities": ["compute"],
+                "metadata": {
+                    "version": "1.0.0",
+                    "location": {
+                        "latitude": 37.7749,
+                        "longitude": -122.4194
+                    },
+                    "tags": []
+                }
+            },
+            {
+                "service_id": "london-1",
+                "service_name": "london-compute",
+                "endpoint": "http://london:8080",
+                "capabilities": ["compute"],
+                "metadata": {
+                    "version": "1.0.0",
+                    "location": {
+                        "latitude": 51.5074,
+                        "longitude": -0.1278
+                    },
+                    "tags": []
+                }
+            }
+        ])))
+        .mount(&mock_songbird)
+        .await;
+
+    let client = SongbirdClient::new(mock_songbird.uri());
+
+    // Find services within 500km of NYC
+    let nyc_lat = 40.7128;
+    let nyc_lon = -74.0060;
+    let nearby = client
+        .discover_by_location(nyc_lat, nyc_lon, 500.0)
+        .await
+        .unwrap();
+
+    // Should find NYC only (SF and London are too far)
+    assert_eq!(nearby.len(), 1);
+    assert_eq!(nearby[0].service_name, "nyc-compute");
+}
+
+// ============================================================================
+// E2E: Capability-Based Architecture Verification
+// ============================================================================
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn test_e2e_capability_based_no_hardcoding() {
+    let mock_songbird = MockServer::start().await;
+
+    // Multiple services with same capability but different implementations
+    Mock::given(method("GET"))
+        .and(path("/api/v1/services/query/storage"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!([
+            {
+                "service_id": "storage-impl-a",
+                "service_name": "beardog-instance-1",
+                "endpoint": "http://impl-a:9000",
+                "capabilities": ["storage"],
+                "metadata": {"version": "1.0.0", "tags": ["ssd"]}
+            },
+            {
+                "service_id": "storage-impl-b",
+                "service_name": "custom-storage-v2",
+                "endpoint": "http://impl-b:9001",
+                "capabilities": ["storage"],
+                "metadata": {"version": "2.0.0", "tags": ["nvme"]}
+            }
+        ])))
+        .mount(&mock_songbird)
+        .await;
+
+    let client = SongbirdClient::new(mock_songbird.uri());
+
+    // Discover by capability (not by hardcoded name)
+    let storage_services = client.discover_by_capability("storage").await.unwrap();
+
+    // Should find both implementations
+    assert_eq!(storage_services.len(), 2);
+
+    // Verify we're not hardcoding to specific names
+    let names: Vec<&str> = storage_services
+        .iter()
+        .map(|s| s.service_name.as_str())
+        .collect();
+    assert!(names.contains(&"beardog-instance-1"));
+    assert!(names.contains(&"custom-storage-v2"));
+
+    // All should have storage capability
+    for service in &storage_services {
+        assert!(service.capabilities.contains(&"storage".to_string()));
+    }
+}
+
+// ============================================================================
+// E2E: PrimalType Construction Patterns
+// ============================================================================
+
+#[test]
+fn test_e2e_primal_type_from_discovery() {
+    // Verify capability-based construction works for all primal types
+    let compute = PrimalType::from_discovered("compute", "any-compute-service", "1.0.0");
+    assert_eq!(compute.category, "compute");
+    assert_eq!(compute.name, "any-compute-service");
+
+    let storage = PrimalType::from_discovered("storage", "any-storage-service", "2.0.0");
+    assert_eq!(storage.category, "storage");
+
+    let discovery = PrimalType::from_discovered("discovery", "any-discovery-service", "1.5.0");
+    assert_eq!(discovery.category, "discovery");
+
+    // Community primals
+    let community = PrimalType::community("my-custom-primal", "experimental");
+    assert_eq!(community.category, "community");
+    assert_eq!(community.name, "my-custom-primal");
+    assert_eq!(
+        community.metadata.get("sub_category"),
+        Some(&"experimental".to_string())
+    );
+}
+
+// ============================================================================
+// E2E: Error Recovery Workflow
+// ============================================================================
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn test_e2e_error_recovery() {
+    let _mock_songbird = MockServer::start().await;
+
+    // Setup mock that fails first, then succeeds (simulate recovery)
+    // Note: wiremock 0.6.5 doesn't support up_to_n_times, so we test the retry pattern differently
+    let _mock_songbird = MockServer::start().await;
+    let mock_server_fail = MockServer::start().await;
+    let mock_server_success = MockServer::start().await;
+
+    // First server always fails
+    Mock::given(method("GET"))
+        .and(path("/api/v1/services/query/compute"))
+        .respond_with(ResponseTemplate::new(500))
+        .mount(&mock_server_fail)
+        .await;
+
+    // Second server succeeds
+    Mock::given(method("GET"))
+        .and(path("/api/v1/services/query/compute"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!([
+            {
+                "service_id": "compute-recovered",
+                "service_name": "toadstool",
+                "endpoint": "http://localhost:8080",
+                "capabilities": ["compute"],
+                "metadata": {"version": "1.0.0", "tags": []}
+            }
+        ])))
+        .mount(&mock_server_success)
+        .await;
+
+    // First attempt with failing server
+    let client_fail = SongbirdClient::new(mock_server_fail.uri());
+    let first_attempt = client_fail.discover_by_capability("compute").await;
+    assert!(first_attempt.is_err());
+
+    // Retry with working server (simulates recovery)
+    let client_success = SongbirdClient::new(mock_server_success.uri());
+    let second_attempt = client_success.discover_by_capability("compute").await;
+    assert!(second_attempt.is_ok());
+    let services = second_attempt.unwrap();
+    assert_eq!(services.len(), 1);
+}
+
+// ============================================================================
+// E2E: Complete User Journey
+// ============================================================================
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn test_e2e_complete_user_journey() {
+    let mock_songbird = MockServer::start().await;
+
+    // Setup mocks for complete journey
+    Mock::given(method("GET"))
+        .and(path("/health"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "status": "healthy"
+        })))
+        .mount(&mock_songbird)
+        .await;
+
+    Mock::given(method("POST"))
+        .and(path("/api/v1/services/register"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "service_id": "user-service-001"
+        })))
+        .mount(&mock_songbird)
+        .await;
+
+    Mock::given(method("GET"))
+        .and(path("/api/v1/services/query/compute"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!([
+            {
+                "service_id": "compute-001",
+                "service_name": "compute-service",
+                "endpoint": "http://compute:8080",
+                "capabilities": ["compute"],
+                "metadata": {"version": "1.0.0", "tags": []}
+            }
+        ])))
+        .mount(&mock_songbird)
+        .await;
+
+    let client = SongbirdClient::new(mock_songbird.uri());
+
+    // Journey: 1. Check system health
+    assert!(client.is_available().await);
+
+    // Journey: 2. Register my service
+    let my_service = ServiceRegistration {
+        service_name: "my-app".to_string(),
+        capabilities: vec!["web".to_string()],
+        endpoint: "http://my-app:3000".to_string(),
+        metadata: ServiceMetadata {
+            version: "1.0.0".to_string(),
+            location: None,
+            tags: vec!["frontend".to_string()],
+        },
+    };
+    let my_id = client.register_service(&my_service).await.unwrap();
+    assert!(!my_id.is_empty());
+
+    // Journey: 3. Discover compute services to use
+    let compute = client.discover_by_capability("compute").await.unwrap();
+    assert!(!compute.is_empty());
+
+    // Journey: 4. Use discovered service (simulated)
+    let compute_endpoint = &compute[0].endpoint;
+    assert!(compute_endpoint.starts_with("http://"));
+}

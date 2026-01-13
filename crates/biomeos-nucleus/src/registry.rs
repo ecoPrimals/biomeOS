@@ -9,11 +9,8 @@ use tokio::sync::RwLock;
 use tracing::{debug, info};
 
 use crate::{
-    capability::CapabilityVerification,
-    discovery::DiscoveredPrimal,
-    identity::IdentityVerification,
-    trust::TrustEvaluation,
-    TrustLevel, VerifiedPrimal,
+    capability::CapabilityVerification, discovery::DiscoveredPrimal,
+    identity::IdentityVerification, trust::TrustEvaluation, TrustLevel, VerifiedPrimal,
 };
 
 /// Primal information (full context)
@@ -64,7 +61,7 @@ impl Registry {
     /// Register a verified primal
     pub async fn register(&self, primal: VerifiedPrimal) {
         let key = format!("{}:{}", primal.name, primal.node_id);
-        
+
         info!(
             primal = %primal.name,
             node = %primal.node_id,
@@ -93,7 +90,7 @@ impl Registry {
     /// Find primals by capability
     pub async fn find_by_capability(&self, capability: &str) -> Vec<RegisteredPrimal> {
         debug!(capability = %capability, "Finding primals by capability in registry");
-        
+
         let primals = self.primals.read().await;
         primals
             .values()
@@ -105,7 +102,7 @@ impl Registry {
     /// Find primals by family
     pub async fn find_by_family(&self, family_id: &str) -> Vec<RegisteredPrimal> {
         debug!(family = %family_id, "Finding primals by family in registry");
-        
+
         let primals = self.primals.read().await;
         primals
             .values()
@@ -117,7 +114,7 @@ impl Registry {
     /// Find primals by trust level
     pub async fn find_by_trust_level(&self, min_trust: TrustLevel) -> Vec<RegisteredPrimal> {
         debug!(min_trust = ?min_trust, "Finding primals by trust level");
-        
+
         let primals = self.primals.read().await;
         primals
             .values()
@@ -130,11 +127,11 @@ impl Registry {
     pub async fn update_health(&self, name: &str, node_id: &str, healthy: bool) {
         let key = format!("{}:{}", name, node_id);
         let mut primals = self.primals.write().await;
-        
+
         if let Some(registered) = primals.get_mut(&key) {
             registered.healthy = healthy;
             registered.last_health_check = Some(chrono::Utc::now());
-            
+
             debug!(
                 primal = %name,
                 node = %node_id,
@@ -148,7 +145,7 @@ impl Registry {
     pub async fn unregister(&self, name: &str, node_id: &str) {
         let key = format!("{}:{}", name, node_id);
         let mut primals = self.primals.write().await;
-        
+
         if primals.remove(&key).is_some() {
             info!(
                 primal = %name,
@@ -167,12 +164,11 @@ impl Registry {
     /// Get registry statistics
     pub async fn stats(&self) -> RegistryStats {
         let primals = self.primals.read().await;
-        
+
         let total = primals.len();
         let healthy = primals.values().filter(|p| p.healthy).count();
-        let by_trust: HashMap<String, usize> = primals
-            .values()
-            .fold(HashMap::new(), |mut acc, p| {
+        let by_trust: HashMap<String, usize> =
+            primals.values().fold(HashMap::new(), |mut acc, p| {
                 let level = format!("{:?}", p.primal.trust_level);
                 *acc.entry(level).or_insert(0) += 1;
                 acc
@@ -241,7 +237,7 @@ mod tests {
     #[tokio::test]
     async fn test_registry_find_by_capability() {
         let registry = Registry::new();
-        
+
         let primal1 = create_test_primal("beardog", "node-alpha");
         let primal2 = create_test_primal("songbird", "node-beta");
 
@@ -268,7 +264,7 @@ mod tests {
     #[tokio::test]
     async fn test_registry_stats() {
         let registry = Registry::new();
-        
+
         let primal1 = create_test_primal("beardog", "node-alpha");
         let primal2 = create_test_primal("songbird", "node-beta");
 
@@ -280,4 +276,3 @@ mod tests {
         assert_eq!(stats.healthy_primals, 2);
     }
 }
-

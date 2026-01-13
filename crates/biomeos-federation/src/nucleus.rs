@@ -67,31 +67,31 @@ pub struct IdentityProof {
 pub struct VerifiedPrimal {
     /// Primal name (e.g., "songbird", "beardog")
     pub name: String,
-    
+
     /// Node ID (e.g., "node-alpha")
     pub node_id: String,
-    
+
     /// Family ID (e.g., "nat0")
     pub family_id: Option<String>,
-    
+
     /// Connection endpoints
     pub endpoints: Vec<PrimalEndpoint>,
-    
+
     /// Verified capabilities (queried from primal, not inferred)
     pub capabilities: CapabilitySet,
-    
+
     /// Identity proof from BearDog
     pub identity_proof: IdentityProof,
-    
+
     /// Trust level
     pub trust_level: TrustLevel,
-    
+
     /// When it was discovered
     pub discovered_at: u64,
-    
+
     /// When it was verified
     pub verified_at: u64,
-    
+
     /// Metadata
     pub metadata: HashMap<String, String>,
 }
@@ -101,19 +101,19 @@ pub struct VerifiedPrimal {
 pub enum SelectionCriteria {
     /// Any primal with this capability (highest trust level wins)
     ByCapability(Capability),
-    
+
     /// Specific node ID
     ByNodeId(String),
-    
+
     /// Specific family
     ByFamily(String),
-    
+
     /// Specific socket path
     BySocket(PathBuf),
-    
+
     /// Minimum trust level required
     MinTrustLevel(TrustLevel),
-    
+
     /// Any (first available, for testing only)
     Any,
 }
@@ -122,17 +122,18 @@ pub enum SelectionCriteria {
 pub struct SecureNucleusDiscovery {
     /// Songbird client (for Layer 1: Physical Discovery)
     songbird: Option<UnixSocketClient>,
-    
+
     /// BearDog client (for Layer 2 & 4: Identity & Trust)
     beardog: Option<BearDogClient>,
-    
+
     /// Verified primals (multiple instances per name possible)
     verified_primals: HashMap<String, Vec<VerifiedPrimal>>,
-    
+
     /// Current family ID
     family_id: Option<String>,
-    
-    /// Current node ID
+
+    /// Current node ID (reserved for future routing/identification features)
+    #[allow(dead_code)] // Will be used for multi-node routing in Phase 3
     node_id: Option<String>,
 }
 
@@ -148,7 +149,7 @@ impl SecureNucleusDiscovery {
             node_id: None,
         }
     }
-    
+
     /// Create with Songbird and BearDog clients (delegated discovery)
     pub fn with_clients(
         songbird: Option<UnixSocketClient>,
@@ -163,7 +164,7 @@ impl SecureNucleusDiscovery {
             node_id: std::env::var("NODE_ID").ok(),
         }
     }
-    
+
     /// Discover primals using insecure basic discovery (for bootstrapping)
     ///
     /// This is used when Songbird/BearDog are not yet available.
@@ -171,16 +172,16 @@ impl SecureNucleusDiscovery {
     pub async fn discover_insecure(&mut self) -> FederationResult<Vec<VerifiedPrimal>> {
         warn!("⚠️  Using insecure discovery (no Songbird/BearDog verification)");
         warn!("   This should only be used for bootstrapping!");
-        
+
         // Use basic discovery without verification
         let mut basic_discovery = PrimalDiscovery::new();
         let discovered = basic_discovery.discover().await?;
-        
+
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs();
-        
+
         // Convert to VerifiedPrimal (but with Unknown trust level)
         for primal in discovered {
             let verified = VerifiedPrimal {
@@ -201,16 +202,16 @@ impl SecureNucleusDiscovery {
                 verified_at: now,
                 metadata: primal.metadata.clone(),
             };
-            
+
             self.verified_primals
                 .entry(primal.name.clone())
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(verified);
         }
-        
+
         Ok(self.all())
     }
-    
+
     /// Discover primals using secure 5-layer protocol
     ///
     /// **Requires**: Songbird and BearDog must be available
@@ -223,14 +224,14 @@ impl SecureNucleusDiscovery {
     /// 5. Registration (biomeOS)
     pub async fn discover_secure(&mut self) -> FederationResult<Vec<VerifiedPrimal>> {
         info!("🔒 Starting secure 5-layer discovery");
-        
+
         // Verify we have required clients
         if self.songbird.is_none() && self.beardog.is_none() {
             return Err(FederationError::DiscoveryError(
                 "Cannot perform secure discovery without Songbird or BearDog".to_string(),
             ));
         }
-        
+
         // Layer 1: Physical Discovery (Songbird)
         let discovered = if let Some(ref songbird) = self.songbird {
             self.layer1_physical_discovery_songbird(songbird).await?
@@ -238,17 +239,20 @@ impl SecureNucleusDiscovery {
             // Fallback to socket scanning if no Songbird
             self.layer1_physical_discovery_sockets().await?
         };
-        
+
         info!("   Layer 1: Discovered {} primals", discovered.len());
-        
+
         // Layers 2-5: Verify each discovered primal
         for primal in discovered {
             match self.verify_primal(primal).await {
                 Ok(verified) => {
-                    info!("   ✅ Verified: {} (trust: {:?})", verified.name, verified.trust_level);
+                    info!(
+                        "   ✅ Verified: {} (trust: {:?})",
+                        verified.name, verified.trust_level
+                    );
                     self.verified_primals
                         .entry(verified.name.clone())
-                        .or_insert_with(Vec::new)
+                        .or_default()
                         .push(verified);
                 }
                 Err(e) => {
@@ -256,19 +260,22 @@ impl SecureNucleusDiscovery {
                 }
             }
         }
-        
-        info!("🔒 Secure discovery complete: {} verified", self.verified_primals.len());
-        
+
+        info!(
+            "🔒 Secure discovery complete: {} verified",
+            self.verified_primals.len()
+        );
+
         Ok(self.all())
     }
-    
+
     /// Layer 1: Physical Discovery via Songbird
     async fn layer1_physical_discovery_songbird(
         &self,
         songbird: &UnixSocketClient,
     ) -> FederationResult<Vec<DiscoveredPrimal>> {
         debug!("Layer 1: Physical Discovery (Songbird)");
-        
+
         // Query Songbird's discovery API
         let request = JsonRpcRequest::new(
             "discover_by_family",
@@ -276,7 +283,7 @@ impl SecureNucleusDiscovery {
                 "family_id": self.family_id.as_deref().unwrap_or("*")
             }),
         );
-        
+
         match songbird.call(request).await {
             Ok(response) => {
                 // Parse Songbird's response
@@ -285,27 +292,30 @@ impl SecureNucleusDiscovery {
                 Ok(vec![]) // TODO: Parse into DiscoveredPrimal
             }
             Err(e) => {
-                warn!("Songbird discovery failed: {}, falling back to socket scan", e);
+                warn!(
+                    "Songbird discovery failed: {}, falling back to socket scan",
+                    e
+                );
                 self.layer1_physical_discovery_sockets().await
             }
         }
     }
-    
+
     /// Layer 1: Physical Discovery via socket scanning (fallback)
     async fn layer1_physical_discovery_sockets(&self) -> FederationResult<Vec<DiscoveredPrimal>> {
         debug!("Layer 1: Physical Discovery (socket scan fallback)");
-        
+
         let mut basic_discovery = PrimalDiscovery::new();
         basic_discovery.discover().await
     }
-    
+
     /// Verify a primal through layers 2-5
     async fn verify_primal(&self, primal: DiscoveredPrimal) -> FederationResult<VerifiedPrimal> {
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs();
-        
+
         // Layer 2: Identity Verification (BearDog)
         let identity_proof = if let Some(ref beardog) = self.beardog {
             self.layer2_identity_verification(beardog, &primal).await?
@@ -319,17 +329,18 @@ impl SecureNucleusDiscovery {
                 timestamp: now,
             }
         };
-        
+
         // Layer 3: Capability Verification (query primal directly)
         let capabilities = self.layer3_capability_verification(&primal).await?;
-        
+
         // Layer 4: Trust Evaluation (BearDog)
         let trust_level = if let Some(ref beardog) = self.beardog {
-            self.layer4_trust_evaluation(beardog, &identity_proof).await?
+            self.layer4_trust_evaluation(beardog, &identity_proof)
+                .await?
         } else {
             TrustLevel::Basic
         };
-        
+
         // Layer 5: Registration (we do this after returning)
         Ok(VerifiedPrimal {
             name: primal.name,
@@ -344,7 +355,7 @@ impl SecureNucleusDiscovery {
             metadata: primal.metadata,
         })
     }
-    
+
     /// Layer 2: Identity Verification via BearDog
     async fn layer2_identity_verification(
         &self,
@@ -352,19 +363,19 @@ impl SecureNucleusDiscovery {
         primal: &DiscoveredPrimal,
     ) -> FederationResult<IdentityProof> {
         debug!("Layer 2: Identity Verification (BearDog)");
-        
+
         // TODO: Challenge-response protocol
         // 1. Generate challenge
         // 2. Send to primal
         // 3. Primal signs with BearDog
         // 4. We verify signature with BearDog
-        
+
         // For now, return placeholder
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs();
-        
+
         Ok(IdentityProof {
             node_id: primal.name.clone(),
             signature: "todo".to_string(),
@@ -373,31 +384,28 @@ impl SecureNucleusDiscovery {
             timestamp: now,
         })
     }
-    
+
     /// Layer 3: Capability Verification (query primal)
     async fn layer3_capability_verification(
         &self,
         primal: &DiscoveredPrimal,
     ) -> FederationResult<CapabilitySet> {
         debug!("Layer 3: Capability Verification");
-        
+
         // Find Unix socket endpoint
-        let socket_path = primal
-            .endpoints
-            .iter()
-            .find_map(|ep| {
-                if let PrimalEndpoint::UnixSocket { path } = ep {
-                    Some(path.clone())
-                } else {
-                    None
-                }
-            });
-        
+        let socket_path = primal.endpoints.iter().find_map(|ep| {
+            if let PrimalEndpoint::UnixSocket { path } = ep {
+                Some(path.clone())
+            } else {
+                None
+            }
+        });
+
         if let Some(socket_path) = socket_path {
             // Query primal for capabilities
             let client = UnixSocketClient::new(socket_path);
             let request = JsonRpcRequest::new("get_capabilities", serde_json::json!({}));
-            
+
             match client.call(request).await {
                 Ok(response) => {
                     // Parse capabilities from response
@@ -406,7 +414,10 @@ impl SecureNucleusDiscovery {
                     Ok(primal.capabilities.clone())
                 }
                 Err(e) => {
-                    warn!("Failed to query capabilities: {}, using discovered capabilities", e);
+                    warn!(
+                        "Failed to query capabilities: {}, using discovered capabilities",
+                        e
+                    );
                     Ok(primal.capabilities.clone())
                 }
             }
@@ -415,7 +426,7 @@ impl SecureNucleusDiscovery {
             Ok(primal.capabilities.clone())
         }
     }
-    
+
     /// Layer 4: Trust Evaluation via BearDog
     async fn layer4_trust_evaluation(
         &self,
@@ -423,15 +434,15 @@ impl SecureNucleusDiscovery {
         _identity_proof: &IdentityProof,
     ) -> FederationResult<TrustLevel> {
         debug!("Layer 4: Trust Evaluation (BearDog)");
-        
+
         // TODO: Use BearDog's trust evaluation API
         // - Check genetic lineage
         // - Evaluate family membership
         // - Return trust level
-        
+
         Ok(TrustLevel::Basic)
     }
-    
+
     /// Get a primal by selection criteria
     pub fn get(&self, criteria: SelectionCriteria) -> Option<&VerifiedPrimal> {
         match criteria {
@@ -480,7 +491,7 @@ impl SecureNucleusDiscovery {
             }
         }
     }
-    
+
     /// Get all instances of a primal by name
     pub fn get_all(&self, name: &str) -> Vec<&VerifiedPrimal> {
         self.verified_primals
@@ -488,7 +499,7 @@ impl SecureNucleusDiscovery {
             .map(|primals| primals.iter().collect())
             .unwrap_or_default()
     }
-    
+
     /// Get all verified primals
     pub fn all(&self) -> Vec<VerifiedPrimal> {
         self.verified_primals
@@ -496,7 +507,7 @@ impl SecureNucleusDiscovery {
             .flat_map(|primals| primals.iter().cloned())
             .collect()
     }
-    
+
     /// Get primals with a specific capability
     pub fn with_capability(&self, cap: &Capability) -> Vec<&VerifiedPrimal> {
         self.verified_primals
@@ -522,9 +533,8 @@ impl SecureNucleusDiscovery {
     pub fn inject_primal_for_testing(mut self, primal: VerifiedPrimal) -> Self {
         self.verified_primals
             .entry(primal.name.clone())
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(primal);
         self
     }
 }
-

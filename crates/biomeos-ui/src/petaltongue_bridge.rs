@@ -193,50 +193,53 @@ impl PetalTongueRPCBridge {
 
         // Get devices from system discovery
         let devices = self.discover_devices().await?;
-        
+
         // Update cache
         let mut cache = self.cache.write().await;
         cache.devices = devices.clone();
         cache.last_update = Some(std::time::Instant::now());
-        
+
         Ok(devices)
     }
-    
+
     /// Discover devices from the system
     async fn discover_devices(&self) -> Result<Vec<Device>> {
         let mut devices = Vec::new();
-        
+
         // Discover GPUs
         if let Ok(gpus) = self.discover_gpus().await {
             devices.extend(gpus);
         }
-        
+
         // Discover CPUs
         if let Ok(cpus) = self.discover_cpus().await {
             devices.extend(cpus);
         }
-        
+
         // Discover storage
         if let Ok(storage) = self.discover_storage().await {
             devices.extend(storage);
         }
-        
+
         // Discover network interfaces
         if let Ok(network) = self.discover_network().await {
             devices.extend(network);
         }
-        
+
         info!("📱 Discovered {} devices", devices.len());
         Ok(devices)
     }
-    
+
     /// Discover GPU devices
     async fn discover_gpus(&self) -> Result<Vec<Device>> {
         let mut gpus = Vec::new();
-        
+
         // Try nvidia-smi for NVIDIA GPUs
         if let Ok(output) = tokio::process::Command::new("nvidia-smi")
-            .args(&["--query-gpu=index,name,memory.total,memory.used", "--format=csv,noheader,nounits"])
+            .args(&[
+                "--query-gpu=index,name,memory.total,memory.used",
+                "--format=csv,noheader,nounits",
+            ])
             .output()
             .await
         {
@@ -248,7 +251,7 @@ impl PetalTongueRPCBridge {
                         let memory_used: f64 = parts[3].parse().unwrap_or(0.0);
                         let memory_total: f64 = parts[2].parse().unwrap_or(1.0);
                         let usage = memory_used / memory_total;
-                        
+
                         gpus.push(Device {
                             id: format!("gpu-{}", parts[0]),
                             name: parts[1].to_string(),
@@ -266,7 +269,7 @@ impl PetalTongueRPCBridge {
                 }
             }
         }
-        
+
         // If no GPUs found via nvidia-smi, add a mock GPU for demo
         if gpus.is_empty() {
             gpus.push(Device {
@@ -279,19 +282,19 @@ impl PetalTongueRPCBridge {
                 metadata: serde_json::json!({"vendor": "System", "note": "No discrete GPU detected"}),
             });
         }
-        
+
         Ok(gpus)
     }
-    
+
     /// Discover CPU devices
     async fn discover_cpus(&self) -> Result<Vec<Device>> {
         let mut cpus = Vec::new();
-        
+
         // Read /proc/cpuinfo for CPU details
         if let Ok(cpuinfo) = tokio::fs::read_to_string("/proc/cpuinfo").await {
             let mut cpu_count = 0;
             let mut cpu_name = "Unknown CPU".to_string();
-            
+
             for line in cpuinfo.lines() {
                 if line.starts_with("processor") {
                     cpu_count += 1;
@@ -301,10 +304,10 @@ impl PetalTongueRPCBridge {
                     }
                 }
             }
-            
+
             // Get current CPU usage from /proc/stat
             let usage = self.get_cpu_usage().await.unwrap_or(0.0);
-            
+
             cpus.push(Device {
                 id: "cpu-0".to_string(),
                 name: cpu_name,
@@ -318,10 +321,10 @@ impl PetalTongueRPCBridge {
                 }),
             });
         }
-        
+
         Ok(cpus)
     }
-    
+
     /// Get current CPU usage
     async fn get_cpu_usage(&self) -> Result<f64> {
         // This is a simplified version - real implementation would track over time
@@ -333,7 +336,7 @@ impl PetalTongueRPCBridge {
                         .skip(1)
                         .filter_map(|s| s.parse().ok())
                         .collect();
-                    
+
                     if values.len() >= 4 {
                         let idle = values[3];
                         let total: u64 = values.iter().sum();
@@ -345,11 +348,11 @@ impl PetalTongueRPCBridge {
         }
         Ok(0.5) // Default to 50% if can't read
     }
-    
+
     /// Discover storage devices
     async fn discover_storage(&self) -> Result<Vec<Device>> {
         let mut storage_devs = Vec::new();
-        
+
         // Read /proc/mounts for mounted filesystems
         if let Ok(mounts) = tokio::fs::read_to_string("/proc/mounts").await {
             for line in mounts.lines() {
@@ -374,19 +377,20 @@ impl PetalTongueRPCBridge {
                 }
             }
         }
-        
+
         Ok(storage_devs)
     }
-    
+
     /// Discover network interfaces
     async fn discover_network(&self) -> Result<Vec<Device>> {
         let mut network_devs = Vec::new();
-        
+
         // Read /sys/class/net for network interfaces
         if let Ok(mut entries) = tokio::fs::read_dir("/sys/class/net").await {
             while let Ok(Some(entry)) = entries.next_entry().await {
                 if let Some(name) = entry.file_name().to_str() {
-                    if name != "lo" { // Skip loopback
+                    if name != "lo" {
+                        // Skip loopback
                         network_devs.push(Device {
                             id: format!("net-{}", name),
                             name: format!("Network: {}", name),
@@ -400,7 +404,7 @@ impl PetalTongueRPCBridge {
                 }
             }
         }
-        
+
         Ok(network_devs)
     }
 
@@ -412,41 +416,42 @@ impl PetalTongueRPCBridge {
 
         // Discover primals from running processes and sockets
         let primals = self.discover_primals().await?;
-        
+
         // Update cache
         let mut cache = self.cache.write().await;
         cache.primals = primals.clone();
         cache.last_update = Some(std::time::Instant::now());
-        
+
         Ok(primals)
     }
-    
+
     /// Discover running primals
     async fn discover_primals(&self) -> Result<Vec<Primal>> {
         let mut primals = Vec::new();
-        
+
         // Check for running primal processes and their sockets
         let uid = std::env::var("UID").unwrap_or_else(|_| "1000".to_string());
         let socket_dir = format!("/run/user/{}", uid);
-        
+
         // Look for primal sockets
         if let Ok(mut entries) = tokio::fs::read_dir(&socket_dir).await {
             while let Ok(Some(entry)) = entries.next_entry().await {
                 if let Some(name) = entry.file_name().to_str() {
-                    // Check for primal socket patterns
-                    if name.contains("songbird") || name.contains("beardog") || 
-                       name.contains("toadstool") || name.contains("nestgate") || 
-                       name.contains("squirrel") {
-                        
-                        let primal_name = self.extract_primal_name(name);
+                    // EVOLUTION: Check for any .sock file, not just known names
+                    if name.ends_with(".sock") {
+                        let socket_path = format!("{}/{}", socket_dir, name);
+
+                        // Query primal for its identity (TRUE PRIMAL principle)
+                        let primal_name = self.query_primal_identity(&socket_path).await;
                         let primal_id = primal_name.to_lowercase();
-                        
+
                         // Try to get health status
-                        let (health, load, status) = self.probe_primal_health(&socket_dir, name).await;
-                        
+                        let (health, load, status) =
+                            self.probe_primal_health(&socket_dir, name).await;
+
                         // Get capabilities based on primal type
                         let capabilities = self.get_primal_capabilities(&primal_id);
-                        
+
                         primals.push(Primal {
                             id: primal_id.clone(),
                             name: primal_name,
@@ -464,7 +469,7 @@ impl PetalTongueRPCBridge {
                 }
             }
         }
-        
+
         // Add biomeOS itself
         primals.push(Primal {
             id: "biomeos".to_string(),
@@ -480,32 +485,83 @@ impl PetalTongueRPCBridge {
             assigned_devices: vec![],
             metadata: serde_json::json!({"self": true}),
         });
-        
+
         info!("🎵 Discovered {} primals", primals.len());
         Ok(primals)
     }
-    
-    /// Extract primal name from socket filename
-    fn extract_primal_name(&self, socket_name: &str) -> String {
-        if socket_name.contains("songbird") {
-            "Songbird".to_string()
-        } else if socket_name.contains("beardog") {
-            "BearDog".to_string()
-        } else if socket_name.contains("toadstool") {
-            "ToadStool".to_string()
-        } else if socket_name.contains("nestgate") {
-            "NestGate".to_string()
-        } else if socket_name.contains("squirrel") {
-            "Squirrel".to_string()
-        } else {
-            "Unknown".to_string()
+
+    /// Query primal for its identity via JSON-RPC
+    ///
+    /// EVOLUTION: Now query-based, not name-based!
+    /// Primals announce their own identity (TRUE PRIMAL principle).
+    async fn query_primal_identity(&self, socket_path: &str) -> String {
+        // Try to connect and query the primal
+        match tokio::net::UnixStream::connect(socket_path).await {
+            Ok(mut stream) => {
+                // Send JSON-RPC request for identity
+                let request = serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "method": "get_primal_info",
+                    "params": {},
+                    "id": 1
+                });
+
+                if let Ok(request_bytes) = serde_json::to_vec(&request) {
+                    use tokio::io::AsyncWriteExt;
+                    if stream.write_all(&request_bytes).await.is_ok() {
+                        use tokio::io::AsyncReadExt;
+                        let mut response_buf = vec![0u8; 4096];
+                        if let Ok(n) = stream.read(&mut response_buf).await {
+                            response_buf.truncate(n);
+                            if let Ok(response) =
+                                serde_json::from_slice::<serde_json::Value>(&response_buf)
+                            {
+                                if let Some(name) = response
+                                    .get("result")
+                                    .and_then(|r| r.get("name"))
+                                    .and_then(|n| n.as_str())
+                                {
+                                    return name.to_string();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Err(_) => {}
         }
+
+        // Fallback: extract from socket filename if query fails
+        // This maintains backward compatibility during migration
+        self.fallback_name_from_socket(socket_path)
     }
-    
+
+    /// Fallback: Extract primal name from socket filename
+    ///
+    /// Used only when JSON-RPC query fails (during migration/compatibility).
+    fn fallback_name_from_socket(&self, socket_path: &str) -> String {
+        let socket_name = socket_path.rsplit('/').next().unwrap_or(socket_path);
+
+        // Generic extraction from filename (e.g., "beardog-nat0.sock" -> "BearDog")
+        if let Some(base_name) = socket_name.split('-').next() {
+            // Capitalize first letter
+            let mut chars = base_name.chars();
+            if let Some(first) = chars.next() {
+                return first.to_uppercase().chain(chars).collect();
+            }
+        }
+
+        "Unknown".to_string()
+    }
+
     /// Probe primal health via JSON-RPC
-    async fn probe_primal_health(&self, socket_dir: &str, socket_name: &str) -> (f64, f64, PrimalStatus) {
+    async fn probe_primal_health(
+        &self,
+        socket_dir: &str,
+        socket_name: &str,
+    ) -> (f64, f64, PrimalStatus) {
         let socket_path = format!("{}/{}", socket_dir, socket_name);
-        
+
         // Try to connect to the socket
         match tokio::net::UnixStream::connect(&socket_path).await {
             Ok(_stream) => {
@@ -519,12 +575,66 @@ impl PetalTongueRPCBridge {
             }
         }
     }
-    
-    /// Get known capabilities for a primal type
+
+    /// Query primal for its capabilities via JSON-RPC
+    ///
+    /// EVOLUTION: Query-based, not hardcoded mapping!
+    async fn query_primal_capabilities(&self, socket_path: &str) -> Vec<String> {
+        // Try to connect and query the primal
+        match tokio::net::UnixStream::connect(socket_path).await {
+            Ok(mut stream) => {
+                // Send JSON-RPC request for capabilities
+                let request = serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "method": "list_capabilities",
+                    "params": {},
+                    "id": 2
+                });
+
+                if let Ok(request_bytes) = serde_json::to_vec(&request) {
+                    use tokio::io::AsyncWriteExt;
+                    if stream.write_all(&request_bytes).await.is_ok() {
+                        use tokio::io::AsyncReadExt;
+                        let mut response_buf = vec![0u8; 4096];
+                        if let Ok(n) = stream.read(&mut response_buf).await {
+                            response_buf.truncate(n);
+                            if let Ok(response) =
+                                serde_json::from_slice::<serde_json::Value>(&response_buf)
+                            {
+                                if let Some(caps) = response
+                                    .get("result")
+                                    .and_then(|r| r.get("capabilities"))
+                                    .and_then(|c| c.as_array())
+                                {
+                                    return caps
+                                        .iter()
+                                        .filter_map(|v| v.as_str())
+                                        .map(|s| s.to_string())
+                                        .collect();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Err(_) => {}
+        }
+
+        // Fallback: return empty capabilities
+        Vec::new()
+    }
+
+    /// Get known capabilities for a primal type (DEPRECATED - fallback only)
+    ///
+    /// This is now a fallback. Production code should use query_primal_capabilities.
     fn get_primal_capabilities(&self, primal_id: &str) -> Vec<String> {
         match primal_id {
             "songbird" => vec!["discovery".to_string(), "registry".to_string()],
-            "beardog" => vec!["security".to_string(), "authorization".to_string(), "btsp".to_string()],
+            "beardog" => vec![
+                "security".to_string(),
+                "authorization".to_string(),
+                "btsp".to_string(),
+            ],
             "toadstool" => vec![
                 "compute".to_string(),
                 "resource_planning".to_string(),
@@ -544,24 +654,27 @@ impl PetalTongueRPCBridge {
 
         // Load templates from graphs directory
         let templates = self.load_niche_templates().await?;
-        
+
         // Update cache
         let mut cache = self.cache.write().await;
         cache.templates = templates.clone();
         cache.last_update = Some(std::time::Instant::now());
-        
+
         Ok(templates)
     }
-    
+
     /// Load niche templates from graphs directory
     async fn load_niche_templates(&self) -> Result<Vec<NicheTemplate>> {
         let mut templates = Vec::new();
-        
+
         // Check if graphs directory exists
         let graphs_dir = "graphs";
         if tokio::fs::metadata(graphs_dir).await.is_ok() {
             // Load tower template
-            if tokio::fs::metadata(format!("{}/tower_deploy.toml", graphs_dir)).await.is_ok() {
+            if tokio::fs::metadata(format!("{}/tower_deploy.toml", graphs_dir))
+                .await
+                .is_ok()
+            {
                 templates.push(NicheTemplate {
                     id: "tower".to_string(),
                     name: "Secure Tower".to_string(),
@@ -594,9 +707,12 @@ impl PetalTongueRPCBridge {
                     }),
                 });
             }
-            
+
             // Load node template
-            if tokio::fs::metadata(format!("{}/node_deploy.toml", graphs_dir)).await.is_ok() {
+            if tokio::fs::metadata(format!("{}/node_deploy.toml", graphs_dir))
+                .await
+                .is_ok()
+            {
                 templates.push(NicheTemplate {
                     id: "node".to_string(),
                     name: "Compute Node".to_string(),
@@ -629,9 +745,12 @@ impl PetalTongueRPCBridge {
                     }),
                 });
             }
-            
+
             // Load nest template
-            if tokio::fs::metadata(format!("{}/nest_deploy.toml", graphs_dir)).await.is_ok() {
+            if tokio::fs::metadata(format!("{}/nest_deploy.toml", graphs_dir))
+                .await
+                .is_ok()
+            {
                 templates.push(NicheTemplate {
                     id: "nest".to_string(),
                     name: "Data Nest".to_string(),
@@ -665,7 +784,7 @@ impl PetalTongueRPCBridge {
                 });
             }
         }
-        
+
         info!("🏗️  Loaded {} niche templates", templates.len());
         Ok(templates)
     }
@@ -688,7 +807,11 @@ impl PetalTongueRPCBridge {
     /// Validate a niche configuration
     ///
     /// Checks if resources are available for deployment
-    pub async fn validate_niche(&self, template_id: String, config: serde_json::Value) -> Result<ValidationResult> {
+    pub async fn validate_niche(
+        &self,
+        template_id: String,
+        config: serde_json::Value,
+    ) -> Result<ValidationResult> {
         info!("✅ Validating niche template {}", template_id);
 
         // TODO: Implement validation
@@ -707,21 +830,31 @@ impl PetalTongueRPCBridge {
     /// Deploy a niche
     ///
     /// Creates and starts a new niche by orchestrating multiple primals
-    pub async fn deploy_niche(&self, template_id: String, config: serde_json::Value) -> Result<String> {
+    pub async fn deploy_niche(
+        &self,
+        template_id: String,
+        config: serde_json::Value,
+    ) -> Result<String> {
         info!("🚀 Deploying niche from template {}", template_id);
 
         // 1. Load the template
         let templates = self.get_niche_templates().await?;
-        let template = templates.iter()
+        let template = templates
+            .iter()
             .find(|t| t.id == template_id)
             .ok_or_else(|| anyhow::anyhow!("Template not found: {}", template_id))?;
 
         info!("📋 Using template: {}", template.name);
 
         // 2. Validate configuration
-        let validation = self.validate_niche(template_id.clone(), config.clone()).await?;
+        let validation = self
+            .validate_niche(template_id.clone(), config.clone())
+            .await?;
         if !validation.valid {
-            return Err(anyhow::anyhow!("Niche validation failed: {:?}", validation.errors));
+            return Err(anyhow::anyhow!(
+                "Niche validation failed: {:?}",
+                validation.errors
+            ));
         }
 
         // 3. Discover required primals
@@ -730,21 +863,29 @@ impl PetalTongueRPCBridge {
 
         for required_role in &template.required_primals {
             // Find a primal that matches the required capabilities
-            let matching_primal = primals.iter()
+            let matching_primal = primals
+                .iter()
                 .find(|p| {
-                    required_role.capabilities.iter().all(|cap| {
-                        p.capabilities.iter().any(|pc| pc.contains(cap))
-                    }) && p.health >= required_role.min_health
+                    required_role
+                        .capabilities
+                        .iter()
+                        .all(|cap| p.capabilities.iter().any(|pc| pc.contains(cap)))
+                        && p.health >= required_role.min_health
                 })
-                .ok_or_else(|| anyhow::anyhow!("No primal found for role: {}", required_role.role))?;
+                .ok_or_else(|| {
+                    anyhow::anyhow!("No primal found for role: {}", required_role.role)
+                })?;
 
             assigned_primals.insert(required_role.role.clone(), matching_primal.id.clone());
-            info!("   {} → {} ({})", required_role.role, matching_primal.name, matching_primal.id);
+            info!(
+                "   {} → {} ({})",
+                required_role.role, matching_primal.name, matching_primal.id
+            );
         }
 
         // 4. Create niche ID and configuration
         let niche_id = format!("niche-{}-{}", template_id, chrono::Utc::now().timestamp());
-        
+
         let niche_config = serde_json::json!({
             "id": niche_id,
             "template": template_id,
@@ -821,4 +962,3 @@ mod tests {
         assert!(templates.is_empty()); // Empty until cache is populated
     }
 }
-

@@ -65,6 +65,7 @@ struct JsonRpcError {
 /// JSON-RPC client for Unix domain sockets
 ///
 /// Async, thread-safe client following Songbird's implementation pattern.
+#[derive(Debug, Clone)]
 pub struct JsonRpcUnixClient {
     /// Unix socket path
     socket_path: PathBuf,

@@ -18,10 +18,10 @@ pub use wrapped::WrappedFormatAdapter;
 pub enum FormatAdapter {
     /// Auto-detect format from response
     Auto(AutoFormatAdapter),
-    
+
     /// Expect unwrapped responses (HTTP status-based)
     Unwrapped(UnwrappedFormatAdapter),
-    
+
     /// Expect wrapped responses (success/data/error envelope)
     Wrapped(WrappedFormatAdapter),
 }
@@ -38,27 +38,24 @@ impl FormatAdapter {
             FormatAdapter::Wrapped(adapter) => adapter.parse(response).await,
         }
     }
-    
+
     /// Check if response indicates success
     pub fn is_success(&self, response: &Response) -> bool {
         response.status().is_success()
     }
-    
+
     /// Extract error information from response
     pub async fn extract_error(&self, response: Response) -> ApiError {
         let status = response.status();
-        let body = response.text().await.unwrap_or_else(|_| String::from("<no body>"));
+        let body = response
+            .text()
+            .await
+            .unwrap_or_else(|_| String::from("<no body>"));
 
         match status.as_u16() {
-            401 => ApiError::Unauthorized {
-                message: body,
-            },
-            403 => ApiError::Forbidden {
-                message: body,
-            },
-            404 => ApiError::NotFound {
-                resource: body,
-            },
+            401 => ApiError::Unauthorized { message: body },
+            403 => ApiError::Forbidden { message: body },
+            404 => ApiError::NotFound { resource: body },
             500..=599 => ApiError::ServerError {
                 status: status.as_u16(),
                 message: body,
@@ -68,7 +65,7 @@ impl FormatAdapter {
             },
         }
     }
-    
+
     /// Get adapter name for logging
     pub fn name(&self) -> &'static str {
         match self {
@@ -77,17 +74,17 @@ impl FormatAdapter {
             FormatAdapter::Wrapped(_) => "wrapped",
         }
     }
-    
+
     /// Create auto-detecting adapter (default)
     pub fn auto() -> Self {
         FormatAdapter::Auto(AutoFormatAdapter::new())
     }
-    
+
     /// Create unwrapped adapter (HTTP status-based)
     pub fn unwrapped() -> Self {
         FormatAdapter::Unwrapped(UnwrappedFormatAdapter::new())
     }
-    
+
     /// Create wrapped adapter (envelope-based)
     pub fn wrapped() -> Self {
         FormatAdapter::Wrapped(WrappedFormatAdapter::new())
@@ -99,4 +96,3 @@ impl Default for FormatAdapter {
         Self::auto()
     }
 }
-

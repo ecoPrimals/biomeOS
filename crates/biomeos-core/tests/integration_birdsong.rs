@@ -45,7 +45,7 @@ mod integration_tests {
         assert!(!ciphertext.is_empty());
     }
 
-    /// Test BirdSong client with v1 API 
+    /// Test BirdSong client with v1 API
     #[tokio::test]
     async fn test_birdsong_encrypt_v1_fallback() {
         let mock_server = MockServer::start().await;
@@ -232,9 +232,7 @@ mod integration_tests {
         // Mock invalid JSON response
         Mock::given(method("POST"))
             .and(path("/api/v1/birdsong/encrypt_discovery"))
-            .respond_with(
-                ResponseTemplate::new(200).set_body_string("not valid json at all"),
-            )
+            .respond_with(ResponseTemplate::new(200).set_body_string("not valid json at all"))
             .mount(&mock_server)
             .await;
 
@@ -391,9 +389,7 @@ mod integration_tests {
         let ciphertext = result.unwrap();
 
         // Verify base64 decoding works
-        let decoded = STANDARD
-            .decode(&ciphertext)
-            .expect("Should decode base64");
+        let decoded = STANDARD.decode(&ciphertext).expect("Should decode base64");
         assert_eq!(decoded, binary_data);
     }
 

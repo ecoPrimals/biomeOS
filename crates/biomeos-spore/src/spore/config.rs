@@ -11,14 +11,14 @@
 use tokio::fs as async_fs;
 use tracing::{debug, info};
 
-use crate::error::SporeResult;
 use super::core::Spore;
+use crate::error::SporeResult;
 
 /// Trait for configuration operations on spores
 pub(super) trait ConfigOps {
     /// Create tower.toml configuration
     fn create_tower_config(&self) -> impl std::future::Future<Output = SporeResult<()>> + Send;
-    
+
     /// Generate tower.toml content
     fn generate_tower_toml(&self) -> String;
 }
@@ -86,5 +86,3 @@ RUST_LOG = "info"
         )
     }
 }
-
-

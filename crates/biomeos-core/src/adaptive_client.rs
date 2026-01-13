@@ -142,7 +142,7 @@ impl AdaptiveHttpClient {
         Res: DeserializeOwned + Debug,
     {
         let url = format!("{}{}", self.endpoint, path);
-        
+
         debug!("📡 AdaptiveClient POST: {}", url);
         debug!("📤 Request body: {:?}", body);
 
@@ -151,13 +151,19 @@ impl AdaptiveHttpClient {
         for attempt in 1..=self.retry_count {
             match self.post_attempt(&url, body).await {
                 Ok(response) => {
-                    info!("✅ AdaptiveClient success on attempt {}/{}", attempt, self.retry_count);
+                    info!(
+                        "✅ AdaptiveClient success on attempt {}/{}",
+                        attempt, self.retry_count
+                    );
                     return Ok(response);
                 }
                 Err(e) => {
-                    warn!("⚠️  AdaptiveClient attempt {}/{} failed: {}", attempt, self.retry_count, e);
+                    warn!(
+                        "⚠️  AdaptiveClient attempt {}/{} failed: {}",
+                        attempt, self.retry_count, e
+                    );
                     last_error = Some(e);
-                    
+
                     if attempt < self.retry_count {
                         let backoff = Duration::from_millis(100 * attempt as u64);
                         tokio::time::sleep(backoff).await;
@@ -170,11 +176,7 @@ impl AdaptiveHttpClient {
     }
 
     /// Single POST attempt
-    async fn post_attempt<Req, Res>(
-        &self,
-        url: &str,
-        body: &Req,
-    ) -> Result<AdaptiveResponse<Res>>
+    async fn post_attempt<Req, Res>(&self, url: &str, body: &Req) -> Result<AdaptiveResponse<Res>>
     where
         Req: Serialize + Debug,
         Res: DeserializeOwned + Debug,
@@ -201,12 +203,11 @@ impl AdaptiveHttpClient {
 
         // Parse response
         if !status.is_success() {
-            error!("❌ Non-success status: {} - Body: {}", status, response_text);
-            return Err(anyhow!(
-                "HTTP {} - Response: {}",
-                status,
-                response_text
-            ));
+            error!(
+                "❌ Non-success status: {} - Body: {}",
+                status, response_text
+            );
+            return Err(anyhow!("HTTP {} - Response: {}", status, response_text));
         }
 
         // Try to parse as our expected type
@@ -220,10 +221,7 @@ impl AdaptiveHttpClient {
                 })
             }
             Err(e) => {
-                error!(
-                    "❌ Failed to parse response as expected type: {}",
-                    e
-                );
+                error!("❌ Failed to parse response as expected type: {}", e);
                 error!("   Raw response: {}", response_text);
                 Err(anyhow!(
                     "Response parsing failed: {} - Raw: {}",
@@ -240,7 +238,7 @@ impl AdaptiveHttpClient {
         Res: DeserializeOwned + Debug,
     {
         let url = format!("{}{}", self.endpoint, path);
-        
+
         debug!("📡 AdaptiveClient GET: {}", url);
 
         let response = self
@@ -262,15 +260,11 @@ impl AdaptiveHttpClient {
         debug!("📥 Response body: {}", response_text);
 
         if !status.is_success() {
-            return Err(anyhow!(
-                "HTTP {} - Response: {}",
-                status,
-                response_text
-            ));
+            return Err(anyhow!("HTTP {} - Response: {}", status, response_text));
         }
 
-        let parsed = serde_json::from_str::<Res>(&response_text)
-            .context("Failed to parse response")?;
+        let parsed =
+            serde_json::from_str::<Res>(&response_text).context("Failed to parse response")?;
 
         Ok(AdaptiveResponse {
             status,
@@ -331,8 +325,8 @@ pub struct BirdSongEncryptResponse {
     /// Encrypted payload - accepts both "encrypted" (v1) and "ciphertext" (v2)
     #[serde(alias = "ciphertext")] // v2 format
     #[serde(default)]
-    pub encrypted: String,         // v1 format (canonical name)
-    
+    pub encrypted: String, // v1 format (canonical name)
+
     #[serde(default)]
     pub family_id: String,
 }
@@ -409,7 +403,10 @@ impl BirdSongClient {
             match self.encrypt_with_version(&request, version).await {
                 Ok(encrypted) => return Ok(encrypted),
                 Err(e) => {
-                    warn!("Detected version {:?} failed, trying other version: {}", version, e);
+                    warn!(
+                        "Detected version {:?} failed, trying other version: {}",
+                        version, e
+                    );
                     // Fall through to try all versions
                 }
             }
@@ -424,7 +421,7 @@ impl BirdSongClient {
             }
             Err(e1) => {
                 debug!("v1 failed: {}, trying v2...", e1);
-                
+
                 // Try v2
                 match self.encrypt_with_version(&request, ApiVersion::V2).await {
                     Ok(encrypted) => {
@@ -552,4 +549,3 @@ mod tests {
         assert_eq!(response.data.encrypted, "test");
     }
 }
-

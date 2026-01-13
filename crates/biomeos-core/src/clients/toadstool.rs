@@ -97,7 +97,7 @@ impl ToadStoolClient {
         let transport = TransportClient::discover_with_preference(
             "toadstool",
             family_id,
-            TransportPreference::JsonRpcUnixSocket,
+            TransportPreference::UnixSocket,
         ).await
             .context("Failed to discover ToadStool. Is it running?")?;
         
@@ -494,7 +494,7 @@ impl PrimalClient for ToadStoolClient {
     }
 
     fn endpoint(&self) -> String {
-        self.transport.endpoint()
+        self.transport.endpoint().to_string()
     }
 
     async fn is_available(&self) -> bool {
@@ -506,7 +506,6 @@ impl PrimalClient for ToadStoolClient {
     }
 
     async fn request(&self, method: &str, _path: &str, body: Option<Value>) -> Result<Value> {
-        // For JSON-RPC, method becomes the RPC method name, path is ignored
         self.transport.call(method, body).await
     }
 }
@@ -870,6 +869,13 @@ pub struct Suggestion {
 mod tests {
     use super::*;
 
+    /// Integration test using harvested binary from plasmidBin/
+    ///
+    /// Start ToadStool manually:
+    /// ```bash
+    /// ./plasmidBin/primals/toadstool --family nat0
+    /// ```
+    #[ignore = "Requires running ToadStool from plasmidBin/primals/toadstool"]
     #[tokio::test]
     async fn test_toadstool_client_creation() {
         let client = ToadStoolClient::discover("nat0").await.unwrap();

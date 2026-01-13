@@ -5,7 +5,7 @@
 use anyhow::Result;
 use biomeos_test_utils::MockPrimal;
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_health_command_basic() -> Result<()> {
     // Start a mock primal
     let mock = MockPrimal::builder("test-primal")
@@ -28,7 +28,7 @@ async fn test_health_command_basic() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_health_command_detailed() -> Result<()> {
     // Test detailed health output
     let mock = MockPrimal::builder("detailed-test")
@@ -57,7 +57,7 @@ async fn test_health_command_detailed() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_health_command_multiple_services() -> Result<()> {
     // Test health checking multiple services
     let mock1 = MockPrimal::builder("service-1")
@@ -88,7 +88,7 @@ async fn test_health_command_multiple_services() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_health_probe_timeout() -> Result<()> {
     // Test probe with timeout behavior
     let mock = MockPrimal::builder("timeout-test")
@@ -111,7 +111,7 @@ async fn test_health_probe_timeout() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_health_scan_discovery() -> Result<()> {
     // Test system scan discovers services
     let mocks: Vec<MockPrimal> = vec![

@@ -13,7 +13,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex};
 use tokio::time::{timeout, Duration};
-use tracing::{debug, info, warn, error};
+use tracing::{debug, error, info, warn};
 
 use crate::neural_graph::{Graph, GraphNode};
 
@@ -107,9 +107,10 @@ impl GraphExecutor {
 
         // Execute each phase
         for (phase_num, phase_nodes) in phases.iter().enumerate() {
-            info!("📍 Phase {}/{}: {} nodes", 
-                phase_num + 1, 
-                phases.len(), 
+            info!(
+                "📍 Phase {}/{}: {} nodes",
+                phase_num + 1,
+                phases.len(),
                 phase_nodes.len()
             );
 
@@ -121,20 +122,20 @@ impl GraphExecutor {
                     error!("❌ Phase {} failed: {}", phase_num + 1, e);
                     report.success = false;
                     report.error = Some(e.to_string());
-                    
+
                     // Rollback if enabled
                     if self.graph.config.rollback_on_failure {
                         warn!("🔄 Rolling back deployment...");
                         self.rollback().await?;
                     }
-                    
+
                     break;
                 }
             }
         }
 
         report.duration_ms = start_time.elapsed().as_millis() as u64;
-        
+
         if report.success {
             info!("✅ Graph execution complete: {} ms", report.duration_ms);
         } else {
@@ -151,12 +152,15 @@ impl GraphExecutor {
 
         // Semaphore for max parallelism
         let semaphore = Arc::new(tokio::sync::Semaphore::new(self.max_parallelism));
-        
+
         // Execute nodes in parallel
         let mut handles = Vec::new();
 
         for node_id in nodes {
-            let node = self.graph.nodes.iter()
+            let node = self
+                .graph
+                .nodes
+                .iter()
                 .find(|n| &n.id == node_id)
                 .ok_or_else(|| anyhow::anyhow!("Node not found: {}", node_id))?
                 .clone();
@@ -180,13 +184,17 @@ impl GraphExecutor {
             match result {
                 Ok(output) => {
                     phase_result.completed += 1;
-                    self.context.set_status(&node_id, NodeStatus::Completed(output.clone())).await;
+                    self.context
+                        .set_status(&node_id, NodeStatus::Completed(output.clone()))
+                        .await;
                     self.context.set_output(&node_id, output).await;
                 }
                 Err(e) => {
                     phase_result.failed += 1;
                     let error_msg = e.to_string();
-                    self.context.set_status(&node_id, NodeStatus::Failed(error_msg.clone())).await;
+                    self.context
+                        .set_status(&node_id, NodeStatus::Failed(error_msg.clone()))
+                        .await;
                     phase_result.errors.push((node_id, error_msg));
                 }
             }
@@ -202,7 +210,10 @@ impl GraphExecutor {
     }
 
     /// Execute a single node
-    async fn execute_node(node: &GraphNode, context: &ExecutionContext) -> Result<serde_json::Value> {
+    async fn execute_node(
+        node: &GraphNode,
+        context: &ExecutionContext,
+    ) -> Result<serde_json::Value> {
         debug!("   Executing node: {}", node.id);
 
         // Mark as running
@@ -226,8 +237,13 @@ impl GraphExecutor {
     }
 
     /// Node executor: filesystem.check_exists
-    async fn node_filesystem_check_exists(node: &GraphNode, context: &ExecutionContext) -> Result<serde_json::Value> {
-        let path = node.config.get("path")
+    async fn node_filesystem_check_exists(
+        node: &GraphNode,
+        context: &ExecutionContext,
+    ) -> Result<serde_json::Value> {
+        let path = node
+            .config
+            .get("path")
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow::anyhow!("Missing 'path' in config"))?;
 
@@ -258,24 +274,35 @@ impl GraphExecutor {
     }
 
     /// Node executor: crypto.derive_child_seed
-    async fn node_crypto_derive_seed(node: &GraphNode, context: &ExecutionContext) -> Result<serde_json::Value> {
+    async fn node_crypto_derive_seed(
+        node: &GraphNode,
+        context: &ExecutionContext,
+    ) -> Result<serde_json::Value> {
         use biomeos_spore::seed::FamilySeed;
 
-        let parent_seed = node.config.get("parent_seed")
+        let parent_seed = node
+            .config
+            .get("parent_seed")
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow::anyhow!("Missing 'parent_seed'"))?;
         let parent_seed = Self::substitute_env(parent_seed, &context.env);
 
-        let node_id = node.config.get("node_id")
+        let node_id = node
+            .config
+            .get("node_id")
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow::anyhow!("Missing 'node_id'"))?;
 
-        let output_path = node.config.get("output_path")
+        let output_path = node
+            .config
+            .get("output_path")
             .and_then(|v| v.as_str())
             .ok_or_else(|| anyhow::anyhow!("Missing 'output_path'"))?;
         let output_path = Self::substitute_env(output_path, &context.env);
 
-        let deployment_batch = node.config.get("deployment_batch")
+        let deployment_batch = node
+            .config
+            .get("deployment_batch")
             .and_then(|v| v.as_str())
             .map(|s| Self::substitute_env(s, &context.env));
 
@@ -294,7 +321,10 @@ impl GraphExecutor {
     }
 
     /// Node executor: primal.launch
-    async fn node_primal_launch(node: &GraphNode, _context: &ExecutionContext) -> Result<serde_json::Value> {
+    async fn node_primal_launch(
+        node: &GraphNode,
+        _context: &ExecutionContext,
+    ) -> Result<serde_json::Value> {
         // This would integrate with biomeos-atomic-deploy
         // For now, return a placeholder
         Ok(serde_json::json!({
@@ -305,7 +335,10 @@ impl GraphExecutor {
     }
 
     /// Node executor: health.check_atomic
-    async fn node_health_check(node: &GraphNode, _context: &ExecutionContext) -> Result<serde_json::Value> {
+    async fn node_health_check(
+        node: &GraphNode,
+        _context: &ExecutionContext,
+    ) -> Result<serde_json::Value> {
         // Placeholder for health checking
         Ok(serde_json::json!({
             "healthy": true,
@@ -314,7 +347,10 @@ impl GraphExecutor {
     }
 
     /// Node executor: lineage.verify_siblings
-    async fn node_lineage_verify(node: &GraphNode, _context: &ExecutionContext) -> Result<serde_json::Value> {
+    async fn node_lineage_verify(
+        node: &GraphNode,
+        _context: &ExecutionContext,
+    ) -> Result<serde_json::Value> {
         // Placeholder for lineage verification
         Ok(serde_json::json!({
             "verified": true,
@@ -323,8 +359,13 @@ impl GraphExecutor {
     }
 
     /// Node executor: report.deployment_success
-    async fn node_deployment_report(node: &GraphNode, context: &ExecutionContext) -> Result<serde_json::Value> {
-        let atomics = node.config.get("atomics_deployed")
+    async fn node_deployment_report(
+        node: &GraphNode,
+        context: &ExecutionContext,
+    ) -> Result<serde_json::Value> {
+        let atomics = node
+            .config
+            .get("atomics_deployed")
             .and_then(|v| v.as_array())
             .map(|arr| arr.iter().filter_map(|v| v.as_str()).collect::<Vec<_>>())
             .unwrap_or_default();
@@ -339,12 +380,12 @@ impl GraphExecutor {
     /// Substitute environment variables in a string
     fn substitute_env(s: &str, env: &HashMap<String, String>) -> String {
         let mut result = s.to_string();
-        
+
         for (key, value) in env {
             let placeholder = format!("${{{}}}", key);
             result = result.replace(&placeholder, value);
         }
-        
+
         result
     }
 
@@ -356,9 +397,10 @@ impl GraphExecutor {
         // Build adjacency list and in-degree map
         for node in &self.graph.nodes {
             in_degree.entry(node.id.clone()).or_insert(0);
-            
+
             for dep in &node.dependencies {
-                graph_map.entry(dep.clone())
+                graph_map
+                    .entry(dep.clone())
                     .or_insert_with(Vec::new)
                     .push(node.id.clone());
                 *in_degree.entry(node.id.clone()).or_insert(0) += 1;
@@ -367,7 +409,8 @@ impl GraphExecutor {
 
         // Kahn's algorithm for topological sort
         let mut phases = Vec::new();
-        let mut queue: VecDeque<String> = in_degree.iter()
+        let mut queue: VecDeque<String> = in_degree
+            .iter()
             .filter(|(_, &degree)| degree == 0)
             .map(|(id, _)| id.clone())
             .collect();

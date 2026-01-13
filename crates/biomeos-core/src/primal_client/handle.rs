@@ -30,22 +30,22 @@ impl fmt::Display for PrimalId {
 pub struct PrimalHandle {
     /// Unique identifier
     pub id: PrimalId,
-    
+
     /// Human-readable name
     pub name: String,
-    
+
     /// Available endpoints (in priority order)
     pub endpoints: Vec<Endpoint>,
-    
+
     /// Advertised capabilities
     pub capabilities: Vec<String>,
-    
+
     /// Parsed API schema (if available)
     pub schema: Option<ApiSchema>,
-    
+
     /// Primary protocol
     pub protocol: String,
-    
+
     /// Hint about response format
     pub format_hint: Option<FormatHint>,
 }
@@ -80,10 +80,10 @@ impl PrimalHandle {
 pub struct Endpoint {
     /// Full URL
     pub url: String,
-    
+
     /// Protocol (http, https, tarpc, grpc, etc.)
     pub protocol: String,
-    
+
     /// Priority (lower = higher priority)
     pub priority: u8,
 }
@@ -108,13 +108,13 @@ impl Endpoint {
 pub enum FormatHint {
     /// Wrapped in ApiResponse { success, data, error }
     Wrapped,
-    
+
     /// Direct data, no wrapper
     Unwrapped,
-    
+
     /// Uses HTTP status codes for success/failure
     StatusCodeBased,
-    
+
     /// Unknown format, will auto-detect
     Unknown,
 }
@@ -124,19 +124,19 @@ pub enum FormatHint {
 pub struct PrimalMetadata {
     /// Primal name
     pub name: String,
-    
+
     /// Version string
     pub version: String,
-    
+
     /// Capabilities with details
     pub capabilities: Vec<Capability>,
-    
+
     /// API version
     pub api_version: String,
-    
+
     /// URL to fetch schema
     pub schema_url: Option<String>,
-    
+
     /// Health check endpoint
     pub health_endpoint: Option<String>,
 }
@@ -146,13 +146,13 @@ pub struct PrimalMetadata {
 pub struct Capability {
     /// Capability name (e.g., "security", "orchestration")
     pub name: String,
-    
+
     /// Capability version
     pub version: String,
-    
+
     /// Operations provided by this capability
     pub operations: Vec<String>,
-    
+
     /// Additional metadata
     #[serde(default)]
     pub metadata: std::collections::HashMap<String, String>,
@@ -173,4 +173,3 @@ impl Capability {
         self
     }
 }
-

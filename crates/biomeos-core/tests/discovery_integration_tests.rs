@@ -16,7 +16,7 @@ use wiremock::{
 /// NOTE: This test is ignored until Songbird integration is complete.
 /// The discovery service currently returns placeholder results.
 #[ignore]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_registry_discovery_success() {
     // Create mock registry server
     let mock_server = MockServer::start().await;
@@ -51,7 +51,7 @@ async fn test_registry_discovery_success() {
     assert!(results[1].starts_with("http://"));
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_registry_discovery_empty_response() {
     let mock_server = MockServer::start().await;
 
@@ -71,7 +71,7 @@ async fn test_registry_discovery_empty_response() {
     assert_eq!(results.len(), 0);
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_registry_discovery_malformed_response() {
     let mock_server = MockServer::start().await;
 
@@ -93,7 +93,7 @@ async fn test_registry_discovery_malformed_response() {
 /// Test discovery of orchestration services
 /// NOTE: Ignored until Songbird integration is complete.
 #[ignore]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_capability_based_orchestration_discovery_success() {
     let mock_server = MockServer::start().await;
 
@@ -127,7 +127,7 @@ async fn test_capability_based_orchestration_discovery_success() {
 /// Test endpoint probing with health response
 /// NOTE: Ignored until endpoint probing is fully implemented.
 #[ignore]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_probe_endpoint_success() {
     let mock_server = MockServer::start().await;
 
@@ -162,7 +162,7 @@ async fn test_probe_endpoint_success() {
 }
 
 /// Test error handling for unreachable endpoints
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_probe_endpoint_unreachable() {
     let config = BiomeOSConfig::default();
     let manager = UniversalBiomeOSManager::new(config).await.unwrap();

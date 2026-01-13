@@ -11,7 +11,7 @@ use crate::error::SporeResult;
 pub struct VerificationResult {
     /// Overall status
     pub valid: bool,
-    
+
     /// Individual checks
     pub checks: Vec<VerificationCheck>,
 }
@@ -21,10 +21,10 @@ pub struct VerificationResult {
 pub struct VerificationCheck {
     /// Name of the check
     pub name: String,
-    
+
     /// Whether it passed
     pub passed: bool,
-    
+
     /// Optional message
     pub message: Option<String>,
 }
@@ -146,11 +146,7 @@ impl SporeVerification {
 
         // Check exists
         if !seed_path.exists() {
-            result.add_check(
-                "Family seed",
-                false,
-                Some("File not found".to_string()),
-            );
+            result.add_check("Family seed", false, Some("File not found".to_string()));
             return;
         }
 
@@ -310,4 +306,3 @@ mod tests {
         assert_eq!(result.checks.len(), 2);
     }
 }
-

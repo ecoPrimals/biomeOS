@@ -75,11 +75,11 @@ enum SporeAction {
         /// USB mount point (e.g., /media/usb)
         #[arg(short, long)]
         mount: PathBuf,
-        
+
         /// Spore label (e.g., biomeOS1)
         #[arg(short, long)]
         label: String,
-        
+
         /// Node ID for this tower (e.g., tower1)
         #[arg(short, long)]
         node: String,
@@ -88,45 +88,45 @@ enum SporeAction {
         #[arg(short = 't', long, default_value = "live")]
         spore_type: String,
     },
-    
+
     /// Clone spore to create sibling
     Clone {
         /// Source spore mount point
         #[arg(short, long)]
         from: PathBuf,
-        
+
         /// Target spore mount point
         #[arg(short, long)]
         to: PathBuf,
-        
+
         /// New node ID for sibling
         #[arg(short, long)]
         node: String,
     },
-    
+
     /// Verify spore integrity
     Verify {
         /// Spore mount point
         mount: PathBuf,
     },
-    
+
     /// Show spore information
     Info {
         /// Spore mount point
         mount: PathBuf,
     },
-    
+
     /// Refresh spore binaries from plasmidBin
     Refresh {
         /// Spore mount point (e.g., /media/usb/biomeOS)
         #[arg(value_name = "MOUNT_POINT")]
         mount: PathBuf,
-        
+
         /// Dry run - show what would be updated without actually updating
         #[arg(short = 'n', long)]
         dry_run: bool,
     },
-    
+
     /// List available USB devices
     List,
 }
@@ -207,11 +207,11 @@ enum Commands {
         /// Validate manifest without deploying
         #[arg(short, long)]
         validate_only: bool,
-        
+
         /// Use graph-based deployment (Neural API)
         #[arg(short, long)]
         graph: bool,
-        
+
         /// Specific graph name to use (requires --graph)
         #[arg(long, requires = "graph")]
         graph_name: Option<String>,
@@ -221,7 +221,7 @@ enum Commands {
     DeployGraph {
         /// Path to the graph file (.toml)
         graph: PathBuf,
-        
+
         /// Validate graph without deploying
         #[arg(short, long)]
         validate_only: bool,
@@ -318,11 +318,11 @@ enum Commands {
         /// Monitoring interval in seconds
         #[arg(short, long, default_value = "30")]
         interval: u64,
-        
+
         /// Use graph-based health check (Neural API)
         #[arg(short, long)]
         graph: bool,
-        
+
         /// Niche manifest for graph-based check
         #[arg(long, requires = "graph")]
         niche: Option<PathBuf>,
@@ -430,32 +430,18 @@ async fn main() -> Result<()> {
             }
         },
         Commands::Spore { action } => match action {
-            SporeAction::Incubate(args) => {
-                handle_spore_incubate(&args).await?
-            }
+            SporeAction::Incubate(args) => handle_spore_incubate(&args).await?,
             SporeAction::Create {
                 mount,
                 label,
                 node,
                 spore_type,
-            } => {
-                handle_spore_create(mount, label, node, spore_type).await?
-            }
-            SporeAction::Clone { from, to, node } => {
-                handle_spore_clone(from, to, node).await?
-            }
-            SporeAction::Verify { mount } => {
-                handle_spore_verify(mount).await?
-            }
-            SporeAction::Info { mount } => {
-                handle_spore_info(mount).await?
-            }
-            SporeAction::Refresh { mount, dry_run } => {
-                handle_spore_refresh(mount, dry_run).await?
-            }
-            SporeAction::List => {
-                handle_spore_list().await?
-            }
+            } => handle_spore_create(mount, label, node, spore_type).await?,
+            SporeAction::Clone { from, to, node } => handle_spore_clone(from, to, node).await?,
+            SporeAction::Verify { mount } => handle_spore_verify(mount).await?,
+            SporeAction::Info { mount } => handle_spore_info(mount).await?,
+            SporeAction::Refresh { mount, dry_run } => handle_spore_refresh(mount, dry_run).await?,
+            SporeAction::List => handle_spore_list().await?,
         },
 
         Commands::Verify(args) => {

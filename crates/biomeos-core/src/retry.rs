@@ -44,16 +44,16 @@ use tracing::{debug, warn};
 pub struct RetryPolicy {
     /// Maximum number of retry attempts
     max_attempts: usize,
-    
+
     /// Initial delay before first retry
     initial_delay: Duration,
-    
+
     /// Maximum delay between retries
     max_delay: Duration,
-    
+
     /// Backoff multiplier (e.g., 2.0 for exponential)
     multiplier: f64,
-    
+
     /// Add random jitter to prevent thundering herd
     jitter: bool,
 }
@@ -116,9 +116,9 @@ impl RetryPolicy {
             return Duration::from_secs(0);
         }
 
-        let base_delay = self.initial_delay.as_millis() as f64 
-            * self.multiplier.powi((attempt - 1) as i32);
-        
+        let base_delay =
+            self.initial_delay.as_millis() as f64 * self.multiplier.powi((attempt - 1) as i32);
+
         let delay_ms = base_delay.min(self.max_delay.as_millis() as f64);
 
         let final_delay = if self.jitter {
@@ -144,7 +144,12 @@ impl RetryPolicy {
         for attempt in 0..self.max_attempts {
             if attempt > 0 {
                 let delay = self.calculate_delay(attempt);
-                debug!("Retry attempt {}/{}, delay: {:?}", attempt + 1, self.max_attempts, delay);
+                debug!(
+                    "Retry attempt {}/{}, delay: {:?}",
+                    attempt + 1,
+                    self.max_attempts,
+                    delay
+                );
                 tokio::time::sleep(delay).await;
             }
 
@@ -152,7 +157,12 @@ impl RetryPolicy {
                 Ok(result) => return Ok(result),
                 Err(e) => {
                     if attempt < self.max_attempts - 1 {
-                        debug!("Operation failed (attempt {}/{}): {}", attempt + 1, self.max_attempts, e);
+                        debug!(
+                            "Operation failed (attempt {}/{}): {}",
+                            attempt + 1,
+                            self.max_attempts,
+                            e
+                        );
                     }
                     last_error = Some(e);
                 }
@@ -174,13 +184,13 @@ impl Default for RetryPolicy {
 pub enum CircuitState {
     /// Circuit is closed, requests flow normally
     Closed,
-    
+
     /// Circuit is open, requests fail immediately
     Open {
         opened_at: Instant,
         failure_count: usize,
     },
-    
+
     /// Circuit is half-open, testing if service recovered
     HalfOpen,
 }
@@ -189,19 +199,19 @@ pub enum CircuitState {
 pub struct CircuitBreaker {
     /// Current state
     state: Arc<RwLock<CircuitState>>,
-    
+
     /// Number of failures before opening circuit
     failure_threshold: usize,
-    
+
     /// Duration to keep circuit open before testing recovery
     timeout: Duration,
-    
+
     /// Current failure count (in closed state)
     failure_count: Arc<RwLock<usize>>,
-    
+
     /// Current success count (in half-open state)
     success_count: Arc<RwLock<usize>>,
-    
+
     /// Number of successes needed to close circuit from half-open
     success_threshold: usize,
 }
@@ -248,7 +258,7 @@ impl CircuitBreaker {
     /// Record a successful call
     async fn record_success(&self) {
         let mut state = self.state.write().await;
-        
+
         match *state {
             CircuitState::Closed => {
                 // Reset failure count on success
@@ -257,7 +267,7 @@ impl CircuitBreaker {
             CircuitState::HalfOpen => {
                 let mut success_count = self.success_count.write().await;
                 *success_count += 1;
-                
+
                 if *success_count >= self.success_threshold {
                     // Enough successes, close the circuit
                     *state = CircuitState::Closed;
@@ -277,12 +287,12 @@ impl CircuitBreaker {
     /// Record a failed call
     async fn record_failure(&self) {
         let mut state = self.state.write().await;
-        
+
         match *state {
             CircuitState::Closed => {
                 let mut failure_count = self.failure_count.write().await;
                 *failure_count += 1;
-                
+
                 if *failure_count >= self.failure_threshold {
                     // Too many failures, open the circuit
                     *state = CircuitState::Open {
@@ -325,14 +335,16 @@ impl CircuitBreaker {
         // Check if circuit is open
         {
             let state = self.state.read().await;
-            if let CircuitState::Open { opened_at, failure_count } = *state {
+            if let CircuitState::Open {
+                opened_at,
+                failure_count,
+            } = *state
+            {
                 let elapsed = Instant::now().duration_since(opened_at);
-                return Err(BirdSongError::CircuitBreakerOpen(
-                    format!(
-                        "Circuit open for {:?} ({} failures, timeout: {:?})",
-                        elapsed, failure_count, self.timeout
-                    )
-                ));
+                return Err(BirdSongError::CircuitBreakerOpen(format!(
+                    "Circuit open for {:?} ({} failures, timeout: {:?})",
+                    elapsed, failure_count, self.timeout
+                )));
             }
         }
 
@@ -363,8 +375,7 @@ mod tests {
 
     #[test]
     fn test_retry_policy_delay_calculation() {
-        let policy = RetryPolicy::exponential(5, Duration::from_millis(100))
-            .with_jitter(false);
+        let policy = RetryPolicy::exponential(5, Duration::from_millis(100)).with_jitter(false);
 
         let delay0 = policy.calculate_delay(0);
         let delay1 = policy.calculate_delay(1);
@@ -395,16 +406,18 @@ mod tests {
         let policy = RetryPolicy::exponential(3, Duration::from_millis(10));
         let mut attempts = 0;
 
-        let result = policy.execute(|| {
-            attempts += 1;
-            async move {
-                if attempts < 2 {
-                    Err("transient error")
-                } else {
-                    Ok("success")
+        let result = policy
+            .execute(|| {
+                attempts += 1;
+                async move {
+                    if attempts < 2 {
+                        Err("transient error")
+                    } else {
+                        Ok("success")
+                    }
                 }
-            }
-        }).await;
+            })
+            .await;
 
         assert_eq!(result, Ok("success"));
         assert_eq!(attempts, 2);
@@ -415,12 +428,12 @@ mod tests {
         let policy = RetryPolicy::exponential(3, Duration::from_millis(10));
         let mut attempts = 0;
 
-        let result = policy.execute(|| {
-            attempts += 1;
-            async move {
-                Err::<(), _>("permanent error")
-            }
-        }).await;
+        let result = policy
+            .execute(|| {
+                attempts += 1;
+                async move { Err::<(), _>("permanent error") }
+            })
+            .await;
 
         assert!(result.is_err());
         assert_eq!(attempts, 3);
@@ -432,17 +445,19 @@ mod tests {
 
         // First 2 failures should keep circuit closed
         for _ in 0..2 {
-            let _ = breaker.call(|| async {
-                Err::<(), _>(BirdSongError::Integration("test failure".to_string()))
-            }).await;
+            let _ = breaker
+                .call(|| async {
+                    Err::<(), _>(BirdSongError::Integration("test failure".to_string()))
+                })
+                .await;
         }
 
         assert!(!breaker.is_open().await);
 
         // 3rd failure should open circuit
-        let _ = breaker.call(|| async {
-            Err::<(), _>(BirdSongError::Integration("test failure".to_string()))
-        }).await;
+        let _ = breaker
+            .call(|| async { Err::<(), _>(BirdSongError::Integration("test failure".to_string())) })
+            .await;
 
         assert!(breaker.is_open().await);
     }
@@ -453,29 +468,30 @@ mod tests {
 
         // Open the circuit
         for _ in 0..2 {
-            let _ = breaker.call(|| async {
-                Err::<(), _>(BirdSongError::Integration("test failure".to_string()))
-            }).await;
+            let _ = breaker
+                .call(|| async {
+                    Err::<(), _>(BirdSongError::Integration("test failure".to_string()))
+                })
+                .await;
         }
 
         // Next call should fail immediately
-        let result = breaker.call(|| async {
-            Ok::<_, BirdSongError>("should not reach here")
-        }).await;
+        let result = breaker
+            .call(|| async { Ok::<_, BirdSongError>("should not reach here") })
+            .await;
 
         assert!(matches!(result, Err(BirdSongError::CircuitBreakerOpen(_))));
     }
 
     #[tokio::test]
     async fn test_circuit_breaker_half_open_recovery() {
-        let breaker = CircuitBreaker::new(2, Duration::from_millis(100))
-            .with_success_threshold(2);
+        let breaker = CircuitBreaker::new(2, Duration::from_millis(100)).with_success_threshold(2);
 
         // Open the circuit
         for _ in 0..2 {
-            let _ = breaker.call(|| async {
-                Err::<(), _>(BirdSongError::Integration("test".to_string()))
-            }).await;
+            let _ = breaker
+                .call(|| async { Err::<(), _>(BirdSongError::Integration("test".to_string())) })
+                .await;
         }
 
         assert!(breaker.is_open().await);
@@ -484,21 +500,20 @@ mod tests {
         tokio::time::sleep(Duration::from_millis(150)).await;
 
         // First success in half-open
-        let _ = breaker.call(|| async {
-            Ok::<_, BirdSongError>("success")
-        }).await;
+        let _ = breaker
+            .call(|| async { Ok::<_, BirdSongError>("success") })
+            .await;
 
         // Should still be half-open (need 2 successes)
         let state = breaker.state().await;
         assert_eq!(state, CircuitState::HalfOpen);
 
         // Second success should close circuit
-        let _ = breaker.call(|| async {
-            Ok::<_, BirdSongError>("success")
-        }).await;
+        let _ = breaker
+            .call(|| async { Ok::<_, BirdSongError>("success") })
+            .await;
 
         let state = breaker.state().await;
         assert_eq!(state, CircuitState::Closed);
     }
 }
-

@@ -33,14 +33,9 @@ impl LogSessionTracker {
             node_id,
         }
     }
-    
+
     /// Register a new primal session
-    pub async fn register_session(
-        &self,
-        primal_id: PrimalId,
-        pid: u32,
-        log_file: Option<PathBuf>,
-    ) {
+    pub async fn register_session(&self, primal_id: PrimalId, pid: u32, log_file: Option<PathBuf>) {
         let session = PrimalSession {
             primal_id: primal_id.clone(),
             node_id: self.node_id.clone(),
@@ -48,33 +43,40 @@ impl LogSessionTracker {
             started_at: chrono::Utc::now(),
             log_file,
         };
-        
-        self.sessions.write().await.insert(primal_id.clone(), session);
+
+        self.sessions
+            .write()
+            .await
+            .insert(primal_id.clone(), session);
         debug!("Registered log session for primal: {}", primal_id);
     }
-    
+
     /// Unregister a primal session
     pub async fn unregister_session(&self, primal_id: &PrimalId) {
         self.sessions.write().await.remove(primal_id);
         debug!("Unregistered log session for primal: {}", primal_id);
     }
-    
+
     /// Get all active sessions
     pub async fn get_all_sessions(&self) -> Vec<PrimalSession> {
         self.sessions.read().await.values().cloned().collect()
     }
-    
+
     /// Archive all active sessions (called on shutdown)
     pub async fn archive_all_sessions(&self, reason: &str) -> anyhow::Result<()> {
         let sessions = self.get_all_sessions().await;
-        
+
         if sessions.is_empty() {
             info!("No active sessions to archive");
             return Ok(());
         }
-        
-        info!("Archiving {} active sessions (reason: {})", sessions.len(), reason);
-        
+
+        info!(
+            "Archiving {} active sessions (reason: {})",
+            sessions.len(),
+            reason
+        );
+
         // TODO: Integrate with biomeos_spore::logs::LogManager
         // For now, just log the intent
         for session in sessions {
@@ -85,9 +87,8 @@ impl LogSessionTracker {
                 (chrono::Utc::now() - session.started_at).num_seconds()
             );
         }
-        
+
         info!("✅ Sessions archived to fossil record");
         Ok(())
     }
 }
-

@@ -23,7 +23,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
 use tokio::fs;
-use tracing::{info, warn, debug};
+use tracing::{debug, info, warn};
 
 use crate::error::SporeResult;
 use crate::seed::FamilySeed;
@@ -34,23 +34,23 @@ use crate::spore_log_tracker::SporeLogTracker;
 pub struct LocalEntropy {
     /// System hostname
     pub hostname: String,
-    
+
     /// Machine ID (from /etc/machine-id or generated)
     pub machine_id: String,
-    
+
     /// Timestamp of incubation
     pub timestamp: DateTime<Utc>,
-    
+
     /// Primary network interface MAC address
     pub mac_address: Option<String>,
-    
+
     /// Random nonce for additional entropy
     #[serde(with = "serde_bytes")]
     pub random_nonce: Vec<u8>,
-    
+
     /// CPU info hash (optional)
     pub cpu_hash: Option<String>,
-    
+
     /// Disk serial (optional, for additional uniqueness)
     pub disk_serial: Option<String>,
 }
@@ -62,7 +62,7 @@ impl LocalEntropy {
     /// that will be mixed with the spore seed.
     pub fn generate(computer_name: Option<&str>) -> SporeResult<Self> {
         info!("Generating local entropy for incubation");
-        
+
         // 1. Hostname
         let hostname = computer_name
             .map(|s| s.to_string())
@@ -72,29 +72,28 @@ impl LocalEntropy {
                 warn!("Could not determine hostname, using default");
                 "unknown-host".to_string()
             });
-        
+
         // 2. Machine ID
         let machine_id = Self::get_machine_id()?;
-        
+
         // 3. Timestamp
         let timestamp = Utc::now();
-        
+
         // 4. MAC address (optional, best effort)
         let mac_address = Self::get_primary_mac_address().ok();
-        
+
         // 5. Random nonce (32 bytes)
         let mut random_nonce = vec![0u8; 32];
-        getrandom::getrandom(&mut random_nonce)
-            .context("Failed to generate random nonce")?;
-        
+        getrandom::getrandom(&mut random_nonce).context("Failed to generate random nonce")?;
+
         // 6. CPU hash (optional)
         let cpu_hash = Self::get_cpu_hash().ok();
-        
+
         // 7. Disk serial (optional)
         let disk_serial = Self::get_disk_serial().ok();
-        
+
         debug!("Generated entropy for hostname: {}", hostname);
-        
+
         Ok(Self {
             hostname,
             machine_id,
@@ -105,62 +104,62 @@ impl LocalEntropy {
             disk_serial,
         })
     }
-    
+
     /// Calculate SHA256 hash of all entropy components
     pub fn hash(&self) -> String {
         let mut hasher = Sha256::new();
-        
+
         hasher.update(self.hostname.as_bytes());
         hasher.update(self.machine_id.as_bytes());
         hasher.update(self.timestamp.to_rfc3339().as_bytes());
-        
+
         if let Some(ref mac) = self.mac_address {
             hasher.update(mac.as_bytes());
         }
-        
+
         hasher.update(&self.random_nonce);
-        
+
         if let Some(ref cpu) = self.cpu_hash {
             hasher.update(cpu.as_bytes());
         }
-        
+
         if let Some(ref disk) = self.disk_serial {
             hasher.update(disk.as_bytes());
         }
-        
+
         format!("{:x}", hasher.finalize())
     }
-    
+
     /// Get machine ID from system
     fn get_machine_id() -> SporeResult<String> {
         // Try /etc/machine-id (Linux)
         if let Ok(id) = std::fs::read_to_string("/etc/machine-id") {
             return Ok(id.trim().to_string());
         }
-        
+
         // Try /var/lib/dbus/machine-id (Linux fallback)
         if let Ok(id) = std::fs::read_to_string("/var/lib/dbus/machine-id") {
             return Ok(id.trim().to_string());
         }
-        
+
         // Generate a stable UUID based on hostname + user
         warn!("Could not read machine-id, generating stable fallback");
         let hostname = std::env::var("HOSTNAME").unwrap_or_else(|_| "unknown".to_string());
         let user = std::env::var("USER").unwrap_or_else(|_| "unknown".to_string());
-        
+
         let mut hasher = Sha256::new();
         hasher.update(hostname.as_bytes());
         hasher.update(user.as_bytes());
         hasher.update(b"biomeos-machine-id");
-        
+
         Ok(format!("{:x}", hasher.finalize()))
     }
-    
+
     /// Get primary network interface MAC address
     fn get_primary_mac_address() -> Result<String> {
         // This is a best-effort approach
         // In production, you might use a crate like `mac_address`
-        
+
         #[cfg(target_os = "linux")]
         {
             // Try to read from /sys/class/net/
@@ -168,12 +167,12 @@ impl LocalEntropy {
                 for entry in entries.flatten() {
                     let iface = entry.file_name();
                     let iface_str = iface.to_string_lossy();
-                    
+
                     // Skip loopback and virtual interfaces
                     if iface_str.starts_with("lo") || iface_str.starts_with("vir") {
                         continue;
                     }
-                    
+
                     let mac_path = format!("/sys/class/net/{}/address", iface_str);
                     if let Ok(mac) = std::fs::read_to_string(&mac_path) {
                         return Ok(mac.trim().to_string());
@@ -181,11 +180,11 @@ impl LocalEntropy {
                 }
             }
         }
-        
+
         // Fallback: return a placeholder
         Ok("00:00:00:00:00:00".to_string())
     }
-    
+
     /// Get CPU info hash
     fn get_cpu_hash() -> Result<String> {
         #[cfg(target_os = "linux")]
@@ -196,10 +195,10 @@ impl LocalEntropy {
                 return Ok(format!("{:x}", hasher.finalize()));
             }
         }
-        
+
         Ok("unknown-cpu".to_string())
     }
-    
+
     /// Get disk serial
     fn get_disk_serial() -> Result<String> {
         // This is platform-specific and best-effort
@@ -213,22 +212,22 @@ impl LocalEntropy {
 pub struct IncubatedNode {
     /// Unique node ID (e.g., "node-spore1-laptop")
     pub node_id: String,
-    
+
     /// Spore ID this node was incubated from
     pub spore_id: String,
-    
+
     /// Deployed node seed (spore_seed + local_entropy)
     pub deployed_seed_hash: String,
-    
+
     /// Path to local configuration
     pub local_config_path: PathBuf,
-    
+
     /// When this node was incubated
     pub incubated_at: DateTime<Utc>,
-    
+
     /// Local entropy hash
     pub entropy_hash: String,
-    
+
     /// Original spore path (if still accessible)
     pub spore_path: Option<PathBuf>,
 }
@@ -281,19 +280,19 @@ impl SporeIncubator {
     /// Create a new incubator for a spore
     pub fn new(spore_path: impl AsRef<Path>) -> SporeResult<Self> {
         let spore_path = spore_path.as_ref().to_path_buf();
-        
+
         info!("Creating incubator for spore at: {}", spore_path.display());
-        
+
         // Load spore seed
         let seed_path = spore_path.join(".family.seed");
         let spore_seed = FamilySeed::from_file(&seed_path)?;
-        
+
         Ok(Self {
             spore_path,
             spore_seed,
         })
     }
-    
+
     /// Incubate this spore on the local computer
     ///
     /// This creates a deployed node by mixing the spore seed with local entropy.
@@ -309,23 +308,23 @@ impl SporeIncubator {
         deploy_local: bool,
     ) -> SporeResult<IncubatedNode> {
         info!("Incubating spore on local computer");
-        
+
         // 1. Generate local entropy
         let local_entropy = LocalEntropy::generate(computer_name)?;
         let entropy_hash = local_entropy.hash();
-        
+
         debug!("Generated local entropy hash: {}", entropy_hash);
-        
+
         // 2. Derive deployed node seed
         let deployed_seed = self.derive_deployed_seed(&local_entropy)?;
         let deployed_seed_hash = Self::hash_seed(&deployed_seed);
-        
+
         // 3. Determine spore ID and node ID
         let spore_id = self.extract_spore_id()?;
         let node_id = format!("node-{}-{}", spore_id, local_entropy.hostname);
-        
+
         info!("Creating incubated node: {}", node_id);
-        
+
         // 4. Create local configuration
         let local_config_path = self.get_local_config_path(&spore_id)?;
         self.create_local_config(
@@ -335,30 +334,36 @@ impl SporeIncubator {
             &deployed_seed_hash,
             &entropy_hash,
             &local_entropy,
-        ).await?;
-        
+        )
+        .await?;
+
         // 5. Store deployed seed securely
-        self.store_deployed_seed(&local_config_path, &deployed_seed).await?;
-        
+        self.store_deployed_seed(&local_config_path, &deployed_seed)
+            .await?;
+
         // 6. Log incubation to spore
         let log_tracker = SporeLogTracker::new(&self.spore_path)?;
         log_tracker.initialize().await?;
-        
+
         let mut metadata = std::collections::HashMap::new();
         metadata.insert("computer_name".to_string(), local_entropy.hostname.clone());
         metadata.insert("entropy_hash".to_string(), entropy_hash.clone());
         metadata.insert("node_id".to_string(), node_id.clone());
-        
-        log_tracker.record_event(crate::spore_log_tracker::SporeLifecycleEvent {
-            timestamp: Utc::now(),
-            event_type: crate::spore_log_tracker::SporeEventType::Custom("incubation".to_string()),
-            node_id: Some(node_id.clone()),
-            deployed_to: Some(local_entropy.hostname.clone()),
-            metadata,
-        }).await?;
-        
+
+        log_tracker
+            .record_event(crate::spore_log_tracker::SporeLifecycleEvent {
+                timestamp: Utc::now(),
+                event_type: crate::spore_log_tracker::SporeEventType::Custom(
+                    "incubation".to_string(),
+                ),
+                node_id: Some(node_id.clone()),
+                deployed_to: Some(local_entropy.hostname.clone()),
+                metadata,
+            })
+            .await?;
+
         info!("✅ Spore incubated successfully as node: {}", node_id);
-        
+
         Ok(IncubatedNode {
             node_id,
             spore_id,
@@ -369,7 +374,7 @@ impl SporeIncubator {
             spore_path: Some(self.spore_path.clone()),
         })
     }
-    
+
     /// Derive deployed node seed from spore seed + local entropy
     ///
     /// Formula: deployed_seed = SHA256(spore_seed || local_entropy_hash)
@@ -381,29 +386,29 @@ impl SporeIncubator {
     fn derive_deployed_seed(&self, local_entropy: &LocalEntropy) -> SporeResult<Vec<u8>> {
         let spore_seed_bytes = std::fs::read(self.spore_path.join(".family.seed"))?;
         let entropy_hash = local_entropy.hash();
-        
+
         let mut hasher = Sha256::new();
         hasher.update(&spore_seed_bytes);
         hasher.update(entropy_hash.as_bytes());
-        
+
         Ok(hasher.finalize().to_vec())
     }
-    
+
     /// Hash a seed for display/storage
     fn hash_seed(seed: &[u8]) -> String {
         let mut hasher = Sha256::new();
         hasher.update(seed);
         format!("{:x}", hasher.finalize())
     }
-    
+
     /// Extract spore ID from spore path or config
     fn extract_spore_id(&self) -> SporeResult<String> {
         // Try to read from .spore.json or tower.toml
         let tower_toml_path = self.spore_path.join("tower.toml");
-        
+
         if tower_toml_path.exists() {
             let content = std::fs::read_to_string(&tower_toml_path)?;
-            
+
             // Parse TOML and extract node_id from meta section
             if let Ok(config) = toml::from_str::<toml::Value>(&content) {
                 if let Some(meta) = config.get("meta") {
@@ -415,30 +420,31 @@ impl SporeIncubator {
                 }
             }
         }
-        
+
         // Fallback: use directory name or UUID
-        Ok(self.spore_path
+        Ok(self
+            .spore_path
             .file_name()
             .and_then(|n| n.to_str())
             .unwrap_or("unknown")
             .to_string())
     }
-    
+
     /// Get local configuration path for this spore
     fn get_local_config_path(&self, spore_id: &str) -> SporeResult<PathBuf> {
         let home = std::env::var("HOME")
             .or_else(|_| std::env::var("USERPROFILE"))
             .context("Could not determine home directory")?;
-        
+
         let config_dir = PathBuf::from(home)
             .join(".config")
             .join("biomeos")
             .join("deployed-nodes")
             .join(spore_id);
-        
+
         Ok(config_dir)
     }
-    
+
     /// Create local configuration for incubated node
     async fn create_local_config(
         &self,
@@ -451,18 +457,20 @@ impl SporeIncubator {
     ) -> SporeResult<()> {
         // Create directory
         fs::create_dir_all(config_path).await?;
-        
+
         // Read parent and spore seed hashes
         let spore_seed_bytes = std::fs::read(self.spore_path.join(".family.seed"))?;
         let spore_seed_hash = Self::hash_seed(&spore_seed_bytes);
-        
+
         // For parent seed, we'd need to track this in the spore manifest
         // For now, use spore seed as parent (or read from manifest)
         let parent_seed_hash = spore_seed_hash.clone(); // TODO: Read from manifest
-        
+
         // Extract family_id from tower.toml
-        let family_id = self.extract_family_id().unwrap_or_else(|_| "unknown".to_string());
-        
+        let family_id = self
+            .extract_family_id()
+            .unwrap_or_else(|_| "unknown".to_string());
+
         // Create node config
         let config = NodeConfig {
             node: NodeInfo {
@@ -487,22 +495,22 @@ impl SporeIncubator {
                 sub_federations: vec![],
             },
         };
-        
+
         // Write node.toml
-        let config_toml = toml::to_string_pretty(&config)
-            .context("Failed to serialize node config")?;
+        let config_toml =
+            toml::to_string_pretty(&config).context("Failed to serialize node config")?;
         fs::write(config_path.join("node.toml"), config_toml).await?;
-        
+
         // Write entropy.json for reference
-        let entropy_json = serde_json::to_string_pretty(&local_entropy)
-            .context("Failed to serialize entropy")?;
+        let entropy_json =
+            serde_json::to_string_pretty(&local_entropy).context("Failed to serialize entropy")?;
         fs::write(config_path.join("entropy.json"), entropy_json).await?;
-        
+
         info!("Created local config at: {}", config_path.display());
-        
+
         Ok(())
     }
-    
+
     /// Store deployed seed securely
     async fn store_deployed_seed(
         &self,
@@ -511,7 +519,7 @@ impl SporeIncubator {
     ) -> SporeResult<()> {
         let seed_path = config_path.join(".deployed.seed");
         fs::write(&seed_path, deployed_seed).await?;
-        
+
         // Set secure permissions (Unix only)
         #[cfg(unix)]
         {
@@ -520,16 +528,16 @@ impl SporeIncubator {
             perms.set_mode(0o600); // Read/write for owner only
             fs::set_permissions(&seed_path, perms).await?;
         }
-        
+
         debug!("Stored deployed seed securely");
         Ok(())
     }
-    
+
     /// Extract family_id from tower.toml
     fn extract_family_id(&self) -> Result<String> {
         let tower_toml_path = self.spore_path.join("tower.toml");
         let content = std::fs::read_to_string(&tower_toml_path)?;
-        
+
         if let Ok(config) = toml::from_str::<toml::Value>(&content) {
             if let Some(tower) = config.get("tower") {
                 if let Some(family) = tower.get("family") {
@@ -538,7 +546,7 @@ impl SporeIncubator {
                     }
                 }
             }
-            
+
             // Fallback: check meta.family_id
             if let Some(meta) = config.get("meta") {
                 if let Some(family_id) = meta.get("family_id") {
@@ -548,7 +556,7 @@ impl SporeIncubator {
                 }
             }
         }
-        
+
         Ok("unknown".to_string())
     }
 }
@@ -558,22 +566,22 @@ pub async fn list_local_nodes() -> SporeResult<Vec<NodeConfig>> {
     let home = std::env::var("HOME")
         .or_else(|_| std::env::var("USERPROFILE"))
         .context("Could not determine home directory")?;
-    
+
     let nodes_dir = PathBuf::from(home)
         .join(".config")
         .join("biomeos")
         .join("deployed-nodes");
-    
+
     if !nodes_dir.exists() {
         return Ok(vec![]);
     }
-    
+
     let mut nodes = Vec::new();
     let mut entries = fs::read_dir(&nodes_dir).await?;
-    
+
     while let Some(entry) = entries.next_entry().await? {
         let node_config_path = entry.path().join("node.toml");
-        
+
         if node_config_path.exists() {
             if let Ok(content) = fs::read_to_string(&node_config_path).await {
                 if let Ok(config) = toml::from_str::<NodeConfig>(&content) {
@@ -582,26 +590,26 @@ pub async fn list_local_nodes() -> SporeResult<Vec<NodeConfig>> {
             }
         }
     }
-    
+
     Ok(nodes)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_local_entropy_generation() {
         let entropy = LocalEntropy::generate(Some("test-computer")).unwrap();
-        
+
         assert_eq!(entropy.hostname, "test-computer");
         assert!(!entropy.machine_id.is_empty());
         assert_eq!(entropy.random_nonce.len(), 32);
-        
+
         let hash = entropy.hash();
         assert_eq!(hash.len(), 64); // SHA256 hex
     }
-    
+
     #[test]
     fn test_entropy_hash_deterministic() {
         let entropy1 = LocalEntropy {
@@ -613,11 +621,10 @@ mod tests {
             cpu_hash: None,
             disk_serial: None,
         };
-        
+
         let hash1 = entropy1.hash();
         let hash2 = entropy1.hash();
-        
+
         assert_eq!(hash1, hash2); // Should be deterministic
     }
 }
-

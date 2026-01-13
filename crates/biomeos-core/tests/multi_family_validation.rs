@@ -93,18 +93,9 @@ mod multi_family_tests {
     fn test_family_credentials_env_loading() {
         // Simulate environment-based credentials
         let test_cases = vec![
-            (
-                "production-family-1",
-                b"prod-seed-12345678901234567890123",
-            ),
-            (
-                "staging-family-2",
-                b"stag-seed-12345678901234567890123",
-            ),
-            (
-                "dev-family-3",
-                b"devv-seed-12345678901234567890123",
-            ),
+            ("production-family-1", b"prod-seed-12345678901234567890123"),
+            ("staging-family-2", b"stag-seed-12345678901234567890123"),
+            ("dev-family-3", b"devv-seed-12345678901234567890123"),
         ];
 
         for (family_id_str, seed_bytes) in test_cases {
@@ -158,8 +149,8 @@ mod multi_family_tests {
             let family_id = FamilyId::new(family.id.clone());
             let seed = create_test_seed(family.seed_data);
 
-            let creds = FamilyCredentials::new(family_id, seed)
-                .expect("Should create valid credentials");
+            let creds =
+                FamilyCredentials::new(family_id, seed).expect("Should create valid credentials");
 
             created_families.push((creds.family_id().to_string(), creds.seed_ref().to_string()));
         }
@@ -182,15 +173,18 @@ mod multi_family_tests {
         let valid_cases = vec![
             ("family-a", b"seed-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
             ("family-b", b"seed-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"),
-            ("family-c-with-long-name", b"seed-cccccccccccccccccccccccccccccccc"),
+            (
+                "family-c-with-long-name",
+                b"seed-cccccccccccccccccccccccccccccccc",
+            ),
         ];
 
         for (family_id_str, seed_data) in valid_cases {
             let family_id = FamilyId::new(family_id_str.to_string());
             let seed = create_test_seed(seed_data);
 
-            let creds = FamilyCredentials::new(family_id, seed)
-                .expect("Should create valid credentials");
+            let creds =
+                FamilyCredentials::new(family_id, seed).expect("Should create valid credentials");
 
             // All should be valid
             assert_eq!(creds.family_id().to_string(), family_id_str);
@@ -210,26 +204,17 @@ mod multi_family_tests {
             let family_id = FamilyId::new(family_id_str.to_string());
             let seed = create_test_seed(seed_data);
 
-            let creds = FamilyCredentials::new(family_id, seed)
-                .expect("Should create valid credentials");
+            let creds =
+                FamilyCredentials::new(family_id, seed).expect("Should create valid credentials");
 
-            results.push((
-                creds.family_id().to_string(),
-                creds.seed_ref().to_string(),
-            ));
+            results.push((creds.family_id().to_string(), creds.seed_ref().to_string()));
         }
 
         // All results should be identical
         let first = &results[0];
         for result in results.iter().skip(1) {
-            assert_eq!(
-                result.0, first.0,
-                "Family IDs should be deterministic"
-            );
-            assert_eq!(
-                result.1, first.1,
-                "Seeds should be deterministic"
-            );
+            assert_eq!(result.0, first.0, "Family IDs should be deterministic");
+            assert_eq!(result.1, first.1, "Seeds should be deterministic");
         }
     }
 
@@ -263,8 +248,8 @@ mod multi_family_tests {
             let family_id = FamilyId::new(family.id.clone());
             let seed = create_test_seed(family.seed_data);
 
-            let creds = FamilyCredentials::new(family_id, seed)
-                .expect("Should create valid credentials");
+            let creds =
+                FamilyCredentials::new(family_id, seed).expect("Should create valid credentials");
 
             assert!(!creds.family_id().to_string().is_empty());
             assert!(!family.description.is_empty());
@@ -338,10 +323,7 @@ mod multi_family_tests {
                 name: "Research Institute".to_string(),
                 family_id: "research-family".to_string(),
                 seed_data: b"research-seed-1234567890123456789012",
-                towers: vec![
-                    "research-lab-1".to_string(),
-                    "research-lab-2".to_string(),
-                ],
+                towers: vec!["research-lab-1".to_string(), "research-lab-2".to_string()],
             },
             Organization {
                 name: "Startup Inc".to_string(),
@@ -359,14 +341,11 @@ mod multi_family_tests {
             let seed = create_test_seed(org.seed_data);
 
             // Create credentials
-            let creds = FamilyCredentials::new(family_id, seed)
-                .expect("Should create valid credentials");
+            let creds =
+                FamilyCredentials::new(family_id, seed).expect("Should create valid credentials");
 
             // Register family
-            family_registry.insert(
-                creds.family_id().to_string(),
-                org.towers.clone(),
-            );
+            family_registry.insert(creds.family_id().to_string(), org.towers.clone());
 
             // Validate credentials
             assert!(!creds.seed_ref().is_empty());
@@ -406,8 +385,8 @@ mod multi_family_tests {
             let seed = SecretSeed::new(STANDARD.encode(seed_str.as_bytes()))
                 .expect("Should create valid seed");
 
-            let creds = FamilyCredentials::new(family_id, seed)
-                .expect("Should create valid credentials");
+            let creds =
+                FamilyCredentials::new(family_id, seed).expect("Should create valid credentials");
 
             families.push(creds.family_id().to_string());
         }
@@ -415,10 +394,7 @@ mod multi_family_tests {
         // Verify all are unique
         let mut ids = std::collections::HashSet::new();
         for family_id in &families {
-            assert!(
-                ids.insert(family_id.clone()),
-                "Duplicate family ID found"
-            );
+            assert!(ids.insert(family_id.clone()), "Duplicate family ID found");
         }
 
         assert_eq!(ids.len(), num_families);

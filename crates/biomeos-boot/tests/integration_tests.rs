@@ -35,7 +35,7 @@ fn setup_integration_env() -> Result<TempDir> {
     Ok(temp)
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_complete_initramfs_build() -> Result<()> {
     let temp = setup_integration_env()?;
     let project_root = temp.path();
@@ -58,7 +58,7 @@ async fn test_complete_initramfs_build() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_initramfs_contains_required_files() -> Result<()> {
     let temp = setup_integration_env()?;
     let project_root = temp.path();
@@ -98,7 +98,7 @@ fn test_kernel_manager_with_custom_kernel() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_multiple_initramfs_builds() -> Result<()> {
     let temp = setup_integration_env()?;
     let project_root = temp.path();
@@ -120,7 +120,7 @@ async fn test_multiple_initramfs_builds() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_initramfs_with_missing_binaries() -> Result<()> {
     let temp = TempDir::new()?;
     let work_dir = temp.path().join("work");
@@ -170,7 +170,7 @@ fn test_concurrent_initramfs_builds() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_initramfs_size_reasonable() -> Result<()> {
     let temp = setup_integration_env()?;
     let project_root = temp.path();
@@ -193,7 +193,7 @@ async fn test_initramfs_size_reasonable() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_initramfs_reproducible_builds() -> Result<()> {
     let temp = setup_integration_env()?;
     let project_root = temp.path();
@@ -226,7 +226,7 @@ async fn test_initramfs_reproducible_builds() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_error_handling_invalid_output_path() -> Result<()> {
     let temp = setup_integration_env()?;
     let project_root = temp.path();

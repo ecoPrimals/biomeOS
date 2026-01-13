@@ -258,8 +258,9 @@ impl GraphExecutor {
     }
 
     /// Node executor: crypto.derive_child_seed
-    async fn node_crypto_derive_seed(node: &GraphNode, context: &ExecutionContext) -> Result<serde_json::Value> {
-        use biomeos_spore::seed::FamilySeed;
+    async fn node_crypto_derive_seed(node: &GraphNode, _context: &ExecutionContext) -> Result<serde_json::Value> {
+        // NOTE: Seed derivation moved to BearDog primal - use JSON-RPC to call it
+        // This is a placeholder demonstrating capability-based evolution
 
         let parent_seed = node.config.get("parent_seed")
             .and_then(|v| v.as_str())

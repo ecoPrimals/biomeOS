@@ -11,13 +11,14 @@
 use tokio::fs as async_fs;
 use tracing::info;
 
-use crate::error::SporeResult;
 use super::core::Spore;
+use crate::error::SporeResult;
 
 /// Trait for deployment script operations on spores
 pub(super) trait DeploymentOps {
     /// Create deployment script for spore
-    fn create_deployment_script(&self) -> impl std::future::Future<Output = SporeResult<()>> + Send;
+    fn create_deployment_script(&self)
+        -> impl std::future::Future<Output = SporeResult<()>> + Send;
 }
 
 impl DeploymentOps for Spore {
@@ -114,10 +115,7 @@ else
     exec ./bin/tower run --config tower.toml
 fi
 "#,
-            self.config.label,
-            self.config.node_id,
-            self.config.label,
-            self.config.node_id,
+            self.config.label, self.config.node_id, self.config.label, self.config.node_id,
         );
 
         let script_path = self.root_path.join("deploy.sh");
@@ -136,5 +134,3 @@ fi
         Ok(())
     }
 }
-
-

@@ -10,22 +10,22 @@ use super::handle::PrimalHandle;
 pub struct ClientConfig {
     /// Cache TTLs
     pub cache: CacheConfig,
-    
+
     /// Timeout settings
     pub timeouts: TimeoutConfig,
-    
+
     /// Connection pooling
     pub pooling: PoolConfig,
-    
+
     /// Discovery methods (tried in order)
     pub discovery_methods: Vec<DiscoveryMethod>,
-    
+
     /// Trust policy
     pub trust_policy: TrustPolicy,
-    
+
     /// Retry configuration
     pub retry: RetryConfig,
-    
+
     /// Explicit endpoint overrides
     pub endpoints: std::collections::HashMap<String, String>,
 }
@@ -53,10 +53,10 @@ impl Default for ClientConfig {
 pub struct CacheConfig {
     /// Schema cache TTL
     pub schema_ttl: Duration,
-    
+
     /// Format hint cache TTL
     pub format_ttl: Duration,
-    
+
     /// Discovery cache TTL
     pub discovery_ttl: Duration,
 }
@@ -64,8 +64,8 @@ pub struct CacheConfig {
 impl Default for CacheConfig {
     fn default() -> Self {
         Self {
-            schema_ttl: Duration::from_secs(3600), // 1 hour
-            format_ttl: Duration::from_secs(300),  // 5 minutes
+            schema_ttl: Duration::from_secs(3600),  // 1 hour
+            format_ttl: Duration::from_secs(300),   // 5 minutes
             discovery_ttl: Duration::from_secs(30), // 30 seconds
         }
     }
@@ -76,7 +76,7 @@ impl Default for CacheConfig {
 pub struct TimeoutConfig {
     /// Request timeout
     pub request: Duration,
-    
+
     /// Connect timeout
     pub connect: Duration,
 }
@@ -95,7 +95,7 @@ impl Default for TimeoutConfig {
 pub struct PoolConfig {
     /// Max idle connections per host
     pub max_idle_per_host: usize,
-    
+
     /// Pool idle timeout
     pub idle_timeout: Duration,
 }
@@ -114,16 +114,16 @@ impl Default for PoolConfig {
 pub enum DiscoveryMethod {
     /// Environment variables
     Environment,
-    
+
     /// mDNS
     MDns,
-    
+
     /// UDP multicast
     Multicast,
-    
+
     /// Consul
     Consul,
-    
+
     /// DHT (future)
     Dht,
 }
@@ -132,17 +132,13 @@ pub enum DiscoveryMethod {
 pub enum TrustPolicy {
     /// Trust all primals (development only - INSECURE)
     TrustAll,
-    
+
     /// Trust primals with genetic lineage from same family
-    GeneticLineage {
-        family_id: String,
-    },
-    
+    GeneticLineage { family_id: String },
+
     /// Trust primals with specific tags
-    Tags {
-        required_tags: Vec<String>,
-    },
-    
+    Tags { required_tags: Vec<String> },
+
     /// Custom trust evaluation (cannot derive Clone due to function pointer)
     Custom(Box<dyn Fn(&PrimalHandle) -> bool + Send + Sync>),
 }
@@ -152,16 +148,14 @@ impl std::fmt::Debug for TrustPolicy {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             TrustPolicy::TrustAll => write!(f, "TrustAll"),
-            TrustPolicy::GeneticLineage { family_id } => {
-                f.debug_struct("GeneticLineage")
-                    .field("family_id", family_id)
-                    .finish()
-            }
-            TrustPolicy::Tags { required_tags } => {
-                f.debug_struct("Tags")
-                    .field("required_tags", required_tags)
-                    .finish()
-            }
+            TrustPolicy::GeneticLineage { family_id } => f
+                .debug_struct("GeneticLineage")
+                .field("family_id", family_id)
+                .finish(),
+            TrustPolicy::Tags { required_tags } => f
+                .debug_struct("Tags")
+                .field("required_tags", required_tags)
+                .finish(),
             TrustPolicy::Custom(_) => write!(f, "Custom(<fn>)"),
         }
     }
@@ -172,16 +166,12 @@ impl Clone for TrustPolicy {
     fn clone(&self) -> Self {
         match self {
             TrustPolicy::TrustAll => TrustPolicy::TrustAll,
-            TrustPolicy::GeneticLineage { family_id } => {
-                TrustPolicy::GeneticLineage {
-                    family_id: family_id.clone(),
-                }
-            }
-            TrustPolicy::Tags { required_tags } => {
-                TrustPolicy::Tags {
-                    required_tags: required_tags.clone(),
-                }
-            }
+            TrustPolicy::GeneticLineage { family_id } => TrustPolicy::GeneticLineage {
+                family_id: family_id.clone(),
+            },
+            TrustPolicy::Tags { required_tags } => TrustPolicy::Tags {
+                required_tags: required_tags.clone(),
+            },
             TrustPolicy::Custom(_) => {
                 // Cannot clone function pointers - default to TrustAll
                 tracing::warn!("Cloning TrustPolicy::Custom - defaulting to TrustAll");
@@ -196,7 +186,7 @@ impl Clone for TrustPolicy {
 pub struct RetryConfig {
     /// Maximum number of retries
     pub max_retries: u32,
-    
+
     /// Backoff strategy
     pub backoff: BackoffStrategy,
 }
@@ -215,10 +205,10 @@ impl Default for RetryConfig {
 pub enum BackoffStrategy {
     /// Fixed delay between retries
     Fixed,
-    
+
     /// Exponential backoff
     Exponential,
-    
+
     /// Linear backoff
     Linear,
 }
@@ -228,26 +218,16 @@ pub enum BackoffStrategy {
 pub enum AuthMethod {
     /// No authentication
     None,
-    
+
     /// Bearer token
     BearerToken(String),
-    
-    /// API key
-    ApiKey {
-        key: String,
-        header: String,
-    },
-    
-    /// Mutual TLS
-    MutualTls {
-        cert: Vec<u8>,
-        key: Vec<u8>,
-    },
-    
-    /// Genetic lineage proof
-    GeneticLineage {
-        tag: String,
-        proof: Vec<u8>,
-    },
-}
 
+    /// API key
+    ApiKey { key: String, header: String },
+
+    /// Mutual TLS
+    MutualTls { cert: Vec<u8>, key: Vec<u8> },
+
+    /// Genetic lineage proof
+    GeneticLineage { tag: String, proof: Vec<u8> },
+}

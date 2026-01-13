@@ -12,7 +12,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 use tokio::time::sleep;
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore] // Requires sudo + network setup
 async fn test_vm_boots_successfully() -> Result<()> {
     // This is a placeholder for full E2E test
@@ -29,7 +29,7 @@ async fn test_vm_boots_successfully() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore] // Requires sudo + network setup
 async fn test_vm_discovers_physical_towers() -> Result<()> {
     // This is a placeholder for federation discovery test
@@ -45,7 +45,7 @@ async fn test_vm_discovers_physical_towers() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore] // Requires sudo + network setup
 async fn test_multi_vm_federation() -> Result<()> {
     // This is a placeholder for multi-VM federation test

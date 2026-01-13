@@ -20,7 +20,7 @@ async fn main() -> anyhow::Result<()> {
     println!("📍 Phase 1: Load Graph\n");
 
     let graph_path = std::path::Path::new("graphs/genetic_lineage_full_nucleus.toml");
-    
+
     if !graph_path.exists() {
         println!("   ⚠️  Graph file not found: {}", graph_path.display());
         println!("   💡 This example demonstrates the API structure.");
@@ -38,13 +38,23 @@ async fn main() -> anyhow::Result<()> {
     println!("📍 Phase 2: Configure Environment\n");
 
     let mut env = HashMap::new();
-    env.insert("USB_SEED_PATH".to_string(), "/tmp/biomeos-test/.family.seed".to_string());
+    env.insert(
+        "USB_SEED_PATH".to_string(),
+        "/tmp/biomeos-test/.family.seed".to_string(),
+    );
     env.insert("FAMILY_ID".to_string(), "nat0".to_string());
-    env.insert("DEPLOYMENT_BATCH".to_string(), chrono::Utc::now().format("%Y%m%d").to_string());
-    env.insert("BINARY_DIR".to_string(), "/home/eastgate/Development/ecoPrimals/phase2/biomeOS/plasmidBin".to_string());
-    env.insert("RUNTIME_DIR".to_string(), 
+    env.insert(
+        "DEPLOYMENT_BATCH".to_string(),
+        chrono::Utc::now().format("%Y%m%d").to_string(),
+    );
+    env.insert(
+        "BINARY_DIR".to_string(),
+        "/home/eastgate/Development/ecoPrimals/phase2/biomeOS/plasmidBin".to_string(),
+    );
+    env.insert(
+        "RUNTIME_DIR".to_string(),
         std::env::var("XDG_RUNTIME_DIR")
-            .unwrap_or_else(|_| format!("/run/user/{}", unsafe { libc::getuid() }))
+            .unwrap_or_else(|_| format!("/run/user/{}", unsafe { libc::getuid() })),
     );
 
     println!("   Environment variables:");
@@ -80,13 +90,14 @@ async fn main() -> anyhow::Result<()> {
 
     println!("\n   Phase Details:");
     for (i, phase) in report.phase_results.iter().enumerate() {
-        println!("      Phase {}: {}/{} nodes completed ({} ms)",
+        println!(
+            "      Phase {}: {}/{} nodes completed ({} ms)",
             i + 1,
             phase.completed,
             phase.total_nodes,
             phase.duration_ms
         );
-        
+
         if !phase.errors.is_empty() {
             for (node_id, error) in &phase.errors {
                 println!("         ❌ {}: {}", node_id, error);
@@ -120,4 +131,3 @@ async fn main() -> anyhow::Result<()> {
 
     Ok(())
 }
-

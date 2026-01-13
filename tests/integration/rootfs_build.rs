@@ -8,7 +8,7 @@ use biomeos_boot::rootfs::{RootFsBuilder, RootFsConfig};
 use std::path::PathBuf;
 use tempfile::TempDir;
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore] // Requires sudo
 async fn test_minimal_rootfs_build() -> Result<()> {
     // Setup
@@ -45,7 +45,7 @@ async fn test_minimal_rootfs_build() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore] // Requires sudo
 async fn test_rootfs_with_primals() -> Result<()> {
     // Skip if plasmidBin doesn't exist
@@ -83,7 +83,7 @@ async fn test_rootfs_with_primals() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore] // Requires sudo
 async fn test_rootfs_concurrent_builds() -> Result<()> {
     // Test that multiple builds can run concurrently
@@ -128,7 +128,7 @@ async fn test_rootfs_concurrent_builds() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore] // Requires sudo
 async fn test_rootfs_error_handling() -> Result<()> {
     // Test that errors are handled gracefully and cleanup happens

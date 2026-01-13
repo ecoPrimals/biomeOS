@@ -103,4 +103,3 @@ mod tests {
         assert!(!adapter.supports("grpc://localhost:50051"));
     }
 }
-

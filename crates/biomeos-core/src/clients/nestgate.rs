@@ -38,7 +38,7 @@ impl NestGateClient {
         let transport = TransportClient::discover_with_preference(
             "nestgate",
             family_id,
-            TransportPreference::JsonRpcUnixSocket,
+            TransportPreference::UnixSocket,
         ).await
             .context("Failed to discover NestGate. Is it running?")?;
         
@@ -190,7 +190,7 @@ impl PrimalClient for NestGateClient {
     }
 
     fn endpoint(&self) -> String {
-        self.transport.endpoint()
+        self.transport.endpoint().to_string()
     }
 
     async fn is_available(&self) -> bool {
@@ -242,6 +242,13 @@ pub struct StorageStats {
 mod tests {
     use super::*;
 
+    /// Integration test using harvested binary from plasmidBin/
+    ///
+    /// Start NestGate manually:
+    /// ```bash
+    /// ./plasmidBin/primals/nestgate --family nat0 --socket /tmp/biomeos-test-nestgate.sock
+    /// ```
+    #[ignore = "Requires running NestGate from plasmidBin/primals/nestgate"]
     #[tokio::test]
     async fn test_nestgate_client_creation() {
         let client = NestGateClient::discover("nat0").await.unwrap();

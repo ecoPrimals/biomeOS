@@ -54,18 +54,21 @@ impl PrimalId {
     /// Returns `IdError::InvalidCharacters` if the ID contains invalid characters.
     pub fn new(id: impl Into<String>) -> Result<Self, IdError> {
         let id = id.into();
-        
+
         if id.is_empty() {
             return Err(IdError::Empty);
         }
-        
-        if !id.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_') {
+
+        if !id
+            .chars()
+            .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
+        {
             return Err(IdError::InvalidCharacters);
         }
-        
+
         Ok(Self(id))
     }
-    
+
     /// Create unchecked ID (for trusted sources like database)
     ///
     /// # Safety
@@ -74,12 +77,12 @@ impl PrimalId {
     pub fn new_unchecked(id: impl Into<String>) -> Self {
         Self(id.into())
     }
-    
+
     /// Get the inner string reference
     pub fn as_str(&self) -> &str {
         &self.0
     }
-    
+
     /// Convert into owned String
     pub fn into_string(self) -> String {
         self.0
@@ -120,12 +123,65 @@ impl FamilyId {
     pub fn new(id: impl Into<String>) -> Self {
         Self(id.into())
     }
-    
+
+    /// Get family ID from environment variable
+    ///
+    /// Checks `BIOMEOS_FAMILY_ID` environment variable
+    pub fn from_env() -> Option<Self> {
+        std::env::var("BIOMEOS_FAMILY_ID")
+            .ok()
+            .map(Self::new)
+    }
+
+    /// Discover local family ID from config
+    ///
+    /// Checks for existing family configuration in:
+    /// - `$XDG_CONFIG_HOME/biomeos/family.txt`
+    /// - `~/.config/biomeos/family.txt`
+    pub fn discover_local() -> Option<Self> {
+        use crate::paths::SystemPaths;
+        
+        let paths = SystemPaths::new().ok()?;
+        let family_file = paths.config_dir().join("family.txt");
+        
+        std::fs::read_to_string(family_file)
+            .ok()
+            .map(|s| Self::new(s.trim()))
+    }
+
+    /// Generate a new random family ID
+    ///
+    /// Uses a memorable name generator for human-friendly IDs
+    pub fn generate() -> Self {
+        use uuid::Uuid;
+        // Generate memorable ID: first 8 chars of UUID
+        let id = Uuid::new_v4().to_string();
+        Self::new(&id[..8])
+    }
+
+    /// Get or create family ID with fallback chain
+    ///
+    /// Priority:
+    /// 1. Environment variable (`BIOMEOS_FAMILY_ID`)
+    /// 2. Local config file
+    /// 3. Generate new ID
+    pub fn get_or_create() -> Self {
+        Self::from_env()
+            .or_else(Self::discover_local)
+            .unwrap_or_else(Self::generate)
+    }
+
+    /// For tests only - deterministic family ID
+    #[cfg(test)]
+    pub fn new_for_test() -> Self {
+        Self::new("test-family")
+    }
+
     /// Get the inner string reference
     pub fn as_str(&self) -> &str {
         &self.0
     }
-    
+
     /// Convert into owned String
     pub fn into_string(self) -> String {
         self.0
@@ -170,17 +226,17 @@ impl Endpoint {
     pub fn new(url: impl AsRef<str>) -> Result<Self, url::ParseError> {
         Ok(Self(url::Url::parse(url.as_ref())?))
     }
-    
+
     /// Get the underlying URL
     pub fn url(&self) -> &url::Url {
         &self.0
     }
-    
+
     /// Get the URL as a string
     pub fn as_str(&self) -> &str {
         self.0.as_str()
     }
-    
+
     /// Join a path to the endpoint
     ///
     /// # Examples
@@ -221,7 +277,7 @@ impl TowerId {
     pub fn new(id: impl Into<String>) -> Self {
         Self(id.into())
     }
-    
+
     /// Get the inner string reference
     pub fn as_str(&self) -> &str {
         &self.0
@@ -244,12 +300,12 @@ impl SessionId {
     pub fn new() -> Self {
         Self(uuid::Uuid::new_v4())
     }
-    
+
     /// Create from existing UUID
     pub fn from_uuid(id: uuid::Uuid) -> Self {
         Self(id)
     }
-    
+
     /// Get the underlying UUID
     pub fn uuid(&self) -> &uuid::Uuid {
         &self.0
@@ -273,10 +329,10 @@ impl fmt::Display for SessionId {
 pub enum IdError {
     #[error("ID cannot be empty")]
     Empty,
-    
+
     #[error("ID contains invalid characters (use alphanumeric, dash, underscore only)")]
     InvalidCharacters,
-    
+
     #[error("Invalid URL format: {0}")]
     InvalidUrl(#[from] url::ParseError),
 }
@@ -284,40 +340,40 @@ pub enum IdError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn primal_id_valid() {
         assert!(PrimalId::new("beardog-local").is_ok());
         assert!(PrimalId::new("songbird_v2").is_ok());
         assert!(PrimalId::new("tower123").is_ok());
     }
-    
+
     #[test]
     fn primal_id_invalid() {
         assert!(PrimalId::new("").is_err());
         assert!(PrimalId::new("has spaces").is_err());
         assert!(PrimalId::new("has/slash").is_err());
     }
-    
+
     #[test]
     fn endpoint_valid() {
         assert!(Endpoint::new("http://localhost:9000").is_ok());
         assert!(Endpoint::new("https://192.168.1.144:8080").is_ok());
     }
-    
+
     #[test]
     fn endpoint_join() {
         let base = Endpoint::new("http://localhost:9000").unwrap();
         let api = base.join("api/v1/health").unwrap();
         assert_eq!(api.as_str(), "http://localhost:9000/api/v1/health");
     }
-    
+
     #[test]
     fn family_id_display() {
         let family = FamilyId::new("iidn");
         assert_eq!(format!("{}", family), "iidn");
     }
-    
+
     #[test]
     fn session_id_unique() {
         let id1 = SessionId::new();
@@ -325,4 +381,3 @@ mod tests {
         assert_ne!(id1, id2);
     }
 }
-

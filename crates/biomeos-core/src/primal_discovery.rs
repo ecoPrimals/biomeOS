@@ -14,19 +14,19 @@ use tracing::{debug, info};
 pub struct PrimalMetadata {
     /// Binary path
     pub binary: PathBuf,
-    
+
     /// Primal ID (from query or filename)
     pub id: String,
-    
+
     /// Capabilities provided
     pub provides: Vec<String>,
-    
+
     /// Capabilities required
     pub requires: Vec<String>,
-    
+
     /// Version (if available)
     pub version: Option<String>,
-    
+
     /// Name (if available)
     pub name: Option<String>,
 }
@@ -34,35 +34,40 @@ pub struct PrimalMetadata {
 /// Scan directory for executable primals
 pub async fn discover_primals(dir: &Path) -> Result<Vec<PrimalMetadata>> {
     info!("🔍 Scanning directory for primals: {}", dir.display());
-    
+
     let mut primals = Vec::new();
-    let mut entries = tokio::fs::read_dir(dir).await
+    let mut entries = tokio::fs::read_dir(dir)
+        .await
         .context("Failed to read directory")?;
-    
+
     while let Some(entry) = entries.next_entry().await? {
         let path = entry.path();
-        
+
         // Skip non-files and hidden files
-        if !path.is_file() || path.file_name()
-            .and_then(|n| n.to_str())
-            .map(|s| s.starts_with('.'))
-            .unwrap_or(false) 
+        if !path.is_file()
+            || path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .map(|s| s.starts_with('.'))
+                .unwrap_or(false)
         {
             continue;
         }
-        
+
         // Check if executable
         if !is_executable(&path).await {
             continue;
         }
-        
+
         debug!("📦 Found executable: {}", path.display());
-        
+
         // Try to query metadata
         match query_primal_metadata(&path).await {
             Ok(metadata) => {
-                info!("✅ Discovered primal: {} (provides: {:?})", 
-                    metadata.id, metadata.provides);
+                info!(
+                    "✅ Discovered primal: {} (provides: {:?})",
+                    metadata.id, metadata.provides
+                );
                 primals.push(metadata);
             }
             Err(e) => {
@@ -81,7 +86,7 @@ pub async fn discover_primals(dir: &Path) -> Result<Vec<PrimalMetadata>> {
             }
         }
     }
-    
+
     info!("🎯 Discovered {} primals", primals.len());
     Ok(primals)
 }
@@ -92,7 +97,7 @@ pub async fn discover_primals(dir: &Path) -> Result<Vec<PrimalMetadata>> {
 /// Expects JSON: {"provides": ["Security"], "requires": ["Discovery"]}
 pub async fn query_primal_metadata(binary: &Path) -> Result<PrimalMetadata> {
     debug!("🔍 Querying primal metadata: {}", binary.display());
-    
+
     let output = Command::new(binary)
         .arg("--biomeos-capabilities")
         .stdin(Stdio::null())
@@ -101,14 +106,14 @@ pub async fn query_primal_metadata(binary: &Path) -> Result<PrimalMetadata> {
         .output()
         .await
         .context("Failed to execute binary")?;
-    
+
     if !output.status.success() {
         anyhow::bail!(
             "Binary returned error: {}",
             String::from_utf8_lossy(&output.stderr)
         );
     }
-    
+
     #[derive(Deserialize)]
     struct CapabilityResponse {
         provides: Vec<String>,
@@ -118,15 +123,16 @@ pub async fn query_primal_metadata(binary: &Path) -> Result<PrimalMetadata> {
         #[serde(default)]
         name: Option<String>,
     }
-    
-    let response: CapabilityResponse = serde_json::from_slice(&output.stdout)
-        .context("Failed to parse capabilities JSON")?;
-    
-    let id = binary.file_stem()
+
+    let response: CapabilityResponse =
+        serde_json::from_slice(&output.stdout).context("Failed to parse capabilities JSON")?;
+
+    let id = binary
+        .file_stem()
         .and_then(|s| s.to_str())
         .unwrap_or("unknown")
         .to_string();
-    
+
     Ok(PrimalMetadata {
         binary: binary.to_path_buf(),
         id,
@@ -140,9 +146,9 @@ pub async fn query_primal_metadata(binary: &Path) -> Result<PrimalMetadata> {
 /// Check if file is executable (platform-agnostic)
 #[cfg(unix)]
 async fn is_executable(path: &Path) -> bool {
-    use tokio::fs;
     use std::os::unix::fs::PermissionsExt;
-    
+    use tokio::fs;
+
     if let Ok(metadata) = fs::metadata(path).await {
         metadata.permissions().mode() & 0o111 != 0
     } else {
@@ -169,20 +175,20 @@ mod tests {
     use super::*;
     use std::fs;
     use tempfile::TempDir;
-    
+
     #[tokio::test]
     async fn test_discover_empty_dir() {
         let dir = TempDir::new().unwrap();
         let primals = discover_primals(dir.path()).await.unwrap();
         assert_eq!(primals.len(), 0);
     }
-    
+
     #[tokio::test]
     async fn test_skip_hidden_files() {
         let dir = TempDir::new().unwrap();
         let hidden = dir.path().join(".hidden");
         fs::write(&hidden, "#!/bin/bash\necho test").unwrap();
-        
+
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
@@ -190,9 +196,8 @@ mod tests {
             perms.set_mode(0o755);
             fs::set_permissions(&hidden, perms).unwrap();
         }
-        
+
         let primals = discover_primals(dir.path()).await.unwrap();
         assert_eq!(primals.len(), 0); // Hidden files skipped
     }
 }
-

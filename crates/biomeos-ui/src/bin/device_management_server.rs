@@ -61,8 +61,7 @@ async fn main() -> Result<()> {
     let bridge = Arc::new(RwLock::new(PetalTongueRPCBridge::new(&socket_path)));
 
     info!("📡 Binding to Unix socket: {}", socket_path);
-    let listener = UnixListener::bind(&socket_path)
-        .context("Failed to bind Unix socket")?;
+    let listener = UnixListener::bind(&socket_path).context("Failed to bind Unix socket")?;
 
     info!("✅ biomeOS Device Management Server ready");
     info!("📡 Advertising capability: device.management");
@@ -172,7 +171,10 @@ async fn handle_method(
             let primal_id = params["primal_id"].as_str().unwrap_or("");
 
             let bridge = bridge.read().await;
-            match bridge.assign_device(device_id.to_string(), primal_id.to_string()).await {
+            match bridge
+                .assign_device(device_id.to_string(), primal_id.to_string())
+                .await
+            {
                 Ok(success) => Ok(json!({"success": success})),
                 Err(e) => Err(JsonRpcError {
                     code: -32603,
@@ -233,4 +235,3 @@ async fn handle_method(
         },
     }
 }
-
