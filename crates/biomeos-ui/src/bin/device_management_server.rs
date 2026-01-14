@@ -9,7 +9,7 @@
 //! - Serves live data to petalTongue GUI
 
 use anyhow::{Context, Result};
-use biomeos_ui::petaltongue_bridge::PetalTongueRPCBridge;
+use biomeos_ui::capabilities::device_management::DeviceManagementProvider;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -58,7 +58,7 @@ async fn main() -> Result<()> {
     let _ = tokio::fs::remove_file(&socket_path).await;
 
     // Create the bridge
-    let bridge = Arc::new(RwLock::new(PetalTongueRPCBridge::new(&socket_path)));
+    let provider = Arc::new(RwLock::new(DeviceManagementProvider::new(&socket_path)));
 
     info!("📡 Binding to Unix socket: {}", socket_path);
     let listener = UnixListener::bind(&socket_path).context("Failed to bind Unix socket")?;
@@ -71,9 +71,9 @@ async fn main() -> Result<()> {
     loop {
         match listener.accept().await {
             Ok((stream, _addr)) => {
-                let bridge = bridge.clone();
+                let provider_clone = provider.clone();
                 tokio::spawn(async move {
-                    if let Err(e) = handle_connection(stream, bridge).await {
+                    if let Err(e) = handle_connection(stream, provider_clone).await {
                         error!("Connection error: {}", e);
                     }
                 });
@@ -87,7 +87,7 @@ async fn main() -> Result<()> {
 
 async fn handle_connection(
     stream: UnixStream,
-    bridge: Arc<RwLock<PetalTongueRPCBridge>>,
+    provider: Arc<RwLock<DeviceManagementProvider>>,
 ) -> Result<()> {
     info!("🔌 New connection from petalTongue");
 
@@ -116,7 +116,7 @@ async fn handle_connection(
         info!("📥 RPC: {}", request.method);
 
         // Handle method
-        let response = handle_method(request, &bridge).await;
+        let response = handle_method(request, &provider).await;
 
         // Send response
         let response_json = serde_json::to_string(&response)? + "\n";
@@ -129,12 +129,12 @@ async fn handle_connection(
 
 async fn handle_method(
     request: JsonRpcRequest,
-    bridge: &Arc<RwLock<PetalTongueRPCBridge>>,
+    provider: &Arc<RwLock<DeviceManagementProvider>>,
 ) -> JsonRpcResponse {
     let result = match request.method.as_str() {
         "get_devices" => {
-            let bridge = bridge.read().await;
-            match bridge.get_devices().await {
+            let provider_guard = provider.read().await;
+            match provider_guard.get_devices().await {
                 Ok(devices) => Ok(json!(devices)),
                 Err(e) => Err(JsonRpcError {
                     code: -32603,
@@ -144,8 +144,8 @@ async fn handle_method(
             }
         }
         "get_primals_extended" => {
-            let bridge = bridge.read().await;
-            match bridge.get_primals_extended().await {
+            let provider_guard = provider.read().await;
+            match provider_guard.get_primals().await {
                 Ok(primals) => Ok(json!(primals)),
                 Err(e) => Err(JsonRpcError {
                     code: -32603,
@@ -155,8 +155,8 @@ async fn handle_method(
             }
         }
         "get_niche_templates" => {
-            let bridge = bridge.read().await;
-            match bridge.get_niche_templates().await {
+            let provider_guard = provider.read().await;
+            match provider_guard.get_niche_templates().await {
                 Ok(templates) => Ok(json!(templates)),
                 Err(e) => Err(JsonRpcError {
                     code: -32603,
@@ -170,8 +170,8 @@ async fn handle_method(
             let device_id = params["device_id"].as_str().unwrap_or("");
             let primal_id = params["primal_id"].as_str().unwrap_or("");
 
-            let bridge = bridge.read().await;
-            match bridge
+            let provider_guard = provider.read().await;
+            match provider_guard
                 .assign_device(device_id.to_string(), primal_id.to_string())
                 .await
             {
@@ -185,11 +185,42 @@ async fn handle_method(
         }
         "validate_niche" => {
             let params = request.params.unwrap_or(json!({}));
+            // Get template from provider
+            let provider_guard = provider.read().await;
+            let templates = match provider_guard.get_niche_templates().await {
+                Ok(t) => t,
+                Err(e) => {
+                    return JsonRpcResponse {
+                        jsonrpc: "2.0".to_string(),
+                        result: None,
+                        error: Some(JsonRpcError {
+                            code: -32603,
+                            message: format!("Failed to get templates: {}", e),
+                            data: None,
+                        }),
+                        id: request.id,
+                    };
+                }
+            };
+            
             let template_id = params["template_id"].as_str().unwrap_or("");
-            let config = params["config"].clone();
-
-            let bridge = bridge.read().await;
-            match bridge.validate_niche(template_id.to_string(), config).await {
+            let template = match templates.iter().find(|t| t.id == template_id) {
+                Some(t) => t,
+                None => {
+                    return JsonRpcResponse {
+                        jsonrpc: "2.0".to_string(),
+                        result: None,
+                        error: Some(JsonRpcError {
+                            code: -32602,
+                            message: format!("Template not found: {}", template_id),
+                            data: None,
+                        }),
+                        id: request.id,
+                    };
+                }
+            };
+            
+            match provider_guard.validate_niche(template).await {
                 Ok(result) => Ok(json!(result)),
                 Err(e) => Err(JsonRpcError {
                     code: -32603,
@@ -200,11 +231,10 @@ async fn handle_method(
         }
         "deploy_niche" => {
             let params = request.params.unwrap_or(json!({}));
-            let template_id = params["template_id"].as_str().unwrap_or("");
             let config = params["config"].clone();
 
-            let bridge = bridge.read().await;
-            match bridge.deploy_niche(template_id.to_string(), config).await {
+            let provider_guard = provider.read().await;
+            match provider_guard.deploy_niche(config).await {
                 Ok(niche_id) => Ok(json!({"niche_id": niche_id})),
                 Err(e) => Err(JsonRpcError {
                     code: -32603,

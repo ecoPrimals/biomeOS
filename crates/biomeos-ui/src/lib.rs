@@ -55,7 +55,6 @@ pub mod actions;
 pub mod capabilities; // ✅ TRUE PRIMAL capability-based architecture!
 pub mod events;
 pub mod orchestrator;
-pub mod petaltongue_bridge; // ⚠️ DEPRECATED - Use capabilities::device_management!
 pub mod realtime;
 pub mod state;
 pub mod suggestions;
@@ -63,8 +62,12 @@ pub mod suggestions;
 pub use actions::{ActionResult, UserAction};
 pub use events::{EventStream, UIEvent};
 pub use orchestrator::InteractiveUIOrchestrator;
-pub use petaltongue_bridge::{
-    Device as PTDevice, NicheTemplate, PetalTongueRPCBridge, Primal as PTPrimal,
+// Re-export capability-based types for compatibility
+pub use capabilities::device_management::{
+    Device as PTDevice,
+    DeviceManagementProvider,
+    NicheTemplate,
+    Primal as PTPrimal,
 };
 pub use realtime::{RealTimeEvent, RealTimeEventHandler, RealTimeEventSubscriber};
 pub use state::{Assignment, Device, PrimalInfo, UIState};
