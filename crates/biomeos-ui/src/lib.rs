@@ -52,9 +52,10 @@
 #![warn(clippy::all)]
 
 pub mod actions;
+pub mod capabilities; // ✅ TRUE PRIMAL capability-based architecture!
 pub mod events;
 pub mod orchestrator;
-pub mod petaltongue_bridge;
+pub mod petaltongue_bridge; // ⚠️ DEPRECATED - Use capabilities::device_management!
 pub mod realtime;
 pub mod state;
 pub mod suggestions;

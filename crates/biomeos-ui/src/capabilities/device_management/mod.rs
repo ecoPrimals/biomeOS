@@ -35,3 +35,12 @@ pub mod provider;
 pub use types::*;
 pub use provider::DeviceManagementProvider;
 
+// Re-export for compatibility during transition
+// These types match the old petaltongue_bridge types
+pub use types::{
+    Device, DeviceType, DeviceStatus,
+    ManagedPrimal as Primal, PrimalStatus,
+    NicheTemplate, PrimalRole, ResourceRequirements,
+    ValidationResult,
+};
+
