@@ -1,4 +1,14 @@
-//! petalTongue RPC Bridge
+//! petalTongue RPC Bridge (DEPRECATED - TRUE PRIMAL VIOLATION!)
+//!
+//! ⚠️  **This module violates TRUE PRIMAL principles!**
+//! ⚠️  **Hardcodes "petalTongue" as a specific primal**
+//!
+//! **Evolution in progress**: Moving to `capabilities/device_management/`
+//! - This will become a generic capability
+//! - ANY primal can discover "device.management" at runtime
+//! - No primal names hardcoded
+//!
+//! **TODO**: Complete migration to capability-based architecture
 //!
 //! Implements the device.management capability for petalTongue's biomeOS integration.
 //! Provides JSON-RPC methods for device discovery, primal status, and niche management.
