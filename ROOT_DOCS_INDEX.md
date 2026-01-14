@@ -53,8 +53,9 @@ This index organizes all root-level documentation for easy navigation.
 ## 🔌 **Integration Guides**
 
 ### Primal Integration
+- **PETALTONGUE_INTEGRATION_JAN13.md** ⭐ **NEW** - PetalTongue UI integration (100% compatible!)
 - **NESTGATE_ATOMIC_HANDOFF.md** - NestGate atomic integration
-- **PETALTONGUE_TUI_INTEGRATION.md** - petalTongue UI integration
+- **PETALTONGUE_TUI_INTEGRATION.md** - petalTongue UI integration (legacy)
 - **PRIMAL_LAUNCHER_README.md** - Primal launching guide
 
 ### Assessment
@@ -195,7 +196,13 @@ biomeOS/
 
 ## ✨ **Recent Updates**
 
-### 2026-01-13
+### 2026-01-13 (Late Evening)
+- ✅ PetalTongue UI integration complete (100% API compatible!)
+- ✅ Binaries harvested to plasmidBin/ (GUI + headless)
+- ✅ Integration guide created (PETALTONGUE_INTEGRATION_JAN13.md)
+- ✅ Updated README, STATUS, and ROOT_DOCS_INDEX
+
+### 2026-01-13 (Earlier)
 - Archived 12 session documents to `archive/sessions-jan13-2026/`
 - Updated STATUS.md with concurrent evolution results
 - Created ROOT_DOCS_INDEX.md for navigation

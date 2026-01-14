@@ -31,7 +31,7 @@ impl PrimalInstance {
     /// Uses signal 0 (null signal) to test process existence without affecting it.
     /// This is safe and idiomatic using the nix crate's signal handling.
     pub fn is_running(&self) -> bool {
-        use nix::sys::signal::{kill, Signal};
+        use nix::sys::signal::kill;
         use nix::unistd::Pid;
 
         // Signal 0 checks process existence without sending an actual signal

@@ -17,6 +17,7 @@ use tracing::{info, warn};
 mod handlers;
 mod state;
 mod websocket;
+mod unix_server;
 
 pub use state::{AppState, Config};
 pub use websocket::{
@@ -214,6 +215,7 @@ async fn main() -> anyhow::Result<()> {
             get(handlers::discovery::get_discovered_primals),
         )
         .route("/api/v1/topology", get(handlers::topology::get_topology))
+        .route("/api/v1/livespores", get(handlers::livespores::get_livespores)) // LiveSpore USB discovery
         .route("/api/v1/events/stream", get(handlers::events::event_stream)) // SSE endpoint
         .route("/api/v1/events/ws", get(websocket_handler)) // WebSocket endpoint (JSON-RPC 2.0)
         .route(
@@ -225,28 +227,53 @@ async fn main() -> anyhow::Result<()> {
         .layer(TraceLayer::new_for_http())
         .with_state(state.clone());
 
-    info!(
-        "🚀 biomeOS API Server listening on http://{}",
-        config.bind_addr
-    );
-    info!("   Health: http://{}/api/v1/health", config.bind_addr);
-    info!(
-        "   Discovery: http://{}/api/v1/primals/discovered",
-        config.bind_addr
-    );
-    info!("   Topology: http://{}/api/v1/topology", config.bind_addr);
-    info!(
-        "   Events (SSE): http://{}/api/v1/events/stream",
-        config.bind_addr
-    );
-    info!(
-        "   Events (WebSocket JSON-RPC 2.0): ws://{}/api/v1/events/ws",
-        config.bind_addr
-    );
-
-    // Start server
-    let listener = tokio::net::TcpListener::bind(config.bind_addr).await?;
-    axum::serve(listener, app).await?;
+    // Start server (Unix socket PRIMARY, HTTP bridge optional)
+    if config.enable_http_bridge {
+        if let Some(bind_addr) = config.bind_addr {
+            // Dual mode: Unix socket + HTTP bridge
+            info!("🌉 Starting in DUAL MODE (Unix socket + HTTP bridge)");
+            info!("   Unix socket: {}", config.socket_path.display());
+            info!("   HTTP bridge: http://{}", bind_addr);
+            info!("   ⚠️ HTTP is TEMPORARY and will be removed!");
+            
+            unix_server::serve_dual_mode(&config.socket_path, bind_addr, app).await?;
+        } else {
+            warn!("⚠️  HTTP bridge enabled but no bind_addr set!");
+            warn!("   Falling back to Unix socket only");
+            
+            info!("🚀 biomeOS API Server starting (Unix socket only)");
+            info!("   Socket: {}", config.socket_path.display());
+            info!("   Protocol: JSON-RPC 2.0");
+            info!("   Endpoints:");
+            info!("     • /api/v1/health");
+            info!("     • /api/v1/primals/discovered");
+            info!("     • /api/v1/topology");
+            info!("     • /api/v1/livespores");
+            info!("     • /api/v1/events/stream (SSE)");
+            info!("     • /api/v1/events/ws (WebSocket JSON-RPC 2.0)");
+            
+            unix_server::serve_unix_socket(&config.socket_path, app).await?;
+        }
+    } else {
+        // Unix socket only (PRODUCTION mode!)
+        info!("🚀 biomeOS API Server starting (Unix socket - PRODUCTION)");
+        info!("   Socket: {}", config.socket_path.display());
+        info!("   Protocol: JSON-RPC 2.0");
+        info!("   Security: Owner-only (0600 permissions)");
+        info!("   Port-free: ✅ TRUE PRIMAL architecture!");
+        info!("");
+        info!("   Endpoints:");
+        info!("     • /api/v1/health");
+        info!("     • /api/v1/primals/discovered");
+        info!("     • /api/v1/topology");
+        info!("     • /api/v1/livespores");
+        info!("     • /api/v1/events/stream (SSE)");
+        info!("     • /api/v1/events/ws (WebSocket JSON-RPC 2.0)");
+        info!("");
+        info!("   Connect via: {}", config.socket_path.display());
+        
+        unix_server::serve_unix_socket(&config.socket_path, app).await?;
+    }
 
     Ok(())
 }

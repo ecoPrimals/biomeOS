@@ -16,6 +16,7 @@ nix = { version = "0.29", features = ["signal", "user"] }
 biomeos-spore = { path = "../biomeos-spore" }
 biomeos-core = { path = "../biomeos-core" }
 biomeos-federation = { path = "../biomeos-federation" }
+biomeos-types = { path = "../biomeos-types" }
 chrono = "0.4"
 toml = "0.8"  # For Neural API graph parsing
 

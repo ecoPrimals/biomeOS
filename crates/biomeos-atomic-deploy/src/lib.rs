@@ -25,7 +25,9 @@
 pub mod deployment_graph;
 pub mod health_check;
 pub mod orchestrator;
-pub mod primal_launcher;
+pub mod primal_coordinator; // NEW: Discovery-based coordination (TRUE PRIMAL)
+pub mod primal_discovery; // NEW: Socket scanning discovery
+pub mod primal_launcher; // EVOLVING: Legacy launcher → coordinator
 
 // Neural API graph execution (TOML-based deterministic deployment)
 pub mod neural_executor;
@@ -34,7 +36,9 @@ pub mod neural_graph;
 pub use deployment_graph::{AtomicDeploymentGraph, DeploymentResult};
 pub use health_check::{HealthChecker, HealthStatus};
 pub use orchestrator::{AtomicType, DeploymentConfig, DeploymentOrchestrator};
-pub use primal_launcher::{PrimalInstance, PrimalLauncher};
+pub use primal_coordinator::{CoordinationStatus, DeploymentGuide, PrimalCoordinator}; // NEW
+pub use primal_discovery::{DiscoveredPrimal, PrimalDiscovery}; // NEW
+pub use primal_launcher::{PrimalInstance, PrimalLauncher}; // LEGACY
 
 // Neural API exports
 pub use neural_executor::{

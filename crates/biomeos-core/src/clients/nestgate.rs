@@ -54,9 +54,9 @@ impl NestGateClient {
         let transport = TransportClient::discover_with_preference(
             "nestgate",
             family_id,
-            TransportPreference::Http
+            TransportPreference::Auto  // ✅ Evolved: Auto-discover secure transport
         ).await
-            .context("Failed to create HTTP client")?;
+            .context("Failed to discover NestGate via secure transport")?;
         
         Ok(Self {
             transport,

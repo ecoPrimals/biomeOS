@@ -75,7 +75,7 @@ impl DeploymentConfig {
         
         Self {
             usb_seed_path,
-            family_id: FamilyId::new_for_test().to_string(),
+            family_id: FamilyId::new("nat0").to_string(),
             deployment_batch: chrono::Utc::now().format("%Y%m%d").to_string(),
             binary_dir: PathBuf::from(
                 "/home/eastgate/Development/ecoPrimals/phase2/biomeOS/plasmidBin",

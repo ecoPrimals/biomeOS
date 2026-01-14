@@ -120,9 +120,9 @@ impl ToadStoolClient {
         let transport = TransportClient::discover_with_preference(
             "toadstool",
             family_id,
-            TransportPreference::Http
+            TransportPreference::Auto  // ✅ Evolved: Auto-discover secure transport
         ).await
-            .context("Failed to create HTTP client")?;
+            .context("Failed to discover ToadStool via secure transport")?;
         
         Ok(Self {
             transport,

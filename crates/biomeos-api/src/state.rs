@@ -55,11 +55,13 @@
 
 use biomeos_core::{CompositeDiscovery, PrimalDiscovery};
 use std::net::SocketAddr;
+use std::path::PathBuf;
 use std::sync::Arc;
 use thiserror::Error;
 
 /// Default bind address (const to avoid parsing at runtime)
-const DEFAULT_BIND_ADDR: &str = "0.0.0.0:3000";
+/// ⚠️ DEPRECATED: Use Unix socket instead! This is for temporary HTTP bridge only.
+const DEFAULT_BIND_ADDR: &str = "127.0.0.1:3000";  // Changed to localhost only!
 
 /// Application state (shared across handlers)
 #[derive(Clone)]
@@ -110,23 +112,33 @@ pub struct Config {
     /// Set via `BIOMEOS_STANDALONE_MODE=true` environment variable.
     pub standalone_mode: bool,
 
-    /// Server bind address
-    pub bind_addr: SocketAddr,
+    /// Unix socket path (PRIMARY transport)
+    pub socket_path: PathBuf,
+
+    /// Server bind address (DEPRECATED - HTTP bridge only!)
+    /// ⚠️ This is only for temporary HTTP bridge to support legacy clients
+    pub bind_addr: Option<SocketAddr>,
+
+    /// Enable HTTP bridge (temporary - for PetalTongue transition)
+    pub enable_http_bridge: bool,
 
     /// Request timeout
     pub request_timeout: std::time::Duration,
 
-    /// Enable CORS
+    /// Enable CORS (HTTP bridge only)
     pub enable_cors: bool,
 }
 
 impl Default for Config {
     fn default() -> Self {
+        // Get runtime directory for Unix socket
+        let socket_path = Self::default_socket_path();
+        
         Self {
             standalone_mode: false, // Production default: require primals
-            bind_addr: DEFAULT_BIND_ADDR
-                .parse()
-                .expect("DEFAULT_BIND_ADDR is a valid socket address"),
+            socket_path,
+            bind_addr: None, // HTTP deprecated by default!
+            enable_http_bridge: false, // Disabled by default (secure!)
             request_timeout: std::time::Duration::from_secs(30),
             enable_cors: true,
         }
@@ -134,27 +146,55 @@ impl Default for Config {
 }
 
 impl Config {
+    /// Get default Unix socket path
+    fn default_socket_path() -> PathBuf {
+        // Use XDG_RUNTIME_DIR or fallback to /run/user/{uid}
+        let runtime_dir = std::env::var("XDG_RUNTIME_DIR")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| {
+                // Fallback to /tmp if XDG_RUNTIME_DIR not set
+                PathBuf::from("/tmp")
+            });
+        
+        runtime_dir.join("biomeos-api.sock")
+    }
+
     /// Load configuration from environment
     pub fn from_env() -> Self {
-        // Support both old and new env var names for backward compatibility
+        // Standalone mode
         let standalone_mode = std::env::var("BIOMEOS_STANDALONE_MODE")
-            .or_else(|_| std::env::var("BIOMEOS_STANDALONE_MODE"))
             .ok()
             .and_then(|v| v.parse::<bool>().ok())
             .unwrap_or(false);
 
-        let bind_addr = std::env::var("BIOMEOS_API_BIND_ADDR")
+        // Unix socket path (PRIMARY)
+        let socket_path = std::env::var("BIOMEOS_API_SOCKET_PATH")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| Self::default_socket_path());
+
+        // HTTP bridge (TEMPORARY - for PetalTongue transition)
+        let enable_http_bridge = std::env::var("BIOMEOS_API_HTTP_BRIDGE")
             .ok()
-            .and_then(|v| v.parse().ok())
-            .unwrap_or_else(|| {
-                DEFAULT_BIND_ADDR
-                    .parse()
-                    .expect("DEFAULT_BIND_ADDR is a valid socket address")
-            });
+            .and_then(|v| v.parse::<bool>().ok())
+            .unwrap_or(false);
+
+        // HTTP bind address (only if bridge enabled)
+        let bind_addr = if enable_http_bridge {
+            std::env::var("BIOMEOS_API_BIND_ADDR")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .or_else(|| {
+                    DEFAULT_BIND_ADDR.parse().ok()
+                })
+        } else {
+            None
+        };
 
         Self {
             standalone_mode,
+            socket_path,
             bind_addr,
+            enable_http_bridge,
             ..Default::default()
         }
     }

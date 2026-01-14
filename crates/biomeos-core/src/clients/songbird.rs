@@ -124,9 +124,9 @@ impl SongbirdClient {
         let transport = TransportClient::discover_with_preference(
             "songbird",
             family_id,
-            TransportPreference::Http
+            TransportPreference::Auto  // ✅ Evolved: Auto-discover secure transport
         ).await
-            .context("Failed to create HTTP client")?;
+            .context("Failed to discover Songbird via secure transport")?;
         
         Ok(Self {
             transport,

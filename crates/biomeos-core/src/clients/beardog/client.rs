@@ -78,10 +78,10 @@ impl BearDogClient {
         let transport = TransportClient::discover_with_preference(
             "beardog",
             family_id,
-            TransportPreference::Http,
+            TransportPreference::Auto,  // ✅ Evolved: Auto-discover secure transport
         )
         .await
-        .context("Failed to create BearDog HTTP client")?;
+        .context("Failed to discover BearDog via secure transport")?;
 
         Ok(Self {
             transport,
@@ -139,6 +139,27 @@ impl BearDogClient {
     /// Get high-level BTSP API client
     pub fn btsp(&self) -> super::btsp::BtspClient {
         super::btsp::BtspClient::new(self.clone())
+    }
+
+    /// Get cryptography operations client
+    ///
+    /// Provides encryption, decryption, signing, and verification
+    pub fn crypto(&self) -> super::crypto::CryptoClient {
+        super::crypto::CryptoClient::new(self.transport.clone())
+    }
+
+    /// Get key management client
+    ///
+    /// Provides key generation, rotation, and lifecycle management
+    pub fn keys(&self) -> super::keys::KeysClient {
+        super::keys::KeysClient::new(self.transport.clone())
+    }
+
+    /// Get access control client
+    ///
+    /// Provides access validation and audit logging
+    pub fn access(&self) -> super::access::AccessClient {
+        super::access::AccessClient::new(self.transport.clone())
     }
 }
 

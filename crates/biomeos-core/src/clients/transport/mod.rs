@@ -7,7 +7,7 @@
 //! This module provides a unified interface for multiple transport protocols:
 //! 1. **JSON-RPC over Unix Sockets** (PRIMARY - fast, secure, isomorphic)
 //! 2. **tarpc** (FUTURE - type-safe, bidirectional)
-//! 3. **HTTP/HTTPS** (FALLBACK - legacy, deprecated)
+//! 3. **HTTP/HTTPS** (DEPRECATED - removed from auto-discovery!)
 //!
 //! ## Philosophy
 //!
@@ -61,9 +61,10 @@ pub enum TransportPreference {
     UnixSocket,
     /// tarpc (FUTURE - not yet implemented)
     Tarpc,
-    /// HTTP/HTTPS (FALLBACK - deprecated)
+    /// HTTP/HTTPS (DEPRECATED - only for explicit use, not auto-discovery!)
+    #[deprecated(since = "0.2.0", note = "Use UnixSocket instead. HTTP is insecure and slow.")]
     Http,
-    /// Auto-select best available
+    /// Auto-select secure transport (Unix socket only!)
     Auto,
 }
 
@@ -98,7 +99,8 @@ enum Transport {
 impl PrimalTransport {
     /// Create a transport client by auto-discovering the primal's transport
     ///
-    /// Searches in XDG runtime directory for Unix sockets, falls back to HTTP.
+    /// Searches in XDG runtime directory for Unix sockets.
+    /// **FAILS FAST** if no secure transport is available (no HTTP fallback!).
     ///
     /// # Arguments
     ///
@@ -137,22 +139,25 @@ impl PrimalTransport {
             }
             TransportPreference::Tarpc => {
                 // TODO: Implement tarpc transport
-                warn!("tarpc transport not yet implemented, falling back to Unix socket");
+                warn!("tarpc transport not yet implemented, trying Unix socket");
                 Self::try_unix_socket(primal_name, family_id).await
-                    .or_else(|_| Self::try_http(primal_name))
+                    .context("No secure transport available (tarpc not implemented, Unix socket failed)")
             }
-            TransportPreference::Http => Self::try_http(primal_name),
+            #[allow(deprecated)]
+            TransportPreference::Http => {
+                warn!("⚠️ HTTP transport explicitly requested (DEPRECATED and INSECURE!)");
+                Self::try_http(primal_name)
+            }
             TransportPreference::Auto => {
-                // Priority: Unix socket > tarpc (future) > HTTP (fallback)
+                // SECURE ONLY: Unix socket → tarpc (future)
+                // NO HTTP FALLBACK! Fail fast if secure transport unavailable.
                 Self::try_unix_socket(primal_name, family_id)
                     .await
-                    .or_else(|e| {
-                        debug!(
-                            error = ?e,
-                            "Unix socket unavailable, falling back to HTTP"
-                        );
-                        Self::try_http(primal_name)
-                    })
+                    .context(format!(
+                        "No secure transport available for primal '{}' (family: '{}'). \
+                         Ensure primal is running and socket exists at /run/user/{{uid}}/{}-{}.sock",
+                        primal_name, family_id, primal_name, family_id
+                    ))
             }
         }
     }
@@ -185,11 +190,19 @@ impl PrimalTransport {
         })
     }
 
-    /// Try to create an HTTP client (fallback)
+    /// Try to create an HTTP client (DEPRECATED - explicit use only!)
+    ///
+    /// ⚠️ **WARNING**: HTTP is DEPRECATED and INSECURE!
+    /// - Not included in auto-discovery
+    /// - Only available for explicit `TransportPreference::Http`
+    /// - Will be removed in future versions
+    ///
+    /// **Use `TransportPreference::UnixSocket` instead!**
+    #[deprecated(since = "0.2.0", note = "Use Unix socket instead. HTTP is insecure and slow.")]
     fn try_http(primal_name: &str) -> Result<Self> {
         warn!(
             primal = primal_name,
-            "⚠️ Using HTTP transport (deprecated - insecure, slow)"
+            "🚨 Using HTTP transport (DEPRECATED and INSECURE!) - switch to Unix socket!"
         );
 
         // Default port mapping (legacy)

@@ -123,9 +123,9 @@ impl SquirrelClient {
         let transport = TransportClient::discover_with_preference(
             "squirrel",
             family_id,
-            TransportPreference::Http
+            TransportPreference::Auto  // ✅ Evolved: Auto-discover secure transport
         ).await
-            .context("Failed to create HTTP client")?;
+            .context("Failed to discover Squirrel via secure transport")?;
         
         Ok(Self {
             transport,
