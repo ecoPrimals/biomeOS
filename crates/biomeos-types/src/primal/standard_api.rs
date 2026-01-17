@@ -65,28 +65,36 @@ pub trait BiomeOSStandardAPI: Send + Sync {
     /// its name, version, and capabilities.
     ///
     /// **JSON-RPC**: `biomeos.identity`
-    async fn biomeos_identity(&self) -> Result<PrimalIdentity, Box<dyn std::error::Error + Send + Sync>>;
+    async fn biomeos_identity(
+        &self,
+    ) -> Result<PrimalIdentity, Box<dyn std::error::Error + Send + Sync>>;
 
     /// Get capabilities (what can I do?)
     ///
     /// Returns the list of capabilities this primal provides.
     ///
     /// **JSON-RPC**: `biomeos.capabilities`
-    async fn biomeos_capabilities(&self) -> Result<Vec<PrimalCapability>, Box<dyn std::error::Error + Send + Sync>>;
+    async fn biomeos_capabilities(
+        &self,
+    ) -> Result<Vec<PrimalCapability>, Box<dyn std::error::Error + Send + Sync>>;
 
     /// Health check (how am I?)
     ///
     /// Returns the primal's current health status.
     ///
     /// **JSON-RPC**: `biomeos.health`
-    async fn biomeos_health(&self) -> Result<HealthStatus, Box<dyn std::error::Error + Send + Sync>>;
+    async fn biomeos_health(
+        &self,
+    ) -> Result<HealthStatus, Box<dyn std::error::Error + Send + Sync>>;
 
     /// Get known peers (who do I know?)
     ///
     /// Returns the list of other primals this primal has discovered.
     ///
     /// **JSON-RPC**: `biomeos.peers`
-    async fn biomeos_peers(&self) -> Result<Vec<PeerInfo>, Box<dyn std::error::Error + Send + Sync>>;
+    async fn biomeos_peers(
+        &self,
+    ) -> Result<Vec<PeerInfo>, Box<dyn std::error::Error + Send + Sync>>;
 }
 
 /// Primal identity information
@@ -116,13 +124,13 @@ pub struct PrimalIdentity {
 pub enum HealthStatus {
     /// Primal is healthy and operational
     Healthy,
-    
+
     /// Primal is degraded but functional
     Degraded,
-    
+
     /// Primal is unhealthy
     Unhealthy,
-    
+
     /// Health status unknown
     Unknown,
 }
@@ -167,7 +175,7 @@ mod tests {
 
         let json = serde_json::to_string(&identity).unwrap();
         let deserialized: PrimalIdentity = serde_json::from_str(&json).unwrap();
-        
+
         assert_eq!(identity, deserialized);
     }
 
@@ -176,4 +184,3 @@ mod tests {
         assert_eq!(HealthStatus::default(), HealthStatus::Unknown);
     }
 }
-

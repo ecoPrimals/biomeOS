@@ -1,0 +1,71 @@
+# NUCLEUS Simple Deployment - Phase 1 Test
+# Simplified graph for initial Neural API validation
+
+[graph]
+id = "nucleus-simple"
+description = "Simplified NUCLEUS deployment for Phase 1 testing"
+version = "1.0.0"
+
+[execution]
+mode = "deterministic"
+parallel_phases = true
+max_parallelism = 3
+timeout_total_ms = 120000
+rollback_on_failure = true
+
+# Phase 1: BearDog (Foundation)
+[[nodes]]
+id = "beardog"
+node_type = "primal_start"
+dependencies = []
+
+[nodes.config]
+binary = "plasmidBin/primals/beardog-server"
+family_id = "${FAMILY_ID}"
+socket = "/tmp/beardog-${FAMILY_ID}-default.sock"
+
+# Phase 2: Songbird (Discovery) - depends on BearDog
+[[nodes]]
+id = "songbird"
+node_type = "primal_start"
+dependencies = ["beardog"]
+
+[nodes.config]
+binary = "plasmidBin/primals/songbird-orchestrator"
+family_id = "${FAMILY_ID}"
+socket = "/tmp/songbird-${FAMILY_ID}.sock"
+security_provider = "/tmp/beardog-${FAMILY_ID}-default.sock"
+
+# Phase 3: Toadstool (Compute) - depends on Songbird
+[[nodes]]
+id = "toadstool"
+node_type = "primal_start"
+dependencies = ["songbird"]
+
+[nodes.config]
+binary = "plasmidBin/primals/toadstool"
+family_id = "${FAMILY_ID}"
+socket = "/tmp/toadstool-${FAMILY_ID}.sock"
+
+# Phase 3: NestGate (Storage) - depends on Songbird (parallel with Toadstool)
+[[nodes]]
+id = "nestgate"
+node_type = "primal_start"
+dependencies = ["songbird"]
+
+[nodes.config]
+binary = "plasmidBin/primals/nestgate"
+family_id = "${FAMILY_ID}"
+socket = "/tmp/nestgate-${FAMILY_ID}.sock"
+jwt_secret = "${JWT_SECRET}"
+
+# Phase 4: Verify Ecosystem - depends on all primals
+[[nodes]]
+id = "verify_ecosystem"
+node_type = "verification"
+dependencies = ["beardog", "songbird", "toadstool", "nestgate"]
+
+[nodes.config]
+check_sockets = true
+check_health = true
+

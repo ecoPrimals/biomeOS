@@ -72,7 +72,7 @@ impl DeploymentConfig {
     /// Create default config for testing
     pub fn test_config(usb_seed_path: PathBuf) -> Self {
         use biomeos_types::identifiers::FamilyId;
-        
+
         Self {
             usb_seed_path,
             family_id: FamilyId::new("nat0").to_string(),
@@ -415,14 +415,13 @@ mod tests {
 
     #[test]
     fn test_deployment_config_creation() {
-        use biomeos_types::identifiers::FamilyId;
         let temp_dir = TempDir::new().unwrap();
         let seed_path = temp_dir.path().join("test.seed");
 
         let config = DeploymentConfig::test_config(seed_path.clone());
 
         assert_eq!(config.usb_seed_path, seed_path);
-        assert_eq!(config.family_id, FamilyId::new_for_test().to_string());
+        assert_eq!(config.family_id, "nat0"); // test_config uses "nat0" as the family_id
         assert!(!config.neural_api_enabled);
         assert!(config.neural_api_endpoint.is_none());
     }

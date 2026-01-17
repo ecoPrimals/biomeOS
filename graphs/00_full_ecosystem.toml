@@ -1,0 +1,123 @@
+# Full Ecosystem Deployment
+# Orchestrates all three layers in sequence:
+# 1. NUCLEUS Enclave (Tower + Node + Nest)
+# 2. Security & Intelligence (BearDog + Squirrel)
+# 3. BenchTop UI (PetalTongue)
+#
+# Result: Complete primal ecosystem coordinated by biomeOS
+
+[graph]
+id = "full-ecosystem-deployment"
+name = "Complete Primal Ecosystem"
+version = "1.0.0"
+description = "Deploy complete primal ecosystem: NUCLEUS + Security + Intelligence + UI"
+
+[graph.metadata]
+family_id = "nat0"
+deployment_type = "full_ecosystem"
+total_primals = 6
+expected_duration_seconds = 90
+
+# Layer 1: NUCLEUS Enclave
+[[nodes]]
+id = "deploy_nucleus"
+node_type = "graph.execute"
+description = "Execute NUCLEUS enclave deployment graph"
+
+[nodes.config]
+graph_file = "graphs/01_nucleus_enclave.toml"
+wait_for_completion = true
+
+# Layer 2: Security & Intelligence
+[[nodes]]
+id = "deploy_security_intelligence"
+node_type = "graph.execute"
+description = "Execute security & intelligence layer deployment"
+depends_on = ["deploy_nucleus"]
+
+[nodes.config]
+graph_file = "graphs/02_security_intelligence.toml"
+wait_for_completion = true
+
+# Layer 3: BenchTop UI
+[[nodes]]
+id = "deploy_benchtop"
+node_type = "graph.execute"
+description = "Execute benchTop UI deployment"
+depends_on = ["deploy_security_intelligence"]
+
+[nodes.config]
+graph_file = "graphs/03_benchtop_ui.toml"
+wait_for_completion = true
+
+# Final Validation: All Primals Healthy
+[[nodes]]
+id = "verify_ecosystem"
+node_type = "health.check_all"
+description = "Verify all 6 primals are healthy and coordinating"
+depends_on = ["deploy_benchtop"]
+
+[nodes.config]
+check_endpoints = [
+    "/tmp/songbird-nat0.sock",           # Tower (NUCLEUS)
+    "/tmp/toadstool-nat0.sock",          # Node (NUCLEUS)
+    "/tmp/nestgate-nat0.sock",           # Nest (NUCLEUS)
+    "/tmp/beardog-nat0-default.sock",    # Security
+    "/tmp/squirrel-nat0.sock",           # Intelligence
+    "/tmp/petaltongue-nat0.sock"         # UI
+]
+timeout_seconds = 60
+require_all_healthy = true
+
+# Test Inter-Primal Discovery
+[[nodes]]
+id = "test_discovery"
+node_type = "primal.query"
+description = "Test that PetalTongue can discover all primals via Songbird"
+depends_on = ["verify_ecosystem"]
+
+[nodes.config]
+query_primal = "petal-tongue-headless"
+method = "get_discovered_primals"
+expected_count = 6
+
+# Report Deployment Success
+[[nodes]]
+id = "ecosystem_deployed"
+node_type = "log.info"
+description = "Report successful ecosystem deployment"
+depends_on = ["test_discovery"]
+
+[nodes.config]
+message = """
+🎊 ECOSYSTEM DEPLOYMENT COMPLETE! 🎊
+
+NUCLEUS Enclave:
+  🏰 Tower: Songbird (discovery, mesh)
+  🧠 Node: ToadStool (compute, orchestration)
+  💾 Nest: NestGate (storage, persistence)
+
+Security & Intelligence:
+  🔐 BearDog (crypto, trust, genetic lineage)
+  🐿️  Squirrel (meta-AI, MCP, routing)
+
+Universal Interface:
+  🌸 PetalTongue (benchTop UI, visualization)
+
+All 6 primals operational and coordinated by biomeOS!
+TRUE PRIMAL architecture validated ✅
+"""
+
+[[nodes]]
+id = "generate_topology_report"
+node_type = "report.generate"
+description = "Generate ecosystem topology report"
+depends_on = ["ecosystem_deployed"]
+
+[nodes.config]
+report_type = "topology"
+output_file = "ecosystem_topology_report.json"
+include_health = true
+include_capabilities = true
+include_connections = true
+

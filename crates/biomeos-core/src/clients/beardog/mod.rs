@@ -56,18 +56,17 @@
 //! ```
 
 // Module declarations
+pub mod access;
+pub mod btsp;
 pub mod client;
 pub mod crypto;
 pub mod keys;
-pub mod access;
 pub mod tunnels;
-pub mod btsp;
 pub mod types;
 
 // Re-export main types
 pub use client::BearDogClient;
 pub use types::{
-    EncryptedData, Signature, KeyInfo, AccessRequest, AccessDecision, 
-    AuditEntry, TunnelInfo, TunnelStatus
+    AccessDecision, AccessRequest, AuditEntry, EncryptedData, KeyInfo, Signature, TunnelInfo,
+    TunnelStatus,
 };
-

@@ -1,0 +1,79 @@
+# Universal BenchTop UI Deployment
+# PetalTongue as the "Desktop for Primals"
+#
+# Think: PopOS Cosmic + Discord + Steam for the primal ecosystem
+
+[graph]
+id = "benchtop-ui-deployment"
+name = "Universal BenchTop UI"
+version = "1.0.0"
+description = "Deploy PetalTongue as universal UI for discovering, monitoring, and controlling all primals"
+
+[graph.metadata]
+family_id = "nat0"
+deployment_type = "benchtop_ui"
+requires_nucleus = true
+requires_security = true
+ui_mode = "headless"  # Options: gui, tui, headless
+
+# UI Layer: PetalTongue
+[[nodes]]
+id = "launch_petaltongue"
+node_type = "primal.launch"
+description = "Launch PetalTongue benchTop UI (headless mode for server deployment)"
+
+[nodes.config]
+primal_name = "petal-tongue-headless"
+binary_path = "plasmidBin/primals/petal-tongue-headless"
+family_id = "nat0"
+socket_path = "/tmp/petaltongue-nat0.sock"
+capabilities = ["visualization", "ui", "sensory", "real_time_events"]
+startup_timeout_seconds = 30
+
+[nodes.environment]
+PETALTONGUE_MODE = "headless"
+PETALTONGUE_NEURAL_API_URL = "http://localhost:3000"
+PETALTONGUE_WEBSOCKET_URL = "ws://localhost:3000/ws/graph_events"
+PETALTONGUE_SSE_URL = "http://localhost:3000/sse/events"
+
+[[nodes.health_check]]
+type = "socket_exists"
+path = "/tmp/petaltongue-nat0.sock"
+
+# Configure Neural API for real-time events
+[[nodes]]
+id = "configure_neural_api_events"
+node_type = "neural_api.configure"
+description = "Configure Neural API to stream events to PetalTongue"
+depends_on = ["launch_petaltongue"]
+
+[nodes.config]
+enable_websocket = true
+enable_sse = true
+websocket_port = 3000
+sse_endpoint = "/sse/events"
+broadcast_to = ["petal-tongue-headless"]
+
+# Verify BenchTop UI
+[[nodes]]
+id = "verify_benchtop"
+node_type = "health.check_all"
+description = "Verify PetalTongue is operational and receiving events"
+depends_on = ["configure_neural_api_events"]
+
+[nodes.config]
+check_endpoints = [
+    "/tmp/petaltongue-nat0.sock"
+]
+timeout_seconds = 30
+require_all_healthy = true
+
+[[nodes]]
+id = "benchtop_complete"
+node_type = "log.info"
+description = "Log benchTop UI deployment completion"
+depends_on = ["verify_benchtop"]
+
+[nodes.config]
+message = "🌸 Universal BenchTop UI deployed! PetalTongue is ready to visualize and control the primal ecosystem."
+

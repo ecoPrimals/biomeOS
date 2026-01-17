@@ -64,10 +64,7 @@ pub use events::{EventStream, UIEvent};
 pub use orchestrator::InteractiveUIOrchestrator;
 // Re-export capability-based types for compatibility
 pub use capabilities::device_management::{
-    Device as PTDevice,
-    DeviceManagementProvider,
-    NicheTemplate,
-    Primal as PTPrimal,
+    Device as PTDevice, DeviceManagementProvider, NicheTemplate, Primal as PTPrimal,
 };
 pub use realtime::{RealTimeEvent, RealTimeEventHandler, RealTimeEventSubscriber};
 pub use state::{Assignment, Device, PrimalInfo, UIState};

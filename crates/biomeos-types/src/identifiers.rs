@@ -128,9 +128,7 @@ impl FamilyId {
     ///
     /// Checks `BIOMEOS_FAMILY_ID` environment variable
     pub fn from_env() -> Option<Self> {
-        std::env::var("BIOMEOS_FAMILY_ID")
-            .ok()
-            .map(Self::new)
+        std::env::var("BIOMEOS_FAMILY_ID").ok().map(Self::new)
     }
 
     /// Discover local family ID from config
@@ -140,10 +138,10 @@ impl FamilyId {
     /// - `~/.config/biomeos/family.txt`
     pub fn discover_local() -> Option<Self> {
         use crate::paths::SystemPaths;
-        
+
         let paths = SystemPaths::new().ok()?;
         let family_file = paths.config_dir().join("family.txt");
-        
+
         std::fs::read_to_string(family_file)
             .ok()
             .map(|s| Self::new(s.trim()))

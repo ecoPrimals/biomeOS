@@ -1,0 +1,87 @@
+# Security & Intelligence Layer Deployment
+# BearDog + Squirrel on top of NUCLEUS foundation
+#
+# - BearDog: Crypto, trust, genetic lineage
+# - Squirrel: Meta-AI routing, MCP server
+
+[graph]
+id = "security-intelligence-layer"
+name = "Security & Intelligence Deployment"
+version = "1.0.0"
+description = "Deploy BearDog and Squirrel on top of NUCLEUS enclave"
+
+[graph.metadata]
+family_id = "nat0"
+deployment_type = "security_intelligence"
+requires_nucleus = true
+security_level = "maximum"
+
+# Security Layer: BearDog
+[[nodes]]
+id = "launch_beardog"
+node_type = "primal.launch"
+description = "Launch BearDog for crypto, trust, and genetic lineage"
+
+[nodes.config]
+primal_name = "beardog-server"
+binary_path = "plasmidBin/primals/beardog-server"
+family_id = "nat0"
+socket_path = "/tmp/beardog-nat0-default.sock"
+capabilities = ["security", "crypto", "trust", "genetic_lineage"]
+startup_timeout_seconds = 30
+
+[[nodes.health_check]]
+type = "socket_exists"
+path = "/tmp/beardog-nat0-default.sock"
+
+[[nodes.health_check]]
+type = "json_rpc_ping"
+method = "beardog.health_check"
+
+# Intelligence Layer: Squirrel
+[[nodes]]
+id = "launch_squirrel"
+node_type = "primal.launch"
+description = "Launch Squirrel for meta-AI routing and MCP"
+depends_on = ["launch_beardog"]
+
+[nodes.config]
+primal_name = "squirrel"
+binary_path = "plasmidBin/primals/squirrel"
+family_id = "nat0"
+socket_path = "/tmp/squirrel-nat0.sock"
+capabilities = ["meta_ai", "ai_routing", "tool_orchestration", "mcp"]
+startup_timeout_seconds = 30
+
+[[nodes.health_check]]
+type = "socket_exists"
+path = "/tmp/squirrel-nat0.sock"
+
+[[nodes.health_check]]
+type = "json_rpc_ping"
+method = "squirrel.health_check"
+
+# Verify Security & Intelligence Layer
+[[nodes]]
+id = "verify_security_intelligence"
+node_type = "health.check_all"
+description = "Verify BearDog and Squirrel are healthy"
+depends_on = ["launch_beardog", "launch_squirrel"]
+
+[nodes.config]
+check_endpoints = [
+    "/tmp/beardog-nat0-default.sock",
+    "/tmp/squirrel-nat0.sock"
+]
+timeout_seconds = 30
+require_all_healthy = true
+
+[[nodes]]
+id = "security_intelligence_complete"
+node_type = "log.info"
+description = "Log security & intelligence layer completion"
+depends_on = ["verify_security_intelligence"]
+
+[nodes.config]
+message = "🔐 Security & Intelligence layer deployed! BearDog (crypto/trust) + Squirrel (meta-AI) operational."
+

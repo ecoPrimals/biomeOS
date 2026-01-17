@@ -14,10 +14,10 @@ use crate::primal_discovery::{DiscoveredPrimal, PrimalDiscovery};
 pub enum CoordinationStatus {
     /// All primals discovered and ready
     Ready,
-    
+
     /// Missing required primals
     MissingPrimals(Vec<String>),
-    
+
     /// Primals found but not responsive
     Unresponsive(Vec<String>),
 }
@@ -27,16 +27,16 @@ pub enum CoordinationStatus {
 pub struct DeploymentGuide {
     /// Atomic type being deployed
     pub atomic_name: String,
-    
+
     /// Required primals
     pub required_primals: Vec<String>,
-    
+
     /// Commands to start missing primals
     pub start_commands: Vec<String>,
-    
+
     /// Verification command
     pub verification: String,
-    
+
     /// Expected Unix sockets
     pub expected_sockets: Vec<String>,
 }
@@ -52,25 +52,23 @@ impl PrimalCoordinator {
     pub fn new(discovery: PrimalDiscovery) -> Self {
         Self { discovery }
     }
-    
+
     /// Get access to the discovery service
     pub fn discovery(&self) -> &PrimalDiscovery {
         &self.discovery
     }
-    
+
     /// Verify required primals are running
     pub async fn verify_primals(&self, required: &[&str]) -> Result<CoordinationStatus> {
         let discovered = self.discovery.discover_all().await?;
-        
-        let discovered_names: HashMap<String, &DiscoveredPrimal> = discovered
-            .iter()
-            .map(|p| (p.name.clone(), p))
-            .collect();
-        
+
+        let discovered_names: HashMap<String, &DiscoveredPrimal> =
+            discovered.iter().map(|p| (p.name.clone(), p)).collect();
+
         // Check for missing primals
         let mut missing = Vec::new();
         let mut unresponsive = Vec::new();
-        
+
         for &primal_name in required {
             match discovered_names.get(primal_name) {
                 Some(primal) => {
@@ -83,7 +81,7 @@ impl PrimalCoordinator {
                 }
             }
         }
-        
+
         if !missing.is_empty() {
             Ok(CoordinationStatus::MissingPrimals(missing))
         } else if !unresponsive.is_empty() {
@@ -92,7 +90,7 @@ impl PrimalCoordinator {
             Ok(CoordinationStatus::Ready)
         }
     }
-    
+
     /// Generate deployment guide for missing primals
     pub fn generate_guide(
         &self,
@@ -105,42 +103,33 @@ impl PrimalCoordinator {
             .map(|&primal| {
                 format!(
                     "FAMILY_ID={} NODE_ID={}-{} ./{} &",
-                    family_id,
-                    atomic_name,
-                    primal,
-                    primal
+                    family_id, atomic_name, primal, primal
                 )
             })
             .collect();
-        
+
         let expected_sockets = required_primals
             .iter()
             .map(|&primal| format!("{}-{}.sock", primal, family_id))
             .collect();
-        
+
         DeploymentGuide {
             atomic_name: atomic_name.to_string(),
             required_primals: required_primals.iter().map(|s| s.to_string()).collect(),
             start_commands,
-            verification: format!(
-                "ls /run/user/$(id -u)/*{}*.sock",
-                family_id
-            ),
+            verification: format!("ls /run/user/$(id -u)/*{}*.sock", family_id),
             expected_sockets,
         }
     }
-    
+
     /// Coordinate primal introductions (facilitate discovery)
-    pub async fn coordinate_introductions(
-        &self,
-        primals: &[DiscoveredPrimal],
-    ) -> Result<()> {
+    pub async fn coordinate_introductions(&self, primals: &[DiscoveredPrimal]) -> Result<()> {
         info!("Coordinating introductions for {} primals", primals.len());
-        
+
         // In TRUE PRIMAL approach, primals discover each other
         // The coordinator just facilitates by ensuring they're all running
         // and can communicate
-        
+
         for primal in primals {
             debug!(
                 "Primal {} available at {}",
@@ -148,10 +137,10 @@ impl PrimalCoordinator {
                 primal.socket_path.display()
             );
         }
-        
+
         // Future: Could implement capability sharing, trust establishment, etc.
         // For now, just verify they're all responsive
-        
+
         Ok(())
     }
 }
@@ -160,19 +149,15 @@ impl PrimalCoordinator {
 mod tests {
     use super::*;
     use std::path::PathBuf;
-    
+
     #[test]
     fn test_generate_guide() {
         let temp_dir = tempfile::tempdir().unwrap();
         let discovery = PrimalDiscovery::new(temp_dir.path().to_path_buf()).unwrap();
         let coordinator = PrimalCoordinator::new(discovery);
-        
-        let guide = coordinator.generate_guide(
-            "tower",
-            &["beardog", "songbird"],
-            "nat0",
-        );
-        
+
+        let guide = coordinator.generate_guide("tower", &["beardog", "songbird"], "nat0");
+
         assert_eq!(guide.atomic_name, "tower");
         assert_eq!(guide.required_primals, vec!["beardog", "songbird"]);
         assert_eq!(guide.start_commands.len(), 2);
@@ -180,4 +165,3 @@ mod tests {
         assert!(guide.start_commands[0].contains("beardog"));
     }
 }
-

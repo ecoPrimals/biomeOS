@@ -266,3 +266,259 @@ impl UIState {
         self.assignments.get(device_id)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::Utc;
+
+    #[test]
+    fn test_ui_state_creation() {
+        let state = UIState::new();
+        assert!(state.devices.is_empty());
+        assert!(state.primals.is_empty());
+        assert!(state.assignments.is_empty());
+        assert!(state.logs.is_empty());
+        assert!(state.topology.nodes.is_empty());
+        assert!(state.topology.edges.is_empty());
+    }
+
+    #[test]
+    fn test_add_device() {
+        let mut state = UIState::new();
+        let device = Device {
+            id: "gpu0".to_string(),
+            device_type: "gpu".to_string(),
+            name: "NVIDIA RTX 4090".to_string(),
+            capabilities: vec!["compute".to_string(), "ml".to_string()],
+            resources: HashMap::new(),
+            status: DeviceStatus::Available,
+        };
+
+        state.add_device(device.clone());
+        assert_eq!(state.devices.len(), 1);
+        assert_eq!(state.get_device("gpu0").unwrap().id, "gpu0");
+        assert_eq!(state.get_device("gpu0").unwrap().device_type, "gpu");
+    }
+
+    #[test]
+    fn test_add_primal() {
+        let mut state = UIState::new();
+        let primal = PrimalInfo {
+            id: "beardog-1".to_string(),
+            name: "beardog".to_string(),
+            capabilities: vec!["security".to_string(), "crypto".to_string()],
+            status: PrimalStatus::Running,
+            health: HealthMetrics {
+                status: "healthy".to_string(),
+                uptime: 3600,
+                cpu_usage: 15.5,
+                memory_usage: 256,
+            },
+        };
+
+        state.add_primal(primal.clone());
+        assert_eq!(state.primals.len(), 1);
+        assert_eq!(state.get_primal("beardog-1").unwrap().name, "beardog");
+        assert_eq!(
+            state.get_primal("beardog-1").unwrap().status,
+            PrimalStatus::Running
+        );
+    }
+
+    #[test]
+    fn test_add_assignment() {
+        let mut state = UIState::new();
+        let assignment = Assignment {
+            device_id: "gpu0".to_string(),
+            primal_id: "toadstool-1".to_string(),
+            assigned_at: Utc::now(),
+            status: AssignmentStatus::Active,
+        };
+
+        state.add_assignment(assignment.clone());
+        assert_eq!(state.assignments.len(), 1);
+        let retrieved = state.get_assignment("gpu0").unwrap();
+        assert_eq!(retrieved.primal_id, "toadstool-1");
+        assert_eq!(retrieved.status, AssignmentStatus::Active);
+    }
+
+    #[test]
+    fn test_add_log_entry() {
+        let mut state = UIState::new();
+        let log = LogEntry {
+            timestamp: Utc::now(),
+            source: "beardog".to_string(),
+            level: LogLevel::Info,
+            message: "Service started".to_string(),
+        };
+
+        state.add_log(log.clone());
+        assert_eq!(state.logs.len(), 1);
+        assert_eq!(state.logs.front().unwrap().source, "beardog");
+        assert_eq!(state.logs.front().unwrap().level, LogLevel::Info);
+    }
+
+    #[test]
+    fn test_log_rotation() {
+        let mut state = UIState::new();
+
+        // Add 1100 log entries (exceeds 1000 limit)
+        for i in 0..1100 {
+            state.add_log(LogEntry {
+                timestamp: Utc::now(),
+                source: "test".to_string(),
+                level: LogLevel::Info,
+                message: format!("Log entry {}", i),
+            });
+        }
+
+        // Should keep only last 1000
+        assert_eq!(state.logs.len(), 1000);
+        // First entry should be entry #100 (0-99 dropped)
+        assert_eq!(state.logs.front().unwrap().message, "Log entry 100");
+        // Last entry should be entry #1099
+        assert_eq!(state.logs.back().unwrap().message, "Log entry 1099");
+    }
+
+    #[test]
+    fn test_get_nonexistent_device() {
+        let state = UIState::new();
+        assert!(state.get_device("nonexistent").is_none());
+    }
+
+    #[test]
+    fn test_get_nonexistent_primal() {
+        let state = UIState::new();
+        assert!(state.get_primal("nonexistent").is_none());
+    }
+
+    #[test]
+    fn test_get_nonexistent_assignment() {
+        let state = UIState::new();
+        assert!(state.get_assignment("nonexistent").is_none());
+    }
+
+    #[test]
+    fn test_device_status_values() {
+        assert_eq!(DeviceStatus::Available, DeviceStatus::Available);
+        assert_ne!(DeviceStatus::Available, DeviceStatus::Assigned);
+        assert_ne!(DeviceStatus::Assigned, DeviceStatus::Offline);
+        assert_ne!(DeviceStatus::Offline, DeviceStatus::Error);
+    }
+
+    #[test]
+    fn test_primal_status_values() {
+        assert_eq!(PrimalStatus::Running, PrimalStatus::Running);
+        assert_ne!(PrimalStatus::Running, PrimalStatus::Starting);
+        assert_ne!(PrimalStatus::Starting, PrimalStatus::Stopping);
+        assert_ne!(PrimalStatus::Stopping, PrimalStatus::Stopped);
+        assert_ne!(PrimalStatus::Stopped, PrimalStatus::Error);
+    }
+
+    #[test]
+    fn test_assignment_status_values() {
+        assert_eq!(AssignmentStatus::Pending, AssignmentStatus::Pending);
+        assert_ne!(AssignmentStatus::Pending, AssignmentStatus::Active);
+        assert_ne!(AssignmentStatus::Active, AssignmentStatus::Failed);
+    }
+
+    #[test]
+    fn test_log_level_values() {
+        assert_eq!(LogLevel::Info, LogLevel::Info);
+        assert_ne!(LogLevel::Info, LogLevel::Warning);
+        assert_ne!(LogLevel::Warning, LogLevel::Error);
+    }
+
+    #[test]
+    fn test_topology_default() {
+        let topology = Topology::default();
+        assert!(topology.nodes.is_empty());
+        assert!(topology.edges.is_empty());
+    }
+
+    #[test]
+    fn test_device_serialization() {
+        let device = Device {
+            id: "test-device".to_string(),
+            device_type: "gpu".to_string(),
+            name: "Test GPU".to_string(),
+            capabilities: vec!["compute".to_string()],
+            resources: HashMap::new(),
+            status: DeviceStatus::Available,
+        };
+
+        // Serialize
+        let json = serde_json::to_string(&device).expect("Should serialize");
+        assert!(json.contains("test-device"));
+        assert!(json.contains("gpu"));
+
+        // Deserialize
+        let deserialized: Device =
+            serde_json::from_str(&json).expect("Should deserialize");
+        assert_eq!(deserialized.id, "test-device");
+        assert_eq!(deserialized.device_type, "gpu");
+    }
+
+    #[test]
+    fn test_primal_info_serialization() {
+        let primal = PrimalInfo {
+            id: "test-primal".to_string(),
+            name: "beardog".to_string(),
+            capabilities: vec!["security".to_string()],
+            status: PrimalStatus::Running,
+            health: HealthMetrics {
+                status: "healthy".to_string(),
+                uptime: 3600,
+                cpu_usage: 10.0,
+                memory_usage: 512,
+            },
+        };
+
+        let json = serde_json::to_string(&primal).expect("Should serialize");
+        assert!(json.contains("test-primal"));
+        assert!(json.contains("beardog"));
+
+        let deserialized: PrimalInfo =
+            serde_json::from_str(&json).expect("Should deserialize");
+        assert_eq!(deserialized.id, "test-primal");
+        assert_eq!(deserialized.name, "beardog");
+        assert_eq!(deserialized.health.uptime, 3600);
+    }
+
+    #[test]
+    fn test_multiple_devices() {
+        let mut state = UIState::new();
+
+        for i in 0..10 {
+            state.add_device(Device {
+                id: format!("device-{}", i),
+                device_type: "gpu".to_string(),
+                name: format!("GPU {}", i),
+                capabilities: vec![],
+                resources: HashMap::new(),
+                status: DeviceStatus::Available,
+            });
+        }
+
+        assert_eq!(state.devices.len(), 10);
+        assert!(state.get_device("device-0").is_some());
+        assert!(state.get_device("device-9").is_some());
+        assert!(state.get_device("device-10").is_none());
+    }
+
+    #[test]
+    fn test_health_metrics_values() {
+        let health = HealthMetrics {
+            status: "healthy".to_string(),
+            uptime: 7200,
+            cpu_usage: 25.5,
+            memory_usage: 1024,
+        };
+
+        assert_eq!(health.status, "healthy");
+        assert_eq!(health.uptime, 7200);
+        assert_eq!(health.cpu_usage, 25.5);
+        assert_eq!(health.memory_usage, 1024);
+    }
+}

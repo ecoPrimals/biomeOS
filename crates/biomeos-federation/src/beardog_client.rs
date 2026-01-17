@@ -111,10 +111,35 @@ impl BearDogClient {
     /// Health check
     pub async fn health_check(&self) -> Result<()> {
         match &self.endpoint {
-            BearDogEndpoint::UnixSocket(_path) => {
-                // TODO: Implement Unix socket health check
-                // For now, just check if socket exists
-                Ok(())
+            BearDogEndpoint::UnixSocket(path) => {
+                // Complete implementation: JSON-RPC health check over Unix socket
+                let client = UnixSocketClient::new(path);
+                
+                // First check if socket exists
+                if !client.is_available() {
+                    return Err(anyhow::anyhow!(
+                        "BearDog Unix socket not found: {}",
+                        path.display()
+                    ));
+                }
+                
+                // Call health.check method
+                let result = client
+                    .call_method("health.check", serde_json::json!({}))
+                    .await
+                    .context("Unix socket health check failed")?;
+                
+                // Check if response indicates healthy status
+                if let Some(status) = result.get("status").and_then(|v| v.as_str()) {
+                    if status == "healthy" || status == "ok" {
+                        Ok(())
+                    } else {
+                        Err(anyhow::anyhow!("BearDog reports unhealthy status: {}", status))
+                    }
+                } else {
+                    // If no status field, successful response means healthy
+                    Ok(())
+                }
             }
             BearDogEndpoint::Http(url) => {
                 let client = reqwest::Client::new();

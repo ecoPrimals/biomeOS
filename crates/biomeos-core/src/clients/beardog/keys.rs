@@ -56,10 +56,7 @@ impl KeysClient {
                 .to_string(),
             created_at: response["created_at"].as_u64().unwrap_or(0),
             expires_at: response["expires_at"].as_u64(),
-            status: response["status"]
-                .as_str()
-                .unwrap_or("active")
-                .to_string(),
+            status: response["status"].as_str().unwrap_or("active").to_string(),
         })
     }
 
@@ -81,14 +78,8 @@ impl KeysClient {
         let mut keys = Vec::new();
         for key in keys_array {
             keys.push(KeyInfo {
-                key_id: key["key_id"]
-                    .as_str()
-                    .unwrap_or("unknown")
-                    .to_string(),
-                key_type: key["key_type"]
-                    .as_str()
-                    .unwrap_or("unknown")
-                    .to_string(),
+                key_id: key["key_id"].as_str().unwrap_or("unknown").to_string(),
+                key_type: key["key_type"].as_str().unwrap_or("unknown").to_string(),
                 created_at: key["created_at"].as_u64().unwrap_or(0),
                 expires_at: key["expires_at"].as_u64(),
                 status: key["status"].as_str().unwrap_or("unknown").to_string(),
@@ -128,10 +119,7 @@ impl KeysClient {
                 .to_string(),
             created_at: response["created_at"].as_u64().unwrap_or(0),
             expires_at: response["expires_at"].as_u64(),
-            status: response["status"]
-                .as_str()
-                .unwrap_or("unknown")
-                .to_string(),
+            status: response["status"].as_str().unwrap_or("unknown").to_string(),
         })
     }
 
@@ -165,10 +153,7 @@ impl KeysClient {
                 .to_string(),
             created_at: response["created_at"].as_u64().unwrap_or(0),
             expires_at: response["expires_at"].as_u64(),
-            status: response["status"]
-                .as_str()
-                .unwrap_or("active")
-                .to_string(),
+            status: response["status"].as_str().unwrap_or("active").to_string(),
         })
     }
 

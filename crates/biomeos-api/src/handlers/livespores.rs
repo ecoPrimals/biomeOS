@@ -12,31 +12,31 @@ use crate::{state::AppState, ApiError};
 pub struct LiveSporeDevice {
     /// Device ID (derived from mount point)
     pub id: String,
-    
+
     /// Mount point (e.g., `/media/usb`)
     pub mount_point: String,
-    
+
     /// Device label (if available)
     pub label: Option<String>,
-    
+
     /// Available space in bytes
     pub available_space: u64,
-    
+
     /// Total space in bytes
     pub total_space: u64,
-    
+
     /// Utilization percentage (0-100)
     pub utilization_percent: f64,
-    
+
     /// Has .family.seed file
     pub has_genetic_seed: bool,
-    
+
     /// Genetic lineage (first 16 chars of seed, if present)
     pub genetic_preview: Option<String>,
-    
+
     /// Primal binaries found (if any)
     pub primals: Vec<String>,
-    
+
     /// Spore type (if detected)
     pub spore_type: Option<String>,
 }
@@ -46,10 +46,10 @@ pub struct LiveSporeDevice {
 pub struct LiveSporesResponse {
     /// Discovered USB devices
     pub devices: Vec<LiveSporeDevice>,
-    
+
     /// Total count
     pub count: usize,
-    
+
     /// Discovery timestamp
     pub discovered_at: String,
 }
@@ -65,16 +65,16 @@ pub async fn get_livespores(
         Ok(usb_devices) => {
             // Convert to API format
             let mut live_devices = Vec::new();
-            
+
             for usb_dev in usb_devices {
                 // Get mount point string early to avoid borrow issues
                 let mount_point_str = usb_dev.mount_point.display().to_string();
                 let mount_point = &usb_dev.mount_point;
-                
+
                 // Check for .family.seed
                 let seed_path = mount_point.join(".family.seed");
                 let has_genetic_seed = tokio::fs::metadata(&seed_path).await.is_ok();
-                
+
                 let genetic_preview = if has_genetic_seed {
                     match tokio::fs::read_to_string(&seed_path).await {
                         Ok(seed) => Some(seed.chars().take(16).collect()),
@@ -83,11 +83,11 @@ pub async fn get_livespores(
                 } else {
                     None
                 };
-                
+
                 // Check for primal binaries
                 let bin_dir = mount_point.join("plasmidBin");
                 let mut primals = Vec::new();
-                
+
                 if tokio::fs::metadata(&bin_dir).await.is_ok() {
                     if let Ok(mut entries) = tokio::fs::read_dir(&bin_dir).await {
                         while let Ok(Some(entry)) = entries.next_entry().await {
@@ -102,7 +102,7 @@ pub async fn get_livespores(
                         }
                     }
                 }
-                
+
                 // Detect spore type
                 let config_path = mount_point.join("tower.toml");
                 let spore_type = if tokio::fs::metadata(&config_path).await.is_ok() {
@@ -112,16 +112,16 @@ pub async fn get_livespores(
                 } else {
                     None
                 };
-                
+
                 // Generate device ID from mount point
                 let id = mount_point
                     .file_name()
                     .and_then(|n| n.to_str())
                     .unwrap_or("unknown")
                     .to_string();
-                
+
                 let utilization = usb_dev.utilization_percent();
-                
+
                 live_devices.push(LiveSporeDevice {
                     id,
                     mount_point: mount_point_str,
@@ -135,7 +135,7 @@ pub async fn get_livespores(
                     spore_type,
                 });
             }
-            
+
             live_devices
         }
         Err(e) => {
@@ -153,4 +153,3 @@ pub async fn get_livespores(
         discovered_at: chrono::Utc::now().to_rfc3339(),
     }))
 }
-

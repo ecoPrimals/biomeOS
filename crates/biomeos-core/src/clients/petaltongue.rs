@@ -116,7 +116,10 @@ impl PetalTongueClient {
     /// # Returns
     /// Health status with version, uptime, and metrics
     pub async fn health(&self) -> Result<PetalTongueHealthResponse> {
-        let v = self.transport.call("health", Some(serde_json::json!({}))).await?;
+        let v = self
+            .transport
+            .call("health", Some(serde_json::json!({})))
+            .await?;
         Ok(serde_json::from_value(v)?)
     }
 
@@ -127,7 +130,10 @@ impl PetalTongueClient {
     /// # Returns
     /// List of capability strings (e.g., "visualization", "gpu-rendering")
     pub async fn get_capabilities(&self) -> Result<Vec<String>> {
-        let v = self.transport.call("get_capabilities", Some(serde_json::json!({}))).await?;
+        let v = self
+            .transport
+            .call("get_capabilities", Some(serde_json::json!({})))
+            .await?;
         Ok(serde_json::from_value(v)?)
     }
 
@@ -159,7 +165,10 @@ impl PetalTongueClient {
     /// # }
     /// ```
     pub async fn render(&self, request: RenderRequest) -> Result<RenderResponse> {
-        let v = self.transport.call("render", Some(serde_json::json!(request))).await?;
+        let v = self
+            .transport
+            .call("render", Some(serde_json::json!(request)))
+            .await?;
         Ok(serde_json::from_value(v)?)
     }
 
@@ -170,7 +179,10 @@ impl PetalTongueClient {
     /// # Returns
     /// Graph metrics including node count, edge count, layout time
     pub async fn graph_metrics(&self) -> Result<GraphMetrics> {
-        let v = self.transport.call("graph_metrics", Some(serde_json::json!({}))).await?;
+        let v = self
+            .transport
+            .call("graph_metrics", Some(serde_json::json!({})))
+            .await?;
         Ok(serde_json::from_value(v)?)
     }
 
@@ -181,7 +193,10 @@ impl PetalTongueClient {
     /// # Returns
     /// List of supported modalities (e.g., "terminal", "svg", "png", "audio")
     pub async fn list_modalities(&self) -> Result<Vec<String>> {
-        let v = self.transport.call("list_modalities", Some(serde_json::json!({}))).await?;
+        let v = self
+            .transport
+            .call("list_modalities", Some(serde_json::json!({})))
+            .await?;
         Ok(serde_json::from_value(v)?)
     }
 
@@ -194,14 +209,14 @@ impl PetalTongueClient {
     ///
     /// # Returns
     /// List of primal endpoints that provide the capability
-    pub async fn discover_capability(
-        &self,
-        capability: &str,
-    ) -> Result<Vec<PrimalEndpoint>> {
-        let v = self.transport.call(
-            "discover_capability",
-            Some(serde_json::json!({ "capability": capability })),
-        ).await?;
+    pub async fn discover_capability(&self, capability: &str) -> Result<Vec<PrimalEndpoint>> {
+        let v = self
+            .transport
+            .call(
+                "discover_capability",
+                Some(serde_json::json!({ "capability": capability })),
+            )
+            .await?;
         Ok(serde_json::from_value(v)?)
     }
 }
@@ -361,9 +376,9 @@ mod tests {
         assert_eq!(endpoint.capabilities.len(), 2);
         assert!(endpoint.protocols.contains(&"tarpc".to_string()));
     }
-    
+
     // Additional unit tests for PetalTongueClient types
-    
+
     #[test]
     fn test_render_request_structure() {
         let request = RenderRequest {
@@ -373,11 +388,11 @@ mod tests {
             height: None,
             output_path: None,
         };
-        
+
         assert_eq!(request.mode, "terminal");
         assert!(request.width.is_none());
     }
-    
+
     #[test]
     fn test_render_response_types() {
         // Success case
@@ -388,7 +403,7 @@ mod tests {
             render_time_ms: 42,
         };
         assert!(success.success);
-        
+
         // Error case
         let error = RenderResponse {
             success: false,
@@ -398,7 +413,7 @@ mod tests {
         };
         assert!(!error.success);
     }
-    
+
     #[test]
     fn test_all_modalities() {
         let modalities = vec!["terminal", "svg", "png", "json", "dot"];
@@ -414,4 +429,3 @@ mod tests {
         }
     }
 }
-

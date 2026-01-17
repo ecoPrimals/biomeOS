@@ -30,22 +30,26 @@ impl Default for HealthStatus {
 pub trait PrimalClient: Send + Sync {
     /// Get the primal's name/identifier
     fn name(&self) -> &str;
-    
+
     /// Get the primal's endpoint
     fn endpoint(&self) -> String;
-    
+
     /// Check if the primal is available and responsive
     async fn is_available(&self) -> bool;
-    
+
     /// Perform health check
     async fn health_check(&self) -> Result<HealthStatus>;
-    
+
     /// Make a raw request to the primal
-    /// 
+    ///
     /// # Arguments
     /// * `method` - The RPC method name
     /// * `path` - The HTTP path (deprecated, ignored for JSON-RPC)
     /// * `body` - Optional request body/parameters
-    async fn request(&self, method: &str, path: &str, body: Option<serde_json::Value>) -> Result<serde_json::Value>;
+    async fn request(
+        &self,
+        method: &str,
+        path: &str,
+        body: Option<serde_json::Value>,
+    ) -> Result<serde_json::Value>;
 }
-

@@ -6,10 +6,10 @@
 //! 3. Verify primals receive correct IPC_PROTOCOL
 //! 4. Test all deployment scenarios
 
+use biomeos_types::identifiers::FamilyId;
 use std::fs;
 use std::path::PathBuf;
 use tempfile::TempDir;
-use biomeos_types::identifiers::FamilyId;
 
 /// Create a temporary tower.toml configuration file
 fn create_test_config(dir: &TempDir, toml_content: &str) -> PathBuf {

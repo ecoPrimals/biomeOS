@@ -100,7 +100,7 @@ async fn test_selection_by_node_id() {
 async fn test_selection_by_family() {
     use biomeos_types::identifiers::FamilyId;
     let nucleus = SecureNucleusDiscovery::new();
-    let test_family = FamilyId::new_for_test().to_string();
+    let test_family = FamilyId::generate().to_string();
 
     let primal = create_mock_verified_primal_with_family(
         "beardog",

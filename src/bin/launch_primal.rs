@@ -127,17 +127,17 @@ async fn launch_primal(primal: &str, family_id: &str) -> Result<()> {
     // Build command - EVOLVED to agnostic pattern
     // No hardcoded primal knowledge! Use environment for configuration.
     let mut cmd = Command::new(&bin_path);
-    
+
     // Universal environment: All primals get these
     cmd.env("BIOMEOS_FAMILY_ID", family_id);
     cmd.env("BIOMEOS_SOCKET_PATH", &socket_path);
-    
+
     // Also set primal-specific variants for backward compat
     // (primals should migrate to BIOMEOS_* prefix)
     let primal_upper = primal.to_uppercase();
     cmd.env(format!("{}_FAMILY_ID", primal_upper), family_id);
     cmd.env(format!("{}_SOCKET", primal_upper), &socket_path);
-    
+
     // Check if binary needs special args (from manifest/config)
     // Instead of hardcoding per primal, check if there's a start command
     if let Some(start_cmd) = std::env::var(format!("{}_START_CMD", primal_upper)).ok() {

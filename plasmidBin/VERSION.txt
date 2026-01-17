@@ -1,1 +1,1 @@
-v0.8.2-plasmidBin
+v0.11.0

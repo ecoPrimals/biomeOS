@@ -69,10 +69,14 @@ async fn test_beardog_lineage_verification() {
     // Test with sample data
     let family_id = "nat0";
     let seed_hash = "test_seed_hash_12345";
+    let node_id = "test_node_001";
 
-    match client.verify_same_family(family_id, seed_hash).await {
-        Ok(is_member) => {
-            println!("✅ Lineage verification response: is_member={}", is_member);
+    match client
+        .verify_same_family(family_id, seed_hash, node_id)
+        .await
+    {
+        Ok(response) => {
+            println!("✅ Lineage verification response: {}", response);
         }
         Err(e) => {
             println!("⚠️  Lineage verification failed: {}", e);
@@ -152,9 +156,12 @@ async fn test_beardog_with_real_seed() {
                 println!("🔒 Seed hash: {}...", &seed_hash[..16]);
 
                 // Try to verify lineage
-                match client.verify_same_family("nat0", &seed_hash).await {
-                    Ok(is_member) => {
-                        println!("✅ Lineage verified: is_member={}", is_member);
+                match client
+                    .verify_same_family("nat0", &seed_hash, "test_node_spore")
+                    .await
+                {
+                    Ok(response) => {
+                        println!("✅ Lineage verified: {}", response);
                     }
                     Err(e) => {
                         println!("⚠️  Lineage verification failed: {}", e);
@@ -191,8 +198,11 @@ async fn test_beardog_full_workflow() {
     }
 
     println!("\n2️⃣  Lineage Verification");
-    match client.verify_same_family("nat0", "test_seed").await {
-        Ok(is_member) => println!("   ✅ Lineage check: {}", is_member),
+    match client
+        .verify_same_family("nat0", "test_seed", "test_node_workflow")
+        .await
+    {
+        Ok(response) => println!("   ✅ Lineage check: {}", response),
         Err(e) => println!("   ⚠️  Lineage check: {}", e),
     }
 

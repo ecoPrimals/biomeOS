@@ -151,8 +151,8 @@ impl JsonRpcUnixClient {
     /// Send a JSON-RPC request and receive response
     async fn send_request(&self, request: &JsonRpcRequest) -> Result<Value> {
         // Serialize request
-        let request_json = serde_json::to_string(request)
-            .context("Failed to serialize JSON-RPC request")?;
+        let request_json =
+            serde_json::to_string(request).context("Failed to serialize JSON-RPC request")?;
         let request_bytes = format!("{}\n", request_json); // Newline-delimited
 
         debug!(
@@ -198,8 +198,8 @@ impl JsonRpcUnixClient {
         debug!(response = %response_line.trim(), "📥 Received response");
 
         // Parse response
-        let response: JsonRpcResponse = serde_json::from_str(&response_line)
-            .context("Failed to parse JSON-RPC response")?;
+        let response: JsonRpcResponse =
+            serde_json::from_str(&response_line).context("Failed to parse JSON-RPC response")?;
 
         // Validate response ID matches request ID
         if response.id != request.id {
@@ -212,11 +212,7 @@ impl JsonRpcUnixClient {
 
         // Check for JSON-RPC errors
         if let Some(error) = response.error {
-            anyhow::bail!(
-                "JSON-RPC error {}: {}",
-                error.code,
-                error.message
-            );
+            anyhow::bail!("JSON-RPC error {}: {}", error.code, error.message);
         }
 
         // Return result
@@ -251,7 +247,10 @@ mod tests {
     fn test_empty_path_error() {
         let result = JsonRpcUnixClient::new("");
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Empty socket path"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Empty socket path"));
     }
 
     #[test]
@@ -290,7 +289,8 @@ mod tests {
 
     #[test]
     fn test_response_deserialization_error() {
-        let json = r#"{"jsonrpc":"2.0","error":{"code":-32600,"message":"Invalid Request"},"id":1}"#;
+        let json =
+            r#"{"jsonrpc":"2.0","error":{"code":-32600,"message":"Invalid Request"},"id":1}"#;
         let response: JsonRpcResponse = serde_json::from_str(json).unwrap();
 
         assert_eq!(response.jsonrpc, "2.0");
@@ -306,7 +306,7 @@ mod tests {
     #[test]
     fn test_atomic_id_generation() {
         let client = JsonRpcUnixClient::new("/tmp/test.sock").unwrap();
-        
+
         // IDs should increment atomically
         let id1 = client.next_id.fetch_add(1, Ordering::SeqCst);
         let id2 = client.next_id.fetch_add(1, Ordering::SeqCst);
@@ -317,4 +317,3 @@ mod tests {
         assert_eq!(id3, 3);
     }
 }
-

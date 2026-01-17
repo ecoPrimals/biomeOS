@@ -13,13 +13,16 @@ pub mod primal_adapter;
 // API adapter pattern (API-agnostic integration)
 pub mod api_adapter;
 
+// Encrypted storage layer (encryption-by-default)
+pub mod encrypted_storage;
+
 // Primal client infrastructure
 // TEMP DISABLED: Being refactored to proper concurrent architecture (see DEEP_DEBT_CONCURRENT_EVOLUTION_PLAN_JAN13.md)
 // Will re-enable after concurrent evolution is complete (91 errors need systematic fix)
-pub mod clients; // Modern client implementations (JSON-RPC, Unix sockets) - DEEP DEBT FIX IN PROGRESS
 pub mod adaptive_client; // Adaptive HTTP client with version tolerance
 pub mod capabilities; // Capability-based architecture (zero hardcoding)
 pub mod capability_registry; // Central capability registry with Unix socket IPC
+pub mod clients; // Modern client implementations (JSON-RPC, Unix sockets) - DEEP DEBT FIX IN PROGRESS
 pub mod concurrent_startup; // Wave-based concurrent primal startup
 pub mod deployment_mode;
 pub mod discovery_bootstrap;

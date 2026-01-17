@@ -1,0 +1,79 @@
+# UI Atomic Deployment Graph
+# Squirrel (AI) + petalTongue (3D UI) on NUCLEUS
+# Self-hosted evolution interface
+
+[graph]
+id = "ui-atomic"
+description = "Deploy user interface and AI coordination layer on NUCLEUS"
+version = "1.0.0"
+
+[execution]
+mode = "deterministic"
+parallel_phases = true
+max_parallelism = 3
+timeout_total_ms = 60000
+rollback_on_failure = true
+
+# Phase 1: Verify NUCLEUS is running
+[[nodes]]
+id = "verify-nucleus"
+node_type = "verification"
+dependencies = []
+
+[nodes.config]
+check_sockets = true
+primal_sockets = [
+    "/tmp/beardog-${FAMILY_ID}-default.sock",
+    "/tmp/songbird-${FAMILY_ID}.sock",
+    "/tmp/toadstool-${FAMILY_ID}.sock"
+]
+
+# Phase 2: Deploy Squirrel (AI coordinator) - parallel with petalTongue
+[[nodes]]
+id = "squirrel"
+node_type = "primal.start"
+dependencies = ["verify-nucleus"]
+
+[nodes.config]
+primal_name = "squirrel"
+binary_path = "plasmidBin/primals/squirrel"
+socket_path = "/tmp/squirrel-${FAMILY_ID}.sock"
+log_path = "/tmp/primals/squirrel-${FAMILY_ID}.log"
+env = {
+    "SQUIRREL_FAMILY_ID" = "${FAMILY_ID}",
+    "SQUIRREL_SOCKET_PATH" = "/tmp/squirrel-${FAMILY_ID}.sock",
+    "SONGBIRD_SOCKET" = "/tmp/songbird-${FAMILY_ID}.sock",
+    "BEARDOG_SOCKET" = "/tmp/beardog-${FAMILY_ID}-default.sock"
+}
+
+# Phase 2: Deploy petalTongue (3D UI) - parallel with Squirrel  
+[[nodes]]
+id = "petaltongue"
+node_type = "primal.start"
+dependencies = ["verify-nucleus"]
+
+[nodes.config]
+primal_name = "petaltongue"
+binary_path = "plasmidBin/primals/petaltongue"
+socket_path = "/tmp/petaltongue-${FAMILY_ID}.sock"
+log_path = "/tmp/primals/petaltongue-${FAMILY_ID}.log"
+env = {
+    "PETALTONGUE_FAMILY_ID" = "${FAMILY_ID}",
+    "PETALTONGUE_SOCKET_PATH" = "/tmp/petaltongue-${FAMILY_ID}.sock",
+    "TOADSTOOL_SOCKET" = "/tmp/toadstool-${FAMILY_ID}.sock",
+    "SONGBIRD_SOCKET" = "/tmp/songbird-${FAMILY_ID}.sock"
+}
+
+# Phase 3: Verify UI Atomic deployment
+[[nodes]]
+id = "verify-ui-atomic"
+node_type = "verification"
+dependencies = ["squirrel", "petaltongue"]
+
+[nodes.config]
+check_sockets = true
+primal_sockets = [
+    "/tmp/squirrel-${FAMILY_ID}.sock",
+    "/tmp/petaltongue-${FAMILY_ID}.sock"
+]
+

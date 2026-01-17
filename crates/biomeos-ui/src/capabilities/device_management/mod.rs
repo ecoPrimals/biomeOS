@@ -29,18 +29,15 @@
 //! └──────────────────────────────────────────────────────────────┘
 //! ```
 
-pub mod types;
 pub mod provider;
+pub mod types;
 
-pub use types::*;
 pub use provider::DeviceManagementProvider;
+pub use types::*;
 
 // Re-export for compatibility during transition
 // These types match the old petaltongue_bridge types
 pub use types::{
-    Device, DeviceType, DeviceStatus,
-    ManagedPrimal as Primal, PrimalStatus,
-    NicheTemplate, PrimalRole, ResourceRequirements,
-    ValidationResult,
+    Device, DeviceStatus, DeviceType, ManagedPrimal as Primal, NicheTemplate, PrimalRole,
+    PrimalStatus, ResourceRequirements, ValidationResult,
 };
-

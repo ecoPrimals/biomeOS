@@ -202,7 +202,7 @@ async fn handle_method(
                     };
                 }
             };
-            
+
             let template_id = params["template_id"].as_str().unwrap_or("");
             let template = match templates.iter().find(|t| t.id == template_id) {
                 Some(t) => t,
@@ -219,7 +219,7 @@ async fn handle_method(
                     };
                 }
             };
-            
+
             match provider_guard.validate_niche(template).await {
                 Ok(result) => Ok(json!(result)),
                 Err(e) => Err(JsonRpcError {

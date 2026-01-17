@@ -102,15 +102,16 @@ impl SongbirdClient {
             "songbird",
             family_id,
             TransportPreference::UnixSocket,
-        ).await
-            .context("Failed to discover Songbird. Is it running?")?;
-        
+        )
+        .await
+        .context("Failed to discover Songbird. Is it running?")?;
+
         Ok(Self {
             transport,
             family_id: family_id.to_string(),
         })
     }
-    
+
     /// Create from explicit endpoint (HTTP fallback)
     ///
     /// **DEPRECATED**: Use `discover()` for Unix socket support (100x faster)
@@ -124,16 +125,17 @@ impl SongbirdClient {
         let transport = TransportClient::discover_with_preference(
             "songbird",
             family_id,
-            TransportPreference::Auto  // ✅ Evolved: Auto-discover secure transport
-        ).await
-            .context("Failed to discover Songbird via secure transport")?;
-        
+            TransportPreference::Auto, // ✅ Evolved: Auto-discover secure transport
+        )
+        .await
+        .context("Failed to discover Songbird via secure transport")?;
+
         Ok(Self {
             transport,
             family_id: family_id.to_string(),
         })
     }
-    
+
     /// Legacy constructor (DEPRECATED)
     ///
     /// **BREAKING**: This method is now async. Use `discover()` instead.
@@ -164,32 +166,38 @@ impl SongbirdClient {
     /// # }
     /// ```
     pub async fn discover_by_capability(&self, capability: &str) -> Result<Vec<ServiceInfo>> {
-        let response = self.transport.call(
-            "discover_by_capability",  // NEW: Direct method name
-            Some(serde_json::json!({
-                "capability": capability,
-                "protocol": "json-rpc"  // Optional protocol filter
-            }))
-        ).await
+        let response = self
+            .transport
+            .call(
+                "discover_by_capability", // NEW: Direct method name
+                Some(serde_json::json!({
+                    "capability": capability,
+                    "protocol": "json-rpc"  // Optional protocol filter
+                })),
+            )
+            .await
             .context("Failed to call discover_by_capability")?;
 
         // v3.20.0 returns {"primals": [...]}
         if let Some(primals) = response.get("primals") {
             let endpoints: Vec<PrimalEndpoint> = serde_json::from_value(primals.clone())
                 .context("Failed to parse primal endpoints")?;
-            
+
             // Convert PrimalEndpoint to ServiceInfo for backward compatibility
-            Ok(endpoints.into_iter().map(|p| ServiceInfo {
-                service_id: p.service_id,
-                service_name: p.primal_name,
-                endpoint: p.endpoint,
-                capabilities: p.capabilities,
-                metadata: ServiceMetadata {
-                    version: "unknown".to_string(),
-                    location: None,
-                    tags: vec![],
-                },
-            }).collect())
+            Ok(endpoints
+                .into_iter()
+                .map(|p| ServiceInfo {
+                    service_id: p.service_id,
+                    service_name: p.primal_name,
+                    endpoint: p.endpoint,
+                    capabilities: p.capabilities,
+                    metadata: ServiceMetadata {
+                        version: "unknown".to_string(),
+                        location: None,
+                        tags: vec![],
+                    },
+                })
+                .collect())
         } else {
             // Fallback for old format
             if let Some(peers) = response.get("peers") {
@@ -234,16 +242,19 @@ impl SongbirdClient {
     /// # }
     /// ```
     pub async fn register_service(&self, service: &ServiceRegistration) -> Result<String> {
-        let response = self.transport.call(
-            "register_service",  // NEW: Direct method name
-            Some(serde_json::json!({
-                "primal_name": service.service_name,
-                "capabilities": service.capabilities,
-                "endpoint": service.endpoint,
-                "protocol": "json-rpc",
-                "health_check_interval": 30
-            }))
-        ).await
+        let response = self
+            .transport
+            .call(
+                "register_service", // NEW: Direct method name
+                Some(serde_json::json!({
+                    "primal_name": service.service_name,
+                    "capabilities": service.capabilities,
+                    "endpoint": service.endpoint,
+                    "protocol": "json-rpc",
+                    "health_check_interval": 30
+                })),
+            )
+            .await
             .context("Failed to call register_service")?;
 
         // v3.20.0 returns {"service_id": "...", "status": "...", "registered_at": "..."}
@@ -275,12 +286,15 @@ impl SongbirdClient {
     /// # }
     /// ```
     pub async fn get_service_health(&self, service_id: &str) -> Result<HealthStatus> {
-        let response = self.transport.call(
-            "get_service_health",  // NEW: Direct method name
-            Some(serde_json::json!({
-                "service_id": service_id
-            }))
-        ).await
+        let response = self
+            .transport
+            .call(
+                "get_service_health", // NEW: Direct method name
+                Some(serde_json::json!({
+                    "service_id": service_id
+                })),
+            )
+            .await
             .context("Failed to call get_service_health")?;
 
         // v3.20.0 returns {"health": {"service_id": "...", "status": "...", ...}}
@@ -367,19 +381,21 @@ impl SongbirdClient {
         longitude: f64,
         radius_km: f64,
     ) -> Result<Vec<ServiceInfo>> {
-        let response = self.transport.call(
-            "discovery.find_by_location",
-            Some(serde_json::json!({
-                "latitude": latitude,
-                "longitude": longitude,
-                "radius_km": radius_km,
-                "family_id": self.family_id
-            }))
-        ).await
+        let response = self
+            .transport
+            .call(
+                "discovery.find_by_location",
+                Some(serde_json::json!({
+                    "latitude": latitude,
+                    "longitude": longitude,
+                    "radius_km": radius_km,
+                    "family_id": self.family_id
+                })),
+            )
+            .await
             .context("Failed to call discovery.find_by_location")?;
 
-        serde_json::from_value(response)
-            .context("Failed to parse service list from response")
+        serde_json::from_value(response).context("Failed to parse service list from response")
     }
 }
 

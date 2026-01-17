@@ -54,13 +54,13 @@ use crate::clients::openapi_adapter::OpenApiAdapter;
 pub struct UniversalPrimalClient {
     /// Base endpoint URL
     endpoint: String,
-    
+
     /// Schema type
     schema_type: ApiSchemaType,
-    
+
     /// The adapter for this primal's API
     adapter: ApiAdapter,
-    
+
     /// HTTP client for direct requests
     http_client: Client,
 }
@@ -70,11 +70,11 @@ pub struct UniversalPrimalClient {
 pub enum ApiAdapter {
     /// OpenAPI v3 adapter
     OpenApi(OpenApiAdapter),
-    
+
     /// JSON Schema adapter (future)
     #[allow(dead_code)]
     JsonSchema,
-    
+
     /// GraphQL adapter (future)
     #[allow(dead_code)]
     GraphQL,
@@ -98,19 +98,17 @@ impl UniversalPrimalClient {
     /// - Schema cannot be parsed
     pub async fn from_endpoint(endpoint: impl Into<String>) -> Result<Self> {
         let endpoint = endpoint.into();
-        
+
         // Fetch schema from standard endpoint
         let schema_url = format!("{}/api/schema", endpoint);
-        let client = Client::builder()
-            .timeout(Duration::from_secs(30))
-            .build()?;
-        
+        let client = Client::builder().timeout(Duration::from_secs(30)).build()?;
+
         let response = client
             .get(&schema_url)
             .send()
             .await
             .with_context(|| format!("Failed to fetch schema from {}", schema_url))?;
-        
+
         if !response.status().is_success() {
             anyhow::bail!(
                 "Schema endpoint returned error: {} {}",
@@ -118,19 +116,17 @@ impl UniversalPrimalClient {
                 response.text().await?
             );
         }
-        
+
         let schema_response: ApiSchemaResponse = response
             .json()
             .await
             .context("Failed to parse schema response")?;
-        
+
         // Create appropriate adapter based on schema type
         let adapter = match schema_response.schema_type {
             ApiSchemaType::OpenAPI => {
-                let openapi_adapter = OpenApiAdapter::from_spec(
-                    endpoint.clone(),
-                    schema_response.schema,
-                )?;
+                let openapi_adapter =
+                    OpenApiAdapter::from_spec(endpoint.clone(), schema_response.schema)?;
                 ApiAdapter::OpenApi(openapi_adapter)
             }
             ApiSchemaType::JSONSchema => {
@@ -143,7 +139,7 @@ impl UniversalPrimalClient {
                 anyhow::bail!("Custom schema format not supported");
             }
         };
-        
+
         Ok(Self {
             endpoint,
             schema_type: schema_response.schema_type,
@@ -151,7 +147,7 @@ impl UniversalPrimalClient {
             http_client: client,
         })
     }
-    
+
     /// Call an operation dynamically
     ///
     /// # Arguments
@@ -177,9 +173,7 @@ impl UniversalPrimalClient {
     /// ```
     pub async fn call_operation(&self, operation_id: &str, params: Value) -> Result<Value> {
         match &self.adapter {
-            ApiAdapter::OpenApi(adapter) => {
-                adapter.call_operation(operation_id, params).await
-            }
+            ApiAdapter::OpenApi(adapter) => adapter.call_operation(operation_id, params).await,
             ApiAdapter::JsonSchema => {
                 anyhow::bail!("JSON Schema adapter not yet implemented")
             }
@@ -188,7 +182,7 @@ impl UniversalPrimalClient {
             }
         }
     }
-    
+
     /// List available operations
     ///
     /// Returns the list of operation IDs that can be called via `call_operation`.
@@ -199,17 +193,17 @@ impl UniversalPrimalClient {
             ApiAdapter::GraphQL => vec![],
         }
     }
-    
+
     /// Get the endpoint URL
     pub fn endpoint(&self) -> &str {
         &self.endpoint
     }
-    
+
     /// Get the schema type
     pub fn schema_type(&self) -> &ApiSchemaType {
         &self.schema_type
     }
-    
+
     /// Get API metadata (title, version, etc.)
     pub fn api_metadata(&self) -> ApiMetadata {
         match &self.adapter {
@@ -237,10 +231,10 @@ impl UniversalPrimalClient {
 pub struct ApiMetadata {
     /// API title
     pub title: String,
-    
+
     /// API version
     pub version: String,
-    
+
     /// Schema type
     pub schema_type: String,
 }
@@ -249,13 +243,13 @@ pub struct ApiMetadata {
 mod tests {
     use super::*;
     use serde_json::json;
-    use wiremock::{Mock, MockServer, ResponseTemplate};
     use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
 
     #[tokio::test]
     async fn test_from_endpoint_openapi() {
         let mock_server = MockServer::start().await;
-        
+
         // Mock the /api/schema endpoint
         Mock::given(method("GET"))
             .and(path("/api/schema"))
@@ -285,12 +279,14 @@ mod tests {
             })))
             .mount(&mock_server)
             .await;
-        
-        let client = UniversalPrimalClient::from_endpoint(&mock_server.uri()).await.unwrap();
-        
+
+        let client = UniversalPrimalClient::from_endpoint(&mock_server.uri())
+            .await
+            .unwrap();
+
         assert_eq!(client.schema_type(), &ApiSchemaType::OpenAPI);
         assert_eq!(client.endpoint(), &mock_server.uri());
-        
+
         let metadata = client.api_metadata();
         assert_eq!(metadata.title, "Test API");
         assert_eq!(metadata.version, "1.0.0");
@@ -299,7 +295,7 @@ mod tests {
     #[tokio::test]
     async fn test_list_operations() {
         let mock_server = MockServer::start().await;
-        
+
         Mock::given(method("GET"))
             .and(path("/api/schema"))
             .respond_with(ResponseTemplate::new(200).set_body_json(json!({
@@ -318,10 +314,12 @@ mod tests {
             })))
             .mount(&mock_server)
             .await;
-        
-        let client = UniversalPrimalClient::from_endpoint(&mock_server.uri()).await.unwrap();
+
+        let client = UniversalPrimalClient::from_endpoint(&mock_server.uri())
+            .await
+            .unwrap();
         let operations = client.list_operations();
-        
+
         assert!(operations.contains(&"getTest".to_string()));
         assert!(operations.contains(&"createTest".to_string()));
         assert_eq!(operations.len(), 2);
@@ -330,7 +328,7 @@ mod tests {
     #[tokio::test]
     async fn test_call_operation() {
         let mock_server = MockServer::start().await;
-        
+
         // Mock schema endpoint
         Mock::given(method("GET"))
             .and(path("/api/schema"))
@@ -368,7 +366,7 @@ mod tests {
             })))
             .mount(&mock_server)
             .await;
-        
+
         // Mock the actual operation
         Mock::given(method("POST"))
             .and(path("/api/v1/test"))
@@ -378,12 +376,16 @@ mod tests {
             })))
             .mount(&mock_server)
             .await;
-        
-        let client = UniversalPrimalClient::from_endpoint(&mock_server.uri()).await.unwrap();
-        let result = client.call_operation("createTest", json!({"name": "test"})).await.unwrap();
-        
+
+        let client = UniversalPrimalClient::from_endpoint(&mock_server.uri())
+            .await
+            .unwrap();
+        let result = client
+            .call_operation("createTest", json!({"name": "test"}))
+            .await
+            .unwrap();
+
         assert_eq!(result["id"], "test-123");
         assert_eq!(result["status"], "created");
     }
 }
-

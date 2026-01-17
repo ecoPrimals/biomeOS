@@ -115,4 +115,3 @@ mod tests {
 
     // Note: Integration tests with actual HTTP endpoints would go in tests/
 }
-

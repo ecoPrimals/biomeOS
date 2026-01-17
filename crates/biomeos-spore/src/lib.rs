@@ -48,6 +48,7 @@ pub mod error;
 pub mod incubation;
 pub mod logs;
 pub mod manifest;
+pub mod neural_spore;
 pub mod refresh;
 pub mod seed;
 pub mod spore;
@@ -62,6 +63,7 @@ pub mod verify;
 pub mod test_support;
 
 pub use error::{SporeError, SporeResult};
+pub use neural_spore::{DeploymentMetrics, NeuralSpore, PhaseMetrics, RollbackState};
 pub use seed::FamilySeed;
 pub use spore::{Spore, SporeConfig};
 pub use spore_types::SporeType;

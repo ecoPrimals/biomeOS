@@ -16,8 +16,8 @@ use tracing::{info, warn};
 
 mod handlers;
 mod state;
-mod websocket;
 mod unix_server;
+mod websocket;
 
 pub use state::{AppState, Config};
 pub use websocket::{
@@ -215,7 +215,10 @@ async fn main() -> anyhow::Result<()> {
             get(handlers::discovery::get_discovered_primals),
         )
         .route("/api/v1/topology", get(handlers::topology::get_topology))
-        .route("/api/v1/livespores", get(handlers::livespores::get_livespores)) // LiveSpore USB discovery
+        .route(
+            "/api/v1/livespores",
+            get(handlers::livespores::get_livespores),
+        ) // LiveSpore USB discovery
         .route("/api/v1/events/stream", get(handlers::events::event_stream)) // SSE endpoint
         .route("/api/v1/events/ws", get(websocket_handler)) // WebSocket endpoint (JSON-RPC 2.0)
         .route(
@@ -235,12 +238,12 @@ async fn main() -> anyhow::Result<()> {
             info!("   Unix socket: {}", config.socket_path.display());
             info!("   HTTP bridge: http://{}", bind_addr);
             info!("   ⚠️ HTTP is TEMPORARY and will be removed!");
-            
+
             unix_server::serve_dual_mode(&config.socket_path, bind_addr, app).await?;
         } else {
             warn!("⚠️  HTTP bridge enabled but no bind_addr set!");
             warn!("   Falling back to Unix socket only");
-            
+
             info!("🚀 biomeOS API Server starting (Unix socket only)");
             info!("   Socket: {}", config.socket_path.display());
             info!("   Protocol: JSON-RPC 2.0");
@@ -251,7 +254,7 @@ async fn main() -> anyhow::Result<()> {
             info!("     • /api/v1/livespores");
             info!("     • /api/v1/events/stream (SSE)");
             info!("     • /api/v1/events/ws (WebSocket JSON-RPC 2.0)");
-            
+
             unix_server::serve_unix_socket(&config.socket_path, app).await?;
         }
     } else {
@@ -271,7 +274,7 @@ async fn main() -> anyhow::Result<()> {
         info!("     • /api/v1/events/ws (WebSocket JSON-RPC 2.0)");
         info!("");
         info!("   Connect via: {}", config.socket_path.display());
-        
+
         unix_server::serve_unix_socket(&config.socket_path, app).await?;
     }
 

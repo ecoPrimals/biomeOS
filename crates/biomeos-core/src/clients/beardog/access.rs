@@ -143,26 +143,11 @@ impl AccessClient {
         let mut entries = Vec::new();
         for entry in entries_array {
             entries.push(AuditEntry {
-                audit_id: entry["audit_id"]
-                    .as_str()
-                    .unwrap_or("unknown")
-                    .to_string(),
-                subject: entry["subject"]
-                    .as_str()
-                    .unwrap_or("unknown")
-                    .to_string(),
-                resource: entry["resource"]
-                    .as_str()
-                    .unwrap_or("unknown")
-                    .to_string(),
-                action: entry["action"]
-                    .as_str()
-                    .unwrap_or("unknown")
-                    .to_string(),
-                decision: entry["decision"]
-                    .as_str()
-                    .unwrap_or("unknown")
-                    .to_string(),
+                audit_id: entry["audit_id"].as_str().unwrap_or("unknown").to_string(),
+                subject: entry["subject"].as_str().unwrap_or("unknown").to_string(),
+                resource: entry["resource"].as_str().unwrap_or("unknown").to_string(),
+                action: entry["action"].as_str().unwrap_or("unknown").to_string(),
+                decision: entry["decision"].as_str().unwrap_or("unknown").to_string(),
                 timestamp: entry["timestamp"].as_u64().unwrap_or(0),
             });
         }

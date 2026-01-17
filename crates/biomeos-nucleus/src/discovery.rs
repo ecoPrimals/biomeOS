@@ -19,7 +19,7 @@ use async_trait::async_trait;
 use biomeos_types::{CapabilityTaxonomy, SystemPaths};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 
 use crate::{Endpoint, Error, Result};
 

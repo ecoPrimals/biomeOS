@@ -30,6 +30,7 @@ pub mod primal_discovery; // NEW: Socket scanning discovery
 pub mod primal_launcher; // EVOLVING: Legacy launcher → coordinator
 
 // Neural API graph execution (TOML-based deterministic deployment)
+pub mod neural_api_server;
 pub mod neural_executor;
 pub mod neural_graph;
 

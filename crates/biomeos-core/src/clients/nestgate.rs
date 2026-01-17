@@ -39,31 +39,33 @@ impl NestGateClient {
             "nestgate",
             family_id,
             TransportPreference::UnixSocket,
-        ).await
-            .context("Failed to discover NestGate. Is it running?")?;
-        
+        )
+        .await
+        .context("Failed to discover NestGate. Is it running?")?;
+
         Ok(Self {
             transport,
             family_id: family_id.to_string(),
         })
     }
-    
+
     #[deprecated(note = "Use NestGateClient::discover() for Unix socket support")]
     pub async fn from_endpoint(endpoint: impl Into<String>, family_id: &str) -> Result<Self> {
         let _endpoint = endpoint.into();
         let transport = TransportClient::discover_with_preference(
             "nestgate",
             family_id,
-            TransportPreference::Auto  // ✅ Evolved: Auto-discover secure transport
-        ).await
-            .context("Failed to discover NestGate via secure transport")?;
-        
+            TransportPreference::Auto, // ✅ Evolved: Auto-discover secure transport
+        )
+        .await
+        .context("Failed to discover NestGate via secure transport")?;
+
         Ok(Self {
             transport,
             family_id: family_id.to_string(),
         })
     }
-    
+
     #[deprecated(note = "Use NestGateClient::discover() instead")]
     pub fn new(_endpoint: impl Into<String>) -> Self {
         panic!("NestGateClient::new() is deprecated. Use NestGateClient::discover() instead.");
@@ -71,29 +73,34 @@ impl NestGateClient {
 
     /// Store data with a key (JSON-RPC: storage.store)
     pub async fn store(&self, key: &str, data: &Value) -> Result<StorageResult> {
-        let response = self.transport.call(
-            "storage.store",
-            Some(serde_json::json!({
-                "key": key,
-                "data": data,
-                "family_id": self.family_id
-            }))
-        ).await
+        let response = self
+            .transport
+            .call(
+                "storage.store",
+                Some(serde_json::json!({
+                    "key": key,
+                    "data": data,
+                    "family_id": self.family_id
+                })),
+            )
+            .await
             .context("Failed to call storage.store")?;
 
-        serde_json::from_value(response)
-            .context("Failed to parse storage result from response")
+        serde_json::from_value(response).context("Failed to parse storage result from response")
     }
 
     /// Retrieve data by key (JSON-RPC: storage.retrieve)
     pub async fn retrieve(&self, key: &str) -> Result<Value> {
-        let response = self.transport.call(
-            "storage.retrieve",
-            Some(serde_json::json!({
-                "key": key,
-                "family_id": self.family_id
-            }))
-        ).await
+        let response = self
+            .transport
+            .call(
+                "storage.retrieve",
+                Some(serde_json::json!({
+                    "key": key,
+                    "family_id": self.family_id
+                })),
+            )
+            .await
             .context("Failed to call storage.retrieve")?;
 
         Ok(response["data"].clone())
@@ -101,13 +108,15 @@ impl NestGateClient {
 
     /// Delete data by key (JSON-RPC: storage.delete)
     pub async fn delete(&self, key: &str) -> Result<()> {
-        self.transport.call(
-            "storage.delete",
-            Some(serde_json::json!({
-                "key": key,
-                "family_id": self.family_id
-            }))
-        ).await
+        self.transport
+            .call(
+                "storage.delete",
+                Some(serde_json::json!({
+                    "key": key,
+                    "family_id": self.family_id
+                })),
+            )
+            .await
             .context("Failed to call storage.delete")?;
 
         Ok(())
@@ -118,12 +127,15 @@ impl NestGateClient {
         let mut params = serde_json::json!({
             "family_id": self.family_id
         });
-        
+
         if let Some(prefix) = prefix {
             params["prefix"] = serde_json::json!(prefix);
         }
 
-        let response = self.transport.call("storage.list", Some(params)).await
+        let response = self
+            .transport
+            .call("storage.list", Some(params))
+            .await
             .context("Failed to call storage.list")?;
 
         serde_json::from_value(response["keys"].clone())
@@ -132,45 +144,52 @@ impl NestGateClient {
 
     /// Get storage statistics (JSON-RPC: storage.stats)
     pub async fn get_stats(&self) -> Result<StorageStats> {
-        let response = self.transport.call(
-            "storage.stats",
-            Some(serde_json::json!({
-                "family_id": self.family_id
-            }))
-        ).await
+        let response = self
+            .transport
+            .call(
+                "storage.stats",
+                Some(serde_json::json!({
+                    "family_id": self.family_id
+                })),
+            )
+            .await
             .context("Failed to call storage.stats")?;
 
-        serde_json::from_value(response)
-            .context("Failed to parse storage stats from response")
+        serde_json::from_value(response).context("Failed to parse storage stats from response")
     }
 
     /// Store a blob (binary data) (JSON-RPC: storage.store_blob)
     pub async fn store_blob(&self, key: &str, blob: &[u8]) -> Result<StorageResult> {
         use base64::Engine;
-        let response = self.transport.call(
-            "storage.store_blob",
-            Some(serde_json::json!({
-                "key": key,
-                "blob": base64::engine::general_purpose::STANDARD.encode(blob),
-                "family_id": self.family_id
-            }))
-        ).await
+        let response = self
+            .transport
+            .call(
+                "storage.store_blob",
+                Some(serde_json::json!({
+                    "key": key,
+                    "blob": base64::engine::general_purpose::STANDARD.encode(blob),
+                    "family_id": self.family_id
+                })),
+            )
+            .await
             .context("Failed to call storage.store_blob")?;
 
-        serde_json::from_value(response)
-            .context("Failed to parse storage result from response")
+        serde_json::from_value(response).context("Failed to parse storage result from response")
     }
 
     /// Retrieve a blob (binary data) (JSON-RPC: storage.retrieve_blob)
     pub async fn retrieve_blob(&self, key: &str) -> Result<Vec<u8>> {
         use base64::Engine;
-        let response = self.transport.call(
-            "storage.retrieve_blob",
-            Some(serde_json::json!({
-                "key": key,
-                "family_id": self.family_id
-            }))
-        ).await
+        let response = self
+            .transport
+            .call(
+                "storage.retrieve_blob",
+                Some(serde_json::json!({
+                    "key": key,
+                    "family_id": self.family_id
+                })),
+            )
+            .await
             .context("Failed to call storage.retrieve_blob")?;
 
         let base64_data = response["blob"]

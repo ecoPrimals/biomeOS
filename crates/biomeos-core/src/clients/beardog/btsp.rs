@@ -90,7 +90,7 @@ impl BtspClient {
     /// # #[tokio::main]
     /// # async fn main() -> anyhow::Result<()> {
     /// let beardog = BearDogClient::discover("nat0").await?;
-    /// 
+    ///
     /// // Simple, intuitive API
     /// let tunnel = beardog.btsp().connect("peer-alpha", "192.168.1.10:9091").await?;
     /// println!("Connected! Tunnel: {}", tunnel.tunnel_id);
@@ -116,7 +116,7 @@ impl BtspClient {
     /// # async fn main() -> anyhow::Result<()> {
     /// let beardog = BearDogClient::discover("nat0").await?;
     /// let tunnel = beardog.btsp().connect("peer-alpha", "192.168.1.10:9091").await?;
-    /// 
+    ///
     /// // Simple disconnect
     /// beardog.btsp().disconnect(&tunnel.tunnel_id).await?;
     /// println!("Disconnected!");
@@ -143,7 +143,7 @@ impl BtspClient {
     /// # async fn main() -> anyhow::Result<()> {
     /// let beardog = BearDogClient::discover("nat0").await?;
     /// let tunnel = beardog.btsp().connect("peer-alpha", "192.168.1.10:9091").await?;
-    /// 
+    ///
     /// // Simple health check
     /// if beardog.btsp().is_active(&tunnel.tunnel_id).await? {
     ///     println!("✅ Tunnel is active");
@@ -173,7 +173,7 @@ impl BtspClient {
     /// # async fn main() -> anyhow::Result<()> {
     /// let beardog = BearDogClient::discover("nat0").await?;
     /// let tunnel = beardog.btsp().connect("peer-alpha", "192.168.1.10:9091").await?;
-    /// 
+    ///
     /// // Get detailed status
     /// let status = beardog.btsp().status(&tunnel.tunnel_id).await?;
     /// println!("State: {}", status.state);
@@ -201,7 +201,7 @@ impl BtspClient {
     /// # async fn main() -> anyhow::Result<()> {
     /// let beardog = BearDogClient::discover("nat0").await?;
     /// let tunnel = beardog.btsp().connect("peer-alpha", "192.168.1.10:9091").await?;
-    /// 
+    ///
     /// // Print formatted stats
     /// let stats = beardog.btsp().stats(&tunnel.tunnel_id).await?;
     /// println!("{}", stats);
@@ -210,7 +210,7 @@ impl BtspClient {
     /// ```
     pub async fn stats(&self, tunnel_id: &str) -> Result<String> {
         let status = self.beardog.get_tunnel_status(tunnel_id).await?;
-        
+
         Ok(format!(
             "BTSP Tunnel Stats ({})\n\
              State: {}\n\
@@ -248,25 +248,34 @@ impl BtspClient {
     /// # async fn main() -> anyhow::Result<()> {
     /// let beardog = BearDogClient::discover("nat0").await?;
     /// let tunnel = beardog.btsp().connect("peer-alpha", "192.168.1.10:9091").await?;
-    /// 
+    ///
     /// // Wait for tunnel to be ready
     /// beardog.btsp().wait_for_active(&tunnel.tunnel_id, 20, 250).await?;
     /// println!("✅ Tunnel is active and ready!");
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn wait_for_active(
+    pub     async fn wait_for_active(
         &self,
         tunnel_id: &str,
         max_attempts: usize,
         interval_ms: u64,
     ) -> Result<()> {
+        // Modern async: Use tokio::time::interval for periodic checks
+        let mut interval = tokio::time::interval(tokio::time::Duration::from_millis(interval_ms));
+        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        
         for attempt in 1..=max_attempts {
-            let status = self.beardog.get_tunnel_status(tunnel_id).await?;
+            interval.tick().await;  // Modern async pattern instead of sleep
             
+            let status = self.beardog.get_tunnel_status(tunnel_id).await?;
+
             match status.state.as_str() {
                 "active" => {
-                    debug!("✅ Tunnel '{}' is active after {} attempt(s)", tunnel_id, attempt);
+                    debug!(
+                        "✅ Tunnel '{}' is active after {} attempt(s)",
+                        tunnel_id, attempt
+                    );
                     return Ok(());
                 }
                 "failed" => {
@@ -288,10 +297,8 @@ impl BtspClient {
                     );
                 }
             }
-            
-            tokio::time::sleep(tokio::time::Duration::from_millis(interval_ms)).await;
         }
-        
+
         Err(anyhow::anyhow!(
             "Timeout waiting for tunnel '{}' to become active",
             tunnel_id
@@ -308,7 +315,10 @@ mod tests {
     async fn test_btsp_connect() {
         let beardog = BearDogClient::discover("nat0").await.unwrap();
         let btsp = beardog.btsp();
-        let tunnel = btsp.connect("test-peer", "192.168.1.100:9091").await.unwrap();
+        let tunnel = btsp
+            .connect("test-peer", "192.168.1.100:9091")
+            .await
+            .unwrap();
         assert!(!tunnel.tunnel_id.is_empty());
     }
 
@@ -317,7 +327,10 @@ mod tests {
     async fn test_btsp_is_active() {
         let beardog = BearDogClient::discover("nat0").await.unwrap();
         let btsp = beardog.btsp();
-        let tunnel = btsp.connect("test-peer", "192.168.1.100:9091").await.unwrap();
+        let tunnel = btsp
+            .connect("test-peer", "192.168.1.100:9091")
+            .await
+            .unwrap();
         let is_active = btsp.is_active(&tunnel.tunnel_id).await.unwrap();
         // State may vary, just verify we can check
         println!("Tunnel active: {}", is_active);
@@ -328,7 +341,10 @@ mod tests {
     async fn test_btsp_stats() {
         let beardog = BearDogClient::discover("nat0").await.unwrap();
         let btsp = beardog.btsp();
-        let tunnel = btsp.connect("test-peer", "192.168.1.100:9091").await.unwrap();
+        let tunnel = btsp
+            .connect("test-peer", "192.168.1.100:9091")
+            .await
+            .unwrap();
         let stats = btsp.stats(&tunnel.tunnel_id).await.unwrap();
         assert!(stats.contains("BTSP Tunnel Stats"));
         println!("{}", stats);

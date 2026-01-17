@@ -24,21 +24,16 @@ use tracing::{info, warn};
 /// # Security
 ///
 /// The socket is created with 0600 permissions (owner-only).
-pub async fn serve_unix_socket<P: AsRef<Path>>(
-    socket_path: P,
-    app: Router,
-) -> Result<()> {
+pub async fn serve_unix_socket<P: AsRef<Path>>(socket_path: P, app: Router) -> Result<()> {
     let socket_path = socket_path.as_ref();
 
     // Remove old socket if exists
     if socket_path.exists() {
-        std::fs::remove_file(socket_path)
-            .context("Failed to remove old Unix socket")?;
+        std::fs::remove_file(socket_path).context("Failed to remove old Unix socket")?;
     }
 
     // Create Unix listener
-    let listener = UnixListener::bind(socket_path)
-        .context("Failed to bind Unix socket")?;
+    let listener = UnixListener::bind(socket_path).context("Failed to bind Unix socket")?;
 
     // Set permissions (0600 - owner only)
     #[cfg(unix)]
@@ -62,37 +57,39 @@ pub async fn serve_unix_socket<P: AsRef<Path>>(
         match listener.accept().await {
             Ok((stream, _addr)) => {
                 let app = app.clone();
-                
+
                 tokio::spawn(async move {
                     let stream = hyper_util::rt::TokioIo::new(stream);
-                    let hyper_service = hyper::service::service_fn(move |request: hyper::Request<hyper::body::Incoming>| {
-                        // Convert hyper request to axum request
-                        let (parts, body) = request.into_parts();
-                        let body = axum::body::Body::new(body);
-                        let request = axum::http::Request::from_parts(parts, body);
-                        
-                        // Clone app for this request
-                        let mut app = app.clone();
-                        
-                        async move {
-                            // Use tower::Service::call directly
-                            use tower::Service;
-                            match app.call(request).await {
-                                Ok(response) => Ok::<_, hyper::Error>(response),
-                                Err(_) => {
-                                    // Create error response
-                                    let response = axum::http::Response::builder()
-                                        .status(500)
-                                        .body(axum::body::Body::from("Internal Server Error"))
-                                        .unwrap();
-                                    Ok(response)
+                    let hyper_service = hyper::service::service_fn(
+                        move |request: hyper::Request<hyper::body::Incoming>| {
+                            // Convert hyper request to axum request
+                            let (parts, body) = request.into_parts();
+                            let body = axum::body::Body::new(body);
+                            let request = axum::http::Request::from_parts(parts, body);
+
+                            // Clone app for this request
+                            let mut app = app.clone();
+
+                            async move {
+                                // Use tower::Service::call directly
+                                use tower::Service;
+                                match app.call(request).await {
+                                    Ok(response) => Ok::<_, hyper::Error>(response),
+                                    Err(_) => {
+                                        // Create error response
+                                        let response = axum::http::Response::builder()
+                                            .status(500)
+                                            .body(axum::body::Body::from("Internal Server Error"))
+                                            .unwrap();
+                                        Ok(response)
+                                    }
                                 }
                             }
-                        }
-                    });
-                    
+                        },
+                    );
+
                     if let Err(e) = hyper_util::server::conn::auto::Builder::new(
-                        hyper_util::rt::TokioExecutor::new()
+                        hyper_util::rt::TokioExecutor::new(),
                     )
                     .serve_connection(stream, hyper_service)
                     .await
@@ -124,7 +121,7 @@ pub async fn serve_dual_mode<P: AsRef<Path>>(
     app: Router,
 ) -> Result<()> {
     let socket_path = socket_path.as_ref().to_path_buf();
-    
+
     warn!("⚠️  Running in DUAL MODE (Unix socket + HTTP bridge)");
     warn!("   This is TEMPORARY for PetalTongue transition!");
     warn!("   Set BIOMEOS_API_HTTP_BRIDGE=false to disable HTTP");
@@ -141,10 +138,9 @@ pub async fn serve_dual_mode<P: AsRef<Path>>(
     // Spawn HTTP bridge
     info!("🌉 Starting HTTP bridge at http://{}", http_addr);
     info!("   ⚠️ HTTP is DEPRECATED and will be removed!");
-    
+
     let listener = tokio::net::TcpListener::bind(http_addr).await?;
     axum::serve(listener, app).await?;
 
     Ok(())
 }
-

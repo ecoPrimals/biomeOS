@@ -1,0 +1,162 @@
+# Bonding Model Test: Weak Forces (Unknown/Insecure Systems)
+# Test minimal interaction with unknown primals (no authentication, read-only)
+
+[graph]
+id = "bonding-test-weak-forces"
+name = "Bonding Test: Weak Forces (Zero Trust)"
+version = "1.0.0"
+description = "Test weak forces: interact with unknown primals (zero trust, minimal disclosure, no disruption)"
+
+[graph.metadata]
+# Bonding Model Metadata (per NUCLEUS_BONDING_MODEL.md)
+test_scenario = "weak_forces_unknown_primal"
+interaction_bond_type = "weak"
+force_type = "dipole_dipole"  # Temporary, oriented interaction
+trust_model = "zero_trust"  # Assume hostile
+electron_involvement = false  # No electron involvement
+information_disclosure = "minimal"  # Avoid fingerprinting
+
+# Prerequisites: Family Alpha running (observer)
+[[nodes]]
+id = "verify_alpha_running"
+node_type = "health.check_all"
+description = "Verify Family Alpha NUCLEUS is operational (observer family)"
+[nodes.config]
+check_endpoints = [
+    "/tmp/beardog-family_alpha.sock",
+    "/tmp/songbird-family_alpha.sock"
+]
+timeout_seconds = 30
+require_all_healthy = true
+
+# Test 1: Weak Force - Dipole-Dipole (Public API Observation)
+[[nodes]]
+id = "weak_dipole_observation"
+node_type = "weak.observation"
+description = "Observe unknown primal via weak dipole-dipole interaction (read-only)"
+depends_on = ["verify_alpha_running"]
+[nodes.config]
+observer_family = "family_alpha"
+bond_type = "weak.dipole"
+electron_involvement = false  # No Tower involvement
+
+# Weak force configuration (per NUCLEUS_BONDING_MODEL.md Section 2.4)
+[nodes.config.weak_interaction]
+force_type = "dipole_dipole"
+directionality = "read_only"
+authentication = "none"
+persistent_connection = false
+assume_hostile = true  # Critical: assume every interaction is monitored
+
+# Target: Unknown primal (simulated as localhost simple HTTP server)
+[nodes.config.target]
+endpoint = "http://localhost:8080/status"  # Unknown primal
+method = "GET"
+auth = "none"
+user_agent = "generic-client/1.0"  # Generic, non-traceable
+rate_limit_ms = 5000  # Respectful, avoid detection
+timeout_ms = 3000
+
+# Security: Zero information leakage
+[nodes.config.security]
+disclose_identity = false
+disclose_capabilities = false
+disclose_family = false
+disclose_topology = false
+disposable_identity = true
+
+# Test 2: Weak Force - Brownian Motion (Network Discovery)
+[[nodes]]
+id = "weak_brownian_discovery"
+node_type = "weak.observation"
+description = "Random network discovery (Brownian motion, best-effort)"
+depends_on = ["weak_dipole_observation"]
+[nodes.config]
+observer_family = "family_alpha"
+bond_type = "weak.brownian"
+electron_involvement = false
+
+# Brownian motion: Random, opportunistic
+[nodes.config.weak_interaction]
+force_type = "brownian"
+directionality = "random"
+authentication = "none"
+persistent_connection = false
+best_effort = true
+no_guarantees = true
+
+# Network scan (passive, no disruption)
+[nodes.config.target]
+scan_type = "passive"
+network_range = "127.0.0.0/24"  # Local network only for testing
+methods = ["ping", "port_scan"]
+ports = [22, 80, 443, 8080]  # Common ports only
+rate_limit_ms = 10000  # Very slow, respectful
+timeout_ms = 2000
+
+# Test 3: Weak Force - Van der Waals (Proximity-Based)
+[[nodes]]
+id = "weak_van_der_waals"
+node_type = "weak.observation"
+description = "Proximity-based discovery (Van der Waals, local network only)"
+depends_on = ["weak_brownian_discovery"]
+[nodes.config]
+observer_family = "family_alpha"
+bond_type = "weak.van_der_waals"
+electron_involvement = false
+
+# Van der Waals: Proximity-based, very weak
+[nodes.config.weak_interaction]
+force_type = "van_der_waals"
+directionality = "proximity_based"
+authentication = "none"
+persistent_connection = false
+minimal_information_exchange = true
+
+# mDNS discovery (local network only)
+[nodes.config.target]
+discovery_method = "mdns"
+network_scope = "local_only"  # Link-local only
+timeout_ms = 5000
+passive_listening = true  # Just listen, don't broadcast
+
+# Test 4: Validate Weak Force Characteristics
+[[nodes]]
+id = "validate_weak_forces"
+node_type = "verification"
+description = "Confirm weak force characteristics (zero trust, minimal disclosure)"
+depends_on = ["weak_van_der_waals"]
+[nodes.config]
+check_type = "weak_force_validation"
+
+# Validate zero leakage (per NUCLEUS_BONDING_MODEL.md Section 2.4.5)
+[nodes.config.validation]
+expect_zero_family_disclosure = true
+expect_zero_capability_disclosure = true
+expect_zero_topology_disclosure = true
+expect_read_only = true
+expect_no_authentication = true
+expect_no_persistent_state = true
+expect_generic_identity = true
+
+# Test 5: Verify No Disruption
+[[nodes]]
+id = "verify_no_disruption"
+node_type = "verification"
+description = "Confirm no disruption or information leakage to unknown systems"
+depends_on = ["validate_weak_forces"]
+[nodes.config]
+check_type = "no_disruption"
+expect_no_crashes = true
+expect_no_logs_on_target = true
+expect_no_fingerprinting = true
+
+# Test Complete
+[[nodes]]
+id = "weak_forces_test_complete"
+node_type = "log.info"
+description = "Weak forces test complete"
+depends_on = ["verify_no_disruption"]
+[nodes.config]
+message = "🔬 WEAK FORCES TEST COMPLETE! Interacted with unknown primals using dipole-dipole, Brownian motion, and Van der Waals forces. Zero trust maintained. No electron involvement. Minimal information disclosure. No disruption. TRUE PRIMAL security validated! ⚛️"
+

@@ -179,10 +179,7 @@ impl UpaClient {
 
     /// Register node via HTTP
     async fn register_node_http(&self, request: RegisterNodeRequest) -> Result<String> {
-        let http = self
-            .http
-            .as_ref()
-            .context("HTTP client not initialized")?;
+        let http = self.http.as_ref().context("HTTP client not initialized")?;
 
         let body = serde_json::to_value(&request)?;
         let response = http
@@ -190,8 +187,8 @@ impl UpaClient {
             .await
             .context("Failed to register node via HTTP")?;
 
-        let response: RegisterNodeResponse = serde_json::from_value(response)
-            .context("Failed to parse registration response")?;
+        let response: RegisterNodeResponse =
+            serde_json::from_value(response).context("Failed to parse registration response")?;
 
         Ok(response.node_id)
     }
@@ -234,10 +231,7 @@ impl UpaClient {
 
     /// Find peer via HTTP
     async fn find_peer_http(&self, peer_name: &str) -> Result<PeerInfo> {
-        let http = self
-            .http
-            .as_ref()
-            .context("HTTP client not initialized")?;
+        let http = self.http.as_ref().context("HTTP client not initialized")?;
 
         // Use Songbird's capability-based discovery endpoint
         let body = serde_json::json!({
@@ -275,18 +269,15 @@ impl UpaClient {
 
     /// List nodes via HTTP
     async fn list_nodes_http(&self) -> Result<Vec<PeerInfo>> {
-        let http = self
-            .http
-            .as_ref()
-            .context("HTTP client not initialized")?;
+        let http = self.http.as_ref().context("HTTP client not initialized")?;
 
         let response = http
             .get("/api/v1/registry/nodes") // Updated path for Songbird
             .await
             .context("Failed to list nodes via HTTP")?;
 
-        let response: ListNodesResponse = serde_json::from_value(response)
-            .context("Failed to parse nodes list")?;
+        let response: ListNodesResponse =
+            serde_json::from_value(response).context("Failed to parse nodes list")?;
 
         Ok(response.nodes)
     }
@@ -493,4 +484,3 @@ mod tests {
         assert_eq!(peer.metadata.get("version").unwrap(), "1.0.0");
     }
 }
-

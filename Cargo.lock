@@ -473,6 +473,7 @@ dependencies = [
  "biomeos-manifest",
  "biomeos-niche",
  "biomeos-primal-sdk",
+ "biomeos-spore",
  "biomeos-system",
  "biomeos-types",
  "chrono",
@@ -534,6 +535,7 @@ name = "biomeos-atomic-deploy"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "base64 0.22.1",
  "biomeos-core",
  "biomeos-federation",
  "biomeos-spore",
@@ -541,14 +543,18 @@ dependencies = [
  "chrono",
  "nix 0.29.0",
  "rand 0.8.5",
+ "regex",
  "serde",
  "serde_json",
+ "sysinfo 0.32.1",
  "tempfile",
  "thiserror",
  "tokio",
  "tokio-test",
  "toml",
  "tracing",
+ "tracing-subscriber",
+ "users",
 ]
 
 [[package]]
@@ -680,6 +686,7 @@ dependencies = [
  "dirs",
  "futures 0.3.31",
  "glob",
+ "hex",
  "hostname 0.4.2",
  "itertools 0.12.1",
  "mockall",
@@ -862,6 +869,7 @@ dependencies = [
  "gethostname",
  "getrandom 0.2.16",
  "hex",
+ "nix 0.29.0",
  "rand 0.8.5",
  "serde",
  "serde_bytes",
@@ -940,8 +948,10 @@ dependencies = [
  "chrono",
  "futures-util",
  "indexmap 2.12.1",
+ "reqwest 0.11.27",
  "serde",
  "serde_json",
+ "tempfile",
  "thiserror",
  "tokio",
  "tokio-stream",
@@ -4581,10 +4591,12 @@ dependencies = [
  "system-configuration",
  "tokio",
  "tokio-native-tls",
+ "tokio-util",
  "tower-service",
  "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",
+ "wasm-streams",
  "web-sys",
  "winreg",
 ]
@@ -5617,6 +5629,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "sysinfo"
+version = "0.32.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4c33cd241af0f2e9e3b5c32163b873b29956890b5342e6745b917ce9d490f4af"
+dependencies = [
+ "core-foundation-sys",
+ "libc",
+ "memchr",
+ "ntapi",
+ "rayon",
+ "windows 0.57.0",
+]
+
+[[package]]
 name = "system-configuration"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6347,6 +6373,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "users"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "24cc0f6d6f267b73e5a2cadf007ba8f9bc39c6a6f9666f8cf25ea809a153b032"
+dependencies = [
+ "libc",
+ "log",
+]
+
+[[package]]
 name = "utf-8"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6529,6 +6565,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cbc538057e648b67f72a982e708d485b2efa771e1ac05fec311f9f63e5800db4"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "wasm-streams"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "15053d8d85c7eccdbefef60f06769760a563c7f0a9d6902a13d35c7800b0ad65"
+dependencies = [
+ "futures-util",
+ "js-sys",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
 ]
 
 [[package]]

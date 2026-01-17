@@ -1,7 +1,7 @@
 # 🧬 plasmidBin Manifest
 
-**Version**: v0.8.2  
-**Date**: January 9, 2026  
+**Version**: v0.11.0  
+**Date**: January 17, 2026  
 **Purpose**: Stable deployment binaries for spore creation
 
 ---
@@ -101,14 +101,33 @@ cargo run --bin biomeos -- spore create /media/user/USB/biomeOS
 
 ## 📊 **Current Binaries**
 
-| Binary | Primal | Version | Status | Size |
-|--------|--------|---------|--------|------|
-| `petal-tongue` | petalTongue | v0.5.0 | ✅ Production | 21MB |
-| `petal-tongue-headless` | petalTongue | v0.5.0 | ✅ Production | 3.1MB |
-| `beardog-server` | BearDog | v0.15.2 | ⏳ Pending harvest | - |
-| `songbird` | Songbird | v3.19.3 | ⏳ Pending harvest | - |
-| `toadstool` | Toadstool | - | ⏳ Pending harvest | - |
-| `nestgate` | NestGate | - | ⏳ Pending harvest | - |
+**Harvest Date**: January 17, 2026  
+**Session**: UniBin Architecture v1.0.0 Compliance Complete
+
+| Binary | Primal | Version | Harvest | Status | Size |
+|--------|--------|---------|---------|--------|------|
+| `beardog-server` | BearDog | v0.9.0 | Jan 16 12:45 | ✅ Pure Rust Evolution! | 3.2M |
+| `squirrel` | Squirrel | v1.2.0 | Jan 17 02:00 | ✅ UniBin v1.0.0 - Doctor Mode - A++ (100/100)! | 18M |
+| `songbird-orchestrator` | Songbird | v3.23.0+ | Jan 16 ~11:00 | ✅ Socket Fix + Tests | ~5M |
+| `toadstool-server` | ToadStool | - | Jan 15 ~20:00 | ✅ Socket Fix | ~4M |
+| `nestgate` | NestGate | - | Jan 15 ~20:00 | ✅ JWT via BearDog | 4.5M |
+| `petal-tongue` | petalTongue | v0.5.0 | Earlier | ✅ Production | 36M |
+| `petal-tongue-headless` | petalTongue | v0.5.0 | Earlier | ✅ Production | 3.1M |
+
+**Notes**:
+- **BearDog v0.9.0**: 100% Pure Rust crypto (ring→RustCrypto), Modern concurrent (parking_lot), Custom JWT, A++
+  - ⏳ BTSP HTTP→Unix evolution pending (joint BearDog+Songbird, ~8-10hrs)
+- **Squirrel v1.2.0**: 🏆 UniBin v1.0.0 FULLY COMPLIANT! Doctor Mode (FIRST IN ECOSYSTEM!), A++ (100/100)
+  - ✅ UniBin subcommands (server, doctor, version)
+  - ✅ Health diagnostics (7 subsystems, text+JSON)
+  - ✅ Zero-HTTP production + dev-direct-http mode
+  - ✅ Modern async Rust (clap, concurrent checks)
+  - 🏆 Reference implementation for ecosystem standard
+- **ToadStool v4.9.0**: Production ready! 100% pure Rust core, 18,224+ tests, 87% coverage, A++
+  - ✅ 15+ hours evolution, HTTP removed from 30+ files, capability-based, modern async
+  - ⏳ Minor integration/protocols HTTP cleanup in progress (core complete!)
+- **Songbird v3.23.0+**: Socket fix complete, comprehensive test suite (3 functions, 11 scenarios)
+- **NestGate**: JWT secret generation via BearDog's new capability, storage layer ready for ToadStool
 
 ---
 
@@ -137,8 +156,29 @@ cargo run --bin biomeos -- spore create /media/user/USB/biomeOS
 
 ---
 
-**Last Updated**: January 9, 2026  
+---
+
+## 🔄 **Evolution Status**
+
+**Pure Rust Migration** (Jan 16-17, 2026):
+- ✅ **BearDog**: ring→RustCrypto complete! Custom Pure Rust JWT
+- ✅ **Squirrel v1.0.3**: ring→RustCrypto complete (FIRST PRIMAL - 2 hours!)
+- ✅ **Squirrel v1.1.0**: Zero-HTTP architecture (Unix sockets production)
+- ✅ **Squirrel v1.2.0**: UniBin v1.0.0 FULLY COMPLIANT! Doctor Mode! A++ (100/100)
+- ⏳ **BearDog BTSP**: HTTP→Unix socket evolution (joint w/ Songbird, ~8-10hrs)
+- ✅ **Ecosystem**: 95% pure Rust achieved! UniBin standard validated!
+
+**Concentrated Gap Strategy**:
+- 🎯 Songbird = ONLY primal with HTTP/TLS (external communication)
+- 🎯 All other primals = Unix sockets only (internal)
+- 🎯 BTSP evolution = BearDog ←→ Songbird via Unix socket
+- 🎯 Result = Controlled HTTP gateway to NUCLEUS
+
+---
+
+**Last Updated**: January 17, 2026 (UniBin v1.0.0 Compliance Complete!)  
+**Version**: v0.11.0  
 **Maintainer**: biomeOS Team
 
-🧬 **plasmidBin: Genetic Material for Spore Deployment** 🌱
+🧬🦀✨ **plasmidBin: UniBin Compliant + Pure Rust Genetic Material for Spore Deployment!** ✨🦀🧬
 

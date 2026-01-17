@@ -1,11 +1,16 @@
 //! NUCLEUS Deployment Binary
 //!
 //! Pure Rust orchestration system for deploying complete biomeOS NUCLEUS.
-//! Replaces bash scripts with proper Neural API + graph orchestration.
+//! Uses Neural API graph executor for ecosystem orchestration.
 //!
-//! NUCLEUS = Node + Tower + Nest on a single gate (liveSpore)
+//! NUCLEUS = Tower (BearDog + Songbird) + Node (Toadstool) + Nest (NestGate)
+//!         + AI (Squirrel) + Visualization (petalTongue)
 
 use anyhow::{Context, Result};
+use biomeos_atomic_deploy::neural_api_server::NeuralApiServer;
+use biomeos_atomic_deploy::neural_executor::GraphExecutor;
+use biomeos_atomic_deploy::neural_graph::Graph;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use tracing::{info, warn};
 
@@ -14,23 +19,62 @@ async fn main() -> Result<()> {
     // Initialize logging
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::INFO)
+        .with_target(false)
         .init();
 
-    info!("🧬 NUCLEUS Deployment System");
+    info!("🧬 NUCLEUS Ecosystem Deployment");
     info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     info!("");
 
     let args: Vec<String> = std::env::args().collect();
     let mode = args.get(1).map(|s| s.as_str()).unwrap_or("deploy");
 
+    // Parse command-line arguments
+    let family_id = args
+        .iter()
+        .position(|arg| arg == "--family")
+        .and_then(|i| args.get(i + 1))
+        .cloned()
+        .unwrap_or_else(|| std::env::var("FAMILY_ID").unwrap_or_else(|_| "nat0".to_string()));
+
+    let graph_path = args
+        .iter()
+        .position(|arg| arg == "--graph")
+        .and_then(|i| args.get(i + 1))
+        .cloned()
+        .unwrap_or_else(|| "graphs/nucleus_ecosystem.toml".to_string());
+
     match mode {
-        "deploy" => deploy_nucleus().await?,
+        "deploy" => deploy_nucleus(&family_id, &graph_path).await?,
+        "serve" => serve_neural_api(&family_id).await?,
         "verify" => verify_nucleus().await?,
         "status" => show_status().await?,
         "ui" => launch_ui().await?,
-        "all" => deploy_and_launch().await?,
+        "all" => deploy_and_launch(&family_id, &graph_path).await?,
         _ => {
-            eprintln!("Usage: {} [deploy|verify|status|ui|all]", args[0]);
+            eprintln!(
+                "Usage: {} [deploy|serve|verify|status|ui|all] [--family FAMILY_ID] [--graph PATH]",
+                args[0]
+            );
+            eprintln!("");
+            eprintln!("Commands:");
+            eprintln!("  deploy    Deploy NUCLEUS ecosystem from graph");
+            eprintln!("  serve     Start Neural API JSON-RPC server");
+            eprintln!("  verify    Verify NUCLEUS health");
+            eprintln!("  status    Show NUCLEUS status");
+            eprintln!("  ui        Launch visualization UI");
+            eprintln!("  all       Deploy and launch everything");
+            eprintln!("");
+            eprintln!("Options:");
+            eprintln!("  --family FAMILY_ID    Genetic family ID (default: nat0)");
+            eprintln!(
+                "  --graph PATH          Graph definition (default: graphs/nucleus_ecosystem.toml)"
+            );
+            eprintln!("");
+            eprintln!("Examples:");
+            eprintln!("  {} deploy --family nat0", args[0]);
+            eprintln!("  {} serve --family nat0", args[0]);
+            eprintln!("  {} deploy --graph graphs/nucleus_ecosystem.toml", args[0]);
             std::process::exit(1);
         }
     }
@@ -39,34 +83,98 @@ async fn main() -> Result<()> {
 }
 
 /// Deploy complete NUCLEUS using Neural API graph
-async fn deploy_nucleus() -> Result<()> {
-    info!("🚀 Deploying NUCLEUS (Node + Tower + Nest)");
+async fn deploy_nucleus(family_id: &str, graph_path: &str) -> Result<()> {
+    info!("🚀 Deploying NUCLEUS Ecosystem");
+    info!("   Family: {}", family_id);
+    info!("   Graph: {}", graph_path);
     info!("");
 
     // Verify graph exists
-    let graph_path = PathBuf::from("graphs/nucleus_deploy.toml");
-    info!("📊 Graph template: {:?}", graph_path);
-
-    if !tokio::fs::metadata(&graph_path).await.is_ok() {
-        warn!("⚠️  Graph template not found");
-        warn!("   Expected: graphs/nucleus_deploy.toml");
-        return Err(anyhow::anyhow!("NUCLEUS deployment graph not found"));
+    let graph_file = PathBuf::from(graph_path);
+    if !tokio::fs::metadata(&graph_file).await.is_ok() {
+        return Err(anyhow::anyhow!("Graph not found: {}", graph_path));
     }
 
-    info!("✅ Graph template found");
+    // Load graph
+    info!("📊 Loading graph definition...");
+    let graph_content = tokio::fs::read_to_string(&graph_file).await?;
+    let graph = Graph::from_toml_str(&graph_content).context("Failed to parse graph TOML")?;
+
+    info!(
+        "✅ Graph loaded: {} ({} nodes)",
+        graph.id,
+        graph.nodes.len()
+    );
     info!("");
 
-    // TODO: Load and execute via Neural API once graph executor is integrated
-    // For now, provide clear next steps
-    info!("📋 NUCLEUS Deployment Steps:");
-    info!("   1. ✅ Graph defined (graphs/nucleus_deploy.toml)");
-    info!("   2. ⏳ Neural API integration (pending)");
-    info!("   3. ⏳ Primal coordination via Songbird");
-    info!("   4. ⏳ Real-time visualization in petalTongue");
-    info!("");
-    info!("💡 Next: Deploy via UI (petalTongue NicheDesigner)");
+    // Prepare environment
+    let uid = std::env::var("UID").unwrap_or_else(|_| {
+        // Fallback: read /proc/self for current UID
+        "1000".to_string()
+    });
+    let mut env = HashMap::new();
+    env.insert("FAMILY_ID".to_string(), family_id.to_string());
+    env.insert("UID".to_string(), uid.clone());
+    env.insert("RUNTIME_DIR".to_string(), format!("/run/user/{}", uid));
+    env.insert("SOCKET_DIR".to_string(), format!("/run/user/{}", uid));
+    env.insert("LOG_DIR".to_string(), "/tmp".to_string());
 
-    Ok(())
+    // JWT secret for NestGate (temporary, should use BearDog)
+    env.insert(
+        "JWT_SECRET".to_string(),
+        std::env::var("JWT_SECRET").unwrap_or_else(|_| "TEMP_DEV_SECRET".to_string()),
+    );
+
+    info!("🌍 Environment:");
+    info!("   FAMILY_ID: {}", family_id);
+    info!("   UID: {}", uid);
+    info!("   SOCKET_DIR: /run/user/{}", uid);
+    info!("");
+
+    // Execute graph
+    info!("🧠 Executing Neural API graph...");
+    info!("");
+
+    let mut executor = GraphExecutor::new(graph, env);
+    match executor.execute().await {
+        Ok(report) => {
+            info!("");
+            info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+            if report.success {
+                info!("✅ NUCLEUS ECOSYSTEM DEPLOYED!");
+            } else {
+                warn!("⚠️  NUCLEUS DEPLOYMENT COMPLETED WITH ISSUES");
+            }
+
+            info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            info!("");
+            info!("Graph: {}", report.graph_id);
+            info!("Success: {}", report.success);
+            info!("Duration: {} ms", report.duration_ms);
+            info!("Phases: {}", report.phase_results.len());
+            info!("");
+
+            if !report.success {
+                if let Some(error) = &report.error {
+                    warn!("Error: {}", error);
+                }
+                return Err(anyhow::anyhow!("Deployment failed"));
+            }
+
+            info!("🎯 Next Steps:");
+            info!("  1. Verify: nucleus verify");
+            info!("  2. Status: nucleus status");
+            info!("  3. Visualize: nucleus ui");
+            info!("");
+
+            Ok(())
+        }
+        Err(e) => {
+            warn!("❌ Deployment failed: {}", e);
+            Err(e)
+        }
+    }
 }
 
 /// Verify NUCLEUS health
@@ -203,19 +311,53 @@ async fn launch_ui() -> Result<()> {
 }
 
 /// Deploy NUCLEUS and launch UI
-async fn deploy_and_launch() -> Result<()> {
+async fn deploy_and_launch(family_id: &str, graph_path: &str) -> Result<()> {
     info!("🚀 Complete NUCLEUS Deployment + UI Launch");
     info!("");
 
     // Deploy NUCLEUS
-    deploy_nucleus().await?;
+    deploy_nucleus(family_id, graph_path).await?;
 
     info!("");
-    info!("⏳ Waiting 2 seconds for system to stabilize...");
-    tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+    info!("⏳ Waiting 5 seconds for ecosystem to stabilize...");
+    tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
 
     // Launch UI
     launch_ui().await?;
+
+    Ok(())
+}
+
+/// Serve Neural API JSON-RPC server
+async fn serve_neural_api(family_id: &str) -> Result<()> {
+    info!("🧠 Starting Neural API Server");
+    info!("   Family: {}", family_id);
+    info!("");
+
+    // Determine socket path
+    let socket_path = format!("/tmp/biomeos-neural-api-{}.sock", family_id);
+
+    // Graphs directory
+    let graphs_dir = "graphs";
+
+    info!("📊 Configuration:");
+    info!("   Socket: {}", socket_path);
+    info!("   Graphs: {}", graphs_dir);
+    info!("");
+
+    // Create Neural API server
+    let server = NeuralApiServer::new(graphs_dir, family_id, &socket_path);
+
+    info!("✅ Neural API server ready");
+    info!("");
+    info!("📡 Squirrel and petalTongue can now connect to:");
+    info!("   {}", socket_path);
+    info!("");
+    info!("Press Ctrl+C to stop");
+    info!("");
+
+    // Serve (blocks until interrupted)
+    server.serve().await?;
 
     Ok(())
 }

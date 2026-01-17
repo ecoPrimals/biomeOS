@@ -142,6 +142,7 @@ biomeos-system = { path = "crates/biomeos-system" }
 biomeos-chimera = { path = "crates/biomeos-chimera" }
 biomeos-atomic-deploy = { path = "crates/biomeos-atomic-deploy" }
 biomeos-niche = { path = "crates/biomeos-niche" }
+biomeos-spore = { path = "crates/biomeos-spore" }
 biomeos-graph = { path = "crates/biomeos-graph" }  # Neural API graph orchestration
 # biomeos-ui = { path = "crates/biomeos-ui" }  # Archived 2025-12-23
 

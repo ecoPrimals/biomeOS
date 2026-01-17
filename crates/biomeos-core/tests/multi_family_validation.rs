@@ -279,9 +279,7 @@ mod multi_family_tests {
                 let creds = FamilyCredentials::new(family_id, seed)
                     .expect("Should create valid credentials");
 
-                // Simulate some work
-                tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
-
+                // No artificial delay - test actual concurrent execution!
                 creds.family_id().to_string()
             });
 

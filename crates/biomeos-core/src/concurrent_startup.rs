@@ -77,12 +77,12 @@ impl DependencyGraph {
                         None => true, // No requirements means ready to start
                         Some(req) => {
                             req.iter().all(|cap| {
-                            // Check if capability provider has started
-                            self.capability_providers
-                                .get(cap)
-                                .map(|provider| started.contains(provider))
-                                .unwrap_or(false)
-                        }) || req.is_empty()
+                                // Check if capability provider has started
+                                self.capability_providers
+                                    .get(cap)
+                                    .map(|provider| started.contains(provider))
+                                    .unwrap_or(false)
+                            }) || req.is_empty()
                         }
                     }
                 })

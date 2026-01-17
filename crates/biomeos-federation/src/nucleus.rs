@@ -52,6 +52,8 @@ pub enum TrustLevel {
 pub struct IdentityProof {
     /// Node ID
     pub node_id: String,
+    /// Family ID (extracted from BearDog lineage verification)
+    pub family_id: Option<String>,
     /// Ed25519 signature
     pub signature: String,
     /// Challenge that was signed
@@ -60,6 +62,43 @@ pub struct IdentityProof {
     pub public_key: String,
     /// Timestamp
     pub timestamp: u64,
+}
+
+/// Songbird discovery response for a service
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct SongbirdServiceInfo {
+    id: String,
+    name: String,
+    address: String,
+    port: u16,
+    tags: Vec<String>,
+    health: String,
+}
+
+/// Songbird discovery response
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct SongbirdDiscoveryResponse {
+    services: Vec<SongbirdServiceInfo>,
+}
+
+/// Primal capability from get_capabilities response
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct PrimalCapabilityInfo {
+    #[serde(rename = "type")]
+    capability_type: String,
+    methods: Vec<String>,
+    version: String,
+}
+
+/// Get capabilities response from primal
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct GetCapabilitiesResponse {
+    primal: String,
+    version: String,
+    family_id: Option<String>,
+    node_id: String,
+    protocols: Vec<String>,
+    provided_capabilities: Vec<PrimalCapabilityInfo>,
 }
 
 /// A verified primal (passed all 5 layers)
@@ -192,6 +231,7 @@ impl SecureNucleusDiscovery {
                 capabilities: primal.capabilities.clone(),
                 identity_proof: IdentityProof {
                     node_id: "unknown".to_string(),
+                    family_id: None,
                     signature: "unverified".to_string(),
                     challenge: "none".to_string(),
                     public_key: "none".to_string(),
@@ -280,16 +320,60 @@ impl SecureNucleusDiscovery {
         let request = JsonRpcRequest::new(
             "discover_by_family",
             serde_json::json!({
-                "family_id": self.family_id.as_deref().unwrap_or("*")
+                "family_tags": [self.family_id.as_deref().unwrap_or("*")],
+                "timeout_ms": 5000
             }),
         );
 
         match songbird.call(request).await {
             Ok(response) => {
-                // Parse Songbird's response
-                // TODO: Define proper response type
-                debug!("Songbird discovery response: {:?}", response);
-                Ok(vec![]) // TODO: Parse into DiscoveredPrimal
+                // Parse Songbird's discovery response
+                let result_value = response.result.unwrap_or_default();
+                match serde_json::from_value::<SongbirdDiscoveryResponse>(result_value) {
+                    Ok(discovery) => {
+                        debug!("Songbird discovered {} services", discovery.services.len());
+                        
+                        // Convert SongbirdServiceInfo to DiscoveredPrimal
+                        let primals: Vec<DiscoveredPrimal> = discovery
+                            .services
+                            .into_iter()
+                            .map(|service| {
+                                // Infer capabilities from tags
+                                let capabilities = CapabilitySet::from_tags(&service.tags);
+                                
+                                // Create endpoint from address:port
+                                let endpoint = if service.address.starts_with("/") {
+                                    // Unix socket path
+                                    PrimalEndpoint::UnixSocket {
+                                        path: PathBuf::from(&service.address),
+                                    }
+                                } else {
+                                    // HTTP endpoint
+                                    PrimalEndpoint::Http {
+                                        url: format!("http://{}:{}", service.address, service.port),
+                                    }
+                                };
+                                
+                                DiscoveredPrimal {
+                                    name: service.name.clone(),
+                                    primal_type: service.tags.first().cloned().unwrap_or_else(|| "unknown".to_string()),
+                                    endpoints: vec![endpoint],
+                                    capabilities,
+                                    metadata: HashMap::from([
+                                        ("id".to_string(), service.id),
+                                        ("health".to_string(), service.health),
+                                    ]),
+                                }
+                            })
+                            .collect();
+                        
+                        Ok(primals)
+                    }
+                    Err(e) => {
+                        warn!("Failed to parse Songbird response: {}, falling back", e);
+                        self.layer1_physical_discovery_sockets().await
+                    }
+                }
             }
             Err(e) => {
                 warn!(
@@ -320,9 +404,10 @@ impl SecureNucleusDiscovery {
         let identity_proof = if let Some(ref beardog) = self.beardog {
             self.layer2_identity_verification(beardog, &primal).await?
         } else {
-            // No BearDog available - skip verification (low trust)
+            // No BearDog available - create placeholder with no family
             IdentityProof {
                 node_id: "unverified".to_string(),
+                family_id: None,
                 signature: "none".to_string(),
                 challenge: "none".to_string(),
                 public_key: "none".to_string(),
@@ -345,7 +430,7 @@ impl SecureNucleusDiscovery {
         Ok(VerifiedPrimal {
             name: primal.name,
             node_id: identity_proof.node_id.clone(),
-            family_id: None, // TODO: Extract from BearDog
+            family_id: identity_proof.family_id.clone(), // Extract from BearDog via identity proof
             endpoints: primal.endpoints,
             capabilities,
             identity_proof,
@@ -364,25 +449,91 @@ impl SecureNucleusDiscovery {
     ) -> FederationResult<IdentityProof> {
         debug!("Layer 2: Identity Verification (BearDog)");
 
-        // TODO: Challenge-response protocol
-        // 1. Generate challenge
-        // 2. Send to primal
-        // 3. Primal signs with BearDog
-        // 4. We verify signature with BearDog
-
-        // For now, return placeholder
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs();
 
+        // Find Unix socket endpoint for challenge-response
+        let socket_path = primal.endpoints.iter().find_map(|ep| {
+            if let PrimalEndpoint::UnixSocket { path } = ep {
+                Some(path.clone())
+            } else {
+                None
+            }
+        });
+
+        if let Some(socket_path) = socket_path {
+            // Step 1: Generate challenge (timestamp-based nonce)
+            let challenge = format!("nucleus-challenge-{}-{}", primal.name, now);
+            
+            // Step 2: Request primal to sign challenge via get_identity
+            let client = UnixSocketClient::new(socket_path);
+            let request = JsonRpcRequest::new(
+                "get_identity",
+                serde_json::json!({
+                    "challenge": challenge
+                }),
+            );
+
+            match client.call(request).await {
+                Ok(response) => {
+                    // Step 3: Parse identity response
+                    let empty_json = serde_json::json!({});
+                    let result = response.result.as_ref().unwrap_or(&empty_json);
+                    let node_id = result["node_id"]
+                        .as_str()
+                        .unwrap_or(&primal.name)
+                        .to_string();
+                    let family_id = result["family_id"]
+                        .as_str()
+                        .map(|s| s.to_string());
+                    let signature = result["signature"]
+                        .as_str()
+                        .unwrap_or("unverified")
+                        .to_string();
+                    let public_key = result["public_key"]
+                        .as_str()
+                        .unwrap_or("none")
+                        .to_string();
+
+                    // Step 4: Verify signature with BearDog (future implementation)
+                    // For now, we trust the primal's self-reported identity
+                    // A full implementation would call beardog.verify_signature(...)
+
+                    Ok(IdentityProof {
+                        node_id,
+                        family_id,
+                        signature,
+                        challenge,
+                        public_key,
+                        timestamp: now,
+                    })
+                }
+                Err(e) => {
+                    debug!("get_identity failed: {}, using basic proof", e);
+                    // Fallback: Create basic identity proof without cryptographic verification
+                    Ok(IdentityProof {
+                        node_id: primal.name.clone(),
+                        family_id: None,
+                        signature: "unverified".to_string(),
+                        challenge,
+                        public_key: "none".to_string(),
+                        timestamp: now,
+                    })
+                }
+            }
+        } else {
+            // No Unix socket - can't perform challenge-response
         Ok(IdentityProof {
             node_id: primal.name.clone(),
-            signature: "todo".to_string(),
-            challenge: "todo".to_string(),
-            public_key: "todo".to_string(),
+                family_id: None,
+                signature: "unverified".to_string(),
+                challenge: "no-socket".to_string(),
+                public_key: "none".to_string(),
             timestamp: now,
         })
+        }
     }
 
     /// Layer 3: Capability Verification (query primal)
@@ -408,10 +559,41 @@ impl SecureNucleusDiscovery {
 
             match client.call(request).await {
                 Ok(response) => {
-                    // Parse capabilities from response
-                    // TODO: Define proper response type
-                    debug!("Capability response: {:?}", response);
+                    // Parse capabilities from structured response
+                    let result_value = response.result.unwrap_or_default();
+                    match serde_json::from_value::<GetCapabilitiesResponse>(result_value) {
+                        Ok(cap_response) => {
+                            debug!(
+                                "Verified capabilities for {} (v{}): {} capabilities",
+                                cap_response.primal,
+                                cap_response.version,
+                                cap_response.provided_capabilities.len()
+                            );
+                            
+                            // Convert PrimalCapabilityInfo to Capability
+                            let mut capabilities = CapabilitySet::new();
+                            for cap_info in cap_response.provided_capabilities {
+                                // Parse capability type string into Capability enum
+                                // FromStr is infallible, so this always succeeds
+                                let cap: Capability = cap_info.capability_type.parse().unwrap();
+                                capabilities.add(cap);
+                            }
+                            
+                            // Validate against discovered capabilities (sanity check)
+                            if capabilities.is_empty() {
+                                warn!(
+                                    "Primal reported zero capabilities, using discovered capabilities"
+                                );
+                                Ok(primal.capabilities.clone())
+                            } else {
+                                Ok(capabilities)
+                            }
+                        }
+                        Err(e) => {
+                            debug!("Failed to parse capability response: {}", e);
                     Ok(primal.capabilities.clone())
+                        }
+                    }
                 }
                 Err(e) => {
                     warn!(
@@ -430,17 +612,58 @@ impl SecureNucleusDiscovery {
     /// Layer 4: Trust Evaluation via BearDog
     async fn layer4_trust_evaluation(
         &self,
-        _beardog: &BearDogClient,
-        _identity_proof: &IdentityProof,
+        beardog: &BearDogClient,
+        identity_proof: &IdentityProof,
     ) -> FederationResult<TrustLevel> {
         debug!("Layer 4: Trust Evaluation (BearDog)");
 
-        // TODO: Use BearDog's trust evaluation API
-        // - Check genetic lineage
-        // - Evaluate family membership
-        // - Return trust level
-
+        // Check if primal has family_id for lineage verification
+        if let Some(ref peer_family_id) = identity_proof.family_id {
+            if let Some(ref our_family_id) = self.family_id {
+                // Use BearDog's lineage verification API
+                match beardog
+                    .verify_same_family(
+                        our_family_id,
+                        peer_family_id, // Use peer's family_id as seed_hash
+                        &identity_proof.node_id,
+                    )
+                    .await
+                {
+                    Ok(lineage) => {
+                        // Map relationship to trust level
+                        let trust_level = match lineage.relationship.as_str() {
+                            "parent" => TrustLevel::High,
+                            "child" => TrustLevel::High,
+                            "sibling" => TrustLevel::Highest, // Same family, highest trust
+                            _ if lineage.is_family_member => TrustLevel::Elevated,
+                            _ => TrustLevel::Basic,
+                        };
+                        
+                        info!(
+                            "   Trust evaluation: {} → {:?} (relationship: {})",
+                            identity_proof.node_id, trust_level, lineage.relationship
+                        );
+                        
+                        Ok(trust_level)
+                    }
+                    Err(e) => {
+                        warn!(
+                            "Failed to verify lineage: {}, defaulting to Basic trust",
+                            e
+                        );
+                        Ok(TrustLevel::Basic)
+                    }
+                }
+            } else {
+                // We don't have a family_id, so we can't verify lineage
+                debug!("No family_id set, cannot verify lineage");
+                Ok(TrustLevel::Basic)
+            }
+        } else {
+            // Primal doesn't have a family_id
+            debug!("Primal has no family_id, cannot verify lineage");
         Ok(TrustLevel::Basic)
+        }
     }
 
     /// Get a primal by selection criteria

@@ -61,7 +61,7 @@ use thiserror::Error;
 
 /// Default bind address (const to avoid parsing at runtime)
 /// ⚠️ DEPRECATED: Use Unix socket instead! This is for temporary HTTP bridge only.
-const DEFAULT_BIND_ADDR: &str = "127.0.0.1:3000";  // Changed to localhost only!
+const DEFAULT_BIND_ADDR: &str = "127.0.0.1:3000"; // Changed to localhost only!
 
 /// Application state (shared across handlers)
 #[derive(Clone)]
@@ -133,11 +133,11 @@ impl Default for Config {
     fn default() -> Self {
         // Get runtime directory for Unix socket
         let socket_path = Self::default_socket_path();
-        
+
         Self {
             standalone_mode: false, // Production default: require primals
             socket_path,
-            bind_addr: None, // HTTP deprecated by default!
+            bind_addr: None,           // HTTP deprecated by default!
             enable_http_bridge: false, // Disabled by default (secure!)
             request_timeout: std::time::Duration::from_secs(30),
             enable_cors: true,
@@ -155,7 +155,7 @@ impl Config {
                 // Fallback to /tmp if XDG_RUNTIME_DIR not set
                 PathBuf::from("/tmp")
             });
-        
+
         runtime_dir.join("biomeos-api.sock")
     }
 
@@ -183,9 +183,7 @@ impl Config {
             std::env::var("BIOMEOS_API_BIND_ADDR")
                 .ok()
                 .and_then(|v| v.parse().ok())
-                .or_else(|| {
-                    DEFAULT_BIND_ADDR.parse().ok()
-                })
+                .or_else(|| DEFAULT_BIND_ADDR.parse().ok())
         } else {
             None
         };
@@ -323,6 +321,9 @@ mod tests {
     fn test_config_from_env() {
         let config = Config::from_env();
         // Should not panic and use defaults
-        assert_eq!(config.bind_addr.port(), 3000);
+        assert_eq!(
+            config.bind_addr.expect("bind_addr should be set").port(),
+            3000
+        );
     }
 }

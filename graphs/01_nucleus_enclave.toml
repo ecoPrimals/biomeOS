@@ -1,0 +1,149 @@
+# NUCLEUS Enclave Deployment Graph
+# Tower + Node + Nest atomic deployment with genetic lineage
+# 
+# NUCLEUS = Secure bootstrapping for the ecosystem
+# - Tower = Songbird (discovery, mesh coordination)
+# - Node = ToadStool (compute, orchestration)
+# - Nest = NestGate (storage, persistence)
+
+[graph]
+id = "nucleus-enclave-deployment"
+name = "NUCLEUS Enclave Bootstrap"
+version = "1.0.0"
+description = "Secure atomic deployment of Tower, Node, and Nest with genetic lineage mixing"
+
+[graph.metadata]
+family_id = "nat0"  # Default test family, override with environment
+deployment_type = "nucleus_enclave"
+requires_usb_seed = false  # For testing, use generated seeds
+security_level = "high"
+
+# Phase 0: Security Foundation (BearDog - deploys FIRST!)
+[[nodes]]
+id = "launch_beardog"
+node_type = "primal.launch"
+description = "Launch BearDog (security foundation) - provides JWT secrets and crypto capabilities"
+
+[nodes.config]
+primal_name = "beardog-server"
+binary_path = "plasmidBin/primals/beardog-server"
+family_id = "nat0"
+socket_path = "/tmp/beardog-nat0.sock"
+capabilities = ["security", "jwt_secrets", "key_derivation", "entropy_mixing"]
+startup_timeout_seconds = 30
+
+[[nodes.health_check]]
+type = "socket_exists"
+path = "/tmp/beardog-nat0.sock"
+
+# Phase 1: Discovery Foundation (Tower = Songbird)
+[[nodes]]
+id = "launch_songbird"
+node_type = "primal.launch"
+description = "Launch Songbird (Tower atomic) for discovery and mesh coordination"
+depends_on = ["launch_beardog"]  # Depends on BearDog for security
+
+[nodes.config]
+primal_name = "songbird-orchestrator"
+binary_path = "plasmidBin/primals/songbird-orchestrator"
+family_id = "nat0"
+socket_path = "/tmp/songbird-nat0.sock"
+security_provider = "/tmp/beardog-nat0.sock"  # BearDog security provider (updated path)
+capabilities = ["discovery", "mesh", "coordination"]
+startup_timeout_seconds = 30
+
+[[nodes.health_check]]
+type = "socket_exists"
+path = "/tmp/songbird-nat0.sock"
+
+[[nodes.health_check]]
+type = "json_rpc_ping"
+method = "songbird.get_status"
+
+# Phase 2: AI/MCP Foundation (Squirrel - Separate Primal!)
+[[nodes]]
+id = "launch_squirrel"
+node_type = "primal.launch"
+description = "Launch Squirrel (AI/MCP primal) - TRUE PRIMAL: separate from Songbird!"
+depends_on = ["launch_songbird"]
+
+[nodes.config]
+primal_name = "squirrel"
+binary_path = "plasmidBin/primals/squirrel"
+family_id = "nat0"
+socket_path = "/tmp/squirrel-nat0.sock"
+capabilities = ["ai", "mcp", "llm", "model_context_protocol"]
+startup_timeout_seconds = 30
+# Squirrel discovers Songbird at runtime (TRUE PRIMAL!)
+songbird_endpoint = "/tmp/songbird-nat0.sock"
+
+[[nodes.health_check]]
+type = "socket_exists"
+path = "/tmp/squirrel-nat0.sock"
+
+# Phase 3: Compute Foundation (Node = ToadStool)
+[[nodes]]
+id = "launch_toadstool"
+node_type = "primal.launch"
+description = "Launch ToadStool (Node atomic) for compute orchestration"
+depends_on = ["launch_squirrel"]
+
+[nodes.config]
+primal_name = "toadstool"
+binary_path = "plasmidBin/primals/toadstool"
+family_id = "nat0"
+socket_path = "/tmp/toadstool-nat0.sock"
+capabilities = ["compute", "orchestration", "collaborative_intelligence"]
+startup_timeout_seconds = 30
+
+[[nodes.health_check]]
+type = "socket_exists"
+path = "/tmp/toadstool-nat0.sock"
+
+# Phase 4: Storage Foundation (Nest = NestGate)
+[[nodes]]
+id = "launch_nestgate"
+node_type = "primal.launch"
+description = "Launch NestGate (Nest atomic) for storage and persistence"
+depends_on = ["launch_toadstool"]
+
+[nodes.config]
+primal_name = "nestgate"
+binary_path = "plasmidBin/primals/nestgate"
+args = ["service", "start"]  # NestGate requires subcommand
+family_id = "nat0"
+socket_path = "/tmp/nestgate-nat0.sock"
+security_provider = "/tmp/beardog-nat0.sock"  # BearDog manages JWT secrets (TRUE PRIMAL) - updated path
+capabilities = ["storage", "persistence"]
+startup_timeout_seconds = 30
+
+[[nodes.health_check]]
+type = "socket_exists"
+path = "/tmp/nestgate-nat0.sock"
+
+# Phase 5: NUCLEUS Verification
+[[nodes]]
+id = "verify_nucleus"
+node_type = "health.check_all"
+description = "Verify all NUCLEUS atomics are healthy and responding"
+depends_on = ["launch_songbird", "launch_squirrel", "launch_toadstool", "launch_nestgate"]
+
+[nodes.config]
+check_endpoints = [
+    "/tmp/songbird-nat0.sock",
+    "/tmp/squirrel-nat0.sock",
+    "/tmp/toadstool-nat0.sock",
+    "/tmp/nestgate-nat0.sock"
+]
+timeout_seconds = 30
+require_all_healthy = true
+
+[[nodes]]
+id = "nucleus_complete"
+node_type = "log.info"
+description = "Log NUCLEUS enclave deployment completion"
+depends_on = ["verify_nucleus"]
+
+[nodes.config]
+message = "🏰 NUCLEUS Enclave deployed successfully! Tower (Songbird) + AI (Squirrel) + Node (ToadStool) + Nest (NestGate) are operational. TRUE PRIMAL architecture validated! 🎉"
+

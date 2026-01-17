@@ -143,3 +143,157 @@ impl Default for NetworkConfig {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_network_spec_default() {
+        let spec = NetworkSpec::default();
+        assert_eq!(spec.metadata.name, "default-network");
+        assert_eq!(spec.subnets.len(), 0);
+        assert_eq!(spec.policies.len(), 0);
+        assert!(spec.dns.is_none());
+        assert!(spec.ipam.is_none());
+    }
+
+    #[test]
+    fn test_network_metadata_default() {
+        let metadata = NetworkMetadata::default();
+        assert_eq!(metadata.name, "default-network");
+        assert!(metadata.description.is_none());
+        assert!(metadata.labels.is_empty());
+        assert!(metadata.annotations.is_empty());
+    }
+
+    #[test]
+    fn test_network_config_default() {
+        let config = NetworkConfig::default();
+        assert!(!config.enable_ipv6);
+        assert!(!config.internal);
+        assert!(config.attachable);
+        assert!(!config.ingress);
+        assert!(matches!(config.scope, NetworkScope::Local));
+        assert!(config.options.is_empty());
+    }
+
+    #[test]
+    fn test_network_driver_variants() {
+        let drivers = vec![
+            NetworkDriver::Bridge,
+            NetworkDriver::Host,
+            NetworkDriver::Overlay,
+            NetworkDriver::Macvlan,
+            NetworkDriver::Ipvlan,
+            NetworkDriver::None,
+            NetworkDriver::Custom("custom-driver".to_string()),
+        ];
+
+        for driver in drivers {
+            let json = serde_json::to_string(&driver).unwrap();
+            let _deserialized: NetworkDriver = serde_json::from_str(&json).unwrap();
+        }
+    }
+
+    #[test]
+    fn test_network_scope_variants() {
+        let scopes = vec![
+            NetworkScope::Local,
+            NetworkScope::Global,
+            NetworkScope::Swarm,
+        ];
+
+        for scope in scopes {
+            let json = serde_json::to_string(&scope).unwrap();
+            let _deserialized: NetworkScope = serde_json::from_str(&json).unwrap();
+        }
+    }
+
+    #[test]
+    fn test_subnet_spec_creation() {
+        let mut aux_addresses = HashMap::new();
+        aux_addresses.insert("router".to_string(), "192.168.1.1".to_string());
+
+        let subnet = SubnetSpec {
+            subnet: "192.168.1.0/24".to_string(),
+            gateway: Some("192.168.1.1".to_string()),
+            ip_range: Some("192.168.1.100-192.168.1.200".to_string()),
+            aux_addresses,
+        };
+
+        assert_eq!(subnet.subnet, "192.168.1.0/24");
+        assert_eq!(subnet.gateway, Some("192.168.1.1".to_string()));
+        assert_eq!(subnet.aux_addresses.len(), 1);
+    }
+
+    #[test]
+    fn test_network_spec_with_subnets() {
+        let mut spec = NetworkSpec::default();
+        
+        spec.subnets.push(SubnetSpec {
+            subnet: "10.0.0.0/24".to_string(),
+            gateway: Some("10.0.0.1".to_string()),
+            ip_range: None,
+            aux_addresses: HashMap::new(),
+        });
+
+        assert_eq!(spec.subnets.len(), 1);
+        assert_eq!(spec.subnets[0].subnet, "10.0.0.0/24");
+    }
+
+    #[test]
+    fn test_network_metadata_with_labels() {
+        let mut labels = HashMap::new();
+        labels.insert("environment".to_string(), "production".to_string());
+        labels.insert("tier".to_string(), "frontend".to_string());
+
+        let metadata = NetworkMetadata {
+            name: "prod-network".to_string(),
+            description: Some("Production network".to_string()),
+            labels,
+            annotations: HashMap::new(),
+        };
+
+        assert_eq!(metadata.name, "prod-network");
+        assert_eq!(metadata.labels.len(), 2);
+        assert_eq!(metadata.labels.get("environment"), Some(&"production".to_string()));
+    }
+
+    #[test]
+    fn test_network_config_ipv6() {
+        let config = NetworkConfig {
+            enable_ipv6: true,
+            internal: false,
+            attachable: true,
+            ingress: false,
+            scope: NetworkScope::Global,
+            options: HashMap::new(),
+        };
+
+        assert!(config.enable_ipv6);
+        assert!(matches!(config.scope, NetworkScope::Global));
+    }
+
+    #[test]
+    fn test_network_serialization() {
+        let spec = NetworkSpec::default();
+        let json = serde_json::to_string(&spec).unwrap();
+        
+        let deserialized: NetworkSpec = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.metadata.name, "default-network");
+    }
+
+    #[test]
+    fn test_custom_network_driver() {
+        let driver = NetworkDriver::Custom("cilium".to_string());
+        
+        match &driver {
+            NetworkDriver::Custom(name) => assert_eq!(name, "cilium"),
+            _ => panic!("Expected Custom driver"),
+        }
+
+        let json = serde_json::to_string(&driver).unwrap();
+        assert!(json.contains("cilium"));
+    }
+}

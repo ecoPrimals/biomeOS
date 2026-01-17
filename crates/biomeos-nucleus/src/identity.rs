@@ -12,7 +12,7 @@
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 
 use crate::{discovery::DiscoveredPrimal, Error, Result};
 

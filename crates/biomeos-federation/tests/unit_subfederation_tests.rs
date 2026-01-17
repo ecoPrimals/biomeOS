@@ -2,7 +2,6 @@
 
 use biomeos_federation::capability::{Capability, CapabilitySet};
 use biomeos_federation::subfederation::{IsolationLevel, SubFederation};
-use chrono::Utc;
 
 #[test]
 fn test_subfederation_creation() {

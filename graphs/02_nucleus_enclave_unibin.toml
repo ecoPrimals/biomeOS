@@ -1,0 +1,205 @@
+# NUCLEUS Enclave Deployment Graph - UniBin Architecture
+# Tower + Node + Nest atomic deployment with genetic lineage
+# 
+# EVOLVED: UniBin pattern - single binary per primal with mode/command args
+# Graph tells binary WHAT to do, not WHICH binary variant to use
+#
+# NUCLEUS = Secure bootstrapping for the ecosystem
+# - Tower = Songbird (discovery, mesh coordination)
+# - Node = ToadStool (compute, orchestration)
+# - Nest = NestGate (storage, persistence)
+
+[graph]
+id = "nucleus-enclave-unibin"
+name = "NUCLEUS Enclave Bootstrap (UniBin)"
+version = "2.0.0"
+description = "Secure atomic deployment using UniBin architecture - robust and maintainable"
+
+[graph.metadata]
+family_id = "nat0"  # Default test family, override with environment
+deployment_type = "nucleus_enclave"
+requires_usb_seed = false  # For testing, use generated seeds
+security_level = "high"
+architecture = "unibin"  # Using UniBin pattern for all primals
+
+# Phase 0: Security Foundation (BearDog - deploys FIRST!)
+[[nodes]]
+id = "launch_beardog"
+node_type = "primal.launch"
+description = "Launch BearDog (security foundation) - provides JWT secrets and crypto capabilities"
+
+[nodes.config]
+primal_name = "beardog"  # Logical primal name
+binary_path = "plasmidBin/primals/beardog-server"  # Current binary name (will evolve to 'beardog' UniBin)
+mode = "server"  # UniBin mode - what to run
+family_id = "nat0"
+socket_path = "/tmp/beardog-nat0.sock"
+capabilities = ["security", "jwt_secrets", "key_derivation", "entropy_mixing"]
+startup_timeout_seconds = 30
+
+# UniBin args (future-ready):
+# args = ["server", "--mode", "daemon"]
+
+[[nodes.health_check]]
+type = "socket_exists"
+path = "/tmp/beardog-nat0.sock"
+
+# Phase 1: Discovery Foundation (Tower = Songbird)
+[[nodes]]
+id = "launch_songbird"
+node_type = "primal.launch"
+description = "Launch Songbird (Tower atomic) for discovery and mesh coordination"
+depends_on = ["launch_beardog"]  # Depends on BearDog for security
+
+[nodes.config]
+primal_name = "songbird"  # Logical primal name
+binary_path = "plasmidBin/primals/songbird-orchestrator"  # Current binary name (will evolve to 'songbird' UniBin)
+mode = "orchestrator"  # UniBin mode - what to run
+family_id = "nat0"
+socket_path = "/tmp/songbird-nat0.sock"
+security_provider = "/tmp/beardog-nat0.sock"  # BearDog security provider
+capabilities = ["discovery", "mesh", "coordination"]
+startup_timeout_seconds = 30
+
+# UniBin args (future-ready):
+# args = ["orchestrator", "--discovery", "--mesh"]
+
+[[nodes.health_check]]
+type = "socket_exists"
+path = "/tmp/songbird-nat0.sock"
+
+[[nodes.health_check]]
+type = "json_rpc_ping"
+method = "songbird.get_status"
+
+# Phase 2: AI/MCP Foundation (Squirrel - Separate Primal!)
+[[nodes]]
+id = "launch_squirrel"
+node_type = "primal.launch"
+description = "Launch Squirrel (AI/MCP primal) - TRUE PRIMAL: separate from Songbird!"
+depends_on = ["launch_songbird"]
+
+[nodes.config]
+primal_name = "squirrel"  # Logical primal name
+binary_path = "plasmidBin/primals/squirrel"  # Already UniBin!
+mode = "server"  # UniBin mode - what to run (if multiple modes exist)
+family_id = "nat0"
+socket_path = "/tmp/squirrel-nat0.sock"
+capabilities = ["ai", "mcp", "llm", "model_context_protocol"]
+startup_timeout_seconds = 30
+# Squirrel discovers Songbird at runtime (TRUE PRIMAL!)
+songbird_endpoint = "/tmp/songbird-nat0.sock"
+
+# UniBin args (if needed in future):
+# args = ["server", "--production"]
+
+[[nodes.health_check]]
+type = "socket_exists"
+path = "/tmp/squirrel-nat0.sock"
+
+# Phase 3: Compute Foundation (Node = ToadStool)
+[[nodes]]
+id = "launch_toadstool"
+node_type = "primal.launch"
+description = "Launch ToadStool (Node atomic) for compute orchestration"
+depends_on = ["launch_squirrel"]
+
+[nodes.config]
+primal_name = "toadstool"  # Logical primal name
+binary_path = "plasmidBin/primals/toadstool-server"  # Current binary name (FIXED!)
+mode = "server"  # UniBin mode - what to run
+family_id = "nat0"
+socket_path = "/tmp/toadstool-nat0.sock"
+capabilities = ["compute", "orchestration", "collaborative_intelligence"]
+startup_timeout_seconds = 30
+
+# UniBin args (future when ToadStool evolves):
+# args = ["server", "--distributed", "--coordinator"]
+
+[[nodes.health_check]]
+type = "socket_exists"
+path = "/tmp/toadstool-nat0.sock"
+
+[[nodes.health_check]]
+type = "json_rpc_ping"
+method = "toadstool.get_status"
+
+# Phase 4: Storage Foundation (Nest = NestGate)
+[[nodes]]
+id = "launch_nestgate"
+node_type = "primal.launch"
+description = "Launch NestGate (Nest atomic) for storage and persistence"
+depends_on = ["launch_beardog", "launch_songbird"]  # Depends on both security and discovery
+
+[nodes.config]
+primal_name = "nestgate"  # Logical primal name
+binary_path = "plasmidBin/primals/nestgate"  # Already UniBin!
+mode = "service"  # UniBin mode - what to run
+args = ["service", "start"]  # UniBin args - ALREADY IMPLEMENTED!
+family_id = "nat0"
+socket_path = "/tmp/nestgate-nat0.sock"
+security_provider = "/tmp/beardog-nat0.sock"  # BearDog for JWT secrets
+capabilities = ["storage", "persistence"]
+startup_timeout_seconds = 30
+
+# NestGate UniBin usage:
+# nestgate service start  ← This is already UniBin pattern!
+
+[[nodes.health_check]]
+type = "socket_exists"
+path = "/tmp/nestgate-nat0.sock"
+
+[[nodes.health_check]]
+type = "json_rpc_ping"
+method = "storage.list"
+
+# Phase 5: Health Verification
+[[nodes]]
+id = "verify_nucleus"
+node_type = "health.check_all"
+description = "Verify all NUCLEUS components are healthy"
+depends_on = ["launch_beardog", "launch_songbird", "launch_nestgate", "launch_toadstool", "launch_squirrel"]
+
+[nodes.config]
+check_all_sockets = true
+socket_directory = "/run/user/1000"
+
+# Final Phase: Completion
+[[nodes]]
+id = "nucleus_complete"
+node_type = "log.info"
+description = "NUCLEUS deployment complete"
+depends_on = ["verify_nucleus"]
+
+[nodes.config]
+message = "🏰 NUCLEUS Enclave deployed successfully! Tower (Songbird) + AI (Squirrel) + Node (ToadStool) + Nest (NestGate) are operational. TRUE PRIMAL architecture validated! 🎉"
+
+# EVOLUTION NOTES:
+#
+# UniBin Pattern Benefits:
+# - Single binary per primal eliminates naming confusion
+# - Mode/args specify WHAT to run, not WHICH binary to use
+# - More robust: graph doesn't need to know binary naming conventions
+# - Easier maintenance: update binary, keep graph the same
+# - Better error messages: "mode 'server' failed" vs "binary 'toadstool-server' not found"
+#
+# Current UniBin Status (Jan 2026):
+# ✅ NestGate: FULLY UniBin (nestgate service start)
+# ⏳ ToadStool: Binary is 'toadstool-server' but should be UniBin 'toadstool'
+# ⏳ Squirrel: Binary is 'squirrel', probably already UniBin
+# ⏳ Songbird: Binary is 'songbird-orchestrator', should be 'songbird' UniBin
+# ⏳ BearDog: Binary is 'beardog-server', should be 'beardog' UniBin
+#
+# Migration Path:
+# Phase 1: Update graph to specify modes (DONE - this file!)
+# Phase 2: Rebuild primals as UniBin (toadstool, songbird, beardog)
+# Phase 3: Update binary_path to use UniBin names ('toadstool', not 'toadstool-server')
+# Phase 4: Remove all binary name variants from plasmidBin/
+#
+# Target UniBin Commands:
+# beardog server --mode daemon
+# songbird orchestrator --discovery --mesh
+# toadstool server --distributed --coordinator
+# nestgate service start  ← ALREADY WORKS!
+# squirrel server --production  ← May already work!
+

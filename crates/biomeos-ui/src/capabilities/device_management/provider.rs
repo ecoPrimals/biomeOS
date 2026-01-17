@@ -241,10 +241,7 @@ impl DeviceManagementProvider {
     ///
     /// Coordinates device assignment via orchestration
     pub async fn assign_device(&self, device_id: String, primal_id: String) -> Result<()> {
-        info!(
-            "🔗 Assigning device {} to primal {}",
-            device_id, primal_id
-        );
+        info!("🔗 Assigning device {} to primal {}", device_id, primal_id);
 
         // TODO: Implement device assignment
         // let orchestrator = discover_by_capability("orchestration").await?;
@@ -294,7 +291,10 @@ impl DeviceManagementProvider {
 
         // Try nvidia-smi for NVIDIA GPUs
         if let Ok(output) = tokio::process::Command::new("nvidia-smi")
-            .args(&["--query-gpu=index,name,utilization.gpu,memory.used,memory.total", "--format=csv,noheader,nounits"])
+            .args(&[
+                "--query-gpu=index,name,utilization.gpu,memory.used,memory.total",
+                "--format=csv,noheader,nounits",
+            ])
             .output()
             .await
         {
@@ -339,7 +339,7 @@ impl DeviceManagementProvider {
         // Get CPU count from /proc/cpuinfo
         if let Ok(cpuinfo) = tokio::fs::read_to_string("/proc/cpuinfo").await {
             let cpu_count = cpuinfo.matches("processor").count();
-            
+
             cpus.push(Device {
                 id: "cpu-0".to_string(),
                 name: format!("CPU ({} cores)", cpu_count),
@@ -464,11 +464,10 @@ impl DeviceManagementProvider {
                         let primal_id = primal_name.to_lowercase();
 
                         // Try to get health status
-                        let (health, load, status) =
-                            self.probe_primal_health(&socket_path).await;
+                        let (health, load, status) = self.probe_primal_health(&socket_path).await;
 
-                        // Get capabilities from primal
-                        let capabilities = self.get_primal_capabilities(&primal_id);
+                        // Get capabilities from primal (TRUE PRIMAL: query at runtime!)
+                        let capabilities = self.get_primal_capabilities(&socket_path).await;
 
                         primals.push(ManagedPrimal {
                             id: primal_id.clone(),
@@ -508,28 +507,193 @@ impl DeviceManagementProvider {
     }
 
     /// Query a primal for its identity (TRUE PRIMAL discovery!)
-    async fn query_primal_identity(&self, _socket_path: &str) -> String {
-        // TODO: Query via JSON-RPC for primal name
-        // For now, derive from socket path
-        "unknown".to_string()
+    /// 
+    /// **TRUE PRIMAL Principle**: Primal code only has self-knowledge.
+    /// We query the primal for its identity rather than hardcoding assumptions.
+    async fn query_primal_identity(&self, socket_path: &str) -> String {
+        use tokio::net::UnixStream;
+        use tokio::io::{AsyncWriteExt, AsyncBufReadExt, BufReader};
+        
+        // Try to connect to the Unix socket
+        let stream = match UnixStream::connect(socket_path).await {
+            Ok(s) => s,
+            Err(e) => {
+                warn!("Failed to connect to {}: {}", socket_path, e);
+                return "unknown".to_string();
+            }
+        };
+        
+        // Send JSON-RPC request for identity
+        let request = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": "identity.get",
+            "params": {},
+            "id": 1
+        });
+        
+        let request_str = serde_json::to_string(&request).unwrap() + "\n";
+        let (mut read, mut write) = stream.into_split();
+        
+        if let Err(e) = write.write_all(request_str.as_bytes()).await {
+            warn!("Failed to send identity query: {}", e);
+            return "unknown".to_string();
+        }
+        
+        // Read response
+        let mut reader = BufReader::new(read);
+        let mut response_line = String::new();
+        
+        match tokio::time::timeout(
+            std::time::Duration::from_secs(2),
+            reader.read_line(&mut response_line)
+        ).await {
+            Ok(Ok(_)) => {
+                if let Ok(response) = serde_json::from_str::<serde_json::Value>(&response_line) {
+                    if let Some(name) = response["result"]["name"].as_str() {
+                        return name.to_string();
+                    }
+                }
+                warn!("Invalid identity response from {}", socket_path);
+                "unknown".to_string()
+            }
+            Ok(Err(e)) => {
+                warn!("Failed to read identity response: {}", e);
+                "unknown".to_string()
+            }
+            Err(_) => {
+                warn!("Identity query timeout for {}", socket_path);
+                "unknown".to_string()
+            }
+        }
     }
 
     /// Probe a primal for health metrics
-    async fn probe_primal_health(&self, _socket_path: &str) -> (f64, f64, PrimalStatus) {
-        // TODO: Query via JSON-RPC for health
-        (1.0, 0.0, PrimalStatus::Healthy)
+    /// 
+    /// **TRUE PRIMAL Principle**: Query primal for its own health status.
+    /// Each primal knows its own state, we don't assume.
+    async fn probe_primal_health(&self, socket_path: &str) -> (f64, f64, PrimalStatus) {
+        use tokio::net::UnixStream;
+        use tokio::io::{AsyncWriteExt, AsyncBufReadExt, BufReader};
+        
+        // Try to connect
+        let stream = match UnixStream::connect(socket_path).await {
+            Ok(s) => s,
+            Err(_) => return (0.0, 1.0, PrimalStatus::Offline),
+        };
+        
+        // Send JSON-RPC health check request
+        let request = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": "health.check",
+            "params": {},
+            "id": 1
+        });
+        
+        let request_str = serde_json::to_string(&request).unwrap() + "\n";
+        let (mut read, mut write) = stream.into_split();
+        
+        if write.write_all(request_str.as_bytes()).await.is_err() {
+            return (0.0, 1.0, PrimalStatus::Degraded);
+        }
+        
+        // Read response
+        let mut reader = BufReader::new(read);
+        let mut response_line = String::new();
+        
+        match tokio::time::timeout(
+            std::time::Duration::from_secs(2),
+            reader.read_line(&mut response_line)
+        ).await {
+            Ok(Ok(_)) => {
+                if let Ok(response) = serde_json::from_str::<serde_json::Value>(&response_line) {
+                    // Parse health metrics from response
+                    let health = response["result"]["health"].as_f64().unwrap_or(1.0);
+                    let load = response["result"]["load"].as_f64().unwrap_or(0.0);
+                    let status_str = response["result"]["status"].as_str().unwrap_or("healthy");
+                    
+                    let status = match status_str {
+                        "healthy" | "ok" => PrimalStatus::Healthy,
+                        "degraded" | "unhealthy" => PrimalStatus::Degraded,
+                        "offline" => PrimalStatus::Offline,
+                        _ => PrimalStatus::Healthy,
+                    };
+                    
+                    return (health, load, status);
+                }
+                // If we got a response but couldn't parse it, assume degraded
+                (0.8, 0.2, PrimalStatus::Degraded)
+            }
+            _ => {
+                // Timeout or error means degraded
+                (0.0, 1.0, PrimalStatus::Degraded)
+            }
+        }
     }
 
-    /// Get capabilities for a primal (based on known patterns)
-    fn get_primal_capabilities(&self, primal_id: &str) -> Vec<String> {
-        // TODO: Query primal for actual capabilities
-        // For now, use known patterns
-        match primal_id {
-            id if id.contains("beardog") => vec!["security".to_string(), "crypto".to_string()],
-            id if id.contains("songbird") => vec!["discovery".to_string(), "mesh".to_string()],
-            id if id.contains("toadstool") => vec!["compute".to_string(), "gpu".to_string()],
-            id if id.contains("nestgate") => vec!["storage".to_string(), "data".to_string()],
-            _ => vec![],
+    /// Get capabilities for a primal via capability-based discovery
+    /// 
+    /// **EVOLUTION FROM HARDCODING**: This method now queries the primal
+    /// for its actual capabilities rather than assuming based on name patterns.
+    /// 
+    /// **TRUE PRIMAL Principle**: Each primal advertises its own capabilities.
+    /// We discover them at runtime, not at compile time.
+    async fn get_primal_capabilities(&self, socket_path: &str) -> Vec<String> {
+        use tokio::net::UnixStream;
+        use tokio::io::{AsyncWriteExt, AsyncBufReadExt, BufReader};
+        
+        // Try to connect to the primal
+        let stream = match UnixStream::connect(socket_path).await {
+            Ok(s) => s,
+            Err(e) => {
+                warn!("Failed to connect to {} for capabilities: {}", socket_path, e);
+                return vec![];
+            }
+        };
+        
+        // Send JSON-RPC request for capabilities
+        let request = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": "capabilities.list",
+            "params": {},
+            "id": 1
+        });
+        
+        let request_str = serde_json::to_string(&request).unwrap() + "\n";
+        let (mut read, mut write) = stream.into_split();
+        
+        if let Err(e) = write.write_all(request_str.as_bytes()).await {
+            warn!("Failed to send capabilities query: {}", e);
+            return vec![];
+        }
+        
+        // Read response
+        let mut reader = BufReader::new(read);
+        let mut response_line = String::new();
+        
+        match tokio::time::timeout(
+            std::time::Duration::from_secs(2),
+            reader.read_line(&mut response_line)
+        ).await {
+            Ok(Ok(_)) => {
+                if let Ok(response) = serde_json::from_str::<serde_json::Value>(&response_line) {
+                    if let Some(caps) = response["result"]["capabilities"].as_array() {
+                        return caps
+                            .iter()
+                            .filter_map(|v| v.as_str().map(String::from))
+                            .collect();
+                    }
+                }
+                warn!("Invalid capabilities response from {}", socket_path);
+                vec![]
+            }
+            Ok(Err(e)) => {
+                warn!("Failed to read capabilities response: {}", e);
+                vec![]
+            }
+            Err(_) => {
+                warn!("Capabilities query timeout for {}", socket_path);
+                vec![]
+            }
         }
     }
 
@@ -601,4 +765,3 @@ impl DeviceManagementProvider {
         ]
     }
 }
-

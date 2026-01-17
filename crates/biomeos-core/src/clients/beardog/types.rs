@@ -179,4 +179,3 @@ pub struct TunnelStatus {
     #[serde(default)]
     pub error: Option<String>,
 }
-

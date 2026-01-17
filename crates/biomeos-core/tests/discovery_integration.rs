@@ -6,26 +6,40 @@
 //! - Multi-primal coordination
 //! - Federation discovery
 //! - Runtime adaptation
+//!
+//! **Concurrency-First Design**: 
+//! - Service polling uses exponential backoff for efficiency
+//! - Minimal delays, fast failure detection
+//! - Optimized for concurrent test execution
 
 use biomeos_core::primal_adapter::discover_primal_interface;
 use std::path::Path;
 use std::process::{Command, Stdio};
 use std::time::Duration;
-use tokio::time::sleep;
 
 // ============================================================================
 // Helper Functions
 // ============================================================================
 
+/// Wait for service with exponential backoff (production-grade polling)
+/// 
+/// **Concurrency**: Uses exponential backoff (10ms → 20ms → 40ms → 80ms) instead of fixed delays
 async fn wait_for_service(url: &str, max_attempts: u32) -> bool {
     let client = reqwest::Client::new();
-    for _ in 0..max_attempts {
+    let mut delay_ms = 10u64; // Start with 10ms
+    
+    for attempt in 0..max_attempts {
         if let Ok(response) = client.get(url).send().await {
             if response.status().is_success() {
                 return true;
             }
         }
-        sleep(Duration::from_millis(500)).await;
+        
+        // Exponential backoff: doubles each iteration, capped at 500ms
+        if attempt < max_attempts - 1 {
+            tokio::time::sleep(Duration::from_millis(delay_ms)).await;
+            delay_ms = (delay_ms * 2).min(500);
+        }
     }
     false
 }

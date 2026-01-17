@@ -101,15 +101,16 @@ impl SquirrelClient {
             "squirrel",
             family_id,
             TransportPreference::UnixSocket,
-        ).await
-            .context("Failed to discover Squirrel. Is it running?")?;
-        
+        )
+        .await
+        .context("Failed to discover Squirrel. Is it running?")?;
+
         Ok(Self {
             transport,
             family_id: family_id.to_string(),
         })
     }
-    
+
     /// Create from explicit endpoint (HTTP fallback)
     ///
     /// **DEPRECATED**: Use `discover()` for Unix socket support (100x faster)
@@ -123,16 +124,17 @@ impl SquirrelClient {
         let transport = TransportClient::discover_with_preference(
             "squirrel",
             family_id,
-            TransportPreference::Auto  // ✅ Evolved: Auto-discover secure transport
-        ).await
-            .context("Failed to discover Squirrel via secure transport")?;
-        
+            TransportPreference::Auto, // ✅ Evolved: Auto-discover secure transport
+        )
+        .await
+        .context("Failed to discover Squirrel via secure transport")?;
+
         Ok(Self {
             transport,
             family_id: family_id.to_string(),
         })
     }
-    
+
     /// Legacy constructor (DEPRECATED)
     ///
     /// **BREAKING**: This method is now async. Use `discover()` instead.
@@ -170,10 +172,10 @@ impl SquirrelClient {
         &self,
         system_state: &Value,
     ) -> Result<OptimizationAnalysis> {
-        let response = self.transport.call(
-            "ai.optimize_system",
-            Some(system_state.clone())
-        ).await
+        let response = self
+            .transport
+            .call("ai.optimize_system", Some(system_state.clone()))
+            .await
             .context("Failed to call ai.optimize_system")?;
 
         serde_json::from_value(response)
@@ -204,18 +206,20 @@ impl SquirrelClient {
     /// # }
     /// ```
     pub async fn infer(&self, model: &str, input: &Value) -> Result<InferenceResult> {
-        let response = self.transport.call(
-            "ai.infer",
-            Some(serde_json::json!({
-                "model": model,
-                "input": input,
-                "family_id": self.family_id
-            }))
-        ).await
+        let response = self
+            .transport
+            .call(
+                "ai.infer",
+                Some(serde_json::json!({
+                    "model": model,
+                    "input": input,
+                    "family_id": self.family_id
+                })),
+            )
+            .await
             .context("Failed to call ai.infer")?;
 
-        serde_json::from_value(response)
-            .context("Failed to parse inference result from response")
+        serde_json::from_value(response).context("Failed to parse inference result from response")
     }
 
     /// Detect patterns in data
@@ -241,14 +245,13 @@ impl SquirrelClient {
     /// # }
     /// ```
     pub async fn detect_patterns(&self, data: &Value) -> Result<Vec<Pattern>> {
-        let response = self.transport.call(
-            "ai.detect_patterns",
-            Some(data.clone())
-        ).await
+        let response = self
+            .transport
+            .call("ai.detect_patterns", Some(data.clone()))
+            .await
             .context("Failed to call ai.detect_patterns")?;
 
-        serde_json::from_value(response)
-            .context("Failed to parse patterns from response")
+        serde_json::from_value(response).context("Failed to parse patterns from response")
     }
 
     /// Get decision support recommendations
@@ -275,14 +278,13 @@ impl SquirrelClient {
     /// # }
     /// ```
     pub async fn decision_support(&self, context: &Value) -> Result<Vec<Recommendation>> {
-        let response = self.transport.call(
-            "ai.decision_support",
-            Some(context.clone())
-        ).await
+        let response = self
+            .transport
+            .call("ai.decision_support", Some(context.clone()))
+            .await
             .context("Failed to call ai.decision_support")?;
 
-        serde_json::from_value(response)
-            .context("Failed to parse recommendations from response")
+        serde_json::from_value(response).context("Failed to parse recommendations from response")
     }
 }
 

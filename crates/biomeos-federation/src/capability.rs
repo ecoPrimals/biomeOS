@@ -91,6 +91,15 @@ impl std::str::FromStr for Capability {
             "read_only" => Capability::ReadOnly,
             "write" => Capability::Write,
             "admin" => Capability::Admin,
+            // Additional mappings for common primal capability types
+            "security" => Capability::Custom("security".to_string()),
+            "encryption" => Capability::Custom("encryption".to_string()),
+            "trust" => Capability::Custom("trust".to_string()),
+            "mesh" => Capability::Custom("mesh".to_string()),
+            "ai" => Capability::Custom("ai".to_string()),
+            "ml" => Capability::Custom("ml".to_string()),
+            "inference" => Capability::Custom("inference".to_string()),
+            "crypto" => Capability::Custom("crypto".to_string()),
             _ => {
                 if let Some(custom) = s.strip_prefix("custom:") {
                     Capability::Custom(custom.to_string())
@@ -99,6 +108,15 @@ impl std::str::FromStr for Capability {
                 }
             }
         })
+    }
+}
+
+/// Implement TryFrom for ergonomic conversion
+impl TryFrom<&str> for Capability {
+    type Error = std::convert::Infallible;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        s.parse()
     }
 }
 
@@ -121,6 +139,18 @@ impl CapabilitySet {
         Self {
             capabilities: caps.into_iter().collect(),
         }
+    }
+
+    /// Create a capability set from tags (e.g., from Songbird discovery)
+    ///
+    /// Parses each tag as a capability using the FromStr trait.
+    /// Unknown tags are treated as Custom capabilities.
+    pub fn from_tags(tags: &[String]) -> Self {
+        let caps: Vec<Capability> = tags
+            .iter()
+            .map(|tag| tag.parse().unwrap()) // FromStr is infallible
+            .collect();
+        Self::from_vec(caps)
     }
 
     /// Add a capability
