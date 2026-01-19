@@ -303,10 +303,10 @@ impl SystemPaths {
             return Ok(PathBuf::from(home).join(".local/share/biomeos"));
         }
 
-        // 3. Use dirs crate as fallback
-        dirs::data_local_dir()
-            .map(|p| p.join("biomeos"))
-            .ok_or(PathError::NoHomeDir)
+        // 3. Use etcetera (Pure Rust!) as fallback
+        use etcetera::base_strategy::{choose_base_strategy, BaseStrategy};
+        let strategy = choose_base_strategy().map_err(|_| PathError::NoHomeDir)?;
+        Ok(strategy.data_dir().join("biomeos"))
     }
 
     /// Get XDG config directory
@@ -321,10 +321,10 @@ impl SystemPaths {
             return Ok(PathBuf::from(home).join(".config/biomeos"));
         }
 
-        // 3. Use dirs crate as fallback
-        dirs::config_dir()
-            .map(|p| p.join("biomeos"))
-            .ok_or(PathError::NoHomeDir)
+        // 3. Use etcetera (Pure Rust!) as fallback
+        use etcetera::base_strategy::{choose_base_strategy, BaseStrategy};
+        let strategy = choose_base_strategy().map_err(|_| PathError::NoHomeDir)?;
+        Ok(strategy.config_dir().join("biomeos"))
     }
 
     /// Get XDG cache directory
@@ -339,10 +339,10 @@ impl SystemPaths {
             return Ok(PathBuf::from(home).join(".cache/biomeos"));
         }
 
-        // 3. Use dirs crate as fallback
-        dirs::cache_dir()
-            .map(|p| p.join("biomeos"))
-            .ok_or(PathError::NoHomeDir)
+        // 3. Use etcetera (Pure Rust!) as fallback
+        use etcetera::base_strategy::{choose_base_strategy, BaseStrategy};
+        let strategy = choose_base_strategy().map_err(|_| PathError::NoHomeDir)?;
+        Ok(strategy.cache_dir().join("biomeos"))
     }
 
     /// Get XDG state directory

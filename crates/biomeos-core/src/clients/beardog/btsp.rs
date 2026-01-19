@@ -255,7 +255,7 @@ impl BtspClient {
     /// # Ok(())
     /// # }
     /// ```
-    pub     async fn wait_for_active(
+    pub async fn wait_for_active(
         &self,
         tunnel_id: &str,
         max_attempts: usize,
@@ -264,10 +264,10 @@ impl BtspClient {
         // Modern async: Use tokio::time::interval for periodic checks
         let mut interval = tokio::time::interval(tokio::time::Duration::from_millis(interval_ms));
         interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
-        
+
         for attempt in 1..=max_attempts {
-            interval.tick().await;  // Modern async pattern instead of sleep
-            
+            interval.tick().await; // Modern async pattern instead of sleep
+
             let status = self.beardog.get_tunnel_status(tunnel_id).await?;
 
             match status.state.as_str() {

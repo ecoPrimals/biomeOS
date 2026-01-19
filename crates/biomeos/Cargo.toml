@@ -1,0 +1,49 @@
+[package]
+name = "biomeos-unibin"
+version = "0.1.0"
+edition = "2021"
+description = "biomeOS Universal Nucleus & Orchestrator - UniBin"
+authors = ["biomeOS Team"]
+
+[[bin]]
+name = "biomeos"
+path = "src/main.rs"
+
+[dependencies]
+# Mode implementations (as libraries)
+biomeos-atomic-deploy = { path = "../biomeos-atomic-deploy" }
+biomeos-core = { path = "../biomeos-core" }
+biomeos-types = { path = "../biomeos-types" }
+biomeos-spore = { path = "../biomeos-spore" }
+biomeos-graph = { path = "../biomeos-graph" }
+
+# CLI framework
+clap = { version = "4.0", features = ["derive", "color"] }
+
+# Async runtime
+tokio = { version = "1.0", features = ["full"] }
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+
+# System info for doctor mode
+sysinfo = "0.32"
+
+# Formatting
+colored = "2.0"
+comfy-table = "7.0"
+
+# Directory utilities - Pure Rust!
+# dirs = "5.0"  # DEPRECATED: Uses dirs-sys (C dependency)
+etcetera = "0.8"  # Pure Rust replacement
+

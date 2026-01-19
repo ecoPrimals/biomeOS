@@ -23,8 +23,8 @@ anyhow = { workspace = true }
 # Logging
 tracing = { workspace = true }
 
-# HTTP client for BearDog/Songbird integration
-reqwest = { workspace = true }
+# HTTP client DEPRECATED: Use atomic_client (Unix sockets) for BearDog/Songbird
+# reqwest = { workspace = true } # REMOVED - Songbird/BearDog handle HTTP/TLS
 base64 = { workspace = true }
 
 [dev-dependencies]

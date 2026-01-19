@@ -217,7 +217,10 @@ impl GraphExecutor {
         node: &GraphNode,
         context: &ExecutionContext,
     ) -> Result<serde_json::Value> {
-        info!("   ⚡ Executing node: {} (type: {})", node.id, node.node_type);
+        info!(
+            "   ⚡ Executing node: {} (type: {})",
+            node.id, node.node_type
+        );
 
         // Mark as running
         context.set_status(&node.id, NodeStatus::Running).await;
@@ -339,7 +342,11 @@ impl GraphExecutor {
         info!("   🔀 Delegating to node_primal_start...");
         // Delegate to the full primal_start implementation
         let result = Self::node_primal_start(node, context).await;
-        info!("   🟢 node_primal_launch result for {}: {:?}", node.id, result.is_ok());
+        info!(
+            "   🟢 node_primal_launch result for {}: {:?}",
+            node.id,
+            result.is_ok()
+        );
         result
     }
 
@@ -513,7 +520,10 @@ impl GraphExecutor {
             .or_else(|| node.config.get("binary"))
             .and_then(|v| v.as_str())
             .ok_or_else(|| {
-                error!("Config keys available: {:?}", node.config.keys().collect::<Vec<_>>());
+                error!(
+                    "Config keys available: {:?}",
+                    node.config.keys().collect::<Vec<_>>()
+                );
                 anyhow::anyhow!("Missing 'binary_path' or 'binary' in config")
             })?;
         let binary = Self::substitute_env(binary, &context.env);
@@ -579,14 +589,14 @@ impl GraphExecutor {
             .and_then(|v| v.as_str())
             .unwrap_or(&node.id);
         let primal_upper = primal_for_env.to_uppercase().replace("-", "_");
-        
+
         // Pass socket path with BOTH primal-specific AND generic names
         // This ensures primals like ToadStool can find their socket path
         cmd.env(format!("{}_SOCKET", primal_upper), &socket);
         cmd.env(format!("{}_SOCKET_PATH", primal_upper), &socket); // Also set with _PATH suffix
         cmd.env(format!("{}_FAMILY", primal_upper), &family_id);
         cmd.env(format!("{}_FAMILY_ID", primal_upper), &family_id);
-        
+
         info!("   🔧 Environment variables set:");
         info!("      BIOMEOS_FAMILY_ID: {}", family_id);
         info!("      BIOMEOS_SOCKET_PATH: {}", socket);
@@ -600,30 +610,38 @@ impl GraphExecutor {
             .and_then(|v| v.as_str())
         {
             let security_provider = Self::substitute_env(security_provider, &context.env);
-            
+
             // Set generic security endpoint
             cmd.env("SECURITY_ENDPOINT", &security_provider);
-            
+
             // Add primal-specific variants
             cmd.env("SONGBIRD_SECURITY_PROVIDER", &security_provider);
             cmd.env("NESTGATE_SECURITY_PROVIDER", &security_provider);
-            
+
             // Request JWT_SECRET from BearDog for primals that need it
             // This is TRUE PRIMAL: runtime capability-based secret management
             if primal_for_env.contains("nestgate") || primal_for_env.contains("NESTGATE") {
                 info!("   🔐 Requesting JWT_SECRET from BearDog security provider...");
-                match Self::request_jwt_secret_from_beardog(&security_provider).await {
+
+                // Use new beardog_jwt_client module (cleaner implementation)
+                let jwt_purpose = format!("{}_authentication", primal_for_env);
+                match crate::beardog_jwt_client::provision_jwt_secret(
+                    Some(&security_provider),
+                    &jwt_purpose,
+                )
+                .await
+                {
                     Ok(jwt_secret) => {
-                        info!("   ✅ Received JWT_SECRET from BearDog ({}  bytes)", jwt_secret.len());
+                        info!(
+                            "   ✅ Received JWT_SECRET from BearDog ({} bytes)",
+                            jwt_secret.len()
+                        );
                         cmd.env("JWT_SECRET", jwt_secret.clone());
                         cmd.env("NESTGATE_JWT_SECRET", jwt_secret);
                     }
                     Err(e) => {
-                        warn!("   ⚠️  Failed to get JWT_SECRET from BearDog: {}. Generating fallback...", e);
-                        // Fallback: generate a secure random secret
-                        let fallback_secret = Self::generate_jwt_secret();
-                        cmd.env("JWT_SECRET", fallback_secret.clone());
-                        cmd.env("NESTGATE_JWT_SECRET", fallback_secret);
+                        warn!("   ⚠️ Failed to provision JWT_SECRET: {}. This will block NestGate startup!", e);
+                        return Err(e.context("JWT provisioning failed for NestGate"));
                     }
                 }
             }
@@ -646,7 +664,8 @@ impl GraphExecutor {
         // Modern async: Check if process crashes immediately using timeout
         let crash_check = async {
             let mut interval = tokio::time::interval(Duration::from_millis(50));
-            for _ in 0..6 {  // Check 6 times over 300ms
+            for _ in 0..6 {
+                // Check 6 times over 300ms
                 interval.tick().await;
                 match child.try_wait()? {
                     Some(status) => {
@@ -672,7 +691,7 @@ impl GraphExecutor {
         let socket_timeout = Duration::from_secs(10);
         let mut interval = tokio::time::interval(Duration::from_millis(100));
         interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
-        
+
         let socket_wait = async {
             loop {
                 interval.tick().await;
@@ -780,7 +799,10 @@ impl GraphExecutor {
         let mut healthy_primals = Vec::new();
 
         if !socket_dir.exists() {
-            warn!("   Socket directory does not exist: {}", socket_dir.display());
+            warn!(
+                "   Socket directory does not exist: {}",
+                socket_dir.display()
+            );
             return Ok(serde_json::json!({
                 "healthy_count": 0,
                 "primals": []
@@ -867,8 +889,30 @@ impl GraphExecutor {
         }))
     }
 
+    /// Find BearDog socket from execution context
+    /// Used for JWT provisioning and other security capabilities
+    async fn find_beardog_socket(context: &ExecutionContext) -> Option<String> {
+        // Try to get from outputs first (from launch_beardog node)
+        if let Some(beardog_output) = context.get_output("launch_beardog").await {
+            if let Some(socket) = beardog_output.get("socket").and_then(|v| v.as_str()) {
+                return Some(socket.to_string());
+            }
+        }
+
+        // Try standard location
+        let default_socket = "/tmp/beardog-nat0.sock";
+        if tokio::fs::metadata(default_socket).await.is_ok() {
+            return Some(default_socket.to_string());
+        }
+
+        None
+    }
+
     /// Request JWT_SECRET from BearDog security provider
     /// This is TRUE PRIMAL: runtime capability-based secret management
+    ///
+    /// NOTE: This is the legacy implementation. New code should use
+    /// beardog_jwt_client module for better separation of concerns.
     async fn request_jwt_secret_from_beardog(beardog_socket: &str) -> Result<String> {
         use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
         use tokio::net::UnixStream;
@@ -877,13 +921,13 @@ impl GraphExecutor {
         info!("   🔐 Connecting to BearDog at: {}", beardog_socket);
 
         // Connect to BearDog with timeout
-        let stream = timeout(
-            Duration::from_secs(5),
-            UnixStream::connect(beardog_socket),
-        )
-        .await
-        .context("Timeout connecting to BearDog")?
-        .context(format!("Failed to connect to BearDog at {}", beardog_socket))?;
+        let stream = timeout(Duration::from_secs(5), UnixStream::connect(beardog_socket))
+            .await
+            .context("Timeout connecting to BearDog")?
+            .context(format!(
+                "Failed to connect to BearDog at {}",
+                beardog_socket
+            ))?;
 
         let (read_half, mut write_half) = stream.into_split();
         let mut reader = BufReader::new(read_half);
@@ -941,15 +985,15 @@ impl GraphExecutor {
     /// Used when BearDog is not available
     fn generate_jwt_secret() -> String {
         use rand::Rng;
-        
+
         info!("   🔐 Generating secure fallback JWT_SECRET...");
-        
+
         // Generate 64 bytes of cryptographically secure random data
         let mut rng = rand::thread_rng();
         let secret: Vec<u8> = (0..64).map(|_| rng.gen()).collect();
-        
+
         // Base64 encode for use as JWT secret
-        use base64::{Engine as _, engine::general_purpose};
+        use base64::{engine::general_purpose, Engine as _};
         general_purpose::STANDARD.encode(&secret)
     }
 }

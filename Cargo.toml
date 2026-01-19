@@ -10,6 +10,7 @@ nursery = "warn"
 [workspace]
 resolver = "2"
 members = [
+    "crates/biomeos",  # NEW UniBin!
     "crates/biomeos-types",
     "crates/biomeos-core",
     "crates/biomeos-cli",
@@ -68,10 +69,11 @@ clap = { version = "4.0", features = ["derive"] }
 axum = { version = "0.7", features = ["ws"] }
 tower = "0.4"
 tower-http = { version = "0.5", features = ["cors"] }
-reqwest = { version = "0.11", features = ["json"] }
+reqwest = { version = "0.11", features = ["json"] } # DEPRECATED: Use Songbird/BearDog for HTTP/TLS
 
-# benchScale for VM provisioning
-benchscale = { path = "../../../primalTools/benchscale", features = ["libvirt"] }
+# benchScale is an external tool (ecoPrimals/primalTools/benchscale)
+# Should be invoked as a separate binary, not a hard dependency
+# benchscale = { path = "../../../primalTools/benchscale", features = ["libvirt"] } # REMOVED
 
 # Async and futures
 futures = "0.3"
@@ -105,7 +107,8 @@ mdbook = "0.4"
 
 # Additional dependencies
 validator = "0.16"
-dirs = "5.0"
+# dirs = "5.0"  # DEPRECATED: Uses dirs-sys (C dependency)
+etcetera = "0.8"  # Pure Rust replacement for dirs
 libc = "0.2"
 num_cpus = "1.16"
 rand = "0.8"
@@ -168,12 +171,14 @@ axum = { workspace = true }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
-# HTTP client
-reqwest = { version = "0.11", features = ["json"] }
+# HTTP client - DEPRECATED: Use Songbird/BearDog for HTTP/TLS
+# reqwest = { version = "0.11", features = ["json"] } # REMOVED - Use atomic_client
 
-# benchScale for VM provisioning
-benchscale = { path = "../../primalTools/benchscale", features = ["libvirt"] }
-dirs = "5.0"
+# benchScale is an external tool (ecoPrimals/primalTools/benchscale)
+# Should be invoked as a separate binary, not a hard dependency
+# benchscale = { path = "../../primalTools/benchscale", features = ["libvirt"] } # REMOVED
+# dirs = "5.0"  # DEPRECATED: Uses dirs-sys (C dependency)
+etcetera = "0.8"  # Pure Rust replacement for dirs
 
 # Time handling
 chrono = { version = "0.4", features = ["serde"] }

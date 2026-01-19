@@ -1,4 +1,7 @@
-//! Universal Primal Client
+//! Universal Primal Client (DEPRECATED - Use atomic_client!)
+//!
+//! ⚠️ WARNING: This module uses HTTP transport with C dependencies (reqwest->openssl-sys).
+//! ⚠️ For ecoBin-compliant Pure Rust communication, use `atomic_client` with Unix sockets.
 //!
 //! Agnostic API negotiation layer for communicating with any primal,
 //! regardless of response format, protocol, or API version.
@@ -6,6 +9,13 @@
 //! # Core Principle
 //!
 //! biomeOS adapts to primals, primals don't adapt to biomeOS.
+//!
+//! # Migration Path
+//!
+//! Old: HTTP-based universal client with format adaptation
+//! New: JSON-RPC over Unix sockets with atomic_client
+
+#![cfg(feature = "http-transport")]
 //!
 //! # Features
 //!

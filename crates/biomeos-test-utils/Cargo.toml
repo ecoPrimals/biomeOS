@@ -30,4 +30,5 @@ uuid = { workspace = true }
 
 [dev-dependencies]
 tokio-test = { workspace = true }
-reqwest = { workspace = true }
+# Testing HTTP client - for benchmarks comparing Tower atomic vs HTTP
+reqwest = { workspace = true } # For testing/benchmarking only

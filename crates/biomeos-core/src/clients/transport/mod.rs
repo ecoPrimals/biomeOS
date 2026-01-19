@@ -349,7 +349,10 @@ mod tests {
     #[test]
     fn test_transport_preference_equality() {
         assert_eq!(TransportPreference::Auto, TransportPreference::Auto);
-        assert_eq!(TransportPreference::UnixSocket, TransportPreference::UnixSocket);
+        assert_eq!(
+            TransportPreference::UnixSocket,
+            TransportPreference::UnixSocket
+        );
         assert_ne!(TransportPreference::Auto, TransportPreference::UnixSocket);
     }
 
@@ -366,7 +369,7 @@ mod tests {
 
         // Should fail if no sockets exist (expected in test environment)
         assert!(result.is_err());
-        
+
         // Error message should indicate what we're looking for
         let err_msg = result.unwrap_err().to_string();
         assert!(err_msg.contains("beardog") || err_msg.contains("nat0"));
@@ -377,7 +380,7 @@ mod tests {
         // Test with different primal names
         let result1 = PrimalTransport::discover_socket_path("songbird", "nat0");
         assert!(result1.is_err());
-        
+
         let result2 = PrimalTransport::discover_socket_path("toadstool", "test-family");
         assert!(result2.is_err());
     }
@@ -422,13 +425,16 @@ mod tests {
         let result = PrimalTransport::discover_with_preference(
             "nonexistent-primal",
             "test-family",
-            TransportPreference::Auto
-        ).await;
-        
+            TransportPreference::Auto,
+        )
+        .await;
+
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
-        assert!(err_msg.contains("No secure transport available") || 
-                err_msg.contains("nonexistent-primal"));
+        assert!(
+            err_msg.contains("No secure transport available")
+                || err_msg.contains("nonexistent-primal")
+        );
     }
 
     #[tokio::test]
@@ -437,9 +443,10 @@ mod tests {
         let result = PrimalTransport::discover_with_preference(
             "test-primal",
             "test-family",
-            TransportPreference::UnixSocket
-        ).await;
-        
+            TransportPreference::UnixSocket,
+        )
+        .await;
+
         assert!(result.is_err());
     }
 

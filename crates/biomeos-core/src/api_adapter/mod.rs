@@ -1,7 +1,16 @@
-//! API Adapter System
+//! API Adapter System (DEPRECATED - Use atomic_client for Pure Rust!)
+//!
+//! ⚠️ WARNING: This module uses HTTP transport with C dependencies (reqwest->openssl-sys).
+//! ⚠️ For ecoBin-compliant Pure Rust communication, use `atomic_client` with Unix sockets.
 //!
 //! Discovers and adapts to primal API interfaces without requiring standardization.
 //! Each primal can have its own API structure - we learn and adapt to it.
+//!
+//! ## Migration Path
+//! - Old: HTTP-based API discovery and adaptation
+//! - New: JSON-RPC over Unix sockets with capability-based discovery
+
+#![cfg(feature = "http-transport")]
 
 pub mod adapters;
 pub mod cache;

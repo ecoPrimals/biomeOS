@@ -3,7 +3,7 @@
 //! Handles runtime operations including log streaming, command execution,
 //! and system/service monitoring.
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use std::collections::HashMap;
 
 use super::core::{PrimalInfo, UniversalBiomeOSManager};
@@ -274,7 +274,7 @@ impl UniversalBiomeOSManager {
         Ok(result)
     }
 
-    /// Fetch service logs from actual primal endpoint
+    /// Fetch service logs from actual primal endpoint (Pure Rust via Unix socket!)
     pub(super) async fn generate_service_logs(
         &self,
         primal: &PrimalInfo,
@@ -283,41 +283,35 @@ impl UniversalBiomeOSManager {
     ) -> Result<Vec<serde_json::Value>> {
         let limit = tail.unwrap_or(100);
 
-        // Build logs endpoint URL
-        let logs_url = format!("{}/api/v1/logs", primal.endpoint);
+        tracing::debug!(
+            "🚀 Fetching logs from {} via atomic client (tail={})",
+            primal.name,
+            limit
+        );
 
-        // Create HTTP client with timeout
-        let client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(10))
-            .build()?;
+        // Use Pure Rust atomic client (Tower-based, Unix sockets)
+        let client = crate::atomic_client::AtomicClient::discover(&primal.name)
+            .await
+            .with_context(|| format!("Failed to discover primal: {}", primal.name))?;
 
-        // Build query parameters
-        let mut url = reqwest::Url::parse(&logs_url)?;
-        url.query_pairs_mut()
-            .append_pair("tail", &limit.to_string());
+        // Build request parameters
+        let mut params = serde_json::json!({
+            "tail": limit
+        });
 
         if let Some(since_time) = since {
-            url.query_pairs_mut().append_pair("since", since_time);
+            params["since"] = serde_json::Value::String(since_time.to_string());
         }
 
-        // Fetch logs from primal
-        match client.get(url).send().await {
-            Ok(response) => {
-                if response.status().is_success() {
-                    match response.json::<Vec<serde_json::Value>>().await {
-                        Ok(logs) => Ok(logs),
-                        Err(e) => {
-                            tracing::warn!("Failed to parse logs from {}: {}", primal.name, e);
-                            // Return empty logs rather than failing
-                            Ok(vec![])
-                        }
-                    }
+        // Fetch logs via JSON-RPC over Unix socket (Pure Rust!)
+        match client.call("get_logs", params).await {
+            Ok(result) => {
+                // Parse logs array
+                if let Some(logs_array) = result.as_array() {
+                    tracing::debug!("✅ Fetched {} logs from {}", logs_array.len(), primal.name);
+                    Ok(logs_array.clone())
                 } else {
-                    tracing::warn!(
-                        "Logs endpoint returned {}: {}",
-                        response.status(),
-                        primal.name
-                    );
+                    tracing::warn!("Logs response is not an array from {}", primal.name);
                     Ok(vec![])
                 }
             }
@@ -329,61 +323,37 @@ impl UniversalBiomeOSManager {
         }
     }
 
-    /// Execute command via primal's execution API
+    /// Execute command via primal's execution API (Pure Rust via Unix socket!)
     pub(super) async fn execute_command_integration(
         &self,
         primal: &PrimalInfo,
         command: &str,
-        interactive: bool,
+        _interactive: bool, // Note: interactive mode not yet supported via atomic_client
     ) -> Result<ExecutionResult> {
-        tracing::debug!("Executing command in {}: {}", primal.name, command);
+        tracing::debug!(
+            "🚀 Executing command in {} via atomic client: {}",
+            primal.name,
+            command
+        );
 
-        let exec_url = format!("{}/api/v1/exec", primal.endpoint);
+        // Use Pure Rust atomic client (Tower-based, Unix sockets)
+        let client = crate::atomic_client::AtomicPrimalClient::discover(&primal.name)
+            .await
+            .with_context(|| format!("Failed to discover primal: {}", primal.name))?;
 
-        // Create HTTP client
-        let client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(60))
-            .build()?;
+        // Execute command via JSON-RPC over Unix socket (Pure Rust!)
+        let atomic_result = client
+            .execute_command(command)
+            .await
+            .with_context(|| format!("Failed to execute command on primal: {}", primal.name))?;
 
-        // Build execution request
-        let exec_request = serde_json::json!({
-            "command": command,
-            "interactive": interactive,
-            "timeout_seconds": 60
-        });
+        tracing::debug!("✅ Command executed successfully on {}", primal.name);
 
-        // Execute command via primal API
-        match client.post(&exec_url).json(&exec_request).send().await {
-            Ok(response) => {
-                if response.status().is_success() {
-                    match response.json::<serde_json::Value>().await {
-                        Ok(result) => Ok(ExecutionResult {
-                            stdout: result["stdout"].as_str().unwrap_or("").to_string(),
-                            stderr: result["stderr"].as_str().unwrap_or("").to_string(),
-                        }),
-                        Err(e) => {
-                            tracing::error!("Failed to parse execution response: {}", e);
-                            Err(anyhow::anyhow!("Failed to parse execution response: {}", e))
-                        }
-                    }
-                } else {
-                    let error_msg = format!(
-                        "Command execution failed with status: {}",
-                        response.status()
-                    );
-                    tracing::error!("{}", error_msg);
-                    Err(anyhow::anyhow!(error_msg))
-                }
-            }
-            Err(e) => {
-                tracing::error!("Failed to execute command on {}: {}", primal.name, e);
-                Err(anyhow::anyhow!(
-                    "Failed to execute command on {}: {}",
-                    primal.name,
-                    e
-                ))
-            }
-        }
+        // Convert to local ExecutionResult type
+        Ok(ExecutionResult {
+            stdout: atomic_result.stdout,
+            stderr: atomic_result.stderr,
+        })
     }
 }
 

@@ -1,7 +1,14 @@
-//! Adaptive HTTP Client Infrastructure
+//! Adaptive HTTP Client Infrastructure (DEPRECATED - Use atomic_client instead!)
+//!
+//! ⚠️ WARNING: This module uses HTTP transport with C dependencies (reqwest->openssl-sys).
+//! ⚠️ For ecoBin-compliant Pure Rust communication, use `atomic_client` with Unix sockets.
 //!
 //! This module provides flexible HTTP client patterns that gracefully handle
 //! API versioning, response format changes, and integration mismatches.
+//!
+//! ## Migration Path
+//! - Old: `AdaptiveHttpClient` with reqwest (C dependencies)
+//! - New: `AtomicClient` with Unix sockets (Pure Rust!)
 //!
 //! ## Core Pattern: Version-Tolerant Response Parsing
 //!
@@ -39,6 +46,8 @@
 //! 3. **Flexible Parsing**: Use serde aliases for known variants
 //! 4. **Version Detection**: Auto-detect API version from response
 //! 5. **Error Context**: Rich error messages with full request/response details
+
+#![cfg(feature = "http-transport")]
 
 use anyhow::{anyhow, Context, Result};
 use reqwest::{Client, StatusCode};
@@ -534,8 +543,7 @@ mod tests {
 
     #[test]
     fn test_adaptive_client_with_retries() {
-        let client = AdaptiveHttpClient::new("http://localhost:8900".to_string())
-            .with_retries(5);
+        let client = AdaptiveHttpClient::new("http://localhost:8900".to_string()).with_retries(5);
         assert_eq!(client.retry_count, 5);
     }
 
@@ -655,7 +663,7 @@ mod tests {
     fn test_birdsong_error_types() {
         // Test various error types exist and format correctly
         // (Can't easily construct reqwest::Error without actual network calls)
-        
+
         let integration_error = BirdSongError::Integration("test".to_string());
         assert!(integration_error.to_string().contains("Integration error"));
     }
@@ -734,7 +742,7 @@ mod tests {
         let json1 = r#"{"encrypted":"test_data","family_id":"test"}"#;
         let response1: BirdSongEncryptResponse = serde_json::from_str(json1).unwrap();
         assert_eq!(response1.encrypted, "test_data");
-        
+
         let json2 = r#"{"ciphertext":"test_data","family_id":"test"}"#;
         let response2: BirdSongEncryptResponse = serde_json::from_str(json2).unwrap();
         assert_eq!(response2.encrypted, "test_data");

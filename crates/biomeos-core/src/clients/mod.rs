@@ -4,7 +4,10 @@
 // Licensed under the Affero General Public License v3.0 or later with Sovran Exemption 1.0.
 // See LICENSE file in the project root or visit https://www.gnu.org/licenses/agpl-3.0.html
 
-//! Primal client implementations
+//! Primal client implementations (DEPRECATED - Use atomic_client!)
+//!
+//! ⚠️ WARNING: These modules use HTTP transport with C dependencies (reqwest->openssl-sys).
+//! ⚠️ For ecoBin-compliant Pure Rust communication, use `atomic_client` with Unix sockets.
 //!
 //! This module contains client implementations for communicating with all primals
 //! in the ecoPrimals ecosystem:
@@ -15,9 +18,12 @@
 //! - **NestGate**: Storage and persistence
 //! - **BearDog**: Cryptography and security
 //!
-//! # Transport Evolution (Wave 2A - IN PROGRESS)
+//! # Migration Path
 //!
-//! All clients are being migrated to use the unified `transport` abstraction:
+//! Old: HTTP-based clients with format adaptation
+//! New: JSON-RPC over Unix sockets with atomic_client
+
+#![cfg(feature = "http-transport")]
 //! - **PRIMARY**: JSON-RPC over Unix sockets (fast, secure)
 //! - **FUTURE**: tarpc (type-safe, bidirectional)
 //! - **FALLBACK**: HTTP/HTTPS (deprecated, insecure)

@@ -98,7 +98,7 @@ impl StorageBackend for MockStorageBackend {
 
 /// Create a test EncryptedStorage with mock backend
 /// Note: Requires BearDog to be running for encryption operations
-/// 
+///
 /// To run these tests, start BearDog first:
 /// ```bash
 /// ./plasmidBin/primals/beardog-server
@@ -107,7 +107,7 @@ async fn create_test_storage() -> Result<EncryptedStorage> {
     let backend = Arc::new(MockStorageBackend::new());
     let beardog = BearDogClient::discover("test_family").await?;
     let family_id = "test_family";
-    
+
     Ok(EncryptedStorage::new(beardog, backend, family_id))
 }
 
@@ -127,10 +127,10 @@ async fn test_encrypt_with_empty_key() {
     let storage = create_test_storage().await;
     if let Ok(storage) = storage {
         let data = b"test data";
-        
+
         // Empty key should be handled gracefully
         let result = storage.store("", data).await;
-        
+
         // Should either succeed (empty string is valid) or fail gracefully
         match result {
             Ok(_) => {
@@ -152,7 +152,7 @@ async fn test_encrypt_with_invalid_utf8_key() {
     let storage = create_test_storage().await;
     if let Ok(storage) = storage {
         let data = b"test data";
-        
+
         // Keys with special characters should work (UTF-8 safe)
         let special_keys = vec![
             "key/with/slashes",
@@ -161,7 +161,7 @@ async fn test_encrypt_with_invalid_utf8_key() {
             "key_with_underscores",
             "key with spaces",
         ];
-        
+
         for key in special_keys {
             let result = storage.store(key, data).await;
             // Should handle all these keys safely
@@ -176,12 +176,12 @@ async fn test_encrypt_with_very_long_key() {
     let storage = create_test_storage().await;
     if let Ok(storage) = storage {
         let data = b"test data";
-        
+
         // Very long key (1KB)
         let long_key = "a".repeat(1024);
-        
+
         let result = storage.store(&long_key, data).await;
-        
+
         // Should handle long keys gracefully
         match result {
             Ok(_) => {
@@ -203,14 +203,17 @@ async fn test_encrypt_with_null_bytes_in_data() {
     if let Ok(storage) = storage {
         // Data with null bytes (binary data)
         let data = vec![0u8, 1, 2, 0, 3, 4, 0, 5];
-        
+
         let result = storage.store("binary_data", &data).await;
-        
+
         // Should handle binary data (including null bytes) correctly
         if let Ok(_) = result {
             let retrieved = storage.retrieve("binary_data").await;
             if let Ok(retrieved_data) = retrieved {
-                assert_eq!(data, retrieved_data, "Binary data should roundtrip correctly");
+                assert_eq!(
+                    data, retrieved_data,
+                    "Binary data should roundtrip correctly"
+                );
             }
         }
     }
@@ -222,9 +225,9 @@ async fn test_encrypt_zero_length_data() {
     let storage = create_test_storage().await;
     if let Ok(storage) = storage {
         let data = b"";
-        
+
         let result = storage.store("empty", data).await;
-        
+
         // Zero-length data should be handled
         match result {
             Ok(_) => {
@@ -251,30 +254,32 @@ async fn test_concurrent_encryption_same_key() {
     let storage = create_test_storage().await;
     if let Ok(storage) = storage {
         let storage = Arc::new(storage);
-        
+
         // Concurrent writes to the same key
         let mut handles = vec![];
-        
+
         for i in 0..10 {
             let storage_clone = Arc::clone(&storage);
             let data = format!("data_{}", i).into_bytes();
-            
-            let handle = tokio::spawn(async move {
-                storage_clone.store("concurrent_key", &data).await
-            });
-            
+
+            let handle =
+                tokio::spawn(async move { storage_clone.store("concurrent_key", &data).await });
+
             handles.push(handle);
         }
-        
+
         // All operations should complete without panic
         for handle in handles {
             let result = handle.await;
             assert!(result.is_ok(), "Concurrent operation should not panic");
         }
-        
+
         // Final state should be consistent
         let result = storage.retrieve("concurrent_key").await;
-        assert!(result.is_ok(), "Should be able to retrieve after concurrent writes");
+        assert!(
+            result.is_ok(),
+            "Should be able to retrieve after concurrent writes"
+        );
     }
 }
 
@@ -284,26 +289,27 @@ async fn test_concurrent_encryption_different_keys() {
     let storage = create_test_storage().await;
     if let Ok(storage) = storage {
         let storage = Arc::new(storage);
-        
+
         // Concurrent writes to different keys
         let mut handles = vec![];
-        
+
         for i in 0..20 {
             let storage_clone = Arc::clone(&storage);
             let key = format!("key_{}", i);
             let data = format!("data_{}", i).into_bytes();
-            
-            let handle = tokio::spawn(async move {
-                storage_clone.store(&key, &data).await
-            });
-            
+
+            let handle = tokio::spawn(async move { storage_clone.store(&key, &data).await });
+
             handles.push(handle);
         }
-        
+
         // All operations should succeed
         for handle in handles {
             let result = handle.await.unwrap();
-            assert!(result.is_ok(), "Concurrent writes to different keys should succeed");
+            assert!(
+                result.is_ok(),
+                "Concurrent writes to different keys should succeed"
+            );
         }
     }
 }
@@ -314,16 +320,16 @@ async fn test_concurrent_read_write() {
     let storage = create_test_storage().await;
     if let Ok(storage) = storage {
         let storage = Arc::new(storage);
-        
+
         // Pre-populate with data
         let _ = storage.store("rw_key", b"initial_data").await;
-        
+
         let mut handles = vec![];
-        
+
         // Mix of concurrent reads and writes
         for i in 0..20 {
             let storage_clone = Arc::clone(&storage);
-            
+
             let handle = if i % 2 == 0 {
                 // Write
                 let data = format!("data_{}", i).into_bytes();
@@ -338,10 +344,10 @@ async fn test_concurrent_read_write() {
                     Ok::<(), anyhow::Error>(())
                 })
             };
-            
+
             handles.push(handle);
         }
-        
+
         // All operations should complete
         for handle in handles {
             let result = handle.await;
@@ -356,27 +362,25 @@ async fn test_concurrent_delete_operations() {
     let storage = create_test_storage().await;
     if let Ok(storage) = storage {
         let storage = Arc::new(storage);
-        
+
         // Pre-populate keys
         for i in 0..10 {
             let key = format!("delete_key_{}", i);
             let _ = storage.store(&key, b"data").await;
         }
-        
+
         let mut handles = vec![];
-        
+
         // Concurrent deletes
         for i in 0..10 {
             let storage_clone = Arc::clone(&storage);
             let key = format!("delete_key_{}", i);
-            
-            let handle = tokio::spawn(async move {
-                storage_clone.delete(&key).await
-            });
-            
+
+            let handle = tokio::spawn(async move { storage_clone.delete(&key).await });
+
             handles.push(handle);
         }
-        
+
         // All deletes should complete
         for handle in handles {
             let result = handle.await;
@@ -391,27 +395,25 @@ async fn test_concurrent_exists_checks() {
     let storage = create_test_storage().await;
     if let Ok(storage) = storage {
         let storage = Arc::new(storage);
-        
+
         // Pre-populate some keys
         for i in 0..5 {
             let key = format!("exists_key_{}", i);
             let _ = storage.store(&key, b"data").await;
         }
-        
+
         let mut handles = vec![];
-        
+
         // Concurrent exists checks
         for i in 0..20 {
             let storage_clone = Arc::clone(&storage);
             let key = format!("exists_key_{}", i % 10); // Mix of existing and non-existing
-            
-            let handle = tokio::spawn(async move {
-                storage_clone.exists(&key).await
-            });
-            
+
+            let handle = tokio::spawn(async move { storage_clone.exists(&key).await });
+
             handles.push(handle);
         }
-        
+
         // All checks should complete
         for handle in handles {
             let result = handle.await;
@@ -426,26 +428,24 @@ async fn test_concurrent_list_operations() {
     let storage = create_test_storage().await;
     if let Ok(storage) = storage {
         let storage = Arc::new(storage);
-        
+
         // Pre-populate keys
         for i in 0..10 {
             let key = format!("list_key_{}", i);
             let _ = storage.store(&key, b"data").await;
         }
-        
+
         let mut handles = vec![];
-        
+
         // Concurrent list operations
         for _ in 0..10 {
             let storage_clone = Arc::clone(&storage);
-            
-            let handle = tokio::spawn(async move {
-                storage_clone.list_keys(Some("list_")).await
-            });
-            
+
+            let handle = tokio::spawn(async move { storage_clone.list_keys(Some("list_")).await });
+
             handles.push(handle);
         }
-        
+
         // All list operations should succeed
         for handle in handles {
             let result = handle.await.unwrap();
@@ -465,24 +465,35 @@ async fn test_metadata_encryption_roundtrip() {
     if let Ok(storage) = storage {
         let test_key = "metadata_test";
         let test_data = b"test data for metadata";
-        
+
         // Store data
         let store_result = storage.store(test_key, test_data).await;
         assert!(store_result.is_ok(), "Store should succeed");
-        
+
         // Load metadata
         let metadata_result = storage.load_metadata(test_key).await;
         assert!(metadata_result.is_ok(), "Metadata should be loadable");
-        
+
         if let Ok(metadata) = metadata_result {
             // Verify metadata structure
-            assert!(!metadata.key_ref.is_empty(), "Key reference should not be empty");
-            assert!(!metadata.plaintext_hash.is_empty(), "Plaintext hash should not be empty");
-            assert!(!metadata.ciphertext_hash.is_empty(), "Ciphertext hash should not be empty");
+            assert!(
+                !metadata.key_ref.is_empty(),
+                "Key reference should not be empty"
+            );
+            assert!(
+                !metadata.plaintext_hash.is_empty(),
+                "Plaintext hash should not be empty"
+            );
+            assert!(
+                !metadata.ciphertext_hash.is_empty(),
+                "Ciphertext hash should not be empty"
+            );
             // Timestamp should be recent (within last hour)
             use chrono::Utc;
             let now = Utc::now();
-            let age = now.signed_duration_since(metadata.encrypted_at).num_seconds();
+            let age = now
+                .signed_duration_since(metadata.encrypted_at)
+                .num_seconds();
             assert!(age < 3600 && age >= 0, "Timestamp should be recent");
         }
     }
@@ -495,14 +506,17 @@ async fn test_metadata_persists_after_retrieval() {
     if let Ok(storage) = storage {
         let test_key = "metadata_persist";
         let test_data = b"persist test";
-        
+
         // Store and retrieve
         let _ = storage.store(test_key, test_data).await;
         let _ = storage.retrieve(test_key).await;
-        
+
         // Metadata should still be loadable
         let metadata_result = storage.load_metadata(test_key).await;
-        assert!(metadata_result.is_ok(), "Metadata should persist after retrieval");
+        assert!(
+            metadata_result.is_ok(),
+            "Metadata should persist after retrieval"
+        );
     }
 }
 
@@ -513,21 +527,27 @@ async fn test_metadata_deleted_with_data() {
     if let Ok(storage) = storage {
         let test_key = "metadata_delete";
         let test_data = b"delete test";
-        
+
         // Store data
         let _ = storage.store(test_key, test_data).await;
-        
+
         // Verify metadata exists
         let metadata_before = storage.load_metadata(test_key).await;
-        assert!(metadata_before.is_ok(), "Metadata should exist before delete");
-        
+        assert!(
+            metadata_before.is_ok(),
+            "Metadata should exist before delete"
+        );
+
         // Delete data
         let delete_result = storage.delete(test_key).await;
         assert!(delete_result.is_ok(), "Delete should succeed");
-        
+
         // Metadata should also be deleted
         let metadata_after = storage.load_metadata(test_key).await;
-        assert!(metadata_after.is_err(), "Metadata should be deleted with data");
+        assert!(
+            metadata_after.is_err(),
+            "Metadata should be deleted with data"
+        );
     }
 }
 
@@ -538,28 +558,35 @@ async fn test_metadata_integrity_verification() {
     if let Ok(storage) = storage {
         let test_key = "metadata_integrity";
         let test_data = b"integrity test data";
-        
+
         // Store data
         let _ = storage.store(test_key, test_data).await;
-        
+
         // Retrieve and verify
         let retrieved = storage.retrieve(test_key).await;
         assert!(retrieved.is_ok(), "Retrieval should succeed");
-        
+
         if let Ok(data) = retrieved {
             // Data should match original
-            assert_eq!(test_data.to_vec(), data, "Data integrity should be maintained");
-            
+            assert_eq!(
+                test_data.to_vec(),
+                data,
+                "Data integrity should be maintained"
+            );
+
             // Metadata hashes should be consistent
             let metadata = storage.load_metadata(test_key).await.unwrap();
-            
+
             // Plaintext hash should match
             use sha2::{Digest, Sha256};
             let mut hasher = Sha256::new();
             hasher.update(test_data);
             let expected_hash = format!("sha256:{}", hex::encode(hasher.finalize()));
-            
-            assert_eq!(metadata.plaintext_hash, expected_hash, "Plaintext hash should match");
+
+            assert_eq!(
+                metadata.plaintext_hash, expected_hash,
+                "Plaintext hash should match"
+            );
         }
     }
 }
@@ -574,16 +601,16 @@ async fn test_overwrite_with_new_encryption() {
     let storage = create_test_storage().await;
     if let Ok(storage) = storage {
         let test_key = "rotation_test";
-        
+
         // Store initial data
         let data1 = b"initial data";
         let _ = storage.store(test_key, data1).await;
-        
+
         // Overwrite with new data (should use new encryption)
         let data2 = b"updated data";
         let result = storage.store(test_key, data2).await;
         assert!(result.is_ok(), "Overwrite should succeed");
-        
+
         // Retrieved data should be the new data
         let retrieved = storage.retrieve(test_key).await;
         if let Ok(data) = retrieved {
@@ -598,20 +625,23 @@ async fn test_metadata_updated_on_overwrite() {
     let storage = create_test_storage().await;
     if let Ok(storage) = storage {
         let test_key = "metadata_rotation";
-        
+
         // Store initial data
         let _ = storage.store(test_key, b"data1").await;
         let metadata1 = storage.load_metadata(test_key).await.unwrap();
         let timestamp1 = metadata1.encrypted_at;
-        
+
         // Timestamps are high-resolution (nanoseconds) - no delay needed!
         // Overwrite data immediately - timestamp will differ
         let _ = storage.store(test_key, b"data2").await;
         let metadata2 = storage.load_metadata(test_key).await.unwrap();
         let timestamp2 = metadata2.encrypted_at;
-        
+
         // Timestamp should be updated (later)
-        assert!(timestamp2 >= timestamp1, "Timestamp should be updated or same on overwrite");
+        assert!(
+            timestamp2 >= timestamp1,
+            "Timestamp should be updated or same on overwrite"
+        );
     }
 }
 
@@ -621,14 +651,14 @@ async fn test_multiple_rapid_overwrites() {
     let storage = create_test_storage().await;
     if let Ok(storage) = storage {
         let test_key = "rapid_overwrites";
-        
+
         // Rapid overwrites
         for i in 0..10 {
             let data = format!("data_{}", i).into_bytes();
             let result = storage.store(test_key, &data).await;
             assert!(result.is_ok(), "Rapid overwrite {} should succeed", i);
         }
-        
+
         // Final data should be retrievable
         let result = storage.retrieve(test_key).await;
         assert!(result.is_ok(), "Should retrieve after rapid overwrites");
@@ -642,18 +672,21 @@ async fn test_encryption_key_consistency() {
     if let Ok(storage) = storage {
         let test_key = "key_consistency";
         let test_data = b"consistency test";
-        
+
         // Store data
         let _ = storage.store(test_key, test_data).await;
         let metadata1 = storage.load_metadata(test_key).await.unwrap();
-        
+
         // Store same key again
         let _ = storage.store(test_key, test_data).await;
         let metadata2 = storage.load_metadata(test_key).await.unwrap();
-        
+
         // For same data key, encryption key_ref should be deterministic
         // (based on implementation - key_ref uses dataset key hash)
-        assert_eq!(metadata1.key_ref, metadata2.key_ref, "Key reference should be consistent for same key");
+        assert_eq!(
+            metadata1.key_ref, metadata2.key_ref,
+            "Key reference should be consistent for same key"
+        );
     }
 }
 
@@ -663,18 +696,21 @@ async fn test_different_keys_different_encryption_keys() {
     let storage = create_test_storage().await;
     if let Ok(storage) = storage {
         let data = b"same data";
-        
+
         // Store same data under different keys
         let _ = storage.store("key1", data).await;
         let _ = storage.store("key2", data).await;
-        
+
         let metadata1 = storage.load_metadata("key1").await.unwrap();
         let metadata2 = storage.load_metadata("key2").await.unwrap();
-        
+
         // Different keys should use different encryption keys
         // (assuming key_ref is based on the key, not the data)
         // This ensures each dataset has its own encryption key
-        assert_ne!(metadata1.key_ref, metadata2.key_ref, "Different keys should have different encryption keys");
+        assert_ne!(
+            metadata1.key_ref, metadata2.key_ref,
+            "Different keys should have different encryption keys"
+        );
     }
 }
 
@@ -688,10 +724,13 @@ async fn test_retrieve_nonexistent_key() {
     let storage = create_test_storage().await;
     if let Ok(storage) = storage {
         let result = storage.retrieve("nonexistent_key").await;
-        
+
         // Should return error (not panic)
-        assert!(result.is_err(), "Retrieving nonexistent key should return error");
-        
+        assert!(
+            result.is_err(),
+            "Retrieving nonexistent key should return error"
+        );
+
         // Error should be meaningful
         if let Err(e) = result {
             let error_msg = e.to_string();
@@ -706,7 +745,7 @@ async fn test_delete_nonexistent_key() {
     let storage = create_test_storage().await;
     if let Ok(storage) = storage {
         let result = storage.delete("nonexistent_delete").await;
-        
+
         // Should handle gracefully (either succeed idempotently or return clear error)
         match result {
             Ok(_) => {
@@ -726,7 +765,7 @@ async fn test_exists_for_nonexistent_key() {
     let storage = create_test_storage().await;
     if let Ok(storage) = storage {
         let result = storage.exists("nonexistent_exists").await;
-        
+
         // Should return Ok(false), not error
         if let Ok(exists) = result {
             assert!(!exists, "Nonexistent key should return false");
@@ -743,22 +782,26 @@ async fn test_large_data_encryption() {
     if let Ok(storage) = storage {
         // Test with 1MB of data
         let large_data = test_data(1024 * 1024);
-        
+
         let result = timeout(
             Duration::from_secs(10),
-            storage.store("large_data", &large_data)
-        ).await;
-        
+            storage.store("large_data", &large_data),
+        )
+        .await;
+
         // Should complete within timeout
         assert!(result.is_ok(), "Large data encryption should not timeout");
-        
+
         if let Ok(store_result) = result {
             assert!(store_result.is_ok(), "Large data storage should succeed");
-            
+
             // Verify retrieval
             let retrieve_result = storage.retrieve("large_data").await;
             if let Ok(retrieved) = retrieve_result {
-                assert_eq!(large_data, retrieved, "Large data should roundtrip correctly");
+                assert_eq!(
+                    large_data, retrieved,
+                    "Large data should roundtrip correctly"
+                );
             }
         }
     }
@@ -773,18 +816,29 @@ async fn test_performance_metrics_tracking() {
         let _ = storage.store("metrics_test_1", b"data1").await;
         let _ = storage.store("metrics_test_2", b"data2").await;
         let _ = storage.retrieve("metrics_test_1").await;
-        
+
         // Get metrics
         let metrics = storage.metrics().await;
-        
+
         // Metrics should be tracking operations
-        assert!(metrics.encrypt_count >= 2, "Should track encrypt operations");
-        assert!(metrics.decrypt_count >= 1, "Should track decrypt operations");
+        assert!(
+            metrics.encrypt_count >= 2,
+            "Should track encrypt operations"
+        );
+        assert!(
+            metrics.decrypt_count >= 1,
+            "Should track decrypt operations"
+        );
         assert!(metrics.bytes_stored > 0, "Should track bytes stored");
-        
+
         // Latency should be reasonable (< 100ms per operation)
-        assert!(metrics.avg_encrypt_latency_us < 100_000, "Encrypt latency should be reasonable");
-        assert!(metrics.avg_decrypt_latency_us < 100_000, "Decrypt latency should be reasonable");
+        assert!(
+            metrics.avg_encrypt_latency_us < 100_000,
+            "Encrypt latency should be reasonable"
+        );
+        assert!(
+            metrics.avg_decrypt_latency_us < 100_000,
+            "Decrypt latency should be reasonable"
+        );
     }
 }
-

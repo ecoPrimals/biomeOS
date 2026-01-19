@@ -27,11 +27,28 @@
 //! let seed = creds.seed_ref(); // Temporary reference, never cloned
 //! ```
 
+// Use BirdSongError if available, otherwise use a local error type
+#[cfg(feature = "http-transport")]
 use crate::adaptive_client::BirdSongError;
+
+#[cfg(not(feature = "http-transport"))]
+use CredentialsError as BirdSongError;
+
 use biomeos_types::identifiers::FamilyId;
 use serde::Deserialize;
 use std::path::Path;
 use zeroize::{Zeroize, ZeroizeOnDrop};
+
+/// Error type for credentials when HTTP transport is not available
+#[cfg(not(feature = "http-transport"))]
+#[derive(Debug, thiserror::Error)]
+pub enum CredentialsError {
+    #[error("Invalid credentials: {0}")]
+    InvalidCredentials(String),
+
+    #[error("Missing required credentials: {0}")]
+    MissingCredentials(String),
+}
 
 /// Secure wrapper for family seed that zeroizes on drop
 #[derive(Clone, Zeroize, ZeroizeOnDrop)]

@@ -29,7 +29,8 @@ anyhow = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
-reqwest = { workspace = true }
+# HTTP client DEPRECATED: Use atomic_client (Unix sockets) for federation communication
+# reqwest = { workspace = true } # REMOVED - Use Songbird/BearDog for HTTP
 axum = { workspace = true }
 tower = { workspace = true }
 tower-http = { workspace = true }
@@ -38,7 +39,8 @@ validator = { workspace = true }
 clap = { workspace = true }
 tempfile = { workspace = true }
 walkdir = { workspace = true }
-dirs = { workspace = true }
+# dirs = { workspace = true }  # DEPRECATED: Uses dirs-sys (C dependency)
+etcetera = { workspace = true }  # Pure Rust replacement
 libc = { workspace = true }
 num_cpus = { workspace = true }
 rand = { workspace = true }

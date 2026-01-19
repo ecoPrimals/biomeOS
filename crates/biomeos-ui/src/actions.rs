@@ -250,8 +250,7 @@ mod tests {
         assert!(json.contains("test-device"));
         assert!(json.contains("test-primal"));
 
-        let deserialized: UserAction =
-            serde_json::from_str(&json).expect("Should deserialize");
+        let deserialized: UserAction = serde_json::from_str(&json).expect("Should deserialize");
         match deserialized {
             UserAction::AssignDevice {
                 device_id,
@@ -271,8 +270,7 @@ mod tests {
         let json = serde_json::to_string(&result).expect("Should serialize");
         assert!(json.contains("test message"));
 
-        let deserialized: ActionResult =
-            serde_json::from_str(&json).expect("Should deserialize");
+        let deserialized: ActionResult = serde_json::from_str(&json).expect("Should deserialize");
         assert!(deserialized.is_success());
     }
 }

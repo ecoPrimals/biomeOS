@@ -75,7 +75,7 @@ pub enum DiscoveryError {
     AuthFailed { id: String },
 
     #[error("Network error: {0}")]
-    Network(#[from] reqwest::Error),
+    Network(String),
 
     #[error("URL parse error: {0}")]
     UrlParse(#[from] url::ParseError),

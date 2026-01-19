@@ -230,7 +230,7 @@ mod tests {
     #[test]
     fn test_network_spec_with_subnets() {
         let mut spec = NetworkSpec::default();
-        
+
         spec.subnets.push(SubnetSpec {
             subnet: "10.0.0.0/24".to_string(),
             gateway: Some("10.0.0.1".to_string()),
@@ -257,7 +257,10 @@ mod tests {
 
         assert_eq!(metadata.name, "prod-network");
         assert_eq!(metadata.labels.len(), 2);
-        assert_eq!(metadata.labels.get("environment"), Some(&"production".to_string()));
+        assert_eq!(
+            metadata.labels.get("environment"),
+            Some(&"production".to_string())
+        );
     }
 
     #[test]
@@ -279,7 +282,7 @@ mod tests {
     fn test_network_serialization() {
         let spec = NetworkSpec::default();
         let json = serde_json::to_string(&spec).unwrap();
-        
+
         let deserialized: NetworkSpec = serde_json::from_str(&json).unwrap();
         assert_eq!(deserialized.metadata.name, "default-network");
     }
@@ -287,7 +290,7 @@ mod tests {
     #[test]
     fn test_custom_network_driver() {
         let driver = NetworkDriver::Custom("cilium".to_string());
-        
+
         match &driver {
             NetworkDriver::Custom(name) => assert_eq!(name, "cilium"),
             _ => panic!("Expected Custom driver"),

@@ -7,7 +7,7 @@
 //! - Federation discovery
 //! - Runtime adaptation
 //!
-//! **Concurrency-First Design**: 
+//! **Concurrency-First Design**:
 //! - Service polling uses exponential backoff for efficiency
 //! - Minimal delays, fast failure detection
 //! - Optimized for concurrent test execution
@@ -22,19 +22,19 @@ use std::time::Duration;
 // ============================================================================
 
 /// Wait for service with exponential backoff (production-grade polling)
-/// 
+///
 /// **Concurrency**: Uses exponential backoff (10ms → 20ms → 40ms → 80ms) instead of fixed delays
 async fn wait_for_service(url: &str, max_attempts: u32) -> bool {
     let client = reqwest::Client::new();
     let mut delay_ms = 10u64; // Start with 10ms
-    
+
     for attempt in 0..max_attempts {
         if let Ok(response) = client.get(url).send().await {
             if response.status().is_success() {
                 return true;
             }
         }
-        
+
         // Exponential backoff: doubles each iteration, capped at 500ms
         if attempt < max_attempts - 1 {
             tokio::time::sleep(Duration::from_millis(delay_ms)).await;

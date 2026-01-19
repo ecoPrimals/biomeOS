@@ -332,7 +332,7 @@ impl SecureNucleusDiscovery {
                 match serde_json::from_value::<SongbirdDiscoveryResponse>(result_value) {
                     Ok(discovery) => {
                         debug!("Songbird discovered {} services", discovery.services.len());
-                        
+
                         // Convert SongbirdServiceInfo to DiscoveredPrimal
                         let primals: Vec<DiscoveredPrimal> = discovery
                             .services
@@ -340,7 +340,7 @@ impl SecureNucleusDiscovery {
                             .map(|service| {
                                 // Infer capabilities from tags
                                 let capabilities = CapabilitySet::from_tags(&service.tags);
-                                
+
                                 // Create endpoint from address:port
                                 let endpoint = if service.address.starts_with("/") {
                                     // Unix socket path
@@ -353,10 +353,14 @@ impl SecureNucleusDiscovery {
                                         url: format!("http://{}:{}", service.address, service.port),
                                     }
                                 };
-                                
+
                                 DiscoveredPrimal {
                                     name: service.name.clone(),
-                                    primal_type: service.tags.first().cloned().unwrap_or_else(|| "unknown".to_string()),
+                                    primal_type: service
+                                        .tags
+                                        .first()
+                                        .cloned()
+                                        .unwrap_or_else(|| "unknown".to_string()),
                                     endpoints: vec![endpoint],
                                     capabilities,
                                     metadata: HashMap::from([
@@ -366,7 +370,7 @@ impl SecureNucleusDiscovery {
                                 }
                             })
                             .collect();
-                        
+
                         Ok(primals)
                     }
                     Err(e) => {
@@ -466,7 +470,7 @@ impl SecureNucleusDiscovery {
         if let Some(socket_path) = socket_path {
             // Step 1: Generate challenge (timestamp-based nonce)
             let challenge = format!("nucleus-challenge-{}-{}", primal.name, now);
-            
+
             // Step 2: Request primal to sign challenge via get_identity
             let client = UnixSocketClient::new(socket_path);
             let request = JsonRpcRequest::new(
@@ -485,17 +489,12 @@ impl SecureNucleusDiscovery {
                         .as_str()
                         .unwrap_or(&primal.name)
                         .to_string();
-                    let family_id = result["family_id"]
-                        .as_str()
-                        .map(|s| s.to_string());
+                    let family_id = result["family_id"].as_str().map(|s| s.to_string());
                     let signature = result["signature"]
                         .as_str()
                         .unwrap_or("unverified")
                         .to_string();
-                    let public_key = result["public_key"]
-                        .as_str()
-                        .unwrap_or("none")
-                        .to_string();
+                    let public_key = result["public_key"].as_str().unwrap_or("none").to_string();
 
                     // Step 4: Verify signature with BearDog (future implementation)
                     // For now, we trust the primal's self-reported identity
@@ -525,14 +524,14 @@ impl SecureNucleusDiscovery {
             }
         } else {
             // No Unix socket - can't perform challenge-response
-        Ok(IdentityProof {
-            node_id: primal.name.clone(),
+            Ok(IdentityProof {
+                node_id: primal.name.clone(),
                 family_id: None,
                 signature: "unverified".to_string(),
                 challenge: "no-socket".to_string(),
                 public_key: "none".to_string(),
-            timestamp: now,
-        })
+                timestamp: now,
+            })
         }
     }
 
@@ -569,7 +568,7 @@ impl SecureNucleusDiscovery {
                                 cap_response.version,
                                 cap_response.provided_capabilities.len()
                             );
-                            
+
                             // Convert PrimalCapabilityInfo to Capability
                             let mut capabilities = CapabilitySet::new();
                             for cap_info in cap_response.provided_capabilities {
@@ -578,7 +577,7 @@ impl SecureNucleusDiscovery {
                                 let cap: Capability = cap_info.capability_type.parse().unwrap();
                                 capabilities.add(cap);
                             }
-                            
+
                             // Validate against discovered capabilities (sanity check)
                             if capabilities.is_empty() {
                                 warn!(
@@ -591,7 +590,7 @@ impl SecureNucleusDiscovery {
                         }
                         Err(e) => {
                             debug!("Failed to parse capability response: {}", e);
-                    Ok(primal.capabilities.clone())
+                            Ok(primal.capabilities.clone())
                         }
                     }
                 }
@@ -638,19 +637,16 @@ impl SecureNucleusDiscovery {
                             _ if lineage.is_family_member => TrustLevel::Elevated,
                             _ => TrustLevel::Basic,
                         };
-                        
+
                         info!(
                             "   Trust evaluation: {} → {:?} (relationship: {})",
                             identity_proof.node_id, trust_level, lineage.relationship
                         );
-                        
+
                         Ok(trust_level)
                     }
                     Err(e) => {
-                        warn!(
-                            "Failed to verify lineage: {}, defaulting to Basic trust",
-                            e
-                        );
+                        warn!("Failed to verify lineage: {}, defaulting to Basic trust", e);
                         Ok(TrustLevel::Basic)
                     }
                 }
@@ -662,7 +658,7 @@ impl SecureNucleusDiscovery {
         } else {
             // Primal doesn't have a family_id
             debug!("Primal has no family_id, cannot verify lineage");
-        Ok(TrustLevel::Basic)
+            Ok(TrustLevel::Basic)
         }
     }
 

@@ -7,29 +7,38 @@
 // Core universal manager (now modular)
 pub mod universal_biomeos_manager;
 
+// Atomic client - Pure Rust, Tower-based Unix socket communication (ecoBin!)
+pub mod atomic_client;
+
 // Primal adapter pattern (CLI-agnostic integration)
 pub mod primal_adapter;
 
-// API adapter pattern (API-agnostic integration)
+// API adapter pattern (DEPRECATED - HTTP-based, use atomic_client!)
+#[cfg(feature = "http-transport")]
 pub mod api_adapter;
 
-// Encrypted storage layer (encryption-by-default)
+// Encrypted storage layer (DEPRECATED - uses HTTP clients)
+#[cfg(feature = "http-transport")]
 pub mod encrypted_storage;
 
 // Primal client infrastructure
 // TEMP DISABLED: Being refactored to proper concurrent architecture (see DEEP_DEBT_CONCURRENT_EVOLUTION_PLAN_JAN13.md)
 // Will re-enable after concurrent evolution is complete (91 errors need systematic fix)
-pub mod adaptive_client; // Adaptive HTTP client with version tolerance
+#[cfg(feature = "http-transport")]
+pub mod adaptive_client; // DEPRECATED: Adaptive HTTP client (use atomic_client instead!)
 pub mod capabilities; // Capability-based architecture (zero hardcoding)
 pub mod capability_registry; // Central capability registry with Unix socket IPC
-pub mod clients; // Modern client implementations (JSON-RPC, Unix sockets) - DEEP DEBT FIX IN PROGRESS
+#[cfg(feature = "http-transport")]
+pub mod clients; // DEPRECATED: HTTP-based clients (use atomic_client!)
 pub mod concurrent_startup; // Wave-based concurrent primal startup
 pub mod deployment_mode;
 pub mod discovery_bootstrap;
-pub mod discovery_http; // HTTP-based discovery implementation
+#[cfg(feature = "http-transport")]
+pub mod discovery_http; // DEPRECATED: HTTP-based discovery (use biomeos-federation instead!)
 pub mod discovery_modern; // Modern trait-based discovery
 pub mod family_credentials; // Secure family seed management
-pub mod primal_client;
+#[cfg(feature = "http-transport")]
+pub mod primal_client; // DEPRECATED: HTTP-based primal client (use atomic_client!)
 pub mod primal_discovery; // Auto-discovery of primals from directories
 pub mod primal_health; // Primal health monitoring
 pub mod primal_impls; // Concrete primal implementations
@@ -63,6 +72,11 @@ pub use universal_biomeos_manager::{
     GeneticAccessKey, PrimalInfo, PrimalStatistics, UniversalBiomeOSManager,
 };
 
+// Re-export atomic client (Pure Rust, Tower-based, ecoBin!)
+pub use atomic_client::{
+    AtomicClient, AtomicPrimalClient, ExecutionResult, JsonRpcRequest, JsonRpcResponse,
+};
+
 // Re-export core services
 pub use universal_biomeos_manager::{HealthMonitor, PrimalDiscoveryService};
 
@@ -72,10 +86,12 @@ pub use discovery_modern::{
     DiscoveryResult, HealthStatus as DiscoveryHealthStatus, PrimalDiscovery, PrimalType,
 };
 // Convenience alias for the most commonly used HealthStatus
+#[cfg(feature = "http-transport")]
 pub use discovery_http::{create_local_discovery, HttpDiscovery, HttpDiscoveryBuilder};
 pub use discovery_modern::HealthStatus;
 
-// Adaptive client infrastructure re-exports
+// Adaptive client infrastructure re-exports (DEPRECATED - use atomic_client!)
+#[cfg(feature = "http-transport")]
 pub use adaptive_client::{
     AdaptiveHttpClient, AdaptiveResponse, ApiVersion, BearDogResponse, BirdSongClient,
     BirdSongDecryptRequest, BirdSongDecryptResponse, BirdSongEncryptRequest,

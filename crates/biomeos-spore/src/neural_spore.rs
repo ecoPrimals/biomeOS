@@ -79,7 +79,8 @@ impl RollbackState {
                     let pid_to_check = *pid as i32;
                     let wait_for_exit = async {
                         let mut interval = tokio::time::interval(Duration::from_millis(10));
-                        for _ in 0..100 {  // Check for up to 1 second
+                        for _ in 0..100 {
+                            // Check for up to 1 second
                             interval.tick().await;
                             // Check if process still exists
                             if kill(Pid::from_raw(pid_to_check), None).is_err() {

@@ -81,8 +81,8 @@ impl Default for EventBroadcaster {
 mod tests {
     use super::*;
     use crate::state::{
-        Assignment, AssignmentStatus, Device, DeviceStatus, HealthMetrics,
-        LogEntry, LogLevel, PrimalInfo, PrimalStatus, Topology,
+        Assignment, AssignmentStatus, Device, DeviceStatus, HealthMetrics, LogEntry, LogLevel,
+        PrimalInfo, PrimalStatus, Topology,
     };
     use chrono::Utc;
     use std::collections::HashMap;
@@ -288,8 +288,7 @@ mod tests {
         let json = serde_json::to_string(&event).expect("Should serialize");
         assert!(json.contains("test error"));
 
-        let deserialized: UIEvent =
-            serde_json::from_str(&json).expect("Should deserialize");
+        let deserialized: UIEvent = serde_json::from_str(&json).expect("Should deserialize");
         match deserialized {
             UIEvent::Error { message } => assert_eq!(message, "test error"),
             _ => panic!("Wrong event type after deserialization"),

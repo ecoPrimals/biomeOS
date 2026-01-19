@@ -28,10 +28,30 @@
 //! let status = monitor.get_status(&primal_id).await;
 //! ```
 
+// Use BirdSongError if available, otherwise use a local error type
+#[cfg(feature = "http-transport")]
 use crate::adaptive_client::BirdSongError;
+
+#[cfg(not(feature = "http-transport"))]
+use HealthError as BirdSongError;
+
 use biomeos_types::identifiers::{Endpoint, PrimalId};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+
+/// Error type for health monitoring when HTTP transport is not available
+#[cfg(not(feature = "http-transport"))]
+#[derive(Debug, thiserror::Error)]
+pub enum HealthError {
+    #[error("Health check failed: {0}")]
+    HealthCheckFailed(String),
+
+    #[error("Connection failed: {0}")]
+    ConnectionFailed(String),
+
+    #[error("Integration error: {0}")]
+    Integration(String),
+}
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
@@ -151,6 +171,7 @@ impl Default for HealthMonitorConfig {
 pub struct PrimalHealthMonitor {
     config: HealthMonitorConfig,
     health_states: Arc<RwLock<HashMap<PrimalId, HealthState>>>,
+    #[cfg(feature = "http-transport")]
     http_client: reqwest::Client,
 }
 
@@ -173,6 +194,7 @@ impl PrimalHealthMonitor {
 
     /// Create a new health monitor with custom configuration
     pub fn with_config(config: HealthMonitorConfig) -> Self {
+        #[cfg(feature = "http-transport")]
         let http_client = reqwest::Client::builder()
             .timeout(config.check_timeout)
             .build()
@@ -181,6 +203,7 @@ impl PrimalHealthMonitor {
         Self {
             config,
             health_states: Arc::new(RwLock::new(HashMap::new())),
+            #[cfg(feature = "http-transport")]
             http_client,
         }
     }
@@ -217,7 +240,8 @@ impl PrimalHealthMonitor {
         );
     }
 
-    /// Check health of a specific primal
+    /// Check health of a specific primal (HTTP-based, DEPRECATED)
+    #[cfg(feature = "http-transport")]
     pub async fn check_health(&self, primal_id: &PrimalId) -> Result<HealthStatus, BirdSongError> {
         let states = self.health_states.read().await;
         let state = states.get(primal_id).ok_or_else(|| {
@@ -361,41 +385,55 @@ impl PrimalHealthMonitor {
     }
 
     /// Start continuous health monitoring (returns task handle)
+    /// Note: HTTP-based health checks only available with http-transport feature
     pub fn start_monitoring(self: Arc<Self>) -> tokio::task::JoinHandle<()> {
         let monitor = self.clone();
         tokio::spawn(async move {
-            info!(
-                "📊 Starting continuous health monitoring (interval: {:?})",
-                monitor.config.check_interval
-            );
+            #[cfg(feature = "http-transport")]
+            {
+                info!(
+                    "📊 Starting continuous health monitoring (interval: {:?})",
+                    monitor.config.check_interval
+                );
 
-            let mut interval = tokio::time::interval(monitor.config.check_interval);
-            interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+                let mut interval = tokio::time::interval(monitor.config.check_interval);
+                interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
-            loop {
-                interval.tick().await;
+                loop {
+                    interval.tick().await;
 
-                // Get list of primals to check
-                let primal_ids: Vec<PrimalId> = {
-                    let states = monitor.health_states.read().await;
-                    states.keys().cloned().collect()
-                };
+                    // Get list of primals to check
+                    let primal_ids: Vec<PrimalId> = {
+                        let states = monitor.health_states.read().await;
+                        states.keys().cloned().collect()
+                    };
 
-                // Check each primal concurrently
-                let checks: Vec<_> = primal_ids
-                    .iter()
-                    .map(|id| {
-                        let monitor = monitor.clone();
-                        let primal_id = id.clone();
-                        async move {
-                            if let Err(e) = monitor.check_health(&primal_id).await {
-                                error!("Health check error for {}: {}", primal_id, e);
+                    // Check each primal concurrently
+                    let checks: Vec<_> = primal_ids
+                        .iter()
+                        .map(|id| {
+                            let monitor = monitor.clone();
+                            let primal_id = id.clone();
+                            async move {
+                                if let Err(e) = monitor.check_health(&primal_id).await {
+                                    error!("Health check error for {}: {}", primal_id, e);
+                                }
                             }
-                        }
-                    })
-                    .collect();
+                        })
+                        .collect();
 
-                futures::future::join_all(checks).await;
+                    futures::future::join_all(checks).await;
+                }
+            }
+
+            #[cfg(not(feature = "http-transport"))]
+            {
+                warn!("📊 Health monitoring disabled (http-transport feature not enabled)");
+                warn!("   For Pure Rust health checks, use atomic_client directly");
+                // Keep task alive but do nothing
+                loop {
+                    tokio::time::sleep(std::time::Duration::from_secs(3600)).await;
+                }
             }
         })
     }

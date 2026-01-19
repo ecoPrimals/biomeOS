@@ -1,9 +1,10 @@
-//! HTTP/HTTPS Transport (DEPRECATED - Fallback Only)
+//! HTTP/HTTPS Transport (DEPRECATED - Use atomic_client!)
 //!
-//! **⚠️ WARNING: This transport is deprecated and insecure**
+//! **⚠️ WARNING: This transport is deprecated and has C dependencies**
 //!
 //! ## Issues
 //!
+//! - **C Dependencies**: reqwest -> openssl-sys (blocks ecoBin!)
 //! - **Cleartext**: No encryption (HTTP)
 //! - **Slow**: ~10ms localhost overhead (vs 0.1ms Unix socket)
 //! - **Non-Isomorphic**: Request/response only (no streaming)
@@ -11,13 +12,12 @@
 //!
 //! ## Migration Path
 //!
-//! All primals are evolving to JSON-RPC over Unix sockets.
-//! This fallback exists only for:
-//! 1. Legacy compatibility during migration
-//! 2. Development environments without Unix sockets
-//! 3. Remote communication (until tarpc is ready)
+//! All primals are evolving to JSON-RPC over Unix sockets via `atomic_client`.
+//! This module is feature-gated and only available with `http-transport` feature.
 //!
-//! **DO NOT USE FOR PRODUCTION unless explicitly required!**
+//! **DO NOT USE - Use `atomic_client` instead!**
+
+#![cfg(feature = "http-transport")]
 
 use anyhow::{Context, Result};
 use reqwest::Client;

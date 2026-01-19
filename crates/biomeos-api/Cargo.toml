@@ -40,8 +40,8 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 anyhow = "1"
 thiserror = "1"
 
-# HTTP client (for querying primals)
-reqwest = { version = "0.11", features = ["json"] }
+# HTTP client DEPRECATED: Use atomic_client (Unix sockets) for primal queries
+# reqwest = { version = "0.11", features = ["json"] } # REMOVED - Use Songbird/BearDog
 
 # Configuration
 config = "0.14"
@@ -53,4 +53,5 @@ uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 
 [dev-dependencies]
-reqwest = { version = "0.12", features = ["json"] }
+# Testing HTTP client - can be used for Tower atomic benchmarks
+reqwest = { version = "0.12", features = ["json"], optional = false } # For testing/benchmarking only

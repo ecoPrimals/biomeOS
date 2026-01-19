@@ -13,7 +13,7 @@ use tokio::net::UnixListener;
 use tokio::sync::oneshot;
 
 /// Test Unix socket health check with successful response
-/// 
+///
 /// **Concurrency**: Uses oneshot channel for server readiness (no sleep!)
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_unix_socket_health_check_success() {
@@ -28,21 +28,21 @@ async fn test_unix_socket_health_check_success() {
     let socket_path_clone = socket_path.clone();
     let server_handle = tokio::spawn(async move {
         let listener = UnixListener::bind(&socket_path_clone).unwrap();
-        
+
         // Signal ready immediately after bind
         let _ = ready_tx.send(());
-        
+
         if let Ok((stream, _)) = listener.accept().await {
             let (read, mut write) = stream.into_split();
             let mut reader = BufReader::new(read);
             let mut request_line = String::new();
-            
+
             // Read request
             if reader.read_line(&mut request_line).await.is_ok() {
                 // Parse and verify it's a health check request
                 if let Ok(req) = serde_json::from_str::<serde_json::Value>(&request_line) {
                     assert_eq!(req["method"], "health.check");
-                    
+
                     // Send healthy response
                     let response = serde_json::json!({
                         "jsonrpc": "2.0",
@@ -51,7 +51,7 @@ async fn test_unix_socket_health_check_success() {
                         },
                         "id": req["id"]
                     });
-                    
+
                     let response_str = serde_json::to_string(&response).unwrap() + "\n";
                     write.write_all(response_str.as_bytes()).await.unwrap();
                 }
@@ -88,12 +88,12 @@ async fn test_unix_socket_health_check_unhealthy() {
     let server_handle = tokio::spawn(async move {
         let listener = UnixListener::bind(&socket_path_clone).unwrap();
         let _ = ready_tx.send(());
-        
+
         if let Ok((stream, _)) = listener.accept().await {
             let (read, mut write) = stream.into_split();
             let mut reader = BufReader::new(read);
             let mut request_line = String::new();
-            
+
             if reader.read_line(&mut request_line).await.is_ok() {
                 if let Ok(req) = serde_json::from_str::<serde_json::Value>(&request_line) {
                     // Send unhealthy response
@@ -104,7 +104,7 @@ async fn test_unix_socket_health_check_unhealthy() {
                         },
                         "id": req["id"]
                     });
-                    
+
                     let response_str = serde_json::to_string(&response).unwrap() + "\n";
                     write.write_all(response_str.as_bytes()).await.unwrap();
                 }
@@ -118,9 +118,15 @@ async fn test_unix_socket_health_check_unhealthy() {
     let client = BearDogClient::with_endpoint(endpoint).unwrap();
     let result = client.health_check().await;
 
-    assert!(result.is_err(), "Health check should fail for unhealthy status");
+    assert!(
+        result.is_err(),
+        "Health check should fail for unhealthy status"
+    );
     if let Err(e) = result {
-        assert!(e.to_string().contains("unhealthy"), "Error should mention unhealthy status");
+        assert!(
+            e.to_string().contains("unhealthy"),
+            "Error should mention unhealthy status"
+        );
     }
 
     server_handle.abort();
@@ -130,12 +136,15 @@ async fn test_unix_socket_health_check_unhealthy() {
 #[tokio::test]
 async fn test_unix_socket_health_check_no_socket() {
     let socket_path = PathBuf::from("/tmp/nonexistent-beardog-socket-12345.sock");
-    
+
     let endpoint = format!("unix://{}", socket_path.display());
     let client = BearDogClient::with_endpoint(endpoint).unwrap();
     let result = client.health_check().await;
 
-    assert!(result.is_err(), "Health check should fail when socket doesn't exist");
+    assert!(
+        result.is_err(),
+        "Health check should fail when socket doesn't exist"
+    );
     if let Err(e) = result {
         let error_msg = e.to_string();
         assert!(
@@ -161,7 +170,7 @@ async fn test_unix_socket_health_check_timeout() {
     let server_handle = tokio::spawn(async move {
         let listener = UnixListener::bind(&socket_path_clone).unwrap();
         let _ = ready_tx.send(());
-        
+
         if let Ok((stream, _)) = listener.accept().await {
             // Accept connection but never send response - just hold it open
             // No sleep needed - we want to test timeout behavior
@@ -174,19 +183,20 @@ async fn test_unix_socket_health_check_timeout() {
 
     let endpoint = format!("unix://{}", socket_path.display());
     let client = BearDogClient::with_endpoint(endpoint).unwrap();
-    
+
     // Health check should either timeout or complete
     // Using tokio timeout to ensure test doesn't hang
-    let result = tokio::time::timeout(
-        std::time::Duration::from_secs(5),
-        client.health_check()
-    ).await;
+    let result =
+        tokio::time::timeout(std::time::Duration::from_secs(5), client.health_check()).await;
 
     // Either the health check completed (with error) OR tokio timeout fired
     match result {
         Ok(health_result) => {
             // Health check completed - it should have failed (no response from server)
-            assert!(health_result.is_err(), "Health check should fail when server doesn't respond");
+            assert!(
+                health_result.is_err(),
+                "Health check should fail when server doesn't respond"
+            );
         }
         Err(_elapsed) => {
             // Tokio timeout fired - this is also acceptable (means no internal timeout yet)
@@ -212,12 +222,12 @@ async fn test_unix_socket_health_check_invalid_response() {
     let server_handle = tokio::spawn(async move {
         let listener = UnixListener::bind(&socket_path_clone).unwrap();
         let _ = ready_tx.send(());
-        
+
         if let Ok((stream, _)) = listener.accept().await {
             let (read, mut write) = stream.into_split();
             let mut reader = BufReader::new(read);
             let mut request_line = String::new();
-            
+
             if reader.read_line(&mut request_line).await.is_ok() {
                 // Send invalid JSON
                 write.write_all(b"invalid json response\n").await.unwrap();
@@ -232,8 +242,10 @@ async fn test_unix_socket_health_check_invalid_response() {
     let result = client.health_check().await;
 
     // Should handle invalid response gracefully
-    assert!(result.is_err() || result.is_ok(), "Should handle invalid response");
+    assert!(
+        result.is_err() || result.is_ok(),
+        "Should handle invalid response"
+    );
 
     server_handle.abort();
 }
-

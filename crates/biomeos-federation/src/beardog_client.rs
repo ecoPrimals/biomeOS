@@ -114,7 +114,7 @@ impl BearDogClient {
             BearDogEndpoint::UnixSocket(path) => {
                 // Complete implementation: JSON-RPC health check over Unix socket
                 let client = UnixSocketClient::new(path);
-                
+
                 // First check if socket exists
                 if !client.is_available() {
                     return Err(anyhow::anyhow!(
@@ -122,41 +122,34 @@ impl BearDogClient {
                         path.display()
                     ));
                 }
-                
+
                 // Call health.check method
                 let result = client
                     .call_method("health.check", serde_json::json!({}))
                     .await
                     .context("Unix socket health check failed")?;
-                
+
                 // Check if response indicates healthy status
                 if let Some(status) = result.get("status").and_then(|v| v.as_str()) {
                     if status == "healthy" || status == "ok" {
                         Ok(())
                     } else {
-                        Err(anyhow::anyhow!("BearDog reports unhealthy status: {}", status))
+                        Err(anyhow::anyhow!(
+                            "BearDog reports unhealthy status: {}",
+                            status
+                        ))
                     }
                 } else {
                     // If no status field, successful response means healthy
                     Ok(())
                 }
             }
-            BearDogEndpoint::Http(url) => {
-                let client = reqwest::Client::new();
-                let response = client
-                    .get(format!("{}/health", url))
-                    .send()
-                    .await
-                    .context("Failed to connect to BearDog")?;
-
-                if response.status().is_success() {
-                    Ok(())
-                } else {
-                    Err(anyhow::anyhow!(
-                        "BearDog health check failed: {}",
-                        response.status()
-                    ))
-                }
+            BearDogEndpoint::Http(_url) => {
+                // DEPRECATED: BearDog only uses Unix sockets (no HTTP)
+                // HTTP has been moved to Songbird (Concentrated Gap strategy)
+                Err(anyhow::anyhow!(
+                    "HTTP endpoint deprecated - BearDog uses Unix sockets only"
+                ))
             }
         }
     }
@@ -195,32 +188,11 @@ impl BearDogClient {
                         .to_string(),
                 })
             }
-            BearDogEndpoint::Http(url) => {
-                #[derive(Serialize)]
-                struct HttpRequest {
-                    family_id: String,
-                    seed_hash: String,
-                    node_id: String,
-                }
-
-                let request = HttpRequest {
-                    family_id: family_id.to_string(),
-                    seed_hash: seed_hash.to_string(),
-                    node_id: node_id.to_string(),
-                };
-
-                let client = reqwest::Client::new();
-                let response: LineageVerificationResponse = client
-                    .post(format!("{}/api/v1/lineage/verify_family", url))
-                    .json(&request)
-                    .send()
-                    .await
-                    .context("Failed to send lineage verification request")?
-                    .json()
-                    .await
-                    .context("Failed to parse lineage verification response")?;
-
-                Ok(response)
+            BearDogEndpoint::Http(_url) => {
+                // DEPRECATED: BearDog only uses Unix sockets (no HTTP)
+                Err(anyhow::anyhow!(
+                    "HTTP endpoint deprecated - BearDog uses Unix sockets only"
+                ))
             }
         }
     }
@@ -255,19 +227,11 @@ impl BearDogClient {
                     created_at: result["created_at"].as_str().unwrap_or("").to_string(),
                 })
             }
-            BearDogEndpoint::Http(url) => {
-                let client = reqwest::Client::new();
-                let response: KeyDerivationResponse = client
-                    .post(format!("{}/api/v1/keys/derive_subfed_key", url))
-                    .json(&request)
-                    .send()
-                    .await
-                    .context("Failed to send key derivation request")?
-                    .json()
-                    .await
-                    .context("Failed to parse key derivation response")?;
-
-                Ok(response)
+            BearDogEndpoint::Http(_url) => {
+                // DEPRECATED: BearDog only uses Unix sockets (no HTTP)
+                Err(anyhow::anyhow!(
+                    "HTTP endpoint deprecated - BearDog uses Unix sockets only"
+                ))
             }
         }
     }
@@ -299,33 +263,11 @@ impl BearDogClient {
                     tag: result["tag"].as_str().unwrap_or("").to_string(),
                 })
             }
-            BearDogEndpoint::Http(url) => {
-                #[derive(Serialize)]
-                struct HttpEncryptRequest {
-                    data: String,
-                    key_ref: String,
-                }
-
-                use base64::Engine;
-                let engine = base64::engine::general_purpose::STANDARD;
-
-                let request = HttpEncryptRequest {
-                    data: engine.encode(data),
-                    key_ref: key_ref.to_string(),
-                };
-
-                let client = reqwest::Client::new();
-                let response: EncryptResponse = client
-                    .post(format!("{}/api/v1/encrypt", url))
-                    .json(&request)
-                    .send()
-                    .await
-                    .context("Failed to send encryption request")?
-                    .json()
-                    .await
-                    .context("Failed to parse encryption response")?;
-
-                Ok(response)
+            BearDogEndpoint::Http(_url) => {
+                // DEPRECATED: BearDog only uses Unix sockets (no HTTP)
+                Err(anyhow::anyhow!(
+                    "HTTP endpoint deprecated - BearDog uses Unix sockets only"
+                ))
             }
         }
     }
@@ -361,43 +303,11 @@ impl BearDogClient {
                     .decode(data_b64)
                     .context("Failed to decode decrypted data")
             }
-            BearDogEndpoint::Http(url) => {
-                #[derive(Serialize)]
-                struct DecryptRequest {
-                    encrypted_data: String,
-                    nonce: String,
-                    tag: String,
-                    key_ref: String,
-                }
-
-                #[derive(Deserialize)]
-                struct DecryptResponse {
-                    data: String,
-                }
-
-                let request = DecryptRequest {
-                    encrypted_data: encrypted_data.to_string(),
-                    nonce: nonce.to_string(),
-                    tag: tag.to_string(),
-                    key_ref: key_ref.to_string(),
-                };
-
-                let client = reqwest::Client::new();
-                let response: DecryptResponse = client
-                    .post(format!("{}/api/v1/decrypt", url))
-                    .json(&request)
-                    .send()
-                    .await
-                    .context("Failed to send decryption request")?
-                    .json()
-                    .await
-                    .context("Failed to parse decryption response")?;
-
-                use base64::Engine;
-                let engine = base64::engine::general_purpose::STANDARD;
-                engine
-                    .decode(&response.data)
-                    .context("Failed to decode decrypted data")
+            BearDogEndpoint::Http(_url) => {
+                // DEPRECATED: BearDog only uses Unix sockets (no HTTP)
+                Err(anyhow::anyhow!(
+                    "HTTP endpoint deprecated - BearDog uses Unix sockets only"
+                ))
             }
         }
     }

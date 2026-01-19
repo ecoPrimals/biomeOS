@@ -3,7 +3,7 @@
 //! Handles service creation, scaling, auto-scaling, and status queries.
 //! Coordinates with Toadstool for compute orchestration.
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use serde::Serialize;
 use std::collections::HashMap;
 use std::path::Path;
@@ -300,47 +300,38 @@ impl UniversalBiomeOSManager {
         ))
     }
 
-    /// Scale service via primal's scaling API
+    /// Scale service via primal's scaling API (Pure Rust via Unix socket!)
     pub(super) async fn scale_service_integration(
         &self,
         primal: &PrimalInfo,
         replicas: u32,
     ) -> Result<ScaleResult> {
-        tracing::debug!("Scaling service {} to {} replicas", primal.name, replicas);
+        tracing::debug!(
+            "🚀 Scaling service {} to {} replicas via atomic client",
+            primal.name,
+            replicas
+        );
 
-        let scale_url = format!("{}/api/v1/scale", primal.endpoint);
-
-        // Create HTTP client
-        let client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(30))
-            .build()?;
+        // Use Pure Rust atomic client (Tower-based, Unix sockets)
+        let client = crate::atomic_client::AtomicClient::discover(&primal.name)
+            .await
+            .with_context(|| format!("Failed to discover primal: {}", primal.name))?;
 
         // Build scale request
         let scale_request = serde_json::json!({
             "target_replicas": replicas
         });
 
-        // Execute scaling via primal API
-        match client.post(&scale_url).json(&scale_request).send().await {
-            Ok(response) => {
-                if response.status().is_success() {
-                    match response.json::<serde_json::Value>().await {
-                        Ok(result) => Ok(ScaleResult {
-                            current_replicas: result["current_replicas"].as_u64().unwrap_or(1)
-                                as u32,
-                            target_replicas: replicas,
-                            status: result["status"].as_str().unwrap_or("scaling").to_string(),
-                        }),
-                        Err(e) => {
-                            tracing::error!("Failed to parse scale response: {}", e);
-                            Err(anyhow::anyhow!("Failed to parse scale response: {}", e))
-                        }
-                    }
-                } else {
-                    let error_msg = format!("Scaling failed with status: {}", response.status());
-                    tracing::error!("{}", error_msg);
-                    Err(anyhow::anyhow!(error_msg))
-                }
+        // Execute scaling via JSON-RPC over Unix socket (Pure Rust!)
+        match client.call("scale_service", scale_request).await {
+            Ok(result) => {
+                tracing::debug!("✅ Scaling completed for {}", primal.name);
+
+                Ok(ScaleResult {
+                    current_replicas: result["current_replicas"].as_u64().unwrap_or(1) as u32,
+                    target_replicas: replicas,
+                    status: result["status"].as_str().unwrap_or("scaling").to_string(),
+                })
             }
             Err(e) => {
                 tracing::error!("Failed to scale service {}: {}", primal.name, e);

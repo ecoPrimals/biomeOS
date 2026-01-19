@@ -456,10 +456,10 @@ mod tests {
     fn test_sse_event_parsing() {
         // Test valid SSE event format
         let sse_text = "event: graph_event\ndata: {\"type\":\"graph_event\",\"graph_id\":\"test123\",\"node_id\":\"node1\",\"event_type\":\"started\",\"timestamp\":\"2026-01-15T12:00:00Z\",\"details\":{}}";
-        
+
         let event = RealTimeEventSubscriber::parse_sse_event(sse_text);
         assert!(event.is_some());
-        
+
         match event.unwrap() {
             RealTimeEvent::GraphEvent { graph_id, .. } => {
                 assert_eq!(graph_id, "test123");
@@ -472,7 +472,7 @@ mod tests {
     fn test_sse_event_parsing_no_event_type() {
         // SSE with only data field
         let sse_text = "data: {\"type\":\"heartbeat\",\"timestamp\":12345,\"primals_count\":5,\"healthy_count\":5}";
-        
+
         let event = RealTimeEventSubscriber::parse_sse_event(sse_text);
         assert!(event.is_some());
     }
@@ -481,7 +481,7 @@ mod tests {
     fn test_sse_event_parsing_invalid() {
         // Invalid JSON in data field
         let sse_text = "event: test\ndata: invalid json";
-        
+
         let event = RealTimeEventSubscriber::parse_sse_event(sse_text);
         assert!(event.is_none());
     }
@@ -490,7 +490,7 @@ mod tests {
     fn test_sse_event_parsing_no_data() {
         // SSE with no data field
         let sse_text = "event: test_event";
-        
+
         let event = RealTimeEventSubscriber::parse_sse_event(sse_text);
         assert!(event.is_none());
     }
@@ -570,7 +570,11 @@ mod tests {
 
         let deserialized: RealTimeEvent = serde_json::from_str(&json).unwrap();
         match deserialized {
-            RealTimeEvent::GraphEvent { graph_id, event_type, .. } => {
+            RealTimeEvent::GraphEvent {
+                graph_id,
+                event_type,
+                ..
+            } => {
                 assert_eq!(graph_id, "test_graph");
                 assert_eq!(event_type, "completed");
             }
@@ -591,7 +595,11 @@ mod tests {
         let deserialized: RealTimeEvent = serde_json::from_str(&json).unwrap();
 
         match deserialized {
-            RealTimeEvent::HealthChanged { old_health, new_health, .. } => {
+            RealTimeEvent::HealthChanged {
+                old_health,
+                new_health,
+                ..
+            } => {
                 assert_eq!(old_health, "degraded");
                 assert_eq!(new_health, "healthy");
             }
@@ -670,7 +678,7 @@ mod tests {
     async fn test_event_handler_creation() {
         let subscriber = Arc::new(RealTimeEventSubscriber::new("test_family".to_string()));
         let handler = RealTimeEventHandler::new(subscriber);
-        
+
         // Handler should be created successfully
         assert!(true); // If we get here, creation succeeded
     }
@@ -680,7 +688,7 @@ mod tests {
         let subscriber = RealTimeEventSubscriber::new("test_family".to_string());
         let rx1 = subscriber.subscribe();
         let rx2 = subscriber.subscribe();
-        
+
         // Both subscriptions should be independent
         assert!(true); // If we get here, subscriptions work
     }
@@ -689,7 +697,7 @@ mod tests {
     fn test_sse_multiline_data() {
         // SSE with multiline data (valid JSON split across lines)
         let sse_text = "event: test\ndata: {\"type\":\"heartbeat\",\ndata: \"timestamp\":12345,\ndata: \"primals_count\":5,\"healthy_count\":5}";
-        
+
         // This should fail to parse (our implementation expects data on one line)
         let event = RealTimeEventSubscriber::parse_sse_event(sse_text);
         assert!(event.is_none());
@@ -699,10 +707,10 @@ mod tests {
     fn test_jsonrpc_notification_structure() {
         // Test that we can parse JSON-RPC notifications
         let json = r#"{"jsonrpc":"2.0","method":"event.notify","params":{"event":{"type":"heartbeat","timestamp":12345,"primals_count":5,"healthy_count":5}}}"#;
-        
+
         let notification: serde_json::Result<serde_json::Value> = serde_json::from_str(json);
         assert!(notification.is_ok());
-        
+
         let notif = notification.unwrap();
         assert_eq!(notif["jsonrpc"], "2.0");
         assert_eq!(notif["method"], "event.notify");

@@ -23,14 +23,15 @@ chrono = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = "0.3"
-reqwest = { workspace = true }
+reqwest = { workspace = true, optional = true }  # DEPRECATED: HTTP transport (use atomic_client instead)
 futures = "0.3"
 hex = "0.4"
 clap = { version = "4.5", features = ["derive", "env"] }
 
 # Configuration and environment
 config = { workspace = true }
-dirs = { workspace = true }
+# dirs = { workspace = true }  # DEPRECATED: Uses dirs-sys (C dependency)
+etcetera = { workspace = true }  # Pure Rust replacement
 toml = "0.8"
 
 # Utilities
@@ -63,3 +64,9 @@ criterion = { workspace = true }
 # Test utilities
 serde_json = { workspace = true }
 tracing-test = "0.2"
+
+[features]
+default = []
+# DEPRECATED: HTTP transport (C dependencies via reqwest->openssl-sys)
+# Use atomic_client for Pure Rust Unix socket communication instead
+http-transport = ["reqwest"]

@@ -4,7 +4,10 @@
 // Licensed under the Affero General Public License v3.0 or later with Sovran Exemption 1.0.
 // See LICENSE file in the project root or visit https://www.gnu.org/licenses/agpl-3.0.html
 
-//! Universal Primal Client - Dynamic API Adaptation
+//! Universal Primal Client - Dynamic API Adaptation (DEPRECATED - Use atomic_client!)
+//!
+//! ⚠️ WARNING: This module uses HTTP transport with C dependencies (reqwest->openssl-sys).
+//! ⚠️ For ecoBin-compliant Pure Rust communication, use `atomic_client` with Unix sockets.
 //!
 //! This module provides a universal client that can interact with any primal
 //! by discovering and adapting to its API schema at runtime.
@@ -12,6 +15,8 @@
 //! # Philosophy
 //!
 //! **Zero API Coupling**: biomeOS adapts to primal APIs, not the other way around.
+
+#![cfg(feature = "http-transport")]
 //!
 //! Instead of hardcoded client wrappers for each primal, the Universal Primal Client:
 //! 1. Fetches the primal's API schema from `/api/schema`

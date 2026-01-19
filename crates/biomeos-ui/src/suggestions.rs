@@ -646,7 +646,10 @@ mod tests {
 
         let suggestions = manager.request_suggestions(context).await.unwrap();
         assert!(suggestions.len() > 0);
-        assert_eq!(suggestions[0].suggestion_type, SuggestionType::DeviceAssignment);
+        assert_eq!(
+            suggestions[0].suggestion_type,
+            SuggestionType::DeviceAssignment
+        );
     }
 
     #[tokio::test]
@@ -703,7 +706,9 @@ mod tests {
             },
         };
 
-        manager.active_suggestions.insert(suggestion.id.clone(), suggestion);
+        manager
+            .active_suggestions
+            .insert(suggestion.id.clone(), suggestion);
 
         let active = manager.get_active_suggestions();
         assert_eq!(active.len(), 1);
@@ -732,10 +737,15 @@ mod tests {
             },
         };
 
-        manager.active_suggestions.insert(suggestion.id.clone(), suggestion.clone());
+        manager
+            .active_suggestions
+            .insert(suggestion.id.clone(), suggestion.clone());
         assert_eq!(manager.active_suggestions.len(), 1);
 
-        manager.send_feedback(&suggestion.id, SuggestionFeedback::Accepted).await.unwrap();
+        manager
+            .send_feedback(&suggestion.id, SuggestionFeedback::Accepted)
+            .await
+            .unwrap();
         assert_eq!(manager.active_suggestions.len(), 0);
     }
 
@@ -760,14 +770,19 @@ mod tests {
             },
         };
 
-        manager.active_suggestions.insert(suggestion.id.clone(), suggestion.clone());
+        manager
+            .active_suggestions
+            .insert(suggestion.id.clone(), suggestion.clone());
 
-        manager.send_feedback(
-            &suggestion.id,
-            SuggestionFeedback::Rejected {
-                reason: "Too expensive".to_string(),
-            },
-        ).await.unwrap();
+        manager
+            .send_feedback(
+                &suggestion.id,
+                SuggestionFeedback::Rejected {
+                    reason: "Too expensive".to_string(),
+                },
+            )
+            .await
+            .unwrap();
 
         assert_eq!(manager.active_suggestions.len(), 0);
     }
@@ -795,9 +810,14 @@ mod tests {
             },
         };
 
-        manager.active_suggestions.insert(suggestion.id.clone(), suggestion.clone());
+        manager
+            .active_suggestions
+            .insert(suggestion.id.clone(), suggestion.clone());
 
-        manager.send_feedback(&suggestion.id, SuggestionFeedback::Dismissed).await.unwrap();
+        manager
+            .send_feedback(&suggestion.id, SuggestionFeedback::Dismissed)
+            .await
+            .unwrap();
 
         // Dismissed feedback should NOT remove the suggestion
         assert_eq!(manager.active_suggestions.len(), 1);
@@ -819,7 +839,10 @@ mod tests {
             impact: Impact {
                 performance_improvement: Some(18.5),
                 cost_change: Some("$0".to_string()),
-                affected_primals: vec!["overloaded_primal".to_string(), "underutilized_primal".to_string()],
+                affected_primals: vec![
+                    "overloaded_primal".to_string(),
+                    "underutilized_primal".to_string(),
+                ],
                 risk_level: "low".to_string(),
             },
         };
@@ -891,7 +914,10 @@ mod tests {
                 health: "healthy".to_string(),
                 load: Some(0.5),
             }],
-            recent_events: Some(vec!["device_added".to_string(), "primal_started".to_string()]),
+            recent_events: Some(vec![
+                "device_added".to_string(),
+                "primal_started".to_string(),
+            ]),
             preferences: Some(preferences),
         };
 
@@ -899,6 +925,9 @@ mod tests {
         assert_eq!(context.available_devices.len(), 1);
         assert_eq!(context.running_primals.len(), 1);
         assert_eq!(context.recent_events.as_ref().unwrap().len(), 2);
-        assert_eq!(context.preferences.as_ref().unwrap().get("prefer_low_cost"), Some(&"true".to_string()));
+        assert_eq!(
+            context.preferences.as_ref().unwrap().get("prefer_low_cost"),
+            Some(&"true".to_string())
+        );
     }
 }

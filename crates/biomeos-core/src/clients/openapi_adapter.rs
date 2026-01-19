@@ -4,7 +4,10 @@
 // Licensed under the Affero General Public License v3.0 or later with Sovran Exemption 1.0.
 // See LICENSE file in the project root or visit https://www.gnu.org/licenses/agpl-3.0.html
 
-//! OpenAPI v3 Adapter for Dynamic API Interaction
+//! OpenAPI v3 Adapter for Dynamic API Interaction (DEPRECATED - Use atomic_client!)
+//!
+//! ⚠️ WARNING: This module uses HTTP transport with C dependencies (reqwest->openssl-sys).
+//! ⚠️ For ecoBin-compliant Pure Rust communication, use `atomic_client` with Unix sockets.
 //!
 //! This adapter enables biomeOS to interact with any primal that provides an
 //! OpenAPI v3 specification, without requiring hardcoded client wrappers.
@@ -14,6 +17,8 @@
 //! ```text
 //! Primal (/api/schema) → OpenAPI Spec → OpenApiAdapter → Dynamic Requests
 //! ```
+
+#![cfg(feature = "http-transport")]
 //!
 //! # Example
 //!

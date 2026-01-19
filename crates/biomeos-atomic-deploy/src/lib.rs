@@ -22,6 +22,7 @@
 //!     └─→ Neural API Reporter (graph execution)
 //! ```
 
+pub mod beardog_jwt_client; // NEW: BearDog JWT integration for orchestrator
 pub mod deployment_graph;
 pub mod health_check;
 pub mod orchestrator;

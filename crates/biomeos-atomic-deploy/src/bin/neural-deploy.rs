@@ -22,7 +22,7 @@ async fn main() -> Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::filter::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::filter::EnvFilter::new("info"))
+                .unwrap_or_else(|_| tracing_subscriber::filter::EnvFilter::new("info")),
         )
         .init();
 
@@ -68,8 +68,8 @@ async fn main() -> Result<()> {
         );
     }
 
-    let mut stream = UnixStream::connect(&socket_path)
-        .context("Failed to connect to Neural API server")?;
+    let mut stream =
+        UnixStream::connect(&socket_path).context("Failed to connect to Neural API server")?;
 
     info!("✅ Connected to Neural API");
     info!("");
@@ -98,8 +98,8 @@ async fn main() -> Result<()> {
         .read_line(&mut response_line)
         .context("Failed to read response")?;
 
-    let response: serde_json::Value = serde_json::from_str(&response_line)
-        .context("Failed to parse response")?;
+    let response: serde_json::Value =
+        serde_json::from_str(&response_line).context("Failed to parse response")?;
 
     if let Some(error) = response.get("error") {
         anyhow::bail!("Execution failed: {}", error);
@@ -131,4 +131,3 @@ async fn main() -> Result<()> {
 
     Ok(())
 }
-

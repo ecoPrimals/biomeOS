@@ -4,7 +4,10 @@
 // Licensed under the Affero General Public License v3.0 or later with Sovran Exemption 1.0.
 // See LICENSE file in the project root or visit https://www.gnu.org/licenses/agpl-3.0.html
 
-//! Encrypted Storage Layer for NUCLEUS
+//! Encrypted Storage Layer for NUCLEUS (DEPRECATED - Use atomic_client!)
+//!
+//! ⚠️ WARNING: This module uses HTTP transport with C dependencies (reqwest->openssl-sys).
+//! ⚠️ For ecoBin-compliant Pure Rust communication, use `atomic_client` with Unix sockets.
 //!
 //! This module provides encryption-by-default for all data stored in NestGate.
 //! All operations transparently encrypt data before storage and decrypt after retrieval.
@@ -18,6 +21,8 @@
 //!     ├→ BearDog (encryption/decryption)
 //!     └→ NestGate (storage backend)
 //! ```
+
+#![cfg(feature = "http-transport")]
 //!
 //! # Features
 //!

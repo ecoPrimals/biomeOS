@@ -454,8 +454,7 @@ mod tests {
         assert!(json.contains("gpu"));
 
         // Deserialize
-        let deserialized: Device =
-            serde_json::from_str(&json).expect("Should deserialize");
+        let deserialized: Device = serde_json::from_str(&json).expect("Should deserialize");
         assert_eq!(deserialized.id, "test-device");
         assert_eq!(deserialized.device_type, "gpu");
     }
@@ -479,8 +478,7 @@ mod tests {
         assert!(json.contains("test-primal"));
         assert!(json.contains("beardog"));
 
-        let deserialized: PrimalInfo =
-            serde_json::from_str(&json).expect("Should deserialize");
+        let deserialized: PrimalInfo = serde_json::from_str(&json).expect("Should deserialize");
         assert_eq!(deserialized.id, "test-primal");
         assert_eq!(deserialized.name, "beardog");
         assert_eq!(deserialized.health.uptime, 3600);

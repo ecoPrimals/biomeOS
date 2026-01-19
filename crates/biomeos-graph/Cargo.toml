@@ -34,7 +34,9 @@ chrono = { workspace = true }
 petgraph = "0.6"
 
 # Database for metrics storage
-rusqlite = { version = "0.32", features = ["bundled"] }
+# rusqlite = { version = "0.32", features = ["bundled"] }  # DEPRECATED: Uses libsqlite3-sys (C dependency)
+# redb = "2.1"  # Pure Rust BUT fails cross-compilation (ARM64, macOS)
+sled = "0.34"  # Pure Rust embedded database - BearDog's proven ecoBin solution!
 
 # biomeOS dependencies
 biomeos-types = { path = "../biomeos-types" }

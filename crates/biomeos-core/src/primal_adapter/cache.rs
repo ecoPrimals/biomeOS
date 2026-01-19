@@ -12,10 +12,10 @@ pub struct AdapterCache {
 impl AdapterCache {
     /// Create new cache
     pub fn new() -> Result<Self> {
-        let cache_dir = dirs::home_dir()
-            .context("Could not find home directory")?
-            .join(".biomeos")
-            .join("primal_adapters");
+        // Use etcetera (Pure Rust!) for home directory
+        use etcetera::base_strategy::{choose_base_strategy, BaseStrategy};
+        let strategy = choose_base_strategy().context("Could not determine base strategy")?;
+        let cache_dir = strategy.home_dir().join(".biomeos").join("primal_adapters");
 
         std::fs::create_dir_all(&cache_dir)?;
 

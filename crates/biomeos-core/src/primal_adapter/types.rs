@@ -242,7 +242,8 @@ impl PrimalAdapter {
         Ok(())
     }
 
-    /// Check if primal is healthy
+    /// Check if primal is healthy (HTTP-based, DEPRECATED)
+    #[cfg(feature = "http-transport")]
     pub async fn check_health(&self) -> Result<bool> {
         if let Some(health_config) = &self.capabilities.health_check {
             let port = match &self.state {
@@ -265,6 +266,13 @@ impl PrimalAdapter {
             // No health check configured, assume healthy if running
             Ok(matches!(self.state, PrimalState::Running { .. }))
         }
+    }
+
+    /// Check if primal is healthy (Pure Rust stub for non-HTTP builds)
+    #[cfg(not(feature = "http-transport"))]
+    pub async fn check_health(&self) -> Result<bool> {
+        // Without HTTP, assume healthy if running
+        Ok(matches!(self.state, PrimalState::Running { .. }))
     }
 
     /// Build the start command

@@ -4,10 +4,15 @@
 // Licensed under the Affero General Public License v3.0 or later with Sovran Exemption 1.0.
 // See LICENSE file in the project root or visit https://www.gnu.org/licenses/agpl-3.0.html
 
-//! Base HTTP client for primal communication
+//! Base HTTP client for primal communication (DEPRECATED - Use atomic_client!)
+//!
+//! ⚠️ WARNING: This module uses HTTP transport with C dependencies (reqwest->openssl-sys).
+//! ⚠️ For ecoBin-compliant Pure Rust communication, use `atomic_client` with Unix sockets.
 //!
 //! This module provides the foundational HTTP client used by all primal clients
 //! to communicate with their respective services.
+
+#![cfg(feature = "http-transport")]
 
 use anyhow::{Context, Result};
 use reqwest::{Client, Method};
