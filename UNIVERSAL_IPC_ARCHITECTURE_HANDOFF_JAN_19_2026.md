@@ -1,22 +1,62 @@
 # 🌍 Universal IPC Architecture - Three Primal Handoff 🌍
 
-**Date**: January 19, 2026  
+**Date**: January 19, 2026 (REVISED)  
 **To**: Songbird, NestGate, ToadStool Teams  
 **From**: biomeOS Architecture Team  
-**Subject**: Evolution to Truly Universal IPC (All Platforms, Zero Conditional Compilation)
+**Subject**: Service-Based Universal IPC (Protocol, Not Library!)
+
+**⚠️ IMPORTANT REVISION**: This handoff has been updated to reflect a **service-based** approach instead of a library approach, maintaining primal autonomy and preventing cross-embedding.
 
 ---
 
 ## 🎯 EXECUTIVE SUMMARY
 
-**Goal**: Make ecoPrimals truly universal by abstracting platform-specific IPC at the **infrastructure layer**, not the **application layer**.
+**Goal**: Make ecoPrimals truly universal through **service-based IPC**, maintaining primal autonomy (NO cross-embedding!).
 
 **Strategy**: 
-- **Songbird** owns ALL communication (remote + local IPC)
+- **Songbird** provides **discovery service** (NOT a library to import!)
+- **wateringHole** defines **standard protocol** (JSON-RPC over Unix sockets)
+- **Each primal** implements protocol **independently** (autonomy!)
 - **NestGate** stores persistent metadata (service registry)
 - **ToadStool** provides Unix environment when needed (Windows WSL2)
 
-**Result**: Application primals (BearDog, Squirrel, etc.) **always use Unix sockets**, infrastructure handles the rest!
+**Result**: Application primals (BearDog, Squirrel, etc.) communicate via **standard protocol**, NOT by embedding each other's code!
+
+---
+
+## ⚠️ CRITICAL ARCHITECTURAL PRINCIPLE
+
+### **NO CROSS-EMBEDDING!**
+
+**WRONG** (Library Approach - Violates Autonomy):
+```rust
+// ❌ This makes Squirrel embed Songbird's code!
+use songbird_universal_ipc::ipc;
+let stream = ipc::connect("/primal/beardog").await?;
+```
+
+**RIGHT** (Service Approach - Maintains Autonomy):
+```rust
+// ✅ Squirrel uses standard protocol, zero embedding!
+use tokio::net::UnixStream;
+
+// Connect to Songbird service
+let songbird = UnixStream::connect("/primal/songbird").await?;
+
+// Ask via JSON-RPC: "Where is beardog?"
+let endpoint = resolve_via_songbird("beardog").await?;
+
+// Connect directly to beardog
+let stream = UnixStream::connect(&endpoint).await?;
+```
+
+**Key**: 
+- ✅ `tokio::net::UnixStream` is the ecosystem runtime (not a primal!)
+- ✅ JSON-RPC is a standard protocol (not owned by any primal!)
+- ✅ Each primal implements independently (autonomy!)
+- ❌ NO primal imports another primal's code!
+
+**Reference**: See `wateringHole/PRIMAL_IPC_PROTOCOL.md` for the official standard.
 
 ---
 
@@ -81,121 +121,96 @@ ToadStool (Environment Provider):
 
 ---
 
-## 🐦 SONGBIRD: Universal Communication Layer
+## 🐦 SONGBIRD: Discovery Service (NOT Library!)
 
-### **Responsibility: ALL Communication (Remote + Local)**
+### **Responsibility: Service Registry & Discovery**
 
-**What Songbird Owns**:
-1. ✅ Service discovery (already does this!)
-2. ✅ P2P networking (already does this!)
-3. ✅ Federation (already does this!)
-4. ✅ **NEW**: Local IPC abstraction (platform-agnostic!)
+**What Songbird Provides** (as a **service**, not a library!):
+1. ✅ Service registry (who/where/what capabilities)
+2. ✅ Discovery via JSON-RPC (`ipc.resolve`, `ipc.find_capability`)
+3. ✅ P2P networking (federation, already does this!)
+4. ✅ Persistent storage (via NestGate)
+
+**What Songbird Does NOT Provide**:
+❌ Library for other primals to import  
+❌ Code embedding  
+❌ Platform abstraction layer (each primal handles via tokio!)
 
 **Why Songbird?**
-> "Sockets are communication channels.  
-> Songbird is the communication specialist.  
-> IPC = Local Networking = Songbird's Domain!"
+> "Songbird orchestrates network communication and service discovery.  
+> It provides the 'yellow pages' service, not a code library!"
 
 ---
 
-### **Implementation: `songbird-universal-ipc`**
+### **Implementation: Internal IPC Service**
 
-#### **Crate Structure**
+#### **Songbird's Internal Structure** (NOT exported!)
 
 ```
-crates/songbird-universal-ipc/
+crates/songbird-ipc-internal/  # Internal only, not published!
 ├── src/
-│   ├── lib.rs              # Public API
-│   ├── endpoint.rs         # Virtual endpoint resolution
-│   ├── platform/
-│   │   ├── mod.rs
-│   │   ├── unix.rs         # Unix socket implementation
-│   │   ├── windows.rs      # Named pipe implementation
-│   │   └── fallback.rs     # TCP localhost (if needed)
-│   └── registry.rs         # Service registry (in-memory)
+│   ├── lib.rs              # Internal use ONLY
+│   ├── service.rs          # JSON-RPC service implementation
+│   ├── registry.rs         # Service registry (in-memory)
+│   └── discovery.rs        # Capability-based discovery
 └── Cargo.toml
 ```
 
-#### **Public API (Platform-Agnostic!)**
+**Key**: This is **INTERNAL** to Songbird. Other primals do NOT import it!
+
+#### **JSON-RPC Service Methods** (Songbird's API)
+
+Songbird listens on `/primal/songbird` and responds to JSON-RPC requests:
 
 ```rust
-// crates/songbird-universal-ipc/src/lib.rs
+// Songbird's JSON-RPC service implementation
 
-/// Universal IPC - Works on ALL platforms!
-pub struct UniversalIPC {
-    registry: ServiceRegistry,
-    platform: Box<dyn PlatformIPC>,
-}
-
-/// Virtual endpoint (platform-agnostic)
-pub struct VirtualEndpoint {
-    path: String,  // Always Unix-style: "/primal/beardog"
-}
-
-impl UniversalIPC {
-    /// Initialize (auto-detects platform)
-    pub fn new() -> Result<Self> {
-        #[cfg(unix)]
-        let platform = Box::new(UnixIPC::new());
-        
-        #[cfg(windows)]
-        let platform = Box::new(WindowsIPC::new());
-        
-        Ok(Self {
-            registry: ServiceRegistry::new(),
-            platform,
-        })
-    }
+/// Register a primal with the registry
+async fn handle_register(params: RegisterParams) -> Result<RegisterResponse> {
+    // Store in registry (backed by NestGate for persistence)
+    registry.insert(ServiceMetadata {
+        name: params.name,
+        endpoint: params.endpoint,
+        capabilities: params.capabilities,
+        version: params.version,
+        registered_at: Timestamp::now(),
+    }).await?;
     
-    /// Register a primal (returns virtual endpoint)
-    pub async fn register(&mut self, primal: &str) -> Result<VirtualEndpoint> {
-        // Create platform-specific endpoint
-        let native_endpoint = self.platform.create_endpoint(primal).await?;
-        
-        // Create virtual endpoint (always Unix-style)
-        let virtual_endpoint = VirtualEndpoint {
-            path: format!("/primal/{}", primal),
-        };
-        
-        // Store mapping
-        self.registry.register(
-            virtual_endpoint.clone(),
-            native_endpoint,
-        ).await?;
-        
-        Ok(virtual_endpoint)
-    }
-    
-    /// Connect to a primal (platform-agnostic!)
-    pub async fn connect(&self, path: &str) -> Result<Box<dyn AsyncStream>> {
-        // Resolve virtual path to native endpoint
-        let native_endpoint = self.registry.resolve(path).await?;
-        
-        // Connect using platform-specific implementation
-        self.platform.connect(&native_endpoint).await
-    }
+    Ok(RegisterResponse {
+        registered: true,
+        endpoint: params.endpoint,
+    })
 }
 
-/// Platform-specific trait (internal)
-trait PlatformIPC: Send + Sync {
-    async fn create_endpoint(&self, primal: &str) -> Result<NativeEndpoint>;
-    async fn connect(&self, endpoint: &NativeEndpoint) -> Result<Box<dyn AsyncStream>>;
+/// Resolve a primal by name
+async fn handle_resolve(params: ResolveParams) -> Result<ServiceMetadata> {
+    let service = registry.get(&params.primal).await?;
+    Ok(service)
 }
 
-/// Native endpoint (platform-specific)
-enum NativeEndpoint {
-    #[cfg(unix)]
-    UnixSocket(PathBuf),
-    
-    #[cfg(windows)]
-    NamedPipe(String),
-    
-    TcpLocal(u16),  // Fallback
+/// Find services by capability
+async fn handle_find_capability(params: CapabilityParams) -> Result<Vec<ServiceMetadata>> {
+    let services = registry.find_by_capability(&params.capability).await?;
+    Ok(services)
 }
 
-/// Unified stream interface (platform-agnostic!)
-pub trait AsyncStream: AsyncRead + AsyncWrite + Send + Unpin {}
+/// List all registered services
+async fn handle_list() -> Result<Vec<ServiceMetadata>> {
+    let services = registry.list_all().await?;
+    Ok(services)
+}
+
+/// Health check / heartbeat
+async fn handle_heartbeat(params: HeartbeatParams) -> Result<HeartbeatResponse> {
+    registry.update_last_seen(&params.name).await?;
+    Ok(HeartbeatResponse {
+        acknowledged: true,
+        timestamp: Timestamp::now(),
+    })
+}
 ```
+
+**Key**: These are **service methods**, not library functions! Other primals call them via JSON-RPC.
 
 #### **Unix Implementation**
 
@@ -251,24 +266,72 @@ impl PlatformIPC for WindowsIPC {
 
 ---
 
-### **Songbird API for Application Primals**
+### **How Application Primals Use Songbird**
+
+**Via Standard Protocol** (NO imports!):
 
 ```rust
-// Simple, universal API
+// In ANY primal (BearDog, Squirrel, etc.):
+use tokio::net::UnixStream;
+use serde_json::json;
 
-// Register (startup)
-let endpoint = songbird::ipc::register("beardog").await?;
-let listener = songbird::ipc::listen(endpoint).await?;
+// 1. Register with Songbird (startup)
+async fn register() -> Result<()> {
+    let mut stream = UnixStream::connect("/primal/songbird").await?;
+    
+    let request = json!({
+        "jsonrpc": "2.0",
+        "method": "ipc.register",
+        "params": {
+            "name": "beardog",
+            "endpoint": "/primal/beardog",
+            "capabilities": ["crypto", "btsp"],
+            "version": "2.7.0"
+        },
+        "id": 1
+    });
+    
+    // Send via JSON-RPC (standard protocol!)
+    stream.write_json(&request).await?;
+    let response = stream.read_json().await?;
+    
+    Ok(())
+}
 
-// Connect (anytime)
-let stream = songbird::ipc::connect("/primal/beardog").await?;
-// Use stream - same on ALL platforms!
+// 2. Resolve another primal (when needed)
+async fn find_service(name: &str) -> Result<String> {
+    let mut stream = UnixStream::connect("/primal/songbird").await?;
+    
+    let request = json!({
+        "jsonrpc": "2.0",
+        "method": "ipc.resolve",
+        "params": { "primal": name },
+        "id": 1
+    });
+    
+    stream.write_json(&request).await?;
+    let response = stream.read_json().await?;
+    
+    let endpoint = response["result"]["endpoint"].as_str().unwrap();
+    Ok(endpoint.to_string())
+}
+
+// 3. Connect directly (peer-to-peer!)
+async fn call_primal() -> Result<()> {
+    let endpoint = find_service("beardog").await?;
+    let stream = UnixStream::connect(&endpoint).await?;
+    
+    // Now communicate directly with BearDog!
+    // Songbird not involved in data transfer!
+    Ok(())
+}
 ```
 
 **Key Points**:
-1. ✅ **Always Unix-style paths** (`/primal/beardog`)
-2. ✅ **Platform-agnostic API** (no #[cfg] in application code!)
-3. ✅ **Transparent abstraction** (app doesn't know platform)
+1. ✅ **Zero Songbird imports** (just standard tokio + protocol!)
+2. ✅ **Platform-agnostic** (tokio handles Unix/Windows!)
+3. ✅ **Primal autonomy maintained** (independent implementation!)
+4. ✅ **Standard protocol** (JSON-RPC, defined in wateringHole!)
 
 ---
 
@@ -573,28 +636,31 @@ impl WindowsIPC {
 
 ## 📋 IMPLEMENTATION CHECKLIST
 
-### **Songbird Team** (~15-20 hours)
+### **Songbird Team** (~10-15 hours)
 
-- [ ] **Week 1**: Create `songbird-universal-ipc` crate
-  - [ ] Public API (`register`, `connect`)
-  - [ ] Platform trait (`PlatformIPC`)
-  - [ ] Unix implementation
-  - [ ] Tests on Linux
+- [ ] **Week 1**: Refactor existing `songbird-universal-ipc`
+  - [ ] **RENAME** to `songbird-ipc-internal` (internal use only!)
+  - [ ] Remove public exports
+  - [ ] Keep excellent platform abstraction (for internal use)
+  - [ ] Verify no other primals import it
 
-- [ ] **Week 2**: Windows support
-  - [ ] Windows implementation (named pipes)
-  - [ ] Test on Windows 10/11
-  - [ ] Integration tests (cross-platform)
+- [ ] **Week 2**: JSON-RPC Service Implementation
+  - [ ] Implement `ipc.register` method
+  - [ ] Implement `ipc.resolve` method
+  - [ ] Implement `ipc.find_capability` method
+  - [ ] Implement `ipc.list` method
+  - [ ] Implement `ipc.heartbeat` method
+  - [ ] Add service to main Songbird binary
 
-- [ ] **Week 3**: Tower Atomic integration
-  - [ ] Migrate Tower Atomic to use `universal-ipc`
-  - [ ] Remove platform-specific code
-  - [ ] Validate on all platforms
+- [ ] **Week 3**: Integration with NestGate
+  - [ ] Store registry in NestGate (persistence)
+  - [ ] Capability indexing
+  - [ ] Test registry survives restarts
 
-- [ ] **Week 4**: Documentation + Release
-  - [ ] API documentation
-  - [ ] Migration guide for other primals
-  - [ ] Release v4.0.0
+- [ ] **Week 4**: Documentation + Testing
+  - [ ] Update Songbird docs (service-based, not library!)
+  - [ ] Integration tests with example primals
+  - [ ] Release Songbird v4.0.0
 
 ---
 
@@ -636,6 +702,39 @@ impl WindowsIPC {
   - [ ] Release v4.17.0
 
 **Note**: ToadStool's role is **optional** - Songbird's named pipe support works without it!
+
+---
+
+### **For Application Primal Teams** (~2-3 hours per primal)
+
+**Each primal implements the protocol independently** (NO Songbird imports!):
+
+- [ ] **Step 1**: Read `wateringHole/PRIMAL_IPC_PROTOCOL.md`
+  - [ ] Understand JSON-RPC 2.0 format
+  - [ ] Understand discovery protocol  
+  - [ ] Understand namespace convention (`/primal/*`)
+
+- [ ] **Step 2**: Implement Registration
+  - [ ] Create helper function to connect to Songbird
+  - [ ] Send `ipc.register` JSON-RPC request on startup
+  - [ ] Declare capabilities
+
+- [ ] **Step 3**: Implement Discovery
+  - [ ] Create helper function to resolve services
+  - [ ] Use `ipc.resolve` or `ipc.find_capability`
+  - [ ] Cache results (optional, for performance)
+
+- [ ] **Step 4**: Use Standard Transport
+  - [ ] Always use `tokio::net::UnixStream`
+  - [ ] Always use `/primal/*` namespace
+  - [ ] Remove any `#[cfg(unix)]` / `#[cfg(windows)]`
+  - [ ] Let tokio handle platform differences
+
+- [ ] **Step 5**: Test & Validate
+  - [ ] Test registration with Songbird
+  - [ ] Test discovery (resolve by name, find by capability)
+  - [ ] Test peer-to-peer communication
+  - [ ] Verify zero imports from other primals ✅
 
 ---
 
