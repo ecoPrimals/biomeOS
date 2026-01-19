@@ -1,9 +1,9 @@
 # 🧬 plasmidBin Manifest
 
-**Version**: v0.17.0  
-**Date**: January 19, 2026 (14:25 UTC)  
+**Version**: v0.18.0  
+**Date**: January 19, 2026 (15:00 UTC)  
 **Purpose**: Stable deployment binaries for spore creation  
-**Status**: 🎉 **7/8 TRUE ecoBins Harvested!** 🎉 (sourDough ecoBin #3!)
+**Status**: 🎊 **7/7 CORE PRIMALS ECOBIN!** 🎊 (100%! Squirrel A++ Complete!)
 
 ---
 
@@ -112,7 +112,8 @@ cargo run --bin biomeos -- spore create /media/user/USB/biomeOS
 | `nestgate` | NestGate | v2.1.0 | Jan 17 15:03 | ✅ ecoBin! 100% Pure Rust! HTTP-FREE! | 4.9M |
 | `toadstool` | ToadStool | v4.16.0 | Jan 17 15:55 | ✅ ecoBin! 100% Pure Rust! VALIDATED! | 15M |
 | `biomeos` | biomeOS | v0.1.0 | Jan 18 18:20 | ✅ **ecoBin #4 CERTIFIED!** x86+ARM64! 🏆 | 5.9M |
-| `squirrel` | Squirrel | v1.2.0 | Jan 17 08:35 | ⏳ UniBin (HTTP legacy blocks ecoBin!) | 18M |
+| `squirrel-x86_64-musl` | Squirrel | v1.7.0 | Jan 19 15:00 | ✅ **A++ ecoBin!** 100% Pure Rust! VALIDATED! | 3.2M |
+| `squirrel-aarch64-musl` | Squirrel | v1.7.0 | Jan 19 15:00 | ✅ **A++ ecoBin!** 100% Pure Rust! VALIDATED! | 2.7M |
 | `songbird-x86_64-musl` | Songbird | v3.33.0 | Jan 19 14:15 | ✅ **A++ ecoBin!** 100% Pure Rust! VALIDATED! | 13M |
 | `songbird-aarch64-musl` | Songbird | v3.33.0 | Jan 19 14:15 | ✅ **A++ ecoBin!** 100% Pure Rust! VALIDATED! | 11M |
 | `sourdough-x86_64-musl` | sourDough | v0.1.0 | Jan 19 14:23 | ✅ **ecoBin #3!** Starter Culture! 100% Pure Rust! | 3.1M |
@@ -324,7 +325,7 @@ cargo run --bin biomeos -- spore create /media/user/USB/biomeOS
 - ✅ NestGate - TRUE ecoBin #2 - GOLD! (VALIDATED!)
 - ✅ **sourDough - TRUE ecoBin #3 - A++!** (STARTER CULTURE! Jan 19!) 🧬
 - ✅ biomeOS - TRUE ecoBin #4! (CERTIFIED Jan 18!) 🏆
-- ✅ Squirrel - TRUE ecoBin #7 - A! (95%, Production Core!) ⚡
+- ✅ **Squirrel - TRUE ecoBin #7 - A++!** (100% Pure Rust! Jan 19!) 🐿️
 - ✅ **Songbird - TRUE ecoBin #8 - A++!** (Network Orchestration! Jan 19!) 🐦
 - ⏳ ToadStool - Ready (needs re-validation after sourDough harvest)
 - N/A petalTongue - GUI (hybrid ecoBin planned)
