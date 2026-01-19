@@ -1,9 +1,9 @@
 # 🧬 biomeOS - Root Documentation Index
 
-**Last Updated**: January 19, 2026 (Evening)  
+**Last Updated**: January 19, 2026 (Evening - Post-Validation)  
 **Version**: v0.15.0  
 **Status**: Production-Ready ecoBin (A++ Grade)  
-**Ready for**: NUCLEUS Validation Deployment
+**Ready for**: NUCLEUS Deployment (pending BearDog server mode)
 
 ---
 
@@ -59,13 +59,14 @@
 - ⏳ In progress
 - ⚠️ By design/special case
 
-### **Current Primal Status (Jan 19, 2026)**
+### **Current Primal Status (Jan 19, 2026 - Post-Validation)**
 
-| Document | Primal | Status |
-|----------|--------|--------|
-| [SONGBIRD_UNIBIN_ECOBIN_FINAL_AUDIT_JAN_19_2026.md](SONGBIRD_UNIBIN_ECOBIN_FINAL_AUDIT_JAN_19_2026.md) | Songbird | A++ ecoBin, 14 targets validated |
-| [SQUIRREL_ECOBIN_FINAL_STATUS_JAN_19_2026.md](SQUIRREL_ECOBIN_FINAL_STATUS_JAN_19_2026.md) | Squirrel | A++ ecoBin, 19,438+ lines deleted |
-| [NUCLEUS_DEPLOYMENT_READINESS_JAN_19_2026.md](NUCLEUS_DEPLOYMENT_READINESS_JAN_19_2026.md) | NUCLEUS | All 5 core primals ready (Tower+Node+Nest) |
+| Document | Scope | Status |
+|----------|-------|--------|
+| [PRIMAL_UNIBIN_AUDIT_JAN_19_2026.md](PRIMAL_UNIBIN_AUDIT_JAN_19_2026.md) | **All 6 Primals** | **83% UniBin complete** (5/6 ready) |
+| [NUCLEUS_VALIDATION_SUMMARY_JAN_19_2026.md](NUCLEUS_VALIDATION_SUMMARY_JAN_19_2026.md) | **NUCLEUS** | Discovery complete, BearDog blocker identified |
+| [BEARDOG_UNIBIN_STATUS_AND_HANDOFF_JAN_19_2026.md](BEARDOG_UNIBIN_STATUS_AND_HANDOFF_JAN_19_2026.md) | **BearDog** | UniBin ~60% complete, server mode needed (4-6 hours) |
+| [FRESH_ECOBIN_HARVEST_JAN_19_2026.md](FRESH_ECOBIN_HARVEST_JAN_19_2026.md) | **Binaries** | Fresh ecoBins for 4 primals (35.3M total) |
 
 ---
 
@@ -99,13 +100,13 @@
 | [TRUE_PRIMAL_PORT_FREE_ARCHITECTURE.md](TRUE_PRIMAL_PORT_FREE_ARCHITECTURE.md) | Unix socket architecture |
 | [GENOMEBIN_ARCHITECTURE_STANDARD.md](GENOMEBIN_ARCHITECTURE_STANDARD.md) | genomeBin spec (copy) |
 
-### **Atomic Validation (Jan 19, 2026)**
+### **Validation Session (Jan 19, 2026 Evening)**
 
 | Document | Description |
 |----------|-------------|
-| [ATOMIC_VALIDATION_DEPLOYMENT_JAN_19_2026.md](ATOMIC_VALIDATION_DEPLOYMENT_JAN_19_2026.md) | Three Atomics validation plan (tonight, 1.75 hours) |
-| [ATOMIC_ALIGNMENT_SUMMARY_JAN_19_2026.md](ATOMIC_ALIGNMENT_SUMMARY_JAN_19_2026.md) | Atomic pattern alignment summary |
-| [DEPLOYMENT_GRAPHS_ALIGNMENT_REVIEW_JAN_19_2026.md](DEPLOYMENT_GRAPHS_ALIGNMENT_REVIEW_JAN_19_2026.md) | Deployment graph alignment review (6 graphs) |
+| [NUCLEUS_VALIDATION_SESSION_JAN_19_2026.md](NUCLEUS_VALIDATION_SESSION_JAN_19_2026.md) | Discovery session log (incremental validation approach) |
+| [NUCLEUS_DISCOVERY_FINDINGS_JAN_19_2026.md](NUCLEUS_DISCOVERY_FINDINGS_JAN_19_2026.md) | Key findings (BearDog UniBin incomplete, architecture mismatch) |
+| [NUCLEUS_VALIDATION_SUMMARY_JAN_19_2026.md](NUCLEUS_VALIDATION_SUMMARY_JAN_19_2026.md) | Comprehensive summary (83% ready, clear path forward) |
 
 ### **Universal IPC Architecture**
 
@@ -193,23 +194,39 @@
 
 ## 🎯 Next Steps
 
-### **Immediate** (Tonight)
+### **Blocked - Waiting for BearDog** (4-6 hours)
 
-1. **NUCLEUS Validation Deployment** 🔥
-   - Deploy Tower Atomic (BearDog + Songbird)
-   - Deploy Node Atomic (Tower + ToadStool)
+1. **BearDog Server Mode Implementation** (BearDog Team)
+   - Add `server` command to CLI (2-3 hours)
+   - Add `doctor` command (1 hour)
+   - Update tests (1 hour)
+   - Validate with Songbird (30 min)
+   - **Timeline**: 4-6 hours
+   - **Handoff**: [BEARDOG_UNIBIN_STATUS_AND_HANDOFF_JAN_19_2026.md](BEARDOG_UNIBIN_STATUS_AND_HANDOFF_JAN_19_2026.md)
+
+### **Immediate** (While Waiting)
+
+2. **Standalone Primal Testing**
+   - Test Songbird server mode (find other issues)
+   - Test ToadStool server/daemon modes
+   - Test NestGate daemon mode
+   - Test Squirrel server mode
+   - Document any findings
+   - **Timeline**: 2-3 hours
+
+### **Once Unblocked** (Tomorrow - 3 hours)
+
+3. **Tower Atomic Validation**
+   - Deploy BearDog + Songbird via `biomeos neural-api`
+   - Test Unix socket communication
+   - Validate JWT generation
+   - Confirm Tower Atomic pattern
+
+4. **Nest/Node Atomic Validation**
    - Deploy Nest Atomic (Tower + NestGate)
+   - Deploy Node Atomic (Tower + ToadStool)
    - Test inter-atomic communication
-   - **Timeline**: 1.75 hours
-   - **Doc**: [ATOMIC_VALIDATION_DEPLOYMENT_JAN_19_2026.md](ATOMIC_VALIDATION_DEPLOYMENT_JAN_19_2026.md)
-
-2. **Fix Deployment Graphs** (After validation)
-   - Fix `node_deploy.toml` (add Tower foundation)
-   - Fix `01_nucleus_enclave.toml` (dependencies)
-   - Fix `02_nucleus_enclave_unibin.toml` (dependencies)
-   - Remove duplicate `nucleus-enclave-deployment.toml`
-   - **Timeline**: 30-45 minutes
-   - **Doc**: [DEPLOYMENT_GRAPHS_ALIGNMENT_REVIEW_JAN_19_2026.md](DEPLOYMENT_GRAPHS_ALIGNMENT_REVIEW_JAN_19_2026.md)
+   - **Timeline**: 2-3 hours total
 
 ### **Short-term** (This Week)
 
@@ -266,14 +283,16 @@
 - ✅ sourDough evolution (reference primal) (Jan 19, 2026)
 - ✅ Ecosystem toolchain (ARM cross-compilation) (Jan 18, 2026)
 - ✅ **THREE ATOMIC PATTERNS defined** (Tower, Node, Nest) (Jan 19, 2026)
-- ✅ Deployment graphs reviewed (6 graphs, fixes identified) (Jan 19, 2026)
-- ✅ Root documentation cleaned (21 docs archived) (Jan 19, 2026)
+- ✅ Deployment graphs reviewed & cleaned (15 archived) (Jan 19, 2026)
+- ✅ Root documentation cleaned (29 docs archived total) (Jan 19, 2026)
+- ✅ **Primal UniBin audit** (5/6 complete, 1 incomplete) (Jan 19, 2026)
+- ✅ **NUCLEUS validation discovery** (BearDog blocker identified) (Jan 19, 2026)
+- ✅ **Fresh ecoBin harvest** (4 primals, 35.3M) (Jan 19, 2026)
 
-### **In Progress** (Tonight)
+### **In Progress** (Waiting on BearDog)
 
-- 🔥 **NUCLEUS Validation Deployment** (Tower + Node + Nest)
-- 🔧 Deployment graph fixes (4 graphs)
-- 🔧 sourDough UniBin CLI implementation
+- ⏳ **BearDog server mode implementation** (4-6 hours, team notified)
+- 🔧 Standalone primal testing (while waiting for BearDog)
 
 ### **Planned**
 
@@ -283,6 +302,34 @@
 - 📝 biomeOS programmatic primal launching
 - 📝 petalTongue ecoBin (headless + CLI)
 - 📝 Ecosystem v1.0 (100% ecoBin, genomeBin deployment)
+
+---
+
+## 📚 Archive
+
+### **Jan 19, 2026 - Validation Session**
+
+**Location**: [archive/jan_2026_evolution/jan_19_validation/](archive/jan_2026_evolution/jan_19_validation/)
+
+**Archived** (8 docs - superseded by current validation docs):
+- NUCLEUS_DEPLOYMENT_READINESS_JAN_19_2026.md
+- ATOMIC_ALIGNMENT_SUMMARY_JAN_19_2026.md
+- DEPLOYMENT_GRAPHS_ALIGNMENT_REVIEW_JAN_19_2026.md
+- ROOT_DOCS_CLEANUP_JAN_19_2026.md
+- SONGBIRD_IPC_ARCHITECTURE_REVIEW_JAN_19_2026.md
+- ATOMIC_VALIDATION_DEPLOYMENT_JAN_19_2026.md
+- SONGBIRD_UNIBIN_ECOBIN_FINAL_AUDIT_JAN_19_2026.md
+- SQUIRREL_ECOBIN_FINAL_STATUS_JAN_19_2026.md
+
+**Reason**: Superseded by comprehensive audit and validation session docs
+
+### **Jan 16-19, 2026 - Atomic Alignment**
+
+**Location**: [archive/jan_2026_evolution/jan_19_atomic_alignment/](archive/jan_2026_evolution/jan_19_atomic_alignment/)
+
+**Archived** (21 docs - status reports from evolution period)
+
+**Reason**: Completed evolution phase, findings consolidated
 
 ---
 
@@ -314,15 +361,18 @@
 
 **Ecosystem Status**:
 - ✅ **7/7 core primals ecoBin-compliant (100%)**
+- ✅ **5/6 primals UniBin-complete (83%)** - BearDog needs server mode
 - ✅ genomeBin standardization complete (80-90% reusable!)
 - ✅ sourDough evolved to reference primal
 - ✅ Production-ready deployment infrastructure
-- ✅ Root documentation clean and current (21 docs archived)
+- ✅ Root documentation clean and current (29 docs archived)
 
-**Ready for Tonight**:
-- 🔥 **NUCLEUS Validation Deployment** (1.75 hours)
-- 🔥 **Three Atomics**: Tower + Node + Nest
-- 🔥 **Inter-Atomic Communication**: Full validation
+**Discovery Complete** (Jan 19, 2026):
+- ✅ Primal UniBin audit complete (5/6 ready)
+- ✅ BearDog blocker identified (server mode missing)
+- ✅ Clear path forward (4-6 hours to unblock)
+- ✅ Fresh ecoBins harvested (4 primals, 35.3M)
+- ⏳ Waiting for BearDog server → Tower Atomic validation
 
 ---
 
