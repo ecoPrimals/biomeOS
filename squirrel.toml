@@ -1,0 +1,154 @@
+# Squirrel Configuration for biomeOS
+# Tower Atomic + Squirrel AI Orchestration
+# Date: January 20, 2026
+
+[server]
+# Unix socket path
+socket = "/tmp/squirrel-nat0.sock"
+
+# Server settings
+bind = "0.0.0.0"
+port = 9010
+daemon = false
+max_connections = 100
+request_timeout_secs = 30
+
+[ai]
+# Enable AI router
+enabled = true
+
+# Enable retry with fallback providers
+enable_retry = true
+max_retries = 2
+
+[ai.providers]
+# AI Provider Configuration
+# Each provider is configured with capabilities and connection details
+
+[ai.providers.anthropic]
+# Anthropic Claude via Songbird HTTP delegation
+enabled = true
+provider_type = "http_delegated"  # Uses Songbird for HTTP
+songbird_socket = "/tmp/songbird-nat0.sock"
+default_model = "claude-3-opus-20240229"
+timeout_seconds = 45
+cost_tier = "premium"
+quality_tier = "premium"
+capabilities = ["text_generation", "analysis", "creative_writing"]
+
+# API key read from environment: ANTHROPIC_API_KEY
+# Squirrel will pass this to Songbird in the HTTP request
+
+[ai.providers.openai]
+# OpenAI GPT via Songbird HTTP delegation
+enabled = true
+provider_type = "http_delegated"
+songbird_socket = "/tmp/songbird-nat0.sock"
+default_model = "gpt-4"
+timeout_seconds = 30
+cost_tier = "high"
+quality_tier = "high"
+capabilities = ["text_generation", "code_generation", "embeddings"]
+
+# API key read from environment: OPENAI_API_KEY
+
+[ai.providers.ollama]
+# Ollama local AI (if available)
+enabled = false  # Set to true if Ollama is running locally
+provider_type = "local"
+base_url = "http://localhost:11434"
+default_model = "llama3-8b"
+timeout_seconds = 30
+cost_tier = "free"
+quality_tier = "standard"
+capabilities = ["text_generation", "privacy_first"]
+
+[ai.routing]
+# Routing strategy: BestFit, LowestCost, HighestQuality, LowestLatency
+strategy = "BestFit"
+
+# Prefer local for sensitive data
+prefer_local_for_sensitive = true
+
+# Prefer API for complex tasks
+prefer_api_for_complex = true
+
+[ai.routing.rules]
+# Automatic routing rules
+
+[[ai.routing.rules.rule]]
+# Simple queries → cheaper model
+condition = "max_tokens < 200"
+preferred_provider = "openai"
+preferred_model = "gpt-3.5-turbo"
+priority = 80
+
+[[ai.routing.rules.rule]]
+# Complex queries → powerful model
+condition = "complexity_high"
+preferred_provider = "anthropic"
+preferred_model = "claude-3-opus-20240229"
+priority = 90
+
+[[ai.routing.rules.rule]]
+# Code generation → specialized model
+condition = "task_type == 'code'"
+preferred_provider = "openai"
+preferred_model = "gpt-4"
+priority = 85
+
+[logging]
+# Log level: trace, debug, info, warn, error
+level = "info"
+
+# Enable JSON logging (for structured logging)
+json = false
+
+# Log to file (optional)
+# file = "/var/log/squirrel/squirrel.log"
+
+[discovery]
+# Announce capabilities to registry on startup
+announce_capabilities = true
+
+# Capabilities to announce
+capabilities = [
+    "ai.text_generation",
+    "ai.routing",
+    "ai.orchestration",
+    "tool.orchestration"
+]
+
+# Registry socket path for capability announcement
+# Default: Discovered from SQUIRREL_REGISTRY_SOCKET env var
+#registry_socket = "/tmp/registry-nat0.sock"
+
+[monitoring]
+# Enable metrics collection
+enable_metrics = true
+enable_tracing = true
+
+# Track performance
+track_latency = true
+track_token_usage = true
+track_cost = true
+track_success_rate = true
+
+[security]
+# Security configuration
+
+# BearDog socket for cryptographic operations
+beardog_socket = "/tmp/beardog-nat0.sock"
+
+# Encrypt sensitive requests
+encrypt_sensitive_requests = true
+
+# Log sanitization
+log_sanitization = true
+
+# Data handling
+retain_request_logs = false
+retain_response_logs = false
+anonymize_logs = true
+max_log_retention_days = 7
+
