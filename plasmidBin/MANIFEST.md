@@ -114,7 +114,7 @@ cargo run --bin biomeos -- spore create /media/user/USB/biomeOS
 | `biomeos` | biomeOS | v0.1.0 | Jan 18 18:20 | ✅ **ecoBin #4 CERTIFIED!** x86+ARM64! 🏆 | 5.9M |
 | `squirrel-x86_64-musl` | Squirrel | v1.7.0 | Jan 19 15:00 | ✅ **A++ ecoBin!** 100% Pure Rust! VALIDATED! | 3.2M |
 | `squirrel-aarch64-musl` | Squirrel | v1.7.0 | Jan 19 15:00 | ✅ **A++ ecoBin!** 100% Pure Rust! VALIDATED! | 2.7M |
-| `songbird-x86_64-musl` | Songbird | v3.33.0 | Jan 19 14:15 | ✅ **A++ ecoBin!** 100% Pure Rust! VALIDATED! | 13M |
+| `songbird` | Songbird | v3.33.0 | Jan 19 19:50 | ✅ **A++ ecoBin!** Crash Fixed! Tower Atomic Stable! | 13M |
 | `songbird-aarch64-musl` | Songbird | v3.33.0 | Jan 19 14:15 | ✅ **A++ ecoBin!** 100% Pure Rust! VALIDATED! | 11M |
 | `sourdough-x86_64-musl` | sourDough | v0.1.0 | Jan 19 14:23 | ✅ **ecoBin #3!** Starter Culture! 100% Pure Rust! | 3.1M |
 | `sourdough-aarch64-musl` | sourDough | v0.1.0 | Jan 19 14:23 | ✅ **ecoBin #3!** Starter Culture! 100% Pure Rust! | 3.0M |
