@@ -36,6 +36,7 @@ coordination = "Sequential"
 id = "start-beardog"
 primal = { by_capability = "security" }
 output = "beardog_started"
+capabilities = ["crypto.sign", "crypto.verify", "security.jwt", "security.hash"]
 
 [nodes.operation]
 name = "start"
@@ -52,6 +53,7 @@ id = "start-songbird"
 primal = { by_capability = "discovery" }
 output = "songbird_started"
 depends_on = ["start-beardog"]
+capabilities = ["http.post", "http.get", "http.request", "discovery.announce", "discovery.query", "security.verify"]
 
 [nodes.operation]
 name = "start"
@@ -77,6 +79,7 @@ id = "start-squirrel"
 primal = { by_capability = "ai" }
 output = "squirrel_started"
 depends_on = ["start-songbird"]
+capabilities = ["ai.text_generation", "ai.routing", "tool.orchestration", "ai.query"]
 
 [nodes.operation]
 name = "start"
