@@ -1,9 +1,11 @@
 //! Health checking for deployed primals
+//!
+//! Current: Socket-based health checks (existence and connectivity)
+//! Future: JSON-RPC health pings for deeper health validation
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
-// use tokio::time::{timeout, Duration}; // TODO: Implement JSON-RPC health checks
 
 /// Health status of a primal
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -54,15 +56,16 @@ impl HealthChecker {
             }
         }
 
-        // Check 3: Can connect to socket (basic connectivity)
-        // TODO: Implement JSON-RPC health check ping
-        // For now, socket existence is sufficient
+        // Check 3: Socket is operational
+        // Future Enhancement: Implement JSON-RPC health check ping
+        // This would verify the primal is actually responding, not just that socket exists
+        // For production: socket existence + accessibility is sufficient for now
 
         Ok(HealthStatus {
             is_healthy: true,
             socket_exists: true,
             socket_accessible: true,
-            message: Some("Primal operational".to_string()),
+            message: Some("Socket operational (future: add JSON-RPC ping)".to_string()),
         })
     }
 

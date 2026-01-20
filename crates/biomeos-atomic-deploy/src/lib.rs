@@ -34,6 +34,7 @@ pub mod primal_launcher; // EVOLVING: Legacy launcher → coordinator
 pub mod neural_api_server;
 pub mod neural_executor;
 pub mod neural_graph;
+pub mod neural_router; // NEW: Capability-based routing layer
 
 pub use deployment_graph::{AtomicDeploymentGraph, DeploymentResult};
 pub use health_check::{HealthChecker, HealthStatus};
@@ -48,3 +49,7 @@ pub use neural_executor::{
     GraphExecutor as NeuralGraphExecutor, NodeStatus, PhaseResult,
 };
 pub use neural_graph::{Graph as NeuralGraph, GraphConfig, GraphNode as NeuralGraphNode};
+pub use neural_router::{
+    AtomicType as RouterAtomicType, DiscoveredAtomic, DiscoveredPrimal as RouterDiscoveredPrimal,
+    NeuralRouter, RoutingMetrics,
+};
