@@ -145,6 +145,9 @@ pub struct GraphNode {
     pub constraints: Option<Constraints>,
     #[serde(default)]
     pub depends_on: Vec<String>,
+    // Capabilities this primal provides (NEW - for capability registry)
+    #[serde(default)]
+    pub capabilities: Vec<String>,
     // Legacy fields (for backward compatibility)
     #[serde(default)]
     pub node_type: Option<String>,

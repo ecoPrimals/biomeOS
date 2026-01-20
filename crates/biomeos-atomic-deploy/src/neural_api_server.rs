@@ -5,6 +5,7 @@
 
 use crate::neural_executor::{ExecutionContext, GraphExecutor};
 use crate::neural_graph::Graph;
+use crate::neural_router::{NeuralRouter, RoutingMetrics}; // NEW: Routing layer
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -29,6 +30,9 @@ pub struct NeuralApiServer {
 
     /// Socket path
     socket_path: PathBuf,
+    
+    /// Neural Router for capability-based routing (NEW)
+    router: Arc<NeuralRouter>,
 }
 
 impl NeuralApiServer {
@@ -38,11 +42,15 @@ impl NeuralApiServer {
         family_id: impl Into<String>,
         socket_path: impl Into<PathBuf>,
     ) -> Self {
+        let family_id_str = family_id.into();
+        let router = Arc::new(NeuralRouter::new(&family_id_str));
+        
         Self {
             graphs_dir: graphs_dir.into(),
             executions: Arc::new(RwLock::new(HashMap::new())),
-            family_id: family_id.into(),
+            family_id: family_id_str,
             socket_path: socket_path.into(),
+            router,
         }
     }
 
@@ -126,6 +134,7 @@ impl NeuralApiServer {
         debug!("📥 Request: {} (id: {})", request.method, request.id);
 
         let result = match request.method.as_str() {
+            // Deployment API (graph execution)
             "neural_api.list_graphs" => self.list_graphs().await?,
             "neural_api.get_graph" => self.get_graph(&request.params).await?,
             "neural_api.save_graph" => self.save_graph(&request.params).await?,
@@ -137,6 +146,18 @@ impl NeuralApiServer {
             "neural_api.get_metrics" => self.get_metrics().await?,
             "neural_api.list_niche_templates" => self.list_niche_templates().await?,
             "neural_api.deploy_niche" => self.deploy_niche(&request.params).await?,
+            
+            // Routing API (primal-to-primal communication) - NEW
+            "neural_api.proxy_http" => self.proxy_http(&request.params).await?,
+            "neural_api.discover_capability" => self.discover_capability(&request.params).await?,
+            "neural_api.route_to_primal" => self.route_to_primal(&request.params).await?,
+            "neural_api.get_routing_metrics" => self.get_routing_metrics().await?,
+            
+            // Capability Registry API (NEW - for dynamic capability management)
+            "capability.register" => self.register_capability(&request.params).await?,
+            "capability.discover" => self.capability_discover(&request.params).await?,
+            "capability.list" => self.capability_list().await?,
+            "capability.providers" => self.capability_providers(&request.params).await?,
             _ => {
                 return Ok(json!({
                     "jsonrpc": "2.0",
@@ -266,11 +287,12 @@ impl NeuralApiServer {
         let execution_id_clone = execution_id.clone();
         let graph_id_owned = graph_id.to_string();
         let family_id_owned = family_id_param.to_string();
+        let router = self.router.clone(); // NEW: Clone router for capability registration
 
         // Execute graph in background
         tokio::spawn(async move {
             let mut env = HashMap::new();
-            env.insert("FAMILY_ID".to_string(), family_id_owned);
+            env.insert("FAMILY_ID".to_string(), family_id_owned.clone());
             env.insert("UID".to_string(), users::get_current_uid().to_string());
             env.insert("SOCKET_DIR".to_string(), "/tmp".to_string());
             env.insert(
@@ -279,11 +301,51 @@ impl NeuralApiServer {
                     .unwrap_or_else(|_| "CHANGE_ME_IN_PRODUCTION".to_string()),
             );
 
-            let mut executor = GraphExecutor::new(graph, env);
+            let mut executor = GraphExecutor::new(graph.clone(), env);
             let start = std::time::Instant::now();
 
             match executor.execute().await {
                 Ok(report) => {
+                    // Register capabilities from deployed nodes (NEW!)
+                    if report.success {
+                        info!("📝 Registering capabilities from deployed graph...");
+                        for node in &graph.nodes {
+                            if !node.capabilities.is_empty() {
+                                // Determine primal name and socket from node
+                                let primal_name = node.primal.as_ref()
+                                    .and_then(|p| p.by_capability.as_ref()
+                                        .map(|cap| match cap.as_str() {
+                                            "security" => "beardog",
+                                            "discovery" => "songbird",
+                                            "ai" => "squirrel",
+                                            "compute" => "toadstool",
+                                            "storage" => "nestgate",
+                                            _ => cap.as_str()
+                                        }))
+                                    .or_else(|| node.primal.as_ref().and_then(|p| p.by_name.as_ref().map(|s| s.as_str())))
+                                    .unwrap_or(&node.id);
+                                
+                                let runtime_dir = std::env::var("BIOMEOS_RUNTIME_DIR")
+                                    .or_else(|_| std::env::var("TMPDIR"))
+                                    .unwrap_or_else(|_| "/tmp".to_string());
+                                let socket_path = format!("{}/{}-{}.sock", runtime_dir, primal_name, family_id_owned);
+                                
+                                for capability in &node.capabilities {
+                                    if let Err(e) = router.register_capability(
+                                        capability,
+                                        primal_name,
+                                        PathBuf::from(&socket_path),
+                                        "graph_deployment",
+                                    ).await {
+                                        warn!("Failed to register capability {}: {}", capability, e);
+                                    } else {
+                                        info!("   ✅ {} → {} @ {}", capability, primal_name, socket_path);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
                     let mut status = executions.write().await;
                     if let Some(exec_status) = status.get_mut(&execution_id_clone) {
                         exec_status.state = if report.success {
@@ -534,6 +596,289 @@ impl NeuralApiServer {
         self.execute_graph(&Some(exec_params)).await
     }
 
+    // ==================== ROUTING API METHODS (NEW) ====================
+    
+    /// Proxy HTTP request through Tower Atomic (Songbird + BearDog)
+    ///
+    /// This enables primals to make HTTP/HTTPS requests without direct dependencies
+    /// on HTTP libraries or C crypto libraries (like ring).
+    ///
+    /// # TRUE PRIMAL Pattern
+    /// Squirrel doesn't know about Songbird or BearDog - it just asks Neural API
+    /// for "secure_http" capability, and the router discovers + forwards.
+    async fn proxy_http(&self, params: &Option<Value>) -> Result<Value> {
+        let start = std::time::Instant::now();
+        let request_id = uuid::Uuid::new_v4().to_string();
+        
+        let params = params.as_ref().context("Missing parameters")?;
+        let method = params["method"].as_str().context("Missing HTTP method")?;
+        let url = params["url"].as_str().context("Missing URL")?;
+        
+        // Create a longer-lived binding for default headers
+        let default_headers = json!({});
+        let headers = params.get("headers").unwrap_or(&default_headers);
+        let body = params.get("body");
+        
+        info!("🌐 Proxy HTTP: {} {}", method, url);
+        
+        // Discover Tower Atomic
+        let atomic = self.router.discover_capability("secure_http").await
+            .context("Failed to discover Tower Atomic")?;
+        
+        debug!("   Discovered: {:?} primals", atomic.primals.len());
+        
+        // Forward to Songbird (handles HTTP/TLS)
+        let http_params = json!({
+            "method": method,
+            "url": url,
+            "headers": headers,
+            "body": body
+        });
+        
+        let result = self.router.forward_request(
+            &atomic.primary_socket,
+            "http.request",
+            &http_params
+        ).await?;
+        
+        // Log metrics
+        let latency = start.elapsed().as_millis() as u64;
+        self.router.log_metric(RoutingMetrics {
+            request_id: request_id.clone(),
+            capability: "secure_http".to_string(),
+            method: format!("http.{}", method),
+            routed_through: atomic.primals.iter().map(|p| p.name.clone()).collect(),
+            latency_ms: latency,
+            success: true,
+            timestamp: chrono::Utc::now(),
+            error: None,
+        }).await;
+        
+        info!("   ✓ Proxied in {}ms", latency);
+        
+        Ok(result)
+    }
+    
+    /// Discover primal(s) by capability
+    async fn discover_capability(&self, params: &Option<Value>) -> Result<Value> {
+        let params = params.as_ref().context("Missing parameters")?;
+        let capability = params["capability"].as_str().context("Missing capability")?;
+        
+        info!("🔍 Discover capability: {}", capability);
+        
+        let atomic = self.router.discover_capability(capability).await?;
+        
+        Ok(json!({
+            "capability": atomic.capability,
+            "atomic_type": atomic.atomic_type.map(|t| format!("{:?}", t)),
+            "primals": atomic.primals.iter().map(|p| {
+                json!({
+                    "name": p.name,
+                    "socket": p.socket_path,
+                    "healthy": p.healthy,
+                    "capabilities": p.capabilities
+                })
+            }).collect::<Vec<_>>(),
+            "primary_socket": atomic.primary_socket
+        }))
+    }
+    
+    /// Route generic JSON-RPC request to primal by capability
+    async fn route_to_primal(&self, params: &Option<Value>) -> Result<Value> {
+        let start = std::time::Instant::now();
+        let request_id = uuid::Uuid::new_v4().to_string();
+        
+        let params = params.as_ref().context("Missing parameters")?;
+        let capability = params["capability"].as_str().context("Missing capability")?;
+        let method = params["method"].as_str().context("Missing method")?;
+        
+        // Create a longer-lived binding for the default empty JSON
+        let default_params = json!({});
+        let rpc_params = params.get("params").unwrap_or(&default_params);
+        
+        info!("🔀 Route: {} -> {}", method, capability);
+        
+        // Discover primal(s) for this capability
+        let atomic = self.router.discover_capability(capability).await?;
+        
+        // Forward request
+        let result = self.router.forward_request(
+            &atomic.primary_socket,
+            method,
+            rpc_params
+        ).await?;
+        
+        // Log metrics
+        let latency = start.elapsed().as_millis() as u64;
+        self.router.log_metric(RoutingMetrics {
+            request_id: request_id.clone(),
+            capability: capability.to_string(),
+            method: method.to_string(),
+            routed_through: atomic.primals.iter().map(|p| p.name.clone()).collect(),
+            latency_ms: latency,
+            success: true,
+            timestamp: chrono::Utc::now(),
+            error: None,
+        }).await;
+        
+        info!("   ✓ Routed in {}ms", latency);
+        
+        Ok(result)
+    }
+    
+    /// Get routing metrics (for learning layer)
+    async fn get_routing_metrics(&self) -> Result<Value> {
+        let metrics = self.router.get_metrics().await;
+        
+        Ok(json!({
+            "total_requests": metrics.len(),
+            "metrics": metrics.iter().map(|m| {
+                json!({
+                    "request_id": m.request_id,
+                    "capability": m.capability,
+                    "method": m.method,
+                    "routed_through": m.routed_through,
+                    "latency_ms": m.latency_ms,
+                    "success": m.success,
+                    "timestamp": m.timestamp.to_rfc3339(),
+                    "error": m.error
+                })
+            }).collect::<Vec<_>>()
+        }))
+    }
+    
+    // ========================================================================
+    // Capability Registry API (NEW - Dynamic Capability Management)
+    // ========================================================================
+    
+    /// Register a capability for a primal
+    /// 
+    /// Called by:
+    /// - Graph deployment (automatic)
+    /// - Primal on startup (self-announcement)
+    /// - Manual registration
+    async fn register_capability(&self, params: &Option<Value>) -> Result<Value> {
+        let params = params.as_ref().context("Missing parameters")?;
+        
+        let capability = params["capability"]
+            .as_str()
+            .context("Missing 'capability' field")?;
+        let primal_name = params["primal"]
+            .as_str()
+            .context("Missing 'primal' field")?;
+        let socket_path = params["socket"]
+            .as_str()
+            .context("Missing 'socket' field")?;
+        let source = params["source"]
+            .as_str()
+            .unwrap_or("manual");
+        
+        info!("📝 Registering: {} → {} (from {})", capability, primal_name, source);
+        
+        self.router.register_capability(
+            capability,
+            primal_name,
+            PathBuf::from(socket_path),
+            source,
+        ).await?;
+        
+        Ok(json!({
+            "registered": true,
+            "capability": capability,
+            "primal": primal_name,
+            "socket": socket_path
+        }))
+    }
+    
+    /// Discover who provides a capability
+    /// 
+    /// Called by primals to find services at runtime
+    async fn capability_discover(&self, params: &Option<Value>) -> Result<Value> {
+        let params = params.as_ref().context("Missing parameters")?;
+        let capability = params["capability"]
+            .as_str()
+            .context("Missing 'capability' field")?;
+        
+        info!("🔍 Discovery request: {}", capability);
+        
+        match self.router.get_capability_providers(capability).await {
+            Some(providers) if !providers.is_empty() => {
+                let primary = &providers[0];
+                Ok(json!({
+                    "found": true,
+                    "capability": capability,
+                    "provider": primary.primal_name,
+                    "socket": primary.socket_path,
+                    "registered_at": primary.registered_at.to_rfc3339(),
+                    "source": primary.source,
+                    "all_providers": providers.iter().map(|p| {
+                        json!({
+                            "primal": p.primal_name,
+                            "socket": p.socket_path
+                        })
+                    }).collect::<Vec<_>>()
+                }))
+            }
+            _ => Ok(json!({
+                "found": false,
+                "capability": capability,
+                "message": format!(
+                    "No provider registered for '{}'. Available capabilities: {:?}",
+                    capability,
+                    self.router.list_capabilities().await.keys().collect::<Vec<_>>()
+                )
+            }))
+        }
+    }
+    
+    /// List all registered capabilities
+    async fn capability_list(&self) -> Result<Value> {
+        let capabilities = self.router.list_capabilities().await;
+        
+        Ok(json!({
+            "capabilities": capabilities.iter().map(|(cap, providers)| {
+                json!({
+                    "capability": cap,
+                    "provider_count": providers.len(),
+                    "providers": providers.iter().map(|p| {
+                        json!({
+                            "primal": p.primal_name,
+                            "socket": p.socket_path,
+                            "registered_at": p.registered_at.to_rfc3339(),
+                            "source": p.source
+                        })
+                    }).collect::<Vec<_>>()
+                })
+            }).collect::<Vec<_>>()
+        }))
+    }
+    
+    /// Get all providers for a specific capability
+    async fn capability_providers(&self, params: &Option<Value>) -> Result<Value> {
+        let params = params.as_ref().context("Missing parameters")?;
+        let capability = params["capability"]
+            .as_str()
+            .context("Missing 'capability' field")?;
+        
+        match self.router.get_capability_providers(capability).await {
+            Some(providers) => Ok(json!({
+                "capability": capability,
+                "providers": providers.iter().map(|p| {
+                    json!({
+                        "primal": p.primal_name,
+                        "socket": p.socket_path,
+                        "registered_at": p.registered_at.to_rfc3339(),
+                        "source": p.source
+                    })
+                }).collect::<Vec<_>>()
+            })),
+            None => Ok(json!({
+                "capability": capability,
+                "providers": []
+            }))
+        }
+    }
+
     /// Clone for spawning tasks
     fn clone(&self) -> Self {
         Self {
@@ -541,6 +886,7 @@ impl NeuralApiServer {
             executions: self.executions.clone(),
             family_id: self.family_id.clone(),
             socket_path: self.socket_path.clone(),
+            router: self.router.clone(),
         }
     }
 }

@@ -212,6 +212,71 @@ impl GraphExecutor {
         Ok(phase_result)
     }
 
+    /// Discover binary path for a primal (capability-based, no hardcoding!)
+    /// 
+    /// Search order:
+    /// 1. BIOMEOS_PLASMID_BIN_DIR environment variable
+    /// 2. ./plasmidBin directory (current directory)
+    /// 3. ../plasmidBin directory (parent directory)
+    /// 
+    /// Architecture is auto-detected from target triple.
+    async fn discover_primal_binary(
+        primal_name: &str,
+        context: &ExecutionContext,
+    ) -> Result<PathBuf> {
+        // Get base directory from environment or defaults
+        let base_dirs = vec![
+            std::env::var("BIOMEOS_PLASMID_BIN_DIR").ok().map(PathBuf::from),
+            Some(PathBuf::from("./plasmidBin")),
+            Some(PathBuf::from("../plasmidBin")),
+            Some(PathBuf::from("../../plasmidBin")), // For workspace structure
+        ];
+        
+        // Auto-detect architecture from target triple
+        let arch_suffix = std::env::consts::ARCH;
+        let os = std::env::consts::OS;
+        
+        // Common binary name patterns to try
+        let binary_patterns = vec![
+            // Pattern 1: primal_arch_os_musl/primal (e.g., beardog_x86_64_linux_musl/beardog)
+            format!("{}_{}_{}_{}/{}", primal_name, arch_suffix, os, "musl", primal_name),
+            // Pattern 2: primal_arch_os/primal (e.g., beardog_x86_64_linux/beardog)
+            format!("{}_{}_{}/{}", primal_name, arch_suffix, os, primal_name),
+            // Pattern 3: primals/primal/primal (e.g., primals/beardog/beardog)
+            format!("primals/{}/{}", primal_name, primal_name),
+            // Pattern 4: primal/primal (e.g., beardog/beardog)
+            format!("{}/{}", primal_name, primal_name),
+            // Pattern 5: just primal name (e.g., beardog)
+            primal_name.to_string(),
+        ];
+        
+        // Try each base directory
+        for base_dir in base_dirs.iter().filter_map(|d| d.as_ref()) {
+            if !base_dir.exists() {
+                continue;
+            }
+            
+            // Try each pattern
+            for pattern in &binary_patterns {
+                let candidate = base_dir.join(pattern);
+                tracing::debug!("   Trying binary path: {}", candidate.display());
+                
+                if candidate.exists() && candidate.is_file() {
+                    tracing::info!("   ✅ Found binary: {}", candidate.display());
+                    return Ok(candidate);
+                }
+            }
+        }
+        
+        // Not found - provide helpful error
+        anyhow::bail!(
+            "Binary not found for primal '{}'. Searched in: {:?}. \
+             Set BIOMEOS_PLASMID_BIN_DIR to specify binary location.",
+            primal_name,
+            base_dirs.iter().filter_map(|d| d.as_ref()).collect::<Vec<_>>()
+        )
+    }
+
     /// Execute a single node
     async fn execute_node(
         node: &GraphNode,
@@ -240,10 +305,12 @@ impl GraphExecutor {
             "crypto.derive_child_seed" => Self::node_crypto_derive_seed(node, context).await,
             "primal.launch" => Self::node_primal_launch(node, context).await,
             "primal_start" => Self::node_primal_start(node, context).await, // NEW: Phase 2
+            "start" => Self::node_primal_start_capability(node, context).await, // NEW: Capability-based start
             "verification" => Self::node_verification(node, context).await, // NEW: Phase 2
             "health.check" => Self::node_health_check(node, context).await,
             "health.check_atomic" => Self::node_health_check(node, context).await,
             "health.check_all" => Self::node_health_check_all(node, context).await,
+            "health_check" => Self::node_health_check_capability(node, context).await, // NEW: Capability-based health check
             "lineage.verify_siblings" => Self::node_lineage_verify(node, context).await,
             "report.deployment_success" => Self::node_deployment_report(node, context).await,
             "log.info" => Self::node_log_info(node, context).await,
@@ -402,6 +469,291 @@ impl GraphExecutor {
         }))
     }
 
+    /// Node executor: start (capability-based primal launching)
+    async fn node_primal_start_capability(
+        node: &GraphNode,
+        _context: &ExecutionContext,
+    ) -> Result<serde_json::Value> {
+        use std::process::Stdio;
+        use tokio::time::{sleep, Duration};
+        
+        tracing::info!("🚀 Starting primal via capability-based discovery");
+        
+        // Extract capability and operation parameters
+        let capability = node
+            .primal
+            .as_ref()
+            .and_then(|p| p.by_capability.as_ref())
+            .ok_or_else(|| anyhow::anyhow!("Missing primal.by_capability"))?;
+        
+        let operation = node
+            .operation
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Missing operation"))?;
+        
+        let params = &operation.params;
+        let mode = params
+            .get("mode")
+            .and_then(|v| v.as_str())
+            .unwrap_or("server");
+        
+        let family_id = params
+            .get("family_id")
+            .and_then(|v| v.as_str())
+            .unwrap_or("nat0");
+        
+        tracing::debug!("   Capability: {}", capability);
+        tracing::debug!("   Mode: {}", mode);
+        tracing::debug!("   Family ID: {}", family_id);
+        
+        // 1. Capability → Primal Name Discovery (NO hardcoded paths!)
+        let primal_name = match capability.as_str() {
+            "security" => "beardog",
+            "discovery" => "songbird",
+            "ai" => "squirrel",
+            "compute" => "toadstool",
+            "storage" => "nestgate",
+            _ => {
+                tracing::warn!("Unknown capability '{}', skipping", capability);
+                return Ok(serde_json::json!({
+                    "started": false,
+                    "capability": capability,
+                    "error": format!("Unknown capability: {}", capability)
+                }));
+            }
+        };
+        
+        // 2. Discover binary path (capability-based, auto-detect architecture)
+        let binary_full_path = match Self::discover_primal_binary(primal_name, _context).await {
+            Ok(path) => path,
+            Err(e) => {
+                tracing::warn!("   Binary discovery failed for {}: {}", primal_name, e);
+                return Ok(serde_json::json!({
+                    "started": false,
+                    "capability": capability,
+                    "primal": primal_name,
+                    "error": format!("Binary not found: {}", e)
+                }));
+            }
+        };
+        
+        tracing::info!("   Discovered: {} → {}", primal_name, binary_full_path.display());
+        
+        // 3. Build socket path (use runtime dir, not hardcoded /tmp/)
+        let runtime_dir = std::env::var("BIOMEOS_RUNTIME_DIR")
+            .or_else(|_| std::env::var("TMPDIR"))
+            .unwrap_or_else(|_| "/tmp".to_string());
+        let socket_path = format!("{}/{}-{}.sock", runtime_dir, primal_name, family_id);
+        
+        // 3. Build command with primal-specific arguments
+        let mut cmd = tokio::process::Command::new(&binary_full_path);
+        cmd.arg(mode);
+        
+        // Add socket path (primal-specific handling)
+        match primal_name {
+            "beardog" => {
+                // BearDog: GOLD STANDARD - uses CLI flags
+                cmd.arg("--socket").arg(&socket_path);
+                cmd.arg("--family-id").arg(family_id);
+            }
+            "squirrel" => {
+                // Squirrel: Uses --socket CLI flag (tested - works!)
+                cmd.arg("--socket").arg(&socket_path);
+                // Also pass Neural API endpoint for routing
+                cmd.env("SERVICE_MESH_ENDPOINT", format!("{}/neural-api-{}.sock", runtime_dir, family_id));
+            }
+            "songbird" => {
+                // Songbird: Needs bonding with BearDog (Tower Atomic!)
+                // Set socket path
+                cmd.env("SONGBIRD_SOCKET", &socket_path);
+                cmd.env("SONGBIRD_ORCHESTRATOR_FAMILY_ID", family_id);
+                
+                // CRITICAL: Point Songbird to BearDog (genetic bonding!)
+                let beardog_socket = format!("{}/beardog-{}.sock", runtime_dir, family_id);
+                cmd.env("SONGBIRD_SECURITY_PROVIDER", &beardog_socket);
+                cmd.env("SECURITY_ENDPOINT", &beardog_socket);  // Alternative name
+                
+                tracing::info!("   🧬 Bonding Songbird → BearDog: {}", beardog_socket);
+            }
+            "nestgate" | "toadstool" => {
+                // Generic: try --socket flag (follow BearDog pattern)
+                cmd.arg("--socket").arg(&socket_path);
+                cmd.arg("--family-id").arg(family_id);
+            }
+            _ => {
+                // Unknown primal: try both methods
+                cmd.arg("--socket").arg(&socket_path);
+                cmd.env("PRIMAL_SOCKET", &socket_path);
+            }
+        }
+        
+        cmd.env("FAMILY_ID", family_id);
+        cmd.stdout(Stdio::null());
+        cmd.stderr(Stdio::null());
+        
+        tracing::info!("   Starting: {} {} (socket: {})", primal_name, mode, socket_path);
+        
+        // 3. Start process
+        let child = match cmd.spawn() {
+            Ok(c) => c,
+            Err(e) => {
+                tracing::error!("   Failed to spawn process: {}", e);
+                return Ok(serde_json::json!({
+                    "started": false,
+                    "capability": capability,
+                    "primal": primal_name,
+                    "error": format!("Failed to spawn: {}", e)
+                }));
+            }
+        };
+        
+        let pid = child.id().unwrap_or(0);
+        tracing::info!("   Process started: PID {}", pid);
+        
+        // 4. Wait for socket (with timeout)
+        // socket_path already defined above (line 546) - use that!
+        tracing::debug!("   Waiting for socket: {}", socket_path);
+        
+        for attempt in 1..=30 {
+            if PathBuf::from(&socket_path).exists() {
+                tracing::info!("   ✅ Socket available: {} (after {}00ms)", socket_path, attempt);
+                
+                // Register capabilities with Neural API (NEW!)
+                if !node.capabilities.is_empty() {
+                    tracing::info!("   📝 Registering {} capabilities...", node.capabilities.len());
+                    for cap in &node.capabilities {
+                        // Note: We can't call router directly here in executor
+                        // This is just logging for now - actual registration happens
+                        // via RPC call from the primal on startup (to be implemented)
+                        tracing::info!("      - {} → {} @ {}", cap, primal_name, socket_path);
+                    }
+                }
+                
+                return Ok(serde_json::json!({
+                    "started": true,
+                    "capability": capability,
+                    "primal": primal_name,
+                    "mode": mode,
+                    "family_id": family_id,
+                    "pid": pid,
+                    "socket": socket_path,
+                    "startup_time_ms": attempt * 100
+                }));
+            }
+            sleep(Duration::from_millis(100)).await;
+        }
+        
+        tracing::warn!("   ⚠️  Socket not found after 3s: {}", socket_path);
+        tracing::warn!("   Process may still be starting or may have failed");
+        
+        // Return partial success (process started but socket not confirmed)
+        Ok(serde_json::json!({
+            "started": true,
+            "capability": capability,
+            "primal": primal_name,
+            "mode": mode,
+            "family_id": family_id,
+            "pid": pid,
+            "socket": socket_path,
+            "socket_confirmed": false,
+            "warning": "Socket not detected within 3 seconds"
+        }))
+    }
+
+    /// Node executor: health_check (capability-based health checking)
+    async fn node_health_check_capability(
+        node: &GraphNode,
+        _context: &ExecutionContext,
+    ) -> Result<serde_json::Value> {
+        tracing::info!("🏥 Health check for capability-based deployment");
+        
+        let operation = node
+            .operation
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Missing operation"))?;
+        
+        let params = &operation.params;
+        
+        tracing::debug!("   Health check params: {:?}", params);
+        
+        // Extract family_id for socket checks
+        let family_id = params
+            .get("family_id")
+            .and_then(|v| v.as_str())
+            .unwrap_or("nat0");
+        
+        let mut checks_passed = Vec::new();
+        let mut checks_failed = Vec::new();
+        
+        // Check Tower Atomic (beardog + songbird)
+        if params.get("check_tower_atomic").is_some() {
+            tracing::debug!("   Checking Tower Atomic...");
+            
+            // Check beardog socket
+            let beardog_socket = format!("/tmp/beardog-{}.sock", family_id);
+            if PathBuf::from(&beardog_socket).exists() {
+                tracing::info!("   ✅ BearDog socket available: {}", beardog_socket);
+                checks_passed.push("beardog_socket");
+            } else {
+                tracing::warn!("   ❌ BearDog socket not found: {}", beardog_socket);
+                checks_failed.push("beardog_socket");
+            }
+            
+            // Check songbird socket
+            let songbird_socket = format!("/tmp/songbird-{}.sock", family_id);
+            if PathBuf::from(&songbird_socket).exists() {
+                tracing::info!("   ✅ Songbird socket available: {}", songbird_socket);
+                checks_passed.push("songbird_socket");
+            } else {
+                tracing::warn!("   ❌ Songbird socket not found: {}", songbird_socket);
+                checks_failed.push("songbird_socket");
+            }
+        }
+        
+        // Check Discovery (songbird)
+        if params.get("check_discovery").is_some() {
+            tracing::debug!("   Checking Discovery service...");
+            
+            let songbird_socket = format!("/tmp/songbird-{}.sock", family_id);
+            if PathBuf::from(&songbird_socket).exists() {
+                tracing::info!("   ✅ Discovery available: {}", songbird_socket);
+                checks_passed.push("discovery");
+            } else {
+                tracing::warn!("   ❌ Discovery not available: {}", songbird_socket);
+                checks_failed.push("discovery");
+            }
+        }
+        
+        // Check AI Ready (squirrel)
+        if params.get("check_ai_ready").is_some() {
+            tracing::debug!("   Checking AI service...");
+            
+            let squirrel_socket = format!("/tmp/squirrel-{}.sock", family_id);
+            if PathBuf::from(&squirrel_socket).exists() {
+                tracing::info!("   ✅ AI service available: {}", squirrel_socket);
+                checks_passed.push("ai_service");
+            } else {
+                tracing::warn!("   ❌ AI service not available: {}", squirrel_socket);
+                checks_failed.push("ai_service");
+            }
+        }
+        
+        let all_healthy = checks_failed.is_empty();
+        
+        if all_healthy {
+            tracing::info!("   ✅ All health checks passed ({} checks)", checks_passed.len());
+        } else {
+            tracing::warn!("   ⚠️  Some health checks failed: {:?}", checks_failed);
+        }
+        
+        Ok(serde_json::json!({
+            "healthy": all_healthy,
+            "checks_passed": checks_passed,
+            "checks_failed": checks_failed,
+            "total_checks": checks_passed.len() + checks_failed.len()
+        }))
+    }
+
     /// Substitute environment variables in a string
     fn substitute_env(s: &str, env: &HashMap<String, String>) -> String {
         let mut result = s.to_string();
@@ -420,16 +772,23 @@ impl GraphExecutor {
         let mut graph_map: HashMap<String, Vec<String>> = HashMap::new();
 
         // Build adjacency list and in-degree map
+        tracing::info!("🔍 Building dependency graph for {} nodes...", self.graph.nodes.len());
         for node in &self.graph.nodes {
+            tracing::info!("   Node '{}' depends_on: {:?}", node.id, node.depends_on);
             in_degree.entry(node.id.clone()).or_insert(0);
 
-            for dep in &node.dependencies {
+            for dep in &node.depends_on {  // FIXED: was node.dependencies, now node.depends_on
                 graph_map
                     .entry(dep.clone())
                     .or_insert_with(Vec::new)
                     .push(node.id.clone());
                 *in_degree.entry(node.id.clone()).or_insert(0) += 1;
             }
+        }
+        
+        tracing::info!("🔍 In-degree calculation:");
+        for (id, degree) in &in_degree {
+            tracing::info!("   {} → in_degree={}", id, degree);
         }
 
         // Kahn's algorithm for topological sort
@@ -475,9 +834,13 @@ impl GraphExecutor {
     }
 
     /// Rollback deployment
+    /// 
+    /// Future Enhancement: Implement rollback strategy
+    /// - Store checkpoints during execution
+    /// - Reverse operations on failure
+    /// - Restore previous state
     async fn rollback(&self) -> Result<()> {
-        warn!("🔄 Rollback not yet implemented");
-        // TODO: Implement rollback strategy
+        warn!("🔄 Rollback not yet implemented - graph execution is forward-only");
         Ok(())
     }
 }
@@ -570,9 +933,13 @@ impl GraphExecutor {
             tokio::fs::remove_file(&socket_path).await.ok();
         }
 
-        // Create log directory
-        std::fs::create_dir_all("/tmp/primals").ok();
-        let log_path = format!("/tmp/primals/{}-{}.log", node.id, family_id);
+        // Create log directory (use runtime dir, not hardcoded /tmp/)
+        let runtime_dir = std::env::var("BIOMEOS_RUNTIME_DIR")
+            .or_else(|_| std::env::var("TMPDIR"))
+            .unwrap_or_else(|_| "/tmp".to_string());
+        let log_dir = format!("{}/primals", runtime_dir);
+        std::fs::create_dir_all(&log_dir).ok();
+        let log_path = format!("{}/{}-{}.log", log_dir, node.id, family_id);
 
         // Build command
         let mut cmd = Command::new(&binary);

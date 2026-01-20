@@ -24,6 +24,7 @@ biomeos-core = { path = "../biomeos-core" }
 biomeos-federation = { path = "../biomeos-federation" }
 biomeos-types = { path = "../biomeos-types" }
 chrono = "0.4"
+uuid = { version = "1.11", features = ["v4"] }  # For request ID generation
 toml = "0.8"  # For Neural API graph parsing
 
 # Neural API integration (TODO: Create neural-api-client crate)
