@@ -1,0 +1,27 @@
+# Tower Atomic + Squirrel Deployment
+# Tower Atomic (BearDog + Songbird) + Squirrel (AI orchestration)
+
+[metadata]
+name = "tower_squirrel"
+version = "1.0.0"
+description = "Tower Atomic + Squirrel for secure AI API communication"
+extends = "tower_atomic"  # Tower Atomic is the foundation
+
+# Add Squirrel to Tower Atomic
+[[primals]]
+name = "squirrel"
+binary = "plasmidBin/primals/squirrel-x86_64-musl"
+mode = "server"
+requires = ["tower"]  # Depends on Tower Atomic being up
+
+[squirrel.env]
+SQUIRREL_SECURITY_PROVIDER = "/tmp/beardog.sock"  # Use Tower for security
+SQUIRREL_HTTP_ENDPOINT = "http://localhost:8080"  # Use Tower for HTTP/TLS
+ANTHROPIC_API_KEY = "${ANTHROPIC_API_KEY}"  # From environment
+
+[validation]
+check_sockets = ["/tmp/beardog.sock", "/tmp/squirrel.sock"]
+check_ports = [8080]
+check_tower_atomic = true  # Verify Tower Atomic operational
+check_ai_ready = true  # Verify Squirrel can make AI calls
+

@@ -1,0 +1,36 @@
+# Tower Atomic Deployment
+# BearDog + Songbird = Tower Atomic (security + discovery)
+
+[metadata]
+name = "tower_atomic"
+version = "1.0.0"
+description = "Tower Atomic: Pure Rust HTTP/TLS stack (BearDog crypto + Songbird HTTP)"
+pattern = "atomic"  # This is an atomic unit
+
+# Tower Atomic = BearDog + Songbird (deployed together, always)
+[atomic.tower]
+components = ["beardog", "songbird"]
+description = "Security (BearDog) + HTTP/TLS (Songbird)"
+
+[[primals]]
+name = "beardog"
+binary = "plasmidBin/primals/beardog/beardog-x86_64-musl"
+mode = "server"
+args = ["--socket", "/tmp/beardog.sock"]
+socket = "/tmp/beardog.sock"
+
+[[primals]]
+name = "songbird"
+binary = "plasmidBin/primals/songbird"
+mode = "server"
+args = ["-p", "8080"]
+port = 8080
+
+[songbird.env]
+SONGBIRD_SECURITY_PROVIDER = "/tmp/beardog.sock"
+
+[validation]
+check_sockets = ["/tmp/beardog.sock"]
+check_ports = [8080]
+check_jwt = true  # Verify Songbird gets JWT from BearDog
+

@@ -115,57 +115,69 @@ echo '{"jsonrpc":"2.0","method":"ai.chat","params":{"prompt":"Hello!"},"id":1}' 
 
 ### **tower_atomic.toml** (Phase 1)
 
+**Tower Atomic = BearDog + Songbird** (atomic unit)
+
 ```toml
 [metadata]
 name = "tower_atomic"
 version = "1.0.0"
-description = "Tower Atomic: BearDog + Songbird (Pure Rust HTTP/TLS)"
+description = "Tower Atomic: Pure Rust HTTP/TLS stack"
+pattern = "atomic"  # BearDog + Songbird deployed as one unit
 
-[[services]]
-id = "beardog"
+[atomic.tower]
+components = ["beardog", "songbird"]
+description = "Security (BearDog) + HTTP/TLS (Songbird)"
+
+[[primals]]
+name = "beardog"
 binary = "plasmidBin/primals/beardog/beardog-x86_64-musl"
-args = ["server", "--socket", "/tmp/beardog.sock"]
-startup_order = 1
+mode = "server"
+args = ["--socket", "/tmp/beardog.sock"]
 
-[[services]]
-id = "songbird"
+[[primals]]
+name = "songbird"
 binary = "plasmidBin/primals/songbird"
-args = ["server", "-p", "8080"]
-env = { SONGBIRD_SECURITY_PROVIDER = "/tmp/beardog.sock" }
-startup_order = 2
-depends_on = ["beardog"]
+mode = "server"
+args = ["-p", "8080"]
+
+[songbird.env]
+SONGBIRD_SECURITY_PROVIDER = "/tmp/beardog.sock"
 
 [validation]
-check_beardog_socket = "/tmp/beardog.sock"
-check_songbird_port = 8080
+check_sockets = ["/tmp/beardog.sock"]
+check_ports = [8080]
+check_jwt = true
 ```
 
 ---
 
-### **tower_atomic_squirrel.toml** (Phase 2)
+### **tower_squirrel.toml** (Phase 2)
+
+**Tower Atomic + Squirrel** (extends the atomic unit)
 
 ```toml
 [metadata]
-name = "tower_atomic_squirrel"
+name = "tower_squirrel"
 version = "1.0.0"
-description = "Tower Atomic + Squirrel (AI via Pure Rust stack)"
-extends = "tower_atomic.toml"
+description = "Tower Atomic + Squirrel for secure AI"
+extends = "tower_atomic"  # Tower Atomic is the foundation
 
-[[services]]
-id = "squirrel"
+[[primals]]
+name = "squirrel"
 binary = "plasmidBin/primals/squirrel-x86_64-musl"
-args = ["server"]
-env = {
-  SQUIRREL_AI_ENDPOINT = "http://localhost:8080/ai",
-  SQUIRREL_SECURITY_PROVIDER = "/tmp/beardog.sock",
-  ANTHROPIC_API_KEY = "${ANTHROPIC_API_KEY}"
-}
-startup_order = 3
-depends_on = ["beardog", "songbird"]
+mode = "server"
+requires = ["tower"]  # Depends on Tower Atomic
+
+[squirrel.env]
+SQUIRREL_SECURITY_PROVIDER = "/tmp/beardog.sock"
+SQUIRREL_HTTP_ENDPOINT = "http://localhost:8080"
+ANTHROPIC_API_KEY = "${ANTHROPIC_API_KEY}"
 
 [validation]
-check_squirrel_socket = "/tmp/squirrel.sock"
+check_sockets = ["/tmp/beardog.sock", "/tmp/squirrel.sock"]
+check_ports = [8080]
 check_tower_atomic = true
+check_ai_ready = true
 ```
 
 ---
