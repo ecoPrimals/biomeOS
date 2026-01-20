@@ -17,6 +17,7 @@
 # =============================================================================
 
 [graph]
+id = "tower_atomic"
 name = "tower_atomic"
 version = "2.0.0"
 description = "Tower Atomic: Pure Rust HTTP/TLS + Discovery (BearDog + Songbird)"

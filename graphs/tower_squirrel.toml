@@ -22,6 +22,7 @@
 # =============================================================================
 
 [graph]
+id = "tower_squirrel"
 name = "tower_squirrel"
 version = "2.0.0"
 description = "Tower Atomic + Squirrel: Secure AI via capability-based discovery"
