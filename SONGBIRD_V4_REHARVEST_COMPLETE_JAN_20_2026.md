@@ -149,24 +149,41 @@ squirrel server
 
 ---
 
-## 🔄 HANDOFF TO SQUIRREL TEAM
+## 🔄 ARCHITECTURE CLARIFICATION
 
-### **Current Squirrel Behavior**
-Squirrel connects to Songbird via `AI_PROVIDER_SOCKETS` and treats it as an AI provider:
-```
-AI router error: Operation failed: Universal AI (songbird-nat0) RPC error [-32601]: Method not found: ai.generate_text
-```
+### **CRITICAL**: Songbird is NOT an AI Provider! ⚠️
+
+**Songbird provides**: `http.request` capability (HTTP routing)  
+**Songbird does NOT provide**: `ai.generate_text` capability
 
 ### **Correct Architecture**
-Squirrel's `AnthropicAdapter` should:
-1. Check for `ANTHROPIC_API_KEY`
-2. Discover `http.request` capability (returns Songbird)
-3. Call Songbird's `http.request` RPC method with Anthropic API requests
-4. Parse Anthropic's response and return to user
 
+#### **For External AI (Anthropic, OpenAI)**
+Squirrel's adapters should:
+1. Check for `ANTHROPIC_API_KEY` environment variable
+2. Discover `http.request` capability (finds Songbird via Neural API registry)
+3. Build Anthropic API request (JSON)
+4. Call Songbird's `http.request` RPC with the API request
+5. Parse Anthropic's HTTP response and return to user
+
+**DO NOT** use `AI_PROVIDER_SOCKETS` for Songbird!
+
+#### **For Local AI (ToadStool, future AI primals)**
+Those primals would provide `ai.generate_text` capability:
+```bash
+export AI_PROVIDER_SOCKETS="/tmp/toadstool-nat0.sock"
+```
+
+### **Squirrel's Anthropic Adapter**
 **File**: `phase1/squirrel/crates/main/src/api/ai/adapters/anthropic.rs`
 
-**Method**: `delegate_http` (already implemented!)
+The `delegate_http` method is already implemented! It should:
+1. Call `discover_capability("http.request")` → returns Songbird socket
+2. Build Anthropic API request
+3. Send to Songbird via `http.request` RPC
+4. Return response
+
+**Current Issue**: Squirrel is treating Songbird as an AI provider (via `AI_PROVIDER_SOCKETS`) instead of using it for HTTP delegation.
 
 ---
 
