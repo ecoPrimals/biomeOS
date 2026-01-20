@@ -1,27 +1,111 @@
-# Tower Atomic + Squirrel Deployment
-# Tower Atomic (BearDog + Songbird) + Squirrel (AI orchestration)
+# =============================================================================
+# Tower Atomic + Squirrel Deployment Graph - Neural API
+# =============================================================================
+#
+# Extends Tower Atomic with AI orchestration capabilities
+#
+# Architecture:
+#   Anthropic API (HTTPS - external, ionic bonding)
+#     ↕
+#   Songbird (HTTP/TLS gateway, discovery service)
+#     ↕
+#   BearDog (Pure Rust crypto operations)
+#     ↕
+#   Squirrel (AI orchestration, capability-based discovery)
+#
+# Capability-Based Discovery:
+# - Squirrel discovers Songbird via SERVICE_MESH_ENDPOINT
+# - Squirrel discovers BearDog via Songbird registry
+# - Squirrel discovers AI providers via capability queries
+# - Zero hardcoding (no ports, no paths, no model names)
+#
+# =============================================================================
 
-[metadata]
+[graph]
 name = "tower_squirrel"
-version = "1.0.0"
-description = "Tower Atomic + Squirrel for secure AI API communication"
-extends = "tower_atomic"  # Tower Atomic is the foundation
+version = "2.0.0"
+description = "Tower Atomic + Squirrel: Secure AI via capability-based discovery"
+coordination = "Sequential"
 
-# Add Squirrel to Tower Atomic
-[[primals]]
-name = "squirrel"
-binary = "plasmidBin/primals/squirrel-x86_64-musl"
+# =============================================================================
+# Phase 1: Deploy Tower Atomic (BearDog + Songbird)
+# =============================================================================
+
+[[nodes]]
+id = "start-beardog"
+primal = { by_capability = "security" }
+output = "beardog_started"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
 mode = "server"
-requires = ["tower"]  # Depends on Tower Atomic being up
+family_id = "nat0"
 
-[squirrel.env]
-SQUIRREL_SECURITY_PROVIDER = "/tmp/beardog.sock"  # Use Tower for security
-SQUIRREL_HTTP_ENDPOINT = "http://localhost:8080"  # Use Tower for HTTP/TLS
-ANTHROPIC_API_KEY = "${ANTHROPIC_API_KEY}"  # From environment
+[nodes.constraints]
+timeout_ms = 30000
 
-[validation]
-check_sockets = ["/tmp/beardog.sock", "/tmp/squirrel.sock"]
-check_ports = [8080]
-check_tower_atomic = true  # Verify Tower Atomic operational
-check_ai_ready = true  # Verify Squirrel can make AI calls
+[[nodes]]
+id = "start-songbird"
+primal = { by_capability = "discovery" }
+output = "songbird_started"
+depends_on = ["start-beardog"]
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "nat0"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+# =============================================================================
+# Phase 2: Deploy Squirrel (AI Orchestration)
+# =============================================================================
+# Squirrel uses capability-based discovery:
+# - Discovers Songbird (SERVICE_MESH_ENDPOINT)
+# - Discovers BearDog via Songbird registry (security capability)
+# - Discovers HTTP gateway via Songbird (http capability)
+# - Discovers AI providers via Songbird (ai capability queries)
+
+[[nodes]]
+id = "start-squirrel"
+primal = { by_capability = "ai" }
+output = "squirrel_started"
+depends_on = ["start-songbird"]
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "nat0"
+# Squirrel will auto-discover:
+# - Songbird (for service discovery)
+# - BearDog (for security, via Songbird)
+# - HTTP gateway (for external APIs, via Songbird)
+
+[nodes.constraints]
+timeout_ms = 30000
+
+# =============================================================================
+# Phase 3: Validate End-to-End (Tower Atomic + Squirrel)
+# =============================================================================
+
+[[nodes]]
+id = "validate-stack"
+output = "stack_validated"
+depends_on = ["start-beardog", "start-songbird", "start-squirrel"]
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.operation.params]
+check_tower_atomic = true  # Verify BearDog + Songbird operational
+check_discovery = true  # Verify Squirrel found Songbird
+check_ai_ready = true  # Verify Squirrel can route AI requests
+check_ionic_bonding = true  # Verify external API access via Tower
 

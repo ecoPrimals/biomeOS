@@ -1,36 +1,83 @@
-# Tower Atomic Deployment
-# BearDog + Songbird = Tower Atomic (security + discovery)
+# =============================================================================
+# Tower Atomic Deployment Graph - Neural API
+# =============================================================================
+#
+# Tower Atomic = BearDog + Songbird (electron - enables bonding)
+#
+# Provides:
+# - Pure Rust HTTP/TLS stack (BearDog crypto + Songbird HTTP)
+# - Service discovery (Songbird registry)
+# - Secure communications (Unix sockets + JSON-RPC)
+#
+# Capability-Based Discovery:
+# - Zero hardcoding (no ports, no paths)
+# - Primals discover each other at runtime
+# - Songbird provides discovery service
+#
+# =============================================================================
 
-[metadata]
+[graph]
 name = "tower_atomic"
-version = "1.0.0"
-description = "Tower Atomic: Pure Rust HTTP/TLS stack (BearDog crypto + Songbird HTTP)"
-pattern = "atomic"  # This is an atomic unit
+version = "2.0.0"
+description = "Tower Atomic: Pure Rust HTTP/TLS + Discovery (BearDog + Songbird)"
+coordination = "Sequential"
 
-# Tower Atomic = BearDog + Songbird (deployed together, always)
-[atomic.tower]
-components = ["beardog", "songbird"]
-description = "Security (BearDog) + HTTP/TLS (Songbird)"
+# =============================================================================
+# Phase 1: Start Security Provider (BearDog)
+# =============================================================================
 
-[[primals]]
-name = "beardog"
-binary = "plasmidBin/primals/beardog/beardog-x86_64-musl"
-mode = "server"
-args = ["--socket", "/tmp/beardog.sock"]
-socket = "/tmp/beardog.sock"
+[[nodes]]
+id = "start-beardog"
+primal = { by_capability = "security" }
+output = "beardog_started"
 
-[[primals]]
-name = "songbird"
-binary = "plasmidBin/primals/songbird"
-mode = "server"
-args = ["-p", "8080"]
-port = 8080
+[nodes.operation]
+name = "start"
 
-[songbird.env]
-SONGBIRD_SECURITY_PROVIDER = "/tmp/beardog.sock"
+[nodes.operation.params]
+mode = "server"  # Crypto operations server
+family_id = "nat0"
 
-[validation]
-check_sockets = ["/tmp/beardog.sock"]
-check_ports = [8080]
-check_jwt = true  # Verify Songbird gets JWT from BearDog
+[nodes.constraints]
+timeout_ms = 30000
+
+# =============================================================================
+# Phase 2: Start Discovery Service (Songbird)
+# =============================================================================
+# Songbird auto-discovers BearDog via capability-based discovery
+
+[[nodes]]
+id = "start-songbird"
+primal = { by_capability = "discovery" }
+output = "songbird_started"
+depends_on = ["start-beardog"]
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"  # Discovery + HTTP gateway
+family_id = "nat0"
+# Songbird will auto-discover BearDog (security provider)
+# Provides HTTP/TLS gateway for external APIs (ionic bonding)
+
+[nodes.constraints]
+timeout_ms = 30000
+
+# =============================================================================
+# Validation: Tower Atomic Health
+# =============================================================================
+
+[[nodes]]
+id = "validate-tower"
+output = "tower_validated"
+depends_on = ["start-beardog", "start-songbird"]
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.operation.params]
+check_jwt_generation = true  # Verify BearDog crypto
+check_discovery_service = true  # Verify Songbird registry
+check_http_gateway = true  # Verify Songbird HTTP/TLS
 
