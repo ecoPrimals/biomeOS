@@ -217,16 +217,25 @@ impl GraphExecutor {
         node: &GraphNode,
         context: &ExecutionContext,
     ) -> Result<serde_json::Value> {
+        // Determine node type (new format or legacy)
+        let node_type_str = if let Some(ref operation) = node.operation {
+            operation.name.as_str()
+        } else if let Some(ref node_type) = node.node_type {
+            node_type.as_str()
+        } else {
+            "unknown"
+        };
+
         info!(
             "   ⚡ Executing node: {} (type: {})",
-            node.id, node.node_type
+            node.id, node_type_str
         );
 
         // Mark as running
         context.set_status(&node.id, NodeStatus::Running).await;
 
         // Execute based on node type
-        let result = match node.node_type.as_str() {
+        let result = match node_type_str {
             "filesystem.check_exists" => Self::node_filesystem_check_exists(node, context).await,
             "crypto.derive_child_seed" => Self::node_crypto_derive_seed(node, context).await,
             "primal.launch" => Self::node_primal_launch(node, context).await,
@@ -241,7 +250,7 @@ impl GraphExecutor {
             "log.warn" => Self::node_log_warn(node, context).await,
             "log.error" => Self::node_log_error(node, context).await,
             _ => {
-                warn!("Unknown node type: {}, skipping", node.node_type);
+                warn!("Unknown node type: {}, skipping", node_type_str);
                 Ok(serde_json::json!({"skipped": true}))
             }
         };

@@ -221,7 +221,23 @@ impl NeuralApiServer {
         let family_id_param = params["family_id"].as_str().unwrap_or(&self.family_id);
 
         let graph_path = self.graphs_dir.join(format!("{}.toml", graph_id));
-        let graph = Graph::from_toml_file(&graph_path).context("Failed to load graph")?;
+        
+        // Enhanced debugging for graph loading
+        tracing::info!("🔍 Loading graph: {}", graph_id);
+        tracing::debug!("   Graph path: {}", graph_path.display());
+        tracing::debug!("   Graphs dir: {}", self.graphs_dir.display());
+        
+        if !graph_path.exists() {
+            tracing::error!("❌ Graph file not found: {}", graph_path.display());
+            anyhow::bail!("Graph file not found: {}", graph_path.display());
+        }
+        
+        tracing::debug!("✅ Graph file exists, attempting to parse...");
+        let graph = Graph::from_toml_file(&graph_path)
+            .with_context(|| format!("Failed to load graph from: {}", graph_path.display()))?;
+        
+        tracing::info!("✅ Graph loaded successfully: {} (version: {})", graph.id, graph.version);
+        tracing::debug!("   Nodes: {}", graph.nodes.len());
 
         // Generate execution ID
         let execution_id = format!("{}-{}", graph_id, chrono::Utc::now().timestamp());

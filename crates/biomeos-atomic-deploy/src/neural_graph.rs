@@ -1,5 +1,6 @@
 //! Graph data structures for Neural API
 
+use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -16,20 +17,33 @@ pub struct Graph {
 impl Graph {
     /// Load graph from TOML file
     pub fn from_toml_file(path: &std::path::Path) -> anyhow::Result<Self> {
-        let contents = std::fs::read_to_string(path)?;
+        tracing::debug!("📖 Reading graph file: {}", path.display());
+        let contents = std::fs::read_to_string(path)
+            .with_context(|| format!("Failed to read file: {}", path.display()))?;
+        tracing::debug!("   File size: {} bytes", contents.len());
+        
         Self::from_toml_str(&contents)
+            .with_context(|| format!("Failed to parse TOML from: {}", path.display()))
     }
 
     /// Load graph from TOML string
     pub fn from_toml_str(toml: &str) -> anyhow::Result<Self> {
+        tracing::debug!("🔍 Parsing TOML structure...");
+        
         // Parse TOML
-        let value: toml::Value = toml::from_str(toml)?;
+        let value: toml::Value = toml::from_str(toml)
+            .context("Failed to parse TOML syntax")?;
+        
+        tracing::debug!("✅ TOML syntax valid");
 
         // Extract graph metadata
+        tracing::debug!("🔍 Looking for [graph] section...");
         let graph_table = value
             .get("graph")
             .and_then(|v| v.as_table())
-            .ok_or_else(|| anyhow::anyhow!("Missing [graph] section"))?;
+            .ok_or_else(|| anyhow::anyhow!("Missing [graph] section in TOML"))?;
+        
+        tracing::debug!("✅ Found [graph] section");
 
         let id = graph_table
             .get("id")
@@ -50,16 +64,29 @@ impl Graph {
             .to_string();
 
         // Extract nodes
+        tracing::debug!("🔍 Looking for [[nodes]] array...");
         let nodes_array = value
             .get("nodes")
             .and_then(|v| v.as_array())
-            .ok_or_else(|| anyhow::anyhow!("Missing [[nodes]] array"))?;
+            .ok_or_else(|| {
+                tracing::error!("❌ Missing [[nodes]] array in TOML");
+                tracing::debug!("   Available top-level keys: {:?}", value.as_table().map(|t| t.keys().collect::<Vec<_>>()));
+                anyhow::anyhow!("Missing [[nodes]] array. Found keys: {:?}", 
+                    value.as_table().map(|t| t.keys().collect::<Vec<_>>()))
+            })?;
+        
+        tracing::debug!("✅ Found [[nodes]] array with {} nodes", nodes_array.len());
 
         let mut nodes = Vec::new();
-        for node_value in nodes_array {
-            let node: GraphNode = toml::from_str(&toml::to_string(node_value)?)?;
+        for (idx, node_value) in nodes_array.iter().enumerate() {
+            tracing::debug!("   Parsing node {}...", idx);
+            let node: GraphNode = toml::from_str(&toml::to_string(node_value)?)
+                .with_context(|| format!("Failed to parse node {} structure", idx))?;
+            tracing::debug!("   ✅ Node {}: id={}", idx, node.id);
             nodes.push(node);
         }
+        
+        tracing::info!("✅ Parsed {} nodes successfully", nodes.len());
 
         // Extract execution config
         let config = if let Some(exec_table) = value.get("execution").and_then(|v| v.as_table()) {
@@ -108,13 +135,58 @@ impl Graph {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GraphNode {
     pub id: String,
-    pub node_type: String,
+    #[serde(default)]
+    pub primal: Option<PrimalSelector>,
+    #[serde(default)]
+    pub output: Option<String>,
+    #[serde(default)]
+    pub operation: Option<Operation>,
+    #[serde(default)]
+    pub constraints: Option<Constraints>,
+    #[serde(default)]
+    pub depends_on: Vec<String>,
+    // Legacy fields (for backward compatibility)
+    #[serde(default)]
+    pub node_type: Option<String>,
     #[serde(default)]
     pub dependencies: Vec<String>,
     #[serde(default)]
     pub config: HashMap<String, serde_json::Value>,
     #[serde(default)]
     pub outputs: Vec<NodeOutput>,
+}
+
+/// Primal selector (capability-based discovery)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PrimalSelector {
+    #[serde(default)]
+    pub by_capability: Option<String>,
+    #[serde(default)]
+    pub by_name: Option<String>,
+}
+
+/// Operation definition
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Operation {
+    pub name: String,
+    #[serde(default)]
+    pub params: HashMap<String, serde_json::Value>,
+}
+
+/// Node constraints
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Constraints {
+    #[serde(default)]
+    pub timeout_ms: Option<u64>,
+    #[serde(default)]
+    pub retry: Option<RetryConfig>,
+}
+
+/// Retry configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RetryConfig {
+    pub max_attempts: u32,
+    pub backoff_ms: u64,
 }
 
 /// Node output definition
