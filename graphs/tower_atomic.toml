@@ -31,13 +31,6 @@ coordination = "Sequential"
 id = "start-beardog"
 primal = { by_capability = "security" }
 output = "beardog_started"
-# Capabilities this primal provides (NEW - for capability registry!)
-capabilities = [
-    "crypto.sign",
-    "crypto.verify",
-    "security.jwt",
-    "security.hash"
-]
 
 [nodes.operation]
 name = "start"
@@ -49,6 +42,18 @@ family_id = "nat0"
 [nodes.constraints]
 timeout_ms = 30000
 
+# Capability Translation: BearDog's semantic → actual method mappings
+[nodes.capabilities_provided]
+"crypto.generate_keypair" = "x25519_generate_ephemeral"
+"crypto.ecdh_derive" = "x25519_derive_secret"
+"crypto.encrypt" = "chacha20_poly1305_encrypt"
+"crypto.decrypt" = "chacha20_poly1305_decrypt"
+"crypto.hash" = "blake3_hash"
+"crypto.hmac" = "hmac_sha256"
+"tls.derive_secrets" = "tls_derive_handshake_secrets"
+"crypto.sign" = "sign_ed25519"
+"crypto.verify" = "verify_ed25519"
+
 # =============================================================================
 # Phase 2: Start Discovery Service (Songbird)
 # =============================================================================
@@ -59,15 +64,6 @@ id = "start-songbird"
 primal = { by_capability = "discovery" }
 output = "songbird_started"
 depends_on = ["start-beardog"]
-# Capabilities this primal provides (NEW - for capability registry!)
-capabilities = [
-    "http.post",
-    "http.get",
-    "http.request",
-    "discovery.announce",
-    "discovery.query",
-    "security.verify"
-]
 
 [nodes.operation]
 name = "start"
@@ -75,11 +71,24 @@ name = "start"
 [nodes.operation.params]
 mode = "server"  # Discovery + HTTP gateway
 family_id = "nat0"
+
+# Environment variables for Songbird
+[nodes.operation.environment]
+NEURAL_API_SOCKET = "/tmp/neural-api-nat0.sock"  # For capability translation routing
+
 # Songbird will auto-discover BearDog (security provider)
 # Provides HTTP/TLS gateway for external APIs (ionic bonding)
 
 [nodes.constraints]
 timeout_ms = 30000
+
+# Capability Translation: Songbird's semantic → actual method mappings
+[nodes.capabilities_provided]
+"http.request" = "http_request"
+"http.get" = "http_get"
+"http.post" = "http_post"
+"discovery.announce" = "discovery_announce"
+"discovery.query" = "discovery_query"
 
 # =============================================================================
 # Validation: Tower Atomic Health

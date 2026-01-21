@@ -27,6 +27,16 @@ family_id = "nat0"  # Can be overridden by executor
 [nodes.constraints]
 timeout_ms = 30000  # 30s to start
 
+# Capability Translation: BearDog's semantic → actual method mappings
+[nodes.capabilities_provided]
+"crypto.generate_keypair" = "x25519_generate_ephemeral"
+"crypto.ecdh_derive" = "x25519_derive_secret"
+"crypto.encrypt" = "chacha20_poly1305_encrypt"
+"crypto.decrypt" = "chacha20_poly1305_decrypt"
+"crypto.hash" = "blake3_hash"
+"crypto.hmac" = "hmac_sha256"
+"tls.derive_secrets" = "tls_derive_handshake_secrets"
+
 # Phase 2: Germinate Songbird (Network + BTSP)
 [[nodes]]
 id = "germinate_songbird"
@@ -43,11 +53,23 @@ name = "start"
 mode = "server"
 family_id = "nat0"
 
+# Environment variables for Songbird
+[nodes.operation.environment]
+NEURAL_API_SOCKET = "/tmp/neural-api-nat0.sock"  # For capability translation routing
+
 # Genetic bonding: Songbird inherits from BearDog
 # BEARDOG_SOCKET will be injected by executor (nucleation)
 
 [nodes.constraints]
 timeout_ms = 30000  # 30s to start
+
+# Capability Translation: Songbird's semantic → actual method mappings
+[nodes.capabilities_provided]
+"http.request" = "http_request"
+"http.get" = "http_get"
+"http.post" = "http_post"
+"discovery.announce" = "discovery_announce"
+"discovery.query" = "discovery_query"
 
 # Phase 3: Validate Tower Atomic Health
 [[nodes]]

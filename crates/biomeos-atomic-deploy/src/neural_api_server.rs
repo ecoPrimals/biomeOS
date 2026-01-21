@@ -1128,47 +1128,64 @@ impl NeuralApiServer {
         
         for node in &graph.nodes {
             if let Some(caps_provided) = &node.capabilities_provided {
-                // Get socket path for this node
-                let socket_path = if let Some(operation) = &node.operation {
-                    if operation.name == "start" {
-                        operation.params.get("socket_path")
-                            .and_then(|v| v.as_str())
-                            .map(|s| s.to_string())
+                // Infer socket path from primal type and family_id
+                let primal_name = if let Some(primal_cfg) = &node.primal {
+                    // Check by_capability first
+                    if let Some(cap) = &primal_cfg.by_capability {
+                        Some(match cap.as_str() {
+                            "security" => "beardog",
+                            "discovery" => "songbird",
+                            "ai" => "squirrel",
+                            "compute" => "toadstool",
+                            "storage" => "nestgate",
+                            _ => cap.as_str()
+                        }.to_string())
+                    } else if let Some(name) = &primal_cfg.by_name {
+                        Some(name.clone())
                     } else {
                         None
                     }
                 } else {
-                    None
+                    Some(node.id.clone())
                 };
                 
-                // If we have a socket path, register translations
-                if let Some(socket) = socket_path {
+                if let Some(primal) = primal_name {
+                    // Get family_id from operation params or use server default
+                    let family_id = if let Some(operation) = &node.operation {
+                        operation.params.get("family_id")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or(&self.family_id)
+                    } else {
+                        &self.family_id
+                    };
+                    
+                    // Build socket path: /tmp/{primal}-{family_id}.sock
+                    let socket_path = format!("/tmp/{}-{}.sock", primal, family_id);
+                    
+                    // Register all translations for this primal
                     for (semantic, actual) in caps_provided {
                         info!(
-                            "📝 Loading translation from graph: {} → {} ({})",
-                            semantic, actual, node.id
+                            "📝 Loading translation from graph: {} → {} ({} @ {})",
+                            semantic, actual, primal, socket_path
                         );
                         
                         registry.register_translation(
                             semantic,
-                            &node.id,
+                            &primal,
                             actual,
-                            &socket,
+                            &socket_path,
                         );
                         
                         loaded_count += 1;
                     }
-                } else {
-                    debug!(
-                        "⚠️  Node {} has capabilities_provided but no socket_path, skipping",
-                        node.id
-                    );
                 }
             }
         }
         
         if loaded_count > 0 {
             info!("✅ Loaded {} capability translations from graph {}", loaded_count, graph.id);
+        } else {
+            debug!("⚠️  No capability translations found in graph {}", graph.id);
         }
         
         Ok(())

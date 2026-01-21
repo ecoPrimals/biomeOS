@@ -196,15 +196,18 @@ impl CapabilityTranslationRegistry {
         
         // 4. Send request
         stream.write_all(rpc_request_str.as_bytes()).await?;
+        stream.write_all(b"\n").await?;  // Add newline for line-based protocols
         stream.flush().await?;
         
-        // 5. Read response
-        let mut response_bytes = Vec::new();
-        stream.read_to_end(&mut response_bytes).await?;
-        let response_str = String::from_utf8(response_bytes)?;
-        trace!("← Provider RPC: {}", response_str);
+        // 5. Read response (line-based for JSON-RPC)
+        let mut reader = tokio::io::BufReader::new(stream);
+        let mut response_line = String::new();
+        use tokio::io::AsyncBufReadExt;
+        reader.read_line(&mut response_line).await?;
         
-        let rpc_response: serde_json::Value = serde_json::from_str(&response_str)?;
+        trace!("← Provider RPC: {}", response_line.trim());
+        
+        let rpc_response: serde_json::Value = serde_json::from_str(&response_line)?;
         
         // 6. Check for errors
         if let Some(error) = rpc_response.get("error") {
