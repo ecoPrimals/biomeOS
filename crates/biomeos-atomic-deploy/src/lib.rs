@@ -34,6 +34,8 @@ pub mod primal_launcher; // EVOLVING: Legacy launcher → coordinator
 pub mod neural_api_server;
 pub mod neural_executor;
 pub mod neural_graph;
+pub mod mode;
+pub mod nucleation;
 pub mod neural_router; // NEW: Capability-based routing layer
 
 pub use deployment_graph::{AtomicDeploymentGraph, DeploymentResult};
