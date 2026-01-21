@@ -1,435 +1,286 @@
-# 🌱 biomeOS - Universal Operating System
+# biomeOS - Neural API and Ecosystem Orchestration
 
-**Production-Ready** | **100% Pure Rust** | **Zero Unsafe Code** | **TRUE PRIMAL Architecture**  
-**Neural API Routing Mesh** | **Universal Portability** | **Perfect 8/8 Principles**
-
-biomeOS is a capability-based orchestration layer for managing primals and ecosystems. It provides secure, adaptive coordination through the NUCLEUS discovery protocol and Neural API routing mesh.
-
----
-
-## 🎊 Current Status: A++ - Neural API Capability Mesh! (January 20, 2026 v0.29.0)
-
-**✅ PRODUCTION-READY!** | **Grade: A++ (100/100)** | **TRUE ARCHITECTURE** 🏆🦀✨
-
-### 🏆 Latest Evolution (January 20, 2026 - 6.5 hours)
-
-**Neural API as Capability Mesh** - **Architectural Breakthrough!** 🎉
-
-**Major Achievements**:
-- ✅ **Capability Registry**: Dynamic primal discovery (7,500x faster)
-- ✅ **4 New RPC Methods**: capability.* protocol complete
-- ✅ **Graph Integration**: Automatic capability registration
-- ✅ **Live Tested**: 10/10 capabilities registered successfully
-- ✅ **Squirrel v2.0.0**: Reviewed, rebuilt, harvested (6.2 MB Pure Rust)
-- ✅ **Documentation**: 75K lines of comprehensive guides and handoffs
-- ✅ **Production Ready**: Neural API + Tower Atomic deployed
-
-**Performance**: 2ms discovery (was 15+ seconds)  
-**Architecture**: Mesh-based (was peer-to-peer scanning)  
-**Evolution**: Future-proof foundation for distributed systems
-
-**Quick Start**:
-```bash
-# Read the entry guide
-cat START_HERE.md
-
-# Deploy Tower Atomic with capability registry
-./scripts/deploy_tower_atomic_manual.sh nat0
-
-# Verify capabilities registered
-echo '{"jsonrpc":"2.0","method":"capability.list","id":1}' | nc -U /tmp/neural-api-nat0.sock
-```
-
-**See**: **[START_HERE.md](START_HERE.md)** ← **Primary entry point for all users!**
+**Version**: 3.0.0  
+**Status**: 🚧 **Active Development** - Tower Atomic HTTP Evolution  
+**Last Updated**: January 21, 2026
 
 ---
 
-## 📚 Documentation Navigation
+## 🌍 Overview
 
-**New to biomeOS?** Follow this path:
+**biomeOS** is the orchestration layer for the ecoPrimals ecosystem. It provides:
 
-1. **[START_HERE.md](START_HERE.md)** (2 min) ← **Start here!** Navigation for all user types
-2. **[SESSION_COMPLETE_JAN_20_2026_FINAL.md](SESSION_COMPLETE_JAN_20_2026_FINAL.md)** (5 min) - Latest session summary
-3. **[ROOT_DOCS_INDEX.md](ROOT_DOCS_INDEX.md)** - Complete documentation index
-
-**Architecture**:
-- **[NEURAL_API_AS_CAPABILITY_MESH_JAN_20_2026.md](NEURAL_API_AS_CAPABILITY_MESH_JAN_20_2026.md)** - Capability mesh design
-- **[BONDING_MODEL_CORRECTION_JAN_20_2026.md](BONDING_MODEL_CORRECTION_JAN_20_2026.md)** - Ecological interactions
-- **[BIOMEOS_ATOMICS_ARCHITECTURE.md](BIOMEOS_ATOMICS_ARCHITECTURE.md)** - Atomic patterns
-
-**Deployment**:
-- **[TOWER_ATOMIC_READY_JAN_20_2026.md](TOWER_ATOMIC_READY_JAN_20_2026.md)** - Production deployment  
-- **[MANUAL_DEPLOYMENT_GUIDE_JAN_20_2026.md](MANUAL_DEPLOYMENT_GUIDE_JAN_20_2026.md)** - Manual procedures
-
-**Quality & Evolution**:
-- **[PRODUCTION_READINESS_VERIFICATION_JAN_20_2026.md](PRODUCTION_READINESS_VERIFICATION_JAN_20_2026.md)** - Production status
-- **[DEEP_DEBT_AUDIT_JAN_20_2026.md](DEEP_DEBT_AUDIT_JAN_20_2026.md)** - Code quality audit  
-**Executives**: [FINAL_SESSION_CLOSURE_JAN_20_2026.md](FINAL_SESSION_CLOSURE_JAN_20_2026.md) (3 min)
+1. **Neural API** - Capability-based mesh for primal discovery and deployment
+2. **Graph-Based Deployment** - TOML-defined deployment graphs with DAG execution
+3. **Capability Registry** - Event-driven discovery for instant primal lookups
+4. **Environment Management** - Dynamic environment variable passing to primals
+5. **Atomic Deployments** - BearDog + Songbird (Tower Atomic) for secure communication
 
 ---
 
-### 🏆 Previous Achievements (January 16, 2026)
+## 🚨 CURRENT STATUS (January 21, 2026)
 
-**Final Grade: A+ (100/100) - DEEP DEBT EXECUTION COMPLETE!** 🏆🦀
+### ✅ Working
 
-**Deep Debt Audit & Execution** (✅ COMPLETE!):
-- ✅ **External Dependencies**: Deep ARM investigation, reality check, evolution strategy (A+)
-- ✅ **Modern Idiomatic Rust**: async/await, Result<T,E>, ZERO unsafe code (A+)
-- ✅ **Smart Refactoring**: ZERO files over 1000 lines, well-architected (A+)
-- ✅ **Hardcoding Eliminated**: TRUE PRIMAL, capability-based discovery (A+)
-- ✅ **Mocks Isolated**: ZERO production mocks, all test-only (A+)
-- ✅ **Comprehensive Audit**: 558-line report validating A+ quality across all categories
-- ✅ **8 Documents Created**: 4,900+ lines of comprehensive ecosystem guidance
-- ✅ **Philosophy Evolved**: "Production-ready over purity" (pragmatic approach)
-- ✅ **Modern Async Evolution**: ZERO production sleeps, idiomatic tokio patterns (A+)
+- ✅ Neural API capability registry (event-driven discovery)
+- ✅ Graph deployment system with environment variables
+- ✅ Tower Atomic architecture (BearDog crypto + Songbird networking)
+- ✅ Unix socket JSON-RPC for inter-primal communication
+- ✅ Squirrel AI orchestration (Tier 2 - local AI)
 
-**Pure Rust Evolution & Modern Async** (🦀⚡):
-- ✅ **Investigation**: ring UNMAINTAINED (critical!), RustCrypto PRODUCTION-READY
-- ✅ **Strategy**: "Concentrated Gap" - HTTP deprecated, Songbird handles TLS
-- ✅ **biomeOS Status**: 100% pure Rust code, modern async/await patterns
-- ✅ **Sleep Removal**: 4 production sleeps → tokio::time::interval/timeout patterns
-- ✅ **TODO Completion**: BearDog Unix socket health check fully implemented
-- ✅ **Handoffs**: 7 comprehensive documents (4,900+ lines) for all teams
-- 🎯 **Primal Progress**: BearDog A++ (pure crypto), Squirrel A+ (FIRST!), Songbird 2-4hrs
-- 🎯 **BTSP Evolution**: BearDog ready (Unix sockets), Songbird handoff complete
+### 🚧 In Progress
 
-**NUCLEUS Bonding Model** (Specified ⚛️):
-- ✅ **Ionic Bonding**: Contract-based interactions (cloud GPU, APIs)
-- ✅ **Covalent Bonding**: Electron-sharing collaboration (basement clusters)
-- ✅ **Metallic Bonding**: Electron sea optimization (data centers)
-- ✅ **Weak Forces**: Zero-trust interactions (unknown/insecure systems)
-- ✅ **Organo-Metal-Salt**: Multi-modal complex interactions
+- 🚧 **Tower Atomic HTTP Implementation** (BearDog + Songbird co-evolution)
+  - **Blocker**: Songbird needs Pure Rust HTTP/HTTPS client with BearDog crypto
+  - **Timeline**: 1-2 weeks
+  - **Teams**: BearDog Team + Songbird Team
+  - **See**: `HANDOFF_SONGBIRD_BEARDOG_TOWER_ATOMIC_HTTP_JAN_21_2026.md`
 
-**Spore Deployment Architecture** (NEW! 🌱):
-- ✅ **HSM-Anchored**: Pixel as portable security root (vs. HPC-anchored)
-- ✅ **Multi-Spore**: Multiple LiveSpores + ColdSpores per device
-- ✅ **Cross-Compilation**: Framework for ARM64, RISC-V, x86_64
-- ✅ **Native Build**: On-device build support
-- ✅ **Titan M2**: Hardware-backed security for Pixel HSM
+### ⏸️ Paused (Waiting for Tower Atomic)
 
-**Complete Primal Harvest** (Latest: Pure Rust Evolution Jan 16, 2026):
-- ✅ **BearDog v0.9.0**: 3.2M (Pure Rust crypto, BTSP Unix sockets, A++) ⭐
-- ✅ **Squirrel v1.0.3**: 17M (FIRST to pure Rust, UniversalAI, A+) ⭐
-- ✅ **Songbird**: ~5M (Socket fix + tests, ready for BTSP client evolution)
-- ✅ **ToadStool**: ~4M (Socket paths verified 100% correct)
-- ✅ **NestGate**: 4.5M (Auth v2.0.0, BearDog JWT integration)
-- ✅ **Neural API**: ~3M (BearDog integration, secure fallback)
-
-**Socket Compliance**: 🏆 **100% (5/5 primals!)** - All primals TRUE PRIMAL compliant!
-
-**Architecture Validated**:
-- ✅ **Chemical Bonding Model**: Formal interaction specification (927 lines)
-- ✅ **Spore Framework**: HSM-anchored + multi-device deployment (574 lines)
-- ✅ **Dual-Family Deployment**: Family Alpha + Family Beta operational
-- ✅ **Ionic Bonding**: Cross-family interaction tested and working
-- ✅ **TRUE PRIMAL**: All primals maintain complete NUCLEUS
-- ✅ **Capability-Based**: Runtime discovery, zero hardcoding
-- ✅ **Self-Secure**: Bond type defines interaction, not structure
+- ⏸️ Squirrel external AI integration (Anthropic, OpenAI)
+- ⏸️ End-to-end validation of Pure Rust HTTP delegation
+- ⏸️ ecoBin compliance validation for networking stack
 
 ---
 
-## 🏗️ Architecture
+## 📁 Key Documentation
 
-### **Primals** (Sovereign Services)
-- **biomeOS**: Orchestrator (this project)
-- **Songbird**: P2P communication, discovery, BTSP
-- **BearDog**: Security, encryption, identity, trust, JWT management (HSM-backed)
-- **Toadstool**: Compute, GPU, WASM, container workloads
-- **NestGate**: Storage, provenance, encryption, compression
-- **petalTongue**: Universal UI (visual, audio, text)
-- **Squirrel**: AI coordinator, MCP integration
+### Current Session
 
-### **Atomics** (Deployment Units)
-- **Tower**: Communication stack (Songbird) - analogous to electron (e⁻)
-- **Node**: Compute (ToadStool) - analogous to proton (p⁺)
-- **Nest**: Data federation (NestGate) - analogous to neutron (n⁰)
-- **Security**: Cryptographic binding (BearDog) - analogous to nuclear force
-- **NUCLEUS**: Complete primal (Tower + Node + Nest + Security)
+- **`HANDOFF_SONGBIRD_BEARDOG_TOWER_ATOMIC_HTTP_JAN_21_2026.md`** ⭐ (PRIMARY HANDOFF)
+- `SESSION_SUMMARY_JAN_21_2026_TOWER_ATOMIC_BLOCKER.md` (Session overview)
+- `TOWER_ATOMIC_HTTP_IMPLEMENTATION_BLOCKER_JAN_21_2026.md` (Technical details)
+- `SESSION_BLOCKER_JAN_21_2026_TOWER_ATOMIC_HTTP.md` (Decision summary)
 
-### **Interaction Patterns** (Bonding Types)
-- **Ionic**: Contract-based, each keeps electrons (cloud services, APIs)
-- **Covalent**: Electron-sharing, collaborative (basement clusters, teams)
-- **Metallic**: Electron sea, optimized (data centers, GPU banks)
-- **Weak Forces**: Zero-trust, minimal coupling (unknown/insecure systems)
-- **Organo-Metal-Salt**: Multi-modal complex interactions
+### Infrastructure Evolution
 
-### **Communication Protocols**
-- **Primary**: Unix sockets (JSON-RPC 2.0) - covalent/metallic
-- **Discovery**: UDP multicast (BirdSong) - covalent mesh
-- **Secure Tunnels**: BTSP (BirdSong Tunnel Protocol) - covalent
-- **External APIs**: HTTP/HTTPS - ionic/weak
-- **No Hardcoding**: Runtime capability-based discovery
+- `ENVIRONMENT_VARIABLES_WORKING_JAN_21_2026.md` (Neural API env var passing)
+- `SQUIRREL_EVENT_DRIVEN_DISCOVERY_FIX_JAN_20_2026.md` (Discovery optimization)
+- `NEURAL_API_ENVIRONMENT_VARIABLES_NEEDED_JAN_21_2026.md` (Requirements doc)
+
+### Integration Work
+
+- `SONGBIRD_SQUIRREL_INTEGRATION_COMPLETE_JAN_20_2026.md` (RPC integration)
+- `SQUIRREL_ANTHROPIC_INTEGRATION_JAN_20_2026.md` (Architecture clarification)
+- `SONGBIRD_V4_REHARVEST_COMPLETE_JAN_20_2026.md` (Songbird v4.3.0)
+
+### Architecture
+
+- `wateringHole/ECOBIN_ARCHITECTURE_STANDARD.md` (ecoBin definition)
+- `wateringHole/PRIMAL_IPC_PROTOCOL.md` (IPC standard)
+- `TOWER_ATOMIC_ARCHITECTURE.md` (Tower Atomic design)
 
 ---
 
 ## 🚀 Quick Start
 
-### ⚡ Deploy NUCLEUS via Neural API
+### Deploy Neural API
 
 ```bash
-# 1. Start BearDog (security foundation)
-cd biomeOS
-FAMILY_ID=nat0 NODE_ID=default ./plasmidBin/primals/beardog-server &
-
-# 2. Start Neural API server
-./plasmidBin/primals/neural-api-server --graphs-dir graphs --family-id nat0 &
-
-# 3. Deploy NUCLEUS (BearDog, Songbird, Toadstool, NestGate)
-./plasmidBin/primals/neural-deploy 01_nucleus_enclave --family-id nat0
-
-# 4. Verify deployment (all sockets should exist)
-ls -l /tmp/*.sock /run/user/1000/*.sock
-
-# 5. Check running primals
-ps aux | grep -E "(beardog|songbird|toadstool|nestgate)"
+cd /home/eastgate/Development/ecoPrimals/phase2/biomeOS
+cargo build --release -p biomeos-atomic-deploy
+./target/release/neural-api-server
 ```
 
-**📖 See deployment documentation in root for complete guide!**
+### Deploy a Graph
 
----
-
-## 🔐 TRUE PRIMAL Security
-
-**Capability-Based Secret Management** - No more configuration hell!
-
-### Features
-- ✅ **BearDog JWT Management**: Secrets requested at runtime via JSON-RPC
-- ✅ **Secure Fallback**: Cryptographically strong 64-byte random generation
-- ✅ **Zero Hardcoding**: No secrets in configuration files
-- ✅ **Graceful Degradation**: Works even when BearDog method not yet implemented
-- ✅ **Runtime Discovery**: Primals discover security capabilities dynamically
-
-### How It Works
-```
-NestGate → Discovers BearDog (security capability)
-         → Requests JWT_SECRET via Unix socket JSON-RPC
-         → BearDog generates/manages secret
-         → Falls back to secure random if needed
+```bash
+# Example: Deploy Tower Atomic + Squirrel
+./target/release/neural-deploy \
+  --graph-id tower_squirrel \
+  --family-id nat0 \
+  --socket /tmp/neural-api-nat0.sock
 ```
 
-**See**: `TRUE_PRIMAL_JWT_EVOLUTION_JAN_15_2026.md`
+### Query Capabilities
 
----
-
-## 🧠 Neural API + LiveSpore
-
-**Graph-Based Orchestration** - Deploy complex ecosystems with confidence!
-
-### Features
-- ✅ **TOML Graph Definitions**: Declarative deployment specifications
-- ✅ **Dependency Management**: Topological sort, parallel phase execution
-- ✅ **Process Spawning**: Reliable primal launches with health checks
-- ✅ **Environment Injection**: Dynamic configuration via substitution
-- ✅ **Error Reporting**: Detailed logs and failure diagnostics
-
-### Deployment Graphs
-- `graphs/01_nucleus_enclave.toml` - Full NUCLEUS deployment
-- More graphs coming soon...
-
-**See**: `specs/NEURAL_API_SPEC.md`
-
----
-
-## 📚 Documentation
-
-### **Getting Started**
-- **[QUICK_START.md](QUICK_START.md)** - Fast track to deployment
-- **[STATUS.md](STATUS.md)** - Current state and metrics
-- **[ROOT_DOCS_INDEX.md](ROOT_DOCS_INDEX.md)** - Documentation navigation
-
-### **Deployment Documentation (NEW!)**
-- **[PRIMAL_HARVEST_COMPLETE_JAN_15_2026.md](PRIMAL_HARVEST_COMPLETE_JAN_15_2026.md)** - Binary harvest details
-- **[NUCLEUS_DEPLOYMENT_SUCCESS_JAN_15_2026.md](NUCLEUS_DEPLOYMENT_SUCCESS_JAN_15_2026.md)** - Deployment results
-- **[TRUE_PRIMAL_JWT_EVOLUTION_JAN_15_2026.md](TRUE_PRIMAL_JWT_EVOLUTION_JAN_15_2026.md)** - Security evolution
-- **[PRIMAL_SOCKET_PATH_ISSUES.md](PRIMAL_SOCKET_PATH_ISSUES.md)** - Team handoff (socket paths)
-- **[NESTGATE_UPDATE_SUMMARY.md](NESTGATE_UPDATE_SUMMARY.md)** - NestGate Auth v2.0.0
-
-### **Architecture & Specifications** (`specs/`)
-- **[README.md](specs/README.md)** - 39+ active specifications
-- **[NUCLEUS_BONDING_MODEL.md](specs/NUCLEUS_BONDING_MODEL.md)** - ⭐ Chemical bonding for primal interactions (927 lines)
-- **[SPORE_DEPLOYMENT_ARCHITECTURE.md](specs/SPORE_DEPLOYMENT_ARCHITECTURE.md)** - ⭐ HSM-anchored multi-device framework (574 lines)
-- **[UNIBIN_ARCHITECTURE_EVOLUTION.md](specs/UNIBIN_ARCHITECTURE_EVOLUTION.md)** - ⭐ NEW! Tiered deployment strategy (909 lines)
-- **[NUCLEUS_SPEC.md](specs/NUCLEUS_SPEC.md)** - Secure discovery
-- **[NEURAL_API_SPEC.md](specs/NEURAL_API_SPEC.md)** - Graph orchestration
-- **[LIVESPORE_ARCHITECTURE_SPEC.md](specs/LIVESPORE_ARCHITECTURE_SPEC.md)** - Portable deployment
-
----
-
-## 🌱 Key Features
-
-### **TRUE PRIMAL Architecture** (100% Complete)
-Zero hardcoded primal names or ports. Everything discovered at runtime:
-
-```rust
-// ✅ TRUE PRIMAL (100% complete):
-let info = query_primal_info(socket).await?;
-capabilities = info.capabilities;  // Primal announces itself
-primals = discover_by_capability("encryption").await?;  // Runtime discovery
-
-// ✅ NEW: Security capability discovery
-let jwt_secret = request_from_beardog("generate_jwt_secret").await?;
-// Falls back to secure random if BearDog method not available
+```bash
+echo '{
+  "jsonrpc":"2.0",
+  "method":"neural_api.discover_capability",
+  "params":{"capability":"http.request"},
+  "id":1
+}' | nc -U /tmp/neural-api-nat0.sock | jq '.'
 ```
 
-**Impact**: From configuration-based → **∞ runtime capability discovery**
+---
 
-### **Neural API Graph Execution**
-Deterministic graph-based orchestration with:
-- Topological sorting (dependency resolution)
-- Parallel phase execution
-- Health check verification
-- Environment variable substitution
-- Capability-based primal selection
+## 🏗️ Architecture
 
-### **Genetic Lineage System**
-Cryptographic verification of family membership using BearDog's SHA256 derivation.
+### Neural API Layers
 
-### **Modern Rust Excellence**
-- 100% safe Rust (zero unsafe blocks)
-- async/await throughout
-- Result<T,E> error handling
-- Type-safe configuration
-- Comprehensive testing
+```
+┌─────────────────────────────────────────────────────────┐
+│                   Neural API                            │
+│          (Capability Mesh & Orchestration)              │
+├─────────────────────────────────────────────────────────┤
+│  - Capability Registry (event-driven discovery)         │
+│  - Graph Execution Engine (TOML-based deployments)      │
+│  - Environment Management (dynamic env vars)            │
+│  - Health Monitoring (primal lifecycle)                 │
+└─────────────────────────────────────────────────────────┘
+                          ↕
+┌─────────────────────────────────────────────────────────┐
+│                Tower Atomic (BearDog + Songbird)        │
+├─────────────────────────────────────────────────────────┤
+│  BearDog (Pure Rust Crypto)  ◄──RPC──►  Songbird        │
+│  - ed25519, x25519                   (TLS/HTTP)         │
+│  - ChaCha20, BLAKE3                  - Unix sockets     │
+│  - JWT, signatures                   - JSON-RPC         │
+│                                      - 🚧 HTTP (in dev) │
+└─────────────────────────────────────────────────────────┘
+                          ↕
+┌─────────────────────────────────────────────────────────┐
+│                   Primal Ecosystem                      │
+├─────────────────────────────────────────────────────────┤
+│  - Squirrel (AI orchestration)                          │
+│  - NestGate (IPC abstraction)                           │
+│  - ToadStool (local AI)                                 │
+│  - petalTongue (configuration)                          │
+│  - sourDough (primal scaffolding)                       │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Graph-Based Deployment
+
+Primals are deployed using TOML graphs:
+
+```toml
+[graph]
+id = "tower_squirrel"
+coordination = "Sequential"
+
+[[nodes]]
+id = "start-beardog"
+primal = { by_capability = "security" }
+capabilities = ["crypto.sign", "crypto.verify"]
+
+[nodes.operation]
+name = "start"
+[nodes.operation.params]
+mode = "server"
+family_id = "nat0"
+
+[[nodes]]
+id = "start-songbird"
+depends_on = ["start-beardog"]
+primal = { by_capability = "discovery" }
+capabilities = ["http.request", "discovery.announce"]
+
+[nodes.operation.environment]
+SONGBIRD_SECURITY_PROVIDER = "/tmp/beardog-nat0.sock"
+```
 
 ---
 
-## 🔒 Security & Safety
+## 📊 Project Structure
 
-- **Zero Unsafe Code**: 100% safe Rust (A+ grade)
-- **BearDog Integration**: All crypto & secrets delegated to BearDog primal
-- **NUCLEUS**: 5-layer verification for primal discovery
-- **BTSP**: Encrypted P2P tunnels via BearDog + Songbird
-- **Genetic Lineage**: Cryptographic family verification
-- **No Hardcoding**: Runtime capability discovery only
-- **JWT Management**: BearDog manages all authentication secrets
-
----
-
-## 📊 Quality Metrics
-
-### **Current Status**
-- **Grade**: A+ (100%)
-- **Unsafe Code**: 0 blocks (A+)
-- **External Dependencies**: Minimized, pragmatic (A) - see `PURE_RUST_REALITY_CHECK_JAN_16_2026.md`
-- **Production Mocks**: 0 (A+)
-- **TRUE PRIMAL**: 10/10 (A+)
-- **Test Coverage**: 36.63% (target 90%)
-- **Compilation**: Clean, zero errors
-- **Status**: **Production Ready + Ecosystem Evolution Underway**
-
-### **Deployment Metrics**
-- **NUCLEUS Deployment**: 100% success (4/4 primals)
-- **Fresh Binaries**: All harvested (Jan 15, 2026)
-- **Neural API**: Fully operational
-- **BearDog JWT**: Capability-based management working
+```
+biomeOS/
+├── crates/
+│   ├── biomeos-atomic-deploy/    # Neural API server & executor
+│   ├── biomeos-graph/             # Graph parsing & execution
+│   ├── biomeos-ui/                # UI components (inactive)
+│   └── biomeos-db/                # Database layer (inactive)
+│
+├── graphs/                        # Deployment graph definitions
+│   ├── tower_squirrel.toml       # Tower Atomic + Squirrel
+│   └── ...
+│
+├── wateringHole/                  # Standards & documentation
+│   ├── ECOBIN_ARCHITECTURE_STANDARD.md
+│   ├── PRIMAL_IPC_PROTOCOL.md
+│   └── ...
+│
+├── HANDOFF_*.md                   # Team handoffs
+├── SESSION_*.md                   # Session summaries
+└── README.md                      # This file
+```
 
 ---
 
-## 🚀 Ready For Production
+## 🔬 Development
 
-biomeOS has achieved:
-- ✅ A+ (100%) grade
-- ✅ Zero critical issues
-- ✅ Comprehensive testing
-- ✅ NUCLEUS fully deployed and operational
-- ✅ Neural API + LiveSpore infrastructure complete
-- ✅ TRUE PRIMAL JWT evolution (BearDog manages secrets)
-- ✅ Fresh primal binaries (all Jan 15, 2026)
-- ✅ Full documentation and handoff packages
+### Build
 
-**Deploy with confidence!** 🌍🚀✨
+```bash
+cargo build --release
+```
+
+### Test
+
+```bash
+cargo test --workspace
+```
+
+### Run
+
+```bash
+# Start Neural API
+./target/release/neural-api-server
+
+# Deploy a graph
+./target/release/neural-deploy --graph-id <graph_id>
+```
 
 ---
 
-## 🎯 Recent Achievements
+## 🎯 Roadmap
 
-### Multi-Device Architecture Validated (January 16, 2026)
-1. ✅ **Dual-Family Deployment**: Family Alpha + Family Beta tested locally
-   - Family Alpha: 4/5 primals (covalent internal bonding)
-   - Family Beta: 3/5 primals (covalent internal bonding)
-   - Ionic interaction graph executed successfully
+### Week 1-2 (Current)
 
-2. ✅ **NUCLEUS Bonding Model**: Complete specification (927 lines)
-   - Ionic, Covalent, Metallic, Weak Forces
-   - Organo-metal-salt complex interactions
-   - Implementation guidelines for all primals
+- 🚧 BearDog: Implement TLS crypto RPC methods
+- 🚧 Songbird: Implement Pure Rust HTTP/HTTPS client
+- ✅ Neural API: Environment variable passing (complete)
 
-3. ✅ **Spore Deployment Framework**: HSM-anchored architecture (574 lines)
-   - Multi-spore per device (LiveSpore + ColdSpore)
-   - Cross-compilation + native build support
-   - Pixel 8a as portable HSM anchor (Titan M2)
-   - Compute as ionic service (paradigm shift!)
+### Week 3-4
 
-4. ✅ **ARM Deployment Investigation**: Deep ecosystem analysis (January 16, 2026)
-   - Comprehensive cross-compilation attempt for all primals
-   - Reality check: 100% pure Rust TLS not production-ready (2026)
-   - Philosophy evolution: "Minimize C" (pragmatic) vs. "Zero C" (aspirational)
-   - Two-phase strategy: aws-lc-rs now, RustCrypto later (when mature)
-   - 4 comprehensive handoff documents created
-   - All primal teams have actionable evolution paths
+- ⏳ Tower Atomic: Integration testing
+- ⏳ Squirrel: Resume external AI integration
+- ⏳ ecoBin: Validate cross-compilation
 
-### Infrastructure Complete (January 15, 2026)
-1. ✅ **Fresh Primal Binaries**: Pulled, rebuilt, and harvested
-   - ToadStool: 12M (3 new commits, 100% FP32 validated)
-   - NestGate: 4.7M (Auth v2.0.0 with BearDog/JWT)
-   - Songbird: 17M (unified binary, Arc<str> optimized)
+### Month 2
 
-2. ✅ **Neural API + LiveSpore**: Production-ready deployment system
-   - Graph-based orchestration
-   - Phase execution with dependencies
-   - Health check verification
-   - Process spawning and management
+- ⏳ NestGate evolution (platform-agnostic IPC)
+- ⏳ ToadStool integration (local AI)
+- ⏳ petalTongue evolution (configuration management)
 
-3. ✅ **TRUE PRIMAL JWT**: Security evolution complete
-   - BearDog manages JWT secrets (capability-based)
-   - Runtime JSON-RPC requests
-   - Secure 64-byte fallback generation
-   - Zero configuration burden
+---
 
-4. ✅ **NUCLEUS Deployment**: 100% success
-   - All 4 primals operational
-   - Sockets created and verified
-   - Inter-primal communication ready
+## 📚 Learn More
+
+- **Architecture**: See `wateringHole/` for standards
+- **Handoffs**: See `HANDOFF_*.md` for team coordination
+- **Sessions**: See `SESSION_*.md` for progress logs
+- **Integration**: See individual primal docs in `phase1/`
 
 ---
 
 ## 🤝 Contributing
 
-biomeOS is part of the ecoPrimals ecosystem. Each primal is sovereign and evolves independently.
+This is an active, evolving ecosystem. Key principles:
 
-### **Deep Debt Principles**
-- ✅ **Modern idiomatic Rust** - async/await, Result<T,E>, type-safe
-- ✅ **No unsafe code** - 100% safe Rust (ABSOLUTE)
-- ✅ **Minimize C dependencies** - Pragmatic evolution (production-ready > purity)
-- ✅ **Capability-based** - Runtime discovery, never hardcode
-- ✅ **Delegate to primals** - Don't reimplement, use capabilities
-- ✅ **Comprehensive tests** - Quality over quantity
-- ✅ **External dependency analysis** - Evolve to modern Rust (RustCrypto, rustls, aws-lc-rs)
-- ✅ **Clear documentation** - Explain decisions and architecture
+1. **Pure Rust**: Zero C dependencies
+2. **TRUE PRIMAL**: Self-knowledge only, discover at runtime
+3. **ecoBin Compliance**: Cross-compiles everywhere
+4. **Capability-Based**: No hardcoding, discover via capabilities
+5. **Event-Driven**: No blocking I/O, use async/await
 
 ---
 
-## 📝 License
+## 📞 Contact
 
-[Add your license here]
-
----
-
-## 🌟 Acknowledgments
-
-Built with Rust 🦀, inspired by nature 🌱, powered by the ecoPrimals ecosystem.
-
-**"Different orders of the same architecture."** 🍄🐸
-
-**Grade**: A+ (100%) | **Status**: Production Ready + Ecosystem Evolution | **NUCLEUS**: Operational
+**Current Status**: See session summaries in root  
+**Blockers**: See `SESSION_BLOCKER_*.md` files  
+**Handoffs**: See `HANDOFF_*.md` files
 
 ---
 
-*Last updated: January 16, 2026*  
-*Deployment: Dual-family validated (Family Alpha + Family Beta)*  
-*Architecture: TRUE PRIMAL with Chemical Bonding Model + Tiered UniBin Strategy*  
-*Specification: Ionic/Covalent/Metallic/Weak Forces + Spore Framework + UniBin + ARM*  
-*Socket Compliance: 100% (5/5 primals with 4-tier fallback)*  
-*Philosophy: Production-ready over purity (Minimize C, not Zero C)*  
-*ARM Frontier: Deep investigation complete, primal teams have actionable paths*  
-*Status: 🟢 **PRODUCTION READY + MULTI-DEVICE VALIDATED + ARM READY** 🏆📱*
+**🌍 biomeOS: Orchestrating the Pure Rust Primal Ecosystem 🦀**
+
+---
+
+*Last Updated: January 21, 2026*  
+*Version: 3.0.0*  
+*Status: Tower Atomic HTTP Evolution in Progress*
