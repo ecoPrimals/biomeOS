@@ -1,0 +1,69 @@
+# Tower Atomic Bootstrap Graph
+# Used by biomeOS in Bootstrap Mode to create the ecosystem foundation
+#
+# This graph creates the Tower Atomic (BearDog + Songbird)
+# which serves as generation 0 security foundation for all other primals
+
+[graph]
+id = "tower_atomic_bootstrap"
+description = "Genesis: Create Tower Atomic (ecosystem security foundation)"
+coordination = "Sequential"  # BearDog must start before Songbird
+
+# Phase 1: Germinate BearDog (Crypto Foundation)
+[[nodes]]
+id = "germinate_beardog"
+output = "beardog_genesis"
+
+[nodes.primal]
+by_capability = "security"  # Discovers beardog binary via capability
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "nat0"  # Can be overridden by executor
+
+[nodes.constraints]
+timeout_ms = 30000  # 30s to start
+
+# Phase 2: Germinate Songbird (Network + BTSP)
+[[nodes]]
+id = "germinate_songbird"
+depends_on = ["germinate_beardog"]  # CRITICAL: Wait for BearDog
+output = "songbird_genesis"
+
+[nodes.primal]
+by_capability = "discovery"  # Discovers songbird binary via capability
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "nat0"
+
+# Genetic bonding: Songbird inherits from BearDog
+# BEARDOG_SOCKET will be injected by executor (nucleation)
+
+[nodes.constraints]
+timeout_ms = 30000  # 30s to start
+
+# Phase 3: Validate Tower Atomic Health
+[[nodes]]
+id = "validate_tower"
+depends_on = ["germinate_beardog", "germinate_songbird"]
+output = "tower_validated"
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.operation.params]
+check_beardog = true
+check_songbird = true
+check_btsp_tunnel = true  # Verify they can establish BTSP tunnel
+timeout_seconds = 10
+
+[nodes.constraints]
+timeout_ms = 15000  # 15s for validation
+
