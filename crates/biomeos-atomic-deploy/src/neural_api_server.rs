@@ -306,35 +306,49 @@ impl NeuralApiServer {
 
     /// Handle a client connection
     async fn handle_connection(&self, stream: UnixStream) -> Result<()> {
+        use tokio::time::{timeout, Duration};
         let mut reader = BufReader::new(stream);
         let mut line = String::new();
 
         loop {
             line.clear();
-            let n = reader.read_line(&mut line).await?;
-            if n == 0 {
-                // Connection closed
-                break;
-            }
+            
+            // Try to read next request with timeout (client may have shut down write side)
+            let read_result = timeout(Duration::from_millis(100), reader.read_line(&mut line)).await;
+            
+            match read_result {
+                Ok(Ok(n)) if n > 0 => {
+                    // Request received, handle it
+                    let response = match self.handle_request(&line).await {
+                        Ok(response) => response,
+                        Err(e) => {
+                            error!("Request error: {}", e);
+                            json!({
+                                "jsonrpc": "2.0",
+                                "error": {
+                                    "code": -32603,
+                                    "message": format!("Internal error: {}", e)
+                                },
+                                "id": null
+                            })
+                        }
+                    };
 
-            let response = match self.handle_request(&line).await {
-                Ok(response) => response,
-                Err(e) => {
-                    error!("Request error: {}", e);
-                    json!({
-                        "jsonrpc": "2.0",
-                        "error": {
-                            "code": -32603,
-                            "message": format!("Internal error: {}", e)
-                        },
-                        "id": null
-                    })
+                    // Write response
+                    let response_str = serde_json::to_string(&response)? + "\n";
+                    let stream = reader.get_mut();
+                    stream.write_all(response_str.as_bytes()).await?;
+                    stream.flush().await?;
+                    
+                    // After sending response, check if we can read more (short timeout)
+                    // If client shut down write side, this will timeout quickly
+                    continue;
                 }
-            };
-
-            // Write response
-            let response_str = serde_json::to_string(&response)? + "\n";
-            reader.get_mut().write_all(response_str.as_bytes()).await?;
+                Ok(Ok(_)) | Ok(Err(_)) | Err(_) => {
+                    // EOF, error, or timeout - client is done
+                    break;
+                }
+            }
         }
 
         Ok(())

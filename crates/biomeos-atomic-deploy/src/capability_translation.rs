@@ -195,16 +195,70 @@ impl CapabilityTranslationRegistry {
         trace!("→ Provider RPC: {}", rpc_request_str);
         
         // 4. Send request
+        let send_start = std::time::Instant::now();
+        trace!("→ Sending {} bytes to {}", rpc_request_str.len(), translation.socket);
         stream.write_all(rpc_request_str.as_bytes()).await?;
         stream.write_all(b"\n").await?;  // Add newline for line-based protocols
         stream.flush().await?;
+        debug!("✓ Request sent in {:?}", send_start.elapsed());
         
-        // 5. Read response (line-based for JSON-RPC)
-        let mut reader = tokio::io::BufReader::new(stream);
-        let mut response_line = String::new();
-        use tokio::io::AsyncBufReadExt;
-        reader.read_line(&mut response_line).await?;
+        // Shutdown write half to signal we're done sending
+        // This prompts the provider to close after sending its response
+        trace!("→ Shutting down write half");
+        stream.shutdown().await?;
+        debug!("✓ Write half shutdown");
         
+        // 5. Read response with JSON-aware reading
+        // BearDog sends complete JSON but keeps socket open, so we read until JSON is complete
+        use tokio::io::AsyncReadExt;
+        use tokio::time::{timeout, Duration};
+        
+        let read_start = std::time::Instant::now();
+        trace!("→ Reading response (JSON-aware)");
+        
+        let mut buffer = Vec::new();
+        let mut temp_buf = [0u8; 4096];
+        let read_timeout = Duration::from_millis(100);
+        
+        loop {
+            match timeout(read_timeout, stream.read(&mut temp_buf)).await {
+                Ok(Ok(0)) => {
+                    trace!("EOF received");
+                    break;
+                }
+                Ok(Ok(n)) => {
+                    buffer.extend_from_slice(&temp_buf[..n]);
+                    trace!("Read {} bytes, total: {}", n, buffer.len());
+                    
+                    // Check if we have complete JSON
+                    if let Ok(s) = std::str::from_utf8(&buffer) {
+                        if serde_json::from_str::<serde_json::Value>(s).is_ok() {
+                            debug!("✓ Complete JSON detected, read {} bytes in {:?}", buffer.len(), read_start.elapsed());
+                            break;
+                        }
+                    }
+                }
+                Ok(Err(e)) => {
+                    return Err(anyhow!("Socket read error: {}", e));
+                }
+                Err(_) => {
+                    // Timeout - check if we have valid JSON
+                    trace!("Read timeout, checking for complete JSON...");
+                    if !buffer.is_empty() {
+                        if let Ok(s) = std::str::from_utf8(&buffer) {
+                            if serde_json::from_str::<serde_json::Value>(s).is_ok() {
+                                debug!("✓ Complete JSON found after timeout, {} bytes in {:?}", buffer.len(), read_start.elapsed());
+                                break;
+                            }
+                        }
+                    }
+                    // Provider is slow or socket issue
+                    return Err(anyhow!("Timeout reading response from provider (no complete JSON received)"));
+                }
+            }
+        }
+        
+        let response_line = String::from_utf8(buffer)?;
         trace!("← Provider RPC: {}", response_line.trim());
         
         let rpc_response: serde_json::Value = serde_json::from_str(&response_line)?;
