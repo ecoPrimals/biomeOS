@@ -412,6 +412,7 @@ dependencies = [
  "base64 0.22.1",
  "biomeos-core",
  "biomeos-federation",
+ "biomeos-graph",
  "biomeos-spore",
  "biomeos-types",
  "chrono",

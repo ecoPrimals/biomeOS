@@ -23,6 +23,7 @@ biomeos-spore = { path = "../biomeos-spore" }
 biomeos-core = { path = "../biomeos-core" }
 biomeos-federation = { path = "../biomeos-federation" }
 biomeos-types = { path = "../biomeos-types" }
+biomeos-graph = { path = "../biomeos-graph" }
 chrono = "0.4"
 uuid = { version = "1.11", features = ["v4"] }  # For request ID generation
 toml = "0.8"  # For Neural API graph parsing

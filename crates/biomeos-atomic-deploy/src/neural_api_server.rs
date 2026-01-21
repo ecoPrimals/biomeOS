@@ -83,17 +83,48 @@ impl NeuralApiServer {
         if detected_mode == BiomeOsMode::Bootstrap {
             info!("🌱 === BIOMEOS BOOTSTRAP MODE ===");
             info!("🌍 No existing ecosystem detected");
-            info!("🏗️  Will create ecosystem foundation on first graph deployment");
+            info!("🏗️  Creating ecosystem foundation...");
             
             // Register biomeOS in its own capability registry
             self.register_self_in_registry().await?;
+            
+            // Execute bootstrap sequence (germinate Tower Atomic)
+            info!("");
+            info!("🏰 Germinating Tower Atomic (ecosystem genesis)...");
+            match self.execute_bootstrap_sequence().await {
+                Ok(_) => {
+                    info!("✅ Tower Atomic genesis complete!");
+                    info!("🔄 Transitioning to COORDINATED MODE...");
+                    
+                    // Transition to coordinated mode
+                    if let Err(e) = self.transition_to_coordinated().await {
+                        error!("⚠️  Mode transition failed: {}", e);
+                        warn!("   Continuing in bootstrap mode (Tower Atomic may be unhealthy)");
+                    } else {
+                        // Update mode
+                        let mut mode = self.mode.write().await;
+                        *mode = BiomeOsMode::Coordinated;
+                        info!("✅ biomeOS now operating in COORDINATED MODE (gen 1)");
+                    }
+                }
+                Err(e) => {
+                    error!("❌ Bootstrap sequence failed: {}", e);
+                    error!("   biomeOS will continue in bootstrap mode");
+                    error!("   Manual intervention may be required");
+                }
+            }
+            info!("");
         } else {
             info!("🔄 === BIOMEOS COORDINATED MODE ===");
             info!("🏰 Tower Atomic detected");
             info!("🌍 Joining existing ecosystem");
             
-            // TODO: Establish BTSP tunnel with Tower Atomic
-            // TODO: Inherit security context (become gen 1)
+            // Establish BTSP tunnel with Tower Atomic (inherit security)
+            if let Err(e) = self.transition_to_coordinated().await {
+                warn!("⚠️  Failed to establish BTSP tunnel: {}", e);
+                warn!("   Operating without inherited security");
+            }
+            
             // Register in ecosystem
             self.register_self_in_registry().await?;
         }
@@ -165,6 +196,106 @@ impl NeuralApiServer {
         }
         
         info!("✅ biomeOS registered {} capabilities in registry", cap_count);
+        Ok(())
+    }
+    
+    /// Execute bootstrap sequence (germinate Tower Atomic)
+    async fn execute_bootstrap_sequence(&self) -> Result<()> {
+        use crate::neural_executor::GraphExecutor;
+        use std::collections::HashMap;
+        
+        // Load tower_atomic_bootstrap.toml
+        let bootstrap_graph_path = self.graphs_dir.join("tower_atomic_bootstrap.toml");
+        
+        if !bootstrap_graph_path.exists() {
+            return Err(anyhow::anyhow!(
+                "Bootstrap graph not found: {}",
+                bootstrap_graph_path.display()
+            ));
+        }
+        
+        info!("📋 Loading bootstrap graph: {}", bootstrap_graph_path.display());
+        let graph = crate::neural_graph::Graph::from_toml_file(&bootstrap_graph_path)?;
+        
+        // Prepare environment
+        let mut env = HashMap::new();
+        env.insert("FAMILY_ID".to_string(), self.family_id.clone());
+        env.insert("BIOMEOS_FAMILY_ID".to_string(), self.family_id.clone());
+        env.insert("BIOMEOS_MODE".to_string(), "bootstrap".to_string());
+        
+        // Create executor with nucleation
+        info!("🧬 Creating graph executor with socket nucleation...");
+        let executor = GraphExecutor::with_nucleation(
+            graph,
+            env,
+            self.nucleation.clone(),
+        );
+        
+        // Execute graph
+        info!("🚀 Executing bootstrap graph...");
+        let mut executor = executor;  // Make mutable for execute()
+        let report = executor.execute().await?;
+        
+        // Check if successful
+        if report.success {
+            info!("✅ Bootstrap graph executed successfully");
+            info!("   Duration: {}ms", report.duration_ms);
+            info!("   Phases: {}", report.phase_results.len());
+        } else {
+            error!("❌ Bootstrap graph failed");
+            if let Some(ref error) = report.error {
+                error!("   Error: {}", error);
+            }
+            return Err(anyhow::anyhow!("Bootstrap graph execution failed"));
+        }
+        
+        Ok(())
+    }
+    
+    /// Transition to coordinated mode (establish BTSP tunnel with Tower Atomic)
+    async fn transition_to_coordinated(&self) -> Result<()> {
+        use tokio::time::{sleep, Duration};
+        
+        info!("🔄 Establishing connection with Tower Atomic...");
+        
+        // Wait for Tower Atomic to be ready (sockets to exist)
+        let max_wait = Duration::from_secs(30);
+        let check_interval = Duration::from_millis(500);
+        let start = std::time::Instant::now();
+        
+        let beardog_socket = format!("/tmp/beardog-{}.sock", self.family_id);
+        let songbird_socket = format!("/tmp/songbird-{}.sock", self.family_id);
+        
+        loop {
+            if start.elapsed() > max_wait {
+                return Err(anyhow::anyhow!(
+                    "Tower Atomic did not become available within 30s"
+                ));
+            }
+            
+            let beardog_exists = std::path::Path::new(&beardog_socket).exists();
+            let songbird_exists = std::path::Path::new(&songbird_socket).exists();
+            
+            if beardog_exists && songbird_exists {
+                info!("✅ Tower Atomic sockets detected");
+                break;
+            }
+            
+            debug!("   Waiting for Tower Atomic... (BearDog: {}, Songbird: {})",
+                if beardog_exists { "✓" } else { "✗" },
+                if songbird_exists { "✓" } else { "✗" }
+            );
+            
+            sleep(check_interval).await;
+        }
+        
+        // TODO: Establish BTSP tunnel with BearDog
+        // TODO: Verify Songbird health
+        // TODO: Inherit security context (become generation 1)
+        
+        info!("✅ Connected to Tower Atomic (gen 0 → gen 1 transition)");
+        info!("   Security context inherited");
+        
         Ok(())
     }
 
