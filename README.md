@@ -1,20 +1,28 @@
-# biomeOS - Neural API and Ecosystem Orchestration
+# biomeOS - Ecosystem Management Primal
 
 **Version**: 3.0.0  
-**Status**: 🚧 **Active Development** - Tower Atomic HTTP Evolution  
+**Status**: 🌱 **Active Evolution** - Lifecycle System Development  
 **Last Updated**: January 21, 2026
 
 ---
 
 ## 🌍 Overview
 
-**biomeOS** is the orchestration layer for the ecoPrimals ecosystem. It provides:
+**biomeOS is a primal**. Not an orchestrator. A primal that specializes in **ecosystem management**.
 
-1. **Neural API** - Capability-based mesh for primal discovery and deployment
-2. **Graph-Based Deployment** - TOML-defined deployment graphs with DAG execution
+Just like:
+- BearDog specializes in **crypto**
+- Songbird specializes in **networking**
+- Squirrel specializes in **AI orchestration**
+- **biomeOS specializes in ecosystem lifecycle**
+
+### What biomeOS Provides
+
+1. **Primal Lifecycle** - Germination, terraria, imprinting, injection, apoptosis
+2. **Nucleation Point** - Coordinated startup and socket assignment
 3. **Capability Registry** - Event-driven discovery for instant primal lookups
-4. **Environment Management** - Dynamic environment variable passing to primals
-5. **Atomic Deployments** - BearDog + Songbird (Tower Atomic) for secure communication
+4. **Graph Deployment** - TOML-defined ecosystems with DAG execution
+5. **Nested Environments** - Sub-niches for testing, development, staging
 
 ---
 
@@ -46,30 +54,26 @@
 
 ## 📁 Key Documentation
 
-### Current Session
+### Specifications (specs/)
 
-- **`HANDOFF_SONGBIRD_BEARDOG_TOWER_ATOMIC_HTTP_JAN_21_2026.md`** ⭐ (PRIMARY HANDOFF)
-- `SESSION_SUMMARY_JAN_21_2026_TOWER_ATOMIC_BLOCKER.md` (Session overview)
-- `TOWER_ATOMIC_HTTP_IMPLEMENTATION_BLOCKER_JAN_21_2026.md` (Technical details)
-- `SESSION_BLOCKER_JAN_21_2026_TOWER_ATOMIC_HTTP.md` (Decision summary)
+- **`BIOMEOS_AS_PRIMAL_SPECIALIZATION.md`** ⭐ (CORE IDENTITY)
+- `lifecycle/PRIMAL_LIFECYCLE_GERMINATION_TERRARIA_JAN_21_2026.md`
+- `lifecycle/NEURAL_API_NUCLEATION_POINT_JAN_21_2026.md`
+- `architecture/BTSP_EVOLUTION_UNIFIED_SECURE_PROTOCOL_JAN_21_2026.md`
 
-### Infrastructure Evolution
+### Archived (specs/archive/)
 
-- `ENVIRONMENT_VARIABLES_WORKING_JAN_21_2026.md` (Neural API env var passing)
-- `SQUIRREL_EVENT_DRIVEN_DISCOVERY_FIX_JAN_20_2026.md` (Discovery optimization)
-- `NEURAL_API_ENVIRONMENT_VARIABLES_NEEDED_JAN_21_2026.md` (Requirements doc)
+- `jan_21_2026_handoffs/` - Historical handoff documents
 
-### Integration Work
+### Standards (wateringHole/)
 
-- `SONGBIRD_SQUIRREL_INTEGRATION_COMPLETE_JAN_20_2026.md` (RPC integration)
-- `SQUIRREL_ANTHROPIC_INTEGRATION_JAN_20_2026.md` (Architecture clarification)
-- `SONGBIRD_V4_REHARVEST_COMPLETE_JAN_20_2026.md` (Songbird v4.3.0)
+- `ECOBIN_ARCHITECTURE_STANDARD.md` - ecoBin definition
+- `PRIMAL_IPC_PROTOCOL.md` - Inter-primal communication
 
-### Architecture
+### Sessions (Recent)
 
-- `wateringHole/ECOBIN_ARCHITECTURE_STANDARD.md` (ecoBin definition)
-- `wateringHole/PRIMAL_IPC_PROTOCOL.md` (IPC standard)
-- `TOWER_ATOMIC_ARCHITECTURE.md` (Tower Atomic design)
+- `ENVIRONMENT_VARIABLES_WORKING_JAN_21_2026.md` - Env var passing
+- `SQUIRREL_EVENT_DRIVEN_DISCOVERY_FIX_JAN_20_2026.md` - Discovery optimization
 
 ---
 
