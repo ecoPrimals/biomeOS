@@ -36,6 +36,7 @@ pub mod neural_executor;
 pub mod neural_graph;
 pub mod mode;
 pub mod nucleation;
+pub mod http_client;
 pub mod neural_router; // NEW: Capability-based routing layer
 
 pub use deployment_graph::{AtomicDeploymentGraph, DeploymentResult};
