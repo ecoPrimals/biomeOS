@@ -3,6 +3,7 @@
 //! Exposes the Neural API graph orchestration engine via JSON-RPC 2.0 over Unix socket.
 //! This enables Squirrel and petalTongue to discover, execute, and monitor graph deployments.
 
+use crate::capability_translation::CapabilityTranslationRegistry;
 use crate::mode::BiomeOsMode;
 use crate::neural_executor::{ExecutionContext, GraphExecutor};
 use crate::neural_graph::Graph;
@@ -42,6 +43,9 @@ pub struct NeuralApiServer {
     
     /// Socket nucleation (deterministic assignment)
     nucleation: Arc<RwLock<SocketNucleation>>,
+    
+    /// Capability Translation Registry (NEW: v2.0.0)
+    translation_registry: Arc<RwLock<CapabilityTranslationRegistry>>,
 }
 
 impl NeuralApiServer {
@@ -66,6 +70,7 @@ impl NeuralApiServer {
             router,
             mode: Arc::new(RwLock::new(BiomeOsMode::Bootstrap)), // Default, will detect on serve()
             nucleation: Arc::new(RwLock::new(SocketNucleation::new(SocketStrategy::FamilyDeterministic))),
+            translation_registry: Arc::new(RwLock::new(CapabilityTranslationRegistry::new())),
         }
     }
 
@@ -367,6 +372,11 @@ impl NeuralApiServer {
             "capability.discover" => self.capability_discover(&request.params).await?,
             "capability.list" => self.capability_list().await?,
             "capability.providers" => self.capability_providers(&request.params).await?,
+            
+            // Capability Translation API (NEW v2.0.0 - semantic capability routing)
+            "capability.call" => self.capability_call(&request.params).await?,
+            "capability.discover_translation" => self.capability_discover_translation(&request.params).await?,
+            "capability.list_translations" => self.capability_list_translations().await?,
             _ => {
                 return Ok(json!({
                     "jsonrpc": "2.0",
@@ -468,6 +478,9 @@ impl NeuralApiServer {
         
         tracing::info!("✅ Graph loaded successfully: {} (version: {})", graph.id, graph.version);
         tracing::debug!("   Nodes: {}", graph.nodes.len());
+        
+        // NEW v2.0.0: Load capability translations from graph
+        self.load_translations_from_graph(&graph).await?;
 
         // Generate execution ID
         let execution_id = format!("{}-{}", graph_id, chrono::Utc::now().timestamp());
@@ -1098,7 +1111,130 @@ impl NeuralApiServer {
             router: self.router.clone(),
             mode: self.mode.clone(),
             nucleation: self.nucleation.clone(),
+            translation_registry: self.translation_registry.clone(),
         }
+    }
+    
+    // ========================================================================
+    // Capability Translation API (v2.0.0)
+    // ========================================================================
+    
+    /// Load capability translations from a graph
+    ///
+    /// Extracts `capabilities_provided` from each node and registers translations
+    async fn load_translations_from_graph(&self, graph: &Graph) -> Result<()> {
+        let mut registry = self.translation_registry.write().await;
+        let mut loaded_count = 0;
+        
+        for node in &graph.nodes {
+            if let Some(caps_provided) = &node.capabilities_provided {
+                // Get socket path for this node
+                let socket_path = if let Some(operation) = &node.operation {
+                    if operation.name == "start" {
+                        operation.params.get("socket_path")
+                            .and_then(|v| v.as_str())
+                            .map(|s| s.to_string())
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                };
+                
+                // If we have a socket path, register translations
+                if let Some(socket) = socket_path {
+                    for (semantic, actual) in caps_provided {
+                        info!(
+                            "📝 Loading translation from graph: {} → {} ({})",
+                            semantic, actual, node.id
+                        );
+                        
+                        registry.register_translation(
+                            semantic,
+                            &node.id,
+                            actual,
+                            &socket,
+                        );
+                        
+                        loaded_count += 1;
+                    }
+                } else {
+                    debug!(
+                        "⚠️  Node {} has capabilities_provided but no socket_path, skipping",
+                        node.id
+                    );
+                }
+            }
+        }
+        
+        if loaded_count > 0 {
+            info!("✅ Loaded {} capability translations from graph {}", loaded_count, graph.id);
+        }
+        
+        Ok(())
+    }
+    
+    /// Call a capability with automatic translation
+    ///
+    /// Maps semantic capability names to provider-specific method names
+    async fn capability_call(&self, params: &Option<Value>) -> Result<Value> {
+        let params = params.as_ref().context("Missing parameters")?;
+        let capability = params["capability"]
+            .as_str()
+            .context("Missing 'capability' field")?;
+        let args = params.get("args").cloned().unwrap_or(json!({}));
+        
+        info!("🔄 Capability call (with translation): {}", capability);
+        
+        let registry = self.translation_registry.read().await;
+        let result = registry.call_capability(capability, args).await?;
+        
+        Ok(result)
+    }
+    
+    /// Discover translation for a semantic capability
+    async fn capability_discover_translation(&self, params: &Option<Value>) -> Result<Value> {
+        let params = params.as_ref().context("Missing parameters")?;
+        let capability = params["capability"]
+            .as_str()
+            .context("Missing 'capability' field")?;
+        
+        let registry = self.translation_registry.read().await;
+        
+        match registry.get_translation(capability) {
+            Some(translation) => Ok(json!({
+                "semantic": translation.semantic,
+                "provider": translation.provider,
+                "actual_method": translation.actual_method,
+                "socket": translation.socket,
+                "metadata": translation.metadata
+            })),
+            None => Err(anyhow::anyhow!("No translation found for capability: {}", capability))
+        }
+    }
+    
+    /// List all capability translations
+    async fn capability_list_translations(&self) -> Result<Value> {
+        let registry = self.translation_registry.read().await;
+        let translations = registry.list_all();
+        
+        let stats = registry.stats();
+        
+        Ok(json!({
+            "translations": translations.iter().map(|t| {
+                json!({
+                    "semantic": t.semantic,
+                    "provider": t.provider,
+                    "actual_method": t.actual_method,
+                    "socket": t.socket
+                })
+            }).collect::<Vec<_>>(),
+            "stats": {
+                "total_translations": stats.total_translations,
+                "total_providers": stats.total_providers,
+                "by_provider": stats.capabilities_by_provider
+            }
+        }))
     }
 }
 

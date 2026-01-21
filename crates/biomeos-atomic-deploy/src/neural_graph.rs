@@ -148,6 +148,13 @@ pub struct GraphNode {
     // Capabilities this primal provides (NEW - for capability registry)
     #[serde(default)]
     pub capabilities: Vec<String>,
+    
+    // NEW v2.0.0: Capability translation mappings (semantic → actual method)
+    // Enables self-describing primals for capability translation
+    // Example: {"crypto.generate_keypair": "x25519_generate_ephemeral"}
+    #[serde(default)]
+    pub capabilities_provided: Option<HashMap<String, String>>,
+    
     // Legacy fields (for backward compatibility)
     #[serde(default)]
     pub node_type: Option<String>,

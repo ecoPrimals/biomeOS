@@ -1,0 +1,40 @@
+# Tower Atomic Test Graph - With Capability Translation
+# Tests semantic capability → actual method translation
+
+[graph]
+id = "tower_atomic_test"
+version = "2.0.0"
+description = "Test graph with capability translation (BearDog + Songbird)"
+
+# BearDog: Crypto provider with self-describing capabilities
+[[nodes]]
+id = "beardog"
+operation = { name = "start", params = { binary = "./plasmidBin/primals/beardog/beardog", mode = "server", socket_path = "/tmp/beardog-nat0.sock" } }
+depends_on = []
+
+# Self-describing: Semantic capability → Actual method mapping
+[nodes.capabilities_provided]
+"crypto.generate_keypair" = "x25519_generate_ephemeral"
+"crypto.ecdh_derive" = "x25519_derive_secret"
+"crypto.encrypt" = "chacha20_poly1305_encrypt"
+"crypto.decrypt" = "chacha20_poly1305_decrypt"
+"crypto.hash" = "blake3_hash"
+"crypto.hmac" = "hmac_sha256"
+
+# Songbird: Network provider with HTTP delegation
+[[nodes]]
+id = "songbird"
+operation = { name = "start", params = { binary = "./plasmidBin/primals/songbird/songbird", mode = "server", socket_path = "/tmp/songbird-nat0.sock" } }
+constraints = { environment = { SONGBIRD_SECURITY_PROVIDER = "/tmp/beardog-nat0.sock", SONGBIRD_ORCHESTRATOR_FAMILY_ID = "nat0" } }
+depends_on = ["beardog"]
+
+# Self-describing: HTTP capabilities
+[nodes.capabilities_provided]
+"http.request" = "http_request"
+"http.get" = "http_get"
+"http.post" = "http_post"
+
+[execution]
+mode = "deterministic"
+parallel_phases = false
+
