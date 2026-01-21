@@ -29,6 +29,12 @@ pub struct SocketNucleation {
     assignments: HashMap<String, PathBuf>,
 }
 
+impl Default for SocketNucleation {
+    fn default() -> Self {
+        Self::new(SocketStrategy::default())
+    }
+}
+
 impl SocketNucleation {
     /// Create new socket nucleation coordinator
     pub fn new(strategy: SocketStrategy) -> Self {

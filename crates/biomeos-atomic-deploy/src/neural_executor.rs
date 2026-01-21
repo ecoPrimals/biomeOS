@@ -27,7 +27,7 @@ pub enum NodeStatus {
 }
 
 /// Execution context shared across nodes
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ExecutionContext {
     /// Environment variables
     pub env: HashMap<String, String>,
@@ -37,17 +37,63 @@ pub struct ExecutionContext {
     pub status: Arc<Mutex<HashMap<String, NodeStatus>>>,
     /// Checkpoint directory
     pub checkpoint_dir: Option<PathBuf>,
+    /// Socket nucleation (deterministic assignment)
+    pub nucleation: Option<Arc<tokio::sync::RwLock<crate::nucleation::SocketNucleation>>>,
+    /// Family ID for socket paths
+    pub family_id: String,
+}
+
+impl std::fmt::Debug for ExecutionContext {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ExecutionContext")
+            .field("env", &self.env)
+            .field("checkpoint_dir", &self.checkpoint_dir)
+            .field("family_id", &self.family_id)
+            .field("nucleation", &self.nucleation.is_some())
+            .finish()
+    }
 }
 
 impl ExecutionContext {
     /// Create new execution context
     pub fn new(env: HashMap<String, String>) -> Self {
+        let family_id = env.get("FAMILY_ID")
+            .or_else(|| env.get("BIOMEOS_FAMILY_ID"))
+            .map(|s| s.clone())
+            .unwrap_or_else(|| "nat0".to_string());
+        
         Self {
             env,
             outputs: Arc::new(Mutex::new(HashMap::new())),
             status: Arc::new(Mutex::new(HashMap::new())),
             checkpoint_dir: None,
+            nucleation: None,
+            family_id,
         }
+    }
+    
+    /// Set socket nucleation
+    pub fn with_nucleation(mut self, nucleation: Arc<tokio::sync::RwLock<crate::nucleation::SocketNucleation>>) -> Self {
+        self.nucleation = Some(nucleation);
+        self
+    }
+    
+    /// Get or assign socket path for a primal
+    pub async fn get_socket_path(&self, primal_name: &str) -> String {
+        if let Some(ref nucleation) = self.nucleation {
+            // Use nucleation for deterministic assignment
+            let mut nuc = nucleation.write().await;
+            let path = nuc.assign_socket(primal_name, &self.family_id);
+            path.display().to_string()
+        } else {
+            // Fallback: deterministic path based on family_id
+            format!("/tmp/{}-{}.sock", primal_name, self.family_id)
+        }
+    }
+    
+    /// Get environment variables
+    pub fn env(&self) -> &HashMap<String, String> {
+        &self.env
     }
 
     /// Set output for a node
@@ -89,6 +135,15 @@ impl GraphExecutor {
             graph,
             context: ExecutionContext::new(env),
             max_parallelism: 3, // Default from graph spec
+        }
+    }
+    
+    /// Create graph executor with socket nucleation
+    pub fn with_nucleation(graph: Graph, env: HashMap<String, String>, nucleation: Arc<tokio::sync::RwLock<crate::nucleation::SocketNucleation>>) -> Self {
+        Self {
+            graph,
+            context: ExecutionContext::new(env).with_nucleation(nucleation),
+            max_parallelism: 3,
         }
     }
 
@@ -539,11 +594,14 @@ impl GraphExecutor {
         
         tracing::info!("   Discovered: {} → {}", primal_name, binary_full_path.display());
         
-        // 3. Build socket path (use runtime dir, not hardcoded /tmp/)
-        let runtime_dir = std::env::var("BIOMEOS_RUNTIME_DIR")
-            .or_else(|_| std::env::var("TMPDIR"))
-            .unwrap_or_else(|_| "/tmp".to_string());
-        let socket_path = format!("{}/{}-{}.sock", runtime_dir, primal_name, family_id);
+        // 3. Build socket path using nucleation (deterministic assignment)
+        let socket_path = _context.get_socket_path(primal_name).await;
+        
+        // Extract runtime directory from socket path (for dependent sockets)
+        let runtime_dir = std::path::Path::new(&socket_path)
+            .parent()
+            .and_then(|p| p.to_str())
+            .unwrap_or("/tmp");
         
         // 3. Build command with primal-specific arguments
         let mut cmd = tokio::process::Command::new(&binary_full_path);
@@ -560,7 +618,8 @@ impl GraphExecutor {
                 // Squirrel: Uses --socket CLI flag (tested - works!)
                 cmd.arg("--socket").arg(&socket_path);
                 // Also pass Neural API endpoint for routing
-                cmd.env("SERVICE_MESH_ENDPOINT", format!("{}/neural-api-{}.sock", runtime_dir, family_id));
+                let neural_api_socket = _context.get_socket_path("neural-api").await;
+                cmd.env("SERVICE_MESH_ENDPOINT", neural_api_socket);
             }
             "songbird" => {
                 // Songbird: Needs bonding with BearDog (Tower Atomic!)
@@ -569,7 +628,7 @@ impl GraphExecutor {
                 cmd.env("SONGBIRD_ORCHESTRATOR_FAMILY_ID", family_id);
                 
                 // CRITICAL: Point Songbird to BearDog (genetic bonding!)
-                let beardog_socket = format!("{}/beardog-{}.sock", runtime_dir, family_id);
+                let beardog_socket = _context.get_socket_path("beardog").await;
                 cmd.env("SONGBIRD_SECURITY_PROVIDER", &beardog_socket);
                 cmd.env("SECURITY_ENDPOINT", &beardog_socket);  // Alternative name
                 

@@ -3,9 +3,11 @@
 //! Exposes the Neural API graph orchestration engine via JSON-RPC 2.0 over Unix socket.
 //! This enables Squirrel and petalTongue to discover, execute, and monitor graph deployments.
 
+use crate::mode::BiomeOsMode;
 use crate::neural_executor::{ExecutionContext, GraphExecutor};
 use crate::neural_graph::Graph;
 use crate::neural_router::{NeuralRouter, RoutingMetrics}; // NEW: Routing layer
+use crate::nucleation::SocketNucleation;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -18,6 +20,7 @@ use tokio::sync::RwLock;
 use tracing::{debug, error, info, warn};
 
 /// Neural API server state
+#[derive(Clone)]
 pub struct NeuralApiServer {
     /// Path to graphs directory
     graphs_dir: PathBuf,
@@ -31,17 +34,27 @@ pub struct NeuralApiServer {
     /// Socket path
     socket_path: PathBuf,
     
-    /// Neural Router for capability-based routing (NEW)
+    /// Neural Router for capability-based routing
     router: Arc<NeuralRouter>,
+    
+    /// Operating mode (Bootstrap or Coordinated)
+    mode: Arc<RwLock<BiomeOsMode>>,
+    
+    /// Socket nucleation (deterministic assignment)
+    nucleation: Arc<RwLock<SocketNucleation>>,
 }
 
 impl NeuralApiServer {
     /// Create a new Neural API server
+    ///
+    /// Mode detection happens on first serve() call
     pub fn new(
         graphs_dir: impl Into<PathBuf>,
         family_id: impl Into<String>,
         socket_path: impl Into<PathBuf>,
     ) -> Self {
+        use crate::nucleation::SocketStrategy;
+        
         let family_id_str = family_id.into();
         let router = Arc::new(NeuralRouter::new(&family_id_str));
         
@@ -51,28 +64,60 @@ impl NeuralApiServer {
             family_id: family_id_str,
             socket_path: socket_path.into(),
             router,
+            mode: Arc::new(RwLock::new(BiomeOsMode::Bootstrap)), // Default, will detect on serve()
+            nucleation: Arc::new(RwLock::new(SocketNucleation::new(SocketStrategy::FamilyDeterministic))),
         }
     }
 
     /// Start the Neural API server
     pub async fn serve(&self) -> Result<()> {
-        // Remove old socket if it exists
+        // 1. Detect operating mode
+        info!("🔍 Detecting biomeOS operating mode...");
+        let detected_mode = BiomeOsMode::detect(&self.family_id).await;
+        {
+            let mut mode = self.mode.write().await;
+            *mode = detected_mode;
+        }
+        
+        // 2. Bootstrap if needed
+        if detected_mode == BiomeOsMode::Bootstrap {
+            info!("🌱 === BIOMEOS BOOTSTRAP MODE ===");
+            info!("🌍 No existing ecosystem detected");
+            info!("🏗️  Will create ecosystem foundation on first graph deployment");
+            
+            // Register biomeOS in its own capability registry
+            self.register_self_in_registry().await?;
+        } else {
+            info!("🔄 === BIOMEOS COORDINATED MODE ===");
+            info!("🏰 Tower Atomic detected");
+            info!("🌍 Joining existing ecosystem");
+            
+            // TODO: Establish BTSP tunnel with Tower Atomic
+            // TODO: Inherit security context (become gen 1)
+            // Register in ecosystem
+            self.register_self_in_registry().await?;
+        }
+        
+        // 3. Remove old socket if it exists
         if self.socket_path.exists() {
             std::fs::remove_file(&self.socket_path).context("Failed to remove old socket")?;
         }
 
-        // Create Unix socket listener
+        // 4. Create Unix socket listener
         let listener =
             UnixListener::bind(&self.socket_path).context("Failed to bind Unix socket")?;
 
-        info!(
-            "🧠 Neural API server listening on: {}",
-            self.socket_path.display()
-        );
+        let mode_str = match detected_mode {
+            BiomeOsMode::Bootstrap => "BOOTSTRAP (genesis)",
+            BiomeOsMode::Coordinated => "COORDINATED (gen 1)",
+        };
+
+        info!("🧠 Neural API server listening on: {}", self.socket_path.display());
+        info!("   Mode: {}", mode_str);
         info!("   Graphs directory: {}", self.graphs_dir.display());
         info!("   Family ID: {}", self.family_id);
 
-        // Accept connections
+        // 5. Accept connections
         loop {
             match listener.accept().await {
                 Ok((stream, _addr)) => {
@@ -88,6 +133,39 @@ impl NeuralApiServer {
                 }
             }
         }
+    }
+    
+    /// Register biomeOS in the capability registry
+    async fn register_self_in_registry(&self) -> Result<()> {
+        let mode = self.mode.read().await;
+        let source = match *mode {
+            BiomeOsMode::Bootstrap => "bootstrap",
+            BiomeOsMode::Coordinated => "coordinated",
+        };
+        
+        let primal_name = format!("biomeos-{}", self.family_id);
+        let capabilities = vec![
+            "primal.germination",
+            "primal.terraria",
+            "ecosystem.coordination",
+            "ecosystem.nucleation",
+            "graph.execution",
+        ];
+        
+        let cap_count = capabilities.len();
+        
+        // Register each capability
+        for capability in capabilities {
+            self.router.register_capability(
+                capability,
+                &primal_name,
+                &self.socket_path,
+                source,
+            ).await?;
+        }
+        
+        info!("✅ biomeOS registered {} capabilities in registry", cap_count);
+        Ok(())
     }
 
     /// Handle a client connection
@@ -887,6 +965,8 @@ impl NeuralApiServer {
             family_id: self.family_id.clone(),
             socket_path: self.socket_path.clone(),
             router: self.router.clone(),
+            mode: self.mode.clone(),
+            nucleation: self.nucleation.clone(),
         }
     }
 }
