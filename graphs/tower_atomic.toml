@@ -43,16 +43,17 @@ family_id = "nat0"
 timeout_ms = 30000
 
 # Capability Translation: BearDog's semantic → actual method mappings
+# Note: BearDog methods already use semantic namespaces (crypto., tls., etc.)
 [nodes.capabilities_provided]
-"crypto.generate_keypair" = "x25519_generate_ephemeral"
-"crypto.ecdh_derive" = "x25519_derive_secret"
-"crypto.encrypt" = "chacha20_poly1305_encrypt"
-"crypto.decrypt" = "chacha20_poly1305_decrypt"
-"crypto.hash" = "blake3_hash"
-"crypto.hmac" = "hmac_sha256"
-"tls.derive_secrets" = "tls_derive_handshake_secrets"
-"crypto.sign" = "sign_ed25519"
-"crypto.verify" = "verify_ed25519"
+"crypto.generate_keypair" = "crypto.x25519_generate_ephemeral"
+"crypto.ecdh_derive" = "crypto.x25519_derive_secret"
+"crypto.encrypt" = "crypto.chacha20_poly1305_encrypt"
+"crypto.decrypt" = "crypto.chacha20_poly1305_decrypt"
+"crypto.hash" = "crypto.blake3_hash"
+"crypto.hmac" = "crypto.hmac_sha256"
+"crypto.sign" = "crypto.sign_ed25519"
+"crypto.verify" = "crypto.verify_ed25519"
+"tls.derive_secrets" = "tls.derive_secrets"
 
 # =============================================================================
 # Phase 2: Start Discovery Service (Songbird)
