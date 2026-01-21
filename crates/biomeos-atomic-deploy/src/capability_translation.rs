@@ -163,12 +163,14 @@ impl CapabilityTranslationRegistry {
             .get_translation(semantic)
             .ok_or_else(|| anyhow!("No provider for capability: {}", semantic))?;
         
-        trace!(
-            "🔄 Translating {} → {} (provider: {})",
+        info!(
+            "🔄 Translating {} → {} (provider: {}, socket: {})",
             semantic,
             translation.actual_method,
-            translation.provider
+            translation.provider,
+            translation.socket
         );
+        debug!("   Params: {}", params);
         
         // 2. Connect to provider
         let mut stream = UnixStream::connect(&translation.socket)
@@ -192,7 +194,8 @@ impl CapabilityTranslationRegistry {
         });
         
         let rpc_request_str = serde_json::to_string(&rpc_request)?;
-        trace!("→ Provider RPC: {}", rpc_request_str);
+        info!("→ Provider RPC: method={}, socket={}", translation.actual_method, translation.socket);
+        trace!("→ Full RPC request: {}", rpc_request_str);
         
         // 4. Send request
         let send_start = std::time::Instant::now();
@@ -259,7 +262,8 @@ impl CapabilityTranslationRegistry {
         }
         
         let response_line = String::from_utf8(buffer)?;
-        trace!("← Provider RPC: {}", response_line.trim());
+        info!("← Provider RPC response received ({} bytes)", response_line.len());
+        trace!("← Full response: {}", response_line.trim());
         
         let rpc_response: serde_json::Value = serde_json::from_str(&response_line)?;
         

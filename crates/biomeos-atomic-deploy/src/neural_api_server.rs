@@ -18,7 +18,7 @@ use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{UnixListener, UnixStream};
 use tokio::sync::RwLock;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info, trace, warn};
 
 /// Neural API server state
 #[derive(Clone)]
@@ -360,6 +360,7 @@ impl NeuralApiServer {
             .context("Failed to parse JSON-RPC request")?;
 
         debug!("📥 Request: {} (id: {})", request.method, request.id);
+        trace!("📥 Full request: {}", request_line.trim());
 
         let result = match request.method.as_str() {
             // Deployment API (graph execution)
@@ -494,7 +495,14 @@ impl NeuralApiServer {
         tracing::debug!("   Nodes: {}", graph.nodes.len());
         
         // NEW v2.0.0: Load capability translations from graph
-        self.load_translations_from_graph(&graph).await?;
+        info!("📝 Attempting to load capability translations from graph...");
+        match self.load_translations_from_graph(&graph).await {
+            Ok(_) => info!("✅ Capability translations loaded successfully"),
+            Err(e) => {
+                error!("❌ Failed to load capability translations: {}", e);
+                return Err(e);
+            }
+        }
 
         // Generate execution ID
         let execution_id = format!("{}-{}", graph_id, chrono::Utc::now().timestamp());
@@ -1137,10 +1145,14 @@ impl NeuralApiServer {
     ///
     /// Extracts `capabilities_provided` from each node and registers translations
     async fn load_translations_from_graph(&self, graph: &Graph) -> Result<()> {
+        info!("🔧 load_translations_from_graph called for graph with {} nodes", graph.nodes.len());
         let mut registry = self.translation_registry.write().await;
         let mut loaded_count = 0;
         
         for node in &graph.nodes {
+            debug!("   Checking node: {} (has capabilities_provided: {})", 
+                   node.id, 
+                   node.capabilities_provided.is_some());
             if let Some(caps_provided) = &node.capabilities_provided {
                 // Infer socket path from primal type and family_id
                 let primal_name = if let Some(primal_cfg) = &node.primal {
@@ -1216,10 +1228,14 @@ impl NeuralApiServer {
         let args = params.get("args").cloned().unwrap_or(json!({}));
         
         info!("🔄 Capability call (with translation): {}", capability);
+        debug!("   Args: {}", args);
         
         let registry = self.translation_registry.read().await;
+        debug!("   Registry has {} translations", registry.list_all().len());
+        
         let result = registry.call_capability(capability, args).await?;
         
+        debug!("   ✅ Result received from provider");
         Ok(result)
     }
     
