@@ -174,6 +174,10 @@ pub struct Operation {
     pub name: String,
     #[serde(default)]
     pub params: HashMap<String, serde_json::Value>,
+    
+    /// Environment variables to pass to the primal (NEW - Jan 21, 2026)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub environment: Option<HashMap<String, String>>,
 }
 
 /// Node constraints

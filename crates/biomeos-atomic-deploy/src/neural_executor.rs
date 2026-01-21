@@ -593,6 +593,24 @@ impl GraphExecutor {
         
         tracing::info!("   Starting: {} {} (socket: {})", primal_name, mode, socket_path);
         
+        // 2.5: Pass environment variables from graph TOML (NEW - Jan 21, 2026)
+        // This enables primals to receive API keys, configuration, etc.
+        tracing::info!("   DEBUG: node.operation exists? {}", node.operation.is_some());
+        if let Some(ref operation) = node.operation {
+            tracing::info!("   DEBUG: operation.environment exists? {}", operation.environment.is_some());
+            if let Some(ref env_map) = operation.environment {
+                tracing::info!("   🔧 Passing {} environment variables to primal", env_map.len());
+                for (key, value) in env_map {
+                    tracing::info!("   Setting env: {}={}", key, if key.contains("KEY") { "***" } else { value });
+                    cmd.env(key, value);
+                }
+            } else {
+                tracing::warn!("   ⚠️  No environment variables in operation");
+            }
+        } else {
+            tracing::warn!("   ⚠️  No operation found on node!");
+        }
+        
         // 3. Start process
         let child = match cmd.spawn() {
             Ok(c) => c,

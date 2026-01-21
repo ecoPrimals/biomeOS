@@ -196,10 +196,24 @@ impl GraphParser {
         let params_json = serde_json::to_value(&params).map_err(|e| {
             GraphError::ParseError(format!("Failed to convert params to JSON: {}", e))
         })?;
+        
+        // Parse environment variables (NEW - Jan 21, 2026)
+        let environment = op_table
+            .get("environment")
+            .and_then(|v| v.as_table())
+            .map(|env_table| {
+                env_table
+                    .iter()
+                    .filter_map(|(k, v)| {
+                        v.as_str().map(|s| (k.clone(), s.to_string()))
+                    })
+                    .collect::<std::collections::HashMap<String, String>>()
+            });
 
         Ok(Operation {
             name,
             params: params_json,
+            environment,
         })
     }
 

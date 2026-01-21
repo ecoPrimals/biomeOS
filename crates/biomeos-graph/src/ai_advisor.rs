@@ -338,6 +338,7 @@ impl AiGraphAdvisor {
                         operation: Operation {
                             name: "handle_errors".to_string(),
                             params: serde_json::json!({}),
+                            environment: None,
                         },
                         input: None,
                         outputs: vec![],
