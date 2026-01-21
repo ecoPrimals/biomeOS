@@ -88,9 +88,16 @@ name = "start"
 mode = "server"
 family_id = "nat0"
 # Squirrel will auto-discover:
-# - Songbird (for service discovery)
+# - Songbird (for service discovery via capability registry)
 # - BearDog (for security, via Songbird)
-# - HTTP gateway (for external APIs, via Songbird)
+# - HTTP gateway (for external APIs, via Songbird's http.request capability)
+
+[nodes.operation.environment]
+# External AI API keys (for Tier 1 - External AI via HTTP delegation)
+ANTHROPIC_API_KEY = "sk-ant-REDACTED"
+# Neural API capability registry for event-driven discovery
+CAPABILITY_REGISTRY_SOCKET = "/tmp/neural-api-nat0.sock"
+# Note: AI_PROVIDER_SOCKETS should NOT be set - that's for local AI primals (Tier 2)
 
 [nodes.constraints]
 timeout_ms = 30000
