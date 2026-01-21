@@ -59,6 +59,8 @@ family_id = "nat0"
 # Environment variables for Songbird
 [nodes.operation.environment]
 NEURAL_API_SOCKET = "/tmp/neural-api-nat0.sock"  # For capability translation routing
+BEARDOG_SOCKET = "/tmp/beardog-nat0.sock"  # Security provider (for non-HTTP crypto operations)
+SONGBIRD_SECURITY_PROVIDER = "/tmp/beardog-nat0.sock"  # Alternative name for security provider
 
 # Genetic bonding: Songbird inherits from BearDog
 # BEARDOG_SOCKET will be injected by executor (nucleation)
