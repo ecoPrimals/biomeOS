@@ -155,6 +155,12 @@ pub struct GraphNode {
     #[serde(default)]
     pub capabilities_provided: Option<HashMap<String, String>>,
     
+    // NEW v2.0.1: Parameter name mappings (semantic → actual parameter names)
+    // Enables parameter translation for capability calls
+    // Example: {"crypto.ecdh_derive": {"private_key": "our_secret", "public_key": "their_public"}}
+    #[serde(default)]
+    pub parameter_mappings: Option<HashMap<String, HashMap<String, String>>>,
+    
     // Legacy fields (for backward compatibility)
     #[serde(default)]
     pub node_type: Option<String>,

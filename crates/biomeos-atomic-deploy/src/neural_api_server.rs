@@ -1190,9 +1190,15 @@ impl NeuralApiServer {
                     
                     // Register all translations for this primal
                     for (semantic, actual) in caps_provided {
+                        // Check if there are parameter mappings for this capability
+                        let param_mappings = node.parameter_mappings.as_ref()
+                            .and_then(|mappings| mappings.get(semantic))
+                            .cloned();
+                        
                         info!(
-                            "📝 Loading translation from graph: {} → {} ({} @ {})",
-                            semantic, actual, primal, socket_path
+                            "📝 Loading translation from graph: {} → {} ({} @ {}) {}",
+                            semantic, actual, primal, socket_path,
+                            if param_mappings.is_some() { "with param mappings" } else { "" }
                         );
                         
                         registry.register_translation(
@@ -1200,6 +1206,7 @@ impl NeuralApiServer {
                             &primal,
                             actual,
                             &socket_path,
+                            param_mappings,
                         );
                         
                         loaded_count += 1;

@@ -27,6 +27,11 @@ pub struct CapabilityTranslation {
     /// Provider socket path
     pub socket: String,
     
+    /// Parameter name mappings (semantic → actual)
+    /// Example: {"private_key": "our_secret", "public_key": "their_public"}
+    #[serde(default)]
+    pub param_mappings: HashMap<String, String>,
+    
     /// Optional metadata
     #[serde(default)]
     pub metadata: HashMap<String, serde_json::Value>,
@@ -73,7 +78,8 @@ impl CapabilityTranslationRegistry {
     ///     "crypto.generate_keypair",
     ///     "beardog",
     ///     "x25519_generate_ephemeral",
-    ///     "/tmp/beardog-nat0.sock"
+    ///     "/tmp/beardog-nat0.sock",
+    ///     None  // No parameter mappings
     /// );
     /// ```
     pub fn register_translation(
@@ -82,6 +88,7 @@ impl CapabilityTranslationRegistry {
         provider: impl Into<String>,
         actual_method: impl Into<String>,
         socket: impl Into<String>,
+        param_mappings: Option<HashMap<String, String>>,
     ) {
         let semantic = semantic.into();
         let provider = provider.into();
@@ -89,8 +96,11 @@ impl CapabilityTranslationRegistry {
         let socket = socket.into();
         
         debug!(
-            "📝 Registering translation: {} → {} ({})",
-            semantic, actual_method, provider
+            "📝 Registering translation: {} → {} ({}) {}",
+            semantic, 
+            actual_method, 
+            provider,
+            if param_mappings.is_some() { "with param mappings" } else { "" }
         );
         
         let translation = CapabilityTranslation {
@@ -98,6 +108,7 @@ impl CapabilityTranslationRegistry {
             provider: provider.clone(),
             actual_method,
             socket,
+            param_mappings: param_mappings.unwrap_or_default(),
             metadata: HashMap::new(),
         };
         
@@ -170,9 +181,27 @@ impl CapabilityTranslationRegistry {
             translation.provider,
             translation.socket
         );
-        debug!("   Params: {}", params);
+        debug!("   Params (semantic): {}", params);
         
-        // 2. Connect to provider
+        // 2. Apply parameter name mappings
+        let mapped_params = if !translation.param_mappings.is_empty() {
+            if let serde_json::Value::Object(obj) = params {
+                let mut mapped_obj = serde_json::Map::new();
+                for (key, value) in obj {
+                    // Use mapping if available, otherwise keep original name
+                    let actual_key = translation.param_mappings.get(&key).unwrap_or(&key);
+                    mapped_obj.insert(actual_key.clone(), value);
+                }
+                debug!("   Params (after mapping): {}", serde_json::Value::Object(mapped_obj.clone()));
+                serde_json::Value::Object(mapped_obj)
+            } else {
+                params
+            }
+        } else {
+            params
+        };
+        
+        // 3. Connect to provider
         let mut stream = UnixStream::connect(&translation.socket)
             .await
             .map_err(|e| {
@@ -184,12 +213,12 @@ impl CapabilityTranslationRegistry {
                 )
             })?;
         
-        // 3. Build RPC with ACTUAL method name
+        // 4. Build RPC with ACTUAL method name and MAPPED parameters
         let id = self.next_id.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         let rpc_request = serde_json::json!({
             "jsonrpc": "2.0",
             "method": translation.actual_method,
-            "params": params,
+            "params": mapped_params,
             "id": id
         });
         

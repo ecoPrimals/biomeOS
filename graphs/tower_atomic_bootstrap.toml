@@ -40,6 +40,11 @@ timeout_ms = 30000  # 30s to start
 "crypto.verify" = "crypto.verify_ed25519"
 "tls.derive_secrets" = "tls.derive_secrets"
 
+# Parameter Mappings: Translate semantic param names to actual param names
+# Format: "semantic.capability" = { "semantic_param" = "actual_param" }
+[nodes.parameter_mappings]
+"crypto.ecdh_derive" = { "private_key" = "our_secret", "public_key" = "their_public" }
+
 # Phase 2: Germinate Songbird (Network + BTSP)
 [[nodes]]
 id = "germinate_songbird"
