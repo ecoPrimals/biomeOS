@@ -53,8 +53,9 @@ timeout_ms = 30000  # 30s to start
 "crypto.sign_rsa_pss" = "crypto.sign_rsa_pss_sha256"
 "crypto.verify_rsa_pss" = "crypto.verify_rsa_pss_sha256"
 
-# TLS Crypto Operations (3 methods)
+# TLS Crypto Operations (4 methods) - Phase 8 (Pure Rust HTTPS complete!)
 "tls.derive_secrets" = "tls.derive_secrets"
+"tls.derive_application_secrets" = "tls.derive_application_secrets"  # Phase 8: Application traffic keys
 "tls.sign_handshake" = "tls.sign_handshake"
 "tls.verify_certificate" = "tls.verify_certificate"
 
