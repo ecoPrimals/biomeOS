@@ -29,7 +29,7 @@ timeout_ms = 30000  # 30s to start
 
 # Capability Translation: BearDog's semantic → actual method mappings
 # Note: BearDog methods already use semantic namespaces (crypto., tls., etc.)
-# BearDog v0.9.0: 23 crypto methods (8 core + 8 ECDSA/RSA + 4 genetic + 3 TLS)
+# BearDog v0.14.0: 24 crypto methods (8 core + 8 ECDSA/RSA + 4 genetic + 4 TLS)
 [nodes.capabilities_provided]
 # Core Crypto Operations (8 methods)
 "crypto.generate_keypair" = "crypto.x25519_generate_ephemeral"
@@ -40,6 +40,12 @@ timeout_ms = 30000  # 30s to start
 "crypto.hmac" = "crypto.hmac_sha256"
 "crypto.sign" = "crypto.sign_ed25519"
 "crypto.verify" = "crypto.verify_ed25519"
+
+# AES-GCM Operations (4 methods) - NEW: For TLS 1.3 cipher suite support!
+"crypto.decrypt_aes_128_gcm" = "crypto.aes128_gcm_decrypt"
+"crypto.encrypt_aes_128_gcm" = "crypto.aes128_gcm_encrypt"
+"crypto.decrypt_aes_256_gcm" = "crypto.aes256_gcm_decrypt"
+"crypto.encrypt_aes_256_gcm" = "crypto.aes256_gcm_encrypt"
 
 # ECDSA Signature Algorithms (4 methods) - Phase 1 & 2 (96% HTTPS coverage)
 "crypto.sign_ecdsa_p256" = "crypto.sign_ecdsa_secp256r1"
@@ -53,9 +59,11 @@ timeout_ms = 30000  # 30s to start
 "crypto.sign_rsa_pss" = "crypto.sign_rsa_pss_sha256"
 "crypto.verify_rsa_pss" = "crypto.verify_rsa_pss_sha256"
 
-# TLS Crypto Operations (4 methods) - Phase 8 (Pure Rust HTTPS complete!)
+# TLS Crypto Operations (6 methods) - Phase 8, 9 & 10 (Pure Rust HTTPS complete!)
 "tls.derive_secrets" = "tls.derive_secrets"
+"tls.derive_handshake_secrets" = "tls.derive_handshake_secrets"  # Phase 9: Handshake traffic keys (CRITICAL!)
 "tls.derive_application_secrets" = "tls.derive_application_secrets"  # Phase 8: Application traffic keys
+"tls.compute_finished_verify_data" = "tls.compute_finished_verify_data"  # Phase 10: Client Finished message (THE FINAL PIECE!)
 "tls.sign_handshake" = "tls.sign_handshake"
 "tls.verify_certificate" = "tls.verify_certificate"
 
@@ -93,6 +101,7 @@ family_id = "nat0"
 NEURAL_API_SOCKET = "/tmp/neural-api-nat0.sock"  # For capability translation routing
 BEARDOG_SOCKET = "/tmp/beardog-nat0.sock"  # Security provider (for non-HTTP crypto operations)
 SONGBIRD_SECURITY_PROVIDER = "/tmp/beardog-nat0.sock"  # Alternative name for security provider
+RUST_LOG = "songbird_http_client=info"  # Enable INFO logging for first-byte verification
 
 # Genetic bonding: Songbird inherits from BearDog
 # BEARDOG_SOCKET will be injected by executor (nucleation)

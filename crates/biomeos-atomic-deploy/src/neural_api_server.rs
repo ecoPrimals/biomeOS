@@ -222,6 +222,11 @@ impl NeuralApiServer {
         info!("📋 Loading bootstrap graph: {}", bootstrap_graph_path.display());
         let graph = crate::neural_graph::Graph::from_toml_file(&bootstrap_graph_path)?;
         
+        // Load capability translations from graph
+        info!("📝 Loading capability translations from bootstrap graph...");
+        self.load_translations_from_graph(&graph).await?;
+        info!("✅ Capability translations loaded");
+        
         // Prepare environment
         let mut env = HashMap::new();
         env.insert("FAMILY_ID".to_string(), self.family_id.clone());
