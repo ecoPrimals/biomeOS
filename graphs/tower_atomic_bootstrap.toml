@@ -25,7 +25,7 @@ mode = "server"
 family_id = "nat0"  # Can be overridden by executor
 
 [nodes.operation.environment]
-RUST_LOG = "beardog_tunnel=debug"  # Enable BearDog v0.17.0 comprehensive debug logging
+RUST_LOG = "beardog_tunnel=info"  # Enable BearDog v0.18.0 enhanced debug logging (uses info! level)
 
 [nodes.constraints]
 timeout_ms = 30000  # 30s to start
