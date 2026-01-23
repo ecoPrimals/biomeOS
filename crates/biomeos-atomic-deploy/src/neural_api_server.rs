@@ -1237,7 +1237,12 @@ impl NeuralApiServer {
         let capability = params["capability"]
             .as_str()
             .context("Missing 'capability' field")?;
-        let args = params.get("args").cloned().unwrap_or(json!({}));
+        
+        // Support both "args" and "params" for compatibility (different primals may use either)
+        let args = params.get("params")
+            .or_else(|| params.get("args"))
+            .cloned()
+            .unwrap_or(json!({}));
         
         info!("🔄 Capability call (with translation): {}", capability);
         debug!("   Args: {}", args);

@@ -113,12 +113,13 @@ RUST_LOG = "songbird_http_client=info"  # Enable INFO logging for first-byte ver
 timeout_ms = 30000  # 30s to start
 
 # Capability Translation: Songbird's semantic → actual method mappings
+# NOTE: Songbird v5.12.3+ uses semantic names directly (http.request, not http_request)
 [nodes.capabilities_provided]
-"http.request" = "http_request"
-"http.get" = "http_get"
-"http.post" = "http_post"
-"discovery.announce" = "discovery_announce"
-"discovery.query" = "discovery_query"
+"http.request" = "http.request"  # Songbird exposes http.request (no translation needed)
+"http.get" = "http.get"          # Future: not yet implemented in Songbird
+"http.post" = "http.post"        # Future: not yet implemented in Songbird
+"discovery.announce" = "announce_capabilities"  # Actual method: announce_capabilities
+"discovery.query" = "discover_by_capability"    # Actual method: discover_by_capability
 
 # Phase 3: Validate Tower Atomic Health
 [[nodes]]
