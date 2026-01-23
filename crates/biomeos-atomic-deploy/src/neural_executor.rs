@@ -647,8 +647,11 @@ impl GraphExecutor {
         }
         
         cmd.env("FAMILY_ID", family_id);
-        cmd.stdout(Stdio::null());
-        cmd.stderr(Stdio::null());
+        
+        // Capture stdout/stderr for debug visibility (Jan 23, 2026 - Deep Debt Solution)
+        // This enables comprehensive debug logging from primals (e.g., BearDog v0.18.0)
+        cmd.stdout(Stdio::piped());
+        cmd.stderr(Stdio::piped());
         
         tracing::info!("   Starting: {} {} (socket: {})", primal_name, mode, socket_path);
         
@@ -670,8 +673,8 @@ impl GraphExecutor {
             tracing::warn!("   ⚠️  No operation found on node!");
         }
         
-        // 3. Start process
-        let child = match cmd.spawn() {
+        // 3. Start process with captured stdout/stderr
+        let mut child = match cmd.spawn() {
             Ok(c) => c,
             Err(e) => {
                 tracing::error!("   Failed to spawn process: {}", e);
@@ -686,6 +689,31 @@ impl GraphExecutor {
         
         let pid = child.id().unwrap_or(0);
         tracing::info!("   Process started: PID {}", pid);
+        
+        // 3.1: Relay primal stdout/stderr to Neural API logs (Deep Debt Solution - Jan 23, 2026)
+        // This makes primal debug output (like BearDog v0.18.0 comprehensive logging) visible
+        let primal_name_for_stdout = primal_name.to_string();
+        let primal_name_for_stderr = primal_name.to_string();
+        
+        if let Some(stdout) = child.stdout.take() {
+            tokio::spawn(async move {
+                use tokio::io::{AsyncBufReadExt, BufReader};
+                let mut reader = BufReader::new(stdout).lines();
+                while let Ok(Some(line)) = reader.next_line().await {
+                    tracing::info!("[{}] {}", primal_name_for_stdout, line);
+                }
+            });
+        }
+        
+        if let Some(stderr) = child.stderr.take() {
+            tokio::spawn(async move {
+                use tokio::io::{AsyncBufReadExt, BufReader};
+                let mut reader = BufReader::new(stderr).lines();
+                while let Ok(Some(line)) = reader.next_line().await {
+                    tracing::warn!("[{}] {}", primal_name_for_stderr, line);
+                }
+            });
+        }
         
         // 4. Wait for socket (with timeout)
         // socket_path already defined above (line 546) - use that!
