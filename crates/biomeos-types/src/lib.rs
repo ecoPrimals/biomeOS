@@ -10,6 +10,7 @@ pub mod api_schema;
 pub mod capability_taxonomy; // Well-known capability taxonomy for discovery
 pub mod config;
 pub mod constants;
+pub mod defaults; // Runtime defaults (socket paths, etc.) with env var overrides
 pub mod error;
 pub mod health;
 pub mod identifiers;
@@ -25,6 +26,7 @@ pub use api_schema::{
 };
 pub use capability_taxonomy::CapabilityTaxonomy; // Well-known capability taxonomy (enum)
 pub use constants::*;
+pub use defaults::{socket_path, RuntimeConfig}; // Runtime configuration with env var overrides
 pub use error::{BiomeError, BiomeResult};
 pub use paths::SystemPaths; // XDG-compliant paths
 
