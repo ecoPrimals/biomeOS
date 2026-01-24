@@ -648,6 +648,14 @@ impl GraphExecutor {
         
         cmd.env("FAMILY_ID", family_id);
         
+        // Pass SSLKEYLOGFILE if set (for Wireshark TLS decryption)
+        if let Ok(sslkeylogfile) = std::env::var("SSLKEYLOGFILE") {
+            if !sslkeylogfile.is_empty() {
+                cmd.env("SSLKEYLOGFILE", &sslkeylogfile);
+                tracing::info!("   🔐 Passing SSLKEYLOGFILE to primal: {}", sslkeylogfile);
+            }
+        }
+        
         // Capture stdout/stderr for debug visibility (Jan 23, 2026 - Deep Debt Solution)
         // This enables comprehensive debug logging from primals (e.g., BearDog v0.18.0)
         cmd.stdout(Stdio::piped());
