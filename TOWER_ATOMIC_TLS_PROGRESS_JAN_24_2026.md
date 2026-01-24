@@ -46,32 +46,45 @@ TOTAL TIME: 3 WEEKS (vs 15 months typical for TLS!)
 
 ### What It Is
 
-**Tower Atomic** = Modular, composable security pattern:
-- **BearDog**: Provides crypto primitives (X25519, HKDF, AES-GCM, ChaCha20)
-- **Songbird**: Provides TLS protocol + network I/O
-- **Communication**: JSON-RPC over Unix sockets
+**Tower Atomic** = **Neural API deployment pattern** orchestrated by biomeOS:
+```
+Tower Atomic Graph (tower_atomic.toml)
+├── biomeOS Neural API: Orchestration + Semantic Translation
+├── BearDog: Pure Rust crypto primitives (X25519, HKDF, AES-GCM, ChaCha20)
+├── Songbird: Pure Rust TLS 1.3 + HTTPS client
+├── Semantic Layer: Navigates differences between primals
+└── Communication: JSON-RPC over Unix sockets
+```
+
+**Purpose**: Provide 100% Pure Rust HTTPS/TLS 1.3 to ALL primals in the ecosystem via graph-based deployment with semantic translation layer.
 
 ### What It's NOT
 
+❌ **NOT just BearDog + Songbird** working together  
 ❌ **NOT hardcoded** between primals  
 ❌ **NOT a single monolithic primal**  
 ❌ **NOT dependent on specific deployment**
 
-✅ **IS capability-based** (any primal can discover Songbird)  
-✅ **IS composable** (works in any configuration)  
-✅ **IS reusable** (any primal can use for HTTPS)
+✅ **IS orchestrated** by biomeOS Neural API via graphs  
+✅ **IS semantic** - biomeOS translates high-level intent to primal-specific RPC  
+✅ **IS capability-based** - dynamic discovery, zero hardcoding  
+✅ **IS composable** - foundation for Node Atomic, Nest Atomic patterns
 
 ### Current Implementation
 
 ```
 External Website (https://example.com)
-         ↕ TLS 1.3
-    Songbird (Protocol Layer)
+         ↕ TLS 1.3 (Pure Rust)
+    Songbird (HTTPS + TLS Protocol)
          ↕ JSON-RPC (Unix socket)
-    BearDog (Crypto Layer)
-         ↕ Capability Discovery
-    Primals (via capability lookup, not hardcoding)
+    BearDog (Crypto Operations)
+         ↕ Semantic Translation
+    biomeOS Neural API (Orchestration + Discovery)
+         ↕ Capability Queries
+    Any Primal (via semantic requests, not hardcoding)
 ```
+
+**Key Innovation**: Primals request "encrypt_data with AES-GCM" semantically, biomeOS translates to "crypto.aes128_gcm_encrypt" and routes to BearDog - primals never know about each other!
 
 ---
 
