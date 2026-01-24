@@ -82,36 +82,46 @@ struct JsonRpcError {
 }
 
 /// Send a JSON-RPC request over Unix socket
-fn send_rpc_request(socket_path: &str, method: &str, params: serde_json::Value) -> Result<serde_json::Value> {
+fn send_rpc_request(
+    socket_path: &str,
+    method: &str,
+    params: serde_json::Value,
+) -> Result<serde_json::Value> {
     debug!("📡 Sending RPC to {}: {}", socket_path, method);
-    
+
     let mut stream = UnixStream::connect(socket_path)
         .map_err(|e| anyhow::anyhow!("Failed to connect to {}: {}", socket_path, e))?;
-    
+
     stream.set_read_timeout(Some(Duration::from_secs(5)))?;
     stream.set_write_timeout(Some(Duration::from_secs(5)))?;
-    
+
     let request = JsonRpcRequest {
         jsonrpc: "2.0",
         id: 1,
         method: method.to_string(),
         params,
     };
-    
+
     let request_bytes = serde_json::to_vec(&request)?;
     stream.write_all(&request_bytes)?;
     stream.write_all(b"\n")?;
     stream.flush()?;
-    
+
     let mut response_buf = vec![0u8; 65536];
     let n = stream.read(&mut response_buf)?;
     let response: JsonRpcResponse = serde_json::from_slice(&response_buf[..n])?;
-    
+
     if let Some(error) = response.error {
-        return Err(anyhow::anyhow!("RPC error {}: {}", error.code, error.message));
+        return Err(anyhow::anyhow!(
+            "RPC error {}: {}",
+            error.code,
+            error.message
+        ));
     }
-    
-    response.result.ok_or_else(|| anyhow::anyhow!("No result in RPC response"))
+
+    response
+        .result
+        .ok_or_else(|| anyhow::anyhow!("No result in RPC response"))
 }
 
 /// Query BearDog for its identity and health via Unix socket
@@ -122,25 +132,29 @@ pub async fn discover_beardog(socket_path: &str) -> Result<LivePrimalInfo> {
     let socket = socket_path.to_string();
     let result = tokio::task::spawn_blocking(move || {
         send_rpc_request(&socket, "health.check", serde_json::json!({}))
-    }).await??;
+    })
+    .await??;
 
     debug!("BearDog health response: {:?}", result);
 
     // Parse health response
-    let status = result.get("status")
+    let status = result
+        .get("status")
         .and_then(|v| v.as_str())
         .unwrap_or("healthy")
         .to_string();
-    
-    let version = result.get("version")
+
+    let version = result
+        .get("version")
         .and_then(|v| v.as_str())
         .unwrap_or("unknown")
         .to_string();
-    
-    let family_id = result.get("family_id")
+
+    let family_id = result
+        .get("family_id")
         .and_then(|v| v.as_str())
         .map(|s| s.to_string());
-    
+
     // BearDog capabilities (from taxonomy)
     let capabilities = vec![
         "security".to_string(),
@@ -152,7 +166,10 @@ pub async fn discover_beardog(socket_path: &str) -> Result<LivePrimalInfo> {
         "genetic_lineage".to_string(),
     ];
 
-    info!("✅ BearDog discovered: version={}, status={}", version, status);
+    info!(
+        "✅ BearDog discovered: version={}, status={}",
+        version, status
+    );
 
     Ok(LivePrimalInfo {
         id: "beardog-local".to_string(),
@@ -174,20 +191,24 @@ pub async fn discover_songbird(socket_path: &str) -> Result<LivePrimalInfo> {
     let socket = socket_path.to_string();
     let result = tokio::task::spawn_blocking(move || {
         send_rpc_request(&socket, "health.check", serde_json::json!({}))
-    }).await;
+    })
+    .await;
 
     // Handle connection failures gracefully
     let (status, version, family_id) = match result {
         Ok(Ok(response)) => {
-            let status = response.get("status")
+            let status = response
+                .get("status")
                 .and_then(|v| v.as_str())
                 .unwrap_or("healthy")
                 .to_string();
-            let version = response.get("version")
+            let version = response
+                .get("version")
                 .and_then(|v| v.as_str())
                 .unwrap_or("unknown")
                 .to_string();
-            let family_id = response.get("family_id")
+            let family_id = response
+                .get("family_id")
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string());
             (status, version, family_id)
@@ -211,7 +232,10 @@ pub async fn discover_songbird(socket_path: &str) -> Result<LivePrimalInfo> {
         "tls.handshake".to_string(),
     ];
 
-    info!("✅ Songbird discovered: version={}, status={}", version, status);
+    info!(
+        "✅ Songbird discovered: version={}, status={}",
+        version, status
+    );
 
     Ok(LivePrimalInfo {
         id: "songbird-local".to_string(),
@@ -232,28 +256,28 @@ fn default_socket_path(primal: &str, family_id: &str) -> String {
     if let Ok(path) = std::env::var(&env_var) {
         return path;
     }
-    
+
     // Check BIOMEOS_SOCKET_DIR
-    let socket_dir = std::env::var("BIOMEOS_SOCKET_DIR")
-        .unwrap_or_else(|_| "/tmp/biomeos/sockets".to_string());
-    
+    let socket_dir =
+        std::env::var("BIOMEOS_SOCKET_DIR").unwrap_or_else(|_| "/tmp/biomeos/sockets".to_string());
+
     format!("{}/{}-{}.sock", socket_dir, primal, family_id)
 }
 
 /// Discover all configured primals via Unix sockets
 pub async fn discover_all_primals() -> Vec<LivePrimalInfo> {
     let mut primals = Vec::new();
-    
+
     // Get family ID from environment (default: nat0)
     let family_id = std::env::var("BIOMEOS_FAMILY_ID")
         .or_else(|_| std::env::var("FAMILY_ID"))
         .unwrap_or_else(|_| "nat0".to_string());
-    
+
     info!("🔍 Discovering primals for family: {}", family_id);
 
     // Discover BearDog
     let beardog_socket = default_socket_path("beardog", &family_id);
-    
+
     match discover_beardog(&beardog_socket).await {
         Ok(primal) => {
             info!("✅ Discovered BearDog: {} ({})", primal.name, primal.health);
@@ -269,7 +293,10 @@ pub async fn discover_all_primals() -> Vec<LivePrimalInfo> {
 
     match discover_songbird(&songbird_socket).await {
         Ok(primal) => {
-            info!("✅ Discovered Songbird: {} ({})", primal.name, primal.health);
+            info!(
+                "✅ Discovered Songbird: {} ({})",
+                primal.name, primal.health
+            );
             primals.push(primal);
         }
         Err(e) => {

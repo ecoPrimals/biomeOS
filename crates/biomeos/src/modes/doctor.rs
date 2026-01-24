@@ -4,10 +4,10 @@
 
 use anyhow::Result;
 use colored::Colorize;
-use comfy_table::{presets::UTF8_FULL, Table};
+use comfy_table::presets::UTF8_FULL;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
-use sysinfo::{Disks, Networks, System};
+use sysinfo::{Disks, System};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Diagnostics {
@@ -39,7 +39,7 @@ impl Diagnostics {
         }
     }
 
-    fn add_check(&mut self, name: &str, check: HealthCheck) {
+    fn add_check(&mut self, _name: &str, check: HealthCheck) {
         // Update overall status
         match check.status {
             HealthStatus::Critical => self.overall_status = HealthStatus::Critical,

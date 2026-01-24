@@ -253,7 +253,7 @@ impl AppStateBuilder {
                 // Real discovery happens via JSON-RPC to running primals
                 tracing::info!("📡 Creating default composite discovery (Unix socket based)");
                 tracing::info!("   Use /api/v1/discovery/live for active primal discovery");
-                
+
                 let composite = CompositeDiscovery::new();
                 Arc::new(composite)
             }

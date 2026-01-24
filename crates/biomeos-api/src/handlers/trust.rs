@@ -74,15 +74,15 @@ fn get_beardog_socket() -> String {
     if let Ok(socket) = std::env::var("BEARDOG_SOCKET") {
         return socket;
     }
-    
+
     // Check socket directory
     let family_id = std::env::var("BIOMEOS_FAMILY_ID")
         .or_else(|_| std::env::var("FAMILY_ID"))
         .unwrap_or_else(|_| "nat0".to_string());
-    
-    let socket_dir = std::env::var("BIOMEOS_SOCKET_DIR")
-        .unwrap_or_else(|_| "/tmp/biomeos/sockets".to_string());
-    
+
+    let socket_dir =
+        std::env::var("BIOMEOS_SOCKET_DIR").unwrap_or_else(|_| "/tmp/biomeos/sockets".to_string());
+
     format!("{}/beardog-{}.sock", socket_dir, family_id)
 }
 
@@ -93,43 +93,51 @@ fn call_beardog<T: Serialize, R: for<'de> Deserialize<'de>>(
 ) -> Result<R, String> {
     let socket_path = get_beardog_socket();
     debug!("📡 Calling BearDog at {}: {}", socket_path, method);
-    
+
     let mut stream = UnixStream::connect(&socket_path)
         .map_err(|e| format!("Failed to connect to BearDog at {}: {}", socket_path, e))?;
-    
-    stream.set_read_timeout(Some(Duration::from_secs(5)))
+
+    stream
+        .set_read_timeout(Some(Duration::from_secs(5)))
         .map_err(|e| format!("Failed to set read timeout: {}", e))?;
-    stream.set_write_timeout(Some(Duration::from_secs(5)))
+    stream
+        .set_write_timeout(Some(Duration::from_secs(5)))
         .map_err(|e| format!("Failed to set write timeout: {}", e))?;
-    
+
     let request = JsonRpcRequest {
         jsonrpc: "2.0",
         id: 1,
         method: method.to_string(),
         params,
     };
-    
-    let request_bytes = serde_json::to_vec(&request)
-        .map_err(|e| format!("Failed to serialize request: {}", e))?;
-    stream.write_all(&request_bytes)
+
+    let request_bytes =
+        serde_json::to_vec(&request).map_err(|e| format!("Failed to serialize request: {}", e))?;
+    stream
+        .write_all(&request_bytes)
         .map_err(|e| format!("Failed to write to socket: {}", e))?;
-    stream.write_all(b"\n")
+    stream
+        .write_all(b"\n")
         .map_err(|e| format!("Failed to write newline: {}", e))?;
-    stream.flush()
+    stream
+        .flush()
         .map_err(|e| format!("Failed to flush socket: {}", e))?;
-    
+
     let mut response_buf = vec![0u8; 65536];
-    let n = stream.read(&mut response_buf)
+    let n = stream
+        .read(&mut response_buf)
         .map_err(|e| format!("Failed to read from socket: {}", e))?;
-    
+
     let response: JsonRpcResponse<R> = serde_json::from_slice(&response_buf[..n])
         .map_err(|e| format!("Failed to parse response: {}", e))?;
-    
+
     if let Some(error) = response.error {
         return Err(format!("RPC error {}: {}", error.code, error.message));
     }
-    
-    response.result.ok_or_else(|| "No result in RPC response".to_string())
+
+    response
+        .result
+        .ok_or_else(|| "No result in RPC response".to_string())
 }
 
 /// POST /api/v1/trust/evaluate
@@ -155,11 +163,9 @@ pub async fn evaluate_trust(
 
     // Use tokio's spawn_blocking for synchronous socket I/O
     let result = tokio::task::spawn_blocking(move || {
-        call_beardog::<TrustEvaluationRequest, TrustEvaluationResponse>(
-            "trust.evaluate",
-            request,
-        )
-    }).await
+        call_beardog::<TrustEvaluationRequest, TrustEvaluationResponse>("trust.evaluate", request)
+    })
+    .await
     .map_err(|e| crate::ApiError::Internal(format!("Task join error: {}", e)))?;
 
     match result {
@@ -208,11 +214,9 @@ pub async fn get_identity(
 
     // Use tokio's spawn_blocking for synchronous socket I/O
     let result = tokio::task::spawn_blocking(move || {
-        call_beardog::<serde_json::Value, IdentityResponse>(
-            "trust.identity",
-            serde_json::json!({}),
-        )
-    }).await
+        call_beardog::<serde_json::Value, IdentityResponse>("trust.identity", serde_json::json!({}))
+    })
+    .await
     .map_err(|e| crate::ApiError::Internal(format!("Task join error: {}", e)))?;
 
     match result {

@@ -111,12 +111,10 @@ impl std::str::FromStr for Capability {
     }
 }
 
-/// Implement TryFrom for ergonomic conversion
-impl TryFrom<&str> for Capability {
-    type Error = std::convert::Infallible;
-
-    fn try_from(s: &str) -> Result<Self, Self::Error> {
-        s.parse()
+/// Implement From for ergonomic conversion
+impl From<&str> for Capability {
+    fn from(s: &str) -> Self {
+        s.parse().expect("Capability parsing should not fail")
     }
 }
 

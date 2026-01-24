@@ -31,7 +31,10 @@ See: [`SONGBIRD_100_PERCENT_HTTPS_SUCCESS_JAN_25_2026.md`](./SONGBIRD_100_PERCEN
 - Owner: Songbird Team  
 - Status: Waiting for Unix socket JSON-RPC interface
 - Blocker: HTTPS client works at library level, not exposed via IPC
-- Guide: [`SONGBIRD_IPC_EVOLUTION_REQUIRED_JAN_25_2026.md`](./SONGBIRD_IPC_EVOLUTION_REQUIRED_JAN_25_2026.md)
+- Guides:
+  - [`HTTPS_STATUS_SUMMARY.md`](./HTTPS_STATUS_SUMMARY.md) - Quick status overview
+  - [`SONGBIRD_BEARDOG_COUPLING_STATUS.md`](./SONGBIRD_BEARDOG_COUPLING_STATUS.md) - Coupling analysis & 3-phase evolution
+  - [`SONGBIRD_IPC_EVOLUTION_REQUIRED_JAN_25_2026.md`](./SONGBIRD_IPC_EVOLUTION_REQUIRED_JAN_25_2026.md) - Technical handoff
 
 **Priority 3: Deploy Tower Atomic via Neural API** (READY - After Songbird)  
 - Owner: biomeOS Team  

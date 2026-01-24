@@ -16,10 +16,14 @@ fn test_parse_tower_atomic_bootstrap_graph() {
         .unwrap();
     let graph_path = workspace_root.join("graphs/tower_atomic_bootstrap.toml");
 
-    let graph = GraphParser::parse_file(&graph_path).expect("Failed to parse tower_atomic_bootstrap.toml");
+    let graph =
+        GraphParser::parse_file(&graph_path).expect("Failed to parse tower_atomic_bootstrap.toml");
 
     // Validate structure - this graph bootstraps Tower Atomic (BearDog + Songbird)
-    assert!(graph.nodes.len() >= 2, "Should have at least 2 nodes for Tower Atomic bootstrap");
+    assert!(
+        graph.nodes.len() >= 2,
+        "Should have at least 2 nodes for Tower Atomic bootstrap"
+    );
 
     GraphValidator::validate(&graph).expect("Graph validation failed");
 }
@@ -75,7 +79,8 @@ fn test_parse_node_atomic_test_graph() {
         .unwrap();
     let graph_path = workspace_root.join("graphs/node_atomic_test.toml");
 
-    let graph = GraphParser::parse_file(&graph_path).expect("Failed to parse node_atomic_test.toml");
+    let graph =
+        GraphParser::parse_file(&graph_path).expect("Failed to parse node_atomic_test.toml");
 
     // Just validate the graph can be parsed and is valid
     GraphValidator::validate(&graph).expect("Graph validation failed");

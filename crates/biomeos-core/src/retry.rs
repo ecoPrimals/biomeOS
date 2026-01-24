@@ -473,7 +473,9 @@ mod tests {
 
         // 3rd failure should open circuit
         let _ = breaker
-            .call(|| async { Err::<(), _>(BirdSongError::RetryExhausted("test failure".to_string())) })
+            .call(|| async {
+                Err::<(), _>(BirdSongError::RetryExhausted("test failure".to_string()))
+            })
             .await;
 
         assert!(breaker.is_open().await);

@@ -229,14 +229,14 @@ impl RealTimeEventSubscriber {
         let url = self.sse_url.as_ref().context("SSE URL not discovered")?;
 
         info!("📡 SSE endpoint configured: {}", url);
-        
+
         // EVOLUTION: SSE requires HTTP client
         // biomeOS delegates HTTP to Songbird for Pure Rust implementation
         // Until Songbird exposes SSE streaming, use WebSocket instead
         warn!("⚠️  SSE streaming not yet implemented (Pure Rust evolution)");
         warn!("   Use WebSocket (subscribe_websocket) for real-time events");
         warn!("   Or set BIOMEOS_WS_ENDPOINT environment variable");
-        
+
         // For now, return success but don't actually stream
         // This allows graceful degradation
         Ok(())
