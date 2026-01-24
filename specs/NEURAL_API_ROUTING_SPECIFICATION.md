@@ -13,6 +13,10 @@ The Neural API serves as the central routing and orchestration layer for biomeOS
 
 **NEW (v2.0.0)**: Neural API now provides **capability translation**, allowing primals to speak in semantic capabilities while the API automatically translates to provider-specific method names. This eliminates all cross-primal API coupling and enables TRUE PRIMAL pattern compliance.
 
+**Key Principle**: **Isomorphic Evolution** - The ecosystem maintains its functional structure even as individual primals change, evolve, swap, or extend. Semantic capabilities remain stable while implementations evolve freely.
+
+**See**: `ISOMORPHIC_EVOLUTION.md` for comprehensive architectural principles.
+
 ---
 
 ## Core Responsibilities
