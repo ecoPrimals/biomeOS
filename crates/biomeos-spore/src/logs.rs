@@ -566,3 +566,474 @@ impl SporeLogManager {
         Ok(())
     }
 }
+
+// ============================================================================
+// Tests
+// ============================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    // ========== Configuration Tests ==========
+
+    #[test]
+    fn test_log_config_default() {
+        let config = LogConfig::default();
+        assert_eq!(config.active_dir, PathBuf::from("/var/biomeos/logs/active"));
+        assert_eq!(config.fossil_dir, PathBuf::from("/var/biomeos/logs/fossil"));
+        assert_eq!(config.max_active_age_secs, 86400);
+        assert!(!config.enable_encryption); // Future feature
+        assert!(config.compress_fossils);
+    }
+
+    #[test]
+    fn test_log_config_custom() {
+        let config = LogConfig {
+            active_dir: PathBuf::from("/custom/active"),
+            fossil_dir: PathBuf::from("/custom/fossil"),
+            max_active_age_secs: 3600,
+            enable_encryption: true,
+            compress_fossils: false,
+        };
+
+        assert_eq!(config.active_dir, PathBuf::from("/custom/active"));
+        assert_eq!(config.max_active_age_secs, 3600);
+        assert!(config.enable_encryption);
+        assert!(!config.compress_fossils);
+    }
+
+    // ========== Active Log Session Tests ==========
+
+    #[test]
+    fn test_active_log_session_creation() {
+        let session = ActiveLogSession::new("test-node-1".to_string(), "deploy-123".to_string());
+
+        assert_eq!(session.node_id, "test-node-1");
+        assert_eq!(session.deployment_id, "deploy-123");
+        assert!(session.process_pids.is_empty());
+        assert!(session.log_files.is_empty());
+    }
+
+    #[test]
+    fn test_active_log_session_add_process() {
+        let mut session = ActiveLogSession::new("test-node".to_string(), "deploy-1".to_string());
+
+        session.add_process(1234);
+        assert_eq!(session.process_pids.len(), 1);
+        assert!(session.process_pids.contains(&1234));
+
+        // Adding same PID again should not duplicate
+        session.add_process(1234);
+        assert_eq!(session.process_pids.len(), 1);
+
+        // Adding different PID should work
+        session.add_process(5678);
+        assert_eq!(session.process_pids.len(), 2);
+    }
+
+    #[test]
+    fn test_active_log_session_duration() {
+        let session = ActiveLogSession::new("test-node".to_string(), "deploy-1".to_string());
+
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        let duration = session.duration();
+        assert!(duration.num_milliseconds() >= 100);
+    }
+
+    #[test]
+    fn test_active_log_session_add_log_file() {
+        let mut session = ActiveLogSession::new("test-node".to_string(), "deploy-1".to_string());
+
+        let log_file = LogFile {
+            primal: "tower".to_string(),
+            path: PathBuf::from("/tmp/test.log"),
+            pid: Some(1234),
+            size_bytes: 1024,
+            last_modified: Utc::now(),
+        };
+
+        session.add_log_file(log_file.clone());
+        assert_eq!(session.log_files.len(), 1);
+        assert_eq!(session.log_files[0].primal, "tower");
+        assert_eq!(session.log_files[0].size_bytes, 1024);
+    }
+
+    #[test]
+    fn test_multiple_processes() {
+        let mut session = ActiveLogSession::new("multi-node".to_string(), "deploy-xyz".to_string());
+
+        // Add multiple processes
+        for pid in 1000..1005 {
+            session.add_process(pid);
+        }
+        assert_eq!(session.process_pids.len(), 5);
+
+        // Verify all PIDs are present
+        for pid in 1000..1005 {
+            assert!(session.process_pids.contains(&pid));
+        }
+    }
+
+    // ========== Log File Tests ==========
+
+    #[test]
+    fn test_log_file_refresh() {
+        let temp_dir = TempDir::new().unwrap();
+        let log_path = temp_dir.path().join("test.log");
+
+        // Create a test file
+        std::fs::write(&log_path, b"test log content").unwrap();
+
+        let mut log_file = LogFile {
+            primal: "tower".to_string(),
+            path: log_path.clone(),
+            pid: Some(1234),
+            size_bytes: 0, // Will be updated
+            last_modified: Utc::now(),
+        };
+
+        // Refresh should update size
+        log_file.refresh().unwrap();
+        assert_eq!(log_file.size_bytes, 16); // "test log content".len()
+    }
+
+    #[test]
+    fn test_log_file_refresh_missing_file() {
+        let mut log_file = LogFile {
+            primal: "tower".to_string(),
+            path: PathBuf::from("/nonexistent/file.log"),
+            pid: Some(1234),
+            size_bytes: 0,
+            last_modified: Utc::now(),
+        };
+
+        // Should return error for missing file
+        assert!(log_file.refresh().is_err());
+    }
+
+    // ========== Fossil Record Tests ==========
+
+    #[test]
+    fn test_fossil_record_from_active_session() {
+        let session = ActiveLogSession::new("node-1".to_string(), "deploy-abc".to_string());
+
+        let fossil = FossilRecord::from_active_session(&session, ArchivalReason::GracefulShutdown);
+
+        assert_eq!(fossil.node_id, "node-1");
+        assert_eq!(fossil.deployment_id, "deploy-abc");
+        assert_eq!(fossil.archival_reason, ArchivalReason::GracefulShutdown);
+        assert!(!fossil.encrypted); // Future feature
+        assert!(fossil.issues.is_empty());
+        assert!(fossil.metrics.is_none());
+    }
+
+    #[test]
+    fn test_fossil_record_duration() {
+        let session = ActiveLogSession::new("node-1".to_string(), "deploy-1".to_string());
+
+        std::thread::sleep(std::time::Duration::from_millis(50));
+
+        let fossil = FossilRecord::from_active_session(&session, ArchivalReason::GracefulShutdown);
+
+        let duration = fossil.duration();
+        assert!(duration.num_milliseconds() >= 50);
+    }
+
+    #[test]
+    fn test_fossil_record_issue_count() {
+        let mut fossil = FossilRecord::from_active_session(
+            &ActiveLogSession::new("node-1".to_string(), "deploy-1".to_string()),
+            ArchivalReason::GracefulShutdown,
+        );
+
+        // Add some test issues
+        fossil.issues.push(LogIssue {
+            severity: IssueSeverity::Error,
+            primal: "tower".to_string(),
+            description: "Test error".to_string(),
+            log_line: Some("ERROR: test error occurred".to_string()),
+            timestamp: Utc::now(),
+        });
+
+        fossil.issues.push(LogIssue {
+            severity: IssueSeverity::Warning,
+            primal: "beardog".to_string(),
+            description: "Test warning".to_string(),
+            log_line: None,
+            timestamp: Utc::now(),
+        });
+
+        fossil.issues.push(LogIssue {
+            severity: IssueSeverity::Critical,
+            primal: "songbird".to_string(),
+            description: "Critical issue".to_string(),
+            log_line: Some("CRITICAL: system failure".to_string()),
+            timestamp: Utc::now(),
+        });
+
+        assert_eq!(fossil.issue_count(None), 3);
+        assert_eq!(fossil.issue_count(Some(IssueSeverity::Error)), 1);
+        assert_eq!(fossil.issue_count(Some(IssueSeverity::Warning)), 1);
+        assert_eq!(fossil.issue_count(Some(IssueSeverity::Critical)), 1);
+        assert_eq!(fossil.issue_count(Some(IssueSeverity::Info)), 0);
+    }
+
+    #[test]
+    fn test_archival_reason_crash() {
+        let reason = ArchivalReason::Crash { exit_code: 137 };
+
+        match reason {
+            ArchivalReason::Crash { exit_code } => assert_eq!(exit_code, 137),
+            _ => panic!("Expected Crash variant"),
+        }
+    }
+
+    #[test]
+    fn test_archival_reason_equality() {
+        assert_eq!(
+            ArchivalReason::GracefulShutdown,
+            ArchivalReason::GracefulShutdown
+        );
+        assert_eq!(
+            ArchivalReason::Crash { exit_code: 1 },
+            ArchivalReason::Crash { exit_code: 1 }
+        );
+        assert_ne!(
+            ArchivalReason::Crash { exit_code: 1 },
+            ArchivalReason::Crash { exit_code: 2 }
+        );
+    }
+
+    // ========== Log Manager Tests ==========
+
+    #[tokio::test]
+    async fn test_log_manager_initialization() {
+        let temp_dir = TempDir::new().unwrap();
+
+        let config = LogConfig {
+            active_dir: temp_dir.path().join("active"),
+            fossil_dir: temp_dir.path().join("fossil"),
+            max_active_age_secs: 3600,
+            enable_encryption: false,
+            compress_fossils: true,
+        };
+
+        let manager = LogManager::new(config.clone());
+        manager.initialize().await.unwrap();
+
+        // Verify directories were created
+        assert!(config.active_dir.exists());
+        assert!(config.fossil_dir.exists());
+    }
+
+    #[test]
+    fn test_log_manager_list_active_sessions_empty() {
+        let temp_dir = TempDir::new().unwrap();
+
+        let config = LogConfig {
+            active_dir: temp_dir.path().join("active"),
+            fossil_dir: temp_dir.path().join("fossil"),
+            ..Default::default()
+        };
+
+        // Active dir doesn't exist yet
+        let manager = LogManager::new(config);
+        let sessions = manager.list_active_sessions().unwrap();
+
+        assert!(sessions.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_log_manager_archive_session() {
+        let temp_dir = TempDir::new().unwrap();
+
+        let config = LogConfig {
+            active_dir: temp_dir.path().join("active"),
+            fossil_dir: temp_dir.path().join("fossil"),
+            ..Default::default()
+        };
+
+        let manager = LogManager::new(config.clone());
+        manager.initialize().await.unwrap();
+
+        // Create a test session with a log file
+        let log_path = temp_dir.path().join("test.log");
+        tokio::fs::write(&log_path, b"test log data").await.unwrap();
+
+        let mut session = ActiveLogSession::new("test-node".to_string(), "deploy-456".to_string());
+        session.add_process(std::process::id());
+
+        let log_file = LogFile {
+            primal: "tower".to_string(),
+            path: log_path.clone(),
+            pid: Some(std::process::id()),
+            size_bytes: 13,
+            last_modified: Utc::now(),
+        };
+        session.add_log_file(log_file);
+
+        // Archive the session
+        let fossil = manager
+            .archive_session(&session, ArchivalReason::Manual)
+            .await
+            .unwrap();
+
+        assert_eq!(fossil.node_id, "test-node");
+        assert_eq!(fossil.deployment_id, "deploy-456");
+        assert_eq!(fossil.archival_reason, ArchivalReason::Manual);
+    }
+
+    // ========== Spore Log Manager Tests ==========
+
+    #[tokio::test]
+    async fn test_spore_log_manager_initialization() {
+        let temp_dir = TempDir::new().unwrap();
+        let spore_root = temp_dir.path().to_path_buf();
+
+        let manager = SporeLogManager::new(spore_root.clone());
+        manager.initialize().await.unwrap();
+
+        // Verify spore log structure created
+        assert!(spore_root.join(".spore.logs").exists());
+        assert!(spore_root.join(".spore.logs/deployments").exists());
+        assert!(spore_root.join(".spore.logs/fossil").exists());
+    }
+
+    #[tokio::test]
+    async fn test_spore_log_manager_record_deployment() {
+        let temp_dir = TempDir::new().unwrap();
+        let spore_root = temp_dir.path().to_path_buf();
+
+        let manager = SporeLogManager::new(spore_root.clone());
+        manager.initialize().await.unwrap();
+
+        // Record a deployment
+        manager.record_deployment("deploy-789").await.unwrap();
+
+        // Verify log file was created
+        let log_file = spore_root.join(".spore.logs/deployments/deploy-789.log");
+        assert!(log_file.exists());
+
+        // Verify content includes deployment ID
+        let content = tokio::fs::read_to_string(&log_file).await.unwrap();
+        assert!(content.contains("deploy-789"));
+    }
+
+    // ========== Integration Tests ==========
+
+    #[tokio::test]
+    async fn test_full_log_lifecycle() {
+        let temp_dir = TempDir::new().unwrap();
+
+        let config = LogConfig {
+            active_dir: temp_dir.path().join("active"),
+            fossil_dir: temp_dir.path().join("fossil"),
+            max_active_age_secs: 1, // 1 second for quick test
+            enable_encryption: false,
+            compress_fossils: true,
+        };
+
+        let manager = LogManager::new(config.clone());
+        manager.initialize().await.unwrap();
+
+        // 1. Create active session
+        let mut session =
+            ActiveLogSession::new("lifecycle-node".to_string(), "deploy-999".to_string());
+        session.add_process(std::process::id());
+
+        // 2. Add log file
+        let log_path = temp_dir.path().join("lifecycle.log");
+        tokio::fs::write(&log_path, b"lifecycle test data")
+            .await
+            .unwrap();
+
+        let log_file = LogFile {
+            primal: "beardog".to_string(),
+            path: log_path,
+            pid: Some(std::process::id()),
+            size_bytes: 19,
+            last_modified: Utc::now(),
+        };
+        session.add_log_file(log_file);
+
+        // 3. Archive session
+        let fossil = manager
+            .archive_session(&session, ArchivalReason::Redeployment)
+            .await
+            .unwrap();
+
+        // 4. Verify fossil record
+        assert_eq!(fossil.archival_reason, ArchivalReason::Redeployment);
+        assert!(fossil.duration().num_milliseconds() >= 0);
+    }
+
+    // ========== Issue Severity Tests ==========
+
+    #[test]
+    fn test_issue_severity_ordering() {
+        // Ensure proper severity levels
+        let critical = IssueSeverity::Critical;
+        let error = IssueSeverity::Error;
+        let warning = IssueSeverity::Warning;
+        let info = IssueSeverity::Info;
+
+        // Just verify they can be created and compared
+        assert_eq!(critical, IssueSeverity::Critical);
+        assert_ne!(error, warning);
+        assert_ne!(info, critical);
+    }
+
+    // ========== Fossil Index Tests ==========
+
+    #[test]
+    fn test_fossil_index_creation() {
+        let index = FossilIndex::new();
+        assert!(index.fossils.is_empty());
+    }
+
+    #[test]
+    fn test_fossil_index_add_entry() {
+        let mut index = FossilIndex::new();
+
+        let entry = FossilIndexEntry {
+            node_id: "test-node".to_string(),
+            session_started: Utc::now(),
+            archival_reason: ArchivalReason::Manual,
+            fossil_path: PathBuf::from("/tmp/fossil/test"),
+            issue_count: 3,
+            encrypted: false,
+        };
+
+        index.add(entry.clone());
+        assert_eq!(index.fossils.len(), 1);
+        assert_eq!(index.fossils[0].node_id, "test-node");
+        assert_eq!(index.fossils[0].issue_count, 3);
+    }
+
+    #[test]
+    fn test_fossil_index_save_and_load() {
+        let temp_dir = TempDir::new().unwrap();
+        let index_path = temp_dir.path().join("index.toml");
+
+        // Create and save index
+        let mut index = FossilIndex::new();
+        index.add(FossilIndexEntry {
+            node_id: "node-save-load".to_string(),
+            session_started: Utc::now(),
+            archival_reason: ArchivalReason::GracefulShutdown,
+            fossil_path: PathBuf::from("/tmp/fossil/save-load"),
+            issue_count: 0,
+            encrypted: false,
+        });
+
+        index.save(&index_path).unwrap();
+        assert!(index_path.exists());
+
+        // Load index
+        let loaded = FossilIndex::load(&index_path).unwrap();
+        assert_eq!(loaded.fossils.len(), 1);
+        assert_eq!(loaded.fossils[0].node_id, "node-save-load");
+    }
+}
