@@ -1,383 +1,341 @@
-# 📚 biomeOS Documentation Index
+# 📚 biomeOS Root Documentation Index
 
-**Last Updated**: January 21, 2026  
-**Status**: ✅ Clean, organized, production-ready  
-**Grade**: A (94/100)
-
----
-
-## 🎯 **START HERE**
-
-### Essential Entry Points
-
-1. **[START_HERE.md](START_HERE.md)** ⭐
-   - Quick start guide
-   - Recent achievements
-   - Next actions
-
-2. **[README.md](README.md)**
-   - Project overview
-   - Architecture highlights
-   - Quick start instructions
-
-3. **This File** - Complete navigation guide
+**Last Updated**: January 24, 2026  
+**biomeOS Version**: 0.1.0 (TRUE ecoBin #5)
 
 ---
 
-## 📋 **ROOT DOCUMENTATION** (17 Essential Docs)
+## 🎯 Start Here
 
-### **🏗️ Architecture & Standards** (5 docs)
-
-1. **[BIOMEOS_ATOMICS_ARCHITECTURE.md](BIOMEOS_ATOMICS_ARCHITECTURE.md)**
-   - Tower, Node, Nest atomic patterns
-   - Deployment architecture
-
-2. **[BONDING_MODEL_CORRECTION_JAN_20_2026.md](BONDING_MODEL_CORRECTION_JAN_20_2026.md)** 🔥
-   - Critical: Chemical bonding (between systems)
-   - vs Ecological interaction (within systems)
-
-3. **[TRUE_PRIMAL_PORT_FREE_ARCHITECTURE.md](TRUE_PRIMAL_PORT_FREE_ARCHITECTURE.md)**
-   - Unix socket architecture
-   - Port-free communication
-
-4. **[GENOMEBIN_ARCHITECTURE_STANDARD.md](GENOMEBIN_ARCHITECTURE_STANDARD.md)**
-   - genomeBin specification
-   - Cross-system deployment
-
-5. **[UNIVERSAL_IPC_ARCHITECTURE_HANDOFF_JAN_19_2026.md](UNIVERSAL_IPC_ARCHITECTURE_HANDOFF_JAN_19_2026.md)**
-   - Universal IPC design
-   - Service-based approach
+| Document | Description | Audience |
+|----------|-------------|----------|
+| **[README.md](README.md)** | Project overview, quick start, architecture | Everyone |
+| **[START_HERE.md](START_HERE.md)** | Orientation guide for new contributors | New developers |
+| **[QUICK_START.md](QUICK_START.md)** | 5-minute deployment guide | Operators |
 
 ---
 
-### **🎯 January 21, 2026 Deliverables** (10 docs)
+## 🏗️ Core Architecture
 
-#### Bootstrap System (3 docs)
+### Primal Integration
+| Document | Description |
+|----------|-------------|
+| **[BIOMEOS_PRIMAL_INTEGRATION_SPEC.md](BIOMEOS_PRIMAL_INTEGRATION_SPEC.md)** | How primals interact with biomeOS |
+| **[TRUE_PRIMAL_PORT_FREE_ARCHITECTURE.md](TRUE_PRIMAL_PORT_FREE_ARCHITECTURE.md)** | Unix socket IPC architecture |
 
-6. **[HANDOFF_BOOTSTRAP_COMPLETE_JAN_21_2026.md](HANDOFF_BOOTSTRAP_COMPLETE_JAN_21_2026.md)** 🌟
-   - Complete bootstrap implementation
-   - Production ready
-   - Team handoff
+### Neural API & Deployment
+| Document | Description |
+|----------|-------------|
+| **[BIOMEOS_NEURAL_API_TOWER_ATOMIC_DEPLOYMENT_PLAN.md](BIOMEOS_NEURAL_API_TOWER_ATOMIC_DEPLOYMENT_PLAN.md)** | Graph-based deployment system |
+| **[NEURAL_API_IMPLEMENTATION_TRACKER.md](NEURAL_API_IMPLEMENTATION_TRACKER.md)** | Implementation status tracker |
+| **[BIOMEOS_ATOMICS_ARCHITECTURE.md](BIOMEOS_ATOMICS_ARCHITECTURE.md)** | Tower Atomic patterns |
 
-7. **[PRIMAL_LIFECYCLE_GERMINATION_TERRARIA_JAN_21_2026.md](PRIMAL_LIFECYCLE_GERMINATION_TERRARIA_JAN_21_2026.md)**
-   - Primal lifecycle specification
-   - Germination, terraria, imprinting
-
-8. **[NEURAL_API_NUCLEATION_POINT_JAN_21_2026.md](NEURAL_API_NUCLEATION_POINT_JAN_21_2026.md)**
-   - Socket nucleation design
-   - Coordinated startup
-
-#### Deep Debt Audit (6 docs)
-
-9. **[DEEP_DEBT_AUDIT_COMPLETE_JAN_21_2026.md](DEEP_DEBT_AUDIT_COMPLETE_JAN_21_2026.md)** ⭐
-   - Overall Grade: A (94/100)
-   - Comprehensive audit report
-   - **PRODUCTION READY**
-
-10. **[DEEP_DEBT_EXECUTION_JAN_21_2026.md](DEEP_DEBT_EXECUTION_JAN_21_2026.md)**
-    - Execution plan for all 8 principles
-    - Detailed findings
-
-11. **[TODO_AUDIT_JAN_21_2026.md](TODO_AUDIT_JAN_21_2026.md)**
-    - 27 TODOs (all legitimate, 0 outdated)
-    - Complete categorization
-
-12. **[REFACTORING_PLAN_JAN_21_2026.md](REFACTORING_PLAN_JAN_21_2026.md)**
-    - Smart refactoring strategy
-    - neural_executor.rs plan
-
-13. **[MODERN_RUST_ANALYSIS_JAN_21_2026.md](MODERN_RUST_ANALYSIS_JAN_21_2026.md)** ✨
-    - Grade: A (90/100)
-    - **Already excellent!**
-    - Modern patterns verified
-
-14. **[BTSP_EVOLUTION_UNIFIED_SECURE_PROTOCOL_JAN_21_2026.md](BTSP_EVOLUTION_UNIFIED_SECURE_PROTOCOL_JAN_21_2026.md)**
-    - BTSP unified security protocol
-    - Internal + external secure comms
+### Standards & Compliance
+| Document | Description |
+|----------|-------------|
+| **[BIOMEOS_ECOBIN_CERTIFICATION_JAN_24_2026.md](BIOMEOS_ECOBIN_CERTIFICATION_JAN_24_2026.md)** | TRUE ecoBin #5 certification |
+| **[GENOMEBIN_ARCHITECTURE_STANDARD.md](GENOMEBIN_ARCHITECTURE_STANDARD.md)** | genomeBin evolution standard |
+| **[TOWER_ATOMIC_VALIDATION_AND_EVOLUTION.md](TOWER_ATOMIC_VALIDATION_AND_EVOLUTION.md)** | Pure Rust TLS validation |
 
 ---
 
-### **📖 Quick References** (2 docs)
+## 📖 Operational Guides
 
-15. **[QUICK_START_TOWER_DEPLOYMENT.md](QUICK_START_TOWER_DEPLOYMENT.md)**
-    - Deploy Tower Atomic quickly
-    - Step-by-step guide
+### Deployment
+| Document | Description |
+|----------|-------------|
+| **[DEPLOYMENT.md](DEPLOYMENT.md)** | Comprehensive deployment guide |
+| **[QUICK_START_TOWER_DEPLOYMENT.md](QUICK_START_TOWER_DEPLOYMENT.md)** | Tower-specific quick start |
 
-16. **[QUICK_REFERENCE_NEURAL_ROUTING.md](QUICK_REFERENCE_NEURAL_ROUTING.md)**
-    - Neural API routing patterns
-    - Quick reference guide
+### Testing & Quality
+| Document | Description |
+|----------|-------------|
+| **[TEST_COVERAGE_MILESTONE_JAN_24_2026.md](TEST_COVERAGE_MILESTONE_JAN_24_2026.md)** | Test coverage achievements |
+| **[INTEGRATION_TEST_RESULTS.md](INTEGRATION_TEST_RESULTS.md)** | Integration test results |
+| **[MULTI_DEVICE_BONDING_TESTS.md](MULTI_DEVICE_BONDING_TESTS.md)** | Multi-device testing |
 
----
-
-### **🧪 Testing & Validation** (2 docs)
-
-17. **[INTEGRATION_TEST_RESULTS.md](INTEGRATION_TEST_RESULTS.md)**
-    - Integration test results
-    - Validation status
-
-18. **[MULTI_DEVICE_BONDING_TESTS.md](MULTI_DEVICE_BONDING_TESTS.md)**
-    - Multi-device testing
-    - Bonding validation
+### Code Quality
+| Document | Description |
+|----------|-------------|
+| **[PRODUCTION_CODE_SLEEP_AUDIT.md](PRODUCTION_CODE_SLEEP_AUDIT.md)** | Production code audit |
 
 ---
 
-### **📊 Status Tracking** (2 docs)
+## 🤝 Integration & Handoffs
 
-19. **[NEURAL_API_IMPLEMENTATION_TRACKER.md](NEURAL_API_IMPLEMENTATION_TRACKER.md)**
-    - Neural API status
-    - Feature tracking
-
-20. **[PRODUCTION_CODE_SLEEP_AUDIT.md](PRODUCTION_CODE_SLEEP_AUDIT.md)**
-    - Code quality audit
-    - Performance review
+| Document | Description |
+|----------|-------------|
+| **[HANDOFF_SONGBIRD_INTEGRATION_TESTING.md](HANDOFF_SONGBIRD_INTEGRATION_TESTING.md)** | Songbird integration handoff |
+| **[HANDOFF_SQUIRREL_TOWER_INTEGRATION.md](HANDOFF_SQUIRREL_TOWER_INTEGRATION.md)** | Squirrel/Tower integration handoff |
 
 ---
 
-### **🚀 Deployment** (2 docs)
+## 📂 Directory Organization
 
-21. **[QUICK_START.md](QUICK_START.md)**
-    - General quick start
-    - Getting started
-
-22. **[DEPLOYMENT.md](DEPLOYMENT.md)**
-    - Deployment guide
-    - Configuration
-
----
-
-## 📁 **DIRECTORY STRUCTURE**
-
-### **Essential Directories**
+### Primary Documentation Locations
 
 ```
 biomeOS/
-├── README.md                  ← Project overview
-├── START_HERE.md             ← Main entry point
-├── ROOT_DOCS_INDEX.md        ← This file
+├── README.md                    # Main project README
+├── ROOT_DOCS_INDEX.md          # This file
+├── START_HERE.md               # New contributor guide
 │
-├── specs/                    ← Technical specifications
-│   ├── lifecycle/            ← Bootstrap, lifecycle specs
-│   └── ...                   ← Other specs
+├── docs/                       # Comprehensive documentation
+│   ├── architecture/           # Architecture docs
+│   ├── api/                    # API documentation
+│   ├── guides/                 # User guides
+│   └── development/            # Development docs
 │
-├── docs/                     ← Technical documentation
-│   ├── api/                  ← API documentation
-│   ├── guides/               ← How-to guides
-│   └── sessions/             ← Session summaries
+├── specs/                      # Technical specifications
+│   ├── primal-ipc/            # IPC protocol specs
+│   ├── neural-api/            # Neural API specs
+│   └── deployment/            # Deployment specs
 │
-├── archive/                  ← Historical documents
-│   ├── jan21-2026-sessions/  ← Today's session docs
-│   ├── jan20-2026-sessions/  ← Yesterday's sessions
-│   └── ...                   ← Older archives
+├── graphs/                     # Deployment graphs (examples)
+│   ├── nucleus_simple.toml
+│   ├── nucleus_ecosystem.toml
+│   └── README.md
 │
-├── crates/                   ← Rust crates
-├── graphs/                   ← Neural API graphs
-└── tests/                    ← Test suites
+├── examples/                   # Example code
+│   ├── basic_deployment/
+│   ├── custom_primal/
+│   └── federation/
+│
+├── templates/                  # Primal templates
+│   └── primal_template.yaml
+│
+└── archive/                    # Historical documentation
+    ├── sessions/               # Development session logs
+    │   └── 2026-01-24/        # Today's session docs
+    └── docs-fossil-record/    # Old documentation
 ```
 
 ---
 
-## 🎯 **KEY ACHIEVEMENTS (January 21, 2026)**
+## 🔍 Finding What You Need
 
-### **Bootstrap System** ✅
-- Mode detection (Bootstrap vs Coordinated)
-- Socket nucleation (deterministic assignment)
-- Genetic bonding (automatic relationships)
-- Tower Atomic genesis
-- **Grade**: A++ (Production ready!)
+### By Role
 
-### **Deep Debt Audit** ✅
-- **Overall Grade**: A (94/100)
-- ZERO unsafe code ✅
-- ZERO application C dependencies ✅
-- 95% Pure Rust ✅
-- Modern Rust patterns throughout ✅
-- TRUE PRIMAL compliant (100%) ✅
-- **Status**: PRODUCTION READY
+#### **I'm an Operator/User**
+1. Start with [README.md](README.md)
+2. Follow [QUICK_START.md](QUICK_START.md)
+3. Read [DEPLOYMENT.md](DEPLOYMENT.md)
+4. Explore `graphs/` for deployment examples
 
-### **Key Metrics**:
-- 27 TODOs (all legitimate, 0 outdated)
-- 53 unwrap/expect (ALL in test code)
-- 0 unsafe blocks
-- 0 application C dependencies
-- 13 commits pushed
-- ~3,643 lines of comprehensive analysis
+#### **I'm a Developer**
+1. Read [START_HERE.md](START_HERE.md)
+2. Understand [BIOMEOS_PRIMAL_INTEGRATION_SPEC.md](BIOMEOS_PRIMAL_INTEGRATION_SPEC.md)
+3. Study `docs/development/`
+4. Check `examples/` for code samples
+
+#### **I'm Writing a Primal**
+1. Read [BIOMEOS_PRIMAL_INTEGRATION_SPEC.md](BIOMEOS_PRIMAL_INTEGRATION_SPEC.md)
+2. Study [TRUE_PRIMAL_PORT_FREE_ARCHITECTURE.md](TRUE_PRIMAL_PORT_FREE_ARCHITECTURE.md)
+3. Use `templates/primal_template.yaml`
+4. Reference `specs/primal-ipc/`
+
+#### **I'm an Architect**
+1. Review [BIOMEOS_NEURAL_API_TOWER_ATOMIC_DEPLOYMENT_PLAN.md](BIOMEOS_NEURAL_API_TOWER_ATOMIC_DEPLOYMENT_PLAN.md)
+2. Study [BIOMEOS_ATOMICS_ARCHITECTURE.md](BIOMEOS_ATOMICS_ARCHITECTURE.md)
+3. Understand [GENOMEBIN_ARCHITECTURE_STANDARD.md](GENOMEBIN_ARCHITECTURE_STANDARD.md)
+4. Explore `specs/` directory
+
+### By Topic
+
+#### **Deployment**
+- Quick: [QUICK_START.md](QUICK_START.md)
+- Detailed: [DEPLOYMENT.md](DEPLOYMENT.md)
+- Tower: [QUICK_START_TOWER_DEPLOYMENT.md](QUICK_START_TOWER_DEPLOYMENT.md)
+- Graphs: `graphs/README.md`
+
+#### **Architecture**
+- Overview: [README.md](README.md) → Architecture section
+- Primal Integration: [BIOMEOS_PRIMAL_INTEGRATION_SPEC.md](BIOMEOS_PRIMAL_INTEGRATION_SPEC.md)
+- IPC: [TRUE_PRIMAL_PORT_FREE_ARCHITECTURE.md](TRUE_PRIMAL_PORT_FREE_ARCHITECTURE.md)
+- Neural API: [BIOMEOS_NEURAL_API_TOWER_ATOMIC_DEPLOYMENT_PLAN.md](BIOMEOS_NEURAL_API_TOWER_ATOMIC_DEPLOYMENT_PLAN.md)
+
+#### **Standards & Compliance**
+- ecoBin: [BIOMEOS_ECOBIN_CERTIFICATION_JAN_24_2026.md](BIOMEOS_ECOBIN_CERTIFICATION_JAN_24_2026.md)
+- genomeBin: [GENOMEBIN_ARCHITECTURE_STANDARD.md](GENOMEBIN_ARCHITECTURE_STANDARD.md)
+- IPC Protocol: `specs/primal-ipc/`
+
+#### **Testing & Quality**
+- Coverage: [TEST_COVERAGE_MILESTONE_JAN_24_2026.md](TEST_COVERAGE_MILESTONE_JAN_24_2026.md)
+- Integration: [INTEGRATION_TEST_RESULTS.md](INTEGRATION_TEST_RESULTS.md)
+- Multi-device: [MULTI_DEVICE_BONDING_TESTS.md](MULTI_DEVICE_BONDING_TESTS.md)
 
 ---
 
-## 📚 **DOCUMENTATION BY TOPIC**
+## 📊 Document Categories
 
-### **Getting Started**
-- START_HERE.md
+### 🎯 Essential (Read First)
 - README.md
 - QUICK_START.md
+- BIOMEOS_PRIMAL_INTEGRATION_SPEC.md
 
-### **Architecture**
-- BIOMEOS_ATOMICS_ARCHITECTURE.md
+### 🏗️ Architecture (Understanding the System)
+- BIOMEOS_NEURAL_API_TOWER_ATOMIC_DEPLOYMENT_PLAN.md
 - TRUE_PRIMAL_PORT_FREE_ARCHITECTURE.md
-- BONDING_MODEL_CORRECTION_JAN_20_2026.md (critical!)
+- BIOMEOS_ATOMICS_ARCHITECTURE.md
 
-### **Bootstrap System**
-- HANDOFF_BOOTSTRAP_COMPLETE_JAN_21_2026.md (main doc)
-- PRIMAL_LIFECYCLE_GERMINATION_TERRARIA_JAN_21_2026.md
-- NEURAL_API_NUCLEATION_POINT_JAN_21_2026.md
-- specs/lifecycle/BIOMEOS_BOOTSTRAP_MODE.md (detailed spec)
+### 📜 Standards (Compliance & Certification)
+- BIOMEOS_ECOBIN_CERTIFICATION_JAN_24_2026.md
+- GENOMEBIN_ARCHITECTURE_STANDARD.md
+- TOWER_ATOMIC_VALIDATION_AND_EVOLUTION.md
 
-### **Deep Debt & Code Quality**
-- DEEP_DEBT_AUDIT_COMPLETE_JAN_21_2026.md (summary)
-- MODERN_RUST_ANALYSIS_JAN_21_2026.md (modern Rust)
-- TODO_AUDIT_JAN_21_2026.md (TODO analysis)
-- REFACTORING_PLAN_JAN_21_2026.md (refactoring)
-
-### **Deployment**
-- QUICK_START_TOWER_DEPLOYMENT.md
+### 🔧 Operations (Running & Deploying)
 - DEPLOYMENT.md
+- QUICK_START_TOWER_DEPLOYMENT.md
 
-### **Testing**
+### 🧪 Testing (Quality Assurance)
+- TEST_COVERAGE_MILESTONE_JAN_24_2026.md
 - INTEGRATION_TEST_RESULTS.md
 - MULTI_DEVICE_BONDING_TESTS.md
 
----
+### 🤝 Integration (Primal Handoffs)
+- HANDOFF_SONGBIRD_INTEGRATION_TESTING.md
+- HANDOFF_SQUIRREL_TOWER_INTEGRATION.md
 
-## 🗂️ **ARCHIVE ORGANIZATION**
-
-### **Latest Archives**
-
-**`archive/jan21-2026-sessions/`** (28 session documents)
-- Bootstrap implementation sessions
-- Deep debt audit sessions
-- Primal harvest sessions
-- Neural API evolution
-
-**`archive/jan20-2026-sessions/`** (Previous day)
-**`archive/jan20-2026-intermediate/`** (Intermediate work)
-
-### **Historical Archives**
-- `archive/jan_2026_evolution/` - January evolution work
-- `archive/sessions-jan14-2026/` - Mid-January sessions
-- `archive/sessions-jan13-2026/` - Earlier sessions
-- `archive/sessions-jan12-2026/` - Historical sessions
-- `archive/docs-fossil-record/` - Legacy documentation
+### 📈 Tracking (Status & Progress)
+- NEURAL_API_IMPLEMENTATION_TRACKER.md
+- PRODUCTION_CODE_SLEEP_AUDIT.md
 
 ---
 
-## 📊 **DOCUMENTATION STATISTICS**
+## 🗄️ Archive Organization
+
+Session documentation and historical records are archived in:
 
 ```
-╔═══════════════════════════════════════════════════════╗
-║  biomeOS Documentation (January 21, 2026)            ║
-╚═══════════════════════════════════════════════════════╝
-
-Root-Level Docs:       22 files (clean!)
-Specs:                 35+ specifications
-Technical Docs:        70+ documents
-Session Archives:      650+ historical files
-Test Documentation:    15+ files
-
-Total Documentation:   ~800 files
-Lines of Docs:         ~50,000+
+archive/
+├── sessions/
+│   └── 2026-01-24/                    # Today's session
+│       ├── COMPREHENSIVE_CODEBASE_AUDIT_JAN_24_2026.md
+│       ├── DEEP_DEBT_EXECUTION_*.md
+│       ├── TEST_COVERAGE_*.md
+│       └── SESSION_COMPLETE_*.md
+│
+├── docs-fossil-record/                # Historical documentation
+├── sessions-jan*/                     # Previous session archives
+└── *_versions_jan_*/                  # Version-specific archives
 ```
 
 ---
 
-## 🎊 **STATUS SUMMARY**
+## 🔄 Document Maintenance
 
-### **Production Readiness**: ✅ READY
+### Document Lifecycle
+1. **Active**: Lives in root (`*.md`)
+2. **Completed**: Moved to `archive/sessions/YYYY-MM-DD/`
+3. **Historical**: Kept in `archive/docs-fossil-record/`
 
-**Code Quality**:
-- Grade: A (94/100)
-- Zero unsafe code ✅
-- Zero application C dependencies ✅
-- Modern idiomatic Rust ✅
-- TRUE PRIMAL compliant ✅
-
-**Bootstrap System**:
-- Mode detection ✅
-- Socket nucleation ✅
-- Genetic bonding ✅
-- Tower Atomic genesis ✅
-- Production ready ✅
-
-**Documentation**:
-- Comprehensive ✅
-- Well-organized ✅
-- Up-to-date ✅
-- Production-ready ✅
+### When to Archive
+- ✅ Session-specific documents (after session complete)
+- ✅ Time-stamped status reports
+- ✅ Completed implementation plans
+- ❌ Core architecture documents (keep in root)
+- ❌ Active specifications (keep in root)
+- ❌ Current guides (keep in root)
 
 ---
 
-## 🔍 **FINDING WHAT YOU NEED**
+## 🆕 Recent Updates (Jan 24, 2026)
 
-### **By Role**
+### New Documents
+- ✅ Updated README.md with comprehensive overview
+- ✅ Updated this ROOT_DOCS_INDEX.md
+- ✅ Created TEST_COVERAGE_MILESTONE_JAN_24_2026.md
 
-**New Users**:
-1. START_HERE.md
-2. README.md
-3. QUICK_START.md
+### Archived Today
+- Moved 20+ session documents to `archive/sessions/2026-01-24/`
+- Includes: audits, execution plans, status reports
+- All accessible for historical reference
 
-**Developers**:
-1. DEEP_DEBT_AUDIT_COMPLETE_JAN_21_2026.md
-2. MODERN_RUST_ANALYSIS_JAN_21_2026.md
-3. specs/ directory
-
-**Architects**:
-1. BIOMEOS_ATOMICS_ARCHITECTURE.md
-2. BONDING_MODEL_CORRECTION_JAN_20_2026.md
-3. UNIVERSAL_IPC_ARCHITECTURE_HANDOFF_JAN_19_2026.md
-
-**DevOps**:
-1. QUICK_START_TOWER_DEPLOYMENT.md
-2. DEPLOYMENT.md
-3. HANDOFF_BOOTSTRAP_COMPLETE_JAN_21_2026.md
+### Active Documents Refreshed
+- README.md: Complete rewrite with modern structure
+- BIOMEOS_ECOBIN_CERTIFICATION_JAN_24_2026.md: Updated certification
+- TEST_COVERAGE_MILESTONE_JAN_24_2026.md: Latest coverage stats
 
 ---
 
-## 🎁 **QUICK COMMANDS**
+## 📝 Contributing to Documentation
 
+### Guidelines
+1. **Keep root clean**: Only active, essential docs in root
+2. **Use clear names**: Descriptive, not generic
+3. **Include dates**: For time-sensitive docs (YYYY-MM-DD)
+4. **Link properly**: Use relative links
+5. **Archive promptly**: Move completed session docs
+
+### Document Template
+```markdown
+# Title
+
+**Last Updated**: YYYY-MM-DD
+**Status**: Active/Archived
+**Audience**: Who should read this
+
+## Overview
+Brief description
+
+## Content
+...
+
+## Related Documents
+- [Link](file.md)
+```
+
+---
+
+## 🔗 External Resources
+
+### Ecosystem Standards
+Located in `../wateringHole/`:
+- `UNIBIN_ARCHITECTURE_STANDARD.md`
+- `ECOBIN_ARCHITECTURE_STANDARD.md`
+- `PRIMAL_IPC_PROTOCOL.md`
+- `GENOMEBIN_ARCHITECTURE_STANDARD.md`
+
+### Related Projects
+- BearDog: Security primal
+- Songbird: Discovery primal
+- NestGate: Storage primal
+- sourDough: Scaffolding tool
+- Tower: AI/Neural primal
+
+---
+
+## 💡 Tips for Navigation
+
+### Quick Find
 ```bash
-# Start here
-cat START_HERE.md
+# Find all architecture docs
+ls *ARCHITECTURE*.md
 
-# See latest achievements
-cat DEEP_DEBT_AUDIT_COMPLETE_JAN_21_2026.md
+# Find all test docs
+ls *TEST*.md
 
-# Bootstrap system
-cat HANDOFF_BOOTSTRAP_COMPLETE_JAN_21_2026.md
+# Find certification docs
+ls *CERTIFICATION*.md
 
-# Modern Rust status
-cat MODERN_RUST_ANALYSIS_JAN_21_2026.md
+# List archived sessions
+ls archive/sessions/
+```
 
-# List all docs
-ls -la *.md
+### Search Content
+```bash
+# Search for specific topics
+grep -r "Neural API" *.md
 
-# Browse archive
-ls -la archive/jan21-2026-sessions/
+# Find mentions of a primal
+grep -r "Songbird" docs/
+
+# Search specifications
+grep -r "JSON-RPC" specs/
 ```
 
 ---
 
-## 📞 **GETTING HELP**
-
-### **Documentation Issues**
-- Check this index first
-- Review START_HERE.md
-- Browse archive/ for historical context
-
-### **Technical Questions**
-- Review specs/ directory
-- Check docs/guides/
-- See DEEP_DEBT_AUDIT_COMPLETE_JAN_21_2026.md
-
-### **Architecture Questions**
-- BIOMEOS_ATOMICS_ARCHITECTURE.md
-- BONDING_MODEL_CORRECTION_JAN_20_2026.md
-- TRUE_PRIMAL_PORT_FREE_ARCHITECTURE.md
-
----
-
-**📚 Documentation is comprehensive, organized, and production-ready!** ✅
-
----
-
-*Last Updated: January 21, 2026*  
-*Status: Complete and current*  
-*Next: Continue building features!*
+**Status**: ✅ Up to date  
+**Maintained By**: biomeOS Core Team  
+**Last Audit**: January 24, 2026
