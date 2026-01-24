@@ -60,7 +60,7 @@ pub enum PrimalSelector {
 pub struct Operation {
     pub name: String,
     pub params: serde_json::Value,
-    
+
     /// Environment variables to pass to the primal
     /// (for API keys, configuration, etc.)
     #[serde(skip_serializing_if = "Option::is_none")]

@@ -240,19 +240,21 @@ impl AppStateBuilder {
     }
 
     /// Build with default local discovery if none provided
+    ///
+    /// NOTE: HTTP-based discovery (create_local_discovery) has been deprecated.
+    /// For live primal discovery, use Unix socket JSON-RPC via live_discovery module.
     pub fn build_with_defaults(self) -> Result<AppState, BuildError> {
         let discovery = match self.discovery {
             Some(d) => d,
             None => {
-                tracing::info!("📡 Creating default local discovery (BearDog + Songbird)");
-                let sources = biomeos_core::create_local_discovery()
-                    .map_err(|e| BuildError::DiscoveryError(e.to_string()))?;
-
-                let mut composite = CompositeDiscovery::new();
-                for source in sources {
-                    composite = composite.add_boxed_source(source);
-                }
-
+                // EVOLUTION: HTTP-based discovery deprecated
+                // Live discovery now uses Unix sockets via handlers/live_discovery.rs
+                // For AppState, we provide an empty composite discovery
+                // Real discovery happens via JSON-RPC to running primals
+                tracing::info!("📡 Creating default composite discovery (Unix socket based)");
+                tracing::info!("   Use /api/v1/discovery/live for active primal discovery");
+                
+                let composite = CompositeDiscovery::new();
                 Arc::new(composite)
             }
         };
@@ -290,10 +292,9 @@ mod tests {
             &self,
             _endpoint: &biomeos_types::Endpoint,
         ) -> DiscoveryResult<biomeos_core::DiscoveredPrimal> {
-            Err(biomeos_core::BiomeError::discovery_failed(
-                "MockDiscovery::discover not implemented".to_string(),
-                Some("test_mock".to_string()),
-            ))
+            Err(biomeos_core::DiscoveryError::NotFound {
+                endpoint: "test_mock".to_string(),
+            })
         }
 
         async fn discover_all(&self) -> DiscoveryResult<Vec<biomeos_core::DiscoveredPrimal>> {
@@ -321,9 +322,9 @@ mod tests {
     fn test_config_from_env() {
         let config = Config::from_env();
         // Should not panic and use defaults
-        assert_eq!(
-            config.bind_addr.expect("bind_addr should be set").port(),
-            3000
-        );
+        // bind_addr is None by default (HTTP bridge disabled for security)
+        assert!(config.bind_addr.is_none() || config.bind_addr.unwrap().port() == 3000);
+        // Socket path should always be set
+        assert!(config.socket_path.to_string_lossy().contains("biomeos"));
     }
 }

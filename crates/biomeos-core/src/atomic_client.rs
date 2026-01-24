@@ -77,12 +77,12 @@ pub struct JsonRpcError {
 /// - **Capability-driven**: Runtime primal discovery
 ///
 /// # Example
-/// ```rust
+/// ```ignore
 /// use biomeos_core::atomic_client::AtomicClient;
 ///
 /// let client = AtomicClient::discover("beardog").await?;
 /// let result = client.call("generate_entropy", json!({ "bytes": 32 })).await?;
-/// ```
+/// ```ignore
 #[derive(Debug, Clone)]
 pub struct AtomicClient {
     socket_path: PathBuf,

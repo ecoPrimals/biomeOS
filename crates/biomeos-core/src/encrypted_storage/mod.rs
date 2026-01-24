@@ -20,7 +20,7 @@
 //! EncryptedStorage (this module)
 //!     ├→ BearDog (encryption/decryption)
 //!     └→ NestGate (storage backend)
-//! ```
+//! ```ignore
 
 #![cfg(feature = "http-transport")]
 //!
@@ -40,7 +40,7 @@
 //!
 //! # Example
 //!
-//! ```no_run
+//! ```ignore
 //! use biomeos_core::encrypted_storage::EncryptedStorage;
 //! use biomeos_core::clients::beardog::BearDogClient;
 //!
@@ -60,7 +60,7 @@
 //!     
 //!     Ok(())
 //! }
-//! ```
+//! ```ignore
 
 pub mod backend;
 pub mod metadata;

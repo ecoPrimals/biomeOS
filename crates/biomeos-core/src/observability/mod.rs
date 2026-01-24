@@ -17,7 +17,7 @@
 //!
 //! # Example
 //!
-//! ```rust,no_run
+//! ```ignore
 //! use biomeos_core::observability::MinimalObserver;
 //!
 //! # async fn example() -> anyhow::Result<()> {

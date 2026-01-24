@@ -61,7 +61,7 @@ async fn test_e2e_multi_computer_incubation_simulation() {
     std::fs::create_dir_all(&spore_path).unwrap();
     let seed_bytes = [42u8; 32];
     std::fs::write(spore_path.join(".family.seed"), &seed_bytes).unwrap();
-    let test_family = FamilyId::new_for_test().to_string();
+    let test_family = FamilyId::new("test-family").to_string();
     std::fs::write(
         spore_path.join("tower.toml"),
         format!(
@@ -98,7 +98,7 @@ async fn test_e2e_genetic_lineage_preservation() {
     std::fs::create_dir_all(&spore_path).unwrap();
     let seed_data = [99u8; 32];
     std::fs::write(spore_path.join(".family.seed"), &seed_data).unwrap();
-    let test_family = FamilyId::new_for_test().to_string();
+    let test_family = FamilyId::new("test-family").to_string();
     std::fs::write(
         spore_path.join("tower.toml"),
         format!(

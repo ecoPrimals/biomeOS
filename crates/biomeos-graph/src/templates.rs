@@ -355,6 +355,7 @@ mod tests {
                 operation: Operation {
                     name: "storage.store".to_string(),
                     params: serde_json::json!({"key": "test"}),
+                    environment: None,
                 },
                 input: None,
                 outputs: vec![],

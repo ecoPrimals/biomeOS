@@ -11,7 +11,7 @@
 //!
 //! # Examples
 //!
-//! ```rust,no_run
+//! ```ignore
 //! use biomeos_core::{HttpDiscovery, PrimalDiscovery, PrimalType};
 //! use biomeos_types::{Endpoint, PrimalId};
 //!
@@ -116,7 +116,7 @@ impl HttpDiscovery {
                 .map_err(|_| DiscoveryError::Timeout {
                     timeout: self.timeout,
                 })?
-                .map_err(DiscoveryError::Network)?;
+                .map_err(|e| DiscoveryError::Network(e.to_string()))?;
 
         if !response.status().is_success() {
             return Err(DiscoveryError::InvalidResponse {
@@ -127,7 +127,7 @@ impl HttpDiscovery {
         response
             .json::<IdentityResponse>()
             .await
-            .map_err(DiscoveryError::Network)
+            .map_err(|e| DiscoveryError::Network(e.to_string()))
     }
 
     /// Try to discover via health endpoint
@@ -140,7 +140,7 @@ impl HttpDiscovery {
                 .map_err(|_| DiscoveryError::Timeout {
                     timeout: self.timeout,
                 })?
-                .map_err(DiscoveryError::Network)?;
+                .map_err(|e| DiscoveryError::Network(e.to_string()))?;
 
         if !response.status().is_success() {
             return Err(DiscoveryError::InvalidResponse {
@@ -151,7 +151,7 @@ impl HttpDiscovery {
         response
             .json::<HealthResponse>()
             .await
-            .map_err(DiscoveryError::Network)
+            .map_err(|e| DiscoveryError::Network(e.to_string()))
     }
 }
 

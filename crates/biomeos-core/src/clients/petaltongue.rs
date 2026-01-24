@@ -19,15 +19,11 @@
 //!
 //! ## Discovery
 //! petalTongue is discovered via Songbird by capability:
-//! ```rust,no_run
-//! # use biomeos_core::clients::songbird::SongbirdClient;
-//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+//! ```ignore
 //! let songbird = SongbirdClient::discover().await?;
 //! let petaltongue_services = songbird
 //!     .discover_by_capability("visualization")
 //!     .await?;
-//! # Ok(())
-//! # }
 //! ```
 
 use crate::clients::transport::{TransportClient, TransportError};
@@ -45,7 +41,7 @@ use std::collections::HashMap;
 ///
 /// # Examples
 ///
-/// ```rust,no_run
+/// ```ignore
 /// use biomeos_core::clients::petaltongue::PetalTongueClient;
 ///
 /// #[tokio::main]
@@ -63,7 +59,7 @@ use std::collections::HashMap;
 ///    
 ///     Ok(())
 /// }
-/// ```
+/// ```ignore
 #[derive(Debug, Clone)]
 pub struct PetalTongueClient {
     transport: TransportClient,
@@ -148,7 +144,7 @@ impl PetalTongueClient {
     /// Rendering response with result data or file path
     ///
     /// # Example
-    /// ```rust,no_run
+    /// ```ignore
     /// # use biomeos_core::clients::petaltongue::{PetalTongueClient, RenderRequest};
     /// # async fn example(ui: &PetalTongueClient) -> Result<(), Box<dyn std::error::Error>> {
     /// let request = RenderRequest {

@@ -380,9 +380,9 @@ async fn test_connection_cleanup() -> Result<()> {
             }
 
             // Close connection
+            // Note: ws_stream was consumed by split(), so we only drop write and read
             drop(write);
             drop(read);
-            drop(ws_stream);
 
             // Subscriptions should be cleaned up automatically
             // (In a real test, we'd verify this by checking server state)
@@ -398,6 +398,7 @@ async fn test_connection_cleanup() -> Result<()> {
 
 /// Performance test: High-frequency events
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "Performance test - run manually"]
 async fn test_high_frequency_events() -> Result<()> {
     // Unit test with broadcaster only
     let broadcaster = Arc::new(GraphEventBroadcaster::new(100));

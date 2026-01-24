@@ -1,15 +1,18 @@
 //! Trust API handlers
 //!
-//! Proxies trust-related requests to BearDog via Universal Primal Client
+//! Proxies trust-related requests to BearDog via Unix socket JSON-RPC.
+//!
+//! Deep Debt Evolution:
+//! - BEFORE: HTTP via reqwest (C dependencies)
+//! - AFTER: Unix socket JSON-RPC (Pure Rust)
 
 use axum::{extract::State, Json};
 use serde::{Deserialize, Serialize};
+use std::io::{Read, Write};
+use std::os::unix::net::UnixStream;
 use std::sync::Arc;
-use tracing::{error, info};
-
-use biomeos_core::primal_client::{
-    ClientConfig, Endpoint, PrimalHandle, PrimalId, UniversalPrimalClient,
-};
+use std::time::Duration;
+use tracing::{debug, error, info, warn};
 
 use crate::AppState;
 
@@ -39,6 +42,96 @@ pub struct IdentityResponse {
     pub identity_attestations: Option<serde_json::Value>,
 }
 
+/// JSON-RPC request structure
+#[derive(Debug, Serialize)]
+struct JsonRpcRequest<T: Serialize> {
+    jsonrpc: &'static str,
+    id: u64,
+    method: String,
+    params: T,
+}
+
+/// JSON-RPC response structure
+#[derive(Debug, Deserialize)]
+struct JsonRpcResponse<T> {
+    #[allow(dead_code)]
+    jsonrpc: String,
+    #[allow(dead_code)]
+    id: u64,
+    result: Option<T>,
+    error: Option<JsonRpcError>,
+}
+
+#[derive(Debug, Deserialize)]
+struct JsonRpcError {
+    code: i32,
+    message: String,
+}
+
+/// Get BearDog socket path
+fn get_beardog_socket() -> String {
+    // Check environment variable first
+    if let Ok(socket) = std::env::var("BEARDOG_SOCKET") {
+        return socket;
+    }
+    
+    // Check socket directory
+    let family_id = std::env::var("BIOMEOS_FAMILY_ID")
+        .or_else(|_| std::env::var("FAMILY_ID"))
+        .unwrap_or_else(|_| "nat0".to_string());
+    
+    let socket_dir = std::env::var("BIOMEOS_SOCKET_DIR")
+        .unwrap_or_else(|_| "/tmp/biomeos/sockets".to_string());
+    
+    format!("{}/beardog-{}.sock", socket_dir, family_id)
+}
+
+/// Send JSON-RPC request to BearDog via Unix socket
+fn call_beardog<T: Serialize, R: for<'de> Deserialize<'de>>(
+    method: &str,
+    params: T,
+) -> Result<R, String> {
+    let socket_path = get_beardog_socket();
+    debug!("📡 Calling BearDog at {}: {}", socket_path, method);
+    
+    let mut stream = UnixStream::connect(&socket_path)
+        .map_err(|e| format!("Failed to connect to BearDog at {}: {}", socket_path, e))?;
+    
+    stream.set_read_timeout(Some(Duration::from_secs(5)))
+        .map_err(|e| format!("Failed to set read timeout: {}", e))?;
+    stream.set_write_timeout(Some(Duration::from_secs(5)))
+        .map_err(|e| format!("Failed to set write timeout: {}", e))?;
+    
+    let request = JsonRpcRequest {
+        jsonrpc: "2.0",
+        id: 1,
+        method: method.to_string(),
+        params,
+    };
+    
+    let request_bytes = serde_json::to_vec(&request)
+        .map_err(|e| format!("Failed to serialize request: {}", e))?;
+    stream.write_all(&request_bytes)
+        .map_err(|e| format!("Failed to write to socket: {}", e))?;
+    stream.write_all(b"\n")
+        .map_err(|e| format!("Failed to write newline: {}", e))?;
+    stream.flush()
+        .map_err(|e| format!("Failed to flush socket: {}", e))?;
+    
+    let mut response_buf = vec![0u8; 65536];
+    let n = stream.read(&mut response_buf)
+        .map_err(|e| format!("Failed to read from socket: {}", e))?;
+    
+    let response: JsonRpcResponse<R> = serde_json::from_slice(&response_buf[..n])
+        .map_err(|e| format!("Failed to parse response: {}", e))?;
+    
+    if let Some(error) = response.error {
+        return Err(format!("RPC error {}: {}", error.code, error.message));
+    }
+    
+    response.result.ok_or_else(|| "No result in RPC response".to_string())
+}
+
 /// POST /api/v1/trust/evaluate
 pub async fn evaluate_trust(
     State(state): State<Arc<AppState>>,
@@ -57,20 +150,19 @@ pub async fn evaluate_trust(
         }));
     }
 
-    // Live mode: Use Universal Primal Client to call BearDog
-    info!("   Live mode: Calling BearDog via Universal Client");
+    // Live mode: Call BearDog via Unix socket JSON-RPC
+    info!("   Live mode: Calling BearDog via Unix socket");
 
-    let client = UniversalPrimalClient::new(ClientConfig::default());
-    let beardog = create_beardog_handle();
-
-    match client
-        .call::<TrustEvaluationRequest, TrustEvaluationResponse>(
-            &beardog,
-            "trust/evaluate",
+    // Use tokio's spawn_blocking for synchronous socket I/O
+    let result = tokio::task::spawn_blocking(move || {
+        call_beardog::<TrustEvaluationRequest, TrustEvaluationResponse>(
+            "trust.evaluate",
             request,
         )
-        .await
-    {
+    }).await
+    .map_err(|e| crate::ApiError::Internal(format!("Task join error: {}", e)))?;
+
+    match result {
         Ok(response) => {
             info!("   ✅ Trust evaluated: {}", response.trust_level);
             Ok(Json(response))
@@ -104,23 +196,26 @@ pub async fn get_identity(
             ],
             family_id: "standalone".to_string(),
             identity_attestations: Some(serde_json::json!({
-                "family_id": "standalone",  // Consistent with parent family_id
+                "family_id": "standalone",
                 "node_role": "tower",
-                "mode": "standalone"  // Clear indicator this is standalone mode
+                "mode": "standalone"
             })),
         }));
     }
 
-    // Live mode: Use Universal Primal Client to call BearDog
-    info!("   Live mode: Calling BearDog via Universal Client");
+    // Live mode: Call BearDog via Unix socket JSON-RPC
+    info!("   Live mode: Calling BearDog via Unix socket");
 
-    let client = UniversalPrimalClient::new(ClientConfig::default());
-    let beardog = create_beardog_handle();
+    // Use tokio's spawn_blocking for synchronous socket I/O
+    let result = tokio::task::spawn_blocking(move || {
+        call_beardog::<serde_json::Value, IdentityResponse>(
+            "trust.identity",
+            serde_json::json!({}),
+        )
+    }).await
+    .map_err(|e| crate::ApiError::Internal(format!("Task join error: {}", e)))?;
 
-    match client
-        .call::<(), IdentityResponse>(&beardog, "trust/identity", ())
-        .await
-    {
+    match result {
         Ok(response) => {
             info!("   ✅ Identity retrieved: {}", response.encryption_tag);
             Ok(Json(response))
@@ -132,35 +227,5 @@ pub async fn get_identity(
                 e
             )))
         }
-    }
-}
-
-/// Helper to create BearDog handle
-///
-/// Future: Use UniversalPrimalClient to discover BearDog dynamically by capability.
-/// For now, uses environment variable BEARDOG_URL (required in production).
-///
-/// # Panics
-/// Panics in release builds if BEARDOG_URL is not set (production safety).
-fn create_beardog_handle() -> PrimalHandle {
-    let beardog_url = std::env::var("BEARDOG_URL").unwrap_or_else(|_| {
-        #[cfg(debug_assertions)]
-        {
-            "http://localhost:9000".to_string()
-        }
-        #[cfg(not(debug_assertions))]
-        {
-            panic!("BEARDOG_URL environment variable must be set in production builds")
-        }
-    });
-
-    PrimalHandle {
-        id: PrimalId::new("beardog"),
-        name: "BearDog".to_string(),
-        endpoints: vec![Endpoint::new(beardog_url, "http").with_priority(1)],
-        capabilities: vec!["trust".to_string(), "identity".to_string()],
-        schema: None,
-        protocol: "http".to_string(),
-        format_hint: None,
     }
 }

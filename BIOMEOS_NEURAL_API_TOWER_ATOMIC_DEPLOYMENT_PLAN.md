@@ -1,6 +1,8 @@
 # biomeOS Neural API Evolution - Tower Atomic Deployment
 **Date**: January 25, 2026  
-**Status**: 🎯 **READY TO EXECUTE** - Songbird/BearDog Working, Now Deploy via biomeOS  
+**Status**: ⚠️ **BLOCKED** - Awaiting Songbird IPC Evolution  
+**Blocker**: Songbird's HTTPS is library-only, not exposed via IPC  
+**See**: `SONGBIRD_IPC_EVOLUTION_REQUIRED_JAN_25_2026.md` for handoff details  
 **Goal**: TRUE PRIMAL deployment via Neural API with semantic translation
 
 ---

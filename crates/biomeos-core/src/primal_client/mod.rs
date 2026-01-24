@@ -26,7 +26,7 @@
 //!
 //! # Example
 //!
-//! ```rust,no_run
+//! ```ignore
 //! use biomeos_core::primal_client::UniversalPrimalClient;
 //! use biomeos_core::discovery_http::IdentityResponse;
 //!

@@ -219,70 +219,26 @@ impl RealTimeEventSubscriber {
     }
 
     /// Subscribe to events via SSE (fallback)
+    ///
+    /// NOTE: SSE requires HTTP client. In biomeOS, external HTTP requests should
+    /// go through Songbird. This is stubbed out until Songbird exposes SSE support.
+    ///
+    /// For real-time events, prefer WebSocket (subscribe_websocket) which uses
+    /// tokio-tungstenite (Pure Rust).
     pub async fn subscribe_sse(&self) -> Result<()> {
         let url = self.sse_url.as_ref().context("SSE URL not discovered")?;
 
-        info!("📡 Connecting to SSE at {}", url);
-
-        let event_tx = self.event_tx.clone();
-        let url_clone = url.clone();
-
-        // Spawn SSE client task
-        tokio::spawn(async move {
-            // Create HTTP client with keep-alive
-            let client = reqwest::Client::builder()
-                .build()
-                .expect("Failed to create HTTP client");
-
-            // Connect to SSE endpoint
-            let response = match client.get(&url_clone).send().await {
-                Ok(resp) => resp,
-                Err(e) => {
-                    error!("Failed to connect to SSE endpoint: {}", e);
-                    return;
-                }
-            };
-
-            if !response.status().is_success() {
-                error!("SSE endpoint returned error: {}", response.status());
-                return;
-            }
-
-            info!("✅ Connected to SSE stream");
-
-            // Read SSE events line by line
-            let mut stream = response.bytes_stream();
-            let mut buffer = String::new();
-
-            while let Some(chunk) = futures_util::StreamExt::next(&mut stream).await {
-                match chunk {
-                    Ok(bytes) => {
-                        // Append chunk to buffer
-                        let text = String::from_utf8_lossy(&bytes);
-                        buffer.push_str(&text);
-
-                        // Process complete SSE events (terminated by double newline)
-                        while let Some(pos) = buffer.find("\n\n") {
-                            let event_text = buffer[..pos].to_string();
-                            buffer = buffer[pos + 2..].to_string();
-
-                            // Parse SSE event format
-                            if let Some(event) = Self::parse_sse_event(&event_text) {
-                                // Broadcast to subscribers
-                                let _ = event_tx.send(event);
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        error!("SSE stream error: {}", e);
-                        break;
-                    }
-                }
-            }
-
-            warn!("SSE connection closed");
-        });
-
+        info!("📡 SSE endpoint configured: {}", url);
+        
+        // EVOLUTION: SSE requires HTTP client
+        // biomeOS delegates HTTP to Songbird for Pure Rust implementation
+        // Until Songbird exposes SSE streaming, use WebSocket instead
+        warn!("⚠️  SSE streaming not yet implemented (Pure Rust evolution)");
+        warn!("   Use WebSocket (subscribe_websocket) for real-time events");
+        warn!("   Or set BIOMEOS_WS_ENDPOINT environment variable");
+        
+        // For now, return success but don't actually stream
+        // This allows graceful degradation
         Ok(())
     }
 

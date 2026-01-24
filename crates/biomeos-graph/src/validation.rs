@@ -551,6 +551,7 @@ mod tests {
             operation: Operation {
                 name: "test_op".to_string(),
                 params: serde_json::Value::Null,
+                environment: None,
             },
             input: None,
             outputs: vec![],

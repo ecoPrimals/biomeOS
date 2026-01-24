@@ -45,6 +45,16 @@ pub struct LineageVerificationResponse {
     pub relationship: String,
 }
 
+impl std::fmt::Display for LineageVerificationResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "LineageVerification(member={}, relationship={}, parent_hash={})",
+            self.is_family_member, self.relationship, self.parent_seed_hash
+        )
+    }
+}
+
 /// BearDog client for cryptographic operations
 pub struct BearDogClient {
     endpoint: BearDogEndpoint,

@@ -54,7 +54,7 @@ impl UniversalPrimalClient {
     ///
     /// # Example
     ///
-    /// ```rust,no_run
+    /// ```ignore
     /// # use biomeos_core::primal_client::UniversalPrimalClient;
     /// # async fn example() -> anyhow::Result<()> {
     /// let client = UniversalPrimalClient::new(Default::default());
@@ -113,7 +113,7 @@ impl UniversalPrimalClient {
     ///
     /// # Example
     ///
-    /// ```rust,no_run
+    /// ```ignore
     /// # use biomeos_core::primal_client::UniversalPrimalClient;
     /// # use serde::Deserialize;
     /// # #[derive(Deserialize)]

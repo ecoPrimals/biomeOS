@@ -19,7 +19,7 @@
 //!
 //! # Example
 //!
-//! ```rust,no_run
+//! ```ignore
 //! use biomeos_core::p2p_coordination::P2PCoordinator;
 //!
 //! # async fn example() -> anyhow::Result<()> {

@@ -137,7 +137,7 @@ impl AtomicDeploymentGraph {
     }
 
     /// Export graph to TOML for Neural API
-    /// 
+    ///
     /// Note: Not currently used - Neural API loads graphs directly from TOML files
     /// Future: Could be useful for programmatic graph generation
     pub fn to_toml(&self) -> Result<String> {
@@ -146,7 +146,7 @@ impl AtomicDeploymentGraph {
     }
 
     /// Get execution order (topological sort)
-    /// 
+    ///
     /// Note: Simplified implementation - returns nodes in declaration order
     /// Neural API's GraphExecutor handles proper topological sorting
     pub fn execution_order(&self) -> Vec<&DeploymentGraphNode> {

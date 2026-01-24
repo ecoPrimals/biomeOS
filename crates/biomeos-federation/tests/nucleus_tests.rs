@@ -266,6 +266,7 @@ fn create_mock_verified_primal_with_family(
         capability_set.add(Capability::Custom(cap.to_string()));
     }
 
+    let family_id_for_proof = family_id.clone();
     VerifiedPrimal {
         name: name.to_string(),
         node_id: node_id.to_string(),
@@ -274,6 +275,7 @@ fn create_mock_verified_primal_with_family(
         capabilities: capability_set,
         identity_proof: IdentityProof {
             node_id: node_id.to_string(),
+            family_id: family_id_for_proof,
             signature: "test-signature".to_string(),
             challenge: "test-challenge".to_string(),
             public_key: "test-pubkey".to_string(),
@@ -302,6 +304,7 @@ async fn test_identity_proof_structure() {
 
     let proof = IdentityProof {
         node_id: "node-alpha".to_string(),
+        family_id: Some("test-family".to_string()),
         signature: "ed25519-signature".to_string(),
         challenge: "random-challenge".to_string(),
         public_key: "ed25519-pubkey".to_string(),

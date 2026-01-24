@@ -1,259 +1,193 @@
-# 🚀 START HERE - biomeOS Quick Guide
-## Updated: January 25, 2026
+# START HERE - biomeOS Quick Orientation
 
-**Welcome to biomeOS!** This guide will get you oriented quickly.
+**Last Updated**: January 25, 2026
 
----
+## 🎯 Current State
 
-## 📍 YOUR STARTING POINT
+**Major Win**: ✅ **100% Pure Rust HTTPS Complete** (Songbird v5.12.6+)
+- HTTP 200 OK from real servers
+- Zero C dependencies
+- Tower Atomic validated
 
-### **Are you...**
+**Current Work**: Deep debt resolution (4/9 tasks complete)
+- ✅ 1,080+ tests passing
+- ✅ reqwest removed from production
+- ✅ Mocks isolated to tests
+- ⏳ Large file refactoring in progress
 
-**New to the project?**  
-→ Start with [`README.md`](./README.md) for project overview  
-→ Then review [`MASTER_EXECUTION_PLAN_JAN_24_2026.md`](./MASTER_EXECUTION_PLAN_JAN_24_2026.md)
-
-**A team member starting work?**  
-→ See [**Immediate Priorities**](#immediate-priorities) below  
-→ Review your team's handoff document
-
-**Looking for documentation?**  
-→ Use [`DOCS_INDEX.md`](./DOCS_INDEX.md) for comprehensive navigation
+**See Full Status**: [`STATUS_JAN_25_2026.md`](./STATUS_JAN_25_2026.md)
 
 ---
 
-## 🎯 IMMEDIATE PRIORITIES (This Week)
+## 📋 Quick Navigation
 
-### **Priority 1: Dual-Mode Implementation** (4-6 hours)
-**Owner**: Songbird Team  
-**Guide**: [`TEAM_HANDOFF_DUAL_MODE_IMPLEMENTATION_JAN_24_2026.md`](./TEAM_HANDOFF_DUAL_MODE_IMPLEMENTATION_JAN_24_2026.md)
+### For New Developers
+1. **Read This**: [`README.md`](./README.md) - Project overview
+2. **Architecture**: See "Core Principles" section in README
+3. **Integration**: [`BIOMEOS_PRIMAL_INTEGRATION_SPEC.md`](./BIOMEOS_PRIMAL_INTEGRATION_SPEC.md)
+4. **Standards**: [`../wateringHole/`](../../wateringHole/) - UniBin, ecoBin specs
 
-**What**: Implement BearDogClient dual-mode support  
-**Why**: Enables primal independence + self-testing  
-**Output**: Primals can work without Neural API (testing) or with it (production)
+### For Contributors
+1. **Current Plan**: [`MASTER_EXECUTION_PLAN_JAN_24_2026.md`](./MASTER_EXECUTION_PLAN_JAN_24_2026.md)
+2. **Deep Debt**: [`DEEP_DEBT_EXECUTION_BIOMEOS_JAN_24_2026.md`](./DEEP_DEBT_EXECUTION_BIOMEOS_JAN_24_2026.md)
+3. **Test & Build**: See "Building" section below
+4. **Code Style**: Follow Deep Debt Principles (see deep debt doc)
 
-### **Priority 2: HTTPS Validation** (2-3 hours)
-**Owner**: All Teams  
-**Guide**: [`TOWER_ATOMIC_CLIENT_SERVER_SELF_TEST_PLAN_JAN_24_2026.md`](./TOWER_ATOMIC_CLIENT_SERVER_SELF_TEST_PLAN_JAN_24_2026.md)
+### For Primal Teams
+1. **Songbird Team**: [`SONGBIRD_IPC_EVOLUTION_REQUIRED_JAN_25_2026.md`](./SONGBIRD_IPC_EVOLUTION_REQUIRED_JAN_25_2026.md)
+2. **BearDog Team**: No current blockers (stable)
+3. **Integration Spec**: [`BIOMEOS_PRIMAL_INTEGRATION_SPEC.md`](./BIOMEOS_PRIMAL_INTEGRATION_SPEC.md)
+4. **UniBin Standard**: [`../wateringHole/UNIBIN_ARCHITECTURE_STANDARD.md`](../../wateringHole/UNIBIN_ARCHITECTURE_STANDARD.md)
 
-**What**: Run client/server self-test to find transcript differences  
-**Why**: We're 99.95% there—keys and encryption proven correct!  
-**Output**: HTTP 200 OK! 🎉
-
-### **Priority 3: Deep Debt Phase 2** (7-10 hours)
-**Owner**: biomeOS Team  
-**Guide**: [`DEEP_DEBT_PHASE_2_STATUS_JAN_24_2026.md`](./DEEP_DEBT_PHASE_2_STATUS_JAN_24_2026.md)
-
-**What**: Continue strategic refactoring (40% complete)  
-**Why**: Production-ready, maintainable codebase  
-**Output**: neural_executor.rs < 800 lines
+### Documentation Index
+**Comprehensive index**: [`DOCS_INDEX.md`](./DOCS_INDEX.md)
 
 ---
 
-## 📚 ESSENTIAL DOCUMENTS
+## 🏗️ Building & Testing
 
-### **Master Plans** (Start Here):
-1. [`MASTER_EXECUTION_PLAN_JAN_24_2026.md`](./MASTER_EXECUTION_PLAN_JAN_24_2026.md)
-   - 4 phases, 2-3 week timeline
-   - All team priorities and dependencies
-
-2. [`DEEP_DEBT_EXECUTION_BIOMEOS_JAN_24_2026.md`](./DEEP_DEBT_EXECUTION_BIOMEOS_JAN_24_2026.md)
-   - 5 phases of code quality improvement
-   - Strategic refactoring plans
-
-### **Implementation Guides** (Copy-Paste Ready):
-3. [`TEAM_HANDOFF_DUAL_MODE_IMPLEMENTATION_JAN_24_2026.md`](./TEAM_HANDOFF_DUAL_MODE_IMPLEMENTATION_JAN_24_2026.md)
-   - Complete dual-mode implementation code
-
-4. [`TOWER_ATOMIC_CLIENT_SERVER_SELF_TEST_PLAN_JAN_24_2026.md`](./TOWER_ATOMIC_CLIENT_SERVER_SELF_TEST_PLAN_JAN_24_2026.md)
-   - HTTPS validation strategy
-
-### **Architecture** (Understand the System):
-5. [`ARCHITECTURAL_CLARITY_NEURAL_API_EVOLUTION_ENGINE_JAN_24_2026.md`](./ARCHITECTURAL_CLARITY_NEURAL_API_EVOLUTION_ENGINE_JAN_24_2026.md)
-   - Neural API as evolution engine
-
-6. [`ARCHITECTURAL_EVOLUTION_PRIMAL_INDEPENDENCE_JAN_24_2026.md`](./ARCHITECTURAL_EVOLUTION_PRIMAL_INDEPENDENCE_JAN_24_2026.md)
-   - TRUE PRIMAL principles
-
-### **Progress Tracking**:
-7. [`SESSION_COMPLETE_22_HOURS_JAN_24_2026.md`](./SESSION_COMPLETE_22_HOURS_JAN_24_2026.md)
-   - Latest session summary (comprehensive)
-
-8. [`DEEP_DEBT_PHASE_1_PROGRESS_JAN_24_2026.md`](./DEEP_DEBT_PHASE_1_PROGRESS_JAN_24_2026.md)
-   - Phase 1 completion details
-
----
-
-## 🏗️ PROJECT STRUCTURE
-
-```
-biomeOS/
-├── README.md                  ← Project overview
-├── START_HERE.md             ← You are here!
-├── DOCS_INDEX.md             ← Full doc navigation
-├── MASTER_EXECUTION_PLAN_JAN_24_2026.md  ← Master roadmap
-│
-├── crates/                    ← Rust crates
-│   ├── biomeos-types/        ← Shared types + defaults.rs (NEW!)
-│   ├── biomeos-atomic-deploy/← Neural API + executor/ (NEW!)
-│   └── ...                   ← 25 total crates
-│
-├── graphs/                    ← Neural API deployment graphs
-├── scripts/                   ← Utility scripts
-├── docs/                      ← Additional documentation
-├── archive/                   ← Historical documents
-│   └── session_jan_24_2026/  ← Jan 24-25 session docs
-└── ...
-```
-
----
-
-## 💻 QUICK START
-
-### **1. Clone and Build**
+### Quick Build
 ```bash
-# Clone (if not already done)
-git clone <repository-url>
-cd biomeOS
-
-# Build all crates
-cargo build --release
+# Check compilation
+cargo check --workspace
 
 # Run tests
-cargo test
+cargo test --workspace
+
+# Format code
+cargo fmt --all
+
+# Lint (pedantic)
+cargo clippy --workspace -- -D warnings
 ```
 
-### **2. Deploy Tower Atomic** (BearDog + Songbird)
+### Current Status
+- ✅ **Compilation**: Clean (0 errors)
+- ✅ **Tests**: 1,080+ passing
+- ⚠️ **Warnings**: ~30 minor linter warnings
+- ✅ **Unsafe**: 0 blocks (100% safe Rust)
+
+---
+
+## 🎯 What to Work On
+
+### High Priority (This Week)
+1. **Large file refactoring**: Split `neural_executor.rs` (1,577 lines)
+2. **Error handling**: Replace 50 panic! calls with Result<T,E>
+3. **Unwrap reduction**: Reduce 517 unwrap() calls in production
+4. **Test coverage**: Achieve 90% coverage (currently ~60%)
+
+### Blocked (External)
+- **Songbird IPC**: Waiting for Unix socket JSON-RPC interface
+- **Neural API Deployment**: Blocked on Songbird IPC
+
+### Ready (When Unblocked)
+- **Tower Atomic Deployment**: Deploy BearDog + Songbird via Neural API
+- **HTTPS Integration Tests**: End-to-end validation
+
+---
+
+## 📚 Key Concepts
+
+### TRUE PRIMAL Architecture
+- **Self-Knowledge Only**: Primals don't hardcode other primals' names/ports
+- **Runtime Discovery**: Find services via capability (e.g., "security", "http")
+- **Unix Socket First**: JSON-RPC 2.0 for inter-primal communication
+- **Pure Rust**: Zero C dependencies for core functionality
+
+### Tower Atomic Stack
+```
+Applications (Squirrel, etc.)
+         ↓
+    Songbird (TLS/HTTP)
+         ↓
+    BearDog (Crypto)
+```
+**Security Boundary**: All protocol translation happens here
+
+### Neural API
+- **Capability Mesh**: Route requests by capability, not hardcoded names
+- **Semantic Translation**: Stable semantic names → provider methods
+- **Evolution Engine**: Primals can evolve without breaking clients
+- **Optional Orchestration**: Primals work independently too
+
+---
+
+## 🚀 Quick Start
+
+### 1. Clone and Build
 ```bash
-# Using Neural API (production mode)
-./target/release/biomeos neural-api \
-  --graph graphs/tower_atomic_bootstrap.toml
-
-# Check logs
-tail -f /tmp/neural-api.log
+cd /home/eastgate/Development/ecoPrimals/phase2/biomeOS
+cargo build --workspace --release
 ```
 
-### **3. Verify Deployment**
+### 2. Run Tests
 ```bash
-# Check BearDog
-./scripts/test_beardog_health.sh
+cargo test --workspace
+```
 
-# Test HTTPS (once validated)
-./scripts/test_https_endpoints.sh
+### 3. Deploy a Primal (Example: BearDog)
+```bash
+# Via neural-api (when available)
+target/release/biomeos neural-api &
+target/release/biomeos deploy graphs/tower_atomic_bootstrap.toml
+
+# Direct (for testing)
+../beardog/target/release/beardog server --socket /tmp/beardog-nat0.sock
+```
+
+### 4. Make HTTP Request via Songbird (When IPC Ready)
+```bash
+# Via Unix socket JSON-RPC
+echo '{"jsonrpc":"2.0","id":1,"method":"http.request","params":{"url":"https://example.com"}}' \
+  | nc -U /tmp/songbird-nat0.sock
 ```
 
 ---
 
-## 🎯 KEY CONCEPTS
+## 📖 Documentation Structure
 
-### **TRUE PRIMAL Architecture**
-- ✅ **Self-knowledge only** - Primals know themselves, discover others
-- ✅ **Runtime discovery** - No hardcoded cross-primal knowledge
-- ✅ **Capability-based** - Request by capability, not by name
-- ✅ **Unix sockets** - JSON-RPC 2.0 over Unix domain sockets
+### By Priority
+1. **Start**: `STATUS_JAN_25_2026.md`, `README.md` (this file)
+2. **Execute**: `MASTER_EXECUTION_PLAN_JAN_24_2026.md`
+3. **Integrate**: `BIOMEOS_PRIMAL_INTEGRATION_SPEC.md`
+4. **Deep Dive**: `DOCS_INDEX.md` → full documentation
 
-### **Neural API**
-- ✅ **Evolution engine** - Enables primal evolution without breaking clients
-- ✅ **Discovery** - Capability-based service discovery
-- ✅ **Semantic translation** - Stable names → provider-specific methods
-- ✅ **Orchestration** - Multi-primal workflows (neural graphs)
-
-### **Dual-Mode Operation**
-- ✅ **Direct mode** - Primal-to-primal (testing, simple deployments)
-- ✅ **Neural API mode** - Via orchestration layer (production, evolution)
-- ✅ **Both valid** - Choose based on use case
+### By Role
+- **New Developer**: README → DOCS_INDEX → Integration Spec
+- **Contributor**: Current Plan → Deep Debt Doc → Test
+- **Primal Team**: Integration Spec → UniBin Standard → IPC Protocol
+- **Architect**: Architecture docs in `archive/` folder
 
 ---
 
-## 📊 CURRENT STATUS
+## ❓ Common Questions
 
-### **Progress**:
-- **HTTPS**: 99.95% (keys correct, encryption correct)
-- **Deep Debt Phase 1**: 100% ✅
-- **Deep Debt Phase 2**: 40% 🔄
-- **Documentation**: 21,500+ lines ✅
-- **Team Readiness**: 100% ✅
+### Q: Why is Songbird deployment blocked?
+**A**: Songbird's HTTPS client works at the library level but isn't exposed via Unix socket JSON-RPC yet. The Songbird team is implementing `http.request` RPC method. See `SONGBIRD_IPC_EVOLUTION_REQUIRED_JAN_25_2026.md`.
 
-### **This Week's Goals**:
-1. Dual-mode implementation complete
-2. HTTPS validation complete (HTTP 200 OK!)
-3. Phase 2 refactoring progressing
+### Q: How do primals communicate?
+**A**: JSON-RPC 2.0 over Unix sockets. No HTTP, no ports, no hardcoded addresses. Environment variables or capability-based discovery resolve socket paths.
 
-### **Next 2-3 Weeks**:
-- Neural API evolution
-- Capability-based discovery
-- Production-ready system
+### Q: What's the difference between ecoBin and UniBin?
+**A**: **UniBin** = single binary with subcommands. **ecoBin** = UniBin + Pure Rust (zero C deps). See `../wateringHole/` specs.
+
+### Q: Can I use HTTP for primal communication?
+**A**: Not in production. HTTP transport is deprecated and feature-gated. Use Unix sockets for IPC, delegate external HTTP to Songbird.
+
+### Q: How do I add a new primal?
+**A**: Follow the integration spec (`BIOMEOS_PRIMAL_INTEGRATION_SPEC.md`). Implement JSON-RPC server, declare capabilities, register with Neural API.
 
 ---
 
-## 🤝 GETTING HELP
+## 🔗 Important Links
 
-### **Documentation**:
-- **Overview**: [`README.md`](./README.md)
-- **Navigation**: [`DOCS_INDEX.md`](./DOCS_INDEX.md)
-- **Architecture**: Architecture docs (see Essential Documents)
-- **Implementation**: Team handoff guides
-
-### **Code**:
-- **Runtime config**: `crates/biomeos-types/src/defaults.rs`
-- **Executor**: `crates/biomeos-atomic-deploy/src/executor/`
-- **Examples**: `crates/*/examples/`
-
-### **Questions**:
-- Check documentation first
-- Review relevant handoff documents
-- Refer to master execution plan
+- **Status**: [`STATUS_JAN_25_2026.md`](./STATUS_JAN_25_2026.md)
+- **README**: [`README.md`](./README.md)
+- **Docs Index**: [`DOCS_INDEX.md`](./DOCS_INDEX.md)
+- **Integration Spec**: [`BIOMEOS_PRIMAL_INTEGRATION_SPEC.md`](./BIOMEOS_PRIMAL_INTEGRATION_SPEC.md)
+- **Master Plan**: [`MASTER_EXECUTION_PLAN_JAN_24_2026.md`](./MASTER_EXECUTION_PLAN_JAN_24_2026.md)
 
 ---
 
-## 🔍 COMMON TASKS
-
-### **"I need to add a new primal..."**
-→ See [`MASTER_EXECUTION_PLAN_JAN_24_2026.md`](./MASTER_EXECUTION_PLAN_JAN_24_2026.md) Phase 3
-
-### **"I need to understand the architecture..."**
-→ Read architecture docs (items 5-6 in Essential Documents)
-
-### **"I need to test HTTPS..."**
-→ Follow [`TOWER_ATOMIC_CLIENT_SERVER_SELF_TEST_PLAN_JAN_24_2026.md`](./TOWER_ATOMIC_CLIENT_SERVER_SELF_TEST_PLAN_JAN_24_2026.md)
-
-### **"I need to add configuration..."**
-→ Use `biomeos_types::defaults::RuntimeConfig` or environment variables
-
-### **"I need to understand deep debt..."**
-→ Review [`DEEP_DEBT_EXECUTION_BIOMEOS_JAN_24_2026.md`](./DEEP_DEBT_EXECUTION_BIOMEOS_JAN_24_2026.md)
-
----
-
-## ✅ CHECKLIST FOR NEW CONTRIBUTORS
-
-- [ ] Read [`README.md`](./README.md)
-- [ ] Review [`MASTER_EXECUTION_PLAN_JAN_24_2026.md`](./MASTER_EXECUTION_PLAN_JAN_24_2026.md)
-- [ ] Understand TRUE PRIMAL architecture
-- [ ] Build project (`cargo build --release`)
-- [ ] Run tests (`cargo test`)
-- [ ] Review your team's handoff document
-- [ ] Start on immediate priorities
-
----
-
-## 🎊 RECENT ACHIEVEMENTS
-
-### **22+ Hour Session (Jan 24-25, 2026)**:
-- ✅ Comprehensive deep debt audit (25 crates, 150k LOC)
-- ✅ Runtime configuration system (defaults.rs)
-- ✅ Strategic refactoring started (3 modules, 630 lines extracted)
-- ✅ Master execution plans (21,500+ lines documentation)
-- ✅ Team handoffs (copy-paste ready code)
-- ✅ Architecture clarity (evolution engine, primal independence)
-
-**Impact**: Foundation-changing infrastructure for production-ready deployments
-
----
-
-**"Start with the plan, dive into details!"** 🎯  
-**"Documentation is your friend!"** 📚  
-**"TRUE PRIMAL: Self-knowledge only, runtime discovery!"** 🔬  
-**"Production-ready in 2-3 weeks!"** 🚀  
-
-**Welcome to biomeOS! Let's build something amazing!** 🎉
+*Need help? Check the docs or ask in the team channel.*

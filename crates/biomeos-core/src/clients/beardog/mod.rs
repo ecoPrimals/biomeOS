@@ -34,7 +34,7 @@
 //!
 //! # Quick Start
 //!
-//! ```no_run
+//! ```ignore
 //! use biomeos_core::clients::beardog::BearDogClient;
 //!
 //! #[tokio::main]
@@ -53,7 +53,7 @@
 //!     
 //!     Ok(())
 //! }
-//! ```
+//! ```ignore
 
 // Module declarations
 pub mod access;

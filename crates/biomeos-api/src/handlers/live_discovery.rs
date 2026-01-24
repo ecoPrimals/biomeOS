@@ -1,8 +1,22 @@
-// Live primal discovery - Query real BearDog and Songbird
+// =============================================================================
+// Live Primal Discovery - Query BearDog and Songbird via Unix Sockets
+// =============================================================================
+//
+// ARCHITECTURE: Uses JSON-RPC 2.0 over Unix sockets for primal discovery.
+// This is the Pure Rust path - no HTTP/TLS dependencies (reqwest, openssl).
+//
+// Deep Debt Evolution:
+//   - BEFORE: reqwest HTTP client with C dependencies
+//   - AFTER: Unix socket JSON-RPC (Pure Rust)
+//
+// =============================================================================
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use tracing::{error, info, warn};
+use std::io::{Read, Write};
+use std::os::unix::net::UnixStream;
+use std::time::Duration;
+use tracing::{debug, error, info, warn};
 
 /// BearDog identity response (unwrapped format)
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -41,131 +55,225 @@ pub struct LivePrimalInfo {
     pub family_id: Option<String>,
 }
 
-/// Query BearDog for its identity and health
-pub async fn discover_beardog(endpoint: &str) -> Result<LivePrimalInfo> {
-    info!("🐻 Discovering BearDog at {}", endpoint);
+/// JSON-RPC 2.0 request
+#[derive(Debug, Serialize)]
+struct JsonRpcRequest {
+    jsonrpc: &'static str,
+    id: u64,
+    method: String,
+    params: serde_json::Value,
+}
 
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(5))
-        .build()?;
+/// JSON-RPC 2.0 response
+#[derive(Debug, Deserialize)]
+struct JsonRpcResponse {
+    #[allow(dead_code)]
+    jsonrpc: String,
+    #[allow(dead_code)]
+    id: u64,
+    result: Option<serde_json::Value>,
+    error: Option<JsonRpcError>,
+}
 
-    // Query identity (BearDog's primary endpoint)
-    let identity_url = format!("{}/api/v1/trust/identity", endpoint);
-    let identity_response = match client.get(&identity_url).send().await {
-        Ok(resp) => {
-            if resp.status().is_success() {
-                match resp.json::<BeardogIdentity>().await {
-                    Ok(i) => {
-                        info!(
-                            "✅ BearDog identity: family={:?}, tag={}",
-                            i.family_id, i.encryption_tag
-                        );
-                        Some(i)
-                    }
-                    Err(e) => {
-                        warn!("Failed to parse BearDog identity: {}", e);
-                        None
-                    }
-                }
-            } else {
-                error!("BearDog identity check returned: {}", resp.status());
-                return Err(anyhow::anyhow!("BearDog not responding"));
-            }
-        }
-        Err(e) => {
-            error!("Failed to connect to BearDog: {}", e);
-            return Err(e.into());
-        }
+#[derive(Debug, Deserialize)]
+struct JsonRpcError {
+    code: i32,
+    message: String,
+}
+
+/// Send a JSON-RPC request over Unix socket
+fn send_rpc_request(socket_path: &str, method: &str, params: serde_json::Value) -> Result<serde_json::Value> {
+    debug!("📡 Sending RPC to {}: {}", socket_path, method);
+    
+    let mut stream = UnixStream::connect(socket_path)
+        .map_err(|e| anyhow::anyhow!("Failed to connect to {}: {}", socket_path, e))?;
+    
+    stream.set_read_timeout(Some(Duration::from_secs(5)))?;
+    stream.set_write_timeout(Some(Duration::from_secs(5)))?;
+    
+    let request = JsonRpcRequest {
+        jsonrpc: "2.0",
+        id: 1,
+        method: method.to_string(),
+        params,
     };
+    
+    let request_bytes = serde_json::to_vec(&request)?;
+    stream.write_all(&request_bytes)?;
+    stream.write_all(b"\n")?;
+    stream.flush()?;
+    
+    let mut response_buf = vec![0u8; 65536];
+    let n = stream.read(&mut response_buf)?;
+    let response: JsonRpcResponse = serde_json::from_slice(&response_buf[..n])?;
+    
+    if let Some(error) = response.error {
+        return Err(anyhow::anyhow!("RPC error {}: {}", error.code, error.message));
+    }
+    
+    response.result.ok_or_else(|| anyhow::anyhow!("No result in RPC response"))
+}
 
-    // Extract capabilities from identity or use defaults
-    let capabilities = identity_response
-        .as_ref()
-        .and_then(|i| i.capabilities.clone())
-        .unwrap_or_else(|| {
-            vec![
-                "security".to_string(),
-                "trust_evaluation".to_string(),
-                "genetic_lineage".to_string(),
-                "hsm".to_string(),
-            ]
-        });
+/// Query BearDog for its identity and health via Unix socket
+pub async fn discover_beardog(socket_path: &str) -> Result<LivePrimalInfo> {
+    info!("🐻 Discovering BearDog at socket: {}", socket_path);
 
-    let family_id = identity_response.and_then(|i| i.family_id);
+    // Use tokio's spawn_blocking for synchronous socket I/O
+    let socket = socket_path.to_string();
+    let result = tokio::task::spawn_blocking(move || {
+        send_rpc_request(&socket, "health.check", serde_json::json!({}))
+    }).await??;
+
+    debug!("BearDog health response: {:?}", result);
+
+    // Parse health response
+    let status = result.get("status")
+        .and_then(|v| v.as_str())
+        .unwrap_or("healthy")
+        .to_string();
+    
+    let version = result.get("version")
+        .and_then(|v| v.as_str())
+        .unwrap_or("unknown")
+        .to_string();
+    
+    let family_id = result.get("family_id")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+    
+    // BearDog capabilities (from taxonomy)
+    let capabilities = vec![
+        "security".to_string(),
+        "crypto.encrypt".to_string(),
+        "crypto.decrypt".to_string(),
+        "crypto.sign".to_string(),
+        "crypto.verify".to_string(),
+        "trust_evaluation".to_string(),
+        "genetic_lineage".to_string(),
+    ];
+
+    info!("✅ BearDog discovered: version={}, status={}", version, status);
 
     Ok(LivePrimalInfo {
         id: "beardog-local".to_string(),
         name: "BearDog".to_string(),
         primal_type: "security".to_string(),
-        version: "0.11.0".to_string(), // Future: query /api/identity or /version endpoint
-        health: "healthy".to_string(), // Assume healthy if identity responds
+        version,
+        health: status,
         capabilities,
-        endpoint: endpoint.to_string(),
+        endpoint: socket_path.to_string(),
         family_id,
     })
 }
 
-/// Query Songbird for its health
-/// Note: Songbird uses tarpc, not HTTP REST, so this is limited for now
-pub async fn discover_songbird(endpoint: &str) -> Result<LivePrimalInfo> {
-    info!("🐦 Discovering Songbird at {}", endpoint);
+/// Query Songbird for its health via Unix socket
+pub async fn discover_songbird(socket_path: &str) -> Result<LivePrimalInfo> {
+    info!("🐦 Discovering Songbird at socket: {}", socket_path);
 
-    // For now, Songbird doesn't have HTTP health endpoint
-    // It uses tarpc RPC, which we'll need to integrate later
-    // Return basic info for now
+    // Use tokio's spawn_blocking for synchronous socket I/O
+    let socket = socket_path.to_string();
+    let result = tokio::task::spawn_blocking(move || {
+        send_rpc_request(&socket, "health.check", serde_json::json!({}))
+    }).await;
 
-    warn!("⚠️  Songbird uses tarpc RPC, not HTTP REST");
-    warn!("   Returning basic info. Full integration requires tarpc client.");
+    // Handle connection failures gracefully
+    let (status, version, family_id) = match result {
+        Ok(Ok(response)) => {
+            let status = response.get("status")
+                .and_then(|v| v.as_str())
+                .unwrap_or("healthy")
+                .to_string();
+            let version = response.get("version")
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown")
+                .to_string();
+            let family_id = response.get("family_id")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            (status, version, family_id)
+        }
+        Ok(Err(e)) => {
+            warn!("⚠️  Songbird not responding: {}", e);
+            ("unreachable".to_string(), "unknown".to_string(), None)
+        }
+        Err(e) => {
+            warn!("⚠️  Songbird discovery task failed: {}", e);
+            ("unreachable".to_string(), "unknown".to_string(), None)
+        }
+    };
+
+    // Songbird capabilities (from taxonomy)
+    let capabilities = vec![
+        "discovery".to_string(),
+        "http.request".to_string(),
+        "http.get".to_string(),
+        "http.post".to_string(),
+        "tls.handshake".to_string(),
+    ];
+
+    info!("✅ Songbird discovered: version={}, status={}", version, status);
 
     Ok(LivePrimalInfo {
         id: "songbird-local".to_string(),
         name: "Songbird".to_string(),
-        primal_type: "orchestration".to_string(),
-        version: "3.0.0".to_string(),
-        health: "assumed_healthy".to_string(), // Can't query yet
-        capabilities: vec![
-            "orchestration".to_string(),
-            "discovery".to_string(),
-            "federation".to_string(),
-            "coordination".to_string(),
-        ],
-        endpoint: endpoint.to_string(),
-        family_id: None, // Can't query yet
+        primal_type: "discovery".to_string(),
+        version,
+        health: status,
+        capabilities,
+        endpoint: socket_path.to_string(),
+        family_id,
     })
 }
 
-/// Discover all configured primals
+/// Get default socket path for a primal
+fn default_socket_path(primal: &str, family_id: &str) -> String {
+    // Check environment variable first
+    let env_var = format!("{}_SOCKET", primal.to_uppercase());
+    if let Ok(path) = std::env::var(&env_var) {
+        return path;
+    }
+    
+    // Check BIOMEOS_SOCKET_DIR
+    let socket_dir = std::env::var("BIOMEOS_SOCKET_DIR")
+        .unwrap_or_else(|_| "/tmp/biomeos/sockets".to_string());
+    
+    format!("{}/{}-{}.sock", socket_dir, primal, family_id)
+}
+
+/// Discover all configured primals via Unix sockets
 pub async fn discover_all_primals() -> Vec<LivePrimalInfo> {
     let mut primals = Vec::new();
+    
+    // Get family ID from environment (default: nat0)
+    let family_id = std::env::var("BIOMEOS_FAMILY_ID")
+        .or_else(|_| std::env::var("FAMILY_ID"))
+        .unwrap_or_else(|_| "nat0".to_string());
+    
+    info!("🔍 Discovering primals for family: {}", family_id);
 
     // Discover BearDog
-    let beardog_endpoint =
-        std::env::var("BEARDOG_ENDPOINT").unwrap_or_else(|_| "http://localhost:9000".to_string());
-
-    match discover_beardog(&beardog_endpoint).await {
+    let beardog_socket = default_socket_path("beardog", &family_id);
+    
+    match discover_beardog(&beardog_socket).await {
         Ok(primal) => {
             info!("✅ Discovered BearDog: {} ({})", primal.name, primal.health);
             primals.push(primal);
         }
         Err(e) => {
-            error!("❌ Failed to discover BearDog: {}", e);
+            warn!("⚠️  BearDog not available: {}", e);
         }
     }
 
     // Discover Songbird
-    let songbird_endpoint =
-        std::env::var("SONGBIRD_ENDPOINT").unwrap_or_else(|_| "http://localhost:8080".to_string());
+    let songbird_socket = default_socket_path("songbird", &family_id);
 
-    match discover_songbird(&songbird_endpoint).await {
+    match discover_songbird(&songbird_socket).await {
         Ok(primal) => {
-            info!(
-                "✅ Discovered Songbird: {} ({})",
-                primal.name, primal.health
-            );
+            info!("✅ Discovered Songbird: {} ({})", primal.name, primal.health);
             primals.push(primal);
         }
         Err(e) => {
-            error!("❌ Failed to discover Songbird: {}", e);
+            warn!("⚠️  Songbird not available: {}", e);
         }
     }
 

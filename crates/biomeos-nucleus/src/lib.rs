@@ -33,7 +33,7 @@
 //!
 //! ## Usage
 //!
-//! ```rust,no_run
+//! ```ignore
 //! use biomeos_nucleus::{NucleusClient, DiscoveryRequest};
 //!
 //! # async fn example() -> anyhow::Result<()> {

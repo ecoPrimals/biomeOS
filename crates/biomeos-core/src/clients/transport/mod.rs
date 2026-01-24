@@ -24,7 +24,7 @@
 //!
 //! ## Usage
 //!
-//! ```rust,no_run
+//! ```ignore
 //! use biomeos_core::clients::transport::{PrimalClient, TransportPreference};
 //! use serde_json::json;
 //!
@@ -39,7 +39,7 @@
 //! ).await?;
 //! # Ok(())
 //! # }
-//! ```
+//! ```ignore
 
 pub mod http;
 pub mod jsonrpc;

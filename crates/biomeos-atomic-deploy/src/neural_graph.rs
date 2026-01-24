@@ -21,7 +21,7 @@ impl Graph {
         let contents = std::fs::read_to_string(path)
             .with_context(|| format!("Failed to read file: {}", path.display()))?;
         tracing::debug!("   File size: {} bytes", contents.len());
-        
+
         Self::from_toml_str(&contents)
             .with_context(|| format!("Failed to parse TOML from: {}", path.display()))
     }
@@ -29,11 +29,10 @@ impl Graph {
     /// Load graph from TOML string
     pub fn from_toml_str(toml: &str) -> anyhow::Result<Self> {
         tracing::debug!("🔍 Parsing TOML structure...");
-        
+
         // Parse TOML
-        let value: toml::Value = toml::from_str(toml)
-            .context("Failed to parse TOML syntax")?;
-        
+        let value: toml::Value = toml::from_str(toml).context("Failed to parse TOML syntax")?;
+
         tracing::debug!("✅ TOML syntax valid");
 
         // Extract graph metadata
@@ -42,7 +41,7 @@ impl Graph {
             .get("graph")
             .and_then(|v| v.as_table())
             .ok_or_else(|| anyhow::anyhow!("Missing [graph] section in TOML"))?;
-        
+
         tracing::debug!("✅ Found [graph] section");
 
         let id = graph_table
@@ -70,11 +69,16 @@ impl Graph {
             .and_then(|v| v.as_array())
             .ok_or_else(|| {
                 tracing::error!("❌ Missing [[nodes]] array in TOML");
-                tracing::debug!("   Available top-level keys: {:?}", value.as_table().map(|t| t.keys().collect::<Vec<_>>()));
-                anyhow::anyhow!("Missing [[nodes]] array. Found keys: {:?}", 
-                    value.as_table().map(|t| t.keys().collect::<Vec<_>>()))
+                tracing::debug!(
+                    "   Available top-level keys: {:?}",
+                    value.as_table().map(|t| t.keys().collect::<Vec<_>>())
+                );
+                anyhow::anyhow!(
+                    "Missing [[nodes]] array. Found keys: {:?}",
+                    value.as_table().map(|t| t.keys().collect::<Vec<_>>())
+                )
             })?;
-        
+
         tracing::debug!("✅ Found [[nodes]] array with {} nodes", nodes_array.len());
 
         let mut nodes = Vec::new();
@@ -85,7 +89,7 @@ impl Graph {
             tracing::debug!("   ✅ Node {}: id={}", idx, node.id);
             nodes.push(node);
         }
-        
+
         tracing::info!("✅ Parsed {} nodes successfully", nodes.len());
 
         // Extract execution config
@@ -148,19 +152,19 @@ pub struct GraphNode {
     // Capabilities this primal provides (NEW - for capability registry)
     #[serde(default)]
     pub capabilities: Vec<String>,
-    
+
     // NEW v2.0.0: Capability translation mappings (semantic → actual method)
     // Enables self-describing primals for capability translation
     // Example: {"crypto.generate_keypair": "x25519_generate_ephemeral"}
     #[serde(default)]
     pub capabilities_provided: Option<HashMap<String, String>>,
-    
+
     // NEW v2.0.1: Parameter name mappings (semantic → actual parameter names)
     // Enables parameter translation for capability calls
     // Example: {"crypto.ecdh_derive": {"private_key": "our_secret", "public_key": "their_public"}}
     #[serde(default)]
     pub parameter_mappings: Option<HashMap<String, HashMap<String, String>>>,
-    
+
     // Legacy fields (for backward compatibility)
     #[serde(default)]
     pub node_type: Option<String>,
@@ -187,7 +191,7 @@ pub struct Operation {
     pub name: String,
     #[serde(default)]
     pub params: HashMap<String, serde_json::Value>,
-    
+
     /// Environment variables to pass to the primal (NEW - Jan 21, 2026)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub environment: Option<HashMap<String, String>>,

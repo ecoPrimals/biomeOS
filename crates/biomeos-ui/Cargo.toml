@@ -15,12 +15,12 @@ biomeos-types = { path = "../biomeos-types" }
 tokio = { version = "1", features = ["full"] }
 tokio-stream = "0.1"
 
-# WebSocket client for real-time events
+# WebSocket client for real-time events (Pure Rust)
 tokio-tungstenite = "0.21"
 futures-util = "0.3"
 
-# HTTP client DEPRECATED: Use atomic_client (Unix sockets) or Songbird for external HTTP
-# reqwest = { version = "0.11", features = ["stream"] } # REMOVED
+# HTTP client REMOVED - External HTTP requests go through Songbird
+# SSE support stubbed until Songbird exposes streaming
 
 # Error handling
 anyhow = "1.0"

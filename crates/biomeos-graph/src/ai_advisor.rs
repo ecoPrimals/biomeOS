@@ -468,6 +468,7 @@ mod tests {
                     operation: Operation {
                         name: "process".to_string(),
                         params: serde_json::json!({}),
+                        environment: None,
                     },
                     input: None,
                     outputs: vec![],
@@ -480,6 +481,7 @@ mod tests {
                     operation: Operation {
                         name: "store".to_string(),
                         params: serde_json::json!({}),
+                        environment: None,
                     },
                     input: None,
                     outputs: vec![],
@@ -492,6 +494,7 @@ mod tests {
                     operation: Operation {
                         name: "send".to_string(),
                         params: serde_json::json!({}),
+                        environment: None,
                     },
                     input: None,
                     outputs: vec![],
@@ -553,6 +556,7 @@ mod tests {
                 operation: Operation {
                     name: "process".to_string(),
                     params: serde_json::json!({}),
+                    environment: None,
                 },
                 input: None,
                 outputs: vec![],

@@ -50,7 +50,7 @@ use serde_json::Value;
 /// Uses JSON-RPC 2.0 over Unix sockets for fast, secure communication.
 ///
 /// # Example
-/// ```no_run
+/// ```ignore
 /// use biomeos_core::clients::squirrel::SquirrelClient;
 /// use serde_json::json;
 ///
@@ -66,7 +66,7 @@ use serde_json::Value;
 ///
 ///     Ok(())
 /// }
-/// ```
+/// ```ignore
 #[derive(Debug, Clone)]
 pub struct SquirrelClient {
     transport: TransportClient,

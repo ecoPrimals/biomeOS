@@ -57,11 +57,12 @@ impl std::fmt::Debug for ExecutionContext {
 impl ExecutionContext {
     /// Create new execution context
     pub fn new(env: HashMap<String, String>) -> Self {
-        let family_id = env.get("FAMILY_ID")
+        let family_id = env
+            .get("FAMILY_ID")
             .or_else(|| env.get("BIOMEOS_FAMILY_ID"))
             .map(|s| s.clone())
             .unwrap_or_else(|| "nat0".to_string());
-        
+
         Self {
             env,
             outputs: Arc::new(Mutex::new(HashMap::new())),
@@ -71,13 +72,16 @@ impl ExecutionContext {
             family_id,
         }
     }
-    
+
     /// Set socket nucleation
-    pub fn with_nucleation(mut self, nucleation: Arc<tokio::sync::RwLock<crate::nucleation::SocketNucleation>>) -> Self {
+    pub fn with_nucleation(
+        mut self,
+        nucleation: Arc<tokio::sync::RwLock<crate::nucleation::SocketNucleation>>,
+    ) -> Self {
         self.nucleation = Some(nucleation);
         self
     }
-    
+
     /// Get or assign socket path for a primal
     pub async fn get_socket_path(&self, primal_name: &str) -> String {
         if let Some(ref nucleation) = self.nucleation {
@@ -90,7 +94,7 @@ impl ExecutionContext {
             format!("/tmp/{}-{}.sock", primal_name, self.family_id)
         }
     }
-    
+
     /// Get environment variables
     pub fn env(&self) -> &HashMap<String, String> {
         &self.env
@@ -137,9 +141,13 @@ impl GraphExecutor {
             max_parallelism: 3, // Default from graph spec
         }
     }
-    
+
     /// Create graph executor with socket nucleation
-    pub fn with_nucleation(graph: Graph, env: HashMap<String, String>, nucleation: Arc<tokio::sync::RwLock<crate::nucleation::SocketNucleation>>) -> Self {
+    pub fn with_nucleation(
+        graph: Graph,
+        env: HashMap<String, String>,
+        nucleation: Arc<tokio::sync::RwLock<crate::nucleation::SocketNucleation>>,
+    ) -> Self {
         Self {
             graph,
             context: ExecutionContext::new(env).with_nucleation(nucleation),
@@ -268,12 +276,12 @@ impl GraphExecutor {
     }
 
     /// Discover binary path for a primal (capability-based, no hardcoding!)
-    /// 
+    ///
     /// Search order:
     /// 1. BIOMEOS_PLASMID_BIN_DIR environment variable
     /// 2. ./plasmidBin directory (current directory)
     /// 3. ../plasmidBin directory (parent directory)
-    /// 
+    ///
     /// Architecture is auto-detected from target triple.
     async fn discover_primal_binary(
         primal_name: &str,
@@ -281,20 +289,25 @@ impl GraphExecutor {
     ) -> Result<PathBuf> {
         // Get base directory from environment or defaults
         let base_dirs = vec![
-            std::env::var("BIOMEOS_PLASMID_BIN_DIR").ok().map(PathBuf::from),
+            std::env::var("BIOMEOS_PLASMID_BIN_DIR")
+                .ok()
+                .map(PathBuf::from),
             Some(PathBuf::from("./plasmidBin")),
             Some(PathBuf::from("../plasmidBin")),
             Some(PathBuf::from("../../plasmidBin")), // For workspace structure
         ];
-        
+
         // Auto-detect architecture from target triple
         let arch_suffix = std::env::consts::ARCH;
         let os = std::env::consts::OS;
-        
+
         // Common binary name patterns to try
         let binary_patterns = vec![
             // Pattern 1: primal_arch_os_musl/primal (e.g., beardog_x86_64_linux_musl/beardog)
-            format!("{}_{}_{}_{}/{}", primal_name, arch_suffix, os, "musl", primal_name),
+            format!(
+                "{}_{}_{}_{}/{}",
+                primal_name, arch_suffix, os, "musl", primal_name
+            ),
             // Pattern 2: primal_arch_os/primal (e.g., beardog_x86_64_linux/beardog)
             format!("{}_{}_{}/{}", primal_name, arch_suffix, os, primal_name),
             // Pattern 3: primals/primal/primal (e.g., primals/beardog/beardog)
@@ -304,31 +317,34 @@ impl GraphExecutor {
             // Pattern 5: just primal name (e.g., beardog)
             primal_name.to_string(),
         ];
-        
+
         // Try each base directory
         for base_dir in base_dirs.iter().filter_map(|d| d.as_ref()) {
             if !base_dir.exists() {
                 continue;
             }
-            
+
             // Try each pattern
             for pattern in &binary_patterns {
                 let candidate = base_dir.join(pattern);
                 tracing::debug!("   Trying binary path: {}", candidate.display());
-                
+
                 if candidate.exists() && candidate.is_file() {
                     tracing::info!("   ✅ Found binary: {}", candidate.display());
                     return Ok(candidate);
                 }
             }
         }
-        
+
         // Not found - provide helpful error
         anyhow::bail!(
             "Binary not found for primal '{}'. Searched in: {:?}. \
              Set BIOMEOS_PLASMID_BIN_DIR to specify binary location.",
             primal_name,
-            base_dirs.iter().filter_map(|d| d.as_ref()).collect::<Vec<_>>()
+            base_dirs
+                .iter()
+                .filter_map(|d| d.as_ref())
+                .collect::<Vec<_>>()
         )
     }
 
@@ -361,7 +377,7 @@ impl GraphExecutor {
             "primal.launch" => Self::node_primal_launch(node, context).await,
             "primal_start" => Self::node_primal_start(node, context).await, // NEW: Phase 2
             "start" => Self::node_primal_start_capability(node, context).await, // NEW: Capability-based start
-            "verification" => Self::node_verification(node, context).await, // NEW: Phase 2
+            "verification" => Self::node_verification(node, context).await,     // NEW: Phase 2
             "health.check" => Self::node_health_check(node, context).await,
             "health.check_atomic" => Self::node_health_check(node, context).await,
             "health.check_all" => Self::node_health_check_all(node, context).await,
@@ -531,36 +547,36 @@ impl GraphExecutor {
     ) -> Result<serde_json::Value> {
         use std::process::Stdio;
         use tokio::time::{sleep, Duration};
-        
+
         tracing::info!("🚀 Starting primal via capability-based discovery");
-        
+
         // Extract capability and operation parameters
         let capability = node
             .primal
             .as_ref()
             .and_then(|p| p.by_capability.as_ref())
             .ok_or_else(|| anyhow::anyhow!("Missing primal.by_capability"))?;
-        
+
         let operation = node
             .operation
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("Missing operation"))?;
-        
+
         let params = &operation.params;
         let mode = params
             .get("mode")
             .and_then(|v| v.as_str())
             .unwrap_or("server");
-        
+
         let family_id = params
             .get("family_id")
             .and_then(|v| v.as_str())
             .unwrap_or("nat0");
-        
+
         tracing::debug!("   Capability: {}", capability);
         tracing::debug!("   Mode: {}", mode);
         tracing::debug!("   Family ID: {}", family_id);
-        
+
         // 1. Capability → Primal Name Discovery (NO hardcoded paths!)
         let primal_name = match capability.as_str() {
             "security" => "beardog",
@@ -577,7 +593,7 @@ impl GraphExecutor {
                 }));
             }
         };
-        
+
         // 2. Discover binary path (capability-based, auto-detect architecture)
         let binary_full_path = match Self::discover_primal_binary(primal_name, _context).await {
             Ok(path) => path,
@@ -591,22 +607,26 @@ impl GraphExecutor {
                 }));
             }
         };
-        
-        tracing::info!("   Discovered: {} → {}", primal_name, binary_full_path.display());
-        
+
+        tracing::info!(
+            "   Discovered: {} → {}",
+            primal_name,
+            binary_full_path.display()
+        );
+
         // 3. Build socket path using nucleation (deterministic assignment)
         let socket_path = _context.get_socket_path(primal_name).await;
-        
+
         // Extract runtime directory from socket path (for dependent sockets)
         let runtime_dir = std::path::Path::new(&socket_path)
             .parent()
             .and_then(|p| p.to_str())
             .unwrap_or("/tmp");
-        
+
         // 3. Build command with primal-specific arguments
         let mut cmd = tokio::process::Command::new(&binary_full_path);
         cmd.arg(mode);
-        
+
         // Add socket path (primal-specific handling)
         match primal_name {
             "beardog" => {
@@ -626,12 +646,12 @@ impl GraphExecutor {
                 // Set socket path
                 cmd.env("SONGBIRD_SOCKET", &socket_path);
                 cmd.env("SONGBIRD_ORCHESTRATOR_FAMILY_ID", family_id);
-                
+
                 // CRITICAL: Point Songbird to BearDog (genetic bonding!)
                 let beardog_socket = _context.get_socket_path("beardog").await;
                 cmd.env("SONGBIRD_SECURITY_PROVIDER", &beardog_socket);
-                cmd.env("SECURITY_ENDPOINT", &beardog_socket);  // Alternative name
-                
+                cmd.env("SECURITY_ENDPOINT", &beardog_socket); // Alternative name
+
                 tracing::info!("   🧬 Bonding Songbird → BearDog: {}", beardog_socket);
             }
             "nestgate" | "toadstool" => {
@@ -645,9 +665,9 @@ impl GraphExecutor {
                 cmd.env("PRIMAL_SOCKET", &socket_path);
             }
         }
-        
+
         cmd.env("FAMILY_ID", family_id);
-        
+
         // Pass SSLKEYLOGFILE if set (for Wireshark TLS decryption)
         if let Ok(sslkeylogfile) = std::env::var("SSLKEYLOGFILE") {
             if !sslkeylogfile.is_empty() {
@@ -655,23 +675,41 @@ impl GraphExecutor {
                 tracing::info!("   🔐 Passing SSLKEYLOGFILE to primal: {}", sslkeylogfile);
             }
         }
-        
+
         // Capture stdout/stderr for debug visibility (Jan 23, 2026 - Deep Debt Solution)
         // This enables comprehensive debug logging from primals (e.g., BearDog v0.18.0)
         cmd.stdout(Stdio::piped());
         cmd.stderr(Stdio::piped());
-        
-        tracing::info!("   Starting: {} {} (socket: {})", primal_name, mode, socket_path);
-        
+
+        tracing::info!(
+            "   Starting: {} {} (socket: {})",
+            primal_name,
+            mode,
+            socket_path
+        );
+
         // 2.5: Pass environment variables from graph TOML (NEW - Jan 21, 2026)
         // This enables primals to receive API keys, configuration, etc.
-        tracing::info!("   DEBUG: node.operation exists? {}", node.operation.is_some());
+        tracing::info!(
+            "   DEBUG: node.operation exists? {}",
+            node.operation.is_some()
+        );
         if let Some(ref operation) = node.operation {
-            tracing::info!("   DEBUG: operation.environment exists? {}", operation.environment.is_some());
+            tracing::info!(
+                "   DEBUG: operation.environment exists? {}",
+                operation.environment.is_some()
+            );
             if let Some(ref env_map) = operation.environment {
-                tracing::info!("   🔧 Passing {} environment variables to primal", env_map.len());
+                tracing::info!(
+                    "   🔧 Passing {} environment variables to primal",
+                    env_map.len()
+                );
                 for (key, value) in env_map {
-                    tracing::info!("   Setting env: {}={}", key, if key.contains("KEY") { "***" } else { value });
+                    tracing::info!(
+                        "   Setting env: {}={}",
+                        key,
+                        if key.contains("KEY") { "***" } else { value }
+                    );
                     cmd.env(key, value);
                 }
             } else {
@@ -680,7 +718,7 @@ impl GraphExecutor {
         } else {
             tracing::warn!("   ⚠️  No operation found on node!");
         }
-        
+
         // 3. Start process with captured stdout/stderr
         let mut child = match cmd.spawn() {
             Ok(c) => c,
@@ -694,15 +732,15 @@ impl GraphExecutor {
                 }));
             }
         };
-        
+
         let pid = child.id().unwrap_or(0);
         tracing::info!("   Process started: PID {}", pid);
-        
+
         // 3.1: Relay primal stdout/stderr to Neural API logs (Deep Debt Solution - Jan 23, 2026)
         // This makes primal debug output (like BearDog v0.18.0 comprehensive logging) visible
         let primal_name_for_stdout = primal_name.to_string();
         let primal_name_for_stderr = primal_name.to_string();
-        
+
         if let Some(stdout) = child.stdout.take() {
             tokio::spawn(async move {
                 use tokio::io::{AsyncBufReadExt, BufReader};
@@ -712,7 +750,7 @@ impl GraphExecutor {
                 }
             });
         }
-        
+
         if let Some(stderr) = child.stderr.take() {
             tokio::spawn(async move {
                 use tokio::io::{AsyncBufReadExt, BufReader};
@@ -722,18 +760,25 @@ impl GraphExecutor {
                 }
             });
         }
-        
+
         // 4. Wait for socket (with timeout)
         // socket_path already defined above (line 546) - use that!
         tracing::debug!("   Waiting for socket: {}", socket_path);
-        
+
         for attempt in 1..=30 {
             if PathBuf::from(&socket_path).exists() {
-                tracing::info!("   ✅ Socket available: {} (after {}00ms)", socket_path, attempt);
-                
+                tracing::info!(
+                    "   ✅ Socket available: {} (after {}00ms)",
+                    socket_path,
+                    attempt
+                );
+
                 // Register capabilities with Neural API (NEW!)
                 if !node.capabilities.is_empty() {
-                    tracing::info!("   📝 Registering {} capabilities...", node.capabilities.len());
+                    tracing::info!(
+                        "   📝 Registering {} capabilities...",
+                        node.capabilities.len()
+                    );
                     for cap in &node.capabilities {
                         // Note: We can't call router directly here in executor
                         // This is just logging for now - actual registration happens
@@ -741,7 +786,7 @@ impl GraphExecutor {
                         tracing::info!("      - {} → {} @ {}", cap, primal_name, socket_path);
                     }
                 }
-                
+
                 return Ok(serde_json::json!({
                     "started": true,
                     "capability": capability,
@@ -755,10 +800,10 @@ impl GraphExecutor {
             }
             sleep(Duration::from_millis(100)).await;
         }
-        
+
         tracing::warn!("   ⚠️  Socket not found after 3s: {}", socket_path);
         tracing::warn!("   Process may still be starting or may have failed");
-        
+
         // Return partial success (process started but socket not confirmed)
         Ok(serde_json::json!({
             "started": true,
@@ -779,29 +824,29 @@ impl GraphExecutor {
         _context: &ExecutionContext,
     ) -> Result<serde_json::Value> {
         tracing::info!("🏥 Health check for capability-based deployment");
-        
+
         let operation = node
             .operation
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("Missing operation"))?;
-        
+
         let params = &operation.params;
-        
+
         tracing::debug!("   Health check params: {:?}", params);
-        
+
         // Extract family_id for socket checks
         let family_id = params
             .get("family_id")
             .and_then(|v| v.as_str())
             .unwrap_or("nat0");
-        
+
         let mut checks_passed = Vec::new();
         let mut checks_failed = Vec::new();
-        
+
         // Check Tower Atomic (beardog + songbird)
         if params.get("check_tower_atomic").is_some() {
             tracing::debug!("   Checking Tower Atomic...");
-            
+
             // Check beardog socket
             let beardog_socket = format!("/tmp/beardog-{}.sock", family_id);
             if PathBuf::from(&beardog_socket).exists() {
@@ -811,7 +856,7 @@ impl GraphExecutor {
                 tracing::warn!("   ❌ BearDog socket not found: {}", beardog_socket);
                 checks_failed.push("beardog_socket");
             }
-            
+
             // Check songbird socket
             let songbird_socket = format!("/tmp/songbird-{}.sock", family_id);
             if PathBuf::from(&songbird_socket).exists() {
@@ -822,11 +867,11 @@ impl GraphExecutor {
                 checks_failed.push("songbird_socket");
             }
         }
-        
+
         // Check Discovery (songbird)
         if params.get("check_discovery").is_some() {
             tracing::debug!("   Checking Discovery service...");
-            
+
             let songbird_socket = format!("/tmp/songbird-{}.sock", family_id);
             if PathBuf::from(&songbird_socket).exists() {
                 tracing::info!("   ✅ Discovery available: {}", songbird_socket);
@@ -836,11 +881,11 @@ impl GraphExecutor {
                 checks_failed.push("discovery");
             }
         }
-        
+
         // Check AI Ready (squirrel)
         if params.get("check_ai_ready").is_some() {
             tracing::debug!("   Checking AI service...");
-            
+
             let squirrel_socket = format!("/tmp/squirrel-{}.sock", family_id);
             if PathBuf::from(&squirrel_socket).exists() {
                 tracing::info!("   ✅ AI service available: {}", squirrel_socket);
@@ -850,15 +895,18 @@ impl GraphExecutor {
                 checks_failed.push("ai_service");
             }
         }
-        
+
         let all_healthy = checks_failed.is_empty();
-        
+
         if all_healthy {
-            tracing::info!("   ✅ All health checks passed ({} checks)", checks_passed.len());
+            tracing::info!(
+                "   ✅ All health checks passed ({} checks)",
+                checks_passed.len()
+            );
         } else {
             tracing::warn!("   ⚠️  Some health checks failed: {:?}", checks_failed);
         }
-        
+
         Ok(serde_json::json!({
             "healthy": all_healthy,
             "checks_passed": checks_passed,
@@ -885,12 +933,16 @@ impl GraphExecutor {
         let mut graph_map: HashMap<String, Vec<String>> = HashMap::new();
 
         // Build adjacency list and in-degree map
-        tracing::info!("🔍 Building dependency graph for {} nodes...", self.graph.nodes.len());
+        tracing::info!(
+            "🔍 Building dependency graph for {} nodes...",
+            self.graph.nodes.len()
+        );
         for node in &self.graph.nodes {
             tracing::info!("   Node '{}' depends_on: {:?}", node.id, node.depends_on);
             in_degree.entry(node.id.clone()).or_insert(0);
 
-            for dep in &node.depends_on {  // FIXED: was node.dependencies, now node.depends_on
+            for dep in &node.depends_on {
+                // FIXED: was node.dependencies, now node.depends_on
                 graph_map
                     .entry(dep.clone())
                     .or_insert_with(Vec::new)
@@ -898,7 +950,7 @@ impl GraphExecutor {
                 *in_degree.entry(node.id.clone()).or_insert(0) += 1;
             }
         }
-        
+
         tracing::info!("🔍 In-degree calculation:");
         for (id, degree) in &in_degree {
             tracing::info!("   {} → in_degree={}", id, degree);
@@ -947,7 +999,7 @@ impl GraphExecutor {
     }
 
     /// Rollback deployment
-    /// 
+    ///
     /// Future Enhancement: Implement rollback strategy
     /// - Store checkpoints during execution
     /// - Reverse operations on failure

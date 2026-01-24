@@ -119,6 +119,7 @@ mod tests {
                 operation: Operation {
                     name: "start".to_string(),
                     params: serde_json::Value::Null,
+                    environment: None,
                 },
                 input: None,
                 outputs: vec![],
@@ -161,6 +162,7 @@ mod tests {
                     operation: Operation {
                         name: "start".to_string(),
                         params: serde_json::Value::Null,
+                        environment: None,
                     },
                     input: None,
                     outputs: vec![],
@@ -173,6 +175,7 @@ mod tests {
                     operation: Operation {
                         name: "start".to_string(),
                         params: serde_json::Value::Null,
+                        environment: None,
                     },
                     input: None,
                     outputs: vec![],
@@ -203,6 +206,7 @@ mod tests {
                     operation: Operation {
                         name: "start".to_string(),
                         params: serde_json::Value::Null,
+                        environment: None,
                     },
                     input: None,
                     outputs: vec![],
@@ -215,6 +219,7 @@ mod tests {
                     operation: Operation {
                         name: "start".to_string(),
                         params: serde_json::Value::Null,
+                        environment: None,
                     },
                     input: None,
                     outputs: vec![],

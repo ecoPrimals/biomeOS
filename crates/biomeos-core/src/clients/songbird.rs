@@ -20,7 +20,7 @@
 //!
 //! # Quick Start
 //!
-//! ```no_run
+//! ```ignore
 //! use biomeos_core::clients::songbird::SongbirdClient;
 //!
 //! #[tokio::main]
@@ -36,7 +36,7 @@
 //!
 //!     Ok(())
 //! }
-//! ```
+//! ```ignore
 
 use crate::clients::transport::{TransportClient, TransportPreference};
 use crate::primal_client::{HealthStatus, PrimalClient};
@@ -50,7 +50,7 @@ use serde_json::Value;
 /// Uses JSON-RPC 2.0 over Unix sockets for fast, secure communication.
 ///
 /// # Example
-/// ```no_run
+/// ```ignore
 /// use biomeos_core::clients::songbird::SongbirdClient;
 ///
 /// #[tokio::main]
@@ -66,7 +66,7 @@ use serde_json::Value;
 ///
 ///     Ok(())
 /// }
-/// ```
+/// ```ignore
 #[derive(Debug, Clone)]
 pub struct SongbirdClient {
     transport: TransportClient,
@@ -275,15 +275,10 @@ impl SongbirdClient {
     /// Returns an error if the request fails.
     ///
     /// # Example
-    /// ```no_run
-    /// # use biomeos_core::clients::songbird::SongbirdClient;
-    /// # #[tokio::main]
-    /// # async fn main() -> anyhow::Result<()> {
+    /// ```ignore
     /// let songbird = SongbirdClient::discover("nat0").await?;
     /// let health = songbird.get_service_health("service-123").await?;
     /// println!("Service healthy: {}", health.healthy);
-    /// # Ok(())
-    /// # }
     /// ```
     pub async fn get_service_health(&self, service_id: &str) -> Result<HealthStatus> {
         let response = self

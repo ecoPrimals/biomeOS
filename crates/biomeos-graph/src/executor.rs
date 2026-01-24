@@ -581,6 +581,7 @@ mod tests {
                     operation: Operation {
                         name: "store".to_string(),
                         params: serde_json::json!({"key": "test"}),
+                        environment: None,
                     },
                     input: None,
                     outputs: vec![],
@@ -593,6 +594,7 @@ mod tests {
                     operation: Operation {
                         name: "process".to_string(),
                         params: serde_json::json!({}),
+                        environment: None,
                     },
                     input: Some("node1".to_string()),
                     outputs: vec![],
@@ -664,6 +666,7 @@ mod tests {
         let operation = Operation {
             name: "test_op".to_string(),
             params: serde_json::json!({}),
+            environment: None,
         };
 
         let result = executor
@@ -682,6 +685,7 @@ mod tests {
         let operation = Operation {
             name: "test_op".to_string(),
             params: serde_json::json!({}),
+            environment: None,
         };
 
         let result = executor.execute_operation("test_primal", &operation).await;
@@ -695,6 +699,7 @@ mod tests {
         let operation = Operation {
             name: "test_op".to_string(),
             params: serde_json::json!({}),
+            environment: None,
         };
 
         let start = std::time::Instant::now();
@@ -745,6 +750,7 @@ mod tests {
         let operation = Operation {
             name: "store_data".to_string(),
             params: serde_json::json!({"key": "value"}),
+            environment: None,
         };
 
         assert_eq!(operation.name, "store_data");

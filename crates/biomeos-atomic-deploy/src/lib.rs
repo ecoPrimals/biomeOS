@@ -31,14 +31,14 @@ pub mod primal_discovery; // NEW: Socket scanning discovery
 pub mod primal_launcher; // EVOLVING: Legacy launcher → coordinator
 
 // Neural API graph execution (TOML-based deterministic deployment)
+pub mod capability_translation;
+pub mod http_client;
+pub mod mode;
 pub mod neural_api_server;
 pub mod neural_executor;
 pub mod neural_graph;
-pub mod mode;
-pub mod nucleation;
-pub mod capability_translation;
-pub mod http_client;
-pub mod neural_router; // NEW: Capability-based routing layer
+pub mod neural_router;
+pub mod nucleation; // NEW: Capability-based routing layer
 
 pub use deployment_graph::{AtomicDeploymentGraph, DeploymentResult};
 pub use health_check::{HealthChecker, HealthStatus};

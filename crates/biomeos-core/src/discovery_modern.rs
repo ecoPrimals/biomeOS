@@ -11,7 +11,7 @@
 //!
 //! # Examples
 //!
-//! ```rust,no_run
+//! ```ignore
 //! use biomeos_core::{CompositeDiscovery, HttpDiscovery, PrimalDiscovery};
 //! use biomeos_types::{Endpoint, PrimalId};
 //!

@@ -247,6 +247,14 @@ async fn configure_primal_sockets(
         }
         "songbird" => {
             // Songbird: Needs bonding with BearDog (Tower Atomic!)
+            //
+            // ⚠️  EVOLUTION NEEDED (see SONGBIRD_IPC_EVOLUTION_REQUIRED_JAN_25_2026.md):
+            // Once Songbird supports `--socket` CLI flag (like BearDog), update to:
+            //   cmd.arg("--socket").arg(socket_path);
+            //   cmd.arg("--family-id").arg(family_id);
+            //   cmd.arg("--beardog-socket").arg(&beardog_socket);
+            //
+            // Current: Environment variables (works with existing Songbird binary)
             cmd.env("SONGBIRD_SOCKET", socket_path);
             cmd.env("SONGBIRD_ORCHESTRATOR_FAMILY_ID", family_id);
 
@@ -254,6 +262,7 @@ async fn configure_primal_sockets(
             let beardog_socket = context.get_socket_path("beardog").await;
             cmd.env("SONGBIRD_SECURITY_PROVIDER", &beardog_socket);
             cmd.env("SECURITY_ENDPOINT", &beardog_socket); // Alternative name
+            cmd.env("BEARDOG_SOCKET", &beardog_socket); // For songbird-http-client
 
             info!("   🧬 Bonding Songbird → BearDog: {}", beardog_socket);
         }

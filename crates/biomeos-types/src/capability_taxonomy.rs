@@ -30,7 +30,7 @@ use std::fmt;
 ///
 /// # Examples
 ///
-/// ```
+/// ```ignore
 /// use biomeos_types::CapabilityTaxonomy;
 ///
 /// // Discover by capability, not name

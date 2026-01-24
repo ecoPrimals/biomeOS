@@ -3,6 +3,13 @@
 #
 # This graph creates the Tower Atomic (BearDog + Songbird)
 # which serves as generation 0 security foundation for all other primals
+#
+# ⚠️  STATUS: BLOCKED - Awaiting Songbird IPC Evolution
+# Songbird's `http.request` capability is currently library-only (songbird-http-client).
+# For this graph to work, Songbird needs to:
+#   1. Add `--socket` option to `songbird server` command
+#   2. Expose JSON-RPC methods (http.request, http.get) via Unix socket
+# See: SONGBIRD_IPC_EVOLUTION_REQUIRED_JAN_25_2026.md
 
 [graph]
 id = "tower_atomic_bootstrap"

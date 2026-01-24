@@ -464,7 +464,7 @@ mod tests {
         for _ in 0..2 {
             let _ = breaker
                 .call(|| async {
-                    Err::<(), _>(BirdSongError::Integration("test failure".to_string()))
+                    Err::<(), _>(BirdSongError::RetryExhausted("test failure".to_string()))
                 })
                 .await;
         }
@@ -473,7 +473,7 @@ mod tests {
 
         // 3rd failure should open circuit
         let _ = breaker
-            .call(|| async { Err::<(), _>(BirdSongError::Integration("test failure".to_string())) })
+            .call(|| async { Err::<(), _>(BirdSongError::RetryExhausted("test failure".to_string())) })
             .await;
 
         assert!(breaker.is_open().await);
@@ -487,7 +487,7 @@ mod tests {
         for _ in 0..2 {
             let _ = breaker
                 .call(|| async {
-                    Err::<(), _>(BirdSongError::Integration("test failure".to_string()))
+                    Err::<(), _>(BirdSongError::RetryExhausted("test failure".to_string()))
                 })
                 .await;
         }
@@ -507,7 +507,7 @@ mod tests {
         // Open the circuit
         for _ in 0..2 {
             let _ = breaker
-                .call(|| async { Err::<(), _>(BirdSongError::Integration("test".to_string())) })
+                .call(|| async { Err::<(), _>(BirdSongError::RetryExhausted("test".to_string())) })
                 .await;
         }
 

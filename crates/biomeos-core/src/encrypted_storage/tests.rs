@@ -102,7 +102,7 @@ impl StorageBackend for MockStorageBackend {
 /// To run these tests, start BearDog first:
 /// ```bash
 /// ./plasmidBin/primals/beardog-server
-/// ```
+/// ```ignore
 async fn create_test_storage() -> Result<EncryptedStorage> {
     let backend = Arc::new(MockStorageBackend::new());
     let beardog = BearDogClient::discover("test_family").await?;

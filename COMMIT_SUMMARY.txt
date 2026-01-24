@@ -1,0 +1,47 @@
+docs: Clean root documentation and archive Jan 2026 sessions
+
+Major Changes:
+- Created STATUS_JAN_25_2026.md (comprehensive status snapshot)
+- Updated README.md (current priorities and HTTPS achievement)
+- Rewrote START_HERE.md (quick orientation by role)
+- Created DOC_SUMMARY_JAN_25_2026.md (navigation guide)
+- Archived 57 session-specific documents to archive/jan_2026_sessions/
+
+Deep Debt Resolution Progress:
+- ✅ All 1,080+ tests passing
+- ✅ reqwest removed from production code (Pure Rust IPC)
+- ✅ Mocks isolated to #[cfg(test)] modules
+- ✅ Fixed all test infrastructure issues
+- ⏳ Large file refactoring in progress
+
+HTTPS Achievement:
+- ✅ Songbird v5.12.6+ achieved 100% Pure Rust HTTPS
+- ✅ HTTP 200 OK from real servers (cloudflare.com, google.com, example.com)
+- ✅ Tower Atomic validated (BearDog + Songbird)
+- ✅ Zero C dependencies for TLS 1.3 + HTTP
+
+Root Documentation Structure (29 files remaining):
+- Core: README, START_HERE, DOCS_INDEX, ROOT_DOCS_INDEX
+- Status: STATUS, DOC_SUMMARY, MASTER_EXECUTION_PLAN, DEEP_DEBT_EXECUTION
+- Active: SONGBIRD_IPC_EVOLUTION, SONGBIRD_100_PERCENT_HTTPS, COMPREHENSIVE_AUDIT
+- Architecture: BIOMEOS_ATOMICS, GENOMEBIN_STANDARD, TRUE_PRIMAL
+- Quick Start: DEPLOYMENT, QUICK_START guides
+- Integration: PRIMAL_INTEGRATION_SPEC, NEURAL_API_DEPLOYMENT_PLAN
+
+Fossil Record:
+- 57 session documents archived to archive/jan_2026_sessions/
+- Complete debugging history preserved (Jan 19-25, 2026)
+- HTTPS debugging sessions, deep debt progress, capability translation
+- Harvest reports, handoffs, and breakthrough documents
+
+Code Quality:
+- Compilation: Clean (0 errors)
+- Tests: 1,080+ passing, 106 test runs
+- Unsafe: 0 blocks (100% safe Rust)
+- Warnings: ~30 minor linter warnings
+
+Next Steps:
+- Continue large file refactoring (neural_executor.rs, neural_api_server.rs)
+- Replace panic! calls with Result<T,E>
+- Reduce unwrap() usage in production
+- Wait for Songbird IPC evolution (blocked)

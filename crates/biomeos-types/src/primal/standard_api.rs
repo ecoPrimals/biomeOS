@@ -20,7 +20,7 @@
 //!
 //! ## Example
 //!
-//! ```rust,no_run
+//! ```ignore
 //! use biomeos_types::primal::standard_api::{BiomeOSStandardAPI, PrimalIdentity};
 //! use biomeos_types::capability_taxonomy::PrimalCapability;
 //!

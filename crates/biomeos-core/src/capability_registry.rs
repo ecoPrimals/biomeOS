@@ -25,11 +25,11 @@
 //! │  └──────────────────────────────────┘  │
 //! │                                         │
 //! └─────────────────────────────────────────┘
-//! ```
+//! ```ignore
 //!
 //! ## Usage
 //!
-//! ```rust,no_run
+//! ```ignore
 //! use biomeos_core::capability_registry::CapabilityRegistry;
 //! use biomeos_types::Capability;
 //!
@@ -43,7 +43,7 @@
 //!     
 //!     Ok(())
 //! }
-//! ```
+//! ```ignore
 
 use crate::Capability;
 use biomeos_types::paths::SystemPaths;

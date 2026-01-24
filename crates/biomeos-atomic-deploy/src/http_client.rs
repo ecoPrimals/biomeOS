@@ -35,11 +35,11 @@ impl BiomeOsHttpClient {
     ///
     /// This delegates all HTTP requests to Songbird (Tower Atomic)
     pub fn new() -> Self {
-        let songbird_socket = std::env::var("SONGBIRD_SOCKET")
-            .unwrap_or_else(|_| {
-                let family_id = std::env::var("BIOMEOS_FAMILY_ID").unwrap_or_else(|_| "nat0".to_string());
-                format!("/tmp/songbird-{}.sock", family_id)
-            });
+        let songbird_socket = std::env::var("SONGBIRD_SOCKET").unwrap_or_else(|_| {
+            let family_id =
+                std::env::var("BIOMEOS_FAMILY_ID").unwrap_or_else(|_| "nat0".to_string());
+            format!("/tmp/songbird-{}.sock", family_id)
+        });
 
         info!("🌐 biomeOS HTTP client initialized (via Tower Atomic)");
         debug!("   Songbird socket: {}", songbird_socket);
@@ -63,23 +63,29 @@ impl BiomeOsHttpClient {
     pub async fn get(&self, url: &str) -> Result<String> {
         info!("🌐 HTTP GET: {}", url);
         let response = self.request("GET", url, HashMap::new(), None).await?;
-        
-        let body = response.body.as_str()
+
+        let body = response
+            .body
+            .as_str()
             .context("Response body is not a string")?
             .to_string();
-        
+
         Ok(body)
     }
 
     /// Perform HTTP POST request
     pub async fn post(&self, url: &str, body: Value) -> Result<String> {
         info!("🌐 HTTP POST: {}", url);
-        let response = self.request("POST", url, HashMap::new(), Some(body)).await?;
-        
-        let body = response.body.as_str()
+        let response = self
+            .request("POST", url, HashMap::new(), Some(body))
+            .await?;
+
+        let body = response
+            .body
+            .as_str()
             .context("Response body is not a string")?
             .to_string();
-        
+
         Ok(body)
     }
 
@@ -100,7 +106,7 @@ impl BiomeOsHttpClient {
     pub async fn fetch_binary(&self, url: &str) -> Result<Vec<u8>> {
         info!("📦 Fetching binary: {}", url);
         let body = self.get(url).await?;
-        
+
         // For now, HTTP returns string body
         // TODO: Support binary responses when Songbird adds base64 encoding
         Ok(body.into_bytes())
@@ -148,7 +154,10 @@ impl BiomeOsHttpClient {
         // Connect to Songbird
         let mut stream = UnixStream::connect(&self.songbird_socket)
             .await
-            .context(format!("Failed to connect to Songbird at {}", self.songbird_socket))?;
+            .context(format!(
+                "Failed to connect to Songbird at {}",
+                self.songbird_socket
+            ))?;
 
         // Send request
         let request_json = serde_json::to_string(&rpc_request)?;
@@ -162,8 +171,8 @@ impl BiomeOsHttpClient {
         debug!("← Songbird: {}", response_buf);
 
         // Parse JSON-RPC response
-        let rpc_response: Value = serde_json::from_str(&response_buf)
-            .context("Failed to parse JSON-RPC response")?;
+        let rpc_response: Value =
+            serde_json::from_str(&response_buf).context("Failed to parse JSON-RPC response")?;
 
         // Check for errors
         if let Some(error) = rpc_response.get("error") {
@@ -171,13 +180,17 @@ impl BiomeOsHttpClient {
         }
 
         // Extract result
-        let result = rpc_response.get("result")
+        let result = rpc_response
+            .get("result")
             .context("No result in RPC response")?;
 
-        let http_response: HttpResponse = serde_json::from_value(result.clone())
-            .context("Failed to parse HTTP response")?;
+        let http_response: HttpResponse =
+            serde_json::from_value(result.clone()).context("Failed to parse HTTP response")?;
 
-        info!("✅ HTTP {} {} → Status: {}", method, url, http_response.status);
+        info!(
+            "✅ HTTP {} {} → Status: {}",
+            method, url, http_response.status
+        );
 
         Ok(http_response)
     }
@@ -204,4 +217,3 @@ mod tests {
         let _client = BiomeOsHttpClient::default();
     }
 }
-
