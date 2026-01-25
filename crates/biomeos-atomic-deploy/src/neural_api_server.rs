@@ -1294,10 +1294,19 @@ impl NeuralApiServer {
     ///
     /// Maps semantic capability names to provider-specific method names
     async fn capability_call(&self, params: &Option<Value>) -> Result<Value> {
+        let start = std::time::Instant::now();
+        let request_id = uuid::Uuid::new_v4().to_string();
+        
         let params = params.as_ref().context("Missing parameters")?;
         let capability = params["capability"]
             .as_str()
             .context("Missing 'capability' field")?;
+
+        // Support both "operation" (semantic) and "method" (actual)
+        let operation = params
+            .get("operation")
+            .or_else(|| params.get("method"))
+            .and_then(|v| v.as_str());
 
         // Support both "args" and "params" for compatibility (different primals may use either)
         let args = params
@@ -1306,15 +1315,73 @@ impl NeuralApiServer {
             .cloned()
             .unwrap_or(json!({}));
 
-        info!("🔄 Capability call (with translation): {}", capability);
+        info!(
+            "🔄 capability.call: {} {}",
+            capability,
+            operation.map(|op| format!("→ {}", op)).unwrap_or_else(|| "(direct)".to_string())
+        );
         debug!("   Args: {}", args);
+        debug!("   Operation provided: {}", operation.is_some());
 
-        let registry = self.translation_registry.read().await;
-        debug!("   Registry has {} translations", registry.list_all().len());
+        // ENHANCED: Support semantic operation routing (e.g., http.post for secure_http capability)
+        let result = if let Some(op) = operation {
+            // Operation-based call (e.g., "http.post" for "secure_http" capability)
+            // Step 1: Discover which primal provides this capability
+            let atomic = self
+                .router
+                .discover_capability(capability)
+                .await
+                .with_context(|| format!("No provider for capability: {}", capability))?;
 
-        let result = registry.call_capability(capability, args).await?;
+            debug!("   Provider: {} primals", atomic.primals.len());
 
-        debug!("   ✅ Result received from provider");
+            // Step 2: Translate semantic operation to actual method (if needed)
+            let registry = self.translation_registry.read().await;
+            let actual_method = if let Some(translation) = registry.get_translation(capability) {
+                // Check if there's a method mapping for this operation
+                translation.metadata
+                    .get("methods")
+                    .and_then(|methods| methods.get(op))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or(op)
+                    .to_string()
+            } else {
+                // No translation, use operation as-is
+                op.to_string()
+            };
+
+            debug!("   Translated: {} → {}", op, actual_method);
+
+            // Step 3: Forward request to provider
+            let result = self
+                .router
+                .forward_request(&atomic.primary_socket, &actual_method, &args)
+                .await?;
+
+            // Log metrics
+            let latency = start.elapsed().as_millis() as u64;
+            self.router
+                .log_metric(RoutingMetrics {
+                    request_id: request_id.clone(),
+                    capability: capability.to_string(),
+                    method: actual_method,
+                    routed_through: atomic.primals.iter().map(|p| p.name.clone()).collect(),
+                    latency_ms: latency,
+                    success: true,
+                    timestamp: chrono::Utc::now(),
+                    error: None,
+                })
+                .await;
+
+            info!("   ✓ capability.call complete in {}ms", latency);
+            result
+        } else {
+            // Legacy: Use translation registry (for backwards compatibility)
+            debug!("   Using translation registry");
+            let registry = self.translation_registry.read().await;
+            registry.call_capability(capability, args).await?
+        };
+
         Ok(result)
     }
 
