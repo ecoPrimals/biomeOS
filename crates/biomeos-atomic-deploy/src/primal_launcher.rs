@@ -182,7 +182,7 @@ mod tests {
     fn test_socket_env_key() {
         let launcher = PrimalLauncher {
             binary_dir: PathBuf::from("/tmp"),
-            runtime_dir: PathBuf::from("/tmp"),
+            _runtime_dir: PathBuf::from("/tmp"),
         };
 
         assert_eq!(launcher.socket_env_key("beardog-server"), "BEARDOG_SOCKET");

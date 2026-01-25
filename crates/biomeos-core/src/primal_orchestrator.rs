@@ -558,13 +558,7 @@ mod tests {
         }
 
         async fn health_check(&self) -> BiomeResult<HealthStatus> {
-            Ok(HealthStatus::Healthy {
-                last_check: std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
-                    .as_secs(),
-                consecutive_successes: 1,
-            })
+            Ok(HealthStatus::Healthy)
         }
     }
 
