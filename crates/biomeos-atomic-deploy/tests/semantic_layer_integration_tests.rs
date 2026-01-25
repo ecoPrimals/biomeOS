@@ -236,7 +236,9 @@ async fn test_multiple_capabilities_same_provider() {
                                 "id": id
                             });
 
-                            let _ = socket.write_all(serde_json::to_string(&response).unwrap().as_bytes()).await;
+                            let _ = socket
+                                .write_all(serde_json::to_string(&response).unwrap().as_bytes())
+                                .await;
                             let _ = socket.flush().await;
                         }
                     }
@@ -278,10 +280,14 @@ async fn test_multiple_capabilities_same_provider() {
     assert!(caps.contains(&"crypto.encrypt".to_string()));
 
     // Test each capability
-    let result1 = registry.call_capability("crypto.generate_keypair", json!({})).await;
+    let result1 = registry
+        .call_capability("crypto.generate_keypair", json!({}))
+        .await;
     assert!(result1.is_ok());
 
-    let result2 = registry.call_capability("crypto.ecdh_derive", json!({})).await;
+    let result2 = registry
+        .call_capability("crypto.ecdh_derive", json!({}))
+        .await;
     assert!(result2.is_ok());
 
     let result3 = registry.call_capability("crypto.encrypt", json!({})).await;
@@ -360,12 +366,12 @@ fn test_registry_list_all() {
         .find(|t| t.semantic == "crypto.generate_keypair")
         .unwrap();
     assert_eq!(crypto_translation.provider, "beardog");
-    assert_eq!(crypto_translation.actual_method, "x25519_generate_ephemeral");
+    assert_eq!(
+        crypto_translation.actual_method,
+        "x25519_generate_ephemeral"
+    );
 
-    let http_translation = all
-        .iter()
-        .find(|t| t.semantic == "http.request")
-        .unwrap();
+    let http_translation = all.iter().find(|t| t.semantic == "http.request").unwrap();
     assert_eq!(http_translation.provider, "songbird");
     assert_eq!(http_translation.actual_method, "http_request");
 }
@@ -409,7 +415,9 @@ async fn test_provider_error_handling() {
                         "id": id
                     });
 
-                    let _ = socket.write_all(serde_json::to_string(&error_response).unwrap().as_bytes()).await;
+                    let _ = socket
+                        .write_all(serde_json::to_string(&error_response).unwrap().as_bytes())
+                        .await;
                     let _ = socket.flush().await;
                 }
             }
@@ -441,11 +449,8 @@ async fn test_isomorphic_evolution_scenario() {
     let socket_path = "/tmp/test-semantic-evolution.sock";
 
     // Old provider uses "old_method_name"
-    let old_server = MockPrimalServer::new(
-        socket_path,
-        "old_method_name",
-        json!({"status": "old"}),
-    );
+    let old_server =
+        MockPrimalServer::new(socket_path, "old_method_name", json!({"status": "old"}));
     let handle = old_server.start().await;
     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
@@ -468,11 +473,8 @@ async fn test_isomorphic_evolution_scenario() {
     let _ = std::fs::remove_file(socket_path);
 
     // New provider uses "new_method_name"
-    let new_server = MockPrimalServer::new(
-        socket_path,
-        "new_method_name",
-        json!({"status": "new"}),
-    );
+    let new_server =
+        MockPrimalServer::new(socket_path, "new_method_name", json!({"status": "new"}));
     let _new_handle = new_server.start().await;
     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
@@ -494,4 +496,3 @@ async fn test_isomorphic_evolution_scenario() {
 
     let _ = std::fs::remove_file(socket_path);
 }
-

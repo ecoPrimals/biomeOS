@@ -53,6 +53,13 @@ struct JsonRpcError {
 /// Call a Unix socket JSON-RPC method
 ///
 /// **Deep Debt Principle**: Shared utility, no duplication across layers
+///
+/// # Errors
+///
+/// Returns error if:
+/// - Unix socket connection fails
+/// - JSON-RPC request fails  
+/// - Response deserialization fails
 pub async fn call_unix_socket_rpc<T: serde::de::DeserializeOwned>(
     socket_path: impl AsRef<Path>,
     method: &str,
@@ -101,7 +108,7 @@ pub async fn call_unix_socket_rpc<T: serde::de::DeserializeOwned>(
     let response: JsonRpcResponse = serde_json::from_str(&response_line).map_err(|e| {
         Error::invalid_response(
             socket_path.display().to_string(),
-            format!("Invalid JSON-RPC response: {}", e),
+            format!("Invalid JSON-RPC response: {e}"),
         )
     })?;
 

@@ -3,7 +3,6 @@
 
 use anyhow::{Context, Result};
 use sha2::{Digest, Sha256};
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use tracing::{info, warn};
 

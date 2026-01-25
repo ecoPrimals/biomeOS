@@ -44,7 +44,7 @@ impl PrimalInstance {
 #[derive(Debug)]
 pub struct PrimalLauncher {
     binary_dir: PathBuf,
-    runtime_dir: PathBuf,
+    _runtime_dir: PathBuf,
 }
 
 impl PrimalLauncher {
@@ -58,7 +58,7 @@ impl PrimalLauncher {
 
         Ok(Self {
             binary_dir,
-            runtime_dir,
+            _runtime_dir: runtime_dir,
         })
     }
 

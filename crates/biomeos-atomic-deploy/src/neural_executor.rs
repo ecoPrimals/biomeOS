@@ -524,7 +524,7 @@ impl GraphExecutor {
     /// Node executor: report.deployment_success
     async fn node_deployment_report(
         node: &GraphNode,
-        context: &ExecutionContext,
+        _context: &ExecutionContext,
     ) -> Result<serde_json::Value> {
         let atomics = node
             .config
@@ -1432,6 +1432,7 @@ impl GraphExecutor {
 
     /// Find BearDog socket from execution context
     /// Used for JWT provisioning and other security capabilities
+    #[allow(dead_code)] // Used conditionally based on security features
     async fn find_beardog_socket(context: &ExecutionContext) -> Option<String> {
         // Try to get from outputs first (from launch_beardog node)
         if let Some(beardog_output) = context.get_output("launch_beardog").await {
@@ -1454,6 +1455,7 @@ impl GraphExecutor {
     ///
     /// NOTE: This is the legacy implementation. New code should use
     /// beardog_jwt_client module for better separation of concerns.
+    #[allow(dead_code)] // Legacy fallback, kept for compatibility
     async fn request_jwt_secret_from_beardog(beardog_socket: &str) -> Result<String> {
         use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
         use tokio::net::UnixStream;
@@ -1524,6 +1526,7 @@ impl GraphExecutor {
 
     /// Generate a secure JWT_SECRET as fallback
     /// Used when BearDog is not available
+    #[allow(dead_code)] // Fallback function, used conditionally
     fn generate_jwt_secret() -> String {
         use rand::Rng;
 

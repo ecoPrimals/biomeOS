@@ -28,6 +28,7 @@ struct JwtSecretParams {
 
 /// Response from BearDog JWT secret generation
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)] // Fields used in deserialization
 struct JwtSecretResponse {
     jsonrpc: String,
     result: JwtSecretResult,

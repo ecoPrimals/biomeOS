@@ -4,7 +4,7 @@
 //!
 //! NUCLEUS provides secure, authenticated, capability-based discovery by coordinating
 //! existing primal capabilities:
-//! - **BearDog**: Cryptographic identity, trust verification
+//! - **`BearDog`**: Cryptographic identity, trust verification
 //! - **Songbird**: Physical discovery, communication routing
 //! - **biomeOS**: Orchestration, capability validation
 //!

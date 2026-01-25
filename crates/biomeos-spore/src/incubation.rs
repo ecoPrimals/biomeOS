@@ -273,7 +273,7 @@ pub struct FederationInfo {
 /// Spore incubator - Handles deployment of spores on local computers
 pub struct SporeIncubator {
     spore_path: PathBuf,
-    spore_seed: FamilySeed,
+    _spore_seed: FamilySeed,
 }
 
 impl SporeIncubator {
@@ -289,7 +289,7 @@ impl SporeIncubator {
 
         Ok(Self {
             spore_path,
-            spore_seed,
+            _spore_seed: spore_seed,
         })
     }
 
@@ -305,7 +305,7 @@ impl SporeIncubator {
     pub async fn incubate(
         &self,
         computer_name: Option<&str>,
-        deploy_local: bool,
+        _deploy_local: bool, // TODO: Will be used for local vs remote deployment choice
     ) -> SporeResult<IncubatedNode> {
         info!("Incubating spore on local computer");
 

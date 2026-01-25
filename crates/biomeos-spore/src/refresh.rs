@@ -6,7 +6,6 @@ use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
 use tracing::{info, warn};
 
-use crate::error::SporeResult;
 use crate::manifest::{BinaryManifest, SporeManifest};
 use crate::verification::{SporeVerifier, VerificationStatus};
 
@@ -190,7 +189,7 @@ impl SporeRefresher {
         spore_path: &Path,
         refreshed_binaries: &[RefreshedBinary],
     ) -> Result<()> {
-        let manifest_path = spore_path.join(".manifest.toml");
+        let _manifest_path = spore_path.join(".manifest.toml");
 
         // Load existing manifest or create new one
         let mut manifest = match SporeManifest::load(spore_path) {

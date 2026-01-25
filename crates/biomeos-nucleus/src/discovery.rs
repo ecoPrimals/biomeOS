@@ -103,7 +103,7 @@ pub struct DiscoveryLayer {
     /// Songbird Unix socket path (discovered at runtime, not hardcoded!)
     songbird_socket: Option<String>,
     /// System paths (XDG-compliant)
-    paths: SystemPaths,
+    _paths: SystemPaths,
 }
 
 impl DiscoveryLayer {
@@ -123,7 +123,7 @@ impl DiscoveryLayer {
 
         Ok(Self {
             songbird_socket: Some(songbird_socket),
-            paths,
+            _paths: paths,
         })
     }
 

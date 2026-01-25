@@ -22,7 +22,7 @@
 //! Total: 25 comprehensive integration tests
 
 use anyhow::Result;
-use biomeos_federation::beardog_client::{BearDogClient, LineageVerificationResponse};
+use biomeos_federation::beardog_client::BearDogClient;
 use biomeos_types::identifiers::FamilyId;
 use sha2::{Digest, Sha256};
 

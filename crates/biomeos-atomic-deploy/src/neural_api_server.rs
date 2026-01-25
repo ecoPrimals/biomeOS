@@ -1369,6 +1369,7 @@ impl NeuralApiServer {
 
 /// JSON-RPC request
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)] // Used in deserialization
 struct JsonRpcRequest {
     jsonrpc: String,
     method: String,
