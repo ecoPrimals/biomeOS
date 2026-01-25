@@ -21,7 +21,7 @@ use biomeos_types::{
 
 use crate::{
     capabilities::{Capability, PrimalConfig},
-    primal_health::HealthStatus,
+    discovery_modern::HealthStatus,
     primal_orchestrator::ManagedPrimal,
 };
 
@@ -239,51 +239,21 @@ impl ManagedPrimal for GenericManagedPrimal {
                     );
                     *process_guard = None; // Clear the handle
 
-                    Ok(HealthStatus::Unhealthy {
-                        reason: format!("Primal {} exited: {:?}", self.id, exit_status),
-                        since: std::time::SystemTime::now()
-                            .duration_since(std::time::UNIX_EPOCH)
-                            .unwrap_or(std::time::Duration::from_secs(0))
-                            .as_secs(),
-                        consecutive_failures: 1,
-                        recovery_attempts: 0,
-                    })
+                    Ok(HealthStatus::Unhealthy)
                 }
                 Ok(None) => {
                     // Process still running - healthy
-                    Ok(HealthStatus::Healthy {
-                        last_check: std::time::SystemTime::now()
-                            .duration_since(std::time::UNIX_EPOCH)
-                            .unwrap_or(std::time::Duration::from_secs(0))
-                            .as_secs(),
-                        consecutive_successes: 1,
-                    })
+                    Ok(HealthStatus::Healthy)
                 }
                 Err(e) => {
                     // Error checking process status
                     warn!("Failed to check process status for {}: {}", self.id, e);
-                    Ok(HealthStatus::Unhealthy {
-                        reason: format!("Failed to check status: {}", e),
-                        since: std::time::SystemTime::now()
-                            .duration_since(std::time::UNIX_EPOCH)
-                            .unwrap_or(std::time::Duration::from_secs(0))
-                            .as_secs(),
-                        consecutive_failures: 1,
-                        recovery_attempts: 0,
-                    })
+                    Ok(HealthStatus::Unhealthy)
                 }
             }
         } else {
             // No process handle - unhealthy
-            Ok(HealthStatus::Unhealthy {
-                reason: format!("Primal {} not running", self.id),
-                since: std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap_or(std::time::Duration::from_secs(0))
-                    .as_secs(),
-                consecutive_failures: 1,
-                recovery_attempts: 0,
-            })
+            Ok(HealthStatus::Unhealthy)
         }
     }
 

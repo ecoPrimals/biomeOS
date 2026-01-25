@@ -23,9 +23,35 @@ use biomeos_types::{
 
 use crate::{
     capabilities::Capability,
-    primal_health::{HealthStatus, PrimalHealthMonitor},
+    discovery_modern::HealthStatus,
     retry::RetryPolicy,
 };
+
+// Temporary stub for PrimalHealthMonitor (was in removed primal_health module)
+#[derive(Clone)]
+pub struct PrimalHealthMonitor;
+
+impl PrimalHealthMonitor {
+    pub fn builder() -> PrimalHealthMonitorBuilder {
+        PrimalHealthMonitorBuilder
+    }
+    
+    pub async fn register(&self, _id: PrimalId, _endpoint: biomeos_types::identifiers::Endpoint) {
+        // TODO: Implement health monitoring after reqwest removal
+    }
+    
+    pub async fn unregister(&self, _id: &PrimalId) {
+        // TODO: Implement health monitoring after reqwest removal
+    }
+}
+
+pub struct PrimalHealthMonitorBuilder;
+
+impl PrimalHealthMonitorBuilder {
+    pub fn build(self) -> PrimalHealthMonitor {
+        PrimalHealthMonitor
+    }
+}
 
 /// Represents a primal's lifecycle state
 #[derive(Debug, Clone, PartialEq, Eq)]
