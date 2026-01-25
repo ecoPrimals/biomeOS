@@ -202,9 +202,9 @@ See [LICENSE](LICENSE) for details.
 
 ## 🔗 Related Projects
 
-- **[BearDog](../beardog/)** - Pure Rust cryptography primal
-- **[Songbird](../songbird/)** - Pure Rust HTTP/TLS primal
-- **[wateringHole](../../wateringHole/)** - Inter-primal standards
+- **[BearDog](https://github.com/ecoPrimals/beardog)** - Pure Rust cryptography primal
+- **[Songbird](https://github.com/ecoPrimals/songbird)** - Pure Rust HTTP/TLS primal
+- **[wateringHole](https://github.com/ecoPrimals/wateringHole)** - Inter-primal standards & protocols
 
 ---
 

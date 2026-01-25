@@ -175,11 +175,11 @@ Historical documentation organized by session:
 
 ### Standards
 - **[GENOMEBIN_ARCHITECTURE_STANDARD.md](./GENOMEBIN_ARCHITECTURE_STANDARD.md)** - genomeBin
-- **[../../wateringHole/](../../wateringHole/)** - Inter-primal standards
-  - PRIMAL_IPC_PROTOCOL.md
-  - SEMANTIC_METHOD_NAMING_STANDARD.md
-  - UNIBIN_ARCHITECTURE_STANDARD.md
-  - ECOBIN_ARCHITECTURE_STANDARD.md
+- **[wateringHole](https://github.com/ecoPrimals/wateringHole)** - Inter-primal standards (official repo)
+  - [PRIMAL_IPC_PROTOCOL.md](https://github.com/ecoPrimals/wateringHole/blob/master/PRIMAL_IPC_PROTOCOL.md)
+  - [SEMANTIC_METHOD_NAMING_STANDARD.md](https://github.com/ecoPrimals/wateringHole/blob/master/SEMANTIC_METHOD_NAMING_STANDARD.md)
+  - [UNIBIN_ARCHITECTURE_STANDARD.md](https://github.com/ecoPrimals/wateringHole/blob/master/UNIBIN_ARCHITECTURE_STANDARD.md)
+  - [ECOBIN_ARCHITECTURE_STANDARD.md](https://github.com/ecoPrimals/wateringHole/blob/master/ECOBIN_ARCHITECTURE_STANDARD.md)
 
 ---
 
