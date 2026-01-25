@@ -48,6 +48,6 @@ sha2 = "0.10"
 [dev-dependencies]
 biomeos-test-utils = { path = "../biomeos-test-utils" }
 # Testing HTTP client - for benchmarks comparing Tower atomic vs HTTP
-reqwest = { workspace = true } # For testing/benchmarking only
+# reqwest = { workspace = true }  # REMOVED: CLI uses atomic_client for Pure Rust # For testing/benchmarking only
 tokio = { workspace = true, features = ["full"] }
 tempfile = { workspace = true }

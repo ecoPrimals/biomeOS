@@ -23,7 +23,7 @@ chrono = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = "0.3"
-reqwest = { workspace = true, optional = true }  # DEPRECATED: HTTP transport (use atomic_client instead)
+# reqwest = { workspace = true, optional = true }  # REMOVED: Deprecated HTTP transport, use Tower Atomic (Songbird + BearDog)
 futures = "0.3"
 hex = "0.4"
 clap = { version = "4.5", features = ["derive", "env"] }
@@ -69,6 +69,4 @@ tracing-test = "0.2"
 
 [features]
 default = []
-# DEPRECATED: HTTP transport (C dependencies via reqwest->openssl-sys)
-# Use atomic_client for Pure Rust Unix socket communication instead
-http-transport = ["reqwest"]
+# http-transport = [] # REMOVED: HTTP transport removed, use atomic_client

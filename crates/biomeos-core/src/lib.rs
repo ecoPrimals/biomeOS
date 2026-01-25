@@ -13,34 +13,15 @@ pub mod atomic_client;
 // Primal adapter pattern (CLI-agnostic integration)
 pub mod primal_adapter;
 
-// API adapter pattern (DEPRECATED - HTTP-based, use atomic_client!)
-#[cfg(feature = "http-transport")]
-pub mod api_adapter;
-
-// Encrypted storage layer (DEPRECATED - uses HTTP clients)
-#[cfg(feature = "http-transport")]
-pub mod encrypted_storage;
-
-// Primal client infrastructure
-// TEMP DISABLED: Being refactored to proper concurrent architecture (see DEEP_DEBT_CONCURRENT_EVOLUTION_PLAN_JAN13.md)
-// Will re-enable after concurrent evolution is complete (91 errors need systematic fix)
-#[cfg(feature = "http-transport")]
-pub mod adaptive_client; // DEPRECATED: Adaptive HTTP client (use atomic_client instead!)
+// Core modules
 pub mod capabilities; // Capability-based architecture (zero hardcoding)
 pub mod capability_registry; // Central capability registry with Unix socket IPC
-#[cfg(feature = "http-transport")]
-pub mod clients; // DEPRECATED: HTTP-based clients (use atomic_client!)
 pub mod concurrent_startup; // Wave-based concurrent primal startup
 pub mod deployment_mode;
 pub mod discovery_bootstrap;
-#[cfg(feature = "http-transport")]
-pub mod discovery_http; // DEPRECATED: HTTP-based discovery (use biomeos-federation instead!)
 pub mod discovery_modern; // Modern trait-based discovery
 pub mod family_credentials; // Secure family seed management
-#[cfg(feature = "http-transport")]
-pub mod primal_client; // DEPRECATED: HTTP-based primal client (use atomic_client!)
 pub mod primal_discovery; // Auto-discovery of primals from directories
-pub mod primal_health; // Primal health monitoring
 pub mod primal_impls; // Concrete primal implementations
 pub mod primal_orchestrator; // Async primal lifecycle orchestration
 pub mod retry; // Retry logic and circuit breaker
@@ -83,19 +64,7 @@ pub use universal_biomeos_manager::{HealthMonitor, PrimalDiscoveryService};
 // Modern discovery system re-exports
 pub use discovery_modern::{
     Capability as DiscoveryCapability, CompositeDiscovery, DiscoveredPrimal, DiscoveryError,
-    DiscoveryResult, HealthStatus as DiscoveryHealthStatus, PrimalDiscovery, PrimalType,
-};
-// Convenience alias for the most commonly used HealthStatus
-#[cfg(feature = "http-transport")]
-pub use discovery_http::{create_local_discovery, HttpDiscovery, HttpDiscoveryBuilder};
-pub use discovery_modern::HealthStatus;
-
-// Adaptive client infrastructure re-exports (DEPRECATED - use atomic_client!)
-#[cfg(feature = "http-transport")]
-pub use adaptive_client::{
-    AdaptiveHttpClient, AdaptiveResponse, ApiVersion, BearDogResponse, BirdSongClient,
-    BirdSongDecryptRequest, BirdSongDecryptResponse, BirdSongEncryptRequest,
-    BirdSongEncryptResponse,
+    DiscoveryResult, HealthStatus, PrimalDiscovery, PrimalType,
 };
 
 // Primal orchestration re-exports (primary Capability enum for orchestration)
@@ -107,9 +76,6 @@ pub use concurrent_startup::{start_in_waves, DependencyGraph};
 pub use family_credentials::FamilyCredentials;
 pub use log_session::{LogSessionTracker, PrimalSession};
 pub use primal_discovery::{discover_primals, query_primal_metadata, PrimalMetadata};
-pub use primal_health::{
-    HealthStatus as PrimalHealthStatus, PrimalHealthMonitor, RecoveryStrategy,
-};
 pub use primal_impls::{
     // Convenience builders
     create_ai_service,
