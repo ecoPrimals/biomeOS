@@ -34,7 +34,7 @@
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! let mut config = Config::default();
-//! config.mock_mode = true;
+//! config.standalone_mode = true;
 //!
 //! let discovery = CompositeDiscovery::new();
 //!

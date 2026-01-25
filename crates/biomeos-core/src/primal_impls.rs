@@ -90,7 +90,30 @@ impl ManagedPrimal for GenericManagedPrimal {
     }
 
     async fn endpoint(&self) -> Option<Endpoint> {
+        // EVOLUTION: Prefer Unix socket over HTTP
+        // Unix sockets are the primary IPC mechanism for biomeOS.
+        // HTTP is only for temporary bridge to PetalTongue.
+        //
+        // Priority:
+        // 1. Unix socket (from PRIMAL_SOCKET_PATH env)
+        // 2. HTTP (legacy, deprecated)
+        //
+        // Deep Debt Principle: Unix socket first, HTTP bridge is temporary.
+        
+        // Try Unix socket first
+        if let Ok(socket_path) = std::env::var("PRIMAL_SOCKET_PATH") {
+            if let Ok(endpoint) = Endpoint::new(&format!("unix://{}", socket_path)) {
+                return Some(endpoint);
+            }
+        }
+
+        // Fallback to HTTP if configured (deprecated)
         if self.config.http_port > 0 {
+            warn!(
+                "⚠️  Primal {} using deprecated HTTP endpoint. Evolve to Unix socket!",
+                self.id
+            );
+            warn!("   Set PRIMAL_SOCKET_PATH=/run/user/$(id -u)/{}.sock", self.config.id);
             let url = format!("http://127.0.0.1:{}", self.config.http_port);
             Endpoint::new(&url).ok()
         } else {

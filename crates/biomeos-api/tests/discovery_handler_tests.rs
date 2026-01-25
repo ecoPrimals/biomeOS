@@ -12,12 +12,12 @@ use biomeos_core::CompositeDiscovery;
 use serde_json::Value;
 use tower::util::ServiceExt; // Required for .oneshot() method on Router
 
-/// Helper to create test app with mock discovery
-async fn test_app_with_mock_discovery() -> Router {
+/// Helper to create test app with standalone discovery
+async fn test_app_with_standalone_discovery() -> Router {
     let discovery = CompositeDiscovery::new();
 
     let mut config = Config::default();
-    config.mock_mode = true;
+    config.standalone_mode = true;
 
     let state = AppState::builder()
         .discovery(discovery)
@@ -206,8 +206,8 @@ async fn test_discovered_primals_trust_fields() {
 }
 
 #[tokio::test]
-async fn test_discovered_primals_mock_mode() {
-    let app = test_app_with_mock_discovery().await;
+async fn test_discovered_primals_standalone_mode_via_config() {
+    let app = test_app_with_standalone_discovery().await;
 
     let response = app
         .oneshot(
@@ -219,7 +219,7 @@ async fn test_discovered_primals_mock_mode() {
         .await
         .unwrap();
 
-    // Should succeed even with mock discovery
+    // Should succeed even with standalone discovery
     assert_eq!(response.status(), StatusCode::OK);
 
     let body = hyper::body::to_bytes(response.into_body()).await.unwrap();

@@ -141,7 +141,14 @@ pub async fn get_discovered_primals(
 /// biomeOS to run standalone for development, testing, and demonstrations
 /// without requiring live primals.
 ///
-/// To use: Set BIOMEOS_STANDALONE_MODE=true
+/// **IMPORTANT**: The endpoints in this demo data are NOT used for actual communication.
+/// They are example values that demonstrate the expected format. Real primals use
+/// Unix sockets for IPC (e.g., `/run/user/1000/beardog.sock`).
+///
+/// **Production**: Real primals are discovered via Songbird capability queries over Unix sockets.
+/// **Development**: Set BIOMEOS_STANDALONE_MODE=true to use this demo data.
+///
+/// Deep Debt Principle: These are demo data, not hardcoded production endpoints.
 fn get_standalone_primals() -> Vec<DiscoveredPrimal> {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -161,6 +168,7 @@ fn get_standalone_primals() -> Vec<DiscoveredPrimal> {
                 "genetic_lineage".to_string(),
                 "hsm".to_string(),
             ],
+            // DEMO DATA: Real primals use Unix sockets like `/run/user/1000/beardog.sock`
             endpoint: "http://localhost:9000".to_string(),
             last_seen: now,
             trust_level: Some(3), // Highest (self)
@@ -180,6 +188,7 @@ fn get_standalone_primals() -> Vec<DiscoveredPrimal> {
                 "federation".to_string(),
                 "coordination".to_string(),
             ],
+            // DEMO DATA: Real primals use Unix sockets like `/run/user/1000/songbird.sock`
             endpoint: "http://localhost:8080".to_string(),
             last_seen: now,
             trust_level: Some(3), // Highest (self)
@@ -194,6 +203,7 @@ fn get_standalone_primals() -> Vec<DiscoveredPrimal> {
             version: "1.0.0".to_string(),
             health: "healthy".to_string(),
             capabilities: vec!["orchestration".to_string(), "federation".to_string()],
+            // DEMO DATA: Real remote primals discovered via mDNS/Songbird with secure TLS
             endpoint: "https://192.168.1.134:8080".to_string(),
             last_seen: now - 5,   // 5 seconds ago
             trust_level: Some(1), // Limited (same family, not elevated)
@@ -220,6 +230,7 @@ fn get_standalone_primals() -> Vec<DiscoveredPrimal> {
                 "versioning".to_string(),
                 "encryption".to_string(),
             ],
+            // DEMO DATA: Real primals use Unix sockets like `/run/user/1000/nestgate.sock`
             endpoint: "http://localhost:3002".to_string(),
             last_seen: now - 2,   // 2 seconds ago
             trust_level: Some(2), // Elevated (human approved)
