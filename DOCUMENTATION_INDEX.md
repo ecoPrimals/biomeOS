@@ -1,133 +1,48 @@
-# 🧬 BiomeOS Documentation Navigation
+# biomeOS Documentation Index
 
-**Quick Links**: [README](README.md) | [Start Here](START_HERE.md) | [Quick Start](QUICK_START.md) | [Root Index](ROOT_DOCS_INDEX.md)
+**Last Updated**: January 26, 2026
 
----
+## Root Documentation (18 files)
 
-## 📚 Documentation Hierarchy
+| File | Description |
+|------|-------------|
+| `START_HERE.md` ⭐ | Quick orientation & current status |
+| `README.md` | Project overview |
+| `DOCUMENTATION_HUB.md` | Central navigation |
+| `DOCUMENTATION_INDEX.md` | This file |
+| `ROOT_DOCS_INDEX.md` | Detailed index |
+| `QUICK_START.md` | Quick deployment |
+| `DEPLOYMENT.md` | Deployment guide |
+| `QUICK_START_TOWER_DEPLOYMENT.md` | Tower deployment |
+| `BIOMEOS_ATOMICS_ARCHITECTURE.md` | Atomics system |
+| `BIOMEOS_NEURAL_API_TOWER_ATOMIC_DEPLOYMENT_PLAN.md` | Neural API |
+| `BIOMEOS_PRIMAL_INTEGRATION_SPEC.md` | Integration |
+| `TRUE_PRIMAL_PORT_FREE_ARCHITECTURE.md` | Zero coupling |
+| `GENOMEBIN_ARCHITECTURE_STANDARD.md` | Binary standards |
+| `ISOMORPHIC_EVOLUTION.md` | Evolution |
+| `SEMANTIC_EVOLUTION_STRATEGY.md` | Naming |
+| `WATERINGHOLE_INTEGRATION.md` | Standards |
+| `SONGBIRD_EVOLUTION_HANDOFF.md` | TLS roadmap |
+| `INFRASTRUCTURE_EVOLUTION.md` | Terraria, Apoptosis |
 
-### Root Level (You Are Here)
-Essential, frequently-referenced documentation
+## Directories
 
-### /specs/
-Technical specifications and protocols → [View specs/](specs/)
+| Directory | Contents |
+|-----------|----------|
+| `specs/` | Technical specifications (60+ files) |
+| `docs/` | User guides (97 files) |
+| `archive/` | Historical records (900+ files) |
+| `graphs/` | Graph definitions (42 files) |
+| `examples/` | Code examples (33 files) |
+| `crates/` | Rust crates (20 crates) |
+| `plasmidBin/` | Deployed binaries |
 
-### /docs/  
-User guides and operational docs → [View docs/](docs/)
+## Quick Links
 
-### /archive/
-Historical documentation and session notes → [View archive/](archive/)
-
----
-
-## 🚀 Quick Access
-
-| Need | Document |
-|------|----------|
-| **Get Started** | [README.md](README.md), [START_HERE.md](START_HERE.md) |
-| **Deploy** | [QUICK_START.md](QUICK_START.md), [DEPLOYMENT.md](DEPLOYMENT.md) |
-| **Architecture** | [GENOMEBIN_ARCHITECTURE_STANDARD.md](GENOMEBIN_ARCHITECTURE_STANDARD.md) |
-| **Latest Audit** | [START_HERE_AUDIT_RESULTS.md](START_HERE_AUDIT_RESULTS.md) |
-| **Standards** | [SEMANTIC_EVOLUTION_STRATEGY.md](SEMANTIC_EVOLUTION_STRATEGY.md) |
-| **Full Index** | [ROOT_DOCS_INDEX.md](ROOT_DOCS_INDEX.md) |
-
----
-
-## 📖 Complete Documentation List
-
-### Getting Started (3 docs)
-- [README.md](README.md) - Project overview
-- [START_HERE.md](START_HERE.md) - Getting started
-- [QUICK_START.md](QUICK_START.md) - Quick deployment
-
-### Architecture & Standards (4 docs)
-- [GENOMEBIN_ARCHITECTURE_STANDARD.md](GENOMEBIN_ARCHITECTURE_STANDARD.md) - UniBin/ecoBin
-- [BIOMEOS_ATOMICS_ARCHITECTURE.md](BIOMEOS_ATOMICS_ARCHITECTURE.md) - Atomics
-- [BIOMEOS_PRIMAL_INTEGRATION_SPEC.md](BIOMEOS_PRIMAL_INTEGRATION_SPEC.md) - Primals
-- [TRUE_PRIMAL_PORT_FREE_ARCHITECTURE.md](TRUE_PRIMAL_PORT_FREE_ARCHITECTURE.md) - Ports
-
-### Evolution & Integration (3 docs)
-- [ISOMORPHIC_EVOLUTION.md](ISOMORPHIC_EVOLUTION.md) - Evolution principles
-- [SEMANTIC_EVOLUTION_STRATEGY.md](SEMANTIC_EVOLUTION_STRATEGY.md) - Naming
-- [WATERINGHOLE_INTEGRATION.md](WATERINGHOLE_INTEGRATION.md) - Standards
-
-### Deployment (3 docs)
-- [DEPLOYMENT.md](DEPLOYMENT.md) - Deployment guide
-- [QUICK_START_TOWER_DEPLOYMENT.md](QUICK_START_TOWER_DEPLOYMENT.md) - Tower
-- [BIOMEOS_NEURAL_API_TOWER_ATOMIC_DEPLOYMENT_PLAN.md](BIOMEOS_NEURAL_API_TOWER_ATOMIC_DEPLOYMENT_PLAN.md) - Neural API
-
-### Status & Indices (4 docs)
-- [START_HERE_AUDIT_RESULTS.md](START_HERE_AUDIT_RESULTS.md) - Latest audit
-- [ROOT_DOCS_INDEX.md](ROOT_DOCS_INDEX.md) - Complete index
-- [DOCS_INDEX.md](DOCS_INDEX.md) - Docs directory index
-- [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md) - Full navigation
+- **Deploy**: `./deploy_tower_atomic.sh`
+- **Specs**: `specs/README.md`
+- **TLS Results**: `archive/session_jan_26_2026_tls_analysis/`
 
 ---
 
-## 🗂️ Directory Structure
-
-```
-biomeOS/
-├── README.md, START_HERE.md        # Start here
-├── GENOMEBIN_*.md, BIOMEOS_*.md    # Architecture
-├── DEPLOYMENT.md, QUICK_START*.md  # Deployment
-├── *_EVOLUTION*.md                 # Evolution strategy
-├── /specs/                         # Technical specs
-├── /docs/                          # User documentation  
-├── /archive/                       # Historical docs
-│   ├── /audit_jan_25_2026/        # Latest audit
-│   ├── /old_team_handoffs_jan_2026/
-│   └── /tower_atomic_docs_jan_2026/
-├── /graphs/                        # Deployment graphs
-├── /templates/                     # YAML templates
-└── /examples/                      # Code examples
-```
-
----
-
-## 🔍 Finding What You Need
-
-### By Topic
-- **Architecture**: Look in root for `*_ARCHITECTURE_*.md`
-- **Deployment**: `DEPLOYMENT.md`, `QUICK_START*.md`
-- **Standards**: `GENOMEBIN_*.md`, `*_EVOLUTION*.md`
-- **Specs**: Check `/specs/` directory
-- **History**: Check `/archive/` directory
-
-### By Date
-Recent work is organized in `/archive/` by date:
-- `audit_jan_25_2026/` - Latest comprehensive audit
-- `old_team_handoffs_jan_2026/` - Recent handoffs
-- `session_jan_24_2026/` - Jan 24 session
-- And more...
-
-### By Search
-```bash
-# Search all root docs
-grep -i "your term" *.md
-
-# Search including subdirectories
-grep -r "your term" docs/
-
-# Search archives
-grep -r "your term" archive/
-```
-
----
-
-## ✨ Document Status
-
-| Category | Count | Status |
-|----------|-------|--------|
-| **Root Docs** | 17 | ✅ Clean & Current |
-| **Specs** | 30+ | ✅ Comprehensive |
-| **Docs** | 100+ | ✅ Well-organized |
-| **Archives** | 800+ | ✅ Preserved |
-
-**Last Cleanup**: January 25, 2026  
-**Organization**: Excellent ✅  
-**Findability**: High ✅  
-
----
-
-🦀🧬✨ **Clear Docs. Clear Path.** ✨🧬🦀
+**Status**: Production Ready | **TLS**: 93% | **Pure Rust**: 100%

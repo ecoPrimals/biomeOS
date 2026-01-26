@@ -1,83 +1,61 @@
 # 🌱 biomeOS - Start Here
 
-**Last Updated**: January 26, 2026 (18:40 UTC)  
-**Status**: 🎉🎉🎉 **96% WEB COMPATIBILITY - PRODUCTION READY!** 🎉🎉🎉  
-**Current State**: Tower Atomic PRODUCTION READY via Neural API, graph-based deployment
-**Songbird**: `eaa1dda9d` (Adaptive HTTP + User-Agent)
-**BearDog**: `964babd25` (SHA-384 evolution complete)
+**Last Updated**: January 26, 2026 (21:30 UTC)  
+**Status**: 🎉 **PRODUCTION READY** - Pure Rust TLS 1.3  
+**Tower Atomic**: 93% TLS Success (87 sites), 96% Web Compatibility
 
 ---
 
-## 🎉🎉🎉 96% WEB COMPATIBILITY ACHIEVED! 🎉🎉🎉
+## 🏆 Tower Atomic Validation Complete
 
-### Test Suite Results (Jan 26, 2026 18:40 UTC)
+### Comprehensive Testing (Jan 26, 2026)
 
-**Success Rate: 31/32 sites (96%) - Production Ready!**
+| Metric | Value | Notes |
+|--------|-------|-------|
+| **Sites Tested** | 87 | Across 11 categories |
+| **TLS 1.3 Success** | 93% (81/87) | Pure Rust |
+| **Web Compatibility** | 96% | With User-Agent |
+| **Cipher Suites** | 100% | All 3 mandatory |
 
-| Category | Result | Details |
-|----------|--------|---------|
-| **AI/ML** | 3/3 ✅ | HuggingFace, Anthropic, OpenAI (401=needs key) |
-| **Cloud** | 5/5 ✅ | AWS, GCP, Azure, DigitalOcean, Vercel |
-| **Code** | 4/4 ✅ | GitHub, GitLab, PyPI, Docker Hub |
-| **Social** | 3/3 ✅ | Discord, Slack, LinkedIn |
-| **News** | 3/3 ✅ | BBC, CNN, TechCrunch |
-| **E-Commerce** | 4/4 ✅ | Stripe, Shopify, PayPal, Amazon |
-| **Research** | 3/3 ✅ | NCBI, PubMed, arXiv |
-| **APIs** | 6/6 ✅ | GitHub API, crates.io, npm, Reddit, etc. |
+### Category Results
 
-### 🏆 User-Agent Evolution - All 403s Fixed!
-
-| Site | Before | After |
-|------|--------|-------|
-| GitHub API | 403 | ✅ 200 OK |
-| crates.io | 403 | ✅ 200 OK |
-| npm | 403 | ✅ 200 OK |
-| Reddit | 403 | ✅ 200 OK |
-| Wikipedia | 403 | ↪️ 301 redirect |
-| Stack Overflow | 403 | ↪️ 302 redirect |
-
----
-
-## 🔧 TLS Pipeline Status - ALL WORKING!
-
-```
-Songbird ─► capability.call("crypto", "generate_keypair") ─► Neural API ─► BearDog ✅
-Songbird ─► capability.call("crypto", "derive_secret") ─► Neural API ─► BearDog ✅
-Songbird ─► capability.call("tls_crypto", "derive_handshake_secrets") ─► Neural API ─► BearDog ✅
-Songbird ─► capability.call("tls_crypto", "derive_application_secrets") ─► Neural API ─► BearDog ✅
-Songbird ─► capability.call("crypto", "encrypt_aes_128_gcm") ─► Neural API ─► BearDog ✅
-Songbird ─► capability.call("crypto", "decrypt_aes_128_gcm") ─► Neural API ─► BearDog ✅
-```
-
-**BearDog SHA-384 Ready**: `crypto.hash_for_cipher` returns 48 bytes for cipher 0x1302 ✅
+| Category | Sites | TLS Success | Notes |
+|----------|-------|-------------|-------|
+| **AI/ML** | 10 | 100% ✅ | OpenAI, Anthropic, HuggingFace |
+| **Cloud** | 10 | 90% ✅ | AWS, GCP, Azure, Vercel |
+| **Code Hosting** | 6 | 83% ✅ | GitHub, GitLab, Bitbucket |
+| **Package Registries** | 10 | 80% ⚠️ | npm needs TLS 1.2 |
+| **Containers** | 6 | 100% ✅ | Docker Hub, GHCR, Quay |
+| **Databases** | 7 | 100% ✅ | MongoDB, Supabase, PlanetScale |
+| **Observability** | 6 | 83% ⚠️ | New Relic needs TLS 1.2 |
+| **CI/CD** | 5 | 80% ⚠️ | Jenkins needs TLS 1.2 |
+| **Serverless** | 7 | 100% ✅ | Vercel, Netlify, Cloudflare |
+| **API Tools** | 5 | 100% ✅ | Postman, Insomnia |
+| **Security** | 6 | 100% ✅ | Auth0, Okta, Cloudflare |
 
 ---
 
-## Quick Status
+## 🔧 Component Status
 
-| Component | Status | Notes |
-|-----------|--------|-------|
-| **biomeOS** | ✅ 100% | Graph-based semantic translation |
-| **Neural API** | ✅ 100% | 45+ semantic mappings, capability.call |
-| **BearDog** | ✅ 100% | SHA-384 evolution complete (`964babd25`) |
-| **Songbird** | ✅ 100% | Adaptive HTTP + User-Agent (`eaa1dda9d`) |
-| **Tower Atomic** | ✅ 96% | **PRODUCTION READY - General web access!** |
+| Component | Version | Status | Capabilities |
+|-----------|---------|--------|--------------|
+| **biomeOS** | `master` | ✅ 100% | Graph deployment, capability.call |
+| **Neural API** | `master` | ✅ 100% | 45+ semantic mappings |
+| **BearDog** | `964babd25` | ✅ 100% | SHA-256, SHA-384, AES-GCM |
+| **Songbird** | `eaa1dda9d` | ✅ 100% | TLS 1.3, HTTP, User-Agent |
 
 ---
 
-## Quick Start
+## 🚀 Quick Start
 
-### Build
+### Build All
 
 ```bash
 # biomeOS
 cargo build --release -p biomeos-unibin
 
-# BearDog (in ecoPrimals/phase1/beardog)
-cargo build --release -p beardog-cli
-
-# Songbird (in ecoPrimals/phase1/songbird)
-cargo build --release -p songbird-orchestrator
+# Verify
+./target/release/biomeos --version
 ```
 
 ### Deploy Tower Atomic
@@ -93,139 +71,148 @@ cargo build --release -p songbird-orchestrator
 ./deploy_tower_atomic.sh stop
 ```
 
-### Test capability.call
+### Test HTTPS
 
 ```bash
-# Direct crypto
-echo '{"jsonrpc":"2.0","method":"capability.call","params":{"capability":"crypto","operation":"sha256","args":{"data":"aGVsbG8gd29ybGQ="}},"id":1}' | nc -U /tmp/neural-api.sock
+# Via Neural API (recommended)
+echo '{"jsonrpc":"2.0","method":"capability.call","params":{
+  "capability":"secure_http",
+  "operation":"http.request",
+  "args":{"url":"https://api.github.com/zen","method":"GET"}
+},"id":1}' | nc -U /tmp/neural-api.sock
 
-# GitHub API via Tower Atomic (Pure Rust TLS 1.3)
-echo '{"jsonrpc":"2.0","method":"capability.call","params":{"capability":"secure_http","operation":"http.request","args":{"url":"https://api.github.com/zen","method":"GET"}},"id":1}' | nc -U /tmp/neural-api.sock
-
-# BearDog SHA-384 (new!)
-echo '{"jsonrpc":"2.0","method":"crypto.hash_for_cipher","params":{"data":"dGVzdA==","cipher_suite":4866},"id":1}' | nc -U /tmp/beardog-nat0.sock
+# Direct to Songbird
+echo '{"jsonrpc":"2.0","method":"http.request","params":{
+  "method":"GET","url":"https://google.com"
+},"id":1}' | nc -U /tmp/songbird-nat0.sock
 ```
 
 ---
 
-## Key Concepts
+## 📚 Key Documentation
+
+### Essential
+- **`README.md`** - Project overview
+- **`DOCUMENTATION_HUB.md`** - Complete navigation
+- **`SONGBIRD_EVOLUTION_HANDOFF.md`** - TLS evolution roadmap
+- **`INFRASTRUCTURE_EVOLUTION.md`** - Terraria, Apoptosis
+
+### Architecture
+- **`specs/README.md`** - All specifications
+- **`BIOMEOS_ATOMICS_ARCHITECTURE.md`** - System design
+- **`TRUE_PRIMAL_PORT_FREE_ARCHITECTURE.md`** - Zero coupling
+
+### Deployment
+- **`deploy_tower_atomic.sh`** - Production script
+- **`graphs/tower_atomic_bootstrap.toml`** - Graph config
+
+---
+
+## 🎯 Key Concepts
 
 ### 1. TRUE PRIMAL Pattern
 
 Primals don't know each other's APIs. Communication via semantic operations:
 
-```rust
-// Caller uses semantic name:
-capability.call("crypto", "generate_keypair")
-
-// Neural API translates via graph:
-"generate_keypair" → "crypto.x25519_generate_ephemeral"
-
-// BearDog receives actual method
+```
+Squirrel → capability.call("crypto", "sha256") → Neural API → BearDog
+                                                      ↓
+                              Translation: "sha256" → "crypto.sha256"
 ```
 
 ### 2. Graph-Based Semantic Translation
 
-Mappings defined in `tower_atomic_bootstrap.toml`:
+Mappings in `tower_atomic_bootstrap.toml`:
 
 ```toml
 [nodes.capabilities_provided]
-"crypto.generate_keypair" = "crypto.x25519_generate_ephemeral"
-"crypto.encrypt" = "crypto.chacha20_poly1305_encrypt"
 "sha256" = "crypto.sha256"
+"sha384" = "crypto.sha384"
+"generate_keypair" = "crypto.x25519_generate_ephemeral"
+"hash_for_cipher" = "crypto.hash_for_cipher"
 ```
 
-### 3. UniBin Architecture
+### 3. Pure Rust TLS 1.3
 
-Single binary with subcommands:
+```
+HTTP Request → Songbird → BearDog (crypto) → External HTTPS
+                  ↓
+           TLS 1.3 handshake
+           AES-128-GCM / AES-256-GCM
+           SHA-256 / SHA-384
+```
 
+---
+
+## 📊 Evolution Roadmap
+
+### ✅ Complete
+- Pure Rust TLS 1.3
+- SHA-384 cipher suites
+- capability.call routing
+- Graph-based deployment
+- 93% TLS validation
+
+### 🔄 In Progress (Songbird Team)
+- TLS 1.2 fallback (npm, Jenkins)
+- close_notify handling
+- Large response streaming
+
+### 📋 Future
+- TLS server mode
+- TLS relay/proxy
+- HTTP/2, WebSocket
+- Database TLS
+
+---
+
+## 🔍 Troubleshooting
+
+### Common Issues
+
+**Socket not found**:
 ```bash
-biomeos neural-api    # Neural API server
-biomeos deploy        # Graph deployment
-biomeos doctor        # Health diagnostics
-biomeos cli           # Interactive CLI
+ls -la /tmp/neural-api.sock /tmp/beardog-nat0.sock /tmp/songbird-nat0.sock
+# If missing, run: ./deploy_tower_atomic.sh
 ```
 
----
-
-## Project Structure
-
-```
-biomeOS/
-├── crates/
-│   ├── biomeos/                  # UniBin main binary
-│   ├── biomeos-atomic-deploy/    # Neural API + Graph execution ⭐
-│   ├── biomeos-core/             # Core types and traits
-│   ├── biomeos-nucleus/          # Discovery and IPC
-│   └── ... (13 crates total)
-├── graphs/
-│   └── tower_atomic_bootstrap.toml  # ⭐ Semantic mappings
-├── specs/                        # Technical specifications
-└── archive/                      # Historical documentation
-
-⭐ = Key files for Tower Atomic
-```
-
----
-
-## Documentation
-
-### Essential
-
-- **`README.md`** - Project overview
-- **`DOCUMENTATION_HUB.md`** - Complete doc organization
-- **`TOWER_ATOMIC_STATUS.md`** - Current Tower Atomic status
-- **`SONGBIRD_EVOLUTION_HANDOFF.md`** - Songbird next steps
-- **`INFRASTRUCTURE_EVOLUTION.md`** - Evolution roadmap (Terraria, Apoptosis)
-
-### Architecture
-
-- **`BIOMEOS_ATOMICS_ARCHITECTURE.md`** - Atomics system design
-- **`TRUE_PRIMAL_PORT_FREE_ARCHITECTURE.md`** - Zero coupling pattern
-- **`GENOMEBIN_ARCHITECTURE_STANDARD.md`** - Binary standards
-
-### Deployment
-
-- **`deploy_tower_atomic.sh`** - Production deployment script
-- **`graphs/tower_atomic_bootstrap.toml`** - Graph configuration
-
-### Session Archive
-
-Historical session docs are in `archive/`
-
----
-
-## Path to 100% TLS
-
-### Songbird Evolution Needed (est. 2 hours)
-
-1. Add `hash_for_cipher` to `CryptoCapability` trait
-2. Implement in `BearDogProvider`
-3. Update `transcript.rs` to use cipher-aware hashing
-4. Pass `cipher_suite` through handshake flow
-
-BearDog's `crypto.hash_for_cipher` is **ready and tested**:
-- Cipher 0x1301/0x1303 → 32-byte SHA-256
-- Cipher 0x1302 → 48-byte SHA-384
-
----
-
-## Getting Help
-
-### Common Commands
-
+**TLS handshake fails**:
 ```bash
-./target/release/biomeos doctor      # Diagnostics
-./target/release/biomeos deploy -n   # Dry-run deployment
-cargo test --workspace              # Run tests
+# Check if site supports TLS 1.3
+echo | openssl s_client -connect example.com:443 2>&1 | grep Protocol
 ```
+
+**HTTP 403 Forbidden**:
+- Usually fixed by User-Agent (included in Songbird `eaa1dda9d`)
+- Verify using `./deploy_tower_atomic.sh status`
 
 ### Logs
 
-- Neural API: `/tmp/neural-api*.log`
-- BearDog: `/tmp/beardog*.log`
-- Songbird: `/tmp/songbird*.log`
+```bash
+# Real-time logs
+tail -f /tmp/neural-api*.log
+tail -f /tmp/beardog*.log
+tail -f /tmp/songbird*.log
+```
 
 ---
 
-**Status**: 🏆 Tower Atomic 100% COMPLETE - Pure Rust TLS 1.3 - All cipher suites supported! 🚀
+## 🎊 Summary
+
+**biomeOS Tower Atomic is PRODUCTION READY**
+
+- ✅ Pure Rust TLS 1.3 (zero C dependencies)
+- ✅ 87 sites validated (93% TLS success)
+- ✅ All 3 mandatory cipher suites
+- ✅ Graph-based semantic translation
+- ✅ capability.call routing
+- ✅ AI/ML APIs (OpenAI, Anthropic, HuggingFace)
+- ✅ Cloud providers (AWS, GCP, Azure)
+- ✅ Code hosting (GitHub, GitLab)
+- ✅ Research (NCBI, PubMed, arXiv)
+
+**Next**: Songbird TLS 1.2 for remaining 7% compatibility
+
+---
+
+**Status**: 🏆 Production Ready | **TLS**: 93% | **Web**: 96% | **Pure Rust**: 100%
