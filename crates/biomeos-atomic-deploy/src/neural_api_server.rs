@@ -136,6 +136,24 @@ impl NeuralApiServer {
             self.register_self_in_registry().await?;
         }
 
+        // ALWAYS load semantic translations from Tower Atomic graph
+        // This is ecosystem-wide configuration, not mode-specific
+        info!("📝 Loading semantic translations from Tower Atomic graph...");
+        let bootstrap_graph_path = self.graphs_dir.join("tower_atomic_bootstrap.toml");
+        if bootstrap_graph_path.exists() {
+            match crate::neural_graph::Graph::from_toml_file(&bootstrap_graph_path) {
+                Ok(graph) => {
+                    match self.load_translations_from_graph(&graph).await {
+                        Ok(_) => info!("✅ Semantic translations loaded from graph"),
+                        Err(e) => warn!("⚠️  Failed to load translations: {}", e),
+                    }
+                }
+                Err(e) => warn!("⚠️  Failed to parse graph: {}", e),
+            }
+        } else {
+            debug!("   No Tower Atomic graph found (will use direct method names)");
+        }
+
         // 3. Remove old socket if it exists
         if self.socket_path.exists() {
             std::fs::remove_file(&self.socket_path).context("Failed to remove old socket")?;
@@ -1066,9 +1084,39 @@ impl NeuralApiServer {
             capability, primal_name, source
         );
 
+        // Register the capability in the router
         self.router
             .register_capability(capability, primal_name, PathBuf::from(socket_path), source)
             .await?;
+
+        // Register semantic mappings if provided
+        if let Some(semantic_mappings) = params.get("semantic_mappings") {
+            if let Some(mappings_obj) = semantic_mappings.as_object() {
+                debug!("   Registering {} semantic mappings for {}", mappings_obj.len(), capability);
+                
+                // Convert to HashMap<String, String>
+                let mut mappings = std::collections::HashMap::new();
+                for (key, value) in mappings_obj {
+                    if let Some(target) = value.as_str() {
+                        mappings.insert(key.clone(), target.to_string());
+                    }
+                }
+
+                // Store in translation registry (one entry per mapping)
+                let mut registry = self.translation_registry.write().await;
+                for (semantic_op, actual_method) in &mappings {
+                    registry.register_translation(
+                        semantic_op,
+                        primal_name,
+                        actual_method,
+                        socket_path,
+                        None, // No param mappings from primal registration
+                    );
+                }
+                
+                info!("   ✅ Registered {} semantic mappings", mappings.len());
+            }
+        }
 
         Ok(json!({
             "registered": true,
@@ -1337,16 +1385,20 @@ impl NeuralApiServer {
 
             // Step 2: Translate semantic operation to actual method (if needed)
             let registry = self.translation_registry.read().await;
-            let actual_method = if let Some(translation) = registry.get_translation(capability) {
-                // Check if there's a method mapping for this operation
-                translation.metadata
-                    .get("methods")
-                    .and_then(|methods| methods.get(op))
-                    .and_then(|v| v.as_str())
-                    .unwrap_or(op)
-                    .to_string()
+            
+            // Try full name first: "{capability}.{operation}" (e.g., "crypto.generate_keypair")
+            let full_name = format!("{}.{}", capability, op);
+            let actual_method = if let Some(translation) = registry.get_translation(&full_name) {
+                // Found translation using full name (crypto.generate_keypair → crypto.x25519_generate_ephemeral)
+                debug!("   ✅ Found translation: {} → {}", full_name, translation.actual_method);
+                translation.actual_method.clone()
+            } else if let Some(translation) = registry.get_translation(op) {
+                // Found translation using just operation name
+                debug!("   ✅ Found translation: {} → {}", op, translation.actual_method);
+                translation.actual_method.clone()
             } else {
-                // No translation, use operation as-is
+                // No translation, use operation as-is (will likely fail, but preserves existing behavior)
+                debug!("   ⚠️  No translation found for {} or {}", full_name, op);
                 op.to_string()
             };
 

@@ -4,12 +4,11 @@
 # This graph creates the Tower Atomic (BearDog + Songbird)
 # which serves as generation 0 security foundation for all other primals
 #
-# ⚠️  STATUS: BLOCKED - Awaiting Songbird IPC Evolution
-# Songbird's `http.request` capability is currently library-only (songbird-http-client).
-# For this graph to work, Songbird needs to:
-#   1. Add `--socket` option to `songbird server` command
-#   2. Expose JSON-RPC methods (http.request, http.get) via Unix socket
-# See: SONGBIRD_IPC_EVOLUTION_REQUIRED_JAN_25_2026.md
+# ✅ STATUS: OPERATIONAL - Songbird IPC Evolution Complete (Jan 26, 2026)
+# Songbird now exposes JSON-RPC methods via Unix socket:
+#   - http.request, http.get, http.post, http.put, http.delete
+#   - Pure Rust TLS 1.3 with capability.call integration
+#   - TRUE PRIMAL pattern: Zero coupling via semantic routing
 
 [graph]
 id = "tower_atomic_bootstrap"
@@ -41,7 +40,7 @@ timeout_ms = 30000  # 30s to start
 # Note: BearDog methods already use semantic namespaces (crypto., tls., etc.)
 # BearDog v0.14.0: 24 crypto methods (8 core + 8 ECDSA/RSA + 4 genetic + 4 TLS)
 [nodes.capabilities_provided]
-# Core Crypto Operations (8 methods)
+# Core Crypto Operations (10 methods)
 "crypto.generate_keypair" = "crypto.x25519_generate_ephemeral"
 "crypto.ecdh_derive" = "crypto.x25519_derive_secret"
 "crypto.encrypt" = "crypto.chacha20_poly1305_encrypt"
@@ -50,6 +49,8 @@ timeout_ms = 30000  # 30s to start
 "crypto.hmac" = "crypto.hmac_sha256"
 "crypto.sign" = "crypto.sign_ed25519"
 "crypto.verify" = "crypto.verify_ed25519"
+"sha256" = "crypto.sha256"  # Direct SHA-256 hash
+"sha384" = "crypto.sha384"  # Direct SHA-384 hash
 
 # AES-GCM Operations (4 methods) - NEW: For TLS 1.3 cipher suite support!
 "crypto.decrypt_aes_128_gcm" = "crypto.aes128_gcm_decrypt"
@@ -73,6 +74,10 @@ timeout_ms = 30000  # 30s to start
 "tls.derive_secrets" = "tls.derive_secrets"
 "tls.derive_handshake_secrets" = "tls.derive_handshake_secrets"  # Phase 9: Handshake traffic keys (CRITICAL!)
 "tls.derive_application_secrets" = "tls.derive_application_secrets"  # Phase 8: Application traffic keys
+
+# Genetic Lineage Operations (2 methods) - BearDog genetic verification
+"verify_lineage" = "genetic.verify_lineage"
+"generate_lineage_proof" = "genetic.generate_lineage_proof"
 "tls.compute_finished_verify_data" = "tls.compute_finished_verify_data"  # Phase 10: Client Finished message (THE FINAL PIECE!)
 "tls.sign_handshake" = "tls.sign_handshake"
 "tls.verify_certificate" = "tls.verify_certificate"

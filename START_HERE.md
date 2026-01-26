@@ -1,336 +1,196 @@
-# 🚀 START HERE - biomeOS Production Ready
+# 🌱 biomeOS - Start Here
 
-**Status**: ✅ **100% PRODUCTION READY**  
-**Updated**: January 25, 2026  
-**Grade**: A+ (Outstanding Excellence)
-
----
-
-## 🎯 **Current Status**
-
-| Achievement | Status |
-|-------------|--------|
-| **Tower Atomic** | ✅ Fully Operational |
-| **GitHub API** | ✅ Connected (Pure Rust TLS 1.3) |
-| **capability.call** | ✅ Enhanced (TRUE PRIMAL) |
-| **Deep Debt** | ✅ 100% Achieved (A+) |
-| **Documentation** | ✅ Streamlined & Comprehensive |
-| **Tests** | ✅ 424 Passing |
-| **ecoBin Compliance** | ✅ Achieved |
-| **UniBin Architecture** | ✅ Achieved |
-
-**Result**: "Responsive is better than fast." ✅ (GitHub API via Pure Rust TLS 1.3)
+**Last Updated**: January 26, 2026  
+**Status**: ✅ **PRODUCTION READY - Tower Atomic Operational**  
+**Current State**: Pure Rust TLS 1.3 → GitHub API verified!
 
 ---
 
-## 📚 **Quick Navigation**
+## 🎉 BREAKTHROUGH: Tower Atomic Working!
 
-### **Start Here** (New Users)
-1. **[README.md](./README.md)** - Project overview
-2. **[DOCUMENTATION_HUB.md](./DOCUMENTATION_HUB.md)** ⭐ **Central navigation hub**
-3. **[QUICK_START.md](./QUICK_START.md)** - Quick deployment
+**January 26, 2026** - Full end-to-end validation complete:
 
-### **Production Deployment**
-4. **[QUICK_START_TOWER_DEPLOYMENT.md](./QUICK_START_TOWER_DEPLOYMENT.md)** - Deploy Tower Atomic
-5. **[DEPLOYMENT.md](./DEPLOYMENT.md)** - General deployment guide
-
-### **Key Features** ⭐
-6. **[CAPABILITY_CALL_EVOLUTION_JAN_25_2026.md](./CAPABILITY_CALL_EVOLUTION_JAN_25_2026.md)** - TRUE PRIMAL pattern
-7. **[SONGBIRD_AUTO_REGISTRATION_HANDOFF.md](./SONGBIRD_AUTO_REGISTRATION_HANDOFF.md)** - Integration guide
-
-### **Testing**
-8. **[test_capability_call.sh](./test_capability_call.sh)** - Test all HTTP methods
-
----
-
-## 🏆 **What We Just Achieved**
-
-### **1. Tower Atomic Operational** ✅
 ```
-biomeOS UniBin (7.1M)
-    ↓
-Neural API (COORDINATED MODE)
-    ↓
-BearDog (/tmp/beardog-nat0.sock) - Pure Rust crypto
-    ↓
-Songbird (/tmp/songbird-nat0.sock) - Pure Rust TLS 1.3
-    ↓
-GitHub API - "Responsive is better than fast." ✅
+User Request
+  ↓ capability.call("secure_http", "http.request")
+Neural API (semantic routing) ✅
+  ↓ Translation: "generate_keypair" → "crypto.x25519_generate_ephemeral"
+Songbird (Pure Rust TLS 1.3) ✅
+  ↓
+BearDog (Pure Rust crypto) ✅
+  ↓
+GitHub API → 200 OK ✅
 ```
 
-**Result**: Zero C dependencies, Production ready!
+---
 
-### **2. TRUE PRIMAL Architecture** ✅
+## Quick Status
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| **biomeOS** | ✅ 100% | Graph-based semantic translation |
+| **Neural API** | ✅ 100% | 39 semantic mappings, capability.call |
+| **BearDog** | ✅ 100% | Pure Rust crypto, auto-registration |
+| **Songbird** | ✅ 100% | Pure Rust TLS 1.3, Neural API mode |
+| **Tower Atomic** | ✅ 100% | GitHub API verified! |
+
+---
+
+## Quick Start
+
+### Build
+
+```bash
+# biomeOS
+cargo build --release -p biomeos-unibin
+
+# BearDog (in ecoPrimals/phase1/beardog)
+cargo build --release -p beardog-cli
+
+# Songbird (in ecoPrimals/phase1/songbird)
+cargo build --release -p songbird-orchestrator
+```
+
+### Run Tower Atomic
+
+```bash
+# Terminal 1: Neural API
+export RUST_LOG=info
+export BIOMEOS_MODE=coordinated
+./target/release/biomeos neural-api --socket /tmp/neural-api.sock
+
+# Terminal 2: BearDog
+export NEURAL_API_SOCKET=/tmp/neural-api.sock
+./target/release/beardog server --socket /tmp/beardog.sock
+
+# Terminal 3: Songbird
+export NEURAL_API_SOCKET=/tmp/neural-api.sock
+./target/release/songbird server
+```
+
+### Test capability.call
+
+```bash
+# Direct crypto
+echo '{"jsonrpc":"2.0","method":"capability.call","params":{"capability":"crypto","operation":"sha256","args":{"data":"aGVsbG8gd29ybGQ="}},"id":1}' | nc -U /tmp/neural-api.sock
+
+# GitHub API via Tower Atomic
+echo '{"jsonrpc":"2.0","method":"capability.call","params":{"capability":"secure_http","operation":"http.request","args":{"url":"https://api.github.com/zen","method":"GET"}},"id":1}' | nc -U /tmp/neural-api.sock
+```
+
+### Full Integration Test
+
+```bash
+./test_tower_atomic_full.sh
+```
+
+---
+
+## Key Concepts
+
+### 1. TRUE PRIMAL Pattern
+
+Primals don't know each other's APIs. Communication via semantic operations:
+
 ```rust
-// Before: 100+ lines of tight coupling
-let songbird = SongbirdClient::new("/tmp/songbird.sock");
-let beardog = BeardogClient::new("/tmp/beardog.sock");
-// ... complex coordination ...
+// Caller uses semantic name:
+capability.call("crypto", "generate_keypair")
 
-// After: 10 lines, zero coupling! ⭐
-neural_api.capability_call(
-    "secure_http",
-    "http.post",
-    json!({"url": url, "body": body})
-).await?
+// Neural API translates via graph:
+"generate_keypair" → "crypto.x25519_generate_ephemeral"
+
+// BearDog receives actual method
 ```
 
-**Result**: 90% less code, zero coupling, isomorphic evolution!
+### 2. Graph-Based Semantic Translation
 
-### **3. Deep Debt 100%** ✅
-- ✅ Modern idiomatic Rust
-- ✅ Zero hardcoding (verified A+)
-- ✅ Pure Rust dependencies (ecoBin compliant)
-- ✅ Complete implementations (no mocks)
-- ✅ Smart refactoring
-- ✅ TRUE PRIMAL pattern
+Mappings defined in `tower_atomic_bootstrap.toml`:
 
-### **4. Documentation Excellence** ✅
-- ✅ Comprehensive navigation hub
-- ✅ Testing scripts ready
-- ✅ Integration guides complete
-- ✅ 18 essential root files
-- ✅ Complete fossil record
+```toml
+[nodes.capabilities_provided]
+"crypto.generate_keypair" = "crypto.x25519_generate_ephemeral"
+"crypto.encrypt" = "crypto.chacha20_poly1305_encrypt"
+"sha256" = "crypto.sha256"
+```
 
----
+### 3. UniBin Architecture
 
-## 🚀 **Quick Start**
+Single binary with subcommands:
 
-### **1. Build biomeOS UniBin**
 ```bash
-cd /home/eastgate/Development/ecoPrimals/phase2/biomeOS
-cargo build --release -p biomeos
-# Result: ./target/release/biomeos (7.1M)
+biomeos neural-api    # Neural API server
+biomeos deploy        # Graph deployment
+biomeos doctor        # Health diagnostics
+biomeos cli           # Interactive CLI
 ```
 
-### **2. Start Neural API**
+---
+
+## Project Structure
+
+```
+biomeOS/
+├── crates/
+│   ├── biomeos/                  # UniBin main binary
+│   ├── biomeos-atomic-deploy/    # Neural API + Graph execution ⭐
+│   ├── biomeos-core/             # Core types and traits
+│   ├── biomeos-nucleus/          # Discovery and IPC
+│   └── ... (13 crates total)
+├── graphs/
+│   └── tower_atomic_bootstrap.toml  # ⭐ Semantic mappings
+├── specs/                        # Technical specifications
+└── archive/                      # Historical documentation
+
+⭐ = Key files for Tower Atomic
+```
+
+---
+
+## Documentation
+
+### Essential
+
+- **`README.md`** - Project overview
+- **`DOCUMENTATION_HUB.md`** - Complete doc organization
+- **`TOWER_ATOMIC_STATUS.md`** - Current Tower Atomic status
+
+### Architecture
+
+- **`BIOMEOS_ATOMICS_ARCHITECTURE.md`** - Atomics system design
+- **`TRUE_PRIMAL_PORT_FREE_ARCHITECTURE.md`** - Zero coupling pattern
+- **`GENOMEBIN_ARCHITECTURE_STANDARD.md`** - Binary standards
+
+### Session Archive
+
+Historical session docs are in `archive/session_jan_26_2026_tower_atomic/`
+
+---
+
+## Recent Fixes
+
+### January 26, 2026
+
+1. **Neural API**: Fixed translation lookup to try both `{capability}.{operation}` and `{operation}`
+2. **Songbird**: Fixed `SongbirdHttpClient` to use `BearDogProvider::from_env()` (Neural API mode by default)
+
+---
+
+## Getting Help
+
+### Common Commands
+
 ```bash
-./target/release/biomeos neural-api --mode coordinated
-# Listens on: /tmp/neural-api-nat0.sock
+./target/release/biomeos doctor      # Diagnostics
+./target/release/biomeos deploy -n   # Dry-run deployment
+cargo test --workspace              # Run tests
 ```
 
-### **3. Deploy Tower Atomic**
-```bash
-# Send graph deployment via Neural API
-echo '{
-  "jsonrpc": "2.0",
-  "method": "graph.deploy",
-  "params": {
-    "graph_path": "graphs/tower_atomic_bootstrap.toml"
-  },
-  "id": 1
-}' | nc -U /tmp/neural-api-nat0.sock
-```
+### Logs
 
-### **4. Test GitHub Connectivity**
-```bash
-# Via Songbird (direct)
-echo '{
-  "jsonrpc": "2.0",
-  "method": "http.request",
-  "params": {
-    "url": "https://api.github.com/zen",
-    "method": "GET",
-    "headers": {"User-Agent": "ecoPrimals/1.0"}
-  },
-  "id": 1
-}' | nc -U /tmp/songbird-nat0.sock
-
-# Expected: 200 OK, "Responsive is better than fast."
-```
-
-### **5. Test capability.call** (Once Songbird registers)
-```bash
-./test_capability_call.sh
-# Tests GET, POST, PUT, DELETE, PATCH
-```
+- Neural API: `/tmp/neural-api*.log`
+- BearDog: `/tmp/beardog*.log`
+- Songbird: `/tmp/songbird*.log`
 
 ---
 
-## 🧪 **Testing**
-
-### **Run All Tests**
-```bash
-cargo test --workspace
-# Result: 424 tests passing ✅
-```
-
-### **Test HTTP Methods**
-```bash
-./test_capability_call.sh
-# Tests all HTTP methods via capability.call
-```
-
-### **Test Coverage**
-```bash
-cargo llvm-cov --workspace --html
-# Current: 41.61% baseline, improving
-```
-
----
-
-## 📖 **Key Concepts**
-
-### **TRUE PRIMAL Architecture**
-- **Zero Coupling**: Primals discover each other via Neural API
-- **Semantic APIs**: Use `capability.call("secure_http", "http.post", {...})`
-- **Runtime Discovery**: No hardcoded socket paths or primal names
-- **Isomorphic Evolution**: Primals can evolve without breaking consumers
-
-### **Tower Atomic Stack**
-```
-Consumer Primals (Squirrel, others)
-         ↓
-Neural API (capability.call - Universal Router)
-         ↓
-Tower Atomic (BearDog + Songbird)
-         ↓
-External APIs (GitHub, etc.)
-```
-
-### **ecoBin Compliance**
-- **Pure Rust**: Zero C dependencies in TLS stack
-- **UniBin**: Single binary with subcommands
-- **Universal**: Cross-compile to any platform
-
----
-
-## 🎯 **What To Work On**
-
-### **P0: Critical** ✅
-**None** - All critical work complete!
-
-### **P1: Important** (External - 2 hours)
-⏳ **Songbird Auto-Registration**
-- Guide: `SONGBIRD_AUTO_REGISTRATION_HANDOFF.md`
-- Complete templates provided
-- Testing checklist included
-
-### **P2: Enhancement** (Future)
-- Run `test_capability_call.sh` (when Tower live)
-- Expand test coverage to 90%
-- Add capability introspection API
-- Performance optimization
-- Chaos testing
-
----
-
-## 📚 **Documentation Structure**
-
-### **Navigation Hub** ⭐
-**[DOCUMENTATION_HUB.md](./DOCUMENTATION_HUB.md)** - Your central navigation point!
-
-Features:
-- 🚀 START HERE section
-- 🏗️ Architecture & Design
-- 🧪 Testing & Validation
-- 🤝 Integration Guides
-- 🗂️ Archive & History
-- 🎯 Quick Reference
-- 📊 Navigation by Task
-
-### **By Priority**
-1. **Start**: This file → `DOCUMENTATION_HUB.md` → `README.md`
-2. **Deploy**: `QUICK_START_TOWER_DEPLOYMENT.md`
-3. **Integrate**: `SONGBIRD_AUTO_REGISTRATION_HANDOFF.md`
-4. **Understand**: `CAPABILITY_CALL_EVOLUTION_JAN_25_2026.md`
-
-### **By Role**
-- **New User**: START_HERE (this) → DOCUMENTATION_HUB → README
-- **Developer**: DOCUMENTATION_HUB → Architecture docs → Specs
-- **Integrator**: SONGBIRD_AUTO_REGISTRATION_HANDOFF → Integration spec
-- **Operator**: QUICK_START_TOWER_DEPLOYMENT → DEPLOYMENT
-
----
-
-## ❓ **Common Questions**
-
-### **Q: Is Tower Atomic ready for production?**
-**A**: ✅ **YES!** GitHub API connected via Pure Rust TLS 1.3. Zero C dependencies. 424 tests passing. A+ grade.
-
-### **Q: How do primals communicate?**
-**A**: Via Neural API's `capability.call` method. No hardcoded socket paths, no coupling. Pure JSON-RPC 2.0 over Unix sockets.
-
-### **Q: What's the TRUE PRIMAL pattern?**
-**A**: Primals use semantic APIs (`capability.call("secure_http", "http.post", {...})`) instead of knowing about specific primals. Neural API discovers and routes automatically. Result: 90% less code, zero coupling.
-
-### **Q: What's the difference between ecoBin and UniBin?**
-**A**: **UniBin** = single binary with subcommands. **ecoBin** = UniBin + Pure Rust (zero C deps). biomeOS is both!
-
-### **Q: Can I deploy this now?**
-**A**: ✅ **YES!** Follow `QUICK_START_TOWER_DEPLOYMENT.md`. For full capability.call, wait for Songbird auto-registration (2 hours, see handoff guide).
-
-### **Q: Where's the test script?**
-**A**: `./test_capability_call.sh` - Tests all HTTP methods (GET, POST, PUT, DELETE, PATCH)
-
----
-
-## 🔗 **Important Links**
-
-### **Essential**
-- **[DOCUMENTATION_HUB.md](./DOCUMENTATION_HUB.md)** ⭐ Central navigation
-- **[README.md](./README.md)** - Project overview
-- **[CAPABILITY_CALL_EVOLUTION_JAN_25_2026.md](./CAPABILITY_CALL_EVOLUTION_JAN_25_2026.md)** ⭐ TRUE PRIMAL
-
-### **Deployment**
-- **[QUICK_START_TOWER_DEPLOYMENT.md](./QUICK_START_TOWER_DEPLOYMENT.md)** - Deploy Tower Atomic
-- **[DEPLOYMENT.md](./DEPLOYMENT.md)** - General deployment
-
-### **Integration**
-- **[SONGBIRD_AUTO_REGISTRATION_HANDOFF.md](./SONGBIRD_AUTO_REGISTRATION_HANDOFF.md)** ⭐ Songbird handoff
-- **[BIOMEOS_PRIMAL_INTEGRATION_SPEC.md](./BIOMEOS_PRIMAL_INTEGRATION_SPEC.md)** - Primal integration
-
-### **Testing**
-- **[test_capability_call.sh](./test_capability_call.sh)** ⭐ Test script
-
-### **Standards** (Parent Directory)
-- `../wateringHole/UNIBIN_ARCHITECTURE_STANDARD.md` - UniBin spec
-- `../wateringHole/ECOBIN_ARCHITECTURE_STANDARD.md` - ecoBin spec
-- `../wateringHole/PRIMAL_IPC_PROTOCOL.md` - IPC protocol
-- `../wateringHole/SEMANTIC_METHOD_NAMING_STANDARD.md` - Method naming
-
----
-
-## 🎉 **Success Story**
-
-On January 25, 2026, we achieved:
-
-1. ✅ **biomeOS UniBin harvested** (7.1M binary)
-2. ✅ **Tower Atomic deployed** (BearDog + Songbird)
-3. ✅ **GitHub API connected** (Pure Rust TLS 1.3!)
-4. ✅ **capability.call enhanced** (TRUE PRIMAL pattern)
-5. ✅ **Deep Debt 100%** (all 6 principles)
-6. ✅ **Testing infrastructure** (scripts + validation)
-7. ✅ **Integration guides** (complete handoffs)
-8. ✅ **Documentation excellence** (streamlined)
-
-**Result**: "Responsive is better than fast." ✅  
-**Grade**: A+ (Outstanding Excellence)  
-**Status**: 100% Production Ready
-
----
-
-## 📊 **Metrics**
-
-| Metric | Value |
-|--------|-------|
-| **Commits** | 24 (all pushed) |
-| **Tests** | 424 passing |
-| **Coverage** | 41.61% baseline |
-| **Architecture** | TRUE PRIMAL (A+) |
-| **Deep Debt** | 100% (A+) |
-| **ecoBin** | Compliant (A+) |
-| **Documentation** | Streamlined (A+) |
-| **Overall** | **A+ (Outstanding Excellence)** |
-
----
-
-**🦀✨ The TRUE PRIMAL ecosystem is alive and production-ready! ✨🦀**
-
-**Questions?** Check [DOCUMENTATION_HUB.md](./DOCUMENTATION_HUB.md) first!
-
----
-
-*Last Updated: January 25, 2026*  
-*Status: Production Ready*  
-*Grade: A+ (Outstanding Excellence)*
+**Status**: ✅ Tower Atomic 100% Ready - GitHub API connectivity verified via Pure Rust TLS 1.3 🚀
