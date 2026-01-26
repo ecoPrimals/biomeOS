@@ -32,8 +32,14 @@ Songbird ─► capability.call("crypto", "decrypt_aes_128_gcm") ─► Neural A
 - ✅ All crypto via Neural API capability.call
 - ✅ Pure Rust - no OpenSSL, no reqwest, no C deps!
 
-**Minor Remaining:**
-- ⚠️ Songbird treats `close_notify` as error instead of graceful close
+**Validation Results (60% success):**
+- ✅ jsonplaceholder.typicode.com (3 endpoints)
+- ✅ ipinfo.io, huggingface.co, catfact.ninja
+- ⚠️ Some sites timeout or close_notify issues
+
+**Minor Remaining Work:**
+- ⚠️ Songbird: Handle `close_notify` as graceful close
+- ⚠️ Songbird: Improve chunked response handling for large responses
 
 ---
 
