@@ -1,12 +1,43 @@
 # 🎵 Songbird TLS Handshake Fix - Handoff
 
-**Date**: January 26, 2026 (Updated 13:00 UTC)  
+**Date**: January 26, 2026 (Updated 13:45 UTC)  
 **Priority**: HIGH  
-**Estimated Fix Time**: 30 minutes (Songbird) + 30 minutes (BearDog)
+**Status**: 🟡 In Progress - Auth Tag Failure
 
 ---
 
-## 🚨 CRITICAL: BearDog API Mismatch (NEW)
+## 🆕 LATEST UPDATE (13:45 UTC)
+
+### Commits Applied
+- **BearDog `fb7513739`**: RFC 8446 compliant `derive_application_secrets` API
+- **Songbird `73431b6db`**: Pass `cipher_suite` to `tls_derive_application_secrets`
+
+### Progress
+| Issue | Status |
+|-------|--------|
+| BearDog API (`pre_master_secret` → `handshake_secret`) | ✅ FIXED |
+| Key length (32 bytes → 16 bytes for AES-128-GCM) | ✅ FIXED |
+| Auth tag verification | ❌ FAILING |
+
+### Current Error
+```
+AES-128-GCM decryption failed: authentication tag verification failed 
+(data may be tampered)
+```
+
+This means:
+1. ✅ Cipher suite is correctly passed (0x1301 / AES-128-GCM)
+2. ✅ Key derivation returns 16-byte keys (correct for AES-128)
+3. ❌ But the derived keys don't match what the server encrypted with
+
+### Investigation Needed
+- Verify `handshake_secret` passed to `derive_application_secrets` is correct
+- Verify `transcript_hash` is computed correctly (must include all messages through ServerHello finished)
+- Check if `cipher_suite` value is correctly passed (should be `4865` / `0x1301`)
+
+---
+
+## 🚨 PREVIOUS: BearDog API Mismatch (RESOLVED)
 
 BearDog's `tls.derive_application_secrets` has wrong API:
 

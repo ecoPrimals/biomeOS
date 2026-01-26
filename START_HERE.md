@@ -1,38 +1,40 @@
 # 🌱 biomeOS - Start Here
 
-**Last Updated**: January 26, 2026 (13:00 UTC)  
-**Status**: ✅ **ARCHITECTURE VALIDATED - capability.call Operational**  
-**Current State**: TLS Stage 1 complete! BearDog needs API fix for Stage 2.
+**Last Updated**: January 26, 2026 (13:45 UTC)  
+**Status**: 🟡 **IN PROGRESS - Auth Tag Verification Issue**  
+**Current State**: Key derivation working! Auth tag mismatch in application data decryption.
 
 ---
 
-## 🎉 MAJOR PROGRESS: TLS Handshake Stage 1 Working!
+## 🔧 Current Status (13:45 UTC)
 
-**January 26, 2026** - TLS handshake secrets derivation complete:
+### Commits Applied Today
+- **BearDog `fb7513739`**: RFC 8446 compliant `derive_application_secrets` API
+- **Songbird `73431b6db`**: Pass `cipher_suite` to `tls_derive_application_secrets`
 
+### TLS Pipeline Status
 ```
 Songbird ─► capability.call("crypto", "generate_keypair") ─► Neural API ─► BearDog ✅
 Songbird ─► capability.call("crypto", "derive_secret") ─► Neural API ─► BearDog ✅
 Songbird ─► capability.call("tls_crypto", "derive_handshake_secrets") ─► Neural API ─► BearDog ✅
-Songbird ─► capability.call("crypto", "decrypt_aes_128_gcm") ─► Neural API ─► BearDog ✅
-Songbird ─► capability.call("tls_crypto", "derive_application_secrets") ─► Neural API ─► BearDog ⚠️
-                                                                               ↑
-                                                              API MISMATCH: BearDog expects
-                                                              pre_master_secret, Songbird
-                                                              sends handshake_secret
+Songbird ─► capability.call("crypto", "decrypt_aes_128_gcm") ─► Neural API ─► BearDog ⚠️
+                                                                              ↑
+                                                            AUTH TAG FAILURE:
+                                                            Keys derived but don't
+                                                            match server's keys
 ```
 
 **What Works:**
 - ✅ All crypto operations via capability.call
-- ✅ AES-128-GCM decryption (80%+ of HTTPS!)
-- ✅ TLS handshake secrets (Stage 1 key derivation)
+- ✅ Correct key length (16 bytes for AES-128-GCM)
+- ✅ BearDog API now accepts `handshake_secret` (RFC 8446 compliant)
 - ✅ Graph-based semantic translation (45+ mappings)
 - ✅ plasmidBin deployment model
 
-**Known Issue (BearDog API Mismatch):**
-- ⚠️ `tls.derive_application_secrets` expects `pre_master_secret` but Songbird sends `handshake_secret`
-- **Fix**: BearDog needs to accept `handshake_secret` as input (RFC 8446 Stage 2)
-- See `SONGBIRD_TLS_HANDOFF_JAN26.md` for details
+**Current Issue (Auth Tag Verification):**
+- ⚠️ AES-128-GCM decryption returns "authentication tag verification failed"
+- This means derived keys don't match what the server used
+- See `SONGBIRD_TLS_HANDOFF_JAN26.md` for investigation details
 
 ---
 
@@ -42,9 +44,9 @@ Songbird ─► capability.call("tls_crypto", "derive_application_secrets") ─�
 |-----------|--------|-------|
 | **biomeOS** | ✅ 100% | Graph-based semantic translation |
 | **Neural API** | ✅ 100% | 45+ semantic mappings, capability.call |
-| **BearDog** | ⚠️ 98% | Stage 1 ✅, Stage 2 API needs fix |
-| **Songbird** | ⚠️ 98% | All Songbird fixes applied, waiting on BearDog |
-| **Tower Atomic** | ⚠️ 95% | Architecture validated, BearDog API pending |
+| **BearDog** | ✅ 100% | RFC 8446 API compliant |
+| **Songbird** | ⚠️ 98% | Auth tag issue in TLS decryption |
+| **Tower Atomic** | ⚠️ 95% | Architecture validated, key derivation issue |
 
 ---
 
