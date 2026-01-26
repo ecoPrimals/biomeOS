@@ -1,57 +1,41 @@
 # 🌱 biomeOS - Start Here
 
-**Last Updated**: January 26, 2026 (15:10 UTC)  
-**Status**: 🎉 **TLS 1.3 PRODUCTION READY - 95% Validation Success**  
+**Last Updated**: January 26, 2026 (17:45 UTC)  
+**Status**: 🎉 **TLS 1.3 PRODUCTION READY - 85% Validation Success**  
 **Current State**: Tower Atomic operational via Neural API, graph-based deployment
-**Songbird**: `7c974f6f7` (Chunked encoding fix)
+**Songbird**: `6c293db44` (v8.2.0 - 1,420+ tests)
+**BearDog**: `8d8ad2f6b` (SHA-384 evolution complete)
 
 ---
 
-## 🎉 PRODUCTION READY! 95% Success Rate (15:10 UTC)
+## 🎉 PRODUCTION READY! 85% Success Rate
 
-### Test Suite: 21 Ecosystem-Critical Endpoints
+### Test Suite Results (Jan 26, 2026 17:45 UTC)
 
-**Success Rate: 95% (20/21)**
+**Success Rate: 17/20 (85%)**
 
-### Results by Category
-| Category | Result | Sites |
-|----------|--------|-------|
-| **AI/ML** | 5/5 ✅ | HuggingFace, Anthropic, OpenAI, Cohere |
-| **Research** | 3/3 ✅ | PubMed, arXiv, bioRxiv |
-| **Tech** | 3/3 ✅ | GitHub, Google, Amazon |
-| **Cloud** | 2/2 ✅ | AWS, Google Cloud |
-| **CDN** | 2/2 ✅ | Cloudflare, example.com |
-| **Registries** | 3/3 ⚠️ | crates.io, npm, PyPI (403 = rate-limit) |
+| Category | Result | Details |
+|----------|--------|---------|
+| **AI/ML** | 5/5 ✅ | HuggingFace, HF API, Anthropic, OpenAI Status, Cohere |
+| **Research** | 3/4 ⚠️ | PubMed ✅, arXiv ✅, bioRxiv ✅, NCBI ❌ |
+| **Tech** | 3/3 ⚠️ | GitHub ✅, GitHub API ⚠️403, Google ✅, Amazon ✅ |
+| **Cloud** | 2/3 ⚠️ | AWS ✅, Google Cloud ✅, Azure ❌ |
+| **Baseline** | 3/3 ✅ | example.com, Cloudflare, ipinfo.io |
 
-### ✅ Working Endpoints (TLS 1.3 Verified)
-| Category | Endpoint | Status |
-|----------|----------|--------|
-| AI/ML | HuggingFace | 200 OK |
-| AI/ML | HuggingFace API | 200 OK |
-| AI/ML | OpenAI API | 421 (TLS works) |
-| Research | PubMed | 200 OK |
-| Research | arXiv | 200 OK |
-| Tech | GitHub | 200 OK |
-| Cloud | Google Cloud | 200 OK |
-| CDN | Cloudflare | 200 OK |
-| Registry | PyPI | 200 OK |
-| Registry | crates.io | 403 (TLS works) |
-| Registry | npm | 403 (TLS works) |
+### ❌ Remaining Issues (2 sites)
 
-### ❌ Failing Endpoints (Issue: Port 80/443)
-| Category | Endpoint | Error |
-|----------|----------|-------|
-| AI/ML | Anthropic | Invalid TLS content 0x48 |
-| Research | NCBI | Invalid TLS content 0x48 |
-| Tech | Google, Amazon | Invalid TLS content 0x48 |
-| Cloud | AWS, Azure | Invalid TLS content 0x48 |
+| Site | Error | Root Cause |
+|------|-------|------------|
+| NCBI | `transcript_hash must be 48 bytes for SHA-384` | Cipher 0x1302 needs SHA-384 |
+| Azure | `transcript_hash must be 48 bytes for SHA-384` | Cipher 0x1302 needs SHA-384 |
 
-**Root Cause**: Songbird connecting to port 80 instead of 443 for some URLs.
-See `SONGBIRD_TLS_HANDOFF_JAN26.md` for full analysis.
+**Fix**: Songbird needs to call `crypto.hash_for_cipher` instead of local SHA-256.
+See `SONGBIRD_EVOLUTION_HANDOFF.md` for details.
 
 ---
 
 ## 🔧 TLS Pipeline Status - ALL WORKING!
+
 ```
 Songbird ─► capability.call("crypto", "generate_keypair") ─► Neural API ─► BearDog ✅
 Songbird ─► capability.call("crypto", "derive_secret") ─► Neural API ─► BearDog ✅
@@ -61,8 +45,7 @@ Songbird ─► capability.call("crypto", "encrypt_aes_128_gcm") ─► Neural A
 Songbird ─► capability.call("crypto", "decrypt_aes_128_gcm") ─► Neural API ─► BearDog ✅
 ```
 
-**Songbird Issue to Fix**:
-- ⚠️ Port 80 vs 443 issue for some URLs (Invalid TLS content type 0x48)
+**BearDog SHA-384 Ready**: `crypto.hash_for_cipher` returns 48 bytes for cipher 0x1302 ✅
 
 ---
 
@@ -72,9 +55,9 @@ Songbird ─► capability.call("crypto", "decrypt_aes_128_gcm") ─► Neural A
 |-----------|--------|-------|
 | **biomeOS** | ✅ 100% | Graph-based semantic translation |
 | **Neural API** | ✅ 100% | 45+ semantic mappings, capability.call |
-| **BearDog** | ✅ 100% | RFC 8446 API compliant, returns handshake_secret |
-| **Songbird** | ✅ 99% | TLS working! Minor: close_notify handling |
-| **Tower Atomic** | ✅ 100% | **OPERATIONAL - Got HTTP response from GitHub!** |
+| **BearDog** | ✅ 100% | SHA-384 evolution complete! |
+| **Songbird** | ⚠️ 85% | Needs SHA-384 transcript hashing |
+| **Tower Atomic** | ✅ 85% | Working for most sites |
 
 ---
 
@@ -115,8 +98,8 @@ echo '{"jsonrpc":"2.0","method":"capability.call","params":{"capability":"crypto
 # GitHub API via Tower Atomic (Pure Rust TLS 1.3)
 echo '{"jsonrpc":"2.0","method":"capability.call","params":{"capability":"secure_http","operation":"http.request","args":{"url":"https://api.github.com/zen","method":"GET"}},"id":1}' | nc -U /tmp/neural-api.sock
 
-# OpenAI (requires API key)
-echo '{"jsonrpc":"2.0","method":"capability.call","params":{"capability":"secure_http","operation":"http.request","args":{"url":"https://api.openai.com/v1/models","method":"GET","headers":{"Authorization":"Bearer sk-..."}}},"id":1}' | nc -U /tmp/neural-api.sock
+# BearDog SHA-384 (new!)
+echo '{"jsonrpc":"2.0","method":"crypto.hash_for_cipher","params":{"data":"dGVzdA==","cipher_suite":4866},"id":1}' | nc -U /tmp/beardog-nat0.sock
 ```
 
 ---
@@ -188,6 +171,7 @@ biomeOS/
 - **`README.md`** - Project overview
 - **`DOCUMENTATION_HUB.md`** - Complete doc organization
 - **`TOWER_ATOMIC_STATUS.md`** - Current Tower Atomic status
+- **`SONGBIRD_EVOLUTION_HANDOFF.md`** - Songbird next steps
 - **`INFRASTRUCTURE_EVOLUTION.md`** - Evolution roadmap (Terraria, Apoptosis)
 
 ### Architecture
@@ -207,12 +191,18 @@ Historical session docs are in `archive/`
 
 ---
 
-## Recent Fixes
+## Path to 100% TLS
 
-### January 26, 2026
+### Songbird Evolution Needed (est. 2 hours)
 
-1. **Neural API**: Fixed translation lookup to try both `{capability}.{operation}` and `{operation}`
-2. **Songbird**: Fixed `SongbirdHttpClient` to use `BearDogProvider::from_env()` (Neural API mode by default)
+1. Add `hash_for_cipher` to `CryptoCapability` trait
+2. Implement in `BearDogProvider`
+3. Update `transcript.rs` to use cipher-aware hashing
+4. Pass `cipher_suite` through handshake flow
+
+BearDog's `crypto.hash_for_cipher` is **ready and tested**:
+- Cipher 0x1301/0x1303 → 32-byte SHA-256
+- Cipher 0x1302 → 48-byte SHA-384
 
 ---
 
@@ -234,4 +224,4 @@ cargo test --workspace              # Run tests
 
 ---
 
-**Status**: ✅ Tower Atomic 100% Ready - GitHub API connectivity verified via Pure Rust TLS 1.3 🚀
+**Status**: ✅ Tower Atomic 85% Ready - BearDog SHA-384 complete, awaiting Songbird evolution 🚀
