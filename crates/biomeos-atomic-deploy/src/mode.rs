@@ -22,12 +22,34 @@ pub enum BiomeOsMode {
 impl BiomeOsMode {
     /// Detect which mode biomeOS should operate in
     ///
+    /// Priority:
+    /// 1. BIOMEOS_MODE environment variable (explicit override)
+    /// 2. Auto-detect based on Tower Atomic presence
+    ///
     /// Returns:
-    /// - Bootstrap if Tower Atomic does not exist
-    /// - Coordinated if Tower Atomic exists and is reachable
+    /// - Bootstrap if Tower Atomic does not exist (or BIOMEOS_MODE=bootstrap)
+    /// - Coordinated if Tower Atomic exists (or BIOMEOS_MODE=coordinated)
     pub async fn detect(family_id: &str) -> Self {
         info!("🔍 Detecting biomeOS operating mode...");
 
+        // Priority 1: Check for explicit mode override
+        if let Ok(mode_override) = std::env::var("BIOMEOS_MODE") {
+            match mode_override.to_lowercase().as_str() {
+                "coordinated" | "coord" | "join" => {
+                    info!("✅ BIOMEOS_MODE={} - entering COORDINATED MODE (explicit)", mode_override);
+                    return Self::Coordinated;
+                }
+                "bootstrap" | "boot" | "genesis" => {
+                    info!("🌱 BIOMEOS_MODE={} - entering BOOTSTRAP MODE (explicit)", mode_override);
+                    return Self::Bootstrap;
+                }
+                _ => {
+                    warn!("⚠️  Unknown BIOMEOS_MODE '{}', falling back to auto-detect", mode_override);
+                }
+            }
+        }
+
+        // Priority 2: Auto-detect based on Tower Atomic presence
         if Self::tower_atomic_exists(family_id).await {
             info!("✅ Tower Atomic detected - entering COORDINATED MODE");
             Self::Coordinated

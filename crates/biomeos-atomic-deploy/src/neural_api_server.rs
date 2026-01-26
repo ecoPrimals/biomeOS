@@ -123,13 +123,26 @@ impl NeuralApiServer {
             info!("");
         } else {
             info!("🔄 === BIOMEOS COORDINATED MODE ===");
-            info!("🏰 Tower Atomic detected");
+            info!("🏰 Tower Atomic detected or explicit coordinated mode");
             info!("🌍 Joining existing ecosystem");
 
-            // Establish BTSP tunnel with Tower Atomic (inherit security)
-            if let Err(e) = self.transition_to_coordinated().await {
-                warn!("⚠️  Failed to establish BTSP tunnel: {}", e);
-                warn!("   Operating without inherited security");
+            // Check if this is explicit coordinated mode (primals will auto-register)
+            let explicit_mode = std::env::var("BIOMEOS_MODE")
+                .map(|m| m.to_lowercase())
+                .map(|m| m == "coordinated" || m == "coord" || m == "join")
+                .unwrap_or(false);
+
+            if explicit_mode {
+                // Explicit coordinated mode: don't wait for sockets
+                // Primals will register themselves via auto-registration
+                info!("📋 Explicit coordinated mode - primals will auto-register");
+                info!("   Neural API will accept capability registrations dynamically");
+            } else {
+                // Auto-detected coordinated mode: establish connection
+                if let Err(e) = self.transition_to_coordinated().await {
+                    warn!("⚠️  Failed to establish BTSP tunnel: {}", e);
+                    warn!("   Operating without inherited security");
+                }
             }
 
             // Register in ecosystem

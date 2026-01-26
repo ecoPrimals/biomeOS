@@ -458,14 +458,22 @@ impl NeuralRouter {
         debug!("   ✓ Sent {} bytes", request_bytes.len());
 
         // Read response with timeout
-        let mut response_bytes = Vec::new();
+        // IMPORTANT: Use line-based reading, not read_to_end
+        // BearDog/Songbird use JSON-RPC over Unix sockets with newline delimiters
+        // They keep connections open for multiple requests, so read_to_end would hang
+        use tokio::io::AsyncBufReadExt;
+        let mut reader = tokio::io::BufReader::new(stream);
+        let mut response_line = String::new();
+        
         timeout(
             self.request_timeout,
-            stream.read_to_end(&mut response_bytes),
+            reader.read_line(&mut response_line),
         )
         .await
-        .context("Response timeout")??;
+        .context("Response timeout")?
+        .context("Failed to read response")?;
 
+        let response_bytes = response_line.trim().as_bytes().to_vec();
         debug!("   ✓ Received {} bytes", response_bytes.len());
 
         // Parse response

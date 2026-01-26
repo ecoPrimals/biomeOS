@@ -43,6 +43,7 @@ timeout_ms = 30000  # 30s to start
 # Core Crypto Operations (10 methods)
 "crypto.generate_keypair" = "crypto.x25519_generate_ephemeral"
 "crypto.ecdh_derive" = "crypto.x25519_derive_secret"
+"crypto.derive_secret" = "crypto.x25519_derive_secret"  # Alias for Songbird compatibility
 "crypto.encrypt" = "crypto.chacha20_poly1305_encrypt"
 "crypto.decrypt" = "crypto.chacha20_poly1305_decrypt"
 "crypto.hash" = "crypto.blake3_hash"
@@ -72,6 +73,9 @@ timeout_ms = 30000  # 30s to start
 
 # TLS Crypto Operations (6 methods) - Phase 8, 9 & 10 (Pure Rust HTTPS complete!)
 "tls.derive_secrets" = "tls.derive_secrets"
+"tls_crypto.derive_handshake_secrets" = "tls.derive_handshake_secrets"  # Songbird capability.call
+"tls_crypto.derive_application_secrets" = "tls.derive_application_secrets"  # Songbird capability.call
+"tls_crypto.compute_finished_verify_data" = "tls.compute_finished_verify_data"  # Songbird capability.call
 "tls.derive_handshake_secrets" = "tls.derive_handshake_secrets"  # Phase 9: Handshake traffic keys (CRITICAL!)
 "tls.derive_application_secrets" = "tls.derive_application_secrets"  # Phase 8: Application traffic keys
 
@@ -113,7 +117,7 @@ family_id = "nat0"
 
 # Environment variables for Songbird
 [nodes.operation.environment]
-NEURAL_API_SOCKET = "/tmp/neural-api-nat0.sock"  # For capability translation routing
+NEURAL_API_SOCKET = "/tmp/neural-api.sock"  # For capability translation routing (must match Neural API socket)
 BEARDOG_SOCKET = "/tmp/beardog-nat0.sock"  # Security provider (for non-HTTP crypto operations)
 SONGBIRD_SECURITY_PROVIDER = "/tmp/beardog-nat0.sock"  # Alternative name for security provider
 RUST_LOG = "songbird_http_client=info"  # Enable INFO logging for first-byte verification

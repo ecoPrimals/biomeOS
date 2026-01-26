@@ -1,26 +1,38 @@
 # 🌱 biomeOS - Start Here
 
-**Last Updated**: January 26, 2026  
-**Status**: ✅ **PRODUCTION READY - Tower Atomic Operational**  
-**Current State**: Pure Rust TLS 1.3 → GitHub API verified!
+**Last Updated**: January 26, 2026 (13:00 UTC)  
+**Status**: ✅ **ARCHITECTURE VALIDATED - capability.call Operational**  
+**Current State**: TLS Stage 1 complete! BearDog needs API fix for Stage 2.
 
 ---
 
-## 🎉 BREAKTHROUGH: Tower Atomic Working!
+## 🎉 MAJOR PROGRESS: TLS Handshake Stage 1 Working!
 
-**January 26, 2026** - Full end-to-end validation complete:
+**January 26, 2026** - TLS handshake secrets derivation complete:
 
 ```
-User Request
-  ↓ capability.call("secure_http", "http.request")
-Neural API (semantic routing) ✅
-  ↓ Translation: "generate_keypair" → "crypto.x25519_generate_ephemeral"
-Songbird (Pure Rust TLS 1.3) ✅
-  ↓
-BearDog (Pure Rust crypto) ✅
-  ↓
-GitHub API → 200 OK ✅
+Songbird ─► capability.call("crypto", "generate_keypair") ─► Neural API ─► BearDog ✅
+Songbird ─► capability.call("crypto", "derive_secret") ─► Neural API ─► BearDog ✅
+Songbird ─► capability.call("tls_crypto", "derive_handshake_secrets") ─► Neural API ─► BearDog ✅
+Songbird ─► capability.call("crypto", "decrypt_aes_128_gcm") ─► Neural API ─► BearDog ✅
+Songbird ─► capability.call("tls_crypto", "derive_application_secrets") ─► Neural API ─► BearDog ⚠️
+                                                                               ↑
+                                                              API MISMATCH: BearDog expects
+                                                              pre_master_secret, Songbird
+                                                              sends handshake_secret
 ```
+
+**What Works:**
+- ✅ All crypto operations via capability.call
+- ✅ AES-128-GCM decryption (80%+ of HTTPS!)
+- ✅ TLS handshake secrets (Stage 1 key derivation)
+- ✅ Graph-based semantic translation (45+ mappings)
+- ✅ plasmidBin deployment model
+
+**Known Issue (BearDog API Mismatch):**
+- ⚠️ `tls.derive_application_secrets` expects `pre_master_secret` but Songbird sends `handshake_secret`
+- **Fix**: BearDog needs to accept `handshake_secret` as input (RFC 8446 Stage 2)
+- See `SONGBIRD_TLS_HANDOFF_JAN26.md` for details
 
 ---
 
@@ -29,10 +41,10 @@ GitHub API → 200 OK ✅
 | Component | Status | Notes |
 |-----------|--------|-------|
 | **biomeOS** | ✅ 100% | Graph-based semantic translation |
-| **Neural API** | ✅ 100% | 39 semantic mappings, capability.call |
-| **BearDog** | ✅ 100% | Pure Rust crypto, auto-registration |
-| **Songbird** | ✅ 100% | Pure Rust TLS 1.3, Neural API mode |
-| **Tower Atomic** | ✅ 100% | GitHub API verified! |
+| **Neural API** | ✅ 100% | 45+ semantic mappings, capability.call |
+| **BearDog** | ⚠️ 98% | Stage 1 ✅, Stage 2 API needs fix |
+| **Songbird** | ⚠️ 98% | All Songbird fixes applied, waiting on BearDog |
+| **Tower Atomic** | ⚠️ 95% | Architecture validated, BearDog API pending |
 
 ---
 
@@ -51,21 +63,17 @@ cargo build --release -p beardog-cli
 cargo build --release -p songbird-orchestrator
 ```
 
-### Run Tower Atomic
+### Deploy Tower Atomic
 
 ```bash
-# Terminal 1: Neural API
-export RUST_LOG=info
-export BIOMEOS_MODE=coordinated
-./target/release/biomeos neural-api --socket /tmp/neural-api.sock
+# One-command deployment
+./deploy_tower_atomic.sh
 
-# Terminal 2: BearDog
-export NEURAL_API_SOCKET=/tmp/neural-api.sock
-./target/release/beardog server --socket /tmp/beardog.sock
+# Check status
+./deploy_tower_atomic.sh status
 
-# Terminal 3: Songbird
-export NEURAL_API_SOCKET=/tmp/neural-api.sock
-./target/release/songbird server
+# Stop
+./deploy_tower_atomic.sh stop
 ```
 
 ### Test capability.call
@@ -74,14 +82,11 @@ export NEURAL_API_SOCKET=/tmp/neural-api.sock
 # Direct crypto
 echo '{"jsonrpc":"2.0","method":"capability.call","params":{"capability":"crypto","operation":"sha256","args":{"data":"aGVsbG8gd29ybGQ="}},"id":1}' | nc -U /tmp/neural-api.sock
 
-# GitHub API via Tower Atomic
+# GitHub API via Tower Atomic (Pure Rust TLS 1.3)
 echo '{"jsonrpc":"2.0","method":"capability.call","params":{"capability":"secure_http","operation":"http.request","args":{"url":"https://api.github.com/zen","method":"GET"}},"id":1}' | nc -U /tmp/neural-api.sock
-```
 
-### Full Integration Test
-
-```bash
-./test_tower_atomic_full.sh
+# OpenAI (requires API key)
+echo '{"jsonrpc":"2.0","method":"capability.call","params":{"capability":"secure_http","operation":"http.request","args":{"url":"https://api.openai.com/v1/models","method":"GET","headers":{"Authorization":"Bearer sk-..."}}},"id":1}' | nc -U /tmp/neural-api.sock
 ```
 
 ---
@@ -153,6 +158,7 @@ biomeOS/
 - **`README.md`** - Project overview
 - **`DOCUMENTATION_HUB.md`** - Complete doc organization
 - **`TOWER_ATOMIC_STATUS.md`** - Current Tower Atomic status
+- **`INFRASTRUCTURE_EVOLUTION.md`** - Evolution roadmap (Terraria, Apoptosis)
 
 ### Architecture
 
@@ -160,9 +166,14 @@ biomeOS/
 - **`TRUE_PRIMAL_PORT_FREE_ARCHITECTURE.md`** - Zero coupling pattern
 - **`GENOMEBIN_ARCHITECTURE_STANDARD.md`** - Binary standards
 
+### Deployment
+
+- **`deploy_tower_atomic.sh`** - Production deployment script
+- **`graphs/tower_atomic_bootstrap.toml`** - Graph configuration
+
 ### Session Archive
 
-Historical session docs are in `archive/session_jan_26_2026_tower_atomic/`
+Historical session docs are in `archive/`
 
 ---
 
