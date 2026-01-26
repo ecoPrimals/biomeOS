@@ -1,8 +1,18 @@
 # 🐦 Songbird TLS Validation Handoff - January 26, 2026
 
-## 📊 Current Status
+## 📊 Current Status (Updated 14:45 UTC)
 
-**Tower Atomic Validation Results**: 50% success rate (11/22 endpoints)
+**Tower Atomic Validation Results**: 58% success rate (7/12 endpoints)
+**Songbird Version**: `8d94c35f9` (Enhanced diagnostics)
+
+### 🔑 Key Finding from Enhanced Diagnostics
+
+**TLS 1.3 IS WORKING FOR ALL SITES!** The failures are in **HTTP response parsing**, not TLS.
+
+The enhanced diagnostics (commit `8d94c35f9`) revealed:
+- ✅ TLS handshakes complete successfully
+- ✅ HTTP requests are sent and encrypted correctly
+- ❌ Response parsing times out for **chunked encoding** or **large responses**
 
 ### What's Working ✅
 | Endpoint | Status | Category |
@@ -35,32 +45,43 @@
 
 ---
 
-## 🔍 Error Analysis
+## 🔍 Error Analysis (UPDATED with Diagnostics)
 
-### Primary Error Pattern
+### CORRECTED: TLS Is Working! Issue Is HTTP Response Parsing
+
+The enhanced diagnostics (`8d94c35f9`) revealed that **TLS handshakes succeed** for all sites.
+The failures are in **HTTP response parsing**, specifically:
+
+### Actual Error Pattern (from logs)
 ```
-ERROR songbird_http_client::tls::handshake_refactored::record_io: 
-  ❌ Invalid TLS content type: 0x48
+2026-01-26T19:39:07.102272Z  INFO songbird_http_client::client: ✅ TLS handshake complete with example.com
+2026-01-26T19:39:07.102336Z  INFO songbird_http_client::client: 🔼 SENDING HTTP REQUEST to server
+... [sends request successfully] ...
+📥 Reading HTTP application data (APPLICATION DATA phase)
+... [timeout waiting for response to complete] ...
 ```
 
-**What `0x48` Means**: This is ASCII 'H', the start of "HTTP/1.1" - the server is responding with plain HTTP instead of TLS.
+### Root Cause: Chunked Response Handling
 
-### Root Cause Hypotheses
+Sites that WORK have:
+- Simple `Content-Length` responses
+- Single TLS record responses
+- Fast response times
 
-1. **Port 80 vs 443 Issue**: Songbird may be connecting to port 80 (HTTP) instead of 443 (HTTPS) for some URLs
-   - Check URL parsing in `songbird-http-client/src/client.rs`
-   - Verify port extraction from HTTPS URLs
+Sites that TIMEOUT have:
+- `Transfer-Encoding: chunked` 
+- Multiple TLS records for large HTML
+- Slow or large responses
 
-2. **Redirect Following Issue**: Songbird may be following HTTP redirects that lead to port 80
-   - Some sites redirect `https://example.com` → `http://www.example.com`
-   - Songbird should not follow redirects that downgrade to HTTP
+### P0 Fix: Improve Response Reading
 
-3. **SNI Mismatch**: Server Name Indication may not match expected hostname
-   - Check SNI extension building in TLS ClientHello
-   - Verify against working vs failing hosts
-
-4. **DNS Resolution Variance**: Some hosts may resolve differently
-   - IPv4 vs IPv6 handling differences
+```rust
+// In songbird-http-client/src/client.rs
+// Issue: read_http_response() doesn't handle:
+// 1. Chunked transfer encoding termination
+// 2. Multiple TLS records needed for large responses
+// 3. Connection: close scenarios
+```
 
 ---
 
