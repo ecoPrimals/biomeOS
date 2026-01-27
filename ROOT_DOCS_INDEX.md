@@ -2,8 +2,9 @@
 
 **Last Updated**: January 27, 2026  
 **Status**: ✅ **Production Ready** - 93% TLS Validation  
-**Tower Atomic**: Pure Rust TLS 1.3 Validated  
-**Tests**: 1,185 passing | **Crates**: 21
+**Tower Atomic**: Pure Rust TLS 1.3 Validated
+**LiveSpore**: Genetic Lineage Federation Ready  
+**Tests**: 1,097 passing | **Crates**: 21
 
 ---
 
@@ -73,17 +74,24 @@
 
 ```
 biomeOS/
-├── *.md                    # Root documentation (15 files)
+├── *.md                    # Root documentation (16 files)
 ├── deploy_tower_atomic.sh  # Production deployment
-├── crates/                 # Rust crates (20)
+├── scripts/                # LiveSpore & deployment scripts ⭐
+│   ├── create_sibling_spore.sh
+│   ├── verify_sibling_lineage.sh
+│   └── test_federation.sh
+├── crates/                 # Rust crates (21)
 │   ├── biomeos/            # UniBin main
 │   ├── biomeos-atomic-deploy/  # Neural API ⭐
+│   ├── biomeos-spore/      # LiveSpore system ⭐
 │   └── ...
 ├── graphs/                 # Graph definitions
-│   └── tower_atomic_bootstrap.toml ⭐
+│   ├── tower_atomic_bootstrap.toml ⭐
+│   ├── livespore_create.toml ⭐
+│   └── federation_verify_lineage.toml
 ├── specs/                  # Technical specifications (60+)
 ├── archive/                # Historical docs (900+)
-│   └── session_jan_26_2026_tls_analysis/  # Latest
+│   └── legacy_http_patterns_jan_27_2026/  # Archived HTTP patterns
 ├── plasmidBin/             # Deployed binaries
 │   └── primals/            # BearDog, Songbird
 └── tests/                  # Test files
@@ -137,18 +145,31 @@ See `specs/README.md` for complete spec listing.
 ./deploy_tower_atomic.sh stop   # Stop
 ```
 
-### Test HTTPS
+### LiveSpore USB Deployment
 ```bash
-echo '{"jsonrpc":"2.0","method":"capability.call","params":{
-  "capability":"secure_http",
-  "operation":"http.request",
-  "args":{"url":"https://api.github.com/zen","method":"GET"}
-},"id":1}' | nc -U /tmp/neural-api.sock
+# Create sibling spore from parent
+./scripts/create_sibling_spore.sh /media/parent/biomeOS /media/newusb node-beta
+
+# Verify genetic lineage
+./scripts/verify_sibling_lineage.sh /media/usb1/biomeOS /media/usb2/biomeOS
+
+# Test federation
+./scripts/test_federation.sh
+```
+
+### Test JSON-RPC (TRUE PRIMAL)
+```bash
+# Health check via Unix socket
+echo '{"jsonrpc":"2.0","method":"health.check","id":1}' | nc -U /tmp/beardog-nat0.sock
+
+# Federation verify
+echo '{"jsonrpc":"2.0","method":"federation.verify_family_member","params":{
+  "family_id":"nat0","node_id":"node-beta"},"id":1}' | nc -U /tmp/beardog-nat0-node-alpha.sock
 ```
 
 ### Build
 ```bash
-cargo build --release -p biomeos-unibin
+cargo build --release --workspace
 cargo test --workspace
 ```
 
@@ -162,9 +183,10 @@ cargo test --workspace
 | **Web Compatibility** | 96% | ✅ Production |
 | **Cipher Suites** | 100% | ✅ All 3 mandatory |
 | **Pure Rust** | 100% | ✅ ecoBin |
-| **Tests** | 1,185 passing | ✅ |
+| **LiveSpore** | Genetic Federation | ✅ Ready |
+| **Tests** | 1,097 passing | ✅ |
 | **Crates** | 21 | ✅ |
-| **Root Docs** | 18 essential | ✅ Clean |
+| **Root Docs** | 16 essential | ✅ Clean |
 
 ---
 

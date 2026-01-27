@@ -34,6 +34,7 @@ pub mod primal_launcher; // EVOLVING: Legacy launcher → coordinator
 // Neural API graph execution (TOML-based deterministic deployment)
 pub mod capability_handlers; // Extracted capability-based primal handlers
 pub mod capability_translation;
+pub mod handlers; // NEW: Smart decomposition of neural_api_server
 pub mod http_client;
 pub mod mode;
 pub mod neural_api_server;

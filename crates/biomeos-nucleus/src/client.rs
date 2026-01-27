@@ -7,7 +7,20 @@
 
 use serde::{Deserialize, Serialize};
 use std::path::Path;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+
+/// Global atomic counter for JSON-RPC request IDs.
+///
+/// This ensures unique IDs across concurrent requests, enabling proper
+/// request/response correlation in JSON-RPC 2.0.
+static REQUEST_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
+
+/// Get the next unique request ID.
+#[inline]
+fn next_request_id() -> u64 {
+    REQUEST_ID_COUNTER.fetch_add(1, Ordering::Relaxed)
+}
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
 use tracing::{debug, info, warn};
@@ -81,12 +94,12 @@ pub async fn call_unix_socket_rpc<T: serde::de::DeserializeOwned>(
     // Split stream for concurrent read/write
     let (read_half, mut write_half) = stream.into_split();
 
-    // Create request
+    // Create request with unique ID for concurrent request correlation
     let request = JsonRpcRequest {
         jsonrpc: "2.0".to_string(),
         method: method.to_string(),
         params,
-        id: 1, // TODO: Use atomic counter for multiple concurrent requests
+        id: next_request_id(),
     };
 
     // Serialize and send request

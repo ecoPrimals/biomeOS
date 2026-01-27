@@ -2,8 +2,8 @@
 
 **Last Updated**: January 27, 2026  
 **Status**: Production Ready - 93% TLS Validation  
-**Version**: Tower Atomic Complete  
-**Tests**: 1,185 passing | **Crates**: 21
+**Version**: Tower Atomic Complete
+**Tests**: 321 passing | **Crates**: 21 | **Formatting**: ✅ Clean
 
 Welcome to the biomeOS documentation hub! This is your central navigation point.
 
@@ -22,7 +22,7 @@ Welcome to the biomeOS documentation hub! This is your central navigation point.
 
 ---
 
-## 🏆 **CURRENT STATUS** (Jan 26, 2026)
+## 🏆 **CURRENT STATUS** (Jan 27, 2026)
 
 | Metric | Value |
 |--------|-------|
@@ -52,7 +52,8 @@ Welcome to the biomeOS documentation hub! This is your central navigation point.
 - **[SEMANTIC_EVOLUTION_STRATEGY.md](./SEMANTIC_EVOLUTION_STRATEGY.md)** - Naming conventions
 
 ### **Evolution Roadmap**
-- **[SONGBIRD_EVOLUTION_HANDOFF.md](./SONGBIRD_EVOLUTION_HANDOFF.md)** ⭐ - TLS roadmap
+- **[RUST_EVOLUTION_ROADMAP.md](./RUST_EVOLUTION_ROADMAP.md)** ⭐ - Scripts → Pure Rust
+- **[SONGBIRD_EVOLUTION_HANDOFF.md](./SONGBIRD_EVOLUTION_HANDOFF.md)** - TLS roadmap
 - **[INFRASTRUCTURE_EVOLUTION.md](./INFRASTRUCTURE_EVOLUTION.md)** - Terraria, Apoptosis
 
 ---
@@ -61,15 +62,20 @@ Welcome to the biomeOS documentation hub! This is your central navigation point.
 
 ### **Core Specs** (`specs/`)
 - **[specs/README.md](./specs/README.md)** ⭐ - All specifications index
+- **[specs/LIVESPORE_IMPRINTING_SPEC.md](./specs/LIVESPORE_IMPRINTING_SPEC.md)** - 64-byte seeds
+- **[specs/BIRDSONG_DARK_FOREST_TRUST_MODEL.md](./specs/BIRDSONG_DARK_FOREST_TRUST_MODEL.md)** - Encrypted discovery
 - Neural API Routing
-- BYOB (Build Your Own Biome)
-- Primal IPC Protocol
 - Security & Federation
 
 ### **Lifecycle Specs** (`specs/lifecycle/`)
 - Bootstrap Mode
 - Neural API Nucleation
 - Primal Lifecycle
+
+### **LiveSpore System**
+- **[graphs/livespore_create.toml](./graphs/livespore_create.toml)** - Neural API imprinting
+- **[graphs/livespore_validate.toml](./graphs/livespore_validate.toml)** - System validation
+- **[scripts/validate_spore.sh](./scripts/validate_spore.sh)** - Portable validator
 
 ---
 
@@ -98,10 +104,11 @@ Welcome to the biomeOS documentation hub! This is your central navigation point.
 | Task | Document |
 |------|----------|
 | **Deploy Tower Atomic** | `./deploy_tower_atomic.sh` |
+| **Deploy LiveSpore (USB)** | `scripts/validate_spore.sh --update` |
 | **Understand Architecture** | `BIOMEOS_ATOMICS_ARCHITECTURE.md` |
-| **Integrate a Primal** | `BIOMEOS_PRIMAL_INTEGRATION_SPEC.md` |
-| **See TLS Results** | `archive/session_jan_26_2026_tls_analysis/` |
-| **Evolve Songbird** | `SONGBIRD_EVOLUTION_HANDOFF.md` |
+| **Create Genetic Lineage** | `specs/LIVESPORE_IMPRINTING_SPEC.md` |
+| **Enable Dark Forest** | `specs/BIRDSONG_DARK_FOREST_TRUST_MODEL.md` |
+| **Evolve Scripts to Rust** | `RUST_EVOLUTION_ROADMAP.md` |
 | **Review Standards** | `../wateringHole/` |
 
 ---
@@ -114,6 +121,10 @@ Welcome to the biomeOS documentation hub! This is your central navigation point.
 | **Tower Atomic** | BearDog + Songbird Pure Rust TLS |
 | **Neural API** | Universal router & orchestrator |
 | **ecoBin** | UniBin + Pure Rust (no C deps) |
+| **LiveSpore** | Portable USB deployment with genetic lineage |
+| **Dark Forest** | Encrypted discovery (only family sees beacons) |
+| **64-byte Seed** | `[genesis:32] + [node_key:32]` structure |
+| **Vault** | Spore-specific personal data (preserved across updates) |
 
 ---
 

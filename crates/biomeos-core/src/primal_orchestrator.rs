@@ -23,43 +23,193 @@ use biomeos_types::{
 
 use crate::{capabilities::Capability, discovery_modern::HealthStatus, retry::RetryPolicy};
 
-// Temporary stub for PrimalHealthMonitor (was in removed primal_health module)
-// TODO: Replace with full implementation using JSON-RPC health checks
+/// Primal health monitor using JSON-RPC over Unix sockets.
+///
+/// This is the TRUE PRIMAL health monitoring implementation:
+/// - Uses Unix sockets, not HTTP
+/// - Calls `health.check` JSON-RPC method
+/// - Tracks primal status with atomic state
 #[derive(Clone)]
-pub struct PrimalHealthMonitor;
+pub struct PrimalHealthMonitor {
+    /// Registered primals: id → socket path
+    primals: Arc<RwLock<HashMap<PrimalId, String>>>,
+
+    /// Primal health status: id → healthy
+    status: Arc<RwLock<HashMap<PrimalId, bool>>>,
+
+    /// Check interval
+    interval: std::time::Duration,
+
+    /// Running flag
+    running: Arc<std::sync::atomic::AtomicBool>,
+}
 
 impl PrimalHealthMonitor {
     pub fn builder() -> PrimalHealthMonitorBuilder {
-        PrimalHealthMonitorBuilder
+        PrimalHealthMonitorBuilder {
+            interval: std::time::Duration::from_secs(30),
+        }
     }
 
-    /// Start the health monitoring background task
+    /// Start the health monitoring background task.
     ///
-    /// This is a stub that returns Ok(()) immediately.
-    /// Full implementation will use JSON-RPC health.check calls.
+    /// Periodically calls `health.check` on all registered primals.
     pub async fn start_monitoring(&self) -> anyhow::Result<()> {
-        tracing::info!("🏥 Health monitor started (stub)");
-        // TODO: Implement actual health monitoring loop
-        // - Periodically call health.check on registered primals
-        // - Update primal status based on responses
-        // - Emit events for state changes
+        tracing::info!("🏥 Health monitor started (JSON-RPC over Unix sockets)");
+
+        self.running
+            .store(true, std::sync::atomic::Ordering::SeqCst);
+
+        let primals = self.primals.clone();
+        let status = self.status.clone();
+        let interval = self.interval;
+        let running = self.running.clone();
+
+        tokio::spawn(async move {
+            let mut interval_timer = tokio::time::interval(interval);
+
+            while running.load(std::sync::atomic::Ordering::SeqCst) {
+                interval_timer.tick().await;
+
+                let primals_snapshot = primals.read().await.clone();
+
+                for (id, socket_path) in primals_snapshot {
+                    let healthy = Self::check_primal_health(&socket_path).await;
+                    status.write().await.insert(id.clone(), healthy);
+
+                    if !healthy {
+                        tracing::warn!("🏥 Primal {} is unhealthy", id);
+                    }
+                }
+            }
+
+            tracing::info!("🏥 Health monitor stopped");
+        });
+
         Ok(())
     }
 
-    pub async fn register(&self, _id: PrimalId, _endpoint: biomeos_types::identifiers::Endpoint) {
-        // TODO: Implement health monitoring after reqwest removal
+    /// Check a primal's health via JSON-RPC.
+    async fn check_primal_health(socket_path: &str) -> bool {
+        use std::path::Path;
+        use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+        use tokio::net::UnixStream;
+
+        let socket = Path::new(socket_path);
+        if !socket.exists() {
+            return false;
+        }
+
+        // Connect and send health.check
+        let stream = match UnixStream::connect(socket).await {
+            Ok(s) => s,
+            Err(_) => return false,
+        };
+
+        let (reader, mut writer) = stream.into_split();
+        let request = r#"{"jsonrpc":"2.0","method":"health.check","id":1}"#;
+
+        if writer
+            .write_all(format!("{}\n", request).as_bytes())
+            .await
+            .is_err()
+        {
+            return false;
+        }
+
+        // Read response
+        let mut reader = BufReader::new(reader);
+        let mut response = String::new();
+
+        match tokio::time::timeout(
+            std::time::Duration::from_secs(5),
+            reader.read_line(&mut response),
+        )
+        .await
+        {
+            Ok(Ok(_)) => {
+                // Check for success
+                response.contains("healthy") || response.contains("\"result\"")
+            }
+            _ => false,
+        }
     }
 
-    pub async fn unregister(&self, _id: &PrimalId) {
-        // TODO: Implement health monitoring after reqwest removal
+    /// Stop the health monitor.
+    pub fn stop(&self) {
+        self.running
+            .store(false, std::sync::atomic::Ordering::SeqCst);
+    }
+
+    /// Register a primal for health monitoring.
+    ///
+    /// Supports both URL-based endpoints and direct socket paths.
+    pub async fn register(&self, id: PrimalId, endpoint: biomeos_types::identifiers::Endpoint) {
+        // Extract socket path from endpoint URL
+        // Unix socket URLs: unix:///tmp/primal.sock or file:///tmp/primal.sock
+        let url = endpoint.url();
+        let socket_path = if url.scheme() == "unix" || url.scheme() == "file" {
+            url.path().to_string()
+        } else {
+            // For HTTP URLs, try to derive socket path from primal ID
+            // Convention: /tmp/{primal_name}-{family_id}.sock
+            tracing::warn!(
+                "🏥 Primal {} uses HTTP endpoint ({}), deriving socket path from ID",
+                id,
+                url
+            );
+            format!("/tmp/{}.sock", id)
+        };
+
+        tracing::debug!("🏥 Registering primal {} at {}", id, socket_path);
+        self.primals.write().await.insert(id.clone(), socket_path);
+        self.status.write().await.insert(id, true); // Assume healthy initially
+    }
+
+    /// Register a primal by direct socket path.
+    pub async fn register_socket(&self, id: PrimalId, socket_path: impl Into<String>) {
+        let socket_path = socket_path.into();
+        tracing::debug!("🏥 Registering primal {} at {}", id, socket_path);
+        self.primals.write().await.insert(id.clone(), socket_path);
+        self.status.write().await.insert(id, true);
+    }
+
+    /// Unregister a primal from health monitoring.
+    pub async fn unregister(&self, id: &PrimalId) {
+        tracing::debug!("🏥 Unregistering primal {}", id);
+        self.primals.write().await.remove(id);
+        self.status.write().await.remove(id);
+    }
+
+    /// Get the health status of a primal.
+    pub async fn is_healthy(&self, id: &PrimalId) -> Option<bool> {
+        self.status.read().await.get(id).copied()
+    }
+
+    /// Get all primal health statuses.
+    pub async fn all_status(&self) -> HashMap<PrimalId, bool> {
+        self.status.read().await.clone()
     }
 }
 
-pub struct PrimalHealthMonitorBuilder;
+pub struct PrimalHealthMonitorBuilder {
+    interval: std::time::Duration,
+}
 
 impl PrimalHealthMonitorBuilder {
+    /// Set the health check interval.
+    pub fn interval(mut self, interval: std::time::Duration) -> Self {
+        self.interval = interval;
+        self
+    }
+
     pub fn build(self) -> PrimalHealthMonitor {
-        PrimalHealthMonitor
+        PrimalHealthMonitor {
+            primals: Arc::new(RwLock::new(HashMap::new())),
+            status: Arc::new(RwLock::new(HashMap::new())),
+            interval: self.interval,
+            running: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+        }
     }
 }
 

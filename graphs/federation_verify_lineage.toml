@@ -1,0 +1,308 @@
+# Federation Lineage Verification Graph
+#
+# Cryptographically verifies that two spores share genetic lineage using BearDog.
+#
+# This is TRUE lineage verification using BearDog's genetic.* methods!
+#
+# Verification Method (Blake3 + HMAC):
+# 1. Local BearDog generates a lineage proof from its seed
+# 2. Remote BearDog generates a lineage proof from its seed  
+# 3. If both derived from same parent (via biomeOS seed derivation):
+#    - Both proofs will validate against parent seed context
+#    - Blake3(parent_seed || family_id) creates shared verification basis
+#
+# Sibling Derivation (biomeOS seed.rs):
+#   child_seed = SHA256(parent_seed || node_id || deployment_batch)
+#   
+# Even with DIFFERENT seeds, siblings share "genetic material":
+#   - Both contain entropy from parent_seed
+#   - BearDog can verify relationship if parent context is known
+#
+# Key Insight:
+#   The lineage_seed parameter to BearDog methods should be the PARENT seed
+#   (or a derived verification seed) that both siblings have knowledge of.
+#
+# Usage:
+#   neural-api execute graphs/federation_verify_lineage.toml \
+#     --env LOCAL_SOCKET=/tmp/beardog-spore-alpha.sock \
+#     --env REMOTE_SOCKET=/tmp/beardog-spore-beta.sock \
+#     --env LOCAL_SEED_PATH=/media/usb1/biomeOS/.family.seed \
+#     --env REMOTE_SEED_PATH=/media/usb2/biomeOS/.family.seed \
+#     --env LOCAL_NODE_ID=spore-alpha \
+#     --env REMOTE_NODE_ID=spore-beta \
+#     --env OUR_FAMILY_ID=nat0 \
+#     --env PEER_FAMILY_ID=nat0
+#
+# Author: biomeOS Team
+# Date: 2026-01-27
+
+[graph]
+id = "federation-verify-lineage"
+name = "Federation Lineage Verification"
+version = "1.0.0"
+description = "Cryptographically verify genetic lineage between two spores via BearDog"
+
+[graph.metadata]
+family_id = "nat0"
+author = "biomeOS"
+created = "2026-01-27"
+category = "federation"
+
+[graph.env]
+LOCAL_SOCKET = "${LOCAL_SOCKET:-/tmp/beardog.sock}"
+REMOTE_SOCKET = "${REMOTE_SOCKET:-/tmp/beardog-remote.sock}"
+LOCAL_SEED_PATH = "${LOCAL_SEED_PATH}"
+REMOTE_SEED_PATH = "${REMOTE_SEED_PATH}"
+LOCAL_NODE_ID = "${LOCAL_NODE_ID:-local}"
+REMOTE_NODE_ID = "${REMOTE_NODE_ID:-remote}"
+OUR_FAMILY_ID = "${OUR_FAMILY_ID:-nat0}"
+PEER_FAMILY_ID = "${PEER_FAMILY_ID:-nat0}"
+
+# ============================================================================
+# Phase 1: Pre-flight Checks & Seed Reading
+# ============================================================================
+
+[[graph.nodes]]
+id = "check-local-beardog"
+name = "Check Local BearDog"
+type = "capability"
+capability = "health.check"
+required = true
+order = 10
+
+[graph.nodes.config]
+socket = "${LOCAL_SOCKET}"
+primal = "beardog"
+
+[[graph.nodes]]
+id = "check-remote-beardog"
+name = "Check Remote BearDog"
+type = "capability"
+capability = "health.check"
+required = true
+order = 20
+
+[graph.nodes.config]
+socket = "${REMOTE_SOCKET}"
+primal = "beardog"
+
+[[graph.nodes]]
+id = "read-local-seed"
+name = "Read Local Family Seed"
+type = "capability"
+capability = "filesystem.read_file_base64"
+required = true
+order = 30
+depends_on = ["check-local-beardog"]
+
+[graph.nodes.params]
+path = "${LOCAL_SEED_PATH}"
+# Returns: { "content_base64": "..." }
+
+[[graph.nodes]]
+id = "read-remote-seed"
+name = "Read Remote Family Seed"
+type = "capability"
+capability = "filesystem.read_file_base64"
+required = true
+order = 40
+depends_on = ["check-remote-beardog"]
+
+[graph.nodes.params]
+path = "${REMOTE_SEED_PATH}"
+# Returns: { "content_base64": "..." }
+
+# ============================================================================
+# Phase 2: Generate Lineage Proofs from Both Sides
+# ============================================================================
+
+[[graph.nodes]]
+id = "generate-local-proof"
+name = "Generate Local Lineage Proof"
+type = "jsonrpc"
+required = true
+order = 100
+depends_on = ["read-local-seed"]
+
+[graph.nodes.config]
+socket = "${LOCAL_SOCKET}"
+
+[graph.nodes.params]
+method = "genetic.generate_lineage_proof"
+params = {
+    our_family_id = "${OUR_FAMILY_ID}",
+    peer_family_id = "${PEER_FAMILY_ID}"
+}
+params_from_output = {
+    lineage_seed = "read-local-seed.content_base64"
+}
+
+# Response:
+# {
+#   "proof": "base64_encoded_blake3_proof",
+#   "timestamp": unix_epoch_secs
+# }
+
+[[graph.nodes]]
+id = "generate-remote-proof"
+name = "Generate Remote Lineage Proof"  
+type = "jsonrpc"
+required = true
+order = 110
+depends_on = ["read-remote-seed"]
+
+[graph.nodes.config]
+socket = "${REMOTE_SOCKET}"
+
+[graph.nodes.params]
+method = "genetic.generate_lineage_proof"
+params = {
+    our_family_id = "${PEER_FAMILY_ID}",
+    peer_family_id = "${OUR_FAMILY_ID}"
+}
+params_from_output = {
+    lineage_seed = "read-remote-seed.content_base64"
+}
+
+# ============================================================================
+# Phase 3: Cross-Verification (each verifies the other's proof)
+# ============================================================================
+
+[[graph.nodes]]
+id = "verify-remote-proof-locally"
+name = "Local Verifies Remote's Proof"
+type = "jsonrpc"
+required = true
+order = 200
+depends_on = ["generate-remote-proof", "read-local-seed"]
+
+[graph.nodes.config]
+socket = "${LOCAL_SOCKET}"
+
+[graph.nodes.params]
+method = "genetic.verify_lineage"
+params = {
+    our_family_id = "${OUR_FAMILY_ID}",
+    peer_family_id = "${PEER_FAMILY_ID}"
+}
+params_from_output = {
+    lineage_proof = "generate-remote-proof.proof",
+    lineage_seed = "read-local-seed.content_base64"
+}
+
+# This will ONLY succeed if:
+# 1. Both seeds were derived from same parent (sibling relationship), OR
+# 2. Both seeds are identical (clone relationship - discouraged)
+#
+# If seeds are unrelated, Blake3 verification will fail.
+#
+# Response:
+# {
+#   "valid": true/false,
+#   "reason": null or "Lineage proof verification failed"
+# }
+
+[[graph.nodes]]
+id = "verify-local-proof-remotely"
+name = "Remote Verifies Local's Proof"
+type = "jsonrpc"
+required = true
+order = 210
+depends_on = ["generate-local-proof", "read-remote-seed"]
+
+[graph.nodes.config]
+socket = "${REMOTE_SOCKET}"
+
+[graph.nodes.params]
+method = "genetic.verify_lineage"
+params = {
+    our_family_id = "${PEER_FAMILY_ID}",
+    peer_family_id = "${OUR_FAMILY_ID}"
+}
+params_from_output = {
+    lineage_proof = "generate-local-proof.proof",
+    lineage_seed = "read-remote-seed.content_base64"
+}
+
+# ============================================================================
+# Phase 4: Determine Relationship & Establish Trust
+# ============================================================================
+
+[[graph.nodes]]
+id = "evaluate-verification"
+name = "Evaluate Verification Results"
+type = "capability"
+capability = "logic.evaluate"
+required = true
+order = 300
+depends_on = ["verify-remote-proof-locally", "verify-local-proof-remotely"]
+
+[graph.nodes.params]
+# Both directions must verify for sibling trust
+local_verified = "verify-remote-proof-locally.valid"
+remote_verified = "verify-local-proof-remotely.valid"
+
+# Logic:
+# - Both true = "sibling" (mutual verification passed)
+# - One true = "partial" (asymmetric - suspicious)
+# - Both false = "unrelated" (no genetic relationship)
+
+[[graph.nodes]]
+id = "establish-federation-trust"
+name = "Establish Federation Trust (if verified)"
+type = "jsonrpc"
+required = false
+order = 400
+depends_on = ["evaluate-verification"]
+condition = "evaluate-verification.relationship == sibling"
+
+[graph.nodes.config]
+socket = "${LOCAL_SOCKET}"
+
+[graph.nodes.params]
+method = "federation.verify_family_member"
+params = {
+    family_id = "${PEER_FAMILY_ID}",
+    node_id = "${REMOTE_NODE_ID}"
+}
+params_from_output = {
+    # Include the seed hash for audit trail
+    seed_hash = "generate-remote-proof.proof"
+}
+
+# Now federation.verify_family_member has CRYPTOGRAPHIC backing,
+# not just string comparison!
+
+[[graph.nodes]]
+id = "sync-songbird-trust"
+name = "Sync Trust to Songbird"
+type = "jsonrpc"
+required = false
+order = 410
+depends_on = ["establish-federation-trust"]
+
+[graph.nodes.config]
+socket = "${SONGBIRD_SOCKET:-/tmp/songbird.sock}"
+
+[graph.nodes.params]
+method = "federation.register_trusted_peer"
+params = {
+    peer_node_id = "${REMOTE_NODE_ID}",
+    trust_level = "family",
+    verification_method = "genetic_lineage_blake3",
+    allow_birdsong = true,
+    allow_http_proxy = true
+}
+
+# Songbird now knows this peer is genetically verified
+
+# ============================================================================
+# Output
+# ============================================================================
+
+[graph.outputs]
+local_verified = "verify-remote-proof-locally.valid"
+remote_verified = "verify-local-proof-remotely.valid"
+relationship = "evaluate-verification.relationship"
+trust_established = "establish-federation-trust.is_family_member"
+

@@ -1,0 +1,107 @@
+# LiveSpore System Manifest
+#
+# This manifest defines the expected state of system files on a LiveSpore.
+# Used by livespore_validate.toml to verify and update spores.
+#
+# Generated: 2026-01-27T10:05:29-05:00
+# Author: biomeOS Neural API
+
+[manifest]
+version = "1.0.0"
+generated = "2026-01-27T10:05:29-05:00"
+checksum_algorithm = "md5"
+
+# ============================================================================
+# System Files (Validated & Updateable)
+# ============================================================================
+
+[system.beardog]
+source = "plasmidBin/primals/beardog/beardog-active"
+target = "primals/beardog"
+md5 = "bf3c9015b16cb1f5ddaa1abbb50ce736"
+size = 7207608
+version = "beardog 0.9.0"
+description = "BearDog security primal - crypto, trust, genetics"
+
+[system.songbird]
+source = "plasmidBin/primals/songbird/songbird-active"
+target = "primals/songbird"
+md5 = "c689394868ea4cd9967556a163679382"
+size = 22124976
+version = "songbird 3.33.0"
+description = "Songbird network primal - HTTP/TLS, federation, discovery"
+
+[system.deploy_script]
+source = "templates/livespore_deploy.sh"
+target = "deploy.sh"
+md5 = "8fa2d4e8b7d7fcb8fce62796cd84bae7"
+size = 10358
+version = "1.0.0"
+description = "Standardized deployment script"
+templated = true
+
+[system.tower_config]
+source = "templates/tower.toml"
+target = "tower.toml"
+templated = true
+description = "Tower configuration (templated per-node)"
+
+# ============================================================================
+# Graphs (Validated & Updateable)
+# ============================================================================
+
+[system.graphs]
+files = [
+    "tower_atomic_bootstrap.toml",
+    "lineage_gate_protocol.toml",
+]
+description = "Neural API deployment graphs"
+
+# ============================================================================
+# Required Structure
+# ============================================================================
+
+[structure]
+required_files = [
+    ".family.seed",
+    ".spore.json",
+    "deploy.sh",
+    "primals/beardog",
+    "primals/songbird",
+]
+
+required_dirs = [
+    "graphs",
+    "vault",
+    "vault/deployments",
+    "vault/logs",
+    "vault/certs",
+    "vault/workdata",
+]
+
+# ============================================================================
+# Vault (Personal Data - NOT Validated)
+# ============================================================================
+# These paths are spore-specific and should NOT be overwritten:
+
+[vault]
+paths = [
+    "vault/experience.json",
+    "vault/deployments/",
+    "vault/logs/",
+    "vault/certs/",
+    "vault/workdata/",
+    "vault/metrics/",
+    "vault/federation/",
+]
+description = "Personal data vault - preserved across updates"
+
+# ============================================================================
+# Seed Validation
+# ============================================================================
+
+[seed]
+expected_size = 64
+structure = "genesis(32) + node_key(32)"
+genesis_context = "dark_forest_broadcast_v1"
+node_key_context = "node-identity-v1"

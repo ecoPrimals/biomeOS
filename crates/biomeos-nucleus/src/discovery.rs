@@ -46,6 +46,7 @@ impl DiscoveryRequest {
     }
 
     /// Set family filter
+    #[must_use]
     pub fn with_family(mut self, family: impl Into<String>) -> Self {
         self.family = Some(family.into());
         self

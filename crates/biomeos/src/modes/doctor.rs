@@ -248,24 +248,24 @@ async fn check_primal_discovery() -> Result<HealthCheck> {
         details: Vec::new(),
     };
 
-    let primals = vec![
-        ("BearDog", "/tmp/beardog.sock"),
-        ("Songbird", "/tmp/songbird.sock"),
-        ("Squirrel", "/tmp/squirrel.sock"),
-        ("NestGate", "/tmp/nestgate.sock"),
-        ("ToadStool", "/tmp/toadstool.sock"),
-    ];
+    // Get family_id from environment or use default
+    // Uses capability-based discovery pattern (no hardcoded paths)
+    let family_id = std::env::var("BIOMEOS_FAMILY_ID").unwrap_or_else(|_| "nat0".to_string());
+
+    let primals = vec!["beardog", "songbird", "squirrel", "nestgate", "toadstool"];
 
     let mut found_count = 0;
-    for (name, socket) in primals {
-        let exists = Path::new(socket).exists();
+    for primal_name in primals {
+        // Use nucleation pattern for deterministic socket path
+        let socket = format!("/tmp/{}-{}.sock", primal_name, family_id);
+        let exists = Path::new(&socket).exists();
         if exists {
             found_count += 1;
             check
                 .details
-                .push(format!("{}: ✅ Found ({})", name, socket));
+                .push(format!("{}: ✅ Found ({})", primal_name, socket));
         } else {
-            check.details.push(format!("{}: ❌ Not found", name));
+            check.details.push(format!("{}: ❌ Not found", primal_name));
         }
     }
 

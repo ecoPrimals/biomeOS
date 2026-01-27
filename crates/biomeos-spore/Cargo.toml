@@ -27,6 +27,7 @@ gethostname = { workspace = true }  # For node identification
 sha2 = { workspace = true }  # For SHA256-based seed derivation
 getrandom = "0.2"  # For secure random nonce generation
 serde_bytes = "0.11"  # For binary data serialization
+base64 = "0.22"  # For beacon encoding
 nix = { version = "0.29", features = ["signal", "process"] }  # For signal handling in rollback
 hex = "0.4"  # For hex encoding
 uuid = { workspace = true }  # For unique IDs

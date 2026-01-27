@@ -108,13 +108,16 @@ impl ExecutionContext {
     /// otherwise falls back to family-based path.
     pub async fn get_socket_path(&self, primal_name: &str) -> String {
         if let Some(ref nucleation) = self.nucleation {
-            // Use nucleation for deterministic assignment
+            // Use shared nucleation for coordinated assignment
             let mut nuc = nucleation.write().await;
             let path = nuc.assign_socket(primal_name, &self.family_id);
             path.display().to_string()
         } else {
-            // Fallback: deterministic path based on family_id
-            format!("/tmp/{}-{}.sock", primal_name, self.family_id)
+            // Fallback: create local nucleation for deterministic path
+            let mut nuc = crate::nucleation::SocketNucleation::default();
+            nuc.assign_socket(primal_name, &self.family_id)
+                .display()
+                .to_string()
         }
     }
 

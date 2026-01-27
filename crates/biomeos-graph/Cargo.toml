@@ -2,51 +2,27 @@
 name = "biomeos-graph"
 version = "0.1.0"
 edition = "2021"
-authors = ["biomeOS Team"]
-description = "Graph-based orchestration for adaptive primal coordination"
-license = "MIT OR Apache-2.0"
+description = "Type-safe ingestion layer for Neural API deployment graphs"
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/ecoPrimals/biomeOS"
+keywords = ["biomeOS", "graph", "deployment", "toml"]
+categories = ["config"]
 
 [dependencies]
-# Async runtime
-tokio = { workspace = true }
-async-trait = { workspace = true }
-futures = { workspace = true }
-
 # Serialization
-serde = { workspace = true }
-serde_json = { workspace = true }
-toml = { workspace = true }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
 
 # Error handling
-anyhow = { workspace = true }
-thiserror = { workspace = true }
-
-# Logging
-tracing = { workspace = true }
-
-# UUID for graph IDs
-uuid = { workspace = true }
-
-# Time
-chrono = { workspace = true }
-
-# Graph algorithms (for cycle detection, topological sort)
-petgraph = "0.6"
-
-# Database for metrics storage
-# rusqlite = { version = "0.32", features = ["bundled"] }  # DEPRECATED: Uses libsqlite3-sys (C dependency)
-# redb = "2.1"  # Pure Rust BUT fails cross-compilation (ARM64, macOS)
-sled = "0.34"  # Pure Rust embedded database - BearDog's proven ecoBin solution!
-
-# biomeOS dependencies
-biomeos-types = { path = "../biomeos-types" }
-biomeos-nucleus = { path = "../biomeos-nucleus" }
+thiserror = "1.0"
 
 [dev-dependencies]
-tokio-test = { workspace = true }
-tempfile = "3.8"
+# Testing
+tempfile = "3.10"
 
-[lib]
-name = "biomeos_graph"
-path = "src/lib.rs"
+[features]
+default = []
 
+# Enable async execution
+async = []

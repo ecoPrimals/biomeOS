@@ -119,7 +119,7 @@ rm -f /tmp/beardog-*.sock /tmp/songbird-*.sock /tmp/neural-api*.sock
 
 ```
 Neural API (capability.call router)
-     ↓
+   ↓
 Songbird (HTTP/TLS 1.3)
      ↓
 BearDog (crypto: SHA-256, SHA-384, AES-GCM, X25519)
@@ -129,11 +129,11 @@ BearDog (crypto: SHA-256, SHA-384, AES-GCM, X25519)
 
 ```
 Consumer → Neural API → capability.call("secure_http", "http.request")
-                ↓
+   ↓
            Translation via graph
                 ↓
            Songbird.http_request()
-                ↓
+   ↓
            BearDog (TLS crypto)
                 ↓
            External HTTPS
@@ -231,6 +231,48 @@ echo | openssl s_client -connect example.com:443 2>&1 | grep Protocol
 ```
 
 **Note**: 7% of sites require TLS 1.2 (not yet supported)
+
+---
+
+## 🧬 LiveSpore USB Deployment
+
+### Create Sibling Spore
+
+```bash
+# From existing parent spore on USB
+./scripts/create_sibling_spore.sh /media/parent/biomeOS /media/newusb node-beta
+
+# Creates:
+# - Derived .family.seed (SHA256 of parent + node_id + batch)
+# - Tower Atomic deploy.sh
+# - Copied primal binaries
+# - Configuration files
+```
+
+### Verify Genetic Lineage
+
+```bash
+# Offline verification (no server needed)
+./scripts/verify_sibling_lineage.sh /media/usb1/biomeOS /media/usb2/biomeOS
+
+# Runtime verification via BearDog
+echo '{"jsonrpc":"2.0","method":"federation.verify_family_member","params":{
+  "family_id":"nat0","node_id":"node-beta"},"id":1}' | nc -U /tmp/beardog-nat0-node-alpha.sock
+```
+
+### Test Federation
+
+```bash
+# Start both spores and verify mutual trust
+./scripts/test_federation.sh
+```
+
+### LiveSpore Graphs
+
+| Graph | Purpose |
+|-------|---------|
+| `livespore_create.toml` | Neural API graph for spore creation |
+| `federation_verify_lineage.toml` | Genetic lineage verification |
 
 ---
 

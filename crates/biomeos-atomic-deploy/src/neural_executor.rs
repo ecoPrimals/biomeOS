@@ -184,10 +184,15 @@ impl GraphExecutor {
     }
 
     /// Execute a single node
+    ///
+    /// Delegates to shared handlers in `executor::node_handlers` for consistency
+    /// and to avoid code duplication.
     async fn execute_node(
         node: &GraphNode,
         context: &ExecutionContext,
     ) -> Result<serde_json::Value> {
+        use crate::executor::node_handlers;
+
         // Determine node type (new format or legacy)
         let node_type_str = if let Some(ref operation) = node.operation {
             operation.name.as_str()
@@ -205,27 +210,41 @@ impl GraphExecutor {
         // Mark as running
         context.set_status(&node.id, NodeStatus::Running).await;
 
-        // Execute based on node type
+        // Execute based on node type - delegate to shared handlers
         let result = match node_type_str {
-            "filesystem.check_exists" => Self::node_filesystem_check_exists(node, context).await,
-            "crypto.derive_child_seed" => Self::node_crypto_derive_seed(node, context).await,
-            "primal.launch" => Self::node_primal_launch(node, context).await,
-            "primal_start" => Self::node_primal_start(node, context).await,
-            // Capability-based handlers (extracted to capability_handlers module)
-            "start" => crate::capability_handlers::primal_start_capability(node, context).await,
-            "health_check" => {
-                crate::capability_handlers::health_check_capability(node, context).await
+            // Filesystem operations
+            "filesystem.check_exists" => {
+                node_handlers::filesystem_check_exists(node, context).await
             }
-            // Verification and health
-            "verification" => Self::node_verification(node, context).await,
-            "health.check" => Self::node_health_check(node, context).await,
-            "health.check_atomic" => Self::node_health_check(node, context).await,
+
+            // Crypto operations
+            "crypto.derive_child_seed" => node_handlers::crypto_derive_seed(node, context).await,
+
+            // Primal lifecycle
+            "primal.launch" => node_handlers::primal_launch(node, context).await,
+            "primal_start" | "start" => {
+                crate::capability_handlers::primal_start_capability(node, context).await
+            }
+
+            // Health checks
+            "health_check" | "health.check" | "health.check_atomic" => {
+                node_handlers::health_check(node, context).await
+            }
             "health.check_all" => Self::node_health_check_all(node, context).await,
-            "lineage.verify_siblings" => Self::node_lineage_verify(node, context).await,
-            "report.deployment_success" => Self::node_deployment_report(node, context).await,
-            "log.info" => Self::node_log_info(node, context).await,
-            "log.warn" => Self::node_log_warn(node, context).await,
-            "log.error" => Self::node_log_error(node, context).await,
+
+            // Verification
+            "verification" => Self::node_verification(node, context).await,
+            "lineage.verify_siblings" => node_handlers::lineage_verify(node, context).await,
+
+            // Reporting
+            "report.deployment_success" => node_handlers::deployment_report(node, context).await,
+
+            // Logging
+            "log.info" => node_handlers::log_info(node, context).await,
+            "log.warn" => node_handlers::log_warn(node, context).await,
+            "log.error" => node_handlers::log_error(node, context).await,
+
+            // Unknown
             _ => {
                 warn!("Unknown node type: {}, skipping", node_type_str);
                 Ok(serde_json::json!({"skipped": true}))
@@ -233,150 +252,6 @@ impl GraphExecutor {
         };
 
         result.context(format!("Node execution failed: {}", node.id))
-    }
-
-    /// Node executor: filesystem.check_exists
-    async fn node_filesystem_check_exists(
-        node: &GraphNode,
-        context: &ExecutionContext,
-    ) -> Result<serde_json::Value> {
-        let path = node
-            .config
-            .get("path")
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| anyhow::anyhow!("Missing 'path' in config"))?;
-
-        // Substitute environment variables
-        let path = Self::substitute_env(path, &context.env);
-        let path = PathBuf::from(path);
-
-        if !path.exists() {
-            anyhow::bail!("Path does not exist: {}", path.display());
-        }
-
-        // Check size if specified
-        if let Some(expected_size) = node.config.get("expected_size").and_then(|v| v.as_u64()) {
-            let metadata = std::fs::metadata(&path)?;
-            if metadata.len() != expected_size {
-                anyhow::bail!(
-                    "File size mismatch: expected {}, got {}",
-                    expected_size,
-                    metadata.len()
-                );
-            }
-        }
-
-        Ok(serde_json::json!({
-            "exists": true,
-            "path": path.to_string_lossy()
-        }))
-    }
-
-    /// Node executor: crypto.derive_child_seed
-    async fn node_crypto_derive_seed(
-        node: &GraphNode,
-        context: &ExecutionContext,
-    ) -> Result<serde_json::Value> {
-        use biomeos_spore::seed::FamilySeed;
-
-        let parent_seed = node
-            .config
-            .get("parent_seed")
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| anyhow::anyhow!("Missing 'parent_seed'"))?;
-        let parent_seed = Self::substitute_env(parent_seed, &context.env);
-
-        let node_id = node
-            .config
-            .get("node_id")
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| anyhow::anyhow!("Missing 'node_id'"))?;
-
-        let output_path = node
-            .config
-            .get("output_path")
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| anyhow::anyhow!("Missing 'output_path'"))?;
-        let output_path = Self::substitute_env(output_path, &context.env);
-
-        let deployment_batch = node
-            .config
-            .get("deployment_batch")
-            .and_then(|v| v.as_str())
-            .map(|s| Self::substitute_env(s, &context.env));
-
-        // Derive child seed
-        FamilySeed::derive_sibling(
-            PathBuf::from(parent_seed),
-            PathBuf::from(&output_path),
-            node_id,
-            deployment_batch.as_deref(),
-        )?;
-
-        Ok(serde_json::json!({
-            "derived": true,
-            "output_path": output_path
-        }))
-    }
-
-    /// Node executor: primal.launch
-    async fn node_primal_launch(
-        node: &GraphNode,
-        context: &ExecutionContext,
-    ) -> Result<serde_json::Value> {
-        info!("   🟢 node_primal_launch called for: {}", node.id);
-        info!("   🔀 Delegating to node_primal_start...");
-        // Delegate to the full primal_start implementation
-        let result = Self::node_primal_start(node, context).await;
-        info!(
-            "   🟢 node_primal_launch result for {}: {:?}",
-            node.id,
-            result.is_ok()
-        );
-        result
-    }
-
-    /// Node executor: health.check_atomic
-    async fn node_health_check(
-        node: &GraphNode,
-        _context: &ExecutionContext,
-    ) -> Result<serde_json::Value> {
-        // Placeholder for health checking
-        Ok(serde_json::json!({
-            "healthy": true,
-            "atomic": node.config.get("atomic_type")
-        }))
-    }
-
-    /// Node executor: lineage.verify_siblings
-    async fn node_lineage_verify(
-        node: &GraphNode,
-        _context: &ExecutionContext,
-    ) -> Result<serde_json::Value> {
-        // Placeholder for lineage verification
-        Ok(serde_json::json!({
-            "verified": true,
-            "siblings": true
-        }))
-    }
-
-    /// Node executor: report.deployment_success
-    async fn node_deployment_report(
-        node: &GraphNode,
-        _context: &ExecutionContext,
-    ) -> Result<serde_json::Value> {
-        let atomics = node
-            .config
-            .get("atomics_deployed")
-            .and_then(|v| v.as_array())
-            .map(|arr| arr.iter().filter_map(|v| v.as_str()).collect::<Vec<_>>())
-            .unwrap_or_default();
-
-        Ok(serde_json::json!({
-            "success": true,
-            "atomics_deployed": atomics,
-            "timestamp": chrono::Utc::now().to_rfc3339()
-        }))
     }
 
     /// Substitute environment variables in a string
@@ -813,69 +688,14 @@ impl GraphExecutor {
     }
 
     /// Node executor: log.info
-    async fn node_log_info(
-        node: &GraphNode,
-        _context: &ExecutionContext,
-    ) -> Result<serde_json::Value> {
-        let message = node
-            .config
-            .get("message")
-            .and_then(|v| v.as_str())
-            .unwrap_or("(no message)");
-
-        info!("📢 {}", message);
-
-        Ok(serde_json::json!({
-            "logged": true,
-            "level": "info",
-            "message": message
-        }))
-    }
-
-    /// Node executor: log.warn
-    async fn node_log_warn(
-        node: &GraphNode,
-        _context: &ExecutionContext,
-    ) -> Result<serde_json::Value> {
-        let message = node
-            .config
-            .get("message")
-            .and_then(|v| v.as_str())
-            .unwrap_or("(no message)");
-
-        warn!("⚠️  {}", message);
-
-        Ok(serde_json::json!({
-            "logged": true,
-            "level": "warn",
-            "message": message
-        }))
-    }
-
-    /// Node executor: log.error
-    async fn node_log_error(
-        node: &GraphNode,
-        _context: &ExecutionContext,
-    ) -> Result<serde_json::Value> {
-        let message = node
-            .config
-            .get("message")
-            .and_then(|v| v.as_str())
-            .unwrap_or("(no message)");
-
-        error!("❌ {}", message);
-
-        Ok(serde_json::json!({
-            "logged": true,
-            "level": "error",
-            "message": message
-        }))
-    }
 
     /// Find BearDog socket from execution context
     /// Used for JWT provisioning and other security capabilities
+    /// Uses SocketNucleation for deterministic paths (no hardcoding)
     #[allow(dead_code)] // Used conditionally based on security features
     async fn find_beardog_socket(context: &ExecutionContext) -> Option<String> {
+        use crate::nucleation::SocketNucleation;
+
         // Try to get from outputs first (from launch_beardog node)
         if let Some(beardog_output) = context.get_output("launch_beardog").await {
             if let Some(socket) = beardog_output.get("socket").and_then(|v| v.as_str()) {
@@ -883,10 +703,11 @@ impl GraphExecutor {
             }
         }
 
-        // Try standard location
-        let default_socket = "/tmp/beardog-nat0.sock";
-        if tokio::fs::metadata(default_socket).await.is_ok() {
-            return Some(default_socket.to_string());
+        // Try nucleated location based on family_id from context
+        let mut nucleation = SocketNucleation::default();
+        let default_socket = nucleation.assign_socket("beardog", &context.family_id);
+        if tokio::fs::metadata(&default_socket).await.is_ok() {
+            return Some(default_socket.to_string_lossy().into_owned());
         }
 
         None

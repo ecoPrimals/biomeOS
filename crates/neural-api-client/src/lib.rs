@@ -209,8 +209,10 @@ impl NeuralApiClient {
         Self::new(socket_path)
     }
     
-    /// Discover socket path from family ID (runtime, not hardcoded)
+    /// Discover socket path from family ID via nucleation pattern
     fn discover_socket(family_id: &str) -> PathBuf {
+        // Neural API follows the same nucleation pattern as primals
+        // Format: /tmp/{primal}-{family_id}.sock
         PathBuf::from(format!("/tmp/neural-api-{}.sock", family_id))
     }
     

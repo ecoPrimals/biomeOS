@@ -93,7 +93,7 @@ async fn handle_active(node_filter: Option<String>) -> Result<()> {
 
     let filtered: Vec<_> = sessions
         .iter()
-        .filter(|s| node_filter.as_ref().map_or(true, |n| s.node_id.contains(n)))
+        .filter(|s| node_filter.as_ref().is_none_or(|n| s.node_id.contains(n)))
         .collect();
 
     if filtered.is_empty() {
@@ -171,7 +171,7 @@ async fn handle_fossil(
     let filtered: Vec<_> = index
         .fossils
         .iter()
-        .filter(|f| node_filter.as_ref().map_or(true, |n| f.node_id.contains(n)))
+        .filter(|f| node_filter.as_ref().is_none_or(|n| f.node_id.contains(n)))
         .take(limit)
         .collect();
 
@@ -284,7 +284,7 @@ async fn handle_migrate(from: PathBuf, dry_run: bool) -> Result<()> {
         let entry = entry?;
         let path = entry.path();
 
-        if path.is_file() && path.extension().map_or(false, |ext| ext == "log") {
+        if path.is_file() && path.extension().is_some_and(|ext| ext == "log") {
             old_logs.push(path);
         }
     }

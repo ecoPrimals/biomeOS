@@ -1,57 +1,38 @@
-// =============================================================================
-// Error Types - Modern Rust Error Handling
-// =============================================================================
+//! Error types for graph operations.
 
 use thiserror::Error;
 
-/// Result type for graph operations
+/// Result type for graph operations.
 pub type Result<T> = std::result::Result<T, GraphError>;
 
-/// Graph-related errors
-#[derive(Error, Debug)]
+/// Errors that can occur during graph operations.
+#[derive(Debug, Error)]
 pub enum GraphError {
-    #[error("Graph parsing error: {0}")]
-    ParseError(String),
-
-    #[error("Graph validation error: {0}")]
-    ValidationError(String),
-
-    #[error("Graph contains cycle")]
-    CyclicGraph,
-
-    #[error("Node not found: {0}")]
-    NodeNotFound(String),
-
-    #[error("Edge references unknown node: {0}")]
-    InvalidEdge(String),
-
-    #[error("Duplicate node ID: {0}")]
-    DuplicateNode(String),
-
-    #[error("Execution error: {0}")]
-    ExecutionError(String),
-
-    #[error("Timeout after {0}ms")]
-    Timeout(u64),
-
+    /// IO error (file not found, permission denied, etc.)
     #[error("IO error: {0}")]
-    Io(#[from] std::io::Error),
+    Io(String),
 
-    #[error("TOML parse error: {0}")]
-    TomlParse(#[from] toml::de::Error),
+    /// TOML parsing error
+    #[error("Parse error: {0}")]
+    Parse(String),
 
-    #[error("JSON error: {0}")]
-    Json(#[from] serde_json::Error),
+    /// Validation error (structural issues)
+    #[error("Validation error: {0}")]
+    Validation(String),
 
-    #[error("Primal capability not found: {0}")]
+    /// Cyclic dependency detected
+    #[error("Cyclic dependency: {0}")]
+    CyclicDependency(String),
+
+    /// Missing dependency
+    #[error("Missing dependency: {0}")]
+    MissingDependency(String),
+
+    /// Execution error
+    #[error("Execution error: {0}")]
+    Execution(String),
+
+    /// Capability not found
+    #[error("Capability not found: {0}")]
     CapabilityNotFound(String),
-
-    #[error("Primal not found: {primal_id} - {reason}")]
-    PrimalNotFound { primal_id: String, reason: String },
-
-    #[error("Execution failed for node {node}: {reason}")]
-    ExecutionFailed { node: String, reason: String },
-
-    #[error(transparent)]
-    Other(#[from] anyhow::Error),
 }

@@ -167,7 +167,7 @@ pub async fn handle_federation_list_subfeds(args: &ListSubfedsArgs) -> Result<()
         .filter(|sf| {
             args.family
                 .as_ref()
-                .map_or(true, |f| sf.parent_family.contains(f))
+                .is_none_or(|f| sf.parent_family.contains(f))
         })
         .collect();
 

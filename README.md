@@ -48,17 +48,31 @@ biomeOS is a **Pure Rust operating system layer** that orchestrates autonomous c
 
 ```bash
 # Build
-cargo build --release -p biomeos-unibin
+cargo build --release --workspace
 
-# Deploy Tower Atomic
+# Deploy Tower Atomic (Unix socket only, TRUE PRIMAL)
 ./deploy_tower_atomic.sh
 
-# Test HTTPS
-echo '{"jsonrpc":"2.0","method":"capability.call","params":{
-  "capability":"secure_http",
-  "operation":"http.request",
-  "args":{"url":"https://api.github.com/zen","method":"GET"}
-},"id":1}' | nc -U /tmp/neural-api.sock
+# Or use LiveSpore on USB
+cd /media/user/USB/biomeOS && ./deploy.sh
+
+# Test JSON-RPC (no HTTP!)
+echo '{"jsonrpc":"2.0","method":"health.check","id":1}' | nc -U /tmp/beardog-nat0.sock
+```
+
+### LiveSpore USB Deployment
+
+Create genetically-linked LiveSpores for federation:
+
+```bash
+# Create sibling spore from existing parent
+./scripts/create_sibling_spore.sh /media/parent/biomeOS /media/newusb node-beta
+
+# Verify genetic lineage between siblings
+./scripts/verify_sibling_lineage.sh /media/usb1/biomeOS /media/usb2/biomeOS
+
+# Test federation (starts both spores)
+./scripts/test_federation.sh
 ```
 
 ---
@@ -184,13 +198,68 @@ See [LICENSE](LICENSE) for details.
 | Metric | Value |
 |--------|-------|
 | **Crates** | 21 |
-| **Tests** | 1,185 passing |
-| **Root Docs** | 18 essential |
-| **Specs** | 62 files |
-| **Archive** | 900+ files |
+| **Tests** | 321 passing |
+| **Rust Files** | 360 |
+| **Lines of Code** | ~101k |
+| **Largest File** | 933 lines |
+| **Formatting** | ✅ Clean (`cargo fmt`) |
+| **Unsafe Code** | 0 blocks |
 
 ---
 
-**Status**: ✅ Production Ready | **TLS**: 93% | **Pure Rust**: 100%
+## 🧬 LiveSpore System
+
+**Genetic lineage** enables automatic federation trust with Dark Forest privacy:
+
+| Feature | Description |
+|---------|-------------|
+| **64-Byte Seed** | `[genesis:32] + [node_key:32]` structure |
+| **Genesis Seed** | Shared family root (bytes 0-31) |
+| **Node Key** | `Blake3(genesis, "node-identity-v1:" + node_id)` (bytes 32-63) |
+| **Dark Forest** | Encrypted beacons - only family can decrypt |
+| **Validation** | `validate_spore.sh --update /path/to/spore` |
+| **Personal Vault** | `vault/experience.json` tracks lived experience |
+
+### LiveSpore Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    USB LiveSpore                            │
+├────────────────────────────┬────────────────────────────────┤
+│   SYSTEM (Validated)       │   VAULT (Spore-Specific)       │
+│   • primals/beardog    ✓   │   • vault/experience.json      │
+│   • primals/songbird   ✓   │   • vault/deployments/         │
+│   • deploy.sh          ✓   │   • vault/logs/                │
+│   • .family.seed       ✓   │   • vault/workdata/            │
+│   ↳ MD5 checksum validated │   ↳ Preserved across updates   │
+└────────────────────────────┴────────────────────────────────┘
+```
+
+See `specs/LIVESPORE_IMPRINTING_SPEC.md` and `specs/BIRDSONG_DARK_FOREST_TRUST_MODEL.md`.
+
+---
+
+## 🦀 Pure Rust Evolution
+
+Scripts are **bootstrap solutions**. We evolve to Pure Rust for:
+
+| Script → Rust | Why |
+|---------------|-----|
+| `deploy.sh` → `biomeos-deploy` | Type safety, cross-platform |
+| `validate_spore.sh` → `biomeos-validate` | Compile-time guarantees |
+| Shell orchestration → Neural API | Full portability, no bash dependency |
+
+**Physics with gravity** (Rust) vs **jelly strings** (bash):
+- Rust: Borrow checker, type system, zero-cost abstractions
+- C: "Physics in vacuum" - some constraints, no safety net
+- Bash: Flexible but fragile, no compile-time checks
+
+See `RUST_EVOLUTION_ROADMAP.md` for migration plan.
+
+---
+
+**Status**: ✅ Production Ready | **TLS**: 93% | **Pure Rust**: 100% (core)
 
 🎉 **biomeOS: Autonomous Compute Through Semantic Evolution**
+
+*Updated: January 27, 2026*

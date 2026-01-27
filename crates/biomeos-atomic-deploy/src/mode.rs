@@ -70,26 +70,30 @@ impl BiomeOsMode {
 
     /// Check if Tower Atomic exists and is reachable
     async fn tower_atomic_exists(family_id: &str) -> bool {
+        use crate::nucleation::SocketNucleation;
+
         // Tower Atomic consists of BearDog + Songbird
         // If either is reachable, Tower Atomic exists
+        // Uses SocketNucleation for deterministic paths (no hardcoding)
 
-        let beardog_socket = format!("/tmp/beardog-{}.sock", family_id);
-        let songbird_socket = format!("/tmp/songbird-{}.sock", family_id);
+        let mut nucleation = SocketNucleation::default();
+        let beardog_socket = nucleation.assign_socket("beardog", family_id);
+        let songbird_socket = nucleation.assign_socket("songbird", family_id);
 
         // Check BearDog
-        if Self::primal_reachable(&beardog_socket).await {
-            debug!("✅ BearDog reachable at {}", beardog_socket);
+        if Self::primal_reachable(beardog_socket.to_string_lossy().as_ref()).await {
+            debug!("✅ BearDog reachable at {:?}", beardog_socket);
             return true;
         }
 
         // Check Songbird
-        if Self::primal_reachable(&songbird_socket).await {
-            debug!("✅ Songbird reachable at {}", songbird_socket);
+        if Self::primal_reachable(songbird_socket.to_string_lossy().as_ref()).await {
+            debug!("✅ Songbird reachable at {:?}", songbird_socket);
             return true;
         }
 
         debug!(
-            "❌ Tower Atomic not found (checked {} and {})",
+            "❌ Tower Atomic not found (checked {:?} and {:?})",
             beardog_socket, songbird_socket
         );
         false

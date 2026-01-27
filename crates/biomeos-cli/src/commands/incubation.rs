@@ -82,7 +82,7 @@ pub async fn handle_node_list_local(args: &ListLocalArgs) -> Result<()> {
         .filter(|n| {
             args.spore_id
                 .as_ref()
-                .map_or(true, |id| n.node.spore_id.contains(id))
+                .is_none_or(|id| n.node.spore_id.contains(id))
         })
         .collect();
 

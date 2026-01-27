@@ -66,4 +66,24 @@ pub enum SporeError {
     /// Anyhow error (for generic fallback)
     #[error("{0}")]
     Anyhow(#[from] anyhow::Error),
+
+    /// Validation error (Dark Forest)
+    #[error("Validation failed: {0}")]
+    ValidationFailed(String),
+
+    /// Serialization error (Dark Forest)
+    #[error("Serialization error: {0}")]
+    SerializationError(String),
+
+    /// Deserialization error (Dark Forest)
+    #[error("Deserialization error: {0}")]
+    DeserializationError(String),
+
+    /// System error (Dark Forest)
+    #[error("System error: {0}")]
+    SystemError(String),
+
+    /// Wrapped I/O error (Dark Forest)
+    #[error("I/O error: {0}")]
+    IoError(std::io::Error),
 }

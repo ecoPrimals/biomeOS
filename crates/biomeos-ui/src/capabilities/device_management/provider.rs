@@ -291,7 +291,7 @@ impl DeviceManagementProvider {
 
         // Try nvidia-smi for NVIDIA GPUs
         if let Ok(output) = tokio::process::Command::new("nvidia-smi")
-            .args(&[
+            .args([
                 "--query-gpu=index,name,utilization.gpu,memory.used,memory.total",
                 "--format=csv,noheader,nounits",
             ])
@@ -362,7 +362,7 @@ impl DeviceManagementProvider {
 
         // Parse df output for mounted filesystems
         if let Ok(output) = tokio::process::Command::new("df")
-            .args(&["-h", "--output=source,size,used,pcent,target"])
+            .args(["-h", "--output=source,size,used,pcent,target"])
             .output()
             .await
         {
@@ -406,7 +406,7 @@ impl DeviceManagementProvider {
 
         // Parse ip link output
         if let Ok(output) = tokio::process::Command::new("ip")
-            .args(&["link", "show"])
+            .args(["link", "show"])
             .output()
             .await
         {

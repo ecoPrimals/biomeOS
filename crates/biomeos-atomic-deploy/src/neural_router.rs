@@ -388,8 +388,10 @@ impl NeuralRouter {
             }
         }
 
-        // Construct socket path (runtime, not hardcoded)
-        let socket_path = PathBuf::from(format!("/tmp/{}-{}.sock", primal_name, self.family_id));
+        // Construct socket path via nucleation (deterministic, not hardcoded)
+        use crate::nucleation::SocketNucleation;
+        let mut nucleation = SocketNucleation::default();
+        let socket_path = nucleation.assign_socket(primal_name, &self.family_id);
 
         // Verify socket exists
         if !socket_path.exists() {

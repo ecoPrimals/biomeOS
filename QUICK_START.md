@@ -165,6 +165,29 @@ Tower Atomic has been validated against 87 sites:
 
 ---
 
+## 🧬 LiveSpore USB Deployment
+
+**Deploy genetically-linked spores for federation:**
+
+```bash
+# Create sibling from existing parent spore
+./scripts/create_sibling_spore.sh /media/parent/biomeOS /media/newusb node-beta
+
+# Verify genetic lineage (offline)
+./scripts/verify_sibling_lineage.sh /media/usb1/biomeOS /media/usb2/biomeOS
+
+# Test federation (runs both spores)
+./scripts/test_federation.sh
+```
+
+**LiveSpore features:**
+- ✅ Portable USB deployment
+- ✅ Genetic lineage verification
+- ✅ Automatic federation trust
+- ✅ Tower Atomic stack
+
+---
+
 ## 📚 Next Steps
 
 ### Learn More

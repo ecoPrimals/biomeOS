@@ -1,278 +1,285 @@
-//! Graph data structures for Neural API
+//! Deployment graph types with compile-time validation.
+//!
+//! These types ensure that when a graph is loaded from TOML,
+//! it is structurally valid before any runtime execution.
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-/// Primal graph - orchestration with capability-based discovery
+use crate::node::GraphNode;
+
+/// A validated deployment graph.
+///
+/// This struct represents a graph that has been:
+/// 1. Parsed from TOML
+/// 2. Validated for structural correctness
+/// 3. Checked for dependency cycles
+///
+/// If you have a `DeploymentGraph`, it is guaranteed to be valid.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PrimalGraph {
+pub struct DeploymentGraph {
+    /// Graph definition section
+    #[serde(rename = "graph")]
+    pub definition: GraphDefinition,
+}
+
+/// Core graph definition.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GraphDefinition {
+    /// Unique identifier for the graph
     pub id: GraphId,
+
+    /// Human-readable name
     pub name: String,
-    pub description: String,
+
+    /// Semantic version
     pub version: String,
-    pub nodes: Vec<PrimalNode>,
-    pub edges: Vec<GraphEdge>,
-    pub coordination: CoordinationPattern,
-}
 
-/// Primal node - graph node with capability-based primal selection
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PrimalNode {
-    pub id: String,
-    pub primal: PrimalSelector,
-    pub operation: Operation,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub input: Option<String>,
+    /// Description of what this graph does
     #[serde(default)]
-    pub outputs: Vec<String>,
+    pub description: String,
+
+    /// Graph metadata
+    #[serde(default)]
+    pub metadata: GraphMetadata,
+
+    /// Environment variable definitions
+    #[serde(default)]
+    pub env: HashMap<String, String>,
+
+    /// Nodes in the graph (execution units)
+    #[serde(default)]
+    pub nodes: Vec<GraphNode>,
+
+    /// Output definitions
+    #[serde(default)]
+    pub outputs: HashMap<String, String>,
 }
 
-/// Graph ID type
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+/// Graph identifier - validated to be lowercase alphanumeric with hyphens.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(try_from = "String", into = "String")]
 pub struct GraphId(String);
 
 impl GraphId {
-    pub fn new(id: impl Into<String>) -> Self {
-        Self(id.into())
+    /// Create a new graph ID, validating format.
+    pub fn new(id: impl Into<String>) -> Result<Self, String> {
+        let id = id.into();
+        if id.is_empty() {
+            return Err("Graph ID cannot be empty".into());
+        }
+        if !id
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+        {
+            return Err(format!(
+                "Graph ID must be lowercase alphanumeric with hyphens: {}",
+                id
+            ));
+        }
+        Ok(Self(id))
     }
 
+    /// Get the ID as a string slice.
     pub fn as_str(&self) -> &str {
         &self.0
     }
 }
 
-/// Primal selector - capability-based discovery (NO HARDCODING!)
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum PrimalSelector {
-    /// Select by primal ID (fallback only)
-    ById { by_id: String },
+impl TryFrom<String> for GraphId {
+    type Error = String;
 
-    /// Select by single capability (preferred!)
-    ByCapability { by_capability: String },
-
-    /// Select by multiple capabilities (AND logic)
-    ByCapabilities { by_capabilities: Vec<String> },
-}
-
-/// Operation to execute on a primal
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Operation {
-    pub name: String,
-    pub params: serde_json::Value,
-
-    /// Environment variables to pass to the primal
-    /// (for API keys, configuration, etc.)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub environment: Option<HashMap<String, String>>,
-}
-
-/// Graph edge
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GraphEdge {
-    pub from: String,
-    pub to: String,
-    pub edge_type: EdgeType,
-}
-
-/// Edge type
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum EdgeType {
-    DataFlow,
-    ControlFlow,
-    Dependency,
-}
-
-/// Coordination pattern
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "PascalCase")]
-pub enum CoordinationPattern {
-    Sequential,
-    Parallel,
-    ConditionalDAG,
-    Pipeline,
-}
-
-/// Node constraints
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NodeConstraints {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub timeout_ms: Option<u64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub retry_policy: Option<RetryPolicy>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub required_capabilities: Option<Vec<String>>,
-}
-
-/// Retry policy
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RetryPolicy {
-    pub max_attempts: u32,
-    pub backoff_ms: u64,
-}
-
-/// Graph execution result
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GraphResult {
-    pub success: bool,
-    pub node_results: HashMap<String, serde_json::Value>,
-    pub errors: Vec<String>,
-    pub duration_ms: u64,
-}
-
-/// Node execution metrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NodeMetrics {
-    pub node_id: String,
-    pub duration_ms: u64,
-    pub success: bool,
-    pub retry_count: u32,
-}
-
-/// Neural API graph
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Graph {
-    pub id: String,
-    pub version: String,
-    pub description: String,
-    pub nodes: Vec<GraphNode>,
-    pub config: GraphConfig,
-}
-
-impl Graph {
-    /// Load graph from TOML file
-    pub fn from_toml_file(path: &std::path::Path) -> anyhow::Result<Self> {
-        let contents = std::fs::read_to_string(path)?;
-        Self::from_toml_str(&contents)
-    }
-
-    /// Load graph from TOML string
-    pub fn from_toml_str(toml: &str) -> anyhow::Result<Self> {
-        // Parse TOML
-        let value: toml::Value = toml::from_str(toml)?;
-
-        // Extract graph metadata
-        let graph_table = value
-            .get("graph")
-            .and_then(|v| v.as_table())
-            .ok_or_else(|| anyhow::anyhow!("Missing [graph] section"))?;
-
-        let id = graph_table
-            .get("id")
-            .and_then(|v| v.as_str())
-            .unwrap_or("unknown")
-            .to_string();
-
-        let version = graph_table
-            .get("version")
-            .and_then(|v| v.as_str())
-            .unwrap_or("0.0.0")
-            .to_string();
-
-        let description = graph_table
-            .get("description")
-            .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .to_string();
-
-        // Extract nodes
-        let nodes_array = value
-            .get("nodes")
-            .and_then(|v| v.as_array())
-            .ok_or_else(|| anyhow::anyhow!("Missing [[nodes]] array"))?;
-
-        let mut nodes = Vec::new();
-        for node_value in nodes_array {
-            let node: GraphNode = toml::from_str(&toml::to_string(node_value)?)?;
-            nodes.push(node);
-        }
-
-        // Extract execution config
-        let config = if let Some(exec_table) = value.get("execution").and_then(|v| v.as_table()) {
-            GraphConfig {
-                deterministic: exec_table
-                    .get("mode")
-                    .and_then(|v| v.as_str())
-                    .map(|s| s == "deterministic")
-                    .unwrap_or(true),
-                parallel_phases: exec_table
-                    .get("parallel_phases")
-                    .and_then(|v| v.as_bool())
-                    .unwrap_or(true),
-                max_parallelism: exec_table
-                    .get("max_parallelism")
-                    .and_then(|v| v.as_integer())
-                    .unwrap_or(3) as usize,
-                timeout_total_ms: exec_table
-                    .get("timeout_total_ms")
-                    .and_then(|v| v.as_integer())
-                    .unwrap_or(60000) as u64,
-                checkpoint_enabled: exec_table
-                    .get("checkpoint_enabled")
-                    .and_then(|v| v.as_bool())
-                    .unwrap_or(false),
-                rollback_on_failure: exec_table
-                    .get("rollback_on_failure")
-                    .and_then(|v| v.as_bool())
-                    .unwrap_or(true),
-            }
-        } else {
-            GraphConfig::default()
-        };
-
-        Ok(Self {
-            id,
-            version,
-            description,
-            nodes,
-            config,
-        })
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Self::new(value)
     }
 }
 
-/// Graph node
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GraphNode {
-    pub id: String,
-    pub node_type: String,
-    #[serde(default)]
-    pub dependencies: Vec<String>,
-    #[serde(default)]
-    pub config: HashMap<String, serde_json::Value>,
-    #[serde(default)]
-    pub outputs: Vec<NodeOutput>,
+impl From<GraphId> for String {
+    fn from(id: GraphId) -> Self {
+        id.0
+    }
 }
 
-/// Node output definition
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NodeOutput {
-    pub name: String,
-    #[serde(rename = "type")]
-    pub output_type: String,
+impl std::fmt::Display for GraphId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
 }
 
-/// Graph execution configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GraphConfig {
-    pub deterministic: bool,
-    pub parallel_phases: bool,
-    pub max_parallelism: usize,
-    pub timeout_total_ms: u64,
-    pub checkpoint_enabled: bool,
-    pub rollback_on_failure: bool,
+/// Metadata about the graph.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct GraphMetadata {
+    /// Family ID this graph belongs to
+    #[serde(default)]
+    pub family_id: Option<String>,
+
+    /// Author of the graph
+    #[serde(default)]
+    pub author: Option<String>,
+
+    /// Creation date
+    #[serde(default)]
+    pub created: Option<String>,
+
+    /// Category (deployment, validation, etc.)
+    #[serde(default)]
+    pub category: Option<GraphCategory>,
+
+    /// Additional metadata
+    #[serde(flatten)]
+    pub extra: HashMap<String, toml::Value>,
 }
 
-impl Default for GraphConfig {
+/// Graph category for classification.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum GraphCategory {
+    /// Deployment graphs
+    Deployment,
+    /// Validation graphs
+    Validation,
+    /// Testing graphs
+    Testing,
+    /// Utility graphs
+    Utility,
+    /// Lifecycle graphs
+    Lifecycle,
+}
+
+impl Default for GraphCategory {
     fn default() -> Self {
-        Self {
-            deterministic: true,
-            parallel_phases: true,
-            max_parallelism: 3,
-            timeout_total_ms: 60000,
-            checkpoint_enabled: false,
-            rollback_on_failure: true,
+        Self::Utility
+    }
+}
+
+impl DeploymentGraph {
+    /// Get the graph ID.
+    pub fn id(&self) -> &GraphId {
+        &self.definition.id
+    }
+
+    /// Get the graph name.
+    pub fn name(&self) -> &str {
+        &self.definition.name
+    }
+
+    /// Get all nodes in the graph.
+    pub fn nodes(&self) -> &[GraphNode] {
+        &self.definition.nodes
+    }
+
+    /// Get nodes in topological order (respecting dependencies).
+    pub fn nodes_in_order(&self) -> Vec<&GraphNode> {
+        // Simple topological sort using Kahn's algorithm
+        let mut result = Vec::new();
+        let mut in_degree: HashMap<&str, usize> = HashMap::new();
+        let mut node_map: HashMap<&str, &GraphNode> = HashMap::new();
+
+        // Initialize
+        for node in &self.definition.nodes {
+            in_degree.insert(node.id.as_str(), node.depends_on.len());
+            node_map.insert(node.id.as_str(), node);
         }
+
+        // Find nodes with no dependencies
+        let mut queue: Vec<&str> = in_degree
+            .iter()
+            .filter(|(_, &deg)| deg == 0)
+            .map(|(&id, _)| id)
+            .collect();
+
+        while let Some(node_id) = queue.pop() {
+            if let Some(node) = node_map.get(node_id) {
+                result.push(*node);
+
+                // Decrease in-degree of dependent nodes
+                for other in &self.definition.nodes {
+                    if other.depends_on.contains(&node_id.to_string()) {
+                        if let Some(deg) = in_degree.get_mut(other.id.as_str()) {
+                            *deg -= 1;
+                            if *deg == 0 {
+                                queue.push(other.id.as_str());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        result
+    }
+
+    /// Get environment variables with defaults resolved.
+    pub fn env(&self) -> &HashMap<String, String> {
+        &self.definition.env
+    }
+
+    /// Resolve an environment variable reference.
+    ///
+    /// Handles formats like:
+    /// - `${VAR}` - Direct reference
+    /// - `${VAR:-default}` - With default value
+    ///
+    /// Note: This resolves against system env first, then graph defaults.
+    /// Graph env values like `"${VAR:-default}"` are treated as default specs,
+    /// not literal values.
+    pub fn resolve_env(&self, value: &str) -> String {
+        let mut result = value.to_string();
+        let mut iterations = 0;
+        const MAX_ITERATIONS: usize = 100;
+
+        // Find all ${...} patterns
+        while let Some(start) = result.find("${") {
+            iterations += 1;
+            if iterations > MAX_ITERATIONS {
+                // Prevent infinite loops from self-referential patterns
+                break;
+            }
+
+            if let Some(end) = result[start..].find('}') {
+                let var_spec = &result[start + 2..start + end];
+
+                // Handle ${VAR:-default} syntax
+                let (var_name, inline_default) = if let Some(pos) = var_spec.find(":-") {
+                    (&var_spec[..pos], Some(&var_spec[pos + 2..]))
+                } else {
+                    (var_spec, None)
+                };
+
+                // Check system env first
+                let resolved = std::env::var(var_name)
+                    .ok()
+                    .or_else(|| {
+                        // Then check graph env - but extract default if it's a ${VAR:-default} pattern
+                        self.definition.env.get(var_name).and_then(|v| {
+                            if v.starts_with("${") && v.contains(":-") {
+                                // Extract default from "${VAR:-default}" pattern
+                                v.find(":-")
+                                    .and_then(|pos| v[pos + 2..].strip_suffix('}'))
+                                    .map(String::from)
+                            } else if !v.contains("${") {
+                                // Literal value
+                                Some(v.clone())
+                            } else {
+                                None
+                            }
+                        })
+                    })
+                    .or_else(|| inline_default.map(String::from))
+                    .unwrap_or_default();
+
+                result = format!(
+                    "{}{}{}",
+                    &result[..start],
+                    resolved,
+                    &result[start + end + 1..]
+                );
+            } else {
+                break;
+            }
+        }
+
+        result
     }
 }
 
@@ -281,31 +288,37 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_simple_graph() {
+    fn test_graph_id_validation() {
+        assert!(GraphId::new("livespore-deploy").is_ok());
+        assert!(GraphId::new("tower-atomic-bootstrap").is_ok());
+        assert!(GraphId::new("test123").is_ok());
+
+        assert!(GraphId::new("").is_err());
+        assert!(GraphId::new("UPPERCASE").is_err());
+        assert!(GraphId::new("has spaces").is_err());
+        assert!(GraphId::new("has_underscore").is_err());
+    }
+
+    #[test]
+    fn test_env_resolution() {
         let toml = r#"
-[graph]
-id = "test_graph"
-version = "1.0.0"
-description = "Test graph"
+            [graph]
+            id = "test-graph"
+            name = "Test"
+            version = "1.0.0"
+            
+            [graph.env]
+            SPORE_TARGET = "/media/user/USB"
+            NODE_ID = "test-node"
+        "#;
 
-[[nodes]]
-id = "node1"
-node_type = "test.node"
-dependencies = []
+        let graph: DeploymentGraph = toml::from_str(toml).unwrap();
 
-[[nodes]]
-id = "node2"
-node_type = "test.node"
-dependencies = ["node1"]
-
-[execution]
-mode = "deterministic"
-max_parallelism = 2
-"#;
-
-        let graph = Graph::from_toml_str(toml).unwrap();
-        assert_eq!(graph.id, "test_graph");
-        assert_eq!(graph.nodes.len(), 2);
-        assert_eq!(graph.config.max_parallelism, 2);
+        assert_eq!(
+            graph.resolve_env("${SPORE_TARGET}/biomeOS"),
+            "/media/user/USB/biomeOS"
+        );
+        assert_eq!(graph.resolve_env("${NODE_ID}"), "test-node");
+        assert_eq!(graph.resolve_env("${MISSING:-default}"), "default");
     }
 }

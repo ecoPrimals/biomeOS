@@ -34,11 +34,18 @@ impl BiomeOsHttpClient {
     /// Create new HTTP client
     ///
     /// This delegates all HTTP requests to Songbird (Tower Atomic)
+    /// Uses SocketNucleation for deterministic paths (no hardcoding)
     pub fn new() -> Self {
+        use crate::nucleation::SocketNucleation;
+
         let songbird_socket = std::env::var("SONGBIRD_SOCKET").unwrap_or_else(|_| {
             let family_id =
                 std::env::var("BIOMEOS_FAMILY_ID").unwrap_or_else(|_| "nat0".to_string());
-            format!("/tmp/songbird-{}.sock", family_id)
+            let mut nucleation = SocketNucleation::default();
+            nucleation
+                .assign_socket("songbird", &family_id)
+                .to_string_lossy()
+                .into_owned()
         });
 
         info!("🌐 biomeOS HTTP client initialized (via Tower Atomic)");

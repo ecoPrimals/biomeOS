@@ -1,8 +1,9 @@
 //! Deploy mode - Execute deployment graph
 //!
-//! TODO: Integration with biomeos-atomic-deploy pending proper exports
+//! Uses biomeos-graph for type-safe TOML graph loading and validation.
 
 use anyhow::{Context, Result};
+use biomeos_graph::GraphLoader;
 use std::path::PathBuf;
 use tracing::{info, warn};
 
@@ -20,22 +21,15 @@ pub async fn run(graph: PathBuf, validate_only: bool, dry_run: bool) -> Result<(
         warn!("🧪 Dry run mode - showing what would happen");
     }
 
-    // Load graph
-    let graph_content = std::fs::read_to_string(&graph)
-        .with_context(|| format!("Failed to read graph: {}", graph.display()))?;
+    // Load graph with type-safe parsing (includes validation)
+    let deployment_graph = GraphLoader::from_file(&graph)
+        .with_context(|| format!("Failed to load graph: {}", graph.display()))?;
 
-    // Parse as TOML
-    let parsed: toml::Value = toml::from_str(&graph_content)
-        .with_context(|| format!("Failed to parse graph: {}", graph.display()))?;
-
-    // Count nodes
-    let node_count = parsed
-        .get("nodes")
-        .and_then(|n| n.as_table())
-        .map(|t| t.len())
-        .unwrap_or(0);
-
-    info!("✅ Graph loaded: {} nodes", node_count);
+    info!(
+        "✅ Graph loaded and validated: {} ({} nodes)",
+        deployment_graph.id(),
+        deployment_graph.nodes().len()
+    );
 
     if validate_only {
         info!("✅ Graph validation complete!");
@@ -43,16 +37,15 @@ pub async fn run(graph: PathBuf, validate_only: bool, dry_run: bool) -> Result<(
     }
 
     if dry_run {
-        info!("Would execute {} nodes", node_count);
-        if let Some(nodes) = parsed.get("nodes").and_then(|n| n.as_table()) {
-            for (name, _node) in nodes {
-                info!("  • Node '{}'", name);
-            }
+        info!("Would execute {} nodes:", deployment_graph.nodes().len());
+        for node in deployment_graph.nodes_in_order() {
+            let cap = node.capability.as_deref().unwrap_or("(no capability)");
+            info!("  • Node '{}' (capability: {})", node.id, cap);
         }
         return Ok(());
     }
 
-    // TODO: Actual deployment execution requires biomeos-atomic-deploy refactoring
+    // Full deployment requires Neural API
     info!("⚠️  Full deployment execution requires Neural API integration");
     info!("   Use: biomeos neural-api (in separate terminal)");
     info!("   Then: Send deployment request via JSON-RPC");

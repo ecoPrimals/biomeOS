@@ -35,13 +35,13 @@ impl TrustLevel {
     #[must_use]
     pub fn is_sufficient(&self, required: &TrustLevel) -> bool {
         use TrustLevel::{Known, Trusted, Unknown, Verified};
-        match (self, required) {
-            (Verified, _) => true,
-            (Trusted, Trusted | Known | Unknown) => true,
-            (Known, Known | Unknown) => true,
-            (Unknown, Unknown) => true,
-            _ => false,
-        }
+        matches!(
+            (self, required),
+            (Verified, _)
+                | (Trusted, Trusted | Known | Unknown)
+                | (Known, Known | Unknown)
+                | (Unknown, Unknown)
+        )
     }
 }
 

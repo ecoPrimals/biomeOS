@@ -44,6 +44,7 @@
 //! }
 //! ```
 
+pub mod dark_forest;
 pub mod error;
 pub mod incubation;
 pub mod logs;
@@ -62,6 +63,7 @@ pub mod verify;
 #[doc(hidden)]
 pub mod test_support;
 
+pub use dark_forest::{BeaconPlaintext, DarkForestBeacon, DiscoveredPeer, EncryptedBeacon};
 pub use error::{SporeError, SporeResult};
 pub use neural_spore::{DeploymentMetrics, NeuralSpore, PhaseMetrics, RollbackState};
 pub use seed::FamilySeed;
