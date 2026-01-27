@@ -14,9 +14,12 @@ use crate::events::GraphEvent;
 use crate::graph::{Operation, PrimalGraph, PrimalNode, PrimalSelector};
 use crate::modification::GraphModification;
 use anyhow::Result;
+use biomeos_nucleus::client::call_unix_socket_rpc;
+use biomeos_types::SystemPaths;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tokio::time::{timeout, Duration};
+use tracing::{debug, warn};
 
 /// AI suggestion from Squirrel
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -208,16 +211,39 @@ impl AiGraphAdvisor {
 
     /// Check if Squirrel is available
     pub async fn check_squirrel_availability(&mut self) -> Result<bool> {
-        // TODO: Implement actual Squirrel discovery via Songbird
-        // For now, we'll check if Squirrel is reachable
+        // Discover Squirrel via XDG-compliant socket path
+        let socket_path = SystemPaths::primal_socket("squirrel");
 
-        // This would use the biomeos-core SquirrelClient when available
-        // let squirrel = SquirrelClient::discover().await?;
-        // self.squirrel_available = squirrel.health_check().await.is_ok();
+        if !std::path::Path::new(&socket_path).exists() {
+            debug!("Squirrel socket not found at {}", socket_path);
+            self.squirrel_available = false;
+            return Ok(false);
+        }
 
-        // For now, gracefully degrade
-        self.squirrel_available = false;
-        Ok(self.squirrel_available)
+        // Try to call health check on Squirrel
+        match call_unix_socket_rpc::<serde_json::Value>(
+            &socket_path,
+            "health.check",
+            serde_json::json!({}),
+        )
+        .await
+        {
+            Ok(result) => {
+                let healthy = result
+                    .get("status")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s == "healthy" || s == "ok")
+                    .unwrap_or(false);
+                self.squirrel_available = healthy;
+                debug!("Squirrel health check: available={}", healthy);
+                Ok(healthy)
+            }
+            Err(e) => {
+                debug!("Squirrel health check failed: {}", e);
+                self.squirrel_available = false;
+                Ok(false)
+            }
+        }
     }
 
     /// Get AI suggestions for a graph
@@ -231,27 +257,52 @@ impl AiGraphAdvisor {
 
     /// Get suggestions from Squirrel
     async fn get_squirrel_suggestions(&self, graph: &PrimalGraph) -> Result<Vec<AiSuggestion>> {
-        // TODO: Implement actual Squirrel integration
-        // This would call Squirrel's analyze_graph method
+        let socket_path = SystemPaths::primal_socket("squirrel");
+        let graph_snapshot = GraphSnapshot::from_graph(graph);
 
         let result = timeout(self.squirrel_timeout, async {
-            // Placeholder for Squirrel call
-            // let squirrel = SquirrelClient::discover().await?;
-            // squirrel.analyze_graph(graph).await
-            Ok::<Vec<AiSuggestion>, anyhow::Error>(Vec::new())
+            call_unix_socket_rpc::<serde_json::Value>(
+                &socket_path,
+                "ai.analyze_graph",
+                serde_json::json!({
+                    "graph_id": graph.id.as_str(),
+                    "graph_name": graph.name,
+                    "snapshot": graph_snapshot,
+                    "coordination": format!("{:?}", graph.coordination),
+                    "node_count": graph.nodes.len(),
+                    "edge_count": graph.edges.len()
+                }),
+            )
+            .await
         })
         .await;
 
         match result {
-            Ok(Ok(suggestions)) => Ok(suggestions),
+            Ok(Ok(response)) => {
+                // Parse suggestions from Squirrel response
+                if let Some(suggestions_json) = response.get("suggestions").and_then(|v| v.as_array())
+                {
+                    let suggestions: Vec<AiSuggestion> = suggestions_json
+                        .iter()
+                        .filter_map(|v| serde_json::from_value(v.clone()).ok())
+                        .collect();
+
+                    if !suggestions.is_empty() {
+                        debug!("Received {} suggestions from Squirrel", suggestions.len());
+                        return Ok(suggestions);
+                    }
+                }
+                // No suggestions from Squirrel, use local
+                Ok(self.get_local_suggestions(graph))
+            }
             Ok(Err(e)) => {
                 // Squirrel failed, fall back to local
-                eprintln!("Squirrel request failed: {}, using local patterns", e);
+                warn!("Squirrel request failed: {}, using local patterns", e);
                 Ok(self.get_local_suggestions(graph))
             }
             Err(_) => {
                 // Timeout, fall back to local
-                eprintln!("Squirrel request timed out, using local patterns");
+                warn!("Squirrel request timed out, using local patterns");
                 Ok(self.get_local_suggestions(graph))
             }
         }
@@ -363,8 +414,64 @@ impl AiGraphAdvisor {
     }
 
     /// Detect coordination pattern improvements
-    fn detect_coordination_improvements(&self, _graph: &PrimalGraph) -> Option<AiSuggestion> {
-        // TODO: Implement more sophisticated pattern detection
+    fn detect_coordination_improvements(&self, graph: &PrimalGraph) -> Option<AiSuggestion> {
+        use crate::graph::CoordinationPattern;
+
+        // Detect if a parallel graph has many dependencies (should be DAG)
+        if matches!(graph.coordination, CoordinationPattern::Parallel) && graph.edges.len() > 2 {
+            // Many edges in a parallel graph suggests DAG would be better
+            return Some(AiSuggestion {
+                id: format!("local_dag_{}", uuid::Uuid::new_v4()),
+                suggestion_type: SuggestionType::Optimization,
+                modification: GraphModification::ChangeCoordination {
+                    pattern: CoordinationPattern::Dag,
+                },
+                reasoning: format!(
+                    "Parallel graph has {} edges defining dependencies. Consider DAG coordination for proper dependency ordering.",
+                    graph.edges.len()
+                ),
+                confidence: 0.75,
+                evidence: vec![
+                    format!("{} edges in parallel graph", graph.edges.len()),
+                    "Dependencies should be respected".to_string(),
+                    "DAG provides optimal parallel execution with dependencies".to_string(),
+                ],
+                impact: ImpactEstimate {
+                    performance: 0.3,
+                    reliability: 0.5,
+                    complexity: 0.1,
+                    summary: "Improves correctness while maintaining parallelism".to_string(),
+                },
+            });
+        }
+
+        // Detect single-node graphs with edges (suggest simplification)
+        if graph.nodes.len() == 1 && !graph.edges.is_empty() {
+            // Suggest removing the first edge as an example
+            if let Some(edge) = graph.edges.first() {
+                return Some(AiSuggestion {
+                    id: format!("local_simplify_{}", uuid::Uuid::new_v4()),
+                    suggestion_type: SuggestionType::BestPractice,
+                    modification: GraphModification::RemoveEdge {
+                        from: edge.from.clone(),
+                        to: edge.to.clone(),
+                    },
+                    reasoning: "Single-node graph has edges which are unnecessary".to_string(),
+                    confidence: 0.95,
+                    evidence: vec![
+                        "Only one node exists".to_string(),
+                        format!("{} unnecessary edges", graph.edges.len()),
+                    ],
+                    impact: ImpactEstimate {
+                        performance: 0.1,
+                        reliability: 0.1,
+                        complexity: -0.3,
+                        summary: "Simplifies graph structure".to_string(),
+                    },
+                });
+            }
+        }
+
         None
     }
 
@@ -372,27 +479,71 @@ impl AiGraphAdvisor {
     pub async fn send_learning_event(&self, event: LearningEvent) -> Result<()> {
         if !self.squirrel_available {
             // Log locally for future batch sending
+            debug!("Squirrel unavailable, skipping learning event");
             return Ok(());
         }
 
-        // TODO: Implement actual Squirrel learning
-        // let squirrel = SquirrelClient::discover().await?;
-        // squirrel.learn_from_event(event).await?;
+        let socket_path = SystemPaths::primal_socket("squirrel");
 
-        Ok(())
+        match call_unix_socket_rpc::<serde_json::Value>(
+            &socket_path,
+            "ai.learn_from_event",
+            serde_json::json!({
+                "event_type": event.event_type,
+                "before": event.before,
+                "after": event.after,
+                "action": event.action,
+                "context": event.context
+            }),
+        )
+        .await
+        {
+            Ok(_) => {
+                debug!("Learning event sent to Squirrel: {}", event.event_type);
+                Ok(())
+            }
+            Err(e) => {
+                warn!("Failed to send learning event to Squirrel: {}", e);
+                // Don't fail the operation, just log
+                Ok(())
+            }
+        }
     }
 
     /// Send feedback on a suggestion
-    pub async fn send_feedback(&self, _feedback: SuggestionFeedback) -> Result<()> {
+    pub async fn send_feedback(&self, feedback: SuggestionFeedback) -> Result<()> {
         if !self.squirrel_available {
+            debug!("Squirrel unavailable, skipping feedback");
             return Ok(());
         }
 
-        // TODO: Implement actual Squirrel feedback
-        // let squirrel = SquirrelClient::discover().await?;
-        // squirrel.record_feedback(feedback).await?;
+        let socket_path = SystemPaths::primal_socket("squirrel");
 
-        Ok(())
+        match call_unix_socket_rpc::<serde_json::Value>(
+            &socket_path,
+            "ai.record_feedback",
+            serde_json::json!({
+                "suggestion_id": feedback.suggestion_id,
+                "accepted": feedback.accepted,
+                "comments": feedback.comments,
+                "outcome": feedback.outcome
+            }),
+        )
+        .await
+        {
+            Ok(_) => {
+                debug!(
+                    "Feedback sent to Squirrel for suggestion: {}",
+                    feedback.suggestion_id
+                );
+                Ok(())
+            }
+            Err(e) => {
+                warn!("Failed to send feedback to Squirrel: {}", e);
+                // Don't fail the operation, just log
+                Ok(())
+            }
+        }
     }
 
     /// Learn from graph events

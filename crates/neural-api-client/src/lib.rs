@@ -209,11 +209,19 @@ impl NeuralApiClient {
         Self::new(socket_path)
     }
     
-    /// Discover socket path from family ID via nucleation pattern
+    /// Discover socket path from family ID via XDG-compliant nucleation pattern
+    ///
+    /// Uses `SystemPaths` to find the runtime directory:
+    /// 1. `$XDG_RUNTIME_DIR/biomeos/neural-api-{family_id}.sock`
+    /// 2. `/tmp/biomeos-$USER/neural-api-{family_id}.sock`
     fn discover_socket(family_id: &str) -> PathBuf {
-        // Neural API follows the same nucleation pattern as primals
-        // Format: /tmp/{primal}-{family_id}.sock
-        PathBuf::from(format!("/tmp/neural-api-{}.sock", family_id))
+        // Use SystemPaths for XDG-compliant socket discovery
+        if let Ok(paths) = biomeos_types::SystemPaths::new() {
+            paths.primal_socket(&format!("neural-api-{}", family_id))
+        } else {
+            // Fallback if SystemPaths fails (shouldn't happen in practice)
+            PathBuf::from(format!("/tmp/neural-api-{}.sock", family_id))
+        }
     }
     
     /// Set request timeout
@@ -456,6 +464,7 @@ mod tests {
     
     #[test]
     fn test_client_construction() {
+        // Test with any valid path (doesn't need to exist for construction)
         let client = NeuralApiClient::new("/tmp/test.sock");
         assert!(client.is_ok());
     }
@@ -463,13 +472,23 @@ mod tests {
     #[test]
     fn test_discover_socket_path() {
         let path = NeuralApiClient::discover_socket("nat0");
-        assert_eq!(path, PathBuf::from("/tmp/neural-api-nat0.sock"));
+        // Should end with the correct socket filename, regardless of XDG prefix
+        assert!(
+            path.to_string_lossy().ends_with("neural-api-nat0.sock"),
+            "Socket path should end with neural-api-nat0.sock, got: {}",
+            path.display()
+        );
     }
     
     #[test]
     fn test_discover_socket_path_custom() {
         let path = NeuralApiClient::discover_socket("production");
-        assert_eq!(path, PathBuf::from("/tmp/neural-api-production.sock"));
+        // Should end with the correct socket filename
+        assert!(
+            path.to_string_lossy().ends_with("neural-api-production.sock"),
+            "Socket path should end with neural-api-production.sock, got: {}",
+            path.display()
+        );
     }
     
     #[test]

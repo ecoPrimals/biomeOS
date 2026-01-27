@@ -250,7 +250,8 @@ pub fn protocol_from_env() -> ProtocolPreference {
         Ok("tarpc") => ProtocolPreference::TarpcOnly,
         Ok("prefer-jsonrpc") => ProtocolPreference::PreferJsonRpc,
         Ok("prefer-tarpc") => ProtocolPreference::PreferTarpc,
-        Ok("auto") | _ => ProtocolPreference::Auto,
+        Ok("auto") => ProtocolPreference::Auto,
+        _ => ProtocolPreference::Auto,
     }
 }
 

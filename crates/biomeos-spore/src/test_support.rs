@@ -1,12 +1,45 @@
 //! Test support utilities - ONLY compiled in test mode
+//!
+//! Creates the expected plasmidBin structure for tests.
+//!
+//! # Structure
+//! ```text
+//! plasmidBin/
+//! ├── tower/
+//! │   └── tower       # Tower orchestrator
+//! └── primals/
+//!     ├── beardog     # UniBin compliant primal binary
+//!     └── songbird    # UniBin compliant primal binary
+//! ```
+//!
+//! # Usage
+//!
+//! For isolated tests (recommended):
+//! ```ignore
+//! let temp_dir = TempDir::new().unwrap();
+//! setup_test_binaries_at(temp_dir.path()).unwrap();
+//! // Tests run with temp_dir as working directory
+//! ```
+//!
+//! For tests using project root (checks for real binaries):
+//! ```ignore
+//! setup_test_binaries().unwrap();
+//! // Uses existing plasmidBin if available
+//! ```
 
 use crate::error::SporeResult;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-/// Setup mock genetic material for testing
+/// Setup test binaries using project root's plasmidBin
 ///
-/// Creates minimal mock binaries in plasmidBin/ AND bin/ for test purposes
+/// This function:
+/// 1. Changes to project root
+/// 2. Verifies plasmidBin/tower/tower exists (real or mock)
+/// 3. Verifies at least one primal exists in plasmidBin/primals/
+/// 4. Creates minimal mocks only if NOTHING exists
+///
+/// For isolated testing, prefer `setup_test_binaries_at()` instead.
 pub fn setup_test_binaries() -> SporeResult<PathBuf> {
     let project_root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
@@ -17,16 +50,82 @@ pub fn setup_test_binaries() -> SporeResult<PathBuf> {
     // Change to project root so relative paths work
     std::env::set_current_dir(project_root)?;
 
-    // Setup plasmidBin/
-    let primal_bins = project_root.join("plasmidBin");
-    fs::create_dir_all(&primal_bins)?;
+    let plasmid_bin = project_root.join("plasmidBin");
+    let tower_dir = plasmid_bin.join("tower");
+    let primals_dir = plasmid_bin.join("primals");
 
-    // Setup bin/ (for tower orchestrator)
-    let bin_dir = project_root.join("bin");
-    fs::create_dir_all(&bin_dir)?;
+    // Ensure directories exist
+    fs::create_dir_all(&tower_dir)?;
+    fs::create_dir_all(&primals_dir)?;
 
-    // Create mock tower binary (in bin/ AND target/release/)
-    let tower_bin = bin_dir.join("tower");
+    // Check tower - create mock only if it's missing or empty
+    let tower_bin = tower_dir.join("tower");
+    if !tower_bin.exists() {
+        fs::write(&tower_bin, "#!/bin/sh\necho 'Mock tower'\n")?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = fs::metadata(&tower_bin)?.permissions();
+            perms.set_mode(0o755);
+            fs::set_permissions(&tower_bin, perms)?;
+        }
+    }
+
+    // Check primals - we need at least one primal binary (file, not directory)
+    let has_primal_binary = primals_dir.read_dir()?.filter_map(|e| e.ok()).any(|entry| {
+        let path = entry.path();
+        // Count files that are executable binaries (not directories, not dotfiles)
+        path.is_file() && !entry.file_name().to_string_lossy().starts_with('.')
+    });
+
+    if !has_primal_binary {
+        // No primal binaries found - create minimal mocks
+        for primal in ["beardog", "songbird"] {
+            let primal_path = primals_dir.join(primal);
+            // Only create if it doesn't exist (might be a directory with versions)
+            if !primal_path.exists() {
+                fs::write(&primal_path, format!("#!/bin/sh\necho 'Mock {}'\n", primal))?;
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::PermissionsExt;
+                    let mut perms = fs::metadata(&primal_path)?.permissions();
+                    perms.set_mode(0o755);
+                    fs::set_permissions(&primal_path, perms)?;
+                }
+            }
+        }
+    }
+
+    Ok(plasmid_bin)
+}
+
+/// Setup plasmidBin at a custom directory for isolated tests
+///
+/// Creates a complete mock plasmidBin structure at the specified base directory.
+/// This is the **preferred method** for testing as it:
+/// - Doesn't modify the project root
+/// - Creates a clean, predictable environment
+/// - Avoids conflicts with existing directories
+///
+/// The working directory is changed to `base_dir` after setup.
+///
+/// # Example
+/// ```ignore
+/// let temp_dir = TempDir::new().unwrap();
+/// setup_test_binaries_at(temp_dir.path()).unwrap();
+/// // Now Spore::create can find plasmidBin/
+/// let result = Spore::create(mount_point, config).await;
+/// ```
+pub fn setup_test_binaries_at(base_dir: &Path) -> SporeResult<PathBuf> {
+    let plasmid_bin = base_dir.join("plasmidBin");
+    let tower_dir = plasmid_bin.join("tower");
+    let primals_dir = plasmid_bin.join("primals");
+
+    fs::create_dir_all(&tower_dir)?;
+    fs::create_dir_all(&primals_dir)?;
+
+    // Create mock tower binary
+    let tower_bin = tower_dir.join("tower");
     fs::write(&tower_bin, "#!/bin/sh\necho 'Mock tower'\n")?;
 
     #[cfg(unix)]
@@ -37,49 +136,30 @@ pub fn setup_test_binaries() -> SporeResult<PathBuf> {
         fs::set_permissions(&tower_bin, perms)?;
     }
 
-    // Also create in target/release/ (for spore copy_binaries)
-    let target_release = project_root.join("target/release");
-    fs::create_dir_all(&target_release)?;
+    // Create mock primal binaries (UniBin compliant names)
+    for primal in ["beardog", "songbird"] {
+        let primal_bin = primals_dir.join(primal);
+        fs::write(&primal_bin, format!("#!/bin/sh\necho 'Mock {}'\n", primal))?;
 
-    let tower_release = target_release.join("tower");
-    fs::write(&tower_release, "#!/bin/sh\necho 'Mock tower'\n")?;
-
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let mut perms = fs::metadata(&tower_release)?.permissions();
-        perms.set_mode(0o755);
-        fs::set_permissions(&tower_release, perms)?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = fs::metadata(&primal_bin)?.permissions();
+            perms.set_mode(0o755);
+            fs::set_permissions(&primal_bin, perms)?;
+        }
     }
 
-    // Create mock beardog-server binary
-    let beardog_bin = primal_bins.join("beardog-server");
-    fs::write(&beardog_bin, "#!/bin/sh\necho 'Mock beardog-server'\n")?;
+    // Change working directory to base_dir so relative paths work
+    std::env::set_current_dir(base_dir)?;
 
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let mut perms = fs::metadata(&beardog_bin)?.permissions();
-        perms.set_mode(0o755);
-        fs::set_permissions(&beardog_bin, perms)?;
-    }
-
-    // Create mock songbird binary
-    let songbird_bin = primal_bins.join("songbird");
-    fs::write(&songbird_bin, "#!/bin/sh\necho 'Mock songbird'\n")?;
-
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let mut perms = fs::metadata(&songbird_bin)?.permissions();
-        perms.set_mode(0o755);
-        fs::set_permissions(&songbird_bin, perms)?;
-    }
-
-    Ok(primal_bins)
+    Ok(plasmid_bin)
 }
 
-/// Cleanup test binaries
+/// Cleanup mock test binaries from project root
+///
+/// Only removes files that contain "Mock" to avoid deleting real binaries.
+/// Safe to call even if no mock binaries exist.
 pub fn cleanup_test_binaries() -> SporeResult<()> {
     let project_root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
@@ -87,30 +167,26 @@ pub fn cleanup_test_binaries() -> SporeResult<()> {
         .parent()
         .unwrap();
 
-    let primal_bins = project_root.join("plasmidBin");
+    let plasmid_bin = project_root.join("plasmidBin");
 
     // Only remove if they're mock files
-    let tower_bin = primal_bins.join("tower");
-    if tower_bin.exists() {
+    let tower_bin = plasmid_bin.join("tower/tower");
+    if tower_bin.exists() && tower_bin.is_file() {
         let content = fs::read_to_string(&tower_bin).unwrap_or_default();
         if content.contains("Mock tower") {
             fs::remove_file(tower_bin)?;
         }
     }
 
-    let beardog_bin = primal_bins.join("beardog-server");
-    if beardog_bin.exists() {
-        let content = fs::read_to_string(&beardog_bin).unwrap_or_default();
-        if content.contains("Mock beardog-server") {
-            fs::remove_file(beardog_bin)?;
-        }
-    }
-
-    let songbird_bin = primal_bins.join("songbird");
-    if songbird_bin.exists() {
-        let content = fs::read_to_string(&songbird_bin).unwrap_or_default();
-        if content.contains("Mock songbird") {
-            fs::remove_file(songbird_bin)?;
+    let primals_dir = plasmid_bin.join("primals");
+    for primal in ["beardog", "songbird"] {
+        let primal_bin = primals_dir.join(primal);
+        // Only remove if it's a file (not a directory) and contains "Mock"
+        if primal_bin.exists() && primal_bin.is_file() {
+            let content = fs::read_to_string(&primal_bin).unwrap_or_default();
+            if content.contains("Mock") {
+                fs::remove_file(primal_bin)?;
+            }
         }
     }
 

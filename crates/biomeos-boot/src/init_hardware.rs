@@ -131,8 +131,7 @@ mod tests {
 
         if let Ok(hw) = result {
             assert!(hw.cpu_count.get() > 0);
-            // Memory might be 0 in some test environments
-            assert!(hw.total_memory_gb >= 0);
+            // Memory detection complete (can be 0 in some containerized environments)
         }
     }
 }

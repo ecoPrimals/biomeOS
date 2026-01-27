@@ -33,9 +33,10 @@ path = "src/bin/songbird_universal_ui_demo.rs"
 name = "comprehensive_ecosystem_demo"
 path = "src/bin/comprehensive_ecosystem_demo.rs"
 
-[[bin]]
-name = "mock_primal_server"
-path = "src/bin/mock_primal_server.rs"
+# Archived - violated TRUE PRIMAL (used TCP ports)
+# [[bin]]
+# name = "mock_primal_server"
+# path = "src/bin/mock_primal_server.rs"
 
 [dependencies]
 # Core dependencies

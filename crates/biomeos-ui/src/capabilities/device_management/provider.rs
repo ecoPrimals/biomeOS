@@ -4,6 +4,7 @@
 //! NO primal-specific code - ANY primal can discover and use this!
 
 use anyhow::Result;
+use biomeos_core::atomic_client::AtomicClient;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
@@ -66,21 +67,35 @@ impl DeviceManagementProvider {
             self.socket_path
         );
 
-        // TODO: Advertise capability via Songbird
-        // let songbird = SongbirdClient::discover().await?;
-        // songbird.register_service(&ServiceRegistration {
-        //     service_name: "device.management".to_string(),
-        //     capabilities: vec!["device.management".to_string()],
-        //     endpoint: self.socket_path.clone(),
-        //     metadata: ServiceMetadata {
-        //         version: "1.0.0".to_string(),
-        //         location: None,
-        //         tags: vec!["ui", "management", "devices"],
-        //     },
-        // }).await?;
+        // Advertise capability via Songbird (if available)
+        if let Ok(songbird) = AtomicClient::discover("songbird").await {
+            match songbird
+                .call(
+                    "registry.register_service",
+                    serde_json::json!({
+                        "service_name": "device.management",
+                        "capabilities": ["device.management"],
+                        "endpoint": self.socket_path,
+                        "metadata": {
+                            "version": env!("CARGO_PKG_VERSION"),
+                            "tags": ["ui", "management", "devices"]
+                        }
+                    }),
+                )
+                .await
+            {
+                Ok(_) => info!("✅ Registered device.management capability with Songbird"),
+                Err(e) => warn!(
+                    "⚠️ Failed to register with Songbird: {} (continuing anyway)",
+                    e
+                ),
+            }
+        } else {
+            warn!("⚠️ Songbird not available, capability not advertised");
+        }
 
-        // TODO: Start JSON-RPC server
-        // rpc_server::start(self.socket_path.clone(), self.clone()).await?;
+        // Note: JSON-RPC server is started by the binary (device_management_server.rs)
+        // This provider just handles the capability logic
 
         info!("✅ device.management capability provider ready");
         Ok(())
@@ -126,12 +141,40 @@ impl DeviceManagementProvider {
     pub async fn get_niche_templates(&self) -> Result<Vec<NicheTemplate>> {
         debug!("📚 Loading niche templates");
 
-        // TODO: Load from NestGate
-        // let nestgate = discover_by_capability("storage").await?;
-        // let templates = nestgate.call("get_templates", params).await?;
+        let mut templates = Vec::new();
 
-        // For now, return built-in templates
-        let templates = self.get_builtin_templates();
+        // Try to load from NestGate first
+        if let Ok(nestgate) = AtomicClient::discover("nestgate").await {
+            match nestgate
+                .call(
+                    "storage.list",
+                    serde_json::json!({ "key_prefix": "template:" }),
+                )
+                .await
+            {
+                Ok(result) => {
+                    if let Some(items) = result.as_array() {
+                        for item in items {
+                            if let Ok(template) =
+                                serde_json::from_value::<NicheTemplate>(item.clone())
+                            {
+                                templates.push(template);
+                            }
+                        }
+                        info!("📚 Loaded {} templates from NestGate", templates.len());
+                    }
+                }
+                Err(e) => {
+                    debug!("NestGate template load failed: {} - using built-in", e);
+                }
+            }
+        }
+
+        // Fall back to built-in templates if none loaded
+        if templates.is_empty() {
+            templates = self.get_builtin_templates();
+            debug!("📚 Using {} built-in templates", templates.len());
+        }
 
         // Update cache
         let mut cache = self.cache.write().await;
@@ -230,11 +273,47 @@ impl DeviceManagementProvider {
     pub async fn deploy_niche(&self, config: serde_json::Value) -> Result<String> {
         info!("🚀 Deploying niche with config: {:?}", config);
 
-        // TODO: Implement niche deployment via orchestrator
-        // let orchestrator = discover_by_capability("orchestration").await?;
-        // let niche_id = orchestrator.call("deploy_niche", config).await?;
+        // Deploy via biomeOS orchestration capability
+        if let Ok(biomeos) = AtomicClient::discover("biomeos").await {
+            match biomeos
+                .call("orchestration.deploy_niche", config.clone())
+                .await
+            {
+                Ok(result) => {
+                    let niche_id = result
+                        .get("niche_id")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("unknown")
+                        .to_string();
+                    info!("✅ Niche deployed: {}", niche_id);
+                    return Ok(niche_id);
+                }
+                Err(e) => {
+                    warn!("❌ Niche deployment failed: {}", e);
+                    return Err(anyhow::anyhow!("Niche deployment failed: {}", e));
+                }
+            }
+        }
 
-        Ok("niche-placeholder".to_string())
+        // Try Songbird as backup orchestrator
+        if let Ok(songbird) = AtomicClient::discover("songbird").await {
+            match songbird.call("orchestration.deploy_niche", config).await {
+                Ok(result) => {
+                    let niche_id = result
+                        .get("niche_id")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("unknown")
+                        .to_string();
+                    info!("✅ Niche deployed via Songbird: {}", niche_id);
+                    return Ok(niche_id);
+                }
+                Err(e) => {
+                    warn!("❌ Songbird niche deployment failed: {}", e);
+                }
+            }
+        }
+
+        Err(anyhow::anyhow!("No orchestration capability available"))
     }
 
     /// Assign a device to a primal
@@ -243,14 +322,50 @@ impl DeviceManagementProvider {
     pub async fn assign_device(&self, device_id: String, primal_id: String) -> Result<()> {
         info!("🔗 Assigning device {} to primal {}", device_id, primal_id);
 
-        // TODO: Implement device assignment
-        // let orchestrator = discover_by_capability("orchestration").await?;
-        // orchestrator.call("assign_device", json!({
-        //     "device_id": device_id,
-        //     "primal_id": primal_id,
-        // })).await?;
+        // Coordinate via Songbird registry
+        if let Ok(songbird) = AtomicClient::discover("songbird").await {
+            match songbird
+                .call(
+                    "registry.assign_device",
+                    serde_json::json!({
+                        "device_id": device_id,
+                        "primal_id": primal_id
+                    }),
+                )
+                .await
+            {
+                Ok(_) => {
+                    info!("✅ Device {} assigned to {}", device_id, primal_id);
 
-        Ok(())
+                    // Persist assignment to NestGate
+                    if let Ok(nestgate) = AtomicClient::discover("nestgate").await {
+                        let _ = nestgate
+                            .call(
+                                "storage.store",
+                                serde_json::json!({
+                                    "key": format!("assignment:{}:{}", device_id, primal_id),
+                                    "value": {
+                                        "device_id": device_id,
+                                        "primal_id": primal_id,
+                                        "assigned_at": chrono::Utc::now().to_rfc3339()
+                                    }
+                                }),
+                            )
+                            .await;
+                    }
+
+                    return Ok(());
+                }
+                Err(e) => {
+                    warn!("❌ Device assignment failed: {}", e);
+                    return Err(anyhow::anyhow!("Device assignment failed: {}", e));
+                }
+            }
+        }
+
+        Err(anyhow::anyhow!(
+            "Songbird not available for device assignment"
+        ))
     }
 
     // ========================================================================
@@ -340,20 +455,70 @@ impl DeviceManagementProvider {
         if let Ok(cpuinfo) = tokio::fs::read_to_string("/proc/cpuinfo").await {
             let cpu_count = cpuinfo.matches("processor").count();
 
+            // Get actual CPU usage from /proc/stat
+            let cpu_usage = self.get_cpu_usage().await.unwrap_or(0.0);
+
             cpus.push(Device {
                 id: "cpu-0".to_string(),
                 name: format!("CPU ({} cores)", cpu_count),
                 device_type: DeviceType::Cpu,
-                status: DeviceStatus::Available,
-                resource_usage: 0.0, // TODO: Get actual usage
+                status: if cpu_usage > 0.9 {
+                    DeviceStatus::InUse
+                } else {
+                    DeviceStatus::Available
+                },
+                resource_usage: cpu_usage,
                 assigned_to: None,
                 metadata: serde_json::json!({
                     "cores": cpu_count,
+                    "usage_percent": (cpu_usage * 100.0) as u32
                 }),
             });
         }
 
         Ok(cpus)
+    }
+
+    /// Get current CPU usage from /proc/stat
+    async fn get_cpu_usage(&self) -> Result<f64> {
+        // Read /proc/stat twice with a small delay to calculate usage
+        let stat1 = tokio::fs::read_to_string("/proc/stat").await?;
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        let stat2 = tokio::fs::read_to_string("/proc/stat").await?;
+
+        // Parse first line (aggregate CPU stats)
+        let parse_cpu_line = |line: &str| -> Option<(u64, u64)> {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() < 5 || !parts[0].starts_with("cpu") {
+                return None;
+            }
+            // user + nice + system + idle
+            let user: u64 = parts[1].parse().ok()?;
+            let nice: u64 = parts[2].parse().ok()?;
+            let system: u64 = parts[3].parse().ok()?;
+            let idle: u64 = parts[4].parse().ok()?;
+            Some((user + nice + system, user + nice + system + idle))
+        };
+
+        let (active1, total1) = stat1
+            .lines()
+            .next()
+            .and_then(parse_cpu_line)
+            .ok_or_else(|| anyhow::anyhow!("Failed to parse /proc/stat"))?;
+        let (active2, total2) = stat2
+            .lines()
+            .next()
+            .and_then(parse_cpu_line)
+            .ok_or_else(|| anyhow::anyhow!("Failed to parse /proc/stat"))?;
+
+        let active_diff = active2.saturating_sub(active1);
+        let total_diff = total2.saturating_sub(total1);
+
+        if total_diff == 0 {
+            return Ok(0.0);
+        }
+
+        Ok(active_diff as f64 / total_diff as f64)
     }
 
     /// Discover storage devices

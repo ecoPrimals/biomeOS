@@ -90,8 +90,7 @@ async fn test_live_spore_has_deploy_script() {
     assert!(root_path.join("deploy.sh").exists());
 }
 
-#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-#[ignore = "Depends on plasmidBin structure - TODO: fix test setup"]
+#[tokio::test(flavor = "current_thread")]
 async fn test_spore_manifest_creation() {
     setup_test_binaries().expect("Failed to setup test binaries");
     let temp_dir = TempDir::new().unwrap();
@@ -101,20 +100,30 @@ async fn test_spore_manifest_creation() {
         spore_type: SporeType::Live,
     };
 
-    let _ = Spore::create(temp_dir.path().to_path_buf(), config).await;
+    let result = Spore::create(temp_dir.path().to_path_buf(), config).await;
+    assert!(
+        result.is_ok(),
+        "Spore creation should succeed: {:?}",
+        result.err()
+    );
 
     let root_path = temp_dir.path().join("biomeOS");
-    let manifest_path = root_path.join(".spore.json");
 
-    // Should have manifest
-    assert!(manifest_path.exists());
+    // Should have .manifest.toml (TOML format manifest)
+    let manifest_path = root_path.join(".manifest.toml");
+    assert!(manifest_path.exists(), ".manifest.toml should exist");
 
-    // Validate manifest content
+    // Validate manifest content (TOML format)
     let manifest_content = std::fs::read_to_string(manifest_path).unwrap();
-    assert!(manifest_content.contains("\"spore_type\":"));
-    assert!(manifest_content.contains("\"label\":"));
-    assert!(manifest_content.contains("\"node_id\":"));
-    assert!(manifest_content.contains("\"genetic_material\":"));
+    assert!(
+        manifest_content.contains("node_id"),
+        "Should contain node_id"
+    );
+    assert!(
+        manifest_content.contains("spore_type"),
+        "Should contain spore_type"
+    );
+    assert!(manifest_content.contains("family"), "Should contain family");
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]

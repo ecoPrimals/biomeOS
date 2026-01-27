@@ -198,7 +198,8 @@ BEARDOG_NODE_ID = "test-node"
     match refresh_result {
         Ok(refresh_report) => {
             // Should have refreshed or attempted to refresh tower
-            assert!(refresh_report.refreshed_binaries.len() >= 0);
+            // Length is always non-negative for Vec, this assertion always passes
+            let _ = refresh_report.refreshed_binaries.len();
         }
         Err(e) => eprintln!("Refresh error (acceptable): {}", e),
     }

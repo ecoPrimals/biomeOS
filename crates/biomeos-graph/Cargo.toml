@@ -16,6 +16,16 @@ toml = "0.8"
 
 # Error handling
 thiserror = "1.0"
+anyhow = "1.0"
+
+# Async & Events (for events.rs GraphEventBroadcaster)
+tokio = { version = "1.34", features = ["sync", "time"] }
+chrono = { version = "0.4", features = ["serde"] }
+tracing = "0.1"
+
+# biomeOS internal crates
+biomeos-types = { path = "../biomeos-types" }
+biomeos-nucleus = { path = "../biomeos-nucleus" }
 
 [dev-dependencies]
 # Testing

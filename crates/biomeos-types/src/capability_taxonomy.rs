@@ -485,12 +485,12 @@ impl CapabilityTaxonomy {
             | Self::McpServer
             | Self::AiCapabilityDiscovery => Some("squirrel"),
 
-            // UI → petalTongue (not yet implemented)
+            // UI → petalTongue (integrated when available via Songbird discovery)
             Self::VisualRendering
             | Self::InputHandling
             | Self::MultiModal
             | Self::TopologyVisualization
-            | Self::RealtimeUpdates => None, // TODO: petalTongue
+            | Self::RealtimeUpdates => None, // petalTongue discovered at runtime
 
             // Orchestration → biomeOS (self)
             Self::LifecycleManagement

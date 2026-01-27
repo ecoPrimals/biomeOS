@@ -1,14 +1,15 @@
 //! Integration tests for plasmidBin deployment
 //!
-//! Tests the complete pipeline from plasmidBin/ to spore creation
+//! Tests the complete pipeline from plasmidBin/ to spore creation.
+//! Uses proper UniBin-compliant binary names (beardog, songbird - no suffixes).
 
+use biomeos_spore::test_support::setup_test_binaries_at;
 use biomeos_spore::{Spore, SporeConfig, SporeType};
 use tempfile::TempDir;
 
 /// Test that spore creation fails gracefully if plasmidBin is missing
-#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-#[ignore = "Depends on plasmidBin structure - TODO: fix test setup"]
-async fn test_missing_nucleus_bin() {
+#[tokio::test(flavor = "current_thread")]
+async fn test_missing_plasmidbin() {
     let temp_dir = TempDir::new().unwrap();
 
     // Change to temp dir where plasmidBin doesn't exist
@@ -36,51 +37,12 @@ async fn test_missing_nucleus_bin() {
 }
 
 /// Test that spore creation succeeds with plasmidBin present
-#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn test_nucleus_bin_deployment() {
+#[tokio::test(flavor = "current_thread")]
+async fn test_plasmidbin_deployment() {
     let temp_dir = TempDir::new().unwrap();
 
-    // Create mock plasmidBin structure
-    let nucleus_dir = temp_dir.path().join("plasmidBin");
-    std::fs::create_dir_all(nucleus_dir.join("tower")).unwrap();
-    std::fs::create_dir_all(nucleus_dir.join("primals")).unwrap();
-
-    // Create mock binaries
-    std::fs::write(
-        nucleus_dir.join("tower/tower"),
-        "#!/bin/sh\necho 'Mock tower'\n",
-    )
-    .unwrap();
-
-    std::fs::write(
-        nucleus_dir.join("primals/beardog-server"),
-        "#!/bin/sh\necho 'Mock beardog'\n",
-    )
-    .unwrap();
-
-    std::fs::write(
-        nucleus_dir.join("primals/songbird"),
-        "#!/bin/sh\necho 'Mock songbird'\n",
-    )
-    .unwrap();
-
-    // Make them executable
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        for path in [
-            nucleus_dir.join("tower/tower"),
-            nucleus_dir.join("primals/beardog-server"),
-            nucleus_dir.join("primals/songbird"),
-        ] {
-            let mut perms = std::fs::metadata(&path).unwrap().permissions();
-            perms.set_mode(0o755);
-            std::fs::set_permissions(&path, perms).unwrap();
-        }
-    }
-
-    // Change to temp dir
-    std::env::set_current_dir(temp_dir.path()).unwrap();
+    // Setup proper plasmidBin structure using test utility
+    setup_test_binaries_at(temp_dir.path()).unwrap();
 
     let mount_point = temp_dir.path().join("usb");
     std::fs::create_dir_all(&mount_point).unwrap();
@@ -95,65 +57,118 @@ async fn test_nucleus_bin_deployment() {
     assert!(
         result.is_ok(),
         "Should succeed with plasmidBin present: {:?}",
-        result
+        result.err()
     );
 
-    // Verify binaries were copied
+    // Verify binaries were copied (UniBin compliant names)
     let spore_root = mount_point.join("biomeOS");
     assert!(
         spore_root.join("bin/tower").exists(),
         "tower should be copied"
     );
     assert!(
-        spore_root.join("primals/beardog-server").exists(),
-        "beardog-server should be copied"
+        spore_root.join("primals/beardog").exists(),
+        "beardog should be copied (UniBin name)"
     );
     assert!(
         spore_root.join("primals/songbird").exists(),
-        "songbird should be copied"
+        "songbird should be copied (UniBin name)"
     );
 }
 
-/// Test that VERSION.txt is verified during deployment
-#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+/// Test that VERSION.txt format is correct for primal tracking
+#[tokio::test(flavor = "current_thread")]
 async fn test_version_tracking() {
     let temp_dir = TempDir::new().unwrap();
 
     // Create mock plasmidBin with VERSION.txt
-    let nucleus_dir = temp_dir.path().join("plasmidBin");
-    std::fs::create_dir_all(nucleus_dir.join("tower")).unwrap();
-    std::fs::create_dir_all(nucleus_dir.join("primals")).unwrap();
+    let plasmid_bin = temp_dir.path().join("plasmidBin");
+    let tower_dir = plasmid_bin.join("tower");
+    let primals_dir = plasmid_bin.join("primals");
+    std::fs::create_dir_all(&tower_dir).unwrap();
+    std::fs::create_dir_all(&primals_dir).unwrap();
 
-    // Create VERSION.txt
+    // Create VERSION.txt with UniBin-compliant names
     std::fs::write(
-        nucleus_dir.join("VERSION.txt"),
+        plasmid_bin.join("VERSION.txt"),
         r#"tower: git:abc123
-beardog-server: git:def456
+beardog: git:def456
 songbird: git:ghi789"#,
     )
     .unwrap();
 
-    // Create mock binaries
-    for (dir, name) in [
-        ("tower", "tower"),
-        ("primals", "beardog-server"),
-        ("primals", "songbird"),
-    ] {
-        let path = nucleus_dir.join(dir).join(name);
-        std::fs::write(&path, "#!/bin/sh\necho 'Mock'\n").unwrap();
+    // Create mock binaries (UniBin names)
+    std::fs::write(tower_dir.join("tower"), "#!/bin/sh\necho 'Mock tower'\n").unwrap();
+    for primal in ["beardog", "songbird"] {
+        std::fs::write(
+            primals_dir.join(primal),
+            format!("#!/bin/sh\necho 'Mock {}'\n", primal),
+        )
+        .unwrap();
 
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
+            let path = primals_dir.join(primal);
             let mut perms = std::fs::metadata(&path).unwrap().permissions();
             perms.set_mode(0o755);
             std::fs::set_permissions(&path, perms).unwrap();
         }
     }
 
-    // VERSION.txt should be accessible for verification
-    let version_content = std::fs::read_to_string(nucleus_dir.join("VERSION.txt")).unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = std::fs::metadata(tower_dir.join("tower"))
+            .unwrap()
+            .permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(tower_dir.join("tower"), perms).unwrap();
+    }
+
+    // VERSION.txt should be accessible and have UniBin-compliant names
+    let version_content = std::fs::read_to_string(plasmid_bin.join("VERSION.txt")).unwrap();
     assert!(version_content.contains("tower:"));
-    assert!(version_content.contains("beardog-server:"));
-    assert!(version_content.contains("songbird:"));
+    assert!(version_content.contains("beardog:")); // UniBin name
+    assert!(version_content.contains("songbird:")); // UniBin name
+}
+
+/// Test spore manifest is created correctly
+#[tokio::test(flavor = "current_thread")]
+async fn test_spore_manifest_creation() {
+    let temp_dir = TempDir::new().unwrap();
+
+    // Setup proper plasmidBin structure
+    setup_test_binaries_at(temp_dir.path()).unwrap();
+
+    let mount_point = temp_dir.path().join("usb");
+    std::fs::create_dir_all(&mount_point).unwrap();
+
+    let config = SporeConfig {
+        label: "test-spore".to_string(),
+        node_id: "test-node".to_string(),
+        spore_type: SporeType::Live,
+    };
+
+    let result = Spore::create(mount_point.clone(), config).await;
+    assert!(
+        result.is_ok(),
+        "Spore creation should succeed: {:?}",
+        result.err()
+    );
+
+    // Verify essential files were created
+    let spore_root = mount_point.join("biomeOS");
+    assert!(
+        spore_root.join("tower.toml").exists(),
+        "tower.toml should exist"
+    );
+    assert!(
+        spore_root.join("deploy.sh").exists(),
+        "deploy.sh should exist"
+    );
+    assert!(
+        spore_root.join("README.md").exists(),
+        "README.md should exist"
+    );
 }

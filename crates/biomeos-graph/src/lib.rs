@@ -24,27 +24,28 @@
 //!
 //! ## Usage
 //!
-//! ```rust,no_run
-//! use biomeos_graph::{DeploymentGraph, GraphLoader};
+//! ```rust,ignore
+//! use biomeos_graph::GraphLoader;
 //!
 //! // Load and validate graph at startup (fail-fast)
 //! let graph = GraphLoader::from_file("graphs/livespore_deploy.toml")?;
 //!
-//! // Execute validated graph
-//! let executor = GraphExecutor::new(neural_api_socket)?;
-//! executor.run(&graph).await?;
+//! // Graph is now validated and ready for execution via Neural API
+//! println!("Loaded graph: {} with {} nodes", graph.id(), graph.nodes().len());
 //! ```
 
 #![deny(unsafe_code)]
 #![warn(missing_docs)]
 
 pub mod error;
+pub mod events;
 pub mod graph;
 pub mod loader;
 pub mod node;
 pub mod validation;
 
 pub use error::{GraphError, Result};
+pub use events::{GraphEvent, GraphEventBroadcaster};
 pub use graph::{DeploymentGraph, GraphMetadata};
 pub use loader::GraphLoader;
 pub use node::{GraphNode, NodeConfig, NodeParams};

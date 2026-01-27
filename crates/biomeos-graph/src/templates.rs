@@ -100,9 +100,6 @@ impl GraphTemplateManager {
 
     /// Discover and connect to NestGate
     pub async fn discover_nestgate(&mut self) -> Result<()> {
-        // TODO: Use Songbird to discover NestGate by capability
-        // For now, we'll use a placeholder
-
         tracing::info!("Discovering NestGate for template storage...");
 
         // Capability-based discovery (no hardcoded endpoints!)
@@ -236,22 +233,73 @@ impl GraphTemplateManager {
             }
         }
 
-        // TODO: Validate parameter types
+        // Validate parameter types
+        for (param_name, value) in parameters {
+            if let Some(param_def) = template.parameters.get(param_name) {
+                let is_valid = match param_def.param_type {
+                    ParameterType::String => value.is_string(),
+                    ParameterType::Number => value.is_number(),
+                    ParameterType::Boolean => value.is_boolean(),
+                    ParameterType::Array => value.is_array(),
+                    ParameterType::Object => value.is_object(),
+                };
+
+                if !is_valid {
+                    anyhow::bail!(
+                        "Parameter '{}' has invalid type: expected {:?}, got {:?}",
+                        param_name,
+                        param_def.param_type,
+                        value
+                    );
+                }
+            }
+        }
 
         Ok(())
     }
 
     /// Apply parameters to graph
+    ///
+    /// Substitutes `{{param_name}}` placeholders in operation params with actual values.
     fn apply_parameters(
         &self,
-        _graph: &mut PrimalGraph,
-        _param_defs: &HashMap<String, TemplateParameter>,
-        _parameters: &HashMap<String, serde_json::Value>,
+        graph: &mut PrimalGraph,
+        param_defs: &HashMap<String, TemplateParameter>,
+        parameters: &HashMap<String, serde_json::Value>,
     ) -> Result<()> {
-        // TODO: Implement parameter substitution in graph
-        // For now, this is a placeholder
+        // Build a map of parameter values (including defaults)
+        let mut effective_params: HashMap<String, serde_json::Value> = HashMap::new();
 
-        // Example: Replace {{param_name}} in operation params with actual values
+        // Start with defaults
+        for (name, def) in param_defs {
+            if let Some(default) = &def.default {
+                effective_params.insert(name.clone(), default.clone());
+            }
+        }
+
+        // Override with provided parameters
+        for (name, value) in parameters {
+            effective_params.insert(name.clone(), value.clone());
+        }
+
+        // Apply substitutions to each node's operation params
+        for node in &mut graph.nodes {
+            let params_str = serde_json::to_string(&node.operation.params)?;
+
+            // Replace {{param_name}} with actual values
+            let mut substituted = params_str;
+            for (param_name, value) in &effective_params {
+                let placeholder = format!("{{{{{}}}}}", param_name);
+                let value_str = match value {
+                    serde_json::Value::String(s) => format!("\"{}\"", s),
+                    _ => value.to_string(),
+                };
+                substituted = substituted.replace(&placeholder, &value_str);
+            }
+
+            // Parse back to JSON
+            node.operation.params = serde_json::from_str(&substituted)?;
+        }
 
         Ok(())
     }
@@ -263,69 +311,168 @@ impl Default for GraphTemplateManager {
     }
 }
 
-/// NestGate client for template storage
+/// NestGate client for template storage via JSON-RPC
+///
+/// Uses capability-based discovery via SystemPaths to find NestGate socket.
+/// All operations use standard JSON-RPC 2.0 calls.
 struct NestGateTemplateClient {
     /// Family ID for storage isolation
     family_id: String,
+    /// Socket path for NestGate connection
+    socket_path: std::path::PathBuf,
 }
 
 impl NestGateTemplateClient {
-    /// Discover NestGate via capability-based discovery
+    /// Discover NestGate via capability-based XDG-compliant discovery
+    ///
+    /// Locates NestGate socket using SystemPaths:
+    /// 1. `$XDG_RUNTIME_DIR/biomeos/nestgate-{family_id}.sock`
+    /// 2. `/tmp/biomeos-$USER/nestgate-{family_id}.sock`
     async fn discover() -> Result<Self> {
-        // TODO: Use Songbird to discover NestGate
-        // For now, use environment variable
-
         let family_id =
-            std::env::var("NESTGATE_FAMILY_ID").unwrap_or_else(|_| "default".to_string());
+            std::env::var("NESTGATE_FAMILY_ID").unwrap_or_else(|_| "nat0".to_string());
 
-        // TODO: Verify NestGate is available via Unix socket
-        // Path: /run/user/{uid}/nestgate-{family_id}.sock
+        // Use SystemPaths for XDG-compliant socket discovery
+        let socket_path = if let Ok(paths) = biomeos_types::SystemPaths::new() {
+            paths.primal_socket(&format!("nestgate-{}", family_id))
+        } else {
+            // Fallback path
+            std::path::PathBuf::from(format!("/tmp/nestgate-{}.sock", family_id))
+        };
 
-        Ok(Self { family_id })
+        // Verify socket exists (NestGate must be running)
+        if !socket_path.exists() {
+            tracing::warn!(
+                "NestGate socket not found at {} - template persistence unavailable",
+                socket_path.display()
+            );
+            // Still return a client - calls will fail gracefully
+        }
+
+        Ok(Self {
+            family_id,
+            socket_path,
+        })
     }
 
-    /// Store a template in NestGate
+    /// Store a template in NestGate via JSON-RPC storage.store
     async fn store_template(&self, template: &GraphTemplate) -> Result<()> {
-        // TODO: Call NestGate storage.store via JSON-RPC
-        // Key: template:{template_id}
-        // Data: serialized GraphTemplate
+        let key = format!("template:{}", template.id);
+        let value = serde_json::to_string(template)?;
 
-        tracing::debug!("Storing template '{}' in NestGate", template.id);
+        let params = serde_json::json!({
+            "key": key,
+            "value": value,
+            "family_id": self.family_id,
+        });
 
-        // Placeholder: In production, this would call NestGate
+        tracing::debug!("Storing template '{}' in NestGate via JSON-RPC", template.id);
+
+        // Call NestGate storage.store via JSON-RPC
+        let _result: serde_json::Value = biomeos_nucleus::client::call_unix_socket_rpc(
+            &self.socket_path,
+            "storage.store",
+            params,
+        )
+        .await
+        .map_err(|e| anyhow::anyhow!("NestGate storage.store failed: {}", e))?;
+
+        tracing::info!("✅ Template '{}' stored in NestGate", template.id);
         Ok(())
     }
 
-    /// Retrieve a template from NestGate
+    /// Retrieve a template from NestGate via JSON-RPC storage.retrieve
     async fn retrieve_template(&self, template_id: &str) -> Result<GraphTemplate> {
-        // TODO: Call NestGate storage.retrieve via JSON-RPC
-        // Key: template:{template_id}
+        let key = format!("template:{}", template_id);
 
-        tracing::debug!("Retrieving template '{}' from NestGate", template_id);
+        let params = serde_json::json!({
+            "key": key,
+            "family_id": self.family_id,
+        });
 
-        // Placeholder
-        anyhow::bail!("Template retrieval not yet implemented")
+        tracing::debug!("Retrieving template '{}' from NestGate via JSON-RPC", template_id);
+
+        // Call NestGate storage.retrieve via JSON-RPC
+        let result: serde_json::Value = biomeos_nucleus::client::call_unix_socket_rpc(
+            &self.socket_path,
+            "storage.retrieve",
+            params,
+        )
+        .await
+        .map_err(|e| anyhow::anyhow!("NestGate storage.retrieve failed: {}", e))?;
+
+        // Extract value from result
+        let value_str = result
+            .get("value")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| anyhow::anyhow!("Template '{}' not found in NestGate", template_id))?;
+
+        // Deserialize template
+        let template: GraphTemplate = serde_json::from_str(value_str)?;
+
+        tracing::info!("✅ Template '{}' retrieved from NestGate", template_id);
+        Ok(template)
     }
 
-    /// List all templates in NestGate
+    /// List all templates from NestGate via JSON-RPC storage.list
     async fn list_templates(&self) -> Result<Vec<GraphTemplate>> {
-        // TODO: Call NestGate storage.list via JSON-RPC
-        // Prefix: template:
+        let params = serde_json::json!({
+            "prefix": "template:",
+            "family_id": self.family_id,
+        });
 
-        tracing::debug!("Listing templates from NestGate");
+        tracing::debug!("Listing templates from NestGate via JSON-RPC");
 
-        // Placeholder
-        Ok(vec![])
+        // Call NestGate storage.list via JSON-RPC
+        let result: serde_json::Value = biomeos_nucleus::client::call_unix_socket_rpc(
+            &self.socket_path,
+            "storage.list",
+            params,
+        )
+        .await
+        .map_err(|e| anyhow::anyhow!("NestGate storage.list failed: {}", e))?;
+
+        // Extract items from result
+        let items = result
+            .get("items")
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default();
+
+        let mut templates = Vec::new();
+        for item in items {
+            if let Some(value_str) = item.get("value").and_then(|v| v.as_str()) {
+                if let Ok(template) = serde_json::from_str::<GraphTemplate>(value_str) {
+                    templates.push(template);
+                }
+            }
+        }
+
+        tracing::info!("✅ Listed {} templates from NestGate", templates.len());
+        Ok(templates)
     }
 
-    /// Delete a template from NestGate
+    /// Delete a template from NestGate via JSON-RPC storage.delete
     async fn delete_template(&self, template_id: &str) -> Result<()> {
-        // TODO: Call NestGate storage.delete via JSON-RPC
-        // Key: template:{template_id}
+        let key = format!("template:{}", template_id);
 
-        tracing::debug!("Deleting template '{}' from NestGate", template_id);
+        let params = serde_json::json!({
+            "key": key,
+            "family_id": self.family_id,
+        });
 
-        // Placeholder
+        tracing::debug!("Deleting template '{}' from NestGate via JSON-RPC", template_id);
+
+        // Call NestGate storage.delete via JSON-RPC
+        let _result: serde_json::Value = biomeos_nucleus::client::call_unix_socket_rpc(
+            &self.socket_path,
+            "storage.delete",
+            params,
+        )
+        .await
+        .map_err(|e| anyhow::anyhow!("NestGate storage.delete failed: {}", e))?;
+
+        tracing::info!("✅ Template '{}' deleted from NestGate", template_id);
         Ok(())
     }
 }

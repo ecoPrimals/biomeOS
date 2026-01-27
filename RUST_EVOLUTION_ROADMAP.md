@@ -64,13 +64,20 @@ Jelly Strings                                    Physics w/ Gravity
 | `logs.rs` → `logs/` | 1,039 | 744 | **-28%** |
 | `neural_executor.rs` | 1,000 | 816 | **-18%** |
 | Formatting issues | 515 | 0 | **100% clean** |
-| Hardcoded sockets | 43 | 32 | Nucleation pattern |
+| Hardcoded sockets | 43 | 0 | SystemPaths XDG |
+| TODOs resolved | 85 | 52 | **-39%** |
 
 **Key accomplishments:**
 - ✅ Handler decomposition (4 focused modules)
-- ✅ Socket nucleation (deterministic paths)
-- ✅ Code deduplication (unified node handlers)
+- ✅ SystemPaths XDG-compliant socket discovery (no hardcoding)
+- ✅ AtomicClient for Pure Rust JSON-RPC over Unix sockets
+- ✅ PrimalClient wrapper for type-safe primal communication
+- ✅ NestGate integration via JSON-RPC (templates, storage)
+- ✅ Squirrel AI integration (suggestions, learning, feedback)
+- ✅ Device management provider with real discovery
+- ✅ Interactive UI orchestrator with full primal integration
 - ✅ `cargo fmt` clean across workspace
+- ✅ `cargo clippy` 0 errors
 
 ### Pure Rust (Core) ✅
 
@@ -420,9 +427,13 @@ The Rust version will be placed alongside scripts until fully validated, then sc
 | Metric | Current | Target |
 |--------|---------|--------|
 | **Pure Rust** | 100% (core) | 100% (all) |
-| **Script Dependencies** | bash, nc, jq | None |
+| **Script Dependencies** | bash, nc | None |
 | **Cross-Platform** | Linux only | Linux, macOS, Windows |
 | **Compile-Time Validation** | Partial | Full |
+| **Tests** | 1,071 passing | 90%+ coverage |
+| **Crates** | 21 | Stable |
+| **TODOs** | 52 | 0 |
+| **Clippy Errors** | 0 | 0 |
 
 ---
 

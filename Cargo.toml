@@ -206,9 +206,10 @@ rand = "0.8"
 # name = "clean_ecosystem_demo"
 # path = "src/bin/clean_ecosystem_demo.rs"
 
-[[example]]
-name = "working_unified_demo"
-path = "examples/working_unified_demo.rs"
+# Archived to archive/legacy_examples_jan_27_2026/
+# [[example]]
+# name = "working_unified_demo"
+# path = "examples/working_unified_demo.rs"
 
 [[example]]
 name = "chimera_registry_demo"

@@ -185,6 +185,8 @@ impl GraphValidator {
 
 #[cfg(test)]
 mod tests {
+    // GraphValidator used via GraphLoader
+    #[allow(unused_imports)]
     use super::*;
     use crate::loader::GraphLoader;
 

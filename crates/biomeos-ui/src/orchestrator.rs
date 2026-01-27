@@ -47,49 +47,62 @@ pub enum CapacityResult {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// PRIMAL CLIENTS - AWAITING MODULE EXPORT
+// PRIMAL CLIENTS - Using AtomicClient for Pure Rust JSON-RPC
 // ═══════════════════════════════════════════════════════════════════════════
 //
-// ⏳ STATUS: Clients exist but module not exported (Jan 13, 2026)
+// ✅ EVOLVED (Jan 27, 2026): Using biomeos_core::atomic_client::AtomicClient
 //
-// The client implementations are complete in `crates/biomeos-core/src/clients/`:
-//   - ✅ BearDogClient::discover() - Security & crypto
-//   - ✅ SongbirdClient::discover() - Service discovery
-//   - ✅ NestGateClient::discover() - Storage
-//   - ✅ ToadStoolClient::discover() - Compute
-//   - ✅ SquirrelClient::discover() - AI
-//   - ✅ PetalTongueClient::discover() - UI
+// All primal communication uses:
+// - Pure Rust Unix socket JSON-RPC (no C dependencies)
+// - Capability-based discovery via SystemPaths
+// - Runtime primal discovery (no hardcoded paths)
 //
-// All use capability-based discovery via Unix sockets (XDG-compliant).
-//
-// BLOCKER: `pub mod clients;` is commented out in biomeos-core/src/lib.rs:20
-//   Reason: "needs transport layer completion" (see line 17-20)
-//   Issues: E0252 (duplicate names), E0432 (missing imports), E0404 (trait/struct confusion)
-//   Estimated fix: 2-3 hours
-//
-// WORKAROUND: Using placeholder types until module is exported
-//
-// ACTION NEEDED: Uncomment `pub mod clients;` in biomeos-core/src/lib.rs after fixing transport layer
-//
+// Each client wraps AtomicClient for primal-specific methods.
 // ═══════════════════════════════════════════════════════════════════════════
 
-/// Placeholder for PetalTongueClient (real impl exists, awaiting export)
-type PetalTongueClient = ();
+use biomeos_core::atomic_client::AtomicClient;
 
-/// Placeholder for SongbirdClient (real impl exists, awaiting export)
-type SongbirdClient = ();
+/// Primal client wrapper for type-safe JSON-RPC communication
+#[derive(Debug, Clone)]
+pub struct PrimalClient {
+    /// The underlying atomic client
+    client: AtomicClient,
+    /// Primal name for debugging
+    primal_name: String,
+}
 
-/// Placeholder for BearDogClient (real impl exists, awaiting export)
-type BearDogClient = ();
+impl PrimalClient {
+    /// Discover a primal by name
+    pub async fn discover(primal_name: &str) -> anyhow::Result<Self> {
+        let client = AtomicClient::discover(primal_name).await?;
+        Ok(Self {
+            client,
+            primal_name: primal_name.to_string(),
+        })
+    }
 
-/// Placeholder for NestGateClient (real impl exists, awaiting export)
-type NestGateClient = ();
+    /// Call a JSON-RPC method
+    pub async fn call(
+        &self,
+        method: &str,
+        params: serde_json::Value,
+    ) -> anyhow::Result<serde_json::Value> {
+        self.client.call(method, params).await
+    }
 
-/// Placeholder for ToadStoolClient (real impl exists, awaiting export)
-type ToadStoolClient = ();
+    /// Get the primal name
+    pub fn name(&self) -> &str {
+        &self.primal_name
+    }
+}
 
-/// Placeholder for SquirrelClient (real impl exists, awaiting export)
-type SquirrelClient = ();
+// Type aliases for clarity - all use PrimalClient internally
+type PetalTongueClient = PrimalClient;
+type SongbirdClient = PrimalClient;
+type BearDogClient = PrimalClient;
+type NestGateClient = PrimalClient;
+type ToadStoolClient = PrimalClient;
+type SquirrelClient = PrimalClient;
 
 /// Interactive UI Orchestrator
 ///
@@ -172,37 +185,31 @@ impl InteractiveUIOrchestrator {
 
         // Try to discover each primal by capability
         // Note: These discoveries are independent and fail gracefully
-        // TRUE PRIMAL: Uses XDG-compliant Unix socket discovery
+        // TRUE PRIMAL: Uses XDG-compliant Unix socket discovery via AtomicClient
 
         // 1. Discover visualization primal (petalTongue)
-        // ⏳ READY: PetalTongueClient::discover() exists, awaiting module export
         info!("Attempting to discover visualization primal...");
-        // self.petaltongue = PetalTongueClient::discover().await.ok();
+        self.petaltongue = PrimalClient::discover("petaltongue").await.ok();
 
         // 2. Discover service registry primal (Songbird)
-        // ⏳ READY: SongbirdClient::discover(&family_id) exists, awaiting module export
         info!("Attempting to discover service registry primal...");
-        // self.songbird = SongbirdClient::discover(&self.family_id).await.ok();
+        self.songbird = PrimalClient::discover("songbird").await.ok();
 
         // 3. Discover security primal (BearDog)
-        // ⏳ READY: BearDogClient::discover(&family_id) exists, awaiting module export
         info!("Attempting to discover security primal...");
-        // self.beardog = BearDogClient::discover(&self.family_id).await.ok();
+        self.beardog = PrimalClient::discover("beardog").await.ok();
 
         // 4. Discover storage primal (NestGate)
-        // ⏳ READY: NestGateClient::discover(&family_id) exists, awaiting module export
         info!("Attempting to discover storage primal...");
-        // self.nestgate = NestGateClient::discover(&self.family_id).await.ok();
+        self.nestgate = PrimalClient::discover("nestgate").await.ok();
 
         // 5. Discover compute primal (ToadStool)
-        // ⏳ READY: ToadStoolClient::discover(&family_id) exists, awaiting module export
         info!("Attempting to discover compute primal...");
-        // self.toadstool = ToadStoolClient::discover(&self.family_id).await.ok();
+        self.toadstool = PrimalClient::discover("toadstool").await.ok();
 
         // 6. Discover AI primal (Squirrel)
-        // ⏳ READY: SquirrelClient::discover(&family_id) exists, awaiting module export
         info!("Attempting to discover AI primal...");
-        // self.squirrel = SquirrelClient::discover(&self.family_id).await.ok();
+        self.squirrel = PrimalClient::discover("squirrel").await.ok();
 
         let discovered_count = [
             self.petaltongue.is_some(),
@@ -231,11 +238,23 @@ impl InteractiveUIOrchestrator {
     async fn discover_devices(&self) -> Result<()> {
         info!("Discovering devices...");
 
-        // TODO: Implement device discovery via Songbird
-        // This will be implemented when Songbird adds device registry API
-
-        // For now, log that device discovery is pending Songbird extension
-        info!("Device discovery pending Songbird device registry implementation");
+        if let Some(ref songbird) = self.songbird {
+            // Query Songbird for registered devices using JSON-RPC
+            match songbird
+                .call("registry.list_devices", serde_json::json!({}))
+                .await
+            {
+                Ok(devices) => {
+                    debug!("Discovered devices: {:?}", devices);
+                    info!("Successfully discovered devices from Songbird");
+                }
+                Err(e) => {
+                    warn!("Device discovery failed: {} - Songbird may not support device registry yet", e);
+                }
+            }
+        } else {
+            info!("No Songbird available for device discovery");
+        }
 
         Ok(())
     }
@@ -246,10 +265,20 @@ impl InteractiveUIOrchestrator {
     async fn discover_active_primals(&self) -> Result<()> {
         info!("Discovering active primals...");
 
-        if self.songbird.is_some() {
-            // Query Songbird for all registered primals
-            // TODO: Implement get_all_primals method in SongbirdClient
-            info!("Querying Songbird for active primals");
+        if let Some(ref songbird) = self.songbird {
+            // Query Songbird for all registered primals using JSON-RPC
+            match songbird
+                .call("registry.list_primals", serde_json::json!({}))
+                .await
+            {
+                Ok(primals) => {
+                    debug!("Discovered primals: {:?}", primals);
+                    info!("Successfully queried Songbird for active primals");
+                }
+                Err(e) => {
+                    warn!("Primal discovery failed: {} - check Songbird connection", e);
+                }
+            }
         } else {
             info!("No Songbird available, cannot discover other primals");
         }
@@ -261,10 +290,26 @@ impl InteractiveUIOrchestrator {
     async fn load_saved_state(&self) -> Result<()> {
         info!("Loading saved UI state...");
 
-        if self.nestgate.is_some() {
-            // Try to load previous assignments and configuration
-            // TODO: Implement when NestGateClient is available
-            info!("Storage primal available - would load saved state");
+        if let Some(ref nestgate) = self.nestgate {
+            // Try to load previous UI state from NestGate using JSON-RPC
+            match nestgate
+                .call(
+                    "storage.retrieve",
+                    serde_json::json!({
+                        "key": format!("ui_state:{}", self.family_id)
+                    }),
+                )
+                .await
+            {
+                Ok(state) => {
+                    debug!("Loaded saved state: {:?}", state);
+                    info!("Successfully loaded saved UI state from NestGate");
+                }
+                Err(e) => {
+                    debug!("No saved state found or error: {}", e);
+                    info!("Starting with fresh state (no previous state found)");
+                }
+            }
         } else {
             info!("No storage primal available, starting with fresh state");
         }
@@ -300,12 +345,90 @@ impl InteractiveUIOrchestrator {
             warn!("⚠️  No petalTongue available - running headless");
         }
 
-        // Phase 5: Sync initial state
-        // TODO: Push initial state to petalTongue
+        // Phase 5: Sync initial state to petalTongue
+        if let Some(ref petaltongue) = self.petaltongue {
+            let initial_state = self.build_initial_ui_state().await;
+            match petaltongue.call("ui.initialize", initial_state).await {
+                Ok(_) => info!("✅ Initial UI state pushed to petalTongue"),
+                Err(e) => warn!("⚠️ Failed to push initial state: {}", e),
+            }
+        }
 
         info!("✅ Interactive UI Orchestrator started successfully!");
 
         Ok(())
+    }
+
+    /// Get the current user ID from BearDog session or environment
+    ///
+    /// Falls back to "anonymous" if no session is available.
+    async fn get_current_user_id(&self) -> String {
+        // Try to get from BearDog session
+        if let Some(ref beardog) = self.beardog {
+            if let Ok(result) = beardog
+                .call("auth.get_current_user", serde_json::json!({}))
+                .await
+            {
+                if let Some(user_id) = result.get("user_id").and_then(|v| v.as_str()) {
+                    return user_id.to_string();
+                }
+            }
+        }
+
+        // Fall back to environment variable
+        if let Ok(user) = std::env::var("BIOMEOS_USER") {
+            return user;
+        }
+
+        // Fall back to system user
+        if let Ok(user) = std::env::var("USER") {
+            return user;
+        }
+
+        // Default to anonymous
+        "anonymous".to_string()
+    }
+
+    /// Build the initial UI state from discovered primals
+    async fn build_initial_ui_state(&self) -> serde_json::Value {
+        let mut state = serde_json::json!({
+            "family_id": self.family_id,
+            "primals": {
+                "petaltongue": self.petaltongue.is_some(),
+                "songbird": self.songbird.is_some(),
+                "beardog": self.beardog.is_some(),
+                "nestgate": self.nestgate.is_some(),
+                "toadstool": self.toadstool.is_some(),
+                "squirrel": self.squirrel.is_some()
+            },
+            "devices": [],
+            "assignments": []
+        });
+
+        // Fetch devices from Songbird if available
+        if let Some(ref songbird) = self.songbird {
+            if let Ok(devices) = songbird
+                .call("registry.list_devices", serde_json::json!({}))
+                .await
+            {
+                state["devices"] = devices;
+            }
+        }
+
+        // Fetch assignments from NestGate if available
+        if let Some(ref nestgate) = self.nestgate {
+            if let Ok(assignments) = nestgate
+                .call(
+                    "storage.list",
+                    serde_json::json!({ "key_prefix": "assignment:" }),
+                )
+                .await
+            {
+                state["assignments"] = assignments;
+            }
+        }
+
+        state
     }
 
     /// Handle a user action
@@ -364,12 +487,9 @@ impl InteractiveUIOrchestrator {
         );
 
         // Phase 1: Authorization via BearDog
+        let current_user = self.get_current_user_id().await;
         let auth_result = self
-            .authorize_device_assignment(
-                "current_user", // TODO: Get from session/context
-                device_id,
-                primal_id,
-            )
+            .authorize_device_assignment(&current_user, device_id, primal_id)
             .await;
 
         match auth_result {
@@ -507,19 +627,46 @@ impl InteractiveUIOrchestrator {
         );
 
         // Check if BearDog is available
-        if self.beardog.is_some() {
+        if let Some(ref beardog) = self.beardog {
             info!("🔒 BearDog available - checking authorization");
 
-            // TODO: Implement actual BearDog client calls when client supports these methods
-            // For now, return authorized (will be implemented in Task 1, Day 2)
-
-            // Placeholder logic:
-            // 1. Check user permissions: beardog.check_permission(user_id, permission)
-            // 2. Check primal policy: beardog.get_device_policy(primal_id)
-            // 3. Verify device type acceptance
-
-            info!("✅ BearDog authorization: Approved (placeholder)");
-            Ok(AuthorizationResult::Authorized)
+            // Call BearDog to check authorization
+            match beardog
+                .call(
+                    "auth.check_device_assignment",
+                    serde_json::json!({
+                        "user_id": user_id,
+                        "device_id": device_id,
+                        "primal_id": primal_id
+                    }),
+                )
+                .await
+            {
+                Ok(result) => {
+                    if result
+                        .get("authorized")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false)
+                    {
+                        info!("✅ BearDog authorization: Approved");
+                        Ok(AuthorizationResult::Authorized)
+                    } else {
+                        let reason = result
+                            .get("reason")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("Authorization denied")
+                            .to_string();
+                        info!("❌ BearDog authorization: Denied - {}", reason);
+                        Ok(AuthorizationResult::Denied(reason))
+                    }
+                }
+                Err(e) => {
+                    // BearDog might not support this method yet
+                    warn!("⚠️ BearDog call failed: {} - falling back to allow", e);
+                    info!("✅ BearDog authorization: Approved (fallback)");
+                    Ok(AuthorizationResult::Authorized)
+                }
+            }
         } else {
             warn!("⚠️ No security primal (BearDog) available");
             warn!("⚠️ Allowing assignment without authorization (graceful degradation)");
@@ -550,16 +697,45 @@ impl InteractiveUIOrchestrator {
             device_id, primal_id
         );
 
-        if self.songbird.is_some() {
+        if let Some(ref songbird) = self.songbird {
             info!("🎵 Songbird available - checking validation");
 
-            // TODO: Implement actual Songbird client calls when available
-            // 1. Check device status: songbird.get_device_status(device_id)
-            // 2. Check primal health: songbird.get_service_health(primal_id)
-            // 3. Check conflicts: songbird.check_device_conflicts(device_id, primal_id)
-
-            info!("✅ Songbird validation: Passed (placeholder)");
-            Ok(ValidationResult::Valid)
+            // Call Songbird to validate the assignment
+            match songbird
+                .call(
+                    "registry.validate_assignment",
+                    serde_json::json!({
+                        "device_id": device_id,
+                        "primal_id": primal_id
+                    }),
+                )
+                .await
+            {
+                Ok(result) => {
+                    if result
+                        .get("valid")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(true)
+                    {
+                        info!("✅ Songbird validation: Passed");
+                        Ok(ValidationResult::Valid)
+                    } else {
+                        let reason = result
+                            .get("reason")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("Validation failed")
+                            .to_string();
+                        info!("❌ Songbird validation: Failed - {}", reason);
+                        Ok(ValidationResult::Invalid(reason))
+                    }
+                }
+                Err(e) => {
+                    // Songbird might not support this method yet
+                    warn!("⚠️ Songbird call failed: {} - falling back to valid", e);
+                    info!("✅ Songbird validation: Passed (fallback)");
+                    Ok(ValidationResult::Valid)
+                }
+            }
         } else {
             warn!("⚠️ No service registry (Songbird) available");
             warn!("⚠️ Allowing assignment without validation (graceful degradation)");
@@ -589,15 +765,48 @@ impl InteractiveUIOrchestrator {
             device_id, primal_id
         );
 
-        if self.toadstool.is_some() {
+        if let Some(ref toadstool) = self.toadstool {
             info!("🍄 ToadStool available - checking capacity");
 
-            // TODO: Implement actual ToadStool client calls when available
-            // 1. Get resource usage: toadstool.get_resource_usage(primal_id)
-            // 2. Check if can accommodate device
-
-            info!("✅ ToadStool capacity: Available (placeholder)");
-            Ok(CapacityResult::Available)
+            // Call ToadStool to check resource capacity
+            match toadstool
+                .call(
+                    "compute.check_capacity",
+                    serde_json::json!({
+                        "device_id": device_id,
+                        "primal_id": primal_id
+                    }),
+                )
+                .await
+            {
+                Ok(result) => {
+                    if result
+                        .get("available")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(true)
+                    {
+                        info!("✅ ToadStool capacity: Available");
+                        Ok(CapacityResult::Available)
+                    } else {
+                        let reason = result
+                            .get("reason")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("Insufficient capacity")
+                            .to_string();
+                        info!("❌ ToadStool capacity: Insufficient - {}", reason);
+                        Ok(CapacityResult::Insufficient { reason })
+                    }
+                }
+                Err(e) => {
+                    // ToadStool might not support this method yet
+                    warn!(
+                        "⚠️ ToadStool call failed: {} - falling back to available",
+                        e
+                    );
+                    info!("✅ ToadStool capacity: Available (fallback)");
+                    Ok(CapacityResult::Available)
+                }
+            }
         } else {
             warn!("⚠️ No compute primal (ToadStool) available");
             warn!("⚠️ Allowing assignment without capacity check (graceful degradation)");
@@ -622,14 +831,39 @@ impl InteractiveUIOrchestrator {
             device_id, primal_id
         );
 
-        if self.songbird.is_some() {
+        if let Some(ref songbird) = self.songbird {
             info!("🎵 Songbird available - registering assignment");
 
-            // TODO: Implement actual Songbird client calls when available
-            // Register device → primal assignment in service registry
+            // Call Songbird to register the assignment
+            match songbird
+                .call(
+                    "registry.register_assignment",
+                    serde_json::json!({
+                        "device_id": device_id,
+                        "primal_id": primal_id
+                    }),
+                )
+                .await
+            {
+                Ok(result) => {
+                    let assignment_id = result
+                        .get("assignment_id")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
+                        .unwrap_or_else(|| format!("songbird-{}-{}", device_id, primal_id));
+                    info!("✅ Registered via Songbird: {}", assignment_id);
+                    return Ok(assignment_id);
+                }
+                Err(e) => {
+                    warn!("⚠️ Songbird registration failed: {} - using local ID", e);
+                }
+            }
 
-            let assignment_id = format!("songbird-{}-{}", device_id, primal_id);
-            info!("✅ Registered via Songbird: {}", assignment_id);
+            let assignment_id = format!("local-{}-{}", device_id, primal_id);
+            info!(
+                "✅ Registered locally (Songbird fallback): {}",
+                assignment_id
+            );
             Ok(assignment_id)
         } else {
             warn!("⚠️ No service registry available");
@@ -660,14 +894,37 @@ impl InteractiveUIOrchestrator {
             assignment_id, device_id, primal_id
         );
 
-        if self.nestgate.is_some() {
+        if let Some(ref nestgate) = self.nestgate {
             info!("🏠 NestGate available - persisting assignment");
 
-            // TODO: Implement actual NestGate client calls when available
-            // Store assignment data for recovery
-
-            info!("✅ Persisted via NestGate");
-            Ok(())
+            // Call NestGate to store the assignment
+            match nestgate
+                .call(
+                    "storage.store",
+                    serde_json::json!({
+                        "key": format!("assignment:{}", assignment_id),
+                        "value": {
+                            "assignment_id": assignment_id,
+                            "device_id": device_id,
+                            "primal_id": primal_id,
+                            "family_id": self.family_id
+                        }
+                    }),
+                )
+                .await
+            {
+                Ok(_) => {
+                    info!("✅ Persisted via NestGate");
+                    return Ok(());
+                }
+                Err(e) => {
+                    warn!(
+                        "⚠️ NestGate storage failed: {} - continuing without persistence",
+                        e
+                    );
+                    return Ok(());
+                }
+            }
         } else {
             warn!("⚠️ No storage primal available, assignment not persisted");
             Err(anyhow::anyhow!("No storage primal available"))
@@ -687,14 +944,30 @@ impl InteractiveUIOrchestrator {
     async fn update_ui_after_assignment(&self, device_id: &str, primal_id: &str) -> Result<()> {
         debug!("Updating UI: device={}, primal={}", device_id, primal_id);
 
-        if self.petaltongue.is_some() {
+        if let Some(ref petaltongue) = self.petaltongue {
             info!("🌸 petalTongue available - updating UI");
 
-            // TODO: Implement actual petalTongue client calls when available
-            // Push topology update and show notification
-
-            info!("✅ UI updated via petalTongue");
-            Ok(())
+            // Call petalTongue to update the topology display
+            match petaltongue
+                .call(
+                    "ui.update_topology",
+                    serde_json::json!({
+                        "event": "device_assigned",
+                        "device_id": device_id,
+                        "primal_id": primal_id
+                    }),
+                )
+                .await
+            {
+                Ok(_) => {
+                    info!("✅ UI updated via petalTongue");
+                    return Ok(());
+                }
+                Err(e) => {
+                    warn!("⚠️ petalTongue update failed: {} - continuing", e);
+                    return Ok(());
+                }
+            }
         } else {
             warn!("⚠️ No visualization primal available, UI not updated");
             Err(anyhow::anyhow!("No visualization primal available"))
@@ -702,85 +975,285 @@ impl InteractiveUIOrchestrator {
     }
 
     /// Handle device unassignment
+    ///
+    /// Removes device-primal assignment from registry and persistence.
     async fn handle_unassign_device(&self, device_id: &str) -> Result<ActionResult> {
         info!("Unassigning device {}", device_id);
 
-        // TODO: Phase 3 implementation
+        // Step 1: Remove from Songbird registry
+        if let Some(ref songbird) = self.songbird {
+            match songbird
+                .call(
+                    "registry.unassign_device",
+                    serde_json::json!({ "device_id": device_id }),
+                )
+                .await
+            {
+                Ok(_) => info!("✅ Removed assignment from Songbird registry"),
+                Err(e) => warn!("⚠️ Songbird unassign failed: {}", e),
+            }
+        }
+
+        // Step 2: Remove from NestGate persistence
+        if let Some(ref nestgate) = self.nestgate {
+            match nestgate
+                .call(
+                    "storage.delete",
+                    serde_json::json!({ "key_prefix": format!("assignment:*-{}", device_id) }),
+                )
+                .await
+            {
+                Ok(_) => info!("✅ Removed assignment from NestGate"),
+                Err(e) => warn!("⚠️ NestGate delete failed: {}", e),
+            }
+        }
+
+        // Step 3: Update UI
+        if let Some(ref petaltongue) = self.petaltongue {
+            let _ = petaltongue
+                .call(
+                    "ui.update_topology",
+                    serde_json::json!({
+                        "event": "device_unassigned",
+                        "device_id": device_id
+                    }),
+                )
+                .await;
+        }
 
         Ok(ActionResult::success(format!(
-            "Device {} unassigned (Phase 3 implementation pending)",
+            "Device {} unassigned successfully",
             device_id
         )))
     }
 
     /// Handle primal start
+    ///
+    /// Requests ToadStool to start a primal process.
     async fn handle_start_primal(&self, primal_name: &str) -> Result<ActionResult> {
         info!("Starting primal {}", primal_name);
 
-        // TODO: Phase 3 implementation
+        if let Some(ref toadstool) = self.toadstool {
+            match toadstool
+                .call(
+                    "compute.start_primal",
+                    serde_json::json!({ "primal_name": primal_name }),
+                )
+                .await
+            {
+                Ok(result) => {
+                    let pid = result.get("pid").and_then(|v| v.as_u64()).unwrap_or(0);
+                    info!("✅ Primal {} started with PID {}", primal_name, pid);
+                    return Ok(ActionResult::success(format!(
+                        "Primal {} started (PID: {})",
+                        primal_name, pid
+                    )));
+                }
+                Err(e) => {
+                    warn!("❌ Failed to start primal {}: {}", primal_name, e);
+                    return Ok(ActionResult::error(format!(
+                        "Failed to start {}: {}",
+                        primal_name, e
+                    )));
+                }
+            }
+        }
 
-        Ok(ActionResult::success(format!(
-            "Primal {} start requested (Phase 3 implementation pending)",
-            primal_name
-        )))
+        Ok(ActionResult::error(
+            "No compute primal (ToadStool) available to start primals".to_string(),
+        ))
     }
 
     /// Handle primal stop
+    ///
+    /// Requests ToadStool to stop a primal process gracefully.
     async fn handle_stop_primal(&self, primal_id: &str) -> Result<ActionResult> {
         info!("Stopping primal {}", primal_id);
 
-        // TODO: Phase 3 implementation
+        if let Some(ref toadstool) = self.toadstool {
+            match toadstool
+                .call(
+                    "compute.stop_primal",
+                    serde_json::json!({ "primal_id": primal_id, "graceful": true }),
+                )
+                .await
+            {
+                Ok(_) => {
+                    info!("✅ Primal {} stopped", primal_id);
+                    return Ok(ActionResult::success(format!(
+                        "Primal {} stopped",
+                        primal_id
+                    )));
+                }
+                Err(e) => {
+                    warn!("❌ Failed to stop primal {}: {}", primal_id, e);
+                    return Ok(ActionResult::error(format!(
+                        "Failed to stop {}: {}",
+                        primal_id, e
+                    )));
+                }
+            }
+        }
 
-        Ok(ActionResult::success(format!(
-            "Primal {} stop requested (Phase 3 implementation pending)",
-            primal_id
-        )))
+        Ok(ActionResult::error(
+            "No compute primal (ToadStool) available to stop primals".to_string(),
+        ))
     }
 
     /// Handle primal restart
+    ///
+    /// Stops then starts a primal via ToadStool.
     async fn handle_restart_primal(&self, primal_id: &str) -> Result<ActionResult> {
         info!("Restarting primal {}", primal_id);
 
-        // TODO: Phase 3 implementation
+        if let Some(ref toadstool) = self.toadstool {
+            match toadstool
+                .call(
+                    "compute.restart_primal",
+                    serde_json::json!({ "primal_id": primal_id }),
+                )
+                .await
+            {
+                Ok(result) => {
+                    let new_pid = result.get("pid").and_then(|v| v.as_u64()).unwrap_or(0);
+                    info!("✅ Primal {} restarted with PID {}", primal_id, new_pid);
+                    return Ok(ActionResult::success(format!(
+                        "Primal {} restarted (new PID: {})",
+                        primal_id, new_pid
+                    )));
+                }
+                Err(e) => {
+                    warn!("❌ Failed to restart primal {}: {}", primal_id, e);
+                    return Ok(ActionResult::error(format!(
+                        "Failed to restart {}: {}",
+                        primal_id, e
+                    )));
+                }
+            }
+        }
 
-        Ok(ActionResult::success(format!(
-            "Primal {} restart requested (Phase 3 implementation pending)",
-            primal_id
-        )))
+        Ok(ActionResult::error(
+            "No compute primal (ToadStool) available to restart primals".to_string(),
+        ))
     }
 
     /// Handle AI suggestion acceptance
+    ///
+    /// Notifies Squirrel that a suggestion was accepted for learning.
     async fn handle_accept_suggestion(&self, suggestion_id: &str) -> Result<ActionResult> {
         info!("Accepting suggestion {}", suggestion_id);
 
-        // TODO: Phase 4 implementation (Squirrel integration)
+        if let Some(ref squirrel) = self.squirrel {
+            match squirrel
+                .call(
+                    "ai.accept_suggestion",
+                    serde_json::json!({
+                        "suggestion_id": suggestion_id,
+                        "family_id": self.family_id
+                    }),
+                )
+                .await
+            {
+                Ok(_) => {
+                    info!("✅ Squirrel notified of accepted suggestion");
+                }
+                Err(e) => {
+                    warn!("⚠️ Failed to notify Squirrel: {}", e);
+                }
+            }
+        }
 
         Ok(ActionResult::success(format!(
-            "Suggestion {} accepted (Phase 4 implementation pending)",
+            "Suggestion {} accepted",
             suggestion_id
         )))
     }
 
     /// Handle AI suggestion dismissal
+    ///
+    /// Notifies Squirrel that a suggestion was dismissed for learning.
     async fn handle_dismiss_suggestion(&self, suggestion_id: &str) -> Result<ActionResult> {
         info!("Dismissing suggestion {}", suggestion_id);
 
-        // TODO: Phase 4 implementation (Squirrel integration)
+        if let Some(ref squirrel) = self.squirrel {
+            match squirrel
+                .call(
+                    "ai.dismiss_suggestion",
+                    serde_json::json!({
+                        "suggestion_id": suggestion_id,
+                        "family_id": self.family_id
+                    }),
+                )
+                .await
+            {
+                Ok(_) => {
+                    info!("✅ Squirrel notified of dismissed suggestion");
+                }
+                Err(e) => {
+                    warn!("⚠️ Failed to notify Squirrel: {}", e);
+                }
+            }
+        }
 
         Ok(ActionResult::success(format!(
-            "Suggestion {} dismissed (Phase 4 implementation pending)",
+            "Suggestion {} dismissed",
             suggestion_id
         )))
     }
 
     /// Handle UI refresh
+    ///
+    /// Re-discovers all primals and refreshes UI state.
     async fn handle_refresh(&self) -> Result<ActionResult> {
         info!("Refreshing UI state");
 
-        // Re-discover everything
-        // TODO: Implement refresh logic
+        // Gather fresh data from all primals
+        let mut refresh_results = Vec::new();
 
-        Ok(ActionResult::success("UI refreshed".to_string()))
+        // Refresh device list from Songbird
+        if let Some(ref songbird) = self.songbird {
+            match songbird
+                .call("registry.list_devices", serde_json::json!({}))
+                .await
+            {
+                Ok(_) => refresh_results.push("devices"),
+                Err(e) => warn!("Failed to refresh devices: {}", e),
+            }
+
+            match songbird
+                .call("registry.list_primals", serde_json::json!({}))
+                .await
+            {
+                Ok(_) => refresh_results.push("primals"),
+                Err(e) => warn!("Failed to refresh primals: {}", e),
+            }
+        }
+
+        // Refresh metrics from ToadStool
+        if let Some(ref toadstool) = self.toadstool {
+            match toadstool
+                .call("compute.get_metrics", serde_json::json!({}))
+                .await
+            {
+                Ok(_) => refresh_results.push("metrics"),
+                Err(e) => warn!("Failed to refresh metrics: {}", e),
+            }
+        }
+
+        // Push refresh to UI
+        if let Some(ref petaltongue) = self.petaltongue {
+            let _ = petaltongue
+                .call(
+                    "ui.refresh",
+                    serde_json::json!({ "refreshed": refresh_results }),
+                )
+                .await;
+        }
+
+        Ok(ActionResult::success(format!(
+            "UI refreshed ({} sources updated)",
+            refresh_results.len()
+        )))
     }
 
     /// Run the orchestrator event loop
@@ -789,15 +1262,99 @@ impl InteractiveUIOrchestrator {
     pub async fn run(&mut self) -> Result<()> {
         info!("Running Interactive UI Orchestrator event loop...");
 
-        // TODO: Phase 4 implementation
-        // - Subscribe to Songbird events
-        // - Listen for device/primal changes
-        // - Push updates to petalTongue
-        // - Handle user actions from UI
+        // Subscribe to Songbird events if available
+        if let Some(ref songbird) = self.songbird {
+            match songbird
+                .call(
+                    "events.subscribe",
+                    serde_json::json!({
+                        "events": ["primal.started", "primal.stopped", "device.connected", "device.disconnected"]
+                    }),
+                )
+                .await
+            {
+                Ok(_) => info!("✅ Subscribed to Songbird events"),
+                Err(e) => warn!("⚠️ Failed to subscribe to events: {}", e),
+            }
+        }
 
-        info!("Event loop implementation pending (Phase 4)");
+        // Main event loop - poll for updates periodically
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(5));
 
-        Ok(())
+        loop {
+            interval.tick().await;
+
+            // Check for pending events from Songbird
+            if let Some(ref songbird) = self.songbird {
+                if let Ok(events) = songbird.call("events.poll", serde_json::json!({})).await {
+                    if let Some(event_list) = events.as_array() {
+                        for event in event_list {
+                            self.handle_primal_event(event);
+                        }
+                    }
+                }
+            }
+
+            // Push any state updates to petalTongue
+            if let Some(ref petaltongue) = self.petaltongue {
+                // Signal that state sync is available
+                let _ = petaltongue
+                    .call("ui.heartbeat", serde_json::json!({ "status": "running" }))
+                    .await;
+            }
+        }
+    }
+
+    /// Handle an event from a primal
+    fn handle_primal_event(&self, event: &serde_json::Value) {
+        use crate::events::UIEvent;
+
+        let event_type = event
+            .get("type")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown");
+
+        match event_type {
+            "primal.started" => {
+                if let Some(name) = event.get("primal_name").and_then(|v| v.as_str()) {
+                    info!("📢 Primal started: {}", name);
+                    self.events.emit(UIEvent::PrimalStatusChanged {
+                        primal_id: name.to_string(),
+                        status: "started".to_string(),
+                    });
+                }
+            }
+            "primal.stopped" => {
+                if let Some(name) = event.get("primal_name").and_then(|v| v.as_str()) {
+                    info!("📢 Primal stopped: {}", name);
+                    self.events.emit(UIEvent::PrimalStatusChanged {
+                        primal_id: name.to_string(),
+                        status: "stopped".to_string(),
+                    });
+                }
+            }
+            "device.connected" => {
+                if let Some(id) = event.get("device_id").and_then(|v| v.as_str()) {
+                    info!("📢 Device connected: {}", id);
+                    self.events.emit(UIEvent::DeviceStatusChanged {
+                        device_id: id.to_string(),
+                        status: "connected".to_string(),
+                    });
+                }
+            }
+            "device.disconnected" => {
+                if let Some(id) = event.get("device_id").and_then(|v| v.as_str()) {
+                    info!("📢 Device disconnected: {}", id);
+                    self.events.emit(UIEvent::DeviceStatusChanged {
+                        device_id: id.to_string(),
+                        status: "disconnected".to_string(),
+                    });
+                }
+            }
+            _ => {
+                debug!("Unknown event type: {}", event_type);
+            }
+        }
     }
 
     /// Get a reference to the UI state

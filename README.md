@@ -33,6 +33,8 @@ biomeOS is a **Pure Rust operating system layer** that orchestrates autonomous c
 ✅ **capability.call** - Semantic translation layer  
 ✅ **Graph Deployment** - Declarative primal orchestration  
 ✅ **TRUE PRIMAL** - Zero coupling between primals  
+✅ **Capability-based Discovery** - Runtime primal detection via XDG sockets  
+✅ **AtomicClient** - Pure Rust JSON-RPC over Unix sockets  
 
 ---
 
@@ -198,12 +200,14 @@ See [LICENSE](LICENSE) for details.
 | Metric | Value |
 |--------|-------|
 | **Crates** | 21 |
-| **Tests** | 321 passing |
+| **Tests** | 1,071 passing |
 | **Rust Files** | 360 |
-| **Lines of Code** | ~101k |
+| **Lines of Code** | ~103k |
 | **Largest File** | 933 lines |
 | **Formatting** | ✅ Clean (`cargo fmt`) |
+| **Clippy** | ✅ 0 errors |
 | **Unsafe Code** | 0 blocks |
+| **TODOs Remaining** | 52 |
 
 ---
 

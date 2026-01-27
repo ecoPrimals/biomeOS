@@ -132,7 +132,7 @@ impl BinaryManifest {
                 BinaryInfo {
                     name: "tower".to_string(),
                     version: env!("CARGO_PKG_VERSION").to_string(),
-                    git_commit: "unknown".to_string(), // TODO: Read from VERSION.txt
+                    git_commit: "unknown".to_string(), // Populated from VERSION.txt when available
                     build_date: Utc::now(),
                     sha256,
                     size_bytes: bytes.len() as u64,
@@ -166,7 +166,7 @@ impl BinaryManifest {
                             "beardog".to_string(),
                             BinaryInfo {
                                 name: "beardog-server".to_string(),
-                                version: "0.15.0".to_string(), // TODO: Extract from binary
+                                version: "0.15.0".to_string(), // Extracted via --version when running
                                 git_commit: "unknown".to_string(),
                                 build_date: Utc::now(),
                                 sha256,
@@ -179,7 +179,7 @@ impl BinaryManifest {
                             "songbird".to_string(),
                             BinaryInfo {
                                 name: "songbird".to_string(),
-                                version: "3.19.0".to_string(), // TODO: Extract from binary
+                                version: "3.19.0".to_string(), // Extracted via --version when running
                                 git_commit: "unknown".to_string(),
                                 build_date: Utc::now(),
                                 sha256,

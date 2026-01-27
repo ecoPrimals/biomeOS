@@ -211,8 +211,8 @@ async fn stress_concurrent_read_write() {
         join_set.spawn(async move {
             for _ in 0..OPERATIONS_PER_TASK {
                 let value = *data.read().await;
-                // Value should never decrease (only writers increment)
-                assert!(value >= 0, "Value should be non-negative");
+                // Value is u64 so always non-negative, check it reads successfully
+                let _ = value;
             }
         });
     }

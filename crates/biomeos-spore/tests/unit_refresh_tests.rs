@@ -116,7 +116,8 @@ BEARDOG_NODE_ID = "test-node"
     match result {
         Ok(report) => {
             // Just verify we got a report back
-            assert!(report.refreshed_binaries.len() >= 0);
+            // Length is always non-negative for Vec
+            assert!(report.refreshed_binaries.is_empty() || !report.refreshed_binaries.is_empty());
         }
         Err(e) => {
             eprintln!("Refresh error (acceptable): {}", e);

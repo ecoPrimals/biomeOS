@@ -428,3 +428,100 @@ pub use version::*;
 
 // Re-export capability constants for easy access
 pub use capabilities::*;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_version_constants() {
+        // Version should be set
+        assert!(!version::VERSION.is_empty());
+        assert_eq!(version::TYPES_VERSION, version::VERSION);
+        assert_eq!(version::API_VERSION, "biomeOS/v1");
+        assert_eq!(version::MCP_PROTOCOL_VERSION, "1.0");
+    }
+
+    #[test]
+    fn test_endpoint_constants() {
+        assert_eq!(endpoints::DEFAULT_LOCALHOST, "127.0.0.1");
+        assert_eq!(endpoints::PRODUCTION_BIND_ADDRESS, "0.0.0.0");
+        assert_eq!(endpoints::HEALTH_ENDPOINT, "/health");
+        assert_eq!(endpoints::METRICS_ENDPOINT, "/metrics");
+        assert_eq!(endpoints::DISCOVERY_ENDPOINT, "/discovery");
+    }
+
+    #[test]
+    fn test_timeout_constants() {
+        assert_eq!(timeouts::DEFAULT_CONNECTION_TIMEOUT.as_secs(), 30);
+        assert_eq!(timeouts::DEFAULT_REQUEST_TIMEOUT.as_secs(), 30);
+        assert_eq!(timeouts::DEFAULT_OPERATION_TIMEOUT.as_secs(), 60);
+        assert_eq!(timeouts::DEFAULT_SESSION_TIMEOUT.as_secs(), 3600);
+        assert_eq!(timeouts::DEFAULT_RETRY_DELAY.as_millis(), 1000);
+    }
+
+    #[test]
+    fn test_limit_constants() {
+        assert_eq!(limits::DEFAULT_MAX_CONNECTIONS, 1000);
+        assert_eq!(limits::DEFAULT_BUFFER_SIZE, 8192);
+        assert_eq!(limits::DEFAULT_MAX_MESSAGE_SIZE, 1024 * 1024);
+        assert_eq!(limits::DEFAULT_RATE_LIMIT_PER_MINUTE, 100);
+    }
+
+    #[test]
+    fn test_network_constants() {
+        assert_eq!(network::DEFAULT_HTTP_PORT, 8080);
+        assert_eq!(network::DEFAULT_HTTPS_PORT, 8443);
+        assert_eq!(network::DEFAULT_WS_PORT, 8081);
+        assert_eq!(network::DEFAULT_MCP_PORT, 3000);
+        assert_eq!(network::DEFAULT_USER_AGENT, "biomeOS/1.0");
+        assert_eq!(network::DEFAULT_CONTENT_TYPE, "application/json");
+    }
+
+    #[test]
+    fn test_security_constants() {
+        assert_eq!(security::DEFAULT_AUTH_TIMEOUT.as_secs(), 300);
+        assert_eq!(security::DEFAULT_TOKEN_EXPIRY.as_secs(), 3600);
+        assert_eq!(security::DEFAULT_LOCKOUT_DURATION.as_secs(), 1800);
+    }
+
+    #[test]
+    fn test_capability_constants() {
+        assert_eq!(capabilities::COMPUTE, "compute");
+        assert_eq!(capabilities::STORAGE, "storage");
+        assert_eq!(capabilities::SECURITY, "security");
+        assert_eq!(capabilities::AI, "ai");
+        assert_eq!(capabilities::DISCOVERY, "discovery");
+        assert_eq!(capabilities::ORCHESTRATION, "orchestration");
+    }
+
+    #[test]
+    fn test_files_plugin_dir() {
+        let dir = files::default_plugin_dir("squirrel");
+        assert_eq!(dir, ".squirrel/plugins");
+
+        let dir2 = files::default_plugin_dir("beardog");
+        assert_eq!(dir2, ".beardog/plugins");
+    }
+
+    #[test]
+    fn test_files_constants() {
+        assert_eq!(files::DEFAULT_CONFIG_FILE, "biome.yaml");
+        assert_eq!(files::DEFAULT_RULES_DIR, ".rules");
+        assert_eq!(files::DEFAULT_HISTORY_FILE, "command_history.json");
+    }
+
+    #[test]
+    fn test_event_constants() {
+        assert_eq!(events::PLUGIN_INITIALIZED, "plugin.initialized");
+        assert_eq!(events::SYSTEM_READY, "system.ready");
+        assert_eq!(events::COMMAND_EXECUTED, "command.executed");
+    }
+
+    #[test]
+    fn test_env_var_constants() {
+        assert_eq!(env_vars::BIND_ADDRESS, "BIND_ADDRESS");
+        assert_eq!(env_vars::HTTP_PORT, "HTTP_PORT");
+        assert_eq!(env_vars::MAX_CONNECTIONS, "MAX_CONNECTIONS");
+    }
+}

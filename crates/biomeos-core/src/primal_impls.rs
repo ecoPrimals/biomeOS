@@ -17,6 +17,7 @@ use tracing::{info, warn};
 use biomeos_types::{
     error::{BiomeError, BiomeResult},
     identifiers::{Endpoint, PrimalId},
+    SystemPaths,
 };
 
 use crate::{
@@ -160,27 +161,36 @@ impl ManagedPrimal for GenericManagedPrimal {
 
         // ✅ DEEP DEBT FIX (Jan 5, 2026): Redirect logs to per-primal files
         // instead of /dev/null to enable observability and debugging!
-        // Create /tmp/primals/ directory if needed
-        std::fs::create_dir_all("/tmp/primals").ok();
-
-        // Get node ID from env for unique log file names
+        // Use XDG-compliant paths via SystemPaths
         let node_id = std::env::var("SONGBIRD_NODE_ID")
             .or_else(|_| std::env::var("NODE_ID"))
             .unwrap_or_else(|_| "unknown".to_string());
 
-        let log_path = format!("/tmp/primals/{}-{}.log", self.id, node_id);
+        // Use SystemPaths for XDG-compliant log location
+        let log_path = if let Ok(paths) = SystemPaths::new() {
+            paths.log_file(&format!("{}-{}", self.id, node_id))
+        } else {
+            // Fallback (should rarely happen)
+            std::fs::create_dir_all("/tmp/primals").ok();
+            std::path::PathBuf::from(format!("/tmp/primals/{}-{}.log", self.id, node_id))
+        };
+
+        // Ensure log directory exists
+        if let Some(parent) = log_path.parent() {
+            std::fs::create_dir_all(parent).ok();
+        }
         let log_file = OpenOptions::new()
             .create(true)
             .append(true)
             .open(&log_path)
             .map_err(|e| {
                 BiomeError::internal_error(
-                    format!("Failed to create log file {}: {}", log_path, e),
+                    format!("Failed to create log file {}: {}", log_path.display(), e),
                     Some("log_file_creation_failure"),
                 )
             })?;
 
-        info!("📝 Primal logs will be written to: {}", log_path);
+        info!("📝 Primal logs will be written to: {}", log_path.display());
 
         let child = cmd
             .stdout(Stdio::from(log_file.try_clone().map_err(|e| {
