@@ -83,6 +83,10 @@ async-trait = "0.1"
 toml = "0.8"
 bincode = "1.3"
 
+# RPC frameworks (JSON-RPC + tarpc for performance escalation)
+tarpc = { version = "0.35", features = ["serde-transport", "serde-transport-bincode", "tokio1"] }
+tokio-serde = { version = "0.9", features = ["bincode"] }
+
 # Utilities
 itertools = "0.12"
 once_cell = "1.19"

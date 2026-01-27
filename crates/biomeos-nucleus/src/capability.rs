@@ -150,8 +150,8 @@ mod tests {
 
     #[test]
     fn test_capability_verification_logic() {
-        let expected = vec!["encryption".to_string(), "identity".to_string()];
-        let actual = vec![
+        let expected = ["encryption".to_string(), "identity".to_string()];
+        let actual = [
             "encryption".to_string(),
             "identity".to_string(),
             "trust".to_string(),
@@ -168,8 +168,8 @@ mod tests {
 
     #[test]
     fn test_capability_verification_missing() {
-        let expected = vec!["encryption".to_string(), "identity".to_string()];
-        let actual = vec!["encryption".to_string()]; // Missing "identity"
+        let expected = ["encryption".to_string(), "identity".to_string()];
+        let actual = ["encryption".to_string()]; // Missing "identity"
 
         let missing: Vec<_> = expected
             .iter()

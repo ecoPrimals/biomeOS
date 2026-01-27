@@ -90,7 +90,7 @@ impl ExecutionContext {
             inner
                 .primals_by_capability
                 .entry(cap)
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(id.clone());
         }
     }

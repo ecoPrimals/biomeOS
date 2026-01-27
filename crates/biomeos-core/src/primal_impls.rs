@@ -99,10 +99,10 @@ impl ManagedPrimal for GenericManagedPrimal {
         // 2. HTTP (legacy, deprecated)
         //
         // Deep Debt Principle: Unix socket first, HTTP bridge is temporary.
-        
+
         // Try Unix socket first
         if let Ok(socket_path) = std::env::var("PRIMAL_SOCKET_PATH") {
-            if let Ok(endpoint) = Endpoint::new(&format!("unix://{}", socket_path)) {
+            if let Ok(endpoint) = Endpoint::new(format!("unix://{}", socket_path)) {
                 return Some(endpoint);
             }
         }
@@ -113,7 +113,10 @@ impl ManagedPrimal for GenericManagedPrimal {
                 "⚠️  Primal {} using deprecated HTTP endpoint. Evolve to Unix socket!",
                 self.id
             );
-            warn!("   Set PRIMAL_SOCKET_PATH=/run/user/$(id -u)/{}.sock", self.config.id);
+            warn!(
+                "   Set PRIMAL_SOCKET_PATH=/run/user/$(id -u)/{}.sock",
+                self.config.id
+            );
             let url = format!("http://127.0.0.1:{}", self.config.http_port);
             Endpoint::new(&url).ok()
         } else {

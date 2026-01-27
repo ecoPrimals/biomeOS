@@ -3,7 +3,7 @@
 //! Generic implementation of the `device.management` capability.
 //! NO primal-specific code - ANY primal can discover and use this!
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
@@ -532,7 +532,7 @@ impl DeviceManagementProvider {
         });
 
         let request_str = serde_json::to_string(&request).unwrap() + "\n";
-        let (mut read, mut write) = stream.into_split();
+        let (read, mut write) = stream.into_split();
 
         if let Err(e) = write.write_all(request_str.as_bytes()).await {
             warn!("Failed to send identity query: {}", e);
@@ -592,7 +592,7 @@ impl DeviceManagementProvider {
         });
 
         let request_str = serde_json::to_string(&request).unwrap() + "\n";
-        let (mut read, mut write) = stream.into_split();
+        let (read, mut write) = stream.into_split();
 
         if write.write_all(request_str.as_bytes()).await.is_err() {
             return (0.0, 1.0, PrimalStatus::Degraded);
@@ -666,7 +666,7 @@ impl DeviceManagementProvider {
         });
 
         let request_str = serde_json::to_string(&request).unwrap() + "\n";
-        let (mut read, mut write) = stream.into_split();
+        let (read, mut write) = stream.into_split();
 
         if let Err(e) = write.write_all(request_str.as_bytes()).await {
             warn!("Failed to send capabilities query: {}", e);

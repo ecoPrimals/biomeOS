@@ -36,15 +36,24 @@ impl BiomeOsMode {
         if let Ok(mode_override) = std::env::var("BIOMEOS_MODE") {
             match mode_override.to_lowercase().as_str() {
                 "coordinated" | "coord" | "join" => {
-                    info!("✅ BIOMEOS_MODE={} - entering COORDINATED MODE (explicit)", mode_override);
+                    info!(
+                        "✅ BIOMEOS_MODE={} - entering COORDINATED MODE (explicit)",
+                        mode_override
+                    );
                     return Self::Coordinated;
                 }
                 "bootstrap" | "boot" | "genesis" => {
-                    info!("🌱 BIOMEOS_MODE={} - entering BOOTSTRAP MODE (explicit)", mode_override);
+                    info!(
+                        "🌱 BIOMEOS_MODE={} - entering BOOTSTRAP MODE (explicit)",
+                        mode_override
+                    );
                     return Self::Bootstrap;
                 }
                 _ => {
-                    warn!("⚠️  Unknown BIOMEOS_MODE '{}', falling back to auto-detect", mode_override);
+                    warn!(
+                        "⚠️  Unknown BIOMEOS_MODE '{}', falling back to auto-detect",
+                        mode_override
+                    );
                 }
             }
         }

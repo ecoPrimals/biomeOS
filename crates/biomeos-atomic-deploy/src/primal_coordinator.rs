@@ -2,7 +2,7 @@
 //!
 //! Coordinates primal interactions (doesn't launch them!)
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::{debug, info};

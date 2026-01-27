@@ -32,7 +32,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::UnixStream;
 use tokio::sync::RwLock;
 use tokio::time::{timeout, Duration};
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info, warn};
 
 /// Discovered primal with socket and capabilities
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -230,14 +230,16 @@ impl NeuralRouter {
                     capability, primary.primal_name
                 );
 
-                // Build discovered atomic from registered providers
+                // Build discovered atomic from registered providers with health status
                 let mut primals = Vec::new();
                 for provider in &providers {
+                    let socket_str = provider.socket_path.to_string_lossy();
+                    let healthy = Self::check_primal_health(&socket_str).await;
                     primals.push(DiscoveredPrimal {
                         name: provider.primal_name.clone(),
                         socket_path: provider.socket_path.clone(),
                         capabilities: vec![capability.to_string()],
-                        healthy: true, // TODO: Actual health check
+                        healthy,
                         last_check: chrono::Utc::now(),
                     });
                 }
@@ -464,14 +466,11 @@ impl NeuralRouter {
         use tokio::io::AsyncBufReadExt;
         let mut reader = tokio::io::BufReader::new(stream);
         let mut response_line = String::new();
-        
-        timeout(
-            self.request_timeout,
-            reader.read_line(&mut response_line),
-        )
-        .await
-        .context("Response timeout")?
-        .context("Failed to read response")?;
+
+        timeout(self.request_timeout, reader.read_line(&mut response_line))
+            .await
+            .context("Response timeout")?
+            .context("Failed to read response")?;
 
         let response_bytes = response_line.trim().as_bytes().to_vec();
         debug!("   ✓ Received {} bytes", response_bytes.len());
@@ -526,6 +525,58 @@ impl NeuralRouter {
     pub async fn invalidate_cache(&self) {
         self.discovered_primals.write().await.clear();
         info!("🔄 Discovery cache invalidated");
+    }
+
+    /// Check if a primal is healthy via JSON-RPC health.check call
+    ///
+    /// Returns true if the primal responds with healthy status, false otherwise.
+    /// Timeout is 2 seconds to avoid blocking.
+    async fn check_primal_health(socket_path: &str) -> bool {
+        use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+        use tokio::net::UnixStream;
+        use tokio::time::{timeout, Duration};
+
+        // Quick check: socket exists?
+        if !std::path::Path::new(socket_path).exists() {
+            return false;
+        }
+
+        // Try to connect and call health.check
+        let health_check = async {
+            let stream = UnixStream::connect(socket_path).await?;
+            let (read_half, mut write_half) = stream.into_split();
+
+            let request = serde_json::json!({
+                "jsonrpc": "2.0",
+                "method": "health.check",
+                "params": {},
+                "id": 1
+            });
+
+            write_half.write_all(request.to_string().as_bytes()).await?;
+            write_half.write_all(b"\n").await?;
+            write_half.flush().await?;
+
+            let mut reader = BufReader::new(read_half);
+            let mut response_line = String::new();
+            reader.read_line(&mut response_line).await?;
+
+            let response: serde_json::Value = serde_json::from_str(&response_line)?;
+
+            Ok::<bool, anyhow::Error>(
+                response
+                    .get("result")
+                    .and_then(|r| r.get("healthy"))
+                    .and_then(|h| h.as_bool())
+                    .unwrap_or(false),
+            )
+        };
+
+        // Timeout after 2 seconds
+        match timeout(Duration::from_secs(2), health_check).await {
+            Ok(Ok(healthy)) => healthy,
+            _ => false,
+        }
     }
 }
 

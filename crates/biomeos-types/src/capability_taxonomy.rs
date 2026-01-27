@@ -362,7 +362,8 @@ impl CapabilityTaxonomy {
     pub fn from_str_flexible(s: &str) -> Option<Self> {
         let s_lower = s.to_lowercase();
         match s_lower.as_str() {
-            "encryption" => Some(Self::Encryption),
+            // Security capabilities - "security" is an alias for encryption
+            "encryption" | "security" | "crypto" => Some(Self::Encryption),
             "identity" => Some(Self::Identity),
             "trust" => Some(Self::Trust),
             "key_management" | "keymanagement" => Some(Self::KeyManagement),
@@ -378,7 +379,8 @@ impl CapabilityTaxonomy {
                 Some(Self::CapabilityAnnouncement)
             }
 
-            "workload_execution" | "workloadexecution" | "execution" => {
+            // Compute capabilities - "compute" is an alias for workload execution
+            "workload_execution" | "workloadexecution" | "execution" | "compute" => {
                 Some(Self::WorkloadExecution)
             }
             "resource_scheduling" | "resourcescheduling" | "scheduling" => {
@@ -388,6 +390,7 @@ impl CapabilityTaxonomy {
             "fractal_compute" | "fractalcompute" => Some(Self::FractalCompute),
             "gpu_acceleration" | "gpuacceleration" | "gpu" => Some(Self::GpuAcceleration),
 
+            // Storage capabilities
             "data_storage" | "datastorage" | "storage" => Some(Self::DataStorage),
             "provenance" => Some(Self::Provenance),
             "compression" => Some(Self::Compression),
@@ -412,7 +415,8 @@ impl CapabilityTaxonomy {
             "log_aggregation" | "logaggregation" | "logs" => Some(Self::LogAggregation),
             "graph_orchestration" | "graphorchestration" => Some(Self::GraphOrchestration),
 
-            "ai_coordination" | "aicoordination" => Some(Self::AiCoordination),
+            // AI capabilities - "ai" is an alias for coordination
+            "ai_coordination" | "aicoordination" | "ai" => Some(Self::AiCoordination),
             "ai_multi_provider" | "aimultiprovider" => Some(Self::AiMultiProvider),
             "mcp_server" | "mcpserver" | "mcp" => Some(Self::McpServer),
             "ai_capability_discovery" | "aicapabilitydiscovery" => {
@@ -426,6 +430,90 @@ impl CapabilityTaxonomy {
 
             _ => None,
         }
+    }
+
+    /// Get the default primal name that typically provides this capability.
+    ///
+    /// **MIGRATION NOTE**: This is a fallback for bootstrapping. The target architecture
+    /// uses Songbird for runtime capability discovery. This mapping will be deprecated
+    /// once all primals register their capabilities with Songbird on startup.
+    ///
+    /// Set `BIOMEOS_STRICT_DISCOVERY=1` to disable this fallback and require
+    /// all capabilities to be discovered via Songbird.
+    pub fn default_primal(&self) -> Option<&'static str> {
+        // Check if strict discovery is enabled (no fallback)
+        if std::env::var("BIOMEOS_STRICT_DISCOVERY").is_ok() {
+            return None;
+        }
+
+        match self {
+            // Security capabilities → BearDog
+            Self::Encryption
+            | Self::Identity
+            | Self::Trust
+            | Self::KeyManagement
+            | Self::HardwareSecurity
+            | Self::SecureTunneling => Some("beardog"),
+
+            // Discovery & Communication → Songbird
+            Self::Discovery
+            | Self::P2PFederation
+            | Self::Tunneling
+            | Self::Routing
+            | Self::GeneticRouting
+            | Self::CapabilityAnnouncement
+            | Self::BluetoothGenesis => Some("songbird"),
+
+            // Compute → Toadstool
+            Self::WorkloadExecution
+            | Self::ResourceScheduling
+            | Self::ProcessIsolation
+            | Self::FractalCompute
+            | Self::GpuAcceleration => Some("toadstool"),
+
+            // Storage → NestGate
+            Self::DataStorage
+            | Self::Provenance
+            | Self::Compression
+            | Self::Replication
+            | Self::Deduplication
+            | Self::ContentAddressed => Some("nestgate"),
+
+            // AI → Squirrel
+            Self::AiCoordination
+            | Self::AiMultiProvider
+            | Self::McpServer
+            | Self::AiCapabilityDiscovery => Some("squirrel"),
+
+            // UI → petalTongue (not yet implemented)
+            Self::VisualRendering
+            | Self::InputHandling
+            | Self::MultiModal
+            | Self::TopologyVisualization
+            | Self::RealtimeUpdates => None, // TODO: petalTongue
+
+            // Orchestration → biomeOS (self)
+            Self::LifecycleManagement
+            | Self::HealthMonitoring
+            | Self::ConfigManagement
+            | Self::MetricsCollection
+            | Self::LogAggregation
+            | Self::GraphOrchestration
+            | Self::SporeDeployment
+            | Self::GeneticLineage
+            | Self::NicheDeployment => Some("biomeos"),
+
+            // Custom capabilities have no default
+            Self::Custom(_) => None,
+        }
+    }
+
+    /// Resolve a capability string to a primal name using the taxonomy
+    ///
+    /// This is a convenience function for migrating from hardcoded capability→primal
+    /// mappings to taxonomy-based resolution.
+    pub fn resolve_to_primal(capability: &str) -> Option<&'static str> {
+        Self::from_str_flexible(capability).and_then(|cap| cap.default_primal())
     }
 }
 

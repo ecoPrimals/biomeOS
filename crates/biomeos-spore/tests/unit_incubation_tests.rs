@@ -128,7 +128,7 @@ async fn test_spore_incubator_creation() {
     std::fs::create_dir_all(&spore_path).unwrap();
     // FamilySeed expects 32 bytes
     let seed_bytes = [42u8; 32];
-    std::fs::write(spore_path.join(".family.seed"), &seed_bytes).unwrap();
+    std::fs::write(spore_path.join(".family.seed"), seed_bytes).unwrap();
     std::fs::write(
         spore_path.join("tower.toml"),
         r#"

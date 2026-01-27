@@ -14,7 +14,7 @@ use tokio_stream::StreamExt as TokioStreamExt;
 use tracing::{info, warn};
 
 use crate::AppState;
-use biomeos_core::{DiscoveredPrimal, HealthStatus};
+use biomeos_core::HealthStatus;
 
 /// Event types that can be streamed
 #[derive(Debug, Clone, Serialize)]

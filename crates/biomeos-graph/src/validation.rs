@@ -350,7 +350,7 @@ impl EnhancedGraphValidator {
             // Only check dependency edges for cycles
             if matches!(edge.edge_type, crate::graph::EdgeType::Dependency) {
                 adj.entry(edge.from.clone())
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push(edge.to.clone());
             }
         }
@@ -453,7 +453,7 @@ impl EnhancedGraphValidator {
         for edge in &graph.edges {
             if matches!(edge.edge_type, crate::graph::EdgeType::Dependency) {
                 adj.entry(edge.from.clone())
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push(edge.to.clone());
             }
         }

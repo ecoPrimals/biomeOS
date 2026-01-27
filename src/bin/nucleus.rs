@@ -56,7 +56,7 @@ async fn main() -> Result<()> {
                 "Usage: {} [deploy|serve|verify|status|ui|all] [--family FAMILY_ID] [--graph PATH]",
                 args[0]
             );
-            eprintln!("");
+            eprintln!();
             eprintln!("Commands:");
             eprintln!("  deploy    Deploy NUCLEUS ecosystem from graph");
             eprintln!("  serve     Start Neural API JSON-RPC server");
@@ -64,13 +64,13 @@ async fn main() -> Result<()> {
             eprintln!("  status    Show NUCLEUS status");
             eprintln!("  ui        Launch visualization UI");
             eprintln!("  all       Deploy and launch everything");
-            eprintln!("");
+            eprintln!();
             eprintln!("Options:");
             eprintln!("  --family FAMILY_ID    Genetic family ID (default: nat0)");
             eprintln!(
                 "  --graph PATH          Graph definition (default: graphs/nucleus_ecosystem.toml)"
             );
-            eprintln!("");
+            eprintln!();
             eprintln!("Examples:");
             eprintln!("  {} deploy --family nat0", args[0]);
             eprintln!("  {} serve --family nat0", args[0]);
@@ -91,7 +91,7 @@ async fn deploy_nucleus(family_id: &str, graph_path: &str) -> Result<()> {
 
     // Verify graph exists
     let graph_file = PathBuf::from(graph_path);
-    if !tokio::fs::metadata(&graph_file).await.is_ok() {
+    if tokio::fs::metadata(&graph_file).await.is_err() {
         return Err(anyhow::anyhow!("Graph not found: {}", graph_path));
     }
 
@@ -239,7 +239,7 @@ async fn show_status() -> Result<()> {
     // Show running primals
     info!("Running Primals:");
     let output = tokio::process::Command::new("pgrep")
-        .args(&["-a", "-f", "beardog|toadstool|nestgate|squirrel"])
+        .args(["-a", "-f", "beardog|toadstool|nestgate|squirrel"])
         .output()
         .await?;
 
@@ -284,7 +284,7 @@ async fn launch_ui() -> Result<()> {
 
     let petaltongue_bin = "plasmidBin/petaltongue";
 
-    if !tokio::fs::metadata(petaltongue_bin).await.is_ok() {
+    if tokio::fs::metadata(petaltongue_bin).await.is_err() {
         return Err(anyhow::anyhow!(
             "petalTongue binary not found at {}",
             petaltongue_bin

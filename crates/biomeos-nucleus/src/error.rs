@@ -22,7 +22,7 @@ pub enum Error {
         capability: Option<String>,
     },
 
-    /// Identity verification failed (Layer 2: BearDog)
+    /// Identity verification failed (Layer 2: `BearDog`)
     #[error("Identity verification failed for {primal}: {reason}")]
     IdentityVerificationFailed {
         /// Primal that failed verification
@@ -40,7 +40,7 @@ pub enum Error {
         actual: Vec<String>,
     },
 
-    /// Trust evaluation failed (Layer 4: BearDog)
+    /// Trust evaluation failed (Layer 4: `BearDog`)
     #[error("Trust evaluation failed: {reason}")]
     TrustEvaluationFailed {
         /// Reason for failure
@@ -126,6 +126,7 @@ impl Error {
     }
 
     /// Create a capability mismatch error
+    #[must_use]
     pub fn capability_mismatch(expected: Vec<String>, actual: Vec<String>) -> Self {
         Self::CapabilityMismatch { expected, actual }
     }

@@ -5,7 +5,7 @@
 
 use crate::capability_translation::CapabilityTranslationRegistry;
 use crate::mode::BiomeOsMode;
-use crate::neural_executor::{ExecutionContext, GraphExecutor};
+use crate::neural_executor::GraphExecutor;
 use crate::neural_graph::Graph;
 use crate::neural_router::{NeuralRouter, RoutingMetrics}; // NEW: Routing layer
 use crate::nucleation::SocketNucleation;
@@ -155,12 +155,10 @@ impl NeuralApiServer {
         let bootstrap_graph_path = self.graphs_dir.join("tower_atomic_bootstrap.toml");
         if bootstrap_graph_path.exists() {
             match crate::neural_graph::Graph::from_toml_file(&bootstrap_graph_path) {
-                Ok(graph) => {
-                    match self.load_translations_from_graph(&graph).await {
-                        Ok(_) => info!("✅ Semantic translations loaded from graph"),
-                        Err(e) => warn!("⚠️  Failed to load translations: {}", e),
-                    }
-                }
+                Ok(graph) => match self.load_translations_from_graph(&graph).await {
+                    Ok(_) => info!("✅ Semantic translations loaded from graph"),
+                    Err(e) => warn!("⚠️  Failed to load translations: {}", e),
+                },
                 Err(e) => warn!("⚠️  Failed to parse graph: {}", e),
             }
         } else {
@@ -619,9 +617,7 @@ impl NeuralApiServer {
                                         })
                                     })
                                     .or_else(|| {
-                                        node.primal
-                                            .as_ref()
-                                            .and_then(|p| p.by_name.as_ref().map(|s| s.as_str()))
+                                        node.primal.as_ref().and_then(|p| p.by_name.as_deref())
                                     })
                                     .unwrap_or(&node.id);
 
@@ -1105,8 +1101,12 @@ impl NeuralApiServer {
         // Register semantic mappings if provided
         if let Some(semantic_mappings) = params.get("semantic_mappings") {
             if let Some(mappings_obj) = semantic_mappings.as_object() {
-                debug!("   Registering {} semantic mappings for {}", mappings_obj.len(), capability);
-                
+                debug!(
+                    "   Registering {} semantic mappings for {}",
+                    mappings_obj.len(),
+                    capability
+                );
+
                 // Convert to HashMap<String, String>
                 let mut mappings = std::collections::HashMap::new();
                 for (key, value) in mappings_obj {
@@ -1126,7 +1126,7 @@ impl NeuralApiServer {
                         None, // No param mappings from primal registration
                     );
                 }
-                
+
                 info!("   ✅ Registered {} semantic mappings", mappings.len());
             }
         }
@@ -1279,10 +1279,8 @@ impl NeuralApiServer {
                             }
                             .to_string(),
                         )
-                    } else if let Some(name) = &primal_cfg.by_name {
-                        Some(name.clone())
                     } else {
-                        None
+                        primal_cfg.by_name.as_ref().map(|name| name.clone())
                     }
                 } else {
                     Some(node.id.clone())
@@ -1357,7 +1355,7 @@ impl NeuralApiServer {
     async fn capability_call(&self, params: &Option<Value>) -> Result<Value> {
         let start = std::time::Instant::now();
         let request_id = uuid::Uuid::new_v4().to_string();
-        
+
         let params = params.as_ref().context("Missing parameters")?;
         let capability = params["capability"]
             .as_str()
@@ -1379,7 +1377,9 @@ impl NeuralApiServer {
         info!(
             "🔄 capability.call: {} {}",
             capability,
-            operation.map(|op| format!("→ {}", op)).unwrap_or_else(|| "(direct)".to_string())
+            operation
+                .map(|op| format!("→ {}", op))
+                .unwrap_or_else(|| "(direct)".to_string())
         );
         debug!("   Args: {}", args);
         debug!("   Operation provided: {}", operation.is_some());
@@ -1398,16 +1398,22 @@ impl NeuralApiServer {
 
             // Step 2: Translate semantic operation to actual method (if needed)
             let registry = self.translation_registry.read().await;
-            
+
             // Try full name first: "{capability}.{operation}" (e.g., "crypto.generate_keypair")
             let full_name = format!("{}.{}", capability, op);
             let actual_method = if let Some(translation) = registry.get_translation(&full_name) {
                 // Found translation using full name (crypto.generate_keypair → crypto.x25519_generate_ephemeral)
-                debug!("   ✅ Found translation: {} → {}", full_name, translation.actual_method);
+                debug!(
+                    "   ✅ Found translation: {} → {}",
+                    full_name, translation.actual_method
+                );
                 translation.actual_method.clone()
             } else if let Some(translation) = registry.get_translation(op) {
                 // Found translation using just operation name
-                debug!("   ✅ Found translation: {} → {}", op, translation.actual_method);
+                debug!(
+                    "   ✅ Found translation: {} → {}",
+                    op, translation.actual_method
+                );
                 translation.actual_method.clone()
             } else {
                 // No translation, use operation as-is (will likely fail, but preserves existing behavior)
@@ -1525,12 +1531,50 @@ struct ExecutionStatus {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempfile::tempdir;
 
     #[tokio::test]
-    #[ignore] // Requires graphs directory
     async fn test_list_graphs() {
-        let server = NeuralApiServer::new("graphs", "test", "/tmp/test-neural-api.sock");
+        // Create a temporary graphs directory
+        let temp_dir = tempdir().expect("Failed to create temp dir");
+        let graphs_dir = temp_dir.path().join("graphs");
+        std::fs::create_dir_all(&graphs_dir).expect("Failed to create graphs dir");
+
+        let server = NeuralApiServer::new(&graphs_dir, "test", "/tmp/test-neural-api.sock");
+
         let result = server.list_graphs().await.unwrap();
         assert!(result.is_array());
+        assert!(result.as_array().unwrap().is_empty()); // Empty dir = empty list
+    }
+
+    #[tokio::test]
+    async fn test_list_graphs_with_files() {
+        let temp_dir = tempdir().expect("Failed to create temp dir");
+        let graphs_dir = temp_dir.path().join("graphs");
+        std::fs::create_dir_all(&graphs_dir).expect("Failed to create graphs dir");
+
+        // Create a sample graph file
+        std::fs::write(
+            graphs_dir.join("test_graph.toml"),
+            r#"[graph]
+id = "test"
+name = "Test Graph"
+version = "1.0.0"
+
+[[nodes]]
+id = "node1"
+node_type = "log.info"
+
+[nodes.config]
+message = "Hello"
+"#,
+        )
+        .expect("Failed to write test graph");
+
+        let server = NeuralApiServer::new(&graphs_dir, "test", "/tmp/test-neural-api.sock");
+
+        let result = server.list_graphs().await.unwrap();
+        let graphs = result.as_array().unwrap();
+        assert!(!graphs.is_empty());
     }
 }

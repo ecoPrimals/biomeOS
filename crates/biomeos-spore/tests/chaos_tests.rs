@@ -4,7 +4,6 @@
 
 use biomeos_spore::{Spore, SporeConfig, SporeType};
 use std::fs;
-use std::path::PathBuf;
 use tempfile::TempDir;
 
 /// Test behavior when destination filesystem is read-only

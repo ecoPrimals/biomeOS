@@ -114,7 +114,7 @@ impl DependencyGraph {
             }
 
             // Sort wave for deterministic ordering (by display string)
-            wave.sort_by(|a, b| a.to_string().cmp(&b.to_string()));
+            wave.sort_by_key(|a| a.to_string());
 
             // Mark as started
             for id in &wave {
@@ -183,7 +183,7 @@ pub async fn start_in_waves(
         let results = futures::future::join_all(tasks).await;
 
         // Check for errors
-        for (_i, result) in results.into_iter().enumerate() {
+        for result in results.into_iter() {
             match result {
                 Ok(Ok(())) => {}
                 Ok(Err(e)) => {

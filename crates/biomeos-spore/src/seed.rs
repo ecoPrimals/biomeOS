@@ -291,7 +291,7 @@ mod tests {
 
         // Create a seed file
         let bytes = [42u8; 32];
-        fs::write(&seed_path, &bytes).unwrap();
+        fs::write(&seed_path, bytes).unwrap();
 
         // Load it
         let seed = FamilySeed::from_file(&seed_path).unwrap();
@@ -312,7 +312,7 @@ mod tests {
 
         // Create file with wrong size
         let bytes = [42u8; 16]; // Only 16 bytes, not 32
-        fs::write(&seed_path, &bytes).unwrap();
+        fs::write(&seed_path, bytes).unwrap();
 
         let result = FamilySeed::from_file(&seed_path);
         assert!(result.is_err());

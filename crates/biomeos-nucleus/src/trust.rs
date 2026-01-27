@@ -1,14 +1,14 @@
 //! Layer 4: Trust Evaluation
 //!
-//! **Delegates to BearDog** - No reimplementation!
+//! **Delegates to `BearDog`** - No reimplementation!
 //!
-//! BearDog handles:
+//! `BearDog` handles:
 //! - Genetic lineage verification
 //! - Family membership validation
 //! - Trust level computation
 //! - Cryptographic proof of relationship
 //!
-//! This layer just coordinates BearDog's existing APIs.
+//! This layer just coordinates `BearDog`'s existing APIs.
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -16,7 +16,7 @@ use tracing::info;
 
 use crate::{discovery::DiscoveredPrimal, identity::IdentityProof, Error, Result};
 
-/// Trust level (evaluated by BearDog)
+/// Trust level (evaluated by `BearDog`)
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TrustLevel {
@@ -32,8 +32,9 @@ pub enum TrustLevel {
 
 impl TrustLevel {
     /// Check if this trust level is sufficient
+    #[must_use]
     pub fn is_sufficient(&self, required: &TrustLevel) -> bool {
-        use TrustLevel::*;
+        use TrustLevel::{Known, Trusted, Unknown, Verified};
         match (self, required) {
             (Verified, _) => true,
             (Trusted, Trusted | Known | Unknown) => true,
@@ -57,12 +58,12 @@ pub struct TrustEvaluation {
     pub message: String,
 }
 
-/// Trust evaluation layer (delegates to BearDog)
+/// Trust evaluation layer (delegates to `BearDog`)
 #[async_trait]
 pub trait TrustLayer: Send + Sync {
     /// Evaluate trust for a discovered primal
     ///
-    /// Delegates to BearDog's `federation.verify_family_member` API
+    /// Delegates to `BearDog`'s `federation.verify_family_member` API
     async fn evaluate_trust(
         &self,
         discovered: &DiscoveredPrimal,
@@ -73,14 +74,14 @@ pub trait TrustLayer: Send + Sync {
 
 /// Trust layer implementation
 pub struct TrustLayerImpl {
-    /// BearDog socket (discovered at runtime)
+    /// `BearDog` socket (discovered at runtime)
     beardog_socket: Option<String>,
 }
 
 impl TrustLayerImpl {
     /// Create a new trust layer
     ///
-    /// **Deep Debt Principle**: Discovers BearDog at runtime, no hardcoding!
+    /// **Deep Debt Principle**: Discovers `BearDog` at runtime, no hardcoding!
     pub async fn new() -> Result<Self> {
         info!("Initializing NUCLEUS Trust Layer (delegating to BearDog)");
 
@@ -92,7 +93,7 @@ impl TrustLayerImpl {
         })
     }
 
-    /// Discover BearDog's Unix socket (same logic as identity layer)
+    /// Discover `BearDog`'s Unix socket (same logic as identity layer)
     async fn discover_beardog_socket() -> Result<String> {
         // Reuse discovery logic from identity layer
         crate::identity::IdentityLayerImpl::new()
@@ -101,7 +102,7 @@ impl TrustLayerImpl {
             .ok_or_else(|| Error::discovery_failed("BearDog socket not found", None))
     }
 
-    /// Get BearDog socket path
+    /// Get `BearDog` socket path
     fn beardog_socket(&self) -> Result<&str> {
         self.beardog_socket
             .as_deref()
@@ -144,7 +145,7 @@ impl TrustLayer for TrustLayerImpl {
         // Parse trust evaluation
         let is_family_member = response
             .get("is_family_member")
-            .and_then(|v| v.as_bool())
+            .and_then(serde_json::Value::as_bool)
             .unwrap_or(false);
 
         let relationship = response

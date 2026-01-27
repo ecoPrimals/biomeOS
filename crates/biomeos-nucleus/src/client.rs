@@ -132,7 +132,7 @@ pub async fn call_unix_socket_rpc<T: serde::de::DeserializeOwned>(
     serde_json::from_value(result).map_err(|e| {
         Error::invalid_response(
             socket_path.display().to_string(),
-            format!("Failed to deserialize result: {}", e),
+            format!("Failed to deserialize result: {e}"),
         )
     })
 }
@@ -147,17 +147,17 @@ pub async fn call_unix_socket_rpc<T: serde::de::DeserializeOwned>(
 ///
 /// **Deep Debt Principles Applied**:
 /// - No hardcoding: Discovers all primals at runtime
-/// - No reimplementation: Delegates to BearDog and Songbird
+/// - No reimplementation: Delegates to `BearDog` and Songbird
 /// - Fast AND safe: Zero unsafe code, async throughout
 /// - Capability-based: Selects by what primals can do
 pub struct NucleusClient {
     /// Layer 1: Physical discovery (Songbird)
     discovery: Arc<dyn PhysicalDiscovery>,
-    /// Layer 2: Identity verification (BearDog)
+    /// Layer 2: Identity verification (`BearDog`)
     identity: Arc<dyn IdentityLayer>,
     /// Layer 3: Capability verification
     capability: Arc<dyn CapabilityLayer>,
-    /// Layer 4: Trust evaluation (BearDog)
+    /// Layer 4: Trust evaluation (`BearDog`)
     trust: Arc<dyn TrustLayer>,
     /// Layer 5: Registry and tracking
     registry: Arc<Registry>,
@@ -191,9 +191,9 @@ impl NucleusClient {
     ///
     /// Runs all 5 NUCLEUS layers:
     /// 1. Physical discovery (Songbird)
-    /// 2. Identity verification (BearDog)
+    /// 2. Identity verification (`BearDog`)
     /// 3. Capability verification
-    /// 4. Trust evaluation (BearDog)
+    /// 4. Trust evaluation (`BearDog`)
     /// 5. Registry and tracking
     pub async fn discover(&self, request: DiscoveryRequest) -> Result<Vec<VerifiedPrimal>> {
         info!(
@@ -296,6 +296,7 @@ impl NucleusClient {
     }
 
     /// Get registry for direct access
+    #[must_use]
     pub fn registry(&self) -> Arc<Registry> {
         self.registry.clone()
     }
@@ -308,6 +309,7 @@ pub struct NucleusClientBuilder {
 
 impl NucleusClientBuilder {
     /// Create a new builder
+    #[must_use]
     pub fn new() -> Self {
         Self {}
     }

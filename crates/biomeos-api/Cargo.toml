@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 # Web framework
 axum = { version = "0.7", features = ["ws"] }
-tower = "0.4"
+tower = { version = "0.4", features = ["util"] }
 tower-http = { version = "0.5", features = ["cors", "trace"] }
 
 # Async runtime
@@ -56,3 +56,4 @@ chrono = { version = "0.4", features = ["serde"] }
 [dev-dependencies]
 # Testing utilities
 tokio-test = "0.4"
+http-body-util = "0.1"

@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 use std::io::{Read, Write};
 use std::os::unix::net::UnixStream;
 use std::time::Duration;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info, warn};
 
 /// BearDog identity response (unwrapped format)
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -24,6 +24,7 @@
 
 pub mod beardog_jwt_client; // NEW: BearDog JWT integration for orchestrator
 pub mod deployment_graph;
+pub mod executor; // Shared executor module (types, context, handlers, spawner)
 pub mod health_check;
 pub mod orchestrator;
 pub mod primal_coordinator; // NEW: Discovery-based coordination (TRUE PRIMAL)
@@ -31,6 +32,7 @@ pub mod primal_discovery; // NEW: Socket scanning discovery
 pub mod primal_launcher; // EVOLVING: Legacy launcher → coordinator
 
 // Neural API graph execution (TOML-based deterministic deployment)
+pub mod capability_handlers; // Extracted capability-based primal handlers
 pub mod capability_translation;
 pub mod http_client;
 pub mod mode;
@@ -47,11 +49,13 @@ pub use primal_coordinator::{CoordinationStatus, DeploymentGuide, PrimalCoordina
 pub use primal_discovery::{DiscoveredPrimal, PrimalDiscovery}; // NEW
 pub use primal_launcher::{PrimalInstance, PrimalLauncher}; // LEGACY
 
-// Neural API exports
-pub use neural_executor::{
-    ExecutionContext as NeuralExecutionContext, ExecutionReport,
-    GraphExecutor as NeuralGraphExecutor, NodeStatus, PhaseResult,
+// Neural API exports - types from executor module, re-exported via neural_executor
+pub use executor::{
+    ExecutionContext, ExecutionReport, NodeStatus, PhaseResult, PhaseResultSummary,
 };
+pub use neural_executor::GraphExecutor as NeuralGraphExecutor;
+// Backwards compatibility alias
+pub use executor::ExecutionContext as NeuralExecutionContext;
 pub use neural_graph::{Graph as NeuralGraph, GraphConfig, GraphNode as NeuralGraphNode};
 pub use neural_router::{
     AtomicType as RouterAtomicType, DiscoveredAtomic, DiscoveredPrimal as RouterDiscoveredPrimal,

@@ -150,11 +150,7 @@ pub async fn spawn_primal_process(
         .await
         .context(format!("Failed to discover binary for {}", primal_name))?;
 
-    info!(
-        "   Discovered: {} → {}",
-        primal_name,
-        binary_path.display()
-    );
+    info!("   Discovered: {} → {}", primal_name, binary_path.display());
 
     // 2. Get socket path (deterministic via nucleation)
     let socket_path = context.get_socket_path(primal_name).await;
@@ -273,7 +269,10 @@ async fn configure_primal_sockets(
         }
         _ => {
             // Unknown primal: try both methods
-            warn!("   ⚠️  Unknown primal '{}', using generic configuration", primal_name);
+            warn!(
+                "   ⚠️  Unknown primal '{}', using generic configuration",
+                primal_name
+            );
             cmd.arg("--socket").arg(socket_path);
             cmd.env("PRIMAL_SOCKET", socket_path);
         }
@@ -351,10 +350,7 @@ mod tests {
         let ctx = ExecutionContext::new(HashMap::new());
         let result = discover_primal_binary("nonexistent_primal", &ctx).await;
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("Binary not found"));
+        assert!(result.unwrap_err().to_string().contains("Binary not found"));
     }
 
     #[tokio::test]
@@ -380,4 +376,3 @@ mod tests {
         // (Can't easily test this without executing, but structure is correct)
     }
 }
-

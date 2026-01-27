@@ -82,7 +82,7 @@ impl Registry {
 
     /// Get a registered primal
     pub async fn get(&self, name: &str, node_id: &str) -> Option<RegisteredPrimal> {
-        let key = format!("{}:{}", name, node_id);
+        let key = format!("{name}:{node_id}");
         let primals = self.primals.read().await;
         primals.get(&key).cloned()
     }
@@ -125,7 +125,7 @@ impl Registry {
 
     /// Update primal health status
     pub async fn update_health(&self, name: &str, node_id: &str, healthy: bool) {
-        let key = format!("{}:{}", name, node_id);
+        let key = format!("{name}:{node_id}");
         let mut primals = self.primals.write().await;
 
         if let Some(registered) = primals.get_mut(&key) {
@@ -143,7 +143,7 @@ impl Registry {
 
     /// Remove a primal from the registry
     pub async fn unregister(&self, name: &str, node_id: &str) {
-        let key = format!("{}:{}", name, node_id);
+        let key = format!("{name}:{node_id}");
         let mut primals = self.primals.write().await;
 
         if primals.remove(&key).is_some() {
@@ -215,7 +215,7 @@ mod tests {
             capabilities: vec!["test".to_string()],
             endpoint: Endpoint {
                 endpoint_type: EndpointType::UnixSocket,
-                address: format!("/tmp/{}.sock", name),
+                address: format!("/tmp/{name}.sock"),
             },
             trust_level: TrustLevel::Verified,
             version: "1.0.0".to_string(),

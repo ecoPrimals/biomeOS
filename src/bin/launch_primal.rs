@@ -140,7 +140,7 @@ async fn launch_primal(primal: &str, family_id: &str) -> Result<()> {
 
     // Check if binary needs special args (from manifest/config)
     // Instead of hardcoding per primal, check if there's a start command
-    if let Some(start_cmd) = std::env::var(format!("{}_START_CMD", primal_upper)).ok() {
+    if let Ok(start_cmd) = std::env::var(format!("{}_START_CMD", primal_upper)) {
         for arg in start_cmd.split_whitespace() {
             cmd.arg(arg);
         }

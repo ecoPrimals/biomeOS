@@ -172,7 +172,10 @@ impl ExecutionContext {
                 "family_id": self.family_id,
             });
 
-            std::fs::write(checkpoint_path, serde_json::to_string_pretty(&checkpoint_data)?)?;
+            std::fs::write(
+                checkpoint_path,
+                serde_json::to_string_pretty(&checkpoint_data)?,
+            )?;
         }
         Ok(())
     }
@@ -234,4 +237,3 @@ mod tests {
         assert_eq!(status, Some(NodeStatus::Running));
     }
 }
-

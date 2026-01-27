@@ -6,7 +6,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Type of spore
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum SporeType {
     /// Cold spore - genetic material only, for storage/archival
     ///
@@ -20,6 +20,7 @@ pub enum SporeType {
     /// Like seeds ready to germinate - active, executable, ready to grow.
     /// Includes execution environment, handles filesystem limitations.
     /// Ideal for USB deployment, rapid activation.
+    #[default]
     Live,
 }
 
@@ -48,13 +49,6 @@ impl SporeType {
             SporeType::Cold => "❄️",
             SporeType::Live => "🌱",
         }
-    }
-}
-
-impl Default for SporeType {
-    fn default() -> Self {
-        // Default to live spore for backward compatibility
-        SporeType::Live
     }
 }
 

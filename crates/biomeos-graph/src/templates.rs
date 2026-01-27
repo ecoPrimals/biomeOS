@@ -10,13 +10,11 @@
 //! - Zero unsafe code
 //! - Modern async Rust
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::graph::{
-    CoordinationPattern, GraphId, Operation, PrimalGraph, PrimalNode, PrimalSelector,
-};
+use crate::graph::{GraphId, PrimalGraph};
 
 /// Graph template metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -220,7 +218,7 @@ impl GraphTemplateManager {
         self.apply_parameters(&mut graph, &template.parameters, &parameters)?;
 
         // Generate new graph ID
-        graph.id = GraphId::new(&format!("{}_instance", template_id));
+        graph.id = GraphId::new(format!("{}_instance", template_id));
 
         Ok(graph)
     }
@@ -336,7 +334,8 @@ impl NestGateTemplateClient {
 mod tests {
     use super::*;
     use crate::graph::{
-        CoordinationPattern, GraphNode, NodeConstraints, Operation, PrimalSelector, RetryPolicy,
+        CoordinationPattern, GraphId, NodeConstraints, Operation, PrimalGraph, PrimalNode,
+        PrimalSelector, RetryPolicy,
     };
     use chrono::Utc;
 

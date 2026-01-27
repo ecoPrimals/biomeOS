@@ -6,7 +6,6 @@
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::UnixStream;
 use tracing::{info, warn};

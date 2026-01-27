@@ -18,17 +18,25 @@ pub mod manifest;
 pub mod paths; // XDG-compliant system paths
 pub mod primal;
 pub mod service;
+pub mod tarpc_types; // tarpc service definitions for high-performance RPC
 
 // Re-export key types from each module
 pub use api_schema::{
     ApiSchemaResponse, ApiSchemaType, OperationMetadata, ParameterMetadata, PrimalInfo,
     SchemaDiscoveryConfig,
 };
+
+// tarpc types for high-performance RPC
 pub use capability_taxonomy::CapabilityTaxonomy; // Well-known capability taxonomy (enum)
 pub use constants::*;
 pub use defaults::{socket_path, RuntimeConfig}; // Runtime configuration with env var overrides
 pub use error::{BiomeError, BiomeResult};
-pub use paths::SystemPaths; // XDG-compliant paths
+pub use paths::SystemPaths;
+pub use tarpc_types::{
+    protocol_from_env, HealthMetrics, HealthStatus, JwtSecretResult, LineageResult, ProtocolInfo,
+    ProtocolPreference, RegistrationResult, ServiceInfo, ServiceRegistration, SignatureResult,
+    VersionInfo, PROTOCOL_ENV_VAR,
+}; // XDG-compliant paths
 
 // Health system exports
 pub use health::{

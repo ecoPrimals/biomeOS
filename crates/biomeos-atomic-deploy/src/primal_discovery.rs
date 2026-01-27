@@ -93,7 +93,7 @@ impl PrimalDiscovery {
             let path = entry.path();
 
             // Only consider .sock files
-            if !path.extension().map_or(false, |ext| ext == "sock") {
+            if !path.extension().is_some_and(|ext| ext == "sock") {
                 continue;
             }
 

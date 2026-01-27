@@ -21,13 +21,10 @@ use biomeos_types::{
     identifiers::{Endpoint, PrimalId},
 };
 
-use crate::{
-    capabilities::Capability,
-    discovery_modern::HealthStatus,
-    retry::RetryPolicy,
-};
+use crate::{capabilities::Capability, discovery_modern::HealthStatus, retry::RetryPolicy};
 
 // Temporary stub for PrimalHealthMonitor (was in removed primal_health module)
+// TODO: Replace with full implementation using JSON-RPC health checks
 #[derive(Clone)]
 pub struct PrimalHealthMonitor;
 
@@ -35,11 +32,24 @@ impl PrimalHealthMonitor {
     pub fn builder() -> PrimalHealthMonitorBuilder {
         PrimalHealthMonitorBuilder
     }
-    
+
+    /// Start the health monitoring background task
+    ///
+    /// This is a stub that returns Ok(()) immediately.
+    /// Full implementation will use JSON-RPC health.check calls.
+    pub async fn start_monitoring(&self) -> anyhow::Result<()> {
+        tracing::info!("🏥 Health monitor started (stub)");
+        // TODO: Implement actual health monitoring loop
+        // - Periodically call health.check on registered primals
+        // - Update primal status based on responses
+        // - Emit events for state changes
+        Ok(())
+    }
+
     pub async fn register(&self, _id: PrimalId, _endpoint: biomeos_types::identifiers::Endpoint) {
         // TODO: Implement health monitoring after reqwest removal
     }
-    
+
     pub async fn unregister(&self, _id: &PrimalId) {
         // TODO: Implement health monitoring after reqwest removal
     }
@@ -411,7 +421,7 @@ impl PrimalOrchestrator {
             for cap in record.primal.provides() {
                 capability_providers
                     .entry(cap.clone())
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push(id.clone());
             }
 
@@ -432,7 +442,7 @@ impl PrimalOrchestrator {
                         // Provider must start before consumer
                         graph
                             .entry(provider_id.clone())
-                            .or_insert_with(Vec::new)
+                            .or_default()
                             .push(consumer_id.clone());
 
                         *in_degree.entry(consumer_id.clone()).or_insert(0) += 1;

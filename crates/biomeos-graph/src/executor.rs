@@ -12,10 +12,9 @@ use std::collections::{HashMap, VecDeque};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tokio::time::{timeout, Duration};
 use tracing::{debug, error, info, warn};
 
-use crate::graph::{Graph, GraphNode, NodeMetrics, Operation, PrimalGraph};
+use crate::graph::{Graph, GraphNode, Operation};
 
 /// Trait for executing operations on primals
 #[async_trait::async_trait]
@@ -409,7 +408,7 @@ impl GraphExecutor {
             for dep in &node.dependencies {
                 graph_map
                     .entry(dep.clone())
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push(node.id.clone());
                 *in_degree.entry(node.id.clone()).or_insert(0) += 1;
             }
@@ -512,7 +511,8 @@ impl PhaseResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::graph::{CoordinationPattern, GraphId, PrimalNode, PrimalSelector};
+    use crate::graph::{CoordinationPattern, GraphId, PrimalGraph, PrimalNode, PrimalSelector};
+    use std::time::Duration;
 
     // Mock executor for testing
     struct MockPrimalExecutor {

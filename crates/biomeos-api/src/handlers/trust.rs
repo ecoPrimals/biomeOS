@@ -12,7 +12,7 @@ use std::io::{Read, Write};
 use std::os::unix::net::UnixStream;
 use std::sync::Arc;
 use std::time::Duration;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info};
 
 use crate::AppState;
 

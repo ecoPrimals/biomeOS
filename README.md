@@ -151,9 +151,9 @@ cargo llvm-cov --workspace
 ## 🤝 Contributing
 
 Key areas:
-1. **Test Coverage** - Expand beyond 41%
-2. **TLS 1.2** - Fallback for older servers
-3. **Documentation** - Examples and guides
+1. **TLS 1.2** - Fallback for older servers (7% remaining)
+2. **Documentation** - Examples and guides
+3. **Primal Integration** - New primal development
 
 ### Code Quality
 - ✅ `cargo fmt` for formatting
@@ -183,10 +183,10 @@ See [LICENSE](LICENSE) for details.
 
 | Metric | Value |
 |--------|-------|
-| **Crates** | 20 |
-| **Tests** | 424 passing |
-| **Coverage** | 41.61% |
-| **Root Docs** | 15 essential |
+| **Crates** | 21 |
+| **Tests** | 1,185 passing |
+| **Root Docs** | 18 essential |
+| **Specs** | 62 files |
 | **Archive** | 900+ files |
 
 ---

@@ -92,10 +92,7 @@ impl GraphParser {
             ));
         }
 
-        nodes_array
-            .iter()
-            .map(|node_value| Self::parse_node(node_value))
-            .collect()
+        nodes_array.iter().map(Self::parse_node).collect()
     }
 
     /// Parse a single node
@@ -228,7 +225,7 @@ impl GraphParser {
 
         let retry_policy = table
             .get("retry")
-            .map(|v| Self::parse_retry_policy(v))
+            .map(Self::parse_retry_policy)
             .transpose()?;
 
         let required_capabilities = table
@@ -280,11 +277,7 @@ impl GraphParser {
             return Ok(vec![]);
         }
 
-        edges_array
-            .unwrap()
-            .iter()
-            .map(|edge_value| Self::parse_edge(edge_value))
-            .collect()
+        edges_array.unwrap().iter().map(Self::parse_edge).collect()
     }
 
     /// Parse a single edge

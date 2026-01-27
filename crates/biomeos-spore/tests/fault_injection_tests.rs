@@ -44,7 +44,6 @@ async fn test_seed_generation_failure() {
 
     #[cfg(unix)]
     {
-        use std::os::unix::fs::PermissionsExt;
         let secrets_dir = biomeos_dir.join("secrets");
         fs::create_dir_all(&secrets_dir).unwrap();
         let mut perms = fs::metadata(&secrets_dir).unwrap().permissions();
@@ -63,7 +62,6 @@ async fn test_seed_generation_failure() {
     // Cleanup
     #[cfg(unix)]
     {
-        use std::os::unix::fs::PermissionsExt;
         let secrets_dir = biomeos_dir.join("secrets");
         if secrets_dir.exists() {
             let mut perms = fs::metadata(&secrets_dir).unwrap().permissions();

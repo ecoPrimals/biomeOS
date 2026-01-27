@@ -319,7 +319,7 @@ async fn test_invalid_node_id_handling() {
 async fn test_verify_multiple_families_sequentially() {
     let client = create_test_client().await;
     if let Ok(client) = client {
-        let families = vec![test_family_id(), test_family_id(), test_family_id()];
+        let families = [test_family_id(), test_family_id(), test_family_id()];
 
         let seed = test_seed_hash("multi_family_test");
 
@@ -342,7 +342,7 @@ async fn test_verify_multiple_seeds_same_family() {
     if let Ok(client) = client {
         let family_id = test_family_id();
 
-        let seeds = vec![
+        let seeds = [
             test_seed_hash("seed_1"),
             test_seed_hash("seed_2"),
             test_seed_hash("seed_3"),
@@ -415,7 +415,7 @@ async fn test_family_relationship_tracking() {
         if let Ok(response) = result {
             // Relationship field should have meaningful value
             let valid_relationships =
-                vec!["unknown", "direct", "derived", "sibling", "parent", "child"];
+                ["unknown", "direct", "derived", "sibling", "parent", "child"];
 
             assert!(
                 valid_relationships

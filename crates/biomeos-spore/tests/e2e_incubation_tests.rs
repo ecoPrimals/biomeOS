@@ -1,9 +1,8 @@
 //! E2E tests for spore incubation workflow
 
-use biomeos_spore::incubation::{list_local_nodes, SporeIncubator};
+use biomeos_spore::incubation::SporeIncubator;
 use biomeos_spore::seed::FamilySeed;
 use biomeos_types::identifiers::FamilyId;
-use std::path::PathBuf;
 use tempfile::TempDir;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
@@ -19,7 +18,7 @@ async fn test_e2e_incubation_workflow() {
     // Create family seed (32 bytes required)
     let seed_path = spore_path.join(".family.seed");
     let seed_bytes = [42u8; 32];
-    std::fs::write(&seed_path, &seed_bytes).unwrap();
+    std::fs::write(&seed_path, seed_bytes).unwrap();
 
     // Create tower.toml
     std::fs::write(
@@ -60,7 +59,7 @@ async fn test_e2e_multi_computer_incubation_simulation() {
     // Create spore
     std::fs::create_dir_all(&spore_path).unwrap();
     let seed_bytes = [42u8; 32];
-    std::fs::write(spore_path.join(".family.seed"), &seed_bytes).unwrap();
+    std::fs::write(spore_path.join(".family.seed"), seed_bytes).unwrap();
     let test_family = FamilyId::new("test-family").to_string();
     std::fs::write(
         spore_path.join("tower.toml"),
@@ -97,7 +96,7 @@ async fn test_e2e_genetic_lineage_preservation() {
     // Create spore with known seed (32 bytes)
     std::fs::create_dir_all(&spore_path).unwrap();
     let seed_data = [99u8; 32];
-    std::fs::write(spore_path.join(".family.seed"), &seed_data).unwrap();
+    std::fs::write(spore_path.join(".family.seed"), seed_data).unwrap();
     let test_family = FamilyId::new("test-family").to_string();
     std::fs::write(
         spore_path.join("tower.toml"),
@@ -115,7 +114,7 @@ family_id = "{}"
     let incubator = SporeIncubator::new(&spore_path).unwrap();
 
     // Verify the spore seed can be read
-    let family_seed = FamilySeed::from_file(&spore_path.join(".family.seed")).unwrap();
+    let family_seed = FamilySeed::from_file(spore_path.join(".family.seed")).unwrap();
 
     // In a full E2E test, we would:
     // 1. Incubate the spore
@@ -137,7 +136,7 @@ async fn test_e2e_incubation_with_spore_log_tracking() {
     std::fs::create_dir_all(&spore_path).unwrap();
     std::fs::create_dir_all(spore_path.join(".spore.logs")).unwrap();
     let seed_bytes = [42u8; 32];
-    std::fs::write(spore_path.join(".family.seed"), &seed_bytes).unwrap();
+    std::fs::write(spore_path.join(".family.seed"), seed_bytes).unwrap();
     std::fs::write(
         spore_path.join("tower.toml"),
         r#"

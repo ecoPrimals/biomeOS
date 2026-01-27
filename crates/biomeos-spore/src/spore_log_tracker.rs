@@ -187,7 +187,7 @@ mod tests {
 
     #[test]
     fn test_all_spore_event_types() {
-        let events = vec![
+        let events = [
             SporeEventType::Creation,
             SporeEventType::Cloning,
             SporeEventType::Incubation,

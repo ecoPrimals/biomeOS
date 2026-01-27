@@ -4,7 +4,6 @@
 
 use anyhow::Result;
 use colored::Colorize;
-use comfy_table::presets::UTF8_FULL;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use sysinfo::{Disks, System};

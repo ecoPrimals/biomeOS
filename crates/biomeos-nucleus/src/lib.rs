@@ -78,7 +78,7 @@ pub use trust::{TrustEvaluation, TrustLayer, TrustLevel};
 /// Primal endpoint information (discovered via Songbird)
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Endpoint {
-    /// Endpoint type (unix_socket, udp, tcp)
+    /// Endpoint type (`unix_socket`, udp, tcp)
     pub endpoint_type: EndpointType,
     /// Endpoint address/path
     pub address: String,
@@ -109,7 +109,7 @@ pub struct VerifiedPrimal {
     pub capabilities: Vec<String>,
     /// Primary endpoint
     pub endpoint: Endpoint,
-    /// Trust level (evaluated by BearDog)
+    /// Trust level (evaluated by `BearDog`)
     pub trust_level: TrustLevel,
     /// Version
     pub version: String,

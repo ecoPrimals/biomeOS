@@ -93,7 +93,9 @@ pub use primal_impls::{
     SongbirdConfig,
     TowerBuilder,
 };
-pub use primal_orchestrator::{ManagedPrimal, PrimalHealthMonitor, PrimalOrchestrator, PrimalState};
+pub use primal_orchestrator::{
+    ManagedPrimal, PrimalHealthMonitor, PrimalOrchestrator, PrimalState,
+};
 pub use retry::{CircuitBreaker, RetryPolicy};
 pub use tower_config::PrimalConfig as TowerPrimalConfig;
 pub use tower_config::{DiscoveryConfig, HealthConfig, TowerConfig};

@@ -5,125 +5,33 @@
 //! - Parallel execution within phases
 //! - Checkpoint/rollback support
 //! - Live monitoring and metrics
+//!
+//! ## Architecture
+//!
+//! Uses shared types from `crate::executor`:
+//! - `ExecutionContext`: Shared state across nodes
+//! - `NodeStatus`: Node execution status
+//! - `ExecutionReport`: Final execution report
+//! - `PhaseResult`: Result from a single phase
+//!
+//! ## Deep Debt Principles
+//!
+//! - Capability-based discovery (no hardcoded primal names)
+//! - Pure JSON-RPC communication (no HTTP in IPC)
+//! - Runtime primal discovery (self-knowledge only)
 
 use anyhow::{Context, Result};
-use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
 use std::path::PathBuf;
 use std::sync::Arc;
-use tokio::sync::Mutex;
-use tracing::{debug, error, info, warn};
+use tracing::{error, info, warn};
 
 use crate::neural_graph::{Graph, GraphNode};
 
-/// Execution status for a node
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum NodeStatus {
-    Pending,
-    Running,
-    Completed(serde_json::Value),
-    Failed(String),
-    Skipped,
-}
-
-/// Execution context shared across nodes
-#[derive(Clone)]
-pub struct ExecutionContext {
-    /// Environment variables
-    pub env: HashMap<String, String>,
-    /// Node outputs (for dependency resolution)
-    pub outputs: Arc<Mutex<HashMap<String, serde_json::Value>>>,
-    /// Execution status of nodes
-    pub status: Arc<Mutex<HashMap<String, NodeStatus>>>,
-    /// Checkpoint directory
-    pub checkpoint_dir: Option<PathBuf>,
-    /// Socket nucleation (deterministic assignment)
-    pub nucleation: Option<Arc<tokio::sync::RwLock<crate::nucleation::SocketNucleation>>>,
-    /// Family ID for socket paths
-    pub family_id: String,
-}
-
-impl std::fmt::Debug for ExecutionContext {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ExecutionContext")
-            .field("env", &self.env)
-            .field("checkpoint_dir", &self.checkpoint_dir)
-            .field("family_id", &self.family_id)
-            .field("nucleation", &self.nucleation.is_some())
-            .finish()
-    }
-}
-
-impl ExecutionContext {
-    /// Create new execution context
-    pub fn new(env: HashMap<String, String>) -> Self {
-        let family_id = env
-            .get("FAMILY_ID")
-            .or_else(|| env.get("BIOMEOS_FAMILY_ID"))
-            .map(|s| s.clone())
-            .unwrap_or_else(|| "nat0".to_string());
-
-        Self {
-            env,
-            outputs: Arc::new(Mutex::new(HashMap::new())),
-            status: Arc::new(Mutex::new(HashMap::new())),
-            checkpoint_dir: None,
-            nucleation: None,
-            family_id,
-        }
-    }
-
-    /// Set socket nucleation
-    pub fn with_nucleation(
-        mut self,
-        nucleation: Arc<tokio::sync::RwLock<crate::nucleation::SocketNucleation>>,
-    ) -> Self {
-        self.nucleation = Some(nucleation);
-        self
-    }
-
-    /// Get or assign socket path for a primal
-    pub async fn get_socket_path(&self, primal_name: &str) -> String {
-        if let Some(ref nucleation) = self.nucleation {
-            // Use nucleation for deterministic assignment
-            let mut nuc = nucleation.write().await;
-            let path = nuc.assign_socket(primal_name, &self.family_id);
-            path.display().to_string()
-        } else {
-            // Fallback: deterministic path based on family_id
-            format!("/tmp/{}-{}.sock", primal_name, self.family_id)
-        }
-    }
-
-    /// Get environment variables
-    pub fn env(&self) -> &HashMap<String, String> {
-        &self.env
-    }
-
-    /// Set output for a node
-    pub async fn set_output(&self, node_id: &str, value: serde_json::Value) {
-        let mut outputs = self.outputs.lock().await;
-        outputs.insert(node_id.to_string(), value);
-    }
-
-    /// Get output from a node
-    pub async fn get_output(&self, node_id: &str) -> Option<serde_json::Value> {
-        let outputs = self.outputs.lock().await;
-        outputs.get(node_id).cloned()
-    }
-
-    /// Set node status
-    pub async fn set_status(&self, node_id: &str, status: NodeStatus) {
-        let mut statuses = self.status.lock().await;
-        statuses.insert(node_id.to_string(), status);
-    }
-
-    /// Get node status
-    pub async fn get_status(&self, node_id: &str) -> Option<NodeStatus> {
-        let statuses = self.status.lock().await;
-        statuses.get(node_id).cloned()
-    }
-}
+// Re-export from executor module (single source of truth)
+// This eliminates duplicate type definitions and ensures consistency
+pub use crate::executor::context::{ExecutionContext, NodeStatus};
+pub use crate::executor::types::{ExecutionReport, PhaseResult};
 
 /// Graph executor
 pub struct GraphExecutor {
@@ -177,8 +85,8 @@ impl GraphExecutor {
             );
 
             match self.execute_phase(phase_nodes).await {
-                Ok(phase_results) => {
-                    report.phase_results.push(phase_results);
+                Ok(phase_result) => {
+                    report.add_phase_result(&phase_result);
                 }
                 Err(e) => {
                     error!("❌ Phase {} failed: {}", phase_num + 1, e);
@@ -275,79 +183,6 @@ impl GraphExecutor {
         Ok(phase_result)
     }
 
-    /// Discover binary path for a primal (capability-based, no hardcoding!)
-    ///
-    /// Search order:
-    /// 1. BIOMEOS_PLASMID_BIN_DIR environment variable
-    /// 2. ./plasmidBin directory (current directory)
-    /// 3. ../plasmidBin directory (parent directory)
-    ///
-    /// Architecture is auto-detected from target triple.
-    async fn discover_primal_binary(
-        primal_name: &str,
-        context: &ExecutionContext,
-    ) -> Result<PathBuf> {
-        // Get base directory from environment or defaults
-        let base_dirs = vec![
-            std::env::var("BIOMEOS_PLASMID_BIN_DIR")
-                .ok()
-                .map(PathBuf::from),
-            Some(PathBuf::from("./plasmidBin")),
-            Some(PathBuf::from("../plasmidBin")),
-            Some(PathBuf::from("../../plasmidBin")), // For workspace structure
-        ];
-
-        // Auto-detect architecture from target triple
-        let arch_suffix = std::env::consts::ARCH;
-        let os = std::env::consts::OS;
-
-        // Common binary name patterns to try
-        let binary_patterns = vec![
-            // Pattern 1: primal_arch_os_musl/primal (e.g., beardog_x86_64_linux_musl/beardog)
-            format!(
-                "{}_{}_{}_{}/{}",
-                primal_name, arch_suffix, os, "musl", primal_name
-            ),
-            // Pattern 2: primal_arch_os/primal (e.g., beardog_x86_64_linux/beardog)
-            format!("{}_{}_{}/{}", primal_name, arch_suffix, os, primal_name),
-            // Pattern 3: primals/primal/primal (e.g., primals/beardog/beardog)
-            format!("primals/{}/{}", primal_name, primal_name),
-            // Pattern 4: primal/primal (e.g., beardog/beardog)
-            format!("{}/{}", primal_name, primal_name),
-            // Pattern 5: just primal name (e.g., beardog)
-            primal_name.to_string(),
-        ];
-
-        // Try each base directory
-        for base_dir in base_dirs.iter().filter_map(|d| d.as_ref()) {
-            if !base_dir.exists() {
-                continue;
-            }
-
-            // Try each pattern
-            for pattern in &binary_patterns {
-                let candidate = base_dir.join(pattern);
-                tracing::debug!("   Trying binary path: {}", candidate.display());
-
-                if candidate.exists() && candidate.is_file() {
-                    tracing::info!("   ✅ Found binary: {}", candidate.display());
-                    return Ok(candidate);
-                }
-            }
-        }
-
-        // Not found - provide helpful error
-        anyhow::bail!(
-            "Binary not found for primal '{}'. Searched in: {:?}. \
-             Set BIOMEOS_PLASMID_BIN_DIR to specify binary location.",
-            primal_name,
-            base_dirs
-                .iter()
-                .filter_map(|d| d.as_ref())
-                .collect::<Vec<_>>()
-        )
-    }
-
     /// Execute a single node
     async fn execute_node(
         node: &GraphNode,
@@ -375,13 +210,17 @@ impl GraphExecutor {
             "filesystem.check_exists" => Self::node_filesystem_check_exists(node, context).await,
             "crypto.derive_child_seed" => Self::node_crypto_derive_seed(node, context).await,
             "primal.launch" => Self::node_primal_launch(node, context).await,
-            "primal_start" => Self::node_primal_start(node, context).await, // NEW: Phase 2
-            "start" => Self::node_primal_start_capability(node, context).await, // NEW: Capability-based start
-            "verification" => Self::node_verification(node, context).await,     // NEW: Phase 2
+            "primal_start" => Self::node_primal_start(node, context).await,
+            // Capability-based handlers (extracted to capability_handlers module)
+            "start" => crate::capability_handlers::primal_start_capability(node, context).await,
+            "health_check" => {
+                crate::capability_handlers::health_check_capability(node, context).await
+            }
+            // Verification and health
+            "verification" => Self::node_verification(node, context).await,
             "health.check" => Self::node_health_check(node, context).await,
             "health.check_atomic" => Self::node_health_check(node, context).await,
             "health.check_all" => Self::node_health_check_all(node, context).await,
-            "health_check" => Self::node_health_check_capability(node, context).await, // NEW: Capability-based health check
             "lineage.verify_siblings" => Self::node_lineage_verify(node, context).await,
             "report.deployment_success" => Self::node_deployment_report(node, context).await,
             "log.info" => Self::node_log_info(node, context).await,
@@ -540,381 +379,6 @@ impl GraphExecutor {
         }))
     }
 
-    /// Node executor: start (capability-based primal launching)
-    async fn node_primal_start_capability(
-        node: &GraphNode,
-        _context: &ExecutionContext,
-    ) -> Result<serde_json::Value> {
-        use std::process::Stdio;
-        use tokio::time::{sleep, Duration};
-
-        tracing::info!("🚀 Starting primal via capability-based discovery");
-
-        // Extract capability and operation parameters
-        let capability = node
-            .primal
-            .as_ref()
-            .and_then(|p| p.by_capability.as_ref())
-            .ok_or_else(|| anyhow::anyhow!("Missing primal.by_capability"))?;
-
-        let operation = node
-            .operation
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("Missing operation"))?;
-
-        let params = &operation.params;
-        let mode = params
-            .get("mode")
-            .and_then(|v| v.as_str())
-            .unwrap_or("server");
-
-        let family_id = params
-            .get("family_id")
-            .and_then(|v| v.as_str())
-            .unwrap_or("nat0");
-
-        tracing::debug!("   Capability: {}", capability);
-        tracing::debug!("   Mode: {}", mode);
-        tracing::debug!("   Family ID: {}", family_id);
-
-        // 1. Capability → Primal Name Discovery (NO hardcoded paths!)
-        let primal_name = match capability.as_str() {
-            "security" => "beardog",
-            "discovery" => "songbird",
-            "ai" => "squirrel",
-            "compute" => "toadstool",
-            "storage" => "nestgate",
-            _ => {
-                tracing::warn!("Unknown capability '{}', skipping", capability);
-                return Ok(serde_json::json!({
-                    "started": false,
-                    "capability": capability,
-                    "error": format!("Unknown capability: {}", capability)
-                }));
-            }
-        };
-
-        // 2. Discover binary path (capability-based, auto-detect architecture)
-        let binary_full_path = match Self::discover_primal_binary(primal_name, _context).await {
-            Ok(path) => path,
-            Err(e) => {
-                tracing::warn!("   Binary discovery failed for {}: {}", primal_name, e);
-                return Ok(serde_json::json!({
-                    "started": false,
-                    "capability": capability,
-                    "primal": primal_name,
-                    "error": format!("Binary not found: {}", e)
-                }));
-            }
-        };
-
-        tracing::info!(
-            "   Discovered: {} → {}",
-            primal_name,
-            binary_full_path.display()
-        );
-
-        // 3. Build socket path using nucleation (deterministic assignment)
-        let socket_path = _context.get_socket_path(primal_name).await;
-
-        // Extract runtime directory from socket path (for dependent sockets)
-        let runtime_dir = std::path::Path::new(&socket_path)
-            .parent()
-            .and_then(|p| p.to_str())
-            .unwrap_or("/tmp");
-
-        // 3. Build command with primal-specific arguments
-        let mut cmd = tokio::process::Command::new(&binary_full_path);
-        cmd.arg(mode);
-
-        // Add socket path (primal-specific handling)
-        match primal_name {
-            "beardog" => {
-                // BearDog: GOLD STANDARD - uses CLI flags
-                cmd.arg("--socket").arg(&socket_path);
-                cmd.arg("--family-id").arg(family_id);
-            }
-            "squirrel" => {
-                // Squirrel: Uses --socket CLI flag (tested - works!)
-                cmd.arg("--socket").arg(&socket_path);
-                // Also pass Neural API endpoint for routing
-                let neural_api_socket = _context.get_socket_path("neural-api").await;
-                cmd.env("SERVICE_MESH_ENDPOINT", neural_api_socket);
-            }
-            "songbird" => {
-                // Songbird: Needs bonding with BearDog (Tower Atomic!)
-                // Set socket path
-                cmd.env("SONGBIRD_SOCKET", &socket_path);
-                cmd.env("SONGBIRD_ORCHESTRATOR_FAMILY_ID", family_id);
-
-                // CRITICAL: Point Songbird to BearDog (genetic bonding!)
-                let beardog_socket = _context.get_socket_path("beardog").await;
-                cmd.env("SONGBIRD_SECURITY_PROVIDER", &beardog_socket);
-                cmd.env("SECURITY_ENDPOINT", &beardog_socket); // Alternative name
-
-                tracing::info!("   🧬 Bonding Songbird → BearDog: {}", beardog_socket);
-            }
-            "nestgate" | "toadstool" => {
-                // Generic: try --socket flag (follow BearDog pattern)
-                cmd.arg("--socket").arg(&socket_path);
-                cmd.arg("--family-id").arg(family_id);
-            }
-            _ => {
-                // Unknown primal: try both methods
-                cmd.arg("--socket").arg(&socket_path);
-                cmd.env("PRIMAL_SOCKET", &socket_path);
-            }
-        }
-
-        cmd.env("FAMILY_ID", family_id);
-
-        // Pass SSLKEYLOGFILE if set (for Wireshark TLS decryption)
-        if let Ok(sslkeylogfile) = std::env::var("SSLKEYLOGFILE") {
-            if !sslkeylogfile.is_empty() {
-                cmd.env("SSLKEYLOGFILE", &sslkeylogfile);
-                tracing::info!("   🔐 Passing SSLKEYLOGFILE to primal: {}", sslkeylogfile);
-            }
-        }
-
-        // Capture stdout/stderr for debug visibility (Jan 23, 2026 - Deep Debt Solution)
-        // This enables comprehensive debug logging from primals (e.g., BearDog v0.18.0)
-        cmd.stdout(Stdio::piped());
-        cmd.stderr(Stdio::piped());
-
-        tracing::info!(
-            "   Starting: {} {} (socket: {})",
-            primal_name,
-            mode,
-            socket_path
-        );
-
-        // 2.5: Pass environment variables from graph TOML (NEW - Jan 21, 2026)
-        // This enables primals to receive API keys, configuration, etc.
-        tracing::info!(
-            "   DEBUG: node.operation exists? {}",
-            node.operation.is_some()
-        );
-        if let Some(ref operation) = node.operation {
-            tracing::info!(
-                "   DEBUG: operation.environment exists? {}",
-                operation.environment.is_some()
-            );
-            if let Some(ref env_map) = operation.environment {
-                tracing::info!(
-                    "   🔧 Passing {} environment variables to primal",
-                    env_map.len()
-                );
-                for (key, value) in env_map {
-                    tracing::info!(
-                        "   Setting env: {}={}",
-                        key,
-                        if key.contains("KEY") { "***" } else { value }
-                    );
-                    cmd.env(key, value);
-                }
-            } else {
-                tracing::warn!("   ⚠️  No environment variables in operation");
-            }
-        } else {
-            tracing::warn!("   ⚠️  No operation found on node!");
-        }
-
-        // 3. Start process with captured stdout/stderr
-        let mut child = match cmd.spawn() {
-            Ok(c) => c,
-            Err(e) => {
-                tracing::error!("   Failed to spawn process: {}", e);
-                return Ok(serde_json::json!({
-                    "started": false,
-                    "capability": capability,
-                    "primal": primal_name,
-                    "error": format!("Failed to spawn: {}", e)
-                }));
-            }
-        };
-
-        let pid = child.id().unwrap_or(0);
-        tracing::info!("   Process started: PID {}", pid);
-
-        // 3.1: Relay primal stdout/stderr to Neural API logs (Deep Debt Solution - Jan 23, 2026)
-        // This makes primal debug output (like BearDog v0.18.0 comprehensive logging) visible
-        let primal_name_for_stdout = primal_name.to_string();
-        let primal_name_for_stderr = primal_name.to_string();
-
-        if let Some(stdout) = child.stdout.take() {
-            tokio::spawn(async move {
-                use tokio::io::{AsyncBufReadExt, BufReader};
-                let mut reader = BufReader::new(stdout).lines();
-                while let Ok(Some(line)) = reader.next_line().await {
-                    tracing::info!("[{}] {}", primal_name_for_stdout, line);
-                }
-            });
-        }
-
-        if let Some(stderr) = child.stderr.take() {
-            tokio::spawn(async move {
-                use tokio::io::{AsyncBufReadExt, BufReader};
-                let mut reader = BufReader::new(stderr).lines();
-                while let Ok(Some(line)) = reader.next_line().await {
-                    tracing::warn!("[{}] {}", primal_name_for_stderr, line);
-                }
-            });
-        }
-
-        // 4. Wait for socket (with timeout)
-        // socket_path already defined above (line 546) - use that!
-        tracing::debug!("   Waiting for socket: {}", socket_path);
-
-        for attempt in 1..=30 {
-            if PathBuf::from(&socket_path).exists() {
-                tracing::info!(
-                    "   ✅ Socket available: {} (after {}00ms)",
-                    socket_path,
-                    attempt
-                );
-
-                // Register capabilities with Neural API (NEW!)
-                if !node.capabilities.is_empty() {
-                    tracing::info!(
-                        "   📝 Registering {} capabilities...",
-                        node.capabilities.len()
-                    );
-                    for cap in &node.capabilities {
-                        // Note: We can't call router directly here in executor
-                        // This is just logging for now - actual registration happens
-                        // via RPC call from the primal on startup (to be implemented)
-                        tracing::info!("      - {} → {} @ {}", cap, primal_name, socket_path);
-                    }
-                }
-
-                return Ok(serde_json::json!({
-                    "started": true,
-                    "capability": capability,
-                    "primal": primal_name,
-                    "mode": mode,
-                    "family_id": family_id,
-                    "pid": pid,
-                    "socket": socket_path,
-                    "startup_time_ms": attempt * 100
-                }));
-            }
-            sleep(Duration::from_millis(100)).await;
-        }
-
-        tracing::warn!("   ⚠️  Socket not found after 3s: {}", socket_path);
-        tracing::warn!("   Process may still be starting or may have failed");
-
-        // Return partial success (process started but socket not confirmed)
-        Ok(serde_json::json!({
-            "started": true,
-            "capability": capability,
-            "primal": primal_name,
-            "mode": mode,
-            "family_id": family_id,
-            "pid": pid,
-            "socket": socket_path,
-            "socket_confirmed": false,
-            "warning": "Socket not detected within 3 seconds"
-        }))
-    }
-
-    /// Node executor: health_check (capability-based health checking)
-    async fn node_health_check_capability(
-        node: &GraphNode,
-        _context: &ExecutionContext,
-    ) -> Result<serde_json::Value> {
-        tracing::info!("🏥 Health check for capability-based deployment");
-
-        let operation = node
-            .operation
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("Missing operation"))?;
-
-        let params = &operation.params;
-
-        tracing::debug!("   Health check params: {:?}", params);
-
-        // Extract family_id for socket checks
-        let family_id = params
-            .get("family_id")
-            .and_then(|v| v.as_str())
-            .unwrap_or("nat0");
-
-        let mut checks_passed = Vec::new();
-        let mut checks_failed = Vec::new();
-
-        // Check Tower Atomic (beardog + songbird)
-        if params.get("check_tower_atomic").is_some() {
-            tracing::debug!("   Checking Tower Atomic...");
-
-            // Check beardog socket
-            let beardog_socket = format!("/tmp/beardog-{}.sock", family_id);
-            if PathBuf::from(&beardog_socket).exists() {
-                tracing::info!("   ✅ BearDog socket available: {}", beardog_socket);
-                checks_passed.push("beardog_socket");
-            } else {
-                tracing::warn!("   ❌ BearDog socket not found: {}", beardog_socket);
-                checks_failed.push("beardog_socket");
-            }
-
-            // Check songbird socket
-            let songbird_socket = format!("/tmp/songbird-{}.sock", family_id);
-            if PathBuf::from(&songbird_socket).exists() {
-                tracing::info!("   ✅ Songbird socket available: {}", songbird_socket);
-                checks_passed.push("songbird_socket");
-            } else {
-                tracing::warn!("   ❌ Songbird socket not found: {}", songbird_socket);
-                checks_failed.push("songbird_socket");
-            }
-        }
-
-        // Check Discovery (songbird)
-        if params.get("check_discovery").is_some() {
-            tracing::debug!("   Checking Discovery service...");
-
-            let songbird_socket = format!("/tmp/songbird-{}.sock", family_id);
-            if PathBuf::from(&songbird_socket).exists() {
-                tracing::info!("   ✅ Discovery available: {}", songbird_socket);
-                checks_passed.push("discovery");
-            } else {
-                tracing::warn!("   ❌ Discovery not available: {}", songbird_socket);
-                checks_failed.push("discovery");
-            }
-        }
-
-        // Check AI Ready (squirrel)
-        if params.get("check_ai_ready").is_some() {
-            tracing::debug!("   Checking AI service...");
-
-            let squirrel_socket = format!("/tmp/squirrel-{}.sock", family_id);
-            if PathBuf::from(&squirrel_socket).exists() {
-                tracing::info!("   ✅ AI service available: {}", squirrel_socket);
-                checks_passed.push("ai_service");
-            } else {
-                tracing::warn!("   ❌ AI service not available: {}", squirrel_socket);
-                checks_failed.push("ai_service");
-            }
-        }
-
-        let all_healthy = checks_failed.is_empty();
-
-        if all_healthy {
-            tracing::info!(
-                "   ✅ All health checks passed ({} checks)",
-                checks_passed.len()
-            );
-        } else {
-            tracing::warn!("   ⚠️  Some health checks failed: {:?}", checks_failed);
-        }
-
-        Ok(serde_json::json!({
-            "healthy": all_healthy,
-            "checks_passed": checks_passed,
-            "checks_failed": checks_failed,
-            "total_checks": checks_passed.len() + checks_failed.len()
-        }))
-    }
-
     /// Substitute environment variables in a string
     fn substitute_env(s: &str, env: &HashMap<String, String>) -> String {
         let mut result = s.to_string();
@@ -945,7 +409,7 @@ impl GraphExecutor {
                 // FIXED: was node.dependencies, now node.depends_on
                 graph_map
                     .entry(dep.clone())
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push(node.id.clone());
                 *in_degree.entry(node.id.clone()).or_insert(0) += 1;
             }
@@ -1010,28 +474,6 @@ impl GraphExecutor {
     }
 }
 
-/// Execution report
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ExecutionReport {
-    pub graph_id: String,
-    pub success: bool,
-    pub duration_ms: u64,
-    pub phase_results: Vec<PhaseResult>,
-    pub error: Option<String>,
-}
-
-impl ExecutionReport {
-    fn new(graph_id: String) -> Self {
-        Self {
-            graph_id,
-            success: true,
-            duration_ms: 0,
-            phase_results: Vec::new(),
-            error: None,
-        }
-    }
-}
-
 // =============================================================================
 // Phase 2 Node Executors: primal_start & verification
 // =============================================================================
@@ -1088,7 +530,7 @@ impl GraphExecutor {
         info!("   Socket: {}", socket);
 
         // Check if binary exists
-        if !tokio::fs::metadata(&binary).await.is_ok() {
+        if tokio::fs::metadata(&binary).await.is_err() {
             anyhow::bail!("Binary not found: {}", binary);
         }
 
@@ -1539,28 +981,6 @@ impl GraphExecutor {
         // Base64 encode for use as JWT secret
         use base64::{engine::general_purpose, Engine as _};
         general_purpose::STANDARD.encode(&secret)
-    }
-}
-
-/// Phase execution result
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PhaseResult {
-    pub total_nodes: usize,
-    pub completed: usize,
-    pub failed: usize,
-    pub duration_ms: u64,
-    pub errors: Vec<(String, String)>,
-}
-
-impl PhaseResult {
-    fn new(total_nodes: usize) -> Self {
-        Self {
-            total_nodes,
-            completed: 0,
-            failed: 0,
-            duration_ms: 0,
-            errors: Vec::new(),
-        }
     }
 }
 

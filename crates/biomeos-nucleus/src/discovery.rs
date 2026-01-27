@@ -11,8 +11,8 @@
 //! This layer just coordinates Songbird's existing APIs.
 //!
 //! **Deep Debt Evolution**:
-//! - Uses CapabilityTaxonomy (enum) instead of strings
-//! - Uses SystemPaths for XDG compliance
+//! - Uses `CapabilityTaxonomy` (enum) instead of strings
+//! - Uses `SystemPaths` for XDG compliance
 //! - Runtime discovery, no hardcoded paths
 
 use async_trait::async_trait;
@@ -36,6 +36,7 @@ pub struct DiscoveryRequest {
 
 impl DiscoveryRequest {
     /// Create a new discovery request
+    #[must_use]
     pub fn new(capability: CapabilityTaxonomy) -> Self {
         Self {
             capability,
@@ -51,6 +52,7 @@ impl DiscoveryRequest {
     }
 
     /// Set timeout
+    #[must_use]
     pub fn with_timeout(mut self, timeout: Duration) -> Self {
         self.timeout = Some(timeout);
         self
@@ -70,7 +72,7 @@ pub struct DiscoveredPrimal {
     pub capabilities: Vec<String>,
     /// Endpoints
     pub endpoints: Vec<Endpoint>,
-    /// Signature (signed by BearDog)
+    /// Signature (signed by `BearDog`)
     pub signature: String,
     /// Timestamp
     pub timestamp: String,
@@ -115,7 +117,7 @@ impl DiscoveryLayer {
 
         // Get XDG-compliant paths
         let paths = SystemPaths::new().map_err(|e| {
-            Error::discovery_failed(format!("Failed to initialize SystemPaths: {}", e), None)
+            Error::discovery_failed(format!("Failed to initialize SystemPaths: {e}"), None)
         })?;
 
         // Discover Songbird socket (no hardcoded paths!)
@@ -129,11 +131,11 @@ impl DiscoveryLayer {
 
     /// Discover Songbird's Unix socket
     ///
-    /// **Deep Debt Evolution**: Uses SystemPaths, not hardcoded paths!
+    /// **Deep Debt Evolution**: Uses `SystemPaths`, not hardcoded paths!
     ///
     /// Checks in order:
-    /// 1. Environment variable SONGBIRD_SOCKET
-    /// 2. XDG runtime directory (SystemPaths)
+    /// 1. Environment variable `SONGBIRD_SOCKET`
+    /// 2. XDG runtime directory (`SystemPaths`)
     /// 3. Scan runtime directory for songbird-*.sock
     async fn discover_songbird_socket(paths: &SystemPaths) -> Result<String> {
         debug!("Discovering Songbird socket (XDG-compliant, no hardcoded paths)");
@@ -165,11 +167,11 @@ impl DiscoveryLayer {
         );
 
         let mut read_dir = tokio::fs::read_dir(runtime_dir).await.map_err(|e| {
-            Error::discovery_failed(format!("Failed to read runtime dir: {}", e), None)
+            Error::discovery_failed(format!("Failed to read runtime dir: {e}"), None)
         })?;
 
         while let Some(entry) = read_dir.next_entry().await.map_err(|e| {
-            Error::discovery_failed(format!("Failed to read directory entry: {}", e), None)
+            Error::discovery_failed(format!("Failed to read directory entry: {e}"), None)
         })? {
             let path = entry.path();
             if let Some(filename) = path.file_name().and_then(|n| n.to_str()) {
@@ -324,11 +326,11 @@ mod tests {
     #[test]
     fn test_capability_taxonomy_conversion() {
         let cap = CapabilityTaxonomy::Encryption;
-        let s = format!("{:?}", cap);
+        let s = format!("{cap:?}");
         assert_eq!(s, "Encryption");
 
         let cap2 = CapabilityTaxonomy::P2PFederation;
-        let s2 = format!("{:?}", cap2);
+        let s2 = format!("{cap2:?}");
         assert_eq!(s2, "P2PFederation");
     }
 

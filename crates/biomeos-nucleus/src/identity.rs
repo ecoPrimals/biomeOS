@@ -1,14 +1,14 @@
 //! Layer 2: Identity Verification
 //!
-//! **Delegates to BearDog** - No reimplementation!
+//! **Delegates to `BearDog`** - No reimplementation!
 //!
-//! BearDog handles:
+//! `BearDog` handles:
 //! - Ed25519 signature generation and verification
 //! - Process identity validation
 //! - Challenge-response authentication
 //! - Family key management
 //!
-//! This layer just coordinates BearDog's existing APIs.
+//! This layer just coordinates `BearDog`'s existing APIs.
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -16,7 +16,7 @@ use tracing::{debug, info};
 
 use crate::{discovery::DiscoveredPrimal, Error, Result};
 
-/// Identity proof (from primal, signed by BearDog)
+/// Identity proof (from primal, signed by `BearDog`)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IdentityProof {
     /// Primal name
@@ -39,7 +39,7 @@ pub struct IdentityProof {
     pub started_at: String,
     /// Challenge nonce (for freshness)
     pub challenge: String,
-    /// Ed25519 signature (signed by BearDog)
+    /// Ed25519 signature (signed by `BearDog`)
     pub signature: String,
 }
 
@@ -54,7 +54,7 @@ pub struct IdentityVerification {
     pub message: String,
 }
 
-/// Identity verification layer (delegates to BearDog)
+/// Identity verification layer (delegates to `BearDog`)
 #[async_trait]
 pub trait IdentityLayer: Send + Sync {
     /// Request identity proof from a primal
@@ -64,7 +64,7 @@ pub trait IdentityLayer: Send + Sync {
 
     /// Verify identity proof
     ///
-    /// Delegates to BearDog's `security.verify_primal_identity` API
+    /// Delegates to `BearDog`'s `security.verify_primal_identity` API
     async fn verify_proof(&self, proof: &IdentityProof) -> Result<IdentityVerification>;
 
     /// Full verification flow (request + verify)
@@ -73,14 +73,14 @@ pub trait IdentityLayer: Send + Sync {
 
 /// Identity layer implementation
 pub struct IdentityLayerImpl {
-    /// BearDog socket (discovered at runtime)
+    /// `BearDog` socket (discovered at runtime)
     pub(crate) beardog_socket: Option<String>,
 }
 
 impl IdentityLayerImpl {
     /// Create a new identity layer
     ///
-    /// **Deep Debt Principle**: Discovers BearDog at runtime, no hardcoding!
+    /// **Deep Debt Principle**: Discovers `BearDog` at runtime, no hardcoding!
     pub async fn new() -> Result<Self> {
         info!("Initializing NUCLEUS Identity Layer (delegating to BearDog)");
 
@@ -93,15 +93,16 @@ impl IdentityLayerImpl {
     }
 
     /// Generate a challenge nonce
+    #[must_use]
     pub fn generate_challenge() -> String {
         use sha2::{Digest, Sha256};
         let mut hasher = Sha256::new();
         hasher.update(uuid::Uuid::new_v4().as_bytes());
-        hasher.update(&chrono::Utc::now().timestamp().to_le_bytes());
+        hasher.update(chrono::Utc::now().timestamp().to_le_bytes());
         format!("{:x}", hasher.finalize())
     }
 
-    /// Discover BearDog's Unix socket
+    /// Discover `BearDog`'s Unix socket
     ///
     /// **Deep Debt Principle**: Runtime discovery, not hardcoded!
     async fn discover_beardog_socket() -> Result<String> {
@@ -118,7 +119,7 @@ impl IdentityLayerImpl {
 
         // 2. Check runtime directory
         if let Ok(uid) = std::env::var("UID") {
-            let runtime_path = format!("/run/user/{}/beardog/beardog.sock", uid);
+            let runtime_path = format!("/run/user/{uid}/beardog/beardog.sock");
             if tokio::fs::metadata(&runtime_path).await.is_ok() {
                 debug!(
                     "Found BearDog socket in runtime directory: {}",
@@ -131,10 +132,10 @@ impl IdentityLayerImpl {
         // 3. Check tmp directory
         let mut read_dir = tokio::fs::read_dir("/tmp")
             .await
-            .map_err(|e| Error::discovery_failed(format!("Failed to read /tmp: {}", e), None))?;
+            .map_err(|e| Error::discovery_failed(format!("Failed to read /tmp: {e}"), None))?;
 
         while let Some(entry) = read_dir.next_entry().await.map_err(|e| {
-            Error::discovery_failed(format!("Failed to read directory entry: {}", e), None)
+            Error::discovery_failed(format!("Failed to read directory entry: {e}"), None)
         })? {
             let path = entry.path();
             if let Some(filename) = path.file_name().and_then(|n| n.to_str()) {
@@ -151,7 +152,7 @@ impl IdentityLayerImpl {
         ))
     }
 
-    /// Get BearDog socket path
+    /// Get `BearDog` socket path
     fn beardog_socket(&self) -> Result<&str> {
         self.beardog_socket
             .as_deref()
@@ -223,7 +224,7 @@ impl IdentityLayer for IdentityLayerImpl {
         // Parse verification result
         let verified = response
             .get("verified")
-            .and_then(|v| v.as_bool())
+            .and_then(serde_json::Value::as_bool)
             .ok_or_else(|| Error::invalid_response("beardog", "Missing 'verified' field"))?;
 
         let message = response

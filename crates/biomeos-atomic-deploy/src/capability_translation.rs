@@ -122,7 +122,7 @@ impl CapabilityTranslationRegistry {
         // Add to provider capabilities
         self.provider_capabilities
             .entry(provider)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(semantic);
     }
 

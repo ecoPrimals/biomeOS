@@ -338,7 +338,7 @@ impl GraphModificationHandler {
         for edge in &graph.edges {
             if matches!(edge.edge_type, EdgeType::Dependency) {
                 adj.entry(edge.from.clone())
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push(edge.to.clone());
             }
         }
@@ -348,10 +348,10 @@ impl GraphModificationHandler {
         let mut rec_stack = HashMap::new();
 
         for node in &graph.nodes {
-            if !visited.get(&node.id).copied().unwrap_or(false) {
-                if Self::has_cycle_dfs(&node.id, &adj, &mut visited, &mut rec_stack)? {
-                    return Err(anyhow!("Graph contains a dependency cycle"));
-                }
+            if !visited.get(&node.id).copied().unwrap_or(false)
+                && Self::has_cycle_dfs(&node.id, &adj, &mut visited, &mut rec_stack)?
+            {
+                return Err(anyhow!("Graph contains a dependency cycle"));
             }
         }
 

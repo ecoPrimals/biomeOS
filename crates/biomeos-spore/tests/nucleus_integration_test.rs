@@ -3,7 +3,6 @@
 //! Tests the complete pipeline from plasmidBin/ to spore creation
 
 use biomeos_spore::{Spore, SporeConfig, SporeType};
-use std::path::PathBuf;
 use tempfile::TempDir;
 
 /// Test that spore creation fails gracefully if plasmidBin is missing

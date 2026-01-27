@@ -9,8 +9,9 @@ use axum::{
 };
 use biomeos_api::{AppState, Config};
 use biomeos_core::CompositeDiscovery;
+use http_body_util::BodyExt;
 use serde_json::Value;
-use tower::util::ServiceExt; // Required for .oneshot() method on Router
+use tower::ServiceExt; // Required for .oneshot() method on Router
 
 /// Helper to create test app with standalone discovery
 async fn test_app_with_standalone_discovery() -> Router {
@@ -56,7 +57,7 @@ async fn test_get_discovered_primals_standalone_mode() {
 
     assert_eq!(response.status(), StatusCode::OK);
 
-    let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+    let body = response.into_body().collect().await.unwrap().to_bytes();
     let json: Value = serde_json::from_slice(&body).unwrap();
 
     // Verify structure
@@ -129,7 +130,7 @@ async fn test_discovered_primals_response_structure() {
         .await
         .unwrap();
 
-    let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+    let body = response.into_body().collect().await.unwrap().to_bytes();
     let json: Value = serde_json::from_slice(&body).unwrap();
 
     // Verify response structure
@@ -177,7 +178,7 @@ async fn test_discovered_primals_trust_fields() {
         .await
         .unwrap();
 
-    let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+    let body = response.into_body().collect().await.unwrap().to_bytes();
     let json: Value = serde_json::from_slice(&body).unwrap();
 
     // Check for optional trust fields
@@ -222,7 +223,7 @@ async fn test_discovered_primals_standalone_mode_via_config() {
     // Should succeed even with standalone discovery
     assert_eq!(response.status(), StatusCode::OK);
 
-    let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+    let body = response.into_body().collect().await.unwrap().to_bytes();
     let json: Value = serde_json::from_slice(&body).unwrap();
 
     // Verify basic structure
@@ -264,7 +265,7 @@ async fn test_discovered_primals_timestamp_validity() {
         .await
         .unwrap();
 
-    let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+    let body = response.into_body().collect().await.unwrap().to_bytes();
     let json: Value = serde_json::from_slice(&body).unwrap();
 
     let now = std::time::SystemTime::now()
@@ -300,7 +301,7 @@ async fn test_discovered_primals_capabilities_format() {
         .await
         .unwrap();
 
-    let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+    let body = response.into_body().collect().await.unwrap().to_bytes();
     let json: Value = serde_json::from_slice(&body).unwrap();
 
     // Verify capabilities are properly formatted
@@ -331,7 +332,7 @@ async fn test_discovered_primals_endpoint_format() {
         .await
         .unwrap();
 
-    let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+    let body = response.into_body().collect().await.unwrap().to_bytes();
     let json: Value = serde_json::from_slice(&body).unwrap();
 
     // Verify endpoint format
@@ -357,11 +358,11 @@ async fn test_discovered_primals_endpoint_format() {
 async fn test_discovered_primals_health_endpoint() {
     let app = test_app_standalone().await;
 
-    // Also test the /health endpoint
+    // Also test the /api/v1/health endpoint
     let response = app
         .oneshot(
             Request::builder()
-                .uri("/health")
+                .uri("/api/v1/health")
                 .body(Body::empty())
                 .unwrap(),
         )
