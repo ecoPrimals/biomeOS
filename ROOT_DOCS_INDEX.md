@@ -62,17 +62,19 @@
 | `GENOMEBIN_ARCHITECTURE_STANDARD.md` | UniBin/ecoBin standards |
 | `ISOMORPHIC_EVOLUTION.md` | Evolution principles |
 
-### Deployment (3 files)
+### Deployment (4 files)
 | File | Description |
 |------|-------------|
+| `scripts/bootstrap_tower_atomic.sh` ⭐ | Automated Tower Atomic bootstrap |
 | `deploy_tower_atomic.sh` | Production deployment script |
 | `DEPLOYMENT.md` | General deployment guide |
 | `QUICK_START.md` | Quick deployment |
 
-### Evolution (4 files)
+### Evolution (5 files)
 | File | Description |
 |------|-------------|
 | `PROTOCOL_ESCALATION_ROADMAP.md` ⭐ | JSON-RPC → tarpc Living Graph |
+| `docs/handoffs/PRIMAL_TARPC_EVOLUTION_HANDOFF.md` | tarpc implementation for all primals |
 | `INFRASTRUCTURE_EVOLUTION.md` | Terraria, Apoptosis |
 | `SEMANTIC_EVOLUTION_STRATEGY.md` | Semantic naming |
 | `RUST_EVOLUTION_ROADMAP.md` | Deep debt complete |
