@@ -447,9 +447,47 @@ echo '{"jsonrpc":"2.0","method":"http.post","params":{"url":"https://httpbin.org
 
 ---
 
-*Generated: January 28, 2026 (Night Update)*  
-*Songbird Version: v8.14.0 + commit 53a45b625*  
+## 🎉 UPDATE: HTTP Client Layer Fix COMPLETE (Commit 2fec947bc)
+
+**Status**: ✅ **ALL HTTP HEADER ISSUES RESOLVED**
+
+The Songbird team completed both fixes:
+
+| Issue | Commit | Status |
+|-------|--------|--------|
+| IPC Layer (http.post → handle_request) | a6d702dcd | ✅ FIXED |
+| HTTP Client Layer (caller_headers → wire) | 2fec947bc | ✅ FIXED |
+
+### Fix Summary
+
+**Commit 2fec947bc** - HTTP client wrapper now preserves caller headers:
+- `caller_headers` are now correctly merged into the final HTTP request
+- Headers appear in the raw bytes sent over the wire
+- Base64 body decoding is working correctly
+
+### Test Coverage
+
+68 comprehensive HTTP header tests added (commit a75356812):
+- Header propagation through all layers
+- Base64 body encoding/decoding
+- Multiple header types (auth, content-type, custom)
+
+### Verification
+
+```bash
+# Test with httpbin.org - should echo back custom headers
+echo '{"jsonrpc":"2.0","method":"http.post","params":{"url":"https://httpbin.org/post","headers":{"X-Custom":"test123"},"body":"eyJ0ZXN0Ijp0cnVlfQ=="},"id":1}' | nc -U /run/user/1000/biomeos/songbird-nat0.sock
+
+# Expected: Response contains "X-Custom": "test123"
+```
+
+---
+
+*Generated: January 28, 2026 (Final)*  
+*Songbird Version: v8.14.0 (Commit: f6cb661b4)*  
 *biomeOS Neural API: 74 translations registered*  
-*IPC Fix: ✅ CONFIRMED WORKING*  
-*HTTP Client Fix: 🔴 NEEDED*
+*IPC Fix: ✅ COMPLETE*  
+*HTTP Client Fix: ✅ COMPLETE*  
+*Total Tests: 68 HTTP header tests*  
+*Status: 🚀 PRODUCTION READY*
 
