@@ -28,8 +28,13 @@ pub struct VerifyConfig {
 
 impl Default for VerifyConfig {
     fn default() -> Self {
+        // Use XDG-compliant path with fallback to /tmp
+        let serial_log = std::env::var("XDG_RUNTIME_DIR")
+            .map(|dir| PathBuf::from(format!("{}/biomeos/verify.log", dir)))
+            .unwrap_or_else(|_| PathBuf::from("/tmp/biomeos-verify.log"));
+        
         Self {
-            serial_log: PathBuf::from("/tmp/biomeos-verify.log"),
+            serial_log,
             rootfs_dir: None,
             boot_timeout: 30,
             expected_boot_message: "BiomeOS initialization complete".to_string(),

@@ -349,17 +349,29 @@ fn discover_songbird_socket() -> Result<String> {
         }
     }
 
-    // Priority 3: Family-based discovery
-    if let Ok(family_id) = std::env::var("BIOMEOS_FAMILY_ID") {
+    // Priority 3: Family-based discovery (XDG-compliant first)
+    if let Ok(family_id) = std::env::var("BIOMEOS_FAMILY_ID").or_else(|_| std::env::var("FAMILY_ID")) {
+        // XDG path first
+        if let Ok(runtime) = std::env::var("XDG_RUNTIME_DIR") {
+            let socket = format!("{}/biomeos/songbird-{}.sock", runtime, family_id);
+            if std::path::Path::new(&socket).exists() {
+                return Ok(socket);
+            }
+        }
+        // Legacy fallback
         let socket = format!("/tmp/songbird-{}.sock", family_id);
         if std::path::Path::new(&socket).exists() {
+            tracing::warn!("⚠️ Using legacy /tmp path: {}", socket);
             return Ok(socket);
         }
     }
 
-    // Priority 4: Common patterns
-    for pattern in &["/tmp/songbird.sock", "/run/biomeos/songbird.sock"] {
+    // Priority 4: Common patterns (XDG first, legacy fallback)
+    for pattern in &["/run/biomeos/songbird.sock", "/tmp/songbird.sock"] {
         if std::path::Path::new(pattern).exists() {
+            if pattern.starts_with("/tmp") {
+                tracing::warn!("⚠️ Using legacy /tmp path: {}", pattern);
+            }
             return Ok((*pattern).to_string());
         }
     }
