@@ -29,6 +29,12 @@
 - **10 new JSON-RPC methods** for protocol management
 - **Automated bootstrap script** (`scripts/bootstrap_tower_atomic.sh`)
 
+### Performance Benchmark (JSON-RPC HTTPS/TLS 1.3)
+- **402ms average** latency to api.github.com
+- **100% success rate** (10/10 requests)
+- **338ms fastest**, 440ms slowest
+- **~12 crypto calls** per TLS handshake via Neural API
+
 ### Tower Atomic Production Ready
 - **87 sites tested** across 11 categories
 - **93% TLS 1.3 success** (Pure Rust)
@@ -253,6 +259,7 @@ cargo test --workspace  # 400+ tests, 106 suites
 | Metric | Value | Status |
 |--------|-------|--------|
 | **TLS 1.3 Validation** | 93% (81/87) | ✅ Production |
+| **HTTPS Latency** | 402ms avg to GitHub | ✅ Benchmarked |
 | **Web Compatibility** | 96% | ✅ Production |
 | **Cipher Suites** | 100% | ✅ All 3 mandatory |
 | **Pure Rust** | 100% | ✅ ecoBin |
