@@ -1,9 +1,9 @@
 # 📚 biomeOS Documentation Hub
 
-**Last Updated**: January 28, 2026  
+**Last Updated**: January 28, 2026 (Final)  
 **Status**: Production Ready - 93% TLS Validation  
-**Version**: Tower Atomic + NUCLEUS Lifecycle Complete  
-**Tests**: 400+ passing (106 suites) | **Crates**: 21 | **Lines**: ~106k | **Unsafe**: 0 | **TODOs**: 3
+**Version**: Tower Atomic + NUCLEUS Lifecycle + Protocol Escalation Phase 1  
+**Tests**: 400+ passing (153 in atomic-deploy) | **Crates**: 21 | **Lines**: ~108k | **Unsafe**: 0 | **TODOs**: 3
 
 Welcome to the biomeOS documentation hub! This is your central navigation point.
 
@@ -34,15 +34,19 @@ Welcome to the biomeOS documentation hub! This is your central navigation point.
 | **Tests Passing** | 400+ |
 
 ### Key Commits
-| Primal | Commit | Feature |
-|--------|--------|---------|
+| Component | Commit | Feature |
+|-----------|--------|---------|
+| biomeOS | `75b88ee` | Protocol Escalation + Living Graph ⭐ |
 | BearDog | `964babd25` | SHA-384 complete |
-| Songbird | `eaa1dda9d` | Adaptive HTTP + User-Agent |
+| Songbird | `f6cb661b4` | v8.14.0 - HTTP headers, dual-mode |
+| Squirrel | `28e59176` | biomeOS integration fixes |
 
 ### New in This Release
+- **Protocol Escalation** - Living Graph + JSON-RPC → tarpc ⭐
+- **10 New JSON-RPC Methods** - `protocol.*` and `graph.protocol_map`
+- **Automated Bootstrap** - `scripts/bootstrap_tower_atomic.sh`
 - **NUCLEUS Lifecycle** - Germination through Apoptosis
 - **Socket Discovery** - Capability-based resolution
-- **Concurrent Tests** - No sleeps, proper async patterns
 
 ---
 
@@ -59,8 +63,10 @@ Welcome to the biomeOS documentation hub! This is your central navigation point.
 - **[SEMANTIC_EVOLUTION_STRATEGY.md](./SEMANTIC_EVOLUTION_STRATEGY.md)** - Naming conventions
 
 ### **Evolution Roadmap**
-- **[RUST_EVOLUTION_ROADMAP.md](./RUST_EVOLUTION_ROADMAP.md)** ⭐ - Scripts → Pure Rust
-- **[SONGBIRD_EVOLUTION_HANDOFF.md](./SONGBIRD_EVOLUTION_HANDOFF.md)** - TLS roadmap
+- **[PROTOCOL_ESCALATION_ROADMAP.md](./PROTOCOL_ESCALATION_ROADMAP.md)** ⭐ - JSON-RPC → tarpc Living Graph
+- **[RUST_EVOLUTION_ROADMAP.md](./RUST_EVOLUTION_ROADMAP.md)** - Scripts → Pure Rust
+- **[docs/handoffs/PRIMAL_TARPC_EVOLUTION_HANDOFF.md](./docs/handoffs/PRIMAL_TARPC_EVOLUTION_HANDOFF.md)** - tarpc guide for all primals
+- **[docs/handoffs/SONGBIRD_EVOLUTION_HANDOFF.md](./docs/handoffs/SONGBIRD_EVOLUTION_HANDOFF.md)** - HTTP headers complete
 - **[INFRASTRUCTURE_EVOLUTION.md](./INFRASTRUCTURE_EVOLUTION.md)** - Terraria, Apoptosis
 
 ---
@@ -102,6 +108,8 @@ Welcome to the biomeOS documentation hub! This is your central navigation point.
   - Caching with TTL
 
 ### **Team Handoffs**
+- **[docs/handoffs/PRIMAL_TARPC_EVOLUTION_HANDOFF.md](./docs/handoffs/PRIMAL_TARPC_EVOLUTION_HANDOFF.md)** ⭐ - tarpc guide for all primals
+- **[docs/handoffs/SONGBIRD_EVOLUTION_HANDOFF.md](./docs/handoffs/SONGBIRD_EVOLUTION_HANDOFF.md)** - HTTP headers complete
 - **[docs/handoffs/SONGBIRD_LAN_DISCOVERY_HANDOFF.md](./docs/handoffs/SONGBIRD_LAN_DISCOVERY_HANDOFF.md)** - LAN discovery
 - **[docs/handoffs/SQUIRREL_EVOLUTION_HANDOFF.md](./docs/handoffs/SQUIRREL_EVOLUTION_HANDOFF.md)** - AI primal
 
@@ -152,6 +160,8 @@ Welcome to the biomeOS documentation hub! This is your central navigation point.
 | **TRUE PRIMAL** | Zero coupling via capability.call |
 | **Tower Atomic** | BearDog + Songbird Pure Rust TLS |
 | **Neural API** | Universal router & orchestrator |
+| **Living Graph** ⭐ | Runtime protocol state tracking |
+| **Protocol Escalation** ⭐ | JSON-RPC → tarpc based on metrics |
 | **NUCLEUS** | Lifecycle management (resurrection, apoptosis) |
 | **ecoBin** | UniBin + Pure Rust (no C deps) |
 | **LiveSpore** | Portable USB deployment with genetic lineage |

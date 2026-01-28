@@ -1,14 +1,14 @@
 # 🧬 biomeOS - Root Documentation Index
 
-**Last Updated**: January 28, 2026 (Evening)  
+**Last Updated**: January 28, 2026 (Final)  
 **Status**: ✅ **Production Ready** - 93% TLS Validation  
 **Tower Atomic**: Pure Rust TLS 1.3 Validated  
 **NUCLEUS**: Lifecycle Management Complete  
 **Squirrel AI**: Integration Complete (Anthropic, OpenAI)  
-**Protocol Escalation**: Roadmap defined (JSON-RPC → tarpc)  
+**Protocol Escalation**: ✅ **Phase 1 Complete** - Living Graph + JSON-RPC APIs  
 **LiveSpore**: Genetic Lineage Federation Ready  
 **Deep Debt**: ✅ **Complete** - 96% reduction (85 → 3 TODOs)  
-**Tests**: 400+ passing (106 suites) | **Crates**: 21 | **Lines**: ~106k | **Unsafe**: 0
+**Tests**: 400+ passing (153 in atomic-deploy) | **Crates**: 21 | **Lines**: ~108k | **Unsafe**: 0
 
 ---
 
@@ -23,6 +23,12 @@
 
 ## 🏆 **January 28, 2026 Achievements**
 
+### Protocol Escalation Phase 1 Complete ⭐
+- **Living Graph** infrastructure for runtime protocol state
+- **ProtocolEscalationManager** for JSON-RPC → tarpc transitions
+- **10 new JSON-RPC methods** for protocol management
+- **Automated bootstrap script** (`scripts/bootstrap_tower_atomic.sh`)
+
 ### Tower Atomic Production Ready
 - **87 sites tested** across 11 categories
 - **93% TLS 1.3 success** (Pure Rust)
@@ -36,7 +42,7 @@
 - **Dependency-aware shutdown**
 
 ### Concurrent Testing Complete
-- **400+ tests** passing (106 suites)
+- **153 tests** in biomeos-atomic-deploy alone
 - **No sleeps** - proper async patterns
 - **RAII guards** for global state cleanup
 - **Timeouts** on all network calls
@@ -44,9 +50,9 @@
 ### Key Commits
 | Primal | Commit | Feature |
 |--------|--------|---------|
+| biomeOS | `75b88ee` | Protocol Escalation + Living Graph |
 | BearDog | `964babd25` | SHA-384 evolution complete |
 | Songbird | `f6cb661b4` | v8.14.0 - HTTP headers complete, dual-mode |
-| Songbird | `d4cccba53` | Port:0 beacon fix + federation-port |
 | Squirrel | `28e59176` | biomeOS integration fixes |
 
 ---
@@ -181,9 +187,23 @@ See `specs/README.md` for complete spec listing.
 
 ### Deploy Tower Atomic
 ```bash
+# Automated bootstrap (recommended)
+./scripts/bootstrap_tower_atomic.sh        # Start
+./scripts/bootstrap_tower_atomic.sh --stop # Stop
+
+# Legacy deployment
 ./deploy_tower_atomic.sh        # Start
 ./deploy_tower_atomic.sh status # Check
 ./deploy_tower_atomic.sh stop   # Stop
+```
+
+### Protocol Escalation APIs
+```bash
+# Check protocol status
+echo '{"jsonrpc":"2.0","method":"protocol.status","params":{},"id":1}' | nc -U /run/user/1000/biomeos/neural-api-nat0.sock
+
+# View Living Graph
+echo '{"jsonrpc":"2.0","method":"graph.protocol_map","params":{},"id":1}' | nc -U /run/user/1000/biomeos/neural-api-nat0.sock
 ```
 
 ### Lifecycle Management
@@ -236,13 +256,14 @@ cargo test --workspace  # 400+ tests, 106 suites
 | **Web Compatibility** | 96% | ✅ Production |
 | **Cipher Suites** | 100% | ✅ All 3 mandatory |
 | **Pure Rust** | 100% | ✅ ecoBin |
+| **Protocol Escalation** | Phase 1 Complete | ✅ Living Graph |
 | **NUCLEUS Lifecycle** | Complete | ✅ Ready |
 | **Socket Discovery** | Complete | ✅ No hardcoding |
 | **LiveSpore** | Genetic Federation | ✅ Ready |
-| **Test Suites** | 106 | ✅ |
-| **Tests Passing** | 400+ | ✅ |
+| **Test Suites** | 106+ | ✅ |
+| **Tests Passing** | 400+ (153 in atomic-deploy) | ✅ |
 | **Crates** | 21 | ✅ |
-| **Lines of Code** | ~106k | ✅ |
+| **Lines of Code** | ~108k | ✅ |
 | **Clippy** | 0 errors | ✅ Clean |
 | **Formatting** | Clean | ✅ `cargo fmt` |
 | **Unsafe Code** | 0 blocks | ✅ `#![deny(unsafe_code)]` |

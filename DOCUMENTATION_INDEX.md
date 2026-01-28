@@ -1,7 +1,7 @@
 # biomeOS Documentation Index
 
-**Last Updated**: January 27, 2026  
-**Status**: ✅ Production Ready | **Tests**: 1,071 | **Crates**: 21 | **TODOs**: 52
+**Last Updated**: January 28, 2026 (Final)  
+**Status**: ✅ Production Ready | **Tests**: 400+ | **Crates**: 21 | **TODOs**: 3
 
 ---
 
@@ -12,6 +12,7 @@
 | **[START_HERE.md](START_HERE.md)** ⭐ | Quick orientation & current status |
 | **[README.md](README.md)** | Project overview |
 | **[DOCUMENTATION_HUB.md](DOCUMENTATION_HUB.md)** | Central navigation hub |
+| **[PROTOCOL_ESCALATION_ROADMAP.md](PROTOCOL_ESCALATION_ROADMAP.md)** ⭐ | JSON-RPC → tarpc evolution |
 
 ---
 
@@ -20,9 +21,10 @@
 | Directory | Contents | Focus |
 |-----------|----------|-------|
 | `crates/` | 21 Rust crates | Core implementation |
-| `specs/` | 62 specifications | Technical details |
+| `specs/` | 67 specifications | Technical details |
 | `graphs/` | TOML graphs | Deployment definitions |
-| `scripts/` | Shell scripts | LiveSpore deployment |
+| `scripts/` | Deployment scripts ⭐ | `bootstrap_tower_atomic.sh` |
+| `docs/handoffs/` | Team handoffs | Evolution guides |
 | `archive/` | 900+ files | Historical records |
 
 ---
@@ -36,11 +38,11 @@ cargo build --release --workspace
 # Test
 cargo test --workspace
 
-# Deploy Tower Atomic
-./deploy_tower_atomic.sh
+# Deploy Tower Atomic (recommended)
+./scripts/bootstrap_tower_atomic.sh
 
-# Deploy LiveSpore
-./scripts/validate_spore.sh --update /path/to/spore
+# Legacy deployment
+./deploy_tower_atomic.sh
 ```
 
 ---
@@ -52,11 +54,12 @@ cargo test --workspace
 | **TLS 1.3 Success** | 93% (81/87 sites) |
 | **Web Compatibility** | 96% |
 | **Pure Rust** | 100% |
-| **Tests Passing** | 1,071 |
+| **Protocol Escalation** | Phase 1 Complete |
+| **Tests Passing** | 400+ (153 in atomic-deploy) |
 | **Crates** | 21 |
-| **Lines of Code** | ~103k |
+| **Lines of Code** | ~108k |
 | **Clippy Errors** | 0 |
-| **TODOs Remaining** | 52 |
+| **TODOs Remaining** | 3 (external handoffs) |
 
 ---
 

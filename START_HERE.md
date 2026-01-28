@@ -1,12 +1,13 @@
 # 🌱 biomeOS - Start Here
 
-**Last Updated**: January 28, 2026  
+**Last Updated**: January 28, 2026 (Final)  
 **Status**: 🎉 **PRODUCTION READY** - Pure Rust TLS 1.3  
 **Tower Atomic**: 93% TLS Success (87 sites), 96% Web Compatibility  
+**Protocol Escalation**: ✅ **Phase 1 Complete** - Living Graph + JSON-RPC APIs  
 **NUCLEUS**: Lifecycle management complete (resurrection, apoptosis)  
 **LiveSpore**: Genetic Lineage Federation Ready  
 **Deep Debt**: ✅ **COMPLETE** - 96% TODO reduction (85 → 3)  
-**Tests**: 400+ passing (106 suites) | **Crates**: 21 | **Lines**: ~106k | **Unsafe**: 0
+**Tests**: 400+ passing (153 in atomic-deploy) | **Crates**: 21 | **Lines**: ~108k | **Unsafe**: 0
 
 ---
 
@@ -69,14 +70,14 @@ cargo test --workspace
 ### Deploy Tower Atomic
 
 ```bash
-# One-command deployment
-./deploy_tower_atomic.sh
+# Recommended: Automated bootstrap with XDG compliance
+./scripts/bootstrap_tower_atomic.sh        # Start
+./scripts/bootstrap_tower_atomic.sh --stop # Stop
 
-# Check status
-./deploy_tower_atomic.sh status
-
-# Stop
-./deploy_tower_atomic.sh stop
+# Legacy deployment
+./deploy_tower_atomic.sh        # Start
+./deploy_tower_atomic.sh status # Check
+./deploy_tower_atomic.sh stop   # Stop
 ```
 
 ### Test HTTPS
@@ -115,7 +116,8 @@ echo '{"jsonrpc":"2.0","method":"lifecycle.shutdown_all","id":1}' | nc -U /tmp/n
 ### Essential
 - **`README.md`** - Project overview
 - **`DOCUMENTATION_HUB.md`** - Complete navigation
-- **`PROTOCOL_ESCALATION_ROADMAP.md`** - JSON-RPC → tarpc evolution ⭐
+- **`PROTOCOL_ESCALATION_ROADMAP.md`** ⭐ - JSON-RPC → tarpc Living Graph (Phase 1 Complete)
+- **`specs/LIVING_GRAPH_PROTOCOL_ESCALATION_SPEC.md`** - Full protocol specification
 - **`RUST_EVOLUTION_ROADMAP.md`** - Scripts → Pure Rust migration
 - **`INFRASTRUCTURE_EVOLUTION.md`** - Terraria, Apoptosis
 
@@ -131,6 +133,8 @@ echo '{"jsonrpc":"2.0","method":"lifecycle.shutdown_all","id":1}' | nc -U /tmp/n
 - **`specs/NUCLEUS_DEPLOYMENT_SPEC.md`** - Tower/Node/Nest patterns
 
 ### Handoffs
+- **`docs/handoffs/PRIMAL_TARPC_EVOLUTION_HANDOFF.md`** ⭐ - tarpc guide for all primals
+- **`docs/handoffs/SONGBIRD_EVOLUTION_HANDOFF.md`** - HTTP headers complete, TLS
 - **`docs/handoffs/SONGBIRD_LAN_DISCOVERY_HANDOFF.md`** - LAN discovery evolution
 - **`docs/handoffs/SQUIRREL_EVOLUTION_HANDOFF.md`** - AI primal evolution
 
@@ -204,10 +208,11 @@ let socket = discovery.discover_socket("crypto").await?;
 - capability.call routing
 - Graph-based deployment
 - 93% TLS validation
+- **Protocol Escalation Phase 1** ⭐ - Living Graph + 10 JSON-RPC APIs
 - **NUCLEUS Lifecycle** - Germination through Apoptosis
 - **Socket Discovery** - Capability-based resolution
 - **Concurrent Tests** - No sleeps, proper async patterns
-- **Rollback Strategy** - Full graph execution recovery
+- **Automated Bootstrap** - `scripts/bootstrap_tower_atomic.sh`
 - **Songbird Mesh** - UDP multicast peer discovery
 - **BearDog Integration** - Lineage verification & key derivation
 - **XDG Compliance** - SystemPaths throughout
@@ -219,9 +224,10 @@ let socket = discovery.discover_socket("crypto").await?;
 - Toadstool: Socket binding crash fix
 - LAN Federation: Deploy v8.14.0 to other towers
 
-### 📋 Next: Protocol Escalation (Living Graph)
-- JSON-RPC → tarpc runtime evolution
-- Metrics-based auto-escalation
+### 📋 Next: Protocol Escalation Phase 2-4
+- Phase 2: tarpc service trait integration in primals
+- Phase 3: Metrics-based auto-escalation
+- Phase 4: Hybrid mode optimization
 - See `PROTOCOL_ESCALATION_ROADMAP.md`
 
 ### 📋 Future
