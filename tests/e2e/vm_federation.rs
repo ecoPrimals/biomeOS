@@ -6,14 +6,14 @@
 //! - Real primal binaries
 //!
 //! Run with: cargo test --test vm_federation_e2e -- --ignored
+//!
+//! Note: These are placeholder tests that document the E2E test plan.
+//! Full implementation awaiting biomeos-test-utils VM harness.
 
 use anyhow::Result;
-use std::path::PathBuf;
-use std::time::Duration;
-use tokio::time::sleep;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-#[ignore] // Requires sudo + network setup
+#[ignore = "Requires sudo + network setup + VM harness"]
 async fn test_vm_boots_successfully() -> Result<()> {
     // This is a placeholder for full E2E test
     // Would use TestVm helper from biomeos-test-utils
@@ -25,12 +25,12 @@ async fn test_vm_boots_successfully() -> Result<()> {
     eprintln!("  4. Verify observability metrics");
     eprintln!("  5. Shutdown and cleanup");
     
-    // TODO: Implement once biomeos-test-utils crate is ready
+    // Placeholder - full implementation requires VM harness
     Ok(())
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-#[ignore] // Requires sudo + network setup
+#[ignore = "Requires sudo + network setup + VM harness"]
 async fn test_vm_discovers_physical_towers() -> Result<()> {
     // This is a placeholder for federation discovery test
     
@@ -41,12 +41,12 @@ async fn test_vm_discovers_physical_towers() -> Result<()> {
     eprintln!("  4. Check VM discovers physical towers via mDNS");
     eprintln!("  5. Verify BTSP tunnel establishment");
     
-    // TODO: Implement once biomeos-test-utils crate is ready
+    // Placeholder - full implementation requires VM harness
     Ok(())
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-#[ignore] // Requires sudo + network setup
+#[ignore = "Requires sudo + network setup + VM harness"]
 async fn test_multi_vm_federation() -> Result<()> {
     // This is a placeholder for multi-VM federation test
     
@@ -57,7 +57,6 @@ async fn test_multi_vm_federation() -> Result<()> {
     eprintln!("  4. Test encrypted communication");
     eprintln!("  5. Shutdown all cleanly");
     
-    // TODO: Implement once biomeos-test-utils crate is ready
+    // Placeholder - full implementation requires VM harness
     Ok(())
 }
-

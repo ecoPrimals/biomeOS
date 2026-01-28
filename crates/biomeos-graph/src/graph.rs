@@ -301,6 +301,8 @@ mod tests {
 
     #[test]
     fn test_env_resolution() {
+        // Use unique variable names to avoid collision with system env
+        // (system env takes precedence over graph env by design)
         let toml = r#"
             [graph]
             id = "test-graph"
@@ -308,17 +310,17 @@ mod tests {
             version = "1.0.0"
             
             [graph.env]
-            SPORE_TARGET = "/media/user/USB"
-            NODE_ID = "test-node"
+            TEST_SPORE_TARGET_12345 = "/media/user/USB"
+            TEST_NODE_ID_12345 = "test-node"
         "#;
 
         let graph: DeploymentGraph = toml::from_str(toml).unwrap();
 
         assert_eq!(
-            graph.resolve_env("${SPORE_TARGET}/biomeOS"),
+            graph.resolve_env("${TEST_SPORE_TARGET_12345}/biomeOS"),
             "/media/user/USB/biomeOS"
         );
-        assert_eq!(graph.resolve_env("${NODE_ID}"), "test-node");
+        assert_eq!(graph.resolve_env("${TEST_NODE_ID_12345}"), "test-node");
         assert_eq!(graph.resolve_env("${MISSING:-default}"), "default");
     }
 }

@@ -221,15 +221,124 @@ async fn handle_archive(node_id: String) -> Result<()> {
     Ok(())
 }
 
-async fn handle_clean(_older_than: u64, dry_run: bool) -> Result<()> {
+/// Handle fossil cleanup
+///
+/// EVOLVED (Jan 27, 2026): Complete implementation
+async fn handle_clean(older_than: u64, dry_run: bool) -> Result<()> {
+    use chrono::{Duration, Utc};
+
     if dry_run {
         println!("🔍 Dry run: No files will be deleted\n");
     }
     
-    // TODO: Implement fossil cleanup logic
-    println!("⚠️  Clean functionality not yet implemented");
+    let config = LogConfig::default();
+    let index_path = config.fossil_dir.join("index.toml");
+
+    // Check if fossil index exists
+    if !index_path.exists() {
+        println!("📁 No fossil index found at: {}", index_path.display());
+        println!("   No fossils to clean.");
+        return Ok(());
+    }
+
+    // Load fossil index
+    let index = FossilIndex::load(&index_path)?;
+    let cutoff = Utc::now() - Duration::days(older_than as i64);
+
+    println!("🧹 Cleaning fossils older than {} days", older_than);
+    println!("   Cutoff date: {}", cutoff.format("%Y-%m-%d %H:%M:%S"));
+    println!();
+
+    let mut cleaned_count = 0;
+    let mut freed_bytes: u64 = 0;
+    let mut kept_count = 0;
+
+    for entry in &index.fossils {
+        let is_old = entry.session_started < cutoff;
+
+        if is_old {
+            // Calculate size of fossil directory
+            let dir_size = calculate_dir_size(&entry.fossil_path);
+
+            if dry_run {
+                println!(
+                    "   [DRY RUN] Would delete: {} ({} bytes)",
+                    entry.fossil_path.display(),
+                    dir_size
+                );
+            } else {
+                // Delete the fossil directory
+                if entry.fossil_path.exists() {
+                    match std::fs::remove_dir_all(&entry.fossil_path) {
+                        Ok(()) => {
+                            println!(
+                                "   ✅ Deleted: {} ({} bytes)",
+                                entry.fossil_path.display(),
+                                dir_size
+                            );
+                            freed_bytes += dir_size;
+                        }
+                        Err(e) => {
+                            println!(
+                                "   ⚠️ Failed to delete {}: {}",
+                                entry.fossil_path.display(),
+                                e
+                            );
+                            continue;
+                        }
+                    }
+                }
+            }
+            cleaned_count += 1;
+        } else {
+            kept_count += 1;
+        }
+    }
+
+    println!();
+    if dry_run {
+        println!("📊 Summary (dry run):");
+        println!("   Would clean: {} fossils", cleaned_count);
+        println!("   Would keep:  {} fossils", kept_count);
+    } else {
+        // Update index to remove cleaned entries
+        if cleaned_count > 0 {
+            let mut new_index = FossilIndex::new();
+            for entry in &index.fossils {
+                if entry.session_started >= cutoff {
+                    new_index.add(entry.clone());
+                }
+            }
+            new_index.save(&index_path)?;
+        }
+
+        println!("📊 Cleanup complete:");
+        println!("   Cleaned: {} fossils", cleaned_count);
+        println!("   Freed:   {} bytes ({:.2} MB)", freed_bytes, freed_bytes as f64 / 1_048_576.0);
+        println!("   Kept:    {} fossils", kept_count);
+    }
     
     Ok(())
+}
+
+/// Calculate total size of a directory
+fn calculate_dir_size(path: &PathBuf) -> u64 {
+    if !path.exists() {
+        return 0;
+    }
+
+    let mut total = 0;
+    if let Ok(entries) = std::fs::read_dir(path) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_file() {
+                total += path.metadata().map(|m| m.len()).unwrap_or(0);
+            } else if path.is_dir() {
+                total += calculate_dir_size(&path);
+            }
+        }
+    }
+    total
 }
 
 async fn handle_migrate(from: PathBuf, dry_run: bool) -> Result<()> {

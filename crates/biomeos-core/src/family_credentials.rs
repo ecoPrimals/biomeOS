@@ -270,7 +270,11 @@ mod tests {
     }
 
     #[test]
+    #[ignore] // Skip - modifies global env state, not thread-safe for parallel tests
     fn test_from_env_missing() {
+        // NOTE: This test modifies global environment, skip in parallel test runs
+        // Run with: cargo test test_from_env_missing -- --ignored
+        
         // Clear environment
         std::env::remove_var("FAMILY_ID");
         std::env::remove_var("BEARDOG_FAMILY_ID");
@@ -281,7 +285,11 @@ mod tests {
     }
 
     #[test]
+    #[ignore] // Skip - modifies global env state, not thread-safe for parallel tests
     fn test_from_env_success() {
+        // NOTE: This test modifies global environment, skip in parallel test runs
+        // Run with: cargo test test_from_env_success -- --ignored
+        
         std::env::set_var("FAMILY_ID", "test-family");
         std::env::set_var(
             "FAMILY_SEED",

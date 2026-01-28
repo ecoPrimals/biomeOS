@@ -15,11 +15,12 @@
 //! focuses on connection handling and request routing.
 
 use crate::capability_translation::CapabilityTranslationRegistry;
-use crate::handlers::{CapabilityHandler, GraphHandler, NicheHandler, TopologyHandler};
+use crate::handlers::{CapabilityHandler, GraphHandler, LifecycleHandler, NicheHandler, TopologyHandler};
 use crate::mode::BiomeOsMode;
 use crate::neural_graph::Graph;
 use crate::neural_router::{NeuralRouter, RoutingMetrics};
 use crate::nucleation::SocketNucleation;
+use biomeos_core::SocketDiscovery;
 use anyhow::{Context, Result};
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -80,6 +81,9 @@ pub struct NeuralApiServer {
 
     /// Niche deployment handler
     niche_handler: NicheHandler,
+
+    /// Lifecycle management handler (resurrection, apoptosis)
+    lifecycle_handler: LifecycleHandler,
 }
 
 impl NeuralApiServer {
@@ -125,6 +129,8 @@ impl NeuralApiServer {
             executions.clone(),
         );
 
+        let lifecycle_handler = LifecycleHandler::new(&family_id_str);
+
         Self {
             graphs_dir,
             executions,
@@ -140,6 +146,7 @@ impl NeuralApiServer {
             capability_handler,
             topology_handler,
             niche_handler,
+            lifecycle_handler,
         }
     }
 
@@ -214,6 +221,12 @@ impl NeuralApiServer {
 
             // Register in ecosystem
             self.register_self_in_registry().await?;
+        }
+
+        // Start lifecycle monitoring
+        info!("🔍 Starting primal lifecycle monitoring...");
+        if let Err(e) = self.lifecycle_handler.start_monitoring().await {
+            warn!("⚠️ Failed to start lifecycle monitoring: {}", e);
         }
 
         // ALWAYS load semantic translations from Tower Atomic graph
@@ -402,12 +415,47 @@ impl NeuralApiServer {
             sleep(check_interval).await;
         }
 
-        // TODO: Establish BTSP tunnel with BearDog
-        // TODO: Verify Songbird health
-        // TODO: Inherit security context (become generation 1)
+        // EVOLVED (Jan 27, 2026): Capability-based security context via AtomicClient
+        // Layer 1: Verify BearDog health (crypto provider)
+        match Self::verify_primal_health(&beardog_socket, "beardog").await {
+            Ok(caps) => {
+                info!("✅ BearDog healthy with {} capabilities", caps.len());
+            }
+            Err(e) => {
+                warn!(
+                    "⚠️ BearDog health check failed: {} (continuing with degraded security)",
+                    e
+                );
+            }
+        }
+
+        // Layer 2: Verify Songbird health (discovery/mesh)
+        match Self::verify_primal_health(&songbird_socket, "songbird").await {
+            Ok(caps) => {
+                info!("✅ Songbird healthy with {} capabilities", caps.len());
+            }
+            Err(e) => {
+                warn!(
+                    "⚠️ Songbird health check failed: {} (continuing without mesh)",
+                    e
+                );
+            }
+        }
+
+        // Layer 3: Establish BTSP tunnel via BearDog (capability: secure_tunneling)
+        // This creates a cryptographically secure channel for inter-primal communication
+        match Self::establish_btsp_tunnel(&beardog_socket, &self.family_id).await {
+            Ok(session_id) => {
+                info!("✅ BTSP tunnel established (session: {})", session_id);
+            }
+            Err(e) => {
+                // BTSP is optional for local deployments, warn but continue
+                debug!("BTSP tunnel not established: {} (local mode)", e);
+            }
+        }
 
         info!("✅ Connected to Tower Atomic (gen 0 → gen 1 transition)");
-        info!("   Security context inherited");
+        info!("   Security context inherited via capability-based discovery");
 
         Ok(())
     }
@@ -508,6 +556,14 @@ impl NeuralApiServer {
             "neural_api.deploy_niche" | "niche.deploy" => {
                 self.niche_handler.deploy(&request.params).await?
             }
+
+            // === Lifecycle Operations (delegated to LifecycleHandler) ===
+            "lifecycle.status" => self.lifecycle_handler.status().await?,
+            "lifecycle.get" => self.lifecycle_handler.get(&request.params).await?,
+            "lifecycle.register" => self.lifecycle_handler.register(&request.params).await?,
+            "lifecycle.resurrect" => self.lifecycle_handler.resurrect(&request.params).await?,
+            "lifecycle.apoptosis" => self.lifecycle_handler.apoptosis(&request.params).await?,
+            "lifecycle.shutdown_all" => self.lifecycle_handler.shutdown_all().await?,
 
             // === Capability Operations (delegated to CapabilityHandler) ===
             "capability.register" => self.capability_handler.register(&request.params).await?,
@@ -634,6 +690,7 @@ impl NeuralApiServer {
             capability_handler: self.capability_handler.clone(),
             topology_handler: self.topology_handler.clone(),
             niche_handler: self.niche_handler.clone(),
+            lifecycle_handler: self.lifecycle_handler.clone(),
         }
     }
 
@@ -643,7 +700,8 @@ impl NeuralApiServer {
 
     /// Load capability translations from a graph
     ///
-    /// Extracts `capabilities_provided` from each node and registers translations
+    /// Extracts `capabilities_provided` from each node and registers translations.
+    /// Also registers capability categories from `capabilities` field.
     async fn load_translations_from_graph(&self, graph: &Graph) -> Result<()> {
         info!(
             "🔧 load_translations_from_graph called for graph with {} nodes",
@@ -654,14 +712,14 @@ impl NeuralApiServer {
 
         for node in &graph.nodes {
             debug!(
-                "   Checking node: {} (has capabilities_provided: {})",
+                "   Checking node: {} (capabilities: {:?}, has capabilities_provided: {})",
                 node.id,
+                node.capabilities,
                 node.capabilities_provided.is_some()
             );
-            if let Some(caps_provided) = &node.capabilities_provided {
-                // Infer socket path from primal type and family_id
+
+            // Get primal name for this node
                 let primal_name = if let Some(primal_cfg) = &node.primal {
-                    // Check by_capability first
                     if let Some(cap) = &primal_cfg.by_capability {
                         Some(
                             match cap.as_str() {
@@ -681,7 +739,42 @@ impl NeuralApiServer {
                     Some(node.id.clone())
                 };
 
-                if let Some(primal) = primal_name {
+            if let Some(ref primal) = primal_name {
+                // Get family_id from operation params or use server default
+                let family_id = if let Some(operation) = &node.operation {
+                    operation
+                        .params
+                        .get("family_id")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or(&self.family_id)
+                } else {
+                    &self.family_id
+                };
+
+                // Build socket path using capability-based discovery
+                let socket_discovery = SocketDiscovery::new(family_id.to_string());
+                let socket_path = socket_discovery.build_socket_path(primal).to_string_lossy().to_string();
+
+                // Register capability CATEGORIES from the capabilities field
+                // This enables capability.call("crypto", "sha256") to route to BearDog
+                for capability in &node.capabilities {
+                    info!(
+                        "📝 Registering capability category: {} → {} @ {}",
+                        capability, primal, socket_path
+                    );
+                    if let Err(e) = self
+                        .router
+                        .register_capability(capability, primal, &socket_path, "graph_translation")
+                        .await
+                    {
+                        warn!("Failed to register capability {}: {}", capability, e);
+                    }
+                }
+            }
+
+            if let Some(caps_provided) = &node.capabilities_provided {
+                // Reuse primal_name extracted above
+                if let Some(ref primal) = primal_name {
                     // Get family_id from operation params or use server default
                     let family_id = if let Some(operation) = &node.operation {
                         operation
@@ -693,8 +786,9 @@ impl NeuralApiServer {
                         &self.family_id
                     };
 
-                    // Build socket path: /tmp/{primal}-{family_id}.sock
-                    let socket_path = format!("/tmp/{}-{}.sock", primal, family_id);
+                    // Build socket path using capability-based discovery
+                    let socket_discovery = SocketDiscovery::new(family_id.to_string());
+                    let socket_path = socket_discovery.build_socket_path(primal).to_string_lossy().to_string();
 
                     // Register all translations for this primal
                     for (semantic, actual) in caps_provided {
@@ -720,7 +814,7 @@ impl NeuralApiServer {
 
                         registry.register_translation(
                             semantic,
-                            &primal,
+                            primal.as_str(),
                             actual,
                             &socket_path,
                             param_mappings,
@@ -742,5 +836,156 @@ impl NeuralApiServer {
         }
 
         Ok(())
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // CAPABILITY-BASED PRIMAL COMMUNICATION (Pure Rust, no HTTP)
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /// Verify a primal is healthy and query its capabilities
+    ///
+    /// Uses Pure Rust JSON-RPC over Unix socket (no C dependencies).
+    /// Returns the list of capabilities the primal provides.
+    async fn verify_primal_health(
+        socket_path: &std::path::Path,
+        primal_name: &str,
+    ) -> Result<Vec<String>> {
+        use tokio::time::{timeout, Duration};
+
+        // Connect to the primal's Unix socket
+        let stream = timeout(Duration::from_secs(5), UnixStream::connect(socket_path))
+            .await
+            .context("Connection timeout")?
+            .context("Failed to connect to primal socket")?;
+
+        let (reader, mut writer) = stream.into_split();
+        let mut reader = BufReader::new(reader);
+
+        // Send capabilities query (JSON-RPC 2.0)
+        let request = json!({
+            "jsonrpc": "2.0",
+            "method": "primal.capabilities",
+            "params": {},
+            "id": 1
+        });
+        let request_str = serde_json::to_string(&request)? + "\n";
+        writer.write_all(request_str.as_bytes()).await?;
+        writer.flush().await?;
+
+        // Read response
+        let mut response_line = String::new();
+        timeout(Duration::from_secs(5), reader.read_line(&mut response_line))
+            .await
+            .context("Response timeout")?
+            .context("Failed to read response")?;
+
+        // Parse response
+        let response: Value = serde_json::from_str(response_line.trim())?;
+
+        // Check for error
+        if let Some(error) = response.get("error") {
+            anyhow::bail!(
+                "Primal {} returned error: {}",
+                primal_name,
+                error
+                    .get("message")
+                    .and_then(|m| m.as_str())
+                    .unwrap_or("unknown")
+            );
+        }
+
+        // Extract capabilities from result
+        let capabilities = response
+            .get("result")
+            .and_then(|r| r.get("capabilities"))
+            .and_then(|c| c.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        debug!(
+            "Primal {} provides capabilities: {:?}",
+            primal_name, capabilities
+        );
+
+        Ok(capabilities)
+    }
+
+    /// Establish a BTSP (BearDog Transport Security Protocol) tunnel
+    ///
+    /// This creates a cryptographically secured channel for inter-primal
+    /// communication. The tunnel is authenticated using family lineage.
+    ///
+    /// # Arguments
+    /// * `beardog_socket` - Path to BearDog's Unix socket
+    /// * `family_id` - The family identifier for lineage authentication
+    ///
+    /// # Returns
+    /// Session ID for the established tunnel
+    async fn establish_btsp_tunnel(
+        beardog_socket: &std::path::Path,
+        family_id: &str,
+    ) -> Result<String> {
+        use tokio::time::{timeout, Duration};
+
+        // Connect to BearDog
+        let stream = timeout(Duration::from_secs(5), UnixStream::connect(beardog_socket))
+            .await
+            .context("Connection timeout")?
+            .context("Failed to connect to BearDog")?;
+
+        let (reader, mut writer) = stream.into_split();
+        let mut reader = BufReader::new(reader);
+
+        // Request BTSP tunnel establishment
+        let request = json!({
+            "jsonrpc": "2.0",
+            "method": "btsp.establish_tunnel",
+            "params": {
+                "family_id": family_id,
+                "tunnel_type": "local",
+                "require_lineage_proof": false  // Local deployments don't require proof
+            },
+            "id": 1
+        });
+        let request_str = serde_json::to_string(&request)? + "\n";
+        writer.write_all(request_str.as_bytes()).await?;
+        writer.flush().await?;
+
+        // Read response
+        let mut response_line = String::new();
+        timeout(
+            Duration::from_secs(10),
+            reader.read_line(&mut response_line),
+        )
+        .await
+        .context("BTSP response timeout")?
+        .context("Failed to read BTSP response")?;
+
+        // Parse response
+        let response: Value = serde_json::from_str(response_line.trim())?;
+
+        // Check for error
+        if let Some(error) = response.get("error") {
+            anyhow::bail!(
+                "BTSP tunnel establishment failed: {}",
+                error
+                    .get("message")
+                    .and_then(|m| m.as_str())
+                    .unwrap_or("unknown")
+            );
+        }
+
+        // Extract session ID
+        let session_id = response
+            .get("result")
+            .and_then(|r| r.get("session_id"))
+            .and_then(|s| s.as_str())
+            .ok_or_else(|| anyhow::anyhow!("Missing session_id in BTSP response"))?;
+
+        Ok(session_id.to_string())
     }
 }

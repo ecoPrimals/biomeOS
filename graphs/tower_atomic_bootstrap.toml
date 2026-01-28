@@ -19,6 +19,9 @@ coordination = "Sequential"  # BearDog must start before Songbird
 [[nodes]]
 id = "germinate_beardog"
 output = "beardog_genesis"
+# Capability Categories: Register BearDog as provider for these capability namespaces
+# These are used by capability.call() to discover the right primal socket
+capabilities = ["crypto", "tls_crypto", "genetic", "security"]
 
 [nodes.primal]
 by_capability = "security"  # Discovers beardog binary via capability
@@ -105,6 +108,8 @@ timeout_ms = 30000  # 30s to start
 id = "germinate_songbird"
 depends_on = ["germinate_beardog"]  # CRITICAL: Wait for BearDog
 output = "songbird_genesis"
+# Capability Categories: Register Songbird as provider for these capability namespaces
+capabilities = ["http", "discovery", "secure_http"]
 
 [nodes.primal]
 by_capability = "discovery"  # Discovers songbird binary via capability
@@ -137,6 +142,65 @@ timeout_ms = 30000  # 30s to start
 "http.post" = "http.post"        # Future: not yet implemented in Songbird
 "discovery.announce" = "announce_capabilities"  # Actual method: announce_capabilities
 "discovery.query" = "discover_by_capability"    # Actual method: discover_by_capability
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# OPTIONAL ECOSYSTEM PRIMALS (Registered at runtime when started)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Squirrel AI Orchestration (optional - started separately)
+[[nodes]]
+id = "register_squirrel"
+output = "squirrel_registered"
+capabilities = ["ai", "inference", "learning"]
+
+[nodes.primal]
+by_capability = "ai"
+
+[nodes.operation]
+name = "register_only"
+
+[nodes.operation.params]
+family_id = "nat0"
+
+# Squirrel uses simple method names (no prefix needed)
+[nodes.capabilities_provided]
+"ai.query" = "query_ai"
+"ai.list_providers" = "list_providers"
+"ai.announce" = "announce_capabilities"
+"ai.health" = "health"
+"ai.metrics" = "metrics"
+"ai.discover_peers" = "discover_peers"
+"ai.ping" = "ping"
+"ai.execute_tool" = "execute_tool"
+
+# Toadstool Universal Compute (optional - started separately)
+[[nodes]]
+id = "register_toadstool"
+output = "toadstool_registered"
+capabilities = ["compute", "workload", "orchestration"]
+
+[nodes.primal]
+by_capability = "compute"
+
+[nodes.operation]
+name = "register_only"
+
+[nodes.operation.params]
+family_id = "nat0"
+
+# Toadstool uses toadstool. prefix
+[nodes.capabilities_provided]
+"compute.submit" = "toadstool.submit_workload"
+"compute.status" = "toadstool.query_status"
+"compute.cancel" = "toadstool.cancel_workload"
+"compute.list" = "toadstool.list_workloads"
+"compute.capabilities" = "toadstool.query_capabilities"
+"compute.health" = "toadstool.health"
+"compute.version" = "toadstool.version"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# VALIDATION
+# ═══════════════════════════════════════════════════════════════════════════════
 
 # Phase 3: Validate Tower Atomic Health
 [[nodes]]

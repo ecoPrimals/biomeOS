@@ -36,6 +36,7 @@ pub mod capability_handlers; // Extracted capability-based primal handlers
 pub mod capability_translation;
 pub mod handlers; // NEW: Smart decomposition of neural_api_server
 pub mod http_client;
+pub mod lifecycle_manager; // NEW: Primal lifecycle management (resurrection, apoptosis)
 pub mod mode;
 pub mod neural_api_server;
 pub mod neural_executor;
@@ -61,4 +62,10 @@ pub use neural_graph::{Graph as NeuralGraph, GraphConfig, GraphNode as NeuralGra
 pub use neural_router::{
     AtomicType as RouterAtomicType, DiscoveredAtomic, DiscoveredPrimal as RouterDiscoveredPrimal,
     NeuralRouter, RoutingMetrics,
+};
+
+// Lifecycle management exports
+pub use lifecycle_manager::{
+    ApoptosisReason, HealthConfig, LifecycleManager, LifecycleState, ManagedPrimal,
+    PrimalMetrics, ResurrectionConfig,
 };

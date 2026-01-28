@@ -262,21 +262,40 @@ impl SubFederationManager {
             )));
         }
 
-        // TODO: Verify genetic lineage of members using BearDog
-        // This would call BearDog's API to verify all members share the parent_family lineage
+        // EVOLVED (Jan 27, 2026): Verify genetic lineage of members using BearDog
+        // This delegates to BearDog's API to verify all members share the parent_family lineage
+        if let Err(e) = self.verify_member_lineage(&parent_family, &members).await {
+            warn!(
+                "Lineage verification failed for sub-federation '{}': {}",
+                name, e
+            );
+            // Continue with warning - lineage verification is advisory for now
+        }
 
         // Create sub-federation
-        let subfed = SubFederation::new(
+        let mut subfed = SubFederation::new(
             name.clone(),
-            parent_family,
+            parent_family.clone(),
             members,
             capabilities,
             isolation_level,
         );
 
-        // TODO: Request encryption key from BearDog for this sub-federation
-        // This would call BearDog's API to generate/derive a key for this sub-federation
-        // For now, we just leave encryption_key_ref as None
+        // EVOLVED (Jan 27, 2026): Request encryption key from BearDog for this sub-federation
+        // Derives a key specifically for this sub-federation from the family seed
+        match self.request_subfederation_key(&parent_family, &name).await {
+            Ok(key_ref) => {
+                subfed.encryption_key_ref = Some(key_ref);
+                info!("Encryption key derived for sub-federation '{}'", name);
+            }
+            Err(e) => {
+                warn!(
+                    "Could not derive encryption key for '{}': {} (sub-federation will operate without encryption)",
+                    name, e
+                );
+                // Continue without encryption - sub-federation is still valid
+            }
+        }
 
         // Clone subfed for saving
         let subfed_to_save = subfed.clone();
@@ -369,6 +388,225 @@ impl SubFederationManager {
             node_id, subfed_name
         );
         Ok(())
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // BEARDOG INTEGRATION - Cryptographic Operations via JSON-RPC
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /// Verify that all members share genetic lineage with the parent family
+    ///
+    /// EVOLVED (Jan 27, 2026): Delegates to BearDog via JSON-RPC
+    async fn verify_member_lineage(
+        &self,
+        parent_family: &str,
+        members: &[String],
+    ) -> FederationResult<()> {
+        use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+        use tokio::net::UnixStream;
+
+        // Discover BearDog socket
+        let beardog_socket = Self::discover_beardog_socket()?;
+
+        let stream = UnixStream::connect(&beardog_socket)
+            .await
+            .map_err(|e| FederationError::Generic(format!("BearDog connection failed: {}", e)))?;
+
+        let (reader, mut writer) = stream.into_split();
+        let mut reader = BufReader::new(reader);
+
+        // Request lineage verification
+        let request = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": "lineage.verify_members",
+            "params": {
+                "family_id": parent_family,
+                "member_patterns": members
+            },
+            "id": 1
+        });
+
+        let request_str = serde_json::to_string(&request)
+            .map_err(|e| FederationError::Generic(format!("JSON error: {}", e)))?
+            + "\n";
+
+        writer
+            .write_all(request_str.as_bytes())
+            .await
+            .map_err(|e| FederationError::Generic(format!("Write error: {}", e)))?;
+        writer
+            .flush()
+            .await
+            .map_err(|e| FederationError::Generic(format!("Flush error: {}", e)))?;
+
+        // Read response
+        let mut response_line = String::new();
+        reader
+            .read_line(&mut response_line)
+            .await
+            .map_err(|e| FederationError::Generic(format!("Read error: {}", e)))?;
+
+        let response: serde_json::Value = serde_json::from_str(response_line.trim())
+            .map_err(|e| FederationError::Generic(format!("JSON parse error: {}", e)))?;
+
+        // Check for errors
+        if let Some(error) = response.get("error") {
+            let msg = error
+                .get("message")
+                .and_then(|m| m.as_str())
+                .unwrap_or("Unknown");
+            return Err(FederationError::Generic(format!(
+                "Lineage verification failed: {}",
+                msg
+            )));
+        }
+
+        // Check result
+        let all_verified = response
+            .get("result")
+            .and_then(|r| r.get("all_verified"))
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+
+        if all_verified {
+            info!("✅ Lineage verified for {} members", members.len());
+            Ok(())
+        } else {
+            let failed = response
+                .get("result")
+                .and_then(|r| r.get("failed_members"))
+                .and_then(|f| f.as_array())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|v| v.as_str())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                })
+                .unwrap_or_default();
+
+            Err(FederationError::Generic(format!(
+                "Lineage verification failed for: {}",
+                failed
+            )))
+        }
+    }
+
+    /// Request a derived encryption key for this sub-federation
+    ///
+    /// EVOLVED (Jan 27, 2026): Delegates to BearDog via JSON-RPC
+    async fn request_subfederation_key(
+        &self,
+        parent_family: &str,
+        subfed_name: &str,
+    ) -> FederationResult<String> {
+        use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+        use tokio::net::UnixStream;
+
+        // Discover BearDog socket
+        let beardog_socket = Self::discover_beardog_socket()?;
+
+        let stream = UnixStream::connect(&beardog_socket)
+            .await
+            .map_err(|e| FederationError::Generic(format!("BearDog connection failed: {}", e)))?;
+
+        let (reader, mut writer) = stream.into_split();
+        let mut reader = BufReader::new(reader);
+
+        // Request key derivation
+        let request = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": "crypto.derive_subfederation_key",
+            "params": {
+                "family_id": parent_family,
+                "subfederation_name": subfed_name,
+                "purpose": "subfederation-encryption-v1"
+            },
+            "id": 1
+        });
+
+        let request_str = serde_json::to_string(&request)
+            .map_err(|e| FederationError::Generic(format!("JSON error: {}", e)))?
+            + "\n";
+
+        writer
+            .write_all(request_str.as_bytes())
+            .await
+            .map_err(|e| FederationError::Generic(format!("Write error: {}", e)))?;
+        writer
+            .flush()
+            .await
+            .map_err(|e| FederationError::Generic(format!("Flush error: {}", e)))?;
+
+        // Read response
+        let mut response_line = String::new();
+        reader
+            .read_line(&mut response_line)
+            .await
+            .map_err(|e| FederationError::Generic(format!("Read error: {}", e)))?;
+
+        let response: serde_json::Value = serde_json::from_str(response_line.trim())
+            .map_err(|e| FederationError::Generic(format!("JSON parse error: {}", e)))?;
+
+        // Check for errors
+        if let Some(error) = response.get("error") {
+            let msg = error
+                .get("message")
+                .and_then(|m| m.as_str())
+                .unwrap_or("Unknown");
+            return Err(FederationError::Generic(format!(
+                "Key derivation failed: {}",
+                msg
+            )));
+        }
+
+        // Extract key reference
+        let key_ref = response
+            .get("result")
+            .and_then(|r| r.get("key_ref"))
+            .and_then(|k| k.as_str())
+            .ok_or_else(|| FederationError::Generic("Missing key_ref in response".to_string()))?;
+
+        debug!(
+            "Derived key for sub-federation '{}': {}",
+            subfed_name, key_ref
+        );
+        Ok(key_ref.to_string())
+    }
+
+    /// Discover BearDog socket path (XDG-compliant)
+    fn discover_beardog_socket() -> FederationResult<String> {
+        // Priority 1: Environment variable
+        if let Ok(socket) = std::env::var("BEARDOG_SOCKET") {
+            return Ok(socket);
+        }
+
+        // Priority 2: XDG runtime directory
+        if let Ok(runtime) = std::env::var("XDG_RUNTIME_DIR") {
+            let socket = format!("{}/biomeos/beardog.sock", runtime);
+            if std::path::Path::new(&socket).exists() {
+                return Ok(socket);
+            }
+        }
+
+        // Priority 3: Family-based discovery
+        if let Ok(family_id) = std::env::var("BIOMEOS_FAMILY_ID") {
+            let socket = format!("/tmp/beardog-{}.sock", family_id);
+            if std::path::Path::new(&socket).exists() {
+                return Ok(socket);
+            }
+        }
+
+        // Priority 4: Common patterns
+        let patterns = ["/tmp/beardog.sock", "/run/biomeos/beardog.sock"];
+        for pattern in &patterns {
+            if std::path::Path::new(pattern).exists() {
+                return Ok((*pattern).to_string());
+            }
+        }
+
+        Err(FederationError::Generic(
+            "BearDog socket not found. Ensure BearDog is running.".to_string(),
+        ))
     }
 }
 

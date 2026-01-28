@@ -10,15 +10,23 @@
 //!
 //! Instead of hardcoding socket patterns for specific primals,
 //! we dynamically discover active sockets and query capabilities.
+//!
+//! # XDG Compliance (EVOLVED Jan 27, 2026)
+//!
+//! Socket discovery uses SystemPaths for XDG-compliant path resolution:
+//! 1. `$XDG_RUNTIME_DIR/biomeos/` (preferred)
+//! 2. `/tmp/biomeos-$USER/` (fallback)
+//! 3. `/tmp/` (legacy compatibility)
 
 use crate::neural_router::NeuralRouter;
 use anyhow::Result;
+use biomeos_types::SystemPaths;
 use serde_json::{json, Value};
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::info;
+use tracing::{debug, info};
 
 /// Topology handler for system discovery and metrics.
 #[derive(Clone)]
@@ -73,17 +81,23 @@ impl TopologyHandler {
         }))
     }
 
-    /// Discover active primals by scanning socket directory.
+    /// Discover active primals by scanning socket directories.
     ///
     /// This is the capability-based approach - we don't hardcode primal names,
     /// we discover what's running.
+    ///
+    /// EVOLVED (Jan 27, 2026): Uses XDG-compliant socket discovery via SystemPaths
     async fn discover_active_primals(&self) -> Result<Vec<Value>> {
         let mut primals = Vec::new();
-        let socket_dir = Path::new("/tmp");
+
+        // Get XDG-compliant socket directories (no hardcoding!)
+        let socket_dirs = Self::get_socket_directories();
+        debug!("Scanning socket directories: {:?}", socket_dirs);
 
         // Pattern: {primal}-{family_id}*.sock
         let family_pattern = format!("-{}", self.family_id);
 
+        for socket_dir in &socket_dirs {
         if let Ok(entries) = std::fs::read_dir(socket_dir) {
             for entry in entries.flatten() {
                 let path = entry.path();
@@ -110,6 +124,7 @@ impl TopologyHandler {
                             "capabilities": capabilities,
                             "resource_usage": null
                         }));
+                        }
                     }
                 }
             }
@@ -144,6 +159,55 @@ impl TopologyHandler {
         // Future: Actually call health.capabilities on the socket
         // For now, return empty - we'll use registered capabilities
         Ok(vec![])
+    }
+
+    /// Get XDG-compliant socket directories for primal discovery
+    ///
+    /// EVOLVED (Jan 27, 2026): No more hardcoded `/tmp` - uses SystemPaths
+    ///
+    /// # Priority Order
+    /// 1. XDG runtime directory: `$XDG_RUNTIME_DIR/biomeos/`
+    /// 2. User runtime fallback: `/tmp/biomeos-$USER/`
+    /// 3. Legacy compatibility: `/tmp/` (for existing deployments)
+    fn get_socket_directories() -> Vec<PathBuf> {
+        let mut dirs = Vec::new();
+
+        // Priority 1: SystemPaths XDG-compliant runtime directory
+        if let Ok(paths) = SystemPaths::new() {
+            dirs.push(paths.runtime_dir().to_path_buf());
+        }
+
+        // Priority 2: Explicit BIOMEOS_SOCKET_DIR environment variable
+        if let Ok(socket_dir) = std::env::var("BIOMEOS_SOCKET_DIR") {
+            let path = PathBuf::from(&socket_dir);
+            if !dirs.contains(&path) && path.exists() {
+                dirs.push(path);
+            }
+        }
+
+        // Priority 3: XDG_RUNTIME_DIR/biomeos (direct check)
+        if let Ok(xdg_runtime) = std::env::var("XDG_RUNTIME_DIR") {
+            let path = PathBuf::from(xdg_runtime).join("biomeos");
+            if !dirs.contains(&path) && path.exists() {
+                dirs.push(path);
+            }
+        }
+
+        // Priority 4: /tmp/biomeos-$USER (user-namespaced)
+        if let Ok(user) = std::env::var("USER") {
+            let path = PathBuf::from(format!("/tmp/biomeos-{}", user));
+            if !dirs.contains(&path) && path.exists() {
+                dirs.push(path);
+            }
+        }
+
+        // Priority 5: Legacy compatibility - /tmp (only if nothing else exists)
+        // This ensures backwards compatibility during migration
+        if dirs.is_empty() {
+            dirs.push(PathBuf::from("/tmp"));
+        }
+
+        dirs
     }
 
     /// Infer connections from capability relationships.

@@ -1,35 +1,60 @@
 //! E2E tests for BearDog integration
 //!
 //! These tests require a running BearDog instance.
+//!
+//! **Concurrency-First Design**: All tests use proper timeouts to prevent hangs.
+//! Test issues will be production issues!
 
 use biomeos_federation::beardog_client::BearDogClient;
+use std::time::Duration;
+
+/// Timeout for BearDog availability check
+const AVAILABILITY_TIMEOUT: Duration = Duration::from_secs(2);
 
 /// Helper to check if BearDog is available for testing
+/// **Concurrency**: Uses timeout to prevent hangs when BearDog isn't available
 async fn beardog_available() -> Option<BearDogClient> {
-    // Try to find BearDog via discovery first
-    if let Ok(client) = BearDogClient::from_discovery().await {
-        if client.is_available().await {
-            return Some(client);
-        }
-    }
-
-    // Try common endpoints
-    let endpoints = vec![
-        "http://localhost:9000",
-        "unix:///tmp/beardog-nat0-node-alpha.sock",
-        "unix:///tmp/beardog.sock",
-    ];
-
-    for endpoint in endpoints {
-        if let Ok(client) = BearDogClient::with_endpoint(endpoint.to_string()) {
+    // Use timeout to prevent hanging when BearDog isn't available
+    let result = tokio::time::timeout(AVAILABILITY_TIMEOUT, async {
+        // Try to find BearDog via discovery first
+        if let Ok(client) = BearDogClient::from_discovery().await {
             if client.is_available().await {
-                println!("✅ Found BearDog at: {}", endpoint);
                 return Some(client);
             }
         }
-    }
 
-    None
+        // Try common endpoints with individual timeouts
+        let endpoints = vec![
+            "unix:///tmp/beardog-nat0.sock",
+            "unix:///tmp/beardog-nat0-node-alpha.sock",
+            "unix:///tmp/beardog.sock",
+        ];
+
+        for endpoint in endpoints {
+            if let Ok(client) = BearDogClient::with_endpoint(endpoint.to_string()) {
+                // Quick availability check with its own timeout
+                let available = tokio::time::timeout(
+                    Duration::from_millis(500),
+                    client.is_available()
+                ).await.unwrap_or(false);
+                
+                if available {
+                    println!("✅ Found BearDog at: {}", endpoint);
+                    return Some(client);
+                }
+            }
+        }
+
+        None
+    }).await;
+
+    match result {
+        Ok(client) => client,
+        Err(_) => {
+            println!("⚠️  BearDog availability check timed out");
+            None
+        }
+    }
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
@@ -40,16 +65,22 @@ async fn test_beardog_discovery() {
         Some(client) => {
             println!("✅ BearDog discovered and available");
 
-            // Try health check
-            match client.health_check().await {
-                Ok(()) => println!("✅ BearDog health check passed"),
-                Err(e) => println!("⚠️  BearDog health check failed: {}", e),
+            // Try health check with timeout
+            let health_result = tokio::time::timeout(
+                Duration::from_secs(2),
+                client.health_check()
+            ).await;
+            
+            match health_result {
+                Ok(Ok(())) => println!("✅ BearDog health check passed"),
+                Ok(Err(e)) => println!("⚠️  BearDog health check failed: {}", e),
+                Err(_) => println!("⚠️  BearDog health check timed out"),
             }
         }
         None => {
             println!("⚠️  BearDog not found - skipping integration tests");
             println!("   To run these tests, start BearDog with:");
-            println!("   ./plasmidBin/primals/beardog-server");
+            println!("   ./plasmidBin/beardog server --socket /tmp/beardog-nat0.sock");
         }
     }
 }
@@ -66,21 +97,26 @@ async fn test_beardog_lineage_verification() {
         }
     };
 
-    // Test with sample data
+    // Test with sample data - with timeout
     let family_id = "nat0";
     let seed_hash = "test_seed_hash_12345";
     let node_id = "test_node_001";
 
-    match client
-        .verify_same_family(family_id, seed_hash, node_id)
-        .await
-    {
-        Ok(response) => {
+    let result = tokio::time::timeout(
+        Duration::from_secs(5),
+        client.verify_same_family(family_id, seed_hash, node_id)
+    ).await;
+
+    match result {
+        Ok(Ok(response)) => {
             println!("✅ Lineage verification response: {}", response);
         }
-        Err(e) => {
+        Ok(Err(e)) => {
             println!("⚠️  Lineage verification failed: {}", e);
             println!("   This is expected if BearDog API is not yet implemented");
+        }
+        Err(_) => {
+            println!("⚠️  Lineage verification timed out");
         }
     }
 }
@@ -105,16 +141,24 @@ async fn test_beardog_key_derivation() {
         purpose: "sub-federation-encryption".to_string(),
     };
 
-    match client.derive_subfed_key(request).await {
-        Ok(response) => {
+    let result = tokio::time::timeout(
+        Duration::from_secs(5),
+        client.derive_subfed_key(request)
+    ).await;
+
+    match result {
+        Ok(Ok(response)) => {
             println!("✅ Key derivation successful:");
             println!("   key_ref: {}", response.key_ref);
             println!("   algorithm: {}", response.algorithm);
             println!("   created_at: {}", response.created_at);
         }
-        Err(e) => {
+        Ok(Err(e)) => {
             println!("⚠️  Key derivation failed: {}", e);
             println!("   This is expected if BearDog API is not yet implemented");
+        }
+        Err(_) => {
+            println!("⚠️  Key derivation timed out");
         }
     }
 }
@@ -136,7 +180,6 @@ async fn test_beardog_with_real_seed() {
 
     let possible_spore_paths = vec![
         PathBuf::from("/media/eastgate/BEA6-BBCE/biomeOS"),
-        PathBuf::from("/media/eastgate/*/biomeOS"),
         PathBuf::from("./test-spore/biomeOS"),
     ];
 
@@ -155,16 +198,21 @@ async fn test_beardog_with_real_seed() {
 
                 println!("🔒 Seed hash: {}...", &seed_hash[..16]);
 
-                // Try to verify lineage
-                match client
-                    .verify_same_family("nat0", &seed_hash, "test_node_spore")
-                    .await
-                {
-                    Ok(response) => {
+                // Try to verify lineage with timeout
+                let result = tokio::time::timeout(
+                    Duration::from_secs(5),
+                    client.verify_same_family("nat0", &seed_hash, "test_node_spore")
+                ).await;
+
+                match result {
+                    Ok(Ok(response)) => {
                         println!("✅ Lineage verified: {}", response);
                     }
-                    Err(e) => {
+                    Ok(Err(e)) => {
                         println!("⚠️  Lineage verification failed: {}", e);
+                    }
+                    Err(_) => {
+                        println!("⚠️  Lineage verification timed out");
                     }
                 }
 
@@ -189,21 +237,33 @@ async fn test_beardog_full_workflow() {
     };
 
     println!("\n1️⃣  Health Check");
-    match client.health_check().await {
-        Ok(()) => println!("   ✅ BearDog is healthy"),
-        Err(e) => {
+    let health_result = tokio::time::timeout(
+        Duration::from_secs(2),
+        client.health_check()
+    ).await;
+    
+    match health_result {
+        Ok(Ok(())) => println!("   ✅ BearDog is healthy"),
+        Ok(Err(e)) => {
             println!("   ❌ Health check failed: {}", e);
+            return;
+        }
+        Err(_) => {
+            println!("   ❌ Health check timed out");
             return;
         }
     }
 
     println!("\n2️⃣  Lineage Verification");
-    match client
-        .verify_same_family("nat0", "test_seed", "test_node_workflow")
-        .await
-    {
-        Ok(response) => println!("   ✅ Lineage check: {}", response),
-        Err(e) => println!("   ⚠️  Lineage check: {}", e),
+    let lineage_result = tokio::time::timeout(
+        Duration::from_secs(5),
+        client.verify_same_family("nat0", "test_seed", "test_node_workflow")
+    ).await;
+    
+    match lineage_result {
+        Ok(Ok(response)) => println!("   ✅ Lineage check: {}", response),
+        Ok(Err(e)) => println!("   ⚠️  Lineage check: {}", e),
+        Err(_) => println!("   ⚠️  Lineage check timed out"),
     }
 
     println!("\n3️⃣  Key Derivation");
@@ -213,9 +273,16 @@ async fn test_beardog_full_workflow() {
         subfed_name: "test-subfed".to_string(),
         purpose: "test".to_string(),
     };
-    match client.derive_subfed_key(request).await {
-        Ok(response) => println!("   ✅ Key derived: {}", response.key_ref),
-        Err(e) => println!("   ⚠️  Key derivation: {}", e),
+    
+    let key_result = tokio::time::timeout(
+        Duration::from_secs(5),
+        client.derive_subfed_key(request)
+    ).await;
+    
+    match key_result {
+        Ok(Ok(response)) => println!("   ✅ Key derived: {}", response.key_ref),
+        Ok(Err(e)) => println!("   ⚠️  Key derivation: {}", e),
+        Err(_) => println!("   ⚠️  Key derivation timed out"),
     }
 
     println!("\n✨ Workflow test complete");

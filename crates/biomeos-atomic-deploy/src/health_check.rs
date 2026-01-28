@@ -1,11 +1,19 @@
 //! Health checking for deployed primals
 //!
-//! Current: Socket-based health checks (existence and connectivity)
-//! Future: JSON-RPC health pings for deeper health validation
+//! Provides multi-level health checking:
+//! - Level 1: Socket existence check (fast)
+//! - Level 2: Socket type validation (fast)
+//! - Level 3: JSON-RPC ping (deep, validates primal is responding)
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::net::UnixStream;
+use tokio::time::timeout;
+use tracing::{debug, warn};
 
 /// Health status of a primal
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -13,21 +21,38 @@ pub struct HealthStatus {
     pub is_healthy: bool,
     pub socket_exists: bool,
     pub socket_accessible: bool,
+    /// JSON-RPC ping succeeded (if attempted)
+    pub rpc_responsive: Option<bool>,
+    /// Response latency in milliseconds (if RPC ping attempted)
+    pub latency_ms: Option<u64>,
     pub message: Option<String>,
 }
 
 /// Health checker for primals
 pub struct HealthChecker {
     runtime_dir: PathBuf,
+    /// Timeout for JSON-RPC pings
+    rpc_timeout: Duration,
 }
 
 impl HealthChecker {
     /// Create new health checker
     pub fn new(runtime_dir: PathBuf) -> Self {
-        Self { runtime_dir }
+        Self {
+            runtime_dir,
+            rpc_timeout: Duration::from_secs(5),
+        }
     }
 
-    /// Check health of a primal via its socket
+    /// Create with custom timeout
+    pub fn with_timeout(runtime_dir: PathBuf, rpc_timeout: Duration) -> Self {
+        Self {
+            runtime_dir,
+            rpc_timeout,
+        }
+    }
+
+    /// Check health of a primal via its socket (socket existence only)
     pub async fn check_primal(&self, socket_path: &Path) -> Result<HealthStatus> {
         // Check 1: Socket exists
         if !socket_path.exists() {
@@ -35,6 +60,8 @@ impl HealthChecker {
                 is_healthy: false,
                 socket_exists: false,
                 socket_accessible: false,
+                rpc_responsive: None,
+                latency_ms: None,
                 message: Some(format!("Socket not found: {}", socket_path.display())),
             });
         }
@@ -51,22 +78,135 @@ impl HealthChecker {
                     is_healthy: false,
                     socket_exists: true,
                     socket_accessible: false,
+                    rpc_responsive: None,
+                    latency_ms: None,
                     message: Some("Path exists but is not a socket".to_string()),
                 });
             }
         }
 
-        // Check 3: Socket is operational
-        // Future Enhancement: Implement JSON-RPC health check ping
-        // This would verify the primal is actually responding, not just that socket exists
-        // For production: socket existence + accessibility is sufficient for now
-
         Ok(HealthStatus {
             is_healthy: true,
             socket_exists: true,
             socket_accessible: true,
-            message: Some("Socket operational (future: add JSON-RPC ping)".to_string()),
+            rpc_responsive: None,
+            latency_ms: None,
+            message: Some("Socket operational".to_string()),
         })
+    }
+
+    /// Deep health check with JSON-RPC ping
+    ///
+    /// This validates that the primal is actually responding to requests,
+    /// not just that its socket exists.
+    pub async fn check_primal_deep(
+        &self,
+        socket_path: &Path,
+        health_method: &str,
+    ) -> Result<HealthStatus> {
+        // First do basic socket check
+        let basic = self.check_primal(socket_path).await?;
+        if !basic.is_healthy {
+            return Ok(basic);
+        }
+
+        // Now do JSON-RPC ping
+        let start = std::time::Instant::now();
+
+        match self
+            .rpc_ping(socket_path, health_method)
+            .await
+        {
+            Ok(response) => {
+                let latency_ms = start.elapsed().as_millis() as u64;
+                debug!(
+                    "💚 RPC ping succeeded: {} ({}ms)",
+                    socket_path.display(),
+                    latency_ms
+                );
+
+                Ok(HealthStatus {
+                    is_healthy: true,
+                    socket_exists: true,
+                    socket_accessible: true,
+                    rpc_responsive: Some(true),
+                    latency_ms: Some(latency_ms),
+                    message: response.get("message").and_then(|m| m.as_str()).map(String::from),
+                })
+            }
+            Err(e) => {
+                let latency_ms = start.elapsed().as_millis() as u64;
+                warn!(
+                    "🔴 RPC ping failed: {} - {} ({}ms)",
+                    socket_path.display(),
+                    e,
+                    latency_ms
+                );
+
+                Ok(HealthStatus {
+                    is_healthy: false,
+                    socket_exists: true,
+                    socket_accessible: true,
+                    rpc_responsive: Some(false),
+                    latency_ms: Some(latency_ms),
+                    message: Some(format!("RPC ping failed: {}", e)),
+                })
+            }
+        }
+    }
+
+    /// Send a JSON-RPC ping to a primal
+    async fn rpc_ping(
+        &self,
+        socket_path: &Path,
+        method: &str,
+    ) -> Result<serde_json::Value> {
+        // Connect with timeout
+        let stream = timeout(self.rpc_timeout, UnixStream::connect(socket_path))
+            .await
+            .context("Connection timeout")?
+            .context("Failed to connect")?;
+
+        let (reader, mut writer) = stream.into_split();
+        let mut reader = BufReader::new(reader);
+
+        // Build health check request
+        let request = json!({
+            "jsonrpc": "2.0",
+            "method": method,
+            "params": {},
+            "id": 1
+        });
+
+        let request_str = serde_json::to_string(&request)? + "\n";
+        writer.write_all(request_str.as_bytes()).await?;
+        writer.flush().await?;
+
+        // Read response with timeout
+        let mut response_line = String::new();
+        timeout(self.rpc_timeout, reader.read_line(&mut response_line))
+            .await
+            .context("Response timeout")?
+            .context("Failed to read response")?;
+
+        // Parse response
+        let response: serde_json::Value = serde_json::from_str(response_line.trim())?;
+
+        // Check for error
+        if let Some(error) = response.get("error") {
+            anyhow::bail!(
+                "RPC error: {}",
+                error
+                    .get("message")
+                    .and_then(|m| m.as_str())
+                    .unwrap_or("unknown")
+            );
+        }
+
+        Ok(response
+            .get("result")
+            .cloned()
+            .unwrap_or(serde_json::Value::Null))
     }
 
     /// Check health of all sockets in runtime dir matching a pattern
@@ -172,6 +312,8 @@ mod tests {
             is_healthy: true,
             socket_exists: true,
             socket_accessible: true,
+            rpc_responsive: Some(true),
+            latency_ms: Some(42),
             message: Some("Test message".to_string()),
         };
 
@@ -181,6 +323,17 @@ mod tests {
 
         assert_eq!(status.is_healthy, deserialized.is_healthy);
         assert_eq!(status.socket_exists, deserialized.socket_exists);
+        assert_eq!(status.rpc_responsive, deserialized.rpc_responsive);
+        assert_eq!(status.latency_ms, deserialized.latency_ms);
         assert_eq!(status.message, deserialized.message);
+    }
+
+    #[test]
+    fn test_health_checker_with_timeout() {
+        let checker = HealthChecker::with_timeout(
+            PathBuf::from("/tmp"),
+            Duration::from_secs(10),
+        );
+        assert_eq!(checker.rpc_timeout, Duration::from_secs(10));
     }
 }

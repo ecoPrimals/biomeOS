@@ -50,59 +50,18 @@ pub enum CapacityResult {
 // PRIMAL CLIENTS - Using AtomicClient for Pure Rust JSON-RPC
 // ═══════════════════════════════════════════════════════════════════════════
 //
-// ✅ EVOLVED (Jan 27, 2026): Using biomeos_core::atomic_client::AtomicClient
+// ✅ EVOLVED (Jan 27, 2026): Extracted to primal_client module for reuse
 //
 // All primal communication uses:
 // - Pure Rust Unix socket JSON-RPC (no C dependencies)
 // - Capability-based discovery via SystemPaths
 // - Runtime primal discovery (no hardcoded paths)
-//
-// Each client wraps AtomicClient for primal-specific methods.
 // ═══════════════════════════════════════════════════════════════════════════
 
-use biomeos_core::atomic_client::AtomicClient;
-
-/// Primal client wrapper for type-safe JSON-RPC communication
-#[derive(Debug, Clone)]
-pub struct PrimalClient {
-    /// The underlying atomic client
-    client: AtomicClient,
-    /// Primal name for debugging
-    primal_name: String,
-}
-
-impl PrimalClient {
-    /// Discover a primal by name
-    pub async fn discover(primal_name: &str) -> anyhow::Result<Self> {
-        let client = AtomicClient::discover(primal_name).await?;
-        Ok(Self {
-            client,
-            primal_name: primal_name.to_string(),
-        })
-    }
-
-    /// Call a JSON-RPC method
-    pub async fn call(
-        &self,
-        method: &str,
-        params: serde_json::Value,
-    ) -> anyhow::Result<serde_json::Value> {
-        self.client.call(method, params).await
-    }
-
-    /// Get the primal name
-    pub fn name(&self) -> &str {
-        &self.primal_name
-    }
-}
-
-// Type aliases for clarity - all use PrimalClient internally
-type PetalTongueClient = PrimalClient;
-type SongbirdClient = PrimalClient;
-type BearDogClient = PrimalClient;
-type NestGateClient = PrimalClient;
-type ToadStoolClient = PrimalClient;
-type SquirrelClient = PrimalClient;
+use crate::primal_client::{
+    BearDogClient, NestGateClient, PetalTongueClient, PrimalClient, SongbirdClient, SquirrelClient,
+    ToadStoolClient,
+};
 
 /// Interactive UI Orchestrator
 ///

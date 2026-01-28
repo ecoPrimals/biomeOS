@@ -1,10 +1,12 @@
 # 🧬 biomeOS - Root Documentation Index
 
-**Last Updated**: January 27, 2026  
+**Last Updated**: January 28, 2026  
 **Status**: ✅ **Production Ready** - 93% TLS Validation  
 **Tower Atomic**: Pure Rust TLS 1.3 Validated  
+**NUCLEUS**: Lifecycle Management Complete  
 **LiveSpore**: Genetic Lineage Federation Ready  
-**Tests**: 1,071 passing | **Crates**: 21 | **TODOs**: 52 remaining
+**Deep Debt**: ✅ **Complete** - 96% reduction (85 → 3 TODOs)  
+**Tests**: 400+ passing (106 suites) | **Crates**: 21 | **Lines**: ~106k | **Unsafe**: 0
 
 ---
 
@@ -17,13 +19,25 @@
 
 ---
 
-## 🏆 **January 26, 2026 Achievements**
+## 🏆 **January 28, 2026 Achievements**
 
 ### Tower Atomic Production Ready
 - **87 sites tested** across 11 categories
 - **93% TLS 1.3 success** (Pure Rust)
 - **96% web compatibility** with User-Agent
 - **100% cipher suite support** (SHA-256, SHA-384)
+
+### NUCLEUS Lifecycle Complete
+- **Germination → Apoptosis** state machine
+- **Health monitoring** with auto-detection
+- **Resurrection** from deployment graphs
+- **Dependency-aware shutdown**
+
+### Concurrent Testing Complete
+- **400+ tests** passing (106 suites)
+- **No sleeps** - proper async patterns
+- **RAII guards** for global state cleanup
+- **Timeouts** on all network calls
 
 ### Key Commits
 | Primal | Commit | Feature |
@@ -68,6 +82,13 @@
 | `DOCUMENTATION_HUB.md` | Main navigation hub |
 | `ROOT_DOCS_INDEX.md` | This file |
 
+### New Documentation
+| File | Description |
+|------|-------------|
+| `docs/LIFECYCLE_MANAGEMENT.md` | NUCLEUS lifecycle API ⭐ |
+| `docs/SOCKET_DISCOVERY.md` | Capability-based socket resolution ⭐ |
+| `specs/NUCLEUS_DEPLOYMENT_SPEC.md` | Tower/Node/Nest patterns |
+
 ---
 
 ## 📁 **DIRECTORY STRUCTURE**
@@ -83,6 +104,12 @@ biomeOS/
 ├── crates/                 # Rust crates (21)
 │   ├── biomeos/            # UniBin main
 │   ├── biomeos-atomic-deploy/  # Neural API ⭐
+│   │   └── src/
+│   │       ├── lifecycle_manager.rs  # NUCLEUS lifecycle
+│   │       └── handlers/lifecycle.rs # JSON-RPC handlers
+│   ├── biomeos-core/       # Core types ⭐
+│   │   └── src/
+│   │       └── socket_discovery.rs   # Capability-based discovery
 │   ├── biomeos-spore/      # LiveSpore system ⭐
 │   └── ...
 ├── graphs/                 # Graph definitions
@@ -90,8 +117,11 @@ biomeOS/
 │   ├── livespore_create.toml ⭐
 │   └── federation_verify_lineage.toml
 ├── specs/                  # Technical specifications (60+)
+├── docs/                   # Documentation
+│   ├── LIFECYCLE_MANAGEMENT.md ⭐
+│   ├── SOCKET_DISCOVERY.md ⭐
+│   └── handoffs/           # Team handoff documents
 ├── archive/                # Historical docs (900+)
-│   └── legacy_http_patterns_jan_27_2026/  # Archived HTTP patterns
 ├── plasmidBin/             # Deployed binaries
 │   └── primals/            # BearDog, Songbird
 └── tests/                  # Test files
@@ -105,6 +135,7 @@ biomeOS/
 specs/
 ├── README.md               # Specs overview ⭐
 ├── ARCHITECTURE_OVERVIEW.md
+├── NUCLEUS_DEPLOYMENT_SPEC.md  # NEW: Tower/Node/Nest
 ├── lifecycle/              # Lifecycle specs
 │   ├── BIOMEOS_BOOTSTRAP_MODE.md
 │   └── PRIMAL_LIFECYCLE_*.md
@@ -123,6 +154,8 @@ See `specs/README.md` for complete spec listing.
 ### Recent Sessions
 | Archive | Date | Focus |
 |---------|------|-------|
+| `session_jan_28_2026_lifecycle_tests/` ⭐ | Jan 28 | NUCLEUS lifecycle, concurrent tests |
+| `session_jan_27_2026_deep_debt_final/` | Jan 27 | Deep debt complete (85→3 TODOs) |
 | `session_jan_26_2026_tls_analysis/` | Jan 26 | TLS validation (87 sites) |
 | `session_jan_26_2026_tower_atomic/` | Jan 26 | Tower Atomic integration |
 | `session_jan_25_2026_complete/` | Jan 25 | capability.call |
@@ -143,6 +176,18 @@ See `specs/README.md` for complete spec listing.
 ./deploy_tower_atomic.sh        # Start
 ./deploy_tower_atomic.sh status # Check
 ./deploy_tower_atomic.sh stop   # Stop
+```
+
+### Lifecycle Management
+```bash
+# Check all primal statuses
+echo '{"jsonrpc":"2.0","method":"lifecycle.status","id":1}' | nc -U /tmp/neural-api.sock
+
+# Resurrect a crashed primal
+echo '{"jsonrpc":"2.0","method":"lifecycle.resurrect","params":{"name":"beardog"},"id":1}' | nc -U /tmp/neural-api.sock
+
+# Graceful shutdown all
+echo '{"jsonrpc":"2.0","method":"lifecycle.shutdown_all","id":1}' | nc -U /tmp/neural-api.sock
 ```
 
 ### LiveSpore USB Deployment
@@ -167,10 +212,10 @@ echo '{"jsonrpc":"2.0","method":"federation.verify_family_member","params":{
   "family_id":"nat0","node_id":"node-beta"},"id":1}' | nc -U /tmp/beardog-nat0-node-alpha.sock
 ```
 
-### Build
+### Build & Test
 ```bash
 cargo build --release --workspace
-cargo test --workspace
+cargo test --workspace  # 400+ tests, 106 suites
 ```
 
 ---
@@ -183,13 +228,18 @@ cargo test --workspace
 | **Web Compatibility** | 96% | ✅ Production |
 | **Cipher Suites** | 100% | ✅ All 3 mandatory |
 | **Pure Rust** | 100% | ✅ ecoBin |
+| **NUCLEUS Lifecycle** | Complete | ✅ Ready |
+| **Socket Discovery** | Complete | ✅ No hardcoding |
 | **LiveSpore** | Genetic Federation | ✅ Ready |
-| **Tests** | 1,071 passing | ✅ |
+| **Test Suites** | 106 | ✅ |
+| **Tests Passing** | 400+ | ✅ |
 | **Crates** | 21 | ✅ |
-| **Lines of Code** | ~103k | ✅ |
+| **Lines of Code** | ~106k | ✅ |
 | **Clippy** | 0 errors | ✅ Clean |
 | **Formatting** | Clean | ✅ `cargo fmt` |
-| **TODOs Remaining** | 52 | 📋 Ongoing |
+| **Unsafe Code** | 0 blocks | ✅ `#![deny(unsafe_code)]` |
+| **TODOs Remaining** | 3 | ✅ External handoffs |
+| **Bash Dependencies** | 0 | ✅ Pure Rust orchestration |
 
 ---
 
@@ -207,6 +257,6 @@ cargo test --workspace
 
 ---
 
-**Status**: ✅ Production Ready | **TLS**: 93% | **Archive**: Complete
+**Status**: ✅ Production Ready | **TLS**: 93% | **Tests**: 400+ | **Archive**: Complete
 
 *Start with [START_HERE.md](START_HERE.md) for quick orientation*

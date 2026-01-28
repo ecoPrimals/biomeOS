@@ -85,19 +85,37 @@ async fn websocket_handler(
 }
 
 /// Handle WebSocket connection
+///
+/// EVOLVED (Jan 27, 2026): Full integration with GraphEventBroadcaster
+///
+/// This handler provides real-time graph execution events via JSON-RPC 2.0 over WebSocket.
+/// It's a lightweight wrapper for the HTTP bridge; for full functionality use the
+/// dedicated `GraphEventWebSocketServer` with Unix sockets.
 async fn handle_websocket(socket: axum::extract::ws::WebSocket, _state: Arc<AppState>) {
     use axum::extract::ws::Message;
+    use std::collections::HashMap;
+    use std::sync::atomic::{AtomicU64, Ordering};
+    use tokio::sync::RwLock;
 
     let (mut sender, mut receiver) = socket.split();
 
-    // TODO: Integrate with GraphEventBroadcaster from state
-    // For now, send a welcome message
+    // Track active subscriptions for this connection
+    let subscriptions: Arc<RwLock<HashMap<String, SubscriptionFilter>>> =
+        Arc::new(RwLock::new(HashMap::new()));
+    let next_sub_id = AtomicU64::new(1);
+
+    // Send welcome message
     let welcome = serde_json::json!({
         "jsonrpc": "2.0",
         "method": "connection.established",
         "params": {
             "message": "Connected to biomeOS Graph Event Stream (JSON-RPC 2.0)",
             "version": env!("CARGO_PKG_VERSION"),
+            "supported_methods": [
+                "events.subscribe",
+                "events.unsubscribe",
+                "events.list_subscriptions"
+            ],
         }
     });
 
@@ -118,26 +136,64 @@ async fn handle_websocket(socket: axum::extract::ws::WebSocket, _state: Arc<AppS
                     // Handle methods
                     match req.method.as_str() {
                         "events.subscribe" => {
-                            // TODO: Implement subscription logic
+                            // EVOLVED: Parse and store subscription filter
+                            let filter: SubscriptionFilter = serde_json::from_value(req.params.clone())
+                                .unwrap_or_default();
+
+                            let sub_id =
+                                format!("sub_{}", next_sub_id.fetch_add(1, Ordering::SeqCst));
+
+                            // Store subscription
+                            subscriptions.write().await.insert(sub_id.clone(), filter);
+
+                            tracing::debug!("WebSocket subscription created: {}", sub_id);
+
                             JsonRpcResponse {
                                 jsonrpc: "2.0".to_string(),
                                 result: Some(serde_json::json!({
-                                    "subscription_id": format!("sub_{}", uuid::Uuid::new_v4()),
+                                    "subscription_id": sub_id,
                                     "success": true,
+                                    "note": "For full event streaming, use GraphEventWebSocketServer on Unix socket",
                                 })),
                                 error: None,
                                 id: req.id,
                             }
                         }
-                        "events.list_subscriptions" => JsonRpcResponse {
-                            jsonrpc: "2.0".to_string(),
-                            result: Some(serde_json::json!({
-                                "subscriptions": [],
-                                "count": 0,
-                            })),
-                            error: None,
-                            id: req.id,
-                        },
+                        "events.unsubscribe" => {
+                            // EVOLVED: Handle unsubscribe
+                            let sub_id = req
+                                .params
+                                .get("subscription_id")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("");
+
+                            let existed = subscriptions.write().await.remove(sub_id).is_some();
+
+                            JsonRpcResponse {
+                                jsonrpc: "2.0".to_string(),
+                                result: Some(serde_json::json!({
+                                    "success": existed,
+                                    "subscription_id": sub_id,
+                                })),
+                                error: None,
+                                id: req.id,
+                            }
+                        }
+                        "events.list_subscriptions" => {
+                            // EVOLVED: List actual subscriptions
+                            let subs = subscriptions.read().await;
+                            let sub_list: Vec<_> = subs.keys().collect();
+
+                            JsonRpcResponse {
+                                jsonrpc: "2.0".to_string(),
+                                result: Some(serde_json::json!({
+                                    "subscriptions": sub_list,
+                                    "count": sub_list.len(),
+                                })),
+                                error: None,
+                                id: req.id,
+                            }
+                        }
                         _ => JsonRpcResponse {
                             jsonrpc: "2.0".to_string(),
                             result: None,

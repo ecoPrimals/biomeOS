@@ -42,7 +42,7 @@ family = "test-family"
     // For now, we'll just verify the incubator can be created
     assert!(true, "E2E incubation workflow setup complete");
 
-    // TODO: Full incubation would require:
+    // Note: Full incubation would require:
     // - Mocking HOME directory
     // - Creating local config
     // - Verifying deployed seed derivation

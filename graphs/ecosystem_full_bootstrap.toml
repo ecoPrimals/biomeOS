@@ -1,0 +1,239 @@
+# Full Ecosystem Bootstrap Graph
+# Creates complete primal ecosystem with capability-based discovery and semantic translations
+#
+# Architecture:
+#   Layer 1 (Security):  BearDog (crypto, genetic) 
+#   Layer 2 (Network):   Songbird (http, discovery)
+#   Layer 3 (Compute):   Toadstool (compute, workloads)
+#   Layer 4 (AI):        Squirrel (ai, inference)
+#   Layer 5 (Storage):   NestGate (storage, provenance) [OPTIONAL]
+#
+# ✅ STATUS: OPERATIONAL - Jan 27, 2026
+# All primals use JSON-RPC 2.0 over Unix sockets
+# Neural API provides semantic translation routing
+
+[graph]
+id = "ecosystem_full_bootstrap"
+description = "Genesis: Create full primal ecosystem with semantic capability routing"
+coordination = "Sequential"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 1: BEARDOG (Crypto Foundation - Generation 0)
+# ═══════════════════════════════════════════════════════════════════════════════
+[[nodes]]
+id = "germinate_beardog"
+output = "beardog_genesis"
+capabilities = ["crypto", "tls_crypto", "genetic", "security"]
+
+[nodes.primal]
+by_capability = "security"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "nat0"
+
+[nodes.operation.environment]
+RUST_LOG = "beardog=info"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+# BearDog Capability Translations (39 methods)
+[nodes.capabilities_provided]
+# Core Crypto
+"crypto.generate_keypair" = "crypto.x25519_generate_ephemeral"
+"crypto.ecdh_derive" = "crypto.x25519_derive_secret"
+"crypto.derive_secret" = "crypto.x25519_derive_secret"
+"crypto.encrypt" = "crypto.chacha20_poly1305_encrypt"
+"crypto.decrypt" = "crypto.chacha20_poly1305_decrypt"
+"crypto.hash" = "crypto.blake3_hash"
+"crypto.hmac" = "crypto.hmac_sha256"
+"crypto.sign" = "crypto.sign_ed25519"
+"crypto.verify" = "crypto.verify_ed25519"
+"sha256" = "crypto.sha256"
+"sha384" = "crypto.sha384"
+"hash_for_cipher" = "crypto.hash_for_cipher"
+
+# AES-GCM
+"crypto.decrypt_aes_128_gcm" = "crypto.aes128_gcm_decrypt"
+"crypto.encrypt_aes_128_gcm" = "crypto.aes128_gcm_encrypt"
+"crypto.decrypt_aes_256_gcm" = "crypto.aes256_gcm_decrypt"
+"crypto.encrypt_aes_256_gcm" = "crypto.aes256_gcm_encrypt"
+
+# ECDSA (TLS 1.2/1.3)
+"crypto.sign_ecdsa_p256" = "crypto.sign_ecdsa_secp256r1"
+"crypto.verify_ecdsa_p256" = "crypto.verify_ecdsa_secp256r1"
+"crypto.sign_ecdsa_p384" = "crypto.sign_ecdsa_secp384r1"
+"crypto.verify_ecdsa_p384" = "crypto.verify_ecdsa_secp384r1"
+
+# RSA (Legacy TLS 1.2)
+"crypto.sign_rsa_pkcs1" = "crypto.sign_rsa_pkcs1_sha256"
+"crypto.verify_rsa_pkcs1" = "crypto.verify_rsa_pkcs1_sha256"
+"crypto.sign_rsa_pss" = "crypto.sign_rsa_pss_sha256"
+"crypto.verify_rsa_pss" = "crypto.verify_rsa_pss_sha256"
+
+# TLS Key Derivation
+"tls.derive_secrets" = "tls.derive_secrets"
+"tls_crypto.derive_handshake_secrets" = "tls.derive_handshake_secrets"
+"tls_crypto.derive_application_secrets" = "tls.derive_application_secrets"
+"tls_crypto.compute_finished_verify_data" = "tls.compute_finished_verify_data"
+"tls.derive_handshake_secrets" = "tls.derive_handshake_secrets"
+"tls.derive_application_secrets" = "tls.derive_application_secrets"
+"tls.compute_finished_verify_data" = "tls.compute_finished_verify_data"
+"tls.sign_handshake" = "tls.sign_handshake"
+"tls.verify_certificate" = "tls.verify_certificate"
+
+# Genetic Operations
+"verify_lineage" = "genetic.verify_lineage"
+"generate_lineage_proof" = "genetic.generate_lineage_proof"
+"genetic.derive_key" = "genetic.derive_lineage_key"
+"genetic.mix_entropy" = "genetic.mix_entropy"
+"genetic.verify_lineage" = "genetic.verify_lineage"
+"genetic.generate_proof" = "genetic.generate_lineage_proof"
+
+[nodes.parameter_mappings]
+"crypto.ecdh_derive" = { "private_key" = "our_secret", "public_key" = "their_public" }
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 2: SONGBIRD (Network + Discovery)
+# ═══════════════════════════════════════════════════════════════════════════════
+[[nodes]]
+id = "germinate_songbird"
+depends_on = ["germinate_beardog"]
+output = "songbird_genesis"
+capabilities = ["http", "discovery", "secure_http"]
+
+[nodes.primal]
+by_capability = "discovery"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "nat0"
+
+[nodes.operation.environment]
+NEURAL_API_SOCKET = "/tmp/neural-api.sock"
+BEARDOG_SOCKET = "/tmp/beardog-nat0.sock"
+SONGBIRD_SECURITY_PROVIDER = "/tmp/beardog-nat0.sock"
+RUST_LOG = "songbird=info"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+# Songbird Capability Translations (5 methods)
+[nodes.capabilities_provided]
+"http.request" = "http.request"
+"http.get" = "http.get"
+"http.post" = "http.post"
+"discovery.announce" = "announce_capabilities"
+"discovery.query" = "discover_by_capability"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 3: TOADSTOOL (Universal Compute)
+# ═══════════════════════════════════════════════════════════════════════════════
+[[nodes]]
+id = "germinate_toadstool"
+depends_on = ["germinate_beardog", "germinate_songbird"]
+output = "toadstool_genesis"
+capabilities = ["compute", "workload", "orchestration"]
+
+[nodes.primal]
+by_capability = "compute"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "nat0"
+
+[nodes.operation.environment]
+TOADSTOOL_FAMILY_ID = "nat0"
+TOADSTOOL_NODE_ID = "tower0"
+TOADSTOOL_SECURITY_WARNING_ACKNOWLEDGED = "1"
+SONGBIRD_ENDPOINT = "/tmp/songbird-nat0.sock"
+BEARDOG_SOCKET = "/tmp/beardog-nat0.sock"
+RUST_LOG = "toadstool=info"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+# Toadstool Capability Translations (7 methods)
+[nodes.capabilities_provided]
+"compute.submit" = "toadstool.submit_workload"
+"compute.status" = "toadstool.query_status"
+"compute.cancel" = "toadstool.cancel_workload"
+"compute.list" = "toadstool.list_workloads"
+"compute.capabilities" = "toadstool.query_capabilities"
+"compute.health" = "toadstool.health"
+"compute.version" = "toadstool.version"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 4: SQUIRREL (AI Orchestration)
+# ═══════════════════════════════════════════════════════════════════════════════
+[[nodes]]
+id = "germinate_squirrel"
+depends_on = ["germinate_beardog", "germinate_songbird"]
+output = "squirrel_genesis"
+capabilities = ["ai", "inference", "learning"]
+
+[nodes.primal]
+by_capability = "ai"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "nat0"
+
+[nodes.operation.environment]
+CAPABILITY_REGISTRY_SOCKET = "/tmp/neural-api.sock"
+BEARDOG_SOCKET = "/tmp/beardog-nat0.sock"
+SONGBIRD_SOCKET = "/tmp/songbird-nat0.sock"
+RUST_LOG = "squirrel=info"
+# AI API keys (from secrets)
+ANTHROPIC_API_KEY = "${ANTHROPIC_API_KEY}"
+OPENAI_API_KEY = "${OPENAI_API_KEY}"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+# Squirrel Capability Translations (8 methods)
+[nodes.capabilities_provided]
+"ai.query" = "query_ai"
+"ai.list_providers" = "list_providers"
+"ai.announce" = "announce_capabilities"
+"ai.health" = "health"
+"ai.metrics" = "metrics"
+"ai.discover_peers" = "discover_peers"
+"ai.ping" = "ping"
+"ai.execute_tool" = "execute_tool"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 5: VALIDATE ECOSYSTEM
+# ═══════════════════════════════════════════════════════════════════════════════
+[[nodes]]
+id = "validate_ecosystem"
+depends_on = ["germinate_beardog", "germinate_songbird", "germinate_toadstool", "germinate_squirrel"]
+output = "ecosystem_validated"
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.operation.params]
+check_beardog = true
+check_songbird = true
+check_toadstool = true
+check_squirrel = true
+check_capability_routing = true
+timeout_seconds = 15
+
+[nodes.constraints]
+timeout_ms = 20000
+

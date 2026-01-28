@@ -702,6 +702,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "base64 0.21.7",
  "biomeos-types",
  "chrono",
  "ed25519-dalek",
@@ -847,6 +848,7 @@ name = "biomeos-unibin"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "base64 0.21.7",
  "biomeos-atomic-deploy",
  "biomeos-core",
  "biomeos-graph",

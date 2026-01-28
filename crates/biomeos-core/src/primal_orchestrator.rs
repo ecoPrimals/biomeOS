@@ -21,7 +21,7 @@ use biomeos_types::{
     identifiers::{Endpoint, PrimalId},
 };
 
-use crate::{capabilities::Capability, discovery_modern::HealthStatus, retry::RetryPolicy};
+use crate::{capabilities::Capability, discovery_modern::HealthStatus, retry::RetryPolicy, socket_discovery::SocketDiscovery};
 
 /// Primal health monitor using JSON-RPC over Unix sockets.
 ///
@@ -151,14 +151,18 @@ impl PrimalHealthMonitor {
         let socket_path = if url.scheme() == "unix" || url.scheme() == "file" {
             url.path().to_string()
         } else {
-            // For HTTP URLs, try to derive socket path from primal ID
-            // Convention: /tmp/{primal_name}-{family_id}.sock
+            // For HTTP URLs, use SocketDiscovery for capability-based path building
             tracing::warn!(
-                "🏥 Primal {} uses HTTP endpoint ({}), deriving socket path from ID",
+                "🏥 Primal {} uses HTTP endpoint ({}), discovering socket path",
                 id,
                 url
             );
-            format!("/tmp/{}.sock", id)
+            // Get family_id from env or use default
+            let family_id = std::env::var("FAMILY_ID")
+                .or_else(|_| std::env::var("BIOMEOS_FAMILY_ID"))
+                .unwrap_or_else(|_| "default".to_string());
+            let discovery = SocketDiscovery::new(family_id);
+            discovery.build_socket_path(&id.to_string()).to_string_lossy().to_string()
         };
 
         tracing::debug!("🏥 Registering primal {} at {}", id, socket_path);

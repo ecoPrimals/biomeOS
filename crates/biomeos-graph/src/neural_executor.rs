@@ -27,6 +27,17 @@ pub enum NodeStatus {
     Skipped,
 }
 
+/// Rollback action recorded during execution
+#[derive(Debug, Clone)]
+pub enum RollbackAction {
+    /// Stop a launched process
+    StopProcess { primal: String, pid: u32, socket: String },
+    /// Remove a created file
+    RemoveFile { path: PathBuf },
+    /// Custom rollback via JSON-RPC
+    JsonRpc { socket: String, method: String, params: serde_json::Value },
+}
+
 /// Execution context shared across nodes
 #[derive(Debug, Clone)]
 pub struct ExecutionContext {
@@ -38,6 +49,8 @@ pub struct ExecutionContext {
     pub status: Arc<Mutex<HashMap<String, NodeStatus>>>,
     /// Checkpoint directory
     pub checkpoint_dir: Option<PathBuf>,
+    /// Rollback actions (in execution order)
+    pub rollback_actions: Arc<Mutex<Vec<(String, RollbackAction)>>>,
 }
 
 impl ExecutionContext {
@@ -48,6 +61,7 @@ impl ExecutionContext {
             outputs: Arc::new(Mutex::new(HashMap::new())),
             status: Arc::new(Mutex::new(HashMap::new())),
             checkpoint_dir: None,
+            rollback_actions: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
@@ -73,6 +87,18 @@ impl ExecutionContext {
     pub async fn get_status(&self, node_id: &str) -> Option<NodeStatus> {
         let statuses = self.status.lock().await;
         statuses.get(node_id).cloned()
+    }
+
+    /// Record a rollback action
+    pub async fn record_rollback(&self, node_id: &str, action: RollbackAction) {
+        let mut actions = self.rollback_actions.lock().await;
+        actions.push((node_id.to_string(), action));
+    }
+
+    /// Get all rollback actions in reverse order
+    pub async fn get_rollback_actions(&self) -> Vec<(String, RollbackAction)> {
+        let actions = self.rollback_actions.lock().await;
+        actions.iter().rev().cloned().collect()
     }
 }
 
@@ -408,9 +434,105 @@ impl GraphExecutor {
     }
 
     /// Rollback deployment
+    ///
+    /// EVOLVED (Jan 27, 2026): Complete rollback implementation
     async fn rollback(&self) -> Result<()> {
-        warn!("🔄 Rollback not yet implemented");
-        // TODO: Implement rollback strategy
+        info!("🔄 Starting rollback...");
+
+        let actions = self.context.get_rollback_actions().await;
+        let total = actions.len();
+
+        if total == 0 {
+            info!("✅ No actions to rollback");
+            return Ok(());
+        }
+
+        info!("   Rolling back {} actions", total);
+
+        for (i, (node_id, action)) in actions.iter().enumerate() {
+            debug!("   [{}/{}] Rolling back: {}", i + 1, total, node_id);
+
+            match action {
+                RollbackAction::StopProcess { primal, pid, socket } => {
+                    info!("   Stopping {} (PID {})", primal, pid);
+
+                    // Try graceful shutdown via socket
+                    if std::path::Path::new(socket).exists() {
+                        let _ = Self::send_shutdown(socket).await;
+                        tokio::time::sleep(Duration::from_secs(2)).await;
+                    }
+
+                    // Force kill if needed (Unix only)
+                    #[cfg(unix)]
+                    {
+                        use std::process::Command;
+                        let _ = Command::new("kill").args(["-15", &pid.to_string()]).output();
+                        tokio::time::sleep(Duration::from_secs(1)).await;
+                        let _ = Command::new("kill").args(["-9", &pid.to_string()]).output();
+                    }
+
+                    let _ = std::fs::remove_file(socket);
+                }
+                RollbackAction::RemoveFile { path } => {
+                    if path.exists() {
+                        let _ = std::fs::remove_file(path);
+                    }
+                }
+                RollbackAction::JsonRpc { socket, method, params } => {
+                    if std::path::Path::new(socket).exists() {
+                        let _ = Self::call_rollback_method(socket, method, params.clone()).await;
+                    }
+                }
+            }
+        }
+
+        info!("✅ Rollback completed ({} actions)", total);
+        Ok(())
+    }
+
+    /// Send shutdown signal via JSON-RPC
+    async fn send_shutdown(socket: &str) -> Result<()> {
+        use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+        use tokio::net::UnixStream;
+
+        let stream = timeout(Duration::from_secs(2), UnixStream::connect(socket)).await??;
+        let (reader, mut writer) = stream.into_split();
+        let mut reader = BufReader::new(reader);
+
+        let request = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": "shutdown",
+            "params": { "graceful": true },
+            "id": 1
+        });
+        writer.write_all((serde_json::to_string(&request)? + "\n").as_bytes()).await?;
+        writer.flush().await?;
+
+        let mut response = String::new();
+        let _ = timeout(Duration::from_secs(2), reader.read_line(&mut response)).await;
+        Ok(())
+    }
+
+    /// Call a custom rollback method
+    async fn call_rollback_method(socket: &str, method: &str, params: serde_json::Value) -> Result<()> {
+        use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+        use tokio::net::UnixStream;
+
+        let stream = timeout(Duration::from_secs(5), UnixStream::connect(socket)).await??;
+        let (reader, mut writer) = stream.into_split();
+        let mut reader = BufReader::new(reader);
+
+        let request = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": method,
+            "params": params,
+            "id": 1
+        });
+        writer.write_all((serde_json::to_string(&request)? + "\n").as_bytes()).await?;
+        writer.flush().await?;
+
+        let mut response = String::new();
+        let _ = timeout(Duration::from_secs(5), reader.read_line(&mut response)).await;
         Ok(())
     }
 }

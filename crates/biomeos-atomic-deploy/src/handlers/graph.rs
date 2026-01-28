@@ -11,12 +11,17 @@
 //!
 //! Graph execution uses capability-based primal discovery instead of hardcoded names.
 //! Instead of mapping "security" → "beardog", we discover which primal provides "security".
+//!
+//! # XDG Compliance (EVOLVED Jan 27, 2026)
+//!
+//! Socket directory is determined via SystemPaths, not hardcoded.
 
 use crate::capability_translation::CapabilityTranslationRegistry;
 use crate::neural_executor::GraphExecutor;
 use crate::neural_graph::Graph;
 use crate::neural_router::NeuralRouter;
 use anyhow::{Context, Result};
+use biomeos_types::SystemPaths;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -206,7 +211,14 @@ impl GraphHandler {
             let mut env = HashMap::new();
             env.insert("FAMILY_ID".to_string(), family_id_owned.clone());
             env.insert("UID".to_string(), users::get_current_uid().to_string());
-            env.insert("SOCKET_DIR".to_string(), "/tmp".to_string());
+
+            // EVOLVED (Jan 27, 2026): XDG-compliant socket directory (no hardcoding!)
+            let socket_dir = SystemPaths::new()
+                .map(|p| p.runtime_dir().to_string_lossy().to_string())
+                .unwrap_or_else(|_| {
+                    std::env::var("BIOMEOS_SOCKET_DIR").unwrap_or_else(|_| "/tmp".to_string())
+                });
+            env.insert("SOCKET_DIR".to_string(), socket_dir);
             env.insert(
                 "JWT_SECRET".to_string(),
                 std::env::var("JWT_SECRET")
@@ -272,10 +284,14 @@ impl GraphHandler {
             // Get primal name from node config - NO HARDCODING
             let primal_name = Self::resolve_primal_name(node);
 
-            // Determine socket path
-            let runtime_dir = std::env::var("BIOMEOS_RUNTIME_DIR")
-                .or_else(|_| std::env::var("TMPDIR"))
-                .unwrap_or_else(|_| "/tmp".to_string());
+            // Determine socket path (XDG-compliant, no hardcoding!)
+            let runtime_dir = SystemPaths::new()
+                .map(|p| p.runtime_dir().to_string_lossy().to_string())
+                .unwrap_or_else(|_| {
+                    std::env::var("BIOMEOS_RUNTIME_DIR")
+                        .or_else(|_| std::env::var("TMPDIR"))
+                        .unwrap_or_else(|_| "/tmp".to_string())
+                });
 
             let socket_path = format!("{}/{}-{}.sock", runtime_dir, primal_name, family_id);
 
@@ -328,10 +344,14 @@ impl GraphHandler {
                 let semantic_name = format!("{}.default", capability);
                 let method = format!("{}.invoke", capability);
 
-                // Determine socket path
-                let runtime_dir = std::env::var("BIOMEOS_RUNTIME_DIR")
-                    .or_else(|_| std::env::var("TMPDIR"))
-                    .unwrap_or_else(|_| "/tmp".to_string());
+                // Determine socket path (XDG-compliant, no hardcoding!)
+                let runtime_dir = SystemPaths::new()
+                    .map(|p| p.runtime_dir().to_string_lossy().to_string())
+                    .unwrap_or_else(|_| {
+                        std::env::var("BIOMEOS_RUNTIME_DIR")
+                            .or_else(|_| std::env::var("TMPDIR"))
+                            .unwrap_or_else(|_| "/tmp".to_string())
+                    });
                 let socket_path =
                     format!("{}/{}-{}.sock", runtime_dir, primal_name, self.family_id);
 

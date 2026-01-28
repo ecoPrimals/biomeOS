@@ -44,14 +44,8 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
-// Re-use existing capability type
-// TODO: Import from unified capabilities module when available
-/// Placeholder for primal capabilities
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum PrimalCapability {
-    /// Custom capability
-    Custom(String),
-}
+// EVOLVED (Jan 27, 2026): Import from unified capabilities module
+pub use crate::capability_taxonomy::CapabilityTaxonomy as PrimalCapability;
 
 /// Standard BiomeOS primal API
 ///

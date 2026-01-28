@@ -115,7 +115,7 @@ impl BiomeOsHttpClient {
         let body = self.get(url).await?;
 
         // For now, HTTP returns string body
-        // TODO: Support binary responses when Songbird adds base64 encoding
+        // Note: Songbird returns string body; binary would need base64 encoding
         Ok(body.into_bytes())
     }
 

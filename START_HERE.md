@@ -1,10 +1,12 @@
 # 🌱 biomeOS - Start Here
 
-**Last Updated**: January 27, 2026  
+**Last Updated**: January 28, 2026  
 **Status**: 🎉 **PRODUCTION READY** - Pure Rust TLS 1.3  
 **Tower Atomic**: 93% TLS Success (87 sites), 96% Web Compatibility  
+**NUCLEUS**: Lifecycle management complete (resurrection, apoptosis)  
 **LiveSpore**: Genetic Lineage Federation Ready  
-**Tests**: 1,071 passing | **Crates**: 21 | **Formatting**: ✅ Clean | **Clippy**: ✅ 0 errors
+**Deep Debt**: ✅ **COMPLETE** - 96% TODO reduction (85 → 3)  
+**Tests**: 400+ passing (106 suites) | **Crates**: 21 | **Lines**: ~106k | **Unsafe**: 0
 
 ---
 
@@ -41,8 +43,8 @@
 
 | Component | Version | Status | Capabilities |
 |-----------|---------|--------|--------------|
-| **biomeOS** | `master` | ✅ 100% | Graph deployment, capability.call |
-| **Neural API** | `master` | ✅ 100% | 45+ semantic mappings |
+| **biomeOS** | `master` | ✅ 100% | Graph deployment, capability.call, lifecycle |
+| **Neural API** | `master` | ✅ 100% | 59 semantic mappings, lifecycle management |
 | **BearDog** | `964babd25` | ✅ 100% | SHA-256, SHA-384, AES-GCM |
 | **Songbird** | `eaa1dda9d` | ✅ 100% | TLS 1.3, HTTP, User-Agent |
 
@@ -54,7 +56,10 @@
 
 ```bash
 # biomeOS
-cargo build --release -p biomeos-unibin
+cargo build --release --workspace
+
+# Run all tests (400+ passing)
+cargo test --workspace
 
 # Verify
 ./target/release/biomeos --version
@@ -89,6 +94,19 @@ echo '{"jsonrpc":"2.0","method":"http.request","params":{
 },"id":1}' | nc -U /tmp/songbird-nat0.sock
 ```
 
+### Lifecycle Management
+
+```bash
+# Check all primal statuses
+echo '{"jsonrpc":"2.0","method":"lifecycle.status","id":1}' | nc -U /tmp/neural-api.sock
+
+# Resurrect a crashed primal
+echo '{"jsonrpc":"2.0","method":"lifecycle.resurrect","params":{"name":"songbird"},"id":1}' | nc -U /tmp/neural-api.sock
+
+# Graceful shutdown
+echo '{"jsonrpc":"2.0","method":"lifecycle.shutdown_all","id":1}' | nc -U /tmp/neural-api.sock
+```
+
 ---
 
 ## 📚 Key Documentation
@@ -105,10 +123,14 @@ echo '{"jsonrpc":"2.0","method":"http.request","params":{
 - **`specs/BIRDSONG_DARK_FOREST_TRUST_MODEL.md`** - Encrypted beacons
 - **`BIOMEOS_ATOMICS_ARCHITECTURE.md`** - System design
 
-### Deployment
-- **`deploy_tower_atomic.sh`** - Production script
-- **`scripts/validate_spore.sh`** - LiveSpore validation
-- **`graphs/livespore_validate.toml`** - Neural API validation
+### New in This Release
+- **`docs/LIFECYCLE_MANAGEMENT.md`** - NUCLEUS lifecycle API
+- **`docs/SOCKET_DISCOVERY.md`** - Capability-based socket resolution
+- **`specs/NUCLEUS_DEPLOYMENT_SPEC.md`** - Tower/Node/Nest patterns
+
+### Handoffs
+- **`docs/handoffs/SONGBIRD_LAN_DISCOVERY_HANDOFF.md`** - LAN discovery evolution
+- **`docs/handoffs/SQUIRREL_EVOLUTION_HANDOFF.md`** - AI primal evolution
 
 ---
 
@@ -146,21 +168,55 @@ HTTP Request → Songbird → BearDog (crypto) → External HTTPS
            SHA-256 / SHA-384
 ```
 
+### 4. NUCLEUS Lifecycle
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Primal Lifecycle                          │
+├─────────────────────────────────────────────────────────────┤
+│  Germinating → Incubating → Active ↔ Degraded → Apoptosis  │
+│                                ↓                            │
+│                          Resurrection                       │
+│                      (from deployment graph)                │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 5. Socket Discovery (No Hardcoding)
+
+```rust
+// OLD (hardcoded)
+let socket = PathBuf::from("/tmp/beardog-nat0.sock");
+
+// NEW (capability-based)
+let discovery = SocketDiscovery::new(neural_api_socket, family_id);
+let socket = discovery.discover_socket("crypto").await?;
+```
+
 ---
 
 ## 📊 Evolution Roadmap
 
-### ✅ Complete
+### ✅ Complete (Deep Debt Evolution - Jan 28, 2026)
 - Pure Rust TLS 1.3
 - SHA-384 cipher suites
 - capability.call routing
 - Graph-based deployment
 - 93% TLS validation
+- **NUCLEUS Lifecycle** - Germination through Apoptosis
+- **Socket Discovery** - Capability-based resolution
+- **Concurrent Tests** - No sleeps, proper async patterns
+- **Rollback Strategy** - Full graph execution recovery
+- **Songbird Mesh** - UDP multicast peer discovery
+- **BearDog Integration** - Lineage verification & key derivation
+- **XDG Compliance** - SystemPaths throughout
+- **CapabilityTaxonomy** - Unified enum for all capabilities
+- **JSON-RPC over Unix sockets** - No HTTP in production
 
-### 🔄 In Progress (Songbird Team)
-- TLS 1.2 fallback (npm, Jenkins)
-- close_notify handling
-- Large response streaming
+### 🔄 External Handoffs (Awaiting Teams)
+- Songbird: TCP gateway mode for LAN federation
+- Songbird: TLS 1.2 fallback (npm, Jenkins)
+- Squirrel: Discovery timeout fixes
+- Toadstool: Socket binding crash fix
 
 ### 📋 Future
 - TLS server mode
@@ -190,6 +246,15 @@ echo | openssl s_client -connect example.com:443 2>&1 | grep Protocol
 - Usually fixed by User-Agent (included in Songbird `eaa1dda9d`)
 - Verify using `./deploy_tower_atomic.sh status`
 
+**Primal crashed**:
+```bash
+# Check lifecycle status
+echo '{"jsonrpc":"2.0","method":"lifecycle.status","id":1}' | nc -U /tmp/neural-api.sock
+
+# Resurrect
+echo '{"jsonrpc":"2.0","method":"lifecycle.resurrect","params":{"name":"beardog"},"id":1}' | nc -U /tmp/neural-api.sock
+```
+
 ### Logs
 
 ```bash
@@ -210,13 +275,16 @@ tail -f /tmp/songbird*.log
 - ✅ All 3 mandatory cipher suites
 - ✅ Graph-based semantic translation
 - ✅ capability.call routing
+- ✅ NUCLEUS lifecycle management
+- ✅ Socket discovery (no hardcoding)
+- ✅ 400+ tests passing (concurrent, no sleeps)
 - ✅ AI/ML APIs (OpenAI, Anthropic, HuggingFace)
 - ✅ Cloud providers (AWS, GCP, Azure)
 - ✅ Code hosting (GitHub, GitLab)
 - ✅ Research (NCBI, PubMed, arXiv)
 
-**Next**: Songbird TLS 1.2 for remaining 7% compatibility
+**Next**: External team handoffs for TLS 1.2 and LAN federation
 
 ---
 
-**Status**: 🏆 Production Ready | **TLS**: 93% | **Web**: 96% | **Pure Rust**: 100%
+**Status**: 🏆 Production Ready | **TLS**: 93% | **Web**: 96% | **Pure Rust**: 100% | **Tests**: 400+

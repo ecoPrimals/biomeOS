@@ -18,6 +18,7 @@ pub mod capabilities; // Capability-based architecture (zero hardcoding)
 pub mod capability_registry; // Central capability registry with Unix socket IPC
 pub mod concurrent_startup; // Wave-based concurrent primal startup
 pub mod deployment_mode;
+pub mod socket_discovery; // Capability-based socket discovery (replaces hardcoded /tmp paths)
 pub mod discovery_bootstrap;
 pub mod discovery_modern; // Modern trait-based discovery
 pub mod family_credentials; // Secure family seed management
@@ -97,6 +98,7 @@ pub use primal_orchestrator::{
     ManagedPrimal, PrimalHealthMonitor, PrimalOrchestrator, PrimalState,
 };
 pub use retry::{CircuitBreaker, RetryPolicy};
+pub use socket_discovery::{DiscoveredSocket, DiscoveryMethod, DiscoveryStrategy, SocketDiscovery};
 pub use tower_config::PrimalConfig as TowerPrimalConfig;
 pub use tower_config::{DiscoveryConfig, HealthConfig, TowerConfig};
 

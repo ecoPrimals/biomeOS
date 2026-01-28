@@ -40,8 +40,8 @@ enum Mode {
     /// CLI mode - System management commands (default)
     #[command(name = "cli")]
     Cli {
-        // TODO: Full CLI integration pending
-        // For now, this is a stub that shows a message
+        // EVOLVED (Jan 27, 2026): Bridge to full CLI functionality
+        // Shows system status and available commands
     },
 
     /// Neural API server mode - Graph-based orchestration

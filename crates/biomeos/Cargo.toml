@@ -43,6 +43,9 @@ sysinfo = "0.32"
 colored = "2.0"
 comfy-table = "7.0"
 
+# Encoding
+base64 = { workspace = true }
+
 # Directory utilities - Pure Rust!
 # dirs = "5.0"  # DEPRECATED: Uses dirs-sys (C dependency)
 etcetera = "0.8"  # Pure Rust replacement

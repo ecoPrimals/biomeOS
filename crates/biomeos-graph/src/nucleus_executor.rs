@@ -54,6 +54,54 @@ impl NucleusPrimalExecutor {
         Ok(Self { nucleus, cache })
     }
     
+    /// Resolve family ID from config/environment
+    ///
+    /// EVOLVED (Jan 27, 2026): XDG-compliant family resolution
+    ///
+    /// Priority:
+    /// 1. BIOMEOS_FAMILY_ID environment variable
+    /// 2. Family file in XDG data directory
+    /// 3. None (discover all families)
+    fn resolve_family_id() -> Option<String> {
+        // Priority 1: Environment variable
+        if let Ok(family) = std::env::var("BIOMEOS_FAMILY_ID") {
+            if !family.is_empty() {
+                debug!("Using family ID from environment: {}", family);
+                return Some(family);
+            }
+        }
+
+        // Priority 2: XDG data directory
+        if let Ok(paths) = biomeos_types::SystemPaths::new() {
+            let family_file = paths.data_dir().join("family_id");
+            if family_file.exists() {
+                if let Ok(contents) = std::fs::read_to_string(&family_file) {
+                    let family = contents.trim().to_string();
+                    if !family.is_empty() {
+                        debug!("Using family ID from config file: {}", family);
+                        return Some(family);
+                    }
+                }
+            }
+        }
+
+        // Priority 3: Legacy /etc/biomeos/family_id
+        let legacy_file = std::path::Path::new("/etc/biomeos/family_id");
+        if legacy_file.exists() {
+            if let Ok(contents) = std::fs::read_to_string(legacy_file) {
+                let family = contents.trim().to_string();
+                if !family.is_empty() {
+                    debug!("Using family ID from legacy config: {}", family);
+                    return Some(family);
+                }
+            }
+        }
+
+        // No family ID configured - discover all
+        debug!("No family ID configured, will discover all families");
+        None
+    }
+    
     /// Discover primals by capability (with caching)
     async fn discover_by_capability_cached(
         &self,
@@ -70,10 +118,13 @@ impl NucleusPrimalExecutor {
         
         // Discover via NUCLEUS (all 5 layers)
         info!(capability = %capability, "Discovering primals via NUCLEUS");
+
+        // EVOLVED (Jan 27, 2026): Get family from config or environment
+        let family = Self::resolve_family_id();
         
         let request = DiscoveryRequest {
             capability: capability.to_string(),
-            family: None, // TODO: Get from config
+            family,
             timeout: None,
         };
         

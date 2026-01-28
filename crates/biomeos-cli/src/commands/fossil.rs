@@ -249,13 +249,78 @@ async fn handle_archive(node_id: String) -> Result<()> {
     Ok(())
 }
 
-async fn handle_clean(_older_than: u64, dry_run: bool) -> Result<()> {
+/// EVOLVED (Jan 27, 2026): Complete fossil cleanup implementation
+async fn handle_clean(older_than: u64, dry_run: bool) -> Result<()> {
+    use chrono::{Duration, Utc};
+
     if dry_run {
         println!("🔍 Dry run: No files will be deleted\n");
     }
 
-    // TODO: Implement fossil cleanup logic
-    println!("⚠️  Clean functionality not yet implemented");
+    let config = LogConfig::default();
+    let manager = LogManager::new(config.clone());
+
+    // Initialize and get fossil index
+    manager.initialize().await?;
+
+    let cutoff = Utc::now() - Duration::days(older_than as i64);
+    println!(
+        "🗑️  Cleaning fossils older than {} days (before {})",
+        older_than,
+        cutoff.format("%Y-%m-%d")
+    );
+
+    // Get all fossils from index
+    let index_path = config.fossil_dir.join("index.toml");
+    let index = FossilIndex::load(&index_path)?;
+    let mut cleaned_count = 0;
+    let mut freed_bytes: u64 = 0;
+
+    for fossil in &index.fossils {
+        // Check if fossil is older than cutoff (using session_started as reference)
+        if fossil.session_started < cutoff {
+            // Use fossil_path from the index entry
+            let fossil_path = &fossil.fossil_path;
+
+            if fossil_path.exists() {
+                if let Ok(metadata) = std::fs::metadata(fossil_path) {
+                    freed_bytes += metadata.len();
+                }
+
+                if dry_run {
+                    println!(
+                        "   Would delete: {} ({})",
+                        fossil.node_id,
+                        fossil.session_started.format("%Y-%m-%d %H:%M")
+                    );
+                } else {
+                    if let Err(e) = std::fs::remove_file(fossil_path) {
+                        tracing::warn!("Failed to delete fossil {}: {}", fossil.node_id, e);
+                        continue;
+                    }
+                    info!("Deleted fossil: {}", fossil.node_id);
+                }
+                cleaned_count += 1;
+            }
+        }
+    }
+
+    if cleaned_count > 0 {
+        let freed_mb = freed_bytes as f64 / (1024.0 * 1024.0);
+        if dry_run {
+            println!(
+                "\n📊 Would clean {} fossils, freeing {:.2} MB",
+                cleaned_count, freed_mb
+            );
+        } else {
+            println!(
+                "\n✅ Cleaned {} fossils, freed {:.2} MB",
+                cleaned_count, freed_mb
+            );
+        }
+    } else {
+        println!("✅ No fossils older than {} days found", older_than);
+    }
 
     Ok(())
 }

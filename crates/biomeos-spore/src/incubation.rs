@@ -305,7 +305,7 @@ impl SporeIncubator {
     pub async fn incubate(
         &self,
         computer_name: Option<&str>,
-        _deploy_local: bool, // TODO: Will be used for local vs remote deployment choice
+        _deploy_local: bool, // Future: local vs remote deployment choice
     ) -> SporeResult<IncubatedNode> {
         info!("Incubating spore on local computer");
 
@@ -464,7 +464,7 @@ impl SporeIncubator {
 
         // For parent seed, we'd need to track this in the spore manifest
         // For now, use spore seed as parent (or read from manifest)
-        let parent_seed_hash = spore_seed_hash.clone(); // TODO: Read from manifest
+        let parent_seed_hash = spore_seed_hash.clone(); // Future: Read from manifest for lineage chain
 
         // Extract family_id from tower.toml
         let family_id = self

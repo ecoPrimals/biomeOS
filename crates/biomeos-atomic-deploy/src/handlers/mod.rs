@@ -5,6 +5,7 @@
 //! - `capability`: Capability routing and discovery
 //! - `topology`: System topology and metrics
 //! - `niche`: Niche template deployment
+//! - `lifecycle`: Primal lifecycle management (resurrection, apoptosis)
 //!
 //! # Architecture
 //!
@@ -13,7 +14,8 @@
 //!   ├── GraphHandler      (CRUD, execute)
 //!   ├── CapabilityHandler (routing, discovery)
 //!   ├── TopologyHandler   (primals, metrics)
-//!   └── NicheHandler      (templates)
+//!   ├── NicheHandler      (templates)
+//!   └── LifecycleHandler  (resurrection, apoptosis)
 //! ```
 //!
 //! # Capability-Based Design
@@ -24,10 +26,12 @@
 
 pub mod capability;
 pub mod graph;
+pub mod lifecycle;
 pub mod niche;
 pub mod topology;
 
 pub use capability::CapabilityHandler;
 pub use graph::{ExecutionStatus, GraphHandler};
+pub use lifecycle::LifecycleHandler;
 pub use niche::NicheHandler;
 pub use topology::TopologyHandler;

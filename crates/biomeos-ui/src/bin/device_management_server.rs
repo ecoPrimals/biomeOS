@@ -5,8 +5,10 @@
 //! This server:
 //! - Discovers devices and primals from the running system
 //! - Provides JSON-RPC 2.0 API over Unix socket
-//! - Advertises device.management capability (TODO: integrate with Songbird)
+//! - Advertises device.management capability via Songbird UDP multicast
 //! - Serves live data to petalTongue GUI
+//!
+//! EVOLVED (Jan 27, 2026): Integrated with Songbird for capability advertisement
 
 use anyhow::{Context, Result};
 use biomeos_ui::capabilities::device_management::DeviceManagementProvider;
@@ -65,6 +67,12 @@ async fn main() -> Result<()> {
 
     info!("✅ biomeOS Device Management Server ready");
     info!("📡 Advertising capability: device.management");
+
+    // EVOLVED (Jan 27, 2026): Register with Songbird for capability advertisement
+    if let Err(e) = register_with_songbird(&socket_path).await {
+        warn!("Could not register with Songbird: {} (local-only mode)", e);
+    }
+
     info!("🌸 Waiting for petalTongue connections...");
 
     // Accept connections
@@ -264,4 +272,97 @@ async fn handle_method(
             id: request.id,
         },
     }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SONGBIRD INTEGRATION - EVOLVED (Jan 27, 2026)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Register this server with Songbird for capability advertisement
+///
+/// This enables other primals and nodes to discover this device management
+/// server via Songbird's UDP multicast discovery.
+async fn register_with_songbird(socket_path: &str) -> Result<()> {
+    // Find Songbird socket
+    let songbird_socket = discover_songbird_socket()?;
+
+    info!("📡 Registering with Songbird at: {}", songbird_socket);
+
+    let stream = tokio::net::UnixStream::connect(&songbird_socket)
+        .await
+        .context("Failed to connect to Songbird")?;
+
+    let (reader, mut writer) = stream.into_split();
+    let mut reader = BufReader::new(reader);
+
+    // Register capability
+    let request = json!({
+        "jsonrpc": "2.0",
+        "method": "discovery.register_capability",
+        "params": {
+            "capability": "device.management",
+            "endpoint": {
+                "type": "unix_socket",
+                "path": socket_path
+            },
+            "metadata": {
+                "version": env!("CARGO_PKG_VERSION"),
+                "description": "Device management and primal orchestration"
+            }
+        },
+        "id": 1
+    });
+
+    let request_str = serde_json::to_string(&request)? + "\n";
+    writer.write_all(request_str.as_bytes()).await?;
+    writer.flush().await?;
+
+    // Read response
+    let mut response_line = String::new();
+    reader.read_line(&mut response_line).await?;
+
+    let response: Value = serde_json::from_str(response_line.trim())?;
+
+    if response.get("error").is_some() {
+        let msg = response["error"]["message"]
+            .as_str()
+            .unwrap_or("Unknown error");
+        anyhow::bail!("Songbird registration failed: {}", msg);
+    }
+
+    info!("✅ Registered with Songbird for UDP multicast discovery");
+    Ok(())
+}
+
+/// Discover Songbird socket using XDG-compliant paths
+fn discover_songbird_socket() -> Result<String> {
+    // Priority 1: Environment variable
+    if let Ok(socket) = std::env::var("SONGBIRD_SOCKET") {
+        return Ok(socket);
+    }
+
+    // Priority 2: XDG runtime directory
+    if let Ok(runtime) = std::env::var("XDG_RUNTIME_DIR") {
+        let socket = format!("{}/biomeos/songbird.sock", runtime);
+        if std::path::Path::new(&socket).exists() {
+            return Ok(socket);
+        }
+    }
+
+    // Priority 3: Family-based discovery
+    if let Ok(family_id) = std::env::var("BIOMEOS_FAMILY_ID") {
+        let socket = format!("/tmp/songbird-{}.sock", family_id);
+        if std::path::Path::new(&socket).exists() {
+            return Ok(socket);
+        }
+    }
+
+    // Priority 4: Common patterns
+    for pattern in &["/tmp/songbird.sock", "/run/biomeos/songbird.sock"] {
+        if std::path::Path::new(pattern).exists() {
+            return Ok((*pattern).to_string());
+        }
+    }
+
+    anyhow::bail!("Songbird socket not found")
 }

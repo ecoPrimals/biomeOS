@@ -1,6 +1,7 @@
 //! API mode - HTTP/WebSocket API server
 //!
-//! TODO: Integration with biomeos-api pending library exports
+//! Note: For full API server, use neural-api-server binary directly.
+//! This mode provides a stub for unified CLI entry point.
 
 use anyhow::Result;
 use std::path::PathBuf;

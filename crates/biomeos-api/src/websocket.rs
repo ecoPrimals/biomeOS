@@ -100,7 +100,7 @@ impl JsonRpcError {
 }
 
 /// Subscription filter parameters
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct SubscriptionFilter {
     /// Filter by specific graph ID
     #[serde(default)]

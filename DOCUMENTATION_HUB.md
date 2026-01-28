@@ -1,9 +1,9 @@
 # 📚 biomeOS Documentation Hub
 
-**Last Updated**: January 27, 2026  
+**Last Updated**: January 28, 2026  
 **Status**: Production Ready - 93% TLS Validation  
-**Version**: Tower Atomic Complete  
-**Tests**: 1,071 passing | **Crates**: 21 | **Clippy**: ✅ 0 errors | **TODOs**: 52
+**Version**: Tower Atomic + NUCLEUS Lifecycle Complete  
+**Tests**: 400+ passing (106 suites) | **Crates**: 21 | **Lines**: ~106k | **Unsafe**: 0 | **TODOs**: 3
 
 Welcome to the biomeOS documentation hub! This is your central navigation point.
 
@@ -22,7 +22,7 @@ Welcome to the biomeOS documentation hub! This is your central navigation point.
 
 ---
 
-## 🏆 **CURRENT STATUS** (Jan 27, 2026)
+## 🏆 **CURRENT STATUS** (Jan 28, 2026)
 
 | Metric | Value |
 |--------|-------|
@@ -30,12 +30,19 @@ Welcome to the biomeOS documentation hub! This is your central navigation point.
 | **Web Compatibility** | 96% |
 | **Cipher Suites** | 100% (all 3 mandatory) |
 | **Pure Rust** | 100% |
+| **Test Suites** | 106 |
+| **Tests Passing** | 400+ |
 
 ### Key Commits
 | Primal | Commit | Feature |
 |--------|--------|---------|
 | BearDog | `964babd25` | SHA-384 complete |
 | Songbird | `eaa1dda9d` | Adaptive HTTP + User-Agent |
+
+### New in This Release
+- **NUCLEUS Lifecycle** - Germination through Apoptosis
+- **Socket Discovery** - Capability-based resolution
+- **Concurrent Tests** - No sleeps, proper async patterns
 
 ---
 
@@ -64,13 +71,14 @@ Welcome to the biomeOS documentation hub! This is your central navigation point.
 - **[specs/README.md](./specs/README.md)** ⭐ - All specifications index
 - **[specs/LIVESPORE_IMPRINTING_SPEC.md](./specs/LIVESPORE_IMPRINTING_SPEC.md)** - 64-byte seeds
 - **[specs/BIRDSONG_DARK_FOREST_TRUST_MODEL.md](./specs/BIRDSONG_DARK_FOREST_TRUST_MODEL.md)** - Encrypted discovery
+- **[specs/NUCLEUS_DEPLOYMENT_SPEC.md](./specs/NUCLEUS_DEPLOYMENT_SPEC.md)** - Tower/Node/Nest
 - Neural API Routing
 - Security & Federation
 
 ### **Lifecycle Specs** (`specs/lifecycle/`)
 - Bootstrap Mode
 - Neural API Nucleation
-- Primal Lifecycle
+- Primal Lifecycle (Germination → Apoptosis)
 
 ### **LiveSpore System**
 - **[graphs/livespore_create.toml](./graphs/livespore_create.toml)** - Neural API imprinting
@@ -79,12 +87,34 @@ Welcome to the biomeOS documentation hub! This is your central navigation point.
 
 ---
 
+## 📄 **NEW DOCUMENTATION**
+
+### **Lifecycle Management**
+- **[docs/LIFECYCLE_MANAGEMENT.md](./docs/LIFECYCLE_MANAGEMENT.md)** ⭐ - NUCLEUS lifecycle API
+  - Primal states: Germinating, Incubating, Active, Degraded, Apoptosis
+  - Health monitoring & auto-resurrection
+  - Dependency-aware shutdown
+
+### **Socket Discovery**
+- **[docs/SOCKET_DISCOVERY.md](./docs/SOCKET_DISCOVERY.md)** ⭐ - Capability-based resolution
+  - No hardcoded `/tmp` paths
+  - Multi-strategy discovery (env, XDG, family-scoped, Neural API)
+  - Caching with TTL
+
+### **Team Handoffs**
+- **[docs/handoffs/SONGBIRD_LAN_DISCOVERY_HANDOFF.md](./docs/handoffs/SONGBIRD_LAN_DISCOVERY_HANDOFF.md)** - LAN discovery
+- **[docs/handoffs/SQUIRREL_EVOLUTION_HANDOFF.md](./docs/handoffs/SQUIRREL_EVOLUTION_HANDOFF.md)** - AI primal
+
+---
+
 ## 🗂️ **ARCHIVE & HISTORY**
 
 ### **Recent Sessions** (`archive/`)
 | Archive | Focus |
 |---------|-------|
-| `session_jan_26_2026_tls_analysis/` ⭐ | TLS validation (87 sites) |
+| `session_jan_28_2026_lifecycle_tests/` ⭐ | NUCLEUS lifecycle, concurrent tests |
+| `session_jan_27_2026_deep_debt_final/` | Deep debt complete (85→3 TODOs) |
+| `session_jan_26_2026_tls_analysis/` | TLS validation (87 sites) |
 | `session_jan_26_2026_tower_atomic/` | Tower Atomic integration |
 | `session_jan_25_2026_complete/` | capability.call |
 
@@ -106,6 +136,8 @@ Welcome to the biomeOS documentation hub! This is your central navigation point.
 | **Deploy Tower Atomic** | `./deploy_tower_atomic.sh` |
 | **Deploy LiveSpore (USB)** | `scripts/validate_spore.sh --update` |
 | **Understand Architecture** | `BIOMEOS_ATOMICS_ARCHITECTURE.md` |
+| **Manage Primal Lifecycle** | `docs/LIFECYCLE_MANAGEMENT.md` |
+| **Discover Sockets** | `docs/SOCKET_DISCOVERY.md` |
 | **Create Genetic Lineage** | `specs/LIVESPORE_IMPRINTING_SPEC.md` |
 | **Enable Dark Forest** | `specs/BIRDSONG_DARK_FOREST_TRUST_MODEL.md` |
 | **Evolve Scripts to Rust** | `RUST_EVOLUTION_ROADMAP.md` |
@@ -120,11 +152,13 @@ Welcome to the biomeOS documentation hub! This is your central navigation point.
 | **TRUE PRIMAL** | Zero coupling via capability.call |
 | **Tower Atomic** | BearDog + Songbird Pure Rust TLS |
 | **Neural API** | Universal router & orchestrator |
+| **NUCLEUS** | Lifecycle management (resurrection, apoptosis) |
 | **ecoBin** | UniBin + Pure Rust (no C deps) |
 | **LiveSpore** | Portable USB deployment with genetic lineage |
 | **Dark Forest** | Encrypted discovery (only family sees beacons) |
 | **64-byte Seed** | `[genesis:32] + [node_key:32]` structure |
 | **Vault** | Spore-specific personal data (preserved across updates) |
+| **Socket Discovery** | Capability-based socket resolution |
 
 ---
 
@@ -135,9 +169,10 @@ Welcome to the biomeOS documentation hub! This is your central navigation point.
 - **Standards**: `../wateringHole/`
 - **History**: `archive/` subdirectories
 - **Deployment**: `graphs/`, `deployments/`
+- **Handoffs**: `docs/handoffs/`
 
 ---
 
-**Status**: ✅ Production Ready | **TLS**: 93% | **Pure Rust**: 100%
+**Status**: ✅ Production Ready | **TLS**: 93% | **Pure Rust**: 100% | **Tests**: 400+
 
 *For quick start, see [START_HERE.md](./START_HERE.md)*
