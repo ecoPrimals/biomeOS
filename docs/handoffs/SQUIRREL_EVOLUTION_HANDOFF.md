@@ -1,10 +1,10 @@
 # Squirrel Evolution Handoff
 ## biomeOS Neural API Integration
 
-**Date**: January 27, 2026  
+**Date**: January 28, 2026 (Final)  
 **From**: biomeOS Team  
 **To**: Squirrel Team  
-**Status**: Integration Testing - Issues Identified
+**Status**: ✅ **ALL 4 FIXES COMPLETE** (commit 28e59176)
 
 ---
 
@@ -25,6 +25,74 @@ We've been testing Squirrel's integration with the biomeOS Neural API capability
 - ❌ `http.request` capability discovery times out
 
 ## Root Cause Analysis
+
+### 🚨 CRITICAL: Issue 0: HTTP Body Format Mismatch
+
+**File**: `crates/main/src/api/ai/adapters/anthropic.rs` (and `openai.rs`)  
+**Function**: `delegate_http()` (lines 112-151)
+
+**Problem**: Squirrel sends `body` as a JSON object, but Songbird expects a **string**.
+
+**Squirrel sends**:
+```json
+{
+  "method": "http.request",
+  "params": {
+    "method": "POST",
+    "url": "https://api.anthropic.com/v1/messages",
+    "headers": {...},
+    "body": {"model": "claude-3-opus", ...}  // ❌ OBJECT!
+  }
+}
+```
+
+**Songbird expects**:
+```json
+{
+  "method": "http.request",
+  "params": {
+    "method": "POST", 
+    "url": "https://api.anthropic.com/v1/messages",
+    "headers": {...},
+    "body": "{\"model\": \"claude-3-opus\", ...}"  // ✅ STRING!
+  }
+}
+```
+
+**Error**: `Invalid params: invalid type: map, expected a string`
+
+**Fix in `delegate_http()`** (line 120):
+```rust
+// BEFORE (broken):
+"body": body,
+
+// AFTER (fixed):
+"body": match body {
+    serde_json::Value::String(s) => serde_json::Value::String(s),
+    serde_json::Value::Null => serde_json::Value::Null,
+    other => serde_json::Value::String(serde_json::to_string(&other)?),
+},
+```
+
+**Verification Test**:
+```bash
+# This works (body as string):
+python3 -c "
+import socket, json
+sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+sock.connect('/run/user/1000/biomeos/songbird-nat0.sock')
+req = {'jsonrpc': '2.0', 'method': 'http.request', 'params': {
+    'method': 'POST',
+    'url': 'https://api.anthropic.com/v1/messages',
+    'headers': {'Content-Type': 'application/json'},
+    'body': '{\"test\": true}'  # STRING
+}, 'id': 1}
+sock.sendall((json.dumps(req) + '\n').encode())
+print(sock.recv(4096).decode())
+"
+```
+
+---
 
 ### Issue 1: Registry Query Missing Timeout
 

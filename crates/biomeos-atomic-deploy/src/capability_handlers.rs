@@ -230,16 +230,26 @@ async fn configure_primal_socket(
             cmd.env("SERVICE_MESH_ENDPOINT", neural_api_socket);
         }
         "songbird" => {
-            // Songbird: Environment-based configuration
-            cmd.env("SONGBIRD_SOCKET", socket_path);
-            cmd.env("SONGBIRD_ORCHESTRATOR_FAMILY_ID", family_id);
-
-            // Bond to BearDog for security
+            // Songbird v3.33.0: CLI flags + environment variables
+            // Validated Jan 28, 2026 - matches successful manual startup
+            cmd.arg("--socket").arg(socket_path);
+            
+            // Bond to BearDog for security (TLS crypto delegation)
             let beardog_socket = context.get_socket_path("beardog").await;
-            cmd.env("SONGBIRD_SECURITY_PROVIDER", &beardog_socket);
-            cmd.env("SECURITY_ENDPOINT", &beardog_socket);
+            cmd.arg("--beardog-socket").arg(&beardog_socket);
+            
+            // Environment variables for Songbird configuration
+            cmd.env("BEARDOG_MODE", "direct"); // Direct RPC to BearDog (Neural API adds routing later)
+            cmd.env("BEARDOG_SOCKET", &beardog_socket);
+            cmd.env("SONGBIRD_SECURITY_PROVIDER", "beardog"); // Provider name, not socket path!
+            cmd.env("FAMILY_ID", family_id);
+            
+            // Neural API socket if available (enables capability.call routing)
+            let neural_api_socket = context.get_socket_path("neural-api").await;
+            cmd.env("NEURAL_API_SOCKET", &neural_api_socket);
 
             info!("   🧬 Bonding Songbird → BearDog: {}", beardog_socket);
+            info!("   🧠 Neural API: {}", neural_api_socket);
         }
         "nestgate" | "toadstool" => {
             // Generic: use CLI flags (follow BearDog pattern)

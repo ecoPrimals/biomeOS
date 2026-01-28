@@ -15,11 +15,13 @@
 //! focuses on connection handling and request routing.
 
 use crate::capability_translation::CapabilityTranslationRegistry;
-use crate::handlers::{CapabilityHandler, GraphHandler, LifecycleHandler, NicheHandler, TopologyHandler};
+use crate::handlers::{CapabilityHandler, GraphHandler, LifecycleHandler, NicheHandler, ProtocolHandler, TopologyHandler};
+use crate::living_graph::LivingGraph;
 use crate::mode::BiomeOsMode;
 use crate::neural_graph::Graph;
 use crate::neural_router::{NeuralRouter, RoutingMetrics};
 use crate::nucleation::SocketNucleation;
+use crate::protocol_escalation::{EscalationConfig, ProtocolEscalationManager};
 use biomeos_core::SocketDiscovery;
 use anyhow::{Context, Result};
 use serde::Deserialize;
@@ -84,6 +86,12 @@ pub struct NeuralApiServer {
 
     /// Lifecycle management handler (resurrection, apoptosis)
     lifecycle_handler: LifecycleHandler,
+
+    /// Protocol escalation handler (JSON-RPC → tarpc)
+    protocol_handler: ProtocolHandler,
+
+    /// Living graph for protocol state tracking
+    living_graph: Arc<LivingGraph>,
 }
 
 impl NeuralApiServer {
@@ -131,6 +139,17 @@ impl NeuralApiServer {
 
         let lifecycle_handler = LifecycleHandler::new(&family_id_str);
 
+        // Living Graph for protocol state tracking
+        let living_graph = Arc::new(LivingGraph::new(&family_id_str));
+
+        // Protocol Escalation Manager (JSON-RPC → tarpc)
+        let escalation_manager = Arc::new(RwLock::new(ProtocolEscalationManager::new(
+            living_graph.clone(),
+            EscalationConfig::default(),
+        )));
+
+        let protocol_handler = ProtocolHandler::new(living_graph.clone(), escalation_manager);
+
         Self {
             graphs_dir,
             executions,
@@ -138,8 +157,10 @@ impl NeuralApiServer {
             socket_path: socket_path.into(),
             router,
             mode: Arc::new(RwLock::new(BiomeOsMode::Bootstrap)),
+            // Use XdgRuntime for proper Unix XDG compliance
+            // Falls back to /tmp if XDG_RUNTIME_DIR unavailable
             nucleation: Arc::new(RwLock::new(SocketNucleation::new(
-                SocketStrategy::FamilyDeterministic,
+                SocketStrategy::XdgRuntime,
             ))),
             translation_registry,
             graph_handler,
@@ -147,6 +168,8 @@ impl NeuralApiServer {
             topology_handler,
             niche_handler,
             lifecycle_handler,
+            protocol_handler,
+            living_graph,
         }
     }
 
@@ -565,6 +588,18 @@ impl NeuralApiServer {
             "lifecycle.apoptosis" => self.lifecycle_handler.apoptosis(&request.params).await?,
             "lifecycle.shutdown_all" => self.lifecycle_handler.shutdown_all().await?,
 
+            // === Protocol Escalation Operations (delegated to ProtocolHandler) ===
+            "protocol.status" => self.protocol_handler.status().await?,
+            "protocol.escalate" => self.protocol_handler.escalate(&request.params).await?,
+            "protocol.fallback" => self.protocol_handler.fallback(&request.params).await?,
+            "protocol.metrics" => self.protocol_handler.metrics(&request.params).await?,
+            "protocol.register_primal" => self.protocol_handler.register_primal(&request.params).await?,
+            "protocol.register_connection" => self.protocol_handler.register_connection(&request.params).await?,
+            "protocol.record_request" => self.protocol_handler.record_request(&request.params).await?,
+            "protocol.start_monitoring" => self.protocol_handler.start_monitoring().await?,
+            "protocol.stop_monitoring" => self.protocol_handler.stop_monitoring().await?,
+            "graph.protocol_map" => self.protocol_handler.protocol_map().await?,
+
             // === Capability Operations (delegated to CapabilityHandler) ===
             "capability.register" => self.capability_handler.register(&request.params).await?,
             "capability.discover" | "neural_api.discover_capability" => {
@@ -691,6 +726,8 @@ impl NeuralApiServer {
             topology_handler: self.topology_handler.clone(),
             niche_handler: self.niche_handler.clone(),
             lifecycle_handler: self.lifecycle_handler.clone(),
+            protocol_handler: self.protocol_handler.clone(),
+            living_graph: self.living_graph.clone(),
         }
     }
 

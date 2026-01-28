@@ -12,7 +12,9 @@
 ## 🎉 Production Ready
 
 **Tower Atomic validated** with 93% TLS 1.3 success across 87 sites.  
-**NUCLEUS lifecycle management** complete with resurrection & apoptosis.
+**NUCLEUS lifecycle management** complete with resurrection & apoptosis.  
+**Squirrel AI integration** complete with HTTP header routing.  
+**Protocol escalation** roadmap defined (JSON-RPC → tarpc).
 
 | Metric | Value |
 |--------|-------|
@@ -21,6 +23,8 @@
 | **Web Compatibility** | 96% |
 | **Pure Rust** | 100% |
 | **Tests Passing** | 400+ (106 suites) |
+| **Songbird** | v8.14.0 (HTTP headers complete) |
+| **Squirrel** | v0.1.0 (AI integration complete) |
 
 ---
 
@@ -160,10 +164,12 @@ Germinating → Incubating → Active ↔ Degraded → Apoptosis → Dead
 - **[docs/LIFECYCLE_MANAGEMENT.md](./docs/LIFECYCLE_MANAGEMENT.md)** - NUCLEUS lifecycle
 - **[docs/SOCKET_DISCOVERY.md](./docs/SOCKET_DISCOVERY.md)** - Capability-based discovery
 - **[INFRASTRUCTURE_EVOLUTION.md](./INFRASTRUCTURE_EVOLUTION.md)** - Terraria, Apoptosis
+- **[PROTOCOL_ESCALATION_ROADMAP.md](./PROTOCOL_ESCALATION_ROADMAP.md)** - JSON-RPC → tarpc
 
 ### Handoffs
 - **[docs/handoffs/](./docs/handoffs/)** - Team handoff documents
-- **[SONGBIRD_EVOLUTION_HANDOFF.md](./SONGBIRD_EVOLUTION_HANDOFF.md)** - TLS roadmap
+- **[docs/handoffs/SONGBIRD_EVOLUTION_HANDOFF.md](./docs/handoffs/SONGBIRD_EVOLUTION_HANDOFF.md)** - HTTP, TLS, discovery
+- **[docs/handoffs/SQUIRREL_EVOLUTION_HANDOFF.md](./docs/handoffs/SQUIRREL_EVOLUTION_HANDOFF.md)** - AI integration
 
 ---
 
@@ -193,9 +199,10 @@ All tests follow modern concurrent Rust patterns:
 ## 🤝 Contributing
 
 Key areas:
-1. **TLS 1.2** - Fallback for older servers (7% remaining)
-2. **Documentation** - Examples and guides
-3. **Primal Integration** - New primal development
+1. **Protocol Escalation** - JSON-RPC → tarpc runtime evolution
+2. **TLS 1.2** - Fallback for older servers (7% remaining)
+3. **LAN Federation** - Cross-node discovery and trust
+4. **Documentation** - Examples and guides
 
 ### Code Quality
 - ✅ `cargo fmt` for formatting

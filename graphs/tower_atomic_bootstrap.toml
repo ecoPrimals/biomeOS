@@ -42,6 +42,11 @@ timeout_ms = 30000  # 30s to start
 # Capability Translation: BearDog's semantic → actual method mappings
 # Note: BearDog methods already use semantic namespaces (crypto., tls., etc.)
 # BearDog v0.14.0: 24 crypto methods (8 core + 8 ECDSA/RSA + 4 genetic + 4 TLS)
+#
+# === API EVOLUTION TRANSLATIONS ===
+# These mappings enable Songbird (and other primals) to call BearDog with
+# evolving method names. Neural API translates semantic → actual at runtime.
+#
 [nodes.capabilities_provided]
 # Core Crypto Operations (10 methods)
 "crypto.generate_keypair" = "crypto.x25519_generate_ephemeral"
@@ -56,6 +61,22 @@ timeout_ms = 30000  # 30s to start
 "sha256" = "crypto.sha256"  # Direct SHA-256 hash
 "sha384" = "crypto.sha384"  # Direct SHA-384 hash
 "hash_for_cipher" = "crypto.hash_for_cipher"  # Cipher-aware hashing (SHA-256 or SHA-384)
+
+# === SONGBIRD TLS DIRECT MODE TRANSLATIONS ===
+# When Songbird calls BearDog in direct mode (not via capability.call),
+# it uses these short method names. Neural API maps them to BearDog's actual methods.
+# This enables API evolution without changing Songbird's internal method names.
+"x25519_generate_ephemeral" = "crypto.x25519_generate_ephemeral"
+"x25519_diffie_hellman" = "crypto.x25519_derive_secret"
+"x25519_derive_secret" = "crypto.x25519_derive_secret"
+"chacha20_poly1305_encrypt" = "crypto.chacha20_poly1305_encrypt"
+"chacha20_poly1305_decrypt" = "crypto.chacha20_poly1305_decrypt"
+"aes128_gcm_encrypt" = "crypto.aes128_gcm_encrypt"
+"aes128_gcm_decrypt" = "crypto.aes128_gcm_decrypt"
+"aes256_gcm_encrypt" = "crypto.aes256_gcm_encrypt"
+"aes256_gcm_decrypt" = "crypto.aes256_gcm_decrypt"
+"blake3_hash" = "crypto.blake3_hash"
+"hmac_sha256" = "crypto.hmac_sha256"
 
 # AES-GCM Operations (4 methods) - NEW: For TLS 1.3 cipher suite support!
 "crypto.decrypt_aes_128_gcm" = "crypto.aes128_gcm_decrypt"
@@ -82,6 +103,13 @@ timeout_ms = 30000  # 30s to start
 "tls_crypto.compute_finished_verify_data" = "tls.compute_finished_verify_data"  # Songbird capability.call
 "tls.derive_handshake_secrets" = "tls.derive_handshake_secrets"  # Phase 9: Handshake traffic keys (CRITICAL!)
 "tls.derive_application_secrets" = "tls.derive_application_secrets"  # Phase 8: Application traffic keys
+
+# === SONGBIRD TLS DIRECT MODE - TLS KEY DERIVATION ===
+# Songbird's TLS layer calls these methods directly (without namespace prefix)
+"derive_handshake_secrets" = "tls.derive_handshake_secrets"
+"derive_application_secrets" = "tls.derive_application_secrets"
+"compute_finished_verify_data" = "tls.compute_finished_verify_data"
+"derive_secrets" = "tls.derive_secrets"
 
 # Genetic Lineage Operations (2 methods) - BearDog genetic verification
 "verify_lineage" = "genetic.verify_lineage"

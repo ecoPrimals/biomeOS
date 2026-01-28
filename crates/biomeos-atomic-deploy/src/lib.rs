@@ -37,12 +37,14 @@ pub mod capability_translation;
 pub mod handlers; // NEW: Smart decomposition of neural_api_server
 pub mod http_client;
 pub mod lifecycle_manager; // NEW: Primal lifecycle management (resurrection, apoptosis)
+pub mod living_graph; // NEW: Runtime protocol state tracking
 pub mod mode;
 pub mod neural_api_server;
 pub mod neural_executor;
 pub mod neural_graph;
 pub mod neural_router;
 pub mod nucleation; // NEW: Capability-based routing layer
+pub mod protocol_escalation; // NEW: JSON-RPC → tarpc escalation
 
 pub use deployment_graph::{AtomicDeploymentGraph, DeploymentResult};
 pub use health_check::{HealthChecker, HealthStatus};
@@ -69,3 +71,10 @@ pub use lifecycle_manager::{
     ApoptosisReason, HealthConfig, LifecycleManager, LifecycleState, ManagedPrimal,
     PrimalMetrics, ResurrectionConfig,
 };
+
+// Living Graph / Protocol Escalation exports
+pub use living_graph::{
+    ConnectionId, ConnectionMetrics, ConnectionState, LivingGraph, PrimalHealth,
+    PrimalProtocolState, ProtocolMode, ProtocolSummary,
+};
+pub use protocol_escalation::{EscalationConfig, EscalationResult, ProtocolEscalationManager};

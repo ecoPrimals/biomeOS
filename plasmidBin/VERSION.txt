@@ -1,23 +1,39 @@
-v0.21.0
+v0.23.0
 
-## Harvested Binaries (January 28, 2026)
+## Harvested Binaries (January 28, 2026 - Final)
 
 | Primal | Version | Commit | Features |
 |--------|---------|--------|----------|
-| beardog | 0.16.0 | 964babd25 | SHA-384, AES-GCM, X25519 |
-| songbird | 3.33.0 | 012d5814a | STUN/Relay, TLS 1.3 93%, reqwest eliminated |
-| squirrel | - | latest | AI orchestration |
+| beardog | 0.16.0 | 964babd25 | SHA-384, AES-GCM, X25519, TLS 1.3 |
+| songbird | 8.14.0 | a2ece6489 | All biomeOS integration complete |
+| squirrel | 0.1.0 | 28e59176 | AI orchestration (ALL 4 FIXES COMPLETE) |
 | toadstool | - | latest | Universal compute |
 | nestgate | - | latest | Data storage |
 
-## Key Updates in This Harvest
+## Songbird v8.14.0 - Complete biomeOS Integration
 
-### Songbird v3.33.0 (Jan 28, 2026)
-- STUN/Relay Multi-Tier Architecture complete
-- 100% reqwest elimination - ZERO C dependencies
-- Sovereignty-first NAT traversal
-- 1,155+ tests passing
-- Deep debt: zero unsafe, zero hardcoding, zero unwraps
+### Port:0 Beacon Fix (d4cccba53)
+- Configuration validation rejects port:0 with discovery enabled
+- `--federation-port` CLI flag for clearer intent
+- Dual-mode architecture: External TCP + Internal Unix socket
+- 4 unit tests (100% passing)
+
+### XDG Socket Discovery - Complete (5b1e50e03, ee13f1e9f)
+- HTTP client layer: `socket_discovery.rs`
+- TLS layer: `socket_discovery.rs` + `EnvReader` trait
+- 13 tests passing (6 HTTP + 7 TLS)
+- 0 `#[ignore]` flags - fully concurrent
+
+### STUN/Relay Multi-Tier (ee13f1e9f)
+- Pure Rust STUN client (RFC 5389)
+- UDP hole punching
+- 4-tier fallback (Lineage → User-Provided → Public → Rendezvous)
+- New crate: `songbird-stun` (900+ lines)
+
+### Quality Metrics
+- Build: 0 warnings
+- Tests: 38 new tests (35 passing, 3 infrastructure-dependent)
+- Documentation: 2,700+ lines added
 
 ### BearDog v0.16.0
 - SHA-384 cipher suites complete

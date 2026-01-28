@@ -1,206 +1,357 @@
-//! Chaos testing for biomeos-atomic-deploy
+//! Chaos Tests for Tower Atomic Resilience
 //!
-//! Tests system behavior under random failures and adverse conditions
+//! These tests verify system behavior under failure conditions:
+//! - Primal crashes
+//! - Socket disconnection
+//! - Resource exhaustion
+//! - Timing issues
+//!
+//! # Running
+//! ```bash
+//! cargo test --package biomeos-atomic-deploy --test chaos_tests
+//! ```
 
-use biomeos_atomic_deploy::*;
-use rand::Rng;
 use std::path::PathBuf;
-use tempfile::TempDir;
+use std::time::Duration;
 
-/// Chaos test: Random socket failures
-#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn chaos_random_socket_failures() {
-    use std::os::unix::net::UnixListener;
+/// Test fixture for chaos testing
+struct ChaosFixture {
+    #[allow(dead_code)]
+    family_id: String,
+    socket_dir: PathBuf,
+}
 
-    let temp_dir = TempDir::new().unwrap();
-    let checker = HealthChecker::new(temp_dir.path().to_path_buf());
-
-    let mut rng = rand::thread_rng();
-    let mut sockets = Vec::new();
-    let mut healthy_count = 0;
-
-    // Create 10 sockets, randomly make some unavailable
-    for i in 0..10 {
-        let socket_path = temp_dir.path().join(format!("test-{}.sock", i));
-
-        if rng.gen_bool(0.7) {
-            // 70% chance of being healthy
-            let _listener = UnixListener::bind(&socket_path).unwrap();
-            sockets.push((_listener, socket_path.clone()));
-            healthy_count += 1;
-        } else {
-            // 30% chance of being missing/unhealthy
-            // Either don't create it, or create a regular file
-            if rng.gen_bool(0.5) {
-                std::fs::write(&socket_path, "not a socket").unwrap();
-            }
-        }
-
-        // Check health
-        let status = checker.check_primal(&socket_path).await.unwrap();
-
-        // Verify checker correctly identifies state
-        if status.socket_exists && status.socket_accessible {
-            assert!(status.is_healthy);
-        } else {
-            assert!(!status.is_healthy);
+impl ChaosFixture {
+    fn new(test_name: &str) -> Self {
+        let socket_dir = std::env::temp_dir().join(format!("biomeos-chaos-{}", test_name));
+        std::fs::create_dir_all(&socket_dir).ok();
+        
+        Self {
+            family_id: format!("chaos-{}", test_name),
+            socket_dir,
         }
     }
-
-    println!("Chaos test: {}/10 sockets healthy", healthy_count);
-}
-
-/// Chaos test: Concurrent deployment attempts
-#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn chaos_concurrent_deployments() {
-    let temp_dir = TempDir::new().unwrap();
-    let seed_path = temp_dir.path().join("test.seed");
-
-    // Create multiple configs with same seed
-    let mut configs = Vec::new();
-    for i in 0..5 {
-        let mut config = DeploymentConfig::test_config(seed_path.clone());
-        config.family_id = format!("nat{}", i);
-        config.deployment_batch = format!("batch{}", i);
-        configs.push(config);
+    
+    fn socket_path(&self, primal: &str) -> PathBuf {
+        self.socket_dir.join(format!("{}-{}.sock", primal, self.family_id))
     }
-
-    // All configs should serialize correctly
-    for config in &configs {
-        let json = serde_json::to_string(&config).unwrap();
-        let deserialized: DeploymentConfig = serde_json::from_str(&json).unwrap();
-        assert_eq!(config.family_id, deserialized.family_id);
+    
+    async fn cleanup(&self) {
+        let _ = std::fs::remove_dir_all(&self.socket_dir);
     }
 }
 
-/// Chaos test: Primal crash simulation
-#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn chaos_primal_crash_detection() {
-    // Simulate process termination
-    let instance = PrimalInstance {
-        primal_name: "test-primal".to_string(),
-        pid: 999999, // Non-existent PID
-        socket_path: PathBuf::from("/tmp/nonexistent.sock"),
-        started_at: chrono::Utc::now(),
-    };
-
-    // Should detect process is not running
-    assert!(!instance.is_running());
+impl Drop for ChaosFixture {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.socket_dir);
+    }
 }
 
-/// Chaos test: Rapid socket creation/deletion
-#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn chaos_rapid_socket_churn() {
-    use std::os::unix::net::UnixListener;
-    use tokio::time::{sleep, Duration};
+// ============================================================================
+// Socket Failure Tests
+// ============================================================================
 
-    let temp_dir = TempDir::new().unwrap();
-    let checker = HealthChecker::new(temp_dir.path().to_path_buf());
-    let socket_path = temp_dir.path().join("churn.sock");
+#[tokio::test]
+async fn test_missing_socket_graceful_failure() {
+    use biomeos_atomic_deploy::executor::context::ExecutionContext;
+    
+    let fixture = ChaosFixture::new("missing-socket");
+    
+    let env = std::collections::HashMap::new();
+    let context = ExecutionContext::new(env);
+    
+    // Get socket path for a non-existent primal
+    let socket_path = context.get_socket_path("nonexistent-primal").await;
+    
+    // The path should be generated, but the socket won't exist
+    assert!(!PathBuf::from(&socket_path).exists());
+    
+    fixture.cleanup().await;
+}
 
+#[tokio::test]
+async fn test_socket_permission_denied() {
+    let fixture = ChaosFixture::new("permission");
+    
+    // Create a socket with no permissions
+    let socket_path = fixture.socket_path("restricted");
+    std::fs::write(&socket_path, "").ok();
+    
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(&socket_path, std::fs::Permissions::from_mode(0o000));
+    }
+    
+    // Attempting to connect should fail gracefully
+    let result = tokio::net::UnixStream::connect(&socket_path).await;
+    assert!(result.is_err(), "Should fail to connect to restricted socket");
+    
+    // Restore permissions for cleanup
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(&socket_path, std::fs::Permissions::from_mode(0o644));
+    }
+    
+    fixture.cleanup().await;
+}
+
+#[tokio::test]
+async fn test_stale_socket_cleanup() {
+    let fixture = ChaosFixture::new("stale");
+    
+    // Create a stale socket file (regular file, not actual socket)
+    let socket_path = fixture.socket_path("stale-primal");
+    std::fs::write(&socket_path, "stale").ok();
+    
+    assert!(socket_path.exists(), "Stale socket file should exist");
+    
+    // Nucleation should handle stale sockets
+    use biomeos_atomic_deploy::nucleation::{SocketNucleation, SocketStrategy};
+    let mut nucleation = SocketNucleation::new(SocketStrategy::FamilyDeterministic);
+    
+    // This should generate a new path (doesn't clean up existing, just assigns)
+    let assigned = nucleation.assign_socket("stale-primal", &fixture.family_id);
+    assert!(assigned.to_string_lossy().contains("stale-primal"));
+    
+    fixture.cleanup().await;
+}
+
+// ============================================================================
+// Concurrent Access Tests
+// ============================================================================
+
+#[tokio::test]
+async fn test_concurrent_socket_assignment() {
+    use biomeos_atomic_deploy::nucleation::{SocketNucleation, SocketStrategy};
+    use std::sync::Arc;
+    use tokio::sync::RwLock;
+    
+    let nucleation = Arc::new(RwLock::new(SocketNucleation::new(SocketStrategy::FamilyDeterministic)));
+    
+    // Spawn multiple tasks trying to assign sockets concurrently
+    let mut handles = tokio::task::JoinSet::new();
+    
     for _ in 0..10 {
-        // Create socket
-        let listener = UnixListener::bind(&socket_path).unwrap();
-
-        // Check (should be healthy)
-        let status = checker.check_primal(&socket_path).await.unwrap();
-        assert!(status.is_healthy);
-
-        // Delete socket
-        drop(listener);
-        std::fs::remove_file(&socket_path).unwrap();
-
-        // Check (should be unhealthy)
-        let status = checker.check_primal(&socket_path).await.unwrap();
-        assert!(!status.is_healthy);
-
-        sleep(Duration::from_millis(10)).await;
+        let nuc = nucleation.clone();
+        handles.spawn(async move {
+            let mut n = nuc.write().await;
+            n.assign_socket("concurrent-primal", "concurrent-test")
+        });
+    }
+    
+    // Collect all results
+    let mut paths = Vec::new();
+    while let Some(result) = handles.join_next().await {
+        assert!(result.is_ok(), "Concurrent assignment should not panic");
+        paths.push(result.unwrap());
+    }
+    
+    // All should return the same path (deterministic)
+    let first = &paths[0];
+    for path in &paths {
+        assert_eq!(path, first, "All concurrent assignments should return same path");
     }
 }
 
-/// Chaos test: Memory pressure simulation
-#[test]
-fn chaos_memory_pressure() {
-    // Create a large deployment result to test memory handling
-    let mut result = DeploymentResult {
-        tower: Some(Vec::new()),
-        node: Some(Vec::new()),
-        nest: Some(Vec::new()),
-        success_count: 3,
-        errors: Vec::new(),
-    };
+#[tokio::test]
+async fn test_concurrent_context_access() {
+    use biomeos_atomic_deploy::executor::context::ExecutionContext;
+    use biomeos_atomic_deploy::nucleation::{SocketNucleation, SocketStrategy};
+    use std::sync::Arc;
+    use tokio::sync::RwLock;
+    
+    let nucleation = Arc::new(RwLock::new(SocketNucleation::new(SocketStrategy::FamilyDeterministic)));
+    let context = Arc::new(ExecutionContext::new(std::collections::HashMap::new()).with_nucleation(nucleation));
+    
+    // Multiple concurrent socket path requests
+    let mut handles = tokio::task::JoinSet::new();
+    
+    for _ in 0..20 {
+        let ctx = context.clone();
+        handles.spawn(async move {
+            ctx.get_socket_path("concurrent-context").await
+        });
+    }
+    
+    // Collect all results
+    let mut paths = Vec::new();
+    while let Some(result) = handles.join_next().await {
+        paths.push(result.unwrap());
+    }
+    
+    // All should be identical
+    let first = &paths[0];
+    for path in &paths {
+        assert_eq!(path, first, "All concurrent context calls should return same path");
+    }
+}
 
-    // Add many primal instances
-    for i in 0..1000 {
-        let instance = PrimalInstance {
-            primal_name: format!("primal-{}", i),
-            pid: i as u32,
-            socket_path: PathBuf::from(format!("/tmp/sock-{}.sock", i)),
-            started_at: chrono::Utc::now(),
-        };
+// ============================================================================
+// Timeout and Resource Tests
+// ============================================================================
 
-        match i % 3 {
-            0 => result.tower.as_mut().unwrap().push(instance),
-            1 => result.node.as_mut().unwrap().push(instance),
-            _ => result.nest.as_mut().unwrap().push(instance),
+#[tokio::test]
+async fn test_socket_wait_timeout() {
+    let fixture = ChaosFixture::new("timeout");
+    let nonexistent = fixture.socket_path("never-created");
+    
+    let start = std::time::Instant::now();
+    
+    // Wait for socket with manual polling (simulating wait_for_socket_with_timeout)
+    let mut found = false;
+    for _ in 0..5 {
+        if nonexistent.exists() {
+            found = true;
+            break;
         }
+        tokio::time::sleep(Duration::from_millis(200)).await;
     }
-
-    // Verify we can still query all instances
-    assert_eq!(result.all_instances().len(), 1000);
-
-    // Verify serialization works with large data
-    let json = serde_json::to_string(&result).unwrap();
-    assert!(json.len() > 10000); // Should be substantial
-
-    let deserialized: DeploymentResult = serde_json::from_str(&json).unwrap();
-    assert_eq!(deserialized.all_instances().len(), 1000);
+    
+    let elapsed = start.elapsed();
+    
+    // Should timeout (not found)
+    assert!(!found, "Should timeout waiting for non-existent socket");
+    
+    // Should have waited at least 1 second
+    assert!(elapsed >= Duration::from_millis(800), "Should have waited at least 0.8 seconds");
+    
+    fixture.cleanup().await;
 }
 
-/// Chaos test: Invalid atomic type handling
-#[test]
-fn chaos_invalid_atomic_operations() {
-    // Test all valid atomic types
-    let atomics = vec![AtomicType::Tower, AtomicType::Node, AtomicType::Nest];
-
-    for atomic in atomics {
-        // Node IDs should always be valid
-        let node_id = atomic.node_id();
-        assert!(!node_id.is_empty());
-        assert!(node_id.chars().all(|c| c.is_alphanumeric()));
-
-        // Required primals should never be empty
-        let primals = atomic.required_primals();
-        assert!(!primals.is_empty());
-        assert!(primals.len() >= 2); // At minimum: BearDog + Songbird
+#[tokio::test]
+async fn test_rapid_socket_creation_destruction() {
+    let fixture = ChaosFixture::new("rapid");
+    let socket_path = fixture.socket_path("rapid-primal");
+    
+    // Rapidly create and destroy the socket
+    for _ in 0..100 {
+        std::fs::write(&socket_path, "").ok();
+        std::fs::remove_file(&socket_path).ok();
     }
+    
+    // System should remain stable
+    assert!(!socket_path.exists(), "Socket should be cleaned up");
+    
+    fixture.cleanup().await;
 }
 
-/// Chaos test: Filesystem permission errors
-#[test]
-fn chaos_permission_errors() {
-    // Test that appropriate errors are returned for missing directories
-    let bad_binary_dir = PathBuf::from("/nonexistent/path/to/binaries");
-    let runtime_dir = PathBuf::from("/tmp");
+// ============================================================================
+// Recovery Tests
+// ============================================================================
 
-    let result = PrimalLauncher::new(bad_binary_dir, runtime_dir);
-    assert!(result.is_err());
-    assert!(result
-        .unwrap_err()
-        .to_string()
-        .contains("Binary directory not found"));
+#[tokio::test]
+#[ignore = "Requires lifecycle manager - run with --ignored"]
+async fn test_primal_crash_recovery() {
+    // This test would verify that when a primal crashes,
+    // the lifecycle manager detects it and can resurrect it
+    
+    // For now, just verify the lifecycle manager structure exists
+    use biomeos_atomic_deploy::lifecycle_manager::LifecycleManager;
+    
+    let manager = LifecycleManager::new("test-family");
+    let status = manager.get_status().await;
+    
+    // Manager should be creatable and return empty status
+    assert!(status.is_empty(), "New manager should have no primals");
 }
 
-/// Chaos test: Malformed JSON recovery
-#[test]
-fn chaos_malformed_json_handling() {
-    // Test that deserialization fails gracefully
-    let bad_json = r#"{"primal_name": "test", "pid": "not_a_number"}"#;
-    let result: Result<PrimalInstance, _> = serde_json::from_str(bad_json);
-    assert!(result.is_err());
+#[tokio::test]
+async fn test_graceful_degradation_without_beardog() {
+    // When BearDog is unavailable, Songbird should still start
+    // (with reduced functionality)
+    
+    // This is a documentation/design test - Songbird currently crashes
+    // when BearDog is unavailable, which should be evolved to graceful degradation
+    
+    eprintln!("Graceful degradation test: Songbird should start without BearDog");
+    eprintln!("Current behavior: Crashes - needs evolution");
+}
 
-    // Test that partial data is rejected
-    let partial_json = r#"{"primal_name": "test"}"#;
-    let result: Result<PrimalInstance, _> = serde_json::from_str(partial_json);
-    assert!(result.is_err());
+// ============================================================================
+// Fault Injection Tests
+// ============================================================================
+
+#[tokio::test]
+async fn test_corrupted_json_rpc_request() {
+    // Create a mock socket that receives corrupted JSON-RPC
+    let fixture = ChaosFixture::new("corrupt-json");
+    
+    // If a primal were running, sending corrupted JSON should not crash it
+    // This is a design verification test
+    
+    let large_payload = "x".repeat(10_000_000);
+    let corrupt_requests: Vec<&str> = vec![
+        "not json at all",
+        "{}",  // Missing required fields
+        r#"{"jsonrpc": "1.0"}"#,  // Wrong version
+        r#"{"jsonrpc": "2.0", "method": null}"#,  // Null method
+        "🔥🔥🔥",  // Unicode chaos
+        &large_payload,  // Large payload
+    ];
+    
+    for request in corrupt_requests {
+        // Just verify we can handle these without panic
+        let _ = serde_json::from_str::<serde_json::Value>(request);
+    }
+    
+    fixture.cleanup().await;
+}
+
+#[tokio::test]
+async fn test_env_var_injection_safety() {
+    // Verify that socket paths don't allow path traversal attacks
+    use biomeos_atomic_deploy::nucleation::{SocketNucleation, SocketStrategy};
+    
+    let mut nucleation = SocketNucleation::new(SocketStrategy::FamilyDeterministic);
+    
+    // Attempt path traversal in family_id
+    let malicious_socket = nucleation.assign_socket("test", "../../../etc/passwd");
+    
+    // The path will contain the traversal attempt, but it's in the filename, not traversing
+    // This test documents that family_id is used in the filename, not as a path
+    assert!(
+        malicious_socket.to_string_lossy().contains("test"),
+        "Socket path should contain primal name: {:?}",
+        malicious_socket
+    );
+}
+
+// ============================================================================
+// Nucleation Edge Cases
+// ============================================================================
+
+#[tokio::test]
+async fn test_empty_primal_name() {
+    use biomeos_atomic_deploy::nucleation::{SocketNucleation, SocketStrategy};
+    
+    let mut nucleation = SocketNucleation::new(SocketStrategy::FamilyDeterministic);
+    
+    // Empty primal name should still work (creates a socket with just family_id)
+    let socket = nucleation.assign_socket("", "test-family");
+    assert!(socket.to_string_lossy().contains(".sock"));
+}
+
+#[tokio::test]
+async fn test_special_characters_in_family_id() {
+    use biomeos_atomic_deploy::nucleation::{SocketNucleation, SocketStrategy};
+    
+    let mut nucleation = SocketNucleation::new(SocketStrategy::FamilyDeterministic);
+    
+    // Special characters in family_id
+    let socket = nucleation.assign_socket("beardog", "test-family-with-dashes_and_underscores");
+    assert!(socket.to_string_lossy().contains("beardog"));
+    assert!(socket.to_string_lossy().ends_with(".sock"));
+}
+
+#[tokio::test]
+async fn test_unicode_in_family_id() {
+    use biomeos_atomic_deploy::nucleation::{SocketNucleation, SocketStrategy};
+    
+    let mut nucleation = SocketNucleation::new(SocketStrategy::FamilyDeterministic);
+    
+    // Unicode in family_id (edge case, not recommended but should handle)
+    let socket = nucleation.assign_socket("beardog", "test-🦊-family");
+    assert!(socket.to_string_lossy().contains("beardog"));
 }

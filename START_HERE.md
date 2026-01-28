@@ -44,9 +44,10 @@
 | Component | Version | Status | Capabilities |
 |-----------|---------|--------|--------------|
 | **biomeOS** | `master` | ✅ 100% | Graph deployment, capability.call, lifecycle |
-| **Neural API** | `master` | ✅ 100% | 59 semantic mappings, lifecycle management |
-| **BearDog** | `964babd25` | ✅ 100% | SHA-256, SHA-384, AES-GCM |
-| **Songbird** | `eaa1dda9d` | ✅ 100% | TLS 1.3, HTTP, User-Agent |
+| **Neural API** | `master` | ✅ 100% | 74 semantic mappings, lifecycle management |
+| **BearDog** | `964babd25` | ✅ 100% | SHA-256, SHA-384, AES-GCM, X25519 |
+| **Songbird** | `8.14.0` | ✅ 100% | TLS 1.3, HTTP headers, dual-mode, STUN |
+| **Squirrel** | `0.1.0` | ✅ 100% | AI providers (Anthropic, OpenAI), HTTP delegation |
 
 ---
 
@@ -114,6 +115,7 @@ echo '{"jsonrpc":"2.0","method":"lifecycle.shutdown_all","id":1}' | nc -U /tmp/n
 ### Essential
 - **`README.md`** - Project overview
 - **`DOCUMENTATION_HUB.md`** - Complete navigation
+- **`PROTOCOL_ESCALATION_ROADMAP.md`** - JSON-RPC → tarpc evolution ⭐
 - **`RUST_EVOLUTION_ROADMAP.md`** - Scripts → Pure Rust migration
 - **`INFRASTRUCTURE_EVOLUTION.md`** - Terraria, Apoptosis
 
@@ -213,10 +215,14 @@ let socket = discovery.discover_socket("crypto").await?;
 - **JSON-RPC over Unix sockets** - No HTTP in production
 
 ### 🔄 External Handoffs (Awaiting Teams)
-- Songbird: TCP gateway mode for LAN federation
-- Songbird: TLS 1.2 fallback (npm, Jenkins)
-- Squirrel: Discovery timeout fixes
+- Songbird: TLS 1.2 fallback (npm, Jenkins, 7% remaining)
 - Toadstool: Socket binding crash fix
+- LAN Federation: Deploy v8.14.0 to other towers
+
+### 📋 Next: Protocol Escalation (Living Graph)
+- JSON-RPC → tarpc runtime evolution
+- Metrics-based auto-escalation
+- See `PROTOCOL_ESCALATION_ROADMAP.md`
 
 ### 📋 Future
 - TLS server mode

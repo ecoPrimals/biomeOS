@@ -1,9 +1,11 @@
 # 🧬 biomeOS - Root Documentation Index
 
-**Last Updated**: January 28, 2026  
+**Last Updated**: January 28, 2026 (Evening)  
 **Status**: ✅ **Production Ready** - 93% TLS Validation  
 **Tower Atomic**: Pure Rust TLS 1.3 Validated  
 **NUCLEUS**: Lifecycle Management Complete  
+**Squirrel AI**: Integration Complete (Anthropic, OpenAI)  
+**Protocol Escalation**: Roadmap defined (JSON-RPC → tarpc)  
 **LiveSpore**: Genetic Lineage Federation Ready  
 **Deep Debt**: ✅ **Complete** - 96% reduction (85 → 3 TODOs)  
 **Tests**: 400+ passing (106 suites) | **Crates**: 21 | **Lines**: ~106k | **Unsafe**: 0
@@ -43,9 +45,9 @@
 | Primal | Commit | Feature |
 |--------|--------|---------|
 | BearDog | `964babd25` | SHA-384 evolution complete |
-| Songbird | `eaa1dda9d` | Adaptive HTTP + User-Agent |
-| Songbird | `478a3e622` | cipher_suite to finished_verify_data |
-| Songbird | `7c974f6f7` | Chunked encoding fix |
+| Songbird | `f6cb661b4` | v8.14.0 - HTTP headers complete, dual-mode |
+| Songbird | `d4cccba53` | Port:0 beacon fix + federation-port |
+| Squirrel | `28e59176` | biomeOS integration fixes |
 
 ---
 
@@ -67,12 +69,13 @@
 | `DEPLOYMENT.md` | General deployment guide |
 | `QUICK_START.md` | Quick deployment |
 
-### Evolution (3 files)
+### Evolution (4 files)
 | File | Description |
 |------|-------------|
-| `SONGBIRD_EVOLUTION_HANDOFF.md` | TLS 1.2, server mode roadmap |
+| `PROTOCOL_ESCALATION_ROADMAP.md` ⭐ | JSON-RPC → tarpc Living Graph |
 | `INFRASTRUCTURE_EVOLUTION.md` | Terraria, Apoptosis |
 | `SEMANTIC_EVOLUTION_STRATEGY.md` | Semantic naming |
+| `RUST_EVOLUTION_ROADMAP.md` | Deep debt complete |
 
 ### Navigation (4 files)
 | File | Description |
@@ -85,9 +88,12 @@
 ### New Documentation
 | File | Description |
 |------|-------------|
-| `docs/LIFECYCLE_MANAGEMENT.md` | NUCLEUS lifecycle API ⭐ |
-| `docs/SOCKET_DISCOVERY.md` | Capability-based socket resolution ⭐ |
-| `specs/NUCLEUS_DEPLOYMENT_SPEC.md` | Tower/Node/Nest patterns |
+| `PROTOCOL_ESCALATION_ROADMAP.md` | Living Graph JSON-RPC → tarpc ⭐ |
+| `specs/LIVING_GRAPH_PROTOCOL_ESCALATION_SPEC.md` | Full protocol spec ⭐ |
+| `docs/LIFECYCLE_MANAGEMENT.md` | NUCLEUS lifecycle API |
+| `docs/SOCKET_DISCOVERY.md` | Capability-based socket resolution |
+| `docs/handoffs/SONGBIRD_EVOLUTION_HANDOFF.md` | HTTP headers, TLS, discovery |
+| `docs/handoffs/SQUIRREL_EVOLUTION_HANDOFF.md` | AI integration complete |
 
 ---
 

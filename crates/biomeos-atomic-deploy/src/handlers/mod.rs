@@ -6,6 +6,7 @@
 //! - `topology`: System topology and metrics
 //! - `niche`: Niche template deployment
 //! - `lifecycle`: Primal lifecycle management (resurrection, apoptosis)
+//! - `protocol`: Protocol escalation (JSON-RPC → tarpc)
 //!
 //! # Architecture
 //!
@@ -15,7 +16,8 @@
 //!   ├── CapabilityHandler (routing, discovery)
 //!   ├── TopologyHandler   (primals, metrics)
 //!   ├── NicheHandler      (templates)
-//!   └── LifecycleHandler  (resurrection, apoptosis)
+//!   ├── LifecycleHandler  (resurrection, apoptosis)
+//!   └── ProtocolHandler   (escalation, fallback, metrics)
 //! ```
 //!
 //! # Capability-Based Design
@@ -28,10 +30,12 @@ pub mod capability;
 pub mod graph;
 pub mod lifecycle;
 pub mod niche;
+pub mod protocol;
 pub mod topology;
 
 pub use capability::CapabilityHandler;
 pub use graph::{ExecutionStatus, GraphHandler};
 pub use lifecycle::LifecycleHandler;
 pub use niche::NicheHandler;
+pub use protocol::ProtocolHandler;
 pub use topology::TopologyHandler;
