@@ -30,7 +30,7 @@
 //! - **Dependency Awareness**: Respects primal dependency order
 //! - **Graceful Apoptosis**: Coordinated shutdown with cleanup
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;

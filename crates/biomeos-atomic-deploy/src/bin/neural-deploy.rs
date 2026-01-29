@@ -30,7 +30,7 @@ async fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().collect();
     if args.len() < 2 {
         eprintln!("Usage: neural-deploy <graph-id> [--family-id <ID>]");
-        eprintln!("");
+        eprintln!();
         eprintln!("Examples:");
         eprintln!("  neural-deploy 01_nucleus_enclave");
         eprintln!("  neural-deploy 00_full_ecosystem --family-id nat0");

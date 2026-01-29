@@ -19,8 +19,8 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
 
-use crate::living_graph::{LivingGraph, PrimalProtocolState, ProtocolMode};
-use crate::protocol_escalation::{EscalationResult, ProtocolEscalationManager};
+use crate::living_graph::{LivingGraph, PrimalProtocolState};
+use crate::protocol_escalation::ProtocolEscalationManager;
 
 /// Handler for protocol-related JSON-RPC methods
 #[derive(Clone)]
