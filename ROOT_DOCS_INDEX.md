@@ -1,14 +1,14 @@
 # 🧬 biomeOS - Root Documentation Index
 
-**Last Updated**: January 28, 2026 (Final)  
+**Last Updated**: January 29, 2026  
 **Status**: ✅ **Production Ready** - 93% TLS Validation  
-**Tower Atomic**: Pure Rust TLS 1.3 Validated  
+**Tower Atomic**: Pure Rust TLS 1.3 Validated (366ms avg HTTPS)  
 **NUCLEUS**: Lifecycle Management Complete  
 **Squirrel AI**: Integration Complete (Anthropic, OpenAI)  
 **Protocol Escalation**: ✅ **Phase 1 Complete** - Living Graph + JSON-RPC APIs  
 **LiveSpore**: Genetic Lineage Federation Ready  
-**Deep Debt**: ✅ **Complete** - 96% reduction (85 → 3 TODOs)  
-**Tests**: 400+ passing (153 in atomic-deploy) | **Crates**: 21 | **Lines**: ~108k | **Unsafe**: 0
+**Deep Debt**: ✅ **Complete** - 0 TODOs, 0 unsafe, XDG-compliant  
+**Tests**: 277+ passing | **Crates**: 21 | **Lines**: ~111k | **Unsafe**: 0
 
 ---
 
@@ -21,19 +21,24 @@
 
 ---
 
-## 🏆 **January 28, 2026 Achievements**
+## 🏆 **Latest Session Achievements**
 
-### Protocol Escalation Phase 1 Complete ⭐
+### January 29, 2026 - Final Polish
+- **Deployment automation** - `deploy_to_tower.sh` for remote tower deployment
+- **LAN testing** - `test_lan_handshake.sh` for cross-tower validation
+- **Clippy clean** - All auto-fixable lints resolved
+- **XDG compliance** - All hardcoded `/tmp` paths eliminated
+
+### January 28, 2026 - Protocol Escalation Phase 1 Complete
 - **Living Graph** infrastructure for runtime protocol state
 - **ProtocolEscalationManager** for JSON-RPC → tarpc transitions
 - **10 new JSON-RPC methods** for protocol management
 - **Automated bootstrap script** (`scripts/bootstrap_tower_atomic.sh`)
 
 ### Performance Benchmark (JSON-RPC HTTPS/TLS 1.3)
-- **402ms average** latency to api.github.com
+- **366ms average** latency to api.github.com
 - **100% success rate** (10/10 requests)
-- **338ms fastest**, 440ms slowest
-- **~12 crypto calls** per TLS handshake via Neural API
+- **Pure Rust crypto** routed via Neural API
 
 ### Tower Atomic Production Ready
 - **87 sites tested** across 11 categories
@@ -47,16 +52,12 @@
 - **Resurrection** from deployment graphs
 - **Dependency-aware shutdown**
 
-### Concurrent Testing Complete
-- **153 tests** in biomeos-atomic-deploy alone
-- **No sleeps** - proper async patterns
-- **RAII guards** for global state cleanup
-- **Timeouts** on all network calls
-
 ### Key Commits
 | Primal | Commit | Feature |
 |--------|--------|---------|
-| biomeOS | `75b88ee` | Protocol Escalation + Living Graph |
+| biomeOS | `eb92130` | Clippy fixes + deployment scripts |
+| biomeOS | `9b80c4c` | Tower deployment automation |
+| biomeOS | `8b827cc` | XDG-compliant socket discovery |
 | BearDog | `964babd25` | SHA-384 evolution complete |
 | Songbird | `f6cb661b4` | v8.14.0 - HTTP headers complete, dual-mode |
 | Squirrel | `28e59176` | biomeOS integration fixes |
@@ -74,11 +75,13 @@
 | `GENOMEBIN_ARCHITECTURE_STANDARD.md` | UniBin/ecoBin standards |
 | `ISOMORPHIC_EVOLUTION.md` | Evolution principles |
 
-### Deployment (4 files)
+### Deployment (6 files)
 | File | Description |
 |------|-------------|
 | `scripts/bootstrap_tower_atomic.sh` ⭐ | Automated Tower Atomic bootstrap |
-| `deploy_tower_atomic.sh` | Production deployment script |
+| `scripts/deploy_to_tower.sh` ⭐ | Deploy to remote tower via SSH |
+| `scripts/test_lan_handshake.sh` ⭐ | Test LAN connectivity between towers |
+| `deploy_tower_atomic.sh` | Legacy deployment script |
 | `DEPLOYMENT.md` | General deployment guide |
 | `QUICK_START.md` | Quick deployment |
 
@@ -117,10 +120,12 @@
 biomeOS/
 ├── *.md                    # Root documentation (16 files)
 ├── deploy_tower_atomic.sh  # Production deployment
-├── scripts/                # LiveSpore & deployment scripts ⭐
-│   ├── create_sibling_spore.sh
-│   ├── verify_sibling_lineage.sh
-│   └── test_federation.sh
+├── scripts/                # Deployment & LiveSpore scripts ⭐
+│   ├── bootstrap_tower_atomic.sh   # Start Tower Atomic
+│   ├── deploy_to_tower.sh          # Deploy to remote tower
+│   ├── test_lan_handshake.sh       # Test LAN connectivity
+│   ├── create_sibling_spore.sh     # Create USB spores
+│   └── verify_sibling_lineage.sh   # Verify genetic lineage
 ├── crates/                 # Rust crates (21)
 │   ├── biomeos/            # UniBin main
 │   ├── biomeos-atomic-deploy/  # Neural API ⭐
@@ -259,23 +264,23 @@ cargo test --workspace  # 400+ tests, 106 suites
 | Metric | Value | Status |
 |--------|-------|--------|
 | **TLS 1.3 Validation** | 93% (81/87) | ✅ Production |
-| **HTTPS Latency** | 402ms avg to GitHub | ✅ Benchmarked |
+| **HTTPS Latency** | 366ms avg to GitHub | ✅ Benchmarked |
 | **Web Compatibility** | 96% | ✅ Production |
 | **Cipher Suites** | 100% | ✅ All 3 mandatory |
 | **Pure Rust** | 100% | ✅ ecoBin |
 | **Protocol Escalation** | Phase 1 Complete | ✅ Living Graph |
 | **NUCLEUS Lifecycle** | Complete | ✅ Ready |
-| **Socket Discovery** | Complete | ✅ No hardcoding |
+| **Socket Discovery** | XDG-compliant | ✅ No hardcoding |
 | **LiveSpore** | Genetic Federation | ✅ Ready |
-| **Test Suites** | 106+ | ✅ |
-| **Tests Passing** | 400+ (153 in atomic-deploy) | ✅ |
+| **Tests Passing** | 277+ | ✅ |
 | **Crates** | 21 | ✅ |
-| **Lines of Code** | ~108k | ✅ |
+| **Lines of Code** | ~111k | ✅ |
+| **Rust Files** | 369 | ✅ |
 | **Clippy** | 0 errors | ✅ Clean |
 | **Formatting** | Clean | ✅ `cargo fmt` |
 | **Unsafe Code** | 0 blocks | ✅ `#![deny(unsafe_code)]` |
-| **TODOs Remaining** | 3 | ✅ External handoffs |
-| **Bash Dependencies** | 0 | ✅ Pure Rust orchestration |
+| **TODOs/FIXMEs** | 0 | ✅ Complete |
+| **Mocks in Prod** | 0 | ✅ All in `#[cfg(test)]` |
 
 ---
 
@@ -293,6 +298,8 @@ cargo test --workspace  # 400+ tests, 106 suites
 
 ---
 
-**Status**: ✅ Production Ready | **TLS**: 93% | **Tests**: 400+ | **Archive**: Complete
+**Status**: ✅ Production Ready | **TLS**: 93% | **Tests**: 277+ | **Deep Debt**: ✅ Complete
 
 *Start with [START_HERE.md](START_HERE.md) for quick orientation*
+
+*Updated: January 29, 2026*

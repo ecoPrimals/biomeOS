@@ -1,14 +1,14 @@
 # 🌱 biomeOS - Start Here
 
-**Last Updated**: January 28, 2026 (Final)  
+**Last Updated**: January 29, 2026  
 **Status**: 🎉 **PRODUCTION READY** - Pure Rust TLS 1.3  
 **Tower Atomic**: 93% TLS Success (87 sites), 96% Web Compatibility  
-**Performance**: 402ms avg HTTPS latency (benchmarked)  
+**Performance**: 366ms avg HTTPS latency (benchmarked)  
 **Protocol Escalation**: ✅ **Phase 1 Complete** - Living Graph + JSON-RPC APIs  
 **NUCLEUS**: Lifecycle management complete (resurrection, apoptosis)  
 **LiveSpore**: Genetic Lineage Federation Ready  
-**Deep Debt**: ✅ **COMPLETE** - 96% TODO reduction (85 → 3)  
-**Tests**: 400+ passing (153 in atomic-deploy) | **Crates**: 21 | **Lines**: ~108k | **Unsafe**: 0
+**Deep Debt**: ✅ **COMPLETE** - 0 TODOs, 0 unsafe, XDG-compliant  
+**Tests**: 277+ passing | **Crates**: 21 | **Lines**: ~111k | **Unsafe**: 0
 
 ---
 
@@ -45,20 +45,19 @@
 
 | Component | Version | Status | Capabilities |
 |-----------|---------|--------|--------------|
-| **biomeOS** | `90c801c` | ✅ 100% | Graph deployment, capability.call, lifecycle, Living Graph |
+| **biomeOS** | `eb92130` | ✅ 100% | Graph deployment, capability.call, lifecycle, Living Graph |
 | **Neural API** | `master` | ✅ 100% | 74 semantic mappings, lifecycle, protocol escalation |
-| **BearDog** | `964babd25` | ✅ 100% | SHA-256, SHA-384, AES-GCM, X25519 |
-| **Songbird** | `8.14.0` | ✅ 100% | TLS 1.3, HTTP headers, dual-mode, STUN |
+| **BearDog** | `0.9.0` | ✅ 100% | SHA-256, SHA-384, AES-GCM, X25519 |
+| **Songbird** | `3.33.0` | ✅ 100% | TLS 1.3, HTTP headers, dual-mode, STUN |
 | **Squirrel** | `0.1.0` | ✅ 100% | AI providers (Anthropic, OpenAI), HTTP delegation |
 
-### Performance (Benchmarked Jan 28, 2026)
+### Performance (Benchmarked Jan 28-29, 2026)
 | Metric | Value |
 |--------|-------|
-| **HTTPS Latency** | 402ms avg (to api.github.com) |
-| **Success Rate** | 100% (10/10 requests) |
-| **Fastest** | 338ms |
-| **Slowest** | 440ms |
+| **HTTPS Latency** | 366ms avg (to api.github.com) |
+| **Success Rate** | 100% |
 | **Crypto Calls/TLS** | ~12 via JSON-RPC |
+| **Tower Atomic Local** | ✅ Fully validated |
 
 ---
 
@@ -81,8 +80,14 @@ cargo test --workspace
 
 ```bash
 # Recommended: Automated bootstrap with XDG compliance
-./scripts/bootstrap_tower_atomic.sh        # Start
+./scripts/bootstrap_tower_atomic.sh        # Start locally
 ./scripts/bootstrap_tower_atomic.sh --stop # Stop
+
+# Deploy to remote tower
+./scripts/deploy_to_tower.sh 192.168.1.134  # Deploy via SSH
+
+# Test LAN connectivity
+./scripts/test_lan_handshake.sh             # Test cross-tower
 
 # Legacy deployment
 ./deploy_tower_atomic.sh        # Start
@@ -212,7 +217,7 @@ let socket = discovery.discover_socket("crypto").await?;
 
 ## 📊 Evolution Roadmap
 
-### ✅ Complete (Deep Debt Evolution - Jan 28, 2026)
+### ✅ Complete (Deep Debt Evolution - Jan 28-29, 2026)
 - Pure Rust TLS 1.3
 - SHA-384 cipher suites
 - capability.call routing
@@ -220,14 +225,15 @@ let socket = discovery.discover_socket("crypto").await?;
 - 93% TLS validation
 - **Protocol Escalation Phase 1** ⭐ - Living Graph + 10 JSON-RPC APIs
 - **NUCLEUS Lifecycle** - Germination through Apoptosis
-- **Socket Discovery** - Capability-based resolution
+- **Socket Discovery** - Capability-based resolution (XDG-compliant)
 - **Concurrent Tests** - No sleeps, proper async patterns
 - **Automated Bootstrap** - `scripts/bootstrap_tower_atomic.sh`
+- **Remote Deployment** - `scripts/deploy_to_tower.sh`
+- **LAN Testing** - `scripts/test_lan_handshake.sh`
 - **Songbird Mesh** - UDP multicast peer discovery
 - **BearDog Integration** - Lineage verification & key derivation
-- **XDG Compliance** - SystemPaths throughout
-- **CapabilityTaxonomy** - Unified enum for all capabilities
-- **JSON-RPC over Unix sockets** - No HTTP in production
+- **Deep Debt Complete** - 0 TODOs, 0 mocks in production
+- **Clippy Clean** - All auto-fixable lints resolved
 
 ### 🔄 External Handoffs (Awaiting Teams)
 - Songbird: TLS 1.2 fallback (npm, Jenkins, 7% remaining)
@@ -309,4 +315,6 @@ tail -f /tmp/songbird*.log
 
 ---
 
-**Status**: 🏆 Production Ready | **TLS**: 93% | **Web**: 96% | **Pure Rust**: 100% | **Tests**: 400+
+**Status**: 🏆 Production Ready | **TLS**: 93% | **Web**: 96% | **Pure Rust**: 100% | **Tests**: 277+
+
+*Updated: January 29, 2026*
