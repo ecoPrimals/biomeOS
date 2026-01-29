@@ -283,6 +283,10 @@ mod tests {
 
     #[test]
     fn test_runtime_config() {
+        // Clear environment variables to test default behavior
+        env::remove_var("NEURAL_API_SOCKET");
+        env::remove_var("BEARDOG_SOCKET");
+        
         let config = RuntimeConfig::with_socket_dir("/test");
 
         assert!(config.neural_api_socket().starts_with("/test"));
