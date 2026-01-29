@@ -216,15 +216,19 @@ name = "register_only"
 [nodes.operation.params]
 family_id = "nat0"
 
-# Toadstool uses toadstool. prefix
+# Toadstool uses toadstool. prefix for core, resources. for compute orchestration
 [nodes.capabilities_provided]
-"compute.submit" = "toadstool.submit_workload"
-"compute.status" = "toadstool.query_status"
-"compute.cancel" = "toadstool.cancel_workload"
-"compute.list" = "toadstool.list_workloads"
-"compute.capabilities" = "toadstool.query_capabilities"
+# Core Toadstool methods
 "compute.health" = "toadstool.health"
 "compute.version" = "toadstool.version"
+"compute.capabilities" = "toadstool.query_capabilities"
+# Collaborative Intelligence - Resource Estimation
+"compute.estimate" = "resources.estimate"
+"compute.validate" = "resources.validate_availability"
+"compute.optimize" = "resources.suggest_optimizations"
+# AI Provider - Local Compute (future)
+"ai.local_inference" = "resources.estimate"  # Estimate before running
+"ai.local_execute" = "resources.validate_availability"  # Validate resources
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # VALIDATION

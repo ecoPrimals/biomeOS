@@ -1,0 +1,177 @@
+# Node Atomic Compute Graph
+# Extends Tower Atomic with Toadstool for local compute capabilities
+#
+# Stack: BearDog (crypto) → Songbird (network) → Toadstool (compute)
+#
+# ✅ STATUS: NEW - January 29, 2026
+# Enables local AI inference and compute orchestration
+#
+# Use Case:
+# - Local LLM inference (Llama, Mistral, etc.)
+# - GPU workload scheduling
+# - Distributed training coordination
+# - Resource estimation for Squirrel AI routing
+
+[graph]
+id = "node_atomic_compute"
+description = "Node Atomic with local compute (BearDog + Songbird + Toadstool)"
+coordination = "Sequential"
+
+# Phase 1: Import Tower Atomic (BearDog + Songbird)
+# Note: In production, use graph composition. Here we inline for clarity.
+
+# Phase 1.1: Germinate BearDog (Crypto Foundation)
+[[nodes]]
+id = "germinate_beardog"
+output = "beardog_genesis"
+capabilities = ["crypto", "tls_crypto", "genetic", "security"]
+
+[nodes.primal]
+by_capability = "security"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "nat0"
+
+[nodes.operation.environment]
+RUST_LOG = "beardog_tunnel=info"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+# Core crypto translations (subset - see tower_atomic_bootstrap.toml for full list)
+[nodes.capabilities_provided]
+"crypto.generate_keypair" = "crypto.x25519_generate_ephemeral"
+"crypto.ecdh_derive" = "crypto.x25519_derive_secret"
+"crypto.encrypt" = "crypto.chacha20_poly1305_encrypt"
+"crypto.decrypt" = "crypto.chacha20_poly1305_decrypt"
+"x25519_generate_ephemeral" = "crypto.x25519_generate_ephemeral"
+"x25519_derive_secret" = "crypto.x25519_derive_secret"
+
+# Phase 1.2: Germinate Songbird (Network + HTTP)
+[[nodes]]
+id = "germinate_songbird"
+depends_on = ["germinate_beardog"]
+output = "songbird_genesis"
+capabilities = ["http", "discovery", "secure_http"]
+
+[nodes.primal]
+by_capability = "discovery"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "nat0"
+
+[nodes.operation.environment]
+NEURAL_API_SOCKET = "/run/user/1000/biomeos/neural-api-node-alpha.sock"
+BEARDOG_SOCKET = "/run/user/1000/biomeos/beardog-node-alpha.sock"
+SONGBIRD_SECURITY_PROVIDER = "beardog"
+RUST_LOG = "songbird_http_client=info"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[nodes.capabilities_provided]
+"http.request" = "http.request"
+"http.get" = "http.get"
+"http.post" = "http.post"
+"discovery.announce" = "announce_capabilities"
+"discovery.query" = "discover_by_capability"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Phase 2: Germinate Toadstool (Local Compute)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "germinate_toadstool"
+depends_on = ["germinate_beardog", "germinate_songbird"]
+output = "toadstool_genesis"
+capabilities = ["compute", "workload", "orchestration", "ai_local"]
+
+[nodes.primal]
+by_capability = "compute"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "nat0"
+
+[nodes.operation.environment]
+# XDG-compliant socket path
+SOCKET_PATH = "/run/user/1000/biomeos/toadstool-node-alpha.sock"
+# Security provider for authenticated operations
+BEARDOG_SOCKET = "/run/user/1000/biomeos/beardog-node-alpha.sock"
+# Discovery via Songbird
+SONGBIRD_SOCKET = "/run/user/1000/biomeos/songbird-node-alpha.sock"
+RUST_LOG = "toadstool=info"
+
+[nodes.constraints]
+timeout_ms = 45000  # May need GPU initialization
+
+# Toadstool Capability Translations
+[nodes.capabilities_provided]
+# Core Toadstool methods
+"compute.health" = "toadstool.health"
+"compute.version" = "toadstool.version"
+"compute.capabilities" = "toadstool.query_capabilities"
+# Collaborative Intelligence - Resource Estimation
+"compute.estimate" = "resources.estimate"
+"compute.validate" = "resources.validate_availability"
+"compute.optimize" = "resources.suggest_optimizations"
+# AI Provider - Local Compute
+"ai.local_inference" = "resources.estimate"
+"ai.local_execute" = "resources.validate_availability"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Phase 3: Validate Node Atomic
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "validate_node_atomic"
+depends_on = ["germinate_beardog", "germinate_songbird", "germinate_toadstool"]
+output = "node_validated"
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.operation.params]
+check_beardog = true
+check_songbird = true
+check_toadstool = true
+timeout_seconds = 15
+
+[nodes.constraints]
+timeout_ms = 20000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Optional: Register Squirrel (AI Orchestration)
+# Squirrel can route to Toadstool for local inference or Anthropic for cloud
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "register_squirrel"
+output = "squirrel_registered"
+capabilities = ["ai", "inference", "learning"]
+
+[nodes.primal]
+by_capability = "ai"
+
+[nodes.operation]
+name = "register_only"
+
+[nodes.operation.params]
+family_id = "nat0"
+
+[nodes.capabilities_provided]
+"ai.query" = "query_ai"
+"ai.list_providers" = "list_providers"
+"ai.health" = "health"
+
