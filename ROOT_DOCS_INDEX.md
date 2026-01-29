@@ -10,7 +10,7 @@
 **Mobile/Hardware**: 📱 **Architecture Complete** - Pixel 8a + SoloKey designed  
 **Deep Debt**: ✅ **Complete** - 0 TODOs, 0 unsafe, XDG-compliant  
 **Handoffs**: 📋 **7 Active** - Songbird, BearDog, Squirrel, NestGate  
-**Tests**: 277+ passing | **Crates**: 21 | **Lines**: ~111k | **Unsafe**: 0
+**Tests**: 1141+ passing (108 suites) | **Crates**: 21 | **Lines**: ~111k | **Unsafe**: 0
 
 ---
 
@@ -24,6 +24,13 @@
 ---
 
 ## 🏆 **Latest Session Achievements**
+
+### January 29, 2026 (Late) - Concurrent-First Design ✅
+- **Socket Timeouts** - All socket reads now have bounded timeouts (30-60s)
+- **Fixed Files** - `biomeos-nucleus/client.rs`, `http_client.rs`, `dark_forest.rs`, `device_management_server.rs`
+- **Pattern**: `timeout(Duration, socket.read(...)).await`
+- **Test Suites**: 108 suites, 1141+ tests passing
+- **Serial Tests**: Only for chaos tests (working directory races)
 
 ### January 29, 2026 (Evening) - Mobile & Hardware Anchor Architecture ✅
 - **Pixel 8a Integration** - Complete deployment architecture designed
@@ -292,7 +299,7 @@ echo '{"jsonrpc":"2.0","method":"federation.verify_family_member","params":{
 ### Build & Test
 ```bash
 cargo build --release --workspace
-cargo test --workspace  # 400+ tests, 106 suites
+cargo test --workspace  # 1141+ tests, 108 suites
 ```
 
 ---
@@ -314,7 +321,7 @@ cargo test --workspace  # 400+ tests, 106 suites
 | **Nest Atomic** | NestGate JSON-RPC | 🟡 Persistence pending |
 | **Socket Discovery** | XDG-compliant | ✅ No hardcoding |
 | **LiveSpore** | Dual USB Ready | ✅ Federation tested |
-| **Tests Passing** | 277+ | ✅ |
+| **Tests Passing** | 1141+ | ✅ |
 | **Crates** | 21 | ✅ |
 | **Lines of Code** | ~111k | ✅ |
 | **Rust Files** | 369 | ✅ |
@@ -340,7 +347,7 @@ cargo test --workspace  # 400+ tests, 106 suites
 
 ---
 
-**Status**: ✅ Production Ready | **TLS**: 93% | **Tests**: 277+ | **Deep Debt**: ✅ Complete
+**Status**: ✅ Production Ready | **TLS**: 93% | **Tests**: 1141+ | **Deep Debt**: ✅ Complete
 
 *Start with [START_HERE.md](START_HERE.md) for quick orientation*
 

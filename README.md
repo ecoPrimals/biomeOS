@@ -26,7 +26,7 @@
 | **TLS 1.3 Success** | 93% |
 | **Web Compatibility** | 96% |
 | **Pure Rust** | 100% |
-| **Tests Passing** | 277+ |
+| **Tests Passing** | 1141+ |
 | **AI E2E Latency** | 560ms avg (Anthropic) |
 | **HTTPS Latency** | 366ms avg |
 | **Songbird** | v8.14.0 (HTTP headers, dual-mode) |
@@ -185,7 +185,7 @@ Germinating → Incubating → Active ↔ Degraded → Apoptosis → Dead
 ## 🧪 Testing
 
 ```bash
-# Run all tests (400+ passing, 106 suites)
+# Run all tests (1141+ passing, 108 suites)
 cargo test --workspace
 
 # Run specific integration tests
@@ -199,9 +199,10 @@ cargo llvm-cov --workspace
 
 All tests follow modern concurrent Rust patterns:
 - ✅ No `sleep()` for readiness - use `oneshot` channels
-- ✅ Timeouts on all network calls
+- ✅ Timeouts on all socket reads (30-60s bounds)
 - ✅ RAII guards for global state cleanup
 - ✅ Proper async/await throughout
+- ✅ Serial tests only for chaos scenarios
 
 ---
 
@@ -242,7 +243,8 @@ See [LICENSE](LICENSE) for details.
 | Metric | Value |
 |--------|-------|
 | **Crates** | 21 |
-| **Tests Passing** | 277+ |
+| **Tests Passing** | 1141+ |
+| **Test Suites** | 108 |
 | **Rust Files** | 369 |
 | **Lines of Code** | ~111k |
 | **Largest File** | <1000 lines (smart refactored) |
@@ -252,6 +254,7 @@ See [LICENSE](LICENSE) for details.
 | **TODOs/FIXMEs** | 0 |
 | **Mocks in Production** | 0 (all in `#[cfg(test)]`) |
 | **Hardcoded Paths** | 0 (XDG-compliant) |
+| **Socket Timeouts** | All reads bounded (30-60s) |
 
 ---
 
@@ -352,7 +355,7 @@ See `docs/handoffs/` for detailed specifications.
 
 ---
 
-**Status**: ✅ Production Ready | **TLS**: 93% | **Pure Rust**: 100% | **Tests**: 277+ | **Handoffs**: 7
+**Status**: ✅ Production Ready | **TLS**: 93% | **Pure Rust**: 100% | **Tests**: 1141+ | **Handoffs**: 7
 
 🎉 **biomeOS: Autonomous Compute Through Semantic Evolution**
 
