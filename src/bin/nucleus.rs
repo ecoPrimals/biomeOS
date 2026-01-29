@@ -10,6 +10,7 @@ use anyhow::{Context, Result};
 use biomeos_atomic_deploy::neural_api_server::NeuralApiServer;
 use biomeos_atomic_deploy::neural_executor::GraphExecutor;
 use biomeos_atomic_deploy::neural_graph::Graph;
+use biomeos_core::family_discovery;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use tracing::{info, warn};
@@ -30,12 +31,14 @@ async fn main() -> Result<()> {
     let mode = args.get(1).map(|s| s.as_str()).unwrap_or("deploy");
 
     // Parse command-line arguments
+    // Family ID: CLI arg > FAMILY_ID env > .family.seed file discovery
+    // NOTE: Removed "nat0" hardcoding - use proper Dark Forest family discovery
     let family_id = args
         .iter()
         .position(|arg| arg == "--family")
         .and_then(|i| args.get(i + 1))
         .cloned()
-        .unwrap_or_else(|| std::env::var("FAMILY_ID").unwrap_or_else(|_| "nat0".to_string()));
+        .unwrap_or_else(family_discovery::get_family_id);
 
     let graph_path = args
         .iter()
@@ -66,14 +69,14 @@ async fn main() -> Result<()> {
             eprintln!("  all       Deploy and launch everything");
             eprintln!();
             eprintln!("Options:");
-            eprintln!("  --family FAMILY_ID    Genetic family ID (default: nat0)");
+            eprintln!("  --family FAMILY_ID    Genetic family ID (auto-discovered from .family.seed)");
             eprintln!(
                 "  --graph PATH          Graph definition (default: graphs/nucleus_ecosystem.toml)"
             );
             eprintln!();
             eprintln!("Examples:");
-            eprintln!("  {} deploy --family nat0", args[0]);
-            eprintln!("  {} serve --family nat0", args[0]);
+            eprintln!("  {} deploy", args[0]);
+            eprintln!("  {} serve --family cf7e8729dc4ff05f", args[0]);
             eprintln!("  {} deploy --graph graphs/nucleus_ecosystem.toml", args[0]);
             std::process::exit(1);
         }

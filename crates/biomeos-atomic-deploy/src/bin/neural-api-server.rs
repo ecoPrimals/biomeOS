@@ -7,11 +7,12 @@
 //!
 //! Options:
 //!   --graphs-dir <PATH>    Directory containing graph TOML files (default: ./graphs)
-//!   --family-id <ID>       Family ID for this instance (default: nat0)
-//!   --socket <PATH>        Unix socket path (default: /tmp/neural-api-{family}.sock)
+//!   --family-id <ID>       Family ID for this instance (auto-discovered from .family.seed or env)
+//!   --socket <PATH>        Unix socket path (default: /run/user/{uid}/biomeos/neural-api-{family}.sock)
 
 use anyhow::{Context, Result};
 use biomeos_atomic_deploy::neural_api_server::NeuralApiServer;
+use biomeos_core::family_discovery;
 use std::path::PathBuf;
 use tracing::info;
 
@@ -31,10 +32,12 @@ async fn main() -> Result<()> {
         .and_then(|i| std::env::args().nth(i + 1))
         .unwrap_or_else(|| "graphs".to_string());
 
+    // Family ID: CLI arg > env var > .family.seed file > "default"
+    // NOTE: Removed "nat0" hardcoding - use proper Dark Forest family discovery
     let family_id = std::env::args()
         .position(|arg| arg == "--family-id")
         .and_then(|i| std::env::args().nth(i + 1))
-        .unwrap_or_else(|| "nat0".to_string());
+        .unwrap_or_else(|| family_discovery::get_family_id());
 
     let socket_path = std::env::args()
         .position(|arg| arg == "--socket")

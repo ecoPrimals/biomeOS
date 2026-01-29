@@ -33,7 +33,7 @@ name = "start"
 
 [nodes.operation.params]
 mode = "server"
-family_id = "nat0"
+family_id = "${FAMILY_ID}"
 
 [nodes.operation.environment]
 RUST_LOG = "beardog=info"
@@ -114,7 +114,7 @@ name = "start"
 
 [nodes.operation.params]
 mode = "server"
-family_id = "nat0"
+family_id = "${FAMILY_ID}"
 
 [nodes.operation.environment]
 NEURAL_API_SOCKET = "/tmp/neural-api.sock"
@@ -150,7 +150,7 @@ name = "start"
 
 [nodes.operation.params]
 mode = "server"
-family_id = "nat0"
+family_id = "${FAMILY_ID}"
 
 [nodes.operation.environment]
 TOADSTOOL_FAMILY_ID = "nat0"
@@ -190,7 +190,7 @@ name = "start"
 
 [nodes.operation.params]
 mode = "server"
-family_id = "nat0"
+family_id = "${FAMILY_ID}"
 
 [nodes.operation.environment]
 CAPABILITY_REGISTRY_SOCKET = "/tmp/neural-api.sock"

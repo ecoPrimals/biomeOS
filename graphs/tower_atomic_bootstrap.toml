@@ -31,7 +31,7 @@ name = "start"
 
 [nodes.operation.params]
 mode = "server"
-family_id = "nat0"  # Can be overridden by executor
+family_id = "${FAMILY_ID}"  # Can be overridden by executor
 
 [nodes.operation.environment]
 RUST_LOG = "beardog_tunnel=info"  # Enable BearDog v0.18.0 enhanced debug logging (uses info! level)
@@ -147,7 +147,7 @@ name = "start"
 
 [nodes.operation.params]
 mode = "server"
-family_id = "nat0"
+family_id = "${FAMILY_ID}"
 
 # Environment variables for Songbird
 [nodes.operation.environment]
@@ -188,7 +188,7 @@ by_capability = "ai"
 name = "register_only"
 
 [nodes.operation.params]
-family_id = "nat0"
+family_id = "${FAMILY_ID}"
 
 # Squirrel uses simple method names (no prefix needed)
 [nodes.capabilities_provided]
@@ -214,7 +214,7 @@ by_capability = "compute"
 name = "register_only"
 
 [nodes.operation.params]
-family_id = "nat0"
+family_id = "${FAMILY_ID}"
 
 # Toadstool uses toadstool. prefix for core, resources. for compute orchestration
 [nodes.capabilities_provided]

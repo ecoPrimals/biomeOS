@@ -44,7 +44,7 @@ name = "start"
 
 [nodes.operation.params]
 mode = "server"
-family_id = "nat0"
+family_id = "${FAMILY_ID}"
 
 [nodes.operation.environment]
 RUST_LOG = "beardog=info"
@@ -81,7 +81,7 @@ name = "start"
 
 [nodes.operation.params]
 mode = "server"
-family_id = "nat0"
+family_id = "${FAMILY_ID}"
 
 [nodes.operation.environment]
 NEURAL_API_SOCKET = "/run/user/1000/biomeos/neural-api-nat0.sock"
@@ -135,7 +135,7 @@ name = "start"
 
 [nodes.operation.params]
 mode = "server"
-family_id = "nat0"
+family_id = "${FAMILY_ID}"
 
 [nodes.operation.environment]
 TOADSTOOL_SOCKET = "/run/user/1000/biomeos/toadstool-nat0.sock"
@@ -191,7 +191,7 @@ name = "start"
 
 [nodes.operation.params]
 mode = "server"
-family_id = "nat0"
+family_id = "${FAMILY_ID}"
 provenance_enabled = true
 
 [nodes.operation.environment]
@@ -244,7 +244,7 @@ by_capability = "ai"
 name = "register_only"
 
 [nodes.operation.params]
-family_id = "nat0"
+family_id = "${FAMILY_ID}"
 
 [nodes.capabilities_provided]
 "ai.query" = "query_ai"

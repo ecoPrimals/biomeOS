@@ -37,7 +37,7 @@ name = "start"
 
 [nodes.operation.params]
 mode = "server"  # Crypto operations server
-family_id = "nat0"
+family_id = "${FAMILY_ID}"
 
 [nodes.constraints]
 timeout_ms = 30000
@@ -99,7 +99,7 @@ name = "start"
 
 [nodes.operation.params]
 mode = "server"  # Discovery + HTTP gateway
-family_id = "nat0"
+family_id = "${FAMILY_ID}"
 
 # Environment variables for Songbird
 [nodes.operation.environment]

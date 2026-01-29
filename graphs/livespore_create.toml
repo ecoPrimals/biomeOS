@@ -32,7 +32,7 @@ version = "1.0.0"
 description = "Create a new LiveSpore deployment on removable media with genetic lineage"
 
 [graph.metadata]
-family_id = "nat0"
+family_id = "${FAMILY_ID}"
 author = "biomeOS"
 created = "2026-01-27"
 category = "deployment"
@@ -311,7 +311,7 @@ template = """
 
 [tower]
 node_id = "${NODE_ID}"
-family_id = "nat0"
+family_id = "${FAMILY_ID}"
 deployment_mode = "live_spore"
 
 [tower.sockets]

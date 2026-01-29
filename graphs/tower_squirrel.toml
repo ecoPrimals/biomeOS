@@ -43,7 +43,7 @@ name = "start"
 
 [nodes.operation.params]
 mode = "server"
-family_id = "nat0"
+family_id = "${FAMILY_ID}"
 
 [nodes.constraints]
 timeout_ms = 30000
@@ -60,7 +60,7 @@ name = "start"
 
 [nodes.operation.params]
 mode = "server"
-family_id = "nat0"
+family_id = "${FAMILY_ID}"
 
 [nodes.constraints]
 timeout_ms = 30000
@@ -86,7 +86,7 @@ name = "start"
 
 [nodes.operation.params]
 mode = "server"
-family_id = "nat0"
+family_id = "${FAMILY_ID}"
 # Squirrel will auto-discover:
 # - Songbird (for service discovery via capability registry)
 # - BearDog (for security, via Songbird)

@@ -43,7 +43,7 @@ version = "1.0.0"
 description = "Cryptographically verify genetic lineage between two spores via BearDog"
 
 [graph.metadata]
-family_id = "nat0"
+family_id = "${FAMILY_ID}"
 author = "biomeOS"
 created = "2026-01-27"
 category = "federation"

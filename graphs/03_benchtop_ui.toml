@@ -10,7 +10,7 @@ version = "1.0.0"
 description = "Deploy PetalTongue as universal UI for discovering, monitoring, and controlling all primals"
 
 [graph.metadata]
-family_id = "nat0"
+family_id = "${FAMILY_ID}"
 deployment_type = "benchtop_ui"
 requires_nucleus = true
 requires_security = true
@@ -25,7 +25,7 @@ description = "Launch PetalTongue benchTop UI (headless mode for server deployme
 [nodes.config]
 primal_name = "petal-tongue-headless"
 binary_path = "plasmidBin/primals/petal-tongue-headless"
-family_id = "nat0"
+family_id = "${FAMILY_ID}"
 socket_path = "/tmp/petaltongue-nat0.sock"
 capabilities = ["visualization", "ui", "sensory", "real_time_events"]
 startup_timeout_seconds = 30

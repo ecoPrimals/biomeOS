@@ -34,7 +34,7 @@ name = "start"
 
 [nodes.operation.params]
 mode = "server"
-family_id = "nat0"
+family_id = "${FAMILY_ID}"
 
 [nodes.operation.environment]
 RUST_LOG = "beardog_tunnel=info"
@@ -66,7 +66,7 @@ name = "start"
 
 [nodes.operation.params]
 mode = "server"
-family_id = "nat0"
+family_id = "${FAMILY_ID}"
 
 [nodes.operation.environment]
 NEURAL_API_SOCKET = "/run/user/1000/biomeos/neural-api-node-alpha.sock"
@@ -102,7 +102,7 @@ name = "start"
 
 [nodes.operation.params]
 mode = "server"
-family_id = "nat0"
+family_id = "${FAMILY_ID}"
 
 [nodes.operation.environment]
 # XDG-compliant socket path
@@ -168,7 +168,7 @@ by_capability = "ai"
 name = "register_only"
 
 [nodes.operation.params]
-family_id = "nat0"
+family_id = "${FAMILY_ID}"
 
 [nodes.capabilities_provided]
 "ai.query" = "query_ai"

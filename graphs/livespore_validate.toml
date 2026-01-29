@@ -41,7 +41,7 @@ version = "1.0.0"
 description = "Deterministic validation and update protocol for USB spores"
 
 [graph.metadata]
-family_id = "nat0"
+family_id = "${FAMILY_ID}"
 author = "biomeOS"
 created = "2026-01-27"
 category = "deployment"

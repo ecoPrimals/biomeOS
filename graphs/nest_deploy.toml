@@ -46,7 +46,7 @@ name = "start"
 
 [nodes.operation.params]
 mode = "data-vault"  # Optimized for nest storage
-family_id = "nat0"
+family_id = "${FAMILY_ID}"
 
 [nodes.constraints]
 timeout_ms = 30000
@@ -76,7 +76,7 @@ name = "start"
 
 [nodes.operation.params]
 mode = "daemon"
-family_id = "nat0"
+family_id = "${FAMILY_ID}"
 # Songbird will auto-discover BearDog via capability-based discovery
 
 [nodes.constraints]
@@ -109,7 +109,7 @@ name = "start"
 
 [nodes.operation.params]
 mode = "daemon"
-family_id = "nat0"
+family_id = "${FAMILY_ID}"
 provenance_enabled = true
 # NestGate will:
 # 1. Discover Songbird via $SONGBIRD_FAMILY_ID

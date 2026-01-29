@@ -11,7 +11,7 @@ version = "1.0.0"
 description = "Deploy BearDog and Squirrel on top of NUCLEUS enclave"
 
 [graph.metadata]
-family_id = "nat0"
+family_id = "${FAMILY_ID}"
 deployment_type = "security_intelligence"
 requires_nucleus = true
 security_level = "maximum"
@@ -25,7 +25,7 @@ description = "Launch BearDog for crypto, trust, and genetic lineage"
 [nodes.config]
 primal_name = "beardog-server"
 binary_path = "plasmidBin/primals/beardog-server"
-family_id = "nat0"
+family_id = "${FAMILY_ID}"
 socket_path = "/tmp/beardog-nat0-default.sock"
 capabilities = ["security", "crypto", "trust", "genetic_lineage"]
 startup_timeout_seconds = 30
@@ -48,7 +48,7 @@ depends_on = ["launch_beardog"]
 [nodes.config]
 primal_name = "squirrel"
 binary_path = "plasmidBin/primals/squirrel"
-family_id = "nat0"
+family_id = "${FAMILY_ID}"
 socket_path = "/tmp/squirrel-nat0.sock"
 capabilities = ["meta_ai", "ai_routing", "tool_orchestration", "mcp"]
 startup_timeout_seconds = 30

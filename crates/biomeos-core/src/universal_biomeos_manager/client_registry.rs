@@ -9,6 +9,7 @@ use tokio::sync::RwLock;
 
 use crate::clients::*;
 use crate::discovery_bootstrap::DiscoveryBootstrap;
+use crate::family_discovery;
 use crate::primal_client::PrimalClient;
 use biomeos_types::constants::capabilities;
 
@@ -67,8 +68,8 @@ impl ClientRegistry {
                 tracing::info!("✅ Found universal adapter, initializing Songbird client...");
 
                 // Initialize Songbird client using capability-based discovery
-                // Note: We assume family_id from environment or use default "nat0"
-                let family_id = std::env::var("FAMILY_ID").unwrap_or_else(|_| "nat0".to_string());
+                // Family ID discovered from .family.seed or environment
+                let family_id = family_discovery::get_family_id();
                 
                 match SongbirdClient::discover(&family_id).await {
                     Ok(songbird_client) => {
@@ -104,7 +105,7 @@ impl ClientRegistry {
         if let Ok(services) = songbird.discover_by_capability(capabilities::COMPUTE).await {
             if !services.is_empty() {
                 // Use capability-based discovery instead of hardcoded endpoint
-                let family_id = std::env::var("FAMILY_ID").unwrap_or_else(|_| "nat0".to_string());
+                let family_id = family_discovery::get_family_id();
                 match ToadStoolClient::discover(&family_id).await {
                     Ok(client) => {
                         *self.toadstool.write().await = Some(client);
@@ -123,7 +124,7 @@ impl ClientRegistry {
         if let Ok(services) = songbird.discover_by_capability(capabilities::AI).await {
             if !services.is_empty() {
                 // Use capability-based discovery instead of hardcoded endpoint
-                let family_id = std::env::var("FAMILY_ID").unwrap_or_else(|_| "nat0".to_string());
+                let family_id = family_discovery::get_family_id();
                 match SquirrelClient::discover(&family_id).await {
                     Ok(client) => {
                         *self.squirrel.write().await = Some(client);
@@ -142,7 +143,7 @@ impl ClientRegistry {
         if let Ok(services) = songbird.discover_by_capability(capabilities::STORAGE).await {
             if !services.is_empty() {
                 // Use capability-based discovery instead of hardcoded endpoint
-                let family_id = std::env::var("FAMILY_ID").unwrap_or_else(|_| "nat0".to_string());
+                let family_id = family_discovery::get_family_id();
                 match NestGateClient::discover(&family_id).await {
                     Ok(client) => {
                         *self.nestgate.write().await = Some(client);
@@ -164,7 +165,7 @@ impl ClientRegistry {
         {
             if !services.is_empty() {
                 // Use capability-based discovery instead of hardcoded endpoint
-                let family_id = std::env::var("FAMILY_ID").unwrap_or_else(|_| "nat0".to_string());
+                let family_id = family_discovery::get_family_id();
                 match BearDogClient::discover(&family_id).await {
                     Ok(client) => {
                         *self.beardog.write().await = Some(client);
