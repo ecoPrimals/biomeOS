@@ -1,35 +1,32 @@
-vm-testing/*.qcow2
-*.log
 
-# Rust build artifacts
-/target/
-target/
-**/*.rs.bk
-*.pdb
-
-# Coverage
-*.profraw
-*.profdata
-/coverage/
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
 *~
-vm-images/*.img
-*.qcow2
+/coverage/
+# Coverage
+# EXCEPT: Keep structure and version manifest
+# IDE
+.idea/
 *.iso
-
+*.log
+*.pdb
+plasmidBin/archive/**/*
+!plasmidBin/archive/.gitkeep
+!plasmidBin/MANIFEST.md
+plasmidBin/neural-api-server
+plasmidBin/primals/*
+!plasmidBin/primals/.gitkeep
 # PlasmidBin - Stable deployment binaries (not tracked in git)
 plasmidBin/tower/*
-plasmidBin/primals/*
-plasmidBin/archive/**/*
-
-# EXCEPT: Keep structure and version manifest
 !plasmidBin/tower/.gitkeep
-!plasmidBin/primals/.gitkeep
-!plasmidBin/archive/.gitkeep
 !plasmidBin/VERSION.txt
-!plasmidBin/MANIFEST.md
+*.profdata
+*.profraw
+*.qcow2
+**/*.rs.bk
+# Rust build artifacts
+*.swo
+*.swp
+/target/
+target/
+vm-images/*.img
+vm-testing/*.qcow2
+.vscode/
