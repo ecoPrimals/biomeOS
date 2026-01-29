@@ -3,10 +3,11 @@
 **Last Updated**: January 29, 2026  
 **Status**: 🎉 **PRODUCTION READY** - Pure Rust TLS 1.3  
 **Tower Atomic**: 93% TLS Success (87 sites), 96% Web Compatibility  
-**Performance**: 366ms avg HTTPS latency (benchmarked)  
+**Multi-AI**: ✅ **9/9 Tests** (Anthropic, OpenAI, HuggingFace, Toadstool)  
+**Performance**: 560ms avg AI E2E latency, 366ms HTTPS  
+**NUCLEUS**: Tower + Node + Nest Atomics Complete  
 **Protocol Escalation**: ✅ **Phase 1 Complete** - Living Graph + JSON-RPC APIs  
-**NUCLEUS**: Lifecycle management complete (resurrection, apoptosis)  
-**LiveSpore**: Genetic Lineage Federation Ready  
+**LiveSpore**: Dual USB Spore Deployment Ready  
 **Deep Debt**: ✅ **COMPLETE** - 0 TODOs, 0 unsafe, XDG-compliant  
 **Tests**: 277+ passing | **Crates**: 21 | **Lines**: ~111k | **Unsafe**: 0
 
@@ -45,19 +46,23 @@
 
 | Component | Version | Status | Capabilities |
 |-----------|---------|--------|--------------|
-| **biomeOS** | `eb92130` | ✅ 100% | Graph deployment, capability.call, lifecycle, Living Graph |
+| **biomeOS** | Latest | ✅ 100% | Graph deployment, capability.call, lifecycle, Living Graph |
 | **Neural API** | `master` | ✅ 100% | 74 semantic mappings, lifecycle, protocol escalation |
 | **BearDog** | `0.9.0` | ✅ 100% | SHA-256, SHA-384, AES-GCM, X25519 |
-| **Songbird** | `3.33.0` | ✅ 100% | TLS 1.3, HTTP headers, dual-mode, STUN |
-| **Squirrel** | `0.1.0` | ✅ 100% | AI providers (Anthropic, OpenAI), HTTP delegation |
+| **Songbird** | `v8.14.0` | ✅ 100% | TLS 1.3, HTTP headers, dual-mode, STUN |
+| **Squirrel** | `28e59176` | ✅ 100% | AI providers (Anthropic, OpenAI, HuggingFace) |
+| **Toadstool** | `fd3190e8` | ✅ 100% | Local compute, GPU scheduling, JSON-RPC dual format |
+| **NestGate** | Latest | 🟡 90% | JSON-RPC storage (persistence pending) |
 
-### Performance (Benchmarked Jan 28-29, 2026)
+### Performance (Benchmarked Jan 29, 2026)
 | Metric | Value |
 |--------|-------|
+| **AI E2E Latency** | 560ms avg (to Anthropic API) |
 | **HTTPS Latency** | 366ms avg (to api.github.com) |
-| **Success Rate** | 100% |
+| **Local Compute** | 56ms (Toadstool health) |
+| **Success Rate** | 100% (9/9 AI tests) |
 | **Crypto Calls/TLS** | ~12 via JSON-RPC |
-| **Tower Atomic Local** | ✅ Fully validated |
+| **Tower + Node** | ✅ Fully validated |
 
 ---
 
@@ -149,9 +154,11 @@ echo '{"jsonrpc":"2.0","method":"lifecycle.shutdown_all","id":1}' | nc -U /tmp/n
 
 ### Handoffs
 - **`docs/handoffs/PRIMAL_TARPC_EVOLUTION_HANDOFF.md`** ⭐ - tarpc guide for all primals
+- **`docs/handoffs/NESTGATE_PERSISTENCE_HANDOFF.md`** ⭐ - Storage persistence evolution
 - **`docs/handoffs/SONGBIRD_EVOLUTION_HANDOFF.md`** - HTTP headers complete, TLS
-- **`docs/handoffs/SONGBIRD_LAN_DISCOVERY_HANDOFF.md`** - LAN discovery evolution
-- **`docs/handoffs/SQUIRREL_EVOLUTION_HANDOFF.md`** - AI primal evolution
+- **`docs/handoffs/SONGBIRD_STUN_RENDEZVOUS_HANDOFF.md`** - STUN JSON-RPC exposure
+- **`docs/handoffs/SQUIRREL_HTTP_BODY_PARSING_HANDOFF.md`** - HTTP body parsing
+- **`docs/handoffs/TOADSTOOL_JSONRPC_HANDOFF.md`** ✅ - JSON-RPC dual format (FIXED)
 
 ---
 
@@ -237,7 +244,8 @@ let socket = discovery.discover_socket("crypto").await?;
 
 ### 🔄 External Handoffs (Awaiting Teams)
 - Songbird: TLS 1.2 fallback (npm, Jenkins, 7% remaining)
-- Toadstool: Socket binding crash fix
+- Songbird: STUN methods JSON-RPC exposure
+- NestGate: Storage persistence configuration
 - LAN Federation: Deploy v8.14.0 to other towers
 
 ### 📋 Next: Protocol Escalation Phase 2-4
