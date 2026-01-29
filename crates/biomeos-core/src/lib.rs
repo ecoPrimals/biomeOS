@@ -22,6 +22,7 @@ pub mod socket_discovery; // Capability-based socket discovery (replaces hardcod
 pub mod discovery_bootstrap;
 pub mod discovery_modern; // Modern trait-based discovery
 pub mod family_credentials; // Secure family seed management
+pub mod family_discovery; // Dynamic family ID discovery (replaces nat0 hardcoding)
 pub mod primal_discovery; // Auto-discovery of primals from directories
 pub mod primal_impls; // Concrete primal implementations
 pub mod primal_orchestrator; // Async primal lifecycle orchestration

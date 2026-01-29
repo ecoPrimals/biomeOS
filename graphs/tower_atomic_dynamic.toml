@@ -1,0 +1,179 @@
+# Tower Atomic Bootstrap - Dynamic Family Discovery
+# 
+# This graph uses environment variable substitution for family ID
+# instead of hardcoded "nat0". Deploy by setting FAMILY_ID:
+#
+#   FAMILY_ID=$(xxd -p .family.seed | head -c 16) ./deploy.sh
+#
+# Or for USB LiveSpores, the launcher script reads from .family.seed
+
+[graph]
+id = "tower_atomic_dynamic"
+description = "Tower Atomic (BearDog + Songbird + Neural API) with Dynamic Family Discovery"
+coordination = "Sequential"
+
+# Family ID comes from environment - NEVER hardcode!
+# Priority: FAMILY_ID env > BIOMEOS_FAMILY_ID env > .family.seed file
+
+# ============================================================================
+# Phase 1: Start BearDog (Security Foundation)
+# ============================================================================
+[[nodes]]
+id = "germinate_beardog"
+depends_on = []
+output = "beardog_genesis"
+capabilities = ["crypto", "security", "tls_crypto", "lineage"]
+
+[nodes.primal]
+by_capability = "crypto"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+
+[nodes.operation.environment]
+# Dynamic socket path using XDG and family ID from env
+SOCKET_PATH = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
+RUST_LOG = "beardog=info"
+# Family ID read from env - NOT hardcoded
+# FAMILY_ID must be set before graph execution
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[nodes.capabilities_provided]
+"crypto" = "crypto"
+"crypto.sha256" = "crypto.sha256"
+"crypto.sha384" = "crypto.sha384"
+"crypto.aes128_gcm_encrypt" = "crypto.aes128_gcm_encrypt"
+"crypto.aes128_gcm_decrypt" = "crypto.aes128_gcm_decrypt"
+"crypto.aes256_gcm_encrypt" = "crypto.aes256_gcm_encrypt"
+"crypto.aes256_gcm_decrypt" = "crypto.aes256_gcm_decrypt"
+"crypto.x25519_generate_ephemeral" = "crypto.x25519_generate_ephemeral"
+"crypto.x25519_derive_secret" = "crypto.x25519_derive_secret"
+"crypto.hash_for_cipher" = "crypto.hash_for_cipher"
+"tls_crypto" = "tls_crypto"
+"tls_crypto.derive_handshake_secrets" = "tls_crypto.derive_handshake_secrets"
+"tls_crypto.derive_application_secrets" = "tls_crypto.derive_application_secrets"
+"tls_crypto.compute_finished_verify_data" = "tls_crypto.compute_finished_verify_data"
+"lineage" = "lineage"
+"federation.verify_family_member" = "federation.verify_family_member"
+
+# ============================================================================
+# Phase 2: Start Songbird (Network Layer - depends on BearDog for crypto)
+# ============================================================================
+[[nodes]]
+id = "germinate_songbird"
+depends_on = ["germinate_beardog"]
+output = "songbird_genesis"
+capabilities = ["http", "tls", "discovery", "secure_http", "federation"]
+
+[nodes.primal]
+by_capability = "http"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+
+[nodes.operation.environment]
+# Dynamic paths
+SOCKET_PATH = "${XDG_RUNTIME_DIR}/biomeos/songbird-${FAMILY_ID}.sock"
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
+SONGBIRD_SECURITY_PROVIDER = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
+NEURAL_API_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/neural-api-${FAMILY_ID}.sock"
+# Use port 8080 for discovery beacons (required when discovery.mode is enabled)
+SONGBIRD_PORT = "8080"
+RUST_LOG = "songbird=info"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[nodes.capabilities_provided]
+"http" = "http"
+"http.request" = "http.request"
+"http.get" = "http.request"
+"http.post" = "http.request"
+"tls" = "tls"
+"secure_http" = "http.request"
+"discovery" = "discovery"
+"discovery.beacon" = "discovery.beacon"
+"federation" = "federation"
+"birdsong.encrypt" = "birdsong.encrypt"
+"birdsong.decrypt" = "birdsong.decrypt"
+
+# ============================================================================
+# Phase 3: Validate Tower Atomic (BearDog + Songbird)
+# ============================================================================
+[[nodes]]
+id = "validate_tower"
+depends_on = ["germinate_beardog", "germinate_songbird"]
+output = "tower_validated"
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.operation.params]
+check_beardog = true
+check_songbird = true
+timeout_seconds = 30
+
+[nodes.constraints]
+timeout_ms = 45000
+
+# ============================================================================
+# Phase 4: Start Squirrel (AI Router - Optional for full stack)
+# ============================================================================
+[[nodes]]
+id = "germinate_squirrel"
+depends_on = ["validate_tower"]
+output = "squirrel_genesis"
+capabilities = ["ai", "ai_routing"]
+
+[nodes.primal]
+by_capability = "ai"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+
+[nodes.operation.environment]
+# Dynamic paths
+SOCKET_PATH = "${XDG_RUNTIME_DIR}/biomeos/squirrel-${FAMILY_ID}.sock"
+SONGBIRD_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/songbird-${FAMILY_ID}.sock"
+HTTP_REQUEST_PROVIDER_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/songbird-${FAMILY_ID}.sock"
+NEURAL_API_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/neural-api-${FAMILY_ID}.sock"
+RUST_LOG = "squirrel=info"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[nodes.capabilities_provided]
+"ai" = "ai"
+"ai.query" = "query_ai"
+"ai.generate" = "query_ai"
+
+# ============================================================================
+# Metadata
+# ============================================================================
+[metadata]
+version = "2.0.0"
+requires_family_id = true
+description = """
+Tower Atomic with Dynamic Family Discovery.
+
+This graph REQUIRES FAMILY_ID to be set in the environment.
+Do NOT use hardcoded family IDs like 'nat0' in production.
+
+For LiveSpore USB deployments:
+  export FAMILY_ID=$(xxd -p .family.seed | head -c 16)
+
+For development/testing:
+  export FAMILY_ID=test-$(hostname)-$(date +%Y%m%d)
+"""
+
