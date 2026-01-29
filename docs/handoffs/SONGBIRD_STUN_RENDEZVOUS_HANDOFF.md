@@ -1,16 +1,47 @@
 # Songbird STUN/Rendezvous JSON-RPC Handoff
 
-**Date**: January 29, 2026  
+**Date**: January 29, 2026 (Updated)  
 **From**: biomeOS Team  
 **To**: Songbird Team  
 **Priority**: High  
-**Status**: Blocking cross-spore rendezvous
+**Status**: **ROOT CAUSE IDENTIFIED** - Simple wiring fix needed
 
 ---
 
 ## Executive Summary
 
-Songbird v8.14.0 has excellent STUN infrastructure (`songbird-stun` crate) but the methods are **not exposed via JSON-RPC**, blocking biomeOS's Dark Forest rendezvous protocol for cross-spore and cross-tower communication.
+Songbird v8.18.0 has **fully implemented** STUN/Discovery handlers in `IpcServiceHandler`, but `bin_interface.rs` uses `HttpHandler` which only exposes HTTP methods. **The handlers exist - they just need to be wired in.**
+
+## Root Cause
+
+```rust
+// bin_interface.rs line ~216
+// CURRENT (only HTTP methods):
+let handler_clone = HttpHandler::with_default_discovery();
+
+// NEEDED (all methods including STUN/Discovery):
+let handler_clone = IpcServiceHandler::new(...);
+```
+
+### Implemented Methods (in IpcServiceHandler)
+
+```rust
+// crates/songbird-universal-ipc/src/service.rs lines 466-482
+"stun.get_public_address" => self.handle_stun_get_public_address(params).await,
+"stun.bind" => self.handle_stun_bind(params).await,
+"discovery.peers" => self.handle_discovery_peers(params).await,
+"rendezvous.register" => self.handle_rendezvous_register(params).await,
+"rendezvous.lookup" => self.handle_rendezvous_lookup(params).await,
+"peer.connect" => self.handle_peer_connect(params).await,
+```
+
+### The Fix (One-Line Change)
+
+In `crates/songbird-orchestrator/src/bin_interface.rs`, change the handler construction to use `IpcServiceHandler` instead of `HttpHandler`, or add the STUN/Discovery dispatch to `HttpHandler`.
+
+---
+
+## Previous Analysis (Still Valid)
 
 ## Current State
 
