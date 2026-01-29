@@ -4,11 +4,66 @@
 **From**: biomeOS Team  
 **To**: Squirrel Team  
 **Priority**: High  
-**Status**: Blocking AI Integration
+**Status**: ✅ RESOLVED (but new issue found)
 
 ---
 
-## Issue Summary
+## UPDATE: Body Parsing FIXED ✅
+
+The body parsing fix was correctly implemented in commit `6198cbc6` and subsequent commits. The Anthropic adapter now correctly handles `body` as a string.
+
+**Validation Result**: Tower Atomic → Squirrel → Anthropic working at **~630ms latency**!
+
+```json
+{"jsonrpc":"2.0","result":{"latency_ms":693,"model":"claude-3-haiku-20240307","provider":"anthropic","response":"4","success":true,"tokens_used":18},"id":1}
+```
+
+---
+
+## NEW ISSUE: Phase 4 Evolution Broke HTTP Mode
+
+The "Phase 4: Deprecate vendor adapters" commit (`a5800d26`) removed the HTTP-based adapter initialization from `router.rs`. This breaks biomeOS integration.
+
+### Current Behavior (Broken)
+
+The new `AiRouter::new_with_discovery()` only discovers `ai.complete`, `ai.chat`, etc. capabilities. It no longer initializes `AnthropicAdapter` or `OpenAiAdapter` which use `http.request` capability.
+
+### Required Behavior
+
+The router should:
+1. First try to discover `ai.xxx` capabilities (TRUE PRIMAL)
+2. **Fall back** to HTTP-based adapters if no ai.xxx providers found
+
+### Recommended Fix
+
+In `router.rs`, after the `ai.xxx` discovery fails, initialize HTTP adapters:
+
+```rust
+// If no ai.xxx providers discovered, try HTTP-based adapters
+if local_providers.is_empty() {
+    info!("🔍 Initializing capability-based HTTP adapters...");
+    
+    // Anthropic via http.request
+    if let Ok(adapter) = AnthropicAdapter::new().await {
+        if adapter.is_available().await {
+            info!("✅ Anthropic adapter available (HTTP via capability discovery)");
+            local_providers.push(Arc::new(adapter));
+        }
+    }
+    
+    // OpenAI via http.request
+    if let Ok(adapter) = OpenAiAdapter::new().await {
+        if adapter.is_available().await {
+            info!("✅ OpenAI adapter available (HTTP via capability discovery)");
+            local_providers.push(Arc::new(adapter));
+        }
+    }
+}
+```
+
+---
+
+## ORIGINAL ISSUE (Now Resolved)
 
 Squirrel's Anthropic adapter fails to parse HTTP responses from Songbird because Songbird returns the response body as a **JSON string**, but Squirrel's adapter expects a **JSON object**.
 
