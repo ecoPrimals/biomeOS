@@ -134,4 +134,29 @@ The following deep debt items have been addressed:
 
 ---
 
+## Concurrent-First Design (Jan 29, 2026)
+
+All socket reads now have bounded timeouts to prevent hangs:
+
+| File | Timeout | Context |
+|------|---------|---------|
+| `biomeos-nucleus/client.rs` | 30s | JSON-RPC socket reads |
+| `biomeos-atomic-deploy/http_client.rs` | 60s | HTTP response reads |
+| `biomeos-spore/dark_forest.rs` | 30s | Dark Forest socket reads |
+| `biomeos-ui/device_management_server.rs` | 30s | Songbird registration |
+
+**Pattern applied**:
+```rust
+timeout(Duration::from_secs(N), socket.read(...))
+    .await
+    .context("timeout message")?
+    .context("read error")?;
+```
+
+**Serial tests** remain only for:
+- Chaos tests (working directory races)
+- Tests that require exclusive file system access
+
+---
+
 *Generated: January 29, 2026 (Evening)*
