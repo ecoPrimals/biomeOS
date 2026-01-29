@@ -1,0 +1,278 @@
+# NUCLEUS Complete Deployment Graph
+# =============================================================================
+#
+# NUCLEUS = Tower + Node + Nest = Complete biomeOS System
+#
+# Architecture:
+#   Tower = BearDog + Songbird          (crypto + network)
+#   Node  = Tower + Toadstool           (crypto + network + compute)
+#   Nest  = Tower + NestGate            (crypto + network + storage)
+#   NUCLEUS = BearDog + Songbird + Toadstool + NestGate (shared security)
+#
+# ✅ STATUS: January 29, 2026
+#   - Tower Atomic: VALIDATED (BearDog TLS 1.3, Songbird HTTP)
+#   - Node Atomic: VALIDATED (Toadstool 24 cores, 2.4 TFLOPS)
+#   - Nest Atomic: PENDING (NestGate needs evolution)
+#
+# Socket Conventions (XDG-compliant):
+#   $XDG_RUNTIME_DIR/biomeos/{primal}-{family_id}.sock
+#   Example: /run/user/1000/biomeos/beardog-nat0.sock
+#
+# =============================================================================
+
+[graph]
+id = "nucleus_complete"
+version = "1.0.0"
+description = "Complete NUCLEUS: Tower + Node + Nest atomics"
+coordination = "Sequential"
+
+# =============================================================================
+# PHASE 1: TOWER ATOMIC (Crypto + Network Foundation)
+# =============================================================================
+
+# 1.1: Germinate BearDog (Security Foundation)
+[[nodes]]
+id = "tower_beardog"
+output = "beardog_genesis"
+capabilities = ["crypto", "tls_crypto", "genetic", "security"]
+
+[nodes.primal]
+by_capability = "security"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "nat0"
+
+[nodes.operation.environment]
+RUST_LOG = "beardog=info"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+# Core crypto translations
+[nodes.capabilities_provided]
+"crypto.generate_keypair" = "crypto.x25519_generate_ephemeral"
+"crypto.ecdh_derive" = "crypto.x25519_derive_secret"
+"crypto.encrypt" = "crypto.chacha20_poly1305_encrypt"
+"crypto.decrypt" = "crypto.chacha20_poly1305_decrypt"
+"x25519_generate_ephemeral" = "crypto.x25519_generate_ephemeral"
+"x25519_derive_secret" = "crypto.x25519_derive_secret"
+"aes128_gcm_encrypt" = "crypto.aes128_gcm_encrypt"
+"aes128_gcm_decrypt" = "crypto.aes128_gcm_decrypt"
+"tls_crypto.derive_handshake_secrets" = "tls.derive_handshake_secrets"
+"tls_crypto.derive_application_secrets" = "tls.derive_application_secrets"
+"tls_crypto.compute_finished_verify_data" = "tls.compute_finished_verify_data"
+
+# 1.2: Germinate Songbird (Network + Discovery)
+[[nodes]]
+id = "tower_songbird"
+depends_on = ["tower_beardog"]
+output = "songbird_genesis"
+capabilities = ["http", "discovery", "secure_http"]
+
+[nodes.primal]
+by_capability = "discovery"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "nat0"
+
+[nodes.operation.environment]
+NEURAL_API_SOCKET = "/run/user/1000/biomeos/neural-api-nat0.sock"
+BEARDOG_SOCKET = "/run/user/1000/biomeos/beardog-nat0.sock"
+SONGBIRD_SECURITY_PROVIDER = "beardog"
+RUST_LOG = "songbird=info"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[nodes.capabilities_provided]
+"http.request" = "http.request"
+"http.get" = "http.get"
+"http.post" = "http.post"
+"discovery.announce" = "announce_capabilities"
+"discovery.query" = "discover_by_capability"
+
+# 1.3: Validate Tower Atomic
+[[nodes]]
+id = "tower_validate"
+depends_on = ["tower_beardog", "tower_songbird"]
+output = "tower_validated"
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.operation.params]
+check_beardog = true
+check_songbird = true
+timeout_seconds = 10
+
+[nodes.constraints]
+timeout_ms = 15000
+
+# =============================================================================
+# PHASE 2: NODE ATOMIC (Add Compute)
+# =============================================================================
+
+# 2.1: Germinate Toadstool (Universal Compute)
+[[nodes]]
+id = "node_toadstool"
+depends_on = ["tower_validate"]
+output = "toadstool_genesis"
+capabilities = ["compute", "workload", "orchestration", "ai_local"]
+
+[nodes.primal]
+by_capability = "compute"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "nat0"
+
+[nodes.operation.environment]
+TOADSTOOL_SOCKET = "/run/user/1000/biomeos/toadstool-nat0.sock"
+BEARDOG_SOCKET = "/run/user/1000/biomeos/beardog-nat0.sock"
+SONGBIRD_SOCKET = "/run/user/1000/biomeos/songbird-nat0.sock"
+RUST_LOG = "toadstool=info"
+
+[nodes.constraints]
+timeout_ms = 45000  # GPU init may take time
+
+[nodes.capabilities_provided]
+"compute.health" = "toadstool.health"
+"compute.version" = "toadstool.version"
+"compute.capabilities" = "toadstool.query_capabilities"
+"compute.estimate" = "resources.estimate"
+"compute.validate" = "resources.validate_availability"
+"ai.local_inference" = "resources.estimate"
+
+# 2.2: Validate Node Atomic
+[[nodes]]
+id = "node_validate"
+depends_on = ["node_toadstool"]
+output = "node_validated"
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.operation.params]
+check_beardog = true
+check_songbird = true
+check_toadstool = true
+timeout_seconds = 15
+
+[nodes.constraints]
+timeout_ms = 20000
+
+# =============================================================================
+# PHASE 3: NEST ATOMIC (Add Storage) - Requires NestGate
+# =============================================================================
+
+# 3.1: Germinate NestGate (Federated Storage)
+[[nodes]]
+id = "nest_nestgate"
+depends_on = ["node_validate"]
+output = "nestgate_genesis"
+capabilities = ["storage", "provenance", "persistence"]
+
+[nodes.primal]
+by_capability = "storage"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "nat0"
+provenance_enabled = true
+
+[nodes.operation.environment]
+NESTGATE_SOCKET = "/run/user/1000/biomeos/nestgate-nat0.sock"
+BEARDOG_SOCKET = "/run/user/1000/biomeos/beardog-nat0.sock"
+SONGBIRD_SOCKET = "/run/user/1000/biomeos/songbird-nat0.sock"
+RUST_LOG = "nestgate=info"
+
+[nodes.constraints]
+timeout_ms = 60000
+
+[nodes.capabilities_provided]
+"storage.store" = "store"
+"storage.retrieve" = "retrieve"
+"storage.stats" = "stats"
+"storage.health" = "health_check"
+
+# 3.2: Validate NUCLEUS Complete
+[[nodes]]
+id = "nucleus_validate"
+depends_on = ["nest_nestgate"]
+output = "nucleus_validated"
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.operation.params]
+check_beardog = true
+check_songbird = true
+check_toadstool = true
+check_nestgate = true
+timeout_seconds = 20
+
+[nodes.constraints]
+timeout_ms = 30000
+
+# =============================================================================
+# OPTIONAL: Add AI Orchestration (Squirrel)
+# =============================================================================
+
+[[nodes]]
+id = "register_squirrel"
+output = "squirrel_registered"
+capabilities = ["ai", "inference", "learning"]
+
+[nodes.primal]
+by_capability = "ai"
+
+[nodes.operation]
+name = "register_only"
+
+[nodes.operation.params]
+family_id = "nat0"
+
+[nodes.capabilities_provided]
+"ai.query" = "query_ai"
+"ai.list_providers" = "list_providers"
+"ai.health" = "health"
+
+# =============================================================================
+# SUMMARY
+# =============================================================================
+#
+# Deployment Order:
+#   1. BearDog (crypto foundation)
+#   2. Songbird (network, bonded to BearDog)
+#   3. [Tower Validated]
+#   4. Toadstool (compute, uses Tower for security)
+#   5. [Node Validated]
+#   6. NestGate (storage, uses Tower for encryption)
+#   7. [NUCLEUS Validated]
+#   8. [Optional] Squirrel (AI routing)
+#
+# Capabilities Exposed:
+#   - crypto.* (26 methods) → BearDog
+#   - tls_crypto.* (4 methods) → BearDog
+#   - http.* (3 methods) → Songbird
+#   - discovery.* (2 methods) → Songbird
+#   - compute.* (6 methods) → Toadstool
+#   - storage.* (4 methods) → NestGate
+#   - ai.* (3 methods) → Squirrel
+#
+# =============================================================================
+
