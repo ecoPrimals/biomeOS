@@ -778,7 +778,8 @@ impl NeuralApiServer {
 
             if let Some(ref primal) = primal_name {
                 // Get family_id from operation params or use server default
-                let family_id = if let Some(operation) = &node.operation {
+                // NOTE: Supports ${VAR} substitution for isomorphic deployment
+                let family_id_raw = if let Some(operation) = &node.operation {
                     operation
                         .params
                         .get("family_id")
@@ -786,6 +787,12 @@ impl NeuralApiServer {
                         .unwrap_or(&self.family_id)
                 } else {
                     &self.family_id
+                };
+                // Substitute ${FAMILY_ID} with actual value from server's family_id
+                let family_id = if family_id_raw == "${FAMILY_ID}" {
+                    &self.family_id
+                } else {
+                    family_id_raw
                 };
 
                 // Build socket path using capability-based discovery
@@ -813,7 +820,8 @@ impl NeuralApiServer {
                 // Reuse primal_name extracted above
                 if let Some(ref primal) = primal_name {
                     // Get family_id from operation params or use server default
-                    let family_id = if let Some(operation) = &node.operation {
+                    // NOTE: Supports ${VAR} substitution for isomorphic deployment
+                    let family_id_raw = if let Some(operation) = &node.operation {
                         operation
                             .params
                             .get("family_id")
@@ -821,6 +829,12 @@ impl NeuralApiServer {
                             .unwrap_or(&self.family_id)
                     } else {
                         &self.family_id
+                    };
+                    // Substitute ${FAMILY_ID} with actual value from server's family_id
+                    let family_id = if family_id_raw == "${FAMILY_ID}" {
+                        &self.family_id
+                    } else {
+                        family_id_raw
                     };
 
                     // Build socket path using capability-based discovery
