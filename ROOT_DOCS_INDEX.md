@@ -23,7 +23,15 @@
 
 ## 🏆 **Latest Session Achievements**
 
-### January 29, 2026 - Final Polish
+### January 29, 2026 - Dark Forest Validation
+- **Dual USB Spore Test** - Both spores validated with encrypted handshake
+- **Birdsong Encrypt/Decrypt** - Family-based encryption working ✅
+- **Challenge-Response** - Full handshake simulation completed ✅
+- **UDP Discovery** - Both spores broadcasting on port 2300 ✅
+- **LAN Discovery** - Other tower (192.168.1.134) actively connecting
+- **STUN Handoff** - Created for Songbird JSON-RPC exposure
+
+### January 29, 2026 - Earlier: Final Polish
 - **Deployment automation** - `deploy_to_tower.sh` for remote tower deployment
 - **LAN testing** - `test_lan_handshake.sh` for cross-tower validation
 - **Clippy clean** - All auto-fixable lints resolved
@@ -109,6 +117,7 @@
 | `specs/LIVING_GRAPH_PROTOCOL_ESCALATION_SPEC.md` | Full protocol spec ⭐ |
 | `docs/LIFECYCLE_MANAGEMENT.md` | NUCLEUS lifecycle API |
 | `docs/SOCKET_DISCOVERY.md` | Capability-based socket resolution |
+| `docs/handoffs/SONGBIRD_STUN_RENDEZVOUS_HANDOFF.md` | STUN JSON-RPC exposure ⭐ NEW |
 | `docs/handoffs/SONGBIRD_EVOLUTION_HANDOFF.md` | HTTP headers, TLS, discovery |
 | `docs/handoffs/SQUIRREL_EVOLUTION_HANDOFF.md` | AI integration complete |
 
