@@ -198,6 +198,7 @@ specs/
 ├── README.md               # Specs overview ⭐
 ├── ARCHITECTURE_OVERVIEW.md
 ├── NUCLEUS_DEPLOYMENT_SPEC.md  # NEW: Tower/Node/Nest
+| `specs/NUCLEUS_ATOMIC_COMPOSITION.md` | Tower/Node/Nest patterns ⭐ NEW |
 ├── lifecycle/              # Lifecycle specs
 │   ├── BIOMEOS_BOOTSTRAP_MODE.md
 │   └── PRIMAL_LIFECYCLE_*.md

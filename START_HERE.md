@@ -153,6 +153,7 @@ echo '{"jsonrpc":"2.0","method":"lifecycle.shutdown_all","id":1}' | nc -U /tmp/n
 - **`docs/LIFECYCLE_MANAGEMENT.md`** - NUCLEUS lifecycle API
 - **`docs/SOCKET_DISCOVERY.md`** - Capability-based socket resolution
 - **`specs/NUCLEUS_DEPLOYMENT_SPEC.md`** - Tower/Node/Nest patterns
+- **`specs/NUCLEUS_ATOMIC_COMPOSITION.md`** - Atomic composition patterns
 
 ### Active Handoffs (7 Teams)
 | Handoff | Team | Priority | Status |
