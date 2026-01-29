@@ -1,13 +1,15 @@
 # 🌱 biomeOS - Start Here
 
-**Last Updated**: January 29, 2026  
+**Last Updated**: January 29, 2026 (Evening)  
 **Status**: 🎉 **PRODUCTION READY** - Pure Rust TLS 1.3  
 **Tower Atomic**: 93% TLS Success (87 sites), 96% Web Compatibility  
 **Multi-AI**: ✅ **9/9 Tests** (Anthropic, OpenAI, HuggingFace, Toadstool)  
 **Performance**: 560ms avg AI E2E latency, 366ms HTTPS  
 **NUCLEUS**: Tower + Node + Nest Atomics Complete  
 **Protocol Escalation**: ✅ **Phase 1 Complete** - Living Graph + JSON-RPC APIs  
-**LiveSpore**: Dual USB Spore Deployment Ready  
+**LiveSpore**: ✅ **Dual USB Validated** - Dark Forest handshake working  
+**Mobile/Hardware**: 📱 **Architecture Complete** - Pixel 8a + SoloKey designed  
+**Handoffs**: 📋 **7 Active** - Awaiting primal team evolution  
 **Deep Debt**: ✅ **COMPLETE** - 0 TODOs, 0 unsafe, XDG-compliant  
 **Tests**: 277+ passing | **Crates**: 21 | **Lines**: ~111k | **Unsafe**: 0
 
@@ -152,13 +154,17 @@ echo '{"jsonrpc":"2.0","method":"lifecycle.shutdown_all","id":1}' | nc -U /tmp/n
 - **`docs/SOCKET_DISCOVERY.md`** - Capability-based socket resolution
 - **`specs/NUCLEUS_DEPLOYMENT_SPEC.md`** - Tower/Node/Nest patterns
 
-### Handoffs
-- **`docs/handoffs/PRIMAL_TARPC_EVOLUTION_HANDOFF.md`** ⭐ - tarpc guide for all primals
-- **`docs/handoffs/NESTGATE_PERSISTENCE_HANDOFF.md`** ⭐ - Storage persistence evolution
-- **`docs/handoffs/SONGBIRD_EVOLUTION_HANDOFF.md`** - HTTP headers complete, TLS
-- **`docs/handoffs/SONGBIRD_STUN_RENDEZVOUS_HANDOFF.md`** - STUN JSON-RPC exposure
-- **`docs/handoffs/SQUIRREL_HTTP_BODY_PARSING_HANDOFF.md`** - HTTP body parsing
-- **`docs/handoffs/TOADSTOOL_JSONRPC_HANDOFF.md`** ✅ - JSON-RPC dual format (FIXED)
+### Active Handoffs (7 Teams)
+| Handoff | Team | Priority | Status |
+|---------|------|----------|--------|
+| `SONGBIRD_TCP_GATEWAY_HANDOFF.md` ⭐ | Songbird | HIGH | TCP not binding |
+| `SONGBIRD_STUN_RENDEZVOUS_HANDOFF.md` | Songbird | HIGH | STUN methods |
+| `SONGBIRD_EVOLUTION_HANDOFF.md` | Songbird | Done | HTTP headers ✅ |
+| `BEARDOG_ANDROID_CROSS_COMPILE_HANDOFF.md` | BearDog | MEDIUM | 2 errors |
+| `SQUIRREL_HTTP_BODY_PARSING_HANDOFF.md` | Squirrel | MEDIUM | HTTP adapter |
+| `NESTGATE_PERSISTENCE_HANDOFF.md` | NestGate | MEDIUM | Persistence |
+| `TOADSTOOL_JSONRPC_HANDOFF.md` | Toadstool | Done | JSON-RPC ✅ |
+| `PRIMAL_TARPC_EVOLUTION_HANDOFF.md` | All Primals | Future | tarpc spec |
 
 ---
 
@@ -243,10 +249,12 @@ let socket = discovery.discover_socket("crypto").await?;
 - **Clippy Clean** - All auto-fixable lints resolved
 
 ### 🔄 External Handoffs (Awaiting Teams)
-- Songbird: TLS 1.2 fallback (npm, Jenkins, 7% remaining)
-- Songbird: STUN methods JSON-RPC exposure
-- NestGate: Storage persistence configuration
-- LAN Federation: Deploy v8.14.0 to other towers
+- **Songbird** (HIGH): TCP Gateway not binding, STUN methods
+- **Songbird**: TLS 1.2 fallback (npm, Jenkins, 7% remaining)
+- **BearDog** (MEDIUM): Android cross-compile (2 errors)
+- **NestGate** (MEDIUM): Storage persistence configuration
+- **Squirrel** (MEDIUM): HTTP adapter preservation
+- **LAN Federation**: Pending TCP Gateway evolution
 
 ### 📋 Next: Protocol Escalation Phase 2-4
 - Phase 2: tarpc service trait integration in primals

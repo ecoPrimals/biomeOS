@@ -1,13 +1,15 @@
 # 🧬 biomeOS - Root Documentation Index
 
-**Last Updated**: January 29, 2026  
+**Last Updated**: January 29, 2026 (Evening)  
 **Status**: ✅ **Production Ready** - 93% TLS Validation  
 **Tower Atomic**: Pure Rust TLS 1.3 Validated (366ms avg HTTPS)  
 **NUCLEUS**: Tower + Node + Nest Atomics Complete  
 **Multi-AI**: ✅ **9/9 Tests Passed** (Anthropic, OpenAI, HuggingFace, Toadstool)  
 **Protocol Escalation**: ✅ **Phase 1 Complete** - Living Graph + JSON-RPC APIs  
-**LiveSpore**: Dual USB Spore Deployment Ready  
+**LiveSpore**: ✅ **Dual USB Validated** - Dark Forest handshake working  
+**Mobile/Hardware**: 📱 **Architecture Complete** - Pixel 8a + SoloKey designed  
 **Deep Debt**: ✅ **Complete** - 0 TODOs, 0 unsafe, XDG-compliant  
+**Handoffs**: 📋 **7 Active** - Songbird, BearDog, Squirrel, NestGate  
 **Tests**: 277+ passing | **Crates**: 21 | **Lines**: ~111k | **Unsafe**: 0
 
 ---
@@ -23,31 +25,35 @@
 
 ## 🏆 **Latest Session Achievements**
 
-### January 29, 2026 - Multi-AI Validation Complete ✅
-- **9/9 Multi-AI Tests Passed**:
-  - ✅ Anthropic Claude 3 Haiku (text generation, 560ms E2E)
-  - ✅ OpenAI GPT-4 (text generation via direct HTTP)
-  - ✅ HuggingFace DistilBERT (sentiment analysis)
-  - ✅ HuggingFace GPT-2 (text generation)
-  - ✅ HuggingFace BERT (fill-mask)
-  - ✅ Toadstool local compute (24 cores, 2.4 TFLOPS)
-  - ✅ Multi-step coordinated AI task
-- **NestGate Integration** - JSON-RPC working (persistence handoff created)
-- **NUCLEUS Complete** - Tower + Node + Nest atomics validated
+### January 29, 2026 (Evening) - Mobile & Hardware Anchor Architecture ✅
+- **Pixel 8a Integration** - Complete deployment architecture designed
+  - Android Keystore / Titan M2 HSM support
+  - Tower Lite deployment mode (HSM-only)
+  - Cross-compilation: `aarch64-linux-android` target ready
+- **SoloKey Integration** - Physical root of trust architecture
+  - FIDO2/U2F challenge-response for lineage attestation
+  - USB OTG support for Pixel → SoloKey hierarchy
+  - LiveSpore bootstrap with hardware attestation
+- **Handoffs Created** - 7 active handoffs for primal teams:
+  - 🐦 Songbird: TCP Gateway, STUN methods, HTTP headers ✅
+  - 🐻 BearDog: Android cross-compile (2 errors)
+  - 🐿️ Squirrel: HTTP body parsing, adapter preservation
+  - 🏰 NestGate: Persistence configuration
+  - 🍄 Toadstool: JSON-RPC dual format ✅ FIXED
 
-### January 29, 2026 - Dark Forest Validation
+### January 29, 2026 - Dark Forest & Multi-AI Validation ✅
+- **9/9 Multi-AI Tests Passed** (Anthropic, OpenAI, HuggingFace, Toadstool)
 - **Dual USB Spore Test** - Both spores validated with encrypted handshake
 - **Birdsong Encrypt/Decrypt** - Family-based encryption working ✅
-- **Challenge-Response** - Full handshake simulation completed ✅
 - **UDP Discovery** - Both spores broadcasting on port 2300 ✅
-- **LAN Discovery** - Other tower (192.168.1.134) actively connecting
-- **STUN Handoff** - Created for Songbird JSON-RPC exposure
+- **Dynamic Family Discovery** - `cf7e8729dc4ff05f` from `.family.seed`
+- **Symlink Bridge** - nat0 → family ID for graph compatibility
 
-### January 29, 2026 - Earlier: Final Polish
-- **Deployment automation** - `deploy_to_tower.sh` for remote tower deployment
-- **LAN testing** - `test_lan_handshake.sh` for cross-tower validation
-- **Clippy clean** - All auto-fixable lints resolved
-- **XDG compliance** - All hardcoded `/tmp` paths eliminated
+### January 29, 2026 - Earlier: LAN/STUN Investigation
+- **TCP Gateway Issue** - Songbird not binding TCP port (handoff created)
+- **STUN Methods** - Not exposed via JSON-RPC (handoff created)
+- **What Works**: UDP discovery, Unix IPC, HTTPS client, Birdsong
+- **What Needs Evolution**: TCP gateway, STUN methods, LAN federation
 
 ### January 28, 2026 - Protocol Escalation Phase 1 Complete
 - **Living Graph** infrastructure for runtime protocol state
@@ -127,14 +133,21 @@
 | File | Description |
 |------|-------------|
 | `PROTOCOL_ESCALATION_ROADMAP.md` | Living Graph JSON-RPC → tarpc ⭐ |
-| `specs/LIVING_GRAPH_PROTOCOL_ESCALATION_SPEC.md` | Full protocol spec ⭐ |
+| `specs/LIVING_GRAPH_PROTOCOL_ESCALATION_SPEC.md` | Full protocol spec |
+| `specs/MOBILE_HARDWARE_ANCHOR_ARCHITECTURE.md` | Pixel 8a + SoloKey ⭐ NEW |
 | `docs/LIFECYCLE_MANAGEMENT.md` | NUCLEUS lifecycle API |
 | `docs/SOCKET_DISCOVERY.md` | Capability-based socket resolution |
-| `docs/handoffs/NESTGATE_PERSISTENCE_HANDOFF.md` | Storage persistence evolution ⭐ NEW |
-| `docs/handoffs/SONGBIRD_STUN_RENDEZVOUS_HANDOFF.md` | STUN JSON-RPC exposure |
-| `docs/handoffs/SONGBIRD_EVOLUTION_HANDOFF.md` | HTTP headers, TLS, discovery |
-| `docs/handoffs/SQUIRREL_HTTP_BODY_PARSING_HANDOFF.md` | HTTP body parsing fix |
-| `docs/handoffs/TOADSTOOL_JSONRPC_HANDOFF.md` | JSON-RPC dual format ✅ FIXED |
+
+### Active Handoffs (7 Teams)
+| Handoff | Team | Priority | Status |
+|---------|------|----------|--------|
+| `SONGBIRD_TCP_GATEWAY_HANDOFF.md` ⭐ | Songbird | HIGH | TCP not binding |
+| `SONGBIRD_STUN_RENDEZVOUS_HANDOFF.md` | Songbird | HIGH | STUN methods |
+| `SONGBIRD_EVOLUTION_HANDOFF.md` | Songbird | Done | HTTP headers ✅ |
+| `BEARDOG_ANDROID_CROSS_COMPILE_HANDOFF.md` | BearDog | MEDIUM | 2 errors |
+| `SQUIRREL_HTTP_BODY_PARSING_HANDOFF.md` | Squirrel | MEDIUM | HTTP adapter |
+| `NESTGATE_PERSISTENCE_HANDOFF.md` | NestGate | MEDIUM | Persistence |
+| `TOADSTOOL_JSONRPC_HANDOFF.md` | Toadstool | Done | JSON-RPC ✅ |
 
 ---
 

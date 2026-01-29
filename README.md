@@ -15,7 +15,9 @@
 **NUCLEUS lifecycle management** complete with resurrection & apoptosis.  
 **Multi-AI coordination** validated (9/9 tests: Anthropic, OpenAI, HuggingFace, Toadstool).  
 **Protocol escalation** roadmap defined (JSON-RPC → tarpc).  
-**Dual USB LiveSpore** deployment ready for distributed AI workloads.
+**Dual USB LiveSpore** validated with Dark Forest encrypted handshake.  
+**Mobile/Hardware Architecture** designed (Pixel 8a + SoloKey integration).  
+**7 Active Handoffs** to primal teams for continued evolution.
 
 | Metric | Value |
 |--------|-------|
@@ -320,8 +322,38 @@ See `RUST_EVOLUTION_ROADMAP.md` for full details.
 
 ---
 
-**Status**: ✅ Production Ready | **TLS**: 93% | **Pure Rust**: 100% | **Tests**: 277+ | **Deep Debt**: ✅
+## 📋 Active Handoffs
+
+External primal teams are evolving in parallel. Current handoffs:
+
+| Handoff | Team | Priority | Issue |
+|---------|------|----------|-------|
+| `SONGBIRD_TCP_GATEWAY_HANDOFF.md` | Songbird | HIGH | TCP port not binding |
+| `SONGBIRD_STUN_RENDEZVOUS_HANDOFF.md` | Songbird | HIGH | STUN methods exposure |
+| `BEARDOG_ANDROID_CROSS_COMPILE_HANDOFF.md` | BearDog | MEDIUM | 2 compile errors |
+| `NESTGATE_PERSISTENCE_HANDOFF.md` | NestGate | MEDIUM | Storage persistence |
+| `SQUIRREL_HTTP_BODY_PARSING_HANDOFF.md` | Squirrel | MEDIUM | HTTP adapter |
+
+### What Works Now ✅
+- Unix socket IPC (JSON-RPC)
+- HTTPS client (external APIs)
+- UDP discovery beacons
+- Dark Forest encrypted handshake
+- Multi-AI coordination
+- NUCLEUS lifecycle
+
+### What Needs Primal Evolution 🔄
+- TCP gateway (blocks LAN federation)
+- STUN methods (blocks NAT traversal)
+- Android cross-compile (blocks Pixel HSM)
+- Storage persistence (blocks durable state)
+
+See `docs/handoffs/` for detailed specifications.
+
+---
+
+**Status**: ✅ Production Ready | **TLS**: 93% | **Pure Rust**: 100% | **Tests**: 277+ | **Handoffs**: 7
 
 🎉 **biomeOS: Autonomous Compute Through Semantic Evolution**
 
-*Updated: January 29, 2026*
+*Updated: January 29, 2026 (Evening)*
