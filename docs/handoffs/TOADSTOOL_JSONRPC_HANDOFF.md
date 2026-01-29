@@ -3,14 +3,36 @@
 **Date**: January 29, 2026  
 **From**: biomeOS Team  
 **To**: Toadstool Team  
-**Priority**: Medium  
-**Status**: JSON-RPC socket not responding
+**Priority**: Low  
+**Status**: ✅ RESOLVED
 
 ---
 
-## Issue Summary
+## UPDATE: JSON-RPC FIXED ✅
 
-Toadstool's JSON-RPC socket (`*.jsonrpc.sock`) is not responding to requests. Connections are accepted but responses are never sent, resulting in timeouts and "Broken pipe" errors.
+The Toadstool team fixed the JSON-RPC socket in commit `fd3190e8`:
+- Now supports both raw JSON-RPC and HTTP-wrapped requests
+- Auto-detects format on first line
+
+**Validation Results** (Jan 29, 2026 evening):
+```json
+// toadstool.health
+{"id":1,"jsonrpc":"2.0","result":{"healthy":true,"service":"toadstool","version":"0.1.0"}}
+
+// toadstool.query_capabilities
+{
+  "available_resources": {"available_cpu_cores":24,"total_memory_bytes":33376526336},
+  "supported_workload_types": ["cpu_compute","gpu_compute","neural_compute","distributed"]
+}
+```
+
+**Deployed**: Pulled 21 commits, built, deployed to biomeOS plasmidBin.
+
+---
+
+## ORIGINAL ISSUE (Now Resolved)
+
+Toadstool's JSON-RPC socket (`*.jsonrpc.sock`) was not responding to requests. Connections were accepted but responses were never sent, resulting in timeouts and "Broken pipe" errors.
 
 ### Error Observation
 
