@@ -23,6 +23,7 @@ fn next_request_id() -> u64 {
 }
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
+use tokio::time::{timeout, Duration};
 use tracing::{debug, info, warn};
 
 use crate::{
@@ -110,10 +111,15 @@ pub async fn call_unix_socket_rpc<T: serde::de::DeserializeOwned>(
     write_half.write_all(b"\n").await?; // Newline delimiter
     write_half.flush().await?;
 
-    // Read response
+    // Read response with timeout to prevent hangs
     let mut reader = BufReader::new(read_half);
     let mut response_line = String::new();
-    reader.read_line(&mut response_line).await?;
+    
+    // 30 second timeout for socket reads (prevents indefinite hangs)
+    timeout(Duration::from_secs(30), reader.read_line(&mut response_line))
+        .await
+        .map_err(|_| Error::timeout("Socket read", 30))?
+        .map_err(|e| Error::discovery_failed(format!("Read error: {e}"), None))?;
 
     debug!(response = %response_line, "Received JSON-RPC response");
 

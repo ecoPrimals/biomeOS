@@ -15,9 +15,11 @@ use biomeos_ui::capabilities::device_management::DeviceManagementProvider;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{UnixListener, UnixStream};
 use tokio::sync::RwLock;
+use tokio::time::timeout;
 use tracing::{error, info, warn};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -317,9 +319,12 @@ async fn register_with_songbird(socket_path: &str) -> Result<()> {
     writer.write_all(request_str.as_bytes()).await?;
     writer.flush().await?;
 
-    // Read response
+    // Read response with timeout (30s)
     let mut response_line = String::new();
-    reader.read_line(&mut response_line).await?;
+    timeout(Duration::from_secs(30), reader.read_line(&mut response_line))
+        .await
+        .context("Songbird registration timeout (30s)")?
+        .context("Failed to read Songbird response")?;
 
     let response: Value = serde_json::from_str(response_line.trim())?;
 

@@ -11,8 +11,10 @@ use anyhow::{Context, Result};
 use serde::Deserialize;
 use serde_json::Value;
 use std::collections::HashMap;
+use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::UnixStream;
+use tokio::time::timeout;
 use tracing::{debug, info};
 
 /// HTTP request builder for biomeOS
@@ -172,9 +174,12 @@ impl BiomeOsHttpClient {
         stream.write_all(request_json.as_bytes()).await?;
         stream.shutdown().await?;
 
-        // Read response
+        // Read response with timeout to prevent hangs (60s for HTTP responses)
         let mut response_buf = String::new();
-        stream.read_to_string(&mut response_buf).await?;
+        timeout(Duration::from_secs(60), stream.read_to_string(&mut response_buf))
+            .await
+            .context("Socket read timeout (60s)")?
+            .context("Failed to read response from Songbird")?;
         debug!("← Songbird: {}", response_buf);
 
         // Parse JSON-RPC response
