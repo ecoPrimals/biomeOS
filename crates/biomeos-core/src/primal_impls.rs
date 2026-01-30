@@ -115,7 +115,7 @@ impl ManagedPrimal for GenericManagedPrimal {
                 self.id
             );
             warn!(
-                "   Set PRIMAL_SOCKET_PATH=/run/user/$(id -u)/{}.sock",
+                "   Set PRIMAL_SOCKET_PATH=$XDG_RUNTIME_DIR/biomeos/{}.sock",
                 self.config.id
             );
             let url = format!("http://127.0.0.1:{}", self.config.http_port);
@@ -170,9 +170,18 @@ impl ManagedPrimal for GenericManagedPrimal {
         let log_path = if let Ok(paths) = SystemPaths::new() {
             paths.log_file(&format!("{}-{}", self.id, node_id))
         } else {
-            // Fallback (should rarely happen)
-            std::fs::create_dir_all("/tmp/primals").ok();
-            std::path::PathBuf::from(format!("/tmp/primals/{}-{}.log", self.id, node_id))
+            // EVOLVED: Environment-driven fallback (no hardcoded /tmp)
+            // Respects BIOMEOS_LOG_DIR or falls back to writable directory
+            let log_dir = std::env::var("BIOMEOS_LOG_DIR")
+                .or_else(|_| std::env::var("XDG_STATE_HOME").map(|p| format!("{}/biomeos/logs", p)))
+                .or_else(|_| std::env::var("HOME").map(|p| format!("{}/.local/state/biomeos/logs", p)))
+                .unwrap_or_else(|_| {
+                    warn!("No XDG paths available, using current directory for logs");
+                    "./logs".to_string()
+                });
+            
+            std::fs::create_dir_all(&log_dir).ok();
+            std::path::PathBuf::from(format!("{}/{}-{}.log", log_dir, self.id, node_id))
         };
 
         // Ensure log directory exists

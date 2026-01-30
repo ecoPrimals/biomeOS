@@ -22,6 +22,9 @@ use tokio::net::UnixStream;
 use tokio::time::timeout;
 use tracing::{debug, warn};
 
+// Import the platform-agnostic socket discovery solution
+use crate::socket_discovery::SocketDiscovery;
+
 /// JSON-RPC 2.0 Request
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JsonRpcRequest {
@@ -230,51 +233,75 @@ impl AtomicClient {
     }
 }
 
-/// Discover primal socket by name using capability-based discovery
+/// Discover primal socket by name using platform-agnostic discovery
 ///
-/// This function searches common socket locations and validates
-/// the primal's identity via JSON-RPC.
+/// **EVOLVED:** Now uses `SocketDiscovery` for platform-agnostic, runtime-based discovery.
 ///
-/// # Discovery Locations (in order):
-/// 1. `/tmp/{primal}.sock`
-/// 2. `/tmp/{primal}-server.sock`
-/// 3. `/var/run/biomeos/{primal}.sock`
-/// 4. `/run/biomeos/{primal}.sock`
+/// This replaces hardcoded paths with capability-based discovery that:
+/// - Respects environment variables (e.g., `BEARDOG_SOCKET`)
+/// - Uses XDG_RUNTIME_DIR when available
+/// - Falls back to family-namespaced /tmp
+/// - Works across platforms (Linux, Android, etc.)
 ///
 /// # Arguments
 /// * `primal_name` - Name of the primal to discover
 ///
 /// # Returns
 /// Path to the primal's Unix socket
+///
+/// # Discovery Order
+/// 1. Environment variable hint (e.g., `BEARDOG_SOCKET`)
+/// 2. XDG_RUNTIME_DIR (e.g., `/run/user/1000/biomeos/beardog.sock`)
+/// 3. Family-scoped /tmp (e.g., `/tmp/beardog-{family}.sock`)
+/// 4. Legacy /tmp (e.g., `/tmp/beardog.sock`)
 async fn discover_primal_socket(primal_name: &str) -> Result<PathBuf> {
-    let primal_lower = primal_name.to_lowercase();
+    // Get family_id from environment (if available)
+    let family_id = std::env::var("FAMILY_ID")
+        .or_else(|_| std::env::var("NODE_FAMILY_ID"))
+        .unwrap_or_else(|_| {
+            debug!("No FAMILY_ID set, using 'default' for socket discovery");
+            "default".to_string()
+        });
 
-    let candidates = vec![
-        format!("/tmp/{}.sock", primal_lower),
-        format!("/tmp/{}-server.sock", primal_lower),
-        format!("/var/run/biomeos/{}.sock", primal_lower),
-        format!("/run/biomeos/{}.sock", primal_lower),
-    ];
-
-    for path_str in &candidates {
-        let path = PathBuf::from(path_str);
-        if path.exists() {
-            debug!("Found candidate socket: {}", path.display());
-
+    // Use SocketDiscovery for platform-agnostic discovery
+    let discovery = SocketDiscovery::new(&family_id);
+    
+    match discovery.discover_primal(primal_name).await {
+        Some(discovered) => {
+            debug!(
+                "Discovered {} via {:?} at: {}",
+                primal_name,
+                discovered.discovered_via,
+                discovered.path.display()
+            );
+            
             // Validate by attempting a connection
-            if UnixStream::connect(&path).await.is_ok() {
-                debug!("Validated primal socket: {}", path.display());
-                return Ok(path);
+            if UnixStream::connect(&discovered.path).await.is_ok() {
+                debug!("Validated primal socket: {}", discovered.path.display());
+                return Ok(discovered.path);
             } else {
-                warn!("Socket exists but connection failed: {}", path.display());
+                warn!(
+                    "Socket exists but connection failed: {}",
+                    discovered.path.display()
+                );
             }
+        }
+        None => {
+            debug!("SocketDiscovery found nothing for {}", primal_name);
         }
     }
 
+    // If discovery failed, provide helpful error with discovery path info
     anyhow::bail!(
-        "Primal '{}' not found. Searched: {:?}",
+        "Primal '{}' not found. Try:\n\
+         1. Set environment variable: export {}_SOCKET=/path/to/{}.sock\n\
+         2. Ensure primal is running in family: {}\n\
+         3. Check XDG_RUNTIME_DIR or /tmp for {}.sock",
         primal_name,
-        candidates
+        primal_name.to_uppercase(),
+        primal_name,
+        family_id,
+        primal_name
     )
 }
 

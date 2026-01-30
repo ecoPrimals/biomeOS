@@ -154,9 +154,15 @@ impl DeploymentMode {
         match self {
             DeploymentMode::ColdSpore { media_path, .. } => media_path.join("runtime"),
             DeploymentMode::LiveSpore { .. } => {
-                // XDG-compliant for installed systems
-                let uid = Self::get_uid();
-                PathBuf::from(format!("/run/user/{}", uid))
+                // EVOLVED: Use XDG_RUNTIME_DIR instead of hardcoded path
+                // This respects the system's runtime directory configuration
+                if let Ok(xdg_runtime) = std::env::var("XDG_RUNTIME_DIR") {
+                    PathBuf::from(xdg_runtime).join("biomeos")
+                } else {
+                    // Fallback: construct XDG-compliant path using UID
+                    let uid = Self::get_uid();
+                    PathBuf::from(format!("/run/user/{}/biomeos", uid))
+                }
             }
             DeploymentMode::SiblingSpore { install_dir, .. } => {
                 // User-space runtime directory
@@ -345,18 +351,26 @@ impl DeploymentMode {
     }
 
     fn get_install_dir() -> Result<PathBuf> {
-        // 1. Check BIOMEOS_INSTALL_DIR
+        // 1. Check BIOMEOS_INSTALL_DIR (explicit override)
         if let Ok(dir) = std::env::var("BIOMEOS_INSTALL_DIR") {
             return Ok(PathBuf::from(dir));
         }
 
-        // 2. Default to home directory
+        // 2. Use XDG_DATA_HOME if available (XDG-compliant)
+        if let Ok(xdg_data) = std::env::var("XDG_DATA_HOME") {
+            return Ok(PathBuf::from(xdg_data).join("biomeos"));
+        }
+
+        // 3. Default to HOME/.local/share (XDG default)
         if let Ok(home) = std::env::var("HOME") {
             return Ok(PathBuf::from(home).join(".local/share/biomeos"));
         }
 
-        // 3. Fallback to /tmp
-        Ok(PathBuf::from("/tmp/biomeos"))
+        // 4. EVOLVED: Use current directory as last resort (writable, platform-agnostic)
+        // This works on all platforms including Android, Windows, etc.
+        std::env::current_dir()
+            .map(|p| p.join(".biomeos"))
+            .context("Failed to determine install directory - no HOME or XDG paths available")
     }
 
     fn detect_isolation_level() -> IsolationLevel {

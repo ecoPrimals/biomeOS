@@ -55,7 +55,7 @@ impl BiomeOSConfigBuilder {
         //
         // For local development, set:
         //   export BIOMEOS_BIND_ADDRESS="127.0.0.1"  # If HTTP bridge needed
-        //   export BIOMEOS_UNIX_SOCKET="/run/user/$(id -u)/biomeos.sock"  # Primary IPC
+        //   export BIOMEOS_UNIX_SOCKET="$XDG_RUNTIME_DIR/biomeos/biomeos.sock"  # Primary IPC
         //
         // Deep Debt Principle: Fail fast with clear guidance instead of silent hardcoded fallbacks.
         builder.config.network.bind_address =
