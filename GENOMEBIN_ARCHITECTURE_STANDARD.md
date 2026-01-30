@@ -42,6 +42,7 @@ beardog key         # Key management mode
 - ✅ One binary, many functions
 - ✅ Organized capabilities
 - ⚠️ Architecture-specific (x86_64 OR ARM64)
+- ⚠️ Platform-specific (may assume Unix)
 - ⚠️ May have C dependencies
 - ⚠️ User must install/configure
 
@@ -58,12 +59,15 @@ beardog key         # Key management mode
 - Pure Rust = Portability strand
 - Together = Stable, universal structure
 
-**Requirements**:
+**Requirements** (Updated January 30, 2026 - TRUE PRIMAL Standards):
 1. ✅ UniBin architecture (multiple modes)
 2. ✅ 100% Pure Rust (zero C dependencies)
 3. ✅ Cross-compilation (x86_64, ARM64, RISC-V, etc.)
 4. ✅ Static linking (musl, self-contained)
 5. ✅ Binary validation (no C symbols)
+6. ✅ **Platform-agnostic IPC** (Linux, Android, Windows, macOS, iOS, WASM)
+7. ✅ **Runtime transport discovery** (Unix sockets, abstract sockets, TCP, named pipes, etc.)
+8. ✅ **Zero platform assumptions** (no hardcoded paths or OS-specific logic)
 
 **Example** (BearDog ecoBin):
 ```
@@ -73,14 +77,19 @@ beardog-armv7-musl    (ecoBin for ARMv7)
 beardog-riscv64-musl  (ecoBin for RISC-V)
 ```
 
-**Characteristics**:
+**Characteristics** (Updated January 30, 2026):
 - ✅ One binary per architecture
 - ✅ Works on ANY architecture (cross-compiled)
+- ✅ Works on ANY platform (runtime IPC discovery)
 - ✅ Pure Rust (stable bonds)
 - ✅ Self-contained (static)
+- ✅ Platform-agnostic (no Unix/Windows/etc assumptions)
 - ⚠️ User still must: detect arch, install, configure, manage
 
-**Quality**: Stable DNA that replicates universally, but needs cellular machinery
+**Quality**: Stable DNA that replicates universally across architectures AND platforms
+
+**TRUE ecoBin Philosophy**: 
+> "If it can't run on the arch/platform, it's not a true ecoBin"
 
 ---
 
@@ -107,21 +116,26 @@ beardog-riscv64-musl  (ecoBin for RISC-V)
 8. ✅ Rollback capability (safety)
 9. ✅ Uninstall support (clean removal)
 
-**Example** (BearDog genomeBin):
+**Example** (BearDog genomeBin - TRUE PRIMAL):
 ```
 beardog.genome (single file, ~5-10M)
 ├── Deployment wrapper (shell script + Rust)
-├── Architecture detection (x86_64, ARM64, etc.)
-├── OS detection (Linux, macOS, BSD, etc.)
-├── ecoBin payload (all architectures embedded)
-│   ├── beardog-x86_64-linux-musl
-│   ├── beardog-aarch64-linux-musl
-│   ├── beardog-x86_64-macos
-│   └── beardog-aarch64-macos
-├── Installation logic
-├── Configuration templates
-├── Service definitions (systemd, launchd)
+├── Architecture detection (x86_64, ARM64, RISC-V, etc.)
+├── Platform detection (Linux, Android, Windows, macOS, iOS, etc.)
+├── ecoBin payload (all platforms embedded)
+│   ├── beardog-x86_64-linux-musl (Unix sockets)
+│   ├── beardog-aarch64-linux-musl (Unix + abstract sockets)
+│   ├── beardog-aarch64-android (abstract sockets + TCP fallback)
+│   ├── beardog-x86_64-windows (named pipes + TCP fallback)
+│   ├── beardog-x86_64-macos (Unix sockets)
+│   ├── beardog-aarch64-macos (Unix sockets - M-series)
+│   ├── beardog-aarch64-ios (XPC + TCP fallback)
+│   └── beardog-wasm32 (in-process channels)
+├── Installation logic (platform-aware)
+├── Configuration templates (transport-agnostic)
+├── Service definitions (systemd, launchd, Windows Service, etc.)
 ├── Health check scripts
+├── IPC transport discovery
 └── Update/rollback mechanism
 ```
 

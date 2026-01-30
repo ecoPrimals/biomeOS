@@ -101,3 +101,34 @@ Standards are community-driven:
 
 🌊 **Official Repository**: https://github.com/ecoPrimals/wateringHole
 
+
+---
+
+## 🌍 TRUE ecoBin Evolution - January 30, 2026
+
+### **Platform-Agnostic IPC Standard**
+
+**New Standards Added:**
+- `ECOBIN_TRUE_PRIMAL_STANDARD.md` - ecoBin v2.0 with platform-agnostic IPC
+- `docs/deep-debt/PLATFORM_AGNOSTIC_IPC_EVOLUTION.md` - Implementation guide
+
+**Key Evolution:**
+- **ecoBin v1.0:** Cross-architecture (x86_64, ARM64, RISC-V)
+- **ecoBin v2.0:** Cross-architecture + Cross-platform (Linux, Android, Windows, macOS, iOS, WASM, embedded)
+
+**Philosophy:**
+> "If it can't run on the arch/platform, it's not a true ecoBin"
+
+**Implementation:**
+- `biomeos-ipc` crate for platform-agnostic transport
+- Runtime discovery (Unix sockets, abstract sockets, TCP, named pipes, etc.)
+- Graceful fallback (prefer native, fall back to TCP)
+- Zero platform assumptions
+
+**Adoption Target:** Q1 2026 (migrate all primals to TRUE ecoBin v2.0)
+
+**References:**
+- Platform-agnostic IPC: `docs/deep-debt/PLATFORM_AGNOSTIC_IPC_EVOLUTION.md`
+- TRUE ecoBin standard: `ECOBIN_TRUE_PRIMAL_STANDARD.md`
+- genomeBin updates: `GENOMEBIN_ARCHITECTURE_STANDARD.md`
+

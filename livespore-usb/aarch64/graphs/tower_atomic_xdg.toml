@@ -31,7 +31,7 @@ name = "start"
 
 [nodes.operation.params]
 mode = "server"
-family_id = "${FAMILY_ID}"  # Can be overridden by executor
+family_id = "${FAMILY_ID}"  # Discovered from .family.seed or environment
 
 [nodes.operation.environment]
 RUST_LOG = "beardog_tunnel=info"  # Enable BearDog v0.18.0 enhanced debug logging (uses info! level)
@@ -151,9 +151,9 @@ family_id = "${FAMILY_ID}"
 
 # Environment variables for Songbird
 [nodes.operation.environment]
-NEURAL_API_SOCKET = "/tmp/neural-api.sock"  # For capability translation routing (must match Neural API socket)
-BEARDOG_SOCKET = "/run/user/1000/biomeos/beardog.sock"  # Security provider (modern XDG path)
-SONGBIRD_SECURITY_PROVIDER = "beardog"  # Use discovery, not hardcoded path
+NEURAL_API_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/neural-api-${FAMILY_ID}.sock"  # For capability translation routing (must match Neural API socket)
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"  # Security provider (for non-HTTP crypto operations)
+SONGBIRD_SECURITY_PROVIDER = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"  # Alternative name for security provider
 RUST_LOG = "songbird_http_client=info"  # Enable INFO logging for first-byte verification
 
 # Genetic bonding: Songbird inherits from BearDog
@@ -216,19 +216,15 @@ name = "register_only"
 [nodes.operation.params]
 family_id = "${FAMILY_ID}"
 
-# Toadstool uses toadstool. prefix for core, resources. for compute orchestration
+# Toadstool uses toadstool. prefix
 [nodes.capabilities_provided]
-# Core Toadstool methods
+"compute.submit" = "toadstool.submit_workload"
+"compute.status" = "toadstool.query_status"
+"compute.cancel" = "toadstool.cancel_workload"
+"compute.list" = "toadstool.list_workloads"
+"compute.capabilities" = "toadstool.query_capabilities"
 "compute.health" = "toadstool.health"
 "compute.version" = "toadstool.version"
-"compute.capabilities" = "toadstool.query_capabilities"
-# Collaborative Intelligence - Resource Estimation
-"compute.estimate" = "resources.estimate"
-"compute.validate" = "resources.validate_availability"
-"compute.optimize" = "resources.suggest_optimizations"
-# AI Provider - Local Compute (future)
-"ai.local_inference" = "resources.estimate"  # Estimate before running
-"ai.local_execute" = "resources.validate_availability"  # Validate resources
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # VALIDATION
