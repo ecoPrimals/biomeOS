@@ -54,10 +54,12 @@ impl fmt::Display for Capability {
     }
 }
 
-impl Capability {
-    /// Parse capability from string
-    pub fn from_str(s: &str) -> Self {
-        match s.to_lowercase().as_str() {
+impl std::str::FromStr for Capability {
+    type Err = std::convert::Infallible;
+
+    /// Parse capability from string (implements FromStr trait)
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s.to_lowercase().as_str() {
             "security" => Capability::Security,
             "discovery" => Capability::Discovery,
             "compute" => Capability::Compute,
@@ -67,14 +69,20 @@ impl Capability {
             "federation" => Capability::Federation,
             "network" => Capability::Network,
             _ => Capability::Custom(s.to_string()),
-        }
+        })
     }
+}
 
+impl Capability {
     /// Load from environment variable (comma-separated)
     pub fn from_env(var_name: &str) -> Vec<Self> {
         std::env::var(var_name)
             .ok()
-            .map(|s| s.split(',').map(|cap| Self::from_str(cap.trim())).collect())
+            .map(|s| {
+                s.split(',')
+                    .filter_map(|cap| cap.trim().parse().ok())
+                    .collect()
+            })
             .unwrap_or_default()
     }
 }
@@ -188,15 +196,25 @@ impl PrimalConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::str::FromStr;
 
     #[test]
     fn test_capability_parsing() {
-        assert_eq!(Capability::from_str("security"), Capability::Security);
-        assert_eq!(Capability::from_str("DISCOVERY"), Capability::Discovery);
         assert_eq!(
-            Capability::from_str("custom"),
+            Capability::from_str("security").unwrap(),
+            Capability::Security
+        );
+        assert_eq!(
+            Capability::from_str("DISCOVERY").unwrap(),
+            Capability::Discovery
+        );
+        assert_eq!(
+            Capability::from_str("custom").unwrap(),
             Capability::Custom("custom".to_string())
         );
+
+        // Also test via parse()
+        assert_eq!("ai".parse::<Capability>().unwrap(), Capability::AI);
     }
 
     #[test]

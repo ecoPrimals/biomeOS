@@ -35,10 +35,10 @@ impl MockPrimalServer {
     /// **Concurrency**: Caller awaits ready_receiver instead of sleeping
     async fn start_with_ready(self) -> (tokio::task::JoinHandle<()>, oneshot::Receiver<()>) {
         let (ready_tx, ready_rx) = oneshot::channel();
-        
+
         let handle = tokio::spawn(async move {
             let listener = UnixListener::bind(&self.socket_path).unwrap();
-            
+
             // Signal ready AFTER bind succeeds
             let _ = ready_tx.send(());
 
@@ -81,7 +81,7 @@ impl MockPrimalServer {
                 }
             }
         });
-        
+
         (handle, ready_rx)
     }
 }
@@ -110,7 +110,7 @@ async fn test_basic_capability_translation() {
         }),
     );
     let (_handle, ready_rx) = server.start_with_ready().await;
-    
+
     // Wait for server to be ready (deterministic, no sleep!)
     ready_rx.await.expect("Server failed to start");
 
@@ -149,7 +149,7 @@ async fn test_parameter_mapping_translation() {
         }),
     );
     let (_handle, ready_rx) = server.start_with_ready().await;
-    
+
     // Wait for server to be ready (deterministic, no sleep!)
     ready_rx.await.expect("Server failed to start");
 
@@ -258,9 +258,21 @@ async fn test_multiple_primals_routing() {
     // Create registry with multiple primals
     let mut registry = CapabilityTranslationRegistry::new();
 
-    registry.register_translation("crypto.hash", "beardog", "crypto.sha256", beardog_socket, None);
+    registry.register_translation(
+        "crypto.hash",
+        "beardog",
+        "crypto.sha256",
+        beardog_socket,
+        None,
+    );
 
-    registry.register_translation("http.request", "songbird", "http.get", songbird_socket, None);
+    registry.register_translation(
+        "http.request",
+        "songbird",
+        "http.get",
+        songbird_socket,
+        None,
+    );
 
     // Route to BearDog
     let crypto_result = registry.call_capability("crypto.hash", json!({})).await;
@@ -357,7 +369,10 @@ async fn test_registry_parameter_mapping_storage() {
     let translation = registry.get_translation("crypto.ecdh").unwrap();
     // param_mappings is a HashMap, not Option<HashMap>
     assert!(!translation.param_mappings.is_empty());
-    assert_eq!(translation.param_mappings.get("our_key"), Some(&"their_key".to_string()));
+    assert_eq!(
+        translation.param_mappings.get("our_key"),
+        Some(&"their_key".to_string())
+    );
 }
 
 #[tokio::test]
@@ -402,7 +417,13 @@ async fn test_registry_error_handling() {
     ready_rx.await.expect("Server failed to start");
 
     let mut registry = CapabilityTranslationRegistry::new();
-    registry.register_translation("test.error", "test_primal", "test_method", socket_path, None);
+    registry.register_translation(
+        "test.error",
+        "test_primal",
+        "test_method",
+        socket_path,
+        None,
+    );
 
     let result = registry.call_capability("test.error", json!({})).await;
     // Should propagate error from server
@@ -415,11 +436,7 @@ async fn test_registry_concurrent_calls() {
     let _cleanup = SocketCleanup(socket_path.to_string());
 
     // Start server that can handle multiple concurrent requests
-    let server = MockPrimalServer::new(
-        socket_path,
-        "concurrent_test",
-        json!({"success": true}),
-    );
+    let server = MockPrimalServer::new(socket_path, "concurrent_test", json!({"success": true}));
     let (_handle, ready_rx) = server.start_with_ready().await;
     ready_rx.await.expect("Server failed to start");
 

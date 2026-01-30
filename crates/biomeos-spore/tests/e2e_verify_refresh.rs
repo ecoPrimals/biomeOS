@@ -239,7 +239,7 @@ async fn test_e2e_multi_binary_refresh() {
     use sha2::{Digest, Sha256};
     let mut binaries = HashMap::new();
 
-    for (name, content, path) in [
+    for (name, content, _path) in [
         ("tower", tower_content, "bin/tower"),
         ("beardog-server", beardog_content, "primals/beardog-server"),
         (

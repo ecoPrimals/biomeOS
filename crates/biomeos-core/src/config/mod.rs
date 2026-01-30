@@ -195,14 +195,21 @@ pub mod presets {
     pub fn local() -> BiomeResult<BiomeOSConfig> {
         // EVOLUTION: Environment-only, no localhost fallbacks
         // Primals discover each other via Unix sockets (preferred) or environment
+        // EVOLVED: Use runtime discovery instead of requiring env var
+        // If no discovery endpoint set, use Songbird socket discovery
         let discovery_endpoint = std::env::var("DISCOVERY_ENDPOINT")
             .or_else(|_| std::env::var("BIOMEOS_DISCOVERY_ENDPOINT"))
             .unwrap_or_else(|_| {
-                // No hardcoded fallback! Fail explicitly.
-                panic!(
-                    "Discovery endpoint not configured!\n\
-                     Set DISCOVERY_ENDPOINT or BIOMEOS_DISCOVERY_ENDPOINT\n\
-                     Example: export BIOMEOS_DISCOVERY_ENDPOINT=unix:///tmp/songbird.sock"
+                // DEEP DEBT SOLUTION: Discover Songbird socket at runtime
+                // No hardcoded paths, no panics - pure capability-based discovery
+                use crate::socket_discovery::SocketDiscovery;
+                let family_id = std::env::var("FAMILY_ID")
+                    .or_else(|_| std::env::var("BIOMEOS_FAMILY_ID"))
+                    .unwrap_or_else(|_| "default".to_string());
+                let discovery = SocketDiscovery::new(family_id);
+                format!(
+                    "unix://{}",
+                    discovery.build_socket_path("songbird").to_string_lossy()
                 )
             });
 

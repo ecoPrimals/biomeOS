@@ -38,7 +38,7 @@ impl Drop for DirGuard {
 async fn test_missing_plasmidbin() {
     // RAII guard ensures directory restoration even on panic
     let _dir_guard = DirGuard::new();
-    
+
     let temp_dir = TempDir::new().unwrap();
 
     // Change to temp dir where plasmidBin doesn't exist
@@ -54,7 +54,7 @@ async fn test_missing_plasmidbin() {
     };
 
     let result = Spore::create(mount_point, config).await;
-    
+
     // EVOLVED: Behavior depends on plasmidBin discovery (may use fallback paths)
     // Test validates graceful handling (no panic), not specific error
     match result {
@@ -65,13 +65,17 @@ async fn test_missing_plasmidbin() {
             println!("✅ Spore creation failed as expected: {}", e);
         }
     }
-    
+
     // Note: DirGuard will restore original directory when dropped
 }
 
 /// Test that spore creation succeeds with plasmidBin present
 #[tokio::test(flavor = "current_thread")]
+#[serial_test::serial]
 async fn test_plasmidbin_deployment() {
+    // RAII guard ensures directory restoration even on panic
+    let _dir_guard = DirGuard::new();
+
     let temp_dir = TempDir::new().unwrap();
 
     // Setup proper plasmidBin structure using test utility
@@ -168,7 +172,11 @@ songbird: git:ghi789"#,
 
 /// Test spore manifest is created correctly
 #[tokio::test(flavor = "current_thread")]
+#[serial_test::serial]
 async fn test_spore_manifest_creation() {
+    // RAII guard ensures directory restoration even on panic
+    let _dir_guard = DirGuard::new();
+
     let temp_dir = TempDir::new().unwrap();
 
     // Setup proper plasmidBin structure

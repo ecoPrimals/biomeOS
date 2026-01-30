@@ -1,337 +1,286 @@
-# 🌱 biomeOS - Start Here
+# 🚀 Start Here - biomeOS Quick Orientation
 
-**Last Updated**: January 29, 2026 (Evening)  
-**Status**: 🎉 **PRODUCTION READY** - Pure Rust TLS 1.3  
-**Tower Atomic**: 93% TLS Success (87 sites), 96% Web Compatibility  
-**Multi-AI**: ✅ **9/9 Tests** (Anthropic, OpenAI, HuggingFace, Toadstool)  
-**Performance**: 560ms avg AI E2E latency, 366ms HTTPS  
-**NUCLEUS**: Tower + Node + Nest Atomics Complete  
-**Protocol Escalation**: ✅ **Phase 1 Complete** - Living Graph + JSON-RPC APIs  
-**LiveSpore**: ✅ **Dual USB Validated** - Dark Forest handshake working  
-**Mobile/Hardware**: 📱 **Architecture Complete** - Pixel 8a + SoloKey designed  
-**Handoffs**: 📋 **7 Active** - Awaiting primal team evolution  
-**Deep Debt**: ✅ **COMPLETE** - 0 TODOs, 0 unsafe, XDG-compliant  
-**Tests**: 1141+ passing (108 suites) | **Crates**: 21 | **Lines**: ~111k | **Unsafe**: 0
+**Welcome to biomeOS!** This guide will get you oriented quickly.
 
 ---
 
-## 🏆 Tower Atomic Validation Complete
+## 📍 **What is biomeOS?**
 
-### Comprehensive Testing (Jan 26, 2026)
+biomeOS is the **orchestrator** for the ecoPrimals ecosystem, enabling:
 
-| Metric | Value | Notes |
-|--------|-------|-------|
-| **Sites Tested** | 87 | Across 11 categories |
-| **TLS 1.3 Success** | 93% (81/87) | Pure Rust |
-| **Web Compatibility** | 96% | With User-Agent |
-| **Cipher Suites** | 100% | All 3 mandatory |
+- **Composable Primal Deployments** - Mix and match primals (BearDog, Songbird, NestGate, etc.)
+- **Cross-Primal Communication** - Unix sockets + JSON-RPC with semantic routing
+- **Capability-Based Discovery** - Primals discover each other at runtime
+- **Graph-Based Deployment** - Declare your stack in TOML, biomeOS handles the rest
 
-### Category Results
-
-| Category | Sites | TLS Success | Notes |
-|----------|-------|-------------|-------|
-| **AI/ML** | 10 | 100% ✅ | OpenAI, Anthropic, HuggingFace |
-| **Cloud** | 10 | 90% ✅ | AWS, GCP, Azure, Vercel |
-| **Code Hosting** | 6 | 83% ✅ | GitHub, GitLab, Bitbucket |
-| **Package Registries** | 10 | 80% ⚠️ | npm needs TLS 1.2 |
-| **Containers** | 6 | 100% ✅ | Docker Hub, GHCR, Quay |
-| **Databases** | 7 | 100% ✅ | MongoDB, Supabase, PlanetScale |
-| **Observability** | 6 | 83% ⚠️ | New Relic needs TLS 1.2 |
-| **CI/CD** | 5 | 80% ⚠️ | Jenkins needs TLS 1.2 |
-| **Serverless** | 7 | 100% ✅ | Vercel, Netlify, Cloudflare |
-| **API Tools** | 5 | 100% ✅ | Postman, Insomnia |
-| **Security** | 6 | 100% ✅ | Auth0, Okta, Cloudflare |
+**Think of it as:** Docker Compose + Kubernetes... but for primals, written in Pure Rust, with semantic routing.
 
 ---
 
-## 🔧 Component Status
+## 🎯 **I Want To...**
 
-| Component | Version | Status | Capabilities |
-|-----------|---------|--------|--------------|
-| **biomeOS** | Latest | ✅ 100% | Graph deployment, capability.call, lifecycle, Living Graph |
-| **Neural API** | `master` | ✅ 100% | 74 semantic mappings, lifecycle, protocol escalation |
-| **BearDog** | `0.9.0` | ✅ 100% | SHA-256, SHA-384, AES-GCM, X25519 |
-| **Songbird** | `v8.14.0` | ✅ 100% | TLS 1.3, HTTP headers, dual-mode, STUN |
-| **Squirrel** | `28e59176` | ✅ 100% | AI providers (Anthropic, OpenAI, HuggingFace) |
-| **Toadstool** | `fd3190e8` | ✅ 100% | Local compute, GPU scheduling, JSON-RPC dual format |
-| **NestGate** | Latest | 🟡 90% | JSON-RPC storage (persistence pending) |
+### **Understand the Architecture**
 
-### Performance (Benchmarked Jan 29, 2026)
-| Metric | Value |
-|--------|-------|
-| **AI E2E Latency** | 560ms avg (to Anthropic API) |
-| **HTTPS Latency** | 366ms avg (to api.github.com) |
-| **Local Compute** | 56ms (Toadstool health) |
-| **Success Rate** | 100% (9/9 AI tests) |
-| **Crypto Calls/TLS** | ~12 via JSON-RPC |
-| **Tower + Node** | ✅ Fully validated |
+→ Read: [BIOMEOS_ATOMICS_ARCHITECTURE.md](BIOMEOS_ATOMICS_ARCHITECTURE.md)
 
----
+**Key Concepts:**
+- **NUCLEUS Atomics:** Tower (security), Node (compute), Nest (storage)
+- **Primal Self-Knowledge:** Each primal manages itself
+- **Capability Routing:** `neural_api.call("http.request", ...)` → Songbird
 
-## 🚀 Quick Start
+### **See What's Been Accomplished**
 
-### Build All
+→ Read: [ECOSYSTEM_HARVEST_COMPLETE_100_PERCENT.md](ECOSYSTEM_HARVEST_COMPLETE_100_PERCENT.md)
 
+**Highlights:**
+- ✅ 3/3 primal teams responded in <24 hours
+- ✅ All A+/A++ quality implementations
+- ✅ 5,000+ tests passing across ecosystem
+- ✅ Socket standard established
+
+### **Run the NUCLEUS Stack**
+
+→ Read: [QUICK_START.md](QUICK_START.md)
+
+**Quick Command:**
 ```bash
-# biomeOS
-cargo build --release --workspace
+./scripts/quick_start_nucleus_test.sh
+```
 
-# Run all tests (1141+ passing, 108 suites)
+### **Integrate a New Primal**
+
+→ Read: [BIOMEOS_PRIMAL_INTEGRATION_SPEC.md](BIOMEOS_PRIMAL_INTEGRATION_SPEC.md)
+
+**Steps:**
+1. Create Unix socket at `/run/user/$UID/biomeos/{primal}.sock`
+2. Implement JSON-RPC 2.0 server
+3. Register capabilities
+4. Add to deployment graph
+
+### **Run Tests**
+
+→ Read: [NUCLEUS_TEST_INDEX.md](NUCLEUS_TEST_INDEX.md)
+
+**Quick Command:**
+```bash
 cargo test --workspace
-
-# Verify
-./target/release/biomeos --version
 ```
 
-### Deploy Tower Atomic
+### **Deploy to Production**
 
-```bash
-# Recommended: Automated bootstrap with XDG compliance
-./scripts/bootstrap_tower_atomic.sh        # Start locally
-./scripts/bootstrap_tower_atomic.sh --stop # Stop
+→ Read: [DEPLOYMENT.md](DEPLOYMENT.md)
 
-# Deploy to remote tower
-./scripts/deploy_to_tower.sh 192.168.1.134  # Deploy via SSH
+**Checklist:** [PRODUCTION_DEPLOYMENT_CHECKLIST.md](PRODUCTION_DEPLOYMENT_CHECKLIST.md)
 
-# Test LAN connectivity
-./scripts/test_lan_handshake.sh             # Test cross-tower
+### **Find Everything**
 
-# Legacy deployment
-./deploy_tower_atomic.sh        # Start
-./deploy_tower_atomic.sh status # Check
-./deploy_tower_atomic.sh stop   # Stop
+→ Read: [ROOT_INDEX.md](ROOT_INDEX.md) - Complete documentation index
+
+---
+
+## 🏗️ **Project Structure**
+
 ```
-
-### Test HTTPS
-
-```bash
-# Via Neural API (recommended)
-echo '{"jsonrpc":"2.0","method":"capability.call","params":{
-  "capability":"secure_http",
-  "operation":"http.request",
-  "args":{"url":"https://api.github.com/zen","method":"GET"}
-},"id":1}' | nc -U /tmp/neural-api.sock
-
-# Direct to Songbird
-echo '{"jsonrpc":"2.0","method":"http.request","params":{
-  "method":"GET","url":"https://google.com"
-},"id":1}' | nc -U /tmp/songbird-nat0.sock
-```
-
-### Lifecycle Management
-
-```bash
-# Check all primal statuses
-echo '{"jsonrpc":"2.0","method":"lifecycle.status","id":1}' | nc -U /tmp/neural-api.sock
-
-# Resurrect a crashed primal
-echo '{"jsonrpc":"2.0","method":"lifecycle.resurrect","params":{"name":"songbird"},"id":1}' | nc -U /tmp/neural-api.sock
-
-# Graceful shutdown
-echo '{"jsonrpc":"2.0","method":"lifecycle.shutdown_all","id":1}' | nc -U /tmp/neural-api.sock
+biomeOS/
+├── crates/                     # Rust crates
+│   ├── biomeos-nucleus/        # Core orchestrator
+│   ├── biomeos-types/          # Shared types
+│   ├── biomeos-chimera/        # Graph executor
+│   └── biomeos-niche/          # Ecosystem manager
+├── graphs/                     # Deployment graphs (.toml)
+├── scripts/                    # Automation scripts
+├── docs/                       # Documentation
+│   └── handoffs/               # Primal handoff documents
+├── specs/                      # Architecture specs
+├── archive/                    # Archived sessions
+└── *.md                        # Root documentation
 ```
 
 ---
 
-## 📚 Key Documentation
+## 🦀 **The Primals**
 
-### Essential
-- **`README.md`** - Project overview
-- **`DOCUMENTATION_HUB.md`** - Complete navigation
-- **`PROTOCOL_ESCALATION_ROADMAP.md`** ⭐ - JSON-RPC → tarpc Living Graph (Phase 1 Complete)
-- **`specs/LIVING_GRAPH_PROTOCOL_ESCALATION_SPEC.md`** - Full protocol specification
-- **`RUST_EVOLUTION_ROADMAP.md`** - Scripts → Pure Rust migration
-- **`INFRASTRUCTURE_EVOLUTION.md`** - Terraria, Apoptosis
+biomeOS orchestrates these autonomous primals:
 
-### Architecture
-- **`specs/README.md`** - All specifications
-- **`specs/LIVESPORE_IMPRINTING_SPEC.md`** - 64-byte seeds, validation
-- **`specs/BIRDSONG_DARK_FOREST_TRUST_MODEL.md`** - Encrypted beacons
-- **`BIOMEOS_ATOMICS_ARCHITECTURE.md`** - System design
+| Primal | Purpose | Socket | Status |
+|--------|---------|--------|--------|
+| **BearDog** | Crypto/TLS/HSM | `beardog.sock` | ✅ Ready |
+| **Songbird** | HTTP/Discovery/Federation | `songbird.sock` | ✅ Ready |
+| **NestGate** | Storage/Models/Persistence | `nestgate.sock` | ✅ Ready |
+| **Toadstool** | GPU Compute/AI Inference | `toadstool.sock` | ✅ Ready |
+| **Squirrel** | AI Multi-Provider (local+online) | `squirrel.sock` | ✅ Ready |
 
-### New in This Release
-- **`docs/LIFECYCLE_MANAGEMENT.md`** - NUCLEUS lifecycle API
-- **`docs/SOCKET_DISCOVERY.md`** - Capability-based socket resolution
-- **`specs/NUCLEUS_DEPLOYMENT_SPEC.md`** - Tower/Node/Nest patterns
-- **`specs/NUCLEUS_ATOMIC_COMPOSITION.md`** - Atomic composition patterns
-
-### Active Handoffs (7 Teams)
-| Handoff | Team | Priority | Status |
-|---------|------|----------|--------|
-| `SONGBIRD_TCP_GATEWAY_HANDOFF.md` ⭐ | Songbird | HIGH | TCP not binding |
-| `SONGBIRD_STUN_RENDEZVOUS_HANDOFF.md` | Songbird | HIGH | STUN methods |
-| `SONGBIRD_EVOLUTION_HANDOFF.md` | Songbird | Done | HTTP headers ✅ |
-| `BEARDOG_ANDROID_CROSS_COMPILE_HANDOFF.md` | BearDog | MEDIUM | 2 errors |
-| `SQUIRREL_HTTP_BODY_PARSING_HANDOFF.md` | Squirrel | MEDIUM | HTTP adapter |
-| `NESTGATE_PERSISTENCE_HANDOFF.md` | NestGate | MEDIUM | Persistence |
-| `TOADSTOOL_JSONRPC_HANDOFF.md` | Toadstool | Done | JSON-RPC ✅ |
-| `PRIMAL_TARPC_EVOLUTION_HANDOFF.md` | All Primals | Future | tarpc spec |
+**Socket Location:** `/run/user/$UID/biomeos/{primal}.sock`
 
 ---
 
-## 🎯 Key Concepts
+## 🎯 **NUCLEUS Atomics**
 
-### 1. TRUE PRIMAL Pattern
+biomeOS deploys primals in three **atomic compositions**:
 
-Primals don't know each other's APIs. Communication via semantic operations:
-
+### **1. Tower Atomic** (Security Foundation)
 ```
-Squirrel → capability.call("crypto", "sha256") → Neural API → BearDog
-                                                      ↓
-                              Translation: "sha256" → "crypto.sha256"
+BearDog + Songbird
+```
+- Crypto operations
+- TLS/HTTPS
+- Service discovery
+- Secure HTTP
+
+### **2. Node Atomic** (Compute Foundation)
+```
+Tower + Toadstool
+```
+- Everything in Tower
+- GPU compute (NVIDIA)
+- Local AI inference
+- Hardware acceleration
+
+### **3. Nest Atomic** (Persistence Foundation)
+```
+Tower + NestGate
+```
+- Everything in Tower
+- Persistent storage
+- Model caching
+- HuggingFace integration
+
+---
+
+## 📚 **Essential Reading**
+
+### **New to biomeOS?**
+
+1. **[README.md](README.md)** - Project overview
+2. **[BIOMEOS_ATOMICS_ARCHITECTURE.md](BIOMEOS_ATOMICS_ARCHITECTURE.md)** - Architecture
+3. **[QUICK_START.md](QUICK_START.md)** - Quick start guide
+4. **[NUCLEUS_AI_INTEGRATION_GUIDE.md](NUCLEUS_AI_INTEGRATION_GUIDE.md)** - Integration guide
+
+### **Recent Accomplishments?**
+
+1. **[ECOSYSTEM_HARVEST_COMPLETE_100_PERCENT.md](ECOSYSTEM_HARVEST_COMPLETE_100_PERCENT.md)** - Ecosystem status
+2. **[NUCLEUS_DEEP_DEBT_MISSION_COMPLETE.md](NUCLEUS_DEEP_DEBT_MISSION_COMPLETE.md)** - Mission summary
+3. **[PRIMAL_HARVEST_COMPLETE.md](PRIMAL_HARVEST_COMPLETE.md)** - Primal harvests
+
+### **Want Details?**
+
+→ **[ROOT_INDEX.md](ROOT_INDEX.md)** - Complete documentation index (20+ documents organized)
+
+---
+
+## 🚀 **Quick Commands**
+
+### **Build Everything**
+```bash
+cargo build --release --workspace
 ```
 
-### 2. Graph-Based Semantic Translation
-
-Mappings in `tower_atomic_bootstrap.toml`:
-
-```toml
-[nodes.capabilities_provided]
-"sha256" = "crypto.sha256"
-"sha384" = "crypto.sha384"
-"generate_keypair" = "crypto.x25519_generate_ephemeral"
-"hash_for_cipher" = "crypto.hash_for_cipher"
+### **Run Tests**
+```bash
+cargo test --workspace
 ```
 
-### 3. Pure Rust TLS 1.3
-
-```
-HTTP Request → Songbird → BearDog (crypto) → External HTTPS
-                  ↓
-           TLS 1.3 handshake
-           AES-128-GCM / AES-256-GCM
-           SHA-256 / SHA-384
+### **Start NUCLEUS Stack**
+```bash
+./scripts/quick_start_nucleus_test.sh
 ```
 
-### 4. NUCLEUS Lifecycle
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Primal Lifecycle                          │
-├─────────────────────────────────────────────────────────────┤
-│  Germinating → Incubating → Active ↔ Degraded → Apoptosis  │
-│                                ↓                            │
-│                          Resurrection                       │
-│                      (from deployment graph)                │
-└─────────────────────────────────────────────────────────────┘
+### **Check Socket Status**
+```bash
+ls -la /run/user/$(id -u)/biomeos/
 ```
 
-### 5. Socket Discovery (No Hardcoding)
+### **Deploy Custom Graph**
+```bash
+cargo run --release -- deploy graphs/my_graph.toml
+```
+
+---
+
+## 🎊 **Current Status (Jan 30, 2026)**
+
+### **Production Ready: ✅**
+
+- ✅ Socket standard established
+- ✅ All 5 NUCLEUS primals ready
+- ✅ 3/3 primal teams responded (<24h)
+- ✅ 5,000+ tests passing (100%)
+- ✅ All atomics functional
+
+### **What Just Happened?**
+
+**NUCLEUS Integration Mission (Jan 29-30, 2026):**
+- Investigated socket discovery issues
+- Fixed biomeOS discovery logic
+- Created handoff documents for 3 primal teams
+- **All 3 teams responded in <24 hours** with excellent implementations
+- Achieved 100% ecosystem readiness
+
+**This is unprecedented in distributed ecosystem development!**
+
+---
+
+## 💡 **Key Concepts**
+
+### **Primal Self-Knowledge**
+
+Each primal:
+- Creates its own socket
+- Discovers others at runtime
+- Registers capabilities
+- No compile-time coupling
+
+### **Capability-Based Routing**
 
 ```rust
-// OLD (hardcoded)
-let socket = PathBuf::from("/tmp/beardog-nat0.sock");
+// Semantic capability calls
+neural_api.call("http.request", request_params)    // → Songbird
+neural_api.call("crypto.sign", sign_params)        // → BearDog
+neural_api.call("storage.put", storage_params)     // → NestGate
+neural_api.call("ai.query", ai_params)             // → Squirrel
+```
 
-// NEW (capability-based)
-let discovery = SocketDiscovery::new(neural_api_socket, family_id);
-let socket = discovery.discover_socket("crypto").await?;
+### **Graph-Based Deployment**
+
+```toml
+# graphs/my_stack.toml
+[[primals]]
+name = "beardog"
+binary = "../phase1/beardog/target/release/beardog"
+args = ["server"]
+
+[[primals]]
+name = "songbird"
+binary = "../phase1/songbird/target/release/songbird"
+args = ["server"]
 ```
 
 ---
 
-## 📊 Evolution Roadmap
+## 🤝 **Getting Help**
 
-### ✅ Complete (Deep Debt Evolution - Jan 28-29, 2026)
-- Pure Rust TLS 1.3
-- SHA-384 cipher suites
-- capability.call routing
-- Graph-based deployment
-- 93% TLS validation
-- **Protocol Escalation Phase 1** ⭐ - Living Graph + 10 JSON-RPC APIs
-- **NUCLEUS Lifecycle** - Germination through Apoptosis
-- **Socket Discovery** - Capability-based resolution (XDG-compliant)
-- **Concurrent Tests** - No sleeps, proper async patterns
-- **Automated Bootstrap** - `scripts/bootstrap_tower_atomic.sh`
-- **Remote Deployment** - `scripts/deploy_to_tower.sh`
-- **LAN Testing** - `scripts/test_lan_handshake.sh`
-- **Songbird Mesh** - UDP multicast peer discovery
-- **BearDog Integration** - Lineage verification & key derivation
-- **Deep Debt Complete** - 0 TODOs, 0 mocks in production
-- **Clippy Clean** - All auto-fixable lints resolved
-
-### 🔄 External Handoffs (Awaiting Teams)
-- **Songbird** (HIGH): TCP Gateway not binding, STUN methods
-- **Songbird**: TLS 1.2 fallback (npm, Jenkins, 7% remaining)
-- **BearDog** (MEDIUM): Android cross-compile (2 errors)
-- **NestGate** (MEDIUM): Storage persistence configuration
-- **Squirrel** (MEDIUM): HTTP adapter preservation
-- **LAN Federation**: Pending TCP Gateway evolution
-
-### 📋 Next: Protocol Escalation Phase 2-4
-- Phase 2: tarpc service trait integration in primals
-- Phase 3: Metrics-based auto-escalation
-- Phase 4: Hybrid mode optimization
-- See `PROTOCOL_ESCALATION_ROADMAP.md`
-
-### 📋 Future
-- TLS server mode
-- TLS relay/proxy
-- HTTP/2, WebSocket
-- Database TLS
+- **Documentation:** [ROOT_INDEX.md](ROOT_INDEX.md)
+- **Architecture:** [BIOMEOS_ATOMICS_ARCHITECTURE.md](BIOMEOS_ATOMICS_ARCHITECTURE.md)
+- **Testing:** [NUCLEUS_TEST_INDEX.md](NUCLEUS_TEST_INDEX.md)
+- **Deployment:** [DEPLOYMENT.md](DEPLOYMENT.md)
 
 ---
 
-## 🔍 Troubleshooting
+## 🙏 **Credits**
 
-### Common Issues
+**NUCLEUS Mission Success:**
+- **NestGate Team** - A++ 99.7/100, 4-tier innovation
+- **Songbird Team** - A+, Pure Rust XDG
+- **BearDog Team** - A++ 100/100, 5-tier pattern
 
-**Socket not found**:
-```bash
-ls -la /tmp/neural-api.sock /tmp/beardog-nat0.sock /tmp/songbird-nat0.sock
-# If missing, run: ./deploy_tower_atomic.sh
-```
-
-**TLS handshake fails**:
-```bash
-# Check if site supports TLS 1.3
-echo | openssl s_client -connect example.com:443 2>&1 | grep Protocol
-```
-
-**HTTP 403 Forbidden**:
-- Usually fixed by User-Agent (included in Songbird `eaa1dda9d`)
-- Verify using `./deploy_tower_atomic.sh status`
-
-**Primal crashed**:
-```bash
-# Check lifecycle status
-echo '{"jsonrpc":"2.0","method":"lifecycle.status","id":1}' | nc -U /tmp/neural-api.sock
-
-# Resurrect
-echo '{"jsonrpc":"2.0","method":"lifecycle.resurrect","params":{"name":"beardog"},"id":1}' | nc -U /tmp/neural-api.sock
-```
-
-### Logs
-
-```bash
-# Real-time logs
-tail -f /tmp/neural-api*.log
-tail -f /tmp/beardog*.log
-tail -f /tmp/songbird*.log
-```
+**Philosophy:** TRUE PRIMAL architecture - autonomous primals, ecosystem coordination.
 
 ---
 
-## 🎊 Summary
+**Next Steps:**
+1. Read [README.md](README.md) for project overview
+2. Check [ROOT_INDEX.md](ROOT_INDEX.md) for complete docs
+3. Run [QUICK_START.md](QUICK_START.md) to deploy NUCLEUS
+4. Explore [specs/](specs/) for architecture details
 
-**biomeOS Tower Atomic is PRODUCTION READY**
-
-- ✅ Pure Rust TLS 1.3 (zero C dependencies)
-- ✅ 87 sites validated (93% TLS success)
-- ✅ All 3 mandatory cipher suites
-- ✅ Graph-based semantic translation
-- ✅ capability.call routing
-- ✅ NUCLEUS lifecycle management
-- ✅ Socket discovery (no hardcoding)
-- ✅ 1141+ tests passing (concurrent, socket timeouts)
-- ✅ AI/ML APIs (OpenAI, Anthropic, HuggingFace)
-- ✅ Cloud providers (AWS, GCP, Azure)
-- ✅ Code hosting (GitHub, GitLab)
-- ✅ Research (NCBI, PubMed, arXiv)
-
-**Next**: External team handoffs for TLS 1.2 and LAN federation
-
----
-
-**Status**: 🏆 Production Ready | **TLS**: 93% | **Web**: 96% | **Pure Rust**: 100% | **Tests**: 1141+
-
-*Updated: January 29, 2026*
+**🦀✨ Welcome to the ecosystem! ✨🦀**

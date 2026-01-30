@@ -33,7 +33,7 @@ async fn test_beardog_style_socket_communication() {
     tokio::spawn(async move {
         // Signal ready AFTER bind succeeds
         let _ = ready_tx.send(());
-        
+
         let (mut socket, _) = listener.accept().await.unwrap();
 
         // Read request
@@ -109,7 +109,7 @@ async fn test_json_aware_reading() {
     tokio::spawn(async move {
         // Signal ready AFTER bind succeeds
         let _ = ready_tx.send(());
-        
+
         let (mut socket, _) = listener.accept().await.unwrap();
         let mut buf = vec![0u8; 1024];
         let _ = socket.read(&mut buf).await;
@@ -182,11 +182,11 @@ async fn test_json_aware_reading() {
 
     println!("Total time: {:?}", start.elapsed());
     println!("Response: {}", String::from_utf8_lossy(&buffer));
-    
+
     // Validate we got a proper response
     assert!(!buffer.is_empty(), "Should have received response");
-    let response: serde_json::Value = serde_json::from_slice(&buffer)
-        .expect("Should be valid JSON");
+    let response: serde_json::Value =
+        serde_json::from_slice(&buffer).expect("Should be valid JSON");
     assert_eq!(response["result"]["algorithm"], "X25519");
 }
 
@@ -204,7 +204,7 @@ async fn test_concurrent_socket_connections() {
     // Server handles multiple connections
     tokio::spawn(async move {
         let _ = ready_tx.send(());
-        
+
         loop {
             if let Ok((mut socket, _)) = listener.accept().await {
                 tokio::spawn(async move {
@@ -216,7 +216,7 @@ async fn test_concurrent_socket_connections() {
                             .ok()
                             .and_then(|v| v.get("id").cloned())
                             .unwrap_or(serde_json::json!(1));
-                        
+
                         let response = serde_json::json!({
                             "jsonrpc": "2.0",
                             "result": {"success": true},
@@ -247,13 +247,14 @@ async fn test_concurrent_socket_connections() {
             stream.write_all(request.to_string().as_bytes()).await?;
             stream.flush().await?;
             stream.shutdown().await?;
-            
+
             let mut response = vec![0u8; 1024];
             let n = tokio::time::timeout(
                 tokio::time::Duration::from_millis(500),
-                stream.read(&mut response)
-            ).await??;
-            
+                stream.read(&mut response),
+            )
+            .await??;
+
             let parsed: serde_json::Value = serde_json::from_slice(&response[..n])?;
             Ok::<_, Box<dyn std::error::Error + Send + Sync>>(parsed)
         }));
@@ -280,8 +281,12 @@ async fn test_concurrent_socket_connections() {
             }
         }
     }
-    
-    assert!(successes >= 8, "At least 8/10 concurrent connections should succeed, got {}", successes);
+
+    assert!(
+        successes >= 8,
+        "At least 8/10 concurrent connections should succeed, got {}",
+        successes
+    );
 }
 
 /// Test: What nc does that works

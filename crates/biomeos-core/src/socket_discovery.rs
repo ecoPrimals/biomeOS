@@ -245,13 +245,17 @@ impl SocketDiscovery {
             }
         }
 
-        // 3. Try known capability→primal mappings (fallback)
-        let primal_name = self.capability_to_primal(capability);
-        if let Some(name) = primal_name {
-            return self.discover_primal(&name).await;
-        }
-
-        warn!("Socket not found for capability: {}", capability);
+        // 3. No hardcoded fallback - require explicit configuration
+        warn!(
+            "Socket not found for capability '{}'. \
+             To resolve: (1) Start a primal providing '{}' capability, \
+             (2) Set {}_SOCKET or {}_ENDPOINT environment variable, or \
+             (3) Ensure Neural API registry is accessible for runtime discovery.",
+            capability,
+            capability,
+            capability.to_uppercase(),
+            capability.to_uppercase()
+        );
         None
     }
 
@@ -259,9 +263,7 @@ impl SocketDiscovery {
     ///
     /// Returns the path directly, or None if not found.
     pub async fn get_socket_path(&self, primal_name: &str) -> Option<PathBuf> {
-        self.discover_primal(primal_name)
-            .await
-            .map(|s| s.path)
+        self.discover_primal(primal_name).await.map(|s| s.path)
     }
 
     /// Build deterministic socket path for a primal
@@ -289,8 +291,14 @@ impl SocketDiscovery {
         // Try various environment variable patterns
         let env_patterns = vec![
             format!("{}_SOCKET", primal_name.to_uppercase().replace("-", "_")),
-            format!("{}_SOCKET_PATH", primal_name.to_uppercase().replace("-", "_")),
-            format!("BIOMEOS_{}_SOCKET", primal_name.to_uppercase().replace("-", "_")),
+            format!(
+                "{}_SOCKET_PATH",
+                primal_name.to_uppercase().replace("-", "_")
+            ),
+            format!(
+                "BIOMEOS_{}_SOCKET",
+                primal_name.to_uppercase().replace("-", "_")
+            ),
         ];
 
         for env_var in env_patterns {
@@ -376,14 +384,26 @@ impl SocketDiscovery {
     async fn discover_via_registry_by_name(&self, primal_name: &str) -> Option<DiscoveredSocket> {
         let neural_api = self.get_neural_api_socket()?;
 
-        match self.query_registry("primal.discover", &serde_json::json!({
-            "name": primal_name
-        }), &neural_api).await {
+        match self
+            .query_registry(
+                "primal.discover",
+                &serde_json::json!({
+                    "name": primal_name
+                }),
+                &neural_api,
+            )
+            .await
+        {
             Ok(result) => {
                 if let Some(socket_path) = result.get("socket_path").and_then(|s| s.as_str()) {
-                    let capabilities = result.get("capabilities")
+                    let capabilities = result
+                        .get("capabilities")
                         .and_then(|c| c.as_array())
-                        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+                        .map(|arr| {
+                            arr.iter()
+                                .filter_map(|v| v.as_str().map(String::from))
+                                .collect()
+                        })
                         .unwrap_or_default();
 
                     return Some(DiscoveredSocket {
@@ -403,15 +423,26 @@ impl SocketDiscovery {
     }
 
     /// Query capability registry by capability
-    async fn discover_via_registry_by_capability(&self, capability: &str) -> Option<DiscoveredSocket> {
+    async fn discover_via_registry_by_capability(
+        &self,
+        capability: &str,
+    ) -> Option<DiscoveredSocket> {
         let neural_api = self.get_neural_api_socket()?;
 
-        match self.query_registry("capability.discover", &serde_json::json!({
-            "capability": capability
-        }), &neural_api).await {
+        match self
+            .query_registry(
+                "capability.discover",
+                &serde_json::json!({
+                    "capability": capability
+                }),
+                &neural_api,
+            )
+            .await
+        {
             Ok(result) => {
                 if let Some(socket_path) = result.get("primary_socket").and_then(|s| s.as_str()) {
-                    let primal_name = result.get("provider")
+                    let primal_name = result
+                        .get("provider")
                         .and_then(|p| p.as_str())
                         .map(String::from);
 
@@ -442,10 +473,13 @@ impl SocketDiscovery {
         use tokio::net::UnixStream;
         use tokio::time::{timeout, Duration};
 
-        let stream = timeout(Duration::from_secs(5), UnixStream::connect(neural_api_socket))
-            .await
-            .map_err(|_| "Connection timeout")?
-            .map_err(|e| format!("Connection failed: {}", e))?;
+        let stream = timeout(
+            Duration::from_secs(5),
+            UnixStream::connect(neural_api_socket),
+        )
+        .await
+        .map_err(|_| "Connection timeout")?
+        .map_err(|e| format!("Connection failed: {}", e))?;
 
         let (reader, mut writer) = stream.into_split();
         let mut reader = BufReader::new(reader);
@@ -458,7 +492,10 @@ impl SocketDiscovery {
         });
 
         let request_str = serde_json::to_string(&request).map_err(|e| e.to_string())? + "\n";
-        writer.write_all(request_str.as_bytes()).await.map_err(|e| e.to_string())?;
+        writer
+            .write_all(request_str.as_bytes())
+            .await
+            .map_err(|e| e.to_string())?;
         writer.flush().await.map_err(|e| e.to_string())?;
 
         let mut response_line = String::new();
@@ -474,7 +511,8 @@ impl SocketDiscovery {
             return Err(format!("Registry error: {}", error));
         }
 
-        response.get("result")
+        response
+            .get("result")
             .cloned()
             .ok_or_else(|| "No result in response".to_string())
     }
@@ -514,29 +552,21 @@ impl SocketDiscovery {
             PathBuf::from("/tmp/neural-api.sock"),
         ];
 
-        for path in standard_locations {
-            if path.exists() {
-                return Some(path);
-            }
-        }
-
-        None
+        standard_locations.into_iter().find(|path| path.exists())
     }
 
-    /// Map capability to known primal name (fallback)
-    fn capability_to_primal(&self, capability: &str) -> Option<String> {
-        // Known mappings (fallback when registry unavailable)
-        let mapping = match capability {
-            "crypto" | "security" | "tls" | "genetic" => Some("beardog"),
-            "http" | "discovery" | "network" | "mesh" => Some("songbird"),
-            "ai" | "inference" | "learning" => Some("squirrel"),
-            "compute" | "workload" | "orchestration" => Some("toadstool"),
-            "storage" | "data" | "persistence" => Some("nestgate"),
-            _ => None,
-        };
-
-        mapping.map(String::from)
-    }
+    /// REMOVED: Hardcoded capability→primal mappings
+    ///
+    /// This function has been removed to adhere to the TRUE PRIMAL principle:
+    /// "Primals do NOT have hardcoded knowledge of other primals"
+    ///
+    /// Instead, capability discovery now relies solely on:
+    /// 1. Runtime registry queries (Neural API)
+    /// 2. Environment variables (e.g., SECURITY_SOCKET, AI_ENDPOINT)
+    /// 3. Explicit configuration
+    ///
+    /// This ensures biomeOS remains agnostic and capability-based, with no
+    /// compile-time coupling to specific primal implementations.
 
     /// Check cache for a socket
     async fn check_cache(&self, key: &str) -> Option<DiscoveredSocket> {
@@ -618,17 +648,10 @@ mod tests {
         assert!(path.to_string_lossy().contains("test-family"));
     }
 
-    #[test]
-    fn test_capability_to_primal_mapping() {
-        let discovery = SocketDiscovery::new("nat0");
-
-        assert_eq!(discovery.capability_to_primal("crypto"), Some("beardog".to_string()));
-        assert_eq!(discovery.capability_to_primal("http"), Some("songbird".to_string()));
-        assert_eq!(discovery.capability_to_primal("ai"), Some("squirrel".to_string()));
-        assert_eq!(discovery.capability_to_primal("compute"), Some("toadstool".to_string()));
-        assert_eq!(discovery.capability_to_primal("storage"), Some("nestgate".to_string()));
-        assert_eq!(discovery.capability_to_primal("unknown"), None);
-    }
+    /// REMOVED: test_capability_to_primal_mapping
+    ///
+    /// This test has been removed as the hardcoded capability→primal mapping
+    /// has been evolved to runtime-only discovery. See function documentation above.
 
     #[test]
     fn test_discovery_strategy_defaults() {
@@ -685,4 +708,3 @@ mod tests {
         assert!(cleared.is_none());
     }
 }
-

@@ -133,12 +133,7 @@ impl LifecycleHandler {
         // Note: register_primal uses internal locking, we just need to access the manager
         let manager = self.manager.read().await;
         manager
-            .register_primal(
-                name,
-                PathBuf::from(socket_path),
-                pid,
-                deployment_node,
-            )
+            .register_primal(name, PathBuf::from(socket_path), pid, deployment_node)
             .await?;
         drop(manager); // Explicit drop for clarity
 
@@ -310,4 +305,3 @@ mod tests {
         assert_eq!(status["count"], 1);
     }
 }
-

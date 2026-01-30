@@ -82,6 +82,11 @@ impl TrustLayerImpl {
     /// Create a new trust layer
     ///
     /// **Deep Debt Principle**: Discovers `BearDog` at runtime, no hardcoding!
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - `BearDog` socket cannot be discovered (`BearDog` not running or socket not found)
     pub async fn new() -> Result<Self> {
         info!("Initializing NUCLEUS Trust Layer (delegating to BearDog)");
 

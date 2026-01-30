@@ -68,8 +68,8 @@ pub use neural_router::{
 
 // Lifecycle management exports
 pub use lifecycle_manager::{
-    ApoptosisReason, HealthConfig, LifecycleManager, LifecycleState, ManagedPrimal,
-    PrimalMetrics, ResurrectionConfig,
+    ApoptosisReason, HealthConfig, LifecycleManager, LifecycleState, ManagedPrimal, PrimalMetrics,
+    ResurrectionConfig,
 };
 
 // Living Graph / Protocol Escalation exports

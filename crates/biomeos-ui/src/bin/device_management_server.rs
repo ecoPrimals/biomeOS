@@ -321,10 +321,13 @@ async fn register_with_songbird(socket_path: &str) -> Result<()> {
 
     // Read response with timeout (30s)
     let mut response_line = String::new();
-    timeout(Duration::from_secs(30), reader.read_line(&mut response_line))
-        .await
-        .context("Songbird registration timeout (30s)")?
-        .context("Failed to read Songbird response")?;
+    timeout(
+        Duration::from_secs(30),
+        reader.read_line(&mut response_line),
+    )
+    .await
+    .context("Songbird registration timeout (30s)")?
+    .context("Failed to read Songbird response")?;
 
     let response: Value = serde_json::from_str(response_line.trim())?;
 
@@ -355,7 +358,9 @@ fn discover_songbird_socket() -> Result<String> {
     }
 
     // Priority 3: Family-based discovery (XDG-compliant first)
-    if let Ok(family_id) = std::env::var("BIOMEOS_FAMILY_ID").or_else(|_| std::env::var("FAMILY_ID")) {
+    if let Ok(family_id) =
+        std::env::var("BIOMEOS_FAMILY_ID").or_else(|_| std::env::var("FAMILY_ID"))
+    {
         // XDG path first
         if let Ok(runtime) = std::env::var("XDG_RUNTIME_DIR") {
             let socket = format!("{}/biomeos/songbird-{}.sock", runtime, family_id);

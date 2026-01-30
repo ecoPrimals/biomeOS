@@ -32,7 +32,7 @@ impl MockPrimalServer {
     /// **Concurrency**: Uses oneshot channel for deterministic readiness
     async fn start(socket_path: PathBuf, primal_name: &str, capabilities: Vec<&str>) -> Self {
         let (ready_tx, ready_rx) = oneshot::channel();
-        
+
         let listener = UnixListener::bind(&socket_path).expect("Failed to bind socket");
         let name = primal_name.to_string();
         let caps: Vec<String> = capabilities.into_iter().map(|s| s.to_string()).collect();
@@ -41,7 +41,7 @@ impl MockPrimalServer {
         let handle = tokio::spawn(async move {
             // Signal ready AFTER bind succeeds
             let _ = ready_tx.send(());
-            
+
             loop {
                 match listener.accept().await {
                     Ok((stream, _)) => {

@@ -142,8 +142,7 @@ family_id = "test-family"
     let _incubator = SporeIncubator::new(&spore_path).unwrap();
 
     // Verify incubator was created (internal state check would require pub fields or getters)
-    // For now, just verify it doesn't panic
-    assert!(true, "Incubator created successfully");
+    // Successful creation without panic = test pass
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]

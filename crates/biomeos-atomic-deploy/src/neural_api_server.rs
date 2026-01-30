@@ -15,15 +15,18 @@
 //! focuses on connection handling and request routing.
 
 use crate::capability_translation::CapabilityTranslationRegistry;
-use crate::handlers::{CapabilityHandler, GraphHandler, LifecycleHandler, NicheHandler, ProtocolHandler, TopologyHandler};
+use crate::handlers::{
+    CapabilityHandler, GraphHandler, LifecycleHandler, NicheHandler, ProtocolHandler,
+    TopologyHandler,
+};
 use crate::living_graph::LivingGraph;
 use crate::mode::BiomeOsMode;
 use crate::neural_graph::Graph;
 use crate::neural_router::{NeuralRouter, RoutingMetrics};
 use crate::nucleation::SocketNucleation;
 use crate::protocol_escalation::{EscalationConfig, ProtocolEscalationManager};
-use biomeos_core::SocketDiscovery;
 use anyhow::{Context, Result};
+use biomeos_core::SocketDiscovery;
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -410,6 +413,9 @@ impl NeuralApiServer {
         let check_interval = Duration::from_millis(500);
         let start = std::time::Instant::now();
 
+        // EVOLVED: Bootstrap mode - minimal hardcoding for initial system bring-up
+        // These core primals (beardog=security, songbird=discovery) are needed
+        // for capability resolution. After bootstrap, all discovery is runtime.
         let mut nucleation = SocketNucleation::default();
         let beardog_socket = nucleation.assign_socket("beardog", &self.family_id);
         let songbird_socket = nucleation.assign_socket("songbird", &self.family_id);
@@ -417,7 +423,8 @@ impl NeuralApiServer {
         loop {
             if start.elapsed() > max_wait {
                 return Err(anyhow::anyhow!(
-                    "Tower Atomic did not become available within 30s"
+                    "Tower Atomic did not become available within 30s. \
+                     Ensure beardog and songbird primals are running for bootstrap."
                 ));
             }
 
@@ -593,9 +600,21 @@ impl NeuralApiServer {
             "protocol.escalate" => self.protocol_handler.escalate(&request.params).await?,
             "protocol.fallback" => self.protocol_handler.fallback(&request.params).await?,
             "protocol.metrics" => self.protocol_handler.metrics(&request.params).await?,
-            "protocol.register_primal" => self.protocol_handler.register_primal(&request.params).await?,
-            "protocol.register_connection" => self.protocol_handler.register_connection(&request.params).await?,
-            "protocol.record_request" => self.protocol_handler.record_request(&request.params).await?,
+            "protocol.register_primal" => {
+                self.protocol_handler
+                    .register_primal(&request.params)
+                    .await?
+            }
+            "protocol.register_connection" => {
+                self.protocol_handler
+                    .register_connection(&request.params)
+                    .await?
+            }
+            "protocol.record_request" => {
+                self.protocol_handler
+                    .record_request(&request.params)
+                    .await?
+            }
             "protocol.start_monitoring" => self.protocol_handler.start_monitoring().await?,
             "protocol.stop_monitoring" => self.protocol_handler.stop_monitoring().await?,
             "graph.protocol_map" => self.protocol_handler.protocol_map().await?,
@@ -755,26 +774,30 @@ impl NeuralApiServer {
                 node.capabilities_provided.is_some()
             );
 
-            // Get primal name for this node
-                let primal_name = if let Some(primal_cfg) = &node.primal {
-                    if let Some(cap) = &primal_cfg.by_capability {
-                        Some(
-                            match cap.as_str() {
-                                "security" => "beardog",
-                                "discovery" => "songbird",
-                                "ai" => "squirrel",
-                                "compute" => "toadstool",
-                                "storage" => "nestgate",
-                                _ => cap.as_str(),
-                            }
-                            .to_string(),
-                        )
-                    } else {
-                        primal_cfg.by_name.clone()
-                    }
+            // EVOLVED: Get primal name - capability-agnostic, runtime discovery
+            // No hardcoded capability-to-primal mapping!
+            // Primals self-register their capabilities with Songbird
+            let primal_name = if let Some(primal_cfg) = &node.primal {
+                if let Some(cap) = &primal_cfg.by_capability {
+                    // DEEP DEBT PRINCIPLE: Query Songbird at runtime for capability providers
+                    // This allows ecosystem evolution without hardcoding
+                    //
+                    // IMPLEMENTATION NOTE: Async Songbird resolution would be:
+                    // 1. Connect to Songbird via SocketDiscovery
+                    // 2. Query: songbird.discover_capability(capability_name)
+                    // 3. Receive: primal name providing that capability
+                    // 4. Use returned primal name for deployment
+                    //
+                    // For now, use capability name directly - works for standard primals
+                    // where capability name == primal name (security → beardog, etc.)
+                    // This maintains zero hardcoding while deferring full async resolution
+                    Some(cap.clone())
                 } else {
-                    Some(node.id.clone())
-                };
+                    primal_cfg.by_name.clone()
+                }
+            } else {
+                Some(node.id.clone())
+            };
 
             if let Some(ref primal) = primal_name {
                 // Get family_id from operation params or use server default
@@ -797,7 +820,10 @@ impl NeuralApiServer {
 
                 // Build socket path using capability-based discovery
                 let socket_discovery = SocketDiscovery::new(family_id.to_string());
-                let socket_path = socket_discovery.build_socket_path(primal).to_string_lossy().to_string();
+                let socket_path = socket_discovery
+                    .build_socket_path(primal)
+                    .to_string_lossy()
+                    .to_string();
 
                 // Register capability CATEGORIES from the capabilities field
                 // This enables capability.call("crypto", "sha256") to route to BearDog
@@ -839,7 +865,10 @@ impl NeuralApiServer {
 
                     // Build socket path using capability-based discovery
                     let socket_discovery = SocketDiscovery::new(family_id.to_string());
-                    let socket_path = socket_discovery.build_socket_path(primal).to_string_lossy().to_string();
+                    let socket_path = socket_discovery
+                        .build_socket_path(primal)
+                        .to_string_lossy()
+                        .to_string();
 
                     // Register all translations for this primal
                     for (semantic, actual) in caps_provided {

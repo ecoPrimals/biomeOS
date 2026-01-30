@@ -245,17 +245,17 @@ async fn configure_primal_sockets(
             // Songbird v3.33.0: CLI flags + environment variables
             // EVOLUTION COMPLETE (Jan 28, 2026) - Songbird now supports --socket CLI
             cmd.arg("--socket").arg(socket_path);
-            
+
             // Bond to BearDog for security (TLS crypto delegation)
             let beardog_socket = context.get_socket_path("beardog").await;
             cmd.arg("--beardog-socket").arg(&beardog_socket);
-            
+
             // Environment variables for Songbird configuration
             cmd.env("BEARDOG_MODE", "direct"); // Direct RPC to BearDog
             cmd.env("BEARDOG_SOCKET", &beardog_socket);
             cmd.env("SONGBIRD_SECURITY_PROVIDER", "beardog"); // Provider name, not socket!
             cmd.env("FAMILY_ID", family_id);
-            
+
             // Neural API socket for capability.call routing
             let neural_api_socket = context.get_socket_path("neural-api").await;
             cmd.env("NEURAL_API_SOCKET", &neural_api_socket);

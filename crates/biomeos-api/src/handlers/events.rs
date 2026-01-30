@@ -111,7 +111,7 @@ pub async fn event_stream(
         |fut| fut,
     );
 
-    let stream = FuturesStreamExt::flat_map(stream, |events| stream::iter(events));
+    let stream = FuturesStreamExt::flat_map(stream, stream::iter);
     let stream = TokioStreamExt::throttle(stream, Duration::from_secs(5));
     let stream = FuturesStreamExt::filter_map(stream, |event| async move {
         // Attempt to serialize the event to JSON for SSE
@@ -212,7 +212,7 @@ async fn detect_and_emit_changes(
                 }
 
                 // Check for family changes
-                let prev_family = prev_snapshot.family_id.as_ref().map(|s| s.as_str());
+                let prev_family = prev_snapshot.family_id.as_deref();
                 let curr_family = primal.family_id.as_ref().map(|f| f.as_str());
 
                 if prev_family != curr_family {
@@ -233,7 +233,7 @@ async fn detect_and_emit_changes(
             primal_id,
             PrimalSnapshot {
                 name: primal.name.clone(),
-                health: primal.health.clone(),
+                health: primal.health,
                 family_id: primal.family_id.as_ref().map(|f| f.to_string()),
                 capabilities_count: primal.capabilities.len(),
             },

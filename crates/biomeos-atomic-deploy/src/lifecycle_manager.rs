@@ -338,7 +338,10 @@ impl LifecycleManager {
         let graph_id = graph_id.into();
         let mut graphs = self.deployment_graphs.write().await;
         graphs.insert(graph_id.clone(), graph);
-        info!("📋 Stored deployment graph: {} (for resurrection)", graph_id);
+        info!(
+            "📋 Stored deployment graph: {} (for resurrection)",
+            graph_id
+        );
     }
 
     // ========================================================================
@@ -436,7 +439,10 @@ impl LifecycleManager {
                 _ => {}
             }
 
-            debug!("💚 {} healthy ({}ms)", name, primal.metrics.last_health_latency_ms);
+            debug!(
+                "💚 {} healthy ({}ms)",
+                name, primal.metrics.last_health_latency_ms
+            );
         } else {
             // Health check failed
             primal.metrics.health_failures += 1;
@@ -444,9 +450,7 @@ impl LifecycleManager {
             if primal.metrics.health_failures >= primal.health_config.failure_threshold {
                 warn!(
                     "🔴 {} DEGRADED after {} failures: {:?}",
-                    name,
-                    primal.metrics.health_failures,
-                    health_result.message
+                    name, primal.metrics.health_failures, health_result.message
                 );
 
                 primal.state = LifecycleState::Degraded {
@@ -503,10 +507,7 @@ impl LifecycleManager {
 
         // Check max attempts
         if attempts >= primal.resurrection_config.max_attempts {
-            error!(
-                "💀 {} resurrection exhausted ({} attempts)",
-                name, attempts
-            );
+            error!("💀 {} resurrection exhausted ({} attempts)", name, attempts);
             primal.state = LifecycleState::Apoptosis {
                 reason: ApoptosisReason::ResurrectionExhausted,
                 started_at: chrono::Utc::now(),
@@ -891,4 +892,3 @@ mod tests {
         assert_eq!(config.max_attempts, 5);
     }
 }
-

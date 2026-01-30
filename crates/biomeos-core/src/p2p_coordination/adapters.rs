@@ -269,12 +269,12 @@ impl SongbirdDiscoveryAdapter {
             endpoint
         );
         
-        // For now, we'll create a placeholder that will panic if used
-        // This forces migration to proper discovery patterns
-        panic!(
+        // EVOLVED: Return error instead of panic for deprecated function
+        anyhow::bail!(
             "SongbirdDiscoveryAdapter::new() is deprecated. \
-             Use SongbirdClient::discover() for capability-based discovery."
-        );
+             Use SongbirdClient::discover() for capability-based discovery. \
+             See migration guide in docs/migrations/SONGBIRD_CLIENT_MIGRATION.md"
+        )
     }
     
     /// Create adapter from a discovered Songbird client

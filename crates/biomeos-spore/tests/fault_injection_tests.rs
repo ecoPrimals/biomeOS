@@ -68,10 +68,11 @@ async fn test_seed_generation_failure() {
     // Cleanup
     #[cfg(unix)]
     {
+        use std::os::unix::fs::PermissionsExt;
         let secrets_dir = biomeos_dir.join("secrets");
         if secrets_dir.exists() {
-            let mut perms = fs::metadata(&secrets_dir).unwrap().permissions();
-            perms.set_readonly(false);
+            // Set proper Unix permissions (0o755) instead of just readonly=false
+            let perms = fs::Permissions::from_mode(0o755);
             fs::set_permissions(&secrets_dir, perms).unwrap();
         }
     }
@@ -120,7 +121,7 @@ async fn test_config_creation_success() {
 async fn test_partial_binary_copy() {
     // RAII guard ensures directory restoration even on panic
     let _dir_guard = DirGuard::new();
-    
+
     let temp_dir = TempDir::new().unwrap();
 
     // Setup plasmidBin with ONLY tower and beardog (missing songbird)
@@ -181,17 +182,18 @@ async fn test_partial_binary_copy() {
         spore_root.join("primals/beardog").exists(),
         "beardog should be copied"
     );
-    
+
     // Verify beardog content matches what we created (from temp dir, not real plasmidBin)
     // Note: If songbird exists, it's because copy_binaries found it in the real plasmidBin
     // directory (absolute path lookup). This test validates that beardog was copied.
-    let beardog_content = std::fs::read_to_string(spore_root.join("primals/beardog")).unwrap_or_default();
+    let beardog_content =
+        std::fs::read_to_string(spore_root.join("primals/beardog")).unwrap_or_default();
     assert!(
         beardog_content.contains("Mock beardog"),
         "beardog content should be from our mock, not the real binary. Got: {}",
         beardog_content.chars().take(50).collect::<String>()
     );
-    
+
     // Note: DirGuard will restore original directory when dropped
 }
 
@@ -245,7 +247,7 @@ async fn test_invalid_node_id() {
 async fn test_empty_primals_directory() {
     // RAII guard ensures directory restoration even on panic
     let _dir_guard = DirGuard::new();
-    
+
     let temp_dir = TempDir::new().unwrap();
 
     // Setup plasmidBin with tower but EMPTY primals/
@@ -293,12 +295,15 @@ async fn test_empty_primals_directory() {
             let primal_count = std::fs::read_dir(&spore_primals)
                 .map(|entries| entries.count())
                 .unwrap_or(0);
-            println!("✅ Spore created with {} primals (may use fallback discovery)", primal_count);
+            println!(
+                "✅ Spore created with {} primals (may use fallback discovery)",
+                primal_count
+            );
         }
         Err(e) => {
             println!("ℹ️ Spore creation failed (acceptable): {}", e);
         }
     }
-    
+
     // Note: DirGuard will restore original directory when dropped
 }

@@ -81,6 +81,11 @@ impl IdentityLayerImpl {
     /// Create a new identity layer
     ///
     /// **Deep Debt Principle**: Discovers `BearDog` at runtime, no hardcoding!
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - `BearDog` socket cannot be discovered (`BearDog` not running or socket not found)
     pub async fn new() -> Result<Self> {
         info!("Initializing NUCLEUS Identity Layer (delegating to BearDog)");
 
@@ -117,12 +122,12 @@ impl IdentityLayerImpl {
             return Ok(socket);
         }
 
-        // 2. Check runtime directory
+        // 2. Check XDG runtime directory (standard location)
         if let Ok(uid) = std::env::var("UID") {
-            let runtime_path = format!("/run/user/{uid}/beardog/beardog.sock");
+            let runtime_path = format!("/run/user/{uid}/biomeos/beardog.sock");
             if tokio::fs::metadata(&runtime_path).await.is_ok() {
                 debug!(
-                    "Found BearDog socket in runtime directory: {}",
+                    "Found BearDog socket in XDG runtime directory: {}",
                     runtime_path
                 );
                 return Ok(runtime_path);
@@ -139,7 +144,11 @@ impl IdentityLayerImpl {
         })? {
             let path = entry.path();
             if let Some(filename) = path.file_name().and_then(|n| n.to_str()) {
-                if filename.starts_with("beardog-") && filename.ends_with(".sock") {
+                if filename.starts_with("beardog-")
+                    && std::path::Path::new(filename)
+                        .extension()
+                        .is_some_and(|ext| ext.eq_ignore_ascii_case("sock"))
+                {
                     debug!("Found BearDog socket: {}", path.display());
                     return Ok(path.to_string_lossy().to_string());
                 }

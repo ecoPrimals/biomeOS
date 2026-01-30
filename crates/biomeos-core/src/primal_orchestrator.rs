@@ -21,7 +21,10 @@ use biomeos_types::{
     identifiers::{Endpoint, PrimalId},
 };
 
-use crate::{capabilities::Capability, discovery_modern::HealthStatus, retry::RetryPolicy, socket_discovery::SocketDiscovery};
+use crate::{
+    capabilities::Capability, discovery_modern::HealthStatus, retry::RetryPolicy,
+    socket_discovery::SocketDiscovery,
+};
 
 /// Primal health monitor using JSON-RPC over Unix sockets.
 ///
@@ -162,7 +165,10 @@ impl PrimalHealthMonitor {
                 .or_else(|_| std::env::var("BIOMEOS_FAMILY_ID"))
                 .unwrap_or_else(|_| "default".to_string());
             let discovery = SocketDiscovery::new(family_id);
-            discovery.build_socket_path(&id.to_string()).to_string_lossy().to_string()
+            discovery
+                .build_socket_path(id.as_ref())
+                .to_string_lossy()
+                .to_string()
         };
 
         tracing::debug!("🏥 Registering primal {} at {}", id, socket_path);

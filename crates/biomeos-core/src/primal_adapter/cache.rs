@@ -74,16 +74,9 @@ impl AdapterCache {
     }
 }
 
-impl Default for AdapterCache {
-    fn default() -> Self {
-        // Use panicking default since this is called implicitly
-        // Production code should explicitly call new() and handle errors
-        Self::new().unwrap_or_else(|e| {
-            tracing::error!("Failed to create adapter cache: {}", e);
-            panic!("Could not initialize adapter cache: {}", e)
-        })
-    }
-}
+// EVOLVED: Removed panicking Default impl
+// Use AdapterCache::new() explicitly for proper error handling
+// If you need a Default, create infallible fallback with in-memory only cache
 
 /// Save adapter to cache (convenience function)
 pub fn save_adapter(adapter: &PrimalAdapter) -> Result<()> {

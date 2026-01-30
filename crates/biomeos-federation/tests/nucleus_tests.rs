@@ -40,10 +40,7 @@ async fn test_insecure_discovery() {
 
     // Insecure discovery with timeout to prevent hangs
     // **Concurrency**: Uses timeout - test issues will be production issues!
-    let result = tokio::time::timeout(
-        Duration::from_secs(5),
-        nucleus.discover_insecure()
-    ).await;
+    let result = tokio::time::timeout(Duration::from_secs(5), nucleus.discover_insecure()).await;
 
     match result {
         Ok(Ok(primals)) => {
@@ -52,7 +49,10 @@ async fn test_insecure_discovery() {
         }
         Ok(Err(e)) => {
             // Discovery returned an error - that's ok, just log it
-            println!("⚠️  Insecure discovery error (expected without Songbird): {}", e);
+            println!(
+                "⚠️  Insecure discovery error (expected without Songbird): {}",
+                e
+            );
         }
         Err(_) => {
             // Timeout - this is acceptable when no discovery service is running

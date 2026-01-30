@@ -10,7 +10,7 @@ use super::session::ActiveLogSession;
 use crate::error::SporeResult;
 use chrono::Utc;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tokio::fs as async_fs;
 use tracing::{debug, info, warn};
 
@@ -124,7 +124,7 @@ impl LogManager {
     async fn update_fossil_index(
         &self,
         fossil: &FossilRecord,
-        fossil_path: &PathBuf,
+        fossil_path: &Path,
     ) -> SporeResult<()> {
         let index_path = self.config.fossil_dir.join("index.toml");
 
@@ -138,7 +138,7 @@ impl LogManager {
             node_id: fossil.node_id.clone(),
             session_started: fossil.session_started,
             archival_reason: fossil.archival_reason.clone(),
-            fossil_path: fossil_path.clone(),
+            fossil_path: fossil_path.to_path_buf(),
             issue_count: fossil.issues.len(),
             encrypted: fossil.encrypted,
         };

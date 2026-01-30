@@ -35,12 +35,11 @@ family = "test-family"
     .unwrap();
 
     // 2. Create incubator
-    let incubator = SporeIncubator::new(&spore_path).unwrap();
+    let _incubator = SporeIncubator::new(&spore_path).unwrap();
 
     // 3. Incubate the spore
     // Note: This will try to write to ~/.config/biomeos/ which may not be desired in tests
-    // For now, we'll just verify the incubator can be created
-    assert!(true, "E2E incubation workflow setup complete");
+    // For now, we'll just verify the incubator can be created (successful creation = test pass)
 
     // Note: Full incubation would require:
     // - Mocking HOME directory
@@ -75,7 +74,7 @@ family_id = "{}"
     .unwrap();
 
     // Simulate two computers
-    let incubator = SporeIncubator::new(&spore_path).unwrap();
+    let _incubator = SporeIncubator::new(&spore_path).unwrap();
 
     // In a real scenario, we would:
     // 1. Incubate on computer A with entropy_A
@@ -111,7 +110,7 @@ family_id = "{}"
     )
     .unwrap();
 
-    let incubator = SporeIncubator::new(&spore_path).unwrap();
+    let _incubator = SporeIncubator::new(&spore_path).unwrap();
 
     // Verify the spore seed can be read
     let family_seed = FamilySeed::from_file(spore_path.join(".family.seed")).unwrap();
@@ -146,7 +145,7 @@ node_id = "log-test"
     )
     .unwrap();
 
-    let incubator = SporeIncubator::new(&spore_path).unwrap();
+    let _incubator = SporeIncubator::new(&spore_path).unwrap();
 
     // In a full test, we would:
     // 1. Incubate the spore

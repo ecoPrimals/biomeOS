@@ -341,7 +341,11 @@ pub fn substitute_env(s: &str, env: &HashMap<String, String>) -> String {
 /// **Deep Debt Principle**: No hardcoded primal names - only capabilities.
 /// Discovery order:
 /// 1. Environment variable ({CAPABILITY}_SOCKET or {CAPABILITY}_ENDPOINT)
-/// 2. Well-known socket path pattern
+/// 2. (REMOVED) Well-known primal names - evolved to runtime-only discovery
+///
+/// Note: This function no longer falls back to hardcoded primal names.
+/// Users must explicitly configure capability providers via environment variables
+/// or ensure the Neural API capability registry is accessible for runtime discovery.
 async fn discover_capability_provider(
     context: &ExecutionContext,
     capability: &str,
@@ -368,26 +372,19 @@ async fn discover_capability_provider(
         return Some(endpoint.clone());
     }
 
-    // 3. Try well-known providers for common capabilities
-    let well_known = match capability {
-        "security" | "crypto" => vec!["beardog"],
-        "discovery" | "mesh" => vec!["songbird"],
-        "storage" => vec!["nestgate"],
-        "compute" => vec!["toadstool"],
-        "ai" | "mcp" => vec!["squirrel"],
-        _ => vec![],
-    };
-
-    for primal in well_known {
-        let socket = context.get_socket_path(primal).await;
-        if tokio::fs::metadata(&socket).await.is_ok() {
-            debug!(
-                "Found {} provider via well-known {}: {}",
-                capability, primal, socket
-            );
-            return Some(socket);
-        }
-    }
+    // 3. No hardcoded fallback - require explicit configuration
+    // EVOLVED: Removed hardcoded capability→primal mappings
+    // TRUE PRIMAL principle: No compile-time knowledge of specific primal names
+    debug!(
+        "No provider found for capability '{}'. \
+         Resolution options: \
+         (1) Start a primal providing '{}' capability, \
+         (2) Set {}_ENDPOINT environment variable, or \
+         (3) Ensure Neural API capability registry is accessible.",
+        capability,
+        capability,
+        capability.to_uppercase()
+    );
 
     None
 }

@@ -43,9 +43,19 @@ async fn test_readonly_filesystem() {
     assert!(result.is_err(), "Should fail on read-only filesystem");
 
     // Cleanup: Make writable again for temp_dir cleanup
-    let mut perms = fs::metadata(&mount_point).unwrap().permissions();
-    perms.set_readonly(false);
-    fs::set_permissions(&mount_point, perms).unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        // Set proper Unix permissions (0o755) instead of just readonly=false
+        let perms = fs::Permissions::from_mode(0o755);
+        fs::set_permissions(&mount_point, perms).unwrap();
+    }
+    #[cfg(not(unix))]
+    {
+        let mut perms = fs::metadata(&mount_point).unwrap().permissions();
+        perms.set_readonly(false);
+        fs::set_permissions(&mount_point, perms).unwrap();
+    }
 }
 
 /// Test behavior when disk space is insufficient (simulated)

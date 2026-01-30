@@ -32,7 +32,7 @@ impl Default for VerifyConfig {
         let serial_log = std::env::var("XDG_RUNTIME_DIR")
             .map(|dir| PathBuf::from(format!("{}/biomeos/verify.log", dir)))
             .unwrap_or_else(|_| PathBuf::from("/tmp/biomeos-verify.log"));
-        
+
         Self {
             serial_log,
             rootfs_dir: None,

@@ -113,6 +113,12 @@ impl DiscoveryLayer {
     /// Create a new discovery layer
     ///
     /// **Deep Debt Principle**: Discovers Songbird at runtime, no hardcoding!
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - System paths cannot be initialized (XDG directories unavailable)
+    /// - Songbird socket cannot be discovered (Songbird not running or socket not found)
     pub async fn new() -> Result<Self> {
         info!("Initializing NUCLEUS Discovery Layer (delegating to Songbird)");
 
@@ -151,7 +157,7 @@ impl DiscoveryLayer {
         }
 
         // 2. Try standard songbird socket in runtime directory
-        let standard_socket = paths.primal_socket("songbird-orchestrator");
+        let standard_socket = paths.primal_socket("songbird");
         if tokio::fs::metadata(&standard_socket).await.is_ok() {
             debug!(
                 "Found Songbird socket at XDG location: {}",
@@ -176,7 +182,11 @@ impl DiscoveryLayer {
         })? {
             let path = entry.path();
             if let Some(filename) = path.file_name().and_then(|n| n.to_str()) {
-                if filename.starts_with("songbird-") && filename.ends_with(".sock") {
+                if filename.starts_with("songbird-")
+                    && std::path::Path::new(filename)
+                        .extension()
+                        .is_some_and(|ext| ext.eq_ignore_ascii_case("sock"))
+                {
                     debug!("Found Songbird socket: {}", path.display());
                     return Ok(path.to_string_lossy().to_string());
                 }

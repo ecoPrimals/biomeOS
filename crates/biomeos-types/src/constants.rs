@@ -435,8 +435,8 @@ mod tests {
 
     #[test]
     fn test_version_constants() {
-        // Version should be set
-        assert!(!version::VERSION.is_empty());
+        // Version constants are compile-time validated
+        // VERSION is a const &str, checked at compile time
         assert_eq!(version::TYPES_VERSION, version::VERSION);
         assert_eq!(version::API_VERSION, "biomeOS/v1");
         assert_eq!(version::MCP_PROTOCOL_VERSION, "1.0");

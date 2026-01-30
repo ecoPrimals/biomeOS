@@ -1,7 +1,6 @@
 // biomeOS API Server
 // REST API for primal orchestration and discovery
 
-use std::sync::Arc;
 use tracing::{info, warn};
 
 use biomeos_api::{create_app, AppState};

@@ -69,7 +69,9 @@ async fn main() -> Result<()> {
             eprintln!("  all       Deploy and launch everything");
             eprintln!();
             eprintln!("Options:");
-            eprintln!("  --family FAMILY_ID    Genetic family ID (auto-discovered from .family.seed)");
+            eprintln!(
+                "  --family FAMILY_ID    Genetic family ID (auto-discovered from .family.seed)"
+            );
             eprintln!(
                 "  --graph PATH          Graph definition (default: graphs/nucleus_ecosystem.toml)"
             );

@@ -114,12 +114,15 @@ pub async fn call_unix_socket_rpc<T: serde::de::DeserializeOwned>(
     // Read response with timeout to prevent hangs
     let mut reader = BufReader::new(read_half);
     let mut response_line = String::new();
-    
+
     // 30 second timeout for socket reads (prevents indefinite hangs)
-    timeout(Duration::from_secs(30), reader.read_line(&mut response_line))
-        .await
-        .map_err(|_| Error::timeout("Socket read", 30))?
-        .map_err(|e| Error::discovery_failed(format!("Read error: {e}"), None))?;
+    timeout(
+        Duration::from_secs(30),
+        reader.read_line(&mut response_line),
+    )
+    .await
+    .map_err(|_| Error::timeout("Socket read", 30))?
+    .map_err(|e| Error::discovery_failed(format!("Read error: {e}"), None))?;
 
     debug!(response = %response_line, "Received JSON-RPC response");
 
@@ -186,6 +189,13 @@ impl NucleusClient {
     /// Create a new NUCLEUS client
     ///
     /// Initializes all 5 layers
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Discovery layer fails to initialize (Songbird socket discovery fails)
+    /// - Identity layer fails to initialize (`BearDog` socket discovery fails)
+    /// - Trust layer fails to initialize (system paths or credentials unavailable)
     pub async fn new() -> Result<Self> {
         info!("Initializing NUCLEUS Client (5-layer secure discovery)");
 
@@ -214,6 +224,14 @@ impl NucleusClient {
     /// 3. Capability verification
     /// 4. Trust evaluation (`BearDog`)
     /// 5. Registry and tracking
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Physical discovery fails (Songbird unreachable or returns error)
+    /// - Identity verification fails (invalid signatures or `BearDog` unreachable)
+    /// - Capability verification fails (primal doesn't match requested capability)
+    /// - Trust evaluation fails (lineage verification or trust score below threshold)
     pub async fn discover(&self, request: DiscoveryRequest) -> Result<Vec<VerifiedPrimal>> {
         info!(
             capability = %request.capability,
@@ -369,7 +387,7 @@ impl NucleusClient {
                 .or_else(|_| Ok::<_, std::io::Error>("1000".to_string()))
         }) {
             let seed_path =
-                std::path::PathBuf::from(format!("/run/user/{}/biomeos/family.seed", uid));
+                std::path::PathBuf::from(format!("/run/user/{uid}/biomeos/family.seed"));
             if let Ok(seed) = std::fs::read(&seed_path) {
                 debug!(
                     "Family seed loaded from user runtime dir: {}",
@@ -398,6 +416,10 @@ impl NucleusClientBuilder {
     }
 
     /// Build the client
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `NucleusClient::new()` fails. See [`NucleusClient::new`] for details.
     pub async fn build(self) -> Result<NucleusClient> {
         NucleusClient::new().await
     }

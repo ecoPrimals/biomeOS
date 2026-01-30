@@ -37,7 +37,7 @@ async fn main() -> Result<()> {
     let family_id = std::env::args()
         .position(|arg| arg == "--family-id")
         .and_then(|i| std::env::args().nth(i + 1))
-        .unwrap_or_else(|| family_discovery::get_family_id());
+        .unwrap_or_else(family_discovery::get_family_id);
 
     let socket_path = std::env::args()
         .position(|arg| arg == "--socket")

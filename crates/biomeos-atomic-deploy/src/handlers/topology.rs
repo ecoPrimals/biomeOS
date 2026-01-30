@@ -98,32 +98,32 @@ impl TopologyHandler {
         let family_pattern = format!("-{}", self.family_id);
 
         for socket_dir in &socket_dirs {
-        if let Ok(entries) = std::fs::read_dir(socket_dir) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                let filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+            if let Ok(entries) = std::fs::read_dir(socket_dir) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    let filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
 
-                // Check if it's a socket for our family
-                if filename.ends_with(".sock") && filename.contains(&family_pattern) {
-                    // Extract primal name from socket filename
-                    // Pattern: {primal}-{family_id}[-node_id].sock
-                    if let Some(primal_name) = filename.split('-').next() {
-                        let socket_path = path.to_string_lossy().to_string();
+                    // Check if it's a socket for our family
+                    if filename.ends_with(".sock") && filename.contains(&family_pattern) {
+                        // Extract primal name from socket filename
+                        // Pattern: {primal}-{family_id}[-node_id].sock
+                        if let Some(primal_name) = filename.split('-').next() {
+                            let socket_path = path.to_string_lossy().to_string();
 
-                        // Query capabilities if possible
-                        let capabilities = self
-                            .query_primal_capabilities(&socket_path)
-                            .await
-                            .unwrap_or_default();
+                            // Query capabilities if possible
+                            let capabilities = self
+                                .query_primal_capabilities(&socket_path)
+                                .await
+                                .unwrap_or_default();
 
-                        primals.push(json!({
-                            "id": filename.trim_end_matches(".sock"),
-                            "primal_type": primal_name,
-                            "socket_path": socket_path,
-                            "health": "healthy", // Could ping socket for real health
-                            "capabilities": capabilities,
-                            "resource_usage": null
-                        }));
+                            primals.push(json!({
+                                "id": filename.trim_end_matches(".sock"),
+                                "primal_type": primal_name,
+                                "socket_path": socket_path,
+                                "health": "healthy", // Could ping socket for real health
+                                "capabilities": capabilities,
+                                "resource_usage": null
+                            }));
                         }
                     }
                 }

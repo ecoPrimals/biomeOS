@@ -262,7 +262,7 @@ async fn discover_primal_socket(primal_name: &str) -> Result<PathBuf> {
             debug!("Found candidate socket: {}", path.display());
 
             // Validate by attempting a connection
-            if let Ok(_) = UnixStream::connect(&path).await {
+            if UnixStream::connect(&path).await.is_ok() {
                 debug!("Validated primal socket: {}", path.display());
                 return Ok(path);
             } else {

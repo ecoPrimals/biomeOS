@@ -113,10 +113,7 @@ impl HealthChecker {
         // Now do JSON-RPC ping
         let start = std::time::Instant::now();
 
-        match self
-            .rpc_ping(socket_path, health_method)
-            .await
-        {
+        match self.rpc_ping(socket_path, health_method).await {
             Ok(response) => {
                 let latency_ms = start.elapsed().as_millis() as u64;
                 debug!(
@@ -131,7 +128,10 @@ impl HealthChecker {
                     socket_accessible: true,
                     rpc_responsive: Some(true),
                     latency_ms: Some(latency_ms),
-                    message: response.get("message").and_then(|m| m.as_str()).map(String::from),
+                    message: response
+                        .get("message")
+                        .and_then(|m| m.as_str())
+                        .map(String::from),
                 })
             }
             Err(e) => {
@@ -156,11 +156,7 @@ impl HealthChecker {
     }
 
     /// Send a JSON-RPC ping to a primal
-    async fn rpc_ping(
-        &self,
-        socket_path: &Path,
-        method: &str,
-    ) -> Result<serde_json::Value> {
+    async fn rpc_ping(&self, socket_path: &Path, method: &str) -> Result<serde_json::Value> {
         // Connect with timeout
         let stream = timeout(self.rpc_timeout, UnixStream::connect(socket_path))
             .await
@@ -330,10 +326,7 @@ mod tests {
 
     #[test]
     fn test_health_checker_with_timeout() {
-        let checker = HealthChecker::with_timeout(
-            PathBuf::from("/tmp"),
-            Duration::from_secs(10),
-        );
+        let checker = HealthChecker::with_timeout(PathBuf::from("/tmp"), Duration::from_secs(10));
         assert_eq!(checker.rpc_timeout, Duration::from_secs(10));
     }
 }

@@ -137,8 +137,8 @@ async fn handle_websocket(socket: axum::extract::ws::WebSocket, _state: Arc<AppS
                     match req.method.as_str() {
                         "events.subscribe" => {
                             // EVOLVED: Parse and store subscription filter
-                            let filter: SubscriptionFilter = serde_json::from_value(req.params.clone())
-                                .unwrap_or_default();
+                            let filter: SubscriptionFilter =
+                                serde_json::from_value(req.params.clone()).unwrap_or_default();
 
                             let sub_id =
                                 format!("sub_{}", next_sub_id.fetch_add(1, Ordering::SeqCst));

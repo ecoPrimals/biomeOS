@@ -21,79 +21,121 @@ use tokio::sync::{broadcast, RwLock};
 pub enum GraphEvent {
     /// Graph execution started
     GraphStarted {
+        /// Unique identifier for this graph execution
         graph_id: String,
+        /// Human-readable name of the graph
         graph_name: String,
+        /// Total number of nodes in the graph
         total_nodes: usize,
+        /// Coordination mode (sequential/parallel)
         coordination: String,
+        /// When this event occurred
         timestamp: DateTime<Utc>,
     },
 
     /// Node started executing
     NodeStarted {
+        /// Graph execution this node belongs to
         graph_id: String,
+        /// Unique identifier for this node
         node_id: String,
+        /// Primal executing this node
         primal: String,
+        /// Operation being performed
         operation: String,
+        /// When this event occurred
         timestamp: DateTime<Utc>,
     },
 
     /// Node completed successfully
     NodeCompleted {
+        /// Graph execution this node belongs to
         graph_id: String,
+        /// Unique identifier for this node
         node_id: String,
+        /// Duration of execution in milliseconds
         duration_ms: u64,
+        /// Optional output data from the node
         output: Option<serde_json::Value>,
+        /// When this event occurred
         timestamp: DateTime<Utc>,
     },
 
     /// Node failed
     NodeFailed {
+        /// Graph execution this node belongs to
         graph_id: String,
+        /// Unique identifier for this node
         node_id: String,
+        /// Error message describing the failure
         error: String,
+        /// Which retry attempt this was (0 for first attempt)
         retry_attempt: usize,
+        /// Whether the node will be retried
         will_retry: bool,
+        /// When this event occurred
         timestamp: DateTime<Utc>,
     },
 
     /// AI decision made during execution
     DecisionMade {
+        /// Graph execution this decision belongs to
         graph_id: String,
+        /// Type of decision (e.g., "node_selection", "parameter_adjustment")
         decision_type: String,
+        /// AI reasoning steps that led to the decision
         reasoning: Vec<String>,
+        /// Confidence score (0.0 to 1.0)
         confidence: f64,
+        /// When this event occurred
         timestamp: DateTime<Utc>,
     },
 
     /// Graph execution paused
     GraphPaused {
+        /// Graph execution that was paused
         graph_id: String,
+        /// Reason for pausing
         reason: String,
+        /// Node that was executing when paused
         current_node: Option<String>,
+        /// When this event occurred
         timestamp: DateTime<Utc>,
     },
 
     /// Graph execution resumed
     GraphResumed {
+        /// Graph execution that was resumed
         graph_id: String,
+        /// When this event occurred
         timestamp: DateTime<Utc>,
     },
 
     /// Graph execution completed
     GraphCompleted {
+        /// Graph execution that completed
         graph_id: String,
+        /// Total execution duration in milliseconds
         duration_ms: u64,
+        /// Number of nodes that were executed
         nodes_executed: usize,
+        /// Number of nodes that failed
         nodes_failed: usize,
+        /// Whether the graph completed successfully
         success: bool,
+        /// When this event occurred
         timestamp: DateTime<Utc>,
     },
 
     /// Graph execution cancelled
     GraphCancelled {
+        /// Graph execution that was cancelled
         graph_id: String,
+        /// Reason for cancellation
         reason: String,
+        /// Number of nodes that completed before cancellation
         nodes_completed: usize,
+        /// When this event occurred
         timestamp: DateTime<Utc>,
     },
 }
@@ -413,7 +455,7 @@ mod tests {
     #[tokio::test]
     async fn test_concurrent_broadcasting() {
         let broadcaster = GraphEventBroadcaster::new(1000);
-        let mut receiver = broadcaster.subscribe();
+        let receiver = broadcaster.subscribe();
 
         // Spawn multiple tasks broadcasting events
         let mut handles = vec![];

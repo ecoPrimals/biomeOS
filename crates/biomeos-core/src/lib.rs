@@ -18,7 +18,6 @@ pub mod capabilities; // Capability-based architecture (zero hardcoding)
 pub mod capability_registry; // Central capability registry with Unix socket IPC
 pub mod concurrent_startup; // Wave-based concurrent primal startup
 pub mod deployment_mode;
-pub mod socket_discovery; // Capability-based socket discovery (replaces hardcoded /tmp paths)
 pub mod discovery_bootstrap;
 pub mod discovery_modern; // Modern trait-based discovery
 pub mod family_credentials; // Secure family seed management
@@ -27,6 +26,7 @@ pub mod primal_discovery; // Auto-discovery of primals from directories
 pub mod primal_impls; // Concrete primal implementations
 pub mod primal_orchestrator; // Async primal lifecycle orchestration
 pub mod retry; // Retry logic and circuit breaker
+pub mod socket_discovery; // Capability-based socket discovery (replaces hardcoded /tmp paths)
 pub mod tower_config; // Tower configuration (TOML-based) // LiveSpore deployment mode detection
 
 // P2P coordination (BiomeOS's killer feature!)

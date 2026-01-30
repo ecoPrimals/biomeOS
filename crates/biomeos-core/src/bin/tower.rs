@@ -15,7 +15,6 @@ use biomeos_core::{
 };
 use clap::{Parser, Subcommand};
 use tracing::{error, info, warn};
-use tracing_subscriber;
 
 #[derive(Parser)]
 #[command(name = "tower")]

@@ -8,6 +8,17 @@
 //! - **Runtime discovery**: No compile-time dependencies
 //! - **Network effect**: Value emerges from cooperation
 //! - **Capability-based**: Query capabilities, don't assume
+//!
+//! ## Architecture (Refactored Jan 30, 2026)
+//!
+//! Smart domain-driven refactoring into 7 focused modules:
+//! - `action_handler`: User action coordination
+//! - `authorization`: BearDog authorization checks
+//! - `validation`: Songbird validation logic
+//! - `capacity`: ToadStool capacity checks
+//! - `discovery`: Runtime primal/device discovery
+//! - `persistence`: NestGate data persistence
+//! - `ui_sync`: petalTongue UI updates
 
 use crate::{
     actions::{ActionResult, UserAction},
@@ -19,38 +30,25 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
 
-/// Result of authorization check
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum AuthorizationResult {
-    /// Authorization granted
-    Authorized,
-    /// Authorization denied with reason
-    Denied(String),
-}
+// Domain modules (Jan 30, 2026 refactor)
+mod action_handler;
+mod authorization;
+mod capacity;
+mod discovery;
+mod persistence;
+mod ui_sync;
+mod validation;
 
-/// Result of validation check
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ValidationResult {
-    /// Validation passed
-    Valid,
-    /// Validation failed with reason
-    Invalid(String),
-}
-
-/// Result of capacity check
-#[derive(Debug, Clone, PartialEq)]
-pub enum CapacityResult {
-    /// Capacity available
-    Available,
-    /// Capacity insufficient with details
-    Insufficient { reason: String },
-}
+use action_handler::ActionHandler;
+use discovery::Discovery;
+use ui_sync::UISync;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PRIMAL CLIENTS - Using AtomicClient for Pure Rust JSON-RPC
 // ═══════════════════════════════════════════════════════════════════════════
 //
 // ✅ EVOLVED (Jan 27, 2026): Extracted to primal_client module for reuse
+// ✅ EVOLVED (Jan 30, 2026): Refactored into domain-driven modules
 //
 // All primal communication uses:
 // - Pure Rust Unix socket JSON-RPC (no C dependencies)
@@ -59,7 +57,7 @@ pub enum CapacityResult {
 // ═══════════════════════════════════════════════════════════════════════════
 
 use crate::primal_client::{
-    BearDogClient, NestGateClient, PetalTongueClient, PrimalClient, SongbirdClient, SquirrelClient,
+    BearDogClient, NestGateClient, PetalTongueClient, SongbirdClient, SquirrelClient,
     ToadStoolClient,
 };
 
@@ -140,140 +138,31 @@ impl InteractiveUIOrchestrator {
     ///
     /// Uses capability-based discovery to find primals. No hardcoded assumptions!
     async fn discover_primals(&mut self) -> Result<()> {
-        info!("Discovering primals via capability-based discovery...");
+        let result = Discovery::discover_primals().await?;
 
-        // Try to discover each primal by capability
-        // Note: These discoveries are independent and fail gracefully
-        // TRUE PRIMAL: Uses XDG-compliant Unix socket discovery via AtomicClient
-
-        // 1. Discover visualization primal (petalTongue)
-        info!("Attempting to discover visualization primal...");
-        self.petaltongue = PrimalClient::discover("petaltongue").await.ok();
-
-        // 2. Discover service registry primal (Songbird)
-        info!("Attempting to discover service registry primal...");
-        self.songbird = PrimalClient::discover("songbird").await.ok();
-
-        // 3. Discover security primal (BearDog)
-        info!("Attempting to discover security primal...");
-        self.beardog = PrimalClient::discover("beardog").await.ok();
-
-        // 4. Discover storage primal (NestGate)
-        info!("Attempting to discover storage primal...");
-        self.nestgate = PrimalClient::discover("nestgate").await.ok();
-
-        // 5. Discover compute primal (ToadStool)
-        info!("Attempting to discover compute primal...");
-        self.toadstool = PrimalClient::discover("toadstool").await.ok();
-
-        // 6. Discover AI primal (Squirrel)
-        info!("Attempting to discover AI primal...");
-        self.squirrel = PrimalClient::discover("squirrel").await.ok();
-
-        let discovered_count = [
-            self.petaltongue.is_some(),
-            self.songbird.is_some(),
-            self.beardog.is_some(),
-            self.nestgate.is_some(),
-            self.toadstool.is_some(),
-            self.squirrel.is_some(),
-        ]
-        .iter()
-        .filter(|&&x| x)
-        .count();
-
-        info!("Discovered {}/6 primals", discovered_count);
-
-        if discovered_count == 0 {
-            warn!("No primals discovered! UI will have limited functionality.");
-        }
+        self.petaltongue = result.petaltongue;
+        self.songbird = result.songbird;
+        self.beardog = result.beardog;
+        self.nestgate = result.nestgate;
+        self.toadstool = result.toadstool;
+        self.squirrel = result.squirrel;
 
         Ok(())
     }
 
     /// Discover devices from available primals
-    ///
-    /// Uses Songbird's device registry if available. Falls back gracefully.
     async fn discover_devices(&self) -> Result<()> {
-        info!("Discovering devices...");
-
-        if let Some(ref songbird) = self.songbird {
-            // Query Songbird for registered devices using JSON-RPC
-            match songbird
-                .call("registry.list_devices", serde_json::json!({}))
-                .await
-            {
-                Ok(devices) => {
-                    debug!("Discovered devices: {:?}", devices);
-                    info!("Successfully discovered devices from Songbird");
-                }
-                Err(e) => {
-                    warn!("Device discovery failed: {} - Songbird may not support device registry yet", e);
-                }
-            }
-        } else {
-            info!("No Songbird available for device discovery");
-        }
-
-        Ok(())
+        Discovery::discover_devices(&self.songbird).await
     }
 
     /// Discover active primals
-    ///
-    /// Uses Songbird's primal registry to get list of active primals.
     async fn discover_active_primals(&self) -> Result<()> {
-        info!("Discovering active primals...");
-
-        if let Some(ref songbird) = self.songbird {
-            // Query Songbird for all registered primals using JSON-RPC
-            match songbird
-                .call("registry.list_primals", serde_json::json!({}))
-                .await
-            {
-                Ok(primals) => {
-                    debug!("Discovered primals: {:?}", primals);
-                    info!("Successfully queried Songbird for active primals");
-                }
-                Err(e) => {
-                    warn!("Primal discovery failed: {} - check Songbird connection", e);
-                }
-            }
-        } else {
-            info!("No Songbird available, cannot discover other primals");
-        }
-
-        Ok(())
+        Discovery::discover_active_primals(&self.songbird).await
     }
 
     /// Load saved state from NestGate
     async fn load_saved_state(&self) -> Result<()> {
-        info!("Loading saved UI state...");
-
-        if let Some(ref nestgate) = self.nestgate {
-            // Try to load previous UI state from NestGate using JSON-RPC
-            match nestgate
-                .call(
-                    "storage.retrieve",
-                    serde_json::json!({
-                        "key": format!("ui_state:{}", self.family_id)
-                    }),
-                )
-                .await
-            {
-                Ok(state) => {
-                    debug!("Loaded saved state: {:?}", state);
-                    info!("Successfully loaded saved UI state from NestGate");
-                }
-                Err(e) => {
-                    debug!("No saved state found or error: {}", e);
-                    info!("Starting with fresh state (no previous state found)");
-                }
-            }
-        } else {
-            info!("No storage primal available, starting with fresh state");
-        }
-
-        Ok(())
+        Discovery::load_saved_state(&self.nestgate, &self.family_id).await
     }
 
     /// Start the orchestrator
@@ -305,89 +194,26 @@ impl InteractiveUIOrchestrator {
         }
 
         // Phase 5: Sync initial state to petalTongue
-        if let Some(ref petaltongue) = self.petaltongue {
-            let initial_state = self.build_initial_ui_state().await;
-            match petaltongue.call("ui.initialize", initial_state).await {
-                Ok(_) => info!("✅ Initial UI state pushed to petalTongue"),
-                Err(e) => warn!("⚠️ Failed to push initial state: {}", e),
-            }
-        }
+        let initial_state = self.build_initial_ui_state().await;
+        let _ = UISync::initialize_ui(&self.petaltongue, initial_state).await;
 
         info!("✅ Interactive UI Orchestrator started successfully!");
 
         Ok(())
     }
 
-    /// Get the current user ID from BearDog session or environment
-    ///
-    /// Falls back to "anonymous" if no session is available.
-    async fn get_current_user_id(&self) -> String {
-        // Try to get from BearDog session
-        if let Some(ref beardog) = self.beardog {
-            if let Ok(result) = beardog
-                .call("auth.get_current_user", serde_json::json!({}))
-                .await
-            {
-                if let Some(user_id) = result.get("user_id").and_then(|v| v.as_str()) {
-                    return user_id.to_string();
-                }
-            }
-        }
-
-        // Fall back to environment variable
-        if let Ok(user) = std::env::var("BIOMEOS_USER") {
-            return user;
-        }
-
-        // Fall back to system user
-        if let Ok(user) = std::env::var("USER") {
-            return user;
-        }
-
-        // Default to anonymous
-        "anonymous".to_string()
-    }
-
     /// Build the initial UI state from discovered primals
     async fn build_initial_ui_state(&self) -> serde_json::Value {
-        let mut state = serde_json::json!({
-            "family_id": self.family_id,
-            "primals": {
-                "petaltongue": self.petaltongue.is_some(),
-                "songbird": self.songbird.is_some(),
-                "beardog": self.beardog.is_some(),
-                "nestgate": self.nestgate.is_some(),
-                "toadstool": self.toadstool.is_some(),
-                "squirrel": self.squirrel.is_some()
-            },
-            "devices": [],
-            "assignments": []
-        });
-
-        // Fetch devices from Songbird if available
-        if let Some(ref songbird) = self.songbird {
-            if let Ok(devices) = songbird
-                .call("registry.list_devices", serde_json::json!({}))
-                .await
-            {
-                state["devices"] = devices;
-            }
-        }
-
-        // Fetch assignments from NestGate if available
-        if let Some(ref nestgate) = self.nestgate {
-            if let Ok(assignments) = nestgate
-                .call(
-                    "storage.list",
-                    serde_json::json!({ "key_prefix": "assignment:" }),
-                )
-                .await
-            {
-                state["assignments"] = assignments;
-            }
-        }
-
-        state
+        Discovery::build_initial_ui_state(
+            &self.family_id,
+            &self.songbird,
+            &self.nestgate,
+            &self.petaltongue,
+            &self.beardog,
+            &self.toadstool,
+            &self.squirrel,
+        )
+        .await
     }
 
     /// Handle a user action
@@ -397,49 +223,20 @@ impl InteractiveUIOrchestrator {
     pub async fn handle_user_action(&self, action: UserAction) -> Result<ActionResult> {
         debug!(?action, "Handling user action");
 
-        match action {
-            UserAction::AssignDevice {
-                device_id,
-                primal_id,
-            } => self.handle_assign_device(&device_id, &primal_id).await,
-
-            UserAction::UnassignDevice { device_id } => {
-                self.handle_unassign_device(&device_id).await
-            }
-
-            UserAction::StartPrimal { primal_name } => self.handle_start_primal(&primal_name).await,
-
-            UserAction::StopPrimal { primal_id } => self.handle_stop_primal(&primal_id).await,
-
-            UserAction::RestartPrimal { primal_id } => self.handle_restart_primal(&primal_id).await,
-
-            UserAction::AcceptSuggestion { suggestion_id } => {
-                self.handle_accept_suggestion(&suggestion_id).await
-            }
-
-            UserAction::DismissSuggestion { suggestion_id } => {
-                self.handle_dismiss_suggestion(&suggestion_id).await
-            }
-
-            UserAction::Refresh => self.handle_refresh().await,
-        }
+        ActionHandler::handle_user_action(
+            action,
+            &self.family_id,
+            &self.petaltongue,
+            &self.songbird,
+            &self.beardog,
+            &self.nestgate,
+            &self.toadstool,
+            &self.squirrel,
+        )
+        .await
     }
 
-    /// Handle device assignment
-    ///
-    /// Network effect: Coordinates 6 primals for a single user action!
-    ///
-    /// ## Multi-Primal Coordination Flow
-    ///
-    /// 1. **BearDog**: Authorization (user permissions, primal policy)
-    /// 2. **Songbird**: Validation (device availability, primal health)
-    /// 3. **ToadStool**: Capacity check (resource availability)
-    /// 4. **Songbird**: Register assignment (service registry)
-    /// 5. **NestGate**: Persist assignment (recovery after restart)
-    /// 6. **petalTongue**: Update UI (visual feedback)
-    ///
-    /// This is the network effect in action!
-    async fn handle_assign_device(&self, device_id: &str, primal_id: &str) -> Result<ActionResult> {
+    /// Run the orchestrator event loop
         info!(
             "🎯 Device assignment requested: {} → {}",
             device_id, primal_id
@@ -874,14 +671,14 @@ impl InteractiveUIOrchestrator {
             {
                 Ok(_) => {
                     info!("✅ Persisted via NestGate");
-                    return Ok(());
+                    Ok(())
                 }
                 Err(e) => {
                     warn!(
                         "⚠️ NestGate storage failed: {} - continuing without persistence",
                         e
                     );
-                    return Ok(());
+                    Ok(())
                 }
             }
         } else {
@@ -920,11 +717,11 @@ impl InteractiveUIOrchestrator {
             {
                 Ok(_) => {
                     info!("✅ UI updated via petalTongue");
-                    return Ok(());
+                    Ok(())
                 }
                 Err(e) => {
                     warn!("⚠️ petalTongue update failed: {} - continuing", e);
-                    return Ok(());
+                    Ok(())
                 }
             }
         } else {

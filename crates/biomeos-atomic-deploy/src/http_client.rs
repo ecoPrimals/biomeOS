@@ -176,10 +176,13 @@ impl BiomeOsHttpClient {
 
         // Read response with timeout to prevent hangs (60s for HTTP responses)
         let mut response_buf = String::new();
-        timeout(Duration::from_secs(60), stream.read_to_string(&mut response_buf))
-            .await
-            .context("Socket read timeout (60s)")?
-            .context("Failed to read response from Songbird")?;
+        timeout(
+            Duration::from_secs(60),
+            stream.read_to_string(&mut response_buf),
+        )
+        .await
+        .context("Socket read timeout (60s)")?
+        .context("Failed to read response from Songbird")?;
         debug!("← Songbird: {}", response_buf);
 
         // Parse JSON-RPC response

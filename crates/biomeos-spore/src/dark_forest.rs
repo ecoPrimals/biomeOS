@@ -315,10 +315,13 @@ impl DarkForestBeacon {
 
         // Read with timeout to prevent hangs (30s for JSON-RPC)
         let mut response_str = String::new();
-        timeout(Duration::from_secs(30), stream.read_to_string(&mut response_str))
-            .await
-            .map_err(|_| SporeError::SystemError("Socket read timeout (30s)".to_string()))?
-            .map_err(|e| SporeError::SystemError(format!("Read error: {e}")))?;
+        timeout(
+            Duration::from_secs(30),
+            stream.read_to_string(&mut response_str),
+        )
+        .await
+        .map_err(|_| SporeError::SystemError("Socket read timeout (30s)".to_string()))?
+        .map_err(|e| SporeError::SystemError(format!("Read error: {e}")))?;
 
         serde_json::from_str(&response_str)
             .map_err(|e| SporeError::DeserializationError(format!("Invalid JSON response: {}", e)))

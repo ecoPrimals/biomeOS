@@ -33,11 +33,11 @@ async fn beardog_available() -> Option<BearDogClient> {
         for endpoint in endpoints {
             if let Ok(client) = BearDogClient::with_endpoint(endpoint.to_string()) {
                 // Quick availability check with its own timeout
-                let available = tokio::time::timeout(
-                    Duration::from_millis(500),
-                    client.is_available()
-                ).await.unwrap_or(false);
-                
+                let available =
+                    tokio::time::timeout(Duration::from_millis(500), client.is_available())
+                        .await
+                        .unwrap_or(false);
+
                 if available {
                     println!("✅ Found BearDog at: {}", endpoint);
                     return Some(client);
@@ -46,7 +46,8 @@ async fn beardog_available() -> Option<BearDogClient> {
         }
 
         None
-    }).await;
+    })
+    .await;
 
     match result {
         Ok(client) => client,
@@ -66,11 +67,9 @@ async fn test_beardog_discovery() {
             println!("✅ BearDog discovered and available");
 
             // Try health check with timeout
-            let health_result = tokio::time::timeout(
-                Duration::from_secs(2),
-                client.health_check()
-            ).await;
-            
+            let health_result =
+                tokio::time::timeout(Duration::from_secs(2), client.health_check()).await;
+
             match health_result {
                 Ok(Ok(())) => println!("✅ BearDog health check passed"),
                 Ok(Err(e)) => println!("⚠️  BearDog health check failed: {}", e),
@@ -104,8 +103,9 @@ async fn test_beardog_lineage_verification() {
 
     let result = tokio::time::timeout(
         Duration::from_secs(5),
-        client.verify_same_family(family_id, seed_hash, node_id)
-    ).await;
+        client.verify_same_family(family_id, seed_hash, node_id),
+    )
+    .await;
 
     match result {
         Ok(Ok(response)) => {
@@ -141,10 +141,8 @@ async fn test_beardog_key_derivation() {
         purpose: "sub-federation-encryption".to_string(),
     };
 
-    let result = tokio::time::timeout(
-        Duration::from_secs(5),
-        client.derive_subfed_key(request)
-    ).await;
+    let result =
+        tokio::time::timeout(Duration::from_secs(5), client.derive_subfed_key(request)).await;
 
     match result {
         Ok(Ok(response)) => {
@@ -201,8 +199,9 @@ async fn test_beardog_with_real_seed() {
                 // Try to verify lineage with timeout
                 let result = tokio::time::timeout(
                     Duration::from_secs(5),
-                    client.verify_same_family("nat0", &seed_hash, "test_node_spore")
-                ).await;
+                    client.verify_same_family("nat0", &seed_hash, "test_node_spore"),
+                )
+                .await;
 
                 match result {
                     Ok(Ok(response)) => {
@@ -237,11 +236,8 @@ async fn test_beardog_full_workflow() {
     };
 
     println!("\n1️⃣  Health Check");
-    let health_result = tokio::time::timeout(
-        Duration::from_secs(2),
-        client.health_check()
-    ).await;
-    
+    let health_result = tokio::time::timeout(Duration::from_secs(2), client.health_check()).await;
+
     match health_result {
         Ok(Ok(())) => println!("   ✅ BearDog is healthy"),
         Ok(Err(e)) => {
@@ -257,9 +253,10 @@ async fn test_beardog_full_workflow() {
     println!("\n2️⃣  Lineage Verification");
     let lineage_result = tokio::time::timeout(
         Duration::from_secs(5),
-        client.verify_same_family("nat0", "test_seed", "test_node_workflow")
-    ).await;
-    
+        client.verify_same_family("nat0", "test_seed", "test_node_workflow"),
+    )
+    .await;
+
     match lineage_result {
         Ok(Ok(response)) => println!("   ✅ Lineage check: {}", response),
         Ok(Err(e)) => println!("   ⚠️  Lineage check: {}", e),
@@ -273,12 +270,10 @@ async fn test_beardog_full_workflow() {
         subfed_name: "test-subfed".to_string(),
         purpose: "test".to_string(),
     };
-    
-    let key_result = tokio::time::timeout(
-        Duration::from_secs(5),
-        client.derive_subfed_key(request)
-    ).await;
-    
+
+    let key_result =
+        tokio::time::timeout(Duration::from_secs(5), client.derive_subfed_key(request)).await;
+
     match key_result {
         Ok(Ok(response)) => println!("   ✅ Key derived: {}", response.key_ref),
         Ok(Err(e)) => println!("   ⚠️  Key derivation: {}", e),

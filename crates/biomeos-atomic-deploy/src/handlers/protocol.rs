@@ -74,7 +74,9 @@ impl ProtocolHandler {
     /// {"jsonrpc":"2.0","method":"protocol.escalate","params":{"from":"songbird","to":"beardog"},"id":1}
     /// ```
     pub async fn escalate(&self, params: &Option<Value>) -> Result<Value> {
-        let params = params.as_ref().ok_or_else(|| anyhow!("Missing parameters"))?;
+        let params = params
+            .as_ref()
+            .ok_or_else(|| anyhow!("Missing parameters"))?;
 
         let from = params
             .get("from")
@@ -114,7 +116,9 @@ impl ProtocolHandler {
     /// {"jsonrpc":"2.0","method":"protocol.fallback","params":{"from":"songbird","to":"beardog","reason":"manual"},"id":1}
     /// ```
     pub async fn fallback(&self, params: &Option<Value>) -> Result<Value> {
-        let params = params.as_ref().ok_or_else(|| anyhow!("Missing parameters"))?;
+        let params = params
+            .as_ref()
+            .ok_or_else(|| anyhow!("Missing parameters"))?;
 
         let from = params
             .get("from")
@@ -131,7 +135,10 @@ impl ProtocolHandler {
             .and_then(|v| v.as_str())
             .unwrap_or("manual");
 
-        warn!("⚠️ protocol.fallback: {} → {} (reason: {})", from, to, reason);
+        warn!(
+            "⚠️ protocol.fallback: {} → {} (reason: {})",
+            from, to, reason
+        );
 
         let manager = self.escalation_manager.read().await;
         let result = manager
@@ -158,7 +165,9 @@ impl ProtocolHandler {
     /// {"jsonrpc":"2.0","method":"protocol.metrics","params":{"from":"songbird","to":"beardog"},"id":1}
     /// ```
     pub async fn metrics(&self, params: &Option<Value>) -> Result<Value> {
-        let params = params.as_ref().ok_or_else(|| anyhow!("Missing parameters"))?;
+        let params = params
+            .as_ref()
+            .ok_or_else(|| anyhow!("Missing parameters"))?;
 
         let from = params
             .get("from")
@@ -255,7 +264,9 @@ impl ProtocolHandler {
     /// }
     /// ```
     pub async fn register_primal(&self, params: &Option<Value>) -> Result<Value> {
-        let params = params.as_ref().ok_or_else(|| anyhow!("Missing parameters"))?;
+        let params = params
+            .as_ref()
+            .ok_or_else(|| anyhow!("Missing parameters"))?;
 
         let primal_id = params
             .get("primal_id")
@@ -317,7 +328,9 @@ impl ProtocolHandler {
     /// }
     /// ```
     pub async fn register_connection(&self, params: &Option<Value>) -> Result<Value> {
-        let params = params.as_ref().ok_or_else(|| anyhow!("Missing parameters"))?;
+        let params = params
+            .as_ref()
+            .ok_or_else(|| anyhow!("Missing parameters"))?;
 
         let from = params
             .get("from")
@@ -354,7 +367,9 @@ impl ProtocolHandler {
     /// }
     /// ```
     pub async fn record_request(&self, params: &Option<Value>) -> Result<Value> {
-        let params = params.as_ref().ok_or_else(|| anyhow!("Missing parameters"))?;
+        let params = params
+            .as_ref()
+            .ok_or_else(|| anyhow!("Missing parameters"))?;
 
         let from = params
             .get("from")
@@ -376,7 +391,9 @@ impl ProtocolHandler {
             .and_then(|v| v.as_bool())
             .unwrap_or(true);
 
-        self.graph.record_request(from, to, latency_us, success).await;
+        self.graph
+            .record_request(from, to, latency_us, success)
+            .await;
 
         Ok(json!({
             "status": "recorded",
@@ -439,10 +456,7 @@ mod tests {
     async fn test_status() {
         let handler = create_test_handler().await;
 
-        handler
-            .graph
-            .register_connection("a", "b")
-            .await;
+        handler.graph.register_connection("a", "b").await;
 
         let result = handler.status().await.unwrap();
 
@@ -512,7 +526,11 @@ mod tests {
         assert_eq!(result["to"], "primal-b");
 
         // Verify registration
-        assert!(handler.graph.get_connection("primal-a", "primal-b").await.is_some());
+        assert!(handler
+            .graph
+            .get_connection("primal-a", "primal-b")
+            .await
+            .is_some());
     }
 
     #[tokio::test]
@@ -520,10 +538,7 @@ mod tests {
         let handler = create_test_handler().await;
 
         // First register the connection
-        handler
-            .graph
-            .register_connection("a", "b")
-            .await;
+        handler.graph.register_connection("a", "b").await;
 
         let params = Some(json!({
             "from": "a",
@@ -547,10 +562,7 @@ mod tests {
         let handler = create_test_handler().await;
 
         // Register and add requests
-        handler
-            .graph
-            .register_connection("x", "y")
-            .await;
+        handler.graph.register_connection("x", "y").await;
 
         for i in 0..10 {
             handler
@@ -586,4 +598,3 @@ mod tests {
         assert!(result.is_err());
     }
 }
-

@@ -215,18 +215,12 @@ impl ProtocolEscalationManager {
             )
             .await;
 
-        debug!(
-            "🔍 Checking {} escalation candidates",
-            candidates.len()
-        );
+        debug!("🔍 Checking {} escalation candidates", candidates.len());
 
         for conn in candidates {
             // Check cooldown
             if self.is_in_cooldown(&conn).await {
-                debug!(
-                    "⏳ Connection {} in cooldown, skipping",
-                    conn.id
-                );
+                debug!("⏳ Connection {} in cooldown, skipping", conn.id);
                 continue;
             }
 
@@ -408,10 +402,7 @@ impl ProtocolEscalationManager {
             "id": self.graph.next_request_id(),
         });
 
-        match self
-            .send_json_rpc(&state.json_rpc_socket, &request)
-            .await
-        {
+        match self.send_json_rpc(&state.json_rpc_socket, &request).await {
             Ok(response) => {
                 if let Some(result) = response.get("result") {
                     let endpoint: TarpcEndpoint = serde_json::from_value(result.clone())
@@ -594,8 +585,7 @@ impl ProtocolEscalationManager {
             Err(_) => return Err("Response timeout (>5s)".to_string()),
         }
 
-        serde_json::from_str(&response_line)
-            .map_err(|e| format!("Failed to parse response: {}", e))
+        serde_json::from_str(&response_line).map_err(|e| format!("Failed to parse response: {}", e))
     }
 
     /// Get protocol status for all connections (for JSON-RPC API)
@@ -746,4 +736,3 @@ mod tests {
         assert!(json.contains("tarpc"));
     }
 }
-

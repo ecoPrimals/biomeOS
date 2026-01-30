@@ -380,7 +380,10 @@ impl LivingGraph {
     pub async fn update_connection_protocol(&self, from: &str, to: &str, mode: ProtocolMode) {
         let id = ConnectionId::new(from, to);
         if let Some(conn) = self.connections.write().await.get_mut(&id) {
-            info!("🔄 Updating connection {} protocol: {} → {}", id, conn.protocol, mode);
+            info!(
+                "🔄 Updating connection {} protocol: {} → {}",
+                id, conn.protocol, mode
+            );
             conn.protocol = mode;
             if mode == ProtocolMode::Tarpc {
                 conn.escalate();
@@ -485,7 +488,11 @@ impl LivingGraph {
     }
 
     /// Get JSON-RPC connections that could be escalated
-    pub async fn get_escalation_candidates(&self, min_requests: u64, latency_threshold_us: f64) -> Vec<ConnectionState> {
+    pub async fn get_escalation_candidates(
+        &self,
+        min_requests: u64,
+        latency_threshold_us: f64,
+    ) -> Vec<ConnectionState> {
         self.connections
             .read()
             .await
@@ -652,4 +659,3 @@ mod tests {
         assert_eq!(graph.connection_count().await, 1); // Only b→c remains
     }
 }
-
