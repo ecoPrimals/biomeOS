@@ -6,7 +6,7 @@
 use anyhow::{Context, Result, bail};
 use flate2::read::GzDecoder;
 use std::fs::{self, File};
-use std::io::{BufReader, Read, Seek, SeekFrom};
+use std::io::Read;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use tar::Archive;
