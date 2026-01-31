@@ -37,6 +37,7 @@ members = [
     "crates/biomeos-boot",
     "crates/biomeos-deploy", "crates/biomeos-test-utils", "crates/biomeos-nucleus",
     "crates/biomeos-atomic-deploy",  # Genetic lineage atomic deployment (modern Rust, no bash)
+    "crates/biomeos-genomebin-v3",  # NEW: genomeBin v3.0 - TRUE binary isomorphic format
 ]
 exclude = [
     "validation",  # Independent workspace for validation tools using benchScale
