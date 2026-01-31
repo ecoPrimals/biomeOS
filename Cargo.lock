@@ -640,6 +640,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "biomeos-genome-factory"
+version = "1.0.0"
+dependencies = [
+ "anyhow",
+ "biomeos-genomebin-v3",
+ "biomeos-types",
+ "etcetera",
+ "hex",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tokio-test",
+ "tracing",
+]
+
+[[package]]
 name = "biomeos-genomebin-v3"
 version = "3.0.0"
 dependencies = [

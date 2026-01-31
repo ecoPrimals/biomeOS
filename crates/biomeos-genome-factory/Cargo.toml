@@ -1,0 +1,50 @@
+[package]
+name = "biomeos-genome-factory"
+version = "1.0.0"
+edition = "2021"
+authors = ["ecoPrimals Team"]
+license = "MIT"
+description = "Genome Factory - Universal genomeBin production for any primal"
+repository = "https://github.com/ecoPrimals/biomeOS"
+
+[dependencies]
+# genomeBin v3.0 engine
+biomeos-genomebin-v3 = { path = "../biomeos-genomebin-v3" }
+
+# Types
+biomeos-types = { path = "../biomeos-types" }
+
+# Error handling (Pure Rust)
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# Serialization (Pure Rust)
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Logging (Pure Rust)
+tracing = { workspace = true }
+
+# Async runtime (Pure Rust)
+tokio = { workspace = true, features = ["fs", "process"] }
+
+# Path handling (Pure Rust)
+etcetera = { workspace = true }
+
+# Hex encoding (Pure Rust)
+hex = "0.4"
+
+[dev-dependencies]
+tokio-test = { workspace = true }
+tempfile = "3.8"
+
+[lib]
+name = "biomeos_genome_factory"
+path = "src/lib.rs"
+
+# TRUE ecoBin v2.0 Principles:
+# ✅ 100% Pure Rust
+# ✅ Zero unsafe code
+# ✅ Runtime discovery
+# ✅ Self-replication capability
+# ✅ Federation-native
