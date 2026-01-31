@@ -1,0 +1,99 @@
+# nest_genome.toml - NEST Deployment (TOWER + Storage + AI)
+# Universal genomeBin graph deployment
+# Platform: Linux (x86_64), Android (aarch64), macOS (aarch64/x86_64)
+
+[metadata]
+name = "nest"
+version = "0.1.0"
+description = "Deploy NEST (TOWER + NestGate + Squirrel) via genomeBin"
+author = "biomeOS Core Team"
+
+# Deploy BearDog (Security Foundation)
+[[nodes]]
+id = "deploy_beardog"
+type = "genome.deploy"
+description = "Deploy BearDog genomeBin"
+
+[nodes.config]
+genome = "beardog.genome"
+target = "auto"
+wait_ready = true
+healthcheck_timeout = 30
+
+# Deploy Songbird (Discovery & Federation)
+[[nodes]]
+id = "deploy_songbird"
+type = "genome.deploy"
+description = "Deploy Songbird genomeBin"
+depends_on = ["deploy_beardog"]
+
+[nodes.config]
+genome = "songbird.genome"
+target = "auto"
+wait_ready = true
+healthcheck_timeout = 30
+requires = ["beardog"]
+
+# Deploy NestGate (Storage & Persistence)
+[[nodes]]
+id = "deploy_nestgate"
+type = "genome.deploy"
+description = "Deploy NestGate genomeBin"
+depends_on = ["deploy_songbird"]
+
+[nodes.config]
+genome = "nestgate.genome"
+target = "auto"
+wait_ready = true
+healthcheck_timeout = 30
+requires = ["beardog", "songbird"]
+
+# Deploy Squirrel (AI Coordination)
+[[nodes]]
+id = "deploy_squirrel"
+type = "genome.deploy"
+description = "Deploy Squirrel genomeBin"
+depends_on = ["deploy_nestgate"]
+
+[nodes.config]
+genome = "squirrel.genome"
+target = "auto"
+wait_ready = true
+healthcheck_timeout = 30
+requires = ["beardog", "songbird", "nestgate"]
+
+# Verify NEST health
+[[nodes]]
+id = "verify_nest"
+type = "health.check_atomic"
+description = "Verify NEST atomicity"
+depends_on = ["deploy_squirrel"]
+
+[nodes.config]
+primals = ["beardog", "songbird", "nestgate", "squirrel"]
+timeout = 15
+required_capabilities = ["security", "discovery", "storage", "ai"]
+
+# Test AI with storage
+[[nodes]]
+id = "test_ai_storage"
+type = "test.ai_storage_integration"
+description = "Test AI coordination with storage"
+depends_on = ["verify_nest"]
+
+[nodes.config]
+test_model_cache = true
+test_context_persistence = true
+timeout = 30
+
+# Report deployment success
+[[nodes]]
+id = "report_success"
+type = "report.deployment_success"
+description = "Report NEST deployment success"
+depends_on = ["test_ai_storage"]
+
+[nodes.config]
+deployment = "nest"
+primals = ["beardog", "songbird", "nestgate", "squirrel"]
+notify = ["console", "log"]

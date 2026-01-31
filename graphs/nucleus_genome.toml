@@ -1,12 +1,24 @@
-# nucleus_genome.toml - NUCLEUS Deployment (All 5 Primals)
+# nucleus_genome.toml - NUCLEUS Deployment (All 6 Primals + biomeOS)
 # Universal genomeBin graph deployment
 # Platform: Linux (x86_64), Android (aarch64), macOS (aarch64/x86_64)
 
 [metadata]
 name = "nucleus"
-version = "0.1.0"
-description = "Deploy complete NUCLEUS (all 5 primals) via genomeBin"
+version = "0.2.0"
+description = "Deploy complete NUCLEUS (biomeOS + 5 primals) via genomeBin"
 author = "biomeOS Core Team"
+
+# Deploy biomeOS (Orchestrator)
+[[nodes]]
+id = "deploy_biomeos"
+type = "genome.deploy"
+description = "Deploy biomeOS genomeBin orchestrator"
+
+[nodes.config]
+genome = "biomeos.genome"
+target = "auto"
+wait_ready = true
+healthcheck_timeout = 30
 
 # Deploy BearDog (Security Foundation)
 [[nodes]]
@@ -114,5 +126,6 @@ depends_on = ["verify_lineage"]
 
 [nodes.config]
 deployment = "nucleus"
-primals = ["beardog", "songbird", "squirrel", "toadstool", "nestgate"]
+primals = ["biomeos", "beardog", "songbird", "squirrel", "toadstool", "nestgate"]
 notify = ["console", "log"]
+full_ecosystem = true
