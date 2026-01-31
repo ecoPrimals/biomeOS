@@ -1,0 +1,132 @@
+# cross_platform_genome.toml - Cross-Platform Deployment
+# Deploy genomeBins on multiple platforms simultaneously
+# USB (x86_64) + Android (aarch64) with handshake validation
+
+[metadata]
+name = "cross_platform"
+version = "0.1.0"
+description = "Deploy TOWER on USB + Android with cross-platform handshake"
+author = "biomeOS Core Team"
+
+# Deploy BearDog on USB (x86_64)
+[[nodes]]
+id = "deploy_beardog_usb"
+type = "genome.deploy"
+description = "Deploy BearDog on USB (x86_64)"
+
+[nodes.config]
+genome = "beardog.genome"
+target = "usb"  # Explicit target
+architecture = "x86_64"
+wait_ready = true
+healthcheck_timeout = 30
+
+# Deploy BearDog on Android (aarch64)
+[[nodes]]
+id = "deploy_beardog_android"
+type = "genome.deploy"
+description = "Deploy BearDog on Android (aarch64)"
+
+[nodes.config]
+genome = "beardog.genome"
+target = "android"  # Explicit target
+architecture = "aarch64"
+wait_ready = true
+healthcheck_timeout = 30
+
+# Deploy Songbird on USB
+[[nodes]]
+id = "deploy_songbird_usb"
+type = "genome.deploy"
+description = "Deploy Songbird on USB (x86_64)"
+depends_on = ["deploy_beardog_usb"]
+
+[nodes.config]
+genome = "songbird.genome"
+target = "usb"
+architecture = "x86_64"
+wait_ready = true
+healthcheck_timeout = 30
+requires = ["beardog"]
+
+# Deploy Songbird on Android
+[[nodes]]
+id = "deploy_songbird_android"
+type = "genome.deploy"
+description = "Deploy Songbird on Android (aarch64)"
+depends_on = ["deploy_beardog_android"]
+
+[nodes.config]
+genome = "songbird.genome"
+target = "android"
+architecture = "aarch64"
+wait_ready = true
+healthcheck_timeout = 30
+requires = ["beardog"]
+
+# Verify TOWER on USB
+[[nodes]]
+id = "verify_tower_usb"
+type = "health.check_atomic"
+description = "Verify TOWER on USB"
+depends_on = ["deploy_songbird_usb"]
+
+[nodes.config]
+primals = ["beardog", "songbird"]
+target = "usb"
+timeout = 10
+
+# Verify TOWER on Android
+[[nodes]]
+id = "verify_tower_android"
+type = "health.check_atomic"
+description = "Verify TOWER on Android"
+depends_on = ["deploy_songbird_android"]
+
+[nodes.config]
+primals = ["beardog", "songbird"]
+target = "android"
+timeout = 10
+
+# Establish cross-platform handshake
+[[nodes]]
+id = "cross_platform_handshake"
+type = "federation.cross_platform_handshake"
+description = "Establish USB ↔ Android handshake"
+depends_on = ["verify_tower_usb", "verify_tower_android"]
+
+[nodes.config]
+platforms = [
+    { name = "usb", architecture = "x86_64", primals = ["beardog", "songbird"] },
+    { name = "android", architecture = "aarch64", primals = ["beardog", "songbird"] }
+]
+handshake_method = "mDNS"
+verify_tls = true
+timeout = 30
+
+# Verify cross-platform communication
+[[nodes]]
+id = "verify_communication"
+type = "federation.verify_communication"
+description = "Verify USB ↔ Android communication"
+depends_on = ["cross_platform_handshake"]
+
+[nodes.config]
+source = "usb"
+destination = "android"
+test_messages = ["ping", "capabilities", "lineage"]
+timeout = 10
+
+# Report deployment success
+[[nodes]]
+id = "report_success"
+type = "report.deployment_success"
+description = "Report cross-platform deployment success"
+depends_on = ["verify_communication"]
+
+[nodes.config]
+deployment = "cross_platform"
+platforms = ["usb", "android"]
+primals = ["beardog", "songbird"]
+notify = ["console", "log"]
+success_message = "🎊 Cross-platform genomeBin deployment complete! USB ↔ Android handshake validated!"
