@@ -72,7 +72,7 @@ pub struct DiscoveryQuery {
 impl Default for DiscoveryQuery {
     fn default() -> Self {
         Self {
-            capability: PrimalCapability::Discovery,
+            capability: PrimalCapability::new("discovery", "discovery", "1.0"),
             timeout: Duration::from_secs(5),
             family_id: None,
             prefer_local: true,
@@ -187,7 +187,7 @@ impl PrimalDiscovery {
             return Ok(DiscoveredPrimal {
                 name: "songbird".to_string(),
                 primal_type: PrimalType::new("discovery", "songbird", "1.0.0"),
-                capabilities: vec![PrimalCapability::Discovery],
+                capabilities: vec![PrimalCapability::new("discovery", "mdns", "1.0")],
                 socket_path: socket,
                 network_endpoint: None,
                 family_id,
@@ -205,7 +205,7 @@ impl PrimalDiscovery {
                 return Ok(DiscoveredPrimal {
                     name: "songbird".to_string(),
                     primal_type: PrimalType::new("discovery", "songbird", "1.0.0"),
-                    capabilities: vec![PrimalCapability::Discovery],
+                    capabilities: vec![PrimalCapability::new("discovery", "mdns", "1.0")],
                     socket_path: socket,
                     network_endpoint: None,
                     family_id,
@@ -229,10 +229,10 @@ impl PrimalDiscovery {
 
     /// Discover primal via environment variables (fallback)
     async fn discover_via_environment(query: DiscoveryQuery) -> Result<DiscoveredPrimal> {
-        let capability_name = format!("{:?}", query.capability).to_uppercase();
+        let capability_name = query.capability.category.clone();
         
-        // Try environment variable: BEARDOG_SOCKET, SONGBIRD_SOCKET, etc.
-        let socket_env = format!("{}_SOCKET", capability_name);
+        // Try environment variable based on category: SECURITY_SOCKET, DISCOVERY_SOCKET, etc.
+        let socket_env = format!("{}_SOCKET", capability_name.to_uppercase());
         
         if let Ok(socket_path) = std::env::var(&socket_env) {
             let family_id = std::env::var("FAMILY_ID")
@@ -243,7 +243,7 @@ impl PrimalDiscovery {
 
             return Ok(DiscoveredPrimal {
                 name: capability_name.to_lowercase(),
-                primal_type: Self::capability_to_type(query.capability),
+                primal_type: Self::capability_to_type(query.capability.clone()),
                 capabilities: vec![query.capability],
                 socket_path: PathBuf::from(socket_path),
                 network_endpoint: None,
@@ -259,31 +259,24 @@ impl PrimalDiscovery {
     }
 
     /// Map capability to primal type (heuristic for common primals)
+    /// 
+    /// Since PrimalCapability is a struct with category/name fields,
+    /// we match on the category string to determine the likely primal type.
     fn capability_to_type(capability: PrimalCapability) -> PrimalType {
-        // Map capability to likely primal type based on category
-        match capability {
-            // Security capabilities → BearDog
-            PrimalCapability::Encryption
-            | PrimalCapability::Identity  
-            | PrimalCapability::Trust
-            | PrimalCapability::KeyManagement
-            | PrimalCapability::HardwareSecurity => PrimalType::new("security", "beardog", "1.0.0"),
-            
-            // Discovery capabilities → Songbird
-            PrimalCapability::Discovery
-            | PrimalCapability::P2PFederation
-            | PrimalCapability::CapabilityAnnouncement => PrimalType::new("discovery", "songbird", "1.0.0"),
-            
-            // Compute capabilities → Toadstool
-            PrimalCapability::WorkloadExecution
-            | PrimalCapability::ResourceScheduling
-            | PrimalCapability::GpuAcceleration => PrimalType::new("compute", "toadstool", "1.0.0"),
-            
-            // Storage capabilities → NestGate
-            PrimalCapability::DataStorage
-            | PrimalCapability::Provenance => PrimalType::new("storage", "nestgate", "1.0.0"),
-            
-            // Everything else - generic
+        // Match based on capability category
+        match capability.category.as_str() {
+            "security" | "encryption" | "identity" | "trust" => {
+                PrimalType::new("security", "beardog", "1.0.0")
+            }
+            "discovery" | "p2p" | "federation" => {
+                PrimalType::new("discovery", "songbird", "1.0.0")
+            }
+            "compute" | "workload" | "execution" | "gpu" => {
+                PrimalType::new("compute", "toadstool", "1.0.0")
+            }
+            "storage" | "data" | "persistence" => {
+                PrimalType::new("storage", "nestgate", "1.0.0")
+            }
             _ => PrimalType::new("generic", "unknown", "1.0.0"),
         }
     }
@@ -312,12 +305,12 @@ mod tests {
 
     #[test]
     fn test_discovery_query_builder() {
-        let query = DiscoveryQuery::capability(PrimalCapability::Encryption)
+        let query = DiscoveryQuery::capability(PrimalCapability::new("security", "encryption", "1.0"))
             .with_timeout(Duration::from_secs(10))
             .in_family("prod")
             .allow_remote();
 
-        assert_eq!(query.capability, PrimalCapability::Encryption);
+        assert_eq!(query.capability.category, "security");
         assert_eq!(query.timeout, Duration::from_secs(10));
         assert_eq!(query.family_id, Some("prod".to_string()));
         assert!(!query.prefer_local);
@@ -325,11 +318,13 @@ mod tests {
 
     #[test]
     fn test_capability_to_type() {
-        let security_type = PrimalDiscovery::capability_to_type(PrimalCapability::Encryption);
+        let security_cap = PrimalCapability::new("security", "encryption", "1.0");
+        let security_type = PrimalDiscovery::capability_to_type(security_cap);
         assert_eq!(security_type.category, "security");
         assert_eq!(security_type.name, "beardog");
         
-        let discovery_type = PrimalDiscovery::capability_to_type(PrimalCapability::Discovery);
+        let discovery_cap = PrimalCapability::new("discovery", "mdns", "1.0");
+        let discovery_type = PrimalDiscovery::capability_to_type(discovery_cap);
         assert_eq!(discovery_type.category, "discovery");
         assert_eq!(discovery_type.name, "songbird");
     }

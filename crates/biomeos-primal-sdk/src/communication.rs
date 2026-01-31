@@ -1,6 +1,6 @@
-/// Inter-Primal Communication Helpers
-///
-/// Standard patterns for secure communication between primals using BearDog BTSP.
+//! Inter-Primal Communication Helpers
+//!
+//! Standard patterns for secure communication between primals using BearDog BTSP.
 //!
 //! # Design Principles
 //!
@@ -18,7 +18,7 @@
 //! # async fn example() -> anyhow::Result<()> {
 //! // Connect to security provider
 //! let client = PrimalClient::connect_to_capability(
-//!     PrimalCapability::Security
+//!     PrimalCapability::Encryption
 //! ).await?;
 //!
 //! // Send request
@@ -88,7 +88,7 @@ impl PrimalClient {
     /// # use biomeos_primal_sdk::PrimalCapability;
     /// # async fn example() -> anyhow::Result<()> {
     /// let client = PrimalClient::connect_to_capability(
-    ///     PrimalCapability::Discovery
+    ///     PrimalCapability::new("discovery", "mdns", "1.0")
     /// ).await?;
     /// # Ok(())
     /// # }
@@ -198,8 +198,10 @@ impl SecureTunnel {
     /// # }
     /// ```
     pub async fn establish(target_primal_id: impl Into<String>) -> Result<PathBuf> {
-        // Discover BearDog (security provider)
-        let beardog = PrimalDiscovery::find_by_capability(PrimalCapability::Security).await?;
+        // Discover BearDog (security provider) by security capability
+        let beardog = PrimalDiscovery::find_by_capability(
+            PrimalCapability::new("security", "encryption", "1.0")
+        ).await?;
         
         // Request tunnel establishment via BearDog
         let client = PrimalClient::new(beardog);
