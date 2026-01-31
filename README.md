@@ -97,9 +97,11 @@ biomeOS is a **TRUE PRIMAL** distributed computing ecosystem built on three atom
 
 ---
 
-## 🏗️ **The Three Atomics**
+## 🏗️ **The Three Atomics (Fundamental Particles)**
 
-### **1. Tower Atomic** 🏰 **(Security Foundation)**
+Like electrons, protons, and neutrons - the 3 atomics create an **encrypted enclave** that other primals can utilize.
+
+### **1. TOWER Atomic** 🏰 **(Security Foundation)**
 **Components:** BearDog + Songbird  
 **Purpose:** Ecosystem security, trust, and service discovery
 
@@ -110,40 +112,50 @@ biomeOS is a **TRUE PRIMAL** distributed computing ecosystem built on three atom
 
 ---
 
-### **2. Node Atomic** 💻 **(Local Compute)**
-**Components:** Tower + Toadstool  
-**Purpose:** Secure local AI compute and GPU processing
+### **2. NODE Atomic** 💻 **(Secure Compute)**
+**Components:** TOWER + Toadstool  
+**Purpose:** Encrypted compute enclave with GPU/CPU processing
 
-- **Tower:** Security foundation (BearDog + Songbird)
+- **TOWER:** Security foundation (BearDog + Songbird)
 - **Toadstool:** barraCUDA GPU compute framework for local AI
 
 **Status:** ✅ Production Ready
 
 ---
 
-### **3. Nest Atomic** 🪺 **(Storage + AI Coordination)**
-**Components:** Tower + NestGate + Squirrel  
-**Purpose:** Model storage, caching, and multi-AI orchestration
+### **3. NEST Atomic** 🪺 **(Secure Storage)**
+**Components:** TOWER + NestGate  
+**Purpose:** Encrypted storage enclave for models and persistence
 
-- **Tower:** Security foundation
+- **TOWER:** Security foundation
 - **NestGate:** Persistent storage for models and results
-- **Squirrel:** AI coordinator between local and large language models
 
 **Status:** ✅ Production Ready
 
 ---
 
-## 🎊 **NUCLEUS: Complete Ecosystem**
+## 🎊 **NUCLEUS: The Complete Encrypted Enclave**
 
-**NUCLEUS = Tower + Node + Nest**
+**NUCLEUS = TOWER + NODE + NEST** (4 core primals forming 3 atomics)
 
-When all three atomics are deployed together, you have a complete autonomous distributed computing ecosystem capable of:
+When all three atomics are deployed together, you have a complete **encrypted enclave** that provides:
 
-- ✅ Secure inter-process communication (Tower)
-- ✅ Local AI/GPU compute (Node)
-- ✅ Remote API orchestration (Nest - Squirrel)
-- ✅ Model persistence and caching (Nest - NestGate)
-- ✅ Network discovery and federation (Tower - Songbird)
+- ✅ **Secure inter-process communication** (TOWER)
+- ✅ **Encrypted compute capability** (NODE)
+- ✅ **Encrypted storage capability** (NEST)
+- ✅ **Network discovery and federation** (TOWER - Songbird)
+- ✅ **Genetic trust framework** (TOWER - BearDog)
+
+### **Primals That Live ON TOP of the Atomics**
+
+Once the encrypted enclave exists, additional primals can utilize it:
+
+- **Squirrel** 🐿️ - AI Coordination (orchestrates between local and remote AI)
+- **PetalTongue** 🌸 - UI/UX Primal (beautiful interface for the ecosystem)
+- **biomeOS** 🦀 - Orchestrator (coordinates all primals)
+- **[Future Primals]** - Any primal that needs encrypted, trusted capabilities
+
+**Philosophy:** The 3 atomics are like fundamental particles - they create the secure foundation that other primals build upon
 
 ---
 
