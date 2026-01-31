@@ -17,7 +17,7 @@ use biomeos_types::{
     BiomeOSConfig, Environment, OrganizationScale,
 };
 use std::time::Duration;
-use tracing::warn;
+use tracing::{debug, info, warn};
 
 /// Builder for creating flexible BiomeOS configurations using unified types
 #[derive(Debug, Clone)]
@@ -57,12 +57,14 @@ impl BiomeOSConfigBuilder {
         //   export BIOMEOS_BIND_ADDRESS="127.0.0.1"  # If HTTP bridge needed
         //   export BIOMEOS_UNIX_SOCKET="$XDG_RUNTIME_DIR/biomeos/biomeos.sock"  # Primary IPC
         //
-        // Deep Debt Principle: Fail fast with clear guidance instead of silent hardcoded fallbacks.
+        // TRUE ecoBin v2.0: No hardcoded fallbacks - explicit configuration required
+        // Unix sockets are the PRIMARY IPC mechanism (platform-agnostic)
+        // HTTP bridge is OPTIONAL and must be explicitly enabled
         builder.config.network.bind_address =
             std::env::var("BIOMEOS_BIND_ADDRESS").unwrap_or_else(|_| {
-                warn!("BIOMEOS_BIND_ADDRESS not set. Unix socket preferred for IPC.");
-                warn!("For HTTP bridge: export BIOMEOS_BIND_ADDRESS=127.0.0.1");
-                "127.0.0.1".to_string() // Fallback to localhost for development only
+                info!("BIOMEOS_BIND_ADDRESS not set. Using Unix socket for IPC (recommended).");
+                info!("To enable HTTP bridge: export BIOMEOS_BIND_ADDRESS=0.0.0.0");
+                String::new() // Empty = Unix socket only (no HTTP bridge)
             });
 
         builder.config.network.port = std::env::var("BIOMEOS_PORT")
@@ -105,12 +107,12 @@ impl BiomeOSConfigBuilder {
         //   export BIOMEOS_TEST_BIND="127.0.0.1"
         //   export BIOMEOS_TEST_PORT=8083
         //
-        // Deep Debt Principle: Prefer Unix sockets for tests, use network only when needed.
+        // TRUE ecoBin v2.0: Tests use Unix sockets by default (fast & isolated)
+        // Network testing is OPTIONAL and requires explicit enablement
         builder.config.network.bind_address =
             std::env::var("BIOMEOS_TEST_BIND").unwrap_or_else(|_| {
-                warn!("BIOMEOS_TEST_BIND not set. Using Unix sockets for test isolation.");
-                warn!("For network tests: export BIOMEOS_TEST_BIND=127.0.0.1");
-                "127.0.0.1".to_string() // Fallback for tests that need network
+                debug!("BIOMEOS_TEST_BIND not set. Tests will use Unix sockets (recommended).");
+                String::new() // Empty = Unix socket only for tests
             });
 
         builder.config.network.port = std::env::var("BIOMEOS_TEST_PORT")

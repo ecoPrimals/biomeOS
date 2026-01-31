@@ -44,12 +44,19 @@
 //! ```
 
 pub mod context;
+pub mod core;
+pub mod helpers;
 pub mod monitoring;
+pub mod nodes;
 pub mod rollback;
 pub mod topological;
 
 // Re-export main types for convenience
 pub use context::{ExecutionContext, NodeStatus, RollbackAction};
+pub use core::{execute_node, GraphExecutor};
+pub use helpers::{
+    discover_beardog_socket, discover_primal_socket, parse_config, substitute_env,
+};
 pub use monitoring::{ExecutionReport, PhaseResult};
 pub use rollback::RollbackManager;
 pub use topological::TopologicalSorter;

@@ -22,6 +22,7 @@ pub mod discovery_bootstrap;
 pub mod discovery_modern; // Modern trait-based discovery
 pub mod family_credentials; // Secure family seed management
 pub mod family_discovery; // Dynamic family ID discovery (replaces nat0 hardcoding)
+pub mod ipc; // Platform-agnostic IPC (TRUE ecoBin v2.0: Linux, Android, Windows, iOS, WASM)
 pub mod primal_discovery; // Auto-discovery of primals from directories
 pub mod primal_impls; // Concrete primal implementations
 pub mod primal_orchestrator; // Async primal lifecycle orchestration
@@ -68,6 +69,9 @@ pub use discovery_modern::{
     Capability as DiscoveryCapability, CompositeDiscovery, DiscoveredPrimal, DiscoveryError,
     DiscoveryResult, HealthStatus, PrimalDiscovery, PrimalType,
 };
+
+// Platform-agnostic IPC re-exports (TRUE ecoBin v2.0)
+pub use ipc::{detect_best_transport, Transport, TransportType};
 
 // Primal orchestration re-exports (primary Capability enum for orchestration)
 pub use capabilities::{Capability, PrimalConfig as CapabilitiesPrimalConfig};

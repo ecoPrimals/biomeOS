@@ -1,7 +1,9 @@
 //! Adaptive HTTP Client Infrastructure (DEPRECATED - Use atomic_client instead!)
 //!
-//! ⚠️ WARNING: This module uses HTTP transport with C dependencies (reqwest->openssl-sys).
-//! ⚠️ For ecoBin-compliant Pure Rust communication, use `atomic_client` with Unix sockets.
+//! ⚠️ WARNING: This module is DEPRECATED and will be removed in v1.0
+//! ⚠️ It uses HTTP transport with C dependencies (reqwest->openssl-sys).
+//! ⚠️ For TRUE ecoBin v2.0 compliant Pure Rust communication, use `atomic_client` with Unix sockets.
+//! ⚠️ This file is kept only for historical reference and will NOT compile without http-transport feature.
 //!
 //! This module provides flexible HTTP client patterns that gracefully handle
 //! API versioning, response format changes, and integration mismatches.

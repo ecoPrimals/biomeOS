@@ -31,4 +31,4 @@ uuid = { workspace = true }
 [dev-dependencies]
 tokio-test = { workspace = true }
 # Testing HTTP client - for benchmarks comparing Tower atomic vs HTTP
-reqwest = { workspace = true } # For testing/benchmarking only
+# reqwest = { workspace = true } # REMOVED (TRUE ecoBin v2.0): Use atomic_client for Pure Rust testing
