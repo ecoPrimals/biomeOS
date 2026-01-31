@@ -124,10 +124,12 @@ async fn deploy_nucleus(family_id: &str, graph_path: &str) -> Result<()> {
     env.insert("SOCKET_DIR".to_string(), format!("/run/user/{}", uid));
     env.insert("LOG_DIR".to_string(), "/tmp".to_string());
 
-    // JWT secret for NestGate (temporary, should use BearDog)
+    // JWT secret for NestGate
+    // NOTE: In production, NestGate should use BearDog for authentication
+    // This env var is for development/testing only
     env.insert(
         "JWT_SECRET".to_string(),
-        std::env::var("JWT_SECRET").unwrap_or_else(|_| "TEMP_DEV_SECRET".to_string()),
+        std::env::var("JWT_SECRET").unwrap_or_else(|_| "DEVELOPMENT_ONLY_SECRET".to_string()),
     );
 
     info!("🌍 Environment:");

@@ -44,7 +44,7 @@ async fn main() -> anyhow::Result<()> {
             info!("🌉 Starting in DUAL MODE (Unix socket + HTTP bridge)");
             info!("   Unix socket: {}", config.socket_path.display());
             info!("   HTTP bridge: http://{}", bind_addr);
-            info!("   ⚠️ HTTP is TEMPORARY and will be removed!");
+            info!("   ⚠️ HTTP bridge is for PetalTongue transition only!");
 
             biomeos_api::serve_dual_mode(&config.socket_path, bind_addr, app).await?;
         } else {
