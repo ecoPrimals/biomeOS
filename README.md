@@ -1,6 +1,5 @@
-# 🦀 biomeOS - TRUE ecoBin v2.0 + genomeBin Reference Implementation
-
-**The First Universal Deployment Platform in the ecoPrimals Ecosystem**
+# 🦀 biomeOS - Universal Orchestration Platform
+**System-Level Orchestrator for the ecoPrimals NUCLEUS Ecosystem**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Rust](https://img.shields.io/badge/Rust-100%25-orange.svg)](https://www.rust-lang.org/)
@@ -86,14 +85,23 @@ biomeOS is the **first primal** in the ecoPrimals ecosystem to achieve **100% TR
 
 ## 🎯 **What is biomeOS?**
 
-biomeOS is a **TRUE PRIMAL** distributed computing ecosystem built on three atomic patterns that compose into a complete operating nucleus for AI, compute, and distributed coordination.
+biomeOS is a **system-level orchestrator** that lives **ON TOP** of the NUCLEUS atomics, providing unified coordination, graph execution, and deployment management for the ecoPrimals ecosystem.
 
-### **Core Philosophy:**
-- **Runtime Discovery:** Components discover each other via capability beacons
-- **Platform-Agnostic:** Works on ANY architecture + ANY platform
-- **Capability-Based:** Interactions based on what you can do, not who you are
-- **Atomic Composition:** Small, perfect patterns that compose elegantly
-- **Genetic Lineage:** Cryptographic validation of component relationships
+### **Core Role:**
+- **Orchestrates** multi-primal workflows via neural graph execution
+- **Coordinates** federation across platforms and networks
+- **Deploys** atomic compositions (TOWER, NODE, NEST)
+- **Provides** unified UI/CLI for human interaction
+- **Manages** system-level primitives and infrastructure
+
+### **What biomeOS Does NOT Do:**
+- ❌ Implement security (uses BearDog BTSP)
+- ❌ Implement discovery (uses Songbird registry)
+- ❌ Implement AI logic (routes to Squirrel)
+- ❌ Implement compute (assigns to Toadstool)
+- ❌ Implement storage (coordinates NestGate)
+
+**Philosophy**: *biomeOS coordinates sovereign primals, it doesn't control them.*
 
 ---
 
