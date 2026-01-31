@@ -10,6 +10,7 @@ nursery = "warn"
 [workspace]
 resolver = "2"
 members = [
+    "crates/genome-deploy",
     "crates/biomeos",  # NEW UniBin!
     "crates/biomeos-types",
     "crates/biomeos-core",
