@@ -227,7 +227,7 @@ async fn handle_websocket(socket: axum::extract::ws::WebSocket, _state: Arc<AppS
 
 /// Create the application router with all routes
 pub fn create_app(state: AppState) -> Router {
-    let state = Arc::new(state);
+    let shared_state = Arc::new(state);
 
     Router::new()
         .route("/api/v1/health", get(health))
@@ -255,9 +255,31 @@ pub fn create_app(state: AppState) -> Router {
             post(handlers::trust::evaluate_trust),
         )
         .route("/api/v1/trust/identity", get(handlers::trust::get_identity))
+        // Genome Factory routes
+        .route(
+            "/api/v1/genome/create",
+            post(handlers::genome::create_genome),
+        )
+        .route(
+            "/api/v1/genome/compose",
+            post(handlers::genome::compose_genome),
+        )
+        .route(
+            "/api/v1/genome/self-replicate",
+            post(handlers::genome::self_replicate),
+        )
+        .route(
+            "/api/v1/genome/:id/verify",
+            get(handlers::genome::verify_genome),
+        )
+        .route("/api/v1/genome/list", get(handlers::genome::list_genomes))
+        .route(
+            "/api/v1/genome/:id/download",
+            get(handlers::genome::download_genome),
+        )
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http())
-        .with_state(state)
+        .with_state(shared_state)
 }
 
 /// Serve on Unix socket only (production mode)

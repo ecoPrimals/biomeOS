@@ -5,8 +5,8 @@
 //! # Architecture
 //!
 //! The [`AppState`] holds all shared state for the API server, including
-//! the discovery service and configuration. It's built using the builder
-//! pattern for ergonomic and type-safe initialization.
+//! the discovery service, genome factory, and configuration. It's built using
+//! the builder pattern for ergonomic and type-safe initialization.
 //!
 //! # Examples
 //!
@@ -53,6 +53,7 @@
 //! - **Defaults**: Sensible defaults with `build_with_defaults()`
 //! - **Environment**: Load configuration from environment variables
 
+use crate::handlers::genome::GenomeState;
 use biomeos_core::{CompositeDiscovery, PrimalDiscovery};
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -67,6 +68,7 @@ const DEFAULT_BIND_ADDR: &str = "127.0.0.1:3000"; // Changed to localhost only!
 #[derive(Clone)]
 pub struct AppState {
     discovery: Arc<dyn PrimalDiscovery>,
+    genome: Arc<GenomeState>,
     config: Config,
 }
 
@@ -79,6 +81,11 @@ impl AppState {
     /// Get the discovery service
     pub fn discovery(&self) -> &dyn PrimalDiscovery {
         &*self.discovery
+    }
+
+    /// Get the genome factory state
+    pub fn genome(&self) -> &GenomeState {
+        &*self.genome
     }
 
     /// Get the configuration
@@ -202,6 +209,7 @@ impl Config {
 #[derive(Default)]
 pub struct AppStateBuilder {
     discovery: Option<Arc<dyn PrimalDiscovery>>,
+    genome: Option<Arc<GenomeState>>,
     config: Option<Config>,
 }
 
@@ -234,9 +242,25 @@ impl AppStateBuilder {
     pub fn build(self) -> Result<AppState, BuildError> {
         let discovery = self.discovery.ok_or(BuildError::MissingDiscovery)?;
 
+        // Initialize genome factory
+        let genome = match self.genome {
+            Some(g) => g,
+            None => {
+                tracing::info!("🧬 Initializing default genome factory");
+                Arc::new(
+                    GenomeState::new()
+                        .map_err(|e| BuildError::ConfigError(e.to_string()))?,
+                )
+            }
+        };
+
         let config = self.config.unwrap_or_default();
 
-        Ok(AppState { discovery, config })
+        Ok(AppState {
+            discovery,
+            genome,
+            config,
+        })
     }
 
     /// Build with default local discovery if none provided
@@ -259,9 +283,25 @@ impl AppStateBuilder {
             }
         };
 
+        // Initialize genome factory
+        let genome = match self.genome {
+            Some(g) => g,
+            None => {
+                tracing::info!("🧬 Initializing default genome factory");
+                Arc::new(
+                    GenomeState::new()
+                        .map_err(|e| BuildError::ConfigError(e.to_string()))?,
+                )
+            }
+        };
+
         let config = self.config.unwrap_or_default();
 
-        Ok(AppState { discovery, config })
+        Ok(AppState {
+            discovery,
+            genome,
+            config,
+        })
     }
 }
 

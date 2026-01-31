@@ -2,6 +2,7 @@
 
 pub mod discovery;
 pub mod events; // Real-time SSE events
+pub mod genome; // Genome Factory API
 pub mod live_discovery;
 pub mod livespores; // LiveSpore USB device discovery
 pub mod topology;

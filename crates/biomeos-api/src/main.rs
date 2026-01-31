@@ -61,6 +61,13 @@ async fn main() -> anyhow::Result<()> {
             info!("     • /api/v1/livespores");
             info!("     • /api/v1/events/stream (SSE)");
             info!("     • /api/v1/events/ws (WebSocket JSON-RPC 2.0)");
+            info!("     🧬 Genome Factory:");
+            info!("       • POST /api/v1/genome/create");
+            info!("       • POST /api/v1/genome/compose");
+            info!("       • POST /api/v1/genome/self-replicate");
+            info!("       • GET  /api/v1/genome/list");
+            info!("       • GET  /api/v1/genome/:id/verify");
+            info!("       • GET  /api/v1/genome/:id/download");
 
             biomeos_api::serve_unix_socket(&config.socket_path, app).await?;
         }
@@ -79,6 +86,13 @@ async fn main() -> anyhow::Result<()> {
         info!("     • /api/v1/livespores");
         info!("     • /api/v1/events/stream (SSE)");
         info!("     • /api/v1/events/ws (WebSocket JSON-RPC 2.0)");
+        info!("     🧬 Genome Factory:");
+        info!("       • POST /api/v1/genome/create");
+        info!("       • POST /api/v1/genome/compose");
+        info!("       • POST /api/v1/genome/self-replicate");
+        info!("       • GET  /api/v1/genome/list");
+        info!("       • GET  /api/v1/genome/:id/verify");
+        info!("       • GET  /api/v1/genome/:id/download");
         info!("");
         info!("   Connect via: {}", config.socket_path.display());
 

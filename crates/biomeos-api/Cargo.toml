@@ -29,6 +29,7 @@ biomeos-core = { path = "../biomeos-core" }
 biomeos-types = { path = "../biomeos-types" }
 biomeos-graph = { path = "../biomeos-graph" }
 biomeos-spore = { path = "../biomeos-spore" }
+biomeos-genome-factory = { path = "../biomeos-genome-factory" }
 
 # Async utilities
 async-trait = "0.1"

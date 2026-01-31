@@ -8,6 +8,7 @@ pub mod deploy;
 pub mod discover;
 pub mod federation;
 pub mod fossil;
+pub mod genome;
 pub mod health;
 pub mod incubation;
 pub mod monitor;
@@ -48,4 +49,10 @@ pub use incubation::{handle_node_list_local, handle_spore_incubate};
 pub use federation::{
     handle_federation_check_access, handle_federation_create_subfed, handle_federation_join_subfed,
     handle_federation_list_subfeds,
+};
+
+// Genome commands
+pub use genome::{
+    handle_genome_compose, handle_genome_create, handle_genome_list,
+    handle_genome_self_replicate, handle_genome_verify,
 };

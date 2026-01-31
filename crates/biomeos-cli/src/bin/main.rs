@@ -58,6 +58,21 @@ enum FederationAction {
     CheckAccess(federation::CheckAccessArgs),
 }
 
+/// Genome subcommands
+#[derive(Subcommand)]
+enum GenomeAction {
+    /// Create genomeBin from binaries
+    Create(genome::CreateArgs),
+    /// Compose atomic genomeBin (TOWER, NODE, etc.)
+    Compose(genome::ComposeArgs),
+    /// Self-replicate (biomeOS creates its own genomeBin)
+    SelfReplicate,
+    /// List all genomes
+    List,
+    /// Verify genomeBin integrity
+    Verify(genome::VerifyArgs),
+}
+
 /// Node subcommands
 #[derive(Subcommand)]
 enum NodeAction {
@@ -396,6 +411,12 @@ enum Commands {
         action: FederationAction,
     },
 
+    /// Manage genomeBins (self-extracting multi-arch deployments)
+    Genome {
+        #[command(subcommand)]
+        action: GenomeAction,
+    },
+
     /// Manage local nodes (incubated spores)
     Node {
         #[command(subcommand)]
@@ -548,6 +569,23 @@ async fn main() -> Result<()> {
             }
             FederationAction::CheckAccess(args) => {
                 handle_federation_check_access(&args).await?;
+            }
+        },
+        Commands::Genome { action } => match action {
+            GenomeAction::Create(args) => {
+                handle_genome_create(args)?;
+            }
+            GenomeAction::Compose(args) => {
+                handle_genome_compose(args)?;
+            }
+            GenomeAction::SelfReplicate => {
+                handle_genome_self_replicate()?;
+            }
+            GenomeAction::List => {
+                handle_genome_list()?;
+            }
+            GenomeAction::Verify(args) => {
+                handle_genome_verify(args)?;
             }
         },
         Commands::Node { action } => match action {
