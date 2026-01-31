@@ -37,12 +37,17 @@ struct JwtSecretResponse {
 #[derive(Debug, Deserialize)]
 struct JwtSecretResult {
     secret: String,
+    #[allow(dead_code)] // Part of BearDog API response, may be used for validation
     purpose: String,
+    #[allow(dead_code)] // Part of BearDog API response
     strength: String,
+    #[allow(dead_code)] // Part of BearDog API response
     byte_length: usize,
     #[serde(default)]
+    #[allow(dead_code)] // Part of BearDog API response
     encoded_length: usize,
     #[serde(default)]
+    #[allow(dead_code)] // Part of BearDog API response
     algorithm: String,
 }
 

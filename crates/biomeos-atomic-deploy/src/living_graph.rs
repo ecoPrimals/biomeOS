@@ -288,7 +288,8 @@ impl ConnectionState {
 
 /// Living deployment graph with runtime protocol state
 pub struct LivingGraph {
-    /// Static deployment definition (from TOML)
+    /// Static deployment definition (from TOML) - reserved for future graph validation
+    #[allow(dead_code)]
     deployment: Option<DeploymentGraph>,
     /// Runtime state: primal → protocol state
     protocol_state: RwLock<HashMap<String, PrimalProtocolState>>,
