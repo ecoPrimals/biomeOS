@@ -19,12 +19,12 @@
 biomeOS is the self-replicating orchestrator for the NUCLEUS ecosystem, implementing TRUE ecoBin v2.0 standards with 100% Pure Rust, zero unsafe code, and **platform-agnostic isomorphic IPC**.
 
 **Core Primals**:
-- `beardog` - Security & Cryptography (BTSP + BirdSong)
-- `songbird` - Discovery & Orchestration (mDNS + HTTP)
-- `toadstool` - GPU Compute
-- `nestgate` - Storage Management
-- `squirrel` - AI Coordination
-- `nucleus` - Graph-based Orchestration
+- `beardog` - Security & Cryptography (BTSP + BirdSong) ✅ Isomorphic IPC
+- `songbird` - Discovery & Orchestration (mDNS + HTTP) ✅ Isomorphic IPC
+- `toadstool` - GPU Compute + Akida Neuromorphic
+- `nestgate` - Universal Storage & MCP Provider (Data) ✅ Isomorphic IPC Phases 1&2
+- `squirrel` - AI MCP (Model Context Protocol) ✅ Isomorphic IPC
+- `nucleus` - Graph-based Orchestration (biomeOS)
 
 **Atomics** (Primal Compositions):
 - `TOWER` = beardog + songbird
