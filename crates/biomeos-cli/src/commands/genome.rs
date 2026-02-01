@@ -29,6 +29,28 @@ pub struct CreateArgs {
     /// Description
     #[arg(short, long)]
     pub description: Option<String>,
+    
+    /// Use Pure Rust v4.0 format (single extractor - legacy)
+    /// For backward compatibility only. Use --v4-1 for production.
+    #[arg(long, default_value_t = false)]
+    pub v4: bool,
+    
+    /// Use Multi-Architecture Fat Binary v4.1 (RECOMMENDED - genomeBin standard)
+    /// Creates single file with embedded extractors for multiple architectures
+    #[arg(long, default_value_t = true)]
+    pub v4_1: bool,
+    
+    /// Extractor architectures for v4.1 (comma-separated: x86_64,aarch64,riscv64)
+    #[arg(long, default_value = "x86_64,aarch64")]
+    pub extractor_arches: String,
+    
+    /// Use universal shell wrapper (v3.5) - DEPRECATED
+    #[arg(short, long, default_value_t = false)]
+    pub universal: bool,
+    
+    /// Use legacy Rust stub (v3.0) - DEPRECATED
+    #[arg(long)]
+    pub legacy: bool,
 }
 
 /// Compose genome arguments
@@ -55,9 +77,27 @@ pub struct VerifyArgs {
 
 /// Handle genome create command
 pub fn handle_genome_create(args: CreateArgs) -> Result<()> {
+    // Determine format (v4.1 is now the default)
+    let (v4, v4_1, universal) = if args.legacy {
+        println!("⚠️  Using legacy Rust stub (v3.0 - DEPRECATED)");
+        (false, false, false)
+    } else if args.universal {
+        println!("⚠️  Using universal shell wrapper (v3.5 - DEPRECATED)");
+        (false, false, true)
+    } else if args.v4 {
+        println!("ℹ️  Using Pure Rust v4.0 (single extractor - legacy)");
+        println!("   Consider --v4-1 for multi-architecture support");
+        (true, false, false)
+    } else {
+        // DEFAULT: v4.1 multi-arch fat binary
+        println!("🧬 Using Multi-Architecture Fat Binary v4.1 (genomeBin STANDARD)");
+        println!("   Architectures: {}", args.extractor_arches);
+        (false, true, false)
+    };
+    
     println!("🧬 Creating genomeBin: {}", args.name);
 
-    let factory = GenomeFactory::default()
+    let factory = GenomeFactory::with_default_storage()
         .context("Failed to initialize genome factory")?;
 
     let mut binaries = HashMap::new();
@@ -69,6 +109,16 @@ pub fn handle_genome_create(args: CreateArgs) -> Result<()> {
         anyhow::bail!("At least one binary must be specified (use --binary arch=path)");
     }
 
+    // Parse extractor architectures for v4.1
+    let extractor_arches = if v4_1 {
+        args.extractor_arches
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .collect()
+    } else {
+        vec![]
+    };
+
     let request = GenomeCreateRequest {
         name: args.name.clone(),
         binaries,
@@ -78,6 +128,10 @@ pub fn handle_genome_create(args: CreateArgs) -> Result<()> {
             nucleus_atomic: None,
             capabilities: vec![],
         },
+        universal,
+        v4,
+        v4_1,
+        extractor_arches,
     };
 
     let response = factory.create_genome(request)
@@ -88,6 +142,24 @@ pub fn handle_genome_create(args: CreateArgs) -> Result<()> {
     println!("   Path: {}", response.path.display());
     println!("   Size: {} bytes ({:.2} MB)", response.size, response.size as f64 / 1_048_576.0);
     println!("   Architectures: {}", response.architectures.join(", "));
+    
+    if v4_1 {
+        println!("   Format: v4.1 (Multi-Arch Fat Binary - STANDARD) ✅");
+        println!("   ✅ Embedded extractors: {}!", args.extractor_arches);
+        println!("   ✅ Runtime architecture detection!");
+        println!("   ✅ Single file, native execution everywhere!");
+        println!("   ✅ Production validated on x86_64 + ARM64!");
+    } else if v4 {
+        println!("   Format: v4.0 (Pure Rust - single extractor)");
+        println!("   ℹ️  Consider upgrading to --v4-1 for multi-arch support");
+        println!("   ✅ Deterministic fingerprint!");
+    } else if universal {
+        println!("   Format: v3.5-universal (shell wrapper - DEPRECATED)");
+        println!("   ⚠️  Please upgrade to --v4-1 for production use");
+    } else {
+        println!("   Format: v3.0 (Rust stub - DEPRECATED)");
+        println!("   ⚠️  Please upgrade to --v4-1 for production use");
+    }
 
     Ok(())
 }
@@ -96,7 +168,7 @@ pub fn handle_genome_create(args: CreateArgs) -> Result<()> {
 pub fn handle_genome_compose(args: ComposeArgs) -> Result<()> {
     println!("🧬 Composing {} atomic: {}", args.nucleus_type, args.name);
 
-    let factory = GenomeFactory::default()
+    let factory = GenomeFactory::with_default_storage()
         .context("Failed to initialize genome factory")?;
 
     if args.genome.is_empty() {
@@ -126,7 +198,7 @@ pub fn handle_genome_compose(args: ComposeArgs) -> Result<()> {
 pub fn handle_genome_self_replicate() -> Result<()> {
     println!("🧬 Self-replication: biomeOS creating its own genomeBin");
 
-    let factory = GenomeFactory::default()
+    let factory = GenomeFactory::with_default_storage()
         .context("Failed to initialize genome factory")?;
 
     let response = factory.self_replicate()
@@ -145,7 +217,7 @@ pub fn handle_genome_self_replicate() -> Result<()> {
 
 /// Handle genome list command
 pub fn handle_genome_list() -> Result<()> {
-    let factory = GenomeFactory::default()
+    let factory = GenomeFactory::with_default_storage()
         .context("Failed to initialize genome factory")?;
 
     let genomes = factory.list_genomes()
@@ -178,7 +250,7 @@ pub fn handle_genome_list() -> Result<()> {
 pub fn handle_genome_verify(args: VerifyArgs) -> Result<()> {
     println!("🔍 Verifying genomeBin: {}", args.name);
 
-    let factory = GenomeFactory::default()
+    let factory = GenomeFactory::with_default_storage()
         .context("Failed to initialize genome factory")?;
 
     let result = factory.verify_genome(&args.name)

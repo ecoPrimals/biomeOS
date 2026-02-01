@@ -11,9 +11,12 @@
 //! - WASM (In-process channels)
 
 use anyhow::{Context, Result};
+use std::fs::File;
+use std::io::{ErrorKind, Write};
+use std::net::SocketAddr;
 use std::path::PathBuf;
 use tokio::io::{AsyncRead, AsyncWrite};
-use tracing::{debug, info};
+use tracing::{debug, error, info, warn};
 
 /// Universal IPC transport type
 ///
@@ -98,13 +101,19 @@ impl Transport {
         }
     }
 
-    /// Bind and listen on the transport endpoint
+    /// Bind and listen on the transport endpoint (with automatic platform adaptation)
+    ///
+    /// **Isomorphic IPC**: Implements Try→Detect→Adapt→Succeed pattern.
+    /// 
+    /// This method attempts to bind the optimal transport first, detects platform
+    /// constraints (like SELinux blocking Unix sockets), and automatically adapts
+    /// to TCP fallback when needed.
     ///
     /// Returns a listener for accepting incoming connections.
     pub async fn bind(&self) -> Result<Box<dyn TransportListener>> {
         match &self.transport_type {
             TransportType::UnixSocket { path } => {
-                debug!("Binding Unix socket: {}", path.display());
+                debug!("🔌 Attempting Unix socket bind: {}", path.display());
                 
                 // Remove existing socket file if it exists
                 if path.exists() {
@@ -123,6 +132,7 @@ impl Transport {
                 let listener = tokio::net::UnixListener::bind(path)
                     .context(format!("Failed to bind Unix socket: {}", path.display()))?;
                 
+                info!("✅ Unix socket bound: {}", path.display());
                 Ok(Box::new(UnixTransportListener { listener }))
             }
 
@@ -176,6 +186,171 @@ impl Transport {
     /// Get the transport type
     pub fn transport_type(&self) -> &TransportType {
         &self.transport_type
+    }
+
+    /// Bind with automatic fallback (Try→Detect→Adapt→Succeed pattern)
+    ///
+    /// **TRUE Isomorphism**: Automatically adapts to platform constraints.
+    ///
+    /// This is the recommended bind method for production primals. It:
+    /// 1. **TRY**: Attempts optimal transport (Unix socket)
+    /// 2. **DETECT**: Identifies platform constraints (SELinux, permissions)
+    /// 3. **ADAPT**: Falls back to TCP localhost automatically
+    /// 4. **SUCCEED**: Returns working listener or real error
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// let transport = Transport::new(TransportType::UnixSocket { 
+    ///     path: PathBuf::from("/tmp/myprimal.sock") 
+    /// });
+    /// 
+    /// // Automatically handles platform constraints
+    /// let listener = transport.bind_with_fallback().await?;
+    /// ```
+    pub async fn bind_with_fallback(&self) -> Result<Box<dyn TransportListener>> {
+        info!("🔌 Starting IPC server (isomorphic mode)");
+        
+        // 1. TRY optimal transport first
+        match self.bind().await {
+            Ok(listener) => {
+                info!("   ✅ Using optimal transport: {:?}", self.transport_type);
+                Ok(listener)
+            }
+            
+            // 2. DETECT platform constraints
+            Err(e) if Self::is_platform_constraint(&e) => {
+                warn!("⚠️  Optimal transport unavailable: {}", e);
+                warn!("   Detected platform constraint, adapting...");
+                
+                // 3. ADAPT to TCP fallback
+                self.start_tcp_fallback().await
+            }
+            
+            // 4. Real error - propagate it
+            Err(e) => {
+                error!("❌ Failed to bind IPC (real error): {}", e);
+                Err(e)
+            }
+        }
+    }
+
+    /// Detect if error is due to platform constraint (not a real error)
+    ///
+    /// Platform constraints include:
+    /// - SELinux blocking Unix socket creation (Android)
+    /// - Unsupported address family
+    /// - Permission denied in sandboxed environments
+    ///
+    /// **Deep Debt**: This is runtime detection, not compile-time #[cfg].
+    fn is_platform_constraint(error: &anyhow::Error) -> bool {
+        // Check if it's an I/O error
+        if let Some(io_err) = error.downcast_ref::<std::io::Error>() {
+            match io_err.kind() {
+                // Permission denied often means SELinux blocking
+                ErrorKind::PermissionDenied => {
+                    debug!("Permission denied - checking SELinux status");
+                    is_selinux_enforcing()
+                }
+                
+                // Address family not supported (platform lacks Unix sockets)
+                ErrorKind::Unsupported => {
+                    debug!("Unsupported address family - platform constraint");
+                    true
+                }
+                
+                // Not a platform constraint
+                _ => false
+            }
+        } else {
+            false
+        }
+    }
+
+    /// Start TCP fallback server (isomorphic mode)
+    ///
+    /// Binds to localhost with ephemeral port and writes discovery file
+    /// for clients to find the endpoint.
+    async fn start_tcp_fallback(&self) -> Result<Box<dyn TransportListener>> {
+        info!("🌐 Starting TCP IPC fallback (isomorphic mode)");
+        info!("   Protocol: JSON-RPC 2.0 (same as Unix socket)");
+        info!("   Security: Localhost-only (127.0.0.1)");
+        
+        // Bind to localhost with ephemeral port (0 = OS assigns)
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .context("Failed to bind TCP socket for fallback")?;
+        
+        let local_addr = listener.local_addr()
+            .context("Failed to get local TCP address")?;
+        
+        info!("✅ TCP IPC listening on {}", local_addr);
+        
+        // Write discovery file for clients
+        self.write_tcp_discovery_file(&local_addr)?;
+        
+        info!("   Status: READY ✅ (isomorphic TCP fallback active)");
+        
+        Ok(Box::new(TcpTransportListener { listener }))
+    }
+
+    /// Write TCP discovery file (XDG-compliant)
+    ///
+    /// Creates a discovery file that clients can read to find the TCP endpoint.
+    /// Format: `tcp:127.0.0.1:PORT`
+    ///
+    /// Tries locations in order:
+    /// 1. $XDG_RUNTIME_DIR/{service}-ipc-port
+    /// 2. $HOME/.local/share/{service}-ipc-port  
+    /// 3. /tmp/{service}-ipc-port
+    fn write_tcp_discovery_file(&self, addr: &SocketAddr) -> Result<()> {
+        // Extract service name from transport type
+        let service_name = self.get_service_name();
+        
+        let discovery_filename = format!("{}-ipc-port", service_name);
+        
+        // Try XDG-compliant locations in order
+        let discovery_dirs = [
+            std::env::var("XDG_RUNTIME_DIR").ok(),
+            std::env::var("HOME").ok().map(|h| format!("{}/.local/share", h)),
+            Some("/tmp".to_string()),
+        ];
+        
+        for dir in discovery_dirs.iter().filter_map(|d| d.as_ref()) {
+            // Ensure directory exists
+            if let Ok(()) = std::fs::create_dir_all(dir) {
+                let discovery_path = format!("{}/{}", dir, discovery_filename);
+                
+                match File::create(&discovery_path) {
+                    Ok(mut f) => {
+                        // Write in format: tcp:127.0.0.1:PORT
+                        if writeln!(f, "tcp:{}", addr).is_ok() {
+                            info!("📁 TCP discovery file: {}", discovery_path);
+                            return Ok(());
+                        }
+                    }
+                    Err(e) => {
+                        debug!("Could not create discovery file at {}: {}", discovery_path, e);
+                    }
+                }
+            }
+        }
+        
+        warn!("⚠️  Could not write TCP discovery file (clients may not find endpoint)");
+        Ok(()) // Non-fatal - primal can still function
+    }
+
+    /// Get service name from transport type
+    fn get_service_name(&self) -> String {
+        match &self.transport_type {
+            TransportType::UnixSocket { path } => {
+                path.file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("biomeos")
+                    .to_string()
+            }
+            _ => "biomeos".to_string()
+        }
     }
 }
 
@@ -331,6 +506,41 @@ fn get_unix_socket_path(service_name: &str) -> Result<PathBuf> {
 
     // Fallback to /tmp (less secure but works everywhere)
     Ok(PathBuf::from(format!("/tmp/{}.sock", service_name)))
+}
+
+/// Check if SELinux is enforcing (runtime detection)
+///
+/// **Deep Debt**: Runtime platform detection, not compile-time #[cfg].
+/// 
+/// This detects if SELinux is actively blocking operations (Enforcing mode).
+/// On Android, SELinux typically blocks Unix socket creation in certain contexts.
+///
+/// Returns true if SELinux is enforcing, false otherwise (including if the
+/// file doesn't exist on non-SELinux systems).
+fn is_selinux_enforcing() -> bool {
+    match std::fs::read_to_string("/sys/fs/selinux/enforce") {
+        Ok(contents) => {
+            match contents.trim().parse::<u8>() {
+                Ok(1) => {
+                    debug!("SELinux is enforcing - platform constraint detected");
+                    true
+                }
+                Ok(0) => {
+                    debug!("SELinux is permissive - not a constraint");
+                    false
+                }
+                _ => {
+                    debug!("SELinux status unknown");
+                    false
+                }
+            }
+        }
+        Err(_) => {
+            // File doesn't exist - not an SELinux system
+            debug!("No SELinux detected (file not found)");
+            false
+        }
+    }
 }
 
 #[cfg(test)]

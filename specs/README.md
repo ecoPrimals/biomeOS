@@ -1,7 +1,7 @@
 # biomeOS Specifications
 
-**Last Updated**: January 26, 2026  
-**Status**: ✅ Production Ready (Tower Atomic 96% Web Compatible)
+**Last Updated**: January 31, 2026  
+**Status**: ✅ Production Ready (genomeBin v3.0 Complete + Bare-Metal OS Spec)
 
 ---
 
@@ -74,6 +74,9 @@
 | `LIVESPORE_ARCHITECTURE_SPEC.md` | ✅ Current | USB deployment |
 | `SPORE_DEPLOYMENT_ARCHITECTURE.md` | ✅ Current | Spore system |
 | `UNIBIN_ARCHITECTURE_EVOLUTION.md` | ✅ Current | UniBin standards |
+| `GENOMEBIN_V3_SPECIFICATION.md` | ✅ Production | genomeBin v3.0 binary format |
+| `BIOMEOS_GENOME_FACTORY_SPEC.md` | ✅ Production | Genome factory API |
+| `GENOMEBIN_BARE_METAL_UEFI_SPEC.md` | 🎨 Design | **Bare-metal UEFI boot** ✨ **NEW!** |
 
 ---
 
@@ -99,6 +102,16 @@
 3. 📋 HTTP/2 support
 4. 📋 WebSocket support
 5. 📋 Database TLS connections
+
+### 🎨 Design Phase (Q1-Q2 2026)
+1. 🎨 **Bare-Metal UEFI Boot** - biomeOS as standalone OS ✨ **NEW!**
+   - EFI boot stub (x86_64, ARM64)
+   - Minimal Linux kernel
+   - Primals as native OS services
+   - Hardware detection (GPU, network, storage)
+   - Multiple deployment modes (Live USB, disk install, dual-boot)
+   - **Timeline**: 22-30 weeks (5 phases)
+   - **See**: `GENOMEBIN_BARE_METAL_UEFI_SPEC.md`
 
 ---
 

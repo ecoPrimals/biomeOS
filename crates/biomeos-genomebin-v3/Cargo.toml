@@ -14,8 +14,11 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 bincode = "1.3"
 
-# Compression (Pure Rust - zstd)
+# Compression (zstd for encoding, ruzstd for decoding if needed)
+# NOTE: Creator runs on dev machines only, C dependency acceptable here
+# Extractor (biomeos-genome-extract) uses Pure Rust ruzstd
 zstd = "0.13"
+ruzstd = "0.7"
 
 # Hashing (Pure Rust - SHA256)
 sha2 = "0.10"
@@ -43,6 +46,11 @@ tempfile = "3.8"
 [dev-dependencies]
 tokio-test = { workspace = true }
 tempfile = "3.8"
+tracing-subscriber = "0.3"
+
+[[example]]
+name = "create_self_extracting"
+path = "examples/create_self_extracting.rs"
 
 [lib]
 name = "biomeos_genomebin_v3"

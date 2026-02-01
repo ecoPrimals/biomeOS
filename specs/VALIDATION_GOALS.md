@@ -104,6 +104,39 @@
 
 ---
 
+### **H7: Bare-Metal UEFI Boot**
+
+**Hypothesis**: biomeOS can function as a standalone operating system, orchestrating primals as native OS services on UEFI hardware
+
+**Validation Criteria**:
+- [ ] Boots on QEMU/KVM (x86_64)
+- [ ] Boots on real hardware (x86_64, 3+ different machines)
+- [ ] Boots on ARM64 (Raspberry Pi 4/5, UEFI-capable SBCs)
+- [ ] UEFI Secure Boot working (signed boot stub)
+- [ ] All 4 primals start automatically as OS services
+- [ ] neuralAPI accessible immediately after boot
+- [ ] Hardware detection working (GPU, network, storage)
+- [ ] Installation modes working (Live USB, disk install, dual-boot)
+- [ ] Performance meets targets (boot <10s, memory <2GB idle)
+- [ ] Independent replication by external party
+
+**Current Status**: DESIGN PHASE (0% implemented, specification complete)
+
+**Timeline**: 22-30 weeks (5 phases: Boot Stub → Kernel → Orchestration → Installation → Hardware Support)
+
+**Priority**: MEDIUM (validate core primal functionality first, then bare-metal OS capability)
+
+**Impact**: MASSIVE - Transforms biomeOS from orchestrator to standalone OS platform, enables:
+- Direct hardware deployment (no host OS needed)
+- True "boot from USB" like Pop!_OS or Ubuntu Live
+- Primal ecosystem as native OS services
+- Hardware-level genetic trust framework
+- Cloud VM images (AWS AMI, Azure Image, GCP Image)
+
+**See**: [`GENOMEBIN_BARE_METAL_UEFI_SPEC.md`](GENOMEBIN_BARE_METAL_UEFI_SPEC.md) for complete specification
+
+---
+
 ## 🔬 Hardware Validation Matrix
 
 ### **Available Hardware** (For Testing)
@@ -512,8 +545,9 @@ YES: "We fuzzed it, injected faults, ran chaos tests, stressed it,
 | barraCUDA | Multi-vendor GPU | 90% Phase 1 | 🔬 Ready to test |
 | Coverage | 90% ensures correctness | ~60% current | ❌ Insufficient |
 | Inter-primal | Unix socket IPC | Client module disabled | ❌ Blocked |
+| Bare-Metal | UEFI boot OS | Spec complete | 🎨 Design Phase |
 
-**Overall**: **20% validated, 80% remaining**
+**Overall**: **15% validated, 85% remaining** (1 new hypothesis added)
 
 ---
 

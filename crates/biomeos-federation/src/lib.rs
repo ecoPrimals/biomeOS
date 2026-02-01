@@ -24,7 +24,7 @@ pub use subfederation::{IsolationLevel, SubFederation, SubFederationManager};
 // Re-export PrimalEndpoint for tests
 pub use beardog_client::BearDogClient;
 pub use discovery::PrimalEndpoint;
-pub use unix_socket_client::{JsonRpcRequest, JsonRpcResponse, UnixSocketClient};
+pub use unix_socket_client::{IsomorphicClient, JsonRpcRequest, JsonRpcResponse, UnixSocketClient};
 
 use thiserror::Error;
 

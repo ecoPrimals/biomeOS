@@ -26,7 +26,7 @@ pub struct GenomeState {
 impl GenomeState {
     /// Create new genome state with default factory
     pub fn new() -> Result<Self, ApiError> {
-        let factory = GenomeFactory::default().map_err(|e| {
+        let factory = GenomeFactory::with_default_storage().map_err(|e| {
             ApiError::Internal(format!("Failed to initialize genome factory: {}", e))
         })?;
 

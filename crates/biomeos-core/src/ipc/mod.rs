@@ -29,4 +29,10 @@
 
 pub mod transport;
 
-pub use transport::{detect_best_transport, Transport, TransportType};
+pub use transport::{
+    detect_best_transport, 
+    AsyncReadWrite,
+    Transport, 
+    TransportListener,
+    TransportType,
+};

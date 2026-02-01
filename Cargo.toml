@@ -39,9 +39,11 @@ members = [
     "crates/biomeos-atomic-deploy",  # Genetic lineage atomic deployment (modern Rust, no bash)
     "crates/biomeos-genomebin-v3",  # NEW: genomeBin v3.0 - TRUE binary isomorphic format
     "crates/biomeos-genome-factory",  # NEW: Genome Factory - Universal genomeBin production
+    "crates/biomeos-genome-extract",  # NEW: genomeBin v4.0 - Pure Rust Universal Extractor (binary = DNA)
 ]
 exclude = [
     "validation",  # Independent workspace for validation tools using benchScale
+    "crates/biomeos-genomebin-v3/stub",  # Standalone stub binary (not part of main workspace)
 ]
 
 [workspace.package]

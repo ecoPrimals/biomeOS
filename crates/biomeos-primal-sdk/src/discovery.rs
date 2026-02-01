@@ -222,9 +222,88 @@ impl PrimalDiscovery {
         songbird: &DiscoveredPrimal,
         query: DiscoveryQuery,
     ) -> Result<DiscoveredPrimal> {
-        // TODO: Implement JSON-RPC query to Songbird
-        // For now, return error to trigger fallback
-        Err(anyhow!("Songbird query not yet implemented - using fallback"))
+        use tokio::net::UnixStream;
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        use serde_json::json;
+
+        // Connect to Songbird Unix socket
+        let mut stream = UnixStream::connect(&songbird.socket_path)
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to connect to Songbird at {}",
+                    songbird.socket_path.display()
+                )
+            })?;
+
+        // Build JSON-RPC request
+        let request = json!({
+            "jsonrpc": "2.0",
+            "method": "discover",
+            "params": {
+                "capability": {
+                    "category": query.capability.category,
+                    "name": query.capability.name,
+                    "version": query.capability.version,
+                },
+                "family_id": query.family_id,
+                "prefer_local": query.prefer_local,
+            },
+            "id": 1
+        });
+
+        // Send request
+        let request_bytes = serde_json::to_vec(&request)?;
+        stream.write_all(&request_bytes).await?;
+        stream.write_all(b"\n").await?; // Newline delimiter
+        stream.flush().await?;
+
+        // Read response
+        let mut response_buf = Vec::new();
+        let mut buffer = [0u8; 4096];
+        
+        // Read until newline or EOF (with timeout from query)
+        let read_result = tokio::time::timeout(
+            query.timeout,
+            async {
+                loop {
+                    let n = stream.read(&mut buffer).await?;
+                    if n == 0 {
+                        break; // EOF
+                    }
+                    response_buf.extend_from_slice(&buffer[..n]);
+                    if response_buf.ends_with(b"\n") {
+                        break;
+                    }
+                }
+                Ok::<_, std::io::Error>(())
+            }
+        ).await;
+
+        if read_result.is_err() {
+            return Err(anyhow!("Timeout waiting for Songbird response"));
+        }
+        read_result??;
+
+        // Parse JSON-RPC response
+        let response: serde_json::Value = serde_json::from_slice(&response_buf)
+            .context("Failed to parse Songbird JSON-RPC response")?;
+
+        // Check for JSON-RPC error
+        if let Some(error) = response.get("error") {
+            return Err(anyhow!("Songbird query error: {}", error));
+        }
+
+        // Extract result
+        let result = response
+            .get("result")
+            .ok_or_else(|| anyhow!("Missing result in Songbird response"))?;
+
+        // Parse into DiscoveredPrimal
+        let discovered: DiscoveredPrimal = serde_json::from_value(result.clone())
+            .context("Failed to parse discovered primal from Songbird response")?;
+
+        Ok(discovered)
     }
 
     /// Discover primal via environment variables (fallback)
@@ -285,15 +364,89 @@ impl PrimalDiscovery {
     pub async fn find_all_by_capability(
         capability: PrimalCapability,
     ) -> Result<Vec<DiscoveredPrimal>> {
+        use tokio::net::UnixStream;
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        use serde_json::json;
+
         // Try Songbird first
         if let Ok(songbird) = Self::discover_songbird().await {
-            // TODO: Query Songbird for all primals with capability
-            // For now, return single result from simple discovery
-            let primal = Self::find_by_capability(capability).await?;
-            return Ok(vec![primal]);
+            // Query Songbird for all primals with capability
+            let result = async {
+                let mut stream = UnixStream::connect(&songbird.socket_path).await?;
+
+                // Build JSON-RPC request for discover_all
+                let request = json!({
+                    "jsonrpc": "2.0",
+                    "method": "discover_all",
+                    "params": {
+                        "capability": {
+                            "category": capability.category,
+                            "name": capability.name,
+                            "version": capability.version,
+                        },
+                    },
+                    "id": 2
+                });
+
+                // Send request
+                let request_bytes = serde_json::to_vec(&request)?;
+                stream.write_all(&request_bytes).await?;
+                stream.write_all(b"\n").await?;
+                stream.flush().await?;
+
+                // Read response
+                let mut response_buf = Vec::new();
+                let mut buffer = [0u8; 8192]; // Larger buffer for multiple results
+                
+                let read_result = tokio::time::timeout(
+                    Duration::from_secs(5),
+                    async {
+                        loop {
+                            let n = stream.read(&mut buffer).await?;
+                            if n == 0 {
+                                break;
+                            }
+                            response_buf.extend_from_slice(&buffer[..n]);
+                            if response_buf.ends_with(b"\n") {
+                                break;
+                            }
+                        }
+                        Ok::<_, std::io::Error>(())
+                    }
+                ).await;
+
+                if read_result.is_err() {
+                    return Err(anyhow!("Timeout waiting for Songbird discover_all response"));
+                }
+                read_result??;
+
+                // Parse JSON-RPC response
+                let response: serde_json::Value = serde_json::from_slice(&response_buf)?;
+
+                if let Some(error) = response.get("error") {
+                    return Err(anyhow!("Songbird discover_all error: {}", error));
+                }
+
+                let result = response
+                    .get("result")
+                    .ok_or_else(|| anyhow!("Missing result in Songbird discover_all response"))?;
+
+                // Parse into Vec<DiscoveredPrimal>
+                let discovered: Vec<DiscoveredPrimal> = serde_json::from_value(result.clone())?;
+
+                Ok::<Vec<DiscoveredPrimal>, anyhow::Error>(discovered)
+            }.await;
+
+            // If Songbird query succeeds, return results
+            if let Ok(primals) = result {
+                if !primals.is_empty() {
+                    return Ok(primals);
+                }
+            }
+            // If Songbird query fails or returns empty, fall through to fallback
         }
 
-        // Fallback: Return single result
+        // Fallback: Return single result from environment discovery
         let primal = Self::find_by_capability(capability).await?;
         Ok(vec![primal])
     }

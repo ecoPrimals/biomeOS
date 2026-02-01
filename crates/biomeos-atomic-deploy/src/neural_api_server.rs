@@ -26,6 +26,7 @@ use crate::neural_router::{NeuralRouter, RoutingMetrics};
 use crate::nucleation::SocketNucleation;
 use crate::protocol_escalation::{EscalationConfig, ProtocolEscalationManager};
 use anyhow::{Context, Result};
+use biomeos_core::ipc::{Transport, TransportType, TransportListener};
 use biomeos_core::SocketDiscovery;
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -33,7 +34,6 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::net::{UnixListener, UnixStream};
 use tokio::sync::RwLock;
 use tracing::{debug, error, info, trace, warn};
 
@@ -276,9 +276,18 @@ impl NeuralApiServer {
             std::fs::remove_file(&self.socket_path).context("Failed to remove old socket")?;
         }
 
-        // 4. Create Unix socket listener
-        let listener =
-            UnixListener::bind(&self.socket_path).context("Failed to bind Unix socket")?;
+        // 4. Create IPC listener with automatic platform adaptation (isomorphic mode)
+        info!("🔌 Starting Neural API server (isomorphic IPC)");
+        
+        let transport = Transport::new(TransportType::UnixSocket {
+            path: self.socket_path.clone(),
+        });
+        
+        // Use bind_with_fallback for automatic TCP fallback on platform constraints
+        let mut listener = transport
+            .bind_with_fallback()
+            .await
+            .context("Failed to bind Neural API IPC")?;
 
         let mode_str = match detected_mode {
             BiomeOsMode::Bootstrap => "BOOTSTRAP (genesis)",
@@ -296,7 +305,7 @@ impl NeuralApiServer {
         // 5. Accept connections
         loop {
             match listener.accept().await {
-                Ok((stream, _addr)) => {
+                Ok(stream) => {
                     let server = self.clone();
                     tokio::spawn(async move {
                         if let Err(e) = server.handle_connection(stream).await {
@@ -490,8 +499,8 @@ impl NeuralApiServer {
         Ok(())
     }
 
-    /// Handle a client connection
-    async fn handle_connection(&self, stream: UnixStream) -> Result<()> {
+    /// Handle a client connection (isomorphic - Unix socket or TCP)
+    async fn handle_connection(&self, stream: Box<dyn biomeos_core::ipc::AsyncReadWrite>) -> Result<()> {
         use tokio::time::{timeout, Duration};
         let mut reader = BufReader::new(stream);
         let mut line = String::new();
@@ -932,13 +941,17 @@ impl NeuralApiServer {
     ) -> Result<Vec<String>> {
         use tokio::time::{timeout, Duration};
 
-        // Connect to the primal's Unix socket
-        let stream = timeout(Duration::from_secs(5), UnixStream::connect(socket_path))
+        // Connect to the primal's Unix socket using isomorphic transport
+        let transport = Transport::new(TransportType::UnixSocket {
+            path: socket_path.to_path_buf(),
+        });
+        
+        let stream = timeout(Duration::from_secs(5), transport.connect())
             .await
             .context("Connection timeout")?
             .context("Failed to connect to primal socket")?;
 
-        let (reader, mut writer) = stream.into_split();
+        let (reader, mut writer) = tokio::io::split(stream);
         let mut reader = BufReader::new(reader);
 
         // Send capabilities query (JSON-RPC 2.0)
@@ -949,11 +962,14 @@ impl NeuralApiServer {
             "id": 1
         });
         let request_str = serde_json::to_string(&request)? + "\n";
+        
+        use tokio::io::AsyncWriteExt;
         writer.write_all(request_str.as_bytes()).await?;
         writer.flush().await?;
 
         // Read response
         let mut response_line = String::new();
+        use tokio::io::AsyncReadExt;
         timeout(Duration::from_secs(5), reader.read_line(&mut response_line))
             .await
             .context("Response timeout")?
@@ -1011,14 +1027,21 @@ impl NeuralApiServer {
     ) -> Result<String> {
         use tokio::time::{timeout, Duration};
 
-        // Connect to BearDog
-        let stream = timeout(Duration::from_secs(5), UnixStream::connect(beardog_socket))
+        // Connect to BearDog using isomorphic transport
+        let transport = Transport::new(TransportType::UnixSocket {
+            path: beardog_socket.to_path_buf(),
+        });
+        
+        let stream = timeout(Duration::from_secs(5), transport.connect())
             .await
             .context("Connection timeout")?
             .context("Failed to connect to BearDog")?;
 
-        let (reader, mut writer) = stream.into_split();
-        let mut reader = BufReader::new(reader);
+        // Split stream for bidirectional communication
+        use tokio::io::AsyncReadExt;
+        let (read_half, write_half) = tokio::io::split(stream);
+        let mut reader = BufReader::new(read_half);
+        let mut writer = write_half;
 
         // Request BTSP tunnel establishment
         let request = json!({

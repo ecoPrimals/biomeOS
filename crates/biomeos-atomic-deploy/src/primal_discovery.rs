@@ -1,6 +1,11 @@
 //! Primal discovery - TRUE PRIMAL approach
 //!
-//! Discovers running primals via Unix socket scanning (no launching!)
+//! **TRUE ecoBin v2.0:** Isomorphic IPC discovery with automatic endpoint detection.
+//!
+//! Discovers running primals via:
+//! - Unix socket scanning (Linux/macOS optimal path)
+//! - TCP discovery file reading (Android/cross-platform fallback)
+//! - No launching, just discovery!
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
@@ -186,32 +191,39 @@ impl PrimalDiscovery {
         }
     }
 
-    /// Test if a socket is responsive
+    /// Test if a socket or TCP endpoint is responsive
+    ///
+    /// **TRUE ecoBin v2.0:** Tests connectivity via isomorphic transport.
     async fn test_socket(&self, socket_path: &Path) -> bool {
-        #[cfg(unix)]
-        {
-            use tokio::net::UnixStream;
-
-            // Try to connect (don't send data, just test connectivity)
-            match tokio::time::timeout(Duration::from_secs(1), UnixStream::connect(socket_path))
-                .await
-            {
-                Ok(Ok(_stream)) => true,
-                Ok(Err(e)) => {
-                    debug!("Socket {} not responsive: {}", socket_path.display(), e);
-                    false
-                }
-                Err(_) => {
-                    debug!("Socket {} connection timeout", socket_path.display());
-                    false
-                }
-            }
+        use biomeos_federation::unix_socket_client::IsomorphicClient;
+        use serde_json::json;
+        
+        // Create isomorphic client (will discover Unix socket OR TCP endpoint)
+        let client = IsomorphicClient::new(socket_path);
+        
+        // Check if transport is available
+        if !client.is_available() {
+            debug!("No transport available for {}", socket_path.display());
+            return false;
         }
-
-        #[cfg(not(unix))]
-        {
-            // On non-Unix systems, assume socket exists = responsive
-            socket_path.exists()
+        
+        // Try a simple health check call with timeout
+        match tokio::time::timeout(
+            Duration::from_secs(1),
+            client.call_method("health", json!({}))
+        ).await {
+            Ok(Ok(_)) => {
+                debug!("✅ Primal responsive at {}", socket_path.display());
+                true
+            }
+            Ok(Err(e)) => {
+                debug!("Primal at {} not responsive: {}", socket_path.display(), e);
+                false
+            }
+            Err(_) => {
+                debug!("Primal at {} connection timeout", socket_path.display());
+                false
+            }
         }
     }
 

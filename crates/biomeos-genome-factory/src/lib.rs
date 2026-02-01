@@ -87,10 +87,13 @@ impl GenomeFactory {
             .with_context(|| format!("Failed to load genome: {}", name))
     }
     
-    /// Get default factory (uses plasmidBin/ in current workspace)
+    /// Create factory with default workspace storage location
     ///
+    /// Uses workspace root + plasmidBin/ as storage directory.
+    /// This method can fail if workspace root cannot be found.
+    /// 
     /// Deep Debt: Runtime discovery, no hardcoding
-    pub fn default() -> Result<Self> {
+    pub fn with_default_storage() -> Result<Self> {
         // Try to find workspace root
         let workspace_root = Self::find_workspace_root()?;
         let storage_dir = workspace_root.join("plasmidBin");
