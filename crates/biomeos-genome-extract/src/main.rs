@@ -95,12 +95,38 @@ fn execute_command(genome_path: &str, command: &str, args: &[String]) -> Result<
 }
 
 /// Find MAGIC marker in file
+/// 
+/// Deep Debt Fix: Handles both v4.0 (pure) and v4.1 (fat binary with bootstrap)
+/// v4.1 format has: [Bootstrap 4KB][Table 128B][Extractors ~2MB][GENOME40 payload]
+/// We need to find the GENOME40 magic AFTER the v4.1 structure
 fn find_magic<R: Read + Seek>(reader: &mut R) -> Result<u64> {
     reader.seek(SeekFrom::Start(0))?;
     
+    // First, check if this is a v4.1 fat binary (starts with "#!/bin/sh")
+    let mut header = [0u8; 32];
+    reader.read_exact(&mut header)?;
+    
+    let is_v4_1 = header.starts_with(b"#!/bin/sh") && 
+                  header.windows(8).any(|w| w == b"genomeBin");
+    
+    if is_v4_1 {
+        // v4.1 format: skip to GENOME40 payload
+        // Bootstrap (4096) + Table (128) + Extractors (variable, but we can search)
+        // The GENOME40 magic will be AFTER all extractors
+        // Typical offset: ~2MB for 2 extractors (1MB each padded)
+        eprintln!("Detected genomeBin v4.1 (multi-arch fat binary)");
+        
+        // Start search after minimum v4.1 header (4KB bootstrap + 128B table)
+        let min_v4_1_offset = 4096 + 128;
+        reader.seek(SeekFrom::Start(min_v4_1_offset))?;
+    } else {
+        // v4.0 format: search from beginning
+        reader.seek(SeekFrom::Start(0))?;
+    }
+    
     // For efficiency, search in larger chunks
     let mut buffer = vec![0u8; 64 * 1024]; // 64KB chunks
-    let mut offset = 0u64;
+    let mut offset = if is_v4_1 { 4096 + 128 } else { 0 };
     let mut prev_chunk_tail = Vec::new();
     
     loop {
@@ -109,7 +135,7 @@ fn find_magic<R: Read + Seek>(reader: &mut R) -> Result<u64> {
             if offset == 0 {
                 anyhow::bail!("Empty file (not a genomeBin v4.0)");
             }
-            anyhow::bail!("MAGIC marker 'GENOME40' not found (not a genomeBin v4.0 file)");
+            anyhow::bail!("MAGIC marker 'GENOME40' not found (not a genomeBin v4.0/v4.1 file)");
         }
         
         // Combine previous tail with current buffer to catch markers at boundaries
@@ -132,6 +158,10 @@ fn find_magic<R: Read + Seek>(reader: &mut R) -> Result<u64> {
             } else {
                 offset + pos as u64
             };
+            
+            if is_v4_1 {
+                eprintln!("Found GENOME40 payload at offset: {} (after v4.1 structure)", found_offset);
+            }
             
             return Ok(found_offset);
         }

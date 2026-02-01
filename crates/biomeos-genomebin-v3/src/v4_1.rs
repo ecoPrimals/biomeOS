@@ -245,7 +245,7 @@ impl GenomeBin {
         
         // Write binary table (64 bytes per entry)
         let mut binary_offset = 0u64;
-        for (arch, compressed_bin) in sorted_binaries {
+        for (arch, compressed_bin) in &sorted_binaries {
             let arch_str = match arch {
                 Arch::X86_64 => "x86_64",
                 Arch::Aarch64 => "aarch64",
@@ -270,8 +270,8 @@ impl GenomeBin {
             binary_offset += compressed_bin.data.len() as u64;
         }
         
-        // Write compressed binaries
-        for (_arch, compressed_bin) in self.binaries.iter() {
+        // Write compressed binaries (MUST use same sorted order as table!)
+        for (_arch, compressed_bin) in sorted_binaries {
             file.write_all(&compressed_bin.data)?;
         }
         
