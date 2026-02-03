@@ -55,9 +55,10 @@ pub use universal_biomeos_manager::{
     GeneticAccessKey, PrimalInfo, PrimalStatistics, UniversalBiomeOSManager,
 };
 
-// Re-export atomic client (Pure Rust, Tower-based, ecoBin!)
+// Re-export atomic client (Universal IPC v3.0 - Multi-Transport)
 pub use atomic_client::{
-    AtomicClient, AtomicPrimalClient, ExecutionResult, JsonRpcRequest, JsonRpcResponse,
+    discover_primal_endpoint, AtomicClient, AtomicPrimalClient, ExecutionResult, JsonRpcRequest,
+    JsonRpcResponse,
 };
 
 // Re-export core services
@@ -85,21 +86,24 @@ pub use primal_impls::{
     create_discovery_orchestrator,
     create_security_provider,
     create_storage_provider,
-    // Legacy type aliases (deprecated)
-    BearDogConfig,
     // New generic primal system
     GenericManagedPrimal,
     ManagedBearDog,
     ManagedSongbird,
     PrimalBuilder,
-    SongbirdConfig,
-    TowerBuilder,
 };
+// Legacy type aliases (re-exported for backward compatibility)
+// Silence warnings for intentional deprecations during migration period
+#[allow(deprecated)]
+pub use primal_impls::{BearDogConfig, SongbirdConfig, TowerBuilder};
 pub use primal_orchestrator::{
     ManagedPrimal, PrimalHealthMonitor, PrimalOrchestrator, PrimalState,
 };
 pub use retry::{CircuitBreaker, RetryPolicy};
-pub use socket_discovery::{DiscoveredSocket, DiscoveryMethod, DiscoveryStrategy, SocketDiscovery};
+pub use socket_discovery::{
+    discover_endpoint, discover_socket, DiscoveredSocket, DiscoveryMethod, DiscoveryStrategy,
+    SocketDiscovery, TransportEndpoint,
+};
 pub use tower_config::PrimalConfig as TowerPrimalConfig;
 pub use tower_config::{DiscoveryConfig, HealthConfig, TowerConfig};
 
