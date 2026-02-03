@@ -1,0 +1,123 @@
+# Songbird Dark Forest Deployment Graph
+# Deploys Songbird with BearDog security provider integration
+#
+# ✅ STATUS: Created Feb 2, 2026 - STUN + Dark Forest Beacon handshake
+#
+# This graph deploys Songbird and wires it to BearDog for:
+#   - STUN NAT traversal (stun.get_public_address, stun.bind)
+#   - Dark Forest encrypted beacons
+#   - Lineage verification via genetic methods
+#
+# Architecture:
+#   BearDog (crypto) ← IPC → Songbird (network) → STUN Handshake
+#
+# Usage:
+#   biome deploy --graph songbird_dark_forest_deploy.toml
+
+[graph]
+id = "songbird_dark_forest_deploy"
+description = "Deploy Songbird with BearDog Dark Forest security integration"
+coordination = "Sequential"  # BearDog must be running before Songbird
+
+# Phase 1: Verify BearDog is running (dependency check)
+[[nodes]]
+id = "verify_beardog"
+output = "beardog_verified"
+capabilities = ["security", "crypto", "genetic"]
+
+[nodes.primal]
+by_capability = "security"
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.operation.params]
+timeout_ms = 5000
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# Phase 2: Deploy and start Songbird
+[[nodes]]
+id = "deploy_songbird"
+depends_on = ["verify_beardog"]
+output = "songbird_deployed"
+capabilities = ["network", "stun", "http", "discovery", "birdsong"]
+
+[nodes.primal]
+name = "songbird"
+binary_path = "${SONGBIRD_BINARY}"  # Set by executor
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+socket = "${SONGBIRD_SOCKET}"  # Unix socket path or TCP address
+
+[nodes.operation.environment]
+RUST_LOG = "songbird=info,songbird_universal_ipc=info"
+BEARDOG_SOCKET = "${BEARDOG_SOCKET}"  # BearDog IPC endpoint for crypto delegation
+SONGBIRD_SECURITY_PROVIDER = "beardog"  # Wire to BearDog for all crypto
+
+[nodes.constraints]
+timeout_ms = 30000  # 30s to start
+
+# Capability Translation: Songbird's semantic → actual method mappings
+[nodes.capabilities_provided]
+# STUN methods
+"stun.get_public_address" = "stun.get_public_address"
+"stun.bind" = "stun.bind"
+
+# Dark Forest methods (relay to BearDog via birdsong handler)
+"birdsong.generate_beacon" = "birdsong.generate_encrypted_beacon"
+"birdsong.decrypt_beacon" = "birdsong.try_decrypt_beacon"
+"birdsong.pure_noise_beacon" = "birdsong.generate_pure_noise_beacon"
+
+# HTTP methods
+"http.request" = "http.request"
+"http.get" = "http.get"
+"http.post" = "http.post"
+
+# Discovery methods
+"discovery.announce" = "discovery.announce"
+"discovery.find_family" = "discovery.find_family_nodes"
+
+# Phase 3: Verify Songbird STUN capability
+[[nodes]]
+id = "verify_stun"
+depends_on = ["deploy_songbird"]
+output = "stun_verified"
+
+[nodes.primal]
+by_capability = "stun"
+
+[nodes.operation]
+name = "call"
+
+[nodes.operation.params]
+method = "stun.get_public_address"
+params = { server = "stun.nextcloud.com:3478" }
+
+[nodes.constraints]
+timeout_ms = 15000  # STUN may take time
+
+# Phase 4: Verify Dark Forest beacon capability
+[[nodes]]
+id = "verify_birdsong"
+depends_on = ["verify_stun"]
+output = "birdsong_verified"
+
+[nodes.primal]
+by_capability = "birdsong"
+
+[nodes.operation]
+name = "call"
+
+[nodes.operation.params]
+method = "birdsong.generate_encrypted_beacon"
+params = { family_hash = "${FAMILY_HASH}" }
+
+[nodes.constraints]
+timeout_ms = 10000
