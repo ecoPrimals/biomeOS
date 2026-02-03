@@ -2,12 +2,10 @@
 //!
 //! REST API library for primal orchestration and discovery.
 //! This module exposes the core types and functions used by the binary.
-//!
-//! **TRUE ecoBin v2.0:** Isomorphic IPC with automatic platform adaptation.
 
 mod handlers;
 mod state;
-mod unix_server; // Legacy name kept for compatibility
+mod unix_server;
 mod websocket;
 
 pub use state::{AppState, AppStateBuilder, Config};
@@ -284,27 +282,12 @@ pub fn create_app(state: AppState) -> Router {
         .with_state(shared_state)
 }
 
-/// Serve on isomorphic transport (production mode)
-///
-/// **TRUE ecoBin v2.0:** Platform-agnostic IPC with automatic adaptation.
-///
-/// This is the PRIMARY and RECOMMENDED way to serve the biomeOS API.
-pub async fn serve_isomorphic(socket_path: &std::path::Path, app: Router) -> anyhow::Result<()> {
-    unix_server::serve_isomorphic(socket_path, app).await
-}
-
-/// Serve on Unix socket only (deprecated - use serve_isomorphic)
-///
-/// **DEPRECATED**: Use `serve_isomorphic()` for TRUE ecoBin compliance.
-///
-/// This function is maintained for backward compatibility.
+/// Serve on Unix socket only (production mode)
 pub async fn serve_unix_socket(socket_path: &std::path::Path, app: Router) -> anyhow::Result<()> {
     unix_server::serve_unix_socket(socket_path, app).await
 }
 
-/// Serve in dual mode (isomorphic IPC + HTTP bridge)
-///
-/// ⚠️ TEMPORARY for PetalTongue transition - will be removed.
+/// Serve in dual mode (Unix socket + HTTP bridge)
 pub async fn serve_dual_mode(
     socket_path: &std::path::Path,
     bind_addr: std::net::SocketAddr,

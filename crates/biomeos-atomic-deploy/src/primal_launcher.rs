@@ -1,11 +1,6 @@
 //! Primal process launcher
 //!
-//! **TRUE ecoBin v2.0:** Isomorphic IPC support with automatic endpoint discovery.
-//!
-//! Modern Rust replacement for bash process management with:
-//! - Automatic detection of Unix sockets OR TCP discovery files
-//! - Platform-agnostic primal launching
-//! - No hardcoded transport assumptions
+//! Modern Rust replacement for bash process management
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
@@ -84,14 +79,11 @@ impl PrimalLauncher {
             .ok_or_else(|| anyhow::anyhow!("Socket path not provided for {}", primal_name))?
             .clone();
 
-        // Clean up old socket if it exists (Unix sockets only)
+        // Clean up old socket if it exists
         let socket_path_buf = PathBuf::from(&socket_path);
         if socket_path_buf.exists() {
             std::fs::remove_file(&socket_path_buf).context("Failed to remove old socket")?;
         }
-        
-        // Note: TCP discovery files are automatically cleaned up by the primal itself
-        // when it starts (part of isomorphic IPC pattern)
 
         // Build command
         let mut cmd = Command::new(&binary_path);
@@ -164,43 +156,20 @@ impl PrimalLauncher {
         }
     }
 
-    /// Wait for socket or discovery file to appear
-    ///
-    /// **TRUE ecoBin v2.0:** Supports isomorphic IPC detection.
-    ///
-    /// This checks for:
-    /// 1. Unix socket at specified path (optimal)
-    /// 2. TCP discovery file if Unix socket doesn't appear (Android fallback)
+    /// Wait for socket to appear
     async fn wait_for_socket(&self, socket_path: &Path, timeout: Duration) -> Result<()> {
-        use biomeos_core::ipc::detect_best_transport;
-        
         let start = std::time::Instant::now();
-        let service_name = socket_path
-            .file_stem()
-            .and_then(|s| s.to_str())
-            .ok_or_else(|| anyhow::anyhow!("Invalid socket path: no filename"))?;
 
         while start.elapsed() < timeout {
-            // Try Unix socket first
             if socket_path.exists() {
-                debug!("   ✅ Unix socket appeared: {}", socket_path.display());
-                return Ok(());
-            }
-
-            // Try TCP discovery file
-            if detect_best_transport(service_name).is_ok() {
-                debug!("   ✅ TCP discovery file appeared for: {}", service_name);
+                debug!("   Socket appeared: {}", socket_path.display());
                 return Ok(());
             }
 
             sleep(Duration::from_millis(100)).await;
         }
 
-        anyhow::bail!(
-            "Timeout waiting for socket or discovery file: {} ({}s)",
-            socket_path.display(),
-            timeout.as_secs()
-        )
+        anyhow::bail!("Timeout waiting for socket: {}", socket_path.display())
     }
 }
 

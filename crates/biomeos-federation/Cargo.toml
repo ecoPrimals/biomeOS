@@ -7,9 +7,6 @@ license.workspace = true
 description = "biomeOS federation and sub-federation management"
 
 [dependencies]
-# Internal dependencies
-biomeos-core = { path = "../biomeos-core" }
-
 # Async runtime
 tokio = { workspace = true }
 

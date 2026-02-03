@@ -1,21 +1,14 @@
-//! Isomorphic JSON-RPC client for primal communication
+//! Unix socket JSON-RPC client for BearDog
 //!
-//! **TRUE ecoBin v2.0:** Platform-agnostic IPC with automatic endpoint discovery.
-//!
-//! Implements JSON-RPC 2.0 client with automatic transport selection:
-//! - Linux/macOS: Unix sockets (optimal)
-//! - Android: TCP with XDG discovery file lookup
-//! - Windows: Named pipes (future)
-//!
-//! This implements the Try→Detect→Adapt→Succeed pattern from songbird.
+//! Implements a simple JSON-RPC 2.0 client over Unix sockets.
 
 use anyhow::{Context, Result};
-use biomeos_core::ipc::{detect_best_transport, Transport, TransportType};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::path::{Path, PathBuf};
-use tokio::io::{AsyncBufReadExt, BufReader};
-use tracing::{debug, error, info};
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::net::UnixStream;
+use tracing::{debug, error};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JsonRpcRequest {
@@ -57,105 +50,34 @@ pub struct JsonRpcError {
     pub data: Option<Value>,
 }
 
-/// Isomorphic JSON-RPC client with automatic transport detection
-///
-/// **TRUE ecoBin v2.0:** Platform-agnostic client that adapts to any transport.
-///
-/// # Isomorphism
-///
-/// The client automatically discovers the best available transport:
-/// 1. **Try**: Attempt optimal transport (Unix socket at default path)
-/// 2. **Detect**: Check for TCP discovery file if Unix socket unavailable
-/// 3. **Adapt**: Connect via discovered TCP endpoint
-/// 4. **Succeed**: Client connects regardless of platform
-pub struct IsomorphicClient {
+/// Unix socket client for JSON-RPC communication
+pub struct UnixSocketClient {
     socket_path: PathBuf,
 }
 
-impl IsomorphicClient {
-    /// Create a new isomorphic client
-    ///
-    /// The client will automatically discover the best transport for this primal.
+impl UnixSocketClient {
+    /// Create a new Unix socket client
     pub fn new(socket_path: impl AsRef<Path>) -> Self {
         Self {
             socket_path: socket_path.as_ref().to_path_buf(),
         }
     }
 
-    /// Check if any transport is available (Unix socket or TCP via discovery)
+    /// Check if the socket exists
     pub fn is_available(&self) -> bool {
-        // Try Unix socket first
-        if self.socket_path.exists() {
-            return true;
-        }
-
-        // Extract service name from socket path
-        if let Some(filename) = self.socket_path.file_stem() {
-            if let Some(service_name) = filename.to_str() {
-                // Try detecting via discovery file
-                if detect_best_transport(service_name).is_ok() {
-                    return true;
-                }
-            }
-        }
-
-        false
-    }
-
-    /// Discover and connect to the primal's transport
-    ///
-    /// This implements automatic endpoint discovery:
-    /// - First tries Unix socket at specified path
-    /// - Falls back to reading TCP discovery file from XDG runtime dir
-    async fn connect(&self) -> Result<Box<dyn biomeos_core::ipc::AsyncReadWrite>> {
-        debug!("Discovering transport for: {}", self.socket_path.display());
-
-        // Try optimal transport (Unix socket) first
-        let transport = Transport::new(TransportType::UnixSocket {
-            path: self.socket_path.clone(),
-        });
-
-        match transport.connect().await {
-            Ok(stream) => {
-                info!("✅ Connected via Unix socket: {}", self.socket_path.display());
-                Ok(stream)
-            }
-            Err(_) => {
-                // Try discovering via service name
-                debug!("Unix socket unavailable, checking for TCP discovery file");
-                
-                let service_name = self
-                    .socket_path
-                    .file_stem()
-                    .and_then(|s| s.to_str())
-                    .ok_or_else(|| anyhow::anyhow!("Invalid socket path: no filename"))?;
-                
-                match detect_best_transport(service_name) {
-                    Ok(discovered_transport) => {
-                        info!("📡 Discovered transport via detection");
-                        discovered_transport.connect().await
-                            .context("Failed to connect via discovered transport")
-                    }
-                    Err(e) => {
-                        Err(anyhow::anyhow!(
-                            "No transport available for {}: {}",
-                            self.socket_path.display(),
-                            e
-                        ))
-                    }
-                }
-            }
-        }
+        self.socket_path.exists()
     }
 
     /// Send a JSON-RPC request and receive response
     pub async fn call(&self, request: JsonRpcRequest) -> Result<JsonRpcResponse> {
-        // Connect via automatic discovery
-        let stream = self.connect().await?;
+        debug!("Connecting to Unix socket: {}", self.socket_path.display());
 
-        // Split stream for reading/writing
-        let (reader, mut writer) = tokio::io::split(stream);
-        let mut reader = BufReader::new(reader);
+        let mut stream = UnixStream::connect(&self.socket_path)
+            .await
+            .context(format!(
+                "Failed to connect to Unix socket: {}",
+                self.socket_path.display()
+            ))?;
 
         // Serialize request
         let request_str =
@@ -164,14 +86,14 @@ impl IsomorphicClient {
         debug!("Sending JSON-RPC request: {}", request_str);
 
         // Send request (newline-delimited)
-        use tokio::io::AsyncWriteExt;
-        writer.write_all(request_str.as_bytes()).await?;
-        writer.write_all(b"\n").await?;
-        writer.flush().await?;
+        stream.write_all(request_str.as_bytes()).await?;
+        stream.write_all(b"\n").await?;
+        stream.flush().await?;
 
         // Read response (newline-delimited)
+        let (reader, _writer) = stream.split();
+        let mut reader = BufReader::new(reader);
         let mut line = String::new();
-        use tokio::io::AsyncReadExt;
         reader
             .read_line(&mut line)
             .await
@@ -210,11 +132,6 @@ impl IsomorphicClient {
     }
 }
 
-/// Legacy alias for backward compatibility
-///
-/// **DEPRECATED**: Use `IsomorphicClient` directly for TRUE ecoBin compliance.
-pub type UnixSocketClient = IsomorphicClient;
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -230,22 +147,14 @@ mod tests {
     }
 
     #[test]
-    fn test_isomorphic_client_creation() {
-        let client = IsomorphicClient::new("/tmp/test.sock");
-        assert_eq!(client.socket_path, PathBuf::from("/tmp/test.sock"));
-    }
-
-    #[test]
-    fn test_legacy_unix_socket_client_alias() {
-        // Verify backward compatibility alias works
+    fn test_unix_socket_client_creation() {
         let client = UnixSocketClient::new("/tmp/test.sock");
         assert_eq!(client.socket_path, PathBuf::from("/tmp/test.sock"));
     }
 
     #[test]
     fn test_socket_availability() {
-        let client = IsomorphicClient::new("/tmp/nonexistent.sock");
-        // Will be false if neither Unix socket nor TCP discovery file exists
+        let client = UnixSocketClient::new("/tmp/nonexistent.sock");
         assert!(!client.is_available());
     }
 }

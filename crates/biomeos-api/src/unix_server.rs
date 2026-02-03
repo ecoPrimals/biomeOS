@@ -1,87 +1,61 @@
-//! Isomorphic server for biomeOS API
+//! Unix socket server for biomeOS API
 //!
-//! **TRUE ecoBin v2.0:** Platform-agnostic IPC with automatic adaptation.
-//!
-//! Provides secure, port-free communication with automatic platform detection:
-//! - Linux/macOS: Unix sockets (optimal)
-//! - Android: TCP fallback with XDG discovery
-//! - Windows: Named pipes (future)
-//!
-//! This implements the Try→Detect→Adapt→Succeed pattern from songbird.
+//! Provides secure, port-free communication via Unix sockets with JSON-RPC 2.0.
 
 use anyhow::{Context, Result};
 use axum::Router;
-use biomeos_core::ipc::{Transport, TransportListener, TransportType};
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use tokio::net::UnixListener;
 use tracing::{info, warn};
 
-/// Serve an Axum router over isomorphic transport (Unix socket with TCP fallback)
+/// Serve an Axum router over a Unix socket
 ///
-/// **TRUE ecoBin v2.0:** This is the PRIMARY transport for biomeOS API, providing:
-/// - Port-free architecture on Linux/macOS (Unix sockets)
-/// - Automatic TCP fallback on Android (SELinux constraints)
-/// - XDG-compliant discovery files for clients
-/// - Fast (0.1ms Unix overhead vs 10ms HTTP)
-/// - Secure by default (filesystem permissions or localhost-only)
-///
-/// # Isomorphism
-///
-/// The server automatically detects platform constraints and adapts:
-/// 1. **Try**: Attempt optimal transport (Unix socket)
-/// 2. **Detect**: Runtime check for platform constraints (SELinux)
-/// 3. **Adapt**: Fall back to TCP with discovery file
-/// 4. **Succeed**: Server starts successfully on any platform
+/// This is the PRIMARY transport for biomeOS API, providing:
+/// - Port-free architecture (no TCP ports!)
+/// - Secure by default (filesystem permissions)
+/// - Fast (0.1ms overhead vs 10ms HTTP)
+/// - Isomorphic (same API as HTTP)
 ///
 /// # Arguments
 ///
-/// * `socket_path` - Path to Unix socket (or base name for discovery)
+/// * `socket_path` - Path to Unix socket
 /// * `app` - Axum router to serve
 ///
 /// # Security
 ///
-/// - Unix sockets: Created with 0600 permissions (owner-only)
-/// - TCP fallback: Binds to 127.0.0.1 (localhost-only)
-/// - Discovery files: Written to XDG-compliant runtime dir
-pub async fn serve_isomorphic<P: AsRef<Path>>(socket_path: P, app: Router) -> Result<()> {
+/// The socket is created with 0600 permissions (owner-only).
+pub async fn serve_unix_socket<P: AsRef<Path>>(socket_path: P, app: Router) -> Result<()> {
     let socket_path = socket_path.as_ref();
 
-    // Remove old socket if exists (only for Unix sockets)
+    // Remove old socket if exists
     if socket_path.exists() {
         std::fs::remove_file(socket_path).context("Failed to remove old Unix socket")?;
     }
 
-    info!("🔌 Starting biomeOS API server (isomorphic mode)");
+    // Create Unix listener
+    let listener = UnixListener::bind(socket_path).context("Failed to bind Unix socket")?;
 
-    // Create transport with automatic fallback
-    let transport = Transport::new(TransportType::UnixSocket {
-        path: socket_path.to_path_buf(),
-    });
-
-    let mut listener = transport
-        .bind_with_fallback()
-        .await
-        .context("Failed to bind biomeOS API")?;
-
-    // Set permissions for Unix sockets
+    // Set permissions (0600 - owner only)
     #[cfg(unix)]
-    if socket_path.exists() {
+    {
         use std::fs;
         use std::os::unix::fs::PermissionsExt;
-        if let Err(e) = fs::set_permissions(socket_path, fs::Permissions::from_mode(0o600)) {
-            warn!("Could not set socket permissions: {}", e);
-        } else {
-            info!("   Security: Owner-only (0600 permissions)");
-        }
+        fs::set_permissions(socket_path, fs::Permissions::from_mode(0o600))
+            .context("Failed to set socket permissions")?;
     }
 
-    info!("📡 biomeOS API listening (isomorphic mode)");
-    info!("   Protocol: JSON-RPC 2.0");
+    info!(
+        "📡 biomeOS API listening on Unix socket: {}",
+        socket_path.display()
+    );
+    info!("   Security: Owner-only (0600 permissions)");
+    info!("   Protocol: JSON-RPC 2.0 over Unix socket");
     info!("   Port-free: ✅ TRUE PRIMAL architecture!");
 
     // Serve connections
     loop {
         match listener.accept().await {
-            Ok(stream) => {
+            Ok((stream, _addr)) => {
                 let app = app.clone();
 
                 tokio::spawn(async move {
@@ -131,25 +105,14 @@ pub async fn serve_isomorphic<P: AsRef<Path>>(socket_path: P, app: Router) -> Re
     }
 }
 
-/// Legacy wrapper: Serve an Axum router over Unix socket
-///
-/// **DEPRECATED**: Use `serve_isomorphic()` instead for TRUE ecoBin compliance.
-///
-/// This wrapper is maintained for backward compatibility but internally uses
-/// the isomorphic transport layer.
-pub async fn serve_unix_socket<P: AsRef<Path>>(socket_path: P, app: Router) -> Result<()> {
-    warn!("⚠️  serve_unix_socket() is deprecated - use serve_isomorphic() instead");
-    serve_isomorphic(socket_path, app).await
-}
-
-/// Serve an Axum router over both isomorphic transport and HTTP (temporary bridge)
+/// Serve an Axum router over both Unix socket and HTTP (temporary bridge)
 ///
 /// ⚠️ This is TEMPORARY for PetalTongue transition!
-/// Production deployments should use isomorphic transport only.
+/// Production deployments should use Unix socket only.
 ///
 /// # Arguments
 ///
-/// * `socket_path` - Path to Unix socket (or base for discovery)
+/// * `socket_path` - Path to Unix socket
 /// * `http_addr` - HTTP bind address (e.g., "127.0.0.1:3000")
 /// * `app` - Axum router to serve
 pub async fn serve_dual_mode<P: AsRef<Path>>(
@@ -159,16 +122,16 @@ pub async fn serve_dual_mode<P: AsRef<Path>>(
 ) -> Result<()> {
     let socket_path = socket_path.as_ref().to_path_buf();
 
-    warn!("⚠️  Running in DUAL MODE (isomorphic IPC + HTTP bridge)");
+    warn!("⚠️  Running in DUAL MODE (Unix socket + HTTP bridge)");
     warn!("   This is TEMPORARY for PetalTongue transition!");
     warn!("   Set BIOMEOS_API_HTTP_BRIDGE=false to disable HTTP");
 
-    // Spawn isomorphic IPC server
+    // Spawn Unix socket server
     let socket_app = app.clone();
     let socket_path_clone = socket_path.clone();
     tokio::spawn(async move {
-        if let Err(e) = serve_isomorphic(&socket_path_clone, socket_app).await {
-            warn!("Isomorphic IPC server error: {}", e);
+        if let Err(e) = serve_unix_socket(&socket_path_clone, socket_app).await {
+            warn!("Unix socket server error: {}", e);
         }
     });
 

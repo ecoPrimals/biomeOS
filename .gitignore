@@ -30,3 +30,13 @@ target/
 vm-images/*.img
 vm-testing/*.qcow2
 .vscode/
+
+# Sensitive files (TRUE ecoBin v2.0 security)
+*.key
+*.pem
+*.env
+*secret*
+*credential*
+secrets/
+certs/*.key
+certs/*.pem

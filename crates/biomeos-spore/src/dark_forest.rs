@@ -415,6 +415,286 @@ impl DarkForestBeacon {
             .map(|s| s.to_string())
             .ok_or_else(|| SporeError::ValidationFailed("Failed to derive session key".to_string()))
     }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // TRUE DARK FOREST - Pure Noise Beacons (Feb 2, 2026)
+    // ═══════════════════════════════════════════════════════════════════
+    //
+    // Evolution from structured beacons to pure noise (A → A++ security):
+    //
+    // Old (A grade):
+    //   {"ciphertext":"...","nonce":"...","tag":"...","version":1}
+    //   Problem: JSON structure is metadata (identifiable, traceable)
+    //
+    // New (A++ LEGENDARY):
+    //   [nonce (12 bytes)] + [ciphertext + tag (N+16 bytes)]
+    //   Indistinguishable from random noise to outsiders
+    //
+    // User Insight: "Birds communicate via encrypted noise. Family lineage
+    //                mixes beacon to noise, relatives can hear and understand.
+    //                No plaintext leaks."
+    //
+    // Result: Zero metadata leaks, true Dark Forest communication
+
+    /// Derive dedicated beacon key from lineage (TRUE Dark Forest)
+    ///
+    /// Calls BearDog's new `genetic.derive_lineage_beacon_key` method.
+    /// This is domain-separated from other genetic keys.
+    ///
+    /// All family members derive identical keys from their shared lineage,
+    /// enabling pure noise beacons with genetic decryption.
+    ///
+    /// # Returns
+    /// 32-byte ChaCha20-Poly1305 key (hex-encoded)
+    async fn derive_dedicated_beacon_key(&self) -> SporeResult<String> {
+        let request = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": "genetic.derive_lineage_beacon_key",
+            "params": {},
+            "id": 101
+        });
+
+        let response = self.call_beardog(&request).await?;
+
+        response
+            .get("result")
+            .and_then(|r| r.get("beacon_key"))
+            .and_then(|k| k.as_str())
+            .map(|s| s.to_string())
+            .ok_or_else(|| {
+                SporeError::ValidationFailed("Failed to derive dedicated beacon key".to_string())
+            })
+    }
+
+    /// Generate pure noise beacon (TRUE Dark Forest - A++ security)
+    ///
+    /// Output is indistinguishable from random bytes to outsiders.
+    /// Only family members with correct lineage can decrypt.
+    ///
+    /// # Format
+    /// `[nonce (12 bytes)] + [ciphertext (N bytes)] + [tag (16 bytes)]`
+    ///
+    /// No JSON, no structure, no version, NO metadata.
+    ///
+    /// # Arguments
+    /// * `socket_path` - BearDog socket path to advertise
+    /// * `capabilities` - Capabilities to advertise
+    /// * `lineage_mode` - Optional lineage mode
+    ///
+    /// # Returns
+    /// Pure noise bytes (indistinguishable from random)
+    pub async fn generate_pure_noise_beacon(
+        &self,
+        socket_path: &str,
+        capabilities: &[&str],
+        lineage_mode: Option<&str>,
+    ) -> SporeResult<Vec<u8>> {
+        info!("🌑 Generating pure noise Dark Forest beacon (A++ security)");
+
+        // Derive dedicated beacon key (domain-separated)
+        let beacon_key = self.derive_dedicated_beacon_key().await?;
+        debug!("   Derived dedicated beacon key (HKDF-SHA256)");
+
+        // Create beacon plaintext (NO family_hash, NO version, NO metadata)
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_err(|e| SporeError::SystemError(format!("Time error: {}", e)))?
+            .as_secs();
+
+        // Pure discovery info (no hashes, no obscuration)
+        let beacon = serde_json::json!({
+            "node_id": self.node_id,
+            "timestamp": timestamp,
+            "socket_path": socket_path,
+            "capabilities": capabilities,
+            "lineage_mode": lineage_mode
+        });
+
+        // Serialize to JSON
+        let beacon_json = serde_json::to_string(&beacon)
+            .map_err(|e| SporeError::SerializationError(e.to_string()))?;
+
+        // Encode for transmission
+        let beacon_b64 = BASE64.encode(beacon_json.as_bytes());
+
+        // Encrypt with ChaCha20-Poly1305
+        let encrypt_request = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": "crypto.chacha20_poly1305_encrypt",
+            "params": {
+                "key": beacon_key,
+                "plaintext": beacon_b64
+            },
+            "id": 102
+        });
+
+        let response = self.call_beardog(&encrypt_request).await?;
+        let result = response.get("result").ok_or_else(|| {
+            SporeError::ValidationFailed("No result in encrypt response".to_string())
+        })?;
+
+        // Extract encryption components
+        let nonce_b64 = result
+            .get("nonce")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| SporeError::ValidationFailed("Missing nonce".to_string()))?;
+        let ciphertext_b64 = result
+            .get("ciphertext")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| SporeError::ValidationFailed("Missing ciphertext".to_string()))?;
+        let tag_b64 = result
+            .get("tag")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| SporeError::ValidationFailed("Missing tag".to_string()))?;
+
+        // Decode from base64 to raw bytes
+        let nonce = BASE64
+            .decode(nonce_b64)
+            .map_err(|e| SporeError::DeserializationError(format!("Invalid nonce: {}", e)))?;
+        let ciphertext = BASE64
+            .decode(ciphertext_b64)
+            .map_err(|e| SporeError::DeserializationError(format!("Invalid ciphertext: {}", e)))?;
+        let tag = BASE64
+            .decode(tag_b64)
+            .map_err(|e| SporeError::DeserializationError(format!("Invalid tag: {}", e)))?;
+
+        // Concatenate: nonce + ciphertext + tag (PURE BYTES, NO STRUCTURE)
+        let mut beacon_bytes = Vec::with_capacity(nonce.len() + ciphertext.len() + tag.len());
+        beacon_bytes.extend_from_slice(&nonce);
+        beacon_bytes.extend_from_slice(&ciphertext);
+        beacon_bytes.extend_from_slice(&tag);
+
+        info!(
+            "✅ Pure noise beacon generated: {} bytes (zero metadata)",
+            beacon_bytes.len()
+        );
+        debug!(
+            "   Components: nonce={} bytes, ciphertext={} bytes, tag={} bytes",
+            nonce.len(),
+            ciphertext.len(),
+            tag.len()
+        );
+
+        Ok(beacon_bytes)
+    }
+
+    /// Try to decrypt pure noise beacon (TRUE Dark Forest)
+    ///
+    /// Returns `Some(beacon)` if same family, `None` if different family/noise.
+    /// Failures are SILENT (no logs) - true Dark Forest principle.
+    ///
+    /// # Format
+    /// Input: `[nonce (12 bytes)] + [ciphertext (N bytes)] + [tag (16 bytes)]`
+    ///
+    /// # Returns
+    /// - `Some(Value)` if same family (successful decrypt)
+    /// - `None` if different family or actual noise (silent failure)
+    ///
+    /// # Security
+    /// - No error logs on decrypt failure (silent)
+    /// - Indistinguishable from handling random noise
+    /// - Zero metadata extraction possible
+    pub async fn try_decrypt_pure_noise_beacon(
+        &self,
+        noise_bytes: &[u8],
+    ) -> SporeResult<Option<serde_json::Value>> {
+        // Validate minimum size: nonce (12) + tag (16) = 28 bytes minimum
+        if noise_bytes.len() < 28 {
+            // SILENT - could be noise, ignore without logging
+            return Ok(None);
+        }
+
+        // Derive OUR dedicated beacon key
+        let beacon_key = match self.derive_dedicated_beacon_key().await {
+            Ok(key) => key,
+            Err(_) => {
+                // SILENT - if we can't get key, treat as noise
+                return Ok(None);
+            }
+        };
+
+        // Split beacon: nonce (12 bytes) + ciphertext (variable) + tag (16 bytes)
+        // ChaCha20-Poly1305 uses 12-byte nonce and 16-byte auth tag
+        let nonce = &noise_bytes[0..12];
+        let ciphertext_and_tag = &noise_bytes[12..];
+
+        // Tag is last 16 bytes
+        if ciphertext_and_tag.len() < 16 {
+            // SILENT - malformed, treat as noise
+            return Ok(None);
+        }
+
+        let ciphertext = &ciphertext_and_tag[..ciphertext_and_tag.len() - 16];
+        let tag = &ciphertext_and_tag[ciphertext_and_tag.len() - 16..];
+
+        // Encode for BearDog JSON-RPC
+        let nonce_b64 = BASE64.encode(nonce);
+        let ciphertext_b64 = BASE64.encode(ciphertext);
+        let tag_b64 = BASE64.encode(tag);
+
+        // Try to decrypt (SILENT failure on error)
+        let decrypt_request = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": "crypto.chacha20_poly1305_decrypt",
+            "params": {
+                "key": beacon_key,
+                "ciphertext": ciphertext_b64,
+                "nonce": nonce_b64,
+                "tag": tag_b64
+            },
+            "id": 103
+        });
+
+        let response = match self.call_beardog(&decrypt_request).await {
+            Ok(resp) => resp,
+            Err(_) => {
+                // SILENT - beardog communication failed, treat as noise
+                return Ok(None);
+            }
+        };
+
+        // Check if decryption failed (not family)
+        if response.get("error").is_some() {
+            // SILENT - different family or wrong key, this is noise to us
+            return Ok(None);
+        }
+
+        // Decryption succeeded - we're family!
+        let plaintext_b64 = match response
+            .get("result")
+            .and_then(|r| r.get("plaintext"))
+            .and_then(|p| p.as_str())
+        {
+            Some(p) => p,
+            None => {
+                // SILENT - malformed response, treat as noise
+                return Ok(None);
+            }
+        };
+
+        // Decode plaintext
+        let plaintext_bytes = match BASE64.decode(plaintext_b64) {
+            Ok(bytes) => bytes,
+            Err(_) => {
+                // SILENT - invalid base64, treat as noise
+                return Ok(None);
+            }
+        };
+
+        // Parse beacon JSON
+        let beacon: serde_json::Value = match serde_json::from_slice(&plaintext_bytes) {
+            Ok(b) => b,
+            Err(_) => {
+                // SILENT - invalid JSON, treat as noise
+                return Ok(None);
+            }
+        };
+
+        info!("✅ Pure noise beacon decrypted - family member found");
+        debug!("   Node: {}", beacon.get("node_id").and_then(|v| v.as_str()).unwrap_or("unknown"));
+
+        Ok(Some(beacon))
+    }
 }
 
 /// Discovery result from scanning for encrypted beacons

@@ -423,6 +423,8 @@ dependencies = [
  "base64 0.22.1",
  "biomeos-core",
  "biomeos-federation",
+ "biomeos-genome-factory",
+ "biomeos-genomebin-v3",
  "biomeos-graph",
  "biomeos-spore",
  "biomeos-types",

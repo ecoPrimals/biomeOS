@@ -108,22 +108,18 @@ impl ManagedPrimal for GenericManagedPrimal {
             }
         }
 
-        // HTTP fallback is DEPRECATED - Unix sockets are the TRUE ecoBin way
-        // If HTTP is absolutely required, it must be explicitly configured
+        // Fallback to HTTP if configured (deprecated)
         if self.config.http_port > 0 {
             warn!(
                 "⚠️  Primal {} using deprecated HTTP endpoint. Evolve to Unix socket!",
                 self.id
             );
             warn!(
-                "   Preferred: Set PRIMAL_SOCKET_PATH=$XDG_RUNTIME_DIR/biomeos/{}.sock",
+                "   Set PRIMAL_SOCKET_PATH=$XDG_RUNTIME_DIR/biomeos/{}.sock",
                 self.config.id
             );
-            
-            // TRUE ecoBin v2.0: No hardcoded addresses - return None if not configured
-            // This forces explicit configuration via environment or discovery
-            warn!("   HTTP endpoint disabled. Use Unix sockets for TRUE ecoBin compliance.");
-            None
+            let url = format!("http://127.0.0.1:{}", self.config.http_port);
+            Endpoint::new(&url).ok()
         } else {
             None
         }

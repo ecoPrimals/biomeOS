@@ -39,11 +39,9 @@ members = [
     "crates/biomeos-atomic-deploy",  # Genetic lineage atomic deployment (modern Rust, no bash)
     "crates/biomeos-genomebin-v3",  # NEW: genomeBin v3.0 - TRUE binary isomorphic format
     "crates/biomeos-genome-factory",  # NEW: Genome Factory - Universal genomeBin production
-    "crates/biomeos-genome-extract",  # NEW: genomeBin v4.0 - Pure Rust Universal Extractor (binary = DNA)
 ]
 exclude = [
     "validation",  # Independent workspace for validation tools using benchScale
-    "crates/biomeos-genomebin-v3/stub",  # Standalone stub binary (not part of main workspace)
 ]
 
 [workspace.package]
@@ -74,7 +72,7 @@ clap = { version = "4.0", features = ["derive"] }
 axum = { version = "0.7", features = ["ws"] }
 tower = { version = "0.5", features = [] }
 tower-http = { version = "0.5", features = ["cors"] }
-# reqwest = { version = "0.11", features = ["json"] } # REMOVED (TRUE ecoBin v2.0): Use Songbird/BearDog for HTTP/TLS (Pure Rust!)
+reqwest = { version = "0.11", features = ["json"] } # Test-only: Legacy tests still use it (TODO: migrate to atomic_client)
 
 # benchScale is an external tool (ecoPrimals/primalTools/benchscale)
 # Should be invoked as a separate binary, not a hard dependency
