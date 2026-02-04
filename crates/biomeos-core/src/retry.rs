@@ -33,19 +33,11 @@
 //! }).await;
 //! ```
 
-// Use BirdSongError if available, otherwise use a local error type
-#[cfg(feature = "http-transport")]
-use crate::adaptive_client::BirdSongError;
-
-#[cfg(not(feature = "http-transport"))]
-use RetryError as BirdSongError;
-
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 
-/// Error type for retry logic when HTTP transport is not available
-#[cfg(not(feature = "http-transport"))]
+/// Error type for retry logic operations
 #[derive(Debug, thiserror::Error)]
 pub enum RetryError {
     #[error("Operation failed after retries: {0}")]
@@ -54,6 +46,10 @@ pub enum RetryError {
     #[error("Circuit breaker open: {0}")]
     CircuitBreakerOpen(String),
 }
+
+// Alias for backward compatibility
+#[allow(dead_code)]
+type BirdSongError = RetryError;
 use tracing::{debug, warn};
 
 /// Retry policy configuration

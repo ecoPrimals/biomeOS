@@ -242,36 +242,13 @@ impl PrimalAdapter {
         Ok(())
     }
 
-    /// Check if primal is healthy (HTTP-based, DEPRECATED)
-    #[cfg(feature = "http-transport")]
+    /// Check if primal is healthy
+    ///
+    /// Uses running state as health indicator (socket-based health checks
+    /// are done via AtomicClient in the deployment layer).
     pub async fn check_health(&self) -> Result<bool> {
-        if let Some(health_config) = &self.capabilities.health_check {
-            let port = match &self.state {
-                PrimalState::Running { port, .. } => *port,
-                PrimalState::Unhealthy { port, .. } => *port,
-                _ => return Ok(false),
-            };
-
-            let url = health_config.url_pattern.replace("PORT", &port.to_string());
-
-            let client = reqwest::Client::new();
-            let response =
-                tokio::time::timeout(health_config.timeout, client.get(&url).send()).await;
-
-            match response {
-                Ok(Ok(resp)) => Ok(resp.status().as_u16() == health_config.expected_status),
-                _ => Ok(false),
-            }
-        } else {
-            // No health check configured, assume healthy if running
-            Ok(matches!(self.state, PrimalState::Running { .. }))
-        }
-    }
-
-    /// Check if primal is healthy (Pure Rust stub for non-HTTP builds)
-    #[cfg(not(feature = "http-transport"))]
-    pub async fn check_health(&self) -> Result<bool> {
-        // Without HTTP, assume healthy if running
+        // Socket-based health checks are done via AtomicClient
+        // Here we just check if the primal is in a running state
         Ok(matches!(self.state, PrimalState::Running { .. }))
     }
 
