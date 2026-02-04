@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
-**Last Updated**: January 29, 2026  
-**Status**: Production Ready - Universal IPC v3.0
+**Last Updated**: February 4, 2026  
+**Status**: Production Ready - Cross-Device AI Coordination
 
 ---
 
@@ -130,16 +130,25 @@ Tier 2 (Universal - Cross-Device):
   6. TCP remote:910X (federation)
 ```
 
-### Cross-Device Example
+### Cross-Device AI Coordination (Validated Feb 4, 2026)
 
 ```bash
-# On Desktop (local AI)
-SQUIRREL_SOCKET=tcp://localhost:9104 ./squirrel
+# Setup ADB reverse forwarding (Pixel → Local Ollama)
+adb reverse tcp:11434 tcp:11434
 
-# On Pixel 8a (API gateway)
-SONGBIRD_TCP_HOST=0.0.0.0 ./songbird
+# On Pixel, make AI request via Songbird HTTP capability
+adb shell "echo '{
+  \"jsonrpc\":\"2.0\",
+  \"method\":\"http.request\",
+  \"params\":{
+    \"method\":\"POST\",
+    \"url\":\"http://127.0.0.1:11434/api/generate\",
+    \"body\":\"{\\\"model\\\":\\\"tinyllama\\\",\\\"prompt\\\":\\\"Hello\\\",\\\"stream\\\":false}\"
+  },
+  \"id\":1
+}' | nc -w 60 127.0.0.1 9901"
 
-# Desktop Squirrel can now route HTTP through Pixel's Songbird
+# Result: tinyllama responds via cross-device flow!
 ```
 
 ---
@@ -168,5 +177,6 @@ SONGBIRD_TCP_HOST=0.0.0.0 ./songbird
 **Status**: Production Ready  
 **IPC**: Universal IPC v3.0  
 **Primals**: 6/6 ecoBin v2.0 compliant  
-**Tests**: 822 passing  
-**Security**: A++ LEGENDARY
+**Tests**: 800+ passing  
+**Security**: A++ LEGENDARY  
+**Cross-Device**: BirdSong + AI Coordination Validated

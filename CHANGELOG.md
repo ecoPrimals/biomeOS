@@ -2,6 +2,34 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## [v1.6] - 2026-02-04
+
+### Added
+- **Cross-Device AI Coordination**: Pixel → ADB reverse → Local Ollama working
+- **BirdSong Discovery Validation**: Multicast beacons captured, peers discovered
+- **ADB Port Forwarding**: Bidirectional (forward + reverse) for cross-device IPC
+
+### Changed
+- **BearDog**: `--abstract` flag for Android SELinux compatibility (commit `417ddf51f`)
+- **Songbird**: `SONGBIRD_PID_DIR` + `SONGBIRD_DATA_DIR` for Android (commit `e1f259358`)
+- **Songbird**: Host header with port for HTTP/1.1 compliance (commit `3f24da03b`)
+
+### Validated
+- Pixel discovers USB Songbird via BirdSong multicast
+- TCP connectivity bidirectional (USB:8082 ↔ Pixel:8080)
+- STUN server reachable (Google STUN via UDP)
+- AI generation: tinyllama responded with 541 tokens via cross-device flow
+
+### Architecture Validated
+
+```
+Pixel Songbird → ADB Reverse → Local Ollama (tinyllama)
+     ↓
+BirdSong Discovery → USB Songbird (discovered peer)
+```
+
+---
+
 ## [v1.5] - 2026-01-29
 
 ### Added

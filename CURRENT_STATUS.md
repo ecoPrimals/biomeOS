@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: January 29, 2026  
-**Version**: 1.5  
-**Status**: Production Ready - Universal IPC v3.0 Complete
+**Updated**: February 4, 2026  
+**Version**: 1.6  
+**Status**: Production Ready - Cross-Device AI Coordination Complete
 
 ---
 
@@ -14,10 +14,12 @@
 | **IPC Standard** | Universal IPC v3.0 |
 | **Security Grade** | A++ LEGENDARY |
 | **Code Quality** | A |
-| **Tests Passing** | 822 |
+| **Tests Passing** | 800+ |
 | **Unsafe Code** | 0 blocks |
 | **Direct UnixStream** | 0 in production |
-| **Deployment** | USB + Pixel + Cross-Device |
+| **Deployment** | USB + Pixel + Cross-Device AI |
+| **BirdSong Discovery** | ✅ Validated |
+| **Cross-Device AI** | ✅ Pixel → Ollama Working |
 
 ---
 
@@ -47,7 +49,24 @@ Full NUCLEUS  = All 5 primals + biomeOS  (orchestration)
 
 ---
 
-## Recent Evolution (Jan 29, 2026)
+## Recent Evolution (Feb 4, 2026)
+
+### Cross-Device AI Coordination Complete
+
+| Component | Status |
+|-----------|--------|
+| BirdSong Discovery | ✅ Pixel discovers USB peer via multicast |
+| Cross-device TCP | ✅ ADB forward/reverse working |
+| Songbird HTTP | ✅ Host header fix for HTTP/1.1 compliance |
+| Pixel → Ollama | ✅ AI generation via ADB reverse |
+
+### Primal Evolutions
+
+| Primal | Commit | Change |
+|--------|--------|--------|
+| BearDog | `417ddf51f` | `--abstract` flag for Android SELinux |
+| Songbird | `e1f259358` | `SONGBIRD_PID_DIR` + `SONGBIRD_DATA_DIR` |
+| Songbird | `3f24da03b` | Host header with port for HTTP/1.1 |
 
 ### Universal IPC v3.0 Complete
 
@@ -153,8 +172,9 @@ adb shell /data/local/tmp/biomeos/start_nucleus_mobile.sh
 
 ### High Priority
 - ~~Universal IPC v3.0~~ ✅ COMPLETE (Jan 29, 2026)
-- Cross-device TCP validation (Pixel + Desktop)
-- Deploy and test federation with remote primals
+- ~~Cross-device TCP validation~~ ✅ COMPLETE (Feb 4, 2026)
+- ~~BirdSong discovery validation~~ ✅ COMPLETE (Feb 4, 2026)
+- STUN NAT traversal (cross-network without ADB)
 
 ### Medium Priority
 - Evolve remaining crates to AtomicClient (optional)
@@ -192,7 +212,8 @@ cargo llvm-cov --workspace
 
 **Status**: Production Ready  
 **IPC**: Universal IPC v3.0  
-**Deployment**: USB + Pixel + Cross-Device  
+**Deployment**: USB + Pixel + Cross-Device AI  
 **Security**: A++ LEGENDARY  
 **Code Quality**: A  
-**Tests**: 800+ passing
+**Tests**: 800+ passing  
+**Cross-Device**: BirdSong Discovery + AI Coordination
