@@ -1,5 +1,7 @@
 //! Neural API Routing Layer
 //!
+//! **Universal IPC v3.0**: Uses AtomicClient for multi-transport routing.
+//!
 //! Pure Rust implementation of capability-based primal routing.
 //!
 //! # Design Principles
@@ -9,29 +11,31 @@
 //! - **Service Mesh**: API gateway pattern
 //! - **Zero Unsafe**: Fast AND safe Rust
 //! - **Observable**: All requests logged for learning
+//! - **Multi-Transport**: Unix, Abstract, TCP via Universal IPC v3.0
 //!
 //! # Architecture
 //!
 //! ```text
 //! Client → Neural Router → Capability Discovery → Primal Discovery
 //!                              ↓                        ↓
-//!                         Atomic Mapping          Socket Lookup
+//!                         Atomic Mapping          Socket/TCP Lookup
 //!                              ↓                        ↓
-//!                         Request Forward ← JSON-RPC → Response
+//!                         AtomicClient Forward ← JSON-RPC → Response
 //!                              ↓
 //!                         Metrics Collection
 //! ```
 
+#![deny(unsafe_code)] // Fast AND safe: Zero unsafe code, async I/O throughout
+
 use anyhow::{anyhow, Context, Result};
+use biomeos_core::atomic_client::AtomicClient;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
-use tokio::io::AsyncWriteExt;
-use tokio::net::UnixStream;
 use tokio::sync::RwLock;
-use tokio::time::{timeout, Duration};
+use tokio::time::Duration;
 use tracing::{debug, info, warn};
 
 /// Discovered primal with socket and capabilities
@@ -215,6 +219,85 @@ impl NeuralRouter {
             .cloned()
     }
 
+    /// Discover primals by capability category
+    ///
+    /// Maps capability names to categories and queries the registry for any primal
+    /// that provides that category capability. This implements TRUE PRIMAL pattern:
+    /// primals have self-knowledge only and discover other primals at runtime.
+    ///
+    /// # Capability Mappings
+    /// - crypto/security → "security" category
+    /// - discovery → "discovery" category
+    /// - ai → "ai" category
+    async fn discover_by_capability_category(&self, capability: &str) -> Result<DiscoveredAtomic> {
+        // Map capability name to category
+        let category = match capability {
+            "crypto_sign" | "crypto.sign" | "crypto" | "security" | "encryption" => "security",
+            "discovery" => "discovery",
+            "ai" | "ai.routing" | "ai.text_generation" | "ai.coordination" => "ai",
+            _ => {
+                return Err(anyhow!(
+                    "Capability '{}' does not map to a known category (security, discovery, ai)",
+                    capability
+                ));
+            }
+        };
+
+        debug!(
+            "   Mapping capability '{}' to category '{}'",
+            capability, category
+        );
+
+        // Query registry for any primal providing this category
+        let registry = self.capability_registry.read().await;
+
+        // Search for primals that provide this category capability
+        let mut matching_providers = Vec::new();
+        for (registered_cap, providers) in registry.iter() {
+            // Check if this registered capability matches the category
+            // This handles both exact matches and category-based matches
+            if registered_cap == category || registered_cap.starts_with(&format!("{}.", category)) {
+                matching_providers.extend(providers.iter().cloned());
+            }
+        }
+
+        if matching_providers.is_empty() {
+            return Err(anyhow!(
+                "No primals found providing '{}' capability. Available capabilities: {:?}",
+                category,
+                registry.keys().collect::<Vec<_>>()
+            ));
+        }
+
+        // Use the first healthy provider
+        let primary = &matching_providers[0];
+        info!(
+            "   ✅ Found primal via capability category: {} → {} (provides {})",
+            capability, primary.primal_name, category
+        );
+
+        // Build discovered atomic from matching providers with health status
+        let mut primals = Vec::new();
+        for provider in &matching_providers {
+            let socket_str = provider.socket_path.to_string_lossy();
+            let healthy = Self::check_primal_health(&socket_str).await;
+            primals.push(DiscoveredPrimal {
+                name: provider.primal_name.clone(),
+                socket_path: provider.socket_path.clone(),
+                capabilities: vec![category.to_string()],
+                healthy,
+                last_check: chrono::Utc::now(),
+            });
+        }
+
+        Ok(DiscoveredAtomic {
+            capability: capability.to_string(),
+            primals,
+            atomic_type: None,
+            primary_socket: primary.socket_path.clone(),
+        })
+    }
+
     /// Discover primal(s) by capability
     ///
     /// **TRUE PRIMAL Pattern**: Discovers at runtime via registry (new!) or fallback patterns
@@ -253,20 +336,25 @@ impl NeuralRouter {
             }
         }
 
-        // FALLBACK: Use hardcoded patterns (for backwards compatibility during migration)
-        warn!("   ⚠️  Capability not in registry, using fallback pattern");
+        // FALLBACK: Try capability-based discovery by category
+        warn!("   ⚠️  Capability not in registry, trying capability category discovery");
         match capability {
             "secure_http" | "http.request" | "http.post" | "http.get" => {
                 self.discover_tower_atomic().await
             }
             "secure_storage" => self.discover_nest_atomic().await,
             "secure_compute" => self.discover_node_atomic().await,
-            "crypto_sign" | "crypto.sign" => {
-                self.discover_single_primal("beardog", capability).await
+            "crypto_sign" | "crypto.sign" | "crypto" | "security" | "encryption" => {
+                // Use capability-based discovery: find any primal with "security" capability
+                self.discover_by_capability_category(capability).await
             }
-            "discovery" => self.discover_single_primal("songbird", capability).await,
-            "ai" | "ai.routing" | "ai.text_generation" => {
-                self.discover_single_primal("squirrel", capability).await
+            "discovery" => {
+                // Use capability-based discovery: find any primal with "discovery" capability
+                self.discover_by_capability_category(capability).await
+            }
+            "ai" | "ai.routing" | "ai.text_generation" | "ai.coordination" => {
+                // Use capability-based discovery: find any primal with "ai" capability
+                self.discover_by_capability_category(capability).await
             }
             _ => Err(anyhow!(
                 "Capability '{}' not registered. Available: {:?}",
@@ -429,6 +517,16 @@ impl NeuralRouter {
     /// Forward JSON-RPC request to primal
     ///
     /// **Pure Rust**: Async I/O, no unsafe code, idiomatic error handling
+    ///
+    /// # Safety
+    ///
+    /// This function is safe - it uses:
+    /// - `tokio::net::UnixStream` for safe async Unix socket I/O
+    /// - `AtomicClient` for multi-transport JSON-RPC (Universal IPC v3.0)
+    /// - Configurable timeout via `request_timeout`
+    /// - Proper error propagation via `Result<T>`
+    ///
+    /// No unsafe code, raw pointers, or manual memory management.
     pub async fn forward_request(
         &self,
         socket_path: &PathBuf,
@@ -439,58 +537,18 @@ impl NeuralRouter {
 
         debug!("   → Forwarding: {} to {}", method, socket_path.display());
 
-        // Connect to primal's Unix socket
-        let mut stream = timeout(Duration::from_secs(5), UnixStream::connect(socket_path))
+        // Create AtomicClient with configured timeout (Universal IPC v3.0)
+        let client = AtomicClient::unix(socket_path).with_timeout(self.request_timeout);
+
+        // Forward the request via AtomicClient
+        let result = client
+            .call(method, params.clone())
             .await
-            .context("Connection timeout")?
-            .context("Failed to connect to primal")?;
-
-        // Build JSON-RPC request
-        let request = serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": method,
-            "params": params,
-            "id": 1
-        });
-
-        // Send request
-        let request_bytes = serde_json::to_vec(&request)?;
-        stream.write_all(&request_bytes).await?;
-        stream.write_all(b"\n").await?; // Newline delimiter
-        stream.flush().await?;
-
-        debug!("   ✓ Sent {} bytes", request_bytes.len());
-
-        // Read response with timeout
-        // IMPORTANT: Use line-based reading, not read_to_end
-        // BearDog/Songbird use JSON-RPC over Unix sockets with newline delimiters
-        // They keep connections open for multiple requests, so read_to_end would hang
-        use tokio::io::AsyncBufReadExt;
-        let mut reader = tokio::io::BufReader::new(stream);
-        let mut response_line = String::new();
-
-        timeout(self.request_timeout, reader.read_line(&mut response_line))
-            .await
-            .context("Response timeout")?
-            .context("Failed to read response")?;
-
-        let response_bytes = response_line.trim().as_bytes().to_vec();
-        debug!("   ✓ Received {} bytes", response_bytes.len());
-
-        // Parse response
-        let response: Value =
-            serde_json::from_slice(&response_bytes).context("Failed to parse response")?;
-
-        // Check for JSON-RPC error
-        if let Some(error) = response.get("error") {
-            return Err(anyhow!("Primal returned error: {}", error));
-        }
-
-        // Extract result
-        let result = response
-            .get("result")
-            .ok_or_else(|| anyhow!("Response missing 'result' field"))?
-            .clone();
+            .context(format!(
+                "Failed to forward {} to {}",
+                method,
+                socket_path.display()
+            ))?;
 
         let latency = start.elapsed().as_millis() as u64;
         debug!("   ✓ Forwarded successfully in {}ms", latency);
