@@ -1,18 +1,18 @@
 //! Health checking for deployed primals
 //!
+//! **Universal IPC v3.0**: Uses AtomicClient for multi-transport health checks.
+//!
 //! Provides multi-level health checking:
 //! - Level 1: Socket existence check (fast)
 //! - Level 2: Socket type validation (fast)
-//! - Level 3: JSON-RPC ping (deep, validates primal is responding)
+//! - Level 3: JSON-RPC ping via AtomicClient (deep, validates primal is responding)
 
 use anyhow::{Context, Result};
+use biomeos_core::atomic_client::AtomicClient;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::net::UnixStream;
-use tokio::time::timeout;
 use tracing::{debug, warn};
 
 /// Health status of a primal
@@ -155,54 +155,18 @@ impl HealthChecker {
         }
     }
 
-    /// Send a JSON-RPC ping to a primal
+    /// Send a JSON-RPC ping to a primal via AtomicClient (Universal IPC v3.0)
+    ///
+    /// Uses `AtomicClient` with configurable timeout for health checks.
     async fn rpc_ping(&self, socket_path: &Path, method: &str) -> Result<serde_json::Value> {
-        // Connect with timeout
-        let stream = timeout(self.rpc_timeout, UnixStream::connect(socket_path))
+        // Create AtomicClient with configured timeout
+        let client = AtomicClient::unix(socket_path).with_timeout(self.rpc_timeout);
+
+        // Call the health method
+        client
+            .call(method, json!({}))
             .await
-            .context("Connection timeout")?
-            .context("Failed to connect")?;
-
-        let (reader, mut writer) = stream.into_split();
-        let mut reader = BufReader::new(reader);
-
-        // Build health check request
-        let request = json!({
-            "jsonrpc": "2.0",
-            "method": method,
-            "params": {},
-            "id": 1
-        });
-
-        let request_str = serde_json::to_string(&request)? + "\n";
-        writer.write_all(request_str.as_bytes()).await?;
-        writer.flush().await?;
-
-        // Read response with timeout
-        let mut response_line = String::new();
-        timeout(self.rpc_timeout, reader.read_line(&mut response_line))
-            .await
-            .context("Response timeout")?
-            .context("Failed to read response")?;
-
-        // Parse response
-        let response: serde_json::Value = serde_json::from_str(response_line.trim())?;
-
-        // Check for error
-        if let Some(error) = response.get("error") {
-            anyhow::bail!(
-                "RPC error: {}",
-                error
-                    .get("message")
-                    .and_then(|m| m.as_str())
-                    .unwrap_or("unknown")
-            );
-        }
-
-        Ok(response
-            .get("result")
-            .cloned()
-            .unwrap_or(serde_json::Value::Null))
+            .context("RPC ping failed")
     }
 
     /// Check health of all sockets in runtime dir matching a pattern
