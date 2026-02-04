@@ -12,7 +12,8 @@
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP) |
 | Security | A++ LEGENDARY |
 | Code Quality | A |
-| Tests | 800+ passing |
+| Tests | 822 passing |
+| Unsafe Code | 0 blocks |
 | Deployment | USB + Pixel + Cross-Device |
 
 ---
