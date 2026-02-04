@@ -47,4 +47,5 @@ tokio-test = "0.4"
 tempfile = { workspace = true }
 futures = "0.3"
 serial_test = "3.0"
+tracing-subscriber = { workspace = true }
 

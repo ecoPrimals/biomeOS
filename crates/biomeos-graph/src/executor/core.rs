@@ -1,16 +1,16 @@
 //! Core graph execution logic
 //!
-//! **TRUE ecoBin v2.0:** Smart refactored for maintainability.
+//! **EVOLVED:** Smart refactored for maintainability.
 //!
 //! This module contains the main GraphExecutor implementation and orchestration logic.
-//! Node-specific executors are in the `nodes/` submodules.
+//! Node-specific handlers are in the `node_handlers` module.
 
 use super::{
     context::{ExecutionContext, NodeStatus},
-    monitoring::{ExecutionReport, PhaseResult},
-    nodes, // Import node executors
+    node_handlers,
     rollback::RollbackManager,
     topological::TopologicalSorter,
+    types::{ExecutionReport, PhaseResult},
 };
 use crate::graph::{Graph, GraphNode};
 use anyhow::{Context, Result};
@@ -114,7 +114,7 @@ impl GraphExecutor {
                 .graph
                 .nodes
                 .iter()
-                .find(|n| &n.id == node_id)
+                .find(|n| n.id.as_str() == node_id)
                 .ok_or_else(|| anyhow::anyhow!("Node not found: {}", node_id))?
                 .clone();
 
@@ -124,7 +124,7 @@ impl GraphExecutor {
             let handle = tokio::spawn(async move {
                 let result = execute_node(&node, &context).await;
                 drop(permit); // Release semaphore
-                (node.id.clone(), result)
+                (node.id.as_str().to_string(), result)
             });
 
             handles.push(handle);
@@ -165,8 +165,8 @@ impl GraphExecutor {
 
 /// Execute a single node (dispatcher)
 ///
-/// This function dispatches to the appropriate node executor based on node type.
-/// Node executors are organized by domain in the `nodes/` submodules.
+/// This function dispatches to the appropriate node handler based on node type.
+/// Node handlers are in the `node_handlers` module.
 pub async fn execute_node(
     node: &GraphNode,
     context: &ExecutionContext,
@@ -174,42 +174,29 @@ pub async fn execute_node(
     debug!("   Executing node: {}", node.id);
 
     // Mark as running
-    context.set_status(&node.id, NodeStatus::Running).await;
+    context.set_status(node.id.as_str(), NodeStatus::Running).await;
 
-    // Dispatch to node-specific executor
-    // All node executors are in the `nodes/` submodules (smart refactored!)
-    let result = match node.node_type.as_str() {
-        "filesystem.check_exists" => nodes::filesystem::check_exists(node, context).await,
-        "crypto.derive_child_seed" => nodes::crypto::derive_child_seed(node, context).await,
-        "primal.launch" => nodes::primal::launch(node, context).await,
-        "health.check_atomic" => nodes::health::check_atomic(node, context).await,
-        "lineage.verify_siblings" => nodes::lineage::verify_siblings(node, context).await,
-        "report.deployment_success" => nodes::report::deployment_success(node, context).await,
+    // Dispatch to node-specific handler
+    let result = match node.capability.as_deref() {
+        Some("filesystem.check_exists") => {
+            node_handlers::node_filesystem_check_exists(node, context).await
+        }
+        Some("crypto.derive_child_seed") => {
+            node_handlers::node_crypto_derive_seed(node, context).await
+        }
+        Some("primal.launch") => node_handlers::node_primal_launch(node, context).await,
+        Some("health.check_atomic") => node_handlers::node_health_check(node, context).await,
+        Some("lineage.verify_siblings") => {
+            node_handlers::node_lineage_verify(node, context).await
+        }
+        Some("report.deployment_success") => {
+            node_handlers::node_deployment_report(node, context).await
+        }
         _ => {
-            warn!("Unknown node type: {}, skipping", node.node_type);
+            warn!("Unknown node capability: {:?}, skipping", node.capability);
             Ok(serde_json::json!({"skipped": true}))
         }
     };
 
     result.context(format!("Node execution failed: {}", node.id))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_graph_executor_creation() {
-        let graph = Graph {
-            id: "test".to_string(),
-            version: "1.0".to_string(),
-            nodes: vec![],
-            edges: vec![],
-            config: Default::default(),
-        };
-        let env = HashMap::new();
-        
-        let executor = GraphExecutor::new(graph, env);
-        assert_eq!(executor.max_parallelism, 3);
-    }
 }

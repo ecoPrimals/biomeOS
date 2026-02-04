@@ -5,13 +5,22 @@
 
 use crate::GenomeFactory;
 use anyhow::{Context, Result};
-use biomeos_genomebin_v3::{Arch, GenomeBinBuilder};
+use biomeos_genomebin_v3::{Arch, GenomeBin, GenomeManifest};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-/// Response after self-replication
+/// Request for replicating a genome
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SelfReplicateResponse {
+pub struct GenomeReplicateRequest {
+    /// Genome name to replicate
+    pub name: String,
+    /// Target destination
+    pub destination: PathBuf,
+}
+
+/// Response after replication
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GenomeReplicateResponse {
     pub genome_id: String,
     pub path: PathBuf,
     pub size: u64,
@@ -22,52 +31,61 @@ impl GenomeFactory {
     /// Self-replicate: Create biomeOS's own genomeBin
     ///
     /// Deep Debt: Introspection + self-knowledge
-    pub fn self_replicate(&self) -> Result<SelfReplicateResponse> {
+    pub fn self_replicate(&self) -> Result<GenomeReplicateResponse> {
         tracing::info!("🧬 Self-replication initiated: biomeOS creating its own genomeBin");
-        
+
         // Find current executable
-        let self_binary = std::env::current_exe()
-            .context("Failed to get current executable path")?;
-        
+        let self_binary =
+            std::env::current_exe().context("Failed to get current executable path")?;
+
         tracing::debug!("Found self binary: {}", self_binary.display());
-        
+
         // Detect current architecture
         let arch = Arch::detect();
-        
-        // Build self-genomeBin
-        let genome = GenomeBinBuilder::new("biomeos")
+
+        // Read binary data
+        let binary_data = std::fs::read(&self_binary).context("Failed to read self binary")?;
+
+        // Build manifest
+        let manifest = GenomeManifest::new("biomeos")
             .version(env!("CARGO_PKG_VERSION"))
             .description("biomeOS System Orchestrator - Self-Replicated")
             .nucleus_atomic("ORCHESTRATOR")
-            .capability("orchestration")
-            .capability("genome-factory")
-            .capability("federation")
-            .capability("self-replication")
-            .add_binary(arch, self_binary)
-            .build()
-            .context("Failed to build self-genomeBin")?;
-        
+            .add_capability("orchestration")
+            .add_capability("genome-factory")
+            .add_capability("federation")
+            .add_capability("self-replication");
+
+        // Build genomeBin
+        let mut genome = GenomeBin::with_manifest(manifest);
+        genome.add_binary_bytes(arch, &binary_data);
+
         // Write to storage
         let output_path = self.genome_path("biomeos-self");
-        genome.write(&output_path)
+        genome
+            .save(&output_path)
             .context("Failed to write self-genomeBin")?;
-        
-        let response = SelfReplicateResponse {
+
+        let size = std::fs::metadata(&output_path)
+            .map(|m| m.len())
+            .unwrap_or(0);
+
+        let response = GenomeReplicateResponse {
             genome_id: "biomeos-self".to_string(),
             path: output_path,
-            size: genome.total_size(),
+            size,
             architectures: vec![format!("{:?}", arch)],
         };
-        
+
         tracing::info!(
             "✅ Self-replication complete: {} bytes for {:?}",
             response.size,
             arch
         );
-        
+
         Ok(response)
     }
-    
+
     /// Check if self-genomeBin exists
     pub fn has_self_genome(&self) -> bool {
         self.genome_exists("biomeos-self")
@@ -78,14 +96,14 @@ impl GenomeFactory {
 mod tests {
     use super::*;
     use tempfile::TempDir;
-    
+
     #[test]
     fn test_self_replicate() {
         let temp_dir = TempDir::new().unwrap();
-        let factory = GenomeFactory::new(temp_dir.path()).unwrap();
-        
+        let factory = GenomeFactory::new(temp_dir.path());
+
         let response = factory.self_replicate().unwrap();
-        
+
         assert_eq!(response.genome_id, "biomeos-self");
         assert!(response.path.exists());
         assert_eq!(response.architectures.len(), 1);

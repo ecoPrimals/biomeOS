@@ -154,7 +154,7 @@ pub fn socket_path(service: &str) -> Result<PathBuf, String> {
 ///
 /// let config = RuntimeConfig::from_env();
 /// let neural_socket = config.neural_api_socket();
-/// let beardog_socket = config.beardog_socket();
+/// let http_port = config.http_port();
 /// ```
 #[derive(Debug, Clone)]
 pub struct RuntimeConfig {
@@ -235,6 +235,56 @@ impl RuntimeConfig {
     /// Get socket directory
     pub fn socket_dir(&self) -> &Path {
         &self.socket_dir
+    }
+
+    // ========================================================================
+    // PORT CONFIGURATION (Environment Variable Overrides)
+    // ========================================================================
+
+    /// Get HTTP port from environment or fallback to default
+    pub fn http_port(&self) -> u16 {
+        env::var("HTTP_PORT")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(8080)
+    }
+
+    /// Get HTTPS port from environment or fallback to default
+    pub fn https_port(&self) -> u16 {
+        env::var("HTTPS_PORT")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(8443)
+    }
+
+    /// Get WebSocket port from environment or fallback to default
+    pub fn websocket_port(&self) -> u16 {
+        env::var("WEBSOCKET_PORT")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(8081)
+    }
+
+    /// Get MCP port from environment or fallback to default
+    pub fn mcp_port(&self) -> u16 {
+        env::var("MCP_WEBSOCKET_PORT")
+            .or_else(|_| env::var("MCP_PORT"))
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(3000)
+    }
+
+    /// Get discovery port from environment or fallback to default
+    pub fn discovery_port(&self) -> u16 {
+        env::var("DISCOVERY_PORT")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(8001)
+    }
+
+    /// Get bind address from environment or fallback to default
+    pub fn bind_address(&self) -> String {
+        env::var("BIND_ADDRESS").unwrap_or_else(|_| "127.0.0.1".to_string())
     }
 }
 

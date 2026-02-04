@@ -7,6 +7,8 @@
 // - Platform-agnostic (runtime detection)
 // - Self-contained (no external tools)
 
+#![deny(unsafe_code)] // Fast AND safe: Zero unsafe code, pure Rust I/O
+
 mod format;
 
 use anyhow::{Context, Result};
@@ -365,7 +367,9 @@ fn run_binary<R: Read + Seek>(
     let temp_dir = std::env::temp_dir().join(format!("genome-{}", std::process::id()));
     std::fs::create_dir_all(&temp_dir)?;
     
-    extract_binary(reader, header, magic_offset, temp_dir.to_str().unwrap(), genome_path)?;
+    // SAFETY: temp_dir is created from std::env::temp_dir() which always returns valid UTF-8
+    // Using to_string_lossy() for defensive programming, but temp_dir.to_str() would be safe here
+    extract_binary(reader, header, magic_offset, &temp_dir.to_string_lossy(), genome_path)?;
     
     let binary_name = Path::new(genome_path)
         .file_stem()

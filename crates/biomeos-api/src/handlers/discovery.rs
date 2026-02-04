@@ -53,7 +53,7 @@ pub async fn get_discovered_primals(
     if state.is_standalone_mode() {
         // Standalone mode: Return demo data for development/testing without live primals
         info!("   Using standalone data (BIOMEOS_STANDALONE_MODE=true) - works without primals");
-        let primals = get_standalone_primals();
+        let primals = get_standalone_primals()?;
         return Ok(Json(DiscoveredPrimalsResponse {
             count: primals.len(),
             mode: "standalone".to_string(),
@@ -149,14 +149,18 @@ pub async fn get_discovered_primals(
 /// **Development**: Set BIOMEOS_STANDALONE_MODE=true to use this demo data.
 ///
 /// Deep Debt Principle: These are demo data, not hardcoded production endpoints.
-fn get_standalone_primals() -> Vec<DiscoveredPrimal> {
+/// All endpoints must be provided via environment variables - no hardcoded IPs or URLs.
+fn get_standalone_primals() -> Result<Vec<DiscoveredPrimal>, ApiError> {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or(std::time::Duration::from_secs(0)) // Safe fallback: epoch time
         .as_secs();
 
-    vec![
-        DiscoveredPrimal {
+    let mut primals = Vec::new();
+
+    // BearDog - Unix socket endpoint (optional with safe default for local sockets)
+    if let Ok(endpoint) = std::env::var("BEARDOG_ENDPOINT") {
+        primals.push(DiscoveredPrimal {
             id: "beardog-local".to_string(),
             name: "BearDog".to_string(),
             primal_type: "security".to_string(),
@@ -168,15 +172,18 @@ fn get_standalone_primals() -> Vec<DiscoveredPrimal> {
                 "genetic_lineage".to_string(),
                 "hsm".to_string(),
             ],
-            // DEMO DATA: Real primals use Unix sockets like `/run/user/1000/beardog.sock`
-            endpoint: "http://localhost:9000".to_string(),
+            endpoint,
             last_seen: now,
             trust_level: Some(3), // Highest (self)
             family_id: Some("iidn".to_string()),
             allowed_capabilities: Some(vec!["*".to_string()]),
             denied_capabilities: Some(vec![]),
-        },
-        DiscoveredPrimal {
+        });
+    }
+
+    // Songbird - Unix socket endpoint (optional with safe default for local sockets)
+    if let Ok(endpoint) = std::env::var("SONGBIRD_ENDPOINT") {
+        primals.push(DiscoveredPrimal {
             id: "songbird-local".to_string(),
             name: "Songbird".to_string(),
             primal_type: "orchestration".to_string(),
@@ -188,60 +195,79 @@ fn get_standalone_primals() -> Vec<DiscoveredPrimal> {
                 "federation".to_string(),
                 "coordination".to_string(),
             ],
-            // DEMO DATA: Real primals use Unix sockets like `/run/user/1000/songbird.sock`
-            endpoint: "http://localhost:8080".to_string(),
+            endpoint,
             last_seen: now,
             trust_level: Some(3), // Highest (self)
             family_id: Some("iidn".to_string()),
             allowed_capabilities: Some(vec!["*".to_string()]),
             denied_capabilities: Some(vec![]),
-        },
-        DiscoveredPrimal {
-            id: "tower2-remote".to_string(),
-            name: "tower2".to_string(),
-            primal_type: "tower".to_string(),
-            version: "1.0.0".to_string(),
-            health: "healthy".to_string(),
-            capabilities: vec!["orchestration".to_string(), "federation".to_string()],
-            // DEMO DATA: Real remote primals discovered via mDNS/Songbird with secure TLS
-            endpoint: "https://192.168.1.134:8080".to_string(),
-            last_seen: now - 5,   // 5 seconds ago
-            trust_level: Some(1), // Limited (same family, not elevated)
-            family_id: Some("iidn".to_string()),
-            allowed_capabilities: Some(vec![
-                "discovery".to_string(),
-                "coordination/birdsong".to_string(),
-                "health".to_string(),
-            ]),
-            denied_capabilities: Some(vec![
-                "data/*".to_string(),
-                "commands/*".to_string(),
-                "federation/*".to_string(),
-            ]),
-        },
-        DiscoveredPrimal {
-            id: "nestgate-local".to_string(),
-            name: "NestGate".to_string(),
-            primal_type: "storage".to_string(),
-            version: "2.1.0".to_string(),
-            health: "healthy".to_string(),
-            capabilities: vec![
-                "storage".to_string(),
-                "versioning".to_string(),
-                "encryption".to_string(),
-            ],
-            // DEMO DATA: Real primals use Unix sockets like `/run/user/1000/nestgate.sock`
-            endpoint: "http://localhost:3002".to_string(),
-            last_seen: now - 2,   // 2 seconds ago
-            trust_level: Some(2), // Elevated (human approved)
-            family_id: Some("iidn".to_string()),
-            allowed_capabilities: Some(vec![
-                "discovery".to_string(),
-                "coordination/*".to_string(),
-                "storage/read".to_string(),
-                "storage/write".to_string(),
-            ]),
-            denied_capabilities: Some(vec!["storage/admin".to_string(), "keys/*".to_string()]),
-        },
-    ]
+        });
+    }
+
+    // Tower2 - Remote endpoint (REQUIRED - no hardcoded IP fallback)
+    let tower2_endpoint = std::env::var("TOWER2_ENDPOINT").map_err(|_| {
+        ApiError::Internal(
+            "TOWER2_ENDPOINT environment variable is required in standalone mode. \
+            Set TOWER2_ENDPOINT to the remote tower endpoint URL (e.g., https://example.com:8080). \
+            No hardcoded IP addresses are allowed."
+                .to_string(),
+        )
+    })?;
+    primals.push(DiscoveredPrimal {
+        id: "tower2-remote".to_string(),
+        name: "tower2".to_string(),
+        primal_type: "tower".to_string(),
+        version: "1.0.0".to_string(),
+        health: "healthy".to_string(),
+        capabilities: vec!["orchestration".to_string(), "federation".to_string()],
+        endpoint: tower2_endpoint,
+        last_seen: now - 5,   // 5 seconds ago
+        trust_level: Some(1), // Limited (same family, not elevated)
+        family_id: Some("iidn".to_string()),
+        allowed_capabilities: Some(vec![
+            "discovery".to_string(),
+            "coordination/birdsong".to_string(),
+            "health".to_string(),
+        ]),
+        denied_capabilities: Some(vec![
+            "data/*".to_string(),
+            "commands/*".to_string(),
+            "federation/*".to_string(),
+        ]),
+    });
+
+    // NestGate - Endpoint (REQUIRED - no hardcoded localhost fallback)
+    let nestgate_endpoint = std::env::var("NESTGATE_ENDPOINT").map_err(|_| {
+        ApiError::Internal(
+            "NESTGATE_ENDPOINT environment variable is required in standalone mode. \
+            Set NESTGATE_ENDPOINT to the NestGate endpoint URL. \
+            No hardcoded localhost addresses are allowed."
+                .to_string(),
+        )
+    })?;
+    primals.push(DiscoveredPrimal {
+        id: "nestgate-local".to_string(),
+        name: "NestGate".to_string(),
+        primal_type: "storage".to_string(),
+        version: "2.1.0".to_string(),
+        health: "healthy".to_string(),
+        capabilities: vec![
+            "storage".to_string(),
+            "versioning".to_string(),
+            "encryption".to_string(),
+        ],
+        endpoint: nestgate_endpoint,
+        last_seen: now - 2,   // 2 seconds ago
+        trust_level: Some(2), // Elevated (human approved)
+        family_id: Some("iidn".to_string()),
+        allowed_capabilities: Some(vec![
+            "discovery".to_string(),
+            "coordination/*".to_string(),
+            "storage/read".to_string(),
+            "storage/write".to_string(),
+        ]),
+        denied_capabilities: Some(vec!["storage/admin".to_string(), "keys/*".to_string()]),
+    });
+
+    Ok(primals)
 }

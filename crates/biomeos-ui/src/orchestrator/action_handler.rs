@@ -15,8 +15,8 @@
 use crate::{
     actions::{ActionResult, UserAction},
     primal_client::{
-        BearDogClient, NestGateClient, PetalTongueClient, PrimalClient, SongbirdClient,
-        SquirrelClient, ToadStoolClient,
+        BearDogClient, NestGateClient, PetalTongueClient, SongbirdClient, SquirrelClient,
+        ToadStoolClient,
     },
 };
 use anyhow::Result;
@@ -90,9 +90,7 @@ impl ActionHandler {
                 Self::handle_dismiss_suggestion(&suggestion_id, family_id, squirrel).await
             }
 
-            UserAction::Refresh => {
-                Self::handle_refresh(songbird, toadstool, petaltongue).await
-            }
+            UserAction::Refresh => Self::handle_refresh(songbird, toadstool, petaltongue).await,
         }
     }
 
@@ -125,9 +123,13 @@ impl ActionHandler {
 
         // Phase 1: Authorization via BearDog
         let current_user = Authorization::get_current_user_id(beardog).await;
-        let auth_result =
-            Authorization::authorize_device_assignment(beardog, &current_user, device_id, primal_id)
-                .await;
+        let auth_result = Authorization::authorize_device_assignment(
+            beardog,
+            &current_user,
+            device_id,
+            primal_id,
+        )
+        .await;
 
         match auth_result {
             Ok(AuthorizationResult::Authorized) => {
@@ -174,7 +176,8 @@ impl ActionHandler {
         }
 
         // Phase 3: Capacity check via ToadStool
-        let capacity_result = Capacity::check_primal_capacity(toadstool, device_id, primal_id).await;
+        let capacity_result =
+            Capacity::check_primal_capacity(toadstool, device_id, primal_id).await;
 
         match capacity_result {
             Ok(CapacityResult::Available) => {
@@ -209,9 +212,14 @@ impl ActionHandler {
         };
 
         // Phase 5: Persist assignment via NestGate (non-critical)
-        if let Err(e) =
-            Persistence::persist_assignment(nestgate, family_id, &assignment_id, device_id, primal_id)
-                .await
+        if let Err(e) = Persistence::persist_assignment(
+            nestgate,
+            family_id,
+            &assignment_id,
+            device_id,
+            primal_id,
+        )
+        .await
         {
             warn!("⚠️ Failed to persist assignment: {}, continuing", e);
             // Non-critical: assignment still works, just won't survive restart

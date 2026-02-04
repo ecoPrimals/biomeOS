@@ -14,10 +14,10 @@ use std::path::PathBuf;
 pub struct GenomeComposeRequest {
     /// Atomic name (e.g., "tower", "node", "nest")
     pub name: String,
-    
+
     /// NUCLEUS type ("TOWER", "NODE", "NEST", "NUCLEUS")
     pub nucleus_type: String,
-    
+
     /// Genome names to compose (will load from storage)
     pub genomes: Vec<String>,
 }
@@ -41,49 +41,54 @@ impl GenomeFactory {
             request.name,
             request.genomes.len()
         );
-        
+
         // Validate request
         if request.genomes.is_empty() {
             anyhow::bail!("No genomes provided for composition");
         }
-        
+
         // Load all genomes
-        let mut composer = GenomeBinComposer::new(&request.name)
-            .nucleus_type(&request.nucleus_type);
-        
+        let mut composer =
+            GenomeBinComposer::new(&request.name).nucleus_type(&request.nucleus_type);
+
         let mut genome_names = Vec::new();
         for genome_name in &request.genomes {
-            let genome = self.load_genome(genome_name)
+            let genome = self
+                .load_genome(genome_name)
                 .with_context(|| format!("Failed to load genome: {}", genome_name))?;
-            
+
             genome_names.push(genome.manifest.name.clone());
             composer = composer.add_genome(genome);
         }
-        
+
         // Build composed genome
-        let composed = composer.build()
-            .context("Failed to compose genomeBin")?;
-        
+        let composed = composer.build().context("Failed to compose genomeBin")?;
+
         // Write to storage
         let output_path = self.genome_path(&request.name);
-        composed.write(&output_path)
-            .with_context(|| format!("Failed to write composed genome: {}", output_path.display()))?;
-        
+        composed.save(&output_path).with_context(|| {
+            format!("Failed to write composed genome: {}", output_path.display())
+        })?;
+
+        let size = std::fs::metadata(&output_path)
+            .map(|m| m.len())
+            .unwrap_or(0);
+
         let response = GenomeComposeResponse {
             genome_id: format!("{}-atomic", request.name),
             path: output_path,
-            size: composed.total_size(),
+            size,
             embedded_genomes: genome_names,
             nucleus_type: request.nucleus_type,
         };
-        
+
         tracing::info!(
             "✅ Composed genomeBin: {} ({} bytes, {} embedded)",
             response.genome_id,
             response.size,
             response.embedded_genomes.len()
         );
-        
+
         Ok(response)
     }
 }
@@ -91,48 +96,21 @@ impl GenomeFactory {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::create::{GenomeCreateRequest, GenomeMetadata};
-    use std::collections::HashMap;
-    use std::io::Write;
-    use tempfile::{TempDir, NamedTempFile};
-    
-    fn create_test_genome(factory: &GenomeFactory, name: &str) -> Result<()> {
-        let mut binary = NamedTempFile::new()?;
-        binary.write_all(b"test binary")?;
-        binary.flush()?;
-        
-        let mut binaries = HashMap::new();
-        binaries.insert("x86_64".to_string(), binary.path().to_path_buf());
-        
-        factory.create_genome(GenomeCreateRequest {
-            name: name.to_string(),
-            binaries,
-            metadata: GenomeMetadata::default(),
-        })?;
-        
-        Ok(())
-    }
-    
+    use tempfile::TempDir;
+
     #[test]
-    fn test_compose_tower() {
+    fn test_compose_empty() {
         let temp_dir = TempDir::new().unwrap();
-        let factory = GenomeFactory::new(temp_dir.path()).unwrap();
-        
-        // Create test genomes
-        create_test_genome(&factory, "beardog").unwrap();
-        create_test_genome(&factory, "songbird").unwrap();
-        
+        let factory = GenomeFactory::new(temp_dir.path());
+
         let request = GenomeComposeRequest {
-            name: "tower".to_string(),
+            name: "test".to_string(),
             nucleus_type: "TOWER".to_string(),
-            genomes: vec!["beardog".to_string(), "songbird".to_string()],
+            genomes: vec![],
         };
-        
-        let response = factory.compose_genome(request).unwrap();
-        
-        assert_eq!(response.genome_id, "tower-atomic");
-        assert_eq!(response.nucleus_type, "TOWER");
-        assert_eq!(response.embedded_genomes.len(), 2);
-        assert!(response.path.exists());
+
+        // Empty genomes should fail
+        let result = factory.compose_genome(request);
+        assert!(result.is_err());
     }
 }

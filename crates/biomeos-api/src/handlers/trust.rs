@@ -233,3 +233,83 @@ pub async fn get_identity(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_trust_evaluation_request_deserialize() {
+        let json = r#"{
+            "peer_id": "peer-123",
+            "peer_tags": ["trusted", "verified"]
+        }"#;
+        let req: TrustEvaluationRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.peer_id, "peer-123");
+        assert_eq!(req.peer_tags.len(), 2);
+    }
+
+    #[test]
+    fn test_trust_evaluation_response_serialize() {
+        let resp = TrustEvaluationResponse {
+            decision: "allow".to_string(),
+            confidence: 0.95,
+            reason: "known_peer".to_string(),
+            trust_level: "high".to_string(),
+            metadata: serde_json::json!({"provider": "beardog"}),
+        };
+        let json = serde_json::to_string(&resp).unwrap();
+        assert!(json.contains("allow"));
+        assert!(json.contains("0.95"));
+        assert!(json.contains("high"));
+    }
+
+    #[test]
+    fn test_identity_response_serialize() {
+        let resp = IdentityResponse {
+            encryption_tag: "beardog:family:nat0:node1".to_string(),
+            capabilities: vec!["btsp".to_string(), "birdsong".to_string()],
+            family_id: "nat0".to_string(),
+            identity_attestations: Some(serde_json::json!({"role": "tower"})),
+        };
+        let json = serde_json::to_string(&resp).unwrap();
+        assert!(json.contains("beardog:family:nat0:node1"));
+        assert!(json.contains("btsp"));
+        assert!(json.contains("nat0"));
+    }
+
+    #[test]
+    fn test_get_beardog_socket_default() {
+        // Clear environment to test default
+        std::env::remove_var("BEARDOG_SOCKET");
+        std::env::remove_var("BIOMEOS_FAMILY_ID");
+        std::env::remove_var("FAMILY_ID");
+        std::env::remove_var("BIOMEOS_SOCKET_DIR");
+
+        let socket = get_beardog_socket();
+        assert!(socket.contains("beardog"));
+        assert!(socket.ends_with(".sock"));
+    }
+
+    #[test]
+    fn test_get_beardog_socket_env_override() {
+        std::env::set_var("BEARDOG_SOCKET", "/custom/path/beardog.sock");
+        let socket = get_beardog_socket();
+        assert_eq!(socket, "/custom/path/beardog.sock");
+        std::env::remove_var("BEARDOG_SOCKET");
+    }
+
+    #[test]
+    fn test_json_rpc_request_serialize() {
+        let req = JsonRpcRequest {
+            jsonrpc: "2.0",
+            id: 1,
+            method: "test.method".to_string(),
+            params: serde_json::json!({"key": "value"}),
+        };
+        let json = serde_json::to_string(&req).unwrap();
+        assert!(json.contains("2.0"));
+        assert!(json.contains("test.method"));
+        assert!(json.contains("key"));
+    }
+}

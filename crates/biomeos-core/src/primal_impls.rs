@@ -118,7 +118,12 @@ impl ManagedPrimal for GenericManagedPrimal {
                 "   Set PRIMAL_SOCKET_PATH=$XDG_RUNTIME_DIR/biomeos/{}.sock",
                 self.config.id
             );
-            let url = format!("http://127.0.0.1:{}", self.config.http_port);
+            // Use RuntimeConfig for bind address and port resolution
+            use biomeos_types::defaults::RuntimeConfig;
+            let runtime_config = RuntimeConfig::from_env();
+            let bind_addr = runtime_config.bind_address();
+            let http_port = runtime_config.http_port();
+            let url = format!("http://{}:{}", bind_addr, http_port);
             Endpoint::new(&url).ok()
         } else {
             None
@@ -174,12 +179,14 @@ impl ManagedPrimal for GenericManagedPrimal {
             // Respects BIOMEOS_LOG_DIR or falls back to writable directory
             let log_dir = std::env::var("BIOMEOS_LOG_DIR")
                 .or_else(|_| std::env::var("XDG_STATE_HOME").map(|p| format!("{}/biomeos/logs", p)))
-                .or_else(|_| std::env::var("HOME").map(|p| format!("{}/.local/state/biomeos/logs", p)))
+                .or_else(|_| {
+                    std::env::var("HOME").map(|p| format!("{}/.local/state/biomeos/logs", p))
+                })
                 .unwrap_or_else(|_| {
                     warn!("No XDG paths available, using current directory for logs");
                     "./logs".to_string()
                 });
-            
+
             std::fs::create_dir_all(&log_dir).ok();
             std::path::PathBuf::from(format!("{}/{}-{}.log", log_dir, self.id, node_id))
         };

@@ -72,8 +72,5 @@ pub mod prelude {
     pub use crate::communication::{PrimalClient, SecureTunnel};
     pub use crate::discovery::{DiscoveredPrimal, DiscoveryQuery, PrimalDiscovery};
     pub use crate::types::{PrimalRequest, PrimalResponse, RequestPriority};
-    pub use crate::{
-        Health, PrimalCapability, PrimalType, UniversalPrimalService, BiomeResult,
-    };
+    pub use crate::{BiomeResult, Health, PrimalCapability, PrimalType, UniversalPrimalService};
 }
-

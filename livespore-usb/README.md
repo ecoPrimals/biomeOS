@@ -1,8 +1,8 @@
 # 💾 LiveSpore USB - NUCLEUS Complete
 
-**Build Date:** January 30, 2026  
-**Version:** NUCLEUS Legendary Session  
-**Status:** Static Binaries - Boot Anywhere
+**Build Date:** February 3, 2026  
+**Version:** NUCLEUS + Primal Deployment Standard v1.0  
+**Status:** Static Binaries - Deterministic Behavior Across Architectures
 
 ---
 
@@ -11,86 +11,74 @@
 ### **All 3 NUCLEUS Atomic Patterns**
 
 1. **Tower Atomic** (BearDog + Songbird)
-   - Security foundation
-   - Network discovery
-   - Grade: A++ (100/100)
+   - Security foundation + Network discovery
+   - Unix socket IPC (no HTTP)
 
 2. **Node Atomic** (Tower + Toadstool)
-   - Compute layer
-   - barraCUDA 50 GPU operations
-   - Grade: A++ with GPU
+   - Compute layer + GPU operations
+   - Same socket pattern
 
 3. **Nest Atomic** (Tower + NestGate + Squirrel)
-   - Storage and coordination
-   - AI capabilities
-   - Grade: A+++ (110/100)
+   - Storage + AI capabilities
+   - Neural API semantic routing
 
-### **Multi-Architecture Support**
+### **Architecture Parity** ✅
+
+Both architectures behave identically:
 
 ```
 livespore-usb/
 ├── x86_64/              # Intel/AMD 64-bit
 │   ├── primals/         # 5 static binaries (musl)
 │   ├── graphs/          # Deployment graphs
-│   └── scripts/         # Launch scripts
+│   └── scripts/         # Standard launch scripts
 └── aarch64/             # ARM64 (Pixel 8a, Pi 4)
     ├── primals/         # 5 static binaries (musl)
     ├── graphs/          # Deployment graphs
-    └── scripts/         # Launch scripts
+    └── scripts/         # Same standard scripts
 ```
+
+**Key Principle**: Architecture affects PATH, not BEHAVIOR.
 
 ---
 
 ## 🚀 **Quick Start**
 
-### **Auto-Detect Architecture**
+### **Standard Deployment (Recommended)**
 
 ```bash
-# Boot from LiveSpore USB
-# Auto-detect will select correct architecture
+# Auto-detect architecture and use standard scripts
+cd livespore-usb/$(uname -m)/scripts/
+FAMILY_ID=livespore ./start_tower.sh
 
-ARCH=$(uname -m)
-export BIOMEOS_ROOT="/media/livespore/biomeos"
-
-if [ "$ARCH" = "x86_64" ]; then
-  PRIMAL_PATH="$BIOMEOS_ROOT/x86_64/primals"
-elif [ "$ARCH" = "aarch64" ]; then
-  PRIMAL_PATH="$BIOMEOS_ROOT/aarch64/primals"
-else
-  echo "❌ Unsupported architecture: $ARCH"
-  exit 1
-fi
-
-# Start Tower Atomic
-$PRIMAL_PATH/beardog server &
-$PRIMAL_PATH/songbird server &
+# Sockets created at standard location:
+#   $XDG_RUNTIME_DIR/biomeos/beardog-livespore.sock
+#   $XDG_RUNTIME_DIR/biomeos/songbird-livespore.sock
 ```
 
-### **Manual Deployment**
+### **Full NUCLEUS Deployment**
 
 ```bash
-# x86_64 (Intel/AMD)
-cd /media/livespore/biomeos/x86_64/primals
+# Start Tower + NestGate + Squirrel
+FAMILY_ID=livespore ./start_nest.sh
 
-# OR aarch64 (ARM64 - Pixel 8a)
-cd /media/livespore/biomeos/aarch64/primals
-
-# Environment
-export FAMILY_ID=livespore
-export NODE_ID=$(hostname)
-
-# Tower Atomic
-./beardog server &
-./songbird server &
-
-# Node Atomic (add Toadstool)
-./toadstool daemon --socket /run/user/$UID/biomeos/toadstool.sock --register &
-
-# Nest Atomic (add NestGate + Squirrel)
-export NESTGATE_JWT_SECRET="$(openssl rand -base64 48)"
-./nestgate service start --daemon &
-./squirrel &
+# Or use unified script from scripts/ directory
+../../../scripts/start_nucleus.sh nest
 ```
+
+### **Socket Path Resolution**
+
+Scripts automatically resolve socket directory (5-tier fallback):
+
+```
+1. $BIOMEOS_SOCKET_DIR     (explicit override)
+2. $XDG_RUNTIME_DIR/biomeos/
+3. /run/user/$UID/biomeos/
+4. /data/local/tmp/biomeos/  (Android)
+5. /tmp/biomeos/             (fallback)
+```
+
+See [`specs/PRIMAL_DEPLOYMENT_STANDARD.md`](../specs/PRIMAL_DEPLOYMENT_STANDARD.md) for full specification.
 
 ---
 
@@ -109,14 +97,14 @@ export NESTGATE_JWT_SECRET="$(openssl rand -base64 48)"
 **Total Size:** ~60M (static, no dependencies)  
 **Quality:** A++ average (101.2/100)
 
-### **aarch64-unknown-linux-musl** (Static - To Build)
+### **aarch64-unknown-linux-musl** (Static)
 
 Same 5 primals for ARM64 architecture:
-- Pixel 8a (Graphene OS)
+- Pixel 8a (GrapheneOS)
 - Raspberry Pi 4+
 - Other ARM64 devices
 
-**Status:** ⏳ Pending cross-arch build
+**Status:** ✅ Standardized (same behavior as x86_64)
 
 ---
 
@@ -144,15 +132,17 @@ echo '{"jsonrpc":"2.0","method":"graph.execute","params":{"graph_id":"tower_atom
 
 ## 🔍 **Validation Status**
 
-**Validated on x86_64:**
+**x86_64:**
 - ✅ Tower Atomic (BearDog + Songbird)
 - ✅ Node Atomic (Tower + Toadstool)  
-- ⏳ Nest Atomic (80% - pending NestGate + Squirrel)
+- ✅ Nest Atomic (Tower + NestGate + Squirrel)
+- ✅ Neural API semantic routing
+- ✅ AI via Squirrel → Neural API → Songbird
 
-**Pending ARM64 Validation:**
-- ⏳ Build for aarch64-musl
-- ⏳ Test on Pixel 8a / Raspberry Pi
-- ⏳ Validate all 3 atomics on ARM
+**aarch64 (ARM64):**
+- ✅ Same scripts, same behavior
+- ✅ Socket-based IPC (no HTTP fallback needed)
+- ✅ Tested on Pixel 8a (GrapheneOS)
 
 ---
 
@@ -165,12 +155,12 @@ echo '{"jsonrpc":"2.0","method":"graph.execute","params":{"graph_id":"tower_atom
 - ✅ No installation required
 - ✅ Run from USB directly
 
-### **Socket Standardization** ✅
+### **Socket Standardization** ✅ (PRIMAL_DEPLOYMENT_STANDARD v1.0)
 
-- ✅ All primals use `/run/user/$UID/biomeos/{primal}.sock`
-- ✅ XDG Base Directory compliant
-- ✅ Auto-create biomeos/ subdirectory
-- ✅ 5-tier discovery pattern
+- ✅ All primals use `$SOCKET_DIR/{primal}-{family_id}.sock`
+- ✅ 5-tier socket directory resolution
+- ✅ Same behavior on x86_64 and aarch64
+- ✅ No HTTP ports by default
 
 ### **Multi-Atomic** ✅
 
@@ -249,27 +239,31 @@ cp -r livespore-usb/* /media/usb-mount/
 
 ---
 
-## 🎯 **Next Steps**
+## 🎯 **Status**
 
-### **Complete LiveSpore** (Today)
+### **Completed** ✅
 
-1. ⏳ Build aarch64-musl binaries
-2. ⏳ Harvest to livespore-usb/aarch64/
-3. ⏳ Create launch scripts
-4. ⏳ Test on physical device
+- ✅ x86_64 and aarch64 scripts standardized
+- ✅ Socket-based IPC across all architectures
+- ✅ PRIMAL_DEPLOYMENT_STANDARD v1.0 compliance
+- ✅ Neural API semantic routing validated
 
-### **Deploy & Test** (Tomorrow)
+### **Usage**
 
-1. Write USB image
-2. Boot on Pixel 8a
-3. Validate all atomics on ARM64
-4. Test LAN coordination
+```bash
+# Any architecture
+cd livespore-usb/$(uname -m)/scripts/
+FAMILY_ID=ecosystem ./start_tower.sh
+
+# Or use unified script
+../../../scripts/start_nucleus.sh tower
+```
 
 ---
 
-**Build Date:** January 30, 2026  
-**Version:** NUCLEUS Legendary Session  
-**Status:** x86_64 READY, aarch64 PENDING  
-**Quality:** A++ (101.2/100)
+**Build Date:** February 3, 2026  
+**Version:** NUCLEUS + PRIMAL_DEPLOYMENT_STANDARD v1.0  
+**Status:** x86_64 ✅ | aarch64 ✅  
+**Standard:** Deterministic behavior across architectures
 
-🦀✨ **LIVESPORE USB - NUCLEUS COMPLETE!** ✨🦀
+🧬✨ **LIVESPORE USB - ARCHITECTURE PARITY COMPLETE!** ✨🧬

@@ -44,11 +44,30 @@ pub mod version {
 /// 3. Primals query for capabilities they need (e.g., "security", "storage")
 /// 4. No primal contains knowledge of specific other primal endpoints
 pub mod endpoints {
-    /// Default localhost address (for binding)
+    use super::env_vars;
+    use std::env;
+
+    /// Default localhost address (for binding) - fallback only
     pub const DEFAULT_LOCALHOST: &str = "127.0.0.1";
 
-    /// Production bind address (for accepting connections)
+    /// Production bind address (for accepting connections) - fallback only
     pub const PRODUCTION_BIND_ADDRESS: &str = "0.0.0.0";
+
+    /// Get bind address from environment or fallback to default
+    ///
+    /// Checks `BIND_ADDRESS` environment variable first.
+    /// Falls back to `DEFAULT_LOCALHOST` for development.
+    pub fn bind_address() -> String {
+        env::var(env_vars::BIND_ADDRESS).unwrap_or_else(|_| DEFAULT_LOCALHOST.to_string())
+    }
+
+    /// Get production bind address from environment or fallback
+    ///
+    /// Checks `BIND_ADDRESS` environment variable first.
+    /// Falls back to `PRODUCTION_BIND_ADDRESS` for production.
+    pub fn production_bind_address() -> String {
+        env::var(env_vars::BIND_ADDRESS).unwrap_or_else(|_| PRODUCTION_BIND_ADDRESS.to_string())
+    }
 
     // REMOVED: FALLBACK_*_ENDPOINT constants
     //
@@ -170,21 +189,78 @@ pub mod limits {
 }
 
 /// Network configuration constants
+///
+/// **DESIGN PRINCIPLE**: These are FALLBACK defaults only.
+/// Production systems MUST use environment variables or capability discovery.
 pub mod network {
-    /// Default HTTP port
+    use super::env_vars;
+    use std::env;
+
+    /// Default HTTP port (fallback only)
     pub const DEFAULT_HTTP_PORT: u16 = 8080;
 
-    /// Default HTTPS port
+    /// Default HTTPS port (fallback only)
     pub const DEFAULT_HTTPS_PORT: u16 = 8443;
 
-    /// Default WebSocket port
+    /// Default WebSocket port (fallback only)
     pub const DEFAULT_WS_PORT: u16 = 8081;
 
-    /// Default MCP port
+    /// Default MCP port (fallback only)
     pub const DEFAULT_MCP_PORT: u16 = 3000;
 
-    /// Default discovery port
+    /// Default discovery port (fallback only)
     pub const DEFAULT_DISCOVERY_PORT: u16 = 8001;
+
+    /// Get HTTP port from environment or fallback to default
+    ///
+    /// Checks `HTTP_PORT` environment variable first.
+    pub fn http_port() -> u16 {
+        env::var(env_vars::HTTP_PORT)
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(DEFAULT_HTTP_PORT)
+    }
+
+    /// Get HTTPS port from environment or fallback to default
+    ///
+    /// Checks `HTTPS_PORT` environment variable first.
+    pub fn https_port() -> u16 {
+        env::var(env_vars::HTTPS_PORT)
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(DEFAULT_HTTPS_PORT)
+    }
+
+    /// Get WebSocket port from environment or fallback to default
+    ///
+    /// Checks `WEBSOCKET_PORT` environment variable first.
+    pub fn websocket_port() -> u16 {
+        env::var(env_vars::WEBSOCKET_PORT)
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(DEFAULT_WS_PORT)
+    }
+
+    /// Get MCP port from environment or fallback to default
+    ///
+    /// Checks `MCP_PORT` or `MCP_WEBSOCKET_PORT` environment variable first.
+    pub fn mcp_port() -> u16 {
+        env::var(env_vars::MCP_WEBSOCKET_PORT)
+            .or_else(|_| env::var("MCP_PORT"))
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(DEFAULT_MCP_PORT)
+    }
+
+    /// Get discovery port from environment or fallback to default
+    ///
+    /// Checks `DISCOVERY_PORT` environment variable first.
+    pub fn discovery_port() -> u16 {
+        env::var("DISCOVERY_PORT")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(DEFAULT_DISCOVERY_PORT)
+    }
 
     /// Link local address range
     pub const LINK_LOCAL_RANGE: &str = "169.254.0.0/16";
@@ -387,6 +463,9 @@ pub mod env_vars {
 
     /// WebSocket port environment variable
     pub const WEBSOCKET_PORT: &str = "WEBSOCKET_PORT";
+
+    /// HTTPS port environment variable
+    pub const HTTPS_PORT: &str = "HTTPS_PORT";
 
     /// MCP WebSocket port environment variable
     pub const MCP_WEBSOCKET_PORT: &str = "MCP_WEBSOCKET_PORT";

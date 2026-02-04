@@ -12,7 +12,7 @@
 //!
 //! If ToadStool is not available, capacity check passes by default.
 
-use crate::primal_client::{PrimalClient, ToadStoolClient};
+use crate::primal_client::ToadStoolClient;
 use anyhow::Result;
 use tracing::{debug, info, warn};
 

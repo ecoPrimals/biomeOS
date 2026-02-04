@@ -133,6 +133,7 @@ pub struct GraphMetadata {
 /// Graph category for classification.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
+#[derive(Default)]
 pub enum GraphCategory {
     /// Deployment graphs
     Deployment,
@@ -141,15 +142,10 @@ pub enum GraphCategory {
     /// Testing graphs
     Testing,
     /// Utility graphs
+    #[default]
     Utility,
     /// Lifecycle graphs
     Lifecycle,
-}
-
-impl Default for GraphCategory {
-    fn default() -> Self {
-        Self::Utility
-    }
 }
 
 impl DeploymentGraph {

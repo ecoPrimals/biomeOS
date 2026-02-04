@@ -237,30 +237,29 @@ mod tests {
             .expect("Should start");
 
         // Use hyper-util HTTP client (Pure Rust, no reqwest dependency)
-        use hyper_util::client::legacy::Client;
-        use hyper_util::rt::TokioExecutor;
         use http_body_util::{BodyExt, Empty};
         use hyper::body::Bytes;
-        
+        use hyper_util::client::legacy::Client;
+        use hyper_util::rt::TokioExecutor;
+
         let client: Client<_, Empty<Bytes>> = Client::builder(TokioExecutor::new()).build_http();
         let uri = format!("{}/health", mock.url())
             .parse::<hyper::Uri>()
             .expect("Should parse URI");
-        
-        let response = client
-            .get(uri)
-            .await
-            .expect("Should send request");
+
+        let response = client.get(uri).await.expect("Should send request");
 
         assert!(response.status().is_success());
 
-        let body_bytes = response.into_body().collect()
+        let body_bytes = response
+            .into_body()
+            .collect()
             .await
             .expect("Should read body")
             .to_bytes();
-        let health: HealthResponse = serde_json::from_slice(&body_bytes)
-            .expect("Should parse JSON");
-        
+        let health: HealthResponse =
+            serde_json::from_slice(&body_bytes).expect("Should parse JSON");
+
         assert_eq!(health.status, "healthy");
         assert_eq!(health.name, "health-test");
         assert_eq!(health.checks_received, 1);
@@ -279,16 +278,16 @@ mod tests {
             .expect("Should start");
 
         // Use hyper-util HTTP client (Pure Rust, no reqwest dependency)
-        use hyper_util::client::legacy::Client;
-        use hyper_util::rt::TokioExecutor;
         use http_body_util::Full;
         use hyper::body::Bytes;
-        
+        use hyper_util::client::legacy::Client;
+        use hyper_util::rt::TokioExecutor;
+
         let client: Client<_, Full<Bytes>> = Client::builder(TokioExecutor::new()).build_http();
         let uri = format!("{}/api/v1/command", mock.url())
             .parse::<hyper::Uri>()
             .expect("Should parse URI");
-        
+
         let json_body = serde_json::to_string(&CommandRequest {
             command: "test-command".to_string(),
         })
@@ -301,10 +300,7 @@ mod tests {
             .body(Full::new(Bytes::from(json_body)))
             .expect("Should build request");
 
-        let response = client
-            .request(req)
-            .await
-            .expect("Should send request");
+        let response = client.request(req).await.expect("Should send request");
 
         assert!(response.status().is_success());
 

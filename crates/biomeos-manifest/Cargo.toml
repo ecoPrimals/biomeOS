@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 authors = ["biomeOS Team"]
 description = "Manifest management utilities for biomeOS using the unified type system"
-license = "MIT OR Apache-2.0"
+license = "AGPL-3.0-only"
 repository = "https://github.com/your-org/biomeos"
 
 [dependencies]

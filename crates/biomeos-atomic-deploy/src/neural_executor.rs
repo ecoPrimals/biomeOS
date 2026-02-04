@@ -602,7 +602,7 @@ impl GraphExecutor {
 
         if check_sockets {
             // Get socket directory
-            let socket_dir = context
+            let _socket_dir = context
                 .env
                 .get("SOCKET_DIR")
                 .ok_or_else(|| anyhow::anyhow!("SOCKET_DIR not set"))?;

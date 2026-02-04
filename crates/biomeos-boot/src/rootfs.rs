@@ -317,6 +317,7 @@ impl RootFsBuilder {
                 .prefix("biomeos-build-")
                 .tempdir()
                 .context("Failed to create temporary mount point")?;
+            #[allow(deprecated)]
             temp_dir.into_path()
         };
 

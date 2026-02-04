@@ -27,6 +27,10 @@ plasmidBin/tower/*
 *.swp
 /target/
 target/
+
+# Local binary directories (not tracked)
+primals/
+bin/
 vm-images/*.img
 vm-testing/*.qcow2
 .vscode/

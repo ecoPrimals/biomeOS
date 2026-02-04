@@ -36,3 +36,59 @@ pub enum GraphError {
     #[error("Capability not found: {0}")]
     CapabilityNotFound(String),
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_io_error_display() {
+        let err = GraphError::Io("file not found".to_string());
+        assert_eq!(err.to_string(), "IO error: file not found");
+    }
+
+    #[test]
+    fn test_parse_error_display() {
+        let err = GraphError::Parse("invalid TOML".to_string());
+        assert_eq!(err.to_string(), "Parse error: invalid TOML");
+    }
+
+    #[test]
+    fn test_validation_error_display() {
+        let err = GraphError::Validation("missing required field".to_string());
+        assert_eq!(err.to_string(), "Validation error: missing required field");
+    }
+
+    #[test]
+    fn test_cyclic_dependency_display() {
+        let err = GraphError::CyclicDependency("A -> B -> A".to_string());
+        assert_eq!(err.to_string(), "Cyclic dependency: A -> B -> A");
+    }
+
+    #[test]
+    fn test_missing_dependency_display() {
+        let err = GraphError::MissingDependency("node-x".to_string());
+        assert_eq!(err.to_string(), "Missing dependency: node-x");
+    }
+
+    #[test]
+    fn test_execution_error_display() {
+        let err = GraphError::Execution("timeout".to_string());
+        assert_eq!(err.to_string(), "Execution error: timeout");
+    }
+
+    #[test]
+    fn test_capability_not_found_display() {
+        let err = GraphError::CapabilityNotFound("crypto.encrypt".to_string());
+        assert_eq!(err.to_string(), "Capability not found: crypto.encrypt");
+    }
+
+    #[test]
+    fn test_result_type() {
+        let ok_result: Result<i32> = Ok(42);
+        assert_eq!(ok_result.unwrap(), 42);
+
+        let err_result: Result<i32> = Err(GraphError::Io("test".to_string()));
+        assert!(err_result.is_err());
+    }
+}

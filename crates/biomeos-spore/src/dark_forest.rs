@@ -691,7 +691,13 @@ impl DarkForestBeacon {
         };
 
         info!("✅ Pure noise beacon decrypted - family member found");
-        debug!("   Node: {}", beacon.get("node_id").and_then(|v| v.as_str()).unwrap_or("unknown"));
+        debug!(
+            "   Node: {}",
+            beacon
+                .get("node_id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown")
+        );
 
         Ok(Some(beacon))
     }

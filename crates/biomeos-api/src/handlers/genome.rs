@@ -1,0 +1,696 @@
+//! Genome Factory API Handlers
+//!
+//! REST/WebSocket endpoints for genomeBin operations.
+//! Implements XDG-compliant file storage for genomeBins.
+//!
+//! AGPL-3.0-only License
+
+use axum::{extract::Path, http::StatusCode, response::Json};
+use biomeos_genomebin_v3::{Arch, GenomeBin, GenomeBinBuilder, GenomeManifest};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::path::PathBuf;
+use tokio::sync::RwLock;
+use tracing::{error, info, warn};
+
+/// Genome state for storing built genomes
+#[derive(Debug)]
+pub struct GenomeState {
+    /// In-memory cache of genomes
+    genomes: RwLock<HashMap<String, GenomeBin>>,
+    /// Storage directory for persistent genomes (XDG-compliant)
+    storage_dir: PathBuf,
+}
+
+impl Default for GenomeState {
+    fn default() -> Self {
+        Self {
+            genomes: RwLock::new(HashMap::new()),
+            storage_dir: Self::default_storage_dir(),
+        }
+    }
+}
+
+impl GenomeState {
+    /// Get XDG-compliant default storage directory
+    fn default_storage_dir() -> PathBuf {
+        // XDG_DATA_HOME or ~/.local/share
+        let data_home = std::env::var("XDG_DATA_HOME")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| {
+                dirs::home_dir()
+                    .map(|h| h.join(".local/share"))
+                    .unwrap_or_else(|| PathBuf::from("/tmp"))
+            });
+        data_home.join("biomeos/genomes")
+    }
+
+    pub fn new() -> Result<Self, String> {
+        let storage_dir = Self::default_storage_dir();
+        Self::with_storage(storage_dir)
+    }
+
+    pub fn with_storage(storage_dir: PathBuf) -> Result<Self, String> {
+        // Ensure directory exists
+        if !storage_dir.exists() {
+            std::fs::create_dir_all(&storage_dir)
+                .map_err(|e| format!("Failed to create genome storage: {}", e))?;
+        }
+        Ok(Self {
+            genomes: RwLock::new(HashMap::new()),
+            storage_dir,
+        })
+    }
+
+    /// Get path for a genome file
+    fn genome_path(&self, id: &str) -> PathBuf {
+        self.storage_dir.join(format!("{}.genome", id))
+    }
+
+    /// Save genome to persistent storage
+    async fn save_genome(&self, id: &str, genome: &GenomeBin) -> Result<(), String> {
+        let path = self.genome_path(id);
+        genome
+            .save(&path)
+            .map_err(|e| format!("Failed to save genome: {}", e))?;
+
+        // Also cache in memory
+        let mut cache = self.genomes.write().await;
+        cache.insert(id.to_string(), genome.clone());
+
+        info!("💾 Saved genome to: {}", path.display());
+        Ok(())
+    }
+
+    /// Load genome from persistent storage
+    async fn load_genome(&self, id: &str) -> Result<GenomeBin, String> {
+        // Check cache first
+        {
+            let cache = self.genomes.read().await;
+            if let Some(genome) = cache.get(id) {
+                return Ok(genome.clone());
+            }
+        }
+
+        // Load from disk
+        let path = self.genome_path(id);
+        if !path.exists() {
+            return Err(format!("Genome not found: {}", id));
+        }
+
+        let genome = GenomeBin::load(&path).map_err(|e| format!("Failed to load genome: {}", e))?;
+
+        // Cache for future access
+        {
+            let mut cache = self.genomes.write().await;
+            cache.insert(id.to_string(), genome.clone());
+        }
+
+        Ok(genome)
+    }
+
+    /// List all genomes in storage
+    async fn list_all(&self) -> Result<Vec<(String, GenomeBin)>, String> {
+        let mut genomes = Vec::new();
+
+        if !self.storage_dir.exists() {
+            return Ok(genomes);
+        }
+
+        let entries = std::fs::read_dir(&self.storage_dir)
+            .map_err(|e| format!("Failed to read storage dir: {}", e))?;
+
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().map(|e| e == "genome").unwrap_or(false) {
+                if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+                    match GenomeBin::load(&path) {
+                        Ok(genome) => {
+                            genomes.push((stem.to_string(), genome));
+                        }
+                        Err(e) => {
+                            warn!("Failed to load genome {}: {}", path.display(), e);
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(genomes)
+    }
+}
+
+// Thread-safe global state
+lazy_static::lazy_static! {
+    static ref GENOME_STATE: GenomeState = GenomeState::default();
+}
+
+/// Build genomeBin request
+#[derive(Debug, Deserialize)]
+pub struct BuildRequest {
+    /// Genome name
+    pub name: String,
+    /// Optional version
+    pub version: Option<String>,
+    /// Optional description
+    pub description: Option<String>,
+    /// Binary path and architecture pairs
+    pub binaries: Vec<BinarySpec>,
+}
+
+/// Binary specification
+#[derive(Debug, Deserialize)]
+pub struct BinarySpec {
+    /// Architecture (x86_64, aarch64, arm, riscv64)
+    pub arch: String,
+    /// Path to binary file
+    pub path: PathBuf,
+}
+
+/// Build genomeBin response
+#[derive(Debug, Serialize)]
+pub struct BuildResponse {
+    pub success: bool,
+    pub genome_id: String,
+    pub message: String,
+}
+
+/// Build a new genomeBin
+pub async fn build_genome(
+    Json(req): Json<BuildRequest>,
+) -> Result<Json<BuildResponse>, StatusCode> {
+    info!("Building genomeBin: {}", req.name);
+
+    let mut builder = GenomeBinBuilder::new(&req.name);
+
+    if let Some(version) = &req.version {
+        builder = builder.version(version.clone());
+    }
+
+    if let Some(description) = &req.description {
+        builder = builder.description(description.clone());
+    }
+
+    // Parse and add binaries
+    for spec in req.binaries {
+        let arch = match spec.arch.as_str() {
+            "x86_64" => Arch::X86_64,
+            "aarch64" => Arch::Aarch64,
+            "arm" => Arch::Arm,
+            "riscv64" => Arch::Riscv64,
+            _ => {
+                error!("Invalid architecture: {}", spec.arch);
+                return Err(StatusCode::BAD_REQUEST);
+            }
+        };
+
+        if !spec.path.exists() {
+            error!("Binary not found: {}", spec.path.display());
+            return Err(StatusCode::NOT_FOUND);
+        }
+
+        builder = builder.add_binary(arch, spec.path);
+    }
+
+    match builder.build() {
+        Ok(genome) => {
+            let genome_id = format!("{}-{}", genome.manifest.name, genome.manifest.version);
+
+            // Save to persistent storage
+            if let Err(e) = GENOME_STATE.save_genome(&genome_id, &genome).await {
+                error!("Failed to save genome: {}", e);
+                return Err(StatusCode::INTERNAL_SERVER_ERROR);
+            }
+
+            info!("✅ Built and saved genomeBin: {}", genome_id);
+
+            Ok(Json(BuildResponse {
+                success: true,
+                genome_id,
+                message: format!(
+                    "Built genomeBin with {} architectures",
+                    genome.binaries.len()
+                ),
+            }))
+        }
+        Err(e) => {
+            error!("Failed to build genomeBin: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+/// Get genomeBin info
+pub async fn get_genome_info(
+    Path(id): Path<String>,
+) -> Result<Json<GenomeInfoResponse>, StatusCode> {
+    info!("Getting genome info: {}", id);
+
+    match GENOME_STATE.load_genome(&id).await {
+        Ok(genome) => {
+            let archs: Vec<String> = genome
+                .binaries
+                .keys()
+                .map(|a| format!("{:?}", a).to_lowercase())
+                .collect();
+
+            Ok(Json(GenomeInfoResponse {
+                name: genome.manifest.name.clone(),
+                version: genome.manifest.version.clone(),
+                architectures: archs,
+            }))
+        }
+        Err(e) => {
+            error!("Genome not found: {} - {}", id, e);
+            Err(StatusCode::NOT_FOUND)
+        }
+    }
+}
+
+/// Download genomeBin
+pub async fn download_genome(Path(id): Path<String>) -> Result<Json<DownloadResponse>, StatusCode> {
+    info!("Download request for genome: {}", id);
+
+    let path = GENOME_STATE.genome_path(&id);
+    if !path.exists() {
+        error!("Genome not found: {}", id);
+        return Err(StatusCode::NOT_FOUND);
+    }
+
+    let size = std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
+
+    Ok(Json(DownloadResponse {
+        url: format!("/api/v1/genome/{}/data", id),
+        size,
+    }))
+}
+
+/// Verify genomeBin request
+#[derive(Debug, Deserialize)]
+pub struct VerifyRequest {
+    /// Path to genomeBin file
+    pub path: PathBuf,
+}
+
+/// Verify genomeBin response
+#[derive(Debug, Serialize)]
+pub struct VerifyResponse {
+    pub valid: bool,
+    pub message: String,
+}
+
+/// Verify genomeBin integrity by ID
+pub async fn verify_genome(Path(id): Path<String>) -> Result<Json<VerifyResponse>, StatusCode> {
+    info!("Verifying genome: {}", id);
+
+    match GENOME_STATE.load_genome(&id).await {
+        Ok(genome) => match genome.is_valid() {
+            Ok(valid) => {
+                if valid {
+                    info!("✅ Genome verified: {}", id);
+                    Ok(Json(VerifyResponse {
+                        valid: true,
+                        message: "All checksums valid".to_string(),
+                    }))
+                } else {
+                    error!("❌ Genome verification failed: {}", id);
+                    Ok(Json(VerifyResponse {
+                        valid: false,
+                        message: "Checksum verification failed".to_string(),
+                    }))
+                }
+            }
+            Err(e) => {
+                error!("Verification error: {}", e);
+                Err(StatusCode::INTERNAL_SERVER_ERROR)
+            }
+        },
+        Err(e) => {
+            error!("Genome not found: {} - {}", id, e);
+            Err(StatusCode::NOT_FOUND)
+        }
+    }
+}
+
+/// Verify genomeBin integrity from file (legacy)
+pub async fn verify_genome_file(
+    Json(req): Json<VerifyRequest>,
+) -> Result<Json<VerifyResponse>, StatusCode> {
+    info!("Verifying genomeBin: {}", req.path.display());
+
+    if !req.path.exists() {
+        error!("GenomeBin not found: {}", req.path.display());
+        return Err(StatusCode::NOT_FOUND);
+    }
+
+    match GenomeBin::load(&req.path) {
+        Ok(genome) => match genome.is_valid() {
+            Ok(valid) => {
+                if valid {
+                    info!("✅ GenomeBin verified: {}", req.path.display());
+                    Ok(Json(VerifyResponse {
+                        valid: true,
+                        message: "All checksums valid".to_string(),
+                    }))
+                } else {
+                    error!("❌ GenomeBin verification failed: {}", req.path.display());
+                    Ok(Json(VerifyResponse {
+                        valid: false,
+                        message: "Checksum verification failed".to_string(),
+                    }))
+                }
+            }
+            Err(e) => {
+                error!("Verification error: {}", e);
+                Err(StatusCode::INTERNAL_SERVER_ERROR)
+            }
+        },
+        Err(e) => {
+            error!("Failed to load genomeBin: {}", e);
+            Err(StatusCode::BAD_REQUEST)
+        }
+    }
+}
+
+/// GenomeBin info response
+#[derive(Debug, Serialize)]
+pub struct GenomeInfoResponse {
+    pub name: String,
+    pub version: String,
+    pub architectures: Vec<String>,
+}
+
+/// Download response
+#[derive(Debug, Serialize)]
+pub struct DownloadResponse {
+    pub url: String,
+    pub size: u64,
+}
+
+// ============================================================================
+// Public Handler Functions (used by router)
+// ============================================================================
+
+/// Create a new genome
+#[derive(Debug, Deserialize)]
+pub struct CreateGenomeRequest {
+    pub name: String,
+    pub version: Option<String>,
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct CreateGenomeResponse {
+    pub success: bool,
+    pub genome_id: String,
+    pub message: String,
+}
+
+pub async fn create_genome(
+    Json(req): Json<CreateGenomeRequest>,
+) -> Result<Json<CreateGenomeResponse>, StatusCode> {
+    info!("Creating genome: {}", req.name);
+
+    let manifest = GenomeManifest::new(&req.name)
+        .version(req.version.unwrap_or_else(|| "0.1.0".to_string()))
+        .description(req.description.unwrap_or_default());
+
+    let genome = GenomeBin::with_manifest(manifest);
+    let genome_id = format!("{}-{}", genome.manifest.name, genome.manifest.version);
+
+    // Save to persistent storage
+    if let Err(e) = GENOME_STATE.save_genome(&genome_id, &genome).await {
+        error!("Failed to save genome: {}", e);
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    Ok(Json(CreateGenomeResponse {
+        success: true,
+        genome_id: genome_id.clone(),
+        message: format!("Created genome: {}", genome_id),
+    }))
+}
+
+/// Compose genomes into atomic
+#[derive(Debug, Deserialize)]
+pub struct ComposeRequest {
+    pub name: String,
+    pub nucleus_type: String,
+    pub genomes: Vec<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ComposeResponse {
+    pub success: bool,
+    pub genome_id: String,
+    pub embedded_count: usize,
+    pub message: String,
+}
+
+pub async fn compose_genome(
+    Json(req): Json<ComposeRequest>,
+) -> Result<Json<ComposeResponse>, StatusCode> {
+    info!(
+        "Composing {} atomic from {} genomes",
+        req.nucleus_type,
+        req.genomes.len()
+    );
+
+    // Load all source genomes
+    let mut source_genomes = Vec::new();
+    for genome_id in &req.genomes {
+        match GENOME_STATE.load_genome(genome_id).await {
+            Ok(genome) => source_genomes.push(genome),
+            Err(e) => {
+                error!("Failed to load genome {}: {}", genome_id, e);
+                return Err(StatusCode::NOT_FOUND);
+            }
+        }
+    }
+
+    // Create composed genome manifest
+    let manifest = GenomeManifest::new(&req.name)
+        .version("1.0.0")
+        .description(format!(
+            "{} atomic composed from {} genomes",
+            req.nucleus_type,
+            source_genomes.len()
+        ))
+        .nucleus_atomic(&req.nucleus_type);
+
+    let mut composed = GenomeBin::with_manifest(manifest);
+
+    // Merge binaries from all source genomes
+    let mut embedded_count = 0;
+    for source in &source_genomes {
+        for (arch, binary) in &source.binaries {
+            // Only add if not already present
+            if !composed.binaries.contains_key(arch) {
+                composed.add_binary_bytes(*arch, &binary.data);
+                embedded_count += 1;
+            }
+        }
+    }
+
+    let genome_id = format!("{}-composed", req.name);
+
+    // Save composed genome
+    if let Err(e) = GENOME_STATE.save_genome(&genome_id, &composed).await {
+        error!("Failed to save composed genome: {}", e);
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    Ok(Json(ComposeResponse {
+        success: true,
+        genome_id: genome_id.clone(),
+        embedded_count,
+        message: format!(
+            "Composed {} binaries from {} genomes",
+            embedded_count,
+            req.genomes.len()
+        ),
+    }))
+}
+
+/// Self-replicate biomeOS
+#[derive(Debug, Serialize)]
+pub struct SelfReplicateResponse {
+    pub success: bool,
+    pub genome_id: String,
+    pub size: u64,
+    pub message: String,
+}
+
+pub async fn self_replicate() -> Result<Json<SelfReplicateResponse>, StatusCode> {
+    info!("Self-replication initiated");
+
+    // Get current executable
+    let self_binary = std::env::current_exe().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let arch = Arch::detect();
+    let binary_data = std::fs::read(&self_binary).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let manifest = GenomeManifest::new("biomeos")
+        .version(env!("CARGO_PKG_VERSION"))
+        .description("biomeOS System Orchestrator - Self-Replicated")
+        .nucleus_atomic("ORCHESTRATOR")
+        .add_capability("orchestration")
+        .add_capability("self-replication");
+
+    let mut genome = GenomeBin::with_manifest(manifest);
+    genome.add_binary_bytes(arch, &binary_data);
+
+    let genome_id = "biomeos-self".to_string();
+    let size = binary_data.len() as u64;
+
+    // Save to persistent storage
+    if let Err(e) = GENOME_STATE.save_genome(&genome_id, &genome).await {
+        error!("Failed to save self-replicated genome: {}", e);
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    Ok(Json(SelfReplicateResponse {
+        success: true,
+        genome_id: genome_id.clone(),
+        size,
+        message: format!("Self-replicated biomeOS: {} bytes", size),
+    }))
+}
+
+/// List all genomes
+#[derive(Debug, Serialize)]
+pub struct ListGenomesResponse {
+    pub genomes: Vec<GenomeSummary>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct GenomeSummary {
+    pub id: String,
+    pub name: String,
+    pub version: String,
+    pub architectures: Vec<String>,
+}
+
+pub async fn list_genomes() -> Result<Json<ListGenomesResponse>, StatusCode> {
+    info!("Listing all genomes");
+
+    match GENOME_STATE.list_all().await {
+        Ok(genomes) => {
+            let summaries: Vec<GenomeSummary> = genomes
+                .iter()
+                .map(|(id, genome)| {
+                    let archs: Vec<String> = genome
+                        .binaries
+                        .keys()
+                        .map(|a| format!("{:?}", a).to_lowercase())
+                        .collect();
+                    GenomeSummary {
+                        id: id.clone(),
+                        name: genome.manifest.name.clone(),
+                        version: genome.manifest.version.clone(),
+                        architectures: archs,
+                    }
+                })
+                .collect();
+
+            Ok(Json(ListGenomesResponse { genomes: summaries }))
+        }
+        Err(e) => {
+            error!("Failed to list genomes: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_genome_state_default_storage_dir() {
+        let dir = GenomeState::default_storage_dir();
+        assert!(dir.to_string_lossy().contains("biomeos/genomes"));
+    }
+
+    #[test]
+    fn test_build_request_deserialize() {
+        let json = r#"{
+            "name": "test-genome",
+            "version": "1.0.0",
+            "description": "Test genome",
+            "binaries": []
+        }"#;
+        let req: BuildRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.name, "test-genome");
+        assert_eq!(req.version, Some("1.0.0".to_string()));
+    }
+
+    #[test]
+    fn test_build_response_serialize() {
+        let resp = BuildResponse {
+            success: true,
+            genome_id: "test-1.0.0".to_string(),
+            message: "Built".to_string(),
+        };
+        let json = serde_json::to_string(&resp).unwrap();
+        assert!(json.contains("test-1.0.0"));
+    }
+
+    #[test]
+    fn test_verify_response_serialize() {
+        let resp = VerifyResponse {
+            valid: true,
+            message: "All checksums valid".to_string(),
+        };
+        let json = serde_json::to_string(&resp).unwrap();
+        assert!(json.contains("valid"));
+        assert!(json.contains("true"));
+    }
+
+    #[test]
+    fn test_create_genome_request_deserialize() {
+        let json = r#"{
+            "name": "my-genome"
+        }"#;
+        let req: CreateGenomeRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.name, "my-genome");
+        assert!(req.version.is_none());
+    }
+
+    #[test]
+    fn test_compose_request_deserialize() {
+        let json = r#"{
+            "name": "tower-atomic",
+            "nucleus_type": "TOWER",
+            "genomes": ["beardog-1.0", "songbird-1.0"]
+        }"#;
+        let req: ComposeRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.name, "tower-atomic");
+        assert_eq!(req.nucleus_type, "TOWER");
+        assert_eq!(req.genomes.len(), 2);
+    }
+
+    #[test]
+    fn test_genome_summary_serialize() {
+        let summary = GenomeSummary {
+            id: "test-1.0".to_string(),
+            name: "test".to_string(),
+            version: "1.0".to_string(),
+            architectures: vec!["x86_64".to_string()],
+        };
+        let json = serde_json::to_string(&summary).unwrap();
+        assert!(json.contains("test-1.0"));
+        assert!(json.contains("x86_64"));
+    }
+
+    #[test]
+    fn test_download_response_serialize() {
+        let resp = DownloadResponse {
+            url: "/api/v1/genome/test/data".to_string(),
+            size: 12345,
+        };
+        let json = serde_json::to_string(&resp).unwrap();
+        assert!(json.contains("/api/v1/genome/test/data"));
+        assert!(json.contains("12345"));
+    }
+}

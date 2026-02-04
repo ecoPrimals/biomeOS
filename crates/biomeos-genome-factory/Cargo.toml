@@ -3,7 +3,7 @@ name = "biomeos-genome-factory"
 version = "1.0.0"
 edition = "2021"
 authors = ["ecoPrimals Team"]
-license = "MIT"
+license = "AGPL-3.0-only"
 description = "Genome Factory - Universal genomeBin production for any primal"
 repository = "https://github.com/ecoPrimals/biomeOS"
 

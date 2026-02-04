@@ -81,13 +81,14 @@ async fn main() -> Result<()> {
 
     for i in 0..spores.len() {
         for j in (i + 1)..spores.len() {
-            let (node_a, _seed_a, hash_a) = &spores[i];
+            let (node_a, _seed_a, _hash_a) = &spores[i];
             let (node_b, seed_b_bytes, hash_b) = &spores[j];
 
             println!("Testing: {} ↔ {}", node_a, node_b);
 
             // Convert seed_b to base64 for BearDog API
-            let seed_b_base64 = base64::encode(seed_b_bytes);
+            use base64::Engine;
+            let _seed_b_base64 = base64::engine::general_purpose::STANDARD.encode(seed_b_bytes);
 
             match client.verify_same_family("nat0", hash_b, node_b).await {
                 Ok(response) => {

@@ -115,6 +115,7 @@ pub struct PrimalIdentity {
 /// Standard health status for all primals
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
+#[derive(Default)]
 pub enum HealthStatus {
     /// Primal is healthy and operational
     Healthy,
@@ -126,13 +127,8 @@ pub enum HealthStatus {
     Unhealthy,
 
     /// Health status unknown
+    #[default]
     Unknown,
-}
-
-impl Default for HealthStatus {
-    fn default() -> Self {
-        Self::Unknown
-    }
 }
 
 /// Peer information

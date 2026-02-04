@@ -1,0 +1,337 @@
+# =============================================================================
+# Data Nest Deployment Graph - Neural API Evolution
+# =============================================================================
+#
+# This graph deploys a complete Nest niche:
+# - BearDog (security, encryption, genetic lineage) - MUST START FIRST
+# - Songbird (discovery, federation) - Needs BearDog as security provider
+# - NestGate (storage, provenance, persistence) - Registers with Songbird
+#
+# Deep Debt Principles:
+# - Capability-based discovery (zero hardcoding!)
+# - Proper startup sequence (BearDog → Songbird → NestGate)
+# - Self-knowledge only (primals discover each other at runtime)
+# - XDG-compliant paths (no /tmp hardcoding)
+#
+# Created: January 10, 2026
+# Status: Neural API Evolution - Production Ready
+#
+# =============================================================================
+
+[graph]
+name = "nest_deploy"
+version = "2.0.0"
+description = "Deploy complete data nest with storage, persistence, and provenance"
+coordination = "Sequential"
+
+# =============================================================================
+# Phase 1: Start Security Provider (BearDog MUST start first!)
+# =============================================================================
+#
+# BearDog is the FOUNDATION - provides:
+# - Encryption for data at rest
+# - Access control for nest operations
+# - Genetic lineage verification
+# - Security provider for Songbird
+#
+# =============================================================================
+
+[[nodes]]
+id = "start-beardog"
+primal = { by_capability = "security" }
+output = "beardog_started"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "data-vault"  # Optimized for nest storage
+family_id = "${FAMILY_ID}"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[nodes.constraints.retry]
+max_attempts = 3
+backoff_ms = 2000
+
+# =============================================================================
+# Phase 2: Start Discovery Service (Songbird needs BearDog!)
+# =============================================================================
+#
+# Songbird provides:
+# - Service discovery for NestGate registration
+# - Federation coordination across nest nodes
+# - Encrypted data transfer via BTSP tunnels
+#
+# =============================================================================
+
+[[nodes]]
+id = "start-songbird"
+primal = { by_capability = "discovery" }
+output = "songbird_started"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "daemon"
+family_id = "${FAMILY_ID}"
+# Songbird will auto-discover BearDog via capability-based discovery
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[nodes.constraints.retry]
+max_attempts = 3
+backoff_ms = 2000
+
+# =============================================================================
+# Phase 3: Start Storage Gateway (NestGate)
+# =============================================================================
+#
+# NestGate provides:
+# - Content-addressed storage
+# - Data provenance tracking
+# - Adaptive compression (8:1 for genomics)
+# - Zero-copy operations
+# - Auto-registration with Songbird
+#
+# =============================================================================
+
+[[nodes]]
+id = "start-nestgate"
+primal = { by_capability = "storage" }
+output = "nestgate_started"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "daemon"
+family_id = "${FAMILY_ID}"
+provenance_enabled = true
+# NestGate will:
+# 1. Discover Songbird via $SONGBIRD_FAMILY_ID
+# 2. Auto-register 6 capabilities
+# 3. Report health every 30s
+
+[nodes.constraints]
+timeout_ms = 60000
+
+[nodes.constraints.retry]
+max_attempts = 3
+backoff_ms = 2000
+
+# =============================================================================
+# Phase 4: Verify All Services Registered
+# =============================================================================
+
+[[nodes]]
+id = "verify-songbird-registration"
+primal = { by_capability = "discovery" }
+output = "nest_services_registered"
+
+[nodes.operation]
+name = "discover_by_capability"
+
+[nodes.operation.params]
+capability = "storage"
+# Should discover NestGate with 6 capabilities
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# =============================================================================
+# Phase 5: Verify Storage Health
+# =============================================================================
+
+[[nodes]]
+id = "verify-nestgate-health"
+primal = { by_capability = "storage" }
+output = "nestgate_health"
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.operation.params]
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# =============================================================================
+# Phase 6: Test Storage Operations
+# =============================================================================
+
+[[nodes]]
+id = "test-nestgate-store"
+primal = { by_capability = "storage" }
+output = "test_store_result"
+
+[nodes.operation]
+name = "store"
+
+[nodes.operation.params]
+key = "nest:deployment:test"
+data = { deployed_at = "2026-01-10", status = "operational", primals = 3 }
+
+[nodes.constraints]
+timeout_ms = 5000
+
+[[nodes]]
+id = "test-nestgate-stats"
+primal = { by_capability = "storage" }
+output = "storage_stats"
+
+[nodes.operation]
+name = "stats"
+
+[nodes.operation.params]
+
+[nodes.constraints]
+timeout_ms = 5000
+
+# =============================================================================
+# Phase 7: Verify Encryption Integration
+# =============================================================================
+
+[[nodes]]
+id = "test-encrypted-storage"
+primal = { by_capability = "security" }
+output = "encrypted_test"
+
+[nodes.operation]
+name = "encrypt"
+
+[nodes.operation.params]
+data = "nest test data"
+algorithm = "aes256"
+
+[nodes.constraints]
+timeout_ms = 5000
+
+[[nodes]]
+id = "store-encrypted-data"
+primal = { by_capability = "storage" }
+output = "encrypted_blob_stored"
+
+[nodes.operation]
+name = "store_blob"
+
+[nodes.operation.params]
+key = "encrypted:nest:test"
+blob = "{{nodes.test-encrypted-storage.output}}"
+
+[nodes.constraints]
+timeout_ms = 5000
+
+# =============================================================================
+# Phase 8: Final Nest Verification
+# =============================================================================
+
+[[nodes]]
+id = "verify-nest-operational"
+primal = { by_capability = "storage" }
+output = "nest_status"
+
+[nodes.operation]
+name = "get_stats"
+
+[nodes.operation.params]
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# =============================================================================
+# Dependencies (Explicit Ordering for Sequential Execution)
+# =============================================================================
+
+# Phase 1 → Phase 2 (BearDog MUST start before Songbird)
+[[edges]]
+from = "start-beardog"
+to = "start-songbird"
+
+# Phase 2 → Phase 3 (Songbird MUST be running for NestGate registration)
+[[edges]]
+from = "start-songbird"
+to = "start-nestgate"
+
+# Phase 3 → Phase 4 (NestGate started → verify registration)
+[[edges]]
+from = "start-nestgate"
+to = "verify-songbird-registration"
+
+# Phase 4 → Phase 5 (Registration verified → check health)
+[[edges]]
+from = "verify-songbird-registration"
+to = "verify-nestgate-health"
+
+# Phase 5 → Phase 6 (Health checked → test operations)
+[[edges]]
+from = "verify-nestgate-health"
+to = "test-nestgate-store"
+
+[[edges]]
+from = "test-nestgate-store"
+to = "test-nestgate-stats"
+
+# Phase 6 → Phase 7 (Operations tested → test encryption integration)
+[[edges]]
+from = "test-nestgate-stats"
+to = "test-encrypted-storage"
+
+[[edges]]
+from = "test-encrypted-storage"
+to = "store-encrypted-data"
+
+# Phase 7 → Phase 8 (Encryption tested → final verification)
+[[edges]]
+from = "store-encrypted-data"
+to = "verify-nest-operational"
+
+# =============================================================================
+# Expected Metrics Collection
+# =============================================================================
+#
+# Neural API will collect:
+# - BearDog startup time (baseline for security provider)
+# - Songbird startup time (discovery service initialization)
+# - NestGate startup time (storage gateway initialization)
+# - Registration latency (NestGate → Songbird)
+# - Storage operation latency (store, retrieve, stats)
+# - Encryption operation latency (BearDog)
+# - Overall nest deployment time
+#
+# These metrics enable:
+# - Performance optimization (identify bottlenecks)
+# - Adaptive deployment strategies
+# - Learning optimal startup sequences
+# - Predictive resource allocation
+#
+# =============================================================================
+
+# =============================================================================
+# Usage
+# =============================================================================
+#
+# Deploy nest niche:
+#   biomeos deploy-niche niches/nest.toml
+#   (Uses this graph automatically via default = true in nest.toml)
+#
+# Deploy with specific graph:
+#   biomeos deploy-niche niches/nest.toml --graph nest_deploy
+#
+# Expected output:
+#   ✅ Phase 1: BearDog started (PID: xxxx, socket: /run/user/{uid}/beardog-nat0.sock)
+#   ✅ Phase 2: Songbird started (PID: xxxx, socket: /run/user/{uid}/songbird-nat0.sock)
+#   ✅ Phase 3: NestGate started (PID: xxxx, socket: /run/user/{uid}/nestgate-nat0.sock)
+#   ✅ Phase 4: NestGate registered with Songbird (6 capabilities)
+#   ✅ Phase 5: NestGate health check passed
+#   ✅ Phase 6: Storage operations verified
+#   ✅ Phase 7: Encryption integration verified
+#   ✅ Phase 8: Nest operational!
+#
+# Total time: ~10-15 seconds (depending on storage backend)
+#
+# =============================================================================
+

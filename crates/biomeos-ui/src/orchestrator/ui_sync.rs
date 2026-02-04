@@ -11,7 +11,7 @@
 //! If petalTongue is not available, UI is not updated
 //! but operations continue successfully.
 
-use crate::primal_client::{PetalTongueClient, PrimalClient};
+use crate::primal_client::PetalTongueClient;
 use anyhow::Result;
 use tracing::{debug, info, warn};
 
@@ -102,7 +102,7 @@ impl UISync {
                 }
                 Err(e) => {
                     warn!("⚠️ Failed to push initial state: {}", e);
-                    Err(e.into())
+                    Err(e)
                 }
             }
         } else {
@@ -144,8 +144,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_update_ui_no_petaltongue() {
-        let result =
-            UISync::update_ui_after_assignment(&None, "test-device", "test-primal").await;
+        let result = UISync::update_ui_after_assignment(&None, "test-device", "test-primal").await;
 
         // Should return error but not panic
         assert!(result.is_err());

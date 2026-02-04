@@ -8,21 +8,14 @@ use std::path::PathBuf;
 use tracing::{debug, info};
 
 /// Socket Nucleation Strategy
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub enum SocketStrategy {
     /// /tmp/{primal}-{family_id}.sock
     FamilyDeterministic,
 
     /// XDG_RUNTIME_DIR/{primal}-{family_id}.sock (or /tmp/ fallback)
+    #[default]
     XdgRuntime,
-}
-
-impl Default for SocketStrategy {
-    fn default() -> Self {
-        // XdgRuntime is preferred for proper Unix compliance
-        // Falls back to /tmp/{primal}-{family}.sock if XDG_RUNTIME_DIR unavailable
-        Self::XdgRuntime
-    }
 }
 
 /// Socket Nucleation - Assigns sockets deterministically

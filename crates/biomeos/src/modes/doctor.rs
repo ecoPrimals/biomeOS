@@ -177,7 +177,8 @@ async fn check_configuration() -> Result<HealthCheck> {
     // Use etcetera (Pure Rust!) for config directory
     use etcetera::base_strategy::{choose_base_strategy, BaseStrategy};
     let config_path = choose_base_strategy()
-        .ok().map(|strategy| strategy.config_dir().join("biomeos/config.toml"))
+        .ok()
+        .map(|strategy| strategy.config_dir().join("biomeos/config.toml"))
         .unwrap_or_else(|| Path::new("~/.config/biomeos/config.toml").to_path_buf());
 
     if config_path.exists() {

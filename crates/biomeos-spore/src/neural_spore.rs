@@ -169,7 +169,9 @@ impl NeuralSpore {
         while let Some(entry) = entries.next_entry().await? {
             let path = entry.path();
             if path.extension().and_then(|s| s.to_str()) == Some("toml") {
-                let filename = path.file_name().unwrap();
+                let filename = path
+                    .file_name()
+                    .context("Graph file path has no filename")?;
                 let dest = self.graphs_dir.join(filename);
 
                 tokio::fs::copy(&path, &dest)
@@ -195,7 +197,9 @@ impl NeuralSpore {
         while let Some(entry) = entries.next_entry().await? {
             let path = entry.path();
             if path.is_file() {
-                let filename = path.file_name().unwrap();
+                let filename = path
+                    .file_name()
+                    .context("Binary file path has no filename")?;
                 let dest = self.binaries_dir.join(filename);
 
                 tokio::fs::copy(&path, &dest)

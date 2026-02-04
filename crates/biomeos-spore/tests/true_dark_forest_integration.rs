@@ -42,7 +42,7 @@ async fn test_same_family_discovery() -> Result<(), Box<dyn std::error::Error>> 
     println!("═══════════════════════════════════════════════════════════════════\n");
 
     let beardog = beardog_socket();
-    
+
     // Check beardog availability
     if !std::path::Path::new(&beardog).exists() {
         eprintln!("⚠️  Skipping: BearDog not running at {}", beardog);
@@ -93,7 +93,7 @@ async fn test_different_family_isolation() -> Result<(), Box<dyn std::error::Err
     println!("═══════════════════════════════════════════════════════════════════\n");
 
     let beardog = beardog_socket();
-    
+
     if !std::path::Path::new(&beardog).exists() {
         eprintln!("⚠️  Skipping: BearDog not running at {}", beardog);
         return Ok(());
@@ -104,7 +104,7 @@ async fn test_different_family_isolation() -> Result<(), Box<dyn std::error::Err
     let seed_path_beta = "/tmp/test_family_beta.seed";
     let seed_alpha = b"family_alpha_seed_32bytes_long!!";
     let seed_beta = b"family_beta_seed_32bytes_long!!!";
-    
+
     create_test_seed(seed_path_alpha, seed_alpha).await?;
     create_test_seed(seed_path_beta, seed_beta).await?;
 
@@ -124,7 +124,10 @@ async fn test_different_family_isolation() -> Result<(), Box<dyn std::error::Err
     let result = node_beta.try_decrypt_pure_noise_beacon(&beacon).await?;
 
     // Verify SILENT failure (None, not error)
-    assert!(result.is_none(), "Different family should return None (silent failure)");
+    assert!(
+        result.is_none(),
+        "Different family should return None (silent failure)"
+    );
     println!("✅ SUCCESS: Node Beta silently failed (sees noise)");
     println!("   Result: None (indistinguishable from random noise)");
     println!("   No errors, no logs - true Dark Forest");
@@ -147,7 +150,7 @@ async fn test_beacon_determinism() -> Result<(), Box<dyn std::error::Error>> {
     println!("═══════════════════════════════════════════════════════════════════\n");
 
     let beardog = beardog_socket();
-    
+
     if !std::path::Path::new(&beardog).exists() {
         eprintln!("⚠️  Skipping: BearDog not running at {}", beardog);
         return Ok(());
@@ -160,7 +163,7 @@ async fn test_beacon_determinism() -> Result<(), Box<dyn std::error::Error>> {
     // Create first beacon manager
     println!("🔑 Creating first beacon manager...");
     let mgr1 = DarkForestBeacon::new(&beardog, seed_path, "test_node").await?;
-    
+
     // Generate beacon 1
     let beacon1 = mgr1
         .generate_pure_noise_beacon("/tmp/test.sock", &["test"], None)
@@ -170,7 +173,7 @@ async fn test_beacon_determinism() -> Result<(), Box<dyn std::error::Error>> {
     // Create second beacon manager (simulating restart)
     println!("🔑 Creating second beacon manager (simulated restart)...");
     let mgr2 = DarkForestBeacon::new(&beardog, seed_path, "test_node").await?;
-    
+
     // Generate beacon 2
     let beacon2 = mgr2
         .generate_pure_noise_beacon("/tmp/test.sock", &["test"], None)
@@ -205,7 +208,7 @@ async fn test_network_indistinguishability() -> Result<(), Box<dyn std::error::E
     println!("═══════════════════════════════════════════════════════════════════\n");
 
     let beardog = beardog_socket();
-    
+
     if !std::path::Path::new(&beardog).exists() {
         eprintln!("⚠️  Skipping: BearDog not running at {}", beardog);
         return Ok(());
@@ -252,9 +255,16 @@ async fn test_network_indistinguishability() -> Result<(), Box<dyn std::error::E
 
     // Test 3: No identifiable strings
     println!("\n📊 Test 3: Verify no identifiable strings");
-    let identifiers = ["birdsong", "family", "version", "ciphertext", "nonce", "tag"];
+    let identifiers = [
+        "birdsong",
+        "family",
+        "version",
+        "ciphertext",
+        "nonce",
+        "tag",
+    ];
     let mut found_identifiers = HashSet::new();
-    
+
     for beacon in &beacons {
         let beacon_str = String::from_utf8_lossy(beacon);
         for id in &identifiers {
@@ -263,8 +273,12 @@ async fn test_network_indistinguishability() -> Result<(), Box<dyn std::error::E
             }
         }
     }
-    
-    assert!(found_identifiers.is_empty(), "Found identifiers: {:?}", found_identifiers);
+
+    assert!(
+        found_identifiers.is_empty(),
+        "Found identifiers: {:?}",
+        found_identifiers
+    );
     println!("✅ PASSED: No identifiable strings found");
     println!("   Checked: {:?}", identifiers);
 
@@ -274,11 +288,11 @@ async fn test_network_indistinguishability() -> Result<(), Box<dyn std::error::E
     let min_size = sizes.iter().min().unwrap();
     let max_size = sizes.iter().max().unwrap();
     let size_variance = max_size - min_size;
-    
+
     println!("   Min size: {} bytes", min_size);
     println!("   Max size: {} bytes", max_size);
     println!("   Variance: {} bytes", size_variance);
-    
+
     // Should be minimal variance (only from different socket path lengths)
     assert!(size_variance < 50, "Size variance should be minimal");
     println!("✅ PASSED: Consistent sizes (variance < 50 bytes)");
@@ -316,7 +330,7 @@ async fn test_performance_characteristics() -> Result<(), Box<dyn std::error::Er
     println!("═══════════════════════════════════════════════════════════════════\n");
 
     let beardog = beardog_socket();
-    
+
     if !std::path::Path::new(&beardog).exists() {
         eprintln!("⚠️  Skipping: BearDog not running at {}", beardog);
         return Ok(());
@@ -332,34 +346,37 @@ async fn test_performance_characteristics() -> Result<(), Box<dyn std::error::Er
     println!("⚡ Benchmarking beacon generation (50 iterations)...");
     let start = std::time::Instant::now();
     let mut beacons = Vec::new();
-    
+
     for i in 0..50 {
         let beacon = mgr
             .generate_pure_noise_beacon(&format!("/tmp/perf_{}.sock", i), &["test"], None)
             .await?;
         beacons.push(beacon);
     }
-    
+
     let generation_time = start.elapsed();
     let avg_generation = generation_time / 50;
-    
+
     println!("✅ Generation results:");
     println!("   Total time: {:?}", generation_time);
     println!("   Average: {:?} per beacon", avg_generation);
-    println!("   Throughput: ~{} beacons/sec", 1000 / avg_generation.as_millis().max(1));
+    println!(
+        "   Throughput: ~{} beacons/sec",
+        1000 / avg_generation.as_millis().max(1)
+    );
 
     // Benchmark decryption (success case)
     println!("\n⚡ Benchmarking successful decryption (50 iterations)...");
     let start = std::time::Instant::now();
-    
+
     for beacon in &beacons {
         let result = mgr.try_decrypt_pure_noise_beacon(beacon).await?;
         assert!(result.is_some());
     }
-    
+
     let decrypt_success_time = start.elapsed();
     let avg_decrypt_success = decrypt_success_time / 50;
-    
+
     println!("✅ Successful decryption results:");
     println!("   Total time: {:?}", decrypt_success_time);
     println!("   Average: {:?} per beacon", avg_decrypt_success);
@@ -373,30 +390,32 @@ async fn test_performance_characteristics() -> Result<(), Box<dyn std::error::Er
         rand::thread_rng().fill_bytes(&mut noise);
         random_beacons.push(noise);
     }
-    
+
     let start = std::time::Instant::now();
-    
+
     for noise in &random_beacons {
         let result = mgr.try_decrypt_pure_noise_beacon(noise).await?;
         assert!(result.is_none());
     }
-    
+
     let decrypt_failure_time = start.elapsed();
     let avg_decrypt_failure = decrypt_failure_time / 50;
-    
+
     println!("✅ Silent failure results:");
     println!("   Total time: {:?}", decrypt_failure_time);
     println!("   Average: {:?} per beacon", avg_decrypt_failure);
-    println!("   Speedup vs success: {:.1}x", 
-             avg_decrypt_success.as_micros() as f64 / avg_decrypt_failure.as_micros() as f64);
+    println!(
+        "   Speedup vs success: {:.1}x",
+        avg_decrypt_success.as_micros() as f64 / avg_decrypt_failure.as_micros() as f64
+    );
 
     cleanup_test_seed(seed_path).await;
-    
+
     println!("\n🏆 Performance Summary:");
     println!("  Generation: ~{:?} avg", avg_generation);
     println!("  Success decrypt: ~{:?} avg", avg_decrypt_success);
     println!("  Silent failure: ~{:?} avg", avg_decrypt_failure);
     println!("  Status: ⚡ Production-ready performance\n");
-    
+
     Ok(())
 }

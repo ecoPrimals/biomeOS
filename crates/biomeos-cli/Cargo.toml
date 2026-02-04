@@ -23,6 +23,7 @@ biomeos-federation = { path = "../biomeos-federation" }
 biomeos-graph = { path = "../biomeos-graph" }
 biomeos-manifest = { path = "../biomeos-manifest" }
 biomeos-genome-factory = { path = "../biomeos-genome-factory" }
+biomeos-genomebin-v3 = { path = "../biomeos-genomebin-v3" }
 clap = { version = "4.4", features = ["derive", "color"] }
 tokio = { version = "1.0", features = ["full"] }
 anyhow = "1.0"
@@ -45,6 +46,7 @@ sysinfo = "0.29"
 uuid = { version = "1.0", features = ["v4"] }
 base64 = "0.22"
 sha2 = "0.10"
+dirs = "5.0"
 
 [dev-dependencies]
 biomeos-test-utils = { path = "../biomeos-test-utils" }

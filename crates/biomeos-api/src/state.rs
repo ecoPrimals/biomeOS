@@ -62,7 +62,14 @@ use thiserror::Error;
 
 /// Default bind address (const to avoid parsing at runtime)
 /// ⚠️ DEPRECATED: Use Unix socket instead! This is for temporary HTTP bridge only.
-const DEFAULT_BIND_ADDR: &str = "127.0.0.1:3000"; // Changed to localhost only!
+///
+/// **EVOLVED**: Now reads from environment variables via RuntimeConfig.
+/// Falls back to this constant only for development.
+fn default_bind_addr() -> String {
+    use biomeos_types::defaults::RuntimeConfig;
+    let config = RuntimeConfig::from_env();
+    format!("{}:{}", config.bind_address(), config.mcp_port())
+}
 
 /// Application state (shared across handlers)
 #[derive(Clone)]
@@ -85,7 +92,7 @@ impl AppState {
 
     /// Get the genome factory state
     pub fn genome(&self) -> &GenomeState {
-        &*self.genome
+        &self.genome
     }
 
     /// Get the configuration
@@ -154,16 +161,28 @@ impl Default for Config {
 
 impl Config {
     /// Get default Unix socket path
+    ///
+    /// Uses 5-tier socket resolution per PRIMAL_DEPLOYMENT_STANDARD.md:
+    /// 1. Environment variable (BIOMEOS_API_SOCKET)
+    /// 2. XDG_RUNTIME_DIR/biomeos/
+    /// 3. /run/user/{uid}/biomeos/
+    /// 4. /data/local/tmp/biomeos/ (Android)
+    /// 5. /tmp/biomeos/ (fallback)
     fn default_socket_path() -> PathBuf {
-        // Use XDG_RUNTIME_DIR or fallback to /run/user/{uid}
-        let runtime_dir = std::env::var("XDG_RUNTIME_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| {
-                // Fallback to /tmp if XDG_RUNTIME_DIR not set
-                PathBuf::from("/tmp")
-            });
+        use biomeos_core::socket_discovery::SocketDiscovery;
 
-        runtime_dir.join("biomeos-api.sock")
+        // Check environment variable first
+        if let Ok(path) = std::env::var("BIOMEOS_API_SOCKET") {
+            return PathBuf::from(path);
+        }
+
+        // Use SocketDiscovery for 5-tier resolution
+        let family_id = std::env::var("FAMILY_ID")
+            .or_else(|_| std::env::var("BIOMEOS_FAMILY_ID"))
+            .unwrap_or_else(|_| "default".to_string());
+
+        let discovery = SocketDiscovery::new(family_id);
+        discovery.build_socket_path("biomeos-api")
     }
 
     /// Load configuration from environment
@@ -190,7 +209,7 @@ impl Config {
             std::env::var("BIOMEOS_API_BIND_ADDR")
                 .ok()
                 .and_then(|v| v.parse().ok())
-                .or_else(|| DEFAULT_BIND_ADDR.parse().ok())
+                .or_else(|| default_bind_addr().parse().ok())
         } else {
             None
         };
@@ -247,10 +266,7 @@ impl AppStateBuilder {
             Some(g) => g,
             None => {
                 tracing::info!("🧬 Initializing default genome factory");
-                Arc::new(
-                    GenomeState::new()
-                        .map_err(|e| BuildError::ConfigError(e.to_string()))?,
-                )
+                Arc::new(GenomeState::new().map_err(|e| BuildError::ConfigError(e.to_string()))?)
             }
         };
 
@@ -288,10 +304,7 @@ impl AppStateBuilder {
             Some(g) => g,
             None => {
                 tracing::info!("🧬 Initializing default genome factory");
-                Arc::new(
-                    GenomeState::new()
-                        .map_err(|e| BuildError::ConfigError(e.to_string()))?,
-                )
+                Arc::new(GenomeState::new().map_err(|e| BuildError::ConfigError(e.to_string()))?)
             }
         };
 

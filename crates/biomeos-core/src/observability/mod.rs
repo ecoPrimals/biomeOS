@@ -45,20 +45,15 @@ use std::time::{Duration, SystemTime};
 use tracing::{debug, info, warn};
 
 /// Observability mode
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum ObservabilityMode {
     /// No telemetry at all
     Disabled,
     /// Local-only (default, sovereignty-respecting)
+    #[default]
     LocalOnly,
     /// Share with family (opt-in, lineage-gated)
     FamilyFederation,
-}
-
-impl Default for ObservabilityMode {
-    fn default() -> Self {
-        Self::LocalOnly
-    }
 }
 
 /// Local metrics (sovereignty-respecting)

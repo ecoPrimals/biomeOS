@@ -200,6 +200,9 @@ impl MetricsCollector {
 }
 
 // Stub implementations for compatibility
+// TODO: These are intentionally simplified - node-level metrics can be added later if needed
+// Rationale: Current implementation focuses on graph-level metrics for simplicity
+// Future: Add node-level tracking if detailed per-node metrics are required
 impl MetricsCollector {
     pub async fn record_node_execution(
         &self,
@@ -267,5 +270,130 @@ mod tests {
         assert_eq!(metrics.total_executions, 1);
         assert_eq!(metrics.successful_executions, 1);
         assert_eq!(metrics.success_rate, 1.0);
+    }
+
+    #[tokio::test]
+    async fn test_multiple_executions() {
+        let dir = tempdir().unwrap();
+        let db_path = dir.path().join("metrics_multi.sled");
+
+        let collector = MetricsCollector::new(&db_path).await.unwrap();
+
+        // Record multiple executions
+        for i in 0..5 {
+            let result = GraphResult {
+                success: i % 2 == 0, // Alternate success/failure
+                node_results: Default::default(),
+                errors: vec![],
+                duration_ms: (i + 1) * 100,
+            };
+
+            collector
+                .record_execution("multi_graph", &result, (i + 1) * 100)
+                .await
+                .unwrap();
+        }
+
+        let metrics = collector.get_graph_metrics("multi_graph").await.unwrap();
+        assert!(metrics.is_some());
+
+        let m = metrics.unwrap();
+        assert_eq!(m.total_executions, 5);
+        assert_eq!(m.successful_executions, 3); // 0, 2, 4 are successful
+        assert_eq!(m.failed_executions, 2);     // 1, 3 are failures
+    }
+
+    #[tokio::test]
+    async fn test_no_metrics_for_unknown_graph() {
+        let dir = tempdir().unwrap();
+        let db_path = dir.path().join("metrics_empty.sled");
+
+        let collector = MetricsCollector::new(&db_path).await.unwrap();
+
+        let metrics = collector.get_graph_metrics("nonexistent").await.unwrap();
+        assert!(metrics.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_tracked_graphs() {
+        let dir = tempdir().unwrap();
+        let db_path = dir.path().join("metrics_tracked.sled");
+
+        let collector = MetricsCollector::new(&db_path).await.unwrap();
+
+        // Record executions for multiple graphs
+        for graph in &["graph_a", "graph_b", "graph_c"] {
+            let result = GraphResult {
+                success: true,
+                node_results: Default::default(),
+                errors: vec![],
+                duration_ms: 100,
+            };
+            collector.record_execution(graph, &result, 100).await.unwrap();
+        }
+
+        let graphs = collector.get_tracked_graphs().await.unwrap();
+        assert_eq!(graphs.len(), 3);
+        assert!(graphs.contains(&"graph_a".to_string()));
+        assert!(graphs.contains(&"graph_b".to_string()));
+        assert!(graphs.contains(&"graph_c".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_clear_all() {
+        let dir = tempdir().unwrap();
+        let db_path = dir.path().join("metrics_clear.sled");
+
+        let collector = MetricsCollector::new(&db_path).await.unwrap();
+
+        // Add some data
+        let result = GraphResult {
+            success: true,
+            node_results: Default::default(),
+            errors: vec![],
+            duration_ms: 100,
+        };
+        collector.record_execution("test", &result, 100).await.unwrap();
+
+        // Clear
+        collector.clear_all().await.unwrap();
+
+        // Verify cleared
+        let graphs = collector.get_tracked_graphs().await.unwrap();
+        assert!(graphs.is_empty());
+    }
+
+    #[test]
+    fn test_graph_metrics_serialize() {
+        let metrics = GraphMetrics {
+            graph_name: "test".to_string(),
+            total_executions: 10,
+            successful_executions: 8,
+            failed_executions: 2,
+            avg_duration_ms: 150.5,
+            min_duration_ms: 100,
+            max_duration_ms: 200,
+            success_rate: 0.8,
+            last_executed_at: chrono::Utc::now(),
+        };
+        let json = serde_json::to_string(&metrics).unwrap();
+        assert!(json.contains("test"));
+        assert!(json.contains("10"));
+        assert!(json.contains("0.8"));
+    }
+
+    #[test]
+    fn test_execution_record_serialize() {
+        let record = ExecutionRecord {
+            id: 12345,
+            graph_name: "test_graph".to_string(),
+            success: true,
+            duration_ms: 150,
+            executed_at: chrono::Utc::now(),
+            metadata: "{}".to_string(),
+        };
+        let json = serde_json::to_string(&record).unwrap();
+        assert!(json.contains("test_graph"));
+        assert!(json.contains("150"));
     }
 }

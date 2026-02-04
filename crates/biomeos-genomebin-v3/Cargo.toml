@@ -1,0 +1,61 @@
+[package]
+name = "biomeos-genomebin-v3"
+version = "3.0.0"
+edition = "2021"
+authors = ["ecoPrimals Team"]
+license = "AGPL-3.0-only"
+description = "genomeBin v3.0 - TRUE binary isomorphic format for ecoPrimals"
+repository = "https://github.com/ecoPrimals/biomeOS"
+readme = "README.md"
+
+[dependencies]
+# Types
+biomeos-types = { path = "../biomeos-types" }
+
+# Error handling (Pure Rust)
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# Serialization (Pure Rust)
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Logging (Pure Rust)
+tracing = { workspace = true }
+
+# Compression (Pure Rust) - lz4_flex uses 100% Rust
+lz4_flex = "0.11"
+
+# Compression for v4.1 format
+zstd = { version = "0.13", default-features = false }
+
+# Hashing (Pure Rust)
+blake3 = { version = "1.5", features = ["pure"] }
+sha2 = "0.10"
+
+# Hex encoding (Pure Rust)
+hex = "0.4"
+
+# Datetime (Pure Rust)
+chrono = { workspace = true }
+
+# Path handling (Pure Rust)
+etcetera = { workspace = true }
+
+# Temp files for extraction
+tempfile = "3.8"
+
+[dev-dependencies]
+tempfile = "3.8"
+
+[lib]
+name = "biomeos_genomebin_v3"
+path = "src/lib.rs"
+
+# TRUE ecoBin v2.0 Principles:
+# ✅ 100% Pure Rust (no C deps)
+# ✅ Zero unsafe code
+# ✅ Multi-architecture (x86_64, aarch64, etc.)
+# ✅ Self-extracting capability
+# ✅ Fractal composition (genomeBins can contain genomeBins)
+# ✅ NUCLEUS atomic types (TOWER, NODE, NEST, NUCLEUS)

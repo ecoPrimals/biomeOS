@@ -219,11 +219,12 @@ pub struct LineageResult {
 // ============================================================================
 
 /// Protocol preference for escalation
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum ProtocolPreference {
     /// Use JSON-RPC only
     JsonRpcOnly,
     /// Prefer JSON-RPC, fallback to tarpc
+    #[default]
     PreferJsonRpc,
     /// Prefer tarpc, fallback to JSON-RPC
     PreferTarpc,
@@ -231,13 +232,6 @@ pub enum ProtocolPreference {
     TarpcOnly,
     /// Auto-detect based on capabilities
     Auto,
-}
-
-impl Default for ProtocolPreference {
-    fn default() -> Self {
-        // Default to JSON-RPC for flexibility
-        Self::PreferJsonRpc
-    }
 }
 
 /// Environment variable for protocol preference

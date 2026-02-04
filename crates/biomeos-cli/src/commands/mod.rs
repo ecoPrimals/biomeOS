@@ -53,6 +53,7 @@ pub use federation::{
 
 // Genome commands
 pub use genome::{
-    handle_genome_compose, handle_genome_create, handle_genome_list,
-    handle_genome_self_replicate, handle_genome_verify,
+    handle_genome_compose, handle_genome_create, handle_genome_list, handle_genome_self_replicate,
+    handle_genome_verify, ComposeArgs as GenomeComposeArgs, CreateArgs as GenomeCreateArgs,
+    VerifyArgs as GenomeVerifyArgs,
 };

@@ -30,6 +30,7 @@ biomeos-types = { path = "../biomeos-types" }
 biomeos-graph = { path = "../biomeos-graph" }
 biomeos-spore = { path = "../biomeos-spore" }
 biomeos-genome-factory = { path = "../biomeos-genome-factory" }
+biomeos-genomebin-v3 = { path = "../biomeos-genomebin-v3" }
 
 # Async utilities
 async-trait = "0.1"
@@ -47,6 +48,10 @@ thiserror = "1"
 
 # Configuration
 config = "0.14"
+
+# Utilities
+lazy_static = "1.4"
+dirs = "5.0"
 
 # WebSocket support (JSON-RPC 2.0 over WebSocket)
 tokio-tungstenite = "0.21"

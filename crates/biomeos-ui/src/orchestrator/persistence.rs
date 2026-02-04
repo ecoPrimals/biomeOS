@@ -11,7 +11,7 @@
 //! If NestGate is not available, data is not persisted
 //! but operations continue successfully.
 
-use crate::primal_client::{NestGateClient, PrimalClient};
+use crate::primal_client::NestGateClient;
 use anyhow::Result;
 use tracing::{debug, info, warn};
 
@@ -90,7 +90,7 @@ impl Persistence {
                 }
                 Err(e) => {
                     warn!("⚠️ NestGate delete failed: {}", e);
-                    Err(e.into())
+                    Err(e)
                 }
             }
         } else {

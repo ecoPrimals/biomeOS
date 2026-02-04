@@ -55,7 +55,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if !std::path::Path::new(beardog_socket).exists() {
         eprintln!("❌ BearDog not running at {}", beardog_socket);
         eprintln!("   Start beardog first:");
-        eprintln!("   FAMILY_ID=demo ./beardog server --socket {}", beardog_socket);
+        eprintln!(
+            "   FAMILY_ID=demo ./beardog server --socket {}",
+            beardog_socket
+        );
         return Ok(());
     }
     println!("✅ BearDog socket found: {}", beardog_socket);
@@ -141,7 +144,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let duration = start.elapsed();
             println!("✅ DECRYPTION SUCCESS (same family) in {:?}", duration);
             println!("   Decrypted data:");
-            println!("   - node_id: {}", decrypted["node_id"].as_str().unwrap_or("unknown"));
+            println!(
+                "   - node_id: {}",
+                decrypted["node_id"].as_str().unwrap_or("unknown")
+            );
             println!(
                 "   - capabilities: {}",
                 decrypted["capabilities"]
@@ -175,13 +181,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("🔓 Attempting to decrypt random noise (different family)...");
     let start = Instant::now();
-    match beacon_mgr.try_decrypt_pure_noise_beacon(&random_noise).await? {
+    match beacon_mgr
+        .try_decrypt_pure_noise_beacon(&random_noise)
+        .await?
+    {
         Some(_) => {
             println!("❌ UNEXPECTED: Random noise should NOT decrypt");
         }
         None => {
             let duration = start.elapsed();
-            println!("✅ SILENT FAILURE (different family/noise) in {:?}", duration);
+            println!(
+                "✅ SILENT FAILURE (different family/noise) in {:?}",
+                duration
+            );
             println!("   Result: None (indistinguishable from noise)");
             println!("   No error logs, no exceptions - true Dark Forest");
         }
@@ -204,11 +216,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     for i in 1..=10 {
         let start = Instant::now();
         let beacon = beacon_mgr
-            .generate_pure_noise_beacon(
-                &format!("/tmp/demo_{}.sock", i),
-                &["test"],
-                None,
-            )
+            .generate_pure_noise_beacon(&format!("/tmp/demo_{}.sock", i), &["test"], None)
             .await?;
         total_duration += start.elapsed();
         sizes.push(beacon.len());
@@ -220,7 +228,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("✅ Performance Results:");
     println!("   Average generation time: {:?}", avg_duration);
     println!("   Average beacon size: {} bytes", avg_size);
-    println!("   Throughput: ~{} beacons/sec", 1000 / avg_duration.as_millis().max(1));
+    println!(
+        "   Throughput: ~{} beacons/sec",
+        1000 / avg_duration.as_millis().max(1)
+    );
     println!();
 
     // Network transmission analysis

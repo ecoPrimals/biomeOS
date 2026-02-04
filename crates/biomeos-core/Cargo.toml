@@ -60,8 +60,8 @@ tokio-test = "0.4"
 wiremock = "0.6" 
 tempfile = { workspace = true }
 criterion = { workspace = true }
-# DEPRECATED: HTTP tests use reqwest directly - should migrate to atomic_client
-reqwest = { workspace = true }
+# REMOVED for ecoBin v2.0: Use ureq or atomic_client for Pure Rust
+ureq = { workspace = true }
 
 # Test utilities
 serde_json = { workspace = true }

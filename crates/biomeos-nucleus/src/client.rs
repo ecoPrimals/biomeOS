@@ -14,9 +14,22 @@ use std::sync::Arc;
 ///
 /// This ensures unique IDs across concurrent requests, enabling proper
 /// request/response correlation in JSON-RPC 2.0.
+///
+/// # Safety
+///
+/// This uses `AtomicU64` which is a safe, lock-free atomic operation.
+/// `Ordering::Relaxed` is sufficient here since we only need uniqueness,
+/// not strict ordering guarantees. This is a zero-cost abstraction over
+/// platform-specific atomic instructions.
 static REQUEST_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
 
 /// Get the next unique request ID.
+///
+/// # Safety
+///
+/// This function is safe - it uses atomic operations which are guaranteed
+/// to be thread-safe and cannot cause data races. The counter will wrap
+/// around after 2^64 requests, which is acceptable for this use case.
 #[inline]
 fn next_request_id() -> u64 {
     REQUEST_ID_COUNTER.fetch_add(1, Ordering::Relaxed)

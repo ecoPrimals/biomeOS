@@ -12,7 +12,7 @@
 //!
 //! If BearDog is not available, authorization is granted by default.
 
-use crate::primal_client::{BearDogClient, PrimalClient};
+use crate::primal_client::BearDogClient;
 use anyhow::Result;
 use tracing::{debug, info, warn};
 

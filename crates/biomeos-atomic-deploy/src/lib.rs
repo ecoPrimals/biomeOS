@@ -23,13 +23,15 @@
 //! ```
 
 pub mod beardog_jwt_client; // NEW: BearDog JWT integration for orchestrator
+pub mod bootstrap; // NEW: Bootstrap sequence execution and mode transitions
 pub mod deployment_graph;
 pub mod executor; // Shared executor module (types, context, handlers, spawner)
 pub mod health_check;
 pub mod orchestrator;
+pub mod primal_communication;
 pub mod primal_coordinator; // NEW: Discovery-based coordination (TRUE PRIMAL)
 pub mod primal_discovery; // NEW: Socket scanning discovery
-pub mod primal_launcher; // EVOLVING: Legacy launcher → coordinator
+pub mod primal_launcher; // EVOLVING: Legacy launcher → coordinator // NEW: Primal health verification and BTSP tunnel establishment
 
 // Neural API graph execution (TOML-based deterministic deployment)
 pub mod capability_handlers; // Extracted capability-based primal handlers
@@ -39,7 +41,7 @@ pub mod http_client;
 pub mod lifecycle_manager; // NEW: Primal lifecycle management (resurrection, apoptosis)
 pub mod living_graph; // NEW: Runtime protocol state tracking
 pub mod mode;
-pub mod neural_api_server;
+pub mod neural_api_server; // Refactored into submodules: rpc, connection, routing, proxy, translation_loader, server_lifecycle
 pub mod neural_executor;
 pub mod neural_graph;
 pub mod neural_router;

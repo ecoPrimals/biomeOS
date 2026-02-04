@@ -24,17 +24,20 @@ impl LabManager {
         let current = std::env::current_dir().unwrap_or_default();
         let benchscale_root = if current.ends_with("biomeOS") {
             // We're in biomeOS root, go up one level and into benchscale
-            current.parent().unwrap().join("benchscale")
+            current
+                .parent()
+                .map(|p| p.join("benchscale"))
+                .unwrap_or_else(|| current.join("../benchscale"))
         } else {
             // Try to find it relative to cargo manifest dir
-            PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .parent()
-                .unwrap()
-                .parent()
-                .unwrap()
-                .parent()
-                .unwrap()
-                .join("benchscale")
+            // Use safe navigation with fallback
+            let manifest_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+            manifest_path
+                .parent() // crates/
+                .and_then(|p| p.parent()) // biomeOS/
+                .and_then(|p| p.parent()) // phase2/
+                .map(|p| p.join("benchscale"))
+                .unwrap_or_else(|| PathBuf::from("benchscale"))
         };
         Self { benchscale_root }
     }

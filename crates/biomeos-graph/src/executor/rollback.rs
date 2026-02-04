@@ -99,27 +99,31 @@ impl<'a> RollbackManager<'a> {
             use std::process::Command;
 
             // Check if process exists
-            let check = Command::new("kill")
+            let check_result = Command::new("kill")
                 .args(["-0", &pid.to_string()])
                 .output();
 
-            if check.is_ok() && check.unwrap().status.success() {
-                // Process still running, send SIGTERM
-                let _ = Command::new("kill")
-                    .args(["-15", &pid.to_string()]) // SIGTERM
-                    .output();
-
-                tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
-
-                // Check again, send SIGKILL if still running
-                let check = Command::new("kill")
-                    .args(["-0", &pid.to_string()])
-                    .output();
-
-                if check.is_ok() && check.unwrap().status.success() {
+            if let Ok(output) = check_result {
+                if output.status.success() {
+                    // Process still running, send SIGTERM
                     let _ = Command::new("kill")
-                        .args(["-9", &pid.to_string()]) // SIGKILL
+                        .args(["-15", &pid.to_string()]) // SIGTERM
                         .output();
+
+                    tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+
+                    // Check again, send SIGKILL if still running
+                    let check_result = Command::new("kill")
+                        .args(["-0", &pid.to_string()])
+                        .output();
+
+                    if let Ok(output) = check_result {
+                        if output.status.success() {
+                            let _ = Command::new("kill")
+                                .args(["-9", &pid.to_string()]) // SIGKILL
+                                .output();
+                        }
+                    }
                 }
             }
         }

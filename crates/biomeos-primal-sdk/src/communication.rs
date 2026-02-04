@@ -126,8 +126,10 @@ impl PrimalClient {
     /// # }
     /// ```
     pub async fn request(&self, method: impl Into<String>, params: Value) -> Result<Value> {
-        let id = self.request_id.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-        
+        let id = self
+            .request_id
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+
         let request = JsonRpcRequest {
             jsonrpc: "2.0".to_string(),
             method: method.into(),
@@ -135,18 +137,18 @@ impl PrimalClient {
             id,
         };
 
-        let response = timeout(
-            self.timeout,
-            self.send_request(request),
-        ).await
-        .context("Request timeout")?
-        .context("Request failed")?;
+        let response = timeout(self.timeout, self.send_request(request))
+            .await
+            .context("Request timeout")?
+            .context("Request failed")?;
 
         if let Some(error) = response.error {
             return Err(anyhow!("RPC error {}: {}", error.code, error.message));
         }
 
-        response.result.ok_or_else(|| anyhow!("No result in response"))
+        response
+            .result
+            .ok_or_else(|| anyhow!("No result in response"))
     }
 
     /// Send request over Unix socket
@@ -158,7 +160,7 @@ impl PrimalClient {
 
         // Serialize request
         let request_json = serde_json::to_vec(&request)?;
-        
+
         // Send request
         stream.write_all(&request_json).await?;
         stream.write_all(b"\n").await?; // Line-delimited JSON
@@ -169,8 +171,8 @@ impl PrimalClient {
         stream.read_to_end(&mut response_buf).await?;
 
         // Deserialize response
-        let response: JsonRpcResponse = serde_json::from_slice(&response_buf)
-            .context("Failed to parse JSON-RPC response")?;
+        let response: JsonRpcResponse =
+            serde_json::from_slice(&response_buf).context("Failed to parse JSON-RPC response")?;
 
         Ok(response)
     }
@@ -199,18 +201,23 @@ impl SecureTunnel {
     /// ```
     pub async fn establish(target_primal_id: impl Into<String>) -> Result<PathBuf> {
         // Discover BearDog (security provider) by security capability
-        let beardog = PrimalDiscovery::find_by_capability(
-            PrimalCapability::new("security", "encryption", "1.0")
-        ).await?;
-        
+        let beardog = PrimalDiscovery::find_by_capability(PrimalCapability::new(
+            "security",
+            "encryption",
+            "1.0",
+        ))
+        .await?;
+
         // Request tunnel establishment via BearDog
         let client = PrimalClient::new(beardog);
-        let response = client.request(
-            "establish_tunnel",
-            serde_json::json!({
-                "target": target_primal_id.into(),
-            }),
-        ).await?;
+        let response = client
+            .request(
+                "establish_tunnel",
+                serde_json::json!({
+                    "target": target_primal_id.into(),
+                }),
+            )
+            .await?;
 
         // Extract tunnel socket path from response
         let tunnel_path = response["tunnel_socket"]

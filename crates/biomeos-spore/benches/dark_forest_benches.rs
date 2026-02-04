@@ -31,8 +31,8 @@
 //! cargo bench --bench dark_forest_benches
 //! ```
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
 use biomeos_spore::DarkForestBeacon;
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 
 /// Create test seed for benchmarking
 async fn setup_test_seed() -> String {
@@ -59,17 +59,20 @@ fn beardog_socket() -> String {
 
 fn bench_pure_noise_generation(c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
-    
+
     // Setup
     let seed_path = rt.block_on(setup_test_seed());
     let beardog = beardog_socket();
-    
+
     // Check if beardog is available
     if !std::path::Path::new(&beardog).exists() {
-        eprintln!("⚠️  Skipping benchmarks: BearDog not running at {}", beardog);
+        eprintln!(
+            "⚠️  Skipping benchmarks: BearDog not running at {}",
+            beardog
+        );
         return;
     }
-    
+
     let mgr = rt.block_on(async {
         DarkForestBeacon::new(&beardog, &seed_path, "bench_node")
             .await
@@ -100,14 +103,14 @@ fn bench_pure_noise_generation(c: &mut Criterion) {
 
 fn bench_old_format_generation(c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
-    
+
     let seed_path = rt.block_on(setup_test_seed());
     let beardog = beardog_socket();
-    
+
     if !std::path::Path::new(&beardog).exists() {
         return;
     }
-    
+
     let mgr = rt.block_on(async {
         DarkForestBeacon::new(&beardog, &seed_path, "bench_node")
             .await
@@ -137,14 +140,14 @@ fn bench_old_format_generation(c: &mut Criterion) {
 
 fn bench_pure_noise_decrypt_success(c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
-    
+
     let seed_path = rt.block_on(setup_test_seed());
     let beardog = beardog_socket();
-    
+
     if !std::path::Path::new(&beardog).exists() {
         return;
     }
-    
+
     let mgr = rt.block_on(async {
         DarkForestBeacon::new(&beardog, &seed_path, "bench_node")
             .await
@@ -177,14 +180,14 @@ fn bench_pure_noise_decrypt_success(c: &mut Criterion) {
 
 fn bench_pure_noise_silent_failure(c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
-    
+
     let seed_path = rt.block_on(setup_test_seed());
     let beardog = beardog_socket();
-    
+
     if !std::path::Path::new(&beardog).exists() {
         return;
     }
-    
+
     let mgr = rt.block_on(async {
         DarkForestBeacon::new(&beardog, &seed_path, "bench_node")
             .await
@@ -215,14 +218,14 @@ fn bench_pure_noise_silent_failure(c: &mut Criterion) {
 
 fn bench_size_comparison(c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
-    
+
     let seed_path = rt.block_on(setup_test_seed());
     let beardog = beardog_socket();
-    
+
     if !std::path::Path::new(&beardog).exists() {
         return;
     }
-    
+
     let mgr = rt.block_on(async {
         DarkForestBeacon::new(&beardog, &seed_path, "bench_node")
             .await
@@ -239,10 +242,10 @@ fn bench_size_comparison(c: &mut Criterion) {
             .generate_pure_noise_beacon("/tmp/bench.sock", &["test"], None)
             .await
             .unwrap();
-        
+
         // Serialize old format to bytes for fair comparison
         let old_bytes = serde_json::to_vec(&old).unwrap();
-        
+
         (old_bytes, pure)
     });
 
@@ -251,9 +254,11 @@ fn bench_size_comparison(c: &mut Criterion) {
     println!("═══════════════════════════════════════════════════════════════════");
     println!("Old format (JSON):     {} bytes", old_beacon.len());
     println!("Pure noise (bytes):    {} bytes", pure_noise_beacon.len());
-    println!("Reduction:             {} bytes ({:.1}%)", 
-             old_beacon.len() - pure_noise_beacon.len(),
-             (1.0 - pure_noise_beacon.len() as f64 / old_beacon.len() as f64) * 100.0);
+    println!(
+        "Reduction:             {} bytes ({:.1}%)",
+        old_beacon.len() - pure_noise_beacon.len(),
+        (1.0 - pure_noise_beacon.len() as f64 / old_beacon.len() as f64) * 100.0
+    );
     println!("═══════════════════════════════════════════════════════════════════\n");
 
     rt.block_on(cleanup_test_seed(&seed_path));

@@ -244,7 +244,7 @@ impl VmVerifier {
         let mut entries =
             fs::read_dir(&primal_dir)
                 .await
-                .map_err(|e| DeployError::FileNotFound {
+                .map_err(|_e| DeployError::FileNotFound {
                     path: primal_dir.clone(),
                 })?;
 

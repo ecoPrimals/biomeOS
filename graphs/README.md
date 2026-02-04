@@ -1,8 +1,27 @@
 # 📊 biomeOS Deployment Graphs
 
-**Last Updated**: January 19, 2026 (Evening)  
-**Status**: Cleaned and aligned with THREE ATOMIC PATTERNS  
-**Gold Standard**: `nest_deploy.toml`
+**Last Updated**: February 3, 2026  
+**Status**: Operational - Graph-based deployment via Neural API  
+**Gold Standard**: `tower_atomic_xdg.toml`  
+**Evolution**: See [`specs/EVOLUTION_PATH.md`](../specs/EVOLUTION_PATH.md)
+
+---
+
+## 🧬 Evolution: Scripts → Graphs → Pure Rust
+
+Graphs are the **target deployment mechanism**, replacing shell scripts:
+
+```
+Phase 1 (Scaffolding):  ./start_tower.sh  → spawns processes
+Phase 2 (Target):       graph.execute     → Neural API orchestrates
+Phase 3 (Adaptive):     Living graphs     → Self-healing, optimized
+```
+
+**Execute via Neural API**:
+```bash
+echo '{"jsonrpc":"2.0","method":"graph.execute","params":{"graph_id":"tower_atomic_xdg"},"id":1}' | \
+  nc -U /run/user/$(id -u)/biomeos/neural-api.sock
+```
 
 ---
 

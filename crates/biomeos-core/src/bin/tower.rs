@@ -80,6 +80,64 @@ enum Commands {
     },
 }
 
+/// Get the path for the tower PID file
+fn get_tower_pid_file() -> PathBuf {
+    // Check XDG runtime dir first
+    if let Ok(runtime) = std::env::var("XDG_RUNTIME_DIR") {
+        return PathBuf::from(runtime).join("biomeos/tower.pid");
+    }
+
+    // Fall back to family-specific temp
+    let family_id = std::env::var("BIOMEOS_FAMILY_ID")
+        .or_else(|_| std::env::var("FAMILY_ID"))
+        .unwrap_or_else(|_| "default".to_string());
+
+    PathBuf::from(format!("/tmp/biomeos-{}/tower.pid", family_id))
+}
+
+/// Get the socket directory
+fn get_socket_dir() -> PathBuf {
+    if let Ok(dir) = std::env::var("BIOMEOS_SOCKET_DIR") {
+        return PathBuf::from(dir);
+    }
+
+    if let Ok(runtime) = std::env::var("XDG_RUNTIME_DIR") {
+        return PathBuf::from(runtime).join("biomeos/sockets");
+    }
+
+    let family_id = std::env::var("BIOMEOS_FAMILY_ID")
+        .or_else(|_| std::env::var("FAMILY_ID"))
+        .unwrap_or_else(|_| "default".to_string());
+
+    PathBuf::from(format!("/tmp/biomeos-{}/sockets", family_id))
+}
+
+/// Write the PID file for the running tower
+fn write_pid_file() -> Result<()> {
+    let pid_file = get_tower_pid_file();
+
+    // Ensure parent directory exists
+    if let Some(parent) = pid_file.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+
+    let pid = std::process::id();
+    std::fs::write(&pid_file, pid.to_string())?;
+
+    info!("📝 PID file written: {} (PID: {})", pid_file.display(), pid);
+    Ok(())
+}
+
+/// Clean up the PID file on shutdown
+fn cleanup_pid_file() {
+    let pid_file = get_tower_pid_file();
+    if pid_file.exists() {
+        if let Err(e) = std::fs::remove_file(&pid_file) {
+            warn!("Failed to remove PID file: {}", e);
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
@@ -176,6 +234,11 @@ async fn main() -> Result<()> {
                 all_primals.len()
             );
 
+            // Write PID file for stop/status commands
+            if let Err(e) = write_pid_file() {
+                warn!("Failed to write PID file: {}", e);
+            }
+
             // Start health monitoring
             tokio::spawn(async move {
                 if let Err(e) = health_monitor.start_monitoring().await {
@@ -192,6 +255,9 @@ async fn main() -> Result<()> {
             // Wait for interrupt
             tokio::signal::ctrl_c().await?;
             info!("🛑 Received shutdown signal, stopping tower...");
+
+            // Clean up PID file
+            cleanup_pid_file();
 
             // Archive logs before stopping
             if let Err(e) = log_tracker.archive_all_sessions("graceful_shutdown").await {
@@ -257,6 +323,11 @@ async fn main() -> Result<()> {
             info!("✅ Tower started successfully!");
             info!("🌸 All primals running with zero-hardcoded configuration!");
 
+            // Write PID file for stop/status commands
+            if let Err(e) = write_pid_file() {
+                warn!("Failed to write PID file: {}", e);
+            }
+
             // Start health monitoring
             tokio::spawn(async move {
                 if let Err(e) = health_monitor.start_monitoring().await {
@@ -273,6 +344,9 @@ async fn main() -> Result<()> {
             // Wait for interrupt
             tokio::signal::ctrl_c().await?;
             info!("🛑 Received shutdown signal, stopping tower...");
+
+            // Clean up PID file
+            cleanup_pid_file();
 
             // Archive logs before stopping
             if let Err(e) = log_tracker.archive_all_sessions("graceful_shutdown").await {
@@ -306,6 +380,11 @@ async fn main() -> Result<()> {
                     orchestrator.start_all().await?;
                     info!("✅ Tower started from environment!");
 
+                    // Write PID file for stop/status commands
+                    if let Err(e) = write_pid_file() {
+                        warn!("Failed to write PID file: {}", e);
+                    }
+
                     // Start health monitoring
                     tokio::spawn(async move {
                         if let Err(e) = health_monitor.start_monitoring().await {
@@ -322,6 +401,9 @@ async fn main() -> Result<()> {
                     // Wait for interrupt
                     tokio::signal::ctrl_c().await?;
                     info!("🛑 Stopping tower...");
+
+                    // Clean up PID file
+                    cleanup_pid_file();
 
                     // Archive logs before stopping
                     if let Err(e) = log_tracker.archive_all_sessions("graceful_shutdown").await {
@@ -343,19 +425,150 @@ async fn main() -> Result<()> {
 
         Commands::Stop => {
             info!("🛑 Stopping all primals...");
-            error!("❌ Not implemented yet - requires persistent orchestrator state");
-            error!("   Rationale: Stop command needs a shared state mechanism (e.g., Unix socket, Redis, or file-based PID tracking)");
-            error!("   Workaround: Use Ctrl+C to stop the tower process, or kill individual primal PIDs");
-            std::process::exit(1);
+
+            // Read tower PID file
+            let pid_file = get_tower_pid_file();
+            if !pid_file.exists() {
+                error!(
+                    "❌ No running tower found (PID file not found: {})",
+                    pid_file.display()
+                );
+                error!("💡 The tower may not be running, or was started in a different directory");
+                std::process::exit(1);
+            }
+
+            match std::fs::read_to_string(&pid_file) {
+                Ok(content) => {
+                    let pid: i32 = content.trim().parse().unwrap_or(0);
+                    if pid > 0 {
+                        info!("📡 Sending SIGTERM to tower process (PID: {})", pid);
+
+                        // Send SIGTERM to the tower process
+                        #[cfg(unix)]
+                        {
+                            use std::process::Command;
+                            let status = Command::new("kill")
+                                .args(["-TERM", &pid.to_string()])
+                                .status();
+
+                            match status {
+                                Ok(s) if s.success() => {
+                                    info!("✅ Sent stop signal to tower (PID: {})", pid);
+                                    // Clean up PID file
+                                    let _ = std::fs::remove_file(&pid_file);
+                                }
+                                Ok(_) => {
+                                    warn!("⚠️  Process {} may have already stopped", pid);
+                                    let _ = std::fs::remove_file(&pid_file);
+                                }
+                                Err(e) => {
+                                    error!("❌ Failed to send signal: {}", e);
+                                    std::process::exit(1);
+                                }
+                            }
+                        }
+
+                        #[cfg(not(unix))]
+                        {
+                            error!("❌ Stop command only supported on Unix systems");
+                            std::process::exit(1);
+                        }
+                    } else {
+                        error!("❌ Invalid PID in file: {}", content);
+                        std::process::exit(1);
+                    }
+                }
+                Err(e) => {
+                    error!("❌ Failed to read PID file: {}", e);
+                    std::process::exit(1);
+                }
+            }
         }
 
         Commands::Status => {
-            info!("📊 Primal Status:");
-            error!("❌ Not implemented yet - requires persistent orchestrator state");
-            error!("   Rationale: Status command needs to query the running orchestrator instance");
-            error!("   Future: Implement via Unix socket or HTTP status endpoint on tower process");
-            error!("   Workaround: Check process list (ps aux | grep primal) or use health monitor logs");
-            std::process::exit(1);
+            info!("📊 Tower Status:");
+
+            // Check for PID file
+            let pid_file = get_tower_pid_file();
+            if !pid_file.exists() {
+                info!("❌ No running tower found");
+                info!("💡 Start a tower with: tower run --config tower.toml");
+                return Ok(());
+            }
+
+            match std::fs::read_to_string(&pid_file) {
+                Ok(content) => {
+                    let pid: i32 = content.trim().parse().unwrap_or(0);
+                    if pid > 0 {
+                        // Check if process is still running
+                        #[cfg(unix)]
+                        {
+                            use std::process::Command;
+                            let output = Command::new("ps")
+                                .args(["-p", &pid.to_string(), "-o", "pid,command"])
+                                .output();
+
+                            match output {
+                                Ok(out) if out.status.success() => {
+                                    info!("✅ Tower is RUNNING (PID: {})", pid);
+
+                                    // Try to get more details from socket directory
+                                    let socket_dir = get_socket_dir();
+                                    if socket_dir.exists() {
+                                        info!("");
+                                        info!("📂 Socket Directory: {}", socket_dir.display());
+
+                                        if let Ok(entries) = std::fs::read_dir(&socket_dir) {
+                                            let sockets: Vec<_> = entries
+                                                .filter_map(|e| e.ok())
+                                                .filter(|e| {
+                                                    e.path()
+                                                        .extension()
+                                                        .map(|x| x == "sock")
+                                                        .unwrap_or(false)
+                                                })
+                                                .collect();
+
+                                            if !sockets.is_empty() {
+                                                info!("🔌 Active Sockets:");
+                                                for socket in sockets {
+                                                    info!(
+                                                        "   • {}",
+                                                        socket.file_name().to_string_lossy()
+                                                    );
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // Show family ID if set
+                                    if let Ok(family) = std::env::var("BIOMEOS_FAMILY_ID")
+                                        .or_else(|_| std::env::var("FAMILY_ID"))
+                                    {
+                                        info!("");
+                                        info!("🏠 Family ID: {}", family);
+                                    }
+                                }
+                                _ => {
+                                    info!("❌ Tower process (PID: {}) is not running", pid);
+                                    info!("🧹 Cleaning up stale PID file...");
+                                    let _ = std::fs::remove_file(&pid_file);
+                                }
+                            }
+                        }
+
+                        #[cfg(not(unix))]
+                        {
+                            info!("Tower PID: {} (cannot verify on non-Unix)", pid);
+                        }
+                    } else {
+                        error!("❌ Invalid PID in file");
+                    }
+                }
+                Err(e) => {
+                    error!("❌ Failed to read PID file: {}", e);
+                }
+            }
         }
 
         Commands::Capabilities => {

@@ -220,8 +220,11 @@ impl RealTimeEventSubscriber {
 
     /// Subscribe to events via SSE (fallback)
     ///
-    /// NOTE: SSE requires HTTP client. In biomeOS, external HTTP requests should
+    /// TODO: Implement SSE streaming - requires Songbird SSE support
+    /// Rationale: SSE requires HTTP client. In biomeOS, external HTTP requests should
     /// go through Songbird. This is stubbed out until Songbird exposes SSE support.
+    /// Future: Implement when Songbird provides SSE streaming API
+    /// Workaround: Use WebSocket (subscribe_websocket) which uses tokio-tungstenite (Pure Rust)
     ///
     /// For real-time events, prefer WebSocket (subscribe_websocket) which uses
     /// tokio-tungstenite (Pure Rust).

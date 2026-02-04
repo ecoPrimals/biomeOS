@@ -1,29 +1,37 @@
 # biomeOS Specifications
 
-**Last Updated**: January 26, 2026  
-**Status**: ✅ Production Ready (Tower Atomic 96% Web Compatible)
+**Last Updated**: February 3, 2026  
+**Status**: ✅ Production Ready + NUCLEUS Semantic Routing  
+**Standard**: PRIMAL_DEPLOYMENT_STANDARD v1.0
 
 ---
 
 ## 🎉 CURRENT STATE
 
-### Tower Atomic Validated ✅
-- **87 sites tested** across 11 categories
-- **93% TLS 1.3 success** (Pure Rust)
-- **96% web compatibility** with User-Agent
-- **ALL mandatory cipher suites** working
+### NUCLEUS Architecture ✅
+- **Neural API**: Semantic capability routing operational
+- **Tower Atomic**: BearDog + Songbird (security + network)
+- **Deployment**: Deterministic across x86_64 and aarch64
+- **Evolution**: Scripts → Graphs → Pure Rust
 
-### Evolution Complete ✅
-| Component | Status | Latest Commit |
-|-----------|--------|---------------|
-| BearDog | ✅ 100% | `964babd25` (SHA-384) |
-| Songbird | ✅ 100% | `eaa1dda9d` (User-Agent) |
-| Neural API | ✅ 100% | Graph semantic translation |
-| biomeOS | ✅ 100% | Tower Atomic deployment |
+### Component Status ✅
+| Component | Status | Description |
+|-----------|--------|-------------|
+| BearDog | ✅ 100% | Crypto, TLS, genetic lineage |
+| Songbird | ✅ 100% | HTTP, TLS 1.3, discovery |
+| Neural API | ✅ 100% | capability.call semantic routing |
+| biomeOS | ✅ 100% | Ecosystem orchestration primal |
 
 ---
 
 ## 📋 ACTIVE SPECIFICATIONS
+
+### Deployment Standards (NEW)
+
+| Spec | Status | Description |
+|------|--------|-------------|
+| `PRIMAL_DEPLOYMENT_STANDARD.md` | ✅ v1.0 | Socket paths, arch parity |
+| `EVOLUTION_PATH.md` | ✅ v1.0 | Scripts → Graphs → Pure Rust |
 
 ### Core Architecture
 

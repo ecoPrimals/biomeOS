@@ -15,6 +15,8 @@
 //! - **Pure Rust**: No unsafe code, no external dependencies for detection
 //! - **Graceful**: Works in all environments, degrades gracefully
 
+#![deny(unsafe_code)] // Fast AND safe: Zero unsafe code, pure Rust system detection
+
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -388,12 +390,25 @@ impl DeploymentMode {
         IsolationLevel::Shared
     }
 
+    /// Get the current user ID.
+    ///
+    /// # Safety
+    ///
+    /// This function is safe - it reads from environment variables and `/proc/self/loginuid`
+    /// which are standard Linux interfaces. All I/O operations use safe Rust APIs.
+    /// The fallback value (1000) is a safe default for typical first user on Linux systems.
+    ///
+    /// # Panics
+    ///
+    /// This function never panics - it always returns a valid u32 value.
     fn get_uid() -> u32 {
         std::env::var("UID")
             .ok()
             .and_then(|s| s.parse().ok())
             .unwrap_or_else(|| {
                 // Linux-specific: read /proc/self/loginuid
+                // SAFETY: /proc/self/loginuid is a standard Linux interface that always
+                // returns a valid integer string. If reading fails, we use a safe default.
                 std::fs::read_to_string("/proc/self/loginuid")
                     .ok()
                     .and_then(|s| s.trim().parse().ok())

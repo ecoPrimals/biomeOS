@@ -13,7 +13,7 @@
 //!
 //! If Songbird is not available, validation passes by default.
 
-use crate::primal_client::{PrimalClient, SongbirdClient};
+use crate::primal_client::SongbirdClient;
 use anyhow::Result;
 use tracing::{debug, info, warn};
 

@@ -655,7 +655,7 @@ impl LifecycleManager {
     /// Initiate apoptosis (graceful shutdown) for a primal
     ///
     /// Uses iterative approach instead of recursion to avoid async boxing complexity.
-    pub async fn apoptosis(&self, name: &str, reason: ApoptosisReason) -> Result<()> {
+    pub async fn apoptosis(&self, name: &str, _reason: ApoptosisReason) -> Result<()> {
         // Collect all primals to shut down (transitive dependents)
         let shutdown_list = self.collect_shutdown_order(name).await;
 

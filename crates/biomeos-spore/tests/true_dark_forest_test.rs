@@ -33,11 +33,7 @@ async fn test_pure_noise_beacon_generation() {
 
     // Generate pure noise beacon
     let pure_noise_beacon = beacon_mgr
-        .generate_pure_noise_beacon(
-            "/tmp/test.sock",
-            &["crypto", "genetics"],
-            Some("genesis"),
-        )
+        .generate_pure_noise_beacon("/tmp/test.sock", &["crypto", "genetics"], Some("genesis"))
         .await
         .expect("Failed to generate pure noise beacon");
 
@@ -68,15 +64,30 @@ async fn test_pure_noise_beacon_generation() {
         "Beacon should not contain 'version' field"
     );
 
-    println!("✅ Pure noise beacon generated: {} bytes", pure_noise_beacon.len());
+    println!(
+        "✅ Pure noise beacon generated: {} bytes",
+        pure_noise_beacon.len()
+    );
     println!("   Format: [nonce (12)] + [ciphertext (N)] + [tag (16)]");
-    println!("   First 16 bytes (hex): {}", hex::encode(&pure_noise_beacon[..16.min(pure_noise_beacon.len())]));
+    println!(
+        "   First 16 bytes (hex): {}",
+        hex::encode(&pure_noise_beacon[..16.min(pure_noise_beacon.len())])
+    );
 
     // Test decryption (same family)
-    match beacon_mgr.try_decrypt_pure_noise_beacon(&pure_noise_beacon).await {
+    match beacon_mgr
+        .try_decrypt_pure_noise_beacon(&pure_noise_beacon)
+        .await
+    {
         Ok(Some(decrypted)) => {
             println!("✅ Same family decryption: SUCCESS");
-            println!("   Decrypted node_id: {}", decrypted.get("node_id").and_then(|v| v.as_str()).unwrap_or("unknown"));
+            println!(
+                "   Decrypted node_id: {}",
+                decrypted
+                    .get("node_id")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("unknown")
+            );
         }
         Ok(None) => {
             panic!("❌ Same family should decrypt successfully");
@@ -96,9 +107,14 @@ fn test_pure_noise_format_properties() {
     // (no JSON, no structure)
 
     // Simulate a pure noise beacon
-    let nonce = vec![0x4a, 0xf3, 0x9b, 0x2c, 0x7e, 0x11, 0x88, 0x45, 0xd2, 0x3f, 0xaa, 0xbb];
+    let nonce = vec![
+        0x4a, 0xf3, 0x9b, 0x2c, 0x7e, 0x11, 0x88, 0x45, 0xd2, 0x3f, 0xaa, 0xbb,
+    ];
     let ciphertext = vec![0x11, 0x22, 0x33, 0x44, 0x55]; // Example
-    let tag = vec![0xa1, 0xb2, 0xc3, 0xd4, 0xe5, 0xf6, 0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xf0, 0x11, 0x22];
+    let tag = vec![
+        0xa1, 0xb2, 0xc3, 0xd4, 0xe5, 0xf6, 0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xf0, 0x11,
+        0x22,
+    ];
 
     let mut beacon = Vec::new();
     beacon.extend_from_slice(&nonce);
@@ -106,7 +122,11 @@ fn test_pure_noise_format_properties() {
     beacon.extend_from_slice(&tag);
 
     // Verify properties
-    assert_eq!(beacon.len(), 12 + 5 + 16, "Format: nonce + ciphertext + tag");
+    assert_eq!(
+        beacon.len(),
+        12 + 5 + 16,
+        "Format: nonce + ciphertext + tag"
+    );
 
     // Verify no JSON
     assert!(
@@ -121,7 +141,10 @@ fn test_pure_noise_format_properties() {
     );
 
     println!("✅ Pure noise format validated");
-    println!("   Total: {} bytes (nonce: 12, ciphertext: 5, tag: 16)", beacon.len());
+    println!(
+        "   Total: {} bytes (nonce: 12, ciphertext: 5, tag: 16)",
+        beacon.len()
+    );
     println!("   First 8 bytes (hex): {}", hex::encode(&beacon[..8]));
     println!("   Indistinguishable from random noise: ✅");
 }

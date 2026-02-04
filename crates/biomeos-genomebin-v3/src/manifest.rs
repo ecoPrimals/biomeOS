@@ -14,26 +14,26 @@ use serde::{Deserialize, Serialize};
 pub struct GenomeManifest {
     /// Primal name (e.g., "beardog")
     pub name: String,
-    
+
     /// Version (e.g., "0.9.0")
     pub version: String,
-    
+
     /// Human-readable description
     pub description: String,
-    
+
     /// Supported architectures
     pub architectures: Vec<Arch>,
-    
+
     /// NUCLEUS atomic type (if part of atomic)
     /// "TOWER", "NODE", "NEST", "NUCLEUS", or None for standalone
     pub nucleus_atomic: Option<String>,
-    
+
     /// Primal capabilities (for discovery)
     pub capabilities: Vec<String>,
-    
+
     /// Creation timestamp (ISO 8601)
     pub created_at: String,
-    
+
     /// Optional: genomeBin format version
     #[serde(default = "default_format_version")]
     pub format_version: String,
@@ -57,36 +57,36 @@ impl GenomeManifest {
             format_version: default_format_version(),
         }
     }
-    
+
     /// Builder: Set version
     pub fn version(mut self, version: impl Into<String>) -> Self {
         self.version = version.into();
         self
     }
-    
+
     /// Builder: Set description
     pub fn description(mut self, description: impl Into<String>) -> Self {
         self.description = description.into();
         self
     }
-    
+
     /// Builder: Set NUCLEUS atomic type
     pub fn nucleus_atomic(mut self, atomic_type: impl Into<String>) -> Self {
         self.nucleus_atomic = Some(atomic_type.into());
         self
     }
-    
+
     /// Builder: Add capability
     pub fn add_capability(mut self, capability: impl Into<String>) -> Self {
         self.capabilities.push(capability.into());
         self
     }
-    
+
     /// Check if has specific capability
     pub fn has_capability(&self, capability: &str) -> bool {
         self.capabilities.iter().any(|c| c == capability)
     }
-    
+
     /// Check if supports architecture
     pub fn supports_arch(&self, arch: Arch) -> bool {
         self.architectures.contains(&arch)
@@ -96,7 +96,7 @@ impl GenomeManifest {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_manifest_creation() {
         let manifest = GenomeManifest::new("test-primal");
@@ -107,7 +107,7 @@ mod tests {
         assert!(manifest.capabilities.is_empty());
         assert!(manifest.nucleus_atomic.is_none());
     }
-    
+
     #[test]
     fn test_manifest_builder() {
         let manifest = GenomeManifest::new("beardog")
@@ -116,7 +116,7 @@ mod tests {
             .nucleus_atomic("TOWER-component")
             .add_capability("encryption")
             .add_capability("identity");
-        
+
         assert_eq!(manifest.version, "0.9.0");
         assert_eq!(manifest.description, "BearDog Security Primal");
         assert_eq!(manifest.nucleus_atomic, Some("TOWER-component".to_string()));
@@ -125,12 +125,12 @@ mod tests {
         assert!(manifest.has_capability("identity"));
         assert!(!manifest.has_capability("compute"));
     }
-    
+
     #[test]
     fn test_arch_support() {
         let mut manifest = GenomeManifest::new("test");
         assert!(!manifest.supports_arch(Arch::X86_64));
-        
+
         manifest.architectures.push(Arch::X86_64);
         assert!(manifest.supports_arch(Arch::X86_64));
         assert!(!manifest.supports_arch(Arch::Aarch64));

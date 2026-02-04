@@ -17,6 +17,19 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 use std::time::Duration;
 
+// Helper function for HTTP health checks (pure Rust via ureq)
+fn http_get(url: &str, timeout_secs: u64) -> Result<(u16, String), String> {
+    ureq::get(url)
+        .timeout(Duration::from_secs(timeout_secs))
+        .call()
+        .map(|resp| {
+            let status = resp.status();
+            let body = resp.into_string().unwrap_or_default();
+            (status, body)
+        })
+        .map_err(|e| e.to_string())
+}
+
 // ============================================================================
 // Helper Functions
 // ============================================================================
@@ -24,13 +37,20 @@ use std::time::Duration;
 /// Wait for service with exponential backoff (production-grade polling)
 ///
 /// **Concurrency**: Uses exponential backoff (10ms → 20ms → 40ms → 80ms) instead of fixed delays
+/// **ecoBin v2.0**: Uses ureq (pure Rust) instead of reqwest (C deps)
 async fn wait_for_service(url: &str, max_attempts: u32) -> bool {
-    let client = reqwest::Client::new();
+    let url = url.to_string();
     let mut delay_ms = 10u64; // Start with 10ms
 
     for attempt in 0..max_attempts {
-        if let Ok(response) = client.get(url).send().await {
-            if response.status().is_success() {
+        let url_clone = url.clone();
+        let result = tokio::task::spawn_blocking(move || {
+            ureq::get(&url_clone).timeout(Duration::from_secs(1)).call()
+        })
+        .await;
+
+        if let Ok(Ok(response)) = result {
+            if response.status() >= 200 && response.status() < 300 {
                 return true;
             }
         }
@@ -198,26 +218,15 @@ async fn test_discover_running_nestgate() {
     // Check if NestGate is running on default port
     let nestgate_url = "http://localhost:9020/health";
 
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(2))
-        .build()
-        .unwrap();
-
-    match client.get(nestgate_url).send().await {
-        Ok(response) => {
-            if response.status().is_success() {
+    // Use pure Rust HTTP (ecoBin v2.0 compliant)
+    match http_get(nestgate_url, 2) {
+        Ok((status, body)) => {
+            if status >= 200 && status < 300 {
                 println!("✅ NestGate is running and responsive");
-
-                // Verify health response
-                if let Ok(body) = response.text().await {
-                    assert!(!body.is_empty(), "Health response should not be empty");
-                    println!("   Health response: {}", body);
-                }
+                assert!(!body.is_empty(), "Health response should not be empty");
+                println!("   Health response: {}", body);
             } else {
-                println!(
-                    "⚠️  NestGate returned non-success status: {}",
-                    response.status()
-                );
+                println!("⚠️  NestGate returned non-success status: {}", status);
             }
         }
         Err(e) => {
@@ -284,17 +293,12 @@ async fn test_rest_api_architecture() {
     // Test discovery of REST API-based primals (like NestGate)
     let nestgate_url = "http://localhost:9020/health";
 
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(2))
-        .build()
-        .unwrap();
-
-    match client.get(nestgate_url).send().await {
-        Ok(response) => {
+    // Use pure Rust HTTP (ecoBin v2.0 compliant)
+    match http_get(nestgate_url, 2) {
+        Ok((status, _)) if status >= 200 && status < 300 => {
             println!("✅ REST API primal discovered (NestGate)");
-            assert!(response.status().is_success());
         }
-        Err(_) => {
+        _ => {
             println!("⏭️  REST API primal not running");
         }
     }
@@ -424,12 +428,10 @@ async fn test_graceful_degradation_missing_primal() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_graceful_degradation_unreachable_service() {
     // Test that system gracefully handles unreachable services
-    let client = reqwest::Client::builder()
+    // Use pure Rust HTTP with short timeout (ecoBin v2.0 compliant)
+    let result = ureq::get("http://localhost:9999/health")
         .timeout(Duration::from_millis(100))
-        .build()
-        .unwrap();
-
-    let result = client.get("http://localhost:9999/health").send().await;
+        .call();
 
     assert!(
         result.is_err(),
@@ -505,15 +507,8 @@ async fn test_discovery_integration_summary() {
         summary.push((name, available));
     }
 
-    // Check for running services
-    let nestgate_running = reqwest::Client::builder()
-        .timeout(Duration::from_millis(500))
-        .build()
-        .unwrap()
-        .get("http://localhost:9020/health")
-        .send()
-        .await
-        .is_ok();
+    // Check for running services (pure Rust via ureq)
+    let nestgate_running = http_get("http://localhost:9020/health", 1).is_ok();
 
     let songbird_running = Command::new("pgrep")
         .arg("-f")

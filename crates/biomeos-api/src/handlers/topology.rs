@@ -162,69 +162,88 @@ pub async fn get_topology(
     }
 }
 
-/// Generate mock topology for testing
-/// Get standalone topology (works without primals)
+/// Get standalone topology (valid operational mode, not a mock)
 ///
-/// This provides a basic topology for development and demos
-/// when the full primal stack is not available.
+/// This is NOT a production mock - it's a valid operational mode that allows
+/// biomeOS to run standalone for development, testing, and demonstrations
+/// without requiring live primals.
+///
+/// **Production**: Real topology is built from discovered primals via `build_live_topology()`
+/// **Development**: Set `BIOMEOS_STANDALONE_MODE=true` to use this standalone topology.
+///
+/// EVOLVED (Feb 2026): Capability-based topology - primals are described by
+/// their capabilities, not hardcoded names. The standalone topology now uses
+/// generic capability categories.
 fn get_standalone_topology() -> (Vec<TopologyNode>, Vec<TopologyEdge>) {
+    // Get node ID from environment or use default
+    let node_id = std::env::var("BIOMEOS_NODE_ID").unwrap_or_else(|_| "standalone".to_string());
+    let family_id = std::env::var("BIOMEOS_FAMILY_ID")
+        .or_else(|_| std::env::var("FAMILY_ID"))
+        .unwrap_or_else(|_| "dev".to_string());
+
     let primals = vec![
+        // Security capability provider (crypto operations)
         TopologyNode {
-            id: "beardog-node-alpha".to_string(),
-            name: "beardog".to_string(),
-            primal_type: "beardog".to_string(),
+            id: format!("security-{}-{}", family_id, node_id),
+            name: "security-provider".to_string(),
+            primal_type: "security".to_string(),
             health: "healthy".to_string(),
             capabilities: vec![
                 "security".to_string(),
-                "encryption".to_string(),
+                "crypto.encrypt".to_string(),
+                "crypto.decrypt".to_string(),
+                "crypto.sign".to_string(),
                 "identity".to_string(),
             ],
             endpoints: Some(NodeEndpoints {
-                unix_socket: Some("/tmp/beardog-node-alpha.sock".to_string()),
+                unix_socket: Some(format!("/tmp/biomeos/sockets/security-{}.sock", family_id)),
                 http: None,
             }),
             metadata: Some(NodeMetadata {
-                version: Some("v0.15.2".to_string()),
-                family_id: Some("nat0".to_string()),
-                node_id: Some("node-alpha".to_string()),
+                version: Some(env!("CARGO_PKG_VERSION").to_string()),
+                family_id: Some(family_id.clone()),
+                node_id: Some(node_id.clone()),
                 trust_level: Some(3),
             }),
         },
+        // Discovery capability provider (HTTP, networking)
         TopologyNode {
-            id: "songbird-node-alpha".to_string(),
-            name: "songbird".to_string(),
-            primal_type: "songbird".to_string(),
+            id: format!("discovery-{}-{}", family_id, node_id),
+            name: "discovery-provider".to_string(),
+            primal_type: "discovery".to_string(),
             health: "healthy".to_string(),
             capabilities: vec![
                 "discovery".to_string(),
-                "p2p".to_string(),
-                "btsp".to_string(),
+                "http.request".to_string(),
+                "http.get".to_string(),
+                "http.post".to_string(),
             ],
             endpoints: Some(NodeEndpoints {
-                unix_socket: Some("/tmp/songbird-node-alpha.sock".to_string()),
+                unix_socket: Some(format!("/tmp/biomeos/sockets/discovery-{}.sock", family_id)),
                 http: None,
             }),
             metadata: Some(NodeMetadata {
-                version: Some("v3.19.0".to_string()),
-                family_id: Some("nat0".to_string()),
-                node_id: Some("node-alpha".to_string()),
+                version: Some(env!("CARGO_PKG_VERSION").to_string()),
+                family_id: Some(family_id.clone()),
+                node_id: Some(node_id.clone()),
                 trust_level: Some(3),
             }),
         },
     ];
 
+    // Connection: Discovery provider uses Security for encrypted requests
     let connections = vec![TopologyEdge {
-        from: "songbird-node-alpha".to_string(),
-        to: "beardog-node-alpha".to_string(),
+        from: format!("discovery-{}-{}", family_id, node_id),
+        to: format!("security-{}-{}", family_id, node_id),
         edge_type: "capability_invocation".to_string(),
-        capability: Some("encryption".to_string()),
+        capability: Some("crypto.encrypt".to_string()),
         metrics: Some(EdgeMetrics {
-            request_count: Some(42),
-            avg_latency_ms: Some(2.3),
-            latency_ms: Some(2.3),
+            request_count: None,
+            avg_latency_ms: Some(1.0),
+            latency_ms: Some(1.0),
             bandwidth_mbps: None,
             packet_loss: Some(0.0),
-            last_measured: None,
+            last_measured: Some("standalone-mode".to_string()),
         }),
     }];
 
@@ -366,19 +385,21 @@ fn extract_node_id_from_primal(primal_id: &str) -> Option<String> {
 /// Collect real metrics for an edge between primals
 ///
 /// EVOLVED (Jan 27, 2026): Measures actual connection latency
+/// EVOLVED (Feb 2026): Capability-based latency estimation
 ///
 /// Returns metrics if measurement is possible, None otherwise.
+/// Latency estimates are based on capability types, not primal names.
 fn collect_edge_metrics(from_id: &str, to_id: &str) -> Option<EdgeMetrics> {
-    // For now, return synthetic metrics based on primal types
+    // For now, return synthetic metrics based on capability types
     // In production, this would measure actual latency via JSON-RPC ping
 
-    // Infer latency from primal relationship
-    let estimated_latency_ms = if from_id.contains("songbird") && to_id.contains("beardog") {
-        // Orchestration → Security is typically fast (local sockets)
-        Some(1.5)
-    } else if from_id.contains("beardog") {
-        // Security operations may have crypto overhead
+    // Infer latency from capability relationship (type-based, not name-based)
+    let estimated_latency_ms = if to_id.contains("security") || to_id.contains("crypto") {
+        // Security/crypto operations may have computational overhead
         Some(5.0)
+    } else if from_id.contains("discovery") || from_id.contains("http") {
+        // Discovery → other is typically fast (local sockets)
+        Some(1.5)
     } else {
         // Default estimate for local socket communication
         Some(2.0)
@@ -392,4 +413,175 @@ fn collect_edge_metrics(from_id: &str, to_id: &str) -> Option<EdgeMetrics> {
         packet_loss: Some(0.0), // Local sockets are reliable
         last_measured: Some(chrono::Utc::now().to_rfc3339()),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_topology_node_serialize() {
+        let node = TopologyNode {
+            id: "test-node".to_string(),
+            name: "Test".to_string(),
+            primal_type: "security".to_string(),
+            health: "healthy".to_string(),
+            capabilities: vec!["crypto".to_string()],
+            endpoints: None,
+            metadata: None,
+        };
+        let json = serde_json::to_string(&node).unwrap();
+        assert!(json.contains("test-node"));
+        assert!(json.contains("security"));
+    }
+
+    #[test]
+    fn test_topology_edge_serialize() {
+        let edge = TopologyEdge {
+            from: "node-a".to_string(),
+            to: "node-b".to_string(),
+            edge_type: "capability_invocation".to_string(),
+            capability: Some("crypto.encrypt".to_string()),
+            metrics: None,
+        };
+        let json = serde_json::to_string(&edge).unwrap();
+        assert!(json.contains("node-a"));
+        assert!(json.contains("node-b"));
+        assert!(json.contains("capability_invocation"));
+    }
+
+    #[test]
+    fn test_health_status_healthy() {
+        let nodes = vec![
+            TopologyNode {
+                id: "a".to_string(),
+                name: "A".to_string(),
+                primal_type: "security".to_string(),
+                health: "healthy".to_string(),
+                capabilities: vec![],
+                endpoints: None,
+                metadata: None,
+            },
+            TopologyNode {
+                id: "b".to_string(),
+                name: "B".to_string(),
+                primal_type: "discovery".to_string(),
+                health: "healthy".to_string(),
+                capabilities: vec![],
+                endpoints: None,
+                metadata: None,
+            },
+        ];
+        let status = calculate_health_status(&nodes);
+        assert_eq!(status.overall, "healthy");
+        assert_eq!(status.primals_healthy, 2);
+        assert_eq!(status.primals_total, 2);
+    }
+
+    #[test]
+    fn test_health_status_degraded() {
+        let nodes = vec![
+            TopologyNode {
+                id: "a".to_string(),
+                name: "A".to_string(),
+                primal_type: "security".to_string(),
+                health: "healthy".to_string(),
+                capabilities: vec![],
+                endpoints: None,
+                metadata: None,
+            },
+            TopologyNode {
+                id: "b".to_string(),
+                name: "B".to_string(),
+                primal_type: "discovery".to_string(),
+                health: "unhealthy".to_string(),
+                capabilities: vec![],
+                endpoints: None,
+                metadata: None,
+            },
+        ];
+        let status = calculate_health_status(&nodes);
+        assert_eq!(status.overall, "degraded");
+        assert_eq!(status.primals_healthy, 1);
+    }
+
+    #[test]
+    fn test_extract_node_id_three_parts() {
+        let result = extract_node_id_from_primal("beardog-nat0-desktop");
+        assert_eq!(result, Some("desktop".to_string()));
+    }
+
+    #[test]
+    fn test_extract_node_id_two_parts() {
+        let result = extract_node_id_from_primal("beardog-desktop");
+        assert_eq!(result, Some("desktop".to_string()));
+    }
+
+    #[test]
+    fn test_extract_node_id_one_part() {
+        let result = extract_node_id_from_primal("standalone");
+        assert_eq!(result, Some("standalone".to_string()));
+    }
+
+    #[test]
+    fn test_collect_edge_metrics_security() {
+        let metrics = collect_edge_metrics("discovery-node", "security-node");
+        assert!(metrics.is_some());
+        let m = metrics.unwrap();
+        assert_eq!(m.latency_ms, Some(5.0)); // Security has overhead
+    }
+
+    #[test]
+    fn test_collect_edge_metrics_discovery() {
+        let metrics = collect_edge_metrics("discovery-node", "storage-node");
+        assert!(metrics.is_some());
+        let m = metrics.unwrap();
+        assert_eq!(m.latency_ms, Some(1.5)); // Discovery is fast
+    }
+
+    #[test]
+    fn test_collect_edge_metrics_default() {
+        let metrics = collect_edge_metrics("node-a", "node-b");
+        assert!(metrics.is_some());
+        let m = metrics.unwrap();
+        assert_eq!(m.latency_ms, Some(2.0)); // Default latency
+    }
+
+    #[test]
+    fn test_standalone_topology() {
+        let (nodes, edges) = get_standalone_topology();
+        assert!(!nodes.is_empty());
+        assert!(!edges.is_empty());
+
+        // Check nodes have proper capabilities
+        for node in &nodes {
+            assert!(!node.capabilities.is_empty());
+            assert!(!node.id.is_empty());
+        }
+    }
+
+    #[test]
+    fn test_node_endpoints_serialize() {
+        let endpoints = NodeEndpoints {
+            unix_socket: Some("/tmp/test.sock".to_string()),
+            http: None,
+        };
+        let json = serde_json::to_string(&endpoints).unwrap();
+        assert!(json.contains("/tmp/test.sock"));
+        assert!(!json.contains("http")); // Skip serializing None
+    }
+
+    #[test]
+    fn test_node_metadata_serialize() {
+        let metadata = NodeMetadata {
+            version: Some("1.0.0".to_string()),
+            family_id: Some("nat0".to_string()),
+            node_id: Some("desktop".to_string()),
+            trust_level: Some(3),
+        };
+        let json = serde_json::to_string(&metadata).unwrap();
+        assert!(json.contains("1.0.0"));
+        assert!(json.contains("nat0"));
+        assert!(json.contains("3"));
+    }
 }
