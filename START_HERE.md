@@ -1,283 +1,172 @@
-# 🚀 START HERE - biomeOS TRUE Dark Forest
+# Start Here - biomeOS
 
-**Last Updated**: February 2, 2026  
-**Status**: ✅ **TRUE DARK FOREST COMPLETE** - Ready for validation!
-
-═══════════════════════════════════════════════════════════════════
-
-## 🎊 **What's New: TRUE Dark Forest (A++ Security)**
-
-biomeOS has achieved **TRUE Dark Forest** security where:
-- 🌑 Beacons are **pure noise** (indistinguishable from random)
-- 🌑 **Zero metadata leaks** (better than Signal/Tor)
-- 🌑 Genetic lineage **IS** the decryption key
-- 🌑 Network observers see **only random bytes**
-
-**Security Grade**: 🏆 **A++ LEGENDARY**
+**Last Updated**: January 29, 2026  
+**Status**: Production Ready - Universal IPC v3.0
 
 ---
 
-## 📖 **Quick Navigation**
+## What is biomeOS?
 
-### **👤 I Want to Test TRUE Dark Forest**
-→ **5-minute validation test** 🏆
+biomeOS is the **ecosystem orchestrator** for ecoPrimals - a federation of autonomous Rust programs (primals) that communicate via capability-based discovery and Universal IPC v3.0.
+
+### Key Concepts
+
+- **Primals**: Self-contained Rust binaries with specific capabilities
+- **Atomics**: Primal combinations (Tower = BearDog + Songbird)
+- **NUCLEUS**: Complete system (Tower + Node + Nest)
+- **Neural API**: Semantic routing via `capability.call`
+- **Universal IPC v3.0**: Multi-transport communication (Unix/Abstract/TCP)
+
+---
+
+## Quick Start
+
+### 1. Deploy Tower Atomic (5 minutes)
 
 ```bash
-cd /home/eastgate/Development/ecoPrimals/phase2/biomeOS
+cd livespore-usb/$(uname -m)/scripts/
+FAMILY_ID=my_family ./start_tower.sh
 
-# Run TRUE Dark Forest integration test
-./scripts/test-true-dark-forest.sh
-
-# Expected: A++ LEGENDARY validation!
+# Verify
+echo '{"jsonrpc":"2.0","method":"health","id":1}' | \
+  nc -U /run/user/$(id -u)/biomeos/beardog-my_family.sock
 ```
 
----
+### 2. Deploy Full NUCLEUS (10 minutes)
 
-### **👨‍💻 I Want to Understand the Architecture**
-→ **[README.md](README.md)** - Complete overview
-
-**Key Documents**:
-1. [TRUE Dark Forest Evolution](docs/sessions/feb02-2026/BIRDSONG_SECURITY_EVOLUTION_TRUE_DARKFOREST.md) - A → A++ security
-2. [Implementation Complete](docs/sessions/feb02-2026/TRUE_DARKFOREST_EXECUTION_COMPLETE_FEB02_2026.md) - Status
-3. [Deep Debt Analysis](docs/sessions/feb02-2026/DEEP_DEBT_ANALYSIS_FEB02_2026.md) - A+ code quality
-
----
-
-### **🔧 I Want to Deploy**
-→ **Quick deployment guide**
-
-**On USB/Linux (Tier 1 - Optimal)**:
 ```bash
-cd plasmidBin/
+cd livespore-usb/$(uname -m)/scripts/
+FAMILY_ID=my_family ./deploy_atomic.sh nucleus
 
-# Extract genomeBin
-./beardog.genome extract /tmp/beardog/
-
-# Start with TRUE Dark Forest support
-FAMILY_ID=dark_forest NODE_ID=my_node \
-  /tmp/beardog/beardog server \
-  --socket /run/user/$(id -u)/biomeos/beardog.sock &
-
-# Test beacon key derivation
-echo '{"jsonrpc":"2.0","method":"genetic.derive_lineage_beacon_key","params":{},"id":1}' | \
-  nc -U /run/user/$(id -u)/biomeos/beardog.sock
+# All sockets created at:
+# /run/user/$UID/biomeos/{primal}-{family_id}.sock
 ```
 
-**On Android/Pixel (Tier 2 - Degraded)**:
+### 3. Use capability.call (Neural API)
+
 ```bash
-# Push genomeBin to Pixel
-./scripts/genome-sync.sh pixel
+# Discover who provides "crypto" capability
+echo '{"jsonrpc":"2.0","method":"capability.discover","params":{"capability":"crypto"},"id":1}' | \
+  nc -U /run/user/$(id -u)/biomeos/neural-api.sock
 
-# Extract and start
-adb shell "cd /data/local/tmp/plasmidBin && \
-  ./beardog.genome extract /data/local/tmp/primals/ && \
-  cd /data/local/tmp/primals && \
-  FAMILY_ID=pixel_dark_forest NODE_ID=pixel_node \
-  ./beardog server --listen 127.0.0.1:9900 &"
+# Call capability (routed automatically)
+echo '{"jsonrpc":"2.0","method":"capability.call","params":{"capability":"crypto","operation":"sha256","data":"hello"},"id":1}' | \
+  nc -U /run/user/$(id -u)/biomeos/neural-api.sock
 ```
 
 ---
 
-### **📚 I Want Complete Documentation**
-→ **Session documentation** (58 docs, ~23,500 lines)
+## Architecture
 
-**Location**: `docs/sessions/feb02-2026/`
-
-**Key Documents**:
-- Security analyses (A → A++ evolution)
-- Implementation guides
-- Deep debt audit (A+ grade)
-- Testing strategies
-- Deployment guides
-- Evolution plans
-
----
-
-## 🏆 **Current Status**
-
-### **Implementation** ✅ **100% COMPLETE**
-
-| Component | Status | Lines |
-|-----------|--------|-------|
-| biomeOS pure noise | ✅ Complete | ~197 |
-| BearDog beacon key | ✅ In code | ~52 |
-| Unit tests | ✅ Written | ~115 |
-| Integration tests | ✅ Written | ~400 |
-| Benchmarks | ✅ Written | ~200 |
-| Demo & examples | ✅ Written | ~780 |
-| **Total Code** | **✅ Done** | **~1,744** |
-
----
-
-### **Security Evolution** 🏆 **A++ LEGENDARY**
-
-**Before (Old System)**:
-```json
-{
-  "family_id": "ecoPrimals_Phase2",  // ← LEAK!
-  "version": "2.0",                  // ← LEAK!
-  "encrypted_payload": "..."         // ← Identifiable
-}
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        NUCLEUS                               │
+├─────────────────────────────────────────────────────────────┤
+│  Layer 2: biomeOS + Neural API                              │
+│           (semantic translation, capability routing)         │
+├─────────────────────────────────────────────────────────────┤
+│  Layer 1: Atomics                                           │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
+│  │  Tower   │  │   Node   │  │   Nest   │  │ Squirrel │   │
+│  │ BearDog  │  │  Tower   │  │  Tower   │  │  AI/MCP  │   │
+│  │ Songbird │  │ Toadstool│  │ NestGate │  │          │   │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘   │
+├─────────────────────────────────────────────────────────────┤
+│  Layer 0: Primals (evolve independently)                    │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-**After (TRUE Dark Forest)**:
-```
-[0x4a, 0x8f, 0x2c, ...]  // ← Pure noise (123 bytes)
-// No JSON, no structure, NO metadata
-// Only family with same lineage can decrypt
-```
+---
 
-**Network Visibility**: Random bytes → Learn NOTHING ✅
+## Key Documents
+
+| Document | Purpose |
+|----------|---------|
+| `README.md` | Complete overview |
+| `CURRENT_STATUS.md` | Latest status |
+| `specs/PRIMAL_DEPLOYMENT_STANDARD.md` | Deployment standard |
+| `specs/EVOLUTION_PATH.md` | Scripts to graphs migration |
 
 ---
 
-### **Code Quality** 🏆 **A+ EXCELLENT**
+## Deployment Paths
 
-**Strengths**:
-- ✅ Modern idiomatic Rust
-- ✅ Zero production mocks
-- ✅ Pure Rust dependencies
-- ✅ Capability-based architecture
-- ✅ Runtime discovery
-- ✅ Excellent organization
+### For x86_64 (Linux/USB)
 
-**Grade**: 🏆 **A+ (World-class with optional improvements)**
-
----
-
-## 📊 **What's Ready**
-
-### **Infrastructure** ✅
-- genomeBin v4.1 (multi-arch: x86_64 + ARM64)
-- BearDog rebuilt (includes TRUE Dark Forest method)
-- Songbird deployed
-- Pure noise beacon methods implemented
-
-### **Testing** ✅
-- Unit tests (~115 lines)
-- Integration tests (~400 lines)
-- Performance benchmarks (~200 lines)
-- Demo & walkthrough (~300 lines)
-- Test script (end-to-end)
-
-### **Documentation** ✅
-- Root docs: 6 essential files
-- Session docs: 58 comprehensive documents (~23,500 lines)
-- Security analyses
-- Implementation guides
-- Evolution roadmaps
-
----
-
-## 🎯 **Quick Start Paths**
-
-### **Path 1: Validate TRUE Dark Forest** (5 minutes)
 ```bash
-# Full validation test
-./scripts/test-true-dark-forest.sh
-
-# Expected: A++ LEGENDARY validation!
+cd livespore-usb/x86_64/scripts/
+./deploy_atomic.sh nucleus
 ```
 
-### **Path 2: Run Integration Tests** (10 minutes)
+### For aarch64 (Pixel/ARM)
+
 ```bash
-cd crates/biomeos-spore
-
-# Run comprehensive tests
-cargo test --test true_dark_forest_integration -- --ignored --nocapture
-
-# Expected: All tests pass with A++ grade
+adb push pixel8a-deploy /data/local/tmp/biomeos
+adb shell /data/local/tmp/biomeos/start_nucleus_mobile.sh
 ```
 
-### **Path 3: Run Performance Benchmarks** (15 minutes)
+### Graph-based (Phase 2)
+
 ```bash
-# Benchmark performance improvements
-cargo bench --bench dark_forest_benches
-
-# Expected: 25% faster, 32% smaller, A++ security
-```
-
-### **Path 4: Run Demo** (5 minutes)
-```bash
-# Interactive demonstration
-cargo run --example true_dark_forest_demo
-
-# Shows: generation, decryption, performance, security properties
+./deploy_atomic.sh --graph nucleus
+# Uses Neural API for deployment orchestration
 ```
 
 ---
 
-## 💡 **Key Insights**
+## Universal IPC v3.0 - Transport Discovery
 
-### **1. Pure Noise = Zero Metadata**
-Network observers cannot distinguish TRUE Dark Forest beacons from random data. No JSON, no structure, no identifiable patterns.
+Primals discover communication endpoints with automatic fallback:
 
-### **2. Genetic Lineage = Decryption Key**
-The beacon encryption key is derived from family lineage using HKDF-SHA256. Same family can decrypt, different family sees noise (silently).
+```
+Tier 1 (Native - High Performance):
+  1. $PRIMAL_SOCKET environment variable
+  2. $XDG_RUNTIME_DIR/biomeos/primal.sock
+  3. /run/user/$UID/biomeos/primal.sock
+  4. @biomeos_primal (Abstract socket - Linux/Android)
 
-### **3. Better Than Signal/Tor**
-- **Signal**: Encrypted content, metadata leaks (server, timing)
-- **Tor**: Encrypted routing, traffic analysis possible
-- **TRUE Dark Forest**: Beacons = noise, zero metadata, zero analysis ✅
+Tier 2 (Universal - Cross-Device):
+  5. TCP localhost:910X
+  6. TCP remote:910X (federation)
+```
 
-### **4. World-Class Architecture**
-Deep debt analysis shows biomeOS already had:
-- ✅ Capability-based design
-- ✅ Zero production mocks
-- ✅ Pure Rust dependencies
-- ✅ Runtime discovery
+### Cross-Device Example
 
-**Philosophy**: "We discovered we already built it right."
-
----
-
-## 🧬 **The Vision Realized**
-
-> **"Birds communicate via encrypted noise. Family lineage mixes beacon to noise, relatives can hear and understand. No plaintext leaks."** - User insight that triggered A++ evolution
-
-**This is now PRODUCTION REALITY**:
-
-Just as birdsong in nature:
-- Sounds like noise to outsiders
-- Meaningful to family members
-- No metadata revealed
-- Silent failures (no alerts)
-
-TRUE Dark Forest:
-- Looks like random bytes to outsiders ✅
-- Decryptable by family lineage ✅
-- Zero metadata leaks ✅
-- Silent failures (no logs) ✅
-
----
-
-## 🎊 **Bottom Line**
-
-**TRUE Dark Forest is COMPLETE and ready for validation.**
-
-**Status**:
-- ✅ Code: 100% complete (~1,744 lines)
-- ✅ Tests: Comprehensive suite ready
-- ✅ BearDog: Rebuilt with TRUE Dark Forest support
-- ✅ Documentation: 58 docs, ~23,500 lines
-- ⏳ Validation: 5-20 minutes from confirmation
-
-**Command**:
 ```bash
-./scripts/test-true-dark-forest.sh  # → A++ LEGENDARY!
+# On Desktop (local AI)
+SQUIRREL_SOCKET=tcp://localhost:9104 ./squirrel
+
+# On Pixel 8a (API gateway)
+SONGBIRD_TCP_HOST=0.0.0.0 ./songbird
+
+# Desktop Squirrel can now route HTTP through Pixel's Songbird
 ```
 
 ---
 
-═══════════════════════════════════════════════════════════════════
+## Standards
 
-🌑🧬✅ **TRUE DARK FOREST - Ready for Validation!** ✅🧬🌑
+| Standard | Description |
+|----------|-------------|
+| **ecoBin v2.0** | 100% Pure Rust, zero C deps |
+| **Universal IPC v3.0** | Multi-transport (Unix/Abstract/TCP) |
+| **PRIMAL_DEPLOYMENT_STANDARD** | Deterministic cross-platform |
+| **Semantic Method Naming** | capability.call routing |
+| **AGPL-3.0-only** | License requirement |
 
-**Security**: 🏆 A++ LEGENDARY (zero metadata)  
-**Code Quality**: 🏆 A+ EXCELLENT (world-class)  
-**Documentation**: 📚 58 docs (~23,500 lines)  
-**Status**: ✅ READY FOR 5-MINUTE TEST
+---
 
-**Next**: Run `./scripts/test-true-dark-forest.sh` → Validate A++ security!
+## Need Help?
 
-═══════════════════════════════════════════════════════════════════
+1. Check `CURRENT_STATUS.md` for latest status
+2. See `docs/handoffs/` for evolution reports
+3. Review `specs/` for standards
+4. Explore `livespore-usb/` for deployment scripts
+
+---
+
+**Status**: Production Ready  
+**IPC**: Universal IPC v3.0  
+**Primals**: 6/6 ecoBin v2.0 compliant  
+**Tests**: 800+ passing  
+**Security**: A++ LEGENDARY
