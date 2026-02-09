@@ -81,12 +81,12 @@ impl DiscoveryUtils {
         let all_services = Self::endpoints_to_discovery_results(manager, all_endpoints).await?;
 
         // Categorize services
-        let mut by_type = std::collections::HashMap::new();
+        let mut by_type: std::collections::HashMap<String, Vec<_>> = std::collections::HashMap::new();
         for service in &all_services {
             let category = service.primal_type.category.clone();
             by_type
                 .entry(category)
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(service.clone());
         }
 

@@ -56,10 +56,7 @@ use ui_sync::UISync;
 // - Runtime primal discovery (no hardcoded paths)
 // ═══════════════════════════════════════════════════════════════════════════
 
-use crate::primal_client::{
-    BearDogClient, NestGateClient, PetalTongueClient, SongbirdClient, SquirrelClient,
-    ToadStoolClient,
-};
+use crate::primal_client::PrimalConnections;
 
 /// Interactive UI Orchestrator
 ///
@@ -87,13 +84,8 @@ pub struct InteractiveUIOrchestrator {
     /// Event broadcaster
     events: EventBroadcaster,
 
-    /// Primal clients (discovered at runtime via capabilities)
-    petaltongue: Option<PetalTongueClient>,
-    songbird: Option<SongbirdClient>,
-    beardog: Option<BearDogClient>,
-    nestgate: Option<NestGateClient>,
-    toadstool: Option<ToadStoolClient>,
-    squirrel: Option<SquirrelClient>,
+    /// Dynamic primal connections (DEEP DEBT EVOLUTION: replaced 6 fixed fields)
+    connections: PrimalConnections,
 
     /// Family ID for primal discovery
     family_id: String,
@@ -124,12 +116,7 @@ impl InteractiveUIOrchestrator {
         Ok(Self {
             state,
             events,
-            petaltongue: None,
-            songbird: None,
-            beardog: None,
-            nestgate: None,
-            toadstool: None,
-            squirrel: None,
+            connections: PrimalConnections::default(),
             family_id,
         })
     }
@@ -139,30 +126,23 @@ impl InteractiveUIOrchestrator {
     /// Uses capability-based discovery to find primals. No hardcoded assumptions!
     async fn discover_primals(&mut self) -> Result<()> {
         let result = Discovery::discover_primals().await?;
-
-        self.petaltongue = result.petaltongue;
-        self.songbird = result.songbird;
-        self.beardog = result.beardog;
-        self.nestgate = result.nestgate;
-        self.toadstool = result.toadstool;
-        self.squirrel = result.squirrel;
-
+        self.connections = result.connections;
         Ok(())
     }
 
     /// Discover devices from available primals
     async fn discover_devices(&self) -> Result<()> {
-        Discovery::discover_devices(&self.songbird).await
+        Discovery::discover_devices(&self.connections).await
     }
 
     /// Discover active primals
     async fn discover_active_primals(&self) -> Result<()> {
-        Discovery::discover_active_primals(&self.songbird).await
+        Discovery::discover_active_primals(&self.connections).await
     }
 
     /// Load saved state from NestGate
     async fn load_saved_state(&self) -> Result<()> {
-        Discovery::load_saved_state(&self.nestgate, &self.family_id).await
+        Discovery::load_saved_state(&self.connections, &self.family_id).await
     }
 
     /// Start the orchestrator
@@ -187,7 +167,7 @@ impl InteractiveUIOrchestrator {
         self.load_saved_state().await?;
 
         // Phase 4: Launch UI if petalTongue is available
-        if self.petaltongue.is_some() {
+        if self.connections.petaltongue().is_some() {
             info!("✅ petalTongue available - UI will be rendered");
         } else {
             warn!("⚠️  No petalTongue available - running headless");
@@ -195,7 +175,8 @@ impl InteractiveUIOrchestrator {
 
         // Phase 5: Sync initial state to petalTongue
         let initial_state = self.build_initial_ui_state().await;
-        let _ = UISync::initialize_ui(&self.petaltongue, initial_state).await;
+        let petaltongue = self.connections.petaltongue().cloned();
+        let _ = UISync::initialize_ui(&petaltongue, initial_state).await;
 
         info!("✅ Interactive UI Orchestrator started successfully!");
 
@@ -206,12 +187,7 @@ impl InteractiveUIOrchestrator {
     async fn build_initial_ui_state(&self) -> serde_json::Value {
         Discovery::build_initial_ui_state(
             &self.family_id,
-            &self.songbird,
-            &self.nestgate,
-            &self.petaltongue,
-            &self.beardog,
-            &self.toadstool,
-            &self.squirrel,
+            &self.connections,
         )
         .await
     }
@@ -226,12 +202,7 @@ impl InteractiveUIOrchestrator {
         ActionHandler::handle_user_action(
             action,
             &self.family_id,
-            &self.petaltongue,
-            &self.songbird,
-            &self.beardog,
-            &self.nestgate,
-            &self.toadstool,
-            &self.squirrel,
+            &self.connections,
         )
         .await
     }
@@ -242,9 +213,11 @@ impl InteractiveUIOrchestrator {
     pub async fn run(&mut self) -> Result<()> {
         info!("Running Interactive UI Orchestrator event loop...");
 
-        // Subscribe to Songbird events if available
-        if let Some(ref songbird) = self.songbird {
-            match songbird
+        // Subscribe to registry provider events if available
+        let registry_name = std::env::var("BIOMEOS_REGISTRY_PROVIDER")
+            .unwrap_or_else(|_| "songbird".to_string());
+        if let Some(registry) = self.connections.get(&registry_name) {
+            match registry
                 .call(
                     "events.subscribe",
                     serde_json::json!({
@@ -264,9 +237,9 @@ impl InteractiveUIOrchestrator {
         loop {
             interval.tick().await;
 
-            // Check for pending events from Songbird
-            if let Some(ref songbird) = self.songbird {
-                if let Ok(events) = songbird.call("events.poll", serde_json::json!({})).await {
+            // Check for pending events from registry provider
+            if let Some(registry) = self.connections.get(&registry_name) {
+                if let Ok(events) = registry.call("events.poll", serde_json::json!({})).await {
                     if let Some(event_list) = events.as_array() {
                         for event in event_list {
                             self.handle_primal_event(event);
@@ -276,7 +249,8 @@ impl InteractiveUIOrchestrator {
             }
 
             // Push any state updates to petalTongue
-            let _ = UISync::send_heartbeat(&self.petaltongue).await;
+            let pt = self.connections.petaltongue().cloned();
+            let _ = UISync::send_heartbeat(&pt).await;
         }
     }
 

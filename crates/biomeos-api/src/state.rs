@@ -179,7 +179,7 @@ impl Config {
         // Use SocketDiscovery for 5-tier resolution
         let family_id = std::env::var("FAMILY_ID")
             .or_else(|_| std::env::var("BIOMEOS_FAMILY_ID"))
-            .unwrap_or_else(|_| "default".to_string());
+            .unwrap_or_else(|_| biomeos_core::family_discovery::get_family_id());
 
         let discovery = SocketDiscovery::new(family_id);
         discovery.build_socket_path("biomeos-api")

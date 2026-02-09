@@ -451,7 +451,7 @@ impl SovereigntyGuardian {
 
         self.violations
             .entry(entity.to_string())
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(violation);
 
         // Log the violation

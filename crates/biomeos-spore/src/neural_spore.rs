@@ -261,7 +261,7 @@ impl NeuralSpore {
 
 ```bash
 cd biomeOS
-./primals/nucleus deploy --family nat0 --graph graphs/nucleus_simple.toml
+./primals/nucleus deploy --family 1894e909e454 --graph graphs/nucleus_simple.toml
 ```
 
 This will deploy:

@@ -15,8 +15,8 @@
 use crate::{
     actions::{ActionResult, UserAction},
     primal_client::{
-        BearDogClient, NestGateClient, PetalTongueClient, SongbirdClient, SquirrelClient,
-        ToadStoolClient,
+        BearDogClient, NestGateClient, PetalTongueClient, PrimalConnections, SongbirdClient,
+        SquirrelClient, ToadStoolClient,
     },
 };
 use anyhow::Result;
@@ -33,64 +33,77 @@ use super::{
 /// Action handler
 pub struct ActionHandler;
 
+/// Context for device assignment coordination (bundles primal clients)
+struct DeviceAssignmentCtx<'a> {
+    petaltongue: &'a Option<PetalTongueClient>,
+    songbird: &'a Option<SongbirdClient>,
+    beardog: &'a Option<BearDogClient>,
+    nestgate: &'a Option<NestGateClient>,
+    toadstool: &'a Option<ToadStoolClient>,
+}
+
 impl ActionHandler {
     /// Handle a user action
     ///
     /// Actions come from the UI (petalTongue) and are processed here.
     /// The orchestrator coordinates between multiple primals to fulfill the action.
+    /// Handle a user action
+    ///
+    /// DEEP DEBT EVOLUTION (Feb 7, 2026): Takes `PrimalConnections` instead of
+    /// individual primal references. Extracts typed clients internally.
     pub async fn handle_user_action(
         action: UserAction,
         family_id: &str,
-        petaltongue: &Option<PetalTongueClient>,
-        songbird: &Option<SongbirdClient>,
-        beardog: &Option<BearDogClient>,
-        nestgate: &Option<NestGateClient>,
-        toadstool: &Option<ToadStoolClient>,
-        squirrel: &Option<SquirrelClient>,
+        connections: &PrimalConnections,
     ) -> Result<ActionResult> {
+        // Extract typed clients from dynamic registry (backward compatible)
+        let petaltongue = connections.petaltongue().cloned();
+        let songbird = connections.songbird().cloned();
+        let beardog = connections.beardog().cloned();
+        let nestgate = connections.nestgate().cloned();
+        let toadstool = connections.toadstool().cloned();
+        let squirrel = connections.squirrel().cloned();
+
         match action {
             UserAction::AssignDevice {
                 device_id,
                 primal_id,
             } => {
-                Self::handle_assign_device(
-                    &device_id,
-                    &primal_id,
-                    family_id,
-                    petaltongue,
-                    songbird,
-                    beardog,
-                    nestgate,
-                    toadstool,
-                )
-                .await
+                let ctx = DeviceAssignmentCtx {
+                    petaltongue: &petaltongue,
+                    songbird: &songbird,
+                    beardog: &beardog,
+                    nestgate: &nestgate,
+                    toadstool: &toadstool,
+                };
+                Self::handle_assign_device(&device_id, &primal_id, family_id, &ctx).await
             }
 
             UserAction::UnassignDevice { device_id } => {
-                Self::handle_unassign_device(&device_id, songbird, nestgate, petaltongue).await
+                Self::handle_unassign_device(&device_id, &songbird, &nestgate, &petaltongue).await
             }
 
             UserAction::StartPrimal { primal_name } => {
-                Self::handle_start_primal(&primal_name, toadstool).await
+                Self::handle_start_primal(&primal_name, &toadstool).await
             }
 
             UserAction::StopPrimal { primal_id } => {
-                Self::handle_stop_primal(&primal_id, toadstool).await
+                Self::handle_stop_primal(&primal_id, &toadstool).await
             }
 
             UserAction::RestartPrimal { primal_id } => {
-                Self::handle_restart_primal(&primal_id, toadstool).await
+                Self::handle_restart_primal(&primal_id, &toadstool).await
             }
 
             UserAction::AcceptSuggestion { suggestion_id } => {
-                Self::handle_accept_suggestion(&suggestion_id, family_id, squirrel).await
+                Self::handle_accept_suggestion(&suggestion_id, family_id, &squirrel).await
             }
 
             UserAction::DismissSuggestion { suggestion_id } => {
-                Self::handle_dismiss_suggestion(&suggestion_id, family_id, squirrel).await
+                Self::handle_dismiss_suggestion(&suggestion_id, family_id, &squirrel).await
             }
 
-            UserAction::Refresh => Self::handle_refresh(songbird, toadstool, petaltongue).await,
+            UserAction::Refresh => Self::handle_refresh(&songbird, &toadstool, &petaltongue).await,
         }
     }
 
@@ -110,11 +123,7 @@ impl ActionHandler {
         device_id: &str,
         primal_id: &str,
         family_id: &str,
-        petaltongue: &Option<PetalTongueClient>,
-        songbird: &Option<SongbirdClient>,
-        beardog: &Option<BearDogClient>,
-        nestgate: &Option<NestGateClient>,
-        toadstool: &Option<ToadStoolClient>,
+        ctx: &DeviceAssignmentCtx<'_>,
     ) -> Result<ActionResult> {
         info!(
             "🎯 Device assignment requested: {} → {}",
@@ -122,9 +131,9 @@ impl ActionHandler {
         );
 
         // Phase 1: Authorization via BearDog
-        let current_user = Authorization::get_current_user_id(beardog).await;
+        let current_user = Authorization::get_current_user_id(ctx.beardog).await;
         let auth_result = Authorization::authorize_device_assignment(
-            beardog,
+            ctx.beardog,
             &current_user,
             device_id,
             primal_id,
@@ -153,7 +162,7 @@ impl ActionHandler {
 
         // Phase 2: Validation via Songbird
         let validation_result =
-            Validation::validate_device_assignment(songbird, device_id, primal_id).await;
+            Validation::validate_device_assignment(ctx.songbird, device_id, primal_id).await;
 
         match validation_result {
             Ok(ValidationResult::Valid) => {
@@ -177,7 +186,7 @@ impl ActionHandler {
 
         // Phase 3: Capacity check via ToadStool
         let capacity_result =
-            Capacity::check_primal_capacity(toadstool, device_id, primal_id).await;
+            Capacity::check_primal_capacity(ctx.toadstool, device_id, primal_id).await;
 
         match capacity_result {
             Ok(CapacityResult::Available) => {
@@ -197,7 +206,7 @@ impl ActionHandler {
         }
 
         // Phase 4: Register assignment via Songbird
-        let assignment_id = match Self::register_assignment(songbird, device_id, primal_id).await {
+        let assignment_id = match Self::register_assignment(ctx.songbird, device_id, primal_id).await {
             Ok(id) => {
                 info!("✅ Assignment registered: {}", id);
                 id
@@ -213,7 +222,7 @@ impl ActionHandler {
 
         // Phase 5: Persist assignment via NestGate (non-critical)
         if let Err(e) = Persistence::persist_assignment(
-            nestgate,
+            ctx.nestgate,
             family_id,
             &assignment_id,
             device_id,
@@ -228,7 +237,7 @@ impl ActionHandler {
         }
 
         // Phase 6: Update UI via petalTongue (non-critical)
-        if let Err(e) = UISync::update_ui_after_assignment(petaltongue, device_id, primal_id).await
+        if let Err(e) = UISync::update_ui_after_assignment(ctx.petaltongue, device_id, primal_id).await
         {
             warn!("⚠️ Failed to update UI: {}, continuing", e);
             // Non-critical: assignment succeeded, UI just not updated
@@ -552,5 +561,180 @@ impl ActionHandler {
             "UI refreshed ({} sources updated)",
             refresh_results.len()
         )))
+    }
+}
+
+// ============================================================================
+// TESTS
+// ============================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_handle_start_primal_no_toadstool() {
+        let result = ActionHandler::handle_start_primal("beardog", &None).await;
+
+        assert!(result.is_ok());
+        let action_result = result.unwrap();
+        assert!(action_result.is_error());
+    }
+
+    #[tokio::test]
+    async fn test_handle_stop_primal_no_toadstool() {
+        let result = ActionHandler::handle_stop_primal("primal-123", &None).await;
+
+        assert!(result.is_ok());
+        let action_result = result.unwrap();
+        assert!(action_result.is_error());
+    }
+
+    #[tokio::test]
+    async fn test_handle_restart_primal_no_toadstool() {
+        let result = ActionHandler::handle_restart_primal("primal-456", &None).await;
+
+        assert!(result.is_ok());
+        let action_result = result.unwrap();
+        assert!(action_result.is_error());
+    }
+
+    #[tokio::test]
+    async fn test_handle_accept_suggestion_no_squirrel() {
+        let result =
+            ActionHandler::handle_accept_suggestion("suggestion-001", "family-123", &None).await;
+
+        assert!(result.is_ok());
+        let action_result = result.unwrap();
+        // Should succeed even without Squirrel (non-critical)
+        assert!(action_result.is_success());
+    }
+
+    #[tokio::test]
+    async fn test_handle_dismiss_suggestion_no_squirrel() {
+        let result =
+            ActionHandler::handle_dismiss_suggestion("suggestion-002", "family-123", &None).await;
+
+        assert!(result.is_ok());
+        let action_result = result.unwrap();
+        // Should succeed even without Squirrel (non-critical)
+        assert!(action_result.is_success());
+    }
+
+    #[tokio::test]
+    async fn test_handle_unassign_device_no_clients() {
+        let result = ActionHandler::handle_unassign_device("device-123", &None, &None, &None).await;
+
+        assert!(result.is_ok());
+        let action_result = result.unwrap();
+        assert!(action_result.is_success());
+    }
+
+    #[tokio::test]
+    async fn test_handle_refresh_no_clients() {
+        let result = ActionHandler::handle_refresh(&None, &None, &None).await;
+
+        assert!(result.is_ok());
+        let action_result = result.unwrap();
+        assert!(action_result.is_success());
+    }
+
+    #[tokio::test]
+    async fn test_register_assignment_no_songbird() {
+        let result = ActionHandler::register_assignment(&None, "device-001", "primal-001").await;
+
+        assert!(result.is_ok());
+        let assignment_id = result.unwrap();
+        // Should generate local ID
+        assert!(assignment_id.starts_with("local-"));
+        assert!(assignment_id.contains("device-001"));
+        assert!(assignment_id.contains("primal-001"));
+    }
+
+    #[tokio::test]
+    async fn test_handle_user_action_assign_device() {
+        let connections = PrimalConnections::default();
+        let action = UserAction::AssignDevice {
+            device_id: "dev-123".to_string(),
+            primal_id: "primal-456".to_string(),
+        };
+        let result = ActionHandler::handle_user_action(action, "family-123", &connections).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_handle_user_action_unassign_device() {
+        let connections = PrimalConnections::default();
+        let action = UserAction::UnassignDevice {
+            device_id: "dev-123".to_string(),
+        };
+        let result = ActionHandler::handle_user_action(action, "family-123", &connections).await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_success());
+    }
+
+    #[tokio::test]
+    async fn test_handle_user_action_start_primal() {
+        let connections = PrimalConnections::default();
+        let action = UserAction::StartPrimal {
+            primal_name: "beardog".to_string(),
+        };
+        let result = ActionHandler::handle_user_action(action, "family-123", &connections).await;
+        assert!(result.is_ok());
+        // Fails without ToadStool
+        assert!(result.unwrap().is_error());
+    }
+
+    #[tokio::test]
+    async fn test_handle_user_action_stop_primal() {
+        let connections = PrimalConnections::default();
+        let action = UserAction::StopPrimal {
+            primal_id: "primal-123".to_string(),
+        };
+        let result = ActionHandler::handle_user_action(action, "family-123", &connections).await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_error());
+    }
+
+    #[tokio::test]
+    async fn test_handle_user_action_restart_primal() {
+        let connections = PrimalConnections::default();
+        let action = UserAction::RestartPrimal {
+            primal_id: "primal-789".to_string(),
+        };
+        let result = ActionHandler::handle_user_action(action, "family-123", &connections).await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_error());
+    }
+
+    #[tokio::test]
+    async fn test_handle_user_action_accept_suggestion() {
+        let connections = PrimalConnections::default();
+        let action = UserAction::AcceptSuggestion {
+            suggestion_id: "suggestion-001".to_string(),
+        };
+        let result = ActionHandler::handle_user_action(action, "family-123", &connections).await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_success());
+    }
+
+    #[tokio::test]
+    async fn test_handle_user_action_dismiss_suggestion() {
+        let connections = PrimalConnections::default();
+        let action = UserAction::DismissSuggestion {
+            suggestion_id: "suggestion-002".to_string(),
+        };
+        let result = ActionHandler::handle_user_action(action, "family-123", &connections).await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_success());
+    }
+
+    #[tokio::test]
+    async fn test_handle_user_action_refresh() {
+        let connections = PrimalConnections::default();
+        let action = UserAction::Refresh;
+        let result = ActionHandler::handle_user_action(action, "family-123", &connections).await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_success());
     }
 }

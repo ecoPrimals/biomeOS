@@ -6,7 +6,6 @@
 use biomeos_atomic_deploy::neural_router::{NeuralRouter, RoutingMetrics};
 use serde_json::json;
 use std::path::PathBuf;
-use tempfile::TempDir;
 
 /// Test helper: Create test Neural Router
 fn create_test_router() -> NeuralRouter {
@@ -15,7 +14,7 @@ fn create_test_router() -> NeuralRouter {
 
 #[tokio::test]
 async fn test_neural_router_creation() {
-    let router = create_test_router();
+    let _router = create_test_router();
 
     // Router should be created successfully
     // (No public family_id() method, but we can test behavior)
@@ -57,7 +56,8 @@ async fn test_register_capability() {
             PathBuf::from("/run/user/1000/songbird-test.sock"),
             "test",
         )
-        .await;
+        .await
+        .unwrap();
 
     // Verify capability was registered
     let capabilities = router.list_capabilities().await;
@@ -76,7 +76,8 @@ async fn test_get_capability_providers() {
             PathBuf::from("/run/user/1000/beardog-test.sock"),
             "test",
         )
-        .await;
+        .await
+        .unwrap();
 
     // Get providers for the capability
     let providers = router.get_capability_providers("crypto").await;
@@ -193,7 +194,8 @@ async fn test_invalidate_cache() {
             PathBuf::from("/tmp/test.sock"),
             "test",
         )
-        .await;
+        .await
+        .unwrap();
 
     // Invalidate cache
     router.invalidate_cache().await;
@@ -215,7 +217,8 @@ async fn test_multiple_providers_same_capability() {
             PathBuf::from("/run/user/1000/toadstool1.sock"),
             "test",
         )
-        .await;
+        .await
+        .unwrap();
 
     router
         .register_capability(
@@ -224,7 +227,8 @@ async fn test_multiple_providers_same_capability() {
             PathBuf::from("/run/user/1000/toadstool2.sock"),
             "test",
         )
-        .await;
+        .await
+        .unwrap();
 
     // Should have 2 providers for storage
     let providers = router.get_capability_providers("storage").await;
@@ -281,7 +285,8 @@ async fn test_capability_registration_overwrites() {
             PathBuf::from("/tmp/primal1.sock"),
             "test",
         )
-        .await;
+        .await
+        .unwrap();
 
     // Register again with different socket
     router
@@ -291,7 +296,8 @@ async fn test_capability_registration_overwrites() {
             PathBuf::from("/tmp/primal1-new.sock"),
             "test",
         )
-        .await;
+        .await
+        .unwrap();
 
     // Should still have the capability
     let providers = router.get_capability_providers("test_cap").await;

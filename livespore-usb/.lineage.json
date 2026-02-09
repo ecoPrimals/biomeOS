@@ -1,0 +1,10 @@
+{
+  "device_id": "f65cecf5e44b16c786a3181768717d83",
+  "node_id": "usb",
+  "family_id": "8ff3b864a4bc589a",
+  "generation": 1,
+  "derived_seed": "z47FDc60bpWma+DkhJzTQUQgJCVnX4J5wnS6dkiG+fg=",
+  "derived_at": 1770518944,
+  "derivation_method": "HKDF-SHA256",
+  "lineage_certificate": null
+}

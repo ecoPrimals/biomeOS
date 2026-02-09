@@ -51,6 +51,8 @@ pub struct NeuralApiServer {
     pub(super) graphs_dir: PathBuf,
 
     /// Active executions (execution_id -> status)
+    /// Reserved for async execution tracking in future graph executor evolution
+    #[allow(dead_code)]
     pub(super) executions: Arc<RwLock<HashMap<String, crate::handlers::graph::ExecutionStatus>>>,
 
     /// Family ID for this server
@@ -91,6 +93,8 @@ pub struct NeuralApiServer {
     pub(super) protocol_handler: ProtocolHandler,
 
     /// Living graph for protocol state tracking
+    /// Reserved for protocol escalation state queries
+    #[allow(dead_code)]
     pub(super) living_graph: Arc<LivingGraph>,
 }
 

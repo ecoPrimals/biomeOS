@@ -19,7 +19,7 @@
 #
 # Environment:
 #   DEPLOYMENT_BATCH - Optional batch ID (default: today's date)
-#   FAMILY_ID - Optional family ID (default: nat0)
+#   FAMILY_ID - Optional family ID (default: 1894e909e454)
 #
 # Author: biomeOS Team
 # Date: 2026-01-27
@@ -51,7 +51,7 @@ PARENT_ROOT="$1"
 TARGET_PATH="$2"
 NODE_ID="$3"
 DEPLOYMENT_BATCH="${DEPLOYMENT_BATCH:-$(date +%Y%m%d)}"
-FAMILY_ID="${FAMILY_ID:-nat0}"
+FAMILY_ID="${FAMILY_ID:-1894e909e454}"
 
 PARENT_SEED="$PARENT_ROOT/.family.seed"
 SPORE_ROOT="$TARGET_PATH/biomeOS"

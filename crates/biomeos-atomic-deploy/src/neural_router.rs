@@ -1,6 +1,7 @@
 //! Neural API Routing Layer
 //!
-//! **Universal IPC v3.0**: Uses AtomicClient for multi-transport routing.
+//! **Universal IPC v3.0 + tarpc**: Uses AtomicClient for multi-transport routing
+//! with protocol escalation to tarpc for hot-paths.
 //!
 //! Pure Rust implementation of capability-based primal routing.
 //!
@@ -12,6 +13,7 @@
 //! - **Zero Unsafe**: Fast AND safe Rust
 //! - **Observable**: All requests logged for learning
 //! - **Multi-Transport**: Unix, Abstract, TCP via Universal IPC v3.0
+//! - **Protocol Escalation**: JSON-RPC first, tarpc for hot-paths
 //!
 //! # Architecture
 //!
@@ -20,7 +22,9 @@
 //!                              ↓                        ↓
 //!                         Atomic Mapping          Socket/TCP Lookup
 //!                              ↓                        ↓
-//!                         AtomicClient Forward ← JSON-RPC → Response
+//!                    Protocol Selection ← LivingGraph Protocol State
+//!                              ↓
+//!                    [JSON-RPC] or [tarpc]
 //!                              ↓
 //!                         Metrics Collection
 //! ```
@@ -29,6 +33,7 @@
 
 use anyhow::{anyhow, Context, Result};
 use biomeos_core::atomic_client::AtomicClient;
+use biomeos_types::tarpc_types::ProtocolPreference;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -37,6 +42,9 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio::time::Duration;
 use tracing::{debug, info, warn};
+
+use crate::capability_domains::capability_to_provider_fallback;
+use crate::living_graph::{LivingGraph, ProtocolMode};
 
 /// Discovered primal with socket and capabilities
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -136,7 +144,7 @@ pub struct RegisteredCapability {
 /// Neural Router - Capability-based request routing
 pub struct NeuralRouter {
     /// Family ID for socket discovery
-    family_id: String,
+    pub(crate) family_id: String,
 
     /// Discovered primals cache (runtime discovery)
     discovered_primals: Arc<RwLock<HashMap<String, DiscoveredPrimal>>>,
@@ -149,12 +157,19 @@ pub struct NeuralRouter {
 
     /// Request timeout
     request_timeout: Duration,
+
+    /// Living graph for protocol state tracking (JSON-RPC AND tarpc first)
+    living_graph: Option<Arc<LivingGraph>>,
+
+    /// Protocol preference from environment
+    protocol_preference: ProtocolPreference,
 }
 
 impl NeuralRouter {
     /// Create a new Neural Router
     ///
     /// **Zero Hardcoding**: Uses family_id for runtime discovery
+    /// **JSON-RPC AND tarpc first**: Protocol preference from environment
     pub fn new(family_id: impl Into<String>) -> Self {
         Self {
             family_id: family_id.into(),
@@ -162,7 +177,23 @@ impl NeuralRouter {
             capability_registry: Arc::new(RwLock::new(HashMap::new())),
             metrics: Arc::new(RwLock::new(Vec::new())),
             request_timeout: Duration::from_secs(30),
+            living_graph: None,
+            protocol_preference: biomeos_types::tarpc_types::protocol_from_env(),
         }
+    }
+
+    /// Attach a living graph for protocol-aware routing
+    ///
+    /// Enables tarpc escalation for hot-path capabilities when primals support it.
+    pub fn with_living_graph(mut self, graph: Arc<LivingGraph>) -> Self {
+        self.living_graph = Some(graph);
+        self
+    }
+
+    /// Set protocol preference override
+    pub fn with_protocol_preference(mut self, preference: ProtocolPreference) -> Self {
+        self.protocol_preference = preference;
+        self
     }
 
     /// Register a capability (NEW - for graph deployment and primal announcements)
@@ -194,7 +225,7 @@ impl NeuralRouter {
         let mut registry = self.capability_registry.write().await;
         registry
             .entry(capability.clone())
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(registration);
 
         info!("✅ Registered capability: {} → {}", capability, primal_name);
@@ -368,82 +399,157 @@ impl NeuralRouter {
         }
     }
 
-    /// Discover Tower Atomic (BearDog + Songbird)
+    /// Discover Tower Atomic (security + discovery capabilities)
+    ///
+    /// **Capability-Based Discovery**: Finds primals by capability, not by name.
+    /// Tower Atomic = primal with "security" capability + primal with "discovery" capability
     async fn discover_tower_atomic(&self) -> Result<DiscoveredAtomic> {
-        debug!("   Discovering Tower Atomic (BearDog + Songbird)");
+        debug!("   Discovering Tower Atomic (security + discovery capabilities)");
 
-        // Discover both primals
-        let beardog = self.find_primal_by_socket("beardog").await?;
-        let songbird = self.find_primal_by_socket("songbird").await?;
+        // Discover by CAPABILITY, not by name
+        // This allows different primals to provide these capabilities in the future
+        let security_primal = self
+            .find_primal_by_capability("security")
+            .await
+            .context("Tower Atomic requires a primal with 'security' capability")?;
+
+        let discovery_primal = self
+            .find_primal_by_capability("discovery")
+            .await
+            .context("Tower Atomic requires a primal with 'discovery' capability")?;
 
         // Verify both are healthy
-        if !beardog.healthy || !songbird.healthy {
+        if !security_primal.healthy || !discovery_primal.healthy {
             warn!(
-                "   ⚠️  Tower Atomic unhealthy: beardog={}, songbird={}",
-                beardog.healthy, songbird.healthy
+                "   ⚠️  Tower Atomic unhealthy: security={}, discovery={}",
+                security_primal.healthy, discovery_primal.healthy
             );
         }
 
         info!(
-            "   ✅ Tower Atomic discovered: {} + {}",
-            beardog.name, songbird.name
+            "   ✅ Tower Atomic discovered: {} (security) + {} (discovery)",
+            security_primal.name, discovery_primal.name
         );
 
         Ok(DiscoveredAtomic {
             capability: "secure_http".to_string(),
-            primals: vec![beardog.clone(), songbird.clone()],
+            primals: vec![security_primal.clone(), discovery_primal.clone()],
             atomic_type: Some(AtomicType::Tower),
-            primary_socket: songbird.socket_path, // Songbird handles HTTP
+            primary_socket: discovery_primal.socket_path, // Discovery primal handles HTTP
         })
     }
 
-    /// Discover Nest Atomic (Tower + NestGate)
+    /// Discover Nest Atomic (Tower + storage capability)
+    ///
+    /// **Capability-Based Discovery**: Finds storage primal by capability, not by name.
     async fn discover_nest_atomic(&self) -> Result<DiscoveredAtomic> {
-        debug!("   Discovering Nest Atomic (Tower + NestGate)");
+        debug!("   Discovering Nest Atomic (Tower + storage capability)");
 
         // First get Tower Atomic
         let tower = self.discover_tower_atomic().await?;
 
-        // Then add NestGate
-        let nestgate = self.find_primal_by_socket("nestgate").await?;
+        // Then find primal with "storage" capability
+        let storage_primal = self
+            .find_primal_by_capability("storage")
+            .await
+            .context("Nest Atomic requires a primal with 'storage' capability")?;
 
         let mut primals = tower.primals;
-        primals.push(nestgate.clone());
+        primals.push(storage_primal.clone());
 
-        info!("   ✅ Nest Atomic discovered: Tower + {}", nestgate.name);
+        info!(
+            "   ✅ Nest Atomic discovered: Tower + {} (storage)",
+            storage_primal.name
+        );
 
         Ok(DiscoveredAtomic {
             capability: "secure_storage".to_string(),
             primals,
             atomic_type: Some(AtomicType::Nest),
-            primary_socket: nestgate.socket_path, // NestGate handles storage
+            primary_socket: storage_primal.socket_path, // Storage primal handles storage
         })
     }
 
-    /// Discover Node Atomic (Tower + ToadStool)
+    /// Discover Node Atomic (Tower + compute capability)
+    ///
+    /// **Capability-Based Discovery**: Finds compute primal by capability, not by name.
     async fn discover_node_atomic(&self) -> Result<DiscoveredAtomic> {
-        debug!("   Discovering Node Atomic (Tower + ToadStool)");
+        debug!("   Discovering Node Atomic (Tower + compute capability)");
 
         // First get Tower Atomic
         let tower = self.discover_tower_atomic().await?;
 
-        // Then add ToadStool
-        let toadstool = self.find_primal_by_socket("toadstool").await?;
+        // Then find primal with "compute" capability
+        let compute_primal = self
+            .find_primal_by_capability("compute")
+            .await
+            .context("Node Atomic requires a primal with 'compute' capability")?;
 
         let mut primals = tower.primals;
-        primals.push(toadstool.clone());
+        primals.push(compute_primal.clone());
 
-        info!("   ✅ Node Atomic discovered: Tower + {}", toadstool.name);
+        info!(
+            "   ✅ Node Atomic discovered: Tower + {} (compute)",
+            compute_primal.name
+        );
 
         Ok(DiscoveredAtomic {
             capability: "secure_compute".to_string(),
             primals,
             atomic_type: Some(AtomicType::Node),
-            primary_socket: toadstool.socket_path, // ToadStool handles compute
+            primary_socket: compute_primal.socket_path, // Compute primal handles compute
         })
     }
 
+    /// Find primal by capability (capability-based discovery)
+    ///
+    /// **Deep Debt Principle**: Discover by WHAT a primal can do, not WHO it is.
+    /// This allows the ecosystem to evolve without changing discovery code.
+    async fn find_primal_by_capability(&self, capability: &str) -> Result<DiscoveredPrimal> {
+        // First, check the capability registry for registered providers
+        let registry = self.capability_registry.read().await;
+
+        if let Some(providers) = registry.get(capability) {
+            if let Some(provider) = providers.first() {
+                // Found in registry - use the registered socket
+                debug!(
+                    "   📖 Registry hit: {} provides '{}'",
+                    provider.primal_name, capability
+                );
+
+                // Perform quick health check via AtomicClient
+                let healthy = self.quick_health_check(&provider.socket_path).await;
+
+                return Ok(DiscoveredPrimal {
+                    name: provider.primal_name.clone(),
+                    socket_path: provider.socket_path.clone(),
+                    capabilities: vec![capability.to_string()],
+                    healthy,
+                    last_check: chrono::Utc::now(),
+                });
+            }
+        }
+
+        // Fallback: Use configurable capability-to-provider mappings
+        // See: config/capability_registry.toml for domain definitions
+        let fallback_primal = capability_to_provider_fallback(capability);
+
+        if let Some(primal) = fallback_primal {
+            debug!(
+                "   ⚠️  Registry miss: using fallback mapping {} → {}",
+                capability, primal
+            );
+            self.find_primal_by_socket(primal).await
+        } else {
+            Err(anyhow!(
+                "No primal found for capability '{}'. Register a provider or check the capability name.",
+                capability
+            ))
+        }
+    }
+
     /// Discover a single primal by capability
+    #[allow(dead_code)] // Reserved for single-capability discovery queries
     async fn discover_single_primal(
         &self,
         primal_hint: &str,
@@ -466,7 +572,10 @@ impl NeuralRouter {
     /// Find primal by socket pattern (runtime discovery)
     ///
     /// **Zero Hardcoding**: Constructs socket path from family_id + primal name
-    async fn find_primal_by_socket(&self, primal_name: &str) -> Result<DiscoveredPrimal> {
+    pub(crate) async fn find_primal_by_socket(
+        &self,
+        primal_name: &str,
+    ) -> Result<DiscoveredPrimal> {
         // Check cache first
         {
             let cache = self.discovered_primals.read().await;
@@ -490,12 +599,15 @@ impl NeuralRouter {
             ));
         }
 
+        // Perform health check
+        let healthy = self.quick_health_check(&socket_path).await;
+
         // Create discovered primal
         let primal = DiscoveredPrimal {
             name: primal_name.to_string(),
             socket_path,
             capabilities: vec![], // Future: Query primal for capabilities via JSON-RPC
-            healthy: true,        // Future: Actual health check via JSON-RPC ping
+            healthy,
             last_check: chrono::Utc::now(),
         };
 
@@ -506,12 +618,41 @@ impl NeuralRouter {
         }
 
         debug!(
-            "   ✅ Discovered: {} @ {}",
+            "   ✅ Discovered: {} @ {} (healthy: {})",
             primal_name,
-            primal.socket_path.display()
+            primal.socket_path.display(),
+            healthy
         );
 
         Ok(primal)
+    }
+
+    /// Quick health check via AtomicClient
+    ///
+    /// Attempts a lightweight health.check RPC call with a short timeout.
+    /// Returns true if the primal responds, false otherwise.
+    async fn quick_health_check(&self, socket_path: &PathBuf) -> bool {
+        use std::time::Duration;
+
+        // Use a short timeout for health checks
+        let health_timeout = Duration::from_millis(500);
+
+        let client = AtomicClient::unix(socket_path).with_timeout(health_timeout);
+
+        match client.call("health.check", serde_json::json!({})).await {
+            Ok(response) => {
+                // Check if response indicates healthy
+                response
+                    .get("healthy")
+                    .and_then(|h| h.as_bool())
+                    .unwrap_or(true) // Default to healthy if no explicit field
+            }
+            Err(_) => {
+                // Connection failed or timed out - unhealthy
+                debug!("   ⚠️ Health check failed for {}", socket_path.display());
+                false
+            }
+        }
     }
 
     /// Forward JSON-RPC request to primal
@@ -520,9 +661,13 @@ impl NeuralRouter {
     ///
     /// # Safety
     ///
+    /// Forward a request to a primal via the appropriate protocol
+    ///
+    /// **JSON-RPC AND tarpc first**: Checks protocol availability and preferences.
+    ///
     /// This function is safe - it uses:
-    /// - `tokio::net::UnixStream` for safe async Unix socket I/O
     /// - `AtomicClient` for multi-transport JSON-RPC (Universal IPC v3.0)
+    /// - Protocol selection based on `LivingGraph` state and `ProtocolPreference`
     /// - Configurable timeout via `request_timeout`
     /// - Proper error propagation via `Result<T>`
     ///
@@ -535,25 +680,86 @@ impl NeuralRouter {
     ) -> Result<Value> {
         let start = std::time::Instant::now();
 
-        debug!("   → Forwarding: {} to {}", method, socket_path.display());
+        // Determine protocol based on preference and availability
+        let use_tarpc = self.should_use_tarpc(socket_path).await;
+
+        if use_tarpc {
+            // tarpc path - infrastructure ready, primal servers need implementation
+            //
+            // Current Status (Feb 2026):
+            // - tarpc service traits defined in biomeos_types::tarpc_types
+            // - NeuralRouter has protocol selection infrastructure
+            // - LivingGraph tracks protocol escalation metrics
+            // - Primal servers need to implement tarpc endpoints
+            //
+            // When primals implement tarpc servers:
+            // return self.forward_via_tarpc(socket_path, method, params).await;
+            debug!(
+                "   → tarpc preferred for {} - fallback to JSON-RPC (primal tarpc servers pending)",
+                socket_path.display()
+            );
+        }
+
+        debug!(
+            "   → Forwarding via JSON-RPC: {} to {}",
+            method,
+            socket_path.display()
+        );
 
         // Create AtomicClient with configured timeout (Universal IPC v3.0)
         let client = AtomicClient::unix(socket_path).with_timeout(self.request_timeout);
 
-        // Forward the request via AtomicClient
-        let result = client
-            .call(method, params.clone())
-            .await
-            .context(format!(
-                "Failed to forward {} to {}",
-                method,
-                socket_path.display()
-            ))?;
+        // Forward the request via AtomicClient (JSON-RPC)
+        let result = client.call(method, params.clone()).await.context(format!(
+            "Failed to forward {} to {}",
+            method,
+            socket_path.display()
+        ))?;
 
         let latency = start.elapsed().as_millis() as u64;
         debug!("   ✓ Forwarded successfully in {}ms", latency);
 
+        // Record metrics for protocol escalation decisions
+        if let Some(graph) = &self.living_graph {
+            // Extract primal name from socket path for metrics
+            if let Some(primal_name) = socket_path.file_stem().and_then(|s| s.to_str()) {
+                graph
+                    .record_request("neural-api", primal_name, latency * 1000, true)
+                    .await;
+            }
+        }
+
         Ok(result)
+    }
+
+    /// Check if tarpc should be used for this request
+    async fn should_use_tarpc(&self, socket_path: &std::path::Path) -> bool {
+        // Check protocol preference first
+        match self.protocol_preference {
+            ProtocolPreference::JsonRpcOnly => return false,
+            ProtocolPreference::TarpcOnly => return true,
+            ProtocolPreference::PreferJsonRpc => return false, // Default to JSON-RPC
+            ProtocolPreference::PreferTarpc | ProtocolPreference::Auto => {
+                // Check LivingGraph for tarpc availability
+            }
+        }
+
+        // Check LivingGraph if available
+        if let Some(graph) = &self.living_graph {
+            // Extract primal name from socket path
+            if let Some(primal_name) = socket_path.file_stem().and_then(|s| s.to_str()) {
+                if let Some(state) = graph.get_primal_state(primal_name).await {
+                    // Use tarpc if available and connection is in tarpc/hybrid mode
+                    return state.tarpc_available()
+                        && matches!(
+                            state.current_mode,
+                            ProtocolMode::Tarpc | ProtocolMode::Hybrid
+                        );
+                }
+            }
+        }
+
+        false
     }
 
     /// Log routing metrics for learning
@@ -640,46 +846,6 @@ impl NeuralRouter {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+// Capability domain mappings are in crate::capability_domains
 
-    #[test]
-    fn test_router_creation() {
-        let router = NeuralRouter::new("test-family");
-        assert_eq!(router.family_id, "test-family");
-    }
-
-    #[tokio::test]
-    async fn test_socket_path_construction() {
-        let router = NeuralRouter::new("nat0");
-
-        // This would fail if socket doesn't exist, but shows the pattern
-        let result = router.find_primal_by_socket("beardog").await;
-
-        // We expect it to look for /tmp/beardog-nat0.sock
-        // (Will fail if not running, but that's OK for unit test)
-    }
-
-    #[tokio::test]
-    async fn test_metrics_collection() {
-        let router = NeuralRouter::new("test");
-
-        let metric = RoutingMetrics {
-            request_id: "test-123".to_string(),
-            capability: "secure_http".to_string(),
-            method: "http.get".to_string(),
-            routed_through: vec!["songbird".to_string()],
-            latency_ms: 100,
-            success: true,
-            timestamp: chrono::Utc::now(),
-            error: None,
-        };
-
-        router.log_metric(metric.clone()).await;
-
-        let metrics = router.get_metrics().await;
-        assert_eq!(metrics.len(), 1);
-        assert_eq!(metrics[0].request_id, "test-123");
-    }
-}
+// Tests are in neural_router_tests.rs to keep this file under 1000 lines

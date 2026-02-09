@@ -1,0 +1,103 @@
+{
+  "version": "3.1.0",
+  "schema": "evolved-genetic-v2",
+  "description": "Mitochondrial beacon address book with NAT traversal - syncable across family",
+  "mito_beacon_id": "8ff3b864a4bc589a418ada16499c829e0d808dff8dc9f8328f9f7ac02c42dd74",
+  "mito_beacon_hint": "8ff3b864a4bc589a",
+  "this_node": {
+    "node_id": "usb",
+    "lineage_id": "5772c07f24654debb585deb3100b5cde2327370baaba20205d526d2ac7ba7c0e",
+    "lineage_hint": "5772c07f24654deb",
+    "capabilities": [
+      "desktop",
+      "compute",
+      "ai-server",
+      "gpu",
+      "storage",
+      "tor-gateway"
+    ],
+    "endpoints": {
+      "ipv6_global": "[2600:1700:b0b0:5b90::27]:3492",
+      "ipv6_slaac": "[2600:1700:b0b0:5b90:8f11:631e:f8f1:f27b]:3492",
+      "tor": "eaaz3tlirenexp2mabctirbwd2fv67mayvtrr4fmqemhyypvnemybmqd.onion:3492",
+      "lan_ipv4": "192.168.1.144:3492",
+      "lan_ipv6": "[2600:1700:b0b0:5b90:cdbd:7693:81ac:585f]:3492"
+    },
+    "nat_info": {
+      "type": "symmetric",
+      "public_ip": "162.226.225.148",
+      "last_stun_check": "2026-02-07T17:45:00Z",
+      "can_offer_relay": true,
+      "relay_bandwidth_mbps": 100,
+      "tor_reachable": true
+    }
+  },
+  "nat_traversal": {
+    "strategy": "sovereignty-first",
+    "self_hosted_stun": {
+      "enabled": false,
+      "address": null,
+      "comment": "Enable after coturn setup on Tower"
+    },
+    "public_stun_fallback": {
+      "enabled": true,
+      "preferred_servers": [
+        "stun.nextcloud.com:3478",
+        "stun.l.google.com:19302",
+        "stun.cloudflare.com:3478"
+      ]
+    },
+    "family_relay": {
+      "enabled": true,
+      "relay_nodes": [
+        "tower"
+      ],
+      "comment": "Tower offers relay to family when direct connection fails"
+    }
+  },
+  "sync_info": {
+    "sync_token": "4d5e6f7a-b1c2-d3e4-f5a6-b7c8d9e0f1a2",
+    "last_sync": "2026-02-07T18:00:00Z",
+    "sync_version": 4
+  },
+  "family_members": {
+    "pixel8a": {
+      "lineage_id": "3795d0cac4fb65769e760ae0b898967fa8ed9df2a517d05bc98c71dc4471d8f6",
+      "lineage_hint": "3795d0cac4fb6576",
+      "first_met": "2026-02-04T11:17:00Z",
+      "last_seen": "2026-02-05T19:30:00Z",
+      "endpoints": {
+        "lan": [
+          "tcp:192.168.1.80:9901"
+        ],
+        "public": [
+          "107.122.244.113:*"
+        ]
+      },
+      "capabilities": [
+        "mobile",
+        "compute",
+        "ai-client",
+        "camera",
+        "gps"
+      ],
+      "nat_info": {
+        "type": "symmetric",
+        "public_ip": "107.122.244.113",
+        "last_stun_check": "2026-02-05T19:30:00Z",
+        "can_offer_relay": false,
+        "comment": "Mobile - symmetric NAT on carrier"
+      },
+      "relationship": "same_mito",
+      "notes": "Pixel 8a - mobile edge device"
+    }
+  },
+  "friends": {},
+  "pending_introductions": [],
+  "metadata": {
+    "created_at": "2026-02-04T11:17:00Z",
+    "updated_at": "2026-02-07T17:45:00Z",
+    "model": "evolved-genetic-v2",
+    "notes": "Added Tor hidden service endpoint for symmetric NAT traversal. Tower gateway reachable globally via Tor."
+  }
+}

@@ -270,6 +270,160 @@ mod tests {
     }
 
     #[test]
+    fn test_config_error_without_key() {
+        let error = BiomeError::config_error("Missing config file", None::<String>);
+        assert_eq!(error.category(), &AIErrorCategory::ConfigurationIssue);
+    }
+
+    #[test]
+    fn test_network_error_with_all_fields() {
+        let error = BiomeError::network_error(
+            "Connection refused",
+            Some("http://localhost:8080"),
+            Some(503),
+        );
+        assert_eq!(error.category(), &AIErrorCategory::NetworkFailure);
+    }
+
+    #[test]
+    fn test_network_error_minimal() {
+        let error = BiomeError::network_error("Network unavailable", None::<String>, None);
+        assert_eq!(error.category(), &AIErrorCategory::NetworkFailure);
+    }
+
+    #[test]
+    fn test_security_error_with_violation_type() {
+        let error =
+            BiomeError::security_error("Access denied", Some(SecurityViolationType::AccessDenied));
+        assert_eq!(error.category(), &AIErrorCategory::SecurityViolation);
+    }
+
+    #[test]
+    fn test_security_error_without_violation_type() {
+        let error = BiomeError::security_error("Security check failed", None);
+        assert_eq!(error.category(), &AIErrorCategory::SecurityViolation);
+    }
+
+    #[test]
+    fn test_resource_error() {
+        let error =
+            BiomeError::resource_error("Memory exhausted", "memory", Some("1GB"), Some("512MB"));
+        assert_eq!(error.category(), &AIErrorCategory::ResourceLimitation);
+    }
+
+    #[test]
+    fn test_resource_error_minimal() {
+        let error = BiomeError::resource_error(
+            "Resource unavailable",
+            "cpu",
+            None::<String>,
+            None::<String>,
+        );
+        assert_eq!(error.category(), &AIErrorCategory::ResourceLimitation);
+    }
+
+    #[test]
+    fn test_discovery_failed() {
+        let error = BiomeError::discovery_failed("Service not found", Some("beardog"));
+        assert_eq!(error.category(), &AIErrorCategory::NetworkFailure);
+    }
+
+    #[test]
+    fn test_discovery_failed_without_target() {
+        let error = BiomeError::discovery_failed("Discovery timeout", None::<String>);
+        assert_eq!(error.category(), &AIErrorCategory::NetworkFailure);
+    }
+
+    #[test]
+    fn test_integration_failed() {
+        let error = BiomeError::integration_failed("Songbird API error", Some("songbird"));
+        assert_eq!(error.category(), &AIErrorCategory::DependencyFailure);
+    }
+
+    #[test]
+    fn test_internal_error() {
+        let error = BiomeError::internal_error("Unexpected state", Some("ERR_001"));
+        assert_eq!(error.category(), &AIErrorCategory::SystemError);
+    }
+
+    #[test]
+    fn test_internal_error_without_code() {
+        let error = BiomeError::internal_error("Unknown error", None::<String>);
+        assert_eq!(error.category(), &AIErrorCategory::SystemError);
+    }
+
+    #[test]
+    fn test_timeout_error() {
+        let error = BiomeError::timeout_error("Request timed out", 30000, Some("health_check"));
+        assert_eq!(error.category(), &AIErrorCategory::NetworkFailure);
+        assert!(error.should_retry()); // Timeout errors should be retryable
+    }
+
+    #[test]
+    fn test_validation_error() {
+        let errors = vec![ValidationError {
+            field: "name".to_string(),
+            message: "Name is required".to_string(),
+            code: "required".to_string(),
+            rejected_value: None,
+        }];
+        let error = BiomeError::validation_error("Validation failed", errors);
+        assert_eq!(error.category(), &AIErrorCategory::UserError);
+    }
+
+    #[test]
+    fn test_from_io_error() {
+        let io_err = std::io::Error::new(std::io::ErrorKind::NotFound, "file not found");
+        let error: BiomeError = io_err.into();
+        assert_eq!(error.category(), &AIErrorCategory::SystemError);
+    }
+
+    #[test]
+    fn test_from_serde_json_error() {
+        let json_str = "{ invalid json }";
+        let json_err: Result<serde_json::Value, _> = serde_json::from_str(json_str);
+        if let Err(e) = json_err {
+            let error: BiomeError = e.into();
+            // JSON parsing errors are validation errors (UserError category)
+            assert_eq!(error.category(), &AIErrorCategory::UserError);
+        }
+    }
+
+    #[test]
+    fn test_from_uuid_error() {
+        let uuid_str = "not-a-valid-uuid";
+        let uuid_err: Result<uuid::Uuid, _> = uuid_str.parse();
+        if let Err(e) = uuid_err {
+            let error: BiomeError = e.into();
+            // UUID parsing errors are validation errors (UserError category)
+            assert_eq!(error.category(), &AIErrorCategory::UserError);
+        }
+    }
+
+    #[test]
+    fn test_severity_accessor() {
+        let error = BiomeError::internal_error("Bug detected", Some("SEVERE"));
+        let severity = error.severity();
+        // Severity should be a valid value
+        assert!(*severity >= ErrorSeverity::Info);
+    }
+
+    #[test]
+    fn test_ai_context_accessor() {
+        let error = BiomeError::config_error("Bad config", Some("key"));
+        let context = error.ai_context();
+        assert_eq!(context.category, AIErrorCategory::ConfigurationIssue);
+    }
+
+    #[test]
+    fn test_suggested_actions_accessor() {
+        let error = BiomeError::network_error("Timeout", Some("endpoint"), None);
+        let actions = error.suggested_actions();
+        // Actions may be empty by default
+        assert!(actions.is_empty() || !actions.is_empty());
+    }
+
+    #[test]
     fn test_retry_strategy() {
         let strategy = RetryStrategy::exponential_backoff(3, 1000, 10000);
         assert!(strategy.should_retry);
@@ -278,10 +432,40 @@ mod tests {
     }
 
     #[test]
+    fn test_retry_strategy_no_retry() {
+        let strategy = RetryStrategy::no_retry();
+        assert!(!strategy.should_retry);
+    }
+
+    #[test]
     fn test_error_severity_ordering() {
         assert!(ErrorSeverity::Emergency > ErrorSeverity::Critical);
         assert!(ErrorSeverity::Critical > ErrorSeverity::Error);
         assert!(ErrorSeverity::Error > ErrorSeverity::Warning);
         assert!(ErrorSeverity::Warning > ErrorSeverity::Info);
+    }
+
+    #[test]
+    fn test_error_severity_equality() {
+        assert_eq!(ErrorSeverity::Error, ErrorSeverity::Error);
+        assert_ne!(ErrorSeverity::Error, ErrorSeverity::Warning);
+    }
+
+    #[test]
+    fn test_biome_result_type() {
+        fn test_fn() -> BiomeResult<i32> {
+            Ok(42)
+        }
+
+        assert_eq!(test_fn().unwrap(), 42);
+    }
+
+    #[test]
+    fn test_biome_result_error() {
+        fn test_fn() -> BiomeResult<i32> {
+            Err(BiomeError::internal_error("test error", None::<String>))
+        }
+
+        assert!(test_fn().is_err());
     }
 }

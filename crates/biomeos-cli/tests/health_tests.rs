@@ -245,8 +245,8 @@ async fn test_health_scan_discovery() -> Result<()> {
     let temp_dir = TempDir::new()?;
 
     // Create a recognizable pattern of sockets
-    let socket1 = temp_dir.path().join("primal1-nat0.sock");
-    let socket2 = temp_dir.path().join("primal2-nat0.sock");
+    let socket1 = temp_dir.path().join("primal1-family_a.sock");
+    let socket2 = temp_dir.path().join("primal2-family_a.sock");
 
     let _server1 = MockPrimalServer::start(socket1.clone(), "primal1", vec!["cap1"]).await;
     let _server2 = MockPrimalServer::start(socket2.clone(), "primal2", vec!["cap2"]).await;

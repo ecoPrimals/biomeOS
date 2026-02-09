@@ -18,7 +18,15 @@ pub struct SporeConfig {
     /// Node ID for this tower (e.g., "tower1")
     pub node_id: String,
 
+    /// Family ID for this ecosystem (e.g., "nat0")
+    #[serde(default = "default_family_id")]
+    pub family_id: String,
+
     /// Type of spore (Cold = storage, Live = deployable)
     #[serde(default)]
     pub spore_type: SporeType,
+}
+
+pub fn default_family_id() -> String {
+    std::env::var("FAMILY_ID").unwrap_or_else(|_| "default".to_string())
 }

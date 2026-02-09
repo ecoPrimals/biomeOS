@@ -25,8 +25,8 @@ async fn beardog_available() -> Option<BearDogClient> {
 
         // Try common endpoints with individual timeouts
         let endpoints = vec![
-            "unix:///tmp/beardog-nat0.sock",
-            "unix:///tmp/beardog-nat0-node-alpha.sock",
+            "unix:///tmp/beardog-test_family.sock",
+            "unix:///tmp/beardog-test_family-node-alpha.sock",
             "unix:///tmp/beardog.sock",
         ];
 
@@ -79,7 +79,7 @@ async fn test_beardog_discovery() {
         None => {
             println!("⚠️  BearDog not found - skipping integration tests");
             println!("   To run these tests, start BearDog with:");
-            println!("   ./plasmidBin/beardog server --socket /tmp/beardog-nat0.sock");
+            println!("   ./plasmidBin/beardog server --socket /tmp/beardog-test_family.sock");
         }
     }
 }
@@ -97,7 +97,7 @@ async fn test_beardog_lineage_verification() {
     };
 
     // Test with sample data - with timeout
-    let family_id = "nat0";
+    let family_id = "test_family";
     let seed_hash = "test_seed_hash_12345";
     let node_id = "test_node_001";
 
@@ -136,7 +136,7 @@ async fn test_beardog_key_derivation() {
     use biomeos_federation::beardog_client::KeyDerivationRequest;
 
     let request = KeyDerivationRequest {
-        parent_family: "nat0".to_string(),
+        parent_family: "test_family".to_string(),
         subfed_name: "gaming".to_string(),
         purpose: "sub-federation-encryption".to_string(),
     };
@@ -199,7 +199,7 @@ async fn test_beardog_with_real_seed() {
                 // Try to verify lineage with timeout
                 let result = tokio::time::timeout(
                     Duration::from_secs(5),
-                    client.verify_same_family("nat0", &seed_hash, "test_node_spore"),
+                    client.verify_same_family("test_family", &seed_hash, "test_node_spore"),
                 )
                 .await;
 
@@ -253,7 +253,7 @@ async fn test_beardog_full_workflow() {
     println!("\n2️⃣  Lineage Verification");
     let lineage_result = tokio::time::timeout(
         Duration::from_secs(5),
-        client.verify_same_family("nat0", "test_seed", "test_node_workflow"),
+        client.verify_same_family("test_family", "test_seed", "test_node_workflow"),
     )
     .await;
 
@@ -266,7 +266,7 @@ async fn test_beardog_full_workflow() {
     println!("\n3️⃣  Key Derivation");
     use biomeos_federation::beardog_client::KeyDerivationRequest;
     let request = KeyDerivationRequest {
-        parent_family: "nat0".to_string(),
+        parent_family: "test_family".to_string(),
         subfed_name: "test-subfed".to_string(),
         purpose: "test".to_string(),
     };

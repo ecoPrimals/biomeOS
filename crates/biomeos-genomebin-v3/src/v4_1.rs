@@ -305,7 +305,7 @@ mod tests {
     fn test_bootstrap_size() {
         // Verify bootstrap script exists and is reasonable size
         let bootstrap = include_bytes!("../bootstrap-selector.sh");
-        assert!(bootstrap.len() > 0, "Bootstrap script must exist");
+        assert!(!bootstrap.is_empty(), "Bootstrap script must exist");
         assert!(
             bootstrap.len() < BOOTSTRAP_SIZE,
             "Bootstrap script ({} bytes) must fit in {} bytes",

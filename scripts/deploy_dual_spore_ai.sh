@@ -124,7 +124,7 @@ fallback_to_api = true
 
 [toadstool]
 enabled = true
-socket = "/run/user/1000/biomeos/toadstool-nat0.jsonrpc.sock"
+socket = "/run/user/1000/biomeos/toadstool-1894e909e454.jsonrpc.sock"
 capabilities = ["compute", "ai_local", "gpu"]
 
 [resources]

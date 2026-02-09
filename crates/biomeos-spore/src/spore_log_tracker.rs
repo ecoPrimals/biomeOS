@@ -490,7 +490,7 @@ node_id = "custom-spore-id-123"
             .record_event(SporeLifecycleEvent {
                 timestamp: Utc::now(),
                 event_type: SporeEventType::Incubation,
-                node_id: Some("nat0-node-1".to_string()),
+                node_id: Some("family-node-1".to_string()),
                 deployed_to: Some("/media/usb1".to_string()),
                 metadata,
             })
@@ -502,7 +502,7 @@ node_id = "custom-spore-id-123"
             .record_event(SporeLifecycleEvent {
                 timestamp: Utc::now(),
                 event_type: SporeEventType::Verification,
-                node_id: Some("nat0-node-1".to_string()),
+                node_id: Some("family-node-1".to_string()),
                 deployed_to: None,
                 metadata: HashMap::new(),
             })
@@ -514,7 +514,7 @@ node_id = "custom-spore-id-123"
             .record_event(SporeLifecycleEvent {
                 timestamp: Utc::now(),
                 event_type: SporeEventType::Refresh,
-                node_id: Some("nat0-node-1".to_string()),
+                node_id: Some("family-node-1".to_string()),
                 deployed_to: None,
                 metadata: HashMap::new(),
             })

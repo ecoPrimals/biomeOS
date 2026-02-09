@@ -10,14 +10,14 @@ fn test_subfederation_creation() {
 
     let subfed = SubFederation::new(
         "gaming".to_string(),
-        "nat0".to_string(),
+        "test_family".to_string(),
         members.clone(),
         caps,
         IsolationLevel::Low,
     );
 
     assert_eq!(subfed.name, "gaming");
-    assert_eq!(subfed.parent_family, "nat0");
+    assert_eq!(subfed.parent_family, "test_family");
     assert_eq!(subfed.members.len(), 2);
     assert_eq!(subfed.isolation_level, IsolationLevel::Low);
 }

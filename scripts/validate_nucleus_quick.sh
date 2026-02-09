@@ -45,15 +45,15 @@ test_primal "Songbird" "$SOCKET_DIR/songbird-node-alpha.sock" "version" "jsonrpc
 
 echo ""
 echo "=== Node Atomic (Compute) ==="
-test_primal "Toadstool" "$SOCKET_DIR/toadstool-nat0.jsonrpc.sock" "toadstool.health" "healthy"
+test_primal "Toadstool" "$SOCKET_DIR/toadstool-1894e909e454.jsonrpc.sock" "toadstool.health" "healthy"
 
 echo ""
 echo "=== Nest Atomic (Storage) ==="
-test_primal "NestGate" "$SOCKET_DIR/nestgate-nat0.sock" "storage.store" "jsonrpc"
+test_primal "NestGate" "$SOCKET_DIR/nestgate-1894e909e454.sock" "storage.store" "jsonrpc"
 
 echo ""
 echo "=== AI Router ==="
-test_primal "Squirrel" "$SOCKET_DIR/squirrel-nat0.sock" "list_providers" "providers"
+test_primal "Squirrel" "$SOCKET_DIR/squirrel-1894e909e454.sock" "list_providers" "providers"
 
 echo ""
 echo "=== Neural API ==="

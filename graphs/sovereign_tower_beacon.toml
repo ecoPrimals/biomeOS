@@ -1,0 +1,157 @@
+# Sovereign Tower Beacon Deployment Graph
+# =========================================
+#
+# Pure Rust ecoPrimals deployment — NO external dependencies
+# - NO coturn (TURN server)
+# - NO tor daemon (/usr/bin/tor)
+# - NO Python bridges
+#
+# Architecture:
+# 1. BearDog provides crypto (ChaCha20-Poly1305, Ed25519, Blake3)
+# 2. Songbird provides IPv6 dual-stack HTTP + discovery
+# 3. Dark Forest beacon gates ALL incoming connections (family-only)
+# 4. DNS beacon at nestgate.io provides universal reachability
+#
+# Connection priority:
+#   Tier 0: IPv6 direct via tower.nestgate.io (0ms, no NAT)
+#   Tier 1: IPv4 direct via nestgate.io A record
+#   Tier 2: LAN via mDNS/Dark Forest broadcast
+#   Tier 3: (future) Pure Rust Tor via songbird-tor-protocol
+#
+# STATUS: OPERATIONAL — Sovereign Beacon Mode (Feb 7, 2026)
+
+[graph]
+id = "sovereign_tower_beacon"
+description = "Sovereign Tower: Dark Forest gated, IPv6 dual-stack, pure Rust"
+coordination = "Sequential"
+
+# =============================================================================
+# PHASE 1: BearDog (Crypto Foundation + Dark Forest Keys)
+# =============================================================================
+
+[[nodes]]
+id = "germinate_beardog"
+output = "beardog_genesis"
+capabilities = ["crypto", "security", "beacon", "genetic"]
+
+[nodes.primal]
+by_capability = "security"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+
+[nodes.operation.environment]
+RUST_LOG = "beardog=info"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+# BearDog capability translations (crypto primitives)
+[nodes.capabilities_provided]
+# Core crypto
+"crypto.generate_keypair" = "crypto.x25519_generate_ephemeral"
+"crypto.encrypt" = "crypto.chacha20_poly1305_encrypt"
+"crypto.decrypt" = "crypto.chacha20_poly1305_decrypt"
+"crypto.hash" = "crypto.blake3_hash"
+"crypto.hmac" = "crypto.hmac_sha256"
+"crypto.sign" = "crypto.sign_ed25519"
+"crypto.verify" = "crypto.verify_ed25519"
+
+# Dark Forest beacon crypto
+"beacon.generate" = "beacon.generate"
+"beacon.encrypt" = "beacon.encrypt"
+"beacon.decrypt" = "beacon.decrypt"
+"beacon.try_decrypt" = "beacon.try_decrypt"
+
+# Genetic lineage
+"genetic.derive_key" = "genetic.derive_lineage_key"
+"genetic.verify_lineage" = "genetic.verify_lineage"
+"genetic.generate_proof" = "genetic.generate_lineage_proof"
+
+# =============================================================================
+# PHASE 2: Songbird (IPv6 Dual-Stack + Dark Forest Gated)
+# =============================================================================
+
+[[nodes]]
+id = "germinate_songbird"
+depends_on = ["germinate_beardog"]
+output = "songbird_genesis"
+capabilities = ["http", "discovery", "mesh"]
+
+[nodes.primal]
+by_capability = "discovery"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+
+[nodes.operation.environment]
+# Security provider
+BEARDOG_SOCKET = "${beardog_socket}"
+SONGBIRD_SECURITY_PROVIDER = "beardog"
+# IPv6 dual-stack binding (critical for sovereign beacon)
+BIOMEOS_BIND_ALL = "true"
+# Sovereign mode flags
+BIOMEOS_SOVEREIGN = "true"
+BIOMEOS_DARK_FOREST = "true"
+BIOMEOS_NO_EXTERNAL_DEPS = "true"
+RUST_LOG = "songbird=info"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[nodes.capabilities_provided]
+"http.request" = "http.request"
+"discovery.announce" = "announce_capabilities"
+"discovery.query" = "discover_by_capability"
+"mesh.status" = "mesh.status"
+"mesh.announce" = "mesh.announce"
+
+# =============================================================================
+# PHASE 3: Dark Forest Beacon Initialization
+# =============================================================================
+
+[[nodes]]
+id = "init_dark_forest_beacon"
+depends_on = ["germinate_beardog", "germinate_songbird"]
+output = "dark_forest_active"
+
+[nodes.operation]
+name = "rpc_call"
+target = "beardog"
+
+# Verify beacon crypto pipeline works (derive key test)
+[nodes.operation.params]
+method = "crypto.blake3_hash"
+params = { data = "dark-forest-init-test" }
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# =============================================================================
+# PHASE 4: Validation
+# =============================================================================
+
+[[nodes]]
+id = "validate_sovereign_tower"
+depends_on = ["germinate_beardog", "germinate_songbird", "init_dark_forest_beacon"]
+output = "tower_validated"
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.operation.params]
+check_beardog = true
+check_songbird = true
+check_dark_forest = true
+timeout_seconds = 10
+
+[nodes.constraints]
+timeout_ms = 15000

@@ -20,7 +20,7 @@ impl NeuralApiServer {
     /// - Lifecycle management → LifecycleHandler
     /// - Protocol escalation → ProtocolHandler
     pub async fn handle_request(&self, request_line: &str) -> Result<Value> {
-        let request = JsonRpcRequest::from_str(request_line)?;
+        let request = JsonRpcRequest::parse(request_line)?;
 
         debug!("📥 Request: {} (id: {})", request.method, request.id);
         trace!("📥 Full request: {}", request_line.trim());
@@ -112,6 +112,27 @@ impl NeuralApiServer {
 
             // === Legacy Routing (still needed for HTTP proxy) ===
             "neural_api.proxy_http" => self.proxy_http(&request.params).await?,
+
+            // === Mesh & NAT Traversal Operations (routed via capability.call) ===
+            // These provide direct method syntax sugar: mesh.status → capability.call("mesh", "status")
+            "mesh.status" | "mesh.find_path" | "mesh.announce" | "mesh.peers" | "mesh.health_check"
+            | "punch.request" | "punch.status"
+            | "stun.discover" | "stun.detect_nat_type"
+            | "relay.serve" | "relay.status" | "relay.allocate"
+            | "onion.create_service" | "onion.get_address" | "onion.connect" | "onion.status" => {
+                // Transform direct method call into capability.call format
+                let parts: Vec<&str> = request.method.split('.').collect();
+                if parts.len() == 2 {
+                    let cap_params = Some(serde_json::json!({
+                        "capability": parts[0],
+                        "operation": parts[1],
+                        "args": request.params.clone().unwrap_or(serde_json::json!({}))
+                    }));
+                    self.capability_handler.call(&cap_params).await?
+                } else {
+                    return Ok(method_not_found_response(&request.method, request.id));
+                }
+            }
 
             // === Unknown Method ===
             _ => {

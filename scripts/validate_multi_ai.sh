@@ -16,9 +16,9 @@ echo ""
 HF_TOKEN="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"
 
 # Sockets
-SQUIRREL_SOCKET="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/biomeos/squirrel-nat0.sock"
+SQUIRREL_SOCKET="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/biomeos/squirrel-1894e909e454.sock"
 SONGBIRD_SOCKET="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/biomeos/songbird-node-alpha.sock"
-TOADSTOOL_SOCKET="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/biomeos/toadstool-nat0.jsonrpc.sock"
+TOADSTOOL_SOCKET="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/biomeos/toadstool-1894e909e454.jsonrpc.sock"
 
 PASSED=0
 FAILED=0

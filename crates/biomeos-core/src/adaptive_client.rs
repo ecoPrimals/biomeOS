@@ -633,7 +633,7 @@ mod tests {
     fn test_encrypt_request_serialization() {
         let request = BirdSongEncryptRequest {
             plaintext: "test".to_string(),
-            family_id: "nat0".to_string(),
+            family_id: "1894e909e454".to_string(),
         };
         let json = serde_json::to_string(&request).unwrap();
         assert!(json.contains("plaintext"));
@@ -644,7 +644,7 @@ mod tests {
     fn test_decrypt_request_serialization() {
         let request = BirdSongDecryptRequest {
             encrypted: "encrypted_data".to_string(),
-            family_id: "nat0".to_string(),
+            family_id: "1894e909e454".to_string(),
         };
         let json = serde_json::to_string(&request).unwrap();
         assert!(json.contains("encrypted"));
@@ -653,10 +653,10 @@ mod tests {
 
     #[test]
     fn test_decrypt_response_parsing() {
-        let json = r#"{"plaintext":"decrypted","family_id":"nat0"}"#;
+        let json = r#"{"plaintext":"decrypted","family_id":"test_family"}"#;
         let response: BirdSongDecryptResponse = serde_json::from_str(json).unwrap();
         assert_eq!(response.plaintext, "decrypted");
-        assert_eq!(response.family_id, "nat0");
+        assert_eq!(response.family_id, "test_family");
     }
 
     #[test]
@@ -680,10 +680,10 @@ mod tests {
     #[test]
     fn test_birdsong_error_family_mismatch() {
         let error = BirdSongError::FamilyMismatch {
-            expected: "nat0".to_string(),
+            expected: "test_family".to_string(),
             actual: "nat1".to_string(),
         };
-        assert!(error.to_string().contains("expected nat0"));
+        assert!(error.to_string().contains("expected test_family"));
         assert!(error.to_string().contains("got nat1"));
     }
 

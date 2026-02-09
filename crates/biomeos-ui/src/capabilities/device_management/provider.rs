@@ -17,18 +17,18 @@ use super::types::*;
 /// Discovered at runtime - no hardcoded primal names!
 pub struct DeviceManagementProvider {
     /// Cache for graceful degradation
-    cache: Arc<RwLock<ProviderCache>>,
+    pub(crate) cache: Arc<RwLock<ProviderCache>>,
     /// Socket path for RPC server
-    socket_path: String,
+    pub(crate) socket_path: String,
 }
 
 /// Cached data for offline mode
 #[derive(Debug, Clone, Default)]
-struct ProviderCache {
-    devices: Vec<Device>,
-    primals: Vec<ManagedPrimal>,
-    templates: Vec<NicheTemplate>,
-    last_update: Option<std::time::Instant>,
+pub(crate) struct ProviderCache {
+    pub(crate) devices: Vec<Device>,
+    pub(crate) primals: Vec<ManagedPrimal>,
+    pub(crate) templates: Vec<NicheTemplate>,
+    pub(crate) last_update: Option<std::time::Instant>,
 }
 
 impl DeviceManagementProvider {
@@ -67,9 +67,11 @@ impl DeviceManagementProvider {
             self.socket_path
         );
 
-        // Advertise capability via Songbird (if available)
-        if let Ok(songbird) = AtomicClient::discover("songbird").await {
-            match songbird
+        // Advertise capability via registry provider (Songbird or env-configured)
+        let registry_provider = std::env::var("BIOMEOS_REGISTRY_PROVIDER")
+            .unwrap_or_else(|_| "songbird".to_string());
+        if let Ok(registry) = AtomicClient::discover(&registry_provider).await {
+            match registry
                 .call(
                     "registry.register_service",
                     serde_json::json!({
@@ -84,9 +86,9 @@ impl DeviceManagementProvider {
                 )
                 .await
             {
-                Ok(_) => info!("✅ Registered device.management capability with Songbird"),
+                Ok(_) => info!("✅ Registered device.management capability with registry"),
                 Err(e) => warn!(
-                    "⚠️ Failed to register with Songbird: {} (continuing anyway)",
+                    "⚠️ Failed to register with registry provider: {} (continuing anyway)",
                     e
                 ),
             }
@@ -143,9 +145,11 @@ impl DeviceManagementProvider {
 
         let mut templates = Vec::new();
 
-        // Try to load from NestGate first
-        if let Ok(nestgate) = AtomicClient::discover("nestgate").await {
-            match nestgate
+        // Try to load from storage provider (NestGate or env-configured)
+        let storage_provider = std::env::var("BIOMEOS_STORAGE_PROVIDER")
+            .unwrap_or_else(|_| "nestgate".to_string());
+        if let Ok(storage) = AtomicClient::discover(&storage_provider).await {
+            match storage
                 .call(
                     "storage.list",
                     serde_json::json!({ "key_prefix": "template:" }),
@@ -161,11 +165,11 @@ impl DeviceManagementProvider {
                                 templates.push(template);
                             }
                         }
-                        info!("📚 Loaded {} templates from NestGate", templates.len());
+                        info!("📚 Loaded {} templates from storage provider", templates.len());
                     }
                 }
                 Err(e) => {
-                    debug!("NestGate template load failed: {} - using built-in", e);
+                    debug!("Storage provider template load failed: {} - using built-in", e);
                 }
             }
         }
@@ -295,9 +299,11 @@ impl DeviceManagementProvider {
             }
         }
 
-        // Try Songbird as backup orchestrator
-        if let Ok(songbird) = AtomicClient::discover("songbird").await {
-            match songbird.call("orchestration.deploy_niche", config).await {
+        // Try orchestration provider as backup
+        let orch_provider = std::env::var("BIOMEOS_REGISTRY_PROVIDER")
+            .unwrap_or_else(|_| "songbird".to_string());
+        if let Ok(orchestrator) = AtomicClient::discover(&orch_provider).await {
+            match orchestrator.call("orchestration.deploy_niche", config).await {
                 Ok(result) => {
                     let niche_id = result
                         .get("niche_id")
@@ -322,9 +328,11 @@ impl DeviceManagementProvider {
     pub async fn assign_device(&self, device_id: String, primal_id: String) -> Result<()> {
         info!("🔗 Assigning device {} to primal {}", device_id, primal_id);
 
-        // Coordinate via Songbird registry
-        if let Ok(songbird) = AtomicClient::discover("songbird").await {
-            match songbird
+        // Coordinate via registry provider
+        let registry_provider = std::env::var("BIOMEOS_REGISTRY_PROVIDER")
+            .unwrap_or_else(|_| "songbird".to_string());
+        if let Ok(registry) = AtomicClient::discover(&registry_provider).await {
+            match registry
                 .call(
                     "registry.assign_device",
                     serde_json::json!({
@@ -337,9 +345,11 @@ impl DeviceManagementProvider {
                 Ok(_) => {
                     info!("✅ Device {} assigned to {}", device_id, primal_id);
 
-                    // Persist assignment to NestGate
-                    if let Ok(nestgate) = AtomicClient::discover("nestgate").await {
-                        let _ = nestgate
+                    // Persist assignment to storage provider
+                    let storage_prov = std::env::var("BIOMEOS_STORAGE_PROVIDER")
+                        .unwrap_or_else(|_| "nestgate".to_string());
+                    if let Ok(storage) = AtomicClient::discover(&storage_prov).await {
+                        let _ = storage
                             .call(
                                 "storage.store",
                                 serde_json::json!({
@@ -696,7 +706,13 @@ impl DeviceManagementProvider {
             "id": 1
         });
 
-        let request_str = serde_json::to_string(&request).unwrap() + "\n";
+        let request_str = match serde_json::to_string(&request) {
+            Ok(s) => s + "\n",
+            Err(e) => {
+                warn!("Failed to serialize identity request: {}", e);
+                return "unknown".to_string();
+            }
+        };
         let (read, mut write) = stream.into_split();
 
         if let Err(e) = write.write_all(request_str.as_bytes()).await {
@@ -756,7 +772,13 @@ impl DeviceManagementProvider {
             "id": 1
         });
 
-        let request_str = serde_json::to_string(&request).unwrap() + "\n";
+        let request_str = match serde_json::to_string(&request) {
+            Ok(s) => s + "\n",
+            Err(e) => {
+                warn!("Failed to serialize health request: {}", e);
+                return (0.0, 1.0, PrimalStatus::Degraded);
+            }
+        };
         let (read, mut write) = stream.into_split();
 
         if write.write_all(request_str.as_bytes()).await.is_err() {
@@ -830,7 +852,13 @@ impl DeviceManagementProvider {
             "id": 1
         });
 
-        let request_str = serde_json::to_string(&request).unwrap() + "\n";
+        let request_str = match serde_json::to_string(&request) {
+            Ok(s) => s + "\n",
+            Err(e) => {
+                warn!("Failed to serialize capabilities request: {}", e);
+                return vec![];
+            }
+        };
         let (read, mut write) = stream.into_split();
 
         if let Err(e) = write.write_all(request_str.as_bytes()).await {
@@ -872,70 +900,11 @@ impl DeviceManagementProvider {
     }
 
     /// Get built-in niche templates
-    fn get_builtin_templates(&self) -> Vec<NicheTemplate> {
-        vec![
-            NicheTemplate {
-                id: "tower".to_string(),
-                name: "Tower (Secure Base)".to_string(),
-                description: "BearDog + Songbird atomic deployment".to_string(),
-                required_primals: vec![
-                    PrimalRole {
-                        role: "security".to_string(),
-                        capabilities: vec!["crypto".to_string(), "identity".to_string()],
-                        min_health: 0.9,
-                        metadata: serde_json::json!({}),
-                    },
-                    PrimalRole {
-                        role: "discovery".to_string(),
-                        capabilities: vec!["mesh".to_string(), "p2p".to_string()],
-                        min_health: 0.8,
-                        metadata: serde_json::json!({}),
-                    },
-                ],
-                optional_primals: vec![],
-                estimated_resources: ResourceRequirements {
-                    cpu_cores: 2,
-                    memory_mb: 512,
-                    storage_gb: 1,
-                    gpu_required: false,
-                    network_bandwidth_mbps: 10,
-                },
-                metadata: serde_json::json!({}),
-            },
-            NicheTemplate {
-                id: "node".to_string(),
-                name: "Node (Compute Ready)".to_string(),
-                description: "Tower + Toadstool for compute workloads".to_string(),
-                required_primals: vec![
-                    PrimalRole {
-                        role: "security".to_string(),
-                        capabilities: vec!["crypto".to_string()],
-                        min_health: 0.9,
-                        metadata: serde_json::json!({}),
-                    },
-                    PrimalRole {
-                        role: "discovery".to_string(),
-                        capabilities: vec!["mesh".to_string()],
-                        min_health: 0.8,
-                        metadata: serde_json::json!({}),
-                    },
-                    PrimalRole {
-                        role: "compute".to_string(),
-                        capabilities: vec!["gpu".to_string(), "cpu".to_string()],
-                        min_health: 0.8,
-                        metadata: serde_json::json!({}),
-                    },
-                ],
-                optional_primals: vec![],
-                estimated_resources: ResourceRequirements {
-                    cpu_cores: 4,
-                    memory_mb: 2048,
-                    storage_gb: 10,
-                    gpu_required: true,
-                    network_bandwidth_mbps: 100,
-                },
-                metadata: serde_json::json!({}),
-            },
-        ]
+    ///
+    /// Delegates to the templates module for standard templates.
+    /// This keeps template definitions separate from provider logic.
+    pub(crate) fn get_builtin_templates(&self) -> Vec<NicheTemplate> {
+        super::templates::builtin_templates()
     }
 }
+// Tests are in provider_tests.rs to keep this file under 1000 lines

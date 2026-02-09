@@ -7,14 +7,14 @@
 # Usage: ./scripts/bootstrap_tower_atomic.sh [--stop]
 #
 # Environment:
-#   FAMILY_ID    - Family identifier (default: nat0)
+#   FAMILY_ID    - Family identifier (default: 1894e909e454)
 #   NODE_ID      - Node identifier (default: tower0)
 #   BIOMEOS_ROOT - biomeOS root directory (default: script dir parent)
 
 set -e
 
 # Configuration
-FAMILY_ID="${FAMILY_ID:-nat0}"
+FAMILY_ID="${FAMILY_ID:-1894e909e454}"
 NODE_ID="${NODE_ID:-tower0}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIOMEOS_ROOT="${BIOMEOS_ROOT:-$(dirname "$SCRIPT_DIR")}"

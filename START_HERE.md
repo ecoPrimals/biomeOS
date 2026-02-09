@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
-**Last Updated**: February 4, 2026  
-**Status**: Production Ready - Cross-Device AI Coordination
+**Last Updated**: February 9, 2026
+**Status**: Production Ready - Plasmodium + Model Cache
 
 ---
 
@@ -16,6 +16,10 @@ biomeOS is the **ecosystem orchestrator** for ecoPrimals - a federation of auton
 - **NUCLEUS**: Complete system (Tower + Node + Nest)
 - **Neural API**: Semantic routing via `capability.call`
 - **Universal IPC v3.0**: Multi-transport communication (Unix/Abstract/TCP)
+- **Sovereign Mesh**: Distributed relay network for NAT traversal
+- **Dark Forest**: Zero-metadata beacon discovery using genetic lineage
+- **Plasmodium**: Over-NUCLEUS collective coordination (slime mold pattern)
+- **Model Cache**: NUCLEUS-integrated AI model management
 
 ---
 
@@ -59,22 +63,31 @@ echo '{"jsonrpc":"2.0","method":"capability.call","params":{"capability":"crypto
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        NUCLEUS                               │
-├─────────────────────────────────────────────────────────────┤
-│  Layer 2: biomeOS + Neural API                              │
-│           (semantic translation, capability routing)         │
-├─────────────────────────────────────────────────────────────┤
-│  Layer 1: Atomics                                           │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
-│  │  Tower   │  │   Node   │  │   Nest   │  │ Squirrel │   │
-│  │ BearDog  │  │  Tower   │  │  Tower   │  │  AI/MCP  │   │
-│  │ Songbird │  │ Toadstool│  │ NestGate │  │          │   │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘   │
-├─────────────────────────────────────────────────────────────┤
-│  Layer 0: Primals (evolve independently)                    │
-└─────────────────────────────────────────────────────────────┘
++-------------------------------------------------------------+
+|                        NUCLEUS                               |
++-------------------------------------------------------------+
+|  Layer 2: biomeOS + Neural API                               |
+|           (semantic translation, capability routing)          |
++-------------------------------------------------------------+
+|  Layer 1: Atomics                                            |
+|  +----------+  +----------+  +----------+  +----------+     |
+|  |  Tower   |  |   Node   |  |   Nest   |  | Squirrel |     |
+|  | BearDog  |  |  Tower   |  |  Tower   |  |  AI/MCP  |     |
+|  | Songbird |  | Toadstool|  | NestGate |  |          |     |
+|  +----------+  +----------+  +----------+  +----------+     |
++-------------------------------------------------------------+
+|  Layer 0: Primals (evolve independently)                     |
++-------------------------------------------------------------+
 ```
+
+### Deep Debt Principles (Feb 7, 2026)
+
+1. **Pure Rust**: Zero C dependencies (no libc, nix, dirs, reqwest, lazy_static)
+2. **Capability-based**: Primals discover each other at runtime, not by name
+3. **No hardcoding**: Provider names configurable via environment variables
+4. **No production mocks**: Stubs replaced with real implementations or honest errors
+5. **Idiomatic Rust**: Modern patterns (OnceLock, or_default, Default trait)
+6. **Zero actionable warnings**: Clippy clean across all crates (except pre-existing biomeos-boot docs)
 
 ---
 
@@ -84,8 +97,9 @@ echo '{"jsonrpc":"2.0","method":"capability.call","params":{"capability":"crypto
 |----------|---------|
 | `README.md` | Complete overview |
 | `CURRENT_STATUS.md` | Latest status |
-| `specs/PRIMAL_DEPLOYMENT_STANDARD.md` | Deployment standard |
-| `specs/EVOLUTION_PATH.md` | Scripts to graphs migration |
+| `QUICK_START.md` | 5-minute deployment |
+| `DOCUMENTATION.md` | Full documentation index |
+| `CHANGELOG.md` | Version history |
 
 ---
 
@@ -130,26 +144,21 @@ Tier 2 (Universal - Cross-Device):
   6. TCP remote:910X (federation)
 ```
 
-### Cross-Device AI Coordination (Validated Feb 4, 2026)
+---
 
-```bash
-# Setup ADB reverse forwarding (Pixel → Local Ollama)
-adb reverse tcp:11434 tcp:11434
+## Environment Variables
 
-# On Pixel, make AI request via Songbird HTTP capability
-adb shell "echo '{
-  \"jsonrpc\":\"2.0\",
-  \"method\":\"http.request\",
-  \"params\":{
-    \"method\":\"POST\",
-    \"url\":\"http://127.0.0.1:11434/api/generate\",
-    \"body\":\"{\\\"model\\\":\\\"tinyllama\\\",\\\"prompt\\\":\\\"Hello\\\",\\\"stream\\\":false}\"
-  },
-  \"id\":1
-}' | nc -w 60 127.0.0.1 9901"
-
-# Result: tinyllama responds via cross-device flow!
-```
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `FAMILY_ID` | Genetic lineage identifier | (required) |
+| `BIOMEOS_SECURITY_PROVIDER` | Security/crypto primal | `beardog` |
+| `BIOMEOS_NETWORK_PROVIDER` | Network orchestration primal | `songbird` |
+| `BIOMEOS_REGISTRY_PROVIDER` | Service registry primal | `songbird` |
+| `BIOMEOS_STORAGE_PROVIDER` | Persistence primal | `nestgate` |
+| `BIOMEOS_STRICT_DISCOVERY` | Disable bootstrap name fallbacks | (unset) |
+| `BIOMEOS_SOVEREIGN` | Enable sovereign mode (no public STUN) | (unset) |
+| `XDG_RUNTIME_DIR` | XDG runtime directory | `/run/user/$UID` |
+| `RUST_LOG` | Logging level | `info` |
 
 ---
 
@@ -161,6 +170,7 @@ adb shell "echo '{
 | **Universal IPC v3.0** | Multi-transport (Unix/Abstract/TCP) |
 | **PRIMAL_DEPLOYMENT_STANDARD** | Deterministic cross-platform |
 | **Semantic Method Naming** | capability.call routing |
+| **Sovereign NAT Traversal** | Mesh relay, hole punching, onion services |
 | **AGPL-3.0-only** | License requirement |
 
 ---
@@ -177,6 +187,8 @@ adb shell "echo '{
 **Status**: Production Ready  
 **IPC**: Universal IPC v3.0  
 **Primals**: 6/6 ecoBin v2.0 compliant  
-**Tests**: 800+ passing  
+**Tests**: 1,747 passing  
 **Security**: A++ LEGENDARY  
-**Cross-Device**: BirdSong + AI Coordination Validated
+**NAT Traversal**: Sovereign Mesh + Hole Punching + Onion Services  
+**Plasmodium**: Over-NUCLEUS collective coordination  
+**Updated**: February 9, 2026

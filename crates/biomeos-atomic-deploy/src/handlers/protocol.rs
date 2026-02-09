@@ -256,8 +256,8 @@ impl ProtocolHandler {
     ///   "method":"protocol.register_primal",
     ///   "params":{
     ///     "primal_id": "beardog",
-    ///     "json_rpc_socket": "/run/user/1000/biomeos/beardog-nat0.sock",
-    ///     "tarpc_socket": "/run/user/1000/biomeos/beardog-nat0-tarpc.sock",
+    ///     "json_rpc_socket": "/run/user/1000/biomeos/beardog-family.sock",
+    ///     "tarpc_socket": "/run/user/1000/biomeos/beardog-family-tarpc.sock",
     ///     "capabilities": ["crypto", "identity"]
     ///   },
     ///   "id":1

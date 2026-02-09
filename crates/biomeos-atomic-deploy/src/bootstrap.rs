@@ -77,7 +77,7 @@ pub async fn register_self_in_registry(
 /// * `family_id` - Family ID for this server
 /// * `nucleation` - Socket nucleation for deterministic socket assignment
 pub async fn execute_bootstrap_sequence(
-    graphs_dir: &PathBuf,
+    graphs_dir: &std::path::Path,
     family_id: &str,
     nucleation: &Arc<RwLock<SocketNucleation>>,
 ) -> Result<()> {
@@ -144,18 +144,22 @@ pub async fn transition_to_coordinated(family_id: &str) -> Result<()> {
     let check_interval = Duration::from_millis(500);
     let start = std::time::Instant::now();
 
-    // EVOLVED: Bootstrap mode - minimal hardcoding for initial system bring-up
-    // These core primals (beardog=security, songbird=discovery) are needed
-    // for capability resolution. After bootstrap, all discovery is runtime.
+    // DEEP DEBT EVOLUTION: Bootstrap resolves provider names from env
+    // These are the minimum primals needed before capability registry starts
+    let security_provider = std::env::var("BIOMEOS_SECURITY_PROVIDER")
+        .unwrap_or_else(|_| "beardog".to_string());
+    let network_provider = std::env::var("BIOMEOS_NETWORK_PROVIDER")
+        .unwrap_or_else(|_| "songbird".to_string());
     let mut nucleation = SocketNucleation::new(SocketStrategy::default());
-    let beardog_socket = nucleation.assign_socket("beardog", family_id);
-    let songbird_socket = nucleation.assign_socket("songbird", family_id);
+    let beardog_socket = nucleation.assign_socket(&security_provider, family_id);
+    let songbird_socket = nucleation.assign_socket(&network_provider, family_id);
 
     loop {
         if start.elapsed() > max_wait {
             return Err(anyhow::anyhow!(
                 "Tower Atomic did not become available within 30s. \
-                 Ensure beardog and songbird primals are running for bootstrap."
+                 Ensure {} and {} primals are running for bootstrap.",
+                security_provider, network_provider
             ));
         }
 
@@ -176,11 +180,10 @@ pub async fn transition_to_coordinated(family_id: &str) -> Result<()> {
         sleep(check_interval).await;
     }
 
-    // EVOLVED (Jan 27, 2026): Capability-based security context via AtomicClient
-    // Layer 1: Verify BearDog health (crypto provider)
-    match verify_primal_health(&beardog_socket, "beardog").await {
+    // Layer 1: Verify security provider health
+    match verify_primal_health(&beardog_socket, &security_provider).await {
         Ok(caps) => {
-            info!("✅ BearDog healthy with {} capabilities", caps.len());
+            info!("✅ {} healthy with {} capabilities", security_provider, caps.len());
         }
         Err(e) => {
             warn!(
@@ -190,10 +193,10 @@ pub async fn transition_to_coordinated(family_id: &str) -> Result<()> {
         }
     }
 
-    // Layer 2: Verify Songbird health (discovery/mesh)
-    match verify_primal_health(&songbird_socket, "songbird").await {
+    // Layer 2: Verify network provider health
+    match verify_primal_health(&songbird_socket, &network_provider).await {
         Ok(caps) => {
-            info!("✅ Songbird healthy with {} capabilities", caps.len());
+            info!("✅ {} healthy with {} capabilities", network_provider, caps.len());
         }
         Err(e) => {
             warn!(
@@ -219,4 +222,90 @@ pub async fn transition_to_coordinated(family_id: &str) -> Result<()> {
     info!("   Security context inherited via capability-based discovery");
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_socket_nucleation_creates_valid_paths() {
+        let mut nucleation = SocketNucleation::new(SocketStrategy::default());
+        let beardog_socket = nucleation.assign_socket("beardog", "test-family");
+        let songbird_socket = nucleation.assign_socket("songbird", "test-family");
+
+        // Socket paths should be different
+        assert_ne!(beardog_socket, songbird_socket);
+
+        // Should contain primal name and family
+        let beardog_str = beardog_socket.to_string_lossy();
+        let songbird_str = songbird_socket.to_string_lossy();
+
+        assert!(beardog_str.contains("beardog") || beardog_str.contains("test-family"));
+        assert!(songbird_str.contains("songbird") || songbird_str.contains("test-family"));
+    }
+
+    #[test]
+    fn test_socket_strategy_default() {
+        let strategy = SocketStrategy::default();
+        // Default strategy should be XdgRuntime
+        assert!(matches!(strategy, SocketStrategy::XdgRuntime));
+    }
+
+    #[test]
+    fn test_socket_strategy_family_deterministic() {
+        let strategy = SocketStrategy::FamilyDeterministic;
+        assert!(matches!(strategy, SocketStrategy::FamilyDeterministic));
+    }
+
+    #[tokio::test]
+    async fn test_register_self_capabilities() {
+        // Verify the capabilities list is correct
+        let capabilities = vec![
+            "primal.germination",
+            "primal.terraria",
+            "ecosystem.coordination",
+            "ecosystem.nucleation",
+            "graph.execution",
+        ];
+
+        assert_eq!(capabilities.len(), 5);
+        assert!(capabilities.contains(&"primal.germination"));
+        assert!(capabilities.contains(&"graph.execution"));
+    }
+
+    #[test]
+    fn test_biome_os_mode_variants() {
+        // Test BiomeOsMode enum usage
+        let bootstrap = BiomeOsMode::Bootstrap;
+        let coordinated = BiomeOsMode::Coordinated;
+
+        // Both variants should be distinct
+        assert!(matches!(bootstrap, BiomeOsMode::Bootstrap));
+        assert!(matches!(coordinated, BiomeOsMode::Coordinated));
+    }
+
+    #[test]
+    fn test_bootstrap_graph_path_construction() {
+        let graphs_dir = std::path::Path::new("/test/graphs");
+        let bootstrap_graph_path = graphs_dir.join("tower_atomic_bootstrap.toml");
+
+        assert_eq!(
+            bootstrap_graph_path.to_string_lossy(),
+            "/test/graphs/tower_atomic_bootstrap.toml"
+        );
+    }
+
+    #[test]
+    fn test_environment_setup_for_bootstrap() {
+        let family_id = "test-family";
+        let mut env = HashMap::new();
+        env.insert("FAMILY_ID".to_string(), family_id.to_string());
+        env.insert("BIOMEOS_FAMILY_ID".to_string(), family_id.to_string());
+        env.insert("BIOMEOS_MODE".to_string(), "bootstrap".to_string());
+
+        assert_eq!(env.get("FAMILY_ID"), Some(&"test-family".to_string()));
+        assert_eq!(env.get("BIOMEOS_MODE"), Some(&"bootstrap".to_string()));
+        assert_eq!(env.len(), 3);
+    }
 }

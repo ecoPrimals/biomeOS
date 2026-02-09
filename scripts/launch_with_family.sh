@@ -36,7 +36,7 @@ echo ""
 # =============================================================================
 discover_family_id() {
     # Priority 1: FAMILY_ID env var (explicit override)
-    if [ -n "$FAMILY_ID" ] && [ "$FAMILY_ID" != "nat0" ]; then
+    if [ -n "$FAMILY_ID" ] && [ "$FAMILY_ID" != "1894e909e454" ]; then
         echo -e "${GREEN}✅ Using FAMILY_ID from environment: $FAMILY_ID${NC}"
         return 0
     fi
@@ -66,11 +66,11 @@ discover_family_id() {
         fi
     done
     
-    # Warn about nat0 deprecation
-    if [ "$FAMILY_ID" = "nat0" ]; then
-        echo -e "${YELLOW}⚠️ WARNING: nat0 is deprecated prototype family ID${NC}"
+    # Warn about 1894e909e454 deprecation
+    if [ "$FAMILY_ID" = "1894e909e454" ]; then
+        echo -e "${YELLOW}⚠️ WARNING: 1894e909e454 is deprecated prototype family ID${NC}"
         echo -e "${YELLOW}   Consider using a proper .family.seed file${NC}"
-        export FAMILY_ID="nat0"
+        export FAMILY_ID="1894e909e454"
         return 0
     fi
     

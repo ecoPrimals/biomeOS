@@ -310,7 +310,7 @@ mod tests {
     fn test_spore_manifest_creation() {
         let mut manifest = SporeManifest::new(
             "node-alpha".to_string(),
-            "nat0".to_string(),
+            "1894e909e454".to_string(),
             "LiveSpore".to_string(),
             "2026-01-08".to_string(),
             "parent_hash".to_string(),

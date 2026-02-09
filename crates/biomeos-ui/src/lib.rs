@@ -1,8 +1,12 @@
-//! Interactive UI Orchestration for biomeOS
+//! Interactive UI Orchestration for `biomeOS`
 //!
-//! This crate implements the orchestration layer for biomeOS's interactive UI,
+//! This crate implements the orchestration layer for `biomeOS`'s interactive UI,
 //! coordinating between multiple primals to create an emergent network effect.
-//!
+
+// Crate-level lint configuration
+#![allow(clippy::doc_markdown)] // Allow technical terms without backticks
+#![deny(unsafe_code)] // No unsafe code in UI
+
 //! ## Network Effect Architecture
 //!
 //! This is NOT a single primal's feature. It's an **emergent capability** from
@@ -35,7 +39,7 @@
 //! #[tokio::main]
 //! async fn main() -> anyhow::Result<()> {
 //!     // Create the orchestrator (connects to all primals)
-//!     let mut orchestrator = InteractiveUIOrchestrator::new("nat0").await?;
+//!     let mut orchestrator = InteractiveUIOrchestrator::new("1894e909e454").await?;
 //!     
 //!     // Start the UI (launches petalTongue and syncs state)
 //!     orchestrator.start().await?;
@@ -47,7 +51,6 @@
 //! }
 //! ```
 
-#![deny(unsafe_code)]
 #![warn(missing_docs)]
 #![warn(clippy::all)]
 

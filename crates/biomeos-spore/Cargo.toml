@@ -7,6 +7,9 @@ license.workspace = true
 description = "biomeOS USB spore management - orchestration layer only"
 
 [dependencies]
+# Core biomeOS dependencies
+biomeos-core = { path = "../biomeos-core" }
+
 # Core async and serialization
 tokio = { workspace = true }
 async-trait = { workspace = true }

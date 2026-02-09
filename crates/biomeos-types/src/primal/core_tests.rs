@@ -114,7 +114,7 @@ mod tests {
 
     #[test]
     fn test_multiple_primal_types() {
-        let primals = vec![
+        let primals = [
             PrimalType::new("storage", "nestgate", "1.0.0"),
             PrimalType::new("security", "beardog", "0.9.0"),
             PrimalType::new("orchestration", "songbird", "3.0.0"),

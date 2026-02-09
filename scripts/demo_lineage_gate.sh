@@ -30,8 +30,8 @@ echo ""
 # Configuration
 SPORE1_ROOT="${SPORE1_ROOT:-/media/eastgate/biomeOS1/biomeOS}"
 SPORE2_ROOT="${SPORE2_ROOT:-/media/eastgate/BEA6-BBCE/biomeOS}"
-BEARDOG_SOCKET_1="${BEARDOG_SOCKET_1:-/tmp/beardog-nat0-node-alpha.sock}"
-BEARDOG_SOCKET_2="${BEARDOG_SOCKET_2:-/tmp/beardog-nat0-node-beta.sock}"
+BEARDOG_SOCKET_1="${BEARDOG_SOCKET_1:-/tmp/beardog-1894e909e454-node-alpha.sock}"
+BEARDOG_SOCKET_2="${BEARDOG_SOCKET_2:-/tmp/beardog-1894e909e454-node-beta.sock}"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Phase 1: Family Beacon (Public Advertisement)
@@ -46,19 +46,19 @@ echo "📡 What mDNS/UDP would advertise:"
 echo ""
 echo "  Spore A (node-alpha):"
 echo "    _biome._tcp.local"
-echo "    TXT: family_id=nat0"
+echo "    TXT: family_id=1894e909e454"
 echo "    TXT: node_id=node-alpha"
 echo "    TXT: lineage_mode=genesis"
-echo "    TXT: socket=/tmp/beardog-nat0-node-alpha.sock"
+echo "    TXT: socket=/tmp/beardog-1894e909e454-node-alpha.sock"
 echo ""
 echo "  Spore B (node-beta):"
 echo "    _biome._tcp.local"
-echo "    TXT: family_id=nat0"
+echo "    TXT: family_id=1894e909e454"
 echo "    TXT: node_id=node-beta"
 echo "    TXT: lineage_mode=sibling"
-echo "    TXT: socket=/tmp/beardog-nat0-node-beta.sock"
+echo "    TXT: socket=/tmp/beardog-1894e909e454-node-beta.sock"
 echo ""
-echo -e "${YELLOW}⚠️  Anyone can advertise family_id=nat0 - it's just a tag!${NC}"
+echo -e "${YELLOW}⚠️  Anyone can advertise family_id=1894e909e454 - it's just a tag!${NC}"
 echo -e "${YELLOW}   The REAL verification happens in Phase 2...${NC}"
 echo ""
 
@@ -123,8 +123,8 @@ PROOF_REQUEST=$(cat <<EOF
     "jsonrpc": "2.0",
     "method": "genetic.generate_lineage_proof",
     "params": {
-        "our_family_id": "nat0",
-        "peer_family_id": "nat0",
+        "our_family_id": "1894e909e454",
+        "peer_family_id": "1894e909e454",
         "lineage_seed": "$SEED2_B64"
     },
     "id": 1
@@ -157,8 +157,8 @@ VERIFY_REQUEST=$(cat <<EOF
     "jsonrpc": "2.0",
     "method": "genetic.verify_lineage",
     "params": {
-        "our_family_id": "nat0",
-        "peer_family_id": "nat0",
+        "our_family_id": "1894e909e454",
+        "peer_family_id": "1894e909e454",
         "lineage_proof": "$PROOF_B64",
         "lineage_seed": "$SEED1_B64"
     },
@@ -212,8 +212,8 @@ KEY_REQUEST=$(cat <<EOF
     "jsonrpc": "2.0",
     "method": "genetic.derive_lineage_key",
     "params": {
-        "our_family_id": "nat0",
-        "peer_family_id": "nat0",
+        "our_family_id": "1894e909e454",
+        "peer_family_id": "1894e909e454",
         "context": "$SESSION_CONTEXT",
         "lineage_seed": "$SEED1_B64"
     },

@@ -18,7 +18,7 @@
 [deployment]
 hostname = "swiftgate"
 location = "mobile"
-family_id = "nat0"
+family_id = "1894e909e454"
 deployment_type = "tower-plus-compute"
 mobile_mode = true
 
@@ -209,7 +209,7 @@ gpu_time_slicing = true
 cpu_pinning = false
 
 # Trusted deployers
-trusted_families = ["nat0"]
+trusted_families = ["1894e909e454"]
 trusted_sub_feds = ["lan-hpc", "mobile", "demos"]
 
 # Battery management
@@ -247,7 +247,7 @@ track_location = false  # Privacy
 
 # Step 1: Deploy Tower
 # export NODE_ID=tower-swiftgate
-# export FAMILY_ID=nat0
+# export FAMILY_ID=1894e909e454
 # export MOBILE_MODE=true
 # biomeos deploy --niche tower --config deployments/basement-hpc/swiftgate.toml --usb /media/liveSpore4
 
@@ -266,5 +266,5 @@ track_location = false  # Privacy
 
 # Step 4: Verify federation (from any network)
 # curl --unix-socket /tmp/songbird-tower-swiftgate.sock \
-#   -d '{"jsonrpc":"2.0","method":"discover_by_family","params":{"family_tags":["nat0"]},"id":1}'
+#   -d '{"jsonrpc":"2.0","method":"discover_by_family","params":{"family_tags":["1894e909e454"]},"id":1}'
 

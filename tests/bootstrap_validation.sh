@@ -79,7 +79,7 @@ sleep 1
 info "Removing existing sockets..."
 rm -f /tmp/beardog-*.sock /tmp/songbird-*.sock /tmp/biomeos-*.sock /tmp/neural-api-*.sock 2>/dev/null || true
 
-if [ ! -S "/tmp/beardog-nat0.sock" ] && [ ! -S "/tmp/songbird-nat0.sock" ]; then
+if [ ! -S "/tmp/beardog-1894e909e454.sock" ] && [ ! -S "/tmp/songbird-1894e909e454.sock" ]; then
     pass "Environment clean (no Tower Atomic sockets)"
 else
     fail "Environment not clean (sockets still exist)"

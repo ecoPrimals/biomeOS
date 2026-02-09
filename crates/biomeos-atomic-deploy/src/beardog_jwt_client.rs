@@ -61,43 +61,55 @@ pub async fn fetch_jwt_secret_from_beardog(socket_path: &str, purpose: &str) -> 
             }),
         )
         .await
-        .context(format!("Failed to fetch JWT secret from BearDog at {}", socket_path))?;
+        .context(format!(
+            "Failed to fetch JWT secret from BearDog at {}",
+            socket_path
+        ))?;
 
     debug!("   Received response from BearDog");
 
     // Parse the result
-    let result: JwtSecretResult = serde_json::from_value(response)
-        .context("Failed to parse BearDog JWT response")?;
+    let result: JwtSecretResult =
+        serde_json::from_value(response).context("Failed to parse BearDog JWT response")?;
 
     info!("JWT secret obtained from BearDog");
     info!("   Length: {} characters", result.secret.len());
-    info!("   Strength: {} ({} bytes)", result.strength, result.byte_length);
+    info!(
+        "   Strength: {} ({} bytes)",
+        result.strength, result.byte_length
+    );
     info!("   Algorithm: {}", result.algorithm);
 
     Ok(result.secret)
 }
 
-/// Fetch JWT secret from BearDog using auto-discovery (Universal IPC v3.0)
+/// Fetch JWT secret from security provider using auto-discovery (Universal IPC v3.0)
 ///
 /// **Universal IPC v3.0**: Uses `AtomicClient::discover()` with automatic
-/// transport fallback. Discovers BearDog via environment, XDG, abstract socket, or TCP.
+/// transport fallback. Discovers the security provider via environment, XDG,
+/// abstract socket, or TCP.
+///
+/// DEEP DEBT EVOLUTION: Resolves security provider via `BIOMEOS_SECURITY_PROVIDER`
+/// env var, defaulting to "beardog" only as a bootstrap fallback.
 ///
 /// # Arguments
 /// * `purpose` - Purpose of the JWT secret (e.g., "nestgate_authentication")
 ///
 /// # Returns
 /// * `Ok(String)` - Base64-encoded JWT secret
-/// * `Err` - If BearDog is unavailable or request fails
+/// * `Err` - If security provider is unavailable or request fails
 pub async fn fetch_jwt_secret_with_discovery(purpose: &str) -> Result<String> {
-    info!("Discovering BearDog for JWT secret generation...");
+    let provider = std::env::var("BIOMEOS_SECURITY_PROVIDER")
+        .unwrap_or_else(|_| "beardog".to_string());
+    info!("Discovering security provider '{}' for JWT secret generation...", provider);
     info!("   Purpose: {}", purpose);
 
     // Use auto-discovery with fallback (Unix → Abstract → TCP)
-    let client = AtomicClient::discover("beardog")
+    let client = AtomicClient::discover(&provider)
         .await
-        .context("Failed to discover BearDog")?;
+        .context(format!("Failed to discover security provider '{}'", provider))?;
 
-    info!("   Discovered BearDog via: {}", client.endpoint());
+    info!("   Discovered {} via: {}", provider, client.endpoint());
 
     // Call BearDog's JWT secret generation method
     let response = client
@@ -112,8 +124,8 @@ pub async fn fetch_jwt_secret_with_discovery(purpose: &str) -> Result<String> {
         .context("Failed to fetch JWT secret from BearDog")?;
 
     // Parse the result
-    let result: JwtSecretResult = serde_json::from_value(response)
-        .context("Failed to parse BearDog JWT response")?;
+    let result: JwtSecretResult =
+        serde_json::from_value(response).context("Failed to parse BearDog JWT response")?;
 
     info!("JWT secret obtained from BearDog via {}", client.endpoint());
     info!("   Length: {} characters", result.secret.len());

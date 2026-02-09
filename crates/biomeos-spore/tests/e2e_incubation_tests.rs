@@ -82,7 +82,7 @@ family_id = "{}"
     // 3. Verify both have unique deployed_seeds but share spore lineage
     // 4. Verify both can federate
 
-    assert!(true, "Multi-computer simulation setup complete");
+    // Multi-computer simulation setup complete - test passes if we reach here
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
@@ -113,7 +113,7 @@ family_id = "{}"
     let _incubator = SporeIncubator::new(&spore_path).unwrap();
 
     // Verify the spore seed can be read
-    let family_seed = FamilySeed::from_file(spore_path.join(".family.seed")).unwrap();
+    let _family_seed = FamilySeed::from_file(spore_path.join(".family.seed")).unwrap();
 
     // In a full E2E test, we would:
     // 1. Incubate the spore
@@ -121,7 +121,7 @@ family_id = "{}"
     // 3. Verify lineage fields are correctly set
     // 4. Use BearDog to verify genetic relationship
 
-    assert!(true, "Genetic lineage test setup complete");
+    // Genetic lineage test setup complete - test passes if we reach here
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
@@ -153,7 +153,7 @@ node_id = "log-test"
     // 3. Verify the incubation event was logged
     // 4. Check metadata includes computer name, entropy hash, node_id
 
-    assert!(true, "Spore log tracking test setup complete");
+    // Spore log tracking test setup complete - test passes if we reach here
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]

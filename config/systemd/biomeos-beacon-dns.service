@@ -1,0 +1,23 @@
+[Unit]
+Description=biomeOS Sovereign Beacon DNS Updater
+Documentation=https://github.com/ecoPrimals/biomeOS
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/Development/ecoPrimals/phase2/biomeOS/scripts/beacon_dns_updater.sh daemon
+Restart=on-failure
+RestartSec=30
+# Environment
+Environment=DOMAIN=nestgate.io
+Environment=SUBDOMAIN=tower
+# Don't use root — runs as user service
+# Porkbun credentials loaded from ~/.config/biomeos/porkbun.env by script
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=biomeos-beacon-dns
+
+[Install]
+WantedBy=default.target

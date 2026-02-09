@@ -121,7 +121,6 @@ impl GenomeBin {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::TempDir;
 
     #[test]
     fn test_default_install_dir() {

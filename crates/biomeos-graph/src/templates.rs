@@ -330,7 +330,7 @@ impl NestGateTemplateClient {
     /// 2. `/tmp/biomeos-$USER/nestgate-{family_id}.sock`
     async fn discover() -> Result<Self> {
         let family_id =
-            std::env::var("NESTGATE_FAMILY_ID").unwrap_or_else(|_| "nat0".to_string());
+            std::env::var("NESTGATE_FAMILY_ID").unwrap_or_else(|_| biomeos_core::family_discovery::get_family_id());
 
         // Use SystemPaths for XDG-compliant socket discovery
         let socket_path = if let Ok(paths) = biomeos_types::SystemPaths::new() {

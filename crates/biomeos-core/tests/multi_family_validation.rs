@@ -299,6 +299,7 @@ mod multi_family_tests {
     #[tokio::test]
     async fn test_full_multi_family_scenario() {
         // Scenario: Three organizations, each with their own family
+        #[allow(dead_code)]
         struct Organization {
             name: String,
             family_id: String,

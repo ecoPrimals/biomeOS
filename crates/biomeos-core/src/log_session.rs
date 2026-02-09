@@ -209,3 +209,163 @@ struct FossilEntry {
     archival_reason: String,
     log_file: Option<PathBuf>,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_tracker_creation() {
+        let tracker = LogSessionTracker::new("test-node".to_string());
+        assert_eq!(tracker.node_id, "test-node");
+    }
+
+    #[tokio::test]
+    async fn test_register_session() {
+        let tracker = LogSessionTracker::new("test-node".to_string());
+        let primal_id = PrimalId::new("beardog-test").unwrap();
+
+        tracker
+            .register_session(primal_id.clone(), 1234, None)
+            .await;
+
+        let sessions = tracker.get_all_sessions().await;
+        assert_eq!(sessions.len(), 1);
+        assert_eq!(sessions[0].primal_id, primal_id);
+        assert_eq!(sessions[0].pid, 1234);
+        assert_eq!(sessions[0].node_id, "test-node");
+    }
+
+    #[tokio::test]
+    async fn test_register_session_with_log_file() {
+        let tracker = LogSessionTracker::new("test-node".to_string());
+        let primal_id = PrimalId::new("songbird-test").unwrap();
+        let log_path = PathBuf::from("/tmp/test.log");
+
+        tracker
+            .register_session(primal_id.clone(), 5678, Some(log_path.clone()))
+            .await;
+
+        let sessions = tracker.get_all_sessions().await;
+        assert_eq!(sessions.len(), 1);
+        assert_eq!(sessions[0].log_file, Some(log_path));
+    }
+
+    #[tokio::test]
+    async fn test_unregister_session() {
+        let tracker = LogSessionTracker::new("test-node".to_string());
+        let primal_id = PrimalId::new("beardog-test").unwrap();
+
+        tracker
+            .register_session(primal_id.clone(), 1234, None)
+            .await;
+        assert_eq!(tracker.get_all_sessions().await.len(), 1);
+
+        tracker.unregister_session(&primal_id).await;
+        assert_eq!(tracker.get_all_sessions().await.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_multiple_sessions() {
+        let tracker = LogSessionTracker::new("test-node".to_string());
+
+        let primal1 = PrimalId::new("beardog-1").unwrap();
+        let primal2 = PrimalId::new("songbird-1").unwrap();
+        let primal3 = PrimalId::new("toadstool-1").unwrap();
+
+        tracker.register_session(primal1.clone(), 1001, None).await;
+        tracker.register_session(primal2.clone(), 1002, None).await;
+        tracker.register_session(primal3.clone(), 1003, None).await;
+
+        let sessions = tracker.get_all_sessions().await;
+        assert_eq!(sessions.len(), 3);
+
+        // Unregister one
+        tracker.unregister_session(&primal2).await;
+        let sessions = tracker.get_all_sessions().await;
+        assert_eq!(sessions.len(), 2);
+
+        // Verify correct one was removed
+        let pids: Vec<u32> = sessions.iter().map(|s| s.pid).collect();
+        assert!(pids.contains(&1001));
+        assert!(!pids.contains(&1002));
+        assert!(pids.contains(&1003));
+    }
+
+    #[tokio::test]
+    async fn test_session_started_at() {
+        let tracker = LogSessionTracker::new("test-node".to_string());
+        let primal_id = PrimalId::new("test-primal").unwrap();
+
+        let before = chrono::Utc::now();
+        tracker
+            .register_session(primal_id.clone(), 1234, None)
+            .await;
+        let after = chrono::Utc::now();
+
+        let sessions = tracker.get_all_sessions().await;
+        assert!(sessions[0].started_at >= before);
+        assert!(sessions[0].started_at <= after);
+    }
+
+    #[tokio::test]
+    async fn test_get_all_sessions_empty() {
+        let tracker = LogSessionTracker::new("test-node".to_string());
+        let sessions = tracker.get_all_sessions().await;
+        assert!(sessions.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_unregister_nonexistent_session() {
+        let tracker = LogSessionTracker::new("test-node".to_string());
+        let primal_id = PrimalId::new("nonexistent").unwrap();
+
+        // Should not panic
+        tracker.unregister_session(&primal_id).await;
+        assert!(tracker.get_all_sessions().await.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_archive_empty_sessions() {
+        let tracker = LogSessionTracker::new("test-node".to_string());
+
+        // Should succeed even with no sessions
+        let result = tracker.archive_all_sessions("test").await;
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_fossil_entry_serialization() {
+        let entry = FossilEntry {
+            primal_id: "test-primal".to_string(),
+            node_id: "test-node".to_string(),
+            pid: 1234,
+            started_at: chrono::Utc::now(),
+            ended_at: chrono::Utc::now(),
+            duration_seconds: 60,
+            archival_reason: "test".to_string(),
+            log_file: None,
+        };
+
+        let toml_str = toml::to_string(&entry).unwrap();
+        assert!(toml_str.contains("primal_id"));
+        assert!(toml_str.contains("test-primal"));
+    }
+
+    #[test]
+    fn test_primal_session_clone() {
+        let session = PrimalSession {
+            primal_id: PrimalId::new("test").unwrap(),
+            node_id: "node".to_string(),
+            pid: 123,
+            started_at: chrono::Utc::now(),
+            log_file: Some(PathBuf::from("/tmp/log")),
+        };
+
+        let cloned = session.clone();
+        assert_eq!(cloned.primal_id, session.primal_id);
+        assert_eq!(cloned.node_id, session.node_id);
+        assert_eq!(cloned.pid, session.pid);
+        assert_eq!(cloned.log_file, session.log_file);
+    }
+}

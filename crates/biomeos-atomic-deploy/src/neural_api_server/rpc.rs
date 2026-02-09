@@ -18,7 +18,9 @@ pub struct JsonRpcRequest {
 
 impl JsonRpcRequest {
     /// Parse a JSON-RPC request from a string
-    pub fn from_str(request_line: &str) -> Result<Self> {
+    ///
+    /// Named `parse` to avoid confusion with `std::str::FromStr::from_str`
+    pub fn parse(request_line: &str) -> Result<Self> {
         serde_json::from_str(request_line.trim()).context("Failed to parse JSON-RPC request")
     }
 }

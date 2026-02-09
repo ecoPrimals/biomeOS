@@ -1,132 +1,295 @@
 #!/system/bin/sh
-# 🎊 NUCLEUS Mobile Deployment Script for Pixel 8a
-# =============================================================================
-# 
-# Deploys Tower Atomic (BearDog + Songbird) on GrapheneOS
-# Architecture: ARM64 (aarch64)
-# Device: Google Pixel 8a
-# OS: GrapheneOS (Android 16)
+#═══════════════════════════════════════════════════════════════════════════════
+# NUCLEUS Mobile Deployment - Pixel 8a (Sovereign Mode)
+# Architecture: aarch64 (ARM64)
+# Standard: Evolved Genetic Standard v2.0 — Sovereign Multi-Path
 #
-# Date: January 30, 2026
-# Status: Production deployment validation
+# Seeds loaded from BIOMEOS_ROOT:
+#   .family.seed  - mitochondrial DNA (shared across family)
+#   .beacon.seed  - beacon identity (derived from family)
+#   .lineage.seed - nuclear DNA (unique to THIS device)
+#   .lineage.json - identity record
 #
-# =============================================================================
+# On Android, BearDog falls back to TCP 127.0.0.1:9900 for IPC
+# when Unix domain sockets fail on the filesystem.
+#
+# Deployment Phases (matching tower_atomic_bootstrap.toml):
+#   1. BearDog (crypto foundation)
+#   2. Songbird (network + discovery)
+#   2a. Sovereign Onion Service
+#   2b. Mesh Network init
+#   2c. STUN NAT discovery
+#   3. Dark Forest beacon verification
+#   4. Health validation
+#═══════════════════════════════════════════════════════════════════════════════
 
 set -e
 
-echo "🦀✨ NUCLEUS Mobile Deployment - Pixel 8a ✨🦀"
-echo "═══════════════════════════════════════════════════"
-echo ""
-
-# Environment setup
+# Environment
 export BIOMEOS_ROOT="/data/local/tmp/biomeos"
-export PRIMAL_DIR="$BIOMEOS_ROOT/primals"
-export FAMILY_SEED="$BIOMEOS_ROOT/.family.seed"
-
-# Android doesn't have XDG_RUNTIME_DIR, use /data/local/tmp
+export NODE_ID="${NODE_ID:-pixel8a}"
+export RUST_LOG="${RUST_LOG:-info}"
 export XDG_RUNTIME_DIR="/data/local/tmp"
-mkdir -p "$XDG_RUNTIME_DIR/biomeos"
 
-# Read family ID from seed (first 16 bytes as hex)
-if [ -f "$FAMILY_SEED" ]; then
-  FAMILY_ID=$(xxd -p -l 16 "$FAMILY_SEED" | tr -d '\n')
-  echo "📍 Family ID from .family.seed: $FAMILY_ID"
+#───────────────────────────────────────────────────────────────────────────────
+# Family ID Derivation from Mitochondrial Seed
+# Standard: hex(family.seed[0..8]) = 16 hex chars
+# On Android, xxd may not be available — use od as fallback
+#───────────────────────────────────────────────────────────────────────────────
+derive_family_id() {
+    local seed_file="$BIOMEOS_ROOT/.family.seed"
+    if [ ! -f "$seed_file" ]; then
+        return 1
+    fi
+    # Try xxd first, fall back to od + printf
+    if command -v xxd >/dev/null 2>&1; then
+        xxd -p -l 8 "$seed_file" | tr -d '\n'
+    else
+        # od fallback for Android (toybox)
+        od -A n -t x1 -N 8 "$seed_file" | tr -d ' \n'
+    fi
+}
+
+if [ -n "$FAMILY_ID" ] && [ ${#FAMILY_ID} -ge 16 ]; then
+    export FAMILY_ID
+elif SEED_ID=$(derive_family_id) && [ -n "$SEED_ID" ]; then
+    export FAMILY_ID="$SEED_ID"
 else
-  FAMILY_ID="pixel8a-mobile"
-  echo "⚠️  Using default family ID: $FAMILY_ID"
+    echo "No .family.seed found and FAMILY_ID not set"
+    exit 1
 fi
 
-export FAMILY_ID
-export NODE_ID="pixel8a-node1"
-export RUST_LOG=info
+PRIMAL_DIR="$BIOMEOS_ROOT/primals"
+SOCKET_DIR="$XDG_RUNTIME_DIR/biomeos"
 
+echo "═══════════════════════════════════════════════════════════════"
+echo "  NUCLEUS Mobile - Sovereign Multi-Path Protocol"
+echo "  Pure Rust ecoPrimals (no external dependencies)"
+echo "═══════════════════════════════════════════════════════════════"
 echo ""
-echo "Environment:"
-echo "  Device: $(getprop ro.product.model)"
-echo "  Android: $(getprop ro.build.version.release)"
-echo "  Architecture: $(uname -m)"
-echo "  Family ID: $FAMILY_ID"
-echo "  Runtime Dir: $XDG_RUNTIME_DIR/biomeos"
-echo ""
-
-# Clean old sockets
-rm -f "$XDG_RUNTIME_DIR/biomeos/"*.sock 2>/dev/null || true
-
-echo "═══════════════════════════════════════════════════"
-echo "🏰 Starting Tower Atomic (BearDog + Songbird)"
-echo "═══════════════════════════════════════════════════"
+echo "Device:        $(getprop ro.product.model 2>/dev/null || echo 'mobile')"
+echo "Android:       $(getprop ro.build.version.release 2>/dev/null || echo 'unknown')"
+echo "Architecture:  $(uname -m)"
+echo "Family ID:     $FAMILY_ID"
+echo "Node ID:       $NODE_ID"
+echo "BIOMEOS_ROOT:  $BIOMEOS_ROOT"
+echo "Socket Dir:    $SOCKET_DIR"
 echo ""
 
-# Start BearDog (Security Foundation)
-echo "🐻 Starting BearDog (Security & Genetics)..."
-cd "$BIOMEOS_ROOT"  # Change to writable directory
-export BEARDOG_SOCKET="$XDG_RUNTIME_DIR/biomeos/beardog.sock"
-"$PRIMAL_DIR/beardog" server --socket "$BEARDOG_SOCKET" > "$BIOMEOS_ROOT/beardog.log" 2>&1 &
+mkdir -p "$SOCKET_DIR"
+mkdir -p "$PRIMAL_DIR"
+
+#───────────────────────────────────────────────────────────────────────────────
+# Seeds Verification
+#───────────────────────────────────────────────────────────────────────────────
+echo "Seeds:"
+[ -f "$BIOMEOS_ROOT/.family.seed" ] && echo "  .family.seed    OK (mitochondrial)" || { echo "  .family.seed    MISSING"; exit 1; }
+[ -f "$BIOMEOS_ROOT/.beacon.seed" ] && echo "  .beacon.seed    OK (beacon)" || echo "  .beacon.seed    -- (will use family seed)"
+[ -f "$BIOMEOS_ROOT/.lineage.seed" ] && echo "  .lineage.seed   OK (nuclear)" || echo "  .lineage.seed   -- (will derive on first run)"
+[ -f "$BIOMEOS_ROOT/.lineage.json" ] && echo "  .lineage.json   OK (identity)" || echo "  .lineage.json   -- (will derive on first run)"
+[ -f "$BIOMEOS_ROOT/.known_beacons.json" ] && echo "  .known_beacons  OK (address book)" || echo "  .known_beacons  -- (will discover)"
+echo ""
+
+# Kill stale processes
+pkill -f "beardog server" 2>/dev/null || true
+pkill -f "songbird server" 2>/dev/null || true
+rm -f "$SOCKET_DIR"/*.sock 2>/dev/null
+sleep 1
+
+#───────────────────────────────────────────────────────────────────────────────
+# Phase 1: BearDog (Crypto Foundation)
+#───────────────────────────────────────────────────────────────────────────────
+echo "Phase 1: BearDog (Security)..."
+cd "$BIOMEOS_ROOT"
+export BEARDOG_SOCKET="$SOCKET_DIR/beardog.sock"
+
+"$PRIMAL_DIR/beardog" server \
+    --socket "$BEARDOG_SOCKET" > "$BIOMEOS_ROOT/beardog.log" 2>&1 &
 BEARDOG_PID=$!
 echo "  PID: $BEARDOG_PID"
-echo "  Socket: $BEARDOG_SOCKET"
 
-# Wait for BearDog socket
-sleep 8
-BEARDOG_SOCK="$BEARDOG_SOCKET"
+# Wait for BearDog (may fall back to TCP on Android)
+BEARDOG_IPC=""
+tries=0
+while [ $tries -lt 12 ]; do
+    if [ -S "$BEARDOG_SOCKET" ]; then
+        echo "  BearDog ready (Unix socket)"
+        BEARDOG_IPC="$BEARDOG_SOCKET"
+        break
+    fi
+    sleep 1
+    tries=$((tries + 1))
+done
 
-if [ -S "$BEARDOG_SOCK" ]; then
-  echo "  ✅ BearDog ready!"
-else
-  echo "  ❌ BearDog socket not found at: $BEARDOG_SOCK"
-  echo "  Checking directory..."
-  ls -la "$XDG_RUNTIME_DIR/biomeos/" || echo "Directory not accessible"
-  echo "  Log tail:"
-  tail -15 "$BIOMEOS_ROOT/beardog.log"
-  exit 1
+if [ -z "$BEARDOG_IPC" ]; then
+    echo "  Unix socket not available, checking TCP fallback..."
+    # BearDog falls back to TCP 127.0.0.1:9900 on Android
+    if nc -z 127.0.0.1 9900 2>/dev/null; then
+        echo "  BearDog ready (TCP 127.0.0.1:9900)"
+        BEARDOG_IPC="tcp://127.0.0.1:9900"
+    else
+        echo "  BearDog not responding after ${tries}s"
+        tail -15 "$BIOMEOS_ROOT/beardog.log" 2>/dev/null
+        exit 1
+    fi
 fi
 
-echo ""
-echo "🎵 Starting Songbird (Discovery & Federation)..."
-export SONGBIRD_SECURITY_PROVIDER="beardog"
-export SONGBIRD_SOCKET="$XDG_RUNTIME_DIR/biomeos/songbird.sock"
+#───────────────────────────────────────────────────────────────────────────────
+# Phase 2: Songbird (Network + Discovery)
+#───────────────────────────────────────────────────────────────────────────────
+echo "Phase 2: Songbird (Network)..."
+SONGBIRD_PORT="${SONGBIRD_PORT:-9901}"
+export SONGBIRD_SOCKET="$SOCKET_DIR/songbird.sock"
+export SONGBIRD_SECURITY_PROVIDER="$BEARDOG_IPC"
+export CRYPTO_PROVIDER_SOCKET="$BEARDOG_IPC"
+export BIOMEOS_BIND_ALL=true
+export BIOMEOS_SOVEREIGN=true
+export BIOMEOS_DARK_FOREST=true
+export BIOMEOS_NO_EXTERNAL_DEPS=true
+export SONGBIRD_ONION_ENABLED=true
+export SONGBIRD_MESH_ENABLED=true
 
-cd "$BIOMEOS_ROOT"  # Change to writable directory
-"$PRIMAL_DIR/songbird" server --socket "$SONGBIRD_SOCKET" > "$BIOMEOS_ROOT/songbird.log" 2>&1 &
+cd "$BIOMEOS_ROOT"
+"$PRIMAL_DIR/songbird" server \
+    --port "$SONGBIRD_PORT" \
+    --socket "$SONGBIRD_SOCKET" \
+    --verbose > "$BIOMEOS_ROOT/songbird.log" 2>&1 &
 SONGBIRD_PID=$!
 echo "  PID: $SONGBIRD_PID"
-echo "  Socket: $SONGBIRD_SOCKET"
 
-# Wait for Songbird socket
-sleep 5
-SONGBIRD_SOCK="$XDG_RUNTIME_DIR/biomeos/songbird-$FAMILY_ID.sock"
-if [ ! -S "$SONGBIRD_SOCK" ]; then
-  SONGBIRD_SOCK="$XDG_RUNTIME_DIR/biomeos/songbird.sock"
+# Wait for Songbird
+tries=0
+while [ $tries -lt 12 ]; do
+    if [ -S "$SONGBIRD_SOCKET" ]; then
+        echo "  Songbird ready (TCP :$SONGBIRD_PORT + IPC)"
+        break
+    fi
+    sleep 1
+    tries=$((tries + 1))
+done
+
+if [ ! -S "$SONGBIRD_SOCKET" ]; then
+    echo "  Songbird socket pending, checking TCP..."
+    if nc -z 127.0.0.1 $SONGBIRD_PORT 2>/dev/null; then
+        echo "  Songbird ready (TCP :$SONGBIRD_PORT)"
+    else
+        echo "  Songbird still starting..."
+        tail -5 "$BIOMEOS_ROOT/songbird.log" 2>/dev/null
+    fi
 fi
 
-if [ -S "$SONGBIRD_SOCK" ]; then
-  echo "  ✅ Songbird socket: $SONGBIRD_SOCK"
+#───────────────────────────────────────────────────────────────────────────────
+# Phase 2a: Sovereign Onion Service
+#───────────────────────────────────────────────────────────────────────────────
+rpc_songbird() {
+    local method=$1 params=$2
+    if [ -S "$SONGBIRD_SOCKET" ]; then
+        echo "{\"jsonrpc\":\"2.0\",\"method\":\"$method\",\"params\":$params,\"id\":1}" | \
+            nc -U "$SONGBIRD_SOCKET" -w 8 -q 2 2>/dev/null
+    else
+        # TCP fallback
+        echo "{\"jsonrpc\":\"2.0\",\"method\":\"$method\",\"params\":$params,\"id\":1}" | \
+            nc 127.0.0.1 "$SONGBIRD_PORT" -w 8 -q 2 2>/dev/null
+    fi
+}
+
+echo ""
+echo "Phase 2a: Sovereign Onion Service..."
+ONION_RESP=$(rpc_songbird "onion.start" "{\"port\":$SONGBIRD_PORT}")
+if echo "$ONION_RESP" | grep -q '"started"'; then
+    ONION_ADDR=$(echo "$ONION_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin)['result']['onion_address'])" 2>/dev/null || echo "?")
+    echo "  Onion: $ONION_ADDR:$SONGBIRD_PORT"
 else
-  echo "  ❌ Songbird socket not found"
-  echo "  Log tail:"
-  tail -10 "$BIOMEOS_ROOT/songbird.log"
-  exit 1
+    echo "  Onion: pending (will retry)"
 fi
 
+#───────────────────────────────────────────────────────────────────────────────
+# Phase 2b: Mesh Network Init
+#───────────────────────────────────────────────────────────────────────────────
+echo "Phase 2b: Mesh Network..."
+MESH_RESP=$(rpc_songbird "mesh.init" "{\"family_id\":\"$FAMILY_ID\",\"node_id\":\"$NODE_ID\"}")
+if echo "$MESH_RESP" | grep -q '"initialized"'; then
+    echo "  Mesh: initialized (node=$NODE_ID)"
+else
+    echo "  Mesh: pending"
+fi
+
+#───────────────────────────────────────────────────────────────────────────────
+# Phase 2c: STUN NAT Discovery
+#───────────────────────────────────────────────────────────────────────────────
+echo "Phase 2c: STUN NAT Discovery..."
+STUN_RESP=$(rpc_songbird "stun.get_public_address" "{}")
+if echo "$STUN_RESP" | grep -q '"public_address"'; then
+    PUB_ADDR=$(echo "$STUN_RESP" | python3 -c "import sys,json; print(json.load(sys.stdin)['result']['full_address'])" 2>/dev/null || echo "?")
+    echo "  Public: $PUB_ADDR"
+else
+    echo "  STUN: pending (may be behind NAT)"
+fi
+
+#───────────────────────────────────────────────────────────────────────────────
+# Phase 3: Dark Forest Beacon Verification
+#───────────────────────────────────────────────────────────────────────────────
 echo ""
-echo "═══════════════════════════════════════════════════"
-echo "✅ Tower Atomic Deployed on Pixel 8a!"
-echo "═══════════════════════════════════════════════════"
+echo "Phase 3: Dark Forest Beacon..."
+BEACON_RESP=$(rpc_songbird "birdsong.generate_encrypted_beacon" "{\"node_id\":\"$NODE_ID\",\"capabilities\":[\"http\",\"discovery\",\"security\"]}")
+if echo "$BEACON_RESP" | grep -q '"encrypted_beacon"'; then
+    echo "  Dark Forest: beacon ready"
+else
+    echo "  Dark Forest: beacon pending"
+fi
+
+#───────────────────────────────────────────────────────────────────────────────
+# Phase 4: Health Validation
+#───────────────────────────────────────────────────────────────────────────────
 echo ""
-echo "Active Sockets:"
-ls -lh "$XDG_RUNTIME_DIR/biomeos/"*.sock 2>/dev/null || echo "  (checking...)"
+echo "Phase 4: Validation..."
+BD_OK=false; SB_OK=false
+
+# BearDog health
+if [ -S "$BEARDOG_SOCKET" ]; then
+    BD_RESP=$(echo '{"jsonrpc":"2.0","method":"health","params":{},"id":1}' | \
+        nc -U "$BEARDOG_SOCKET" -w 3 -q 1 2>/dev/null)
+    echo "$BD_RESP" | grep -q '"healthy"' && BD_OK=true
+elif nc -z 127.0.0.1 9900 2>/dev/null; then
+    BD_OK=true
+fi
+$BD_OK && echo "  BearDog:  OK" || echo "  BearDog:  FAIL"
+
+# Songbird health
+SB_RESP=$(rpc_songbird "health" "{}")
+echo "$SB_RESP" | grep -q '"healthy"' && SB_OK=true
+$SB_OK && echo "  Songbird: OK" || echo "  Songbird: FAIL"
+
 echo ""
-echo "Process Status:"
-echo "  BearDog:  PID $BEARDOG_PID"
-echo "  Songbird: PID $SONGBIRD_PID"
+echo "═══════════════════════════════════════════════════════════════"
+if $BD_OK && $SB_OK; then
+    echo "  NUCLEUS Mobile OPERATIONAL - Pixel 8a (Sovereign)"
+else
+    echo "  NUCLEUS Mobile PARTIAL - some services pending"
+fi
+echo "═══════════════════════════════════════════════════════════════"
+echo ""
+echo "Sockets:"
+ls -lh "$SOCKET_DIR"/*.sock 2>/dev/null || echo "  (TCP mode - no sockets)"
+echo ""
+echo "PIDs: BearDog=$BEARDOG_PID, Songbird=$SONGBIRD_PID"
+echo ""
+echo "Network:"
+echo "  Songbird TCP:  :$SONGBIRD_PORT"
+echo "  BearDog:       :9900 (TCP fallback)"
+[ -n "$ONION_ADDR" ] && echo "  Onion:         $ONION_ADDR:$SONGBIRD_PORT"
+[ -n "$PUB_ADDR" ] && echo "  Public STUN:   $PUB_ADDR"
+echo ""
+echo "Tower beacon:"
+echo "  IPv4: nestgate.io:3492"
+echo "  IPv6: tower.nestgate.io:3492"
+echo "  Onion: (see .known_beacons.json)"
 echo ""
 echo "Logs:"
 echo "  BearDog:  $BIOMEOS_ROOT/beardog.log"
 echo "  Songbird: $BIOMEOS_ROOT/songbird.log"
 echo ""
-echo "🎊 NUCLEUS Tower Atomic operational on mobile!"
-echo ""
-echo "To check status:"
-echo "  adb shell ls -lh /data/local/tmp/biomeos/*.sock"
-echo "  adb shell cat /data/local/tmp/biomeos/beardog.log"
+echo "Deploy to Pixel:"
+echo "  adb push $BIOMEOS_ROOT /data/local/tmp/biomeos"
+echo "  adb shell sh /data/local/tmp/biomeos/start_nucleus_mobile.sh"
 echo ""

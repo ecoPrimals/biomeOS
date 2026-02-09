@@ -148,7 +148,61 @@ impl PrimalCoordinator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
+
+    #[test]
+    fn test_coordination_status_ready() {
+        let status = CoordinationStatus::Ready;
+        let json = serde_json::to_string(&status).expect("serialize");
+        assert!(json.contains("Ready"));
+    }
+
+    #[test]
+    fn test_coordination_status_missing_primals() {
+        let status = CoordinationStatus::MissingPrimals(vec!["beardog".to_string()]);
+        let json = serde_json::to_string(&status).expect("serialize");
+        assert!(json.contains("MissingPrimals"));
+        assert!(json.contains("beardog"));
+    }
+
+    #[test]
+    fn test_coordination_status_unresponsive() {
+        let status = CoordinationStatus::Unresponsive(vec!["songbird".to_string()]);
+        let json = serde_json::to_string(&status).expect("serialize");
+        assert!(json.contains("Unresponsive"));
+        assert!(json.contains("songbird"));
+    }
+
+    #[test]
+    fn test_deployment_guide_serialization() {
+        let guide = DeploymentGuide {
+            atomic_name: "tower".to_string(),
+            required_primals: vec!["beardog".to_string(), "songbird".to_string()],
+            start_commands: vec!["./beardog &".to_string()],
+            verification: "ls /run/user/1000/*.sock".to_string(),
+            expected_sockets: vec!["beardog.sock".to_string()],
+        };
+
+        let json = serde_json::to_string(&guide).expect("serialize");
+        assert!(json.contains("tower"));
+        assert!(json.contains("beardog"));
+        assert!(json.contains("verification"));
+    }
+
+    #[test]
+    fn test_deployment_guide_deserialization() {
+        let json = r#"{
+            "atomic_name": "nucleus",
+            "required_primals": ["beardog", "songbird", "toadstool"],
+            "start_commands": ["cmd1", "cmd2"],
+            "verification": "verify",
+            "expected_sockets": ["a.sock", "b.sock"]
+        }"#;
+
+        let guide: DeploymentGuide = serde_json::from_str(json).expect("deserialize");
+        assert_eq!(guide.atomic_name, "nucleus");
+        assert_eq!(guide.required_primals.len(), 3);
+        assert_eq!(guide.start_commands.len(), 2);
+    }
 
     #[test]
     fn test_generate_guide() {
@@ -156,12 +210,58 @@ mod tests {
         let discovery = PrimalDiscovery::new(temp_dir.path().to_path_buf()).unwrap();
         let coordinator = PrimalCoordinator::new(discovery);
 
-        let guide = coordinator.generate_guide("tower", &["beardog", "songbird"], "nat0");
+        let guide = coordinator.generate_guide("tower", &["beardog", "songbird"], "1894e909e454");
 
         assert_eq!(guide.atomic_name, "tower");
         assert_eq!(guide.required_primals, vec!["beardog", "songbird"]);
         assert_eq!(guide.start_commands.len(), 2);
-        assert!(guide.start_commands[0].contains("FAMILY_ID=nat0"));
+        assert!(guide.start_commands[0].contains("FAMILY_ID=1894e909e454"));
         assert!(guide.start_commands[0].contains("beardog"));
+    }
+
+    #[test]
+    fn test_generate_guide_expected_sockets() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let discovery = PrimalDiscovery::new(temp_dir.path().to_path_buf()).unwrap();
+        let coordinator = PrimalCoordinator::new(discovery);
+
+        let guide = coordinator.generate_guide("node", &["toadstool"], "test-fam");
+
+        assert_eq!(guide.expected_sockets.len(), 1);
+        assert!(guide.expected_sockets[0].contains("toadstool"));
+        assert!(guide.expected_sockets[0].contains("test-fam"));
+    }
+
+    #[test]
+    fn test_generate_guide_verification_command() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let discovery = PrimalDiscovery::new(temp_dir.path().to_path_buf()).unwrap();
+        let coordinator = PrimalCoordinator::new(discovery);
+
+        let guide = coordinator.generate_guide("nest", &["nestgate"], "family123");
+
+        assert!(guide.verification.contains("family123"));
+        assert!(guide.verification.contains("ls"));
+        assert!(guide.verification.contains("sock"));
+    }
+
+    #[test]
+    fn test_primal_coordinator_debug() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let discovery = PrimalDiscovery::new(temp_dir.path().to_path_buf()).unwrap();
+        let coordinator = PrimalCoordinator::new(discovery);
+
+        let debug_str = format!("{:?}", coordinator);
+        assert!(debug_str.contains("PrimalCoordinator"));
+    }
+
+    #[test]
+    fn test_coordinator_discovery_access() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let discovery = PrimalDiscovery::new(temp_dir.path().to_path_buf()).unwrap();
+        let coordinator = PrimalCoordinator::new(discovery);
+
+        // Should be able to access discovery through coordinator
+        let _discovery_ref = coordinator.discovery();
     }
 }

@@ -81,7 +81,7 @@ impl ExecutionContext {
             .get("FAMILY_ID")
             .or_else(|| env.get("BIOMEOS_FAMILY_ID"))
             .cloned()
-            .unwrap_or_else(|| "nat0".to_string());
+            .unwrap_or_else(biomeos_core::family_discovery::get_family_id);
 
         Self {
             env,

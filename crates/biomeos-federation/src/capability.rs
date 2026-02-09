@@ -112,9 +112,18 @@ impl std::str::FromStr for Capability {
 }
 
 /// Implement From for ergonomic conversion
+///
+/// Note: This is infallible because `FromStr` returns `Infallible` error type.
+/// Unknown capabilities become `Capability::Custom(s)`.
 impl From<&str> for Capability {
     fn from(s: &str) -> Self {
-        s.parse().expect("Capability parsing should not fail")
+        // SAFETY: `FromStr` for `Capability` returns `Result<Self, Infallible>`
+        // which means parsing can never fail - it always produces a valid Capability.
+        // Unknown strings become `Capability::Custom(s)`.
+        match s.parse::<Capability>() {
+            Ok(cap) => cap,
+            Err(infallible) => match infallible {},
+        }
     }
 }
 

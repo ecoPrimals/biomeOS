@@ -13,7 +13,6 @@ use biomeos_graph::{GraphEvent, GraphEventBroadcaster};
 use chrono::Utc;
 use futures_util::{SinkExt, StreamExt};
 use serde_json::json;
-use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::time::{sleep, Duration};
 use tokio_tungstenite::{connect_async, tungstenite::Message};
@@ -23,6 +22,7 @@ use tokio_tungstenite::{connect_async, tungstenite::Message};
 
 /// Helper to parse JSON-RPC response
 #[derive(Debug, serde::Deserialize)]
+#[allow(dead_code)]
 struct JsonRpcResponse {
     jsonrpc: String,
     #[serde(default)]
@@ -33,6 +33,7 @@ struct JsonRpcResponse {
 }
 
 #[derive(Debug, serde::Deserialize)]
+#[allow(dead_code)]
 struct JsonRpcError {
     code: i32,
     message: String,
@@ -348,7 +349,7 @@ async fn test_event_broadcaster_integration() {
         timestamp: Utc::now(),
     };
 
-    broadcaster.broadcast(event.clone()).await;
+    let _ = broadcaster.broadcast(event.clone()).await;
 
     // Both receivers should get the event
     assert!(receiver1.recv().await.is_ok());
@@ -415,7 +416,7 @@ async fn test_high_frequency_events() -> Result<()> {
                 coordination: "parallel".to_string(),
                 timestamp: Utc::now(),
             };
-            broadcaster_clone.broadcast(event).await;
+            let _ = broadcaster_clone.broadcast(event).await;
         }
     });
 

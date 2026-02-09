@@ -96,7 +96,7 @@ family_id = "${FAMILY_ID}"
 # External AI API keys (for Tier 1 - External AI via HTTP delegation)
 ANTHROPIC_API_KEY = "sk-ant-REDACTED"
 # Neural API capability registry for event-driven discovery
-CAPABILITY_REGISTRY_SOCKET = "/tmp/neural-api-nat0.sock"
+CAPABILITY_REGISTRY_SOCKET = "/tmp/neural-api-1894e909e454.sock"
 # Note: AI_PROVIDER_SOCKETS should NOT be set - that's for local AI primals (Tier 2)
 
 [nodes.constraints]

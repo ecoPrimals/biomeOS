@@ -8,7 +8,7 @@
 //! - Graceful degradation: Basic checks work without BearDog
 
 use anyhow::{Context, Result};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tracing::{debug, info, warn};
 
 /// Lineage verification result
@@ -181,19 +181,22 @@ async fn verify_lineage(path: &PathBuf, detailed: bool) -> Result<LineageVerific
 /// - Signature verification
 /// - Family membership proof
 async fn verify_cryptographic_lineage(
-    path: &PathBuf,
+    path: &Path,
     verification: &LineageVerification,
 ) -> Result<Vec<String>> {
     use biomeos_core::atomic_client::AtomicClient;
 
     let mut details = Vec::new();
 
-    // Discover BearDog for cryptographic operations
-    let beardog = AtomicClient::discover("beardog")
+    // Discover security provider for cryptographic operations
+    // DEEP DEBT EVOLUTION: Resolve provider name from env, not hardcoded
+    let security_provider = std::env::var("BIOMEOS_SECURITY_PROVIDER")
+        .unwrap_or_else(|_| "beardog".to_string());
+    let beardog = AtomicClient::discover(&security_provider)
         .await
-        .context("BearDog not available for cryptographic verification")?;
+        .context(format!("{} not available for cryptographic verification", security_provider))?;
 
-    debug!("BearDog discovered, performing cryptographic verification");
+    debug!("{} discovered, performing cryptographic verification", security_provider);
 
     // Read family seed if available
     let seed_path = path.join(".family.seed");

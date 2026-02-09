@@ -108,7 +108,7 @@ fn test_binary_manifest_deserialization() {
 fn test_spore_manifest_creation() {
     let manifest = SporeManifest::new(
         "node-alpha".to_string(),
-        "nat0".to_string(),
+        "test_family".to_string(),
         "live".to_string(),
         "20260108".to_string(),
         "parent_hash".to_string(),
@@ -116,7 +116,7 @@ fn test_spore_manifest_creation() {
     );
 
     assert_eq!(manifest.spore.node_id, "node-alpha");
-    assert_eq!(manifest.spore.family_id, "nat0");
+    assert_eq!(manifest.spore.family_id, "test_family");
     assert_eq!(manifest.spore.spore_type, "live");
     assert_eq!(manifest.spore.deployment_batch, "20260108");
     assert_eq!(manifest.lineage.parent_seed_hash, "parent_hash");

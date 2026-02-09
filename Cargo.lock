@@ -400,6 +400,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "axum",
+ "base64 0.22.1",
  "biomeos-core",
  "biomeos-genome-factory",
  "biomeos-genomebin-v3",
@@ -408,15 +409,18 @@ dependencies = [
  "biomeos-types",
  "chrono",
  "config",
- "dirs",
+ "etcetera",
  "futures 0.3.31",
  "futures-util",
+ "hex",
  "http-body-util",
  "hyper",
  "hyper-util",
- "lazy_static",
+ "rand",
+ "semver 1.0.27",
  "serde",
  "serde_json",
+ "sha2",
  "thiserror",
  "tokio",
  "tokio-stream",
@@ -537,7 +541,6 @@ dependencies = [
  "comfy-table",
  "console",
  "crossterm 0.27.0",
- "dirs",
  "humantime",
  "indicatif",
  "ratatui",
@@ -801,6 +804,7 @@ dependencies = [
  "async-fs",
  "async-trait",
  "base64 0.22.1",
+ "biomeos-core",
  "biomeos-types",
  "chrono",
  "futures 0.3.31",
@@ -911,9 +915,11 @@ dependencies = [
  "base64 0.21.7",
  "biomeos-atomic-deploy",
  "biomeos-core",
+ "biomeos-genomebin-v3",
  "biomeos-graph",
  "biomeos-spore",
  "biomeos-types",
+ "chrono",
  "clap",
  "colored",
  "comfy-table",
@@ -1540,27 +1546,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dirs"
-version = "5.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44c45a9d03d6676652bcb5e724c7e988de1acad23a711b5217ab9cbecbec2225"
-dependencies = [
- "dirs-sys",
-]
-
-[[package]]
-name = "dirs-sys"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "520f05a5cbd335fae5a99ff7a6ab8627577660ee5cfd6a94a6a929b52ff0321c"
-dependencies = [
- "libc",
- "option-ext",
- "redox_users",
- "windows-sys 0.48.0",
-]
-
-[[package]]
 name = "dispatch2"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1960,10 +1945,9 @@ dependencies = [
  "anyhow",
  "clap",
  "colored",
- "dirs",
  "flate2",
  "indicatif",
- "nix 0.29.0",
+ "memmap2",
  "serde",
  "tar",
  "tempfile",
@@ -2641,6 +2625,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f52b00d39961fc5b2736ea853c9cc86238e165017a493d1d5c8eac6bdc4cc273"
 
 [[package]]
+name = "memmap2"
+version = "0.9.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "744133e4a0e0a658e1374cf3bf8e415c4052a15a111acd372764c55b4177d490"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "memoffset"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2948,12 +2941,6 @@ dependencies = [
  "rand",
  "thiserror",
 ]
-
-[[package]]
-name = "option-ext"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04744f49eae99ab78e0d5c0b603ab218f515ea8cfe5a456d7629ad883a3b6e7d"
 
 [[package]]
 name = "ordered-multimap"
@@ -3352,17 +3339,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec96166dafa0886eb81fe1c0a388bece180fbef2135f97c1e2cf8302e74b43b5"
 dependencies = [
  "bitflags 2.10.0",
-]
-
-[[package]]
-name = "redox_users"
-version = "0.4.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba009ff324d1fc1b900bd1fdb31564febe58a8ccc8a6fdbb93b543d33b13ca43"
-dependencies = [
- "getrandom 0.2.16",
- "libredox",
- "thiserror",
 ]
 
 [[package]]

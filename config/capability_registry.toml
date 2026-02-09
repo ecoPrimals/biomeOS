@@ -1,0 +1,187 @@
+# Capability Registry Configuration
+# Version: 1.0.0
+# 
+# This file defines the semantic capability translations for biomeOS.
+# Primals register their capabilities dynamically at runtime, but this
+# configuration provides fallback mappings for backward compatibility
+# and static deployment scenarios.
+#
+# Principle: biomeOS orchestrates, primals execute primitives.
+# See: specs/BEACON_CAPABILITY_TRANSLATIONS.md
+
+[metadata]
+version = "1.0.0"
+description = "biomeOS Capability Translation Registry"
+
+# ==============================================================================
+# CAPABILITY DOMAINS
+# ==============================================================================
+# Each domain maps semantic capabilities to provider primals.
+# Format: semantic_capability = { provider = "primal_name", method = "actual_method" }
+
+# ------------------------------------------------------------------------------
+# Security Domain (BearDog)
+# Cryptographic primitives, beacon genetics, TLS operations
+# ------------------------------------------------------------------------------
+
+[domains.security]
+provider = "beardog"
+capabilities = [
+    "crypto",
+    "encryption", 
+    "security",
+    "genetic",
+    "beacon",
+    "tls"
+]
+
+[translations.beacon]
+# Core Beacon Primitives
+"beacon.generate" = { provider = "beardog", method = "beacon.generate" }
+"beacon.get_id" = { provider = "beardog", method = "beacon.get_id" }
+"beacon.get_seed" = { provider = "beardog", method = "beacon.get_seed" }
+"beacon.encrypt" = { provider = "beardog", method = "beacon.encrypt" }
+"beacon.decrypt" = { provider = "beardog", method = "beacon.decrypt" }
+"beacon.try_decrypt" = { provider = "beardog", method = "beacon.try_decrypt" }
+
+[translations.crypto]
+# General Crypto
+"crypto.encrypt" = { provider = "beardog", method = "chacha20_poly1305_encrypt" }
+"crypto.decrypt" = { provider = "beardog", method = "chacha20_poly1305_decrypt" }
+"crypto.encrypt_with_lineage" = { provider = "beardog", method = "encrypt_with_lineage_key" }
+"crypto.decrypt_with_lineage" = { provider = "beardog", method = "decrypt_with_lineage_key" }
+"crypto.blake3_hash" = { provider = "beardog", method = "blake3_hash" }
+"crypto.hmac_sha256" = { provider = "beardog", method = "hmac_sha256" }
+"crypto.derive_child_seed" = { provider = "beardog", method = "derive_child_seed" }
+"crypto.generate_keypair" = { provider = "beardog", method = "x25519_generate_ephemeral" }
+
+# TLS Crypto
+"crypto.x25519_generate_ephemeral" = { provider = "beardog", method = "x25519_generate_ephemeral" }
+"crypto.x25519_derive_secret" = { provider = "beardog", method = "x25519_derive_secret" }
+"crypto.sign_ed25519" = { provider = "beardog", method = "ed25519_sign" }
+"crypto.verify_ed25519" = { provider = "beardog", method = "ed25519_verify" }
+
+# JWT Operations
+"security.generate_jwt" = { provider = "beardog", method = "generate_jwt_secret" }
+"security.verify_jwt" = { provider = "beardog", method = "verify_jwt" }
+
+# ------------------------------------------------------------------------------
+# Network Domain (Songbird)
+# Discovery, HTTP, orchestration, federation, beacon exchange
+# ------------------------------------------------------------------------------
+
+[domains.network]
+provider = "songbird"
+capabilities = [
+    "discovery",
+    "http",
+    "orchestration",
+    "federation",
+    "network"
+]
+
+[translations.network]
+"network.beacon_exchange" = { provider = "songbird", method = "beacon_exchange" }
+"network.discover_peers" = { provider = "songbird", method = "discover_peers" }
+"network.http_request" = { provider = "songbird", method = "http_request" }
+"network.tls_connect" = { provider = "songbird", method = "tls_connect" }
+
+[translations.discovery]
+"discovery.find_primals" = { provider = "songbird", method = "find_primals" }
+"discovery.announce" = { provider = "songbird", method = "announce_presence" }
+
+# ------------------------------------------------------------------------------
+# Storage Domain (NestGate)
+# Persistence, versioning, atomic operations
+# ------------------------------------------------------------------------------
+
+[domains.storage]
+provider = "nestgate"
+capabilities = [
+    "storage",
+    "versioning",
+    "persistence"
+]
+
+[translations.storage]
+"storage.put" = { provider = "nestgate", method = "storage.put" }
+"storage.get" = { provider = "nestgate", method = "storage.get" }
+"storage.delete" = { provider = "nestgate", method = "storage.delete" }
+"storage.list" = { provider = "nestgate", method = "storage.list" }
+"storage.retrieve" = { provider = "nestgate", method = "storage.retrieve" }
+
+# ------------------------------------------------------------------------------
+# Compute Domain (ToadStool)
+# Execution, compute, parsing, transformation
+# ------------------------------------------------------------------------------
+
+[domains.compute]
+provider = "toadstool"
+capabilities = [
+    "compute",
+    "execution",
+    "parsing"
+]
+
+[translations.compute]
+"compute.execute" = { provider = "toadstool", method = "execute" }
+"compute.parse" = { provider = "toadstool", method = "parse" }
+"compute.transform" = { provider = "toadstool", method = "transform" }
+
+# ------------------------------------------------------------------------------
+# AI Domain (Squirrel)
+# AI assistance, MCP, machine learning
+# ------------------------------------------------------------------------------
+
+[domains.ai]
+provider = "squirrel"
+capabilities = [
+    "ai",
+    "mcp",
+    "assistance",
+    "ml"
+]
+
+[translations.ai]
+"ai.query" = { provider = "squirrel", method = "query" }
+"ai.suggest" = { provider = "squirrel", method = "suggest" }
+"ai.analyze" = { provider = "squirrel", method = "analyze" }
+"mcp.call" = { provider = "squirrel", method = "mcp_call" }
+
+# ==============================================================================
+# SOCKET PATH TEMPLATES
+# ==============================================================================
+# Socket paths are resolved dynamically using these templates.
+# Variables: {primal}, {family_id}, {xdg_runtime}, {uid}
+
+[socket_templates]
+# Priority order (highest to lowest)
+priority = [
+    "{primal}_socket_env",        # $BEARDOG_SOCKET, $SONGBIRD_SOCKET, etc.
+    "xdg_runtime",                # $XDG_RUNTIME_DIR/biomeos/{primal}-{family}.sock
+    "run_user",                   # /run/user/{uid}/biomeos/{primal}-{family}.sock
+    "android_data",               # /data/local/tmp/biomeos/{primal}-{family}.sock
+    "tmp_fallback"                # /tmp/{primal}-{family}.sock
+]
+
+[socket_templates.patterns]
+xdg_runtime = "{xdg_runtime}/biomeos/{primal}-{family_id}.sock"
+run_user = "/run/user/{uid}/biomeos/{primal}-{family_id}.sock"
+android_data = "/data/local/tmp/biomeos/{primal}-{family_id}.sock"
+tmp_fallback = "/tmp/{primal}-{family_id}.sock"
+
+# ==============================================================================
+# NOTES
+# ==============================================================================
+# 
+# 1. Dynamic Registration: Primals register their capabilities at startup via
+#    the NeuralAPI. This config provides fallback mappings only.
+#
+# 2. Socket Discovery: Socket paths are discovered dynamically using the
+#    SocketNucleation system. Templates here are for documentation.
+#
+# 3. Evolution: As we migrate to full capability-based discovery, the
+#    hardcoded fallbacks in neural_router.rs will be removed.
+#
+# 4. Sovereignty: Each primal is autonomous. This config does not create
+#    dependencies - it only documents the capability translation layer.

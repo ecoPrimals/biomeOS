@@ -147,4 +147,90 @@ mod tests {
         // Should return something (env var or "anonymous")
         assert!(!user_id.is_empty());
     }
+
+    #[tokio::test]
+    async fn test_authorization_no_beardog_graceful_degradation() {
+        // Tests that authorization is granted by default when BearDog is unavailable
+        let result = Authorization::authorize_device_assignment(
+            &None,
+            "user-abc-123",
+            "device-xyz-456",
+            "primal-789",
+        )
+        .await;
+
+        // Should succeed with graceful degradation
+        assert!(result.is_ok());
+        let auth_result = result.unwrap();
+        assert_eq!(auth_result, AuthorizationResult::Authorized);
+    }
+
+    #[test]
+    fn test_authorization_result_authorized() {
+        let result = AuthorizationResult::Authorized;
+        assert_eq!(result, AuthorizationResult::Authorized);
+    }
+
+    #[test]
+    fn test_authorization_result_denied() {
+        let reason = "Insufficient permissions".to_string();
+        let result = AuthorizationResult::Denied(reason.clone());
+
+        match result {
+            AuthorizationResult::Denied(r) => assert_eq!(r, reason),
+            _ => panic!("Expected Denied result"),
+        }
+    }
+
+    #[test]
+    fn test_authorization_result_debug() {
+        let authorized = AuthorizationResult::Authorized;
+        let denied = AuthorizationResult::Denied("test reason".to_string());
+
+        // Test Debug trait
+        assert!(format!("{:?}", authorized).contains("Authorized"));
+        assert!(format!("{:?}", denied).contains("Denied"));
+        assert!(format!("{:?}", denied).contains("test reason"));
+    }
+
+    #[test]
+    fn test_authorization_result_clone() {
+        let original = AuthorizationResult::Denied("clone test".to_string());
+        let cloned = original.clone();
+
+        assert_eq!(original, cloned);
+    }
+
+    #[test]
+    fn test_authorization_result_eq() {
+        let authorized1 = AuthorizationResult::Authorized;
+        let authorized2 = AuthorizationResult::Authorized;
+        let denied1 = AuthorizationResult::Denied("same reason".to_string());
+        let denied2 = AuthorizationResult::Denied("same reason".to_string());
+        let denied3 = AuthorizationResult::Denied("different reason".to_string());
+
+        assert_eq!(authorized1, authorized2);
+        assert_eq!(denied1, denied2);
+        assert_ne!(authorized1, denied1);
+        assert_ne!(denied1, denied3);
+    }
+
+    #[tokio::test]
+    async fn test_get_current_user_with_env_var() {
+        // Save original value
+        let original = std::env::var("BIOMEOS_USER").ok();
+
+        // Set env var
+        std::env::set_var("BIOMEOS_USER", "test-env-user");
+
+        let user_id = Authorization::get_current_user_id(&None).await;
+        assert_eq!(user_id, "test-env-user");
+
+        // Restore original
+        if let Some(val) = original {
+            std::env::set_var("BIOMEOS_USER", val);
+        } else {
+            std::env::remove_var("BIOMEOS_USER");
+        }
+    }
 }

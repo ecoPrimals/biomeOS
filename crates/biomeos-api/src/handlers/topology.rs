@@ -371,7 +371,7 @@ fn extract_node_id_from_primal(primal_id: &str) -> Option<String> {
     let parts: Vec<&str> = primal_id.split('-').collect();
 
     match parts.len() {
-        // Pattern: primal-family-node (e.g., "beardog-nat0-desktop")
+        // Pattern: primal-family-node (e.g., "beardog-fam-desktop")
         3 => Some(parts[2].to_string()),
         // Pattern: primal-node (e.g., "beardog-desktop")
         2 => Some(parts[1].to_string()),
@@ -507,7 +507,7 @@ mod tests {
 
     #[test]
     fn test_extract_node_id_three_parts() {
-        let result = extract_node_id_from_primal("beardog-nat0-desktop");
+        let result = extract_node_id_from_primal("beardog-fam-desktop");
         assert_eq!(result, Some("desktop".to_string()));
     }
 
@@ -575,13 +575,13 @@ mod tests {
     fn test_node_metadata_serialize() {
         let metadata = NodeMetadata {
             version: Some("1.0.0".to_string()),
-            family_id: Some("nat0".to_string()),
+            family_id: Some("1894e909e454".to_string()),
             node_id: Some("desktop".to_string()),
             trust_level: Some(3),
         };
         let json = serde_json::to_string(&metadata).unwrap();
         assert!(json.contains("1.0.0"));
-        assert!(json.contains("nat0"));
+        assert!(json.contains("1894e909e454"));
         assert!(json.contains("3"));
     }
 }

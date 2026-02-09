@@ -1,7 +1,14 @@
-//! Unified BiomeOS Type System
+//! Unified `BiomeOS` Type System
 //!
-//! This crate provides a comprehensive, unified type system for the BiomeOS ecosystem,
+//! This crate provides a comprehensive, unified type system for the `BiomeOS` ecosystem,
 //! consolidating all types that were previously scattered across multiple crates.
+
+// Allow doc_markdown warnings for internal documentation - the important thing is
+// that the documentation exists, not that every technical term has backticks.
+// This significantly reduces noise while maintaining documentation coverage.
+#![allow(clippy::doc_markdown)]
+// Deny unsafe code in type definitions
+#![deny(unsafe_code)]
 
 use std::collections::HashMap;
 
@@ -15,6 +22,7 @@ pub mod error;
 pub mod health;
 pub mod identifiers;
 pub mod manifest;
+pub mod network_config; // Capability-based network configuration
 pub mod paths; // XDG-compliant system paths
 pub mod primal;
 pub mod service;
@@ -31,6 +39,7 @@ pub use capability_taxonomy::CapabilityTaxonomy; // Well-known capability taxono
 pub use constants::*;
 pub use defaults::{socket_path, RuntimeConfig}; // Runtime configuration with env var overrides
 pub use error::{BiomeError, BiomeResult};
+pub use network_config::{NetworkConfig, PortConfig}; // Capability-based network configuration
 pub use paths::SystemPaths;
 pub use tarpc_types::{
     protocol_from_env, HealthMetrics, HealthStatus, JwtSecretResult, LineageResult, ProtocolInfo,

@@ -72,29 +72,35 @@ impl BiomeOsMode {
     async fn tower_atomic_exists(family_id: &str) -> bool {
         use crate::nucleation::SocketNucleation;
 
-        // Tower Atomic consists of BearDog + Songbird
+        // Tower Atomic consists of security + network primals
         // If either is reachable, Tower Atomic exists
-        // Uses SocketNucleation for deterministic paths (no hardcoding)
+        // Uses SocketNucleation for deterministic paths
+        // DEEP DEBT EVOLUTION: Resolve provider names from env, not hardcoded
+
+        let security_provider = std::env::var("BIOMEOS_SECURITY_PROVIDER")
+            .unwrap_or_else(|_| "beardog".to_string());
+        let network_provider = std::env::var("BIOMEOS_NETWORK_PROVIDER")
+            .unwrap_or_else(|_| "songbird".to_string());
 
         let mut nucleation = SocketNucleation::default();
-        let beardog_socket = nucleation.assign_socket("beardog", family_id);
-        let songbird_socket = nucleation.assign_socket("songbird", family_id);
+        let security_socket = nucleation.assign_socket(&security_provider, family_id);
+        let network_socket = nucleation.assign_socket(&network_provider, family_id);
 
-        // Check BearDog
-        if Self::primal_reachable(beardog_socket.to_string_lossy().as_ref()).await {
-            debug!("✅ BearDog reachable at {:?}", beardog_socket);
+        // Check security provider
+        if Self::primal_reachable(security_socket.to_string_lossy().as_ref()).await {
+            debug!("✅ Security provider ({}) reachable at {:?}", security_provider, security_socket);
             return true;
         }
 
-        // Check Songbird
-        if Self::primal_reachable(songbird_socket.to_string_lossy().as_ref()).await {
-            debug!("✅ Songbird reachable at {:?}", songbird_socket);
+        // Check network provider
+        if Self::primal_reachable(network_socket.to_string_lossy().as_ref()).await {
+            debug!("✅ Network provider ({}) reachable at {:?}", network_provider, network_socket);
             return true;
         }
 
         debug!(
             "❌ Tower Atomic not found (checked {:?} and {:?})",
-            beardog_socket, songbird_socket
+            security_socket, network_socket
         );
         false
     }
@@ -136,27 +142,75 @@ mod tests {
     use tempfile::tempdir;
     use tokio::net::UnixListener;
 
+    #[test]
+    fn test_biome_os_mode_debug() {
+        let bootstrap = BiomeOsMode::Bootstrap;
+        let coordinated = BiomeOsMode::Coordinated;
+
+        assert!(format!("{:?}", bootstrap).contains("Bootstrap"));
+        assert!(format!("{:?}", coordinated).contains("Coordinated"));
+    }
+
+    #[test]
+    fn test_biome_os_mode_clone() {
+        let mode = BiomeOsMode::Bootstrap;
+        let cloned = mode;
+        assert_eq!(mode, cloned);
+    }
+
+    #[test]
+    fn test_biome_os_mode_copy() {
+        let mode = BiomeOsMode::Coordinated;
+        let copied: BiomeOsMode = mode;
+        assert_eq!(mode, copied);
+    }
+
+    #[test]
+    fn test_biome_os_mode_equality() {
+        assert_eq!(BiomeOsMode::Bootstrap, BiomeOsMode::Bootstrap);
+        assert_eq!(BiomeOsMode::Coordinated, BiomeOsMode::Coordinated);
+        assert_ne!(BiomeOsMode::Bootstrap, BiomeOsMode::Coordinated);
+    }
+
     #[tokio::test]
     async fn test_detect_bootstrap_mode() {
-        // No Tower Atomic exists
-        let mode = BiomeOsMode::detect("test-bootstrap").await;
+        // No Tower Atomic exists for random family ID
+        let mode = BiomeOsMode::detect("test-bootstrap-random-12345").await;
         assert_eq!(mode, BiomeOsMode::Bootstrap);
     }
 
     #[tokio::test]
-    async fn test_detect_coordinated_mode() {
-        // Create mock BearDog socket
+    async fn test_detect_coordinated_mode_with_socket() {
+        // Create mock BearDog socket in a temp directory
         let dir = tempdir().unwrap();
-        let socket_path = dir.path().join("beardog-test-coord.sock");
+        let socket_path = dir.path().join("test-socket.sock");
         let _listener = UnixListener::bind(&socket_path).unwrap();
 
-        // Should detect Tower Atomic exists (but socket path doesn't match family_id pattern)
-        // This test needs adjustment for actual family_id-based paths
+        // Test that primal_reachable works with existing socket
+        let reachable = BiomeOsMode::primal_reachable(socket_path.to_str().unwrap()).await;
+        assert!(reachable, "Should detect socket as reachable");
     }
 
     #[tokio::test]
     async fn test_primal_reachable_nonexistent() {
-        let reachable = BiomeOsMode::primal_reachable("/tmp/nonexistent-socket.sock").await;
+        let reachable = BiomeOsMode::primal_reachable("/tmp/nonexistent-socket-xyz.sock").await;
         assert!(!reachable);
+    }
+
+    #[tokio::test]
+    async fn test_primal_reachable_with_valid_socket() {
+        let dir = tempdir().unwrap();
+        let socket_path = dir.path().join("reachable-test.sock");
+        let _listener = UnixListener::bind(&socket_path).unwrap();
+
+        let reachable = BiomeOsMode::primal_reachable(socket_path.to_str().unwrap()).await;
+        assert!(reachable);
+    }
+
+    #[tokio::test]
+    async fn test_tower_atomic_exists_no_sockets() {
+        // With a random family ID that doesn't have sockets
+        let exists = BiomeOsMode::tower_atomic_exists("no-tower-exists-xyz").await;
+        assert!(!exists);
     }
 }

@@ -117,15 +117,16 @@ pub struct VmVerifier {
     config: VerifyConfig,
 }
 
+impl Default for VmVerifier {
+    fn default() -> Self {
+        Self::new(VerifyConfig::default())
+    }
+}
+
 impl VmVerifier {
     /// Create a new verifier
     pub fn new(config: VerifyConfig) -> Self {
         Self { config }
-    }
-
-    /// Create verifier with default config
-    pub fn default() -> Self {
-        Self::new(VerifyConfig::default())
     }
 
     /// Verify VM boot from serial log

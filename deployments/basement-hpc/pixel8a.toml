@@ -18,7 +18,7 @@
 [deployment]
 hostname = "pixel8a"
 location = "mobile"
-family_id = "nat0"
+family_id = "1894e909e454"
 deployment_type = "tower-lite"
 mobile_mode = true
 device_type = "android"
@@ -255,19 +255,19 @@ track_hsm_operations = true
 
 # Step 2: Deploy Tower Lite
 # export NODE_ID=tower-pixel8a
-# export FAMILY_ID=nat0
+# export FAMILY_ID=1894e909e454
 # export MOBILE_MODE=true
 # export BEARDOG_HSM_MODE=hardware
 # biomeos deploy --niche tower-lite --config deployments/basement-hpc/pixel8a.toml --usb /storage/emulated/0/liveSpore5
 
 # Step 3: Verify HSM
-# curl --unix-socket /tmp/beardog-nat0-tower-pixel8a.sock \
+# curl --unix-socket /tmp/beardog-1894e909e454-tower-pixel8a.sock \
 #   -d '{"jsonrpc":"2.0","method":"hsm.get_capabilities","params":{},"id":1}'
 
 # Expected: Android Keystore + StrongBox (if available)
 
 # Step 4: Test 2FA
-# curl --unix-socket /tmp/beardog-nat0-tower-pixel8a.sock \
+# curl --unix-socket /tmp/beardog-1894e909e454-tower-pixel8a.sock \
 #   -d '{"jsonrpc":"2.0","method":"federation.sign_deployment","params":{"deployment_manifest":"..."},"id":1}'
 
 # Expected: Biometric prompt on phone

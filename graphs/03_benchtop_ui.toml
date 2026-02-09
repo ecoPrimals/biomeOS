@@ -26,7 +26,7 @@ description = "Launch PetalTongue benchTop UI (headless mode for server deployme
 primal_name = "petal-tongue-headless"
 binary_path = "plasmidBin/primals/petal-tongue-headless"
 family_id = "${FAMILY_ID}"
-socket_path = "/tmp/petaltongue-nat0.sock"
+socket_path = "/tmp/petaltongue-1894e909e454.sock"
 capabilities = ["visualization", "ui", "sensory", "real_time_events"]
 startup_timeout_seconds = 30
 
@@ -38,7 +38,7 @@ PETALTONGUE_SSE_URL = "http://localhost:3000/sse/events"
 
 [[nodes.health_check]]
 type = "socket_exists"
-path = "/tmp/petaltongue-nat0.sock"
+path = "/tmp/petaltongue-1894e909e454.sock"
 
 # Configure Neural API for real-time events
 [[nodes]]
@@ -63,7 +63,7 @@ depends_on = ["configure_neural_api_events"]
 
 [nodes.config]
 check_endpoints = [
-    "/tmp/petaltongue-nat0.sock"
+    "/tmp/petaltongue-1894e909e454.sock"
 ]
 timeout_seconds = 30
 require_all_healthy = true

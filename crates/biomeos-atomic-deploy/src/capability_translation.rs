@@ -1,16 +1,83 @@
-// Capability Translation Registry for Neural API
-//
-// Enables primals to speak in semantic capabilities while Neural API
-// automatically translates to provider-specific method names.
-//
-// See: specs/CAPABILITY_TRANSLATION_ARCHITECTURE.md
+//! Capability Translation Registry for Neural API
+//!
+//! This module provides semantic-to-actual method translation for capability-based
+//! routing. It enables primals to communicate using semantic capabilities (e.g.,
+//! "crypto.encrypt") while the registry automatically translates to provider-specific
+//! method names (e.g., "chacha20_poly1305_encrypt").
+//!
+//! # Architecture
+//!
+//! ```text
+//! Consumer                    Registry                      Provider
+//!    │                           │                              │
+//!    │ capability.call(          │                              │
+//!    │   "crypto.encrypt",       │                              │
+//!    │   params)                 │                              │
+//!    │──────────────────────────>│                              │
+//!    │                           │ Lookup translation           │
+//!    │                           │ Map parameters               │
+//!    │                           │ Resolve socket               │
+//!    │                           │                              │
+//!    │                           │ call(                        │
+//!    │                           │   "chacha20_poly1305_encrypt",
+//!    │                           │   mapped_params)             │
+//!    │                           │─────────────────────────────>│
+//!    │                           │                              │
+//!    │                           │<─────────────────────────────│
+//!    │<──────────────────────────│                              │
+//! ```
+//!
+//! # Configuration
+//!
+//! Capability translations can be loaded from:
+//! - TOML configuration files (see `config/capability_registry.toml`)
+//! - Programmatic defaults via `load_defaults()`
+//! - Manual registration via `register_translation()`
+//!
+//! # Socket Resolution
+//!
+//! Socket paths are resolved using a 5-tier fallback hierarchy:
+//! 1. `$PRIMAL_SOCKET` environment variable (e.g., `$BEARDOG_SOCKET`)
+//! 2. `$XDG_RUNTIME_DIR/biomeos/{primal}-{family}.sock`
+//! 3. `/run/user/{uid}/biomeos/{primal}-{family}.sock`
+//! 4. `/data/local/tmp/biomeos/{primal}-{family}.sock` (Android)
+//! 5. `/tmp/{primal}-{family}.sock` (universal fallback)
+//!
+//! # Example
+//!
+//! ```ignore
+//! use biomeos_atomic_deploy::capability_translation::CapabilityTranslationRegistry;
+//!
+//! let mut registry = CapabilityTranslationRegistry::new();
+//! registry.load_defaults();
+//!
+//! // Call a capability - automatically translated to provider method
+//! let result = registry.call_capability(
+//!     "crypto.encrypt",
+//!     serde_json::json!({"plaintext": "hello", "context": "test"})
+//! ).await?;
+//! ```
+//!
+//! See: `specs/CAPABILITY_TRANSLATION_ARCHITECTURE.md`
 
 use anyhow::{anyhow, Result};
+use biomeos_core::atomic_client::AtomicClient;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tokio::io::AsyncWriteExt;
-use tokio::net::UnixStream;
 use tracing::{debug, info, trace};
+
+// =============================================================================
+// Type Definitions
+// =============================================================================
+
+/// Method translation tuple: (semantic_name, actual_method_name)
+type MethodTranslation = (&'static str, &'static str);
+
+/// Domain provider mapping: (primal_name, domain_name, method_translations)
+type DomainProvider = (&'static str, &'static str, &'static [MethodTranslation]);
+
+/// Collection of domain provider mappings for capability translation
+type DomainProviderMappings = &'static [DomainProvider];
 
 /// Capability translation entry
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -48,7 +115,8 @@ pub struct CapabilityTranslationRegistry {
     /// Provider → List of semantic capabilities they provide
     provider_capabilities: HashMap<String, Vec<String>>,
 
-    /// Next RPC ID
+    /// Next RPC ID (reserved for future tarpc request correlation)
+    #[allow(dead_code)]
     next_id: std::sync::Arc<std::sync::atomic::AtomicU64>,
 }
 
@@ -78,7 +146,7 @@ impl CapabilityTranslationRegistry {
     ///     "crypto.generate_keypair",
     ///     "beardog",
     ///     "x25519_generate_ephemeral",
-    ///     "/tmp/beardog-nat0.sock",
+    ///     "/tmp/beardog-family.sock",
     ///     None  // No parameter mappings
     /// );
     /// ```
@@ -151,6 +219,9 @@ impl CapabilityTranslationRegistry {
 
     /// Call a capability with automatic translation
     ///
+    /// Uses Universal IPC v3.0 `AtomicClient` for multi-transport support.
+    /// This enables Unix sockets, abstract sockets (Android), and TCP fallback.
+    ///
     /// # Arguments
     ///
     /// * `semantic` - Semantic capability name
@@ -205,135 +276,33 @@ impl CapabilityTranslationRegistry {
             params
         };
 
-        // 3. Connect to provider
-        let mut stream = UnixStream::connect(&translation.socket)
-            .await
-            .map_err(|e| {
-                anyhow!(
-                    "Failed to connect to provider {} at {}: {}",
-                    translation.provider,
-                    translation.socket,
-                    e
-                )
-            })?;
+        // 3. Create AtomicClient for provider socket (Universal IPC v3.0)
+        let client = AtomicClient::unix(&translation.socket);
 
-        // 4. Build RPC with ACTUAL method name and MAPPED parameters
-        let id = self
-            .next_id
-            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-        let rpc_request = serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": translation.actual_method,
-            "params": mapped_params,
-            "id": id
-        });
-
-        let rpc_request_str = serde_json::to_string(&rpc_request)?;
         info!(
             "→ Provider RPC: method={}, socket={}",
             translation.actual_method, translation.socket
         );
-        trace!("→ Full RPC request: {}", rpc_request_str);
+        trace!("→ Params: {}", mapped_params);
 
-        // 4. Send request
-        let send_start = std::time::Instant::now();
-        trace!(
-            "→ Sending {} bytes to {}",
-            rpc_request_str.len(),
-            translation.socket
-        );
-        stream.write_all(rpc_request_str.as_bytes()).await?;
-        stream.write_all(b"\n").await?; // Add newline for line-based protocols
-        stream.flush().await?;
-        debug!("✓ Request sent in {:?}", send_start.elapsed());
+        // 4. Call provider with actual method name and mapped parameters
+        let result = client
+            .call(&translation.actual_method, mapped_params)
+            .await
+            .map_err(|e| {
+                anyhow!(
+                    "Provider {} error for {}: {}",
+                    translation.provider,
+                    semantic,
+                    e
+                )
+            })?;
 
-        // Shutdown write half to signal we're done sending
-        // This prompts the provider to close after sending its response
-        trace!("→ Shutting down write half");
-        stream.shutdown().await?;
-        debug!("✓ Write half shutdown");
+        info!("← Provider RPC response received");
+        trace!("← Result: {}", result);
 
-        // 5. Read response with JSON-aware reading
-        // BearDog sends complete JSON but keeps socket open, so we read until JSON is complete
-        use tokio::io::AsyncReadExt;
-        use tokio::time::{timeout, Duration};
-
-        let read_start = std::time::Instant::now();
-        trace!("→ Reading response (JSON-aware)");
-
-        let mut buffer = Vec::new();
-        let mut temp_buf = [0u8; 4096];
-        let read_timeout = Duration::from_millis(100);
-
-        loop {
-            match timeout(read_timeout, stream.read(&mut temp_buf)).await {
-                Ok(Ok(0)) => {
-                    trace!("EOF received");
-                    break;
-                }
-                Ok(Ok(n)) => {
-                    buffer.extend_from_slice(&temp_buf[..n]);
-                    trace!("Read {} bytes, total: {}", n, buffer.len());
-
-                    // Check if we have complete JSON
-                    if let Ok(s) = std::str::from_utf8(&buffer) {
-                        if serde_json::from_str::<serde_json::Value>(s).is_ok() {
-                            debug!(
-                                "✓ Complete JSON detected, read {} bytes in {:?}",
-                                buffer.len(),
-                                read_start.elapsed()
-                            );
-                            break;
-                        }
-                    }
-                }
-                Ok(Err(e)) => {
-                    return Err(anyhow!("Socket read error: {}", e));
-                }
-                Err(_) => {
-                    // Timeout - check if we have valid JSON
-                    trace!("Read timeout, checking for complete JSON...");
-                    if !buffer.is_empty() {
-                        if let Ok(s) = std::str::from_utf8(&buffer) {
-                            if serde_json::from_str::<serde_json::Value>(s).is_ok() {
-                                debug!(
-                                    "✓ Complete JSON found after timeout, {} bytes in {:?}",
-                                    buffer.len(),
-                                    read_start.elapsed()
-                                );
-                                break;
-                            }
-                        }
-                    }
-                    // Provider is slow or socket issue
-                    return Err(anyhow!(
-                        "Timeout reading response from provider (no complete JSON received)"
-                    ));
-                }
-            }
-        }
-
-        let response_line = String::from_utf8(buffer)?;
-        info!(
-            "← Provider RPC response received ({} bytes)",
-            response_line.len()
-        );
-        trace!("← Full response: {}", response_line.trim());
-
-        let rpc_response: serde_json::Value = serde_json::from_str(&response_line)?;
-
-        // 6. Check for errors
-        if let Some(error) = rpc_response.get("error") {
-            return Err(anyhow!(
-                "Provider {} error for {}: {}",
-                translation.provider,
-                semantic,
-                error
-            ));
-        }
-
-        // 7. Return result
-        Ok(rpc_response["result"].clone())
+        // 5. Return result
+        Ok(result)
     }
 
     /// Get statistics about the registry
@@ -348,6 +317,326 @@ impl CapabilityTranslationRegistry {
                 .collect(),
         }
     }
+
+    /// Load translations from a TOML configuration file
+    ///
+    /// This enables agnostic capability registration without hardcoding
+    /// primal names in the source code.
+    ///
+    /// # Arguments
+    ///
+    /// * `config_path` - Path to the capability_registry.toml file
+    /// * `socket_resolver` - Function to resolve socket paths for primals
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let socket_resolver = |primal: &str, family_id: &str| {
+    ///     format!("/tmp/{}-{}.sock", primal, family_id)
+    /// };
+    /// registry.load_from_config("config/capability_registry.toml", socket_resolver)?;
+    /// ```
+    pub fn load_from_config<F>(
+        &mut self,
+        config_path: impl AsRef<std::path::Path>,
+        socket_resolver: F,
+    ) -> Result<usize>
+    where
+        F: Fn(&str, &str) -> String,
+    {
+        let config_content = std::fs::read_to_string(config_path.as_ref())
+            .map_err(|e| anyhow!("Failed to read capability config: {}", e))?;
+
+        let config: toml::Value = toml::from_str(&config_content)
+            .map_err(|e| anyhow!("Failed to parse capability config: {}", e))?;
+
+        let family_id = biomeos_core::family_discovery::get_family_id();
+        let mut count = 0;
+
+        // Load all translation tables
+        if let Some(translations) = config.get("translations").and_then(|t| t.as_table()) {
+            for (domain, domain_translations) in translations {
+                if let Some(domain_table) = domain_translations.as_table() {
+                    for (semantic, translation) in domain_table {
+                        if let Some(trans_table) = translation.as_table() {
+                            let provider = trans_table
+                                .get("provider")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or_default();
+                            let method = trans_table
+                                .get("method")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or(semantic);
+
+                            if !provider.is_empty() {
+                                let socket = socket_resolver(provider, &family_id);
+                                self.register_translation(
+                                    semantic.clone(),
+                                    provider,
+                                    method,
+                                    socket,
+                                    None,
+                                );
+                                count += 1;
+                            }
+                        }
+                    }
+                }
+                debug!("📦 Loaded {} translations from domain '{}'", count, domain);
+            }
+        }
+
+        info!("📚 Loaded {} capability translations from config", count);
+        Ok(count)
+    }
+
+    /// Load default translations with automatic socket resolution
+    ///
+    /// Uses the standard 5-tier socket fallback hierarchy:
+    /// 1. $PRIMAL_SOCKET environment variable
+    /// 2. $XDG_RUNTIME_DIR/biomeos/{primal}-{family}.sock
+    /// 3. /run/user/{uid}/biomeos/{primal}-{family}.sock
+    /// 4. /data/local/tmp/biomeos/{primal}-{family}.sock (Android)
+    /// 5. /tmp/{primal}-{family}.sock (fallback)
+    ///
+    /// ## Capability-Based Provider Resolution
+    ///
+    /// Providers are resolved using environment variable overrides first:
+    /// - `BIOMEOS_SECURITY_PROVIDER`: Primal providing security capabilities
+    /// - `BIOMEOS_NETWORK_PROVIDER`: Primal providing network capabilities
+    /// - `BIOMEOS_STORAGE_PROVIDER`: Primal providing storage capabilities
+    /// - `BIOMEOS_COMPUTE_PROVIDER`: Primal providing compute capabilities
+    /// - `BIOMEOS_AI_PROVIDER`: Primal providing AI capabilities
+    ///
+    /// This enables runtime capability substitution without code changes.
+    pub fn load_defaults(&mut self) -> usize {
+        let family_id = biomeos_core::family_discovery::get_family_id();
+        let mut count = 0;
+
+        // DEEP DEBT EVOLUTION: Provider resolution is ENV-FIRST.
+        // In strict discovery mode, providers MUST be explicitly configured.
+        // Bootstrap defaults only used when BIOMEOS_STRICT_DISCOVERY is not set.
+        let strict = std::env::var("BIOMEOS_STRICT_DISCOVERY").is_ok();
+
+        let resolve_provider = |env_key: &str, default: &str| -> String {
+            match std::env::var(env_key) {
+                Ok(v) => v,
+                Err(_) if strict => {
+                    tracing::warn!(
+                        "BIOMEOS_STRICT_DISCOVERY: {} not set, skipping provider",
+                        env_key
+                    );
+                    String::new()
+                }
+                Err(_) => default.to_string(),
+            }
+        };
+
+        let security_provider = resolve_provider("BIOMEOS_SECURITY_PROVIDER", "beardog");
+        let network_provider = resolve_provider("BIOMEOS_NETWORK_PROVIDER", "songbird");
+        let storage_provider = resolve_provider("BIOMEOS_STORAGE_PROVIDER", "nestgate");
+        let compute_provider = resolve_provider("BIOMEOS_COMPUTE_PROVIDER", "toadstool");
+        let ai_provider = resolve_provider("BIOMEOS_AI_PROVIDER", "squirrel");
+
+        // Define domain → provider mappings
+        // The semantic capability names (left) are stable API contracts
+        // The actual method names (right) are provider-specific implementations
+        // Type alias defined at module level to satisfy clippy::type_complexity
+        let domain_providers: DomainProviderMappings = &[
+            // Security domain - cryptographic operations
+            (
+                "beardog", // Default, overridden by security_provider
+                "security",
+                &[
+                    // Beacon genetics
+                    ("beacon.generate", "beacon.generate"),
+                    ("beacon.get_id", "beacon.get_id"),
+                    ("beacon.get_seed", "beacon.get_seed"),
+                    ("beacon.encrypt", "beacon.encrypt"),
+                    ("beacon.decrypt", "beacon.decrypt"),
+                    ("beacon.try_decrypt", "beacon.try_decrypt"),
+                    // Core crypto
+                    ("crypto.encrypt", "chacha20_poly1305_encrypt"),
+                    ("crypto.decrypt", "chacha20_poly1305_decrypt"),
+                    ("crypto.generate_keypair", "x25519_generate_ephemeral"),
+                    ("crypto.blake3_hash", "blake3_hash"),
+                    ("crypto.hmac", "hmac_sha256"),
+                    ("crypto.sign", "sign_ed25519"),
+                    ("crypto.verify", "verify_ed25519"),
+                    // SHA3-256 for .onion address derivation (Tor v3 spec)
+                    ("crypto.sha3_256", "crypto.sha3_256"),
+                    ("onion.hash_checksum", "crypto.sha3_256"),
+                    // Onion identity keys
+                    ("onion.generate_identity", "crypto.ed25519_generate_keypair"),
+                    ("onion.session_key", "crypto.x25519_generate_ephemeral"),
+                    ("onion.derive_shared", "crypto.x25519_derive_secret"),
+                    ("onion.encrypt", "crypto.chacha20_poly1305_encrypt"),
+                    ("onion.decrypt", "crypto.chacha20_poly1305_decrypt"),
+                    ("onion.hkdf_extract", "crypto.hmac_sha256"),
+                    ("onion.hkdf_expand", "crypto.hmac_sha256"),
+                    // JWT
+                    ("security.generate_jwt", "generate_jwt_secret"),
+                ],
+            ),
+            // Network domain - HTTP, discovery, peer communication, mesh relay
+            (
+                "songbird", // Default, overridden by network_provider
+                "network",
+                &[
+                    // HTTP operations
+                    ("network.beacon_exchange", "beacon_exchange"),
+                    ("network.discover_peers", "discover_peers"),
+                    ("network.http_request", "http_request"),
+                    ("discovery.find_primals", "find_primals"),
+                    // STUN operations (NAT traversal)
+                    ("stun.discover", "stun.get_public_address"),
+                    ("stun.detect_nat_type", "stun.detect_nat_type"),
+                    // Mesh relay operations (Sovereign Beacon Mesh)
+                    ("mesh.status", "mesh.status"),
+                    ("mesh.find_path", "mesh.find_path"),
+                    ("mesh.announce", "mesh.announce"),
+                    ("mesh.peers", "mesh.list_peers"),
+                    ("mesh.health_check", "mesh.health_check"),
+                    // Hole punch coordination
+                    ("punch.request", "punch.request"),
+                    ("punch.status", "punch.status"),
+                    // Relay operations
+                    ("relay.serve", "relay.serve"),
+                    ("relay.status", "relay.status"),
+                    ("relay.allocate", "relay.allocate"),
+                    // Onion service (when enabled)
+                    ("onion.create_service", "onion.create_service"),
+                    ("onion.get_address", "onion.get_address"),
+                    ("onion.connect", "onion.connect"),
+                    ("onion.status", "onion.status"),
+                ],
+            ),
+            // Storage domain - data persistence
+            (
+                "nestgate", // Default, overridden by storage_provider
+                "storage",
+                &[
+                    ("storage.put", "storage.put"),
+                    ("storage.get", "storage.get"),
+                    ("storage.delete", "storage.delete"),
+                    ("storage.retrieve", "storage.retrieve"),
+                ],
+            ),
+            // Compute domain - workload execution
+            (
+                "toadstool", // Default, overridden by compute_provider
+                "compute",
+                &[("compute.execute", "execute"), ("compute.parse", "parse")],
+            ),
+            // AI domain - machine learning and inference
+            (
+                "squirrel", // Default, overridden by ai_provider
+                "ai",
+                &[
+                    ("ai.query", "query"),
+                    ("ai.suggest", "suggest"),
+                    ("mcp.call", "mcp_call"),
+                ],
+            ),
+        ];
+
+        // Map domain names to runtime-resolved providers
+        let provider_overrides: std::collections::HashMap<&str, String> = [
+            ("security", security_provider),
+            ("network", network_provider),
+            ("storage", storage_provider),
+            ("compute", compute_provider),
+            ("ai", ai_provider),
+        ]
+        .into_iter()
+        .collect();
+
+        for (_default_provider, domain, translations) in domain_providers {
+            // Use environment-overridden provider if available, otherwise use default
+            // DEEP DEBT: In strict mode, empty provider means skip this domain
+            let actual_provider = provider_overrides
+                .get(domain)
+                .filter(|s| !s.is_empty())
+                .map(|s| s.as_str())
+                .unwrap_or(_default_provider);
+
+            if actual_provider.is_empty() {
+                tracing::debug!("Skipping domain {} (no provider configured in strict mode)", domain);
+                continue;
+            }
+
+            let socket = resolve_primal_socket(actual_provider, &family_id);
+
+            for (semantic, method) in *translations {
+                self.register_translation(
+                    *semantic,
+                    actual_provider,
+                    *method,
+                    socket.clone(),
+                    None,
+                );
+                count += 1;
+            }
+
+            debug!(
+                "📦 Loaded {} default translations for {} ({})",
+                translations.len(),
+                domain,
+                actual_provider
+            );
+        }
+
+        info!("📚 Loaded {} default capability translations", count);
+        count
+    }
+}
+
+/// Resolve socket path for a primal using 5-tier fallback
+///
+/// Priority:
+/// 1. $PRIMAL_SOCKET environment variable (e.g., $BEARDOG_SOCKET)
+/// 2. $XDG_RUNTIME_DIR/biomeos/{primal}-{family}.sock
+/// 3. /run/user/{uid}/biomeos/{primal}-{family}.sock
+/// 4. /data/local/tmp/biomeos/{primal}-{family}.sock (Android)
+/// 5. /tmp/{primal}-{family}.sock (fallback)
+pub fn resolve_primal_socket(primal: &str, family_id: &str) -> String {
+    // 1. Check environment variable override
+    let env_var = format!("{}_SOCKET", primal.to_uppercase());
+    if let Ok(socket) = std::env::var(&env_var) {
+        return socket;
+    }
+
+    // 2. Try XDG_RUNTIME_DIR
+    if let Ok(xdg_runtime) = std::env::var("XDG_RUNTIME_DIR") {
+        let socket = format!("{}/biomeos/{}-{}.sock", xdg_runtime, primal, family_id);
+        if std::path::Path::new(&socket).exists()
+            || std::path::Path::new(&format!("{}/biomeos", xdg_runtime)).exists()
+        {
+            return socket;
+        }
+    }
+
+    // 3. Try /run/user/{uid}
+    if let Ok(uid) = std::env::var("UID").or_else(|_| {
+        std::process::Command::new("id")
+            .arg("-u")
+            .output()
+            .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+    }) {
+        let socket = format!("/run/user/{}/biomeos/{}-{}.sock", uid, primal, family_id);
+        if std::path::Path::new(&format!("/run/user/{}/biomeos", uid)).exists() {
+            return socket;
+        }
+    }
+
+    // 4. Android fallback
+    let android_socket = format!("/data/local/tmp/biomeos/{}-{}.sock", primal, family_id);
+    if std::path::Path::new("/data/local/tmp/biomeos").exists() {
+        return android_socket;
+    }
+
+    // 5. Universal fallback
+    format!("/tmp/{}-{}.sock", primal, family_id)
 }
 
 impl Default for CapabilityTranslationRegistry {
@@ -464,5 +753,138 @@ mod tests {
         assert_eq!(stats.total_providers, 2);
         assert_eq!(stats.capabilities_by_provider["beardog"], 1);
         assert_eq!(stats.capabilities_by_provider["songbird"], 1);
+    }
+
+    #[test]
+    fn test_load_defaults() {
+        let mut registry = CapabilityTranslationRegistry::new();
+
+        let count = registry.load_defaults();
+
+        // Should load translations for all domains
+        assert!(count > 0, "Should load at least some translations");
+
+        // Check security domain translations exist
+        assert!(
+            registry.has_capability("beacon.generate"),
+            "Should have beacon.generate"
+        );
+        assert!(
+            registry.has_capability("crypto.encrypt"),
+            "Should have crypto.encrypt"
+        );
+
+        // Check network domain translations exist
+        assert!(
+            registry.has_capability("network.beacon_exchange"),
+            "Should have network.beacon_exchange"
+        );
+
+        // Check storage domain translations exist
+        assert!(
+            registry.has_capability("storage.put"),
+            "Should have storage.put"
+        );
+
+        // Check AI domain translations exist
+        assert!(registry.has_capability("ai.query"), "Should have ai.query");
+
+        // Verify provider mappings
+        let beardog_caps = registry.provider_capabilities("beardog");
+        assert!(!beardog_caps.is_empty(), "BearDog should have capabilities");
+        assert!(
+            beardog_caps.contains(&"beacon.generate".to_string()),
+            "BearDog should provide beacon.generate"
+        );
+    }
+
+    /// NOTE: Environment variable tests are inherently flaky when run in parallel
+    /// because `std::env` is process-global. These tests verify the resolution
+    /// priority logic using a unique primal name to avoid collisions.
+    #[test]
+    fn test_resolve_primal_socket_env_override() {
+        // Use a unique primal name to avoid collision with other tests
+        let unique_primal = "testprimal_env_override";
+        let env_var = format!("{}_SOCKET", unique_primal.to_uppercase());
+
+        // Set environment variable override
+        std::env::set_var(&env_var, "/custom/unique-test.sock");
+
+        let socket = resolve_primal_socket(unique_primal, "test-family");
+        assert_eq!(socket, "/custom/unique-test.sock");
+
+        // Clean up
+        std::env::remove_var(&env_var);
+    }
+
+    #[test]
+    fn test_resolve_primal_socket_fallback() {
+        // Use a unique primal name that won't have env override
+        let unique_primal = "testprimal_fallback";
+
+        let socket = resolve_primal_socket(unique_primal, "test-family");
+
+        // Should contain the primal name and family ID regardless of path tier
+        assert!(
+            socket.contains(unique_primal),
+            "Socket should contain primal name"
+        );
+        assert!(
+            socket.contains("test-family"),
+            "Socket should contain family ID"
+        );
+        assert!(socket.ends_with(".sock"), "Socket should end with .sock");
+    }
+
+    #[test]
+    fn test_resolve_primal_socket_different_primals() {
+        // Ensure no environment overrides
+        std::env::remove_var("SONGBIRD_SOCKET");
+        std::env::remove_var("NESTGATE_SOCKET");
+
+        let songbird = resolve_primal_socket("songbird", "fam1");
+        let nestgate = resolve_primal_socket("nestgate", "fam1");
+
+        // Sockets should be different
+        assert_ne!(songbird, nestgate);
+
+        // Each should contain the primal name
+        assert!(songbird.contains("songbird"));
+        assert!(nestgate.contains("nestgate"));
+    }
+
+    #[test]
+    fn test_registry_default_impl() {
+        let registry = CapabilityTranslationRegistry::default();
+
+        // Should be empty initially
+        assert_eq!(registry.stats().total_translations, 0);
+    }
+
+    #[test]
+    fn test_translation_with_param_mappings() {
+        let mut registry = CapabilityTranslationRegistry::new();
+
+        let mut param_mappings = HashMap::new();
+        param_mappings.insert("private_key".to_string(), "our_secret".to_string());
+        param_mappings.insert("public_key".to_string(), "their_public".to_string());
+
+        registry.register_translation(
+            "crypto.ecdh_derive",
+            "beardog",
+            "x25519_derive_secret",
+            "/tmp/beardog.sock",
+            Some(param_mappings),
+        );
+
+        let translation = registry.get_translation("crypto.ecdh_derive").unwrap();
+        assert_eq!(
+            translation.param_mappings.get("private_key"),
+            Some(&"our_secret".to_string())
+        );
+        assert_eq!(
+            translation.param_mappings.get("public_key"),
+            Some(&"their_public".to_string())
+        );
     }
 }

@@ -30,8 +30,8 @@
 #     --env REMOTE_SEED_PATH=/media/usb2/biomeOS/.family.seed \
 #     --env LOCAL_NODE_ID=spore-alpha \
 #     --env REMOTE_NODE_ID=spore-beta \
-#     --env OUR_FAMILY_ID=nat0 \
-#     --env PEER_FAMILY_ID=nat0
+#     --env OUR_FAMILY_ID=1894e909e454 \
+#     --env PEER_FAMILY_ID=1894e909e454
 #
 # Author: biomeOS Team
 # Date: 2026-01-27
@@ -55,8 +55,8 @@ LOCAL_SEED_PATH = "${LOCAL_SEED_PATH}"
 REMOTE_SEED_PATH = "${REMOTE_SEED_PATH}"
 LOCAL_NODE_ID = "${LOCAL_NODE_ID:-local}"
 REMOTE_NODE_ID = "${REMOTE_NODE_ID:-remote}"
-OUR_FAMILY_ID = "${OUR_FAMILY_ID:-nat0}"
-PEER_FAMILY_ID = "${PEER_FAMILY_ID:-nat0}"
+OUR_FAMILY_ID = "${OUR_FAMILY_ID:-1894e909e454}"
+PEER_FAMILY_ID = "${PEER_FAMILY_ID:-1894e909e454}"
 
 # ============================================================================
 # Phase 1: Pre-flight Checks & Seed Reading

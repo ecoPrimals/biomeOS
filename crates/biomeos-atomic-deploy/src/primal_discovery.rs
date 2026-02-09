@@ -29,7 +29,7 @@ pub struct DiscoveredPrimal {
 
 impl DiscoveredPrimal {
     /// Extract primal name from socket filename
-    /// e.g., "beardog-nat0.sock" → "beardog"
+    /// e.g., "beardog-test_family.sock" → "beardog"
     fn extract_name(socket_name: &str) -> Option<String> {
         socket_name
             .strip_suffix(".sock")?
@@ -39,7 +39,7 @@ impl DiscoveredPrimal {
     }
 
     /// Extract family ID from socket filename
-    /// e.g., "beardog-nat0.sock" → Some("nat0")
+    /// e.g., "beardog-test_family.sock" → Some("test_family")
     fn extract_family_id(socket_name: &str) -> Option<String> {
         let without_sock = socket_name.strip_suffix(".sock")?;
         let parts: Vec<&str> = without_sock.split('-').collect();
@@ -237,7 +237,7 @@ mod tests {
     #[test]
     fn test_extract_name() {
         assert_eq!(
-            DiscoveredPrimal::extract_name("beardog-nat0.sock"),
+            DiscoveredPrimal::extract_name("beardog-test_family.sock"),
             Some("beardog".to_string())
         );
         assert_eq!(
@@ -250,8 +250,8 @@ mod tests {
     #[test]
     fn test_extract_family_id() {
         assert_eq!(
-            DiscoveredPrimal::extract_family_id("beardog-nat0.sock"),
-            Some("nat0".to_string())
+            DiscoveredPrimal::extract_family_id("beardog-test_family.sock"),
+            Some("test_family".to_string())
         );
         assert_eq!(
             DiscoveredPrimal::extract_family_id("songbird-test-123.sock"),

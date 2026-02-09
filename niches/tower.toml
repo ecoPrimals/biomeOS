@@ -286,14 +286,14 @@ log_fossil_enabled = true  # Integrate with biomeOS log fossil
 # Scenario 1: Simple LAN Tower
 # export NODE_ID=tower-alpha
 # export NODE_NAME=northgate
-# export FAMILY_ID=nat0
+# export FAMILY_ID=1894e909e454
 # biomeos deploy --niche tower
 # (Uses default "deploy" graph automatically!)
 
 # Scenario 2: WAN Tower with Multiple Sub-Federations
 # export NODE_ID=tower-beta
 # export NODE_NAME=strandgate
-# export FAMILY_ID=nat0
+# export FAMILY_ID=1894e909e454
 # export SUB_FEDERATIONS=gaming,family,work
 # export ANNOUNCE_CAPABILITIES=storage,compute,ai
 # biomeos deploy --niche tower --graph deploy
@@ -301,7 +301,7 @@ log_fossil_enabled = true  # Integrate with biomeOS log fossil
 # Scenario 3: Mobile Tower (Minimal)
 # export NODE_ID=tower-mobile
 # export NODE_NAME=swiftgate
-# export FAMILY_ID=nat0
+# export FAMILY_ID=1894e909e454
 # export PROMETHEUS_ENABLED=false
 # export UDP_MULTICAST=false  # Save battery
 # biomeos deploy --niche tower

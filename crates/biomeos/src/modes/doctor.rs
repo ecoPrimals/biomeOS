@@ -250,7 +250,7 @@ async fn check_primal_discovery() -> Result<HealthCheck> {
 
     // Get family_id from environment or use default
     // Uses capability-based discovery pattern (no hardcoded paths)
-    let family_id = std::env::var("BIOMEOS_FAMILY_ID").unwrap_or_else(|_| "nat0".to_string());
+    let family_id = biomeos_core::family_discovery::get_family_id();
 
     let primals = vec!["beardog", "songbird", "squirrel", "nestgate", "toadstool"];
 

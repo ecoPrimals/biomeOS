@@ -58,7 +58,7 @@ pub async fn discover_primal_binary(
     _context: &ExecutionContext,
 ) -> Result<PathBuf> {
     // Get base directories from environment or defaults
-    let base_dirs = vec![
+    let base_dirs: &[Option<PathBuf>] = &[
         std::env::var("BIOMEOS_PLASMID_BIN_DIR")
             .ok()
             .map(PathBuf::from),

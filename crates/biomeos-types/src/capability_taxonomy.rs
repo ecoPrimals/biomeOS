@@ -17,6 +17,7 @@
 // =============================================================================
 
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use std::fmt;
 
 /// Well-known capabilities that primals can provide
@@ -92,6 +93,31 @@ pub enum CapabilityTaxonomy {
     /// Announce capabilities to network
     /// Typical provider: Songbird
     CapabilityAnnouncement,
+
+    /// Distributed beacon mesh relay
+    /// Typical provider: Songbird
+    /// Provides: mesh.status, mesh.find_path, mesh.announce, mesh.peers
+    MeshRelay,
+
+    /// UDP hole punching for symmetric NAT traversal
+    /// Typical provider: Songbird
+    /// Provides: punch.request, punch.status
+    HolePunch,
+
+    /// STUN protocol for NAT type detection
+    /// Typical provider: Songbird
+    /// Provides: stun.discover, stun.detect_nat_type
+    StunClient,
+
+    /// Sovereign onion service (lightweight .onion address generation)
+    /// Typical provider: Songbird (with BearDog crypto)
+    /// Provides: onion.create_service, onion.get_address, onion.connect
+    OnionService,
+
+    /// Relay server for TURN-like fallback
+    /// Typical provider: Songbird
+    /// Provides: relay.serve, relay.allocate
+    RelayServer,
 
     // =============================================================================
     // Compute & Execution
@@ -238,67 +264,77 @@ pub enum CapabilityTaxonomy {
 
 impl CapabilityTaxonomy {
     /// Get a human-readable description of this capability
-    pub fn description(&self) -> &'static str {
+    ///
+    /// Returns `Cow<'static, str>` to avoid memory leaks for custom capabilities
+    /// while maintaining zero-copy for static descriptions.
+    pub fn description(&self) -> Cow<'static, str> {
         match self {
             // Security
-            Self::Encryption => "Encrypt and decrypt data",
-            Self::Identity => "Verify cryptographic identities",
-            Self::Trust => "Evaluate trust relationships",
-            Self::KeyManagement => "Generate and manage cryptographic keys",
-            Self::HardwareSecurity => "Hardware security module operations",
-            Self::SecureTunneling => "Create secure encrypted tunnels",
+            Self::Encryption => Cow::Borrowed("Encrypt and decrypt data"),
+            Self::Identity => Cow::Borrowed("Verify cryptographic identities"),
+            Self::Trust => Cow::Borrowed("Evaluate trust relationships"),
+            Self::KeyManagement => Cow::Borrowed("Generate and manage cryptographic keys"),
+            Self::HardwareSecurity => Cow::Borrowed("Hardware security module operations"),
+            Self::SecureTunneling => Cow::Borrowed("Create secure encrypted tunnels"),
 
             // Communication
-            Self::Discovery => "Discover other primals and nodes",
-            Self::P2PFederation => "Peer-to-peer federation",
-            Self::Tunneling => "Network tunneling and routing",
-            Self::Routing => "Packet routing and forwarding",
-            Self::GeneticRouting => "BirdSong genetic lineage NAT",
-            Self::CapabilityAnnouncement => "Announce capabilities to network",
+            Self::Discovery => Cow::Borrowed("Discover other primals and nodes"),
+            Self::P2PFederation => Cow::Borrowed("Peer-to-peer federation"),
+            Self::Tunneling => Cow::Borrowed("Network tunneling and routing"),
+            Self::Routing => Cow::Borrowed("Packet routing and forwarding"),
+            Self::GeneticRouting => Cow::Borrowed("BirdSong genetic lineage NAT"),
+            Self::CapabilityAnnouncement => Cow::Borrowed("Announce capabilities to network"),
+            // NAT traversal and mesh
+            Self::MeshRelay => Cow::Borrowed("Distributed beacon mesh relay for NAT traversal"),
+            Self::HolePunch => Cow::Borrowed("UDP hole punching for symmetric NAT"),
+            Self::StunClient => Cow::Borrowed("STUN protocol for NAT type detection"),
+            Self::OnionService => Cow::Borrowed("Sovereign onion service for .onion addresses"),
+            Self::RelayServer => Cow::Borrowed("TURN-like relay server for fallback connectivity"),
 
             // Compute
-            Self::WorkloadExecution => "Execute workloads",
-            Self::ResourceScheduling => "Schedule compute resources",
-            Self::ProcessIsolation => "Isolate processes and containers",
-            Self::FractalCompute => "Fractal compute scaling",
-            Self::GpuAcceleration => "GPU acceleration",
+            Self::WorkloadExecution => Cow::Borrowed("Execute workloads"),
+            Self::ResourceScheduling => Cow::Borrowed("Schedule compute resources"),
+            Self::ProcessIsolation => Cow::Borrowed("Isolate processes and containers"),
+            Self::FractalCompute => Cow::Borrowed("Fractal compute scaling"),
+            Self::GpuAcceleration => Cow::Borrowed("GPU acceleration"),
 
             // Storage
-            Self::DataStorage => "Store and retrieve data",
-            Self::Provenance => "Track data provenance",
-            Self::Compression => "Adaptive data compression",
-            Self::Replication => "Data replication",
-            Self::Deduplication => "Data deduplication",
-            Self::ContentAddressed => "Content-addressed storage",
+            Self::DataStorage => Cow::Borrowed("Store and retrieve data"),
+            Self::Provenance => Cow::Borrowed("Track data provenance"),
+            Self::Compression => Cow::Borrowed("Adaptive data compression"),
+            Self::Replication => Cow::Borrowed("Data replication"),
+            Self::Deduplication => Cow::Borrowed("Data deduplication"),
+            Self::ContentAddressed => Cow::Borrowed("Content-addressed storage"),
 
             // UI
-            Self::VisualRendering => "Render visual interfaces",
-            Self::InputHandling => "Handle user input",
-            Self::MultiModal => "Multi-modal interface",
-            Self::TopologyVisualization => "Visualize network topology",
-            Self::RealtimeUpdates => "Real-time UI updates",
+            Self::VisualRendering => Cow::Borrowed("Render visual interfaces"),
+            Self::InputHandling => Cow::Borrowed("Handle user input"),
+            Self::MultiModal => Cow::Borrowed("Multi-modal interface"),
+            Self::TopologyVisualization => Cow::Borrowed("Visualize network topology"),
+            Self::RealtimeUpdates => Cow::Borrowed("Real-time UI updates"),
 
             // Orchestration
-            Self::LifecycleManagement => "Primal lifecycle management",
-            Self::HealthMonitoring => "Health monitoring",
-            Self::ConfigManagement => "Configuration management",
-            Self::MetricsCollection => "Metrics collection",
-            Self::LogAggregation => "Log aggregation",
-            Self::GraphOrchestration => "Graph-based orchestration",
+            Self::LifecycleManagement => Cow::Borrowed("Primal lifecycle management"),
+            Self::HealthMonitoring => Cow::Borrowed("Health monitoring"),
+            Self::ConfigManagement => Cow::Borrowed("Configuration management"),
+            Self::MetricsCollection => Cow::Borrowed("Metrics collection"),
+            Self::LogAggregation => Cow::Borrowed("Log aggregation"),
+            Self::GraphOrchestration => Cow::Borrowed("Graph-based orchestration"),
 
             // AI
-            Self::AiCoordination => "AI coordination and routing",
-            Self::AiMultiProvider => "Multi-provider AI support",
-            Self::McpServer => "MCP server",
-            Self::AiCapabilityDiscovery => "AI capability discovery",
+            Self::AiCoordination => Cow::Borrowed("AI coordination and routing"),
+            Self::AiMultiProvider => Cow::Borrowed("Multi-provider AI support"),
+            Self::McpServer => Cow::Borrowed("MCP server"),
+            Self::AiCapabilityDiscovery => Cow::Borrowed("AI capability discovery"),
 
             // Specialized
-            Self::BluetoothGenesis => "Bluetooth genesis pairing",
-            Self::SporeDeployment => "USB spore deployment",
-            Self::GeneticLineage => "Genetic lineage management",
-            Self::NicheDeployment => "Niche deployment",
+            Self::BluetoothGenesis => Cow::Borrowed("Bluetooth genesis pairing"),
+            Self::SporeDeployment => Cow::Borrowed("USB spore deployment"),
+            Self::GeneticLineage => Cow::Borrowed("Genetic lineage management"),
+            Self::NicheDeployment => Cow::Borrowed("Niche deployment"),
 
-            Self::Custom(name) => Box::leak(format!("Custom: {}", name).into_boxed_str()),
+            // Custom capabilities use Owned to avoid memory leaks
+            Self::Custom(name) => Cow::Owned(format!("Custom: {}", name)),
         }
     }
 
@@ -317,7 +353,12 @@ impl CapabilityTaxonomy {
             | Self::Tunneling
             | Self::Routing
             | Self::GeneticRouting
-            | Self::CapabilityAnnouncement => CapabilityCategory::Communication,
+            | Self::CapabilityAnnouncement
+            | Self::MeshRelay
+            | Self::HolePunch
+            | Self::StunClient
+            | Self::OnionService
+            | Self::RelayServer => CapabilityCategory::Communication,
 
             Self::WorkloadExecution
             | Self::ResourceScheduling
@@ -378,6 +419,12 @@ impl CapabilityTaxonomy {
             "capability_announcement" | "capabilityannouncement" => {
                 Some(Self::CapabilityAnnouncement)
             }
+            // NAT traversal and mesh capabilities
+            "mesh_relay" | "meshrelay" | "mesh" => Some(Self::MeshRelay),
+            "hole_punch" | "holepunch" | "punch" => Some(Self::HolePunch),
+            "stun_client" | "stunclient" | "stun" => Some(Self::StunClient),
+            "onion_service" | "onionservice" | "onion" => Some(Self::OnionService),
+            "relay_server" | "relayserver" | "relay" => Some(Self::RelayServer),
 
             // Compute capabilities - "compute" is an alias for workload execution
             "workload_execution" | "workloadexecution" | "execution" | "compute" => {
@@ -462,7 +509,12 @@ impl CapabilityTaxonomy {
             | Self::Routing
             | Self::GeneticRouting
             | Self::CapabilityAnnouncement
-            | Self::BluetoothGenesis => Some("songbird"),
+            | Self::BluetoothGenesis
+            | Self::MeshRelay
+            | Self::HolePunch
+            | Self::StunClient
+            | Self::OnionService
+            | Self::RelayServer => Some("songbird"),
 
             // Compute → Toadstool
             Self::WorkloadExecution
@@ -514,6 +566,28 @@ impl CapabilityTaxonomy {
     /// mappings to taxonomy-based resolution.
     pub fn resolve_to_primal(capability: &str) -> Option<&'static str> {
         Self::from_str_flexible(capability).and_then(|cap| cap.default_primal())
+    }
+
+    /// Get known primal names from the capability taxonomy.
+    ///
+    /// **DEEP DEBT NOTE**: This is a bootstrap-time hint, NOT the source of truth.
+    /// In sovereign mode, primals self-register via capability.call() at runtime.
+    /// This list is ONLY used during initial bootstrap before capability discovery
+    /// is available. Once Songbird is running, use `discovery.query` instead.
+    ///
+    /// Set `BIOMEOS_STRICT_DISCOVERY=1` to disable this fallback entirely.
+    ///
+    /// # Returns
+    ///
+    /// Bootstrap-time primal name hints (empty if strict discovery is enabled)
+    pub fn known_primals() -> &'static [&'static str] {
+        // In strict discovery mode, return nothing — primals discover at runtime
+        if std::env::var("BIOMEOS_STRICT_DISCOVERY").is_ok() {
+            return &[];
+        }
+        // Bootstrap hints only — NOT the canonical list
+        // Primals self-register their capabilities at startup
+        &["beardog", "songbird", "toadstool", "nestgate", "squirrel"]
     }
 }
 
@@ -614,5 +688,237 @@ mod tests {
         let json = serde_json::to_string(&cap).unwrap();
         let deserialized: CapabilityTaxonomy = serde_json::from_str(&json).unwrap();
         assert_eq!(cap, deserialized);
+    }
+
+    #[test]
+    fn test_known_primals() {
+        let primals = CapabilityTaxonomy::known_primals();
+
+        // Should return the canonical list of primals
+        assert!(!primals.is_empty(), "Should have known primals");
+        assert_eq!(primals.len(), 5, "Should have exactly 5 primals");
+
+        // Verify expected primals are present
+        assert!(primals.contains(&"beardog"), "Should include beardog");
+        assert!(primals.contains(&"songbird"), "Should include songbird");
+        assert!(primals.contains(&"toadstool"), "Should include toadstool");
+        assert!(primals.contains(&"nestgate"), "Should include nestgate");
+        assert!(primals.contains(&"squirrel"), "Should include squirrel");
+    }
+
+    #[test]
+    fn test_resolve_to_primal() {
+        // Test direct capability resolution
+        assert_eq!(
+            CapabilityTaxonomy::resolve_to_primal("encryption"),
+            Some("beardog")
+        );
+        assert_eq!(
+            CapabilityTaxonomy::resolve_to_primal("discovery"),
+            Some("songbird")
+        );
+        assert_eq!(
+            CapabilityTaxonomy::resolve_to_primal("storage"),
+            Some("nestgate")
+        );
+        assert_eq!(
+            CapabilityTaxonomy::resolve_to_primal("compute"),
+            Some("toadstool")
+        );
+        assert_eq!(
+            CapabilityTaxonomy::resolve_to_primal("ai"),
+            Some("squirrel")
+        );
+
+        // Unknown capabilities should return None
+        assert_eq!(CapabilityTaxonomy::resolve_to_primal("unknown"), None);
+    }
+
+    #[test]
+    fn test_default_primal_security() {
+        // Security capabilities should map to beardog
+        assert_eq!(
+            CapabilityTaxonomy::Encryption.default_primal(),
+            Some("beardog")
+        );
+        assert_eq!(
+            CapabilityTaxonomy::Identity.default_primal(),
+            Some("beardog")
+        );
+        assert_eq!(CapabilityTaxonomy::Trust.default_primal(), Some("beardog"));
+        assert_eq!(
+            CapabilityTaxonomy::KeyManagement.default_primal(),
+            Some("beardog")
+        );
+    }
+
+    #[test]
+    fn test_default_primal_communication() {
+        // Communication capabilities should map to songbird
+        assert_eq!(
+            CapabilityTaxonomy::Discovery.default_primal(),
+            Some("songbird")
+        );
+        assert_eq!(
+            CapabilityTaxonomy::P2PFederation.default_primal(),
+            Some("songbird")
+        );
+        assert_eq!(
+            CapabilityTaxonomy::Tunneling.default_primal(),
+            Some("songbird")
+        );
+    }
+
+    #[test]
+    fn test_default_primal_compute() {
+        // Compute capabilities should map to toadstool
+        assert_eq!(
+            CapabilityTaxonomy::WorkloadExecution.default_primal(),
+            Some("toadstool")
+        );
+        assert_eq!(
+            CapabilityTaxonomy::ResourceScheduling.default_primal(),
+            Some("toadstool")
+        );
+    }
+
+    #[test]
+    fn test_default_primal_storage() {
+        // Storage capabilities should map to nestgate
+        assert_eq!(
+            CapabilityTaxonomy::DataStorage.default_primal(),
+            Some("nestgate")
+        );
+        assert_eq!(
+            CapabilityTaxonomy::ContentAddressed.default_primal(),
+            Some("nestgate")
+        );
+    }
+
+    #[test]
+    fn test_default_primal_ai() {
+        // AI capabilities should map to squirrel
+        assert_eq!(
+            CapabilityTaxonomy::AiCoordination.default_primal(),
+            Some("squirrel")
+        );
+        assert_eq!(
+            CapabilityTaxonomy::McpServer.default_primal(),
+            Some("squirrel")
+        );
+    }
+
+    #[test]
+    fn test_custom_capability_no_default() {
+        // Custom capabilities should not have a default primal
+        assert_eq!(
+            CapabilityTaxonomy::Custom("custom-cap".to_string()).default_primal(),
+            None
+        );
+    }
+
+    #[test]
+    fn test_nat_traversal_capabilities() {
+        // NAT traversal capabilities should map to songbird
+        assert_eq!(
+            CapabilityTaxonomy::MeshRelay.default_primal(),
+            Some("songbird")
+        );
+        assert_eq!(
+            CapabilityTaxonomy::HolePunch.default_primal(),
+            Some("songbird")
+        );
+        assert_eq!(
+            CapabilityTaxonomy::StunClient.default_primal(),
+            Some("songbird")
+        );
+        assert_eq!(
+            CapabilityTaxonomy::OnionService.default_primal(),
+            Some("songbird")
+        );
+        assert_eq!(
+            CapabilityTaxonomy::RelayServer.default_primal(),
+            Some("songbird")
+        );
+
+        // All should be in Communication category
+        assert_eq!(
+            CapabilityTaxonomy::MeshRelay.category(),
+            CapabilityCategory::Communication
+        );
+        assert_eq!(
+            CapabilityTaxonomy::HolePunch.category(),
+            CapabilityCategory::Communication
+        );
+        assert_eq!(
+            CapabilityTaxonomy::StunClient.category(),
+            CapabilityCategory::Communication
+        );
+        assert_eq!(
+            CapabilityTaxonomy::OnionService.category(),
+            CapabilityCategory::Communication
+        );
+        assert_eq!(
+            CapabilityTaxonomy::RelayServer.category(),
+            CapabilityCategory::Communication
+        );
+    }
+
+    #[test]
+    fn test_nat_traversal_from_str() {
+        // Test string parsing for NAT traversal capabilities
+        assert_eq!(
+            CapabilityTaxonomy::from_str_flexible("mesh"),
+            Some(CapabilityTaxonomy::MeshRelay)
+        );
+        assert_eq!(
+            CapabilityTaxonomy::from_str_flexible("mesh_relay"),
+            Some(CapabilityTaxonomy::MeshRelay)
+        );
+        assert_eq!(
+            CapabilityTaxonomy::from_str_flexible("punch"),
+            Some(CapabilityTaxonomy::HolePunch)
+        );
+        assert_eq!(
+            CapabilityTaxonomy::from_str_flexible("hole_punch"),
+            Some(CapabilityTaxonomy::HolePunch)
+        );
+        assert_eq!(
+            CapabilityTaxonomy::from_str_flexible("stun"),
+            Some(CapabilityTaxonomy::StunClient)
+        );
+        assert_eq!(
+            CapabilityTaxonomy::from_str_flexible("onion"),
+            Some(CapabilityTaxonomy::OnionService)
+        );
+        assert_eq!(
+            CapabilityTaxonomy::from_str_flexible("relay"),
+            Some(CapabilityTaxonomy::RelayServer)
+        );
+    }
+
+    #[test]
+    fn test_resolve_nat_traversal_to_primal() {
+        // Test resolve_to_primal for NAT traversal capabilities
+        assert_eq!(
+            CapabilityTaxonomy::resolve_to_primal("mesh"),
+            Some("songbird")
+        );
+        assert_eq!(
+            CapabilityTaxonomy::resolve_to_primal("punch"),
+            Some("songbird")
+        );
+        assert_eq!(
+            CapabilityTaxonomy::resolve_to_primal("stun"),
+            Some("songbird")
+        );
+        assert_eq!(
+            CapabilityTaxonomy::resolve_to_primal("onion"),
+            Some("songbird")
+        );
+        assert_eq!(
+            CapabilityTaxonomy::resolve_to_primal("relay"),
+            Some("songbird")
+        );
     }
 }

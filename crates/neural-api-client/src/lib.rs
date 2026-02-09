@@ -25,7 +25,7 @@
 //!
 //! # async fn example() -> anyhow::Result<()> {
 //! // Discover Neural API socket at runtime
-//! let client = NeuralApiClient::discover("nat0")?;
+//! let client = NeuralApiClient::discover("1894e909e454")?;
 //!
 //! // Call external HTTP API (no reqwest needed!)
 //! let response = client.proxy_http(
@@ -192,8 +192,8 @@ impl NeuralApiClient {
     /// ```no_run
     /// use neural_api_client::NeuralApiClient;
     ///
-    /// // Discovers /tmp/neural-api-nat0.sock
-    /// let client = NeuralApiClient::discover("nat0")?;
+    /// // Discovers /tmp/neural-api-family.sock
+    /// let client = NeuralApiClient::discover("1894e909e454")?;
     /// # Ok::<(), anyhow::Error>(())
     /// ```
     pub fn discover(family_id: &str) -> Result<Self> {
@@ -251,7 +251,7 @@ impl NeuralApiClient {
     /// use serde_json::json;
     ///
     /// # async fn example() -> anyhow::Result<()> {
-    /// let client = NeuralApiClient::discover("nat0")?;
+    /// let client = NeuralApiClient::discover("1894e909e454")?;
     ///
     /// let response = client.proxy_http(
     ///     "POST",
@@ -300,7 +300,7 @@ impl NeuralApiClient {
     /// use neural_api_client::NeuralApiClient;
     ///
     /// # async fn example() -> anyhow::Result<()> {
-    /// let client = NeuralApiClient::discover("nat0")?;
+    /// let client = NeuralApiClient::discover("1894e909e454")?;
     ///
     /// let info = client.discover_capability("secure_http").await?;
     /// println!("Capability: {}", info.capability);
@@ -331,7 +331,7 @@ impl NeuralApiClient {
     /// use serde_json::json;
     ///
     /// # async fn example() -> anyhow::Result<()> {
-    /// let client = NeuralApiClient::discover("nat0")?;
+    /// let client = NeuralApiClient::discover("1894e909e454")?;
     ///
     /// // Call crypto function without knowing about BearDog
     /// let signature = client.route_to_primal(
@@ -365,7 +365,7 @@ impl NeuralApiClient {
     /// use neural_api_client::NeuralApiClient;
     ///
     /// # async fn example() -> anyhow::Result<()> {
-    /// let client = NeuralApiClient::discover("nat0")?;
+    /// let client = NeuralApiClient::discover("1894e909e454")?;
     ///
     /// let metrics = client.get_metrics().await?;
     /// println!("Total requests: {}", metrics.total_requests);
@@ -471,11 +471,11 @@ mod tests {
     
     #[test]
     fn test_discover_socket_path() {
-        let path = NeuralApiClient::discover_socket("nat0");
+        let path = NeuralApiClient::discover_socket("1894e909e454");
         // Should end with the correct socket filename, regardless of XDG prefix
         assert!(
-            path.to_string_lossy().ends_with("neural-api-nat0.sock"),
-            "Socket path should end with neural-api-nat0.sock, got: {}",
+            path.to_string_lossy().ends_with("neural-api-family.sock"),
+            "Socket path should end with neural-api-family.sock, got: {}",
             path.display()
         );
     }

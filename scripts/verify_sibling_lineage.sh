@@ -242,7 +242,7 @@ if ! command -v b3sum &>/dev/null; then
 fi
 
 # Generate proofs for cross-verification
-FAMILY_ID="nat0"
+FAMILY_ID="1894e909e454"
 
 echo "  Generating proof from Spore 1 for Spore 2..."
 PROOF_1_TO_2=$(generate_blake3_proof "$SPORE1_SEED" "$FAMILY_ID" "$FAMILY_ID")

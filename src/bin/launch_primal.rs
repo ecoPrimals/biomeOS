@@ -5,7 +5,7 @@
 //!
 //! # Philosophy
 //!
-//! - Modern idiomatic Rust (async/await, Result<T>, zero unsafe)
+//! - Modern idiomatic Rust (async/await, `Result<T>`, zero unsafe)
 //! - XDG-compliant socket paths
 //! - Capability-based discovery
 //! - Genetic lineage configuration

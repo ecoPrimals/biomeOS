@@ -23,7 +23,7 @@ fn test_e2e_tarpc_protocol_configuration() {
 
     let toml = r#"
 [tower]
-family = "nat0"
+family = "test_family"
 concurrent_startup = true
 
 [[primals]]
@@ -32,7 +32,7 @@ provides = ["Security"]
 protocol = "tarpc"
 
 [primals.env]
-BEARDOG_FAMILY_ID = "nat0"
+BEARDOG_FAMILY_ID = "test_family"
 BEARDOG_NODE_ID = "test-tower"
 RUST_LOG = "info"
 "#;
@@ -51,7 +51,7 @@ RUST_LOG = "info"
     // Verify env vars
     assert_eq!(
         config.primals[0].env.get("BEARDOG_FAMILY_ID"),
-        Some(&"nat0".to_string())
+        Some(&"test_family".to_string())
     );
     assert_eq!(
         config.primals[0].env.get("BEARDOG_NODE_ID"),
@@ -65,7 +65,7 @@ fn test_e2e_jsonrpc_protocol_configuration() {
 
     let toml = r#"
 [tower]
-family = "nat0"
+family = "test_family"
 
 [[primals]]
 binary = "./primals/songbird"
@@ -97,7 +97,7 @@ fn test_e2e_auto_detect_protocol() {
 
     let toml = r#"
 [tower]
-family = "nat0"
+family = "test_family"
 
 [[primals]]
 binary = "./primals/beardog"
@@ -123,7 +123,7 @@ fn test_e2e_fractal_deployment_mixed_protocols() {
 
     let toml = r#"
 [tower]
-family = "nat0"
+family = "test_family"
 concurrent_startup = true
 
 # Core primals: tarpc (performance-critical)
@@ -177,7 +177,7 @@ fn test_e2e_isomorphic_deployment_scenarios() {
     // Production configuration (tarpc)
     let prod_toml = r#"
 [tower]
-family = "nat0"
+family = "test_family"
 
 [[primals]]
 binary = "./primals/beardog"
@@ -200,7 +200,7 @@ DEPLOYMENT_ENV = "production"
     // Development configuration (JSON-RPC, same binary)
     let dev_toml = r#"
 [tower]
-family = "nat0"
+family = "test_family"
 
 [[primals]]
 binary = "./primals/beardog"
@@ -245,7 +245,7 @@ fn test_e2e_backward_compatibility() {
     let toml = r#"
 [tower]
 name = "legacy-tower"
-family = "nat0"
+family = "test_family"
 
 [[primals]]
 binary = "./primals/beardog"
@@ -286,7 +286,7 @@ fn test_e2e_url_scheme_variations() {
 
     let toml = r#"
 [tower]
-family = "nat0"
+family = "test_family"
 
 [[primals]]
 binary = "./primals/beardog"
@@ -351,7 +351,7 @@ fn test_e2e_complete_tower_configuration() {
     // Complete configuration from examples/tower-dual-protocol.toml
     let toml = r#"
 [tower]
-family = "nat0"
+family = "test_family"
 concurrent_startup = true
 
 [[primals]]
@@ -362,7 +362,7 @@ protocol = "tarpc"
 
 [primals.env]
 BEARDOG_FAMILY_SEED = "Nat0C/G/b4B7u06n0r14SuZXrp/IZ/38fZHh8aJQMVg="
-BEARDOG_FAMILY_ID = "nat0"
+BEARDOG_FAMILY_ID = "test_family"
 BEARDOG_NODE_ID = "tower1"
 RUST_LOG = "info"
 
@@ -373,7 +373,7 @@ requires = ["Security"]
 protocol = "tarpc"
 
 [primals.env]
-SONGBIRD_FAMILY_ID = "nat0"
+SONGBIRD_FAMILY_ID = "test_family"
 SONGBIRD_NODE_ID = "tower1"
 SECURITY_ENDPOINT = "tarpc+unix:///tmp/beardog-nat0-tower1.sock"
 RUST_LOG = "info"
@@ -390,7 +390,7 @@ recovery_attempts = 3
         toml::from_str(&config_str).expect("Failed to parse config");
 
     // Verify tower metadata
-    assert_eq!(config.tower.family, Some("nat0".to_string()));
+    assert_eq!(config.tower.family, Some("test_family".to_string()));
     assert!(config.tower.concurrent_startup);
 
     // Verify primals
@@ -404,7 +404,7 @@ recovery_attempts = 3
     assert_eq!(config.primals[0].protocol, Some("tarpc".to_string()));
     assert_eq!(
         config.primals[0].env.get("BEARDOG_FAMILY_ID"),
-        Some(&"nat0".to_string())
+        Some(&"test_family".to_string())
     );
 
     // Songbird

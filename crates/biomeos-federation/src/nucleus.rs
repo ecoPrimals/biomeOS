@@ -110,7 +110,7 @@ pub struct VerifiedPrimal {
     /// Node ID (e.g., "node-alpha")
     pub node_id: String,
 
-    /// Family ID (e.g., "nat0")
+    /// Family ID (e.g., "test_family")
     pub family_id: Option<String>,
 
     /// Connection endpoints

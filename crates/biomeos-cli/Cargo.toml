@@ -6,8 +6,9 @@ description = "BiomeOS CLI tools for system management, discovery, and monitorin
 authors = ["BiomeOS Team"]
 
 [[bin]]
-name = "biomeos"
+name = "biomeos-cli"
 path = "src/bin/main.rs"
+doc = false  # Avoid collision with biomeos-unibin
 
 [[bin]]
 name = "verify-lineage"
@@ -46,7 +47,7 @@ sysinfo = "0.29"
 uuid = { version = "1.0", features = ["v4"] }
 base64 = "0.22"
 sha2 = "0.10"
-dirs = "5.0"
+# dirs removed — pure Rust via $HOME env resolution
 
 [dev-dependencies]
 biomeos-test-utils = { path = "../biomeos-test-utils" }

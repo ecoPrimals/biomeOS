@@ -6,7 +6,7 @@ set -e
 
 REMOTE_HOST="${1:-192.168.1.134}"
 REMOTE_USER="${2:-strandgate}"
-FAMILY_ID="${3:-nat0}"
+FAMILY_ID="${3:-1894e909e454}"
 
 echo "╔══════════════════════════════════════════════════════════════════╗"
 echo "║              biomeOS Tower Deployment Script                     ║"

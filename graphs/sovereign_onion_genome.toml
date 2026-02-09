@@ -1,0 +1,228 @@
+# Sovereign Onion Service Deployment Graph
+# =========================================
+#
+# Deploys BearDog + Songbird with Sovereign Onion Service capabilities
+# for NAT traversal without port forwarding.
+#
+# Architecture:
+# 1. BearDog provides crypto (including SHA3-256 for .onion addresses)
+# 2. Songbird provides Sovereign Onion Service (Pure Rust, no Arti)
+# 3. Mesh relay for distributed NAT traversal
+#
+# ✅ STATUS: READY FOR IMPLEMENTATION
+# Depends on: BearDog SHA3-256 method, Songbird Sovereign Onion crate
+#
+# Reference: docs/handoffs/SOVEREIGN_BEACON_MESH_HANDOFF_FEB06_2026.md
+
+[graph]
+id = "sovereign_onion_genome"
+description = "Deploy Sovereign Onion Service (BearDog + Songbird mesh)"
+coordination = "Sequential"  # BearDog must start before Songbird
+
+# =============================================================================
+# PHASE 1: BearDog (Crypto Foundation + Onion Address Derivation)
+# =============================================================================
+
+[[nodes]]
+id = "germinate_beardog_onion"
+output = "beardog_onion_genesis"
+# Capability namespaces for discovery
+capabilities = ["crypto", "security", "onion_crypto", "beacon"]
+
+[nodes.primal]
+by_capability = "security"  # Discovers BearDog via capability system
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+
+[nodes.operation.environment]
+RUST_LOG = "beardog=info,beardog_crypto=debug"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+# BearDog Crypto Methods (existing + SHA3-256 for onion)
+[nodes.capabilities_provided]
+# Core crypto (existing)
+"crypto.generate_keypair" = "crypto.x25519_generate_ephemeral"
+"crypto.ecdh_derive" = "crypto.x25519_derive_secret"
+"crypto.encrypt" = "crypto.chacha20_poly1305_encrypt"
+"crypto.decrypt" = "crypto.chacha20_poly1305_decrypt"
+"crypto.hash" = "crypto.blake3_hash"
+"crypto.hmac" = "crypto.hmac_sha256"
+"crypto.sign" = "crypto.sign_ed25519"
+"crypto.verify" = "crypto.verify_ed25519"
+
+# NEW: SHA3-256 for .onion address derivation (Tor v3 spec)
+"crypto.sha3_256" = "crypto.sha3_256"
+"onion.hash_checksum" = "crypto.sha3_256"  # Semantic alias
+
+# Ed25519 for .onion identity keys
+"onion.generate_identity" = "crypto.ed25519_generate_keypair"
+"crypto.ed25519_generate_keypair" = "crypto.ed25519_generate_keypair"
+
+# X25519 for onion session keys
+"onion.session_key" = "crypto.x25519_generate_ephemeral"
+"onion.derive_shared" = "crypto.x25519_derive_secret"
+
+# ChaCha20-Poly1305 for onion data encryption
+"onion.encrypt" = "crypto.chacha20_poly1305_encrypt"
+"onion.decrypt" = "crypto.chacha20_poly1305_decrypt"
+
+# HMAC for HKDF key derivation
+"onion.hkdf_extract" = "crypto.hmac_sha256"
+"onion.hkdf_expand" = "crypto.hmac_sha256"
+
+# Beacon genetics (for family/lineage encryption)
+"beacon.generate" = "beacon.generate"
+"beacon.encrypt" = "beacon.encrypt"
+"beacon.decrypt" = "beacon.decrypt"
+"genetic.derive_key" = "genetic.derive_lineage_key"
+
+# =============================================================================
+# PHASE 2: Songbird (Sovereign Onion Service + Mesh Relay)
+# =============================================================================
+
+[[nodes]]
+id = "germinate_songbird_onion"
+depends_on = ["germinate_beardog_onion"]  # CRITICAL: Needs BearDog for crypto
+output = "songbird_onion_genesis"
+capabilities = ["discovery", "http", "onion", "mesh", "relay", "stun"]
+
+[nodes.primal]
+by_capability = "discovery"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+enable_onion = true  # Enable Sovereign Onion Service
+enable_mesh = true   # Enable distributed mesh relay
+
+[nodes.operation.environment]
+# Crypto provider (runtime discovery)
+CRYPTO_PROVIDER_SOCKET = "${beardog_socket}"
+BEARDOG_SOCKET = "${beardog_socket}"
+SONGBIRD_SECURITY_PROVIDER = "beardog"
+
+# Onion service configuration
+SONGBIRD_ONION_ENABLED = "true"
+SONGBIRD_MESH_ENABLED = "true"
+
+# Logging
+RUST_LOG = "songbird=info,songbird_sovereign_onion=debug,songbird_mesh=debug"
+
+[nodes.constraints]
+timeout_ms = 45000  # Onion setup may take longer
+
+# Songbird Capabilities (HTTP + Onion + Mesh)
+[nodes.capabilities_provided]
+# Existing HTTP capabilities
+"http.request" = "http.request"
+"http.get" = "http.get"
+"http.post" = "http.post"
+
+# Discovery capabilities
+"discovery.announce" = "announce_capabilities"
+"discovery.query" = "discover_by_capability"
+
+# STUN capabilities (for NAT type detection)
+"stun.discover" = "stun.get_public_address"
+"stun.detect_nat_type" = "stun.detect_nat_type"
+
+# NEW: Sovereign Onion Service capabilities
+"onion.create_service" = "onion.create_service"      # Create .onion endpoint
+"onion.get_address" = "onion.get_address"            # Get our .onion address
+"onion.connect" = "onion.connect"                    # Connect to .onion
+"onion.accept" = "onion.accept"                      # Accept incoming connection
+"onion.status" = "onion.status"                      # Service status
+
+# NEW: Mesh relay capabilities
+"mesh.status" = "mesh.status"                        # Mesh network status
+"mesh.find_path" = "mesh.find_path"                  # Find path to peer
+"mesh.announce" = "mesh.announce"                    # Announce as relay
+"mesh.peers" = "mesh.list_peers"                     # List known peers
+"mesh.health_check" = "mesh.health_check"            # Check peer health
+
+# NEW: Hole punch coordination
+"punch.request" = "punch.request"                    # Request hole punch
+"punch.status" = "punch.status"                      # Punch attempt status
+
+# Relay capabilities
+"relay.serve" = "relay.serve"                        # Start relay service
+"relay.status" = "relay.status"                      # Relay status
+"relay.allocate" = "relay.allocate"                  # Allocate relay session
+
+# =============================================================================
+# PHASE 3: Mesh Initialization
+# =============================================================================
+
+[[nodes]]
+id = "initialize_mesh"
+depends_on = ["germinate_songbird_onion"]
+output = "mesh_initialized"
+
+[nodes.primal]
+by_capability = "mesh"  # Uses Songbird's mesh capability
+
+[nodes.operation]
+name = "call"
+
+[nodes.operation.params]
+method = "mesh.announce"
+args = { as_relay = true }  # Announce ourselves as potential relay
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# =============================================================================
+# PHASE 4: Validation
+# =============================================================================
+
+[[nodes]]
+id = "validate_onion_service"
+depends_on = ["germinate_beardog_onion", "germinate_songbird_onion", "initialize_mesh"]
+output = "onion_validated"
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.operation.params]
+check_beardog = true
+check_songbird = true
+check_crypto_delegation = true  # Verify SHA3-256 works
+check_onion_service = true      # Verify .onion address generated
+check_mesh_status = true        # Verify mesh initialized
+timeout_seconds = 15
+
+[nodes.constraints]
+timeout_ms = 20000
+
+# =============================================================================
+# OPTIONAL: Cross-NAT Peer Connection Test
+# =============================================================================
+
+[[nodes]]
+id = "test_peer_discovery"
+depends_on = ["validate_onion_service"]
+output = "peer_discovery_tested"
+
+[nodes.primal]
+by_capability = "mesh"
+
+[nodes.operation]
+name = "call"
+
+[nodes.operation.params]
+method = "mesh.find_path"
+args = { target = "${TARGET_PEER_ID}" }  # Optional: test specific peer
+
+[nodes.constraints]
+timeout_ms = 30000
+optional = true  # Don't fail if no target specified

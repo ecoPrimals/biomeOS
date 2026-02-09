@@ -163,7 +163,7 @@ mod tests {
     fn test_create_deployment_graph() {
         let graph = AtomicDeploymentGraph::full_nucleus_deployment(
             PathBuf::from("/tmp/test.seed"),
-            "nat0".to_string(),
+            "1894e909e454".to_string(),
         );
 
         assert!(!graph.nodes.is_empty());

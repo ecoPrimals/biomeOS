@@ -97,7 +97,7 @@ fi
 
 # Derive broadcast key
 SEED_B64=$(base64 -w0 "$FAMILY_SEED")
-FAMILY_ID="${FAMILY_ID:-nat0}"
+FAMILY_ID="${FAMILY_ID:-1894e909e454}"
 
 echo "🔑 Deriving broadcast key..."
 KEY_RESP=$(echo '{"jsonrpc":"2.0","method":"genetic.derive_lineage_key","params":{"our_family_id":"'"$FAMILY_ID"'","peer_family_id":"broadcast","context":"birdsong-dark-forest-v1","lineage_seed":"'"$SEED_B64"'"},"id":1}' | nc -N -U "$BEARDOG_SOCKET")

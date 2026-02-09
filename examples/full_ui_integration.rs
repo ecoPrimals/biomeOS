@@ -268,10 +268,10 @@ async fn run_demo() -> Result<()> {
     let devices = get_demo_devices();
     for device in &devices {
         println!(
-            "  • {} ({:?}) - {} - Usage: {:.0}%",
+            "  • {} ({:?}) - {:?} - Usage: {:.0}%",
             device.name,
             device.device_type,
-            format!("{:?}", device.status),
+            device.status,
             device.resource_usage * 100.0
         );
     }

@@ -211,7 +211,7 @@ mod tests {
         VerifiedPrimal {
             name: name.to_string(),
             node_id: node.to_string(),
-            family_id: "nat0".to_string(),
+            family_id: "1894e909e454".to_string(),
             capabilities: vec!["test".to_string()],
             endpoint: Endpoint {
                 endpoint_type: EndpointType::UnixSocket,

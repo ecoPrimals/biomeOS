@@ -17,6 +17,7 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
 
 /// Test fixture for Tower Atomic deployment
+#[allow(dead_code)]
 struct TowerAtomicFixture {
     family_id: String,
     socket_dir: PathBuf,

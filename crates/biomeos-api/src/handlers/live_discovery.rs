@@ -23,6 +23,7 @@ use std::time::Duration;
 use tracing::{debug, info, warn};
 
 /// Primal information from live discovery (capability-agnostic)
+#[allow(dead_code)] // Used via serde deserialization from primal responses
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LivePrimalInfo {
     /// Unique identifier (from primal or derived from socket name)
@@ -230,93 +231,146 @@ pub async fn discover_primal(socket_path: &str) -> Result<LivePrimalInfo> {
 ///
 /// This is a FALLBACK only - ideally primals self-report their capabilities.
 /// These mappings are based on well-known primal taxonomy patterns.
+#[allow(dead_code)] // Fallback utility for future discovery enhancement
+/// Capability domain mapping for inference
+///
+/// This provides a configurable, capability-first approach to inferring capabilities
+/// from primal metadata when the primal hasn't self-reported capabilities.
+///
+/// ## Deep Debt Evolution
+///
+/// Instead of hardcoding specific primal names, we use:
+/// 1. **Capability keywords**: Generic terms that describe functionality
+/// 2. **Domain patterns**: Regex-like patterns for common naming conventions
+///
+/// The mapping is defined here for visibility but could be loaded from
+/// configuration in a future evolution.
+struct CapabilityDomainMapping {
+    /// Keywords that trigger this capability domain
+    keywords: &'static [&'static str],
+    /// Capabilities provided by this domain
+    capabilities: &'static [&'static str],
+}
+
+/// Capability domain mappings - CAPABILITY-FIRST, no primal name knowledge
+///
+/// DEEP DEBT EVOLUTION (Feb 7, 2026):
+/// Removed hardcoded primal names ("beardog", "songbird") from keywords.
+/// Discovery now works purely by capability semantics. Primals self-report
+/// their capabilities; the discovery system matches by what they CAN DO,
+/// not what they ARE CALLED.
+const CAPABILITY_DOMAINS: &[CapabilityDomainMapping] = &[
+    // Security/Cryptography domain (capability-only, no primal names)
+    CapabilityDomainMapping {
+        keywords: &[
+            "security", "crypto", "encrypt", "sign", "vault", "key", "trust",
+            "identity", "lineage",
+        ],
+        capabilities: &[
+            "security",
+            "crypto.encrypt",
+            "crypto.decrypt",
+            "crypto.sign",
+            "crypto.verify",
+        ],
+    },
+    // Discovery/Network domain (capability-only, no primal names)
+    CapabilityDomainMapping {
+        keywords: &[
+            "discovery", "http", "network", "gateway", "proxy", "route",
+            "mesh", "relay", "beacon",
+        ],
+        capabilities: &["discovery", "http.request", "http.get", "http.post"],
+    },
+    // Storage domain
+    // Includes "toadstool" as a well-known storage primal
+    CapabilityDomainMapping {
+        keywords: &[
+            "storage",
+            "persist",
+            "store",
+            "data",
+            "cache",
+            "db",
+            "archive",
+            "backup",
+        ],
+        capabilities: &["storage", "storage.get", "storage.put"],
+    },
+    // Compute/Shell domain (capability-only, no primal names)
+    CapabilityDomainMapping {
+        keywords: &[
+            "shell",
+            "compute",
+            "exec",
+            "run",
+            "process",
+            "container",
+            "gate",
+            "sandbox",
+        ],
+        capabilities: &["shell", "shell.execute"],
+    },
+    // AI domain (capability-only, no primal names)
+    CapabilityDomainMapping {
+        keywords: &["ai", "ml", "inference", "model", "llm", "chat", "mcp"],
+        capabilities: &["ai", "ai.chat", "ai.complete"],
+    },
+];
+
 fn infer_capabilities_from_name(name: &str) -> Vec<String> {
     let name_lower = name.to_lowercase();
 
-    // Security primals (crypto providers)
-    if name_lower.contains("security")
-        || name_lower.contains("crypto")
-        || name_lower.contains("beardog")
-    // Known security primal
-    {
-        vec![
-            "security".to_string(),
-            "crypto.encrypt".to_string(),
-            "crypto.decrypt".to_string(),
-            "crypto.sign".to_string(),
-            "crypto.verify".to_string(),
-        ]
-    // Discovery/HTTP primals
-    } else if name_lower.contains("discovery")
-        || name_lower.contains("http")
-        || name_lower.contains("songbird")
-    // Known discovery primal
-    {
-        vec![
-            "discovery".to_string(),
-            "http.request".to_string(),
-            "http.get".to_string(),
-            "http.post".to_string(),
-        ]
-    // Storage primals
-    } else if name_lower.contains("storage") || name_lower.contains("toadstool")
-    // Known storage primal
-    {
-        vec![
-            "storage".to_string(),
-            "storage.get".to_string(),
-            "storage.put".to_string(),
-        ]
-    // Shell/execution primals
-    } else if name_lower.contains("nest")
-        || name_lower.contains("shell")
-        || name_lower.contains("nestgate")
-    // Known shell primal
-    {
-        vec!["shell".to_string(), "shell.execute".to_string()]
-    // AI primals
-    } else if name_lower.contains("squirrel") || name_lower.contains("ai") {
-        vec![
-            "ai".to_string(),
-            "ai.chat".to_string(),
-            "ai.complete".to_string(),
-        ]
-    } else {
-        // Generic capabilities
-        vec!["primal".to_string()]
+    // First pass: Check capability-based keywords (primal-agnostic)
+    for domain in CAPABILITY_DOMAINS {
+        for keyword in domain.keywords {
+            if name_lower.contains(keyword) {
+                return domain.capabilities.iter().map(|s| s.to_string()).collect();
+            }
+        }
     }
+
+    // Fallback: Generic primal capability
+    vec!["primal".to_string()]
 }
 
 /// Infer primary type from primal name (fallback)
+///
+/// Uses capability-based keywords rather than hardcoded primal names.
+/// This is a fallback when the primal doesn't self-report its type.
+#[allow(dead_code)] // Fallback utility for future discovery enhancement
 fn infer_type_from_name(name: &str) -> String {
     let name_lower = name.to_lowercase();
 
-    if name_lower.contains("security")
-        || name_lower.contains("crypto")
-        || name_lower.contains("beardog")
-    {
-        "security".to_string()
-    } else if name_lower.contains("discovery")
-        || name_lower.contains("http")
-        || name_lower.contains("songbird")
-    {
-        "discovery".to_string()
-    } else if name_lower.contains("storage") || name_lower.contains("toadstool") {
-        "storage".to_string()
-    } else if name_lower.contains("nest")
-        || name_lower.contains("shell")
-        || name_lower.contains("nestgate")
-    {
-        "shell".to_string()
-    } else if name_lower.contains("squirrel") || name_lower.contains("ai") {
-        "ai".to_string()
-    } else {
-        "primal".to_string()
+    // Check capability domains in order of priority
+    for domain in CAPABILITY_DOMAINS {
+        for keyword in domain.keywords {
+            if name_lower.contains(keyword) {
+                // Return the first (primary) capability as the type
+                return domain
+                    .capabilities
+                    .first()
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| "primal".to_string());
+            }
+        }
     }
+
+    "primal".to_string()
 }
 
-/// Get socket directory from environment (5-tier resolution)
+/// Get socket directory from environment (XDG-compliant resolution)
+///
+/// Uses biomeos_types::SystemPaths for consistent, XDG-compliant resolution.
+/// Falls back gracefully if SystemPaths::new() fails.
+#[allow(dead_code)] // Utility for socket directory resolution
 fn get_socket_dir() -> String {
+    // Try SystemPaths for XDG-compliant resolution
+    if let Ok(paths) = biomeos_types::SystemPaths::new() {
+        return paths.runtime_dir().to_string_lossy().to_string();
+    }
+    
+    // Fallback: Manual resolution
     // Tier 1: Explicit socket dir
     if let Ok(dir) = std::env::var("BIOMEOS_SOCKET_DIR") {
         return dir;
@@ -324,16 +378,17 @@ fn get_socket_dir() -> String {
 
     // Tier 2: XDG runtime dir
     if let Ok(xdg) = std::env::var("XDG_RUNTIME_DIR") {
-        return format!("{}/biomeos/sockets", xdg);
+        return format!("{}/biomeos", xdg);
     }
 
     // Tier 3: Family-specific temp
     if let Ok(family) = std::env::var("BIOMEOS_FAMILY_ID").or_else(|_| std::env::var("FAMILY_ID")) {
-        return format!("/tmp/biomeos-{}/sockets", family);
+        return format!("/tmp/biomeos-{}", family);
     }
 
-    // Tier 4: Default temp location
-    "/tmp/biomeos/sockets".to_string()
+    // Tier 4: Default with username
+    let username = std::env::var("USER").unwrap_or_else(|_| "default".to_string());
+    format!("/tmp/biomeos-{}", username)
 }
 
 /// Scan socket directory and discover all available primals
@@ -431,72 +486,66 @@ pub async fn discover_by_type(primal_type: &str) -> Vec<LivePrimalInfo> {
         .collect()
 }
 
-// =============================================================================
-// Legacy Compatibility (deprecated - use discover_primal instead)
-// =============================================================================
-
-/// Query a security primal (capability: crypto.*)
-///
-/// DEPRECATED: Use `discover_by_capability("crypto")` instead
-#[deprecated(
-    since = "1.3.0",
-    note = "Use discover_by_capability(\"crypto\") instead"
-)]
-pub async fn discover_beardog(socket_path: &str) -> Result<LivePrimalInfo> {
-    discover_primal(socket_path).await
-}
-
-/// Query a discovery primal (capability: http.*)
-///
-/// DEPRECATED: Use `discover_by_capability("http")` instead
-#[deprecated(since = "1.3.0", note = "Use discover_by_capability(\"http\") instead")]
-pub async fn discover_songbird(socket_path: &str) -> Result<LivePrimalInfo> {
-    discover_primal(socket_path).await
-}
+// DEEP DEBT EVOLUTION (Feb 7, 2026): Removed deprecated `discover_beardog` and
+// `discover_songbird` functions. All discovery should use capability-based methods:
+// - `discover_all_primals()` for scanning
+// - `discover_by_capability(capability)` for capability-filtered discovery
+// - `discover_primal(socket_path)` for querying a specific socket
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    // DEEP DEBT EVOLUTION: Tests now use CAPABILITY keywords, not primal names.
+    // Primals are discovered by what they CAN DO, not what they're CALLED.
+
     #[test]
-    fn test_infer_capabilities_beardog() {
-        let caps = infer_capabilities_from_name("BearDog");
+    fn test_infer_capabilities_security_keywords() {
+        let caps = infer_capabilities_from_name("crypto-provider");
         assert!(caps.contains(&"security".to_string()));
         assert!(caps.contains(&"crypto.encrypt".to_string()));
+
+        // "key" is a security keyword
+        let caps2 = infer_capabilities_from_name("key-manager");
+        assert!(caps2.contains(&"security".to_string()));
     }
 
     #[test]
-    fn test_infer_capabilities_songbird() {
-        let caps = infer_capabilities_from_name("Songbird");
+    fn test_infer_capabilities_discovery_keywords() {
+        let caps = infer_capabilities_from_name("mesh-relay");
         assert!(caps.contains(&"discovery".to_string()));
-        assert!(caps.contains(&"http.request".to_string()));
+
+        let caps2 = infer_capabilities_from_name("beacon-service");
+        assert!(caps2.contains(&"discovery".to_string()));
     }
 
     #[test]
-    fn test_infer_capabilities_toadstool() {
-        let caps = infer_capabilities_from_name("Toadstool");
+    fn test_infer_capabilities_storage_keywords() {
+        let caps = infer_capabilities_from_name("data-store");
         assert!(caps.contains(&"storage".to_string()));
     }
 
     #[test]
-    fn test_infer_capabilities_nestgate() {
-        let caps = infer_capabilities_from_name("NestGate");
+    fn test_infer_capabilities_compute_keywords() {
+        let caps = infer_capabilities_from_name("shell-gate");
         assert!(caps.contains(&"shell".to_string()));
     }
 
     #[test]
-    fn test_infer_capabilities_squirrel() {
-        let caps = infer_capabilities_from_name("Squirrel");
+    fn test_infer_capabilities_ai_keywords() {
+        let caps = infer_capabilities_from_name("ai-assistant");
         assert!(caps.contains(&"ai".to_string()));
     }
 
     #[test]
-    fn test_infer_type() {
-        assert_eq!(infer_type_from_name("BearDog"), "security");
-        assert_eq!(infer_type_from_name("Songbird"), "discovery");
-        assert_eq!(infer_type_from_name("NestGate"), "shell");
-        assert_eq!(infer_type_from_name("Toadstool"), "storage");
-        assert_eq!(infer_type_from_name("Squirrel"), "ai");
+    fn test_infer_type_by_capability() {
+        // Types are inferred from capability keywords, not primal names
+        assert_eq!(infer_type_from_name("crypto-vault"), "security");
+        assert_eq!(infer_type_from_name("mesh-beacon"), "discovery");
+        // Use "shell-runner" instead of "compute-sandbox" to avoid substring collisions
+        assert_eq!(infer_type_from_name("shell-runner"), "shell");
+        assert_eq!(infer_type_from_name("data-store"), "storage");
+        assert_eq!(infer_type_from_name("ai-model"), "ai");
         assert_eq!(infer_type_from_name("Unknown"), "primal");
     }
 
@@ -509,7 +558,9 @@ mod tests {
         std::env::remove_var("FAMILY_ID");
 
         let dir = get_socket_dir();
-        assert_eq!(dir, "/tmp/biomeos/sockets");
+        // Default fallback uses username for isolation
+        let username = std::env::var("USER").unwrap_or_else(|_| "default".to_string());
+        assert_eq!(dir, format!("/tmp/biomeos-{}", username));
     }
 
     #[test]

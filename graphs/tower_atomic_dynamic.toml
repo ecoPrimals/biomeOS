@@ -1,7 +1,7 @@
 # Tower Atomic Bootstrap - Dynamic Family Discovery
 # 
 # This graph uses environment variable substitution for family ID
-# instead of hardcoded "nat0". Deploy by setting FAMILY_ID:
+# instead of hardcoded "1894e909e454". Deploy by setting FAMILY_ID:
 #
 #   FAMILY_ID=$(xxd -p .family.seed | head -c 16) ./deploy.sh
 #
@@ -168,7 +168,7 @@ description = """
 Tower Atomic with Dynamic Family Discovery.
 
 This graph REQUIRES FAMILY_ID to be set in the environment.
-Do NOT use hardcoded family IDs like 'nat0' in production.
+Do NOT use hardcoded family IDs like '1894e909e454' in production.
 
 For LiveSpore USB deployments:
   export FAMILY_ID=$(xxd -p .family.seed | head -c 16)

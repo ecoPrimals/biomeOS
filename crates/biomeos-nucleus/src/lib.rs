@@ -41,7 +41,7 @@
 //! let client = NucleusClient::new().await?;
 //! let primals = client.discover(DiscoveryRequest {
 //!     capability: "encryption".to_string(),
-//!     family: Some("nat0".to_string()),
+//!     family: Some("1894e909e454".to_string()),
 //!     timeout: None,
 //! }).await?;
 //!

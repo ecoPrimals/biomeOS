@@ -11,7 +11,7 @@
 #
 # Usage:
 #   neural-api execute lineage_gate_protocol \
-#     --env PEER_SOCKET=/tmp/beardog-nat0-node-beta.sock \
+#     --env PEER_SOCKET=/tmp/beardog-1894e909e454-node-beta.sock \
 #     --env OUR_SEED_B64=<base64_seed>
 #
 

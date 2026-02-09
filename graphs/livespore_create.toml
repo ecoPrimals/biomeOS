@@ -346,7 +346,7 @@ permissions = "0755"
 # Deploy script copies from standardized template and substitutes variables
 source_template = "templates/livespore_deploy.sh"
 substitutions = {
-    "__FAMILY_ID__" = "nat0",
+    "__FAMILY_ID__" = "1894e909e454",
     "__NODE_ID__" = "${NODE_ID}",
     "__SPORE_VERSION__" = "1.0.0"
 }

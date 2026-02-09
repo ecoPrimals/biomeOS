@@ -118,8 +118,8 @@ family_id = "${FAMILY_ID}"
 
 [nodes.operation.environment]
 NEURAL_API_SOCKET = "/tmp/neural-api.sock"
-BEARDOG_SOCKET = "/tmp/beardog-nat0.sock"
-SONGBIRD_SECURITY_PROVIDER = "/tmp/beardog-nat0.sock"
+BEARDOG_SOCKET = "/tmp/beardog-1894e909e454.sock"
+SONGBIRD_SECURITY_PROVIDER = "/tmp/beardog-1894e909e454.sock"
 RUST_LOG = "songbird=info"
 
 [nodes.constraints]
@@ -153,11 +153,11 @@ mode = "server"
 family_id = "${FAMILY_ID}"
 
 [nodes.operation.environment]
-TOADSTOOL_FAMILY_ID = "nat0"
+TOADSTOOL_FAMILY_ID = "1894e909e454"
 TOADSTOOL_NODE_ID = "tower0"
 TOADSTOOL_SECURITY_WARNING_ACKNOWLEDGED = "1"
-SONGBIRD_ENDPOINT = "/tmp/songbird-nat0.sock"
-BEARDOG_SOCKET = "/tmp/beardog-nat0.sock"
+SONGBIRD_ENDPOINT = "/tmp/songbird-1894e909e454.sock"
+BEARDOG_SOCKET = "/tmp/beardog-1894e909e454.sock"
 RUST_LOG = "toadstool=info"
 
 [nodes.constraints]
@@ -194,8 +194,8 @@ family_id = "${FAMILY_ID}"
 
 [nodes.operation.environment]
 CAPABILITY_REGISTRY_SOCKET = "/tmp/neural-api.sock"
-BEARDOG_SOCKET = "/tmp/beardog-nat0.sock"
-SONGBIRD_SOCKET = "/tmp/songbird-nat0.sock"
+BEARDOG_SOCKET = "/tmp/beardog-1894e909e454.sock"
+SONGBIRD_SOCKET = "/tmp/songbird-1894e909e454.sock"
 RUST_LOG = "squirrel=info"
 # AI API keys (from secrets)
 ANTHROPIC_API_KEY = "${ANTHROPIC_API_KEY}"

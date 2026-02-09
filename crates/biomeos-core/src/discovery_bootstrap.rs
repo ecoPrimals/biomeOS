@@ -189,37 +189,64 @@ impl DiscoveryBootstrap {
         Err(anyhow::anyhow!("No services found via mDNS"))
     }
 
-    /// Discover via UDP broadcast
+    /// Discover via UDP broadcast (pure Rust)
     ///
-    /// Sends a UDP broadcast packet to the local network asking for BiomeOS services.
-    /// This works well in LANs where multicast might be filtered.
+    /// DEEP DEBT EVOLUTION (Feb 7, 2026): Real UDP broadcast implementation.
+    /// Sends a discovery packet to the local network and listens for responses.
     async fn discover_via_broadcast(&self) -> Result<String> {
+        use tokio::net::UdpSocket;
+        use std::time::Duration;
+
         tracing::info!("Attempting UDP broadcast discovery");
 
-        // Broadcast discovery pattern:
-        // 1. Create UDP socket
-        // 2. Enable broadcast option
-        // 3. Send discovery packet to 255.255.255.255:DISCOVERY_PORT
-        // 4. Listen for responses with timeout
-        // 5. Parse responses and select best endpoint
-
-        // Example discovery packet structure:
-        // { "type": "discover", "version": "1.0", "capabilities": ["universal-adapter"] }
-
-        // Example response structure:
-        // { "type": "response", "endpoint": "http://192.168.1.100:8001", "name": "biomeos-1" }
-
-        tracing::debug!("Broadcasting discovery request to 255.255.255.255");
-        tracing::debug!("Listening for responses (timeout: 3s)");
-
-        // Simulated discovery - in production would use actual UDP broadcast
+        // Allow env var override for testing
         if let Ok(endpoint) = std::env::var("BROADCAST_DISCOVERED_ENDPOINT") {
-            tracing::info!("Broadcast discovered endpoint: {}", endpoint);
+            tracing::info!("Broadcast discovered endpoint (from env): {}", endpoint);
             return Ok(endpoint);
         }
 
-        tracing::trace!("Broadcast discovery found no responses");
-        Err(anyhow::anyhow!("No services responded to broadcast"))
+        let discovery_port: u16 = std::env::var("BIOMEOS_DISCOVERY_PORT")
+            .and_then(|p| p.parse().map_err(|_| std::env::VarError::NotPresent))
+            .unwrap_or(9199);
+
+        // Bind to any available port for sending
+        let socket = UdpSocket::bind("0.0.0.0:0").await
+            .map_err(|e| anyhow::anyhow!("Failed to bind UDP socket: {}", e))?;
+        socket.set_broadcast(true)
+            .map_err(|e| anyhow::anyhow!("Failed to enable broadcast: {}", e))?;
+
+        // Send discovery packet
+        let request = serde_json::json!({
+            "type": "discover",
+            "version": "1.0",
+            "service": self.service_name,
+        });
+        let packet = serde_json::to_vec(&request)?;
+        let broadcast_addr = format!("255.255.255.255:{}", discovery_port);
+
+        socket.send_to(&packet, &broadcast_addr).await
+            .map_err(|e| anyhow::anyhow!("Failed to send broadcast: {}", e))?;
+
+        tracing::debug!("Broadcast sent to {}, listening for responses...", broadcast_addr);
+
+        // Listen for responses with timeout
+        let mut buf = [0u8; 4096];
+        match tokio::time::timeout(Duration::from_secs(3), socket.recv_from(&mut buf)).await {
+            Ok(Ok((n, addr))) => {
+                if let Ok(response) = serde_json::from_slice::<serde_json::Value>(&buf[..n]) {
+                    if let Some(endpoint) = response.get("endpoint").and_then(|e| e.as_str()) {
+                        tracing::info!("Broadcast discovered endpoint: {} from {}", endpoint, addr);
+                        return Ok(endpoint.to_string());
+                    }
+                }
+                Err(anyhow::anyhow!("Invalid broadcast response from {}", addr))
+            }
+            Ok(Err(e)) => Err(anyhow::anyhow!("Broadcast receive error: {}", e)),
+            Err(_) => {
+                tracing::trace!("Broadcast discovery timed out (3s)");
+                Err(anyhow::anyhow!("No services responded to broadcast"))
+            }
+        }
     }
 
     /// Discover via multicast
@@ -285,9 +312,137 @@ mod tests {
     }
 
     #[test]
+    fn test_bootstrap_creation_string() {
+        let bootstrap = DiscoveryBootstrap::new(String::from("my-service"));
+        assert_eq!(bootstrap.service_name(), "my-service");
+    }
+
+    #[test]
     fn test_bootstrap_default() {
         let bootstrap = DiscoveryBootstrap::default();
         assert_eq!(bootstrap.service_name(), "universal-adapter");
+    }
+
+    #[test]
+    fn test_bootstrap_clone() {
+        let bootstrap = DiscoveryBootstrap::new("test-service");
+        let cloned = bootstrap.clone();
+        assert_eq!(bootstrap.service_name(), cloned.service_name());
+    }
+
+    #[test]
+    fn test_bootstrap_debug() {
+        let bootstrap = DiscoveryBootstrap::new("test");
+        let debug_str = format!("{:?}", bootstrap);
+        assert!(debug_str.contains("DiscoveryBootstrap"));
+        assert!(debug_str.contains("test"));
+    }
+
+    #[tokio::test]
+    async fn test_discover_via_mdns_with_env() {
+        // Using the simulated mDNS discovery path
+        std::env::set_var("MDNS_DISCOVERED_ENDPOINT", "http://mdns-test:9999");
+
+        let bootstrap = DiscoveryBootstrap::new("test");
+        let result = bootstrap.discover_via_mdns().await;
+
+        std::env::remove_var("MDNS_DISCOVERED_ENDPOINT");
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "http://mdns-test:9999");
+    }
+
+    #[tokio::test]
+    async fn test_discover_via_mdns_no_service() {
+        // Ensure the simulated env var is not set
+        std::env::remove_var("MDNS_DISCOVERED_ENDPOINT");
+
+        let bootstrap = DiscoveryBootstrap::new("test");
+        let result = bootstrap.discover_via_mdns().await;
+
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("No services found via mDNS"));
+    }
+
+    /// Mutex to serialize env-var-mutating broadcast tests
+    static BROADCAST_ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    #[tokio::test]
+    async fn test_discover_via_broadcast_with_env() {
+        let _lock = BROADCAST_ENV_LOCK.lock().unwrap();
+
+        // Using the simulated broadcast discovery path
+        std::env::set_var(
+            "BROADCAST_DISCOVERED_ENDPOINT",
+            "http://broadcast-test:8888",
+        );
+
+        let bootstrap = DiscoveryBootstrap::new("test");
+        let result = bootstrap.discover_via_broadcast().await;
+
+        std::env::remove_var("BROADCAST_DISCOVERED_ENDPOINT");
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "http://broadcast-test:8888");
+    }
+
+    #[tokio::test]
+    async fn test_discover_via_broadcast_no_response() {
+        let _lock = BROADCAST_ENV_LOCK.lock().unwrap();
+
+        // Ensure the simulated env var is not set
+        std::env::remove_var("BROADCAST_DISCOVERED_ENDPOINT");
+
+        let bootstrap = DiscoveryBootstrap::new("test");
+        let result = bootstrap.discover_via_broadcast().await;
+
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("No services responded to broadcast"));
+    }
+
+    /// Mutex to serialize env-var-mutating multicast tests
+    static MULTICAST_ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    #[tokio::test]
+    async fn test_discover_via_multicast_with_env() {
+        let _lock = MULTICAST_ENV_LOCK.lock().unwrap();
+
+        // Using the simulated multicast discovery path
+        std::env::set_var(
+            "MULTICAST_DISCOVERED_ENDPOINT",
+            "http://multicast-test:7777",
+        );
+
+        let bootstrap = DiscoveryBootstrap::new("test");
+        let result = bootstrap.discover_via_multicast().await;
+
+        std::env::remove_var("MULTICAST_DISCOVERED_ENDPOINT");
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "http://multicast-test:7777");
+    }
+
+    #[tokio::test]
+    async fn test_discover_via_multicast_no_service() {
+        let _lock = MULTICAST_ENV_LOCK.lock().unwrap();
+
+        // Ensure the simulated env var is not set
+        std::env::remove_var("MULTICAST_DISCOVERED_ENDPOINT");
+
+        let bootstrap = DiscoveryBootstrap::new("test");
+        let result = bootstrap.discover_via_multicast().await;
+
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("No services found via multicast"));
     }
 
     #[tokio::test]

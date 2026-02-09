@@ -374,14 +374,14 @@ description = "Graceful shutdown with workload draining"
 
 # Scenario 1: Simple GPU Compute Node
 # export NODE_ID=compute-gpu0
-# export FAMILY_ID=nat0
+# export FAMILY_ID=1894e909e454
 # export RESOURCE_TYPE=gpu
 # export RESOURCE_ID=0
 # biomeos deploy --niche compute-node
 
 # Scenario 2: Secure CPU Pool Coordinator
 # export NODE_ID=cpu-pool-coordinator
-# export FAMILY_ID=nat0
+# export FAMILY_ID=1894e909e454
 # export TOADSTOOL_SECURE_MODE=true
 # export POOLED_ENABLED=true
 # export POOL_COORDINATOR=true
@@ -389,7 +389,7 @@ description = "Graceful shutdown with workload draining"
 
 # Scenario 3: Nested GPU with Sub-Nodes
 # export NODE_ID=gpu-nested-parent
-# export FAMILY_ID=nat0
+# export FAMILY_ID=1894e909e454
 # export RESOURCE_TYPE=gpu
 # export NESTED_ENABLED=true
 # export SUB_NODE_COUNT=4
@@ -398,7 +398,7 @@ description = "Graceful shutdown with workload draining"
 # Scenario 4: Spread ML Training Node
 # export NODE_ID=ml-train-physical-alpha
 # export LOGICAL_NODE_ID=ml-train-distributed
-# export FAMILY_ID=nat0
+# export FAMILY_ID=1894e909e454
 # export SPREAD_ENABLED=true
 # export COORDINATOR_ENDPOINT=udp://192.168.1.100:4433
 # biomeos deploy --niche compute-node

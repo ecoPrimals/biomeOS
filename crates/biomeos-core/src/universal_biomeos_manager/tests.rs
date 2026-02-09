@@ -20,7 +20,7 @@ mod manager_basic_tests {
         {
             let _manager = UniversalBiomeOSManager::new(config).await.unwrap();
         }
-        assert!(true, "Manager dropped without panic");
+        // If we reach here, manager was dropped without panic - test passes
     }
 
     #[test]

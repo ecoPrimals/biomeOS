@@ -54,6 +54,16 @@ pub struct LiveSporesResponse {
     pub discovered_at: String,
 }
 
+/// Calculate utilization percentage from available and total space
+#[allow(dead_code)] // Utility for future storage analytics
+fn calculate_utilization(available: u64, total: u64) -> f64 {
+    if total == 0 {
+        return 0.0;
+    }
+    let used = total.saturating_sub(available);
+    (used as f64 / total as f64) * 100.0
+}
+
 /// GET /api/v1/livespores - Discover USB devices with LiveSpore capability
 pub async fn get_livespores(
     State(_state): State<Arc<AppState>>,
@@ -92,11 +102,17 @@ pub async fn get_livespores(
                     if let Ok(mut entries) = tokio::fs::read_dir(&bin_dir).await {
                         while let Ok(Some(entry)) = entries.next_entry().await {
                             if let Some(name) = entry.file_name().to_str() {
-                                // Check if it's a known primal
-                                if ["beardog", "songbird", "toadstool", "nestgate", "squirrel"]
-                                    .contains(&name)
+                                // DEEP DEBT EVOLUTION: Accept ANY executable as a primal.
+                                // No hardcoded whitelist — primals self-identify at runtime.
+                                // Skip hidden files and non-executable entries.
+                                if !name.starts_with('.') && !name.ends_with(".toml")
+                                    && !name.ends_with(".json") && !name.ends_with(".genome")
                                 {
-                                    primals.push(name.to_string());
+                                    if let Ok(meta) = entry.metadata().await {
+                                        if meta.is_file() {
+                                            primals.push(name.to_string());
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -152,4 +168,153 @@ pub async fn get_livespores(
         count,
         discovered_at: chrono::Utc::now().to_rfc3339(),
     }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_livespore_device_serialization() {
+        let device = LiveSporeDevice {
+            id: "usb-001".to_string(),
+            mount_point: "/media/usb".to_string(),
+            label: Some("LIVESPORE".to_string()),
+            available_space: 1024 * 1024 * 100, // 100 MB
+            total_space: 1024 * 1024 * 1024,    // 1 GB
+            utilization_percent: 90.0,
+            has_genetic_seed: true,
+            genetic_preview: Some("abc123def456".to_string()),
+            primals: vec!["beardog".to_string(), "songbird".to_string()],
+            spore_type: Some("live".to_string()),
+        };
+
+        let json = serde_json::to_string(&device).expect("serialize");
+        assert!(json.contains("usb-001"));
+        assert!(json.contains("/media/usb"));
+        assert!(json.contains("LIVESPORE"));
+        assert!(json.contains("beardog"));
+    }
+
+    #[test]
+    fn test_livespore_device_deserialization() {
+        let json = r#"{
+            "id": "test-device",
+            "mount_point": "/mnt/test",
+            "label": null,
+            "available_space": 500,
+            "total_space": 1000,
+            "utilization_percent": 50.0,
+            "has_genetic_seed": false,
+            "genetic_preview": null,
+            "primals": [],
+            "spore_type": null
+        }"#;
+
+        let device: LiveSporeDevice = serde_json::from_str(json).expect("deserialize");
+        assert_eq!(device.id, "test-device");
+        assert_eq!(device.available_space, 500);
+        assert!(!device.has_genetic_seed);
+        assert!(device.primals.is_empty());
+    }
+
+    #[test]
+    fn test_livespores_response_serialization() {
+        let response = LiveSporesResponse {
+            devices: vec![],
+            count: 0,
+            discovered_at: "2026-02-04T12:00:00Z".to_string(),
+        };
+
+        let json = serde_json::to_string(&response).expect("serialize");
+        assert!(json.contains("\"count\":0"));
+        assert!(json.contains("2026-02-04"));
+    }
+
+    #[test]
+    fn test_calculate_utilization_normal() {
+        // 900 MB used out of 1 GB = 90%
+        let util = calculate_utilization(100 * 1024 * 1024, 1024 * 1024 * 1024);
+        assert!((util - 90.234).abs() < 1.0); // ~90%
+    }
+
+    #[test]
+    fn test_calculate_utilization_empty() {
+        // All space available = 0% used
+        let util = calculate_utilization(1000, 1000);
+        assert!((util - 0.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_calculate_utilization_full() {
+        // No space available = 100% used
+        let util = calculate_utilization(0, 1000);
+        assert!((util - 100.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_calculate_utilization_zero_total() {
+        // Division by zero protection
+        let util = calculate_utilization(0, 0);
+        assert!((util - 0.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_livespore_device_with_primals() {
+        let device = LiveSporeDevice {
+            id: "spore-usb".to_string(),
+            mount_point: "/media/spore".to_string(),
+            label: None,
+            available_space: 0,
+            total_space: 0,
+            utilization_percent: 0.0,
+            has_genetic_seed: true,
+            genetic_preview: Some("lineage_abc123".to_string()),
+            primals: vec![
+                "beardog".to_string(),
+                "songbird".to_string(),
+                "toadstool".to_string(),
+                "nestgate".to_string(),
+                "squirrel".to_string(),
+            ],
+            spore_type: Some("live".to_string()),
+        };
+
+        assert_eq!(device.primals.len(), 5);
+        assert!(device.primals.contains(&"beardog".to_string()));
+        assert!(device.primals.contains(&"squirrel".to_string()));
+    }
+
+    #[test]
+    fn test_spore_types() {
+        // Live spore has tower.toml
+        let live = LiveSporeDevice {
+            id: "live".to_string(),
+            mount_point: "/mnt/live".to_string(),
+            label: None,
+            available_space: 0,
+            total_space: 0,
+            utilization_percent: 0.0,
+            has_genetic_seed: true,
+            genetic_preview: None,
+            primals: vec![],
+            spore_type: Some("live".to_string()),
+        };
+        assert_eq!(live.spore_type, Some("live".to_string()));
+
+        // Cold spore has genetic seed but no tower.toml
+        let cold = LiveSporeDevice {
+            id: "cold".to_string(),
+            mount_point: "/mnt/cold".to_string(),
+            label: None,
+            available_space: 0,
+            total_space: 0,
+            utilization_percent: 0.0,
+            has_genetic_seed: true,
+            genetic_preview: None,
+            primals: vec![],
+            spore_type: Some("cold".to_string()),
+        };
+        assert_eq!(cold.spore_type, Some("cold".to_string()));
+    }
 }

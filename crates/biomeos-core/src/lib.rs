@@ -1,14 +1,20 @@
-//! BiomeOS Core - Universal Ecosystem Management
+//! `BiomeOS` Core - Universal Ecosystem Management
 //!
-//! Modular, unified architecture for managing the entire biomeOS ecosystem.
+//! Modular, unified architecture for managing the entire `biomeOS` ecosystem.
 //! Now split into focused modules for better maintainability and compliance
-//! with the 2000-line file size limit.
+//! with the 1000-line file size limit.
+
+// Crate-level lint configuration
+#![allow(clippy::doc_markdown)] // Allow technical terms without backticks
+#![deny(unsafe_code)] // No unsafe code in core
 
 // Core universal manager (now modular)
 pub mod universal_biomeos_manager;
 
 // Atomic client - Pure Rust, Tower-based Unix socket communication (ecoBin!)
 pub mod atomic_client;
+#[cfg(test)]
+mod atomic_client_tests;
 
 // Primal adapter pattern (CLI-agnostic integration)
 pub mod primal_adapter;
@@ -16,12 +22,14 @@ pub mod primal_adapter;
 // Core modules
 pub mod capabilities; // Capability-based architecture (zero hardcoding)
 pub mod capability_registry; // Central capability registry with Unix socket IPC
+#[cfg(test)]
+mod capability_registry_tests;
 pub mod concurrent_startup; // Wave-based concurrent primal startup
 pub mod deployment_mode;
 pub mod discovery_bootstrap;
 pub mod discovery_modern; // Modern trait-based discovery
 pub mod family_credentials; // Secure family seed management
-pub mod family_discovery; // Dynamic family ID discovery (replaces nat0 hardcoding)
+pub mod family_discovery; // Dynamic family ID discovery (seed-derived, cryptographic)
 pub mod primal_discovery; // Auto-discovery of primals from directories
 pub mod primal_impls; // Concrete primal implementations
 pub mod primal_orchestrator; // Async primal lifecycle orchestration
@@ -41,6 +49,16 @@ pub mod vm_federation;
 
 // Observability (sovereignty-respecting)
 pub mod observability;
+
+// STUN Extension (optional self-hosted STUN support)
+// biomeOS works without this - falls back to public STUN
+pub mod stun_extension;
+
+// NUCLEUS model cache (NestGate-integrated, filesystem fallback)
+pub mod model_cache;
+
+// Plasmodium - Over-NUCLEUS coordination (slime mold collective)
+pub mod plasmodium;
 
 // Legacy support - keep existing modules for compatibility
 pub mod ai_first_api;

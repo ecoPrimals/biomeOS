@@ -159,19 +159,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_log_formatting() {
-        // Test that log messages are formatted correctly
-        // (without actually writing to devices in test)
-        let level = LogLevel::Info;
-        let msg = "Test message";
-
-        // Verify format
-        assert_eq!(format!("{:?}", level), "Info");
+    fn test_log_level_debug_format() {
+        assert_eq!(format!("{:?}", LogLevel::Info), "Info");
+        assert_eq!(format!("{:?}", LogLevel::Warning), "Warning");
+        assert_eq!(format!("{:?}", LogLevel::Error), "Error");
+        assert_eq!(format!("{:?}", LogLevel::Critical), "Critical");
     }
 
     #[test]
     fn test_boot_stage_progression() {
-        // Test that boot stages can be tracked
         let stages = vec![
             BootStage::GrubHandoff,
             BootStage::InitStart,
@@ -180,8 +176,66 @@ mod tests {
         ];
 
         for stage in stages {
-            // Should not panic
-            let _ = format!("{:?}", stage);
+            let debug_str = format!("{:?}", stage);
+            assert!(!debug_str.is_empty());
         }
+    }
+
+    #[test]
+    fn test_boot_stage_debug_format() {
+        assert!(format!("{:?}", BootStage::GrubHandoff).contains("GrubHandoff"));
+        assert!(format!("{:?}", BootStage::InitStart).contains("InitStart"));
+        assert!(format!("{:?}", BootStage::Complete).contains("Complete"));
+    }
+
+    #[test]
+    fn test_boot_logger_stats_debug() {
+        let stats = BootLoggerStats {
+            log_count: 10,
+            uptime_ms: 5000,
+            serial_active: true,
+        };
+
+        let debug_str = format!("{:?}", stats);
+        assert!(debug_str.contains("10"));
+        assert!(debug_str.contains("5000"));
+        assert!(debug_str.contains("true"));
+    }
+
+    #[test]
+    fn test_boot_logger_stats_fields() {
+        let stats = BootLoggerStats {
+            log_count: 0,
+            uptime_ms: 0,
+            serial_active: false,
+        };
+
+        assert_eq!(stats.log_count, 0);
+        assert_eq!(stats.uptime_ms, 0);
+        assert!(!stats.serial_active);
+    }
+
+    #[test]
+    fn test_log_message_format() {
+        // Test the expected log message format
+        let timestamp = 1234567890_u64;
+        let level = LogLevel::Info;
+        let msg = "Test message";
+
+        let formatted = format!("[{:010}] [{:?}] {}\n", timestamp, level, msg);
+
+        assert!(formatted.contains("[1234567890]"));
+        assert!(formatted.contains("[Info]"));
+        assert!(formatted.contains("Test message"));
+        assert!(formatted.ends_with('\n'));
+    }
+
+    #[test]
+    fn test_checkpoint_message_format() {
+        let stage = BootStage::FilesystemMount;
+        let checkpoint_msg = format!("Boot checkpoint: {:?}", stage);
+
+        assert!(checkpoint_msg.contains("Boot checkpoint"));
+        assert!(checkpoint_msg.contains("FilesystemMount"));
     }
 }

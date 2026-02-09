@@ -114,33 +114,7 @@ pub fn discover_family() -> Option<DiscoveredFamily> {
 
 /// Discover family ID with custom configuration
 pub fn discover_family_with_config(config: &FamilyDiscoveryConfig) -> Option<DiscoveredFamily> {
-    // 1. Check FAMILY_ID env var (explicit override)
-    if let Ok(family_id) = std::env::var("FAMILY_ID") {
-        if !family_id.is_empty() && family_id != "nat0" {
-            info!("🧬 Family ID from FAMILY_ID env: {}", family_id);
-            return Some(DiscoveredFamily {
-                id: family_id,
-                source: FamilySource::FamilyIdEnv,
-                genesis_seed: None,
-                node_key: None,
-            });
-        }
-    }
-
-    // 2. Check BIOMEOS_FAMILY_ID env var
-    if let Ok(family_id) = std::env::var("BIOMEOS_FAMILY_ID") {
-        if !family_id.is_empty() && family_id != "nat0" {
-            info!("🧬 Family ID from BIOMEOS_FAMILY_ID env: {}", family_id);
-            return Some(DiscoveredFamily {
-                id: family_id,
-                source: FamilySource::BiomeosEnv,
-                genesis_seed: None,
-                node_key: None,
-            });
-        }
-    }
-
-    // 3. Search for .family.seed file
+    // 1. Search for .family.seed file (seed-derived identity is canonical)
     for seed_path in &config.seed_file_paths {
         if let Some(family) = read_family_seed(seed_path) {
             info!(
@@ -152,13 +126,30 @@ pub fn discover_family_with_config(config: &FamilyDiscoveryConfig) -> Option<Dis
         }
     }
 
-    // 4. Check for legacy nat0 (warn and migrate)
+    // 2. Check FAMILY_ID env var (explicit override — must be seed-derived, not a tag)
     if let Ok(family_id) = std::env::var("FAMILY_ID") {
-        if family_id == "nat0" {
-            warn!("⚠️ FAMILY_ID='nat0' is deprecated prototype - using for compatibility");
+        if !family_id.is_empty() {
+            if family_id == "nat0" {
+                warn!("⚠️ FAMILY_ID='nat0' is a deprecated prototype tag — ignoring. Derive from .family.seed instead.");
+            } else {
+                info!("🧬 Family ID from FAMILY_ID env: {}", family_id);
+                return Some(DiscoveredFamily {
+                    id: family_id,
+                    source: FamilySource::FamilyIdEnv,
+                    genesis_seed: None,
+                    node_key: None,
+                });
+            }
+        }
+    }
+
+    // 3. Check BIOMEOS_FAMILY_ID env var
+    if let Ok(family_id) = std::env::var("BIOMEOS_FAMILY_ID") {
+        if !family_id.is_empty() && family_id != "nat0" {
+            info!("🧬 Family ID from BIOMEOS_FAMILY_ID env: {}", family_id);
             return Some(DiscoveredFamily {
                 id: family_id,
-                source: FamilySource::FamilyIdEnv,
+                source: FamilySource::BiomeosEnv,
                 genesis_seed: None,
                 node_key: None,
             });

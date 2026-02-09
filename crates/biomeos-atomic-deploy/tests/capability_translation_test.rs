@@ -301,7 +301,7 @@ fn test_nc_behavior() {
     // This works with 5 second timeout
     let output = Command::new("timeout")
         .args(&["5", "bash", "-c", 
-            "echo '{\"jsonrpc\":\"2.0\",\"method\":\"crypto.x25519_generate_ephemeral\",\"params\":{},\"id\":1}' | nc -U /tmp/beardog-nat0.sock"])
+            "echo '{\"jsonrpc\":\"2.0\",\"method\":\"crypto.x25519_generate_ephemeral\",\"params\":{},\"id\":1}' | nc -U /tmp/beardog-family.sock"])
         .output();
 
     match output {

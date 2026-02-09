@@ -381,4 +381,74 @@ mod tests {
         assert!(json.contains("\"nodes\":5"));
         assert!(json.contains("primal_added"));
     }
+
+    #[test]
+    fn test_ecosystem_event_debug() {
+        let event = EcosystemEvent::Heartbeat {
+            timestamp: 0,
+            primals_count: 0,
+            healthy_count: 0,
+            families: vec![],
+        };
+        let debug_str = format!("{:?}", event);
+        assert!(debug_str.contains("Heartbeat"));
+    }
+
+    #[test]
+    fn test_ecosystem_event_clone() {
+        let event = EcosystemEvent::TrustUpdated {
+            primal_id: "test".to_string(),
+            name: "Test".to_string(),
+            trust_level: 2,
+        };
+        let cloned = event.clone();
+        let json1 = serde_json::to_string(&event).unwrap();
+        let json2 = serde_json::to_string(&cloned).unwrap();
+        assert_eq!(json1, json2);
+    }
+
+    #[test]
+    fn test_current_timestamp_returns_reasonable_value() {
+        let ts = current_timestamp();
+        // Should be after 2020 (timestamp > 1577836800)
+        assert!(ts > 1577836800, "Timestamp should be after 2020");
+        // Should be before 2050 (timestamp < 2524608000)
+        assert!(ts < 2524608000, "Timestamp should be before 2050");
+    }
+
+    #[test]
+    fn test_primal_discovered_without_family() {
+        let event = EcosystemEvent::PrimalDiscovered {
+            primal_id: "orphan".to_string(),
+            name: "Orphan".to_string(),
+            primal_type: "unknown".to_string(),
+            family_id: None,
+            capabilities: vec![],
+        };
+
+        let json = serde_json::to_string(&event).unwrap();
+        assert!(json.contains("orphan"));
+        assert!(json.contains("\"family_id\":null"));
+    }
+
+    #[test]
+    fn test_ecosystem_state_default() {
+        let state = EcosystemState {
+            primals: HashMap::new(),
+        };
+        assert!(state.primals.is_empty());
+    }
+
+    #[test]
+    fn test_primal_snapshot_clone() {
+        let snapshot = PrimalSnapshot {
+            name: "test".to_string(),
+            health: HealthStatus::Healthy,
+            family_id: Some("fam".to_string()),
+            capabilities_count: 5,
+        };
+        let cloned = snapshot.clone();
+        assert_eq!(cloned.name, "test");
+        assert_eq!(cloned.capabilities_count, 5);
+    }
 }

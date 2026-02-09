@@ -107,6 +107,8 @@ ls -la /run/user/$(id -u)/biomeos/*.sock
 | `RUST_LOG` | Logging level | `info` |
 | `PRIMAL_SOCKET` | Override socket path | `/tmp/beardog.sock` |
 | `XDG_RUNTIME_DIR` | XDG runtime directory | `/run/user/1000` |
+| `BIOMEOS_SECURITY_PROVIDER` | Security primal name | `beardog` |
+| `BIOMEOS_NETWORK_PROVIDER` | Network primal name | `songbird` |
 
 ---
 
@@ -160,10 +162,10 @@ adb shell chmod +x /data/local/tmp/biomeos/primals/*
 
 1. Read [START_HERE.md](START_HERE.md) for architecture overview
 2. See [CURRENT_STATUS.md](CURRENT_STATUS.md) for latest status
-3. Review [specs/PRIMAL_DEPLOYMENT_STANDARD.md](specs/PRIMAL_DEPLOYMENT_STANDARD.md)
+3. Review [DOCUMENTATION.md](DOCUMENTATION.md) for full documentation index
 
 ---
 
-**Status**: Production Ready  
-**Updated**: February 4, 2026  
-**Cross-Device**: BirdSong + AI Coordination Validated
+**Status**: Production Ready
+**Updated**: February 7, 2026
+**Tests**: 1,747 passing

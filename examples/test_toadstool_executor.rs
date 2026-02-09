@@ -18,6 +18,7 @@ struct JsonRpcRequest {
 }
 
 #[derive(serde::Deserialize, Debug)]
+#[allow(dead_code)] // Fields used by serde deserialization
 struct JsonRpcResponse {
     jsonrpc: String,
     result: Option<serde_json::Value>,

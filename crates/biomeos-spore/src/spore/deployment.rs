@@ -50,7 +50,7 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 echo "Spore: {}"
 echo "Node:  {}"
-echo "Family: nat0 (genetic lineage)"
+echo "Family: seed-derived (genetic lineage)"
 echo ""
 
 # Fix permissions (FAT32 USB drives don't preserve execute bits)
@@ -91,7 +91,7 @@ echo ""
 # Display configuration
 echo "📋 Configuration:"
 echo "  • Config: tower.toml"
-echo "  • Family: nat0"
+echo "  • Family: seed-derived"
 echo "  • Concurrent: true"
 echo ""
 

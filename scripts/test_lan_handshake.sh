@@ -6,7 +6,7 @@ set -e
 
 LOCAL_TOWER="${1:-192.168.1.144}"
 REMOTE_TOWER="${2:-192.168.1.134}"
-FAMILY_ID="${3:-nat0}"
+FAMILY_ID="${3:-1894e909e454}"
 
 echo "╔══════════════════════════════════════════════════════════════════╗"
 echo "║              biomeOS LAN Handshake Test                          ║"

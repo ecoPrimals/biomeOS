@@ -25,7 +25,9 @@ use tokio::sync::oneshot;
 /// **Concurrency**: Uses oneshot channel to signal readiness instead of sleep
 struct MockPrimalServer {
     socket_path: PathBuf,
+    #[allow(dead_code)] // Stored for test diagnostics
     primal_name: String,
+    #[allow(dead_code)] // Stored for test diagnostics
     capabilities: Vec<String>,
     handle: tokio::task::JoinHandle<()>,
 }
@@ -180,7 +182,7 @@ async fn query_primal(
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_discovery_capability_based() -> Result<()> {
     let temp_dir = TempDir::new()?;
-    let socket_path = temp_dir.path().join("beardog-nat0.sock");
+    let socket_path = temp_dir.path().join("beardog-family_a.sock");
 
     // Start mock BearDog with security capabilities
     let _server = MockPrimalServer::start(
@@ -345,13 +347,13 @@ async fn test_discovery_federation() -> Result<()> {
     let temp_dir = TempDir::new()?;
 
     // Simulate primals from different families
-    let family_nat0 = temp_dir.path().join("beardog-nat0.sock");
-    let family_nat1 = temp_dir.path().join("beardog-nat1.sock");
+    let family_a = temp_dir.path().join("beardog-family_a.sock");
+    let family_nat1 = temp_dir.path().join("beardog-family_b.sock");
 
-    let _primal_nat0 =
-        MockPrimalServer::start(family_nat0.clone(), "beardog-nat0", vec!["security"]).await;
+    let _primal_a =
+        MockPrimalServer::start(family_a.clone(), "beardog-family_a", vec!["security"]).await;
     let _primal_nat1 =
-        MockPrimalServer::start(family_nat1.clone(), "beardog-nat1", vec!["security"]).await;
+        MockPrimalServer::start(family_nat1.clone(), "beardog-family_b", vec!["security"]).await;
 
     // Discover all primals, group by family
     let mut by_family: HashMap<String, Vec<String>> = HashMap::new();
@@ -375,8 +377,8 @@ async fn test_discovery_federation() -> Result<()> {
     }
 
     // Should have primals in two families
-    assert!(by_family.contains_key("nat0"));
-    assert!(by_family.contains_key("nat1"));
+    assert!(by_family.contains_key("family_a"));
+    assert!(by_family.contains_key("family_b"));
 
     Ok(())
 }

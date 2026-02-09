@@ -16,7 +16,12 @@ pub enum UIEvent {
     DeviceRemoved(String),
 
     /// A device status changed
-    DeviceStatusChanged { device_id: String, status: String },
+    DeviceStatusChanged {
+        /// ID of the device whose status changed
+        device_id: String,
+        /// New status string
+        status: String,
+    },
 
     /// A new primal was registered
     PrimalRegistered(PrimalInfo),
@@ -25,13 +30,21 @@ pub enum UIEvent {
     PrimalRemoved(String),
 
     /// A primal status changed
-    PrimalStatusChanged { primal_id: String, status: String },
+    PrimalStatusChanged {
+        /// ID of the primal whose status changed
+        primal_id: String,
+        /// New status string
+        status: String,
+    },
 
     /// An assignment was created
     AssignmentCreated(Assignment),
 
     /// An assignment was removed
-    AssignmentRemoved { device_id: String },
+    AssignmentRemoved {
+        /// ID of the device whose assignment was removed
+        device_id: String,
+    },
 
     /// A log entry was added
     LogEntry(LogEntry),
@@ -40,7 +53,10 @@ pub enum UIEvent {
     TopologyChanged(Topology),
 
     /// An error occurred
-    Error { message: String },
+    Error {
+        /// Error message describing what went wrong
+        message: String,
+    },
 }
 
 /// Event stream - broadcasts UI events

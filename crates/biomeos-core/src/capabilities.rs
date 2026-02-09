@@ -218,8 +218,169 @@ mod tests {
     }
 
     #[test]
+    fn test_capability_parsing_all_variants() {
+        assert_eq!(
+            Capability::from_str("compute").unwrap(),
+            Capability::Compute
+        );
+        assert_eq!(
+            Capability::from_str("storage").unwrap(),
+            Capability::Storage
+        );
+        assert_eq!(
+            Capability::from_str("observability").unwrap(),
+            Capability::Observability
+        );
+        assert_eq!(
+            Capability::from_str("federation").unwrap(),
+            Capability::Federation
+        );
+        assert_eq!(
+            Capability::from_str("network").unwrap(),
+            Capability::Network
+        );
+    }
+
+    #[test]
+    fn test_capability_parsing_case_insensitive() {
+        assert_eq!(
+            Capability::from_str("SECURITY").unwrap(),
+            Capability::Security
+        );
+        assert_eq!(
+            Capability::from_str("SeCuRiTy").unwrap(),
+            Capability::Security
+        );
+        assert_eq!(
+            Capability::from_str("Network").unwrap(),
+            Capability::Network
+        );
+    }
+
+    #[test]
+    fn test_capability_parsing_unknown_becomes_custom() {
+        let cap = Capability::from_str("unknown_capability").unwrap();
+        assert_eq!(cap, Capability::Custom("unknown_capability".to_string()));
+    }
+
+    #[test]
     fn test_capability_display() {
         assert_eq!(Capability::Security.to_string(), "security");
         assert_eq!(Capability::Discovery.to_string(), "discovery");
+    }
+
+    #[test]
+    fn test_capability_display_all_variants() {
+        assert_eq!(Capability::Compute.to_string(), "compute");
+        assert_eq!(Capability::AI.to_string(), "ai");
+        assert_eq!(Capability::Storage.to_string(), "storage");
+        assert_eq!(Capability::Observability.to_string(), "observability");
+        assert_eq!(Capability::Federation.to_string(), "federation");
+        assert_eq!(Capability::Network.to_string(), "network");
+        assert_eq!(
+            Capability::Custom("myservice".to_string()).to_string(),
+            "custom:myservice"
+        );
+    }
+
+    #[test]
+    fn test_capability_equality() {
+        assert_eq!(Capability::Security, Capability::Security);
+        assert_ne!(Capability::Security, Capability::Discovery);
+        assert_eq!(
+            Capability::Custom("test".to_string()),
+            Capability::Custom("test".to_string())
+        );
+        assert_ne!(
+            Capability::Custom("test1".to_string()),
+            Capability::Custom("test2".to_string())
+        );
+    }
+
+    #[test]
+    fn test_capability_clone() {
+        let cap = Capability::Storage;
+        let cloned = cap.clone();
+        assert_eq!(cap, cloned);
+
+        let custom = Capability::Custom("test".to_string());
+        let cloned_custom = custom.clone();
+        assert_eq!(custom, cloned_custom);
+    }
+
+    #[test]
+    fn test_capability_hash() {
+        use std::collections::HashSet;
+
+        let mut set = HashSet::new();
+        set.insert(Capability::Security);
+        set.insert(Capability::Discovery);
+        set.insert(Capability::Security); // duplicate
+
+        assert_eq!(set.len(), 2);
+        assert!(set.contains(&Capability::Security));
+        assert!(set.contains(&Capability::Discovery));
+    }
+
+    #[test]
+    fn test_capability_serialization() {
+        let cap = Capability::Security;
+        let json = serde_json::to_string(&cap).unwrap();
+        assert_eq!(json, "\"Security\"");
+
+        let deserialized: Capability = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized, cap);
+    }
+
+    #[test]
+    fn test_capability_custom_serialization() {
+        let cap = Capability::Custom("myservice".to_string());
+        let json = serde_json::to_string(&cap).unwrap();
+        assert!(json.contains("myservice"));
+
+        let deserialized: Capability = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized, cap);
+    }
+
+    #[test]
+    fn test_capability_from_env_empty() {
+        // Ensure the env var doesn't exist
+        std::env::remove_var("TEST_CAP_EMPTY_1234");
+        let caps = Capability::from_env("TEST_CAP_EMPTY_1234");
+        assert!(caps.is_empty());
+    }
+
+    #[test]
+    fn test_primal_config_for_capability() {
+        let config = PrimalConfig::for_capability(
+            vec![Capability::Security, Capability::Compute],
+            vec![Capability::Discovery],
+        );
+
+        assert_eq!(config.provides.len(), 2);
+        assert!(config.provides.contains(&Capability::Security));
+        assert!(config.provides.contains(&Capability::Compute));
+        assert_eq!(config.requires.len(), 1);
+        assert!(config.requires.contains(&Capability::Discovery));
+        assert_eq!(config.http_port, 0);
+        assert!(config.env_config.is_empty());
+    }
+
+    #[test]
+    fn test_primal_config_for_capability_empty() {
+        let config = PrimalConfig::for_capability(vec![], vec![]);
+
+        assert!(config.provides.is_empty());
+        assert!(config.requires.is_empty());
+        assert!(!config.id.is_empty()); // Should have a UUID
+    }
+
+    #[test]
+    fn test_primal_config_id_is_uuid() {
+        let config = PrimalConfig::for_capability(vec![], vec![]);
+
+        // UUID format: 8-4-4-4-12 hex characters
+        assert!(config.id.len() == 36);
+        assert!(config.id.chars().filter(|c| *c == '-').count() == 4);
     }
 }

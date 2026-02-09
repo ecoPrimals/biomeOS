@@ -3,6 +3,7 @@
 //! REST API library for primal orchestration and discovery.
 //! This module exposes the core types and functions used by the binary.
 
+pub mod dark_forest_gate;
 mod handlers;
 mod state;
 mod unix_server;
@@ -15,15 +16,17 @@ pub use websocket::{
 
 use axum::{
     extract::State,
-    http::StatusCode,
+    http::{HeaderValue, StatusCode},
     response::{IntoResponse, Response},
     routing::{get, post},
     Json, Router,
 };
 use futures_util::{SinkExt, StreamExt};
-use serde::Serialize;
 use std::sync::Arc;
-use tower_http::{cors::CorsLayer, trace::TraceLayer};
+use tower_http::{
+    cors::{AllowHeaders, AllowMethods, AllowOrigin, CorsLayer},
+    trace::TraceLayer,
+};
 
 /// API error type
 #[derive(Debug, thiserror::Error)]
@@ -54,27 +57,7 @@ impl IntoResponse for ApiError {
     }
 }
 
-/// Health check response
-#[derive(Serialize)]
-struct HealthResponse {
-    status: String,
-    version: String,
-    mode: String,
-}
-
-/// Health check handler
-async fn health(State(state): State<Arc<AppState>>) -> Json<HealthResponse> {
-    Json(HealthResponse {
-        status: "healthy".to_string(),
-        version: env!("CARGO_PKG_VERSION").to_string(),
-        mode: if state.is_standalone_mode() {
-            "standalone"
-        } else {
-            "live"
-        }
-        .to_string(),
-    })
-}
+// Health handler moved to handlers/health.rs
 
 /// WebSocket upgrade handler for JSON-RPC 2.0 event streaming
 async fn websocket_handler(
@@ -226,11 +209,62 @@ async fn handle_websocket(socket: axum::extract::ws::WebSocket, _state: Arc<AppS
 }
 
 /// Create the application router with all routes
+///
+/// **Sovereign mode is enabled by default.** All connections must present
+/// a valid Dark Forest beacon token proving family lineage before any
+/// interaction occurs. Without lineage, the system is indistinguishable
+/// from an empty 403.
+///
+/// Set `BIOMEOS_SOVEREIGN=false` to disable (development/testing only).
 pub fn create_app(state: AppState) -> Router {
+    create_app_with_transport(state, false)
+}
+
+/// Create the application router for TCP-bound mode
+///
+/// When binding to a TCP port (public network), sovereign mode is FORCED
+/// regardless of environment variables. The system never exposes anything
+/// on a network port without lineage verification.
+pub fn create_app_for_tcp(state: AppState) -> Router {
+    create_app_with_transport(state, true)
+}
+
+/// Internal: create app with transport-aware security
+fn create_app_with_transport(state: AppState, force_sovereign: bool) -> Router {
     let shared_state = Arc::new(state);
 
-    Router::new()
-        .route("/api/v1/health", get(health))
+    // Initialize Dark Forest gate
+    let mut gate_config = dark_forest_gate::DarkForestGateConfig::from_env();
+    if force_sovereign {
+        gate_config = gate_config.force_sovereign();
+    }
+    let gate_state = dark_forest_gate::DarkForestGateState::new(gate_config.clone());
+
+    // CORS: restrictive by default
+    // Only allow same-origin + the X-Dark-Forest-Token header
+    // No permissive CORS — an attacker should learn nothing from preflight
+    let cors = if gate_config.enabled {
+        // Sovereign mode: no CORS at all — only family clients connect,
+        // they don't need browser CORS
+        CorsLayer::new()
+            .allow_origin(AllowOrigin::exact(HeaderValue::from_static("null")))
+            .allow_methods(AllowMethods::list([
+                axum::http::Method::GET,
+                axum::http::Method::POST,
+            ]))
+            .allow_headers(AllowHeaders::list([
+                axum::http::header::CONTENT_TYPE,
+                axum::http::HeaderName::from_static("x-dark-forest-token"),
+            ]))
+    } else {
+        // Non-sovereign (development): permissive for local testing
+        CorsLayer::permissive()
+    };
+
+    let router = Router::new()
+        .route("/api/v1/health", get(handlers::health::health))
+        .route("/api/v1/health/ready", get(handlers::health::readiness))
+        .route("/api/v1/health/live", get(handlers::health::liveness))
         .route(
             "/api/v1/primals/discovered",
             get(handlers::discovery::get_discovered_primals),
@@ -277,21 +311,147 @@ pub fn create_app(state: AppState) -> Router {
             "/api/v1/genome/:id/download",
             get(handlers::genome::download_genome),
         )
-        .layer(CorsLayer::permissive())
+        .layer(cors)
         .layer(TraceLayer::new_for_http())
-        .with_state(shared_state)
+        .with_state(shared_state);
+
+    // Add rendezvous routes (Dark Forest beacon handshake for Pixel-USB)
+    // These have their OWN Dark Forest verification inside the handlers too
+    let beardog_socket = std::env::var("BEARDOG_SOCKET")
+        .unwrap_or_else(|_| "/run/user/1000/biomeos/beardog.sock".to_string());
+    let rendezvous_state = Arc::new(handlers::rendezvous::RendezvousState::new(&beardog_socket));
+
+    let router = router
+        .route(
+            "/api/v1/rendezvous/beacon",
+            post(handlers::rendezvous::post_beacon),
+        )
+        .route(
+            "/api/v1/rendezvous/check",
+            post(handlers::rendezvous::check_peer),
+        )
+        .with_state(rendezvous_state);
+
+    // Apply Dark Forest gate as outermost layer
+    // This gates ALL requests — lineage before interaction
+    router.layer(axum::middleware::from_fn_with_state(
+        gate_state,
+        dark_forest_gate::dark_forest_gate_middleware,
+    ))
 }
 
 /// Serve on Unix socket only (production mode)
+///
+/// Unix sockets are inherently secure via filesystem permissions (0600).
+/// The Dark Forest gate still applies for defense in depth, but Unix
+/// socket connections are already limited to the local user.
 pub async fn serve_unix_socket(socket_path: &std::path::Path, app: Router) -> anyhow::Result<()> {
     unix_server::serve_unix_socket(socket_path, app).await
 }
 
 /// Serve in dual mode (Unix socket + HTTP bridge)
+///
+/// **WARNING**: When binding to TCP, sovereign mode is FORCED.
+/// All TCP connections must present a valid Dark Forest token.
+/// The TCP-bound router uses `create_app_for_tcp()` which forces sovereign.
 pub async fn serve_dual_mode(
     socket_path: &std::path::Path,
     bind_addr: std::net::SocketAddr,
     app: Router,
 ) -> anyhow::Result<()> {
     unix_server::serve_dual_mode(socket_path, bind_addr, app).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_api_error_internal() {
+        let error = ApiError::Internal("test error".to_string());
+        assert!(format!("{error}").contains("test error"));
+    }
+
+    #[test]
+    fn test_api_error_discovery_failed() {
+        let error = ApiError::DiscoveryFailed("no primals found".to_string());
+        assert!(format!("{error}").contains("no primals found"));
+    }
+
+    #[test]
+    fn test_api_error_not_found() {
+        let error = ApiError::NotFound("resource missing".to_string());
+        assert!(format!("{error}").contains("resource missing"));
+    }
+
+    // Health handler tests moved to handlers/health.rs
+
+    #[test]
+    fn test_create_app_returns_router() {
+        // Create a minimal AppState for testing
+        let state = AppState::builder()
+            .build_with_defaults()
+            .expect("should create state");
+        let app = create_app(state);
+        // Router should be created without panicking
+        drop(app);
+    }
+
+    #[test]
+    fn test_json_rpc_error_codes() {
+        // Standard JSON-RPC error codes
+        let method_not_found = JsonRpcError {
+            code: -32601,
+            message: "Method not found".to_string(),
+            data: None,
+        };
+        assert_eq!(method_not_found.code, -32601);
+
+        let parse_error = JsonRpcError {
+            code: -32700,
+            message: "Parse error".to_string(),
+            data: None,
+        };
+        assert_eq!(parse_error.code, -32700);
+    }
+
+    #[test]
+    fn test_json_rpc_response_success() {
+        let response = JsonRpcResponse {
+            jsonrpc: "2.0".to_string(),
+            result: Some(serde_json::json!({"data": "test"})),
+            error: None,
+            id: Some(serde_json::json!(1)),
+        };
+        assert!(response.result.is_some());
+        assert!(response.error.is_none());
+    }
+
+    #[test]
+    fn test_json_rpc_response_error() {
+        let response = JsonRpcResponse {
+            jsonrpc: "2.0".to_string(),
+            result: None,
+            error: Some(JsonRpcError {
+                code: -32600,
+                message: "Invalid request".to_string(),
+                data: None,
+            }),
+            id: None,
+        };
+        assert!(response.result.is_none());
+        assert!(response.error.is_some());
+    }
+
+    #[test]
+    fn test_subscription_filter_serialization() {
+        let filter = SubscriptionFilter {
+            graph_id: Some("test-graph".to_string()),
+            event_types: Some(vec!["node_started".to_string()]),
+            node_filter: None,
+        };
+        let json = serde_json::to_string(&filter).expect("serialize");
+        assert!(json.contains("test-graph"));
+        assert!(json.contains("node_started"));
+    }
 }

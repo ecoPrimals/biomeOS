@@ -1,0 +1,29 @@
+[Unit]
+Description=biomeOS Sovereign Tower Atomic (BearDog + Songbird)
+Documentation=https://github.com/ecoPrimals/biomeOS
+After=network-online.target
+Wants=network-online.target
+Before=biomeos-beacon-dns.service
+
+[Service]
+Type=forking
+ExecStart=%h/Development/ecoPrimals/phase2/biomeOS/scripts/start_nucleus.sh sovereign
+# Evolved standard v2 environment
+Environment=FAMILY_ID=1894e909e454
+Environment=NODE_ID=gate
+Environment=BIOMEOS_ROOT=%h/Development/ecoPrimals/phase2/biomeOS
+Environment=BIOMEOS_BIND_ALL=true
+Environment=BIOMEOS_SOVEREIGN=true
+Environment=BIOMEOS_DARK_FOREST=true
+Environment=BIOMEOS_NO_EXTERNAL_DEPS=true
+Environment=RUST_LOG=info
+# Restart policy
+Restart=on-failure
+RestartSec=10
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=biomeos-tower
+
+[Install]
+WantedBy=default.target

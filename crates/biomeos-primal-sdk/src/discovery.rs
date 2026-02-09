@@ -206,7 +206,7 @@ impl PrimalDiscovery {
     /// Try to discover a specific primal
     async fn try_discover_primal(
         &self,
-        socket_dir: &PathBuf,
+        socket_dir: &std::path::Path,
         name: &str,
     ) -> Option<DiscoveredPrimal> {
         // Standard socket naming: {primal}-{family}.sock
@@ -239,7 +239,7 @@ impl PrimalDiscovery {
         })
     }
 
-    fn method_for_dir(&self, dir: &PathBuf) -> DiscoveryMethod {
+    fn method_for_dir(&self, dir: &std::path::Path) -> DiscoveryMethod {
         let path_str = dir.to_string_lossy();
         if path_str.contains("XDG_RUNTIME_DIR") || path_str.contains("/run/user/") {
             DiscoveryMethod::XdgRuntime

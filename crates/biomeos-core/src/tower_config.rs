@@ -196,7 +196,7 @@ mod tests {
         let toml = r#"
 [tower]
 name = "tower1"
-family = "nat0"
+family = "1894e909e454"
 concurrent_startup = true
 
 [[primals]]
@@ -217,7 +217,7 @@ timeout_secs = 5
 
         let config = TowerConfig::from_toml(toml).unwrap();
         assert_eq!(config.tower.name, Some("tower1".to_string()));
-        assert_eq!(config.tower.family, Some("nat0".to_string()));
+        assert_eq!(config.tower.family, Some("1894e909e454".to_string()));
         assert_eq!(config.primals.len(), 2);
         assert_eq!(config.primals[0].provides.len(), 2);
         assert_eq!(config.health.interval_secs, 30);
@@ -291,7 +291,7 @@ BEARDOG_NODE_ID = "test"
     fn test_dual_protocol_configuration() {
         let toml = r#"
 [tower]
-family = "nat0"
+family = "1894e909e454"
 concurrent_startup = true
 
 [[primals]]
@@ -300,7 +300,7 @@ provides = ["Security"]
 protocol = "tarpc"
 
 [primals.env]
-BEARDOG_FAMILY_ID = "nat0"
+BEARDOG_FAMILY_ID = "1894e909e454"
 BEARDOG_NODE_ID = "tower1"
 
 [[primals]]
@@ -334,7 +334,7 @@ SECURITY_ENDPOINT = "jsonrpc+unix:///tmp/beardog.sock"
     fn test_fractal_deployment_mixed_protocols() {
         let toml = r#"
 [tower]
-family = "nat0"
+family = "1894e909e454"
 
 [[primals]]
 binary = "./primals/beardog"
@@ -366,7 +366,7 @@ protocol = "jsonrpc"
         let toml = r#"
 [tower]
 name = "tower1"
-family = "nat0"
+family = "1894e909e454"
 
 [[primals]]
 binary = "./primals/beardog"

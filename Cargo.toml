@@ -2,10 +2,19 @@
 # Deny unwrap/expect in production code to enforce proper error handling
 unwrap_used = "warn"
 expect_used = "warn"
-# Other pedantic lints
-all = "warn"
-pedantic = "warn"
-nursery = "warn"
+# Lint groups with lower priority so individual overrides work
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+
+# Allow stylistic lints that are noisy without adding significant value
+# These are intentional style choices for internal documentation
+doc_markdown = "allow"           # BiomeOS, JSON-RPC, etc. don't need backticks internally
+missing_errors_doc = "allow"     # Error handling is clear from Result types
+missing_panics_doc = "allow"     # Panics are avoided via unwrap_used/expect_used warnings
+uninlined_format_args = "allow"  # Format string style is a preference
+module_name_repetitions = "allow" # Module::ModuleThing is idiomatic in our codebase
+similar_names = "allow"          # avg_cpu vs avg_gpu is intentionally similar
 
 [workspace]
 resolver = "2"

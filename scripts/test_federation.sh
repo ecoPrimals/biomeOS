@@ -35,7 +35,7 @@ log_step() { echo -e "${CYAN}▶ $1${NC}"; }
 # Configuration
 USB1_ROOT="${USB1_ROOT:-/media/eastgate/biomeOS1/biomeOS}"
 USB2_ROOT="${USB2_ROOT:-/media/eastgate/BEA6-BBCE/biomeOS}"
-FAMILY_ID="nat0"
+FAMILY_ID="1894e909e454"
 NODE1="node-alpha"
 NODE2="node-beta"
 
@@ -177,7 +177,7 @@ send_jsonrpc() {
 
 # Node 1 verifies Node 2's family membership
 log_info "Node 1 ($NODE1) verifying Node 2 ($NODE2)..."
-VERIFY_REQUEST='{"jsonrpc":"2.0","method":"federation.verify_family_member","params":{"family_id":"nat0","node_id":"node-beta"},"id":1}'
+VERIFY_REQUEST='{"jsonrpc":"2.0","method":"federation.verify_family_member","params":{"family_id":"1894e909e454","node_id":"node-beta"},"id":1}'
 
 RESULT1=$(send_jsonrpc "$BEARDOG1_SOCKET" "$VERIFY_REQUEST")
 echo "  Response: $RESULT1"
@@ -191,7 +191,7 @@ echo ""
 
 # Node 2 verifies Node 1's family membership
 log_info "Node 2 ($NODE2) verifying Node 1 ($NODE1)..."
-VERIFY_REQUEST='{"jsonrpc":"2.0","method":"federation.verify_family_member","params":{"family_id":"nat0","node_id":"node-alpha"},"id":2}'
+VERIFY_REQUEST='{"jsonrpc":"2.0","method":"federation.verify_family_member","params":{"family_id":"1894e909e454","node_id":"node-alpha"},"id":2}'
 
 RESULT2=$(send_jsonrpc "$BEARDOG2_SOCKET" "$VERIFY_REQUEST")
 echo "  Response: $RESULT2"
@@ -211,7 +211,7 @@ log_step "Phase 5: Testing genetic proof generation..."
 # Generate lineage proof from Node 1's seed
 SEED1_B64=$(base64 -w0 "$USB1_ROOT/.family.seed")
 PROOF_REQUEST=$(cat <<EOF
-{"jsonrpc":"2.0","method":"genetic.generate_lineage_proof","params":{"our_family_id":"nat0","peer_family_id":"nat0","lineage_seed":"$SEED1_B64"},"id":3}
+{"jsonrpc":"2.0","method":"genetic.generate_lineage_proof","params":{"our_family_id":"1894e909e454","peer_family_id":"1894e909e454","lineage_seed":"$SEED1_B64"},"id":3}
 EOF
 )
 
@@ -230,7 +230,7 @@ echo ""
 # Generate lineage proof from Node 2's seed
 SEED2_B64=$(base64 -w0 "$USB2_ROOT/.family.seed")
 PROOF_REQUEST=$(cat <<EOF
-{"jsonrpc":"2.0","method":"genetic.generate_lineage_proof","params":{"our_family_id":"nat0","peer_family_id":"nat0","lineage_seed":"$SEED2_B64"},"id":4}
+{"jsonrpc":"2.0","method":"genetic.generate_lineage_proof","params":{"our_family_id":"1894e909e454","peer_family_id":"1894e909e454","lineage_seed":"$SEED2_B64"},"id":4}
 EOF
 )
 

@@ -1,32 +1,66 @@
 # BiomeOS Project Status
-**Last Updated:** January 29, 2026 (Evening)
+**Last Updated:** February 9, 2026
 
-## 🎉 Phase 2 Complete - Production Ready
+## Production Ready - Plasmodium + Model Cache
 
-**Status:** ✅ Grade A (93/100)
-**Tests:** 719/719 passing (100%)
-**Coverage:** 40% baseline established
-**Tasks:** 10/10 completed (100%)
-**CI/CD:** Fully operational
+**Status:** Grade A (Pure Rust, Idiomatic, Zero Warnings)
+**Tests:** 1,747 passing (0 failures)
+**Clippy:** PASS (0 warnings outside biomeos-boot)
+**Format:** PASS
 
 ## Quick Links
 
 - [README.md](./README.md) - Main documentation
 - [START_HERE.md](./START_HERE.md) - Getting started guide
-- [EXECUTIVE_SUMMARY.md](./EXECUTIVE_SUMMARY.md) - Executive overview
-- [PRODUCTION_DEPLOYMENT_CHECKLIST.md](./PRODUCTION_DEPLOYMENT_CHECKLIST.md) - Deploy guide
-- [COVERAGE_BASELINE_REPORT.md](./COVERAGE_BASELINE_REPORT.md) - Coverage analysis
+- [CURRENT_STATUS.md](./CURRENT_STATUS.md) - Latest status
+- [DOCUMENTATION.md](./DOCUMENTATION.md) - Documentation index
+- [CHANGELOG.md](./CHANGELOG.md) - Version history
 
 ## Key Metrics
 
-- Code Quality: A (93/100)
-- Tests Passing: 719/719
-- Coverage: 40%
-- panic!() Paths: 0
-- unsafe Blocks: 0
-- Hardcoded Logic: 0
-- CI/CD: 2 workflows, 10 jobs
+| Metric | Value |
+|--------|-------|
+| Code Quality | A (Pure Rust, idiomatic, zero warnings) |
+| Tests Passing | 1,747 |
+| Unsafe Blocks | 1 (justified mmap) |
+| Clippy | PASS |
+| Format | PASS |
+| Hardcoded primal names | 0 (all env-configurable) |
+| External C deps | 0 |
+| Production mocks | 0 |
+| Plasmodium | Over-NUCLEUS collective (read-only Phase 1) |
+| Model Cache | NUCLEUS-integrated, HuggingFace import |
 
-## Production Ready ✅
+## Standards Compliance
 
-All critical requirements met. Ready for deployment.
+| Standard | Status |
+|----------|--------|
+| ecoBin v2.0 | 100% Pure Rust |
+| Universal IPC v3.0 | Multi-transport |
+| JSON-RPC 2.0 | Implemented |
+| tarpc | Infrastructure ready |
+| PRIMAL_DEPLOYMENT_STANDARD | Compliant |
+| Sovereign NAT Traversal | Mesh + Tor wired |
+
+## Latest Work (Feb 9, 2026)
+
+### Plasmodium - Over-NUCLEUS Collective
+- Spec, module, CLI complete
+- Live tested on Tower (RTX 4070, BearDog, Songbird, 2 models)
+- Graceful degradation for offline gates
+
+### Model Cache
+- HuggingFace import, symlink-aware sizing
+- NestGate integration with filesystem fallback
+- Live tested on Tower + gate2
+
+### Handoffs Created
+- Plasmodium Over-NUCLEUS Handoff
+- NestGate Model Cache Handoff (4 bugs documented)
+- Toadstool Distributed GPU Handoff
+
+## Production Ready
+
+All critical requirements met. Deployment validated on USB + Pixel.
+Sovereign NAT traversal + Tor gateway operational.
+Over-NUCLEUS collective coordination live.

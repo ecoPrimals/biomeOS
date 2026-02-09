@@ -30,9 +30,14 @@
 //! ```
 
 pub mod provider;
+pub mod templates;
 pub mod types;
 
+#[cfg(test)]
+mod provider_tests;
+
 pub use provider::DeviceManagementProvider;
+pub use templates::{builtin_templates, node_template, tower_template};
 pub use types::*;
 
 // Re-export for compatibility during transition

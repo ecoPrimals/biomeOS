@@ -19,6 +19,7 @@ use crate::error::{SporeError, SporeResult};
 use crate::spore_types::SporeType;
 
 use super::config::ConfigOps;
+use super::types::default_family_id;
 use super::deployment::DeploymentOps;
 use super::documentation::DocumentationOps;
 use super::filesystem::FilesystemOps;
@@ -146,6 +147,7 @@ impl Spore {
                 .and_then(|n| n.to_str())
                 .unwrap_or("unknown")
                 .to_string(),
+            family_id: default_family_id(),
             node_id,
             spore_type: SporeType::default(), // Detect from manifest if available
         };
@@ -178,6 +180,7 @@ impl Spore {
         let sibling_config = SporeConfig {
             label: format!("biomeOS-{}", sibling_node_id),
             node_id: sibling_node_id.to_string(),
+            family_id: self.config.family_id.clone(),
             spore_type: self.config.spore_type,
         };
 

@@ -28,6 +28,14 @@ fn resolve_capability_to_primal(capability: &str) -> Option<&'static str> {
     biomeos_types::CapabilityTaxonomy::resolve_to_primal(capability)
 }
 
+/// Get all known primal names from the capability taxonomy
+///
+/// This provides a canonical list of primals for health checks and deployment.
+/// Uses `biomeos_types::CapabilityTaxonomy::known_primals()` for consistency.
+fn known_primal_names() -> Vec<&'static str> {
+    biomeos_types::CapabilityTaxonomy::known_primals().to_vec()
+}
+
 /// Start a primal via capability-based discovery
 ///
 /// This is the capability-based alternative to direct primal name starting.
@@ -59,7 +67,8 @@ pub async fn primal_start_capability(
     let family_id = params
         .get("family_id")
         .and_then(|v| v.as_str())
-        .unwrap_or("nat0");
+        .map(|s| s.to_string())
+        .unwrap_or_else(biomeos_core::family_discovery::get_family_id);
 
     debug!("   Capability: {}", capability);
     debug!("   Mode: {}", mode);
@@ -106,9 +115,9 @@ pub async fn primal_start_capability(
     cmd.arg(mode);
 
     // Configure primal-specific socket handling
-    configure_primal_socket(&mut cmd, primal_name, &socket_path, family_id, context).await;
+    configure_primal_socket(&mut cmd, primal_name, &socket_path, &family_id, context).await;
 
-    cmd.env("FAMILY_ID", family_id);
+    cmd.env("FAMILY_ID", &family_id);
 
     // Pass SSLKEYLOGFILE if set (for TLS debugging)
     if let Ok(sslkeylogfile) = std::env::var("SSLKEYLOGFILE") {
@@ -321,7 +330,8 @@ pub async fn health_check_capability(
     let family_id = params
         .get("family_id")
         .and_then(|v| v.as_str())
-        .unwrap_or("nat0");
+        .map(|s| s.to_string())
+        .unwrap_or_else(biomeos_core::family_discovery::get_family_id);
 
     let mut checks_passed = Vec::new();
     let mut checks_failed = Vec::new();
@@ -337,8 +347,9 @@ pub async fn health_check_capability(
             vec![]
         }
     } else {
-        // Check all known primals
-        vec!["beardog", "songbird", "squirrel", "toadstool", "nestgate"]
+        // Check all known primals (from capability domains)
+        // See: config/capability_registry.toml for domain definitions
+        known_primal_names()
     };
 
     // Check each primal
@@ -393,34 +404,21 @@ pub async fn health_check_capability(
     }))
 }
 
-/// Call primal health endpoint via JSON-RPC
+/// Call primal health endpoint via JSON-RPC using AtomicClient
+///
+/// Uses Universal IPC v3.0 AtomicClient for multi-transport support.
+/// This enables Unix sockets, abstract sockets (Android), and TCP fallback.
 async fn call_primal_health(socket_path: &str) -> Result<bool> {
-    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-    use tokio::net::UnixStream;
+    use biomeos_core::atomic_client::AtomicClient;
 
-    let stream = UnixStream::connect(socket_path).await?;
-    let (read_half, mut write_half) = stream.into_split();
+    // Create AtomicClient from socket path (supports Unix sockets)
+    let client = AtomicClient::unix(socket_path);
 
-    let request = json!({
-        "jsonrpc": "2.0",
-        "method": "health.check",
-        "params": {},
-        "id": 1
-    });
-
-    write_half.write_all(request.to_string().as_bytes()).await?;
-    write_half.write_all(b"\n").await?;
-    write_half.flush().await?;
-
-    let mut reader = BufReader::new(read_half);
-    let mut response_line = String::new();
-    reader.read_line(&mut response_line).await?;
-
-    let response: serde_json::Value = serde_json::from_str(&response_line)?;
+    // Use health.check method (semantic naming standard)
+    let response = client.call("health.check", json!({})).await?;
 
     Ok(response
-        .get("result")
-        .and_then(|r| r.get("healthy"))
+        .get("healthy")
         .and_then(|h| h.as_bool())
         .unwrap_or(false))
 }
@@ -482,10 +480,79 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_resolve_capability_to_primal() {
-        assert_eq!(resolve_capability_to_primal("security"), Some("beardog"));
+    fn test_resolve_capability_to_primal_encryption() {
+        // Encryption capability maps to beardog
+        assert_eq!(resolve_capability_to_primal("encryption"), Some("beardog"));
+    }
+
+    #[test]
+    fn test_resolve_capability_to_primal_discovery() {
+        // Discovery capability maps to songbird
         assert_eq!(resolve_capability_to_primal("discovery"), Some("songbird"));
+    }
+
+    #[test]
+    fn test_resolve_capability_to_primal_compute() {
+        // Compute capability maps to toadstool
+        assert_eq!(resolve_capability_to_primal("compute"), Some("toadstool"));
+    }
+
+    #[test]
+    fn test_resolve_capability_to_primal_storage() {
+        // Storage capability maps to nestgate
+        assert_eq!(resolve_capability_to_primal("storage"), Some("nestgate"));
+    }
+
+    #[test]
+    fn test_resolve_capability_to_primal_ai() {
+        // AI capability maps to squirrel
         assert_eq!(resolve_capability_to_primal("ai"), Some("squirrel"));
+    }
+
+    #[test]
+    fn test_resolve_capability_to_primal_unknown() {
+        // Unknown capabilities return None
         assert_eq!(resolve_capability_to_primal("unknown"), None);
+        assert_eq!(resolve_capability_to_primal("nonexistent"), None);
+    }
+
+    #[test]
+    fn test_known_primal_names_contains_core_primals() {
+        let primals = known_primal_names();
+
+        assert!(primals.contains(&"beardog"), "Should contain beardog");
+        assert!(primals.contains(&"songbird"), "Should contain songbird");
+        assert!(primals.contains(&"toadstool"), "Should contain toadstool");
+        assert!(primals.contains(&"nestgate"), "Should contain nestgate");
+        assert!(primals.contains(&"squirrel"), "Should contain squirrel");
+    }
+
+    #[test]
+    fn test_known_primal_names_returns_vec() {
+        let primals = known_primal_names();
+        assert_eq!(primals.len(), 5, "Should have exactly 5 core primals");
+    }
+
+    #[test]
+    fn test_binary_discovery_path_construction() {
+        let arch = std::env::consts::ARCH;
+        let os = std::env::consts::OS;
+        let target = format!("{}-{}", arch, os);
+
+        assert!(target.contains(arch));
+        assert!(target.contains(os));
+    }
+
+    #[test]
+    fn test_plasmid_bin_paths() {
+        let paths = [
+            PathBuf::from("./plasmidBin"),
+            PathBuf::from("../plasmidBin"),
+            PathBuf::from("../../plasmidBin"),
+        ];
+
+        for path in paths {
+            assert!(path.to_string_lossy().contains("plasmidBin"));
+        }
     }
 }

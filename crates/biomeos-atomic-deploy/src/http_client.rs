@@ -41,8 +41,7 @@ impl BiomeOsHttpClient {
         use crate::nucleation::SocketNucleation;
 
         let songbird_socket = std::env::var("SONGBIRD_SOCKET").unwrap_or_else(|_| {
-            let family_id =
-                std::env::var("BIOMEOS_FAMILY_ID").unwrap_or_else(|_| "nat0".to_string());
+            let family_id = biomeos_core::family_discovery::get_family_id();
             let mut nucleation = SocketNucleation::default();
             nucleation
                 .assign_socket("songbird", &family_id)

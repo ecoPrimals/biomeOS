@@ -97,8 +97,27 @@ impl ConsoleWriter {
 }
 
 impl Default for ConsoleWriter {
+    /// Create a default ConsoleWriter
+    ///
+    /// Note: `ConsoleWriter::new()` is infallible in practice - it handles
+    /// /dev/console unavailability gracefully with `.ok()`. The `io::Result`
+    /// return type is for API consistency with other I/O operations.
     fn default() -> Self {
-        Self::new().expect("Failed to create console writer")
+        // SAFETY: ConsoleWriter::new() always returns Ok(...) in practice.
+        // The console_device is opened with .ok() which handles failures.
+        // stdout and stderr are always available.
+        match Self::new() {
+            Ok(writer) => writer,
+            Err(_) => {
+                // This path is unreachable, but we handle it gracefully
+                // rather than panicking.
+                Self {
+                    stdout: io::stdout(),
+                    stderr: io::stderr(),
+                    console_device: None,
+                }
+            }
+        }
     }
 }
 

@@ -33,14 +33,19 @@ impl Default for GenomeState {
 
 impl GenomeState {
     /// Get XDG-compliant default storage directory
+    ///
+    /// DEEP DEBT EVOLUTION: Uses etcetera (pure Rust) instead of dirs (C-based)
     fn default_storage_dir() -> PathBuf {
         // XDG_DATA_HOME or ~/.local/share
         let data_home = std::env::var("XDG_DATA_HOME")
             .map(PathBuf::from)
+            .or_else(|_| std::env::var("HOME").map(|h| PathBuf::from(h).join(".local/share")))
             .unwrap_or_else(|_| {
-                dirs::home_dir()
-                    .map(|h| h.join(".local/share"))
-                    .unwrap_or_else(|| PathBuf::from("/tmp"))
+                // Pure Rust fallback via etcetera
+                use etcetera::base_strategy::{choose_base_strategy, BaseStrategy};
+                choose_base_strategy()
+                    .map(|s| s.data_dir())
+                    .unwrap_or_else(|_| PathBuf::from("/tmp"))
             });
         data_home.join("biomeos/genomes")
     }
@@ -141,8 +146,11 @@ impl GenomeState {
 }
 
 // Thread-safe global state
-lazy_static::lazy_static! {
-    static ref GENOME_STATE: GenomeState = GenomeState::default();
+// DEEP DEBT EVOLUTION: Replaced lazy_static! with std::sync::OnceLock (stable Rust, no external dep)
+static GENOME_STATE: std::sync::OnceLock<GenomeState> = std::sync::OnceLock::new();
+
+fn genome_state() -> &'static GenomeState {
+    GENOME_STATE.get_or_init(GenomeState::default)
 }
 
 /// Build genomeBin request
@@ -159,6 +167,7 @@ pub struct BuildRequest {
 }
 
 /// Binary specification
+#[allow(dead_code)] // Used by BuildRequest but may not be constructed in all paths
 #[derive(Debug, Deserialize)]
 pub struct BinarySpec {
     /// Architecture (x86_64, aarch64, arm, riscv64)
@@ -168,6 +177,7 @@ pub struct BinarySpec {
 }
 
 /// Build genomeBin response
+#[allow(dead_code)] // Response type for future genomeBin build API
 #[derive(Debug, Serialize)]
 pub struct BuildResponse {
     pub success: bool,
@@ -217,7 +227,7 @@ pub async fn build_genome(
             let genome_id = format!("{}-{}", genome.manifest.name, genome.manifest.version);
 
             // Save to persistent storage
-            if let Err(e) = GENOME_STATE.save_genome(&genome_id, &genome).await {
+            if let Err(e) = genome_state().save_genome(&genome_id, &genome).await {
                 error!("Failed to save genome: {}", e);
                 return Err(StatusCode::INTERNAL_SERVER_ERROR);
             }
@@ -246,7 +256,7 @@ pub async fn get_genome_info(
 ) -> Result<Json<GenomeInfoResponse>, StatusCode> {
     info!("Getting genome info: {}", id);
 
-    match GENOME_STATE.load_genome(&id).await {
+    match genome_state().load_genome(&id).await {
         Ok(genome) => {
             let archs: Vec<String> = genome
                 .binaries
@@ -271,7 +281,7 @@ pub async fn get_genome_info(
 pub async fn download_genome(Path(id): Path<String>) -> Result<Json<DownloadResponse>, StatusCode> {
     info!("Download request for genome: {}", id);
 
-    let path = GENOME_STATE.genome_path(&id);
+    let path = genome_state().genome_path(&id);
     if !path.exists() {
         error!("Genome not found: {}", id);
         return Err(StatusCode::NOT_FOUND);
@@ -303,7 +313,7 @@ pub struct VerifyResponse {
 pub async fn verify_genome(Path(id): Path<String>) -> Result<Json<VerifyResponse>, StatusCode> {
     info!("Verifying genome: {}", id);
 
-    match GENOME_STATE.load_genome(&id).await {
+    match genome_state().load_genome(&id).await {
         Ok(genome) => match genome.is_valid() {
             Ok(valid) => {
                 if valid {
@@ -419,7 +429,7 @@ pub async fn create_genome(
     let genome_id = format!("{}-{}", genome.manifest.name, genome.manifest.version);
 
     // Save to persistent storage
-    if let Err(e) = GENOME_STATE.save_genome(&genome_id, &genome).await {
+    if let Err(e) = genome_state().save_genome(&genome_id, &genome).await {
         error!("Failed to save genome: {}", e);
         return Err(StatusCode::INTERNAL_SERVER_ERROR);
     }
@@ -459,7 +469,7 @@ pub async fn compose_genome(
     // Load all source genomes
     let mut source_genomes = Vec::new();
     for genome_id in &req.genomes {
-        match GENOME_STATE.load_genome(genome_id).await {
+        match genome_state().load_genome(genome_id).await {
             Ok(genome) => source_genomes.push(genome),
             Err(e) => {
                 error!("Failed to load genome {}: {}", genome_id, e);
@@ -495,7 +505,7 @@ pub async fn compose_genome(
     let genome_id = format!("{}-composed", req.name);
 
     // Save composed genome
-    if let Err(e) = GENOME_STATE.save_genome(&genome_id, &composed).await {
+    if let Err(e) = genome_state().save_genome(&genome_id, &composed).await {
         error!("Failed to save composed genome: {}", e);
         return Err(StatusCode::INTERNAL_SERVER_ERROR);
     }
@@ -544,7 +554,7 @@ pub async fn self_replicate() -> Result<Json<SelfReplicateResponse>, StatusCode>
     let size = binary_data.len() as u64;
 
     // Save to persistent storage
-    if let Err(e) = GENOME_STATE.save_genome(&genome_id, &genome).await {
+    if let Err(e) = genome_state().save_genome(&genome_id, &genome).await {
         error!("Failed to save self-replicated genome: {}", e);
         return Err(StatusCode::INTERNAL_SERVER_ERROR);
     }
@@ -574,7 +584,7 @@ pub struct GenomeSummary {
 pub async fn list_genomes() -> Result<Json<ListGenomesResponse>, StatusCode> {
     info!("Listing all genomes");
 
-    match GENOME_STATE.list_all().await {
+    match genome_state().list_all().await {
         Ok(genomes) => {
             let summaries: Vec<GenomeSummary> = genomes
                 .iter()

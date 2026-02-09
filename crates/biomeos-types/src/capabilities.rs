@@ -17,6 +17,7 @@
 // =============================================================================
 
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use std::fmt;
 
 /// Well-known capabilities that primals can provide
@@ -246,67 +247,71 @@ pub enum PrimalCapability {
 
 impl PrimalCapability {
     /// Get a human-readable description of this capability
-    pub fn description(&self) -> &'static str {
+    ///
+    /// Returns `Cow<'static, str>` to avoid memory leaks for custom capabilities
+    /// while maintaining zero-copy for static descriptions.
+    pub fn description(&self) -> Cow<'static, str> {
         match self {
             // Security
-            Self::Encryption => "Encrypt and decrypt data",
-            Self::Identity => "Verify cryptographic identities",
-            Self::Trust => "Evaluate trust relationships",
-            Self::KeyManagement => "Generate and manage cryptographic keys",
-            Self::HardwareSecurity => "Hardware security module operations",
-            Self::SecureTunneling => "Create secure encrypted tunnels",
-            
+            Self::Encryption => Cow::Borrowed("Encrypt and decrypt data"),
+            Self::Identity => Cow::Borrowed("Verify cryptographic identities"),
+            Self::Trust => Cow::Borrowed("Evaluate trust relationships"),
+            Self::KeyManagement => Cow::Borrowed("Generate and manage cryptographic keys"),
+            Self::HardwareSecurity => Cow::Borrowed("Hardware security module operations"),
+            Self::SecureTunneling => Cow::Borrowed("Create secure encrypted tunnels"),
+
             // Communication
-            Self::Discovery => "Discover other primals and nodes",
-            Self::P2PFederation => "Peer-to-peer federation",
-            Self::Tunneling => "Network tunneling and routing",
-            Self::Routing => "Packet routing and forwarding",
-            Self::GeneticRouting => "BirdSong genetic lineage NAT",
-            Self::CapabilityAnnouncement => "Announce capabilities to network",
-            
+            Self::Discovery => Cow::Borrowed("Discover other primals and nodes"),
+            Self::P2PFederation => Cow::Borrowed("Peer-to-peer federation"),
+            Self::Tunneling => Cow::Borrowed("Network tunneling and routing"),
+            Self::Routing => Cow::Borrowed("Packet routing and forwarding"),
+            Self::GeneticRouting => Cow::Borrowed("BirdSong genetic lineage NAT"),
+            Self::CapabilityAnnouncement => Cow::Borrowed("Announce capabilities to network"),
+
             // Compute
-            Self::WorkloadExecution => "Execute workloads",
-            Self::ResourceScheduling => "Schedule compute resources",
-            Self::ProcessIsolation => "Isolate processes and containers",
-            Self::FractalCompute => "Fractal compute scaling",
-            Self::GpuAcceleration => "GPU acceleration",
-            
+            Self::WorkloadExecution => Cow::Borrowed("Execute workloads"),
+            Self::ResourceScheduling => Cow::Borrowed("Schedule compute resources"),
+            Self::ProcessIsolation => Cow::Borrowed("Isolate processes and containers"),
+            Self::FractalCompute => Cow::Borrowed("Fractal compute scaling"),
+            Self::GpuAcceleration => Cow::Borrowed("GPU acceleration"),
+
             // Storage
-            Self::DataStorage => "Store and retrieve data",
-            Self::Provenance => "Track data provenance",
-            Self::Compression => "Adaptive data compression",
-            Self::Replication => "Data replication",
-            Self::Deduplication => "Data deduplication",
-            Self::ContentAddressed => "Content-addressed storage",
-            
+            Self::DataStorage => Cow::Borrowed("Store and retrieve data"),
+            Self::Provenance => Cow::Borrowed("Track data provenance"),
+            Self::Compression => Cow::Borrowed("Adaptive data compression"),
+            Self::Replication => Cow::Borrowed("Data replication"),
+            Self::Deduplication => Cow::Borrowed("Data deduplication"),
+            Self::ContentAddressed => Cow::Borrowed("Content-addressed storage"),
+
             // UI
-            Self::VisualRendering => "Render visual interfaces",
-            Self::InputHandling => "Handle user input",
-            Self::MultiModal => "Multi-modal interface",
-            Self::TopologyVisualization => "Visualize network topology",
-            Self::RealtimeUpdates => "Real-time UI updates",
-            
+            Self::VisualRendering => Cow::Borrowed("Render visual interfaces"),
+            Self::InputHandling => Cow::Borrowed("Handle user input"),
+            Self::MultiModal => Cow::Borrowed("Multi-modal interface"),
+            Self::TopologyVisualization => Cow::Borrowed("Visualize network topology"),
+            Self::RealtimeUpdates => Cow::Borrowed("Real-time UI updates"),
+
             // Orchestration
-            Self::LifecycleManagement => "Primal lifecycle management",
-            Self::HealthMonitoring => "Health monitoring",
-            Self::ConfigManagement => "Configuration management",
-            Self::MetricsCollection => "Metrics collection",
-            Self::LogAggregation => "Log aggregation",
-            Self::GraphOrchestration => "Graph-based orchestration",
-            
+            Self::LifecycleManagement => Cow::Borrowed("Primal lifecycle management"),
+            Self::HealthMonitoring => Cow::Borrowed("Health monitoring"),
+            Self::ConfigManagement => Cow::Borrowed("Configuration management"),
+            Self::MetricsCollection => Cow::Borrowed("Metrics collection"),
+            Self::LogAggregation => Cow::Borrowed("Log aggregation"),
+            Self::GraphOrchestration => Cow::Borrowed("Graph-based orchestration"),
+
             // AI
-            Self::AiCoordination => "AI coordination and routing",
-            Self::AiMultiProvider => "Multi-provider AI support",
-            Self::McpServer => "MCP server",
-            Self::AiCapabilityDiscovery => "AI capability discovery",
-            
+            Self::AiCoordination => Cow::Borrowed("AI coordination and routing"),
+            Self::AiMultiProvider => Cow::Borrowed("Multi-provider AI support"),
+            Self::McpServer => Cow::Borrowed("MCP server"),
+            Self::AiCapabilityDiscovery => Cow::Borrowed("AI capability discovery"),
+
             // Specialized
-            Self::BluetoothGenesis => "Bluetooth genesis pairing",
-            Self::SporeDeployment => "USB spore deployment",
-            Self::GeneticLineage => "Genetic lineage management",
-            Self::NicheDeployment => "Niche deployment",
-            
-            Self::Custom(name) => return Box::leak(format!("Custom: {}", name).into_boxed_str()),
+            Self::BluetoothGenesis => Cow::Borrowed("Bluetooth genesis pairing"),
+            Self::SporeDeployment => Cow::Borrowed("USB spore deployment"),
+            Self::GeneticLineage => Cow::Borrowed("Genetic lineage management"),
+            Self::NicheDeployment => Cow::Borrowed("Niche deployment"),
+
+            // Custom capabilities use Owned to avoid memory leaks
+            Self::Custom(name) => Cow::Owned(format!("Custom: {}", name)),
         }
     }
     

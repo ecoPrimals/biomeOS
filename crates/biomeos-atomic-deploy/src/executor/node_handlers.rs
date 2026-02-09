@@ -424,13 +424,13 @@ mod tests {
     fn test_substitute_env() {
         let mut env = HashMap::new();
         env.insert("FOO".to_string(), "bar".to_string());
-        env.insert("FAMILY_ID".to_string(), "nat0".to_string());
+        env.insert("FAMILY_ID".to_string(), "1894e909e454".to_string());
 
         assert_eq!(substitute_env("${FOO}", &env), "bar");
         assert_eq!(substitute_env("$FOO", &env), "bar");
         assert_eq!(
             substitute_env("prefix-${FAMILY_ID}-suffix", &env),
-            "prefix-nat0-suffix"
+            "prefix-1894e909e454-suffix"
         );
     }
 

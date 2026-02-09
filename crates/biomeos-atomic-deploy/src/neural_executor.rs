@@ -37,7 +37,7 @@ pub use crate::executor::types::{ExecutionReport, PhaseResult};
 pub struct GraphExecutor {
     graph: Graph,
     context: ExecutionContext,
-    max_parallelism: usize,
+    pub(crate) max_parallelism: usize,
 }
 
 impl GraphExecutor {
@@ -244,6 +244,10 @@ impl GraphExecutor {
             "log.warn" => node_handlers::log_warn(node, context).await,
             "log.error" => node_handlers::log_error(node, context).await,
 
+            // RPC call (NEW - Feb 6, 2026)
+            // Allows graph nodes to call arbitrary methods on primals
+            "rpc_call" => Self::node_rpc_call(node, context).await,
+
             // Unknown
             _ => {
                 warn!("Unknown node type: {}, skipping", node_type_str);
@@ -255,7 +259,8 @@ impl GraphExecutor {
     }
 
     /// Substitute environment variables in a string
-    fn substitute_env(s: &str, env: &HashMap<String, String>) -> String {
+    #[allow(dead_code)] // Reserved for graph environment variable expansion
+    pub(crate) fn substitute_env(s: &str, env: &HashMap<String, String>) -> String {
         let mut result = s.to_string();
 
         for (key, value) in env {
@@ -267,7 +272,7 @@ impl GraphExecutor {
     }
 
     /// Perform topological sort to determine execution phases
-    fn topological_sort(&self) -> Result<Vec<Vec<String>>> {
+    pub(crate) fn topological_sort(&self) -> Result<Vec<Vec<String>>> {
         let mut in_degree: HashMap<String, usize> = HashMap::new();
         let mut graph_map: HashMap<String, Vec<String>> = HashMap::new();
 
@@ -356,6 +361,7 @@ impl GraphExecutor {
 impl GraphExecutor {
     /// Node executor: primal_start
     /// Spawns a primal binary as a child process with environment configuration
+    #[allow(dead_code)] // Reserved for graph-based primal spawning
     async fn node_primal_start(
         node: &GraphNode,
         context: &ExecutionContext,
@@ -687,25 +693,35 @@ impl GraphExecutor {
         }))
     }
 
-    /// Node executor: log.info
-
-    /// Find BearDog socket from execution context
-    /// Used for JWT provisioning and other security capabilities
-    /// Uses SocketNucleation for deterministic paths (no hardcoding)
+    /// Find security provider socket from execution context
+    ///
+    /// DEEP DEBT EVOLUTION: Resolves security provider by capability, not name.
+    /// Uses graph output first, then env override, then nucleation fallback.
     #[allow(dead_code)] // Used conditionally based on security features
-    async fn find_beardog_socket(context: &ExecutionContext) -> Option<String> {
+    async fn find_security_socket(context: &ExecutionContext) -> Option<String> {
         use crate::nucleation::SocketNucleation;
 
-        // Try to get from outputs first (from launch_beardog node)
-        if let Some(beardog_output) = context.get_output("launch_beardog").await {
-            if let Some(socket) = beardog_output.get("socket").and_then(|v| v.as_str()) {
-                return Some(socket.to_string());
+        // 1. Try to get from graph execution outputs (capability-based)
+        for node_name in &["launch_security", "launch_beardog"] {
+            if let Some(output) = context.get_output(node_name).await {
+                if let Some(socket) = output.get("socket").and_then(|v| v.as_str()) {
+                    return Some(socket.to_string());
+                }
             }
         }
 
-        // Try nucleated location based on family_id from context
+        // 2. Try env override (DEEP DEBT: configurable, not hardcoded)
+        if let Ok(socket) = std::env::var("BIOMEOS_SECURITY_SOCKET") {
+            if tokio::fs::metadata(&socket).await.is_ok() {
+                return Some(socket);
+            }
+        }
+
+        // 3. Fall back to nucleation with resolved provider name
+        let provider = std::env::var("BIOMEOS_SECURITY_PROVIDER")
+            .unwrap_or_else(|_| "beardog".to_string());
         let mut nucleation = SocketNucleation::default();
-        let default_socket = nucleation.assign_socket("beardog", &context.family_id);
+        let default_socket = nucleation.assign_socket(&provider, &context.family_id);
         if tokio::fs::metadata(&default_socket).await.is_ok() {
             return Some(default_socket.to_string_lossy().into_owned());
         }
@@ -713,109 +729,109 @@ impl GraphExecutor {
         None
     }
 
-    /// Request JWT_SECRET from BearDog security provider
-    /// This is TRUE PRIMAL: runtime capability-based secret management
+    // DEEP DEBT EVOLUTION (Feb 7, 2026): Removed legacy `request_jwt_secret_from_beardog`
+    // and `generate_jwt_secret` functions. These are now properly implemented in the
+    // `beardog_jwt_client` module with better separation of concerns:
+    //   - `crate::beardog_jwt_client::provision_jwt_secret()` for JWT provisioning
+    //   - `crate::beardog_jwt_client::generate_secure_random_jwt()` for fallback
+
+    /// Node executor: rpc_call
+    /// Makes a JSON-RPC call to a target primal
     ///
-    /// NOTE: This is the legacy implementation. New code should use
-    /// beardog_jwt_client module for better separation of concerns.
-    #[allow(dead_code)] // Legacy fallback, kept for compatibility
-    async fn request_jwt_secret_from_beardog(beardog_socket: &str) -> Result<String> {
+    /// NEW (Feb 6, 2026) - Allows graph nodes to orchestrate primal behavior
+    /// Used for: onion.start, mesh.init, birdsong.advertise, etc.
+    async fn node_rpc_call(
+        node: &GraphNode,
+        context: &ExecutionContext,
+    ) -> Result<serde_json::Value> {
         use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
         use tokio::net::UnixStream;
-        use tokio::time::{timeout, Duration};
+        use std::time::Duration;
 
-        info!("   🔐 Connecting to BearDog at: {}", beardog_socket);
+        // Get target primal from config
+        let target = node
+            .config
+            .get("target")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| anyhow::anyhow!("rpc_call requires 'target' config (primal name)"))?;
 
-        // Connect to BearDog with timeout
-        let stream = timeout(Duration::from_secs(5), UnixStream::connect(beardog_socket))
-            .await
-            .context("Timeout connecting to BearDog")?
-            .context(format!(
-                "Failed to connect to BearDog at {}",
-                beardog_socket
-            ))?;
+        // Get method name from config
+        let method = node
+            .config
+            .get("method")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| anyhow::anyhow!("rpc_call requires 'method' config"))?;
 
-        let (read_half, mut write_half) = stream.into_split();
-        let mut reader = BufReader::new(read_half);
+        // Get params from config (optional, default to empty object)
+        let params = node
+            .config
+            .get("params")
+            .cloned()
+            .unwrap_or_else(|| serde_json::json!({}));
 
-        // JSON-RPC request to generate JWT secret
-        // BearDog should have a "generate_secret" or "derive_jwt_secret" method
+        // Substitute environment variables in params
+        let params_str = serde_json::to_string(&params)?;
+        let params_expanded = crate::executor::substitute_env(&params_str, context.env());
+        let params: serde_json::Value = serde_json::from_str(&params_expanded)?;
+
+        info!("   📞 RPC call to {}: {}({:?})", target, method, params);
+
+        // Get socket path for target primal
+        let socket_path = context.get_socket_path(target).await;
+
+        // Build JSON-RPC request
         let request = serde_json::json!({
             "jsonrpc": "2.0",
-            "method": "beardog.generate_jwt_secret",
-            "params": {
-                "purpose": "nestgate_authentication",
-                "strength": "high"
-            },
+            "method": method,
+            "params": params,
             "id": 1
         });
 
-        let request_str = serde_json::to_string(&request)?;
-        info!("   📤 Sending request to BearDog: {}", request_str);
+        // Connect to primal
+        let stream = tokio::time::timeout(
+            Duration::from_secs(10),
+            UnixStream::connect(&socket_path),
+        )
+        .await
+        .context(format!("Timeout connecting to {} at {}", target, socket_path))?
+        .context(format!("Failed to connect to {} at {}", target, socket_path))?;
 
-        // Send request with newline delimiter
-        write_half.write_all(request_str.as_bytes()).await?;
+        let (read_half, mut write_half) = stream.into_split();
+
+        // Send request
+        let request_json = serde_json::to_string(&request)?;
+        write_half.write_all(request_json.as_bytes()).await?;
         write_half.write_all(b"\n").await?;
         write_half.flush().await?;
 
         // Read response with timeout
+        let mut reader = BufReader::new(read_half);
         let mut response_line = String::new();
-        timeout(Duration::from_secs(5), reader.read_line(&mut response_line))
+        tokio::time::timeout(Duration::from_secs(30), reader.read_line(&mut response_line))
             .await
-            .context("Timeout waiting for BearDog response")?
-            .context("Failed to read response from BearDog")?;
+            .context(format!("Timeout waiting for {} response", target))?
+            .context(format!("Failed to read response from {}", target))?;
 
-        info!("   📥 Received from BearDog: {}", response_line.trim());
-
-        // Parse JSON-RPC response
         let response: serde_json::Value = serde_json::from_str(&response_line)
-            .context("Failed to parse BearDog response as JSON")?;
+            .context(format!("Invalid JSON response from {}", target))?;
 
-        // Extract secret from response
+        // Check for error
         if let Some(error) = response.get("error") {
-            anyhow::bail!("BearDog returned error: {}", error);
+            let error_msg = error.get("message").and_then(|m| m.as_str()).unwrap_or("Unknown error");
+            anyhow::bail!("RPC error from {}: {}", target, error_msg);
         }
 
-        if let Some(result) = response.get("result") {
-            if let Some(secret) = result.get("secret").and_then(|s| s.as_str()) {
-                return Ok(secret.to_string());
-            } else if let Some(secret) = result.as_str() {
-                return Ok(secret.to_string());
-            }
-        }
+        // Extract result
+        let result = response.get("result").cloned().unwrap_or(serde_json::Value::Null);
 
-        anyhow::bail!("BearDog response did not contain a valid secret")
-    }
+        info!("   ✅ RPC call successful: {} → {:?}", method, result);
 
-    /// Generate a secure JWT_SECRET as fallback
-    /// Used when BearDog is not available
-    #[allow(dead_code)] // Fallback function, used conditionally
-    fn generate_jwt_secret() -> String {
-        use rand::Rng;
-
-        info!("   🔐 Generating secure fallback JWT_SECRET...");
-
-        // Generate 64 bytes of cryptographically secure random data
-        let mut rng = rand::thread_rng();
-        let secret: Vec<u8> = (0..64).map(|_| rng.gen()).collect();
-
-        // Base64 encode for use as JWT secret
-        use base64::{engine::general_purpose, Engine as _};
-        general_purpose::STANDARD.encode(&secret)
+        Ok(serde_json::json!({
+            "target": target,
+            "method": method,
+            "result": result,
+            "success": true
+        }))
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_env_substitution() {
-        let mut env = HashMap::new();
-        env.insert("FOO".to_string(), "bar".to_string());
-        env.insert("BAZ".to_string(), "qux".to_string());
-
-        let result = GraphExecutor::substitute_env("${FOO}/${BAZ}/test", &env);
-        assert_eq!(result, "bar/qux/test");
-    }
-}
+// Tests are in neural_executor_tests.rs to keep this file under 1000 lines

@@ -13,7 +13,7 @@ fn test_load_livespore_create_graph_format() {
         description = "Create a new LiveSpore deployment"
         
         [graph.metadata]
-        family_id = "nat0"
+        family_id = "1894e909e454"
         author = "biomeOS"
         created = "2026-01-27"
         category = "deployment"

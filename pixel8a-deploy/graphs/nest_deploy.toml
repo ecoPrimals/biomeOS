@@ -322,9 +322,9 @@ to = "verify-nest-operational"
 #   biomeos deploy-niche niches/nest.toml --graph nest_deploy
 #
 # Expected output:
-#   ✅ Phase 1: BearDog started (PID: xxxx, socket: /run/user/{uid}/beardog-nat0.sock)
-#   ✅ Phase 2: Songbird started (PID: xxxx, socket: /run/user/{uid}/songbird-nat0.sock)
-#   ✅ Phase 3: NestGate started (PID: xxxx, socket: /run/user/{uid}/nestgate-nat0.sock)
+#   ✅ Phase 1: BearDog started (PID: xxxx, socket: /run/user/{uid}/beardog-1894e909e454.sock)
+#   ✅ Phase 2: Songbird started (PID: xxxx, socket: /run/user/{uid}/songbird-1894e909e454.sock)
+#   ✅ Phase 3: NestGate started (PID: xxxx, socket: /run/user/{uid}/nestgate-1894e909e454.sock)
 #   ✅ Phase 4: NestGate registered with Songbird (6 capabilities)
 #   ✅ Phase 5: NestGate health check passed
 #   ✅ Phase 6: Storage operations verified

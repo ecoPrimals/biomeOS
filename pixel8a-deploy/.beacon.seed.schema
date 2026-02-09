@@ -1,0 +1,87 @@
+# Beacon Seed Architecture (Mitochondrial DNA)
+# Version: 1.0.0
+# Date: February 4, 2026
+
+## Relationship to Lineage
+
+Beacon seed is LOOSELY TIED to lineage seed - like mitochondrial DNA:
+- Derived from lineage but domain-separated
+- Can be adapted/swapped/shared independently  
+- Carries "address book" of meetings
+- Syncs across devices when lineage permissions connect
+
+## Derivation
+
+From lineage seed (32 bytes):
+  beacon_seed = HKDF-SHA256(
+    ikm = lineage_seed,
+    salt = node_id,          # Each device gets unique beacon
+    info = "ecoPrimals-beacon-mito-v1"
+  )
+
+This gives:
+- Same family → related beacon IDs (can find each other)
+- Different devices → unique beacons (can track which device met whom)
+- Loose tie → beacon can be rotated without changing lineage
+
+## Address Book Structure
+
+The beacon "address book" (known_beacons.json):
+{
+  "version": "1.0.0",
+  "owner_beacon_id": "<hex>",
+  "parent_lineage_hint": "<first 8 bytes of lineage family_id>",
+  "sync_token": "<uuid for merge conflicts>",
+  "entries": [
+    {
+      "beacon_id": "<hex>",
+      "node_name": "alice-desktop",
+      "first_met": "2026-02-04T10:30:00Z",
+      "last_seen": "2026-02-04T11:45:00Z", 
+      "endpoints": ["192.168.1.50:9900", "10.0.0.5:9900"],
+      "capabilities_hint": ["compute", "storage"],
+      "notes": "Met at coffee shop, trusted for AI work",
+      "trust_level": "met"  # met | verified | trusted
+    }
+  ]
+}
+
+## Sync Model
+
+When two devices with same lineage connect:
+
+1. Desktop has address book A (met Alice, Bob)
+2. Pixel has address book B (met Carol, Alice)
+
+Sync rules:
+- UNION entries by beacon_id
+- Take NEWER last_seen timestamp
+- MERGE endpoints (keep all known)
+- Keep notes from both (concatenate)
+- Conflict on trust_level → take higher
+
+Result: Both devices know Alice, Bob, Carol
+
+## Use Case: Pixel meets, Desktop uses
+
+1. Pixel meets "Dave" at conference
+   → Pixel address book: Dave added
+   
+2. Pixel syncs to Desktop (USB or network)
+   → Desktop address book: Dave added
+   
+3. Desktop can now discover Dave for collaboration
+   → Uses beacon to find Dave
+   → Uses lineage for permissions (separate exchange)
+
+## Key Insight
+
+"The beacon seed is your SOCIAL NETWORK (who you've met).
+ The lineage seed is your TRUST NETWORK (what they can do).
+ 
+ You can share your contacts without sharing your keys."
+
+## Files
+
+.beacon.seed         - 32 bytes, derived from lineage
+.known_beacons.json  - Address book (portable, syncable)

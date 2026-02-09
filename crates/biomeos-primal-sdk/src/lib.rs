@@ -14,7 +14,7 @@
 //! # async fn example() -> anyhow::Result<()> {
 //! // Discover a primal by capability
 //! let security = PrimalDiscovery::find_by_capability(
-//!     PrimalCapability::Security
+//!     PrimalCapability::security()
 //! ).await?;
 //!
 //! // Connect and communicate

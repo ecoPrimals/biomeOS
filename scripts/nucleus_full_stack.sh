@@ -4,7 +4,7 @@
 
 set -e
 
-export FAMILY_ID=nat0
+export FAMILY_ID=1894e909e454
 export NODE_ID=nucleus1
 export JWT_SECRET="$(openssl rand -base64 48)"
 

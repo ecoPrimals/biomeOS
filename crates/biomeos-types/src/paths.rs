@@ -367,11 +367,60 @@ impl SystemPaths {
             .or_else(|_| env::var("USERNAME"))
             .unwrap_or_else(|_| "default".to_string())
     }
+
+    /// Create SystemPaths without creating directories
+    ///
+    /// This is useful for Default implementation and cases where you want
+    /// to compute paths but defer directory creation until actually needed.
+    /// Directories will be created lazily when first accessed via methods
+    /// like `primal_socket()`.
+    ///
+    /// Note: This will use fallback paths (e.g., /tmp) if XDG paths cannot
+    /// be determined. For stricter path requirements, use `new()` which
+    /// returns a `Result`.
+    pub fn new_lazy() -> Self {
+        // Compute paths with fallbacks - these operations cannot fail
+        let runtime_dir =
+            Self::get_runtime_dir().unwrap_or_else(|_| env::temp_dir().join("biomeos"));
+        let data_dir =
+            Self::get_data_dir().unwrap_or_else(|_| env::temp_dir().join("biomeos-data"));
+        let config_dir =
+            Self::get_config_dir().unwrap_or_else(|_| env::temp_dir().join("biomeos-config"));
+        let cache_dir =
+            Self::get_cache_dir().unwrap_or_else(|_| env::temp_dir().join("biomeos-cache"));
+        let state_dir =
+            Self::get_state_dir().unwrap_or_else(|_| env::temp_dir().join("biomeos-state"));
+
+        Self {
+            runtime_dir,
+            data_dir,
+            config_dir,
+            cache_dir,
+            state_dir,
+        }
+    }
+
+    /// Ensure all directories exist
+    ///
+    /// Call this after `new_lazy()` when you need to guarantee directories exist.
+    pub fn ensure_all_dirs(&self) -> Result<()> {
+        Self::ensure_dir(&self.runtime_dir)?;
+        Self::ensure_dir(&self.data_dir)?;
+        Self::ensure_dir(&self.config_dir)?;
+        Self::ensure_dir(&self.cache_dir)?;
+        Self::ensure_dir(&self.state_dir)?;
+        Ok(())
+    }
 }
 
 impl Default for SystemPaths {
+    /// Create SystemPaths with lazy directory creation
+    ///
+    /// This implementation uses `new_lazy()` to avoid panicking.
+    /// Directories will be created when first accessed. For explicit
+    /// directory creation and error handling, use `SystemPaths::new()`.
     fn default() -> Self {
-        Self::new().expect("Failed to create SystemPaths")
+        Self::new_lazy()
     }
 }
 

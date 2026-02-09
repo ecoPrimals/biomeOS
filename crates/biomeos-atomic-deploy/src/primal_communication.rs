@@ -11,7 +11,7 @@
 
 use anyhow::{Context, Result};
 use biomeos_core::atomic_client::AtomicClient;
-use serde_json::{json, Value};
+use serde_json::json;
 use std::path::Path;
 use std::time::Duration;
 use tracing::debug;
@@ -139,12 +139,15 @@ pub async fn establish_btsp_tunnel(beardog_socket: &Path, family_id: &str) -> Re
 ///
 /// Uses `AtomicClient::discover()` to find BearDog automatically.
 pub async fn establish_btsp_tunnel_with_discovery(family_id: &str) -> Result<String> {
-    // Discover BearDog with automatic transport fallback
-    let client = AtomicClient::discover("beardog")
+    // Discover security provider with automatic transport fallback
+    // DEEP DEBT EVOLUTION: Resolve provider name from env, not hardcoded
+    let security_provider = std::env::var("BIOMEOS_SECURITY_PROVIDER")
+        .unwrap_or_else(|_| "beardog".to_string());
+    let client = AtomicClient::discover(&security_provider)
         .await
-        .context("Failed to discover BearDog for BTSP tunnel")?;
+        .context(format!("Failed to discover {} for BTSP tunnel", security_provider))?;
 
-    debug!("Discovered BearDog via {} for BTSP", client.endpoint());
+    debug!("Discovered {} via {} for BTSP", security_provider, client.endpoint());
 
     // Request BTSP tunnel establishment
     let response = client
@@ -166,4 +169,82 @@ pub async fn establish_btsp_tunnel_with_discovery(family_id: &str) -> Result<Str
         .ok_or_else(|| anyhow::anyhow!("Missing session_id in BTSP response"))?;
 
     Ok(session_id.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    #[test]
+    fn test_capabilities_response_parsing() {
+        let response =
+            json!({ "capabilities": ["crypto.encrypt", "crypto.decrypt", "genetic.verify"] });
+        let capabilities = response
+            .get("capabilities")
+            .and_then(|c| c.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+        assert_eq!(capabilities.len(), 3);
+        assert!(capabilities.contains(&"crypto.encrypt".to_string()));
+    }
+
+    #[test]
+    fn test_capabilities_response_empty() {
+        let response = json!({ "capabilities": [] });
+        let capabilities = response
+            .get("capabilities")
+            .and_then(|c| c.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+        assert!(capabilities.is_empty());
+    }
+
+    #[test]
+    fn test_capabilities_response_missing() {
+        let response = json!({ "status": "ok" });
+        let capabilities = response
+            .get("capabilities")
+            .and_then(|c| c.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+        assert!(capabilities.is_empty());
+    }
+
+    #[test]
+    fn test_btsp_request_structure() {
+        let request = json!({ "family_id": "test-family", "tunnel_type": "local", "require_lineage_proof": false });
+        assert_eq!(request["family_id"], "test-family");
+        assert_eq!(request["tunnel_type"], "local");
+    }
+
+    #[test]
+    fn test_btsp_session_id_parsing() {
+        let response = json!({ "session_id": "btsp-session-abc123", "established": true });
+        let session_id = response
+            .get("session_id")
+            .and_then(|s| s.as_str())
+            .map(String::from);
+        assert_eq!(session_id, Some("btsp-session-abc123".to_string()));
+    }
+
+    #[test]
+    fn test_btsp_session_id_missing() {
+        let response = json!({ "error": "tunnel establishment failed" });
+        assert!(response
+            .get("session_id")
+            .and_then(|s| s.as_str())
+            .is_none());
+    }
 }

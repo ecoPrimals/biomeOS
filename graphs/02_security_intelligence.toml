@@ -26,13 +26,13 @@ description = "Launch BearDog for crypto, trust, and genetic lineage"
 primal_name = "beardog-server"
 binary_path = "plasmidBin/primals/beardog-server"
 family_id = "${FAMILY_ID}"
-socket_path = "/tmp/beardog-nat0-default.sock"
+socket_path = "/tmp/beardog-1894e909e454-default.sock"
 capabilities = ["security", "crypto", "trust", "genetic_lineage"]
 startup_timeout_seconds = 30
 
 [[nodes.health_check]]
 type = "socket_exists"
-path = "/tmp/beardog-nat0-default.sock"
+path = "/tmp/beardog-1894e909e454-default.sock"
 
 [[nodes.health_check]]
 type = "json_rpc_ping"
@@ -49,13 +49,13 @@ depends_on = ["launch_beardog"]
 primal_name = "squirrel"
 binary_path = "plasmidBin/primals/squirrel"
 family_id = "${FAMILY_ID}"
-socket_path = "/tmp/squirrel-nat0.sock"
+socket_path = "/tmp/squirrel-1894e909e454.sock"
 capabilities = ["meta_ai", "ai_routing", "tool_orchestration", "mcp"]
 startup_timeout_seconds = 30
 
 [[nodes.health_check]]
 type = "socket_exists"
-path = "/tmp/squirrel-nat0.sock"
+path = "/tmp/squirrel-1894e909e454.sock"
 
 [[nodes.health_check]]
 type = "json_rpc_ping"
@@ -70,8 +70,8 @@ depends_on = ["launch_beardog", "launch_squirrel"]
 
 [nodes.config]
 check_endpoints = [
-    "/tmp/beardog-nat0-default.sock",
-    "/tmp/squirrel-nat0.sock"
+    "/tmp/beardog-1894e909e454-default.sock",
+    "/tmp/squirrel-1894e909e454.sock"
 ]
 timeout_seconds = 30
 require_all_healthy = true

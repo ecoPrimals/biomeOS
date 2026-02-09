@@ -46,7 +46,7 @@ pub struct DeploymentConfig {
     /// Path to USB parent seed
     pub usb_seed_path: PathBuf,
 
-    /// Family ID (e.g., "nat0")
+    /// Family ID (e.g., "1894e909e454")
     pub family_id: String,
 
     /// Deployment batch (e.g., "20260112")
@@ -75,7 +75,7 @@ impl DeploymentConfig {
 
         Self {
             usb_seed_path,
-            family_id: FamilyId::new("nat0").to_string(),
+            family_id: FamilyId::new("1894e909e454").to_string(),
             deployment_batch: chrono::Utc::now().format("%Y%m%d").to_string(),
             binary_dir: PathBuf::from(
                 "/home/eastgate/Development/ecoPrimals/phase2/biomeOS/plasmidBin",
@@ -421,7 +421,7 @@ mod tests {
         let config = DeploymentConfig::test_config(seed_path.clone());
 
         assert_eq!(config.usb_seed_path, seed_path);
-        assert_eq!(config.family_id, "nat0"); // test_config uses "nat0" as the family_id
+        assert_eq!(config.family_id, "1894e909e454"); // test_config uses "1894e909e454" as the family_id
         assert!(!config.neural_api_enabled);
         assert!(config.neural_api_endpoint.is_none());
     }

@@ -18,7 +18,7 @@
 //!
 //! # Environment Variables
 //!
-//! - `FAMILY_ID`: Family identifier (default: "nat0")
+//! - `FAMILY_ID`: Family identifier (default: "1894e909e454")
 //! - `NODE_ID`: Node identifier (default: "tower0")
 //! - `BIOMEOS_ROOT`: biomeOS root directory (default: current dir)
 //! - `XDG_RUNTIME_DIR`: Runtime directory (default: /run/user/1000)
@@ -52,7 +52,7 @@ impl Config {
             .unwrap_or_else(|_| PathBuf::from("/run/user/1000"));
 
         Self {
-            family_id: env::var("FAMILY_ID").unwrap_or_else(|_| "nat0".to_string()),
+            family_id: env::var("FAMILY_ID").unwrap_or_else(|_| "1894e909e454".to_string()),
             node_id: env::var("NODE_ID").unwrap_or_else(|_| "tower0".to_string()),
             plasmid_bin: biomeos_root.join("plasmidBin"),
             graphs_dir: biomeos_root.join("graphs"),

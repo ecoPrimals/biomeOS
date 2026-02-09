@@ -264,15 +264,17 @@ pub fn handle_genome_self_replicate() -> Result<()> {
 }
 
 /// Get the XDG-compliant genome storage directory
+///
+/// DEEP DEBT EVOLUTION: Uses $HOME env instead of `dirs` (C-based)
 fn get_genome_storage_dir() -> PathBuf {
     // Check XDG data directory first
     if let Ok(data_home) = std::env::var("XDG_DATA_HOME") {
         return PathBuf::from(data_home).join("biomeos/genomes");
     }
 
-    // Fall back to ~/.local/share/biomeos/genomes
-    if let Some(home) = dirs::home_dir() {
-        return home.join(".local/share/biomeos/genomes");
+    // Fall back to $HOME/.local/share/biomeos/genomes
+    if let Ok(home) = std::env::var("HOME") {
+        return PathBuf::from(home).join(".local/share/biomeos/genomes");
     }
 
     // Last resort: /tmp

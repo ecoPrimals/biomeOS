@@ -21,9 +21,9 @@ BIOMEOS_SOCKET_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/biomeos"
 BEARDOG_SOCKET="${BIOMEOS_SOCKET_DIR}/beardog-node-alpha.sock"
 SONGBIRD_SOCKET="${BIOMEOS_SOCKET_DIR}/songbird-node-alpha.sock"
 NEURAL_API_SOCKET="${BIOMEOS_SOCKET_DIR}/neural-api-node-alpha.sock"
-SQUIRREL_SOCKET="${BIOMEOS_SOCKET_DIR}/squirrel-nat0.sock"
-TOADSTOOL_SOCKET="${BIOMEOS_SOCKET_DIR}/toadstool-nat0.jsonrpc.sock"
-NESTGATE_SOCKET="${BIOMEOS_SOCKET_DIR}/nestgate-nat0.sock"
+SQUIRREL_SOCKET="${BIOMEOS_SOCKET_DIR}/squirrel-1894e909e454.sock"
+TOADSTOOL_SOCKET="${BIOMEOS_SOCKET_DIR}/toadstool-1894e909e454.jsonrpc.sock"
+NESTGATE_SOCKET="${BIOMEOS_SOCKET_DIR}/nestgate-1894e909e454.sock"
 
 PASSED=0
 FAILED=0
@@ -159,7 +159,7 @@ echo ""
 
 TOTAL=$((TOTAL + 1))
 echo -n "  [$TOTAL] NestGate storage.store... "
-result=$(echo '{"jsonrpc":"2.0","method":"storage.store","params":{"family_id":"nat0","key":"nucleus:validation","value":{"test":"NUCLEUS validation","timestamp":"'"$(date -Iseconds)"'"}},"id":1}' | timeout 5 nc -U "$NESTGATE_SOCKET" 2>/dev/null)
+result=$(echo '{"jsonrpc":"2.0","method":"storage.store","params":{"family_id":"1894e909e454","key":"nucleus:validation","value":{"test":"NUCLEUS validation","timestamp":"'"$(date -Iseconds)"'"}},"id":1}' | timeout 5 nc -U "$NESTGATE_SOCKET" 2>/dev/null)
 if echo "$result" | grep -q "success"; then
     echo "✅ PASSED"
     PASSED=$((PASSED + 1))

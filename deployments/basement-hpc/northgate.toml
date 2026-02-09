@@ -18,7 +18,7 @@
 [deployment]
 hostname = "northgate"
 location = "basement-lan"
-family_id = "nat0"
+family_id = "1894e909e454"
 deployment_type = "tower-plus-compute"
 
 # =============================================================================
@@ -169,7 +169,7 @@ gpu_time_slicing = true
 cpu_pinning = false
 
 # Trusted deployers (genetic lineage)
-trusted_families = ["nat0"]
+trusted_families = ["1894e909e454"]
 trusted_sub_feds = ["lan-hpc", "ai-cluster"]
 
 # =============================================================================
@@ -207,7 +207,7 @@ alert_on_memory_pressure = 95
 
 # Step 2: Deploy Tower on Northgate
 # export NODE_ID=tower-northgate
-# export FAMILY_ID=nat0
+# export FAMILY_ID=1894e909e454
 # biomeos deploy --niche tower --config deployments/basement-hpc/northgate.toml
 
 # Step 3: Deploy GPU Compute Node
@@ -223,5 +223,5 @@ alert_on_memory_pressure = 95
 
 # Step 5: Verify deployment
 # curl --unix-socket /tmp/songbird-tower-northgate.sock \
-#   -d '{"jsonrpc":"2.0","method":"discover_by_family","params":{"family_tags":["nat0"]},"id":1}'
+#   -d '{"jsonrpc":"2.0","method":"discover_by_family","params":{"family_tags":["1894e909e454"]},"id":1}'
 

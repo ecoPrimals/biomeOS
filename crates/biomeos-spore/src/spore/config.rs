@@ -49,7 +49,7 @@ impl ConfigOps for Spore {
 # Secure Genetic Lineage - File-based seed (not exposed in config)
 
 [tower]
-family = "nat0"
+family = "test_family"
 concurrent_startup = true
 
 # BearDog v0.15.0 - Security Primal (Port-Free!)
@@ -61,7 +61,7 @@ requires = []
 [primals.env]
 # ✅ SECURE: File-based seed (BearDog v0.15.0 reads the file)
 BEARDOG_FAMILY_SEED_FILE = "./.family.seed"
-BEARDOG_FAMILY_ID = "nat0"
+BEARDOG_FAMILY_ID = "test_family"
 BEARDOG_NODE_ID = "{node_id}"
 RUST_LOG = "info"
 
@@ -72,17 +72,18 @@ provides = ["Discovery"]
 requires = ["Security"]
 
 [primals.env]
-SONGBIRD_FAMILY_ID = "nat0"
+SONGBIRD_FAMILY_ID = "test_family"
 SONGBIRD_NODE_ID = "{node_id}"
 SONGBIRD_TAGS = "btsp_enabled"
 # Protocol-aware endpoint URLs:
 #   - "unix://..." = Auto-detect (server determines protocol)
-SECURITY_ENDPOINT = "unix:///tmp/beardog-nat0-{node_id}.sock"
-SONGBIRD_SECURITY_PROVIDER = "unix:///tmp/beardog-nat0-{node_id}.sock"
+SECURITY_ENDPOINT = "unix:///tmp/beardog-{family_id}-{node_id}.sock"
+SONGBIRD_SECURITY_PROVIDER = "unix:///tmp/beardog-{family_id}-{node_id}.sock"
 RUST_LOG = "info"
 "#,
             self.config.label,
             node_id = self.config.node_id,
+            family_id = self.config.family_id,
         )
     }
 }

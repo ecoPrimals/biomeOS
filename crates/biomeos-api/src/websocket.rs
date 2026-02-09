@@ -155,8 +155,11 @@ impl SubscriptionFilter {
 
 /// Active subscription
 struct Subscription {
+    #[allow(dead_code)] // Used for subscription ID lookup
     id: String,
     filter: SubscriptionFilter,
+    /// Channel sender for pushing events to the WebSocket client
+    #[allow(dead_code)] // Will be used when event forwarding is wired
     sender: tokio::sync::mpsc::UnboundedSender<GraphEvent>,
 }
 
@@ -523,5 +526,78 @@ mod tests {
         };
 
         assert!(filter.matches(&event));
+    }
+
+    #[test]
+    fn test_json_rpc_request_deserialization() {
+        let json =
+            r#"{"jsonrpc": "2.0", "id": 1, "method": "test.method", "params": {"key": "value"}}"#;
+        let request: JsonRpcRequest = serde_json::from_str(json).expect("deserialize");
+
+        assert_eq!(request.jsonrpc, "2.0");
+        assert_eq!(request.id, Some(serde_json::json!(1)));
+        assert_eq!(request.method, "test.method");
+    }
+
+    #[test]
+    fn test_json_rpc_response_serialization() {
+        let response = JsonRpcResponse {
+            jsonrpc: "2.0".to_string(),
+            result: Some(serde_json::json!({"success": true})),
+            error: None,
+            id: Some(serde_json::json!(1)),
+        };
+
+        let json = serde_json::to_string(&response).expect("serialize");
+        assert!(json.contains("2.0"));
+        assert!(json.contains("success"));
+    }
+
+    #[test]
+    fn test_json_rpc_error_with_data() {
+        let error = JsonRpcError::invalid_params(Some("missing required field".to_string()));
+        assert_eq!(error.code, -32602);
+        assert!(error.data.is_some());
+    }
+
+    #[test]
+    fn test_subscription_filter_serialization() {
+        let filter = SubscriptionFilter {
+            graph_id: Some("test-graph".to_string()),
+            event_types: Some(vec!["graph_started".to_string()]),
+            node_filter: Some("node*".to_string()),
+        };
+
+        let json = serde_json::to_string(&filter).expect("serialize");
+        assert!(json.contains("test-graph"));
+        assert!(json.contains("graph_started"));
+        assert!(json.contains("node*"));
+    }
+
+    #[test]
+    fn test_subscription_filter_deserialization() {
+        let json = r#"{"graph_id": "g1", "event_types": ["a", "b"], "node_filter": "n*"}"#;
+        let filter: SubscriptionFilter = serde_json::from_str(json).expect("deserialize");
+
+        assert_eq!(filter.graph_id, Some("g1".to_string()));
+        assert_eq!(filter.event_types.as_ref().map(|e| e.len()), Some(2));
+        assert_eq!(filter.node_filter, Some("n*".to_string()));
+    }
+
+    #[test]
+    fn test_graph_event_serialization() {
+        let event = GraphEvent::GraphCompleted {
+            graph_id: "test".to_string(),
+            success: true,
+            duration_ms: 1234,
+            nodes_executed: 5,
+            nodes_failed: 0,
+            timestamp: Utc::now(),
+        };
+
+        let json = serde_json::to_string(&event).expect("serialize");
+        assert!(json.contains("test"));
+        assert!(json.contains("1234"));
+        assert!(json.contains("true"));
     }
 }

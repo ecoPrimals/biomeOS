@@ -16,6 +16,7 @@ biomeos-core = { path = "../biomeos-core" }
 biomeos-types = { path = "../biomeos-types" }
 biomeos-spore = { path = "../biomeos-spore" }
 biomeos-graph = { path = "../biomeos-graph" }
+biomeos-genomebin-v3 = { path = "../biomeos-genomebin-v3" }
 
 # CLI framework
 clap = { version = "4.0", features = ["derive", "color"] }
@@ -35,6 +36,9 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 toml = "0.8"
+
+# Time
+chrono = { workspace = true }
 
 # System info for doctor mode
 sysinfo = "0.32"

@@ -193,67 +193,10 @@ impl Spore {
     ///
     /// EVOLVED (Jan 27, 2026): XDG-compliant family resolution
     ///
-    /// Priority:
-    /// 1. BIOMEOS_FAMILY_ID environment variable
-    /// 2. .family_id file in spore root
-    /// 3. Extract from .family.seed filename pattern (if present)
-    /// 4. XDG data directory family_id file
-    /// 5. Default to "nat0"
+    /// Uses centralized family discovery from biomeos_core.
     fn resolve_family_id(&self) -> String {
-        // Priority 1: Environment variable
-        if let Ok(family) = std::env::var("BIOMEOS_FAMILY_ID") {
-            if !family.is_empty() {
-                debug!("Using family ID from environment: {}", family);
-                return family;
-            }
-        }
-
-        // Priority 2: .family_id file in spore root
-        let family_id_file = self.root_path.join(".family_id");
-        if family_id_file.exists() {
-            if let Ok(content) = fs::read_to_string(&family_id_file) {
-                let family = content.trim().to_string();
-                if !family.is_empty() {
-                    debug!("Using family ID from .family_id file: {}", family);
-                    return family;
-                }
-            }
-        }
-
-        // Priority 3: Check for family seed file with NAT in name
-        // Pattern: .family-{nat}.seed or similar
-        if let Ok(entries) = fs::read_dir(&self.root_path) {
-            for entry in entries.flatten() {
-                let name = entry.file_name().to_string_lossy().to_string();
-                if name.starts_with(".family-") && name.ends_with(".seed") {
-                    // Extract NAT from filename: .family-nat0.seed -> nat0
-                    if let Some(nat) = name
-                        .strip_prefix(".family-")
-                        .and_then(|s| s.strip_suffix(".seed"))
-                    {
-                        debug!("Extracted family ID from seed filename: {}", nat);
-                        return nat.to_string();
-                    }
-                }
-            }
-        }
-
-        // Priority 4: XDG data directory
-        if let Ok(runtime) = std::env::var("XDG_DATA_HOME") {
-            let family_file = PathBuf::from(runtime).join("biomeos/family_id");
-            if family_file.exists() {
-                if let Ok(content) = fs::read_to_string(&family_file) {
-                    let family = content.trim().to_string();
-                    if !family.is_empty() {
-                        debug!("Using family ID from XDG data: {}", family);
-                        return family;
-                    }
-                }
-            }
-        }
-
-        // Default
-        debug!("Using default family ID: nat0");
-        "nat0".to_string()
+        // Delegate to centralized family discovery
+        // This ensures consistent discovery across the entire codebase
+        biomeos_core::family_discovery::get_family_id()
     }
 }

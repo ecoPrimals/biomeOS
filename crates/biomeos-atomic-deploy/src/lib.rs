@@ -9,7 +9,11 @@
 //! - **Neural API Integration**: Deterministic orchestration
 //! - **Genetic Lineage**: Cryptographic family trust
 //! - **Verifiable Deployment**: Every step logged and checkpointed
-//!
+
+// Crate-level lint configuration
+#![allow(clippy::doc_markdown)] // Allow technical terms without backticks
+#![deny(unsafe_code)] // No unsafe code in deployment
+
 //! # Architecture
 //!
 //! ```text
@@ -34,6 +38,7 @@ pub mod primal_discovery; // NEW: Socket scanning discovery
 pub mod primal_launcher; // EVOLVING: Legacy launcher → coordinator // NEW: Primal health verification and BTSP tunnel establishment
 
 // Neural API graph execution (TOML-based deterministic deployment)
+mod capability_domains; // Capability domain mappings for fallback resolution
 pub mod capability_handlers; // Extracted capability-based primal handlers
 pub mod capability_translation;
 pub mod handlers; // NEW: Smart decomposition of neural_api_server
@@ -43,8 +48,14 @@ pub mod living_graph; // NEW: Runtime protocol state tracking
 pub mod mode;
 pub mod neural_api_server; // Refactored into submodules: rpc, connection, routing, proxy, translation_loader, server_lifecycle
 pub mod neural_executor;
+#[cfg(test)]
+mod neural_executor_tests;
 pub mod neural_graph;
 pub mod neural_router;
+#[cfg(test)]
+mod neural_router_tests;
+#[cfg(test)]
+mod capability_translation_integration_tests; // Sovereign Onion translation tests
 pub mod nucleation; // NEW: Capability-based routing layer
 pub mod protocol_escalation; // NEW: JSON-RPC → tarpc escalation
 

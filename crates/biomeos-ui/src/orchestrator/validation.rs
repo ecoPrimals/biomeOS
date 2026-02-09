@@ -103,4 +103,66 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), ValidationResult::Valid);
     }
+
+    #[tokio::test]
+    async fn test_validation_no_songbird_graceful_degradation() {
+        // Tests that validation passes by default when Songbird is unavailable
+        let result =
+            Validation::validate_device_assignment(&None, "device-abc-123", "primal-xyz-456").await;
+
+        // Should succeed with graceful degradation
+        assert!(result.is_ok());
+        let validation_result = result.unwrap();
+        assert_eq!(validation_result, ValidationResult::Valid);
+    }
+
+    #[test]
+    fn test_validation_result_valid() {
+        let result = ValidationResult::Valid;
+        assert_eq!(result, ValidationResult::Valid);
+    }
+
+    #[test]
+    fn test_validation_result_invalid() {
+        let reason = "Device already assigned".to_string();
+        let result = ValidationResult::Invalid(reason.clone());
+
+        match result {
+            ValidationResult::Invalid(r) => assert_eq!(r, reason),
+            _ => panic!("Expected Invalid result"),
+        }
+    }
+
+    #[test]
+    fn test_validation_result_debug() {
+        let valid = ValidationResult::Valid;
+        let invalid = ValidationResult::Invalid("test reason".to_string());
+
+        // Test Debug trait
+        assert!(format!("{:?}", valid).contains("Valid"));
+        assert!(format!("{:?}", invalid).contains("Invalid"));
+        assert!(format!("{:?}", invalid).contains("test reason"));
+    }
+
+    #[test]
+    fn test_validation_result_clone() {
+        let original = ValidationResult::Invalid("clone test".to_string());
+        let cloned = original.clone();
+
+        assert_eq!(original, cloned);
+    }
+
+    #[test]
+    fn test_validation_result_eq() {
+        let valid1 = ValidationResult::Valid;
+        let valid2 = ValidationResult::Valid;
+        let invalid1 = ValidationResult::Invalid("same reason".to_string());
+        let invalid2 = ValidationResult::Invalid("same reason".to_string());
+        let invalid3 = ValidationResult::Invalid("different reason".to_string());
+
+        assert_eq!(valid1, valid2);
+        assert_eq!(invalid1, invalid2);
+        assert_ne!(valid1, invalid1);
+        assert_ne!(invalid1, invalid3);
+    }
 }

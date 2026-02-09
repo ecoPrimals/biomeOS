@@ -661,3 +661,13 @@ let replication_status = nestgate.replicate_to_family(
 
 🎉 **Perfect Composability Across All Niches!** 🚀
 
+---
+
+## Multi-Gate Coordination: Plasmodium
+
+When multiple gates each run a complete NUCLEUS, they bond covalently via shared `family_seed` and Songbird mesh. The emergent collective is called **Plasmodium** (after the slime mold *Physarum polycephalum*) -- a decentralized coordination layer with no central brain.
+
+**Specification**: `specs/PLASMODIUM_OVER_NUCLEUS_SPEC.md`  
+**Implementation**: `biomeos-core::plasmodium` module  
+**CLI**: `biomeos plasmodium status|gates|models`
+

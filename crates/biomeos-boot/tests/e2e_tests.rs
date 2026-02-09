@@ -223,7 +223,7 @@ fn test_error_messages_are_helpful() -> Result<()> {
 
 #[test]
 fn test_biomeos_mkboot_with_env_vars() -> Result<()> {
-    let temp = TempDir::new()?;
+    let _temp = TempDir::new()?;
 
     let mut cmd = Command::cargo_bin("biomeos-mkboot")?;
     cmd.env("RUST_LOG", "debug").arg("--help");

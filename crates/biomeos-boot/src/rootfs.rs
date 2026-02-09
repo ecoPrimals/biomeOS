@@ -678,7 +678,7 @@ mod tests {
         let root = temp_dir.path();
 
         let config = RootFsConfig::default();
-        let builder = RootFsBuilder::new(config);
+        let _builder = RootFsBuilder::new(config);
 
         // Just test directory structure creation (skip busybox install in test)
         let dirs = [

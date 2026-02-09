@@ -4,11 +4,16 @@
 # This graph creates the Tower Atomic (BearDog + Songbird)
 # which serves as generation 0 security foundation for all other primals
 #
-# ✅ STATUS: OPERATIONAL - Songbird IPC Evolution Complete (Jan 26, 2026)
-# Songbird now exposes JSON-RPC methods via Unix socket:
-#   - http.request, http.get, http.post, http.put, http.delete
-#   - Pure Rust TLS 1.3 with capability.call integration
-#   - TRUE PRIMAL pattern: Zero coupling via semantic routing
+# ✅ STATUS: OPERATIONAL - Sovereign Onion Service Ready (Feb 6, 2026)
+# BearDog provides:
+#   - Full crypto suite including SHA3-256 for .onion address derivation
+#   - Ed25519/X25519/ChaCha20-Poly1305 for onion key exchange
+#   - TRUE PRIMAL pattern: All crypto delegated via JSON-RPC
+# Songbird provides:
+#   - HTTP/HTTPS with Pure Rust TLS 1.3
+#   - Sovereign Onion Service (Pure Rust, no Arti)
+#   - Mesh relay, hole punching, STUN for NAT traversal
+#   - TRUE PRIMAL pattern: Network only, crypto via BearDog
 
 [graph]
 id = "tower_atomic_bootstrap"
@@ -21,7 +26,7 @@ id = "germinate_beardog"
 output = "beardog_genesis"
 # Capability Categories: Register BearDog as provider for these capability namespaces
 # These are used by capability.call() to discover the right primal socket
-capabilities = ["crypto", "tls_crypto", "genetic", "security"]
+capabilities = ["crypto", "tls_crypto", "genetic", "security", "beacon"]
 
 [nodes.primal]
 by_capability = "security"  # Discovers beardog binary via capability
@@ -118,11 +123,66 @@ timeout_ms = 30000  # 30s to start
 "tls.sign_handshake" = "tls.sign_handshake"
 "tls.verify_certificate" = "tls.verify_certificate"
 
+# === BEACON GENETICS TRANSLATIONS (Dark Forest) ===
+# These enable biomeOS BeaconGeneticsManager to orchestrate meetings
+# using BearDog's crypto primitives via capability.call()
+#
+# Beacon Core Operations (6 methods) - BearDog beacon primitives
+"beacon.generate" = "beacon.generate"            # Generate new beacon seed
+"beacon.get_id" = "beacon.get_id"                # Get public beacon ID
+"beacon.get_seed" = "beacon.get_seed"            # Get beacon seed (for meeting exchange)
+"beacon.encrypt" = "beacon.encrypt"              # Encrypt with beacon seed
+"beacon.decrypt" = "beacon.decrypt"              # Decrypt with beacon seed
+"beacon.try_decrypt" = "beacon.try_decrypt"      # Try decrypt, return success/failure
+
+# Lineage-Based Encryption (for seed storage at rest)
+"crypto.encrypt_with_lineage" = "crypto.encrypt_with_lineage_key"
+"crypto.decrypt_with_lineage" = "crypto.decrypt_with_lineage_key"
+
+# Seed Derivation
+"crypto.derive_child_seed" = "crypto.derive_child_seed"
+
 # Genetic Crypto Operations (4 methods) - Phase 5
 "genetic.derive_key" = "genetic.derive_lineage_key"
 "genetic.mix_entropy" = "genetic.mix_entropy"
 "genetic.verify_lineage" = "genetic.verify_lineage"
 "genetic.generate_proof" = "genetic.generate_lineage_proof"
+
+# === SOVEREIGN ONION SERVICE TRANSLATIONS (Feb 6, 2026) ===
+# These enable Songbird's Sovereign Onion Service to delegate crypto to BearDog
+# Pattern: TRUE PRIMAL - all crypto operations via BearDog
+#
+# SHA3-256 for .onion address derivation (Tor v3 spec)
+"crypto.sha3_256" = "crypto.sha3_256"
+"onion.hash_checksum" = "crypto.sha3_256"  # Semantic alias for onion address
+
+# Ed25519 for .onion identity keys
+"onion.generate_identity" = "crypto.ed25519_generate_keypair"
+"crypto.ed25519_generate_keypair" = "crypto.ed25519_generate_keypair"
+"sign_ed25519" = "crypto.sign_ed25519"
+"verify_ed25519" = "crypto.verify_ed25519"
+
+# X25519 for onion session keys  
+"onion.session_key" = "crypto.x25519_generate_ephemeral"
+"onion.derive_shared" = "crypto.x25519_derive_secret"
+
+# ChaCha20-Poly1305 for onion data encryption
+"onion.encrypt" = "crypto.chacha20_poly1305_encrypt"
+"onion.decrypt" = "crypto.chacha20_poly1305_decrypt"
+
+# HMAC for HKDF key derivation
+"onion.hkdf_extract" = "crypto.hmac_sha256"
+"onion.hkdf_expand" = "crypto.hmac_sha256"
+
+# BearDog-prefixed methods (direct Songbird calls)
+"beardog.crypto.sha3_256" = "beardog.crypto.sha3_256"
+"beardog.crypto.sign_ed25519" = "beardog.crypto.sign_ed25519"
+"beardog.crypto.verify_ed25519" = "beardog.crypto.verify_ed25519"
+"beardog.crypto.x25519_generate_ephemeral" = "beardog.crypto.x25519_generate_ephemeral"
+"beardog.crypto.x25519_derive_secret" = "beardog.crypto.x25519_derive_secret"
+"beardog.crypto.chacha20_poly1305_encrypt" = "beardog.crypto.chacha20_poly1305_encrypt"
+"beardog.crypto.chacha20_poly1305_decrypt" = "beardog.crypto.chacha20_poly1305_decrypt"
+"beardog.crypto.hmac_sha256" = "beardog.crypto.hmac_sha256"
 
 # Parameter Mappings: Translate semantic param names to actual param names
 # Format: "semantic.capability" = { "semantic_param" = "actual_param" }
@@ -137,7 +197,8 @@ id = "germinate_songbird"
 depends_on = ["germinate_beardog"]  # CRITICAL: Wait for BearDog
 output = "songbird_genesis"
 # Capability Categories: Register Songbird as provider for these capability namespaces
-capabilities = ["http", "discovery", "secure_http"]
+# Feb 6, 2026: Added mesh, onion, relay, stun, punch for Sovereign NAT Traversal
+capabilities = ["http", "discovery", "secure_http", "mesh", "onion", "relay", "stun", "punch"]
 
 [nodes.primal]
 by_capability = "discovery"  # Discovers songbird binary via capability
@@ -153,8 +214,12 @@ family_id = "${FAMILY_ID}"
 [nodes.operation.environment]
 NEURAL_API_SOCKET = "/tmp/neural-api.sock"  # For capability translation routing (must match Neural API socket)
 BEARDOG_SOCKET = "/run/user/1000/biomeos/beardog.sock"  # Security provider (modern XDG path)
+CRYPTO_PROVIDER_SOCKET = "/run/user/1000/biomeos/beardog.sock"  # For Sovereign Onion crypto delegation
 SONGBIRD_SECURITY_PROVIDER = "beardog"  # Use discovery, not hardcoded path
-RUST_LOG = "songbird_http_client=info"  # Enable INFO logging for first-byte verification
+SONGBIRD_ONION_ENABLED = "true"  # Enable Sovereign Onion Service
+SONGBIRD_MESH_ENABLED = "true"   # Enable distributed mesh relay
+BIOMEOS_BIND_ALL = "true"  # IPv6 dual-stack [::] — accepts both IPv4 and IPv6
+RUST_LOG = "songbird_http_client=info,songbird_sovereign_onion=debug"  # Enable INFO logging
 
 # Genetic bonding: Songbird inherits from BearDog
 # BEARDOG_SOCKET will be injected by executor (nucleation)
@@ -170,6 +235,34 @@ timeout_ms = 30000  # 30s to start
 "http.post" = "http.post"        # Future: not yet implemented in Songbird
 "discovery.announce" = "announce_capabilities"  # Actual method: announce_capabilities
 "discovery.query" = "discover_by_capability"    # Actual method: discover_by_capability
+
+# === SOVEREIGN ONION SERVICE - NETWORK CAPABILITIES (Feb 6, 2026) ===
+# Mesh relay for distributed NAT traversal
+"mesh.status" = "mesh.status"
+"mesh.find_path" = "mesh.find_path"
+"mesh.announce" = "mesh.announce"
+"mesh.peers" = "mesh.list_peers"
+"mesh.health_check" = "mesh.health_check"
+
+# Hole punch coordination
+"punch.request" = "punch.request"
+"punch.status" = "punch.status"
+
+# STUN for NAT type detection
+"stun.discover" = "stun.get_public_address"
+"stun.detect_nat_type" = "stun.detect_nat_type"
+
+# Relay capabilities
+"relay.serve" = "relay.serve"
+"relay.status" = "relay.status"
+"relay.allocate" = "relay.allocate"
+
+# Sovereign Onion Service endpoints (Pure Rust, BearDog crypto)
+"onion.create_service" = "onion.create_service"
+"onion.get_address" = "onion.get_address"
+"onion.connect" = "onion.connect"
+"onion.accept" = "onion.accept"
+"onion.status" = "onion.status"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # OPTIONAL ECOSYSTEM PRIMALS (Registered at runtime when started)
@@ -231,13 +324,73 @@ family_id = "${FAMILY_ID}"
 "ai.local_execute" = "resources.validate_availability"  # Validate resources
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# SOVEREIGN ONION SERVICE INITIALIZATION (Feb 6, 2026)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Phase 2a: Initialize Sovereign Onion Service
+# - Starts the .onion listener on Songbird
+# - Initializes mesh with our onion as bootstrap
+# - BearDog handles all crypto (Ed25519, X25519, ChaCha20)
+[[nodes]]
+id = "init_sovereign_onion"
+depends_on = ["germinate_songbird"]
+output = "onion_initialized"
+
+[nodes.operation]
+name = "rpc_call"
+target = "songbird"  # Target the Songbird primal
+
+# Call onion.start to create .onion identity
+[nodes.operation.params]
+method = "onion.start"
+params = { port = 3492 }
+
+[nodes.constraints]
+timeout_ms = 30000  # 30s for identity generation
+
+# Phase 2b: Initialize Beacon Mesh with Onion Bootstrap
+[[nodes]]
+id = "init_beacon_mesh"
+depends_on = ["init_sovereign_onion"]
+output = "mesh_initialized"
+
+[nodes.operation]
+name = "rpc_call"
+target = "songbird"
+
+[nodes.operation.params]
+method = "mesh.init"
+# node_id and bootstrap_onions injected by executor from environment/onion output
+params = { node_id = "${NODE_ID}", bootstrap_onions = [] }
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# Phase 2c: Announce as Family Relay (optional - makes this node a relay for others)
+[[nodes]]
+id = "announce_relay"
+depends_on = ["init_beacon_mesh"]
+output = "relay_announced"
+
+[nodes.operation]
+name = "rpc_call"
+target = "songbird"
+
+[nodes.operation.params]
+method = "mesh.announce"
+params = { as_relay = true, capabilities = ["relay", "stun", "onion"] }
+
+[nodes.constraints]
+timeout_ms = 5000
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # VALIDATION
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # Phase 3: Validate Tower Atomic Health
 [[nodes]]
 id = "validate_tower"
-depends_on = ["germinate_beardog", "germinate_songbird"]
+depends_on = ["germinate_beardog", "germinate_songbird", "init_sovereign_onion"]
 output = "tower_validated"
 
 [nodes.operation]
@@ -247,6 +400,7 @@ name = "health_check"
 check_beardog = true
 check_songbird = true
 check_btsp_tunnel = true  # Verify they can establish BTSP tunnel
+check_onion = true  # Verify onion service is running (NEW - Feb 6, 2026)
 timeout_seconds = 10
 
 [nodes.constraints]

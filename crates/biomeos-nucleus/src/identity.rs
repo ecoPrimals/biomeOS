@@ -280,7 +280,7 @@ mod tests {
         let json = r#"{
             "primal_name": "beardog",
             "node_id": "node-alpha",
-            "family_id": "nat0",
+            "family_id": "1894e909e454",
             "version": "0.15.2",
             "process_id": 12345,
             "socket_path": "/tmp/beardog.sock",

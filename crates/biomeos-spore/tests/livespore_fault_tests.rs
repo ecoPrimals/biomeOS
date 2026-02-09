@@ -16,6 +16,8 @@ use tempfile::TempDir;
 
 /// Test fixture for LiveSpore fault testing
 struct LiveSporeFaultFixture {
+    /// Temp dir kept alive to prevent cleanup during test
+    #[allow(dead_code)]
     temp_dir: TempDir,
     spore_path: PathBuf,
 }
@@ -186,12 +188,12 @@ fn test_mismatched_family_id() {
     fixture.create_directory("biomeOS");
     fixture.create_valid_seed();
 
-    // tower.toml says family_id = "nat0"
+    // tower.toml says family_id = "test_family"
     fixture.write_file(
         "biomeOS/tower.toml",
         r#"
 [tower]
-family_id = "nat0"
+family_id = "test_family"
 node_id = "test-node"
 "#,
     );
@@ -200,7 +202,7 @@ node_id = "test-node"
     // In a real scenario, this would fail lineage verification
 
     let config = std::fs::read_to_string(fixture.spore_path.join("biomeOS/tower.toml")).unwrap();
-    assert!(config.contains("nat0"));
+    assert!(config.contains("test_family"));
 }
 
 // ============================================================================

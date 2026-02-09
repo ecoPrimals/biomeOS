@@ -137,7 +137,7 @@ mod tests {
         let json = r#"{
             "primal": "beardog",
             "version": "0.15.2",
-            "family_id": "nat0",
+            "family_id": "1894e909e454",
             "node_id": "node-alpha",
             "capabilities": ["encryption", "identity", "trust"]
         }"#;

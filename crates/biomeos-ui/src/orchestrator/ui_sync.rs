@@ -148,6 +148,8 @@ mod tests {
 
         // Should return error but not panic
         assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("No visualization primal"));
     }
 
     #[tokio::test]
@@ -155,7 +157,54 @@ mod tests {
         let state = serde_json::json!({"test": "data"});
         let result = UISync::initialize_ui(&None, state).await;
 
-        // Should succeed gracefully
+        // Should succeed gracefully (running headless)
         assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_update_ui_after_unassignment_no_client() {
+        let result = UISync::update_ui_after_unassignment(&None, "device-123").await;
+
+        // Should succeed (graceful degradation)
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_push_refresh_no_client() {
+        let refresh_results = vec!["devices", "primals", "metrics"];
+        let result = UISync::push_refresh(&None, refresh_results).await;
+
+        // Should succeed (graceful degradation)
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_push_refresh_empty_results() {
+        let result = UISync::push_refresh(&None, vec![]).await;
+
+        // Should succeed with empty results
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_send_heartbeat_no_client() {
+        let result = UISync::send_heartbeat(&None).await;
+
+        // Should succeed (graceful degradation)
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_update_ui_after_assignment_with_device_and_primal() {
+        // Test that the function handles device and primal IDs properly
+        let result =
+            UISync::update_ui_after_assignment(&None, "device-abc-123", "primal-xyz-456").await;
+
+        assert!(result.is_err());
+        // Error message should be consistent
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("visualization primal"));
     }
 }

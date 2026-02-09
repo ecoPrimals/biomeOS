@@ -2,27 +2,25 @@
 //!
 //! Handles runtime discovery of primals, devices, and saved state.
 //!
-//! ## TRUE PRIMAL Principles
+//! ## DEEP DEBT EVOLUTION (Feb 7, 2026)
 //!
-//! - **No hardcoding**: All primals discovered via capabilities
-//! - **Runtime discovery**: No compile-time dependencies
+//! - **Dynamic discovery**: Scans runtime socket directory for ANY primal
+//! - **No hardcoded primal list**: Unknown primals are discovered and accessible
+//! - **Capability-based**: Uses `PrimalConnections` dynamic registry
 //! - **Graceful degradation**: System works with partial primal availability
 
-use crate::primal_client::{
-    BearDogClient, NestGateClient, PetalTongueClient, PrimalClient, SongbirdClient, SquirrelClient,
-    ToadStoolClient,
-};
+use crate::primal_client::PrimalConnections;
 use anyhow::Result;
 use tracing::{debug, info, warn};
 
-/// Discovery result
+/// Discovery result — wraps PrimalConnections for dynamic primal access
+///
+/// DEEP DEBT EVOLUTION: Replaced fixed-field struct with dynamic registry.
+/// Access primals by name: `result.connections.get("beardog")`
+/// Or via typed accessors: `result.connections.beardog()`
 pub struct DiscoveryResult {
-    pub petaltongue: Option<PetalTongueClient>,
-    pub songbird: Option<SongbirdClient>,
-    pub beardog: Option<BearDogClient>,
-    pub nestgate: Option<NestGateClient>,
-    pub toadstool: Option<ToadStoolClient>,
-    pub squirrel: Option<SquirrelClient>,
+    /// Dynamic primal connections registry
+    pub connections: PrimalConnections,
 }
 
 /// Primal and device discovery
@@ -31,130 +29,95 @@ pub struct Discovery;
 impl Discovery {
     /// Discover and connect to all primals
     ///
-    /// Uses capability-based discovery to find primals. No hardcoded assumptions!
+    /// DEEP DEBT EVOLUTION: Uses dynamic socket scanning instead of hardcoded list.
+    /// Discovers ANY primal with a socket in the runtime directory.
     pub async fn discover_primals() -> Result<DiscoveryResult> {
-        info!("Discovering primals via capability-based discovery...");
+        info!("Discovering primals via dynamic socket scanning...");
 
-        // Try to discover each primal by capability
-        // Note: These discoveries are independent and fail gracefully
-        // TRUE PRIMAL: Uses XDG-compliant Unix socket discovery via AtomicClient
+        let family_id = std::env::var("FAMILY_ID")
+            .or_else(|_| std::env::var("BIOMEOS_FAMILY_ID"))
+            .unwrap_or_else(|_| "default".to_string());
 
-        // 1. Discover visualization primal (petalTongue)
-        info!("Attempting to discover visualization primal...");
-        let petaltongue = PrimalClient::discover("petaltongue").await.ok();
+        let connections = PrimalConnections::discover_all(&family_id).await;
 
-        // 2. Discover service registry primal (Songbird)
-        info!("Attempting to discover service registry primal...");
-        let songbird = PrimalClient::discover("songbird").await.ok();
-
-        // 3. Discover security primal (BearDog)
-        info!("Attempting to discover security primal...");
-        let beardog = PrimalClient::discover("beardog").await.ok();
-
-        // 4. Discover storage primal (NestGate)
-        info!("Attempting to discover storage primal...");
-        let nestgate = PrimalClient::discover("nestgate").await.ok();
-
-        // 5. Discover compute primal (ToadStool)
-        info!("Attempting to discover compute primal...");
-        let toadstool = PrimalClient::discover("toadstool").await.ok();
-
-        // 6. Discover AI primal (Squirrel)
-        info!("Attempting to discover AI primal...");
-        let squirrel = PrimalClient::discover("squirrel").await.ok();
-
-        let discovered_count = [
-            petaltongue.is_some(),
-            songbird.is_some(),
-            beardog.is_some(),
-            nestgate.is_some(),
-            toadstool.is_some(),
-            squirrel.is_some(),
-        ]
-        .iter()
-        .filter(|&&x| x)
-        .count();
-
-        info!("Discovered {}/6 primals", discovered_count);
+        let discovered_count = connections.count_available();
+        info!("Discovered {} primals: {:?}", discovered_count, connections.available_primals());
 
         if discovered_count == 0 {
             warn!("No primals discovered! UI will have limited functionality.");
         }
 
-        Ok(DiscoveryResult {
-            petaltongue,
-            songbird,
-            beardog,
-            nestgate,
-            toadstool,
-            squirrel,
-        })
+        Ok(DiscoveryResult { connections })
     }
 
-    /// Discover devices from available primals
+    /// Discover devices from registry provider
     ///
-    /// Uses Songbird's device registry if available. Falls back gracefully.
-    pub async fn discover_devices(songbird: &Option<SongbirdClient>) -> Result<()> {
+    /// Uses the registry provider (resolved by name) if available. Falls back gracefully.
+    pub async fn discover_devices(connections: &PrimalConnections) -> Result<()> {
         info!("Discovering devices...");
 
-        if let Some(ref songbird) = songbird {
-            // Query Songbird for registered devices using JSON-RPC
-            match songbird
+        let registry_name = std::env::var("BIOMEOS_REGISTRY_PROVIDER")
+            .unwrap_or_else(|_| "songbird".to_string());
+
+        if let Some(registry) = connections.get(&registry_name) {
+            match registry
                 .call("registry.list_devices", serde_json::json!({}))
                 .await
             {
                 Ok(devices) => {
                     debug!("Discovered devices: {:?}", devices);
-                    info!("Successfully discovered devices from Songbird");
+                    info!("Successfully discovered devices from {}", registry_name);
                 }
                 Err(e) => {
-                    warn!("Device discovery failed: {} - Songbird may not support device registry yet", e);
+                    warn!("Device discovery failed: {} - {} may not support device registry yet", e, registry_name);
                 }
             }
         } else {
-            info!("No Songbird available for device discovery");
+            info!("No registry provider available for device discovery");
         }
 
         Ok(())
     }
 
-    /// Discover active primals
-    ///
-    /// Uses Songbird's primal registry to get list of active primals.
-    pub async fn discover_active_primals(songbird: &Option<SongbirdClient>) -> Result<()> {
+    /// Discover active primals via registry
+    pub async fn discover_active_primals(connections: &PrimalConnections) -> Result<()> {
         info!("Discovering active primals...");
 
-        if let Some(ref songbird) = songbird {
-            // Query Songbird for all registered primals using JSON-RPC
-            match songbird
+        let registry_name = std::env::var("BIOMEOS_REGISTRY_PROVIDER")
+            .unwrap_or_else(|_| "songbird".to_string());
+
+        if let Some(registry) = connections.get(&registry_name) {
+            match registry
                 .call("registry.list_primals", serde_json::json!({}))
                 .await
             {
                 Ok(primals) => {
                     debug!("Discovered primals: {:?}", primals);
-                    info!("Successfully queried Songbird for active primals");
+                    info!("Successfully queried {} for active primals", registry_name);
                 }
                 Err(e) => {
-                    warn!("Primal discovery failed: {} - check Songbird connection", e);
+                    warn!("Primal discovery failed: {} - check {} connection", e, registry_name);
                 }
             }
         } else {
-            info!("No Songbird available, cannot discover other primals");
+            info!("No registry provider available, cannot discover other primals");
         }
 
         Ok(())
     }
 
-    /// Load saved state from NestGate
+    /// Load saved state from storage provider
     pub async fn load_saved_state(
-        nestgate: &Option<NestGateClient>,
+        connections: &PrimalConnections,
         family_id: &str,
     ) -> Result<()> {
         info!("Loading saved UI state...");
 
-        if let Some(ref nestgate) = nestgate {
-            // Try to load previous UI state from NestGate using JSON-RPC
-            match nestgate
+        let storage_name = std::env::var("BIOMEOS_STORAGE_PROVIDER")
+            .unwrap_or_else(|_| "nestgate".to_string());
+
+        if let Some(storage) = connections.get(&storage_name) {
+            match storage
                 .call(
                     "storage.retrieve",
                     serde_json::json!({
@@ -165,7 +128,7 @@ impl Discovery {
             {
                 Ok(state) => {
                     debug!("Loaded saved state: {:?}", state);
-                    info!("Successfully loaded saved UI state from NestGate");
+                    info!("Successfully loaded saved UI state from {}", storage_name);
                 }
                 Err(e) => {
                     debug!("No saved state found or error: {}", e);
@@ -173,39 +136,39 @@ impl Discovery {
                 }
             }
         } else {
-            info!("No storage primal available, starting with fresh state");
+            info!("No storage provider available, starting with fresh state");
         }
 
         Ok(())
     }
 
     /// Build initial UI state from discovered primals
+    ///
+    /// DEEP DEBT EVOLUTION: Takes `PrimalConnections` instead of individual
+    /// primal references. State includes ALL discovered primals dynamically.
     pub async fn build_initial_ui_state(
         family_id: &str,
-        songbird: &Option<SongbirdClient>,
-        nestgate: &Option<NestGateClient>,
-        petaltongue: &Option<PetalTongueClient>,
-        beardog: &Option<BearDogClient>,
-        toadstool: &Option<ToadStoolClient>,
-        squirrel: &Option<SquirrelClient>,
+        connections: &PrimalConnections,
     ) -> serde_json::Value {
+        // Build dynamic primals map
+        let mut primals_map = serde_json::Map::new();
+        for name in connections.available_primals() {
+            primals_map.insert(name.to_string(), serde_json::Value::Bool(true));
+        }
+
         let mut state = serde_json::json!({
             "family_id": family_id,
-            "primals": {
-                "petaltongue": petaltongue.is_some(),
-                "songbird": songbird.is_some(),
-                "beardog": beardog.is_some(),
-                "nestgate": nestgate.is_some(),
-                "toadstool": toadstool.is_some(),
-                "squirrel": squirrel.is_some()
-            },
+            "primals": primals_map,
+            "primal_count": connections.count_available(),
             "devices": [],
             "assignments": []
         });
 
-        // Fetch devices from Songbird if available
-        if let Some(ref songbird) = songbird {
-            if let Ok(devices) = songbird
+        // Fetch devices from registry provider if available
+        let registry_name = std::env::var("BIOMEOS_REGISTRY_PROVIDER")
+            .unwrap_or_else(|_| "songbird".to_string());
+        if let Some(registry) = connections.get(&registry_name) {
+            if let Ok(devices) = registry
                 .call("registry.list_devices", serde_json::json!({}))
                 .await
             {
@@ -213,9 +176,11 @@ impl Discovery {
             }
         }
 
-        // Fetch assignments from NestGate if available
-        if let Some(ref nestgate) = nestgate {
-            if let Ok(assignments) = nestgate
+        // Fetch assignments from storage provider if available
+        let storage_name = std::env::var("BIOMEOS_STORAGE_PROVIDER")
+            .unwrap_or_else(|_| "nestgate".to_string());
+        if let Some(storage) = connections.get(&storage_name) {
+            if let Ok(assignments) = storage
                 .call(
                     "storage.list",
                     serde_json::json!({ "key_prefix": "assignment:" }),
@@ -241,14 +206,24 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_discover_devices_no_songbird() {
-        let result = Discovery::discover_devices(&None).await;
+    async fn test_discover_devices_no_provider() {
+        let connections = PrimalConnections::default();
+        let result = Discovery::discover_devices(&connections).await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
-    async fn test_load_saved_state_no_nestgate() {
-        let result = Discovery::load_saved_state(&None, "test-family").await;
+    async fn test_load_saved_state_no_provider() {
+        let connections = PrimalConnections::default();
+        let result = Discovery::load_saved_state(&connections, "test-family").await;
         assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_build_initial_ui_state_empty() {
+        let connections = PrimalConnections::default();
+        let state = Discovery::build_initial_ui_state("test-family", &connections).await;
+        assert_eq!(state["family_id"], "test-family");
+        assert_eq!(state["primal_count"], 0);
     }
 }

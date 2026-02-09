@@ -38,6 +38,7 @@ fn http_get(url: &str, timeout_secs: u64) -> Result<(u16, String), String> {
 ///
 /// **Concurrency**: Uses exponential backoff (10ms → 20ms → 40ms → 80ms) instead of fixed delays
 /// **ecoBin v2.0**: Uses ureq (pure Rust) instead of reqwest (C deps)
+#[allow(dead_code)] // Available for integration tests that need HTTP service polling
 async fn wait_for_service(url: &str, max_attempts: u32) -> bool {
     let url = url.to_string();
     let mut delay_ms = 10u64; // Start with 10ms

@@ -316,9 +316,7 @@ echo '{"jsonrpc":"2.0","method":"lifecycle.status","id":1}' | \
 |----------|-------------|
 | `specs/NUCLEUS_DEPLOYMENT_SPEC.md` | Deployment specification |
 | `specs/NUCLEUS_BONDING_MODEL.md` | Covalent/Ionic bonding |
-| `docs/LIFECYCLE_MANAGEMENT.md` | Primal lifecycle |
-| `docs/SOCKET_DISCOVERY.md` | Capability-based sockets |
-| `PROTOCOL_ESCALATION_ROADMAP.md` | JSON-RPC → tarpc |
+| `specs/PLASMODIUM_OVER_NUCLEUS_SPEC.md` | Over-NUCLEUS collective coordination |
 
 ---
 

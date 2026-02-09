@@ -10,7 +10,7 @@
 #   ./deploy_tower_atomic.sh [family_id] [node_id]
 #
 # Environment:
-#   FAMILY_ID - Family identifier (default: nat0)
+#   FAMILY_ID - Family identifier (default: 1894e909e454)
 #   NODE_ID   - Node identifier (default: tower1)
 #
 
@@ -24,7 +24,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLASMID_BIN="${SCRIPT_DIR}/plasmidBin"
 
 # Family/Node identity
-export FAMILY_ID="${1:-${FAMILY_ID:-nat0}}"
+export FAMILY_ID="${1:-${FAMILY_ID:-1894e909e454}}"
 export NODE_ID="${2:-${NODE_ID:-tower1}}"
 
 # Socket paths

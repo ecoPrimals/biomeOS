@@ -103,9 +103,9 @@ family_id = "${FAMILY_ID}"
 
 # Environment variables for Songbird
 [nodes.operation.environment]
-NEURAL_API_SOCKET = "/tmp/neural-api-nat0.sock"  # For capability translation routing
-BEARDOG_SOCKET = "/tmp/beardog-nat0.sock"  # Security provider (for non-HTTP crypto operations)
-SONGBIRD_SECURITY_PROVIDER = "/tmp/beardog-nat0.sock"  # Alternative name for security provider
+NEURAL_API_SOCKET = "/tmp/neural-api-1894e909e454.sock"  # For capability translation routing
+BEARDOG_SOCKET = "/tmp/beardog-1894e909e454.sock"  # Security provider (for non-HTTP crypto operations)
+SONGBIRD_SECURITY_PROVIDER = "/tmp/beardog-1894e909e454.sock"  # Alternative name for security provider
 
 # Songbird will auto-discover BearDog (security provider)
 # Provides HTTP/TLS gateway for external APIs (ionic bonding)

@@ -31,12 +31,14 @@
 //!
 //! ```ignore
 //! use biomeos_core::capability_registry::CapabilityRegistry;
+//! use biomeos_core::family_discovery::get_family_id;
 //! use biomeos_types::Capability;
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
-//!     // Create registry
-//!     let registry = CapabilityRegistry::new("nat0".to_string());
+//!     // Create registry with dynamic family discovery
+//!     let family_id = get_family_id(); // Discovers from .family.seed or env
+//!     let registry = CapabilityRegistry::new(family_id);
 //!     
 //!     // Start Unix socket server
 //!     registry.serve().await?;
@@ -167,7 +169,8 @@ impl CapabilityRegistry {
     /// Create a new capability registry
     pub fn new(family_id: String) -> Self {
         // Use SystemPaths for XDG-compliant socket path
-        let paths = SystemPaths::new().expect("Failed to initialize SystemPaths");
+        // Using new_lazy() to avoid panicking - directories created on demand
+        let paths = SystemPaths::new_lazy();
         let socket_path = paths
             .runtime_dir()
             .join(format!("biomeos-registry-{}.sock", family_id));
@@ -215,7 +218,7 @@ impl CapabilityRegistry {
             for capability in params.provides {
                 index
                     .entry(capability)
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push(id.clone());
             }
         }
@@ -573,47 +576,4 @@ impl Clone for CapabilityRegistry {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_register_and_get_provider() {
-        let registry = CapabilityRegistry::new("test".to_string());
-
-        let primal_id = PrimalId::new("beardog-localhost").unwrap();
-        let params = RegisterParams {
-            provides: vec![Capability::Security],
-            requires: vec![],
-            socket_path: Some("/tmp/beardog-test.sock".to_string()),
-            http_endpoint: None,
-            metadata: None,
-        };
-
-        registry.register(primal_id.clone(), params).await.unwrap();
-
-        let provider = registry.get_provider(&Capability::Security).await.unwrap();
-        assert!(provider.is_some());
-        assert_eq!(provider.unwrap().id, primal_id);
-    }
-
-    #[tokio::test]
-    async fn test_unregister() {
-        let registry = CapabilityRegistry::new("test".to_string());
-
-        let primal_id = PrimalId::new("beardog-localhost").unwrap();
-        let params = RegisterParams {
-            provides: vec![Capability::Security],
-            requires: vec![],
-            socket_path: Some("/tmp/beardog-test.sock".to_string()),
-            http_endpoint: None,
-            metadata: None,
-        };
-
-        registry.register(primal_id.clone(), params).await.unwrap();
-        registry.unregister(&primal_id).await.unwrap();
-
-        let provider = registry.get_provider(&Capability::Security).await.unwrap();
-        assert!(provider.is_none());
-    }
-}
+// Tests are in capability_registry_tests.rs to keep this file under 1000 lines

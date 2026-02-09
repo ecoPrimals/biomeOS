@@ -18,7 +18,7 @@
 [deployment]
 hostname = "strandgate"
 location = "basement-lan"
-family_id = "nat0"
+family_id = "1894e909e454"
 deployment_type = "tower-plus-compute"
 
 # =============================================================================
@@ -176,7 +176,7 @@ fair_scheduling = false  # FIFO for pipeline jobs
 cpu_pinning = true  # NUMA-aware for EPYC
 
 # Trusted deployers
-trusted_families = ["nat0"]
+trusted_families = ["1894e909e454"]
 trusted_sub_feds = ["lan-hpc", "bio-pipeline"]
 
 # Bio-specific
@@ -207,7 +207,7 @@ health_check_timeout = 10
 
 # Step 1: Deploy Tower
 # export NODE_ID=tower-strandgate
-# export FAMILY_ID=nat0
+# export FAMILY_ID=1894e909e454
 # biomeos deploy --niche tower --config deployments/basement-hpc/strandgate.toml
 
 # Step 2: Deploy Pooled CPU Compute Node

@@ -22,7 +22,6 @@
 
 use anyhow::{Context, Result};
 use biomeos_core::deployment_mode::DeploymentMode;
-use std::path::PathBuf;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -139,7 +138,7 @@ async fn check_atomic_availability(mode: &DeploymentMode) -> Result<Vec<String>>
     Ok(available)
 }
 
-fn socket_exists(prefix: &PathBuf, socket_name: &str) -> bool {
+fn socket_exists(prefix: &std::path::Path, socket_name: &str) -> bool {
     prefix.join(socket_name).exists()
 }
 

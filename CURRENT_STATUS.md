@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: February 4, 2026  
-**Version**: 1.6  
-**Status**: Production Ready - Cross-Device AI Coordination Complete
+**Updated**: February 9, 2026 (Plasmodium + Model Cache)
+**Version**: 2.9
+**Status**: PRODUCTION READY - Over-NUCLEUS Collective Coordination
 
 ---
 
@@ -10,22 +10,133 @@
 
 | Metric | Status |
 |--------|--------|
-| **ecoBin Compliance** | 6/6 primals (100%) |
-| **IPC Standard** | Universal IPC v3.0 |
-| **Security Grade** | A++ LEGENDARY |
-| **Code Quality** | A |
-| **Tests Passing** | 800+ |
-| **Unsafe Code** | 0 blocks |
-| **Direct UnixStream** | 0 in production |
-| **Deployment** | USB + Pixel + Cross-Device AI |
-| **BirdSong Discovery** | ✅ Validated |
-| **Cross-Device AI** | ✅ Pixel → Ollama Working |
+| **genomeBins** | 5/5 primals ready (100%) |
+| **Cross-Arch** | x86_64 + aarch64 (USB + Pixel) |
+| **IPC Standard** | Universal IPC v3.0 + tarpc wiring |
+| **Security Grade** | A++ (TRUE PRIMAL + Genetic Model) |
+| **Code Quality** | A (Pure Rust, idiomatic, zero warnings) |
+| **Tests Passing** | 1,747 (0 failures, 6 ignored) |
+| **Unsafe Code** | 1 production (justified mmap in genome-deploy) |
+| **Clippy** | PASS (0 warnings across all non-boot crates) |
+| **Formatting** | PASS (`cargo fmt --check`) |
+| **Genetic Model** | EVOLVED - Mitochondrial + Nuclear DNA |
+| **BirdSong Discovery** | Encrypted, shared beacon model |
+| **Discovery Model** | Dynamic socket scanning (no hardcoded names) |
+| **NAT Traversal** | Sovereign mesh relay + Tor gateway |
+| **P2P Sovereign Onion** | PRODUCTION READY |
+| **External C deps** | 0 (no libc, nix, dirs, reqwest, lazy_static) |
+| **Plasmodium** | Over-NUCLEUS collective coordination (read-only) |
+| **Model Cache** | NUCLEUS-integrated, HuggingFace import, NestGate fallback |
+
+---
+
+## Deep Debt Evolution (Feb 7, 2026)
+
+### What Changed
+
+Complete deep debt evolution across the entire workspace:
+
+#### Pure Rust Dependencies
+| Removed | Replaced With |
+|---------|---------------|
+| `lazy_static` | `std::sync::OnceLock` |
+| `dirs` | `etcetera` / `std::env::var("HOME")` |
+| `nix` | `std::env::var("UID")` / `std::env::var("EUID")` |
+
+#### Capability-Based Discovery
+- **`PrimalConnections`**: Evolved from fixed 6-field struct to dynamic `HashMap<String, PrimalClient>` with runtime socket directory scanning
+- **Provider names**: All configurable via environment variables (`BIOMEOS_SECURITY_PROVIDER`, `BIOMEOS_NETWORK_PROVIDER`, etc.)
+- **`BIOMEOS_STRICT_DISCOVERY`**: Disables all bootstrap name fallbacks for pure runtime discovery
+- **Live socket scanning**: `discover_all()` scans `$XDG_RUNTIME_DIR/biomeos/*.sock` for any primal
+
+#### Production Mock Elimination
+- `discovery.rs`: Replaced `get_standalone_primals()` fabricated data with `probe_live_sockets()`
+- `trust.rs`: Removed `standalone_mode` branches that returned fabricated trust decisions
+- `livespores.rs`: Replaced hardcoded primal whitelist with dynamic binary scanning
+- `discovery_bootstrap.rs`: Replaced broadcast stub with real UDP socket implementation
+
+#### Warning Elimination
+- Eliminated all dead code, unused import, unused variable warnings workspace-wide
+- Fixed test race conditions with `Mutex` locks for env-var-mutating tests
+- All non-boot crates: zero clippy warnings
+
+#### Clippy Modernization
+- `or_insert_with(Vec::new)` -> `or_default()` (7 instances)
+- `unwrap_or_else(|| json!(null))` -> `unwrap_or(Value::Null)`
+- Duplicated `#![deny(unsafe_code)]` removed
+- `fn default()` -> proper `impl Default` trait
+- `too_many_arguments` -> context struct pattern
+- Boolean expression simplification
+
+#### UI Orchestrator Refactoring
+- `InteractiveUIOrchestrator`: 6 individual `Option<Client>` fields -> single `PrimalConnections`
+- `handle_user_action()`: 8 parameters -> 3 (`action`, `family_id`, `&PrimalConnections`)
+- `handle_assign_device()`: 8 parameters -> 4 (via `DeviceAssignmentCtx`)
+- `DiscoveryResult`: Wraps `PrimalConnections` dynamic registry
+
+---
+
+## Tor Gateway (Feb 7, 2026)
+
+### Hidden Service Status
+
+| Component | Status |
+|-----------|--------|
+| Tor daemon | Running, bootstrapped |
+| Hidden service | `eaaz3tlirenexp2mabctirbwd2fv67mayvtrr4fmqemhyypvnemybmqd.onion` |
+| Port 3492 | TCP Proxy -> Songbird IPC |
+| IPC via Tor | Verified (`health` returns healthy) |
+
+### Connection Paths
+
+| Path | Endpoint | Accessibility |
+|------|----------|---------------|
+| Tor (Global) | `eaaz3...onion:3492` | Anywhere with Tor |
+| LAN IPv4 | `192.168.1.144:3492` | Same network only |
+| LAN IPv6 | `2600:1700:...:3492` | IPv6 reachable |
+
+---
+
+## P2P Sovereign Onion (Feb 6, 2026)
+
+### TRUE PRIMAL Status: 100%
+
+| Component | Status |
+|-----------|--------|
+| **BearDog Crypto** | Complete - All 8 methods (SHA3, Ed25519, X25519, ChaCha20, HMAC) |
+| **Songbird Service** | Complete - OnionService + OnionConnector |
+| **Capability Translations** | 15+ onion/mesh capabilities wired |
+| **Neural API Routing** | Direct mesh.*/punch.*/onion.* methods |
+| **Integration Tests** | 12/12 passing |
+| **Deployment Graph** | `tower_atomic_bootstrap.toml` updated |
+
+---
+
+## Genetic Model Details
+
+### Mitochondrial (Beacon Seed) - Shared Identity
+
+```
+Purpose: Family recognition in Dark Forest
+Shared:  Yes - all family members have same seed
+Sync:    Can be synced/transferred between devices
+Evolves: Address book grows as connections made
+```
+
+### Nuclear DNA (Lineage Seed) - Unique Identity
+
+```
+Purpose: Individual device authentication
+Shared:  No - derived uniquely per device
+Derived: HKDF(family_seed, device_entropy, context)
+Copied:  NEVER - always fresh derivation
+```
 
 ---
 
 ## Ecosystem Status
 
-### NUCLEUS Architecture - OPERATIONAL
+### NUCLEUS Architecture - GENOMES READY
 
 ```
 NUCLEUS = Tower + Node + Nest + biomeOS
@@ -38,102 +149,59 @@ Full NUCLEUS  = All 5 primals + biomeOS  (orchestration)
 
 ### Primal Status
 
-| Primal | ecoBin | IPC | Status |
-|--------|--------|-----|--------|
-| BearDog | v2.0 | Isomorphic | Reference implementation |
-| Songbird | v2.0 | Isomorphic | Pure Rust TLS 1.3 |
-| Toadstool | v2.0 | Isomorphic | Compute orchestration |
-| NestGate | v2.0 | Isomorphic | Socket-only default |
-| Squirrel | v2.0 | Universal | AI via Tower Atomic |
-| biomeOS | v2.0 | Neural API | Graph deployment |
+| Primal | genomeBin | Size | x86_64 | aarch64 |
+|--------|-----------|------|--------|---------|
+| **songbird** | v3.33.0 | 18.5 MB | Yes | Yes |
+| **beardog** | complete | 6.9 MB | Yes | Yes |
+| **toadstool** | complete | 8.9 MB | Yes | Yes |
+| **nestgate** | complete | 5.6 MB | Yes | Yes |
+| **squirrel** | complete | 4.3 MB | Yes | Yes |
+| **biomeOS** | complete | 3.9 MB | Yes | Pending |
 
 ---
 
-## Recent Evolution (Feb 4, 2026)
+## Latest Work (Feb 9, 2026)
 
-### Cross-Device AI Coordination Complete
+### Plasmodium - Over-NUCLEUS Collective
+- **Spec**: `specs/PLASMODIUM_OVER_NUCLEUS_SPEC.md`
+- **Module**: `biomeos-core::plasmodium` -- types + collective query engine
+- **CLI**: `biomeos plasmodium status|gates|models`
+- **Live tested**: Tower local gate fully queried (BearDog, Songbird, RTX 4070, models)
+- **Graceful degradation**: Offline gates shown as "offline", collective shrinks/grows dynamically
+- **No central brain**: Any gate can query the collective
 
-| Component | Status |
-|-----------|--------|
-| BirdSong Discovery | ✅ Pixel discovers USB peer via multicast |
-| Cross-device TCP | ✅ ADB forward/reverse working |
-| Songbird HTTP | ✅ Host header fix for HTTP/1.1 compliance |
-| Pixel → Ollama | ✅ AI generation via ADB reverse |
+### Model Cache - Zero Re-Downloads
+- **Module**: `biomeos-core::model_cache` -- NestGate integration + filesystem fallback
+- **CLI**: `biomeos model-cache import-hf|list|resolve|register|status`
+- **Symlink-aware**: Correctly sizes HuggingFace models with blob storage
+- **Live tested**: Tower + gate2 model management verified
 
-### Primal Evolutions
+### NestGate Handoff
+- Identified 4 bugs in NestGate (inverted boolean, storage.retrieve null, ZFS assumption, missing exists)
+- Documented in `docs/handoffs/NESTGATE_MODEL_CACHE_HANDOFF_FEB09_2026.md`
+- Model cache gracefully degrades to filesystem-only mode
 
-| Primal | Commit | Change |
-|--------|--------|--------|
-| BearDog | `417ddf51f` | `--abstract` flag for Android SELinux |
-| Songbird | `e1f259358` | `SONGBIRD_PID_DIR` + `SONGBIRD_DATA_DIR` |
-| Songbird | `3f24da03b` | Host header with port for HTTP/1.1 |
-
-### Universal IPC v3.0 Complete
-
-| Component | Status |
-|-----------|--------|
-| `biomeos-core` | ✅ Multi-transport AtomicClient |
-| `biomeos-atomic-deploy` | ✅ All IPC via AtomicClient |
-| Cross-device TCP | ✅ Remote primal communication |
-| Abstract sockets | ✅ Android/Linux SELinux-safe |
-
-### AtomicClient API
-
-```rust
-// Auto-discovery with transport fallback
-let client = AtomicClient::discover("beardog").await?;
-
-// Explicit transports
-AtomicClient::unix("/path/to/socket")
-AtomicClient::tcp("192.168.1.100", 9100)
-AtomicClient::abstract_socket("biomeos_beardog")  // Linux
-```
-
-### Files Evolved
-
-| File | Change |
-|------|--------|
-| `socket_discovery.rs` | +TransportEndpoint, +discover_with_fallback |
-| `atomic_client.rs` | Multi-transport dispatch |
-| `beardog_jwt_client.rs` | Direct → AtomicClient |
-| `health_check.rs` | Direct → AtomicClient |
-| `primal_communication.rs` | Direct → AtomicClient |
-| `neural_router.rs` | Direct → AtomicClient |
-
-### Remaining TODOs (Intentional)
-
-| Item | Reason |
-|------|--------|
-| SSE streaming | Requires Songbird evolution |
-| Node-level metrics | Design decision (simplified) |
+### Distributed GPU (Toadstool Handoff)
+- Multi-gate GPU inference architecture designed
+- Handoff: `docs/handoffs/TOADSTOOL_DISTRIBUTED_GPU_HANDOFF_FEB09_2026.md`
 
 ---
 
-## Deployment Readiness
+## Remaining Work
 
-### USB LiveSpore (x86_64)
+### High Priority
+1. **Plasmodium Phase 2**: Job submission + remote compute query
+2. **Songbird mesh peers**: Auto-discovery of bonded gates (currently manual PLASMODIUM_PEERS)
+3. **ARM64 biomeOS genomeBin** - blocks Pixel biomeOS deployment
 
-```bash
-cd livespore-usb/x86_64/scripts/
-./deploy_atomic.sh tower    # BearDog + Songbird
-./deploy_atomic.sh node     # + Toadstool
-./deploy_atomic.sh nest     # + NestGate
-./deploy_atomic.sh nucleus  # Complete NUCLEUS
-```
+### Medium Priority
+1. **NestGate evolution**: Fix 4 identified bugs for mesh model sharing
+2. **Test Coverage to 90%** (currently ~48%)
+3. **Beacon Genetics Phase 2C** - Cluster beacons
 
-### Pixel 8a (aarch64)
-
-```bash
-adb push pixel8a-deploy /data/local/tmp/biomeos
-adb shell /data/local/tmp/biomeos/start_nucleus_mobile.sh
-```
-
-### Deployment Features
-
-- 5-tier socket path resolution
-- Deterministic behavior across architectures
-- Graph-based deployment via Neural API
-- Shell script fallback (scaffolding)
+### Low Priority
+1. **Chaos/Fault Testing**
+2. **biomeos-boot documentation** - 44 pre-existing missing-doc warnings
 
 ---
 
@@ -146,43 +214,7 @@ adb shell /data/local/tmp/biomeos/start_nucleus_mobile.sh
 | PRIMAL_DEPLOYMENT_STANDARD v1.0 | Deterministic behavior |
 | Semantic Method Naming | capability.call routing |
 | AGPL-3.0-only License | Compliant |
-
----
-
-## Documentation
-
-| Location | Content |
-|----------|---------|
-| `README.md` | Project overview |
-| `START_HERE.md` | Quick start guide |
-| `QUICK_START.md` | 5-minute deployment |
-| `specs/PRIMAL_DEPLOYMENT_STANDARD.md` | Deployment standard |
-
-### Handoffs
-
-| Document | Content |
-|----------|---------|
-| `docs/handoffs/SONGBIRD_REQWEST_REMOVAL_HANDOFF.md` | Songbird evolution |
-| `docs/handoffs/NESTGATE_HTTP_FEATURE_GATING_HANDOFF.md` | NestGate evolution |
-| `docs/handoffs/DEEP_AUDIT_JAN29_2026.md` | Audit report |
-
----
-
-## Next Steps
-
-### High Priority
-- ~~Universal IPC v3.0~~ ✅ COMPLETE (Jan 29, 2026)
-- ~~Cross-device TCP validation~~ ✅ COMPLETE (Feb 4, 2026)
-- ~~BirdSong discovery validation~~ ✅ COMPLETE (Feb 4, 2026)
-- STUN NAT traversal (cross-network without ADB)
-
-### Medium Priority
-- Evolve remaining crates to AtomicClient (optional)
-- NestGate HTTP feature-gating - See handoff
-
-### Low Priority (Design Decisions)
-- UI SSE streaming (requires Songbird SSE support)
-- Node-level metrics (intentionally simplified)
+| Evolved Genetic Model v2.0 | Mitochondrial + Nuclear |
 
 ---
 
@@ -192,13 +224,10 @@ adb shell /data/local/tmp/biomeos/start_nucleus_mobile.sh
 # Build
 cargo build --workspace
 
-# Test
-cargo test --workspace --lib
+# Test (1,747 tests)
+cargo test --workspace
 
-# Check
-cargo check --workspace
-
-# Clippy
+# Clippy (0 warnings outside biomeos-boot)
 cargo clippy --workspace
 
 # Format
@@ -211,9 +240,12 @@ cargo llvm-cov --workspace
 ---
 
 **Status**: Production Ready  
-**IPC**: Universal IPC v3.0  
-**Deployment**: USB + Pixel + Cross-Device AI  
-**Security**: A++ LEGENDARY  
-**Code Quality**: A  
-**Tests**: 800+ passing  
-**Cross-Device**: BirdSong Discovery + AI Coordination
+**Genetic Model**: Evolved (Mitochondrial + Nuclear)  
+**IPC**: Universal IPC v3.0 + tarpc wiring  
+**Security**: A++ (Two-seed Dark Forest)  
+**Code Quality**: A (Pure Rust, idiomatic, zero warnings)  
+**Plasmodium**: Over-NUCLEUS collective coordination  
+**Model Cache**: NUCLEUS-integrated, HuggingFace import  
+**Tests**: 1,747 passing  
+**Clippy**: PASS | **Format**: PASS  
+**Unsafe Code**: 1 justified (mmap)

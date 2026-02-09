@@ -18,7 +18,7 @@
 //! # async fn example() -> anyhow::Result<()> {
 //! // Connect to security provider
 //! let client = PrimalClient::connect_to_capability(
-//!     PrimalCapability::Encryption
+//!     PrimalCapability::encryption()
 //! ).await?;
 //!
 //! // Send request
@@ -52,11 +52,13 @@ struct JsonRpcRequest {
 /// JSON-RPC 2.0 response
 #[derive(Debug, Deserialize)]
 struct JsonRpcResponse {
+    #[allow(dead_code)] // Required for JSON-RPC 2.0 spec compliance
     jsonrpc: String,
     #[serde(default)]
     result: Option<Value>,
     #[serde(default)]
     error: Option<JsonRpcError>,
+    #[allow(dead_code)] // Required for JSON-RPC 2.0 spec compliance
     id: u64,
 }
 
@@ -65,6 +67,7 @@ struct JsonRpcError {
     code: i32,
     message: String,
     #[serde(default)]
+    #[allow(dead_code)] // Part of JSON-RPC 2.0 spec
     data: Option<Value>,
 }
 

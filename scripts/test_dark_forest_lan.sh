@@ -73,10 +73,10 @@ echo -e "${CYAN}Starting BearDog for Dark Forest operations${NC}"
 echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 
-export FAMILY_ID=nat0
-export BEARDOG_FAMILY_ID=nat0
+export FAMILY_ID=1894e909e454
+export BEARDOG_FAMILY_ID=1894e909e454
 export BEARDOG_NODE_ID=dark-forest-test
-$BEARDOG_BIN server --socket /tmp/beardog-dark-forest.sock --family-id nat0 &
+$BEARDOG_BIN server --socket /tmp/beardog-dark-forest.sock --family-id 1894e909e454 &
 BEARDOG_PID=$!
 sleep 3
 
@@ -116,7 +116,7 @@ echo -e "${GREEN}   ✅ Broadcast key: ${BROADCAST_KEY:0:24}...${NC}"
 
 # Create beacon plaintext
 TIMESTAMP=$(date +%s)
-BEACON_DATA="{\"family_hash\":\"$(echo -n 'nat0' | sha256sum | cut -c1-16)\",\"node_id\":\"usb-alpha\",\"timestamp\":$TIMESTAMP,\"socket_path\":\"/tmp/beardog-dark-forest.sock\",\"capabilities\":\"crypto,lineage\"}"
+BEACON_DATA="{\"family_hash\":\"$(echo -n '1894e909e454' | sha256sum | cut -c1-16)\",\"node_id\":\"usb-alpha\",\"timestamp\":$TIMESTAMP,\"socket_path\":\"/tmp/beardog-dark-forest.sock\",\"capabilities\":\"crypto,lineage\"}"
 BEACON_B64=$(echo -n "$BEACON_DATA" | base64 -w0)
 echo "Step 2: Created beacon plaintext"
 
@@ -196,12 +196,12 @@ echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 
 echo "Step 1: Generate lineage proof..."
-PROOF_RESPONSE=$(call_beardog "{\"jsonrpc\":\"2.0\",\"method\":\"genetic.generate_lineage_proof\",\"params\":{\"our_family_id\":\"nat0\",\"peer_family_id\":\"nat0\",\"lineage_seed\":\"$FAMILY_SEED_B64\"},\"id\":6}")
+PROOF_RESPONSE=$(call_beardog "{\"jsonrpc\":\"2.0\",\"method\":\"genetic.generate_lineage_proof\",\"params\":{\"our_family_id\":\"1894e909e454\",\"peer_family_id\":\"1894e909e454\",\"lineage_seed\":\"$FAMILY_SEED_B64\"},\"id\":6}")
 PROOF=$(echo "$PROOF_RESPONSE" | grep -o '"proof":"[^"]*"' | cut -d'"' -f4)
 echo "   Proof: ${PROOF:0:32}..."
 
 echo "Step 2: Verify lineage..."
-VERIFY_RESPONSE=$(call_beardog "{\"jsonrpc\":\"2.0\",\"method\":\"genetic.verify_lineage\",\"params\":{\"our_family_id\":\"nat0\",\"peer_family_id\":\"nat0\",\"lineage_proof\":\"$PROOF\",\"lineage_seed\":\"$FAMILY_SEED_B64\"},\"id\":7}")
+VERIFY_RESPONSE=$(call_beardog "{\"jsonrpc\":\"2.0\",\"method\":\"genetic.verify_lineage\",\"params\":{\"our_family_id\":\"1894e909e454\",\"peer_family_id\":\"1894e909e454\",\"lineage_proof\":\"$PROOF\",\"lineage_seed\":\"$FAMILY_SEED_B64\"},\"id\":7}")
 
 if echo "$VERIFY_RESPONSE" | grep -q '"valid":true'; then
     echo -e "${GREEN}   ✅ Lineage verified - full family trust established!${NC}"
@@ -217,7 +217,7 @@ echo -e "${CYAN}TEST 5: Session Key Derivation${NC}"
 echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 
-SESSION_RESPONSE=$(call_beardog "{\"jsonrpc\":\"2.0\",\"method\":\"genetic.derive_lineage_key\",\"params\":{\"our_family_id\":\"nat0\",\"peer_family_id\":\"nat0\",\"context\":\"session-$(date +%s)\",\"lineage_seed\":\"$FAMILY_SEED_B64\"},\"id\":8}")
+SESSION_RESPONSE=$(call_beardog "{\"jsonrpc\":\"2.0\",\"method\":\"genetic.derive_lineage_key\",\"params\":{\"our_family_id\":\"1894e909e454\",\"peer_family_id\":\"1894e909e454\",\"context\":\"session-$(date +%s)\",\"lineage_seed\":\"$FAMILY_SEED_B64\"},\"id\":8}")
 SESSION_KEY=$(echo "$SESSION_RESPONSE" | grep -o '"key":"[^"]*"' | cut -d'"' -f4)
 
 if [[ -n "$SESSION_KEY" ]]; then

@@ -131,7 +131,7 @@ pub struct AtomicClient {
     /// Transport endpoint (Unix, Abstract, or TCP)
     endpoint: TransportEndpoint,
     /// Request timeout
-    timeout: Duration,
+    pub(crate) timeout: Duration,
     /// Legacy: socket path for backwards compatibility
     socket_path: PathBuf,
 }
@@ -167,7 +167,11 @@ impl AtomicClient {
                 debug!(
                     "Discovered {} via {}: {}",
                     primal_name,
-                    if endpoint.is_native() { "Tier 1" } else { "Tier 2" },
+                    if endpoint.is_native() {
+                        "Tier 1"
+                    } else {
+                        "Tier 2"
+                    },
                     endpoint
                 );
 
@@ -309,8 +313,7 @@ impl AtomicClient {
             .await
             .context(format!(
                 "Request to {} timed out after {:?}",
-                self.endpoint,
-                self.timeout
+                self.endpoint, self.timeout
             ))??;
 
         // Check for JSON-RPC errors
@@ -328,9 +331,7 @@ impl AtomicClient {
     /// Dispatches to the appropriate transport based on endpoint type.
     async fn call_impl(&self, request: JsonRpcRequest) -> Result<JsonRpcResponse> {
         match &self.endpoint {
-            TransportEndpoint::UnixSocket { path } => {
-                self.call_via_unix(path, request).await
-            }
+            TransportEndpoint::UnixSocket { path } => self.call_via_unix(path, request).await,
             TransportEndpoint::TcpSocket { host, port } => {
                 self.call_via_tcp(host, *port, request).await
             }
@@ -342,9 +343,10 @@ impl AtomicClient {
 
     /// Send JSON-RPC request via Unix socket
     async fn call_via_unix(&self, path: &Path, request: JsonRpcRequest) -> Result<JsonRpcResponse> {
-        let stream = UnixStream::connect(path)
-            .await
-            .context(format!("Failed to connect to Unix socket: {}", path.display()))?;
+        let stream = UnixStream::connect(path).await.context(format!(
+            "Failed to connect to Unix socket: {}",
+            path.display()
+        ))?;
 
         self.send_request(stream, request).await
     }
@@ -484,7 +486,11 @@ pub async fn discover_primal_endpoint(primal_name: &str) -> Result<TransportEndp
             debug!(
                 "Discovered {} via {}: {}",
                 primal_name,
-                if endpoint.is_native() { "Tier 1" } else { "Tier 2" },
+                if endpoint.is_native() {
+                    "Tier 1"
+                } else {
+                    "Tier 2"
+                },
                 endpoint
             );
             Ok(endpoint)
@@ -658,171 +664,4 @@ impl AtomicPrimalClient {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    // ========================================================================
-    // JSON-RPC Tests
-    // ========================================================================
-
-    #[test]
-    fn test_jsonrpc_request_creation() {
-        let request = JsonRpcRequest::new("test_method", serde_json::json!({"key": "value"}));
-        assert_eq!(request.jsonrpc, "2.0");
-        assert_eq!(request.method, "test_method");
-        assert_eq!(request.params["key"], "value");
-        assert!(request.id > 0);
-    }
-
-    // ========================================================================
-    // AtomicClient Constructor Tests - Universal IPC v3.0
-    // ========================================================================
-
-    #[test]
-    fn test_atomic_client_unix() {
-        let client = AtomicClient::unix("/tmp/test.sock");
-        assert_eq!(client.socket_path().to_str().unwrap(), "/tmp/test.sock");
-        assert!(matches!(
-            client.endpoint(),
-            TransportEndpoint::UnixSocket { .. }
-        ));
-    }
-
-    #[test]
-    fn test_atomic_client_tcp() {
-        let client = AtomicClient::tcp("192.168.1.100", 9100);
-        assert!(matches!(
-            client.endpoint(),
-            TransportEndpoint::TcpSocket { .. }
-        ));
-        if let TransportEndpoint::TcpSocket { host, port } = client.endpoint() {
-            assert_eq!(host, "192.168.1.100");
-            assert_eq!(*port, 9100);
-        }
-    }
-
-    #[test]
-    fn test_atomic_client_from_endpoint() {
-        let endpoint = TransportEndpoint::TcpSocket {
-            host: "localhost".to_string(),
-            port: 8080,
-        };
-        let client = AtomicClient::from_endpoint(endpoint);
-        assert!(matches!(
-            client.endpoint(),
-            TransportEndpoint::TcpSocket { .. }
-        ));
-    }
-
-    #[test]
-    fn test_atomic_client_new_legacy() {
-        // Test backwards compatibility
-        let client = AtomicClient::new("/tmp/test.sock");
-        assert_eq!(client.socket_path().to_str().unwrap(), "/tmp/test.sock");
-    }
-
-    #[test]
-    fn test_client_with_timeout() {
-        let client = AtomicClient::unix("/tmp/test.sock").with_timeout(Duration::from_secs(10));
-        assert_eq!(client.timeout, Duration::from_secs(10));
-    }
-
-    #[test]
-    fn test_is_available_unix() {
-        // Non-existent socket
-        let client = AtomicClient::unix("/tmp/nonexistent.sock");
-        assert!(!client.is_available());
-    }
-
-    #[test]
-    fn test_is_available_tcp() {
-        // TCP always returns true (availability checked on connect)
-        let client = AtomicClient::tcp("127.0.0.1", 9999);
-        assert!(client.is_available());
-    }
-
-    // ========================================================================
-    // AtomicPrimalClient Constructor Tests
-    // ========================================================================
-
-    #[test]
-    fn test_atomic_primal_client_unix() {
-        let client = AtomicPrimalClient::unix("beardog", "/tmp/beardog.sock");
-        assert_eq!(client.primal_name(), "beardog");
-        assert!(matches!(
-            client.endpoint(),
-            TransportEndpoint::UnixSocket { .. }
-        ));
-    }
-
-    #[test]
-    fn test_atomic_primal_client_tcp() {
-        let client = AtomicPrimalClient::tcp("beardog", "192.168.1.100", 9100);
-        assert_eq!(client.primal_name(), "beardog");
-        assert!(matches!(
-            client.endpoint(),
-            TransportEndpoint::TcpSocket { .. }
-        ));
-    }
-
-    #[test]
-    fn test_atomic_primal_client_from_endpoint() {
-        let endpoint = TransportEndpoint::TcpSocket {
-            host: "10.0.0.1".to_string(),
-            port: 9200,
-        };
-        let client = AtomicPrimalClient::from_endpoint("songbird", endpoint);
-        assert_eq!(client.primal_name(), "songbird");
-    }
-
-    // ========================================================================
-    // Integration Tests (require running primals)
-    // ========================================================================
-
-    #[tokio::test]
-    #[ignore] // Requires BearDog to be running
-    async fn test_beardog_discovery() {
-        let client = AtomicPrimalClient::discover("beardog").await;
-        if let Ok(client) = client {
-            assert!(client.is_available());
-
-            // Log the transport type discovered
-            println!(
-                "BearDog discovered via: {}",
-                client.endpoint().display_string()
-            );
-
-            // Try a health check
-            let health = client.health_check().await;
-            assert!(
-                health.is_ok(),
-                "BearDog health check failed: {:?}",
-                health.err()
-            );
-        }
-    }
-
-    #[tokio::test]
-    #[ignore] // Requires Songbird to be running
-    async fn test_songbird_discovery() {
-        let client = AtomicPrimalClient::discover("songbird").await;
-        if let Ok(client) = client {
-            assert!(client.is_available());
-            println!(
-                "Songbird discovered via: {}",
-                client.endpoint().display_string()
-            );
-        }
-    }
-
-    #[tokio::test]
-    #[ignore] // Requires TCP endpoint running
-    async fn test_tcp_connection() {
-        let client = AtomicClient::tcp("127.0.0.1", 9100);
-        // This will fail unless something is listening
-        let result = client.call("ping", Value::Null).await;
-        // Just verify we can construct and attempt TCP calls
-        assert!(result.is_err() || result.is_ok()); // Either works or fails gracefully
-    }
-}
+// Tests are in atomic_client_tests.rs to keep this file under 1000 lines

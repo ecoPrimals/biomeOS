@@ -22,7 +22,10 @@ pub enum CapacityResult {
     /// Capacity available
     Available,
     /// Capacity insufficient with details
-    Insufficient { reason: String },
+    Insufficient {
+        /// Reason why capacity is insufficient
+        reason: String,
+    },
 }
 
 /// Capacity checker
@@ -103,5 +106,79 @@ mod tests {
 
         assert!(result.is_ok());
         assert!(matches!(result.unwrap(), CapacityResult::Available));
+    }
+
+    #[tokio::test]
+    async fn test_capacity_no_toadstool_graceful_degradation() {
+        // Tests that capacity check passes by default when ToadStool is unavailable
+        let result =
+            Capacity::check_primal_capacity(&None, "device-abc-123", "primal-xyz-456").await;
+
+        // Should succeed with graceful degradation
+        assert!(result.is_ok());
+        let capacity_result = result.unwrap();
+        assert_eq!(capacity_result, CapacityResult::Available);
+    }
+
+    #[test]
+    fn test_capacity_result_available() {
+        let result = CapacityResult::Available;
+        assert_eq!(result, CapacityResult::Available);
+    }
+
+    #[test]
+    fn test_capacity_result_insufficient() {
+        let reason = "Not enough memory".to_string();
+        let result = CapacityResult::Insufficient {
+            reason: reason.clone(),
+        };
+
+        match result {
+            CapacityResult::Insufficient { reason: r } => assert_eq!(r, reason),
+            _ => panic!("Expected Insufficient result"),
+        }
+    }
+
+    #[test]
+    fn test_capacity_result_debug() {
+        let available = CapacityResult::Available;
+        let insufficient = CapacityResult::Insufficient {
+            reason: "test reason".to_string(),
+        };
+
+        // Test Debug trait
+        assert!(format!("{:?}", available).contains("Available"));
+        assert!(format!("{:?}", insufficient).contains("Insufficient"));
+        assert!(format!("{:?}", insufficient).contains("test reason"));
+    }
+
+    #[test]
+    fn test_capacity_result_clone() {
+        let original = CapacityResult::Insufficient {
+            reason: "clone test".to_string(),
+        };
+        let cloned = original.clone();
+
+        assert_eq!(original, cloned);
+    }
+
+    #[test]
+    fn test_capacity_result_eq() {
+        let available1 = CapacityResult::Available;
+        let available2 = CapacityResult::Available;
+        let insufficient1 = CapacityResult::Insufficient {
+            reason: "same reason".to_string(),
+        };
+        let insufficient2 = CapacityResult::Insufficient {
+            reason: "same reason".to_string(),
+        };
+        let insufficient3 = CapacityResult::Insufficient {
+            reason: "different reason".to_string(),
+        };
+
+        assert_eq!(available1, available2);
+        assert_eq!(insufficient1, insufficient2);
+        assert_ne!(available1, insufficient1);
+        assert_ne!(insufficient1, insufficient3);
     }
 }

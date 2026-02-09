@@ -503,7 +503,7 @@ impl GraphExecutor {
             
             for dep in &node.dependencies {
                 graph_map.entry(dep.clone())
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push(node.id.clone());
                 *in_degree.entry(node.id.clone()).or_insert(0) += 1;
             }

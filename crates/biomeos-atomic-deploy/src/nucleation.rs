@@ -85,21 +85,33 @@ impl SocketNucleation {
         &self.assignments
     }
 
-    /// Family deterministic path: /tmp/{primal}-{family_id}.sock
+    /// Family deterministic path using SystemPaths
+    ///
+    /// Uses XDG-compliant paths via `SystemPaths` instead of hardcoded `/tmp/`.
+    /// Falls back to temp dir if XDG not available.
     fn family_deterministic_path(primal: &str, family_id: &str) -> PathBuf {
-        PathBuf::from(format!("/tmp/{}-{}.sock", primal, family_id))
+        use biomeos_types::paths::SystemPaths;
+
+        // Use SystemPaths for XDG-compliant paths
+        let paths = SystemPaths::new_lazy();
+        paths.primal_socket(&format!("{}-{}", primal, family_id))
     }
 
-    /// XDG runtime path with /tmp fallback
-    /// Creates sockets in {XDG_RUNTIME_DIR}/biomeos/ for proper namespacing
+    /// XDG runtime path using SystemPaths
+    ///
+    /// Creates sockets in XDG_RUNTIME_DIR/biomeos/ for proper namespacing
     fn xdg_runtime_path(primal: &str, family_id: &str) -> PathBuf {
-        let runtime_dir = std::env::var("XDG_RUNTIME_DIR").unwrap_or_else(|_| "/tmp".to_string());
+        use biomeos_types::paths::SystemPaths;
 
-        // Create biomeos subdirectory for proper namespacing (matches SocketDiscovery)
-        let biomeos_dir = PathBuf::from(&runtime_dir).join("biomeos");
-        std::fs::create_dir_all(&biomeos_dir).ok();
+        // Use SystemPaths for XDG-compliant paths with automatic directory creation
+        let paths = SystemPaths::new_lazy();
 
-        biomeos_dir.join(format!("{}-{}.sock", primal, family_id))
+        // Ensure runtime directory exists
+        if let Err(e) = std::fs::create_dir_all(paths.runtime_dir()) {
+            tracing::warn!("Failed to create runtime dir: {}", e);
+        }
+
+        paths.primal_socket(&format!("{}-{}", primal, family_id))
     }
 }
 
@@ -111,11 +123,23 @@ mod tests {
     fn test_family_deterministic() {
         let mut nucleation = SocketNucleation::new(SocketStrategy::FamilyDeterministic);
 
-        let socket = nucleation.assign_socket("beardog", "nat0");
-        assert_eq!(socket, PathBuf::from("/tmp/beardog-nat0.sock"));
+        let socket = nucleation.assign_socket("beardog", "test_family");
 
-        // Second assignment should return same socket
-        let socket2 = nucleation.assign_socket("beardog", "nat0");
+        // Verify socket follows expected pattern (XDG-compliant)
+        let socket_str = socket.to_string_lossy();
+        assert!(
+            socket_str.contains("beardog-test_family"),
+            "Socket should contain primal-family: {}",
+            socket_str
+        );
+        assert!(
+            socket_str.ends_with(".sock"),
+            "Socket should end with .sock: {}",
+            socket_str
+        );
+
+        // Second assignment should return same socket (deterministic)
+        let socket2 = nucleation.assign_socket("beardog", "test_family");
         assert_eq!(socket, socket2);
     }
 
@@ -123,12 +147,15 @@ mod tests {
     fn test_different_families() {
         let mut nucleation = SocketNucleation::new(SocketStrategy::FamilyDeterministic);
 
-        let nat0_socket = nucleation.assign_socket("beardog", "nat0");
-        let nat1_socket = nucleation.assign_socket("beardog", "nat1");
+        let family_a_socket = nucleation.assign_socket("beardog", "test_family");
+        let family_b_socket = nucleation.assign_socket("beardog", "nat1");
 
-        assert_ne!(nat0_socket, nat1_socket);
-        assert_eq!(nat0_socket, PathBuf::from("/tmp/beardog-nat0.sock"));
-        assert_eq!(nat1_socket, PathBuf::from("/tmp/beardog-nat1.sock"));
+        // Different families should get different sockets
+        assert_ne!(family_a_socket, family_b_socket);
+
+        // Verify both follow expected patterns
+        assert!(family_a_socket.to_string_lossy().contains("beardog-test_family"));
+        assert!(family_b_socket.to_string_lossy().contains("beardog-nat1"));
     }
 
     #[test]
@@ -141,21 +168,23 @@ mod tests {
             "squirrel".to_string(),
         ];
 
-        let assignments = nucleation.assign_batch(&primals, "nat0");
+        let assignments = nucleation.assign_batch(&primals, "test_family");
 
         assert_eq!(assignments.len(), 3);
-        assert_eq!(
-            assignments.get("beardog"),
-            Some(&PathBuf::from("/tmp/beardog-nat0.sock"))
-        );
-        assert_eq!(
-            assignments.get("songbird"),
-            Some(&PathBuf::from("/tmp/songbird-nat0.sock"))
-        );
-        assert_eq!(
-            assignments.get("squirrel"),
-            Some(&PathBuf::from("/tmp/squirrel-nat0.sock"))
-        );
+
+        // Verify each primal got a unique, properly-named socket
+        let beardog = assignments.get("beardog").unwrap();
+        let songbird = assignments.get("songbird").unwrap();
+        let squirrel = assignments.get("squirrel").unwrap();
+
+        assert!(beardog.to_string_lossy().contains("beardog-test_family"));
+        assert!(songbird.to_string_lossy().contains("songbird-test_family"));
+        assert!(squirrel.to_string_lossy().contains("squirrel-test_family"));
+
+        // All should be .sock files
+        assert!(beardog.to_string_lossy().ends_with(".sock"));
+        assert!(songbird.to_string_lossy().ends_with(".sock"));
+        assert!(squirrel.to_string_lossy().ends_with(".sock"));
     }
 }
 
@@ -165,11 +194,11 @@ fn test_xdg_runtime_strategy() {
     std::env::set_var("XDG_RUNTIME_DIR", "/run/user/1000");
 
     let mut nucleation = SocketNucleation::new(SocketStrategy::XdgRuntime);
-    let socket = nucleation.assign_socket("beardog", "nat0");
+    let socket = nucleation.assign_socket("beardog", "test_family");
 
     // Should create XDG path with biomeos subdirectory
     assert!(socket.to_string_lossy().contains("/run/user/1000/biomeos/"));
-    assert!(socket.to_string_lossy().contains("beardog-nat0"));
+    assert!(socket.to_string_lossy().contains("beardog-test_family"));
     assert!(socket.to_string_lossy().ends_with(".sock"));
 }
 

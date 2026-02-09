@@ -24,12 +24,10 @@
 //! 6. Failed decrypt → ignore (not family)
 
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
+use biomeos_core::AtomicClient;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::UnixStream;
-use tokio::time::{timeout, Duration};
 use tracing::{debug, info, warn};
 
 use crate::error::{SporeError, SporeResult};
@@ -293,38 +291,40 @@ impl DarkForestBeacon {
             .ok_or_else(|| SporeError::ValidationFailed("Failed to hash string".to_string()))
     }
 
-    /// Call BearDog via Unix socket
+    /// Call BearDog via AtomicClient (Universal IPC v3.0)
+    ///
+    /// Uses AtomicClient for consistent, multi-transport JSON-RPC communication.
+    /// Supports Unix sockets, abstract sockets, and TCP fallback.
     async fn call_beardog(&self, request: &serde_json::Value) -> SporeResult<serde_json::Value> {
-        let mut stream = UnixStream::connect(&self.beardog_socket)
-            .await
-            .map_err(|e| {
-                SporeError::IoError(std::io::Error::new(
-                    std::io::ErrorKind::ConnectionRefused,
-                    format!(
-                        "Failed to connect to BearDog at {}: {}",
-                        self.beardog_socket, e
-                    ),
-                ))
-            })?;
+        // Extract method and params from JSON-RPC request
+        let method = request
+            .get("method")
+            .and_then(|m| m.as_str())
+            .ok_or_else(|| SporeError::ValidationFailed("Missing method in request".to_string()))?;
 
-        let request_str = serde_json::to_string(request)
-            .map_err(|e| SporeError::SerializationError(e.to_string()))?;
+        let params = request
+            .get("params")
+            .cloned()
+            .unwrap_or(serde_json::json!({}));
 
-        stream.write_all(request_str.as_bytes()).await?;
-        stream.shutdown().await?;
+        // Create AtomicClient with 30s timeout (consistent with original)
+        let client = AtomicClient::unix(&self.beardog_socket)
+            .with_timeout(std::time::Duration::from_secs(30));
 
-        // Read with timeout to prevent hangs (30s for JSON-RPC)
-        let mut response_str = String::new();
-        timeout(
-            Duration::from_secs(30),
-            stream.read_to_string(&mut response_str),
-        )
-        .await
-        .map_err(|_| SporeError::SystemError("Socket read timeout (30s)".to_string()))?
-        .map_err(|e| SporeError::SystemError(format!("Read error: {e}")))?;
+        // Make the call via AtomicClient
+        let result = client.call(method, params).await.map_err(|e| {
+            SporeError::IoError(std::io::Error::new(
+                std::io::ErrorKind::ConnectionRefused,
+                format!("BearDog call failed: {}", e),
+            ))
+        })?;
 
-        serde_json::from_str(&response_str)
-            .map_err(|e| SporeError::DeserializationError(format!("Invalid JSON response: {}", e)))
+        // Wrap result in JSON-RPC response format for compatibility
+        Ok(serde_json::json!({
+            "jsonrpc": "2.0",
+            "result": result,
+            "id": request.get("id").cloned().unwrap_or(serde_json::json!(1))
+        }))
     }
 
     /// Verify lineage after successful beacon decryption

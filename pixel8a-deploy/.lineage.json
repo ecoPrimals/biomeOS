@@ -1,0 +1,10 @@
+{
+  "device_id": "pixel8a",
+  "family_id": "1894e909e454",
+  "lineage_seed_hash": "6470b373321b700daa05373906f8b350",
+  "kdf": "HKDF-SHA256",
+  "derivation_proof": "qXuWkmnRre8oIoZ0k6gPsZ8EEtWp0xEd2H7tN1WqK68=",
+  "derived_at": "2026-02-08T16:45:00Z",
+  "parent_device": "gate",
+  "generation": 1
+}

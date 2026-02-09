@@ -142,11 +142,8 @@ impl UniversalBiomeOSManager {
         &self.registered_primals
     }
 
-    /// Get client registry reference
-    // Legacy method - ClientRegistry removed
-    // pub fn clients(&self) -> &Arc<ClientRegistry> {
-    //     &self.clients
-    // }
+    // NOTE: ClientRegistry removed - clients() method deprecated
+    // pub fn clients(&self) -> &Arc<ClientRegistry> { &self.clients }
 
     /// Shutdown the manager gracefully
     pub async fn shutdown(&self) -> Result<()> {

@@ -68,7 +68,7 @@ ANTHROPIC_API_KEY = "${ANTHROPIC_API_KEY}"
 OPENAI_API_KEY = "${OPENAI_API_KEY}"
 
 # Capability registry (Neural API)
-CAPABILITY_REGISTRY_SOCKET = "/tmp/neural-api-nat0.sock"
+CAPABILITY_REGISTRY_SOCKET = "/tmp/neural-api-1894e909e454.sock"
 
 [nodes.constraints]
 timeout_ms = 30000

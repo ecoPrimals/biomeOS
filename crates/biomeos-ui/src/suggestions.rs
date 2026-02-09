@@ -66,36 +66,51 @@ pub enum SuggestionType {
 pub enum SuggestedAction {
     /// Assign a device to a primal
     AssignDevice {
+        /// Target device ID
         device_id: String,
+        /// Target primal ID
         primal_id: String,
+        /// Reason for the suggestion
         reason: String,
     },
 
     /// Remove a device assignment
     RemoveAssignment {
+        /// Device ID to unassign
         device_id: String,
+        /// Primal ID currently assigned
         primal_id: String,
+        /// Reason for the suggestion
         reason: String,
     },
 
     /// Reallocate resources
     ReallocateResources {
+        /// Source primal ID
         from_primal: String,
+        /// Destination primal ID
         to_primal: String,
+        /// Type of resource (cpu, memory, gpu, etc.)
         resource_type: String,
+        /// Amount to reallocate
         amount: String,
     },
 
     /// Add more capacity
     AddCapacity {
+        /// Type of primal to add
         primal_type: String,
+        /// Estimated capacity need
         estimated_need: String,
     },
 
     /// Optimize configuration
     OptimizeConfig {
+        /// Target primal ID
         primal_id: String,
+        /// Configuration key to change
         config_key: String,
+        /// Suggested new value
         suggested_value: serde_json::Value,
     },
 }
@@ -138,20 +153,30 @@ pub struct SuggestionContext {
 /// Device information for context
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceInfo {
+    /// Unique device identifier
     pub id: String,
+    /// Type of device (gpu, cpu, storage, etc.)
     pub device_type: String,
+    /// List of device capabilities
     pub capabilities: Vec<String>,
+    /// Currently assigned primal ID, if any
     pub current_assignment: Option<String>,
 }
 
 /// Primal information for context
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PrimalInfo {
+    /// Unique primal identifier
     pub id: String,
+    /// Primal name
     pub name: String,
+    /// Type of primal (security, discovery, compute, etc.)
     pub primal_type: String,
+    /// List of primal capabilities
     pub capabilities: Vec<String>,
+    /// Health status (healthy, degraded, unhealthy)
     pub health: String,
+    /// Current load factor (0.0 - 1.0), if known
     pub load: Option<f32>,
 }
 
@@ -162,13 +187,19 @@ pub enum SuggestionFeedback {
     Accepted,
 
     /// User rejected the suggestion with reason
-    Rejected { reason: String },
+    Rejected {
+        /// Reason for rejection
+        reason: String,
+    },
 
     /// User dismissed without action
     Dismissed,
 
     /// User modified the suggestion
-    Modified { changes: String },
+    Modified {
+        /// Description of modifications made
+        changes: String,
+    },
 }
 
 /// AI Suggestion Manager
@@ -176,48 +207,114 @@ pub enum SuggestionFeedback {
 /// Interfaces with Squirrel AI primal to get intelligent suggestions
 /// for device assignments and optimizations.
 pub struct AISuggestionManager {
-    /// Squirrel client (discovered via capabilities)
-    squirrel_client: Option<SquirrelClientPlaceholder>,
+    /// AI provider socket path (discovered via capabilities, not by name)
+    ///
+    /// DEEP DEBT EVOLUTION: Replaced `SquirrelClientPlaceholder = ()` with
+    /// actual socket path. The manager discovers ANY primal that provides
+    /// the "ai" capability, not specifically "Squirrel".
+    ai_provider_socket: Option<std::path::PathBuf>,
 
     /// Family ID
+    #[allow(dead_code)] // Used for family-scoped AI suggestions
     family_id: String,
 
     /// Active suggestions
     active_suggestions: HashMap<String, AISuggestion>,
 }
 
-// Placeholder for Squirrel client
-// Will be replaced with actual client import
-type SquirrelClientPlaceholder = ();
-
 impl AISuggestionManager {
     /// Create a new AI suggestion manager
     pub fn new(family_id: String) -> Self {
         Self {
-            squirrel_client: None,
+            ai_provider_socket: None,
             family_id,
             active_suggestions: HashMap::new(),
         }
     }
 
-    /// Discover and connect to Squirrel
-    pub async fn discover_squirrel(&mut self) -> Result<()> {
-        info!("🔍 Discovering Squirrel AI primal...");
+    /// Discover an AI capability provider
+    ///
+    /// DEEP DEBT EVOLUTION: Discovers ANY primal with "ai" capability,
+    /// not specifically "Squirrel". Primals self-register capabilities.
+    pub async fn discover_ai_provider(&mut self) -> Result<()> {
+        info!("🔍 Discovering AI capability provider...");
 
-        // Capability-based discovery via SystemPaths XDG sockets
-        // Squirrel integration is optional - graceful degradation if unavailable
         if let Ok(paths) = biomeos_types::SystemPaths::new() {
-            let socket_path = paths.primal_socket("squirrel");
-            if socket_path.exists() {
-                self.squirrel_client = Some(());
-                info!("✅ Squirrel AI discovered at {}", socket_path.display());
-            } else {
-                info!("ℹ️ Squirrel not available (socket not found), using local heuristics");
+            // Scan runtime directory for any primal socket that responds to ai capabilities
+            let runtime_dir = paths.runtime_dir();
+            if let Ok(entries) = std::fs::read_dir(runtime_dir) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if path.extension().is_some_and(|e| e == "sock") {
+                        // Check if this socket responds to ai.capabilities
+                        if Self::probe_ai_capability(&path).await {
+                            let name = path.file_stem()
+                                .map(|s| s.to_string_lossy().to_string())
+                                .unwrap_or_default();
+                            info!("✅ AI provider discovered: {} at {}", name, path.display());
+                            self.ai_provider_socket = Some(path);
+                            return Ok(());
+                        }
+                    }
+                }
             }
+
+            // Fallback: check well-known ai provider socket (bootstrap only)
+            if std::env::var("BIOMEOS_STRICT_DISCOVERY").is_err() {
+                let ai_provider = std::env::var("BIOMEOS_AI_PROVIDER")
+                    .unwrap_or_else(|_| "squirrel".to_string());
+                let socket_path = paths.primal_socket(&ai_provider);
+                if socket_path.exists() {
+                    info!("✅ AI provider found via bootstrap name: {}", ai_provider);
+                    self.ai_provider_socket = Some(socket_path);
+                    return Ok(());
+                }
+            }
+
+            info!("ℹ️ No AI provider available, using local heuristics");
         } else {
             info!("ℹ️ Could not determine socket paths, using local heuristics");
         }
         Ok(())
+    }
+
+    /// Probe a socket to check if it provides AI capabilities
+    async fn probe_ai_capability(socket_path: &std::path::Path) -> bool {
+        use std::os::unix::net::UnixStream;
+        use std::io::{Read, Write};
+
+        let mut stream = match UnixStream::connect(socket_path) {
+            Ok(s) => s,
+            Err(_) => return false,
+        };
+
+        let _ = stream.set_read_timeout(Some(std::time::Duration::from_secs(2)));
+        let _ = stream.set_write_timeout(Some(std::time::Duration::from_secs(2)));
+
+        let request = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "capabilities",
+            "params": {}
+        });
+
+        if let Ok(bytes) = serde_json::to_vec(&request) {
+            let _ = stream.write_all(&bytes);
+            let _ = stream.write_all(b"\n");
+            let _ = stream.flush();
+
+            let mut buf = vec![0u8; 4096];
+            if let Ok(n) = stream.read(&mut buf) {
+                if let Ok(response) = serde_json::from_slice::<serde_json::Value>(&buf[..n]) {
+                    if let Some(result) = response.get("result") {
+                        let result_str = result.to_string().to_lowercase();
+                        return result_str.contains("ai") || result_str.contains("suggest");
+                    }
+                }
+            }
+        }
+
+        false
     }
 
     /// Request suggestions based on current context
@@ -227,8 +324,8 @@ impl AISuggestionManager {
     ) -> Result<Vec<AISuggestion>> {
         info!("🤖 Requesting AI suggestions...");
 
-        if self.squirrel_client.is_none() {
-            warn!("Squirrel not available, using local heuristics");
+        if self.ai_provider_socket.is_none() {
+            warn!("No AI provider available, using local heuristics");
         }
 
         // Generate suggestions (via Squirrel if available, otherwise local heuristics)
@@ -256,12 +353,12 @@ impl AISuggestionManager {
             suggestion_id, feedback
         );
 
-        // Send to Squirrel if available
+        // Send to AI provider if available
         // Note: Full feedback loop implemented in biomeos-graph/src/ai_advisor.rs
-        if self.squirrel_client.is_some() {
-            debug!("Feedback recorded (Squirrel available for learning)");
+        if self.ai_provider_socket.is_some() {
+            debug!("Feedback recorded (AI provider available for learning)");
         } else {
-            debug!("Feedback recorded locally (Squirrel unavailable)");
+            debug!("Feedback recorded locally (no AI provider)");
         }
 
         // Always remove from active suggestions if accepted/rejected
@@ -370,7 +467,7 @@ mod tests {
     async fn test_suggestion_manager_creation() {
         let manager = AISuggestionManager::new("test_family".to_string());
         assert_eq!(manager.family_id, "test_family");
-        assert!(manager.squirrel_client.is_none());
+        assert!(manager.ai_provider_socket.is_none());
     }
 
     #[tokio::test]
@@ -613,20 +710,19 @@ mod tests {
     async fn test_manager_creation() {
         let manager = AISuggestionManager::new("test_family".to_string());
         assert_eq!(manager.family_id, "test_family");
-        assert!(manager.squirrel_client.is_none());
+        assert!(manager.ai_provider_socket.is_none());
         assert!(manager.active_suggestions.is_empty());
     }
 
     #[tokio::test]
-    async fn test_discover_squirrel() {
+    async fn test_discover_ai_provider() {
         let mut manager = AISuggestionManager::new("test_family".to_string());
-        assert!(manager.squirrel_client.is_none());
+        assert!(manager.ai_provider_socket.is_none());
 
-        // discover_squirrel checks for actual socket - returns Ok even if not found
-        // Squirrel client is only set if the socket exists at runtime
-        let result = manager.discover_squirrel().await;
+        // discover_ai_provider scans for actual sockets - returns Ok even if not found
+        let result = manager.discover_ai_provider().await;
         assert!(result.is_ok());
-        // Note: squirrel_client will be None unless Squirrel is actually running
+        // Note: ai_provider_socket will be None unless an AI provider is running
         // This is correct runtime-discovery behavior
     }
 
@@ -665,8 +761,8 @@ mod tests {
     #[tokio::test]
     async fn test_request_suggestions_with_context() {
         let mut manager = AISuggestionManager::new("test_family".to_string());
-        // Even without Squirrel, we get local heuristic suggestions
-        manager.discover_squirrel().await.unwrap();
+        // Even without AI provider, we get local heuristic suggestions
+        manager.discover_ai_provider().await.unwrap();
 
         let context = SuggestionContext {
             assignments: HashMap::new(),

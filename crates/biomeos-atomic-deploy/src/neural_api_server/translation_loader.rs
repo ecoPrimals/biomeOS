@@ -8,6 +8,7 @@ use biomeos_core::SocketDiscovery;
 use tracing::{debug, info, warn};
 
 use super::NeuralApiServer;
+use crate::capability_domains::capability_to_provider_fallback;
 use crate::neural_graph::{Graph, GraphNode};
 
 impl NeuralApiServer {
@@ -59,24 +60,35 @@ impl NeuralApiServer {
                 node.capabilities_provided.is_some()
             );
 
-            // EVOLVED: Get primal name - capability-agnostic, runtime discovery
-            // No hardcoded capability-to-primal mapping!
-            // Primals self-register their capabilities with Songbird
+            // EVOLVED: Get primal name - capability-based resolution via domain mappings
+            // Uses capability_domains.rs for well-known capability → primal mappings
+            // This is robust and doesn't require runtime Songbird queries
             let primal_name = if let Some(primal_cfg) = &node.primal {
                 if let Some(cap) = &primal_cfg.by_capability {
-                    // DEEP DEBT PRINCIPLE: Query Songbird at runtime for capability providers
-                    // This allows ecosystem evolution without hardcoding
+                    // ROBUST SOLUTION: Use capability domain mappings to resolve primal name
+                    // This maps semantic capability names to actual primal names:
+                    //   "security" → "beardog"
+                    //   "http"     → "songbird"
+                    //   "storage"  → "nestgate"
+                    //   etc.
                     //
-                    // IMPLEMENTATION NOTE: Async Songbird resolution would be:
-                    // 1. Connect to Songbird via SocketDiscovery
-                    // 2. Query: songbird.discover_capability(capability_name)
-                    // 3. Receive: primal name providing that capability
-                    // 4. Use returned primal name for deployment
-                    //
-                    // For now, use capability name directly - works for standard primals
-                    // where capability name == primal name (security → beardog, etc.)
-                    // This maintains zero hardcoding while deferring full async resolution
-                    Some(cap.clone())
+                    // The mapping is defined in capability_domains.rs and can be extended
+                    // or loaded from config/capability_registry.toml in the future.
+                    if let Some(resolved_primal) = capability_to_provider_fallback(cap) {
+                        debug!(
+                            "   Resolved capability '{}' to primal '{}'",
+                            cap, resolved_primal
+                        );
+                        Some(resolved_primal.to_string())
+                    } else {
+                        // Fallback: if capability isn't in domain mappings, use it as primal name
+                        // This handles custom primals that register with capability == primal name
+                        warn!(
+                            "   No domain mapping for capability '{}', using as primal name",
+                            cap
+                        );
+                        Some(cap.clone())
+                    }
                 } else {
                     primal_cfg.by_name.clone()
                 }

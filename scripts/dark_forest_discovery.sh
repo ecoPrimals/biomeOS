@@ -45,7 +45,7 @@ FAMILY_SEED="$SPORE_ROOT/.family.seed"
 BEARDOG_BIN="$SPORE_ROOT/primals/beardog"
 BEARDOG_SOCKET="/tmp/beardog-dark-forest.sock"
 BEACON_PORT=7777
-FAMILY_ID="${FAMILY_ID:-nat0}"
+FAMILY_ID="${FAMILY_ID:-1894e909e454}"
 NODE_ID="${NODE_ID:-$(hostname)}"
 
 # Colors
@@ -311,7 +311,7 @@ MODES:
     test          Local validation test
 
 ENVIRONMENT:
-    FAMILY_ID     Family identifier (default: nat0)
+    FAMILY_ID     Family identifier (default: 1894e909e454)
     NODE_ID       This node's identifier (default: hostname)
     BEACON_PORT   UDP port for beacons (default: 7777)
 

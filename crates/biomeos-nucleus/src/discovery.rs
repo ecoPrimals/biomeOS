@@ -317,11 +317,11 @@ mod tests {
     #[test]
     fn test_discovery_request_with_taxonomy() {
         let request = DiscoveryRequest::new(CapabilityTaxonomy::Encryption)
-            .with_family("nat0")
+            .with_family("1894e909e454")
             .with_timeout(Duration::from_secs(5));
 
         assert!(matches!(request.capability, CapabilityTaxonomy::Encryption));
-        assert_eq!(request.family, Some("nat0".to_string()));
+        assert_eq!(request.family, Some("1894e909e454".to_string()));
         assert_eq!(request.timeout, Some(Duration::from_secs(5)));
     }
 
@@ -351,7 +351,7 @@ mod tests {
         let json = r#"{
             "primal": "beardog",
             "node_id": "node-alpha",
-            "family_id": "nat0",
+            "family_id": "1894e909e454",
             "capabilities": ["encryption", "identity"],
             "endpoints": [
                 {"endpoint_type": "unix_socket", "address": "/tmp/beardog.sock"}

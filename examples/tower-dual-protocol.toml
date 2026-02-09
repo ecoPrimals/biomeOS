@@ -4,7 +4,7 @@
 # for fractal and isomorphic deployments
 
 [tower]
-family = "nat0"
+family = "1894e909e454"
 concurrent_startup = true
 
 # ═══════════════════════════════════════════════════════════════════
@@ -24,7 +24,7 @@ protocol = "tarpc"  # Type-safe, high-performance
 
 [primals.env]
 BEARDOG_FAMILY_SEED = "Nat0C/G/b4B7u06n0r14SuZXrp/IZ/38fZHh8aJQMVg="
-BEARDOG_FAMILY_ID = "nat0"
+BEARDOG_FAMILY_ID = "1894e909e454"
 BEARDOG_NODE_ID = "tower1"
 RUST_LOG = "info"
 
@@ -35,9 +35,9 @@ requires = ["Security"]
 protocol = "tarpc"  # Type-safe communication with BearDog
 
 [primals.env]
-SONGBIRD_FAMILY_ID = "nat0"
+SONGBIRD_FAMILY_ID = "1894e909e454"
 SONGBIRD_NODE_ID = "tower1"
-SECURITY_ENDPOINT = "tarpc+unix:///tmp/beardog-nat0-tower1.sock"
+SECURITY_ENDPOINT = "tarpc+unix:///tmp/beardog-1894e909e454-tower1.sock"
 RUST_LOG = "info"
 
 # ═══════════════════════════════════════════════════════════════════
@@ -57,7 +57,7 @@ RUST_LOG = "info"
 # 
 # [primals.env]
 # BEARDOG_FAMILY_SEED = "Nat0C/G/b4B7u06n0r14SuZXrp/IZ/38fZHh8aJQMVg="
-# BEARDOG_FAMILY_ID = "nat0"
+# BEARDOG_FAMILY_ID = "1894e909e454"
 # BEARDOG_NODE_ID = "tower1"
 # RUST_LOG = "info"
 # 
@@ -68,9 +68,9 @@ RUST_LOG = "info"
 # protocol = "jsonrpc"  # Flexible, easy debugging
 # 
 # [primals.env]
-# SONGBIRD_FAMILY_ID = "nat0"
+# SONGBIRD_FAMILY_ID = "1894e909e454"
 # SONGBIRD_NODE_ID = "tower1"
-# SECURITY_ENDPOINT = "jsonrpc+unix:///tmp/beardog-nat0-tower1.sock"
+# SECURITY_ENDPOINT = "jsonrpc+unix:///tmp/beardog-1894e909e454-tower1.sock"
 # RUST_LOG = "info"
 
 # ═══════════════════════════════════════════════════════════════════
@@ -89,7 +89,7 @@ RUST_LOG = "info"
 # 
 # [primals.env]
 # BEARDOG_FAMILY_SEED = "Nat0C/G/b4B7u06n0r14SuZXrp/IZ/38fZHh8aJQMVg="
-# BEARDOG_FAMILY_ID = "nat0"
+# BEARDOG_FAMILY_ID = "1894e909e454"
 # BEARDOG_NODE_ID = "tower1"
 # RUST_LOG = "info"
 # 
@@ -100,9 +100,9 @@ RUST_LOG = "info"
 # protocol = "tarpc"  # Client chooses protocol
 # 
 # [primals.env]
-# SONGBIRD_FAMILY_ID = "nat0"
+# SONGBIRD_FAMILY_ID = "1894e909e454"
 # SONGBIRD_NODE_ID = "tower1"
-# SECURITY_ENDPOINT = "unix:///tmp/beardog-nat0-tower1.sock"  # Server auto-detects
+# SECURITY_ENDPOINT = "unix:///tmp/beardog-1894e909e454-tower1.sock"  # Server auto-detects
 # RUST_LOG = "info"
 
 # ═══════════════════════════════════════════════════════════════════
@@ -119,7 +119,7 @@ RUST_LOG = "info"
 # protocol = "tarpc"  # Core primal - performance critical
 # 
 # [primals.env]
-# BEARDOG_FAMILY_ID = "nat0"
+# BEARDOG_FAMILY_ID = "1894e909e454"
 # BEARDOG_NODE_ID = "tower1"
 # 
 # [[primals]]
@@ -130,7 +130,7 @@ RUST_LOG = "info"
 # 
 # [primals.env]
 # SONGBIRD_NODE_ID = "tower1"
-# SECURITY_ENDPOINT = "tarpc+unix:///tmp/beardog-nat0-tower1.sock"
+# SECURITY_ENDPOINT = "tarpc+unix:///tmp/beardog-1894e909e454-tower1.sock"
 # 
 # [[primals]]
 # binary = "./primals/toadstool"

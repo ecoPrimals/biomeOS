@@ -321,8 +321,6 @@ async fn verify_all_spores(verbose: bool) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[tokio::test]
     async fn test_verify_args_parsing() {
         // Test that the command structure is valid

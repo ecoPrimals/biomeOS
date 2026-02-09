@@ -211,6 +211,20 @@ config:
 
 **Current Deployment Example**: Our NUCLEUS with 5 primals (BearDog, Songbird, Squirrel, ToadStool, NestGate) all in `nat0` family.
 
+#### 2.2.5 Plasmodium: The Covalent Collective
+
+When two or more NUCLEUS instances bond covalently, they form a **Plasmodium** -- a collective organism (named after the slime mold *Physarum polycephalum*) that provides:
+
+- **Unified capability view** across all bonded gates
+- **Decentralized workload routing** to the best gate for each job
+- **No central brain** -- any gate can query the collective
+- **Graceful degradation** -- gates can join/leave dynamically
+
+The Plasmodium layer in biomeOS (`biomeos-core::plasmodium`) queries existing Songbird mesh primitives (`mesh.peers`, `mesh.status`) and aggregates state into a `PlasmodiumState` snapshot. It does NOT introduce new primal primitives.
+
+**Full specification**: `specs/PLASMODIUM_OVER_NUCLEUS_SPEC.md`  
+**CLI**: `biomeos plasmodium status|gates|models`
+
 ---
 
 ### 2.3 Metallic Bonding (Electron Sea, Optimized Evolution)
@@ -872,6 +886,7 @@ Our NUCLEUS deployment (January 16, 2026) validates:
 **Molecular Orbital**: Shared state space in covalent bonding  
 **Electrostatic**: Field-based interaction in ionic bonding  
 **Organo-Metal-Salt**: System with different internal and external bond types  
+**Plasmodium**: Collective organism formed by 2+ covalently bonded NUCLEUS instances (slime mold metaphor)  
 
 ---
 
