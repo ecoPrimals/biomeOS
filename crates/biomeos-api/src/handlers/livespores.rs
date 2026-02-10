@@ -105,8 +105,10 @@ pub async fn get_livespores(
                                 // DEEP DEBT EVOLUTION: Accept ANY executable as a primal.
                                 // No hardcoded whitelist — primals self-identify at runtime.
                                 // Skip hidden files and non-executable entries.
-                                if !name.starts_with('.') && !name.ends_with(".toml")
-                                    && !name.ends_with(".json") && !name.ends_with(".genome")
+                                if !name.starts_with('.')
+                                    && !name.ends_with(".toml")
+                                    && !name.ends_with(".json")
+                                    && !name.ends_with(".genome")
                                 {
                                     if let Ok(meta) = entry.metadata().await {
                                         if meta.is_file() {

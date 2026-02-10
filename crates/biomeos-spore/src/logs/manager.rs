@@ -97,7 +97,12 @@ impl LogManager {
         // Copy log files to fossil directory
         for log_file in &session.log_files {
             if log_file.path.exists() {
-                let dest = fossil_dir.join(log_file.path.file_name().unwrap());
+                let dest = fossil_dir.join(
+                    log_file
+                        .path
+                        .file_name()
+                        .expect("log file path must have filename"),
+                );
                 async_fs::copy(&log_file.path, &dest).await?;
                 debug!(
                     "Archived log: {} → {}",

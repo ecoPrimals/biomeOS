@@ -80,10 +80,15 @@ pub enum RuntimeType {
 /// Container engines
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ContainerEngine {
+    /// Docker engine
     Docker,
+    /// Podman container engine
     Podman,
+    /// containerd runtime
     Containerd,
+    /// CRI-O container runtime
     Crio,
+    /// Custom container engine
     Custom(String),
 }
 
@@ -112,8 +117,11 @@ pub struct ContainerImage {
 /// Image pull policies
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ImagePullPolicy {
+    /// Always pull the image
     Always,
+    /// Pull only if not present locally
     IfNotPresent,
+    /// Never pull the image
     Never,
 }
 
@@ -139,9 +147,13 @@ pub enum BinaryType {
 /// WASM engines
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum WasmEngine {
+    /// Wasmtime runtime
     Wasmtime,
+    /// Wasmer runtime
     Wasmer,
+    /// WasmEdge runtime
     WasmEdge,
+    /// Custom WASM engine
     Custom(String),
 }
 
@@ -167,11 +179,17 @@ pub struct VmConfig {
 /// VM types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum VmType {
+    /// QEMU emulator
     Qemu,
+    /// KVM hypervisor
     Kvm,
+    /// Xen hypervisor
     Xen,
+    /// Oracle VirtualBox
     VirtualBox,
+    /// VMware hypervisor
     VMware,
+    /// Custom VM type
     Custom(String),
 }
 
@@ -204,8 +222,11 @@ pub struct VmMemoryConfig {
 /// VM memory sharing
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum VmMemorySharing {
+    /// No memory sharing
     None,
+    /// Shared memory between VMs
     Shared,
+    /// Private memory for each VM
     Private,
 }
 
@@ -228,8 +249,11 @@ pub struct VmStorageConfig {
 /// VM storage types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum VmStorageType {
+    /// Local disk storage
     Disk,
+    /// Volume-based storage
     Volume,
+    /// Network-attached storage
     Network,
 }
 
@@ -249,9 +273,13 @@ pub struct VmNetworkConfig {
 /// VM network types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum VmNetworkType {
+    /// Bridged networking
     Bridge,
+    /// NAT networking
     Nat,
+    /// Host-only networking
     HostOnly,
+    /// Internal networking
     Internal,
 }
 
@@ -296,9 +324,13 @@ pub struct RuntimeMount {
 /// Mount types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MountType {
+    /// Bind mount from host
     Bind,
+    /// Named volume mount
     Volume,
+    /// Temporary filesystem mount
     Tmpfs,
+    /// Cache mount
     Cache,
 }
 

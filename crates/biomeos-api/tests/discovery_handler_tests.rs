@@ -23,12 +23,12 @@ async fn test_app_with_standalone_discovery() -> Router {
 
     let discovery = CompositeDiscovery::new();
 
-    let mut config = Config::default();
-    config.standalone_mode = true;
-
     let state = AppState::builder()
         .discovery(discovery)
-        .config(config)
+        .config(Config {
+            standalone_mode: true,
+            ..Default::default()
+        })
         .build()
         .expect("Failed to build test app state");
 

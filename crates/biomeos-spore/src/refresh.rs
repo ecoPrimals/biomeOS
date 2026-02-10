@@ -225,26 +225,37 @@ impl SporeRefresher {
 /// Report of a spore refresh operation
 #[derive(Debug)]
 pub struct RefreshReport {
+    /// Path to the refreshed spore
     pub spore_path: PathBuf,
+    /// Node identifier
     pub node_id: String,
+    /// Binaries that were successfully refreshed
     pub refreshed_binaries: Vec<RefreshedBinary>,
+    /// Binaries that failed to refresh
     pub failed_binaries: Vec<FailedBinary>,
 }
 
 /// Information about a refreshed binary
 #[derive(Debug)]
 pub struct RefreshedBinary {
+    /// Binary name
     pub name: String,
+    /// Previous version (if known)
     pub old_version: Option<String>,
+    /// New version from the nucleus
     pub new_version: String,
+    /// Previous SHA-256 digest
     pub old_sha256: Option<String>,
+    /// New SHA-256 digest
     pub new_sha256: String,
 }
 
 /// Information about a failed binary refresh
 #[derive(Debug)]
 pub struct FailedBinary {
+    /// Binary name
     pub name: String,
+    /// Error message explaining the failure
     pub error: String,
 }
 
@@ -264,8 +275,10 @@ impl RefreshReport {
 mod tests {
     use super::*;
 
+    // ========== RefreshReport Tests ==========
+
     #[test]
-    fn test_refresh_report_success() {
+    fn test_refresh_report_success_with_changes() {
         let report = RefreshReport {
             spore_path: PathBuf::from("/test"),
             node_id: "test-node".to_string(),
@@ -281,5 +294,161 @@ mod tests {
 
         assert!(report.is_success());
         assert!(report.has_changes());
+    }
+
+    #[test]
+    fn test_refresh_report_success_no_changes() {
+        let report = RefreshReport {
+            spore_path: PathBuf::from("/media/usb/biomeOS"),
+            node_id: "fresh-node".to_string(),
+            refreshed_binaries: vec![],
+            failed_binaries: vec![],
+        };
+
+        assert!(report.is_success());
+        assert!(!report.has_changes());
+    }
+
+    #[test]
+    fn test_refresh_report_with_failures() {
+        let report = RefreshReport {
+            spore_path: PathBuf::from("/media/usb/biomeOS"),
+            node_id: "failing-node".to_string(),
+            refreshed_binaries: vec![RefreshedBinary {
+                name: "beardog".to_string(),
+                old_version: Some("0.14.0".to_string()),
+                new_version: "0.15.0".to_string(),
+                old_sha256: None,
+                new_sha256: "new_hash".to_string(),
+            }],
+            failed_binaries: vec![FailedBinary {
+                name: "songbird".to_string(),
+                error: "Not found in plasmidBin".to_string(),
+            }],
+        };
+
+        assert!(!report.is_success());
+        assert!(report.has_changes());
+    }
+
+    #[test]
+    fn test_refresh_report_only_failures() {
+        let report = RefreshReport {
+            spore_path: PathBuf::from("/test"),
+            node_id: "broken-node".to_string(),
+            refreshed_binaries: vec![],
+            failed_binaries: vec![
+                FailedBinary {
+                    name: "beardog".to_string(),
+                    error: "SHA256 mismatch".to_string(),
+                },
+                FailedBinary {
+                    name: "songbird".to_string(),
+                    error: "Permission denied".to_string(),
+                },
+            ],
+        };
+
+        assert!(!report.is_success());
+        assert!(!report.has_changes());
+    }
+
+    // ========== RefreshedBinary Tests ==========
+
+    #[test]
+    fn test_refreshed_binary_with_all_fields() {
+        let binary = RefreshedBinary {
+            name: "tower".to_string(),
+            old_version: Some("0.5.0".to_string()),
+            new_version: "0.6.0".to_string(),
+            old_sha256: Some("abc123".to_string()),
+            new_sha256: "def456".to_string(),
+        };
+
+        assert_eq!(binary.name, "tower");
+        assert_eq!(binary.old_version, Some("0.5.0".to_string()));
+        assert_eq!(binary.new_version, "0.6.0");
+    }
+
+    #[test]
+    fn test_refreshed_binary_missing_old_info() {
+        let binary = RefreshedBinary {
+            name: "songbird".to_string(),
+            old_version: None,
+            new_version: "3.19.0".to_string(),
+            old_sha256: None,
+            new_sha256: "new_hash".to_string(),
+        };
+
+        assert!(binary.old_version.is_none());
+        assert!(binary.old_sha256.is_none());
+    }
+
+    // ========== FailedBinary Tests ==========
+
+    #[test]
+    fn test_failed_binary_debug() {
+        let failed = FailedBinary {
+            name: "beardog".to_string(),
+            error: "Source binary SHA256 mismatch".to_string(),
+        };
+
+        let debug = format!("{:?}", failed);
+        assert!(debug.contains("beardog"));
+        assert!(debug.contains("SHA256 mismatch"));
+    }
+
+    // ========== RefreshReport Multiple Binaries ==========
+
+    #[test]
+    fn test_refresh_report_multiple_refreshed() {
+        let report = RefreshReport {
+            spore_path: PathBuf::from("/media/usb1/biomeOS"),
+            node_id: "multi-node".to_string(),
+            refreshed_binaries: vec![
+                RefreshedBinary {
+                    name: "beardog".to_string(),
+                    old_version: Some("0.14.0".to_string()),
+                    new_version: "0.15.0".to_string(),
+                    old_sha256: Some("old1".to_string()),
+                    new_sha256: "new1".to_string(),
+                },
+                RefreshedBinary {
+                    name: "songbird".to_string(),
+                    old_version: Some("3.18.0".to_string()),
+                    new_version: "3.19.0".to_string(),
+                    old_sha256: Some("old2".to_string()),
+                    new_sha256: "new2".to_string(),
+                },
+                RefreshedBinary {
+                    name: "tower".to_string(),
+                    old_version: None,
+                    new_version: "0.6.0".to_string(),
+                    old_sha256: None,
+                    new_sha256: "new3".to_string(),
+                },
+            ],
+            failed_binaries: vec![],
+        };
+
+        assert!(report.is_success());
+        assert!(report.has_changes());
+        assert_eq!(report.refreshed_binaries.len(), 3);
+    }
+
+    // ========== Debug Formatting ==========
+
+    #[test]
+    fn test_refresh_report_debug() {
+        let report = RefreshReport {
+            spore_path: PathBuf::from("/test"),
+            node_id: "debug-node".to_string(),
+            refreshed_binaries: vec![],
+            failed_binaries: vec![],
+        };
+
+        let debug = format!("{:?}", report);
+        assert!(debug.contains("debug-node"));
+        assert!(debug.contains("/test"));
     }
 }

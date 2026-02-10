@@ -1,5 +1,6 @@
-// Health monitoring utilities for CLI
-// Specialized health functions implemented: analysis, scoring, trends, conditions
+//! Health monitoring utilities for CLI
+//!
+//! Specialized health functions: analysis, scoring, trends, conditions.
 
 use anyhow::Result;
 use biomeos_core::UniversalBiomeOSManager;
@@ -11,10 +12,15 @@ pub struct HealthUtils;
 /// System health representation for CLI
 #[derive(Debug, Clone)]
 pub struct SystemHealth {
+    /// Overall health status
     pub overall_status: Health,
+    /// CPU utilization percentage (0.0–100.0)
     pub cpu_usage: f64,
+    /// Memory utilization percentage (0.0–100.0)
     pub memory_usage: f64,
+    /// Disk utilization percentage (0.0–100.0)
     pub disk_usage: f64,
+    /// Network connectivity status
     pub network_status: String,
 }
 
@@ -93,18 +99,27 @@ impl HealthUtils {
     }
 }
 
+/// CLI-formatted health report
 #[derive(Debug)]
 pub struct CLIHealthReport {
+    /// System-level health information
     pub system: SystemHealth,
+    /// Health of individual services
     pub services: Vec<ServiceHealth>,
+    /// When this report was generated
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
+/// Health information for a single service
 #[derive(Debug)]
 pub struct ServiceHealth {
+    /// Service display name
     pub name: String,
+    /// Service endpoint URL
     pub endpoint: String,
+    /// Service health status
     pub status: biomeos_primal_sdk::Health,
+    /// Response time in milliseconds
     pub response_time_ms: u64,
 }
 
@@ -257,25 +272,39 @@ impl HealthUtils {
     }
 }
 
+/// Health analysis results
 #[derive(Debug)]
 pub struct HealthAnalysis {
+    /// Overall health score (0.0–100.0)
     pub overall_score: f64,
+    /// Detected health issues
     pub issues: Vec<String>,
+    /// Suggested recommendations
     pub recommendations: Vec<String>,
+    /// Current system health snapshot
     pub system_health: SystemHealth,
 }
 
+/// Health trend analysis
 #[derive(Debug)]
 pub struct HealthTrend {
+    /// Trend direction (e.g., "Stable", "Improving", "Declining")
     pub trend: String,
+    /// Confidence in the trend prediction (0.0–100.0)
     pub confidence: f64,
+    /// Human-readable prediction
     pub prediction: String,
 }
 
+/// A specific health condition detected in the system
 #[derive(Debug)]
 pub struct HealthCondition {
+    /// Condition identifier
     pub condition: String,
+    /// Severity level
     pub severity: String,
+    /// Description of the condition
     pub description: String,
+    /// Recommended action to address the condition
     pub action: String,
 }

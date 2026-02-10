@@ -81,7 +81,10 @@ pub enum ArchivalReason {
     GracefulShutdown,
 
     /// Process crashed
-    Crash { exit_code: i32 },
+    Crash {
+        /// Process exit code
+        exit_code: i32,
+    },
 
     /// Manual archival by user
     Manual,

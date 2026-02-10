@@ -41,6 +41,8 @@ pub mod primal_launcher; // EVOLVING: Legacy launcher → coordinator // NEW: Pr
 mod capability_domains; // Capability domain mappings for fallback resolution
 pub mod capability_handlers; // Extracted capability-based primal handlers
 pub mod capability_translation;
+#[cfg(test)]
+mod capability_translation_integration_tests; // Sovereign Onion translation tests
 pub mod handlers; // NEW: Smart decomposition of neural_api_server
 pub mod http_client;
 pub mod lifecycle_manager; // NEW: Primal lifecycle management (resurrection, apoptosis)
@@ -54,8 +56,6 @@ pub mod neural_graph;
 pub mod neural_router;
 #[cfg(test)]
 mod neural_router_tests;
-#[cfg(test)]
-mod capability_translation_integration_tests; // Sovereign Onion translation tests
 pub mod nucleation; // NEW: Capability-based routing layer
 pub mod protocol_escalation; // NEW: JSON-RPC → tarpc escalation
 

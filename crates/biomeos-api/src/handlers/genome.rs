@@ -34,20 +34,11 @@ impl Default for GenomeState {
 impl GenomeState {
     /// Get XDG-compliant default storage directory
     ///
-    /// DEEP DEBT EVOLUTION: Uses etcetera (pure Rust) instead of dirs (C-based)
+    /// Uses SystemPaths for consistent XDG path resolution across all of biomeOS.
     fn default_storage_dir() -> PathBuf {
-        // XDG_DATA_HOME or ~/.local/share
-        let data_home = std::env::var("XDG_DATA_HOME")
-            .map(PathBuf::from)
-            .or_else(|_| std::env::var("HOME").map(|h| PathBuf::from(h).join(".local/share")))
-            .unwrap_or_else(|_| {
-                // Pure Rust fallback via etcetera
-                use etcetera::base_strategy::{choose_base_strategy, BaseStrategy};
-                choose_base_strategy()
-                    .map(|s| s.data_dir())
-                    .unwrap_or_else(|_| PathBuf::from("/tmp"))
-            });
-        data_home.join("biomeos/genomes")
+        biomeos_types::paths::SystemPaths::new_lazy()
+            .data_dir()
+            .join("genomes")
     }
 
     pub fn new() -> Result<Self, String> {
@@ -615,12 +606,124 @@ pub async fn list_genomes() -> Result<Json<ListGenomesResponse>, StatusCode> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempfile::TempDir;
+
+    // ========== GenomeState Tests ==========
 
     #[test]
     fn test_genome_state_default_storage_dir() {
         let dir = GenomeState::default_storage_dir();
         assert!(dir.to_string_lossy().contains("biomeos/genomes"));
     }
+
+    #[test]
+    fn test_genome_state_with_storage() {
+        let temp_dir = TempDir::new().expect("create temp dir");
+        let storage = temp_dir.path().join("genomes");
+        let state = GenomeState::with_storage(storage.clone()).expect("create state");
+        assert!(storage.exists(), "with_storage should create the directory");
+        assert_eq!(state.storage_dir, storage);
+    }
+
+    #[test]
+    fn test_genome_state_genome_path() {
+        let temp_dir = TempDir::new().expect("create temp dir");
+        let state = GenomeState::with_storage(temp_dir.path().to_path_buf()).expect("create state");
+        let path = state.genome_path("test-genome");
+        assert_eq!(path, temp_dir.path().join("test-genome.genome"));
+    }
+
+    #[tokio::test]
+    async fn test_genome_state_save_and_load() {
+        let temp_dir = TempDir::new().expect("create temp dir");
+        let state = GenomeState::with_storage(temp_dir.path().to_path_buf()).expect("create state");
+
+        // Create a genome
+        let manifest = GenomeManifest::new("test").version("1.0.0");
+        let genome = GenomeBin::with_manifest(manifest);
+
+        // Save it
+        state
+            .save_genome("test-1.0.0", &genome)
+            .await
+            .expect("save genome");
+
+        // Verify file was created
+        assert!(temp_dir.path().join("test-1.0.0.genome").exists());
+
+        // Load it back
+        let loaded = state
+            .load_genome("test-1.0.0")
+            .await
+            .expect("load genome");
+        assert_eq!(loaded.manifest.name, "test");
+        assert_eq!(loaded.manifest.version, "1.0.0");
+    }
+
+    #[tokio::test]
+    async fn test_genome_state_load_not_found() {
+        let temp_dir = TempDir::new().expect("create temp dir");
+        let state = GenomeState::with_storage(temp_dir.path().to_path_buf()).expect("create state");
+
+        let result = state.load_genome("nonexistent").await;
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .contains("Genome not found: nonexistent")
+        );
+    }
+
+    #[tokio::test]
+    async fn test_genome_state_list_all_empty() {
+        let temp_dir = TempDir::new().expect("create temp dir");
+        let state = GenomeState::with_storage(temp_dir.path().to_path_buf()).expect("create state");
+
+        let genomes = state.list_all().await.expect("list all");
+        assert!(genomes.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_genome_state_list_all_with_genomes() {
+        let temp_dir = TempDir::new().expect("create temp dir");
+        let state = GenomeState::with_storage(temp_dir.path().to_path_buf()).expect("create state");
+
+        // Save two genomes
+        let manifest1 = GenomeManifest::new("genome-a").version("1.0.0");
+        let manifest2 = GenomeManifest::new("genome-b").version("2.0.0");
+
+        state
+            .save_genome("genome-a-1.0.0", &GenomeBin::with_manifest(manifest1))
+            .await
+            .expect("save genome-a");
+        state
+            .save_genome("genome-b-2.0.0", &GenomeBin::with_manifest(manifest2))
+            .await
+            .expect("save genome-b");
+
+        let genomes = state.list_all().await.expect("list all");
+        assert_eq!(genomes.len(), 2);
+
+        let names: Vec<&str> = genomes.iter().map(|(_, g)| g.manifest.name.as_str()).collect();
+        assert!(names.contains(&"genome-a"));
+        assert!(names.contains(&"genome-b"));
+    }
+
+    #[tokio::test]
+    async fn test_genome_state_list_all_nonexistent_dir() {
+        let temp_dir = TempDir::new().expect("create temp dir");
+        let storage = temp_dir.path().join("does-not-exist");
+        // Create state manually to avoid auto-creation
+        let state = GenomeState {
+            genomes: RwLock::new(HashMap::new()),
+            storage_dir: storage,
+        };
+
+        let genomes = state.list_all().await.expect("list all");
+        assert!(genomes.is_empty());
+    }
+
+    // ========== Request/Response Serialization Tests ==========
 
     #[test]
     fn test_build_request_deserialize() {
@@ -630,9 +733,35 @@ mod tests {
             "description": "Test genome",
             "binaries": []
         }"#;
-        let req: BuildRequest = serde_json::from_str(json).unwrap();
+        let req: BuildRequest = serde_json::from_str(json).expect("deserialize");
         assert_eq!(req.name, "test-genome");
         assert_eq!(req.version, Some("1.0.0".to_string()));
+        assert_eq!(req.description, Some("Test genome".to_string()));
+        assert!(req.binaries.is_empty());
+    }
+
+    #[test]
+    fn test_build_request_minimal() {
+        let json = r#"{"name": "minimal", "binaries": []}"#;
+        let req: BuildRequest = serde_json::from_str(json).expect("deserialize");
+        assert_eq!(req.name, "minimal");
+        assert!(req.version.is_none());
+        assert!(req.description.is_none());
+    }
+
+    #[test]
+    fn test_build_request_with_binaries() {
+        let json = r#"{
+            "name": "multi-arch",
+            "binaries": [
+                {"arch": "x86_64", "path": "/tmp/bin-x86"},
+                {"arch": "aarch64", "path": "/tmp/bin-arm"}
+            ]
+        }"#;
+        let req: BuildRequest = serde_json::from_str(json).expect("deserialize");
+        assert_eq!(req.binaries.len(), 2);
+        assert_eq!(req.binaries[0].arch, "x86_64");
+        assert_eq!(req.binaries[1].arch, "aarch64");
     }
 
     #[test]
@@ -642,8 +771,16 @@ mod tests {
             genome_id: "test-1.0.0".to_string(),
             message: "Built".to_string(),
         };
-        let json = serde_json::to_string(&resp).unwrap();
+        let json = serde_json::to_string(&resp).expect("serialize");
         assert!(json.contains("test-1.0.0"));
+        assert!(json.contains("\"success\":true"));
+    }
+
+    #[test]
+    fn test_verify_request_deserialize() {
+        let json = r#"{"path": "/tmp/test.genome"}"#;
+        let req: VerifyRequest = serde_json::from_str(json).expect("deserialize");
+        assert_eq!(req.path, PathBuf::from("/tmp/test.genome"));
     }
 
     #[test]
@@ -652,19 +789,53 @@ mod tests {
             valid: true,
             message: "All checksums valid".to_string(),
         };
-        let json = serde_json::to_string(&resp).unwrap();
-        assert!(json.contains("valid"));
-        assert!(json.contains("true"));
+        let json = serde_json::to_string(&resp).expect("serialize");
+        assert!(json.contains("\"valid\":true"));
+        assert!(json.contains("All checksums valid"));
+    }
+
+    #[test]
+    fn test_verify_response_invalid() {
+        let resp = VerifyResponse {
+            valid: false,
+            message: "Checksum mismatch".to_string(),
+        };
+        let json = serde_json::to_string(&resp).expect("serialize");
+        assert!(json.contains("\"valid\":false"));
     }
 
     #[test]
     fn test_create_genome_request_deserialize() {
-        let json = r#"{
-            "name": "my-genome"
-        }"#;
-        let req: CreateGenomeRequest = serde_json::from_str(json).unwrap();
+        let json = r#"{"name": "my-genome"}"#;
+        let req: CreateGenomeRequest = serde_json::from_str(json).expect("deserialize");
         assert_eq!(req.name, "my-genome");
         assert!(req.version.is_none());
+        assert!(req.description.is_none());
+    }
+
+    #[test]
+    fn test_create_genome_request_full() {
+        let json = r#"{
+            "name": "full-genome",
+            "version": "2.0.0",
+            "description": "A fully specified genome"
+        }"#;
+        let req: CreateGenomeRequest = serde_json::from_str(json).expect("deserialize");
+        assert_eq!(req.name, "full-genome");
+        assert_eq!(req.version, Some("2.0.0".to_string()));
+        assert_eq!(req.description, Some("A fully specified genome".to_string()));
+    }
+
+    #[test]
+    fn test_create_genome_response_serialize() {
+        let resp = CreateGenomeResponse {
+            success: true,
+            genome_id: "new-genome-1.0.0".to_string(),
+            message: "Created".to_string(),
+        };
+        let json = serde_json::to_string(&resp).expect("serialize");
+        assert!(json.contains("new-genome-1.0.0"));
+        assert!(json.contains("\"success\":true"));
     }
 
     #[test]
@@ -674,10 +845,36 @@ mod tests {
             "nucleus_type": "TOWER",
             "genomes": ["beardog-1.0", "songbird-1.0"]
         }"#;
-        let req: ComposeRequest = serde_json::from_str(json).unwrap();
+        let req: ComposeRequest = serde_json::from_str(json).expect("deserialize");
         assert_eq!(req.name, "tower-atomic");
         assert_eq!(req.nucleus_type, "TOWER");
         assert_eq!(req.genomes.len(), 2);
+    }
+
+    #[test]
+    fn test_compose_response_serialize() {
+        let resp = ComposeResponse {
+            success: true,
+            genome_id: "composed-1.0".to_string(),
+            embedded_count: 3,
+            message: "Composed".to_string(),
+        };
+        let json = serde_json::to_string(&resp).expect("serialize");
+        assert!(json.contains("composed-1.0"));
+        assert!(json.contains("\"embedded_count\":3"));
+    }
+
+    #[test]
+    fn test_self_replicate_response_serialize() {
+        let resp = SelfReplicateResponse {
+            success: true,
+            genome_id: "biomeos-self".to_string(),
+            size: 50_000_000,
+            message: "Self-replicated".to_string(),
+        };
+        let json = serde_json::to_string(&resp).expect("serialize");
+        assert!(json.contains("biomeos-self"));
+        assert!(json.contains("50000000"));
     }
 
     #[test]
@@ -688,9 +885,33 @@ mod tests {
             version: "1.0".to_string(),
             architectures: vec!["x86_64".to_string()],
         };
-        let json = serde_json::to_string(&summary).unwrap();
+        let json = serde_json::to_string(&summary).expect("serialize");
         assert!(json.contains("test-1.0"));
         assert!(json.contains("x86_64"));
+    }
+
+    #[test]
+    fn test_list_genomes_response_serialize() {
+        let resp = ListGenomesResponse {
+            genomes: vec![
+                GenomeSummary {
+                    id: "g1".to_string(),
+                    name: "genome1".to_string(),
+                    version: "1.0".to_string(),
+                    architectures: vec!["x86_64".to_string()],
+                },
+                GenomeSummary {
+                    id: "g2".to_string(),
+                    name: "genome2".to_string(),
+                    version: "2.0".to_string(),
+                    architectures: vec!["aarch64".to_string()],
+                },
+            ],
+        };
+        let json = serde_json::to_string(&resp).expect("serialize");
+        assert!(json.contains("genome1"));
+        assert!(json.contains("genome2"));
+        assert!(json.contains("aarch64"));
     }
 
     #[test]
@@ -699,8 +920,22 @@ mod tests {
             url: "/api/v1/genome/test/data".to_string(),
             size: 12345,
         };
-        let json = serde_json::to_string(&resp).unwrap();
+        let json = serde_json::to_string(&resp).expect("serialize");
         assert!(json.contains("/api/v1/genome/test/data"));
         assert!(json.contains("12345"));
+    }
+
+    #[test]
+    fn test_genome_info_response_serialize() {
+        let resp = GenomeInfoResponse {
+            name: "test-genome".to_string(),
+            version: "1.0.0".to_string(),
+            architectures: vec!["x86_64".to_string(), "aarch64".to_string()],
+        };
+        let json = serde_json::to_string(&resp).expect("serialize");
+        assert!(json.contains("test-genome"));
+        assert!(json.contains("1.0.0"));
+        assert!(json.contains("x86_64"));
+        assert!(json.contains("aarch64"));
     }
 }

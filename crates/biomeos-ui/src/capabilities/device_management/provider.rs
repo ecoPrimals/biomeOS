@@ -5,11 +5,18 @@
 
 use anyhow::Result;
 use biomeos_core::atomic_client::AtomicClient;
+use biomeos_types::CapabilityTaxonomy;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
 
 use super::types::*;
+
+/// Resolve a capability to its runtime provider name via env var or taxonomy default.
+fn resolve_provider(env_var: &str, capability: CapabilityTaxonomy) -> String {
+    std::env::var(env_var)
+        .unwrap_or_else(|_| capability.default_primal().unwrap_or("unknown").to_string())
+}
 
 /// Device Management Capability Provider
 ///
@@ -68,8 +75,8 @@ impl DeviceManagementProvider {
         );
 
         // Advertise capability via registry provider (Songbird or env-configured)
-        let registry_provider = std::env::var("BIOMEOS_REGISTRY_PROVIDER")
-            .unwrap_or_else(|_| "songbird".to_string());
+        let registry_provider =
+            resolve_provider("BIOMEOS_REGISTRY_PROVIDER", CapabilityTaxonomy::Discovery);
         if let Ok(registry) = AtomicClient::discover(&registry_provider).await {
             match registry
                 .call(
@@ -146,8 +153,8 @@ impl DeviceManagementProvider {
         let mut templates = Vec::new();
 
         // Try to load from storage provider (NestGate or env-configured)
-        let storage_provider = std::env::var("BIOMEOS_STORAGE_PROVIDER")
-            .unwrap_or_else(|_| "nestgate".to_string());
+        let storage_provider =
+            resolve_provider("BIOMEOS_STORAGE_PROVIDER", CapabilityTaxonomy::DataStorage);
         if let Ok(storage) = AtomicClient::discover(&storage_provider).await {
             match storage
                 .call(
@@ -165,11 +172,17 @@ impl DeviceManagementProvider {
                                 templates.push(template);
                             }
                         }
-                        info!("📚 Loaded {} templates from storage provider", templates.len());
+                        info!(
+                            "📚 Loaded {} templates from storage provider",
+                            templates.len()
+                        );
                     }
                 }
                 Err(e) => {
-                    debug!("Storage provider template load failed: {} - using built-in", e);
+                    debug!(
+                        "Storage provider template load failed: {} - using built-in",
+                        e
+                    );
                 }
             }
         }
@@ -300,10 +313,13 @@ impl DeviceManagementProvider {
         }
 
         // Try orchestration provider as backup
-        let orch_provider = std::env::var("BIOMEOS_REGISTRY_PROVIDER")
-            .unwrap_or_else(|_| "songbird".to_string());
+        let orch_provider =
+            resolve_provider("BIOMEOS_REGISTRY_PROVIDER", CapabilityTaxonomy::Discovery);
         if let Ok(orchestrator) = AtomicClient::discover(&orch_provider).await {
-            match orchestrator.call("orchestration.deploy_niche", config).await {
+            match orchestrator
+                .call("orchestration.deploy_niche", config)
+                .await
+            {
                 Ok(result) => {
                     let niche_id = result
                         .get("niche_id")
@@ -329,8 +345,8 @@ impl DeviceManagementProvider {
         info!("🔗 Assigning device {} to primal {}", device_id, primal_id);
 
         // Coordinate via registry provider
-        let registry_provider = std::env::var("BIOMEOS_REGISTRY_PROVIDER")
-            .unwrap_or_else(|_| "songbird".to_string());
+        let registry_provider =
+            resolve_provider("BIOMEOS_REGISTRY_PROVIDER", CapabilityTaxonomy::Discovery);
         if let Ok(registry) = AtomicClient::discover(&registry_provider).await {
             match registry
                 .call(
@@ -346,8 +362,10 @@ impl DeviceManagementProvider {
                     info!("✅ Device {} assigned to {}", device_id, primal_id);
 
                     // Persist assignment to storage provider
-                    let storage_prov = std::env::var("BIOMEOS_STORAGE_PROVIDER")
-                        .unwrap_or_else(|_| "nestgate".to_string());
+                    let storage_prov = resolve_provider(
+                        "BIOMEOS_STORAGE_PROVIDER",
+                        CapabilityTaxonomy::DataStorage,
+                    );
                     if let Ok(storage) = AtomicClient::discover(&storage_prov).await {
                         let _ = storage
                             .call(
@@ -410,46 +428,51 @@ impl DeviceManagementProvider {
         Ok(devices)
     }
 
-    /// Discover GPU devices
+    /// Discover GPU devices (pure Rust via /proc/driver/nvidia/)
     async fn discover_gpus(&self) -> Result<Vec<Device>> {
         let mut gpus = Vec::new();
 
-        // Try nvidia-smi for NVIDIA GPUs
-        if let Ok(output) = tokio::process::Command::new("nvidia-smi")
-            .args([
-                "--query-gpu=index,name,utilization.gpu,memory.used,memory.total",
-                "--format=csv,noheader,nounits",
-            ])
-            .output()
-            .await
-        {
-            if output.status.success() {
-                let stdout = String::from_utf8_lossy(&output.stdout);
-                for line in stdout.lines() {
-                    let parts: Vec<&str> = line.split(',').map(|s| s.trim()).collect();
-                    if parts.len() >= 5 {
-                        let id = format!("gpu-{}", parts[0]);
-                        let name = parts[1].to_string();
-                        let usage = parts[2].parse::<f64>().unwrap_or(0.0) / 100.0;
+        // Read NVIDIA GPU info from /proc/driver/nvidia/gpus/ (pure Rust, no nvidia-smi)
+        if let Ok(mut entries) = tokio::fs::read_dir("/proc/driver/nvidia/gpus").await {
+            let mut idx = 0;
+            while let Ok(Some(entry)) = entries.next_entry().await {
+                let gpu_dir = entry.path();
+                let info_path = gpu_dir.join("information");
 
-                        gpus.push(Device {
-                            id,
-                            name,
-                            device_type: DeviceType::Gpu,
-                            status: if usage > 0.8 {
-                                DeviceStatus::InUse
-                            } else {
-                                DeviceStatus::Available
-                            },
-                            resource_usage: usage,
-                            assigned_to: None,
-                            metadata: serde_json::json!({
-                                "vendor": "nvidia",
-                                "memory_used_mb": parts[3].parse::<u64>().unwrap_or(0),
-                                "memory_total_mb": parts[4].parse::<u64>().unwrap_or(0),
-                            }),
-                        });
+                if let Ok(info) = tokio::fs::read_to_string(&info_path).await {
+                    let mut name = format!("NVIDIA GPU {}", idx);
+                    let mut memory_total_mb: u64 = 0;
+
+                    for line in info.lines() {
+                        if let Some(val) = line.strip_prefix("Model:") {
+                            name = val.trim().to_string();
+                        }
+                        // Memory info may not always be in /proc, but try
                     }
+
+                    // Try to get memory from sysfs
+                    let pci_id = entry.file_name().to_string_lossy().to_string();
+                    let mem_path = format!("/sys/bus/pci/devices/{}/mem_info_vram_total", pci_id);
+                    if let Ok(mem_str) = tokio::fs::read_to_string(&mem_path).await {
+                        if let Ok(bytes) = mem_str.trim().parse::<u64>() {
+                            memory_total_mb = bytes / (1024 * 1024);
+                        }
+                    }
+
+                    gpus.push(Device {
+                        id: format!("gpu-{}", idx),
+                        name,
+                        device_type: DeviceType::Gpu,
+                        status: DeviceStatus::Available,
+                        resource_usage: 0.0,
+                        assigned_to: None,
+                        metadata: serde_json::json!({
+                            "vendor": "nvidia",
+                            "pci_id": pci_id,
+                            "memory_total_mb": memory_total_mb,
+                        }),
+                    });
+                    idx += 1;
                 }
             }
         }
@@ -531,42 +554,37 @@ impl DeviceManagementProvider {
         Ok(active_diff as f64 / total_diff as f64)
     }
 
-    /// Discover storage devices
+    /// Discover storage devices (pure Rust via /proc/mounts + statvfs)
     async fn discover_storage(&self) -> Result<Vec<Device>> {
         let mut storage = Vec::new();
 
-        // Parse df output for mounted filesystems
-        if let Ok(output) = tokio::process::Command::new("df")
-            .args(["-h", "--output=source,size,used,pcent,target"])
-            .output()
-            .await
-        {
-            if output.status.success() {
-                let stdout = String::from_utf8_lossy(&output.stdout);
-                for (idx, line) in stdout.lines().skip(1).enumerate() {
-                    let parts: Vec<&str> = line.split_whitespace().collect();
-                    if parts.len() >= 5 {
-                        let source = parts[0];
-                        // Skip tmpfs and other virtual filesystems
-                        if source.starts_with("/dev/") {
-                            storage.push(Device {
-                                id: format!("storage-{}", idx),
-                                name: parts[4].to_string(), // mount point
-                                device_type: DeviceType::Storage,
-                                status: DeviceStatus::Available,
-                                resource_usage: parts[3]
-                                    .trim_end_matches('%')
-                                    .parse::<f64>()
-                                    .unwrap_or(0.0)
-                                    / 100.0,
-                                assigned_to: None,
-                                metadata: serde_json::json!({
-                                    "source": source,
-                                    "size": parts[1],
-                                    "used": parts[2],
-                                }),
-                            });
-                        }
+        // Read /proc/mounts for mounted filesystems (pure Rust, no `df` shell-out)
+        if let Ok(mounts) = tokio::fs::read_to_string("/proc/mounts").await {
+            for (idx, line) in mounts.lines().enumerate() {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                if parts.len() >= 2 {
+                    let source = parts[0];
+                    let mount_point = parts[1];
+
+                    // Only show real block devices
+                    if source.starts_with("/dev/") {
+                        // Use statvfs for space info (pure Rust via std)
+                        let (size_str, used_str, usage) = Self::statvfs_info(mount_point)
+                            .unwrap_or(("unknown".to_string(), "unknown".to_string(), 0.0));
+
+                        storage.push(Device {
+                            id: format!("storage-{}", idx),
+                            name: mount_point.to_string(),
+                            device_type: DeviceType::Storage,
+                            status: DeviceStatus::Available,
+                            resource_usage: usage,
+                            assigned_to: None,
+                            metadata: serde_json::json!({
+                                "source": source,
+                                "size": size_str,
+                                "used": used_str,
+                            }),
+                        });
                     }
                 }
             }
@@ -575,43 +593,72 @@ impl DeviceManagementProvider {
         Ok(storage)
     }
 
-    /// Discover network interfaces
+    /// Get filesystem stats via nix::sys::statvfs (pure Rust, no libc)
+    fn statvfs_info(path: &str) -> Option<(String, String, f64)> {
+        #[cfg(unix)]
+        {
+            use nix::sys::statvfs::statvfs;
+            let stat = statvfs(path).ok()?;
+
+            let block_size = stat.fragment_size() as u64;
+            let total = stat.blocks() * block_size;
+            let available = stat.blocks_available() * block_size;
+            let used = total.saturating_sub(available);
+            let usage = if total > 0 {
+                used as f64 / total as f64
+            } else {
+                0.0
+            };
+
+            Some((Self::human_size(total), Self::human_size(used), usage))
+        }
+        #[cfg(not(unix))]
+        None
+    }
+
+    /// Format bytes as human-readable size
+    fn human_size(bytes: u64) -> String {
+        const UNITS: &[&str] = &["B", "K", "M", "G", "T"];
+        let mut size = bytes as f64;
+        for unit in UNITS {
+            if size < 1024.0 {
+                return format!("{:.1}{}", size, unit);
+            }
+            size /= 1024.0;
+        }
+        format!("{:.1}P", size)
+    }
+
+    /// Discover network interfaces (pure Rust via /sys/class/net/)
     async fn discover_network(&self) -> Result<Vec<Device>> {
         let mut network = Vec::new();
 
-        // Parse ip link output
-        if let Ok(output) = tokio::process::Command::new("ip")
-            .args(["link", "show"])
-            .output()
-            .await
-        {
-            if output.status.success() {
-                let stdout = String::from_utf8_lossy(&output.stdout);
-                for line in stdout.lines() {
-                    if let Some(idx) = line.find(':') {
-                        if let Some(name_end) = line[idx + 1..].find(':') {
-                            let name = line[idx + 1..idx + 1 + name_end].trim();
-                            // Skip loopback
-                            if name != "lo" && !name.is_empty() {
-                                let status = if line.contains("state UP") {
-                                    DeviceStatus::InUse
-                                } else {
-                                    DeviceStatus::Offline
-                                };
+        // Read /sys/class/net/ for network interfaces (pure Rust, no `ip` shell-out)
+        if let Ok(mut entries) = tokio::fs::read_dir("/sys/class/net").await {
+            while let Ok(Some(entry)) = entries.next_entry().await {
+                let name = entry.file_name().to_string_lossy().to_string();
 
-                                network.push(Device {
-                                    id: format!("net-{}", name),
-                                    name: name.to_string(),
-                                    device_type: DeviceType::Network,
-                                    status,
-                                    resource_usage: 0.0,
-                                    assigned_to: None,
-                                    metadata: serde_json::json!({}),
-                                });
-                            }
-                        }
-                    }
+                // Skip loopback
+                if name == "lo" {
+                    continue;
                 }
+
+                // Read operstate to determine if interface is up
+                let operstate_path = format!("/sys/class/net/{}/operstate", name);
+                let status = match tokio::fs::read_to_string(&operstate_path).await {
+                    Ok(state) if state.trim() == "up" => DeviceStatus::InUse,
+                    _ => DeviceStatus::Offline,
+                };
+
+                network.push(Device {
+                    id: format!("net-{}", name),
+                    name,
+                    device_type: DeviceType::Network,
+                    status,
+                    resource_usage: 0.0,
+                    assigned_to: None,
+                    metadata: serde_json::json!({}),
+                });
             }
         }
 

@@ -12,6 +12,9 @@
 // Principle: Primal code only has self-knowledge and discovers others at runtime.
 //            No hardcoded primal names - all discovery is dynamic.
 //
+// This module provides utility functions used by other handlers and by future
+// REST API routes for live primal querying. Functions are pub for cross-module use.
+//
 // =============================================================================
 
 use anyhow::{Context, Result};
@@ -263,8 +266,7 @@ const CAPABILITY_DOMAINS: &[CapabilityDomainMapping] = &[
     // Security/Cryptography domain (capability-only, no primal names)
     CapabilityDomainMapping {
         keywords: &[
-            "security", "crypto", "encrypt", "sign", "vault", "key", "trust",
-            "identity", "lineage",
+            "security", "crypto", "encrypt", "sign", "vault", "key", "trust", "identity", "lineage",
         ],
         capabilities: &[
             "security",
@@ -277,8 +279,15 @@ const CAPABILITY_DOMAINS: &[CapabilityDomainMapping] = &[
     // Discovery/Network domain (capability-only, no primal names)
     CapabilityDomainMapping {
         keywords: &[
-            "discovery", "http", "network", "gateway", "proxy", "route",
-            "mesh", "relay", "beacon",
+            "discovery",
+            "http",
+            "network",
+            "gateway",
+            "proxy",
+            "route",
+            "mesh",
+            "relay",
+            "beacon",
         ],
         capabilities: &["discovery", "http.request", "http.get", "http.post"],
     },
@@ -286,14 +295,7 @@ const CAPABILITY_DOMAINS: &[CapabilityDomainMapping] = &[
     // Includes "toadstool" as a well-known storage primal
     CapabilityDomainMapping {
         keywords: &[
-            "storage",
-            "persist",
-            "store",
-            "data",
-            "cache",
-            "db",
-            "archive",
-            "backup",
+            "storage", "persist", "store", "data", "cache", "db", "archive", "backup",
         ],
         capabilities: &["storage", "storage.get", "storage.put"],
     },
@@ -369,7 +371,7 @@ fn get_socket_dir() -> String {
     if let Ok(paths) = biomeos_types::SystemPaths::new() {
         return paths.runtime_dir().to_string_lossy().to_string();
     }
-    
+
     // Fallback: Manual resolution
     // Tier 1: Explicit socket dir
     if let Ok(dir) = std::env::var("BIOMEOS_SOCKET_DIR") {

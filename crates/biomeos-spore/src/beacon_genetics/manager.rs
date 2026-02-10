@@ -717,7 +717,7 @@ mod tests {
 
     #[test]
     fn test_our_beacon_id() {
-        let temp_dir = tempfile::TempDir::new().unwrap();
+        let temp_dir = tempfile::TempDir::new().expect("create temp dir");
         let mock_caller = Box::new(MockCapabilityCaller::new());
 
         let mut manager =
@@ -730,7 +730,332 @@ mod tests {
         let manifest = BeaconGeneticsManifest::new(BeaconId::from_hex("our_beacon_123"), "lineage");
         manager.set_manifest(manifest);
 
-        let id = manager.our_beacon_id().unwrap();
+        let id = manager.our_beacon_id().expect("should have ID");
         assert_eq!(id.0, "our_beacon_123");
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // initialize tests
+    // ═══════════════════════════════════════════════════════════════
+
+    #[tokio::test]
+    async fn test_initialize_loads_existing_manifest() {
+        let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+
+        // Pre-create a manifest file
+        let manifest =
+            BeaconGeneticsManifest::new(BeaconId::from_hex("existing-beacon"), "lineage-hint");
+        let manifest_path = temp_dir.path().join(".beacon.genetics.json");
+        manifest.save(&manifest_path).expect("save manifest");
+
+        let mock_caller = Box::new(MockCapabilityCaller::new());
+        let mut manager =
+            BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
+
+        manager.initialize().await.expect("init should succeed");
+
+        let id = manager.our_beacon_id().expect("should have loaded ID");
+        assert_eq!(id.0, "existing-beacon");
+    }
+
+    #[tokio::test]
+    async fn test_initialize_generates_new_manifest() {
+        let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+
+        let mock_caller = Box::new(MockCapabilityCaller::new());
+        mock_caller
+            .set_response(
+                "beacon.generate",
+                serde_json::json!({
+                    "beacon_id": "new-beacon-456",
+                    "seed_hex": "deadbeefcafebabe"
+                }),
+            )
+            .await;
+
+        let mut manager =
+            BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
+
+        manager.initialize().await.expect("init should succeed");
+
+        let id = manager.our_beacon_id().expect("should have new ID");
+        assert_eq!(id.0, "new-beacon-456");
+
+        // Manifest file should have been saved
+        assert!(temp_dir.path().join(".beacon.genetics.json").exists());
+        // Beacon seed should have been saved
+        assert!(temp_dir.path().join(".beacon.seed").exists());
+        // Seeds directory should have been created
+        assert!(temp_dir.path().join(".beacon_seeds").is_dir());
+    }
+
+    #[tokio::test]
+    async fn test_initialize_generate_fails() {
+        let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+
+        let mock_caller = Box::new(MockCapabilityCaller::new());
+        // No mock response set for "beacon.generate" — will fail
+
+        let mut manager =
+            BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
+
+        let result = manager.initialize().await;
+        assert!(result.is_err());
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // get_lineage_hint tests
+    // ═══════════════════════════════════════════════════════════════
+
+    #[test]
+    fn test_get_lineage_hint_with_family_seed() {
+        let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+
+        // Write a family seed (at least 8 bytes)
+        let seed_data = b"abcdefghijklmnop"; // 16 bytes
+        std::fs::write(temp_dir.path().join(".family.seed"), seed_data)
+            .expect("write seed");
+
+        let mock_caller = Box::new(MockCapabilityCaller::new());
+        let manager =
+            BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
+
+        let hint = manager.get_lineage_hint().expect("should succeed");
+        // First 8 bytes hex-encoded
+        assert_eq!(hint, hex::encode(&seed_data[0..8]));
+    }
+
+    #[test]
+    fn test_get_lineage_hint_short_seed() {
+        let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+
+        // Write a seed that's too short (< 8 bytes)
+        std::fs::write(temp_dir.path().join(".family.seed"), b"short")
+            .expect("write seed");
+
+        let mock_caller = Box::new(MockCapabilityCaller::new());
+        let manager =
+            BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
+
+        let result = manager.get_lineage_hint();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_get_lineage_hint_no_seed_file() {
+        let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+
+        let mock_caller = Box::new(MockCapabilityCaller::new());
+        let manager =
+            BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
+
+        let result = manager.get_lineage_hint();
+        assert!(result.is_err());
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // save_manifest tests
+    // ═══════════════════════════════════════════════════════════════
+
+    #[test]
+    fn test_save_manifest_no_manifest() {
+        let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+        let mock_caller = Box::new(MockCapabilityCaller::new());
+        let manager =
+            BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
+
+        // Should be a no-op when there's no manifest
+        manager.save_manifest().expect("no-op save should succeed");
+        assert!(!temp_dir.path().join(".beacon.genetics.json").exists());
+    }
+
+    #[test]
+    fn test_save_manifest_with_manifest() {
+        let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+        let mock_caller = Box::new(MockCapabilityCaller::new());
+
+        let mut manager =
+            BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
+
+        manager.set_manifest(BeaconGeneticsManifest::new(
+            BeaconId::from_hex("save-test"),
+            "hint",
+        ));
+
+        manager.save_manifest().expect("save should succeed");
+        assert!(temp_dir.path().join(".beacon.genetics.json").exists());
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // sync_with_lineage_peer - additional edge cases
+    // ═══════════════════════════════════════════════════════════════
+
+    #[tokio::test]
+    async fn test_sync_updates_existing_meetings() {
+        let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+        let mock_caller = Box::new(MockCapabilityCaller::new());
+
+        let mut manager =
+            BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
+
+        let mut local = BeaconGeneticsManifest::new(
+            BeaconId::from_hex("local"),
+            "same_hint",
+        );
+        local.add_meeting(
+            BeaconId::from_hex("shared"),
+            MeetingRecord {
+                node_name: "shared-node".into(),
+                first_met: 100,
+                last_seen: 200,
+                endpoints: vec!["10.0.0.1:9000".into()],
+                capabilities_hint: vec![],
+                notes: "local note".into(),
+                relationship: MeetingRelationship::Direct,
+                visibility: MeetingVisibility::Mutual,
+                seed_file: "shared.seed".into(),
+            },
+        );
+        manager.set_manifest(local);
+
+        // Remote has same meeting but newer last_seen and new endpoint
+        let mut remote = BeaconGeneticsManifest::new(
+            BeaconId::from_hex("remote"),
+            "same_hint",
+        );
+        remote.add_meeting(
+            BeaconId::from_hex("shared"),
+            MeetingRecord {
+                node_name: "shared-node".into(),
+                first_met: 100,
+                last_seen: 500, // newer
+                endpoints: vec!["10.0.0.1:9000".into(), "10.0.0.2:9000".into()],
+                capabilities_hint: vec![],
+                notes: "remote note".into(),
+                relationship: MeetingRelationship::Direct,
+                visibility: MeetingVisibility::Mutual,
+                seed_file: "shared.seed".into(),
+            },
+        );
+
+        let result = manager.sync_with_lineage_peer(&remote).await.expect("sync");
+        assert_eq!(result.added, 0);
+        assert_eq!(result.updated, 1);
+
+        let manifest = manager.manifest.as_ref().expect("manifest");
+        let shared_record = manifest.meetings.get("shared").expect("shared meeting");
+        assert_eq!(shared_record.last_seen, 500);
+        assert_eq!(shared_record.endpoints.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_sync_not_initialized() {
+        let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+        let mock_caller = Box::new(MockCapabilityCaller::new());
+
+        let mut manager =
+            BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
+        // Don't set manifest
+
+        let remote = BeaconGeneticsManifest::new(
+            BeaconId::from_hex("remote"),
+            "hint",
+        );
+
+        let result = manager.sync_with_lineage_peer(&remote).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("not initialized"));
+    }
+
+    #[tokio::test]
+    async fn test_sync_merges_shared_with() {
+        let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+        let mock_caller = Box::new(MockCapabilityCaller::new());
+
+        let mut manager =
+            BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
+
+        let mut local = BeaconGeneticsManifest::new(
+            BeaconId::from_hex("local"),
+            "same",
+        );
+        local.shared_with.insert("peer-a".into());
+        manager.set_manifest(local);
+
+        let mut remote = BeaconGeneticsManifest::new(
+            BeaconId::from_hex("remote"),
+            "same",
+        );
+        remote.shared_with.insert("peer-b".into());
+
+        let result = manager.sync_with_lineage_peer(&remote).await.expect("sync");
+        assert_eq!(result.added, 0);
+        assert_eq!(result.updated, 0);
+
+        let manifest = manager.manifest.as_ref().expect("manifest");
+        assert!(manifest.shared_with.contains("peer-a"));
+        assert!(manifest.shared_with.contains("peer-b"));
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // try_decrypt_with_met_seeds tests
+    // ═══════════════════════════════════════════════════════════════
+
+    #[tokio::test]
+    async fn test_try_decrypt_not_initialized() {
+        let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+        let mock_caller = Box::new(MockCapabilityCaller::new());
+
+        let manager =
+            BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
+
+        let result = manager.try_decrypt_with_met_seeds(b"encrypted-data").await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("not initialized"));
+    }
+
+    #[tokio::test]
+    async fn test_try_decrypt_no_meetings() {
+        let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+        let mock_caller = Box::new(MockCapabilityCaller::new());
+
+        let mut manager =
+            BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
+
+        let manifest = BeaconGeneticsManifest::new(
+            BeaconId::from_hex("local"),
+            "hint",
+        );
+        manager.set_manifest(manifest);
+
+        let result = manager
+            .try_decrypt_with_met_seeds(b"encrypted-data")
+            .await
+            .expect("should succeed");
+
+        assert!(result.is_none(), "no meetings, so nothing to decrypt with");
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // manager construction tests
+    // ═══════════════════════════════════════════════════════════════
+
+    #[test]
+    fn test_new_manager() {
+        let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+        let manager = BeaconGeneticsManager::new(temp_dir.path());
+        assert!(manager.our_beacon_id().is_none());
+        assert!(manager.list_meetings().is_empty());
+    }
+
+    #[test]
+    fn test_with_capability_caller() {
+        let temp_dir = tempfile::TempDir::new().expect("create temp dir");
+        let mock = Box::new(MockCapabilityCaller::new());
+        let manager =
+            BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock);
+
+        assert!(manager.our_beacon_id().is_none());
+        assert_eq!(manager.root_path, temp_dir.path());
     }
 }

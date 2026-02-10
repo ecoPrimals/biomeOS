@@ -16,9 +16,7 @@ fn create_test_router() -> NeuralRouter {
 async fn test_neural_router_creation() {
     let _router = create_test_router();
 
-    // Router should be created successfully
-    // (No public family_id() method, but we can test behavior)
-    assert!(true); // Router created without panic
+    // Router created successfully without panic — reaching this point validates construction
 }
 
 #[tokio::test]

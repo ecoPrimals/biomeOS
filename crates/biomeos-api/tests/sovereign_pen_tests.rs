@@ -42,11 +42,11 @@ fn sovereign_app() -> Router {
     // Point to nonexistent socket so all verification fails
     std::env::set_var("BEARDOG_SOCKET", "/tmp/nonexistent-beardog-pentest.sock");
 
-    let mut config = Config::default();
-    config.standalone_mode = true;
-
     let state = AppState::builder()
-        .config(config)
+        .config(Config {
+            standalone_mode: true,
+            ..Default::default()
+        })
         .build_with_defaults()
         .expect("Failed to build app state");
 
@@ -197,12 +197,7 @@ async fn pentest_all_routes_reject_without_token() {
     for route in routes {
         let response = app
             .clone()
-            .oneshot(
-                Request::builder()
-                    .uri(route)
-                    .body(Body::empty())
-                    .unwrap(),
-            )
+            .oneshot(Request::builder().uri(route).body(Body::empty()).unwrap())
             .await
             .unwrap();
 
@@ -261,12 +256,7 @@ async fn pentest_health_reveals_nothing() {
     for path in health_paths {
         let response = app
             .clone()
-            .oneshot(
-                Request::builder()
-                    .uri(path)
-                    .body(Body::empty())
-                    .unwrap(),
-            )
+            .oneshot(Request::builder().uri(path).body(Body::empty()).unwrap())
             .await
             .unwrap();
 
@@ -289,12 +279,7 @@ async fn pentest_health_path_variants() {
     for path in variants {
         let response = app
             .clone()
-            .oneshot(
-                Request::builder()
-                    .uri(path)
-                    .body(Body::empty())
-                    .unwrap(),
-            )
+            .oneshot(Request::builder().uri(path).body(Body::empty()).unwrap())
             .await
             .unwrap();
 
@@ -303,7 +288,9 @@ async fn pentest_health_path_variants() {
 
         // Either bare 200 or 403 — both are acceptable, but body must be empty
         assert!(
-            resp_status == StatusCode::OK || resp_status == StatusCode::FORBIDDEN || resp_status == StatusCode::NOT_FOUND,
+            resp_status == StatusCode::OK
+                || resp_status == StatusCode::FORBIDDEN
+                || resp_status == StatusCode::NOT_FOUND,
             "Unexpected status {} for {}",
             resp_status,
             path
@@ -341,12 +328,7 @@ async fn pentest_well_known_no_path_traversal() {
     for path in traversal_attempts {
         let response = app
             .clone()
-            .oneshot(
-                Request::builder()
-                    .uri(path)
-                    .body(Body::empty())
-                    .unwrap(),
-            )
+            .oneshot(Request::builder().uri(path).body(Body::empty()).unwrap())
             .await
             .unwrap();
 
@@ -401,12 +383,7 @@ async fn pentest_health_path_spoofing() {
     for path in spoofing_attempts {
         let response = app
             .clone()
-            .oneshot(
-                Request::builder()
-                    .uri(path)
-                    .body(Body::empty())
-                    .unwrap(),
-            )
+            .oneshot(Request::builder().uri(path).body(Body::empty()).unwrap())
             .await
             .unwrap();
 
@@ -437,19 +414,19 @@ async fn pentest_invalid_tokens_rejected() {
 
     let oversized = "A".repeat(10000);
     let bad_tokens: Vec<&str> = vec![
-        "",                          // Empty
-        " ",                         // Whitespace
-        "invalid",                   // Plaintext
-        "AAAA",                      // Short base64
-        "AAAAAAAAAAAAAAAAAAAAAA==",  // Valid base64, invalid crypto
-        "null",                      // JSON null
-        "true",                      // JSON bool
-        "{}",                        // JSON object
-        "[]",                        // JSON array
-        &oversized,                  // Oversized (10KB)
-        "Bearer test-token",         // OAuth-style
+        "",                         // Empty
+        " ",                        // Whitespace
+        "invalid",                  // Plaintext
+        "AAAA",                     // Short base64
+        "AAAAAAAAAAAAAAAAAAAAAA==", // Valid base64, invalid crypto
+        "null",                     // JSON null
+        "true",                     // JSON bool
+        "{}",                       // JSON object
+        "[]",                       // JSON array
+        &oversized,                 // Oversized (10KB)
+        "Bearer test-token",        // OAuth-style
         "Basic dGVzdDp0ZXN0",       // Basic auth style
-        "../../../etc/passwd",       // Path traversal in token
+        "../../../etc/passwd",      // Path traversal in token
         "' OR 1=1 --",              // SQL injection in token
     ];
 
@@ -476,7 +453,7 @@ async fn pentest_invalid_tokens_rejected() {
     // Tokens with bytes that are invalid as HTTP header values should be
     // rejected at the HTTP layer itself (never reach our code) — that's correct
     let invalid_header_tokens = vec![
-        "\x00\x00\x00\x00",         // Null bytes
+        "\x00\x00\x00\x00",          // Null bytes
         "<script>alert(1)</script>", // Angle brackets (may be invalid depending on header rules)
     ];
 
@@ -513,7 +490,7 @@ async fn pentest_token_wrong_header() {
         ("Authorization", "Bearer fake-token"),
         ("X-Api-Key", "fake-key"),
         ("Cookie", "session=fake"),
-        ("X-Dark-Forest", "close-but-wrong"),      // Missing -Token
+        ("X-Dark-Forest", "close-but-wrong"), // Missing -Token
         ("x-dark-forest-token", "case-sensitivity"), // lowercase
         ("X-DARK-FOREST-TOKEN", "ALL-CAPS"),
     ];
@@ -612,10 +589,7 @@ async fn pentest_cors_preflight_reveals_nothing() {
                 .uri("/api/v1/primals")
                 .header("Origin", "https://evil.com")
                 .header("Access-Control-Request-Method", "GET")
-                .header(
-                    "Access-Control-Request-Headers",
-                    "X-Dark-Forest-Token",
-                )
+                .header("Access-Control-Request-Headers", "X-Dark-Forest-Token")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -677,12 +651,7 @@ async fn pentest_unknown_paths_return_403_not_404() {
     for path in unknown_paths {
         let response = app
             .clone()
-            .oneshot(
-                Request::builder()
-                    .uri(path)
-                    .body(Body::empty())
-                    .unwrap(),
-            )
+            .oneshot(Request::builder().uri(path).body(Body::empty()).unwrap())
             .await
             .unwrap();
 
@@ -863,12 +832,7 @@ async fn pentest_url_encoding_bypass() {
     for path in encoded_paths {
         let response = app
             .clone()
-            .oneshot(
-                Request::builder()
-                    .uri(path)
-                    .body(Body::empty())
-                    .unwrap(),
-            )
+            .oneshot(Request::builder().uri(path).body(Body::empty()).unwrap())
             .await
             .unwrap();
 
@@ -947,17 +911,18 @@ async fn pentest_all_403_responses_identical() {
     for route in &routes {
         let response = app
             .clone()
-            .oneshot(
-                Request::builder()
-                    .uri(*route)
-                    .body(Body::empty())
-                    .unwrap(),
-            )
+            .oneshot(Request::builder().uri(*route).body(Body::empty()).unwrap())
             .await
             .unwrap();
 
         let status = response.status().as_u16();
-        let body = response.into_body().collect().await.unwrap().to_bytes().to_vec();
+        let body = response
+            .into_body()
+            .collect()
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         responses_raw.push((status, body));
     }
 

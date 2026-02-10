@@ -156,8 +156,12 @@ impl DiscoveryLayer {
             return Ok(socket);
         }
 
-        // 2. Try standard songbird socket in runtime directory
-        let standard_socket = paths.primal_socket("songbird");
+        // 2. Try standard discovery primal socket in runtime directory
+        // Uses CapabilityTaxonomy to resolve the discovery primal name
+        let discovery_primal = CapabilityTaxonomy::Discovery
+            .default_primal()
+            .unwrap_or("songbird");
+        let standard_socket = paths.primal_socket(discovery_primal);
         if tokio::fs::metadata(&standard_socket).await.is_ok() {
             debug!(
                 "Found Songbird socket at XDG location: {}",

@@ -29,6 +29,7 @@ pub struct HealthStatus {
 }
 
 /// Health checker for primals
+#[derive(Clone)]
 pub struct HealthChecker {
     runtime_dir: PathBuf,
     /// Timeout for JSON-RPC pings
@@ -42,6 +43,14 @@ impl HealthChecker {
             runtime_dir,
             rpc_timeout: Duration::from_secs(5),
         }
+    }
+
+    /// Create with XDG-compliant default runtime directory
+    pub fn new_default() -> Self {
+        let runtime_dir = biomeos_types::paths::SystemPaths::new_lazy()
+            .runtime_dir()
+            .to_path_buf();
+        Self::new(runtime_dir)
     }
 
     /// Create with custom timeout

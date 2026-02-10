@@ -38,6 +38,18 @@ use std::time::Duration;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
 
+/// Paths that bypass the gate completely (ACME/DNS validation only)
+const BYPASS_PATHS: &[&str] = &["/.well-known/"];
+
+/// Paths that return bare 200 OK (no body, reveals nothing about the system)
+/// Allows basic uptime monitoring without leaking any information.
+const BARE_OK_PATHS: &[&str] = &[
+    "/health",
+    "/api/v1/health",
+    "/api/v1/health/ready",
+    "/api/v1/health/live",
+];
+
 /// Dark Forest gate configuration
 #[derive(Debug, Clone)]
 pub struct DarkForestGateConfig {
@@ -46,11 +58,6 @@ pub struct DarkForestGateConfig {
     pub enabled: bool,
     /// BearDog socket path for crypto verification
     pub beardog_socket: String,
-    /// Paths that bypass the gate (ACME only — health returns bare 200)
-    pub bypass_paths: Vec<String>,
-    /// Paths that get a bare 200 OK (no body, no info) even without a token
-    /// This allows basic uptime monitoring without leaking anything
-    pub bare_ok_paths: Vec<String>,
 }
 
 impl DarkForestGateConfig {
@@ -65,25 +72,15 @@ impl DarkForestGateConfig {
             .map(|v| v != "false" && v != "0")
             .unwrap_or(true);
 
-        let beardog_socket = env::var("BEARDOG_SOCKET")
-            .unwrap_or_else(|_| "/run/user/1000/biomeos/beardog.sock".to_string());
-
-        // Only ACME/DNS validation bypasses the gate completely
-        let bypass_paths = vec!["/.well-known/".to_string()];
-
-        // Health endpoints return bare 200 OK (no body) — reveals nothing
-        let bare_ok_paths = vec![
-            "/health".to_string(),
-            "/api/v1/health".to_string(),
-            "/api/v1/health/ready".to_string(),
-            "/api/v1/health/live".to_string(),
-        ];
+        let beardog_socket = env::var("BEARDOG_SOCKET").unwrap_or_else(|_| {
+            // Use SystemPaths for XDG-compliant socket discovery (no hardcoded UID)
+            let paths = biomeos_types::paths::SystemPaths::new_lazy();
+            paths.primal_socket("beardog").to_string_lossy().to_string()
+        });
 
         Self {
             enabled,
             beardog_socket,
-            bypass_paths,
-            bare_ok_paths,
         }
     }
 
@@ -97,12 +94,14 @@ impl DarkForestGateConfig {
 /// Shared gate state (cached verification results)
 #[derive(Clone)]
 pub struct DarkForestGateState {
+    /// Gate configuration
     pub config: DarkForestGateConfig,
     /// Cache of recently verified tokens (token_hash → expiry_timestamp)
     verified_cache: Arc<RwLock<std::collections::HashMap<String, u64>>>,
 }
 
 impl DarkForestGateState {
+    /// Create a new gate state with the given configuration
     pub fn new(config: DarkForestGateConfig) -> Self {
         if config.enabled {
             info!("Dark Forest gate ACTIVE — lineage required before any interaction");
@@ -206,17 +205,17 @@ pub async fn dark_forest_gate_middleware(
 
     // Bare OK paths: return 200 with empty body — reveals NOTHING about the system
     // This allows basic uptime monitoring (load balancers, etc.) without leaking info
-    for bare_path in &gate.config.bare_ok_paths {
+    for bare_path in BARE_OK_PATHS {
         if path == *bare_path || path.starts_with(&format!("{bare_path}/")) {
             return Response::builder()
                 .status(StatusCode::OK)
                 .body(Body::empty())
-                .unwrap();
+                .expect("static 200 response");
         }
     }
 
     // ACME/DNS validation bypass (full pass-through)
-    for bypass in &gate.config.bypass_paths {
+    for bypass in BYPASS_PATHS {
         if path.starts_with(bypass) {
             debug!("Gate bypass for ACME path: {}", path);
             return next.run(request).await;
@@ -239,7 +238,7 @@ pub async fn dark_forest_gate_middleware(
                 Response::builder()
                     .status(StatusCode::FORBIDDEN)
                     .body(Body::empty())
-                    .unwrap()
+                    .expect("static 403 response")
             }
         }
         None => {
@@ -248,7 +247,7 @@ pub async fn dark_forest_gate_middleware(
             Response::builder()
                 .status(StatusCode::FORBIDDEN)
                 .body(Body::empty())
-                .unwrap()
+                .expect("static 403 response")
         }
     }
 }
@@ -260,10 +259,10 @@ mod tests {
     #[test]
     fn test_config_defaults_to_sovereign() {
         // Without env vars, gate should be ENABLED (sovereign by default)
-        let config = DarkForestGateConfig::from_env();
-        // Note: env may have BIOMEOS_SOVEREIGN set in test, so we check structure
-        assert!(config.bypass_paths.iter().any(|p| p.contains(".well-known")));
-        assert!(!config.bare_ok_paths.is_empty());
+        let _config = DarkForestGateConfig::from_env();
+        // Constants should be properly populated
+        assert!(BYPASS_PATHS.iter().any(|p| p.contains(".well-known")));
+        assert!(!BARE_OK_PATHS.is_empty());
     }
 
     #[test]
@@ -271,8 +270,6 @@ mod tests {
         let config = DarkForestGateConfig {
             enabled: true,
             beardog_socket: "/tmp/test.sock".to_string(),
-            bypass_paths: vec!["/.well-known/".to_string()],
-            bare_ok_paths: vec!["/health".to_string()],
         };
         let state = DarkForestGateState::new(config.clone());
         assert!(state.config.enabled);
@@ -280,19 +277,17 @@ mod tests {
 
     #[test]
     fn test_health_is_bare_ok_not_bypass() {
-        let config = DarkForestGateConfig::from_env();
         // Health should NOT be in bypass paths (would leak info)
-        assert!(!config.bypass_paths.iter().any(|p| p.contains("health")));
+        assert!(!BYPASS_PATHS.iter().any(|p| p.contains("health")));
         // Health SHOULD be in bare_ok paths (returns 200 with empty body)
-        assert!(config.bare_ok_paths.iter().any(|p| p.contains("health")));
+        assert!(BARE_OK_PATHS.iter().any(|p| p.contains("health")));
     }
 
     #[test]
     fn test_only_well_known_bypasses_gate() {
-        let config = DarkForestGateConfig::from_env();
         // Only .well-known should fully bypass
-        assert_eq!(config.bypass_paths.len(), 1);
-        assert!(config.bypass_paths[0].contains(".well-known"));
+        assert_eq!(BYPASS_PATHS.len(), 1);
+        assert!(BYPASS_PATHS[0].contains(".well-known"));
     }
 
     #[test]
@@ -300,8 +295,6 @@ mod tests {
         let config = DarkForestGateConfig {
             enabled: false,
             beardog_socket: "/tmp/test.sock".to_string(),
-            bypass_paths: vec![],
-            bare_ok_paths: vec![],
         };
         assert!(!config.enabled);
         let config = config.force_sovereign();

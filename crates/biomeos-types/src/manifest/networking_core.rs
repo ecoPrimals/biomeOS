@@ -50,12 +50,19 @@ pub struct NetworkMetadata {
 /// Network drivers
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum NetworkDriver {
+    /// Bridge network driver
     Bridge,
+    /// Host network driver
     Host,
+    /// Overlay network driver
     Overlay,
+    /// Macvlan network driver
     Macvlan,
+    /// IPvlan network driver
     Ipvlan,
+    /// No network driver
     None,
+    /// Custom network driver
     Custom(String),
 }
 
@@ -84,8 +91,11 @@ pub struct NetworkConfig {
 /// Network scopes
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum NetworkScope {
+    /// Local scope
     Local,
+    /// Global scope
     Global,
+    /// Docker Swarm scope
     Swarm,
 }
 

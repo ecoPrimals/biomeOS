@@ -248,7 +248,7 @@ mod tests {
     // NOTE: This test modifies global environment state and may be flaky in parallel execution.
     // Consider using a dedicated test harness with sequential execution for environment tests.
     #[test]
-    #[ignore] // Ignored due to environment variable global state issues
+    #[ignore = "Env var tests not thread-safe — use cargo test -- --ignored --test-threads=1"]
     fn test_discover_from_env() {
         std::env::set_var("FAMILY_ID", "test_family_123");
         let result = discover_family();

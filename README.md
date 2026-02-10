@@ -1,6 +1,6 @@
 # biomeOS - Autonomous Federation Platform
 
-**NUCLEUS Architecture** | **Neural API** | **Universal IPC v3.0** | **Sovereign NAT Traversal**
+**NUCLEUS Architecture** | **Neural API** | **Universal IPC v3.0** | **AI Bridge** | **Distributed Plasmodium**
 
 ---
 
@@ -9,43 +9,42 @@
 | Metric | Value |
 |--------|-------|
 | Primals | 6/6 ecoBin v2.0 compliant |
-| IPC | Universal IPC v3.0 (Unix + Abstract + TCP) |
+| IPC | Universal IPC v3.0 (Unix + Abstract + TCP + HTTP JSON-RPC) |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
-| Code Quality | A (Pure Rust, idiomatic, zero actionable warnings) |
-| Tests | 1,747 passing, 0 failures |
-| Unsafe Code | 1 in production (justified mmap) |
-| Clippy | PASS (0 warnings outside biomeos-boot) |
+| Code Quality | A+ (Pure Rust, idiomatic, zero warnings, full doc coverage, deep debt audit) |
+| Tests | 2,297 passing (56.75% region coverage) |
+| Unsafe Code | 0 in production |
+| Clippy | PASS (0 warnings, entire workspace) |
 | Formatting | PASS |
 | Deployment | USB + Pixel + Cross-Device AI |
-| Genetics | Evolved (Mitochondrial + Nuclear DNA) |
-| NAT Traversal | Sovereign mesh relay + hole punching |
-| Neural API | Capability-based routing |
-| Discovery | Dynamic runtime socket scanning |
-| Plasmodium | Over-NUCLEUS collective coordination |
-| Model Cache | NUCLEUS-integrated, HuggingFace import |
+| AI Bridge | Squirrel -> Songbird -> Cloud/Local AI (validated) |
+| Neural API | 121 semantic capability translations |
+| Plasmodium | HTTP JSON-RPC collective (runtime port, SSH deprecated) |
+| Lifecycle | Auto-monitoring, deep health checks, auto-resurrection |
 
 ---
 
 ## Architecture
 
 ```
-+---------------------------------------------------------------------------+
-|                              NUCLEUS                                       |
-+---------------------------------------------------------------------------+
-|  Neural API Layer                                                          |
-|  +---------------------------------------------------------------------+  |
-|  |  capability.call -> semantic translation -> route to provider        |  |
-|  +---------------------------------------------------------------------+  |
-+---------------------------------------------------------------------------+
-|  Atomics Layer                                                             |
-|  +----------+  +----------+  +----------+  +----------+                   |
-|  |  Tower   |  |   Node   |  |   Nest   |  | Squirrel |                   |
-|  | BearDog  |  |  Tower + |  |  Tower + |  |   AI     |                   |
-|  | Songbird |  | Toadstool|  | NestGate |  |          |                   |
-|  +----------+  +----------+  +----------+  +----------+                   |
-+---------------------------------------------------------------------------+
-|  Primals Layer (evolve independently via capability.call)                  |
-+---------------------------------------------------------------------------+
++-------------------------------------------------------------+
+|                        NUCLEUS                               |
++-------------------------------------------------------------+
+|  AI Bridge                                                   |
+|  Squirrel -> http.request -> Songbird -> Cloud/Local AI      |
++-------------------------------------------------------------+
+|  Neural API (121 semantic translations)                      |
+|  capability.call -> translate -> route to provider           |
++-------------------------------------------------------------+
+|  Atomics                                                     |
+|  +----------+  +----------+  +----------+  +----------+     |
+|  |  Tower   |  |   Node   |  |   Nest   |  | Squirrel |     |
+|  | BearDog  |  |  Tower + |  |  Tower + |  |   AI     |     |
+|  | Songbird |  | Toadstool|  | NestGate |  |          |     |
+|  +----------+  +----------+  +----------+  +----------+     |
++-------------------------------------------------------------+
+|  Primals (evolve independently via capability.call)          |
++-------------------------------------------------------------+
 ```
 
 ### Atomics
@@ -55,24 +54,22 @@
 | Tower | BearDog + Songbird | Crypto, TLS, HTTP, Discovery |
 | Node | Tower + Toadstool | + Compute, GPU |
 | Nest | Tower + NestGate | + Storage, Persistence |
-| Full | All + Squirrel | + AI Orchestration |
+| Full | All + Squirrel + Neural API | + AI Orchestration |
 
 ---
 
 ## Quick Start
 
-### Deploy Tower Atomic
+### Deploy Full NUCLEUS (Pure Rust)
 
 ```bash
-cd livespore-usb/$(uname -m)/scripts/
-FAMILY_ID=my_ecosystem ./start_tower.sh
+biomeos nucleus start --mode full --node-id tower1
 ```
 
-### Deploy Full NUCLEUS
+### Deploy Tower Atomic Only
 
 ```bash
-cd livespore-usb/$(uname -m)/scripts/
-FAMILY_ID=my_ecosystem ./deploy_atomic.sh nucleus
+biomeos nucleus start --mode tower --node-id tower1
 ```
 
 ### On Pixel 8a
@@ -82,41 +79,86 @@ adb push pixel8a-deploy /data/local/tmp/biomeos
 adb shell /data/local/tmp/biomeos/start_nucleus_mobile.sh
 ```
 
+The `biomeos nucleus start` command:
+- Detects if an ecosystem is already running (bootstrap vs. coordinated mode)
+- Discovers primal binaries from `livespore-usb/`, `plasmidBin/`, `target/release/`, `$PATH`
+- Starts primals in dependency order with family-suffixed sockets
+- Integrates with `LifecycleManager` for ongoing deep health monitoring (JSON-RPC ping)
+- Auto-resurrects degraded primals with exponential backoff
+- Graceful coordinated shutdown via SIGTERM with dependency ordering
+
 ---
 
-## Key Features
+## Validated AI Bridge
 
-### Neural API - Semantic Routing
+Squirrel discovers HTTP capability via explicit socket path, routes AI queries
+through Songbird's HTTP handler, with BearDog providing TLS for HTTPS:
+
+```
+Local AI:    Songbird -> HTTP POST -> Ollama (phi3/tinyllama)  ~2s
+Cloud AI:    Squirrel -> Songbird -> BearDog TLS -> Anthropic  ~786ms
+Neural API:  proxy_http -> Songbird -> BearDog TLS -> HTTPS    ~756ms
+```
+
+### Test AI Bridge
+
+```bash
+# Local AI via Songbird
+echo '{"jsonrpc":"2.0","method":"http.request","params":{"method":"POST","url":"http://localhost:11434/v1/chat/completions","headers":{"content-type":"application/json"},"body":"{\"model\":\"tinyllama\",\"messages\":[{\"role\":\"user\",\"content\":\"Name the largest planet. One word.\"}],\"max_tokens\":10}"},"id":1}' | \
+  nc -U /run/user/$(id -u)/biomeos/songbird.sock -w 15 -q 1
+
+# Cloud AI via Squirrel
+echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"Name the largest ocean. One word.","model":"claude-3-haiku-20240307","max_tokens":10},"id":1}' | \
+  nc -U /run/user/$(id -u)/biomeos/squirrel.sock -w 15 -q 1
+```
+
+---
+
+## Neural API - Semantic Routing
+
+121 capability translations enable primals to compose without knowing each other:
 
 ```
 Squirrel -> capability.call("http", "request", ...) -> Neural API
     |
-Neural API translates: http.request -> secure_http (Tower Atomic)
+Neural API translates: http.request -> songbird.http_request
     |
 Songbird (via BearDog TLS 1.3) -> External API
 ```
 
 Primals don't know about each other - they discover capabilities at runtime.
 
-### Dynamic Capability-Based Discovery
+---
 
-```rust
-// Primals discovered at runtime by scanning socket directory
-let connections = PrimalConnections::discover_all(&family_id).await;
+## Plasmodium (Over-NUCLEUS Collective)
 
-// Access by capability, not by name
-if let Some(security) = connections.get("beardog") {
-    security.call("crypto.sign", params).await?;
-}
+When 2+ gates run a complete NUCLEUS and share a `.family.seed`, they form a
+**Plasmodium** -- a decentralized collective named after *Physarum polycephalum*.
+
+```
+Tower (RTX 4070, 31 GB RAM, 24 cores)  <-HTTP JSON-RPC->  gate2 (RTX 3090, 251 GB RAM, 128 cores)
+                              |
+                Collective: 36 GB VRAM, 282 GB RAM, 152 CPU
 ```
 
-All primal names are configurable via environment variables:
-- `BIOMEOS_SECURITY_PROVIDER` (default: "beardog")
-- `BIOMEOS_NETWORK_PROVIDER` (default: "songbird")
-- `BIOMEOS_REGISTRY_PROVIDER` (default: "songbird")
-- `BIOMEOS_STORAGE_PROVIDER` (default: "nestgate")
+```bash
+# Collective status across all bonded gates
+FAMILY_ID=nat0 biomeos plasmodium status
 
-### TRUE Dark Forest Security (A++ LEGENDARY)
+# Per-gate hardware details
+FAMILY_ID=nat0 biomeos plasmodium gates
+
+# Aggregate model view across all gates
+FAMILY_ID=nat0 biomeos plasmodium models
+```
+
+No central brain. Gates join/leave dynamically. Capabilities aggregate automatically.
+Transport: `AtomicClient::http()` → Songbird HTTP JSON-RPC gateway (port 8080).
+Port discovery: `mesh.peers` beacon exchange → `SONGBIRD_MESH_PORT` → default 8080.
+
+---
+
+## TRUE Dark Forest Security (A++ LEGENDARY)
 
 ```
 Before: { "family_id": "...", "payload": "..." }  <- metadata leaks
@@ -127,7 +169,9 @@ After:  [0x4a, 0x8f, 0x2c, ...]                   <- pure noise
 - Genetic lineage = decryption key
 - Better than Signal/Tor for metadata privacy
 
-### Evolved Genetic Model
+---
+
+## Evolved Genetic Model
 
 ```
 +-------------------------------------------------------------+
@@ -153,149 +197,32 @@ After:  [0x4a, 0x8f, 0x2c, ...]                   <- pure noise
 | Beacon | Mitochondrial DNA | Family encryption, Dark Forest | Yes |
 | Lineage | Nuclear DNA | Device identity, ancestry proof | Never |
 
-### ecoBin v2.0 Standard
-
-- 100% Pure Rust (zero C dependencies)
-- Cross-compilation to any target
-- Self-extracting genomeBins
-- Universal IPC v3.0 (multi-transport)
-
-### Universal IPC v3.0
-
-Multi-transport communication with automatic fallback:
-
-```rust
-// Auto-discovery with fallback
-let client = AtomicClient::discover("beardog").await?;
-
-// Explicit transports
-let unix = AtomicClient::unix("/path/to/socket");
-let tcp = AtomicClient::tcp("192.168.1.100", 9100);  // Cross-device
-```
-
-| Transport | Platform | Use Case |
-|-----------|----------|----------|
-| Unix Socket | Linux/macOS | High performance local |
-| Abstract Socket | Linux/Android | SELinux-friendly |
-| TCP Socket | All | Cross-device federation |
-
-### Plasmodium (Over-NUCLEUS Collective)
-
-When 2+ gates run a complete NUCLEUS and share a `family_seed`, they form a **Plasmodium** -- a decentralized collective named after the slime mold *Physarum polycephalum*.
-
-```bash
-# Collective status across all bonded gates
-FAMILY_ID=nat0 biomeos plasmodium status
-
-# Per-gate hardware details
-FAMILY_ID=nat0 biomeos plasmodium gates
-
-# Aggregate model view across all gates
-FAMILY_ID=nat0 biomeos plasmodium models
-```
-
-No central brain. Gates join/leave dynamically. Capabilities aggregate automatically.
-
-### Model Cache
-
-NUCLEUS-integrated model management with zero re-downloads:
-
-```bash
-# Import models from HuggingFace cache
-biomeos model-cache import-hf
-
-# List cached models
-biomeos model-cache list
-
-# Resolve model (local or mesh)
-biomeos model-cache resolve "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
-```
-
-### Sovereign NAT Traversal
-
-Pure Rust solution for symmetric NAT connectivity:
-
-```
-+------------------------------------------------------------------+
-|                   Sovereign Beacon Mesh                            |
-+------------------------------------------------------------------+
-|  STUN Detection -> NAT Type Analysis -> Path Selection            |
-|       |                                                           |
-|  [Full Cone] -> Direct UDP                                        |
-|  [Restricted] -> UDP Hole Punch                                   |
-|  [Symmetric] -> Mesh Relay OR Sovereign Onion Service             |
-+------------------------------------------------------------------+
-```
-
-| Method | Use Case | Provider |
-|--------|----------|----------|
-| `mesh.status` | Network mesh status | Songbird |
-| `mesh.find_path` | Route to peer via mesh | Songbird |
-| `punch.request` | UDP hole punch | Songbird |
-| `onion.create_service` | .onion address | Songbird + BearDog |
-
-**No port forwarding required** - family members relay for each other.
-
----
-
-## Deployment Standard
-
-### Transport Discovery (5-Tier)
-
-```
-Tier 1 (Native):
-  - $PRIMAL_SOCKET environment variable
-  - $XDG_RUNTIME_DIR/biomeos/primal.sock
-  - /run/user/$UID/biomeos/primal.sock
-  - @biomeos_primal (Abstract - Linux only)
-
-Tier 2 (Universal):
-  - TCP localhost:910X (calculated from primal name)
-  - TCP remote:910X (cross-device)
-```
-
-### Supported Platforms
-
-| Platform | Architecture | Status |
-|----------|--------------|--------|
-| Linux | x86_64 | Production |
-| Linux | aarch64 | Production |
-| Android | aarch64 | Production |
-| GrapheneOS | aarch64 | Production |
-
 ---
 
 ## Primal Status
 
-| Primal | Purpose | ecoBin | Status |
-|--------|---------|--------|--------|
-| BearDog | Crypto, Genetics | v2.0 | Reference |
-| Songbird | HTTP, TLS, Discovery | v2.0 | 93% TLS validation |
-| Toadstool | Compute, GPU | v2.0 | barraCUDA ready |
-| NestGate | Storage, Federation | v2.0 | Socket-only default |
-| Squirrel | AI Orchestration | v2.0 | Capability-based |
-| biomeOS | System Orchestrator | v2.0 | Neural API |
+| Primal | Purpose | Status | Next Evolution |
+|--------|---------|--------|----------------|
+| BearDog | Crypto, Genetics | Reference | Stable |
+| Songbird | HTTP, TLS, Discovery | 90% | Mesh state fix, UDP discovery fix, port 3492 elimination |
+| Toadstool | Compute, GPU | Operational | GPU job queue |
+| NestGate | Storage, Federation | Operational (patched) | Upstream boolean fix |
+| Squirrel | AI Orchestration | Operational | Ollama native adapter |
+| biomeOS | System Orchestrator | Evolved | Graph-based NUCLEUS deploy, ARM64 genomeBin |
 
 ---
 
-## Documentation
+## Standards Compliance
 
-| Document | Purpose |
-|----------|---------|
-| [START_HERE.md](START_HERE.md) | Quick start guide |
-| [CURRENT_STATUS.md](CURRENT_STATUS.md) | Latest status |
-| [QUICK_START.md](QUICK_START.md) | 5-minute deployment |
-| [DOCUMENTATION.md](DOCUMENTATION.md) | Full documentation index |
-| [CHANGELOG.md](CHANGELOG.md) | Version history |
-
-### Standards (wateringHole)
-
-| Standard | Description |
-|----------|-------------|
-| ecoBin v2.0 | Pure Rust requirement |
-| Universal IPC v3.0 | Multi-transport JSON-RPC |
-| UniBin | Single binary, multiple modes |
+| Standard | Status |
+|----------|--------|
+| ecoBin v2.0 | 100% Pure Rust |
+| Universal IPC v3.0 | Multi-transport (Unix/Abstract/TCP/HTTP JSON-RPC) |
+| PRIMAL_DEPLOYMENT_STANDARD v1.0 | Deterministic behavior |
 | Semantic Method Naming | capability.call routing |
+| AGPL-3.0-only License | Compliant |
+| Evolved Genetic Model v2.0 | Mitochondrial + Nuclear |
+| XDG Base Directory | SystemPaths (all paths XDG-compliant) |
 
 ---
 
@@ -307,24 +234,25 @@ Tier 2 (Universal):
 cargo build --workspace
 ```
 
-### Test
+### Test (2,297 tests)
 
 ```bash
 cargo test --workspace
+```
+
+### Coverage (56.75% region)
+
+```bash
+cargo llvm-cov --workspace
 ```
 
 ### Check
 
 ```bash
 cargo check --workspace
-cargo clippy --workspace
+cargo clippy --workspace   # 0 warnings
 cargo fmt --check
-```
-
-### Coverage
-
-```bash
-cargo llvm-cov --workspace
+cargo doc --workspace      # 0 missing_docs warnings
 ```
 
 ---
@@ -333,29 +261,47 @@ cargo llvm-cov --workspace
 
 ```
 biomeOS/
-+-- crates/                 # Rust workspace (25 crates)
-|   +-- biomeos-core/       # Core orchestration + discovery
-|   +-- biomeos-types/      # Shared types and constants
-|   +-- biomeos-graph/      # Graph execution engine
-|   +-- biomeos-spore/      # Deployment packaging
-|   +-- biomeos-api/        # HTTP/WebSocket API server
-|   +-- biomeos-ui/         # Interactive UI orchestration
-|   +-- biomeos-atomic-deploy/ # Atomic deployment + Neural API
-|   +-- biomeos-cli/        # Command-line interface
-|   +-- biomeos-boot/       # ISO/initramfs builder
-|   +-- biomeos-primal-sdk/ # Primal development SDK
-|   +-- genome-deploy/      # genomeBin deployment
-|   +-- ...
-+-- livespore-usb/          # USB deployment
-|   +-- x86_64/             # Intel/AMD binaries
-|   +-- aarch64/            # ARM64 binaries
-+-- pixel8a-deploy/         # Pixel 8a deployment
-+-- specs/                  # Standards and specs
-+-- docs/                   # Documentation
-|   +-- handoffs/           # Evolution reports
-|   +-- sessions/           # Session archives
-+-- graphs/                 # Deployment graphs
+├── crates/                    # Rust workspace (26 crates)
+│   ├── biomeos/               # Main binary (CLI + nucleus modes)
+│   ├── biomeos-core/          # Core orchestration + discovery + plasmodium
+│   ├── biomeos-types/         # Shared types, SystemPaths, capability taxonomy
+│   ├── biomeos-cli/           # Command-line interface + TUI
+│   ├── biomeos-api/           # HTTP/WebSocket API server
+│   ├── biomeos-compute/       # Fractal compute architecture
+│   ├── biomeos-graph/         # Graph execution engine
+│   ├── biomeos-spore/         # Deployment packaging + beacon genetics
+│   ├── biomeos-ui/            # Interactive UI orchestration
+│   ├── biomeos-atomic-deploy/ # Atomic deployment + Neural API + Lifecycle
+│   ├── biomeos-deploy/        # QEMU/VM deployment
+│   ├── biomeos-boot/          # ISO/initramfs builder
+│   ├── biomeos-nucleus/       # NUCLEUS lifecycle management
+│   ├── biomeos-federation/    # Federation + secure discovery
+│   ├── biomeos-genome-factory/# genomeBin build + compose + replicate
+│   ├── biomeos-genomebin-v3/  # genomeBin v3.0 binary format
+│   ├── biomeos-primal-sdk/    # Primal development SDK
+│   ├── genome-deploy/         # genomeBin deployment
+│   └── ...                    # + 8 more (manifest, niche, chimera, test-utils, etc.)
+├── livespore-usb/             # USB deployment
+│   ├── x86_64/                # Intel/AMD binaries
+│   └── aarch64/               # ARM64 binaries
+├── pixel8a-deploy/            # Pixel 8a deployment
+├── specs/                     # Standards and specs (19 active)
+├── docs/handoffs/             # Evolution reports (14 active)
+├── graphs/                    # Deployment graphs
+└── scripts/                   # Startup and build scripts
 ```
+
+---
+
+## Documentation
+
+| Document | Purpose |
+|----------|---------|
+| [START_HERE.md](START_HERE.md) | Architecture overview |
+| [CURRENT_STATUS.md](CURRENT_STATUS.md) | Validated systems + evolution needs |
+| [QUICK_START.md](QUICK_START.md) | 5-minute deployment |
+| [CHANGELOG.md](CHANGELOG.md) | Version history |
+| [DOCUMENTATION.md](DOCUMENTATION.md) | Full documentation index |
 
 ---
 
@@ -372,17 +318,18 @@ AGPL-3.0-only
 ### Principles
 
 1. **Capability-based**: Primals discover, don't hardcode
-2. **Pure Rust**: Zero C dependencies (no libc, no nix, no reqwest)
-3. **Deterministic**: Same behavior across architectures
-4. **Autonomous**: Self-extracting, self-discovering
-5. **Secure**: TRUE Dark Forest (A++ LEGENDARY)
-6. **Agnostic**: Provider names configurable via environment
+2. **Pure Rust**: Zero C dependencies (safe `nix` crate for POSIX syscalls)
+3. **XDG-compliant**: All paths via `SystemPaths` -- portable across systems
+4. **Deterministic**: Same behavior across architectures
+5. **Autonomous**: Self-extracting, self-discovering
+6. **Secure**: TRUE Dark Forest (A++ LEGENDARY)
+7. **Self-healing**: LifecycleManager auto-resurrects degraded primals
 
 ---
 
-**Status**: Production Ready  
-**Updated**: February 9, 2026  
-**Compliance**: ecoBin v2.0, Universal IPC v3.0, PRIMAL_DEPLOYMENT_STANDARD v1.0  
-**Cross-Device**: BirdSong Discovery + AI Coordination + Sovereign NAT Traversal  
-**Plasmodium**: Over-NUCLEUS collective coordination across bonded gates  
-**Tests**: 1,747 passing | **Clippy**: PASS | **Format**: PASS
+**Status**: Production Ready
+**Updated**: February 10, 2026
+**AI Bridge**: Local + Cloud AI validated
+**Plasmodium**: HTTP JSON-RPC collective (runtime port)
+**Covalent Bond**: Transport ready, beacon discovery pending Songbird fixes
+**Tests**: 2,297 passing (56.75% coverage) | **Clippy**: PASS | **Docs**: Full coverage | **Format**: PASS

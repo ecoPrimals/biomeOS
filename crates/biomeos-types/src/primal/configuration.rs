@@ -41,8 +41,9 @@ pub struct PrimalConfiguration {
     /// Metadata and tags
     pub metadata: PrimalMetadata,
 
-    /// Creation and update timestamps
+    /// Creation timestamp
     pub created_at: DateTime<Utc>,
+    /// Last update timestamp
     pub updated_at: DateTime<Utc>,
 }
 
@@ -146,13 +147,24 @@ pub struct TlsConfiguration {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum CertificateSource {
     /// Let's Encrypt automatic certificate
-    LetsEncrypt { domains: Vec<String> },
+    LetsEncrypt {
+        /// Domains to obtain certificates for
+        domains: Vec<String>,
+    },
 
     /// Provided certificate files
-    Files { cert_path: String, key_path: String },
+    Files {
+        /// Path to certificate file
+        cert_path: String,
+        /// Path to private key file
+        key_path: String,
+    },
 
     /// Certificate from secret store
-    Secret { secret_name: String },
+    Secret {
+        /// Secret name containing the certificate
+        secret_name: String,
+    },
 }
 
 /// Network policy
@@ -171,8 +183,11 @@ pub struct NetworkPolicy {
 /// Network policy types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum NetworkPolicyType {
+    /// Inbound traffic rules
     Ingress,
+    /// Outbound traffic rules
     Egress,
+    /// Both inbound and outbound
     Both,
 }
 
@@ -221,10 +236,18 @@ pub struct LoadBalancingConfig {
 /// Load balancing algorithms
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LoadBalancingAlgorithm {
+    /// Round-robin distribution
     RoundRobin,
+    /// Least active connections
     LeastConnections,
-    WeightedRoundRobin { weights: HashMap<String, u32> },
+    /// Weighted round-robin
+    WeightedRoundRobin {
+        /// Per-target weights
+        weights: HashMap<String, u32>,
+    },
+    /// Hash by client IP
     IpHash,
+    /// Random selection
     Random,
 }
 
@@ -279,12 +302,21 @@ pub struct AuthenticationConfig {
 /// Authentication methods
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AuthenticationMethod {
+    /// No authentication required
     None,
+    /// API key authentication
     ApiKey,
+    /// Bearer token authentication
     BearerToken,
+    /// Mutual TLS (client certificate)
     MutualTls,
+    /// OAuth 2.0 authentication
     OAuth2,
-    Custom { method: String },
+    /// Custom authentication handler
+    Custom {
+        /// Custom method identifier
+        method: String,
+    },
 }
 
 /// Token configuration
@@ -313,10 +345,17 @@ pub struct AuthorizationConfig {
 /// Authorization models
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AuthorizationModel {
+    /// No authorization
     None,
-    Rbac, // Role-Based Access Control
-    Abac, // Attribute-Based Access Control
-    Custom { model: String },
+    /// Role-Based Access Control
+    Rbac,
+    /// Attribute-Based Access Control
+    Abac,
+    /// Custom authorization model
+    Custom {
+        /// Model identifier
+        model: String,
+    },
 }
 
 /// Authorization policy
@@ -361,10 +400,23 @@ pub struct KeyManagementConfig {
 /// Key sources
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum KeySource {
+    /// Auto-generated keys
     Generated,
-    Provided { key_path: String },
-    Hsm { hsm_config: HashMap<String, String> },
-    Vault { vault_path: String },
+    /// Keys provided from a file
+    Provided {
+        /// Path to the key file
+        key_path: String,
+    },
+    /// Keys from a Hardware Security Module
+    Hsm {
+        /// HSM configuration parameters
+        hsm_config: HashMap<String, String>,
+    },
+    /// Keys from HashiCorp Vault
+    Vault {
+        /// Vault secret path
+        vault_path: String,
+    },
 }
 
 /// Audit configuration
@@ -383,19 +435,41 @@ pub struct AuditConfig {
 /// Audit destinations
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AuditDestination {
-    File { path: String },
-    Syslog { server: String },
-    Database { connection: String },
-    External { endpoint: String },
+    /// File-based audit log
+    File {
+        /// Log file path
+        path: String,
+    },
+    /// Syslog destination
+    Syslog {
+        /// Syslog server address
+        server: String,
+    },
+    /// Database destination
+    Database {
+        /// Database connection string
+        connection: String,
+    },
+    /// External service destination
+    External {
+        /// External endpoint URL
+        endpoint: String,
+    },
 }
 
 /// Audit events
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AuditEvent {
+    /// Authentication events
     Authentication,
+    /// Authorization events
     Authorization,
+    /// Configuration change events
     Configuration,
+    /// Data access events
     DataAccess,
+    /// Administrative actions
     Administrative,
+    /// All event types
     All,
 }

@@ -86,7 +86,10 @@ mod tests {
     #[test]
     fn test_result_type() {
         let ok_result: Result<i32> = Ok(42);
-        assert_eq!(ok_result.unwrap(), 42);
+        match ok_result {
+            Ok(val) => assert_eq!(val, 42),
+            Err(e) => panic!("Expected Ok(42), got Err({e})"),
+        }
 
         let err_result: Result<i32> = Err(GraphError::Io("test".to_string()));
         assert!(err_result.is_err());

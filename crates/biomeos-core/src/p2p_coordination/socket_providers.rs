@@ -482,8 +482,8 @@ mod tests {
 
     #[test]
     fn test_socket_rpc_client_timeout() {
-        let client =
-            SocketRpcClient::new(PathBuf::from("/tmp/test.sock")).with_timeout(Duration::from_secs(30));
+        let client = SocketRpcClient::new(PathBuf::from("/tmp/test.sock"))
+            .with_timeout(Duration::from_secs(30));
         assert_eq!(client.timeout, Duration::from_secs(30));
     }
 }

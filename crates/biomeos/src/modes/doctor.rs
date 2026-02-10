@@ -174,12 +174,9 @@ async fn check_configuration() -> Result<HealthCheck> {
         details: Vec::new(),
     };
 
-    // Use etcetera (Pure Rust!) for config directory
-    use etcetera::base_strategy::{choose_base_strategy, BaseStrategy};
-    let config_path = choose_base_strategy()
-        .ok()
-        .map(|strategy| strategy.config_dir().join("biomeos/config.toml"))
-        .unwrap_or_else(|| Path::new("~/.config/biomeos/config.toml").to_path_buf());
+    // Use SystemPaths (XDG-compliant) for config directory
+    let paths = biomeos_types::paths::SystemPaths::new_lazy();
+    let config_path = paths.config_dir().join("config.toml");
 
     if config_path.exists() {
         check
@@ -252,20 +249,43 @@ async fn check_primal_discovery() -> Result<HealthCheck> {
     // Uses capability-based discovery pattern (no hardcoded paths)
     let family_id = biomeos_core::family_discovery::get_family_id();
 
-    let primals = vec!["beardog", "songbird", "squirrel", "nestgate", "toadstool"];
+    // Use XDG-compliant SystemPaths for socket directory
+    let paths = biomeos_types::paths::SystemPaths::new_lazy();
+    let runtime_dir = paths.runtime_dir();
+
+    let health_checker =
+        biomeos_atomic_deploy::health_check::HealthChecker::new(runtime_dir.to_path_buf());
+
+    let primals = ["beardog", "songbird", "squirrel", "nestgate", "toadstool"];
+
+    check
+        .details
+        .push(format!("Socket dir: {}", runtime_dir.display()));
+    check.details.push(format!("Family ID: {}", family_id));
 
     let mut found_count = 0;
-    for primal_name in primals {
-        // Use nucleation pattern for deterministic socket path
-        let socket = format!("/tmp/{}-{}.sock", primal_name, family_id);
-        let exists = Path::new(&socket).exists();
-        if exists {
-            found_count += 1;
-            check
-                .details
-                .push(format!("{}: ✅ Found ({})", primal_name, socket));
-        } else {
-            check.details.push(format!("{}: ❌ Not found", primal_name));
+    for primal_name in &primals {
+        // Use family-suffixed socket naming convention
+        let socket_path = runtime_dir.join(format!("{}-{}.sock", primal_name, family_id));
+
+        match health_checker.check_primal(&socket_path).await {
+            Ok(status) if status.is_healthy => {
+                found_count += 1;
+                check.details.push(format!(
+                    "{}: ✅ Healthy ({})",
+                    primal_name,
+                    socket_path.display()
+                ));
+            }
+            Ok(status) => {
+                let msg = status.message.unwrap_or_else(|| "Not found".to_string());
+                check.details.push(format!("{}: ❌ {}", primal_name, msg));
+            }
+            Err(e) => {
+                check
+                    .details
+                    .push(format!("{}: ❌ Error: {}", primal_name, e));
+            }
         }
     }
 

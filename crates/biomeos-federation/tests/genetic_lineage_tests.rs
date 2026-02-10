@@ -67,7 +67,7 @@ fn test_seed_hash(input: &str) -> String {
 // ============================================================================
 
 #[tokio::test]
-#[ignore] // Requires running BearDog instance
+#[ignore = "Requires running BearDog instance"]
 async fn test_invalid_family_id_rejection() {
     let client = create_test_client().await;
     if let Ok(client) = client {
@@ -93,7 +93,7 @@ async fn test_invalid_family_id_rejection() {
 }
 
 #[tokio::test]
-#[ignore] // Requires running BearDog instance
+#[ignore = "Requires running BearDog instance"]
 async fn test_invalid_seed_hash_format() {
     let client = create_test_client().await;
     if let Ok(client) = client {
@@ -134,7 +134,7 @@ async fn test_invalid_seed_hash_format() {
 }
 
 #[tokio::test]
-#[ignore] // Requires running BearDog instance
+#[ignore = "Requires running BearDog instance"]
 async fn test_nonexistent_family_rejection() {
     let client = create_test_client().await;
     if let Ok(client) = client {
@@ -161,7 +161,7 @@ async fn test_nonexistent_family_rejection() {
 }
 
 #[tokio::test]
-#[ignore] // Requires running BearDog instance
+#[ignore = "Requires running BearDog instance"]
 async fn test_wrong_seed_for_family() {
     let client = create_test_client().await;
     if let Ok(client) = client {
@@ -187,7 +187,7 @@ async fn test_wrong_seed_for_family() {
 }
 
 #[tokio::test]
-#[ignore] // Requires running BearDog instance
+#[ignore = "Requires running BearDog instance"]
 async fn test_tampered_seed_hash_rejection() {
     let client = create_test_client().await;
     if let Ok(client) = client {
@@ -220,7 +220,7 @@ async fn test_tampered_seed_hash_rejection() {
 }
 
 #[tokio::test]
-#[ignore] // Requires running BearDog instance
+#[ignore = "Requires running BearDog instance"]
 async fn test_replay_attack_prevention() {
     let client = create_test_client().await;
     if let Ok(client) = client {
@@ -250,7 +250,7 @@ async fn test_replay_attack_prevention() {
 }
 
 #[tokio::test]
-#[ignore] // Requires running BearDog instance
+#[ignore = "Requires running BearDog instance"]
 async fn test_cross_family_contamination() {
     let client = create_test_client().await;
     if let Ok(client) = client {
@@ -275,7 +275,7 @@ async fn test_cross_family_contamination() {
 }
 
 #[tokio::test]
-#[ignore] // Requires running BearDog instance
+#[ignore = "Requires running BearDog instance"]
 async fn test_invalid_node_id_handling() {
     let client = create_test_client().await;
     if let Ok(client) = client {
@@ -315,7 +315,7 @@ async fn test_invalid_node_id_handling() {
 // ============================================================================
 
 #[tokio::test]
-#[ignore] // Requires running BearDog instance
+#[ignore = "Requires running BearDog instance"]
 async fn test_verify_multiple_families_sequentially() {
     let client = create_test_client().await;
     if let Ok(client) = client {
@@ -336,7 +336,7 @@ async fn test_verify_multiple_families_sequentially() {
 }
 
 #[tokio::test]
-#[ignore] // Requires running BearDog instance
+#[ignore = "Requires running BearDog instance"]
 async fn test_verify_multiple_seeds_same_family() {
     let client = create_test_client().await;
     if let Ok(client) = client {
@@ -361,7 +361,7 @@ async fn test_verify_multiple_seeds_same_family() {
 }
 
 #[tokio::test]
-#[ignore] // Requires running BearDog instance
+#[ignore = "Requires running BearDog instance"]
 async fn test_concurrent_family_verifications() {
     use std::sync::Arc;
     use tokio::task::JoinSet;
@@ -401,7 +401,7 @@ async fn test_concurrent_family_verifications() {
 }
 
 #[tokio::test]
-#[ignore] // Requires running BearDog instance
+#[ignore = "Requires running BearDog instance"]
 async fn test_family_relationship_tracking() {
     let client = create_test_client().await;
     if let Ok(client) = client {
@@ -429,7 +429,7 @@ async fn test_family_relationship_tracking() {
 }
 
 #[tokio::test]
-#[ignore] // Requires running BearDog instance
+#[ignore = "Requires running BearDog instance"]
 async fn test_parent_seed_hash_format() {
     let client = create_test_client().await;
     if let Ok(client) = client {
@@ -455,7 +455,7 @@ async fn test_parent_seed_hash_format() {
 }
 
 #[tokio::test]
-#[ignore] // Requires running BearDog instance
+#[ignore = "Requires running BearDog instance"]
 async fn test_verify_with_different_node_ids() {
     let client = create_test_client().await;
     if let Ok(client) = client {
@@ -486,7 +486,7 @@ async fn test_verify_with_different_node_ids() {
 }
 
 #[tokio::test]
-#[ignore] // Requires running BearDog instance
+#[ignore = "Requires running BearDog instance"]
 async fn test_large_scale_family_verification() {
     let client = create_test_client().await;
     if let Ok(client) = client {
@@ -540,7 +540,7 @@ async fn test_beardog_unavailable_error() {
 }
 
 #[tokio::test]
-#[ignore] // Requires running BearDog instance
+#[ignore = "Requires running BearDog instance"]
 async fn test_timeout_on_slow_response() {
     use tokio::time::{timeout, Duration};
 
@@ -565,7 +565,7 @@ async fn test_timeout_on_slow_response() {
 }
 
 #[tokio::test]
-#[ignore] // Requires running BearDog instance
+#[ignore = "Requires running BearDog instance"]
 async fn test_malformed_response_handling() {
     // This test would require a mock BearDog that returns malformed responses
     // For now, we test that the client can handle unexpected response formats
@@ -624,7 +624,7 @@ async fn test_invalid_endpoint_format() {
 }
 
 #[tokio::test]
-#[ignore] // Requires running BearDog instance
+#[ignore = "Requires running BearDog instance"]
 async fn test_network_partition_recovery() {
     // This test simulates recovery after a network partition
     // We verify that the client can recover after a failed call
@@ -655,7 +655,7 @@ async fn test_network_partition_recovery() {
 // ============================================================================
 
 #[tokio::test]
-#[ignore] // Requires running BearDog instance
+#[ignore = "Requires running BearDog instance"]
 async fn test_unicode_in_family_id() {
     let client = create_test_client().await;
     if let Ok(client) = client {
@@ -673,7 +673,7 @@ async fn test_unicode_in_family_id() {
 }
 
 #[tokio::test]
-#[ignore] // Requires running BearDog instance
+#[ignore = "Requires running BearDog instance"]
 async fn test_very_long_family_id() {
     let client = create_test_client().await;
     if let Ok(client) = client {
@@ -691,7 +691,7 @@ async fn test_very_long_family_id() {
 }
 
 #[tokio::test]
-#[ignore] // Requires running BearDog instance
+#[ignore = "Requires running BearDog instance"]
 async fn test_special_characters_in_node_id() {
     let client = create_test_client().await;
     if let Ok(client) = client {
@@ -717,7 +717,7 @@ async fn test_special_characters_in_node_id() {
 }
 
 #[tokio::test]
-#[ignore] // Requires running BearDog instance
+#[ignore = "Requires running BearDog instance"]
 async fn test_rapid_successive_verifications() {
     let client = create_test_client().await;
     if let Ok(client) = client {
@@ -737,7 +737,7 @@ async fn test_rapid_successive_verifications() {
 }
 
 #[tokio::test]
-#[ignore] // Requires running BearDog instance
+#[ignore = "Requires running BearDog instance"]
 async fn test_verification_response_serialization() {
     let client = create_test_client().await;
     if let Ok(client) = client {

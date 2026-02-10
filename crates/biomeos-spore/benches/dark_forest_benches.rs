@@ -31,8 +31,10 @@
 //! cargo bench --bench dark_forest_benches
 //! ```
 
+#![allow(clippy::unwrap_used)]
+
 use biomeos_spore::DarkForestBeacon;
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 /// Create test seed for benchmarking
 async fn setup_test_seed() -> String {
@@ -216,7 +218,7 @@ fn bench_pure_noise_silent_failure(c: &mut Criterion) {
 // Benchmark 5: Size Comparison
 // ═══════════════════════════════════════════════════════════════════
 
-fn bench_size_comparison(c: &mut Criterion) {
+fn bench_size_comparison(_c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
 
     let seed_path = rt.block_on(setup_test_seed());

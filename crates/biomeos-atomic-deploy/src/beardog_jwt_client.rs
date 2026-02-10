@@ -89,8 +89,10 @@ pub async fn fetch_jwt_secret_from_beardog(socket_path: &str, purpose: &str) -> 
 /// transport fallback. Discovers the security provider via environment, XDG,
 /// abstract socket, or TCP.
 ///
-/// DEEP DEBT EVOLUTION: Resolves security provider via `BIOMEOS_SECURITY_PROVIDER`
-/// env var, defaulting to "beardog" only as a bootstrap fallback.
+/// **Capability-based discovery**: Resolves the security provider via:
+/// 1. `BIOMEOS_SECURITY_PROVIDER` env var (explicit override)
+/// 2. Capability taxonomy (`CapabilityTaxonomy::resolve_to_primal("security")`)
+/// 3. "beardog" bootstrap fallback (only when strict discovery is off)
 ///
 /// # Arguments
 /// * `purpose` - Purpose of the JWT secret (e.g., "nestgate_authentication")
@@ -99,35 +101,51 @@ pub async fn fetch_jwt_secret_from_beardog(socket_path: &str, purpose: &str) -> 
 /// * `Ok(String)` - Base64-encoded JWT secret
 /// * `Err` - If security provider is unavailable or request fails
 pub async fn fetch_jwt_secret_with_discovery(purpose: &str) -> Result<String> {
+    use biomeos_types::capability_taxonomy::CapabilityTaxonomy;
+
+    // Capability-based provider resolution (3-tier)
     let provider = std::env::var("BIOMEOS_SECURITY_PROVIDER")
-        .unwrap_or_else(|_| "beardog".to_string());
-    info!("Discovering security provider '{}' for JWT secret generation...", provider);
+        .ok()
+        .or_else(|| CapabilityTaxonomy::resolve_to_primal("security").map(String::from))
+        .unwrap_or_else(|| "beardog".to_string());
+
+    info!(
+        "Discovering security provider '{}' for JWT secret generation...",
+        provider
+    );
     info!("   Purpose: {}", purpose);
 
     // Use auto-discovery with fallback (Unix → Abstract → TCP)
-    let client = AtomicClient::discover(&provider)
-        .await
-        .context(format!("Failed to discover security provider '{}'", provider))?;
+    let client = AtomicClient::discover(&provider).await.context(format!(
+        "Failed to discover security provider '{}'",
+        provider
+    ))?;
 
     info!("   Discovered {} via: {}", provider, client.endpoint());
 
-    // Call BearDog's JWT secret generation method
+    // Use capability-namespaced method name for forward compatibility
+    // The security provider responds to both "security.generate_jwt_secret"
+    // and legacy "beardog.generate_jwt_secret" method names.
     let response = client
         .call(
-            "beardog.generate_jwt_secret",
+            "security.generate_jwt_secret",
             json!({
                 "purpose": purpose,
                 "strength": "high"
             }),
         )
         .await
-        .context("Failed to fetch JWT secret from BearDog")?;
+        .context("Failed to fetch JWT secret from security provider")?;
 
     // Parse the result
-    let result: JwtSecretResult =
-        serde_json::from_value(response).context("Failed to parse BearDog JWT response")?;
+    let result: JwtSecretResult = serde_json::from_value(response)
+        .context("Failed to parse security provider JWT response")?;
 
-    info!("JWT secret obtained from BearDog via {}", client.endpoint());
+    info!(
+        "JWT secret obtained from security provider '{}' via {}",
+        provider,
+        client.endpoint()
+    );
     info!("   Length: {} characters", result.secret.len());
 
     Ok(result.secret)

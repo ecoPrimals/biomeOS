@@ -235,6 +235,7 @@ pub struct LeafNode {
 }
 
 impl LeafNode {
+    /// Create a new leaf node with the given configuration and resources
     pub fn new(config: NodeConfig, resources: ResourceInfo) -> Self {
         Self {
             config,
@@ -401,6 +402,7 @@ pub struct ParentNode {
 }
 
 impl ParentNode {
+    /// Create a new parent node with the given configuration, resources, and children
     pub fn new(
         config: NodeConfig,
         resources: ResourceInfo,

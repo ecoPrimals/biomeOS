@@ -15,7 +15,7 @@ use wiremock::{
 /// Test the registry discovery with a mock server
 /// NOTE: This test is ignored until Songbird integration is complete.
 /// The discovery service currently returns placeholder results.
-#[ignore]
+#[ignore = "Pending Songbird integration — discovery returns placeholder results"]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_registry_discovery_success() {
     // Create mock registry server
@@ -92,7 +92,7 @@ async fn test_registry_discovery_malformed_response() {
 
 /// Test discovery of orchestration services
 /// NOTE: Ignored until Songbird integration is complete.
-#[ignore]
+#[ignore = "Pending Songbird integration"]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_capability_based_orchestration_discovery_success() {
     let mock_server = MockServer::start().await;
@@ -126,7 +126,7 @@ async fn test_capability_based_orchestration_discovery_success() {
 
 /// Test endpoint probing with health response
 /// NOTE: Ignored until endpoint probing is fully implemented.
-#[ignore]
+#[ignore = "Pending endpoint probing implementation"]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_probe_endpoint_success() {
     let mock_server = MockServer::start().await;

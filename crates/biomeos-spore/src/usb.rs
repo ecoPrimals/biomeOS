@@ -121,6 +121,8 @@ mod tests {
         assert!(result.is_ok());
     }
 
+    // ========== UsbDevice Space Checks ==========
+
     #[test]
     fn test_has_sufficient_space() {
         let device = UsbDevice {
@@ -135,6 +137,34 @@ mod tests {
     }
 
     #[test]
+    fn test_has_sufficient_space_exact() {
+        let device = UsbDevice {
+            mount_point: PathBuf::from("/test"),
+            label: None,
+            available_space: 1000,
+            total_space: 2000,
+        };
+
+        assert!(device.has_sufficient_space(1000)); // Exact match
+        assert!(!device.has_sufficient_space(1001)); // One byte over
+    }
+
+    #[test]
+    fn test_has_sufficient_space_zero_available() {
+        let device = UsbDevice {
+            mount_point: PathBuf::from("/test"),
+            label: None,
+            available_space: 0,
+            total_space: 8_000_000_000,
+        };
+
+        assert!(device.has_sufficient_space(0));
+        assert!(!device.has_sufficient_space(1));
+    }
+
+    // ========== Utilization Tests ==========
+
+    #[test]
     fn test_utilization_percent() {
         let device = UsbDevice {
             mount_point: PathBuf::from("/test"),
@@ -146,5 +176,112 @@ mod tests {
         // 6GB used out of 8GB = 75% utilization
         let util = device.utilization_percent();
         assert!((util - 75.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_utilization_percent_zero_total() {
+        let device = UsbDevice {
+            mount_point: PathBuf::from("/test"),
+            label: None,
+            available_space: 0,
+            total_space: 0,
+        };
+
+        // Should return 0.0, not NaN or panic
+        assert!((device.utilization_percent() - 0.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_utilization_percent_empty_device() {
+        let device = UsbDevice {
+            mount_point: PathBuf::from("/test"),
+            label: Some("empty".to_string()),
+            available_space: 8_000_000_000,
+            total_space: 8_000_000_000,
+        };
+
+        // No data used = 0% utilization
+        let util = device.utilization_percent();
+        assert!((util - 0.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_utilization_percent_full_device() {
+        let device = UsbDevice {
+            mount_point: PathBuf::from("/test"),
+            label: Some("full".to_string()),
+            available_space: 0,
+            total_space: 4_000_000_000,
+        };
+
+        // 100% utilization
+        let util = device.utilization_percent();
+        assert!((util - 100.0).abs() < 0.1);
+    }
+
+    // ========== UsbDevice Properties ==========
+
+    #[test]
+    fn test_usb_device_with_label() {
+        let device = UsbDevice {
+            mount_point: PathBuf::from("/media/user/biomeOS1"),
+            label: Some("biomeOS1".to_string()),
+            available_space: 5_000_000_000,
+            total_space: 16_000_000_000,
+        };
+
+        assert_eq!(device.label, Some("biomeOS1".to_string()));
+        assert_eq!(device.mount_point, PathBuf::from("/media/user/biomeOS1"));
+    }
+
+    #[test]
+    fn test_usb_device_without_label() {
+        let device = UsbDevice {
+            mount_point: PathBuf::from("/mnt/usb"),
+            label: None,
+            available_space: 1_000_000,
+            total_space: 2_000_000,
+        };
+
+        assert!(device.label.is_none());
+    }
+
+    #[test]
+    fn test_usb_device_clone() {
+        let device = UsbDevice {
+            mount_point: PathBuf::from("/test"),
+            label: Some("test".to_string()),
+            available_space: 100,
+            total_space: 200,
+        };
+
+        let cloned = device.clone();
+        assert_eq!(cloned.mount_point, device.mount_point);
+        assert_eq!(cloned.label, device.label);
+        assert_eq!(cloned.available_space, device.available_space);
+        assert_eq!(cloned.total_space, device.total_space);
+    }
+
+    #[test]
+    fn test_usb_device_debug() {
+        let device = UsbDevice {
+            mount_point: PathBuf::from("/media/usb0"),
+            label: Some("USB_DRIVE".to_string()),
+            available_space: 1024,
+            total_space: 2048,
+        };
+
+        let debug = format!("{:?}", device);
+        assert!(debug.contains("USB_DRIVE"));
+        assert!(debug.contains("/media/usb0"));
+    }
+
+    // ========== find_device_by_label ==========
+
+    #[tokio::test]
+    async fn test_find_device_by_label_not_found() {
+        // This label almost certainly doesn't exist
+        let result = find_device_by_label("nonexistent_biomeOS_label_xyz123").await;
+        assert!(result.is_err());
     }
 }

@@ -173,10 +173,16 @@ impl UniversalBiomeOSManager {
 /// Statistics about registered primals
 #[derive(Debug, Clone)]
 pub struct PrimalStatistics {
+    /// Total number of registered primals
     pub total: usize,
+    /// Number of healthy primals
     pub healthy: usize,
+    /// Number of degraded primals
     pub degraded: usize,
+    /// Number of unhealthy primals
     pub unhealthy: usize,
+    /// Number of primals in unknown state
     pub unknown: usize,
+    /// Count of primals grouped by type
     pub by_type: std::collections::HashMap<String, usize>,
 }

@@ -1,4 +1,7 @@
-// MIGRATED TO UNIFIED TYPES: Integration module updated for biomeos-types
+//! Live service monitoring and health-check infrastructure
+//!
+//! Migrated to unified types via `biomeos-types`.
+
 use crate::universal_biomeos_manager::UniversalBiomeOSManager;
 use anyhow::Result;
 use biomeos_types::{BiomeOSConfig, Health};
@@ -6,9 +9,12 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::{debug, info, warn};
 
+/// Runtime service that manages the biomeOS lifecycle
 #[derive(Debug)]
 pub struct LiveService {
+    /// Active configuration
     pub config: BiomeOSConfig,
+    /// Universal manager for primal orchestration
     pub universal_manager: UniversalBiomeOSManager,
 }
 
@@ -344,75 +350,119 @@ impl LiveService {
     }
 }
 
+/// Aggregate system status snapshot
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SystemStatus {
+    /// System uptime
     pub uptime: chrono::Duration,
+    /// CPU / memory / disk resource usage
     pub resource_usage: biomeos_types::ResourceMetrics,
+    /// Overall health assessment
     pub health_status: Health,
+    /// Per-primal health status
     pub primals: HashMap<String, PrimalStatus>,
 }
 
+/// Status of a single discovered primal
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PrimalStatus {
+    /// Primal name
     pub name: String,
+    /// Health status
     pub health: biomeos_types::Health,
+    /// Endpoint URL or socket path
     pub endpoint: String,
+    /// When this primal was discovered
     pub discovered_at: chrono::DateTime<chrono::Utc>,
 }
 
+/// Disk / storage metrics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StorageMetrics {
+    /// Total disk space in bytes
     pub total_space: u64,
+    /// Used disk space in bytes
     pub used_space: u64,
+    /// Available disk space in bytes
     pub available_space: u64,
+    /// Per-mount-point details
     pub mount_points: Vec<MountPoint>,
 }
 
+/// A single filesystem mount point
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MountPoint {
+    /// Mount path
     pub path: String,
+    /// Filesystem type
     pub filesystem: String,
+    /// Total capacity in bytes
     pub total_bytes: u64,
+    /// Used space in bytes
     pub used_bytes: u64,
+    /// Available space in bytes
     pub available_bytes: u64,
 }
 
+/// Network status summary
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NetworkStatus {
+    /// Network interfaces
     pub interfaces: Vec<NetworkInterface>,
+    /// Cumulative bytes sent
     pub total_bytes_sent: u64,
+    /// Cumulative bytes received
     pub total_bytes_received: u64,
+    /// Number of active TCP/UDP connections
     pub active_connections: u32,
 }
 
+/// A network interface and its traffic counters
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NetworkInterface {
+    /// Interface name (e.g. "eth0")
     pub name: String,
+    /// Primary IP address
     pub ip_address: Option<String>,
+    /// MAC address
     pub mac_address: Option<String>,
+    /// Whether the interface is up
     pub is_up: bool,
+    /// Bytes sent on this interface
     pub bytes_sent: u64,
+    /// Bytes received on this interface
     pub bytes_received: u64,
 }
 
+/// Result of a periodic health check
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HealthCheckResult {
+    /// Whether the system is healthy overall
     pub overall_healthy: bool,
+    /// System status snapshot
     pub system_status: SystemStatus,
+    /// Storage metrics
     pub storage_metrics: StorageMetrics,
+    /// Network status
     pub network_status: NetworkStatus,
+    /// When this check was performed
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
+/// Status of a single network interface (simplified)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InterfaceStatus {
+    /// Interface name
     pub name: String,
+    /// Human-readable status string
     pub status: String,
+    /// IP address (if assigned)
     pub ip_address: Option<String>,
+    /// Whether the interface is active
     pub is_active: bool,
 }
 
-// Helper functions for type conversion and defaults (avoiding orphan rule issues)
+/// Create default (zero) resource metrics
 pub fn default_resource_metrics() -> biomeos_types::ResourceMetrics {
     biomeos_types::ResourceMetrics {
         cpu_usage: Some(0.0),

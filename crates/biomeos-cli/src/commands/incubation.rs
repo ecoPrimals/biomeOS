@@ -6,6 +6,7 @@ use clap::Args;
 use std::path::PathBuf;
 use tracing::info;
 
+/// Arguments for spore incubation
 #[derive(Args, Debug)]
 pub struct IncubateArgs {
     /// Path to the USB spore
@@ -21,6 +22,7 @@ pub struct IncubateArgs {
     pub deploy_local: bool,
 }
 
+/// Arguments for listing locally incubated nodes
 #[derive(Args, Debug)]
 pub struct ListLocalArgs {
     /// Filter by spore ID

@@ -40,9 +40,11 @@ use tokio::sync::RwLock;
 /// Error type for retry logic operations
 #[derive(Debug, thiserror::Error)]
 pub enum RetryError {
+    /// All retry attempts were exhausted
     #[error("Operation failed after retries: {0}")]
     RetryExhausted(String),
 
+    /// The circuit breaker is open, blocking requests
     #[error("Circuit breaker open: {0}")]
     CircuitBreakerOpen(String),
 }
@@ -182,7 +184,7 @@ impl RetryPolicy {
             }
         }
 
-        Err(last_error.unwrap())
+        Err(last_error.expect("retry loop must have executed at least once"))
     }
 }
 
@@ -200,7 +202,9 @@ pub enum CircuitState {
 
     /// Circuit is open, requests fail immediately
     Open {
+        /// When the circuit was opened
         opened_at: Instant,
+        /// Number of consecutive failures that triggered the open
         failure_count: usize,
     },
 

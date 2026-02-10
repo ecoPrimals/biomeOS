@@ -35,7 +35,7 @@ async fn cleanup_test_seed(path: &str) {
 // ═══════════════════════════════════════════════════════════════════
 
 #[tokio::test]
-#[ignore] // Requires beardog running
+#[ignore = "Requires running BearDog instance"]
 async fn test_same_family_discovery() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n═══════════════════════════════════════════════════════════════════");
     println!("Test 1: Same Family Discovery");
@@ -86,7 +86,7 @@ async fn test_same_family_discovery() -> Result<(), Box<dyn std::error::Error>> 
 // ═══════════════════════════════════════════════════════════════════
 
 #[tokio::test]
-#[ignore] // Requires beardog running
+#[ignore = "Requires running BearDog instance"]
 async fn test_different_family_isolation() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n═══════════════════════════════════════════════════════════════════");
     println!("Test 2: Different Family Isolation");
@@ -143,7 +143,7 @@ async fn test_different_family_isolation() -> Result<(), Box<dyn std::error::Err
 // ═══════════════════════════════════════════════════════════════════
 
 #[tokio::test]
-#[ignore] // Requires beardog running
+#[ignore = "Requires running BearDog instance"]
 async fn test_beacon_determinism() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n═══════════════════════════════════════════════════════════════════");
     println!("Test 3: Beacon Determinism");
@@ -201,7 +201,7 @@ async fn test_beacon_determinism() -> Result<(), Box<dyn std::error::Error>> {
 // ═══════════════════════════════════════════════════════════════════
 
 #[tokio::test]
-#[ignore] // Requires beardog running
+#[ignore = "Requires running BearDog instance"]
 async fn test_network_indistinguishability() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n═══════════════════════════════════════════════════════════════════");
     println!("Test 4: Network Indistinguishability (Zero Metadata)");
@@ -323,7 +323,7 @@ async fn test_network_indistinguishability() -> Result<(), Box<dyn std::error::E
 // ═══════════════════════════════════════════════════════════════════
 
 #[tokio::test]
-#[ignore] // Requires beardog running
+#[ignore = "Requires running BearDog instance"]
 async fn test_performance_characteristics() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n═══════════════════════════════════════════════════════════════════");
     println!("Test 5: Performance Characteristics");

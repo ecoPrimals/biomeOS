@@ -52,32 +52,49 @@ pub struct LoggingConfig {
 /// Log levels
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LogLevel {
+    /// Most verbose — captures everything
     Trace,
+    /// Debug-level diagnostics
     Debug,
+    /// Informational messages
     Info,
+    /// Potentially harmful situations
     Warn,
+    /// Error events
     Error,
+    /// Logging disabled
     Off,
 }
 
 /// Log formats
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LogFormat {
+    /// Structured JSON output
     Json,
+    /// Plain text output
     Plain,
+    /// Pretty-printed (human-readable)
     Pretty,
+    /// Compact single-line format
     Compact,
+    /// Custom format string
     Custom(String),
 }
 
 /// Log destinations
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LogDestination {
+    /// Standard output
     Stdout,
+    /// Standard error
     Stderr,
+    /// Log to a file
     File(PathBuf),
+    /// Forward to syslog
     Syslog(SyslogConfig),
+    /// Send to a network endpoint
     Network(NetworkLogConfig),
+    /// Fan-out to multiple destinations
     Multiple(Vec<LogDestination>),
 }
 
@@ -100,8 +117,11 @@ pub struct SyslogConfig {
 /// Syslog protocols
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SyslogProtocol {
+    /// UDP transport
     Udp,
+    /// TCP transport
     Tcp,
+    /// TLS-encrypted transport
     Tls,
 }
 
@@ -130,19 +150,38 @@ pub struct NetworkLogConfig {
 /// Network log protocols
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum NetworkLogProtocol {
+    /// HTTP transport
     Http,
+    /// HTTPS transport
     Https,
+    /// Raw TCP transport
     Tcp,
+    /// Raw UDP transport
     Udp,
+    /// Custom protocol
     Custom(String),
 }
 
 /// Network log authentication
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum NetworkLogAuth {
+    /// Bearer token authentication
     Bearer(String),
-    Basic { username: String, password: String },
-    ApiKey { key: String, header: String },
+    /// HTTP basic authentication
+    Basic {
+        /// Username
+        username: String,
+        /// Password
+        password: String,
+    },
+    /// API key authentication
+    ApiKey {
+        /// API key value
+        key: String,
+        /// Header name for the key
+        header: String,
+    },
+    /// Custom authentication parameters
     Custom(HashMap<String, String>),
 }
 
@@ -165,10 +204,15 @@ pub struct LogRotationConfig {
 /// Rotation schedule
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RotationSchedule {
+    /// Rotate every hour
     Hourly,
+    /// Rotate every day
     Daily,
+    /// Rotate every week
     Weekly,
+    /// Rotate every month
     Monthly,
+    /// Custom cron-like expression
     Custom(String),
 }
 
@@ -201,8 +245,11 @@ pub struct CustomLogFilter {
 /// Log filter actions
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LogFilterAction {
+    /// Allow matching log entries
     Allow,
+    /// Deny matching log entries
     Deny,
+    /// Transform matching log entries with the given template
     Transform(String),
 }
 
@@ -222,9 +269,16 @@ pub struct LogSamplingConfig {
 /// Sampling strategies
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SamplingStrategy {
+    /// Random probabilistic sampling
     Random,
+    /// Deterministic hash-based sampling
     Deterministic,
-    RateLimited { rate: u32 },
+    /// Rate-limited sampling
+    RateLimited {
+        /// Maximum events per second
+        rate: u32,
+    },
+    /// Custom sampling implementation
     Custom(String),
 }
 
@@ -253,10 +307,15 @@ pub struct TracingConfig {
 /// Tracing exporters
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TracingExporter {
+    /// Console output
     Console,
+    /// Jaeger distributed tracing
     Jaeger(JaegerConfig),
+    /// Zipkin distributed tracing
     Zipkin(ZipkinConfig),
+    /// OpenTelemetry Protocol (OTLP)
     Otlp(OtlpConfig),
+    /// Custom exporter
     Custom(String),
 }
 
@@ -302,23 +361,40 @@ pub struct OtlpConfig {
 /// OTLP protocols
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OtlpProtocol {
+    /// gRPC transport
     Grpc,
+    /// HTTP transport
     Http,
 }
 
 /// OTLP compression
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OtlpCompression {
+    /// Gzip compression
     Gzip,
+    /// No compression
     None,
 }
 
 /// Tracing authentication
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TracingAuth {
+    /// Bearer token
     Bearer(String),
-    Basic { username: String, password: String },
-    ApiKey { key: String, header: String },
+    /// HTTP basic auth
+    Basic {
+        /// Username
+        username: String,
+        /// Password
+        password: String,
+    },
+    /// API key auth
+    ApiKey {
+        /// API key value
+        key: String,
+        /// Header name
+        header: String,
+    },
 }
 
 /// Tracing sampling configuration
@@ -337,10 +413,18 @@ pub struct TracingSamplingConfig {
 /// Tracing sampling strategies
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TracingSamplingStrategy {
+    /// Always sample
     Always,
+    /// Never sample
     Never,
+    /// Sample based on trace ID ratio
     TraceIdRatio,
-    RateLimited { rate: u32 },
+    /// Rate-limited sampling
+    RateLimited {
+        /// Maximum traces per second
+        rate: u32,
+    },
+    /// Custom sampling strategy
     Custom(String),
 }
 
@@ -404,10 +488,15 @@ pub struct MetricsConfig {
 /// Metrics formats
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MetricsFormat {
+    /// Prometheus exposition format
     Prometheus,
+    /// JSON format
     Json,
+    /// StatsD protocol
     StatsD,
+    /// InfluxDB line protocol
     InfluxDB,
+    /// Custom format
     Custom(String),
 }
 
@@ -430,9 +519,13 @@ pub struct CustomMetricConfig {
 /// Metric types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MetricType {
+    /// Monotonically increasing counter
     Counter,
+    /// Value that can go up and down
     Gauge,
+    /// Distribution of values in buckets
     Histogram,
+    /// Statistical summary with quantiles
     Summary,
 }
 
@@ -480,19 +573,28 @@ pub struct AlertRule {
 /// Alert severity levels
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum AlertSeverity {
+    /// Informational alert
     Info,
+    /// Warning-level alert
     Warning,
+    /// Critical-level alert
     Critical,
+    /// Emergency-level alert (requires immediate action)
     Emergency,
 }
 
 /// Notification channels
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum NotificationChannel {
+    /// Email notifications
     Email(EmailNotificationConfig),
+    /// Slack notifications
     Slack(SlackNotificationConfig),
+    /// Generic webhook notifications
     Webhook(WebhookNotificationConfig),
+    /// PagerDuty notifications
     PagerDuty(PagerDutyNotificationConfig),
+    /// Custom notification handler
     Custom(CustomNotificationConfig),
 }
 
@@ -592,8 +694,15 @@ pub struct AlertManagerConfig {
 /// Alert manager authentication
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AlertManagerAuth {
+    /// Bearer token
     Bearer(String),
-    Basic { username: String, password: String },
+    /// HTTP basic auth
+    Basic {
+        /// Username
+        username: String,
+        /// Password
+        password: String,
+    },
 }
 
 /// Alert grouping configuration

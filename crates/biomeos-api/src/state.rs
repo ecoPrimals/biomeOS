@@ -33,8 +33,10 @@
 //! use biomeos_core::CompositeDiscovery;
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-//! let mut config = Config::default();
-//! config.standalone_mode = true;
+//! let config = Config {
+//!     standalone_mode: true,
+//!     ..Default::default()
+//! };
 //!
 //! let discovery = CompositeDiscovery::new();
 //!
@@ -104,12 +106,6 @@ impl AppState {
     pub fn is_standalone_mode(&self) -> bool {
         self.config.standalone_mode
     }
-
-    /// Legacy alias for backward compatibility
-    #[deprecated(since = "0.2.0", note = "Use is_standalone_mode() instead")]
-    pub fn is_mock_mode(&self) -> bool {
-        self.is_standalone_mode()
-    }
 }
 
 /// Application configuration
@@ -129,11 +125,16 @@ pub struct Config {
     /// Unix socket path (PRIMARY transport)
     pub socket_path: PathBuf,
 
-    /// Server bind address (DEPRECATED - HTTP bridge only!)
-    /// ⚠️ This is only for temporary HTTP bridge to support legacy clients
+    /// Server bind address (DEPRECATED — HTTP bridge only!)
+    ///
+    /// **DEPRECATED since 0.3.0**: This is only for the temporary HTTP bridge
+    /// to support legacy PetalTongue clients. Will be removed in v0.5.0.
     pub bind_addr: Option<SocketAddr>,
 
-    /// Enable HTTP bridge (temporary - for PetalTongue transition)
+    /// Enable HTTP bridge (DEPRECATED — for PetalTongue transition)
+    ///
+    /// **DEPRECATED since 0.3.0**: Will be removed in v0.5.0 when PetalTongue
+    /// migrates to Unix socket JSON-RPC.
     pub enable_http_bridge: bool,
 
     /// Request timeout

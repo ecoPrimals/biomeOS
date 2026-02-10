@@ -273,11 +273,10 @@ impl GraphParser {
         let edges_array = value.get("edges").and_then(|v| v.as_array());
 
         // Edges are optional
-        if edges_array.is_none() {
-            return Ok(vec![]);
+        match edges_array {
+            Some(edges) => edges.iter().map(Self::parse_edge).collect(),
+            None => Ok(vec![]),
         }
-
-        edges_array.unwrap().iter().map(Self::parse_edge).collect()
     }
 
     /// Parse a single edge

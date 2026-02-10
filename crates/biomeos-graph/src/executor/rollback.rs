@@ -93,37 +93,22 @@ impl<'a> RollbackManager<'a> {
             }
         }
 
-        // Check if process is still running, send SIGTERM
+        // Signal-based process termination (safe Rust via nix)
         #[cfg(unix)]
         {
-            use std::process::Command;
+            use nix::sys::signal::{kill, Signal};
+            use nix::unistd::Pid;
+            let pid_t = Pid::from_raw(pid as i32);
 
-            // Check if process exists
-            let check_result = Command::new("kill")
-                .args(["-0", &pid.to_string()])
-                .output();
+            // Check if process exists (signal 0 = test)
+            if kill(pid_t, None).is_ok() {
+                // Process still running, send SIGTERM
+                let _ = kill(pid_t, Signal::SIGTERM);
+                tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
 
-            if let Ok(output) = check_result {
-                if output.status.success() {
-                    // Process still running, send SIGTERM
-                    let _ = Command::new("kill")
-                        .args(["-15", &pid.to_string()]) // SIGTERM
-                        .output();
-
-                    tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
-
-                    // Check again, send SIGKILL if still running
-                    let check_result = Command::new("kill")
-                        .args(["-0", &pid.to_string()])
-                        .output();
-
-                    if let Ok(output) = check_result {
-                        if output.status.success() {
-                            let _ = Command::new("kill")
-                                .args(["-9", &pid.to_string()]) // SIGKILL
-                                .output();
-                        }
-                    }
+                // Check again, send SIGKILL if still running
+                if kill(pid_t, None).is_ok() {
+                    let _ = kill(pid_t, Signal::SIGKILL);
                 }
             }
         }

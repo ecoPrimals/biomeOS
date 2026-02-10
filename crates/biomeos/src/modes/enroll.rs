@@ -77,7 +77,8 @@ pub async fn run(args: EnrollArgs) -> Result<()> {
         warn!("   Use --force to re-enroll");
 
         // Load and display existing lineage
-        if let Ok(lineage) = LineageDeriver::<DirectBeardogCaller>::load_lineage(&args.lineage_seed) {
+        if let Ok(lineage) = LineageDeriver::<DirectBeardogCaller>::load_lineage(&args.lineage_seed)
+        {
             info!("   Existing enrollment:");
             info!("      Device ID: {}", lineage.device_id);
             info!("      Node ID: {}", lineage.node_id);
@@ -103,10 +104,7 @@ pub async fn run(args: EnrollArgs) -> Result<()> {
 
     // Check family seed exists
     if !args.family_seed.exists() {
-        error!(
-            "❌ Family seed not found at {}",
-            args.family_seed.display()
-        );
+        error!("❌ Family seed not found at {}", args.family_seed.display());
         error!("   Please ensure the family seed file exists before enrollment.");
         return Err(anyhow::anyhow!(
             "Family seed not found: {}",
@@ -147,10 +145,7 @@ pub async fn run(args: EnrollArgs) -> Result<()> {
 
     // Generate additional device entropy and show it
     let entropy = generate_device_entropy();
-    info!(
-        "   Device entropy: {} bytes generated",
-        entropy.len()
-    );
+    info!("   Device entropy: {} bytes generated", entropy.len());
 
     Ok(())
 }
@@ -181,17 +176,25 @@ fn discover_beardog_socket() -> Option<String> {
         }
     }
 
-    // Try common paths
-    let common_paths = [
-        "/tmp/beardog.sock",
-        "/tmp/beardog-family.sock",
-        "/run/user/1000/biomeos/beardog.sock",
-        "/run/user/1000/biomeos/beardog-family.sock",
-    ];
+    // Try XDG-compliant paths (no hardcoded UID)
+    let paths = biomeos_types::paths::SystemPaths::new_lazy();
+    let xdg_socket = paths.primal_socket("beardog");
+    if xdg_socket.exists() {
+        return Some(xdg_socket.to_string_lossy().to_string());
+    }
 
-    for path in &common_paths {
-        if std::path::Path::new(path).exists() {
-            return Some(path.to_string());
+    // Also check family-suffixed variant
+    let family_id = std::env::var("FAMILY_ID").unwrap_or_else(|_| "family".to_string());
+    let family_socket = paths.primal_socket(&format!("beardog-{}", family_id));
+    if family_socket.exists() {
+        return Some(family_socket.to_string_lossy().to_string());
+    }
+
+    // Legacy /tmp fallback
+    for name in &["beardog.sock", &format!("beardog-{}.sock", family_id)] {
+        let path = format!("/tmp/{}", name);
+        if std::path::Path::new(&path).exists() {
+            return Some(path);
         }
     }
 

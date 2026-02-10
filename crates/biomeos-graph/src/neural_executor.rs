@@ -579,13 +579,15 @@ impl GraphExecutor {
                         tokio::time::sleep(Duration::from_secs(2)).await;
                     }
 
-                    // Force kill if needed (Unix only)
+                    // Force kill if needed (safe Rust via nix)
                     #[cfg(unix)]
                     {
-                        use std::process::Command;
-                        let _ = Command::new("kill").args(["-15", &pid.to_string()]).output();
+                        use nix::sys::signal::{kill, Signal};
+                        use nix::unistd::Pid;
+                        let pid_t = Pid::from_raw(*pid as i32);
+                        let _ = kill(pid_t, Signal::SIGTERM);
                         tokio::time::sleep(Duration::from_secs(1)).await;
-                        let _ = Command::new("kill").args(["-9", &pid.to_string()]).output();
+                        let _ = kill(pid_t, Signal::SIGKILL);
                     }
 
                     let _ = std::fs::remove_file(socket);

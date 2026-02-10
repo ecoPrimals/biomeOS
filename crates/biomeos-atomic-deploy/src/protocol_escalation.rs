@@ -696,8 +696,10 @@ mod tests {
         let graph = Arc::new(LivingGraph::new("test-family"));
         graph.register_connection("a", "b").await;
 
-        let mut config = EscalationConfig::default();
-        config.escalation_cooldown_secs = 1; // 1 second cooldown for test
+        let config = EscalationConfig {
+            escalation_cooldown_secs: 1, // 1 second cooldown for test
+            ..Default::default()
+        };
 
         let manager = ProtocolEscalationManager::new(graph.clone(), config);
 
@@ -731,8 +733,222 @@ mod tests {
             message: "Success".to_string(),
         };
 
-        let json = serde_json::to_string(&result).unwrap();
+        let json = serde_json::to_string(&result).expect("serialize escalation result");
         assert!(json.contains("songbird"));
         assert!(json.contains("tarpc"));
+
+        let parsed: EscalationResult =
+            serde_json::from_str(&json).expect("parse escalation result");
+        assert_eq!(parsed.from, "songbird");
+        assert_eq!(parsed.to, "beardog");
+        assert!(parsed.success);
+    }
+
+    #[test]
+    fn test_escalation_config_serialization() {
+        let config = EscalationConfig {
+            min_requests: 200,
+            latency_threshold_us: 1000,
+            stable_health_duration_secs: 60,
+            tarpc_failure_threshold: 5,
+            check_interval_secs: 20,
+            escalation_cooldown_secs: 120,
+            auto_escalate: false,
+        };
+
+        let json = serde_json::to_string(&config).expect("serialize config");
+        let parsed: EscalationConfig = serde_json::from_str(&json).expect("parse config");
+        assert_eq!(parsed.min_requests, 200);
+        assert_eq!(parsed.latency_threshold_us, 1000);
+        assert!(!parsed.auto_escalate);
+        assert_eq!(parsed.tarpc_failure_threshold, 5);
+    }
+
+    #[test]
+    fn test_tarpc_endpoint_serialization() {
+        let endpoint = TarpcEndpoint {
+            available: true,
+            socket: Some(PathBuf::from("/tmp/beardog-tarpc.sock")),
+            services: vec!["health".to_string(), "deploy".to_string()],
+        };
+
+        let json = serde_json::to_string(&endpoint).expect("serialize endpoint");
+        let parsed: TarpcEndpoint = serde_json::from_str(&json).expect("parse endpoint");
+        assert!(parsed.available);
+        assert_eq!(parsed.services.len(), 2);
+    }
+
+    #[test]
+    fn test_tarpc_endpoint_unavailable() {
+        let endpoint = TarpcEndpoint {
+            available: false,
+            socket: None,
+            services: vec![],
+        };
+
+        let json = serde_json::to_string(&endpoint).expect("serialize");
+        let parsed: TarpcEndpoint = serde_json::from_str(&json).expect("parse");
+        assert!(!parsed.available);
+        assert!(parsed.socket.is_none());
+        assert!(parsed.services.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_escalation_result_failed() {
+        let result = EscalationResult {
+            from: "a".to_string(),
+            to: "b".to_string(),
+            previous_mode: ProtocolMode::JsonRpc,
+            current_mode: ProtocolMode::JsonRpc, // stayed the same
+            tarpc_socket: None,
+            success: false,
+            message: "Target does not support tarpc".to_string(),
+        };
+
+        assert!(!result.success);
+        assert!(result.tarpc_socket.is_none());
+        assert_eq!(result.previous_mode, result.current_mode);
+    }
+
+    #[tokio::test]
+    async fn test_stop_monitoring() {
+        let graph = Arc::new(LivingGraph::new("test-family"));
+        let manager = ProtocolEscalationManager::with_defaults(graph);
+
+        // Stop monitoring sets running to false
+        manager.stop_monitoring().await;
+        assert!(!*manager.running.read().await);
+    }
+
+    #[tokio::test]
+    async fn test_start_monitoring_disabled() {
+        let graph = Arc::new(LivingGraph::new("test-family"));
+        let config = EscalationConfig {
+            auto_escalate: false,
+            ..Default::default()
+        };
+        let manager = ProtocolEscalationManager::new(graph, config);
+
+        // Should return immediately since auto_escalate is false
+        manager.start_monitoring().await;
+        // If this returns, the test passes (not stuck in a loop)
+    }
+
+    #[tokio::test]
+    async fn test_get_connection_metrics_existing() {
+        let graph = Arc::new(LivingGraph::new("test-family"));
+        graph.register_connection("songbird", "beardog").await;
+
+        let manager = ProtocolEscalationManager::with_defaults(graph);
+        let metrics = manager
+            .get_connection_metrics("songbird", "beardog")
+            .await;
+
+        assert!(metrics.is_some());
+        let m = metrics.expect("metrics");
+        assert_eq!(m["connection"]["from"], "songbird");
+        assert_eq!(m["connection"]["to"], "beardog");
+        assert!(m["metrics"]["request_count"].is_number());
+    }
+
+    #[tokio::test]
+    async fn test_get_connection_metrics_nonexistent() {
+        let graph = Arc::new(LivingGraph::new("test-family"));
+        let manager = ProtocolEscalationManager::with_defaults(graph);
+
+        let metrics = manager.get_connection_metrics("a", "b").await;
+        assert!(metrics.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_get_status_empty_graph() {
+        let graph = Arc::new(LivingGraph::new("test-family"));
+        let manager = ProtocolEscalationManager::with_defaults(graph);
+        let status = manager.get_status().await;
+
+        assert_eq!(status["summary"]["total"], 0);
+        assert_eq!(status["summary"]["json_rpc"], 0);
+        assert_eq!(status["summary"]["tarpc"], 0);
+        assert!(status["connections"].is_array());
+        assert!(status["config"]["auto_escalate"].as_bool().unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_get_status_with_config_info() {
+        let graph = Arc::new(LivingGraph::new("test-family"));
+        let config = EscalationConfig {
+            min_requests: 50,
+            latency_threshold_us: 250,
+            check_interval_secs: 5,
+            ..Default::default()
+        };
+        let manager = ProtocolEscalationManager::new(graph, config);
+        let status = manager.get_status().await;
+
+        assert_eq!(status["config"]["min_requests"], 50);
+        assert_eq!(status["config"]["latency_threshold_us"], 250);
+        assert_eq!(status["config"]["check_interval_secs"], 5);
+    }
+
+    #[tokio::test]
+    async fn test_auto_escalate_check_no_candidates() {
+        let graph = Arc::new(LivingGraph::new("test-family"));
+        let manager = ProtocolEscalationManager::with_defaults(graph);
+
+        // Should succeed with no candidates
+        let result = manager.auto_escalate_check().await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_fallback_connection_not_found() {
+        let graph = Arc::new(LivingGraph::new("test-family"));
+        let manager = ProtocolEscalationManager::with_defaults(graph);
+
+        let result = manager
+            .fallback_connection("a", "b", "test reason")
+            .await;
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .contains("Connection not found"));
+    }
+
+    #[tokio::test]
+    async fn test_escalate_connection_not_found() {
+        let graph = Arc::new(LivingGraph::new("test-family"));
+        let manager = ProtocolEscalationManager::with_defaults(graph);
+
+        let result = manager.escalate_connection("a", "b").await;
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .contains("Connection not found"));
+    }
+
+    #[tokio::test]
+    async fn test_multiple_connections_status() {
+        let graph = Arc::new(LivingGraph::new("test-family"));
+        graph.register_connection("a", "b").await;
+        graph.register_connection("b", "c").await;
+        graph.register_connection("a", "c").await;
+
+        let manager = ProtocolEscalationManager::with_defaults(graph);
+        let status = manager.get_status().await;
+
+        assert_eq!(status["summary"]["total"], 3);
+        let connections = status["connections"].as_array().expect("array");
+        assert_eq!(connections.len(), 3);
+    }
+
+    #[test]
+    fn test_escalation_config_default_fn_values() {
+        assert_eq!(default_min_requests(), 100);
+        assert_eq!(default_latency_threshold(), 500);
+        assert_eq!(default_stable_health_duration(), 30);
+        assert_eq!(default_tarpc_failure_threshold(), 3);
+        assert_eq!(default_check_interval(), 10);
+        assert_eq!(default_escalation_cooldown(), 60);
+        assert!(default_auto_escalate());
     }
 }

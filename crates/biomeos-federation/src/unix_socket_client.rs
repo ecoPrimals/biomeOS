@@ -10,15 +10,21 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
 use tracing::{debug, error};
 
+/// A JSON-RPC 2.0 request envelope
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JsonRpcRequest {
+    /// Protocol version (always "2.0")
     pub jsonrpc: String,
+    /// Method name to invoke
     pub method: String,
+    /// Method parameters
     pub params: Value,
+    /// Request identifier
     pub id: u64,
 }
 
 impl JsonRpcRequest {
+    /// Create a new request with an auto-incrementing id
     pub fn new(method: impl Into<String>, params: Value) -> Self {
         use std::sync::atomic::{AtomicU64, Ordering};
         static REQUEST_ID: AtomicU64 = AtomicU64::new(1);
@@ -32,20 +38,29 @@ impl JsonRpcRequest {
     }
 }
 
+/// A JSON-RPC 2.0 response envelope
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JsonRpcResponse {
+    /// Protocol version (always "2.0")
     pub jsonrpc: String,
+    /// Successful result payload (mutually exclusive with `error`)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub result: Option<Value>,
+    /// Error payload (mutually exclusive with `result`)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<JsonRpcError>,
+    /// Request identifier this response corresponds to
     pub id: u64,
 }
 
+/// A JSON-RPC 2.0 error object
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JsonRpcError {
+    /// Numeric error code
     pub code: i32,
+    /// Human-readable error message
     pub message: String,
+    /// Optional structured error data
     #[serde(skip_serializing_if = "Option::is_none")]
     pub data: Option<Value>,
 }

@@ -85,6 +85,72 @@ impl SocketNucleation {
         &self.assignments
     }
 
+    /// Multi-family assignment for a shared primal
+    ///
+    /// When a primal can serve multiple families (e.g., Songbird, Toadstool),
+    /// assign a socket for each family to the same logical primal.
+    ///
+    /// Returns the list of socket paths created for the primal.
+    pub fn assign_multi_family(&mut self, primal: &str, family_ids: &[String]) -> Vec<PathBuf> {
+        family_ids
+            .iter()
+            .map(|fid| self.assign_socket(primal, fid))
+            .collect()
+    }
+
+    /// Check if a primal can be shared across families
+    ///
+    /// Primals that provide cryptographic key management MUST have separate
+    /// instances per family (key material is family-specific).
+    /// Other primals CAN share instances with family-suffixed sockets.
+    ///
+    /// **Capability-based**: Uses the taxonomy to determine if a primal holds
+    /// family-specific state (e.g., key material) rather than hardcoding names.
+    pub fn can_share(primal: &str) -> bool {
+        use biomeos_types::capability_taxonomy::CapabilityTaxonomy;
+
+        // Check if this primal provides security/key-management capabilities
+        // via the taxonomy (reverse lookup: name → capability → category)
+        let is_key_holder = CapabilityTaxonomy::resolve_to_primal("key_management")
+            .is_some_and(|name| name == primal)
+            || CapabilityTaxonomy::resolve_to_primal("encryption")
+                .is_some_and(|name| name == primal);
+
+        // Primals holding per-family cryptographic state cannot share
+        !is_key_holder
+    }
+
+    /// Plan a multi-family deployment
+    ///
+    /// Returns (dedicated_instances, shared_instances):
+    /// - dedicated_instances: primals that need one instance per family
+    /// - shared_instances: primals that can share across families
+    pub fn plan_multi_family(
+        &mut self,
+        primals: &[String],
+        family_ids: &[String],
+    ) -> (HashMap<String, Vec<PathBuf>>, HashMap<String, Vec<PathBuf>>) {
+        let mut dedicated = HashMap::new();
+        let mut shared = HashMap::new();
+
+        for primal in primals {
+            if Self::can_share(primal) {
+                // Shared: one instance, multiple family sockets
+                let sockets = self.assign_multi_family(primal, family_ids);
+                shared.insert(primal.clone(), sockets);
+            } else {
+                // Dedicated: separate instance per family
+                let sockets: Vec<PathBuf> = family_ids
+                    .iter()
+                    .map(|fid| self.assign_socket(primal, fid))
+                    .collect();
+                dedicated.insert(primal.clone(), sockets);
+            }
+        }
+
+        (dedicated, shared)
+    }
+
     /// Family deterministic path using SystemPaths
     ///
     /// Uses XDG-compliant paths via `SystemPaths` instead of hardcoded `/tmp/`.
@@ -154,7 +220,9 @@ mod tests {
         assert_ne!(family_a_socket, family_b_socket);
 
         // Verify both follow expected patterns
-        assert!(family_a_socket.to_string_lossy().contains("beardog-test_family"));
+        assert!(family_a_socket
+            .to_string_lossy()
+            .contains("beardog-test_family"));
         assert!(family_b_socket.to_string_lossy().contains("beardog-nat1"));
     }
 
@@ -222,4 +290,50 @@ fn test_default_strategy_is_xdg() {
     let nucleation = SocketNucleation::default();
     // Default should be XdgRuntime now
     assert!(matches!(nucleation.strategy, SocketStrategy::XdgRuntime));
+}
+
+#[test]
+fn test_can_share() {
+    // BearDog cannot share (crypto keys are per-family)
+    assert!(!SocketNucleation::can_share("beardog"));
+    // Others can share
+    assert!(SocketNucleation::can_share("songbird"));
+    assert!(SocketNucleation::can_share("nestgate"));
+    assert!(SocketNucleation::can_share("toadstool"));
+    assert!(SocketNucleation::can_share("squirrel"));
+}
+
+#[test]
+fn test_multi_family_assignment() {
+    let mut nucleation = SocketNucleation::new(SocketStrategy::FamilyDeterministic);
+    let families = vec!["alpha".to_string(), "beta".to_string()];
+
+    let sockets = nucleation.assign_multi_family("songbird", &families);
+    assert_eq!(sockets.len(), 2);
+
+    // Each should have the correct family suffix
+    assert!(sockets[0].to_string_lossy().contains("songbird-alpha"));
+    assert!(sockets[1].to_string_lossy().contains("songbird-beta"));
+}
+
+#[test]
+fn test_plan_multi_family() {
+    let mut nucleation = SocketNucleation::new(SocketStrategy::FamilyDeterministic);
+    let primals = vec![
+        "beardog".to_string(),
+        "songbird".to_string(),
+        "nestgate".to_string(),
+    ];
+    let families = vec!["alpha".to_string(), "beta".to_string()];
+
+    let (dedicated, shared) = nucleation.plan_multi_family(&primals, &families);
+
+    // BearDog should be dedicated (separate instance per family)
+    assert!(dedicated.contains_key("beardog"));
+    assert_eq!(dedicated["beardog"].len(), 2);
+
+    // Songbird and NestGate should be shared
+    assert!(shared.contains_key("songbird"));
+    assert!(shared.contains_key("nestgate"));
+    assert_eq!(shared["songbird"].len(), 2);
 }

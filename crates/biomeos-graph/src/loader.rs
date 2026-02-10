@@ -106,6 +106,15 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_loader_default() {
+        let l1 = GraphLoader::new();
+        let l2 = GraphLoader::default();
+        // Both construct valid loaders
+        let _ = l1;
+        let _ = l2;
+    }
+
+    #[test]
     fn test_load_minimal_graph() {
         let toml = r#"
             [graph]
@@ -160,6 +169,152 @@ mod tests {
         "#;
 
         let result = GraphLoader::from_str(toml, None);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_invalid_toml_syntax() {
+        let bad_toml = "this is not valid TOML {{{}}}";
+        let result = GraphLoader::from_str(bad_toml, None);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_missing_required_fields() {
+        // Missing name field
+        let toml = r#"
+            [graph]
+            id = "missing-name"
+            version = "1.0.0"
+        "#;
+        let result = GraphLoader::from_str(toml, None);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_from_str_with_source_path() {
+        let toml = r#"
+            [graph]
+            id = "path-test"
+            name = "Path Test"
+            version = "1.0.0"
+        "#;
+        let result = GraphLoader::from_str(toml, Some(std::path::Path::new("/fake/path.toml")));
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_from_str_error_includes_source() {
+        let bad_toml = "not valid";
+        let result = GraphLoader::from_str(bad_toml, Some(std::path::Path::new("/my/file.toml")));
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("/my/file.toml"));
+    }
+
+    #[test]
+    fn test_from_file_nonexistent() {
+        let result = GraphLoader::from_file("/nonexistent/path/graph.toml");
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("Failed to read"));
+    }
+
+    #[test]
+    fn test_load_from_file_roundtrip() {
+        let toml_content = r#"
+[graph]
+id = "file-test"
+name = "File Test"
+version = "1.0.0"
+
+[[graph.nodes]]
+id = "node-a"
+name = "Node A"
+capability = "crypto.hash"
+"#;
+
+        let dir = tempfile::tempdir().unwrap();
+        let file_path = dir.path().join("test-graph.toml");
+        std::fs::write(&file_path, toml_content).unwrap();
+
+        let graph = GraphLoader::from_file(&file_path).unwrap();
+        assert_eq!(graph.id().as_str(), "file-test");
+        assert_eq!(graph.nodes().len(), 1);
+    }
+
+    #[test]
+    fn test_load_graphs_from_dir_empty() {
+        let dir = tempfile::tempdir().unwrap();
+        let graphs = load_graphs_from_dir(dir.path()).unwrap();
+        assert!(graphs.is_empty());
+    }
+
+    #[test]
+    fn test_load_graphs_from_dir_multiple() {
+        let dir = tempfile::tempdir().unwrap();
+
+        // Write two valid graphs
+        let graph1 = r#"
+[graph]
+id = "graph-one"
+name = "Graph One"
+version = "1.0.0"
+"#;
+        let graph2 = r#"
+[graph]
+id = "graph-two"
+name = "Graph Two"
+version = "1.0.0"
+"#;
+        std::fs::write(dir.path().join("one.toml"), graph1).unwrap();
+        std::fs::write(dir.path().join("two.toml"), graph2).unwrap();
+
+        let graphs = load_graphs_from_dir(dir.path()).unwrap();
+        assert_eq!(graphs.len(), 2);
+    }
+
+    #[test]
+    fn test_load_graphs_from_dir_skips_non_toml() {
+        let dir = tempfile::tempdir().unwrap();
+
+        let graph = r#"
+[graph]
+id = "only-graph"
+name = "Only"
+version = "1.0.0"
+"#;
+        std::fs::write(dir.path().join("valid.toml"), graph).unwrap();
+        std::fs::write(dir.path().join("readme.txt"), "not a graph").unwrap();
+        std::fs::write(dir.path().join("data.json"), "{}").unwrap();
+
+        let graphs = load_graphs_from_dir(dir.path()).unwrap();
+        assert_eq!(graphs.len(), 1);
+    }
+
+    #[test]
+    fn test_load_graphs_from_dir_skips_invalid() {
+        let dir = tempfile::tempdir().unwrap();
+
+        let valid = r#"
+[graph]
+id = "valid-graph"
+name = "Valid"
+version = "1.0.0"
+"#;
+        let invalid = "not valid toml {{";
+
+        std::fs::write(dir.path().join("valid.toml"), valid).unwrap();
+        std::fs::write(dir.path().join("invalid.toml"), invalid).unwrap();
+
+        let graphs = load_graphs_from_dir(dir.path()).unwrap();
+        assert_eq!(graphs.len(), 1);
+        assert_eq!(graphs[0].id().as_str(), "valid-graph");
+    }
+
+    #[test]
+    fn test_load_graphs_from_dir_nonexistent() {
+        let result = load_graphs_from_dir("/nonexistent/directory");
         assert!(result.is_err());
     }
 }

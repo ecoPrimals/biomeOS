@@ -141,13 +141,20 @@ pub async fn establish_btsp_tunnel(beardog_socket: &Path, family_id: &str) -> Re
 pub async fn establish_btsp_tunnel_with_discovery(family_id: &str) -> Result<String> {
     // Discover security provider with automatic transport fallback
     // DEEP DEBT EVOLUTION: Resolve provider name from env, not hardcoded
-    let security_provider = std::env::var("BIOMEOS_SECURITY_PROVIDER")
-        .unwrap_or_else(|_| "beardog".to_string());
+    let security_provider =
+        std::env::var("BIOMEOS_SECURITY_PROVIDER").unwrap_or_else(|_| "beardog".to_string());
     let client = AtomicClient::discover(&security_provider)
         .await
-        .context(format!("Failed to discover {} for BTSP tunnel", security_provider))?;
+        .context(format!(
+            "Failed to discover {} for BTSP tunnel",
+            security_provider
+        ))?;
 
-    debug!("Discovered {} via {} for BTSP", security_provider, client.endpoint());
+    debug!(
+        "Discovered {} via {} for BTSP",
+        security_provider,
+        client.endpoint()
+    );
 
     // Request BTSP tunnel establishment
     let response = client

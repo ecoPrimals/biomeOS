@@ -282,27 +282,30 @@ impl TopologyHandler {
         let primals = self.discover_active_primals().await?;
         let primal_count = primals.len();
 
-        // Check capabilities, not primal names
-        let has_security = primals.iter().any(|p| {
-            p["capabilities"]
-                .as_array()
-                .map(|caps| caps.iter().any(|c| c.as_str() == Some("security")))
-                .unwrap_or(false)
-        }) || primals.iter().any(|p| p["primal_type"] == "beardog"); // Fallback
+        // Check capabilities via taxonomy (not hardcoded primal names)
+        let has_capability = |primals: &[serde_json::Value], cap: &str| -> bool {
+            primals.iter().any(|p| {
+                // Primary: check declared capabilities
+                p["capabilities"]
+                    .as_array()
+                    .map(|caps| caps.iter().any(|c| c.as_str() == Some(cap)))
+                    .unwrap_or(false)
+            }) || primals.iter().any(|p| {
+                // Fallback: resolve primal_type through taxonomy
+                p["primal_type"]
+                    .as_str()
+                    .map(|name| {
+                        biomeos_types::capability_taxonomy::capabilities_for_primal(name)
+                            .iter()
+                            .any(|c| c == cap)
+                    })
+                    .unwrap_or(false)
+            })
+        };
 
-        let has_discovery = primals.iter().any(|p| {
-            p["capabilities"]
-                .as_array()
-                .map(|caps| caps.iter().any(|c| c.as_str() == Some("discovery")))
-                .unwrap_or(false)
-        }) || primals.iter().any(|p| p["primal_type"] == "songbird");
-
-        let has_compute = primals.iter().any(|p| {
-            p["capabilities"]
-                .as_array()
-                .map(|caps| caps.iter().any(|c| c.as_str() == Some("compute")))
-                .unwrap_or(false)
-        }) || primals.iter().any(|p| p["primal_type"] == "toadstool");
+        let has_security = has_capability(&primals, "security");
+        let has_discovery = has_capability(&primals, "discovery");
+        let has_compute = has_capability(&primals, "compute");
 
         let expected_capabilities = 3;
         let actual_capabilities = [has_security, has_discovery, has_compute]

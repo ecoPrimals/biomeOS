@@ -2,6 +2,255 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## [v1.21] - 2026-02-10 (Test Coverage Push Phase 2)
+
+### Test Coverage Push — Phase 2
+196 new tests across 5 crates/modules. Coverage: 51.4% → 56.75% region (+5.3pp).
+
+| Module | Tests Added | Coverage Focus |
+|---|---|---|
+| `biomeos-core` concurrent_startup | +21 | DependencyGraph build, topological_waves (empty, chain, diamond, circular) |
+| `biomeos-core` primal_orchestrator | +29 | PrimalHealthMonitor, PrimalOrchestrator lifecycle, resolve_dependencies |
+| `biomeos-federation` nucleus | +36 | SecureNucleusDiscovery 5-layer protocol, TrustLevel, VerifiedPrimal, selection |
+| `biomeos-federation` discovery | +25 | PrimalDiscovery, parse_endpoint, register_songbird_peer, capability filtering |
+| `biomeos-spore` beacon_genetics | +70 | types, derivation (LineageDeriver lifecycle), capability (DirectBeardogCaller), manager |
+| `biomeos-atomic-deploy` orchestrator | +15 | AtomicType, DeploymentConfig, DeploymentResult, orchestrator creation |
+
+### Clippy Fixes
+- `assert_eq!(val, true)` → `assert!(val)` in `primal_orchestrator.rs`
+- `unwrap_err()` after `is_err()` → `if let Err(e)` in `discovery.rs`
+- `field_reassign_with_default` → struct literal in `mod_tests.rs`
+
+### Quality Metrics
+| Metric | Before | After |
+|--------|--------|-------|
+| Tests Passing | 2,101 | 2,297 |
+| Region Coverage | 51.4% | 56.75% |
+| Clippy | PASS | PASS |
+
+---
+
+## [v1.20] - 2026-02-10 (Deep Debt Audit + Test Coverage Push Phase 1)
+
+### Deep Debt Audit
+Comprehensive codebase audit eliminating technical debt:
+
+| Category | Before | After |
+|----------|--------|-------|
+| Clippy warnings | 83 | 0 |
+| Production `unwrap()` | 46 | 0 (all → `expect()` with context) |
+| Hardcoded primal names | 30+ | 0 (centralized via `CapabilityTaxonomy`) |
+| Production mocks | 1 (`is_mock_mode`) | 0 |
+| Deprecated functions | 8 | 0 (all removed or migrated) |
+
+Key evolutions:
+- `std::sync::Mutex` → `tokio::sync::Mutex` in async test contexts
+- `Config::default()` field reassignment → struct literal update syntax
+- Deprecated `Command::cargo_bin()` → `cargo_bin_cmd!()` macro
+- `assert!(true)` placeholders → `todo!()` or `const {}` blocks
+- `RuntimeConfig::service_socket()` fixed to use struct's `socket_dir`
+
+### Test Coverage Push — Phase 1
+311 new tests across 8 crates. Coverage: 46.9% → 51.4% region (+4.5pp).
+
+| Crate/Module | Tests Added | Coverage Focus |
+|---|---|---|
+| `biomeos-types` config | ~20 | BiomeOSConfig validation, builder, merge, serde, env vars |
+| `biomeos-core` stun_extension | ~10 | Config defaults, availability, fallback |
+| `biomeos-atomic-deploy` lifecycle + protocol | ~25 | LifecycleManager state machine, EscalationConfig |
+| `biomeos-graph` (4 modules) | ~60 | GraphId/NodeId validation, topological sort, TOML loading |
+| `biomeos-spore` (7 modules) | ~120 | error, manifest, verify, refresh, usb, incubation, seed, dark_forest |
+| `biomeos-api` handlers (4 modules) | ~76 | trust, rendezvous, events, genome — serde, state, I/O |
+
+### Quality Metrics
+| Metric | Before | After |
+|--------|--------|-------|
+| Tests Passing | 1,790 | 2,101 |
+| Region Coverage | 46.9% | 51.4% |
+| Clippy | PASS | PASS |
+
+---
+
+## [v1.19] - 2026-02-10 (Full Documentation Coverage)
+
+### Workspace-Wide Doc Coverage
+- **Resolved**: All ~1,445 `missing_docs` warnings across 8 crates
+- Every public module, struct, enum, field, variant, function, and type alias now has doc comments
+- `#![warn(missing_docs)]` enforced on `biomeos-core`, `biomeos-types`, `biomeos-cli`, `biomeos-compute`, `biomeos-api`, `biomeos-deploy`, `biomeos-genome-factory`, `genome-deploy`
+
+| Crate | Warnings Fixed |
+|---|---|
+| `biomeos-types` | 892 |
+| `biomeos-cli` | 249 |
+| `biomeos-core` | 140 |
+| `biomeos-compute` | 91 |
+| `biomeos-api` | 21 |
+| `biomeos-deploy` | 20 |
+| `biomeos-genome-factory` | 20 |
+| `genome-deploy` | 12 |
+
+### Quality Metrics
+| Metric | Before | After |
+|--------|--------|-------|
+| `missing_docs` warnings | ~1,445 | 0 |
+| Code Quality Grade | A | A+ |
+| Tests Passing | 1,788 | 1,790 |
+| Clippy | PASS | PASS |
+
+### Root Documentation
+- Updated `CURRENT_STATUS.md` to v2.13
+- Updated `README.md`, `START_HERE.md`, `QUICK_START.md`, `DOCUMENTATION.md`, `CHANGELOG.md`
+
+---
+
+## [v1.18] - 2026-02-10 (Covalent Bond Transport + Inter-Gate Evolution)
+
+### HTTP JSON-RPC Transport (Inter-NUCLEUS Covalent Bond)
+- **Added**: `TransportEndpoint::HttpJsonRpc` variant in `socket_discovery/transport.rs`
+- **Added**: `AtomicClient::http(host, port)` -- pure Rust HTTP POST to `/jsonrpc` (zero new deps)
+- **Added**: `call_via_http()` using raw `TcpStream` for Pure Rust guarantee
+- **Transport Tier 2**: Inter-gate communication via Songbird HTTP JSON-RPC gateway (port 8080)
+- **Parse support**: `http://host:port/jsonrpc` URLs in `TransportEndpoint::parse()`
+
+### Plasmodium Evolution (Hardcoded Port Elimination)
+- **Replaced**: `plasmodium.rs` `query_remote_gate()` hardcoded port 3492 → runtime discovery
+- **Port resolution**: `mesh.peers` address → `SONGBIRD_MESH_PORT` env → default 8080
+- **Transport**: Switched from `AtomicClient::tcp()` to `AtomicClient::http()` for remote gates
+- **Docs**: Updated architecture comment to reference HTTP JSON-RPC gateway
+
+### Songbird Beacon Evolution (Handed off)
+- **Added**: `jsonrpc_port` field in beacon discovery payload (`mesh_handler.rs`)
+- **Port source**: `SONGBIRD_HTTP_PORT` → `SONGBIRD_PORT` → default 8080
+- **Peer discovery**: Uses announced `jsonrpc_port` instead of ephemeral UDP source port
+
+### Device Enrollment
+- **Validated**: `biomeos enroll` on Tower (machine-id: f65cecf5...) and gate2 (machine-id: bd7023ba...)
+- **Method**: `Blake3-Lineage-KDF` from shared `.family.seed`
+- **Both devices**: Generation 1 lineage seeds derived
+
+### Full NUCLEUS on gate2
+- **Deployed**: All 5 primals (BearDog, Songbird, NestGate, Toadstool, Squirrel) + biomeOS
+- **Validated**: Cross-machine HTTP JSON-RPC (Tower → gate2:8080/jsonrpc returns healthy)
+- **gate2 config**: BearDog, Songbird (port 8080), NestGate (port 7777), Toadstool, Squirrel
+
+### Investigation: 4 Blocking Issues for Covalent Bond Chain
+- **Issue 1**: Songbird `--socket` flag creates separate IPC server from orchestrator's internal one
+- **Issue 2**: HTTP, bin_interface, and orchestrator each create independent `MeshHandler` instances (no shared state)
+- **Issue 3**: `udp_multicast_discover()` binds to ephemeral port but sends/listens on 5353 (mDNS collision)
+- **Issue 4**: 22 occurrences of hardcoded port 3492 across 12 Songbird files
+- **Handoff**: `docs/handoffs/COVALENT_BOND_EVOLUTION_HANDOFF_FEB10_2026.md` with root causes, file locations, fix guidance
+
+### Formatting
+- `cargo fmt` applied to new code
+
+---
+
+## [v1.17] - 2026-02-09 (Deep Evolution - biomeOS Team Complete)
+
+### Pure Rust System Calls
+- **Replaced**: All production `Command::new()` shell-outs with pure Rust
+- `nvidia-smi` -> `/proc/driver/nvidia/gpus/` + `/sys/bus/pci/devices/`
+- `df` -> `/proc/mounts` + `nix::sys::statvfs`
+- `ip` (query) -> `/sys/class/net/` + `operstate`
+- `kill` -> `nix::sys::signal::kill`
+- `which` -> Pure Rust `PATH` scan
+- `ssh` -> Songbird mesh RPC (SSH retained as deprecated fallback only)
+
+### Internalized start_nucleus.sh
+- `biomeos nucleus start` is now a pure Rust NUCLEUS launcher
+- Binary discovery across `livespore-usb/`, `plasmidBin/`, `target/release/`, `$PATH`
+- Dependency-ordered startup (BearDog -> Songbird -> NestGate -> ...)
+- Family ID derivation from env var or `.family.seed`
+- Bootstrap vs. coordinated mode auto-detection
+- Zero unsafe code, zero shell-outs
+
+### LifecycleManager Integration
+- Nucleus mode creates `LifecycleManager` and registers all started primals
+- Background health monitoring at 10s intervals
+- **Deep JSON-RPC health checks** for Active primals (not just socket existence)
+- Lighter socket-only checks for Incubating primals during startup
+- Auto-resurrection of degraded primals with exponential backoff
+- Coordinated dependency-aware shutdown via `LifecycleManager::shutdown_all()`
+
+### SystemPaths Consolidation
+- Eliminated all duplicate path resolution logic across the codebase
+- `nucleus.rs`, `doctor.rs`, `trust.rs`, `topology.rs`, `genome.rs`, `capability_translation.rs`
+  all delegate to centralized `SystemPaths::new_lazy()`
+- Zero hardcoded `/tmp` paths in production code
+
+### Capability-Based Plasmodium
+- `query_local_gate()` dynamically scans runtime socket directory for family-matching sockets
+- `aggregate_capabilities()` uses `capability_taxonomy::capabilities_for_primal()`
+  instead of hardcoded primal-name-to-capability match block
+- New `capabilities_for_primal()` in `biomeos-types::capability_taxonomy` as single source of truth
+
+### API Route Completion
+- Wired 5 previously dead-code handler modules into the API router
+- `GET /api/v1/capabilities`, `POST /api/v1/capabilities/discover`
+- `POST /api/v1/genome/build`, `GET /api/v1/genome/:id/info`, `POST /api/v1/genome/verify-file`
+
+### biomeos-boot Doc Compliance
+- Fixed all 39 missing-docs warnings across 5 files
+- Replaced 5 production `unwrap()` calls with safe alternatives
+
+### Deep Debt Cleanup
+- Production `unwrap()` in `model_cache.rs` replaced with graceful `continue`
+- All `SporeConfig` tests updated with required `family_id` field
+- All `#[allow(dead_code)]` audited and justified
+- Clippy: 0 warnings across entire workspace (including biomeos-boot)
+- Tests: 1,789 passing, 0 failures
+
+### Root Documentation Update
+- All root docs updated to reflect evolution completions
+- Test count, clippy status, startup commands, architecture, primal status updated
+- Bypass status updated: 2 evolved (sockets, SSH), 3 active (owned by primal teams)
+
+---
+
+## [v1.16] - 2026-02-09 (AI Bridge + Evolution Audit)
+
+### AI Bridge - Squirrel -> Songbird -> Cloud/Local AI
+- **Validated**: Squirrel `query_ai` -> Anthropic Claude Haiku via Songbird HTTP bridge (786ms)
+- **Validated**: Songbird `http.request` -> Ollama (phi3, tinyllama) via HTTP (~2s)
+- **Validated**: Neural API `proxy_http` -> Songbird -> BearDog TLS -> HTTPS -> Anthropic
+- **Discovery**: `HTTP_REQUEST_PROVIDER_SOCKET` env var bypass for instant capability discovery
+- **API Keys**: Loaded from `ecoPrimals/testing-secrets/api-keys.toml`
+
+### Neural API Server
+- Started as `biomeos neural-api` mode with 121 capability translations
+- Capability registration via `capability.register` JSON-RPC
+- Socket nucleation symlinks (`songbird.sock -> songbird-{family_id}.sock`)
+- `proxy_http` routes HTTPS through Songbird + BearDog TLS chain
+
+### NUCLEUS Startup Script Evolution
+- `scripts/start_nucleus.sh`: Added `load_api_keys()`, `start_neural_api()`
+- Automatic API key loading from testing-secrets
+- Socket symlink creation for nucleated paths
+- Squirrel configured with `HTTP_REQUEST_PROVIDER_SOCKET` and `AI_HTTP_PROVIDERS`
+- NestGate startup fixed to use `daemon --socket-only`
+
+### gate2 NestGate Restart
+- Restarted via SSH with ZFS backend optimization
+- `storage.exists` validated via JSON-RPC
+
+### Distributed Plasmodium Validation
+- 2-gate collective: Tower (RTX 4070, 31GB, 24 cores) + gate2 (RTX 3090, 251GB, 128 cores)
+- Total: 36 GB VRAM, 282 GB RAM, 152 CPU cores
+- SSH-based remote gate queries
+
+### Documentation
+- Root docs updated: CURRENT_STATUS, QUICK_START, START_HERE, CHANGELOG
+- Handoff: `docs/handoffs/SQUIRREL_NEURAL_API_BRIDGE_HANDOFF_FEB09_2026.md`
+- Documented 5 bypasses with evolution paths
+- Primal evolution needs audited
+
+### Deep Debt Audit
+- 2 TODO markers remaining in codebase (both intentional)
+- 0 HACK/WORKAROUND/BYPASS markers in source code
+- All bypasses documented in CURRENT_STATUS.md with evolution paths
+
+---
+
 ## [v1.15] - 2026-02-09 (Plasmodium + Model Cache)
 
 ### Plasmodium - Over-NUCLEUS Collective Coordination

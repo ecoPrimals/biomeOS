@@ -19,11 +19,11 @@ use crate::error::{SporeError, SporeResult};
 use crate::spore_types::SporeType;
 
 use super::config::ConfigOps;
-use super::types::default_family_id;
 use super::deployment::DeploymentOps;
 use super::documentation::DocumentationOps;
 use super::filesystem::FilesystemOps;
 use super::genetics::GeneticsOps;
+use super::types::default_family_id;
 use super::types::SporeConfig;
 
 /// USB Spore - A self-contained biomeOS deployment
@@ -74,6 +74,7 @@ impl Spore {
     ///     label: "biomeOS1".to_string(),
     ///     node_id: "tower1".to_string(),
     ///     spore_type: SporeType::Live,
+    ///     family_id: "1894e909e454".to_string(),
     /// };
     ///
     /// let spore = Spore::create(

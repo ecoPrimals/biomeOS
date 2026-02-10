@@ -2,6 +2,7 @@
 name = "biomeos-unibin"
 version = "0.1.0"
 edition = "2021"
+license = "AGPL-3.0-only"
 description = "biomeOS Universal Nucleus & Orchestrator - UniBin"
 authors = ["biomeOS Team"]
 
@@ -49,6 +50,9 @@ comfy-table = "7.0"
 
 # Encoding
 base64 = { workspace = true }
+
+# POSIX syscall wrappers (safe Rust, signal handling)
+nix = { version = "0.29", features = ["signal"] }
 
 # Directory utilities - Pure Rust!
 # dirs = "5.0"  # DEPRECATED: Uses dirs-sys (C dependency)

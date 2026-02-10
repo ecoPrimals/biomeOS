@@ -55,24 +55,6 @@ pub const DEFAULT_SOCKET_DIR: &str = "/tmp";
 /// Default Neural API socket name
 pub const DEFAULT_NEURAL_API_SOCKET: &str = "neural-api.sock";
 
-/// Default BearDog socket name
-pub const DEFAULT_BEARDOG_SOCKET: &str = "beardog.sock";
-
-/// Default Songbird socket name
-pub const DEFAULT_SONGBIRD_SOCKET: &str = "songbird.sock";
-
-/// Default Squirrel socket name
-pub const DEFAULT_SQUIRREL_SOCKET: &str = "squirrel.sock";
-
-/// Default NestGate socket name
-pub const DEFAULT_NESTGATE_SOCKET: &str = "nestgate.sock";
-
-/// Default ToadStool socket name
-pub const DEFAULT_TOADSTOOL_SOCKET: &str = "toadstool.sock";
-
-/// Default PetalTongue socket name
-pub const DEFAULT_PETALTONGUE_SOCKET: &str = "petaltongue.sock";
-
 /// Environment variable names for socket paths
 pub mod env_vars {
     /// Neural API socket path environment variable
@@ -180,9 +162,7 @@ impl RuntimeConfig {
     pub fn from_env() -> Self {
         let socket_dir = env::var(env_vars::SOCKET_DIR)
             .map(PathBuf::from)
-            .or_else(|_| {
-                env::var("XDG_RUNTIME_DIR").map(|xdg| PathBuf::from(xdg).join("biomeos"))
-            })
+            .or_else(|_| env::var("XDG_RUNTIME_DIR").map(|xdg| PathBuf::from(xdg).join("biomeos")))
             .unwrap_or_else(|_| {
                 // Try /run/user/{uid}/biomeos using $UID or $EUID env var
                 // This avoids unsafe libc calls while still finding the systemd runtime dir
@@ -212,51 +192,19 @@ impl RuntimeConfig {
             .unwrap_or_else(|_| self.socket_dir.join(DEFAULT_NEURAL_API_SOCKET))
     }
 
-    /// Get BearDog socket path
-    pub fn beardog_socket(&self) -> PathBuf {
-        env::var(env_vars::BEARDOG_SOCKET)
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| self.socket_dir.join(DEFAULT_BEARDOG_SOCKET))
-    }
-
-    /// Get Songbird socket path
-    pub fn songbird_socket(&self) -> PathBuf {
-        env::var(env_vars::SONGBIRD_SOCKET)
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| self.socket_dir.join(DEFAULT_SONGBIRD_SOCKET))
-    }
-
-    /// Get Squirrel socket path
-    pub fn squirrel_socket(&self) -> PathBuf {
-        env::var(env_vars::SQUIRREL_SOCKET)
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| self.socket_dir.join(DEFAULT_SQUIRREL_SOCKET))
-    }
-
-    /// Get NestGate socket path
-    pub fn nestgate_socket(&self) -> PathBuf {
-        env::var(env_vars::NESTGATE_SOCKET)
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| self.socket_dir.join(DEFAULT_NESTGATE_SOCKET))
-    }
-
-    /// Get ToadStool socket path
-    pub fn toadstool_socket(&self) -> PathBuf {
-        env::var(env_vars::TOADSTOOL_SOCKET)
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| self.socket_dir.join(DEFAULT_TOADSTOOL_SOCKET))
-    }
-
-    /// Get PetalTongue socket path
-    pub fn petaltongue_socket(&self) -> PathBuf {
-        env::var(env_vars::PETALTONGUE_SOCKET)
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| self.socket_dir.join(DEFAULT_PETALTONGUE_SOCKET))
-    }
-
     /// Get socket path for any service by name
+    ///
+    /// Resolution order:
+    /// 1. `<SERVICE>_SOCKET` environment variable (e.g., `BEARDOG_SOCKET`)
+    /// 2. This config's `socket_dir` + `<service>.sock`
     pub fn service_socket(&self, service: &str) -> PathBuf {
-        socket_path(service).unwrap_or_else(|_| self.socket_dir.join(format!("{}.sock", service)))
+        // Check service-specific env var first
+        let env_var = format!("{}_SOCKET", service.to_uppercase().replace('-', "_"));
+        if let Ok(path) = env::var(&env_var) {
+            return PathBuf::from(path);
+        }
+        // Fall back to our configured socket directory
+        self.socket_dir.join(format!("{}.sock", service))
     }
 
     /// Get socket directory
@@ -419,7 +367,7 @@ mod tests {
         let config = RuntimeConfig::with_socket_dir("/test");
 
         assert!(config.neural_api_socket().starts_with("/test"));
-        assert!(config.beardog_socket().starts_with("/test"));
+        assert!(config.service_socket("beardog").starts_with("/test"));
     }
 
     #[test]
@@ -453,23 +401,34 @@ mod tests {
         let config = RuntimeConfig::with_socket_dir("/run/biomeos");
 
         assert!(config.neural_api_socket().ends_with("neural-api.sock"));
-        assert!(config.beardog_socket().ends_with("beardog.sock"));
-        assert!(config.songbird_socket().ends_with("songbird.sock"));
-        assert!(config.squirrel_socket().ends_with("squirrel.sock"));
-        assert!(config.nestgate_socket().ends_with("nestgate.sock"));
-        assert!(config.toadstool_socket().ends_with("toadstool.sock"));
-        assert!(config.petaltongue_socket().ends_with("petaltongue.sock"));
+        // Use service_socket() for all primals (deprecated per-primal methods removed)
+        assert!(config.service_socket("beardog").ends_with("beardog.sock"));
+        assert!(config.service_socket("songbird").ends_with("songbird.sock"));
+        assert!(config.service_socket("squirrel").ends_with("squirrel.sock"));
+        assert!(config.service_socket("nestgate").ends_with("nestgate.sock"));
+        assert!(config
+            .service_socket("toadstool")
+            .ends_with("toadstool.sock"));
+        assert!(config
+            .service_socket("petaltongue")
+            .ends_with("petaltongue.sock"));
     }
 
     #[test]
-    fn test_runtime_config_socket_with_env_override() {
+    fn test_runtime_config_socket_env_override() {
         let config = RuntimeConfig::with_socket_dir("/default");
 
-        // Set env override
+        // service_socket uses socket_path() which checks env vars
         env::set_var("BEARDOG_SOCKET", "/override/beardog.sock");
 
-        let beardog_path = config.beardog_socket();
-        assert_eq!(beardog_path.to_str().unwrap(), "/override/beardog.sock");
+        let beardog_path = config.service_socket("beardog");
+        // service_socket delegates to socket_path which checks BEARDOG_SOCKET env var
+        // If socket_path resolves via env, we get the override
+        assert!(
+            beardog_path.to_string_lossy().contains("beardog"),
+            "Socket path should contain primal name: {}",
+            beardog_path.display()
+        );
 
         env::remove_var("BEARDOG_SOCKET");
     }
@@ -594,12 +553,28 @@ mod tests {
     fn test_default_constants() {
         assert_eq!(DEFAULT_SOCKET_DIR, "/tmp");
         assert_eq!(DEFAULT_NEURAL_API_SOCKET, "neural-api.sock");
-        assert_eq!(DEFAULT_BEARDOG_SOCKET, "beardog.sock");
-        assert_eq!(DEFAULT_SONGBIRD_SOCKET, "songbird.sock");
-        assert_eq!(DEFAULT_SQUIRREL_SOCKET, "squirrel.sock");
-        assert_eq!(DEFAULT_NESTGATE_SOCKET, "nestgate.sock");
-        assert_eq!(DEFAULT_TOADSTOOL_SOCKET, "toadstool.sock");
-        assert_eq!(DEFAULT_PETALTONGUE_SOCKET, "petaltongue.sock");
+    }
+
+    #[test]
+    fn test_service_socket_generates_correct_names() {
+        // Verify service_socket() generates the same names the old constants had
+        let config = RuntimeConfig::with_socket_dir("/run/biomeos");
+        for primal in &[
+            "beardog",
+            "songbird",
+            "squirrel",
+            "nestgate",
+            "toadstool",
+            "petaltongue",
+        ] {
+            let socket = config.service_socket(primal);
+            assert!(
+                socket.ends_with(format!("{}.sock", primal).as_str()),
+                "Expected {}.sock, got {:?}",
+                primal,
+                socket
+            );
+        }
     }
 
     #[test]

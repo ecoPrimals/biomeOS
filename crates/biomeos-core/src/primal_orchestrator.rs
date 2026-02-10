@@ -48,6 +48,7 @@ pub struct PrimalHealthMonitor {
 }
 
 impl PrimalHealthMonitor {
+    /// Create a new builder for configuring the health monitor
     pub fn builder() -> PrimalHealthMonitorBuilder {
         PrimalHealthMonitorBuilder {
             interval: std::time::Duration::from_secs(30),
@@ -202,6 +203,7 @@ impl PrimalHealthMonitor {
     }
 }
 
+/// Builder for [`PrimalHealthMonitor`]
 pub struct PrimalHealthMonitorBuilder {
     interval: std::time::Duration,
 }
@@ -213,6 +215,7 @@ impl PrimalHealthMonitorBuilder {
         self
     }
 
+    /// Build the health monitor with the configured interval
     pub fn build(self) -> PrimalHealthMonitor {
         PrimalHealthMonitor {
             primals: Arc::new(RwLock::new(HashMap::new())),
@@ -235,7 +238,10 @@ pub enum PrimalState {
     /// Started but degraded
     Degraded,
     /// Failed to start or crashed
-    Failed { reason: String },
+    Failed {
+        /// Human-readable failure reason
+        reason: String,
+    },
     /// Intentionally stopped
     Stopped,
 }
@@ -694,6 +700,9 @@ impl PrimalOrchestrator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+
+    // ── Mock primal ──────────────────────────────────────────────────
 
     struct MockPrimal {
         id: PrimalId,
@@ -706,31 +715,405 @@ mod tests {
         fn id(&self) -> &PrimalId {
             &self.id
         }
-
         fn provides(&self) -> &[Capability] {
             &self.provides
         }
-
         fn requires(&self) -> &[Capability] {
             &self.requires
         }
-
         async fn endpoint(&self) -> Option<Endpoint> {
             None
         }
-
         async fn start(&self) -> BiomeResult<()> {
             Ok(())
         }
-
         async fn stop(&self) -> BiomeResult<()> {
             Ok(())
         }
-
         async fn health_check(&self) -> BiomeResult<HealthStatus> {
             Ok(HealthStatus::Healthy)
         }
     }
+
+    /// A mock primal that tracks start/stop calls and can simulate failures.
+    struct InstrumentedPrimal {
+        id: PrimalId,
+        provides: Vec<Capability>,
+        requires: Vec<Capability>,
+        started: AtomicBool,
+        start_count: AtomicU32,
+        stop_count: AtomicU32,
+        fail_start: AtomicBool,
+        fail_health: AtomicBool,
+    }
+
+    impl InstrumentedPrimal {
+        fn new(name: &str, provides: Vec<Capability>, requires: Vec<Capability>) -> Self {
+            Self {
+                id: PrimalId::new(name).expect("valid name"),
+                provides,
+                requires,
+                started: AtomicBool::new(false),
+                start_count: AtomicU32::new(0),
+                stop_count: AtomicU32::new(0),
+                fail_start: AtomicBool::new(false),
+                fail_health: AtomicBool::new(false),
+            }
+        }
+    }
+
+    #[async_trait]
+    impl ManagedPrimal for InstrumentedPrimal {
+        fn id(&self) -> &PrimalId {
+            &self.id
+        }
+        fn provides(&self) -> &[Capability] {
+            &self.provides
+        }
+        fn requires(&self) -> &[Capability] {
+            &self.requires
+        }
+        async fn endpoint(&self) -> Option<Endpoint> {
+            None
+        }
+        async fn start(&self) -> BiomeResult<()> {
+            self.start_count.fetch_add(1, Ordering::SeqCst);
+            if self.fail_start.load(Ordering::SeqCst) {
+                return Err(BiomeError::internal_error(
+                    "mock start failure",
+                    Some("test"),
+                ));
+            }
+            self.started.store(true, Ordering::SeqCst);
+            Ok(())
+        }
+        async fn stop(&self) -> BiomeResult<()> {
+            self.stop_count.fetch_add(1, Ordering::SeqCst);
+            self.started.store(false, Ordering::SeqCst);
+            Ok(())
+        }
+        async fn health_check(&self) -> BiomeResult<HealthStatus> {
+            if self.fail_health.load(Ordering::SeqCst) {
+                Ok(HealthStatus::Unhealthy)
+            } else {
+                Ok(HealthStatus::Healthy)
+            }
+        }
+        fn startup_timeout(&self) -> Duration {
+            Duration::from_secs(2) // Short for tests
+        }
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────
+
+    fn pid(name: &str) -> PrimalId {
+        PrimalId::new(name).expect("valid primal id")
+    }
+
+    fn make_orchestrator() -> PrimalOrchestrator {
+        let monitor = Arc::new(PrimalHealthMonitor::builder().build());
+        let retry = RetryPolicy::exponential(1, Duration::from_millis(10));
+        PrimalOrchestrator::new(monitor, retry)
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // PrimalState tests
+    // ═══════════════════════════════════════════════════════════════
+
+    #[test]
+    fn test_primal_state_debug() {
+        assert!(format!("{:?}", PrimalState::Pending).contains("Pending"));
+        assert!(format!("{:?}", PrimalState::Starting).contains("Starting"));
+        assert!(format!("{:?}", PrimalState::Running).contains("Running"));
+        assert!(format!("{:?}", PrimalState::Degraded).contains("Degraded"));
+        assert!(format!("{:?}", PrimalState::Stopped).contains("Stopped"));
+        let failed = PrimalState::Failed {
+            reason: "boom".into(),
+        };
+        let dbg = format!("{:?}", failed);
+        assert!(dbg.contains("Failed"));
+        assert!(dbg.contains("boom"));
+    }
+
+    #[test]
+    fn test_primal_state_clone_and_eq() {
+        let states = vec![
+            PrimalState::Pending,
+            PrimalState::Starting,
+            PrimalState::Running,
+            PrimalState::Degraded,
+            PrimalState::Stopped,
+            PrimalState::Failed {
+                reason: "x".into(),
+            },
+        ];
+        for s in &states {
+            let cloned = s.clone();
+            assert_eq!(s, &cloned);
+        }
+        // Different variants are not equal
+        assert_ne!(PrimalState::Pending, PrimalState::Running);
+    }
+
+    #[test]
+    fn test_primal_state_failed_different_reasons() {
+        let f1 = PrimalState::Failed {
+            reason: "a".into(),
+        };
+        let f2 = PrimalState::Failed {
+            reason: "b".into(),
+        };
+        assert_ne!(f1, f2);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // PrimalHealthMonitorBuilder tests
+    // ═══════════════════════════════════════════════════════════════
+
+    #[test]
+    fn test_builder_default_interval() {
+        let monitor = PrimalHealthMonitor::builder().build();
+        assert_eq!(monitor.interval, Duration::from_secs(30));
+    }
+
+    #[test]
+    fn test_builder_custom_interval() {
+        let monitor = PrimalHealthMonitor::builder()
+            .interval(Duration::from_secs(5))
+            .build();
+        assert_eq!(monitor.interval, Duration::from_secs(5));
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // PrimalHealthMonitor tests
+    // ═══════════════════════════════════════════════════════════════
+
+    #[tokio::test]
+    async fn test_health_monitor_register_socket_and_status() {
+        let monitor = PrimalHealthMonitor::builder().build();
+        let id = pid("test-primal");
+
+        monitor
+            .register_socket(id.clone(), "/tmp/test.sock")
+            .await;
+
+        // Initially assumed healthy
+        assert_eq!(monitor.is_healthy(&id).await, Some(true));
+
+        let all = monitor.all_status().await;
+        assert_eq!(all.len(), 1);
+        assert!(all[&id]);
+    }
+
+    #[tokio::test]
+    async fn test_health_monitor_unregister() {
+        let monitor = PrimalHealthMonitor::builder().build();
+        let id = pid("removable");
+
+        monitor
+            .register_socket(id.clone(), "/tmp/removable.sock")
+            .await;
+        assert!(monitor.is_healthy(&id).await.is_some());
+
+        monitor.unregister(&id).await;
+        assert!(monitor.is_healthy(&id).await.is_none());
+        assert!(monitor.all_status().await.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_health_monitor_multiple_primals() {
+        let monitor = PrimalHealthMonitor::builder().build();
+
+        monitor
+            .register_socket(pid("a"), "/tmp/a.sock")
+            .await;
+        monitor
+            .register_socket(pid("b"), "/tmp/b.sock")
+            .await;
+        monitor
+            .register_socket(pid("c"), "/tmp/c.sock")
+            .await;
+
+        assert_eq!(monitor.all_status().await.len(), 3);
+    }
+
+    #[tokio::test]
+    async fn test_health_monitor_is_healthy_unknown_primal() {
+        let monitor = PrimalHealthMonitor::builder().build();
+        assert_eq!(monitor.is_healthy(&pid("unknown")).await, None);
+    }
+
+    #[test]
+    fn test_health_monitor_stop() {
+        let monitor = PrimalHealthMonitor::builder().build();
+        // Initially not running
+        assert!(!monitor.running.load(std::sync::atomic::Ordering::SeqCst));
+        monitor.stop();
+        assert!(!monitor.running.load(std::sync::atomic::Ordering::SeqCst));
+    }
+
+    #[test]
+    fn test_health_monitor_clone() {
+        let monitor = PrimalHealthMonitor::builder()
+            .interval(Duration::from_secs(10))
+            .build();
+        let cloned = monitor.clone();
+        assert_eq!(cloned.interval, Duration::from_secs(10));
+        // They share the same Arc internals
+        assert!(Arc::ptr_eq(&monitor.primals, &cloned.primals));
+        assert!(Arc::ptr_eq(&monitor.status, &cloned.status));
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // PrimalOrchestrator tests
+    // ═══════════════════════════════════════════════════════════════
+
+    #[tokio::test]
+    async fn test_orchestrator_register_and_get_state() {
+        let orch = make_orchestrator();
+        let primal = Arc::new(InstrumentedPrimal::new("test-svc", vec![], vec![]));
+
+        assert_eq!(orch.get_state(&pid("test-svc")).await, None);
+
+        orch.register(primal).await;
+        assert_eq!(
+            orch.get_state(&pid("test-svc")).await,
+            Some(PrimalState::Pending)
+        );
+    }
+
+    #[tokio::test]
+    async fn test_orchestrator_get_all_states_empty() {
+        let orch = make_orchestrator();
+        assert!(orch.get_all_states().await.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_orchestrator_get_all_states_multiple() {
+        let orch = make_orchestrator();
+        orch.register(Arc::new(InstrumentedPrimal::new("a", vec![], vec![])))
+            .await;
+        orch.register(Arc::new(InstrumentedPrimal::new("b", vec![], vec![])))
+            .await;
+
+        let states = orch.get_all_states().await;
+        assert_eq!(states.len(), 2);
+        assert_eq!(states[&pid("a")], PrimalState::Pending);
+        assert_eq!(states[&pid("b")], PrimalState::Pending);
+    }
+
+    #[tokio::test]
+    async fn test_orchestrator_start_primal_not_found() {
+        let orch = make_orchestrator();
+        let result = orch.start_primal(&pid("nonexistent")).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_orchestrator_stop_primal_not_found() {
+        let orch = make_orchestrator();
+        let result = orch.stop_primal(&pid("nonexistent")).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_orchestrator_start_and_state_transition() {
+        let orch = make_orchestrator();
+        let primal = Arc::new(InstrumentedPrimal::new("healthy-svc", vec![], vec![]));
+        orch.register(primal.clone()).await;
+
+        let result = orch.start_primal(&pid("healthy-svc")).await;
+        assert!(result.is_ok(), "healthy primal should start: {:?}", result);
+
+        // State should be Running after successful start + health check
+        assert_eq!(
+            orch.get_state(&pid("healthy-svc")).await,
+            Some(PrimalState::Running)
+        );
+
+        // Start count should be 1
+        assert_eq!(primal.start_count.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test]
+    async fn test_orchestrator_start_already_running() {
+        let orch = make_orchestrator();
+        let primal = Arc::new(InstrumentedPrimal::new("already", vec![], vec![]));
+        orch.register(primal.clone()).await;
+
+        // Start it
+        orch.start_primal(&pid("already")).await.expect("first start");
+        assert_eq!(primal.start_count.load(Ordering::SeqCst), 1);
+
+        // Start again — should short-circuit
+        orch.start_primal(&pid("already")).await.expect("second start");
+        assert_eq!(
+            primal.start_count.load(Ordering::SeqCst),
+            1,
+            "should not call start() again"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_orchestrator_stop_primal() {
+        let orch = make_orchestrator();
+        let primal = Arc::new(InstrumentedPrimal::new("stoppable", vec![], vec![]));
+        orch.register(primal.clone()).await;
+
+        orch.start_primal(&pid("stoppable")).await.expect("start");
+        assert_eq!(
+            orch.get_state(&pid("stoppable")).await,
+            Some(PrimalState::Running)
+        );
+
+        orch.stop_primal(&pid("stoppable")).await.expect("stop");
+        assert_eq!(
+            orch.get_state(&pid("stoppable")).await,
+            Some(PrimalState::Stopped)
+        );
+        assert_eq!(primal.stop_count.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test]
+    async fn test_orchestrator_stop_already_stopped() {
+        let orch = make_orchestrator();
+        let primal = Arc::new(InstrumentedPrimal::new("double-stop", vec![], vec![]));
+        orch.register(primal.clone()).await;
+
+        orch.start_primal(&pid("double-stop")).await.expect("start");
+        orch.stop_primal(&pid("double-stop")).await.expect("stop 1");
+        orch.stop_primal(&pid("double-stop"))
+            .await
+            .expect("stop 2 should short-circuit");
+        assert_eq!(
+            primal.stop_count.load(Ordering::SeqCst),
+            1,
+            "stop() should only be called once"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_orchestrator_start_with_failed_start() {
+        let orch = make_orchestrator();
+        let primal = Arc::new(InstrumentedPrimal::new("fail-start", vec![], vec![]));
+        primal.fail_start.store(true, Ordering::SeqCst);
+        orch.register(primal.clone()).await;
+
+        let result = orch.start_primal(&pid("fail-start")).await;
+        assert!(result.is_err(), "start should fail");
+
+        // State should be Failed
+        match orch.get_state(&pid("fail-start")).await {
+            Some(PrimalState::Failed { reason }) => {
+                assert!(!reason.is_empty());
+            }
+            other => panic!("expected Failed state, got {:?}", other),
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Dependency resolution tests
+    // ═══════════════════════════════════════════════════════════════
 
     #[tokio::test]
     async fn test_capability_based_resolution() {
@@ -739,23 +1122,20 @@ mod tests {
 
         let orchestrator = PrimalOrchestrator::new(health_monitor, retry_policy);
 
-        // Create dependency chain by capability:
-        // crypto_provider (provides Security) <- discovery (requires Security) <- app (requires Discovery)
-
         let crypto_provider = Arc::new(MockPrimal {
-            id: PrimalId::new("crypto-provider-1".to_string()).unwrap(),
+            id: PrimalId::new("crypto-provider-1").expect("valid id"),
             provides: vec![Capability::Security],
             requires: vec![],
         });
 
         let discovery = Arc::new(MockPrimal {
-            id: PrimalId::new("discovery-service-1".to_string()).unwrap(),
+            id: PrimalId::new("discovery-service-1").expect("valid id"),
             provides: vec![Capability::Discovery],
             requires: vec![Capability::Security],
         });
 
         let app = Arc::new(MockPrimal {
-            id: PrimalId::new("app-1".to_string()).unwrap(),
+            id: PrimalId::new("app-1").expect("valid id"),
             provides: vec![],
             requires: vec![Capability::Discovery],
         });
@@ -764,11 +1144,138 @@ mod tests {
         orchestrator.register(discovery).await;
         orchestrator.register(crypto_provider).await;
 
-        let order = orchestrator.resolve_dependencies().await.unwrap();
+        let order = orchestrator
+            .resolve_dependencies()
+            .await
+            .expect("should resolve");
 
-        // Crypto provider should come first, then discovery, then app
         assert_eq!(order[0].to_string(), "crypto-provider-1");
         assert_eq!(order[1].to_string(), "discovery-service-1");
         assert_eq!(order[2].to_string(), "app-1");
+    }
+
+    #[tokio::test]
+    async fn test_resolution_independent_primals() {
+        let orch = make_orchestrator();
+
+        orch.register(Arc::new(InstrumentedPrimal::new(
+            "alpha",
+            vec![Capability::Security],
+            vec![],
+        )))
+        .await;
+        orch.register(Arc::new(InstrumentedPrimal::new(
+            "beta",
+            vec![Capability::Discovery],
+            vec![],
+        )))
+        .await;
+
+        let order = orch.resolve_dependencies().await.expect("should resolve");
+        assert_eq!(order.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_resolution_circular_deps() {
+        let orch = make_orchestrator();
+
+        orch.register(Arc::new(InstrumentedPrimal::new(
+            "a",
+            vec![Capability::Security],
+            vec![Capability::Discovery],
+        )))
+        .await;
+        orch.register(Arc::new(InstrumentedPrimal::new(
+            "b",
+            vec![Capability::Discovery],
+            vec![Capability::Security],
+        )))
+        .await;
+
+        let result = orch.resolve_dependencies().await;
+        assert!(result.is_err(), "circular deps should fail");
+    }
+
+    #[tokio::test]
+    async fn test_resolution_empty() {
+        let orch = make_orchestrator();
+        let order = orch.resolve_dependencies().await.expect("empty is ok");
+        assert!(order.is_empty());
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // start_all / stop_all tests
+    // ═══════════════════════════════════════════════════════════════
+
+    #[tokio::test]
+    async fn test_start_all_independent() {
+        let orch = make_orchestrator();
+        orch.register(Arc::new(InstrumentedPrimal::new("a", vec![], vec![])))
+            .await;
+        orch.register(Arc::new(InstrumentedPrimal::new("b", vec![], vec![])))
+            .await;
+
+        orch.start_all().await.expect("start_all should succeed");
+
+        let states = orch.get_all_states().await;
+        assert!(states.values().all(|s| *s == PrimalState::Running));
+    }
+
+    #[tokio::test]
+    async fn test_stop_all() {
+        let orch = make_orchestrator();
+        orch.register(Arc::new(InstrumentedPrimal::new("a", vec![], vec![])))
+            .await;
+        orch.register(Arc::new(InstrumentedPrimal::new("b", vec![], vec![])))
+            .await;
+
+        orch.start_all().await.expect("start");
+        orch.stop_all().await.expect("stop_all should succeed");
+
+        let states = orch.get_all_states().await;
+        assert!(states.values().all(|s| *s == PrimalState::Stopped));
+    }
+
+    #[tokio::test]
+    async fn test_start_all_with_deps() {
+        let orch = make_orchestrator();
+        orch.register(Arc::new(InstrumentedPrimal::new(
+            "security",
+            vec![Capability::Security],
+            vec![],
+        )))
+        .await;
+        orch.register(Arc::new(InstrumentedPrimal::new(
+            "discovery",
+            vec![Capability::Discovery],
+            vec![Capability::Security],
+        )))
+        .await;
+
+        orch.start_all().await.expect("start_all with deps");
+
+        let states = orch.get_all_states().await;
+        assert_eq!(states[&pid("security")], PrimalState::Running);
+        assert_eq!(states[&pid("discovery")], PrimalState::Running);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // ManagedPrimal default startup_timeout
+    // ═══════════════════════════════════════════════════════════════
+
+    #[test]
+    fn test_managed_primal_default_timeout() {
+        let primal = MockPrimal {
+            id: pid("default-timeout"),
+            provides: vec![],
+            requires: vec![],
+        };
+        assert_eq!(primal.startup_timeout(), Duration::from_secs(30));
+    }
+
+    #[test]
+    fn test_instrumented_primal_custom_timeout() {
+        let primal = InstrumentedPrimal::new("custom-timeout", vec![], vec![]);
+        assert_eq!(primal.startup_timeout(), Duration::from_secs(2));
     }
 }

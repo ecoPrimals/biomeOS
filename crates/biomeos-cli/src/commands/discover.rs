@@ -13,12 +13,16 @@ use super::utils::{create_spinner, display_results, parse_capabilities};
 /// Discovery methods supported by the CLI
 #[derive(clap::ValueEnum, Clone, Debug)]
 pub enum DiscoveryMethod {
+    /// Discover services by their advertised capabilities
     #[value(name = "capability-based")]
     CapabilityBased,
+    /// Discover services from a registry endpoint
     #[value(name = "registry-based")]
     RegistryBased,
+    /// Discover services via DNS-based lookups
     #[value(name = "dns-based")]
     DnsBased,
+    /// Discover services via multicast announcements
     #[value(name = "multicast")]
     Multicast,
 }

@@ -67,9 +67,13 @@ pub struct UIConfig {
 /// UI themes
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum UITheme {
+    /// Light theme
     Light,
+    /// Dark theme
     Dark,
+    /// Auto-detect from system
     Auto,
+    /// Custom theme name
     Custom(String),
 }
 
@@ -95,20 +99,30 @@ pub struct DashboardConfig {
 /// Dashboard layouts
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DashboardLayout {
+    /// Grid-based layout
     Grid,
+    /// List-based layout
     List,
+    /// Card-based layout
     Cards,
+    /// Custom layout
     Custom(String),
 }
 
 /// Dashboard views
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DashboardView {
+    /// System overview
     Overview,
+    /// Metrics dashboard
     Metrics,
+    /// Log viewer
     Logs,
+    /// Services status
     Services,
+    /// Configuration editor
     Configuration,
+    /// Custom view
     Custom(String),
 }
 
@@ -134,11 +148,17 @@ pub struct WidgetConfig {
 /// Widget types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum WidgetType {
+    /// System statistics widget
     SystemStats,
+    /// Service status widget
     ServiceStatus,
+    /// Log viewer widget
     LogViewer,
+    /// Metrics chart widget
     MetricsChart,
+    /// Alert summary widget
     AlertSummary,
+    /// Custom widget
     Custom(String),
 }
 

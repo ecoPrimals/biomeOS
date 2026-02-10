@@ -28,8 +28,11 @@ pub struct NetworkPolicySpec {
 /// Network policy types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum NetworkPolicyType {
+    /// Inbound traffic policy
     Ingress,
+    /// Outbound traffic policy
     Egress,
+    /// Both inbound and outbound
     Both,
 }
 
@@ -92,22 +95,30 @@ pub struct NetworkPolicyPort {
 /// Network policy protocols
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum NetworkPolicyProtocol {
+    /// Transmission Control Protocol
     TCP,
+    /// User Datagram Protocol
     UDP,
+    /// Stream Control Transmission Protocol
     SCTP,
 }
 
 /// Network policy port value
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum NetworkPolicyPortValue {
+    /// Numeric port number
     Number(u16),
+    /// Named port
     Name(String),
 }
 
 /// Network policy action
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum NetworkPolicyAction {
+    /// Allow traffic
     Allow,
+    /// Deny traffic
     Deny,
+    /// Log traffic
     Log,
 }

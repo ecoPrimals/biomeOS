@@ -136,8 +136,11 @@ pub enum ImageSpec {
 /// Image pull policies
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ImagePullPolicy {
+    /// Always pull the image
     Always,
+    /// Pull only if not present locally
     IfNotPresent,
+    /// Never pull the image
     Never,
 }
 
@@ -174,8 +177,11 @@ pub enum FunctionCodeSpec {
 
     /// Code from S3/object storage
     S3 {
+        /// S3 bucket name
         bucket: String,
+        /// Object key
         key: String,
+        /// AWS region
         region: Option<String>,
     },
 }
@@ -183,8 +189,12 @@ pub enum FunctionCodeSpec {
 /// Restart policy for services
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RestartPolicy {
+    /// Always restart
     Always,
+    /// Restart only on failure
     OnFailure,
+    /// Never restart
     Never,
+    /// Restart unless explicitly stopped
     UnlessStopped,
 }

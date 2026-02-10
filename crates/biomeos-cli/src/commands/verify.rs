@@ -8,12 +8,15 @@ use clap::{Args, Subcommand};
 use std::path::PathBuf;
 use tracing::info;
 
+/// Arguments for verification commands
 #[derive(Args)]
 pub struct VerifyArgs {
+    /// Verification target
     #[command(subcommand)]
     target: VerifyTarget,
 }
 
+/// Targets for verification
 #[derive(Subcommand)]
 pub enum VerifyTarget {
     /// Verify plasmidBin integrity
@@ -38,6 +41,7 @@ pub enum VerifyTarget {
     },
 }
 
+/// Execute a verification command
 pub async fn run(args: VerifyArgs) -> Result<()> {
     match args.target {
         VerifyTarget::Nucleus { path } => {

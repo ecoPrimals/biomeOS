@@ -7,6 +7,7 @@ pub mod doctor;
 pub mod enroll;
 pub mod model_cache;
 pub mod neural_api;
+pub mod nucleus;
 pub mod plasmodium;
 pub mod verify_lineage;
 pub mod version;

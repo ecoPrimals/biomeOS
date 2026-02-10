@@ -28,9 +28,12 @@ pub async fn handle_spore_create(
     println!("   Mount: {}", mount.display());
     println!("   Type: {} {}", spore_type.emoji(), spore_type);
 
+    let family_id = std::env::var("FAMILY_ID").unwrap_or_else(|_| "default".to_string());
+
     let config = SporeConfig {
         label: label.clone(),
         node_id: node_id.clone(),
+        family_id,
         spore_type,
     };
 

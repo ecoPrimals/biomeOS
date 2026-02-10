@@ -12,18 +12,34 @@ pub enum EnvVarSpec {
     Value(String),
 
     /// Reference to secret
-    Secret { name: String, key: String },
+    Secret {
+        /// Secret name
+        name: String,
+        /// Key within the secret
+        key: String,
+    },
 
     /// Reference to config
-    Config { name: String, key: String },
+    Config {
+        /// Config name
+        name: String,
+        /// Key within the config
+        key: String,
+    },
 
     /// Field reference
-    FieldRef { field_path: String },
+    FieldRef {
+        /// Field path expression
+        field_path: String,
+    },
 
     /// Resource field reference
     ResourceFieldRef {
+        /// Container name
         container_name: Option<String>,
+        /// Resource name
         resource: String,
+        /// Divisor for the resource value
         divisor: Option<String>,
     },
 }
@@ -50,8 +66,11 @@ pub struct VolumeMountSpec {
 /// Mount propagation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MountPropagation {
+    /// No mount propagation
     None,
+    /// Host-to-container mount propagation
     HostToContainer,
+    /// Bidirectional mount propagation
     Bidirectional,
 }
 
@@ -71,8 +90,12 @@ pub struct ServiceDependency {
 /// Dependency conditions
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DependencyCondition {
+    /// Service has started
     ServiceStarted,
+    /// Service is healthy
     ServiceHealthy,
+    /// Service has completed
     ServiceCompleted,
+    /// Custom condition
     Custom(String),
 }

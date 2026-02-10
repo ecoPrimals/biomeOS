@@ -185,10 +185,63 @@ impl GraphValidator {
 
 #[cfg(test)]
 mod tests {
-    // GraphValidator used via GraphLoader
-    #[allow(unused_imports)]
     use super::*;
     use crate::loader::GraphLoader;
+
+    #[test]
+    fn test_validator_default() {
+        let v1 = GraphValidator::new();
+        let v2 = GraphValidator::default();
+        // Both should have the same known namespaces
+        assert_eq!(v1.known_namespaces.len(), v2.known_namespaces.len());
+    }
+
+    #[test]
+    fn test_known_namespaces() {
+        let validator = GraphValidator::new();
+        let expected = vec![
+            "crypto", "genetic", "filesystem", "process",
+            "network", "config", "biomeos", "http", "birdsong",
+        ];
+        for ns in expected {
+            assert!(
+                validator.known_namespaces.contains(ns),
+                "Missing namespace: {}",
+                ns
+            );
+        }
+    }
+
+    #[test]
+    fn test_add_namespace() {
+        let mut validator = GraphValidator::new();
+        assert!(!validator.known_namespaces.contains("custom"));
+        validator.add_namespace("custom");
+        assert!(validator.known_namespaces.contains("custom"));
+    }
+
+    #[test]
+    fn test_valid_graph_passes() {
+        let toml = r#"
+            [graph]
+            id = "valid-graph"
+            name = "Valid"
+            version = "1.0.0"
+
+            [[graph.nodes]]
+            id = "step-one"
+            name = "Step 1"
+            capability = "crypto.hash"
+
+            [[graph.nodes]]
+            id = "step-two"
+            name = "Step 2"
+            capability = "filesystem.write"
+            depends_on = ["step-one"]
+        "#;
+        let result = GraphLoader::from_str(toml, None);
+        assert!(result.is_ok());
+    }
 
     #[test]
     fn test_detect_cycle() {
@@ -257,5 +310,87 @@ mod tests {
 
         let result = GraphLoader::from_str(toml, None);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_valid_capability_known_namespace() {
+        let toml = r#"
+            [graph]
+            id = "known-ns"
+            name = "Known Namespace"
+            version = "1.0.0"
+
+            [[graph.nodes]]
+            id = "hash-node"
+            name = "Hash"
+            capability = "crypto.blake3_hash"
+        "#;
+        let result = GraphLoader::from_str(toml, None);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_missing_dependency_node() {
+        let toml = r#"
+            [graph]
+            id = "missing-dep"
+            name = "Missing Dep"
+            version = "1.0.0"
+
+            [[graph.nodes]]
+            id = "step-one"
+            name = "Step 1"
+            depends_on = ["nonexistent"]
+        "#;
+        let result = GraphLoader::from_str(toml, None);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("non-existent"));
+    }
+
+    #[test]
+    fn test_self_dependency_cycle() {
+        let toml = r#"
+            [graph]
+            id = "self-dep"
+            name = "Self Dep"
+            version = "1.0.0"
+
+            [[graph.nodes]]
+            id = "loop-node"
+            name = "Loop"
+            depends_on = ["loop-node"]
+        "#;
+        let result = GraphLoader::from_str(toml, None);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_no_nodes_graph() {
+        let toml = r#"
+            [graph]
+            id = "empty-graph"
+            name = "Empty"
+            version = "1.0.0"
+        "#;
+        // A graph with no nodes should still parse (nodes are optional in definition)
+        let result = GraphLoader::from_str(toml, None);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_node_with_no_capability_is_valid() {
+        let toml = r#"
+            [graph]
+            id = "no-cap"
+            name = "No Capability"
+            version = "1.0.0"
+
+            [[graph.nodes]]
+            id = "basic-node"
+            name = "Basic"
+        "#;
+        // Nodes without capability should pass validation
+        let result = GraphLoader::from_str(toml, None);
+        assert!(result.is_ok());
     }
 }

@@ -70,8 +70,8 @@ impl Capability {
     /// This method is provided for backwards compatibility.
     #[allow(clippy::should_implement_trait)] // We do implement FromStr, this is a convenience wrapper
     pub fn from_str(s: &str) -> Self {
-        // Use the FromStr trait implementation
-        s.parse().unwrap() // Infallible, safe to unwrap
+        // Use the FromStr trait implementation (Err = Infallible)
+        s.parse().expect("Capability::FromStr is infallible")
     }
 }
 
@@ -155,7 +155,7 @@ impl CapabilitySet {
     pub fn from_tags(tags: &[String]) -> Self {
         let caps: Vec<Capability> = tags
             .iter()
-            .map(|tag| tag.parse().unwrap()) // FromStr is infallible
+            .map(|tag| tag.parse().expect("Capability::FromStr is infallible"))
             .collect();
         Self::from_vec(caps)
     }

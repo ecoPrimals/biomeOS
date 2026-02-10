@@ -718,8 +718,8 @@ impl GraphExecutor {
         }
 
         // 3. Fall back to nucleation with resolved provider name
-        let provider = std::env::var("BIOMEOS_SECURITY_PROVIDER")
-            .unwrap_or_else(|_| "beardog".to_string());
+        let provider =
+            std::env::var("BIOMEOS_SECURITY_PROVIDER").unwrap_or_else(|_| "beardog".to_string());
         let mut nucleation = SocketNucleation::default();
         let default_socket = nucleation.assign_socket(&provider, &context.family_id);
         if tokio::fs::metadata(&default_socket).await.is_ok() {
@@ -744,9 +744,9 @@ impl GraphExecutor {
         node: &GraphNode,
         context: &ExecutionContext,
     ) -> Result<serde_json::Value> {
+        use std::time::Duration;
         use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
         use tokio::net::UnixStream;
-        use std::time::Duration;
 
         // Get target primal from config
         let target = node
@@ -788,13 +788,17 @@ impl GraphExecutor {
         });
 
         // Connect to primal
-        let stream = tokio::time::timeout(
-            Duration::from_secs(10),
-            UnixStream::connect(&socket_path),
-        )
-        .await
-        .context(format!("Timeout connecting to {} at {}", target, socket_path))?
-        .context(format!("Failed to connect to {} at {}", target, socket_path))?;
+        let stream =
+            tokio::time::timeout(Duration::from_secs(10), UnixStream::connect(&socket_path))
+                .await
+                .context(format!(
+                    "Timeout connecting to {} at {}",
+                    target, socket_path
+                ))?
+                .context(format!(
+                    "Failed to connect to {} at {}",
+                    target, socket_path
+                ))?;
 
         let (read_half, mut write_half) = stream.into_split();
 
@@ -807,22 +811,31 @@ impl GraphExecutor {
         // Read response with timeout
         let mut reader = BufReader::new(read_half);
         let mut response_line = String::new();
-        tokio::time::timeout(Duration::from_secs(30), reader.read_line(&mut response_line))
-            .await
-            .context(format!("Timeout waiting for {} response", target))?
-            .context(format!("Failed to read response from {}", target))?;
+        tokio::time::timeout(
+            Duration::from_secs(30),
+            reader.read_line(&mut response_line),
+        )
+        .await
+        .context(format!("Timeout waiting for {} response", target))?
+        .context(format!("Failed to read response from {}", target))?;
 
         let response: serde_json::Value = serde_json::from_str(&response_line)
             .context(format!("Invalid JSON response from {}", target))?;
 
         // Check for error
         if let Some(error) = response.get("error") {
-            let error_msg = error.get("message").and_then(|m| m.as_str()).unwrap_or("Unknown error");
+            let error_msg = error
+                .get("message")
+                .and_then(|m| m.as_str())
+                .unwrap_or("Unknown error");
             anyhow::bail!("RPC error from {}: {}", target, error_msg);
         }
 
         // Extract result
-        let result = response.get("result").cloned().unwrap_or(serde_json::Value::Null);
+        let result = response
+            .get("result")
+            .cloned()
+            .unwrap_or(serde_json::Value::Null);
 
         info!("   ✅ RPC call successful: {} → {:?}", method, result);
 

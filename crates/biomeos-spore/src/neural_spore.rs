@@ -12,32 +12,46 @@ use tracing::{info, warn};
 /// Metrics collected during deployment
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeploymentMetrics {
+    /// Total deployment wall-clock time in milliseconds
     pub total_duration_ms: u64,
+    /// Number of primals successfully deployed
     pub primals_deployed: usize,
+    /// Number of primals that failed deployment
     pub primals_failed: usize,
+    /// Per-phase timing and status
     pub phase_metrics: Vec<PhaseMetrics>,
+    /// ISO-8601 timestamp of when metrics were captured
     pub timestamp: String,
 }
 
 /// Metrics for individual phase
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PhaseMetrics {
+    /// Phase ordinal (0-based)
     pub phase_id: usize,
+    /// Number of nodes in this phase
     pub node_count: usize,
+    /// Phase duration in milliseconds
     pub duration_ms: u64,
+    /// Whether this phase completed successfully
     pub success: bool,
+    /// Error messages for nodes that failed
     pub failures: Vec<String>,
 }
 
 /// Rollback state tracker
 #[derive(Debug, Clone)]
 pub struct RollbackState {
+    /// PIDs of spawned primal processes to kill on rollback
     pub spawned_pids: Vec<u32>,
+    /// Socket file paths to clean up on rollback
     pub created_sockets: Vec<PathBuf>,
+    /// When the deployment started (for timeout tracking)
     pub started_at: Instant,
 }
 
 impl RollbackState {
+    /// Create a new empty rollback state
     pub fn new() -> Self {
         Self {
             spawned_pids: Vec::new(),
@@ -116,9 +130,13 @@ impl RollbackState {
 
 /// LiveSpore with Neural API support
 pub struct NeuralSpore {
+    /// Root path of the spore (e.g. USB mount / biomeOS)
     pub root_path: PathBuf,
+    /// Directory containing graph TOML files
     pub graphs_dir: PathBuf,
+    /// Directory containing primal binaries
     pub binaries_dir: PathBuf,
+    /// Metrics collected during the last deployment (if any)
     pub metrics: Option<DeploymentMetrics>,
 }
 

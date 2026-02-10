@@ -31,6 +31,20 @@ pub enum TransportEndpoint {
         /// Port number
         port: u16,
     },
+
+    /// HTTP JSON-RPC gateway (Tier 2 - Inter-gate covalent bond transport)
+    ///
+    /// Sends JSON-RPC requests as HTTP POST to `/jsonrpc` on a remote
+    /// Songbird instance. This is the preferred transport for inter-NUCLEUS
+    /// communication over LAN (covalent bonding) and internet (ionic bonding).
+    ///
+    /// The port is runtime-discoverable via beacon exchange, NOT hardcoded.
+    HttpJsonRpc {
+        /// Host address
+        host: String,
+        /// HTTP port (Songbird default: 8080, runtime-discovered via beacon)
+        port: u16,
+    },
 }
 
 impl TransportEndpoint {
@@ -38,7 +52,7 @@ impl TransportEndpoint {
     pub fn tier(&self) -> u8 {
         match self {
             Self::UnixSocket { .. } | Self::AbstractSocket { .. } => 1,
-            Self::TcpSocket { .. } => 2,
+            Self::TcpSocket { .. } | Self::HttpJsonRpc { .. } => 2,
         }
     }
 
@@ -53,6 +67,7 @@ impl TransportEndpoint {
             Self::UnixSocket { path } => format!("unix://{}", path.display()),
             Self::AbstractSocket { name } => format!("abstract://@{}", name),
             Self::TcpSocket { host, port } => format!("tcp://{}:{}", host, port),
+            Self::HttpJsonRpc { host, port } => format!("http://{}:{}/jsonrpc", host, port),
         }
     }
 
@@ -70,6 +85,13 @@ impl TransportEndpoint {
             return Some(Self::AbstractSocket {
                 name: stripped.to_string(),
             });
+        }
+
+        // HTTP JSON-RPC: explicit prefix
+        if let Some(stripped) = value.strip_prefix("http://") {
+            // Strip trailing /jsonrpc if present
+            let stripped = stripped.strip_suffix("/jsonrpc").unwrap_or(stripped);
+            return Self::parse_http(stripped);
         }
 
         // TCP: explicit prefix or host:port format
@@ -98,6 +120,16 @@ impl TransportEndpoint {
             let port: u16 = parts[0].parse().ok()?;
             let host = parts[1].to_string();
             return Some(Self::TcpSocket { host, port });
+        }
+        None
+    }
+
+    fn parse_http(value: &str) -> Option<Self> {
+        let parts: Vec<&str> = value.rsplitn(2, ':').collect();
+        if parts.len() == 2 {
+            let port: u16 = parts[0].parse().ok()?;
+            let host = parts[1].to_string();
+            return Some(Self::HttpJsonRpc { host, port });
         }
         None
     }

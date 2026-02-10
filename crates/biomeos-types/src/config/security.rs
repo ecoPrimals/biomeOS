@@ -65,14 +65,23 @@ pub struct AuthenticationConfig {
 /// Authentication methods
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AuthMethod {
+    /// No authentication
     None,
+    /// API key authentication
     ApiKey,
+    /// Bearer token authentication
     Bearer,
+    /// HTTP Basic authentication
     Basic,
+    /// JSON Web Token
     Jwt,
+    /// OAuth 2.0
     OAuth2,
+    /// SAML-based SSO
     Saml,
+    /// LDAP directory authentication
     Ldap,
+    /// Custom authentication handler
     Custom(String),
 }
 
@@ -101,14 +110,23 @@ pub struct JwtConfig {
 /// JWT algorithms
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum JwtAlgorithm {
+    /// HMAC-SHA256
     HS256,
+    /// HMAC-SHA384
     HS384,
+    /// HMAC-SHA512
     HS512,
+    /// RSA-SHA256
     RS256,
+    /// RSA-SHA384
     RS384,
+    /// RSA-SHA512
     RS512,
+    /// ECDSA-SHA256
     ES256,
+    /// ECDSA-SHA384
     ES384,
+    /// ECDSA-SHA512
     ES512,
 }
 
@@ -166,8 +184,11 @@ pub struct ApiKeyConfig {
 /// API key validation methods
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ApiKeyValidation {
+    /// Validate against a database
     Database,
+    /// Validate against a static list of keys
     StaticList(Vec<String>),
+    /// Validate via an external service
     External(String),
 }
 
@@ -193,10 +214,15 @@ pub struct MfaConfig {
 /// MFA methods
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MfaMethod {
+    /// Time-based one-time password
     Totp,
+    /// SMS verification code
     Sms,
+    /// Email verification code
     Email,
+    /// Hardware security key (e.g., YubiKey)
     Hardware,
+    /// Backup recovery codes
     Backup,
 }
 
@@ -258,10 +284,15 @@ pub struct AuthorizationConfig {
 /// Authorization policies
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AuthorizationPolicy {
+    /// Allow all requests by default
     Allow,
+    /// Deny all requests by default
     Deny,
+    /// Use role-based access control
     Rbac,
+    /// Use attribute-based access control
     Abac,
+    /// Custom authorization handler
     Custom(String),
 }
 
@@ -301,9 +332,13 @@ pub struct AbacRule {
 /// Authorization actions
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AuthorizationAction {
+    /// Allow the request
     Allow,
+    /// Deny the request
     Deny,
+    /// Log the request but allow it
     Log,
+    /// Challenge the user for additional credentials
     Challenge,
 }
 
@@ -352,9 +387,13 @@ pub struct DataInTransitConfig {
 /// Encryption algorithms
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum EncryptionAlgorithm {
+    /// AES-256 in GCM mode (authenticated encryption)
     AES256GCM,
+    /// AES-256 in CBC mode
     AES256CBC,
+    /// ChaCha20-Poly1305 (authenticated encryption)
     ChaCha20Poly1305,
+    /// Custom encryption algorithm
     Custom(String),
 }
 
@@ -374,10 +413,15 @@ pub struct KeyManagementConfig {
 /// Key storage backends
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum KeyStorageBackend {
+    /// Local filesystem storage
     Local,
+    /// HashiCorp Vault
     Vault,
+    /// Hardware Security Module
     Hsm,
+    /// Cloud Key Management Service
     Kms,
+    /// Custom key storage
     Custom(String),
 }
 
@@ -397,9 +441,13 @@ pub struct KeyDerivationConfig {
 /// Key derivation algorithms
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum KeyDerivationAlgorithm {
+    /// PBKDF2 (Password-Based Key Derivation Function 2)
     PBKDF2,
+    /// Scrypt memory-hard function
     Scrypt,
+    /// Argon2 memory-hard function
     Argon2,
+    /// Custom key derivation
     Custom(String),
 }
 
@@ -425,9 +473,13 @@ pub struct AuditConfig {
 /// Audit destinations
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AuditDestination {
+    /// Write audit logs to a file
     File(PathBuf),
+    /// Forward to syslog
     Syslog(SyslogConfig),
+    /// Store in a database
     Database(DatabaseConfig),
+    /// Send to an external service
     External(String),
 }
 
@@ -460,22 +512,34 @@ pub struct DatabaseConfig {
 /// Audit events
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AuditEvent {
+    /// Authentication events (login, logout, failures)
     Authentication,
+    /// Authorization events (access granted/denied)
     Authorization,
+    /// Data access events (reads, writes)
     DataAccess,
+    /// Configuration change events
     Configuration,
+    /// Administrative actions
     Administrative,
+    /// Security-related events
     Security,
+    /// Error events
     Error,
+    /// Audit all event types
     All,
 }
 
 /// Audit log formats
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AuditFormat {
+    /// JSON format
     Json,
+    /// Common Event Format
     Cef,
+    /// Syslog format
     Syslog,
+    /// Custom format template
     Custom(String),
 }
 
@@ -511,9 +575,13 @@ pub struct SessionConfig {
 /// Session storage types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SessionStorage {
+    /// In-memory storage (not persistent)
     Memory,
+    /// File-based storage
     File(PathBuf),
+    /// Database-backed storage
     Database(DatabaseConfig),
+    /// Redis-backed storage
     Redis(RedisConfig),
 }
 
@@ -555,8 +623,11 @@ pub struct CookieConfig {
 /// SameSite cookie attribute
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SameSite {
+    /// Strict same-site policy
     Strict,
+    /// Lax same-site policy (default)
     Lax,
+    /// No same-site restriction
     None,
 }
 

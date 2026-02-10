@@ -37,6 +37,9 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # Collections
 indexmap = "2.0"
 
+# System info (statvfs for disk usage, pure Rust wrapper)
+nix = { version = "0.29", features = ["fs"] }
+
 # Time
 chrono = { version = "0.4", features = ["serde"] }
 

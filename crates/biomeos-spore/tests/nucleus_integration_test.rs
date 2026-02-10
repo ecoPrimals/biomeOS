@@ -51,6 +51,7 @@ async fn test_missing_plasmidbin() {
         label: "test-spore".to_string(),
         node_id: "test-node".to_string(),
         spore_type: SporeType::Live,
+        family_id: "test-family".to_string(),
     };
 
     let result = Spore::create(mount_point, config).await;
@@ -88,6 +89,7 @@ async fn test_plasmidbin_deployment() {
         label: "test-spore".to_string(),
         node_id: "test-node".to_string(),
         spore_type: SporeType::Live,
+        family_id: "test-family".to_string(),
     };
 
     let result = Spore::create(mount_point.clone(), config).await;
@@ -189,6 +191,7 @@ async fn test_spore_manifest_creation() {
         label: "test-spore".to_string(),
         node_id: "test-node".to_string(),
         spore_type: SporeType::Live,
+        family_id: "test-family".to_string(),
     };
 
     let result = Spore::create(mount_point.clone(), config).await;

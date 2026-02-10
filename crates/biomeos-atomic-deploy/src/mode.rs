@@ -77,10 +77,10 @@ impl BiomeOsMode {
         // Uses SocketNucleation for deterministic paths
         // DEEP DEBT EVOLUTION: Resolve provider names from env, not hardcoded
 
-        let security_provider = std::env::var("BIOMEOS_SECURITY_PROVIDER")
-            .unwrap_or_else(|_| "beardog".to_string());
-        let network_provider = std::env::var("BIOMEOS_NETWORK_PROVIDER")
-            .unwrap_or_else(|_| "songbird".to_string());
+        let security_provider =
+            std::env::var("BIOMEOS_SECURITY_PROVIDER").unwrap_or_else(|_| "beardog".to_string());
+        let network_provider =
+            std::env::var("BIOMEOS_NETWORK_PROVIDER").unwrap_or_else(|_| "songbird".to_string());
 
         let mut nucleation = SocketNucleation::default();
         let security_socket = nucleation.assign_socket(&security_provider, family_id);
@@ -88,13 +88,19 @@ impl BiomeOsMode {
 
         // Check security provider
         if Self::primal_reachable(security_socket.to_string_lossy().as_ref()).await {
-            debug!("✅ Security provider ({}) reachable at {:?}", security_provider, security_socket);
+            debug!(
+                "✅ Security provider ({}) reachable at {:?}",
+                security_provider, security_socket
+            );
             return true;
         }
 
         // Check network provider
         if Self::primal_reachable(network_socket.to_string_lossy().as_ref()).await {
-            debug!("✅ Network provider ({}) reachable at {:?}", network_provider, network_socket);
+            debug!(
+                "✅ Network provider ({}) reachable at {:?}",
+                network_provider, network_socket
+            );
             return true;
         }
 

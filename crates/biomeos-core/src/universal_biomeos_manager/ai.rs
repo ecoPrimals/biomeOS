@@ -401,18 +401,27 @@ enum QueryIntent {
 /// AI Recommendation
 #[derive(Debug, Clone)]
 pub struct AIRecommendation {
+    /// Short title for the recommendation
     pub title: String,
+    /// Detailed description of what to do and why
     pub description: String,
+    /// How important this recommendation is
     pub priority: Priority,
+    /// Category (e.g. "performance", "security", "reliability")
     pub category: String,
+    /// Specific command or action to take
     pub action: Option<String>,
+    /// Expected improvement if recommendation is followed
     pub estimated_impact: String,
 }
 
 /// Recommendation priority
 #[derive(Debug, Clone)]
 pub enum Priority {
+    /// Should be addressed immediately
     High,
+    /// Should be addressed soon
     Medium,
+    /// Can be addressed when convenient
     Low,
 }

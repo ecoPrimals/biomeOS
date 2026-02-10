@@ -3,6 +3,9 @@
 //! A pure Rust implementation of a self-extracting, multi-architecture
 //! binary format for distributing ecoPrimals primals.
 //!
+#![warn(missing_docs)]
+#![deny(unsafe_code)]
+//!
 //! # Deep Debt Principles
 //!
 //! - **Runtime Discovery**: Architecture detection at execution time

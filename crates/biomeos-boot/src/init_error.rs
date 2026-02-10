@@ -12,103 +12,145 @@ pub type Result<T> = std::result::Result<T, BootError>;
 #[derive(Debug, Error)]
 #[non_exhaustive]
 pub enum BootError {
-    /// Init system errors
+    /// Not running as PID 1
     #[error("not running as PID 1 (current PID: {0})")]
     NotPid1(i32),
 
+    /// Init system is already running
     #[error("init already running")]
     InitAlreadyRunning,
 
-    /// Filesystem errors
+    /// Mount operation failed
     #[error("failed to mount {target} from {fs_source}: {errno}")]
     MountFailed {
+        /// Mount target path
         target: String,
+        /// Filesystem source device
         fs_source: String,
+        /// System error number
         errno: nix::errno::Errno,
     },
 
+    /// Filesystem is already mounted
     #[error("filesystem {0} already mounted")]
     AlreadyMounted(String),
 
+    /// Failed to create a directory
     #[error("failed to create directory {path}: {error}")]
-    DirectoryCreation { path: PathBuf, error: String },
+    DirectoryCreation {
+        /// Directory path that failed
+        path: PathBuf,
+        /// Error details
+        error: String,
+    },
 
-    /// Hardware detection errors
+    /// Hardware detection failed
     #[error("hardware detection failed: {0}")]
     HardwareDetection(#[source] Box<dyn std::error::Error + Send + Sync>),
 
+    /// Unsupported CPU architecture
     #[error("unsupported architecture: {0}")]
     UnsupportedArchitecture(String),
 
-    /// Network errors
+    /// Network configuration failed
     #[error("network configuration failed: {0}")]
     NetworkConfig(#[source] Box<dyn std::error::Error + Send + Sync>),
 
+    /// Failed to detect network interfaces
     #[error("failed to detect network interfaces")]
     NetworkInterfaceDetection,
 
-    /// Boot parameter errors
+    /// Failed to read kernel command line
     #[error("failed to read /proc/cmdline: {0}")]
     CmdlineRead(#[source] std::io::Error),
 
+    /// Invalid boot parameter value
     #[error("invalid boot parameter: {0}")]
     InvalidBootParameter(String),
 
+    /// Required boot parameter is missing
     #[error("missing required boot parameter: {0}")]
     MissingBootParameter(String),
 
-    /// Shell and process errors
+    /// Failed to spawn emergency shell
     #[error("failed to spawn shell: {0}")]
     ShellSpawn(#[source] std::io::Error),
 
+    /// Shell exited unexpectedly
     #[error("shell exited unexpectedly with code {0:?}")]
     ShellExited(Option<i32>),
 
+    /// Failed to execute a process
     #[error("failed to execute {command}: {source}")]
     ProcessExecution {
+        /// Command that failed
         command: String,
+        /// I/O error source
         #[source]
         source: std::io::Error,
     },
 
-    /// Console I/O errors
+    /// Console initialization failed
     #[error("failed to initialize console output: {0}")]
     ConsoleInit(#[source] std::io::Error),
 
+    /// Console write failed
     #[error("failed to write to console: {0}")]
     ConsoleWrite(#[source] std::io::Error),
 
-    /// Device detection errors
+    /// USB device detection failed
     #[error("failed to detect USB device: {0}")]
     UsbDetection(String),
 
+    /// BiomeOS USB drive not found
     #[error("BiomeOS USB not found at expected paths")]
     BiomeOsUsbNotFound,
 
-    /// Emergency mode errors
+    /// Emergency mode failed
     #[error("emergency mode failed: {0}")]
     EmergencyMode(String),
 
-    /// Generic I/O errors
+    /// Generic I/O error
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
 
-    /// Initialization errors
+    /// Initialization failed
     #[error("initialization failed: {0}")]
     InitializationFailed(String),
 
-    // Device management errors (new for boot_logger)
+    /// Device not found
     #[error("device not found: {device}")]
-    DeviceNotFound { device: String },
+    DeviceNotFound {
+        /// Device path or name
+        device: String,
+    },
 
+    /// Failed to open a device
     #[error("failed to open device {device}: {error}")]
-    DeviceOpen { device: String, error: String },
+    DeviceOpen {
+        /// Device path or name
+        device: String,
+        /// Error details
+        error: String,
+    },
 
+    /// Failed to create a device
     #[error("failed to create device {device}: {error}")]
-    DeviceCreation { device: String, error: String },
+    DeviceCreation {
+        /// Device path or name
+        device: String,
+        /// Error details
+        error: String,
+    },
 
+    /// I/O error during a specific operation
     #[error("I/O error during {operation}: {error}")]
-    IoError { operation: String, error: String },
+    IoError {
+        /// Operation that failed
+        operation: String,
+        /// Error details
+        error: String,
+    },
 }
 
 impl BootError {

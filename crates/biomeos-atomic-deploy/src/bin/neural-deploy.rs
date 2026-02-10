@@ -3,7 +3,7 @@
 //! Client for deploying ecosystems via Neural API graphs.
 //!
 //! Usage:
-//!   neural-deploy <graph-id> [--family-id <ID>]
+//!   `neural-deploy <graph-id> [--family-id <ID>]`
 //!
 //! Examples:
 //!   neural-deploy 01_nucleus_enclave

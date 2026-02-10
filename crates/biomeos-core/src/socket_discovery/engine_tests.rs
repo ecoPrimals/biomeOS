@@ -244,8 +244,10 @@ async fn test_cache_functionality() {
 
 #[tokio::test]
 async fn test_cache_ttl_expiration() {
-    let mut strategy = DiscoveryStrategy::default();
-    strategy.cache_ttl_secs = 1; // Very short TTL
+    let strategy = DiscoveryStrategy {
+        cache_ttl_secs: 1, // Very short TTL
+        ..Default::default()
+    };
     let discovery = SocketDiscovery::with_strategy("test", strategy);
 
     let socket = DiscoveredSocket::from_unix_path(
@@ -267,8 +269,10 @@ async fn test_cache_ttl_expiration() {
 
 #[tokio::test]
 async fn test_cache_disabled() {
-    let mut strategy = DiscoveryStrategy::default();
-    strategy.enable_cache = false;
+    let strategy = DiscoveryStrategy {
+        enable_cache: false,
+        ..Default::default()
+    };
     let discovery = SocketDiscovery::with_strategy("test", strategy);
 
     let socket = DiscoveredSocket::from_unix_path(
@@ -318,8 +322,10 @@ async fn test_discover_with_fallback_nonexistent() {
 
 #[tokio::test]
 async fn test_discover_with_fallback_tcp_disabled() {
-    let mut strategy = DiscoveryStrategy::default();
-    strategy.enable_tcp_fallback = false;
+    let strategy = DiscoveryStrategy {
+        enable_tcp_fallback: false,
+        ..Default::default()
+    };
     let discovery = SocketDiscovery::with_strategy("test", strategy);
 
     let result = discovery.discover_with_fallback("nonexistent").await;

@@ -21,15 +21,19 @@ pub type Result<T> = std::result::Result<T, NicheError>;
 /// Niche-related errors
 #[derive(Debug, thiserror::Error)]
 pub enum NicheError {
+    /// I/O error reading niche file
     #[error("Failed to read niche file: {0}")]
     IoError(#[from] std::io::Error),
 
+    /// TOML parsing error
     #[error("Failed to parse TOML: {0}")]
     ParseError(#[from] toml::de::Error),
 
+    /// Manifest validation error
     #[error("Validation error: {0}")]
     ValidationError(String),
 
+    /// Referenced graph file not found
     #[error("Graph file not found: {0}")]
     GraphNotFound(String),
 }
@@ -55,15 +59,21 @@ pub struct NicheManifest {
 /// Niche metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NicheMetadata {
+    /// Niche name (unique identifier)
     pub name: String,
+    /// Niche version (semver)
     pub version: String,
 
+    /// Niche type (e.g. "development", "production")
     #[serde(rename = "type")]
     pub niche_type: String,
 
+    /// Human-readable description
     pub description: String,
+    /// Target architecture (e.g. "x86_64", "aarch64")
     pub architecture: String,
 
+    /// Optional path to the family seed file for identity derivation
     #[serde(default)]
     pub family_seed_file: Option<String>,
 }

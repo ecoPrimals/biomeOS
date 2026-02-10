@@ -82,13 +82,21 @@ pub enum PrimalInterface {
 /// Interface patterns we try to discover
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum InterfacePattern {
+    /// Direct execution (no subcommands)
     Direct,
+    /// `serve` subcommand pattern
     SubcommandServe,
+    /// `service` subcommand pattern
     SubcommandService,
+    /// `start` subcommand pattern
     SubcommandStart,
+    /// `run` subcommand pattern
     SubcommandRun,
+    /// Systemd service management
     Systemd,
+    /// Docker container management
     Docker,
+    /// HTTP API-based lifecycle control
     ApiLifecycle,
 }
 

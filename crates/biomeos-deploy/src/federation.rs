@@ -223,8 +223,12 @@ impl Federation {
 /// Federation status
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FederationStatus {
+    /// Federation name
     pub name: String,
+    /// Total number of VMs in the federation
     pub total_vms: usize,
+    /// Number of currently running VMs
     pub running_vms: usize,
+    /// Health status of each VM
     pub vm_health: Vec<VmHealth>,
 }

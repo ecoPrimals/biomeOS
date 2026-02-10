@@ -13,7 +13,7 @@
 use biomeos_spore::DarkForestBeacon;
 
 #[tokio::test]
-#[ignore] // Requires beardog with genetic.derive_lineage_beacon_key
+#[ignore = "Requires running BearDog with genetic.derive_lineage_beacon_key"]
 async fn test_pure_noise_beacon_generation() {
     // This test validates biomeOS implementation
     // Requires beardog to have genetic.derive_lineage_beacon_key implemented

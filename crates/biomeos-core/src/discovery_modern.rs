@@ -62,24 +62,43 @@ pub type DiscoveryResult<T> = Result<T, DiscoveryError>;
 /// Discovery errors
 #[derive(Debug, Error)]
 pub enum DiscoveryError {
+    /// Primal was not found at the specified endpoint
     #[error("Primal not found at {endpoint}")]
-    NotFound { endpoint: String },
+    NotFound {
+        /// Endpoint that was probed
+        endpoint: String,
+    },
 
+    /// Connection timed out
     #[error("Connection timeout after {timeout:?}")]
-    Timeout { timeout: Duration },
+    Timeout {
+        /// Duration before timeout occurred
+        timeout: Duration,
+    },
 
+    /// Response was malformed or unexpected
     #[error("Invalid response from primal: {message}")]
-    InvalidResponse { message: String },
+    InvalidResponse {
+        /// Descriptive message about the invalid response
+        message: String,
+    },
 
+    /// Authentication / identity verification failed
     #[error("Authentication failed for primal {id}")]
-    AuthFailed { id: String },
+    AuthFailed {
+        /// Primal identifier that failed auth
+        id: String,
+    },
 
+    /// Network-level error during discovery
     #[error("Network error: {0}")]
     Network(String),
 
+    /// URL parsing failed
     #[error("URL parse error: {0}")]
     UrlParse(#[from] url::ParseError),
 
+    /// Catch-all for other errors
     #[error(transparent)]
     Other(#[from] anyhow::Error),
 }

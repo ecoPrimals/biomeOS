@@ -50,7 +50,7 @@ pub struct CapabilityParameter {
 
 /// Universal Primal Capabilities - fully extensible
 ///
-/// This replaces the old Vec<String> capabilities with a structured approach.
+/// This replaces the old `Vec<String>` capabilities with a structured approach.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct PrimalCapability {
     /// Capability category (e.g., "compute", "storage", "security")
@@ -131,9 +131,13 @@ pub struct CapabilityPerformance {
 /// Latency characteristics
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct LatencyCharacteristics {
+    /// 50th percentile (median) latency in milliseconds
     pub p50_ms: u32,
+    /// 95th percentile latency in milliseconds
     pub p95_ms: u32,
+    /// 99th percentile latency in milliseconds
     pub p99_ms: u32,
+    /// Maximum latency in milliseconds
     pub max_ms: u32,
 }
 
@@ -182,66 +186,83 @@ impl PrimalCapability {
     }
 
     // Convenience constructors for common capabilities
+
+    /// Create a compute capability
     pub fn compute() -> Self {
         Self::new("compute", "compute", "1.0")
     }
 
+    /// Create a storage capability
     pub fn storage() -> Self {
         Self::new("storage", "storage", "1.0")
     }
 
+    /// Create a networking capability
     pub fn networking() -> Self {
         Self::new("networking", "networking", "1.0")
     }
 
+    /// Create a security capability
     pub fn security() -> Self {
         Self::new("security", "security", "1.0")
     }
 
+    /// Create an AI capability
     pub fn ai() -> Self {
         Self::new("ai", "ai", "1.0")
     }
 
+    /// Create a machine learning capability
     pub fn machine_learning() -> Self {
         Self::new("ml", "machine-learning", "1.0")
     }
 
+    /// Create an analytics capability
     pub fn analytics() -> Self {
         Self::new("analytics", "analytics", "1.0")
     }
 
+    /// Create a gaming capability
     pub fn gaming() -> Self {
         Self::new("gaming", "gaming", "1.0")
     }
 
+    /// Create a web development capability
     pub fn web_development() -> Self {
         Self::new("web", "web-development", "1.0")
     }
 
+    /// Create an orchestration capability
     pub fn orchestration() -> Self {
         Self::new("orchestration", "orchestration", "1.0")
     }
 
+    /// Create an authentication capability
     pub fn authentication() -> Self {
         Self::new("authentication", "authentication", "1.0")
     }
 
+    /// Create an encryption capability
     pub fn encryption() -> Self {
         Self::new("encryption", "encryption", "1.0")
     }
 
+    /// Create a data processing capability
     pub fn data_processing() -> Self {
         Self::new("data", "data-processing", "1.0")
     }
 
+    /// Create a service discovery capability
     pub fn service_discovery() -> Self {
         Self::new("networking", "service-discovery", "1.0")
     }
 
+    /// Create a load balancing capability
     pub fn load_balancing() -> Self {
         Self::new("networking", "load-balancing", "1.0")
     }
 
+    /// Create a custom capability with the given name
     pub fn custom(name: impl Into<String>) -> Self {
         Self::new("custom", name, "1.0")
     }

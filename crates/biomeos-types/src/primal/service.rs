@@ -233,10 +233,15 @@ pub enum AccessLevel {
 /// Request priority levels
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub enum RequestPriority {
+    /// Low priority
     Low = 1,
+    /// Normal priority
     Normal = 2,
+    /// High priority
     High = 3,
+    /// Critical priority
     Critical = 4,
+    /// Emergency priority
     Emergency = 5,
 }
 

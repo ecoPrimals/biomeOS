@@ -27,6 +27,7 @@ pub struct SporeConfig {
     pub spore_type: SporeType,
 }
 
+/// Returns the default family ID from `FAMILY_ID` env var or `"default"`
 pub fn default_family_id() -> String {
     std::env::var("FAMILY_ID").unwrap_or_else(|_| "default".to_string())
 }

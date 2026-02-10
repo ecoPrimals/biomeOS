@@ -149,8 +149,11 @@ impl BootLogger {
 /// Boot logger statistics
 #[derive(Debug)]
 pub struct BootLoggerStats {
+    /// Total number of log entries recorded
     pub log_count: usize,
+    /// System uptime in milliseconds since boot
     pub uptime_ms: u64,
+    /// Whether serial console logging is active
     pub serial_active: bool,
 }
 

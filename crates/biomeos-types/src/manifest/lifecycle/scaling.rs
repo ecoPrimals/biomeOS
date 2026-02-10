@@ -25,10 +25,15 @@ pub struct ScalingSpec {
 /// Scaling types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ScalingType {
+    /// No scaling
     None,
+    /// Horizontal scaling only
     Horizontal,
+    /// Vertical scaling only
     Vertical,
+    /// Both horizontal and vertical scaling
     Both,
+    /// Custom scaling strategy
     Custom,
 }
 
@@ -71,24 +76,39 @@ pub struct ScalingMetric {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ScalingMetricType {
     /// Resource metrics (CPU, Memory)
-    Resource { name: ResourceName },
+    Resource {
+        /// Resource name to monitor
+        name: ResourceName,
+    },
     /// Pod metrics
-    Pods { metric_name: String },
+    Pods {
+        /// Metric name to query
+        metric_name: String,
+    },
     /// Object metrics
     Object {
+        /// Metric name to query
         metric_name: String,
+        /// Target object reference
         target: ObjectTarget,
     },
     /// External metrics
-    External { metric_name: String },
+    External {
+        /// External metric name
+        metric_name: String,
+    },
 }
 
 /// Resource names
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ResourceName {
+    /// CPU resource
     Cpu,
+    /// Memory resource
     Memory,
+    /// Storage resource
     Storage,
+    /// Custom resource
     Custom(String),
 }
 
@@ -139,7 +159,9 @@ pub struct ScalingPolicy {
 /// Scaling policy types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ScalingPolicyType {
+    /// Scale by pod count
     Pods,
+    /// Scale by percentage
     Percent,
 }
 
@@ -169,8 +191,11 @@ pub struct ScalingDirectionBehavior {
 /// Scaling policy select
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ScalingPolicySelect {
+    /// Select the policy with the maximum change
     Max,
+    /// Select the policy with the minimum change
     Min,
+    /// Scaling is disabled
     Disabled,
 }
 
@@ -190,8 +215,11 @@ pub struct VerticalScalingSpec {
 /// Vertical scaling modes
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum VerticalScalingMode {
+    /// Vertical scaling is off
     Off,
+    /// Apply recommendations only at creation
     Initial,
+    /// Automatically apply recommendations
     Auto,
 }
 
@@ -224,9 +252,13 @@ pub struct ContainerResourcePolicy {
 /// Controlled values
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ControlledValue {
+    /// CPU requests in millicores
     RequestsCpuMillis,
+    /// Memory requests in bytes
     RequestsMemoryBytes,
+    /// CPU limits in millicores
     LimitsCpuMillis,
+    /// Memory limits in bytes
     LimitsMemoryBytes,
 }
 

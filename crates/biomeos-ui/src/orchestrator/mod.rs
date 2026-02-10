@@ -185,11 +185,7 @@ impl InteractiveUIOrchestrator {
 
     /// Build the initial UI state from discovered primals
     async fn build_initial_ui_state(&self) -> serde_json::Value {
-        Discovery::build_initial_ui_state(
-            &self.family_id,
-            &self.connections,
-        )
-        .await
+        Discovery::build_initial_ui_state(&self.family_id, &self.connections).await
     }
 
     /// Handle a user action
@@ -199,12 +195,7 @@ impl InteractiveUIOrchestrator {
     pub async fn handle_user_action(&self, action: UserAction) -> Result<ActionResult> {
         debug!(?action, "Handling user action");
 
-        ActionHandler::handle_user_action(
-            action,
-            &self.family_id,
-            &self.connections,
-        )
-        .await
+        ActionHandler::handle_user_action(action, &self.family_id, &self.connections).await
     }
 
     /// Run the orchestrator event loop
@@ -214,9 +205,14 @@ impl InteractiveUIOrchestrator {
         info!("Running Interactive UI Orchestrator event loop...");
 
         // Subscribe to registry provider events if available
-        let registry_name = std::env::var("BIOMEOS_REGISTRY_PROVIDER")
-            .unwrap_or_else(|_| "songbird".to_string());
-        if let Some(registry) = self.connections.get(&registry_name) {
+        let registry_name = discovery::resolve_capability_provider(
+            "BIOMEOS_REGISTRY_PROVIDER",
+            biomeos_types::CapabilityTaxonomy::Discovery,
+        );
+        if let Some(registry) = registry_name
+            .as_deref()
+            .and_then(|n| self.connections.get(n))
+        {
             match registry
                 .call(
                     "events.subscribe",
@@ -238,7 +234,10 @@ impl InteractiveUIOrchestrator {
             interval.tick().await;
 
             // Check for pending events from registry provider
-            if let Some(registry) = self.connections.get(&registry_name) {
+            if let Some(registry) = registry_name
+                .as_deref()
+                .and_then(|n| self.connections.get(n))
+            {
                 if let Ok(events) = registry.call("events.poll", serde_json::json!({})).await {
                     if let Some(event_list) = events.as_array() {
                         for event in event_list {

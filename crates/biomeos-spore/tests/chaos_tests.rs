@@ -35,6 +35,7 @@ async fn test_readonly_filesystem() {
         label: "test-spore".to_string(),
         node_id: "test-node".to_string(),
         spore_type: SporeType::Live,
+        family_id: "test-family".to_string(),
     };
 
     let result = Spore::create(mount_point.clone(), config).await;
@@ -108,6 +109,7 @@ async fn test_disk_full_simulation() {
         label: "test-spore".to_string(),
         node_id: "test-node".to_string(),
         spore_type: SporeType::Live,
+        family_id: "test-family".to_string(),
     };
 
     let result = Spore::create(mount_point, config).await;
@@ -148,6 +150,7 @@ async fn test_corrupt_binaries() {
         label: "test-spore".to_string(),
         node_id: "test-node".to_string(),
         spore_type: SporeType::Live,
+        family_id: "test-family".to_string(),
     };
 
     let result = Spore::create(mount_point.clone(), config).await;
@@ -179,6 +182,7 @@ async fn test_fat32_limitations() {
         label: "test-spore".to_string(),
         node_id: "test-node".to_string(),
         spore_type: SporeType::Live,
+        family_id: "test-family".to_string(),
     };
 
     let result = Spore::create(mount_point.clone(), config).await;
@@ -211,6 +215,7 @@ async fn test_concurrent_spore_creation() {
             label: format!("spore{}", i),
             node_id: format!("node{}", i),
             spore_type: SporeType::Live,
+            family_id: "test-family".to_string(),
         };
 
         let result = Spore::create(mount_point.clone(), config).await;

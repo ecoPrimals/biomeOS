@@ -190,13 +190,19 @@ async fn verify_cryptographic_lineage(
 
     // Discover security provider for cryptographic operations
     // DEEP DEBT EVOLUTION: Resolve provider name from env, not hardcoded
-    let security_provider = std::env::var("BIOMEOS_SECURITY_PROVIDER")
-        .unwrap_or_else(|_| "beardog".to_string());
+    let security_provider =
+        std::env::var("BIOMEOS_SECURITY_PROVIDER").unwrap_or_else(|_| "beardog".to_string());
     let beardog = AtomicClient::discover(&security_provider)
         .await
-        .context(format!("{} not available for cryptographic verification", security_provider))?;
+        .context(format!(
+            "{} not available for cryptographic verification",
+            security_provider
+        ))?;
 
-    debug!("{} discovered, performing cryptographic verification", security_provider);
+    debug!(
+        "{} discovered, performing cryptographic verification",
+        security_provider
+    );
 
     // Read family seed if available
     let seed_path = path.join(".family.seed");

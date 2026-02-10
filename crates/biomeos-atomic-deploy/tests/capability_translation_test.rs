@@ -292,7 +292,7 @@ async fn test_concurrent_socket_connections() {
 /// Test: What nc does that works
 /// NOTE: This test requires a running BearDog, skip if not available
 #[test]
-#[ignore] // Run with: cargo test test_nc_behavior -- --ignored
+#[ignore = "Requires running BearDog instance — run with cargo test -- --ignored"]
 fn test_nc_behavior() {
     use std::process::Command;
 
@@ -300,7 +300,7 @@ fn test_nc_behavior() {
 
     // This works with 5 second timeout
     let output = Command::new("timeout")
-        .args(&["5", "bash", "-c", 
+        .args(["5", "bash", "-c", 
             "echo '{\"jsonrpc\":\"2.0\",\"method\":\"crypto.x25519_generate_ephemeral\",\"params\":{},\"id\":1}' | nc -U /tmp/beardog-family.sock"])
         .output();
 

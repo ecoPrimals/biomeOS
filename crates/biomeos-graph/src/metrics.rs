@@ -148,7 +148,7 @@ impl MetricsCollector {
             min_duration = min_duration.min(record.duration_ms);
             max_duration_ms = max_duration_ms.max(record.duration_ms);
 
-            if last_executed.is_none() || record.executed_at > last_executed.unwrap() {
+            if last_executed.map_or(true, |prev| record.executed_at > prev) {
                 last_executed = Some(record.executed_at);
             }
         }

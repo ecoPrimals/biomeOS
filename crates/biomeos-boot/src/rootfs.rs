@@ -1,3 +1,8 @@
+//! Root filesystem builder for BiomeOS bootable images
+//!
+//! Creates qcow2 disk images with BiomeOS binaries, kernel modules,
+//! and configuration for standalone boot from USB or network.
+
 use anyhow::{Context, Result};
 use clap::Parser;
 use std::fs;
@@ -507,24 +512,25 @@ impl RootFsBuilder {
             let path = entry.path();
 
             if path.is_file() {
-                let filename = path.file_name().unwrap();
-                let dest = target_dir.join(filename);
+                if let Some(filename) = path.file_name() {
+                    let dest = target_dir.join(filename);
 
-                std::fs::copy(&path, &dest).with_context(|| {
-                    format!("Failed to copy primal {}", filename.to_string_lossy())
-                })?;
+                    std::fs::copy(&path, &dest).with_context(|| {
+                        format!("Failed to copy primal {}", filename.to_string_lossy())
+                    })?;
 
-                // Make executable
-                #[cfg(unix)]
-                {
-                    use std::os::unix::fs::PermissionsExt;
-                    let mut perms = std::fs::metadata(&dest)?.permissions();
-                    perms.set_mode(0o755);
-                    std::fs::set_permissions(&dest, perms)?;
+                    // Make executable
+                    #[cfg(unix)]
+                    {
+                        use std::os::unix::fs::PermissionsExt;
+                        let mut perms = std::fs::metadata(&dest)?.permissions();
+                        perms.set_mode(0o755);
+                        std::fs::set_permissions(&dest, perms)?;
+                    }
+
+                    info!("  ✓ Installed {}", filename.to_string_lossy());
+                    count += 1;
                 }
-
-                info!("  ✓ Installed {}", filename.to_string_lossy());
-                count += 1;
             }
         }
 
@@ -552,7 +558,10 @@ impl RootFsBuilder {
             let path = entry.path();
 
             if path.is_file() && path.extension().is_some_and(|ext| ext == "service") {
-                let filename = path.file_name().unwrap();
+                let filename = match path.file_name() {
+                    Some(f) => f,
+                    None => continue,
+                };
                 let dest = systemd_dir.join(filename);
 
                 std::fs::copy(&path, &dest).with_context(|| {
@@ -639,6 +648,7 @@ impl RootFsBuilder {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use tempfile::TempDir;
@@ -697,7 +707,7 @@ mod tests {
 
     // Integration test for NBD device detection (requires sudo)
     #[test]
-    #[ignore] // Run with: cargo test --ignored
+    #[ignore = "Requires NBD kernel module and sudo"]
     fn test_nbd_device_detection() {
         // This test requires NBD kernel module loaded
         let result = NbdGuard::find_available_device();

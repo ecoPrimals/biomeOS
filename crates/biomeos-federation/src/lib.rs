@@ -7,6 +7,9 @@
 //! - BearDog integration for all cryptographic operations
 //! - NUCLEUS secure discovery protocol (5-layer verification)
 
+#![warn(missing_docs)]
+#![deny(unsafe_code)]
+
 pub mod beardog_client;
 pub mod capability;
 pub mod discovery;
@@ -28,37 +31,49 @@ pub use unix_socket_client::{JsonRpcRequest, JsonRpcResponse, UnixSocketClient};
 
 use thiserror::Error;
 
+/// Errors produced by federation operations
 #[derive(Error, Debug)]
 pub enum FederationError {
+    /// Underlying I/O error
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
 
+    /// TOML deserialization error
     #[error("Serialization error: {0}")]
     Serialization(#[from] toml::de::Error),
 
+    /// TOML serialization error
     #[error("Deserialization error: {0}")]
     Deserialization(#[from] toml::ser::Error),
 
+    /// A requested node was not found in the federation
     #[error("Node {0} not found in federation")]
     NodeNotFound(String),
 
+    /// A requested sub-federation was not found
     #[error("Sub-federation {0} not found")]
     SubFederationNotFound(String),
 
+    /// An operation required a capability not allowed in the sub-federation
     #[error("Capability {0} not allowed in sub-federation {1}")]
     CapabilityDenied(String, String),
 
+    /// Genetic lineage verification failed
     #[error("Genetic lineage verification failed: {0}")]
     LineageVerificationFailed(String),
 
+    /// Error communicating with the security provider (BearDog)
     #[error("BearDog error: {0}")]
     BearDogError(String),
 
+    /// Primal discovery error
     #[error("Discovery error: {0}")]
     DiscoveryError(String),
 
+    /// Catch-all error
     #[error("Generic error: {0}")]
     Generic(String),
 }
 
+/// Convenience result alias for federation operations
 pub type FederationResult<T> = Result<T, FederationError>;

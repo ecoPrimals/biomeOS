@@ -1,5 +1,7 @@
-// Discovery utilities for CLI
-// Specialized discovery functions implemented: type filtering, comprehensive discovery, location-based, advanced filtering
+//! Discovery utilities for CLI
+//!
+//! Specialized discovery functions: type filtering, comprehensive discovery,
+//! location-based, and advanced filtering.
 
 use anyhow::Result;
 use biomeos_core::{universal_biomeos_manager::DiscoveryResult, UniversalBiomeOSManager};
@@ -81,13 +83,11 @@ impl DiscoveryUtils {
         let all_services = Self::endpoints_to_discovery_results(manager, all_endpoints).await?;
 
         // Categorize services
-        let mut by_type: std::collections::HashMap<String, Vec<_>> = std::collections::HashMap::new();
+        let mut by_type: std::collections::HashMap<String, Vec<_>> =
+            std::collections::HashMap::new();
         for service in &all_services {
             let category = service.primal_type.category.clone();
-            by_type
-                .entry(category)
-                .or_default()
-                .push(service.clone());
+            by_type.entry(category).or_default().push(service.clone());
         }
 
         // Test connectivity to each service
@@ -178,12 +178,19 @@ impl DiscoveryUtils {
     }
 }
 
+/// Report from a comprehensive discovery scan
 #[derive(Debug)]
 pub struct DiscoveryReport {
+    /// Total number of services discovered
     pub total_services: usize,
+    /// Services grouped by primal type category
     pub services_by_type: std::collections::HashMap<String, Vec<DiscoveryResult>>,
+    /// Number of services responding to health checks
     pub healthy_services: usize,
+    /// Number of services failing health checks
     pub unhealthy_services: usize,
+    /// Time taken for the discovery scan in milliseconds
     pub discovery_time_ms: u64,
+    /// When the discovery was performed
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }

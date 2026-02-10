@@ -3,33 +3,36 @@
 //! Rust implementation of genomeBin deployment, replacing POSIX shell wrappers
 //! with type-safe, cross-platform deployment infrastructure.
 //!
-//! ## Zero-Copy Architecture
+//! ## Safe I/O Architecture
 //!
-//! Uses memory-mapped I/O (mmap) for efficient genomeBin extraction:
-//! - No memory allocation for file contents
-//! - Kernel handles paging efficiently
-//! - ~50-80% memory reduction for large binaries
+//! Uses `std::fs::read()` for genomeBin extraction — 100% safe Rust with
+//! zero `unsafe` blocks. For a one-shot deployment tool, the allocation
+//! cost of reading the file is negligible compared to the disk I/O and
+//! extraction time. This allows `#![deny(unsafe_code)]` across the entire crate.
+
+#![warn(missing_docs)]
+#![deny(unsafe_code)]
 
 use anyhow::{bail, Context, Result};
 use colored::Colorize;
 use flate2::read::GzDecoder;
 use indicatif::{ProgressBar, ProgressStyle};
-use memmap2::Mmap;
 use std::fs::{self, File};
 use std::io::Read;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use tar::Archive;
 
-/// Threshold for using mmap (1 MB)
-const MMAP_THRESHOLD: u64 = 1024 * 1024;
-
 /// Supported architectures
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Architecture {
+    /// x86-64 (AMD64)
     X86_64,
+    /// ARM 64-bit (AArch64)
     Aarch64,
+    /// ARM 32-bit (ARMv7)
     Armv7,
+    /// RISC-V 64-bit
     Riscv64,
 }
 
@@ -59,9 +62,13 @@ impl Architecture {
 /// Supported platforms
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Platform {
+    /// Linux
     Linux,
+    /// Android (Linux-family)
     Android,
+    /// macOS
     MacOS,
+    /// Windows
     Windows,
 }
 
@@ -100,9 +107,13 @@ impl Platform {
 /// GenomeBin metadata
 #[derive(Debug, Clone)]
 pub struct GenomeMetadata {
+    /// Genome name
     pub name: String,
+    /// Genome version
     pub version: String,
+    /// Human-readable description
     pub description: String,
+    /// Supported architectures
     pub architectures: Vec<Architecture>,
 }
 
@@ -155,11 +166,7 @@ impl GenomeDeployer {
         let is_root = std::env::var("EUID")
             .or_else(|_| std::env::var("UID"))
             .map(|uid| uid == "0")
-            .unwrap_or_else(|_| {
-                std::env::var("USER")
-                    .map(|u| u == "root")
-                    .unwrap_or(false)
-            });
+            .unwrap_or_else(|_| std::env::var("USER").map(|u| u == "root").unwrap_or(false));
 
         match self.platform {
             Platform::Android => PathBuf::from(format!("/data/local/tmp/{}", primal_name)),
@@ -171,71 +178,37 @@ impl GenomeDeployer {
                 }
             }
             Platform::MacOS => home_dir().join(format!("Library/{}", primal_name)),
-            Platform::Windows => {
-                std::env::var("LOCALAPPDATA")
-                    .map(PathBuf::from)
-                    .unwrap_or_else(|_| PathBuf::from("C:\\ProgramData"))
-                    .join(primal_name)
-            }
+            Platform::Windows => std::env::var("LOCALAPPDATA")
+                .map(PathBuf::from)
+                .unwrap_or_else(|_| PathBuf::from("C:\\ProgramData"))
+                .join(primal_name),
         }
     }
 
-    /// Extract genomeBin archive using zero-copy mmap
+    /// Extract genomeBin archive using safe buffered I/O
     ///
-    /// Uses memory-mapped I/O for efficient extraction:
-    /// - Files > 1MB: mmap (zero-copy, kernel-managed paging)
-    /// - Files < 1MB: traditional read (lower overhead for small files)
-    ///
-    /// ## Safety Analysis (mmap)
-    ///
-    /// The `Mmap::map()` call requires unsafe because memory mapping has
-    /// inherent risks at the OS level. Our usage is safe because:
-    ///
-    /// 1. **Read-only access**: File opened without write permissions
-    /// 2. **Exclusive read lock**: We acquire a shared lock (flock) to prevent
-    ///    concurrent truncation during read
-    /// 3. **Bounded lifetime**: The mmap is dropped before function returns
-    /// 4. **No aliasing**: We don't create mutable references to the mapped region
-    /// 5. **Trusted source**: genomeBin files are created by our build system
-    ///
-    /// The memmap2 crate is pure Rust and widely used in production systems.
+    /// Reads the genomeBin file into memory and extracts the embedded tar.gz archive.
+    /// For a one-shot deployment operation, the read allocation is negligible
+    /// compared to disk I/O and decompression time.
     fn extract_archive(&self, install_dir: &Path) -> Result<()> {
         println!("{}", "Extracting genomeBin...".blue());
 
         let file = File::open(&self.genome_path)?;
         let file_size = file.metadata()?.len();
 
-        // Use mmap for large files (zero-copy), regular read for small files
-        let archive_data: Box<dyn AsRef<[u8]>> = if file_size >= MMAP_THRESHOLD {
-            println!(
-                "{}",
-                format!(
-                    "  Using zero-copy mmap for {}MB file",
-                    file_size / 1024 / 1024
-                )
-                .dimmed()
-            );
-            
-            // SAFETY:
-            // - File is opened read-only (File::open, not OpenOptions with write)
-            // - File descriptor remains valid for duration of mmap (owned by us)
-            // - We don't modify the mapped memory (Mmap is !DerefMut)
-            // - Mmap dropped before file (Rust drop order: reverse declaration)
-            // - Concurrent modification prevented: genomeBin is a static archive
-            //
-            // The only remaining risk is another process truncating the file while
-            // we read it, which would cause a SIGBUS. This is acceptable for a
-            // deployment tool where genomeBin files are stable artifacts.
-            let mmap = unsafe { Mmap::map(&file)? };
-            Box::new(mmap)
-        } else {
-            let mut contents = Vec::new();
-            let mut file = file;
-            file.read_to_end(&mut contents)?;
-            Box::new(contents)
-        };
+        println!(
+            "{}",
+            format!(
+                "  Reading {:.1}MB genomeBin...",
+                file_size as f64 / 1_048_576.0
+            )
+            .dimmed()
+        );
 
-        let data = (*archive_data).as_ref();
+        // Safe read — no unsafe, no mmap, no SIGBUS risk
+        let mut file = file;
+        let mut data = Vec::with_capacity(file_size as usize);
+        file.read_to_end(&mut data)?;
 
         // Find __ARCHIVE_START__ marker
         let marker = b"__ARCHIVE_START__\n";
@@ -245,7 +218,7 @@ impl GenomeDeployer {
             .context("Archive marker not found in genomeBin")?
             + marker.len();
 
-        // Extract tar.gz from the mmap'd region (no additional allocation)
+        // Extract tar.gz from the read data
         let archive_slice = &data[archive_start..];
         let decoder = GzDecoder::new(archive_slice);
         let mut archive = Archive::new(decoder);
@@ -255,7 +228,7 @@ impl GenomeDeployer {
         pb.set_style(
             ProgressStyle::default_spinner()
                 .template("{spinner:.green} {msg}")
-                .unwrap(),
+                .expect("valid progress bar template"),
         );
         pb.set_message("Extracting binaries...");
 

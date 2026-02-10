@@ -1,4 +1,16 @@
 //! Network bridge management
+//!
+//! ## Shell-outs (accepted - privileged network configuration)
+//!
+//! The `create()` and `destroy()` methods call `sudo ip link/addr` to manage
+//! Linux network bridges. These require root privileges and cannot be replaced
+//! with pure Rust without a netlink library (`netlink-rs` or `rtnetlink`).
+//!
+//! The `exists()` method has been evolved to pure Rust via `/sys/class/net/`.
+//!
+//! **Evolution path**: When the `rtnetlink` crate stabilizes for our use case,
+//! bridge create/delete/configure operations can be replaced with Netlink
+//! socket calls, eliminating the `sudo ip` dependency entirely.
 
 use crate::error::{DeployError, Result};
 use std::process::Command;
@@ -32,13 +44,9 @@ impl NetworkBridge {
         }
     }
 
-    /// Check if bridge exists
+    /// Check if bridge exists (pure Rust via /sys/class/net/)
     pub fn exists(&self) -> bool {
-        Command::new("ip")
-            .args(["link", "show", &self.config.name])
-            .output()
-            .map(|output| output.status.success())
-            .unwrap_or(false)
+        std::path::Path::new(&format!("/sys/class/net/{}", self.config.name)).exists()
     }
 
     /// Create the network bridge

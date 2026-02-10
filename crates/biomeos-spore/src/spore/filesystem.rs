@@ -139,7 +139,9 @@ impl FilesystemOps for Spore {
 
             // Only copy files (not directories)
             if path.is_file() {
-                let file_name = path.file_name().unwrap();
+                let file_name = path
+                    .file_name()
+                    .expect("path confirmed as file must have filename");
                 let dst_path = primals_dst_dir.join(file_name);
 
                 async_fs::copy(&path, &dst_path).await?;

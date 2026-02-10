@@ -135,10 +135,9 @@ mod tests {
     async fn test_health_endpoint_standalone_mode() {
         let state = Arc::new(
             AppState::builder()
-                .config({
-                    let mut config = crate::Config::default();
-                    config.standalone_mode = true;
-                    config
+                .config(crate::Config {
+                    standalone_mode: true,
+                    ..Default::default()
                 })
                 .build_with_defaults()
                 .expect("should build"),
@@ -155,10 +154,9 @@ mod tests {
     async fn test_health_endpoint_live_mode() {
         let state = Arc::new(
             AppState::builder()
-                .config({
-                    let mut config = crate::Config::default();
-                    config.standalone_mode = false;
-                    config
+                .config(crate::Config {
+                    standalone_mode: false,
+                    ..Default::default()
                 })
                 .build_with_defaults()
                 .expect("should build"),
@@ -174,10 +172,9 @@ mod tests {
     async fn test_readiness_endpoint_standalone_mode() {
         let state = Arc::new(
             AppState::builder()
-                .config({
-                    let mut config = crate::Config::default();
-                    config.standalone_mode = true;
-                    config
+                .config(crate::Config {
+                    standalone_mode: true,
+                    ..Default::default()
                 })
                 .build_with_defaults()
                 .expect("should build"),
@@ -192,10 +189,9 @@ mod tests {
     async fn test_readiness_endpoint_live_mode() {
         let state = Arc::new(
             AppState::builder()
-                .config({
-                    let mut config = crate::Config::default();
-                    config.standalone_mode = false;
-                    config
+                .config(crate::Config {
+                    standalone_mode: false,
+                    ..Default::default()
                 })
                 .build_with_defaults()
                 .expect("should build"),

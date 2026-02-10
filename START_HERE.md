@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
-**Last Updated**: February 9, 2026
-**Status**: Production Ready - Plasmodium + Model Cache
+**Last Updated**: February 10, 2026
+**Status**: Production Ready - Full Doc Coverage, Zero Warnings
 
 ---
 
@@ -13,49 +13,48 @@ biomeOS is the **ecosystem orchestrator** for ecoPrimals - a federation of auton
 
 - **Primals**: Self-contained Rust binaries with specific capabilities
 - **Atomics**: Primal combinations (Tower = BearDog + Songbird)
-- **NUCLEUS**: Complete system (Tower + Node + Nest)
-- **Neural API**: Semantic routing via `capability.call`
-- **Universal IPC v3.0**: Multi-transport communication (Unix/Abstract/TCP)
-- **Sovereign Mesh**: Distributed relay network for NAT traversal
+- **NUCLEUS**: Complete system (Tower + Node + Nest + Neural API)
+- **Neural API**: Semantic routing via `capability.call` (121 translations)
+- **Universal IPC v3.0**: Multi-transport communication (Unix/Abstract/TCP/HTTP JSON-RPC)
 - **Dark Forest**: Zero-metadata beacon discovery using genetic lineage
 - **Plasmodium**: Over-NUCLEUS collective coordination (slime mold pattern)
-- **Model Cache**: NUCLEUS-integrated AI model management
+- **AI Bridge**: Squirrel -> Songbird HTTP -> Cloud/Local AI
+- **LifecycleManager**: Deep health monitoring, auto-resurrection, coordinated shutdown
+- **SystemPaths**: XDG-compliant path resolution (no hardcoded paths)
+- **Capability Taxonomy**: Canonical primal-to-capability mapping (single source of truth)
 
 ---
 
 ## Quick Start
 
-### 1. Deploy Tower Atomic (5 minutes)
+### 1. Deploy Full NUCLEUS
 
 ```bash
-cd livespore-usb/$(uname -m)/scripts/
-FAMILY_ID=my_family ./start_tower.sh
-
-# Verify
-echo '{"jsonrpc":"2.0","method":"health","id":1}' | \
-  nc -U /run/user/$(id -u)/biomeos/beardog-my_family.sock
+biomeos nucleus start --mode full --node-id tower1
 ```
 
-### 2. Deploy Full NUCLEUS (10 minutes)
+### 2. Verify AI Bridge
 
 ```bash
-cd livespore-usb/$(uname -m)/scripts/
-FAMILY_ID=my_family ./deploy_atomic.sh nucleus
+# Local AI (Ollama via Songbird)
+echo '{"jsonrpc":"2.0","method":"http.request","params":{"method":"POST","url":"http://localhost:11434/v1/chat/completions","headers":{"content-type":"application/json"},"body":"{\"model\":\"tinyllama\",\"messages\":[{\"role\":\"user\",\"content\":\"hello\"}],\"max_tokens\":10}"},"id":1}' | \
+  nc -U /run/user/$(id -u)/biomeos/songbird.sock -w 15 -q 1
 
-# All sockets created at:
-# /run/user/$UID/biomeos/{primal}-{family_id}.sock
+# Cloud AI (Anthropic via Squirrel)
+echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"claude-3-haiku-20240307","max_tokens":10},"id":1}' | \
+  nc -U /run/user/$(id -u)/biomeos/squirrel.sock -w 15 -q 1
 ```
 
 ### 3. Use capability.call (Neural API)
 
 ```bash
-# Discover who provides "crypto" capability
+# Discover who provides a capability
 echo '{"jsonrpc":"2.0","method":"capability.discover","params":{"capability":"crypto"},"id":1}' | \
-  nc -U /run/user/$(id -u)/biomeos/neural-api.sock
+  nc -U /run/user/$(id -u)/biomeos/neural-api.sock -w 2 -q 1
 
-# Call capability (routed automatically)
-echo '{"jsonrpc":"2.0","method":"capability.call","params":{"capability":"crypto","operation":"sha256","data":"hello"},"id":1}' | \
-  nc -U /run/user/$(id -u)/biomeos/neural-api.sock
+# List all 121 capability translations
+echo '{"jsonrpc":"2.0","method":"capability.list_translations","params":{},"id":1}' | \
+  nc -U /run/user/$(id -u)/biomeos/neural-api.sock -w 2 -q 1
 ```
 
 ---
@@ -66,8 +65,11 @@ echo '{"jsonrpc":"2.0","method":"capability.call","params":{"capability":"crypto
 +-------------------------------------------------------------+
 |                        NUCLEUS                               |
 +-------------------------------------------------------------+
-|  Layer 2: biomeOS + Neural API                               |
-|           (semantic translation, capability routing)          |
+|  Layer 3: AI Bridge                                          |
+|  Squirrel -> http.request -> Songbird -> Cloud/Local AI      |
++-------------------------------------------------------------+
+|  Layer 2: Neural API (121 semantic translations)             |
+|  capability.call -> translate -> route to provider           |
 +-------------------------------------------------------------+
 |  Layer 1: Atomics                                            |
 |  +----------+  +----------+  +----------+  +----------+     |
@@ -76,18 +78,49 @@ echo '{"jsonrpc":"2.0","method":"capability.call","params":{"capability":"crypto
 |  | Songbird |  | Toadstool|  | NestGate |  |          |     |
 |  +----------+  +----------+  +----------+  +----------+     |
 +-------------------------------------------------------------+
-|  Layer 0: Primals (evolve independently)                     |
+|  Layer 0: Primals (evolve independently via capability.call) |
 +-------------------------------------------------------------+
 ```
 
-### Deep Debt Principles (Feb 7, 2026)
+### How Primals Compose
 
-1. **Pure Rust**: Zero C dependencies (no libc, nix, dirs, reqwest, lazy_static)
+Primals evolve independently. They don't know about each other -- they discover
+capabilities at runtime. The Neural API's semantic translation layer is the glue:
+
+```
+Squirrel wants: "http.request"
+  -> Neural API translation: http.request -> songbird.http_request
+  -> Songbird provides: http.request on its JSON-RPC socket
+  -> BearDog provides: TLS crypto for HTTPS (discovered by Songbird)
+```
+
+No primal imports another primal's code. They compose through sockets and JSON-RPC.
+
+### Deep Debt Principles
+
+1. **Pure Rust**: Zero C dependencies (safe `nix` crate for POSIX syscalls)
 2. **Capability-based**: Primals discover each other at runtime, not by name
-3. **No hardcoding**: Provider names configurable via environment variables
+3. **XDG-compliant**: All paths via `SystemPaths` -- no hardcoded `/tmp` or `/run/user/1000`
 4. **No production mocks**: Stubs replaced with real implementations or honest errors
 5. **Idiomatic Rust**: Modern patterns (OnceLock, or_default, Default trait)
-6. **Zero actionable warnings**: Clippy clean across all crates (except pre-existing biomeos-boot docs)
+6. **Zero warnings**: Clippy clean, full doc coverage (0 `missing_docs` warnings across 8 crates)
+7. **Self-healing**: LifecycleManager auto-resurrects degraded primals
+8. **Tested**: 2,297 tests, 56.75% region coverage (llvm-cov)
+
+---
+
+## Validated Chains
+
+| Chain | Path | Status |
+|-------|------|--------|
+| Local AI | Songbird -> HTTP -> Ollama (phi3) | Validated |
+| Cloud AI | Squirrel -> Songbird -> BearDog TLS -> Anthropic | Validated |
+| Nest Atomic | NestGate storage.exists/store/retrieve | Validated (Tower + gate2) |
+| Plasmodium | HTTP JSON-RPC 2-gate collective | Validated |
+| Covalent Bond | HTTP transport to gate2:8080 | Validated (beacon discovery pending) |
+| Device Enrollment | Blake3-Lineage-KDF (Tower + gate2) | Validated |
+| Neural API proxy | proxy_http -> Songbird -> HTTPS | Validated |
+| Tower Atomic | BearDog + Songbird health/crypto/JWT | Validated |
 
 ---
 
@@ -95,70 +128,25 @@ echo '{"jsonrpc":"2.0","method":"capability.call","params":{"capability":"crypto
 
 | Document | Purpose |
 |----------|---------|
-| `README.md` | Complete overview |
-| `CURRENT_STATUS.md` | Latest status |
+| `CURRENT_STATUS.md` | Validated systems, bypasses, evolution needs |
 | `QUICK_START.md` | 5-minute deployment |
-| `DOCUMENTATION.md` | Full documentation index |
 | `CHANGELOG.md` | Version history |
+| `DOCUMENTATION.md` | Full documentation index |
+| `docs/handoffs/` | Per-session evolution reports |
+| `specs/EVOLUTION_ROADMAP.md` | Bypass elimination and evolution waves |
 
 ---
 
-## Deployment Paths
+## Primal Status
 
-### For x86_64 (Linux/USB)
-
-```bash
-cd livespore-usb/x86_64/scripts/
-./deploy_atomic.sh nucleus
-```
-
-### For aarch64 (Pixel/ARM)
-
-```bash
-adb push pixel8a-deploy /data/local/tmp/biomeos
-adb shell /data/local/tmp/biomeos/start_nucleus_mobile.sh
-```
-
-### Graph-based (Phase 2)
-
-```bash
-./deploy_atomic.sh --graph nucleus
-# Uses Neural API for deployment orchestration
-```
-
----
-
-## Universal IPC v3.0 - Transport Discovery
-
-Primals discover communication endpoints with automatic fallback:
-
-```
-Tier 1 (Native - High Performance):
-  1. $PRIMAL_SOCKET environment variable
-  2. $XDG_RUNTIME_DIR/biomeos/primal.sock
-  3. /run/user/$UID/biomeos/primal.sock
-  4. @biomeos_primal (Abstract socket - Linux/Android)
-
-Tier 2 (Universal - Cross-Device):
-  5. TCP localhost:910X
-  6. TCP remote:910X (federation)
-```
-
----
-
-## Environment Variables
-
-| Variable | Purpose | Default |
-|----------|---------|---------|
-| `FAMILY_ID` | Genetic lineage identifier | (required) |
-| `BIOMEOS_SECURITY_PROVIDER` | Security/crypto primal | `beardog` |
-| `BIOMEOS_NETWORK_PROVIDER` | Network orchestration primal | `songbird` |
-| `BIOMEOS_REGISTRY_PROVIDER` | Service registry primal | `songbird` |
-| `BIOMEOS_STORAGE_PROVIDER` | Persistence primal | `nestgate` |
-| `BIOMEOS_STRICT_DISCOVERY` | Disable bootstrap name fallbacks | (unset) |
-| `BIOMEOS_SOVEREIGN` | Enable sovereign mode (no public STUN) | (unset) |
-| `XDG_RUNTIME_DIR` | XDG runtime directory | `/run/user/$UID` |
-| `RUST_LOG` | Logging level | `info` |
+| Primal | Purpose | Status | Next Evolution |
+|--------|---------|--------|----------------|
+| BearDog | Crypto, Genetics | Reference | Stable |
+| Songbird | HTTP, TLS, Discovery | 90% | Mesh state fix, UDP discovery, port 3492 |
+| Toadstool | Compute, GPU | Operational | GPU job queue |
+| NestGate | Storage, Federation | Operational (patched) | Upstream boolean fix |
+| Squirrel | AI Orchestration | Operational | Ollama native adapter |
+| biomeOS | System Orchestrator | Evolved | Graph deploy, ARM64 genomeBin |
 
 ---
 
@@ -167,28 +155,21 @@ Tier 2 (Universal - Cross-Device):
 | Standard | Description |
 |----------|-------------|
 | **ecoBin v2.0** | 100% Pure Rust, zero C deps |
-| **Universal IPC v3.0** | Multi-transport (Unix/Abstract/TCP) |
+| **Universal IPC v3.0** | Multi-transport (Unix/Abstract/TCP/HTTP) |
 | **PRIMAL_DEPLOYMENT_STANDARD** | Deterministic cross-platform |
 | **Semantic Method Naming** | capability.call routing |
-| **Sovereign NAT Traversal** | Mesh relay, hole punching, onion services |
 | **AGPL-3.0-only** | License requirement |
+| **XDG Base Directory** | All paths via SystemPaths |
 
 ---
 
-## Need Help?
-
-1. Check `CURRENT_STATUS.md` for latest status
-2. See `docs/handoffs/` for evolution reports
-3. Review `specs/` for standards
-4. Explore `livespore-usb/` for deployment scripts
-
----
-
-**Status**: Production Ready  
-**IPC**: Universal IPC v3.0  
-**Primals**: 6/6 ecoBin v2.0 compliant  
-**Tests**: 1,747 passing  
-**Security**: A++ LEGENDARY  
-**NAT Traversal**: Sovereign Mesh + Hole Punching + Onion Services  
-**Plasmodium**: Over-NUCLEUS collective coordination  
-**Updated**: February 9, 2026
+**Status**: Production Ready
+**AI Bridge**: Local + Cloud AI validated
+**Plasmodium**: HTTP JSON-RPC collective (runtime port)
+**Covalent Bond**: Transport ready, beacon discovery pending Songbird fixes
+**Neural API**: 121 semantic translations
+**Lifecycle**: Deep health monitoring + auto-resurrection
+**IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate)
+**Primals**: 6/6 ecoBin v2.0 compliant
+**Tests**: 2,297 passing (56.75% coverage) | **Clippy**: PASS | **Docs**: Full coverage
+**Updated**: February 10, 2026

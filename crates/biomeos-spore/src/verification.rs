@@ -38,21 +38,32 @@ impl std::fmt::Display for VerificationStatus {
 /// Verification report for a single binary
 #[derive(Debug)]
 pub struct BinaryVerification {
+    /// Binary name
     pub name: String,
+    /// Verification result
     pub status: VerificationStatus,
+    /// Expected version from the manifest
     pub expected_version: String,
+    /// Actual version on disk (if determinable)
     pub actual_version: Option<String>,
+    /// Expected SHA-256 digest from the manifest
     pub expected_sha256: String,
+    /// Actual SHA-256 digest on disk
     pub actual_sha256: Option<String>,
 }
 
 /// Complete verification report for a spore
 #[derive(Debug)]
 pub struct VerificationReport {
+    /// Path to the spore directory
     pub spore_path: PathBuf,
+    /// Node identifier
     pub node_id: String,
+    /// Aggregate status across all binaries
     pub overall_status: VerificationStatus,
+    /// Per-binary verification results
     pub binaries: Vec<BinaryVerification>,
+    /// Human-readable recommendations
     pub recommendations: Vec<String>,
 }
 

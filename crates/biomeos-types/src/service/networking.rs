@@ -70,12 +70,19 @@ pub struct ServicePort {
 /// Port protocols
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PortProtocol {
+    /// TCP protocol
     Tcp,
+    /// UDP protocol
     Udp,
+    /// HTTP protocol
     Http,
+    /// HTTPS protocol
     Https,
+    /// gRPC protocol
     Grpc,
+    /// WebSocket protocol
     WebSocket,
+    /// Custom protocol
     Custom(String),
 }
 
@@ -98,12 +105,19 @@ pub struct PortLoadBalancer {
 /// Load balancing algorithms
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LoadBalancingAlgorithm {
+    /// Round-robin distribution
     RoundRobin,
+    /// Least active connections
     LeastConnections,
+    /// Weighted round-robin distribution
     WeightedRoundRobin,
+    /// Hash by client IP
     IpHash,
+    /// Consistent hashing (minimises redistribution)
     ConsistentHash,
+    /// Random selection
     Random,
+    /// Custom algorithm
     Custom(String),
 }
 
@@ -123,9 +137,13 @@ pub struct SessionAffinity {
 /// Affinity types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AffinityType {
+    /// No affinity
     None,
+    /// Sticky by client IP address
     ClientIp,
+    /// Sticky by cookie
     Cookie,
+    /// Sticky by header value
     Header(String),
 }
 
@@ -224,9 +242,13 @@ pub enum DiscoveryMethod {
 /// Kubernetes service types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum KubernetesServiceType {
+    /// Internal cluster IP
     ClusterIP,
+    /// Exposed via node port
     NodePort,
+    /// External load balancer
     LoadBalancer,
+    /// DNS CNAME alias
     ExternalName,
 }
 
@@ -300,11 +322,17 @@ pub struct TargetGroup {
 /// Target protocols
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TargetProtocol {
+    /// HTTP protocol
     Http,
+    /// HTTPS protocol
     Https,
+    /// TCP protocol
     Tcp,
+    /// UDP protocol
     Udp,
+    /// Combined TCP and UDP
     TcpUdp,
+    /// TLS-encrypted protocol
     Tls,
 }
 
@@ -412,27 +440,37 @@ pub struct TrafficRoute {
 pub enum RouteCondition {
     /// Header condition
     Header {
+        /// Header name
         name: String,
+        /// Expected value
         value: String,
+        /// Comparison operator
         operator: ConditionOperator,
     },
 
     /// Path condition
     Path {
+        /// Path pattern
         pattern: String,
+        /// Comparison operator
         operator: ConditionOperator,
     },
 
     /// Query parameter condition
     QueryParam {
+        /// Parameter name
         name: String,
+        /// Expected value
         value: String,
+        /// Comparison operator
         operator: ConditionOperator,
     },
 
     /// Custom condition
     Custom {
+        /// Condition type identifier
         condition_type: String,
+        /// Additional configuration
         config: HashMap<String, String>,
     },
 }
@@ -440,12 +478,19 @@ pub enum RouteCondition {
 /// Condition operators
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ConditionOperator {
+    /// Exact equality
     Equals,
+    /// Not equal
     NotEquals,
+    /// Contains substring
     Contains,
+    /// Does not contain substring
     NotContains,
+    /// Starts with prefix
     StartsWith,
+    /// Ends with suffix
     EndsWith,
+    /// Matches regex pattern
     Matches,
 }
 
@@ -524,7 +569,9 @@ pub enum RateLimitCondition {
 
     /// Custom condition
     Custom {
+        /// Condition type identifier
         condition_type: String,
+        /// Condition value
         value: String,
     },
 }
@@ -607,20 +654,36 @@ pub enum RetryCondition {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum BackoffStrategy {
     /// Fixed backoff
-    Fixed { delay: u32 },
+    Fixed {
+        /// Delay in seconds
+        delay: u32,
+    },
 
     /// Exponential backoff
     Exponential {
+        /// Base delay in seconds
         base_delay: u32,
+        /// Maximum delay cap in seconds
         max_delay: u32,
+        /// Multiplier per attempt
         multiplier: f64,
     },
 
     /// Linear backoff
-    Linear { base_delay: u32, increment: u32 },
+    Linear {
+        /// Base delay in seconds
+        base_delay: u32,
+        /// Linear increment per attempt
+        increment: u32,
+    },
 
     /// Random backoff
-    Random { min_delay: u32, max_delay: u32 },
+    Random {
+        /// Minimum delay in seconds
+        min_delay: u32,
+        /// Maximum delay in seconds
+        max_delay: u32,
+    },
 }
 
 /// Default implementation for ServiceNetworking

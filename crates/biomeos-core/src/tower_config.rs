@@ -26,6 +26,7 @@ pub struct TowerConfig {
     pub health: HealthConfig,
 }
 
+/// Metadata for the tower (top-level node identity)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TowerMeta {
     /// Tower name (defaults to hostname)
@@ -49,6 +50,7 @@ impl Default for TowerMeta {
     }
 }
 
+/// Configuration for a single primal within a tower
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PrimalConfig {
     /// Binary path (relative or absolute)
@@ -86,6 +88,7 @@ pub struct PrimalConfig {
     pub auto_discover: bool,
 }
 
+/// Configuration for primal auto-discovery
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DiscoveryConfig {
     /// Directories to scan for primals
@@ -111,6 +114,7 @@ impl Default for DiscoveryConfig {
     }
 }
 
+/// Configuration for health checks and auto-recovery
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HealthConfig {
     /// Health check interval in seconds

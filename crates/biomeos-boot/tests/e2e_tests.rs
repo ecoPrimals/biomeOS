@@ -3,14 +3,14 @@
 //! These tests execute the actual binaries and verify their behavior.
 
 use anyhow::Result;
-use assert_cmd::Command;
+use assert_cmd::cargo::cargo_bin_cmd;
 use predicates::prelude::*;
 use std::fs;
 use tempfile::TempDir;
 
 #[test]
 fn test_biomeos_mkboot_help() -> Result<()> {
-    let mut cmd = Command::cargo_bin("biomeos-mkboot")?;
+    let mut cmd = cargo_bin_cmd!("biomeos-mkboot");
     cmd.arg("--help");
 
     cmd.assert()
@@ -25,7 +25,7 @@ fn test_biomeos_mkboot_help() -> Result<()> {
 
 #[test]
 fn test_biomeos_mkboot_usb_help() -> Result<()> {
-    let mut cmd = Command::cargo_bin("biomeos-mkboot")?;
+    let mut cmd = cargo_bin_cmd!("biomeos-mkboot");
     cmd.arg("usb").arg("--help");
 
     cmd.assert()
@@ -37,7 +37,7 @@ fn test_biomeos_mkboot_usb_help() -> Result<()> {
 
 #[test]
 fn test_biomeos_mkboot_iso_help() -> Result<()> {
-    let mut cmd = Command::cargo_bin("biomeos-mkboot")?;
+    let mut cmd = cargo_bin_cmd!("biomeos-mkboot");
     cmd.arg("iso").arg("--help");
 
     cmd.assert()
@@ -49,7 +49,7 @@ fn test_biomeos_mkboot_iso_help() -> Result<()> {
 
 #[test]
 fn test_biomeos_mkboot_initramfs_help() -> Result<()> {
-    let mut cmd = Command::cargo_bin("biomeos-mkboot")?;
+    let mut cmd = cargo_bin_cmd!("biomeos-mkboot");
     cmd.arg("initramfs").arg("--help");
 
     cmd.assert()
@@ -62,7 +62,7 @@ fn test_biomeos_mkboot_initramfs_help() -> Result<()> {
 
 #[test]
 fn test_biomeos_mkboot_invalid_command() -> Result<()> {
-    let mut cmd = Command::cargo_bin("biomeos-mkboot")?;
+    let mut cmd = cargo_bin_cmd!("biomeos-mkboot");
     cmd.arg("invalid-command");
 
     cmd.assert()
@@ -74,7 +74,7 @@ fn test_biomeos_mkboot_invalid_command() -> Result<()> {
 
 #[test]
 fn test_biomeos_mkboot_initramfs_missing_output() -> Result<()> {
-    let mut cmd = Command::cargo_bin("biomeos-mkboot")?;
+    let mut cmd = cargo_bin_cmd!("biomeos-mkboot");
     cmd.arg("initramfs");
 
     cmd.assert()
@@ -101,7 +101,7 @@ fn test_biomeos_mkboot_initramfs_build() -> Result<()> {
         "#!/bin/sh\necho cli",
     )?;
 
-    let mut cmd = Command::cargo_bin("biomeos-mkboot")?;
+    let mut cmd = cargo_bin_cmd!("biomeos-mkboot");
     cmd.arg("--project-root")
         .arg(&project_root)
         .arg("initramfs")
@@ -136,7 +136,7 @@ fn test_biomeos_mkboot_custom_project_root() -> Result<()> {
     let custom_root = temp.path().join("custom");
     fs::create_dir_all(&custom_root)?;
 
-    let mut cmd = Command::cargo_bin("biomeos-mkboot")?;
+    let mut cmd = cargo_bin_cmd!("biomeos-mkboot");
     cmd.arg("--project-root").arg(&custom_root).arg("--help");
 
     cmd.assert().success();
@@ -146,7 +146,7 @@ fn test_biomeos_mkboot_custom_project_root() -> Result<()> {
 
 #[test]
 fn test_biomeos_mkboot_nonexistent_project_root() -> Result<()> {
-    let mut cmd = Command::cargo_bin("biomeos-mkboot")?;
+    let mut cmd = cargo_bin_cmd!("biomeos-mkboot");
     cmd.arg("--project-root")
         .arg("/nonexistent/path/that/should/fail")
         .arg("initramfs")
@@ -162,7 +162,7 @@ fn test_biomeos_mkboot_nonexistent_project_root() -> Result<()> {
 fn test_biomeos_init_not_pid1() -> Result<()> {
     // biomeos-init should detect it's not PID 1
     // Note: This might produce no output on some systems, which is okay
-    let mut cmd = Command::cargo_bin("biomeos-init")?;
+    let mut cmd = cargo_bin_cmd!("biomeos-init");
 
     cmd.assert().failure(); // Just check it exits with error
 
@@ -176,7 +176,7 @@ fn test_concurrent_mkboot_commands() -> Result<()> {
     let handles: Vec<_> = (0..3)
         .map(|_| {
             thread::spawn(|| -> Result<()> {
-                let mut cmd = Command::cargo_bin("biomeos-mkboot")?;
+                let mut cmd = cargo_bin_cmd!("biomeos-mkboot");
                 cmd.arg("--help");
                 cmd.assert().success();
                 Ok(())
@@ -193,7 +193,7 @@ fn test_concurrent_mkboot_commands() -> Result<()> {
 
 #[test]
 fn test_biomeos_mkboot_output_formatting() -> Result<()> {
-    let mut cmd = Command::cargo_bin("biomeos-mkboot")?;
+    let mut cmd = cargo_bin_cmd!("biomeos-mkboot");
     cmd.arg("--help");
 
     let output = cmd.output()?;
@@ -209,7 +209,7 @@ fn test_biomeos_mkboot_output_formatting() -> Result<()> {
 
 #[test]
 fn test_error_messages_are_helpful() -> Result<()> {
-    let mut cmd = Command::cargo_bin("biomeos-mkboot")?;
+    let mut cmd = cargo_bin_cmd!("biomeos-mkboot");
     cmd.arg("initramfs"); // Missing required --output
 
     let output = cmd.output()?;
@@ -225,7 +225,7 @@ fn test_error_messages_are_helpful() -> Result<()> {
 fn test_biomeos_mkboot_with_env_vars() -> Result<()> {
     let _temp = TempDir::new()?;
 
-    let mut cmd = Command::cargo_bin("biomeos-mkboot")?;
+    let mut cmd = cargo_bin_cmd!("biomeos-mkboot");
     cmd.env("RUST_LOG", "debug").arg("--help");
 
     cmd.assert().success();
@@ -235,7 +235,7 @@ fn test_biomeos_mkboot_with_env_vars() -> Result<()> {
 
 #[test]
 fn test_biomeos_mkboot_stdin_not_required() -> Result<()> {
-    let mut cmd = Command::cargo_bin("biomeos-mkboot")?;
+    let mut cmd = cargo_bin_cmd!("biomeos-mkboot");
     cmd.arg("--help").write_stdin(""); // Empty stdin
 
     cmd.assert().success();
@@ -245,7 +245,7 @@ fn test_biomeos_mkboot_stdin_not_required() -> Result<()> {
 
 #[test]
 fn test_all_subcommands_documented() -> Result<()> {
-    let mut cmd = Command::cargo_bin("biomeos-mkboot")?;
+    let mut cmd = cargo_bin_cmd!("biomeos-mkboot");
     cmd.arg("--help");
 
     let output = cmd.output()?;

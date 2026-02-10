@@ -31,33 +31,45 @@ pub use biomeos_graph::{GraphEvent, GraphEventBroadcaster};
 /// JSON-RPC 2.0 request structure
 #[derive(Debug, Clone, Deserialize)]
 pub struct JsonRpcRequest {
+    /// JSON-RPC version (must be "2.0")
     pub jsonrpc: String,
+    /// Method name to invoke
     pub method: String,
+    /// Method parameters
     pub params: serde_json::Value,
+    /// Request identifier (None for notifications)
     pub id: Option<serde_json::Value>,
 }
 
 /// JSON-RPC 2.0 response structure
 #[derive(Debug, Clone, Serialize)]
 pub struct JsonRpcResponse {
+    /// JSON-RPC version (always "2.0")
     pub jsonrpc: String,
+    /// Successful result value
     #[serde(skip_serializing_if = "Option::is_none")]
     pub result: Option<serde_json::Value>,
+    /// Error object (mutually exclusive with result)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<JsonRpcError>,
+    /// Request identifier echoed back
     pub id: Option<serde_json::Value>,
 }
 
 /// JSON-RPC 2.0 error structure
 #[derive(Debug, Clone, Serialize)]
 pub struct JsonRpcError {
+    /// Standard JSON-RPC error code
     pub code: i32,
+    /// Human-readable error message
     pub message: String,
+    /// Additional error data
     #[serde(skip_serializing_if = "Option::is_none")]
     pub data: Option<serde_json::Value>,
 }
 
 impl JsonRpcError {
+    /// Create a parse error (-32700)
     pub fn parse_error() -> Self {
         Self {
             code: -32700,
@@ -66,6 +78,7 @@ impl JsonRpcError {
         }
     }
 
+    /// Create an invalid request error (-32600)
     pub fn invalid_request() -> Self {
         Self {
             code: -32600,
@@ -74,6 +87,7 @@ impl JsonRpcError {
         }
     }
 
+    /// Create a method not found error (-32601)
     pub fn method_not_found() -> Self {
         Self {
             code: -32601,
@@ -82,6 +96,7 @@ impl JsonRpcError {
         }
     }
 
+    /// Create an invalid params error (-32602)
     pub fn invalid_params(details: Option<String>) -> Self {
         Self {
             code: -32602,
@@ -90,6 +105,7 @@ impl JsonRpcError {
         }
     }
 
+    /// Create an internal error (-32603)
     pub fn internal_error(details: Option<String>) -> Self {
         Self {
             code: -32603,

@@ -8,27 +8,39 @@ use std::collections::HashMap;
 /// BYOB Team configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ByobTeamConfig {
+    /// Unique team identifier
     pub team_id: String,
+    /// How strongly the team is isolated
     pub isolation_level: IsolationLevel,
+    /// Resource quotas for the team
     pub resource_limits: ResourceLimits,
+    /// Capabilities this team is allowed to use
     pub allowed_capabilities: Vec<String>,
 }
 
 /// Isolation levels for BYOB teams
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum IsolationLevel {
+    /// No isolation — shared everything
     None,
+    /// Basic namespace isolation
     Basic,
+    /// Strict resource and network isolation
     Strict,
+    /// Full VM-level isolation
     Complete,
 }
 
 /// Resource limits for BYOB teams
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourceLimits {
+    /// Maximum CPU usage percentage
     pub max_cpu_percent: f64,
+    /// Maximum memory in MiB
     pub max_memory_mb: u64,
+    /// Maximum disk space in MiB
     pub max_disk_mb: u64,
+    /// Maximum network throughput in Mbps
     pub max_network_mbps: f64,
 }
 

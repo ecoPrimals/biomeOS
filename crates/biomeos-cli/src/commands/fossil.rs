@@ -9,12 +9,15 @@ use clap::{Args, Subcommand};
 use std::path::PathBuf;
 use tracing::info;
 
+/// Arguments for fossil log management commands
 #[derive(Debug, Args)]
 pub struct FossilArgs {
+    /// Fossil subcommand to execute
     #[command(subcommand)]
     pub action: FossilAction,
 }
 
+/// Available fossil log management actions
 #[derive(Debug, Subcommand)]
 pub enum FossilAction {
     /// Show active log sessions
@@ -71,6 +74,7 @@ pub enum FossilAction {
     CleanupStale,
 }
 
+/// Execute a fossil log management command
 pub async fn run(args: FossilArgs) -> Result<()> {
     match args.action {
         FossilAction::Active { node } => handle_active(node).await,
@@ -363,20 +367,28 @@ async fn handle_migrate(from: PathBuf, dry_run: bool) -> Result<()> {
 
     if !dry_run {
         // Archive to fossil directory
-        for log_path in old_logs {
-            let file_name = log_path.file_name().unwrap().to_string_lossy();
+        for log_path in &old_logs {
+            let file_name = log_path
+                .file_name()
+                .expect("log path has no filename")
+                .to_string_lossy();
             let dest = config.fossil_dir.join("legacy").join(&*file_name);
 
-            std::fs::create_dir_all(dest.parent().unwrap())?;
-            std::fs::rename(&log_path, &dest)?;
+            if let Some(parent) = dest.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::rename(log_path, &dest)?;
 
             println!("  ✅ Migrated: {}", file_name);
         }
 
         println!("\n✅ Migration complete!");
     } else {
-        for log_path in old_logs {
-            let file_name = log_path.file_name().unwrap().to_string_lossy();
+        for log_path in &old_logs {
+            let file_name = log_path
+                .file_name()
+                .expect("log path has no filename")
+                .to_string_lossy();
             println!("  Would migrate: {}", file_name);
         }
     }

@@ -1,17 +1,21 @@
-// Formatting utilities for CLI output
-// Additional formatting functions implemented: table, duration, file_size, percentage, timestamp
+//! Formatting utilities for CLI output
+//!
+//! Additional formatting functions: table, duration, file_size, percentage, timestamp.
 
 use colored::*;
 
+/// Format data as pretty-printed JSON
 pub fn format_json_pretty<T: serde::Serialize>(data: &T) -> String {
     serde_json::to_string_pretty(data).unwrap_or_else(|_| "Error serializing to JSON".to_string())
 }
 
+/// Format data as YAML
 pub fn format_yaml<T: serde::Serialize>(data: &T) -> String {
     // Use serde_yaml for proper YAML formatting
     serde_yaml::to_string(data).unwrap_or_else(|_| "Error serializing to YAML".to_string())
 }
 
+/// Colorize a status string based on its value
 pub fn colorize_status(status: &str) -> String {
     match status.to_lowercase().as_str() {
         "healthy" | "ok" | "success" => status.green().to_string(),

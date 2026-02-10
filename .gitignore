@@ -42,5 +42,25 @@ vm-testing/*.qcow2
 *secret*
 *credential*
 secrets/
-certs/*.key
-certs/*.pem
+certs/
+
+# Identity and seed files (never commit)
+.family.seed
+.lineage.seed
+.lineage.json
+.beacon.seed
+.known_beacons.json
+.project-status
+
+# Runtime data (generated at runtime, not source)
+data/
+tmp-cloud-init/
+audit.log
+
+# Primal binaries (ELF/Mach-O - use genomeBin for distribution)
+validation/primals/
+base-spore/primals/
+base-spore/.family.seed
+
+# Archive (fossil record lives in ecoPrimals/archive/)
+archive/

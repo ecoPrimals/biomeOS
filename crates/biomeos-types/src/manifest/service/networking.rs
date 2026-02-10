@@ -34,12 +34,19 @@ pub struct PortSpec {
 /// Port protocols
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PortProtocol {
+    /// TCP protocol
     Tcp,
+    /// UDP protocol
     Udp,
+    /// HTTP protocol
     Http,
+    /// HTTPS protocol
     Https,
+    /// gRPC protocol
     Grpc,
+    /// WebSocket protocol
     WebSocket,
+    /// Custom protocol
     Custom(String),
 }
 
@@ -62,12 +69,19 @@ pub struct LoadBalancerSpec {
 /// Load balancing algorithms
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LoadBalancingAlgorithm {
+    /// Round-robin distribution
     RoundRobin,
+    /// Least active connections
     LeastConnections,
+    /// Weighted round-robin
     WeightedRoundRobin,
+    /// IP-based hashing
     IpHash,
+    /// Consistent hashing
     ConsistentHash,
+    /// Random selection
     Random,
+    /// Custom algorithm
     Custom(String),
 }
 
@@ -87,9 +101,13 @@ pub struct SessionAffinity {
 /// Affinity types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AffinityType {
+    /// Client IP-based affinity
     ClientIP,
+    /// Cookie-based affinity
     Cookie,
+    /// Header-based affinity
     Header,
+    /// No session affinity
     None,
 }
 

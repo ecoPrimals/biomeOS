@@ -308,6 +308,7 @@ pub struct PrimalBuilder {
 }
 
 impl PrimalBuilder {
+    /// Create a new builder with default values
     pub fn new() -> Self {
         Self {
             id: None,
@@ -319,36 +320,43 @@ impl PrimalBuilder {
         }
     }
 
+    /// Set the primal identifier
     pub fn id(mut self, id: String) -> Self {
         self.id = Some(id);
         self
     }
 
+    /// Set the path to the primal binary
     pub fn binary_path(mut self, path: String) -> Self {
         self.binary_path = Some(path);
         self
     }
 
+    /// Set the capabilities this primal provides
     pub fn provides(mut self, capabilities: Vec<Capability>) -> Self {
         self.provides = capabilities;
         self
     }
 
+    /// Set the capabilities this primal requires
     pub fn requires(mut self, capabilities: Vec<Capability>) -> Self {
         self.requires = capabilities;
         self
     }
 
+    /// Set the HTTP port (temporary bridge)
     pub fn http_port(mut self, port: u16) -> Self {
         self.http_port = port;
         self
     }
 
+    /// Add an environment variable for the primal process
     pub fn env_var(mut self, key: String, value: String) -> Self {
         self.env_vars.insert(key, value);
         self
     }
 
+    /// Build the primal from the configured values
     pub fn build(self) -> BiomeResult<Arc<GenericManagedPrimal>> {
         let config = PrimalConfig {
             id: self.id.unwrap_or_else(|| uuid::Uuid::new_v4().to_string()),
@@ -436,19 +444,11 @@ pub fn create_storage_provider(
 }
 
 // Legacy compatibility (DEPRECATED - use GenericManagedPrimal instead)
+
+/// Legacy alias — use [`GenericManagedPrimal`] instead
 pub type ManagedBearDog = GenericManagedPrimal;
+/// Legacy alias — use [`GenericManagedPrimal`] instead
 pub type ManagedSongbird = GenericManagedPrimal;
-
-#[deprecated(note = "Use PrimalBuilder::new().provides(Security).build() instead")]
-pub type BearDogConfig = PrimalConfig;
-
-#[deprecated(
-    note = "Use PrimalBuilder::new().provides(Discovery).requires(Security).build() instead"
-)]
-pub type SongbirdConfig = PrimalConfig;
-
-#[deprecated(note = "Use PrimalBuilder directly instead")]
-pub type TowerBuilder = PrimalBuilder;
 
 #[cfg(test)]
 mod tests {

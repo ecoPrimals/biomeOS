@@ -27,18 +27,13 @@
 //! - Only same-lineage nodes can be paired
 //! - Rate-limited to prevent enumeration
 
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::IntoResponse,
-    Json,
-};
+use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
+use base64::Engine;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::sync::RwLock;
-use base64::Engine;
 use tracing::info;
 
 /// Rendezvous slot: holds an encrypted beacon waiting for its pair
@@ -225,9 +220,7 @@ pub async fn post_beacon(
     // Check if a matching peer is already waiting
     let peer_beacon = if !lineage_slots.is_empty() {
         // Find a slot from a DIFFERENT node (not ourselves)
-        let peer_idx = lineage_slots
-            .iter()
-            .position(|s| s.node_hash != node_hash);
+        let peer_idx = lineage_slots.iter().position(|s| s.node_hash != node_hash);
 
         peer_idx.map(|idx| {
             let peer = lineage_slots.remove(idx);
@@ -327,10 +320,19 @@ pub async fn check_peer(
 mod tests {
     use super::*;
 
+    // ========== RendezvousState Tests ==========
+
     #[test]
     fn test_rendezvous_state_creation() {
         let state = RendezvousState::new("/tmp/test-beardog.sock");
         assert_eq!(state.beardog_socket, "/tmp/test-beardog.sock");
+    }
+
+    #[test]
+    fn test_rendezvous_state_clone() {
+        let state = RendezvousState::new("/tmp/test.sock");
+        let cloned = state.clone();
+        assert_eq!(cloned.beardog_socket, "/tmp/test.sock");
     }
 
     #[tokio::test]
@@ -357,14 +359,235 @@ mod tests {
         assert!(slots.is_empty());
     }
 
+    #[tokio::test]
+    async fn test_clean_expired_keeps_valid_slots() {
+        let state = RendezvousState::new("/tmp/test.sock");
+
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+
+        let mut slots = state.slots.write().await;
+        slots.insert(
+            "lineage1".to_string(),
+            vec![RendezvousSlot {
+                encrypted_beacon: "valid".to_string(),
+                node_hash: "node1".to_string(),
+                lineage_hash: "lineage1".to_string(),
+                created_at: now,
+                expires_at: now + 300, // 5 minutes from now
+            }],
+        );
+        drop(slots);
+
+        state.clean_expired().await;
+
+        let slots = state.slots.read().await;
+        assert_eq!(slots.len(), 1);
+        assert_eq!(slots["lineage1"][0].encrypted_beacon, "valid");
+    }
+
+    #[tokio::test]
+    async fn test_clean_expired_mixed_slots() {
+        let state = RendezvousState::new("/tmp/test.sock");
+
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+
+        let mut slots = state.slots.write().await;
+        slots.insert(
+            "lineage1".to_string(),
+            vec![
+                RendezvousSlot {
+                    encrypted_beacon: "expired".to_string(),
+                    node_hash: "node1".to_string(),
+                    lineage_hash: "lineage1".to_string(),
+                    created_at: 0,
+                    expires_at: 1, // Expired
+                },
+                RendezvousSlot {
+                    encrypted_beacon: "valid".to_string(),
+                    node_hash: "node2".to_string(),
+                    lineage_hash: "lineage1".to_string(),
+                    created_at: now,
+                    expires_at: now + 300, // Valid
+                },
+            ],
+        );
+        drop(slots);
+
+        state.clean_expired().await;
+
+        let slots = state.slots.read().await;
+        assert_eq!(slots.len(), 1);
+        assert_eq!(slots["lineage1"].len(), 1);
+        assert_eq!(slots["lineage1"][0].encrypted_beacon, "valid");
+    }
+
+    // ========== Request/Response Serialization Tests ==========
+
     #[test]
     fn test_rendezvous_post_request_deserialize() {
         let json = serde_json::json!({
             "encrypted_beacon": "base64data",
             "dark_forest_token": "tokendata"
         });
-        let request: RendezvousPostRequest = serde_json::from_value(json).unwrap();
+        let request: RendezvousPostRequest = serde_json::from_value(json).expect("deserialize");
         assert_eq!(request.encrypted_beacon, "base64data");
         assert_eq!(request.dark_forest_token, "tokendata");
+    }
+
+    #[test]
+    fn test_rendezvous_post_response_serialize() {
+        let response = RendezvousPostResponse {
+            accepted: true,
+            slot_id: Some("slot-abc".to_string()),
+            peer_beacon: None,
+            peers_waiting: 2,
+        };
+
+        let json = serde_json::to_string(&response).expect("serialize");
+        assert!(json.contains("\"accepted\":true"));
+        assert!(json.contains("\"slot_id\":\"slot-abc\""));
+        assert!(!json.contains("peer_beacon")); // skip_serializing_if = None
+        assert!(json.contains("\"peers_waiting\":2"));
+    }
+
+    #[test]
+    fn test_rendezvous_post_response_with_peer() {
+        let response = RendezvousPostResponse {
+            accepted: true,
+            slot_id: Some("slot-123".to_string()),
+            peer_beacon: Some("encrypted_peer_data".to_string()),
+            peers_waiting: 0,
+        };
+
+        let json = serde_json::to_string(&response).expect("serialize");
+        assert!(json.contains("encrypted_peer_data"));
+    }
+
+    #[test]
+    fn test_rendezvous_check_request_deserialize() {
+        let json = serde_json::json!({
+            "dark_forest_token": "check-token"
+        });
+        let request: RendezvousCheckRequest =
+            serde_json::from_value(json).expect("deserialize");
+        assert_eq!(request.dark_forest_token, "check-token");
+    }
+
+    #[test]
+    fn test_rendezvous_check_response_no_match() {
+        let response = RendezvousCheckResponse {
+            matched: false,
+            peer_beacon: None,
+            peers_waiting: 0,
+        };
+
+        let json = serde_json::to_string(&response).expect("serialize");
+        assert!(json.contains("\"matched\":false"));
+        assert!(!json.contains("peer_beacon")); // skip_serializing_if = None
+    }
+
+    #[test]
+    fn test_rendezvous_check_response_with_match() {
+        let response = RendezvousCheckResponse {
+            matched: true,
+            peer_beacon: Some("matched_beacon_data".to_string()),
+            peers_waiting: 3,
+        };
+
+        let json = serde_json::to_string(&response).expect("serialize");
+        assert!(json.contains("\"matched\":true"));
+        assert!(json.contains("matched_beacon_data"));
+        assert!(json.contains("\"peers_waiting\":3"));
+    }
+
+    // ========== RendezvousSlot Tests ==========
+
+    #[test]
+    fn test_rendezvous_slot_clone() {
+        let slot = RendezvousSlot {
+            encrypted_beacon: "beacon".to_string(),
+            node_hash: "hash".to_string(),
+            lineage_hash: "lineage".to_string(),
+            created_at: 1000,
+            expires_at: 1300,
+        };
+
+        let cloned = slot.clone();
+        assert_eq!(cloned.encrypted_beacon, "beacon");
+        assert_eq!(cloned.node_hash, "hash");
+        assert_eq!(cloned.lineage_hash, "lineage");
+        assert_eq!(cloned.created_at, 1000);
+        assert_eq!(cloned.expires_at, 1300);
+    }
+
+    #[test]
+    fn test_rendezvous_slot_serialization() {
+        let slot = RendezvousSlot {
+            encrypted_beacon: "enc_data".to_string(),
+            node_hash: "nh".to_string(),
+            lineage_hash: "lh".to_string(),
+            created_at: 100,
+            expires_at: 400,
+        };
+
+        let json = serde_json::to_string(&slot).expect("serialize");
+        assert!(json.contains("enc_data"));
+        assert!(json.contains("\"created_at\":100"));
+        assert!(json.contains("\"expires_at\":400"));
+    }
+
+    #[tokio::test]
+    async fn test_multiple_lineage_groups() {
+        let state = RendezvousState::new("/tmp/test.sock");
+
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+
+        let mut slots = state.slots.write().await;
+
+        // Add slots for two different lineage groups
+        slots.insert(
+            "family-a".to_string(),
+            vec![RendezvousSlot {
+                encrypted_beacon: "beacon-a1".to_string(),
+                node_hash: "node-a1".to_string(),
+                lineage_hash: "family-a".to_string(),
+                created_at: now,
+                expires_at: now + 300,
+            }],
+        );
+        slots.insert(
+            "family-b".to_string(),
+            vec![
+                RendezvousSlot {
+                    encrypted_beacon: "beacon-b1".to_string(),
+                    node_hash: "node-b1".to_string(),
+                    lineage_hash: "family-b".to_string(),
+                    created_at: now,
+                    expires_at: now + 300,
+                },
+                RendezvousSlot {
+                    encrypted_beacon: "beacon-b2".to_string(),
+                    node_hash: "node-b2".to_string(),
+                    lineage_hash: "family-b".to_string(),
+                    created_at: now,
+                    expires_at: now + 300,
+                },
+            ],
+        );
+        drop(slots);
+
+        let slots = state.slots.read().await;
+        assert_eq!(slots.len(), 2);
+        assert_eq!(slots["family-a"].len(), 1);
+        assert_eq!(slots["family-b"].len(), 2);
     }
 }

@@ -325,12 +325,15 @@ impl fmt::Display for SessionId {
 /// Identifier errors
 #[derive(Debug, thiserror::Error)]
 pub enum IdError {
+    /// ID cannot be empty
     #[error("ID cannot be empty")]
     Empty,
 
+    /// ID contains invalid characters
     #[error("ID contains invalid characters (use alphanumeric, dash, underscore only)")]
     InvalidCharacters,
 
+    /// Invalid URL format
     #[error("Invalid URL format: {0}")]
     InvalidUrl(#[from] url::ParseError),
 }

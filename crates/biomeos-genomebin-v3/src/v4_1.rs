@@ -317,11 +317,14 @@ mod tests {
     #[test]
     fn test_table_capacity() {
         // Verify table can hold at least 4 architectures (32 bytes each)
+        // Compile-time assertion: if TABLE_SIZE < 128, this won't compile
         const MIN_ARCHITECTURES: usize = 4;
+        const _: () = assert!(TABLE_SIZE >= MIN_ARCHITECTURES * 32);
+        // Verify at runtime that table holds expected count
+        let capacity = TABLE_SIZE / 32;
         assert!(
-            TABLE_SIZE >= MIN_ARCHITECTURES * 32,
-            "Table must hold at least {} architecture entries",
-            MIN_ARCHITECTURES
+            capacity >= MIN_ARCHITECTURES,
+            "Table holds {capacity} arch entries (need {MIN_ARCHITECTURES})"
         );
     }
 }

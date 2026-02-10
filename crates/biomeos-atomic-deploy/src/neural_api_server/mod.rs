@@ -16,6 +16,7 @@
 //! This decomposition keeps each handler under 500 lines while the server
 //! focuses on connection handling and request routing.
 
+pub mod agents;
 mod connection;
 mod proxy;
 mod routing;
@@ -96,6 +97,9 @@ pub struct NeuralApiServer {
     /// Reserved for protocol escalation state queries
     #[allow(dead_code)]
     pub(super) living_graph: Arc<LivingGraph>,
+
+    /// Plasmodium agent registry (meld/split/mix routing contexts)
+    pub(super) agent_registry: agents::AgentRegistry,
 }
 
 impl NeuralApiServer {
@@ -174,6 +178,7 @@ impl NeuralApiServer {
             lifecycle_handler,
             protocol_handler,
             living_graph,
+            agent_registry: agents::AgentRegistry::new(),
         }
     }
 }

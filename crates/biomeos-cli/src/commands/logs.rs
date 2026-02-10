@@ -379,20 +379,28 @@ async fn handle_migrate(from: PathBuf, dry_run: bool) -> Result<()> {
     
     if !dry_run {
         // Archive to fossil directory
-        for log_path in old_logs {
-            let file_name = log_path.file_name().unwrap().to_string_lossy();
+        for log_path in &old_logs {
+            let file_name = log_path
+                .file_name()
+                .expect("log path has no filename")
+                .to_string_lossy();
             let dest = config.fossil_dir.join("legacy").join(&*file_name);
-            
-            std::fs::create_dir_all(dest.parent().unwrap())?;
-            std::fs::rename(&log_path, &dest)?;
-            
+
+            if let Some(parent) = dest.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::rename(log_path, &dest)?;
+
             println!("  ✅ Migrated: {}", file_name);
         }
-        
+
         println!("\n✅ Migration complete!");
     } else {
-        for log_path in old_logs {
-            let file_name = log_path.file_name().unwrap().to_string_lossy();
+        for log_path in &old_logs {
+            let file_name = log_path
+                .file_name()
+                .expect("log path has no filename")
+                .to_string_lossy();
             println!("  Would migrate: {}", file_name);
         }
     }

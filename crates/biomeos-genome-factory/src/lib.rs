@@ -3,6 +3,9 @@
 //! This crate provides a factory for building, composing, and replicating
 //! genomeBins - the self-extracting binary format for ecoPrimals primals.
 //!
+#![warn(missing_docs)]
+#![deny(unsafe_code)]
+//!
 //! # AGPL-3.0-only License
 //!
 //! This program is free software: you can redistribute it and/or modify
@@ -16,8 +19,11 @@
 //! - **Runtime Discovery**: No hardcoded paths, discover storage at runtime
 //! - **100% Pure Rust**: No C dependencies
 
+/// Atomic genomeBin composition from individual genomes
 pub mod compose;
+/// Self-replication and genome distribution
 pub mod replicate;
+/// GenomeBin integrity verification
 pub mod verify;
 
 pub use compose::{GenomeComposeRequest, GenomeComposeResponse};

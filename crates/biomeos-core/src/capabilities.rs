@@ -93,7 +93,7 @@ pub struct PrimalConfig {
     /// Unique identifier (from PRIMAL_ID or auto-generated)
     pub id: String,
 
-    /// Binary path (from PRIMAL_BINARY or argv[0])
+    /// Binary path (from `PRIMAL_BINARY` or `argv[0]`)
     pub binary_path: String,
 
     /// Capabilities this primal provides

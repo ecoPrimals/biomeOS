@@ -146,10 +146,10 @@ pub async fn transition_to_coordinated(family_id: &str) -> Result<()> {
 
     // DEEP DEBT EVOLUTION: Bootstrap resolves provider names from env
     // These are the minimum primals needed before capability registry starts
-    let security_provider = std::env::var("BIOMEOS_SECURITY_PROVIDER")
-        .unwrap_or_else(|_| "beardog".to_string());
-    let network_provider = std::env::var("BIOMEOS_NETWORK_PROVIDER")
-        .unwrap_or_else(|_| "songbird".to_string());
+    let security_provider =
+        std::env::var("BIOMEOS_SECURITY_PROVIDER").unwrap_or_else(|_| "beardog".to_string());
+    let network_provider =
+        std::env::var("BIOMEOS_NETWORK_PROVIDER").unwrap_or_else(|_| "songbird".to_string());
     let mut nucleation = SocketNucleation::new(SocketStrategy::default());
     let beardog_socket = nucleation.assign_socket(&security_provider, family_id);
     let songbird_socket = nucleation.assign_socket(&network_provider, family_id);
@@ -159,7 +159,8 @@ pub async fn transition_to_coordinated(family_id: &str) -> Result<()> {
             return Err(anyhow::anyhow!(
                 "Tower Atomic did not become available within 30s. \
                  Ensure {} and {} primals are running for bootstrap.",
-                security_provider, network_provider
+                security_provider,
+                network_provider
             ));
         }
 
@@ -183,7 +184,11 @@ pub async fn transition_to_coordinated(family_id: &str) -> Result<()> {
     // Layer 1: Verify security provider health
     match verify_primal_health(&beardog_socket, &security_provider).await {
         Ok(caps) => {
-            info!("✅ {} healthy with {} capabilities", security_provider, caps.len());
+            info!(
+                "✅ {} healthy with {} capabilities",
+                security_provider,
+                caps.len()
+            );
         }
         Err(e) => {
             warn!(
@@ -196,7 +201,11 @@ pub async fn transition_to_coordinated(family_id: &str) -> Result<()> {
     // Layer 2: Verify network provider health
     match verify_primal_health(&songbird_socket, &network_provider).await {
         Ok(caps) => {
-            info!("✅ {} healthy with {} capabilities", network_provider, caps.len());
+            info!(
+                "✅ {} healthy with {} capabilities",
+                network_provider,
+                caps.len()
+            );
         }
         Err(e) => {
             warn!(
@@ -261,7 +270,7 @@ mod tests {
     #[tokio::test]
     async fn test_register_self_capabilities() {
         // Verify the capabilities list is correct
-        let capabilities = vec![
+        let capabilities = [
             "primal.germination",
             "primal.terraria",
             "ecosystem.coordination",

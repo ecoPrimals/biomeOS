@@ -11,6 +11,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use tracing::{info, warn};
 
+/// Builder for creating initramfs (initial RAM filesystem) images
 pub struct InitramfsBuilder {
     root: PathBuf,
     binaries: Vec<BinarySpec>,
@@ -116,7 +117,8 @@ impl InitramfsBuilder {
                     let lib_src = Path::new(lib_path_str);
                     if lib_src.exists() && lib_src.is_absolute() {
                         // Preserve the full directory structure (e.g., /lib/x86_64-linux-gnu/)
-                        let dest_full = self.root.join(lib_src.strip_prefix("/").unwrap());
+                        let relative = lib_src.strip_prefix("/").unwrap_or(lib_src);
+                        let dest_full = self.root.join(relative);
 
                         // Create parent directories
                         if let Some(parent) = dest_full.parent() {
@@ -136,20 +138,22 @@ impl InitramfsBuilder {
 
             // Also handle dynamic linker (e.g., /lib64/ld-linux-x86-64.so.2)
             if line.contains("ld-linux") && line.starts_with("\t/") {
-                let ld_path_str = line.split_whitespace().next().unwrap();
-                let ld_src = Path::new(ld_path_str);
-                if ld_src.exists() {
-                    let dest_full = self.root.join(ld_src.strip_prefix("/").unwrap());
+                if let Some(ld_path_str) = line.split_whitespace().next() {
+                    let ld_src = Path::new(ld_path_str);
+                    if ld_src.exists() {
+                        let relative = ld_src.strip_prefix("/").unwrap_or(ld_src);
+                        let dest_full = self.root.join(relative);
 
-                    if let Some(parent) = dest_full.parent() {
-                        fs::create_dir_all(parent)?;
-                    }
+                        if let Some(parent) = dest_full.parent() {
+                            fs::create_dir_all(parent)?;
+                        }
 
-                    if !dest_full.exists() {
-                        fs::copy(ld_src, &dest_full).with_context(|| {
-                            format!("Failed to copy dynamic linker: {}", ld_src.display())
-                        })?;
-                        info!("  ✓ Copied dynamic linker: {}", ld_src.display());
+                        if !dest_full.exists() {
+                            fs::copy(ld_src, &dest_full).with_context(|| {
+                                format!("Failed to copy dynamic linker: {}", ld_src.display())
+                            })?;
+                            info!("  ✓ Copied dynamic linker: {}", ld_src.display());
+                        }
                     }
                 }
             }
@@ -391,10 +395,12 @@ impl KernelManager {
         Ok(kernel_dir.join("biomeos-initramfs.img"))
     }
 
+    /// Get the kernel image path
     pub fn kernel_path(&self) -> &Path {
         &self.kernel_path
     }
 
+    /// Get the initramfs image path
     pub fn initramfs_path(&self) -> &Path {
         &self.initramfs_path
     }

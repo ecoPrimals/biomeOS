@@ -238,3 +238,12 @@ path = "examples/full_ecosystem_demo.rs"
 [[example]]
 name = "benchscale_p2p_test"
 path = "examples/benchscale_p2p_test.rs"
+
+# =============================================================================
+# Release Profile (workspace-wide)
+# =============================================================================
+# NOTE: Profile settings MUST be at workspace root (non-root profiles are ignored)
+[profile.release]
+strip = false   # Keep symbols for debugging
+lto = true      # Link-time optimization for smaller binaries
+panic = "abort"  # No unwinding — faster and smaller (critical for init/PID 1)

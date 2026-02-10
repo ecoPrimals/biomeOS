@@ -229,12 +229,19 @@ pub struct DiscoveryConfig {
 /// Discovery methods
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum DiscoveryMethod {
+    /// Static service list
     Static,
+    /// DNS-based discovery
     Dns,
+    /// Consul service discovery
     Consul,
+    /// Kubernetes service discovery
     Kubernetes,
+    /// Registry-based discovery
     Registry,
+    /// mDNS multicast discovery
     Mdns,
+    /// Custom discovery method
     Custom(String),
 }
 
@@ -347,9 +354,13 @@ pub struct MetricsConfig {
 /// Metrics formats
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MetricsFormat {
+    /// Prometheus exposition format
     Prometheus,
+    /// JSON format
     Json,
+    /// StatsD format
     StatsD,
+    /// Custom metrics format
     Custom(String),
 }
 

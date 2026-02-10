@@ -61,7 +61,7 @@ fn test_binary_spec() {
 
 /// Test initramfs build (integration test)
 #[test]
-#[ignore] // Requires build artifacts
+#[ignore = "Requires build artifacts — run after full build"]
 fn test_full_initramfs_build() -> Result<()> {
     let temp_dir = tempfile::tempdir()?;
     let binding = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -133,7 +133,7 @@ fn test_qemu_available() {
 
 /// Diagnostic: Verify root disk structure
 #[test]
-#[ignore] // Requires VM setup
+#[ignore = "Requires VM setup (QEMU)"]
 fn test_root_disk_structure() -> Result<()> {
     let binding = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let project_root = binding.parent().unwrap().parent().unwrap();

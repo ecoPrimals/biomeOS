@@ -194,8 +194,8 @@ impl DiscoveryBootstrap {
     /// DEEP DEBT EVOLUTION (Feb 7, 2026): Real UDP broadcast implementation.
     /// Sends a discovery packet to the local network and listens for responses.
     async fn discover_via_broadcast(&self) -> Result<String> {
-        use tokio::net::UdpSocket;
         use std::time::Duration;
+        use tokio::net::UdpSocket;
 
         tracing::info!("Attempting UDP broadcast discovery");
 
@@ -210,9 +210,11 @@ impl DiscoveryBootstrap {
             .unwrap_or(9199);
 
         // Bind to any available port for sending
-        let socket = UdpSocket::bind("0.0.0.0:0").await
+        let socket = UdpSocket::bind("0.0.0.0:0")
+            .await
             .map_err(|e| anyhow::anyhow!("Failed to bind UDP socket: {}", e))?;
-        socket.set_broadcast(true)
+        socket
+            .set_broadcast(true)
             .map_err(|e| anyhow::anyhow!("Failed to enable broadcast: {}", e))?;
 
         // Send discovery packet
@@ -224,10 +226,15 @@ impl DiscoveryBootstrap {
         let packet = serde_json::to_vec(&request)?;
         let broadcast_addr = format!("255.255.255.255:{}", discovery_port);
 
-        socket.send_to(&packet, &broadcast_addr).await
+        socket
+            .send_to(&packet, &broadcast_addr)
+            .await
             .map_err(|e| anyhow::anyhow!("Failed to send broadcast: {}", e))?;
 
-        tracing::debug!("Broadcast sent to {}, listening for responses...", broadcast_addr);
+        tracing::debug!(
+            "Broadcast sent to {}, listening for responses...",
+            broadcast_addr
+        );
 
         // Listen for responses with timeout
         let mut buf = [0u8; 4096];
@@ -368,11 +375,12 @@ mod tests {
     }
 
     /// Mutex to serialize env-var-mutating broadcast tests
-    static BROADCAST_ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    /// Uses tokio::sync::Mutex to safely hold across await points
+    static BROADCAST_ENV_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
     #[tokio::test]
     async fn test_discover_via_broadcast_with_env() {
-        let _lock = BROADCAST_ENV_LOCK.lock().unwrap();
+        let _lock = BROADCAST_ENV_LOCK.lock().await;
 
         // Using the simulated broadcast discovery path
         std::env::set_var(
@@ -391,7 +399,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_discover_via_broadcast_no_response() {
-        let _lock = BROADCAST_ENV_LOCK.lock().unwrap();
+        let _lock = BROADCAST_ENV_LOCK.lock().await;
 
         // Ensure the simulated env var is not set
         std::env::remove_var("BROADCAST_DISCOVERED_ENDPOINT");
@@ -407,11 +415,12 @@ mod tests {
     }
 
     /// Mutex to serialize env-var-mutating multicast tests
-    static MULTICAST_ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    /// Uses tokio::sync::Mutex to safely hold across await points
+    static MULTICAST_ENV_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
     #[tokio::test]
     async fn test_discover_via_multicast_with_env() {
-        let _lock = MULTICAST_ENV_LOCK.lock().unwrap();
+        let _lock = MULTICAST_ENV_LOCK.lock().await;
 
         // Using the simulated multicast discovery path
         std::env::set_var(
@@ -430,7 +439,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_discover_via_multicast_no_service() {
-        let _lock = MULTICAST_ENV_LOCK.lock().unwrap();
+        let _lock = MULTICAST_ENV_LOCK.lock().await;
 
         // Ensure the simulated env var is not set
         std::env::remove_var("MULTICAST_DISCOVERED_ENDPOINT");
@@ -446,7 +455,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // Environment variable tests can interfere with each other
+    #[ignore = "Env var tests not thread-safe — use cargo test -- --ignored --test-threads=1"]
     async fn test_environment_variable_discovery() {
         // Set environment variable
         env::set_var("DISCOVERY_ENDPOINT", "http://test:1234");
@@ -462,7 +471,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // Environment variable tests can interfere with each other
+    #[ignore = "Env var tests not thread-safe — use cargo test -- --ignored --test-threads=1"]
     async fn test_legacy_environment_variable() {
         // Save and clear any existing vars
         let saved_discovery = env::var("DISCOVERY_ENDPOINT").ok();
@@ -485,7 +494,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // Environment variable tests can interfere with each other
+    #[ignore = "Env var tests not thread-safe — use cargo test -- --ignored --test-threads=1"]
     async fn test_no_discovery_fails_gracefully() {
         // Save current env vars
         let saved_discovery = env::var("DISCOVERY_ENDPOINT").ok();

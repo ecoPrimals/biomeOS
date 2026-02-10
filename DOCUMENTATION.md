@@ -1,6 +1,6 @@
 # biomeOS Documentation Index
 
-**Updated**: February 9, 2026
+**Updated**: February 10, 2026
 
 ---
 
@@ -13,12 +13,9 @@
 | Deploy in 5 minutes | [QUICK_START.md](QUICK_START.md) |
 | Check current status | [CURRENT_STATUS.md](CURRENT_STATUS.md) |
 | See what changed | [CHANGELOG.md](CHANGELOG.md) |
+| See evolution roadmap | [specs/EVOLUTION_ROADMAP.md](specs/EVOLUTION_ROADMAP.md) |
 | Deploy to USB/Pixel | [livespore-usb/README.md](livespore-usb/README.md) |
-| Understand deployment standard | [specs/PRIMAL_DEPLOYMENT_STANDARD.md](specs/PRIMAL_DEPLOYMENT_STANDARD.md) |
-| NAT traversal / mesh | [specs/MESH_IPC_METHODS_SPEC.md](specs/MESH_IPC_METHODS_SPEC.md) |
-| Sovereign onion service | [docs/handoffs/SOVEREIGN_BEACON_MESH_HANDOFF_FEB06_2026.md](docs/handoffs/SOVEREIGN_BEACON_MESH_HANDOFF_FEB06_2026.md) |
-| Over-NUCLEUS collective | [specs/PLASMODIUM_OVER_NUCLEUS_SPEC.md](specs/PLASMODIUM_OVER_NUCLEUS_SPEC.md) |
-| Model cache | [docs/handoffs/NESTGATE_MODEL_CACHE_HANDOFF_FEB09_2026.md](docs/handoffs/NESTGATE_MODEL_CACHE_HANDOFF_FEB09_2026.md) |
+| Start a NUCLEUS | `biomeos nucleus start --mode full --node-id tower1` |
 
 ---
 
@@ -27,121 +24,73 @@
 | Document | Purpose |
 |----------|---------|
 | [README.md](README.md) | Project overview, architecture, quick start |
-| [START_HERE.md](START_HERE.md) | Getting started guide with deep debt principles |
-| [CURRENT_STATUS.md](CURRENT_STATUS.md) | Latest status, metrics, and remaining work |
+| [START_HERE.md](START_HERE.md) | Getting started with validated systems |
+| [CURRENT_STATUS.md](CURRENT_STATUS.md) | Validated systems, bypasses, evolution needs |
 | [QUICK_START.md](QUICK_START.md) | 5-minute deployment guide |
 | [CHANGELOG.md](CHANGELOG.md) | Version history |
 
 ---
 
-## Specifications
+## Specifications (19 active)
 
-Located in `specs/`:
+See [specs/README.md](specs/README.md) for full index. Key specs:
 
-| Document | Purpose |
-|----------|---------|
-| [PRIMAL_DEPLOYMENT_STANDARD.md](specs/PRIMAL_DEPLOYMENT_STANDARD.md) | Deployment standard v1.0 |
-| [MESH_IPC_METHODS_SPEC.md](specs/MESH_IPC_METHODS_SPEC.md) | Mesh JSON-RPC method definitions |
-| [SOVEREIGN_NAT_TRAVERSAL_EVOLUTION.md](specs/SOVEREIGN_NAT_TRAVERSAL_EVOLUTION.md) | NAT traversal design |
-| [GENETIC_LINEAGE_EVOLUTION_SPEC.md](specs/GENETIC_LINEAGE_EVOLUTION_SPEC.md) | Genetic model spec |
-| [DARK_FOREST_BEACON_GENETICS_SPEC.md](specs/DARK_FOREST_BEACON_GENETICS_SPEC.md) | Dark Forest beacon spec |
-| [SOVEREIGN_BIRDSONG_MESH_SPEC.md](specs/SOVEREIGN_BIRDSONG_MESH_SPEC.md) | Birdsong mesh architecture |
+| Spec | Purpose |
+|------|---------|
+| [EVOLUTION_ROADMAP.md](specs/EVOLUTION_ROADMAP.md) | Bypasses, multi-family, Plasmodium agents, waves |
 | [PLASMODIUM_OVER_NUCLEUS_SPEC.md](specs/PLASMODIUM_OVER_NUCLEUS_SPEC.md) | Over-NUCLEUS collective coordination |
-| [NUCLEUS_BONDING_MODEL.md](specs/NUCLEUS_BONDING_MODEL.md) | Chemical bonding model for inter-NUCLEUS interaction |
+| [NUCLEUS_BONDING_MODEL.md](specs/NUCLEUS_BONDING_MODEL.md) | Chemical bonding model |
+| [NUCLEUS_ATOMIC_COMPOSITION.md](specs/NUCLEUS_ATOMIC_COMPOSITION.md) | Tower/Node/Nest/Full patterns |
+| [NEURAL_API_ROUTING_SPECIFICATION.md](specs/NEURAL_API_ROUTING_SPECIFICATION.md) | Capability translation v2.0 |
+| [PRIMAL_DEPLOYMENT_STANDARD.md](specs/PRIMAL_DEPLOYMENT_STANDARD.md) | Deterministic deployment v1.0 |
+
+47 specs archived to `ecoPrimals/archive/biomeos-feb09-2026/specs/`.
 
 ---
 
-## Handoffs & Reports
+## Handoffs & Evolution Reports (14 active)
 
-Located in `docs/handoffs/`:
+### Covalent Bond Investigation (Feb 10, 2026)
 
-### Latest (Feb 2026)
+| Document | Team | Priority |
+|----------|------|----------|
+| [COVALENT_BOND_EVOLUTION_HANDOFF_FEB10_2026.md](docs/handoffs/COVALENT_BOND_EVOLUTION_HANDOFF_FEB10_2026.md) | Songbird | **CRITICAL** |
+
+### Primal Evolution Handoffs (Feb 9, 2026)
+
+| Document | Team | Priority |
+|----------|------|----------|
+| [SONGBIRD_EVOLUTION_HANDOFF_FEB09_2026.md](docs/handoffs/SONGBIRD_EVOLUTION_HANDOFF_FEB09_2026.md) | Songbird | HIGH |
+| [NESTGATE_EVOLUTION_HANDOFF_FEB09_2026.md](docs/handoffs/NESTGATE_EVOLUTION_HANDOFF_FEB09_2026.md) | NestGate | HIGH |
+| [SQUIRREL_EVOLUTION_HANDOFF_FEB09_2026.md](docs/handoffs/SQUIRREL_EVOLUTION_HANDOFF_FEB09_2026.md) | Squirrel | MEDIUM |
+| [TOADSTOOL_EVOLUTION_HANDOFF_FEB09_2026.md](docs/handoffs/TOADSTOOL_EVOLUTION_HANDOFF_FEB09_2026.md) | Toadstool | MEDIUM |
+| [BEARDOG_EVOLUTION_HANDOFF_FEB09_2026.md](docs/handoffs/BEARDOG_EVOLUTION_HANDOFF_FEB09_2026.md) | BearDog | LOW |
+| [BIOMEOS_EVOLUTION_HANDOFF_FEB09_2026.md](docs/handoffs/BIOMEOS_EVOLUTION_HANDOFF_FEB09_2026.md) | biomeOS | COMPLETE |
+
+### System Handoffs (Feb 7-9, 2026)
 
 | Document | Content |
 |----------|---------|
-| [PLASMODIUM_OVER_NUCLEUS_HANDOFF_FEB09_2026.md](docs/handoffs/PLASMODIUM_OVER_NUCLEUS_HANDOFF_FEB09_2026.md) | Over-NUCLEUS collective coordination |
+| [SQUIRREL_NEURAL_API_BRIDGE_HANDOFF_FEB09_2026.md](docs/handoffs/SQUIRREL_NEURAL_API_BRIDGE_HANDOFF_FEB09_2026.md) | AI bridge validation |
+| [PLASMODIUM_OVER_NUCLEUS_HANDOFF_FEB09_2026.md](docs/handoffs/PLASMODIUM_OVER_NUCLEUS_HANDOFF_FEB09_2026.md) | Over-NUCLEUS collective |
 | [NESTGATE_MODEL_CACHE_HANDOFF_FEB09_2026.md](docs/handoffs/NESTGATE_MODEL_CACHE_HANDOFF_FEB09_2026.md) | Model cache + NestGate bugs |
 | [TOADSTOOL_DISTRIBUTED_GPU_HANDOFF_FEB09_2026.md](docs/handoffs/TOADSTOOL_DISTRIBUTED_GPU_HANDOFF_FEB09_2026.md) | Distributed GPU inference |
 | [SONGBIRD_ROUTER_EVOLUTION_HANDOFF_FEB08_2026.md](docs/handoffs/SONGBIRD_ROUTER_EVOLUTION_HANDOFF_FEB08_2026.md) | Songbird multi-path routing |
 | [SOVEREIGN_MULTI_PATH_PROTOCOL_FEB08_2026.md](docs/handoffs/SOVEREIGN_MULTI_PATH_PROTOCOL_FEB08_2026.md) | Sovereign multi-path protocol |
 | [TOR_INTEGRATION_HANDOFF_FEB07_2026.md](docs/handoffs/TOR_INTEGRATION_HANDOFF_FEB07_2026.md) | Tor gateway integration |
 
----
-
-## Deployment
-
-### USB LiveSpore
-
-| Location | Content |
-|----------|---------|
-| `livespore-usb/x86_64/` | Intel/AMD deployment |
-| `livespore-usb/aarch64/` | ARM64 deployment |
-| `livespore-usb/x86_64/scripts/` | Deployment scripts |
-| `livespore-usb/x86_64/primals/` | Primal binaries |
-
-### Pixel 8a
-
-| Location | Content |
-|----------|---------|
-| `pixel8a-deploy/` | Android deployment package |
-| `pixel8a-deploy/primals/` | aarch64 binaries |
-
----
-
-## Graph Definitions
-
-Located in `graphs/`:
-
-| Graph | Purpose |
-|-------|---------|
-| `tower_atomic_bootstrap.toml` | Tower Atomic deployment |
-| `sovereign_onion_genome.toml` | Sovereign onion mesh deployment |
-
----
-
-## Crate Documentation
-
-### Core Crates (25 total)
-
-| Crate | Purpose |
-|-------|---------|
-| `biomeos-core` | Core orchestration, discovery, P2P coordination, plasmodium, model cache |
-| `biomeos-types` | Shared types, paths, capabilities, defaults |
-| `biomeos-graph` | Graph execution engine |
-| `biomeos-spore` | Deployment packaging, Dark Forest beacons |
-| `biomeos-boot` | ISO/initramfs builder |
-
-### API & UI Crates
-
-| Crate | Purpose |
-|-------|---------|
-| `biomeos-api` | HTTP/WebSocket API server, capability handlers |
-| `biomeos-ui` | Interactive UI orchestration, dynamic primal connections |
-| `biomeos-cli` | Command-line interface |
-
-### Deployment Crates
-
-| Crate | Purpose |
-|-------|---------|
-| `biomeos-atomic-deploy` | Atomic deployment, Neural API, capability routing |
-| `biomeos-genomebin-v3` | genomeBin format |
-| `biomeos-primal-sdk` | Primal development SDK |
-| `genome-deploy` | genomeBin deployment (1 justified unsafe: mmap) |
-| `biomeos-deploy` | VM deployment and verification |
-
-### Specialized Crates
-
-| Crate | Purpose |
-|-------|---------|
-| `biomeos-federation` | Multi-tower federation |
+14 handoffs archived to `ecoPrimals/archive/biomeos-feb09-2026/handoffs/`.
 
 ---
 
 ## Environment Variables Reference
 
+### Core
+
 | Variable | Purpose | Default |
 |----------|---------|---------|
-| `FAMILY_ID` | Genetic lineage identifier | (required) |
+| `NODE_ID` | Node identifier | (required for Neural API) |
+| `FAMILY_ID` | Genetic lineage identifier | (from .family.seed) |
 | `BIOMEOS_SECURITY_PROVIDER` | Security/crypto primal | `beardog` |
 | `BIOMEOS_NETWORK_PROVIDER` | Network orchestration primal | `songbird` |
 | `BIOMEOS_REGISTRY_PROVIDER` | Service registry primal | `songbird` |
@@ -150,38 +99,62 @@ Located in `graphs/`:
 | `BIOMEOS_SOVEREIGN` | Enable sovereign mode | (unset) |
 | `BIOMEOS_BIND_ADDRESS` | Network bind address | `::1` |
 | `XDG_RUNTIME_DIR` | XDG runtime directory | `/run/user/$UID` |
-| `BIOMEOS_SOCKET_DIR` | Override socket directory | (auto-resolved) |
+| `BIOMEOS_SOCKET_DIR` | Override socket directory | (auto-resolved via SystemPaths) |
+| `SONGBIRD_MESH_PORT` | Plasmodium remote gate port | `8080` |
+| `SONGBIRD_HTTP_PORT` | Songbird HTTP listen port (beacon payload) | `8080` |
+
+### AI Bridge
+
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `HTTP_REQUEST_PROVIDER_SOCKET` | Squirrel HTTP capability socket | (auto-discover) |
+| `AI_HTTP_PROVIDERS` | Enabled cloud AI providers | (none) |
+| `ANTHROPIC_API_KEY` | Anthropic Claude API key | (none) |
+| `OPENAI_API_KEY` | OpenAI GPT API key | (none) |
+
+### Socket Paths
+
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `BEARDOG_SOCKET` | BearDog socket path | (auto-discover via SystemPaths) |
+| `SONGBIRD_SOCKET` | Songbird socket path | (auto-discover via SystemPaths) |
+| `SONGBIRD_SECURITY_PROVIDER` | BearDog socket for Songbird TLS | (auto-discover) |
+| `NEURAL_API_SOCKET` | Neural API socket path | (auto-discover via SystemPaths) |
+| `NESTGATE_JWT_SECRET` | NestGate authentication secret | (auto-generate) |
 
 ---
 
 ## Build & Test
 
 ```bash
-# Generate crate documentation
-cargo doc --workspace --no-deps --open
+# Build
+cargo build --workspace
 
-# Run all tests (1,747 tests)
+# Test (2,297 tests)
 cargo test --workspace
 
-# Clippy (0 warnings outside biomeos-boot)
+# Coverage (56.75% region)
+cargo llvm-cov --workspace
+
+# Clippy (0 warnings, entire workspace)
 cargo clippy --workspace
 
-# Check coverage
-cargo llvm-cov --workspace
+# Format
+cargo fmt --check
+
+# Start NUCLEUS (Pure Rust)
+biomeos nucleus start --mode full --node-id tower1
 ```
 
 ---
 
-## Contributing
+## Fossil Archive
 
-1. Follow ecoBin v2.0 standard (Pure Rust, zero C deps)
-2. Use capability-based discovery (no hardcoded primal names)
-3. Follow PRIMAL_DEPLOYMENT_STANDARD
-4. Keep files under 1000 lines
-5. Ensure zero clippy warnings
-6. Update relevant documentation
+Previous docs archived to `ecoPrimals/archive/biomeos-feb09-2026/`.
+See `ARCHIVE_INDEX.md` in archive for details.
 
 ---
 
-**Status**: Documentation current as of February 9, 2026  
-**Tests**: 1,747 passing | **Clippy**: PASS
+**Documentation current as of February 10, 2026**
+**Active: 19 specs, 14 handoffs, 10 scripts**
+**Tests: 2,297 passing (56.75% region coverage) | Clippy: PASS | Docs: Full coverage**

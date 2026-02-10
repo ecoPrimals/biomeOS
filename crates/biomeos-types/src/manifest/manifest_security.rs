@@ -38,8 +38,11 @@ pub struct SecurityPolicySpec {
 /// Security policy types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SecurityPolicyType {
+    /// Network-level security policy
     NetworkPolicy,
+    /// Pod security policy (PSP)
     PodSecurityPolicy,
+    /// Custom security policy
     CustomPolicy,
 }
 
@@ -59,8 +62,11 @@ pub struct SecurityRuleSpec {
 /// Security actions
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SecurityAction {
+    /// Allow the action
     Allow,
+    /// Deny the action
     Deny,
+    /// Audit the action (log only)
     Audit,
 }
 
@@ -80,13 +86,21 @@ pub struct SecurityConditionSpec {
 /// Condition operators
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ConditionOperator {
+    /// Equals comparison
     Equals,
+    /// Not-equals comparison
     NotEquals,
+    /// Value is in the set
     In,
+    /// Value is not in the set
     NotIn,
+    /// Key exists
     Exists,
+    /// Key does not exist
     DoesNotExist,
+    /// Greater than comparison
     GreaterThan,
+    /// Less than comparison
     LessThan,
 }
 
@@ -162,7 +176,9 @@ pub struct RoleRef {
 /// Role kinds
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RoleKind {
+    /// Namespace-scoped role
     Role,
+    /// Cluster-scoped role
     ClusterRole,
 }
 
@@ -182,8 +198,11 @@ pub struct SubjectSpec {
 /// Subject kinds
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SubjectKind {
+    /// User subject
     User,
+    /// Group subject
     Group,
+    /// Service account subject
     ServiceAccount,
 }
 
@@ -279,16 +298,27 @@ pub struct TlsSpec {
 /// Certificate sources
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum CertificateSource {
+    /// Self-signed certificate
     SelfSigned,
-    CertManager { issuer: String },
-    External { secret_name: String },
+    /// Certificate from cert-manager
+    CertManager {
+        /// Issuer name
+        issuer: String,
+    },
+    /// External certificate from secret
+    External {
+        /// Secret name containing the certificate
+        secret_name: String,
+    },
 }
 
 /// TLS versions
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TlsVersion {
+    /// TLS version 1.2
     #[serde(rename = "1.2")]
     V1_2,
+    /// TLS version 1.3
     #[serde(rename = "1.3")]
     V1_3,
 }
@@ -306,8 +336,11 @@ pub struct MutualTlsSpec {
 /// Client certificate verification modes
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ClientCertVerification {
+    /// Client certificate is required
     Required,
+    /// Client certificate is optional
     Optional,
+    /// Client certificate verification is disabled
     Disabled,
 }
 
@@ -349,7 +382,9 @@ pub struct AuditWebhookSpec {
 /// Audit log formats
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AuditLogFormat {
+    /// JSON formatted logs
     Json,
+    /// Legacy text format
     Legacy,
 }
 

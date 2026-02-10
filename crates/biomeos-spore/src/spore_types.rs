@@ -84,4 +84,55 @@ mod tests {
     fn test_default() {
         assert_eq!(SporeType::default(), SporeType::Live);
     }
+
+    #[test]
+    fn test_description() {
+        assert!(SporeType::Cold.description().contains("storage"));
+        assert!(SporeType::Live.description().contains("Deployment"));
+    }
+
+    #[test]
+    fn test_emoji() {
+        assert_eq!(SporeType::Cold.emoji(), "❄️");
+        assert_eq!(SporeType::Live.emoji(), "🌱");
+    }
+
+    #[test]
+    fn test_serialization_roundtrip_json() {
+        let live = SporeType::Live;
+        let json = serde_json::to_string(&live).expect("serialize");
+        let deserialized: SporeType = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(deserialized, live);
+
+        let cold = SporeType::Cold;
+        let json = serde_json::to_string(&cold).expect("serialize");
+        let deserialized: SporeType = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(deserialized, cold);
+    }
+
+    #[test]
+    fn test_equality() {
+        assert_eq!(SporeType::Live, SporeType::Live);
+        assert_eq!(SporeType::Cold, SporeType::Cold);
+        assert_ne!(SporeType::Live, SporeType::Cold);
+    }
+
+    #[test]
+    fn test_clone_and_copy() {
+        let original = SporeType::Cold;
+        let copied = original; // Copy trait
+        let also_copied = original; // Still valid because Copy
+
+        assert_eq!(original, copied);
+        assert_eq!(original, also_copied);
+    }
+
+    #[test]
+    fn test_debug_format() {
+        let debug = format!("{:?}", SporeType::Live);
+        assert_eq!(debug, "Live");
+
+        let debug = format!("{:?}", SporeType::Cold);
+        assert_eq!(debug, "Cold");
+    }
 }

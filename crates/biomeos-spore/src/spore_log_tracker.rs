@@ -21,29 +21,43 @@ use crate::error::SporeResult;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SporeEventType {
+    /// Spore was created from scratch
     Creation,
+    /// Spore was cloned from an existing spore
     Cloning,
+    /// Spore was deployed (incubated) on a computer
     Incubation,
+    /// Spore integrity was verified
     Verification,
+    /// Spore binaries were refreshed to a new version
     Refresh,
+    /// Application-defined event type
     Custom(String),
 }
 
 /// A spore lifecycle event
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SporeLifecycleEvent {
+    /// When this event occurred
     pub timestamp: DateTime<Utc>,
+    /// Type of lifecycle event
     pub event_type: SporeEventType,
+    /// Node identifier (if applicable)
     pub node_id: Option<String>,
+    /// Target host (for deployment events)
     pub deployed_to: Option<String>,
+    /// Arbitrary key-value metadata
     pub metadata: HashMap<String, String>,
 }
 
 /// Lifecycle log for a spore
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SporeLifecycleLog {
+    /// Spore identifier
     pub spore_id: String,
+    /// When the log was initialized
     pub created_at: DateTime<Utc>,
+    /// Chronological list of lifecycle events
     pub events: Vec<SporeLifecycleEvent>,
 }
 

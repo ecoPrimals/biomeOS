@@ -117,16 +117,30 @@ pub struct RetryStrategy {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum BackoffType {
     /// Linear backoff with fixed increment
-    Linear { increment_ms: u64 },
+    Linear {
+        /// Increment in milliseconds
+        increment_ms: u64,
+    },
 
     /// Exponential backoff
-    Exponential { base: f64, max_delay_ms: u64 },
+    Exponential {
+        /// Exponential base multiplier
+        base: f64,
+        /// Maximum delay in milliseconds
+        max_delay_ms: u64,
+    },
 
     /// Fibonacci backoff
-    Fibonacci { max_delay_ms: u64 },
+    Fibonacci {
+        /// Maximum delay in milliseconds
+        max_delay_ms: u64,
+    },
 
     /// Custom backoff with predefined delays
-    Custom { delays_ms: Vec<u64> },
+    Custom {
+        /// Sequence of delay values in milliseconds
+        delays_ms: Vec<u64>,
+    },
 }
 
 /// Error severity levels
@@ -207,7 +221,10 @@ pub enum ActionType {
     HealthCheck,
 
     /// Custom action
-    Custom { action_type: String },
+    Custom {
+        /// Custom action type identifier
+        action_type: String,
+    },
 }
 
 /// Risk levels for actions

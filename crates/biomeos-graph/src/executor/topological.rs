@@ -45,10 +45,14 @@ impl TopologicalSorter {
         for (node_id, node) in &graph.nodes {
             for dep in &node.depends_on {
                 // Increment in-degree for dependent node
-                *in_degree.get_mut(node_id).unwrap() += 1;
+                if let Some(degree) = in_degree.get_mut(node_id) {
+                    *degree += 1;
+                }
 
                 // Add edge from dependency to dependent
-                adjacency.get_mut(dep).unwrap().push(node_id.clone());
+                if let Some(adj) = adjacency.get_mut(dep) {
+                    adj.push(node_id.clone());
+                }
             }
         }
 

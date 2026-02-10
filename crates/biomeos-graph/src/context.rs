@@ -56,25 +56,31 @@ impl ExecutionContext {
 
     /// Store output from a node
     pub fn set_output(&self, key: String, value: Value) {
-        let mut inner = self.inner.write().unwrap();
+        let mut inner = self
+            .inner
+            .write()
+            .expect("execution context lock poisoned");
         inner.outputs.insert(key, value);
     }
 
     /// Get output from a previous node
     pub fn get_output(&self, key: &str) -> Option<Value> {
-        let inner = self.inner.read().unwrap();
+        let inner = self.inner.read().expect("execution context lock poisoned");
         inner.outputs.get(key).cloned()
     }
 
     /// Get all outputs
     pub fn get_all_outputs(&self) -> HashMap<String, Value> {
-        let inner = self.inner.read().unwrap();
+        let inner = self.inner.read().expect("execution context lock poisoned");
         inner.outputs.clone()
     }
 
     /// Register a discovered primal
     pub fn register_primal(&self, id: String, capabilities: Vec<String>) {
-        let mut inner = self.inner.write().unwrap();
+        let mut inner = self
+            .inner
+            .write()
+            .expect("execution context lock poisoned");
 
         // Store primal info
         inner.primal_info.insert(
@@ -97,7 +103,7 @@ impl ExecutionContext {
 
     /// Find primals by capability (runtime discovery!)
     pub fn find_primal_by_capability(&self, capability: &str) -> Option<String> {
-        let inner = self.inner.read().unwrap();
+        let inner = self.inner.read().expect("execution context lock poisoned");
         inner
             .primals_by_capability
             .get(capability)
@@ -107,7 +113,7 @@ impl ExecutionContext {
 
     /// Find primals by multiple capabilities (all required)
     pub fn find_primal_by_capabilities(&self, capabilities: &[String]) -> Option<String> {
-        let inner = self.inner.read().unwrap();
+        let inner = self.inner.read().expect("execution context lock poisoned");
 
         // Find primals that have ALL capabilities
         for (primal_id, info) in &inner.primal_info {
@@ -125,7 +131,7 @@ impl ExecutionContext {
 
     /// Get primal info
     pub fn get_primal_info(&self, id: &str) -> Option<PrimalInfo> {
-        let inner = self.inner.read().unwrap();
+        let inner = self.inner.read().expect("execution context lock poisoned");
         inner.primal_info.get(id).cloned()
     }
 }

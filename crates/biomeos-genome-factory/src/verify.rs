@@ -19,18 +19,26 @@ pub struct GenomeVerifyRequest {
 /// Verification result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GenomeVerifyResponse {
+    /// Identifier of the verified genome
     pub genome_id: String,
+    /// Whether the genome passed all verification checks
     pub valid: bool,
+    /// Per-component checksum results
     pub checksums: HashMap<String, ChecksumResult>,
+    /// Whether the manifest is valid
     pub manifest_valid: bool,
+    /// Number of embedded genomes
     pub embedded_count: usize,
 }
 
 /// Checksum verification result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChecksumResult {
+    /// Expected checksum value
     pub expected: String,
+    /// Actual computed checksum value
     pub actual: String,
+    /// Whether expected matches actual
     pub valid: bool,
 }
 

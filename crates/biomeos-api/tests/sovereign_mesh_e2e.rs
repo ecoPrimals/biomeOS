@@ -436,11 +436,7 @@ async fn e2e_phase1_beacon_generation() {
         "[2600:1700:b0b0:5b90::80]:9901",
     );
     let usb = SimulatedNode::new("usb", family_seed.clone(), "192.168.1.50:9902");
-    let tower = SimulatedNode::new(
-        "tower",
-        family_seed.clone(),
-        "tower.nestgate.io:3492",
-    );
+    let tower = SimulatedNode::new("tower", family_seed.clone(), "tower.nestgate.io:3492");
 
     // Each node has a unique beacon ID
     assert_ne!(pixel.beardog.beacon_id, usb.beardog.beacon_id);
@@ -509,9 +505,7 @@ async fn e2e_phase2_rendezvous_matching() {
     );
 
     // Pixel polls and gets USB's beacon
-    let pixel_check = rendezvous
-        .check_peer(&pixel_token, "pixel8a")
-        .unwrap();
+    let pixel_check = rendezvous.check_peer(&pixel_token, "pixel8a").unwrap();
     assert!(
         pixel_check.is_some(),
         "Pixel should find USB's beacon on check"
@@ -602,11 +596,7 @@ async fn e2e_phase4_encrypted_data_transfer() {
         family_seed.clone(),
         "[2600:1700:b0b0:5b90::80]:9901",
     );
-    let tower = SimulatedNode::new(
-        "tower",
-        family_seed.clone(),
-        "tower.nestgate.io:3492",
-    );
+    let tower = SimulatedNode::new("tower", family_seed.clone(), "tower.nestgate.io:3492");
 
     // Simulate Pixel sending data home to Tower
     let original_data = b"Photos from hike - 2026-02-07 - encrypted sovereign transfer";
@@ -660,11 +650,7 @@ async fn e2e_phase5_attacker_rejection() {
         family_seed.clone(),
         "[2600:1700:b0b0:5b90::80]:9901",
     );
-    let attacker = SimulatedNode::new(
-        "evil-node",
-        attacker_seed.clone(),
-        "198.51.100.1:6666",
-    );
+    let attacker = SimulatedNode::new("evil-node", attacker_seed.clone(), "198.51.100.1:6666");
 
     // Tower rendezvous (with family's seed)
     let rendezvous = MockRendezvous::new(family_seed.clone());
@@ -722,11 +708,7 @@ async fn e2e_phase6_full_sovereign_mesh_flow() {
         "[2600:1700:b0b0:5b90::80]:9901",
     );
     let usb = SimulatedNode::new("usb", family_seed.clone(), "192.168.1.50:9902");
-    let tower = SimulatedNode::new(
-        "tower",
-        family_seed.clone(),
-        "tower.nestgate.io:3492",
-    );
+    let tower = SimulatedNode::new("tower", family_seed.clone(), "tower.nestgate.io:3492");
 
     // === RENDEZVOUS: Pixel and USB meet via Tower ===
     let rendezvous = MockRendezvous::new(family_seed.clone());
@@ -813,11 +795,13 @@ async fn e2e_phase6_full_sovereign_mesh_flow() {
     let attacker = SimulatedNode::new("attacker", attacker_seed, "evil.com:666");
     assert!(attacker.decrypt_peer_beacon(&pixel_beacon).is_none());
     assert!(attacker.decrypt_data(&encrypted_payload).is_none());
-    assert!(
-        rendezvous
-            .post_beacon(&attacker.create_token(), &attacker.encrypt_beacon(), "attacker")
-            .is_err()
-    );
+    assert!(rendezvous
+        .post_beacon(
+            &attacker.create_token(),
+            &attacker.encrypt_beacon(),
+            "attacker"
+        )
+        .is_err());
 }
 
 /// Verify crypto properties: same plaintext produces different ciphertext each time

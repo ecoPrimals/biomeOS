@@ -61,6 +61,7 @@ async fn test_seed_generation_failure() {
         label: "test-spore".to_string(),
         node_id: "test-node".to_string(),
         spore_type: SporeType::Live,
+        family_id: "test-family".to_string(),
     };
 
     let result = Spore::create(mount_point.clone(), config).await;
@@ -116,6 +117,7 @@ async fn test_config_creation_success() {
         label: "test-spore".to_string(),
         node_id: "test-node".to_string(),
         spore_type: SporeType::Live,
+        family_id: "test-family".to_string(),
     };
 
     // Normal creation should work
@@ -191,6 +193,7 @@ async fn test_partial_binary_copy() {
         label: "test-spore".to_string(),
         node_id: "test-node".to_string(),
         spore_type: SporeType::Live,
+        family_id: "test-family".to_string(),
     };
 
     let result = Spore::create(mount_point.clone(), config).await;
@@ -246,6 +249,7 @@ async fn test_invalid_node_id() {
             label: "test-spore".to_string(),
             node_id: node_id.to_string(),
             spore_type: SporeType::Live,
+            family_id: "test-family".to_string(),
         };
 
         let result = Spore::create(mount_point.clone(), config).await;
@@ -307,6 +311,7 @@ async fn test_empty_primals_directory() {
         label: "test-spore".to_string(),
         node_id: "test-node".to_string(),
         spore_type: SporeType::Live,
+        family_id: "test-family".to_string(),
     };
 
     let result = Spore::create(mount_point.clone(), config).await;

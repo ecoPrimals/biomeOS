@@ -21,9 +21,13 @@ pub struct GenomeReplicateRequest {
 /// Response after replication
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GenomeReplicateResponse {
+    /// Identifier of the replicated genome
     pub genome_id: String,
+    /// Path where the replicated genome was written
     pub path: PathBuf,
+    /// Size of the replicated genome in bytes
     pub size: u64,
+    /// Supported architectures in the replicated genome
     pub architectures: Vec<String>,
 }
 

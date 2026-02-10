@@ -25,9 +25,13 @@ pub struct LogIssue {
 /// Issue severity levels.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum IssueSeverity {
+    /// System-affecting critical issue
     Critical,
+    /// Error requiring attention
     Error,
+    /// Potential problem
     Warning,
+    /// Informational
     Info,
 }
 
@@ -37,9 +41,11 @@ pub struct LogMetrics {
     /// Total lines logged
     pub total_lines: u64,
 
-    /// Lines by severity
+    /// Number of error-level lines
     pub errors: u64,
+    /// Number of warning-level lines
     pub warnings: u64,
+    /// Number of info-level lines
     pub info: u64,
 
     /// Total size

@@ -39,7 +39,7 @@ mod multi_family_tests {
     #[test]
     fn test_multi_family_isolation() {
         // Create three different families
-        let families = vec![
+        let families = [
             (
                 FamilyId::new("family-alpha".to_string()),
                 create_test_seed(b"alpha-seed-123456789012345678901234"),
@@ -121,7 +121,7 @@ mod multi_family_tests {
         }
 
         // Create three families with members
-        let families = vec![
+        let families = [
             Family {
                 id: "enterprise-corp".to_string(),
                 seed_data: b"enterprise-seed-123456789012345678901",
@@ -373,7 +373,7 @@ mod multi_family_tests {
 
     /// Stress test: Many families
     #[tokio::test]
-    #[ignore] // Run with --ignored for stress testing
+    #[ignore = "Stress test — run with cargo test -- --ignored"]
     async fn test_many_families_stress() {
         let num_families = 100;
         let mut families = Vec::new();

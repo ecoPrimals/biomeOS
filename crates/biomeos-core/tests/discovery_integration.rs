@@ -222,7 +222,7 @@ async fn test_discover_running_nestgate() {
     // Use pure Rust HTTP (ecoBin v2.0 compliant)
     match http_get(nestgate_url, 2) {
         Ok((status, body)) => {
-            if status >= 200 && status < 300 {
+            if (200..300).contains(&status) {
                 println!("✅ NestGate is running and responsive");
                 assert!(!body.is_empty(), "Health response should not be empty");
                 println!("   Health response: {}", body);
@@ -282,7 +282,7 @@ async fn test_capability_based_discovery() {
 
     // This test passes if we can discover at least one capability
     // (or if none are available, which is also valid)
-    assert!(true, "Capability-based discovery validated");
+    // Reaching this point without panic validates the discovery pipeline
 }
 
 // ============================================================================
@@ -296,7 +296,7 @@ async fn test_rest_api_architecture() {
 
     // Use pure Rust HTTP (ecoBin v2.0 compliant)
     match http_get(nestgate_url, 2) {
-        Ok((status, _)) if status >= 200 && status < 300 => {
+        Ok((status, _)) if (200..300).contains(&status) => {
             println!("✅ REST API primal discovered (NestGate)");
         }
         _ => {
@@ -321,7 +321,7 @@ async fn test_cli_tool_architecture() {
                 use biomeos_core::primal_adapter::PrimalInterface;
                 match adapter.interface {
                     PrimalInterface::Direct { .. } | PrimalInterface::Subcommand { .. } => {
-                        assert!(true, "CLI interface correctly identified");
+                        // CLI interface correctly identified
                     }
                     _ => {
                         println!("   Interface: {:?}", adapter.interface);
@@ -398,7 +398,7 @@ async fn test_no_hardcoded_endpoints() {
         println!("⚠️  No primals available to test zero-hardcoding");
     }
 
-    assert!(true, "Zero-hardcoding validation complete");
+    // Zero-hardcoding validation complete — test exercises pure discovery pipeline
 }
 
 // ============================================================================

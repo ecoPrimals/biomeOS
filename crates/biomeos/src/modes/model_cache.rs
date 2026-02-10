@@ -4,7 +4,7 @@
 
 use anyhow::Result;
 use biomeos_core::model_cache::{ModelCache, ModelResolution};
-use std::path::PathBuf;
+use std::path::Path;
 
 use crate::ModelCacheCommand;
 
@@ -88,10 +88,7 @@ async fn list_models() -> Result<()> {
         return Ok(());
     }
 
-    println!(
-        "  {:<40} {:>10}  {:>12}  {}",
-        "MODEL", "FORMAT", "SIZE", "PATH"
-    );
+    println!("  {:<40} {:>10}  {:>12}  PATH", "MODEL", "FORMAT", "SIZE",);
     println!("  {}", "-".repeat(90));
 
     for model in &models {
@@ -145,7 +142,10 @@ async fn resolve_model(model_id: &str) -> Result<()> {
                 "    Size:   {:.1} MB",
                 entry.size_bytes as f64 / 1_048_576.0
             );
-            println!("    Transfer needed: Use Songbird to fetch from {}", entry.gate_id);
+            println!(
+                "    Transfer needed: Use Songbird to fetch from {}",
+                entry.gate_id
+            );
         }
         ModelResolution::NotFound => {
             println!("  NOT FOUND in local cache or mesh.");
@@ -161,7 +161,7 @@ async fn resolve_model(model_id: &str) -> Result<()> {
 }
 
 /// Register a model from a local path
-async fn register_model(model_id: &str, path: &PathBuf) -> Result<()> {
+async fn register_model(model_id: &str, path: &Path) -> Result<()> {
     println!("\n  Registering: {} -> {}\n", model_id, path.display());
 
     let mut cache = ModelCache::new().await?;
@@ -220,11 +220,7 @@ async fn show_status() -> Result<()> {
                 .into_iter()
                 .flatten()
                 .filter_map(|e| e.ok())
-                .filter(|e| {
-                    e.file_name()
-                        .to_string_lossy()
-                        .starts_with("models--")
-                })
+                .filter(|e| e.file_name().to_string_lossy().starts_with("models--"))
                 .collect();
 
             let unregistered = hf_models

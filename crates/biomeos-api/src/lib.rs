@@ -3,6 +3,10 @@
 //! REST API library for primal orchestration and discovery.
 //! This module exposes the core types and functions used by the binary.
 
+#![warn(missing_docs)]
+#![deny(unsafe_code)]
+
+/// Dark Forest beacon gate middleware for sovereign security
 pub mod dark_forest_gate;
 mod handlers;
 mod state;
@@ -31,12 +35,15 @@ use tower_http::{
 /// API error type
 #[derive(Debug, thiserror::Error)]
 pub enum ApiError {
+    /// Internal server error
     #[error("Internal server error: {0}")]
     Internal(String),
 
+    /// Primal discovery failure
     #[error("Primal discovery failed: {0}")]
     DiscoveryFailed(String),
 
+    /// Resource not found
     #[error("Not found: {0}")]
     NotFound(String),
 }
@@ -284,6 +291,15 @@ fn create_app_with_transport(state: AppState, force_sovereign: bool) -> Router {
         )
         .route("/api/v1/events/stream", get(handlers::events::event_stream))
         .route("/api/v1/events/ws", get(websocket_handler))
+        // Capability discovery routes
+        .route(
+            "/api/v1/capabilities",
+            get(handlers::capability::list_capabilities),
+        )
+        .route(
+            "/api/v1/capabilities/discover",
+            post(handlers::capability::discover_capability),
+        )
         .route(
             "/api/v1/trust/evaluate",
             post(handlers::trust::evaluate_trust),
@@ -311,14 +327,25 @@ fn create_app_with_transport(state: AppState, force_sovereign: bool) -> Router {
             "/api/v1/genome/:id/download",
             get(handlers::genome::download_genome),
         )
+        .route("/api/v1/genome/build", post(handlers::genome::build_genome))
+        .route(
+            "/api/v1/genome/:id/info",
+            get(handlers::genome::get_genome_info),
+        )
+        .route(
+            "/api/v1/genome/verify-file",
+            post(handlers::genome::verify_genome_file),
+        )
         .layer(cors)
         .layer(TraceLayer::new_for_http())
         .with_state(shared_state);
 
     // Add rendezvous routes (Dark Forest beacon handshake for Pixel-USB)
     // These have their OWN Dark Forest verification inside the handlers too
-    let beardog_socket = std::env::var("BEARDOG_SOCKET")
-        .unwrap_or_else(|_| "/run/user/1000/biomeos/beardog.sock".to_string());
+    let beardog_socket = std::env::var("BEARDOG_SOCKET").unwrap_or_else(|_| {
+        let paths = biomeos_types::paths::SystemPaths::new_lazy();
+        paths.primal_socket("beardog").to_string_lossy().to_string()
+    });
     let rendezvous_state = Arc::new(handlers::rendezvous::RendezvousState::new(&beardog_socket));
 
     let router = router
@@ -354,11 +381,20 @@ pub async fn serve_unix_socket(socket_path: &std::path::Path, app: Router) -> an
 /// **WARNING**: When binding to TCP, sovereign mode is FORCED.
 /// All TCP connections must present a valid Dark Forest token.
 /// The TCP-bound router uses `create_app_for_tcp()` which forces sovereign.
+///
+/// **DEPRECATED since 0.3.0**: Use [`serve_unix_socket()`] for production.
+/// HTTP bridge will be removed in v0.5.0 when PetalTongue migrates to
+/// Unix socket JSON-RPC.
+#[deprecated(
+    since = "0.3.0",
+    note = "Use serve_unix_socket() — HTTP bridge will be removed in v0.5.0"
+)]
 pub async fn serve_dual_mode(
     socket_path: &std::path::Path,
     bind_addr: std::net::SocketAddr,
     app: Router,
 ) -> anyhow::Result<()> {
+    #[allow(deprecated)]
     unix_server::serve_dual_mode(socket_path, bind_addr, app).await
 }
 

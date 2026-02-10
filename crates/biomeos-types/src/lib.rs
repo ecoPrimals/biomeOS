@@ -6,6 +6,7 @@
 // Allow doc_markdown warnings for internal documentation - the important thing is
 // that the documentation exists, not that every technical term has backticks.
 // This significantly reduces noise while maintaining documentation coverage.
+#![warn(missing_docs)]
 #![allow(clippy::doc_markdown)]
 // Deny unsafe code in type definitions
 #![deny(unsafe_code)]
@@ -14,7 +15,8 @@ use std::collections::HashMap;
 
 // Core unified modules
 pub mod api_schema;
-pub mod capability_taxonomy; // Well-known capability taxonomy for discovery
+/// Well-known capability taxonomy for discovery
+pub mod capability_taxonomy;
 pub mod config;
 pub mod constants;
 pub mod defaults; // Runtime defaults (socket paths, etc.) with env var overrides
@@ -23,7 +25,8 @@ pub mod health;
 pub mod identifiers;
 pub mod manifest;
 pub mod network_config; // Capability-based network configuration
-pub mod paths; // XDG-compliant system paths
+/// XDG-compliant system paths
+pub mod paths;
 pub mod primal;
 pub mod service;
 pub mod tarpc_types; // tarpc service definitions for high-performance RPC
@@ -84,8 +87,9 @@ pub use identifiers::{Endpoint, FamilyId, IdError, PrimalId, SessionId, TowerId}
 pub use chrono::{DateTime, Utc};
 pub use uuid::Uuid;
 
-// Convenience type aliases for common patterns
+/// Convenience type alias for HashMap used throughout BiomeOS
 pub type BiomeMap<K, V> = HashMap<K, V>;
+/// Convenience type alias for UTC DateTime used throughout BiomeOS
 pub type BiomeDateTime = DateTime<Utc>;
 
 /// Unified build information for the entire BiomeOS ecosystem

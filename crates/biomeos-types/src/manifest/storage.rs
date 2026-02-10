@@ -386,34 +386,48 @@ pub struct LabelSelectorRequirement {
 /// Label selector operators
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LabelSelectorOperator {
+    /// Value is in the set
     In,
+    /// Value is not in the set
     NotIn,
+    /// Key exists
     Exists,
+    /// Key does not exist
     DoesNotExist,
 }
 
 /// Azure caching modes
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AzureCachingMode {
+    /// No caching
     None,
+    /// Read-only caching
     ReadOnly,
+    /// Read-write caching
     ReadWrite,
 }
 
 /// Azure disk kinds
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AzureDiskKind {
+    /// Shared disk
     Shared,
+    /// Dedicated disk
     Dedicated,
+    /// Managed disk
     Managed,
 }
 
 /// Volume access modes
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum VolumeAccessMode {
+    /// Read-write by a single node
     ReadWriteOnce,
+    /// Read-only by many nodes
     ReadOnlyMany,
+    /// Read-write by many nodes
     ReadWriteMany,
+    /// Read-write by a single pod
     ReadWriteOncePod,
 }
 
@@ -427,15 +441,20 @@ pub struct VolumeCapacity {
 /// Volume reclaim policies
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum VolumeReclaimPolicy {
+    /// Retain the volume after release
     Retain,
+    /// Recycle the volume (scrub data)
     Recycle,
+    /// Delete the volume after release
     Delete,
 }
 
 /// Volume modes
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum VolumeMode {
+    /// Filesystem-backed volume
     Filesystem,
+    /// Raw block device volume
     Block,
 }
 
@@ -476,11 +495,17 @@ pub struct NodeSelectorRequirement {
 /// Node selector operators
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum NodeSelectorOperator {
+    /// Value is in the set
     In,
+    /// Value is not in the set
     NotIn,
+    /// Key exists
     Exists,
+    /// Key does not exist
     DoesNotExist,
+    /// Value is greater than
     Gt,
+    /// Value is less than
     Lt,
 }
 
@@ -567,18 +592,39 @@ pub struct ExternalSecretRef {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SecretProvider {
     /// AWS Secrets Manager
-    AwsSecretsManager { region: String },
+    AwsSecretsManager {
+        /// AWS region
+        region: String,
+    },
     /// Azure Key Vault
-    AzureKeyVault { vault_url: String },
+    AzureKeyVault {
+        /// Vault URL
+        vault_url: String,
+    },
     /// Google Secret Manager
-    GoogleSecretManager { project_id: String },
+    GoogleSecretManager {
+        /// GCP project ID
+        project_id: String,
+    },
     /// HashiCorp Vault
-    Vault { address: String, path: String },
+    Vault {
+        /// Vault server address
+        address: String,
+        /// Secret path within vault
+        path: String,
+    },
     /// Kubernetes secret
-    Kubernetes { namespace: String, name: String },
+    Kubernetes {
+        /// Kubernetes namespace
+        namespace: String,
+        /// Secret name
+        name: String,
+    },
     /// Custom provider
     Custom {
+        /// Provider name
         provider_name: String,
+        /// Provider configuration
         config: HashMap<String, String>,
     },
 }
@@ -636,7 +682,9 @@ pub enum ConfigData {
     File(String),
     /// Template
     Template {
+        /// Template string
         template: String,
+        /// Template variables
         variables: HashMap<String, String>,
     },
 }
@@ -685,7 +733,9 @@ pub struct StorageClassMetadata {
 /// Volume binding modes
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum VolumeBindingMode {
+    /// Bind immediately when claim is created
     Immediate,
+    /// Wait for first consumer pod to bind
     WaitForFirstConsumer,
 }
 

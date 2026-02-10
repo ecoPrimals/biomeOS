@@ -73,6 +73,7 @@ pub struct VerifyArgs {
 /// Genome-related commands
 #[derive(Debug, Args)]
 pub struct GenomeArgs {
+    /// Genome subcommand to execute
     #[command(subcommand)]
     pub command: GenomeCommand,
 }

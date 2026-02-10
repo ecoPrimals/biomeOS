@@ -36,12 +36,10 @@
 //!
 //! # Socket Resolution
 //!
-//! Socket paths are resolved using a 5-tier fallback hierarchy:
+//! Socket paths are resolved via:
 //! 1. `$PRIMAL_SOCKET` environment variable (e.g., `$BEARDOG_SOCKET`)
-//! 2. `$XDG_RUNTIME_DIR/biomeos/{primal}-{family}.sock`
-//! 3. `/run/user/{uid}/biomeos/{primal}-{family}.sock`
-//! 4. `/data/local/tmp/biomeos/{primal}-{family}.sock` (Android)
-//! 5. `/tmp/{primal}-{family}.sock` (universal fallback)
+//! 2. `SystemPaths::new_lazy().primal_socket()` -- XDG-compliant resolution
+//!    (handles `XDG_RUNTIME_DIR`, `/run/user/{uid}`, and `/tmp` fallbacks)
 //!
 //! # Example
 //!
@@ -392,12 +390,9 @@ impl CapabilityTranslationRegistry {
 
     /// Load default translations with automatic socket resolution
     ///
-    /// Uses the standard 5-tier socket fallback hierarchy:
-    /// 1. $PRIMAL_SOCKET environment variable
-    /// 2. $XDG_RUNTIME_DIR/biomeos/{primal}-{family}.sock
-    /// 3. /run/user/{uid}/biomeos/{primal}-{family}.sock
-    /// 4. /data/local/tmp/biomeos/{primal}-{family}.sock (Android)
-    /// 5. /tmp/{primal}-{family}.sock (fallback)
+    /// Socket resolution:
+    /// 1. `$PRIMAL_SOCKET` environment variable (primal-specific override)
+    /// 2. `SystemPaths::new_lazy().primal_socket()` (XDG-compliant)
     ///
     /// ## Capability-Based Provider Resolution
     ///
@@ -561,7 +556,10 @@ impl CapabilityTranslationRegistry {
                 .unwrap_or(_default_provider);
 
             if actual_provider.is_empty() {
-                tracing::debug!("Skipping domain {} (no provider configured in strict mode)", domain);
+                tracing::debug!(
+                    "Skipping domain {} (no provider configured in strict mode)",
+                    domain
+                );
                 continue;
             }
 
@@ -591,52 +589,25 @@ impl CapabilityTranslationRegistry {
     }
 }
 
-/// Resolve socket path for a primal using 5-tier fallback
+/// Resolve socket path for a primal
 ///
 /// Priority:
-/// 1. $PRIMAL_SOCKET environment variable (e.g., $BEARDOG_SOCKET)
-/// 2. $XDG_RUNTIME_DIR/biomeos/{primal}-{family}.sock
-/// 3. /run/user/{uid}/biomeos/{primal}-{family}.sock
-/// 4. /data/local/tmp/biomeos/{primal}-{family}.sock (Android)
-/// 5. /tmp/{primal}-{family}.sock (fallback)
+/// 1. `$PRIMAL_SOCKET` environment variable (e.g., `$BEARDOG_SOCKET`)
+/// 2. `SystemPaths::new_lazy().primal_socket()` (XDG-compliant, handles
+///    `XDG_RUNTIME_DIR`, `/run/user/{uid}`, and `/tmp` fallbacks)
 pub fn resolve_primal_socket(primal: &str, family_id: &str) -> String {
-    // 1. Check environment variable override
+    // 1. Check environment variable override (primal-specific)
     let env_var = format!("{}_SOCKET", primal.to_uppercase());
     if let Ok(socket) = std::env::var(&env_var) {
         return socket;
     }
 
-    // 2. Try XDG_RUNTIME_DIR
-    if let Ok(xdg_runtime) = std::env::var("XDG_RUNTIME_DIR") {
-        let socket = format!("{}/biomeos/{}-{}.sock", xdg_runtime, primal, family_id);
-        if std::path::Path::new(&socket).exists()
-            || std::path::Path::new(&format!("{}/biomeos", xdg_runtime)).exists()
-        {
-            return socket;
-        }
-    }
-
-    // 3. Try /run/user/{uid}
-    if let Ok(uid) = std::env::var("UID").or_else(|_| {
-        std::process::Command::new("id")
-            .arg("-u")
-            .output()
-            .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
-    }) {
-        let socket = format!("/run/user/{}/biomeos/{}-{}.sock", uid, primal, family_id);
-        if std::path::Path::new(&format!("/run/user/{}/biomeos", uid)).exists() {
-            return socket;
-        }
-    }
-
-    // 4. Android fallback
-    let android_socket = format!("/data/local/tmp/biomeos/{}-{}.sock", primal, family_id);
-    if std::path::Path::new("/data/local/tmp/biomeos").exists() {
-        return android_socket;
-    }
-
-    // 5. Universal fallback
-    format!("/tmp/{}-{}.sock", primal, family_id)
+    // 2. XDG-compliant resolution via SystemPaths
+    let primal_id = format!("{}-{}", primal, family_id);
+    biomeos_types::paths::SystemPaths::new_lazy()
+        .primal_socket(&primal_id)
+        .to_string_lossy()
+        .to_string()
 }
 
 impl Default for CapabilityTranslationRegistry {

@@ -62,8 +62,10 @@ pub struct TlsConfig {
 /// TLS version specification
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TlsVersion {
+    /// TLS version 1.2
     #[serde(rename = "1.2")]
     V1_2,
+    /// TLS version 1.3
     #[serde(rename = "1.3")]
     V1_3,
 }
@@ -128,12 +130,19 @@ pub struct LoadBalancingConfig {
 /// Load balancing algorithms
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LoadBalancingAlgorithm {
+    /// Round-robin distribution
     RoundRobin,
+    /// Weighted round-robin
     WeightedRoundRobin,
+    /// Least active connections
     LeastConnections,
+    /// Weighted least connections
     WeightedLeastConnections,
+    /// IP-based hashing
     IpHash,
+    /// Random selection
     Random,
+    /// Weighted random selection
     WeightedRandom,
 }
 
@@ -185,18 +194,26 @@ pub struct RateLimitingConfig {
 /// Rate limiting algorithms
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RateLimitingAlgorithm {
+    /// Token bucket algorithm
     TokenBucket,
+    /// Leaky bucket algorithm
     LeakyBucket,
+    /// Fixed window counter
     FixedWindow,
+    /// Sliding window counter
     SlidingWindow,
 }
 
 /// Rate limiting key types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RateLimitingKey {
+    /// Rate limit by client IP
     ClientIp,
+    /// Rate limit by API key
     ApiKey,
+    /// Rate limit by user ID
     UserId,
+    /// Custom rate limit key
     Custom(String),
 }
 

@@ -3,11 +3,18 @@
 //! This crate provides command-line interface utilities for BiomeOS,
 //! including TUI components, discovery, formatting, and health monitoring.
 
-// Core CLI modules
+#![warn(missing_docs)]
+#![deny(unsafe_code)]
+
+/// CLI command implementations
 pub mod commands;
+/// Service discovery utilities
 pub mod discovery;
+/// Output formatting utilities
 pub mod formatting;
+/// Health monitoring utilities
 pub mod health;
+/// Terminal user interface components
 pub mod tui;
 
 // Re-export key types and utilities
@@ -60,10 +67,13 @@ impl CliUtils {
 /// Output format options for CLI commands
 #[derive(clap::ValueEnum, Clone)]
 pub enum OutputFormat {
+    /// JSON output
     #[value(name = "json")]
     Json,
+    /// YAML output
     #[value(name = "yaml")]
     Yaml,
+    /// Human-readable pretty-printed output
     #[value(name = "pretty")]
     Pretty,
 }

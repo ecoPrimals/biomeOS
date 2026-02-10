@@ -1,209 +1,57 @@
 # biomeOS Specifications
 
-**Last Updated**: February 3, 2026  
-**Status**: ✅ Production Ready + NUCLEUS Semantic Routing  
-**Standard**: PRIMAL_DEPLOYMENT_STANDARD v1.0
+**Last Updated**: February 9, 2026
+**Active Specs**: 19 (47 archived to `ecoPrimals/archive/biomeos-feb09-2026/specs/`)
 
 ---
 
-## 🎉 CURRENT STATE
+## Active Specifications
 
-### NUCLEUS Architecture ✅
-- **Neural API**: Semantic capability routing operational
-- **Tower Atomic**: BearDog + Songbird (security + network)
-- **Deployment**: Deterministic across x86_64 and aarch64
-- **Evolution**: Scripts → Graphs → Pure Rust
+### Evolution & Roadmap
+| Spec | Purpose |
+|------|---------|
+| [EVOLUTION_ROADMAP.md](EVOLUTION_ROADMAP.md) | Bypasses, evolution paths, priority waves |
+| [EVOLUTION_PATH.md](EVOLUTION_PATH.md) | Scripts -> Graphs -> Pure Rust pipeline |
 
-### Component Status ✅
-| Component | Status | Description |
-|-----------|--------|-------------|
-| BearDog | ✅ 100% | Crypto, TLS, genetic lineage |
-| Songbird | ✅ 100% | HTTP, TLS 1.3, discovery |
-| Neural API | ✅ 100% | capability.call semantic routing |
-| biomeOS | ✅ 100% | Ecosystem orchestration primal |
+### Architecture & Composition
+| Spec | Purpose |
+|------|---------|
+| [NUCLEUS_ATOMIC_COMPOSITION.md](NUCLEUS_ATOMIC_COMPOSITION.md) | Tower/Node/Nest/Full atomic patterns |
+| [NUCLEUS_BONDING_MODEL.md](NUCLEUS_BONDING_MODEL.md) | Chemical bonding model for distributed systems |
+| [COMPLETE_ECOSYSTEM_NUCLEUS_INTEGRATION.md](COMPLETE_ECOSYSTEM_NUCLEUS_INTEGRATION.md) | Full ecosystem integration |
+| [PLASMODIUM_OVER_NUCLEUS_SPEC.md](PLASMODIUM_OVER_NUCLEUS_SPEC.md) | Over-NUCLEUS collective coordination |
 
----
+### Neural API & Capability Routing
+| Spec | Purpose |
+|------|---------|
+| [NEURAL_API_ROUTING_SPECIFICATION.md](NEURAL_API_ROUTING_SPECIFICATION.md) | Capability translation routing v2.0 |
+| [CAPABILITY_TRANSLATION_ARCHITECTURE.md](CAPABILITY_TRANSLATION_ARCHITECTURE.md) | Semantic translation architecture |
+| [BEACON_CAPABILITY_TRANSLATIONS.md](BEACON_CAPABILITY_TRANSLATIONS.md) | Beacon -> BearDog method mapping |
+| [SQUIRREL_CAPABILITY_SPEC.md](SQUIRREL_CAPABILITY_SPEC.md) | Squirrel AI orchestration capabilities |
 
-## 📋 ACTIVE SPECIFICATIONS
+### Security & Genetics
+| Spec | Purpose |
+|------|---------|
+| [DARK_FOREST_BEACON_GENETICS_SPEC.md](DARK_FOREST_BEACON_GENETICS_SPEC.md) | Dark Forest zero-metadata discovery |
+| [BEACON_GENETICS_BUILD_SPEC.md](BEACON_GENETICS_BUILD_SPEC.md) | Mitochondrial DNA build spec |
+| [GENETIC_LINEAGE_EVOLUTION_SPEC.md](GENETIC_LINEAGE_EVOLUTION_SPEC.md) | Nuclear DNA lineage evolution |
 
-### Deployment Standards (NEW)
+### Networking & NAT Traversal
+| Spec | Purpose |
+|------|---------|
+| [SOVEREIGN_NAT_TRAVERSAL_EVOLUTION.md](SOVEREIGN_NAT_TRAVERSAL_EVOLUTION.md) | Pure Rust NAT traversal |
+| [SOVEREIGN_BIRDSONG_MESH_SPEC.md](SOVEREIGN_BIRDSONG_MESH_SPEC.md) | BirdSong mesh architecture |
+| [MESH_IPC_METHODS_SPEC.md](MESH_IPC_METHODS_SPEC.md) | Mesh JSON-RPC method definitions |
+| [MULTI_TIER_NAT_TRAVERSAL_SPEC.md](MULTI_TIER_NAT_TRAVERSAL_SPEC.md) | Full/restricted/symmetric NAT handling |
 
-| Spec | Status | Description |
-|------|--------|-------------|
-| `PRIMAL_DEPLOYMENT_STANDARD.md` | ✅ v1.0 | Socket paths, arch parity |
-| `EVOLUTION_PATH.md` | ✅ v1.0 | Scripts → Graphs → Pure Rust |
-
-### Core Architecture
-
-| Spec | Status | Description |
-|------|--------|-------------|
-| `ARCHITECTURE_OVERVIEW.md` | ✅ Current | System architecture overview |
-| `CAPABILITY_TRANSLATION_ARCHITECTURE.md` | ✅ Current | capability.call semantic layer |
-| `ATOMIC_DEPLOYMENT_SYSTEM_SPEC.md` | ✅ Current | Graph-based deployment |
-| `GRAPH_BASED_ORCHESTRATION_SPEC.md` | ✅ Current | Neural API orchestration |
-
-### Primal Identity
-
-| Spec | Status | Description |
-|------|--------|-------------|
-| `BIOMEOS_AS_PRIMAL_SPECIALIZATION.md` | ✅ Core | biomeOS as primal, not god layer |
-| `BIOMEOS_INTEGRATION_SPECIFICATION.md` | ✅ Current | Primal integration patterns |
-| `PRIMAL_SERVICE_REGISTRATION_STANDARDS.md` | ✅ Current | Auto-registration standards |
-
-### Lifecycle System
-
-| Spec | Status | Description |
-|------|--------|-------------|
-| `lifecycle/BIOMEOS_BOOTSTRAP_MODE.md` | ✅ Implemented | Bootstrap → Coordinated |
-| `lifecycle/NEURAL_API_NUCLEATION_POINT_JAN_21_2026.md` | ✅ Implemented | Socket assignment |
-| `lifecycle/PRIMAL_LIFECYCLE_GERMINATION_TERRARIA_JAN_21_2026.md` | 🔄 In Progress | Terraria system |
-
-### Security
-
-| Spec | Status | Description |
-|------|--------|-------------|
-| `ENCRYPTION_STRATEGY_SPEC.md` | ✅ Current | BearDog encryption |
-| `GENETIC_LINEAGE_ARCHITECTURE_SPEC.md` | ✅ Current | Lineage verification |
-| `CRYPTO_LOCK_EXTENSION_SYSTEM.md` | ✅ Current | Lock-by-lineage |
-
-### Network & Communication
-
-| Spec | Status | Description |
-|------|--------|-------------|
-| `NEURAL_API_ROUTING_SPECIFICATION.md` | ✅ Current | capability.call routing |
-| `NEURAL_API_SERVER_IMPLEMENTATION_SPEC.md` | ✅ Current | Server implementation |
-| `NEURAL_API_CLIENT_SPECIFICATION.md` | ✅ Current | Client patterns |
-| `CROSS_PRIMAL_API_CONTRACTS.md` | ✅ Current | API contracts |
-
-### Deployment
-
-| Spec | Status | Description |
-|------|--------|-------------|
-| `LIVESPORE_ARCHITECTURE_SPEC.md` | ✅ Current | USB deployment |
-| `SPORE_DEPLOYMENT_ARCHITECTURE.md` | ✅ Current | Spore system |
-| `UNIBIN_ARCHITECTURE_EVOLUTION.md` | ✅ Current | UniBin standards |
+### Standards
+| Spec | Purpose |
+|------|---------|
+| [PRIMAL_DEPLOYMENT_STANDARD.md](PRIMAL_DEPLOYMENT_STANDARD.md) | Deterministic deployment v1.0 |
 
 ---
 
-## 🚀 EVOLUTION ROADMAP
+## Archived
 
-### ✅ Completed (Jan 26, 2026)
-1. ✅ Tower Atomic Pure Rust TLS 1.3
-2. ✅ capability.call semantic translation
-3. ✅ Graph-based deployment
-4. ✅ SHA-384 cipher suite support
-5. ✅ Auto User-Agent injection
-6. ✅ 93% TLS 1.3 validation
-
-### 🔄 In Progress (Week of Jan 27)
-1. 🔄 Songbird TLS 1.2 fallback
-2. 🔄 Terraria testing system
-3. 🔄 Apoptosis graceful shutdown
-4. 🔄 close_notify handling
-
-### 📋 Future (Feb 2026)
-1. 📋 TLS server mode (Songbird)
-2. 📋 TLS relay/proxy mode
-3. 📋 HTTP/2 support
-4. 📋 WebSocket support
-5. 📋 Database TLS connections
-
----
-
-## 📁 SPEC ORGANIZATION
-
-```
-specs/
-├── README.md (this file)
-├── ARCHITECTURE_OVERVIEW.md
-├── architecture/
-│   └── BTSP_EVOLUTION_UNIFIED_SECURE_PROTOCOL_JAN_21_2026.md
-├── lifecycle/
-│   ├── BIOMEOS_BOOTSTRAP_MODE.md
-│   ├── NEURAL_API_NUCLEATION_POINT_JAN_21_2026.md
-│   └── PRIMAL_LIFECYCLE_GERMINATION_TERRARIA_JAN_21_2026.md
-├── examples/
-│   ├── ai-research.biome.yaml
-│   ├── basic-development.biome.yaml
-│   └── secure-enterprise.biome.yaml
-└── archive/
-    └── jan_21_2026_handoffs/
-```
-
----
-
-## 🎯 CORE PRINCIPLES
-
-### 1. biomeOS is a Primal
-- Not special, not privileged
-- Specializes in ecosystem management
-- Can be nested, replaced, or shut down
-- Follows same lifecycle rules
-
-### 2. TRUE PRIMAL Pattern
-- Zero hardcoding between primals
-- capability.call for semantic translation
-- Graph-based mappings
-- Runtime discovery
-
-### 3. Security Inheritance
-- All primals inherit from Tower Atomic
-- BearDog provides crypto foundation
-- Genetic lineage verification
-- Lock-by-lineage encryption
-
-### 4. ecoBin Compliance
-- Pure Rust (zero C dependencies)
-- Cross-compilation to any target
-- Single binary per primal
-- Self-contained deployment
-
----
-
-## 📚 RELATED DOCUMENTATION
-
-### In biomeOS Root
-- `INFRASTRUCTURE_EVOLUTION.md` - Terraria, Apoptosis roadmap
-- `SONGBIRD_EVOLUTION_HANDOFF.md` - TLS 1.2, server mode
-- `deploy_tower_atomic.sh` - Production deployment
-
-### In ecoPrimals/wateringHole/
-- `ECOBIN_ARCHITECTURE_STANDARD.md` - ecoBin definition
-- `PRIMAL_IPC_PROTOCOL.md` - Inter-primal communication
-- `SEMANTIC_METHOD_NAMING_STANDARD.md` - Method naming
-
-### In phase1/ Primals
-- `beardog/` - Crypto primal (SHA-384 complete)
-- `songbird/` - Network primal (TLS 1.3 complete)
-- `squirrel/` - AI orchestration primal
-
----
-
-## 🎊 VISION
-
-**Every primal follows the same lifecycle. Every primal specializes. No god layers.**
-
-```
-Tower Atomic (security foundation)
-    ├── BearDog (crypto) ✅ 100%
-    └── Songbird (network) ✅ 96%
-         ↓
-All Primals (specialists):
-  - biomeOS (ecosystem) ✅ 100%
-  - Squirrel (AI) → Tower via capability.call
-  - ToadStool (local AI)
-  - NestGate (auth)
-  - PetalTongue (UI)
-         ↓
-All inherit security
-All use capability discovery
-All can be nested
-```
-
-**biomeOS manages the ecosystem, but is part of it - not above it.**
-
----
-
-*Specifications maintained by biomeOS team*  
-*Status: Production Ready*  
-*Tower Atomic: 96% Web Compatible*
+47 specs archived to `ecoPrimals/archive/biomeos-feb09-2026/specs/`.
+See archive `ARCHIVE_INDEX.md` for details.

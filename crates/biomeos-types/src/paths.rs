@@ -24,21 +24,28 @@ use std::env;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
+/// Errors related to system path operations
 #[derive(Error, Debug)]
 pub enum PathError {
+    /// Failed to create a directory
     #[error("Failed to create directory: {path}")]
     CreateDirFailed {
+        /// Directory path that failed
         path: String,
+        /// Underlying IO error
         source: std::io::Error,
     },
 
+    /// Failed to determine the home directory
     #[error("Failed to determine home directory")]
     NoHomeDir,
 
+    /// Invalid path encountered
     #[error("Invalid path: {0}")]
     InvalidPath(String),
 }
 
+/// Result type for path operations
 pub type Result<T> = std::result::Result<T, PathError>;
 
 /// System paths following XDG Base Directory specification

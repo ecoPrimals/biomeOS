@@ -42,17 +42,12 @@ impl MockPrimalServer {
             // Signal ready AFTER bind succeeds
             let _ = ready_tx.send(());
 
-            loop {
-                match listener.accept().await {
-                    Ok((stream, _)) => {
-                        let name = name.clone();
-                        let caps = caps.clone();
-                        tokio::spawn(async move {
-                            let _ = Self::handle_connection(stream, &name, &caps).await;
-                        });
-                    }
-                    Err(_) => break,
-                }
+            while let Ok((stream, _)) = listener.accept().await {
+                let name = name.clone();
+                let caps = caps.clone();
+                tokio::spawn(async move {
+                    let _ = Self::handle_connection(stream, &name, &caps).await;
+                });
             }
         });
 

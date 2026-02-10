@@ -3,7 +3,11 @@
 //! This crate provides comprehensive manifest parsing, validation, and management
 //! capabilities for biomeOS.
 
-pub mod niche; // TOML-based niche manifests with graph support
+#![warn(missing_docs)]
+#![deny(unsafe_code)]
+
+/// TOML-based niche manifest parsing with graph support
+pub mod niche;
 
 use std::collections::HashMap;
 use std::fs;
@@ -211,7 +215,9 @@ impl BiomeManifestTemplates {
                     );
                     config.insert(
                         "port".to_string(),
-                        serde_json::Value::Number(serde_json::Number::from(8080)),
+                        serde_json::Value::Number(serde_json::Number::from(
+                            biomeos_types::constants::network::DEFAULT_HTTP_PORT,
+                        )),
                     );
                     config
                 },

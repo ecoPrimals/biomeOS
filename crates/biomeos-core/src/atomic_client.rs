@@ -51,9 +51,13 @@ use crate::socket_discovery::{SocketDiscovery, TransportEndpoint};
 /// JSON-RPC 2.0 Request
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JsonRpcRequest {
+    /// Protocol version (always "2.0")
     pub jsonrpc: String,
+    /// Method name
     pub method: String,
+    /// Method parameters
     pub params: Value,
+    /// Request identifier
     pub id: u64,
 }
 
@@ -74,19 +78,26 @@ impl JsonRpcRequest {
 /// JSON-RPC 2.0 Response
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JsonRpcResponse {
+    /// Protocol version
     pub jsonrpc: String,
+    /// Successful result payload
     #[serde(skip_serializing_if = "Option::is_none")]
     pub result: Option<Value>,
+    /// Error payload
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<JsonRpcError>,
+    /// Corresponding request identifier
     pub id: u64,
 }
 
 /// JSON-RPC 2.0 Error
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JsonRpcError {
+    /// Numeric error code
     pub code: i32,
+    /// Human-readable error message
     pub message: String,
+    /// Optional structured data
     #[serde(skip_serializing_if = "Option::is_none")]
     pub data: Option<Value>,
 }
@@ -226,7 +237,7 @@ impl AtomicClient {
 
     /// Create an atomic client with explicit TCP endpoint (Tier 2)
     ///
-    /// Use this for cross-device communication.
+    /// Use this for cross-device communication (raw newline-delimited JSON-RPC).
     ///
     /// # Arguments
     /// * `host` - TCP host address
@@ -234,6 +245,29 @@ impl AtomicClient {
     pub fn tcp(host: impl Into<String>, port: u16) -> Self {
         Self {
             endpoint: TransportEndpoint::TcpSocket {
+                host: host.into(),
+                port,
+            },
+            socket_path: PathBuf::new(),
+            timeout: Duration::from_secs(30),
+        }
+    }
+
+    /// Create an atomic client with HTTP JSON-RPC endpoint (Tier 2 - Inter-gate)
+    ///
+    /// Use this for inter-NUCLEUS communication via Songbird's HTTP `/jsonrpc`
+    /// gateway. This is the preferred transport for covalent bond communication
+    /// between NUCLEUS instances on LAN or internet.
+    ///
+    /// The port should be runtime-discovered via beacon exchange, not hardcoded.
+    /// Songbird's default HTTP port is 8080 (configurable via `SONGBIRD_HTTP_PORT`).
+    ///
+    /// # Arguments
+    /// * `host` - Remote host address (IP or hostname)
+    /// * `port` - Remote Songbird HTTP port (discovered via beacon, default 8080)
+    pub fn http(host: impl Into<String>, port: u16) -> Self {
+        Self {
+            endpoint: TransportEndpoint::HttpJsonRpc {
                 host: host.into(),
                 port,
             },
@@ -279,6 +313,7 @@ impl AtomicClient {
             TransportEndpoint::UnixSocket { path } => path.exists(),
             TransportEndpoint::TcpSocket { .. } => true, // TCP availability checked on connect
             TransportEndpoint::AbstractSocket { .. } => true, // Abstract availability checked on connect
+            TransportEndpoint::HttpJsonRpc { .. } => true, // HTTP availability checked on connect
         }
     }
 
@@ -338,6 +373,9 @@ impl AtomicClient {
             TransportEndpoint::AbstractSocket { name } => {
                 self.call_via_abstract(name, request).await
             }
+            TransportEndpoint::HttpJsonRpc { host, port } => {
+                self.call_via_http(host, *port, request).await
+            }
         }
     }
 
@@ -364,6 +402,95 @@ impl AtomicClient {
             .context(format!("Failed to connect to TCP: {}", addr))?;
 
         self.send_request(stream, request).await
+    }
+
+    /// Send JSON-RPC request via HTTP POST to `/jsonrpc` endpoint
+    ///
+    /// This implements a minimal HTTP/1.1 POST client using raw `TcpStream`,
+    /// keeping the zero-C-dependency Pure Rust guarantee. The remote Songbird
+    /// instance serves JSON-RPC over HTTP at `POST /jsonrpc`, which forwards
+    /// to the same IPC handler as the Unix socket (mesh.*, relay.*, health, etc.)
+    ///
+    /// EVOLUTION (Feb 2026): Replaces raw TCP JSON-RPC for inter-gate communication.
+    /// Songbird's HTTP gateway is the covalent bond transport.
+    async fn call_via_http(
+        &self,
+        host: &str,
+        port: u16,
+        request: JsonRpcRequest,
+    ) -> Result<JsonRpcResponse> {
+        let addr = format!("{}:{}", host, port);
+        let mut stream = TcpStream::connect(&addr)
+            .await
+            .context(format!("Failed to connect to HTTP endpoint: {}", addr))?;
+
+        // Serialize JSON-RPC request body
+        let body =
+            serde_json::to_string(&request).context("Failed to serialize JSON-RPC request")?;
+
+        // Build minimal HTTP/1.1 POST request
+        let http_request = format!(
+            "POST /jsonrpc HTTP/1.1\r\n\
+             Host: {}\r\n\
+             Content-Type: application/json\r\n\
+             Content-Length: {}\r\n\
+             Connection: close\r\n\
+             \r\n\
+             {}",
+            addr,
+            body.len(),
+            body
+        );
+
+        trace!("Sending HTTP JSON-RPC request to {}", addr);
+
+        // Send HTTP request
+        stream.write_all(http_request.as_bytes()).await?;
+        stream.flush().await?;
+
+        // Read full HTTP response
+        let mut response_buf = Vec::new();
+        let mut reader = BufReader::new(stream);
+        loop {
+            let mut line = String::new();
+            match reader.read_line(&mut line).await {
+                Ok(0) => break, // EOF
+                Ok(_) => response_buf.push(line),
+                Err(e) => {
+                    // Connection closed after body -- expected with Connection: close
+                    if response_buf.is_empty() {
+                        return Err(e).context("Failed to read HTTP response");
+                    }
+                    break;
+                }
+            }
+        }
+
+        // Find the JSON body after the blank line separator
+        let full_response = response_buf.join("");
+        let body_start = full_response
+            .find("\r\n\r\n")
+            .or_else(|| full_response.find("\n\n"))
+            .map(|pos| {
+                if full_response[pos..].starts_with("\r\n\r\n") {
+                    pos + 4
+                } else {
+                    pos + 2
+                }
+            })
+            .ok_or_else(|| anyhow::anyhow!("Malformed HTTP response: no body separator"))?;
+
+        let json_body = full_response[body_start..].trim();
+
+        trace!("Received HTTP JSON-RPC response: {}", json_body);
+
+        // Parse JSON-RPC response from HTTP body
+        let response: JsonRpcResponse = serde_json::from_str(json_body).context(format!(
+            "Failed to parse JSON-RPC response from HTTP body: {}",
+            &json_body[..json_body.len().min(200)]
+        ))?;
+
+        Ok(response)
     }
 
     /// Send JSON-RPC request via abstract socket (Linux/Android)
@@ -511,34 +638,14 @@ pub async fn discover_primal_endpoint(primal_name: &str) -> Result<TransportEndp
     }
 }
 
-/// Legacy: Discover primal socket path (Unix only)
-///
-/// **Deprecated**: Use `discover_primal_endpoint()` for multi-transport support.
-#[deprecated(
-    since = "3.0.0",
-    note = "Use discover_primal_endpoint() for Universal IPC v3.0 support"
-)]
-pub async fn discover_primal_socket(primal_name: &str) -> Result<PathBuf> {
-    let endpoint = discover_primal_endpoint(primal_name).await?;
-
-    match endpoint {
-        TransportEndpoint::UnixSocket { path } => Ok(path),
-        TransportEndpoint::AbstractSocket { name } => {
-            // Return a pseudo-path for abstract sockets
-            Ok(PathBuf::from(format!("@{}", name)))
-        }
-        TransportEndpoint::TcpSocket { host, port } => {
-            // Return a pseudo-path for TCP
-            Ok(PathBuf::from(format!("tcp://{}:{}", host, port)))
-        }
-    }
-}
-
 /// Result of a command execution
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExecutionResult {
+    /// Standard output from the command
     pub stdout: String,
+    /// Standard error output
     pub stderr: String,
+    /// Process exit code (if available)
     pub exit_code: Option<i32>,
 }
 
@@ -588,12 +695,6 @@ impl AtomicPrimalClient {
             client: AtomicClient::from_endpoint(endpoint),
             primal_name: primal_name.into(),
         }
-    }
-
-    /// Legacy: Create a client with explicit socket path
-    #[deprecated(since = "3.0.0", note = "Use unix() for clarity")]
-    pub fn new(primal_name: impl Into<String>, socket_path: impl AsRef<Path>) -> Self {
-        Self::unix(primal_name, socket_path)
     }
 
     /// Health check (ping)

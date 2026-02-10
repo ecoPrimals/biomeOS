@@ -59,13 +59,25 @@ pub enum DeploymentMode {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum HostOS {
     /// Linux distribution
-    Linux { distro: String },
+    Linux {
+        /// Distribution name (e.g. "ubuntu", "fedora")
+        distro: String,
+    },
     /// macOS
-    MacOS { version: String },
+    MacOS {
+        /// macOS version string
+        version: String,
+    },
     /// Windows
-    Windows { version: String },
+    Windows {
+        /// Windows version string
+        version: String,
+    },
     /// BSD variant
-    BSD { variant: String },
+    BSD {
+        /// BSD variant name (e.g. "freebsd", "openbsd")
+        variant: String,
+    },
     /// Unknown/Other
     Unknown,
 }

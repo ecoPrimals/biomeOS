@@ -83,7 +83,15 @@ async fn status() -> Result<()> {
     println!(
         "  {:<18} {:<12} {:>5} {:>5} GB {:>8} {:>4} unique",
         "TOTAL",
-        format!("{}", state.gates.iter().flat_map(|g| &g.primals).filter(|p| p.healthy).count()),
+        format!(
+            "{}",
+            state
+                .gates
+                .iter()
+                .flat_map(|g| &g.primals)
+                .filter(|p| p.healthy)
+                .count()
+        ),
         state.collective.total_gpus,
         state.collective.total_ram_gb,
         "",
@@ -140,7 +148,10 @@ async fn gates() -> Result<()> {
         println!("  {}", label);
 
         println!("    Address:  {}", gate.address);
-        println!("    Status:   {}", if gate.reachable { "online" } else { "offline" });
+        println!(
+            "    Status:   {}",
+            if gate.reachable { "online" } else { "offline" }
+        );
         println!("    Bond:     {}", gate.bond_type);
 
         // Primals
@@ -235,9 +246,7 @@ async fn models() -> Result<()> {
 
     // Also include from collective aggregation
     for model in &state.collective.models {
-        model_gates
-            .entry(model.model_id.clone())
-            .or_default();
+        model_gates.entry(model.model_id.clone()).or_default();
         for gate_id in &model.gates {
             let entry = model_gates.entry(model.model_id.clone()).or_default();
             if !entry.contains(gate_id) {
@@ -253,21 +262,14 @@ async fn models() -> Result<()> {
     }
 
     // Display
-    println!(
-        "  {:<45} {:<20}",
-        "MODEL", "GATES"
-    );
+    println!("  {:<45} {:<20}", "MODEL", "GATES");
     println!("  {}", "-".repeat(70));
 
     let mut sorted_models: Vec<_> = model_gates.iter().collect();
     sorted_models.sort_by_key(|(k, _)| (*k).clone());
 
     for (model_id, gates) in &sorted_models {
-        println!(
-            "  {:<45} {:<20}",
-            model_id,
-            gates.join(", "),
-        );
+        println!("  {:<45} {:<20}", model_id, gates.join(", "),);
     }
 
     println!("  {}", "-".repeat(70));

@@ -110,16 +110,38 @@ impl NeuralApiServer {
             }
             "capability.list_translations" => self.capability_handler.list_translations().await?,
 
+            // === Plasmodium Agent Operations ===
+            "agent.create" | "agent.list" | "agent.get" | "agent.remove" | "agent.meld"
+            | "agent.split" | "agent.resolve" => {
+                super::agents::handle_agent_request(
+                    &self.agent_registry,
+                    request.method.as_str(),
+                    &request.params,
+                )
+                .await?
+            }
+
             // === Legacy Routing (still needed for HTTP proxy) ===
             "neural_api.proxy_http" => self.proxy_http(&request.params).await?,
 
             // === Mesh & NAT Traversal Operations (routed via capability.call) ===
             // These provide direct method syntax sugar: mesh.status → capability.call("mesh", "status")
-            "mesh.status" | "mesh.find_path" | "mesh.announce" | "mesh.peers" | "mesh.health_check"
-            | "punch.request" | "punch.status"
-            | "stun.discover" | "stun.detect_nat_type"
-            | "relay.serve" | "relay.status" | "relay.allocate"
-            | "onion.create_service" | "onion.get_address" | "onion.connect" | "onion.status" => {
+            "mesh.status"
+            | "mesh.find_path"
+            | "mesh.announce"
+            | "mesh.peers"
+            | "mesh.health_check"
+            | "punch.request"
+            | "punch.status"
+            | "stun.discover"
+            | "stun.detect_nat_type"
+            | "relay.serve"
+            | "relay.status"
+            | "relay.allocate"
+            | "onion.create_service"
+            | "onion.get_address"
+            | "onion.connect"
+            | "onion.status" => {
                 // Transform direct method call into capability.call format
                 let parts: Vec<&str> = request.method.split('.').collect();
                 if parts.len() == 2 {

@@ -196,7 +196,12 @@ fn get_standalone_topology() -> (Vec<TopologyNode>, Vec<TopologyEdge>) {
                 "identity".to_string(),
             ],
             endpoints: Some(NodeEndpoints {
-                unix_socket: Some(format!("/tmp/biomeos/sockets/security-{}.sock", family_id)),
+                unix_socket: Some(
+                    biomeos_types::paths::SystemPaths::new_lazy()
+                        .primal_socket(&format!("security-{}", family_id))
+                        .to_string_lossy()
+                        .to_string(),
+                ),
                 http: None,
             }),
             metadata: Some(NodeMetadata {
@@ -219,7 +224,12 @@ fn get_standalone_topology() -> (Vec<TopologyNode>, Vec<TopologyEdge>) {
                 "http.post".to_string(),
             ],
             endpoints: Some(NodeEndpoints {
-                unix_socket: Some(format!("/tmp/biomeos/sockets/discovery-{}.sock", family_id)),
+                unix_socket: Some(
+                    biomeos_types::paths::SystemPaths::new_lazy()
+                        .primal_socket(&format!("discovery-{}", family_id))
+                        .to_string_lossy()
+                        .to_string(),
+                ),
                 http: None,
             }),
             metadata: Some(NodeMetadata {

@@ -21,20 +21,30 @@ pub struct PrimalDiscoveryService {
 /// Discovery result from primal scanning
 #[derive(Debug, Clone)]
 pub struct DiscoveryResult {
+    /// Primal identifier
     pub id: String,
+    /// Communication endpoint
     pub endpoint: String,
+    /// Primal type classification
     pub primal_type: PrimalType,
+    /// Capabilities discovered
     pub capabilities: Vec<PrimalCapability>,
+    /// Health status at discovery time
     pub health: Health,
+    /// When this primal was discovered
     pub discovered_at: chrono::DateTime<chrono::Utc>,
 }
 
 /// Probe result from endpoint probing
 #[derive(Debug, Clone)]
 pub struct ProbeResult {
+    /// Primal name reported by the endpoint
     pub name: String,
+    /// Primal version reported by the endpoint
     pub version: String,
+    /// Capabilities reported by the endpoint
     pub capabilities: Vec<PrimalCapability>,
+    /// Health status reported by the endpoint
     pub health: Health,
 }
 

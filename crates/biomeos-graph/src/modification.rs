@@ -144,7 +144,9 @@ impl GraphModificationHandler {
             match Self::apply(&current_graph, modification) {
                 Ok(result) => {
                     if result.success {
-                        current_graph = result.graph.unwrap();
+                        current_graph = result
+                            .graph
+                            .expect("successful modification must have graph");
                         all_warnings.extend(result.warnings);
                     } else {
                         return Ok(ModificationResult::failure(format!(

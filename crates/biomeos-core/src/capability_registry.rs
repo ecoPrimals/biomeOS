@@ -93,29 +93,41 @@ pub struct PrimalInfo {
 pub enum RegistryRequest {
     /// Register a primal
     Register {
+        /// Primal identifier
         id: String,
+        /// Correlation request identifier
         request_id: String,
+        /// Registration parameters
         params: RegisterParams,
     },
 
     /// Query for capability provider
     GetProvider {
+        /// Correlation request identifier
         request_id: String,
+        /// Capability to look up
         capability: Capability,
     },
 
     /// List all registered primals
-    ListPrimals { request_id: String },
+    ListPrimals {
+        /// Correlation request identifier
+        request_id: String,
+    },
 
     /// Heartbeat
     Heartbeat {
+        /// Correlation request identifier
         request_id: String,
+        /// Primal sending the heartbeat
         primal_id: String,
     },
 
     /// Unregister a primal
     Unregister {
+        /// Correlation request identifier
         request_id: String,
+        /// Primal to unregister
         primal_id: String,
     },
 }
@@ -123,27 +135,40 @@ pub enum RegistryRequest {
 /// Registration parameters
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RegisterParams {
+    /// Capabilities this primal provides
     pub provides: Vec<Capability>,
+    /// Capabilities this primal requires from others
     pub requires: Vec<Capability>,
+    /// Unix socket path for JSON-RPC
     pub socket_path: Option<String>,
+    /// HTTP endpoint URL (temporary bridge)
     pub http_endpoint: Option<String>,
+    /// Arbitrary key-value metadata
     pub metadata: Option<HashMap<String, String>>,
 }
 
 /// Registry response message
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RegistryResponse {
+    /// Correlation request identifier
     pub request_id: String,
+    /// Response status
     pub status: ResponseStatus,
+    /// Payload (if any)
     pub data: Option<serde_json::Value>,
+    /// Error message (if any)
     pub error: Option<String>,
 }
 
+/// Response status codes
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ResponseStatus {
+    /// Operation succeeded
     Success,
+    /// Operation failed
     Error,
+    /// Requested resource not found
     NotFound,
 }
 
@@ -155,10 +180,10 @@ pub struct CapabilityRegistry {
     /// Family ID
     family_id: String,
 
-    /// Registered primals (PrimalId -> PrimalInfo)
+    /// Registered primals (`PrimalId` -> `PrimalInfo`)
     primals: Arc<RwLock<HashMap<PrimalId, PrimalInfo>>>,
 
-    /// Capability index (Capability -> Vec<PrimalId>)
+    /// Capability index (`Capability` -> `Vec<PrimalId>`)
     capability_index: Arc<RwLock<HashMap<Capability, Vec<PrimalId>>>>,
 
     /// Unix socket path
@@ -216,10 +241,7 @@ impl CapabilityRegistry {
         {
             let mut index = self.capability_index.write().await;
             for capability in params.provides {
-                index
-                    .entry(capability)
-                    .or_default()
-                    .push(id.clone());
+                index.entry(capability).or_default().push(id.clone());
             }
         }
 

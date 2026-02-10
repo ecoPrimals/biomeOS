@@ -283,26 +283,349 @@ mod tests {
     use super::*;
     use tempfile::TempDir;
 
-    #[tokio::test]
-    async fn test_verify_empty_directory() {
-        let temp_dir = TempDir::new().unwrap();
-        let result = SporeVerification::verify(temp_dir.path()).await.unwrap();
+    // ========== VerificationResult Tests ==========
 
-        assert!(!result.valid); // Should fail - no structure
-        assert!(!result.checks.is_empty());
+    #[test]
+    fn test_verification_result_new() {
+        let result = VerificationResult::new();
+        assert!(result.valid);
+        assert!(result.checks.is_empty());
     }
 
     #[test]
-    fn test_verification_result() {
+    fn test_verification_result_passing_checks() {
+        let mut result = VerificationResult::new();
+
+        result.add_check("test1", true, None);
+        result.add_check("test2", true, Some("All good".to_string()));
+
+        assert!(result.valid);
+        assert_eq!(result.checks.len(), 2);
+        assert!(result.checks[0].passed);
+        assert!(result.checks[1].passed);
+        assert!(result.checks[0].message.is_none());
+        assert_eq!(result.checks[1].message, Some("All good".to_string()));
+    }
+
+    #[test]
+    fn test_verification_result_failing_check_invalidates() {
         let mut result = VerificationResult::new();
         assert!(result.valid);
 
-        result.add_check("test1", true, None);
+        result.add_check("pass", true, None);
         assert!(result.valid);
 
-        result.add_check("test2", false, Some("Failed".to_string()));
+        result.add_check("fail", false, Some("Failed".to_string()));
         assert!(!result.valid);
 
-        assert_eq!(result.checks.len(), 2);
+        // Adding another pass doesn't restore validity
+        result.add_check("pass2", true, None);
+        assert!(!result.valid);
+
+        assert_eq!(result.checks.len(), 3);
+    }
+
+    #[test]
+    fn test_verification_result_clone() {
+        let mut result = VerificationResult::new();
+        result.add_check("test", true, None);
+
+        let cloned = result.clone();
+        assert_eq!(cloned.valid, result.valid);
+        assert_eq!(cloned.checks.len(), result.checks.len());
+    }
+
+    #[test]
+    fn test_verification_check_clone() {
+        let check = VerificationCheck {
+            name: "Family seed".to_string(),
+            passed: true,
+            message: Some("32 bytes OK".to_string()),
+        };
+        let cloned = check.clone();
+        assert_eq!(cloned.name, "Family seed");
+        assert!(cloned.passed);
+        assert_eq!(cloned.message, Some("32 bytes OK".to_string()));
+    }
+
+    // ========== SporeVerification Tests ==========
+
+    #[tokio::test]
+    async fn test_verify_nonexistent_path() {
+        let result = SporeVerification::verify(Path::new("/nonexistent/path/abc123"))
+            .await
+            .expect("verify should succeed even for missing path");
+
+        assert!(!result.valid);
+        assert_eq!(result.checks.len(), 1);
+        assert_eq!(result.checks[0].name, "Root directory");
+        assert!(!result.checks[0].passed);
+    }
+
+    #[tokio::test]
+    async fn test_verify_empty_directory() {
+        let temp_dir = TempDir::new().expect("create temp dir");
+        let result = SporeVerification::verify(temp_dir.path())
+            .await
+            .expect("verify");
+
+        assert!(!result.valid);
+        // Root exists, but dirs/seed/config/binaries missing
+        assert!(result.checks.len() > 1);
+
+        // Root directory check should pass
+        let root_check = result.checks.iter().find(|c| c.name == "Root directory");
+        assert!(root_check.expect("root check").passed);
+    }
+
+    #[tokio::test]
+    async fn test_verify_directory_structure_checks() {
+        let temp_dir = TempDir::new().expect("create temp dir");
+        let spore = temp_dir.path();
+
+        // Create partial structure
+        std::fs::create_dir_all(spore.join("bin")).expect("create bin");
+        std::fs::create_dir_all(spore.join("primals")).expect("create primals");
+        // Missing: secrets, logs
+
+        let result = SporeVerification::verify(spore).await.expect("verify");
+
+        // bin and primals should pass, secrets and logs should fail
+        let bin_check = result
+            .checks
+            .iter()
+            .find(|c| c.name == "Directory: bin");
+        assert!(bin_check.expect("bin check").passed);
+
+        let secrets_check = result
+            .checks
+            .iter()
+            .find(|c| c.name == "Directory: secrets");
+        assert!(!secrets_check.expect("secrets check").passed);
+    }
+
+    #[tokio::test]
+    async fn test_verify_family_seed_missing() {
+        let temp_dir = TempDir::new().expect("create temp dir");
+        let spore = temp_dir.path();
+
+        // Create all required dirs but no seed
+        for dir in &["bin", "primals", "secrets", "logs"] {
+            std::fs::create_dir_all(spore.join(dir)).expect("create dir");
+        }
+
+        let result = SporeVerification::verify(spore).await.expect("verify");
+
+        let seed_check = result
+            .checks
+            .iter()
+            .find(|c| c.name == "Family seed");
+        assert!(!seed_check.expect("seed check").passed);
+    }
+
+    #[tokio::test]
+    async fn test_verify_family_seed_correct_size() {
+        let temp_dir = TempDir::new().expect("create temp dir");
+        let spore = temp_dir.path();
+
+        for dir in &["bin", "primals", "secrets", "logs"] {
+            std::fs::create_dir_all(spore.join(dir)).expect("create dir");
+        }
+
+        // Write correct 32-byte seed
+        std::fs::write(spore.join(".family.seed"), [0u8; 32]).expect("write seed");
+
+        let result = SporeVerification::verify(spore).await.expect("verify");
+
+        let size_check = result
+            .checks
+            .iter()
+            .find(|c| c.name == "Family seed size");
+        assert!(size_check.expect("seed size check").passed);
+    }
+
+    #[tokio::test]
+    async fn test_verify_family_seed_wrong_size() {
+        let temp_dir = TempDir::new().expect("create temp dir");
+        let spore = temp_dir.path();
+
+        for dir in &["bin", "primals", "secrets", "logs"] {
+            std::fs::create_dir_all(spore.join(dir)).expect("create dir");
+        }
+
+        // Write wrong-size seed
+        std::fs::write(spore.join(".family.seed"), [0u8; 16]).expect("write seed");
+
+        let result = SporeVerification::verify(spore).await.expect("verify");
+
+        let size_check = result
+            .checks
+            .iter()
+            .find(|c| c.name == "Family seed size");
+        assert!(!size_check.expect("seed size check").passed);
+        assert!(
+            size_check
+                .expect("seed size check message")
+                .message
+                .as_ref()
+                .expect("message")
+                .contains("16")
+        );
+    }
+
+    #[tokio::test]
+    async fn test_verify_config_missing() {
+        let temp_dir = TempDir::new().expect("create temp dir");
+        let spore = temp_dir.path();
+
+        for dir in &["bin", "primals", "secrets", "logs"] {
+            std::fs::create_dir_all(spore.join(dir)).expect("create dir");
+        }
+        std::fs::write(spore.join(".family.seed"), [0u8; 32]).expect("write seed");
+
+        let result = SporeVerification::verify(spore).await.expect("verify");
+
+        let config_check = result
+            .checks
+            .iter()
+            .find(|c| c.name == "Configuration");
+        assert!(!config_check.expect("config check").passed);
+    }
+
+    #[tokio::test]
+    async fn test_verify_config_uses_seed_file() {
+        let temp_dir = TempDir::new().expect("create temp dir");
+        let spore = temp_dir.path();
+
+        for dir in &["bin", "primals", "secrets", "logs"] {
+            std::fs::create_dir_all(spore.join(dir)).expect("create dir");
+        }
+        std::fs::write(spore.join(".family.seed"), [0u8; 32]).expect("write seed");
+
+        // Write tower.toml that references BEARDOG_FAMILY_SEED_FILE
+        let config_content = r#"
+[tower]
+name = "test"
+
+[environment]
+BEARDOG_FAMILY_SEED_FILE = "/biomeOS/secrets/.family.seed"
+"#;
+        std::fs::write(spore.join("tower.toml"), config_content).expect("write config");
+
+        let result = SporeVerification::verify(spore).await.expect("verify");
+
+        let seed_ref_check = result
+            .checks
+            .iter()
+            .find(|c| c.name == "Config uses seed file");
+        assert!(seed_ref_check.expect("seed ref check").passed);
+
+        let raw_seed_check = result
+            .checks
+            .iter()
+            .find(|c| c.name == "Config not exposing raw seed");
+        assert!(raw_seed_check.expect("raw seed check").passed);
+    }
+
+    #[tokio::test]
+    async fn test_verify_binaries_missing() {
+        let temp_dir = TempDir::new().expect("create temp dir");
+        let spore = temp_dir.path();
+
+        for dir in &["bin", "primals", "secrets", "logs"] {
+            std::fs::create_dir_all(spore.join(dir)).expect("create dir");
+        }
+        std::fs::write(spore.join(".family.seed"), [0u8; 32]).expect("write seed");
+        std::fs::write(
+            spore.join("tower.toml"),
+            "BEARDOG_FAMILY_SEED_FILE = \"/secrets/.family.seed\"\n",
+        )
+        .expect("write config");
+
+        let result = SporeVerification::verify(spore).await.expect("verify");
+
+        // All binary checks should fail
+        let binary_checks: Vec<_> = result
+            .checks
+            .iter()
+            .filter(|c| {
+                c.name == "BearDog binary"
+                    || c.name == "Songbird binary"
+                    || c.name == "Tower binary"
+            })
+            .collect();
+
+        for check in &binary_checks {
+            assert!(!check.passed, "Binary {} should be missing", check.name);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_verify_complete_spore() {
+        let temp_dir = TempDir::new().expect("create temp dir");
+        let spore = temp_dir.path();
+
+        // Create complete structure
+        for dir in &["bin", "primals", "secrets", "logs"] {
+            std::fs::create_dir_all(spore.join(dir)).expect("create dir");
+        }
+        std::fs::write(spore.join(".family.seed"), [0u8; 32]).expect("write seed");
+        std::fs::write(
+            spore.join("tower.toml"),
+            "BEARDOG_FAMILY_SEED_FILE = \"/secrets/.family.seed\"\n",
+        )
+        .expect("write config");
+
+        // Create executable binaries
+        std::fs::write(spore.join("bin/tower"), b"tower binary").expect("write tower");
+        std::fs::write(spore.join("primals/beardog"), b"beardog binary")
+            .expect("write beardog");
+        std::fs::write(spore.join("primals/songbird"), b"songbird binary")
+            .expect("write songbird");
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            for path in &["bin/tower", "primals/beardog", "primals/songbird"] {
+                let mut perms =
+                    std::fs::metadata(spore.join(path)).expect("metadata").permissions();
+                perms.set_mode(0o755);
+                std::fs::set_permissions(spore.join(path), perms).expect("set perms");
+            }
+        }
+
+        let result = SporeVerification::verify(spore).await.expect("verify");
+
+        // All directory and seed checks should pass
+        let dir_checks: Vec<_> = result
+            .checks
+            .iter()
+            .filter(|c| c.name.starts_with("Directory:"))
+            .collect();
+        for check in &dir_checks {
+            assert!(check.passed, "Directory check {} should pass", check.name);
+        }
+    }
+
+    // ========== print_summary tests ==========
+
+    #[test]
+    fn test_print_summary_passing() {
+        let mut result = VerificationResult::new();
+        result.add_check("test1", true, None);
+        result.add_check("test2", true, Some("All good".to_string()));
+
+        // Just ensure it doesn't panic
+        result.print_summary();
+    }
+
+    #[test]
+    fn test_print_summary_failing() {
+        let mut result = VerificationResult::new();
+        result.add_check("pass", true, None);
+        result.add_check("fail", false, Some("Missing".to_string()));
+
+        // Just ensure it doesn't panic
+        result.print_summary();
     }
 }

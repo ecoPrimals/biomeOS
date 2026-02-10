@@ -3,6 +3,9 @@
 //! Pure Rust deployment orchestration for BiomeOS federations.
 //! Replaces bash scripts with type-safe, async Rust implementation.
 
+#![warn(missing_docs)]
+#![deny(unsafe_code)]
+
 pub mod error;
 pub mod federation;
 pub mod health;

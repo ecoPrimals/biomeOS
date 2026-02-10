@@ -95,14 +95,18 @@ pub enum ProbeHandler {
 /// Probe port
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ProbePort {
+    /// Port number
     Number(u16),
+    /// Port name
     Name(String),
 }
 
 /// HTTP schemes
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum HttpScheme {
+    /// Plain HTTP
     Http,
+    /// HTTPS (TLS)
     Https,
 }
 
@@ -134,8 +138,11 @@ pub struct HealthReporting {
 /// Health report formats
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum HealthReportFormat {
+    /// JSON format
     Json,
+    /// Prometheus exposition format
     Prometheus,
+    /// Custom format
     Custom(String),
 }
 
@@ -199,9 +206,13 @@ pub struct HealthCheckResult {
 /// Health status
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum HealthStatus {
+    /// Service is healthy
     Healthy,
+    /// Service is unhealthy
     Unhealthy,
+    /// Service is degraded
     Degraded,
+    /// Health status is unknown
     Unknown,
 }
 
@@ -277,9 +288,13 @@ pub enum AlertCondition {
 /// Alert severity levels
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AlertSeverity {
+    /// Informational alert
     Info,
+    /// Warning-level alert
     Warning,
+    /// Error-level alert
     Error,
+    /// Critical alert
     Critical,
 }
 
@@ -365,18 +380,26 @@ pub struct DashboardAuth {
 /// Dashboard authentication types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DashboardAuthType {
+    /// No authentication
     None,
+    /// Basic (username/password) authentication
     Basic,
+    /// API key authentication
     ApiKey,
+    /// JWT token authentication
     Jwt,
 }
 
 /// Dashboard themes
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DashboardTheme {
+    /// Light theme
     Light,
+    /// Dark theme
     Dark,
+    /// Auto-detect from system
     Auto,
+    /// Custom theme
     Custom(String),
 }
 

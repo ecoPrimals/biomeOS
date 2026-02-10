@@ -3,6 +3,9 @@
 //! This crate provides comprehensive system information gathering, health monitoring,
 //! and resource metrics for the BiomeOS ecosystem.
 
+#![warn(missing_docs)]
+#![deny(unsafe_code)]
+
 use std::collections::HashMap;
 use std::fs;
 
@@ -570,93 +573,141 @@ impl SystemInspector {
 /// Comprehensive system information
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct SystemInfo {
+    /// System hostname
     pub hostname: String,
+    /// Kernel version and architecture
     pub kernel_info: KernelInfo,
+    /// CPU model and core count
     pub cpu_info: CpuInfo,
+    /// RAM usage statistics
     pub memory_info: MemoryInfo,
+    /// Per-disk usage statistics
     pub disk_info: Vec<DiskInfo>,
+    /// Network interface details
     pub network_info: Vec<NetworkInterface>,
+    /// System uptime
     pub uptime: std::time::Duration,
+    /// 1/5/15-minute load averages
     pub load_average: LoadAverage,
+    /// Timestamp when this snapshot was taken
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
 /// Kernel information
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct KernelInfo {
+    /// Kernel name (e.g. "Linux")
     pub name: String,
+    /// Kernel version string
     pub version: String,
+    /// Machine architecture (e.g. "x86_64")
     pub architecture: String,
 }
 
 /// CPU information  
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct CpuInfo {
+    /// CPU model name
     pub model: String,
+    /// Number of logical CPU cores
     pub cores: u32,
+    /// CPU architecture (e.g. "x86_64", "aarch64")
     pub architecture: String,
 }
 
 /// Memory information
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct MemoryInfo {
+    /// Total physical memory in GiB
     pub total_gb: f64,
+    /// Used memory in GiB
     pub used_gb: f64,
+    /// Available memory in GiB
     pub available_gb: f64,
+    /// Memory usage as a percentage (0–100)
     pub usage_percent: f64,
 }
 
 /// Disk information
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct DiskInfo {
+    /// Block device path (e.g. "/dev/sda1")
     pub device: String,
+    /// Mount point (e.g. "/", "/home")
     pub mount_point: String,
+    /// Filesystem type (e.g. "ext4", "btrfs")
     pub filesystem: String,
+    /// Total disk capacity in GiB
     pub total_gb: f64,
+    /// Used disk space in GiB
     pub used_gb: f64,
+    /// Available disk space in GiB
     pub available_gb: f64,
+    /// Disk usage as a percentage (0–100)
     pub usage_percent: f64,
 }
 
 /// Network interface information
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct NetworkInterface {
+    /// Interface name (e.g. "eth0", "wlan0")
     pub name: String,
+    /// Type of network interface
     pub interface_type: NetworkInterfaceType,
+    /// Current operational status
     pub status: NetworkInterfaceStatus,
+    /// IP addresses bound to this interface
     pub addresses: Vec<String>,
+    /// MAC / hardware address
     pub mac_address: Option<String>,
+    /// Maximum transmission unit in bytes
     pub mtu: u32,
+    /// Cumulative bytes transmitted
     pub bytes_sent: u64,
+    /// Cumulative bytes received
     pub bytes_received: u64,
+    /// Cumulative packets transmitted
     pub packets_sent: u64,
+    /// Cumulative packets received
     pub packets_received: u64,
 }
 
 /// Network interface types
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub enum NetworkInterfaceType {
+    /// Wired Ethernet
     Ethernet,
+    /// Wi-Fi / wireless
     Wireless,
+    /// Loopback (lo)
     Loopback,
+    /// Virtual bridge
     Bridge,
+    /// VPN / tunnel interface
     Tunnel,
+    /// Unknown or other interface type
     Other(String),
 }
 
 /// Network interface status
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub enum NetworkInterfaceStatus {
+    /// Interface is up and operational
     Up,
+    /// Interface is down
     Down,
+    /// Status could not be determined
     Unknown,
 }
 
 /// System load average
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct LoadAverage {
+    /// 1-minute load average
     pub load_1m: f64,
+    /// 5-minute load average
     pub load_5m: f64,
+    /// 15-minute load average
     pub load_15m: f64,
 }
 

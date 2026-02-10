@@ -47,17 +47,12 @@ impl MockPrimalServer {
             // Signal ready AFTER bind succeeds
             let _ = ready_tx.send(());
 
-            loop {
-                match listener.accept().await {
-                    Ok((stream, _)) => {
-                        let name = name.clone();
-                        let caps = caps_clone.clone();
-                        tokio::spawn(async move {
-                            let _ = Self::handle_connection(stream, &name, &caps).await;
-                        });
-                    }
-                    Err(_) => break,
-                }
+            while let Ok((stream, _)) = listener.accept().await {
+                let name = name.clone();
+                let caps = caps_clone.clone();
+                tokio::spawn(async move {
+                    let _ = Self::handle_connection(stream, &name, &caps).await;
+                });
             }
         });
 
@@ -366,7 +361,7 @@ async fn test_discovery_federation() -> Result<()> {
             // Extract family from filename pattern: {primal}-{family}.sock
             if let Some(family) = filename
                 .strip_suffix(".sock")
-                .and_then(|s| s.split('-').last())
+                .and_then(|s| s.split('-').next_back())
             {
                 by_family
                     .entry(family.to_string())

@@ -4,6 +4,9 @@
 //! and other primals **without** direct HTTP dependencies or knowledge
 //! of other primals' existence.
 //!
+#![warn(missing_docs)]
+#![deny(unsafe_code)]
+//!
 //! # TRUE PRIMAL Pattern
 //!
 //! Primals using this client have **zero knowledge** of:

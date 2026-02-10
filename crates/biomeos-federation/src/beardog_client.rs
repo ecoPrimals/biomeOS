@@ -11,37 +11,56 @@ use std::path::PathBuf;
 use crate::discovery::{PrimalDiscovery, PrimalEndpoint};
 use crate::unix_socket_client::UnixSocketClient;
 
+/// Request payload for deriving a sub-federation key via BearDog
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KeyDerivationRequest {
+    /// Parent family identifier
     pub parent_family: String,
+    /// Sub-federation name
     pub subfed_name: String,
+    /// Key purpose (e.g. "encryption", "signing")
     pub purpose: String,
 }
 
+/// Response from a key derivation request
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KeyDerivationResponse {
+    /// Opaque key reference (never raw material)
     pub key_ref: String,
+    /// Cryptographic algorithm used
     pub algorithm: String,
+    /// ISO-8601 creation timestamp
     pub created_at: String,
 }
 
+/// Response from an encryption operation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EncryptResponse {
+    /// Base64-encoded ciphertext
     pub encrypted_data: String,
+    /// Base64-encoded nonce / IV
     pub nonce: String,
+    /// Base64-encoded authentication tag
     pub tag: String,
 }
 
+/// Request payload for verifying genetic lineage
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LineageVerificationRequest {
+    /// Family identifier to verify
     pub family_id: String,
+    /// SHA-256 hash of the family seed
     pub seed_hash: String,
 }
 
+/// Response from a lineage verification request
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LineageVerificationResponse {
+    /// Whether the requester is a member of the family
     pub is_family_member: bool,
+    /// Hash of the parent family seed for chain verification
     pub parent_seed_hash: String,
+    /// Relationship descriptor (e.g. "child", "sibling")
     pub relationship: String,
 }
 

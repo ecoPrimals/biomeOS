@@ -94,9 +94,13 @@ pub struct PrimalResponse {
 /// Request priority levels for primal operations
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub enum RequestPriority {
+    /// Low priority — background tasks, deferred operations
     Low = 1,
+    /// Normal priority — standard user-initiated operations
     Normal = 2,
+    /// High priority — time-sensitive operations
     High = 3,
+    /// Critical priority — safety, security, or system-integrity operations
     Critical = 4,
 }
 

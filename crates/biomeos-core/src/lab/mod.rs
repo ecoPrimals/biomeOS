@@ -3,6 +3,20 @@
 //! Integration layer for benchScale lab environment system.
 //! Allows BiomeOS to orchestrate lab experiments for testing P2P coordination,
 //! BTSP tunnels, BirdSong encryption, and multi-primal deployments.
+//!
+//! ## Runtime Dependencies (shell-outs)
+//!
+//! This module uses `std::process::Command` to call benchScale shell scripts.
+//! These are **infrastructure orchestration tools** (QEMU VM management) that
+//! cannot be replaced with pure Rust without implementing an entire hypervisor
+//! client library. The shell-outs here are acceptable because:
+//!
+//! 1. Lab is a development/testing tool, not a production path
+//! 2. benchScale scripts manage QEMU VMs (external infrastructure)
+//! 3. The API surface is small and well-defined (4 scripts)
+//!
+//! **Evolution path**: If benchScale gains a Rust API or we migrate to
+//! libvirt-rs, these shell-outs can be replaced.
 
 use anyhow::{Context, Result};
 use std::path::PathBuf;
@@ -202,9 +216,13 @@ impl LabHandle {
 /// Result of a lab test
 #[derive(Debug, Clone)]
 pub struct TestResult {
+    /// Name of the test that was run
     pub test_name: String,
+    /// Whether the test passed
     pub success: bool,
+    /// Standard output captured from the test
     pub stdout: String,
+    /// Standard error captured from the test
     pub stderr: String,
 }
 

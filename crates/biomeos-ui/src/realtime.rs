@@ -394,7 +394,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // Requires Neural API server to be running (integration test)
+    #[ignore = "Requires running Neural API server — integration test"]
     async fn test_discover_endpoints() {
         let mut subscriber = RealTimeEventSubscriber::new("test_family".to_string());
 
@@ -680,8 +680,7 @@ mod tests {
         let subscriber = Arc::new(RealTimeEventSubscriber::new("test_family".to_string()));
         let _handler = RealTimeEventHandler::new(subscriber);
 
-        // Handler should be created successfully
-        assert!(true); // If we get here, creation succeeded
+        // Handler created successfully — reaching this point validates construction
     }
 
     #[tokio::test]
@@ -690,8 +689,7 @@ mod tests {
         let _rx1 = subscriber.subscribe();
         let _rx2 = subscriber.subscribe();
 
-        // Both subscriptions should be independent
-        assert!(true); // If we get here, subscriptions work
+        // Both subscriptions created independently — reaching this validates the pattern
     }
 
     #[test]

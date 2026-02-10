@@ -92,28 +92,46 @@ pub struct BiomeOSConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConfigMetadata {
     /// Configuration version using semantic versioning
+    #[serde(default = "ConfigMetadata::default_version")]
     pub version: String,
 
     /// Configuration name/identifier  
+    #[serde(default = "ConfigMetadata::default_name")]
     pub name: String,
 
     /// Configuration description
+    #[serde(default)]
     pub description: Option<String>,
 
     /// Configuration author
+    #[serde(default)]
     pub author: Option<String>,
 
     /// When this configuration was created
+    #[serde(default = "Utc::now")]
     pub created_at: DateTime<Utc>,
 
     /// When this configuration was last modified
+    #[serde(default = "Utc::now")]
     pub modified_at: DateTime<Utc>,
 
     /// Configuration tags for organization
+    #[serde(default)]
     pub tags: Vec<String>,
 
     /// Custom metadata fields
+    #[serde(default)]
     pub custom: HashMap<String, serde_json::Value>,
+}
+
+impl ConfigMetadata {
+    fn default_version() -> String {
+        "1.0.0".to_string()
+    }
+
+    fn default_name() -> String {
+        "default-biome-config".to_string()
+    }
 }
 
 impl Default for ConfigMetadata {

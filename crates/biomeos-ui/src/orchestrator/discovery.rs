@@ -11,7 +11,21 @@
 
 use crate::primal_client::PrimalConnections;
 use anyhow::Result;
+use biomeos_types::CapabilityTaxonomy;
 use tracing::{debug, info, warn};
+
+/// Resolve a capability to its provider primal name at runtime.
+///
+/// Priority: environment variable → capability taxonomy default.
+/// This centralizes the resolution logic instead of scattering env var lookups.
+pub fn resolve_capability_provider(
+    env_var: &str,
+    capability: CapabilityTaxonomy,
+) -> Option<String> {
+    std::env::var(env_var)
+        .ok()
+        .or_else(|| capability.default_primal().map(String::from))
+}
 
 /// Discovery result — wraps PrimalConnections for dynamic primal access
 ///
@@ -41,7 +55,11 @@ impl Discovery {
         let connections = PrimalConnections::discover_all(&family_id).await;
 
         let discovered_count = connections.count_available();
-        info!("Discovered {} primals: {:?}", discovered_count, connections.available_primals());
+        info!(
+            "Discovered {} primals: {:?}",
+            discovered_count,
+            connections.available_primals()
+        );
 
         if discovered_count == 0 {
             warn!("No primals discovered! UI will have limited functionality.");
@@ -56,24 +74,31 @@ impl Discovery {
     pub async fn discover_devices(connections: &PrimalConnections) -> Result<()> {
         info!("Discovering devices...");
 
-        let registry_name = std::env::var("BIOMEOS_REGISTRY_PROVIDER")
-            .unwrap_or_else(|_| "songbird".to_string());
+        let registry_name =
+            resolve_capability_provider("BIOMEOS_REGISTRY_PROVIDER", CapabilityTaxonomy::Discovery);
 
-        if let Some(registry) = connections.get(&registry_name) {
-            match registry
-                .call("registry.list_devices", serde_json::json!({}))
-                .await
-            {
-                Ok(devices) => {
-                    debug!("Discovered devices: {:?}", devices);
-                    info!("Successfully discovered devices from {}", registry_name);
+        if let Some(name) = &registry_name {
+            if let Some(registry) = connections.get(name) {
+                match registry
+                    .call("registry.list_devices", serde_json::json!({}))
+                    .await
+                {
+                    Ok(devices) => {
+                        debug!("Discovered devices: {:?}", devices);
+                        info!("Successfully discovered devices from {}", name);
+                    }
+                    Err(e) => {
+                        warn!(
+                            "Device discovery failed: {} - {} may not support device registry yet",
+                            e, name
+                        );
+                    }
                 }
-                Err(e) => {
-                    warn!("Device discovery failed: {} - {} may not support device registry yet", e, registry_name);
-                }
+            } else {
+                info!("Registry provider '{}' not available", name);
             }
         } else {
-            info!("No registry provider available for device discovery");
+            info!("No registry provider configured (strict discovery mode)");
         }
 
         Ok(())
@@ -83,38 +108,42 @@ impl Discovery {
     pub async fn discover_active_primals(connections: &PrimalConnections) -> Result<()> {
         info!("Discovering active primals...");
 
-        let registry_name = std::env::var("BIOMEOS_REGISTRY_PROVIDER")
-            .unwrap_or_else(|_| "songbird".to_string());
+        let registry_name =
+            resolve_capability_provider("BIOMEOS_REGISTRY_PROVIDER", CapabilityTaxonomy::Discovery);
 
-        if let Some(registry) = connections.get(&registry_name) {
-            match registry
-                .call("registry.list_primals", serde_json::json!({}))
-                .await
-            {
-                Ok(primals) => {
-                    debug!("Discovered primals: {:?}", primals);
-                    info!("Successfully queried {} for active primals", registry_name);
+        if let Some(name) = &registry_name {
+            if let Some(registry) = connections.get(name) {
+                match registry
+                    .call("registry.list_primals", serde_json::json!({}))
+                    .await
+                {
+                    Ok(primals) => {
+                        debug!("Discovered primals: {:?}", primals);
+                        info!("Successfully queried {} for active primals", name);
+                    }
+                    Err(e) => {
+                        warn!("Primal discovery failed: {} - check {} connection", e, name);
+                    }
                 }
-                Err(e) => {
-                    warn!("Primal discovery failed: {} - check {} connection", e, registry_name);
-                }
+            } else {
+                info!("Registry provider '{}' not available", name);
             }
         } else {
-            info!("No registry provider available, cannot discover other primals");
+            info!("No registry provider configured (strict discovery mode)");
         }
 
         Ok(())
     }
 
     /// Load saved state from storage provider
-    pub async fn load_saved_state(
-        connections: &PrimalConnections,
-        family_id: &str,
-    ) -> Result<()> {
+    pub async fn load_saved_state(connections: &PrimalConnections, family_id: &str) -> Result<()> {
         info!("Loading saved UI state...");
 
-        let storage_name = std::env::var("BIOMEOS_STORAGE_PROVIDER")
-            .unwrap_or_else(|_| "nestgate".to_string());
+        let storage_name = resolve_capability_provider(
+            "BIOMEOS_STORAGE_PROVIDER",
+            CapabilityTaxonomy::DataStorage,
+        )
+        .expect("DataStorage capability must have a default provider");
 
         if let Some(storage) = connections.get(&storage_name) {
             match storage
@@ -165,9 +194,9 @@ impl Discovery {
         });
 
         // Fetch devices from registry provider if available
-        let registry_name = std::env::var("BIOMEOS_REGISTRY_PROVIDER")
-            .unwrap_or_else(|_| "songbird".to_string());
-        if let Some(registry) = connections.get(&registry_name) {
+        let registry_name =
+            resolve_capability_provider("BIOMEOS_REGISTRY_PROVIDER", CapabilityTaxonomy::Discovery);
+        if let Some(registry) = registry_name.as_deref().and_then(|n| connections.get(n)) {
             if let Ok(devices) = registry
                 .call("registry.list_devices", serde_json::json!({}))
                 .await
@@ -177,9 +206,11 @@ impl Discovery {
         }
 
         // Fetch assignments from storage provider if available
-        let storage_name = std::env::var("BIOMEOS_STORAGE_PROVIDER")
-            .unwrap_or_else(|_| "nestgate".to_string());
-        if let Some(storage) = connections.get(&storage_name) {
+        let storage_name = resolve_capability_provider(
+            "BIOMEOS_STORAGE_PROVIDER",
+            CapabilityTaxonomy::DataStorage,
+        );
+        if let Some(storage) = storage_name.as_deref().and_then(|n| connections.get(n)) {
             if let Ok(assignments) = storage
                 .call(
                     "storage.list",

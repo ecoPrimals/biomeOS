@@ -20,11 +20,14 @@ pub struct BootableMediaBuilder {
 /// Boot target type
 #[derive(Debug, Clone, Copy)]
 pub enum BootTarget {
+    /// ISO image for optical media or virtual machines
     Iso,
+    /// USB flash drive bootable image
     Usb,
 }
 
 impl BootableMediaBuilder {
+    /// Create a new bootable media builder rooted at the given project path
     pub fn new(project_root: PathBuf) -> Result<Self> {
         let work_dir = project_root.join("build/boot-media");
         let output_dir = project_root.join("dist");

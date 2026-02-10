@@ -10,20 +10,30 @@ use std::time::Duration;
 /// System environment types
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum Environment {
+    /// Development environment
     Development,
+    /// Testing environment
     Testing,
+    /// Staging environment
     Staging,
+    /// Production environment
     Production,
+    /// Custom environment
     Custom(String),
 }
 
 /// Organization scale for tuning behavior
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum OrganizationScale {
+    /// Individual user
     Individual,
+    /// Small team
     Team,
+    /// Department level
     Department,
+    /// Enterprise level
     Enterprise,
+    /// Global scale
     Global,
 }
 

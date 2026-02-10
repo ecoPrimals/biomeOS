@@ -41,92 +41,70 @@ Built a model cache layer in biomeOS (`biomeos-core::model_cache`) that manages 
 
 ## NestGate Bugs Found
 
-### Bug 1: Inverted Boolean in Socket-Only Mode (CRITICAL)
+### Bug 1: Inverted Boolean in Socket-Only Mode (CRITICAL) -- PATCHED DOWNSTREAM
 
-**File**: `nestgate/code/crates/nestgate-bin/src/cli.rs` line ~337
+**Status**: PATCHED in biomeOS fork, awaiting upstream fix
+**Detailed Report**: `nestgate/UPSTREAM_BUG1_INVERTED_BOOLEAN_FEB09_2026.md`
+
+The Feb 9 NestGate evolution added `socket_only: bool` (default `true`) alongside the existing `enable_http: bool` field. The computed `use_socket_only` (which is `true`) is then passed directly to `run_daemon()` whose 4th parameter is `enable_http: bool`. Result: `--socket-only` starts HTTP mode.
 
 ```rust
-// CURRENT (BUG):
-crate::commands::service::run_daemon(port, &bind, dev, use_socket_only)
+// BUG: use_socket_only (true) passed as enable_http parameter
+crate::commands::service::run_daemon(port, &bind, dev, use_socket_only)  // <-- inverted
 
-// The 4th parameter is named `enable_http` in run_daemon():
-pub async fn run_daemon(port: u16, bind: &str, dev: bool, enable_http: bool)
-
-// When use_socket_only = true, enable_http receives true -> starts HTTP mode!
-// FIX:
-crate::commands::service::run_daemon(port, &bind, dev, !use_socket_only)
+// DOWNSTREAM PATCH (one-line fix):
+crate::commands::service::run_daemon(port, &bind, dev, !use_socket_only)  // <-- negated
 ```
 
-**Impact**: `nestgate daemon --socket-only` starts in HTTP mode instead of socket mode. The storage JSON-RPC methods (`storage.store`, `storage.retrieve`, etc.) are only available via the Unix socket server, not the HTTP server. This means NestGate's storage API is effectively unreachable.
+NestGate team's investigation called this a "false positive" because they analyzed the pre-evolution code (which only had `enable_http` and was correct). The bug was introduced by their own evolution adding the dual-boolean pattern.
 
-### Bug 2: `storage.retrieve` Returns Null (KNOWN)
+**Recommended upstream fix**: Remove the `socket_only` field entirely; revert to the pre-evolution pattern where only `enable_http` exists (defaults false = socket-only). See detailed report for three fix options.
 
-**Reference**: `docs/handoffs/NESTGATE_PERSISTENCE_HANDOFF.md`
+### Bug 2: `storage.retrieve` Returns Null -- RESOLVED
+
+**Status**: FIXED (was caused by Bug 1)
+
+When NestGate started in HTTP mode (due to Bug 1), the `storage.*` JSON-RPC methods were only available via the Unix socket server codepath, which was never started. With the Bug 1 patch applied, `storage.retrieve` correctly returns stored data:
 
 ```bash
-# storage.store works:
-{"jsonrpc":"2.0","result":{"key":"test:key","success":true},"id":1}
-
-# storage.list works:
-{"jsonrpc":"2.0","result":{"keys":["test:key"]},"id":2}
-
-# storage.retrieve FAILS:
-{"jsonrpc":"2.0","result":{"data":null},"id":3}
+# storage.retrieve now WORKS:
+{"jsonrpc":"2.0","result":{"data":{"model":"TinyLlama","size":2100}},"id":4}
 ```
 
-**Hypothesis**: `store` writes to one internal structure (index/transaction log) while `retrieve` reads from a different path (filesystem) that was never written to.
+NestGate also added enhanced logging throughout the store/retrieve pipeline in this evolution, which will help diagnose any future issues.
 
-### Bug 3: ZFS Backend Assumed
+### Bug 3: ZFS Backend Assumed -- RESOLVED BY NESTGATE
 
-NestGate's HTTP mode tries to execute `zpool list` on startup, which fails on systems without ZFS:
+**Status**: FIXED upstream in this evolution
+
+NestGate added `capabilities.rs` with runtime ZFS detection (`zpool version`). When ZFS is not available, it gracefully falls back to standard filesystem mode:
 
 ```
-ERROR Command failed: zpool list -H -o name,size,alloc,free,health (exit code: 1)
-ERROR Error output: The ZFS modules cannot be auto-loaded.
+INFO 🗄️  Storage backend: Filesystem (universal compatibility)
+INFO    Works on ANY filesystem: ext4, NTFS, APFS, btrfs, etc.
 ```
-
-This is non-fatal but noisy. NestGate should gracefully skip ZFS when it's not available.
 
 ---
 
-## What biomeOS Needs From NestGate
+## What biomeOS Needs From NestGate (Next Evolution)
 
-### Priority 1: Fix Socket-Only Mode
-Fix the inverted boolean so `nestgate daemon --socket-only` actually starts the Unix socket JSON-RPC server with `storage.*` methods.
+### REMAINING: Fix Inverted Boolean Upstream
 
-### Priority 2: Fix `storage.retrieve`
-Make `storage.retrieve` return the data that `storage.store` wrote. The model cache module sends:
+The downstream one-line patch (`!use_socket_only`) works but should be resolved properly in NestGate. The cleanest fix is to revert to the pre-evolution single-boolean pattern:
 
-```json
-{
-  "method": "storage.store",
-  "params": {
-    "family_id": "nat0",
-    "key": "model-cache:TinyLlama/TinyLlama-1.1B-Chat-v1.0",
-    "value": { "model_id": "...", "gate_id": "pop-os", "size_bytes": 2202500000, ... }
-  }
+```rust
+// Remove socket_only field, keep only enable_http (defaults false = socket-only)
+Daemon {
+    #[arg(long)]
+    enable_http: bool,
 }
 ```
 
-And later queries:
+See `UPSTREAM_BUG1_INVERTED_BOOLEAN_FEB09_2026.md` in NestGate root for full analysis and three fix options.
 
-```json
-{
-  "method": "storage.retrieve",
-  "params": {
-    "family_id": "nat0",
-    "key": "model-cache:TinyLlama/TinyLlama-1.1B-Chat-v1.0"
-  }
-}
-```
-
-This must return the stored value, not null.
-
-### Priority 3: Filesystem Backend Fallback
-When ZFS is not available, NestGate should use a simple filesystem backend (the code for this exists in `universal_storage/backends/filesystem/` but isn't wired up as default fallback).
-
-### Priority 4: `storage.exists` Method
-Currently returns "Method not found". The model cache can work without it (uses `retrieve` + null check) but a proper `exists` method would be more efficient.
+### RESOLVED: `storage.retrieve` -- Works with Bug 1 patch
+### RESOLVED: ZFS Backend Fallback -- `capabilities.rs` added upstream
+### RESOLVED: `storage.exists` Method -- Implemented and routed upstream
 
 ---
 
@@ -188,12 +166,22 @@ biomeos model-cache status         # NestGate connection + cache stats
 
 ---
 
+## Current Status (Post-Patch)
+
+With the downstream Bug 1 patch applied, Nest Atomic is fully operational:
+
+- `storage.exists` -- Efficient existence check (new from this evolution)
+- `storage.store` -- Stores with `size_bytes` in response (enhanced)
+- `storage.retrieve` -- Returns actual data (no longer null)
+- `model_cache::find_on_mesh()` -- Uses two-phase `exists` -> `retrieve` lookup
+- NestGate socket-only mode runs correctly at `/run/user/1000/biomeos/nestgate.sock`
+- Validated live on Tower with family_id `8ff3b864a4bc589a`
+
 ## Evolution Path
 
-Once NestGate bugs are fixed:
-
-1. **Mesh discovery works**: `resolve` on Tower would find Mistral-7B on gate2 via NestGate
-2. **Model transfer**: Add Songbird-based model file transfer (rsync-like, BearDog-encrypted)
-3. **Blob storage**: Use `storage.store_blob` for smaller model files directly in NestGate
-4. **Deduplication**: NestGate can deduplicate identical models across gates (same SHA256)
-5. **Auto-sync**: Background task that syncs model manifests across gates periodically
+1. **Upstream Bug 1 fix**: NestGate resolves the inverted boolean, biomeOS removes downstream patch
+2. **Mesh discovery**: `resolve` on Tower finds Mistral-7B on gate2 via NestGate
+3. **Model transfer**: Songbird-based model file transfer (rsync-like, BearDog-encrypted)
+4. **Blob storage**: Use `storage.store_blob` for smaller model files directly in NestGate
+5. **Deduplication**: NestGate can deduplicate identical models across gates (same SHA256)
+6. **Auto-sync**: Background task syncs model manifests across gates periodically

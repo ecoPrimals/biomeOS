@@ -129,7 +129,7 @@ fn test_atomic_primal_client_from_endpoint() {
 // ========================================================================
 
 #[tokio::test]
-#[ignore] // Requires BearDog to be running
+#[ignore = "Requires running BearDog instance"]
 async fn test_beardog_discovery() {
     let client = AtomicPrimalClient::discover("beardog").await;
     if let Ok(client) = client {
@@ -152,7 +152,7 @@ async fn test_beardog_discovery() {
 }
 
 #[tokio::test]
-#[ignore] // Requires Songbird to be running
+#[ignore = "Requires running Songbird instance"]
 async fn test_songbird_discovery() {
     let client = AtomicPrimalClient::discover("songbird").await;
     if let Ok(client) = client {
@@ -165,7 +165,7 @@ async fn test_songbird_discovery() {
 }
 
 #[tokio::test]
-#[ignore] // Requires TCP endpoint running
+#[ignore = "Requires running TCP endpoint"]
 async fn test_tcp_connection() {
     let client = AtomicClient::tcp("127.0.0.1", 9100);
     // This will fail unless something is listening
@@ -304,9 +304,8 @@ fn test_atomic_primal_client_primal_name() {
 }
 
 #[test]
-fn test_atomic_primal_client_legacy_new() {
-    #[allow(deprecated)]
-    let client = AtomicPrimalClient::new("songbird", "/tmp/songbird.sock");
+fn test_atomic_primal_client_unix_constructor() {
+    let client = AtomicPrimalClient::unix("songbird", "/tmp/songbird.sock");
     assert_eq!(client.primal_name(), "songbird");
 }
 

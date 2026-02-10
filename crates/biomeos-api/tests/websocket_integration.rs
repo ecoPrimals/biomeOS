@@ -20,6 +20,21 @@ use tokio_tungstenite::{connect_async, tungstenite::Message};
 // Note: We can't import from biomeos-api since it's a binary crate
 // So we'll test through the WebSocket protocol
 
+/// Get the WebSocket server URL from environment or default.
+///
+/// Uses `BIOMEOS_WS_TEST_URL` env var if set, otherwise falls back to
+/// the default HTTP port from RuntimeConfig.
+fn ws_test_url() -> String {
+    if let Ok(url) = std::env::var("BIOMEOS_WS_TEST_URL") {
+        return url;
+    }
+    let port = std::env::var("HTTP_PORT")
+        .ok()
+        .and_then(|v| v.parse::<u16>().ok())
+        .unwrap_or(biomeos_types::constants::network::DEFAULT_HTTP_PORT);
+    format!("ws://127.0.0.1:{}/ws", port)
+}
+
 /// Helper to parse JSON-RPC response
 #[derive(Debug, serde::Deserialize)]
 #[allow(dead_code)]
@@ -45,9 +60,9 @@ async fn test_websocket_connection() -> Result<()> {
     // This test requires the biomeos-api server to be running
     // In CI, we'll skip this test if the server isn't available
 
-    let url = "ws://127.0.0.1:8080/ws"; // Assuming default port
+    let url = ws_test_url();
 
-    match connect_async(url).await {
+    match connect_async(&url).await {
         Ok((ws_stream, _)) => {
             let (mut write, mut read) = ws_stream.split();
 
@@ -81,9 +96,9 @@ async fn test_websocket_connection() -> Result<()> {
 /// Test: JSON-RPC 2.0 error codes
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_json_rpc_error_codes() -> Result<()> {
-    let url = "ws://127.0.0.1:8080/ws";
+    let url = ws_test_url();
 
-    match connect_async(url).await {
+    match connect_async(&url).await {
         Ok((ws_stream, _)) => {
             let (mut write, mut read) = ws_stream.split();
 
@@ -126,9 +141,9 @@ async fn test_json_rpc_error_codes() -> Result<()> {
 /// Test: Subscription management
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_subscription_management() -> Result<()> {
-    let url = "ws://127.0.0.1:8080/ws";
+    let url = ws_test_url();
 
-    match connect_async(url).await {
+    match connect_async(&url).await {
         Ok((ws_stream, _)) => {
             let (mut write, mut read) = ws_stream.split();
 
@@ -207,9 +222,9 @@ async fn test_subscription_management() -> Result<()> {
 /// Test: Event filtering
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_event_filtering() -> Result<()> {
-    let url = "ws://127.0.0.1:8080/ws";
+    let url = ws_test_url();
 
-    match connect_async(url).await {
+    match connect_async(&url).await {
         Ok((ws_stream, _)) => {
             let (mut write, mut read) = ws_stream.split();
 
@@ -251,13 +266,13 @@ async fn test_event_filtering() -> Result<()> {
 /// Test: Concurrent subscriptions
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_concurrent_subscriptions() -> Result<()> {
-    let url = "ws://127.0.0.1:8080/ws";
+    let url = ws_test_url();
 
     // Create multiple connections
     let mut handles = vec![];
 
     for i in 0..5 {
-        let url_clone = url.to_string();
+        let url_clone = url.clone();
         let handle = tokio::spawn(async move {
             match connect_async(&url_clone).await {
                 Ok((ws_stream, _)) => {
@@ -298,9 +313,9 @@ async fn test_concurrent_subscriptions() -> Result<()> {
 /// Test: Invalid params error
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_invalid_params() -> Result<()> {
-    let url = "ws://127.0.0.1:8080/ws";
+    let url = ws_test_url();
 
-    match connect_async(url).await {
+    match connect_async(&url).await {
         Ok((ws_stream, _)) => {
             let (mut write, mut read) = ws_stream.split();
 
@@ -359,9 +374,9 @@ async fn test_event_broadcaster_integration() {
 /// Test: Connection cleanup
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_connection_cleanup() -> Result<()> {
-    let url = "ws://127.0.0.1:8080/ws";
+    let url = ws_test_url();
 
-    match connect_async(url).await {
+    match connect_async(&url).await {
         Ok((ws_stream, _)) => {
             let (mut write, mut read) = ws_stream.split();
 

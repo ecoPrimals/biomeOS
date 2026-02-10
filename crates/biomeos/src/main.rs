@@ -240,6 +240,22 @@ enum Mode {
         #[command(subcommand)]
         command: PlasmodiumCommand,
     },
+
+    /// NUCLEUS - Start a NUCLEUS (pure Rust replacement for start_nucleus.sh)
+    #[command(name = "nucleus")]
+    Nucleus {
+        /// Deployment mode: tower|node|nest|full
+        #[arg(long, default_value = "full")]
+        mode: String,
+
+        /// Node ID (required)
+        #[arg(long)]
+        node_id: String,
+
+        /// Family ID (auto-derived from .family.seed if not specified)
+        #[arg(long)]
+        family_id: Option<String>,
+    },
 }
 
 /// Plasmodium subcommands - Over-NUCLEUS collective coordination
@@ -332,6 +348,11 @@ async fn main() -> Result<()> {
         Mode::Enroll(args) => modes::enroll::run(args).await,
         Mode::ModelCache { command } => modes::model_cache::run(command).await,
         Mode::Plasmodium { command } => modes::plasmodium::run(command).await,
+        Mode::Nucleus {
+            mode: nucleus_mode,
+            node_id,
+            family_id,
+        } => modes::nucleus::run(nucleus_mode, node_id, family_id).await,
     }
 }
 

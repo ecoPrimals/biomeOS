@@ -546,10 +546,9 @@ mod tests {
     async fn test_list_capabilities_standalone_mode() {
         let state = Arc::new(
             AppState::builder()
-                .config({
-                    let mut config = crate::Config::default();
-                    config.standalone_mode = true;
-                    config
+                .config(crate::Config {
+                    standalone_mode: true,
+                    ..Default::default()
                 })
                 .build_with_defaults()
                 .expect("should build"),
@@ -567,10 +566,9 @@ mod tests {
     async fn test_discover_capability_standalone_mode() {
         let state = Arc::new(
             AppState::builder()
-                .config({
-                    let mut config = crate::Config::default();
-                    config.standalone_mode = true;
-                    config
+                .config(crate::Config {
+                    standalone_mode: true,
+                    ..Default::default()
                 })
                 .build_with_defaults()
                 .expect("should build"),

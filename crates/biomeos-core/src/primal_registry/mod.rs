@@ -36,9 +36,13 @@ pub enum BinaryLocation {
     Local(PathBuf),
     /// GitHub release
     GitHub {
+        /// GitHub organization or user
         org: String,
+        /// Repository name
         repo: String,
+        /// Release tag (e.g., "v1.0.0")
         tag: String,
+        /// Release asset filename
         asset: String,
     },
     /// Custom URL
@@ -365,55 +369,6 @@ impl PrimalRegistry {
             capabilities: vec![], // Will be discovered at runtime via JSON-RPC
             default_ports: HashMap::new(), // Will be discovered or configured
             config_hints: HashMap::new(),
-        }
-    }
-
-    /// Legacy metadata (deprecated - for backward compatibility only)
-    /// This should NOT be used in production - primals should announce capabilities
-    #[allow(dead_code)]
-    #[deprecated(note = "Primals should announce their own capabilities via JSON-RPC")]
-    fn legacy_hardcoded_metadata(&self, name: &str) -> Option<PrimalMetadata> {
-        // Only kept for reference - DO NOT USE
-        match name {
-            "beardog" => Some(PrimalMetadata {
-                description: "Cryptography & Security primal".to_string(),
-                capabilities: vec![
-                    "crypto".to_string(),
-                    "security".to_string(),
-                    "btsp".to_string(),
-                ],
-                default_ports: [("api".to_string(), 9000)].into(),
-                config_hints: HashMap::new(),
-            }),
-            "songbird" => Some(PrimalMetadata {
-                description: "Service Mesh & Federation primal".to_string(),
-                capabilities: vec![
-                    "discovery".to_string(),
-                    "federation".to_string(),
-                    "mesh".to_string(),
-                ],
-                default_ports: [("api".to_string(), 8000)].into(),
-                config_hints: HashMap::new(),
-            }),
-            "toadstool" => Some(PrimalMetadata {
-                description: "Compute & Orchestration primal".to_string(),
-                capabilities: vec!["compute".to_string(), "orchestration".to_string()],
-                default_ports: [("api".to_string(), 7000)].into(),
-                config_hints: HashMap::new(),
-            }),
-            "nestgate" => Some(PrimalMetadata {
-                description: "Storage & Data primal".to_string(),
-                capabilities: vec!["storage".to_string(), "data".to_string()],
-                default_ports: [("api".to_string(), 6000)].into(),
-                config_hints: HashMap::new(),
-            }),
-            "squirrel" => Some(PrimalMetadata {
-                description: "AI & Intelligence primal".to_string(),
-                capabilities: vec!["ai".to_string(), "ml".to_string()],
-                default_ports: [("api".to_string(), 5000)].into(),
-                config_hints: HashMap::new(),
-            }),
-            _ => None,
         }
     }
 }

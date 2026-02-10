@@ -5,6 +5,7 @@
 //! with the 1000-line file size limit.
 
 // Crate-level lint configuration
+#![warn(missing_docs)]
 #![allow(clippy::doc_markdown)] // Allow technical terms without backticks
 #![deny(unsafe_code)] // No unsafe code in core
 
@@ -24,18 +25,22 @@ pub mod capabilities; // Capability-based architecture (zero hardcoding)
 pub mod capability_registry; // Central capability registry with Unix socket IPC
 #[cfg(test)]
 mod capability_registry_tests;
-pub mod concurrent_startup; // Wave-based concurrent primal startup
+/// Wave-based concurrent primal startup
+pub mod concurrent_startup;
+/// Deployment mode detection (LiveSpore vs development)
 pub mod deployment_mode;
 pub mod discovery_bootstrap;
 pub mod discovery_modern; // Modern trait-based discovery
 pub mod family_credentials; // Secure family seed management
 pub mod family_discovery; // Dynamic family ID discovery (seed-derived, cryptographic)
-pub mod primal_discovery; // Auto-discovery of primals from directories
+/// Auto-discovery of primals from directories
+pub mod primal_discovery;
 pub mod primal_impls; // Concrete primal implementations
 pub mod primal_orchestrator; // Async primal lifecycle orchestration
 pub mod retry; // Retry logic and circuit breaker
 pub mod socket_discovery; // Capability-based socket discovery (replaces hardcoded /tmp paths)
-pub mod tower_config; // Tower configuration (TOML-based) // LiveSpore deployment mode detection
+/// Tower middleware configuration (TOML-based)
+pub mod tower_config;
 
 // P2P coordination (BiomeOS's killer feature!)
 pub mod p2p_coordination;
@@ -65,6 +70,7 @@ pub mod ai_first_api;
 pub mod byob;
 pub mod config;
 pub mod config_builder;
+/// Integration utilities for live service monitoring and system status
 pub mod integration;
 pub mod log_session;
 
@@ -110,10 +116,7 @@ pub use primal_impls::{
     ManagedSongbird,
     PrimalBuilder,
 };
-// Legacy type aliases (re-exported for backward compatibility)
-// Silence warnings for intentional deprecations during migration period
-#[allow(deprecated)]
-pub use primal_impls::{BearDogConfig, SongbirdConfig, TowerBuilder};
+// Legacy type aliases removed — use PrimalBuilder directly
 pub use primal_orchestrator::{
     ManagedPrimal, PrimalHealthMonitor, PrimalOrchestrator, PrimalState,
 };

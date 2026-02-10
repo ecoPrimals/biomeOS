@@ -18,20 +18,30 @@ use biomeos_types::{BiomeOSConfig, Health};
 /// Primary primal info for discovery results
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PrimalInfo {
+    /// Unique primal identifier
     pub id: String,
+    /// Human-readable primal name
     pub name: String,
+    /// Primal type classification
     pub primal_type: PrimalType,
+    /// Communication endpoint (socket path or URL)
     pub endpoint: String,
+    /// Capabilities this primal provides
     pub capabilities: Vec<PrimalCapability>,
+    /// Current health status
     pub health: Health,
+    /// Last heartbeat / health check timestamp
     pub last_seen: chrono::DateTime<chrono::Utc>,
+    /// When this primal was first discovered
     pub discovered_at: chrono::DateTime<chrono::Utc>,
+    /// Arbitrary key-value metadata
     pub metadata: HashMap<String, String>,
 }
 
 /// Universal BiomeOS Manager for ecosystem orchestration
 #[derive(Debug, Clone)]
 pub struct UniversalBiomeOSManager {
+    /// Shared configuration for the BiomeOS ecosystem
     pub config: Arc<BiomeOSConfig>,
     pub(crate) discovery_service: Arc<PrimalDiscoveryService>,
     pub(crate) registered_primals: Arc<RwLock<HashMap<String, PrimalInfo>>>,

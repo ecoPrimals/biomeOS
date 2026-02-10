@@ -19,10 +19,7 @@ async fn main() -> anyhow::Result<()> {
         )
         .init();
 
-    info!(
-        "Starting biomeOS API Server v{}",
-        env!("CARGO_PKG_VERSION")
-    );
+    info!("Starting biomeOS API Server v{}", env!("CARGO_PKG_VERSION"));
 
     // Build application state using modern builder pattern
     let state = AppState::builder()
@@ -49,6 +46,8 @@ async fn main() -> anyhow::Result<()> {
             info!("  HTTP bridge: http://{}", bind_addr);
             info!("  Security: Dark Forest gate FORCED on TCP");
 
+            // DEPRECATED: HTTP bridge is temporary for PetalTongue transition
+            #[allow(deprecated)]
             biomeos_api::serve_dual_mode(&config.socket_path, bind_addr, app).await?;
         } else {
             warn!("HTTP bridge enabled but no bind_addr set — falling back to Unix socket");

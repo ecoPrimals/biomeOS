@@ -591,6 +591,28 @@ impl CapabilityTaxonomy {
     }
 }
 
+/// Get capability category names for a primal based on the taxonomy
+///
+/// This is the reverse of `CapabilityTaxonomy::default_primal()`.
+/// Returns the high-level capability categories that a primal provides,
+/// derived from the taxonomy rather than hardcoded per-callsite.
+///
+/// **DEEP DEBT NOTE**: This is a bootstrap-time hint. In production,
+/// primals should self-report capabilities via `discover_capabilities`.
+pub fn capabilities_for_primal(primal_name: &str) -> Vec<String> {
+    match primal_name {
+        "beardog" => vec!["crypto".to_string(), "security".to_string()],
+        "songbird" => vec!["discovery".to_string(), "network".to_string()],
+        "toadstool" => vec!["compute".to_string()],
+        "nestgate" => vec!["storage".to_string()],
+        "squirrel" => vec!["ai".to_string()],
+        "biomeos" => vec!["orchestration".to_string()],
+        // Unknown primals contribute their name as a capability domain
+        // (runtime discovery will replace this with actual capabilities)
+        other => vec![other.to_string()],
+    }
+}
+
 impl fmt::Display for CapabilityTaxonomy {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -607,13 +629,21 @@ impl fmt::Display for CapabilityTaxonomy {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum CapabilityCategory {
+    /// Security and cryptography capabilities
     Security,
+    /// Communication and networking capabilities
     Communication,
+    /// Compute and execution capabilities
     Compute,
+    /// Storage and data capabilities
     Storage,
+    /// User interface and rendering capabilities
     UserInterface,
+    /// Orchestration and management capabilities
     Orchestration,
+    /// AI and intelligence capabilities
     AI,
+    /// Specialized and custom capabilities
     Specialized,
 }
 

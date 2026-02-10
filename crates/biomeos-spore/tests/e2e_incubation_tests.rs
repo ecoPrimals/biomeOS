@@ -168,8 +168,12 @@ async fn test_e2e_local_config_structure() {
     // 5. Verifying .deployed.seed permissions (0600)
     // 6. Checking entropy.json content
 
-    assert!(
-        true,
-        "Local config structure test pending full implementation"
-    );
+    // DEEP DEBT: Local config structure test pending full implementation
+    // Steps to complete:
+    // 1. Create test spore definition
+    // 2. Incubate the spore
+    // 3. Verify ~/.config/biomeos/deployed-nodes/{spore-id}/ structure
+    // 4. Check node.toml format
+    // 5. Verify .deployed.seed permissions (0600)
+    // 6. Check entropy.json content
 }

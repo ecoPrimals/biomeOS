@@ -1,15 +1,16 @@
-// =============================================================================
-// biomeos-compute - Isomorphic & Fractal Compute Architecture
-// =============================================================================
-//
-// A fractal, isomorphic compute system where the same interface works at
-// every scale - from a single CPU core to planetary-scale clusters.
-//
-// "Same structure at every level" - Nature's pattern
-//
-// =============================================================================
+//! biomeos-compute - Isomorphic & Fractal Compute Architecture
+//!
+//! A fractal, isomorphic compute system where the same interface works at
+//! every scale - from a single CPU core to planetary-scale clusters.
+//!
+//! "Same structure at every level" - Nature's pattern
 
+#![warn(missing_docs)]
+#![deny(unsafe_code)]
+
+/// Fractal recursive node construction
 pub mod fractal;
+/// Core compute node trait and data types
 pub mod node;
 
 // Re-export core types

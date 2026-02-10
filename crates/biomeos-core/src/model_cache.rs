@@ -81,8 +81,11 @@ fn default_format() -> String {
 /// Individual file within a model
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelFile {
+    /// File path relative to the model root
     pub relative_path: String,
+    /// File size in bytes
     pub size_bytes: u64,
+    /// Optional SHA-256 digest for integrity verification
     #[serde(default)]
     pub sha256: Option<String>,
 }
@@ -90,7 +93,9 @@ pub struct ModelFile {
 /// Model cache manifest (local JSON file)
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CacheManifest {
+    /// Manifest format version
     pub version: u32,
+    /// Cached models keyed by model ID
     pub models: HashMap<String, ModelEntry>,
 }
 
@@ -108,7 +113,8 @@ impl CacheManifest {
 /// Manages model artifacts with NestGate integration and filesystem fallback.
 /// Designed for zero re-downloads across the biomeOS mesh.
 pub struct ModelCache {
-    /// Root directory for cached models
+    /// Root directory for cached models (used for mesh model sharing in Plasmodium Phase 2)
+    #[allow(dead_code)]
     cache_dir: PathBuf,
 
     /// Path to the local manifest file
@@ -155,8 +161,11 @@ impl ModelCache {
             CacheManifest::new()
         };
 
-        // Try to discover NestGate (graceful degradation)
-        let nestgate = match AtomicClient::discover("nestgate").await {
+        // Try to discover storage provider via capability taxonomy (graceful degradation)
+        let storage_primal = biomeos_types::CapabilityTaxonomy::DataStorage
+            .default_primal()
+            .unwrap_or("nestgate");
+        let nestgate = match AtomicClient::discover(storage_primal).await {
             Ok(client) => {
                 info!("NestGate connected for model registry");
                 Some(client)
@@ -310,8 +319,12 @@ impl ModelCache {
         // Find the actual snapshot directory
         let snapshot_dir = Self::find_hf_snapshot(&hf_cache)?;
 
-        self.register_model(model_id, &snapshot_dir, &format!("huggingface:{}", model_id))
-            .await?;
+        self.register_model(
+            model_id,
+            &snapshot_dir,
+            &format!("huggingface:{}", model_id),
+        )
+        .await?;
 
         Ok(snapshot_dir)
     }
@@ -357,16 +370,44 @@ impl ModelCache {
 
     /// Check the mesh (NestGate) for a model available on another gate
     ///
-    /// Returns the gate_id and metadata if the model exists elsewhere.
+    /// Uses `storage.exists` for efficient existence check (no data transfer),
+    /// then retrieves full metadata only when the model is confirmed present.
     pub async fn find_on_mesh(&self, model_id: &str) -> Option<ModelEntry> {
         let client = self.nestgate.as_ref()?;
+        let key = format!("model-cache:{}", model_id);
 
+        // Phase 1: Efficient existence check (new NestGate storage.exists method)
+        let exists = match client
+            .call(
+                "storage.exists",
+                json!({
+                    "family_id": self.family_id,
+                    "key": key
+                }),
+            )
+            .await
+        {
+            Ok(response) => response
+                .get("exists")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false),
+            Err(e) => {
+                debug!("NestGate mesh existence check failed: {}", e);
+                return None;
+            }
+        };
+
+        if !exists {
+            return None;
+        }
+
+        // Phase 2: Retrieve full metadata (only when we know it exists)
         let result = client
             .call(
                 "storage.retrieve",
                 json!({
                     "family_id": self.family_id,
-                    "key": format!("model-cache:{}", model_id)
+                    "key": key
                 }),
             )
             .await;
@@ -384,7 +425,7 @@ impl ModelCache {
                 }
             }
             Err(e) => {
-                debug!("NestGate mesh lookup failed: {}", e);
+                debug!("NestGate mesh retrieve failed: {}", e);
                 None
             }
         }
@@ -489,7 +530,10 @@ impl ModelCache {
                 );
             }
             Err(e) => {
-                warn!("NestGate registration failed (model still cached locally): {}", e);
+                warn!(
+                    "NestGate registration failed (model still cached locally): {}",
+                    e
+                );
             }
         }
     }
@@ -506,13 +550,19 @@ impl ModelCache {
             let mut entries = fs::read_dir(&current).await?;
             while let Some(entry) = entries.next_entry().await? {
                 // Follow symlinks to get real file metadata
-                let real_path = fs::canonicalize(entry.path()).await
+                let real_path = fs::canonicalize(entry.path())
+                    .await
                     .unwrap_or_else(|_| entry.path());
-                let metadata = fs::metadata(&real_path).await
-                    .unwrap_or_else(|_| {
+                let metadata = match fs::metadata(&real_path).await {
+                    Ok(m) => m,
+                    Err(_) => {
                         // Fallback to symlink metadata if target doesn't exist
-                        std::fs::symlink_metadata(&entry.path()).unwrap()
-                    });
+                        match std::fs::symlink_metadata(entry.path()) {
+                            Ok(m) => m,
+                            Err(_) => continue, // Skip entries we can't stat
+                        }
+                    }
+                };
 
                 if metadata.is_dir() {
                     stack.push(entry.path());
@@ -581,10 +631,7 @@ impl ModelCache {
     fn find_hf_snapshot(model_dir: &Path) -> Result<PathBuf> {
         let snapshots_dir = model_dir.join("snapshots");
         if !snapshots_dir.exists() {
-            anyhow::bail!(
-                "No snapshots directory in {}",
-                model_dir.display()
-            );
+            anyhow::bail!("No snapshots directory in {}", model_dir.display());
         }
 
         // Use the most recent snapshot (alphabetically last = latest hash)

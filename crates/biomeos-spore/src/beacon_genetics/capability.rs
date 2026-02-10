@@ -211,6 +211,10 @@ impl CapabilityCaller for DirectBeardogCaller {
 mod tests {
     use super::*;
 
+    // ═══════════════════════════════════════════════════════════════
+    // NeuralApiCapabilityCaller tests
+    // ═══════════════════════════════════════════════════════════════
+
     #[test]
     fn test_neural_api_default_socket() {
         let socket = NeuralApiCapabilityCaller::default_socket();
@@ -221,5 +225,99 @@ mod tests {
     fn test_neural_api_caller_new() {
         let caller = NeuralApiCapabilityCaller::new("/tmp/test.sock");
         assert_eq!(caller.neural_api_socket, "/tmp/test.sock");
+    }
+
+    #[test]
+    fn test_neural_api_caller_new_custom_path() {
+        let caller = NeuralApiCapabilityCaller::new("/run/user/1000/biomeos/custom.sock");
+        assert_eq!(
+            caller.neural_api_socket,
+            "/run/user/1000/biomeos/custom.sock"
+        );
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // DirectBeardogCaller tests
+    // ═══════════════════════════════════════════════════════════════
+
+    #[test]
+    fn test_direct_beardog_new_unix() {
+        let caller = DirectBeardogCaller::new("/tmp/beardog.sock");
+        assert_eq!(caller.beardog_endpoint, "/tmp/beardog.sock");
+    }
+
+    #[test]
+    fn test_direct_beardog_new_tcp() {
+        let caller = DirectBeardogCaller::new("tcp:127.0.0.1:9000");
+        assert_eq!(caller.beardog_endpoint, "tcp:127.0.0.1:9000");
+    }
+
+    #[test]
+    fn test_direct_beardog_default_socket() {
+        let socket = DirectBeardogCaller::default_socket();
+        assert!(socket.contains("beardog.sock"));
+    }
+
+    #[test]
+    fn test_translate_capability_passthrough() {
+        let caller = DirectBeardogCaller::new("/tmp/test.sock");
+        assert_eq!(
+            caller.translate_capability("beacon.encrypt"),
+            "beacon.encrypt"
+        );
+        assert_eq!(
+            caller.translate_capability("genetic.derive_lineage_key"),
+            "genetic.derive_lineage_key"
+        );
+        assert_eq!(
+            caller.translate_capability("crypto.sign"),
+            "crypto.sign"
+        );
+    }
+
+    #[test]
+    fn test_create_client_unix() {
+        let caller = DirectBeardogCaller::new("/tmp/beardog.sock");
+        let _client = caller.create_client();
+        // Just verify no panic on construction
+    }
+
+    #[test]
+    fn test_create_client_tcp() {
+        let caller = DirectBeardogCaller::new("tcp:127.0.0.1:9000");
+        let _client = caller.create_client();
+        // Just verify no panic on construction
+    }
+
+    #[test]
+    fn test_create_client_tcp_default_port() {
+        // Invalid port should default to 9000
+        let caller = DirectBeardogCaller::new("tcp:host:badport");
+        let _client = caller.create_client();
+    }
+
+    #[test]
+    fn test_create_client_tcp_no_port() {
+        // Single part after "tcp:" → falls back to unix
+        let caller = DirectBeardogCaller::new("tcp:justhost");
+        let _client = caller.create_client();
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // CapabilityCaller trait object tests
+    // ═══════════════════════════════════════════════════════════════
+
+    /// Verify that callers can be used as trait objects
+    #[test]
+    fn test_caller_as_boxed_trait() {
+        let _caller: Box<dyn CapabilityCaller> =
+            Box::new(NeuralApiCapabilityCaller::new("/tmp/test.sock"));
+        // Just ensure the boxing works — the trait is object-safe
+    }
+
+    #[test]
+    fn test_direct_caller_as_boxed_trait() {
+        let _caller: Box<dyn CapabilityCaller> =
+            Box::new(DirectBeardogCaller::new("/tmp/beardog.sock"));
     }
 }

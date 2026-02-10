@@ -231,7 +231,10 @@ pub enum HealthIssueCategory {
     Software,
 
     /// Custom category
-    Custom { category: String },
+    Custom {
+        /// Custom category name
+        category: String,
+    },
 }
 
 /// Health issue severity levels
@@ -313,28 +316,43 @@ pub enum RemediationActionType {
     Manual,
 
     /// Custom action
-    Custom { action_type: String },
+    Custom {
+        /// Custom action type name
+        action_type: String,
+    },
 }
 
 /// Startup phases
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub enum StartupPhase {
+    /// Initial boot sequence
     Initializing,
+    /// Loading configuration files and settings
     LoadingConfiguration,
+    /// Connecting to required dependencies
     ConnectingDependencies,
+    /// Starting internal services
     StartingServices,
+    /// Executing health check probes
     RunningHealthChecks,
+    /// Startup complete and ready to serve
     Ready,
 }
 
 /// Shutdown phases
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub enum ShutdownPhase {
+    /// Shutdown has been initiated
     Initiated,
+    /// Dropping active connections
     DroppingConnections,
+    /// Flushing buffered data to storage
     FlushingData,
+    /// Stopping running services
     StoppingServices,
+    /// Cleaning up temporary resources
     Cleanup,
+    /// Shutdown complete
     Stopped,
 }
 
@@ -357,7 +375,10 @@ pub enum MaintenanceType {
     Configuration,
 
     /// Custom maintenance
-    Custom { maintenance_type: String },
+    Custom {
+        /// Custom maintenance type name
+        maintenance_type: String,
+    },
 }
 
 /// Comprehensive health report
@@ -420,7 +441,10 @@ pub enum HealthSubjectType {
     Component,
 
     /// Custom subject type
-    Custom { subject_type: String },
+    Custom {
+        /// Custom subject type name
+        subject_type: String,
+    },
 }
 
 /// Component health information
@@ -461,10 +485,15 @@ pub struct HealthMetrics {
 /// Response time metrics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResponseTimeMetrics {
+    /// Average response time in milliseconds
     pub average_ms: f64,
+    /// 50th percentile (median) response time in milliseconds
     pub p50_ms: f64,
+    /// 95th percentile response time in milliseconds
     pub p95_ms: f64,
+    /// 99th percentile response time in milliseconds
     pub p99_ms: f64,
+    /// Maximum response time in milliseconds
     pub max_ms: f64,
 }
 
@@ -487,9 +516,13 @@ pub struct ResourceMetrics {
 /// Network I/O metrics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NetworkIoMetrics {
+    /// Inbound bytes per second
     pub bytes_in_per_sec: f64,
+    /// Outbound bytes per second
     pub bytes_out_per_sec: f64,
+    /// Inbound packets per second
     pub packets_in_per_sec: f64,
+    /// Outbound packets per second
     pub packets_out_per_sec: f64,
 }
 
@@ -557,10 +590,18 @@ pub enum HealthEventTrigger {
     ManualCheck,
 
     /// Metric threshold exceeded
-    MetricThreshold { metric: String, threshold: f64 },
+    MetricThreshold {
+        /// Name of the metric
+        metric: String,
+        /// Threshold value that was exceeded
+        threshold: f64,
+    },
 
     /// External event
-    ExternalEvent { source: String },
+    ExternalEvent {
+        /// Source of the external event
+        source: String,
+    },
 
     /// System startup
     Startup,
@@ -572,7 +613,10 @@ pub enum HealthEventTrigger {
     ConfigurationChange,
 
     /// Custom trigger
-    Custom { trigger: String },
+    Custom {
+        /// Custom trigger identifier
+        trigger: String,
+    },
 }
 
 /// Health check configuration
@@ -625,19 +669,40 @@ impl Default for HealthCheckConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum HealthCheckTarget {
     /// HTTP endpoint
-    Http { url: String, method: String },
+    Http {
+        /// URL path to check
+        url: String,
+        /// HTTP method to use
+        method: String,
+    },
 
     /// TCP port check
-    Tcp { host: String, port: u16 },
+    Tcp {
+        /// Hostname or IP to connect to
+        host: String,
+        /// Port number to check
+        port: u16,
+    },
 
     /// Command execution
-    Command { command: String, args: Vec<String> },
+    Command {
+        /// Command to execute
+        command: String,
+        /// Command arguments
+        args: Vec<String>,
+    },
 
     /// Function call
-    Function { function: String },
+    Function {
+        /// Function name to invoke
+        function: String,
+    },
 
     /// Custom check
-    Custom { target: String },
+    Custom {
+        /// Custom check target identifier
+        target: String,
+    },
 }
 
 /// Metric threshold configuration
@@ -656,9 +721,13 @@ pub struct MetricThreshold {
 /// Threshold comparison operators
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ThresholdOperator {
+    /// Value is greater than threshold
     GreaterThan,
+    /// Value is less than threshold
     LessThan,
+    /// Value equals threshold
     Equal,
+    /// Value does not equal threshold
     NotEqual,
 }
 
@@ -675,10 +744,16 @@ pub enum ThresholdAction {
     MarkUnhealthy,
 
     /// Trigger alert
-    TriggerAlert { alert_type: String },
+    TriggerAlert {
+        /// Type of alert to trigger
+        alert_type: String,
+    },
 
     /// Execute remediation
-    ExecuteRemediation { action_id: String },
+    ExecuteRemediation {
+        /// ID of the remediation action to execute
+        action_id: String,
+    },
 }
 
 #[cfg(test)]

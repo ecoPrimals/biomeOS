@@ -35,9 +35,11 @@ use zeroize::{Zeroize, ZeroizeOnDrop};
 /// Error type for credentials operations
 #[derive(Debug, thiserror::Error)]
 pub enum CredentialsError {
+    /// Credentials were present but invalid
     #[error("Invalid credentials: {0}")]
     InvalidCredentials(String),
 
+    /// Required credentials were not found
     #[error("Missing required credentials: {0}")]
     MissingCredentials(String),
 }
@@ -266,7 +268,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // Skip - modifies global env state, not thread-safe for parallel tests
+    #[ignore = "Env var tests not thread-safe — use cargo test -- --ignored --test-threads=1"]
     fn test_from_env_missing() {
         // NOTE: This test modifies global environment, skip in parallel test runs
         // Run with: cargo test test_from_env_missing -- --ignored
@@ -281,7 +283,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // Skip - modifies global env state, not thread-safe for parallel tests
+    #[ignore = "Env var tests not thread-safe — use cargo test -- --ignored --test-threads=1"]
     fn test_from_env_success() {
         // NOTE: This test modifies global environment, skip in parallel test runs
         // Run with: cargo test test_from_env_success -- --ignored

@@ -299,15 +299,20 @@ pub struct AuthzRule {
 /// Authorization effects
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AuthzEffect {
+    /// Allow the request
     Allow,
+    /// Deny the request
     Deny,
 }
 
 /// Authorization actions
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AuthzAction {
+    /// Allow the action
     Allow,
+    /// Deny the action
     Deny,
+    /// Audit the action (log only)
     Audit,
 }
 
@@ -471,8 +476,11 @@ pub struct NetworkPolicy {
 /// Network policy types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum NetworkPolicyType {
+    /// Ingress (incoming) traffic policy
     Ingress,
+    /// Egress (outgoing) traffic policy
     Egress,
+    /// Both ingress and egress
     Both,
 }
 
@@ -525,23 +533,31 @@ pub struct NetworkPolicyPort {
 /// Network policy port value
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum NetworkPolicyPortValue {
+    /// Port number
     Number(u16),
+    /// Port name
     Name(String),
 }
 
 /// Network policy protocols
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum NetworkPolicyProtocol {
+    /// TCP protocol
     TCP,
+    /// UDP protocol
     UDP,
+    /// SCTP protocol
     SCTP,
 }
 
 /// Network policy action
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum NetworkPolicyAction {
+    /// Allow traffic
     Allow,
+    /// Deny traffic
     Deny,
+    /// Log traffic
     Log,
 }
 

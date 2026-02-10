@@ -74,22 +74,39 @@ pub struct StartupHealthCheck {
 pub enum HealthCheckType {
     /// HTTP health check
     Http {
+        /// HTTP path to check
         path: String,
+        /// Port number
         port: u16,
+        /// HTTP scheme
         scheme: HttpScheme,
+        /// HTTP headers
         headers: HashMap<String, String>,
     },
     /// TCP health check
-    Tcp { port: u16 },
+    Tcp {
+        /// Port number
+        port: u16,
+    },
     /// Command health check
-    Exec { command: Vec<String> },
+    Exec {
+        /// Command to execute
+        command: Vec<String>,
+    },
     /// gRPC health check
-    Grpc { port: u16, service: Option<String> },
+    Grpc {
+        /// Port number
+        port: u16,
+        /// Service name
+        service: Option<String>,
+    },
 }
 
 /// HTTP schemes
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum HttpScheme {
+    /// Plain HTTP
     Http,
+    /// HTTPS (TLS)
     Https,
 }

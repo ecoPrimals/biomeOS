@@ -28,8 +28,40 @@ ARCH="$(uname -m)"
 
 # Environment - evolved standard defaults
 export NODE_ID="${NODE_ID:-gate}"
+export BEARDOG_NODE_ID="${BEARDOG_NODE_ID:-$NODE_ID}"
 export RUST_LOG="${RUST_LOG:-info}"
 export BIOMEOS_ROOT="${BIOMEOS_ROOT:-$PROJECT_ROOT}"
+
+#───────────────────────────────────────────────────────────────────────────────
+# API Keys (loaded from ecoPrimals/testing-secrets if available)
+#───────────────────────────────────────────────────────────────────────────────
+load_api_keys() {
+    local SECRETS_FILE=""
+    for candidate in \
+        "$PROJECT_ROOT/../../testing-secrets/api-keys.toml" \
+        "$PROJECT_ROOT/../testing-secrets/api-keys.toml" \
+        "$HOME/Development/ecoPrimals/testing-secrets/api-keys.toml"; do
+        if [ -f "$candidate" ]; then
+            SECRETS_FILE="$candidate"
+            break
+        fi
+    done
+
+    if [ -n "$SECRETS_FILE" ]; then
+        echo "🔑 Loading API keys from $(basename $(dirname "$SECRETS_FILE"))/$(basename "$SECRETS_FILE")"
+        # Extract keys (only if not already set)
+        if [ -z "$ANTHROPIC_API_KEY" ]; then
+            export ANTHROPIC_API_KEY=$(grep 'anthropic_api_key' "$SECRETS_FILE" | head -1 | cut -d'"' -f2)
+            [ -n "$ANTHROPIC_API_KEY" ] && echo "  ✅ Anthropic API key loaded"
+        fi
+        if [ -z "$OPENAI_API_KEY" ]; then
+            export OPENAI_API_KEY=$(grep 'openai_api_key' "$SECRETS_FILE" | head -1 | cut -d'"' -f2)
+            [ -n "$OPENAI_API_KEY" ] && echo "  ✅ OpenAI API key loaded"
+        fi
+    else
+        echo "  ℹ️  No testing-secrets/api-keys.toml found (cloud AI disabled)"
+    fi
+}
 
 #───────────────────────────────────────────────────────────────────────────────
 # Family ID Derivation from Mitochondrial Seed
@@ -262,9 +294,8 @@ start_nestgate() {
     pkill -f "nestgate service" 2>/dev/null || true
     rm -f "$NESTGATE_SOCKET" 2>/dev/null
     
-    "$PRIMAL_DIR/nestgate" service start \
-        --socket "$NESTGATE_SOCKET" \
-        --daemon > /tmp/nestgate_nucleus.log 2>&1 &
+    "$PRIMAL_DIR/nestgate" daemon \
+        --socket-only > /tmp/nestgate_nucleus.log 2>&1 &
     NESTGATE_PID=$!
     echo "  PID: $NESTGATE_PID"
     
@@ -287,17 +318,94 @@ start_nestgate() {
 start_squirrel() {
     echo "🐿️ Starting Squirrel (AI)..."
     export SQUIRREL_SOCKET="$SOCKET_DIR/squirrel.sock"
-    export NEURAL_API_SOCKET="$SOCKET_DIR/neural-api.sock"
+    
+    # Squirrel discovers http.request capability via this env var
+    # This enables Anthropic/OpenAI API calls through Songbird HTTP bridge
+    export HTTP_REQUEST_PROVIDER_SOCKET="$SOCKET_DIR/songbird.sock"
+    export AI_HTTP_PROVIDERS="anthropic,openai"
     
     pkill -f "squirrel server" 2>/dev/null || true
-    rm -f "$SQUIRREL_SOCKET" "$NEURAL_API_SOCKET" 2>/dev/null
+    rm -f "$SQUIRREL_SOCKET" 2>/dev/null
     
-    "$PRIMAL_DIR/squirrel" server > /tmp/squirrel_nucleus.log 2>&1 &
+    "$PRIMAL_DIR/squirrel" server \
+        --socket "$SQUIRREL_SOCKET" > /tmp/squirrel_nucleus.log 2>&1 &
     SQUIRREL_PID=$!
     echo "  PID: $SQUIRREL_PID"
     
-    sleep 3
-    echo "  ✅ Squirrel started"
+    local tries=0
+    while [ ! -S "$SQUIRREL_SOCKET" ] && [ $tries -lt 10 ]; do
+        sleep 1
+        tries=$((tries + 1))
+    done
+    
+    if [ -S "$SQUIRREL_SOCKET" ]; then
+        echo "  ✅ Squirrel ready (AI bridge active)"
+    else
+        echo "  ⚠️  Squirrel socket pending"
+    fi
+}
+
+#───────────────────────────────────────────────────────────────────────────────
+# Start Neural API (NUCLEUS orchestration)
+#───────────────────────────────────────────────────────────────────────────────
+start_neural_api() {
+    echo "🧠 Starting Neural API (Orchestration)..."
+    export NEURAL_API_SOCKET="$SOCKET_DIR/neural-api.sock"
+    
+    pkill -f "biomeos neural-api" 2>/dev/null || true
+    rm -f "$NEURAL_API_SOCKET" 2>/dev/null
+    
+    local BIOMEOS_BIN=""
+    for candidate in \
+        "$PROJECT_ROOT/target/release/biomeos" \
+        "$PRIMAL_DIR/../biomeos" \
+        "$PROJECT_ROOT/plasmidBin/optimized/$ARCH/biomeos"; do
+        if [ -x "$candidate" ]; then
+            BIOMEOS_BIN="$candidate"
+            break
+        fi
+    done
+    
+    if [ -z "$BIOMEOS_BIN" ]; then
+        echo "  ⚠️  biomeOS binary not found (Neural API skipped)"
+        return
+    fi
+    
+    "$BIOMEOS_BIN" neural-api \
+        --socket "$NEURAL_API_SOCKET" > /tmp/neural-api_nucleus.log 2>&1 &
+    NEURAL_API_PID=$!
+    echo "  PID: $NEURAL_API_PID"
+    
+    local tries=0
+    while [ ! -S "$NEURAL_API_SOCKET" ] && [ $tries -lt 10 ]; do
+        sleep 1
+        tries=$((tries + 1))
+    done
+    
+    if [ -S "$NEURAL_API_SOCKET" ]; then
+        echo "  ✅ Neural API ready (capability routing active)"
+        
+        # Register active primals with correct socket paths
+        for primal in beardog songbird nestgate toadstool squirrel; do
+            local sock="$SOCKET_DIR/${primal}.sock"
+            if [ -S "$sock" ]; then
+                echo "{\"jsonrpc\":\"2.0\",\"method\":\"capability.register\",\"params\":{\"capability\":\"${primal}\",\"primal\":\"${primal}\",\"socket\":\"${sock}\",\"source\":\"startup\"},\"id\":1}" | \
+                    nc -U "$NEURAL_API_SOCKET" -w 2 -q 1 > /dev/null 2>&1 || true
+            fi
+        done
+        
+        # Create nucleated socket symlinks (Neural API generates family-suffixed paths)
+        for primal in beardog songbird nestgate toadstool squirrel; do
+            local base="$SOCKET_DIR/${primal}.sock"
+            local nucleated="$SOCKET_DIR/${primal}-${FAMILY_ID}.sock"
+            if [ -S "$base" ] && [ ! -e "$nucleated" ]; then
+                ln -sf "$base" "$nucleated" 2>/dev/null
+            fi
+        done
+        echo "  ✅ Socket symlinks created"
+    else
+        echo "  ⚠️  Neural API socket pending"
+    fi
 }
 
 #───────────────────────────────────────────────────────────────────────────────
@@ -385,13 +493,15 @@ case "$ATOMIC" in
         ;;
     nest)
         echo "═══════════════════════════════════════════════════════════════"
-        echo "🪺 NEST ATOMIC (Tower + NestGate + Squirrel)"
+        echo "🪺 NEST ATOMIC (Tower + NestGate + Squirrel + AI Bridge)"
         echo "═══════════════════════════════════════════════════════════════"
         echo ""
+        load_api_keys
         start_beardog
         start_songbird
         start_nestgate
         start_squirrel
+        start_neural_api
         ;;
     sovereign)
         echo "═══════════════════════════════════════════════════════════════"
@@ -415,14 +525,16 @@ case "$ATOMIC" in
         ;;
     full)
         echo "═══════════════════════════════════════════════════════════════"
-        echo "🧬 FULL NUCLEUS (All Primals)"
+        echo "🧬 FULL NUCLEUS (All Primals + Neural API + AI Bridge)"
         echo "═══════════════════════════════════════════════════════════════"
         echo ""
+        load_api_keys
         start_beardog
         start_songbird
         start_toadstool
         start_nestgate
         start_squirrel
+        start_neural_api
         ;;
     *)
         echo "Unknown atomic: $ATOMIC"

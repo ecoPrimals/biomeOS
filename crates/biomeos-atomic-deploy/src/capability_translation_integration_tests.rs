@@ -98,7 +98,7 @@ mod tests {
         for cap in &onion_crypto_caps {
             let translation = registry
                 .get_translation(cap)
-                .expect(&format!("Translation missing for {}", cap));
+                .unwrap_or_else(|| panic!("Translation missing for {}", cap));
 
             assert_eq!(
                 translation.provider, "beardog",
@@ -159,7 +159,7 @@ mod tests {
         for cap in &songbird_caps {
             let translation = registry
                 .get_translation(cap)
-                .expect(&format!("Translation missing for {}", cap));
+                .unwrap_or_else(|| panic!("Translation missing for {}", cap));
 
             assert_eq!(
                 translation.provider, "songbird",
@@ -308,7 +308,7 @@ mod tests {
         for (semantic, expected_actual) in cases {
             let translation = registry
                 .get_translation(semantic)
-                .expect(&format!("No translation for {}", semantic));
+                .unwrap_or_else(|| panic!("No translation for {}", semantic));
 
             assert_eq!(
                 translation.actual_method, expected_actual,
@@ -386,14 +386,14 @@ mod tests {
         // All capabilities needed for Sovereign Onion Service
         let required_caps = [
             // BearDog crypto (TRUE PRIMAL)
-            ("crypto.sha3_256", "beardog"),         // .onion address checksum
+            ("crypto.sha3_256", "beardog"), // .onion address checksum
             ("onion.generate_identity", "beardog"), // Ed25519 identity
-            ("onion.session_key", "beardog"),       // X25519 session
-            ("onion.derive_shared", "beardog"),     // ECDH
-            ("onion.encrypt", "beardog"),           // ChaCha20
-            ("onion.decrypt", "beardog"),           // ChaCha20
-            ("onion.hkdf_extract", "beardog"),      // HKDF
-            ("onion.hkdf_expand", "beardog"),       // HKDF
+            ("onion.session_key", "beardog"), // X25519 session
+            ("onion.derive_shared", "beardog"), // ECDH
+            ("onion.encrypt", "beardog"),   // ChaCha20
+            ("onion.decrypt", "beardog"),   // ChaCha20
+            ("onion.hkdf_extract", "beardog"), // HKDF
+            ("onion.hkdf_expand", "beardog"), // HKDF
             // Songbird network
             ("mesh.status", "songbird"),
             ("mesh.find_path", "songbird"),
@@ -407,7 +407,7 @@ mod tests {
         for (cap, expected_provider) in required_caps {
             let translation = registry
                 .get_translation(cap)
-                .expect(&format!("Missing capability: {}", cap));
+                .unwrap_or_else(|| panic!("Missing capability: {}", cap));
 
             assert_eq!(
                 translation.provider, expected_provider,

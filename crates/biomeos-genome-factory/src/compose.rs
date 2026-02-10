@@ -25,10 +25,15 @@ pub struct GenomeComposeRequest {
 /// Response after composing
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GenomeComposeResponse {
+    /// Unique identifier for the composed genome
     pub genome_id: String,
+    /// Path where the composed genome was written
     pub path: PathBuf,
+    /// Size of the composed genome in bytes
     pub size: u64,
+    /// Names of genomes embedded in the composition
     pub embedded_genomes: Vec<String>,
+    /// NUCLEUS type of the composed genome
     pub nucleus_type: String,
 }
 

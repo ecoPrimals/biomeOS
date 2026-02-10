@@ -51,19 +51,15 @@ pub async fn probe_interface_patterns(binary: &Path) -> Vec<PrimalInterface> {
 
     // If nothing worked, mark as unknown
     if discovered.is_empty() {
-        #[allow(clippy::vec_init_then_push)]
-        {
-            let mut patterns = Vec::new();
-            patterns.push(InterfacePattern::Direct);
-            patterns.push(InterfacePattern::SubcommandServe);
-            patterns.push(InterfacePattern::SubcommandService);
-            patterns.push(InterfacePattern::SubcommandStart);
-            patterns.push(InterfacePattern::SubcommandRun);
-
-            discovered.push(PrimalInterface::Unknown {
-                attempted_patterns: patterns,
-            });
-        }
+        discovered.push(PrimalInterface::Unknown {
+            attempted_patterns: vec![
+                InterfacePattern::Direct,
+                InterfacePattern::SubcommandServe,
+                InterfacePattern::SubcommandService,
+                InterfacePattern::SubcommandStart,
+                InterfacePattern::SubcommandRun,
+            ],
+        });
     }
 
     discovered
@@ -184,13 +180,10 @@ async fn detect_port_config(binary: &Path) -> PortConfigMethod {
             }
             // Check for env var mentions
             if help_text.contains("PORT") || help_text.contains("port") {
-                #[allow(clippy::vec_init_then_push)]
-                {
-                    let mut methods = Vec::new();
-                    methods.push(PortConfigMethod::EnvVar("PORT".to_string()));
-                    methods.push(PortConfigMethod::CliFlag("--port".to_string()));
-                    return PortConfigMethod::Multiple(methods);
-                }
+                return PortConfigMethod::Multiple(vec![
+                    PortConfigMethod::EnvVar("PORT".to_string()),
+                    PortConfigMethod::CliFlag("--port".to_string()),
+                ]);
             }
         }
     }

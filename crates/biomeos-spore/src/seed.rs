@@ -336,4 +336,171 @@ mod tests {
         let env_value = std::env::var("BEARDOG_FAMILY_SEED_FILE").unwrap();
         assert_eq!(env_value, seed_path.to_str().unwrap());
     }
+
+    // ========== Sibling Derivation Tests ==========
+
+    #[test]
+    fn test_derive_sibling() {
+        let temp_dir = TempDir::new().unwrap();
+        let parent_path = temp_dir.path().join("parent.seed");
+        let child_path = temp_dir.path().join("child.seed");
+
+        // Generate parent
+        FamilySeed::generate_genesis(&parent_path).expect("generate parent");
+
+        // Derive sibling
+        let child = FamilySeed::derive_sibling(
+            &parent_path,
+            &child_path,
+            "node-alpha",
+            Some("2026-01-08"),
+        )
+        .expect("derive sibling");
+
+        assert_eq!(child.file_path(), child_path.as_path());
+
+        // Verify child is 32 bytes
+        let metadata = fs::metadata(&child_path).expect("child metadata");
+        assert_eq!(metadata.len(), 32);
+
+        // Verify child is different from parent
+        let parent_bytes = fs::read(&parent_path).expect("read parent");
+        let child_bytes = fs::read(&child_path).expect("read child");
+        assert_ne!(parent_bytes, child_bytes);
+    }
+
+    #[test]
+    fn test_derive_sibling_deterministic() {
+        let temp_dir = TempDir::new().unwrap();
+        let parent_path = temp_dir.path().join("parent.seed");
+        let child1_path = temp_dir.path().join("child1.seed");
+        let child2_path = temp_dir.path().join("child2.seed");
+
+        // Write known parent seed
+        let parent_seed = [42u8; 32];
+        fs::write(&parent_path, parent_seed).expect("write parent");
+
+        // Derive same sibling twice
+        FamilySeed::derive_sibling(&parent_path, &child1_path, "node-alpha", Some("batch1"))
+            .expect("derive child1");
+        FamilySeed::derive_sibling(&parent_path, &child2_path, "node-alpha", Some("batch1"))
+            .expect("derive child2");
+
+        let child1 = fs::read(&child1_path).expect("read child1");
+        let child2 = fs::read(&child2_path).expect("read child2");
+
+        // Same inputs = same output
+        assert_eq!(child1, child2);
+    }
+
+    #[test]
+    fn test_derive_sibling_different_node_ids() {
+        let temp_dir = TempDir::new().unwrap();
+        let parent_path = temp_dir.path().join("parent.seed");
+        let child1_path = temp_dir.path().join("child1.seed");
+        let child2_path = temp_dir.path().join("child2.seed");
+
+        let parent_seed = [42u8; 32];
+        fs::write(&parent_path, parent_seed).expect("write parent");
+
+        FamilySeed::derive_sibling(&parent_path, &child1_path, "node-alpha", Some("batch1"))
+            .expect("derive child1");
+        FamilySeed::derive_sibling(&parent_path, &child2_path, "node-beta", Some("batch1"))
+            .expect("derive child2");
+
+        let child1 = fs::read(&child1_path).expect("read child1");
+        let child2 = fs::read(&child2_path).expect("read child2");
+
+        // Different node_id = different seed (siblings are unique)
+        assert_ne!(child1, child2);
+    }
+
+    #[test]
+    fn test_derive_sibling_different_batches() {
+        let temp_dir = TempDir::new().unwrap();
+        let parent_path = temp_dir.path().join("parent.seed");
+        let child1_path = temp_dir.path().join("child1.seed");
+        let child2_path = temp_dir.path().join("child2.seed");
+
+        let parent_seed = [42u8; 32];
+        fs::write(&parent_path, parent_seed).expect("write parent");
+
+        FamilySeed::derive_sibling(&parent_path, &child1_path, "node-alpha", Some("batch1"))
+            .expect("derive child1");
+        FamilySeed::derive_sibling(&parent_path, &child2_path, "node-alpha", Some("batch2"))
+            .expect("derive child2");
+
+        let child1 = fs::read(&child1_path).expect("read child1");
+        let child2 = fs::read(&child2_path).expect("read child2");
+
+        // Different batch = different seed
+        assert_ne!(child1, child2);
+    }
+
+    #[test]
+    fn test_derive_sibling_no_batch() {
+        let temp_dir = TempDir::new().unwrap();
+        let parent_path = temp_dir.path().join("parent.seed");
+        let child_path = temp_dir.path().join("child.seed");
+
+        let parent_seed = [42u8; 32];
+        fs::write(&parent_path, parent_seed).expect("write parent");
+
+        let child = FamilySeed::derive_sibling(&parent_path, &child_path, "node-alpha", None)
+            .expect("derive child");
+
+        assert_eq!(child.file_path(), child_path.as_path());
+        let metadata = fs::metadata(&child_path).expect("child metadata");
+        assert_eq!(metadata.len(), 32);
+    }
+
+    #[test]
+    fn test_derive_sibling_wrong_parent_size() {
+        let temp_dir = TempDir::new().unwrap();
+        let parent_path = temp_dir.path().join("parent.seed");
+        let child_path = temp_dir.path().join("child.seed");
+
+        // Write wrong-size parent
+        fs::write(&parent_path, [0u8; 16]).expect("write parent");
+
+        let result =
+            FamilySeed::derive_sibling(&parent_path, &child_path, "node", Some("batch"));
+        assert!(result.is_err());
+        assert!(matches!(
+            result,
+            Err(SporeError::InvalidSeedLength {
+                expected: 32,
+                found: 16
+            })
+        ));
+    }
+
+    #[test]
+    fn test_derive_sibling_parent_not_found() {
+        let temp_dir = TempDir::new().unwrap();
+        let parent_path = temp_dir.path().join("nonexistent.seed");
+        let child_path = temp_dir.path().join("child.seed");
+
+        let result =
+            FamilySeed::derive_sibling(&parent_path, &child_path, "node", Some("batch"));
+        assert!(result.is_err());
+    }
+
+    // ========== Genesis Tests ==========
+
+    #[test]
+    fn test_generate_genesis_unique() {
+        let temp_dir = TempDir::new().unwrap();
+        let seed1_path = temp_dir.path().join("seed1");
+        let seed2_path = temp_dir.path().join("seed2");
+
+        FamilySeed::generate_genesis(&seed1_path).expect("genesis 1");
+        FamilySeed::generate_genesis(&seed2_path).expect("genesis 2");
+
+        let seed1 = fs::read(&seed1_path).expect("read seed1");
+        let seed2 = fs::read(&seed2_path).expect("read seed2");
+
+        // Two genesis seeds should be different (random)
+        assert_ne!(seed1, seed2);
+    }
 }

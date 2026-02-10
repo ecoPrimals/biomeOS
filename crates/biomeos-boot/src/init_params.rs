@@ -118,6 +118,7 @@ pub fn parse_cmdline(cmdline: &str) -> Result<BootParams> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

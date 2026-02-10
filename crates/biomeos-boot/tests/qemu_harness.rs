@@ -93,7 +93,7 @@ impl Drop for QemuVm {
 
 /// Test that QEMU can boot the ISO
 #[test]
-#[ignore] // Requires built ISO
+#[ignore = "Requires built ISO image"]
 fn test_qemu_boot_iso() -> Result<()> {
     let binding = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let project_root = binding.parent().unwrap().parent().unwrap();
@@ -135,7 +135,7 @@ fn test_qemu_boot_iso() -> Result<()> {
 
 /// Test boot with root disk
 #[test]
-#[ignore] // Requires built ISO and disk
+#[ignore = "Requires built ISO image and root disk"]
 fn test_qemu_boot_with_disk() -> Result<()> {
     let binding = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let project_root = binding.parent().unwrap().parent().unwrap();

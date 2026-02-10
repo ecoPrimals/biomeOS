@@ -128,10 +128,11 @@ impl PrimalConnections {
         }
 
         // Phase 2: Try bootstrap names for any not found via directory scan
-        // Gated behind strict discovery to allow evolution
-        if std::env::var("BIOMEOS_STRICT_DISCOVERY").is_err() {
-            let bootstrap_names = ["petaltongue", "songbird", "beardog", "nestgate", "toadstool", "squirrel"];
-            for name in &bootstrap_names {
+        // Uses CapabilityTaxonomy::known_primals() for the bootstrap hint list
+        // In strict discovery mode, this returns empty (no hardcoded names)
+        {
+            let bootstrap_names = biomeos_types::CapabilityTaxonomy::known_primals();
+            for name in bootstrap_names {
                 if !connections.clients.contains_key(*name) {
                     match PrimalClient::discover(name).await {
                         Ok(client) => {
@@ -172,17 +173,29 @@ impl PrimalConnections {
     // ===================================================================
 
     /// PetalTongue UI framework connection
-    pub fn petaltongue(&self) -> Option<&PetalTongueClient> { self.clients.get("petaltongue") }
+    pub fn petaltongue(&self) -> Option<&PetalTongueClient> {
+        self.clients.get("petaltongue")
+    }
     /// Songbird discovery/networking connection
-    pub fn songbird(&self) -> Option<&SongbirdClient> { self.clients.get("songbird") }
+    pub fn songbird(&self) -> Option<&SongbirdClient> {
+        self.clients.get("songbird")
+    }
     /// BearDog security/crypto connection
-    pub fn beardog(&self) -> Option<&BearDogClient> { self.clients.get("beardog") }
+    pub fn beardog(&self) -> Option<&BearDogClient> {
+        self.clients.get("beardog")
+    }
     /// NestGate storage connection
-    pub fn nestgate(&self) -> Option<&NestGateClient> { self.clients.get("nestgate") }
+    pub fn nestgate(&self) -> Option<&NestGateClient> {
+        self.clients.get("nestgate")
+    }
     /// ToadStool compute/GPU connection
-    pub fn toadstool(&self) -> Option<&ToadStoolClient> { self.clients.get("toadstool") }
+    pub fn toadstool(&self) -> Option<&ToadStoolClient> {
+        self.clients.get("toadstool")
+    }
     /// Squirrel AI connection
-    pub fn squirrel(&self) -> Option<&SquirrelClient> { self.clients.get("squirrel") }
+    pub fn squirrel(&self) -> Option<&SquirrelClient> {
+        self.clients.get("squirrel")
+    }
 }
 
 #[cfg(test)]
@@ -287,7 +300,14 @@ mod tests {
     #[test]
     fn test_primal_connections_all_available() {
         let mut connections = PrimalConnections::default();
-        for name in &["petaltongue", "songbird", "beardog", "nestgate", "toadstool", "squirrel"] {
+        for name in &[
+            "petaltongue",
+            "songbird",
+            "beardog",
+            "nestgate",
+            "toadstool",
+            "squirrel",
+        ] {
             connections.clients.insert(
                 name.to_string(),
                 PrimalClient::with_socket(name, format!("/tmp/{}.sock", name)),

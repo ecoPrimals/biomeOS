@@ -199,9 +199,7 @@ fn probe_live_sockets() -> Vec<DiscoveredPrimal> {
             Ok(handle) => {
                 // We're in an async context — use block_in_place to avoid nesting
                 match std::thread::scope(|_| {
-                    handle.block_on(async {
-                        client.call("health", serde_json::json!({})).await
-                    })
+                    handle.block_on(async { client.call("health", serde_json::json!({})).await })
                 }) {
                     Ok(result) => {
                         let h = result
@@ -487,8 +485,14 @@ mod tests {
         for primal in &primals {
             assert!(!primal.id.is_empty(), "Probed primal should have an ID");
             assert!(!primal.name.is_empty(), "Probed primal should have a name");
-            assert!(!primal.endpoint.is_empty(), "Probed primal should have an endpoint");
-            assert!(primal.last_seen > 0, "Probed primal should have a timestamp");
+            assert!(
+                !primal.endpoint.is_empty(),
+                "Probed primal should have an endpoint"
+            );
+            assert!(
+                primal.last_seen > 0,
+                "Probed primal should have a timestamp"
+            );
         }
     }
 
@@ -506,10 +510,9 @@ mod tests {
 
         let state = Arc::new(
             AppState::builder()
-                .config({
-                    let mut config = crate::Config::default();
-                    config.standalone_mode = true;
-                    config
+                .config(crate::Config {
+                    standalone_mode: true,
+                    ..Default::default()
                 })
                 .build_with_defaults()
                 .expect("should build"),

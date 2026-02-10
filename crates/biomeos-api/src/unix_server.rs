@@ -80,7 +80,7 @@ pub async fn serve_unix_socket<P: AsRef<Path>>(socket_path: P, app: Router) -> R
                                         let response = axum::http::Response::builder()
                                             .status(500)
                                             .body(axum::body::Body::from("Internal Server Error"))
-                                            .unwrap();
+                                            .expect("static 500 response");
                                         Ok(response)
                                     }
                                 }
@@ -107,14 +107,28 @@ pub async fn serve_unix_socket<P: AsRef<Path>>(socket_path: P, app: Router) -> R
 
 /// Serve an Axum router over both Unix socket and HTTP (temporary bridge)
 ///
-/// ⚠️ This is TEMPORARY for PetalTongue transition!
-/// Production deployments should use Unix socket only.
+/// # Deprecation Notice
+///
+/// **DEPRECATED since 0.3.0**: This function exists solely for the PetalTongue
+/// transition period. Once PetalTongue migrates to Unix socket JSON-RPC,
+/// this function and all HTTP bridge infrastructure will be removed.
+///
+/// **Target removal**: v0.5.0
+///
+/// **Migration**: Use [`serve_unix_socket`] directly. PetalTongue should connect
+/// via Unix socket JSON-RPC instead of HTTP.
+///
+/// Production deployments MUST use Unix socket only.
 ///
 /// # Arguments
 ///
 /// * `socket_path` - Path to Unix socket
 /// * `http_addr` - HTTP bind address (e.g., "127.0.0.1:3000")
 /// * `app` - Axum router to serve
+#[deprecated(
+    since = "0.3.0",
+    note = "Use serve_unix_socket() — HTTP bridge will be removed in v0.5.0"
+)]
 pub async fn serve_dual_mode<P: AsRef<Path>>(
     socket_path: P,
     http_addr: std::net::SocketAddr,

@@ -7,6 +7,7 @@ use clap::Args;
 use std::path::PathBuf;
 use tracing::info;
 
+/// Arguments for creating a sub-federation
 #[derive(Args, Debug)]
 pub struct CreateSubfedArgs {
     /// Sub-federation name
@@ -34,6 +35,7 @@ pub struct CreateSubfedArgs {
     pub config_dir: PathBuf,
 }
 
+/// Arguments for listing sub-federations
 #[derive(Args, Debug)]
 pub struct ListSubfedsArgs {
     /// Configuration directory
@@ -49,6 +51,7 @@ pub struct ListSubfedsArgs {
     pub detailed: bool,
 }
 
+/// Arguments for joining a sub-federation
 #[derive(Args, Debug)]
 pub struct JoinSubfedArgs {
     /// Sub-federation name
@@ -64,6 +67,7 @@ pub struct JoinSubfedArgs {
     pub config_dir: PathBuf,
 }
 
+/// Arguments for checking sub-federation access
 #[derive(Args, Debug)]
 pub struct CheckAccessArgs {
     /// Node ID

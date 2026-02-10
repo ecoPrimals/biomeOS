@@ -4,7 +4,7 @@
 //! These tests require the petalTongue binary to be available in bin/primals/.
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-#[ignore] // Requires live petalTongue binary
+#[ignore = "Requires live PetalTongue binary"]
 async fn test_petaltongue_discovery() {
     // Test that we can discover and connect to petalTongue
     // In production, this would discover via Songbird
@@ -14,7 +14,7 @@ async fn test_petaltongue_discovery() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-#[ignore] // Requires live petalTongue binary
+#[ignore = "Requires live PetalTongue binary"]
 async fn test_petaltongue_ecosystem() {
     // Test ecosystem interaction between petalTongue and other primals
     println!("🌸🐿️ petalTongue + Squirrel ecosystem test");

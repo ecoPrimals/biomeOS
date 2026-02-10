@@ -135,10 +135,7 @@ impl<C: CapabilityCaller> LineageDeriver<C> {
         node_id: &str,
         device_entropy: Option<&[u8]>,
     ) -> SporeResult<DeviceLineage> {
-        info!(
-            "🧬 Deriving device lineage for {} ({})",
-            node_id, device_id
-        );
+        info!("🧬 Deriving device lineage for {} ({})", node_id, device_id);
 
         // Build context for derivation
         let context = format!("ecoPrimals-device-lineage-v1:{}:{}", family_id, device_id);
@@ -158,9 +155,7 @@ impl<C: CapabilityCaller> LineageDeriver<C> {
             .caller
             .call("genetic.derive_lineage_key", params)
             .await
-            .map_err(|e| {
-                SporeError::SystemError(format!("Failed to derive lineage key: {}", e))
-            })?;
+            .map_err(|e| SporeError::SystemError(format!("Failed to derive lineage key: {}", e)))?;
 
         // Extract the derived key
         let derived_key = result
@@ -176,10 +171,7 @@ impl<C: CapabilityCaller> LineageDeriver<C> {
             .unwrap_or("unknown")
             .to_string();
 
-        info!(
-            "✅ Derived unique seed for {} using {}",
-            node_id, method
-        );
+        info!("✅ Derived unique seed for {} using {}", node_id, method);
 
         // If additional device entropy provided, mix it in
         let final_seed = if let Some(entropy) = device_entropy {
@@ -196,9 +188,9 @@ impl<C: CapabilityCaller> LineageDeriver<C> {
 
         // DEEP DEBT EVOLUTION: Sign the lineage certificate via security provider
         // BearDog provides Ed25519 signing via crypto.sign capability
-        let lineage_certificate = self.sign_lineage_certificate(
-            device_id, node_id, family_id, &final_seed, derived_at
-        ).await;
+        let lineage_certificate = self
+            .sign_lineage_certificate(device_id, node_id, family_id, &final_seed, derived_at)
+            .await;
 
         Ok(DeviceLineage {
             device_id: device_id.to_string(),
@@ -340,9 +332,9 @@ impl<C: CapabilityCaller> LineageDeriver<C> {
     /// Save lineage to file
     fn save_lineage(&self, lineage: &DeviceLineage, path: &Path) -> SporeResult<()> {
         // Decode the base64 seed and write raw bytes
-        let seed_bytes = BASE64.decode(&lineage.derived_seed).map_err(|e| {
-            SporeError::DeserializationError(format!("Invalid base64 seed: {}", e))
-        })?;
+        let seed_bytes = BASE64
+            .decode(&lineage.derived_seed)
+            .map_err(|e| SporeError::DeserializationError(format!("Invalid base64 seed: {}", e)))?;
 
         std::fs::write(path, &seed_bytes).map_err(|e| {
             SporeError::IoError(std::io::Error::other(format!(
@@ -425,17 +417,13 @@ impl<C: CapabilityCaller> LineageDeriver<C> {
             .caller
             .call("genetic.generate_lineage_proof", params)
             .await
-            .map_err(|e| {
-                SporeError::SystemError(format!("Failed to generate proof: {}", e))
-            })?;
+            .map_err(|e| SporeError::SystemError(format!("Failed to generate proof: {}", e)))?;
 
         result
             .get("proof")
             .and_then(|v: &serde_json::Value| v.as_str())
             .map(|s: &str| s.to_string())
-            .ok_or_else(|| {
-                SporeError::SystemError("Missing 'proof' in result".to_string())
-            })
+            .ok_or_else(|| SporeError::SystemError("Missing 'proof' in result".to_string()))
     }
 
     /// Verify lineage proof from a peer
@@ -456,11 +444,12 @@ impl<C: CapabilityCaller> LineageDeriver<C> {
             .caller
             .call("genetic.verify_lineage", params)
             .await
-            .map_err(|e| {
-                SporeError::SystemError(format!("Failed to verify proof: {}", e))
-            })?;
+            .map_err(|e| SporeError::SystemError(format!("Failed to verify proof: {}", e)))?;
 
-        Ok(result.get("valid").and_then(|v: &serde_json::Value| v.as_bool()).unwrap_or(false))
+        Ok(result
+            .get("valid")
+            .and_then(|v: &serde_json::Value| v.as_bool())
+            .unwrap_or(false))
     }
 }
 
@@ -510,10 +499,61 @@ pub fn generate_device_entropy() -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
 
-    #[test]
-    fn test_device_lineage_serialization() {
-        let lineage = DeviceLineage {
+    // ═══════════════════════════════════════════════════════════════
+    // Mock capability caller
+    // ═══════════════════════════════════════════════════════════════
+
+    struct MockCaller {
+        responses: Arc<Mutex<HashMap<String, Result<serde_json::Value, String>>>>,
+    }
+
+    impl MockCaller {
+        fn new() -> Self {
+            Self {
+                responses: Arc::new(Mutex::new(HashMap::new())),
+            }
+        }
+
+        async fn set_ok(&self, cap: &str, val: serde_json::Value) {
+            self.responses
+                .lock()
+                .await
+                .insert(cap.to_string(), Ok(val));
+        }
+
+        async fn set_err(&self, cap: &str, msg: &str) {
+            self.responses
+                .lock()
+                .await
+                .insert(cap.to_string(), Err(msg.to_string()));
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl CapabilityCaller for MockCaller {
+        async fn call(
+            &self,
+            capability: &str,
+            _params: serde_json::Value,
+        ) -> Result<serde_json::Value, String> {
+            let responses = self.responses.lock().await;
+            responses
+                .get(capability)
+                .cloned()
+                .unwrap_or_else(|| Err(format!("No mock for {}", capability)))
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // DeviceLineage tests
+    // ═══════════════════════════════════════════════════════════════
+
+    fn sample_lineage() -> DeviceLineage {
+        DeviceLineage {
             device_id: "device-123".to_string(),
             node_id: "tower".to_string(),
             family_id: "1894e909e454".to_string(),
@@ -522,31 +562,70 @@ mod tests {
             derived_at: 1738726800,
             derivation_method: "Blake3-Lineage-KDF".to_string(),
             lineage_certificate: None,
-        };
+        }
+    }
 
-        let json = serde_json::to_string(&lineage).unwrap();
+    #[test]
+    fn test_device_lineage_serialization() {
+        let lineage = sample_lineage();
+
+        let json = serde_json::to_string(&lineage).expect("serialize");
         assert!(json.contains("device-123"));
         assert!(json.contains("tower"));
         assert!(json.contains("1894e909e454"));
 
-        let parsed: DeviceLineage = serde_json::from_str(&json).unwrap();
+        let parsed: DeviceLineage = serde_json::from_str(&json).expect("deserialize");
         assert_eq!(parsed.device_id, "device-123");
         assert_eq!(parsed.node_id, "tower");
     }
 
     #[test]
-    fn test_generate_device_entropy() {
-        let entropy1 = generate_device_entropy();
-        let entropy2 = generate_device_entropy();
-
-        // Should be 32 bytes
-        assert_eq!(entropy1.len(), 32);
-        assert_eq!(entropy2.len(), 32);
-
-        // Should be different each time (high probability)
-        // Note: In rare cases this could fail due to timing
-        assert_ne!(entropy1, entropy2);
+    fn test_device_lineage_serde_roundtrip() {
+        let lineage = DeviceLineage {
+            lineage_certificate: Some("signed-cert-data".to_string()),
+            ..sample_lineage()
+        };
+        let json = serde_json::to_string(&lineage).expect("serialize");
+        let restored: DeviceLineage = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(
+            restored.lineage_certificate.as_deref(),
+            Some("signed-cert-data")
+        );
+        assert_eq!(restored.generation, 1);
+        assert_eq!(restored.derivation_method, "Blake3-Lineage-KDF");
     }
+
+    #[test]
+    fn test_device_lineage_clone_and_debug() {
+        let lineage = sample_lineage();
+        let cloned = lineage.clone();
+        assert_eq!(cloned.device_id, "device-123");
+        let dbg = format!("{:?}", lineage);
+        assert!(dbg.contains("DeviceLineage"));
+        assert!(dbg.contains("device-123"));
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // EnrollmentResult tests
+    // ═══════════════════════════════════════════════════════════════
+
+    #[test]
+    fn test_enrollment_result_clone_and_debug() {
+        let result = EnrollmentResult {
+            lineage: sample_lineage(),
+            seed_path: std::path::PathBuf::from("/tmp/test.seed"),
+        };
+        let cloned = result.clone();
+        assert_eq!(cloned.seed_path, Path::new("/tmp/test.seed"));
+        assert_eq!(cloned.lineage.node_id, "tower");
+
+        let dbg = format!("{:?}", result);
+        assert!(dbg.contains("EnrollmentResult"));
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // DerivationParams tests
+    // ═══════════════════════════════════════════════════════════════
 
     #[test]
     fn test_derivation_params_serialization() {
@@ -558,7 +637,7 @@ mod tests {
             purpose: "device-lineage".to_string(),
         };
 
-        let json = serde_json::to_string(&params).unwrap();
+        let json = serde_json::to_string(&params).expect("serialize");
         assert!(json.contains("family_seed"));
         assert!(json.contains("dev-001"));
         assert!(json.contains("device_entropy"));
@@ -574,7 +653,453 @@ mod tests {
             purpose: "device-lineage".to_string(),
         };
 
-        let json = serde_json::to_string(&params).unwrap();
+        let json = serde_json::to_string(&params).expect("serialize");
         assert!(!json.contains("device_entropy")); // Should be skipped
+    }
+
+    #[test]
+    fn test_derivation_params_clone_and_debug() {
+        let params = DerivationParams {
+            family_seed: "seed".into(),
+            device_id: "dev".into(),
+            node_id: "node".into(),
+            device_entropy: None,
+            purpose: "test".into(),
+        };
+        let cloned = params.clone();
+        assert_eq!(cloned.purpose, "test");
+        let dbg = format!("{:?}", params);
+        assert!(dbg.contains("DerivationParams"));
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // generate_device_entropy tests
+    // ═══════════════════════════════════════════════════════════════
+
+    #[test]
+    fn test_generate_device_entropy() {
+        let entropy1 = generate_device_entropy();
+        let entropy2 = generate_device_entropy();
+
+        // Should be 32 bytes
+        assert_eq!(entropy1.len(), 32);
+        assert_eq!(entropy2.len(), 32);
+
+        // Should be different each time (high probability)
+        assert_ne!(entropy1, entropy2);
+    }
+
+    #[test]
+    fn test_generate_device_entropy_non_zero() {
+        let entropy = generate_device_entropy();
+        // All zeros is astronomically unlikely
+        assert!(entropy.iter().any(|&b| b != 0));
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // LineageDeriver tests
+    // ═══════════════════════════════════════════════════════════════
+
+    #[test]
+    fn test_lineage_deriver_new() {
+        let mock = MockCaller::new();
+        let _deriver = LineageDeriver::new(mock);
+        // Just verify construction succeeds
+    }
+
+    #[tokio::test]
+    async fn test_derive_device_seed_success() {
+        let mock = MockCaller::new();
+        mock.set_ok(
+            "genetic.derive_lineage_key",
+            serde_json::json!({
+                "key": "ZGVyaXZlZC1zZWVkLWRhdGE=", // "derived-seed-data" in base64
+                "method": "Blake3-KDF"
+            }),
+        )
+        .await;
+        mock.set_err("crypto.sign", "not available").await;
+
+        let deriver = LineageDeriver::new(mock);
+        let result = deriver
+            .derive_device_seed("family-seed-b64", "family-01", "dev-001", "tower", None)
+            .await;
+
+        let lineage = result.expect("derivation should succeed");
+        assert_eq!(lineage.device_id, "dev-001");
+        assert_eq!(lineage.node_id, "tower");
+        assert_eq!(lineage.family_id, "family-01");
+        assert_eq!(lineage.generation, 1);
+        assert_eq!(lineage.derived_seed, "ZGVyaXZlZC1zZWVkLWRhdGE=");
+        assert_eq!(lineage.derivation_method, "Blake3-KDF");
+        assert!(lineage.derived_at > 0);
+        // Certificate is None because crypto.sign returned an error
+        assert!(lineage.lineage_certificate.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_derive_device_seed_with_certificate() {
+        let mock = MockCaller::new();
+        mock.set_ok(
+            "genetic.derive_lineage_key",
+            serde_json::json!({
+                "key": "c2VlZA==",
+                "method": "HKDF"
+            }),
+        )
+        .await;
+        mock.set_ok(
+            "crypto.sign",
+            serde_json::json!({
+                "signature": "sig-abc123"
+            }),
+        )
+        .await;
+
+        let deriver = LineageDeriver::new(mock);
+        let lineage = deriver
+            .derive_device_seed("family-b64", "fam-01", "dev-02", "pixel", None)
+            .await
+            .expect("should succeed");
+
+        assert_eq!(
+            lineage.lineage_certificate.as_deref(),
+            Some("sig-abc123")
+        );
+    }
+
+    #[tokio::test]
+    async fn test_derive_device_seed_with_device_entropy() {
+        let mock = MockCaller::new();
+        mock.set_ok(
+            "genetic.derive_lineage_key",
+            serde_json::json!({
+                "key": "ZGVyaXZlZA==",
+                "method": "KDF"
+            }),
+        )
+        .await;
+        mock.set_ok(
+            "genetic.mix_entropy",
+            serde_json::json!({
+                "mixed_seed": "bWl4ZWQ="
+            }),
+        )
+        .await;
+        mock.set_err("crypto.sign", "unavailable").await;
+
+        let deriver = LineageDeriver::new(mock);
+        let entropy = b"extra-device-entropy-data-32byte";
+        let lineage = deriver
+            .derive_device_seed("family", "fam", "dev", "node", Some(entropy))
+            .await
+            .expect("should succeed");
+
+        assert_eq!(lineage.derived_seed, "bWl4ZWQ=");
+    }
+
+    #[tokio::test]
+    async fn test_derive_device_seed_entropy_mix_fallback() {
+        let mock = MockCaller::new();
+        mock.set_ok(
+            "genetic.derive_lineage_key",
+            serde_json::json!({
+                "key": "b3JpZ2luYWw=",
+                "method": "KDF"
+            }),
+        )
+        .await;
+        // Mix entropy fails — should fallback to the original key
+        mock.set_err("genetic.mix_entropy", "mix failed").await;
+        mock.set_err("crypto.sign", "unavailable").await;
+
+        let deriver = LineageDeriver::new(mock);
+        let lineage = deriver
+            .derive_device_seed("fam", "fam", "dev", "node", Some(b"entropy"))
+            .await
+            .expect("should succeed with fallback");
+
+        assert_eq!(lineage.derived_seed, "b3JpZ2luYWw=");
+    }
+
+    #[tokio::test]
+    async fn test_derive_device_seed_derivation_fails() {
+        let mock = MockCaller::new();
+        mock.set_err("genetic.derive_lineage_key", "service down")
+            .await;
+
+        let deriver = LineageDeriver::new(mock);
+        let result = deriver
+            .derive_device_seed("fam", "fam", "dev", "node", None)
+            .await;
+
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("derive lineage key"),
+            "unexpected error: {}",
+            err_msg
+        );
+    }
+
+    #[tokio::test]
+    async fn test_derive_device_seed_missing_key_in_response() {
+        let mock = MockCaller::new();
+        mock.set_ok(
+            "genetic.derive_lineage_key",
+            serde_json::json!({ "not_key": "value" }),
+        )
+        .await;
+
+        let deriver = LineageDeriver::new(mock);
+        let result = deriver
+            .derive_device_seed("fam", "fam", "dev", "node", None)
+            .await;
+
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("Missing 'key'"), "unexpected: {}", err_msg);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // save_lineage / load_lineage / has_lineage tests
+    // ═══════════════════════════════════════════════════════════════
+
+    #[test]
+    fn test_save_and_load_lineage_roundtrip() {
+        let tmp = tempfile::TempDir::new().expect("create temp dir");
+        let seed_path = tmp.path().join("device.lineage");
+
+        let mock = MockCaller::new();
+        let deriver = LineageDeriver::new(mock);
+
+        let lineage = DeviceLineage {
+            derived_seed: BASE64.encode(b"32-bytes-of-derived-seed-data!!"),
+            ..sample_lineage()
+        };
+
+        deriver
+            .save_lineage(&lineage, &seed_path)
+            .expect("save should succeed");
+
+        assert!(seed_path.exists(), "seed file should exist");
+        assert!(
+            seed_path.with_extension("json").exists(),
+            "metadata file should exist"
+        );
+
+        let loaded =
+            LineageDeriver::<MockCaller>::load_lineage(&seed_path).expect("load should succeed");
+        assert_eq!(loaded.device_id, "device-123");
+        assert_eq!(loaded.node_id, "tower");
+        assert_eq!(loaded.family_id, "1894e909e454");
+    }
+
+    #[test]
+    fn test_load_lineage_raw_seed_fallback() {
+        let tmp = tempfile::TempDir::new().expect("create temp dir");
+        let seed_path = tmp.path().join("raw.lineage");
+
+        // Write raw seed bytes with NO .json metadata
+        std::fs::write(&seed_path, b"raw-seed-32-bytes-of-data!!!!!!")
+            .expect("write raw seed");
+
+        let loaded =
+            LineageDeriver::<MockCaller>::load_lineage(&seed_path).expect("load should succeed");
+
+        assert_eq!(loaded.device_id, "unknown");
+        assert_eq!(loaded.node_id, "unknown");
+        assert_eq!(loaded.generation, 1);
+        assert!(loaded.lineage_certificate.is_none());
+        // derived_seed should be base64 of the raw bytes
+        assert!(!loaded.derived_seed.is_empty());
+    }
+
+    #[test]
+    fn test_load_lineage_nonexistent() {
+        let result = LineageDeriver::<MockCaller>::load_lineage(Path::new("/nonexistent/file"));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_has_lineage() {
+        let tmp = tempfile::TempDir::new().expect("create temp dir");
+        let path = tmp.path().join("exists.lineage");
+
+        assert!(!LineageDeriver::<MockCaller>::has_lineage(&path));
+
+        std::fs::write(&path, b"data").expect("write");
+        assert!(LineageDeriver::<MockCaller>::has_lineage(&path));
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // enroll_device tests
+    // ═══════════════════════════════════════════════════════════════
+
+    #[tokio::test]
+    async fn test_enroll_device_success() {
+        let tmp = tempfile::TempDir::new().expect("create temp dir");
+        let family_seed_path = tmp.path().join(".family.seed");
+        let lineage_path = tmp.path().join(".lineage.seed");
+
+        // Write a fake family seed
+        std::fs::write(&family_seed_path, b"fake-family-seed-32bytes!!!!!!")
+            .expect("write family seed");
+
+        let mock = MockCaller::new();
+        mock.set_ok(
+            "genetic.derive_lineage_key",
+            serde_json::json!({
+                "key": BASE64.encode(b"derived-device-specific-key!!!!"),
+                "method": "HKDF-SHA256"
+            }),
+        )
+        .await;
+        mock.set_err("crypto.sign", "not running").await;
+
+        let deriver = LineageDeriver::new(mock);
+        let enrollment = deriver
+            .enroll_device(&family_seed_path, &lineage_path, "fam-01", "dev-01", "tower")
+            .await
+            .expect("enrollment should succeed");
+
+        assert_eq!(enrollment.lineage.device_id, "dev-01");
+        assert_eq!(enrollment.lineage.node_id, "tower");
+        assert_eq!(enrollment.seed_path, lineage_path);
+        assert!(lineage_path.exists());
+    }
+
+    #[tokio::test]
+    async fn test_enroll_device_missing_family_seed() {
+        let tmp = tempfile::TempDir::new().expect("create temp dir");
+        let family_path = tmp.path().join("nonexistent.seed");
+        let lineage_path = tmp.path().join("lineage.seed");
+
+        let mock = MockCaller::new();
+        let deriver = LineageDeriver::new(mock);
+
+        let result = deriver
+            .enroll_device(&family_path, &lineage_path, "fam", "dev", "node")
+            .await;
+
+        assert!(result.is_err());
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // generate_lineage_proof / verify_lineage_proof tests
+    // ═══════════════════════════════════════════════════════════════
+
+    #[tokio::test]
+    async fn test_generate_lineage_proof_success() {
+        let mock = MockCaller::new();
+        mock.set_ok(
+            "genetic.generate_lineage_proof",
+            serde_json::json!({ "proof": "proof-data-abc" }),
+        )
+        .await;
+
+        let deriver = LineageDeriver::new(mock);
+        let lineage = sample_lineage();
+        let proof = deriver
+            .generate_lineage_proof(&lineage, "peer-family")
+            .await
+            .expect("proof should succeed");
+
+        assert_eq!(proof, "proof-data-abc");
+    }
+
+    #[tokio::test]
+    async fn test_generate_lineage_proof_missing_proof() {
+        let mock = MockCaller::new();
+        mock.set_ok(
+            "genetic.generate_lineage_proof",
+            serde_json::json!({ "no_proof": true }),
+        )
+        .await;
+
+        let deriver = LineageDeriver::new(mock);
+        let result = deriver
+            .generate_lineage_proof(&sample_lineage(), "peer")
+            .await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_generate_lineage_proof_call_fails() {
+        let mock = MockCaller::new();
+        mock.set_err("genetic.generate_lineage_proof", "service down")
+            .await;
+
+        let deriver = LineageDeriver::new(mock);
+        let result = deriver
+            .generate_lineage_proof(&sample_lineage(), "peer")
+            .await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_verify_lineage_proof_valid() {
+        let mock = MockCaller::new();
+        mock.set_ok(
+            "genetic.verify_lineage",
+            serde_json::json!({ "valid": true }),
+        )
+        .await;
+
+        let deriver = LineageDeriver::new(mock);
+        let valid = deriver
+            .verify_lineage_proof(&sample_lineage(), "peer-fam", "proof-data")
+            .await
+            .expect("verify should succeed");
+
+        assert!(valid);
+    }
+
+    #[tokio::test]
+    async fn test_verify_lineage_proof_invalid() {
+        let mock = MockCaller::new();
+        mock.set_ok(
+            "genetic.verify_lineage",
+            serde_json::json!({ "valid": false }),
+        )
+        .await;
+
+        let deriver = LineageDeriver::new(mock);
+        let valid = deriver
+            .verify_lineage_proof(&sample_lineage(), "peer-fam", "bad-proof")
+            .await
+            .expect("verify should succeed");
+
+        assert!(!valid);
+    }
+
+    #[tokio::test]
+    async fn test_verify_lineage_proof_missing_field() {
+        let mock = MockCaller::new();
+        mock.set_ok(
+            "genetic.verify_lineage",
+            serde_json::json!({ "something_else": 42 }),
+        )
+        .await;
+
+        let deriver = LineageDeriver::new(mock);
+        let valid = deriver
+            .verify_lineage_proof(&sample_lineage(), "peer-fam", "proof")
+            .await
+            .expect("verify should succeed (defaults to false)");
+
+        assert!(!valid); // Missing "valid" field defaults to false
+    }
+
+    #[tokio::test]
+    async fn test_verify_lineage_proof_call_fails() {
+        let mock = MockCaller::new();
+        mock.set_err("genetic.verify_lineage", "service down").await;
+
+        let deriver = LineageDeriver::new(mock);
+        let result = deriver
+            .verify_lineage_proof(&sample_lineage(), "peer", "proof")
+            .await;
+        assert!(result.is_err());
     }
 }

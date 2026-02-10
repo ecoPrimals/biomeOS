@@ -76,12 +76,8 @@ path = "src/bin/mkboot.rs"
 name = "biomeos-rootfs"
 path = "src/bin/biomeos-rootfs.rs"
 
-[profile.release]
-# Static linking for init binary (must run without dynamic libraries)
-# This is critical for PID 1 in initramfs where no libraries exist yet
-strip = false  # Keep symbols for debugging kernel panics
-lto = true     # Link-time optimization for smaller binary
-panic = "abort" # No unwinding in init - faster and smaller
+# NOTE: Profile configuration moved to workspace root Cargo.toml
+# (non-root profile sections are ignored by cargo)
 
 [features]
 default = []

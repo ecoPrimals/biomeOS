@@ -25,16 +25,25 @@ pub struct BiomeDependency {
 /// Dependency sources
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DependencySource {
+    /// Registry-based dependency
     Registry {
+        /// Registry URL
         url: String,
     },
+    /// Git repository dependency
     Git {
+        /// Repository URL
         url: String,
+        /// Branch name
         branch: Option<String>,
+        /// Tag name
         tag: Option<String>,
+        /// Commit hash
         commit: Option<String>,
     },
+    /// Local filesystem dependency
     Local {
+        /// Filesystem path
         path: String,
     },
 }
@@ -71,13 +80,21 @@ pub struct SecretSpec {
 /// Secret types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SecretType {
+    /// Opaque (generic) secret
     Opaque,
+    /// Service account token
     ServiceAccountToken,
+    /// Docker config JSON
     DockerConfigJson,
+    /// Legacy Docker config
     DockerConfig,
+    /// HTTP basic auth credentials
     BasicAuth,
+    /// SSH authentication key
     SshAuth,
+    /// TLS certificate and key
     Tls,
+    /// Custom secret type
     Custom(String),
 }
 
@@ -125,20 +142,32 @@ pub struct HealthCheckSpec {
 /// Health check types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum HealthCheckType {
+    /// HTTP health check
     Http {
+        /// URL path to check
         path: String,
+        /// Port number
         port: u16,
+        /// HTTP or HTTPS
         scheme: HttpScheme,
+        /// Additional headers
         headers: HashMap<String, String>,
     },
+    /// TCP connectivity check
     Tcp {
+        /// Port to connect to
         port: u16,
     },
+    /// Execute a command
     Exec {
+        /// Command and arguments
         command: Vec<String>,
     },
+    /// gRPC health check
     Grpc {
+        /// gRPC port
         port: u16,
+        /// Service name (optional)
         service: Option<String>,
     },
 }
@@ -146,7 +175,9 @@ pub enum HealthCheckType {
 /// HTTP schemes
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum HttpScheme {
+    /// Plain HTTP
     Http,
+    /// HTTPS (TLS)
     Https,
 }
 
@@ -172,8 +203,11 @@ pub struct MetricsSpec {
 /// Metrics formats
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MetricsFormat {
+    /// Prometheus exposition format
     Prometheus,
+    /// OpenMetrics format
     OpenMetrics,
+    /// JSON format
     Json,
 }
 
@@ -196,19 +230,28 @@ pub struct LoggingSpec {
 /// Log levels
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LogLevel {
+    /// Most verbose
     Trace,
+    /// Debug diagnostics
     Debug,
+    /// Informational
     Info,
+    /// Warnings
     Warn,
+    /// Errors
     Error,
+    /// Fatal (process will exit)
     Fatal,
 }
 
 /// Log formats
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LogFormat {
+    /// JSON output
     Json,
+    /// Plain text
     Text,
+    /// Structured key-value
     Structured,
 }
 
@@ -225,11 +268,17 @@ pub struct LogOutputSpec {
 /// Log output types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LogOutputType {
+    /// Standard output
     Stdout,
+    /// Standard error
     Stderr,
+    /// File output
     File,
+    /// Syslog output
     Syslog,
+    /// Elasticsearch output
     ElasticSearch,
+    /// Fluentd output
     Fluentd,
 }
 
@@ -265,9 +314,21 @@ pub struct TracingSpec {
 /// Tracing exporters
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TracingExporter {
-    Jaeger { endpoint: String },
-    Zipkin { endpoint: String },
-    Otlp { endpoint: String },
+    /// Jaeger distributed tracing
+    Jaeger {
+        /// Jaeger collector endpoint
+        endpoint: String,
+    },
+    /// Zipkin distributed tracing
+    Zipkin {
+        /// Zipkin collector endpoint
+        endpoint: String,
+    },
+    /// OpenTelemetry Protocol
+    Otlp {
+        /// OTLP collector endpoint
+        endpoint: String,
+    },
 }
 
 /// Alerting specification
@@ -299,8 +360,11 @@ pub struct AlertRuleSpec {
 /// Alert severity
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AlertSeverity {
+    /// Critical severity — immediate action required
     Critical,
+    /// Warning severity — attention needed
     Warning,
+    /// Informational severity
     Info,
 }
 
@@ -320,9 +384,13 @@ pub struct NotificationChannelSpec {
 /// Notification channel types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum NotificationChannelType {
+    /// Email notification
     Email,
+    /// Slack notification
     Slack,
+    /// Generic webhook
     Webhook,
+    /// PagerDuty integration
     PagerDuty,
 }
 
@@ -426,12 +494,18 @@ pub struct LifecycleHookSpec {
 /// Lifecycle actions
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LifecycleAction {
+    /// Execute a command
     Exec {
+        /// Command and arguments
         command: Vec<String>,
     },
+    /// Make an HTTP request
     Http {
+        /// Request URL
         url: String,
+        /// HTTP method
         method: String,
+        /// Request headers
         headers: HashMap<String, String>,
     },
 }
@@ -439,7 +513,10 @@ pub enum LifecycleAction {
 /// Enforcement modes
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum EnforcementMode {
+    /// Strictly enforce the policy
     Enforce,
+    /// Warn on violations but allow
     Warn,
+    /// Policy disabled
     Disabled,
 }

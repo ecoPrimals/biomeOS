@@ -133,11 +133,17 @@ pub struct AnalysisCriteria {
 /// Threshold operators
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ThresholdOperator {
+    /// Value is greater than threshold
     GreaterThan,
+    /// Value is less than threshold
     LessThan,
+    /// Value is greater than or equal to threshold
     GreaterThanOrEqual,
+    /// Value is less than or equal to threshold
     LessThanOrEqual,
+    /// Value equals threshold
     Equal,
+    /// Value does not equal threshold
     NotEqual,
 }
 
@@ -176,11 +182,17 @@ pub struct AnalysisTemplate {
 /// Metrics providers
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MetricsProvider {
+    /// Prometheus metrics system
     Prometheus,
+    /// DataDog monitoring platform
     DataDog,
+    /// New Relic observability platform
     NewRelic,
+    /// Grafana monitoring stack
     Grafana,
+    /// AWS CloudWatch
     CloudWatch,
+    /// Custom metrics provider
     Custom(String),
 }
 
@@ -200,10 +212,15 @@ pub struct TrafficSplittingSpec {
 /// Traffic routers
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TrafficRouter {
+    /// Istio service mesh
     Istio,
+    /// Nginx ingress controller
     Nginx,
+    /// Traefik proxy
     Traefik,
+    /// Ambassador API gateway
     Ambassador,
+    /// Custom traffic router
     Custom(String),
 }
 
@@ -265,10 +282,15 @@ pub struct PromotionCondition {
 /// Promotion condition types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PromotionConditionType {
+    /// Success rate percentage
     SuccessRate,
+    /// Error rate percentage
     ErrorRate,
+    /// Response time in milliseconds
     ResponseTime,
+    /// Total request count
     RequestCount,
+    /// Custom promotion condition
     Custom(String),
 }
 
@@ -315,19 +337,27 @@ pub struct PreviewTest {
 pub enum PreviewTestType {
     /// HTTP test
     Http {
+        /// URL to test
         url: String,
+        /// HTTP method to use
         method: HttpMethod,
+        /// Expected HTTP status code
         expected_status: u16,
     },
     /// Load test
     LoadTest {
+        /// Test duration
         duration: Duration,
+        /// Number of concurrent users
         concurrent_users: u32,
+        /// Target URL for the load test
         target_url: String,
     },
     /// Custom test
     Custom {
+        /// Test runner executable
         test_runner: String,
+        /// Test configuration
         config: HashMap<String, String>,
     },
 }
@@ -351,8 +381,12 @@ pub struct UpdateHook {
 /// Update phases
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum UpdatePhase {
+    /// Before the update begins
     PreUpdate,
+    /// After the update completes
     PostUpdate,
+    /// Before a rollback begins
     PreRollback,
+    /// After a rollback completes
     PostRollback,
 }

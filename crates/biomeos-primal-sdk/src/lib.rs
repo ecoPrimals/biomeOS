@@ -6,6 +6,9 @@
 //! - Capability-based communication
 //! - Graceful degradation
 //!
+#![warn(missing_docs)]
+#![deny(unsafe_code)]
+//!
 //! # Quick Start
 //!
 //! ```rust,no_run
@@ -55,7 +58,7 @@ pub use biomeos_types::{
     UniversalServiceResponse,
 };
 
-// Extended types module for primal-specific functionality
+/// Extended types for primal-specific functionality (requests, responses, priorities)
 pub mod types;
 
 // Re-export extended types for convenience

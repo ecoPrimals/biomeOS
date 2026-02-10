@@ -305,8 +305,11 @@ pub struct ServiceCondition {
 /// Condition status
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ConditionStatus {
+    /// Condition is met
     True,
+    /// Condition is not met
     False,
+    /// Condition status is unknown
     Unknown,
 }
 
@@ -354,12 +357,19 @@ pub struct ServiceEndpoint {
 /// Endpoint protocols
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum EndpointProtocol {
+    /// Plain HTTP
     Http,
+    /// HTTPS (TLS)
     Https,
+    /// Raw TCP
     Tcp,
+    /// UDP
     Udp,
+    /// gRPC
     Grpc,
+    /// WebSocket
     WebSocket,
+    /// Custom protocol
     Custom(String),
 }
 
@@ -481,8 +491,11 @@ pub struct ScalingPolicy {
 /// Scaling directions
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ScalingDirection {
+    /// Scale up (add replicas)
     Up,
+    /// Scale down (remove replicas)
     Down,
+    /// Scale in either direction
     Both,
 }
 
@@ -601,11 +614,17 @@ pub struct ConfigFile {
 /// Configuration formats
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ConfigFormat {
+    /// JSON format
     Json,
+    /// YAML format
     Yaml,
+    /// TOML format
     Toml,
+    /// Java properties format
     Properties,
+    /// INI format
     Ini,
+    /// Custom format
     Custom(String),
 }
 

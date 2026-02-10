@@ -39,6 +39,7 @@ async fn test_spore_directory_structure() {
         label: "test_spore".to_string(),
         node_id: "tower_test".to_string(),
         spore_type: SporeType::Live,
+        family_id: "test-family".to_string(),
     };
 
     // Note: This will fail without actual binaries, but tests the structure
@@ -62,6 +63,7 @@ async fn test_cold_spore_no_deploy_script() {
         label: "cold_test".to_string(),
         node_id: "tower_cold".to_string(),
         spore_type: SporeType::Cold,
+        family_id: "test-family".to_string(),
     };
 
     let _ = Spore::create(temp_dir.path().to_path_buf(), config).await;
@@ -80,6 +82,7 @@ async fn test_live_spore_has_deploy_script() {
         label: "live_test".to_string(),
         node_id: "tower_live".to_string(),
         spore_type: SporeType::Live,
+        family_id: "test-family".to_string(),
     };
 
     let _ = Spore::create(temp_dir.path().to_path_buf(), config).await;
@@ -98,6 +101,7 @@ async fn test_spore_manifest_creation() {
         label: "manifest_test".to_string(),
         node_id: "tower_manifest".to_string(),
         spore_type: SporeType::Live,
+        family_id: "test-family".to_string(),
     };
 
     let result = Spore::create(temp_dir.path().to_path_buf(), config).await;
@@ -157,6 +161,7 @@ async fn test_spore_readme_differentiation() {
         label: "cold_readme".to_string(),
         node_id: "tower_cold".to_string(),
         spore_type: SporeType::Cold,
+        family_id: "test-family".to_string(),
     };
     let _ = Spore::create(temp_dir.path().to_path_buf(), cold_config).await;
     let cold_readme = std::fs::read_to_string(temp_dir.path().join("biomeOS/README.md")).unwrap();
@@ -169,6 +174,7 @@ async fn test_spore_readme_differentiation() {
         label: "live_readme".to_string(),
         node_id: "tower_live".to_string(),
         spore_type: SporeType::Live,
+        family_id: "test-family".to_string(),
     };
     let _ = Spore::create(temp_dir.path().to_path_buf(), live_config).await;
     let live_readme = std::fs::read_to_string(temp_dir.path().join("biomeOS/README.md")).unwrap();
@@ -191,6 +197,7 @@ fn test_spore_config_serialization() {
         label: "serialize_test".to_string(),
         node_id: "tower_test".to_string(),
         spore_type: SporeType::Cold,
+        family_id: "test-family".to_string(),
     };
 
     // Should be able to serialize to JSON
@@ -221,6 +228,7 @@ async fn test_secrets_directory_permissions() {
         label: "permissions_test".to_string(),
         node_id: "tower_test".to_string(),
         spore_type: SporeType::Live,
+        family_id: "test-family".to_string(),
     };
 
     let _ = Spore::create(temp_dir.path().to_path_buf(), config).await;

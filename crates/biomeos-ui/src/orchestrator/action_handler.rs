@@ -206,19 +206,20 @@ impl ActionHandler {
         }
 
         // Phase 4: Register assignment via Songbird
-        let assignment_id = match Self::register_assignment(ctx.songbird, device_id, primal_id).await {
-            Ok(id) => {
-                info!("✅ Assignment registered: {}", id);
-                id
-            }
-            Err(e) => {
-                warn!("❌ Failed to register assignment: {}", e);
-                return Ok(ActionResult::error(format!(
-                    "Failed to register assignment: {}",
-                    e
-                )));
-            }
-        };
+        let assignment_id =
+            match Self::register_assignment(ctx.songbird, device_id, primal_id).await {
+                Ok(id) => {
+                    info!("✅ Assignment registered: {}", id);
+                    id
+                }
+                Err(e) => {
+                    warn!("❌ Failed to register assignment: {}", e);
+                    return Ok(ActionResult::error(format!(
+                        "Failed to register assignment: {}",
+                        e
+                    )));
+                }
+            };
 
         // Phase 5: Persist assignment via NestGate (non-critical)
         if let Err(e) = Persistence::persist_assignment(
@@ -237,7 +238,8 @@ impl ActionHandler {
         }
 
         // Phase 6: Update UI via petalTongue (non-critical)
-        if let Err(e) = UISync::update_ui_after_assignment(ctx.petaltongue, device_id, primal_id).await
+        if let Err(e) =
+            UISync::update_ui_after_assignment(ctx.petaltongue, device_id, primal_id).await
         {
             warn!("⚠️ Failed to update UI: {}, continuing", e);
             // Non-critical: assignment succeeded, UI just not updated

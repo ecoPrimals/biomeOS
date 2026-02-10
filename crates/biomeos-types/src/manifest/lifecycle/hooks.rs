@@ -60,37 +60,54 @@ pub enum LifecyclePhase {
 pub enum LifecycleAction {
     /// Execute command
     Exec {
+        /// Command and arguments
         command: Vec<String>,
+        /// Environment variables
         environment: HashMap<String, String>,
+        /// Working directory
         working_dir: Option<String>,
     },
     /// HTTP request
     Http {
+        /// Request URL
         url: String,
+        /// HTTP method
         method: HttpMethod,
+        /// Request headers
         headers: HashMap<String, String>,
+        /// Request body
         body: Option<String>,
+        /// Request timeout
         timeout: Option<Duration>,
     },
     /// TCP socket check
     TcpSocket {
+        /// Target host
         host: String,
+        /// Target port
         port: u16,
+        /// Connection timeout
         timeout: Option<Duration>,
     },
     /// Send signal
     Signal {
+        /// Signal to send
         signal: Signal,
+        /// Signal target
         target: SignalTarget,
     },
     /// Wait for condition
     Wait {
+        /// Condition to wait for
         condition: WaitCondition,
+        /// Maximum wait time
         timeout: Duration,
     },
     /// Custom action
     Custom {
+        /// Action type identifier
         action_type: String,
+        /// Action configuration
         config: HashMap<String, serde_json::Value>,
     },
 }
@@ -98,33 +115,51 @@ pub enum LifecycleAction {
 /// HTTP methods
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum HttpMethod {
+    /// GET request
     Get,
+    /// POST request
     Post,
+    /// PUT request
     Put,
+    /// DELETE request
     Delete,
+    /// PATCH request
     Patch,
+    /// HEAD request
     Head,
+    /// OPTIONS request
     Options,
 }
 
 /// System signals
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Signal {
+    /// Graceful termination
     Sigterm,
+    /// Forced kill
     Sigkill,
+    /// Interrupt (Ctrl-C)
     Sigint,
+    /// Hang-up / reload config
     Sighup,
+    /// User-defined signal 1
     Sigusr1,
+    /// User-defined signal 2
     Sigusr2,
+    /// Custom signal
     Custom(String),
 }
 
 /// Signal targets
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SignalTarget {
+    /// Main process only
     MainProcess,
+    /// All child processes
     AllProcesses,
+    /// Named process group
     ProcessGroup(String),
+    /// Specific process by PID
     ProcessById(u32),
 }
 
@@ -134,14 +169,21 @@ pub enum WaitCondition {
     /// Wait for port to be available
     PortAvailable(u16),
     /// Wait for HTTP endpoint to respond
-    HttpResponse { url: String, expected_status: u16 },
+    HttpResponse {
+        /// URL to poll
+        url: String,
+        /// Expected HTTP status code
+        expected_status: u16,
+    },
     /// Wait for file to exist
     FileExists(String),
     /// Wait for process to exit
     ProcessExit(u32),
     /// Wait for custom condition
     Custom {
+        /// Condition type identifier
         condition_type: String,
+        /// Condition configuration
         config: HashMap<String, String>,
     },
 }
@@ -192,12 +234,20 @@ pub enum LifecycleConditionType {
 /// Condition operators
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ConditionOperator {
+    /// Exact equality
     Equals,
+    /// Not equal
     NotEquals,
+    /// Contains substring
     Contains,
+    /// Does not contain substring
     NotContains,
+    /// Greater than (numeric)
     GreaterThan,
+    /// Less than (numeric)
     LessThan,
+    /// Value exists / is defined
     Exists,
+    /// Value does not exist
     NotExists,
 }

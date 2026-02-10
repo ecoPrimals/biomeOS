@@ -77,10 +77,15 @@ pub struct ServiceMeshSpec {
 /// Service mesh types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ServiceMeshType {
+    /// Istio service mesh
     Istio,
+    /// Linkerd service mesh
     Linkerd,
+    /// HashiCorp Consul Connect
     Consul,
+    /// Envoy proxy
     Envoy,
+    /// Custom service mesh
     Custom(String),
 }
 
@@ -184,9 +189,13 @@ pub struct TlsSpec {
 /// TLS modes
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TlsMode {
+    /// Pass through TLS to the backend
     Passthrough,
+    /// Simple TLS termination
     Simple,
+    /// Mutual TLS (mTLS)
     Mutual,
+    /// Auto passthrough with SNI
     AutoPassthrough,
 }
 
@@ -203,9 +212,13 @@ pub struct LoadBalancerSpec {
 /// Load balancer algorithms
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LoadBalancerAlgorithm {
+    /// Round-robin distribution
     RoundRobin,
+    /// Least connections
     LeastConn,
+    /// Random selection
     Random,
+    /// Pass through without balancing
     Passthrough,
 }
 
@@ -244,8 +257,11 @@ pub struct MeshSecurityPolicySpec {
 /// Security actions for mesh policies
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SecurityAction {
+    /// Allow the action
     Allow,
+    /// Deny the action
     Deny,
+    /// Audit the action (log only)
     Audit,
 }
 
@@ -368,15 +384,20 @@ pub struct ServiceEntryPort {
 /// Service location
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ServiceLocation {
+    /// Service is external to the mesh
     MeshExternal,
+    /// Service is internal to the mesh
     MeshInternal,
 }
 
 /// Service resolution
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ServiceResolution {
+    /// No resolution
     None,
+    /// Static IP resolution
     Static,
+    /// DNS-based resolution
     DNS,
 }
 
@@ -457,8 +478,11 @@ pub struct HttpSettingsSpec {
 /// H2 upgrade policy
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum H2UpgradePolicy {
+    /// Use default upgrade behavior
     Default,
+    /// Do not upgrade to HTTP/2
     DoNotUpgrade,
+    /// Upgrade to HTTP/2
     Upgrade,
 }
 
@@ -506,9 +530,13 @@ pub struct ClientTlsSettings {
 /// Client TLS modes
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ClientTlsMode {
+    /// TLS disabled
     Disable,
+    /// Simple TLS (server verification only)
     Simple,
+    /// Mutual TLS
     Mutual,
+    /// Istio-managed mutual TLS
     IstioMutual,
 }
 
@@ -560,8 +588,11 @@ pub struct HttpMatchCondition {
 /// String match
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum StringMatch {
+    /// Exact string match
     Exact(String),
+    /// String prefix match
     Prefix(String),
+    /// Regular expression match
     Regex(String),
 }
 
@@ -594,7 +625,9 @@ pub struct DestinationSpec {
 /// Port selector
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PortSelector {
+    /// Port number
     Number(u16),
+    /// Port name
     Name(String),
 }
 

@@ -14,10 +14,15 @@ use tracing::{debug, info, warn};
 /// Session metadata for a running primal
 #[derive(Debug, Clone)]
 pub struct PrimalSession {
+    /// Primal identifier
     pub primal_id: PrimalId,
+    /// Node identifier this session belongs to
     pub node_id: String,
+    /// OS process ID of the running primal
     pub pid: u32,
+    /// When this session started
     pub started_at: chrono::DateTime<chrono::Utc>,
+    /// Path to the session log file
     pub log_file: Option<PathBuf>,
 }
 
