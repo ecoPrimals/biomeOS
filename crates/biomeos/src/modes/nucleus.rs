@@ -141,6 +141,14 @@ pub async fn run(mode: String, node_id: String, family_id: Option<String>) -> Re
 
         let socket_path = socket_dir.join(format!("{}-{}.sock", primal, family_id));
 
+        // Toadstool exposes tarpc on .sock and JSON-RPC on .jsonrpc.sock
+        // NUCLEUS health checks use JSON-RPC, so use the jsonrpc socket for health monitoring
+        let health_socket = if *primal == "toadstool" {
+            socket_dir.join(format!("{}-{}.jsonrpc.sock", primal, family_id))
+        } else {
+            socket_path.clone()
+        };
+
         info!("Starting {} ...", primal);
 
         let child = start_primal(
@@ -156,25 +164,32 @@ pub async fn run(mode: String, node_id: String, family_id: Option<String>) -> Re
 
         let pid = child.id();
 
-        // Wait for socket to appear
-        wait_for_socket(&socket_path, Duration::from_secs(10)).await?;
+        // Wait for socket to appear (use health_socket for primals with separate JSON-RPC sockets)
+        wait_for_socket(&health_socket, Duration::from_secs(10)).await?;
 
-        // Health check
-        if let Err(e) = health_check(&socket_path).await {
+        // Health check via JSON-RPC
+        if let Err(e) = health_check(&health_socket).await {
             warn!("{} health check failed: {} (continuing)", primal, e);
         } else {
             info!("  {} healthy (PID: {:?})", primal, pid);
         }
 
-        // Register with lifecycle manager for ongoing monitoring
+        // Register with lifecycle manager for ongoing monitoring (use health_socket for JSON-RPC pings)
         lifecycle
             .register_primal(
                 *primal,
-                socket_path.clone(),
+                health_socket.clone(),
                 pid,
                 None, // No deployment graph node (direct binary launch)
             )
             .await?;
+
+        // Toadstool uses semantic method naming: "toadstool.health" instead of "health"
+        if *primal == "toadstool" {
+            lifecycle
+                .set_health_method("toadstool", "toadstool.health")
+                .await;
+        }
 
         children.push((primal.to_string(), child));
     }
@@ -361,16 +376,23 @@ async fn start_primal(
         "nestgate" => {
             cmd.arg("daemon")
                 .arg("--socket-only")
+                .arg("--family-id")
+                .arg(family_id)
                 .env("NESTGATE_JWT_SECRET", generate_jwt_secret());
         }
         "toadstool" => {
-            cmd.arg("server").arg("--socket").arg(socket_path);
+            cmd.arg("server")
+                .arg("--socket")
+                .arg(&socket_path)
+                .env("TOADSTOOL_SOCKET", &socket_path)
+                .env("TOADSTOOL_FAMILY_ID", family_id);
         }
         "squirrel" => {
             let songbird_socket = socket_dir.join(format!("songbird-{}.sock", family_id));
             cmd.arg("server")
                 .arg("--socket")
-                .arg(socket_path)
+                .arg(&socket_path)
+                .env("SQUIRREL_SOCKET", &socket_path)
                 .env("HTTP_REQUEST_PROVIDER_SOCKET", &songbird_socket);
 
             // Load AI providers if env vars are set
@@ -424,10 +446,25 @@ async fn health_check(socket_path: &std::path::Path) -> Result<()> {
     use biomeos_core::atomic_client::AtomicClient;
 
     let client = AtomicClient::unix(socket_path).with_timeout(Duration::from_secs(3));
-    let response = client
-        .call("health", serde_json::json!({}))
-        .await
-        .context("Health check RPC failed")?;
+
+    // Try plain "health" first (BearDog, Songbird, NestGate, Squirrel),
+    // then semantic "{primal}.health" (Toadstool follows the naming standard)
+    let response = match client.call("health", serde_json::json!({})).await {
+        Ok(resp) => resp,
+        Err(_) => {
+            // Extract primal name from socket path for semantic method naming
+            let primal_name = socket_path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .and_then(|s| s.split('-').next())
+                .unwrap_or("unknown");
+            let semantic_method = format!("{}.health", primal_name);
+            client
+                .call(&semantic_method, serde_json::json!({}))
+                .await
+                .context("Health check RPC failed")?
+        }
+    };
 
     if response.get("status").and_then(|s| s.as_str()) == Some("healthy") {
         Ok(())
