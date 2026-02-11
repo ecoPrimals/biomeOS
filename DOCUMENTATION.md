@@ -1,6 +1,6 @@
 # biomeOS Documentation Index
 
-**Updated**: February 10, 2026
+**Updated**: February 11, 2026
 
 ---
 
@@ -48,7 +48,13 @@ See [specs/README.md](specs/README.md) for full index. Key specs:
 
 ---
 
-## Handoffs & Evolution Reports (14 active)
+## Handoffs & Evolution Reports (15 active)
+
+### Relay-Assisted Coordinated Punch (Feb 11, 2026)
+
+| Document | Team | Priority |
+|----------|------|----------|
+| [RELAY_ASSISTED_COORDINATED_PUNCH_HANDOFF_FEB11_2026.md](docs/handoffs/RELAY_ASSISTED_COORDINATED_PUNCH_HANDOFF_FEB11_2026.md) | Songbird + BearDog | HIGH |
 
 ### Covalent Bond Investigation (Feb 10, 2026)
 
@@ -79,7 +85,7 @@ See [specs/README.md](specs/README.md) for full index. Key specs:
 | [SOVEREIGN_MULTI_PATH_PROTOCOL_FEB08_2026.md](docs/handoffs/SOVEREIGN_MULTI_PATH_PROTOCOL_FEB08_2026.md) | Sovereign multi-path protocol |
 | [TOR_INTEGRATION_HANDOFF_FEB07_2026.md](docs/handoffs/TOR_INTEGRATION_HANDOFF_FEB07_2026.md) | Tor gateway integration |
 
-14 handoffs archived to `ecoPrimals/archive/biomeos-feb09-2026/handoffs/`.
+14 earlier handoffs archived to `ecoPrimals/archive/biomeos-feb09-2026/handoffs/`.
 
 ---
 
@@ -130,10 +136,10 @@ See [specs/README.md](specs/README.md) for full index. Key specs:
 # Build
 cargo build --workspace
 
-# Test (2,297 tests)
+# Test (2,539 tests)
 cargo test --workspace
 
-# Coverage (56.75% region)
+# Coverage (~57% region)
 cargo llvm-cov --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -155,6 +161,6 @@ See `ARCHIVE_INDEX.md` in archive for details.
 
 ---
 
-**Documentation current as of February 10, 2026**
-**Active: 19 specs, 14 handoffs, 10 scripts**
-**Tests: 2,297 passing (56.75% region coverage) | Clippy: PASS | Docs: Full coverage**
+**Documentation current as of February 11, 2026**
+**Active: 19 specs, 15 handoffs, 10 scripts**
+**Tests: 2,539 passing (56.75% region coverage) | Clippy: PASS | Docs: Full coverage**

@@ -206,7 +206,7 @@ pub struct CollectiveCapabilities {
 Shows the collective state at a glance.
 
 ```
-  Plasmodium Status - Family: nat0
+  Plasmodium Status - Family: cf7e8729
   =================================
 
   Collective: 2 gates bonded (covalent)

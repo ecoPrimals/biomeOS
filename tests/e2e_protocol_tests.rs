@@ -75,7 +75,7 @@ protocol = "jsonrpc"
 
 [primals.env]
 SONGBIRD_NODE_ID = "test-tower"
-SECURITY_ENDPOINT = "jsonrpc+unix:///tmp/beardog-nat0-test.sock"
+SECURITY_ENDPOINT = "jsonrpc+unix:///tmp/beardog-test_family-test.sock"
 "#;
 
     let config_path = create_test_config(&temp_dir, toml);
@@ -87,7 +87,7 @@ SECURITY_ENDPOINT = "jsonrpc+unix:///tmp/beardog-nat0-test.sock"
     assert_eq!(config.primals[0].protocol, Some("jsonrpc".to_string()));
     assert_eq!(
         config.primals[0].env.get("SECURITY_ENDPOINT"),
-        Some(&"jsonrpc+unix:///tmp/beardog-nat0-test.sock".to_string())
+        Some(&"jsonrpc+unix:///tmp/beardog-test_family-test.sock".to_string())
     );
 }
 
@@ -143,7 +143,7 @@ protocol = "tarpc"
 
 [primals.env]
 SONGBIRD_NODE_ID = "tower1"
-SECURITY_ENDPOINT = "tarpc+unix:///tmp/beardog-nat0-tower1.sock"
+SECURITY_ENDPOINT = "tarpc+unix:///tmp/beardog-test_family-tower1.sock"
 
 # Edge primal: JSON-RPC (flexibility)
 [[primals]]
@@ -304,7 +304,7 @@ protocol = "tarpc"
 [primals.env]
 SONGBIRD_NODE_ID = "tower1"
 # URL scheme: tarpc+unix://
-SECURITY_ENDPOINT = "tarpc+unix:///tmp/beardog-nat0-tower1.sock"
+SECURITY_ENDPOINT = "tarpc+unix:///tmp/beardog-test_family-tower1.sock"
 
 [[primals]]
 binary = "./primals/toadstool"
@@ -314,7 +314,7 @@ protocol = "jsonrpc"
 [primals.env]
 TOADSTOOL_NODE_ID = "tower1"
 # URL scheme: jsonrpc+unix://
-WORKLOAD_ENDPOINT = "jsonrpc+unix:///tmp/toadstool-nat0-tower1.sock"
+WORKLOAD_ENDPOINT = "jsonrpc+unix:///tmp/toadstool-test_family-tower1.sock"
 "#;
 
     let config_path = create_test_config(&temp_dir, toml);
@@ -375,7 +375,7 @@ protocol = "tarpc"
 [primals.env]
 SONGBIRD_FAMILY_ID = "test_family"
 SONGBIRD_NODE_ID = "tower1"
-SECURITY_ENDPOINT = "tarpc+unix:///tmp/beardog-nat0-tower1.sock"
+SECURITY_ENDPOINT = "tarpc+unix:///tmp/beardog-test_family-tower1.sock"
 RUST_LOG = "info"
 
 [health]
@@ -413,7 +413,7 @@ recovery_attempts = 3
     assert_eq!(config.primals[1].protocol, Some("tarpc".to_string()));
     assert_eq!(
         config.primals[1].env.get("SECURITY_ENDPOINT"),
-        Some(&"tarpc+unix:///tmp/beardog-nat0-tower1.sock".to_string())
+        Some(&"tarpc+unix:///tmp/beardog-test_family-tower1.sock".to_string())
     );
 
     // Verify health config

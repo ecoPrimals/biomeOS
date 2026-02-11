@@ -1,5 +1,5 @@
 [package]
-name = "genome-deploy"
+name = "biomeos-genome-deploy"
 version = "0.1.0"
 edition = "2021"
 license = "AGPL-3.0-only"

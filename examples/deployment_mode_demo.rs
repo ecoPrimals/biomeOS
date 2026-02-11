@@ -31,24 +31,26 @@ fn main() {
 
             // Show socket configuration
             let socket_prefix = mode.socket_prefix();
+            let family_id = biomeos_core::family_discovery::get_family_id();
             println!("🔌 Socket Configuration:");
             println!("   Base Path: {}", socket_prefix.display());
+            println!("   Family ID: {} (from .family.seed)", family_id);
             println!("   Example Sockets:");
             println!(
-                "     - beardog:   {}/beardog-nat0.sock",
-                socket_prefix.display()
+                "     - beardog:   {}/beardog-{}.sock",
+                socket_prefix.display(), family_id
             );
             println!(
-                "     - songbird:  {}/songbird-nat0.sock",
-                socket_prefix.display()
+                "     - songbird:  {}/songbird-{}.sock",
+                socket_prefix.display(), family_id
             );
             println!(
-                "     - toadstool: {}/toadstool-nat0.sock",
-                socket_prefix.display()
+                "     - toadstool: {}/toadstool-{}.sock",
+                socket_prefix.display(), family_id
             );
             println!(
-                "     - nestgate:  {}/nestgate-nat0.sock\n",
-                socket_prefix.display()
+                "     - nestgate:  {}/nestgate-{}.sock\n",
+                socket_prefix.display(), family_id
             );
 
             // Show mode-specific information

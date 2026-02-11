@@ -104,7 +104,7 @@ impl DeploymentConfig {
                     host_os: biomeos_core::deployment_mode::HostOS::Linux {
                         distro: "Unknown".to_string(),
                     },
-                    install_dir: PathBuf::from("/tmp/biomeos"),
+                    install_dir: std::env::temp_dir().join("biomeos"),
                     isolation: biomeos_core::deployment_mode::IsolationLevel::Shared,
                 }
             }),

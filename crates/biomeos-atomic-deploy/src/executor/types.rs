@@ -231,4 +231,120 @@ mod tests {
         assert_eq!(summary.total, 5);
         assert_eq!(summary.duration_ms, 500);
     }
+
+    // --- New tests for comprehensive coverage ---
+
+    #[test]
+    fn test_phase_result_all_success() {
+        let mut result = PhaseResult::new(3);
+        result.add_completed();
+        result.add_completed();
+        result.add_completed();
+        assert!(result.is_success());
+        assert_eq!(result.completed, 3);
+        assert_eq!(result.failed, 0);
+        assert!(result.errors.is_empty());
+    }
+
+    #[test]
+    fn test_phase_result_multiple_failures() {
+        let mut result = PhaseResult::new(4);
+        result.add_completed();
+        result.add_failed("node2", "timeout");
+        result.add_failed("node3", "OOM");
+        result.add_completed();
+
+        assert!(!result.is_success());
+        assert_eq!(result.completed, 2);
+        assert_eq!(result.failed, 2);
+        assert_eq!(result.errors.len(), 2);
+        assert_eq!(result.errors[0], ("node2".to_string(), "timeout".to_string()));
+        assert_eq!(result.errors[1], ("node3".to_string(), "OOM".to_string()));
+    }
+
+    #[test]
+    fn test_execution_report_serialization_roundtrip() {
+        let mut report = ExecutionReport::new("my-graph")
+            .mark_success()
+            .with_duration(2500)
+            .with_phases(3)
+            .with_nodes(8);
+
+        let mut phase = PhaseResult::new(2);
+        phase.completed = 2;
+        phase.duration_ms = 100;
+        report.add_phase_result(&phase);
+
+        let json = serde_json::to_string(&report).unwrap();
+        let parsed: ExecutionReport = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(parsed.graph_id, "my-graph");
+        assert!(parsed.success);
+        assert_eq!(parsed.duration_ms, 2500);
+        assert_eq!(parsed.phase_results.len(), 1);
+        assert_eq!(parsed.total_phases(), 3); // Explicit override
+        assert_eq!(parsed.total_nodes(), 8); // Explicit override
+    }
+
+    #[test]
+    fn test_execution_report_total_phases_from_results() {
+        let mut report = ExecutionReport::new("test");
+
+        let phase1 = PhaseResult::new(3);
+        let phase2 = PhaseResult::new(2);
+        report.add_phase_result(&phase1);
+        report.add_phase_result(&phase2);
+
+        // No explicit phases_executed — should derive from phase_results
+        assert_eq!(report.total_phases(), 2);
+        assert_eq!(report.total_nodes(), 5); // 3 + 2
+    }
+
+    #[test]
+    fn test_execution_report_empty() {
+        let report = ExecutionReport::new("empty-graph");
+        assert!(report.success); // Default is success
+        assert_eq!(report.duration_ms, 0);
+        assert_eq!(report.total_phases(), 0);
+        assert_eq!(report.total_nodes(), 0);
+        assert!(report.error.is_none());
+    }
+
+    #[test]
+    fn test_execution_report_debug() {
+        let report = ExecutionReport::new("debug-test").mark_failed("kaboom");
+        let debug_str = format!("{:?}", report);
+        assert!(debug_str.contains("ExecutionReport"));
+        assert!(debug_str.contains("debug-test"));
+        assert!(debug_str.contains("kaboom"));
+    }
+
+    #[test]
+    fn test_phase_result_summary_serialization() {
+        let summary = PhaseResultSummary {
+            completed: 5,
+            failed: 1,
+            total: 6,
+            duration_ms: 750,
+        };
+        let json = serde_json::to_string(&summary).unwrap();
+        let parsed: PhaseResultSummary = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.completed, 5);
+        assert_eq!(parsed.failed, 1);
+        assert_eq!(parsed.total, 6);
+        assert_eq!(parsed.duration_ms, 750);
+    }
+
+    #[test]
+    fn test_phase_result_clone() {
+        let mut result = PhaseResult::new(2);
+        result.add_completed();
+        result.add_failed("node2", "error");
+        result.duration_ms = 100;
+
+        let cloned = result.clone();
+        assert_eq!(cloned.completed, result.completed);
+        assert_eq!(cloned.failed, result.failed);
+        assert_eq!(cloned.errors.len(), result.errors.len());
+    }
 }

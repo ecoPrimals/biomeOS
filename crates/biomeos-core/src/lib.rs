@@ -55,6 +55,9 @@ pub mod vm_federation;
 // Observability (sovereignty-respecting)
 pub mod observability;
 
+// Connection Strategy (multi-tier NAT traversal orchestration)
+pub mod connection_strategy;
+
 // STUN Extension (optional self-hosted STUN support)
 // biomeOS works without this - falls back to public STUN
 pub mod stun_extension;
@@ -127,6 +130,12 @@ pub use socket_discovery::{
 };
 pub use tower_config::PrimalConfig as TowerPrimalConfig;
 pub use tower_config::{DiscoveryConfig, HealthConfig, TowerConfig};
+
+// Connection strategy re-exports
+pub use connection_strategy::{
+    connect_to_peer, ConnectionResult, ConnectionTier, NatType, PeerConnectionInfo, PortPattern,
+    StunResults,
+};
 
 // Legacy re-exports for backwards compatibility
 pub use universal_biomeos_manager as manager;

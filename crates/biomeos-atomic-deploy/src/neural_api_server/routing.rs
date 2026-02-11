@@ -112,7 +112,7 @@ impl NeuralApiServer {
 
             // === Plasmodium Agent Operations ===
             "agent.create" | "agent.list" | "agent.get" | "agent.remove" | "agent.meld"
-            | "agent.split" | "agent.resolve" => {
+            | "agent.split" | "agent.resolve" | "agent.route" | "agent.auto_meld" => {
                 super::agents::handle_agent_request(
                     &self.agent_registry,
                     request.method.as_str(),
@@ -133,11 +133,14 @@ impl NeuralApiServer {
             | "mesh.health_check"
             | "punch.request"
             | "punch.status"
+            | "punch.coordinate"
             | "stun.discover"
             | "stun.detect_nat_type"
+            | "stun.probe_port_pattern"
             | "relay.serve"
             | "relay.status"
             | "relay.allocate"
+            | "relay.authorize"
             | "onion.create_service"
             | "onion.get_address"
             | "onion.connect"

@@ -411,7 +411,7 @@ depends_on = ["establish_data_federation"]
 // Future API: Encrypted compute workload submission
 
 // 1. Discover compute node via NUCLEUS
-let nodes = nucleus.discover_secure("nat0", PrimalType::Compute).await?;
+let nodes = nucleus.discover_secure(&family_id, PrimalType::Compute).await?;
 let compute_node = nodes.first().ok_or("No compute nodes")?;
 
 // 2. Request encrypted compute environment from BearDog
@@ -461,7 +461,7 @@ let result = toadstool.submit_workload_encrypted(
 // Future API: Secure data federation
 
 // 1. Discover data nests via NUCLEUS
-let nests = nucleus.discover_secure("nat0", PrimalType::Data).await?;
+let nests = nucleus.discover_secure(&family_id, PrimalType::Data).await?;
 
 // 2. Query capacity and capabilities
 let available_nest = nests.iter()
@@ -473,7 +473,7 @@ let stored = nestgate.store_with_provenance(
     data,
     Provenance {
         creator: beardog.get_identity().await?,
-        family: "nat0",
+        family: &family_id,
         purpose: "genomic-sequencing-results",
         access_policy: AccessPolicy::FamilyRead,
     }
@@ -535,7 +535,7 @@ let replication_status = nestgate.replicate_to_family(
 │ Step 3: BearDog verifies all primals (genetic lineage)         │
 └─────────────────────────────────────────────────────────────────┘
            ↓
-    All primals verified as siblings (family: nat0)
+    All primals verified as siblings (family: <seed-derived>)
     ✅ Trust level: HIGH
            ↓
 ┌─────────────────────────────────────────────────────────────────┐

@@ -66,7 +66,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create Dark Forest beacon manager
     println!("🌲 Creating Dark Forest beacon manager...");
-    let beacon_mgr = DarkForestBeacon::new(beardog_socket, family_seed_path, node_id).await?;
+    let beacon_mgr = DarkForestBeacon::from_beardog_socket(beardog_socket, family_seed_path, node_id).await?;
     println!("✅ Manager created");
     println!();
 

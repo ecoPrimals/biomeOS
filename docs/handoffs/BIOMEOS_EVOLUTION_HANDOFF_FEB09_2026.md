@@ -268,7 +268,7 @@ Each operates independently until mesh reconnects and they re-meld.
 |--------|-------|
 | TODO markers | 1 (intentional design note in metrics.rs) |
 | FIXME/HACK/WORKAROUND | 0 |
-| Unsafe code | 1 (`Mmap::map` in genome-deploy -- properly documented, OS-level) |
+| Unsafe code | 1 (`Mmap::map` in biomeos-genome-deploy -- properly documented, OS-level) |
 | Clippy warnings | 0 (entire workspace, including biomeos-boot) |
 | Production unwrap() | 0 (all in test code) |
 | Shell-outs from Rust | 3 production (`sudo ip link/addr/set` in deploy/network.rs for bridge mgmt -- requires root, documented netlink evolution path) |

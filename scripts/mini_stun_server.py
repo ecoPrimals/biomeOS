@@ -18,7 +18,7 @@ Usage:
 Test with Songbird:
     echo '{"jsonrpc":"2.0","method":"stun.get_public_address",
       "params":{"server":"127.0.0.1:3478"},"id":1}' | 
-      nc -U /run/user/1000/biomeos/songbird-nat0.sock
+      nc -U /run/user/1000/biomeos/songbird-$FAMILY_ID.sock
 
 License: AGPL-3.0-only (biomeOS)
 """

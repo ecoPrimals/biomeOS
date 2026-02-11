@@ -72,7 +72,7 @@ impl NeuralApiCapabilityCaller {
         } else if let Ok(uid) = std::env::var("UID") {
             format!("/run/user/{}/biomeos/neural-api.sock", uid)
         } else {
-            "/tmp/biomeos/neural-api.sock".to_string()
+            std::env::temp_dir().join("biomeos/neural-api.sock").to_string_lossy().to_string()
         }
     }
 }
@@ -142,7 +142,7 @@ impl DirectBeardogCaller {
         } else if let Ok(uid) = std::env::var("UID") {
             format!("/run/user/{}/biomeos/beardog.sock", uid)
         } else {
-            "/tmp/biomeos/beardog.sock".to_string()
+            std::env::temp_dir().join("biomeos/beardog.sock").to_string_lossy().to_string()
         }
     }
 

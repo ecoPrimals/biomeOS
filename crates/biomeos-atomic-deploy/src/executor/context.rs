@@ -239,4 +239,182 @@ mod tests {
         let status = ctx.get_status("node1").await;
         assert_eq!(status, Some(NodeStatus::Running));
     }
+
+    // --- New tests for comprehensive coverage ---
+
+    #[tokio::test]
+    async fn test_get_output_missing_key() {
+        let ctx = ExecutionContext::new(HashMap::new());
+        let output = ctx.get_output("nonexistent").await;
+        assert!(output.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_get_status_missing_key() {
+        let ctx = ExecutionContext::new(HashMap::new());
+        let status = ctx.get_status("nonexistent").await;
+        assert!(status.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_all_statuses() {
+        let ctx = ExecutionContext::new(HashMap::new());
+        ctx.set_status("node1", NodeStatus::Completed(serde_json::json!({"ok": true})))
+            .await;
+        ctx.set_status("node2", NodeStatus::Running).await;
+        ctx.set_status("node3", NodeStatus::Failed("oops".to_string()))
+            .await;
+        ctx.set_status("node4", NodeStatus::Pending).await;
+        ctx.set_status("node5", NodeStatus::Skipped).await;
+
+        let all = ctx.all_statuses().await;
+        assert_eq!(all.len(), 5);
+        assert_eq!(all.get("node1"), Some(&NodeStatus::Completed(serde_json::json!({"ok": true}))));
+        assert_eq!(all.get("node2"), Some(&NodeStatus::Running));
+        assert_eq!(all.get("node3"), Some(&NodeStatus::Failed("oops".to_string())));
+        assert_eq!(all.get("node4"), Some(&NodeStatus::Pending));
+        assert_eq!(all.get("node5"), Some(&NodeStatus::Skipped));
+    }
+
+    #[tokio::test]
+    async fn test_status_overwrite() {
+        let ctx = ExecutionContext::new(HashMap::new());
+        ctx.set_status("node1", NodeStatus::Pending).await;
+        assert_eq!(ctx.get_status("node1").await, Some(NodeStatus::Pending));
+
+        ctx.set_status("node1", NodeStatus::Running).await;
+        assert_eq!(ctx.get_status("node1").await, Some(NodeStatus::Running));
+
+        ctx.set_status("node1", NodeStatus::Completed(serde_json::json!("done")))
+            .await;
+        assert_eq!(
+            ctx.get_status("node1").await,
+            Some(NodeStatus::Completed(serde_json::json!("done")))
+        );
+    }
+
+    #[tokio::test]
+    async fn test_output_overwrite() {
+        let ctx = ExecutionContext::new(HashMap::new());
+        ctx.set_output("node1", serde_json::json!(1)).await;
+        assert_eq!(ctx.get_output("node1").await, Some(serde_json::json!(1)));
+
+        ctx.set_output("node1", serde_json::json!(2)).await;
+        assert_eq!(ctx.get_output("node1").await, Some(serde_json::json!(2)));
+    }
+
+    #[tokio::test]
+    async fn test_checkpoint_save_and_load() {
+        let temp_dir = tempfile::tempdir().unwrap();
+
+        let ctx = ExecutionContext::new(HashMap::new())
+            .with_checkpoint_dir(temp_dir.path().to_path_buf());
+
+        ctx.set_status("beardog", NodeStatus::Completed(serde_json::json!({"pid": 123})))
+            .await;
+        ctx.set_status("songbird", NodeStatus::Running).await;
+
+        // Save checkpoint
+        ctx.save_checkpoint().await.unwrap();
+
+        // Verify checkpoint file exists
+        let checkpoint_path = temp_dir.path().join("execution_state.json");
+        assert!(checkpoint_path.exists());
+
+        // Create a fresh context and load
+        let ctx2 = ExecutionContext::new(HashMap::new())
+            .with_checkpoint_dir(temp_dir.path().to_path_buf());
+
+        ctx2.load_checkpoint().await.unwrap();
+
+        let loaded = ctx2.all_statuses().await;
+        assert_eq!(loaded.len(), 2);
+        assert_eq!(
+            loaded.get("beardog"),
+            Some(&NodeStatus::Completed(serde_json::json!({"pid": 123})))
+        );
+        assert_eq!(loaded.get("songbird"), Some(&NodeStatus::Running));
+    }
+
+    #[tokio::test]
+    async fn test_checkpoint_load_missing_file() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let ctx = ExecutionContext::new(HashMap::new())
+            .with_checkpoint_dir(temp_dir.path().to_path_buf());
+
+        // Load checkpoint from empty dir — should succeed without error
+        ctx.load_checkpoint().await.unwrap();
+        let statuses = ctx.all_statuses().await;
+        assert!(statuses.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_save_checkpoint_no_dir_configured() {
+        let ctx = ExecutionContext::new(HashMap::new());
+        // No checkpoint dir set — save should be a no-op success
+        ctx.save_checkpoint().await.unwrap();
+    }
+
+    #[test]
+    fn test_context_debug_format() {
+        let mut env = HashMap::new();
+        env.insert("FAMILY_ID".to_string(), "test_fam".to_string());
+        let ctx = ExecutionContext::new(env);
+        let debug_str = format!("{:?}", ctx);
+        assert!(debug_str.contains("ExecutionContext"));
+        assert!(debug_str.contains("FAMILY_ID"));
+        assert!(debug_str.contains("test_fam"));
+    }
+
+    #[test]
+    fn test_family_id_from_biomeos_family_id_env() {
+        let mut env = HashMap::new();
+        env.insert("BIOMEOS_FAMILY_ID".to_string(), "biomeos_fam".to_string());
+        let ctx = ExecutionContext::new(env);
+        assert_eq!(ctx.family_id, "biomeos_fam");
+    }
+
+    #[test]
+    fn test_family_id_prefers_family_id_over_biomeos() {
+        let mut env = HashMap::new();
+        env.insert("FAMILY_ID".to_string(), "primary".to_string());
+        env.insert("BIOMEOS_FAMILY_ID".to_string(), "secondary".to_string());
+        let ctx = ExecutionContext::new(env);
+        assert_eq!(ctx.family_id, "primary");
+    }
+
+    #[test]
+    fn test_env_accessor() {
+        let mut env = HashMap::new();
+        env.insert("KEY".to_string(), "VALUE".to_string());
+        let ctx = ExecutionContext::new(env);
+        assert_eq!(ctx.env().get("KEY"), Some(&"VALUE".to_string()));
+    }
+
+    #[test]
+    fn test_node_status_serialization_roundtrip() {
+        let statuses = vec![
+            NodeStatus::Pending,
+            NodeStatus::Running,
+            NodeStatus::Completed(serde_json::json!({"result": "ok"})),
+            NodeStatus::Failed("timeout".to_string()),
+            NodeStatus::Skipped,
+        ];
+        for status in statuses {
+            let json = serde_json::to_string(&status).unwrap();
+            let parsed: NodeStatus = serde_json::from_str(&json).unwrap();
+            assert_eq!(parsed, status);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_context_clone_shares_state() {
+        let ctx = ExecutionContext::new(HashMap::new());
+        let ctx2 = ctx.clone();
+
+        ctx.set_output("node1", serde_json::json!("hello")).await;
+        // Cloned context should see the same output (shared Arc)
+        let output = ctx2.get_output("node1").await;
+        assert_eq!(output, Some(serde_json::json!("hello")));
+    }
 }

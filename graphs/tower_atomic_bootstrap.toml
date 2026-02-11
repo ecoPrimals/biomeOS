@@ -212,9 +212,9 @@ family_id = "${FAMILY_ID}"
 
 # Environment variables for Songbird
 [nodes.operation.environment]
-NEURAL_API_SOCKET = "/tmp/neural-api.sock"  # For capability translation routing (must match Neural API socket)
-BEARDOG_SOCKET = "/run/user/1000/biomeos/beardog.sock"  # Security provider (modern XDG path)
-CRYPTO_PROVIDER_SOCKET = "/run/user/1000/biomeos/beardog.sock"  # For Sovereign Onion crypto delegation
+NEURAL_API_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/neural-api-${FAMILY_ID}.sock"  # biomeOS capability routing socket
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"  # Security provider (XDG path)
+CRYPTO_PROVIDER_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"  # For Sovereign Onion crypto delegation
 SONGBIRD_SECURITY_PROVIDER = "beardog"  # Use discovery, not hardcoded path
 SONGBIRD_ONION_ENABLED = "true"  # Enable Sovereign Onion Service
 SONGBIRD_MESH_ENABLED = "true"   # Enable distributed mesh relay
@@ -343,7 +343,7 @@ target = "songbird"  # Target the Songbird primal
 # Call onion.start to create .onion identity
 [nodes.operation.params]
 method = "onion.start"
-params = { port = 3492 }
+params = { port = 8080 }
 
 [nodes.constraints]
 timeout_ms = 30000  # 30s for identity generation

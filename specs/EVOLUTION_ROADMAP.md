@@ -111,7 +111,7 @@ Detailed handoffs in `docs/handoffs/`:
 |--------|-------|
 | TODO markers in source | 1 (intentional design note) |
 | FIXME/HACK/WORKAROUND | 0 |
-| Unsafe code | 1 (`Mmap::map` in genome-deploy -- documented, OS-level) |
+| Unsafe code | 1 (`Mmap::map` in biomeos-genome-deploy -- documented, OS-level) |
 | Clippy warnings | 0 (entire workspace, including biomeos-boot) |
 | Production unwrap() | 0 (all in test code) |
 | Shell-outs from Rust | 3 (`sudo ip link/addr/set` in deploy/network.rs -- requires root) |
@@ -252,13 +252,14 @@ that maps capability requests to the best available primal across the mesh.
 ```
 Agent = {
   name: "hpc_coordinator",
-  family_id: "nat0",
+  family_id: "cf7e8729",           // Derived from .family.seed (not a plaintext tag)
+  beacon_tags: ["gaming", "research"],  // Beacon tags (behavioral realms)
   routing_table: {
-    "crypto.*":   -> tower:beardog-nat0.sock      (local)
-    "http.*":     -> tower:songbird-nat0.sock     (local)
-    "storage.*":  -> gate2:nestgate-nat0.sock     (remote via mesh)
-    "compute.*":  -> gate2:toadstool-nat0.sock    (remote via mesh)
-    "ai.*":       -> tower:squirrel-nat0.sock     (local)
+    "crypto.*":   -> tower:beardog-cf7e8729.sock      (local)
+    "http.*":     -> tower:songbird-cf7e8729.sock     (local)
+    "storage.*":  -> gate2:nestgate-cf7e8729.sock     (remote via mesh)
+    "compute.*":  -> gate2:toadstool-cf7e8729.sock    (remote via mesh)
+    "ai.*":       -> tower:squirrel-cf7e8729.sock     (local)
   }
 }
 ```

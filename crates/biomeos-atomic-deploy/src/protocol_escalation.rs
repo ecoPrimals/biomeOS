@@ -951,4 +951,347 @@ mod tests {
         assert_eq!(default_escalation_cooldown(), 60);
         assert!(default_auto_escalate());
     }
+
+    // --- New tests for comprehensive coverage ---
+
+    #[test]
+    fn test_config_deserialization_empty_json_uses_defaults() {
+        // Empty JSON should use all serde defaults
+        let config: EscalationConfig = serde_json::from_str("{}").expect("parse empty json");
+        assert_eq!(config.min_requests, 100);
+        assert_eq!(config.latency_threshold_us, 500);
+        assert_eq!(config.stable_health_duration_secs, 30);
+        assert_eq!(config.tarpc_failure_threshold, 3);
+        assert_eq!(config.check_interval_secs, 10);
+        assert_eq!(config.escalation_cooldown_secs, 60);
+        assert!(config.auto_escalate);
+    }
+
+    #[test]
+    fn test_config_deserialization_partial_json() {
+        // Only override some fields, rest use defaults
+        let json = r#"{"min_requests": 500, "auto_escalate": false}"#;
+        let config: EscalationConfig = serde_json::from_str(json).expect("parse partial json");
+        assert_eq!(config.min_requests, 500);
+        assert!(!config.auto_escalate);
+        // Defaults for the rest
+        assert_eq!(config.latency_threshold_us, 500);
+        assert_eq!(config.stable_health_duration_secs, 30);
+        assert_eq!(config.tarpc_failure_threshold, 3);
+        assert_eq!(config.check_interval_secs, 10);
+        assert_eq!(config.escalation_cooldown_secs, 60);
+    }
+
+    #[test]
+    fn test_config_clone() {
+        let config = EscalationConfig {
+            min_requests: 42,
+            latency_threshold_us: 999,
+            ..Default::default()
+        };
+        let cloned = config.clone();
+        assert_eq!(cloned.min_requests, 42);
+        assert_eq!(cloned.latency_threshold_us, 999);
+        assert_eq!(cloned.check_interval_secs, config.check_interval_secs);
+    }
+
+    #[test]
+    fn test_config_debug() {
+        let config = EscalationConfig::default();
+        let debug_str = format!("{:?}", config);
+        assert!(debug_str.contains("min_requests"));
+        assert!(debug_str.contains("auto_escalate"));
+    }
+
+    #[test]
+    fn test_escalation_result_degraded_mode() {
+        let result = EscalationResult {
+            from: "songbird".to_string(),
+            to: "beardog".to_string(),
+            previous_mode: ProtocolMode::Tarpc,
+            current_mode: ProtocolMode::Degraded,
+            tarpc_socket: None,
+            success: true,
+            message: "Fell back due to tarpc failure".to_string(),
+        };
+        assert!(result.success);
+        assert_eq!(result.current_mode, ProtocolMode::Degraded);
+        assert_eq!(result.previous_mode, ProtocolMode::Tarpc);
+    }
+
+    #[test]
+    fn test_escalation_result_clone_and_debug() {
+        let result = EscalationResult {
+            from: "a".to_string(),
+            to: "b".to_string(),
+            previous_mode: ProtocolMode::JsonRpc,
+            current_mode: ProtocolMode::Tarpc,
+            tarpc_socket: Some(PathBuf::from("/tmp/test.sock")),
+            success: true,
+            message: "ok".to_string(),
+        };
+        let cloned = result.clone();
+        assert_eq!(cloned.from, result.from);
+        assert_eq!(cloned.tarpc_socket, result.tarpc_socket);
+
+        let debug_str = format!("{:?}", result);
+        assert!(debug_str.contains("EscalationResult"));
+    }
+
+    #[test]
+    fn test_tarpc_endpoint_with_many_services() {
+        let endpoint = TarpcEndpoint {
+            available: true,
+            socket: Some(PathBuf::from("/run/user/1000/biomeos/beardog.sock")),
+            services: vec![
+                "health".to_string(),
+                "deploy".to_string(),
+                "crypto.encrypt".to_string(),
+                "crypto.decrypt".to_string(),
+                "birdsong.verify".to_string(),
+            ],
+        };
+        assert_eq!(endpoint.services.len(), 5);
+        assert!(endpoint.services.contains(&"crypto.encrypt".to_string()));
+
+        // Roundtrip serialization
+        let json = serde_json::to_string(&endpoint).unwrap();
+        let parsed: TarpcEndpoint = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.services.len(), 5);
+        assert_eq!(parsed.socket, endpoint.socket);
+    }
+
+    #[test]
+    fn test_tarpc_endpoint_debug_and_clone() {
+        let endpoint = TarpcEndpoint {
+            available: false,
+            socket: None,
+            services: vec![],
+        };
+        let cloned = endpoint.clone();
+        assert_eq!(cloned.available, endpoint.available);
+        let debug_str = format!("{:?}", endpoint);
+        assert!(debug_str.contains("TarpcEndpoint"));
+    }
+
+    #[tokio::test]
+    async fn test_multiple_cooldowns_different_connections() {
+        let graph = Arc::new(LivingGraph::new("test-family"));
+        graph.register_connection("a", "b").await;
+        graph.register_connection("c", "d").await;
+
+        let config = EscalationConfig {
+            escalation_cooldown_secs: 60,
+            ..Default::default()
+        };
+        let manager = ProtocolEscalationManager::new(graph.clone(), config);
+
+        let conn_ab = graph.get_connection("a", "b").await.unwrap();
+        let conn_cd = graph.get_connection("c", "d").await.unwrap();
+
+        // Neither in cooldown initially
+        assert!(!manager.is_in_cooldown(&conn_ab).await);
+        assert!(!manager.is_in_cooldown(&conn_cd).await);
+
+        // Record cooldown for a→b only
+        manager.record_cooldown(&conn_ab.id.to_string()).await;
+        assert!(manager.is_in_cooldown(&conn_ab).await);
+        assert!(!manager.is_in_cooldown(&conn_cd).await);
+
+        // Record cooldown for c→d too
+        manager.record_cooldown(&conn_cd.id.to_string()).await;
+        assert!(manager.is_in_cooldown(&conn_ab).await);
+        assert!(manager.is_in_cooldown(&conn_cd).await);
+    }
+
+    #[tokio::test]
+    async fn test_cooldown_zero_duration() {
+        let graph = Arc::new(LivingGraph::new("test-family"));
+        graph.register_connection("a", "b").await;
+
+        let config = EscalationConfig {
+            escalation_cooldown_secs: 0,
+            ..Default::default()
+        };
+        let manager = ProtocolEscalationManager::new(graph.clone(), config);
+
+        let conn = graph.get_connection("a", "b").await.unwrap();
+        manager.record_cooldown(&conn.id.to_string()).await;
+
+        // With 0-second cooldown, should NOT be in cooldown (elapsed >= 0 is always true,
+        // but the check is `elapsed < cooldown` which is `elapsed < 0` — always false)
+        assert!(!manager.is_in_cooldown(&conn).await);
+    }
+
+    #[tokio::test]
+    async fn test_status_connection_details() {
+        let graph = Arc::new(LivingGraph::new("test-family"));
+        graph.register_connection("songbird", "beardog").await;
+
+        let manager = ProtocolEscalationManager::with_defaults(graph);
+        let status = manager.get_status().await;
+
+        let connections = status["connections"].as_array().expect("array");
+        assert_eq!(connections.len(), 1);
+
+        let conn = &connections[0];
+        assert_eq!(conn["from"], "songbird");
+        assert_eq!(conn["to"], "beardog");
+        assert_eq!(conn["protocol"], "JsonRpc");
+        assert_eq!(conn["requests"], 0);
+        assert_eq!(conn["escalation_attempts"], 0);
+        assert_eq!(conn["fallback_count"], 0);
+    }
+
+    #[tokio::test]
+    async fn test_connection_metrics_detailed_fields() {
+        let graph = Arc::new(LivingGraph::new("test-family"));
+        graph.register_connection("songbird", "beardog").await;
+        // Record some requests to populate metrics
+        graph.record_request("songbird", "beardog", 100, true).await;
+        graph.record_request("songbird", "beardog", 200, true).await;
+        graph.record_request("songbird", "beardog", 300, false).await;
+
+        let manager = ProtocolEscalationManager::with_defaults(graph);
+        let metrics = manager
+            .get_connection_metrics("songbird", "beardog")
+            .await
+            .expect("metrics should exist");
+
+        assert_eq!(metrics["metrics"]["request_count"], 3);
+        assert_eq!(metrics["metrics"]["error_count"], 1);
+        assert!(metrics["metrics"]["avg_latency_us"].as_f64().unwrap() > 0.0);
+        assert!(metrics["metrics"]["max_latency_us"].as_u64().unwrap() >= 300);
+        assert_eq!(metrics["history"]["escalation_attempts"], 0);
+        assert_eq!(metrics["history"]["fallback_count"], 0);
+    }
+
+    #[tokio::test]
+    async fn test_auto_escalate_check_with_low_traffic_connections() {
+        let graph = Arc::new(LivingGraph::new("test-family"));
+        graph.register_connection("songbird", "beardog").await;
+        // Record only a few requests — well below threshold
+        graph
+            .record_request("songbird", "beardog", 1000, true)
+            .await;
+
+        let manager = ProtocolEscalationManager::with_defaults(graph);
+        // Should succeed — connections exist but don't meet escalation criteria
+        let result = manager.auto_escalate_check().await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_graph_accessor() {
+        let graph = Arc::new(LivingGraph::new("my-family"));
+        let manager = ProtocolEscalationManager::with_defaults(graph);
+        assert_eq!(manager.graph().family_id(), "my-family");
+    }
+
+    #[tokio::test]
+    async fn test_config_accessor() {
+        let config = EscalationConfig {
+            min_requests: 77,
+            latency_threshold_us: 333,
+            auto_escalate: false,
+            ..Default::default()
+        };
+        let graph = Arc::new(LivingGraph::new("test"));
+        let manager = ProtocolEscalationManager::new(graph, config);
+        assert_eq!(manager.config().min_requests, 77);
+        assert_eq!(manager.config().latency_threshold_us, 333);
+        assert!(!manager.config().auto_escalate);
+    }
+
+    #[tokio::test]
+    async fn test_stop_then_check_running_flag() {
+        let graph = Arc::new(LivingGraph::new("test-family"));
+        let manager = ProtocolEscalationManager::with_defaults(graph);
+
+        // Initially not running
+        assert!(!*manager.running.read().await);
+
+        // Stop sets it to false (idempotent)
+        manager.stop_monitoring().await;
+        assert!(!*manager.running.read().await);
+    }
+
+    #[test]
+    fn test_escalation_result_roundtrip_all_modes() {
+        for mode in [
+            ProtocolMode::JsonRpc,
+            ProtocolMode::Tarpc,
+            ProtocolMode::Hybrid,
+            ProtocolMode::Degraded,
+        ] {
+            let result = EscalationResult {
+                from: "a".to_string(),
+                to: "b".to_string(),
+                previous_mode: ProtocolMode::JsonRpc,
+                current_mode: mode,
+                tarpc_socket: None,
+                success: true,
+                message: format!("mode: {:?}", mode),
+            };
+            let json = serde_json::to_string(&result).unwrap();
+            let parsed: EscalationResult = serde_json::from_str(&json).unwrap();
+            assert_eq!(parsed.current_mode, mode);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_status_after_protocol_update() {
+        let graph = Arc::new(LivingGraph::new("test-family"));
+        graph.register_connection("a", "b").await;
+        graph
+            .update_connection_protocol("a", "b", ProtocolMode::Tarpc)
+            .await;
+
+        let manager = ProtocolEscalationManager::with_defaults(graph);
+        let status = manager.get_status().await;
+
+        assert_eq!(status["summary"]["tarpc"], 1);
+        assert_eq!(status["summary"]["json_rpc"], 0);
+        assert_eq!(status["summary"]["total"], 1);
+    }
+
+    #[tokio::test]
+    async fn test_fallback_existing_connection() {
+        let graph = Arc::new(LivingGraph::new("test-family"));
+        graph.register_connection("songbird", "beardog").await;
+        // First escalate to tarpc
+        graph
+            .update_connection_protocol("songbird", "beardog", ProtocolMode::Tarpc)
+            .await;
+
+        let manager = ProtocolEscalationManager::with_defaults(graph);
+        let result = manager
+            .fallback_connection("songbird", "beardog", "tarpc failure")
+            .await;
+
+        assert!(result.is_ok());
+        let r = result.unwrap();
+        assert!(r.success);
+        assert_eq!(r.current_mode, ProtocolMode::Degraded);
+        assert!(r.message.contains("tarpc failure"));
+    }
+
+    #[tokio::test]
+    async fn test_escalate_existing_connection_no_primal_state() {
+        // Connection exists but no primal state registered — escalation
+        // will fail because query_tarpc_endpoint can't find the primal
+        let graph = Arc::new(LivingGraph::new("test-family"));
+        graph.register_connection("songbird", "beardog").await;
+
+        let manager = ProtocolEscalationManager::with_defaults(graph);
+        let result = manager
+            .escalate_connection("songbird", "beardog")
+            .await;
+
+        // Should return Ok with success=false (primal not found for tarpc query)
+        assert!(result.is_ok());
+        let r = result.unwrap();
+        assert!(!r.success);
+        assert!(r.message.contains("Failed to query tarpc endpoint"));
+    }
 }

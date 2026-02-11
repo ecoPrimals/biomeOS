@@ -45,13 +45,13 @@ cd /home/eastgate/Development/ecoPrimals/phase2/biomeOS
 
 # Create genetic family seed for basement HPC
 cargo run --bin spore-tools -- create-family \
-  --family-id nat0 \
+  --family-id ${FAMILY_ID} \
   --description "Basement HPC - LAN + Internet + Mobile" \
   --output .family.seed
 
 # Backup seed (CRITICAL!)
-cp .family.seed ~/.secrets/basement-hpc-nat0.seed
-chmod 400 ~/.secrets/basement-hpc-nat0.seed
+cp .family.seed ~/.secrets/basement-hpc-${FAMILY_ID}.seed
+chmod 400 ~/.secrets/basement-hpc-${FAMILY_ID}.seed
 ```
 
 ### **Phase 2: Build LiveSpores (5 USBs)**
@@ -72,7 +72,7 @@ done
 # Verify all spores are genetic siblings
 cargo run --bin spore-tools -- verify-lineage \
   --spores /media/liveSpore{1..5} \
-  --family-id nat0
+  --family-id ${FAMILY_ID}
 ```
 
 ### **Phase 3: Deploy LAN Towers (6 nodes)**
@@ -82,32 +82,32 @@ Deploy towers on each LAN machine:
 ```bash
 # On Northgate
 export NODE_ID=tower-northgate
-export FAMILY_ID=nat0
+export FAMILY_ID=${FAMILY_ID}
 biomeos deploy --niche tower --config deployments/basement-hpc/northgate.toml --usb /media/liveSpore1
 
 # On Southgate
 export NODE_ID=tower-southgate
-export FAMILY_ID=nat0
+export FAMILY_ID=${FAMILY_ID}
 biomeos deploy --niche tower --config deployments/basement-hpc/southgate.toml --usb /media/liveSpore1
 
 # On Eastgate
 export NODE_ID=tower-eastgate
-export FAMILY_ID=nat0
+export FAMILY_ID=${FAMILY_ID}
 biomeos deploy --niche tower --config deployments/basement-hpc/eastgate.toml --usb /media/liveSpore1
 
 # On Westgate
 export NODE_ID=tower-westgate
-export FAMILY_ID=nat0
+export FAMILY_ID=${FAMILY_ID}
 biomeos deploy --niche tower --config deployments/basement-hpc/westgate.toml --usb /media/liveSpore1
 
 # On Strandgate
 export NODE_ID=tower-strandgate
-export FAMILY_ID=nat0
+export FAMILY_ID=${FAMILY_ID}
 biomeos deploy --niche tower --config deployments/basement-hpc/strandgate.toml --usb /media/liveSpore1
 
 # On BlueGate
 export NODE_ID=tower-bluegate
-export FAMILY_ID=nat0
+export FAMILY_ID=${FAMILY_ID}
 biomeos deploy --niche tower --config deployments/basement-hpc/bluegate.toml --usb /media/liveSpore1
 ```
 
@@ -116,7 +116,7 @@ biomeos deploy --niche tower --config deployments/basement-hpc/bluegate.toml --u
 ```bash
 # From any LAN tower (e.g., Northgate)
 curl --unix-socket /tmp/songbird-tower-northgate.sock \
-  -d '{"jsonrpc":"2.0","method":"discover_by_family","params":{"family_tags":["nat0"],"timeout_ms":5000},"id":1}' \
+  -d '{"jsonrpc":"2.0","method":"discover_by_family","params":{"family_tags":["${FAMILY_ID}"],"timeout_ms":5000},"id":1}' \
   | jq '.result.nodes'
 
 # Expected: 6 towers discovered
@@ -153,13 +153,13 @@ Repeat for all LAN nodes using their respective config files.
 ```bash
 # On FlockGate (brother's house)
 export NODE_ID=tower-flockgate
-export FAMILY_ID=nat0
+export FAMILY_ID=${FAMILY_ID}
 export INTERNET_ENABLED=true
 biomeos deploy --niche tower --config deployments/basement-hpc/flockgate.toml --usb /media/liveSpore2
 
 # On KinGate (family)
 export NODE_ID=tower-kingate
-export FAMILY_ID=nat0
+export FAMILY_ID=${FAMILY_ID}
 export INTERNET_ENABLED=true
 biomeos deploy --niche tower --config deployments/basement-hpc/kingate.toml --usb /media/liveSpore3
 ```
@@ -169,7 +169,7 @@ biomeos deploy --niche tower --config deployments/basement-hpc/kingate.toml --us
 ```bash
 # From any LAN tower
 curl --unix-socket /tmp/songbird-tower-northgate.sock \
-  -d '{"jsonrpc":"2.0","method":"discover_by_family","params":{"family_tags":["nat0"],"timeout_ms":10000},"id":1}' \
+  -d '{"jsonrpc":"2.0","method":"discover_by_family","params":{"family_tags":["${FAMILY_ID}"],"timeout_ms":10000},"id":1}' \
   | jq '.result.nodes | map(.node_id)'
 
 # Expected: 8 towers (6 LAN + 2 Internet)
@@ -180,14 +180,14 @@ curl --unix-socket /tmp/songbird-tower-northgate.sock \
 ```bash
 # Swiftgate (portable laptop)
 export NODE_ID=tower-swiftgate
-export FAMILY_ID=nat0
+export FAMILY_ID=${FAMILY_ID}
 export MOBILE_MODE=true
 biomeos deploy --niche tower --config deployments/basement-hpc/swiftgate.toml --usb /media/liveSpore4
 
 # Pixel 8a (Android phone)
 # Use Termux or Android app
 export NODE_ID=tower-pixel8a
-export FAMILY_ID=nat0
+export FAMILY_ID=${FAMILY_ID}
 export MOBILE_MODE=true
 export BEARDOG_HSM_MODE=hardware
 biomeos deploy --niche tower-lite --config deployments/basement-hpc/pixel8a.toml --usb /media/liveSpore5
@@ -201,7 +201,7 @@ biomeos deploy --niche tower-lite --config deployments/basement-hpc/pixel8a.toml
 ```bash
 # Count federated towers
 curl --unix-socket /tmp/songbird-tower-northgate.sock \
-  -d '{"jsonrpc":"2.0","method":"discover_by_family","params":{"family_tags":["nat0"]},"id":1}' \
+  -d '{"jsonrpc":"2.0","method":"discover_by_family","params":{"family_tags":["${FAMILY_ID}"]},"id":1}' \
   | jq '.result.nodes | length'
 
 # Expected: 10 (6 LAN + 2 Internet + 2 Mobile)
@@ -228,7 +228,7 @@ curl --unix-socket /tmp/compute-node-northgate-rtx5090.sock \
 ```bash
 # Verify all nodes share genetic lineage
 cargo run --bin spore-tools -- verify-deployed \
-  --family-id nat0 \
+  --family-id ${FAMILY_ID} \
   --towers tower-{northgate,southgate,eastgate,westgate,strandgate,bluegate,flockgate,kingate,swiftgate,pixel8a}
 ```
 
@@ -275,7 +275,7 @@ Import dashboards:
 
 ### **Genetic Family Seed**
 - **CRITICAL**: Backup `.family.seed` securely
-- **Storage**: `~/.secrets/basement-hpc-nat0.seed` (chmod 400)
+- **Storage**: `~/.secrets/basement-hpc-${FAMILY_ID}.seed` (chmod 400)
 - **Recovery**: Store on SoloKeys (FIDO2/HSM)
 
 ### **Sub-Federations**
@@ -284,13 +284,13 @@ Create granular trust domains:
 ```bash
 # Gaming sub-federation
 cargo run --bin subfed-tools -- create \
-  --parent-family nat0 \
+  --parent-family ${FAMILY_ID} \
   --subfed-name gaming \
   --members tower-southgate,tower-bluegate,tower-flockgate,tower-kingate
 
 # Bio pipeline sub-federation
 cargo run --bin subfed-tools -- create \
-  --parent-family nat0 \
+  --parent-family ${FAMILY_ID} \
   --subfed-name bio-pipeline \
   --members tower-strandgate,tower-westgate
 ```
@@ -319,7 +319,7 @@ cargo run --bin subfed-tools -- create \
 ## 📝 Notes
 
 - All configs use environment variables for flexibility
-- Genetic lineage (`nat0`) provides baseline trust
+- Genetic lineage (`${FAMILY_ID}`) provides baseline trust
 - Sub-federations enable granular access control
 - Mobile nodes bridge LAN ↔ Internet
 

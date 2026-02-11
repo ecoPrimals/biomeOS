@@ -2,18 +2,21 @@
 # Creates complete primal ecosystem with capability-based discovery and semantic translations
 #
 # Architecture:
-#   Layer 1 (Security):  BearDog (crypto, genetic) 
-#   Layer 2 (Network):   Songbird (http, discovery)
+#   Layer 1 (Security):  BearDog (crypto, genetic, beacon)
+#   Layer 2 (Network):   Songbird (http, discovery, mesh, onion, relay, stun, punch)
 #   Layer 3 (Compute):   Toadstool (compute, workloads)
 #   Layer 4 (AI):        Squirrel (ai, inference)
-#   Layer 5 (Storage):   NestGate (storage, provenance) [OPTIONAL]
+#   Layer 5 (Storage):   NestGate (storage, provenance)
 #
-# ✅ STATUS: OPERATIONAL - Jan 27, 2026
+# ✅ STATUS: February 11, 2026
 # All primals use JSON-RPC 2.0 over Unix sockets
-# Neural API provides semantic translation routing
+# biomeOS orchestrates via its Neural API — the capability routing layer
+# that translates semantic calls to primal-specific methods (124 translations)
+# All paths use XDG_RUNTIME_DIR (no hardcoded paths)
 
 [graph]
 id = "ecosystem_full_bootstrap"
+version = "2.0.0"
 description = "Genesis: Create full primal ecosystem with semantic capability routing"
 coordination = "Sequential"
 
@@ -23,7 +26,7 @@ coordination = "Sequential"
 [[nodes]]
 id = "germinate_beardog"
 output = "beardog_genesis"
-capabilities = ["crypto", "tls_crypto", "genetic", "security"]
+capabilities = ["crypto", "tls_crypto", "genetic", "security", "beacon"]
 
 [nodes.primal]
 by_capability = "security"
@@ -41,7 +44,7 @@ RUST_LOG = "beardog=info"
 [nodes.constraints]
 timeout_ms = 30000
 
-# BearDog Capability Translations (39 methods)
+# BearDog Capability Translations
 [nodes.capabilities_provided]
 # Core Crypto
 "crypto.generate_keypair" = "crypto.x25519_generate_ephemeral"
@@ -94,17 +97,27 @@ timeout_ms = 30000
 "genetic.verify_lineage" = "genetic.verify_lineage"
 "genetic.generate_proof" = "genetic.generate_lineage_proof"
 
+# Beacon Operations
+"beacon.generate" = "beacon.generate"
+"beacon.get_id" = "beacon.get_id"
+"beacon.encrypt" = "beacon.encrypt"
+"beacon.decrypt" = "beacon.decrypt"
+"beacon.try_decrypt" = "beacon.try_decrypt"
+
+# Relay Authorization (Relay-Punch protocol)
+"relay.authorize" = "relay.authorize"
+
 [nodes.parameter_mappings]
 "crypto.ecdh_derive" = { "private_key" = "our_secret", "public_key" = "their_public" }
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# PHASE 2: SONGBIRD (Network + Discovery)
+# PHASE 2: SONGBIRD (Network + Discovery + Mesh + Onion)
 # ═══════════════════════════════════════════════════════════════════════════════
 [[nodes]]
 id = "germinate_songbird"
 depends_on = ["germinate_beardog"]
 output = "songbird_genesis"
-capabilities = ["http", "discovery", "secure_http"]
+capabilities = ["http", "discovery", "secure_http", "mesh", "onion", "relay", "stun", "punch"]
 
 [nodes.primal]
 by_capability = "discovery"
@@ -117,21 +130,51 @@ mode = "server"
 family_id = "${FAMILY_ID}"
 
 [nodes.operation.environment]
-NEURAL_API_SOCKET = "/tmp/neural-api.sock"
-BEARDOG_SOCKET = "/tmp/beardog-1894e909e454.sock"
-SONGBIRD_SECURITY_PROVIDER = "/tmp/beardog-1894e909e454.sock"
+NEURAL_API_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/neural-api-${FAMILY_ID}.sock"
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
+CRYPTO_PROVIDER_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
+SONGBIRD_SECURITY_PROVIDER = "beardog"
+SONGBIRD_ONION_ENABLED = "true"
+SONGBIRD_MESH_ENABLED = "true"
+BIOMEOS_BIND_ALL = "true"
 RUST_LOG = "songbird=info"
 
 [nodes.constraints]
 timeout_ms = 30000
 
-# Songbird Capability Translations (5 methods)
+# Songbird Capability Translations
 [nodes.capabilities_provided]
 "http.request" = "http.request"
 "http.get" = "http.get"
 "http.post" = "http.post"
 "discovery.announce" = "announce_capabilities"
 "discovery.query" = "discover_by_capability"
+
+# Mesh
+"mesh.status" = "mesh.status"
+"mesh.find_path" = "mesh.find_path"
+"mesh.announce" = "mesh.announce"
+"mesh.peers" = "mesh.list_peers"
+
+# Hole Punch (Relay-Punch)
+"punch.request" = "punch.request"
+"punch.coordinate" = "punch.coordinate"
+
+# STUN
+"stun.discover" = "stun.get_public_address"
+"stun.detect_nat_type" = "stun.detect_nat_type"
+"stun.probe_port_pattern" = "stun.probe_port_pattern"
+
+# Relay
+"relay.serve" = "relay.serve"
+"relay.status" = "relay.status"
+"relay.allocate" = "relay.allocate"
+
+# Onion
+"onion.create_service" = "onion.create_service"
+"onion.get_address" = "onion.get_address"
+"onion.connect" = "onion.connect"
+"onion.status" = "onion.status"
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # PHASE 3: TOADSTOOL (Universal Compute)
@@ -153,17 +196,17 @@ mode = "server"
 family_id = "${FAMILY_ID}"
 
 [nodes.operation.environment]
-TOADSTOOL_FAMILY_ID = "1894e909e454"
-TOADSTOOL_NODE_ID = "tower0"
+TOADSTOOL_FAMILY_ID = "${FAMILY_ID}"
+TOADSTOOL_NODE_ID = "${NODE_ID}"
 TOADSTOOL_SECURITY_WARNING_ACKNOWLEDGED = "1"
-SONGBIRD_ENDPOINT = "/tmp/songbird-1894e909e454.sock"
-BEARDOG_SOCKET = "/tmp/beardog-1894e909e454.sock"
+SONGBIRD_ENDPOINT = "${XDG_RUNTIME_DIR}/biomeos/songbird-${FAMILY_ID}.sock"
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
 RUST_LOG = "toadstool=info"
 
 [nodes.constraints]
 timeout_ms = 30000
 
-# Toadstool Capability Translations (7 methods)
+# Toadstool Capability Translations
 [nodes.capabilities_provided]
 "compute.submit" = "toadstool.submit_workload"
 "compute.status" = "toadstool.query_status"
@@ -193,18 +236,17 @@ mode = "server"
 family_id = "${FAMILY_ID}"
 
 [nodes.operation.environment]
-CAPABILITY_REGISTRY_SOCKET = "/tmp/neural-api.sock"
-BEARDOG_SOCKET = "/tmp/beardog-1894e909e454.sock"
-SONGBIRD_SOCKET = "/tmp/songbird-1894e909e454.sock"
-RUST_LOG = "squirrel=info"
-# AI API keys (from secrets)
+CAPABILITY_REGISTRY_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/neural-api-${FAMILY_ID}.sock"
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
+SONGBIRD_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/songbird-${FAMILY_ID}.sock"
 ANTHROPIC_API_KEY = "${ANTHROPIC_API_KEY}"
 OPENAI_API_KEY = "${OPENAI_API_KEY}"
+RUST_LOG = "squirrel=info"
 
 [nodes.constraints]
 timeout_ms = 30000
 
-# Squirrel Capability Translations (8 methods)
+# Squirrel Capability Translations
 [nodes.capabilities_provided]
 "ai.query" = "query_ai"
 "ai.list_providers" = "list_providers"
@@ -216,11 +258,47 @@ timeout_ms = 30000
 "ai.execute_tool" = "execute_tool"
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# PHASE 5: VALIDATE ECOSYSTEM
+# PHASE 5: NESTGATE (Federated Storage)
+# ═══════════════════════════════════════════════════════════════════════════════
+[[nodes]]
+id = "germinate_nestgate"
+depends_on = ["germinate_beardog", "germinate_songbird"]
+output = "nestgate_genesis"
+capabilities = ["storage", "provenance", "persistence"]
+
+[nodes.primal]
+by_capability = "storage"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+provenance_enabled = true
+
+[nodes.operation.environment]
+NESTGATE_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/nestgate-${FAMILY_ID}.sock"
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
+SONGBIRD_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/songbird-${FAMILY_ID}.sock"
+RUST_LOG = "nestgate=info"
+
+[nodes.constraints]
+timeout_ms = 60000
+
+# NestGate Capability Translations
+[nodes.capabilities_provided]
+"storage.store" = "store"
+"storage.retrieve" = "retrieve"
+"storage.stats" = "stats"
+"storage.health" = "health_check"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 6: VALIDATE ECOSYSTEM
 # ═══════════════════════════════════════════════════════════════════════════════
 [[nodes]]
 id = "validate_ecosystem"
-depends_on = ["germinate_beardog", "germinate_songbird", "germinate_toadstool", "germinate_squirrel"]
+depends_on = ["germinate_beardog", "germinate_songbird", "germinate_toadstool", "germinate_squirrel", "germinate_nestgate"]
 output = "ecosystem_validated"
 
 [nodes.operation]
@@ -231,9 +309,9 @@ check_beardog = true
 check_songbird = true
 check_toadstool = true
 check_squirrel = true
+check_nestgate = true
 check_capability_routing = true
 timeout_seconds = 15
 
 [nodes.constraints]
 timeout_ms = 20000
-

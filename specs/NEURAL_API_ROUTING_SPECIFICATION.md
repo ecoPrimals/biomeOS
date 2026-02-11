@@ -123,7 +123,7 @@ Response:
 
 **Flow**:
 1. Neural API looks up `crypto.generate_keypair`
-2. Finds provider: `beardog` at `/tmp/beardog-nat0.sock`
+2. Finds provider: `beardog` at `$RUNTIME_DIR/biomeos/beardog-$FAMILY_ID.sock`
 3. Translates to actual method: `x25519_generate_ephemeral`
 4. Routes RPC to BearDog
 5. Returns result to caller
@@ -149,7 +149,7 @@ Response:
     "semantic": "crypto.generate_keypair",
     "provider": "beardog",
     "actual_method": "x25519_generate_ephemeral",
-    "socket": "/tmp/beardog-nat0.sock"
+    "socket": "/run/user/1000/biomeos/beardog-cf7e8729.sock"
   },
   "id": 2
 }
@@ -205,7 +205,7 @@ Register a primal and its capabilities:
     "capabilities": ["http.request", "http.get", "discovery"],
     "metadata": {
       "version": "0.2.0",
-      "family_id": "nat0"
+      "family_id": "cf7e8729"
     }
   },
   "id": 1

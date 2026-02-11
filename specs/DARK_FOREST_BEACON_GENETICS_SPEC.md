@@ -1,7 +1,7 @@
 # Dark Forest Beacon Genetics Specification
 
-**Version**: 1.0.0  
-**Date**: February 4, 2026  
+**Version**: 2.0.0  
+**Date**: February 11, 2026  
 **Status**: ARCHITECTURAL SPECIFICATION  
 **Author**: Kevin Mok + AI Collaborative Intelligence
 
@@ -9,14 +9,17 @@
 
 ## Executive Summary
 
-This specification introduces a **two-seed architecture** that separates discovery from trust:
+This specification introduces a **three-layer identity architecture** that separates discovery, trust, and behavior:
 
-| Seed | Biological Analog | Function |
-|------|-------------------|----------|
+| Layer | Biological Analog | Function |
+|-------|-------------------|----------|
+| **Lineage Seed** | Nuclear DNA | Cryptographic identity - "Who am I?" (from `.family.seed`) |
 | **Beacon Seed** | Mitochondrial DNA | Discovery visibility - "Who can see me?" |
-| **Lineage Seed** | Nuclear DNA | Permission verification - "What can they do?" |
+| **Beacon Tags** | Phenotype Expression | Behavioral groups - "How do I present myself?" |
 
-**Key Insight**: Beacon genetics is a **social graph of meetings**, not strict inheritance. Lineage is cryptographic trust.
+**Key Insight**: Beacon genetics is a **social graph of meetings**, not strict inheritance. Lineage is cryptographic trust. Beacon tags are named behavioral realms within the mito beacon system.
+
+> **Historical note (v2.0.0)**: The prototype used a plaintext tag `nat0` as the family ID. This conflated identity (nuclear/lineage layer) with discovery (mito/beacon layer). Beacon tags formalize what `nat0` was prototyping — named group memberships — but place them in the correct layer.
 
 ---
 
@@ -482,7 +485,119 @@ struct EntryPointConfig {
 
 ---
 
-## 7. Implementation Plan
+## 7. Beacon Tags (Phenotype Expression)
+
+### 7.1 Concept
+
+A **Beacon Tag** is a named behavioral realm within the mito beacon system. A single node can participate in multiple beacon tags simultaneously, each with different communication modes and ingestion behaviors.
+
+**Use case**: A basement HPC node belongs to both a `gaming` tag (GPU sharing, relaxed ingestion) and a `research` tag (data pipelines, strict provenance). A university LAN node belongs to a `uni-collab` tag where plaintext Birdsong is acceptable because the physical network is trusted.
+
+```
+Tower (basement HPC):
+  ├── lineage: cf7e8729dc4ff05f  (from .family.seed — nuclear DNA, never plaintext)
+  ├── mito beacon: d03029e5...    (Dark Forest encrypted — who can see me)
+  └── beacon tags:
+      ├── "gaming"     → friend mesh, GPU sharing, relaxed ingestion
+      ├── "research"   → same hardware, different behavior/access patterns
+      └── "uni-collab" → university LAN plaintext Birdsong (trusted network)
+```
+
+### 7.2 Transport Modes
+
+Each beacon tag can specify its communication mode independently:
+
+| Mode | When to use | Security model |
+|------|-------------|----------------|
+| **DarkForest** | Default. Untrusted or mixed networks. | Encrypted beacons, observers see noise. |
+| **Birdsong** | Established friend groups on trusted LANs. | Plaintext multicast, assumes physical trust. |
+
+**Flow**:
+1. **Birdsong** (plaintext multicast) — first contact on untrusted networks. "I exist."
+2. **Dark Forest** (BearDog encrypted beacons) — establishes trust mesh. "I'm family / we've met."
+3. **Beacon tags** — after trust established, invite friends: "Join my `gaming` tag."
+4. Within an established tagged group, nodes can downgrade to **plaintext Birdsong** for efficiency — trust is already established via Dark Forest.
+
+### 7.3 Data Model
+
+```rust
+/// Beacon tag — named behavioral realm within the mito beacon system
+/// Evolves from ClusterMembership with transport mode + behavior semantics
+struct BeaconTag {
+    /// Human-readable tag name (e.g., "gaming", "research", "uni-collab")
+    pub tag: String,
+    
+    /// Transport mode for this tag's communication
+    pub transport: BeaconTransport,
+    
+    /// Behavioral hints — different ingestion/behavior per tag
+    /// e.g., {"gpu_sharing": "true", "provenance": "strict"}
+    pub behavior: HashMap<String, String>,
+    
+    /// Underlying cluster (who's in this tag group)
+    pub cluster: ClusterMembership,
+}
+
+enum BeaconTransport {
+    /// Encrypted Dark Forest (default for untrusted or mixed networks)
+    DarkForest,
+    
+    /// Plaintext Birdsong (for established friend groups on trusted LANs)
+    /// require_prior_meeting: must have met via Dark Forest before allowing plaintext
+    Birdsong { require_prior_meeting: bool },
+}
+```
+
+### 7.4 Relationship to Existing Types
+
+| Existing Type | Evolution |
+|---------------|-----------|
+| `ClusterMembership` | Becomes the underlying structure for `BeaconTag.cluster` |
+| `BeaconGeneticsManifest.clusters` | Extended with `tags: Vec<BeaconTag>` |
+| `MeetingRelationship::Cluster` | Tag-aware: meeting established via tagged group |
+| `--family-id` CLI arg | Remains as lineage identity. Beacon tags are a separate `--beacon-tags` arg |
+
+### 7.5 Socket Naming
+
+Socket naming remains per-lineage (family ID derived from `.family.seed`), not per-tag. Tags are a **discovery overlay**, not a socket namespace:
+
+```
+/run/user/1000/biomeos/beardog-cf7e8729.sock    # Lineage-scoped socket
+                                                 # This BearDog serves tags: gaming, research
+```
+
+### 7.6 Multi-Tag Example
+
+```
+Dark Forest establishes trust:
+  Tower ←→ Alice-laptop (met at conference)
+  Tower ←→ Bob-server   (introduced by Alice)
+
+I invite them to tagged groups:
+  Tower → Alice: "Join my 'gaming' tag"    → Alice can see gaming beacons
+  Tower → Bob:   "Join my 'research' tag"  → Bob can see research beacons
+  Tower → Alice: "Also join 'research'"    → Alice sees both
+
+Same hardware, different behaviors:
+  gaming tag:   GPU sharing enabled, relaxed provenance, Birdsong OK on LAN
+  research tag: Data pipelines, strict provenance, Dark Forest only
+```
+
+---
+
+## 8. Implementation Plan
+
+### Phase 0: Beacon Tag Foundation (Priority: High — v2.0.0)
+
+**Tasks**:
+- [x] Reject prototype tags (e.g., `nat0`) as family IDs in `family_discovery.rs`
+- [x] Clean all `nat0` references from source code, examples, and docs
+- [ ] Add `BeaconTag` struct to `beacon_genetics/types.rs`
+- [ ] Add `BeaconTransport` enum (DarkForest, Birdsong)
+- [ ] Extend `BeaconGeneticsManifest` with `tags: Vec<BeaconTag>`
+- [ ] Add `--beacon-tags` CLI arg to `biomeos nucleus`
+
+**Estimated Effort**: 1 session
 
 ### Phase 1: BearDog Beacon Seed (Priority: High)
 
@@ -496,7 +611,7 @@ struct EntryPointConfig {
 
 **Estimated Effort**: 2-3 sessions
 
-### Phase 2: BirdSong Dark Forest (Priority: High)
+### Phase 2: BirdSong Dark Forest + Beacon Tags (Priority: High)
 
 **Tasks**:
 - [ ] Change BirdSong beacon format to encrypted
@@ -539,7 +654,7 @@ struct EntryPointConfig {
 
 ---
 
-## 8. Scaling Analysis
+## 9. Scaling Analysis
 
 ### 8.1 Beacon Load
 
@@ -571,7 +686,7 @@ struct EntryPointConfig {
 
 ---
 
-## 9. Security Analysis
+## 10. Security Analysis
 
 ### 9.1 Threat Model
 
@@ -609,7 +724,7 @@ Level 3: Cluster Member
 
 ---
 
-## 10. Backward Compatibility
+## 11. Backward Compatibility
 
 ### 10.1 Migration Path
 
@@ -645,7 +760,7 @@ Phase 3: Plaintext rejection
 
 ---
 
-## 11. Summary
+## 12. Summary
 
 ### What This Enables
 
@@ -659,19 +774,22 @@ Phase 3: Plaintext rejection
 
 | Layer | Analog | Function |
 |-------|--------|----------|
-| Beacon Seed | Mitochondrial DNA | Discovery/energy |
 | Lineage Seed | Nuclear DNA | Identity/permissions |
+| Beacon Seed | Mitochondrial DNA | Discovery/energy |
+| Beacon Tag | Phenotype Expression | Behavioral groups |
 | Meeting | Social encounter | Beacon genetics exchange |
 | Cluster | Colony | Hierarchical discovery |
 | Entry Point | Colony entrance | External gateway |
 
 ### Design Principles
 
-1. **Beacon = who you've met** (social graph)
-2. **Lineage = what you can do** (permissions)
-3. **Cluster = network topology** (hierarchy)
-4. **Entry point = external interface** (gateway)
-5. **TRUE Dark Forest** (observers see nothing)
+1. **Lineage = who you are** (cryptographic identity, from `.family.seed`)
+2. **Beacon = who you've met** (social graph of meetings)
+3. **Beacon tag = how you present** (named behavioral realms: gaming, research, etc.)
+4. **Cluster = network topology** (hierarchy)
+5. **Entry point = external interface** (gateway)
+6. **TRUE Dark Forest** (observers see nothing)
+7. **Birdsong for friends** (plaintext within established tagged groups on trusted networks)
 
 ---
 
@@ -789,6 +907,6 @@ async fn respond_to_meeting(request: MeetingRequest) -> Result<MeetingResponse> 
 
 ---
 
-**Document Version**: 1.0.0  
-**Last Updated**: February 4, 2026  
-**Next Review**: After Phase 1 implementation
+**Document Version**: 2.0.0  
+**Last Updated**: February 11, 2026  
+**Next Review**: After Phase 0 (Beacon Tag foundation) implementation

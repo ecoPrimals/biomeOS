@@ -234,6 +234,10 @@ impl PrimalDiscovery {
 mod tests {
     use super::*;
 
+    // ========================================================================
+    // extract_name tests
+    // ========================================================================
+
     #[test]
     fn test_extract_name() {
         assert_eq!(
@@ -248,6 +252,59 @@ mod tests {
     }
 
     #[test]
+    fn test_extract_name_all_primals() {
+        assert_eq!(
+            DiscoveredPrimal::extract_name("toadstool-family123.sock"),
+            Some("toadstool".to_string())
+        );
+        assert_eq!(
+            DiscoveredPrimal::extract_name("nestgate-family123.sock"),
+            Some("nestgate".to_string())
+        );
+        assert_eq!(
+            DiscoveredPrimal::extract_name("squirrel-family123.sock"),
+            Some("squirrel".to_string())
+        );
+        assert_eq!(
+            DiscoveredPrimal::extract_name("biomeos-family123.sock"),
+            Some("biomeos".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_name_no_suffix() {
+        assert_eq!(DiscoveredPrimal::extract_name("beardog-family"), None);
+        assert_eq!(DiscoveredPrimal::extract_name("beardog"), None);
+    }
+
+    #[test]
+    fn test_extract_name_no_dash() {
+        // Socket without family ID: "beardog.sock" → "beardog"
+        assert_eq!(
+            DiscoveredPrimal::extract_name("beardog.sock"),
+            Some("beardog".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_name_neural_api() {
+        assert_eq!(
+            DiscoveredPrimal::extract_name("neural-api-cf7e8729.sock"),
+            Some("neural".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_name_empty() {
+        assert_eq!(DiscoveredPrimal::extract_name(""), None);
+        assert_eq!(DiscoveredPrimal::extract_name(".sock"), Some("".to_string()));
+    }
+
+    // ========================================================================
+    // extract_family_id tests
+    // ========================================================================
+
+    #[test]
     fn test_extract_family_id() {
         assert_eq!(
             DiscoveredPrimal::extract_family_id("beardog-test_family.sock"),
@@ -260,13 +317,155 @@ mod tests {
         assert_eq!(DiscoveredPrimal::extract_family_id("beardog.sock"), None);
     }
 
-    #[tokio::test]
-    async fn test_discover_all() {
+    #[test]
+    fn test_extract_family_id_hash_style() {
+        assert_eq!(
+            DiscoveredPrimal::extract_family_id("beardog-1894e909e454.sock"),
+            Some("1894e909e454".to_string())
+        );
+        assert_eq!(
+            DiscoveredPrimal::extract_family_id("songbird-cf7e8729.sock"),
+            Some("cf7e8729".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_family_id_multi_dash() {
+        // Family IDs with dashes: "neural-api-cf7e8729.sock" → "api-cf7e8729"
+        assert_eq!(
+            DiscoveredPrimal::extract_family_id("neural-api-cf7e8729.sock"),
+            Some("api-cf7e8729".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_family_id_empty() {
+        assert_eq!(DiscoveredPrimal::extract_family_id(""), None);
+        assert_eq!(DiscoveredPrimal::extract_family_id(".sock"), None);
+    }
+
+    #[test]
+    fn test_extract_family_id_no_family() {
+        assert_eq!(DiscoveredPrimal::extract_family_id("beardog.sock"), None);
+    }
+
+    // ========================================================================
+    // is_primal_name tests
+    // ========================================================================
+
+    #[test]
+    fn test_is_primal_name_known() {
         let temp_dir = tempfile::tempdir().unwrap();
         let discovery = PrimalDiscovery::new(temp_dir.path().to_path_buf()).unwrap();
 
-        // Should discover empty (no sockets yet)
+        assert!(discovery.is_primal_name("beardog"));
+        assert!(discovery.is_primal_name("songbird"));
+        assert!(discovery.is_primal_name("toadstool"));
+        assert!(discovery.is_primal_name("nestgate"));
+        assert!(discovery.is_primal_name("squirrel"));
+        assert!(discovery.is_primal_name("biomeos"));
+        assert!(discovery.is_primal_name("biomeos-device-management"));
+    }
+
+    #[test]
+    fn test_is_primal_name_unknown() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let discovery = PrimalDiscovery::new(temp_dir.path().to_path_buf()).unwrap();
+
+        assert!(!discovery.is_primal_name("neural"));
+        assert!(!discovery.is_primal_name("unknown"));
+        assert!(!discovery.is_primal_name(""));
+        assert!(!discovery.is_primal_name("neural-api"));
+        assert!(!discovery.is_primal_name("BEARDOG")); // case-sensitive
+    }
+
+    // ========================================================================
+    // PrimalDiscovery creation tests
+    // ========================================================================
+
+    #[test]
+    fn test_discovery_creates_dir() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let new_dir = temp_dir.path().join("new_runtime_dir");
+        assert!(!new_dir.exists());
+
+        let _discovery = PrimalDiscovery::new(new_dir.clone()).unwrap();
+        assert!(new_dir.exists());
+    }
+
+    #[test]
+    fn test_discovery_existing_dir() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let discovery = PrimalDiscovery::new(temp_dir.path().to_path_buf());
+        assert!(discovery.is_ok());
+    }
+
+    // ========================================================================
+    // discover_all tests
+    // ========================================================================
+
+    #[tokio::test]
+    async fn test_discover_all_empty() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let discovery = PrimalDiscovery::new(temp_dir.path().to_path_buf()).unwrap();
+
         let primals = discovery.discover_all().await.unwrap();
         assert_eq!(primals.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_discover_all_ignores_non_sock_files() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        // Create non-socket files
+        std::fs::write(temp_dir.path().join("beardog.log"), b"log data").unwrap();
+        std::fs::write(temp_dir.path().join("songbird.pid"), b"1234").unwrap();
+        std::fs::write(temp_dir.path().join("config.toml"), b"[graph]").unwrap();
+
+        let discovery = PrimalDiscovery::new(temp_dir.path().to_path_buf()).unwrap();
+        let primals = discovery.discover_all().await.unwrap();
+        assert_eq!(primals.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_find_primal_not_found() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let discovery = PrimalDiscovery::new(temp_dir.path().to_path_buf()).unwrap();
+
+        let result = discovery.find_primal("beardog").await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("not found"));
+    }
+
+    #[tokio::test]
+    async fn test_find_by_family_empty() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let discovery = PrimalDiscovery::new(temp_dir.path().to_path_buf()).unwrap();
+
+        let primals = discovery.find_by_family("test_family").await.unwrap();
+        assert!(primals.is_empty());
+    }
+
+    // ========================================================================
+    // DiscoveredPrimal serialization tests
+    // ========================================================================
+
+    #[test]
+    fn test_discovered_primal_serialize() {
+        let primal = DiscoveredPrimal {
+            name: "beardog".to_string(),
+            socket_path: PathBuf::from("/run/user/1000/biomeos/beardog-cf7e.sock"),
+            family_id: Some("cf7e".to_string()),
+            discovered_at: chrono::Utc::now(),
+            responsive: true,
+        };
+
+        let json = serde_json::to_string(&primal).unwrap();
+        assert!(json.contains("beardog"));
+        assert!(json.contains("cf7e"));
+
+        let deserialized: DiscoveredPrimal = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.name, "beardog");
+        assert_eq!(deserialized.family_id, Some("cf7e".to_string()));
+        assert!(deserialized.responsive);
     }
 }

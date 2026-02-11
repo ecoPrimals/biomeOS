@@ -80,17 +80,18 @@ All old bash deployment scripts have been **replaced by the Neural API (Rust inf
 
 ```bash
 # 1. Start Neural API server
-./target/release/neural-api-server --graphs-dir graphs --family-id nat0 &
+./target/release/neural-api-server --graphs-dir graphs &
 
 # 2. Deploy BearDog (security foundation)
 ./plasmidBin/primals/beardog-server &
 sleep 2
 
 # 3. Deploy NUCLEUS enclave
-./plasmidBin/primals/neural-deploy 01_nucleus_enclave --family-id nat0
+./plasmidBin/primals/neural-deploy 01_nucleus_enclave
 
 # 4. Deploy full ecosystem
-./plasmidBin/primals/neural-deploy 00_full_ecosystem --family-id nat0
+./plasmidBin/primals/neural-deploy 00_full_ecosystem
+# Family ID is auto-discovered from .family.seed
 ```
 
 ### Check Status

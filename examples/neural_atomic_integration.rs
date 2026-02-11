@@ -54,7 +54,7 @@ async fn main() -> Result<()> {
 
     if available_atomics.is_empty() {
         println!("   ⚠️  No atomics currently running");
-        println!("   💡 Tip: Start atomics with `launch_primal tower nat0`\n");
+        println!("   💡 Tip: Start atomics with `biomeos nucleus --mode tower --node-id tower1`\n");
     } else {
         println!();
     }
@@ -112,25 +112,27 @@ async fn check_atomic_availability(mode: &DeploymentMode) -> Result<Vec<String>>
     let socket_prefix = mode.socket_prefix();
     let mut available = Vec::new();
 
+    let family_id = biomeos_core::family_discovery::get_family_id();
+
     // Check for Tower atomic (BearDog + Songbird)
-    if socket_exists(&socket_prefix, "beardog-nat0.sock")
-        && socket_exists(&socket_prefix, "songbird-nat0.sock")
+    if socket_exists(&socket_prefix, &format!("beardog-{}.sock", family_id))
+        && socket_exists(&socket_prefix, &format!("songbird-{}.sock", family_id))
     {
         available.push("Tower".to_string());
     }
 
     // Check for Node atomic (Tower + ToadStool)
-    if socket_exists(&socket_prefix, "beardog-nat0.sock")
-        && socket_exists(&socket_prefix, "songbird-nat0.sock")
-        && socket_exists(&socket_prefix, "toadstool-default.sock")
+    if socket_exists(&socket_prefix, &format!("beardog-{}.sock", family_id))
+        && socket_exists(&socket_prefix, &format!("songbird-{}.sock", family_id))
+        && socket_exists(&socket_prefix, &format!("toadstool-{}.sock", family_id))
     {
         available.push("Node".to_string());
     }
 
     // Check for Nest atomic (Tower + NestGate)
-    if socket_exists(&socket_prefix, "beardog-nat0.sock")
-        && socket_exists(&socket_prefix, "songbird-nat0.sock")
-        && socket_exists(&socket_prefix, "nestgate-nat0.sock")
+    if socket_exists(&socket_prefix, &format!("beardog-{}.sock", family_id))
+        && socket_exists(&socket_prefix, &format!("songbird-{}.sock", family_id))
+        && socket_exists(&socket_prefix, &format!("nestgate-{}.sock", family_id))
     {
         available.push("Nest".to_string());
     }

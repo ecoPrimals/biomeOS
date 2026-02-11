@@ -18,7 +18,7 @@ pub struct SporeConfig {
     /// Node ID for this tower (e.g., "tower1")
     pub node_id: String,
 
-    /// Family ID for this ecosystem (e.g., "nat0")
+    /// Family ID for this ecosystem (derived from `.family.seed`, e.g., "cf7e8729dc4ff05f")
     #[serde(default = "default_family_id")]
     pub family_id: String,
 

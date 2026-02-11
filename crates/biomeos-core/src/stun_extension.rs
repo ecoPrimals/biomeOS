@@ -339,12 +339,21 @@ pub enum StunExtensionError {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_default_config() {
-        // Clear env vars that could influence defaults
+    /// Mutex to serialize tests that modify environment variables.
+    /// Env vars are process-global, so parallel tests race without this.
+    static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    /// Helper: clear all STUN-related env vars while holding the lock.
+    fn clear_stun_env() {
         std::env::remove_var("BIOMEOS_STUN_SERVER");
         std::env::remove_var("BIOMEOS_NO_PUBLIC_STUN");
         std::env::remove_var("BIOMEOS_STUN_SERVERS");
+    }
+
+    #[test]
+    fn test_default_config() {
+        let _lock = ENV_LOCK.lock().expect("env lock");
+        clear_stun_env();
 
         let config = StunExtensionConfig::default();
         assert!(config.enabled);
@@ -356,8 +365,8 @@ mod tests {
 
     #[test]
     fn test_default_public_servers() {
-        std::env::remove_var("BIOMEOS_STUN_SERVERS");
-        std::env::remove_var("BIOMEOS_NO_PUBLIC_STUN");
+        let _lock = ENV_LOCK.lock().expect("env lock");
+        clear_stun_env();
 
         let config = StunExtensionConfig::default();
         assert!(config.public_servers.len() >= 3);
@@ -373,6 +382,9 @@ mod tests {
 
     #[test]
     fn test_custom_stun_servers_from_env() {
+        let _lock = ENV_LOCK.lock().expect("env lock");
+        clear_stun_env();
+
         std::env::set_var("BIOMEOS_STUN_SERVERS", "custom1:3478, custom2:3478");
         let config = StunExtensionConfig::default();
         assert_eq!(config.public_servers.len(), 2);
@@ -383,6 +395,9 @@ mod tests {
 
     #[test]
     fn test_no_public_stun_sovereignty_mode() {
+        let _lock = ENV_LOCK.lock().expect("env lock");
+        clear_stun_env();
+
         std::env::set_var("BIOMEOS_NO_PUBLIC_STUN", "true");
         let config = StunExtensionConfig::default();
         assert!(config.public_servers.is_empty());
@@ -392,6 +407,9 @@ mod tests {
 
     #[test]
     fn test_no_public_stun_flag_1() {
+        let _lock = ENV_LOCK.lock().expect("env lock");
+        clear_stun_env();
+
         std::env::set_var("BIOMEOS_NO_PUBLIC_STUN", "1");
         let config = StunExtensionConfig::default();
         assert!(config.public_servers.is_empty());
@@ -401,6 +419,9 @@ mod tests {
 
     #[test]
     fn test_self_hosted_from_env() {
+        let _lock = ENV_LOCK.lock().expect("env lock");
+        clear_stun_env();
+
         std::env::set_var("BIOMEOS_STUN_SERVER", "stun.myserver.com:3478");
         let config = StunExtensionConfig::default();
         assert_eq!(
@@ -473,13 +494,18 @@ mod tests {
 
     #[test]
     fn test_discover_self_hosted_address_without_env() {
-        std::env::remove_var("BIOMEOS_STUN_SERVER");
+        let _lock = ENV_LOCK.lock().expect("env lock");
+        clear_stun_env();
+
         let ext = StunExtension::new();
         assert!(ext.discover_self_hosted_address().is_none());
     }
 
     #[test]
     fn test_discover_self_hosted_address_with_env() {
+        let _lock = ENV_LOCK.lock().expect("env lock");
+        clear_stun_env();
+
         std::env::set_var("BIOMEOS_STUN_SERVER", "192.168.1.100:3478");
         let ext = StunExtension::new();
         assert_eq!(

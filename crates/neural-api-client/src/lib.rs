@@ -223,7 +223,7 @@ impl NeuralApiClient {
             paths.primal_socket(&format!("neural-api-{}", family_id))
         } else {
             // Fallback if SystemPaths fails (shouldn't happen in practice)
-            PathBuf::from(format!("/tmp/neural-api-{}.sock", family_id))
+            std::env::temp_dir().join(format!("neural-api-{}.sock", family_id))
         }
     }
     
@@ -477,8 +477,8 @@ mod tests {
         let path = NeuralApiClient::discover_socket("1894e909e454");
         // Should end with the correct socket filename, regardless of XDG prefix
         assert!(
-            path.to_string_lossy().ends_with("neural-api-family.sock"),
-            "Socket path should end with neural-api-family.sock, got: {}",
+            path.to_string_lossy().ends_with("neural-api-1894e909e454.sock"),
+            "Socket path should end with neural-api-1894e909e454.sock, got: {}",
             path.display()
         );
     }

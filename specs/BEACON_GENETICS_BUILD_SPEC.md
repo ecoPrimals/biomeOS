@@ -1,8 +1,8 @@
 # Beacon Genetics Build Specification
 ## Mitochondrial DNA Model - Address Book / Friend Graph
 
-**Version**: 1.0.0  
-**Date**: February 4, 2026  
+**Version**: 2.0.0  
+**Date**: February 11, 2026  
 **Status**: DESIGN SPECIFICATION  
 **Author**: Kevin Mok + AI Collaborative Intelligence
 
@@ -782,6 +782,33 @@ Beacon Genetics (Mitochondria)
       "seed_file": "cluster-basement-towers.seed"
     }
   ],
+
+  "tags": [
+    {
+      "tag": "gaming",
+      "transport": "birdsong",
+      "behavior": { "gpu_sharing": "true", "provenance": "relaxed" },
+      "cluster": {
+        "cluster_id": "gaming-friends",
+        "role": "hub",
+        "joined_at": "2026-02-10T18:00:00Z",
+        "known_members": ["alice-beacon-id", "bob-beacon-id"],
+        "seed_file": "cluster-gaming.seed"
+      }
+    },
+    {
+      "tag": "research",
+      "transport": "dark_forest",
+      "behavior": { "provenance": "strict", "data_pipelines": "true" },
+      "cluster": {
+        "cluster_id": "research-collab",
+        "role": "entry_point",
+        "joined_at": "2026-02-08T10:00:00Z",
+        "known_members": ["bob-beacon-id"],
+        "seed_file": "cluster-research.seed"
+      }
+    }
+  ],
   
   "shared_with": [
     "c86cb868b057f996dbbbf9d2f41fbe60",
@@ -805,10 +832,11 @@ Beacon Genetics (Mitochondria)
 
 ---
 
-**Document Version**: 1.0.0  
+**Document Version**: 2.0.0  
 **Created**: February 4, 2026  
+**Updated**: February 11, 2026 — Added Beacon Tags (phenotype expression layer)  
 **Status**: DESIGN SPECIFICATION  
-**Next Step**: Review with BearDog team, begin Phase 2A implementation
+**Next Step**: Implement `BeaconTag` in `beacon_genetics/types.rs`, then Phase 2A
 
 ---
 

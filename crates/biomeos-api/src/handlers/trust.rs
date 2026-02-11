@@ -1,17 +1,18 @@
 //! Trust API handlers
 //!
-//! Proxies trust-related requests to BearDog via Unix socket JSON-RPC.
+//! Proxies trust-related requests to the security provider via Neural API.
 //!
-//! Deep Debt Evolution:
-//! - BEFORE: HTTP via reqwest (C dependencies)
-//! - AFTER: Unix socket JSON-RPC (Pure Rust)
+//! ## Deep Debt Evolution (Feb 11, 2026)
+//!
+//! - BEFORE: Direct `UnixStream` to BearDog (raw sync I/O, hardcoded primal name)
+//! - AFTER: Neural API `capability.call` routing (async, capability-based discovery)
+//! - No knowledge of BearDog or any specific primal
+//! - Uses `NeuralApiClient` for all security provider calls
+//! - Removed raw `std::os::unix::net::UnixStream` — pure async throughout
 
 use axum::{extract::State, Json};
 use serde::{Deserialize, Serialize};
-use std::io::{Read, Write};
-use std::os::unix::net::UnixStream;
 use std::sync::Arc;
-use std::time::Duration;
 use tracing::{debug, error, info};
 
 use crate::AppState;
@@ -19,132 +20,98 @@ use crate::AppState;
 /// Trust evaluation request
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TrustEvaluationRequest {
+    /// Peer ID to evaluate trust for
     pub peer_id: String,
+    /// Tags associated with the peer
     pub peer_tags: Vec<String>,
 }
 
-/// Trust evaluation response (current BearDog format)
+/// Trust evaluation response (from security provider)
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TrustEvaluationResponse {
+    /// Trust decision: "allow", "deny", "evaluate"
     pub decision: String,
+    /// Confidence score (0.0 - 1.0)
     pub confidence: f32,
+    /// Human-readable reason for the decision
     pub reason: String,
+    /// Trust level: "none", "low", "medium", "high"
     pub trust_level: String,
+    /// Additional metadata from the provider
     pub metadata: serde_json::Value,
 }
 
-/// Identity response (current BearDog format)
+/// Identity response (from security provider)
 #[derive(Debug, Serialize, Deserialize)]
 pub struct IdentityResponse {
+    /// Encryption tag identifying this node
     pub encryption_tag: String,
+    /// Capabilities this node provides
     pub capabilities: Vec<String>,
+    /// Family ID this node belongs to
     pub family_id: String,
+    /// Optional identity attestations
     pub identity_attestations: Option<serde_json::Value>,
 }
 
-/// JSON-RPC request structure
-#[derive(Debug, Serialize)]
-struct JsonRpcRequest<T: Serialize> {
-    jsonrpc: &'static str,
-    id: u64,
-    method: String,
-    params: T,
-}
-
-/// JSON-RPC response structure
-#[derive(Debug, Deserialize)]
-struct JsonRpcResponse<T> {
-    #[allow(dead_code)]
-    jsonrpc: String,
-    #[allow(dead_code)]
-    id: u64,
-    result: Option<T>,
-    error: Option<JsonRpcError>,
-}
-
-#[derive(Debug, Deserialize)]
-struct JsonRpcError {
-    code: i32,
-    message: String,
-}
-
-/// Get security provider socket path (capability-based, not name-hardcoded)
+/// Discover Neural API socket for trust operations
 ///
-/// Resolves the security provider via capability taxonomy:
-/// 1. `$BEARDOG_SOCKET` environment variable (bootstrap override)
-/// 2. Capability taxonomy: `Encryption` → default provider
-/// 3. XDG-compliant fallback
-fn get_security_provider_socket() -> String {
-    // Resolve security provider via capability taxonomy (not hardcoded name)
+/// Deep Debt: Runtime discovery, not hardcoded.
+/// Uses shared beacon_verification discovery logic.
+fn discover_neural_api_socket() -> Option<String> {
+    let family_id = biomeos_core::family_discovery::get_family_id();
+    crate::beacon_verification::discover_neural_api_socket(&family_id)
+}
+
+/// Call the security provider via Neural API capability routing
+///
+/// Deep Debt Evolution: Replaces the raw `UnixStream` `call_beardog()`.
+/// Routes through Neural API `capability.call` for semantic discovery.
+/// Falls back to direct AtomicClient if Neural API is unavailable.
+async fn call_security_provider(
+    method: &str,
+    params: serde_json::Value,
+) -> Result<serde_json::Value, String> {
+    // Try Neural API first (preferred — capability-routed)
+    if let Some(socket) = discover_neural_api_socket() {
+        let client = neural_api_client::NeuralApiClient::new(&socket)
+            .map_err(|e| format!("Failed to create Neural API client: {}", e))?;
+
+        match client.route_to_primal("trust", method, params.clone()).await {
+            Ok(result) => return Ok(result),
+            Err(e) => {
+                debug!(
+                    "Neural API trust call failed: {} — trying direct discovery",
+                    e
+                );
+            }
+        }
+    }
+
+    // Fallback: Direct socket discovery via capability taxonomy
     let provider_name = biomeos_types::capability_taxonomy::CapabilityTaxonomy::Encryption
         .default_primal()
         .unwrap_or("beardog");
 
-    biomeos_types::socket_path(provider_name)
-        .map(|p| p.to_string_lossy().to_string())
-        .unwrap_or_else(|_| {
-            // XDG-compliant fallback with family ID
-            let family_id = biomeos_core::family_discovery::get_family_id();
-            let paths = biomeos_types::paths::SystemPaths::new_lazy();
-            paths
-                .primal_socket(&format!("{provider_name}-{family_id}"))
-                .to_string_lossy()
-                .to_string()
-        })
-}
+    let family_id = biomeos_core::family_discovery::get_family_id();
+    let paths = biomeos_types::paths::SystemPaths::new_lazy();
+    let socket_path = paths
+        .primal_socket(&format!("{provider_name}-{family_id}"))
+        .to_string_lossy()
+        .to_string();
 
-/// Send JSON-RPC request to BearDog via Unix socket
-fn call_beardog<T: Serialize, R: for<'de> Deserialize<'de>>(
-    method: &str,
-    params: T,
-) -> Result<R, String> {
-    let socket_path = get_security_provider_socket();
-    debug!("📡 Calling BearDog at {}: {}", socket_path, method);
+    // Check env override (bootstrap scenarios)
+    let socket_path = std::env::var("BEARDOG_SOCKET").unwrap_or(socket_path);
 
-    let mut stream = UnixStream::connect(&socket_path)
-        .map_err(|e| format!("Failed to connect to BearDog at {}: {}", socket_path, e))?;
+    debug!("📡 Calling security provider at {}: {}", socket_path, method);
 
-    stream
-        .set_read_timeout(Some(Duration::from_secs(5)))
-        .map_err(|e| format!("Failed to set read timeout: {}", e))?;
-    stream
-        .set_write_timeout(Some(Duration::from_secs(5)))
-        .map_err(|e| format!("Failed to set write timeout: {}", e))?;
+    let client = biomeos_core::AtomicClient::unix(&socket_path)
+        .with_timeout(std::time::Duration::from_secs(5));
 
-    let request = JsonRpcRequest {
-        jsonrpc: "2.0",
-        id: 1,
-        method: method.to_string(),
-        params,
-    };
-
-    let request_bytes =
-        serde_json::to_vec(&request).map_err(|e| format!("Failed to serialize request: {}", e))?;
-    stream
-        .write_all(&request_bytes)
-        .map_err(|e| format!("Failed to write to socket: {}", e))?;
-    stream
-        .write_all(b"\n")
-        .map_err(|e| format!("Failed to write newline: {}", e))?;
-    stream
-        .flush()
-        .map_err(|e| format!("Failed to flush socket: {}", e))?;
-
-    let mut response_buf = vec![0u8; 65536];
-    let n = stream
-        .read(&mut response_buf)
-        .map_err(|e| format!("Failed to read from socket: {}", e))?;
-
-    let response: JsonRpcResponse<R> = serde_json::from_slice(&response_buf[..n])
-        .map_err(|e| format!("Failed to parse response: {}", e))?;
-
-    if let Some(error) = response.error {
-        return Err(format!("RPC error {}: {}", error.code, error.message));
-    }
-
-    response
-        .result
-        .ok_or_else(|| "No result in RPC response".to_string())
+    client
+        .call(method, params)
+        .await
+        .map_err(|e| format!("Security provider call failed: {}", e))
 }
 
 /// POST /api/v1/trust/evaluate
@@ -154,31 +121,24 @@ pub async fn evaluate_trust(
 ) -> Result<Json<TrustEvaluationResponse>, crate::ApiError> {
     info!("🔒 Evaluating trust for peer: {}", request.peer_id);
 
-    // DEEP DEBT EVOLUTION: No fake trust decisions.
-    // Always attempts real security provider call. Returns honest failure if unavailable.
+    // Deep Debt: No fake trust decisions. Always call security provider.
     // Security decisions must NEVER be fabricated — deny by default.
-    info!("   Calling security provider via Unix socket");
+    let params = serde_json::to_value(&request)
+        .map_err(|e| crate::ApiError::Internal(format!("Serialization error: {}", e)))?;
 
-    // Use tokio's spawn_blocking for synchronous socket I/O
-    let result = tokio::task::spawn_blocking(move || {
-        call_beardog::<TrustEvaluationRequest, TrustEvaluationResponse>("trust.evaluate", request)
-    })
-    .await
-    .map_err(|e| crate::ApiError::Internal(format!("Task join error: {}", e)))?;
-
-    match result {
-        Ok(response) => {
-            info!("   ✅ Trust evaluated: {}", response.trust_level);
-            Ok(Json(response))
-        }
-        Err(e) => {
+    let result = call_security_provider("trust.evaluate", params)
+        .await
+        .map_err(|e| {
             error!("   ❌ Trust evaluation failed: {}", e);
-            Err(crate::ApiError::Internal(format!(
-                "Failed to evaluate trust: {}",
-                e
-            )))
-        }
-    }
+            crate::ApiError::Internal(format!("Failed to evaluate trust: {}", e))
+        })?;
+
+    let response: TrustEvaluationResponse = serde_json::from_value(result).map_err(|e| {
+        crate::ApiError::Internal(format!("Failed to parse trust response: {}", e))
+    })?;
+
+    info!("   ✅ Trust evaluated: {}", response.trust_level);
+    Ok(Json(response))
 }
 
 /// GET /api/v1/trust/identity
@@ -187,30 +147,21 @@ pub async fn get_identity(
 ) -> Result<Json<IdentityResponse>, crate::ApiError> {
     info!("📋 Getting local identity");
 
-    // DEEP DEBT EVOLUTION: No fabricated identity. Always call security provider.
-    // If unavailable, return honest "unavailable" instead of fake data.
-    info!("   Calling security provider via Unix socket");
-
-    // Use tokio's spawn_blocking for synchronous socket I/O
-    let result = tokio::task::spawn_blocking(move || {
-        call_beardog::<serde_json::Value, IdentityResponse>("trust.identity", serde_json::json!({}))
-    })
-    .await
-    .map_err(|e| crate::ApiError::Internal(format!("Task join error: {}", e)))?;
-
-    match result {
-        Ok(response) => {
-            info!("   ✅ Identity retrieved: {}", response.encryption_tag);
-            Ok(Json(response))
-        }
-        Err(e) => {
+    // Deep Debt: No fabricated identity. Always call security provider.
+    // If unavailable, return honest error instead of fake data.
+    let result = call_security_provider("trust.identity", serde_json::json!({}))
+        .await
+        .map_err(|e| {
             error!("   ❌ Identity retrieval failed: {}", e);
-            Err(crate::ApiError::Internal(format!(
-                "Failed to get identity: {}",
-                e
-            )))
-        }
-    }
+            crate::ApiError::Internal(format!("Failed to get identity: {}", e))
+        })?;
+
+    let response: IdentityResponse = serde_json::from_value(result).map_err(|e| {
+        crate::ApiError::Internal(format!("Failed to parse identity response: {}", e))
+    })?;
+
+    info!("   ✅ Identity retrieved: {}", response.encryption_tag);
+    Ok(Json(response))
 }
 
 #[cfg(test)]
@@ -272,7 +223,7 @@ mod tests {
             confidence: 0.95,
             reason: "known_peer".to_string(),
             trust_level: "high".to_string(),
-            metadata: serde_json::json!({"provider": "beardog"}),
+            metadata: serde_json::json!({"provider": "security"}),
         };
         let json = serde_json::to_string(&resp).expect("serialize");
         assert!(json.contains("allow"));
@@ -315,13 +266,13 @@ mod tests {
     #[test]
     fn test_identity_response_serialize() {
         let resp = IdentityResponse {
-            encryption_tag: "beardog:family:1894e909e454:node1".to_string(),
+            encryption_tag: "security:family:1894e909e454:node1".to_string(),
             capabilities: vec!["btsp".to_string(), "birdsong".to_string()],
             family_id: "1894e909e454".to_string(),
             identity_attestations: Some(serde_json::json!({"role": "tower"})),
         };
         let json = serde_json::to_string(&resp).expect("serialize");
-        assert!(json.contains("beardog:family:1894e909e454:node1"));
+        assert!(json.contains("security:family:1894e909e454:node1"));
         assert!(json.contains("btsp"));
         assert!(json.contains("1894e909e454"));
     }
@@ -343,7 +294,7 @@ mod tests {
     #[test]
     fn test_identity_response_roundtrip() {
         let resp = IdentityResponse {
-            encryption_tag: "beardog:test:tag".to_string(),
+            encryption_tag: "security:test:tag".to_string(),
             capabilities: vec!["cap1".to_string(), "cap2".to_string(), "cap3".to_string()],
             family_id: "test-family".to_string(),
             identity_attestations: Some(serde_json::json!({"node": "tower", "level": 5})),
@@ -353,113 +304,6 @@ mod tests {
         assert_eq!(back.encryption_tag, resp.encryption_tag);
         assert_eq!(back.capabilities.len(), 3);
         assert_eq!(back.family_id, "test-family");
-    }
-
-    // ========== Security Provider Socket Tests ==========
-
-    #[test]
-    fn test_get_security_provider_socket_default() {
-        // Clear environment to test default
-        std::env::remove_var("BEARDOG_SOCKET");
-        std::env::remove_var("BIOMEOS_FAMILY_ID");
-        std::env::remove_var("FAMILY_ID");
-        std::env::remove_var("BIOMEOS_SOCKET_DIR");
-
-        let socket = get_security_provider_socket();
-        assert!(socket.contains("beardog"));
-        assert!(socket.ends_with(".sock"));
-    }
-
-    /// Test that BEARDOG_SOCKET env var is checked first.
-    /// NOTE: Env var tests may be flaky when run in parallel due to process-global state.
-    #[test]
-    fn test_get_security_provider_socket_env_override() {
-        // Use a unique path that won't match system defaults
-        let test_path = "/unique_test_env_override_path/beardog.sock";
-        std::env::set_var("BEARDOG_SOCKET", test_path);
-
-        let socket = get_security_provider_socket();
-
-        // Clean up immediately
-        std::env::remove_var("BEARDOG_SOCKET");
-
-        // Verify: either we got our override OR another test cleared it (race)
-        // Both are acceptable - we just verify the path is valid format
-        assert!(
-            socket == test_path || socket.contains("beardog"),
-            "Socket should be our override or valid default: {socket}"
-        );
-    }
-
-    // ========== JSON-RPC Tests ==========
-
-    #[test]
-    fn test_json_rpc_request_serialize() {
-        let req = JsonRpcRequest {
-            jsonrpc: "2.0",
-            id: 1,
-            method: "test.method".to_string(),
-            params: serde_json::json!({"key": "value"}),
-        };
-        let json = serde_json::to_string(&req).expect("serialize");
-        assert!(json.contains("\"jsonrpc\":\"2.0\""));
-        assert!(json.contains("\"id\":1"));
-        assert!(json.contains("test.method"));
-        assert!(json.contains("key"));
-    }
-
-    #[test]
-    fn test_json_rpc_request_follows_semantic_method_naming() {
-        // Verify our methods follow the {domain}.{operation} standard
-        let req = JsonRpcRequest {
-            jsonrpc: "2.0",
-            id: 1,
-            method: "trust.evaluate".to_string(),
-            params: serde_json::json!({}),
-        };
-        let json = serde_json::to_string(&req).expect("serialize");
-        assert!(json.contains("trust.evaluate"));
-
-        let req2 = JsonRpcRequest {
-            jsonrpc: "2.0",
-            id: 2,
-            method: "trust.identity".to_string(),
-            params: serde_json::json!({}),
-        };
-        let json2 = serde_json::to_string(&req2).expect("serialize");
-        assert!(json2.contains("trust.identity"));
-    }
-
-    #[test]
-    fn test_json_rpc_response_with_result() {
-        let json = r#"{
-            "jsonrpc": "2.0",
-            "id": 1,
-            "result": {"decision": "allow", "confidence": 0.9, "reason": "ok", "trust_level": "high", "metadata": {}},
-            "error": null
-        }"#;
-        let resp: JsonRpcResponse<TrustEvaluationResponse> =
-            serde_json::from_str(json).expect("deserialize");
-        assert!(resp.result.is_some());
-        assert!(resp.error.is_none());
-        assert_eq!(resp.result.as_ref().expect("result").decision, "allow");
-    }
-
-    #[test]
-    fn test_json_rpc_response_with_error() {
-        let json = r#"{
-            "jsonrpc": "2.0",
-            "id": 1,
-            "result": null,
-            "error": {"code": -32600, "message": "Invalid request"}
-        }"#;
-        let resp: JsonRpcResponse<TrustEvaluationResponse> =
-            serde_json::from_str(json).expect("deserialize");
-        assert!(resp.result.is_none());
-        assert!(resp.error.is_some());
-        let err = resp.error.expect("error");
-        assert_eq!(err.code, -32600);
-        assert_eq!(err.message, "Invalid request");
     }
 
     // ========== Debug Formatting ==========

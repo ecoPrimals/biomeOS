@@ -3,6 +3,13 @@
 //! Implements the Tower's role as a rendezvous point for Pixel-USB handshakes.
 //! The Tower NEVER holds plaintext data — it only relays encrypted Dark Forest beacons.
 //!
+//! ## Deep Debt Evolution (Feb 11, 2026)
+//!
+//! - Removed direct `AtomicClient::unix()` calls to BearDog
+//! - Uses shared `beacon_verification` module (Neural API → socket fallback)
+//! - Single source of truth for decrypt validation (`success && !plaintext.is_empty()`)
+//! - No hardcoded primal names or socket paths
+//!
 //! ## Protocol Flow
 //!
 //! ```text
@@ -11,30 +18,26 @@
 //!                    ┌────────────────┼────────────────┐
 //!                    │                │                │
 //!              1. Verify         2. Store         3. Match
-//!              (BearDog           (ephemeral       (same lineage
-//!               decrypt)           slot)            hash → pair)
-//!                    │                │                │
-//!                    └────────────────┼────────────────┘
-//!                                    │
-//!         Pixel gets USB's beacon ◄──┴──► USB gets Pixel's beacon
+//!              (beacon_verification)  (ephemeral       (same lineage
+//!                                     slot)            hash → pair)
 //! ```
 //!
 //! ## Security Model
 //!
-//! - Tower verifies family membership via Dark Forest decryption (BearDog)
+//! - Tower verifies family membership via shared beacon_verification module
 //! - Tower does NOT store plaintext — only encrypted beacon blobs
 //! - Rendezvous slots expire after 5 minutes
 //! - Only same-lineage nodes can be paired
-//! - Rate-limited to prevent enumeration
 
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
-use base64::Engine;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::sync::RwLock;
 use tracing::info;
+
+use crate::beacon_verification;
 
 /// Rendezvous slot: holds an encrypted beacon waiting for its pair
 #[derive(Debug, Clone, Serialize)]
@@ -49,22 +52,38 @@ struct RendezvousSlot {
     created_at: u64,
     /// When this slot expires
     expires_at: u64,
+    /// Optional connection info (STUN results, relay endpoints) for NAT traversal
+    #[serde(skip_serializing_if = "Option::is_none")]
+    connection_info: Option<biomeos_core::connection_strategy::PeerConnectionInfo>,
 }
 
 /// Shared rendezvous state
+///
+/// Deep Debt Evolution: No direct primal socket knowledge.
+/// All verification routed through `beacon_verification` module.
 #[derive(Clone)]
 pub struct RendezvousState {
     /// Active rendezvous slots: lineage_hash → Vec<RendezvousSlot>
     slots: Arc<RwLock<HashMap<String, Vec<RendezvousSlot>>>>,
-    /// BearDog socket for beacon verification
-    beardog_socket: String,
+    /// Family ID for beacon decryption context
+    family_id: String,
+    /// Neural API socket path (discovered at runtime)
+    neural_api_socket: Option<String>,
 }
 
 impl RendezvousState {
-    pub fn new(beardog_socket: &str) -> Self {
+    /// Create a new rendezvous state
+    ///
+    /// Deep Debt Evolution: No socket parameter needed.
+    /// Discovery happens at runtime via `beacon_verification::discover_neural_api_socket()`.
+    pub fn new(_deprecated_socket: &str) -> Self {
+        let family_id = biomeos_core::family_discovery::get_family_id();
+        let neural_api_socket = beacon_verification::discover_neural_api_socket(&family_id);
+
         Self {
             slots: Arc::new(RwLock::new(HashMap::new())),
-            beardog_socket: beardog_socket.to_string(),
+            family_id,
+            neural_api_socket,
         }
     }
 
@@ -81,6 +100,37 @@ impl RendezvousState {
             !v.is_empty()
         });
     }
+
+    /// Verify family membership via shared beacon verification
+    ///
+    /// Deep Debt Evolution: Single source of truth.
+    /// Routes through Neural API → socket discovery fallback.
+    async fn verify_beacon(&self, dark_forest_token: &str) -> Option<String> {
+        let result = beacon_verification::verify_dark_forest_token(
+            self.neural_api_socket.as_deref(),
+            &self.family_id,
+            dark_forest_token,
+        )
+        .await?;
+
+        Some(result.family_id)
+    }
+
+    /// Hash a node identity via shared crypto routing
+    ///
+    /// Deep Debt Evolution: Uses `beacon_verification::hash_via_capability()`
+    /// instead of direct BearDog socket calls.
+    async fn hash_node_identity(&self, token: &str, epoch: u64) -> String {
+        let data = format!("{}:{}", token, epoch / 300);
+
+        beacon_verification::hash_via_capability(
+            self.neural_api_socket.as_deref(),
+            &self.family_id,
+            &data,
+        )
+        .await
+        .unwrap_or_else(|| format!("anon-{}", epoch))
+    }
 }
 
 /// Request to post a beacon to the rendezvous point
@@ -90,6 +140,11 @@ pub struct RendezvousPostRequest {
     pub encrypted_beacon: String,
     /// Dark Forest verification token (proves family membership)
     pub dark_forest_token: String,
+    /// Optional connection info for NAT traversal strategy selection.
+    /// Includes STUN results, relay endpoints, and self-hosted STUN server addresses.
+    /// When present, the matching peer receives this to optimize their connection tier.
+    #[serde(default)]
+    pub connection_info: Option<biomeos_core::connection_strategy::PeerConnectionInfo>,
 }
 
 /// Response from posting a beacon
@@ -103,6 +158,9 @@ pub struct RendezvousPostResponse {
     /// If a matching peer was already waiting, their beacon
     #[serde(skip_serializing_if = "Option::is_none")]
     pub peer_beacon: Option<String>,
+    /// Matched peer's connection info (STUN results, relay endpoints) for NAT traversal
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub peer_connection_info: Option<biomeos_core::connection_strategy::PeerConnectionInfo>,
     /// Number of peers waiting in the same lineage group
     pub peers_waiting: usize,
 }
@@ -122,6 +180,9 @@ pub struct RendezvousCheckResponse {
     /// Matching peer's encrypted beacon (if found)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub peer_beacon: Option<String>,
+    /// Matched peer's connection info (STUN results, relay endpoints) for NAT traversal
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub peer_connection_info: Option<biomeos_core::connection_strategy::PeerConnectionInfo>,
     /// Number of peers in rendezvous
     pub peers_waiting: usize,
 }
@@ -129,8 +190,9 @@ pub struct RendezvousCheckResponse {
 /// POST /api/v1/rendezvous/beacon — Post an encrypted beacon for rendezvous
 ///
 /// The Pixel or USB posts their Dark Forest beacon here.
-/// Tower verifies family membership, then stores the beacon in an ephemeral slot.
-/// If a matching family member is already waiting, returns their beacon immediately.
+/// Tower verifies family membership via beacon_verification, then stores
+/// the beacon in an ephemeral slot. If a matching family member is already
+/// waiting, returns their beacon immediately.
 pub async fn post_beacon(
     State(state): State<Arc<RendezvousState>>,
     Json(request): Json<RendezvousPostRequest>,
@@ -138,42 +200,11 @@ pub async fn post_beacon(
     // Clean expired slots first
     state.clean_expired().await;
 
-    // Verify family membership via BearDog
-    let client = biomeos_core::AtomicClient::unix(&state.beardog_socket)
-        .with_timeout(Duration::from_secs(5));
-
-    let verify_result = client
-        .call(
-            "beacon.try_decrypt",
-            serde_json::json!({
-                "data": request.dark_forest_token
-            }),
-        )
-        .await;
-
-    // Extract lineage hash from successful decryption
-    let lineage_hash = match verify_result {
-        Ok(result) => {
-            let has_plaintext = result.get("plaintext").is_some();
-            let decrypted = result
-                .get("decrypted")
-                .and_then(|v| v.as_bool())
-                .unwrap_or(false);
-
-            if !has_plaintext && !decrypted {
-                return (StatusCode::FORBIDDEN, Json(serde_json::json!({}))).into_response();
-            }
-
-            // Use family hash from decrypted beacon, or derive from token
-            result
-                .get("plaintext")
-                .and_then(|p| p.get("family_hash"))
-                .and_then(|h| h.as_str())
-                .unwrap_or("unknown")
-                .to_string()
-        }
-        Err(_) => {
-            // Not family — silent rejection
+    // Verify family membership via shared beacon verification
+    let lineage_hash = match state.verify_beacon(&request.dark_forest_token).await {
+        Some(hash) => hash,
+        None => {
+            // Not family — silent rejection (Dark Forest: reveal nothing)
             return (StatusCode::FORBIDDEN, Json(serde_json::json!({}))).into_response();
         }
     };
@@ -183,28 +214,10 @@ pub async fn post_beacon(
         .unwrap_or_default()
         .as_secs();
 
-    // Hash the node identity for the slot (don't store plaintext node ID)
-    let node_hash = {
-        let hash_result = client
-            .call(
-                "crypto.blake3_hash",
-                serde_json::json!({
-                    "data": base64::engine::general_purpose::STANDARD.encode(
-                        format!("{}:{}", request.dark_forest_token, now / 300).as_bytes()
-                    )
-                }),
-            )
-            .await;
-
-        match hash_result {
-            Ok(r) => r
-                .get("hash")
-                .and_then(|h| h.as_str())
-                .unwrap_or("unknown")
-                .to_string(),
-            Err(_) => format!("anon-{}", now),
-        }
-    };
+    // Hash the node identity (routed through capability)
+    let node_hash = state
+        .hash_node_identity(&request.dark_forest_token, now)
+        .await;
 
     let slot = RendezvousSlot {
         encrypted_beacon: request.encrypted_beacon,
@@ -212,26 +225,30 @@ pub async fn post_beacon(
         lineage_hash: lineage_hash.clone(),
         created_at: now,
         expires_at: now + 300, // 5 minute TTL
+        connection_info: request.connection_info,
     };
 
     let mut slots = state.slots.write().await;
     let lineage_slots = slots.entry(lineage_hash.clone()).or_default();
 
     // Check if a matching peer is already waiting
-    let peer_beacon = if !lineage_slots.is_empty() {
+    let (peer_beacon, peer_connection_info) = if !lineage_slots.is_empty() {
         // Find a slot from a DIFFERENT node (not ourselves)
         let peer_idx = lineage_slots.iter().position(|s| s.node_hash != node_hash);
 
-        peer_idx.map(|idx| {
-            let peer = lineage_slots.remove(idx);
-            info!(
-                "🤝 Rendezvous matched! Lineage: {}...",
-                &lineage_hash[..8.min(lineage_hash.len())]
-            );
-            peer.encrypted_beacon
-        })
+        match peer_idx {
+            Some(idx) => {
+                let peer = lineage_slots.remove(idx);
+                info!(
+                    "🤝 Rendezvous matched! Lineage: {}...",
+                    &lineage_hash[..8.min(lineage_hash.len())]
+                );
+                (Some(peer.encrypted_beacon), peer.connection_info)
+            }
+            None => (None, None),
+        }
     } else {
-        None
+        (None, None)
     };
 
     let peers_waiting = lineage_slots.len();
@@ -243,6 +260,7 @@ pub async fn post_beacon(
         accepted: true,
         slot_id: Some(node_hash),
         peer_beacon,
+        peer_connection_info,
         peers_waiting,
     };
 
@@ -258,39 +276,10 @@ pub async fn check_peer(
 ) -> impl IntoResponse {
     state.clean_expired().await;
 
-    // Verify family membership
-    let client = biomeos_core::AtomicClient::unix(&state.beardog_socket)
-        .with_timeout(Duration::from_secs(5));
-
-    let verify_result = client
-        .call(
-            "beacon.try_decrypt",
-            serde_json::json!({
-                "data": request.dark_forest_token
-            }),
-        )
-        .await;
-
-    let lineage_hash = match verify_result {
-        Ok(result) => {
-            let has_plaintext = result.get("plaintext").is_some();
-            let decrypted = result
-                .get("decrypted")
-                .and_then(|v| v.as_bool())
-                .unwrap_or(false);
-
-            if !has_plaintext && !decrypted {
-                return (StatusCode::FORBIDDEN, Json(serde_json::json!({}))).into_response();
-            }
-
-            result
-                .get("plaintext")
-                .and_then(|p| p.get("family_hash"))
-                .and_then(|h| h.as_str())
-                .unwrap_or("unknown")
-                .to_string()
-        }
-        Err(_) => {
+    // Verify family membership via shared beacon verification
+    let lineage_hash = match state.verify_beacon(&request.dark_forest_token).await {
+        Some(hash) => hash,
+        None => {
             return (StatusCode::FORBIDDEN, Json(serde_json::json!({}))).into_response();
         }
     };
@@ -298,18 +287,21 @@ pub async fn check_peer(
     let slots = state.slots.read().await;
     let lineage_slots = slots.get(&lineage_hash);
 
-    let (matched, peer_beacon, peers_waiting) = match lineage_slots {
+    let (matched, peer_beacon, peer_connection_info, peers_waiting) = match lineage_slots {
         Some(slots) if !slots.is_empty() => {
-            // Return the first available peer beacon
-            let peer = slots.first().map(|s| s.encrypted_beacon.clone());
-            (peer.is_some(), peer, slots.len())
+            // Return the first available peer's beacon and connection info
+            let peer = slots.first();
+            let beacon = peer.map(|s| s.encrypted_beacon.clone());
+            let conn_info = peer.and_then(|s| s.connection_info.clone());
+            (beacon.is_some(), beacon, conn_info, slots.len())
         }
-        _ => (false, None, 0),
+        _ => (false, None, None, 0),
     };
 
     let response = RendezvousCheckResponse {
         matched,
         peer_beacon,
+        peer_connection_info,
         peers_waiting,
     };
 
@@ -324,20 +316,20 @@ mod tests {
 
     #[test]
     fn test_rendezvous_state_creation() {
-        let state = RendezvousState::new("/tmp/test-beardog.sock");
-        assert_eq!(state.beardog_socket, "/tmp/test-beardog.sock");
+        let state = RendezvousState::new("");
+        assert!(!state.family_id.is_empty());
     }
 
     #[test]
     fn test_rendezvous_state_clone() {
-        let state = RendezvousState::new("/tmp/test.sock");
+        let state = RendezvousState::new("");
         let cloned = state.clone();
-        assert_eq!(cloned.beardog_socket, "/tmp/test.sock");
+        assert_eq!(cloned.family_id, state.family_id);
     }
 
     #[tokio::test]
     async fn test_clean_expired_removes_old_slots() {
-        let state = RendezvousState::new("/tmp/test.sock");
+        let state = RendezvousState::new("");
 
         // Add an expired slot
         let mut slots = state.slots.write().await;
@@ -349,6 +341,7 @@ mod tests {
                 lineage_hash: "lineage1".to_string(),
                 created_at: 0,
                 expires_at: 1, // Expired long ago
+                connection_info: None,
             }],
         );
         drop(slots);
@@ -361,7 +354,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_clean_expired_keeps_valid_slots() {
-        let state = RendezvousState::new("/tmp/test.sock");
+        let state = RendezvousState::new("");
 
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -377,6 +370,7 @@ mod tests {
                 lineage_hash: "lineage1".to_string(),
                 created_at: now,
                 expires_at: now + 300, // 5 minutes from now
+                connection_info: None,
             }],
         );
         drop(slots);
@@ -390,7 +384,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_clean_expired_mixed_slots() {
-        let state = RendezvousState::new("/tmp/test.sock");
+        let state = RendezvousState::new("");
 
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -407,6 +401,7 @@ mod tests {
                     lineage_hash: "lineage1".to_string(),
                     created_at: 0,
                     expires_at: 1, // Expired
+                    connection_info: None,
                 },
                 RendezvousSlot {
                     encrypted_beacon: "valid".to_string(),
@@ -414,6 +409,7 @@ mod tests {
                     lineage_hash: "lineage1".to_string(),
                     created_at: now,
                     expires_at: now + 300, // Valid
+                    connection_info: None,
                 },
             ],
         );
@@ -446,6 +442,7 @@ mod tests {
             accepted: true,
             slot_id: Some("slot-abc".to_string()),
             peer_beacon: None,
+            peer_connection_info: None,
             peers_waiting: 2,
         };
 
@@ -453,6 +450,7 @@ mod tests {
         assert!(json.contains("\"accepted\":true"));
         assert!(json.contains("\"slot_id\":\"slot-abc\""));
         assert!(!json.contains("peer_beacon")); // skip_serializing_if = None
+        assert!(!json.contains("peer_connection_info")); // skip_serializing_if = None
         assert!(json.contains("\"peers_waiting\":2"));
     }
 
@@ -462,11 +460,38 @@ mod tests {
             accepted: true,
             slot_id: Some("slot-123".to_string()),
             peer_beacon: Some("encrypted_peer_data".to_string()),
+            peer_connection_info: None,
             peers_waiting: 0,
         };
 
         let json = serde_json::to_string(&response).expect("serialize");
         assert!(json.contains("encrypted_peer_data"));
+    }
+
+    #[test]
+    fn test_rendezvous_post_response_with_connection_info() {
+        use biomeos_core::connection_strategy::{PeerConnectionInfo, StunResults};
+
+        let response = RendezvousPostResponse {
+            accepted: true,
+            slot_id: Some("slot-456".to_string()),
+            peer_beacon: Some("peer_data".to_string()),
+            peer_connection_info: Some(PeerConnectionInfo {
+                stun_results: Some(StunResults {
+                    public_addr: "1.2.3.4:41200".to_string(),
+                    nat_type: "symmetric".to_string(),
+                }),
+                relay_endpoint: Some("192.168.1.144:3479".to_string()),
+                stun_server: None,
+            }),
+            peers_waiting: 1,
+        };
+
+        let json = serde_json::to_string(&response).expect("serialize");
+        assert!(json.contains("peer_connection_info"));
+        assert!(json.contains("1.2.3.4:41200"));
+        assert!(json.contains("symmetric"));
+        assert!(json.contains("192.168.1.144:3479"));
     }
 
     #[test]
@@ -484,12 +509,14 @@ mod tests {
         let response = RendezvousCheckResponse {
             matched: false,
             peer_beacon: None,
+            peer_connection_info: None,
             peers_waiting: 0,
         };
 
         let json = serde_json::to_string(&response).expect("serialize");
         assert!(json.contains("\"matched\":false"));
         assert!(!json.contains("peer_beacon")); // skip_serializing_if = None
+        assert!(!json.contains("peer_connection_info")); // skip_serializing_if = None
     }
 
     #[test]
@@ -497,6 +524,7 @@ mod tests {
         let response = RendezvousCheckResponse {
             matched: true,
             peer_beacon: Some("matched_beacon_data".to_string()),
+            peer_connection_info: None,
             peers_waiting: 3,
         };
 
@@ -516,6 +544,7 @@ mod tests {
             lineage_hash: "lineage".to_string(),
             created_at: 1000,
             expires_at: 1300,
+            connection_info: None,
         };
 
         let cloned = slot.clone();
@@ -524,6 +553,7 @@ mod tests {
         assert_eq!(cloned.lineage_hash, "lineage");
         assert_eq!(cloned.created_at, 1000);
         assert_eq!(cloned.expires_at, 1300);
+        assert!(cloned.connection_info.is_none());
     }
 
     #[test]
@@ -534,17 +564,19 @@ mod tests {
             lineage_hash: "lh".to_string(),
             created_at: 100,
             expires_at: 400,
+            connection_info: None,
         };
 
         let json = serde_json::to_string(&slot).expect("serialize");
         assert!(json.contains("enc_data"));
         assert!(json.contains("\"created_at\":100"));
         assert!(json.contains("\"expires_at\":400"));
+        assert!(!json.contains("connection_info")); // skip_serializing_if = None
     }
 
     #[tokio::test]
     async fn test_multiple_lineage_groups() {
-        let state = RendezvousState::new("/tmp/test.sock");
+        let state = RendezvousState::new("");
 
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -553,7 +585,6 @@ mod tests {
 
         let mut slots = state.slots.write().await;
 
-        // Add slots for two different lineage groups
         slots.insert(
             "family-a".to_string(),
             vec![RendezvousSlot {
@@ -562,6 +593,7 @@ mod tests {
                 lineage_hash: "family-a".to_string(),
                 created_at: now,
                 expires_at: now + 300,
+                connection_info: None,
             }],
         );
         slots.insert(
@@ -573,6 +605,7 @@ mod tests {
                     lineage_hash: "family-b".to_string(),
                     created_at: now,
                     expires_at: now + 300,
+                    connection_info: None,
                 },
                 RendezvousSlot {
                     encrypted_beacon: "beacon-b2".to_string(),
@@ -580,6 +613,7 @@ mod tests {
                     lineage_hash: "family-b".to_string(),
                     created_at: now,
                     expires_at: now + 300,
+                    connection_info: None,
                 },
             ],
         );

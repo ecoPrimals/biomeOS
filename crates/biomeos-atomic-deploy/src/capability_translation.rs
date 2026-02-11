@@ -471,6 +471,8 @@ impl CapabilityTranslationRegistry {
                     ("onion.hkdf_expand", "crypto.hmac_sha256"),
                     // JWT
                     ("security.generate_jwt", "generate_jwt_secret"),
+                    // Relay authorization (BearDog verifies lineage for relay sessions)
+                    ("relay.authorize", "relay.authorize"),
                 ],
             ),
             // Network domain - HTTP, discovery, peer communication, mesh relay
@@ -492,9 +494,12 @@ impl CapabilityTranslationRegistry {
                     ("mesh.announce", "mesh.announce"),
                     ("mesh.peers", "mesh.list_peers"),
                     ("mesh.health_check", "mesh.health_check"),
+                    // STUN advanced operations (relay-assisted punch)
+                    ("stun.probe_port_pattern", "stun.probe_port_pattern"),
                     // Hole punch coordination
                     ("punch.request", "punch.request"),
                     ("punch.status", "punch.status"),
+                    ("punch.coordinate", "punch.coordinate"),
                     // Relay operations
                     ("relay.serve", "relay.serve"),
                     ("relay.status", "relay.status"),

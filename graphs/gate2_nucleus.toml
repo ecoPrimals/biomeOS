@@ -1,50 +1,44 @@
-# NUCLEUS Complete Deployment Graph
+# gate2 NUCLEUS Deployment Graph
 # =============================================================================
 #
-# NUCLEUS = Tower + Node + Nest = Complete biomeOS System
+# Deploys a full NUCLEUS on gate2 (192.168.1.132) for covalent bonding with Tower.
+# biomeOS orchestrates gate2's primals via its Neural API, enabling cross-gate
+# capability.call routing through the Songbird mesh.
+#
+# Prerequisites:
+#   - gate2 enrolled with `biomeos enroll` (shared .family.seed with Tower)
+#   - biomeOS genomeBin deployed to gate2
+#   - Tower NUCLEUS already running (for covalent bond mesh discovery)
 #
 # Architecture:
-#   Tower = BearDog + Songbird          (crypto + network)
-#   Node  = Tower + Toadstool           (crypto + network + compute)
-#   Nest  = Tower + NestGate            (crypto + network + storage)
-#   NUCLEUS = BearDog + Songbird + Toadstool + NestGate + Squirrel
+#   gate2 runs its own NUCLEUS: BearDog + Songbird + NestGate + Toadstool + Squirrel
+#   Each primal uses family-suffixed sockets (same family as Tower)
+#   Songbird mesh auto-discovers Tower and establishes covalent bond
+#   biomeOS on gate2 provides Neural API for local capability routing
 #
-# biomeOS orchestrates NUCLEUS via the Neural API — its capability routing layer.
-# The Neural API is how biomeOS interacts with biome niches (primals).
-# It is NOT a separate service; it IS the biomeOS runtime.
+# Covalent Bond Flow:
+#   1. gate2 BearDog starts (same family lineage as Tower)
+#   2. gate2 Songbird starts, joins mesh, discovers Tower via beacon
+#   3. Beacon exchange verifies genetic lineage (Dark Forest protocol)
+#   4. Mesh link established — cross-gate capability.call works
+#   5. Plasmodium agents can meld Tower + gate2 capabilities
 #
 # ✅ STATUS: February 11, 2026
-#   - Tower Atomic: VALIDATED (BearDog A++ 100/100, Songbird A+)
-#   - Node Atomic: READY (Toadstool A++ socket-standardized, barraCUDA 50 ops)
-#   - Nest Atomic: READY (NestGate A+++ socket-only mode)
-#   - AI Bridge: VALIDATED (Squirrel → Songbird → Cloud/Local AI)
-#   - biomeOS Neural API: 124 capability translations, agent routing, relay-punch
-#   - FULL NUCLEUS: READY FOR GRAPH-BASED DEPLOYMENT
-#
-# Socket Conventions (XDG-compliant):
-#   ${XDG_RUNTIME_DIR}/biomeos/{primal}-{family_id}.sock
-#   Example: /run/user/1000/biomeos/beardog-cf7e8729.sock
-#
-# Environment Configuration:
-#   FAMILY_ID discovered from .family.seed (TRUE PRIMAL runtime discovery)
-#   NODE_ID for mesh identification (e.g., "tower1", "gate2")
-#   XDG_RUNTIME_DIR for socket directory (e.g., /run/user/1000)
-#
 # =============================================================================
 
 [graph]
-id = "nucleus_complete"
-version = "2.0.0"
-description = "Complete NUCLEUS: All 5 primals with Sovereign Onion + Mesh (biomeOS Neural API routes capabilities)"
+id = "gate2_nucleus"
+version = "1.0.0"
+description = "gate2 NUCLEUS: Full primal deployment for covalent bonding with Tower"
 coordination = "Sequential"
 
 # =============================================================================
-# PHASE 1: TOWER ATOMIC (Crypto + Network Foundation)
+# PHASE 1: TOWER ATOMIC on gate2
 # =============================================================================
 
-# 1.1: Germinate BearDog (Security Foundation)
+# 1.1: BearDog (must be separate instance — family-specific key material)
 [[nodes]]
-id = "tower_beardog"
+id = "gate2_beardog"
 output = "beardog_genesis"
 capabilities = ["crypto", "tls_crypto", "genetic", "security", "beacon"]
 
@@ -64,9 +58,8 @@ RUST_LOG = "beardog=info"
 [nodes.constraints]
 timeout_ms = 30000
 
-# Core crypto translations
 [nodes.capabilities_provided]
-# Core Crypto Operations
+# Core Crypto
 "crypto.generate_keypair" = "crypto.x25519_generate_ephemeral"
 "crypto.ecdh_derive" = "crypto.x25519_derive_secret"
 "crypto.derive_secret" = "crypto.x25519_derive_secret"
@@ -80,7 +73,13 @@ timeout_ms = 30000
 "sha384" = "crypto.sha384"
 "hash_for_cipher" = "crypto.hash_for_cipher"
 
-# Songbird TLS Direct Mode
+# AES-GCM
+"crypto.decrypt_aes_128_gcm" = "crypto.aes128_gcm_decrypt"
+"crypto.encrypt_aes_128_gcm" = "crypto.aes128_gcm_encrypt"
+"crypto.decrypt_aes_256_gcm" = "crypto.aes256_gcm_decrypt"
+"crypto.encrypt_aes_256_gcm" = "crypto.aes256_gcm_encrypt"
+
+# TLS Direct Mode
 "x25519_generate_ephemeral" = "crypto.x25519_generate_ephemeral"
 "x25519_derive_secret" = "crypto.x25519_derive_secret"
 "chacha20_poly1305_encrypt" = "crypto.chacha20_poly1305_encrypt"
@@ -92,19 +91,11 @@ timeout_ms = 30000
 "blake3_hash" = "crypto.blake3_hash"
 "hmac_sha256" = "crypto.hmac_sha256"
 
-# AES-GCM Operations
-"crypto.decrypt_aes_128_gcm" = "crypto.aes128_gcm_decrypt"
-"crypto.encrypt_aes_128_gcm" = "crypto.aes128_gcm_encrypt"
-"crypto.decrypt_aes_256_gcm" = "crypto.aes256_gcm_decrypt"
-"crypto.encrypt_aes_256_gcm" = "crypto.aes256_gcm_encrypt"
-
-# ECDSA Signature Algorithms
+# ECDSA + RSA
 "crypto.sign_ecdsa_p256" = "crypto.sign_ecdsa_secp256r1"
 "crypto.verify_ecdsa_p256" = "crypto.verify_ecdsa_secp256r1"
 "crypto.sign_ecdsa_p384" = "crypto.sign_ecdsa_secp384r1"
 "crypto.verify_ecdsa_p384" = "crypto.verify_ecdsa_secp384r1"
-
-# RSA Signature Algorithms
 "crypto.sign_rsa_pkcs1" = "crypto.sign_rsa_pkcs1_sha256"
 "crypto.verify_rsa_pkcs1" = "crypto.verify_rsa_pkcs1_sha256"
 "crypto.sign_rsa_pss" = "crypto.sign_rsa_pss_sha256"
@@ -120,48 +111,28 @@ timeout_ms = 30000
 "tls.compute_finished_verify_data" = "tls.compute_finished_verify_data"
 "tls.sign_handshake" = "tls.sign_handshake"
 "tls.verify_certificate" = "tls.verify_certificate"
-"derive_handshake_secrets" = "tls.derive_handshake_secrets"
-"derive_application_secrets" = "tls.derive_application_secrets"
-"compute_finished_verify_data" = "tls.compute_finished_verify_data"
-"derive_secrets" = "tls.derive_secrets"
 
-# Genetic Lineage Operations
+# Genetic + Beacon
 "verify_lineage" = "genetic.verify_lineage"
 "generate_lineage_proof" = "genetic.generate_lineage_proof"
 "genetic.derive_key" = "genetic.derive_lineage_key"
-"genetic.mix_entropy" = "genetic.mix_entropy"
 "genetic.verify_lineage" = "genetic.verify_lineage"
-"genetic.generate_proof" = "genetic.generate_lineage_proof"
-
-# Beacon Operations (Dark Forest)
 "beacon.generate" = "beacon.generate"
 "beacon.get_id" = "beacon.get_id"
-"beacon.get_seed" = "beacon.get_seed"
 "beacon.encrypt" = "beacon.encrypt"
 "beacon.decrypt" = "beacon.decrypt"
 "beacon.try_decrypt" = "beacon.try_decrypt"
 
-# Lineage-Based Encryption
-"crypto.encrypt_with_lineage" = "crypto.encrypt_with_lineage_key"
-"crypto.decrypt_with_lineage" = "crypto.decrypt_with_lineage_key"
-"crypto.derive_child_seed" = "crypto.derive_child_seed"
-
-# Sovereign Onion Crypto
-"crypto.sha3_256" = "crypto.sha3_256"
-"crypto.ed25519_generate_keypair" = "crypto.ed25519_generate_keypair"
-"sign_ed25519" = "crypto.sign_ed25519"
-"verify_ed25519" = "crypto.verify_ed25519"
-
-# Relay Authorization (Relay-Punch protocol)
+# Relay Authorization
 "relay.authorize" = "relay.authorize"
 
 [nodes.parameter_mappings]
 "crypto.ecdh_derive" = { "private_key" = "our_secret", "public_key" = "their_public" }
 
-# 1.2: Germinate Songbird (Network + Discovery + Mesh + Onion)
+# 1.2: Songbird (Network + Mesh — discovers Tower via LAN beacon)
 [[nodes]]
-id = "tower_songbird"
-depends_on = ["tower_beardog"]
+id = "gate2_songbird"
+depends_on = ["gate2_beardog"]
 output = "songbird_genesis"
 capabilities = ["http", "discovery", "secure_http", "mesh", "onion", "relay", "stun", "punch"]
 
@@ -189,63 +160,32 @@ RUST_LOG = "songbird=info"
 timeout_ms = 30000
 
 [nodes.capabilities_provided]
-# HTTP Operations
 "http.request" = "http.request"
 "http.get" = "http.get"
 "http.post" = "http.post"
 "discovery.announce" = "announce_capabilities"
 "discovery.query" = "discover_by_capability"
-
-# Mesh Relay
 "mesh.status" = "mesh.status"
 "mesh.find_path" = "mesh.find_path"
 "mesh.announce" = "mesh.announce"
 "mesh.peers" = "mesh.list_peers"
-"mesh.health_check" = "mesh.health_check"
-
-# Hole Punch Coordination (Relay-Punch protocol)
 "punch.request" = "punch.request"
-"punch.status" = "punch.status"
 "punch.coordinate" = "punch.coordinate"
-
-# STUN for NAT Detection
 "stun.discover" = "stun.get_public_address"
 "stun.detect_nat_type" = "stun.detect_nat_type"
 "stun.probe_port_pattern" = "stun.probe_port_pattern"
-
-# Relay Capabilities
 "relay.serve" = "relay.serve"
 "relay.status" = "relay.status"
 "relay.allocate" = "relay.allocate"
-
-# Sovereign Onion Service
 "onion.create_service" = "onion.create_service"
 "onion.get_address" = "onion.get_address"
 "onion.connect" = "onion.connect"
-"onion.accept" = "onion.accept"
 "onion.status" = "onion.status"
 
-# 1.3: Initialize Sovereign Onion Service
+# 1.3: Initialize mesh and discover Tower
 [[nodes]]
-id = "init_sovereign_onion"
-depends_on = ["tower_songbird"]
-output = "onion_initialized"
-
-[nodes.operation]
-name = "rpc_call"
-target = "songbird"
-
-[nodes.operation.params]
-method = "onion.start"
-params = { port = 8080 }
-
-[nodes.constraints]
-timeout_ms = 30000
-
-# 1.4: Initialize Beacon Mesh
-[[nodes]]
-id = "init_beacon_mesh"
-depends_on = ["init_sovereign_onion"]
+id = "gate2_mesh_init"
+depends_on = ["gate2_songbird"]
 output = "mesh_initialized"
 
 [nodes.operation]
@@ -259,89 +199,31 @@ params = { node_id = "${NODE_ID}", bootstrap_onions = [] }
 [nodes.constraints]
 timeout_ms = 10000
 
-# 1.5: Validate Tower Atomic
+# 1.4: Auto-discover Tower on LAN
 [[nodes]]
-id = "tower_validate"
-depends_on = ["tower_beardog", "tower_songbird", "init_sovereign_onion"]
-output = "tower_validated"
+id = "gate2_discover_tower"
+depends_on = ["gate2_mesh_init"]
+output = "tower_discovered"
 
 [nodes.operation]
-name = "health_check"
+name = "rpc_call"
+target = "songbird"
 
 [nodes.operation.params]
-check_beardog = true
-check_songbird = true
-check_onion = true
-timeout_seconds = 10
+method = "mesh.auto_discover"
+params = {}
 
 [nodes.constraints]
 timeout_ms = 15000
 
 # =============================================================================
-# PHASE 2: NODE ATOMIC (Add Compute)
+# PHASE 2: STORAGE + COMPUTE (gate2's primary roles)
 # =============================================================================
 
-# 2.1: Germinate Toadstool (Universal Compute)
+# 2.1: NestGate (Federated Storage — gate2 may have ZFS)
 [[nodes]]
-id = "node_toadstool"
-depends_on = ["tower_validate"]
-output = "toadstool_genesis"
-capabilities = ["compute", "workload", "orchestration", "ai_local"]
-
-[nodes.primal]
-by_capability = "compute"
-
-[nodes.operation]
-name = "start"
-
-[nodes.operation.params]
-mode = "server"
-family_id = "${FAMILY_ID}"
-
-[nodes.operation.environment]
-TOADSTOOL_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/toadstool-${FAMILY_ID}.sock"
-BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
-SONGBIRD_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/songbird-${FAMILY_ID}.sock"
-RUST_LOG = "toadstool=info"
-
-[nodes.constraints]
-timeout_ms = 45000  # GPU init may take time
-
-[nodes.capabilities_provided]
-"compute.health" = "toadstool.health"
-"compute.version" = "toadstool.version"
-"compute.capabilities" = "toadstool.query_capabilities"
-"compute.estimate" = "resources.estimate"
-"compute.validate" = "resources.validate_availability"
-"compute.optimize" = "resources.suggest_optimizations"
-"ai.local_inference" = "resources.estimate"
-
-# 2.2: Validate Node Atomic
-[[nodes]]
-id = "node_validate"
-depends_on = ["node_toadstool"]
-output = "node_validated"
-
-[nodes.operation]
-name = "health_check"
-
-[nodes.operation.params]
-check_beardog = true
-check_songbird = true
-check_toadstool = true
-timeout_seconds = 15
-
-[nodes.constraints]
-timeout_ms = 20000
-
-# =============================================================================
-# PHASE 3: NEST ATOMIC (Add Storage)
-# =============================================================================
-
-# 3.1: Germinate NestGate (Federated Storage)
-[[nodes]]
-id = "nest_nestgate"
-depends_on = ["node_validate"]
+id = "gate2_nestgate"
+depends_on = ["gate2_beardog", "gate2_songbird"]
 output = "nestgate_genesis"
 capabilities = ["storage", "provenance", "persistence"]
 
@@ -371,14 +253,47 @@ timeout_ms = 60000
 "storage.stats" = "stats"
 "storage.health" = "health_check"
 
-# =============================================================================
-# PHASE 4: AI ORCHESTRATION (Add AI Bridge)
-# =============================================================================
-
-# 4.1: Germinate Squirrel (AI Orchestration)
+# 2.2: Toadstool (GPU Compute — gate2 may have RTX 3090)
 [[nodes]]
-id = "germinate_squirrel"
-depends_on = ["tower_validate"]
+id = "gate2_toadstool"
+depends_on = ["gate2_beardog", "gate2_songbird"]
+output = "toadstool_genesis"
+capabilities = ["compute", "workload", "orchestration"]
+
+[nodes.primal]
+by_capability = "compute"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+
+[nodes.operation.environment]
+TOADSTOOL_FAMILY_ID = "${FAMILY_ID}"
+TOADSTOOL_NODE_ID = "${NODE_ID}"
+TOADSTOOL_SECURITY_WARNING_ACKNOWLEDGED = "1"
+SONGBIRD_ENDPOINT = "${XDG_RUNTIME_DIR}/biomeos/songbird-${FAMILY_ID}.sock"
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
+RUST_LOG = "toadstool=info"
+
+[nodes.constraints]
+timeout_ms = 45000
+
+[nodes.capabilities_provided]
+"compute.submit" = "toadstool.submit_workload"
+"compute.status" = "toadstool.query_status"
+"compute.cancel" = "toadstool.cancel_workload"
+"compute.list" = "toadstool.list_workloads"
+"compute.capabilities" = "toadstool.query_capabilities"
+"compute.health" = "toadstool.health"
+"compute.version" = "toadstool.version"
+
+# 2.3: Squirrel (AI — can route to local GPU via Toadstool)
+[[nodes]]
+id = "gate2_squirrel"
+depends_on = ["gate2_beardog", "gate2_songbird"]
 output = "squirrel_genesis"
 capabilities = ["ai", "inference", "learning"]
 
@@ -414,14 +329,14 @@ timeout_ms = 30000
 "ai.execute_tool" = "execute_tool"
 
 # =============================================================================
-# PHASE 5: VALIDATE FULL NUCLEUS
+# PHASE 3: VALIDATE + BOND
 # =============================================================================
 
-# 5.1: Final NUCLEUS Validation
+# 3.1: Validate gate2 NUCLEUS
 [[nodes]]
-id = "nucleus_validate"
-depends_on = ["nest_nestgate", "germinate_squirrel"]
-output = "nucleus_validated"
+id = "gate2_validate"
+depends_on = ["gate2_nestgate", "gate2_toadstool", "gate2_squirrel"]
+output = "gate2_validated"
 
 [nodes.operation]
 name = "health_check"
@@ -433,16 +348,15 @@ check_toadstool = true
 check_nestgate = true
 check_squirrel = true
 check_capability_routing = true
-check_onion = true
 timeout_seconds = 20
 
 [nodes.constraints]
 timeout_ms = 30000
 
-# 5.2: Announce as Family Relay
+# 3.2: Announce as relay (gate2 can serve as relay for NAT-traversal)
 [[nodes]]
-id = "announce_relay"
-depends_on = ["nucleus_validate"]
+id = "gate2_announce_relay"
+depends_on = ["gate2_validate"]
 output = "relay_announced"
 
 [nodes.operation]
@@ -451,7 +365,7 @@ target = "songbird"
 
 [nodes.operation.params]
 method = "mesh.announce"
-params = { as_relay = true, capabilities = ["relay", "stun", "onion"] }
+params = { as_relay = true, capabilities = ["relay", "stun", "compute", "storage"] }
 
 [nodes.constraints]
 timeout_ms = 5000
@@ -460,41 +374,27 @@ timeout_ms = 5000
 # SUMMARY
 # =============================================================================
 #
-# Deployment Order:
-#   1. BearDog (crypto foundation)
-#   2. Songbird (network, bonded to BearDog)
-#   3. Sovereign Onion + Mesh init
-#   4. [Tower Validated]
-#   5. Toadstool (compute, uses Tower for security)
-#   6. [Node Validated]
-#   7. NestGate (storage, uses Tower for encryption)
-#   8. Squirrel (AI routing, parallel with storage)
-#   9. [NUCLEUS Validated]
-#   10. Announce as relay
+# gate2 Deployment Order:
+#   1. BearDog (crypto — same family lineage as Tower)
+#   2. Songbird (network + mesh — discovers Tower via LAN)
+#   3. Mesh init + Tower auto-discovery
+#   4. NestGate (storage — may have ZFS for dedup/compression)
+#   5. Toadstool (compute — may have RTX 3090 for large models)
+#   6. Squirrel (AI routing — local GPU + remote API)
+#   7. [gate2 Validated]
+#   8. Announce as relay (storage + compute capabilities)
 #
-# Capabilities Exposed:
-#   - crypto.* (40+ methods) → BearDog
-#   - tls_crypto.* (6 methods) → BearDog
-#   - beacon.* (6 methods) → BearDog
-#   - genetic.* (4 methods) → BearDog
-#   - http.* (3 methods) → Songbird
-#   - discovery.* (2 methods) → Songbird
-#   - mesh.* (5 methods) → Songbird
-#   - onion.* (5 methods) → Songbird
-#   - relay.* (3 methods) → Songbird
-#   - stun.* (3 methods) → Songbird
-#   - punch.* (3 methods) → Songbird
-#   - compute.* (7 methods) → Toadstool
-#   - storage.* (4 methods) → NestGate
-#   - ai.* (8 methods) → Squirrel
+# After deployment, Plasmodium agents can meld Tower + gate2:
+#   crypto.*  → Tower:BearDog (both have BearDog, same family)
+#   compute.* → gate2:Toadstool (prefer RTX 3090 for large models)
+#   storage.* → gate2:NestGate (prefer ZFS for dedup)
+#   ai.*      → either gate (load balance)
 #
-# Environment Variables (Required):
-#   FAMILY_ID - derived from .family.seed
-#   XDG_RUNTIME_DIR - socket directory (e.g., /run/user/1000)
-#   NODE_ID - mesh node identifier (e.g., tower1)
-#
-# Environment Variables (Optional):
-#   ANTHROPIC_API_KEY - for Squirrel cloud AI
-#   OPENAI_API_KEY - for Squirrel cloud AI
+# Usage:
+#   biomeos atomic deploy graphs/gate2_nucleus.toml \
+#     --env FAMILY_ID=cf7e8729 \
+#     --env NODE_ID=gate2 \
+#     --env XDG_RUNTIME_DIR=/run/user/1000
 #
 # =============================================================================
+

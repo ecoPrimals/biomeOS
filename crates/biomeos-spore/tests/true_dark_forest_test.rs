@@ -27,7 +27,7 @@ async fn test_pure_noise_beacon_generation() {
     std::fs::write(seed_path, seed_bytes).unwrap();
 
     // Create Dark Forest beacon manager
-    let beacon_mgr = DarkForestBeacon::new(beardog_socket, seed_path, node_id)
+    let beacon_mgr = DarkForestBeacon::from_beardog_socket(beardog_socket, seed_path, node_id)
         .await
         .expect("Failed to create beacon manager");
 

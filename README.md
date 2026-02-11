@@ -12,14 +12,16 @@
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP + HTTP JSON-RPC) |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
 | Code Quality | A+ (Pure Rust, idiomatic, zero warnings, full doc coverage, deep debt audit) |
-| Tests | 2,297 passing (56.75% region coverage) |
+| Tests | 2,539 passing (56.75% region coverage) |
 | Unsafe Code | 0 in production |
 | Clippy | PASS (0 warnings, entire workspace) |
 | Formatting | PASS |
 | Deployment | USB + Pixel + Cross-Device AI |
 | AI Bridge | Squirrel -> Songbird -> Cloud/Local AI (validated) |
-| Neural API | 121 semantic capability translations |
+| Neural API | 124 semantic capability translations |
 | Plasmodium | HTTP JSON-RPC collective (runtime port, SSH deprecated) |
+| NAT Traversal | 4-tier strategy (LAN/punch/coordinated/relay) |
+| Agents | Plasmodium Agent Model (meld/split/mix routing contexts) |
 | Lifecycle | Auto-monitoring, deep health checks, auto-resurrection |
 
 ---
@@ -33,7 +35,7 @@
 |  AI Bridge                                                   |
 |  Squirrel -> http.request -> Songbird -> Cloud/Local AI      |
 +-------------------------------------------------------------+
-|  Neural API (121 semantic translations)                      |
+|  Neural API (124 semantic translations)                      |
 |  capability.call -> translate -> route to provider           |
 +-------------------------------------------------------------+
 |  Atomics                                                     |
@@ -54,7 +56,7 @@
 | Tower | BearDog + Songbird | Crypto, TLS, HTTP, Discovery |
 | Node | Tower + Toadstool | + Compute, GPU |
 | Nest | Tower + NestGate | + Storage, Persistence |
-| Full | All + Squirrel + Neural API | + AI Orchestration |
+| Full | All + Squirrel | + AI Orchestration, Neural API |
 
 ---
 
@@ -116,7 +118,7 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"Name the largest 
 
 ## Neural API - Semantic Routing
 
-121 capability translations enable primals to compose without knowing each other:
+124 capability translations enable primals to compose without knowing each other:
 
 ```
 Squirrel -> capability.call("http", "request", ...) -> Neural API
@@ -143,13 +145,14 @@ Tower (RTX 4070, 31 GB RAM, 24 cores)  <-HTTP JSON-RPC->  gate2 (RTX 3090, 251 G
 
 ```bash
 # Collective status across all bonded gates
-FAMILY_ID=nat0 biomeos plasmodium status
+biomeos plasmodium status
 
 # Per-gate hardware details
-FAMILY_ID=nat0 biomeos plasmodium gates
+biomeos plasmodium gates
 
 # Aggregate model view across all gates
-FAMILY_ID=nat0 biomeos plasmodium models
+biomeos plasmodium models
+# Family ID is auto-discovered from .family.seed (or FAMILY_ID env var)
 ```
 
 No central brain. Gates join/leave dynamically. Capabilities aggregate automatically.
@@ -204,11 +207,11 @@ After:  [0x4a, 0x8f, 0x2c, ...]                   <- pure noise
 | Primal | Purpose | Status | Next Evolution |
 |--------|---------|--------|----------------|
 | BearDog | Crypto, Genetics | Reference | Stable |
-| Songbird | HTTP, TLS, Discovery | 90% | Mesh state fix, UDP discovery fix, port 3492 elimination |
+| Songbird | HTTP, TLS, Discovery, Mesh | 90% | Mesh state fix, UDP discovery fix |
 | Toadstool | Compute, GPU | Operational | GPU job queue |
 | NestGate | Storage, Federation | Operational (patched) | Upstream boolean fix |
 | Squirrel | AI Orchestration | Operational | Ollama native adapter |
-| biomeOS | System Orchestrator | Evolved | Graph-based NUCLEUS deploy, ARM64 genomeBin |
+| biomeOS | System Orchestrator + Neural API | Evolved | ARM64 genomeBin |
 
 ---
 
@@ -234,13 +237,13 @@ After:  [0x4a, 0x8f, 0x2c, ...]                   <- pure noise
 cargo build --workspace
 ```
 
-### Test (2,297 tests)
+### Test (2,539 tests)
 
 ```bash
 cargo test --workspace
 ```
 
-### Coverage (56.75% region)
+### Coverage (~57% region)
 
 ```bash
 cargo llvm-cov --workspace
@@ -279,14 +282,14 @@ biomeOS/
 │   ├── biomeos-genome-factory/# genomeBin build + compose + replicate
 │   ├── biomeos-genomebin-v3/  # genomeBin v3.0 binary format
 │   ├── biomeos-primal-sdk/    # Primal development SDK
-│   ├── genome-deploy/         # genomeBin deployment
+│   ├── biomeos-genome-deploy/  # genomeBin deployment
 │   └── ...                    # + 8 more (manifest, niche, chimera, test-utils, etc.)
 ├── livespore-usb/             # USB deployment
 │   ├── x86_64/                # Intel/AMD binaries
 │   └── aarch64/               # ARM64 binaries
 ├── pixel8a-deploy/            # Pixel 8a deployment
 ├── specs/                     # Standards and specs (19 active)
-├── docs/handoffs/             # Evolution reports (14 active)
+├── docs/handoffs/             # Evolution reports (15 active)
 ├── graphs/                    # Deployment graphs
 └── scripts/                   # Startup and build scripts
 ```
@@ -328,8 +331,9 @@ AGPL-3.0-only
 ---
 
 **Status**: Production Ready
-**Updated**: February 10, 2026
+**Updated**: February 11, 2026
 **AI Bridge**: Local + Cloud AI validated
-**Plasmodium**: HTTP JSON-RPC collective (runtime port)
+**Plasmodium**: HTTP JSON-RPC collective (runtime port) + Agent Model
 **Covalent Bond**: Transport ready, beacon discovery pending Songbird fixes
-**Tests**: 2,297 passing (56.75% coverage) | **Clippy**: PASS | **Docs**: Full coverage | **Format**: PASS
+**NAT Traversal**: 4-tier strategy (LAN/punch/coordinated/relay)
+**Tests**: 2,539 passing (56.75% coverage) | **Clippy**: PASS | **Docs**: Full coverage | **Format**: PASS

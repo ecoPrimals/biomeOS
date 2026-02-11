@@ -24,12 +24,13 @@
 //! 6. Failed decrypt → ignore (not family)
 
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
-use biomeos_core::AtomicClient;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
+use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tracing::{debug, info, warn};
 
+use crate::beacon_genetics::CapabilityCaller;
 use crate::error::{SporeError, SporeResult};
 
 /// Plaintext beacon data (before encryption)
@@ -64,10 +65,21 @@ pub struct EncryptedBeacon {
 }
 
 /// Dark Forest beacon manager
+///
+/// ## Deep Debt Evolution (Feb 11, 2026)
+///
+/// - BEFORE: Direct `beardog_socket: String` — hardcoded primal knowledge
+/// - AFTER: `Arc<dyn CapabilityCaller>` — capability-routed, primal-agnostic
+///
+/// The beacon manager has zero knowledge of which primal provides crypto.
+/// All operations route through the `CapabilityCaller` trait:
+/// - Production: `NeuralApiCapabilityCaller` → Neural API → discovered primal
+/// - Bootstrap: `DirectBeardogCaller` → direct socket (enrollment only)
+/// - Testing: `MockCapabilityCaller` → deterministic responses
 #[derive(Clone)]
 pub struct DarkForestBeacon {
-    /// BearDog socket path for crypto operations
-    beardog_socket: String,
+    /// Capability caller for crypto operations (primal-agnostic)
+    capability_caller: Arc<dyn CapabilityCaller>,
     /// Family seed (base64)
     family_seed_b64: String,
     /// Node ID
@@ -75,14 +87,14 @@ pub struct DarkForestBeacon {
 }
 
 impl DarkForestBeacon {
-    /// Create a new Dark Forest beacon manager
+    /// Create a new Dark Forest beacon manager with capability routing
     ///
     /// # Arguments
-    /// * `beardog_socket` - Path to BearDog Unix socket
+    /// * `capability_caller` - Primal-agnostic crypto provider
     /// * `seed_path` - Path to .family.seed file
     /// * `node_id` - This node's identifier
     pub async fn new<P: AsRef<Path>>(
-        beardog_socket: &str,
+        capability_caller: Arc<dyn CapabilityCaller>,
         seed_path: P,
         node_id: &str,
     ) -> SporeResult<Self> {
@@ -97,10 +109,25 @@ impl DarkForestBeacon {
         let family_seed_b64 = BASE64.encode(&seed_bytes);
 
         Ok(Self {
-            beardog_socket: beardog_socket.to_string(),
+            capability_caller,
             family_seed_b64,
             node_id: node_id.to_string(),
         })
+    }
+
+    /// Create from a BearDog socket path (backward compatibility / bootstrap)
+    ///
+    /// Wraps the socket path in a `DirectBeardogCaller`. Prefer `new()` with
+    /// `NeuralApiCapabilityCaller` for production use.
+    pub async fn from_beardog_socket<P: AsRef<Path>>(
+        beardog_socket: &str,
+        seed_path: P,
+        node_id: &str,
+    ) -> SporeResult<Self> {
+        let caller = Arc::new(
+            crate::beacon_genetics::DirectBeardogCaller::new(beardog_socket),
+        );
+        Self::new(caller, seed_path, node_id).await
     }
 
     /// Derive family broadcast key from seed
@@ -291,10 +318,13 @@ impl DarkForestBeacon {
             .ok_or_else(|| SporeError::ValidationFailed("Failed to hash string".to_string()))
     }
 
-    /// Call BearDog via AtomicClient (Universal IPC v3.0)
+    /// Call crypto provider via capability routing
     ///
-    /// Uses AtomicClient for consistent, multi-transport JSON-RPC communication.
-    /// Supports Unix sockets, abstract sockets, and TCP fallback.
+    /// Deep Debt Evolution: Routes through `CapabilityCaller` trait instead of
+    /// direct BearDog socket. The caller has zero knowledge of which primal
+    /// provides the capability.
+    ///
+    /// Maintains JSON-RPC envelope compatibility with existing call sites.
     async fn call_beardog(&self, request: &serde_json::Value) -> SporeResult<serde_json::Value> {
         // Extract method and params from JSON-RPC request
         let method = request
@@ -307,19 +337,15 @@ impl DarkForestBeacon {
             .cloned()
             .unwrap_or(serde_json::json!({}));
 
-        // Create AtomicClient with 30s timeout (consistent with original)
-        let client = AtomicClient::unix(&self.beardog_socket)
-            .with_timeout(std::time::Duration::from_secs(30));
-
-        // Make the call via AtomicClient
-        let result = client.call(method, params).await.map_err(|e| {
+        // Route through capability caller (primal-agnostic)
+        let result = self.capability_caller.call(method, params).await.map_err(|e| {
             SporeError::IoError(std::io::Error::new(
                 std::io::ErrorKind::ConnectionRefused,
-                format!("BearDog call failed: {}", e),
+                format!("Capability call '{}' failed: {}", method, e),
             ))
         })?;
 
-        // Wrap result in JSON-RPC response format for compatibility
+        // Wrap result in JSON-RPC response format for compatibility with call sites
         Ok(serde_json::json!({
             "jsonrpc": "2.0",
             "result": result,
@@ -867,22 +893,26 @@ mod tests {
 
     #[test]
     fn test_dark_forest_beacon_clone() {
+        use crate::beacon_genetics::DirectBeardogCaller;
+
         let beacon = DarkForestBeacon {
-            beardog_socket: "/tmp/beardog.sock".to_string(),
+            capability_caller: Arc::new(DirectBeardogCaller::new("/tmp/beardog.sock")),
             family_seed_b64: "dGVzdHNlZWQ=".to_string(),
             node_id: "tower1".to_string(),
         };
 
         let cloned = beacon.clone();
-        assert_eq!(cloned.beardog_socket, "/tmp/beardog.sock");
         assert_eq!(cloned.node_id, "tower1");
         assert_eq!(cloned.family_seed_b64, beacon.family_seed_b64);
     }
 
     #[tokio::test]
     async fn test_dark_forest_beacon_new_missing_seed() {
+        use crate::beacon_genetics::DirectBeardogCaller;
+
+        let caller = Arc::new(DirectBeardogCaller::new("/tmp/beardog.sock"));
         let result = DarkForestBeacon::new(
-            "/tmp/beardog.sock",
+            caller,
             "/nonexistent/path/.family.seed",
             "tower1",
         )
@@ -892,21 +922,23 @@ mod tests {
 
     #[tokio::test]
     async fn test_dark_forest_beacon_new_with_seed_file() {
+        use crate::beacon_genetics::DirectBeardogCaller;
+
         let dir = tempfile::tempdir().expect("create tempdir");
         let seed_path = dir.path().join(".family.seed");
         tokio::fs::write(&seed_path, b"test-seed-bytes-32chars-minimum!")
             .await
             .expect("write seed");
 
+        let caller = Arc::new(DirectBeardogCaller::new("/tmp/beardog.sock"));
         let beacon = DarkForestBeacon::new(
-            "/tmp/beardog.sock",
+            caller,
             &seed_path,
             "tower1",
         )
         .await
         .expect("create beacon");
 
-        assert_eq!(beacon.beardog_socket, "/tmp/beardog.sock");
         assert_eq!(beacon.node_id, "tower1");
         assert!(!beacon.family_seed_b64.is_empty());
 

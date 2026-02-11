@@ -149,7 +149,7 @@ config:
 1. **Personal HPC Cluster**
    - Multiple nodes in your basement
    - Shared family_seed
-   - Example: 5 basement nodes, all `nat0` family
+   - Example: 5 basement nodes, all sharing `.family.seed`
 
 2. **Friend/Student Federation**
    - Trusted individuals, shared goals
@@ -181,7 +181,7 @@ bond_type = "covalent"
 shares_electrons = true  # Share Towers
 
 [collaboration]
-shared_family = "nat0"
+shared_family = "${FAMILY_ID}"  # Derived from .family.seed
 family_seed = "${FAMILY_SEED}"  # Shared genetic lineage
 trust_level = "high"
 resource_pooling = true
@@ -190,7 +190,7 @@ resource_pooling = true
 id = "launch_songbird_mesh"
 type = "covalent.tower_mesh"
 config:
-  family_id = "nat0"
+  family_id = "${FAMILY_ID}"
   discovery_protocol = "birdsong_encrypted_udp"
   mesh_topology = "full"
   electron_sharing = true
@@ -209,7 +209,7 @@ config:
 - Family_seed enables quantum entanglement
 - Collaborative decision-making
 
-**Current Deployment Example**: Our NUCLEUS with 5 primals (BearDog, Songbird, Squirrel, ToadStool, NestGate) all in `nat0` family.
+**Current Deployment Example**: Our NUCLEUS with 5 primals (BearDog, Songbird, Squirrel, ToadStool, NestGate) sharing `.family.seed` lineage.
 
 #### 2.2.5 Plasmodium: The Covalent Collective
 
@@ -458,7 +458,7 @@ Just as in coordination chemistry, different bonding systems can interact with e
 
 **Basement Cluster** (Internal Structure):
 - Bond Type: Covalent
-- 5 nodes, shared `nat0` family
+- 5 nodes, shared `.family.seed` lineage
 - Towers form molecular orbital
 - Unix sockets, BirdSong mesh
 
@@ -832,7 +832,7 @@ For systems that shift between bond types dynamically:
 Our NUCLEUS deployment (January 16, 2026) validates:
 
 ✅ **Covalent bonding** (internal):
-- 5 primals, `nat0` family
+- 5 primals, shared lineage
 - BearDog ↔ NestGate (JWT, shared electrons)
 - Songbird ↔ Squirrel (mesh, shared electrons)
 - Unix sockets (short bond length)

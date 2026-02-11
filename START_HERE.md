@@ -1,6 +1,6 @@
 # Start Here - biomeOS
 
-**Last Updated**: February 10, 2026
+**Last Updated**: February 11, 2026
 **Status**: Production Ready - Full Doc Coverage, Zero Warnings
 
 ---
@@ -13,8 +13,8 @@ biomeOS is the **ecosystem orchestrator** for ecoPrimals - a federation of auton
 
 - **Primals**: Self-contained Rust binaries with specific capabilities
 - **Atomics**: Primal combinations (Tower = BearDog + Songbird)
-- **NUCLEUS**: Complete system (Tower + Node + Nest + Neural API)
-- **Neural API**: Semantic routing via `capability.call` (121 translations)
+- **NUCLEUS**: Complete system (Tower + Node + Nest + Squirrel)
+- **Neural API**: Semantic routing via `capability.call` (124 translations, part of biomeOS)
 - **Universal IPC v3.0**: Multi-transport communication (Unix/Abstract/TCP/HTTP JSON-RPC)
 - **Dark Forest**: Zero-metadata beacon discovery using genetic lineage
 - **Plasmodium**: Over-NUCLEUS collective coordination (slime mold pattern)
@@ -22,6 +22,8 @@ biomeOS is the **ecosystem orchestrator** for ecoPrimals - a federation of auton
 - **LifecycleManager**: Deep health monitoring, auto-resurrection, coordinated shutdown
 - **SystemPaths**: XDG-compliant path resolution (no hardcoded paths)
 - **Capability Taxonomy**: Canonical primal-to-capability mapping (single source of truth)
+- **NAT Traversal**: 4-tier connection strategy (LAN/punch/coordinated/relay)
+- **Plasmodium Agents**: Dynamic routing contexts that compose capabilities across gates
 
 ---
 
@@ -52,7 +54,7 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 echo '{"jsonrpc":"2.0","method":"capability.discover","params":{"capability":"crypto"},"id":1}' | \
   nc -U /run/user/$(id -u)/biomeos/neural-api.sock -w 2 -q 1
 
-# List all 121 capability translations
+# List all 124 capability translations
 echo '{"jsonrpc":"2.0","method":"capability.list_translations","params":{},"id":1}' | \
   nc -U /run/user/$(id -u)/biomeos/neural-api.sock -w 2 -q 1
 ```
@@ -68,7 +70,7 @@ echo '{"jsonrpc":"2.0","method":"capability.list_translations","params":{},"id":
 |  Layer 3: AI Bridge                                          |
 |  Squirrel -> http.request -> Songbird -> Cloud/Local AI      |
 +-------------------------------------------------------------+
-|  Layer 2: Neural API (121 semantic translations)             |
+|  Layer 2: Neural API (124 semantic translations)             |
 |  capability.call -> translate -> route to provider           |
 +-------------------------------------------------------------+
 |  Layer 1: Atomics                                            |
@@ -105,7 +107,7 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 5. **Idiomatic Rust**: Modern patterns (OnceLock, or_default, Default trait)
 6. **Zero warnings**: Clippy clean, full doc coverage (0 `missing_docs` warnings across 8 crates)
 7. **Self-healing**: LifecycleManager auto-resurrects degraded primals
-8. **Tested**: 2,297 tests, 56.75% region coverage (llvm-cov)
+8. **Tested**: 2,539 tests, 56.75% region coverage (llvm-cov)
 
 ---
 
@@ -142,11 +144,11 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 | Primal | Purpose | Status | Next Evolution |
 |--------|---------|--------|----------------|
 | BearDog | Crypto, Genetics | Reference | Stable |
-| Songbird | HTTP, TLS, Discovery | 90% | Mesh state fix, UDP discovery, port 3492 |
+| Songbird | HTTP, TLS, Discovery, Mesh | 90% | Mesh state fix, UDP discovery |
 | Toadstool | Compute, GPU | Operational | GPU job queue |
 | NestGate | Storage, Federation | Operational (patched) | Upstream boolean fix |
 | Squirrel | AI Orchestration | Operational | Ollama native adapter |
-| biomeOS | System Orchestrator | Evolved | Graph deploy, ARM64 genomeBin |
+| biomeOS | System Orchestrator + Neural API | Evolved | ARM64 genomeBin |
 
 ---
 
@@ -165,11 +167,12 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 **Status**: Production Ready
 **AI Bridge**: Local + Cloud AI validated
-**Plasmodium**: HTTP JSON-RPC collective (runtime port)
+**Plasmodium**: HTTP JSON-RPC collective (runtime port) + Agent Model
 **Covalent Bond**: Transport ready, beacon discovery pending Songbird fixes
-**Neural API**: 121 semantic translations
+**Neural API**: 124 semantic translations (part of biomeOS)
+**NAT Traversal**: 4-tier strategy (LAN/punch/coordinated/relay)
 **Lifecycle**: Deep health monitoring + auto-resurrection
 **IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate)
 **Primals**: 6/6 ecoBin v2.0 compliant
-**Tests**: 2,297 passing (56.75% coverage) | **Clippy**: PASS | **Docs**: Full coverage
-**Updated**: February 10, 2026
+**Tests**: 2,539 passing (56.75% coverage) | **Clippy**: PASS | **Docs**: Full coverage
+**Updated**: February 11, 2026

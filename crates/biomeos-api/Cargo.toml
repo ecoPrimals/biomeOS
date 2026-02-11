@@ -32,6 +32,7 @@ biomeos-graph = { path = "../biomeos-graph" }
 biomeos-spore = { path = "../biomeos-spore" }
 biomeos-genome-factory = { path = "../biomeos-genome-factory" }
 biomeos-genomebin-v3 = { path = "../biomeos-genomebin-v3" }
+neural-api-client = { path = "../neural-api-client" }
 
 # Async utilities
 async-trait = "0.1"

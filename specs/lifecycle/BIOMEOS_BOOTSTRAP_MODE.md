@@ -46,8 +46,8 @@ async fn bootstrap_mode() -> Result<()> {
     info!("🌱 biomeOS starting in BOOTSTRAP MODE (no ecosystem)");
     
     // 1. Self-initialization
-    let family_id = generate_or_load_family_id()?; // "nat0"
-    let biomeos_socket = assign_biomeos_socket(&family_id); // "/tmp/biomeos-nat0.sock"
+    let family_id = generate_or_load_family_id()?; // "${FAMILY_ID}"
+    let biomeos_socket = assign_biomeos_socket(&family_id); // "/tmp/biomeos-${FAMILY_ID}.sock"
     
     // 2. Create capability registry (biomeOS provides this initially)
     let registry = CapabilityRegistry::new()?;
@@ -175,8 +175,8 @@ impl BootstrapConfig {
         // If not found → Bootstrap Mode
         
         let sockets = vec![
-            "/tmp/songbird-nat0.sock",
-            "/tmp/beardog-nat0.sock",
+            "/tmp/songbird-${FAMILY_ID}.sock",
+            "/tmp/beardog-${FAMILY_ID}.sock",
         ];
         
         for socket in sockets {
@@ -422,7 +422,7 @@ impl NeuralApiServer {
 
 [graph]
 id = "tower_atomic_bootstrap"
-family_id = "nat0"  # Can be overridden
+family_id = "${FAMILY_ID}"  # Can be overridden
 coordination = "Sequential"
 description = "Genesis: Create ecosystem security foundation"
 
@@ -489,16 +489,16 @@ check_btsp_tunnel = true  # Can they establish tunnel?
    └─> Enters BOOTSTRAP MODE
 
 2. Bootstrap initialization
-   ├─> Generate/load family ID (nat0)
-   ├─> Assign biomeOS socket (/tmp/biomeos-nat0.sock)
+   ├─> Generate/load family ID (${FAMILY_ID})
+   ├─> Assign biomeOS socket (/tmp/biomeos-${FAMILY_ID}.sock)
    ├─> Create capability registry
    └─> Register self (bootstrap mode)
 
 3. Germinate Tower Atomic
    ├─> Load tower_atomic_bootstrap.toml
    ├─> Assign sockets (nucleation):
-   │   ├─> BearDog: /tmp/beardog-nat0.sock
-   │   └─> Songbird: /tmp/songbird-nat0.sock
+   │   ├─> BearDog: /tmp/beardog-${FAMILY_ID}.sock
+   │   └─> Songbird: /tmp/songbird-${FAMILY_ID}.sock
    ├─> Deploy BearDog (wait for health)
    ├─> Deploy Songbird with BearDog socket
    └─> Wait for Tower Atomic health

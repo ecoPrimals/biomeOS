@@ -47,9 +47,9 @@ Primal boots:
 **Example**:
 ```bash
 # Neural API germinates Squirrel
-SQUIRREL_SOCKET=/tmp/squirrel-nat0.sock
-FAMILY_ID=nat0
-CAPABILITY_REGISTRY_SOCKET=/tmp/neural-api-nat0.sock
+SQUIRREL_SOCKET=/tmp/squirrel-${FAMILY_ID}.sock
+FAMILY_ID=${FAMILY_ID}
+CAPABILITY_REGISTRY_SOCKET=/tmp/neural-api-${FAMILY_ID}.sock
 # NO ANTHROPIC_API_KEY yet
 # NO AI_PROVIDER_SOCKETS yet
 # NO hardcoded peer knowledge
@@ -126,11 +126,11 @@ observe = true
 Neural API (Imprinting)
     ↓
 Provides ecosystem map:
-  - Tower Atomic exists at /tmp/songbird-nat0.sock
+  - Tower Atomic exists at /tmp/songbird-${FAMILY_ID}.sock
   - Provides: btsp.external, btsp.internal
   - Security inherited from BearDog
     ↓
-  - Local AI at /tmp/toadstool-nat0.sock
+  - Local AI at /tmp/toadstool-${FAMILY_ID}.sock
   - Provides: ai.generate_text
     ↓
 Primal receives imprint:
@@ -150,23 +150,23 @@ Primal updates internal model:
 // Neural API sends imprint to Squirrel
 {
   "imprint": {
-    "ecosystem_id": "nat0-production",
+    "ecosystem_id": "${FAMILY_ID}-production",
     "structure": {
       "tower_atomic": {
-        "id": "songbird-nat0",
+        "id": "songbird-${FAMILY_ID}",
         "capabilities": ["btsp.external", "btsp.internal", "http.request"],
-        "socket": "/tmp/songbird-nat0.sock",
+        "socket": "/tmp/songbird-${FAMILY_ID}.sock",
         "trust": "inherited_from_beardog"
       },
       "local_ai": {
-        "id": "toadstool-nat0",
+        "id": "toadstool-${FAMILY_ID}",
         "capabilities": ["ai.generate_text", "ai.embeddings"],
-        "socket": "/tmp/toadstool-nat0.sock"
+        "socket": "/tmp/toadstool-${FAMILY_ID}.sock"
       },
       "security": {
-        "id": "beardog-nat0",
+        "id": "beardog-${FAMILY_ID}",
         "capabilities": ["crypto.sign", "crypto.verify"],
-        "socket": "/tmp/beardog-nat0.sock",
+        "socket": "/tmp/beardog-${FAMILY_ID}.sock",
         "role": "nucleus_foundation"
       }
     },
@@ -212,18 +212,18 @@ Squirrel joins:
 ```bash
 # Neural API coordinates injection
 neural-api inject \
-  --primal squirrel-nat0 \
+  --primal squirrel-${FAMILY_ID} \
   --parent tower_atomic \
   --inherit-security \
-  --ecosystem nat0-production
+  --ecosystem ${FAMILY_ID}-production
 
 # Output:
-🌱 Germinating: squirrel-nat0
+🌱 Germinating: squirrel-${FAMILY_ID}
 🔬 Terraria complete: validated behavior
-🧬 Imprinting: nat0-production ecosystem structure
-🔐 Inheriting security: tower_atomic → squirrel-nat0
+🧬 Imprinting: ${FAMILY_ID}-production ecosystem structure
+🔐 Inheriting security: tower_atomic → squirrel-${FAMILY_ID}
 💉 Injecting into live ecosystem
-✅ Squirrel-nat0 joined ecosystem (generation: 2)
+✅ Squirrel-${FAMILY_ID} joined ecosystem (generation: 2)
 ```
 
 ### Stage 5: Infant Discovery (Continuous Learning)
@@ -236,7 +236,7 @@ Squirrel (Post-Injection)
 Runtime discovery:
   - "I need http.request capability"
   - Query registry: discover("btsp.external")
-  - Result: songbird-nat0 at /tmp/songbird-nat0.sock
+  - Result: songbird-${FAMILY_ID} at /tmp/songbird-${FAMILY_ID}.sock
   - Connect and use
     ↓
 Ecosystem changes:
@@ -369,7 +369,7 @@ Like a biological terrarium:
 [terraria]
 id = "squirrel_v2_testing"
 mode = "isolated"
-parent_ecosystem = "nat0-production"
+parent_ecosystem = "${FAMILY_ID}-production"
 duration_max = "1h"  # Auto-cleanup
 
 # Mock Tower Atomic
@@ -457,7 +457,7 @@ neural-api terraria create \
 
 # Neural API output:
 🔬 Creating terraria: squirrel-test-20260121
-📦 Mocking ecosystem: nat0-production
+📦 Mocking ecosystem: ${FAMILY_ID}-production
 🌱 Germinating: squirrel-test instance
 👀 Observing behavior...
 
@@ -599,15 +599,15 @@ impl NeuralExecutor {
 
 ```bash
 # Neural API germinates Squirrel
-neural-api germinate --primal squirrel --family nat0
+neural-api germinate --primal squirrel --family ${FAMILY_ID}
 
 # Output:
-🌱 Germinating: squirrel-nat0
-📍 Socket assigned: /tmp/squirrel-nat0.sock
+🌱 Germinating: squirrel-${FAMILY_ID}
+📍 Socket assigned: /tmp/squirrel-${FAMILY_ID}.sock
 🔑 Minimal environment:
-   - SQUIRREL_SOCKET=/tmp/squirrel-nat0.sock
-   - FAMILY_ID=nat0
-   - CAPABILITY_REGISTRY_SOCKET=/tmp/neural-api-nat0.sock
+   - SQUIRREL_SOCKET=/tmp/squirrel-${FAMILY_ID}.sock
+   - FAMILY_ID=${FAMILY_ID}
+   - CAPABILITY_REGISTRY_SOCKET=/tmp/neural-api-${FAMILY_ID}.sock
 ✅ Squirrel germinated (PID: 12345)
 ```
 
@@ -615,7 +615,7 @@ neural-api germinate --primal squirrel --family nat0
 
 ```bash
 # Neural API creates terraria
-neural-api terraria test --primal squirrel-nat0
+neural-api terraria test --primal squirrel-${FAMILY_ID}
 
 # Output:
 🔬 Creating terraria: squirrel-test
@@ -638,15 +638,15 @@ neural-api terraria test --primal squirrel-nat0
 ```bash
 # Neural API imprints ecosystem structure
 neural-api imprint \
-  --primal squirrel-nat0 \
-  --ecosystem nat0-production
+  --primal squirrel-${FAMILY_ID} \
+  --ecosystem ${FAMILY_ID}-production
 
 # Output:
-🧬 Imprinting ecosystem: nat0-production
+🧬 Imprinting ecosystem: ${FAMILY_ID}-production
 📡 Sending structure:
-   - Tower Atomic: songbird-nat0
-   - Local AI: toadstool-nat0
-   - Security: beardog-nat0
+   - Tower Atomic: songbird-${FAMILY_ID}
+   - Local AI: toadstool-${FAMILY_ID}
+   - Security: beardog-${FAMILY_ID}
 🔗 Lineage: tower_atomic → biomeOS → squirrel
 ✅ Imprint complete
 ```
@@ -656,7 +656,7 @@ neural-api imprint \
 ```bash
 # Neural API injects into live ecosystem
 neural-api inject \
-  --primal squirrel-nat0 \
+  --primal squirrel-${FAMILY_ID} \
   --parent tower_atomic \
   --inherit-security
 
@@ -665,7 +665,7 @@ neural-api inject \
 🔐 Inheriting security context...
 💉 Injecting into live ecosystem...
 📡 Announcing to ecosystem peers...
-✅ Squirrel-nat0 joined (generation: 2)
+✅ Squirrel-${FAMILY_ID} joined (generation: 2)
 
 # Ecosystem now:
 🏰 Tower Atomic (gen 0)
@@ -683,7 +683,7 @@ neural-api inject \
 ```bash
 # Squirrel makes AI query
 # Discovers btsp.external capability
-# Finds: songbird-nat0
+# Finds: songbird-${FAMILY_ID}
 # Connects via BTSP
 # Makes HTTP request to Anthropic
 # Returns AI response

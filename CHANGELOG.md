@@ -2,6 +2,85 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## [v1.25] - 2026-02-11 (Test Coverage Expansion Phase 4)
+
+### Test Coverage Expansion — Phase 4
+114 new tests across 7 modules. Total: 2,425 → 2,539.
+
+| Module | Tests Added | Coverage Focus |
+|---|---|---|
+| `protocol_escalation.rs` | 20 | Config serde with defaults/partial JSON, cooldowns, status validation |
+| `executor/context.rs` | 14 | Checkpoint save/load, status overwrite, shared state, NodeStatus serde |
+| `executor/types.rs` | 8 | ExecutionReport serde roundtrip, total_phases/total_nodes, multi-failure |
+| `neural_executor_tests.rs` | 11 | Deep chain sort, wide graph, cycle detection, env var edge cases |
+| `dark_forest_gate.rs` | 15 | Config defaults, bypass paths, bare OK paths, token enforcement |
+| `primal_discovery.rs` | 18 | extract_name/family_id edge cases, non-socket filtering |
+| `node_handlers.rs` | 28 | substitute_env, filesystem_check, log handlers, deployment_report |
+
+---
+
+## [v1.24] - 2026-02-11 (Graph-Based Deployment Validation)
+
+### Deployment Graph Overhaul
+All 4 core deployment graphs updated and validated:
+
+- **XDG Compliance**: Replaced all hardcoded `/tmp/` and `/run/user/1000/` paths with `${XDG_RUNTIME_DIR}/biomeos/` + `${FAMILY_ID}` placeholders
+- **Capability Alignment**: Full `mesh`, `onion`, `relay`, `stun`, `punch` capabilities declared for Songbird across all graphs
+- **Port Standardization**: Sovereign Onion service standardized on port 8080 (was 3492)
+- **New Graph**: `gate2_nucleus.toml` for deploying a second gate NUCLEUS
+- **Neural API Clarification**: Updated all graph descriptions to reflect that Neural API is part of biomeOS, not a separate deployment
+
+### Validation
+- 7 new graph validation tests in `neural_graph.rs`
+- Programmatic verification of zero hardcoded paths in deployment graphs
+
+---
+
+## [v1.23] - 2026-02-11 (Test Coverage Expansion Phase 3)
+
+### Test Coverage Expansion — Phase 3
+61 new tests across 2 modules. Total: 2,358 → 2,419.
+
+| Module | Tests Added | Coverage Focus |
+|---|---|---|
+| `capability_handlers.rs` | 28 | All RPC methods, error paths, multi-registration, semantic mappings |
+| `config/mod.rs` | 30 | Builder methods, feature flags, presets, validation, production readiness |
+
+### Flaky Test Fix
+- Fixed pre-existing env var race condition in `stun_extension.rs` tests using `std::sync::Mutex`
+
+---
+
+## [v1.22] - 2026-02-11 (Relay-Assisted Coordinated Punch + Plasmodium Agents)
+
+### Relay-Assisted Coordinated Punch
+Full implementation of the 4-tier NAT traversal protocol for biomeOS-owned components:
+
+1. **Capability Translations**: Registered `stun.probe_port_pattern`, `punch.coordinate`, `relay.authorize` (124 total translations)
+2. **Neural API Routing Sugar**: Direct method routing for new NAT traversal capabilities
+3. **Connection Strategy Orchestrator**: `biomeos-core/src/connection_strategy.rs` — selects optimal tier (LAN → Direct Punch → Coordinated Punch → Pure Relay)
+4. **Rendezvous Endpoint Evolution**: Extended `POST /rendezvous/beacon` with `connection_info` (STUN results, relay endpoints) in beacon payload and response
+
+### Plasmodium Agent Model
+Dynamic capability-based routing contexts for distributed AI workloads:
+
+1. **Agent Types & Registry**: `CapabilityRoute`, `PlasmodiumAgent`, `AgentState`, `AgentRegistry`
+2. **Agent RPC Methods**: `agent.create`, `agent.list`, `agent.get`, `agent.remove`, `agent.meld`, `agent.split`, `agent.resolve`, `agent.call`, `agent.auto_meld`
+3. **`agent.call` Dispatch**: Resolves capabilities through agent routing table, dispatches to target primal
+4. **`agent.auto_meld`**: Automatically creates agent routing contexts from PlasmodiumState
+
+### Pre-existing Test Fix
+- Fixed `neural-api-client` `test_discover_socket_path` to use dynamic family ID assertion
+
+### Quality Metrics
+| Metric | Before | After |
+|--------|--------|-------|
+| Tests Passing | 2,297 | 2,358 |
+| Capability Translations | 121 | 124 |
+| Clippy | PASS | PASS |
+
+---
+
 ## [v1.21] - 2026-02-10 (Test Coverage Push Phase 2)
 
 ### Test Coverage Push — Phase 2
@@ -76,7 +155,7 @@ Key evolutions:
 ### Workspace-Wide Doc Coverage
 - **Resolved**: All ~1,445 `missing_docs` warnings across 8 crates
 - Every public module, struct, enum, field, variant, function, and type alias now has doc comments
-- `#![warn(missing_docs)]` enforced on `biomeos-core`, `biomeos-types`, `biomeos-cli`, `biomeos-compute`, `biomeos-api`, `biomeos-deploy`, `biomeos-genome-factory`, `genome-deploy`
+- `#![warn(missing_docs)]` enforced on `biomeos-core`, `biomeos-types`, `biomeos-cli`, `biomeos-compute`, `biomeos-api`, `biomeos-deploy`, `biomeos-genome-factory`, `biomeos-genome-deploy`
 
 | Crate | Warnings Fixed |
 |---|---|
@@ -87,7 +166,7 @@ Key evolutions:
 | `biomeos-api` | 21 |
 | `biomeos-deploy` | 20 |
 | `biomeos-genome-factory` | 20 |
-| `genome-deploy` | 12 |
+| `biomeos-genome-deploy` | 12 |
 
 ### Quality Metrics
 | Metric | Before | After |
@@ -297,8 +376,8 @@ Complete codebase-wide evolution to modern idiomatic Rust with zero actionable w
 
 #### Dependencies Removed (Pure Rust)
 - **`lazy_static`** -> `std::sync::OnceLock` (biomeos-api)
-- **`dirs`** -> `etcetera` / `std::env::var("HOME")` (biomeos-api, biomeos-cli, genome-deploy)
-- **`nix`** -> `std::env::var("UID")` (genome-deploy)
+- **`dirs`** -> `etcetera` / `std::env::var("HOME")` (biomeos-api, biomeos-cli, biomeos-genome-deploy)
+- **`nix`** -> `std::env::var("UID")` (biomeos-genome-deploy)
 
 #### Capability-Based Discovery
 - **`PrimalConnections`**: Fixed 6-field struct -> dynamic `HashMap<String, PrimalClient>`
@@ -492,7 +571,7 @@ Complete codebase-wide evolution to modern idiomatic Rust with zero actionable w
 | Finding | Status |
 |---------|--------|
 | Files > 1000 lines | 0 ✅ (all refactored) |
-| Unsafe code (production) | 1 (justified mmap in genome-deploy) |
+| Unsafe code (production) | 1 (justified mmap in biomeos-genome-deploy) |
 | Production TODOs | 2 (documented with rationale) |
 | Mocks in production | 0 (all in test files) |
 | Hardcoded primals | Centralized in `CapabilityTaxonomy` |

@@ -44,7 +44,7 @@ use serde_json::json;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     // Discover Neural API at runtime
-    let client = NeuralApiClient::discover("nat0")?;
+    let client = NeuralApiClient::discover(&family_id)?;
     
     // Call external API (no reqwest, no ring!)
     let response = client.proxy_http(
@@ -75,7 +75,7 @@ use neural_api_client::NeuralApiClient;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let client = NeuralApiClient::discover("nat0")?;
+    let client = NeuralApiClient::discover(&family_id)?;
     
     // Discover what primals provide "secure_http"
     let info = client.discover_capability("secure_http").await?;
@@ -100,7 +100,7 @@ use serde_json::json;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let client = NeuralApiClient::discover("nat0")?;
+    let client = NeuralApiClient::discover(&family_id)?;
     
     // Call crypto function without knowing about BearDog
     let signature = client.route_to_primal(
@@ -170,7 +170,7 @@ let response = songbird.http_request(...).await?;
 **After** (TRUE PRIMAL - ✅):
 ```rust
 // Squirrel only knows about capabilities
-let client = NeuralApiClient::discover("nat0")?;
+let client = NeuralApiClient::discover(&family_id)?;
 let response = client.proxy_http(...).await?;
 // ✅ Zero knowledge of Songbird
 // ✅ Runtime socket discovery
@@ -226,9 +226,10 @@ None required! Socket discovery is runtime-based.
 The client discovers the Neural API socket using the family ID:
 
 ```rust
-// Constructs: /tmp/neural-api-{family_id}.sock
-let client = NeuralApiClient::discover("nat0")?;
-// → /tmp/neural-api-nat0.sock
+// Constructs: $XDG_RUNTIME_DIR/biomeos/neural-api-{family_id}.sock
+let family_id = biomeos_core::family_discovery::get_family_id();
+let client = NeuralApiClient::discover(&family_id)?;
+// → /run/user/1000/biomeos/neural-api-cf7e8729.sock
 
 let client = NeuralApiClient::discover("production")?;
 // → /tmp/neural-api-production.sock
@@ -286,7 +287,7 @@ use neural_api_client::NeuralApiClient;
 use std::collections::HashMap;
 
 async fn call_api() -> Result<String> {
-    let client = NeuralApiClient::discover("nat0")?;
+    let client = NeuralApiClient::discover(&family_id)?;
     let response = client.proxy_http(
         "POST",
         "https://api.example.com/endpoint",

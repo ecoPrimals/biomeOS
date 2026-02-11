@@ -41,7 +41,7 @@ Primals declare both **semantic** and **actual** APIs in deployment graphs:
 id = "beardog"
 binary = "./plasmidBin/primals/beardog/beardog"
 mode = "server"
-socket_path = "/tmp/beardog-nat0.sock"
+socket_path = "$RUNTIME_DIR/biomeos/beardog-$FAMILY_ID.sock"
 
 # Self-describing: Semantic capability → Actual method mapping
 # BearDog v0.9.0: 23 crypto methods (8 core + 8 ECDSA/RSA + 4 genetic + 3 TLS)
@@ -89,7 +89,7 @@ Consumers declare what they need **semantically**:
 id = "songbird"
 binary = "./plasmidBin/primals/songbird/songbird"
 mode = "server"
-socket_path = "/tmp/songbird-nat0.sock"
+socket_path = "$RUNTIME_DIR/biomeos/songbird-$FAMILY_ID.sock"
 
 [nodes.capabilities_required]
 security_provider = [
@@ -118,7 +118,7 @@ pub struct MethodTranslation {
     semantic_name: String,      // "crypto.generate_keypair"
     provider_id: String,         // "beardog"
     actual_method: String,       // "x25519_generate_ephemeral"
-    socket: String,              // "/tmp/beardog-nat0.sock"
+    socket: String,              // "$RUNTIME_DIR/biomeos/beardog-$FAMILY_ID.sock"
 }
 ```
 
@@ -140,7 +140,7 @@ for node in graph.nodes {
                 semantic,           // "crypto.generate_keypair"
                 node.id,            // "beardog"
                 actual,             // "x25519_generate_ephemeral"
-                node.socket_path    // "/tmp/beardog-nat0.sock"
+                node.socket_path    // "$RUNTIME_DIR/biomeos/beardog-$FAMILY_ID.sock"
             );
         }
     }
@@ -274,7 +274,7 @@ binary = "./beardog"
 [[nodes]]
 id = "beardog"
 binary = "./beardog"
-socket_path = "/tmp/beardog-nat0.sock"
+socket_path = "$RUNTIME_DIR/biomeos/beardog-$FAMILY_ID.sock"
 
 # NEW: Capability → Method mapping
 [nodes.capabilities_provided]
@@ -324,7 +324,7 @@ output = "base64"
 {
   "result": {
     "provider": "beardog",
-    "socket": "/tmp/beardog-nat0.sock",
+    "socket": "/run/user/1000/biomeos/beardog-cf7e8729.sock",
     "actual_method": "x25519_generate_ephemeral"
   }
 }
@@ -370,7 +370,7 @@ output = "base64"
 id = "beardog"
 binary = "./plasmidBin/primals/beardog/beardog"
 mode = "server"
-socket_path = "/tmp/beardog-nat0.sock"
+socket_path = "$RUNTIME_DIR/biomeos/beardog-$FAMILY_ID.sock"
 
 [nodes.capabilities_provided]
 "crypto.generate_keypair" = "x25519_generate_ephemeral"
@@ -385,7 +385,7 @@ socket_path = "/tmp/beardog-nat0.sock"
 id = "songbird"
 binary = "./plasmidBin/primals/songbird/songbird"
 mode = "server"
-socket_path = "/tmp/songbird-nat0.sock"
+socket_path = "$RUNTIME_DIR/biomeos/songbird-$FAMILY_ID.sock"
 
 [nodes.capabilities_required]
 security = [

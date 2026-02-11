@@ -76,7 +76,7 @@ fn bench_pure_noise_generation(c: &mut Criterion) {
     }
 
     let mgr = rt.block_on(async {
-        DarkForestBeacon::new(&beardog, &seed_path, "bench_node")
+        DarkForestBeacon::from_beardog_socket(&beardog, &seed_path, "bench_node")
             .await
             .unwrap()
     });
@@ -114,7 +114,7 @@ fn bench_old_format_generation(c: &mut Criterion) {
     }
 
     let mgr = rt.block_on(async {
-        DarkForestBeacon::new(&beardog, &seed_path, "bench_node")
+        DarkForestBeacon::from_beardog_socket(&beardog, &seed_path, "bench_node")
             .await
             .unwrap()
     });
@@ -151,7 +151,7 @@ fn bench_pure_noise_decrypt_success(c: &mut Criterion) {
     }
 
     let mgr = rt.block_on(async {
-        DarkForestBeacon::new(&beardog, &seed_path, "bench_node")
+        DarkForestBeacon::from_beardog_socket(&beardog, &seed_path, "bench_node")
             .await
             .unwrap()
     });
@@ -191,7 +191,7 @@ fn bench_pure_noise_silent_failure(c: &mut Criterion) {
     }
 
     let mgr = rt.block_on(async {
-        DarkForestBeacon::new(&beardog, &seed_path, "bench_node")
+        DarkForestBeacon::from_beardog_socket(&beardog, &seed_path, "bench_node")
             .await
             .unwrap()
     });
@@ -229,7 +229,7 @@ fn bench_size_comparison(_c: &mut Criterion) {
     }
 
     let mgr = rt.block_on(async {
-        DarkForestBeacon::new(&beardog, &seed_path, "bench_node")
+        DarkForestBeacon::from_beardog_socket(&beardog, &seed_path, "bench_node")
             .await
             .unwrap()
     });

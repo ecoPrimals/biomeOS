@@ -62,9 +62,9 @@ Primal B starts → Searches for Primal A's socket
 Neural API (Nucleation Point)
     ↓
 Assigns sockets:
-  - BearDog: /tmp/beardog-nat0.sock
-  - Songbird: /tmp/songbird-nat0.sock
-  - Squirrel: /tmp/squirrel-nat0.sock
+  - BearDog: /tmp/beardog-${FAMILY_ID}.sock
+  - Songbird: /tmp/songbird-${FAMILY_ID}.sock
+  - Squirrel: /tmp/squirrel-${FAMILY_ID}.sock
     ↓
 Deploys in order (DAG):
   1. BearDog (with assigned socket)
@@ -72,8 +72,8 @@ Deploys in order (DAG):
   3. Squirrel (with assigned socket + capability registry)
     ↓
 Registers in capability registry:
-  - beardog-nat0 → /tmp/beardog-nat0.sock
-  - songbird-nat0 → /tmp/songbird-nat0.sock
+  - beardog-${FAMILY_ID} → /tmp/beardog-${FAMILY_ID}.sock
+  - songbird-${FAMILY_ID} → /tmp/songbird-${FAMILY_ID}.sock
     ↓
 Other primals discover instantly (event-driven)
 ```
@@ -133,9 +133,9 @@ fn assign_socket_path(
 ```
 
 **Example**:
-- BearDog (nat0): `/tmp/beardog-nat0.sock`
-- Songbird (nat0): `/tmp/songbird-nat0.sock`
-- Squirrel (nat0): `/tmp/squirrel-nat0.sock`
+- BearDog (${FAMILY_ID}): `/tmp/beardog-${FAMILY_ID}.sock`
+- Songbird (${FAMILY_ID}): `/tmp/songbird-${FAMILY_ID}.sock`
+- Squirrel (${FAMILY_ID}): `/tmp/squirrel-${FAMILY_ID}.sock`
 
 ### 2. Environment Variable Injection
 
@@ -148,8 +148,8 @@ fn assign_socket_path(
 id = "start-beardog"
 [nodes.operation.environment]
 # Neural API injects:
-BEARDOG_SOCKET = "/tmp/beardog-nat0.sock"  # Auto-assigned
-FAMILY_ID = "nat0"
+BEARDOG_SOCKET = "/tmp/beardog-${FAMILY_ID}.sock"  # Auto-assigned
+FAMILY_ID = "${FAMILY_ID}"
 ```
 
 ```toml
@@ -158,9 +158,9 @@ id = "start-songbird"
 depends_on = ["start-beardog"]
 [nodes.operation.environment]
 # Neural API injects:
-SONGBIRD_SOCKET = "/tmp/songbird-nat0.sock"  # Auto-assigned
-SONGBIRD_SECURITY_PROVIDER = "/tmp/beardog-nat0.sock"  # From dependency
-FAMILY_ID = "nat0"
+SONGBIRD_SOCKET = "/tmp/songbird-${FAMILY_ID}.sock"  # Auto-assigned
+SONGBIRD_SECURITY_PROVIDER = "/tmp/beardog-${FAMILY_ID}.sock"  # From dependency
+FAMILY_ID = "${FAMILY_ID}"
 ```
 
 ```toml
@@ -169,9 +169,9 @@ id = "start-squirrel"
 depends_on = ["start-songbird"]
 [nodes.operation.environment]
 # Neural API injects:
-SQUIRREL_SOCKET = "/tmp/squirrel-nat0.sock"  # Auto-assigned
-CAPABILITY_REGISTRY_SOCKET = "/tmp/neural-api-nat0.sock"  # Neural API itself
-FAMILY_ID = "nat0"
+SQUIRREL_SOCKET = "/tmp/squirrel-${FAMILY_ID}.sock"  # Auto-assigned
+CAPABILITY_REGISTRY_SOCKET = "/tmp/neural-api-${FAMILY_ID}.sock"  # Neural API itself
+FAMILY_ID = "${FAMILY_ID}"
 ```
 
 ### 3. Pre-Registration in Capability Registry
@@ -229,8 +229,8 @@ if let Some(deps) = &node.depends_on {
 **Example**:
 ```bash
 # Songbird deployment
-BEARDOG_SOCKET=/tmp/beardog-nat0.sock  # From dependency
-SONGBIRD_SOCKET=/tmp/songbird-nat0.sock  # Assigned
+BEARDOG_SOCKET=/tmp/beardog-${FAMILY_ID}.sock  # From dependency
+SONGBIRD_SOCKET=/tmp/songbird-${FAMILY_ID}.sock  # Assigned
 ```
 
 ---
@@ -244,20 +244,20 @@ SONGBIRD_SOCKET=/tmp/songbird-nat0.sock  # Assigned
 
 [graph]
 id = "tower_atomic"
-family_id = "nat0"
+family_id = "${FAMILY_ID}"
 nucleation = "neural_api"  # Neural API coordinates
 
 [[nodes]]
 id = "beardog"
 primal = { by_capability = "security" }
-# Neural API assigns: /tmp/beardog-nat0.sock
+# Neural API assigns: /tmp/beardog-${FAMILY_ID}.sock
 
 [[nodes]]
 id = "songbird"
 primal = { by_capability = "discovery" }
 depends_on = ["beardog"]
-# Neural API assigns: /tmp/songbird-nat0.sock
-# Neural API injects: BEARDOG_SOCKET=/tmp/beardog-nat0.sock
+# Neural API assigns: /tmp/songbird-${FAMILY_ID}.sock
+# Neural API injects: BEARDOG_SOCKET=/tmp/beardog-${FAMILY_ID}.sock
 ```
 
 **Deployment Flow**:
@@ -265,12 +265,12 @@ depends_on = ["beardog"]
 ```
 Neural API (Nucleation Point)
     ↓
-1. Assign BearDog socket: /tmp/beardog-nat0.sock
+1. Assign BearDog socket: /tmp/beardog-${FAMILY_ID}.sock
 2. Deploy BearDog with socket
 3. Register BearDog in capability registry
 4. Wait for BearDog health ✅
     ↓
-5. Assign Songbird socket: /tmp/songbird-nat0.sock
+5. Assign Songbird socket: /tmp/songbird-${FAMILY_ID}.sock
 6. Inject BEARDOG_SOCKET env var
 7. Deploy Songbird with socket
 8. Register Songbird in capability registry
@@ -295,11 +295,11 @@ NUCLEUS formed: BearDog ↔ Songbird bonded
 
 **Before** (random):
 - BearDog might use `/run/user/1000/beardog.sock`
-- Songbird might expect `/tmp/beardog-nat0.sock`
+- Songbird might expect `/tmp/beardog-${FAMILY_ID}.sock`
 - ❌ Mismatch, discovery fails
 
 **After** (assigned):
-- Neural API assigns `/tmp/beardog-nat0.sock`
+- Neural API assigns `/tmp/beardog-${FAMILY_ID}.sock`
 - Passes to both BearDog and Songbird
 - ✅ Always aligned
 
@@ -351,7 +351,7 @@ NUCLEUS formed: BearDog ↔ Songbird bonded
 ```toml
 [graph]
 id = "tower_squirrel"
-family_id = "nat0"
+family_id = "${FAMILY_ID}"
 coordination = "Sequential"
 
 # NEW: Nucleation configuration
@@ -494,17 +494,17 @@ pub struct NucleationConfig {
 
 ```bash
 # Deploy Tower Atomic via Neural API
-./neural-deploy --graph-id tower_atomic --family-id nat0
+./neural-deploy --graph-id tower_atomic --family-id ${FAMILY_ID}
 
 # Neural API output:
 🌱 Nucleation Point: Neural API
 📍 Assigned sockets:
-   - beardog-nat0: /tmp/beardog-nat0.sock
-   - songbird-nat0: /tmp/songbird-nat0.sock
+   - beardog-${FAMILY_ID}: /tmp/beardog-${FAMILY_ID}.sock
+   - songbird-${FAMILY_ID}: /tmp/songbird-${FAMILY_ID}.sock
 
 🚀 Deploying in order:
    1. ✅ BearDog started (health: healthy)
-   2. ✅ Songbird started (health: healthy, security: beardog-nat0)
+   2. ✅ Songbird started (health: healthy, security: beardog-${FAMILY_ID})
 
 🎊 NUCLEUS formed: Tower Atomic
    Capabilities:
@@ -523,8 +523,8 @@ async fn main() {
     
     // Instant result (< 1ms):
     // {
-    //   "id": "songbird-nat0",
-    //   "socket": "/tmp/songbird-nat0.sock",
+    //   "id": "songbird-${FAMILY_ID}",
+    //   "socket": "/tmp/songbird-${FAMILY_ID}.sock",
     //   "capabilities": ["btsp.external", "discovery.announce"]
     // }
     

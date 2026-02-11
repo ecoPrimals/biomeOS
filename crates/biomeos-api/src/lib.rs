@@ -6,6 +6,8 @@
 #![warn(missing_docs)]
 #![deny(unsafe_code)]
 
+/// Shared beacon verification — single source of truth for Dark Forest token verification
+pub mod beacon_verification;
 /// Dark Forest beacon gate middleware for sovereign security
 pub mod dark_forest_gate;
 mod handlers;
@@ -341,12 +343,8 @@ fn create_app_with_transport(state: AppState, force_sovereign: bool) -> Router {
         .with_state(shared_state);
 
     // Add rendezvous routes (Dark Forest beacon handshake for Pixel-USB)
-    // These have their OWN Dark Forest verification inside the handlers too
-    let beardog_socket = std::env::var("BEARDOG_SOCKET").unwrap_or_else(|_| {
-        let paths = biomeos_types::paths::SystemPaths::new_lazy();
-        paths.primal_socket("beardog").to_string_lossy().to_string()
-    });
-    let rendezvous_state = Arc::new(handlers::rendezvous::RendezvousState::new(&beardog_socket));
+    // Uses Tower Atomic capability routing — no direct primal socket wiring
+    let rendezvous_state = Arc::new(handlers::rendezvous::RendezvousState::new(""));
 
     let router = router
         .route(
