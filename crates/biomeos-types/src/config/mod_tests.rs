@@ -196,9 +196,7 @@ mod config_tests {
 
     #[test]
     fn test_builder_bind_address() -> Result<(), Box<dyn std::error::Error>> {
-        let config = BiomeOSConfig::builder()
-            .bind_address("0.0.0.0")
-            .build()?;
+        let config = BiomeOSConfig::builder().bind_address("0.0.0.0").build()?;
         assert_eq!(config.network.bind_address, "0.0.0.0");
         Ok(())
     }
@@ -208,10 +206,7 @@ mod config_tests {
         let config = BiomeOSConfig::builder()
             .log_level(observability::LogLevel::Debug)
             .build()?;
-        assert_eq!(
-            format!("{:?}", config.observability.logging.level),
-            "Debug"
-        );
+        assert_eq!(format!("{:?}", config.observability.logging.level), "Debug");
         Ok(())
     }
 
@@ -275,10 +270,10 @@ mod config_tests {
             .insert("base_key".to_string(), serde_json::json!("base_value"));
 
         let mut other = BiomeOSConfig::default();
-        other.metadata.custom.insert(
-            "other_key".to_string(),
-            serde_json::json!("other_value"),
-        );
+        other
+            .metadata
+            .custom
+            .insert("other_key".to_string(), serde_json::json!("other_value"));
 
         base.merge(other)?;
         assert!(base.metadata.custom.contains_key("base_key"));
@@ -405,10 +400,9 @@ metadata:
             tags: vec!["tag1".to_string(), "tag2".to_string()],
             ..Default::default()
         };
-        metadata.custom.insert(
-            "key".to_string(),
-            serde_json::json!({"nested": true}),
-        );
+        metadata
+            .custom
+            .insert("key".to_string(), serde_json::json!({"nested": true}));
 
         let json = serde_json::to_string(&metadata)?;
         let parsed: ConfigMetadata = serde_json::from_str(&json)?;
@@ -536,10 +530,7 @@ metadata:
         let dir = tempfile::tempdir()?;
         let path = dir.path().join("invalid.yaml");
         // Port 0 should fail validation
-        std::fs::write(
-            &path,
-            "network:\n  port: 0\n",
-        )?;
+        std::fs::write(&path, "network:\n  port: 0\n")?;
 
         let result = BiomeOSConfig::from_file(&path);
         assert!(result.is_err());
@@ -627,9 +618,18 @@ metadata:
     #[test]
     fn test_timeout_config_defaults() {
         let timeouts = TimeoutConfig::default();
-        assert_eq!(timeouts.connection_timeout, std::time::Duration::from_secs(10));
-        assert_eq!(timeouts.health_check_timeout, std::time::Duration::from_secs(5));
-        assert_eq!(timeouts.shutdown_timeout, std::time::Duration::from_secs(30));
+        assert_eq!(
+            timeouts.connection_timeout,
+            std::time::Duration::from_secs(10)
+        );
+        assert_eq!(
+            timeouts.health_check_timeout,
+            std::time::Duration::from_secs(5)
+        );
+        assert_eq!(
+            timeouts.shutdown_timeout,
+            std::time::Duration::from_secs(30)
+        );
     }
 
     #[test]

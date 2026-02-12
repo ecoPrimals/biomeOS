@@ -267,3 +267,275 @@ impl Default for HttpConfig {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Default Implementations
+    // ═══════════════════════════════════════════════════════════════════════
+
+    #[test]
+    fn test_network_config_default() {
+        let config = NetworkConfig::default();
+        assert_eq!(config.bind_address, "0.0.0.0");
+        assert_eq!(config.port, 8080);
+        assert!(config.tls.is_none());
+        assert!(config.websocket.is_none());
+        assert!(config.load_balancing.is_none());
+        assert!(config.rate_limiting.is_none());
+        assert!(config.cors.is_none());
+    }
+
+    #[test]
+    fn test_http_config_default() {
+        let config = HttpConfig::default();
+        assert!(config.http2);
+        assert!(!config.http3);
+        assert!(config.compression);
+        assert_eq!(config.keep_alive_timeout, Duration::from_secs(60));
+        assert_eq!(config.max_header_size, 8192);
+        assert_eq!(config.request_timeout, Duration::from_secs(60));
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // TLS Configuration
+    // ═══════════════════════════════════════════════════════════════════════
+
+    #[test]
+    fn test_tls_config_creation() {
+        let config = TlsConfig {
+            enabled: true,
+            cert_file: Some(PathBuf::from("/etc/ssl/cert.pem")),
+            key_file: Some(PathBuf::from("/etc/ssl/key.pem")),
+            ca_file: Some(PathBuf::from("/etc/ssl/ca.pem")),
+            min_version: TlsVersion::V1_3,
+            cipher_suites: vec!["TLS_AES_256_GCM_SHA384".to_string()],
+            verify_client: true,
+        };
+        assert!(config.enabled);
+        assert!(config.verify_client);
+    }
+
+    #[test]
+    fn test_tls_version_serialization() {
+        for version in [TlsVersion::V1_2, TlsVersion::V1_3] {
+            let json = serde_json::to_string(&version).expect("serialize");
+            let _: TlsVersion = serde_json::from_str(&json).expect("deserialize");
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // WebSocket Configuration
+    // ═══════════════════════════════════════════════════════════════════════
+
+    #[test]
+    fn test_websocket_config_creation() {
+        let config = WebSocketConfig {
+            enabled: true,
+            max_message_size: 16 * 1024 * 1024,
+            max_frame_size: 64 * 1024,
+            connection_timeout: Duration::from_secs(30),
+            ping_interval: Duration::from_secs(30),
+            pong_timeout: Duration::from_secs(10),
+        };
+        assert!(config.enabled);
+        assert_eq!(config.max_message_size, 16 * 1024 * 1024);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Load Balancing Configuration
+    // ═══════════════════════════════════════════════════════════════════════
+
+    #[test]
+    fn test_load_balancing_algorithm_serialization() {
+        for alg in [
+            LoadBalancingAlgorithm::RoundRobin,
+            LoadBalancingAlgorithm::WeightedRoundRobin,
+            LoadBalancingAlgorithm::LeastConnections,
+            LoadBalancingAlgorithm::WeightedLeastConnections,
+            LoadBalancingAlgorithm::IpHash,
+            LoadBalancingAlgorithm::Random,
+            LoadBalancingAlgorithm::WeightedRandom,
+        ] {
+            let json = serde_json::to_string(&alg).expect("serialize");
+            let _: LoadBalancingAlgorithm = serde_json::from_str(&json).expect("deserialize");
+        }
+    }
+
+    #[test]
+    fn test_load_balancing_config_creation() {
+        let config = LoadBalancingConfig {
+            algorithm: LoadBalancingAlgorithm::LeastConnections,
+            health_check: LoadBalancingHealthCheck {
+                interval: Duration::from_secs(10),
+                timeout: Duration::from_secs(5),
+                healthy_threshold: 3,
+                unhealthy_threshold: 2,
+                path: "/health".to_string(),
+            },
+            session_affinity: Some(SessionAffinity {
+                cookie_name: "BIOMEOS_SESSION".to_string(),
+                timeout: Duration::from_secs(3600),
+            }),
+        };
+        assert_eq!(config.health_check.path, "/health");
+        assert!(config.session_affinity.is_some());
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Rate Limiting Configuration
+    // ═══════════════════════════════════════════════════════════════════════
+
+    #[test]
+    fn test_rate_limiting_algorithm_serialization() {
+        for alg in [
+            RateLimitingAlgorithm::TokenBucket,
+            RateLimitingAlgorithm::LeakyBucket,
+            RateLimitingAlgorithm::FixedWindow,
+            RateLimitingAlgorithm::SlidingWindow,
+        ] {
+            let json = serde_json::to_string(&alg).expect("serialize");
+            let _: RateLimitingAlgorithm = serde_json::from_str(&json).expect("deserialize");
+        }
+    }
+
+    #[test]
+    fn test_rate_limiting_key_serialization() {
+        for key in [
+            RateLimitingKey::ClientIp,
+            RateLimitingKey::ApiKey,
+            RateLimitingKey::UserId,
+            RateLimitingKey::Custom("x-tenant-id".to_string()),
+        ] {
+            let json = serde_json::to_string(&key).expect("serialize");
+            let _: RateLimitingKey = serde_json::from_str(&json).expect("deserialize");
+        }
+    }
+
+    #[test]
+    fn test_rate_limiting_config_creation() {
+        let config = RateLimitingConfig {
+            algorithm: RateLimitingAlgorithm::TokenBucket,
+            requests_per_second: 100,
+            burst_size: 200,
+            key: RateLimitingKey::ClientIp,
+        };
+        assert_eq!(config.requests_per_second, 100);
+        assert_eq!(config.burst_size, 200);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CORS Configuration
+    // ═══════════════════════════════════════════════════════════════════════
+
+    #[test]
+    fn test_cors_config_creation() {
+        let config = CorsConfig {
+            allowed_origins: vec!["https://app.example.com".to_string()],
+            allowed_methods: vec!["GET".to_string(), "POST".to_string()],
+            allowed_headers: vec!["Content-Type".to_string(), "Authorization".to_string()],
+            exposed_headers: vec!["X-Request-Id".to_string()],
+            allow_credentials: true,
+            max_age: Duration::from_secs(3600),
+        };
+        assert!(config.allow_credentials);
+        assert_eq!(config.allowed_origins.len(), 1);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Serialization Roundtrip
+    // ═══════════════════════════════════════════════════════════════════════
+
+    #[test]
+    fn test_network_config_serialization() {
+        let config = NetworkConfig::default();
+        let json = serde_json::to_string(&config).expect("serialize");
+        let deserialized: NetworkConfig = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(deserialized.bind_address, "0.0.0.0");
+        assert_eq!(deserialized.port, 8080);
+    }
+
+    #[test]
+    fn test_full_network_config_serialization() {
+        let config = NetworkConfig {
+            bind_address: "127.0.0.1".to_string(),
+            port: 3000,
+            tls: Some(TlsConfig {
+                enabled: true,
+                cert_file: Some(PathBuf::from("/cert.pem")),
+                key_file: Some(PathBuf::from("/key.pem")),
+                ca_file: None,
+                min_version: TlsVersion::V1_3,
+                cipher_suites: vec![],
+                verify_client: false,
+            }),
+            http: HttpConfig::default(),
+            websocket: Some(WebSocketConfig {
+                enabled: true,
+                max_message_size: 1024 * 1024,
+                max_frame_size: 64 * 1024,
+                connection_timeout: Duration::from_secs(30),
+                ping_interval: Duration::from_secs(30),
+                pong_timeout: Duration::from_secs(10),
+            }),
+            load_balancing: None,
+            rate_limiting: Some(RateLimitingConfig {
+                algorithm: RateLimitingAlgorithm::TokenBucket,
+                requests_per_second: 100,
+                burst_size: 200,
+                key: RateLimitingKey::ApiKey,
+            }),
+            cors: None,
+        };
+        let json = serde_json::to_string(&config).expect("serialize");
+        let deserialized: NetworkConfig = serde_json::from_str(&json).expect("deserialize");
+        assert!(deserialized.tls.is_some());
+        assert!(deserialized.websocket.is_some());
+        assert!(deserialized.rate_limiting.is_some());
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Clone
+    // ═══════════════════════════════════════════════════════════════════════
+
+    #[test]
+    fn test_network_config_clone() {
+        let original = NetworkConfig::default();
+        let cloned = original.clone();
+        assert_eq!(cloned.port, 8080);
+    }
+
+    #[test]
+    fn test_http_config_clone() {
+        let original = HttpConfig::default();
+        let cloned = original.clone();
+        assert!(cloned.http2);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Debug Formatting
+    // ═══════════════════════════════════════════════════════════════════════
+
+    #[test]
+    fn test_tls_version_debug() {
+        let version = TlsVersion::V1_3;
+        let debug = format!("{:?}", version);
+        assert!(debug.contains("V1_3"));
+    }
+
+    #[test]
+    fn test_load_balancing_algorithm_debug() {
+        let alg = LoadBalancingAlgorithm::LeastConnections;
+        let debug = format!("{:?}", alg);
+        assert!(debug.contains("LeastConnections"));
+    }
+
+    #[test]
+    fn test_rate_limiting_key_debug() {
+        let key = RateLimitingKey::Custom("tenant-id".to_string());
+        let debug = format!("{:?}", key);
+        assert!(debug.contains("tenant-id"));
+    }
+}

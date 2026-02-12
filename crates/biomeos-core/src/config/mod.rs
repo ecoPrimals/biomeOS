@@ -548,10 +548,7 @@ mod tests {
         // Should have RUST_LOG env var
         let dev_env = config.environments.get("development");
         assert!(dev_env.is_some());
-        assert_eq!(
-            dev_env.unwrap().variables.get("RUST_LOG").unwrap(),
-            "debug"
-        );
+        assert_eq!(dev_env.unwrap().variables.get("RUST_LOG").unwrap(), "debug");
     }
 
     // ── Validation ─────────────────────────────────────────────────────

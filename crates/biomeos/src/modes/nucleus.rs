@@ -383,17 +383,17 @@ async fn start_primal(
         "toadstool" => {
             cmd.arg("server")
                 .arg("--socket")
-                .arg(&socket_path)
-                .env("TOADSTOOL_SOCKET", &socket_path)
+                .arg(socket_path.as_os_str())
+                .env("TOADSTOOL_SOCKET", socket_path.as_os_str())
                 .env("TOADSTOOL_FAMILY_ID", family_id);
         }
         "squirrel" => {
             let songbird_socket = socket_dir.join(format!("songbird-{}.sock", family_id));
             cmd.arg("server")
                 .arg("--socket")
-                .arg(&socket_path)
-                .env("SQUIRREL_SOCKET", &socket_path)
-                .env("HTTP_REQUEST_PROVIDER_SOCKET", &songbird_socket);
+                .arg(socket_path.as_os_str())
+                .env("SQUIRREL_SOCKET", socket_path.as_os_str())
+                .env("HTTP_REQUEST_PROVIDER_SOCKET", songbird_socket.as_os_str());
 
             // Load AI providers if env vars are set
             if std::env::var("ANTHROPIC_API_KEY").is_ok() || std::env::var("OPENAI_API_KEY").is_ok()

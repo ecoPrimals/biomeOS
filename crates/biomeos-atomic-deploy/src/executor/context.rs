@@ -259,8 +259,11 @@ mod tests {
     #[tokio::test]
     async fn test_all_statuses() {
         let ctx = ExecutionContext::new(HashMap::new());
-        ctx.set_status("node1", NodeStatus::Completed(serde_json::json!({"ok": true})))
-            .await;
+        ctx.set_status(
+            "node1",
+            NodeStatus::Completed(serde_json::json!({"ok": true})),
+        )
+        .await;
         ctx.set_status("node2", NodeStatus::Running).await;
         ctx.set_status("node3", NodeStatus::Failed("oops".to_string()))
             .await;
@@ -269,9 +272,15 @@ mod tests {
 
         let all = ctx.all_statuses().await;
         assert_eq!(all.len(), 5);
-        assert_eq!(all.get("node1"), Some(&NodeStatus::Completed(serde_json::json!({"ok": true}))));
+        assert_eq!(
+            all.get("node1"),
+            Some(&NodeStatus::Completed(serde_json::json!({"ok": true})))
+        );
         assert_eq!(all.get("node2"), Some(&NodeStatus::Running));
-        assert_eq!(all.get("node3"), Some(&NodeStatus::Failed("oops".to_string())));
+        assert_eq!(
+            all.get("node3"),
+            Some(&NodeStatus::Failed("oops".to_string()))
+        );
         assert_eq!(all.get("node4"), Some(&NodeStatus::Pending));
         assert_eq!(all.get("node5"), Some(&NodeStatus::Skipped));
     }
@@ -310,8 +319,11 @@ mod tests {
         let ctx = ExecutionContext::new(HashMap::new())
             .with_checkpoint_dir(temp_dir.path().to_path_buf());
 
-        ctx.set_status("beardog", NodeStatus::Completed(serde_json::json!({"pid": 123})))
-            .await;
+        ctx.set_status(
+            "beardog",
+            NodeStatus::Completed(serde_json::json!({"pid": 123})),
+        )
+        .await;
         ctx.set_status("songbird", NodeStatus::Running).await;
 
         // Save checkpoint

@@ -840,9 +840,7 @@ mod tests {
         graph.register_connection("songbird", "beardog").await;
 
         let manager = ProtocolEscalationManager::with_defaults(graph);
-        let metrics = manager
-            .get_connection_metrics("songbird", "beardog")
-            .await;
+        let metrics = manager.get_connection_metrics("songbird", "beardog").await;
 
         assert!(metrics.is_some());
         let m = metrics.expect("metrics");
@@ -905,13 +903,9 @@ mod tests {
         let graph = Arc::new(LivingGraph::new("test-family"));
         let manager = ProtocolEscalationManager::with_defaults(graph);
 
-        let result = manager
-            .fallback_connection("a", "b", "test reason")
-            .await;
+        let result = manager.fallback_connection("a", "b", "test reason").await;
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .contains("Connection not found"));
+        assert!(result.unwrap_err().contains("Connection not found"));
     }
 
     #[tokio::test]
@@ -921,9 +915,7 @@ mod tests {
 
         let result = manager.escalate_connection("a", "b").await;
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .contains("Connection not found"));
+        assert!(result.unwrap_err().contains("Connection not found"));
     }
 
     #[tokio::test]
@@ -1150,7 +1142,9 @@ mod tests {
         // Record some requests to populate metrics
         graph.record_request("songbird", "beardog", 100, true).await;
         graph.record_request("songbird", "beardog", 200, true).await;
-        graph.record_request("songbird", "beardog", 300, false).await;
+        graph
+            .record_request("songbird", "beardog", 300, false)
+            .await;
 
         let manager = ProtocolEscalationManager::with_defaults(graph);
         let metrics = manager
@@ -1284,9 +1278,7 @@ mod tests {
         graph.register_connection("songbird", "beardog").await;
 
         let manager = ProtocolEscalationManager::with_defaults(graph);
-        let result = manager
-            .escalate_connection("songbird", "beardog")
-            .await;
+        let result = manager.escalate_connection("songbird", "beardog").await;
 
         // Should return Ok with success=false (primal not found for tarpc query)
         assert!(result.is_ok());

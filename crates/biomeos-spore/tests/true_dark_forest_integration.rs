@@ -109,8 +109,10 @@ async fn test_different_family_isolation() -> Result<(), Box<dyn std::error::Err
     create_test_seed(seed_path_beta, seed_beta).await?;
 
     // Create two nodes with DIFFERENT family seeds
-    let node_alpha = DarkForestBeacon::from_beardog_socket(&beardog, seed_path_alpha, "alpha_node").await?;
-    let node_beta = DarkForestBeacon::from_beardog_socket(&beardog, seed_path_beta, "beta_node").await?;
+    let node_alpha =
+        DarkForestBeacon::from_beardog_socket(&beardog, seed_path_alpha, "alpha_node").await?;
+    let node_beta =
+        DarkForestBeacon::from_beardog_socket(&beardog, seed_path_beta, "beta_node").await?;
 
     // Node Alpha generates pure noise beacon
     println!("🌑 Node Alpha: Generating pure noise beacon...");

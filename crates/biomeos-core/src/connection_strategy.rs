@@ -149,14 +149,9 @@ impl PortPattern {
         if let Some(pattern_type) = value.get("type").and_then(|v| v.as_str()) {
             match pattern_type {
                 "sequential" => {
-                    let step = value
-                        .get("step")
-                        .and_then(|v| v.as_i64())
-                        .unwrap_or(1) as i32;
-                    let last_port = value
-                        .get("last_port")
-                        .and_then(|v| v.as_u64())
-                        .unwrap_or(0) as u16;
+                    let step = value.get("step").and_then(|v| v.as_i64()).unwrap_or(1) as i32;
+                    let last_port =
+                        value.get("last_port").and_then(|v| v.as_u64()).unwrap_or(0) as u16;
                     let predicted_next = value
                         .get("predicted_next")
                         .and_then(|v| v.as_u64())
@@ -277,7 +272,10 @@ pub async fn connect_to_peer(
                         .unwrap_or("direct")
                         .to_string();
 
-                    info!("✅ Tier 1 SUCCESS: {} reachable on LAN at {}", peer_id, endpoint);
+                    info!(
+                        "✅ Tier 1 SUCCESS: {} reachable on LAN at {}",
+                        peer_id, endpoint
+                    );
                     return Ok(ConnectionResult {
                         tier: ConnectionTier::LanDirect,
                         endpoint,
@@ -333,7 +331,10 @@ pub async fn connect_to_peer(
                     .unwrap_or("punched")
                     .to_string();
 
-                info!("✅ Tier 2 SUCCESS: Direct punch to {} at {}", peer_id, endpoint);
+                info!(
+                    "✅ Tier 2 SUCCESS: Direct punch to {} at {}",
+                    peer_id, endpoint
+                );
                 return Ok(ConnectionResult {
                     tier: ConnectionTier::DirectPunch,
                     endpoint,
@@ -471,7 +472,10 @@ pub async fn connect_to_peer(
         .unwrap_or("relay-fallback")
         .to_string();
 
-    info!("✅ Tier 4: Pure relay active for {} (session: {})", peer_id, session_id);
+    info!(
+        "✅ Tier 4: Pure relay active for {} (session: {})",
+        peer_id, session_id
+    );
     Ok(ConnectionResult {
         tier: ConnectionTier::PureRelay,
         endpoint: session_id,
@@ -666,10 +670,7 @@ mod tests {
             tier: ConnectionTier::CoordinatedPunch,
             endpoint: "relay-session-abc123".to_string(),
             elapsed_ms: 450,
-            tiers_attempted: vec![
-                ConnectionTier::LanDirect,
-                ConnectionTier::CoordinatedPunch,
-            ],
+            tiers_attempted: vec![ConnectionTier::LanDirect, ConnectionTier::CoordinatedPunch],
         };
 
         let json = serde_json::to_string(&result).expect("serialize");
@@ -677,8 +678,7 @@ mod tests {
         assert!(json.contains("relay-session-abc123"));
         assert!(json.contains("450"));
 
-        let deserialized: ConnectionResult =
-            serde_json::from_str(&json).expect("deserialize");
+        let deserialized: ConnectionResult = serde_json::from_str(&json).expect("deserialize");
         assert_eq!(deserialized.tier, ConnectionTier::CoordinatedPunch);
         assert_eq!(deserialized.tiers_attempted.len(), 2);
     }
@@ -700,8 +700,7 @@ mod tests {
         assert!(json.contains("1.2.3.4:41200"));
         assert!(json.contains("symmetric"));
 
-        let deserialized: PeerConnectionInfo =
-            serde_json::from_str(&json).expect("deserialize");
+        let deserialized: PeerConnectionInfo = serde_json::from_str(&json).expect("deserialize");
         assert!(deserialized.stun_results.is_some());
     }
 
@@ -736,4 +735,3 @@ mod tests {
         }
     }
 }
-

@@ -38,19 +38,23 @@ fn main() {
             println!("   Example Sockets:");
             println!(
                 "     - beardog:   {}/beardog-{}.sock",
-                socket_prefix.display(), family_id
+                socket_prefix.display(),
+                family_id
             );
             println!(
                 "     - songbird:  {}/songbird-{}.sock",
-                socket_prefix.display(), family_id
+                socket_prefix.display(),
+                family_id
             );
             println!(
                 "     - toadstool: {}/toadstool-{}.sock",
-                socket_prefix.display(), family_id
+                socket_prefix.display(),
+                family_id
             );
             println!(
                 "     - nestgate:  {}/nestgate-{}.sock\n",
-                socket_prefix.display(), family_id
+                socket_prefix.display(),
+                family_id
             );
 
             // Show mode-specific information

@@ -235,10 +235,7 @@ fn test_topological_sort_deep_chain() {
     assert_eq!(phases.len(), 5);
     for (i, phase) in phases.iter().enumerate() {
         assert_eq!(phase.len(), 1);
-        assert_eq!(
-            phase[0],
-            ["a", "b", "c", "d", "e"][i]
-        );
+        assert_eq!(phase[0], ["a", "b", "c", "d", "e"][i]);
     }
 }
 

@@ -1,4 +1,6 @@
 // Test fixtures for NUCLEUS atomic testing
+//
+// Deep Debt: Fast AND Safe - uses nix crate for safe POSIX syscalls
 
 use std::path::PathBuf;
 use once_cell::sync::Lazy;
@@ -12,7 +14,8 @@ pub struct TestConfig {
 
 impl TestConfig {
     pub fn default() -> Self {
-        let uid = unsafe { libc::getuid() };
+        // Fast AND Safe: nix::unistd::getuid() is a safe wrapper around the syscall
+        let uid = nix::unistd::getuid();
         Self {
             family_id: "test0".to_string(),
             node_id: "test-node".to_string(),

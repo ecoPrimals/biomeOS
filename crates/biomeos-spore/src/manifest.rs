@@ -396,10 +396,7 @@ mod tests {
             toml::from_str(&toml_str).expect("deserialize from TOML");
         assert_eq!(deserialized.manifest.version, "1.0");
         assert_eq!(deserialized.binaries.len(), 1);
-        assert_eq!(
-            deserialized.binaries["beardog"].name,
-            "beardog-server"
-        );
+        assert_eq!(deserialized.binaries["beardog"].name, "beardog-server");
         assert_eq!(deserialized.binaries["beardog"].size_bytes, 4096);
     }
 
@@ -446,8 +443,7 @@ mod tests {
     #[test]
     fn test_binary_manifest_from_nucleus_empty_dir() {
         let temp_dir = TempDir::new().expect("create temp dir");
-        let manifest =
-            BinaryManifest::from_nucleus(temp_dir.path()).expect("from_nucleus");
+        let manifest = BinaryManifest::from_nucleus(temp_dir.path()).expect("from_nucleus");
 
         assert!(manifest.binaries.is_empty());
         assert_eq!(manifest.manifest.version, "1.0");
@@ -462,8 +458,7 @@ mod tests {
         std::fs::create_dir_all(&tower_dir).expect("create tower dir");
         std::fs::write(tower_dir.join("tower"), b"fake binary").expect("write tower");
 
-        let manifest =
-            BinaryManifest::from_nucleus(temp_dir.path()).expect("from_nucleus");
+        let manifest = BinaryManifest::from_nucleus(temp_dir.path()).expect("from_nucleus");
 
         assert_eq!(manifest.binaries.len(), 1);
         assert!(manifest.binaries.contains_key("tower"));
@@ -481,14 +476,11 @@ mod tests {
         std::fs::create_dir_all(&primals_dir).expect("create primals dir");
         std::fs::write(primals_dir.join("beardog-server"), b"beardog binary")
             .expect("write beardog");
-        std::fs::write(primals_dir.join("songbird"), b"songbird binary")
-            .expect("write songbird");
+        std::fs::write(primals_dir.join("songbird"), b"songbird binary").expect("write songbird");
         // Unknown binary should be skipped
-        std::fs::write(primals_dir.join("unknown-primal"), b"unknown")
-            .expect("write unknown");
+        std::fs::write(primals_dir.join("unknown-primal"), b"unknown").expect("write unknown");
 
-        let manifest =
-            BinaryManifest::from_nucleus(temp_dir.path()).expect("from_nucleus");
+        let manifest = BinaryManifest::from_nucleus(temp_dir.path()).expect("from_nucleus");
 
         assert_eq!(manifest.binaries.len(), 2);
         assert!(manifest.binaries.contains_key("beardog"));
@@ -565,16 +557,8 @@ mod tests {
             "chash".to_string(),
         );
 
-        manifest.record_deployment(
-            "laptop-01".to_string(),
-            "admin".to_string(),
-            true,
-        );
-        manifest.record_deployment(
-            "laptop-02".to_string(),
-            "admin".to_string(),
-            false,
-        );
+        manifest.record_deployment("laptop-01".to_string(), "admin".to_string(), true);
+        manifest.record_deployment("laptop-02".to_string(), "admin".to_string(), false);
 
         assert_eq!(manifest.deployment_history.len(), 2);
         assert!(manifest.deployment_history[0].success);
@@ -600,11 +584,7 @@ mod tests {
             "0.15.0".to_string(),
             "hash1".to_string(),
         );
-        manifest.record_deployment(
-            "server-01".to_string(),
-            "ci-bot".to_string(),
-            true,
-        );
+        manifest.record_deployment("server-01".to_string(), "ci-bot".to_string(), true);
 
         // Save
         manifest.save(temp_dir.path()).expect("save manifest");
@@ -641,7 +621,10 @@ mod tests {
         let deserialized: SporeManifest = toml::from_str(&toml_str).expect("deserialize");
 
         assert_eq!(deserialized.spore.node_id, "node-delta");
-        assert_eq!(deserialized.lineage.derivation_method, manifest.lineage.derivation_method);
+        assert_eq!(
+            deserialized.lineage.derivation_method,
+            manifest.lineage.derivation_method
+        );
     }
 
     // ========== BinaryInfo Tests ==========
@@ -715,8 +698,7 @@ mod tests {
         };
 
         let json = serde_json::to_string(&compat).expect("serialize");
-        let deserialized: CompatibilityInfo =
-            serde_json::from_str(&json).expect("deserialize");
+        let deserialized: CompatibilityInfo = serde_json::from_str(&json).expect("deserialize");
 
         assert_eq!(deserialized.min_tower_version, "0.6.0");
         assert_eq!(deserialized.min_beardog_version, "0.15.0");

@@ -779,7 +779,10 @@ mod tests {
 
         assert_eq!(deserialized.hostname, "test-host");
         assert_eq!(deserialized.machine_id, "abc123");
-        assert_eq!(deserialized.mac_address, Some("00:11:22:33:44:55".to_string()));
+        assert_eq!(
+            deserialized.mac_address,
+            Some("00:11:22:33:44:55".to_string())
+        );
     }
 
     // ========== IncubatedNode Tests ==========

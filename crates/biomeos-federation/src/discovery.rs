@@ -843,7 +843,10 @@ mod tests {
 
         let dp = pd.get("nestgate").expect("should exist");
         assert_eq!(dp.endpoints.len(), 1);
-        assert!(matches!(&dp.endpoints[0], PrimalEndpoint::UnixSocket { .. }));
+        assert!(matches!(
+            &dp.endpoints[0],
+            PrimalEndpoint::UnixSocket { .. }
+        ));
     }
 
     #[test]
@@ -874,7 +877,10 @@ mod tests {
         pd.register_songbird_peer(&peer);
 
         let dp = pd.get("svc").expect("should exist");
-        assert!(dp.endpoints.is_empty(), "invalid UDP addr should be skipped");
+        assert!(
+            dp.endpoints.is_empty(),
+            "invalid UDP addr should be skipped"
+        );
     }
 
     // ═══════════════════════════════════════════════════════════════

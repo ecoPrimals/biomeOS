@@ -12,7 +12,7 @@
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP + HTTP JSON-RPC) |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
 | Code Quality | A+ (Pure Rust, idiomatic, zero warnings, full doc coverage, deep debt audit) |
-| Tests | 2,539 passing (56.75% region coverage) |
+| Tests | 2,798+ passing (60.99% region coverage) |
 | Unsafe Code | 0 in production |
 | Clippy | PASS (0 warnings, entire workspace) |
 | Formatting | PASS |
@@ -237,13 +237,13 @@ After:  [0x4a, 0x8f, 0x2c, ...]                   <- pure noise
 cargo build --workspace
 ```
 
-### Test (2,539 tests)
+### Test (2,798+ tests)
 
 ```bash
 cargo test --workspace
 ```
 
-### Coverage (~57% region)
+### Coverage (~61% region)
 
 ```bash
 cargo llvm-cov --workspace
@@ -336,4 +336,4 @@ AGPL-3.0-only
 **Plasmodium**: HTTP JSON-RPC collective (runtime port) + Agent Model
 **Covalent Bond**: Transport ready, beacon discovery pending Songbird fixes
 **NAT Traversal**: 4-tier strategy (LAN/punch/coordinated/relay)
-**Tests**: 2,539 passing (56.75% coverage) | **Clippy**: PASS | **Docs**: Full coverage | **Format**: PASS
+**Tests**: 2,798+ passing (60.99% coverage) | **Clippy**: PASS | **Docs**: Full coverage | **Format**: PASS

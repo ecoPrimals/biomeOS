@@ -482,10 +482,22 @@ mod tests {
         assert_eq!(ordered.len(), 4);
 
         // step-a must come before step-b, step-c
-        let pos_a = ordered.iter().position(|n| n.id.as_str() == "step-a").unwrap();
-        let pos_b = ordered.iter().position(|n| n.id.as_str() == "step-b").unwrap();
-        let pos_c = ordered.iter().position(|n| n.id.as_str() == "step-c").unwrap();
-        let pos_d = ordered.iter().position(|n| n.id.as_str() == "step-d").unwrap();
+        let pos_a = ordered
+            .iter()
+            .position(|n| n.id.as_str() == "step-a")
+            .unwrap();
+        let pos_b = ordered
+            .iter()
+            .position(|n| n.id.as_str() == "step-b")
+            .unwrap();
+        let pos_c = ordered
+            .iter()
+            .position(|n| n.id.as_str() == "step-c")
+            .unwrap();
+        let pos_d = ordered
+            .iter()
+            .position(|n| n.id.as_str() == "step-d")
+            .unwrap();
 
         assert!(pos_a < pos_b);
         assert!(pos_a < pos_c);

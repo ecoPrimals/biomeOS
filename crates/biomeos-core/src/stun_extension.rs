@@ -568,7 +568,10 @@ mod tests {
 
     #[test]
     fn test_error_display() {
-        assert_eq!(StunExtensionError::Timeout.to_string(), "STUN query timed out");
+        assert_eq!(
+            StunExtensionError::Timeout.to_string(),
+            "STUN query timed out"
+        );
         assert_eq!(
             StunExtensionError::InvalidResponse.to_string(),
             "Invalid response from STUN server"

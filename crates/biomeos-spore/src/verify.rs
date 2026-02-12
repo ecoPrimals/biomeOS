@@ -391,10 +391,7 @@ mod tests {
         let result = SporeVerification::verify(spore).await.expect("verify");
 
         // bin and primals should pass, secrets and logs should fail
-        let bin_check = result
-            .checks
-            .iter()
-            .find(|c| c.name == "Directory: bin");
+        let bin_check = result.checks.iter().find(|c| c.name == "Directory: bin");
         assert!(bin_check.expect("bin check").passed);
 
         let secrets_check = result
@@ -416,10 +413,7 @@ mod tests {
 
         let result = SporeVerification::verify(spore).await.expect("verify");
 
-        let seed_check = result
-            .checks
-            .iter()
-            .find(|c| c.name == "Family seed");
+        let seed_check = result.checks.iter().find(|c| c.name == "Family seed");
         assert!(!seed_check.expect("seed check").passed);
     }
 
@@ -437,10 +431,7 @@ mod tests {
 
         let result = SporeVerification::verify(spore).await.expect("verify");
 
-        let size_check = result
-            .checks
-            .iter()
-            .find(|c| c.name == "Family seed size");
+        let size_check = result.checks.iter().find(|c| c.name == "Family seed size");
         assert!(size_check.expect("seed size check").passed);
     }
 
@@ -458,19 +449,14 @@ mod tests {
 
         let result = SporeVerification::verify(spore).await.expect("verify");
 
-        let size_check = result
-            .checks
-            .iter()
-            .find(|c| c.name == "Family seed size");
+        let size_check = result.checks.iter().find(|c| c.name == "Family seed size");
         assert!(!size_check.expect("seed size check").passed);
-        assert!(
-            size_check
-                .expect("seed size check message")
-                .message
-                .as_ref()
-                .expect("message")
-                .contains("16")
-        );
+        assert!(size_check
+            .expect("seed size check message")
+            .message
+            .as_ref()
+            .expect("message")
+            .contains("16"));
     }
 
     #[tokio::test]
@@ -485,10 +471,7 @@ mod tests {
 
         let result = SporeVerification::verify(spore).await.expect("verify");
 
-        let config_check = result
-            .checks
-            .iter()
-            .find(|c| c.name == "Configuration");
+        let config_check = result.checks.iter().find(|c| c.name == "Configuration");
         assert!(!config_check.expect("config check").passed);
     }
 
@@ -578,17 +561,16 @@ BEARDOG_FAMILY_SEED_FILE = "/biomeOS/secrets/.family.seed"
 
         // Create executable binaries
         std::fs::write(spore.join("bin/tower"), b"tower binary").expect("write tower");
-        std::fs::write(spore.join("primals/beardog"), b"beardog binary")
-            .expect("write beardog");
-        std::fs::write(spore.join("primals/songbird"), b"songbird binary")
-            .expect("write songbird");
+        std::fs::write(spore.join("primals/beardog"), b"beardog binary").expect("write beardog");
+        std::fs::write(spore.join("primals/songbird"), b"songbird binary").expect("write songbird");
 
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
             for path in &["bin/tower", "primals/beardog", "primals/songbird"] {
-                let mut perms =
-                    std::fs::metadata(spore.join(path)).expect("metadata").permissions();
+                let mut perms = std::fs::metadata(spore.join(path))
+                    .expect("metadata")
+                    .permissions();
                 perms.set_mode(0o755);
                 std::fs::set_permissions(spore.join(path), perms).expect("set perms");
             }

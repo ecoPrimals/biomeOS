@@ -107,7 +107,7 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 5. **Idiomatic Rust**: Modern patterns (OnceLock, or_default, Default trait)
 6. **Zero warnings**: Clippy clean, full doc coverage (0 `missing_docs` warnings across 8 crates)
 7. **Self-healing**: LifecycleManager auto-resurrects degraded primals
-8. **Tested**: 2,539 tests, 56.75% region coverage (llvm-cov)
+8. **Tested**: 2,798+ tests, 60.99% region coverage (llvm-cov)
 
 ---
 
@@ -174,5 +174,5 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 **Lifecycle**: Deep health monitoring + auto-resurrection
 **IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate)
 **Primals**: 6/6 ecoBin v2.0 compliant
-**Tests**: 2,539 passing (56.75% coverage) | **Clippy**: PASS | **Docs**: Full coverage
+**Tests**: 2,798+ passing (60.99% coverage) | **Clippy**: PASS | **Docs**: Full coverage
 **Updated**: February 11, 2026

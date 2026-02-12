@@ -923,8 +923,7 @@ mod tests {
         ];
         for reason in reasons {
             let json = serde_json::to_string(&reason).expect("serialize reason");
-            let parsed: ApoptosisReason =
-                serde_json::from_str(&json).expect("parse reason");
+            let parsed: ApoptosisReason = serde_json::from_str(&json).expect("parse reason");
             assert_eq!(reason, parsed);
         }
     }
@@ -1025,11 +1024,8 @@ mod tests {
     #[tokio::test]
     async fn test_lifecycle_manager_with_config() {
         let nucleation = Arc::new(RwLock::new(SocketNucleation::default()));
-        let manager = LifecycleManager::with_config(
-            "custom-family",
-            Duration::from_secs(5),
-            nucleation,
-        );
+        let manager =
+            LifecycleManager::with_config("custom-family", Duration::from_secs(5), nucleation);
         let status = manager.get_status().await;
         assert!(status.is_empty());
     }
@@ -1173,9 +1169,7 @@ mod tests {
             config: GraphConfig::default(),
         };
 
-        manager
-            .store_deployment_graph("tower-graph", graph)
-            .await;
+        manager.store_deployment_graph("tower-graph", graph).await;
 
         // Verify it was stored (no panic)
     }
@@ -1279,7 +1273,10 @@ mod tests {
         // Songbird (dependent) should be shut down before beardog
         assert_eq!(order.len(), 2);
         let names: Vec<&str> = order.iter().map(|(n, _)| n.as_str()).collect();
-        let songbird_pos = names.iter().position(|&n| n == "songbird").expect("songbird");
+        let songbird_pos = names
+            .iter()
+            .position(|&n| n == "songbird")
+            .expect("songbird");
         let beardog_pos = names.iter().position(|&n| n == "beardog").expect("beardog");
         assert!(
             songbird_pos < beardog_pos,

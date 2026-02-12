@@ -258,7 +258,10 @@ mod tests {
         assert_eq!(result.completed, 2);
         assert_eq!(result.failed, 2);
         assert_eq!(result.errors.len(), 2);
-        assert_eq!(result.errors[0], ("node2".to_string(), "timeout".to_string()));
+        assert_eq!(
+            result.errors[0],
+            ("node2".to_string(), "timeout".to_string())
+        );
         assert_eq!(result.errors[1], ("node3".to_string(), "OOM".to_string()));
     }
 

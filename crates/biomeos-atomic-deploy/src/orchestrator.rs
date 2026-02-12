@@ -704,10 +704,10 @@ mod tests {
         let orch = DeploymentOrchestrator::new(config).expect("create orchestrator");
 
         // Verify expected child seed path structure
-        let expected_path = orch.config.runtime_dir.join(format!(
-            ".family-tower-{}.seed",
-            orch.config.family_id
-        ));
+        let expected_path = orch
+            .config
+            .runtime_dir
+            .join(format!(".family-tower-{}.seed", orch.config.family_id));
         assert!(
             expected_path
                 .to_string_lossy()
@@ -723,8 +723,7 @@ mod tests {
         let binary_dir = temp_dir.path().join("bin");
         std::fs::create_dir(&binary_dir).expect("create binary dir");
 
-        let mut config =
-            DeploymentConfig::test_config(temp_dir.path().join("nonexistent.seed"));
+        let mut config = DeploymentConfig::test_config(temp_dir.path().join("nonexistent.seed"));
         config.binary_dir = binary_dir;
         config.runtime_dir = temp_dir.path().join("runtime");
 

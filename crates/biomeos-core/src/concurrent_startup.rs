@@ -270,7 +270,9 @@ mod tests {
             capability_providers: HashMap::new(),
         };
 
-        let waves = graph.topological_waves().expect("empty graph should succeed");
+        let waves = graph
+            .topological_waves()
+            .expect("empty graph should succeed");
         assert_eq!(waves.len(), 0);
     }
 
@@ -356,7 +358,10 @@ mod tests {
         requires.insert(a.clone(), HashSet::new());
         requires.insert(b.clone(), HashSet::from(["security".into()]));
         requires.insert(c.clone(), HashSet::from(["security".into()]));
-        requires.insert(d.clone(), HashSet::from(["discovery".into(), "storage".into()]));
+        requires.insert(
+            d.clone(),
+            HashSet::from(["discovery".into(), "storage".into()]),
+        );
 
         let mut cap_providers = HashMap::new();
         cap_providers.insert("security".into(), a.clone());
@@ -570,7 +575,11 @@ mod tests {
     #[test]
     fn test_build_with_dependencies() {
         let primals: Vec<Arc<dyn ManagedPrimal>> = vec![
-            Arc::new(MockPrimal::new("beardog", vec![Capability::Security], vec![])),
+            Arc::new(MockPrimal::new(
+                "beardog",
+                vec![Capability::Security],
+                vec![],
+            )),
             Arc::new(MockPrimal::new(
                 "songbird",
                 vec![Capability::Discovery],
@@ -615,14 +624,20 @@ mod tests {
         ))];
 
         let graph = DependencyGraph::build(&primals).expect("should build");
-        assert!(graph.capability_providers.contains_key("custom:my-extension"));
+        assert!(graph
+            .capability_providers
+            .contains_key("custom:my-extension"));
     }
 
     // ── build + topological_waves integration ─────────────────────────
     #[test]
     fn test_build_then_waves_linear() {
         let primals: Vec<Arc<dyn ManagedPrimal>> = vec![
-            Arc::new(MockPrimal::new("beardog", vec![Capability::Security], vec![])),
+            Arc::new(MockPrimal::new(
+                "beardog",
+                vec![Capability::Security],
+                vec![],
+            )),
             Arc::new(MockPrimal::new(
                 "songbird",
                 vec![Capability::Discovery],
@@ -649,7 +664,11 @@ mod tests {
         // beardog provides security, songbird provides discovery
         // toadstool and nestgate both require only security → same wave
         let primals: Vec<Arc<dyn ManagedPrimal>> = vec![
-            Arc::new(MockPrimal::new("beardog", vec![Capability::Security], vec![])),
+            Arc::new(MockPrimal::new(
+                "beardog",
+                vec![Capability::Security],
+                vec![],
+            )),
             Arc::new(MockPrimal::new(
                 "nestgate",
                 vec![Capability::Storage],
@@ -727,8 +746,16 @@ mod tests {
     fn test_duplicate_capability_providers() {
         // Two primals both provide "security" — last one wins in the map
         let primals: Vec<Arc<dyn ManagedPrimal>> = vec![
-            Arc::new(MockPrimal::new("beardog", vec![Capability::Security], vec![])),
-            Arc::new(MockPrimal::new("beardog-backup", vec![Capability::Security], vec![])),
+            Arc::new(MockPrimal::new(
+                "beardog",
+                vec![Capability::Security],
+                vec![],
+            )),
+            Arc::new(MockPrimal::new(
+                "beardog-backup",
+                vec![Capability::Security],
+                vec![],
+            )),
         ];
 
         let graph = DependencyGraph::build(&primals).expect("should build despite duplicate");

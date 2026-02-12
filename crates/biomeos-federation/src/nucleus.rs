@@ -1272,7 +1272,10 @@ mod tests {
     async fn test_discover_secure_requires_clients() {
         let mut disc = SecureNucleusDiscovery::new();
         let result = disc.discover_secure().await;
-        assert!(result.is_err(), "secure discovery without clients must fail");
+        assert!(
+            result.is_err(),
+            "secure discovery without clients must fail"
+        );
         let err_msg = format!("{}", result.unwrap_err());
         assert!(err_msg.contains("Songbird") || err_msg.contains("BearDog"));
     }

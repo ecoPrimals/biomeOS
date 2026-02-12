@@ -195,4 +195,4 @@ for diagnostics.
 
 **Status**: Production Ready
 **Updated**: February 11, 2026
-**Tests**: 2,539 passing (56.75% region coverage)
+**Tests**: 2,798+ passing (60.99% region coverage)

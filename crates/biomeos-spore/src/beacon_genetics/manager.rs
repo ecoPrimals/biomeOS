@@ -813,12 +813,10 @@ mod tests {
 
         // Write a family seed (at least 8 bytes)
         let seed_data = b"abcdefghijklmnop"; // 16 bytes
-        std::fs::write(temp_dir.path().join(".family.seed"), seed_data)
-            .expect("write seed");
+        std::fs::write(temp_dir.path().join(".family.seed"), seed_data).expect("write seed");
 
         let mock_caller = Box::new(MockCapabilityCaller::new());
-        let manager =
-            BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
+        let manager = BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
 
         let hint = manager.get_lineage_hint().expect("should succeed");
         // First 8 bytes hex-encoded
@@ -830,12 +828,10 @@ mod tests {
         let temp_dir = tempfile::TempDir::new().expect("create temp dir");
 
         // Write a seed that's too short (< 8 bytes)
-        std::fs::write(temp_dir.path().join(".family.seed"), b"short")
-            .expect("write seed");
+        std::fs::write(temp_dir.path().join(".family.seed"), b"short").expect("write seed");
 
         let mock_caller = Box::new(MockCapabilityCaller::new());
-        let manager =
-            BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
+        let manager = BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
 
         let result = manager.get_lineage_hint();
         assert!(result.is_err());
@@ -846,8 +842,7 @@ mod tests {
         let temp_dir = tempfile::TempDir::new().expect("create temp dir");
 
         let mock_caller = Box::new(MockCapabilityCaller::new());
-        let manager =
-            BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
+        let manager = BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
 
         let result = manager.get_lineage_hint();
         assert!(result.is_err());
@@ -861,8 +856,7 @@ mod tests {
     fn test_save_manifest_no_manifest() {
         let temp_dir = tempfile::TempDir::new().expect("create temp dir");
         let mock_caller = Box::new(MockCapabilityCaller::new());
-        let manager =
-            BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
+        let manager = BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
 
         // Should be a no-op when there's no manifest
         manager.save_manifest().expect("no-op save should succeed");
@@ -898,10 +892,7 @@ mod tests {
         let mut manager =
             BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
 
-        let mut local = BeaconGeneticsManifest::new(
-            BeaconId::from_hex("local"),
-            "same_hint",
-        );
+        let mut local = BeaconGeneticsManifest::new(BeaconId::from_hex("local"), "same_hint");
         local.add_meeting(
             BeaconId::from_hex("shared"),
             MeetingRecord {
@@ -919,10 +910,7 @@ mod tests {
         manager.set_manifest(local);
 
         // Remote has same meeting but newer last_seen and new endpoint
-        let mut remote = BeaconGeneticsManifest::new(
-            BeaconId::from_hex("remote"),
-            "same_hint",
-        );
+        let mut remote = BeaconGeneticsManifest::new(BeaconId::from_hex("remote"), "same_hint");
         remote.add_meeting(
             BeaconId::from_hex("shared"),
             MeetingRecord {
@@ -957,10 +945,7 @@ mod tests {
             BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
         // Don't set manifest
 
-        let remote = BeaconGeneticsManifest::new(
-            BeaconId::from_hex("remote"),
-            "hint",
-        );
+        let remote = BeaconGeneticsManifest::new(BeaconId::from_hex("remote"), "hint");
 
         let result = manager.sync_with_lineage_peer(&remote).await;
         assert!(result.is_err());
@@ -975,17 +960,11 @@ mod tests {
         let mut manager =
             BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
 
-        let mut local = BeaconGeneticsManifest::new(
-            BeaconId::from_hex("local"),
-            "same",
-        );
+        let mut local = BeaconGeneticsManifest::new(BeaconId::from_hex("local"), "same");
         local.shared_with.insert("peer-a".into());
         manager.set_manifest(local);
 
-        let mut remote = BeaconGeneticsManifest::new(
-            BeaconId::from_hex("remote"),
-            "same",
-        );
+        let mut remote = BeaconGeneticsManifest::new(BeaconId::from_hex("remote"), "same");
         remote.shared_with.insert("peer-b".into());
 
         let result = manager.sync_with_lineage_peer(&remote).await.expect("sync");
@@ -1006,8 +985,7 @@ mod tests {
         let temp_dir = tempfile::TempDir::new().expect("create temp dir");
         let mock_caller = Box::new(MockCapabilityCaller::new());
 
-        let manager =
-            BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
+        let manager = BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
 
         let result = manager.try_decrypt_with_met_seeds(b"encrypted-data").await;
         assert!(result.is_err());
@@ -1022,10 +1000,7 @@ mod tests {
         let mut manager =
             BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock_caller);
 
-        let manifest = BeaconGeneticsManifest::new(
-            BeaconId::from_hex("local"),
-            "hint",
-        );
+        let manifest = BeaconGeneticsManifest::new(BeaconId::from_hex("local"), "hint");
         manager.set_manifest(manifest);
 
         let result = manager
@@ -1052,8 +1027,7 @@ mod tests {
     fn test_with_capability_caller() {
         let temp_dir = tempfile::TempDir::new().expect("create temp dir");
         let mock = Box::new(MockCapabilityCaller::new());
-        let manager =
-            BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock);
+        let manager = BeaconGeneticsManager::with_capability_caller(temp_dir.path(), mock);
 
         assert!(manager.our_beacon_id().is_none());
         assert_eq!(manager.root_path, temp_dir.path());

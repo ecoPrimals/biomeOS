@@ -816,3 +816,446 @@ impl Default for MetricsConfig {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Default Implementations
+    // ═══════════════════════════════════════════════════════════════════════
+
+    #[test]
+    fn test_observability_config_default() {
+        let config = ObservabilityConfig::default();
+        assert!(config.logging.structured);
+        assert!(!config.tracing.enabled);
+        assert!(config.metrics.enabled);
+        assert!(config.alerting.is_none());
+    }
+
+    #[test]
+    fn test_logging_config_default() {
+        let config = LoggingConfig::default();
+        assert!(matches!(config.level, LogLevel::Info));
+        assert!(matches!(config.format, LogFormat::Json));
+        assert!(matches!(config.destination, LogDestination::Stdout));
+        assert!(config.structured);
+        assert!(config.filtering.is_none());
+        assert!(config.sampling.is_none());
+    }
+
+    #[test]
+    fn test_log_rotation_default() {
+        let config = LogRotationConfig::default();
+        assert_eq!(config.max_size, 100 * 1024 * 1024);
+        assert_eq!(config.max_files, 10);
+        assert!(config.compress);
+        assert!(config.schedule.is_none());
+    }
+
+    #[test]
+    fn test_tracing_config_default() {
+        let config = TracingConfig::default();
+        assert!(!config.enabled);
+        assert!(matches!(config.exporter, TracingExporter::Console));
+        assert!(config.sampling.parent_based);
+    }
+
+    #[test]
+    fn test_tracing_sampling_default() {
+        let config = TracingSamplingConfig::default();
+        assert!((config.rate - 1.0).abs() < f64::EPSILON);
+        assert!(matches!(config.strategy, TracingSamplingStrategy::Always));
+        assert!(config.parent_based);
+    }
+
+    #[test]
+    fn test_span_limits_default() {
+        let config = SpanLimitsConfig::default();
+        assert_eq!(config.max_attributes, Some(128));
+        assert_eq!(config.max_events, Some(128));
+        assert_eq!(config.max_links, Some(128));
+        assert_eq!(config.max_attribute_value_length, Some(4096));
+    }
+
+    #[test]
+    fn test_tracing_resource_default() {
+        let config = TracingResourceConfig::default();
+        assert_eq!(config.service_name, "biomeos");
+        assert!(config.service_version.is_none());
+        assert!(config.attributes.is_empty());
+    }
+
+    #[test]
+    fn test_metrics_config_default() {
+        let config = MetricsConfig::default();
+        assert!(config.enabled);
+        assert!(matches!(config.format, MetricsFormat::Prometheus));
+        assert!(config.endpoint.is_none());
+        assert_eq!(config.interval, Duration::from_secs(60));
+        assert!(config.labels.is_empty());
+        assert!(config.custom.is_empty());
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Enum Serialization
+    // ═══════════════════════════════════════════════════════════════════════
+
+    #[test]
+    fn test_log_level_serialization() {
+        for level in [
+            LogLevel::Trace,
+            LogLevel::Debug,
+            LogLevel::Info,
+            LogLevel::Warn,
+            LogLevel::Error,
+            LogLevel::Off,
+        ] {
+            let json = serde_json::to_string(&level).expect("serialize");
+            let _: LogLevel = serde_json::from_str(&json).expect("deserialize");
+        }
+    }
+
+    #[test]
+    fn test_log_format_serialization() {
+        for format in [
+            LogFormat::Json,
+            LogFormat::Plain,
+            LogFormat::Pretty,
+            LogFormat::Compact,
+            LogFormat::Custom("%{time} %{level} %{message}".to_string()),
+        ] {
+            let json = serde_json::to_string(&format).expect("serialize");
+            let _: LogFormat = serde_json::from_str(&json).expect("deserialize");
+        }
+    }
+
+    #[test]
+    fn test_syslog_protocol_serialization() {
+        for protocol in [SyslogProtocol::Udp, SyslogProtocol::Tcp, SyslogProtocol::Tls] {
+            let json = serde_json::to_string(&protocol).expect("serialize");
+            let _: SyslogProtocol = serde_json::from_str(&json).expect("deserialize");
+        }
+    }
+
+    #[test]
+    fn test_rotation_schedule_serialization() {
+        for schedule in [
+            RotationSchedule::Hourly,
+            RotationSchedule::Daily,
+            RotationSchedule::Weekly,
+            RotationSchedule::Monthly,
+            RotationSchedule::Custom("0 0 * * *".to_string()),
+        ] {
+            let json = serde_json::to_string(&schedule).expect("serialize");
+            let _: RotationSchedule = serde_json::from_str(&json).expect("deserialize");
+        }
+    }
+
+    #[test]
+    fn test_log_filter_action_serialization() {
+        for action in [
+            LogFilterAction::Allow,
+            LogFilterAction::Deny,
+            LogFilterAction::Transform("{{level}}: {{message}}".to_string()),
+        ] {
+            let json = serde_json::to_string(&action).expect("serialize");
+            let _: LogFilterAction = serde_json::from_str(&json).expect("deserialize");
+        }
+    }
+
+    #[test]
+    fn test_sampling_strategy_serialization() {
+        for strategy in [
+            SamplingStrategy::Random,
+            SamplingStrategy::Deterministic,
+            SamplingStrategy::RateLimited { rate: 100 },
+            SamplingStrategy::Custom("adaptive".to_string()),
+        ] {
+            let json = serde_json::to_string(&strategy).expect("serialize");
+            let _: SamplingStrategy = serde_json::from_str(&json).expect("deserialize");
+        }
+    }
+
+    #[test]
+    fn test_otlp_protocol_serialization() {
+        for protocol in [OtlpProtocol::Grpc, OtlpProtocol::Http] {
+            let json = serde_json::to_string(&protocol).expect("serialize");
+            let _: OtlpProtocol = serde_json::from_str(&json).expect("deserialize");
+        }
+    }
+
+    #[test]
+    fn test_otlp_compression_serialization() {
+        for compression in [OtlpCompression::Gzip, OtlpCompression::None] {
+            let json = serde_json::to_string(&compression).expect("serialize");
+            let _: OtlpCompression = serde_json::from_str(&json).expect("deserialize");
+        }
+    }
+
+    #[test]
+    fn test_tracing_sampling_strategy_serialization() {
+        for strategy in [
+            TracingSamplingStrategy::Always,
+            TracingSamplingStrategy::Never,
+            TracingSamplingStrategy::TraceIdRatio,
+            TracingSamplingStrategy::RateLimited { rate: 50 },
+            TracingSamplingStrategy::Custom("head-based".to_string()),
+        ] {
+            let json = serde_json::to_string(&strategy).expect("serialize");
+            let _: TracingSamplingStrategy = serde_json::from_str(&json).expect("deserialize");
+        }
+    }
+
+    #[test]
+    fn test_metrics_format_serialization() {
+        for format in [
+            MetricsFormat::Prometheus,
+            MetricsFormat::Json,
+            MetricsFormat::StatsD,
+            MetricsFormat::InfluxDB,
+            MetricsFormat::Custom("datadog".to_string()),
+        ] {
+            let json = serde_json::to_string(&format).expect("serialize");
+            let _: MetricsFormat = serde_json::from_str(&json).expect("deserialize");
+        }
+    }
+
+    #[test]
+    fn test_metric_type_serialization() {
+        for mt in [
+            MetricType::Counter,
+            MetricType::Gauge,
+            MetricType::Histogram,
+            MetricType::Summary,
+        ] {
+            let json = serde_json::to_string(&mt).expect("serialize");
+            let _: MetricType = serde_json::from_str(&json).expect("deserialize");
+        }
+    }
+
+    #[test]
+    fn test_alert_severity_serialization() {
+        for severity in [
+            AlertSeverity::Info,
+            AlertSeverity::Warning,
+            AlertSeverity::Critical,
+            AlertSeverity::Emergency,
+        ] {
+            let json = serde_json::to_string(&severity).expect("serialize");
+            let _: AlertSeverity = serde_json::from_str(&json).expect("deserialize");
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Complex Configuration Types
+    // ═══════════════════════════════════════════════════════════════════════
+
+    #[test]
+    fn test_syslog_config_creation() {
+        let config = SyslogConfig {
+            server: "syslog.local".to_string(),
+            port: 514,
+            facility: "local0".to_string(),
+            protocol: SyslogProtocol::Tls,
+        };
+        assert_eq!(config.port, 514);
+    }
+
+    #[test]
+    fn test_network_log_config_creation() {
+        let config = NetworkLogConfig {
+            endpoint: "https://logs.example.com".to_string(),
+            protocol: NetworkLogProtocol::Https,
+            auth: Some(NetworkLogAuth::Bearer("token123".to_string())),
+            buffer_size: Some(8192),
+            batch_size: Some(100),
+            flush_interval: Some(Duration::from_secs(5)),
+        };
+        assert!(config.auth.is_some());
+    }
+
+    #[test]
+    fn test_log_filter_config_creation() {
+        let mut modules = HashMap::new();
+        modules.insert("hyper".to_string(), LogLevel::Warn);
+        modules.insert("tokio".to_string(), LogLevel::Info);
+
+        let config = LogFilterConfig {
+            modules,
+            targets: HashMap::new(),
+            custom: vec![CustomLogFilter {
+                name: "exclude-health".to_string(),
+                expression: "path == '/health'".to_string(),
+                action: LogFilterAction::Deny,
+            }],
+        };
+        assert_eq!(config.modules.len(), 2);
+        assert_eq!(config.custom.len(), 1);
+    }
+
+    #[test]
+    fn test_log_sampling_config_creation() {
+        let config = LogSamplingConfig {
+            enabled: true,
+            rate: 0.1,
+            strategy: SamplingStrategy::RateLimited { rate: 100 },
+        };
+        assert!(config.enabled);
+        assert!((config.rate - 0.1).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_jaeger_config_creation() {
+        let config = JaegerConfig {
+            endpoint: "http://jaeger:14268/api/traces".to_string(),
+            service_name: "biomeos".to_string(),
+            auth: Some(TracingAuth::Bearer("jaeger-token".to_string())),
+        };
+        assert!(config.auth.is_some());
+    }
+
+    #[test]
+    fn test_otlp_config_creation() {
+        let mut headers = HashMap::new();
+        headers.insert("x-api-key".to_string(), "key123".to_string());
+
+        let config = OtlpConfig {
+            endpoint: "http://otel-collector:4317".to_string(),
+            protocol: OtlpProtocol::Grpc,
+            headers,
+            compression: Some(OtlpCompression::Gzip),
+        };
+        assert_eq!(config.headers.len(), 1);
+        assert!(config.compression.is_some());
+    }
+
+    #[test]
+    fn test_custom_metric_config_creation() {
+        let config = CustomMetricConfig {
+            name: "request_duration_seconds".to_string(),
+            metric_type: MetricType::Histogram,
+            description: "Request duration in seconds".to_string(),
+            labels: vec!["method".to_string(), "path".to_string(), "status".to_string()],
+        };
+        assert_eq!(config.labels.len(), 3);
+    }
+
+    #[test]
+    fn test_alert_rule_creation() {
+        let mut labels = HashMap::new();
+        labels.insert("team".to_string(), "platform".to_string());
+        let mut annotations = HashMap::new();
+        annotations.insert("summary".to_string(), "High error rate".to_string());
+
+        let config = AlertRule {
+            name: "high-error-rate".to_string(),
+            expression: "rate(errors[5m]) > 0.1".to_string(),
+            severity: AlertSeverity::Critical,
+            interval: Duration::from_secs(60),
+            duration: Duration::from_secs(300),
+            labels,
+            annotations,
+        };
+        assert_eq!(config.severity, AlertSeverity::Critical);
+    }
+
+    #[test]
+    fn test_slack_notification_config_creation() {
+        let config = SlackNotificationConfig {
+            webhook_url: "https://hooks.slack.com/services/xxx".to_string(),
+            channel: "#alerts".to_string(),
+            username: Some("BiomeOS".to_string()),
+            message_template: "Alert: {{.AlertName}}".to_string(),
+        };
+        assert!(config.username.is_some());
+    }
+
+    #[test]
+    fn test_email_notification_config_creation() {
+        let config = EmailNotificationConfig {
+            smtp_server: "smtp.example.com".to_string(),
+            smtp_port: 587,
+            username: "alerts@example.com".to_string(),
+            password: "secret".to_string(),
+            from: "alerts@example.com".to_string(),
+            to: vec!["oncall@example.com".to_string()],
+            subject_template: "[{{.Severity}}] {{.AlertName}}".to_string(),
+            body_template: "{{.Description}}".to_string(),
+        };
+        assert_eq!(config.smtp_port, 587);
+    }
+
+    #[test]
+    fn test_alert_grouping_config_creation() {
+        let config = AlertGroupingConfig {
+            group_by: vec!["alertname".to_string(), "service".to_string()],
+            group_wait: Duration::from_secs(30),
+            group_interval: Duration::from_secs(60),
+            repeat_interval: Duration::from_secs(3600),
+        };
+        assert_eq!(config.group_by.len(), 2);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Serialization Roundtrip
+    // ═══════════════════════════════════════════════════════════════════════
+
+    #[test]
+    fn test_observability_config_serialization() {
+        let config = ObservabilityConfig::default();
+        let json = serde_json::to_string(&config).expect("serialize");
+        let deserialized: ObservabilityConfig = serde_json::from_str(&json).expect("deserialize");
+        assert!(deserialized.logging.structured);
+    }
+
+    #[test]
+    fn test_logging_config_serialization() {
+        let config = LoggingConfig::default();
+        let json = serde_json::to_string(&config).expect("serialize");
+        let deserialized: LoggingConfig = serde_json::from_str(&json).expect("deserialize");
+        assert!(deserialized.structured);
+    }
+
+    #[test]
+    fn test_tracing_config_serialization() {
+        let config = TracingConfig::default();
+        let json = serde_json::to_string(&config).expect("serialize");
+        let deserialized: TracingConfig = serde_json::from_str(&json).expect("deserialize");
+        assert!(!deserialized.enabled);
+    }
+
+    #[test]
+    fn test_metrics_config_serialization() {
+        let config = MetricsConfig::default();
+        let json = serde_json::to_string(&config).expect("serialize");
+        let deserialized: MetricsConfig = serde_json::from_str(&json).expect("deserialize");
+        assert!(deserialized.enabled);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Clone & Debug
+    // ═══════════════════════════════════════════════════════════════════════
+
+    #[test]
+    fn test_observability_config_clone() {
+        let original = ObservabilityConfig::default();
+        let cloned = original.clone();
+        assert!(cloned.metrics.enabled);
+    }
+
+    #[test]
+    fn test_log_level_debug() {
+        let level = LogLevel::Info;
+        let debug = format!("{:?}", level);
+        assert!(debug.contains("Info"));
+    }
+
+    #[test]
+    fn test_alert_severity_ordering() {
+        assert!(AlertSeverity::Info < AlertSeverity::Warning);
+        assert!(AlertSeverity::Warning < AlertSeverity::Critical);
+        assert!(AlertSeverity::Critical < AlertSeverity::Emergency);
+    }
+}

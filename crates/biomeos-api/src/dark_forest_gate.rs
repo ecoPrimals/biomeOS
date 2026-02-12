@@ -311,9 +311,18 @@ mod tests {
     fn test_bare_ok_paths_include_standard_endpoints() {
         let paths: Vec<&str> = BARE_OK_PATHS.to_vec();
         assert!(paths.contains(&"/health"), "Should include /health");
-        assert!(paths.contains(&"/api/v1/health"), "Should include /api/v1/health");
-        assert!(paths.contains(&"/api/v1/health/ready"), "Should include readiness");
-        assert!(paths.contains(&"/api/v1/health/live"), "Should include liveness");
+        assert!(
+            paths.contains(&"/api/v1/health"),
+            "Should include /api/v1/health"
+        );
+        assert!(
+            paths.contains(&"/api/v1/health/ready"),
+            "Should include readiness"
+        );
+        assert!(
+            paths.contains(&"/api/v1/health/live"),
+            "Should include liveness"
+        );
     }
 
     // ========================================================================
@@ -445,7 +454,13 @@ mod tests {
     #[test]
     fn test_arbitrary_path_requires_token() {
         // Any path that's not in bypass or bare_ok should require Dark Forest token
-        let paths = ["/api/v1/data", "/rendezvous/beacon", "/jsonrpc", "/", "/admin"];
+        let paths = [
+            "/api/v1/data",
+            "/rendezvous/beacon",
+            "/jsonrpc",
+            "/",
+            "/admin",
+        ];
         for path in &paths {
             assert!(!is_bypass_path(path), "{} should not bypass gate", path);
             assert!(!is_bare_ok_path(path), "{} should not be bare OK", path);

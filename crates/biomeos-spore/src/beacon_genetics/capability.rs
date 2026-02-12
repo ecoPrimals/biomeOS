@@ -72,7 +72,10 @@ impl NeuralApiCapabilityCaller {
         } else if let Ok(uid) = std::env::var("UID") {
             format!("/run/user/{}/biomeos/neural-api.sock", uid)
         } else {
-            std::env::temp_dir().join("biomeos/neural-api.sock").to_string_lossy().to_string()
+            std::env::temp_dir()
+                .join("biomeos/neural-api.sock")
+                .to_string_lossy()
+                .to_string()
         }
     }
 }
@@ -142,7 +145,10 @@ impl DirectBeardogCaller {
         } else if let Ok(uid) = std::env::var("UID") {
             format!("/run/user/{}/biomeos/beardog.sock", uid)
         } else {
-            std::env::temp_dir().join("biomeos/beardog.sock").to_string_lossy().to_string()
+            std::env::temp_dir()
+                .join("biomeos/beardog.sock")
+                .to_string_lossy()
+                .to_string()
         }
     }
 
@@ -269,10 +275,7 @@ mod tests {
             caller.translate_capability("genetic.derive_lineage_key"),
             "genetic.derive_lineage_key"
         );
-        assert_eq!(
-            caller.translate_capability("crypto.sign"),
-            "crypto.sign"
-        );
+        assert_eq!(caller.translate_capability("crypto.sign"), "crypto.sign");
     }
 
     #[test]

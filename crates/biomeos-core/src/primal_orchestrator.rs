@@ -843,9 +843,7 @@ mod tests {
             PrimalState::Running,
             PrimalState::Degraded,
             PrimalState::Stopped,
-            PrimalState::Failed {
-                reason: "x".into(),
-            },
+            PrimalState::Failed { reason: "x".into() },
         ];
         for s in &states {
             let cloned = s.clone();
@@ -857,12 +855,8 @@ mod tests {
 
     #[test]
     fn test_primal_state_failed_different_reasons() {
-        let f1 = PrimalState::Failed {
-            reason: "a".into(),
-        };
-        let f2 = PrimalState::Failed {
-            reason: "b".into(),
-        };
+        let f1 = PrimalState::Failed { reason: "a".into() };
+        let f2 = PrimalState::Failed { reason: "b".into() };
         assert_ne!(f1, f2);
     }
 
@@ -893,9 +887,7 @@ mod tests {
         let monitor = PrimalHealthMonitor::builder().build();
         let id = pid("test-primal");
 
-        monitor
-            .register_socket(id.clone(), "/tmp/test.sock")
-            .await;
+        monitor.register_socket(id.clone(), "/tmp/test.sock").await;
 
         // Initially assumed healthy
         assert_eq!(monitor.is_healthy(&id).await, Some(true));
@@ -924,15 +916,9 @@ mod tests {
     async fn test_health_monitor_multiple_primals() {
         let monitor = PrimalHealthMonitor::builder().build();
 
-        monitor
-            .register_socket(pid("a"), "/tmp/a.sock")
-            .await;
-        monitor
-            .register_socket(pid("b"), "/tmp/b.sock")
-            .await;
-        monitor
-            .register_socket(pid("c"), "/tmp/c.sock")
-            .await;
+        monitor.register_socket(pid("a"), "/tmp/a.sock").await;
+        monitor.register_socket(pid("b"), "/tmp/b.sock").await;
+        monitor.register_socket(pid("c"), "/tmp/c.sock").await;
 
         assert_eq!(monitor.all_status().await.len(), 3);
     }
@@ -1042,11 +1028,15 @@ mod tests {
         orch.register(primal.clone()).await;
 
         // Start it
-        orch.start_primal(&pid("already")).await.expect("first start");
+        orch.start_primal(&pid("already"))
+            .await
+            .expect("first start");
         assert_eq!(primal.start_count.load(Ordering::SeqCst), 1);
 
         // Start again — should short-circuit
-        orch.start_primal(&pid("already")).await.expect("second start");
+        orch.start_primal(&pid("already"))
+            .await
+            .expect("second start");
         assert_eq!(
             primal.start_count.load(Ordering::SeqCst),
             1,

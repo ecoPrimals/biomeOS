@@ -499,8 +499,7 @@ mod tests {
         let json = serde_json::json!({
             "dark_forest_token": "check-token"
         });
-        let request: RendezvousCheckRequest =
-            serde_json::from_value(json).expect("deserialize");
+        let request: RendezvousCheckRequest = serde_json::from_value(json).expect("deserialize");
         assert_eq!(request.dark_forest_token, "check-token");
     }
 

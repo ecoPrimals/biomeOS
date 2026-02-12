@@ -643,7 +643,11 @@ mod tests {
 
         let result = handler.list_translations().await.unwrap();
         let count = result["count"].as_u64().unwrap();
-        assert!(count >= 2, "Expected at least 2 translations, got {}", count);
+        assert!(
+            count >= 2,
+            "Expected at least 2 translations, got {}",
+            count
+        );
 
         let translations = result["translations"].as_array().unwrap();
         let semantics: Vec<&str> = translations

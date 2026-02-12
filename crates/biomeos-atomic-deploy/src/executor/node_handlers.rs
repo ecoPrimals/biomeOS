@@ -418,8 +418,8 @@ async fn call_primal_rpc(socket_path: &str, request: &Value) -> Result<Value> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::context::NodeStatus;
+    use super::*;
     use crate::neural_graph::GraphNode;
 
     // ========================================================================
@@ -453,10 +453,7 @@ mod tests {
         env.insert("B".to_string(), "beta".to_string());
         env.insert("C".to_string(), "gamma".to_string());
 
-        assert_eq!(
-            substitute_env("${A}/${B}/${C}", &env),
-            "alpha/beta/gamma"
-        );
+        assert_eq!(substitute_env("${A}/${B}/${C}", &env), "alpha/beta/gamma");
     }
 
     #[test]
@@ -476,7 +473,10 @@ mod tests {
         let mut env = HashMap::new();
         env.insert("EMPTY".to_string(), "".to_string());
 
-        assert_eq!(substitute_env("prefix-${EMPTY}-suffix", &env), "prefix--suffix");
+        assert_eq!(
+            substitute_env("prefix-${EMPTY}-suffix", &env),
+            "prefix--suffix"
+        );
     }
 
     #[test]
@@ -484,7 +484,10 @@ mod tests {
         let mut env = HashMap::new();
         env.insert("FOO".to_string(), "bar".to_string());
 
-        assert_eq!(substitute_env("no variables here", &env), "no variables here");
+        assert_eq!(
+            substitute_env("no variables here", &env),
+            "no variables here"
+        );
     }
 
     #[test]
@@ -501,10 +504,7 @@ mod tests {
         let mut env = HashMap::new();
         env.insert("HOST".to_string(), "gate2".to_string());
 
-        assert_eq!(
-            substitute_env("${HOST}:${HOST}", &env),
-            "gate2:gate2"
-        );
+        assert_eq!(substitute_env("${HOST}:${HOST}", &env), "gate2:gate2");
     }
 
     // ========================================================================
@@ -638,8 +638,10 @@ mod tests {
         let ctx = test_context();
 
         // Simulate completed nodes
-        ctx.set_status("beardog", NodeStatus::Completed(json!({"status": "ok"}))).await;
-        ctx.set_status("songbird", NodeStatus::Completed(json!({"status": "ok"}))).await;
+        ctx.set_status("beardog", NodeStatus::Completed(json!({"status": "ok"})))
+            .await;
+        ctx.set_status("songbird", NodeStatus::Completed(json!({"status": "ok"})))
+            .await;
 
         let result = deployment_report(&node, &ctx).await.unwrap();
         assert_eq!(result["completed"], 2);
@@ -653,8 +655,10 @@ mod tests {
         let node = test_node_with_config("report3", HashMap::new());
         let ctx = test_context();
 
-        ctx.set_status("beardog", NodeStatus::Completed(json!({"status": "ok"}))).await;
-        ctx.set_status("songbird", NodeStatus::Failed("Socket timeout".to_string())).await;
+        ctx.set_status("beardog", NodeStatus::Completed(json!({"status": "ok"})))
+            .await;
+        ctx.set_status("songbird", NodeStatus::Failed("Socket timeout".to_string()))
+            .await;
 
         let result = deployment_report(&node, &ctx).await.unwrap();
         assert_eq!(result["title"], "Deployment Report"); // default title
@@ -669,9 +673,11 @@ mod tests {
         let node = test_node_with_config("report4", HashMap::new());
         let ctx = test_context();
 
-        ctx.set_status("beardog", NodeStatus::Completed(json!({}))).await;
+        ctx.set_status("beardog", NodeStatus::Completed(json!({})))
+            .await;
         ctx.set_status("songbird", NodeStatus::Running).await;
-        ctx.set_status("toadstool", NodeStatus::Failed("OOM".to_string())).await;
+        ctx.set_status("toadstool", NodeStatus::Failed("OOM".to_string()))
+            .await;
         ctx.set_status("nestgate", NodeStatus::Pending).await;
         ctx.set_status("squirrel", NodeStatus::Skipped).await;
 
@@ -694,7 +700,10 @@ mod tests {
 
         let node = test_node_with_config("fs1", {
             let mut c = HashMap::new();
-            c.insert("path".to_string(), json!(test_file.to_string_lossy().to_string()));
+            c.insert(
+                "path".to_string(),
+                json!(test_file.to_string_lossy().to_string()),
+            );
             c
         });
         let ctx = test_context();
@@ -730,7 +739,10 @@ mod tests {
         });
         let mut env = HashMap::new();
         env.insert("FAMILY_ID".to_string(), "test".to_string());
-        env.insert("SEED_DIR".to_string(), temp_dir.path().to_string_lossy().to_string());
+        env.insert(
+            "SEED_DIR".to_string(),
+            temp_dir.path().to_string_lossy().to_string(),
+        );
         let ctx = test_context_with_env(env);
 
         let result = filesystem_check_exists(&node, &ctx).await.unwrap();
@@ -760,7 +772,10 @@ mod tests {
 
         let mut env = HashMap::new();
         env.insert("FAMILY_ID".to_string(), "test".to_string());
-        env.insert("SECURITY_SOCKET".to_string(), sock_path.to_string_lossy().to_string());
+        env.insert(
+            "SECURITY_SOCKET".to_string(),
+            sock_path.to_string_lossy().to_string(),
+        );
         let ctx = test_context_with_env(env);
 
         let result = discover_capability_provider(&ctx, "security").await;
@@ -771,7 +786,10 @@ mod tests {
     async fn test_discover_capability_provider_via_endpoint_env() {
         let mut env = HashMap::new();
         env.insert("FAMILY_ID".to_string(), "test".to_string());
-        env.insert("SECURITY_ENDPOINT".to_string(), "http://localhost:8080".to_string());
+        env.insert(
+            "SECURITY_ENDPOINT".to_string(),
+            "http://localhost:8080".to_string(),
+        );
         let ctx = test_context_with_env(env);
 
         let result = discover_capability_provider(&ctx, "security").await;
@@ -790,7 +808,10 @@ mod tests {
     async fn test_discover_capability_provider_socket_not_exists() {
         let mut env = HashMap::new();
         env.insert("FAMILY_ID".to_string(), "test".to_string());
-        env.insert("SECURITY_SOCKET".to_string(), "/nonexistent/beardog.sock".to_string());
+        env.insert(
+            "SECURITY_SOCKET".to_string(),
+            "/nonexistent/beardog.sock".to_string(),
+        );
         let ctx = test_context_with_env(env);
 
         // Socket file doesn't exist, should fall through to endpoint check

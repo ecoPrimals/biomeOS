@@ -349,13 +349,9 @@ mod tests {
         FamilySeed::generate_genesis(&parent_path).expect("generate parent");
 
         // Derive sibling
-        let child = FamilySeed::derive_sibling(
-            &parent_path,
-            &child_path,
-            "node-alpha",
-            Some("2026-01-08"),
-        )
-        .expect("derive sibling");
+        let child =
+            FamilySeed::derive_sibling(&parent_path, &child_path, "node-alpha", Some("2026-01-08"))
+                .expect("derive sibling");
 
         assert_eq!(child.file_path(), child_path.as_path());
 
@@ -463,8 +459,7 @@ mod tests {
         // Write wrong-size parent
         fs::write(&parent_path, [0u8; 16]).expect("write parent");
 
-        let result =
-            FamilySeed::derive_sibling(&parent_path, &child_path, "node", Some("batch"));
+        let result = FamilySeed::derive_sibling(&parent_path, &child_path, "node", Some("batch"));
         assert!(result.is_err());
         assert!(matches!(
             result,
@@ -481,8 +476,7 @@ mod tests {
         let parent_path = temp_dir.path().join("nonexistent.seed");
         let child_path = temp_dir.path().join("child.seed");
 
-        let result =
-            FamilySeed::derive_sibling(&parent_path, &child_path, "node", Some("batch"));
+        let result = FamilySeed::derive_sibling(&parent_path, &child_path, "node", Some("batch"));
         assert!(result.is_err());
     }
 

@@ -290,7 +290,10 @@ max_parallelism = 2
                 return candidate;
             }
             if !dir.pop() {
-                panic!("Could not find graphs/ directory from {}", env!("CARGO_MANIFEST_DIR"));
+                panic!(
+                    "Could not find graphs/ directory from {}",
+                    env!("CARGO_MANIFEST_DIR")
+                );
             }
         }
     }
@@ -303,12 +306,19 @@ max_parallelism = 2
         assert_eq!(graph.version, "2.0.0");
         // Should have: beardog, songbird, onion_init, mesh_init, tower_validate,
         //              toadstool, node_validate, nestgate, squirrel, nucleus_validate, announce_relay
-        assert!(graph.nodes.len() >= 10, "Expected at least 10 nodes, got {}", graph.nodes.len());
+        assert!(
+            graph.nodes.len() >= 10,
+            "Expected at least 10 nodes, got {}",
+            graph.nodes.len()
+        );
         // Verify first node is BearDog
         assert_eq!(graph.nodes[0].id, "tower_beardog");
         // Verify BearDog has relay.authorize translation (relay-punch)
         let beardog_caps = graph.nodes[0].capabilities_provided.as_ref().unwrap();
-        assert_eq!(beardog_caps.get("relay.authorize"), Some(&"relay.authorize".to_string()));
+        assert_eq!(
+            beardog_caps.get("relay.authorize"),
+            Some(&"relay.authorize".to_string())
+        );
         // Verify Songbird has mesh + punch + stun capabilities
         let songbird = &graph.nodes[1];
         assert_eq!(songbird.id, "tower_songbird");
@@ -317,26 +327,52 @@ max_parallelism = 2
         assert!(songbird.capabilities.contains(&"stun".to_string()));
         // Verify Songbird capability translations include relay-punch methods
         let songbird_caps = songbird.capabilities_provided.as_ref().unwrap();
-        assert_eq!(songbird_caps.get("stun.probe_port_pattern"), Some(&"stun.probe_port_pattern".to_string()));
-        assert_eq!(songbird_caps.get("punch.coordinate"), Some(&"punch.coordinate".to_string()));
+        assert_eq!(
+            songbird_caps.get("stun.probe_port_pattern"),
+            Some(&"stun.probe_port_pattern".to_string())
+        );
+        assert_eq!(
+            songbird_caps.get("punch.coordinate"),
+            Some(&"punch.coordinate".to_string())
+        );
     }
 
     #[test]
     fn test_parse_ecosystem_full_bootstrap() {
         let graphs_dir = find_graphs_dir();
-        let graph = Graph::from_toml_file(&graphs_dir.join("ecosystem_full_bootstrap.toml")).unwrap();
+        let graph =
+            Graph::from_toml_file(&graphs_dir.join("ecosystem_full_bootstrap.toml")).unwrap();
         assert_eq!(graph.id, "ecosystem_full_bootstrap");
         assert_eq!(graph.version, "2.0.0");
         // Should have: beardog, songbird, toadstool, squirrel, nestgate, validate
-        assert!(graph.nodes.len() >= 6, "Expected at least 6 nodes, got {}", graph.nodes.len());
+        assert!(
+            graph.nodes.len() >= 6,
+            "Expected at least 6 nodes, got {}",
+            graph.nodes.len()
+        );
         // Verify NestGate is present (was missing before)
         let nestgate = graph.nodes.iter().find(|n| n.id == "germinate_nestgate");
         assert!(nestgate.is_some(), "NestGate node should be present");
         // Verify no hardcoded /tmp/ paths in Songbird environment
-        let songbird = graph.nodes.iter().find(|n| n.id == "germinate_songbird").unwrap();
-        let env = songbird.operation.as_ref().unwrap().environment.as_ref().unwrap();
+        let songbird = graph
+            .nodes
+            .iter()
+            .find(|n| n.id == "germinate_songbird")
+            .unwrap();
+        let env = songbird
+            .operation
+            .as_ref()
+            .unwrap()
+            .environment
+            .as_ref()
+            .unwrap();
         for (key, val) in env {
-            assert!(!val.contains("/tmp/"), "Songbird env {} should not use /tmp/, got: {}", key, val);
+            assert!(
+                !val.contains("/tmp/"),
+                "Songbird env {} should not use /tmp/, got: {}",
+                key,
+                val
+            );
         }
     }
 
@@ -346,7 +382,11 @@ max_parallelism = 2
         let graph = Graph::from_toml_file(&graphs_dir.join("gate2_nucleus.toml")).unwrap();
         assert_eq!(graph.id, "gate2_nucleus");
         // Should have: beardog, songbird, mesh_init, discover_tower, nestgate, toadstool, squirrel, validate, announce
-        assert!(graph.nodes.len() >= 9, "Expected at least 9 nodes, got {}", graph.nodes.len());
+        assert!(
+            graph.nodes.len() >= 9,
+            "Expected at least 9 nodes, got {}",
+            graph.nodes.len()
+        );
         // Verify auto-discover step exists
         let discover = graph.nodes.iter().find(|n| n.id == "gate2_discover_tower");
         assert!(discover.is_some(), "gate2_discover_tower node should exist");
@@ -363,7 +403,9 @@ max_parallelism = 2
                         assert!(
                             !val.contains("/tmp/"),
                             "Node {} env {} should not use /tmp/: {}",
-                            node.id, key, val
+                            node.id,
+                            key,
+                            val
                         );
                     }
                 }
@@ -376,10 +418,24 @@ max_parallelism = 2
         let graphs_dir = find_graphs_dir();
         let graph = Graph::from_toml_file(&graphs_dir.join("tower_atomic_bootstrap.toml")).unwrap();
         assert_eq!(graph.id, "tower_atomic_bootstrap");
-        assert!(graph.nodes.len() >= 4, "Expected at least 4 nodes, got {}", graph.nodes.len());
+        assert!(
+            graph.nodes.len() >= 4,
+            "Expected at least 4 nodes, got {}",
+            graph.nodes.len()
+        );
         // Verify Songbird environment uses XDG paths
-        let songbird = graph.nodes.iter().find(|n| n.id == "germinate_songbird").unwrap();
-        let env = songbird.operation.as_ref().unwrap().environment.as_ref().unwrap();
+        let songbird = graph
+            .nodes
+            .iter()
+            .find(|n| n.id == "germinate_songbird")
+            .unwrap();
+        let env = songbird
+            .operation
+            .as_ref()
+            .unwrap()
+            .environment
+            .as_ref()
+            .unwrap();
         let neural_api_sock = env.get("NEURAL_API_SOCKET").unwrap();
         assert!(
             neural_api_sock.contains("XDG_RUNTIME_DIR"),
@@ -396,7 +452,11 @@ max_parallelism = 2
                 if let Some(params_val) = op.params.get("params") {
                     if let Some(port_val) = params_val.get("port") {
                         let port = port_val.as_i64().unwrap_or(0);
-                        assert_ne!(port, 3492, "Node {} params should not use port 3492", node.id);
+                        assert_ne!(
+                            port, 3492,
+                            "Node {} params should not use port 3492",
+                            node.id
+                        );
                     }
                 }
             }
@@ -438,7 +498,11 @@ max_parallelism = 2
             }
         }
 
-        assert!(parsed_count >= 4, "Expected to parse at least 4 deployment graphs, got {}", parsed_count);
+        assert!(
+            parsed_count >= 4,
+            "Expected to parse at least 4 deployment graphs, got {}",
+            parsed_count
+        );
         if !errors.is_empty() {
             panic!("Deployment graph parse errors:\n{}", errors.join("\n"));
         }
@@ -468,12 +532,18 @@ max_parallelism = 2
                             assert!(
                                 !val.contains("/tmp/"),
                                 "[{}] Node {} env {} uses /tmp/: {}",
-                                filename, node.id, key, val
+                                filename,
+                                node.id,
+                                key,
+                                val
                             );
                             assert!(
                                 !val.contains("/run/user/1000"),
                                 "[{}] Node {} env {} uses hardcoded /run/user/1000: {}",
-                                filename, node.id, key, val
+                                filename,
+                                node.id,
+                                key,
+                                val
                             );
                         }
                     }

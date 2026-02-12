@@ -436,7 +436,12 @@ mod tests {
             (MeetingVisibility::OneWayOut, "one_way_out"),
         ] {
             let json = serde_json::to_string(&vis).expect("serialize");
-            assert!(json.contains(expected), "expected '{}' in {}", expected, json);
+            assert!(
+                json.contains(expected),
+                "expected '{}' in {}",
+                expected,
+                json
+            );
             let restored: MeetingVisibility = serde_json::from_str(&json).expect("deserialize");
             assert_eq!(vis, restored);
         }
@@ -465,10 +470,7 @@ mod tests {
             cluster_id: "cl-01".into(),
             role: ClusterRole::Hub,
             joined_at: 9999,
-            known_members: vec![
-                BeaconId::from_hex("aaa"),
-                BeaconId::from_hex("bbb"),
-            ],
+            known_members: vec![BeaconId::from_hex("aaa"), BeaconId::from_hex("bbb")],
             seed_file: "cluster-01.seed".into(),
         };
         let json = serde_json::to_string(&membership).expect("serialize");
@@ -506,7 +508,10 @@ mod tests {
 
     #[test]
     fn test_sync_result_clone_debug() {
-        let result = SyncResult { added: 1, updated: 2 };
+        let result = SyncResult {
+            added: 1,
+            updated: 2,
+        };
         let cloned = result.clone();
         assert_eq!(cloned.added, 1);
         let dbg = format!("{:?}", result);
@@ -533,8 +538,7 @@ mod tests {
 
     #[test]
     fn test_manifest_new() {
-        let manifest =
-            BeaconGeneticsManifest::new(BeaconId::from_hex("abc123"), "hint");
+        let manifest = BeaconGeneticsManifest::new(BeaconId::from_hex("abc123"), "hint");
         assert_eq!(manifest.version, "2.0.0");
         assert_eq!(manifest.own_beacon_id, BeaconId::from_hex("abc123"));
         assert_eq!(manifest.lineage_hint, "hint");
@@ -547,8 +551,7 @@ mod tests {
 
     #[test]
     fn test_manifest_add_and_get_meeting() {
-        let mut manifest =
-            BeaconGeneticsManifest::new(BeaconId::from_hex("own"), "hint");
+        let mut manifest = BeaconGeneticsManifest::new(BeaconId::from_hex("own"), "hint");
 
         let beacon_id = BeaconId::from_hex("peer-abc");
         let record = MeetingRecord {
@@ -573,8 +576,7 @@ mod tests {
 
     #[test]
     fn test_manifest_known_beacon_ids() {
-        let mut manifest =
-            BeaconGeneticsManifest::new(BeaconId::from_hex("own"), "hint");
+        let mut manifest = BeaconGeneticsManifest::new(BeaconId::from_hex("own"), "hint");
 
         manifest.add_meeting(
             BeaconId::from_hex("id1"),
@@ -611,8 +613,7 @@ mod tests {
 
     #[test]
     fn test_manifest_get_meeting_not_found() {
-        let manifest =
-            BeaconGeneticsManifest::new(BeaconId::from_hex("own"), "hint");
+        let manifest = BeaconGeneticsManifest::new(BeaconId::from_hex("own"), "hint");
         assert!(manifest.get_meeting(&BeaconId::from_hex("nope")).is_none());
     }
 
@@ -658,19 +659,16 @@ mod tests {
 
     #[test]
     fn test_manifest_serde_roundtrip() {
-        let manifest =
-            BeaconGeneticsManifest::new(BeaconId::from_hex("serde-test"), "hint");
+        let manifest = BeaconGeneticsManifest::new(BeaconId::from_hex("serde-test"), "hint");
         let json = serde_json::to_string(&manifest).expect("serialize");
-        let restored: BeaconGeneticsManifest =
-            serde_json::from_str(&json).expect("deserialize");
+        let restored: BeaconGeneticsManifest = serde_json::from_str(&json).expect("deserialize");
         assert_eq!(restored.own_beacon_id, manifest.own_beacon_id);
         assert_eq!(restored.version, "2.0.0");
     }
 
     #[test]
     fn test_manifest_clone_and_debug() {
-        let manifest =
-            BeaconGeneticsManifest::new(BeaconId::from_hex("clone"), "h");
+        let manifest = BeaconGeneticsManifest::new(BeaconId::from_hex("clone"), "h");
         let cloned = manifest.clone();
         assert_eq!(cloned.own_beacon_id, manifest.own_beacon_id);
         let dbg = format!("{:?}", manifest);

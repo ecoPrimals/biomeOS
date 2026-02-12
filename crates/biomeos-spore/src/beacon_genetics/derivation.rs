@@ -519,10 +519,7 @@ mod tests {
         }
 
         async fn set_ok(&self, cap: &str, val: serde_json::Value) {
-            self.responses
-                .lock()
-                .await
-                .insert(cap.to_string(), Ok(val));
+            self.responses.lock().await.insert(cap.to_string(), Ok(val));
         }
 
         async fn set_err(&self, cap: &str, msg: &str) {
@@ -762,10 +759,7 @@ mod tests {
             .await
             .expect("should succeed");
 
-        assert_eq!(
-            lineage.lineage_certificate.as_deref(),
-            Some("sig-abc123")
-        );
+        assert_eq!(lineage.lineage_certificate.as_deref(), Some("sig-abc123"));
     }
 
     #[tokio::test]
@@ -901,8 +895,7 @@ mod tests {
         let seed_path = tmp.path().join("raw.lineage");
 
         // Write raw seed bytes with NO .json metadata
-        std::fs::write(&seed_path, b"raw-seed-32-bytes-of-data!!!!!!")
-            .expect("write raw seed");
+        std::fs::write(&seed_path, b"raw-seed-32-bytes-of-data!!!!!!").expect("write raw seed");
 
         let loaded =
             LineageDeriver::<MockCaller>::load_lineage(&seed_path).expect("load should succeed");
@@ -959,7 +952,13 @@ mod tests {
 
         let deriver = LineageDeriver::new(mock);
         let enrollment = deriver
-            .enroll_device(&family_seed_path, &lineage_path, "fam-01", "dev-01", "tower")
+            .enroll_device(
+                &family_seed_path,
+                &lineage_path,
+                "fam-01",
+                "dev-01",
+                "tower",
+            )
             .await
             .expect("enrollment should succeed");
 

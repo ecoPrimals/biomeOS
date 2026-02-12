@@ -346,8 +346,7 @@ pub fn agents_from_collective(
                 continue;
             }
 
-            let domains =
-                biomeos_types::capability_taxonomy::capabilities_for_primal(&primal.name);
+            let domains = biomeos_types::capability_taxonomy::capabilities_for_primal(&primal.name);
 
             for domain in &domains {
                 let priority = if domain == "compute" {
@@ -355,7 +354,13 @@ pub fn agents_from_collective(
                     // This ensures that gate2 with 24GB beats tower with 12GB even though
                     // tower is local. The relay/mesh overhead is negligible compared to
                     // the benefit of more GPU memory for model inference.
-                    let max_vram = gate.compute.gpus.iter().map(|g| g.vram_mb).max().unwrap_or(0);
+                    let max_vram = gate
+                        .compute
+                        .gpus
+                        .iter()
+                        .map(|g| g.vram_mb)
+                        .max()
+                        .unwrap_or(0);
                     // More VRAM → lower priority number → preferred
                     // 24GB → 0, 12GB → 5, 0GB → 20, + small locality bonus
                     let vram_score = if max_vram >= 20_000 {
@@ -380,10 +385,7 @@ pub fn agents_from_collective(
                         "gpus".to_string(),
                         serde_json::to_value(&gate.compute.gpus).unwrap_or_default(),
                     );
-                    metadata.insert(
-                        "ram_gb".to_string(),
-                        serde_json::json!(gate.compute.ram_gb),
-                    );
+                    metadata.insert("ram_gb".to_string(), serde_json::json!(gate.compute.ram_gb));
                 }
                 if domain == "storage" {
                     metadata.insert("gate".to_string(), serde_json::json!(gate.gate_id));
@@ -609,7 +611,13 @@ mod tests {
 
     // ── Helper: create a test route ────────────────────────────────────
 
-    fn route(gate: &str, primal: &str, socket: &str, local: bool, priority: u32) -> CapabilityRoute {
+    fn route(
+        gate: &str,
+        primal: &str,
+        socket: &str,
+        local: bool,
+        priority: u32,
+    ) -> CapabilityRoute {
         CapabilityRoute {
             gate_id: gate.to_string(),
             primal: primal.to_string(),
@@ -625,7 +633,10 @@ mod tests {
     #[test]
     fn test_local_agent() {
         let mut agent = PlasmodiumAgent::local("tower", "test_cf7e8729", "tower");
-        agent.add_route("crypto", route("tower", "beardog", "beardog-test_cf7e8729.sock", true, 0));
+        agent.add_route(
+            "crypto",
+            route("tower", "beardog", "beardog-test_cf7e8729.sock", true, 0),
+        );
 
         let resolved = agent.resolve("crypto").unwrap();
         assert_eq!(resolved.primal, "beardog");
@@ -666,10 +677,16 @@ mod tests {
     fn test_meld_agents() {
         let mut tower = PlasmodiumAgent::local("tower", "test_cf7e8729", "tower");
         tower.add_route("crypto", route("tower", "beardog", "beardog.sock", true, 0));
-        tower.add_route("compute", route("tower", "toadstool", "toadstool.sock", true, 10));
+        tower.add_route(
+            "compute",
+            route("tower", "toadstool", "toadstool.sock", true, 10),
+        );
 
         let mut gate2 = PlasmodiumAgent::local("gate2", "test_cf7e8729", "gate2");
-        gate2.add_route("compute", route("gate2", "toadstool", "gate2:toadstool.sock", false, 0));
+        gate2.add_route(
+            "compute",
+            route("gate2", "toadstool", "gate2:toadstool.sock", false, 0),
+        );
 
         tower.meld(&gate2);
 
@@ -713,7 +730,10 @@ mod tests {
         agent.gates.push("gate2".to_string());
         agent.state = AgentState::Melded;
 
-        agent.add_route("compute", route("gate2", "toadstool", "gate2:toadstool.sock", false, 0));
+        agent.add_route(
+            "compute",
+            route("gate2", "toadstool", "gate2:toadstool.sock", false, 0),
+        );
         agent.add_route("crypto", route("tower", "beardog", "beardog.sock", true, 0));
 
         let split = agent.split("gate2").unwrap();
@@ -755,7 +775,12 @@ mod tests {
 
     #[test]
     fn test_agent_state_serialization() {
-        for state in &[AgentState::Active, AgentState::Melded, AgentState::Split, AgentState::Inactive] {
+        for state in &[
+            AgentState::Active,
+            AgentState::Melded,
+            AgentState::Split,
+            AgentState::Inactive,
+        ] {
             let json = serde_json::to_string(state).unwrap();
             let deserialized: AgentState = serde_json::from_str(&json).unwrap();
             assert_eq!(*state, deserialized);
@@ -908,7 +933,9 @@ mod tests {
             "state": "Active"
         }));
 
-        let result = handle_agent_request(&registry, "agent.create", &params).await.unwrap();
+        let result = handle_agent_request(&registry, "agent.create", &params)
+            .await
+            .unwrap();
         assert_eq!(result["created"], "tower");
         assert!(registry.get("tower").await.is_some());
     }
@@ -923,17 +950,25 @@ mod tests {
     #[tokio::test]
     async fn test_rpc_agent_list_empty() {
         let registry = AgentRegistry::new();
-        let result = handle_agent_request(&registry, "agent.list", &None).await.unwrap();
+        let result = handle_agent_request(&registry, "agent.list", &None)
+            .await
+            .unwrap();
         assert_eq!(result["count"], 0);
     }
 
     #[tokio::test]
     async fn test_rpc_agent_list_with_agents() {
         let registry = AgentRegistry::new();
-        registry.register(PlasmodiumAgent::local("a", "cf7e", "tower")).await;
-        registry.register(PlasmodiumAgent::local("b", "cf7e", "gate2")).await;
+        registry
+            .register(PlasmodiumAgent::local("a", "cf7e", "tower"))
+            .await;
+        registry
+            .register(PlasmodiumAgent::local("b", "cf7e", "gate2"))
+            .await;
 
-        let result = handle_agent_request(&registry, "agent.list", &None).await.unwrap();
+        let result = handle_agent_request(&registry, "agent.list", &None)
+            .await
+            .unwrap();
         assert_eq!(result["count"], 2);
     }
 
@@ -944,7 +979,9 @@ mod tests {
         registry.register(agent).await;
 
         let params = Some(json!({ "name": "tower" }));
-        let result = handle_agent_request(&registry, "agent.get", &params).await.unwrap();
+        let result = handle_agent_request(&registry, "agent.get", &params)
+            .await
+            .unwrap();
         assert_eq!(result["name"], "tower");
         assert_eq!(result["family_id"], "cf7e");
     }
@@ -953,7 +990,9 @@ mod tests {
     async fn test_rpc_agent_get_not_found() {
         let registry = AgentRegistry::new();
         let params = Some(json!({ "name": "nonexistent" }));
-        let result = handle_agent_request(&registry, "agent.get", &params).await.unwrap();
+        let result = handle_agent_request(&registry, "agent.get", &params)
+            .await
+            .unwrap();
         assert!(result["error"].as_str().unwrap().contains("not found"));
     }
 
@@ -967,10 +1006,14 @@ mod tests {
     #[tokio::test]
     async fn test_rpc_agent_remove() {
         let registry = AgentRegistry::new();
-        registry.register(PlasmodiumAgent::local("tower", "cf7e", "tower")).await;
+        registry
+            .register(PlasmodiumAgent::local("tower", "cf7e", "tower"))
+            .await;
 
         let params = Some(json!({ "name": "tower" }));
-        let result = handle_agent_request(&registry, "agent.remove", &params).await.unwrap();
+        let result = handle_agent_request(&registry, "agent.remove", &params)
+            .await
+            .unwrap();
         assert_eq!(result["removed"], true);
         assert!(registry.get("tower").await.is_none());
     }
@@ -979,7 +1022,9 @@ mod tests {
     async fn test_rpc_agent_remove_nonexistent() {
         let registry = AgentRegistry::new();
         let params = Some(json!({ "name": "nonexistent" }));
-        let result = handle_agent_request(&registry, "agent.remove", &params).await.unwrap();
+        let result = handle_agent_request(&registry, "agent.remove", &params)
+            .await
+            .unwrap();
         assert_eq!(result["removed"], false);
     }
 
@@ -996,7 +1041,9 @@ mod tests {
         registry.register(gate2).await;
 
         let params = Some(json!({ "target": "tower", "source": "gate2" }));
-        let result = handle_agent_request(&registry, "agent.meld", &params).await.unwrap();
+        let result = handle_agent_request(&registry, "agent.meld", &params)
+            .await
+            .unwrap();
         assert_eq!(result["melded"], true);
 
         let melded = registry.get("tower").await.unwrap();
@@ -1023,7 +1070,9 @@ mod tests {
         registry.register(agent).await;
 
         let params = Some(json!({ "agent": "hpc", "gate_id": "gate2" }));
-        let result = handle_agent_request(&registry, "agent.split", &params).await.unwrap();
+        let result = handle_agent_request(&registry, "agent.split", &params)
+            .await
+            .unwrap();
         assert_eq!(result["split"], true);
         assert_eq!(result["new_agent"], "hpc-gate2");
     }
@@ -1037,7 +1086,9 @@ mod tests {
         registry.register(agent).await;
 
         let params = Some(json!({ "agent": "tower", "capability": "crypto" }));
-        let result = handle_agent_request(&registry, "agent.resolve", &params).await.unwrap();
+        let result = handle_agent_request(&registry, "agent.resolve", &params)
+            .await
+            .unwrap();
         assert_eq!(result["primal"], "beardog");
         assert_eq!(result["gate_id"], "tower");
     }
@@ -1049,7 +1100,9 @@ mod tests {
         registry.register(agent).await;
 
         let params = Some(json!({ "agent": "tower", "capability": "nonexistent" }));
-        let result = handle_agent_request(&registry, "agent.resolve", &params).await.unwrap();
+        let result = handle_agent_request(&registry, "agent.resolve", &params)
+            .await
+            .unwrap();
         assert!(result["error"].as_str().unwrap().contains("No route"));
     }
 
@@ -1066,7 +1119,9 @@ mod tests {
             "capability": "crypto",
             "operation": "sign"
         }));
-        let result = handle_agent_request(&registry, "agent.route", &params).await.unwrap();
+        let result = handle_agent_request(&registry, "agent.route", &params)
+            .await
+            .unwrap();
         assert_eq!(result["routed"], true);
         assert_eq!(result["route"]["primal"], "beardog");
         assert_eq!(result["route"]["is_local"], true);
@@ -1081,7 +1136,10 @@ mod tests {
 
         let mut agent = PlasmodiumAgent::local("hpc", "cf7e", "tower");
         agent.gates.push("gate2".to_string());
-        agent.add_route("compute", route("gate2", "toadstool", "gate2:toadstool.sock", false, 0));
+        agent.add_route(
+            "compute",
+            route("gate2", "toadstool", "gate2:toadstool.sock", false, 0),
+        );
         registry.register(agent).await;
 
         let params = Some(json!({
@@ -1089,7 +1147,9 @@ mod tests {
             "capability": "compute",
             "operation": "submit"
         }));
-        let result = handle_agent_request(&registry, "agent.route", &params).await.unwrap();
+        let result = handle_agent_request(&registry, "agent.route", &params)
+            .await
+            .unwrap();
         assert_eq!(result["routed"], true);
         assert_eq!(result["route"]["gate_id"], "gate2");
         assert_eq!(result["route"]["is_local"], false);
@@ -1107,7 +1167,9 @@ mod tests {
 
         // No explicit operation — should default to "call"
         let params = Some(json!({ "agent": "tower", "capability": "crypto" }));
-        let result = handle_agent_request(&registry, "agent.route", &params).await.unwrap();
+        let result = handle_agent_request(&registry, "agent.route", &params)
+            .await
+            .unwrap();
         assert_eq!(result["dispatch"]["method"], "crypto.call");
     }
 
@@ -1118,7 +1180,9 @@ mod tests {
         registry.register(agent).await;
 
         let params = Some(json!({ "agent": "tower", "capability": "nonexistent" }));
-        let result = handle_agent_request(&registry, "agent.route", &params).await.unwrap();
+        let result = handle_agent_request(&registry, "agent.route", &params)
+            .await
+            .unwrap();
         assert_eq!(result["routed"], false);
         assert!(result["error"].as_str().unwrap().contains("No route"));
     }
@@ -1132,7 +1196,9 @@ mod tests {
 
     // ── agents_from_collective tests ───────────────────────────────────
 
-    fn mock_state(gates: Vec<biomeos_core::plasmodium::GateInfo>) -> biomeos_core::plasmodium::PlasmodiumState {
+    fn mock_state(
+        gates: Vec<biomeos_core::plasmodium::GateInfo>,
+    ) -> biomeos_core::plasmodium::PlasmodiumState {
         biomeos_core::plasmodium::PlasmodiumState {
             gates,
             snapshot_at: "2026-02-11T20:00:00Z".to_string(),
@@ -1249,13 +1315,7 @@ mod tests {
     fn test_auto_meld_local_priority() {
         let state = mock_state(vec![
             mock_gate("tower", "local", true, vec![("songbird", true)], 0),
-            mock_gate(
-                "gate2",
-                "192.168.1.132",
-                false,
-                vec![("songbird", true)],
-                0,
-            ),
+            mock_gate("gate2", "192.168.1.132", false, vec![("songbird", true)], 0),
         ]);
 
         let agents = agents_from_collective(&state);
@@ -1269,11 +1329,21 @@ mod tests {
 
     #[test]
     fn test_auto_meld_skips_unreachable() {
-        let mut state = mock_state(vec![
-            mock_gate("tower", "local", true, vec![("beardog", true)], 0),
-        ]);
+        let mut state = mock_state(vec![mock_gate(
+            "tower",
+            "local",
+            true,
+            vec![("beardog", true)],
+            0,
+        )]);
         // Add an unreachable gate
-        let mut unreachable = mock_gate("gate2", "192.168.1.132", false, vec![("toadstool", true)], 0);
+        let mut unreachable = mock_gate(
+            "gate2",
+            "192.168.1.132",
+            false,
+            vec![("toadstool", true)],
+            0,
+        );
         unreachable.reachable = false;
         state.gates.push(unreachable);
 
@@ -1314,7 +1384,13 @@ mod tests {
     fn test_auto_meld_socket_paths() {
         let state = mock_state(vec![
             mock_gate("tower", "local", true, vec![("beardog", true)], 0),
-            mock_gate("gate2", "192.168.1.132:8080", false, vec![("toadstool", true)], 0),
+            mock_gate(
+                "gate2",
+                "192.168.1.132:8080",
+                false,
+                vec![("toadstool", true)],
+                0,
+            ),
         ]);
 
         let agents = agents_from_collective(&state);
@@ -1325,7 +1401,10 @@ mod tests {
 
         // Remote socket: addr:primal-family.sock
         let gate2_route = agents[1].resolve("compute").unwrap();
-        assert_eq!(gate2_route.socket, "192.168.1.132:8080:toadstool-test_cf7e.sock");
+        assert_eq!(
+            gate2_route.socket,
+            "192.168.1.132:8080:toadstool-test_cf7e.sock"
+        );
     }
 
     #[test]
@@ -1351,12 +1430,26 @@ mod tests {
         let registry = AgentRegistry::new();
 
         let state = mock_state(vec![
-            mock_gate("tower", "local", true, vec![("beardog", true), ("songbird", true)], 12288),
-            mock_gate("gate2", "192.168.1.132:8080", false, vec![("toadstool", true)], 24576),
+            mock_gate(
+                "tower",
+                "local",
+                true,
+                vec![("beardog", true), ("songbird", true)],
+                12288,
+            ),
+            mock_gate(
+                "gate2",
+                "192.168.1.132:8080",
+                false,
+                vec![("toadstool", true)],
+                24576,
+            ),
         ]);
 
         let params = Some(serde_json::to_value(&state).unwrap());
-        let result = handle_agent_request(&registry, "agent.auto_meld", &params).await.unwrap();
+        let result = handle_agent_request(&registry, "agent.auto_meld", &params)
+            .await
+            .unwrap();
 
         assert_eq!(result["auto_melded"], true);
         assert_eq!(result["agents_created"], 3); // tower + gate2 + collective

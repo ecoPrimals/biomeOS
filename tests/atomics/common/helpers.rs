@@ -1,10 +1,13 @@
 // Test helpers for NUCLEUS atomic testing
+//
+// Deep Debt: Fast AND Safe - uses nix crate for safe POSIX syscalls
 
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::time::Duration;
 use tokio::time::sleep;
 use anyhow::{Result, Context};
+use nix::unistd::Uid;
 
 /// Primal process handle
 pub struct PrimalHandle {
@@ -92,7 +95,7 @@ impl NestHandle {
 
 /// Start BearDog primal
 pub async fn start_beardog() -> Result<PrimalHandle> {
-    let uid = unsafe { libc::getuid() };
+    let uid = Uid::current();
     let socket_path = PathBuf::from(format!("/run/user/{}/biomeos/beardog.sock", uid));
     
     // Clean old socket
@@ -129,7 +132,7 @@ pub async fn start_beardog() -> Result<PrimalHandle> {
 
 /// Start Songbird primal
 pub async fn start_songbird(beardog: &PrimalHandle) -> Result<PrimalHandle> {
-    let uid = unsafe { libc::getuid() };
+    let uid = Uid::current();
     let socket_path = PathBuf::from(format!("/run/user/{}/biomeos/songbird.sock", uid));
     
     // Clean old socket
@@ -168,7 +171,7 @@ pub async fn start_songbird(beardog: &PrimalHandle) -> Result<PrimalHandle> {
 
 /// Start Toadstool primal
 pub async fn start_toadstool() -> Result<PrimalHandle> {
-    let uid = unsafe { libc::getuid() };
+    let uid = Uid::current();
     let socket_path = PathBuf::from(format!("/run/user/{}/biomeos/toadstool.sock", uid));
     
     // Clean old socket
@@ -205,7 +208,7 @@ pub async fn start_toadstool() -> Result<PrimalHandle> {
 
 /// Start NestGate primal (socket-only mode)
 pub async fn start_nestgate_socket_only() -> Result<PrimalHandle> {
-    let uid = unsafe { libc::getuid() };
+    let uid = Uid::current();
     let socket_path = PathBuf::from(format!("/run/user/{}/biomeos/nestgate.sock", uid));
     
     // Clean old socket
@@ -247,7 +250,7 @@ pub async fn start_nestgate_socket_only() -> Result<PrimalHandle> {
 
 /// Start Squirrel primal
 pub async fn start_squirrel() -> Result<PrimalHandle> {
-    let uid = unsafe { libc::getuid() };
+    let uid = Uid::current();
     let socket_path = PathBuf::from(format!("/run/user/{}/biomeos/squirrel.sock", uid));
     
     // Clean old socket
@@ -346,7 +349,7 @@ fn generate_secure_jwt() -> Result<String> {
 
 /// Clean up all test sockets
 pub async fn cleanup_test_sockets() -> Result<()> {
-    let uid = unsafe { libc::getuid() };
+    let uid = Uid::current();
     let biomeos_dir = PathBuf::from(format!("/run/user/{}/biomeos", uid));
     
     if !biomeos_dir.exists() {

@@ -200,8 +200,15 @@ mod tests {
     fn test_known_namespaces() {
         let validator = GraphValidator::new();
         let expected = vec![
-            "crypto", "genetic", "filesystem", "process",
-            "network", "config", "biomeos", "http", "birdsong",
+            "crypto",
+            "genetic",
+            "filesystem",
+            "process",
+            "network",
+            "config",
+            "biomeos",
+            "http",
+            "birdsong",
         ];
         for ns in expected {
             assert!(

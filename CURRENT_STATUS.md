@@ -1,8 +1,8 @@
 # biomeOS - Current Status
 
-**Updated**: February 11, 2026 (Test Coverage Expansion Phase 4)
-**Version**: 2.21
-**Status**: PRODUCTION READY - Comprehensive Test Coverage
+**Updated**: February 11, 2026 (Deep Debt Evolution Pass)
+**Version**: 2.22
+**Status**: PRODUCTION READY - Deep Debt Eliminated
 
 ---
 
@@ -15,17 +15,18 @@
 | **IPC Standard** | Universal IPC v3.0 + HTTP JSON-RPC (inter-gate) |
 | **Security Grade** | A++ (TRUE PRIMAL + Genetic Model) |
 | **Code Quality** | A+ (Pure Rust, idiomatic, zero warnings, full doc coverage, deep debt audit) |
-| **Tests Passing** | 2,539 (0 failures) |
-| **Test Coverage** | 56.75% region coverage (llvm-cov, 314 files) |
-| **Unsafe Code** | 0 production (mmap replaced with safe read in biomeos-genome-deploy) |
-| **Clippy** | PASS (0 warnings) |
+| **Tests Passing** | 2,798+ (0 failures) |
+| **Test Coverage** | 60.99% region, 62.35% function (llvm-cov, +170 tests added) |
+| **Unsafe Code** | 0 production, 0 test (libc::getuid → nix::unistd::Uid) |
+| **Clippy** | PASS (0 warnings, 9 warnings fixed) |
 | **Formatting** | PASS |
 | **Genetic Model** | EVOLVED - Mitochondrial + Nuclear DNA |
 | **BirdSong Discovery** | Encrypted, shared beacon model |
 | **Discovery Model** | Dynamic socket scanning + capability taxonomy |
 | **NAT Traversal** | 4-tier strategy (LAN/punch/coordinated/relay) |
 | **P2P Sovereign Onion** | PRODUCTION READY |
-| **External C deps** | 0 (safe `nix` crate for POSIX syscalls only) |
+| **External C deps** | 0 (`dirs` deprecated → `etcetera`, `libc` → `nix`) |
+| **Files >1000 LOC** | 0 production (7 files have tests pushing total >1000) |
 | **Plasmodium** | HTTP JSON-RPC collective (runtime port, SSH deprecated) |
 | **Model Cache** | NUCLEUS-integrated, HuggingFace import, NestGate fallback |
 | **AI Bridge** | Squirrel -> Songbird -> Cloud/Local AI (validated) |
@@ -538,7 +539,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 # Build
 cargo build --workspace
 
-# Test (2,539 tests)
+# Test (2,798+ tests)
 cargo test --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -571,7 +572,7 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 **IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate)
 **Security**: A++ (Two-seed Dark Forest)
 **Code Quality**: A+ (Pure Rust, idiomatic, zero warnings, full doc coverage)
-**Tests**: 2,539 passing (56.75% region coverage via llvm-cov)
+**Tests**: 2,798+ passing (60.99% region coverage via llvm-cov)
 **Clippy**: PASS (0 warnings) | **Format**: PASS
 **Docs**: Full coverage (0 missing_docs warnings across 8 crates)
-**Unsafe Code**: 0 production
+**Unsafe Code**: 0 (production + tests)

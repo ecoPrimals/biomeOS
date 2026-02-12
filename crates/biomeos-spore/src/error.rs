@@ -150,10 +150,7 @@ mod tests {
     #[test]
     fn test_invalid_config_display() {
         let err = SporeError::InvalidConfig("missing node_id".to_string());
-        assert_eq!(
-            err.to_string(),
-            "Invalid configuration: missing node_id"
-        );
+        assert_eq!(err.to_string(), "Invalid configuration: missing node_id");
     }
 
     #[test]
@@ -181,10 +178,7 @@ mod tests {
     #[test]
     fn test_verification_failed_display() {
         let err = SporeError::VerificationFailed("hash mismatch".to_string());
-        assert_eq!(
-            err.to_string(),
-            "Spore verification failed: hash mismatch"
-        );
+        assert_eq!(err.to_string(), "Spore verification failed: hash mismatch");
     }
 
     #[test]
@@ -202,10 +196,7 @@ mod tests {
     #[test]
     fn test_deserialization_error_display() {
         let err = SporeError::DeserializationError("unexpected token".to_string());
-        assert_eq!(
-            err.to_string(),
-            "Deserialization error: unexpected token"
-        );
+        assert_eq!(err.to_string(), "Deserialization error: unexpected token");
     }
 
     #[test]

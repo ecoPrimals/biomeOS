@@ -77,7 +77,10 @@ async fn call_security_provider(
         let client = neural_api_client::NeuralApiClient::new(&socket)
             .map_err(|e| format!("Failed to create Neural API client: {}", e))?;
 
-        match client.route_to_primal("trust", method, params.clone()).await {
+        match client
+            .route_to_primal("trust", method, params.clone())
+            .await
+        {
             Ok(result) => return Ok(result),
             Err(e) => {
                 debug!(
@@ -103,7 +106,10 @@ async fn call_security_provider(
     // Check env override (bootstrap scenarios)
     let socket_path = std::env::var("BEARDOG_SOCKET").unwrap_or(socket_path);
 
-    debug!("📡 Calling security provider at {}: {}", socket_path, method);
+    debug!(
+        "📡 Calling security provider at {}: {}",
+        socket_path, method
+    );
 
     let client = biomeos_core::AtomicClient::unix(&socket_path)
         .with_timeout(std::time::Duration::from_secs(5));
@@ -133,9 +139,8 @@ pub async fn evaluate_trust(
             crate::ApiError::Internal(format!("Failed to evaluate trust: {}", e))
         })?;
 
-    let response: TrustEvaluationResponse = serde_json::from_value(result).map_err(|e| {
-        crate::ApiError::Internal(format!("Failed to parse trust response: {}", e))
-    })?;
+    let response: TrustEvaluationResponse = serde_json::from_value(result)
+        .map_err(|e| crate::ApiError::Internal(format!("Failed to parse trust response: {}", e)))?;
 
     info!("   ✅ Trust evaluated: {}", response.trust_level);
     Ok(Json(response))

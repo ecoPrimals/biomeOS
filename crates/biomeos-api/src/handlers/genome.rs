@@ -652,10 +652,7 @@ mod tests {
         assert!(temp_dir.path().join("test-1.0.0.genome").exists());
 
         // Load it back
-        let loaded = state
-            .load_genome("test-1.0.0")
-            .await
-            .expect("load genome");
+        let loaded = state.load_genome("test-1.0.0").await.expect("load genome");
         assert_eq!(loaded.manifest.name, "test");
         assert_eq!(loaded.manifest.version, "1.0.0");
     }
@@ -667,11 +664,9 @@ mod tests {
 
         let result = state.load_genome("nonexistent").await;
         assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .contains("Genome not found: nonexistent")
-        );
+        assert!(result
+            .unwrap_err()
+            .contains("Genome not found: nonexistent"));
     }
 
     #[tokio::test]
@@ -704,7 +699,10 @@ mod tests {
         let genomes = state.list_all().await.expect("list all");
         assert_eq!(genomes.len(), 2);
 
-        let names: Vec<&str> = genomes.iter().map(|(_, g)| g.manifest.name.as_str()).collect();
+        let names: Vec<&str> = genomes
+            .iter()
+            .map(|(_, g)| g.manifest.name.as_str())
+            .collect();
         assert!(names.contains(&"genome-a"));
         assert!(names.contains(&"genome-b"));
     }
@@ -823,7 +821,10 @@ mod tests {
         let req: CreateGenomeRequest = serde_json::from_str(json).expect("deserialize");
         assert_eq!(req.name, "full-genome");
         assert_eq!(req.version, Some("2.0.0".to_string()));
-        assert_eq!(req.description, Some("A fully specified genome".to_string()));
+        assert_eq!(
+            req.description,
+            Some("A fully specified genome".to_string())
+        );
     }
 
     #[test]

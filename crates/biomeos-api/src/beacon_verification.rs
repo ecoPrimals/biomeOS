@@ -109,10 +109,7 @@ pub async fn hash_via_capability(
             .with_timeout(std::time::Duration::from_secs(5));
 
         if let Ok(r) = client
-            .call(
-                "crypto.blake3_hash",
-                serde_json::json!({ "data": encoded }),
-            )
+            .call("crypto.blake3_hash", serde_json::json!({ "data": encoded }))
             .await
         {
             if let Some(hash) = r.get("hash").and_then(|h| h.as_str()) {
@@ -150,8 +147,7 @@ pub fn discover_neural_api_socket(family_id: &str) -> Option<String> {
     }
 
     // 3. System temp dir fallback (bootstrap scenarios)
-    let tmp_path = std::env::temp_dir()
-        .join(format!("neural-api-{}.sock", family_id));
+    let tmp_path = std::env::temp_dir().join(format!("neural-api-{}.sock", family_id));
     if tmp_path.exists() {
         return Some(tmp_path.to_string_lossy().to_string());
     }
@@ -196,16 +192,13 @@ async fn verify_via_neural_api(
 }
 
 /// Verify via direct socket discovery (fallback)
-async fn verify_via_socket_discovery(
-    family_id: &str,
-    token: &str,
-) -> Option<BeaconVerification> {
+async fn verify_via_socket_discovery(family_id: &str, token: &str) -> Option<BeaconVerification> {
     let paths = biomeos_types::paths::SystemPaths::new_lazy();
     let runtime_dir = paths.runtime_dir();
 
     // Discover any primal providing birdsong.decrypt
     // Deep Debt: capability-based discovery, not name-based
-    let providers = discover_beacon_providers(&runtime_dir, family_id);
+    let providers = discover_beacon_providers(runtime_dir, family_id);
 
     for socket_path in providers {
         let client = biomeos_core::AtomicClient::unix(socket_path.to_string_lossy().as_ref())
@@ -398,4 +391,3 @@ mod tests {
         assert_eq!(c.plaintext, "pt");
     }
 }
-

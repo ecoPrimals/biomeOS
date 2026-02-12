@@ -124,9 +124,9 @@ impl DarkForestBeacon {
         seed_path: P,
         node_id: &str,
     ) -> SporeResult<Self> {
-        let caller = Arc::new(
-            crate::beacon_genetics::DirectBeardogCaller::new(beardog_socket),
-        );
+        let caller = Arc::new(crate::beacon_genetics::DirectBeardogCaller::new(
+            beardog_socket,
+        ));
         Self::new(caller, seed_path, node_id).await
     }
 
@@ -338,12 +338,16 @@ impl DarkForestBeacon {
             .unwrap_or(serde_json::json!({}));
 
         // Route through capability caller (primal-agnostic)
-        let result = self.capability_caller.call(method, params).await.map_err(|e| {
-            SporeError::IoError(std::io::Error::new(
-                std::io::ErrorKind::ConnectionRefused,
-                format!("Capability call '{}' failed: {}", method, e),
-            ))
-        })?;
+        let result = self
+            .capability_caller
+            .call(method, params)
+            .await
+            .map_err(|e| {
+                SporeError::IoError(std::io::Error::new(
+                    std::io::ErrorKind::ConnectionRefused,
+                    format!("Capability call '{}' failed: {}", method, e),
+                ))
+            })?;
 
         // Wrap result in JSON-RPC response format for compatibility with call sites
         Ok(serde_json::json!({
@@ -911,12 +915,8 @@ mod tests {
         use crate::beacon_genetics::DirectBeardogCaller;
 
         let caller = Arc::new(DirectBeardogCaller::new("/tmp/beardog.sock"));
-        let result = DarkForestBeacon::new(
-            caller,
-            "/nonexistent/path/.family.seed",
-            "tower1",
-        )
-        .await;
+        let result =
+            DarkForestBeacon::new(caller, "/nonexistent/path/.family.seed", "tower1").await;
         assert!(result.is_err());
     }
 
@@ -931,19 +931,17 @@ mod tests {
             .expect("write seed");
 
         let caller = Arc::new(DirectBeardogCaller::new("/tmp/beardog.sock"));
-        let beacon = DarkForestBeacon::new(
-            caller,
-            &seed_path,
-            "tower1",
-        )
-        .await
-        .expect("create beacon");
+        let beacon = DarkForestBeacon::new(caller, &seed_path, "tower1")
+            .await
+            .expect("create beacon");
 
         assert_eq!(beacon.node_id, "tower1");
         assert!(!beacon.family_seed_b64.is_empty());
 
         // Verify the seed was properly base64 encoded
-        let decoded = BASE64.decode(&beacon.family_seed_b64).expect("decode base64");
+        let decoded = BASE64
+            .decode(&beacon.family_seed_b64)
+            .expect("decode base64");
         assert_eq!(decoded, b"test-seed-bytes-32chars-minimum!");
     }
 
