@@ -1,0 +1,169 @@
+# Science Data Pipeline Graph
+# Used by biomeOS to orchestrate wetSpring science experiments
+# through the primal ecosystem: NestGate (data) → wetSpring (science) → ToadStool (GPU)
+#
+# STATUS: Protocol defined (Feb 26, 2026)
+# Requires: Tower (BearDog + Songbird) + NestGate + ToadStool
+# Optional: metalForge (hardware dispatch)
+#
+# Pipeline: NCBI query → sequence download → diversity analysis → Anderson spectral
+
+[graph]
+id = "science_pipeline"
+description = "Science data pipeline: NCBI → diversity → Anderson spectral analysis"
+coordination = "Sequential"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 1: ENSURE PREREQUISITES
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Verify NestGate is alive (storage + NCBI data provider)
+[[nodes]]
+id = "check_nestgate"
+output = "nestgate_healthy"
+capabilities = ["storage"]
+
+[nodes.operation]
+name = "rpc_call"
+target = "nestgate"
+
+[nodes.operation.params]
+method = "health"
+params = {}
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# Verify ToadStool is alive (GPU compute provider)
+[[nodes]]
+id = "check_toadstool"
+output = "toadstool_healthy"
+capabilities = ["compute"]
+
+[nodes.operation]
+name = "rpc_call"
+target = "toadstool"
+
+[nodes.operation.params]
+method = "toadstool.health"
+params = {}
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 2: DATA ACQUISITION (NestGate)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Query NCBI for accessions
+[[nodes]]
+id = "ncbi_search"
+depends_on = ["check_nestgate"]
+output = "search_results"
+
+[nodes.operation]
+name = "rpc_call"
+target = "nestgate"
+
+[nodes.operation.params]
+method = "storage.store"
+params = { key = "science:ncbi:query", value = "${NCBI_QUERY}", family_id = "wetspring" }
+
+[nodes.constraints]
+timeout_ms = 30000
+
+# Download sequences via NestGate NCBI provider
+[[nodes]]
+id = "ncbi_fetch"
+depends_on = ["ncbi_search"]
+output = "sequences_cached"
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "science.ncbi_fetch"
+params = { db = "${NCBI_DB}", accessions = "${ACCESSIONS}", api_key = "${NCBI_API_KEY}" }
+
+[nodes.constraints]
+timeout_ms = 300000  # 5 min for large downloads
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 3: DIVERSITY ANALYSIS (wetSpring)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Process FASTQ through diversity pipeline
+[[nodes]]
+id = "diversity_analysis"
+depends_on = ["ncbi_fetch"]
+output = "diversity_results"
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "science.diversity"
+params = { input_path = "${SEQUENCE_CACHE_PATH}", metrics = ["shannon", "simpson", "observed_features", "bray_curtis"] }
+
+[nodes.constraints]
+timeout_ms = 600000  # 10 min for large datasets
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 4: ANDERSON SPECTRAL ANALYSIS (wetSpring + ToadStool GPU)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Run Anderson localization analysis on diversity results
+[[nodes]]
+id = "anderson_analysis"
+depends_on = ["diversity_analysis", "check_toadstool"]
+output = "anderson_results"
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "science.anderson"
+params = { diversity_input = "${DIVERSITY_RESULTS}", lattice_dim = 3, lattice_sizes = [8, 10, 12, 14], n_realizations = 8, use_gpu = true }
+
+[nodes.constraints]
+timeout_ms = 1800000  # 30 min for GPU Lanczos at large L
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 5: RESULTS STORAGE (NestGate)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Store results in NestGate for provenance
+[[nodes]]
+id = "store_results"
+depends_on = ["anderson_analysis"]
+output = "results_stored"
+
+[nodes.operation]
+name = "rpc_call"
+target = "nestgate"
+
+[nodes.operation.params]
+method = "storage.store"
+params = { key = "science:results:${EXPERIMENT_ID}", value = "${ANDERSON_RESULTS_JSON}", family_id = "wetspring" }
+
+[nodes.constraints]
+timeout_ms = 30000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# VALIDATION
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Validate pipeline health and results integrity
+[[nodes]]
+id = "validate_pipeline"
+depends_on = ["store_results"]
+output = "pipeline_validated"
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.operation.params]
+check_nestgate = true
+check_toadstool = true
+check_results_integrity = true
+timeout_seconds = 30

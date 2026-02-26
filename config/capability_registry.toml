@@ -148,6 +148,35 @@ capabilities = [
 "ai.analyze" = { provider = "squirrel", method = "analyze" }
 "mcp.call" = { provider = "squirrel", method = "mcp_call" }
 
+# ------------------------------------------------------------------------------
+# Science Domain (wetSpring)
+# Biodiversity, spectral analysis, Anderson localization, NCBI data
+# wetSpring operates as a science primal — it consumes ToadStool GPU
+# primitives internally and NestGate for data, but exposes high-level
+# science capabilities to the ecosystem.
+# ------------------------------------------------------------------------------
+
+[domains.science]
+provider = "wetspring"
+capabilities = [
+    "science",
+    "biodiversity",
+    "spectral",
+    "metagenomics"
+]
+
+[translations.science]
+# Diversity pipeline: FASTQ → Shannon, Simpson, observed features, Bray-Curtis
+"science.diversity" = { provider = "wetspring", method = "science.diversity" }
+# Anderson localization spectral analysis (uses ToadStool GPU Lanczos internally)
+"science.anderson" = { provider = "wetspring", method = "science.anderson" }
+# NCBI data fetch routed through NestGate when available, sovereign fallback
+"science.ncbi_fetch" = { provider = "nestgate", method = "storage.retrieve", fallback_provider = "wetspring" }
+# ODE quorum sensing model (uses ToadStool batched RK4 internally)
+"science.qs_model" = { provider = "wetspring", method = "science.qs_model" }
+# Full pipeline: NCBI → diversity → Anderson → QS classification
+"science.full_pipeline" = { provider = "wetspring", method = "science.full_pipeline" }
+
 # ==============================================================================
 # SOCKET PATH TEMPLATES
 # ==============================================================================
