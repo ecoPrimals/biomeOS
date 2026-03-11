@@ -201,11 +201,7 @@ impl ContinuousExecutor {
     /// The graph's `tick` config is used for clock parameters.
     /// Falls back to 60 Hz defaults if no tick config is present.
     pub fn new(graph: DeploymentGraph, broadcaster: GraphEventBroadcaster) -> Self {
-        let tick_config = graph
-            .definition
-            .tick
-            .clone()
-            .unwrap_or_default();
+        let tick_config = graph.definition.tick.clone().unwrap_or_default();
 
         let (state_tx, state_rx) = watch::channel(SessionState::Starting);
 
@@ -260,14 +256,20 @@ impl ContinuousExecutor {
         Fut: std::future::Future<Output = anyhow::Result<serde_json::Value>> + Send,
     {
         let graph_id = self.graph.id().as_str().to_string();
-        info!("Continuous session starting: {} @ {} Hz", graph_id, self.tick_config.target_hz);
+        info!(
+            "Continuous session starting: {} @ {} Hz",
+            graph_id, self.tick_config.target_hz
+        );
 
         let _ = self.state_tx.send(SessionState::Running);
-        let _ = self.broadcaster.broadcast(GraphEvent::SessionStarted {
-            graph_id: graph_id.clone(),
-            target_hz: self.tick_config.target_hz,
-            timestamp: Utc::now(),
-        }).await;
+        let _ = self
+            .broadcaster
+            .broadcast(GraphEvent::SessionStarted {
+                graph_id: graph_id.clone(),
+                target_hz: self.tick_config.target_hz,
+                timestamp: Utc::now(),
+            })
+            .await;
 
         let mut clock = TickClock::from_config(&self.tick_config);
         let budget_warning = Duration::from_secs_f64(self.tick_config.budget_warning_ms / 1000.0);
@@ -278,13 +280,15 @@ impl ContinuousExecutor {
                 Ok(SessionCommand::Stop) => {
                     info!("Session stop requested: {}", graph_id);
                     let _ = self.state_tx.send(SessionState::Stopping);
-                    self.broadcast_state_change(&graph_id, "stopping", clock.tick_count()).await;
+                    self.broadcast_state_change(&graph_id, "stopping", clock.tick_count())
+                        .await;
                     break;
                 }
                 Ok(SessionCommand::Pause) => {
                     if *self.state_rx.borrow() == SessionState::Running {
                         let _ = self.state_tx.send(SessionState::Paused);
-                        self.broadcast_state_change(&graph_id, "paused", clock.tick_count()).await;
+                        self.broadcast_state_change(&graph_id, "paused", clock.tick_count())
+                            .await;
                         info!("Session paused: {}", graph_id);
                     }
                 }
@@ -292,7 +296,8 @@ impl ContinuousExecutor {
                     if *self.state_rx.borrow() == SessionState::Paused {
                         clock.reset_accumulator();
                         let _ = self.state_tx.send(SessionState::Running);
-                        self.broadcast_state_change(&graph_id, "running", clock.tick_count()).await;
+                        self.broadcast_state_change(&graph_id, "running", clock.tick_count())
+                            .await;
                         info!("Session resumed: {}", graph_id);
                     }
                 }
@@ -319,7 +324,8 @@ impl ContinuousExecutor {
 
                     let feedback_input = self.get_feedback_input(node_id).await;
 
-                    let node_budget = node.budget_ms
+                    let node_budget = node
+                        .budget_ms
                         .map(|ms| Duration::from_secs_f64(ms / 1000.0))
                         .unwrap_or(budget_warning);
 
@@ -366,13 +372,16 @@ impl ContinuousExecutor {
                 }
 
                 let tick_duration_us = tick_start.elapsed().as_micros() as u64;
-                let _ = self.broadcaster.broadcast(GraphEvent::TickCompleted {
-                    graph_id: graph_id.clone(),
-                    tick: tick_num,
-                    duration_us: tick_duration_us,
-                    budget_overruns,
-                    timestamp: Utc::now(),
-                }).await;
+                let _ = self
+                    .broadcaster
+                    .broadcast(GraphEvent::TickCompleted {
+                        graph_id: graph_id.clone(),
+                        tick: tick_num,
+                        duration_us: tick_duration_us,
+                        budget_overruns,
+                        timestamp: Utc::now(),
+                    })
+                    .await;
             }
 
             if ticks_to_run == 0 {
@@ -381,8 +390,13 @@ impl ContinuousExecutor {
         }
 
         let _ = self.state_tx.send(SessionState::Stopped);
-        self.broadcast_state_change(&graph_id, "stopped", clock.tick_count()).await;
-        info!("Continuous session stopped: {} (total ticks: {})", graph_id, clock.tick_count());
+        self.broadcast_state_change(&graph_id, "stopped", clock.tick_count())
+            .await;
+        info!(
+            "Continuous session stopped: {} (total ticks: {})",
+            graph_id,
+            clock.tick_count()
+        );
     }
 
     fn find_node(&self, node_id: &str) -> Option<&GraphNode> {
@@ -402,12 +416,15 @@ impl ContinuousExecutor {
     }
 
     async fn broadcast_state_change(&self, graph_id: &str, new_state: &str, tick: u64) {
-        let _ = self.broadcaster.broadcast(GraphEvent::SessionStateChanged {
-            graph_id: graph_id.to_string(),
-            new_state: new_state.to_string(),
-            tick_at_change: tick,
-            timestamp: Utc::now(),
-        }).await;
+        let _ = self
+            .broadcaster
+            .broadcast(GraphEvent::SessionStateChanged {
+                graph_id: graph_id.to_string(),
+                new_state: new_state.to_string(),
+                tick_at_change: tick,
+                timestamp: Utc::now(),
+            })
+            .await;
     }
 }
 
@@ -446,7 +463,11 @@ mod tests {
 
         std::thread::sleep(Duration::from_millis(250));
         let ticks = clock.advance();
-        assert!(ticks >= 1, "250ms should produce at least one 100ms tick, got {}", ticks);
+        assert!(
+            ticks >= 1,
+            "250ms should produce at least one 100ms tick, got {}",
+            ticks
+        );
         assert!(clock.tick_count() >= 1);
     }
 
@@ -460,7 +481,11 @@ mod tests {
         let mut clock = TickClock::from_config(&config);
         std::thread::sleep(Duration::from_millis(500));
         let ticks = clock.advance();
-        assert!(ticks <= 2, "Should clamp to max_accumulator worth of ticks, got {}", ticks);
+        assert!(
+            ticks <= 2,
+            "Should clamp to max_accumulator worth of ticks, got {}",
+            ticks
+        );
     }
 
     #[test]
@@ -646,7 +671,10 @@ mod tests {
         let executor = ContinuousExecutor::new(graph, broadcaster);
 
         assert_eq!(executor.feedback_map.len(), 1);
-        assert_eq!(executor.feedback_map.get("producer"), Some(&"consumer".to_string()));
+        assert_eq!(
+            executor.feedback_map.get("producer"),
+            Some(&"consumer".to_string())
+        );
     }
 
     #[test]

@@ -189,10 +189,7 @@ impl SensorCollector {
 ///
 /// This is a convenience function that creates a collector, drains events,
 /// and returns them as a JSON payload for the continuous executor.
-pub fn collect_sensor_input(
-    bus: &SensorEventBus,
-    sources: &[SensorSource],
-) -> serde_json::Value {
+pub fn collect_sensor_input(bus: &SensorEventBus, sources: &[SensorSource]) -> serde_json::Value {
     let rx = bus.subscribe();
     let mut collector = if sources.is_empty() {
         SensorCollector::new(rx)
@@ -296,8 +293,7 @@ mod tests {
     async fn test_sensor_collector_filter() {
         let bus = SensorEventBus::new(100);
         let rx = bus.subscribe();
-        let mut collector =
-            SensorCollector::with_filter(rx, vec![SensorSource::Mouse]);
+        let mut collector = SensorCollector::with_filter(rx, vec![SensorSource::Mouse]);
 
         bus.publish(SensorEvent {
             source: SensorSource::Keyboard,

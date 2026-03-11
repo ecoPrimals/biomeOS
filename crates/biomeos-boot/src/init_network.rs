@@ -32,7 +32,11 @@ impl NetworkManager {
         let interfaces = self.detect_interfaces().await?;
         self.configured = !interfaces.is_empty();
         if self.configured {
-            info!("✅ Network configuration complete ({} interface(s): {:?})", interfaces.len(), interfaces);
+            info!(
+                "✅ Network configuration complete ({} interface(s): {:?})",
+                interfaces.len(),
+                interfaces
+            );
         } else {
             info!("⚠️ No non-loopback interfaces detected");
         }
@@ -67,9 +71,10 @@ impl NetworkManager {
             .await
             .map_err(|e| crate::init_error::BootError::NetworkConfig(Box::new(e)))?
         {
-            let name = entry.file_name().into_string().map_err(|_| {
-                crate::init_error::BootError::NetworkInterfaceDetection
-            })?;
+            let name = entry
+                .file_name()
+                .into_string()
+                .map_err(|_| crate::init_error::BootError::NetworkInterfaceDetection)?;
             if name != "lo" {
                 interfaces.push(name);
             }

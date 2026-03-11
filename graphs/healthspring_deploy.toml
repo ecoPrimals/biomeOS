@@ -1,0 +1,46 @@
+# healthSpring Deployment Graph
+# Deploys healthSpring medical science primal atop Node Atomic
+#
+# healthSpring provides PK/PD, gut microbiome, biosignal processing,
+# endocrinology, and NLME. It consumes toadStool GPU for tissue
+# deformation and petalTongue for clinical visualization.
+
+[graph]
+id = "healthspring_deploy"
+version = "1.0.0"
+description = "healthSpring medical science primal deployment"
+
+[[nodes]]
+id = "verify-tower"
+action = "check_primal"
+params = { primal = "beardog", required = true }
+
+[[nodes]]
+id = "verify-toadstool"
+action = "check_primal"
+params = { primal = "toadstool", required = true }
+depends_on = ["verify-tower"]
+
+[[nodes]]
+id = "verify-nestgate"
+action = "check_primal"
+params = { primal = "nestgate", required = false }
+depends_on = ["verify-tower"]
+
+[[nodes]]
+id = "start-healthspring"
+action = "start_primal"
+params = { primal = "healthspring", socket = "${XDG_RUNTIME_DIR}/biomeos/healthspring-${FAMILY_ID}.sock" }
+depends_on = ["verify-toadstool"]
+
+[[nodes]]
+id = "register-capabilities"
+action = "register_capabilities"
+params = { primal = "healthspring", capabilities = ["medical", "pkpd", "biosignal", "microbiome", "endocrinology", "nlme", "surgical"] }
+depends_on = ["start-healthspring"]
+
+[[nodes]]
+id = "verify-health"
+action = "health_check"
+params = { primal = "healthspring", timeout_ms = 5000 }
+depends_on = ["register-capabilities"]

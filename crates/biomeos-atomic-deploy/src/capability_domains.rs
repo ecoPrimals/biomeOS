@@ -73,7 +73,14 @@ pub(crate) const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
     // Science domain (wetSpring)
     CapabilityDomain {
         provider: "wetspring",
-        capabilities: &["science", "biodiversity", "spectral", "metagenomics"],
+        capabilities: &[
+            "science",
+            "biodiversity",
+            "spectral",
+            "metagenomics",
+            "kinetics",
+            "monitoring",
+        ],
     },
     // Neural science domain (neuralSpring)
     CapabilityDomain {
@@ -97,6 +104,8 @@ pub(crate) const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
             "yield",
             "agriculture",
             "soil_science",
+            "drought",
+            "statistics",
         ],
     },
     // Game science domain (ludoSpring)
@@ -114,7 +123,13 @@ pub(crate) const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
     // Visualization domain (petalTongue)
     CapabilityDomain {
         provider: "petaltongue",
-        capabilities: &["visualization", "ui", "interaction", "representation"],
+        capabilities: &[
+            "visualization",
+            "ui",
+            "interaction",
+            "representation",
+            "sensor_stream",
+        ],
     },
     // XR / Immersive domain (petalTongue + ludoSpring)
     CapabilityDomain {
@@ -282,6 +297,14 @@ mod tests {
             Some("airspring")
         );
         assert_eq!(
+            capability_to_provider_fallback("drought"),
+            Some("airspring")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("statistics"),
+            Some("airspring")
+        );
+        assert_eq!(
             capability_to_provider_fallback("ecology.et0_fao56"),
             Some("airspring")
         );
@@ -295,6 +318,14 @@ mod tests {
         );
         assert_eq!(
             capability_to_provider_fallback("biodiversity"),
+            Some("wetspring")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("kinetics"),
+            Some("wetspring")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("monitoring"),
             Some("wetspring")
         );
         assert_eq!(
@@ -314,18 +345,12 @@ mod tests {
 
     #[test]
     fn test_capability_to_provider_xr_domain() {
-        assert_eq!(
-            capability_to_provider_fallback("xr"),
-            Some("petaltongue")
-        );
+        assert_eq!(capability_to_provider_fallback("xr"), Some("petaltongue"));
         assert_eq!(
             capability_to_provider_fallback("stereo"),
             Some("petaltongue")
         );
-        assert_eq!(
-            capability_to_provider_fallback("vr"),
-            Some("petaltongue")
-        );
+        assert_eq!(capability_to_provider_fallback("vr"), Some("petaltongue"));
         assert_eq!(
             capability_to_provider_fallback("tracking"),
             Some("petaltongue")
@@ -459,6 +484,10 @@ mod tests {
         );
         assert_eq!(
             capability_to_provider_fallback("ui.render"),
+            Some("petaltongue")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("sensor_stream"),
             Some("petaltongue")
         );
     }

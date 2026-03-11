@@ -318,8 +318,7 @@ impl LiveService {
                 continue;
             }
             let mp = mount_point.to_string();
-            let (total, used, available) =
-                get_mount_stats(mount_point).unwrap_or((0, 0, 0));
+            let (total, used, available) = get_mount_stats(mount_point).unwrap_or((0, 0, 0));
             total_space = total_space.saturating_add(total);
             used_space = used_space.saturating_add(used);
             mount_points.push(MountPoint {

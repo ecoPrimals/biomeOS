@@ -79,10 +79,7 @@ impl MotionCaptureAdapter {
     }
 
     /// Start tracking on petalTongue.
-    pub async fn start_tracking(
-        &mut self,
-        petaltongue: &PetalTongueClient,
-    ) -> Result<()> {
+    pub async fn start_tracking(&mut self, petaltongue: &PetalTongueClient) -> Result<()> {
         if self.tracking_active {
             warn!("Tracking already active");
             return Ok(());
@@ -133,7 +130,10 @@ impl MotionCaptureAdapter {
             Ok(value) => {
                 let frame: TrackingFrame = serde_json::from_value(value)?;
                 self.frame_count += 1;
-                debug!("Tracking frame {} (confidence: {:.2})", frame.frame, frame.confidence);
+                debug!(
+                    "Tracking frame {} (confidence: {:.2})",
+                    frame.frame, frame.confidence
+                );
                 Ok(Some(frame))
             }
             Err(e) => {
@@ -144,10 +144,7 @@ impl MotionCaptureAdapter {
     }
 
     /// Trigger tracking calibration.
-    pub async fn calibrate(
-        &self,
-        petaltongue: &PetalTongueClient,
-    ) -> Result<CalibrationResult> {
+    pub async fn calibrate(&self, petaltongue: &PetalTongueClient) -> Result<CalibrationResult> {
         info!("Starting tracking calibration");
         let result = petaltongue
             .call("xr.calibrate_tracking", serde_json::json!({}))
@@ -162,10 +159,7 @@ impl MotionCaptureAdapter {
     }
 
     /// Stop tracking and release devices.
-    pub async fn stop_tracking(
-        &mut self,
-        petaltongue: &PetalTongueClient,
-    ) -> Result<()> {
+    pub async fn stop_tracking(&mut self, petaltongue: &PetalTongueClient) -> Result<()> {
         if !self.tracking_active {
             return Ok(());
         }

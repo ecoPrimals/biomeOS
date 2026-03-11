@@ -1,0 +1,46 @@
+# hotSpring Deployment Graph
+# Deploys hotSpring physics primal atop Node Atomic (Tower + ToadStool + NestGate)
+#
+# hotSpring provides computational physics: MD, lattice QCD, nuclear EOS,
+# transport coefficients, spectral theory, ESN reservoirs.
+# It consumes barraCuda GPU ops via toadStool and NestGate for data.
+
+[graph]
+id = "hotspring_deploy"
+version = "1.0.0"
+description = "hotSpring physics primal deployment"
+
+[[nodes]]
+id = "verify-tower"
+action = "check_primal"
+params = { primal = "beardog", required = true }
+
+[[nodes]]
+id = "verify-toadstool"
+action = "check_primal"
+params = { primal = "toadstool", required = true }
+depends_on = ["verify-tower"]
+
+[[nodes]]
+id = "verify-nestgate"
+action = "check_primal"
+params = { primal = "nestgate", required = false }
+depends_on = ["verify-tower"]
+
+[[nodes]]
+id = "start-hotspring"
+action = "start_primal"
+params = { primal = "hotspring", socket = "${XDG_RUNTIME_DIR}/biomeos/hotspring-${FAMILY_ID}.sock" }
+depends_on = ["verify-toadstool"]
+
+[[nodes]]
+id = "register-capabilities"
+action = "register_capabilities"
+params = { primal = "hotspring", capabilities = ["physics", "md", "lattice_qcd", "transport", "spectral", "nuclear_eos"] }
+depends_on = ["start-hotspring"]
+
+[[nodes]]
+id = "verify-health"
+action = "health_check"
+params = { primal = "hotspring", timeout_ms = 5000 }
+depends_on = ["register-capabilities"]

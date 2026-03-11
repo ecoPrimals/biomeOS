@@ -109,10 +109,7 @@ impl HapticPipeline {
     }
 
     /// Emergency stop all haptic output.
-    pub async fn stop_all(
-        &self,
-        petaltongue: &PetalTongueClient,
-    ) -> Result<()> {
+    pub async fn stop_all(&self, petaltongue: &PetalTongueClient) -> Result<()> {
         if !self.active {
             return Ok(());
         }

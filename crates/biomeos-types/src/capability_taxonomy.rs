@@ -207,7 +207,6 @@ pub enum CapabilityTaxonomy {
     // =============================================================================
     // Medical / Surgical Domain
     // =============================================================================
-
     /// Biosignal processing (ECG, PPG, EDA)
     /// Typical provider: healthSpring
     BiosignalProcessing,
@@ -354,7 +353,9 @@ impl CapabilityTaxonomy {
 
             // Medical / Surgical
             Self::BiosignalProcessing => Cow::Borrowed("Biosignal processing (ECG, PPG, EDA)"),
-            Self::PharmacokineticModeling => Cow::Borrowed("Pharmacokinetic/pharmacodynamic modeling"),
+            Self::PharmacokineticModeling => {
+                Cow::Borrowed("Pharmacokinetic/pharmacodynamic modeling")
+            }
             Self::SurgicalToolSimulation => Cow::Borrowed("Surgical tool simulation and tracking"),
             Self::TissuePhysics => Cow::Borrowed("Tissue physics and deformation modeling"),
             Self::AnatomyModeling => Cow::Borrowed("Anatomy model rendering and interaction"),
@@ -519,9 +520,10 @@ impl CapabilityTaxonomy {
             "biosignal_processing" | "biosignalprocessing" | "biosignal" => {
                 Some(Self::BiosignalProcessing)
             }
-            "pharmacokinetic_modeling" | "pharmacokineticmodeling" | "pharmacokinetics" | "pkpd" => {
-                Some(Self::PharmacokineticModeling)
-            }
+            "pharmacokinetic_modeling"
+            | "pharmacokineticmodeling"
+            | "pharmacokinetics"
+            | "pkpd" => Some(Self::PharmacokineticModeling),
             "surgical_tool_simulation" | "surgicaltoolsimulation" | "surgical" => {
                 Some(Self::SurgicalToolSimulation)
             }

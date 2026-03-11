@@ -381,7 +381,7 @@ mod tests {
         let m = metrics.unwrap();
         assert_eq!(m.total_executions, 5);
         assert_eq!(m.successful_executions, 3); // 0, 2, 4 are successful
-        assert_eq!(m.failed_executions, 2);     // 1, 3 are failures
+        assert_eq!(m.failed_executions, 2); // 1, 3 are failures
     }
 
     #[tokio::test]
@@ -410,7 +410,10 @@ mod tests {
                 errors: vec![],
                 duration_ms: 100,
             };
-            collector.record_execution(graph, &result, 100).await.unwrap();
+            collector
+                .record_execution(graph, &result, 100)
+                .await
+                .unwrap();
         }
 
         let graphs = collector.get_tracked_graphs().await.unwrap();
@@ -434,7 +437,10 @@ mod tests {
             errors: vec![],
             duration_ms: 100,
         };
-        collector.record_execution("test", &result, 100).await.unwrap();
+        collector
+            .record_execution("test", &result, 100)
+            .await
+            .unwrap();
 
         // Clear
         collector.clear_all().await.unwrap();

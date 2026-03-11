@@ -2,6 +2,43 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## [v2.28] - 2026-03-11 (Spring Absorption — Cross-Spring Evolution)
+
+### Capability Translation Absorption
+Absorbed 25+ new capability translations from spring handoffs:
+
+- **wetSpring V110**: Kinetics (Gompertz, Monod, Haldane, first-order), beta diversity, rarefaction, NMF, monitoring, brain (observe/attention/urgency), metrics snapshot
+- **airSpring v0.7.5**: SPI drought index, autocorrelation, gamma CDF, bootstrap CI, jackknife CI
+- **petalTongue V1.6.1**: Sensor stream (subscribe/poll/unsubscribe), interaction (poll/unsubscribe), visualization stream, dashboard
+- **healthSpring V20**: Michaelis-Menten PK, SCFA production, beat classification, stress assessment, clinical TRT pipeline
+
+### Deploy Graphs
+- **hotspring_deploy.toml**: Physics simulation primal deployment
+- **groundspring_deploy.toml**: Measurement science primal deployment
+- **healthspring_deploy.toml**: Medical science primal deployment
+- **cross_spring_ecology.toml**: Multi-spring pipeline (airSpring ET₀ → wetSpring diversity → neuralSpring spectral)
+
+### Niche Templates
+- **ecology-pipeline**: Cross-spring soil-microbiome pipeline
+- **hotspring**: Physics simulation (MD, lattice QCD, transport)
+- **groundspring**: Measurement science (stats, FAO-56, seismic, ESN)
+- **healthspring**: Medical science (PK/PD, biosignal, microbiome, NLME)
+
+### Capability Domain Updates
+- wetSpring domain: added `kinetics`, `monitoring` keywords
+- airSpring domain: added `drought`, `statistics` keywords
+- petalTongue domain: added `sensor_stream` keyword
+
+### Quality
+| Metric | Before | After |
+|--------|--------|-------|
+| Capability translations | 140+ | 165+ |
+| Deploy graphs | 17 | 21 |
+| Niche templates | 9 | 13 |
+| Capability domain keywords | 58 | 63 |
+
+---
+
 ## [v2.27] - 2026-03-11 (Continuous Systems + XR/Surgical VR Evolution)
 
 ### Continuous Execution Systems

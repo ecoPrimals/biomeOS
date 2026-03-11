@@ -29,8 +29,8 @@ pub mod network_config; // Capability-based network configuration
 pub mod paths;
 pub mod primal;
 pub mod service;
-pub mod tarpc_types; // tarpc service definitions for high-performance RPC
 pub mod surgical; // Surgical simulation and medical domain types
+pub mod tarpc_types; // tarpc service definitions for high-performance RPC
 pub mod xr; // Extended Reality (VR/AR/XR) types
 
 // Re-export key types from each module
@@ -88,8 +88,8 @@ pub use identifiers::{Endpoint, FamilyId, IdError, PrimalId, SessionId, TowerId}
 // Surgical domain type exports
 pub use surgical::{
     BiosignalSample, BiosignalStreamConfig, BiosignalType, CompartmentModel, DamageType,
-    PkModelParams, PkModelResult, SurgicalProcedure, SurgicalSessionMetrics,
-    SurgicalSessionState, ToolTissueInteraction,
+    PkModelParams, PkModelResult, SurgicalProcedure, SurgicalSessionMetrics, SurgicalSessionState,
+    ToolTissueInteraction,
 };
 
 // XR (Extended Reality) type exports

@@ -198,6 +198,62 @@ impl NicheHandler {
                     {"name": "HAPTIC_ENABLED", "type": "boolean", "default": true}
                 ]
             }),
+            json!({
+                "id": "ecology-pipeline",
+                "name": "Cross-Spring Ecology",
+                "description": "Multi-spring ecology pipeline (airSpring ET₀ → wetSpring diversity → neuralSpring spectral)",
+                "category": "science",
+                "required_resources": {
+                    "cpu_cores": 4,
+                    "memory_mb": 4096,
+                    "gpu_count": null,
+                    "storage_gb": 5
+                },
+                "graph_id": "cross_spring_ecology",
+                "parameters": []
+            }),
+            json!({
+                "id": "hotspring",
+                "name": "Physics Simulation",
+                "description": "hotSpring computational physics primal (MD, lattice QCD, transport)",
+                "category": "science",
+                "required_resources": {
+                    "cpu_cores": 4,
+                    "memory_mb": 8192,
+                    "gpu_count": 1,
+                    "storage_gb": 10
+                },
+                "graph_id": "hotspring_deploy",
+                "parameters": []
+            }),
+            json!({
+                "id": "groundspring",
+                "name": "Measurement Science",
+                "description": "groundSpring measurement and sensing primal (stats, FAO-56, seismic, ESN)",
+                "category": "science",
+                "required_resources": {
+                    "cpu_cores": 2,
+                    "memory_mb": 2048,
+                    "gpu_count": null,
+                    "storage_gb": 5
+                },
+                "graph_id": "groundspring_deploy",
+                "parameters": []
+            }),
+            json!({
+                "id": "healthspring",
+                "name": "Medical Science",
+                "description": "healthSpring medical primal (PK/PD, biosignal, microbiome, NLME)",
+                "category": "medical",
+                "required_resources": {
+                    "cpu_cores": 4,
+                    "memory_mb": 4096,
+                    "gpu_count": null,
+                    "storage_gb": 10
+                },
+                "graph_id": "healthspring_deploy",
+                "parameters": []
+            }),
         ];
 
         Ok(json!(templates))
@@ -225,6 +281,10 @@ impl NicheHandler {
             "petaltongue" => "petaltongue_deploy",
             "game-engine-tick" => "game-engine-tick",
             "surgical-vr" => "surgical_vr_deploy",
+            "ecology-pipeline" => "cross_spring_ecology",
+            "hotspring" => "hotspring_deploy",
+            "groundspring" => "groundspring_deploy",
+            "healthspring" => "healthspring_deploy",
             _ => anyhow::bail!("Unknown template: {}", template_id),
         };
 
@@ -314,6 +374,10 @@ mod tests {
             "petaltongue",
             "game-engine-tick",
             "surgical-vr",
+            "ecology-pipeline",
+            "hotspring",
+            "groundspring",
+            "healthspring",
         ];
         for id in expected_ids {
             assert!(

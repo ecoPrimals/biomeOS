@@ -1,0 +1,63 @@
+# Cross-Spring Ecology Pipeline
+# Orchestrates a multi-spring scientific workflow:
+# airSpring ET₀ → wetSpring QS/diversity → neuralSpring spectral analysis
+#
+# This pipeline chains evapotranspiration from airSpring through
+# wetSpring's quorum-sensing and diversity analysis, then into
+# neuralSpring's spectral analysis for landscape-level insight.
+
+[graph]
+id = "cross_spring_ecology"
+version = "1.0.0"
+description = "Cross-spring ecology pipeline (ET₀ → diversity → spectral)"
+
+[[nodes]]
+id = "verify-airspring"
+action = "check_primal"
+params = { primal = "airspring", required = true }
+
+[[nodes]]
+id = "verify-wetspring"
+action = "check_primal"
+params = { primal = "wetspring", required = true }
+
+[[nodes]]
+id = "verify-neuralspring"
+action = "check_primal"
+params = { primal = "neuralspring", required = false }
+
+[[nodes]]
+id = "compute-et0"
+action = "capability_call"
+params = { capability = "ecology.et0_fao56", method = "science.et0_fao56" }
+depends_on = ["verify-airspring"]
+
+[[nodes]]
+id = "water-balance"
+action = "capability_call"
+params = { capability = "ecology.water_balance", method = "science.water_balance" }
+depends_on = ["compute-et0"]
+
+[[nodes]]
+id = "qs-model"
+action = "capability_call"
+params = { capability = "science.qs_model", method = "science.qs_model" }
+depends_on = ["verify-wetspring", "water-balance"]
+
+[[nodes]]
+id = "diversity-analysis"
+action = "capability_call"
+params = { capability = "science.diversity", method = "science.diversity" }
+depends_on = ["verify-wetspring"]
+
+[[nodes]]
+id = "beta-diversity"
+action = "capability_call"
+params = { capability = "science.beta_diversity", method = "science.beta_diversity" }
+depends_on = ["diversity-analysis"]
+
+[[nodes]]
+id = "spectral-analysis"
+action = "capability_call"
+params = { capability = "science.spectral_analysis", method = "science.spectral_analysis" }
+depends_on = ["verify-neuralspring", "beta-diversity", "qs-model"]

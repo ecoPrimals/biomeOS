@@ -67,10 +67,7 @@ impl StereoRenderAdapter {
     /// Sends the desired `StereoConfig` and receives back the actual
     /// render targets that petalTongue allocated. The returned targets
     /// may have different resolution/refresh if the hardware can't match.
-    pub async fn negotiate(
-        &self,
-        petaltongue: &PetalTongueClient,
-    ) -> Result<RenderTargets> {
+    pub async fn negotiate(&self, petaltongue: &PetalTongueClient) -> Result<RenderTargets> {
         info!(
             "Negotiating stereo: {}x{} @ {}Hz, IPD={}mm",
             self.config.eye_resolution.0,
@@ -101,10 +98,7 @@ impl StereoRenderAdapter {
     /// Begin a stereo rendering session.
     ///
     /// Must be called after `negotiate()` and before `submit_frame()`.
-    pub async fn begin_session(
-        &mut self,
-        petaltongue: &PetalTongueClient,
-    ) -> Result<()> {
+    pub async fn begin_session(&mut self, petaltongue: &PetalTongueClient) -> Result<()> {
         if self.session_active {
             warn!("Stereo session already active");
             return Ok(());
@@ -149,10 +143,7 @@ impl StereoRenderAdapter {
     }
 
     /// End the stereo rendering session and release resources.
-    pub async fn end_session(
-        &mut self,
-        petaltongue: &PetalTongueClient,
-    ) -> Result<()> {
+    pub async fn end_session(&mut self, petaltongue: &PetalTongueClient) -> Result<()> {
         if !self.session_active {
             return Ok(());
         }

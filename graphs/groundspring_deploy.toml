@@ -1,0 +1,46 @@
+# groundSpring Deployment Graph
+# Deploys groundSpring measurement/sensing primal atop Node Atomic
+#
+# groundSpring provides signal vs noise, inverse problems, sensing systems,
+# temporal dynamics, spatial propagation, and 34 scientific modules.
+# It implements Neural API methods for topology and primal discovery.
+
+[graph]
+id = "groundspring_deploy"
+version = "1.0.0"
+description = "groundSpring measurement science primal deployment"
+
+[[nodes]]
+id = "verify-tower"
+action = "check_primal"
+params = { primal = "beardog", required = true }
+
+[[nodes]]
+id = "verify-toadstool"
+action = "check_primal"
+params = { primal = "toadstool", required = true }
+depends_on = ["verify-tower"]
+
+[[nodes]]
+id = "verify-nestgate"
+action = "check_primal"
+params = { primal = "nestgate", required = false }
+depends_on = ["verify-tower"]
+
+[[nodes]]
+id = "start-groundspring"
+action = "start_primal"
+params = { primal = "groundspring", socket = "${XDG_RUNTIME_DIR}/biomeos/groundspring-${FAMILY_ID}.sock" }
+depends_on = ["verify-toadstool"]
+
+[[nodes]]
+id = "register-capabilities"
+action = "register_capabilities"
+params = { primal = "groundspring", capabilities = ["stats", "fao56", "rarefaction", "seismic", "anderson", "bootstrap", "jackknife", "esn", "lanczos"] }
+depends_on = ["start-groundspring"]
+
+[[nodes]]
+id = "verify-health"
+action = "health_check"
+params = { primal = "groundspring", timeout_ms = 5000 }
+depends_on = ["register-capabilities"]

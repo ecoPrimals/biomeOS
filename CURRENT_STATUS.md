@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: March 11, 2026 (Continuous Systems + XR/Surgical VR Evolution)
-**Version**: 2.27
+**Updated**: March 11, 2026 (Spring Absorption — Cross-Spring Evolution)
+**Version**: 2.28
 **Status**: PRODUCTION READY - Multi-Computer Federation Validated
 
 ---
@@ -24,7 +24,9 @@
 | **Continuous Systems** | ContinuousExecutor (60Hz tick), GraphEventBroadcaster, SensorEventBus |
 | **XR/VR Types** | StereoConfig, Pose6DoF, TrackingFrame, HapticCommand, MotionCaptureAdapter |
 | **Surgical Domain** | SurgicalProcedure, TissueMaterial, AnatomyModel, PkModelParams |
-| **Capability Domains** | 13 domains (+ XR, medical), 140+ translations |
+| **Capability Domains** | 13 domains (+ XR, medical), 165+ translations |
+| **Deploy Graphs** | 21 (+ hotspring, groundspring, healthspring, cross-spring ecology) |
+| **Niche Templates** | 13 (+ ecology-pipeline, hotspring, groundspring, healthspring) |
 | **Genetic Model** | EVOLVED - Mitochondrial + Nuclear DNA |
 | **BirdSong Discovery** | Encrypted, shared beacon model |
 | **Discovery Model** | Dynamic socket scanning + capability taxonomy |
@@ -35,7 +37,7 @@
 | **Plasmodium** | HTTP JSON-RPC collective (runtime port, SSH legacy removed) |
 | **Model Cache** | NUCLEUS-integrated, HuggingFace import, NestGate fallback |
 | **AI Bridge** | Squirrel -> Songbird -> Cloud/Local AI (validated) |
-| **Neural API** | 140+ capability translations, proxy_http, capability.call |
+| **Neural API** | 165+ capability translations, proxy_http, capability.call |
 | **Lifecycle** | Deep health monitoring, auto-resurrection, coordinated shutdown |
 | **SystemPaths** | All paths XDG-compliant via centralized `SystemPaths` |
 | **Hardcoded `/tmp`** | 0 in production code |
@@ -226,6 +228,20 @@ HTTP JSON-RPC collective with runtime port discovery (hardcoded 3492 eliminated)
 ---
 
 ## Completed Evolution Items (biomeOS Team)
+
+### Spring Absorption — Cross-Spring Evolution (Mar 11, 2026)
+
+Absorbed capabilities from all 7 springs and petalTongue V1.6.1:
+
+| Category | Change |
+|----------|--------|
+| **wetSpring V110** | +14 translations: kinetics (Gompertz, Monod, Haldane, first-order), beta diversity, rarefaction, NMF, monitoring, brain (observe/attention/urgency), metrics |
+| **airSpring v0.7.5** | +5 translations: SPI drought index, autocorrelation, gamma CDF, bootstrap CI, jackknife CI |
+| **petalTongue V1.6.1** | +8 translations: sensor stream (subscribe/poll/unsubscribe), interaction (poll/unsubscribe), visualization stream, dashboard |
+| **healthSpring V20** | +5 translations: Michaelis-Menten PK, SCFA production, beat classify, stress assessment, TRT pipeline |
+| **Deploy Graphs** | +4: hotspring_deploy, groundspring_deploy, healthspring_deploy, cross_spring_ecology |
+| **Niche Templates** | +4: ecology-pipeline, hotspring, groundspring, healthspring |
+| **Capability Domains** | +5 keywords: kinetics, monitoring, drought, statistics, sensor_stream |
 
 ### Continuous Systems + XR/Surgical VR Evolution (Mar 11, 2026)
 

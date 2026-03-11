@@ -175,10 +175,7 @@ impl LocalEntropy {
                 ifaces.sort(); // Deterministic: prefer eth0, enp0s3, etc. over wlan0
 
                 for path in ifaces {
-                    let iface_str = path
-                        .file_name()
-                        .and_then(|n| n.to_str())
-                        .unwrap_or("");
+                    let iface_str = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
                     let mac_path = format!("/sys/class/net/{}/address", iface_str);
                     if let Ok(mac) = std::fs::read_to_string(&mac_path) {
                         let mac = mac.trim().to_string();

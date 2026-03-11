@@ -195,7 +195,9 @@ capabilities = [
     "science",
     "biodiversity",
     "spectral",
-    "metagenomics"
+    "metagenomics",
+    "kinetics",
+    "monitoring"
 ]
 
 [domains.neural_science]
@@ -219,6 +221,25 @@ capabilities = [
 "science.qs_model" = { provider = "wetspring", method = "science.qs_model" }
 # Full pipeline: NCBI → diversity → Anderson → QS classification
 "science.full_pipeline" = { provider = "wetspring", method = "science.full_pipeline" }
+# Kinetics models (Gompertz, Monod, Haldane, first-order)
+"science.kinetics.gompertz" = { provider = "wetspring", method = "science.kinetics.gompertz" }
+"science.kinetics.first_order" = { provider = "wetspring", method = "science.kinetics.first_order" }
+"science.kinetics.monod" = { provider = "wetspring", method = "science.kinetics.monod" }
+"science.kinetics.haldane" = { provider = "wetspring", method = "science.kinetics.haldane" }
+# Beta diversity (community comparison matrix)
+"science.beta_diversity" = { provider = "wetspring", method = "science.beta_diversity" }
+# Rarefaction curves (sampling depth analysis)
+"science.rarefaction" = { provider = "wetspring", method = "science.rarefaction" }
+# Non-negative matrix factorization (community typing)
+"science.nmf" = { provider = "wetspring", method = "science.nmf" }
+# Environmental monitoring pipeline
+"science.monitoring" = { provider = "wetspring", method = "science.monitoring" }
+# AI observation / attention / urgency routing (wetSpring brain)
+"science.brain.observe" = { provider = "wetspring", method = "brain.observe" }
+"science.brain.attention" = { provider = "wetspring", method = "brain.attention" }
+"science.brain.urgency" = { provider = "wetspring", method = "brain.urgency" }
+# Telemetry snapshot
+"science.metrics" = { provider = "wetspring", method = "metrics.snapshot" }
 
 # ------------------------------------------------------------------------------
 # neuralSpring Science Capabilities
@@ -255,7 +276,9 @@ capabilities = [
     "soil_science",
     "biodiversity",
     "soil_physics",
-    "crop_management"
+    "crop_management",
+    "drought",
+    "statistics"
 ]
 
 [translations.ecology]
@@ -304,6 +327,20 @@ capabilities = [
 "ecology.sensor_cal" = { provider = "airspring", method = "science.sensor_calibration" }
 # Growing degree-days (GDD)
 "ecology.gdd" = { provider = "airspring", method = "science.gdd" }
+
+# ── Drought & climate indices ──
+# Standardized Precipitation Index (McKee et al. 1993)
+"ecology.spi_drought_index" = { provider = "airspring", method = "science.spi_drought_index" }
+# Autocorrelation function for time series
+"ecology.autocorrelation" = { provider = "airspring", method = "science.autocorrelation" }
+# Gamma CDF (regularized incomplete gamma)
+"ecology.gamma_cdf" = { provider = "airspring", method = "science.gamma_cdf" }
+
+# ── Statistical inference ──
+# Bootstrap confidence intervals (Efron 1979)
+"ecology.bootstrap_ci" = { provider = "airspring", method = "science.bootstrap_ci" }
+# Jackknife confidence intervals (Quenouille 1956)
+"ecology.jackknife_ci" = { provider = "airspring", method = "science.jackknife_ci" }
 
 # ── Biodiversity ──
 # Shannon/Simpson/Chao1 alpha diversity
@@ -373,6 +410,10 @@ capabilities = [
 [translations.visualization]
 # Render visualizations
 "visualization.render" = { provider = "petaltongue", method = "visualization.render" }
+# Live data stream binding (push updates to existing session)
+"visualization.render.stream" = { provider = "petaltongue", method = "visualization.render.stream" }
+# Multi-panel SVG dashboard rendering
+"visualization.render.dashboard" = { provider = "petaltongue", method = "visualization.render.dashboard" }
 # Export to SVG/PNG/JSON
 "visualization.export" = { provider = "petaltongue", method = "visualization.export" }
 # Capability introspection
@@ -387,6 +428,16 @@ capabilities = [
 [translations.interaction]
 # Event subscriptions
 "interaction.subscribe" = { provider = "petaltongue", method = "interaction.subscribe" }
+# Interaction event polling
+"interaction.poll" = { provider = "petaltongue", method = "interaction.poll" }
+# Unsubscribe from interaction events
+"interaction.unsubscribe" = { provider = "petaltongue", method = "interaction.unsubscribe" }
+# Sensor event stream (raw pointer/key/scroll events from UI)
+"interaction.sensor_stream.subscribe" = { provider = "petaltongue", method = "interaction.sensor_stream.subscribe" }
+# Poll sensor event batch
+"interaction.sensor_stream.poll" = { provider = "petaltongue", method = "interaction.sensor_stream.poll" }
+# Unsubscribe from sensor stream
+"interaction.sensor_stream.unsubscribe" = { provider = "petaltongue", method = "interaction.sensor_stream.unsubscribe" }
 
 # ------------------------------------------------------------------------------
 # XR / Immersive Domain (petalTongue + ludoSpring)
@@ -466,6 +517,16 @@ capabilities = [
 # Pharmacokinetics
 "medical.pk_model" = { provider = "healthspring", method = "medical.pk_model" }
 "medical.drug_interaction" = { provider = "healthspring", method = "medical.drug_interaction" }
+# Michaelis-Menten PK simulation (nonlinear elimination)
+"medical.mm_pk_simulate" = { provider = "healthspring", method = "medical.mm_pk_simulate" }
+# SCFA gut microbiome production model
+"medical.scfa_production" = { provider = "healthspring", method = "medical.scfa_production" }
+# ECG beat classification (template matching)
+"medical.classify_beat" = { provider = "healthspring", method = "medical.classify_beat" }
+# EDA stress assessment (phasic/tonic decomposition)
+"medical.assess_stress" = { provider = "healthspring", method = "medical.assess_stress" }
+# Clinical TRT pipeline (5 archetypes)
+"medical.trt_pipeline" = { provider = "healthspring", method = "medical.trt_pipeline" }
 
 # ==============================================================================
 # SOCKET PATH TEMPLATES

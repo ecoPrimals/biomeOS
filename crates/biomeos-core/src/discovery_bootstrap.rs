@@ -200,7 +200,10 @@ impl DiscoveryBootstrap {
 
         // Fallback to env var when probe skipped or found nothing
         if let Ok(endpoint) = std::env::var("MDNS_DISCOVERED_ENDPOINT") {
-            tracing::info!("mDNS fallback: using MDNS_DISCOVERED_ENDPOINT: {}", endpoint);
+            tracing::info!(
+                "mDNS fallback: using MDNS_DISCOVERED_ENDPOINT: {}",
+                endpoint
+            );
             return Ok(endpoint);
         }
 

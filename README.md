@@ -18,7 +18,7 @@
 | Formatting | PASS |
 | Deployment | USB + Pixel + Cross-Device AI |
 | AI Bridge | Squirrel -> Songbird -> Cloud/Local AI (validated) |
-| Neural API | 140+ semantic capability translations |
+| Neural API | 165+ semantic capability translations |
 | Continuous Systems | ContinuousExecutor (60Hz tick), push events, sensor routing |
 | XR/VR | Stereo rendering, motion capture, haptic feedback pipeline |
 | Surgical Domain | Anatomy models, tissue physics, biosignals, pharmacokinetics |
@@ -333,8 +333,9 @@ AGPL-3.0-only
 
 ---
 
-**Status**: Production Ready
+**Status**: Production Ready (v2.28)
 **Updated**: March 11, 2026
+**Spring Absorption**: 165+ translations from 7 springs + petalTongue, 21 deploy graphs, 13 niche templates
 **Continuous Systems**: 60Hz tick loop, push events, sensor routing, feedback edges
 **XR/VR**: Stereo rendering, motion capture, haptic feedback, surgical VR niche
 **AI Bridge**: Local + Cloud AI validated
