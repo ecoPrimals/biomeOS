@@ -51,7 +51,7 @@ pub(crate) const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
     // Compute domain (ToadStool)
     CapabilityDomain {
         provider: "toadstool",
-        capabilities: &["compute", "execution", "parsing"],
+        capabilities: &["compute", "execution", "parsing", "hardware"],
     },
     // AI domain (Squirrel)
     CapabilityDomain {
@@ -239,6 +239,35 @@ mod tests {
         );
         assert_eq!(
             capability_to_provider_fallback("parsing"),
+            Some("toadstool")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("hardware"),
+            Some("toadstool")
+        );
+    }
+
+    #[test]
+    fn test_hardware_learning_prefix_matching() {
+        // compute.hardware.* should match "compute" domain via prefix
+        assert_eq!(
+            capability_to_provider_fallback("compute.hardware.observe"),
+            Some("toadstool")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("compute.hardware.distill"),
+            Some("toadstool")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("compute.hardware.apply"),
+            Some("toadstool")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("compute.hardware.share"),
+            Some("toadstool")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("compute.hardware.status"),
             Some("toadstool")
         );
     }

@@ -121,7 +121,8 @@ provider = "toadstool"
 capabilities = [
     "compute",
     "execution",
-    "parsing"
+    "parsing",
+    "hardware"
 ]
 
 [translations.compute]
@@ -130,6 +131,13 @@ capabilities = [
 "compute.stop" = { provider = "toadstool", method = "stop_workload" }
 "compute.parse" = { provider = "toadstool", method = "parse" }
 "compute.transform" = { provider = "toadstool", method = "transform" }
+
+# Hardware Learning — sovereign GPU compute init
+"compute.hardware.observe" = { provider = "toadstool", method = "hw_learn.observe" }
+"compute.hardware.distill" = { provider = "toadstool", method = "hw_learn.distill" }
+"compute.hardware.apply" = { provider = "toadstool", method = "hw_learn.apply" }
+"compute.hardware.share" = { provider = "toadstool", method = "hw_learn.share_recipe" }
+"compute.hardware.status" = { provider = "toadstool", method = "hw_learn.status" }
 
 # ------------------------------------------------------------------------------
 # AI Domain (Squirrel)
