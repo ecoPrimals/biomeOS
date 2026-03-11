@@ -300,28 +300,44 @@ fn resolve_socket_dir() -> Result<PathBuf> {
 fn discover_binaries(primals: &[&str]) -> Result<HashMap<String, PathBuf>> {
     let mut map = HashMap::new();
 
-    // Search paths in priority order
-    let search_paths = vec![
+    // Ecosystem-level plasmidBin (ecoPrimals/plasmidBin/) via env or path traversal
+    let ecosystem_plasmid_bin = biomeos_types::env_config::plasmid_bin_dir();
+
+    let mut search_paths = vec![
         // Current architecture livespore
         PathBuf::from("livespore-usb")
             .join(std::env::consts::ARCH)
             .join("primals"),
         // Generic livespore
         PathBuf::from("livespore-usb/primals"),
-        // Build output
+        // Local plasmidBin
         PathBuf::from("plasmidBin"),
         PathBuf::from("plasmidBin/optimized").join(std::env::consts::ARCH),
-        // Cargo build output
-        PathBuf::from("target/release"),
     ];
+
+    // Ecosystem root plasmidBin (ecoPrimals/plasmidBin/) — reached from phase2/biomeOS/
+    if let Some(ref eco) = ecosystem_plasmid_bin {
+        search_paths.push(eco.join("primals"));
+        search_paths.push(eco.clone());
+    }
+    search_paths.push(PathBuf::from("../../plasmidBin/primals"));
+    search_paths.push(PathBuf::from("../../plasmidBin"));
+
+    // Cargo build output
+    search_paths.push(PathBuf::from("target/release"));
 
     for primal in primals {
         let mut found = false;
         for search in &search_paths {
-            let path = search.join(primal);
-            if path.exists() && path.is_file() {
-                map.insert(primal.to_string(), path);
-                found = true;
+            // Try direct match and primal/primal subdir pattern
+            for candidate in &[search.join(primal), search.join(primal).join(primal)] {
+                if candidate.exists() && candidate.is_file() {
+                    map.insert(primal.to_string(), candidate.clone());
+                    found = true;
+                    break;
+                }
+            }
+            if found {
                 break;
             }
         }

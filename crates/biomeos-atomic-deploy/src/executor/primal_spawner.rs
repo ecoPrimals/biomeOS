@@ -86,9 +86,11 @@ pub async fn discover_primal_binary(
         format!("{}_{}_{}/{}", primal_name, arch_suffix, os, primal_name),
         // Pattern 3: primals/primal/primal (e.g., primals/beardog/beardog)
         format!("primals/{}/{}", primal_name, primal_name),
-        // Pattern 4: primal/primal (e.g., beardog/beardog)
+        // Pattern 4: primals/primal (flat layout in ecoPrimals/plasmidBin/primals/)
+        format!("primals/{}", primal_name),
+        // Pattern 5: primal/primal (e.g., beardog/beardog)
         format!("{}/{}", primal_name, primal_name),
-        // Pattern 5: just primal name (e.g., beardog)
+        // Pattern 6: just primal name (e.g., beardog)
         primal_name.to_string(),
     ];
 

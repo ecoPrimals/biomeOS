@@ -2,6 +2,20 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## [v2.31] - 2026-03-11 (Ecosystem plasmidBin — Spring Local Niche)
+
+### Ecosystem plasmidBin Discovery
+
+- `nucleus.rs` `discover_binaries` now searches `ECOPRIMALS_PLASMID_BIN`, the
+  `../../plasmidBin/primals/` traversal path, and nested `primal/primal` patterns
+- `primal_spawner.rs` adds flat `primals/{name}` pattern for the ecosystem layout
+- Merge conflicts from prior stash pop resolved in `capability_domains.rs` and
+  `capability_registry.toml`
+- `env_config.rs` docs updated to mark `ECOPRIMALS_PLASMID_BIN` as the canonical
+  path shared between biomeOS and springs
+- `ecoPrimals/plasmidBin/manifest.toml` bumped biomeOS to v2.30.0
+- Spring niche template updated with `ECOPRIMALS_PLASMID_BIN` guidance
+
 ## [v2.30] - 2026-03-11 (Deep Debt Evolution + Hardware Learning Wiring)
 
 ### Deep Debt Evolution (8-Phase Plan)

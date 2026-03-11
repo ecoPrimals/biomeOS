@@ -7,6 +7,12 @@
 # domain-specific capabilities and configuration.
 #
 # See: wateringHole/SPRING_AS_NICHE_DEPLOYMENT_STANDARD.md
+#
+# Primal binaries come from the shared ecosystem plasmidBin:
+#   export ECOPRIMALS_PLASMID_BIN=$ECOPRIMALS_ROOT/plasmidBin
+#
+# This lets every spring spin up the same primals biomeOS uses,
+# without duplicating binaries. The spring itself lives in springs/.
 # =============================================================================
 
 niche:

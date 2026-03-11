@@ -46,10 +46,11 @@ pub mod vars {
     /// XDG runtime directory (standard)
     pub const XDG_RUNTIME_DIR: &str = "XDG_RUNTIME_DIR";
 
-    /// Primal binary directory (ecosystem-level)
+    /// Ecosystem-level primal/spring binary directory (`ecoPrimals/plasmidBin/`).
+    /// Springs use this same path to spin up primals for local niche deployments.
     pub const PLASMID_BIN: &str = "ECOPRIMALS_PLASMID_BIN";
 
-    /// Primal binary directory (biomeOS-local)
+    /// biomeOS-local binary directory (fallback when ecosystem root isn't set)
     pub const PLASMID_BIN_DIR: &str = "BIOMEOS_PLASMID_BIN_DIR";
 
     /// GenomeBin path for distribution

@@ -122,11 +122,7 @@ capabilities = [
     "compute",
     "execution",
     "parsing",
-<<<<<<< Updated upstream
-    "hardware"
-=======
     "hardware_learning"
->>>>>>> Stashed changes
 ]
 
 [translations.compute]
@@ -136,13 +132,9 @@ capabilities = [
 "compute.parse" = { provider = "toadstool", method = "parse" }
 "compute.transform" = { provider = "toadstool", method = "transform" }
 
-<<<<<<< Updated upstream
-# Hardware Learning — sovereign GPU compute init
-=======
 # Hardware learning — vendor-neutral GPU init observation, recipe distillation,
 # and cross-GPU application. Provided by toadStool hw-learn crate.
 # See: HWLEARN_SOVEREIGN_HARDWARE_LEARNING_HANDOFF_MAR11_2026.md
->>>>>>> Stashed changes
 "compute.hardware.observe" = { provider = "toadstool", method = "hw_learn.observe" }
 "compute.hardware.distill" = { provider = "toadstool", method = "hw_learn.distill" }
 "compute.hardware.apply" = { provider = "toadstool", method = "hw_learn.apply" }
