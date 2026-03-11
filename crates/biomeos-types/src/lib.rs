@@ -20,6 +20,7 @@ pub mod capability_taxonomy;
 pub mod config;
 pub mod constants;
 pub mod defaults; // Runtime defaults (socket paths, etc.) with env var overrides
+pub mod env_config; // Centralized environment variable constants and typed accessors
 pub mod error;
 pub mod health;
 pub mod identifiers;

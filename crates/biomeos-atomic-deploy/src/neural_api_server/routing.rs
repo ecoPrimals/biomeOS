@@ -1,6 +1,7 @@
 //! Request routing for Neural API Server
 //!
 //! Routes JSON-RPC requests to appropriate handlers based on method name.
+//! Uses a table-driven handler registry for O(1) lookup.
 
 use anyhow::Result;
 use serde_json::Value;
@@ -8,6 +9,166 @@ use tracing::{debug, trace};
 
 use super::rpc::{method_not_found_response, JsonRpcRequest};
 use super::NeuralApiServer;
+
+/// Route tag for dispatch. Each variant maps to a handler.
+#[derive(Clone, Copy, Debug)]
+enum Route {
+    GraphList,
+    GraphGet,
+    GraphSave,
+    GraphExecute,
+    GraphStatus,
+    TopologyGet,
+    TopologyPrimals,
+    TopologyProprioception,
+    TopologyMetrics,
+    NicheList,
+    NicheDeploy,
+    LifecycleStatus,
+    LifecycleGet,
+    LifecycleRegister,
+    LifecycleResurrect,
+    LifecycleApoptosis,
+    LifecycleShutdownAll,
+    ProtocolStatus,
+    ProtocolEscalate,
+    ProtocolFallback,
+    ProtocolMetrics,
+    ProtocolRegisterPrimal,
+    ProtocolRegisterConnection,
+    ProtocolRecordRequest,
+    ProtocolStartMonitoring,
+    ProtocolStopMonitoring,
+    GraphProtocolMap,
+    CapabilityRegister,
+    CapabilityDiscover,
+    CapabilityList,
+    CapabilityProviders,
+    CapabilityRoute,
+    CapabilityMetrics,
+    CapabilityCall,
+    CapabilityDiscoverTranslations,
+    CapabilityListTranslations,
+    Agent,
+    ProxyHttp,
+    MeshCapabilityCall,
+}
+
+/// Table-driven handler registry: method name → route.
+/// Multiple method names may map to the same route (e.g. neural_api.list_graphs | graph.list).
+const ROUTE_TABLE: &[(&str, Route)] = &[
+    // Graph
+    ("neural_api.list_graphs", Route::GraphList),
+    ("graph.list", Route::GraphList),
+    ("neural_api.get_graph", Route::GraphGet),
+    ("graph.get", Route::GraphGet),
+    ("neural_api.save_graph", Route::GraphSave),
+    ("graph.save", Route::GraphSave),
+    ("neural_api.execute_graph", Route::GraphExecute),
+    ("graph.execute", Route::GraphExecute),
+    ("neural_api.get_execution_status", Route::GraphStatus),
+    ("graph.status", Route::GraphStatus),
+    // Topology
+    ("neural_api.get_topology", Route::TopologyGet),
+    ("topology.get", Route::TopologyGet),
+    ("neural_api.get_primals", Route::TopologyPrimals),
+    ("topology.primals", Route::TopologyPrimals),
+    (
+        "neural_api.get_proprioception",
+        Route::TopologyProprioception,
+    ),
+    ("topology.proprioception", Route::TopologyProprioception),
+    ("neural_api.get_metrics", Route::TopologyMetrics),
+    ("topology.metrics", Route::TopologyMetrics),
+    // Niche
+    ("neural_api.list_niche_templates", Route::NicheList),
+    ("niche.list", Route::NicheList),
+    ("neural_api.deploy_niche", Route::NicheDeploy),
+    ("niche.deploy", Route::NicheDeploy),
+    // Lifecycle
+    ("lifecycle.status", Route::LifecycleStatus),
+    ("lifecycle.get", Route::LifecycleGet),
+    ("lifecycle.register", Route::LifecycleRegister),
+    ("lifecycle.resurrect", Route::LifecycleResurrect),
+    ("lifecycle.apoptosis", Route::LifecycleApoptosis),
+    ("lifecycle.shutdown_all", Route::LifecycleShutdownAll),
+    // Protocol
+    ("protocol.status", Route::ProtocolStatus),
+    ("protocol.escalate", Route::ProtocolEscalate),
+    ("protocol.fallback", Route::ProtocolFallback),
+    ("protocol.metrics", Route::ProtocolMetrics),
+    ("protocol.register_primal", Route::ProtocolRegisterPrimal),
+    (
+        "protocol.register_connection",
+        Route::ProtocolRegisterConnection,
+    ),
+    ("protocol.record_request", Route::ProtocolRecordRequest),
+    ("protocol.start_monitoring", Route::ProtocolStartMonitoring),
+    ("protocol.stop_monitoring", Route::ProtocolStopMonitoring),
+    ("graph.protocol_map", Route::GraphProtocolMap),
+    // Capability
+    ("capability.register", Route::CapabilityRegister),
+    ("capability.discover", Route::CapabilityDiscover),
+    ("neural_api.discover_capability", Route::CapabilityDiscover),
+    ("capability.list", Route::CapabilityList),
+    ("capability.providers", Route::CapabilityProviders),
+    ("capability.route", Route::CapabilityRoute),
+    ("neural_api.route_to_primal", Route::CapabilityRoute),
+    ("capability.metrics", Route::CapabilityMetrics),
+    ("neural_api.get_routing_metrics", Route::CapabilityMetrics),
+    ("capability.call", Route::CapabilityCall),
+    (
+        "capability.discover_translations",
+        Route::CapabilityDiscoverTranslations,
+    ),
+    (
+        "capability.discover_translation",
+        Route::CapabilityDiscoverTranslations,
+    ),
+    (
+        "capability.list_translations",
+        Route::CapabilityListTranslations,
+    ),
+    // Agent
+    ("agent.create", Route::Agent),
+    ("agent.list", Route::Agent),
+    ("agent.get", Route::Agent),
+    ("agent.remove", Route::Agent),
+    ("agent.meld", Route::Agent),
+    ("agent.split", Route::Agent),
+    ("agent.resolve", Route::Agent),
+    ("agent.route", Route::Agent),
+    ("agent.auto_meld", Route::Agent),
+    // Legacy
+    ("neural_api.proxy_http", Route::ProxyHttp),
+    // Mesh & NAT (capability.call sugar)
+    ("mesh.status", Route::MeshCapabilityCall),
+    ("mesh.find_path", Route::MeshCapabilityCall),
+    ("mesh.announce", Route::MeshCapabilityCall),
+    ("mesh.peers", Route::MeshCapabilityCall),
+    ("mesh.health_check", Route::MeshCapabilityCall),
+    ("punch.request", Route::MeshCapabilityCall),
+    ("punch.status", Route::MeshCapabilityCall),
+    ("punch.coordinate", Route::MeshCapabilityCall),
+    ("stun.discover", Route::MeshCapabilityCall),
+    ("stun.detect_nat_type", Route::MeshCapabilityCall),
+    ("stun.probe_port_pattern", Route::MeshCapabilityCall),
+    ("relay.serve", Route::MeshCapabilityCall),
+    ("relay.status", Route::MeshCapabilityCall),
+    ("relay.allocate", Route::MeshCapabilityCall),
+    ("relay.authorize", Route::MeshCapabilityCall),
+    ("onion.create_service", Route::MeshCapabilityCall),
+    ("onion.get_address", Route::MeshCapabilityCall),
+    ("onion.connect", Route::MeshCapabilityCall),
+    ("onion.status", Route::MeshCapabilityCall),
+];
+
+fn lookup_route(method: &str) -> Option<Route> {
+    ROUTE_TABLE
+        .iter()
+        .find(|(m, _)| *m == method)
+        .map(|(_, r)| *r)
+}
 
 impl NeuralApiServer {
     /// Handle a JSON-RPC request
@@ -25,94 +186,71 @@ impl NeuralApiServer {
         debug!("📥 Request: {} (id: {})", request.method, request.id);
         trace!("📥 Full request: {}", request_line.trim());
 
-        let result = match request.method.as_str() {
-            // === Graph Operations (delegated to GraphHandler) ===
-            "neural_api.list_graphs" | "graph.list" => self.graph_handler.list().await?,
-            "neural_api.get_graph" | "graph.get" => self.graph_handler.get(&request.params).await?,
-            "neural_api.save_graph" | "graph.save" => {
-                self.graph_handler.save(&request.params).await?
+        let route = match lookup_route(&request.method) {
+            Some(r) => r,
+            None => {
+                return Ok(method_not_found_response(&request.method, request.id));
             }
-            "neural_api.execute_graph" | "graph.execute" => {
-                self.graph_handler.execute(&request.params).await?
-            }
-            "neural_api.get_execution_status" | "graph.status" => {
-                self.graph_handler.get_status(&request.params).await?
-            }
+        };
 
-            // === Topology Operations (delegated to TopologyHandler) ===
-            "neural_api.get_topology" | "topology.get" => self.topology_handler.get().await?,
-            "neural_api.get_primals" | "topology.primals" => {
-                self.topology_handler.get_primals().await?
-            }
-            "neural_api.get_proprioception" | "topology.proprioception" => {
-                self.topology_handler.get_proprioception().await?
-            }
-            "neural_api.get_metrics" | "topology.metrics" => {
-                self.topology_handler.get_metrics().await?
-            }
-
-            // === Niche Operations (delegated to NicheHandler) ===
-            "neural_api.list_niche_templates" | "niche.list" => self.niche_handler.list().await?,
-            "neural_api.deploy_niche" | "niche.deploy" => {
-                self.niche_handler.deploy(&request.params).await?
-            }
-
-            // === Lifecycle Operations (delegated to LifecycleHandler) ===
-            "lifecycle.status" => self.lifecycle_handler.status().await?,
-            "lifecycle.get" => self.lifecycle_handler.get(&request.params).await?,
-            "lifecycle.register" => self.lifecycle_handler.register(&request.params).await?,
-            "lifecycle.resurrect" => self.lifecycle_handler.resurrect(&request.params).await?,
-            "lifecycle.apoptosis" => self.lifecycle_handler.apoptosis(&request.params).await?,
-            "lifecycle.shutdown_all" => self.lifecycle_handler.shutdown_all().await?,
-
-            // === Protocol Escalation Operations (delegated to ProtocolHandler) ===
-            "protocol.status" => self.protocol_handler.status().await?,
-            "protocol.escalate" => self.protocol_handler.escalate(&request.params).await?,
-            "protocol.fallback" => self.protocol_handler.fallback(&request.params).await?,
-            "protocol.metrics" => self.protocol_handler.metrics(&request.params).await?,
-            "protocol.register_primal" => {
+        let result = match route {
+            Route::GraphList => self.graph_handler.list().await?,
+            Route::GraphGet => self.graph_handler.get(&request.params).await?,
+            Route::GraphSave => self.graph_handler.save(&request.params).await?,
+            Route::GraphExecute => self.graph_handler.execute(&request.params).await?,
+            Route::GraphStatus => self.graph_handler.get_status(&request.params).await?,
+            Route::TopologyGet => self.topology_handler.get().await?,
+            Route::TopologyPrimals => self.topology_handler.get_primals().await?,
+            Route::TopologyProprioception => self.topology_handler.get_proprioception().await?,
+            Route::TopologyMetrics => self.topology_handler.get_metrics().await?,
+            Route::NicheList => self.niche_handler.list().await?,
+            Route::NicheDeploy => self.niche_handler.deploy(&request.params).await?,
+            Route::LifecycleStatus => self.lifecycle_handler.status().await?,
+            Route::LifecycleGet => self.lifecycle_handler.get(&request.params).await?,
+            Route::LifecycleRegister => self.lifecycle_handler.register(&request.params).await?,
+            Route::LifecycleResurrect => self.lifecycle_handler.resurrect(&request.params).await?,
+            Route::LifecycleApoptosis => self.lifecycle_handler.apoptosis(&request.params).await?,
+            Route::LifecycleShutdownAll => self.lifecycle_handler.shutdown_all().await?,
+            Route::ProtocolStatus => self.protocol_handler.status().await?,
+            Route::ProtocolEscalate => self.protocol_handler.escalate(&request.params).await?,
+            Route::ProtocolFallback => self.protocol_handler.fallback(&request.params).await?,
+            Route::ProtocolMetrics => self.protocol_handler.metrics(&request.params).await?,
+            Route::ProtocolRegisterPrimal => {
                 self.protocol_handler
                     .register_primal(&request.params)
                     .await?
             }
-            "protocol.register_connection" => {
+            Route::ProtocolRegisterConnection => {
                 self.protocol_handler
                     .register_connection(&request.params)
                     .await?
             }
-            "protocol.record_request" => {
+            Route::ProtocolRecordRequest => {
                 self.protocol_handler
                     .record_request(&request.params)
                     .await?
             }
-            "protocol.start_monitoring" => self.protocol_handler.start_monitoring().await?,
-            "protocol.stop_monitoring" => self.protocol_handler.stop_monitoring().await?,
-            "graph.protocol_map" => self.protocol_handler.protocol_map().await?,
-
-            // === Capability Operations (delegated to CapabilityHandler) ===
-            "capability.register" => self.capability_handler.register(&request.params).await?,
-            "capability.discover" | "neural_api.discover_capability" => {
-                self.capability_handler.discover(&request.params).await?
+            Route::ProtocolStartMonitoring => self.protocol_handler.start_monitoring().await?,
+            Route::ProtocolStopMonitoring => self.protocol_handler.stop_monitoring().await?,
+            Route::GraphProtocolMap => self.protocol_handler.protocol_map().await?,
+            Route::CapabilityRegister => self.capability_handler.register(&request.params).await?,
+            Route::CapabilityDiscover => self.capability_handler.discover(&request.params).await?,
+            Route::CapabilityList => self.capability_handler.list().await?,
+            Route::CapabilityProviders => {
+                self.capability_handler.providers(&request.params).await?
             }
-            "capability.list" => self.capability_handler.list().await?,
-            "capability.providers" => self.capability_handler.providers(&request.params).await?,
-            "capability.route" | "neural_api.route_to_primal" => {
-                self.capability_handler.route(&request.params).await?
-            }
-            "capability.metrics" | "neural_api.get_routing_metrics" => {
-                self.capability_handler.get_metrics().await?
-            }
-            "capability.call" => self.capability_handler.call(&request.params).await?,
-            "capability.discover_translations" | "capability.discover_translation" => {
+            Route::CapabilityRoute => self.capability_handler.route(&request.params).await?,
+            Route::CapabilityMetrics => self.capability_handler.get_metrics().await?,
+            Route::CapabilityCall => self.capability_handler.call(&request.params).await?,
+            Route::CapabilityDiscoverTranslations => {
                 self.capability_handler
                     .discover_translations(&request.params)
                     .await?
             }
-            "capability.list_translations" => self.capability_handler.list_translations().await?,
-
-            // === Plasmodium Agent Operations ===
-            "agent.create" | "agent.list" | "agent.get" | "agent.remove" | "agent.meld"
-            | "agent.split" | "agent.resolve" | "agent.route" | "agent.auto_meld" => {
+            Route::CapabilityListTranslations => {
+                self.capability_handler.list_translations().await?
+            }
+            Route::Agent => {
                 super::agents::handle_agent_request(
                     &self.agent_registry,
                     request.method.as_str(),
@@ -120,32 +258,8 @@ impl NeuralApiServer {
                 )
                 .await?
             }
-
-            // === Legacy Routing (still needed for HTTP proxy) ===
-            "neural_api.proxy_http" => self.proxy_http(&request.params).await?,
-
-            // === Mesh & NAT Traversal Operations (routed via capability.call) ===
-            // These provide direct method syntax sugar: mesh.status → capability.call("mesh", "status")
-            "mesh.status"
-            | "mesh.find_path"
-            | "mesh.announce"
-            | "mesh.peers"
-            | "mesh.health_check"
-            | "punch.request"
-            | "punch.status"
-            | "punch.coordinate"
-            | "stun.discover"
-            | "stun.detect_nat_type"
-            | "stun.probe_port_pattern"
-            | "relay.serve"
-            | "relay.status"
-            | "relay.allocate"
-            | "relay.authorize"
-            | "onion.create_service"
-            | "onion.get_address"
-            | "onion.connect"
-            | "onion.status" => {
-                // Transform direct method call into capability.call format
+            Route::ProxyHttp => self.proxy_http(&request.params).await?,
+            Route::MeshCapabilityCall => {
                 let parts: Vec<&str> = request.method.split('.').collect();
                 if parts.len() == 2 {
                     let cap_params = Some(serde_json::json!({
@@ -157,11 +271,6 @@ impl NeuralApiServer {
                 } else {
                     return Ok(method_not_found_response(&request.method, request.id));
                 }
-            }
-
-            // === Unknown Method ===
-            _ => {
-                return Ok(method_not_found_response(&request.method, request.id));
             }
         };
 

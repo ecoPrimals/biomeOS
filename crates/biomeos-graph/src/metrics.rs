@@ -128,7 +128,10 @@ impl MetricsCollector {
             success: result.success,
             duration_ms,
             executed_at: chrono::Utc::now(),
-            metadata: serde_json::to_string(&result.node_results).unwrap_or_default(),
+            metadata: serde_json::to_string(&result.node_results).unwrap_or_else(|e| {
+                tracing::warn!("JSON parse fallback: {}", e);
+                Default::default()
+            }),
         };
 
         let key = format!("exec:{}:{}", graph_name, record.id);

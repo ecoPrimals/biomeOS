@@ -12,13 +12,13 @@
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP + HTTP JSON-RPC) |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
 | Code Quality | A+ (Pure Rust, idiomatic, zero warnings, full doc coverage, deep debt audit) |
-| Tests | 3,670+ passing (71.47% region coverage) |
+| Tests | 3,148 passing sequential (71.47% region coverage) |
 | Unsafe Code | 0 in production |
 | Clippy | PASS (0 warnings, entire workspace) |
 | Formatting | PASS |
 | Deployment | USB + Pixel + Cross-Device AI |
 | AI Bridge | Squirrel -> Songbird -> Cloud/Local AI (validated) |
-| Neural API | 165+ semantic capability translations |
+| Neural API | 170+ semantic capability translations (incl. compute.hardware.*) |
 | Continuous Systems | ContinuousExecutor (60Hz tick), push events, sensor routing |
 | XR/VR | Stereo rendering, motion capture, haptic feedback pipeline |
 | Surgical Domain | Anatomy models, tissue physics, biosignals, pharmacokinetics |
@@ -121,7 +121,7 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"Name the largest 
 
 ## Neural API - Semantic Routing
 
-124 capability translations enable primals to compose without knowing each other:
+170+ capability translations enable primals to compose without knowing each other:
 
 ```
 Squirrel -> capability.call("http", "request", ...) -> Neural API
@@ -240,7 +240,7 @@ After:  [0x4a, 0x8f, 0x2c, ...]                   <- pure noise
 cargo build --workspace
 ```
 
-### Test (3,670+ tests)
+### Test (3,148+ tests)
 
 ```bash
 cargo test --workspace
@@ -333,12 +333,13 @@ AGPL-3.0-only
 
 ---
 
-**Status**: Production Ready (v2.28)
+**Status**: Production Ready (v2.30)
 **Updated**: March 11, 2026
-**Spring Absorption**: 165+ translations from 7 springs + petalTongue, 21 deploy graphs, 13 niche templates
+**Deep Debt Evolution**: 8-phase plan executed — capability routing, path elimination, large file splits, env centralization, Rust modernization, libc removal
+**Spring Absorption**: 170+ translations from 7 springs + petalTongue + hw-learn, 24 deploy graphs, 13 niche templates
 **Continuous Systems**: 60Hz tick loop, push events, sensor routing, feedback edges
 **XR/VR**: Stereo rendering, motion capture, haptic feedback, surgical VR niche
 **AI Bridge**: Local + Cloud AI validated
 **Plasmodium**: HTTP JSON-RPC collective (runtime port) + Agent Model
 **NAT Traversal**: 4-tier strategy (LAN/punch/coordinated/relay)
-**Tests**: 3,670+ passing (71.47% coverage) | **Clippy**: PASS | **Docs**: Full coverage | **Format**: PASS
+**Tests**: 3,148 passing sequential (71.47% coverage) | **Clippy**: PASS | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0

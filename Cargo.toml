@@ -127,7 +127,7 @@ mdbook = "0.4"
 validator = "0.16"
 # dirs = "5.0"  # DEPRECATED: Uses dirs-sys (C dependency)
 etcetera = "0.8"  # Pure Rust replacement for dirs
-libc = "0.2"
+
 num_cpus = "1.16"
 rand = "0.8"
 sha2 = "0.10"

@@ -144,12 +144,19 @@ pub async fn transition_to_coordinated(family_id: &str) -> Result<()> {
     let check_interval = Duration::from_millis(500);
     let start = std::time::Instant::now();
 
-    // DEEP DEBT EVOLUTION: Bootstrap resolves provider names from env
-    // These are the minimum primals needed before capability registry starts
-    let security_provider =
-        std::env::var("BIOMEOS_SECURITY_PROVIDER").unwrap_or_else(|_| "beardog".to_string());
-    let network_provider =
-        std::env::var("BIOMEOS_NETWORK_PROVIDER").unwrap_or_else(|_| "songbird".to_string());
+    // Resolve provider names: env override → capability taxonomy → bootstrap fallback
+    let security_provider = biomeos_types::env_config::security_provider()
+        .or_else(|| {
+            biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal("security")
+                .map(String::from)
+        })
+        .unwrap_or_else(|| "beardog".to_string());
+    let network_provider = biomeos_types::env_config::network_provider()
+        .or_else(|| {
+            biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal("discovery")
+                .map(String::from)
+        })
+        .unwrap_or_else(|| "songbird".to_string());
     let mut nucleation = SocketNucleation::new(SocketStrategy::default());
     let beardog_socket = nucleation.assign_socket(&security_provider, family_id);
     let songbird_socket = nucleation.assign_socket(&network_provider, family_id);

@@ -1,0 +1,89 @@
+# UI Atomic Deployment Graph
+# =============================================================================
+#
+# User Interface layer: Squirrel (AI orchestration) + petalTongue (rendering).
+# Requires Tower Atomic (BearDog + Songbird) to already be running.
+#
+# =============================================================================
+
+[graph]
+id = "ui_atomic"
+version = "1.0.0"
+description = "UI Atomic: Squirrel AI + petalTongue rendering on existing Tower"
+coordination = "Sequential"
+
+# 1: Squirrel (AI Bridge)
+[[nodes]]
+id = "squirrel"
+output = "squirrel_ready"
+capabilities = ["ai", "inference"]
+
+[nodes.primal]
+by_capability = "ai"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+
+[nodes.operation.environment]
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
+SONGBIRD_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/songbird-${FAMILY_ID}.sock"
+RUST_LOG = "squirrel=info"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[nodes.capabilities_provided]
+"ai.query" = "query_ai"
+"ai.list_providers" = "list_providers"
+"ai.health" = "health"
+
+# 2: petalTongue (Rendering + Interaction)
+[[nodes]]
+id = "petaltongue"
+depends_on = ["squirrel"]
+output = "petaltongue_ready"
+capabilities = ["visualization", "interaction"]
+
+[nodes.primal]
+by_capability = "visualization"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+
+[nodes.operation.environment]
+NEURAL_API_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/neural-api-${FAMILY_ID}.sock"
+RUST_LOG = "petaltongue=info"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[nodes.capabilities_provided]
+"visualization.render" = "render"
+"visualization.render.stream" = "render.stream"
+"visualization.render.dashboard" = "render.dashboard"
+"interaction.poll" = "interaction.poll"
+
+# 3: Validate UI Atomic
+[[nodes]]
+id = "validate"
+depends_on = ["squirrel", "petaltongue"]
+output = "ui_validated"
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.operation.params]
+check_squirrel = true
+check_petaltongue = true
+timeout_seconds = 10
+
+[nodes.constraints]
+timeout_ms = 15000

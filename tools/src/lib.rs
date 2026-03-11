@@ -3,6 +3,8 @@
 //! Pure Rust tooling for biomeOS development, testing, and ecosystem management.
 //! Eliminates shell scripts in favor of "Rust until the very edge" philosophy.
 
+#![warn(missing_docs)]
+
 use anyhow::Result;
 use std::process::{Command, Stdio};
 use std::path::Path;

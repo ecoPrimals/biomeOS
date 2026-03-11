@@ -2,6 +2,8 @@
 //!
 //! A capability-based orchestration layer for managing primals and ecosystems
 
+#![warn(missing_docs)]
+
 use serde::{Deserialize, Serialize};
 
 // Re-export core types

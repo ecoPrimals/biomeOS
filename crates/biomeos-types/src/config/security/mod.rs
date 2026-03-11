@@ -3,6 +3,19 @@
 //! This module contains security-related configuration types including
 //! authentication, authorization, encryption, audit, session, and CSRF configuration.
 
+mod authorization;
+mod crypto;
+mod tls;
+
+pub use authorization::{
+    AbacConfig, AbacRule, AuthorizationAction, AuthorizationConfig, AuthorizationPolicy, RbacConfig,
+};
+pub use crypto::{
+    DataAtRestConfig, EncryptionAlgorithm, EncryptionConfig, KeyDerivationAlgorithm,
+    KeyDerivationConfig, KeyManagementConfig, KeyStorageBackend,
+};
+pub use tls::{DataInTransitConfig, HstsConfig};
+
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -268,189 +281,6 @@ pub struct EmailMfaConfig {
     pub from_email: String,
 }
 
-/// Authorization configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AuthorizationConfig {
-    /// Default authorization policy
-    pub default_policy: AuthorizationPolicy,
-
-    /// Role-based access control
-    pub rbac: Option<RbacConfig>,
-
-    /// Attribute-based access control
-    pub abac: Option<AbacConfig>,
-}
-
-/// Authorization policies
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum AuthorizationPolicy {
-    /// Allow all requests by default
-    Allow,
-    /// Deny all requests by default
-    Deny,
-    /// Use role-based access control
-    Rbac,
-    /// Use attribute-based access control
-    Abac,
-    /// Custom authorization handler
-    Custom(String),
-}
-
-/// RBAC configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RbacConfig {
-    /// Roles definition
-    pub roles: HashMap<String, Vec<String>>,
-
-    /// Role hierarchy
-    pub hierarchy: Option<HashMap<String, Vec<String>>>,
-}
-
-/// ABAC configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AbacConfig {
-    /// Policy rules
-    pub rules: Vec<AbacRule>,
-
-    /// Attribute sources
-    pub attribute_sources: HashMap<String, String>,
-}
-
-/// ABAC rule
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AbacRule {
-    /// Rule name
-    pub name: String,
-
-    /// Rule condition
-    pub condition: String,
-
-    /// Rule action
-    pub action: AuthorizationAction,
-}
-
-/// Authorization actions
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum AuthorizationAction {
-    /// Allow the request
-    Allow,
-    /// Deny the request
-    Deny,
-    /// Log the request but allow it
-    Log,
-    /// Challenge the user for additional credentials
-    Challenge,
-}
-
-/// Encryption configuration
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct EncryptionConfig {
-    /// Data at rest encryption
-    #[serde(default)]
-    pub at_rest: DataAtRestConfig,
-
-    /// Data in transit encryption
-    #[serde(default)]
-    pub in_transit: DataInTransitConfig,
-
-    /// Key management
-    #[serde(default)]
-    pub key_management: KeyManagementConfig,
-}
-
-/// Data at rest encryption configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DataAtRestConfig {
-    /// Enable encryption
-    pub enabled: bool,
-
-    /// Encryption algorithm
-    pub algorithm: EncryptionAlgorithm,
-
-    /// Key rotation interval
-    pub key_rotation_interval: Duration,
-}
-
-/// Data in transit encryption configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DataInTransitConfig {
-    /// Enable encryption
-    pub enabled: bool,
-
-    /// Minimum TLS version
-    pub min_tls_version: String,
-
-    /// Cipher suites
-    pub cipher_suites: Vec<String>,
-}
-
-/// Encryption algorithms
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum EncryptionAlgorithm {
-    /// AES-256 in GCM mode (authenticated encryption)
-    AES256GCM,
-    /// AES-256 in CBC mode
-    AES256CBC,
-    /// ChaCha20-Poly1305 (authenticated encryption)
-    ChaCha20Poly1305,
-    /// Custom encryption algorithm
-    Custom(String),
-}
-
-/// Key management configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct KeyManagementConfig {
-    /// Key storage backend
-    pub backend: KeyStorageBackend,
-
-    /// Master key ID
-    pub master_key_id: Option<String>,
-
-    /// Key derivation configuration
-    pub derivation: KeyDerivationConfig,
-}
-
-/// Key storage backends
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum KeyStorageBackend {
-    /// Local filesystem storage
-    Local,
-    /// HashiCorp Vault
-    Vault,
-    /// Hardware Security Module
-    Hsm,
-    /// Cloud Key Management Service
-    Kms,
-    /// Custom key storage
-    Custom(String),
-}
-
-/// Key derivation configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct KeyDerivationConfig {
-    /// Derivation algorithm
-    pub algorithm: KeyDerivationAlgorithm,
-
-    /// Iteration count
-    pub iterations: u32,
-
-    /// Salt length
-    pub salt_length: usize,
-}
-
-/// Key derivation algorithms
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum KeyDerivationAlgorithm {
-    /// PBKDF2 (Password-Based Key Derivation Function 2)
-    PBKDF2,
-    /// Scrypt memory-hard function
-    Scrypt,
-    /// Argon2 memory-hard function
-    Argon2,
-    /// Custom key derivation
-    Custom(String),
-}
-
 /// Audit configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuditConfig {
@@ -672,21 +502,6 @@ pub struct SecurityHeaders {
     pub referrer_policy: Option<String>,
 }
 
-/// HSTS configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct HstsConfig {
-    /// Max age in seconds
-    pub max_age: u64,
-
-    /// Include subdomains
-    pub include_subdomains: bool,
-
-    /// Preload
-    pub preload: bool,
-}
-
-// SecurityConfig Default derived via #[derive(Default)]
-
 impl Default for AuthenticationConfig {
     fn default() -> Self {
         Self {
@@ -696,58 +511,6 @@ impl Default for AuthenticationConfig {
             oauth: None,
             api_key: None,
             mfa: None,
-        }
-    }
-}
-
-impl Default for AuthorizationConfig {
-    fn default() -> Self {
-        Self {
-            default_policy: AuthorizationPolicy::Allow,
-            rbac: None,
-            abac: None,
-        }
-    }
-}
-
-// EncryptionConfig Default derived via #[derive(Default)]
-
-impl Default for DataAtRestConfig {
-    fn default() -> Self {
-        Self {
-            enabled: false,
-            algorithm: EncryptionAlgorithm::AES256GCM,
-            key_rotation_interval: Duration::from_secs(30 * 24 * 60 * 60), // 30 days
-        }
-    }
-}
-
-impl Default for DataInTransitConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            min_tls_version: "1.2".to_string(),
-            cipher_suites: vec![],
-        }
-    }
-}
-
-impl Default for KeyManagementConfig {
-    fn default() -> Self {
-        Self {
-            backend: KeyStorageBackend::Local,
-            master_key_id: None,
-            derivation: KeyDerivationConfig::default(),
-        }
-    }
-}
-
-impl Default for KeyDerivationConfig {
-    fn default() -> Self {
-        Self {
-            algorithm: KeyDerivationAlgorithm::PBKDF2,
-            iterations: 100000,
-            salt_length: 32,
         }
     }
 }
@@ -848,55 +611,6 @@ mod tests {
         assert!(config.oauth.is_none());
         assert!(config.api_key.is_none());
         assert!(config.mfa.is_none());
-    }
-
-    #[test]
-    fn test_authorization_config_default() {
-        let config = AuthorizationConfig::default();
-        assert!(matches!(config.default_policy, AuthorizationPolicy::Allow));
-        assert!(config.rbac.is_none());
-        assert!(config.abac.is_none());
-    }
-
-    #[test]
-    fn test_encryption_config_default() {
-        let config = EncryptionConfig::default();
-        assert!(!config.at_rest.enabled);
-        assert!(config.in_transit.enabled);
-    }
-
-    #[test]
-    fn test_data_at_rest_default() {
-        let config = DataAtRestConfig::default();
-        assert!(!config.enabled);
-        assert!(matches!(config.algorithm, EncryptionAlgorithm::AES256GCM));
-        assert_eq!(
-            config.key_rotation_interval,
-            Duration::from_secs(30 * 24 * 60 * 60)
-        );
-    }
-
-    #[test]
-    fn test_data_in_transit_default() {
-        let config = DataInTransitConfig::default();
-        assert!(config.enabled);
-        assert_eq!(config.min_tls_version, "1.2");
-        assert!(config.cipher_suites.is_empty());
-    }
-
-    #[test]
-    fn test_key_management_default() {
-        let config = KeyManagementConfig::default();
-        assert!(matches!(config.backend, KeyStorageBackend::Local));
-        assert!(config.master_key_id.is_none());
-    }
-
-    #[test]
-    fn test_key_derivation_default() {
-        let config = KeyDerivationConfig::default();
-        assert!(matches!(config.algorithm, KeyDerivationAlgorithm::PBKDF2));
-        assert_eq!(config.iterations, 100000);
-        assert_eq!(config.salt_length, 32);
     }
 
     #[test]
@@ -1004,46 +718,6 @@ mod tests {
     }
 
     #[test]
-    fn test_encryption_algorithm_serialization() {
-        for alg in [
-            EncryptionAlgorithm::AES256GCM,
-            EncryptionAlgorithm::AES256CBC,
-            EncryptionAlgorithm::ChaCha20Poly1305,
-            EncryptionAlgorithm::Custom("xchacha20".to_string()),
-        ] {
-            let json = serde_json::to_string(&alg).expect("serialize");
-            let _: EncryptionAlgorithm = serde_json::from_str(&json).expect("deserialize");
-        }
-    }
-
-    #[test]
-    fn test_key_storage_backend_serialization() {
-        for backend in [
-            KeyStorageBackend::Local,
-            KeyStorageBackend::Vault,
-            KeyStorageBackend::Hsm,
-            KeyStorageBackend::Kms,
-            KeyStorageBackend::Custom("sops".to_string()),
-        ] {
-            let json = serde_json::to_string(&backend).expect("serialize");
-            let _: KeyStorageBackend = serde_json::from_str(&json).expect("deserialize");
-        }
-    }
-
-    #[test]
-    fn test_key_derivation_algorithm_serialization() {
-        for alg in [
-            KeyDerivationAlgorithm::PBKDF2,
-            KeyDerivationAlgorithm::Scrypt,
-            KeyDerivationAlgorithm::Argon2,
-            KeyDerivationAlgorithm::Custom("hkdf".to_string()),
-        ] {
-            let json = serde_json::to_string(&alg).expect("serialize");
-            let _: KeyDerivationAlgorithm = serde_json::from_str(&json).expect("deserialize");
-        }
-    }
-
-    #[test]
     fn test_audit_event_serialization() {
         for event in [
             AuditEvent::Authentication,
@@ -1089,33 +763,6 @@ mod tests {
         for same_site in [SameSite::Strict, SameSite::Lax, SameSite::None] {
             let json = serde_json::to_string(&same_site).expect("serialize");
             let _: SameSite = serde_json::from_str(&json).expect("deserialize");
-        }
-    }
-
-    #[test]
-    fn test_authorization_policy_serialization() {
-        for policy in [
-            AuthorizationPolicy::Allow,
-            AuthorizationPolicy::Deny,
-            AuthorizationPolicy::Rbac,
-            AuthorizationPolicy::Abac,
-            AuthorizationPolicy::Custom("opa".to_string()),
-        ] {
-            let json = serde_json::to_string(&policy).expect("serialize");
-            let _: AuthorizationPolicy = serde_json::from_str(&json).expect("deserialize");
-        }
-    }
-
-    #[test]
-    fn test_authorization_action_serialization() {
-        for action in [
-            AuthorizationAction::Allow,
-            AuthorizationAction::Deny,
-            AuthorizationAction::Log,
-            AuthorizationAction::Challenge,
-        ] {
-            let json = serde_json::to_string(&action).expect("serialize");
-            let _: AuthorizationAction = serde_json::from_str(&json).expect("deserialize");
         }
     }
 
@@ -1212,57 +859,6 @@ mod tests {
     }
 
     #[test]
-    fn test_rbac_config_with_hierarchy() {
-        let mut roles = HashMap::new();
-        roles.insert(
-            "admin".to_string(),
-            vec![
-                "read".to_string(),
-                "write".to_string(),
-                "delete".to_string(),
-            ],
-        );
-        roles.insert("user".to_string(), vec!["read".to_string()]);
-
-        let mut hierarchy = HashMap::new();
-        hierarchy.insert("admin".to_string(), vec!["user".to_string()]);
-
-        let config = RbacConfig {
-            roles,
-            hierarchy: Some(hierarchy),
-        };
-
-        assert!(config.roles.contains_key("admin"));
-        assert!(config.hierarchy.is_some());
-    }
-
-    #[test]
-    fn test_abac_config_with_rules() {
-        let config = AbacConfig {
-            rules: vec![
-                AbacRule {
-                    name: "department-match".to_string(),
-                    condition: "user.department == resource.department".to_string(),
-                    action: AuthorizationAction::Allow,
-                },
-                AbacRule {
-                    name: "time-based".to_string(),
-                    condition: "time.hour >= 9 && time.hour <= 17".to_string(),
-                    action: AuthorizationAction::Allow,
-                },
-            ],
-            attribute_sources: {
-                let mut sources = HashMap::new();
-                sources.insert("user".to_string(), "ldap://directory.local".to_string());
-                sources
-            },
-        };
-
-        assert_eq!(config.rules.len(), 2);
-        assert!(config.attribute_sources.contains_key("user"));
-    }
-
-    #[test]
     fn test_totp_config_creation() {
         let config = TotpConfig {
             issuer: "BiomeOS".to_string(),
@@ -1295,17 +891,6 @@ mod tests {
     }
 
     #[test]
-    fn test_hsts_config_creation() {
-        let config = HstsConfig {
-            max_age: 31536000,
-            include_subdomains: true,
-            preload: true,
-        };
-        assert_eq!(config.max_age, 31536000);
-        assert!(config.preload);
-    }
-
-    #[test]
     fn test_mfa_config_creation() {
         let config = MfaConfig {
             enabled: true,
@@ -1332,13 +917,6 @@ mod tests {
         let method = AuthMethod::Custom("kerberos".to_string());
         let debug = format!("{:?}", method);
         assert!(debug.contains("kerberos"));
-    }
-
-    #[test]
-    fn test_encryption_algorithm_debug() {
-        let alg = EncryptionAlgorithm::ChaCha20Poly1305;
-        let debug = format!("{:?}", alg);
-        assert!(debug.contains("ChaCha20"));
     }
 
     #[test]

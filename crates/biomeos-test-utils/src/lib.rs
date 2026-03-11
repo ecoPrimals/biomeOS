@@ -8,6 +8,7 @@
 //!
 //! This crate is only for testing - it should never be used in production code.
 
+#![warn(missing_docs)]
 #![deny(unsafe_code)]
 
 pub mod assertions;

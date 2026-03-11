@@ -67,3 +67,5 @@ archive/
 cloudflared
 *.bak*/
 plasmidBin/optimized/
+chimeras/**/Cargo.lock
+chimeras/**/target/

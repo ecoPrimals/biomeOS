@@ -192,10 +192,15 @@ impl BiomeOSConfigBuilder {
     }
 
     /// Configure DNS discovery
-    pub fn with_dns_discovery(mut self, servers: Vec<String>) -> Self {
+    pub fn with_dns_discovery(self, servers: Vec<String>) -> Self {
+        self.with_dns_discovery_domain(servers, String::new())
+    }
+
+    /// Configure DNS discovery with an explicit domain
+    pub fn with_dns_discovery_domain(mut self, servers: Vec<String>, domain: String) -> Self {
         self.config.discovery.dns = Some(DnsConfig {
             servers,
-            domain: "".to_string(), // Placeholder, will be updated by the user
+            domain,
             timeout: Duration::from_secs(5),
         });
         self

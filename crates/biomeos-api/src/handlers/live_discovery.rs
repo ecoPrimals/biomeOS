@@ -354,35 +354,18 @@ fn infer_type_from_name(name: &str) -> String {
     "primal".to_string()
 }
 
-/// Get socket directory from environment (XDG-compliant resolution)
+/// Get socket directory via XDG-compliant SystemPaths
 ///
-/// Uses biomeos_types::SystemPaths for consistent, XDG-compliant resolution.
-/// Falls back gracefully if SystemPaths::new() fails.
+/// Single source of truth: `SystemPaths::new_lazy().runtime_dir()`.
+/// Only falls back to env override if `BIOMEOS_SOCKET_DIR` is explicitly set.
 fn get_socket_dir() -> String {
-    // Try SystemPaths for XDG-compliant resolution
-    if let Ok(paths) = biomeos_types::SystemPaths::new() {
-        return paths.runtime_dir().to_string_lossy().to_string();
-    }
-
-    // Fallback: Manual resolution
-    // Tier 1: Explicit socket dir
     if let Ok(dir) = std::env::var("BIOMEOS_SOCKET_DIR") {
         return dir;
     }
-
-    // Tier 2: XDG runtime dir
-    if let Ok(xdg) = std::env::var("XDG_RUNTIME_DIR") {
-        return format!("{}/biomeos", xdg);
-    }
-
-    // Tier 3: Family-specific temp
-    if let Ok(family) = std::env::var("BIOMEOS_FAMILY_ID").or_else(|_| std::env::var("FAMILY_ID")) {
-        return format!("/tmp/biomeos-{}", family);
-    }
-
-    // Tier 4: Default with username
-    let username = std::env::var("USER").unwrap_or_else(|_| "default".to_string());
-    format!("/tmp/biomeos-{}", username)
+    biomeos_types::SystemPaths::new_lazy()
+        .runtime_dir()
+        .to_string_lossy()
+        .to_string()
 }
 
 /// Scan socket directory and discover all available primals

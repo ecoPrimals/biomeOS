@@ -1,0 +1,108 @@
+# LiveSpore Creation Deployment Graph
+# =============================================================================
+#
+# Workflow for creating a portable LiveSpore on removable media.
+# Packages primals, graphs, and seeds for offline/portable deployment.
+#
+# =============================================================================
+
+[graph]
+id = "livespore_create"
+version = "1.0.0"
+description = "LiveSpore creation: package primals and graphs onto portable media"
+coordination = "Sequential"
+
+# 1: Validate target media
+[[nodes]]
+id = "validate_target"
+output = "target_validated"
+
+[nodes.operation]
+name = "validate_spore_target"
+
+[nodes.operation.params]
+target = "${SPORE_TARGET}"
+min_space_mb = 512
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# 2: Package primals
+[[nodes]]
+id = "package_primals"
+depends_on = ["validate_target"]
+output = "primals_packaged"
+
+[nodes.operation]
+name = "package_primals"
+
+[nodes.operation.params]
+target = "${SPORE_TARGET}"
+arch = "${TARGET_ARCH}"
+primals = ["beardog", "songbird", "toadstool", "nestgate", "squirrel"]
+
+[nodes.constraints]
+timeout_ms = 120000
+
+# 3: Copy deployment graphs
+[[nodes]]
+id = "copy_graphs"
+depends_on = ["validate_target"]
+output = "graphs_copied"
+
+[nodes.operation]
+name = "copy_graphs"
+
+[nodes.operation.params]
+target = "${SPORE_TARGET}"
+graphs = ["nucleus_simple", "tower_atomic_bootstrap", "node_atomic_compute"]
+
+[nodes.constraints]
+timeout_ms = 30000
+
+# 4: Generate family seed
+[[nodes]]
+id = "generate_seed"
+depends_on = ["package_primals"]
+output = "seed_generated"
+
+[nodes.operation]
+name = "generate_family_seed"
+
+[nodes.operation.params]
+target = "${SPORE_TARGET}"
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# 5: Create autostart script
+[[nodes]]
+id = "create_autostart"
+depends_on = ["copy_graphs", "generate_seed"]
+output = "autostart_created"
+
+[nodes.operation]
+name = "create_autostart"
+
+[nodes.operation.params]
+target = "${SPORE_TARGET}"
+default_graph = "nucleus_simple"
+
+[nodes.constraints]
+timeout_ms = 5000
+
+# 6: Validate LiveSpore
+[[nodes]]
+id = "validate_spore"
+depends_on = ["create_autostart"]
+output = "spore_validated"
+
+[nodes.operation]
+name = "validate_spore"
+
+[nodes.operation.params]
+target = "${SPORE_TARGET}"
+check_integrity = true
+
+[nodes.constraints]
+timeout_ms = 30000

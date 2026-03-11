@@ -11,6 +11,7 @@
 //! - **Verifiable Deployment**: Every step logged and checkpointed
 
 // Crate-level lint configuration
+#![warn(missing_docs)]
 #![allow(clippy::doc_markdown)] // Allow technical terms without backticks
 #![deny(unsafe_code)] // No unsafe code in deployment
 

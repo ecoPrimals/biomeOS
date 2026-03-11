@@ -68,7 +68,7 @@ impl NicheHandler {
                     "gpu_count": null,
                     "storage_gb": 50
                 },
-                "graph_id": "nucleus-simple",
+                "graph_id": "nucleus_simple",
                 "parameters": []
             }),
             json!({
@@ -96,7 +96,7 @@ impl NicheHandler {
                     "gpu_count": 1,
                     "storage_gb": 10
                 },
-                "graph_id": "ui-atomic",
+                "graph_id": "ui_atomic",
                 "parameters": []
             }),
             json!({
@@ -110,7 +110,7 @@ impl NicheHandler {
                     "gpu_count": null,
                     "storage_gb": 1
                 },
-                "graph_id": "livespore-create",
+                "graph_id": "livespore_create",
                 "parameters": [
                     {"name": "SPORE_TARGET", "type": "path", "required": true},
                     {"name": "LINEAGE_MODE", "type": "enum", "values": ["genesis", "sibling"]}
@@ -174,7 +174,7 @@ impl NicheHandler {
                     "gpu_count": 1,
                     "storage_gb": 0
                 },
-                "graph_id": "game-engine-tick",
+                "graph_id": "game_engine_tick",
                 "parameters": [
                     {"name": "TARGET_HZ", "type": "float", "default": 60.0},
                     {"name": "VSYNC", "type": "boolean", "default": true}
@@ -272,14 +272,14 @@ impl NicheHandler {
 
         // Map template to graph
         let graph_id = match template_id {
-            "nucleus" => "nucleus-simple",
+            "nucleus" => "nucleus_simple",
             "tower-atomic" => "tower_atomic_bootstrap",
-            "ui-atomic" => "ui-atomic",
-            "livespore" => "livespore-create",
+            "ui-atomic" => "ui_atomic",
+            "livespore" => "livespore_create",
             "gaming" => "gaming_niche_deploy",
             "ludospring" => "ludospring_deploy",
             "petaltongue" => "petaltongue_deploy",
-            "game-engine-tick" => "game-engine-tick",
+            "game-engine-tick" => "game_engine_tick",
             "surgical-vr" => "surgical_vr_deploy",
             "ecology-pipeline" => "cross_spring_ecology",
             "hotspring" => "hotspring_deploy",
@@ -404,7 +404,7 @@ mod tests {
         assert_eq!(nucleus["name"], "NUCLEUS");
         assert!(nucleus["description"].as_str().unwrap().contains("biomeOS"));
         assert!(nucleus["required_resources"].get("cpu_cores").is_some());
-        assert_eq!(nucleus["graph_id"], "nucleus-simple");
+        assert_eq!(nucleus["graph_id"], "nucleus_simple");
     }
 
     #[tokio::test]
@@ -490,7 +490,7 @@ mod tests {
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
         assert!(
-            err_msg.to_lowercase().contains("not found") || err_msg.contains("nucleus-simple"),
+            err_msg.to_lowercase().contains("not found") || err_msg.contains("nucleus_simple"),
             "Error should mention graph not found: {}",
             err_msg
         );

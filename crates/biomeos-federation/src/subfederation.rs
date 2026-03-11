@@ -573,34 +573,28 @@ impl SubFederationManager {
         Ok(key_ref.to_string())
     }
 
-    /// Discover BearDog socket path (XDG-compliant)
+    /// Discover BearDog socket path via XDG-compliant SystemPaths
     fn discover_beardog_socket() -> FederationResult<String> {
-        // Priority 1: Environment variable
+        // Priority 1: Explicit environment variable override
         if let Ok(socket) = std::env::var("BEARDOG_SOCKET") {
             return Ok(socket);
         }
 
-        // Priority 2: XDG runtime directory
-        if let Ok(runtime) = std::env::var("XDG_RUNTIME_DIR") {
-            let socket = format!("{}/biomeos/beardog.sock", runtime);
-            if std::path::Path::new(&socket).exists() {
-                return Ok(socket);
-            }
+        // Priority 2: XDG-compliant path via SystemPaths
+        let paths = biomeos_types::SystemPaths::new_lazy();
+        let security_provider =
+            biomeos_types::CapabilityTaxonomy::resolve_to_primal("security").unwrap_or("beardog");
+        let socket = paths.primal_socket(security_provider);
+        if socket.exists() {
+            return Ok(socket.to_string_lossy().to_string());
         }
 
-        // Priority 3: Family-based discovery
+        // Priority 3: Family-suffixed discovery
         if let Ok(family_id) = std::env::var("BIOMEOS_FAMILY_ID") {
-            let socket = format!("/tmp/beardog-{}.sock", family_id);
-            if std::path::Path::new(&socket).exists() {
-                return Ok(socket);
-            }
-        }
-
-        // Priority 4: Common patterns
-        let patterns = ["/tmp/beardog.sock", "/run/biomeos/beardog.sock"];
-        for pattern in &patterns {
-            if std::path::Path::new(pattern).exists() {
-                return Ok((*pattern).to_string());
+            let family_socket =
+                paths.primal_socket(&format!("{}-{}", security_provider, family_id));
+            if family_socket.exists() {
+                return Ok(family_socket.to_string_lossy().to_string());
             }
         }
 

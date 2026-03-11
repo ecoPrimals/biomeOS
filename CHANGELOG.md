@@ -2,6 +2,46 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## [v2.30] - 2026-03-11 (Deep Debt Evolution + Hardware Learning Wiring)
+
+### Deep Debt Evolution (8-Phase Plan)
+
+Comprehensive architecture evolution executed across 8 phases:
+
+| Phase | Scope | Result |
+|-------|-------|--------|
+| 1 | Capability-based routing | `primal_spawner.rs` match block → data-driven `primal_launch_profiles.toml`; bootstrap.rs + ai_advisor.rs use `CapabilityTaxonomy::resolve_to_primal()` |
+| 2 | Hardcoded path elimination | 7 files migrated from `/tmp` and hardcoded paths to `SystemPaths` XDG resolution |
+| 3 | Missing deploy graphs | 3 new graphs (`nucleus_simple`, `ui_atomic`, `livespore_create`); niche mappings fixed |
+| 4 | Large file refactoring | 6 files >1000 LOC split into domain modules (system, security, capability_handlers, genome_dist, protocol_escalation, nucleus) |
+| 5 | Dead code + placeholders | `usb.rs` metadata.len() bug fixed; `verification.rs` UNVERIFIED_SIGNATURE constant; config_builder domain method |
+| 6 | Env var centralization | New `biomeos-types/src/env_config.rs` with typed accessors for all BIOMEOS_* vars |
+| 7 | Rust modernization | Neural API routing → table-driven `ROUTE_TABLE` (78 entries); `unwrap_or_default()` → `tracing::warn!` fallbacks; `#![warn(missing_docs)]` on 4 crate roots |
+| 8 | Cargo.toml audit | `libc` removed from workspace + 3 crate Cargo.toml files; pure Rust dependency tree confirmed |
+
+### Hardware Learning Capability Wiring
+
+5 new `compute.hardware.*` capabilities registered for toadStool hw-learn crate:
+- `compute.hardware.observe` → `hw_learn.observe`
+- `compute.hardware.distill` → `hw_learn.distill`
+- `compute.hardware.apply` → `hw_learn.apply`
+- `compute.hardware.share` → `hw_learn.share_recipe`
+- `compute.hardware.status` → `hw_learn.status`
+
+`hardware_learning` keyword added to compute domain in both `capability_registry.toml` and `capability_domains.rs`.
+
+### Quality
+| Metric | Before | After |
+|--------|--------|-------|
+| Tests passing (sequential) | 3,248 | 3,148 (consolidated in module splits) |
+| Capability translations | 165+ | 170+ |
+| Deploy graphs | 21 | 24 |
+| Files >1000 LOC production | 0 | 0 |
+| Hardcoded paths in production | 0 | 0 |
+| External C deps | 0 | 0 |
+
+---
+
 ## [v2.28] - 2026-03-11 (Spring Absorption — Cross-Spring Evolution)
 
 ### Capability Translation Absorption

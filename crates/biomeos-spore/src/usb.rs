@@ -88,17 +88,22 @@ async fn probe_device(path: PathBuf) -> SporeResult<UsbDevice> {
                 (avail, total)
             }
             _ => {
-                // Fallback to placeholder if statvfs fails
-                let size = metadata.len();
-                (size, size.saturating_mul(2))
+                tracing::warn!(
+                    "statvfs failed for {}, reporting zero free space",
+                    path.display()
+                );
+                (0, 0)
             }
         }
     };
 
     #[cfg(not(unix))]
     let (available_space, total_space) = {
-        let size = metadata.len();
-        (size, size.saturating_mul(2))
+        tracing::warn!(
+            "statvfs unavailable on non-Unix, reporting zero free space for {}",
+            path.display()
+        );
+        (0u64, 0u64)
     };
 
     // Extract label from path (last component)

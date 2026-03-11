@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: March 11, 2026 (Spring Absorption — Cross-Spring Evolution)
-**Version**: 2.28
+**Updated**: March 11, 2026 (Deep Debt Evolution + Hardware Learning Wiring)
+**Version**: 2.30
 **Status**: PRODUCTION READY - Multi-Computer Federation Validated
 
 ---
@@ -16,7 +16,7 @@
 | **Security Grade** | A++ (TRUE PRIMAL + Security Headers + Dark Forest Gate) |
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A+ (Pure Rust, idiomatic, zero warnings, full doc coverage, sovereignty audit) |
-| **Tests Passing** | 3,670+ (0 failures) |
+| **Tests Passing** | 3,148 sequential (0 failures, 24 ignored) |
 | **Test Coverage** | 71.47% region, 74.32% function, 69.88% line (llvm-cov) |
 | **Unsafe Code** | 0 production, 0 test (libc::getuid → nix::unistd::Uid) |
 | **Clippy** | PASS (0 warnings) |
@@ -24,15 +24,15 @@
 | **Continuous Systems** | ContinuousExecutor (60Hz tick), GraphEventBroadcaster, SensorEventBus |
 | **XR/VR Types** | StereoConfig, Pose6DoF, TrackingFrame, HapticCommand, MotionCaptureAdapter |
 | **Surgical Domain** | SurgicalProcedure, TissueMaterial, AnatomyModel, PkModelParams |
-| **Capability Domains** | 13 domains (+ XR, medical), 165+ translations |
-| **Deploy Graphs** | 21 (+ hotspring, groundspring, healthspring, cross-spring ecology) |
+| **Capability Domains** | 13 domains (+ XR, medical), 170+ translations (+ 5 compute.hardware.*) |
+| **Deploy Graphs** | 24 (+ nucleus_simple, ui_atomic, livespore_create) |
 | **Niche Templates** | 13 (+ ecology-pipeline, hotspring, groundspring, healthspring) |
 | **Genetic Model** | EVOLVED - Mitochondrial + Nuclear DNA |
 | **BirdSong Discovery** | Encrypted, shared beacon model |
 | **Discovery Model** | Dynamic socket scanning + capability taxonomy |
 | **NAT Traversal** | 4-tier strategy (LAN/punch/coordinated/relay) |
 | **P2P Sovereign Onion** | PRODUCTION READY |
-| **External C deps** | 0 (`dirs` deprecated → `etcetera`, `libc` → `nix`) |
+| **External C deps** | 0 (`dirs` deprecated → `etcetera`, `libc` removed, `nix` for safe POSIX) |
 | **Files >1000 LOC** | 0 production (7 files have tests pushing total >1000; agents.rs + lifecycle_manager.rs refactored into modules) |
 | **Plasmodium** | HTTP JSON-RPC collective (runtime port, SSH legacy removed) |
 | **Model Cache** | NUCLEUS-integrated, HuggingFace import, NestGate fallback |
@@ -263,9 +263,29 @@ Live feed, continuous execution, and immersive VR foundations:
 | **Niche Templates** | `surgical-vr` niche (healthSpring + petalTongue + ludoSpring) with `surgical_vr_deploy.toml` graph |
 | **Tests** | 3,590 → 3,670+ (80 new tests for XR types, surgical domain, UI adapters, capability domains) |
 
+### Deep Debt Evolution Plan — 8-Phase Execution (Mar 11, 2026)
+
+Data-driven architecture evolution across 8 phases:
+
+| Phase | Scope | Key Changes |
+|-------|-------|-------------|
+| **1. Capability routing** | Eliminated hardcoded primal names from routing | `primal_spawner.rs` match block → `config/primal_launch_profiles.toml`; `bootstrap.rs`, `ai_advisor.rs` use `CapabilityTaxonomy::resolve_to_primal()` |
+| **2. Path elimination** | Removed all hardcoded socket/log/config paths | 7 files migrated to `SystemPaths` XDG; removed personal `/home/eastgate/` path from `genome_dist.rs` |
+| **3. Deploy graphs** | Created missing deployment graphs | `nucleus_simple.toml`, `ui_atomic.toml`, `livespore_create.toml`; niche template graph_id naming fixed |
+| **4. Large file splits** | 6 files >1000 LOC → domain modules | `system/lib.rs`, `security.rs`, `capability_handlers.rs`, `genome_dist.rs`, `protocol_escalation.rs`, `nucleus.rs` |
+| **5. Dead code** | Resolved placeholders and dead code | `usb.rs` metadata.len() bug; `UNVERIFIED_SIGNATURE` constant; `config_builder` domain method |
+| **6. Env centralization** | Single source of truth for env vars | New `biomeos-types/src/env_config.rs` with typed accessors |
+| **7. Rust modernization** | Table-driven routing, safer fallbacks, doc enforcement | Neural API `ROUTE_TABLE` (78 entries); `unwrap_or_default` → `tracing::warn!`; `#![warn(missing_docs)]` on 4 crates |
+| **8. Cargo audit** | Pure Rust dependency tree | `libc` removed from workspace + 3 crates; only `linux-raw-sys` (pure Rust syscall interface) |
+
+### Hardware Learning Capability Wiring (Mar 11, 2026)
+
+5 `compute.hardware.*` capabilities registered for toadStool hw-learn crate (vendor-neutral GPU init learning):
+- `observe`, `distill`, `apply`, `share`, `status` → toadstool `hw_learn.*` methods
+
 ### Deep Debt Evolution + Sovereignty Audit (Mar 11, 2026)
 
-Comprehensive audit and evolution against wateringHole standards:
+Previous audit results (preserved as fossil record):
 
 | Category | Change |
 |----------|--------|
@@ -720,20 +740,21 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 
 ---
 
-**Status**: Production Ready (continuous systems + XR/surgical VR evolution complete)
+**Status**: Production Ready (deep debt evolution + hw-learn wiring complete)
 **AI Bridge**: Squirrel -> Songbird -> Cloud/Local AI (validated)
 **Continuous Systems**: ContinuousExecutor (60Hz tick), push events, sensor routing
 **XR/VR**: StereoRenderAdapter, MotionCaptureAdapter, HapticPipeline
 **Surgical Domain**: SurgicalProcedure, TissueMaterial, AnatomyModel, PkModelParams
 **Plasmodium**: HTTP JSON-RPC collective (runtime port, SSH deprecated)
-**Neural API**: 140+ translations, proxy_http, capability.call
+**Neural API**: 170+ translations, proxy_http, capability.call, compute.hardware.*
 **NAT Traversal**: 4-tier strategy orchestrator (LAN/punch/coordinated/relay)
 **Lifecycle**: Deep health monitoring, auto-resurrection
 **Genetic Model**: Evolved (Mitochondrial + Nuclear, Blake3-Lineage-KDF enrollment)
 **IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate)
 **Security**: A++ (Two-seed Dark Forest)
-**Code Quality**: A+ (Pure Rust, idiomatic, zero warnings, full doc coverage)
-**Tests**: 3,670+ passing (71.47% region coverage via llvm-cov)
+**Code Quality**: A+ (Pure Rust, idiomatic, zero warnings, full doc coverage, table-driven routing)
+**Tests**: 3,148 passing sequential (71.47% region coverage via llvm-cov)
 **Clippy**: PASS (0 warnings) | **Format**: PASS
 **Docs**: Full coverage (0 missing_docs warnings across 8 crates)
 **Unsafe Code**: 0 (production + tests)
+**External C deps**: 0 (libc removed, pure Rust)

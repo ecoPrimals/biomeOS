@@ -7,6 +7,12 @@ use clap::Args;
 use std::path::PathBuf;
 use tracing::info;
 
+fn default_federation_config_dir() -> PathBuf {
+    biomeos_types::SystemPaths::new_lazy()
+        .data_dir()
+        .join("federation")
+}
+
 /// Arguments for creating a sub-federation
 #[derive(Args, Debug)]
 pub struct CreateSubfedArgs {
@@ -31,7 +37,7 @@ pub struct CreateSubfedArgs {
     pub isolation: String,
 
     /// Configuration directory
-    #[arg(long, default_value = "/var/biomeos/federation")]
+    #[arg(long, default_value_os_t = default_federation_config_dir())]
     pub config_dir: PathBuf,
 }
 
@@ -39,7 +45,7 @@ pub struct CreateSubfedArgs {
 #[derive(Args, Debug)]
 pub struct ListSubfedsArgs {
     /// Configuration directory
-    #[arg(long, default_value = "/var/biomeos/federation")]
+    #[arg(long, default_value_os_t = default_federation_config_dir())]
     pub config_dir: PathBuf,
 
     /// Filter by family ID
@@ -63,7 +69,7 @@ pub struct JoinSubfedArgs {
     pub node: String,
 
     /// Configuration directory
-    #[arg(long, default_value = "/var/biomeos/federation")]
+    #[arg(long, default_value_os_t = default_federation_config_dir())]
     pub config_dir: PathBuf,
 }
 
@@ -83,7 +89,7 @@ pub struct CheckAccessArgs {
     pub subfed: Option<String>,
 
     /// Configuration directory
-    #[arg(long, default_value = "/var/biomeos/federation")]
+    #[arg(long, default_value_os_t = default_federation_config_dir())]
     pub config_dir: PathBuf,
 }
 

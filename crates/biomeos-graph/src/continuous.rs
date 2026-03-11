@@ -156,7 +156,7 @@ impl std::fmt::Display for SessionState {
 #[derive(Debug, Clone)]
 struct CachedOutput {
     value: serde_json::Value,
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Written for diagnostics; will be read for cache-staleness checks
     tick: u64,
 }
 

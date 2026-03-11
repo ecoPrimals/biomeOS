@@ -1,7 +1,7 @@
 # Start Here - biomeOS
 
-**Last Updated**: February 11, 2026
-**Status**: Production Ready - Full Doc Coverage, Zero Warnings
+**Last Updated**: March 11, 2026
+**Status**: Production Ready - Full Doc Coverage, Zero Warnings, Zero C deps
 
 ---
 
@@ -14,7 +14,7 @@ biomeOS is the **ecosystem orchestrator** for ecoPrimals - a federation of auton
 - **Primals**: Self-contained Rust binaries with specific capabilities
 - **Atomics**: Primal combinations (Tower = BearDog + Songbird)
 - **NUCLEUS**: Complete system (Tower + Node + Nest + Squirrel)
-- **Neural API**: Semantic routing via `capability.call` (124 translations, part of biomeOS)
+- **Neural API**: Semantic routing via `capability.call` (170+ translations, part of biomeOS)
 - **Universal IPC v3.0**: Multi-transport communication (Unix/Abstract/TCP/HTTP JSON-RPC)
 - **Dark Forest**: Zero-metadata beacon discovery using genetic lineage
 - **Plasmodium**: Over-NUCLEUS collective coordination (slime mold pattern)

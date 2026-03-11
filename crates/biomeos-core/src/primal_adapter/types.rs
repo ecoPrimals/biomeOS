@@ -306,8 +306,11 @@ impl PrimalAdapter {
             _ => {}
         }
 
-        // Redirect output to /tmp
-        let log_path = format!("/tmp/{}.log", self.name);
+        // Redirect output to XDG state directory
+        let log_path = biomeos_types::SystemPaths::new_lazy().log_file(&self.name);
+        if let Some(parent) = log_path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
         let log_file = std::fs::File::create(&log_path)?;
         cmd.stdout(log_file.try_clone()?);
         cmd.stderr(log_file);

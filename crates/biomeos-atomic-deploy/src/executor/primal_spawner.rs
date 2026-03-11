@@ -9,6 +9,7 @@
 //! - Output stream capture and relay
 
 use anyhow::{Context, Result};
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::Stdio;
 use tokio::process::{Child, Command};
@@ -27,10 +28,11 @@ use crate::neural_graph::GraphNode;
 ///
 /// # Search Order
 ///
-/// 1. `BIOMEOS_PLASMID_BIN_DIR` environment variable
-/// 2. `./plasmidBin` directory (current directory)
-/// 3. `../plasmidBin` directory (parent directory)
-/// 4. `../../plasmidBin` directory (workspace structure)
+/// 1. `ECOPRIMALS_PLASMID_BIN` environment variable (ecosystem root)
+/// 2. `BIOMEOS_PLASMID_BIN_DIR` environment variable (biomeOS-local)
+/// 3. `./plasmidBin` directory (current directory)
+/// 4. `../plasmidBin` directory (parent directory)
+/// 5. `../../plasmidBin` directory (reaches ecosystem root from phase2/biomeOS/)
 ///
 /// # Binary Patterns
 ///
@@ -57,14 +59,16 @@ pub async fn discover_primal_binary(
     primal_name: &str,
     _context: &ExecutionContext,
 ) -> Result<PathBuf> {
-    // Get base directories from environment or defaults
     let base_dirs: &[Option<PathBuf>] = &[
+        std::env::var("ECOPRIMALS_PLASMID_BIN")
+            .ok()
+            .map(PathBuf::from),
         std::env::var("BIOMEOS_PLASMID_BIN_DIR")
             .ok()
             .map(PathBuf::from),
         Some(PathBuf::from("./plasmidBin")),
         Some(PathBuf::from("../plasmidBin")),
-        Some(PathBuf::from("../../plasmidBin")), // For workspace structure
+        Some(PathBuf::from("../../plasmidBin")),
     ];
 
     // Auto-detect architecture from target triple
@@ -109,7 +113,7 @@ pub async fn discover_primal_binary(
     // Not found - provide helpful error
     anyhow::bail!(
         "Binary not found for primal '{}'. Searched in: {:?}. \
-         Set BIOMEOS_PLASMID_BIN_DIR to specify binary location.",
+         Set ECOPRIMALS_PLASMID_BIN or BIOMEOS_PLASMID_BIN_DIR to specify binary location.",
         primal_name,
         base_dirs
             .iter()
@@ -214,13 +218,51 @@ pub async fn spawn_primal_process(
     Ok(child)
 }
 
+/// Data-driven primal launch profile (loaded from config/primal_launch_profiles.toml)
+#[derive(Debug, Clone, serde::Deserialize)]
+struct LaunchProfile {
+    socket_flag: Option<String>,
+    pass_family_id: Option<bool>,
+    env_socket: Option<String>,
+    #[serde(default)]
+    extra_env: HashMap<String, String>,
+    #[serde(default)]
+    env_sockets: HashMap<String, String>,
+    #[serde(default)]
+    cli_sockets: HashMap<String, String>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct LaunchProfilesConfig {
+    default: LaunchProfile,
+    #[serde(default)]
+    profiles: HashMap<String, LaunchProfile>,
+}
+
+static LAUNCH_PROFILES_TOML: &str = include_str!("../../../../config/primal_launch_profiles.toml");
+
+fn load_launch_profiles() -> LaunchProfilesConfig {
+    toml::from_str(LAUNCH_PROFILES_TOML).unwrap_or_else(|e| {
+        warn!("Failed to parse primal launch profiles: {}", e);
+        LaunchProfilesConfig {
+            default: LaunchProfile {
+                socket_flag: Some("--socket".to_string()),
+                pass_family_id: Some(true),
+                env_socket: Some("PRIMAL_SOCKET".to_string()),
+                extra_env: HashMap::new(),
+                env_sockets: HashMap::new(),
+                cli_sockets: HashMap::new(),
+            },
+            profiles: HashMap::new(),
+        }
+    })
+}
+
 /// Configure primal-specific socket paths and arguments
 ///
-/// Different primals have different socket configuration methods:
-/// - **BearDog**: CLI flags (`--socket`, `--family-id`) - GOLD STANDARD
-/// - **Squirrel**: CLI flag (`--socket`) + Neural API endpoint
-/// - **Songbird**: Environment variables + BearDog bonding
-/// - **Generic**: Try CLI flags (follow BearDog pattern)
+/// Uses data-driven launch profiles from `config/primal_launch_profiles.toml`.
+/// Primals not listed in the config inherit the `[default]` profile.
+/// New primals can be onboarded by adding a TOML entry — no code changes needed.
 async fn configure_primal_sockets(
     cmd: &mut Command,
     primal_name: &str,
@@ -228,54 +270,60 @@ async fn configure_primal_sockets(
     family_id: &str,
     context: &ExecutionContext,
 ) {
-    match primal_name {
-        "beardog" => {
-            // BearDog: GOLD STANDARD - uses CLI flags
-            cmd.arg("--socket").arg(socket_path);
-            cmd.arg("--family-id").arg(family_id);
-        }
-        "squirrel" => {
-            // Squirrel: Uses --socket CLI flag
-            cmd.arg("--socket").arg(socket_path);
-            // Also pass Neural API endpoint for routing
-            let neural_api_socket = context.get_socket_path("neural-api").await;
-            cmd.env("SERVICE_MESH_ENDPOINT", neural_api_socket);
-        }
-        "songbird" => {
-            // Songbird v3.33.0: CLI flags + environment variables
-            // EVOLUTION COMPLETE (Jan 28, 2026) - Songbird now supports --socket CLI
-            cmd.arg("--socket").arg(socket_path);
+    let config = load_launch_profiles();
+    let profile = config.profiles.get(primal_name);
+    let defaults = &config.default;
 
-            // Bond to BearDog for security (TLS crypto delegation)
-            let beardog_socket = context.get_socket_path("beardog").await;
-            cmd.arg("--beardog-socket").arg(&beardog_socket);
+    let socket_flag = profile
+        .and_then(|p| p.socket_flag.as_deref())
+        .or(defaults.socket_flag.as_deref())
+        .unwrap_or("--socket");
 
-            // Environment variables for Songbird configuration
-            cmd.env("BEARDOG_MODE", "direct"); // Direct RPC to BearDog
-            cmd.env("BEARDOG_SOCKET", &beardog_socket);
-            cmd.env("SONGBIRD_SECURITY_PROVIDER", "beardog"); // Provider name, not socket!
-            cmd.env("FAMILY_ID", family_id);
+    let pass_family_id = profile
+        .and_then(|p| p.pass_family_id)
+        .or(defaults.pass_family_id)
+        .unwrap_or(true);
 
-            // Neural API socket for capability.call routing
-            let neural_api_socket = context.get_socket_path("neural-api").await;
-            cmd.env("NEURAL_API_SOCKET", &neural_api_socket);
+    let env_socket = profile
+        .and_then(|p| p.env_socket.as_deref())
+        .or(defaults.env_socket.as_deref());
 
-            info!("   🧬 Bonding Songbird → BearDog: {}", beardog_socket);
-            info!("   🧠 Neural API: {}", neural_api_socket);
+    // Primary socket CLI flag
+    cmd.arg(socket_flag).arg(socket_path);
+
+    if pass_family_id {
+        cmd.arg("--family-id").arg(family_id);
+    }
+
+    // Env var fallback for socket path (only for unknown primals without a profile)
+    if profile.is_none() {
+        if let Some(env_name) = env_socket {
+            cmd.env(env_name, socket_path);
         }
-        "nestgate" | "toadstool" => {
-            // Generic: try --socket flag (follow BearDog pattern)
-            cmd.arg("--socket").arg(socket_path);
-            cmd.arg("--family-id").arg(family_id);
+        warn!("   No launch profile for '{}', using defaults", primal_name);
+    }
+
+    // Static extra env vars from the profile
+    if let Some(p) = profile {
+        for (key, value) in &p.extra_env {
+            cmd.env(key, value);
         }
-        _ => {
-            // Unknown primal: try both methods
-            warn!(
-                "   ⚠️  Unknown primal '{}', using generic configuration",
-                primal_name
-            );
-            cmd.arg("--socket").arg(socket_path);
-            cmd.env("PRIMAL_SOCKET", socket_path);
+
+        // Env vars whose values are resolved socket paths of other primals
+        for (env_name, socket_ref) in &p.env_sockets {
+            if socket_ref == "$family_id" {
+                cmd.env(env_name, family_id);
+            } else {
+                let resolved = context.get_socket_path(socket_ref).await;
+                cmd.env(env_name, &resolved);
+            }
+        }
+
+        // Extra CLI flags whose values are resolved socket paths
+        for (flag, socket_ref) in &p.cli_sockets {
+            let resolved = context.get_socket_path(socket_ref).await;
+            cmd.arg(flag).arg(&resolved);
+            info!("   Bonding {} → {}: {}", primal_name, socket_ref, resolved);
         }
     }
 }

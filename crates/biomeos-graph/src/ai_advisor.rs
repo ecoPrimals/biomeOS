@@ -15,6 +15,7 @@ use crate::graph::{Operation, PrimalGraph, PrimalNode, PrimalSelector};
 use crate::modification::GraphModification;
 use anyhow::Result;
 use biomeos_nucleus::client::call_unix_socket_rpc;
+use biomeos_types::capability_taxonomy::CapabilityTaxonomy;
 use biomeos_types::SystemPaths;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -191,6 +192,11 @@ struct LocalPattern {
 }
 
 impl AiGraphAdvisor {
+    /// Resolve the AI provider primal name via capability taxonomy
+    fn ai_provider() -> &'static str {
+        CapabilityTaxonomy::resolve_to_primal("ai").unwrap_or("squirrel")
+    }
+
     /// Create a new AI advisor
     pub fn new() -> Self {
         Self {
@@ -209,10 +215,9 @@ impl AiGraphAdvisor {
         }
     }
 
-    /// Check if Squirrel is available
+    /// Check if the AI provider is available
     pub async fn check_squirrel_availability(&mut self) -> Result<bool> {
-        // Discover Squirrel via XDG-compliant socket path
-        let socket_path = SystemPaths::primal_socket("squirrel");
+        let socket_path = SystemPaths::primal_socket(Self::ai_provider());
 
         if !std::path::Path::new(&socket_path).exists() {
             debug!("Squirrel socket not found at {}", socket_path);
@@ -257,7 +262,7 @@ impl AiGraphAdvisor {
 
     /// Get suggestions from Squirrel
     async fn get_squirrel_suggestions(&self, graph: &PrimalGraph) -> Result<Vec<AiSuggestion>> {
-        let socket_path = SystemPaths::primal_socket("squirrel");
+        let socket_path = SystemPaths::primal_socket(Self::ai_provider());
         let graph_snapshot = GraphSnapshot::from_graph(graph);
 
         let result = timeout(self.squirrel_timeout, async {
@@ -483,7 +488,7 @@ impl AiGraphAdvisor {
             return Ok(());
         }
 
-        let socket_path = SystemPaths::primal_socket("squirrel");
+        let socket_path = SystemPaths::primal_socket(Self::ai_provider());
 
         match call_unix_socket_rpc::<serde_json::Value>(
             &socket_path,
@@ -517,7 +522,7 @@ impl AiGraphAdvisor {
             return Ok(());
         }
 
-        let socket_path = SystemPaths::primal_socket("squirrel");
+        let socket_path = SystemPaths::primal_socket(Self::ai_provider());
 
         match call_unix_socket_rpc::<serde_json::Value>(
             &socket_path,

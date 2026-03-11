@@ -282,8 +282,10 @@ fn get_genome_storage_dir() -> PathBuf {
         return PathBuf::from(home).join(".local/share/biomeos/genomes");
     }
 
-    // Last resort: /tmp
-    PathBuf::from("/tmp/biomeos/genomes")
+    // Last resort: XDG-compliant data dir
+    biomeos_types::SystemPaths::new_lazy()
+        .data_dir()
+        .join("genomes")
 }
 
 /// Handle genome list command
