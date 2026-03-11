@@ -77,3 +77,81 @@ impl NeuralApiServer {
         Ok(result)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::neural_api_server::NeuralApiServer;
+
+    fn create_test_server() -> NeuralApiServer {
+        let temp = tempfile::tempdir().expect("temp dir");
+        NeuralApiServer::new(temp.path(), "test_family", temp.path().join("neural.sock"))
+    }
+
+    #[tokio::test]
+    async fn test_proxy_http_missing_params() {
+        let server = create_test_server();
+        let result = server.proxy_http(&None).await;
+        let err = result.expect_err("should fail with missing params");
+        assert!(
+            err.to_string().contains("Missing") || err.to_string().contains("parameter"),
+            "expected missing params error, got: {}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    async fn test_proxy_http_missing_method() {
+        let server = create_test_server();
+        let params = Some(serde_json::json!({
+            "url": "https://example.com",
+            "headers": {}
+        }));
+        let result = server.proxy_http(&params).await;
+        let err = result.expect_err("should fail with missing method");
+        assert!(
+            err.to_string().contains("method") || err.to_string().contains("Method"),
+            "expected missing method error, got: {}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    async fn test_proxy_http_missing_url() {
+        let server = create_test_server();
+        let params = Some(serde_json::json!({
+            "method": "GET",
+            "headers": {}
+        }));
+        let result = server.proxy_http(&params).await;
+        let err = result.expect_err("should fail with missing URL");
+        assert!(
+            err.to_string().contains("URL") || err.to_string().contains("url"),
+            "expected missing URL error, got: {}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    async fn test_proxy_http_method_not_string() {
+        let server = create_test_server();
+        let params = Some(serde_json::json!({
+            "method": 123,
+            "url": "https://example.com"
+        }));
+        let result = server.proxy_http(&params).await;
+        let err = result.expect_err("should fail when method is not string");
+        assert!(!err.to_string().is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_proxy_http_url_not_string() {
+        let server = create_test_server();
+        let params = Some(serde_json::json!({
+            "method": "GET",
+            "url": ["not", "a", "string"]
+        }));
+        let result = server.proxy_http(&params).await;
+        let err = result.expect_err("should fail when url is not string");
+        assert!(!err.to_string().is_empty());
+    }
+}

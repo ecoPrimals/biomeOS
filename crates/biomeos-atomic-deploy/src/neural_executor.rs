@@ -248,6 +248,11 @@ impl GraphExecutor {
             // Allows graph nodes to call arbitrary methods on primals
             "rpc_call" => Self::node_rpc_call(node, context).await,
 
+            // Capability call (NEW - Mar 1, 2026)
+            // Routes through neural-api capability.call for semantic resolution.
+            // Falls back to direct primal RPC if neural-api is unavailable.
+            "capability_call" => Self::node_capability_call(node, context).await,
+
             // Unknown
             _ => {
                 warn!("Unknown node type: {}, skipping", node_type_str);
@@ -259,7 +264,7 @@ impl GraphExecutor {
     }
 
     /// Substitute environment variables in a string
-    #[allow(dead_code)] // Reserved for graph environment variable expansion
+    #[allow(dead_code)] // Used by tests; shared with executor::node_handlers for production
     pub(crate) fn substitute_env(s: &str, env: &HashMap<String, String>) -> String {
         let mut result = s.to_string();
 
@@ -355,237 +360,10 @@ impl GraphExecutor {
 }
 
 // =============================================================================
-// Phase 2 Node Executors: primal_start & verification
+// Phase 2 Node Executors: verification
 // =============================================================================
 
 impl GraphExecutor {
-    /// Node executor: primal_start
-    /// Spawns a primal binary as a child process with environment configuration
-    #[allow(dead_code)] // Reserved for graph-based primal spawning
-    async fn node_primal_start(
-        node: &GraphNode,
-        context: &ExecutionContext,
-    ) -> Result<serde_json::Value> {
-        use std::process::Stdio;
-        use std::time::Duration;
-        use tokio::process::Command;
-
-        info!("   🔵 Starting node_primal_start for: {}", node.id);
-        info!("   📋 Node config: {:?}", node.config);
-
-        // Get binary path from config (try both 'binary_path' and 'binary')
-        let binary = node
-            .config
-            .get("binary_path")
-            .or_else(|| node.config.get("binary"))
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| {
-                error!(
-                    "Config keys available: {:?}",
-                    node.config.keys().collect::<Vec<_>>()
-                );
-                anyhow::anyhow!("Missing 'binary_path' or 'binary' in config")
-            })?;
-        let binary = Self::substitute_env(binary, &context.env);
-        info!("   🔍 Found binary: {}", binary);
-
-        // Get family_id from config
-        let family_id = node
-            .config
-            .get("family_id")
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| anyhow::anyhow!("Missing 'family_id' in config"))?;
-        let family_id = Self::substitute_env(family_id, &context.env);
-
-        // Get socket path from config (try both 'socket_path' and 'socket')
-        let socket = node
-            .config
-            .get("socket_path")
-            .or_else(|| node.config.get("socket"))
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| anyhow::anyhow!("Missing 'socket_path' or 'socket' in config"))?;
-        let socket = Self::substitute_env(socket, &context.env);
-
-        info!("   Starting primal: {} (family: {})", node.id, family_id);
-        info!("   Binary: {}", binary);
-        info!("   Socket: {}", socket);
-
-        // Check if binary exists
-        if tokio::fs::metadata(&binary).await.is_err() {
-            anyhow::bail!("Binary not found: {}", binary);
-        }
-
-        // Clean old socket if exists
-        let socket_path = std::path::PathBuf::from(&socket);
-        if socket_path.exists() {
-            tokio::fs::remove_file(&socket_path).await.ok();
-        }
-
-        // Create log directory (use runtime dir, not hardcoded /tmp/)
-        let runtime_dir = std::env::var("BIOMEOS_RUNTIME_DIR")
-            .or_else(|_| std::env::var("TMPDIR"))
-            .unwrap_or_else(|_| "/tmp".to_string());
-        let log_dir = format!("{}/primals", runtime_dir);
-        std::fs::create_dir_all(&log_dir).ok();
-        let log_path = format!("{}/{}-{}.log", log_dir, node.id, family_id);
-
-        // Build command
-        let mut cmd = Command::new(&binary);
-
-        // Add arguments if specified
-        if let Some(args_array) = node.config.get("args").and_then(|v| v.as_array()) {
-            for arg in args_array {
-                if let Some(arg_str) = arg.as_str() {
-                    cmd.arg(arg_str);
-                }
-            }
-        }
-
-        // Set environment variables
-        cmd.env("BIOMEOS_FAMILY_ID", &family_id);
-        cmd.env("BIOMEOS_SOCKET_PATH", &socket);
-
-        // Add primal-specific variants (backward compat)
-        // Use primal_name if available, otherwise fall back to node.id
-        let primal_for_env = node
-            .config
-            .get("primal_name")
-            .and_then(|v| v.as_str())
-            .unwrap_or(&node.id);
-        let primal_upper = primal_for_env.to_uppercase().replace("-", "_");
-
-        // Pass socket path with BOTH primal-specific AND generic names
-        // This ensures primals like ToadStool can find their socket path
-        cmd.env(format!("{}_SOCKET", primal_upper), &socket);
-        cmd.env(format!("{}_SOCKET_PATH", primal_upper), &socket); // Also set with _PATH suffix
-        cmd.env(format!("{}_FAMILY", primal_upper), &family_id);
-        cmd.env(format!("{}_FAMILY_ID", primal_upper), &family_id);
-
-        info!("   🔧 Environment variables set:");
-        info!("      BIOMEOS_FAMILY_ID: {}", family_id);
-        info!("      BIOMEOS_SOCKET_PATH: {}", socket);
-        info!("      {}_SOCKET: {}", primal_upper, socket);
-        info!("      {}_FAMILY: {}", primal_upper, family_id);
-
-        // Add security_provider for primals that need it (e.g., Songbird, NestGate)
-        if let Some(security_provider) = node
-            .config
-            .get("security_provider")
-            .and_then(|v| v.as_str())
-        {
-            let security_provider = Self::substitute_env(security_provider, &context.env);
-
-            // Set generic security endpoint
-            cmd.env("SECURITY_ENDPOINT", &security_provider);
-
-            // Add primal-specific variants
-            cmd.env("SONGBIRD_SECURITY_PROVIDER", &security_provider);
-            cmd.env("NESTGATE_SECURITY_PROVIDER", &security_provider);
-
-            // Request JWT_SECRET from BearDog for primals that need it
-            // This is TRUE PRIMAL: runtime capability-based secret management
-            if primal_for_env.contains("nestgate") || primal_for_env.contains("NESTGATE") {
-                info!("   🔐 Requesting JWT_SECRET from BearDog security provider...");
-
-                // Use new beardog_jwt_client module (cleaner implementation)
-                let jwt_purpose = format!("{}_authentication", primal_for_env);
-                match crate::beardog_jwt_client::provision_jwt_secret(
-                    Some(&security_provider),
-                    &jwt_purpose,
-                )
-                .await
-                {
-                    Ok(jwt_secret) => {
-                        info!(
-                            "   ✅ Received JWT_SECRET from BearDog ({} bytes)",
-                            jwt_secret.len()
-                        );
-                        cmd.env("JWT_SECRET", jwt_secret.clone());
-                        cmd.env("NESTGATE_JWT_SECRET", jwt_secret);
-                    }
-                    Err(e) => {
-                        warn!("   ⚠️ Failed to provision JWT_SECRET: {}. This will block NestGate startup!", e);
-                        return Err(e.context("JWT provisioning failed for NestGate"));
-                    }
-                }
-            }
-        }
-
-        // Redirect stdio to log file
-        let log_file = std::fs::File::create(&log_path)?;
-        cmd.stdout(Stdio::from(log_file.try_clone()?));
-        cmd.stderr(Stdio::from(log_file));
-        cmd.stdin(Stdio::null());
-
-        // Spawn process
-        let mut child = cmd
-            .spawn()
-            .context(format!("Failed to spawn {}", node.id))?;
-
-        let pid = child.id().unwrap_or(0);
-        info!("   ✅ Spawned {} (PID: {})", node.id, pid);
-
-        // Modern async: Check if process crashes immediately using timeout
-        let crash_check = async {
-            let mut interval = tokio::time::interval(Duration::from_millis(50));
-            for _ in 0..6 {
-                // Check 6 times over 300ms
-                interval.tick().await;
-                match child.try_wait()? {
-                    Some(status) => {
-                        anyhow::bail!(
-                            "Process {} exited immediately with status: {}. Check log: {}",
-                            node.id,
-                            status,
-                            log_path
-                        );
-                    }
-                    None => continue,
-                }
-            }
-            Ok::<_, anyhow::Error>(())
-        };
-
-        crash_check.await?;
-        info!("   ✅ {} running (log: {})", node.id, log_path);
-        // Don't wait - let it run in background
-        std::mem::forget(child);
-
-        // Modern async: Wait for socket with exponential backoff
-        let socket_timeout = Duration::from_secs(10);
-        let mut interval = tokio::time::interval(Duration::from_millis(100));
-        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
-
-        let socket_wait = async {
-            loop {
-                interval.tick().await;
-                if socket_path.exists() {
-                    return Ok::<(), anyhow::Error>(());
-                }
-            }
-        };
-
-        match tokio::time::timeout(socket_timeout, socket_wait).await {
-            Ok(_) => {
-                info!("   ✅ Socket created: {}", socket);
-                Ok(serde_json::json!({
-                    "primal": node.id,
-                    "pid": pid,
-                    "socket": socket,
-                    "log": log_path,
-                    "status": "running"
-                }))
-            }
-            Err(_) => {
-                anyhow::bail!(
-                    "Socket not created after {}s: {}",
-                    socket_timeout.as_secs(),
-                    socket
-                )
-            }
-        }
-    }
-
     /// Node executor: verification
     /// Verifies primal health by checking sockets and optionally querying via JSON-RPC
     async fn node_verification(
@@ -691,42 +469,6 @@ impl GraphExecutor {
             "healthy_count": healthy_primals.len(),
             "primals": healthy_primals
         }))
-    }
-
-    /// Find security provider socket from execution context
-    ///
-    /// DEEP DEBT EVOLUTION: Resolves security provider by capability, not name.
-    /// Uses graph output first, then env override, then nucleation fallback.
-    #[allow(dead_code)] // Used conditionally based on security features
-    async fn find_security_socket(context: &ExecutionContext) -> Option<String> {
-        use crate::nucleation::SocketNucleation;
-
-        // 1. Try to get from graph execution outputs (capability-based)
-        for node_name in &["launch_security", "launch_beardog"] {
-            if let Some(output) = context.get_output(node_name).await {
-                if let Some(socket) = output.get("socket").and_then(|v| v.as_str()) {
-                    return Some(socket.to_string());
-                }
-            }
-        }
-
-        // 2. Try env override (DEEP DEBT: configurable, not hardcoded)
-        if let Ok(socket) = std::env::var("BIOMEOS_SECURITY_SOCKET") {
-            if tokio::fs::metadata(&socket).await.is_ok() {
-                return Some(socket);
-            }
-        }
-
-        // 3. Fall back to nucleation with resolved provider name
-        let provider =
-            std::env::var("BIOMEOS_SECURITY_PROVIDER").unwrap_or_else(|_| "beardog".to_string());
-        let mut nucleation = SocketNucleation::default();
-        let default_socket = nucleation.assign_socket(&provider, &context.family_id);
-        if tokio::fs::metadata(&default_socket).await.is_ok() {
-            return Some(default_socket.to_string_lossy().into_owned());
-        }
-
-        None
     }
 
     // DEEP DEBT EVOLUTION (Feb 7, 2026): Removed legacy `request_jwt_secret_from_beardog`
@@ -845,6 +587,202 @@ impl GraphExecutor {
             "result": result,
             "success": true
         }))
+    }
+
+    /// Node executor: capability_call
+    /// Routes semantic capability calls through the neural-api or directly to primals.
+    ///
+    /// Graph nodes specify a `capability` (e.g. "ecology.et0_fao56") and `params`.
+    /// This handler:
+    /// 1. Tries routing via the neural-api `capability.call` JSON-RPC method
+    /// 2. Falls back to direct primal socket resolution via `capability_domains`
+    ///
+    /// NEW (Mar 1, 2026) — Enables science pipeline graphs (science_pipeline.toml,
+    /// neuralspring_spectral_pipeline.toml, airspring_ecology_pipeline.toml)
+    async fn node_capability_call(
+        node: &GraphNode,
+        context: &ExecutionContext,
+    ) -> Result<serde_json::Value> {
+        use std::time::Duration;
+
+        let capability = node
+            .config
+            .get("capability")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| anyhow::anyhow!("capability_call requires 'capability' config"))?;
+
+        let params = node
+            .config
+            .get("params")
+            .cloned()
+            .unwrap_or_else(|| serde_json::json!({}));
+
+        let params_str = serde_json::to_string(&params)?;
+        let params_expanded = crate::executor::substitute_env(&params_str, context.env());
+        let params: serde_json::Value = serde_json::from_str(&params_expanded)?;
+
+        info!("   🔬 Capability call: {}({:?})", capability, params);
+
+        let timeout_ms = node
+            .config
+            .get("timeout_ms")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(30_000);
+
+        // Split capability into (domain, operation) for capability.call semantics
+        let (cap_domain, cap_operation) = if let Some(dot_pos) = capability.find('.') {
+            (&capability[..dot_pos], &capability[dot_pos + 1..])
+        } else {
+            (capability, "execute")
+        };
+
+        // Strategy 1: Route via neural-api capability.call
+        let neural_api_socket = context.get_socket_path("neural-api").await;
+        let neural_api_path = std::path::PathBuf::from(&neural_api_socket);
+
+        if neural_api_path.exists() {
+            let request = serde_json::json!({
+                "jsonrpc": "2.0",
+                "method": "capability.call",
+                "params": {
+                    "capability": cap_domain,
+                    "operation": cap_operation,
+                    "args": params,
+                },
+                "id": 1,
+            });
+
+            match tokio::time::timeout(
+                Duration::from_millis(timeout_ms),
+                Self::send_jsonrpc_async(&neural_api_socket, &request),
+            )
+            .await
+            {
+                Ok(Ok(response)) => {
+                    if let Some(error) = response.get("error") {
+                        let msg = error
+                            .get("message")
+                            .and_then(|m| m.as_str())
+                            .unwrap_or("unknown");
+                        warn!(
+                            "   ⚠️ capability.call({}) via neural-api failed: {}, trying direct",
+                            capability, msg
+                        );
+                    } else {
+                        let result = response
+                            .get("result")
+                            .cloned()
+                            .unwrap_or(serde_json::Value::Null);
+                        info!(
+                            "   ✅ Capability call via neural-api: {} → success",
+                            capability
+                        );
+                        return Ok(serde_json::json!({
+                            "capability": capability,
+                            "routed_via": "neural-api",
+                            "result": result,
+                            "success": true,
+                        }));
+                    }
+                }
+                Ok(Err(e)) => {
+                    warn!(
+                        "   ⚠️ neural-api unreachable for {}: {}, trying direct",
+                        capability, e
+                    );
+                }
+                Err(_) => {
+                    warn!(
+                        "   ⚠️ neural-api timeout for {} ({}ms), trying direct",
+                        capability, timeout_ms
+                    );
+                }
+            }
+        }
+
+        // Strategy 2: Direct primal resolution via capability domains
+        let provider = crate::capability_domains::capability_to_provider_fallback(capability)
+            .or_else(|| crate::capability_domains::capability_to_provider_fallback(cap_domain));
+
+        let provider = provider.ok_or_else(|| {
+            anyhow::anyhow!(
+                "No provider found for capability '{}' (neither neural-api nor fallback)",
+                capability
+            )
+        })?;
+
+        info!(
+            "   📞 Direct capability call: {} → {} ({})",
+            capability, provider, cap_operation
+        );
+
+        let socket_path = context.get_socket_path(provider).await;
+
+        let request = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": capability,
+            "params": params,
+            "id": 1,
+        });
+
+        let response = tokio::time::timeout(
+            Duration::from_millis(timeout_ms),
+            Self::send_jsonrpc_async(&socket_path, &request),
+        )
+        .await
+        .context(format!("Timeout on capability call: {}", capability))?
+        .context(format!(
+            "Failed capability call {} → {} at {}",
+            capability, provider, socket_path
+        ))?;
+
+        if let Some(error) = response.get("error") {
+            let msg = error
+                .get("message")
+                .and_then(|m| m.as_str())
+                .unwrap_or("unknown");
+            anyhow::bail!("Capability call {} failed: {}", capability, msg);
+        }
+
+        let result = response
+            .get("result")
+            .cloned()
+            .unwrap_or(serde_json::Value::Null);
+
+        info!("   ✅ Direct capability call: {} → success", capability);
+
+        Ok(serde_json::json!({
+            "capability": capability,
+            "routed_via": provider,
+            "result": result,
+            "success": true,
+        }))
+    }
+
+    /// Helper: send a JSON-RPC request over a Unix socket and return the response.
+    async fn send_jsonrpc_async(
+        socket_path: &str,
+        request: &serde_json::Value,
+    ) -> Result<serde_json::Value> {
+        use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+        use tokio::net::UnixStream;
+
+        let stream = UnixStream::connect(socket_path)
+            .await
+            .context(format!("Connecting to {}", socket_path))?;
+
+        let (read_half, mut write_half) = stream.into_split();
+
+        let payload = serde_json::to_string(request)?;
+        write_half.write_all(payload.as_bytes()).await?;
+        write_half.write_all(b"\n").await?;
+        write_half.flush().await?;
+
+        let mut reader = BufReader::new(read_half);
+        let mut line = String::new();
+        reader.read_line(&mut line).await?;
+
+        serde_json::from_str(line.trim()).context("Invalid JSON response")
     }
 }
 // Tests are in neural_executor_tests.rs to keep this file under 1000 lines

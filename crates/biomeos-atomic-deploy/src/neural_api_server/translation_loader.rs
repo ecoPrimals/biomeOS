@@ -185,3 +185,205 @@ impl NeuralApiServer {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::neural_api_server::NeuralApiServer;
+    use crate::neural_graph::{GraphNode, Operation, PrimalSelector};
+    use std::collections::HashMap;
+
+    fn create_test_server(family_id: &str) -> NeuralApiServer {
+        let temp = tempfile::tempdir().expect("temp dir");
+        NeuralApiServer::new(temp.path(), family_id, temp.path().join("neural.sock"))
+    }
+
+    #[test]
+    fn test_extract_family_id_from_node_no_operation() {
+        let server = create_test_server("default_family");
+        let node = GraphNode {
+            id: "node1".to_string(),
+            primal: None,
+            output: None,
+            operation: None,
+            constraints: None,
+            depends_on: vec![],
+            capabilities: vec![],
+            capabilities_provided: None,
+            parameter_mappings: None,
+            node_type: None,
+            dependencies: vec![],
+            config: HashMap::new(),
+            outputs: vec![],
+        };
+        assert_eq!(server.extract_family_id_from_node(&node), "default_family");
+    }
+
+    #[test]
+    fn test_extract_family_id_from_node_operation_no_family_id_param() {
+        let server = create_test_server("server_family");
+        let mut params = HashMap::new();
+        params.insert("other".to_string(), serde_json::json!("value"));
+        let node = GraphNode {
+            id: "node2".to_string(),
+            primal: None,
+            output: None,
+            operation: Some(Operation {
+                name: "op".to_string(),
+                params,
+                environment: None,
+            }),
+            constraints: None,
+            depends_on: vec![],
+            capabilities: vec![],
+            capabilities_provided: None,
+            parameter_mappings: None,
+            node_type: None,
+            dependencies: vec![],
+            config: HashMap::new(),
+            outputs: vec![],
+        };
+        assert_eq!(server.extract_family_id_from_node(&node), "server_family");
+    }
+
+    #[test]
+    fn test_extract_family_id_from_node_operation_with_family_id_param() {
+        let server = create_test_server("server_family");
+        let mut params = HashMap::new();
+        params.insert(
+            "family_id".to_string(),
+            serde_json::Value::String("node_family".to_string()),
+        );
+        let node = GraphNode {
+            id: "node3".to_string(),
+            primal: None,
+            output: None,
+            operation: Some(Operation {
+                name: "op".to_string(),
+                params,
+                environment: None,
+            }),
+            constraints: None,
+            depends_on: vec![],
+            capabilities: vec![],
+            capabilities_provided: None,
+            parameter_mappings: None,
+            node_type: None,
+            dependencies: vec![],
+            config: HashMap::new(),
+            outputs: vec![],
+        };
+        assert_eq!(server.extract_family_id_from_node(&node), "node_family");
+    }
+
+    #[test]
+    fn test_extract_family_id_from_node_substitution_placeholder() {
+        let server = create_test_server("resolved_family");
+        let mut params = HashMap::new();
+        params.insert(
+            "family_id".to_string(),
+            serde_json::Value::String("${FAMILY_ID}".to_string()),
+        );
+        let node = GraphNode {
+            id: "node4".to_string(),
+            primal: None,
+            output: None,
+            operation: Some(Operation {
+                name: "op".to_string(),
+                params,
+                environment: None,
+            }),
+            constraints: None,
+            depends_on: vec![],
+            capabilities: vec![],
+            capabilities_provided: None,
+            parameter_mappings: None,
+            node_type: None,
+            dependencies: vec![],
+            config: HashMap::new(),
+            outputs: vec![],
+        };
+        assert_eq!(server.extract_family_id_from_node(&node), "resolved_family");
+    }
+
+    #[test]
+    fn test_extract_family_id_from_node_operation_family_id_not_string() {
+        let server = create_test_server("fallback_family");
+        let mut params = HashMap::new();
+        params.insert("family_id".to_string(), serde_json::json!(42));
+        let node = GraphNode {
+            id: "node5".to_string(),
+            primal: None,
+            output: None,
+            operation: Some(Operation {
+                name: "op".to_string(),
+                params,
+                environment: None,
+            }),
+            constraints: None,
+            depends_on: vec![],
+            capabilities: vec![],
+            capabilities_provided: None,
+            parameter_mappings: None,
+            node_type: None,
+            dependencies: vec![],
+            config: HashMap::new(),
+            outputs: vec![],
+        };
+        assert_eq!(server.extract_family_id_from_node(&node), "fallback_family");
+    }
+
+    #[tokio::test]
+    async fn test_load_translations_from_graph_empty_graph() {
+        let server = create_test_server("test");
+        let graph = crate::neural_graph::Graph {
+            id: "empty".to_string(),
+            version: "1.0".to_string(),
+            description: "".to_string(),
+            nodes: vec![],
+            config: crate::neural_graph::GraphConfig::default(),
+        };
+        server
+            .load_translations_from_graph(&graph)
+            .await
+            .expect("empty graph should load without error");
+    }
+
+    #[tokio::test]
+    async fn test_load_translations_from_graph_node_with_capabilities_provided() {
+        let server = create_test_server("test_family");
+        let mut caps_provided = HashMap::new();
+        caps_provided.insert(
+            "crypto.sha256".to_string(),
+            "actual_sha256_method".to_string(),
+        );
+        let node = GraphNode {
+            id: "beardog".to_string(),
+            primal: Some(PrimalSelector {
+                by_capability: Some("security".to_string()),
+                by_name: None,
+            }),
+            output: None,
+            operation: None,
+            constraints: None,
+            depends_on: vec![],
+            capabilities: vec!["security".to_string(), "crypto".to_string()],
+            capabilities_provided: Some(caps_provided),
+            parameter_mappings: None,
+            node_type: None,
+            dependencies: vec![],
+            config: HashMap::new(),
+            outputs: vec![],
+        };
+        let graph = crate::neural_graph::Graph {
+            id: "test".to_string(),
+            version: "1.0".to_string(),
+            description: "".to_string(),
+            nodes: vec![node],
+            config: crate::neural_graph::GraphConfig::default(),
+        };
+        server
+            .load_translations_from_graph(&graph)
+            .await
+            .expect("graph with translations should load");
+    }
+}

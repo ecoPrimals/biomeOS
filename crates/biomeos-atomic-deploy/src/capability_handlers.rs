@@ -478,43 +478,154 @@ pub async fn discover_primal_binary(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::executor::context::ExecutionContext;
+    use crate::neural_graph::{GraphNode, Operation, PrimalSelector};
+    use std::collections::HashMap;
+    use std::sync::OnceLock;
+
+    /// Serializes tests that change cwd to avoid races (async-aware to hold across await)
+    static CWD_LOCK: OnceLock<tokio::sync::Mutex<()>> = OnceLock::new();
+    fn cwd_lock() -> &'static tokio::sync::Mutex<()> {
+        CWD_LOCK.get_or_init(|| tokio::sync::Mutex::new(()))
+    }
+
+    fn create_beardog_stub(temp: &tempfile::TempDir) {
+        let bin_path = temp.path().join("beardog");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::copy("/bin/true", &bin_path).expect("copy true");
+            std::fs::set_permissions(&bin_path, std::fs::Permissions::from_mode(0o755))
+                .expect("chmod");
+        }
+        #[cfg(not(unix))]
+        {
+            std::fs::write(&bin_path, "").expect("write stub");
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // resolve_capability_to_primal - Domain mapping logic
+    // -------------------------------------------------------------------------
 
     #[test]
     fn test_resolve_capability_to_primal_encryption() {
-        // Encryption capability maps to beardog
-        assert_eq!(resolve_capability_to_primal("encryption"), Some("beardog"));
+        assert_eq!(
+            resolve_capability_to_primal("encryption"),
+            Some("beardog"),
+            "Encryption capability maps to beardog"
+        );
     }
 
     #[test]
     fn test_resolve_capability_to_primal_discovery() {
-        // Discovery capability maps to songbird
-        assert_eq!(resolve_capability_to_primal("discovery"), Some("songbird"));
+        assert_eq!(
+            resolve_capability_to_primal("discovery"),
+            Some("songbird"),
+            "Discovery capability maps to songbird"
+        );
     }
 
     #[test]
     fn test_resolve_capability_to_primal_compute() {
-        // Compute capability maps to toadstool
-        assert_eq!(resolve_capability_to_primal("compute"), Some("toadstool"));
+        assert_eq!(
+            resolve_capability_to_primal("compute"),
+            Some("toadstool"),
+            "Compute capability maps to toadstool"
+        );
     }
 
     #[test]
     fn test_resolve_capability_to_primal_storage() {
-        // Storage capability maps to nestgate
-        assert_eq!(resolve_capability_to_primal("storage"), Some("nestgate"));
+        assert_eq!(
+            resolve_capability_to_primal("storage"),
+            Some("nestgate"),
+            "Storage capability maps to nestgate"
+        );
     }
 
     #[test]
     fn test_resolve_capability_to_primal_ai() {
-        // AI capability maps to squirrel
-        assert_eq!(resolve_capability_to_primal("ai"), Some("squirrel"));
+        assert_eq!(
+            resolve_capability_to_primal("ai"),
+            Some("squirrel"),
+            "AI capability maps to squirrel"
+        );
+    }
+
+    #[test]
+    fn test_resolve_capability_to_primal_case_insensitive() {
+        assert_eq!(
+            resolve_capability_to_primal("ENCRYPTION"),
+            Some("beardog"),
+            "Capability resolution should be case-insensitive"
+        );
+        assert_eq!(
+            resolve_capability_to_primal("Discovery"),
+            Some("songbird"),
+            "Mixed case should resolve"
+        );
+    }
+
+    #[test]
+    fn test_resolve_capability_to_primal_nat_traversal_aliases() {
+        assert_eq!(
+            resolve_capability_to_primal("mesh"),
+            Some("songbird"),
+            "mesh maps to songbird"
+        );
+        assert_eq!(
+            resolve_capability_to_primal("punch"),
+            Some("songbird"),
+            "punch maps to songbird"
+        );
+        assert_eq!(
+            resolve_capability_to_primal("stun"),
+            Some("songbird"),
+            "stun maps to songbird"
+        );
+        assert_eq!(
+            resolve_capability_to_primal("federation"),
+            Some("songbird"),
+            "federation maps to songbird"
+        );
     }
 
     #[test]
     fn test_resolve_capability_to_primal_unknown() {
-        // Unknown capabilities return None
-        assert_eq!(resolve_capability_to_primal("unknown"), None);
-        assert_eq!(resolve_capability_to_primal("nonexistent"), None);
+        assert_eq!(
+            resolve_capability_to_primal("unknown"),
+            None,
+            "Unknown capabilities return None"
+        );
+        assert_eq!(
+            resolve_capability_to_primal("nonexistent"),
+            None,
+            "Nonexistent capability returns None"
+        );
     }
+
+    #[test]
+    fn test_resolve_capability_to_primal_empty_input() {
+        assert_eq!(
+            resolve_capability_to_primal(""),
+            None,
+            "Empty string should return None"
+        );
+    }
+
+    #[test]
+    fn test_resolve_capability_to_primal_whitespace() {
+        assert_eq!(
+            resolve_capability_to_primal("  encryption  "),
+            None,
+            "Whitespace-padded should not match (no trim)"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // known_primal_names - Capability taxonomy bootstrap
+    // -------------------------------------------------------------------------
 
     #[test]
     fn test_known_primal_names_contains_core_primals() {
@@ -530,8 +641,653 @@ mod tests {
     #[test]
     fn test_known_primal_names_returns_vec() {
         let primals = known_primal_names();
-        assert_eq!(primals.len(), 5, "Should have exactly 5 core primals");
+        assert_eq!(
+            primals.len(),
+            5,
+            "Should have exactly 5 core primals when not in strict mode"
+        );
     }
+
+    #[test]
+    #[ignore = "env var BIOMEOS_STRICT_DISCOVERY races with parallel tests — run with --test-threads=1"]
+    fn test_known_primal_names_strict_discovery() {
+        std::env::set_var("BIOMEOS_STRICT_DISCOVERY", "1");
+        let primals = known_primal_names();
+        std::env::remove_var("BIOMEOS_STRICT_DISCOVERY");
+
+        assert!(
+            primals.is_empty(),
+            "Strict discovery mode should return empty list"
+        );
+    }
+
+    #[test]
+    fn test_known_primal_names_no_duplicates() {
+        let primals = known_primal_names();
+        let unique: std::collections::HashSet<_> = primals.iter().collect();
+        assert_eq!(
+            unique.len(),
+            primals.len(),
+            "Known primals should have no duplicates"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // primal_start_capability - Error handling and routing
+    // -------------------------------------------------------------------------
+
+    fn make_node(
+        capability: Option<&str>,
+        mode: &str,
+        family_id: Option<&str>,
+        env_vars: Option<HashMap<String, String>>,
+    ) -> GraphNode {
+        let mut params = HashMap::new();
+        params.insert("mode".to_string(), serde_json::json!(mode));
+        if let Some(fid) = family_id {
+            params.insert("family_id".to_string(), serde_json::json!(fid));
+        }
+
+        let operation = Some(Operation {
+            name: "start".to_string(),
+            params,
+            environment: env_vars,
+        });
+
+        let primal = capability.map(|c| PrimalSelector {
+            by_capability: Some(c.to_string()),
+            by_name: None,
+        });
+
+        GraphNode {
+            id: "test_node".to_string(),
+            primal,
+            output: None,
+            operation,
+            constraints: None,
+            depends_on: vec![],
+            capabilities: vec![],
+            capabilities_provided: None,
+            parameter_mappings: None,
+            node_type: None,
+            dependencies: vec![],
+            config: HashMap::new(),
+            outputs: vec![],
+        }
+    }
+
+    #[tokio::test]
+    async fn test_primal_start_capability_missing_by_capability() {
+        let node = GraphNode {
+            id: "test".to_string(),
+            primal: None,
+            output: None,
+            operation: Some(Operation {
+                name: "start".to_string(),
+                params: HashMap::new(),
+                environment: None,
+            }),
+            constraints: None,
+            depends_on: vec![],
+            capabilities: vec![],
+            capabilities_provided: None,
+            parameter_mappings: None,
+            node_type: None,
+            dependencies: vec![],
+            config: HashMap::new(),
+            outputs: vec![],
+        };
+
+        let ctx = ExecutionContext::new(HashMap::new());
+        let result = primal_start_capability(&node, &ctx).await;
+
+        let err = result.expect_err("Should fail when primal.by_capability is missing");
+        assert!(
+            err.to_string().contains("by_capability"),
+            "Error should mention by_capability: {}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    async fn test_primal_start_capability_primal_without_by_capability() {
+        let node = GraphNode {
+            id: "test".to_string(),
+            primal: Some(PrimalSelector {
+                by_capability: None,
+                by_name: Some("beardog".to_string()),
+            }),
+            output: None,
+            operation: Some(Operation {
+                name: "start".to_string(),
+                params: HashMap::new(),
+                environment: None,
+            }),
+            constraints: None,
+            depends_on: vec![],
+            capabilities: vec![],
+            capabilities_provided: None,
+            parameter_mappings: None,
+            node_type: None,
+            dependencies: vec![],
+            config: HashMap::new(),
+            outputs: vec![],
+        };
+
+        let ctx = ExecutionContext::new(HashMap::new());
+        let result = primal_start_capability(&node, &ctx).await;
+
+        let err = result.expect_err("Should fail when by_capability is None");
+        assert!(
+            err.to_string().contains("by_capability"),
+            "Error should mention by_capability: {}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    async fn test_primal_start_capability_missing_operation() {
+        let node = GraphNode {
+            id: "test".to_string(),
+            primal: Some(PrimalSelector {
+                by_capability: Some("encryption".to_string()),
+                by_name: None,
+            }),
+            output: None,
+            operation: None,
+            constraints: None,
+            depends_on: vec![],
+            capabilities: vec![],
+            capabilities_provided: None,
+            parameter_mappings: None,
+            node_type: None,
+            dependencies: vec![],
+            config: HashMap::new(),
+            outputs: vec![],
+        };
+
+        let ctx = ExecutionContext::new(HashMap::new());
+        let result = primal_start_capability(&node, &ctx).await;
+
+        let err = result.expect_err("Should fail when operation is missing");
+        assert!(
+            err.to_string().contains("operation"),
+            "Error should mention operation: {}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    async fn test_primal_start_capability_unknown_capability() {
+        let node = make_node(Some("nonexistent_capability"), "server", None, None);
+        let ctx = ExecutionContext::new(HashMap::new());
+
+        let result = primal_start_capability(&node, &ctx)
+            .await
+            .expect("Unknown capability returns Ok with started: false");
+
+        assert_eq!(
+            result["started"], false,
+            "Unknown capability should not start"
+        );
+        assert_eq!(result["capability"], "nonexistent_capability");
+        assert!(
+            result["error"]
+                .as_str()
+                .unwrap()
+                .contains("Unknown capability"),
+            "Error field should describe unknown capability"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_primal_start_capability_binary_not_found() {
+        let _guard = cwd_lock().lock().await;
+        let temp = tempfile::tempdir().expect("temp dir");
+        let orig = std::env::current_dir().expect("cwd");
+        std::env::set_current_dir(temp.path()).expect("chdir");
+
+        let node = make_node(Some("encryption"), "server", None, None);
+        let mut env = HashMap::new();
+        env.insert(
+            "BIOMEOS_PLASMID_BIN_DIR".to_string(),
+            temp.path().to_string_lossy().to_string(),
+        );
+        let ctx = ExecutionContext::new(env);
+
+        let result = primal_start_capability(&node, &ctx)
+            .await
+            .expect("Binary not found returns Ok with started: false");
+
+        std::env::set_current_dir(&orig).expect("restore cwd");
+
+        assert_eq!(result["started"], false);
+        assert_eq!(result["capability"], "encryption");
+        assert_eq!(result["primal"], "beardog");
+        assert!(
+            result["error"]
+                .as_str()
+                .unwrap()
+                .contains("Binary not found"),
+            "Error should indicate binary discovery failure"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_primal_start_capability_mode_default() {
+        let _guard = cwd_lock().lock().await;
+        let temp = tempfile::tempdir().expect("temp dir");
+        let orig = std::env::current_dir().expect("cwd");
+        std::env::set_current_dir(temp.path()).expect("chdir");
+
+        create_beardog_stub(&temp);
+
+        let node = make_node(Some("encryption"), "server", None, None);
+        let mut env = HashMap::new();
+        env.insert(
+            "BIOMEOS_PLASMID_BIN_DIR".to_string(),
+            temp.path().to_string_lossy().to_string(),
+        );
+        let ctx = ExecutionContext::new(env);
+
+        let result = primal_start_capability(&node, &ctx).await.unwrap();
+
+        std::env::set_current_dir(&orig).expect("restore cwd");
+
+        assert_eq!(result["mode"], "server", "Default mode should be server");
+    }
+
+    #[tokio::test]
+    async fn test_primal_start_capability_mode_from_params() {
+        let _guard = cwd_lock().lock().await;
+        let temp = tempfile::tempdir().expect("temp dir");
+        let orig = std::env::current_dir().expect("cwd");
+        std::env::set_current_dir(temp.path()).expect("chdir");
+
+        create_beardog_stub(&temp);
+
+        let node = make_node(Some("encryption"), "client", None, None);
+        let mut env = HashMap::new();
+        env.insert(
+            "BIOMEOS_PLASMID_BIN_DIR".to_string(),
+            temp.path().to_string_lossy().to_string(),
+        );
+        let ctx = ExecutionContext::new(env);
+
+        let result = primal_start_capability(&node, &ctx).await.unwrap();
+
+        std::env::set_current_dir(&orig).expect("restore cwd");
+
+        assert_eq!(result["mode"], "client");
+    }
+
+    #[tokio::test]
+    async fn test_primal_start_capability_family_id_from_params() {
+        let _guard = cwd_lock().lock().await;
+        let temp = tempfile::tempdir().expect("temp dir");
+        let orig = std::env::current_dir().expect("cwd");
+        std::env::set_current_dir(temp.path()).expect("chdir");
+
+        create_beardog_stub(&temp);
+
+        let node = make_node(
+            Some("encryption"),
+            "server",
+            Some("custom_family_123"),
+            None,
+        );
+        let mut env = HashMap::new();
+        env.insert(
+            "BIOMEOS_PLASMID_BIN_DIR".to_string(),
+            temp.path().to_string_lossy().to_string(),
+        );
+        let ctx = ExecutionContext::new(env);
+
+        let result = primal_start_capability(&node, &ctx).await.unwrap();
+
+        std::env::set_current_dir(&orig).expect("restore cwd");
+
+        assert_eq!(result["family_id"], "custom_family_123");
+    }
+
+    #[tokio::test]
+    async fn test_primal_start_capability_output_json_structure() {
+        let node = make_node(Some("unknown_cap"), "server", None, None);
+        let ctx = ExecutionContext::new(HashMap::new());
+
+        let result = primal_start_capability(&node, &ctx).await.unwrap();
+
+        assert!(result.get("started").is_some());
+        assert!(result.get("capability").is_some());
+        assert!(result.get("error").is_some());
+        let serialized = serde_json::to_string(&result).expect("Output should serialize to JSON");
+        assert!(!serialized.is_empty());
+    }
+
+    // -------------------------------------------------------------------------
+    // health_check_capability - Capability routing and domain mapping
+    // -------------------------------------------------------------------------
+
+    fn make_health_node(capability: Option<&str>, family_id: Option<&str>) -> GraphNode {
+        let mut params = HashMap::new();
+        if let Some(fid) = family_id {
+            params.insert("family_id".to_string(), serde_json::json!(fid));
+        }
+
+        let operation = Some(Operation {
+            name: "health_check".to_string(),
+            params,
+            environment: None,
+        });
+
+        let primal = capability.map(|c| PrimalSelector {
+            by_capability: Some(c.to_string()),
+            by_name: None,
+        });
+
+        GraphNode {
+            id: "health_node".to_string(),
+            primal,
+            output: None,
+            operation,
+            constraints: None,
+            depends_on: vec![],
+            capabilities: vec![],
+            capabilities_provided: None,
+            parameter_mappings: None,
+            node_type: None,
+            dependencies: vec![],
+            config: HashMap::new(),
+            outputs: vec![],
+        }
+    }
+
+    #[tokio::test]
+    async fn test_health_check_capability_missing_operation() {
+        let node = GraphNode {
+            id: "test".to_string(),
+            primal: Some(PrimalSelector {
+                by_capability: Some("encryption".to_string()),
+                by_name: None,
+            }),
+            output: None,
+            operation: None,
+            constraints: None,
+            depends_on: vec![],
+            capabilities: vec![],
+            capabilities_provided: None,
+            parameter_mappings: None,
+            node_type: None,
+            dependencies: vec![],
+            config: HashMap::new(),
+            outputs: vec![],
+        };
+
+        let ctx = ExecutionContext::new(HashMap::new());
+        let result = health_check_capability(&node, &ctx).await;
+
+        let err = result.expect_err("Should fail when operation is missing");
+        assert!(
+            err.to_string().contains("operation"),
+            "Error should mention operation: {}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    async fn test_health_check_capability_specific_capability() {
+        let node = make_health_node(Some("encryption"), Some("test_family"));
+        let ctx = ExecutionContext::new(HashMap::new());
+
+        let result = health_check_capability(&node, &ctx)
+            .await
+            .expect("Health check should succeed");
+
+        assert_eq!(result["family_id"], "test_family");
+        assert!(
+            result.get("healthy").is_some(),
+            "Result should have healthy field"
+        );
+        assert!(result.get("checks_passed").is_some());
+        assert!(result.get("checks_failed").is_some());
+        assert!(result.get("total_checks").is_some());
+        let total = result["total_checks"].as_u64().unwrap_or(0);
+        assert!(
+            total <= 1,
+            "Single capability should check at most 1 primal"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_health_check_capability_unknown_capability() {
+        let node = make_health_node(Some("unknown_cap"), None);
+        let ctx = ExecutionContext::new(HashMap::new());
+
+        let result = health_check_capability(&node, &ctx)
+            .await
+            .expect("Health check should succeed with empty primals");
+
+        assert_eq!(result["total_checks"], 0);
+        assert!(!result["healthy"].as_bool().unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_health_check_capability_all_primals() {
+        let node = make_health_node(None, None);
+        let ctx = ExecutionContext::new(HashMap::new());
+
+        let result = health_check_capability(&node, &ctx)
+            .await
+            .expect("Health check should succeed");
+
+        let total = result["total_checks"].as_u64().unwrap_or(0);
+        assert!(
+            total <= 5,
+            "Should check at most 5 known primals, got {}",
+            total
+        );
+        assert!(result.get("healthy").is_some());
+        assert!(result.get("checks_passed").is_some());
+        assert!(result.get("checks_failed").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_health_check_capability_output_json_structure() {
+        let node = make_health_node(Some("encryption"), None);
+        let ctx = ExecutionContext::new(HashMap::new());
+
+        let result = health_check_capability(&node, &ctx).await.unwrap();
+
+        assert!(result.get("healthy").is_some());
+        assert!(result.get("family_id").is_some());
+        assert!(result.get("checks_passed").is_some());
+        assert!(result.get("checks_failed").is_some());
+        assert!(result.get("total_checks").is_some());
+        let serialized = serde_json::to_string(&result).expect("Output should serialize");
+        assert!(!serialized.is_empty());
+    }
+
+    // -------------------------------------------------------------------------
+    // discover_primal_binary - Binary discovery logic
+    // -------------------------------------------------------------------------
+
+    #[tokio::test]
+    async fn test_discover_primal_binary_success_via_env() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let bin_path = temp.path().join("beardog");
+        std::fs::write(&bin_path, "#!/bin/sh\nexit 0").expect("write stub");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&bin_path, std::fs::Permissions::from_mode(0o755))
+                .expect("chmod");
+        }
+
+        let mut env = HashMap::new();
+        env.insert(
+            "BIOMEOS_PLASMID_BIN_DIR".to_string(),
+            temp.path().to_string_lossy().to_string(),
+        );
+        let ctx = ExecutionContext::new(env);
+
+        let result = discover_primal_binary("beardog", &ctx)
+            .await
+            .expect("Should find beardog in BIOMEOS_PLASMID_BIN_DIR");
+
+        assert!(result.exists(), "Resolved path should exist");
+        assert_eq!(result.file_name().unwrap(), "beardog");
+    }
+
+    #[tokio::test]
+    async fn test_discover_primal_binary_success_arch_specific() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let arch = std::env::consts::ARCH;
+        let os = std::env::consts::OS;
+        let target_dir = temp.path().join(format!("{}-{}", arch, os));
+        std::fs::create_dir_all(&target_dir).expect("create dir");
+        let bin_path = target_dir.join("squirrel");
+        std::fs::write(&bin_path, "#!/bin/sh\nexit 0").expect("write stub");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&bin_path, std::fs::Permissions::from_mode(0o755))
+                .expect("chmod");
+        }
+
+        let mut env = HashMap::new();
+        env.insert(
+            "BIOMEOS_PLASMID_BIN_DIR".to_string(),
+            temp.path().to_string_lossy().to_string(),
+        );
+        let ctx = ExecutionContext::new(env);
+
+        let result = discover_primal_binary("squirrel", &ctx)
+            .await
+            .expect("Should find arch-specific squirrel");
+
+        assert!(result.exists());
+        assert_eq!(result.file_name().unwrap(), "squirrel");
+    }
+
+    #[tokio::test]
+    async fn test_discover_primal_binary_not_found() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let mut env = HashMap::new();
+        env.insert(
+            "BIOMEOS_PLASMID_BIN_DIR".to_string(),
+            temp.path().to_string_lossy().to_string(),
+        );
+        let ctx = ExecutionContext::new(env);
+
+        let result = discover_primal_binary("nonexistent_primal", &ctx).await;
+
+        let err = result.expect_err("Should fail when binary not found");
+        assert!(
+            err.to_string().contains("Binary not found"),
+            "Error should mention binary: {}",
+            err
+        );
+        assert!(
+            err.to_string().contains("nonexistent_primal"),
+            "Error should mention primal name"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_discover_primal_binary_empty_dir() {
+        let _guard = cwd_lock().lock().await;
+        let temp = tempfile::tempdir().expect("temp dir");
+        let orig = std::env::current_dir().expect("cwd");
+        std::env::set_current_dir(temp.path()).expect("chdir");
+
+        let mut env = HashMap::new();
+        env.insert(
+            "BIOMEOS_PLASMID_BIN_DIR".to_string(),
+            temp.path().to_string_lossy().to_string(),
+        );
+        let ctx = ExecutionContext::new(env);
+
+        let result = discover_primal_binary("beardog", &ctx).await;
+
+        std::env::set_current_dir(&orig).expect("restore cwd");
+
+        let err = result.expect_err("Empty dir should not find beardog");
+        assert!(err.to_string().contains("Binary not found"));
+    }
+
+    #[tokio::test]
+    async fn test_discover_primal_binary_prefers_env_over_default_paths() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let bin_path = temp.path().join("nestgate");
+        std::fs::write(&bin_path, "x").expect("write");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&bin_path, std::fs::Permissions::from_mode(0o755))
+                .expect("chmod");
+        }
+
+        let mut env = HashMap::new();
+        env.insert(
+            "BIOMEOS_PLASMID_BIN_DIR".to_string(),
+            temp.path().to_string_lossy().to_string(),
+        );
+        let ctx = ExecutionContext::new(env);
+
+        let result = discover_primal_binary("nestgate", &ctx)
+            .await
+            .expect("Should find in env dir");
+
+        assert!(result.starts_with(temp.path()));
+    }
+
+    // -------------------------------------------------------------------------
+    // wait_for_socket_with_timeout - Edge cases
+    // -------------------------------------------------------------------------
+
+    #[tokio::test]
+    async fn test_wait_for_socket_exists_immediately() {
+        let temp = tempfile::NamedTempFile::new().expect("temp file");
+        let path = temp.path().to_string_lossy().to_string();
+
+        let found = wait_for_socket_with_timeout(&path, 5).await;
+
+        assert!(found, "Should find socket that exists immediately");
+    }
+
+    #[tokio::test]
+    async fn test_wait_for_socket_not_found() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let path = temp
+            .path()
+            .join("nonexistent.sock")
+            .to_string_lossy()
+            .to_string();
+
+        let found = wait_for_socket_with_timeout(&path, 2).await;
+
+        assert!(
+            !found,
+            "Should not find nonexistent socket within 2 attempts"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_wait_for_socket_zero_attempts() {
+        let temp = tempfile::NamedTempFile::new().expect("temp file");
+        let path = temp.path().to_string_lossy().to_string();
+
+        let found = wait_for_socket_with_timeout(&path, 0).await;
+
+        assert!(
+            !found,
+            "Zero attempts should not check (1..=0 is empty range)"
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // Path construction and type serialization
+    // -------------------------------------------------------------------------
 
     #[test]
     fn test_binary_discovery_path_construction() {
@@ -554,5 +1310,33 @@ mod tests {
         for path in paths {
             assert!(path.to_string_lossy().contains("plasmidBin"));
         }
+    }
+
+    #[test]
+    fn test_json_output_serialization_roundtrip() {
+        let output = json!({
+            "started": false,
+            "capability": "encryption",
+            "error": "Binary not found: test"
+        });
+        let s = serde_json::to_string(&output).expect("serialize");
+        let parsed: serde_json::Value = serde_json::from_str(&s).expect("deserialize");
+        assert_eq!(parsed["started"], false);
+        assert_eq!(parsed["capability"], "encryption");
+    }
+
+    #[test]
+    fn test_health_check_json_serialization() {
+        let output = json!({
+            "healthy": false,
+            "family_id": "test",
+            "checks_passed": [],
+            "checks_failed": ["beardog"],
+            "total_checks": 1
+        });
+        let s = serde_json::to_string(&output).expect("serialize");
+        let parsed: serde_json::Value = serde_json::from_str(&s).expect("deserialize");
+        assert_eq!(parsed["healthy"], false);
+        assert_eq!(parsed["total_checks"], 1);
     }
 }

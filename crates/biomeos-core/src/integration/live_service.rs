@@ -7,7 +7,25 @@ use anyhow::Result;
 use biomeos_types::{BiomeOSConfig, Health};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::path::Path;
 use tracing::{debug, info, warn};
+
+/// Get (total, used, available) bytes for a mount point via statvfs.
+#[cfg(unix)]
+fn get_mount_stats(path: &str) -> Option<(u64, u64, u64)> {
+    nix::sys::statvfs::statvfs(Path::new(path)).ok().map(|st| {
+        let frsize = st.fragment_size() as u64;
+        let total = st.blocks() as u64 * frsize;
+        let avail = st.blocks_available() as u64 * frsize;
+        let used = total.saturating_sub(avail);
+        (total, used, avail)
+    })
+}
+
+#[cfg(not(unix))]
+fn get_mount_stats(_path: &str) -> Option<(u64, u64, u64)> {
+    None
+}
 
 /// Runtime service that manages the biomeOS lifecycle
 #[derive(Debug)]
@@ -288,30 +306,37 @@ impl LiveService {
     pub async fn get_storage_metrics(&self) -> Result<StorageMetrics> {
         debug!("Getting storage metrics");
 
-        let total_space = 0u64;
-        let used_space = 0u64;
+        let mut total_space = 0u64;
+        let mut used_space = 0u64;
         let mut mount_points = Vec::new();
 
         // Check common mount points
         let common_mounts = vec!["/", "/home", "/var", "/tmp"];
 
         for mount_point in common_mounts {
-            if let Ok(_metadata) = std::fs::metadata(mount_point) {
-                // Basic filesystem check - in real implementation would use statvfs
-                mount_points.push(MountPoint {
-                    path: mount_point.to_string(),
-                    filesystem: "unknown".to_string(),
-                    total_bytes: 1024 * 1024 * 1024 * 100, // 100GB default
-                    used_bytes: 1024 * 1024 * 1024 * 50,   // 50GB used
-                    available_bytes: 1024 * 1024 * 1024 * 50, // 50GB available
-                });
+            if std::fs::metadata(mount_point).is_err() {
+                continue;
             }
+            let mp = mount_point.to_string();
+            let (total, used, available) =
+                get_mount_stats(mount_point).unwrap_or((0, 0, 0));
+            total_space = total_space.saturating_add(total);
+            used_space = used_space.saturating_add(used);
+            mount_points.push(MountPoint {
+                path: mp,
+                filesystem: "unknown".to_string(),
+                total_bytes: total,
+                used_bytes: used,
+                available_bytes: available,
+            });
         }
+
+        let available_space = total_space.saturating_sub(used_space);
 
         Ok(StorageMetrics {
             total_space,
             used_space,
-            available_space: total_space - used_space,
+            available_space,
             mount_points,
         })
     }

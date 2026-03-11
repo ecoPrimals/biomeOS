@@ -262,6 +262,11 @@ impl PrimalCapability {
         Self::new("networking", "load-balancing", "1.0")
     }
 
+    /// Create a science capability (wetSpring, neuralSpring, etc.)
+    pub fn science() -> Self {
+        Self::new("science", "science", "1.0")
+    }
+
     /// Create a custom capability with the given name
     pub fn custom(name: impl Into<String>) -> Self {
         Self::new("custom", name, "1.0")

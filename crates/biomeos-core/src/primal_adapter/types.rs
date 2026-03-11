@@ -186,7 +186,7 @@ pub enum PrimalState {
     /// Running and healthy
     Running {
         /// Process handle (if we started it)
-        #[allow(dead_code)]
+        #[allow(dead_code)] // Used for process lifecycle management and diagnostics
         pid: Option<u32>,
         /// Port it's running on
         port: u16,
@@ -344,5 +344,141 @@ impl PrimalInterface {
     /// Check if this is a known interface
     pub fn is_known(&self) -> bool {
         !matches!(self, PrimalInterface::Unknown { .. })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_primal_adapter_new() {
+        let adapter =
+            PrimalAdapter::new("squirrel".to_string(), PathBuf::from("/usr/bin/squirrel"));
+        assert_eq!(adapter.name, "squirrel");
+        assert_eq!(adapter.binary, PathBuf::from("/usr/bin/squirrel"));
+        assert!(!adapter.interface.is_known());
+        assert!(matches!(adapter.state, PrimalState::NotStarted));
+        assert!(adapter.version.is_none());
+    }
+
+    #[test]
+    fn test_primal_capabilities_default() {
+        let caps = PrimalCapabilities::default();
+        assert!(!caps.lifecycle.can_start);
+        assert!(!caps.lifecycle.can_stop);
+        assert!(caps.lifecycle.can_refuse);
+        assert!(caps.health_check.is_none());
+        assert!(matches!(caps.port_config, PortConfigMethod::Unknown));
+        assert!(!caps.has_version_cmd);
+        assert!(!caps.has_fast_help);
+    }
+
+    #[test]
+    fn test_lifecycle_capabilities_default() {
+        let lc = LifecycleCapabilities::default();
+        assert!(!lc.can_start);
+        assert!(!lc.can_stop);
+        assert!(!lc.can_restart);
+        assert!(!lc.graceful_shutdown);
+        assert!(lc.can_refuse);
+    }
+
+    #[test]
+    fn test_primal_interface_is_known() {
+        assert!(PrimalInterface::Direct { args: vec![] }.is_known());
+        assert!(PrimalInterface::Subcommand {
+            start_cmd: "serve".to_string(),
+            stop_cmd: None,
+        }
+        .is_known());
+        assert!(PrimalInterface::Service {
+            service_name: "biomeos".to_string(),
+        }
+        .is_known());
+        assert!(PrimalInterface::Docker {
+            image: "img".to_string(),
+            container: "cnt".to_string(),
+        }
+        .is_known());
+        assert!(PrimalInterface::Api {
+            endpoint: "http://localhost".to_string(),
+            start_path: "/start".to_string(),
+            stop_path: None,
+        }
+        .is_known());
+        assert!(!PrimalInterface::Unknown {
+            attempted_patterns: vec![],
+        }
+        .is_known());
+    }
+
+    #[test]
+    fn test_primal_interface_serialization() {
+        let iface = PrimalInterface::Subcommand {
+            start_cmd: "serve".to_string(),
+            stop_cmd: Some("stop".to_string()),
+        };
+        let json = serde_json::to_string(&iface).expect("serialize");
+        let restored: PrimalInterface = serde_json::from_str(&json).expect("deserialize");
+        match (&iface, &restored) {
+            (
+                PrimalInterface::Subcommand {
+                    start_cmd: s1,
+                    stop_cmd: o1,
+                },
+                PrimalInterface::Subcommand {
+                    start_cmd: s2,
+                    stop_cmd: o2,
+                },
+            ) => {
+                assert_eq!(s1, s2);
+                assert_eq!(o1, o2);
+            }
+            _ => panic!("mismatch"),
+        }
+    }
+
+    #[test]
+    fn test_port_config_method_serialization() {
+        let methods = [
+            PortConfigMethod::EnvVar("PORT".to_string()),
+            PortConfigMethod::CliFlag("--port".to_string()),
+            PortConfigMethod::ConfigFile {
+                path: "/etc/config".to_string(),
+                format: "yaml".to_string(),
+            },
+            PortConfigMethod::Multiple(vec![
+                PortConfigMethod::EnvVar("PORT".to_string()),
+                PortConfigMethod::CliFlag("-p".to_string()),
+            ]),
+            PortConfigMethod::Unknown,
+        ];
+        for method in methods {
+            let json = serde_json::to_value(&method).expect("serialize");
+            let restored: PortConfigMethod = serde_json::from_value(json).expect("deserialize");
+            assert_eq!(
+                serde_json::to_value(&method).unwrap(),
+                serde_json::to_value(&restored).unwrap()
+            );
+        }
+    }
+
+    #[test]
+    fn test_health_check_config_serialization() {
+        let config = HealthCheckConfig {
+            url_pattern: "http://localhost:{PORT}/health".to_string(),
+            expected_status: 200,
+            timeout: Duration::from_secs(5),
+        };
+        let json = serde_json::to_value(&config).expect("serialize");
+        let restored: HealthCheckConfig = serde_json::from_value(json).expect("deserialize");
+        assert_eq!(config.url_pattern, restored.url_pattern);
+        assert_eq!(config.expected_status, restored.expected_status);
+    }
+
+    #[test]
+    fn test_primal_state_default() {
+        assert!(matches!(PrimalState::default(), PrimalState::NotStarted));
     }
 }

@@ -22,6 +22,12 @@ impl AdapterCache {
         Ok(Self { cache_dir })
     }
 
+    /// Create cache with a specific directory (for testing and custom installations)
+    pub fn with_cache_dir(cache_dir: PathBuf) -> Result<Self> {
+        std::fs::create_dir_all(&cache_dir).context("Failed to create adapter cache directory")?;
+        Ok(Self { cache_dir })
+    }
+
     /// Get cache file path for a primal
     fn cache_path(&self, primal_name: &str) -> PathBuf {
         self.cache_dir.join(format!("{}.yaml", primal_name))
@@ -91,9 +97,98 @@ pub fn load_adapter(primal_name: &str) -> Result<PrimalAdapter> {
 }
 
 /// Check if adapter is cached
-#[allow(dead_code)] // Used by external tools and future features
+#[allow(dead_code)] // TODO: Wire up for CLI diagnostics and cache management
 pub fn is_cached(primal_name: &str) -> bool {
     AdapterCache::new()
         .map(|cache| cache.exists(primal_name))
         .unwrap_or(false)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::primal_adapter::types::{
+        LifecycleCapabilities, PortConfigMethod, PrimalCapabilities, PrimalInterface, PrimalState,
+    };
+    use tempfile::TempDir;
+
+    fn make_test_adapter(name: &str) -> PrimalAdapter {
+        PrimalAdapter {
+            name: name.to_string(),
+            binary: std::path::PathBuf::from("/usr/bin/test-primal"),
+            interface: PrimalInterface::Direct {
+                args: vec!["serve".to_string()],
+            },
+            capabilities: PrimalCapabilities {
+                lifecycle: LifecycleCapabilities::default(),
+                health_check: None,
+                port_config: PortConfigMethod::EnvVar("PORT".to_string()),
+                has_version_cmd: true,
+                has_fast_help: true,
+            },
+            state: PrimalState::NotStarted,
+            discovered_at: chrono::Utc::now(),
+            version: Some("1.0.0".to_string()),
+        }
+    }
+
+    #[test]
+    fn test_adapter_cache_save_load() {
+        let tmp = TempDir::new().expect("create temp dir");
+        let cache = AdapterCache::with_cache_dir(tmp.path().to_path_buf()).expect("create cache");
+
+        let adapter = make_test_adapter("squirrel");
+        cache.save(&adapter).expect("save");
+
+        assert!(cache.exists("squirrel"));
+
+        let loaded = cache.load("squirrel").expect("load");
+        assert_eq!(loaded.name, "squirrel");
+        assert_eq!(loaded.version, Some("1.0.0".to_string()));
+    }
+
+    #[test]
+    fn test_adapter_cache_invalidate() {
+        let tmp = TempDir::new().expect("create temp dir");
+        let cache = AdapterCache::with_cache_dir(tmp.path().to_path_buf()).expect("create cache");
+
+        let adapter = make_test_adapter("songbird");
+        cache.save(&adapter).expect("save");
+        assert!(cache.exists("songbird"));
+
+        cache.invalidate("songbird").expect("invalidate");
+        assert!(!cache.exists("songbird"));
+
+        let result = cache.load("songbird");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_adapter_cache_list() {
+        let tmp = TempDir::new().expect("create temp dir");
+        let cache = AdapterCache::with_cache_dir(tmp.path().to_path_buf()).expect("create cache");
+
+        cache.save(&make_test_adapter("squirrel")).expect("save");
+        cache.save(&make_test_adapter("songbird")).expect("save");
+
+        let names = cache.list().expect("list");
+        assert_eq!(names.len(), 2);
+        assert!(names.contains(&"squirrel".to_string()));
+        assert!(names.contains(&"songbird".to_string()));
+    }
+
+    #[test]
+    fn test_adapter_cache_exists_false() {
+        let tmp = TempDir::new().expect("create temp dir");
+        let cache = AdapterCache::with_cache_dir(tmp.path().to_path_buf()).expect("create cache");
+        assert!(!cache.exists("nonexistent"));
+    }
+
+    #[test]
+    fn test_adapter_cache_load_missing() {
+        let tmp = TempDir::new().expect("create temp dir");
+        let cache = AdapterCache::with_cache_dir(tmp.path().to_path_buf()).expect("create cache");
+        let result = cache.load("nonexistent");
+        assert!(result.is_err());
+    }
 }

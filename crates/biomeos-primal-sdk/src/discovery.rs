@@ -262,6 +262,7 @@ pub fn providers_for_capability(cap: &PrimalCapability) -> &'static [&'static st
         ("compute", _) => &["toadstool"],
         ("storage", _) | ("data", _) => &["nestgate"],
         ("ai", _) | ("ml", _) => &["squirrel"],
+        ("science", _) => &["wetspring", "neuralspring"],
         _ => &[],
     }
 }
@@ -274,6 +275,7 @@ pub fn capability_from_primal_name(name: &str) -> PrimalCapability {
         "toadstool" => PrimalCapability::compute(),
         "nestgate" => PrimalCapability::storage(),
         "squirrel" => PrimalCapability::ai(),
+        "wetspring" | "neuralspring" => PrimalCapability::science(),
         _ => PrimalCapability::custom(name),
     }
 }

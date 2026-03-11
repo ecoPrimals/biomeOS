@@ -7,8 +7,10 @@ use crate::crypto::Identity;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;
+use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use tracing::debug;
 
 /// A peer in the mesh network
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -144,15 +146,63 @@ impl MeshNode {
             .collect()
     }
     
-    /// Discover peers (stub - would use actual discovery protocol)
+    /// Discover peers from file-based discovery
+    ///
+    /// Reads from a discovery file at a standard path (XDG_RUNTIME_DIR/biomeos/mesh-peers.json
+    /// or /tmp/biomeos/mesh-peers.json). Other primals can write peer addresses to this file.
+    /// Expects a JSON array of address strings, e.g. `["127.0.0.1:8080", "192.168.1.100:8080"]`.
     pub async fn discover(&self) -> Vec<Peer> {
-        // In real implementation, this would:
-        // 1. Broadcast discovery request
-        // 2. Collect responses
-        // 3. Return candidate peers
-        
-        // For now, return empty
-        vec![]
+        let path = Self::discovery_file_path();
+        let content = match tokio::fs::read_to_string(&path).await {
+            Ok(c) => c,
+            Err(e) => {
+                debug!("Mesh discovery file not found or unreadable: {} ({})", path.display(), e);
+                return vec![];
+            }
+        };
+
+        let addrs: Vec<String> = match serde_json::from_str(&content) {
+            Ok(a) => a,
+            Err(e) => {
+                debug!("Mesh discovery file invalid JSON: {} ({})", path.display(), e);
+                return vec![];
+            }
+        };
+
+        let mut peers = Vec::with_capacity(addrs.len());
+        for addr_str in addrs {
+            let addr_str = addr_str.trim();
+            if addr_str.is_empty() {
+                continue;
+            }
+            let Ok(addr) = addr_str.parse::<SocketAddr>() else {
+                debug!("Skipping invalid address in mesh-peers.json: {}", addr_str);
+                continue;
+            };
+            let identity = Self::discovery_identity_for_address(addr_str);
+            let peer = Peer::new(identity).with_address(addr);
+            peers.push(peer);
+        }
+        debug!("Discovered {} peers from {}", peers.len(), path.display());
+        peers
+    }
+
+    /// Path to the mesh discovery file (XDG or /tmp fallback)
+    fn discovery_file_path() -> PathBuf {
+        std::env::var("XDG_RUNTIME_DIR")
+            .map(|d| PathBuf::from(d).join("biomeos").join("mesh-peers.json"))
+            .unwrap_or_else(|_| PathBuf::from("/tmp/biomeos/mesh-peers.json"))
+    }
+
+    /// Create a synthetic identity for a discovered peer (address-only discovery)
+    fn discovery_identity_for_address(addr: &str) -> Identity {
+        let hash = blake3::hash(addr.as_bytes());
+        Identity {
+            id: format!("did:platypus:discovered:{}", hash),
+            public_key: Vec::new(),
+            generation: 0,
+            lineage_hashes: vec![],
+        }
     }
     
     /// Get our identity

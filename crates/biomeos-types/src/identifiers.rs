@@ -3,6 +3,11 @@
 //! This module provides NewType wrappers for domain identifiers,
 //! ensuring type safety and preventing ID confusion at compile time.
 //!
+//! # Zero-copy design
+//!
+//! Identifiers use `Arc<str>` internally for cheap cloning in hot paths
+//! (discovery, registry lookups, channel passing).
+//!
 //! # Examples
 //!
 //! ```
@@ -25,13 +30,15 @@
 //! Validation happens at construction time, so downstream code
 //! can assume all identifiers are valid.
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
+use std::sync::Arc;
 
 /// Primal identifier (strong type)
 ///
 /// A unique identifier for a primal in the ecosystem.
 /// Enforces alphanumeric characters, dashes, and underscores only.
+/// Uses `Arc<str>` for zero-copy cloning in hot paths.
 ///
 /// # Examples
 ///
@@ -41,9 +48,8 @@ use std::fmt;
 /// let id = PrimalId::new("beardog-local").unwrap();
 /// assert_eq!(id.as_str(), "beardog-local");
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(transparent)]
-pub struct PrimalId(String);
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct PrimalId(Arc<str>);
 
 impl PrimalId {
     /// Create a new primal ID with validation
@@ -52,8 +58,8 @@ impl PrimalId {
     ///
     /// Returns `IdError::Empty` if the ID is empty.
     /// Returns `IdError::InvalidCharacters` if the ID contains invalid characters.
-    pub fn new(id: impl Into<String>) -> Result<Self, IdError> {
-        let id = id.into();
+    pub fn new(id: impl AsRef<str>) -> Result<Self, IdError> {
+        let id = id.as_ref();
 
         if id.is_empty() {
             return Err(IdError::Empty);
@@ -66,7 +72,7 @@ impl PrimalId {
             return Err(IdError::InvalidCharacters);
         }
 
-        Ok(Self(id))
+        Ok(Self(Arc::from(id)))
     }
 
     /// Create unchecked ID (for trusted sources like database)
@@ -74,8 +80,8 @@ impl PrimalId {
     /// # Safety
     ///
     /// Only use this when you know the ID is valid (e.g., from database).
-    pub fn new_unchecked(id: impl Into<String>) -> Self {
-        Self(id.into())
+    pub fn new_unchecked(id: impl AsRef<str>) -> Self {
+        Self(Arc::from(id.as_ref()))
     }
 
     /// Get the inner string reference
@@ -85,7 +91,32 @@ impl PrimalId {
 
     /// Convert into owned String
     pub fn into_string(self) -> String {
-        self.0
+        self.0.to_string()
+    }
+}
+
+impl Serialize for PrimalId {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> Deserialize<'de> for PrimalId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Self::new(s).map_err(serde::de::Error::custom)
+    }
+}
+
+impl From<PrimalId> for String {
+    fn from(id: PrimalId) -> Self {
+        id.into_string()
     }
 }
 
@@ -105,6 +136,7 @@ impl AsRef<str> for PrimalId {
 ///
 /// Represents a family in the genetic lineage system.
 /// Used for auto-trust decisions based on shared genetics.
+/// Uses `Arc<str>` for zero-copy cloning in hot paths.
 ///
 /// # Examples
 ///
@@ -114,14 +146,13 @@ impl AsRef<str> for PrimalId {
 /// let family = FamilyId::new("iidn");
 /// assert_eq!(family.as_str(), "iidn");
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(transparent)]
-pub struct FamilyId(String);
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct FamilyId(Arc<str>);
 
 impl FamilyId {
     /// Create a new family ID
-    pub fn new(id: impl Into<String>) -> Self {
-        Self(id.into())
+    pub fn new(id: impl AsRef<str>) -> Self {
+        Self(Arc::from(id.as_ref()))
     }
 
     /// Get family ID from environment variable
@@ -182,7 +213,32 @@ impl FamilyId {
 
     /// Convert into owned String
     pub fn into_string(self) -> String {
-        self.0
+        self.0.to_string()
+    }
+}
+
+impl Serialize for FamilyId {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> Deserialize<'de> for FamilyId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Ok(Self::new(s))
+    }
+}
+
+impl From<FamilyId> for String {
+    fn from(id: FamilyId) -> Self {
+        id.into_string()
     }
 }
 
@@ -266,19 +322,44 @@ impl AsRef<str> for Endpoint {
 /// Tower identifier (for multi-tower deployments)
 ///
 /// Identifies a specific tower in a distributed deployment.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(transparent)]
-pub struct TowerId(String);
+/// Uses `Arc<str>` for zero-copy cloning in hot paths.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct TowerId(Arc<str>);
 
 impl TowerId {
     /// Create a new tower ID
-    pub fn new(id: impl Into<String>) -> Self {
-        Self(id.into())
+    pub fn new(id: impl AsRef<str>) -> Self {
+        Self(Arc::from(id.as_ref()))
     }
 
     /// Get the inner string reference
     pub fn as_str(&self) -> &str {
         &self.0
+    }
+}
+
+impl Serialize for TowerId {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> Deserialize<'de> for TowerId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Ok(Self::new(s))
+    }
+}
+
+impl From<TowerId> for String {
+    fn from(id: TowerId) -> Self {
+        id.0.to_string()
     }
 }
 
@@ -357,16 +438,47 @@ mod tests {
     }
 
     #[test]
-    fn endpoint_valid() {
-        assert!(Endpoint::new("http://localhost:9000").is_ok());
-        assert!(Endpoint::new("https://192.168.1.144:8080").is_ok());
+    fn primal_id_error_types() {
+        assert!(matches!(PrimalId::new(""), Err(IdError::Empty)));
+        assert!(matches!(
+            PrimalId::new("bad@char"),
+            Err(IdError::InvalidCharacters)
+        ));
     }
 
     #[test]
-    fn endpoint_join() {
-        let base = Endpoint::new("http://localhost:9000").unwrap();
-        let api = base.join("api/v1/health").unwrap();
-        assert_eq!(api.as_str(), "http://localhost:9000/api/v1/health");
+    fn primal_id_unchecked() {
+        let id = PrimalId::new_unchecked("trusted");
+        assert_eq!(id.as_str(), "trusted");
+    }
+
+    #[test]
+    fn primal_id_serialization() {
+        let id = PrimalId::new("beardog").expect("valid");
+        let json = serde_json::to_string(&id).expect("serialize");
+        assert_eq!(json, r#""beardog""#);
+        let loaded: PrimalId = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(loaded.as_str(), "beardog");
+    }
+
+    #[test]
+    fn primal_id_into_string() {
+        let id = PrimalId::new("test").expect("valid");
+        let s: String = id.into_string();
+        assert_eq!(s, "test");
+    }
+
+    #[test]
+    fn primal_id_display() {
+        let id = PrimalId::new("beardog").expect("valid");
+        assert_eq!(format!("{}", id), "beardog");
+    }
+
+    #[test]
+    fn primal_id_as_ref() {
+        let id = PrimalId::new("x").expect("valid");
+        let s: &str = id.as_ref();
+        assert_eq!(s, "x");
     }
 
     #[test]
@@ -376,9 +488,84 @@ mod tests {
     }
 
     #[test]
+    fn family_id_generate() {
+        let id = FamilyId::generate();
+        assert!(!id.as_str().is_empty());
+        assert_eq!(id.as_str().len(), 8);
+    }
+
+    #[test]
+    fn family_id_from_env() {
+        std::env::set_var("BIOMEOS_FAMILY_ID", "env-family");
+        let id = FamilyId::from_env();
+        std::env::remove_var("BIOMEOS_FAMILY_ID");
+        assert!(id.is_some());
+        assert_eq!(id.unwrap().as_str(), "env-family");
+    }
+
+    #[test]
+    fn tower_id_display() {
+        let tower = TowerId::new("tower-alpha");
+        assert_eq!(format!("{}", tower), "tower-alpha");
+    }
+
+    #[test]
+    fn session_id_from_uuid() {
+        let uuid = uuid::Uuid::new_v4();
+        let session = SessionId::from_uuid(uuid);
+        assert_eq!(session.uuid(), &uuid);
+    }
+
+    #[test]
+    fn session_id_default() {
+        let _ = SessionId::default();
+    }
+
+    #[test]
     fn session_id_unique() {
         let id1 = SessionId::new();
         let id2 = SessionId::new();
         assert_ne!(id1, id2);
+    }
+
+    #[test]
+    fn endpoint_valid() {
+        assert!(Endpoint::new("http://localhost:9000").is_ok());
+        assert!(Endpoint::new("https://192.168.1.144:8080").is_ok());
+    }
+
+    #[test]
+    fn endpoint_invalid() {
+        assert!(Endpoint::new("not-a-url").is_err());
+        assert!(Endpoint::new("").is_err());
+    }
+
+    #[test]
+    fn endpoint_join() {
+        let base = Endpoint::new("http://localhost:9000").expect("valid");
+        let api = base.join("api/v1/health").expect("join");
+        assert_eq!(api.as_str(), "http://localhost:9000/api/v1/health");
+    }
+
+    #[test]
+    fn endpoint_url() {
+        let ep = Endpoint::new("http://example.com").expect("valid");
+        assert_eq!(ep.url().host_str(), Some("example.com"));
+    }
+
+    #[test]
+    fn endpoint_serialization() {
+        let ep = Endpoint::new("http://localhost:8080").expect("valid");
+        let json = serde_json::to_string(&ep).expect("serialize");
+        let loaded: Endpoint = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(loaded.as_str(), ep.as_str());
+    }
+
+    #[test]
+    fn id_error_display() {
+        let e = IdError::Empty;
+        assert!(e.to_string().contains("empty"));
+        let e2 = IdError::InvalidCharacters;
+        assert!(e2.to_string().contains("invalid"));
     }
 }

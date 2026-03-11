@@ -485,7 +485,7 @@ fn generate_jwt_secret() -> String {
 }
 
 /// Simple base64 encoding (no external dependency)
-fn base64_encode(data: &[u8]) -> String {
+pub(crate) fn base64_encode(data: &[u8]) -> String {
     const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
     let mut result = String::with_capacity(data.len().div_ceil(3) * 4);
@@ -509,4 +509,161 @@ fn base64_encode(data: &[u8]) -> String {
         }
     }
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_nucleus_mode_from_str_valid() {
+        assert!(matches!(
+            "tower".parse::<NucleusMode>().expect("tower should parse"),
+            NucleusMode::Tower
+        ));
+        assert!(matches!(
+            "Tower"
+                .parse::<NucleusMode>()
+                .expect("Tower should parse (case insensitive)"),
+            NucleusMode::Tower
+        ));
+        assert!(matches!(
+            "node".parse::<NucleusMode>().expect("node should parse"),
+            NucleusMode::Node
+        ));
+        assert!(matches!(
+            "nest".parse::<NucleusMode>().expect("nest should parse"),
+            NucleusMode::Nest
+        ));
+        assert!(matches!(
+            "full".parse::<NucleusMode>().expect("full should parse"),
+            NucleusMode::Full
+        ));
+        assert!(matches!(
+            "nucleus"
+                .parse::<NucleusMode>()
+                .expect("nucleus should parse"),
+            NucleusMode::Full
+        ));
+    }
+
+    #[test]
+    fn test_nucleus_mode_from_str_invalid() {
+        let err = "invalid".parse::<NucleusMode>().unwrap_err();
+        assert!(err.to_string().contains("Unknown nucleus mode"));
+        assert!(err.to_string().contains("invalid"));
+        assert!(err.to_string().contains("tower|node|nest|full"));
+
+        let err2 = "".parse::<NucleusMode>().unwrap_err();
+        assert!(err2.to_string().contains("Unknown nucleus mode"));
+    }
+
+    #[test]
+    fn test_nucleus_mode_primals() {
+        assert_eq!(
+            NucleusMode::Tower.primals(),
+            vec!["beardog", "songbird"],
+            "Tower mode primals"
+        );
+        assert_eq!(
+            NucleusMode::Node.primals(),
+            vec!["beardog", "songbird", "toadstool"],
+            "Node mode primals"
+        );
+        assert_eq!(
+            NucleusMode::Nest.primals(),
+            vec!["beardog", "songbird", "nestgate", "squirrel"],
+            "Nest mode primals"
+        );
+        assert_eq!(
+            NucleusMode::Full.primals(),
+            vec!["beardog", "songbird", "nestgate", "toadstool", "squirrel"],
+            "Full mode primals"
+        );
+    }
+
+    #[test]
+    fn test_base64_encode_empty() {
+        assert_eq!(base64_encode(&[]), "");
+    }
+
+    #[test]
+    fn test_base64_encode_single_byte() {
+        // "M" in base64 is 0x0 in first 6 bits -> 'A', next 6 bits 0 -> 'A', padding
+        let result = base64_encode(&[0x4d]);
+        assert_eq!(result.len(), 4);
+        assert!(result.ends_with("=="));
+    }
+
+    #[test]
+    fn test_base64_encode_three_bytes() {
+        // "Man" -> TWFu in standard base64
+        let result = base64_encode(b"Man");
+        assert_eq!(result, "TWFu");
+    }
+
+    #[test]
+    fn test_base64_encode_roundtrip_alphabet() {
+        let data = b"Hello, World!";
+        let encoded = base64_encode(data);
+        assert!(!encoded.is_empty());
+        assert!(encoded.len() <= data.len().div_ceil(3) * 4 + 4);
+        for c in encoded.chars() {
+            assert!(
+                c.is_ascii_alphanumeric() || c == '+' || c == '/' || c == '=',
+                "Invalid base64 char: {:?}",
+                c
+            );
+        }
+    }
+
+    #[test]
+    fn test_resolve_socket_dir_env_override() {
+        let test_path = "/tmp/biomeos-test-socket-dir";
+        std::env::set_var("BIOMEOS_SOCKET_DIR", test_path);
+        let result = resolve_socket_dir().expect("resolve_socket_dir should succeed");
+        std::env::remove_var("BIOMEOS_SOCKET_DIR");
+        assert_eq!(result, std::path::PathBuf::from(test_path));
+    }
+
+    #[test]
+    fn test_discover_binaries_empty_primals() {
+        let map = discover_binaries(&[]).expect("empty primals should succeed");
+        assert!(map.is_empty());
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn test_discover_binaries_finds_in_path() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let unique_name = "biomeos_test_binary_xyz";
+        let binary_path = temp_dir.path().join(unique_name);
+        std::fs::write(&binary_path, "#!/bin/sh\nexit 0").expect("write test binary");
+        let mut perms = std::fs::metadata(&binary_path).unwrap().permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&binary_path, perms).unwrap();
+
+        let original_path = std::env::var("PATH").ok();
+        let dir_str = temp_dir.path().to_string_lossy().into_owned();
+        std::env::set_var(
+            "PATH",
+            format!("{}:{}", dir_str, original_path.as_deref().unwrap_or("")),
+        );
+
+        let map = discover_binaries(&[unique_name]).expect("discover should succeed");
+        if let Some(original) = original_path {
+            std::env::set_var("PATH", original);
+        } else {
+            std::env::remove_var("PATH");
+        }
+
+        assert!(
+            map.contains_key(unique_name),
+            "{} should be found in PATH, got: {:?}",
+            unique_name,
+            map
+        );
+    }
 }

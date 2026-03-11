@@ -1,0 +1,124 @@
+# =============================================================================
+# Surgical VR Deployment Graph
+# =============================================================================
+# Deploys the immersive surgical training environment:
+# - healthSpring: anatomy models, tissue physics, pharmacokinetics
+# - petalTongue: stereo rendering, motion tracking, haptic feedback
+# - ludoSpring: interaction scoring, procedure flow, difficulty adjustment
+#
+# This graph bootstraps on Tower Atomic (BearDog + Songbird) and wires
+# the continuous tick loop for real-time surgical simulation at 90 Hz.
+# =============================================================================
+
+[graph]
+id = "surgical-vr-deploy"
+name = "Surgical VR Training Environment"
+version = "1.0.0"
+description = "Deploy healthSpring + petalTongue + ludoSpring for immersive surgical simulation"
+
+[[nodes]]
+id = "tower-check"
+primal = "biomeos"
+method = "system.status"
+description = "Verify Tower Atomic is running (BearDog + Songbird)"
+
+[[nodes]]
+id = "deploy-healthspring"
+primal = "biomeos"
+method = "deploy.primal"
+description = "Deploy healthSpring medical science primal"
+depends_on = ["tower-check"]
+
+[nodes.params]
+primal_name = "healthspring"
+capabilities = ["medical", "anatomy", "tissue", "biosignal", "pharmacokinetics"]
+
+[[nodes]]
+id = "deploy-petaltongue"
+primal = "biomeos"
+method = "deploy.primal"
+description = "Deploy petalTongue with XR rendering capabilities"
+depends_on = ["tower-check"]
+
+[nodes.params]
+primal_name = "petaltongue"
+capabilities = ["visualization", "xr", "stereo", "tracking", "haptic"]
+render_mode = "vr"
+
+[[nodes]]
+id = "deploy-ludospring"
+primal = "biomeos"
+method = "deploy.primal"
+description = "Deploy ludoSpring for interaction design and scoring"
+depends_on = ["tower-check"]
+
+[nodes.params]
+primal_name = "ludospring"
+capabilities = ["game", "interaction_design", "accessibility_scoring"]
+
+[[nodes]]
+id = "negotiate-stereo"
+primal = "petaltongue"
+method = "xr.negotiate_stereo"
+description = "Negotiate stereo rendering targets with VR headset"
+depends_on = ["deploy-petaltongue"]
+
+[nodes.params]
+eye_resolution = [2064, 2208]
+refresh_hz = 90
+ipd_mm = 63
+color_format = "rgba16f"
+
+[[nodes]]
+id = "start-tracking"
+primal = "petaltongue"
+method = "xr.start_tracking"
+description = "Begin 6DoF motion tracking (head + hands + tools)"
+depends_on = ["deploy-petaltongue"]
+
+[nodes.params]
+backend = "openxr"
+tracking_hz = 1000
+tracked_devices = ["head", "left_hand", "right_hand", "tool"]
+prediction_ms = 5.0
+
+[[nodes]]
+id = "discover-haptic"
+primal = "petaltongue"
+method = "xr.discover_haptic"
+description = "Discover and initialize haptic feedback devices"
+depends_on = ["deploy-petaltongue"]
+
+[[nodes]]
+id = "load-anatomy"
+primal = "healthspring"
+method = "medical.load_anatomy"
+description = "Load anatomy models for the surgical procedure"
+depends_on = ["deploy-healthspring"]
+
+[nodes.params]
+procedure = "${PROCEDURE}"
+
+[[nodes]]
+id = "register-tools"
+primal = "healthspring"
+method = "medical.register_tool"
+description = "Register surgical instruments for tool-tissue interaction"
+depends_on = ["deploy-healthspring", "start-tracking"]
+
+[[nodes]]
+id = "begin-session"
+primal = "petaltongue"
+method = "xr.begin_session"
+description = "Begin the immersive VR session"
+depends_on = [
+    "negotiate-stereo",
+    "start-tracking",
+    "discover-haptic",
+    "load-anatomy",
+    "register-tools",
+    "deploy-ludospring",
+]
+
+[nodes.params]
+session_type = "surgical_training"

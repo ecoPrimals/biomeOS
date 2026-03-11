@@ -1,0 +1,145 @@
+# =============================================================================
+# petalTongue Deploy Graph
+# =============================================================================
+#
+# Deploys petalTongue as a visualization/UI primal atop Node Atomic:
+#   Tower (BearDog + Songbird) → petalTongue (visualization, UI, interaction)
+#
+# petalTongue registers capabilities covering:
+#   - visualization.render — render visualizations
+#   - visualization.export — export SVG/PNG/JSON
+#   - visualization.capabilities — capability introspection
+#   - ui.render — UI rendering
+#   - ui.display_status — status display
+#   - interaction.subscribe — event subscriptions
+#
+# Socket path: $XDG_RUNTIME_DIR/biomeos/petaltongue-${FAMILY_ID}.sock
+# (or via PETALTONGUE_SOCKET env)
+#
+# STATUS: Experimental (Mar 11, 2026)
+# Requires: Tower Atomic (BearDog + Songbird)
+#
+# Usage:
+#   biomeos deploy graphs/petaltongue_deploy.toml
+#
+# =============================================================================
+
+[graph]
+id = "petaltongue_deploy"
+description = "petalTongue visualization/UI primal atop Node Atomic"
+coordination = "Sequential"
+
+# =============================================================================
+# Phase 1: Tower Atomic (security + network foundation)
+# =============================================================================
+
+[[nodes]]
+id = "germinate_beardog"
+output = "beardog_genesis"
+capabilities = ["crypto", "tls_crypto", "genetic", "security"]
+
+[nodes.primal]
+by_capability = "security"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[nodes.capabilities_provided]
+"crypto.generate_keypair" = "crypto.x25519_generate_ephemeral"
+"crypto.encrypt" = "crypto.chacha20_poly1305_encrypt"
+"crypto.hash" = "crypto.blake3_hash"
+"crypto.sign" = "crypto.sign_ed25519"
+
+[[nodes]]
+id = "germinate_songbird"
+depends_on = ["germinate_beardog"]
+output = "songbird_genesis"
+capabilities = ["http", "discovery", "secure_http", "tls"]
+
+[nodes.primal]
+by_capability = "discovery"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+
+[nodes.operation.environment]
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
+SONGBIRD_SECURITY_PROVIDER = "beardog"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[nodes.capabilities_provided]
+"network.http_request" = "http.request"
+"network.tls_connect" = "tls.connect"
+"discovery.announce" = "announce_capabilities"
+"discovery.query" = "discover_by_capability"
+
+# =============================================================================
+# Phase 2: petalTongue (visualization, UI, interaction)
+# =============================================================================
+
+[[nodes]]
+id = "germinate_petaltongue"
+depends_on = ["germinate_beardog", "germinate_songbird"]
+output = "petaltongue_genesis"
+capabilities = ["visualization", "ui", "interaction", "representation"]
+
+[nodes.primal]
+by_capability = "visualization"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+
+[nodes.operation.environment]
+BIOMEOS_SOCKET_DIR = "${XDG_RUNTIME_DIR}/biomeos"
+FAMILY_ID = "${FAMILY_ID}"
+SONGBIRD_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/songbird-${FAMILY_ID}.sock"
+PETALTONGUE_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/petaltongue-${FAMILY_ID}.sock"
+
+[nodes.constraints]
+timeout_ms = 15000
+
+[nodes.capabilities_provided]
+"visualization.render" = "visualization.render"
+"visualization.export" = "visualization.export"
+"visualization.capabilities" = "visualization.capabilities"
+"ui.render" = "ui.render"
+"ui.display_status" = "ui.display_status"
+"interaction.subscribe" = "interaction.subscribe"
+
+# =============================================================================
+# Phase 3: Validate petalTongue Atomic
+# =============================================================================
+
+[[nodes]]
+id = "validate_petaltongue_atomic"
+depends_on = ["germinate_beardog", "germinate_songbird", "germinate_petaltongue"]
+output = "petaltongue_validated"
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.operation.params]
+check_beardog = true
+check_songbird = true
+check_petaltongue = true
+timeout_seconds = 15
+
+[nodes.constraints]
+timeout_ms = 20000

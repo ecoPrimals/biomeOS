@@ -597,4 +597,271 @@ mod tests {
         let result = handler.escalate(&params).await;
         assert!(result.is_err());
     }
+
+    #[tokio::test]
+    async fn test_escalate_none_params() {
+        let handler = create_test_handler().await;
+        let result = handler.escalate(&None).await;
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .to_lowercase()
+                .contains("missing"),
+            "Error should mention missing params"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_fallback_missing_params() {
+        let handler = create_test_handler().await;
+
+        let params = Some(json!({ "to": "b" }));
+        let result = handler.fallback(&params).await;
+        assert!(result.is_err());
+
+        let params = Some(json!({ "from": "a" }));
+        let result = handler.fallback(&params).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_fallback_none_params() {
+        let handler = create_test_handler().await;
+        let result = handler.fallback(&None).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_fallback_with_reason() {
+        let handler = create_test_handler().await;
+        handler.graph.register_connection("src", "dst").await;
+
+        let params = Some(json!({
+            "from": "src",
+            "to": "dst",
+            "reason": "manual_test"
+        }));
+
+        let result = handler.fallback(&params).await.unwrap();
+        assert!(result.get("status").is_some());
+        assert_eq!(result["from"], "src");
+        assert_eq!(result["to"], "dst");
+    }
+
+    #[tokio::test]
+    async fn test_fallback_default_reason() {
+        let handler = create_test_handler().await;
+        handler.graph.register_connection("a", "b").await;
+
+        let params = Some(json!({ "from": "a", "to": "b" }));
+        let result = handler.fallback(&params).await.unwrap();
+        assert_eq!(result["status"], "degraded");
+    }
+
+    #[tokio::test]
+    async fn test_metrics_missing_params() {
+        let handler = create_test_handler().await;
+
+        let params = Some(json!({ "to": "b" }));
+        let result = handler.metrics(&params).await;
+        assert!(result.is_err());
+
+        let params = Some(json!({ "from": "a" }));
+        let result = handler.metrics(&params).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_metrics_none_params() {
+        let handler = create_test_handler().await;
+        let result = handler.metrics(&None).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_metrics_connection_not_found() {
+        let handler = create_test_handler().await;
+
+        let params = Some(json!({
+            "from": "nonexistent",
+            "to": "also-nonexistent"
+        }));
+        let result = handler.metrics(&params).await;
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .to_lowercase()
+                .contains("not found"),
+            "Error should mention connection not found"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_register_primal_with_tarpc_socket() {
+        let handler = create_test_handler().await;
+
+        let params = Some(json!({
+            "primal_id": "tarpc-primal",
+            "json_rpc_socket": "/tmp/json.sock",
+            "tarpc_socket": "/tmp/tarpc.sock",
+            "capabilities": ["rpc"]
+        }));
+
+        let result = handler.register_primal(&params).await.unwrap();
+        assert_eq!(result["status"], "registered");
+        assert_eq!(result["primal_id"], "tarpc-primal");
+
+        assert!(handler.graph.has_primal("tarpc-primal").await);
+        let state = handler
+            .graph
+            .get_primal_state("tarpc-primal")
+            .await
+            .expect("primal state");
+        assert!(state.tarpc_socket.is_some());
+        assert_eq!(
+            state.tarpc_socket.as_ref().unwrap().to_string_lossy(),
+            "/tmp/tarpc.sock"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_register_primal_missing_params() {
+        let handler = create_test_handler().await;
+
+        let result = handler.register_primal(&None).await;
+        assert!(result.is_err());
+
+        let params = Some(json!({}));
+        let result = handler.register_primal(&params).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_register_connection_missing_params() {
+        let handler = create_test_handler().await;
+
+        let result = handler.register_connection(&None).await;
+        assert!(result.is_err());
+
+        let params = Some(json!({ "from": "a" }));
+        let result = handler.register_connection(&params).await;
+        assert!(result.is_err());
+
+        let params = Some(json!({ "to": "b" }));
+        let result = handler.register_connection(&params).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_record_request_success_false() {
+        let handler = create_test_handler().await;
+        handler.graph.register_connection("a", "b").await;
+
+        let params = Some(json!({
+            "from": "a",
+            "to": "b",
+            "latency_us": 200,
+            "success": false
+        }));
+
+        let result = handler.record_request(&params).await.unwrap();
+        assert_eq!(result["success"], false);
+
+        let conn = handler.graph.get_connection("a", "b").await.unwrap();
+        assert_eq!(conn.metrics.error_count, 1);
+    }
+
+    #[tokio::test]
+    async fn test_record_request_default_success() {
+        let handler = create_test_handler().await;
+        handler.graph.register_connection("x", "y").await;
+
+        let params = Some(json!({
+            "from": "x",
+            "to": "y",
+            "latency_us": 100
+        }));
+
+        let result = handler.record_request(&params).await.unwrap();
+        assert_eq!(result["success"], true);
+    }
+
+    #[tokio::test]
+    async fn test_record_request_missing_params() {
+        let handler = create_test_handler().await;
+
+        let result = handler.record_request(&None).await;
+        assert!(result.is_err());
+
+        let params = Some(json!({ "from": "a", "to": "b" }));
+        let result = handler.record_request(&params).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_start_monitoring() {
+        let handler = create_test_handler().await;
+        let result = handler.start_monitoring().await.unwrap();
+        assert_eq!(result["status"], "started");
+        assert!(result["message"].as_str().unwrap().contains("started"));
+    }
+
+    #[tokio::test]
+    async fn test_stop_monitoring() {
+        let handler = create_test_handler().await;
+        let result = handler.stop_monitoring().await.unwrap();
+        assert_eq!(result["status"], "stopped");
+        assert!(result["message"].as_str().unwrap().contains("stopped"));
+    }
+
+    #[tokio::test]
+    async fn test_protocol_map_empty() {
+        let handler = create_test_handler().await;
+        let result = handler.protocol_map().await.unwrap();
+
+        assert_eq!(result["family_id"], "test-family");
+        assert_eq!(result["summary"]["primal_count"], 0);
+        assert_eq!(result["summary"]["connection_count"], 0);
+        assert!(result["nodes"].as_array().unwrap().is_empty());
+        assert!(result["edges"].as_array().unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_protocol_map_node_structure() {
+        let handler = create_test_handler().await;
+        handler
+            .graph
+            .register_primal(PrimalProtocolState::new(
+                "test-node",
+                std::path::PathBuf::from("/tmp/test.sock"),
+            ))
+            .await;
+
+        let result = handler.protocol_map().await.unwrap();
+        let nodes = result["nodes"].as_array().unwrap();
+        assert_eq!(nodes.len(), 1);
+        assert_eq!(nodes[0]["id"], "test-node");
+        assert!(nodes[0].get("tarpc_available").is_some());
+        assert!(nodes[0].get("current_mode").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_escalate_registered_connection() {
+        let handler = create_test_handler().await;
+        handler.graph.register_connection("client", "server").await;
+
+        let params = Some(json!({
+            "from": "client",
+            "to": "server"
+        }));
+
+        let result = handler.escalate(&params).await.unwrap();
+        assert!(result.get("status").is_some());
+        assert_eq!(result["from"], "client");
+        assert_eq!(result["to"], "server");
+    }
 }

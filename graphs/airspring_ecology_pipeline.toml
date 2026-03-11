@@ -1,0 +1,129 @@
+# airSpring Ecology Pipeline Graph
+# Orchestrates agricultural science through the NUCLEUS:
+#   Tower (BearDog + Songbird) → airSpring (ecology) + NestGate (weather data)
+#
+# STATUS: Live (Mar 1, 2026)
+# Requires: Tower (BearDog + Songbird) + airSpring primal
+# Optional: NestGate (weather data), ToadStool (GPU compute)
+#
+# Pipeline:
+#   1. Verify prerequisites (airSpring, optionally NestGate + ToadStool)
+#   2. Compute FAO-56 Penman-Monteith ET₀
+#   3. Compute water balance
+#   4. Compute yield response (Stewart 1977)
+#   5. Store results with provenance
+
+[graph]
+id = "airspring_ecology_pipeline"
+description = "Ecology pipeline: weather → ET₀ → water balance → yield response"
+coordination = "Sequential"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 1: ENSURE PREREQUISITES
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "check_airspring"
+output = "airspring_healthy"
+capabilities = ["ecology"]
+
+[nodes.operation]
+name = "rpc_call"
+target = "airspring"
+
+[nodes.operation.params]
+method = "health"
+params = {}
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 2: EVAPOTRANSPIRATION (airSpring)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# FAO-56 Penman-Monteith ET₀
+[[nodes]]
+id = "compute_et0"
+depends_on = ["check_airspring"]
+output = "et0_result"
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "ecology.et0_fao56"
+params = { tmax = 32.0, tmin = 18.0, solar_radiation = 22.5, wind_speed_2m = 1.8, actual_vapour_pressure = 1.2, day_of_year = 200, latitude_deg = 42.727, elevation_m = 256.0 }
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# Multi-method comparison: Hargreaves
+[[nodes]]
+id = "compute_et0_hg"
+depends_on = ["check_airspring"]
+output = "et0_hg_result"
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "ecology.et0_hargreaves"
+params = { tmin = 18.0, tmax = 32.0, latitude_deg = 42.727, day_of_year = 200 }
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 3: WATER BALANCE (airSpring)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "compute_water_balance"
+depends_on = ["compute_et0"]
+output = "wb_result"
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "ecology.water_balance"
+params = { et0_mm = 6.0, kc = 1.15, precipitation_mm = 3.5, soil_water_mm = 150.0, field_capacity_mm = 200.0, wilting_point_mm = 50.0 }
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 4: YIELD RESPONSE (airSpring)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "compute_yield"
+depends_on = ["compute_water_balance"]
+output = "yield_result"
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "ecology.yield_response"
+params = { ky = 1.25, eta_over_etm = 0.85, max_yield_t_ha = 12.0 }
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 5: VALIDATION
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "validate_pipeline"
+depends_on = ["compute_et0", "compute_et0_hg", "compute_water_balance", "compute_yield"]
+output = "pipeline_validated"
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.operation.params]
+check_airspring = true
+timeout_seconds = 30

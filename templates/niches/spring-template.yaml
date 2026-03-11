@@ -1,0 +1,156 @@
+# =============================================================================
+# Spring-as-Niche Template
+# =============================================================================
+#
+# This is the canonical template for describing any spring as a BYOB niche.
+# Copy this file, replace <spring> with your spring name, and fill in the
+# domain-specific capabilities and configuration.
+#
+# See: wateringHole/SPRING_AS_NICHE_DEPLOYMENT_STANDARD.md
+# =============================================================================
+
+niche:
+  id: "<spring>-science"
+  name: "<Spring> Science"
+  version: "1.0.0"
+  description: "<Spring> science environment — <brief description of what the spring does>"
+  category: "<domain>"
+  difficulty: "beginner"
+  author: "<team>"
+  deploy_graph: "graphs/<spring>_deploy.toml"
+
+  features:
+    - "<Feature 1>"
+    - "<Feature 2>"
+    - "<Feature 3>"
+
+  required_primals:
+    - "beardog"
+    - "songbird"
+
+  optional_primals:
+    - "toadstool"
+    - "squirrel"
+    - "nestgate"
+
+organisms:
+  primals:
+    beardog:
+      type: "beardog"
+      required: true
+      role: "security"
+      capabilities:
+        - "crypto.encrypt"
+        - "crypto.sign"
+
+    songbird:
+      type: "songbird"
+      required: true
+      role: "discovery"
+      capabilities:
+        - "discovery.announce"
+        - "discovery.query"
+      dependencies: ["beardog"]
+
+    # --- The spring itself ---
+    <spring>:
+      type: "<spring>"
+      required: true
+      role: "science"
+      capabilities:
+        - "<domain>.<method1>"
+        - "<domain>.<method2>"
+        - "<domain>.<method3>"
+      dependencies: ["beardog", "songbird"]
+      config:
+        mode: "server"
+
+    # --- Optional visualization ---
+    petaltongue:
+      type: "petaltongue"
+      required: false
+      role: "visualization"
+      capabilities:
+        - "visualization.render"
+        - "ui.render"
+      dependencies: ["beardog", "songbird"]
+
+    # --- Optional compute acceleration ---
+    toadstool:
+      type: "toadstool"
+      required: false
+      role: "compute"
+      capabilities:
+        - "compute.execute"
+      dependencies: ["beardog", "songbird"]
+
+  chimeras: {}
+  # Define chimeras here if the spring fuses with other primals:
+  #
+  # <spring>-mesh:
+  #   type: "<spring>-mesh"
+  #   required: false
+  #   components:
+  #     - "songbird"
+  #     - "<spring>"
+  #   fusion_overrides:
+  #     protocol: "json-rpc"
+
+interactions:
+  - from: "<spring>"
+    to: "beardog"
+    type: "capability_call"
+    config:
+      capabilities: ["crypto.encrypt"]
+
+  - from: "<spring>"
+    to: "songbird"
+    type: "capability_call"
+    config:
+      capabilities: ["discovery.query"]
+
+  # Add visualization interaction if petaltongue is included:
+  # - from: "<spring>"
+  #   to: "petaltongue"
+  #   type: "data_flow"
+  #   config:
+  #     method: "visualization.render"
+
+  # Add compute interaction if toadstool is included:
+  # - from: "<spring>"
+  #   to: "toadstool"
+  #   type: "capability_call"
+  #   config:
+  #     capabilities: ["compute.execute"]
+
+customization:
+  - id: "render_mode"
+    name: "Visualization"
+    description: "Include visualization via petalTongue"
+    type: "boolean"
+    default: true
+    required: false
+
+  - id: "gpu_acceleration"
+    name: "GPU Acceleration"
+    description: "Include GPU compute via ToadStool"
+    type: "boolean"
+    default: false
+    required: false
+
+resources:
+  cpu_cores: 2
+  memory_mb: 2048
+  gpu: "optional"
+  storage_mb: 1024
+
+networking:
+  mesh_enabled: false
+  ports: []
+  protocols: ["json-rpc"]
+  transports: ["unix-socket"]
+
+security:
+  encryption_required: true
+  lineage_verification: true
+  dark_forest_gate: true

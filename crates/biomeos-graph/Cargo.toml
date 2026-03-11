@@ -26,6 +26,9 @@ tracing = "0.1"
 # POSIX syscall wrappers (safe Rust, signal handling for process management)
 nix = { version = "0.29", features = ["signal"] }
 
+# Metrics storage (Pure Rust, ecoBin compliant)
+sled = "0.34"
+
 # biomeOS internal crates
 biomeos-types = { path = "../biomeos-types" }
 biomeos-nucleus = { path = "../biomeos-nucleus" }

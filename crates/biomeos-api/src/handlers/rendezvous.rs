@@ -623,4 +623,106 @@ mod tests {
         assert_eq!(slots["family-a"].len(), 1);
         assert_eq!(slots["family-b"].len(), 2);
     }
+
+    // ========== Request validation and edge cases ==========
+
+    #[test]
+    fn test_rendezvous_post_request_empty_beacon() {
+        let json = serde_json::json!({
+            "encrypted_beacon": "",
+            "dark_forest_token": "some-token"
+        });
+        let request: RendezvousPostRequest = serde_json::from_value(json).expect("deserialize");
+        assert!(request.encrypted_beacon.is_empty());
+        assert_eq!(request.dark_forest_token, "some-token");
+    }
+
+    #[test]
+    fn test_rendezvous_post_request_connection_info_default() {
+        let json = r#"{"encrypted_beacon": "x", "dark_forest_token": "t"}"#;
+        let request: RendezvousPostRequest = serde_json::from_str(json).expect("deserialize");
+        assert!(
+            request.connection_info.is_none(),
+            "connection_info should default to None"
+        );
+    }
+
+    #[test]
+    fn test_rendezvous_post_request_with_connection_info() {
+        let json = serde_json::json!({
+            "encrypted_beacon": "beacon",
+            "dark_forest_token": "token",
+            "connection_info": {
+                "stun_results": {"public_addr": "1.2.3.4:41200", "nat_type": "symmetric"},
+                "relay_endpoint": "192.168.1.1:3479"
+            }
+        });
+        let request: RendezvousPostRequest = serde_json::from_value(json).expect("deserialize");
+        assert!(request.connection_info.is_some());
+        let info = request.connection_info.as_ref().unwrap();
+        assert!(info.stun_results.is_some());
+        assert_eq!(
+            info.stun_results.as_ref().unwrap().public_addr,
+            "1.2.3.4:41200"
+        );
+    }
+
+    #[test]
+    fn test_rendezvous_check_request_empty_token() {
+        let json = serde_json::json!({"dark_forest_token": ""});
+        let request: RendezvousCheckRequest = serde_json::from_value(json).expect("deserialize");
+        assert!(request.dark_forest_token.is_empty());
+    }
+
+    // ========== Handler integration - invalid token returns 403 ==========
+
+    #[tokio::test]
+    async fn test_post_beacon_invalid_token_returns_forbidden() {
+        let state = Arc::new(RendezvousState::new(""));
+        let request = RendezvousPostRequest {
+            encrypted_beacon: "fake-beacon-data".to_string(),
+            dark_forest_token: "invalid-token-no-socket".to_string(),
+            connection_info: None,
+        };
+
+        let response = post_beacon(axum::extract::State(state), axum::Json(request)).await;
+
+        let (parts, _body) = response.into_response().into_parts();
+        assert_eq!(
+            parts.status,
+            axum::http::StatusCode::FORBIDDEN,
+            "invalid token should return 403 Forbidden (Dark Forest: no socket = not family)"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_check_peer_invalid_token_returns_forbidden() {
+        let state = Arc::new(RendezvousState::new(""));
+        let request = RendezvousCheckRequest {
+            dark_forest_token: "invalid-token".to_string(),
+        };
+
+        let response = check_peer(axum::extract::State(state), axum::Json(request)).await;
+
+        let (parts, _) = response.into_response().into_parts();
+        assert_eq!(
+            parts.status,
+            axum::http::StatusCode::FORBIDDEN,
+            "invalid token should return 403 Forbidden"
+        );
+    }
+
+    #[test]
+    fn test_rendezvous_slot_expiry_logic() {
+        let slot = RendezvousSlot {
+            encrypted_beacon: "x".to_string(),
+            node_hash: "n".to_string(),
+            lineage_hash: "l".to_string(),
+            created_at: 100,
+            expires_at: 400,
+            connection_info: None,
+        };
+        assert!(slot.expires_at > slot.created_at);
+        assert_eq!(slot.expires_at - slot.created_at, 300);
+    }
 }

@@ -114,7 +114,7 @@ pub struct CapabilityTranslationRegistry {
     provider_capabilities: HashMap<String, Vec<String>>,
 
     /// Next RPC ID (reserved for future tarpc request correlation)
-    #[allow(dead_code)]
+    #[allow(dead_code)] // TODO: Wire up for tarpc request correlation
     next_id: std::sync::Arc<std::sync::atomic::AtomicU64>,
 }
 

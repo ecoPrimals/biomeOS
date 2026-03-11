@@ -300,7 +300,7 @@ pub async fn handle_federation_check_access(args: &CheckAccessArgs) -> Result<()
 }
 
 /// Format capabilities for display
-fn format_capabilities(caps: &CapabilitySet) -> String {
+pub(crate) fn format_capabilities(caps: &CapabilitySet) -> String {
     caps.all()
         .iter()
         .map(|c| c.to_string())
@@ -309,10 +309,54 @@ fn format_capabilities(caps: &CapabilitySet) -> String {
 }
 
 /// Truncate string to max length
-fn truncate(s: &str, max: usize) -> String {
+pub(crate) fn truncate(s: &str, max: usize) -> String {
     if s.len() <= max {
         s.to_string()
     } else {
         format!("{}...", &s[..max.saturating_sub(3)])
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use biomeos_federation::capability::{Capability, CapabilitySet};
+
+    #[test]
+    fn test_format_capabilities() {
+        let caps = CapabilitySet::from_vec(vec![Capability::Storage, Capability::Compute]);
+        let result = format_capabilities(&caps);
+        assert!(result.contains("storage"));
+        assert!(result.contains("compute"));
+    }
+
+    #[test]
+    fn test_format_capabilities_empty() {
+        let caps = CapabilitySet::new();
+        let result = format_capabilities(&caps);
+        assert_eq!(result, "");
+    }
+
+    #[test]
+    fn test_truncate_short_string() {
+        assert_eq!(truncate("hello", 10), "hello");
+        assert_eq!(truncate("hi", 5), "hi");
+    }
+
+    #[test]
+    fn test_truncate_long_string() {
+        assert_eq!(truncate("hello world", 8), "hello...");
+        assert_eq!(truncate("abcdefghij", 7), "abcd...");
+    }
+
+    #[test]
+    fn test_truncate_exact_length() {
+        assert_eq!(truncate("hello", 5), "hello");
+    }
+
+    #[test]
+    fn test_truncate_short_max() {
+        // When max=3, prefix length is 0 (max-3), so result is "..."
+        assert_eq!(truncate("hello", 3), "...");
     }
 }

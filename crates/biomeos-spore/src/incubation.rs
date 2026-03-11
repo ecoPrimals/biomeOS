@@ -156,32 +156,41 @@ impl LocalEntropy {
     }
 
     /// Get primary network interface MAC address
+    ///
+    /// On Linux: reads from `/sys/class/net/<interface>/address` for the first
+    /// non-loopback interface. Falls back to placeholder if no interfaces found.
     fn get_primary_mac_address() -> Result<String> {
-        // This is a best-effort approach
-        // In production, you might use a crate like `mac_address`
-
         #[cfg(target_os = "linux")]
         {
-            // Try to read from /sys/class/net/
-            if let Ok(entries) = std::fs::read_dir("/sys/class/net") {
-                for entry in entries.flatten() {
-                    let iface = entry.file_name();
-                    let iface_str = iface.to_string_lossy();
+            let net_dir = "/sys/class/net";
+            if let Ok(entries) = std::fs::read_dir(net_dir) {
+                let mut ifaces: Vec<std::path::PathBuf> = entries
+                    .filter_map(|e| e.ok())
+                    .map(|e| e.path())
+                    .filter(|p| {
+                        let name = p.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                        !name.starts_with("lo") // Skip loopback only
+                    })
+                    .collect();
+                ifaces.sort(); // Deterministic: prefer eth0, enp0s3, etc. over wlan0
 
-                    // Skip loopback and virtual interfaces
-                    if iface_str.starts_with("lo") || iface_str.starts_with("vir") {
-                        continue;
-                    }
-
+                for path in ifaces {
+                    let iface_str = path
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("");
                     let mac_path = format!("/sys/class/net/{}/address", iface_str);
                     if let Ok(mac) = std::fs::read_to_string(&mac_path) {
-                        return Ok(mac.trim().to_string());
+                        let mac = mac.trim().to_string();
+                        if !mac.is_empty() {
+                            return Ok(mac);
+                        }
                     }
                 }
             }
         }
 
-        // Fallback: return a placeholder
+        // Fallback: no suitable interface found (non-Linux or no interfaces)
         Ok("00:00:00:00:00:00".to_string())
     }
 

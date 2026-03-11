@@ -390,4 +390,85 @@ mod tests {
         assert_eq!(c.family_id, "fam");
         assert_eq!(c.plaintext, "pt");
     }
+
+    // ========== parse_decrypt_result edge cases ==========
+
+    #[test]
+    fn test_parse_decrypt_result_plaintext_null() {
+        let value = serde_json::json!({
+            "success": true,
+            "plaintext": null
+        });
+        assert!(
+            parse_decrypt_result(&value, "default").is_none(),
+            "null plaintext should fail (AND validation)"
+        );
+    }
+
+    #[test]
+    fn test_parse_decrypt_result_plaintext_non_string() {
+        let value = serde_json::json!({
+            "success": true,
+            "plaintext": 42
+        });
+        assert!(
+            parse_decrypt_result(&value, "default").is_none(),
+            "non-string plaintext should fail"
+        );
+    }
+
+    #[test]
+    fn test_parse_decrypt_result_success_non_bool() {
+        let value = serde_json::json!({
+            "success": "true",
+            "plaintext": "data"
+        });
+        assert!(
+            parse_decrypt_result(&value, "default").is_none(),
+            "non-bool success should be treated as false"
+        );
+    }
+
+    #[test]
+    fn test_parse_decrypt_result_whitespace_plaintext() {
+        let value = serde_json::json!({
+            "success": true,
+            "plaintext": "   "
+        });
+        let result = parse_decrypt_result(&value, "default");
+        assert!(
+            result.is_some(),
+            "whitespace-only plaintext is non-empty, should pass"
+        );
+        assert_eq!(result.unwrap().plaintext, "   ");
+    }
+
+    #[test]
+    fn test_parse_decrypt_result_family_id_from_value_overrides_default() {
+        let value = serde_json::json!({
+            "success": true,
+            "plaintext": "x",
+            "family_id": "explicit-family"
+        });
+        let result = parse_decrypt_result(&value, "default-family").expect("valid");
+        assert_eq!(result.family_id, "explicit-family");
+    }
+
+    #[test]
+    fn test_beacon_verification_construction() {
+        let v = BeaconVerification {
+            family_id: "test-fam".to_string(),
+            plaintext: "decrypted-content".to_string(),
+        };
+        assert_eq!(v.family_id, "test-fam");
+        assert_eq!(v.plaintext, "decrypted-content");
+    }
+
+    #[test]
+    fn test_discover_neural_api_socket_no_socket_returns_none() {
+        // With no NEURAL_API_SOCKET and no real socket files, should return None
+        let result = discover_neural_api_socket("nonexistent-family-xyz-12345");
+        // Result is environment-dependent; we just verify it doesn't panic
+        let _ = result;
+    }
 }

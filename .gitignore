@@ -64,3 +64,6 @@ base-spore/.family.seed
 
 # Archive (fossil record lives in ecoPrimals/archive/)
 archive/
+cloudflared
+*.bak*/
+plasmidBin/optimized/

@@ -116,6 +116,88 @@ impl NicheHandler {
                     {"name": "LINEAGE_MODE", "type": "enum", "values": ["genesis", "sibling"]}
                 ]
             }),
+            json!({
+                "id": "gaming",
+                "name": "Game Engine",
+                "description": "Interactive game engine niche (ludoSpring + petalTongue + Tower)",
+                "category": "gaming",
+                "required_resources": {
+                    "cpu_cores": 4,
+                    "memory_mb": 4096,
+                    "gpu_count": null,
+                    "storage_gb": 2
+                },
+                "graph_id": "gaming_niche_deploy",
+                "parameters": [
+                    {"name": "RENDER_MODE", "type": "enum", "values": ["gui", "tui", "web", "headless"]},
+                    {"name": "GPU_ACCELERATION", "type": "boolean"}
+                ]
+            }),
+            json!({
+                "id": "ludospring",
+                "name": "Game Science",
+                "description": "ludoSpring game science primal atop Node Atomic",
+                "category": "science",
+                "required_resources": {
+                    "cpu_cores": 2,
+                    "memory_mb": 2048,
+                    "gpu_count": null,
+                    "storage_gb": 1
+                },
+                "graph_id": "ludospring_deploy",
+                "parameters": []
+            }),
+            json!({
+                "id": "petaltongue",
+                "name": "Visualization",
+                "description": "petalTongue universal visualization primal",
+                "category": "visualization",
+                "required_resources": {
+                    "cpu_cores": 2,
+                    "memory_mb": 2048,
+                    "gpu_count": null,
+                    "storage_gb": 1
+                },
+                "graph_id": "petaltongue_deploy",
+                "parameters": [
+                    {"name": "RENDER_MODE", "type": "enum", "values": ["gui", "tui", "web", "headless"]}
+                ]
+            }),
+            json!({
+                "id": "game-engine-tick",
+                "name": "Game Engine Tick Loop",
+                "description": "60 Hz continuous game loop (input → logic → physics → scene → render)",
+                "category": "continuous",
+                "required_resources": {
+                    "cpu_cores": 4,
+                    "memory_mb": 4096,
+                    "gpu_count": 1,
+                    "storage_gb": 0
+                },
+                "graph_id": "game-engine-tick",
+                "parameters": [
+                    {"name": "TARGET_HZ", "type": "float", "default": 60.0},
+                    {"name": "VSYNC", "type": "boolean", "default": true}
+                ]
+            }),
+            json!({
+                "id": "surgical-vr",
+                "name": "Surgical VR Training",
+                "description": "Immersive surgical simulation (healthSpring + petalTongue + ludoSpring)",
+                "category": "medical",
+                "required_resources": {
+                    "cpu_cores": 8,
+                    "memory_mb": 16384,
+                    "gpu_count": 1,
+                    "storage_gb": 20
+                },
+                "graph_id": "surgical_vr_deploy",
+                "parameters": [
+                    {"name": "PROCEDURE", "type": "string", "required": true},
+                    {"name": "TRACKING_BACKEND", "type": "enum", "values": ["openxr", "steamvr", "custom"]},
+                    {"name": "HAPTIC_ENABLED", "type": "boolean", "default": true}
+                ]
+            }),
         ];
 
         Ok(json!(templates))
@@ -138,6 +220,11 @@ impl NicheHandler {
             "tower-atomic" => "tower_atomic_bootstrap",
             "ui-atomic" => "ui-atomic",
             "livespore" => "livespore-create",
+            "gaming" => "gaming_niche_deploy",
+            "ludospring" => "ludospring_deploy",
+            "petaltongue" => "petaltongue_deploy",
+            "game-engine-tick" => "game-engine-tick",
+            "surgical-vr" => "surgical_vr_deploy",
             _ => anyhow::bail!("Unknown template: {}", template_id),
         };
 
@@ -193,6 +280,7 @@ impl NicheHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempfile::TempDir;
 
     #[tokio::test]
     async fn test_niche_list() {
@@ -205,5 +293,169 @@ mod tests {
         let templates = result.as_array().unwrap();
         assert!(!templates.is_empty());
         assert!(templates.iter().any(|t| t["id"] == "nucleus"));
+    }
+
+    #[tokio::test]
+    async fn test_niche_list_all_templates() {
+        let router = Arc::new(NeuralRouter::new("test-family"));
+        let executions = Arc::new(RwLock::new(HashMap::new()));
+        let handler = NicheHandler::new("/tmp", "test-family", router, executions);
+
+        let result = handler.list().await.unwrap();
+        let templates = result.as_array().unwrap();
+
+        let expected_ids = [
+            "nucleus",
+            "tower-atomic",
+            "ui-atomic",
+            "livespore",
+            "gaming",
+            "ludospring",
+            "petaltongue",
+            "game-engine-tick",
+            "surgical-vr",
+        ];
+        for id in expected_ids {
+            assert!(
+                templates.iter().any(|t| t["id"] == id),
+                "Template {} should be in list",
+                id
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_niche_list_template_structure() {
+        let router = Arc::new(NeuralRouter::new("test-family"));
+        let executions = Arc::new(RwLock::new(HashMap::new()));
+        let handler = NicheHandler::new("/tmp", "test-family", router, executions);
+
+        let result = handler.list().await.unwrap();
+        let templates = result.as_array().unwrap();
+
+        let nucleus = templates
+            .iter()
+            .find(|t| t["id"] == "nucleus")
+            .expect("nucleus template");
+        assert_eq!(nucleus["name"], "NUCLEUS");
+        assert!(nucleus["description"].as_str().unwrap().contains("biomeOS"));
+        assert!(nucleus["required_resources"].get("cpu_cores").is_some());
+        assert_eq!(nucleus["graph_id"], "nucleus-simple");
+    }
+
+    #[tokio::test]
+    async fn test_niche_list_livespore_parameters() {
+        let router = Arc::new(NeuralRouter::new("test-family"));
+        let executions = Arc::new(RwLock::new(HashMap::new()));
+        let handler = NicheHandler::new("/tmp", "test-family", router, executions);
+
+        let result = handler.list().await.unwrap();
+        let templates = result.as_array().unwrap();
+        let livespore = templates
+            .iter()
+            .find(|t| t["id"] == "livespore")
+            .expect("livespore template");
+
+        let params = livespore["parameters"].as_array().unwrap();
+        assert!(!params.is_empty());
+        assert!(params.iter().any(|p| p["name"] == "SPORE_TARGET"));
+    }
+
+    #[tokio::test]
+    async fn test_niche_deploy_missing_params() {
+        let router = Arc::new(NeuralRouter::new("test-family"));
+        let executions = Arc::new(RwLock::new(HashMap::new()));
+        let handler = NicheHandler::new("/tmp", "test-family", router, executions);
+
+        let result = handler.deploy(&None).await;
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .to_lowercase()
+                .contains("missing"),
+            "Error should mention missing params"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_niche_deploy_missing_template_id() {
+        let router = Arc::new(NeuralRouter::new("test-family"));
+        let executions = Arc::new(RwLock::new(HashMap::new()));
+        let handler = NicheHandler::new("/tmp", "test-family", router, executions);
+
+        let params = Some(json!({}));
+        let result = handler.deploy(&params).await;
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .to_lowercase()
+                .contains("template_id"),
+            "Error should mention template_id"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_niche_deploy_unknown_template() {
+        let temp_dir = TempDir::new().expect("temp dir");
+        let router = Arc::new(NeuralRouter::new("test-family"));
+        let executions = Arc::new(RwLock::new(HashMap::new()));
+        let handler = NicheHandler::new(temp_dir.path(), "test-family", router, executions);
+
+        let params = Some(json!({ "template_id": "unknown-template-xyz" }));
+        let result = handler.deploy(&params).await;
+        assert!(result.is_err());
+        assert!(
+            result.unwrap_err().to_string().contains("Unknown template"),
+            "Error should mention unknown template"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_niche_deploy_graph_not_found() {
+        let temp_dir = TempDir::new().expect("temp dir");
+        let router = Arc::new(NeuralRouter::new("test-family"));
+        let executions = Arc::new(RwLock::new(HashMap::new()));
+        let handler = NicheHandler::new(temp_dir.path(), "test-family", router, executions);
+
+        let params = Some(json!({ "template_id": "nucleus" }));
+        let result = handler.deploy(&params).await;
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.to_lowercase().contains("not found") || err_msg.contains("nucleus-simple"),
+            "Error should mention graph not found: {}",
+            err_msg
+        );
+    }
+
+    #[tokio::test]
+    async fn test_niche_handler_new() {
+        let router = Arc::new(NeuralRouter::new("test-family"));
+        let executions = Arc::new(RwLock::new(HashMap::new()));
+        let handler = NicheHandler::new(
+            PathBuf::from("/graphs"),
+            "my-family",
+            router.clone(),
+            executions.clone(),
+        );
+
+        let result = handler.list().await.unwrap();
+        assert!(!result.as_array().unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_niche_list_serialization_roundtrip() {
+        let router = Arc::new(NeuralRouter::new("test-family"));
+        let executions = Arc::new(RwLock::new(HashMap::new()));
+        let handler = NicheHandler::new("/tmp", "test-family", router, executions);
+
+        let result = handler.list().await.unwrap();
+        let json_str = serde_json::to_string(&result).expect("serialize");
+        let parsed: Value = serde_json::from_str(&json_str).expect("deserialize");
+        assert_eq!(result, parsed);
     }
 }

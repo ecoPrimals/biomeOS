@@ -300,4 +300,68 @@ mod tests {
         // Should be either from seed file or "default"
         assert!(!family_id.is_empty());
     }
+
+    #[test]
+    fn test_family_source_display() {
+        assert!(FamilySource::FamilyIdEnv.to_string().contains("FAMILY_ID"));
+        assert!(FamilySource::BiomeosEnv.to_string().contains("BIOMEOS"));
+        assert!(FamilySource::Default.to_string().contains("default"));
+        let path = std::path::PathBuf::from("/tmp/.family.seed");
+        assert!(FamilySource::SeedFile(path).to_string().contains("seed"));
+    }
+
+    #[test]
+    fn test_read_family_seed_nonexistent() {
+        let result = read_family_seed(std::path::Path::new("/nonexistent/path/.family.seed"));
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_read_family_seed_too_short() {
+        let temp_dir = TempDir::new().unwrap();
+        let seed_path = temp_dir.path().join(".family.seed");
+        let mut file = std::fs::File::create(&seed_path).unwrap();
+        file.write_all(&[0u8; 16]).unwrap(); // Only 16 bytes
+
+        std::env::remove_var("FAMILY_ID");
+        std::env::remove_var("BIOMEOS_FAMILY_ID");
+
+        let config = FamilyDiscoveryConfig {
+            seed_file_paths: vec![seed_path],
+            allow_default: false,
+            default_family: "default".to_string(),
+        };
+        let result = discover_family_with_config(&config);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_get_family_id_from_env() {
+        std::env::set_var("FAMILY_ID", "env_family_123");
+        let id = get_family_id_from_env();
+        assert_eq!(id, "env_family_123");
+        std::env::remove_var("FAMILY_ID");
+
+        std::env::set_var("BIOMEOS_FAMILY_ID", "biomeos_family");
+        let id = get_family_id_from_env();
+        assert_eq!(id, "biomeos_family");
+        std::env::remove_var("BIOMEOS_FAMILY_ID");
+
+        std::env::remove_var("FAMILY_ID");
+        std::env::remove_var("BIOMEOS_FAMILY_ID");
+        let id = get_family_id_from_env();
+        assert_eq!(id, "default");
+    }
+
+    #[test]
+    fn test_discovered_family_construction() {
+        let family = DiscoveredFamily {
+            id: "abc123".to_string(),
+            source: FamilySource::FamilyIdEnv,
+            genesis_seed: None,
+            node_key: None,
+        };
+        assert_eq!(family.id, "abc123");
+        assert_eq!(family.source, FamilySource::FamilyIdEnv);
+    }
 }

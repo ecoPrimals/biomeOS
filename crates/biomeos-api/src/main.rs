@@ -7,7 +7,7 @@
 
 use tracing::{info, warn};
 
-use biomeos_api::{create_app, create_app_for_tcp, AppState};
+use biomeos_api::{create_app, AppState};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -34,39 +34,24 @@ async fn main() -> anyhow::Result<()> {
         info!("Running in LIVE MODE - discovering real primals");
     }
 
-    // Start server (Unix socket PRIMARY, HTTP bridge optional)
+    // Start server (Unix socket only — HTTP bridge removed in v0.5.0)
     if config.enable_http_bridge {
-        if let Some(bind_addr) = config.bind_addr {
-            // Dual mode: Unix socket + HTTP bridge
-            // TCP bridge uses force-sovereign router — lineage required on all TCP requests
-            let app = create_app_for_tcp(state);
-
-            info!("Starting in DUAL MODE (Unix socket + HTTP bridge)");
-            info!("  Unix socket: {}", config.socket_path.display());
-            info!("  HTTP bridge: http://{}", bind_addr);
-            info!("  Security: Dark Forest gate FORCED on TCP");
-
-            // DEPRECATED: HTTP bridge is temporary for PetalTongue transition
-            #[allow(deprecated)]
-            biomeos_api::serve_dual_mode(&config.socket_path, bind_addr, app).await?;
-        } else {
-            warn!("HTTP bridge enabled but no bind_addr set — falling back to Unix socket");
-
-            let app = create_app(state);
-            biomeos_api::serve_unix_socket(&config.socket_path, app).await?;
+        warn!("HTTP bridge is deprecated and removed. Using Unix socket only.");
+        if config.bind_addr.is_some() {
+            warn!("  bind_addr is ignored — use Unix socket for PetalTongue/JSON-RPC");
         }
-    } else {
-        // Unix socket only (PRODUCTION mode!)
-        let app = create_app(state);
-
-        info!("biomeOS API Server starting (Unix socket - PRODUCTION)");
-        info!("  Socket: {}", config.socket_path.display());
-        info!("  Security: Owner-only (0600) + Dark Forest gate");
-        info!("  Protocol: JSON-RPC 2.0");
-        info!("  Port-free: TRUE PRIMAL architecture");
-
-        biomeos_api::serve_unix_socket(&config.socket_path, app).await?;
     }
+
+    // Unix socket only (PRODUCTION mode!)
+    let app = create_app(state);
+
+    info!("biomeOS API Server starting (Unix socket - PRODUCTION)");
+    info!("  Socket: {}", config.socket_path.display());
+    info!("  Security: Owner-only (0600) + Dark Forest gate");
+    info!("  Protocol: JSON-RPC 2.0");
+    info!("  Port-free: TRUE PRIMAL architecture");
+
+    biomeos_api::serve_unix_socket(&config.socket_path, app).await?;
 
     Ok(())
 }

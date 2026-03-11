@@ -6,6 +6,20 @@
 
 use anyhow::{Context, Result};
 use biomeos_genomebin_v3::{Arch, GenomeBin, GenomeBinBuilder, GenomeBinComposer};
+
+/// Parse architecture string to Arch enum (testable pure function)
+pub fn parse_arch(arch: &str) -> Result<Arch> {
+    match arch {
+        "x86_64" => Ok(Arch::X86_64),
+        "aarch64" => Ok(Arch::Aarch64),
+        "arm" => Ok(Arch::Arm),
+        "riscv64" => Ok(Arch::Riscv64),
+        _ => Err(anyhow::anyhow!(
+            "Invalid architecture: {}. Supported: x86_64, aarch64, arm, riscv64",
+            arch
+        )),
+    }
+}
 use clap::{Args, Subcommand};
 use std::fs;
 use std::path::PathBuf;
@@ -143,17 +157,7 @@ pub fn handle_genome_create(args: CreateArgs) -> Result<()> {
         anyhow::bail!("Binary not found: {}", args.binary.display());
     }
 
-    // Parse architecture
-    let arch = match args.arch.as_str() {
-        "x86_64" => Arch::X86_64,
-        "aarch64" => Arch::Aarch64,
-        "arm" => Arch::Arm,
-        "riscv64" => Arch::Riscv64,
-        _ => anyhow::bail!(
-            "Invalid architecture: {}. Supported: x86_64, aarch64, arm, riscv64",
-            args.arch
-        ),
-    };
+    let arch = parse_arch(&args.arch)?;
 
     // Determine genome name
     let genome_name = args.name.unwrap_or_else(|| {
@@ -390,17 +394,7 @@ pub async fn execute(args: GenomeArgs) -> Result<()> {
                 anyhow::bail!("Binary not found: {}", binary.display());
             }
 
-            // Parse architecture
-            let arch_enum = match arch.as_str() {
-                "x86_64" => Arch::X86_64,
-                "aarch64" => Arch::Aarch64,
-                "arm" => Arch::Arm,
-                "riscv64" => Arch::Riscv64,
-                _ => anyhow::bail!(
-                    "Invalid architecture: {}. Supported: x86_64, aarch64, arm, riscv64",
-                    arch
-                ),
-            };
+            let arch_enum = parse_arch(&arch)?;
 
             // Determine genome name
             let genome_name = name.unwrap_or_else(|| {
@@ -577,5 +571,33 @@ pub async fn execute(args: GenomeArgs) -> Result<()> {
 
             Ok(())
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_arch_valid() {
+        assert!(matches!(parse_arch("x86_64").unwrap(), Arch::X86_64));
+        assert!(matches!(parse_arch("aarch64").unwrap(), Arch::Aarch64));
+        assert!(matches!(parse_arch("arm").unwrap(), Arch::Arm));
+        assert!(matches!(parse_arch("riscv64").unwrap(), Arch::Riscv64));
+    }
+
+    #[test]
+    fn test_parse_arch_invalid() {
+        let result = parse_arch("invalid");
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("Invalid architecture"));
+        assert!(err.to_string().contains("x86_64"));
+    }
+
+    #[test]
+    fn test_parse_arch_empty() {
+        let result = parse_arch("");
+        assert!(result.is_err());
     }
 }

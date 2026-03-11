@@ -116,3 +116,94 @@ impl UniversalBiomeOSManager {
         Ok(result)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::universal_biomeos_manager::UniversalBiomeOSManager;
+    use biomeos_types::BiomeOSConfig;
+    use std::path::Path;
+    use tempfile::NamedTempFile;
+
+    async fn test_manager() -> UniversalBiomeOSManager {
+        UniversalBiomeOSManager::new(BiomeOSConfig::default())
+            .await
+            .expect("create test manager")
+    }
+
+    #[tokio::test]
+    async fn test_plan_service_creation() {
+        let manager = test_manager().await;
+        let config_data = r#"{"service": "test", "replicas": 2}"#;
+        let plan = manager
+            .plan_service_creation(config_data)
+            .await
+            .expect("plan_service_creation should succeed");
+        assert_eq!(plan.get("status").and_then(|v| v.as_str()), Some("planned"));
+        assert!(plan.contains_key("config"));
+        assert!(plan.contains_key("timestamp"));
+        assert_eq!(
+            plan.get("architecture").and_then(|v| v.as_str()),
+            Some("universal_adapter")
+        );
+    }
+
+    #[tokio::test]
+    async fn test_plan_service_creation_invalid_json() {
+        let manager = test_manager().await;
+        let err = manager
+            .plan_service_creation("not valid json {")
+            .await
+            .expect_err("invalid JSON should fail");
+        assert!(err.to_string().contains("parse"));
+    }
+
+    #[tokio::test]
+    async fn test_deploy_biome_validate_only_success() {
+        let manager = test_manager().await;
+        let temp = NamedTempFile::new().expect("create temp file");
+        let path = temp.path();
+        let result = manager
+            .deploy_biome(path, true)
+            .await
+            .expect("deploy_biome validate_only should succeed");
+        assert_eq!(
+            result.get("status").and_then(|v| v.as_str()),
+            Some("success")
+        );
+        assert!(result.contains_key("validation_result"));
+    }
+
+    #[tokio::test]
+    async fn test_deploy_biome_full_deploy() {
+        let manager = test_manager().await;
+        let temp = NamedTempFile::new().expect("create temp file");
+        let path = temp.path();
+        let result = manager
+            .deploy_biome(path, false)
+            .await
+            .expect("deploy_biome should succeed");
+        assert_eq!(
+            result.get("status").and_then(|v| v.as_str()),
+            Some("success")
+        );
+        assert!(result.contains_key("deployment_result"));
+    }
+
+    #[tokio::test]
+    async fn test_deploy_biome_manifest_path_in_result() {
+        let manager = test_manager().await;
+        let path = Path::new("/tmp/test-manifest.yaml");
+        let result = manager
+            .deploy_biome(path, true)
+            .await
+            .expect("deploy_biome should succeed");
+        assert_eq!(
+            result.get("manifest_path").and_then(|v| v.as_str()),
+            Some("/tmp/test-manifest.yaml")
+        );
+        assert_eq!(
+            result.get("validate_only").and_then(|v| v.as_bool()),
+            Some(true)
+        );
+    }
+}

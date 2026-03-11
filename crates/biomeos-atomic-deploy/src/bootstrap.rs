@@ -236,6 +236,7 @@ pub async fn transition_to_coordinated(family_id: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempfile::TempDir;
 
     #[test]
     fn test_socket_nucleation_creates_valid_paths() {
@@ -316,5 +317,129 @@ mod tests {
         assert_eq!(env.get("FAMILY_ID"), Some(&"test-family".to_string()));
         assert_eq!(env.get("BIOMEOS_MODE"), Some(&"bootstrap".to_string()));
         assert_eq!(env.len(), 3);
+    }
+
+    #[tokio::test]
+    async fn test_execute_bootstrap_sequence_missing_graph() {
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+        let graphs_dir = temp_dir.path();
+        // No tower_atomic_bootstrap.toml file exists
+        let result = execute_bootstrap_sequence(
+            graphs_dir,
+            "test-family",
+            &Arc::new(RwLock::new(
+                SocketNucleation::new(SocketStrategy::default()),
+            )),
+        )
+        .await;
+
+        let err = result.expect_err("Should fail when bootstrap graph not found");
+        assert!(
+            err.to_string().contains("Bootstrap graph not found"),
+            "Error should mention missing graph: {}",
+            err
+        );
+        assert!(
+            err.to_string().contains("tower_atomic_bootstrap.toml"),
+            "Error should mention expected filename: {}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    async fn test_execute_bootstrap_sequence_invalid_toml() {
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+        let graphs_dir = temp_dir.path();
+        let bootstrap_path = graphs_dir.join("tower_atomic_bootstrap.toml");
+        std::fs::write(&bootstrap_path, "invalid toml {{{").expect("Failed to write invalid TOML");
+
+        let result = execute_bootstrap_sequence(
+            graphs_dir,
+            "test-family",
+            &Arc::new(RwLock::new(
+                SocketNucleation::new(SocketStrategy::default()),
+            )),
+        )
+        .await;
+
+        let err = result.expect_err("Should fail on invalid TOML");
+        assert!(
+            err.to_string().contains("parse") || err.to_string().contains("TOML"),
+            "Error should mention parse/TOML: {}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    async fn test_register_self_in_registry_bootstrap_mode() {
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+        let socket_path = temp_dir.path().join("biomeos-test.sock");
+        std::fs::File::create(&socket_path).expect("Create socket path placeholder");
+
+        let router = Arc::new(NeuralRouter::new("test-family"));
+        let mode = RwLock::new(BiomeOsMode::Bootstrap);
+
+        register_self_in_registry(&router, "test-family", &socket_path, &mode)
+            .await
+            .expect("Registration should succeed");
+
+        let caps = router.list_capabilities().await;
+        assert!(
+            caps.len() >= 5,
+            "Should register at least 5 capabilities, got {}",
+            caps.len()
+        );
+        assert!(
+            caps.contains_key("primal.germination"),
+            "Should register primal.germination"
+        );
+        assert!(
+            caps.contains_key("graph.execution"),
+            "Should register graph.execution"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_register_self_in_registry_coordinated_mode() {
+        let temp_dir = TempDir::new().expect("Failed to create temp dir");
+        let socket_path = temp_dir.path().join("biomeos-coord.sock");
+        std::fs::File::create(&socket_path).expect("Create socket path placeholder");
+
+        let router = Arc::new(NeuralRouter::new("coord-family"));
+        let mode = RwLock::new(BiomeOsMode::Coordinated);
+
+        register_self_in_registry(&router, "coord-family", &socket_path, &mode)
+            .await
+            .expect("Registration should succeed");
+
+        let providers = router
+            .get_capability_providers("ecosystem.coordination")
+            .await;
+        assert!(
+            providers.is_some(),
+            "Should have ecosystem.coordination registered"
+        );
+        let providers = providers.unwrap();
+        assert_eq!(providers[0].primal_name, "biomeos-coord-family");
+        assert_eq!(providers[0].source, "coordinated");
+    }
+
+    #[test]
+    fn test_primal_name_format() {
+        let primal_name = format!("biomeos-{}", "my-family");
+        assert_eq!(primal_name, "biomeos-my-family");
+    }
+
+    #[test]
+    fn test_capabilities_list_complete() {
+        let capabilities = [
+            "primal.germination",
+            "primal.terraria",
+            "ecosystem.coordination",
+            "ecosystem.nucleation",
+            "graph.execution",
+        ];
+        assert_eq!(capabilities.len(), 5);
+        assert!(capabilities.iter().all(|c| !c.is_empty()));
     }
 }

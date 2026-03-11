@@ -25,7 +25,7 @@ mod multi_family_tests {
     /// Test family credential creation and validation
     #[test]
     fn test_family_credentials_creation() {
-        let family_id = FamilyId::new("test-family-alpha".to_string());
+        let family_id = FamilyId::new("test-family-alpha");
         let seed = create_test_seed(b"test-seed-1234567890123456789012345");
 
         let creds = FamilyCredentials::new(family_id.clone(), seed)
@@ -41,15 +41,15 @@ mod multi_family_tests {
         // Create three different families
         let families = [
             (
-                FamilyId::new("family-alpha".to_string()),
+                FamilyId::new("family-alpha"),
                 create_test_seed(b"alpha-seed-123456789012345678901234"),
             ),
             (
-                FamilyId::new("family-beta".to_string()),
+                FamilyId::new("family-beta"),
                 create_test_seed(b"beta-seed-1234567890123456789012345"),
             ),
             (
-                FamilyId::new("family-gamma".to_string()),
+                FamilyId::new("family-gamma"),
                 create_test_seed(b"gamma-seed-123456789012345678901234"),
             ),
         ];
@@ -99,7 +99,7 @@ mod multi_family_tests {
         ];
 
         for (family_id_str, seed_bytes) in test_cases {
-            let family_id = FamilyId::new(family_id_str.to_string());
+            let family_id = FamilyId::new(family_id_str);
             let seed = create_test_seed(seed_bytes);
 
             let creds = FamilyCredentials::new(family_id.clone(), seed)
@@ -180,7 +180,7 @@ mod multi_family_tests {
         ];
 
         for (family_id_str, seed_data) in valid_cases {
-            let family_id = FamilyId::new(family_id_str.to_string());
+            let family_id = FamilyId::new(family_id_str);
             let seed = create_test_seed(seed_data);
 
             let creds =
@@ -201,7 +201,7 @@ mod multi_family_tests {
         // Run 10 times
         let mut results = Vec::new();
         for _ in 0..10 {
-            let family_id = FamilyId::new(family_id_str.to_string());
+            let family_id = FamilyId::new(family_id_str);
             let seed = create_test_seed(seed_data);
 
             let creds =
@@ -272,7 +272,7 @@ mod multi_family_tests {
         let mut handles = vec![];
 
         for (family_id_str, seed_data) in families {
-            let family_id = FamilyId::new(family_id_str.to_string());
+            let family_id = FamilyId::new(family_id_str);
             let seed = create_test_seed(seed_data);
 
             let handle = task::spawn(async move {

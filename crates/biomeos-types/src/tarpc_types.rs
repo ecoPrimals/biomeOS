@@ -268,11 +268,60 @@ mod tests {
     }
 
     #[test]
+    fn test_health_metrics() {
+        let metrics = HealthMetrics {
+            healthy: true,
+            cpu_usage: 25.5,
+            memory_bytes: 1_000_000,
+            active_connections: 10,
+            total_requests: 1000,
+            total_errors: 5,
+            avg_latency_us: 100,
+        };
+        assert!(metrics.healthy);
+        assert!((metrics.cpu_usage - 25.5).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_version_info() {
+        let info = VersionInfo {
+            version: "0.1.0".to_string(),
+            git_commit: Some("abc123".to_string()),
+            build_timestamp: Some("2026-01-01".to_string()),
+            protocols: vec!["jsonrpc".to_string(), "tarpc".to_string()],
+        };
+        assert_eq!(info.version, "0.1.0");
+        assert_eq!(info.git_commit.as_deref(), Some("abc123"));
+    }
+
+    #[test]
     fn test_protocol_preference_default() {
         assert_eq!(
             ProtocolPreference::default(),
             ProtocolPreference::PreferJsonRpc
         );
+    }
+
+    #[test]
+    fn test_protocol_from_env() {
+        std::env::set_var(PROTOCOL_ENV_VAR, "tarpc");
+        let pref = protocol_from_env();
+        std::env::remove_var(PROTOCOL_ENV_VAR);
+        assert_eq!(pref, ProtocolPreference::TarpcOnly);
+
+        std::env::set_var(PROTOCOL_ENV_VAR, "jsonrpc");
+        let pref = protocol_from_env();
+        std::env::remove_var(PROTOCOL_ENV_VAR);
+        assert_eq!(pref, ProtocolPreference::JsonRpcOnly);
+
+        std::env::set_var(PROTOCOL_ENV_VAR, "prefer-tarpc");
+        let pref = protocol_from_env();
+        std::env::remove_var(PROTOCOL_ENV_VAR);
+        assert_eq!(pref, ProtocolPreference::PreferTarpc);
+
+        std::env::remove_var(PROTOCOL_ENV_VAR);
+        let pref = protocol_from_env();
+        assert_eq!(pref, ProtocolPreference::Auto);
     }
 
     #[test]
@@ -287,5 +336,81 @@ mod tests {
         };
         assert_eq!(info.name, "beardog");
         assert!(info.protocols.contains(&"tarpc".to_string()));
+    }
+
+    #[test]
+    fn test_service_registration() {
+        let reg = ServiceRegistration {
+            name: "songbird".to_string(),
+            endpoint: "/tmp/songbird.sock".to_string(),
+            capabilities: vec!["discovery".to_string()],
+            protocols: vec!["jsonrpc".to_string()],
+            family_id: Some("family-1".to_string()),
+        };
+        assert_eq!(reg.name, "songbird");
+        assert_eq!(reg.family_id.as_deref(), Some("family-1"));
+    }
+
+    #[test]
+    fn test_registration_result() {
+        let ok = RegistrationResult {
+            success: true,
+            registration_id: Some("reg-123".to_string()),
+            error: None,
+        };
+        assert!(ok.success);
+        assert_eq!(ok.registration_id.as_deref(), Some("reg-123"));
+
+        let err = RegistrationResult {
+            success: false,
+            registration_id: None,
+            error: Some("Already registered".to_string()),
+        };
+        assert!(!err.success);
+    }
+
+    #[test]
+    fn test_signature_result() {
+        let ok = SignatureResult {
+            success: true,
+            signature: Some(vec![1, 2, 3]),
+            error: None,
+        };
+        assert!(ok.success);
+    }
+
+    #[test]
+    fn test_lineage_result() {
+        let result = LineageResult {
+            verified: true,
+            family_id: Some("fam-1".to_string()),
+            generation: Some(2),
+            error: None,
+        };
+        assert!(result.verified);
+        assert_eq!(result.generation, Some(2));
+    }
+
+    #[test]
+    fn test_protocol_info() {
+        let info = ProtocolInfo {
+            name: "tarpc".to_string(),
+            available: true,
+            version: "1.0".to_string(),
+            endpoint: Some("/tmp/tarpc.sock".to_string()),
+        };
+        assert_eq!(info.name, "tarpc");
+        assert!(info.available);
+    }
+
+    #[test]
+    fn test_tarpc_types_serialization() {
+        let status = HealthStatus {
+            healthy: true,
+            message: None,
+            uptime_secs: 100,
+        };
+        let json = serde_json::to_string(&status).expect("serialize");
+        let _: HealthStatus = serde_json::from_str(&json).expect("deserialize");
     }
 }

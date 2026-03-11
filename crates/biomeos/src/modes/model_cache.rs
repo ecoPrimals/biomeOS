@@ -8,6 +8,23 @@ use std::path::Path;
 
 use crate::ModelCacheCommand;
 
+/// Format bytes as MB string (e.g. "123.4 MB")
+pub(crate) fn format_size_mb(bytes: u64) -> String {
+    format!("{:.1} MB", bytes as f64 / 1_048_576.0)
+}
+
+/// Format bytes as GB string (e.g. "1.2 GB")
+pub(crate) fn format_size_gb(bytes: u64) -> String {
+    format!("{:.1} GB", bytes as f64 / 1_073_741_824.0)
+}
+
+/// Convert HuggingFace cache dir name to model ID (e.g. "models--org--name" -> "org/name")
+pub(crate) fn hf_dir_to_model_id(dir_name: &str) -> Option<String> {
+    dir_name
+        .strip_prefix("models--")
+        .map(|s| s.replace("--", "/"))
+}
+
 /// Run model cache command
 pub async fn run(command: ModelCacheCommand) -> Result<()> {
     match command {
@@ -32,9 +49,9 @@ async fn import_huggingface() -> Result<()> {
         println!("  Already cached:");
         for model in &existing {
             println!(
-                "    {} ({:.1} MB)",
+                "    {} ({})",
                 model.model_id,
-                model.size_bytes as f64 / 1_048_576.0
+                format_size_mb(model.size_bytes)
             );
         }
         println!();
@@ -51,9 +68,9 @@ async fn import_huggingface() -> Result<()> {
         for model_id in &imported {
             if let Some(entry) = cache.get_model(model_id) {
                 println!(
-                    "    + {} ({:.1} MB, {})",
+                    "    + {} ({}, {})",
                     model_id,
-                    entry.size_bytes as f64 / 1_048_576.0,
+                    format_size_mb(entry.size_bytes),
                     entry.format
                 );
             }
@@ -65,9 +82,9 @@ async fn import_huggingface() -> Result<()> {
     let total_size: u64 = all.iter().map(|m| m.size_bytes).sum();
     println!();
     println!(
-        "  Total: {} models, {:.1} GB cached",
+        "  Total: {} models, {} cached",
         all.len(),
-        total_size as f64 / 1_073_741_824.0
+        format_size_gb(total_size)
     );
     println!();
 
@@ -93,10 +110,10 @@ async fn list_models() -> Result<()> {
 
     for model in &models {
         println!(
-            "  {:<40} {:>10}  {:>9.1} MB  {}",
+            "  {:<40} {:>10}  {:>9}  {}",
             model.model_id,
             model.format,
-            model.size_bytes as f64 / 1_048_576.0,
+            format_size_mb(model.size_bytes),
             model.local_path.display()
         );
     }
@@ -104,9 +121,9 @@ async fn list_models() -> Result<()> {
     let total_size: u64 = models.iter().map(|m| m.size_bytes).sum();
     println!();
     println!(
-        "  Total: {} models, {:.1} GB",
+        "  Total: {} models, {}",
         models.len(),
-        total_size as f64 / 1_073_741_824.0
+        format_size_gb(total_size)
     );
     println!();
 
@@ -124,10 +141,7 @@ async fn resolve_model(model_id: &str) -> Result<()> {
         ModelResolution::Local(entry) => {
             println!("  FOUND (local cache)");
             println!("    Path:   {}", entry.local_path.display());
-            println!(
-                "    Size:   {:.1} MB",
-                entry.size_bytes as f64 / 1_048_576.0
-            );
+            println!("    Size:   {}", format_size_mb(entry.size_bytes));
             println!("    Format: {}", entry.format);
             println!("    Cached: {}", entry.cached_at);
             println!("    Gate:   {}", entry.gate_id);
@@ -138,10 +152,7 @@ async fn resolve_model(model_id: &str) -> Result<()> {
         ModelResolution::Remote(entry) => {
             println!("  FOUND (remote gate)");
             println!("    Gate:   {}", entry.gate_id);
-            println!(
-                "    Size:   {:.1} MB",
-                entry.size_bytes as f64 / 1_048_576.0
-            );
+            println!("    Size:   {}", format_size_mb(entry.size_bytes));
             println!(
                 "    Transfer needed: Use Songbird to fetch from {}",
                 entry.gate_id
@@ -172,10 +183,7 @@ async fn register_model(model_id: &str, path: &Path) -> Result<()> {
     println!("  Registered successfully.");
 
     if let Some(entry) = cache.get_model(model_id) {
-        println!(
-            "    Size:   {:.1} MB",
-            entry.size_bytes as f64 / 1_048_576.0
-        );
+        println!("    Size:   {}", format_size_mb(entry.size_bytes));
         println!("    Format: {}", entry.format);
         println!("    Files:  {}", entry.files.len());
     }
@@ -196,10 +204,7 @@ async fn show_status() -> Result<()> {
 
     println!("  Local cache:");
     println!("    Models:    {}", models.len());
-    println!(
-        "    Size:      {:.1} GB",
-        total_size as f64 / 1_073_741_824.0
-    );
+    println!("    Size:      {}", format_size_gb(total_size));
 
     // Check NestGate connection
     let nestgate_status = if cache.list_mesh_models().await.is_empty() {
@@ -226,13 +231,8 @@ async fn show_status() -> Result<()> {
             let unregistered = hf_models
                 .iter()
                 .filter(|e| {
-                    let model_id = e
-                        .file_name()
-                        .to_string_lossy()
-                        .strip_prefix("models--")
-                        .unwrap_or_default()
-                        .replace("--", "/");
-                    !cache.has_model(&model_id)
+                    hf_dir_to_model_id(&e.file_name().to_string_lossy())
+                        .is_none_or(|id| !cache.has_model(&id))
                 })
                 .count();
 
@@ -248,4 +248,42 @@ async fn show_status() -> Result<()> {
 
     println!();
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_format_size_mb() {
+        assert_eq!(format_size_mb(0), "0.0 MB");
+        assert_eq!(format_size_mb(1_048_576), "1.0 MB");
+        assert_eq!(format_size_mb(1_573_286), "1.5 MB"); // 1.5 * 1024^2
+        assert_eq!(format_size_mb(104_857_600), "100.0 MB");
+    }
+
+    #[test]
+    fn test_format_size_gb() {
+        assert_eq!(format_size_gb(0), "0.0 GB");
+        assert_eq!(format_size_gb(1_073_741_824), "1.0 GB");
+        assert_eq!(format_size_gb(2_147_483_648), "2.0 GB");
+    }
+
+    #[test]
+    fn test_hf_dir_to_model_id() {
+        assert_eq!(
+            hf_dir_to_model_id("models--TinyLlama--TinyLlama-1.1B-Chat-v1.0"),
+            Some("TinyLlama/TinyLlama-1.1B-Chat-v1.0".to_string())
+        );
+        assert_eq!(
+            hf_dir_to_model_id("models--meta-llama--Llama-2-7b-hf"),
+            Some("meta-llama/Llama-2-7b-hf".to_string())
+        );
+        assert_eq!(
+            hf_dir_to_model_id("models--simple"),
+            Some("simple".to_string())
+        );
+        assert_eq!(hf_dir_to_model_id("other--prefix"), None);
+        assert_eq!(hf_dir_to_model_id(""), None);
+    }
 }

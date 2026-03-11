@@ -417,6 +417,27 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_validation_config_default() {
+        let config = ValidationConfig::default();
+        assert_eq!(config.cloud_init_timeout.as_secs(), 600);
+        assert_eq!(config.ssh_timeout.as_secs(), 300);
+        assert_eq!(config.ssh_retry_interval.as_secs(), 30);
+        assert_eq!(config.ssh_max_retries, 20);
+    }
+
+    #[test]
+    fn test_validation_config_custom() {
+        let config = ValidationConfig {
+            cloud_init_timeout: Duration::from_secs(120),
+            ssh_timeout: Duration::from_secs(60),
+            ssh_retry_interval: Duration::from_secs(10),
+            ssh_max_retries: 5,
+        };
+        assert_eq!(config.cloud_init_timeout.as_secs(), 120);
+        assert_eq!(config.ssh_max_retries, 5);
+    }
+
+    #[test]
     fn test_manager_creation() {
         let manager = VmFederationManager::new();
         // Manager creation requires benchscale directory to exist
@@ -430,6 +451,23 @@ mod tests {
                 assert!(
                     e.to_string().contains("benchscale not found"),
                     "Error should be about missing benchscale, got: {}",
+                    e
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_with_validation_config_requires_benchscale() {
+        let config = ValidationConfig::default();
+        let result = VmFederationManager::with_validation_config(config);
+        match result {
+            Ok(_) => {}
+            Err(e) => {
+                assert!(
+                    e.to_string().contains("benchscale not found")
+                        || e.to_string().contains("parent"),
+                    "Expected benchscale or path error, got: {}",
                     e
                 );
             }

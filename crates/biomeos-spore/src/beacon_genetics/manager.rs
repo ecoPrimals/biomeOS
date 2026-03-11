@@ -554,7 +554,7 @@ mod tests {
             }
         }
 
-        #[allow(dead_code)]
+        /// Set mock response for a capability (used by tests)
         async fn set_response(&self, capability: &str, response: serde_json::Value) {
             self.responses
                 .lock()

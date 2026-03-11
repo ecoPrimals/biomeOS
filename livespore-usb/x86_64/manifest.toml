@@ -1,0 +1,156 @@
+# Genome Binary Distribution Manifest
+# ===================================
+#
+# This manifest defines all available primal binaries, versions, and architectures
+# for the ecoPrimals ecosystem. It serves as the source of truth for:
+#
+# 1. Local LiveSpore deployments
+# 2. Remote genome fetching via api.nestgate.io
+# 3. Automated update checks
+#
+# Generated: 2026-02-12
+# Version: 1.0.0
+
+[manifest]
+version = "1.0.0"
+generated = "2026-02-12T19:00:00Z"
+checksum_algorithm = "blake3"  # Primary: BLAKE3, Secondary: SHA256
+
+# =============================================================================
+# PRIMALS
+# =============================================================================
+
+[primals.beardog]
+name = "BearDog"
+description = "Security primal - cryptography, trust, genetics, Dark Forest Gate"
+latest = "0.9.0"
+versions = ["0.9.0"]
+architectures = ["x86_64-linux-musl", "aarch64-linux-musl"]
+capabilities = ["crypto", "birdsong", "lineage", "hsm", "entropy", "jwt"]
+ecobin_grade = "A++"
+
+[primals.songbird]
+name = "Songbird"
+description = "Network primal - HTTP/TLS, federation, mesh, discovery, NAT traversal"
+latest = "3.33.0"
+versions = ["3.33.0", "0.2.1"]
+architectures = ["x86_64-linux-musl", "aarch64-linux-musl"]
+capabilities = ["http", "tls", "mesh", "stun", "relay", "birdsong", "discovery", "onion"]
+ecobin_grade = "A++"
+
+[primals.nestgate]
+name = "NestGate"
+description = "Storage primal - data persistence, provenance, compression"
+latest = "2.1.0"
+versions = ["2.1.0"]
+architectures = ["x86_64-linux-musl", "aarch64-linux-musl"]
+capabilities = ["storage", "provenance", "compression"]
+ecobin_grade = "GOLD"
+
+[primals.squirrel]
+name = "Squirrel"
+description = "AI primal - model inference, MCP, local/cloud AI bridge"
+latest = "0.1.0"
+versions = ["0.1.0"]
+architectures = ["x86_64-linux-musl", "aarch64-linux-musl"]
+capabilities = ["ai", "inference", "mcp"]
+ecobin_grade = "A++"
+
+[primals.toadstool]
+name = "Toadstool"
+description = "Compute primal - GPU/CPU orchestration, WASM, neural compute"
+latest = "0.1.0"
+versions = ["0.1.0"]
+architectures = ["x86_64-linux-musl", "aarch64-linux-musl"]
+capabilities = ["compute", "cpu", "gpu", "wasm", "orchestration"]
+ecobin_grade = "A++"
+
+[primals.biomeos]
+name = "biomeOS"
+description = "Neural API orchestrator - graph execution, primal coordination, NUCLEUS deployment"
+latest = "0.1.0"
+versions = ["0.1.0"]
+architectures = ["x86_64-linux-musl", "aarch64-linux-musl"]
+capabilities = ["orchestration", "graph", "deploy", "nucleus", "spore"]
+ecobin_grade = "A++"
+is_orchestrator = true
+
+# =============================================================================
+# ATOMICS (Pre-configured Primal Combinations)
+# =============================================================================
+
+[atomics.tower]
+name = "Tower Atomic"
+description = "Security + Networking foundation (BearDog + Songbird)"
+primals = ["beardog", "songbird"]
+latest = "1.0.0"
+versions = ["1.0.0"]
+graph = "tower_atomic_bootstrap.toml"
+
+[atomics.node]
+name = "Node Atomic"
+description = "Tower + Compute (BearDog + Songbird + Toadstool)"
+primals = ["beardog", "songbird", "toadstool"]
+latest = "1.0.0"
+versions = ["1.0.0"]
+graph = "node_atomic.toml"
+
+[atomics.nest]
+name = "Nest Atomic"
+description = "Tower + Storage (BearDog + Songbird + NestGate)"
+primals = ["beardog", "songbird", "nestgate"]
+latest = "1.0.0"
+versions = ["1.0.0"]
+graph = "nest_atomic.toml"
+
+[atomics.full]
+name = "Full NUCLEUS"
+description = "Complete ecosystem (All 6 components: 5 primals + orchestrator)"
+primals = ["beardog", "songbird", "nestgate", "squirrel", "toadstool", "biomeos"]
+latest = "1.0.0"
+versions = ["1.0.0"]
+graph = "nucleus_complete.toml"
+
+# =============================================================================
+# DISTRIBUTION ENDPOINTS
+# =============================================================================
+
+[distribution]
+# Primary: Family-verified access via nestgate.io
+primary_endpoint = "https://api.nestgate.io/genome"
+# Fallback: Public GitHub releases
+fallback_endpoint = "https://github.com/ecoPrimals/releases/download"
+# Local: For LiveSpore and air-gapped deployments
+local_path = "genomeBin/primals"
+
+[distribution.authentication]
+# Dark Forest Gate required for primary endpoint
+dark_forest_required = true
+# Public manifest and checksums (no auth needed)
+public_paths = ["/manifest", "/checksum/*"]
+# Download requires Dark Forest Token
+protected_paths = ["/{primal}/{version}/{arch}"]
+
+# =============================================================================
+# ARCHITECTURE MAPPINGS
+# =============================================================================
+
+[architectures]
+x86_64 = { target = "x86_64-unknown-linux-musl", aliases = ["x64", "amd64"] }
+aarch64 = { target = "aarch64-unknown-linux-musl", aliases = ["arm64", "aarch64"] }
+# Future architectures
+# armv7 = { target = "armv7-unknown-linux-musleabihf", aliases = ["arm", "armhf"] }
+# riscv64 = { target = "riscv64gc-unknown-linux-gnu", aliases = ["rv64"] }
+
+# =============================================================================
+# UPDATE POLICY
+# =============================================================================
+
+[updates]
+# How often nodes should check for updates (seconds)
+check_interval = 3600  # 1 hour
+# Automatic update behavior
+auto_update = false  # Require explicit approval
+# Keep N previous versions for rollback
+keep_versions = 3
+

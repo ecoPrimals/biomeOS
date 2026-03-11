@@ -70,6 +70,7 @@ pub use orchestrator::InteractiveUIOrchestrator;
 pub use capabilities::device_management::{
     Device as PTDevice, DeviceManagementProvider, NicheTemplate, Primal as PTPrimal,
 };
+pub use capabilities::{HapticPipeline, MotionCaptureAdapter, StereoRenderAdapter};
 pub use realtime::{RealTimeEvent, RealTimeEventHandler, RealTimeEventSubscriber};
 pub use state::{Assignment, Device, PrimalInfo, UIState};
 pub use suggestions::{AISuggestion, AISuggestionManager, SuggestionContext, SuggestionFeedback};

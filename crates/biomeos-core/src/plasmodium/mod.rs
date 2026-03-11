@@ -28,7 +28,6 @@
 //!
 //! See `specs/PLASMODIUM_OVER_NUCLEUS_SPEC.md` for the full specification.
 
-mod ssh_legacy;
 mod system;
 pub mod types;
 
@@ -105,18 +104,12 @@ impl Plasmodium {
         // 3. Query each peer (prefer Songbird HTTP JSON-RPC, fallback to SSH)
         for peer in peers {
             let result = if peer.address.starts_with("ssh:") {
-                // SSH-based query (legacy): ssh:user@host
-                // Try HTTP JSON-RPC first by extracting the host
+                // SSH-based peer (legacy): ssh:user@host
+                // Try Songbird HTTP JSON-RPC first by extracting the host
                 let ssh_target = &peer.address[4..];
                 let host = ssh_target.split('@').next_back().unwrap_or(ssh_target);
-                match self.query_remote_gate(host, &peer.node_id).await {
-                    Ok(gate) => Ok(gate),
-                    Err(_) => {
-                        // HTTP mesh unavailable, fall back to SSH (legacy transport)
-                        #[allow(deprecated)]
-                        ssh_legacy::query_remote_gate_ssh(ssh_target, &peer.node_id).await
-                    }
-                }
+                // Evolved: No SSH fallback — use Songbird mesh RPC only
+                self.query_remote_gate(host, &peer.node_id).await
             } else {
                 // HTTP JSON-RPC query via Songbird gateway (covalent bond transport)
                 self.query_remote_gate(&peer.address, &peer.node_id).await

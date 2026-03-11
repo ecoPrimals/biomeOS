@@ -200,4 +200,54 @@ mod tests {
         let primals = discover_primals(dir.path()).await.unwrap();
         assert_eq!(primals.len(), 0); // Hidden files skipped
     }
+
+    #[tokio::test]
+    async fn test_discover_skips_non_executable() {
+        let dir = TempDir::new().unwrap();
+        let regular_file = dir.path().join("not_executable");
+        fs::write(&regular_file, "#!/bin/bash\necho test").unwrap();
+        // No chmod - file is not executable
+
+        let primals = discover_primals(dir.path()).await.unwrap();
+        assert_eq!(primals.len(), 0, "Non-executable files should be skipped");
+    }
+
+    #[tokio::test]
+    async fn test_discover_skips_directories() {
+        let dir = TempDir::new().unwrap();
+        let subdir = dir.path().join("subdir");
+        fs::create_dir(&subdir).unwrap();
+
+        let primals = discover_primals(dir.path()).await.unwrap();
+        assert_eq!(primals.len(), 0);
+    }
+
+    #[test]
+    fn test_primal_metadata_serialization() {
+        let meta = PrimalMetadata {
+            binary: PathBuf::from("/bin/squirrel"),
+            id: "squirrel".to_string(),
+            provides: vec!["ai".to_string(), "mcp".to_string()],
+            requires: vec!["compute".to_string()],
+            version: Some("1.0.0".to_string()),
+            name: Some("Squirrel".to_string()),
+        };
+        let json = serde_json::to_string(&meta).expect("serialize");
+        let restored: PrimalMetadata = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(meta.id, restored.id);
+        assert_eq!(meta.provides, restored.provides);
+        assert_eq!(meta.version, restored.version);
+    }
+
+    #[tokio::test]
+    async fn test_query_primal_metadata_nonexistent() {
+        let result = query_primal_metadata(Path::new("/nonexistent/binary")).await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            err.to_string().contains("Failed to execute") || err.to_string().contains("No such"),
+            "Expected execution error, got: {}",
+            err
+        );
+    }
 }

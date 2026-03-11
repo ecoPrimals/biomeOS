@@ -66,7 +66,7 @@ pub async fn run(path: PathBuf, detailed: bool) -> Result<()> {
 }
 
 /// Verify lineage of a spore or primal directory
-async fn verify_lineage(path: &PathBuf, detailed: bool) -> Result<LineageVerification> {
+pub(crate) async fn verify_lineage(path: &PathBuf, detailed: bool) -> Result<LineageVerification> {
     let mut verification = LineageVerification {
         valid: true,
         family_id: None,
@@ -260,4 +260,189 @@ async fn verify_cryptographic_lineage(
     }
 
     Ok(details)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+
+    #[test]
+    fn test_lineage_verification_construction() {
+        let v = LineageVerification {
+            valid: true,
+            family_id: Some("fam-123".to_string()),
+            node_id: Some("node-456".to_string()),
+            details: vec!["detail1".to_string()],
+            warnings: vec!["warn1".to_string()],
+        };
+        assert!(v.valid);
+        assert_eq!(v.family_id.as_deref(), Some("fam-123"));
+        assert_eq!(v.node_id.as_deref(), Some("node-456"));
+        assert_eq!(v.details.len(), 1);
+        assert_eq!(v.warnings.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_run_path_not_found_returns_error() {
+        let path = PathBuf::from("/nonexistent/path/that/does/not/exist/12345");
+        let result = run(path, false).await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            err.to_string().contains("Path not found") || err.to_string().contains("not found"),
+            "Expected path not found error: {}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    async fn test_verify_lineage_directory_basic() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        let path = dir.path().to_path_buf();
+
+        let result = verify_lineage(&path, false).await;
+        let v = result.expect("verify_lineage should succeed");
+        assert!(v.valid);
+        assert!(v.details.contains(&"Directory exists".to_string()));
+        assert!(v.warnings.contains(&"No manifest.toml found".to_string()));
+        assert!(v.warnings.contains(&"No .family.seed found".to_string()));
+        assert!(v
+            .warnings
+            .contains(&"No primals directory found".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_verify_lineage_directory_with_manifest() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        let manifest_path = dir.path().join("manifest.toml");
+        std::fs::write(
+            &manifest_path,
+            r#"
+family_id = "test-family-123"
+node_id = "test-node-456"
+"#,
+        )
+        .expect("write manifest");
+
+        let path = dir.path().to_path_buf();
+        let result = verify_lineage(&path, false).await;
+        let v = result.expect("verify_lineage should succeed");
+        assert!(v.valid);
+        assert_eq!(v.family_id.as_deref(), Some("test-family-123"));
+        assert_eq!(v.node_id.as_deref(), Some("test-node-456"));
+        assert!(v.details.contains(&"Manifest found".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_verify_lineage_directory_with_valid_seed() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        let seed_path = dir.path().join(".family.seed");
+        let mut f = std::fs::File::create(&seed_path).expect("create seed");
+        f.write_all(&[0u8; 64]).expect("write 64 bytes");
+
+        let path = dir.path().to_path_buf();
+        let result = verify_lineage(&path, false).await;
+        let v = result.expect("verify_lineage should succeed");
+        assert!(v.valid);
+        assert!(v
+            .details
+            .contains(&"Family seed valid (64 bytes)".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_verify_lineage_directory_with_invalid_seed_size() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        let seed_path = dir.path().join(".family.seed");
+        let mut f = std::fs::File::create(&seed_path).expect("create seed");
+        f.write_all(&[0u8; 32]).expect("write 32 bytes");
+
+        let path = dir.path().to_path_buf();
+        let result = verify_lineage(&path, false).await;
+        let v = result.expect("verify_lineage should succeed");
+        assert!(!v.valid);
+        assert!(v.warnings.iter().any(|w| w.contains("invalid size")));
+        assert!(v.warnings.iter().any(|w| w.contains("32 bytes")));
+    }
+
+    #[tokio::test]
+    async fn test_verify_lineage_directory_with_primals() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        let primals_dir = dir.path().join("primals");
+        std::fs::create_dir(&primals_dir).expect("create primals dir");
+        std::fs::File::create(primals_dir.join("beardog")).expect("create binary");
+        std::fs::File::create(primals_dir.join("songbird")).expect("create binary");
+
+        let path = dir.path().to_path_buf();
+        let result = verify_lineage(&path, false).await;
+        let v = result.expect("verify_lineage should succeed");
+        assert!(v.valid);
+        assert!(
+            v.details
+                .iter()
+                .any(|d| d.contains("Primals") && d.contains("2 binaries")),
+            "Expected primals directory detail, got: {:?}",
+            v.details
+        );
+    }
+
+    #[tokio::test]
+    async fn test_verify_lineage_single_file_64_bytes() {
+        let file = tempfile::NamedTempFile::new().expect("create temp file");
+        let mut f = file.reopen().expect("reopen");
+        f.write_all(&[0u8; 64]).expect("write 64 bytes");
+        drop(f);
+
+        let path = file.path().to_path_buf();
+        let result = verify_lineage(&path, false).await;
+        let v = result.expect("verify_lineage should succeed");
+        assert!(v.valid);
+        assert!(v
+            .details
+            .contains(&"Valid seed file (64 bytes)".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_verify_lineage_single_file_32_bytes() {
+        let file = tempfile::NamedTempFile::new().expect("create temp file");
+        let mut f = file.reopen().expect("reopen");
+        f.write_all(&[0u8; 32]).expect("write 32 bytes");
+        drop(f);
+
+        let path = file.path().to_path_buf();
+        let result = verify_lineage(&path, false).await;
+        let v = result.expect("verify_lineage should succeed");
+        assert!(v.valid);
+        assert!(v
+            .details
+            .contains(&"Valid hash file (32 bytes)".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_verify_lineage_single_file_unknown_size() {
+        let file = tempfile::NamedTempFile::new().expect("create temp file");
+        let mut f = file.reopen().expect("reopen");
+        f.write_all(&[0u8; 100]).expect("write 100 bytes");
+        drop(f);
+
+        let path = file.path().to_path_buf();
+        let result = verify_lineage(&path, false).await;
+        let v = result.expect("verify_lineage should succeed");
+        assert!(v.valid);
+        assert!(v.warnings.iter().any(|w| w.contains("Unknown file format")));
+        assert!(v.warnings.iter().any(|w| w.contains("100 bytes")));
+    }
+
+    #[tokio::test]
+    async fn test_verify_lineage_manifest_partial() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        let manifest_path = dir.path().join("manifest.toml");
+        std::fs::write(&manifest_path, "family_id = \"only-family\"\n").expect("write manifest");
+
+        let path = dir.path().to_path_buf();
+        let result = verify_lineage(&path, false).await;
+        let v = result.expect("verify_lineage should succeed");
+        assert_eq!(v.family_id.as_deref(), Some("only-family"));
+        assert_eq!(v.node_id, None);
+    }
 }

@@ -314,11 +314,17 @@ impl InteractiveUIOrchestrator {
     pub fn events(&self) -> &EventBroadcaster {
         &self.events
     }
+
+    #[cfg(test)]
+    pub(crate) fn handle_primal_event_for_test(&self, event: &serde_json::Value) {
+        self.handle_primal_event(event);
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::events::UIEvent;
 
     #[tokio::test]
     async fn test_orchestrator_creation() {
@@ -348,5 +354,142 @@ mod tests {
 
         assert!(result.is_ok());
         assert!(result.unwrap().is_success());
+    }
+
+    #[tokio::test]
+    async fn test_orchestrator_state_and_events_accessors() {
+        let orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let state = orchestrator.state();
+        let events = orchestrator.events();
+
+        assert!(state.read().await.devices.is_empty());
+        let _rx = events.subscribe();
+    }
+
+    #[tokio::test]
+    async fn test_handle_primal_event_primal_started() {
+        let orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let mut rx = orchestrator.events().subscribe();
+
+        let event = serde_json::json!({
+            "type": "primal.started",
+            "primal_name": "beardog-1"
+        });
+        orchestrator.handle_primal_event_for_test(&event);
+
+        let received = rx.recv().await.expect("Should receive event");
+        match received {
+            UIEvent::PrimalStatusChanged { primal_id, status } => {
+                assert_eq!(primal_id, "beardog-1");
+                assert_eq!(status, "started");
+            }
+            _ => panic!("Expected PrimalStatusChanged, got {:?}", received),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_handle_primal_event_primal_stopped() {
+        let orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let mut rx = orchestrator.events().subscribe();
+
+        let event = serde_json::json!({
+            "type": "primal.stopped",
+            "primal_name": "songbird-1"
+        });
+        orchestrator.handle_primal_event_for_test(&event);
+
+        let received = rx.recv().await.expect("Should receive event");
+        match received {
+            UIEvent::PrimalStatusChanged { primal_id, status } => {
+                assert_eq!(primal_id, "songbird-1");
+                assert_eq!(status, "stopped");
+            }
+            _ => panic!("Expected PrimalStatusChanged, got {:?}", received),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_handle_primal_event_device_connected() {
+        let orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let mut rx = orchestrator.events().subscribe();
+
+        let event = serde_json::json!({
+            "type": "device.connected",
+            "device_id": "gpu-0"
+        });
+        orchestrator.handle_primal_event_for_test(&event);
+
+        let received = rx.recv().await.expect("Should receive event");
+        match received {
+            UIEvent::DeviceStatusChanged { device_id, status } => {
+                assert_eq!(device_id, "gpu-0");
+                assert_eq!(status, "connected");
+            }
+            _ => panic!("Expected DeviceStatusChanged, got {:?}", received),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_handle_primal_event_device_disconnected() {
+        let orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let mut rx = orchestrator.events().subscribe();
+
+        let event = serde_json::json!({
+            "type": "device.disconnected",
+            "device_id": "gpu-0"
+        });
+        orchestrator.handle_primal_event_for_test(&event);
+
+        let received = rx.recv().await.expect("Should receive event");
+        match received {
+            UIEvent::DeviceStatusChanged { device_id, status } => {
+                assert_eq!(device_id, "gpu-0");
+                assert_eq!(status, "disconnected");
+            }
+            _ => panic!("Expected DeviceStatusChanged, got {:?}", received),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_handle_primal_event_unknown_type_no_emit() {
+        let orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let mut rx = orchestrator.events().subscribe();
+
+        let event = serde_json::json!({
+            "type": "unknown.event",
+            "data": "ignored"
+        });
+        orchestrator.handle_primal_event_for_test(&event);
+
+        let result = tokio::time::timeout(std::time::Duration::from_millis(50), rx.recv()).await;
+        assert!(result.is_err(), "Unknown event type should not emit");
+    }
+
+    #[tokio::test]
+    async fn test_handle_primal_event_missing_primal_name_ignored() {
+        let orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let mut rx = orchestrator.events().subscribe();
+
+        let event = serde_json::json!({
+            "type": "primal.started"
+        });
+        orchestrator.handle_primal_event_for_test(&event);
+
+        let result = tokio::time::timeout(std::time::Duration::from_millis(50), rx.recv()).await;
+        assert!(result.is_err(), "Event without primal_name should not emit");
+    }
+
+    #[tokio::test]
+    async fn test_handle_primal_event_missing_device_id_ignored() {
+        let orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let mut rx = orchestrator.events().subscribe();
+
+        let event = serde_json::json!({
+            "type": "device.connected"
+        });
+        orchestrator.handle_primal_event_for_test(&event);
+
+        let result = tokio::time::timeout(std::time::Duration::from_millis(50), rx.recv()).await;
+        assert!(result.is_err(), "Event without device_id should not emit");
     }
 }

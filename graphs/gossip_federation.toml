@@ -1,0 +1,216 @@
+# Gossip Federation Graph
+# =============================================================================
+#
+# Mito Beacon Gossip Protocol for NUCLEUS federation
+#
+# This graph handles:
+#   1. Encrypted beacon generation (BirdSong via Songbird)
+#   2. Address book persistence (NestGate)
+#   3. Peer discovery and gossip exchange (Songbird mesh)
+#
+# Use Cases:
+#   - Pixel ↔ Tower LAN synchronization
+#   - Hotspot ↔ WiFi address book updates
+#   - LiveSpore deployment discovery
+#
+# =============================================================================
+
+[graph]
+id = "gossip_federation"
+version = "1.0.0"
+description = "Mito beacon gossip for NUCLEUS federation - address book sync"
+coordination = "Sequential"
+
+# =============================================================================
+# PHASE 1: INITIALIZE MESH
+# =============================================================================
+
+[[nodes]]
+id = "mesh_init"
+output = "mesh_state"
+
+[nodes.primal]
+by_capability = "mesh"
+
+[nodes.operation]
+name = "mesh.init"
+
+[nodes.operation.params]
+node_id = "${NODE_ID}"
+
+[nodes.constraints]
+timeout_ms = 5000
+
+# =============================================================================
+# PHASE 2: GENERATE LOCAL BEACON
+# =============================================================================
+
+[[nodes]]
+id = "generate_beacon"
+depends_on = ["mesh_init"]
+output = "local_beacon"
+
+[nodes.primal]
+by_capability = "birdsong"
+
+[nodes.operation]
+name = "birdsong.generate_encrypted_beacon"
+
+[nodes.operation.params]
+node_id = "${NODE_ID}"
+capabilities = ["mesh", "http", "relay", "stun"]
+addresses = ["${LOCAL_ADDRESS}"]
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# =============================================================================
+# PHASE 3: LOAD PERSISTED ADDRESS BOOK
+# =============================================================================
+
+[[nodes]]
+id = "load_address_book"
+depends_on = ["mesh_init"]
+output = "stored_peers"
+
+[nodes.primal]
+by_capability = "storage"
+
+[nodes.operation]
+name = "storage.list"
+
+[nodes.operation.params]
+prefix = "address_book:"
+family_id = "${FAMILY_ID}"
+
+[nodes.constraints]
+timeout_ms = 5000
+allow_failure = true
+
+# =============================================================================
+# PHASE 4: DISCOVER LAN PEERS
+# =============================================================================
+
+[[nodes]]
+id = "discover_peers"
+depends_on = ["mesh_init"]
+output = "discovered_peers"
+
+[nodes.primal]
+by_capability = "mesh"
+
+[nodes.operation]
+name = "mesh.auto_discover"
+
+[nodes.operation.params]
+timeout_seconds = 10
+family_only = true
+
+[nodes.constraints]
+timeout_ms = 15000
+allow_failure = true
+
+# =============================================================================
+# PHASE 5: EXCHANGE BEACONS WITH PEER
+# =============================================================================
+
+[[nodes]]
+id = "beacon_exchange"
+depends_on = ["generate_beacon", "discover_peers"]
+output = "exchange_result"
+
+[nodes.primal]
+by_capability = "http"
+
+[nodes.operation]
+name = "http.post"
+
+[nodes.operation.params]
+url = "${PEER_ADDRESS}/api/v1/rendezvous/beacon"
+body = "${local_beacon}"
+headers = { "Content-Type" = "application/json", "X-Dark-Forest-Token" = "${DARK_FOREST_TOKEN}" }
+
+[nodes.constraints]
+timeout_ms = 10000
+allow_failure = true
+
+# =============================================================================
+# PHASE 6: VERIFY PEER LINEAGE
+# =============================================================================
+
+[[nodes]]
+id = "verify_lineage"
+depends_on = ["beacon_exchange"]
+output = "lineage_verified"
+
+[nodes.primal]
+by_capability = "birdsong"
+
+[nodes.operation]
+name = "birdsong.decrypt_beacon"
+
+[nodes.operation.params]
+encrypted_beacon = "${exchange_result.peer_beacon}"
+
+[nodes.constraints]
+timeout_ms = 5000
+allow_failure = true
+
+# =============================================================================
+# PHASE 7: PERSIST NEW PEER
+# =============================================================================
+
+[[nodes]]
+id = "persist_peer"
+depends_on = ["verify_lineage"]
+output = "persistence_result"
+
+[nodes.primal]
+by_capability = "storage"
+
+[nodes.operation]
+name = "storage.store"
+
+[nodes.operation.params]
+key = "address_book:${lineage_verified.node_id}"
+value = "${lineage_verified}"
+family_id = "${FAMILY_ID}"
+
+[nodes.constraints]
+timeout_ms = 5000
+on_condition = "lineage_verified.is_family == true"
+
+# =============================================================================
+# PHASE 8: UPDATE MESH STATE
+# =============================================================================
+
+[[nodes]]
+id = "update_mesh"
+depends_on = ["persist_peer"]
+output = "mesh_updated"
+
+[nodes.primal]
+by_capability = "mesh"
+
+[nodes.operation]
+name = "mesh.announce"
+
+[nodes.operation.params]
+node_id = "${NODE_ID}"
+addresses = ["${LOCAL_ADDRESS}"]
+capabilities = ["mesh", "http", "relay", "stun"]
+
+[nodes.constraints]
+timeout_ms = 5000
+
+# =============================================================================
+# OUTPUTS
+# =============================================================================
+
+[outputs]
+mesh_state = "mesh_init"
+local_beacon = "generate_beacon"
+peers_discovered = "discover_peers"
+lineage_verified = "verify_lineage"
+persistence_result = "persist_peer"
+

@@ -1,0 +1,178 @@
+# =============================================================================
+# Node Atomic Compute Graph
+# =============================================================================
+#
+# Deploys the Node Atomic: Tower (BearDog + Songbird) + ToadStool
+# Provides local GPU/CPU compute dispatch via barracuda.
+#
+# Stack: BearDog (crypto) -> Songbird (network) -> ToadStool (compute)
+#
+# STATUS: OPERATIONAL - Promoted from pixel8a-deploy for Eastgate (Feb 28, 2026)
+#
+# Use Case:
+#   - groundSpring Anderson localization on GPU
+#   - barracuda GPU dispatch (BatchedElementwiseF64, Lanczos, etc.)
+#   - Resource estimation for distributed workloads
+#
+# Usage:
+#   biomeos deploy graphs/node_atomic_compute.toml
+#   ./scripts/start_nucleus.sh node
+#
+# =============================================================================
+
+[graph]
+id = "node_atomic_compute"
+description = "Node Atomic: Tower + ToadStool local compute (GPU/CPU)"
+coordination = "Sequential"
+
+# =============================================================================
+# Phase 1: BearDog (Crypto Foundation)
+# =============================================================================
+
+[[nodes]]
+id = "germinate_beardog"
+output = "beardog_genesis"
+capabilities = ["crypto", "tls_crypto", "genetic", "security"]
+
+[nodes.primal]
+by_capability = "security"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+
+[nodes.operation.environment]
+RUST_LOG = "beardog_tunnel=info"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[nodes.capabilities_provided]
+"crypto.generate_keypair" = "crypto.x25519_generate_ephemeral"
+"crypto.ecdh_derive" = "crypto.x25519_derive_secret"
+"crypto.encrypt" = "crypto.chacha20_poly1305_encrypt"
+"crypto.decrypt" = "crypto.chacha20_poly1305_decrypt"
+"crypto.hash" = "crypto.blake3_hash"
+"crypto.sign" = "crypto.sign_ed25519"
+"crypto.verify" = "crypto.verify_ed25519"
+
+# =============================================================================
+# Phase 1.2: Songbird (Network + HTTP)
+# =============================================================================
+
+[[nodes]]
+id = "germinate_songbird"
+depends_on = ["germinate_beardog"]
+output = "songbird_genesis"
+capabilities = ["http", "discovery", "secure_http"]
+
+[nodes.primal]
+by_capability = "discovery"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+
+[nodes.operation.environment]
+NEURAL_API_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/neural-api-${FAMILY_ID}.sock"
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
+SONGBIRD_SECURITY_PROVIDER = "beardog"
+BIOMEOS_BIND_ALL = "true"
+RUST_LOG = "songbird_http_client=info"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[nodes.capabilities_provided]
+"http.request" = "http.request"
+"discovery.announce" = "announce_capabilities"
+"discovery.query" = "discover_by_capability"
+
+# =============================================================================
+# Phase 2: ToadStool (Local Compute)
+# =============================================================================
+
+[[nodes]]
+id = "germinate_toadstool"
+depends_on = ["germinate_beardog", "germinate_songbird"]
+output = "toadstool_genesis"
+capabilities = ["compute", "workload", "orchestration"]
+
+[nodes.primal]
+by_capability = "compute"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+
+[nodes.operation.environment]
+SOCKET_PATH = "${XDG_RUNTIME_DIR}/biomeos/toadstool-${FAMILY_ID}.sock"
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
+SONGBIRD_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/songbird-${FAMILY_ID}.sock"
+RUST_LOG = "toadstool=info"
+
+[nodes.constraints]
+timeout_ms = 45000
+
+[nodes.capabilities_provided]
+"compute.health" = "toadstool.health"
+"compute.version" = "toadstool.version"
+"compute.capabilities" = "toadstool.query_capabilities"
+"compute.estimate" = "resources.estimate"
+"compute.validate" = "resources.validate_availability"
+"compute.optimize" = "resources.suggest_optimizations"
+"compute.execute" = "toadstool.execute"
+"compute.submit" = "toadstool.submit"
+
+# =============================================================================
+# Phase 3: Validate Node Atomic
+# =============================================================================
+
+[[nodes]]
+id = "validate_node_atomic"
+depends_on = ["germinate_beardog", "germinate_songbird", "germinate_toadstool"]
+output = "node_validated"
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.operation.params]
+check_beardog = true
+check_songbird = true
+check_toadstool = true
+timeout_seconds = 15
+
+[nodes.constraints]
+timeout_ms = 20000
+
+# =============================================================================
+# Optional: Register Squirrel (AI Orchestration)
+# =============================================================================
+
+[[nodes]]
+id = "register_squirrel"
+output = "squirrel_registered"
+capabilities = ["ai", "inference", "learning"]
+
+[nodes.primal]
+by_capability = "ai"
+
+[nodes.operation]
+name = "register_only"
+
+[nodes.operation.params]
+family_id = "${FAMILY_ID}"
+
+[nodes.capabilities_provided]
+"ai.query" = "query_ai"
+"ai.list_providers" = "list_providers"
+"ai.health" = "health"

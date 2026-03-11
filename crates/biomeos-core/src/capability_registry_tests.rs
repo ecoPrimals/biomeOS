@@ -488,3 +488,81 @@ async fn test_register_with_none_metadata() {
         .unwrap();
     assert!(provider.metadata.is_empty());
 }
+
+#[test]
+fn test_registry_request_serialization() {
+    let req = RegistryRequest::GetProvider {
+        request_id: "req-1".to_string(),
+        capability: Capability::Compute,
+    };
+    let json = serde_json::to_string(&req).expect("serialize");
+    let restored: RegistryRequest = serde_json::from_str(&json).expect("deserialize");
+    match (&req, &restored) {
+        (
+            RegistryRequest::GetProvider {
+                request_id: r1,
+                capability: c1,
+            },
+            RegistryRequest::GetProvider {
+                request_id: r2,
+                capability: c2,
+            },
+        ) => {
+            assert_eq!(r1, r2);
+            assert_eq!(c1, c2);
+        }
+        _ => panic!("mismatch"),
+    }
+}
+
+#[test]
+fn test_registry_response_serialization() {
+    let resp = RegistryResponse {
+        request_id: "req-1".to_string(),
+        status: ResponseStatus::Success,
+        data: Some(serde_json::json!({"message": "ok"})),
+        error: None,
+    };
+    let json = serde_json::to_value(&resp).expect("serialize");
+    let restored: RegistryResponse = serde_json::from_value(json).expect("deserialize");
+    assert_eq!(resp.request_id, restored.request_id);
+    assert!(matches!(restored.status, ResponseStatus::Success));
+}
+
+#[test]
+fn test_response_status_variants() {
+    let statuses = [
+        ResponseStatus::Success,
+        ResponseStatus::Error,
+        ResponseStatus::NotFound,
+    ];
+    for status in statuses {
+        let json = serde_json::to_value(&status).expect("serialize");
+        let restored: ResponseStatus = serde_json::from_value(json).expect("deserialize");
+        assert!(matches!(
+            (status, restored),
+            (ResponseStatus::Success, ResponseStatus::Success)
+                | (ResponseStatus::Error, ResponseStatus::Error)
+                | (ResponseStatus::NotFound, ResponseStatus::NotFound)
+        ));
+    }
+}
+
+#[test]
+fn test_register_params_serialization() {
+    let params = RegisterParams {
+        provides: vec![Capability::Security, Capability::Storage],
+        requires: vec![Capability::Compute],
+        socket_path: Some("/tmp/sock".to_string()),
+        http_endpoint: None,
+        metadata: Some({
+            let mut m = HashMap::new();
+            m.insert("key".to_string(), "value".to_string());
+            m
+        }),
+    };
+    let json = serde_json::to_value(&params).expect("serialize");
+    let restored: RegisterParams = serde_json::from_value(json).expect("deserialize");
+    assert_eq!(params.provides.len(), restored.provides.len());
+    assert_eq!(params.requires.len(), restored.requires.len());
+}

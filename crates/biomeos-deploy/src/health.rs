@@ -143,3 +143,92 @@ impl HealthCheck {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::UNIX_EPOCH;
+
+    #[test]
+    fn test_health_status_variants() {
+        assert_eq!(HealthStatus::Healthy as i32, HealthStatus::Healthy as i32);
+        assert_ne!(HealthStatus::Healthy, HealthStatus::Unhealthy);
+        assert_ne!(HealthStatus::Degraded, HealthStatus::Unknown);
+    }
+
+    #[test]
+    fn test_health_status_serialization() {
+        let status = HealthStatus::Healthy;
+        let json = serde_json::to_string(&status).expect("serialization should succeed");
+        assert!(json.contains("Healthy"));
+        let deserialized: HealthStatus =
+            serde_json::from_str(&json).expect("deserialization should succeed");
+        assert_eq!(deserialized, status);
+    }
+
+    #[test]
+    fn test_vm_health_construction() {
+        let health = VmHealth {
+            vm_name: "test-vm".to_string(),
+            status: HealthStatus::Healthy,
+            last_message_time: Some(UNIX_EPOCH),
+            boot_completed: true,
+            error: None,
+        };
+        assert_eq!(health.vm_name, "test-vm");
+        assert_eq!(health.status, HealthStatus::Healthy);
+        assert!(health.boot_completed);
+    }
+
+    #[test]
+    fn test_vm_health_serialization() {
+        let health = VmHealth {
+            vm_name: "vm1".to_string(),
+            status: HealthStatus::Unhealthy,
+            last_message_time: None,
+            boot_completed: false,
+            error: Some("Kernel panic".to_string()),
+        };
+        let json = serde_json::to_string(&health).expect("serialization should succeed");
+        assert!(json.contains("\"vm_name\":\"vm1\""));
+        assert!(json.contains("Unhealthy"));
+        assert!(json.contains("Kernel panic"));
+    }
+
+    #[tokio::test]
+    async fn test_check_vm_nonexistent_log() {
+        let result = HealthCheck::check_vm("test-vm", "/nonexistent/path/serial.log").await;
+        let health = result.expect("check_vm returns Ok even for missing log");
+        assert_eq!(health.vm_name, "test-vm");
+        assert_eq!(health.status, HealthStatus::Unknown);
+        assert!(!health.boot_completed);
+        assert!(health.error.is_some());
+        assert!(health
+            .error
+            .as_ref()
+            .expect("error present")
+            .contains("Serial log not found"));
+    }
+
+    #[tokio::test]
+    async fn test_check_vm_boot_completed() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let log_path = temp_dir.path().join("serial.log");
+        std::fs::write(&log_path, "BiomeOS Init Complete\n").expect("write log");
+        let result = HealthCheck::check_vm("boot-vm", &log_path).await;
+        let health = result.expect("check_vm should succeed");
+        assert_eq!(health.status, HealthStatus::Healthy);
+        assert!(health.boot_completed);
+    }
+
+    #[tokio::test]
+    async fn test_check_vm_has_errors() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let log_path = temp_dir.path().join("serial.log");
+        std::fs::write(&log_path, "Kernel panic - not syncing\n").expect("write log");
+        let result = HealthCheck::check_vm("panic-vm", &log_path).await;
+        let health = result.expect("check_vm should succeed");
+        assert_eq!(health.status, HealthStatus::Unhealthy);
+        assert!(health.error.is_some());
+    }
+}

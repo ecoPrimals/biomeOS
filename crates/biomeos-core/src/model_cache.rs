@@ -114,7 +114,7 @@ impl CacheManifest {
 /// Designed for zero re-downloads across the biomeOS mesh.
 pub struct ModelCache {
     /// Root directory for cached models (used for mesh model sharing in Plasmodium Phase 2)
-    #[allow(dead_code)]
+    #[allow(dead_code)] // TODO: Wire up for mesh model sharing in Plasmodium Phase 2
     cache_dir: PathBuf,
 
     /// Path to the local manifest file
@@ -765,5 +765,105 @@ mod tests {
 
         let resolution = cache.resolve("nonexistent/model").await;
         assert!(matches!(resolution, ModelResolution::NotFound));
+    }
+
+    #[tokio::test]
+    async fn test_register_model_nonexistent_path() {
+        let tmp = TempDir::new().unwrap();
+        let cache_dir = tmp.path().join("cache");
+        let mut cache = ModelCache::with_cache_dir(cache_dir).await.unwrap();
+
+        let result = cache
+            .register_model(
+                "test/model",
+                tmp.path().join("nonexistent").as_path(),
+                "test://",
+            )
+            .await;
+
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("does not exist"));
+    }
+
+    #[tokio::test]
+    async fn test_resolution_local() {
+        let tmp = TempDir::new().unwrap();
+        let model_dir = tmp.path().join("local-model");
+        std::fs::create_dir_all(&model_dir).unwrap();
+        std::fs::write(model_dir.join("model.gguf"), b"gguf data").unwrap();
+
+        let cache_dir = tmp.path().join("cache");
+        let mut cache = ModelCache::with_cache_dir(cache_dir).await.unwrap();
+        cache
+            .register_model("local/test", &model_dir, "test://source")
+            .await
+            .unwrap();
+
+        let resolution = cache.resolve("local/test").await;
+        match &resolution {
+            ModelResolution::Local(entry) => {
+                assert_eq!(entry.model_id, "local/test");
+                assert_eq!(entry.format, "gguf");
+            }
+            _ => panic!("Expected ModelResolution::Local, got {:?}", resolution),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_model_resolution_display() {
+        let tmp = TempDir::new().unwrap();
+        let cache = ModelCache::with_cache_dir(tmp.path().to_path_buf())
+            .await
+            .unwrap();
+        let resolution = cache.resolve("nonexistent/model").await;
+        let s = format!("{}", resolution);
+        assert_eq!(s, "NOT FOUND");
+    }
+
+    #[tokio::test]
+    async fn test_model_entry_serialization() {
+        let entry = ModelEntry {
+            model_id: "test/model".to_string(),
+            local_path: PathBuf::from("/tmp/models/test"),
+            size_bytes: 1024,
+            source: "huggingface:test/model".to_string(),
+            sha256: Some("abc123".to_string()),
+            cached_at: chrono::Utc::now().to_rfc3339(),
+            gate_id: "gate-1".to_string(),
+            format: "safetensors".to_string(),
+            files: vec![ModelFile {
+                relative_path: "model.safetensors".to_string(),
+                size_bytes: 1024,
+                sha256: None,
+            }],
+        };
+        let json = serde_json::to_value(&entry).expect("serialize");
+        let restored: ModelEntry = serde_json::from_value(json).expect("deserialize");
+        assert_eq!(entry.model_id, restored.model_id);
+        assert_eq!(entry.format, restored.format);
+    }
+
+    #[tokio::test]
+    async fn test_has_model_returns_false_when_path_deleted() {
+        let tmp = TempDir::new().unwrap();
+        let model_dir = tmp.path().join("ephemeral-model");
+        std::fs::create_dir_all(&model_dir).unwrap();
+        std::fs::write(model_dir.join("weights.bin"), b"data").unwrap();
+
+        let cache_dir = tmp.path().join("cache");
+        let mut cache = ModelCache::with_cache_dir(cache_dir).await.unwrap();
+        cache
+            .register_model("ephemeral/model", &model_dir, "test://")
+            .await
+            .unwrap();
+
+        assert!(cache.has_model("ephemeral/model"));
+
+        // Remove the model directory (simulates cache entry pointing to deleted path)
+        std::fs::remove_dir_all(&model_dir).unwrap();
+
+        assert!(!cache.has_model("ephemeral/model"));
+        assert!(cache.get_model_path("ephemeral/model").is_none());
     }
 }

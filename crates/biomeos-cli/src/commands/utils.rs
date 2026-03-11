@@ -134,3 +134,89 @@ pub fn format_bytes(bytes: u64) -> String {
         format!("{:.1} {}", size, UNITS[unit_index])
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_capabilities_single() {
+        let caps = parse_capabilities("storage").expect("single cap should parse");
+        assert_eq!(caps.len(), 1);
+        assert_eq!(caps[0].category, "general");
+        assert_eq!(caps[0].name, "storage");
+        assert_eq!(caps[0].version, "1.0");
+    }
+
+    #[test]
+    fn test_parse_capabilities_with_slash() {
+        let caps = parse_capabilities("storage/file").expect("category/name should parse");
+        assert_eq!(caps.len(), 1);
+        assert_eq!(caps[0].category, "storage");
+        assert_eq!(caps[0].name, "file");
+        assert_eq!(caps[0].version, "1.0");
+    }
+
+    #[test]
+    fn test_parse_capabilities_multiple() {
+        let caps =
+            parse_capabilities("storage,compute,security").expect("multiple caps should parse");
+        assert_eq!(caps.len(), 3);
+        assert_eq!(caps[0].name, "storage");
+        assert_eq!(caps[1].name, "compute");
+        assert_eq!(caps[2].name, "security");
+    }
+
+    #[test]
+    fn test_parse_capabilities_with_spaces() {
+        let caps = parse_capabilities("storage , compute").expect("spaces should trim");
+        assert_eq!(caps.len(), 2);
+        assert_eq!(caps[0].name, "storage");
+        assert_eq!(caps[1].name, "compute");
+    }
+
+    #[test]
+    fn test_parse_capabilities_empty_fails() {
+        let result = parse_capabilities("");
+        assert!(result.is_err(), "Empty string should fail");
+        let result2 = parse_capabilities("  ,  ,  ");
+        assert!(result2.is_err(), "Only whitespace should fail");
+    }
+
+    #[test]
+    fn test_parse_capabilities_mixed_format() {
+        let caps = parse_capabilities("general/foo,bar").expect("mixed format should parse");
+        assert_eq!(caps.len(), 2);
+        assert_eq!(caps[0].category, "general");
+        assert_eq!(caps[0].name, "foo");
+        assert_eq!(caps[1].category, "general");
+        assert_eq!(caps[1].name, "bar");
+    }
+
+    #[test]
+    fn test_format_duration_seconds() {
+        assert_eq!(format_duration(Duration::from_secs(0)), "0s");
+        assert_eq!(format_duration(Duration::from_secs(45)), "45s");
+    }
+
+    #[test]
+    fn test_format_duration_minutes() {
+        assert_eq!(format_duration(Duration::from_secs(60)), "1m 0s");
+        assert_eq!(format_duration(Duration::from_secs(125)), "2m 5s");
+    }
+
+    #[test]
+    fn test_format_duration_hours() {
+        assert_eq!(format_duration(Duration::from_secs(3600)), "1h 0m");
+        assert_eq!(format_duration(Duration::from_secs(3661)), "1h 1m");
+    }
+
+    #[test]
+    fn test_format_bytes() {
+        assert_eq!(format_bytes(0), "0 B");
+        assert_eq!(format_bytes(512), "512 B");
+        assert_eq!(format_bytes(1024), "1.0 KB");
+        assert_eq!(format_bytes(1024 * 1024), "1.0 MB");
+        assert_eq!(format_bytes(512 * 1024), "512.0 KB");
+    }
+}

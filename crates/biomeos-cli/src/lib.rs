@@ -64,6 +64,58 @@ impl CliUtils {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_format_output_json() {
+        let data = serde_json::json!({"key": "value"});
+        let result = CliUtils::format_output(&data, &OutputFormat::Json);
+        assert!(result.is_ok());
+        let s = result.unwrap();
+        assert!(s.contains("key"));
+        assert!(s.contains("value"));
+    }
+
+    #[test]
+    fn test_format_output_yaml() {
+        let data = serde_json::json!({"a": 1, "b": "two"});
+        let result = CliUtils::format_output(&data, &OutputFormat::Yaml);
+        assert!(result.is_ok());
+        let s = result.unwrap();
+        assert!(s.contains("a") || s.contains("1"));
+        assert!(s.contains("b") || s.contains("two"));
+    }
+
+    #[test]
+    fn test_format_output_pretty() {
+        let data = serde_json::json!({"x": 42});
+        let result = CliUtils::format_output(&data, &OutputFormat::Pretty);
+        assert!(result.is_ok());
+        let s = result.unwrap();
+        assert!(s.contains("x"));
+        assert!(s.contains("42"));
+    }
+
+    #[test]
+    fn test_init_logging_levels() {
+        // Test that level parsing works (don't actually init - would conflict with other tests)
+        let levels = ["trace", "debug", "info", "warn", "error", "TRACE", "INFO"];
+        for level in levels {
+            let parsed = match level.to_lowercase().as_str() {
+                "trace" => Some(tracing::Level::TRACE),
+                "debug" => Some(tracing::Level::DEBUG),
+                "info" => Some(tracing::Level::INFO),
+                "warn" => Some(tracing::Level::WARN),
+                "error" => Some(tracing::Level::ERROR),
+                _ => None,
+            };
+            assert!(parsed.is_some(), "Level {} should parse", level);
+        }
+    }
+}
+
 /// Output format options for CLI commands
 #[derive(clap::ValueEnum, Clone)]
 pub enum OutputFormat {

@@ -138,36 +138,78 @@ pub enum GraphEvent {
         /// When this event occurred
         timestamp: DateTime<Utc>,
     },
+
+    /// Continuous session started (tick loop begins)
+    SessionStarted {
+        /// Graph running continuously
+        graph_id: String,
+        /// Target tick rate in Hz
+        target_hz: f64,
+        /// When this event occurred
+        timestamp: DateTime<Utc>,
+    },
+
+    /// One tick of a continuous graph completed
+    TickCompleted {
+        /// Graph running continuously
+        graph_id: String,
+        /// Tick number (monotonically increasing)
+        tick: u64,
+        /// Actual tick duration in microseconds
+        duration_us: u64,
+        /// Number of nodes that exceeded their budget
+        budget_overruns: usize,
+        /// When this event occurred
+        timestamp: DateTime<Utc>,
+    },
+
+    /// Continuous session state changed (paused, resumed, stopped)
+    SessionStateChanged {
+        /// Graph running continuously
+        graph_id: String,
+        /// New session state
+        new_state: String,
+        /// Tick count at time of state change
+        tick_at_change: u64,
+        /// When this event occurred
+        timestamp: DateTime<Utc>,
+    },
 }
 
 impl GraphEvent {
     /// Get the graph ID for this event
     pub fn graph_id(&self) -> &str {
         match self {
-            GraphEvent::GraphStarted { graph_id, .. } => graph_id,
-            GraphEvent::NodeStarted { graph_id, .. } => graph_id,
-            GraphEvent::NodeCompleted { graph_id, .. } => graph_id,
-            GraphEvent::NodeFailed { graph_id, .. } => graph_id,
-            GraphEvent::DecisionMade { graph_id, .. } => graph_id,
-            GraphEvent::GraphPaused { graph_id, .. } => graph_id,
-            GraphEvent::GraphResumed { graph_id, .. } => graph_id,
-            GraphEvent::GraphCompleted { graph_id, .. } => graph_id,
-            GraphEvent::GraphCancelled { graph_id, .. } => graph_id,
+            GraphEvent::GraphStarted { graph_id, .. }
+            | GraphEvent::NodeStarted { graph_id, .. }
+            | GraphEvent::NodeCompleted { graph_id, .. }
+            | GraphEvent::NodeFailed { graph_id, .. }
+            | GraphEvent::DecisionMade { graph_id, .. }
+            | GraphEvent::GraphPaused { graph_id, .. }
+            | GraphEvent::GraphResumed { graph_id, .. }
+            | GraphEvent::GraphCompleted { graph_id, .. }
+            | GraphEvent::GraphCancelled { graph_id, .. }
+            | GraphEvent::SessionStarted { graph_id, .. }
+            | GraphEvent::TickCompleted { graph_id, .. }
+            | GraphEvent::SessionStateChanged { graph_id, .. } => graph_id,
         }
     }
 
     /// Get the timestamp for this event
     pub fn timestamp(&self) -> DateTime<Utc> {
         match self {
-            GraphEvent::GraphStarted { timestamp, .. } => *timestamp,
-            GraphEvent::NodeStarted { timestamp, .. } => *timestamp,
-            GraphEvent::NodeCompleted { timestamp, .. } => *timestamp,
-            GraphEvent::NodeFailed { timestamp, .. } => *timestamp,
-            GraphEvent::DecisionMade { timestamp, .. } => *timestamp,
-            GraphEvent::GraphPaused { timestamp, .. } => *timestamp,
-            GraphEvent::GraphResumed { timestamp, .. } => *timestamp,
-            GraphEvent::GraphCompleted { timestamp, .. } => *timestamp,
-            GraphEvent::GraphCancelled { timestamp, .. } => *timestamp,
+            GraphEvent::GraphStarted { timestamp, .. }
+            | GraphEvent::NodeStarted { timestamp, .. }
+            | GraphEvent::NodeCompleted { timestamp, .. }
+            | GraphEvent::NodeFailed { timestamp, .. }
+            | GraphEvent::DecisionMade { timestamp, .. }
+            | GraphEvent::GraphPaused { timestamp, .. }
+            | GraphEvent::GraphResumed { timestamp, .. }
+            | GraphEvent::GraphCompleted { timestamp, .. }
+            | GraphEvent::GraphCancelled { timestamp, .. }
+            | GraphEvent::SessionStarted { timestamp, .. }
+            | GraphEvent::TickCompleted { timestamp, .. }
+            | GraphEvent::SessionStateChanged { timestamp, .. } => *timestamp,
         }
     }
 }

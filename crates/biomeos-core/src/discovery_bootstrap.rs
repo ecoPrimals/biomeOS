@@ -158,30 +158,49 @@ impl DiscoveryBootstrap {
     /// Discover via mDNS/Bonjour
     ///
     /// Uses mDNS (multicast DNS) to discover services advertising themselves
-    /// on the local network. This is common for service discovery in local networks.
+    /// on the local network via `_biomeos._tcp.local`. Without external mDNS
+    /// crate dependencies, this uses a socket-based approach: probe known
+    /// localhost ports where BiomeOS services (e.g., Songbird) typically advertise.
+    /// Falls back to `MDNS_DISCOVERED_ENDPOINT` env var if probing fails.
     async fn discover_via_mdns(&self) -> Result<String> {
-        tracing::info!("Attempting mDNS discovery for BiomeOS services");
+        use std::time::Duration;
 
-        // mDNS typically uses service type like "_biomeos._tcp.local"
-        // We'll look for any service advertising BiomeOS capabilities
+        tracing::info!("Attempting mDNS discovery for BiomeOS services (_biomeos._tcp.local)");
 
-        // For now, this is a placeholder that demonstrates the pattern
-        // A full implementation would use the `mdns` or `zeroconf` crate
+        // Skip socket probe when disabled (e.g. for deterministic tests)
+        let skip_probe = std::env::var("BIOMEOS_SKIP_MDNS_PROBE").is_ok();
 
-        // Example of what the implementation would do:
-        // 1. Create mDNS browser for "_biomeos._tcp.local"
-        // 2. Set discovery timeout (e.g., 5 seconds)
-        // 3. Collect all discovered services
-        // 4. Select the first healthy one or closest by network distance
-        // 5. Return the endpoint URL
+        if !skip_probe {
+            // Socket-based discovery: probe known localhost ports where BiomeOS
+            // services advertise (Songbird: 3000, discovery: 9199, common HTTP: 8080)
+            const CANDIDATE_PORTS: &[u16] = &[3000, 9199, 8080, 5000];
 
-        tracing::debug!("mDNS discovery would query _biomeos._tcp.local");
-        tracing::debug!("Waiting for mDNS responses (timeout: 5s)");
+            for &port in CANDIDATE_PORTS {
+                let addr = format!("127.0.0.1:{}", port);
+                match tokio::time::timeout(
+                    Duration::from_secs(2),
+                    tokio::net::TcpStream::connect(&addr),
+                )
+                .await
+                {
+                    Ok(Ok(_)) => {
+                        let endpoint = format!("http://127.0.0.1:{}", port);
+                        tracing::info!("mDNS-style discovery: found service at {}", endpoint);
+                        return Ok(endpoint);
+                    }
+                    Ok(Err(e)) => {
+                        tracing::trace!("Port {} unreachable: {}", port, e);
+                    }
+                    Err(_) => {
+                        tracing::trace!("Port {} probe timed out (2s)", port);
+                    }
+                }
+            }
+        }
 
-        // Simulated discovery result
-        // In production, this would come from actual mDNS responses
+        // Fallback to env var when probe skipped or found nothing
         if let Ok(endpoint) = std::env::var("MDNS_DISCOVERED_ENDPOINT") {
-            tracing::info!("mDNS discovered endpoint: {}", endpoint);
+            tracing::info!("mDNS fallback: using MDNS_DISCOVERED_ENDPOINT: {}", endpoint);
             return Ok(endpoint);
         }
 
@@ -345,15 +364,20 @@ mod tests {
         assert!(debug_str.contains("test"));
     }
 
+    /// Mutex to serialize env-var-mutating tests
+    static MDNS_ENV_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
     #[tokio::test]
     async fn test_discover_via_mdns_with_env() {
-        // Using the simulated mDNS discovery path
+        let _guard = MDNS_ENV_LOCK.lock().await;
         std::env::set_var("MDNS_DISCOVERED_ENDPOINT", "http://mdns-test:9999");
+        std::env::set_var("BIOMEOS_SKIP_MDNS_PROBE", "1");
 
         let bootstrap = DiscoveryBootstrap::new("test");
         let result = bootstrap.discover_via_mdns().await;
 
         std::env::remove_var("MDNS_DISCOVERED_ENDPOINT");
+        std::env::remove_var("BIOMEOS_SKIP_MDNS_PROBE");
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "http://mdns-test:9999");
@@ -361,11 +385,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_discover_via_mdns_no_service() {
-        // Ensure the simulated env var is not set
+        let _guard = MDNS_ENV_LOCK.lock().await;
         std::env::remove_var("MDNS_DISCOVERED_ENDPOINT");
+        std::env::set_var("BIOMEOS_SKIP_MDNS_PROBE", "1");
 
         let bootstrap = DiscoveryBootstrap::new("test");
         let result = bootstrap.discover_via_mdns().await;
+
+        std::env::remove_var("BIOMEOS_SKIP_MDNS_PROBE");
 
         assert!(result.is_err());
         assert!(result
@@ -375,7 +402,6 @@ mod tests {
     }
 
     /// Mutex to serialize env-var-mutating broadcast tests
-    /// Uses tokio::sync::Mutex to safely hold across await points
     static BROADCAST_ENV_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
     #[tokio::test]

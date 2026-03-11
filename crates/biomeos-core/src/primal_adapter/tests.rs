@@ -133,6 +133,12 @@ async fn test_compatibility_check() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn test_discover_and_start_nonexistent() {
+    let result = discover_and_start(Path::new("/nonexistent"), 9010).await;
+    assert!(result.is_err());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_health_check_config() {
     let config = HealthCheckConfig {
         url_pattern: "http://localhost:PORT/health".to_string(),

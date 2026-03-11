@@ -171,6 +171,38 @@ pub enum PrimalCapability {
     /// Real-time updates
     /// Typical provider: petalTongue
     RealtimeUpdates,
+
+    /// Stereoscopic 3D rendering (VR/AR)
+    /// Typical provider: petalTongue
+    StereoRendering,
+
+    /// Motion capture and 6DoF tracking
+    /// Typical provider: petalTongue
+    MotionTracking,
+
+    /// Haptic feedback output
+    /// Typical provider: petalTongue
+    HapticFeedback,
+
+    /// Biosignal processing
+    /// Typical provider: healthSpring
+    BiosignalProcessing,
+
+    /// Pharmacokinetic modeling
+    /// Typical provider: healthSpring
+    PharmacokineticModeling,
+
+    /// Surgical tool simulation
+    /// Typical provider: healthSpring + petalTongue
+    SurgicalToolSimulation,
+
+    /// Tissue physics simulation
+    /// Typical provider: healthSpring + barraCuda
+    TissuePhysics,
+
+    /// Anatomy model rendering
+    /// Typical provider: healthSpring + petalTongue
+    AnatomyModeling,
     
     // =============================================================================
     // Orchestration & Management

@@ -12,7 +12,7 @@ use biomeos_types::{BiomeOSConfig, Health, HealthReport};
 /// Health Monitor for system-wide health tracking
 #[derive(Debug, Clone)]
 pub struct HealthMonitor {
-    #[allow(dead_code)] // Config used for future health monitoring configuration
+    #[allow(dead_code)] // TODO: Wire up for health monitoring configuration
     config: Arc<BiomeOSConfig>,
 }
 

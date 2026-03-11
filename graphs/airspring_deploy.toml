@@ -1,0 +1,200 @@
+# =============================================================================
+# airSpring Deploy Graph
+# =============================================================================
+#
+# Deploys airSpring as a NUCLEUS primal atop Node Atomic:
+#   Tower (BearDog + Songbird) → ToadStool (GPU compute) → airSpring (ecology)
+#
+# airSpring registers 30 science capabilities covering:
+#   - 7 ET₀ methods (FAO-56, Hargreaves, Priestley-Taylor, Makkink, Turc, Hamon, Blaney-Criddle)
+#   - Soil physics (Richards PDE, SCS-CN runoff, Green-Ampt infiltration, pedotransfer)
+#   - Crop & irrigation (dual Kc, sensor cal, GDD)
+#   - Biodiversity (Shannon, Bray-Curtis)
+#   - Geophysics coupling (Anderson)
+#   - Monthly ET (Thornthwaite)
+#   - Full ecology pipeline (ET₀ → water balance → yield)
+#   - Cross-primal compute offload to ToadStool
+#   - Data routing through NestGate
+#
+# STATUS: Experimental (Mar 1, 2026)
+# Requires: Tower Atomic (BearDog + Songbird)
+# Optional: ToadStool (GPU offload), NestGate (data caching)
+#
+# Usage:
+#   biomeos deploy graphs/airspring_deploy.toml
+#
+# =============================================================================
+
+[graph]
+id = "airspring_deploy"
+description = "airSpring ecology primal atop Node Atomic"
+coordination = "Sequential"
+
+# =============================================================================
+# Phase 1: Tower Atomic (security + network foundation)
+# =============================================================================
+
+[[nodes]]
+id = "germinate_beardog"
+output = "beardog_genesis"
+capabilities = ["crypto", "tls_crypto", "genetic", "security"]
+
+[nodes.primal]
+by_capability = "security"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[nodes.capabilities_provided]
+"crypto.generate_keypair" = "crypto.x25519_generate_ephemeral"
+"crypto.encrypt" = "crypto.chacha20_poly1305_encrypt"
+"crypto.hash" = "crypto.blake3_hash"
+"crypto.sign" = "crypto.sign_ed25519"
+
+[[nodes]]
+id = "germinate_songbird"
+depends_on = ["germinate_beardog"]
+output = "songbird_genesis"
+capabilities = ["http", "discovery", "secure_http", "tls"]
+
+[nodes.primal]
+by_capability = "discovery"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+
+[nodes.operation.environment]
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
+SONGBIRD_SECURITY_PROVIDER = "beardog"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[nodes.capabilities_provided]
+"network.http_request" = "http.request"
+"network.tls_connect" = "tls.connect"
+"discovery.announce" = "announce_capabilities"
+"discovery.query" = "discover_by_capability"
+
+# =============================================================================
+# Phase 2: ToadStool (GPU/CPU compute — optional but recommended)
+# =============================================================================
+
+[[nodes]]
+id = "germinate_toadstool"
+depends_on = ["germinate_beardog", "germinate_songbird"]
+output = "toadstool_genesis"
+capabilities = ["compute", "workload"]
+
+[nodes.primal]
+by_capability = "compute"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+
+[nodes.operation.environment]
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
+SONGBIRD_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/songbird-${FAMILY_ID}.sock"
+
+[nodes.constraints]
+timeout_ms = 45000
+
+[nodes.capabilities_provided]
+"compute.health" = "toadstool.health"
+"compute.execute" = "toadstool.execute"
+"compute.capabilities" = "toadstool.query_capabilities"
+
+# =============================================================================
+# Phase 3: airSpring (ecology science primal)
+# =============================================================================
+
+[[nodes]]
+id = "germinate_airspring"
+depends_on = ["germinate_beardog", "germinate_songbird"]
+output = "airspring_genesis"
+capabilities = ["ecology", "et0", "irrigation", "water_balance", "yield", "agriculture", "soil_science", "biodiversity"]
+
+[nodes.primal]
+by_capability = "ecology"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+
+[nodes.operation.environment]
+BIOMEOS_SOCKET_DIR = "${XDG_RUNTIME_DIR}/biomeos"
+FAMILY_ID = "${FAMILY_ID}"
+SONGBIRD_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/songbird-${FAMILY_ID}.sock"
+
+[nodes.constraints]
+timeout_ms = 15000
+
+[nodes.capabilities_provided]
+# ET₀ methods
+"ecology.et0_fao56" = "science.et0_fao56"
+"ecology.et0_hargreaves" = "science.et0_hargreaves"
+"ecology.et0_priestley_taylor" = "science.et0_priestley_taylor"
+"ecology.et0_makkink" = "science.et0_makkink"
+"ecology.et0_turc" = "science.et0_turc"
+"ecology.et0_hamon" = "science.et0_hamon"
+"ecology.et0_blaney_criddle" = "science.et0_blaney_criddle"
+# Water balance & yield
+"ecology.water_balance" = "science.water_balance"
+"ecology.yield_response" = "science.yield_response"
+"ecology.full_pipeline" = "ecology.full_pipeline"
+# Soil physics
+"ecology.richards_1d" = "science.richards_1d"
+"ecology.scs_cn_runoff" = "science.scs_cn_runoff"
+"ecology.green_ampt" = "science.green_ampt_infiltration"
+"ecology.soil_moisture" = "science.soil_moisture_topp"
+"ecology.pedotransfer" = "science.pedotransfer_saxton_rawls"
+# Crop & irrigation
+"ecology.dual_kc" = "science.dual_kc"
+"ecology.sensor_cal" = "science.sensor_calibration"
+"ecology.gdd" = "science.gdd"
+# Biodiversity
+"ecology.shannon" = "science.shannon_diversity"
+"ecology.bray_curtis" = "science.bray_curtis"
+# Geophysics
+"ecology.anderson" = "science.anderson_coupling"
+# Monthly ET
+"ecology.thornthwaite" = "science.thornthwaite"
+
+# =============================================================================
+# Phase 4: Validate airSpring Atomic
+# =============================================================================
+
+[[nodes]]
+id = "validate_airspring_atomic"
+depends_on = ["germinate_beardog", "germinate_songbird", "germinate_airspring"]
+output = "airspring_validated"
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.operation.params]
+check_beardog = true
+check_songbird = true
+check_airspring = true
+timeout_seconds = 15
+
+[nodes.constraints]
+timeout_ms = 20000

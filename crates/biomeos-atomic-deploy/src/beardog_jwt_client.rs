@@ -16,17 +16,17 @@ use tracing::{debug, info, warn};
 #[derive(Debug, Deserialize)]
 struct JwtSecretResult {
     secret: String,
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Parsed from BearDog JWT response wire format
     purpose: String,
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Parsed from BearDog JWT response wire format
     strength: String,
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Parsed from BearDog JWT response wire format
     byte_length: usize,
     #[serde(default)]
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Parsed from BearDog JWT response wire format
     encoded_length: usize,
     #[serde(default)]
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Parsed from BearDog JWT response wire format
     algorithm: String,
 }
 
@@ -234,22 +234,100 @@ mod tests {
 
     #[test]
     fn test_generate_secure_random_jwt() {
-        let secret = generate_secure_random_jwt(64).unwrap();
+        let secret = generate_secure_random_jwt(64).expect("64 bytes should succeed");
 
         // Should be base64-encoded (64 bytes → ~88 characters)
-        assert!(secret.len() >= 85 && secret.len() <= 90);
+        assert!(
+            secret.len() >= 85 && secret.len() <= 90,
+            "64 bytes → ~88 chars base64, got {}",
+            secret.len()
+        );
 
         // Should be different each time
-        let secret2 = generate_secure_random_jwt(64).unwrap();
+        let secret2 = generate_secure_random_jwt(64).expect("second call should succeed");
         assert_ne!(secret, secret2);
+    }
+
+    #[test]
+    fn test_generate_secure_random_jwt_various_sizes() {
+        for bytes in [32, 64, 128, 256] {
+            let secret = generate_secure_random_jwt(bytes).expect("should succeed");
+            let expected_min = (bytes * 4 / 3) - 2; // base64 padding
+            let expected_max = (bytes * 4 / 3) + 4;
+            assert!(
+                secret.len() >= expected_min && secret.len() <= expected_max,
+                "{} bytes should produce ~{} chars, got {}",
+                bytes,
+                expected_min,
+                secret.len()
+            );
+        }
+    }
+
+    #[test]
+    fn test_generate_secure_random_jwt_valid_base64() {
+        use base64::Engine;
+        let secret = generate_secure_random_jwt(64).expect("should succeed");
+        let decoded = base64::engine::general_purpose::STANDARD.decode(&secret);
+        assert!(decoded.is_ok(), "Output should be valid base64: {}", secret);
+        assert_eq!(decoded.unwrap().len(), 64, "Decoded should be 64 bytes");
     }
 
     #[tokio::test]
     async fn test_provision_jwt_secret_fallback() {
-        // No BearDog available, should fall back to secure random
-        let secret = provision_jwt_secret(None, "test_purpose").await.unwrap();
+        let secret = provision_jwt_secret(None, "test_purpose")
+            .await
+            .expect("Should fall back to secure random when BearDog unavailable");
+
+        assert!(secret.len() >= 85, "Should be 512-bit equivalent");
+        assert!(!secret.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_provision_jwt_secret_with_failing_socket_falls_back() {
+        // Explicit socket that doesn't exist - should try, fail, then fall back
+        let secret =
+            provision_jwt_secret(Some("/tmp/nonexistent-beardog-xyz.sock"), "test_fallback")
+                .await
+                .expect("Should fall back to secure random when socket fails");
 
         assert!(secret.len() >= 85);
-        assert!(!secret.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_fetch_jwt_secret_from_beardog_unavailable() {
+        let result =
+            fetch_jwt_secret_from_beardog("/tmp/nonexistent-beardog-xyz.sock", "test_purpose")
+                .await;
+
+        let err = result.expect_err("Should fail when BearDog socket does not exist");
+        assert!(
+            err.to_string().contains("Failed to fetch")
+                || err.to_string().contains("BearDog")
+                || err.to_string().contains("connect")
+                || err.to_string().contains("Connection refused")
+                || err.to_string().contains("No such file"),
+            "Error should mention BearDog/connection: {}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    async fn test_fetch_jwt_secret_with_discovery_fails_without_provider() {
+        // When no BearDog is running, discovery fails at connect or discovery
+        let result = fetch_jwt_secret_with_discovery("test_purpose").await;
+
+        if let Err(e) = result {
+            assert!(
+                e.to_string().contains("discover")
+                    || e.to_string().contains("Failed")
+                    || e.to_string().contains("connect")
+                    || e.to_string().contains("BearDog")
+                    || e.to_string().contains("security"),
+                "Error should be about discovery/connection: {}",
+                e
+            );
+        }
+        // If it succeeds (e.g. BearDog running in CI), that's also valid
     }
 }

@@ -181,3 +181,102 @@ impl Error {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_discovery_failed() {
+        let e = Error::discovery_failed("socket not found", Some("security".to_string()));
+        let msg = e.to_string();
+        assert!(msg.contains("Discovery failed"));
+        assert!(msg.contains("socket not found"));
+    }
+
+    #[test]
+    fn test_identity_verification_failed() {
+        let e = Error::identity_verification_failed("beardog", "invalid signature");
+        let msg = e.to_string();
+        assert!(msg.contains("beardog"));
+        assert!(msg.contains("invalid signature"));
+    }
+
+    #[test]
+    fn test_capability_mismatch() {
+        let e =
+            Error::capability_mismatch(vec!["security".to_string()], vec!["discovery".to_string()]);
+        let msg = e.to_string();
+        assert!(msg.contains("Capability verification failed"));
+    }
+
+    #[test]
+    fn test_trust_evaluation_failed() {
+        let e = Error::trust_evaluation_failed("no trust", Some("partial".to_string()));
+        let msg = e.to_string();
+        assert!(msg.contains("Trust evaluation failed"));
+    }
+
+    #[test]
+    fn test_socket_connection_failed() {
+        let path = PathBuf::from("/tmp/missing.sock");
+        let io_err = std::io::Error::new(std::io::ErrorKind::NotFound, "no such file");
+        let e = Error::socket_connection_failed(path, io_err);
+        let msg = e.to_string();
+        assert!(msg.contains("/tmp/missing.sock"));
+    }
+
+    #[test]
+    fn test_jsonrpc_failed() {
+        let e = Error::jsonrpc_failed("health.check", "timeout");
+        let msg = e.to_string();
+        assert!(msg.contains("health.check"));
+        assert!(msg.contains("timeout"));
+    }
+
+    #[test]
+    fn test_primal_not_found() {
+        let e = Error::primal_not_found("security");
+        let msg = e.to_string();
+        assert!(msg.contains("security"));
+    }
+
+    #[test]
+    fn test_invalid_response() {
+        let e = Error::invalid_response("songbird", "malformed JSON");
+        let msg = e.to_string();
+        assert!(msg.contains("songbird"));
+        assert!(msg.contains("malformed JSON"));
+    }
+
+    #[test]
+    fn test_timeout() {
+        let e = Error::timeout("discovery", 30);
+        let msg = e.to_string();
+        assert!(msg.contains("30"));
+        assert!(msg.contains("discovery"));
+    }
+
+    #[test]
+    fn test_error_from_serde() {
+        let json_err = serde_json::from_str::<serde_json::Value>("invalid");
+        let e: Error = json_err.unwrap_err().into();
+        let msg = e.to_string();
+        assert!(msg.contains("Serialization") || msg.contains("error"));
+    }
+
+    #[test]
+    fn test_error_from_io() {
+        let io_err = std::io::Error::new(std::io::ErrorKind::PermissionDenied, "denied");
+        let e: Error = io_err.into();
+        let msg = e.to_string();
+        assert!(msg.contains("IO") || msg.contains("denied"));
+    }
+
+    #[test]
+    fn test_result_type() {
+        let _: Result<()> = Ok(());
+        let err: Result<()> = Err(Error::primal_not_found("test"));
+        assert!(err.is_err());
+    }
+}

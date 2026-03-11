@@ -1,0 +1,275 @@
+# =============================================================================
+# Nest Atomic Deployment Graph
+# =============================================================================
+#
+# Deploys the Nest Atomic: Tower (BearDog + Songbird) + NestGate
+# Provides storage, provenance, and encrypted persistence.
+#
+# Stack: BearDog (crypto) -> Songbird (network) -> NestGate (storage)
+#
+# STATUS: OPERATIONAL - Promoted from pixel8a-deploy for Eastgate (Feb 28, 2026)
+#
+# Usage:
+#   biomeos deploy graphs/nest_deploy.toml
+#   ./scripts/start_nucleus.sh nest
+#
+# =============================================================================
+
+[graph]
+id = "nest_deploy"
+description = "Nest Atomic: Tower + NestGate storage with provenance"
+coordination = "Sequential"
+
+# =============================================================================
+# Phase 1: BearDog (Crypto Foundation)
+# =============================================================================
+
+[[nodes]]
+id = "start-beardog"
+output = "beardog_started"
+capabilities = ["crypto", "tls_crypto", "genetic", "security", "beacon"]
+
+[nodes.primal]
+by_capability = "security"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "data-vault"
+family_id = "${FAMILY_ID}"
+
+[nodes.operation.environment]
+RUST_LOG = "beardog_tunnel=info"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[nodes.constraints.retry]
+max_attempts = 3
+backoff_ms = 2000
+
+[nodes.capabilities_provided]
+"crypto.generate_keypair" = "crypto.x25519_generate_ephemeral"
+"crypto.encrypt" = "crypto.chacha20_poly1305_encrypt"
+"crypto.decrypt" = "crypto.chacha20_poly1305_decrypt"
+"crypto.hash" = "crypto.blake3_hash"
+"crypto.sign" = "crypto.sign_ed25519"
+"crypto.verify" = "crypto.verify_ed25519"
+
+# =============================================================================
+# Phase 2: Songbird (Network + Discovery)
+# =============================================================================
+
+[[nodes]]
+id = "start-songbird"
+depends_on = ["start-beardog"]
+output = "songbird_started"
+capabilities = ["http", "discovery", "secure_http", "mesh"]
+
+[nodes.primal]
+by_capability = "discovery"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+
+[nodes.operation.environment]
+NEURAL_API_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/neural-api-${FAMILY_ID}.sock"
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
+SONGBIRD_SECURITY_PROVIDER = "beardog"
+BIOMEOS_BIND_ALL = "true"
+RUST_LOG = "songbird_http_client=info"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[nodes.constraints.retry]
+max_attempts = 3
+backoff_ms = 2000
+
+[nodes.capabilities_provided]
+"http.request" = "http.request"
+"discovery.announce" = "announce_capabilities"
+"discovery.query" = "discover_by_capability"
+
+# =============================================================================
+# Phase 3: NestGate (Storage + Provenance)
+# =============================================================================
+
+[[nodes]]
+id = "start-nestgate"
+depends_on = ["start-songbird"]
+output = "nestgate_started"
+capabilities = ["storage", "versioning", "persistence", "data"]
+
+[nodes.primal]
+by_capability = "storage"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "daemon"
+family_id = "${FAMILY_ID}"
+provenance_enabled = true
+
+[nodes.operation.environment]
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
+SONGBIRD_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/songbird-${FAMILY_ID}.sock"
+RUST_LOG = "nestgate=info"
+
+[nodes.constraints]
+timeout_ms = 60000
+
+[nodes.constraints.retry]
+max_attempts = 3
+backoff_ms = 2000
+
+[nodes.capabilities_provided]
+"storage.store" = "storage.store"
+"storage.retrieve" = "storage.retrieve"
+"storage.delete" = "storage.delete"
+"storage.list" = "storage.list"
+"storage.exists" = "storage.exists"
+"data.ncbi_search" = "data.ncbi_search"
+"data.ncbi_fetch" = "data.ncbi_fetch"
+"data.noaa_ghcnd" = "data.noaa_ghcnd"
+"data.iris_stations" = "data.iris_stations"
+"data.iris_events" = "data.iris_events"
+
+# =============================================================================
+# Phase 4: Verify Registration
+# =============================================================================
+
+[[nodes]]
+id = "verify-registration"
+depends_on = ["start-nestgate"]
+output = "nest_registered"
+
+[nodes.primal]
+by_capability = "discovery"
+
+[nodes.operation]
+name = "discover_by_capability"
+
+[nodes.operation.params]
+capability = "storage"
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# =============================================================================
+# Phase 5: Health Check
+# =============================================================================
+
+[[nodes]]
+id = "verify-health"
+depends_on = ["verify-registration"]
+output = "nest_healthy"
+
+[nodes.primal]
+by_capability = "storage"
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.operation.params]
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# =============================================================================
+# Phase 6: Test Storage Round-Trip
+# =============================================================================
+
+[[nodes]]
+id = "test-storage-store"
+depends_on = ["verify-health"]
+output = "test_store_result"
+
+[nodes.primal]
+by_capability = "storage"
+
+[nodes.operation]
+name = "store"
+
+[nodes.operation.params]
+key = "nest:deployment:validation"
+data = { deployed_at = "2026-02-28", atomic = "nest", status = "operational", primals = 3, gate = "eastgate" }
+
+[nodes.constraints]
+timeout_ms = 5000
+
+[[nodes]]
+id = "test-storage-retrieve"
+depends_on = ["test-storage-store"]
+output = "test_retrieve_result"
+
+[nodes.primal]
+by_capability = "storage"
+
+[nodes.operation]
+name = "retrieve"
+
+[nodes.operation.params]
+key = "nest:deployment:validation"
+
+[nodes.constraints]
+timeout_ms = 5000
+
+# =============================================================================
+# Phase 7: Validate Nest Atomic Operational
+# =============================================================================
+
+[[nodes]]
+id = "validate-nest"
+depends_on = ["test-storage-retrieve"]
+output = "nest_validated"
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.operation.params]
+check_beardog = true
+check_songbird = true
+check_nestgate = true
+timeout_seconds = 10
+
+[nodes.constraints]
+timeout_ms = 15000
+
+# =============================================================================
+# Edges (Explicit Ordering)
+# =============================================================================
+
+[[edges]]
+from = "start-beardog"
+to = "start-songbird"
+
+[[edges]]
+from = "start-songbird"
+to = "start-nestgate"
+
+[[edges]]
+from = "start-nestgate"
+to = "verify-registration"
+
+[[edges]]
+from = "verify-registration"
+to = "verify-health"
+
+[[edges]]
+from = "verify-health"
+to = "test-storage-store"
+
+[[edges]]
+from = "test-storage-store"
+to = "test-storage-retrieve"
+
+[[edges]]
+from = "test-storage-retrieve"
+to = "validate-nest"

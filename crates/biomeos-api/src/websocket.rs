@@ -171,11 +171,11 @@ impl SubscriptionFilter {
 
 /// Active subscription
 struct Subscription {
-    #[allow(dead_code)] // Used for subscription ID lookup
+    #[allow(dead_code)] // Held for subscription lifecycle; used when event forwarding is wired
     id: String,
     filter: SubscriptionFilter,
     /// Channel sender for pushing events to the WebSocket client
-    #[allow(dead_code)] // Will be used when event forwarding is wired
+    #[allow(dead_code)] // Held for subscription lifecycle; used when event forwarding is wired
     sender: tokio::sync::mpsc::UnboundedSender<GraphEvent>,
 }
 
@@ -615,5 +615,150 @@ mod tests {
         assert!(json.contains("test"));
         assert!(json.contains("1234"));
         assert!(json.contains("true"));
+    }
+
+    #[test]
+    fn test_subscription_filter_event_types() {
+        let filter = SubscriptionFilter {
+            graph_id: None,
+            event_types: Some(vec!["NodeStarted".to_string(), "NodeCompleted".to_string()]),
+            node_filter: None,
+        };
+
+        let started_event = GraphEvent::NodeStarted {
+            graph_id: "g1".to_string(),
+            node_id: "n1".to_string(),
+            primal: "p1".to_string(),
+            operation: "op1".to_string(),
+            timestamp: Utc::now(),
+        };
+        assert!(filter.matches(&started_event));
+
+        let completed_event = GraphEvent::NodeCompleted {
+            graph_id: "g1".to_string(),
+            node_id: "n1".to_string(),
+            duration_ms: 100,
+            output: None,
+            timestamp: Utc::now(),
+        };
+        assert!(filter.matches(&completed_event));
+
+        let graph_started = GraphEvent::GraphStarted {
+            graph_id: "g1".to_string(),
+            graph_name: "G1".to_string(),
+            total_nodes: 1,
+            coordination: "sequential".to_string(),
+            timestamp: Utc::now(),
+        };
+        assert!(!filter.matches(&graph_started));
+    }
+
+    #[test]
+    fn test_subscription_filter_node_failed() {
+        let filter = SubscriptionFilter {
+            graph_id: None,
+            event_types: None,
+            node_filter: Some("target_node".to_string()),
+        };
+
+        let matching_event = GraphEvent::NodeFailed {
+            graph_id: "g1".to_string(),
+            node_id: "target_node".to_string(),
+            error: "err".to_string(),
+            retry_attempt: 0,
+            will_retry: false,
+            timestamp: Utc::now(),
+        };
+        assert!(filter.matches(&matching_event));
+
+        let non_matching = GraphEvent::NodeFailed {
+            graph_id: "g1".to_string(),
+            node_id: "other_node".to_string(),
+            error: "err".to_string(),
+            retry_attempt: 0,
+            will_retry: false,
+            timestamp: Utc::now(),
+        };
+        assert!(!filter.matches(&non_matching));
+    }
+
+    #[test]
+    fn test_subscription_filter_combined() {
+        let filter = SubscriptionFilter {
+            graph_id: Some("my_graph".to_string()),
+            event_types: Some(vec!["NodeCompleted".to_string()]),
+            node_filter: Some("node_a".to_string()),
+        };
+
+        let matching = GraphEvent::NodeCompleted {
+            graph_id: "my_graph".to_string(),
+            node_id: "node_a".to_string(),
+            duration_ms: 50,
+            output: None,
+            timestamp: Utc::now(),
+        };
+        assert!(filter.matches(&matching));
+
+        let wrong_graph = GraphEvent::NodeCompleted {
+            graph_id: "other_graph".to_string(),
+            node_id: "node_a".to_string(),
+            duration_ms: 50,
+            output: None,
+            timestamp: Utc::now(),
+        };
+        assert!(!filter.matches(&wrong_graph));
+    }
+
+    #[test]
+    fn test_json_rpc_error_serialization() {
+        let error = JsonRpcError::internal_error(Some("detail".to_string()));
+        let json = serde_json::to_string(&error).expect("serialize");
+        assert!(json.contains("-32603"));
+        assert!(json.contains("Internal error"));
+        assert!(json.contains("detail"));
+    }
+
+    #[test]
+    fn test_json_rpc_response_error_serialization() {
+        let response = JsonRpcResponse {
+            jsonrpc: "2.0".to_string(),
+            result: None,
+            error: Some(JsonRpcError::invalid_params(Some(
+                "missing field".to_string(),
+            ))),
+            id: Some(serde_json::json!("req-1")),
+        };
+        let json = serde_json::to_string(&response).expect("serialize");
+        assert!(json.contains("error"));
+        assert!(json.contains("-32602"));
+    }
+
+    #[test]
+    fn test_graph_event_websocket_server_construction() {
+        use std::net::SocketAddr;
+        use std::str::FromStr;
+
+        let addr = SocketAddr::from_str("127.0.0.1:0").expect("parse addr");
+        let broadcaster = Arc::new(GraphEventBroadcaster::new(16));
+        let server = GraphEventWebSocketServer::new(addr, broadcaster);
+        // Server should be constructible without panicking
+        drop(server);
+    }
+
+    #[test]
+    fn test_subscription_filter_default() {
+        let filter = SubscriptionFilter::default();
+        assert!(filter.graph_id.is_none());
+        assert!(filter.event_types.is_none());
+        assert!(filter.node_filter.is_none());
+
+        let event = GraphEvent::GraphStarted {
+            graph_id: "any".to_string(),
+            graph_name: "Any".to_string(),
+            total_nodes: 1,
+            coordination: "sequential".to_string(),
+            timestamp: Utc::now(),
+        };
+        assert!(filter.matches(&event));
     }
 }

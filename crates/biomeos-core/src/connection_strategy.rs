@@ -734,4 +734,63 @@ mod tests {
             assert_eq!(deserialized, *nat);
         }
     }
+
+    #[test]
+    fn test_nat_type_from_detection_open() {
+        assert_eq!(NatType::from_detection("open"), NatType::None);
+    }
+
+    #[test]
+    fn test_nat_type_from_detection_fullcone() {
+        assert_eq!(NatType::from_detection("fullcone"), NatType::FullCone);
+    }
+
+    #[test]
+    fn test_port_pattern_from_json_sequential_defaults() {
+        let json = serde_json::json!({"type": "sequential"});
+        let pattern = PortPattern::from_json(&json);
+        if let PortPattern::Sequential {
+            step,
+            last_port,
+            predicted_next,
+            confidence,
+        } = pattern
+        {
+            assert_eq!(step, 1);
+            assert_eq!(last_port, 0);
+            assert_eq!(predicted_next, 0);
+            assert!((confidence - 0.0).abs() < f64::EPSILON);
+        } else {
+            panic!("Expected Sequential with defaults");
+        }
+    }
+
+    #[test]
+    fn test_port_pattern_from_json_random_empty() {
+        let json = serde_json::json!({"type": "random"});
+        let pattern = PortPattern::from_json(&json);
+        assert!(matches!(pattern, PortPattern::Random { observed } if observed.is_empty()));
+    }
+
+    #[test]
+    fn test_stun_results_serialization() {
+        let results = StunResults {
+            public_addr: "1.2.3.4:41200".to_string(),
+            nat_type: "symmetric".to_string(),
+        };
+        let json = serde_json::to_string(&results).expect("serialize");
+        assert!(json.contains("1.2.3.4"));
+        assert!(json.contains("symmetric"));
+
+        let deserialized: StunResults = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(deserialized.public_addr, results.public_addr);
+        assert_eq!(deserialized.nat_type, results.nat_type);
+    }
+
+    #[test]
+    fn test_connection_tier_copy() {
+        let tier = ConnectionTier::LanDirect;
+        let copied = tier;
+        assert_eq!(tier, copied);
+    }
 }

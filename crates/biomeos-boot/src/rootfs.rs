@@ -322,8 +322,7 @@ impl RootFsBuilder {
                 .prefix("biomeos-build-")
                 .tempdir()
                 .context("Failed to create temporary mount point")?;
-            #[allow(deprecated)]
-            temp_dir.into_path()
+            temp_dir.keep()
         };
 
         std::fs::create_dir_all(&mount_point)?;
@@ -648,7 +647,7 @@ impl RootFsBuilder {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use tempfile::TempDir;
@@ -722,5 +721,106 @@ mod tests {
                 assert!(err_msg.contains("No available NBD devices"));
             }
         }
+    }
+
+    #[test]
+    fn test_rootfs_config_custom_values() {
+        let config = RootFsConfig {
+            size: "10G".to_string(),
+            output: PathBuf::from("/tmp/custom.qcow2"),
+            primals_dir: Some(PathBuf::from("/opt/primals")),
+            services_dir: Some(PathBuf::from("/etc/systemd")),
+            mount_point: Some(PathBuf::from("/mnt/build")),
+            fs_type: "xfs".to_string(),
+            dns_servers: Some(vec!["8.8.8.8".to_string(), "8.8.4.4".to_string()]),
+            nbd_device: Some("/dev/nbd0".to_string()),
+            hostname: "custom-host".to_string(),
+        };
+
+        assert_eq!(config.size, "10G");
+        assert_eq!(config.fs_type, "xfs");
+        assert_eq!(config.hostname, "custom-host");
+        assert_eq!(config.dns_servers.as_ref().unwrap().len(), 2);
+    }
+
+    #[test]
+    fn test_rootfs_builder_new() {
+        let config = RootFsConfig::default();
+        let builder = RootFsBuilder::new(config.clone());
+        // Builder holds config
+        assert_eq!(builder.config.size, config.size);
+    }
+
+    #[test]
+    fn test_rootfs_cli_parse() {
+        use clap::Parser;
+
+        let cli = RootFsCli::parse_from(["biomeos-rootfs", "-s", "4G", "-o", "test.qcow2"]);
+        assert_eq!(cli.size, "4G");
+        assert_eq!(cli.output, PathBuf::from("test.qcow2"));
+    }
+
+    #[test]
+    fn test_rootfs_cli_defaults() {
+        use clap::Parser;
+
+        let cli = RootFsCli::parse_from(["biomeos-rootfs"]);
+        assert_eq!(cli.size, "8G");
+        assert_eq!(cli.output, PathBuf::from("biomeos-root.qcow2"));
+        assert_eq!(cli.fs_type, "ext4");
+    }
+
+    #[test]
+    fn test_configure_dns_empty_servers() {
+        let temp_dir = TempDir::new().unwrap();
+        let root = temp_dir.path();
+
+        let config = RootFsConfig {
+            dns_servers: Some(vec![]),
+            ..Default::default()
+        };
+        let builder = RootFsBuilder::new(config);
+
+        // Should not panic; empty servers means "use system DNS" (early return)
+        let result = builder.configure_dns(root);
+        result.expect("configure_dns with empty servers should succeed");
+    }
+
+    #[test]
+    fn test_configure_dns_with_servers() {
+        let temp_dir = TempDir::new().unwrap();
+        let root = temp_dir.path();
+        std::fs::create_dir_all(root.join("etc")).unwrap();
+
+        let config = RootFsConfig {
+            dns_servers: Some(vec!["1.2.3.4".to_string(), "5.6.7.8".to_string()]),
+            ..Default::default()
+        };
+        let builder = RootFsBuilder::new(config);
+
+        builder.configure_dns(root).expect("configure_dns");
+
+        let resolv = std::fs::read_to_string(root.join("etc/resolv.conf")).unwrap();
+        assert!(resolv.contains("1.2.3.4"));
+        assert!(resolv.contains("5.6.7.8"));
+    }
+
+    #[test]
+    fn test_configure_system_sets_hostname() {
+        let temp_dir = TempDir::new().unwrap();
+        let root = temp_dir.path();
+        std::fs::create_dir_all(root.join("etc")).unwrap();
+
+        let config = RootFsConfig {
+            hostname: "test-host".to_string(),
+            dns_servers: Some(vec![]),
+            ..Default::default()
+        };
+        let builder = RootFsBuilder::new(config);
+
+        builder.configure_system(root).expect("configure_system");
+
+        let hostname = std::fs::read_to_string(root.join("etc/hostname")).unwrap();
+        assert_eq!(hostname.trim(), "test-host");
     }
 }

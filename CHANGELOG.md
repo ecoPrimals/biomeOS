@@ -2,6 +2,132 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## [v2.27] - 2026-03-11 (Continuous Systems + XR/Surgical VR Evolution)
+
+### Continuous Execution Systems
+- **ContinuousExecutor**: Fixed-timestep graph execution with `TickClock`, `SessionState` lifecycle, feedback edges, per-node budget enforcement
+- **GraphEventBroadcaster**: `tokio::broadcast`-based push events replacing 5s SSE poll; WebSocket wired to event stream
+- **SensorEventBus**: Real-time sensor routing (keyboard, mouse, gamepad, tracking) through graph nodes
+- **game_engine_tick.toml**: 60 Hz continuous graph (input → logic → physics → scene → render)
+
+### XR Type System (biomeos-types::xr)
+- **VisualOutputCapability**: TwoD / ThreeD(StereoConfig) / Passthrough
+- **StereoConfig**: Per-eye resolution, refresh Hz, IPD, FOV, color format
+- **Pose6DoF**: Position + orientation + velocity + angular velocity
+- **TrackingFrame**: Multi-device tracking with confidence scores
+- **MotionCaptureConfig**: Backend selection, tracking Hz, device list, prediction
+- **HapticCommand/HapticDeviceCapabilities**: Force feedback, rumble, precision actuators
+
+### XR Rendering Adapters (biomeos-ui)
+- **StereoRenderAdapter**: Negotiate/begin/submit/end stereo sessions via JSON-RPC
+- **MotionCaptureAdapter**: OpenXR/SteamVR backend, 1000Hz, surgical preset (head + hands + tool)
+- **HapticPipeline**: Device discovery, safety-clamped force feedback, emergency stop
+
+### Surgical Domain (biomeos-types::surgical)
+- **SurgicalProcedure**: Procedure definition with instruments, anatomy, time limits, difficulty
+- **ToolTissueInteraction**: Penetration depth, reaction force, tissue damage classification
+- **BiosignalType/BiosignalStreamConfig**: ECG, PPG, EDA, EMG streaming
+- **PkModelParams/PkModelResult**: 1/2/3-compartment pharmacokinetic models
+- **SurgicalSessionState/SurgicalSessionMetrics**: Session lifecycle and scoring
+
+### Capability Infrastructure
+- **13 capability domains**: Added XR (petalTongue, 14 methods) and Medical (healthspring, 12 methods)
+- **CapabilityTaxonomy**: Added StereoRendering, MotionTracking, HapticFeedback, BiosignalProcessing, PharmacokineticModeling, SurgicalToolSimulation, TissuePhysics, AnatomyModeling
+- **Niche templates**: `surgical-vr` (healthSpring + petalTongue + ludoSpring)
+- **Deploy graph**: `surgical_vr_deploy.toml` with XR session bootstrap
+
+### Stub Resolution
+- **mDNS**: Real `trust-dns-resolver` async lookup replacing placeholder
+- **Network interfaces**: `/sys/class/net` + `/sys/class/net/*/operstate` parsing
+- **USB space**: `nix::sys::statvfs` for accurate disk space
+- **MAC address**: `/sys/class/net/*/address` reading
+- **Mesh discovery**: File-based peer discovery via XDG runtime directory
+- **Graph metrics**: SQLite-backed execution recording and retrieval
+
+### Quality
+| Metric | Before | After |
+|--------|--------|-------|
+| Tests | 3,590 | 3,670+ |
+| Capability translations | 124 | 140+ |
+| Capability domains | 11 | 13 |
+| New modules | — | xr.rs, surgical.rs, continuous.rs, sensor.rs, xr_rendering.rs, motion_capture.rs, haptic_feedback.rs |
+
+### Cleanup
+- Removed `chimeras/fused/platypus/target/` from git tracking (build artifacts)
+
+---
+
+## [v1.28] - 2026-02-12 (Network Transition Validation)
+
+### Pixel Hotspot ↔ LAN Transition
+
+Full dynamic network transition validated:
+
+| Network State | Pixel IP | Access Method | Status |
+|---------------|----------|---------------|--------|
+| Hotspot | 172.20.10.x | api.nestgate.io (Cloudflare) | ✅ |
+| Home WiFi | 192.168.1.114 | Direct LAN HTTP | ✅ |
+
+**Validated Operations:**
+- IP auto-detection on network switch
+- Address book update via NestGate `storage.store`
+- Direct LAN ping (0% packet loss)
+- Tower → Pixel HTTP JSON-RPC (direct)
+- Pixel → Tower HTTP (200 OK, 141ms)
+- Bidirectional beacon exchange with family verification
+
+---
+
+## [v1.27] - 2026-02-12 (Federation + Security Evolution)
+
+### External Federation via Cloudflare Tunnel
+
+Permanent tunnel established for external beacon rendezvous, bypassing NAT/firewall restrictions.
+
+| Feature | Status |
+|---------|--------|
+| Tunnel Endpoint | `https://api.nestgate.io` |
+| Protocol | QUIC with 4x HA connections |
+| Latency | ~160ms via Cloudflare edge |
+| ISP Visibility | Standard HTTPS only (cannot block/sniff) |
+| Pixel on Hotspot | ✅ Validated (172.20.10.2 → Tower) |
+| LAN Direct | ✅ Validated (192.168.1.x) |
+
+### Security Headers (100/100 Score)
+
+All API responses now include defense-in-depth security headers:
+
+```
+Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+Content-Security-Policy: default-src 'none'; frame-ancestors 'none'
+Referrer-Policy: no-referrer
+Cache-Control: no-store, no-cache, must-revalidate
+```
+
+### Security Audit Results
+
+35 security tests conducted, 0 data leaks:
+
+| Test Category | Result |
+|---------------|--------|
+| Origin IP Exposure | ✅ None (Cloudflare proxy) |
+| Server Fingerprinting | ✅ None (cloudflare only) |
+| Path Traversal | ✅ Blocked (403) |
+| Injection Probes | ✅ Blocked |
+| TLS Configuration | ✅ TLS 1.3, AES-256-GCM |
+| Debug Endpoints | ✅ All blocked (Dark Forest Gate) |
+| Error Information Leakage | ✅ None |
+
+### Code Changes
+
+- `biomeos-api`: Added security headers via `tower_http::set_header`
+- `biomeos-api`: Added request body limit (1MB max)
+- `Cargo.toml`: Added `set-header` and `limit` features to `tower-http`
+
+---
+
 ## [v1.26] - 2026-02-11 (Deep Debt Evolution)
 
 ### Deep Debt Evolution — Complete Audit & Modernization
@@ -936,3 +1062,62 @@ BirdSong Discovery → USB Songbird (discovered peer)
 ---
 
 For detailed session reports, see `docs/archive/`.
+
+## v1.28 - 2026-02-12 (LiveSpore Conversion)
+
+### Spore Ecosystem Evolution
+- **ColdSpore vs LiveSpore**: Documented and implemented two spore types
+  - ColdSpore: Data-only USB (requires host OS)
+  - LiveSpore: Bootable USB (self-contained with Alpine Linux)
+- **Temporal Siblings**: Implemented genetic model for same-generation siblings born at different times
+- **LiveSpore Conversion Script**: Created `scripts/create_livespore.sh` for USB conversion
+
+### USB Conversions
+- **BEA6-BBCE** → ColdSpore (reference, older sibling)
+- **biomeOS1** → ColdSpore (reference, older sibling)
+- **BEA6-BBCE1** → LiveSpore "livespore-alpha" (bootable, younger sibling)
+- **biomeOS21** → LiveSpore "livespore-beta" (bootable, younger sibling)
+
+### Genetic Verification
+- All 4 spores share same mito beacon: `8ff3b864a4bc589a...`
+- Each spore has unique lineage seed for individual identity
+- Family tree: Tower (Gen 0) → 4 siblings (Gen 1)
+- LiveSpores can hear ColdSpores' BirdSong (same family)
+
+### Architecture
+- Updated GENOME_DISTRIBUTION_ARCHITECTURE.md with spore type documentation
+- Alpine Linux base for LiveSpores (~200MB total)
+- syslinux bootloader (BIOS-compatible)
+- Auto-start NUCLEUS on boot
+
+## v1.29 - 2026-02-13 (NUC Federation & Binary Evolution)
+
+### Multi-Computer Federation
+- **NUC Integration**: Deployed NUCLEUS to second computer (Ryzen 5 6600H, 28GB RAM)
+- **SSH Access**: Configured passwordless SSH (`ssh nuc`)
+- **Gen 2 Deployment**: NUC is grandchild of Tower via livespore-alpha
+- **All 5 Primals**: BearDog, Songbird, Toadstool, Squirrel, NestGate verified
+
+### Binary Format Evolution
+- **Discovery**: Non-PIE musl binaries segfault on ASLR systems
+- **Root Cause**: LiveSpore NestGate was `statically linked` (not PIE)
+- **Solution**: Replaced with PIE-enabled `dynamically linked` binary
+- **Spec Added**: `specs/BINARY_BUILD_TARGETS_SPEC.md`
+
+### Documentation Updates
+- **Handoff**: `NUC_FEDERATION_BINARY_EVOLUTION_FEB13_2026.md`
+- **Status**: Updated to v2.25 with NUC federation details
+- **Specs README**: Added BINARY_BUILD_TARGETS_SPEC
+
+### Archived (Deprecated)
+- `scripts/beacon_dns_updater.sh` → Cloudflare Tunnel
+- `scripts/setup_coturn.sh` → Songbird relay (WIP)
+- `scripts/validate_beacon_discovery.sh` → `biomeos doctor`
+- `scripts/genomeBin-hardened-template.sh` → `biomeos genome`
+
+### Covalent Bond Status
+```
+Tower (192.168.1.144) ←──SSH──→ NUC (192.168.1.190)
+      │                              │
+      └── Family: 8ff3b864a4bc589a ──┘
+```

@@ -351,15 +351,16 @@ impl NetworkConfig {
         }
     }
 
-    /// Default public STUN servers
+    /// Default public STUN servers (community-run, FOSS-aligned)
     ///
-    /// These are well-maintained, high-availability STUN servers.
-    /// Used only as fallback when no self-hosted or custom servers available.
+    /// Sovereign-first: community-run servers only. Corporate STUN endpoints
+    /// (Google, Cloudflare) are excluded — core NAT traversal must not depend
+    /// on corporate infrastructure. Override via `BIOMEOS_STUN_SERVERS` env var.
     fn default_public_stun_servers() -> Vec<String> {
         vec![
-            "stun.l.google.com:19302".to_string(),
-            "stun.cloudflare.com:3478".to_string(),
             "stun.nextcloud.com:3478".to_string(),
+            "stun.sip.us:3478".to_string(),
+            "stun.stunprotocol.org:3478".to_string(),
         ]
     }
 }

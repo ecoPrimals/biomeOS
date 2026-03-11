@@ -181,4 +181,85 @@ mod tests {
         assert!(!BootMode::Standard { config: None }.is_interactive());
         assert!(!BootMode::Discovery.is_interactive());
     }
+
+    #[test]
+    fn test_parse_standard_with_config() {
+        let params = parse_cmdline("root=/dev/sda biomeos.config=/etc/biomeos/biome.yaml").unwrap();
+        match &params.mode {
+            BootMode::Standard { config: Some(c) } => {
+                assert_eq!(c, &PathBuf::from("/etc/biomeos/biome.yaml"));
+            }
+            _ => panic!("Expected Standard with config"),
+        }
+    }
+
+    #[test]
+    fn test_parse_biomeos_recovery() {
+        let params = parse_cmdline("root=/dev/sda biomeos.recovery").unwrap();
+        assert_eq!(params.mode, BootMode::Recovery);
+    }
+
+    #[test]
+    fn test_parse_empty_cmdline() {
+        let params = parse_cmdline("").unwrap();
+        assert!(matches!(params.mode, BootMode::Standard { .. }));
+        assert!(params.extra_params.is_empty());
+    }
+
+    #[test]
+    fn test_parse_extra_params_filtered() {
+        let params = parse_cmdline("root=/dev/sda rw quiet biomeos.discovery").unwrap();
+        assert_eq!(params.mode, BootMode::Discovery);
+        assert!(
+            params.extra_params.iter().any(|p| p == "root=/dev/sda"),
+            "extra_params should contain non-biomeos params"
+        );
+        assert!(
+            !params
+                .extra_params
+                .iter()
+                .any(|p| p.starts_with("biomeos.")),
+            "extra_params should not contain biomeos params"
+        );
+    }
+
+    #[test]
+    fn test_mode_description_network() {
+        assert_eq!(
+            BootMode::Network { server: None }.description(),
+            "Network Boot"
+        );
+    }
+
+    #[test]
+    fn test_mode_description_install() {
+        assert_eq!(
+            BootMode::Install { target: None }.description(),
+            "Installation"
+        );
+    }
+
+    #[test]
+    fn test_parse_install_without_target() {
+        let params = parse_cmdline("biomeos.install").unwrap();
+        match params.mode {
+            BootMode::Install { target: None } => {}
+            _ => panic!("Expected Install mode without target"),
+        }
+    }
+
+    #[test]
+    fn test_parse_network_without_server() {
+        let params = parse_cmdline("biomeos.network").unwrap();
+        match params.mode {
+            BootMode::Network { server: None } => {}
+            _ => panic!("Expected Network mode without server"),
+        }
+    }
+
+    #[test]
+    fn test_boot_params_extra_params() {
+        let params = parse_cmdline("root=/dev/sda rw quiet").unwrap();
+        assert_eq!(params.extra_params.len(), 3);
+    }
 }

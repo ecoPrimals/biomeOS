@@ -289,7 +289,7 @@ impl ConnectionState {
 /// Living deployment graph with runtime protocol state
 pub struct LivingGraph {
     /// Static deployment definition (from TOML) - reserved for future graph validation
-    #[allow(dead_code)]
+    #[allow(dead_code)] // TODO: Wire up graph validation when graph-based deployment is active
     deployment: Option<DeploymentGraph>,
     /// Runtime state: primal → protocol state
     protocol_state: RwLock<HashMap<String, PrimalProtocolState>>,

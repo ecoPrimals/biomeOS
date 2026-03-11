@@ -6,9 +6,45 @@
 //! See `specs/PLASMODIUM_OVER_NUCLEUS_SPEC.md` for the full specification.
 
 use anyhow::Result;
-use biomeos_core::plasmodium::Plasmodium;
+use biomeos_core::plasmodium::{Plasmodium, PlasmodiumState};
+use std::collections::HashMap;
 
 use crate::PlasmodiumCommand;
+
+/// Build unified model-to-gates map from collective state (pure, testable)
+pub(crate) fn build_model_gates_map(state: &PlasmodiumState) -> HashMap<String, Vec<String>> {
+    let mut model_gates: HashMap<String, Vec<String>> = HashMap::new();
+
+    for gate in &state.gates {
+        for model in &gate.models {
+            model_gates
+                .entry(model.clone())
+                .or_default()
+                .push(gate.gate_id.clone());
+        }
+    }
+
+    for model in &state.collective.models {
+        model_gates.entry(model.model_id.clone()).or_default();
+        for gate_id in &model.gates {
+            let entry = model_gates.entry(model.model_id.clone()).or_default();
+            if !entry.contains(gate_id) {
+                entry.push(gate_id.clone());
+            }
+        }
+    }
+
+    model_gates
+}
+
+/// Pluralize suffix for counts (e.g. "gate" -> "gates" when count != 1)
+pub(crate) fn plural_suffix(count: usize) -> &'static str {
+    if count == 1 {
+        ""
+    } else {
+        "s"
+    }
+}
 
 /// Run plasmodium command
 pub async fn run(command: PlasmodiumCommand) -> Result<()> {
@@ -231,29 +267,7 @@ async fn models() -> Result<()> {
         }
     }
 
-    // Build a unified model view from gate data
-    let mut model_gates: std::collections::HashMap<String, Vec<String>> =
-        std::collections::HashMap::new();
-
-    for gate in &state.gates {
-        for model in &gate.models {
-            model_gates
-                .entry(model.clone())
-                .or_default()
-                .push(gate.gate_id.clone());
-        }
-    }
-
-    // Also include from collective aggregation
-    for model in &state.collective.models {
-        model_gates.entry(model.model_id.clone()).or_default();
-        for gate_id in &model.gates {
-            let entry = model_gates.entry(model.model_id.clone()).or_default();
-            if !entry.contains(gate_id) {
-                entry.push(gate_id.clone());
-            }
-        }
-    }
+    let model_gates = build_model_gates_map(&state);
 
     if model_gates.is_empty() {
         println!("  No models found across the collective.");
@@ -273,18 +287,102 @@ async fn models() -> Result<()> {
     }
 
     println!("  {}", "-".repeat(70));
+    let reachable_count = state.gates.iter().filter(|g| g.reachable).count();
     println!(
         "  Total: {} unique model{} across {} gate{}",
         sorted_models.len(),
-        if sorted_models.len() != 1 { "s" } else { "" },
-        state.gates.iter().filter(|g| g.reachable).count(),
-        if state.gates.iter().filter(|g| g.reachable).count() != 1 {
-            "s"
-        } else {
-            ""
-        }
+        plural_suffix(sorted_models.len()),
+        reachable_count,
+        plural_suffix(reachable_count)
     );
     println!();
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use biomeos_core::plasmodium::{
+        BondType, CollectiveCapabilities, ComputeInfo, GateInfo, ModelAvailability,
+        PlasmodiumState, PrimalStatus,
+    };
+
+    fn make_gate(gate_id: &str, models: Vec<&str>) -> GateInfo {
+        GateInfo {
+            gate_id: gate_id.to_string(),
+            address: format!("{}:8080", gate_id),
+            is_local: gate_id == "local",
+            primals: vec![PrimalStatus {
+                name: "beardog".to_string(),
+                healthy: true,
+                version: None,
+            }],
+            compute: ComputeInfo::default(),
+            models: models.into_iter().map(String::from).collect(),
+            load: 0.0,
+            reachable: true,
+            bond_type: BondType::Covalent,
+        }
+    }
+
+    #[test]
+    fn test_build_model_gates_map_empty() {
+        let state = PlasmodiumState {
+            gates: vec![],
+            snapshot_at: "2024-01-01T00:00:00Z".to_string(),
+            family_id: "test".to_string(),
+            collective: CollectiveCapabilities::default(),
+        };
+        let map = build_model_gates_map(&state);
+        assert!(map.is_empty());
+    }
+
+    #[test]
+    fn test_build_model_gates_map_from_gates() {
+        let state = PlasmodiumState {
+            gates: vec![
+                make_gate("gate-a", vec!["model/1", "model/2"]),
+                make_gate("gate-b", vec!["model/1", "model/3"]),
+            ],
+            snapshot_at: "2024-01-01T00:00:00Z".to_string(),
+            family_id: "test".to_string(),
+            collective: CollectiveCapabilities::default(),
+        };
+        let map = build_model_gates_map(&state);
+        assert_eq!(map.len(), 3);
+        assert_eq!(map.get("model/1").expect("model/1"), &["gate-a", "gate-b"]);
+        assert_eq!(map.get("model/2").expect("model/2"), &["gate-a"]);
+        assert_eq!(map.get("model/3").expect("model/3"), &["gate-b"]);
+    }
+
+    #[test]
+    fn test_build_model_gates_map_merges_collective() {
+        let state = PlasmodiumState {
+            gates: vec![make_gate("gate-a", vec!["model/1"])],
+            snapshot_at: "2024-01-01T00:00:00Z".to_string(),
+            family_id: "test".to_string(),
+            collective: CollectiveCapabilities {
+                models: vec![ModelAvailability {
+                    model_id: "model/1".to_string(),
+                    size_bytes: 0,
+                    format: "gguf".to_string(),
+                    gates: vec!["gate-a".to_string(), "gate-b".to_string()],
+                }],
+                ..Default::default()
+            },
+        };
+        let map = build_model_gates_map(&state);
+        let gates = map.get("model/1").expect("model/1");
+        assert!(gates.contains(&"gate-a".to_string()));
+        assert!(gates.contains(&"gate-b".to_string()));
+    }
+
+    #[test]
+    fn test_plural_suffix() {
+        assert_eq!(plural_suffix(0), "s");
+        assert_eq!(plural_suffix(1), "");
+        assert_eq!(plural_suffix(2), "s");
+        assert_eq!(plural_suffix(42), "s");
+    }
 }

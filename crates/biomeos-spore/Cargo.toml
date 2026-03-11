@@ -31,7 +31,7 @@ sha2 = { workspace = true }  # For SHA256-based seed derivation
 getrandom = "0.2"  # For secure random nonce generation
 serde_bytes = "0.11"  # For binary data serialization
 base64 = "0.22"  # For beacon encoding
-nix = { version = "0.29", features = ["signal", "process"] }  # For signal handling in rollback
+nix = { version = "0.29", features = ["signal", "process", "fs"] }  # signal/process for rollback; fs for statvfs
 hex = "0.4"  # For hex encoding
 uuid = { workspace = true }  # For unique IDs
 async-fs = "2.1"  # For async file operations

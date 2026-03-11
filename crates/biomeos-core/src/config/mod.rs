@@ -213,7 +213,6 @@ pub mod presets {
                 )
             });
 
-        #[allow(deprecated)]
         BiomeOSConfigBuilder::new()
             .name("local-biome")
             .environment(Environment::Development)

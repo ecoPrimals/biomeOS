@@ -79,6 +79,7 @@ pub struct AppState {
     discovery: Arc<dyn PrimalDiscovery>,
     genome: Arc<GenomeState>,
     config: Config,
+    event_broadcaster: Arc<biomeos_graph::GraphEventBroadcaster>,
 }
 
 impl AppState {
@@ -105,6 +106,11 @@ impl AppState {
     /// Check if standalone mode is enabled (graceful degradation)
     pub fn is_standalone_mode(&self) -> bool {
         self.config.standalone_mode
+    }
+
+    /// Get the graph event broadcaster for push-based event streaming
+    pub fn event_broadcaster(&self) -> &biomeos_graph::GraphEventBroadcaster {
+        &self.event_broadcaster
     }
 }
 
@@ -277,6 +283,7 @@ impl AppStateBuilder {
             discovery,
             genome,
             config,
+            event_broadcaster: Arc::new(biomeos_graph::GraphEventBroadcaster::new(1024)),
         })
     }
 
@@ -315,6 +322,7 @@ impl AppStateBuilder {
             discovery,
             genome,
             config,
+            event_broadcaster: Arc::new(biomeos_graph::GraphEventBroadcaster::new(1024)),
         })
     }
 }
@@ -380,5 +388,62 @@ mod tests {
         assert!(config.bind_addr.is_none() || config.bind_addr.unwrap().port() == 3000);
         // Socket path should always be set
         assert!(config.socket_path.to_string_lossy().contains("biomeos"));
+    }
+
+    #[test]
+    fn test_config_default() {
+        let config = Config::default();
+        assert!(!config.standalone_mode);
+        assert!(config.socket_path.to_string_lossy().contains("biomeos"));
+        assert!(config.bind_addr.is_none());
+        assert!(!config.enable_http_bridge);
+        assert_eq!(config.request_timeout, std::time::Duration::from_secs(30));
+        assert!(config.enable_cors);
+    }
+
+    #[test]
+    fn test_config_from_env_standalone_mode() {
+        std::env::set_var("BIOMEOS_STANDALONE_MODE", "true");
+        let config = Config::from_env();
+        assert!(config.standalone_mode);
+        std::env::remove_var("BIOMEOS_STANDALONE_MODE");
+    }
+
+    #[test]
+    fn test_build_error_display() {
+        let err = BuildError::MissingDiscovery;
+        assert!(format!("{err}").contains("Discovery"));
+
+        let err = BuildError::ConfigError("test error".to_string());
+        assert!(format!("{err}").contains("test error"));
+    }
+
+    #[tokio::test]
+    async fn test_app_state_accessors() {
+        let state = AppState::builder()
+            .discovery(MockDiscovery)
+            .build()
+            .expect("build state");
+
+        assert!(state.discovery().discover_all().await.is_ok());
+        let _ = state.genome();
+        assert!(!state.config().standalone_mode);
+        assert!(!state.is_standalone_mode());
+    }
+
+    #[test]
+    fn test_build_with_defaults_no_discovery() {
+        let result = AppState::builder().config_from_env().build_with_defaults();
+        assert!(result.is_ok());
+        let state = result.expect("state");
+        assert!(!state.is_standalone_mode() || state.config().standalone_mode);
+    }
+
+    #[test]
+    fn test_config_clone() {
+        let config = Config::default();
+        let cloned = config.clone();
+        assert_eq!(config.standalone_mode, cloned.standalone_mode);
+        assert_eq!(config.socket_path, cloned.socket_path);
     }
 }

@@ -58,3 +58,97 @@ impl NeuralApiServer {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::neural_api_server::NeuralApiServer;
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
+
+    fn create_test_server() -> NeuralApiServer {
+        let temp = tempfile::tempdir().expect("temp dir");
+        NeuralApiServer::new(temp.path(), "test_family", temp.path().join("neural.sock"))
+    }
+
+    #[tokio::test]
+    async fn test_handle_connection_unknown_method_returns_error_response() {
+        let (server_stream, mut client_stream) =
+            tokio::net::UnixStream::pair().expect("UnixStream::pair");
+        let server = create_test_server();
+
+        let request = r#"{"jsonrpc":"2.0","method":"unknown.method","id":1}"#;
+        client_stream
+            .write_all((request.to_string() + "\n").as_bytes())
+            .await
+            .expect("write request");
+        client_stream.flush().await.expect("flush");
+
+        let mut buf = String::new();
+        let (read_result, conn_result) = tokio::join!(
+            async {
+                let mut reader = tokio::io::BufReader::new(&mut client_stream);
+                reader.read_line(&mut buf).await
+            },
+            server.handle_connection(server_stream)
+        );
+
+        let _ = read_result.expect("read response");
+        conn_result.expect("handle_connection should succeed");
+        assert!(buf.contains("jsonrpc"));
+        assert!(buf.contains("error"));
+        assert!(buf.contains("unknown.method"));
+    }
+
+    #[tokio::test]
+    async fn test_handle_connection_processes_request_and_returns_response() {
+        let (server_stream, mut client_stream) =
+            tokio::net::UnixStream::pair().expect("UnixStream::pair");
+        let server = create_test_server();
+
+        let request = r#"{"jsonrpc":"2.0","method":"nonexistent","id":42}"#;
+        client_stream
+            .write_all((request.to_string() + "\n").as_bytes())
+            .await
+            .expect("write request");
+        client_stream.flush().await.expect("flush");
+
+        let mut buf = String::new();
+        let (read_result, conn_result) = tokio::join!(
+            async {
+                let mut reader = tokio::io::BufReader::new(&mut client_stream);
+                reader.read_line(&mut buf).await
+            },
+            server.handle_connection(server_stream)
+        );
+
+        let _ = read_result.expect("read response");
+        conn_result.expect("handle_connection");
+        assert!(buf.contains("jsonrpc"));
+        assert!(buf.contains("error") || buf.contains("Method not found"));
+    }
+
+    #[tokio::test]
+    async fn test_handle_connection_invalid_json_returns_internal_error() {
+        let (server_stream, mut client_stream) =
+            tokio::net::UnixStream::pair().expect("UnixStream::pair");
+        let server = create_test_server();
+
+        client_stream
+            .write_all(b"{invalid\n")
+            .await
+            .expect("write invalid json");
+        client_stream.flush().await.expect("flush");
+
+        let mut buf = String::new();
+        let (read_result, conn_result) = tokio::join!(
+            async {
+                let mut reader = tokio::io::BufReader::new(&mut client_stream);
+                reader.read_line(&mut buf).await
+            },
+            server.handle_connection(server_stream)
+        );
+
+        let _ = read_result.expect("read");
+        conn_result.expect("connection handler");
+        assert!(buf.contains("Internal error") || buf.contains("-32603"));
+    }
+}

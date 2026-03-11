@@ -83,3 +83,31 @@ pub async fn run(detailed: bool) -> Result<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_run_simple_does_not_error() {
+        let result = run(false).await;
+        result.expect("run(false) should succeed");
+    }
+
+    #[tokio::test]
+    async fn test_run_detailed_does_not_error() {
+        let result = run(true).await;
+        result.expect("run(true) should succeed");
+    }
+
+    #[test]
+    fn test_version_format_string() {
+        let version = env!("CARGO_PKG_VERSION");
+        let simple = format!("biomeOS v{}", version);
+        assert!(
+            simple.starts_with("biomeOS v"),
+            "Version string should start with 'biomeOS v'"
+        );
+        assert!(!version.is_empty(), "CARGO_PKG_VERSION should be non-empty");
+    }
+}

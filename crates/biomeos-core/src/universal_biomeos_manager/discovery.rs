@@ -14,7 +14,7 @@ use biomeos_types::{BiomeOSConfig, Health, PrimalType};
 /// Primal Discovery Service for ecosystem-wide primal discovery
 #[derive(Debug, Clone)]
 pub struct PrimalDiscoveryService {
-    #[allow(dead_code)] // Config used for future discovery configuration
+    #[allow(dead_code)] // TODO: Wire up for discovery configuration (filters, timeouts)
     config: Arc<BiomeOSConfig>,
 }
 

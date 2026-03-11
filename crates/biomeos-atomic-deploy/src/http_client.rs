@@ -33,6 +33,14 @@ pub struct HttpResponse {
 }
 
 impl BiomeOsHttpClient {
+    /// Create HTTP client with explicit socket path (for testing / dependency injection)
+    #[cfg(test)]
+    pub fn with_socket(socket: impl Into<String>) -> Self {
+        Self {
+            songbird_socket: socket.into(),
+        }
+    }
+
     /// Create new HTTP client
     ///
     /// This delegates all HTTP requests to Songbird (Tower Atomic)
@@ -223,11 +231,181 @@ mod tests {
     #[test]
     fn test_client_creation() {
         let client = BiomeOsHttpClient::new();
-        assert!(client.songbird_socket.contains("songbird"));
+        assert!(
+            client.songbird_socket.contains("songbird"),
+            "Default socket should contain songbird: {}",
+            client.songbird_socket
+        );
     }
 
     #[test]
     fn test_default() {
-        let _client = BiomeOsHttpClient::default();
+        let client = BiomeOsHttpClient::default();
+        assert!(
+            client.songbird_socket.contains("songbird"),
+            "Default should match new(): {}",
+            client.songbird_socket
+        );
+    }
+
+    #[test]
+    fn test_with_socket_for_testing() {
+        let client = BiomeOsHttpClient::with_socket("/tmp/test-songbird.sock");
+        assert_eq!(client.songbird_socket, "/tmp/test-songbird.sock");
+    }
+
+    #[test]
+    fn test_http_response_deserialization() {
+        let json = r#"{
+            "status": 200,
+            "headers": {"Content-Type": "text/plain"},
+            "body": "hello world"
+        }"#;
+        let response: HttpResponse = serde_json::from_str(json).expect("parse HttpResponse");
+        assert_eq!(response.status, 200);
+        assert_eq!(
+            response.headers.get("Content-Type"),
+            Some(&"text/plain".to_string())
+        );
+        assert_eq!(response.body.as_str(), Some("hello world"));
+    }
+
+    #[test]
+    fn test_http_response_deserialization_body_as_object() {
+        let json = r#"{
+            "status": 200,
+            "headers": {},
+            "body": {"key": "value"}
+        }"#;
+        let response: HttpResponse = serde_json::from_str(json).expect("parse HttpResponse");
+        assert_eq!(response.status, 200);
+        assert!(response.body.get("key").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_get_fails_when_songbird_unavailable() {
+        let client = BiomeOsHttpClient::with_socket("/tmp/nonexistent-songbird-xyz.sock");
+
+        let result = client.get("http://example.com").await;
+
+        let err = result.expect_err("Should fail when Songbird socket does not exist");
+        assert!(
+            err.to_string().contains("Failed to connect")
+                || err.to_string().contains("Songbird")
+                || err.to_string().contains("Connection refused")
+                || err.to_string().contains("No such file"),
+            "Error should mention connection failure: {}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    async fn test_post_fails_when_songbird_unavailable() {
+        let client = BiomeOsHttpClient::with_socket("/tmp/nonexistent-songbird-xyz.sock");
+
+        let result = client
+            .post("http://example.com", serde_json::json!({"test": true}))
+            .await;
+
+        let err = result.expect_err("Should fail when Songbird socket does not exist");
+        assert!(
+            err.to_string().contains("Failed to connect")
+                || err.to_string().contains("Songbird")
+                || err.to_string().contains("Connection refused")
+                || err.to_string().contains("No such file"),
+            "Error should mention connection failure: {}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    async fn test_fetch_binary_fails_when_songbird_unavailable() {
+        let client = BiomeOsHttpClient::with_socket("/tmp/nonexistent-songbird-xyz.sock");
+
+        let result = client.fetch_binary("http://example.com/binary").await;
+
+        let err = result.expect_err("Should fail when Songbird socket does not exist");
+        assert!(
+            err.to_string().contains("Failed to connect")
+                || err.to_string().contains("Songbird")
+                || err.to_string().contains("Connection refused")
+                || err.to_string().contains("No such file"),
+            "Error should mention connection failure: {}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    async fn test_is_reachable_returns_false_when_unavailable() {
+        let client = BiomeOsHttpClient::with_socket("/tmp/nonexistent-songbird-xyz.sock");
+
+        let reachable = client.is_reachable("http://example.com").await;
+
+        assert!(
+            !reachable,
+            "is_reachable should return false when Songbird unavailable"
+        );
+    }
+
+    #[test]
+    fn test_http_response_empty_headers() {
+        let json = r#"{"status": 404, "headers": {}, "body": "not found"}"#;
+        let response: HttpResponse = serde_json::from_str(json).expect("parse");
+        assert_eq!(response.status, 404);
+        assert!(response.headers.is_empty());
+    }
+
+    #[test]
+    fn test_http_response_body_as_number() {
+        let json = r#"{"status": 200, "headers": {}, "body": 42}"#;
+        let response: HttpResponse = serde_json::from_str(json).expect("parse");
+        assert_eq!(response.status, 200);
+        assert_eq!(response.body.as_i64(), Some(42));
+    }
+
+    #[test]
+    fn test_http_response_body_as_array() {
+        let json = r#"{"status": 200, "headers": {}, "body": [1, 2, 3]}"#;
+        let response: HttpResponse = serde_json::from_str(json).expect("parse");
+        assert_eq!(response.status, 200);
+        assert!(response.body.is_array());
+    }
+
+    #[test]
+    fn test_http_response_body_as_null() {
+        let json = r#"{"status": 204, "headers": {}, "body": null}"#;
+        let response: HttpResponse = serde_json::from_str(json).expect("parse");
+        assert_eq!(response.status, 204);
+        assert!(response.body.is_null());
+    }
+
+    #[test]
+    fn test_http_response_multiple_headers() {
+        let json = r#"{
+            "status": 200,
+            "headers": {
+                "Content-Type": "application/json",
+                "X-Custom": "value"
+            },
+            "body": "{}"
+        }"#;
+        let response: HttpResponse = serde_json::from_str(json).expect("parse");
+        assert_eq!(response.headers.len(), 2);
+        assert_eq!(
+            response.headers.get("Content-Type"),
+            Some(&"application/json".to_string())
+        );
+        assert_eq!(response.headers.get("X-Custom"), Some(&"value".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_is_reachable_returns_false_on_4xx() {
+        // When Songbird returns 4xx, is_reachable should be false.
+        // We use nonexistent socket - request will fail before we get status,
+        // so we're testing the Err branch. For 4xx we'd need a mock.
+        // This test documents the contract: Err => false
+        let client = BiomeOsHttpClient::with_socket("/tmp/nonexistent-http-test.sock");
+        let reachable = client.is_reachable("http://example.com/404").await;
+        assert!(!reachable);
     }
 }

@@ -158,7 +158,6 @@ pub struct BuildRequest {
 }
 
 /// Binary specification
-#[allow(dead_code)] // Used by BuildRequest but may not be constructed in all paths
 #[derive(Debug, Deserialize)]
 pub struct BinarySpec {
     /// Architecture (x86_64, aarch64, arm, riscv64)
@@ -168,7 +167,6 @@ pub struct BinarySpec {
 }
 
 /// Build genomeBin response
-#[allow(dead_code)] // Response type for future genomeBin build API
 #[derive(Debug, Serialize)]
 pub struct BuildResponse {
     pub success: bool,
@@ -938,5 +936,121 @@ mod tests {
         assert!(json.contains("1.0.0"));
         assert!(json.contains("x86_64"));
         assert!(json.contains("aarch64"));
+    }
+
+    // ========== Handler Logic Tests (use global genome_state) ==========
+
+    #[tokio::test]
+    async fn test_get_genome_info_not_found() {
+        let result = get_genome_info(Path("nonexistent-genome-xyz".to_string())).await;
+        assert!(
+            matches!(result, Err(StatusCode::NOT_FOUND)),
+            "Expected NOT_FOUND for nonexistent genome, got: {:?}",
+            result
+        );
+    }
+
+    #[tokio::test]
+    async fn test_download_genome_not_found() {
+        let result = download_genome(Path("nonexistent-download-xyz".to_string())).await;
+        assert!(
+            matches!(result, Err(StatusCode::NOT_FOUND)),
+            "Expected NOT_FOUND for nonexistent genome download, got: {:?}",
+            result
+        );
+    }
+
+    #[tokio::test]
+    async fn test_verify_genome_not_found() {
+        let result = verify_genome(Path("nonexistent-verify-xyz".to_string())).await;
+        assert!(
+            matches!(result, Err(StatusCode::NOT_FOUND)),
+            "Expected NOT_FOUND for nonexistent genome verify, got: {:?}",
+            result
+        );
+    }
+
+    #[tokio::test]
+    async fn test_verify_genome_file_nonexistent_path() {
+        let req = VerifyRequest {
+            path: PathBuf::from("/nonexistent/path/to/genome.genome"),
+        };
+        let result = verify_genome_file(Json(req)).await;
+        assert!(
+            matches!(result, Err(StatusCode::NOT_FOUND)),
+            "Expected NOT_FOUND for nonexistent file path, got: {:?}",
+            result
+        );
+    }
+
+    #[tokio::test]
+    async fn test_build_genome_invalid_arch() {
+        let req = BuildRequest {
+            name: "test".to_string(),
+            version: None,
+            description: None,
+            binaries: vec![BinarySpec {
+                arch: "invalid_arch".to_string(),
+                path: PathBuf::from("/tmp/some-binary"),
+            }],
+        };
+        let result = build_genome(Json(req)).await;
+        assert!(
+            matches!(result, Err(StatusCode::BAD_REQUEST)),
+            "Expected BAD_REQUEST for invalid architecture, got: {:?}",
+            result
+        );
+    }
+
+    #[tokio::test]
+    async fn test_build_genome_binary_not_found() {
+        let req = BuildRequest {
+            name: "test".to_string(),
+            version: None,
+            description: None,
+            binaries: vec![BinarySpec {
+                arch: "x86_64".to_string(),
+                path: PathBuf::from("/nonexistent/binary/that/does/not/exist"),
+            }],
+        };
+        let result = build_genome(Json(req)).await;
+        assert!(
+            matches!(result, Err(StatusCode::NOT_FOUND)),
+            "Expected NOT_FOUND when binary path does not exist, got: {:?}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_binary_spec_deserialize() {
+        let json = r#"{"arch": "aarch64", "path": "/usr/bin/example"}"#;
+        let spec: BinarySpec = serde_json::from_str(json).expect("deserialize");
+        assert_eq!(spec.arch, "aarch64");
+        assert_eq!(spec.path, PathBuf::from("/usr/bin/example"));
+    }
+
+    #[tokio::test]
+    async fn test_genome_state_load_from_cache_after_save() {
+        let temp_dir = TempDir::new().expect("create temp dir");
+        let state = GenomeState::with_storage(temp_dir.path().to_path_buf()).expect("create state");
+
+        let manifest = GenomeManifest::new("cache-test").version("1.0.0");
+        let genome = GenomeBin::with_manifest(manifest);
+
+        state
+            .save_genome("cache-test-1.0.0", &genome)
+            .await
+            .expect("save genome");
+
+        // Load twice - second should hit cache
+        let loaded1 = state
+            .load_genome("cache-test-1.0.0")
+            .await
+            .expect("first load");
+        let loaded2 = state
+            .load_genome("cache-test-1.0.0")
+            .await
+            .expect("second load");
+        assert_eq!(loaded1.manifest.name, loaded2.manifest.name);
     }
 }

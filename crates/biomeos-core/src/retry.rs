@@ -50,7 +50,6 @@ pub enum RetryError {
 }
 
 // Alias for backward compatibility
-#[allow(dead_code)]
 type BirdSongError = RetryError;
 use tracing::{debug, warn};
 

@@ -266,5 +266,151 @@ mod tests {
 
         let compute = CapabilitySet::compute_only();
         assert!(compute.has(&Capability::Compute));
+
+        let full = CapabilitySet::full_access();
+        assert!(full.has(&Capability::Storage));
+        assert!(full.has(&Capability::Admin));
+    }
+
+    #[test]
+    fn test_capability_from_str_custom_mappings() {
+        assert_eq!(
+            Capability::from_str("security"),
+            Capability::Custom("security".to_string())
+        );
+        assert_eq!(
+            Capability::from_str("encryption"),
+            Capability::Custom("encryption".to_string())
+        );
+        assert_eq!(
+            Capability::from_str("trust"),
+            Capability::Custom("trust".to_string())
+        );
+        assert_eq!(
+            Capability::from_str("mesh"),
+            Capability::Custom("mesh".to_string())
+        );
+        assert_eq!(
+            Capability::from_str("ai"),
+            Capability::Custom("ai".to_string())
+        );
+        assert_eq!(
+            Capability::from_str("ml"),
+            Capability::Custom("ml".to_string())
+        );
+        assert_eq!(
+            Capability::from_str("inference"),
+            Capability::Custom("inference".to_string())
+        );
+        assert_eq!(
+            Capability::from_str("crypto"),
+            Capability::Custom("crypto".to_string())
+        );
+    }
+
+    #[test]
+    fn test_capability_from_str_trait() {
+        let cap: Capability = "storage".parse().expect("parse storage");
+        assert_eq!(cap, Capability::Storage);
+        let cap: Capability = "unknown".parse().expect("parse unknown");
+        assert_eq!(cap, Capability::Custom("unknown".to_string()));
+    }
+
+    #[test]
+    fn test_capability_from_ref_str() {
+        let cap: Capability = "storage".into();
+        assert_eq!(cap, Capability::Storage);
+        let cap: Capability = "custom:foo".into();
+        assert_eq!(cap, Capability::Custom("foo".to_string()));
+    }
+
+    #[test]
+    fn test_capability_display() {
+        assert_eq!(Capability::Storage.to_string(), "storage");
+        assert_eq!(Capability::ReadOnly.to_string(), "read_only");
+        assert_eq!(
+            Capability::Custom("foo".to_string()).to_string(),
+            "custom:foo"
+        );
+    }
+
+    #[test]
+    fn test_capability_serialization_roundtrip() {
+        let variants = [
+            Capability::Storage,
+            Capability::Compute,
+            Capability::Gaming,
+            Capability::Sync,
+            Capability::Voice,
+            Capability::Video,
+            Capability::Discovery,
+            Capability::ReadOnly,
+            Capability::Write,
+            Capability::Admin,
+            Capability::Custom("mycap".to_string()),
+        ];
+        for cap in &variants {
+            let json = serde_json::to_string(cap).expect("serialize Capability");
+            let restored: Capability = serde_json::from_str(&json).expect("deserialize Capability");
+            assert_eq!(cap, &restored);
+        }
+    }
+
+    #[test]
+    fn test_capability_set_from_tags() {
+        let tags = vec![
+            "storage".to_string(),
+            "gaming".to_string(),
+            "custom:foo".to_string(),
+        ];
+        let set = CapabilitySet::from_tags(&tags);
+        assert!(set.has(&Capability::Storage));
+        assert!(set.has(&Capability::Gaming));
+        assert!(set.has(&Capability::Custom("foo".to_string())));
+        assert_eq!(set.all().len(), 3);
+    }
+
+    #[test]
+    fn test_capability_set_default() {
+        let set = CapabilitySet::default();
+        assert!(set.is_empty());
+    }
+
+    #[test]
+    fn test_capability_set_merge() {
+        let mut set1 = CapabilitySet::from_vec(vec![Capability::Storage]);
+        let set2 = CapabilitySet::from_vec(vec![Capability::Storage, Capability::Compute]);
+        set1.merge(&set2);
+        assert!(set1.has(&Capability::Storage));
+        assert!(set1.has(&Capability::Compute));
+        assert_eq!(set1.all().len(), 2);
+    }
+
+    #[test]
+    fn test_capability_set_has_all() {
+        let set1 = CapabilitySet::from_vec(vec![
+            Capability::Storage,
+            Capability::Compute,
+            Capability::Gaming,
+        ]);
+        let set2 = CapabilitySet::from_vec(vec![Capability::Storage, Capability::Compute]);
+        assert!(set1.has_all(&set2));
+        let set3 = CapabilitySet::from_vec(vec![Capability::Storage, Capability::Voice]);
+        assert!(!set1.has_all(&set3));
+    }
+
+    #[test]
+    fn test_capability_set_serialization_roundtrip() {
+        let set = CapabilitySet::from_vec(vec![
+            Capability::Storage,
+            Capability::Gaming,
+            Capability::Custom("foo".to_string()),
+        ]);
+        let json = serde_json::to_string(&set).expect("serialize CapabilitySet");
+        let restored: CapabilitySet =
+            serde_json::from_str(&json).expect("deserialize CapabilitySet");
+        assert!(restored.has(&Capability::Storage));
+        assert!(restored.has(&Capability::Gaming));
+        assert!(restored.has(&Capability::Custom("foo".to_string())));
     }
 }

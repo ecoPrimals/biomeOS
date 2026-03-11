@@ -82,3 +82,75 @@ impl NicheError {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_error_display() {
+        let err = NicheError::parse("test-niche", "invalid yaml");
+        assert!(err.to_string().contains("test-niche"));
+        assert!(err.to_string().contains("invalid yaml"));
+    }
+
+    #[test]
+    fn test_deployment_error_display() {
+        let err = NicheError::deployment("my-niche", "organism failed");
+        assert!(err.to_string().contains("my-niche"));
+        assert!(err.to_string().contains("organism failed"));
+    }
+
+    #[test]
+    fn test_definition_not_found_display() {
+        let err = NicheError::DefinitionNotFound {
+            path: PathBuf::from("/tmp/missing.yaml"),
+        };
+        assert!(err.to_string().contains("definition not found"));
+        assert!(err.to_string().contains("/tmp/missing.yaml"));
+    }
+
+    #[test]
+    fn test_organism_not_available_display() {
+        let err = NicheError::OrganismNotAvailable {
+            niche: "n1".to_string(),
+            organism: "beardog".to_string(),
+        };
+        assert!(err.to_string().contains("beardog"));
+        assert!(err.to_string().contains("n1"));
+    }
+
+    #[test]
+    fn test_invalid_interaction_display() {
+        let err = NicheError::InvalidInteraction {
+            niche: "n1".to_string(),
+            message: "unknown from".to_string(),
+        };
+        assert!(err.to_string().contains("Invalid interaction"));
+        assert!(err.to_string().contains("unknown from"));
+    }
+
+    #[test]
+    fn test_from_io_error() {
+        let io_err = std::io::Error::new(std::io::ErrorKind::NotFound, "file not found");
+        let err: NicheError = io_err.into();
+        assert!(err.to_string().contains("file not found"));
+    }
+
+    #[test]
+    fn test_from_yaml_error() {
+        let yaml_err = serde_yaml::from_str::<String>("invalid: yaml: [").unwrap_err();
+        let err: NicheError = yaml_err.into();
+        assert!(err.to_string().contains("YAML"));
+    }
+
+    #[test]
+    fn test_niche_result_type() {
+        let ok_result: NicheResult<i32> = Ok(42);
+        assert!(ok_result.is_ok());
+        assert_eq!(ok_result.as_ref().unwrap(), &42);
+
+        let err_result: NicheResult<i32> = Err(NicheError::parse("id", "msg"));
+        assert!(err_result.is_err());
+    }
+}

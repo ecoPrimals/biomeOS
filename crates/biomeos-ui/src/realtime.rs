@@ -121,10 +121,10 @@ pub enum RealTimeEvent {
 
 /// JSON-RPC notification (for events from WebSocket)
 #[derive(Debug, Clone, Deserialize)]
-struct JsonRpcNotification {
-    #[allow(dead_code)] // Part of JSON-RPC protocol structure
+pub(crate) struct JsonRpcNotification {
+    #[allow(dead_code)] // Part of JSON-RPC 2.0 wire format; required for deserialization
     jsonrpc: String,
-    #[allow(dead_code)] // Parsed from wire format, used for event type routing
+    #[allow(dead_code)] // Part of JSON-RPC 2.0 wire format; used for event type routing
     method: String,
     params: serde_json::Value,
 }
@@ -144,7 +144,7 @@ pub struct RealTimeEventSubscriber {
     sse_url: Option<String>,
 
     /// Family ID for filtering
-    #[allow(dead_code)] // Used for family-scoped event filtering in future
+    #[allow(dead_code)] // TODO: Wire up for family-scoped event filtering
     family_id: String,
 }
 
@@ -333,6 +333,13 @@ impl RealTimeEventSubscriber {
         // Try to deserialize as RealTimeEvent
         serde_json::from_value(event_value.clone()).context("Failed to parse event")
     }
+
+    #[cfg(test)]
+    pub(crate) fn parse_event_for_test(
+        notification: &JsonRpcNotification,
+    ) -> Result<RealTimeEvent> {
+        Self::parse_event(notification)
+    }
 }
 
 /// Real-time event handler
@@ -340,7 +347,7 @@ impl RealTimeEventSubscriber {
 /// Processes real-time events and updates UI state
 pub struct RealTimeEventHandler {
     /// Event subscriber (kept alive to prevent channel closure)
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Held to keep broadcast channel alive; prevents channel closure
     subscriber: Arc<RealTimeEventSubscriber>,
 
     /// Event receiver
@@ -383,7 +390,7 @@ impl RealTimeEventHandler {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{JsonRpcNotification, *};
 
     #[tokio::test]
     async fn test_subscriber_creation() {
@@ -713,5 +720,110 @@ mod tests {
         let notif = notification.unwrap();
         assert_eq!(notif["jsonrpc"], "2.0");
         assert_eq!(notif["method"], "event.notify");
+    }
+
+    #[test]
+    fn test_parse_event_from_params_event() {
+        let notification = JsonRpcNotification {
+            jsonrpc: "2.0".to_string(),
+            method: "event.notify".to_string(),
+            params: serde_json::json!({
+                "event": {
+                    "type": "heartbeat",
+                    "timestamp": 12345,
+                    "primals_count": 5,
+                    "healthy_count": 5
+                }
+            }),
+        };
+
+        let result = RealTimeEventSubscriber::parse_event_for_test(&notification);
+        assert!(result.is_ok());
+        match result.unwrap() {
+            RealTimeEvent::Heartbeat {
+                timestamp,
+                primals_count,
+                healthy_count,
+            } => {
+                assert_eq!(timestamp, 12345);
+                assert_eq!(primals_count, 5);
+                assert_eq!(healthy_count, 5);
+            }
+            _ => panic!("Expected Heartbeat event"),
+        }
+    }
+
+    #[test]
+    fn test_parse_event_from_params_directly() {
+        let notification = JsonRpcNotification {
+            jsonrpc: "2.0".to_string(),
+            method: "event.notify".to_string(),
+            params: serde_json::json!({
+                "type": "device_removed",
+                "device_id": "gpu-0"
+            }),
+        };
+
+        let result = RealTimeEventSubscriber::parse_event_for_test(&notification);
+        assert!(result.is_ok());
+        match result.unwrap() {
+            RealTimeEvent::DeviceRemoved { device_id } => assert_eq!(device_id, "gpu-0"),
+            _ => panic!("Expected DeviceRemoved event"),
+        }
+    }
+
+    #[test]
+    fn test_parse_event_invalid_json() {
+        let notification = JsonRpcNotification {
+            jsonrpc: "2.0".to_string(),
+            method: "event.notify".to_string(),
+            params: serde_json::json!({
+                "type": "unknown_type",
+                "invalid": "data"
+            }),
+        };
+
+        let result = RealTimeEventSubscriber::parse_event_for_test(&notification);
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_subscribe_sse_no_websocket_returns_ok() {
+        let mut subscriber = RealTimeEventSubscriber::new("test_family".to_string());
+        subscriber.sse_url = Some("http://localhost:9999/sse".to_string());
+        subscriber.websocket_url = None; // Only SSE, no WebSocket - tests graceful path
+
+        let result = subscriber.subscribe_sse().await;
+        assert!(
+            result.is_ok(),
+            "subscribe_sse should return Ok when only SSE URL is set (graceful degradation)"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_discover_endpoints_no_env() {
+        let mut subscriber = RealTimeEventSubscriber::new("test_family".to_string());
+
+        let result = subscriber.discover_endpoints().await;
+        assert!(result.is_ok());
+        assert!(subscriber.websocket_url.is_none());
+        assert!(subscriber.sse_url.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_subscribe_websocket_no_url_returns_err() {
+        let subscriber = RealTimeEventSubscriber::new("test_family".to_string());
+
+        let result = subscriber.subscribe_websocket().await;
+        assert!(
+            result.is_err(),
+            "subscribe_websocket should fail when URL not discovered"
+        );
+        let err = result.unwrap_err();
+        assert!(
+            err.to_string().contains("WebSocket URL not discovered"),
+            "Expected context about URL, got: {}",
+            err
+        );
     }
 }

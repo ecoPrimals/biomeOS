@@ -1,0 +1,109 @@
+# Genome Binary Checksums
+# =======================
+#
+# This file contains integrity verification data for all genome binaries.
+# Format: BLAKE3 (primary) and SHA256 (compatibility)
+#
+# Generated: 2026-02-12T19:10:00Z
+# Algorithm: BLAKE3 (64-char hex)
+
+[checksums]
+version = "1.0.0"
+generated = "2026-02-12T19:10:00Z"
+
+[beardog."latest"."aarch64-linux-musl"]
+sha256 = "53a5ecc51a7685ee37131d726f64fabfe33dd5f6f0ca4ef9767a085d3c16457d"
+size = 5743416
+
+[beardog."latest"."x86_64-linux-musl"]
+sha256 = "ef2824c41f7f9be4f38607571295e262c0a881aa01425725c5e5e825a6974ff8"
+size = 6870528
+
+[beardog."v0.9.0"."aarch64-linux-musl"]
+sha256 = "53a5ecc51a7685ee37131d726f64fabfe33dd5f6f0ca4ef9767a085d3c16457d"
+size = 5743416
+
+[beardog."v0.9.0"."x86_64-linux-musl"]
+sha256 = "ef2824c41f7f9be4f38607571295e262c0a881aa01425725c5e5e825a6974ff8"
+size = 6870528
+
+[songbird."latest"."aarch64-linux-musl"]
+sha256 = "c02cba320ec17704746a0f4f90f7485350f34c830226c5fd7ef7e6b64bb0a056"
+size = 21288888
+
+[songbird."latest"."x86_64-linux-musl"]
+sha256 = "2db3989421a6f2180437fd77545ec53d2e8f6144cdaf744c34164f2543105fad"
+size = 19392432
+
+[songbird."v3.33.0"."aarch64-linux-musl"]
+sha256 = "c02cba320ec17704746a0f4f90f7485350f34c830226c5fd7ef7e6b64bb0a056"
+size = 21288888
+
+[songbird."v3.33.0"."x86_64-linux-musl"]
+sha256 = "2db3989421a6f2180437fd77545ec53d2e8f6144cdaf744c34164f2543105fad"
+size = 19392432
+
+[nestgate."latest"."aarch64-linux-musl"]
+sha256 = "6e7609c07990bcfcf8e21d3003c432353cfed39cf750b5c7c9b3f55558ab4cbf"
+size = 4134824
+
+[nestgate."latest"."x86_64-linux-musl"]
+sha256 = "0a5301cee8c54f658e7706cea4d74604dfa7813fec30d9daa3c2fb0213573c0f"
+size = 4740984
+
+[nestgate."v2.1.0"."aarch64-linux-musl"]
+sha256 = "6e7609c07990bcfcf8e21d3003c432353cfed39cf750b5c7c9b3f55558ab4cbf"
+size = 4134824
+
+[nestgate."v2.1.0"."x86_64-linux-musl"]
+sha256 = "0a5301cee8c54f658e7706cea4d74604dfa7813fec30d9daa3c2fb0213573c0f"
+size = 4740984
+
+[squirrel."latest"."aarch64-linux-musl"]
+sha256 = "dcf739d00d25913d2923b13773707d267b653d6a91bcd46c38b045c721e1003d"
+size = 2195352
+
+[squirrel."latest"."x86_64-linux-musl"]
+sha256 = "f2f7d314fba3ff3ec0cd3526fc059a93025f9e8d9289287ef4deabccda08b5b1"
+size = 2687392
+
+[squirrel."v0.1.0"."aarch64-linux-musl"]
+sha256 = "dcf739d00d25913d2923b13773707d267b653d6a91bcd46c38b045c721e1003d"
+size = 2195352
+
+[squirrel."v0.1.0"."x86_64-linux-musl"]
+sha256 = "f2f7d314fba3ff3ec0cd3526fc059a93025f9e8d9289287ef4deabccda08b5b1"
+size = 2687392
+
+[toadstool."latest"."aarch64-linux-musl"]
+sha256 = "696a69ce8e9b642a94e5797b6be649a39f8b60ed2e2c9cc2accd03cae3304a96"
+size = 6734136
+
+[toadstool."latest"."x86_64-linux-musl"]
+sha256 = "5d24f9aa23d577f1e0c25c01b07b31df42e5ce22ec90307a3e5398f08fa1eeb4"
+size = 8827744
+
+[toadstool."v0.1.0"."aarch64-linux-musl"]
+sha256 = "696a69ce8e9b642a94e5797b6be649a39f8b60ed2e2c9cc2accd03cae3304a96"
+size = 6734136
+
+[toadstool."v0.1.0"."x86_64-linux-musl"]
+sha256 = "5d24f9aa23d577f1e0c25c01b07b31df42e5ce22ec90307a3e5398f08fa1eeb4"
+size = 8827744
+
+[biomeos."latest"."aarch64-linux-musl"]
+sha256 = "de943bd368307e13e7672396e86ac3f1b25f1036d53df91051f63a7e9d545af8"
+size = 8931200
+
+[biomeos."latest"."x86_64-linux-musl"]
+sha256 = "c19cd5425af533678a3c03fc5d29cc191e5b066a560e47684c0a1a8df1f1e7c8"
+size = 9908952
+
+[biomeos."v0.1.0"."aarch64-linux-musl"]
+sha256 = "de943bd368307e13e7672396e86ac3f1b25f1036d53df91051f63a7e9d545af8"
+size = 8931200
+
+[biomeos."v0.1.0"."x86_64-linux-musl"]
+sha256 = "c19cd5425af533678a3c03fc5d29cc191e5b066a560e47684c0a1a8df1f1e7c8"
+size = 9908952
+

@@ -78,18 +78,20 @@ impl Default for StunExtensionConfig {
             .map(|v| v == "1" || v.to_lowercase() == "true")
             .unwrap_or(false);
 
-        // Resolve public servers from environment or use defaults
+        // Resolve public servers: self-hosted first, then env override, then
+        // community-run FOSS servers as last resort. Corporate STUN servers
+        // (Google, Cloudflare) are intentionally excluded — sovereignty means
+        // not depending on corporate infrastructure for core functionality.
         let public_servers = if no_public_stun {
             Vec::new()
         } else {
-            // BIOMEOS_STUN_SERVERS overrides defaults (comma-separated list)
             std::env::var("BIOMEOS_STUN_SERVERS")
                 .map(|s| s.split(',').map(|p| p.trim().to_string()).collect())
                 .unwrap_or_else(|_| {
                     vec![
-                        "stun.l.google.com:19302".to_string(),
-                        "stun.cloudflare.com:3478".to_string(),
                         "stun.nextcloud.com:3478".to_string(),
+                        "stun.sip.us:3478".to_string(),
+                        "stun.stunprotocol.org:3478".to_string(),
                     ]
                 })
         };
@@ -364,17 +366,22 @@ mod tests {
     }
 
     #[test]
-    fn test_default_public_servers() {
+    fn test_default_public_servers_are_sovereign() {
         let _lock = ENV_LOCK.lock().expect("env lock");
         clear_stun_env();
 
         let config = StunExtensionConfig::default();
         assert!(config.public_servers.len() >= 3);
+        // Sovereign defaults: community-run FOSS servers only, no corporate
         assert!(config
             .public_servers
             .iter()
+            .any(|s| s.contains("nextcloud.com")));
+        assert!(!config
+            .public_servers
+            .iter()
             .any(|s| s.contains("google.com")));
-        assert!(config
+        assert!(!config
             .public_servers
             .iter()
             .any(|s| s.contains("cloudflare.com")));

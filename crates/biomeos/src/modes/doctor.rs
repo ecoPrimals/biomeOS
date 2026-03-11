@@ -9,21 +9,21 @@ use std::path::Path;
 use sysinfo::{Disks, System};
 
 #[derive(Debug, Serialize, Deserialize)]
-struct Diagnostics {
+pub(crate) struct Diagnostics {
     checks: Vec<HealthCheck>,
     overall_status: HealthStatus,
     recommendations: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct HealthCheck {
+pub(crate) struct HealthCheck {
     name: String,
     status: HealthStatus,
     details: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq)]
-enum HealthStatus {
+pub(crate) enum HealthStatus {
     Healthy,
     Warning,
     Critical,
@@ -413,7 +413,7 @@ async fn check_dependencies() -> Result<HealthCheck> {
     Ok(check)
 }
 
-fn add_recommendations(diag: &mut Diagnostics) {
+pub(crate) fn add_recommendations(diag: &mut Diagnostics) {
     // Collect recommendations to add (to avoid borrow checker issues)
     let mut recommendations = Vec::new();
 
@@ -440,7 +440,7 @@ fn add_recommendations(diag: &mut Diagnostics) {
     }
 }
 
-fn print_diagnostics(diag: &Diagnostics) {
+pub(crate) fn print_diagnostics(diag: &Diagnostics) {
     for check in &diag.checks {
         let status_icon = match check.status {
             HealthStatus::Healthy => "✅",
@@ -474,5 +474,257 @@ fn print_diagnostics(diag: &Diagnostics) {
         for rec in &diag.recommendations {
             println!("  {} {}", "•".bright_cyan(), rec);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_run_unknown_subsystem_returns_error() {
+        let result = super::run(
+            false,
+            "text".to_string(),
+            Some("unknown_subsystem_xyz".to_string()),
+        )
+        .await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            err.to_string().contains("Unknown subsystem"),
+            "Expected 'Unknown subsystem' in error: {}",
+            err
+        );
+    }
+
+    #[test]
+    fn test_diagnostics_new() {
+        let diag = Diagnostics::new();
+        assert!(diag.checks.is_empty());
+        assert_eq!(diag.overall_status, HealthStatus::Healthy);
+        assert!(diag.recommendations.is_empty());
+    }
+
+    #[test]
+    fn test_diagnostics_add_check_healthy_stays_healthy() {
+        let mut diag = Diagnostics::new();
+        diag.add_check(
+            "Test",
+            HealthCheck {
+                name: "Test".to_string(),
+                status: HealthStatus::Healthy,
+                details: vec!["ok".to_string()],
+            },
+        );
+        assert_eq!(diag.overall_status, HealthStatus::Healthy);
+        assert_eq!(diag.checks.len(), 1);
+    }
+
+    #[test]
+    fn test_diagnostics_add_check_warning_upgrades_status() {
+        let mut diag = Diagnostics::new();
+        diag.add_check(
+            "Test",
+            HealthCheck {
+                name: "Test".to_string(),
+                status: HealthStatus::Warning,
+                details: vec![],
+            },
+        );
+        assert_eq!(diag.overall_status, HealthStatus::Warning);
+    }
+
+    #[test]
+    fn test_diagnostics_add_check_critical_upgrades_status() {
+        let mut diag = Diagnostics::new();
+        diag.add_check(
+            "Test",
+            HealthCheck {
+                name: "Test".to_string(),
+                status: HealthStatus::Critical,
+                details: vec![],
+            },
+        );
+        assert_eq!(diag.overall_status, HealthStatus::Critical);
+    }
+
+    #[test]
+    fn test_diagnostics_add_check_warning_does_not_downgrade_critical() {
+        let mut diag = Diagnostics::new();
+        diag.add_check(
+            "Critical",
+            HealthCheck {
+                name: "Critical".to_string(),
+                status: HealthStatus::Critical,
+                details: vec![],
+            },
+        );
+        diag.add_check(
+            "Warning",
+            HealthCheck {
+                name: "Warning".to_string(),
+                status: HealthStatus::Warning,
+                details: vec![],
+            },
+        );
+        assert_eq!(diag.overall_status, HealthStatus::Critical);
+    }
+
+    #[test]
+    fn test_diagnostics_add_recommendation() {
+        let mut diag = Diagnostics::new();
+        diag.add_recommendation("Fix something".to_string());
+        diag.add_recommendation("Fix another".to_string());
+        assert_eq!(diag.recommendations.len(), 2);
+        assert_eq!(diag.recommendations[0], "Fix something");
+        assert_eq!(diag.recommendations[1], "Fix another");
+    }
+
+    #[test]
+    fn test_add_recommendations_primal_discovery() {
+        let mut diag = Diagnostics::new();
+        diag.add_check(
+            "Primal Discovery",
+            HealthCheck {
+                name: "Primal Discovery".to_string(),
+                status: HealthStatus::Warning,
+                details: vec![],
+            },
+        );
+        add_recommendations(&mut diag);
+        assert!(
+            diag.recommendations
+                .contains(&"Start missing primals for full functionality".to_string()),
+            "Expected primal discovery recommendation"
+        );
+    }
+
+    #[test]
+    fn test_add_recommendations_system_resources() {
+        let mut diag = Diagnostics::new();
+        diag.add_check(
+            "System Resources",
+            HealthCheck {
+                name: "System Resources".to_string(),
+                status: HealthStatus::Warning,
+                details: vec![],
+            },
+        );
+        add_recommendations(&mut diag);
+        assert!(
+            diag.recommendations
+                .contains(&"System resources under pressure - consider scaling".to_string()),
+            "Expected system resources recommendation"
+        );
+    }
+
+    #[test]
+    fn test_add_recommendations_graphs_directory() {
+        let mut diag = Diagnostics::new();
+        diag.add_check(
+            "Graphs Directory",
+            HealthCheck {
+                name: "Graphs Directory".to_string(),
+                status: HealthStatus::Warning,
+                details: vec![],
+            },
+        );
+        add_recommendations(&mut diag);
+        assert!(
+            diag.recommendations
+                .contains(&"Create graphs/ directory and add deployment graphs".to_string()),
+            "Expected graphs directory recommendation"
+        );
+    }
+
+    #[test]
+    fn test_add_recommendations_healthy_checks_add_nothing() {
+        let mut diag = Diagnostics::new();
+        diag.add_check(
+            "Primal Discovery",
+            HealthCheck {
+                name: "Primal Discovery".to_string(),
+                status: HealthStatus::Healthy,
+                details: vec![],
+            },
+        );
+        add_recommendations(&mut diag);
+        assert!(diag.recommendations.is_empty());
+    }
+
+    #[test]
+    fn test_add_recommendations_unknown_check_adds_nothing() {
+        let mut diag = Diagnostics::new();
+        diag.add_check(
+            "Unknown",
+            HealthCheck {
+                name: "Unknown".to_string(),
+                status: HealthStatus::Warning,
+                details: vec![],
+            },
+        );
+        add_recommendations(&mut diag);
+        assert!(diag.recommendations.is_empty());
+    }
+
+    #[test]
+    fn test_health_status_serialization() {
+        let statuses = [
+            HealthStatus::Healthy,
+            HealthStatus::Warning,
+            HealthStatus::Critical,
+        ];
+        for status in statuses {
+            let json = serde_json::to_string(&status).expect("serialize");
+            let parsed: HealthStatus = serde_json::from_str(&json).expect("deserialize");
+            assert_eq!(status, parsed);
+        }
+    }
+
+    #[test]
+    fn test_health_check_serialization() {
+        let check = HealthCheck {
+            name: "Test Check".to_string(),
+            status: HealthStatus::Warning,
+            details: vec!["detail1".to_string(), "detail2".to_string()],
+        };
+        let json = serde_json::to_string(&check).expect("serialize");
+        let parsed: HealthCheck = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(check.name, parsed.name);
+        assert_eq!(check.status, parsed.status);
+        assert_eq!(check.details, parsed.details);
+    }
+
+    #[test]
+    fn test_diagnostics_serialization() {
+        let mut diag = Diagnostics::new();
+        diag.add_check(
+            "Binary",
+            HealthCheck {
+                name: "Binary".to_string(),
+                status: HealthStatus::Healthy,
+                details: vec!["OK".to_string()],
+            },
+        );
+        diag.add_recommendation("Rec 1".to_string());
+        let json = serde_json::to_string(&diag).expect("serialize");
+        let parsed: Diagnostics = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(parsed.checks.len(), 1);
+        assert_eq!(parsed.recommendations.len(), 1);
+    }
+
+    #[test]
+    fn test_print_diagnostics_does_not_panic() {
+        let diag = Diagnostics {
+            checks: vec![HealthCheck {
+                name: "Test".to_string(),
+                status: HealthStatus::Healthy,
+                details: vec!["detail".to_string()],
+            }],
+            overall_status: HealthStatus::Healthy,
+            recommendations: vec![],
+        };
+        print_diagnostics(&diag);
     }
 }

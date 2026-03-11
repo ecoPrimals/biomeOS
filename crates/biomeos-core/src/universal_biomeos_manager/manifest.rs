@@ -84,3 +84,159 @@ impl UniversalBiomeOSManager {
         Ok(format!("Deployment completed for: {}", manifest_path))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::universal_biomeos_manager::UniversalBiomeOSManager;
+    use biomeos_manifest::{BiomeManifestProcessor, BiomeManifestTemplates};
+    use biomeos_types::manifest::service::{
+        ImagePullPolicy, ImageSpec, RestartPolicy, ServiceMetadata, ServiceSpec,
+    };
+    use biomeos_types::BiomeOSConfig;
+    use std::collections::HashMap;
+
+    async fn test_manager() -> UniversalBiomeOSManager {
+        UniversalBiomeOSManager::new(BiomeOSConfig::default())
+            .await
+            .expect("create test manager")
+    }
+
+    fn valid_manifest_yaml() -> String {
+        let mut manifest = BiomeManifestTemplates::web_application("test", "nginx");
+        let service = ServiceSpec {
+            metadata: ServiceMetadata {
+                name: "web".to_string(),
+                description: None,
+                version: "1.0".to_string(),
+                labels: HashMap::new(),
+                annotations: HashMap::new(),
+                primal_type: None,
+                capabilities: vec![],
+            },
+            image: ImageSpec::Container {
+                name: "nginx".to_string(),
+                tag: "latest".to_string(),
+                registry: None,
+                pull_policy: ImagePullPolicy::IfNotPresent,
+                pull_secrets: vec![],
+            },
+            ports: vec![],
+            environment: HashMap::new(),
+            volumes: vec![],
+            resources: None,
+            health_checks: vec![],
+            depends_on: vec![],
+            config: HashMap::new(),
+            scaling: None,
+            security: None,
+            restart_policy: RestartPolicy::Always,
+            deployment: None,
+        };
+        manifest.services.insert("web".to_string(), service);
+        BiomeManifestProcessor::save_to_yaml(&manifest).expect("serialize manifest")
+    }
+
+    #[tokio::test]
+    async fn test_validate_manifest_success() {
+        let manager = test_manager().await;
+        let manifest = manager
+            .validate_manifest(&valid_manifest_yaml())
+            .await
+            .expect("validate_manifest should succeed for valid manifest");
+        assert_eq!(manifest.metadata.name, "test-biome");
+        assert!(!manifest.services.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_validate_manifest_empty_name_fails() {
+        let manager = test_manager().await;
+        let mut manifest = BiomeManifestTemplates::web_application("test", "nginx");
+        manifest.services.insert(
+            "web".to_string(),
+            ServiceSpec {
+                metadata: ServiceMetadata {
+                    name: "web".to_string(),
+                    description: None,
+                    version: "1.0".to_string(),
+                    labels: HashMap::new(),
+                    annotations: HashMap::new(),
+                    primal_type: None,
+                    capabilities: vec![],
+                },
+                image: ImageSpec::Container {
+                    name: "nginx".to_string(),
+                    tag: "latest".to_string(),
+                    registry: None,
+                    pull_policy: ImagePullPolicy::IfNotPresent,
+                    pull_secrets: vec![],
+                },
+                ports: vec![],
+                environment: HashMap::new(),
+                volumes: vec![],
+                resources: None,
+                health_checks: vec![],
+                depends_on: vec![],
+                config: HashMap::new(),
+                scaling: None,
+                security: None,
+                restart_policy: RestartPolicy::Always,
+                deployment: None,
+            },
+        );
+        manifest.metadata.name = String::new();
+        let yaml = serde_yaml::to_string(&manifest).expect("serialize");
+        let err = manager
+            .validate_manifest(&yaml)
+            .await
+            .expect_err("empty name should fail");
+        assert!(err.to_string().contains("name") || err.to_string().contains("empty"));
+    }
+
+    #[tokio::test]
+    async fn test_validate_manifest_empty_services_fails() {
+        let manager = test_manager().await;
+        let manifest = BiomeManifestTemplates::web_application("test", "nginx");
+        let yaml = BiomeManifestProcessor::save_to_yaml(&manifest).expect("serialize");
+        let err = manager
+            .validate_manifest(&yaml)
+            .await
+            .expect_err("empty services should fail");
+        assert!(
+            err.to_string().contains("service") || err.to_string().contains("one"),
+            "error: {}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    async fn test_validate_manifest_invalid_yaml_fails() {
+        let manager = test_manager().await;
+        let err = manager
+            .validate_manifest("invalid: yaml: [")
+            .await
+            .expect_err("invalid YAML should fail");
+        assert!(err.to_string().contains("parse") || err.to_string().contains("manifest"));
+    }
+
+    #[tokio::test]
+    async fn test_deploy_manifest_success() {
+        let manager = test_manager().await;
+        let deployment_id = manager
+            .deploy_manifest(&valid_manifest_yaml())
+            .await
+            .expect("deploy_manifest should succeed");
+        // UUID format
+        assert!(!deployment_id.is_empty());
+        assert!(deployment_id.len() >= 32);
+    }
+
+    #[tokio::test]
+    async fn test_deploy_manifest_validates_first() {
+        let manager = test_manager().await;
+        let err = manager
+            .deploy_manifest("metadata:\n  name: \"\"\nservices: {}")
+            .await
+            .expect_err("deploy should fail on invalid manifest");
+        assert!(!err.to_string().is_empty());
+    }
+}

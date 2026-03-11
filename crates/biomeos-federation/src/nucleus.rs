@@ -172,7 +172,7 @@ pub struct SecureNucleusDiscovery {
     family_id: Option<String>,
 
     /// Current node ID (reserved for future routing/identification features)
-    #[allow(dead_code)] // Will be used for multi-node routing in Phase 3
+    #[allow(dead_code)] // TODO: Wire up for multi-node routing in Phase 3
     node_id: Option<String>,
 }
 

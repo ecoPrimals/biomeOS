@@ -1,0 +1,206 @@
+# =============================================================================
+# Gaming Niche Deploy Graph
+# =============================================================================
+#
+# Deploys the full gaming niche: security + discovery + game science + visualization.
+#
+# Topology:
+#   Phase 1: Tower Atomic (BearDog + Songbird)
+#   Phase 2: Springs (ludoSpring + petalTongue, parallel)
+#   Phase 3: Optional accelerators (ToadStool)
+#   Phase 4: Validation
+#
+# This graph composes two springs (ludoSpring, petalTongue) with core primals
+# into a fully usable interactive system following the Spring-as-Niche standard.
+#
+# Usage:
+#   biomeos deploy graphs/gaming_niche_deploy.toml
+#
+# =============================================================================
+
+[graph]
+id = "gaming_niche_deploy"
+description = "Gaming niche — ludoSpring + petalTongue atop Tower Atomic"
+coordination = "Sequential"
+
+# =============================================================================
+# Phase 1: Tower Atomic (security + discovery foundation)
+# =============================================================================
+
+[[nodes]]
+id = "germinate_beardog"
+output = "beardog_genesis"
+capabilities = ["crypto", "tls_crypto", "genetic", "security"]
+
+[nodes.primal]
+by_capability = "security"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[nodes.capabilities_provided]
+"crypto.generate_keypair" = "crypto.x25519_generate_ephemeral"
+"crypto.encrypt" = "crypto.chacha20_poly1305_encrypt"
+"crypto.hash" = "crypto.blake3_hash"
+"crypto.sign" = "crypto.sign_ed25519"
+
+[[nodes]]
+id = "germinate_songbird"
+depends_on = ["germinate_beardog"]
+output = "songbird_genesis"
+capabilities = ["http", "discovery", "secure_http", "tls"]
+
+[nodes.primal]
+by_capability = "discovery"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+
+[nodes.operation.environment]
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
+SONGBIRD_SECURITY_PROVIDER = "beardog"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[nodes.capabilities_provided]
+"network.http_request" = "http.request"
+"network.tls_connect" = "tls.connect"
+"discovery.announce" = "announce_capabilities"
+"discovery.query" = "discover_by_capability"
+
+# =============================================================================
+# Phase 2: Springs (game science + visualization)
+# =============================================================================
+
+[[nodes]]
+id = "germinate_ludospring"
+depends_on = ["germinate_beardog", "germinate_songbird"]
+output = "ludospring_genesis"
+capabilities = ["game", "ludology", "interaction_design", "procedural_generation", "accessibility_scoring", "engagement_metrics"]
+
+[nodes.primal]
+by_capability = "game"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+
+[nodes.operation.environment]
+BIOMEOS_SOCKET_DIR = "${XDG_RUNTIME_DIR}/biomeos"
+FAMILY_ID = "${FAMILY_ID}"
+SONGBIRD_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/songbird-${FAMILY_ID}.sock"
+
+[nodes.constraints]
+timeout_ms = 15000
+
+[nodes.capabilities_provided]
+"game.analyze_ui" = "game.analyze_ui"
+"game.evaluate_flow" = "game.evaluate_flow"
+"game.fitts_cost" = "game.fitts_cost"
+"game.engagement" = "game.engagement"
+"game.generate_noise" = "game.generate_noise"
+"game.wfc_step" = "game.wfc_step"
+"game.accessibility" = "game.accessibility"
+"game.difficulty_adjustment" = "game.difficulty_adjustment"
+
+[[nodes]]
+id = "germinate_petaltongue"
+depends_on = ["germinate_beardog", "germinate_songbird"]
+output = "petaltongue_genesis"
+capabilities = ["visualization", "ui", "interaction", "representation"]
+
+[nodes.primal]
+by_capability = "visualization"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+
+[nodes.operation.environment]
+BIOMEOS_SOCKET_DIR = "${XDG_RUNTIME_DIR}/biomeos"
+FAMILY_ID = "${FAMILY_ID}"
+PETALTONGUE_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/petaltongue-${FAMILY_ID}.sock"
+SONGBIRD_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/songbird-${FAMILY_ID}.sock"
+
+[nodes.constraints]
+timeout_ms = 20000
+
+[nodes.capabilities_provided]
+"visualization.render" = "visualization.render"
+"visualization.export" = "visualization.export"
+"visualization.capabilities" = "visualization.capabilities"
+"ui.render" = "ui.render"
+"ui.display_status" = "ui.display_status"
+"interaction.subscribe" = "interaction.subscribe"
+
+# =============================================================================
+# Phase 3: Optional accelerators
+# =============================================================================
+
+[[nodes]]
+id = "germinate_toadstool"
+depends_on = ["germinate_beardog", "germinate_songbird"]
+output = "toadstool_genesis"
+capabilities = ["compute", "workload"]
+
+[nodes.primal]
+by_capability = "compute"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+
+[nodes.operation.environment]
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
+SONGBIRD_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/songbird-${FAMILY_ID}.sock"
+
+[nodes.constraints]
+timeout_ms = 45000
+
+[nodes.capabilities_provided]
+"compute.health" = "toadstool.health"
+"compute.execute" = "toadstool.execute"
+"compute.capabilities" = "toadstool.query_capabilities"
+
+# =============================================================================
+# Phase 4: Validate gaming niche
+# =============================================================================
+
+[[nodes]]
+id = "validate_gaming_niche"
+depends_on = ["germinate_beardog", "germinate_songbird", "germinate_ludospring", "germinate_petaltongue"]
+output = "gaming_niche_validated"
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.operation.params]
+check_beardog = true
+check_songbird = true
+check_ludospring = true
+check_petaltongue = true
+timeout_seconds = 20
+
+[nodes.constraints]
+timeout_ms = 30000

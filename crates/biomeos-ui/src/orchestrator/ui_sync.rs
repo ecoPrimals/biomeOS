@@ -141,6 +141,7 @@ impl UISync {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::primal_client::{PetalTongueClient, PrimalClient};
 
     #[tokio::test]
     async fn test_update_ui_no_petaltongue() {
@@ -153,12 +154,38 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_update_ui_after_assignment_with_client_call_fails() {
+        let client: PetalTongueClient =
+            PrimalClient::with_socket("petaltongue", "/nonexistent/petaltongue.sock");
+        let petaltongue = Some(client);
+        let result =
+            UISync::update_ui_after_assignment(&petaltongue, "device-123", "primal-456").await;
+        assert!(
+            result.is_ok(),
+            "graceful degradation when petaltongue call fails"
+        );
+    }
+
+    #[tokio::test]
     async fn test_initialize_ui_no_petaltongue() {
         let state = serde_json::json!({"test": "data"});
         let result = UISync::initialize_ui(&None, state).await;
 
         // Should succeed gracefully (running headless)
         assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_initialize_ui_with_client_call_fails() {
+        let client: PetalTongueClient =
+            PrimalClient::with_socket("petaltongue", "/nonexistent/petaltongue.sock");
+        let petaltongue = Some(client);
+        let state = serde_json::json!({"family_id": "test", "primals": {}});
+        let result = UISync::initialize_ui(&petaltongue, state).await;
+        assert!(
+            result.is_err(),
+            "initialize_ui propagates error when call fails"
+        );
     }
 
     #[tokio::test]
@@ -170,12 +197,30 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_update_ui_after_unassignment_with_client_call_fails() {
+        let client: PetalTongueClient =
+            PrimalClient::with_socket("petaltongue", "/nonexistent/petaltongue.sock");
+        let petaltongue = Some(client);
+        let result = UISync::update_ui_after_unassignment(&petaltongue, "device-123").await;
+        assert!(result.is_ok(), "graceful degradation when call fails");
+    }
+
+    #[tokio::test]
     async fn test_push_refresh_no_client() {
         let refresh_results = vec!["devices", "primals", "metrics"];
         let result = UISync::push_refresh(&None, refresh_results).await;
 
         // Should succeed (graceful degradation)
         assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_push_refresh_with_client() {
+        let client: PetalTongueClient =
+            PrimalClient::with_socket("petaltongue", "/nonexistent/petaltongue.sock");
+        let petaltongue = Some(client);
+        let result = UISync::push_refresh(&petaltongue, vec!["devices", "primals"]).await;
+        assert!(result.is_ok(), "push_refresh always returns Ok");
     }
 
     #[tokio::test]
@@ -192,6 +237,15 @@ mod tests {
 
         // Should succeed (graceful degradation)
         assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_send_heartbeat_with_client() {
+        let client: PetalTongueClient =
+            PrimalClient::with_socket("petaltongue", "/nonexistent/petaltongue.sock");
+        let petaltongue = Some(client);
+        let result = UISync::send_heartbeat(&petaltongue).await;
+        assert!(result.is_ok(), "send_heartbeat always returns Ok");
     }
 
     #[tokio::test]

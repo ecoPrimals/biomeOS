@@ -319,4 +319,80 @@ mod tests {
         };
         assert_eq!(cold.spore_type, Some("cold".to_string()));
     }
+
+    #[test]
+    fn test_livespore_device_serialization_roundtrip() {
+        let device = LiveSporeDevice {
+            id: "roundtrip-device".to_string(),
+            mount_point: "/media/roundtrip".to_string(),
+            label: Some("ROUNDTRIP".to_string()),
+            available_space: 1_000_000,
+            total_space: 2_000_000,
+            utilization_percent: 50.0,
+            has_genetic_seed: false,
+            genetic_preview: None,
+            primals: vec!["primal1".to_string()],
+            spore_type: None,
+        };
+
+        let json = serde_json::to_string(&device).expect("serialize");
+        let restored: LiveSporeDevice = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(device.id, restored.id);
+        assert_eq!(device.mount_point, restored.mount_point);
+        assert_eq!(device.label, restored.label);
+        assert_eq!(device.available_space, restored.available_space);
+        assert_eq!(device.total_space, restored.total_space);
+        assert_eq!(device.primals, restored.primals);
+    }
+
+    #[test]
+    fn test_livespores_response_structure() {
+        let response = LiveSporesResponse {
+            devices: vec![LiveSporeDevice {
+                id: "d1".to_string(),
+                mount_point: "/mnt/d1".to_string(),
+                label: None,
+                available_space: 0,
+                total_space: 0,
+                utilization_percent: 0.0,
+                has_genetic_seed: false,
+                genetic_preview: None,
+                primals: vec![],
+                spore_type: None,
+            }],
+            count: 1,
+            discovered_at: "2026-03-11T12:00:00Z".to_string(),
+        };
+
+        let json = serde_json::to_string(&response).expect("serialize");
+        assert!(json.contains("\"devices\""));
+        assert!(json.contains("\"count\":1"));
+        assert!(json.contains("discovered_at"));
+    }
+
+    #[tokio::test]
+    async fn test_get_livespores_handler_returns_ok() {
+        // Handler gracefully degrades when USB discovery fails (returns empty list)
+        let state = crate::AppState::builder()
+            .build_with_defaults()
+            .expect("create app state");
+
+        let result = get_livespores(axum::extract::State(std::sync::Arc::new(state))).await;
+        assert!(
+            result.is_ok(),
+            "get_livespores should return Ok (graceful degradation), got: {:?}",
+            result
+        );
+
+        let response = result.expect("response");
+        assert_eq!(response.count, response.devices.len());
+        assert!(!response.discovered_at.is_empty());
+    }
+
+    #[test]
+    fn test_calculate_utilization_saturating_sub() {
+        // available > total (edge case - should not panic)
+        let util = calculate_utilization(2000, 1000);
+        assert!((0.0..=100.0).contains(&util));
+    }
 }

@@ -26,7 +26,6 @@ use std::time::Duration;
 use tracing::{debug, info, warn};
 
 /// Primal information from live discovery (capability-agnostic)
-#[allow(dead_code)] // Used via serde deserialization from primal responses
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LivePrimalInfo {
     /// Unique identifier (from primal or derived from socket name)
@@ -67,9 +66,9 @@ struct JsonRpcRequest {
 /// JSON-RPC 2.0 response
 #[derive(Debug, Deserialize)]
 struct JsonRpcResponse {
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Part of JSON-RPC 2.0 wire format; required for deserialization
     jsonrpc: String,
-    #[allow(dead_code)]
+    #[allow(dead_code)] // Part of JSON-RPC 2.0 wire format; required for deserialization
     id: u64,
     result: Option<serde_json::Value>,
     error: Option<JsonRpcError>,
@@ -230,11 +229,6 @@ pub async fn discover_primal(socket_path: &str) -> Result<LivePrimalInfo> {
     }
 }
 
-/// Infer capabilities from primal name (fallback when primal doesn't report)
-///
-/// This is a FALLBACK only - ideally primals self-report their capabilities.
-/// These mappings are based on well-known primal taxonomy patterns.
-#[allow(dead_code)] // Fallback utility for future discovery enhancement
 /// Capability domain mapping for inference
 ///
 /// This provides a configurable, capability-first approach to inferring capabilities
@@ -340,7 +334,6 @@ fn infer_capabilities_from_name(name: &str) -> Vec<String> {
 ///
 /// Uses capability-based keywords rather than hardcoded primal names.
 /// This is a fallback when the primal doesn't self-report its type.
-#[allow(dead_code)] // Fallback utility for future discovery enhancement
 fn infer_type_from_name(name: &str) -> String {
     let name_lower = name.to_lowercase();
 
@@ -365,7 +358,6 @@ fn infer_type_from_name(name: &str) -> String {
 ///
 /// Uses biomeos_types::SystemPaths for consistent, XDG-compliant resolution.
 /// Falls back gracefully if SystemPaths::new() fails.
-#[allow(dead_code)] // Utility for socket directory resolution
 fn get_socket_dir() -> String {
     // Try SystemPaths for XDG-compliant resolution
     if let Ok(paths) = biomeos_types::SystemPaths::new() {
@@ -580,5 +572,97 @@ mod tests {
 
         let json = serde_json::to_string(&info).unwrap();
         assert!(json.contains("test-local"));
+    }
+
+    #[test]
+    fn test_live_primal_info_roundtrip() {
+        let info = LivePrimalInfo {
+            id: "roundtrip-id".to_string(),
+            name: "RoundtripPrimal".to_string(),
+            primal_type: "security".to_string(),
+            version: "2.0.0".to_string(),
+            health: "healthy".to_string(),
+            capabilities: vec!["crypto.encrypt".to_string(), "crypto.sign".to_string()],
+            endpoint: "/run/user/1000/biomeos/test.sock".to_string(),
+            family_id: Some("family-abc".to_string()),
+        };
+
+        let json = serde_json::to_string(&info).expect("serialize");
+        let restored: LivePrimalInfo = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(info.id, restored.id);
+        assert_eq!(info.name, restored.name);
+        assert_eq!(info.primal_type, restored.primal_type);
+        assert_eq!(info.family_id, restored.family_id);
+    }
+
+    #[test]
+    fn test_identity_attestation_roundtrip() {
+        let attestation = IdentityAttestation {
+            provider_capability: "crypto.verify".to_string(),
+            format: "jwt".to_string(),
+            data: serde_json::json!({"sub": "primal-1", "aud": "biomeos"}),
+        };
+
+        let json = serde_json::to_string(&attestation).expect("serialize");
+        let restored: IdentityAttestation = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(
+            attestation.provider_capability,
+            restored.provider_capability
+        );
+        assert_eq!(attestation.format, restored.format);
+    }
+
+    #[test]
+    fn test_get_socket_dir_returns_valid_path() {
+        let dir = get_socket_dir();
+        assert!(!dir.is_empty(), "socket dir should not be empty");
+        assert!(
+            dir.contains("biomeos") || dir.starts_with("/tmp") || dir.starts_with("/run"),
+            "socket dir should be biomeos-related path, got: {}",
+            dir
+        );
+    }
+
+    #[test]
+    fn test_infer_capabilities_unknown_name() {
+        let caps = infer_capabilities_from_name("xyz-unknown-service");
+        assert_eq!(caps, vec!["primal".to_string()]);
+    }
+
+    #[test]
+    fn test_infer_capabilities_first_match_wins() {
+        // "security" and "discovery" - first domain in CAPABILITY_DOMAINS wins
+        let caps = infer_capabilities_from_name("security-discovery-hybrid");
+        assert!(caps.contains(&"security".to_string()));
+    }
+
+    #[test]
+    fn test_infer_type_unknown() {
+        assert_eq!(infer_type_from_name("random-service-xyz"), "primal");
+    }
+
+    #[tokio::test]
+    async fn test_discover_all_primals_empty_dir() {
+        // With no sockets, should return empty without panicking
+        std::env::set_var("BIOMEOS_SOCKET_DIR", "/nonexistent/path/for/tests");
+        let primals = discover_all_primals().await;
+        assert!(primals.is_empty());
+        std::env::remove_var("BIOMEOS_SOCKET_DIR");
+    }
+
+    #[tokio::test]
+    async fn test_discover_by_capability_returns() {
+        std::env::set_var("BIOMEOS_SOCKET_DIR", "/nonexistent/path");
+        let primals = discover_by_capability("crypto.encrypt").await;
+        assert!(primals.is_empty());
+        std::env::remove_var("BIOMEOS_SOCKET_DIR");
+    }
+
+    #[tokio::test]
+    async fn test_discover_by_type_returns() {
+        std::env::set_var("BIOMEOS_SOCKET_DIR", "/nonexistent/path");
+        let primals = discover_by_type("security").await;
+        assert!(primals.is_empty());
+        std::env::remove_var("BIOMEOS_SOCKET_DIR");
     }
 }

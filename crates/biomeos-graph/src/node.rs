@@ -52,6 +52,16 @@ pub struct GraphNode {
     /// Parameters for the capability
     #[serde(default)]
     pub params: NodeParams,
+
+    /// Feedback edge: this node's output feeds back as input to another node on the next tick.
+    /// Only meaningful in Continuous coordination graphs.
+    #[serde(default)]
+    pub feedback_to: Option<String>,
+
+    /// Per-node budget in milliseconds.
+    /// In Continuous graphs, if execution exceeds this, the previous output is reused.
+    #[serde(default)]
+    pub budget_ms: Option<f64>,
 }
 
 fn default_true() -> bool {

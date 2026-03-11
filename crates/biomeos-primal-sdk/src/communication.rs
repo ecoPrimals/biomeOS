@@ -52,13 +52,13 @@ struct JsonRpcRequest {
 /// JSON-RPC 2.0 response
 #[derive(Debug, Deserialize)]
 struct JsonRpcResponse {
-    #[allow(dead_code)] // Required for JSON-RPC 2.0 spec compliance
+    #[allow(dead_code)] // Part of JSON-RPC 2.0 wire format; required for deserialization
     jsonrpc: String,
     #[serde(default)]
     result: Option<Value>,
     #[serde(default)]
     error: Option<JsonRpcError>,
-    #[allow(dead_code)] // Required for JSON-RPC 2.0 spec compliance
+    #[allow(dead_code)] // Part of JSON-RPC 2.0 wire format; required for deserialization
     id: u64,
 }
 
@@ -67,7 +67,7 @@ struct JsonRpcError {
     code: i32,
     message: String,
     #[serde(default)]
-    #[allow(dead_code)] // Part of JSON-RPC 2.0 spec
+    #[allow(dead_code)] // Part of JSON-RPC 2.0 wire format; required for deserialization
     data: Option<Value>,
 }
 

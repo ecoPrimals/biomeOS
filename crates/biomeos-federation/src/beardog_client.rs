@@ -348,16 +348,98 @@ mod tests {
 
     #[test]
     fn test_beardog_client_creation() {
-        let client = BearDogClient::with_endpoint("http://localhost:9000".to_string()).unwrap();
+        let client = BearDogClient::with_endpoint("http://localhost:9000".to_string())
+            .expect("http endpoint should parse");
         assert!(matches!(client.endpoint, BearDogEndpoint::Http(_)));
 
-        let client = BearDogClient::with_endpoint("unix:///tmp/beardog.sock".to_string()).unwrap();
+        let client = BearDogClient::with_endpoint("unix:///tmp/beardog.sock".to_string())
+            .expect("unix endpoint should parse");
         assert!(matches!(client.endpoint, BearDogEndpoint::UnixSocket(_)));
+
+        let client = BearDogClient::with_endpoint("https://localhost:9000".to_string())
+            .expect("https endpoint should parse");
+        assert!(matches!(client.endpoint, BearDogEndpoint::Http(_)));
     }
 
     #[test]
     fn test_invalid_endpoint() {
         let result = BearDogClient::with_endpoint("invalid://endpoint".to_string());
-        assert!(result.is_err());
+        assert!(result.is_err(), "invalid scheme should fail");
+    }
+
+    #[test]
+    fn test_key_derivation_request_serialization() {
+        let req = KeyDerivationRequest {
+            parent_family: "family-1".to_string(),
+            subfed_name: "gaming".to_string(),
+            purpose: "encryption".to_string(),
+        };
+        let json = serde_json::to_string(&req).expect("serialize KeyDerivationRequest");
+        let restored: KeyDerivationRequest =
+            serde_json::from_str(&json).expect("deserialize KeyDerivationRequest");
+        assert_eq!(restored.parent_family, req.parent_family);
+        assert_eq!(restored.subfed_name, req.subfed_name);
+        assert_eq!(restored.purpose, req.purpose);
+    }
+
+    #[test]
+    fn test_key_derivation_response_serialization() {
+        let resp = KeyDerivationResponse {
+            key_ref: "key-ref-123".to_string(),
+            algorithm: "AES-256-GCM".to_string(),
+            created_at: "2026-01-15T12:00:00Z".to_string(),
+        };
+        let json = serde_json::to_string(&resp).expect("serialize KeyDerivationResponse");
+        let restored: KeyDerivationResponse =
+            serde_json::from_str(&json).expect("deserialize KeyDerivationResponse");
+        assert_eq!(restored.key_ref, resp.key_ref);
+        assert_eq!(restored.algorithm, resp.algorithm);
+    }
+
+    #[test]
+    fn test_encrypt_response_serialization() {
+        let resp = EncryptResponse {
+            encrypted_data: "base64data".to_string(),
+            nonce: "base64nonce".to_string(),
+            tag: "base64tag".to_string(),
+        };
+        let json = serde_json::to_string(&resp).expect("serialize EncryptResponse");
+        let restored: EncryptResponse =
+            serde_json::from_str(&json).expect("deserialize EncryptResponse");
+        assert_eq!(restored.encrypted_data, resp.encrypted_data);
+        assert_eq!(restored.nonce, resp.nonce);
+        assert_eq!(restored.tag, resp.tag);
+    }
+
+    #[test]
+    fn test_lineage_verification_request_serialization() {
+        let req = LineageVerificationRequest {
+            family_id: "family-1".to_string(),
+            seed_hash: "sha256hash".to_string(),
+        };
+        let json = serde_json::to_string(&req).expect("serialize LineageVerificationRequest");
+        let restored: LineageVerificationRequest =
+            serde_json::from_str(&json).expect("deserialize LineageVerificationRequest");
+        assert_eq!(restored.family_id, req.family_id);
+        assert_eq!(restored.seed_hash, req.seed_hash);
+    }
+
+    #[test]
+    fn test_lineage_verification_response_serialization_and_display() {
+        let resp = LineageVerificationResponse {
+            is_family_member: true,
+            parent_seed_hash: "parent-hash".to_string(),
+            relationship: "child".to_string(),
+        };
+        let json = serde_json::to_string(&resp).expect("serialize LineageVerificationResponse");
+        let restored: LineageVerificationResponse =
+            serde_json::from_str(&json).expect("deserialize LineageVerificationResponse");
+        assert_eq!(restored.is_family_member, resp.is_family_member);
+        assert_eq!(restored.relationship, resp.relationship);
+
+        let display = resp.to_string();
+        assert!(display.contains("member=true"));
+        assert!(display.contains("relationship=child"));
+        assert!(display.contains("parent_hash=parent-hash"));
     }
 }

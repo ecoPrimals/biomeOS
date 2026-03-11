@@ -87,6 +87,210 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_local_suggestions_device_already_assigned() {
+        let manager = AISuggestionManager::new("test_family".to_string());
+
+        let context = SuggestionContext {
+            assignments: HashMap::new(),
+            available_devices: vec![DeviceInfo {
+                id: "gpu0".to_string(),
+                device_type: "gpu".to_string(),
+                capabilities: vec!["compute".to_string()],
+                current_assignment: Some("toadstool-1".to_string()),
+            }],
+            running_primals: vec![PrimalInfo {
+                id: "toadstool1".to_string(),
+                name: "ToadStool".to_string(),
+                primal_type: "compute".to_string(),
+                capabilities: vec!["compute".to_string()],
+                health: "healthy".to_string(),
+                load: Some(0.5),
+            }],
+            recent_events: None,
+            preferences: None,
+        };
+
+        let suggestions = manager.generate_local_suggestions(&context);
+        assert!(
+            suggestions.is_empty(),
+            "Already-assigned devices should not get assignment suggestions"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_local_suggestions_no_compatible_primal() {
+        let manager = AISuggestionManager::new("test_family".to_string());
+
+        let context = SuggestionContext {
+            assignments: HashMap::new(),
+            available_devices: vec![DeviceInfo {
+                id: "gpu0".to_string(),
+                device_type: "gpu".to_string(),
+                capabilities: vec!["cuda".to_string(), "ml".to_string()],
+                current_assignment: None,
+            }],
+            running_primals: vec![PrimalInfo {
+                id: "beardog1".to_string(),
+                name: "BearDog".to_string(),
+                primal_type: "security".to_string(),
+                capabilities: vec!["crypto".to_string(), "identity".to_string()],
+                health: "healthy".to_string(),
+                load: Some(0.3),
+            }],
+            recent_events: None,
+            preferences: None,
+        };
+
+        let suggestions = manager.generate_local_suggestions(&context);
+        assert!(
+            suggestions.is_empty(),
+            "No suggestion when device capabilities don't match any primal"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_local_suggestions_load_boundary_0_8() {
+        let manager = AISuggestionManager::new("test_family".to_string());
+
+        let context = SuggestionContext {
+            assignments: HashMap::new(),
+            available_devices: vec![],
+            running_primals: vec![PrimalInfo {
+                id: "toadstool1".to_string(),
+                name: "ToadStool".to_string(),
+                primal_type: "compute".to_string(),
+                capabilities: vec!["compute".to_string()],
+                health: "healthy".to_string(),
+                load: Some(0.81), // Just over 0.8 threshold
+            }],
+            recent_events: None,
+            preferences: None,
+        };
+
+        let suggestions = manager.generate_local_suggestions(&context);
+        assert_eq!(suggestions.len(), 1);
+        assert_eq!(
+            suggestions[0].suggestion_type,
+            SuggestionType::ResourceReallocation
+        );
+    }
+
+    #[tokio::test]
+    async fn test_local_suggestions_load_below_threshold() {
+        let manager = AISuggestionManager::new("test_family".to_string());
+
+        let context = SuggestionContext {
+            assignments: HashMap::new(),
+            available_devices: vec![],
+            running_primals: vec![PrimalInfo {
+                id: "toadstool1".to_string(),
+                name: "ToadStool".to_string(),
+                primal_type: "compute".to_string(),
+                capabilities: vec!["compute".to_string()],
+                health: "healthy".to_string(),
+                load: Some(0.79), // Below 0.8
+            }],
+            recent_events: None,
+            preferences: None,
+        };
+
+        let suggestions = manager.generate_local_suggestions(&context);
+        assert!(
+            suggestions.is_empty(),
+            "No rebalance suggestion when load < 0.8"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_local_suggestions_primal_no_load_info() {
+        let manager = AISuggestionManager::new("test_family".to_string());
+
+        let context = SuggestionContext {
+            assignments: HashMap::new(),
+            available_devices: vec![],
+            running_primals: vec![PrimalInfo {
+                id: "toadstool1".to_string(),
+                name: "ToadStool".to_string(),
+                primal_type: "compute".to_string(),
+                capabilities: vec!["compute".to_string()],
+                health: "healthy".to_string(),
+                load: None,
+            }],
+            recent_events: None,
+            preferences: None,
+        };
+
+        let suggestions = manager.generate_local_suggestions(&context);
+        assert!(
+            suggestions.is_empty(),
+            "No rebalance suggestion when load is unknown"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_feedback_modified_keeps_suggestion() {
+        let mut manager = AISuggestionManager::new("test_family".to_string());
+
+        let suggestion = AISuggestion {
+            id: "test_modified".to_string(),
+            suggestion_type: SuggestionType::DeviceAssignment,
+            confidence: 0.85,
+            explanation: "Modified suggestion".to_string(),
+            action: SuggestedAction::AssignDevice {
+                device_id: "gpu0".to_string(),
+                primal_id: "primal1".to_string(),
+                reason: "Test".to_string(),
+            },
+            impact: Impact {
+                performance_improvement: Some(10.0),
+                cost_change: None,
+                affected_primals: vec![],
+                risk_level: "low".to_string(),
+            },
+        };
+
+        manager
+            .active_suggestions
+            .insert(suggestion.id.clone(), suggestion.clone());
+
+        manager
+            .send_feedback(
+                &suggestion.id,
+                SuggestionFeedback::Modified {
+                    changes: "Adjusted parameters".to_string(),
+                },
+            )
+            .await
+            .expect("send_feedback should succeed");
+
+        assert_eq!(
+            manager.active_suggestions.len(),
+            1,
+            "Modified feedback should NOT remove suggestion"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_request_suggestions_empty_context() {
+        let mut manager = AISuggestionManager::new("test_family".to_string());
+
+        let context = SuggestionContext {
+            assignments: HashMap::new(),
+            available_devices: vec![],
+            running_primals: vec![],
+            recent_events: None,
+            preferences: None,
+        };
+
+        let suggestions = manager
+            .request_suggestions(context)
+            .await
+            .expect("request_suggestions should succeed");
+        assert!(suggestions.is_empty());
+        assert!(manager.active_suggestions.is_empty());
+    }
+
+    #[tokio::test]
     async fn test_suggestion_feedback() {
         let mut manager = AISuggestionManager::new("test_family".to_string());
 

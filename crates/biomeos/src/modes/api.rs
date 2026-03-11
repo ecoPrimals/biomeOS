@@ -1,33 +1,48 @@
-//! API mode - HTTP/WebSocket API server
+//! API mode - HTTP/WebSocket API server (UniBin integration)
 //!
-//! Note: For full API server, use neural-api-server binary directly.
-//! This mode provides a stub for unified CLI entry point.
+//! Wires the biomeos-api library into the UniBin `biomeos api` subcommand.
+//! This is the production API server — no separate binary needed.
 
 use anyhow::Result;
 use std::path::PathBuf;
 use tracing::{info, warn};
 
-pub async fn run(port: Option<u16>, socket: Option<PathBuf>, unix_only: bool) -> Result<()> {
-    info!("🌐 biomeOS API Server");
+/// Run the biomeOS API server
+///
+/// Starts the Unix-socket-only JSON-RPC API server using the biomeos-api library.
+/// HTTP bridge is removed — all communication is via Unix socket (TRUE PRIMAL).
+pub async fn run(_port: Option<u16>, socket: Option<PathBuf>, unix_only: bool) -> Result<()> {
+    info!("🌐 biomeOS API Server (UniBin mode)");
 
-    if unix_only {
-        let socket_path = socket.unwrap_or_else(|| PathBuf::from("/tmp/biomeos-api.sock"));
-        info!("Unix socket mode: {}", socket_path.display());
+    let state = biomeos_api::AppState::builder()
+        .config_from_env()
+        .build_with_defaults()?;
 
-        info!("⚠️  Full API server requires biomeos-api library refactoring");
-        info!("   Socket would be: {}", socket_path.display());
-    } else if let Some(socket_path) = socket {
-        info!("Unix socket mode: {}", socket_path.display());
-        info!("⚠️  Full API server requires biomeos-api library refactoring");
+    let config = state.config().clone();
+
+    if config.standalone_mode {
+        warn!("Running in STANDALONE MODE - graceful degradation without primals");
     } else {
-        let port = port.unwrap_or(3000);
-        warn!("⚠️  HTTP mode is deprecated! Use --unix-only for production.");
-        info!("Would start HTTP API server on port {}", port);
-        info!("⚠️  Full API server requires biomeos-api library refactoring");
+        info!("Running in LIVE MODE - discovering real primals");
     }
 
-    info!("");
-    info!("For now, biomeos-api binary should be used directly.");
+    let socket_path = socket.unwrap_or_else(|| config.socket_path.clone());
+
+    if !unix_only {
+        if let Some(port) = _port {
+            warn!("HTTP mode (port {port}) is deprecated — using Unix socket only (TRUE PRIMAL)");
+        }
+    }
+
+    let app = biomeos_api::create_app(state);
+
+    info!("biomeOS API Server starting");
+    info!("  Socket: {}", socket_path.display());
+    info!("  Security: Owner-only (0600) + Dark Forest gate");
+    info!("  Protocol: JSON-RPC 2.0");
+    info!("  Port-free: TRUE PRIMAL architecture");
+
+    biomeos_api::serve_unix_socket(&socket_path, app).await?;
 
     Ok(())
 }

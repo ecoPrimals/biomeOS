@@ -23,6 +23,55 @@ pub struct DeploymentGraph {
     pub definition: GraphDefinition,
 }
 
+/// Coordination pattern for graph execution.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+#[derive(Default)]
+pub enum CoordinationPattern {
+    /// Nodes execute one at a time in dependency order
+    #[default]
+    Sequential,
+    /// Independent nodes execute concurrently
+    Parallel,
+    /// DAG with conditional branching
+    ConditionalDag,
+    /// Streaming pipeline between nodes
+    Pipeline,
+    /// Fixed-timestep loop — nodes execute every tick
+    Continuous,
+}
+
+/// Tick configuration for continuous coordination graphs.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TickConfig {
+    /// Target tick rate in Hz (e.g. 60 for a game loop)
+    pub target_hz: f64,
+    /// Maximum accumulator slack before frame-skipping (ms)
+    #[serde(default = "default_max_accumulator_ms")]
+    pub max_accumulator_ms: f64,
+    /// Per-node budget warning threshold (ms); log if exceeded
+    #[serde(default = "default_budget_warning_ms")]
+    pub budget_warning_ms: f64,
+}
+
+fn default_max_accumulator_ms() -> f64 {
+    100.0
+}
+
+fn default_budget_warning_ms() -> f64 {
+    4.0
+}
+
+impl Default for TickConfig {
+    fn default() -> Self {
+        Self {
+            target_hz: 60.0,
+            max_accumulator_ms: default_max_accumulator_ms(),
+            budget_warning_ms: default_budget_warning_ms(),
+        }
+    }
+}
+
 /// Core graph definition.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GraphDefinition {
@@ -42,6 +91,14 @@ pub struct GraphDefinition {
     /// Graph metadata
     #[serde(default)]
     pub metadata: GraphMetadata,
+
+    /// Coordination pattern (defaults to Sequential)
+    #[serde(default)]
+    pub coordination: CoordinationPattern,
+
+    /// Tick configuration (only used when coordination = Continuous)
+    #[serde(default)]
+    pub tick: Option<TickConfig>,
 
     /// Environment variable definitions
     #[serde(default)]

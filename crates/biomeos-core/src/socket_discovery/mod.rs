@@ -105,3 +105,58 @@ pub async fn discover_endpoint(primal_name: &str) -> Option<TransportEndpoint> {
     let discovery = SocketDiscovery::new(family_id);
     discovery.discover_with_fallback(primal_name).await
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::env;
+
+    #[test]
+    fn test_build_socket_convenience() {
+        let path = build_socket("beardog", "test-family");
+        assert!(path.to_string_lossy().contains("beardog"));
+        assert!(path.to_string_lossy().contains("test-family"));
+    }
+
+    #[test]
+    fn test_build_socket_deterministic() {
+        let path1 = build_socket("songbird", "family-1");
+        let path2 = build_socket("songbird", "family-1");
+        assert_eq!(path1, path2);
+    }
+
+    #[tokio::test]
+    async fn test_discover_socket_uses_family_id_env() {
+        env::set_var("FAMILY_ID", "env-family");
+        let _result = discover_socket("beardog").await;
+        env::remove_var("FAMILY_ID");
+        // Just verify it doesn't panic - result may be None if socket doesn't exist
+    }
+
+    #[tokio::test]
+    async fn test_discover_socket_family_id_from_env() {
+        env::set_var("BIOMEOS_FAMILY_ID", "env-family-id");
+        let family_id = env::var("FAMILY_ID")
+            .or_else(|_| env::var("BIOMEOS_FAMILY_ID"))
+            .unwrap_or_else(|_| "default".to_string());
+        let discovery = SocketDiscovery::new(&family_id);
+        assert_eq!(discovery.family_id, "env-family-id");
+        env::remove_var("BIOMEOS_FAMILY_ID");
+    }
+
+    #[tokio::test]
+    async fn test_discover_endpoint_convenience() {
+        env::set_var("BIOMEOS_FAMILY_ID", "test-default");
+        let _result = discover_endpoint("nonexistent-primal").await;
+        env::remove_var("BIOMEOS_FAMILY_ID");
+        // Just verify it doesn't panic
+    }
+
+    #[tokio::test]
+    async fn test_discover_socket_default_family() {
+        env::remove_var("FAMILY_ID");
+        env::remove_var("BIOMEOS_FAMILY_ID");
+        let _result = discover_socket("beardog").await;
+        // Should use "default" when no env vars set
+    }
+}

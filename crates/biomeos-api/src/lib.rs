@@ -31,6 +31,8 @@ use futures_util::{SinkExt, StreamExt};
 use std::sync::Arc;
 use tower_http::{
     cors::{AllowHeaders, AllowMethods, AllowOrigin, CorsLayer},
+    limit::RequestBodyLimitLayer,
+    set_header::SetResponseHeaderLayer,
     trace::TraceLayer,
 };
 
@@ -78,25 +80,20 @@ async fn websocket_handler(
 
 /// Handle WebSocket connection
 ///
-/// EVOLVED (Jan 27, 2026): Full integration with GraphEventBroadcaster
+/// EVOLVED (Mar 11, 2026): Push-based graph events from GraphEventBroadcaster.
 ///
-/// This handler provides real-time graph execution events via JSON-RPC 2.0 over WebSocket.
-/// It's a lightweight wrapper for the HTTP bridge; for full functionality use the
-/// dedicated `GraphEventWebSocketServer` with Unix sockets.
-async fn handle_websocket(socket: axum::extract::ws::WebSocket, _state: Arc<AppState>) {
+/// After subscribe, graph events are pushed in real-time as JSON-RPC notifications.
+async fn handle_websocket(socket: axum::extract::ws::WebSocket, state: Arc<AppState>) {
     use axum::extract::ws::Message;
     use std::collections::HashMap;
     use std::sync::atomic::{AtomicU64, Ordering};
     use tokio::sync::RwLock;
 
     let (mut sender, mut receiver) = socket.split();
-
-    // Track active subscriptions for this connection
     let subscriptions: Arc<RwLock<HashMap<String, SubscriptionFilter>>> =
         Arc::new(RwLock::new(HashMap::new()));
     let next_sub_id = AtomicU64::new(1);
 
-    // Send welcome message
     let welcome = serde_json::json!({
         "jsonrpc": "2.0",
         "method": "connection.established",
@@ -119,99 +116,124 @@ async fn handle_websocket(socket: axum::extract::ws::WebSocket, _state: Arc<AppS
         return;
     }
 
-    // Handle incoming messages
-    while let Some(Ok(msg)) = receiver.next().await {
-        if let Message::Text(text) = msg {
-            // Parse JSON-RPC request
-            let response = match serde_json::from_str::<JsonRpcRequest>(&text) {
-                Ok(req) => {
-                    // Handle methods
-                    match req.method.as_str() {
-                        "events.subscribe" => {
-                            // EVOLVED: Parse and store subscription filter
-                            let filter: SubscriptionFilter =
-                                serde_json::from_value(req.params.clone()).unwrap_or_default();
-
-                            let sub_id =
-                                format!("sub_{}", next_sub_id.fetch_add(1, Ordering::SeqCst));
-
-                            // Store subscription
-                            subscriptions.write().await.insert(sub_id.clone(), filter);
-
-                            tracing::debug!("WebSocket subscription created: {}", sub_id);
-
-                            JsonRpcResponse {
-                                jsonrpc: "2.0".to_string(),
-                                result: Some(serde_json::json!({
-                                    "subscription_id": sub_id,
-                                    "success": true,
-                                    "note": "For full event streaming, use GraphEventWebSocketServer on Unix socket",
-                                })),
-                                error: None,
-                                id: req.id,
-                            }
-                        }
-                        "events.unsubscribe" => {
-                            // EVOLVED: Handle unsubscribe
-                            let sub_id = req
-                                .params
-                                .get("subscription_id")
-                                .and_then(|v| v.as_str())
-                                .unwrap_or("");
-
-                            let existed = subscriptions.write().await.remove(sub_id).is_some();
-
-                            JsonRpcResponse {
-                                jsonrpc: "2.0".to_string(),
-                                result: Some(serde_json::json!({
-                                    "success": existed,
-                                    "subscription_id": sub_id,
-                                })),
-                                error: None,
-                                id: req.id,
-                            }
-                        }
-                        "events.list_subscriptions" => {
-                            // EVOLVED: List actual subscriptions
-                            let subs = subscriptions.read().await;
-                            let sub_list: Vec<_> = subs.keys().collect();
-
-                            JsonRpcResponse {
-                                jsonrpc: "2.0".to_string(),
-                                result: Some(serde_json::json!({
-                                    "subscriptions": sub_list,
-                                    "count": sub_list.len(),
-                                })),
-                                error: None,
-                                id: req.id,
-                            }
-                        }
-                        _ => JsonRpcResponse {
-                            jsonrpc: "2.0".to_string(),
-                            result: None,
-                            error: Some(JsonRpcError {
-                                code: -32601,
-                                message: "Method not found".to_string(),
-                                data: None,
-                            }),
-                            id: req.id,
-                        },
+    // Spawn a task that forwards broadcaster events to the WebSocket sender
+    let (push_tx, mut push_rx) = tokio::sync::mpsc::channel::<String>(256);
+    let broadcaster = state.event_broadcaster().clone();
+    let subs_for_push = subscriptions.clone();
+    tokio::spawn(async move {
+        let mut rx = broadcaster.subscribe();
+        loop {
+            match rx.recv().await {
+                Ok(event) => {
+                    let subs = subs_for_push.read().await;
+                    if subs.is_empty() {
+                        continue;
+                    }
+                    let notification = serde_json::json!({
+                        "jsonrpc": "2.0",
+                        "method": "events.notification",
+                        "params": event,
+                    });
+                    if push_tx.send(notification.to_string()).await.is_err() {
+                        break;
                     }
                 }
-                Err(_) => JsonRpcResponse {
-                    jsonrpc: "2.0".to_string(),
-                    result: None,
-                    error: Some(JsonRpcError {
-                        code: -32700,
-                        message: "Parse error".to_string(),
-                        data: None,
-                    }),
-                    id: None,
-                },
-            };
+                Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
+                    tracing::warn!("WebSocket event forwarder lagged, skipped {} events", n);
+                }
+                Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
+            }
+        }
+    });
 
-            if let Ok(json) = serde_json::to_string(&response) {
-                let _ = sender.send(Message::Text(json)).await;
+    loop {
+        tokio::select! {
+            msg = receiver.next() => {
+                match msg {
+                    Some(Ok(Message::Text(text))) => {
+                        let response = match serde_json::from_str::<JsonRpcRequest>(&text) {
+                            Ok(req) => match req.method.as_str() {
+                                "events.subscribe" => {
+                                    let filter: SubscriptionFilter =
+                                        serde_json::from_value(req.params.clone()).unwrap_or_default();
+                                    let sub_id = format!("sub_{}", next_sub_id.fetch_add(1, Ordering::SeqCst));
+                                    subscriptions.write().await.insert(sub_id.clone(), filter);
+                                    JsonRpcResponse {
+                                        jsonrpc: "2.0".to_string(),
+                                        result: Some(serde_json::json!({
+                                            "subscription_id": sub_id,
+                                            "success": true,
+                                        })),
+                                        error: None,
+                                        id: req.id,
+                                    }
+                                }
+                                "events.unsubscribe" => {
+                                    let sub_id = req.params.get("subscription_id")
+                                        .and_then(|v| v.as_str()).unwrap_or("");
+                                    let existed = subscriptions.write().await.remove(sub_id).is_some();
+                                    JsonRpcResponse {
+                                        jsonrpc: "2.0".to_string(),
+                                        result: Some(serde_json::json!({
+                                            "success": existed,
+                                            "subscription_id": sub_id,
+                                        })),
+                                        error: None,
+                                        id: req.id,
+                                    }
+                                }
+                                "events.list_subscriptions" => {
+                                    let subs = subscriptions.read().await;
+                                    let sub_list: Vec<_> = subs.keys().collect();
+                                    JsonRpcResponse {
+                                        jsonrpc: "2.0".to_string(),
+                                        result: Some(serde_json::json!({
+                                            "subscriptions": sub_list,
+                                            "count": sub_list.len(),
+                                        })),
+                                        error: None,
+                                        id: req.id,
+                                    }
+                                }
+                                _ => JsonRpcResponse {
+                                    jsonrpc: "2.0".to_string(),
+                                    result: None,
+                                    error: Some(JsonRpcError {
+                                        code: -32601,
+                                        message: "Method not found".to_string(),
+                                        data: None,
+                                    }),
+                                    id: req.id,
+                                },
+                            },
+                            Err(_) => JsonRpcResponse {
+                                jsonrpc: "2.0".to_string(),
+                                result: None,
+                                error: Some(JsonRpcError {
+                                    code: -32700,
+                                    message: "Parse error".to_string(),
+                                    data: None,
+                                }),
+                                id: None,
+                            },
+                        };
+                        if let Ok(json) = serde_json::to_string(&response) {
+                            let _ = sender.send(Message::Text(json)).await;
+                        }
+                    }
+                    Some(Ok(_)) => {} // Ignore non-text messages
+                    _ => break, // Connection closed or error
+                }
+            }
+            pushed = push_rx.recv() => {
+                match pushed {
+                    Some(json) => {
+                        if sender.send(Message::Text(json)).await.is_err() {
+                            break;
+                        }
+                    }
+                    None => break,
+                }
             }
         }
     }
@@ -338,6 +360,27 @@ fn create_app_with_transport(state: AppState, force_sovereign: bool) -> Router {
             "/api/v1/genome/verify-file",
             post(handlers::genome::verify_genome_file),
         )
+        // Genome Distribution API (wateringHole/genomeBin)
+        .route(
+            "/api/v1/genome/dist/manifest",
+            get(handlers::genome_dist::get_manifest),
+        )
+        .route(
+            "/api/v1/genome/dist/:primal/latest",
+            get(handlers::genome_dist::get_latest),
+        )
+        .route(
+            "/api/v1/genome/dist/checksum/:primal/:version/:arch",
+            get(handlers::genome_dist::get_checksum),
+        )
+        .route(
+            "/api/v1/genome/dist/:primal/:version/:arch",
+            get(handlers::genome_dist::download_binary),
+        )
+        .route(
+            "/api/v1/genome/dist/update-livespore",
+            post(handlers::genome_dist::update_livespore),
+        )
         .layer(cors)
         .layer(TraceLayer::new_for_http())
         .with_state(shared_state);
@@ -357,12 +400,42 @@ fn create_app_with_transport(state: AppState, force_sovereign: bool) -> Router {
         )
         .with_state(rendezvous_state);
 
-    // Apply Dark Forest gate as outermost layer
+    // Apply Dark Forest gate
     // This gates ALL requests — lineage before interaction
-    router.layer(axum::middleware::from_fn_with_state(
+    let router = router.layer(axum::middleware::from_fn_with_state(
         gate_state,
         dark_forest_gate::dark_forest_gate_middleware,
-    ))
+    ));
+
+    // Security headers - applied as outermost layer to ALL responses
+    // These headers are defense-in-depth even through Cloudflare proxy
+    router
+        .layer(SetResponseHeaderLayer::overriding(
+            axum::http::header::STRICT_TRANSPORT_SECURITY,
+            HeaderValue::from_static("max-age=31536000; includeSubDomains; preload"),
+        ))
+        .layer(SetResponseHeaderLayer::overriding(
+            axum::http::header::X_CONTENT_TYPE_OPTIONS,
+            HeaderValue::from_static("nosniff"),
+        ))
+        .layer(SetResponseHeaderLayer::overriding(
+            axum::http::header::X_FRAME_OPTIONS,
+            HeaderValue::from_static("DENY"),
+        ))
+        .layer(SetResponseHeaderLayer::overriding(
+            axum::http::header::CONTENT_SECURITY_POLICY,
+            HeaderValue::from_static("default-src 'none'; frame-ancestors 'none'"),
+        ))
+        .layer(SetResponseHeaderLayer::overriding(
+            axum::http::header::REFERRER_POLICY,
+            HeaderValue::from_static("no-referrer"),
+        ))
+        .layer(SetResponseHeaderLayer::overriding(
+            axum::http::header::CACHE_CONTROL,
+            HeaderValue::from_static("no-store, no-cache, must-revalidate"),
+        ))
+        // Request body size limit - prevent oversized payloads (1MB max)
+        .layer(RequestBodyLimitLayer::new(1024 * 1024))
 }
 
 /// Serve on Unix socket only (production mode)
@@ -372,28 +445,6 @@ fn create_app_with_transport(state: AppState, force_sovereign: bool) -> Router {
 /// socket connections are already limited to the local user.
 pub async fn serve_unix_socket(socket_path: &std::path::Path, app: Router) -> anyhow::Result<()> {
     unix_server::serve_unix_socket(socket_path, app).await
-}
-
-/// Serve in dual mode (Unix socket + HTTP bridge)
-///
-/// **WARNING**: When binding to TCP, sovereign mode is FORCED.
-/// All TCP connections must present a valid Dark Forest token.
-/// The TCP-bound router uses `create_app_for_tcp()` which forces sovereign.
-///
-/// **DEPRECATED since 0.3.0**: Use [`serve_unix_socket()`] for production.
-/// HTTP bridge will be removed in v0.5.0 when PetalTongue migrates to
-/// Unix socket JSON-RPC.
-#[deprecated(
-    since = "0.3.0",
-    note = "Use serve_unix_socket() — HTTP bridge will be removed in v0.5.0"
-)]
-pub async fn serve_dual_mode(
-    socket_path: &std::path::Path,
-    bind_addr: std::net::SocketAddr,
-    app: Router,
-) -> anyhow::Result<()> {
-    #[allow(deprecated)]
-    unix_server::serve_dual_mode(socket_path, bind_addr, app).await
 }
 
 #[cfg(test)]
@@ -487,5 +538,78 @@ mod tests {
         let json = serde_json::to_string(&filter).expect("serialize");
         assert!(json.contains("test-graph"));
         assert!(json.contains("node_started"));
+    }
+
+    #[test]
+    fn test_subscription_filter_empty() {
+        let filter = SubscriptionFilter {
+            graph_id: None,
+            event_types: None,
+            node_filter: None,
+        };
+        let json = serde_json::to_string(&filter).expect("serialize");
+        let deserialized: SubscriptionFilter =
+            serde_json::from_str(&json).expect("round-trip deserialize");
+        assert!(deserialized.graph_id.is_none());
+        assert!(deserialized.event_types.is_none());
+    }
+
+    #[test]
+    fn test_api_error_into_response_internal() {
+        let error = ApiError::Internal("test internal".to_string());
+        let response = error.into_response();
+        assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    #[test]
+    fn test_api_error_into_response_discovery_failed() {
+        let error = ApiError::DiscoveryFailed("no primals".to_string());
+        let response = error.into_response();
+        assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+    }
+
+    #[test]
+    fn test_api_error_into_response_not_found() {
+        let error = ApiError::NotFound("resource".to_string());
+        let response = error.into_response();
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[test]
+    fn test_create_app_for_tcp_returns_router() {
+        let state = AppState::builder()
+            .build_with_defaults()
+            .expect("should create state");
+        let app = create_app_for_tcp(state);
+        drop(app);
+    }
+
+    #[test]
+    fn test_json_rpc_request_deserialization() {
+        let json = r#"{
+            "jsonrpc": "2.0",
+            "method": "events.subscribe",
+            "params": {"graph_id": "g1"},
+            "id": 1
+        }"#;
+        let req: JsonRpcRequest = serde_json::from_str(json).expect("deserialize");
+        assert_eq!(req.method, "events.subscribe");
+        assert_eq!(
+            req.params.get("graph_id").and_then(|v| v.as_str()),
+            Some("g1")
+        );
+    }
+
+    #[test]
+    fn test_json_rpc_response_serialization_round_trip() {
+        let response = JsonRpcResponse {
+            jsonrpc: "2.0".to_string(),
+            result: Some(serde_json::json!({"subscription_id": "sub_1"})),
+            error: None,
+            id: Some(serde_json::json!(42)),
+        };
+        let json = serde_json::to_string(&response).expect("serialize");
+        assert!(json.contains("sub_1"));
+        assert!(json.contains("42"));
     }
 }

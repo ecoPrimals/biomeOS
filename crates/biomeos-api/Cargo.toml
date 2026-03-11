@@ -8,12 +8,12 @@ license = "AGPL-3.0-only"
 # Web framework
 axum = { version = "0.7", features = ["ws"] }
 tower = { version = "0.4", features = ["util"] }
-tower-http = { version = "0.5", features = ["cors", "trace"] }
+tower-http = { version = "0.5", features = ["cors", "trace", "set-header", "limit"] }
 
 # Async runtime
 tokio = { version = "1", features = ["full"] }
 tokio-stream = "0.1"
-tokio-util = { version = "0.7", features = ["compat"] }
+tokio-util = { version = "0.7", features = ["compat", "io"] }
 futures = "0.3"
 
 # HTTP server (for Unix socket support)
@@ -23,6 +23,7 @@ hyper-util = { version = "0.1", features = ["tokio", "server", "server-auto"] }
 # Serialization
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+toml = "0.8"
 
 # Internal dependencies
 # NOTE: http-transport feature REMOVED - using Unix sockets for primal communication
@@ -62,6 +63,7 @@ tokio-tungstenite = "0.21"
 futures-util = "0.3"
 uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
+async-stream = "0.3.6"
 
 [dev-dependencies]
 # Testing utilities

@@ -1,7 +1,7 @@
 # biomeOS Specifications
 
-**Last Updated**: February 9, 2026
-**Active Specs**: 19 (47 archived to `ecoPrimals/archive/biomeos-feb09-2026/specs/`)
+**Last Updated**: February 13, 2026
+**Active Specs**: 20 (47 archived to `ecoPrimals/archive/biomeos-feb09-2026/specs/`)
 
 ---
 
@@ -48,6 +48,7 @@
 | Spec | Purpose |
 |------|---------|
 | [PRIMAL_DEPLOYMENT_STANDARD.md](PRIMAL_DEPLOYMENT_STANDARD.md) | Deterministic deployment v1.0 |
+| [BINARY_BUILD_TARGETS_SPEC.md](BINARY_BUILD_TARGETS_SPEC.md) | PIE vs static linking (EVOLVED Feb 13) |
 
 ---
 

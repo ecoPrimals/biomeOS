@@ -1,0 +1,143 @@
+# =============================================================================
+# Game Engine Tick Graph — Continuous Coordination
+# =============================================================================
+#
+# First continuous graph in biomeOS.
+# Runs at 60 Hz with the classic game-loop pipeline:
+#
+#   input → game_logic → physics → scene → render
+#
+# Feedback edges:
+#   - physics → game_logic (collision results feed next-tick decisions)
+#   - scene   → render     (scene graph cached for interpolation)
+#
+# Budget enforcement:
+#   Each node has a per-tick budget. If exceeded, the previous tick's
+#   output is reused and a warning is emitted.
+#
+# Prerequisites:
+#   gaming_niche_deploy.toml must have been executed first
+#   (primals are already running and registered).
+#
+# Usage:
+#   biomeos continuous graphs/game_engine_tick.toml
+#
+# =============================================================================
+
+[graph]
+id = "game-engine-tick"
+name = "Game Engine Tick Loop"
+version = "1.0.0"
+description = "60 Hz continuous game loop: input → logic → physics → scene → render"
+coordination = "continuous"
+
+[graph.tick]
+target_hz = 60.0
+max_accumulator_ms = 100.0
+budget_warning_ms = 4.0
+
+[graph.metadata]
+category = "lifecycle"
+author = "biomeOS"
+created = "2026-03-11"
+
+# =============================================================================
+# Node: Input Collection
+# =============================================================================
+# Polls petalTongue's SensorStreamRegistry for keyboard, mouse, gamepad events.
+# First in the pipeline — no dependencies.
+
+[[graph.nodes]]
+id = "input"
+name = "Input Collection"
+capability = "interaction.poll_sensors"
+budget_ms = 1.0
+
+[graph.nodes.config]
+primal = "petaltongue"
+
+[graph.nodes.params]
+sources = "keyboard,mouse,gamepad"
+batch = true
+
+# =============================================================================
+# Node: Game Logic
+# =============================================================================
+# Processes input + feedback from physics to update game state.
+# ludoSpring evaluates rules, DDA, engagement metrics.
+
+[[graph.nodes]]
+id = "game-logic"
+name = "Game Logic"
+capability = "game.tick_logic"
+depends_on = ["input"]
+budget_ms = 4.0
+
+[graph.nodes.config]
+primal = "ludospring"
+
+[graph.nodes.params]
+input_ref = "${input.output}"
+feedback_ref = "${physics.feedback}"
+
+# =============================================================================
+# Node: Physics
+# =============================================================================
+# Runs collision detection, rigid-body integration, constraint solving.
+# barraCuda provides math primitives; ludoSpring orchestrates.
+# Feeds results back to game_logic for next tick.
+
+[[graph.nodes]]
+id = "physics"
+name = "Physics Step"
+capability = "game.tick_physics"
+depends_on = ["game-logic"]
+feedback_to = "game-logic"
+budget_ms = 4.0
+
+[graph.nodes.config]
+primal = "ludospring"
+
+[graph.nodes.params]
+state_ref = "${game-logic.output}"
+dt = "fixed"
+
+# =============================================================================
+# Node: Scene Graph
+# =============================================================================
+# Builds the renderable scene from physics state.
+# petalTongue converts game state into a scene graph / render list.
+
+[[graph.nodes]]
+id = "scene"
+name = "Scene Build"
+capability = "visualization.build_scene"
+depends_on = ["physics"]
+feedback_to = "render"
+budget_ms = 3.0
+
+[graph.nodes.config]
+primal = "petaltongue"
+
+[graph.nodes.params]
+physics_ref = "${physics.output}"
+
+# =============================================================================
+# Node: Render
+# =============================================================================
+# Submits the scene graph to the GPU for rendering.
+# ToadStool provides the hardware transport; petalTongue manages the pipeline.
+
+[[graph.nodes]]
+id = "render"
+name = "Render Submit"
+capability = "visualization.render"
+depends_on = ["scene"]
+budget_ms = 4.0
+
+[graph.nodes.config]
+primal = "petaltongue"
+
+[graph.nodes.params]
+scene_ref = "${scene.output}"
+vsync = true

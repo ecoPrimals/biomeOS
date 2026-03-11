@@ -291,8 +291,56 @@ mod tests {
             "signature": "sig123"
         }"#;
 
-        let proof: IdentityProof = serde_json::from_str(json).unwrap();
+        let proof: IdentityProof = serde_json::from_str(json).expect("parse proof");
         assert_eq!(proof.primal_name, "beardog");
         assert_eq!(proof.process_id, 12345);
+        assert_eq!(proof.node_id, "node-alpha");
+        assert_eq!(proof.family_id, "1894e909e454");
+        assert_eq!(proof.socket_path, "/tmp/beardog.sock");
+    }
+
+    #[test]
+    fn test_identity_proof_serialization() {
+        let proof = IdentityProof {
+            primal_name: "songbird".to_string(),
+            node_id: "node-1".to_string(),
+            family_id: "fam-1".to_string(),
+            version: "0.1.0".to_string(),
+            process_id: 9999,
+            socket_path: "/tmp/songbird.sock".to_string(),
+            owner_uid: 1000,
+            owner_gid: 1000,
+            started_at: "2026-01-01T00:00:00Z".to_string(),
+            challenge: "challenge".to_string(),
+            signature: "sig".to_string(),
+        };
+        let json = serde_json::to_string(&proof).expect("serialize");
+        let loaded: IdentityProof = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(loaded.primal_name, proof.primal_name);
+    }
+
+    #[test]
+    fn test_identity_verification_struct() {
+        let proof = IdentityProof {
+            primal_name: "test".to_string(),
+            node_id: "n".to_string(),
+            family_id: "f".to_string(),
+            version: "0.1".to_string(),
+            process_id: 1,
+            socket_path: "/tmp/x.sock".to_string(),
+            owner_uid: 0,
+            owner_gid: 0,
+            started_at: String::new(),
+            challenge: "c".to_string(),
+            signature: "s".to_string(),
+        };
+        let verification = IdentityVerification {
+            verified: true,
+            proof: proof.clone(),
+            message: "OK".to_string(),
+        };
+        assert!(verification.verified);
+        assert_eq!(verification.message, "OK");
+        assert_eq!(verification.proof.primal_name, "test");
     }
 }

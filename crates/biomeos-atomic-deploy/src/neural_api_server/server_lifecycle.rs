@@ -13,6 +13,22 @@ use tracing::{debug, error, info, warn};
 use super::NeuralApiServer;
 use crate::mode::BiomeOsMode;
 
+/// Check if mode string indicates explicit coordinated mode
+#[must_use]
+pub fn is_explicit_coordinated_mode_str(mode: &str) -> bool {
+    let m = mode.to_lowercase();
+    m == "coordinated" || m == "coord" || m == "join"
+}
+
+/// Check if BIOMEOS_MODE env var indicates explicit coordinated mode
+#[must_use]
+pub fn is_explicit_coordinated_mode() -> bool {
+    std::env::var("BIOMEOS_MODE")
+        .as_deref()
+        .map(is_explicit_coordinated_mode_str)
+        .unwrap_or(false)
+}
+
 impl NeuralApiServer {
     /// Start the Neural API server
     ///
@@ -118,10 +134,7 @@ impl NeuralApiServer {
         info!("🌍 Joining existing ecosystem");
 
         // Check if this is explicit coordinated mode (primals will auto-register)
-        let explicit_mode = std::env::var("BIOMEOS_MODE")
-            .map(|m| m.to_lowercase())
-            .map(|m| m == "coordinated" || m == "coord" || m == "join")
-            .unwrap_or(false);
+        let explicit_mode = is_explicit_coordinated_mode();
 
         if explicit_mode {
             // Explicit coordinated mode: don't wait for sockets
@@ -209,5 +222,50 @@ impl NeuralApiServer {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_explicit_coordinated_mode_str_coordinated() {
+        assert!(is_explicit_coordinated_mode_str("coordinated"));
+    }
+
+    #[test]
+    fn test_is_explicit_coordinated_mode_str_coord() {
+        assert!(is_explicit_coordinated_mode_str("coord"));
+    }
+
+    #[test]
+    fn test_is_explicit_coordinated_mode_str_join() {
+        assert!(is_explicit_coordinated_mode_str("join"));
+    }
+
+    #[test]
+    fn test_is_explicit_coordinated_mode_str_case_insensitive() {
+        assert!(is_explicit_coordinated_mode_str("COORDINATED"));
+    }
+
+    #[test]
+    fn test_is_explicit_coordinated_mode_str_bootstrap_not_explicit() {
+        assert!(!is_explicit_coordinated_mode_str("bootstrap"));
+    }
+
+    #[test]
+    fn test_is_explicit_coordinated_mode_str_empty_not_explicit() {
+        assert!(!is_explicit_coordinated_mode_str(""));
+    }
+
+    #[test]
+    fn test_is_explicit_coordinated_mode_str_join_uppercase() {
+        assert!(is_explicit_coordinated_mode_str("JOIN"));
+    }
+
+    #[test]
+    fn test_is_explicit_coordinated_mode_str_unknown_not_explicit() {
+        assert!(!is_explicit_coordinated_mode_str("unknown"));
     }
 }

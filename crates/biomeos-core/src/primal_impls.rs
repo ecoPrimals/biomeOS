@@ -471,6 +471,36 @@ mod tests {
     }
 
     #[test]
+    fn test_builder_without_binary_path_fails() {
+        let result = PrimalBuilder::new()
+            .id("test".to_string())
+            .provides(vec![Capability::Security])
+            .build();
+        match result {
+            Ok(_) => panic!("Expected build to fail without binary path"),
+            Err(e) => {
+                let err_msg = e.to_string();
+                assert!(
+                    err_msg.contains("Binary path") || err_msg.contains("PRIMAL_BINARY"),
+                    "Expected binary path error, got: {}",
+                    err_msg
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_builder_default_id_when_not_set() {
+        let primal = PrimalBuilder::new()
+            .binary_path("/bin/true".to_string())
+            .provides(vec![])
+            .requires(vec![])
+            .build()
+            .unwrap();
+        assert!(!primal.id().to_string().is_empty());
+    }
+
+    #[test]
     fn test_convenience_functions() {
         let security = create_security_provider("/path/to/beardog".to_string(), 9000).unwrap();
         assert_eq!(security.provides(), &[Capability::Security]);
@@ -486,5 +516,37 @@ mod tests {
         assert_eq!(ai_service.provides(), &[Capability::AI]);
         assert!(ai_service.requires().contains(&Capability::Compute));
         assert!(ai_service.requires().contains(&Capability::Storage));
+    }
+
+    #[test]
+    fn test_create_storage_provider() {
+        let storage = create_storage_provider("/path/to/nestgate".to_string(), 8002).unwrap();
+        assert_eq!(storage.provides(), &[Capability::Storage]);
+        assert_eq!(storage.requires().len(), 0);
+    }
+
+    #[test]
+    fn test_create_compute_provider() {
+        let compute = create_compute_provider("/path/to/toadstool".to_string(), 8080).unwrap();
+        assert_eq!(compute.provides(), &[Capability::Compute]);
+    }
+
+    #[test]
+    fn test_primal_builder_env_var() {
+        let primal = PrimalBuilder::new()
+            .id("env-test".to_string())
+            .binary_path("/bin/true".to_string())
+            .env_var("CUSTOM_VAR".to_string(), "value".to_string())
+            .build()
+            .unwrap();
+        assert_eq!(primal.id().to_string(), "env-test");
+    }
+
+    #[test]
+    fn test_legacy_type_aliases() {
+        let _beardog: Arc<GenericManagedPrimal> =
+            create_security_provider("/bin/true".to_string(), 9000).unwrap();
+        let _songbird: Arc<GenericManagedPrimal> =
+            create_discovery_orchestrator("/bin/true".to_string()).unwrap();
     }
 }

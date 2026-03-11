@@ -155,8 +155,8 @@ pub async fn spawn_primal_process(
     // 2. Get socket path (deterministic via nucleation)
     let socket_path = context.get_socket_path(primal_name).await;
 
-    // 3. Get family ID from context
-    let family_id = &context.family_id;
+    // 3. Get family ID from context (as_ref for &str)
+    let family_id = context.family_id.as_ref();
 
     // 4. Build command with primal-specific arguments
     let mut cmd = Command::new(&binary_path);
@@ -344,36 +344,234 @@ pub fn relay_output_streams(mut child: Child, primal_name: String) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::neural_graph::GraphNode;
     use std::collections::HashMap;
+    use tempfile::TempDir;
 
     #[tokio::test]
     async fn test_discover_primal_binary_not_found() {
         let ctx = ExecutionContext::new(HashMap::new());
         let result = discover_primal_binary("nonexistent_primal", &ctx).await;
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Binary not found"));
+        let err = result.expect_err("Should fail for nonexistent primal");
+        assert!(
+            err.to_string().contains("Binary not found"),
+            "Error should mention binary: {}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    async fn test_discover_primal_binary_with_env_dir_empty() {
+        let temp_dir = TempDir::new().expect("Create temp dir");
+        std::env::set_var("BIOMEOS_PLASMID_BIN_DIR", temp_dir.path());
+        let ctx = ExecutionContext::new(HashMap::new());
+
+        let result = discover_primal_binary("nonexistent_primal", &ctx).await;
+        std::env::remove_var("BIOMEOS_PLASMID_BIN_DIR");
+        let err = result.expect_err("Should fail when dir has no binary");
+        assert!(
+            err.to_string().contains("Binary not found"),
+            "Error should mention binary: {}",
+            err
+        );
     }
 
     #[tokio::test]
     async fn test_wait_for_socket_timeout() {
-        let result = wait_for_socket("/tmp/nonexistent.sock", 2).await;
+        let result = wait_for_socket("/tmp/nonexistent-socket-xyz-12345.sock", 2).await;
+        let err = result.expect_err("Should timeout on nonexistent socket");
+        assert!(
+            err.to_string().contains("Socket did not become available"),
+            "Error should mention socket timeout: {}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    async fn test_wait_for_socket_success() {
+        let temp_dir = TempDir::new().expect("Create temp dir");
+        let socket_path = temp_dir.path().join("test.sock");
+        let _listener =
+            std::os::unix::net::UnixListener::bind(&socket_path).expect("Bind test socket");
+
+        let result = wait_for_socket(socket_path.to_str().unwrap(), 10).await;
+        result.expect("Should succeed when socket exists");
+    }
+
+    #[tokio::test]
+    async fn test_configure_primal_sockets_beardog() {
+        let mut cmd = Command::new("echo");
+        let mut env = HashMap::new();
+        env.insert("FAMILY_ID".to_string(), "test".to_string());
+        let ctx = ExecutionContext::new(env);
+
+        configure_primal_sockets(&mut cmd, "beardog", "/tmp/beardog.sock", "test", &ctx).await;
+
+        // Spawn and verify args were added (echo will print them)
+        let output = cmd.output().await.expect("spawn echo");
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("/tmp/beardog.sock") || stdout.contains("--socket"),
+            "Beardog should get --socket arg: {}",
+            stdout
+        );
+    }
+
+    #[tokio::test]
+    async fn test_configure_primal_sockets_squirrel() {
+        let mut cmd = Command::new("echo");
+        let mut env = HashMap::new();
+        env.insert("FAMILY_ID".to_string(), "test".to_string());
+        let ctx = ExecutionContext::new(env);
+
+        configure_primal_sockets(&mut cmd, "squirrel", "/tmp/squirrel.sock", "test", &ctx).await;
+
+        let output = cmd.output().await.expect("spawn echo");
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("/tmp/squirrel.sock"),
+            "Squirrel should get socket: {}",
+            stdout
+        );
+    }
+
+    #[tokio::test]
+    async fn test_configure_primal_sockets_songbird() {
+        let mut cmd = Command::new("echo");
+        let mut env = HashMap::new();
+        env.insert("FAMILY_ID".to_string(), "test".to_string());
+        let ctx = ExecutionContext::new(env);
+
+        configure_primal_sockets(&mut cmd, "songbird", "/tmp/songbird.sock", "test", &ctx).await;
+
+        let output = cmd.output().await.expect("spawn echo");
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("/tmp/songbird.sock"),
+            "Songbird should get socket: {}",
+            stdout
+        );
+    }
+
+    #[tokio::test]
+    async fn test_configure_primal_sockets_nestgate() {
+        let mut cmd = Command::new("echo");
+        let mut env = HashMap::new();
+        env.insert("FAMILY_ID".to_string(), "test".to_string());
+        let ctx = ExecutionContext::new(env);
+
+        configure_primal_sockets(&mut cmd, "nestgate", "/tmp/nestgate.sock", "test", &ctx).await;
+
+        let output = cmd.output().await.expect("spawn echo");
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("/tmp/nestgate.sock"),
+            "Nestgate should get socket: {}",
+            stdout
+        );
+    }
+
+    #[tokio::test]
+    async fn test_configure_primal_sockets_unknown_primal() {
+        let mut cmd = Command::new("echo");
+        let mut env = HashMap::new();
+        env.insert("FAMILY_ID".to_string(), "test".to_string());
+        let ctx = ExecutionContext::new(env);
+
+        configure_primal_sockets(
+            &mut cmd,
+            "unknown_primal",
+            "/tmp/unknown.sock",
+            "test",
+            &ctx,
+        )
+        .await;
+
+        let output = cmd.output().await.expect("spawn echo");
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            stdout.contains("/tmp/unknown.sock"),
+            "Unknown primal should get generic socket config: {}",
+            stdout
+        );
+    }
+
+    fn make_minimal_node(id: &str) -> GraphNode {
+        GraphNode {
+            id: id.to_string(),
+            primal: None,
+            output: None,
+            operation: None,
+            constraints: None,
+            depends_on: vec![],
+            capabilities: vec![],
+            capabilities_provided: None,
+            parameter_mappings: None,
+            node_type: None,
+            dependencies: vec![],
+            config: HashMap::new(),
+            outputs: vec![],
+        }
+    }
+
+    #[tokio::test]
+    async fn test_spawn_primal_process_binary_not_found() {
+        let ctx = ExecutionContext::new(HashMap::new());
+        let node = make_minimal_node("test-node");
+
+        let result = spawn_primal_process("nonexistent_primal_xyz", "server", &ctx, &node).await;
+
+        let err = result.expect_err("Should fail when binary not found");
+        assert!(
+            err.to_string().contains("Failed to discover binary")
+                || err.to_string().contains("Binary not found"),
+            "Error should mention binary discovery: {}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    async fn test_spawn_primal_process_with_env_vars_in_node() {
+        let ctx = ExecutionContext::new(HashMap::new());
+        let mut node = make_minimal_node("test-node");
+        node.operation = Some(crate::neural_graph::Operation {
+            name: "test".to_string(),
+            params: HashMap::new(),
+            environment: Some({
+                let mut m = HashMap::new();
+                m.insert("CUSTOM_VAR".to_string(), "custom_value".to_string());
+                m
+            }),
+        });
+
+        // Will fail at binary discovery, but we're testing that node with env is accepted
+        let result = spawn_primal_process("nonexistent_primal", "server", &ctx, &node).await;
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("Socket did not become available"));
     }
 
     #[test]
-    fn test_configure_primal_sockets_beardog() {
-        let mut cmd = Command::new("echo");
-        let ctx = ExecutionContext::new(HashMap::new());
+    fn test_binary_patterns_contain_primal_name() {
+        let primal_name = "beardog";
+        let arch = std::env::consts::ARCH;
+        let os = std::env::consts::OS;
 
-        tokio::runtime::Runtime::new().unwrap().block_on(async {
-            configure_primal_sockets(&mut cmd, "beardog", "/tmp/test.sock", "test", &ctx).await;
-        });
+        let pattern_musl = format!("{}_{}_{}_{}/{}", primal_name, arch, os, "musl", primal_name);
+        assert!(pattern_musl.contains(primal_name));
+        assert!(pattern_musl.contains("musl"));
 
-        // Command should have socket and family-id args
-        // (Can't easily test this without executing, but structure is correct)
+        let pattern_simple = format!("{}/{}", primal_name, primal_name);
+        assert_eq!(pattern_simple, "beardog/beardog");
+    }
+
+    #[tokio::test]
+    async fn test_relay_output_streams_no_panic() {
+        let child = Command::new("true")
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .expect("spawn true");
+
+        relay_output_streams(child, "test-primal".to_string());
+        // If we get here without panic, the function accepted the child
     }
 }

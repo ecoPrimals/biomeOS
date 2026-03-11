@@ -196,7 +196,8 @@ impl HealthUtils {
     }
 
     /// Calculate overall health score (0-100)
-    fn calculate_health_score(health: &SystemHealth) -> f64 {
+    /// Exposed for testing
+    pub(crate) fn calculate_health_score(health: &SystemHealth) -> f64 {
         let mut score: f64 = 100.0;
 
         // Deduct for high resource usage
@@ -307,4 +308,71 @@ pub struct HealthCondition {
     pub description: String,
     /// Recommended action to address the condition
     pub action: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn system_health(cpu: f64, memory: f64, disk: f64) -> SystemHealth {
+        SystemHealth {
+            overall_status: Health::Healthy,
+            cpu_usage: cpu,
+            memory_usage: memory,
+            disk_usage: disk,
+            network_status: "OK".to_string(),
+        }
+    }
+
+    #[test]
+    fn test_calculate_health_score_perfect() {
+        let health = system_health(50.0, 50.0, 50.0);
+        let score = HealthUtils::calculate_health_score(&health);
+        assert_eq!(score, 100.0, "Perfect resource usage should score 100");
+    }
+
+    #[test]
+    fn test_calculate_health_score_memory_penalty() {
+        let health = system_health(50.0, 85.0, 50.0);
+        let score = HealthUtils::calculate_health_score(&health);
+        assert!(score < 100.0, "High memory should reduce score");
+        assert!(score >= 80.0, "10% over 75 = 20 point deduction, score ~80");
+    }
+
+    #[test]
+    fn test_calculate_health_score_cpu_penalty() {
+        let health = system_health(90.0, 50.0, 50.0);
+        let score = HealthUtils::calculate_health_score(&health);
+        assert!(score < 100.0, "High CPU should reduce score");
+    }
+
+    #[test]
+    fn test_calculate_health_score_disk_penalty() {
+        let health = system_health(50.0, 50.0, 95.0);
+        let score = HealthUtils::calculate_health_score(&health);
+        assert!(score < 100.0, "High disk usage should reduce score");
+    }
+
+    #[test]
+    fn test_calculate_health_score_clamped() {
+        let health = system_health(100.0, 100.0, 100.0);
+        let score = HealthUtils::calculate_health_score(&health);
+        assert!(
+            (0.0..=100.0).contains(&score),
+            "Score should be clamped to 0-100"
+        );
+    }
+
+    #[test]
+    fn test_calculate_health_score_exact_thresholds() {
+        // At exactly 75% memory, no deduction
+        let health = system_health(50.0, 75.0, 50.0);
+        let score = HealthUtils::calculate_health_score(&health);
+        assert_eq!(score, 100.0);
+
+        // At exactly 85% disk, no deduction
+        let health2 = system_health(50.0, 50.0, 85.0);
+        let score2 = HealthUtils::calculate_health_score(&health2);
+        assert_eq!(score2, 100.0);
+    }
 }

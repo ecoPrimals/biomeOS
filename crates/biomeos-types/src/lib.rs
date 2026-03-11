@@ -30,6 +30,8 @@ pub mod paths;
 pub mod primal;
 pub mod service;
 pub mod tarpc_types; // tarpc service definitions for high-performance RPC
+pub mod surgical; // Surgical simulation and medical domain types
+pub mod xr; // Extended Reality (VR/AR/XR) types
 
 // Re-export key types from each module
 pub use api_schema::{
@@ -82,6 +84,20 @@ pub use manifest::{BiomeManifest, BiomeSpec, BiomeType, ManifestMetadata};
 
 // Identifier exports - strong-typed domain IDs
 pub use identifiers::{Endpoint, FamilyId, IdError, PrimalId, SessionId, TowerId};
+
+// Surgical domain type exports
+pub use surgical::{
+    BiosignalSample, BiosignalStreamConfig, BiosignalType, CompartmentModel, DamageType,
+    PkModelParams, PkModelResult, SurgicalProcedure, SurgicalSessionMetrics,
+    SurgicalSessionState, ToolTissueInteraction,
+};
+
+// XR (Extended Reality) type exports
+pub use xr::{
+    AnatomyLayer, AnatomyModel, HapticCommand, HapticDeviceCapabilities, HapticDeviceType,
+    MotionCaptureConfig, Pose6DoF, StereoConfig, SurgicalInstrument, TissueMaterial,
+    TrackedDeviceType, TrackingFrame, VisualOutputCapability,
+};
 
 // Additional commonly used types
 pub use chrono::{DateTime, Utc};

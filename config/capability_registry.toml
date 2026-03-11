@@ -104,11 +104,12 @@ capabilities = [
 ]
 
 [translations.storage]
-"storage.put" = { provider = "nestgate", method = "storage.put" }
-"storage.get" = { provider = "nestgate", method = "storage.get" }
+"storage.put" = { provider = "nestgate", method = "storage.store" }
+"storage.get" = { provider = "nestgate", method = "storage.retrieve" }
+"storage.store" = { provider = "nestgate", method = "storage.store" }
+"storage.retrieve" = { provider = "nestgate", method = "storage.retrieve" }
 "storage.delete" = { provider = "nestgate", method = "storage.delete" }
 "storage.list" = { provider = "nestgate", method = "storage.list" }
-"storage.retrieve" = { provider = "nestgate", method = "storage.retrieve" }
 
 # ------------------------------------------------------------------------------
 # Compute Domain (ToadStool)
@@ -124,7 +125,9 @@ capabilities = [
 ]
 
 [translations.compute]
-"compute.execute" = { provider = "toadstool", method = "execute" }
+"compute.execute" = { provider = "toadstool", method = "execute_workload" }
+"compute.submit" = { provider = "toadstool", method = "submit_workload" }
+"compute.stop" = { provider = "toadstool", method = "stop_workload" }
 "compute.parse" = { provider = "toadstool", method = "parse" }
 "compute.transform" = { provider = "toadstool", method = "transform" }
 
@@ -149,6 +152,36 @@ capabilities = [
 "mcp.call" = { provider = "squirrel", method = "mcp_call" }
 
 # ------------------------------------------------------------------------------
+# Data Domain (NestGate Live Providers)
+# Scientific data access: NCBI genomes, NOAA weather, IRIS seismic
+# NestGate acts as a data gateway — it owns the HTTP providers and
+# exposes them via semantic capabilities routed through biomeOS.
+# Added: Phase 1 groundSpring NUCLEUS integration (Feb 28, 2026)
+# ------------------------------------------------------------------------------
+
+[domains.data]
+provider = "nestgate"
+capabilities = [
+    "data",
+    "ncbi",
+    "noaa",
+    "iris",
+    "metagenomics_data",
+    "weather_data",
+    "seismic_data"
+]
+
+[translations.data]
+# NCBI E-utilities (genome, SRA, protein, nucleotide databases)
+"data.ncbi_search" = { provider = "nestgate", method = "data.ncbi_search" }
+"data.ncbi_fetch" = { provider = "nestgate", method = "data.ncbi_fetch" }
+# NOAA Climate Data Online (GHCND daily weather observations)
+"data.noaa_ghcnd" = { provider = "nestgate", method = "data.noaa_ghcnd" }
+# IRIS FDSN (seismic station metadata and earthquake events)
+"data.iris_stations" = { provider = "nestgate", method = "data.iris_stations" }
+"data.iris_events" = { provider = "nestgate", method = "data.iris_events" }
+
+# ------------------------------------------------------------------------------
 # Science Domain (wetSpring)
 # Biodiversity, spectral analysis, Anderson localization, NCBI data
 # wetSpring operates as a science primal — it consumes ToadStool GPU
@@ -165,6 +198,16 @@ capabilities = [
     "metagenomics"
 ]
 
+[domains.neural_science]
+provider = "neuralspring"
+capabilities = [
+    "spectral_analysis",
+    "anderson_localization",
+    "hessian_eigenanalysis",
+    "agent_coordination",
+    "training_trajectory"
+]
+
 [translations.science]
 # Diversity pipeline: FASTQ → Shannon, Simpson, observed features, Bray-Curtis
 "science.diversity" = { provider = "wetspring", method = "science.diversity" }
@@ -176,6 +219,253 @@ capabilities = [
 "science.qs_model" = { provider = "wetspring", method = "science.qs_model" }
 # Full pipeline: NCBI → diversity → Anderson → QS classification
 "science.full_pipeline" = { provider = "wetspring", method = "science.full_pipeline" }
+
+# ------------------------------------------------------------------------------
+# neuralSpring Science Capabilities
+# Spectral analysis, Anderson localization, loss landscape, multi-agent coordination
+# Uses ToadStool GPU (barracuda eigh_gpu, variance_gpu, etc.) internally
+# ------------------------------------------------------------------------------
+"science.spectral_analysis" = { provider = "neuralspring", method = "science.spectral_analysis" }
+"science.anderson_localization" = { provider = "neuralspring", method = "science.anderson_localization" }
+"science.hessian_eigen" = { provider = "neuralspring", method = "science.hessian_eigen" }
+"science.agent_coordination" = { provider = "neuralspring", method = "science.agent_coordination" }
+"science.ipr" = { provider = "neuralspring", method = "science.ipr" }
+"science.disorder_sweep" = { provider = "neuralspring", method = "science.disorder_sweep" }
+# Training trajectory spectral analysis (IPR/LSR/entropy evolution over epochs)
+"science.training_trajectory" = { provider = "neuralspring", method = "science.training_trajectory" }
+
+# ------------------------------------------------------------------------------
+# Ecology Domain (airSpring)
+# Agricultural & ecological science: ET₀, water balance, yield, soil, diversity
+# airSpring operates as an ecology science primal — it consumes ToadStool GPU
+# primitives internally (via barracuda) and NestGate for weather/NASS data,
+# exposing high-level agricultural science capabilities to the ecosystem.
+# Added: Phase 2 airSpring NUCLEUS integration (Mar 1, 2026)
+# ------------------------------------------------------------------------------
+
+[domains.ecology]
+provider = "airspring"
+capabilities = [
+    "ecology",
+    "et0",
+    "irrigation",
+    "water_balance",
+    "yield",
+    "agriculture",
+    "soil_science",
+    "biodiversity",
+    "soil_physics",
+    "crop_management"
+]
+
+[translations.ecology]
+# ── Evapotranspiration (7 methods) ──
+# FAO-56 Penman-Monteith reference evapotranspiration
+"ecology.et0_fao56" = { provider = "airspring", method = "science.et0_fao56" }
+# Hargreaves-Samani (1985) temperature-based ET₀
+"ecology.et0_hargreaves" = { provider = "airspring", method = "science.et0_hargreaves" }
+# Priestley-Taylor (1972) radiation-based ET₀
+"ecology.et0_priestley_taylor" = { provider = "airspring", method = "science.et0_priestley_taylor" }
+# Makkink (1957) radiation-based ET₀
+"ecology.et0_makkink" = { provider = "airspring", method = "science.et0_makkink" }
+# Turc (1961) temperature-radiation ET₀
+"ecology.et0_turc" = { provider = "airspring", method = "science.et0_turc" }
+# Hamon (1961) temperature-based PET
+"ecology.et0_hamon" = { provider = "airspring", method = "science.et0_hamon" }
+# Blaney-Criddle (1950) temperature PET
+"ecology.et0_blaney_criddle" = { provider = "airspring", method = "science.et0_blaney_criddle" }
+# Thornthwaite (1948) monthly PET
+"ecology.thornthwaite" = { provider = "airspring", method = "science.thornthwaite" }
+
+# ── Water balance & yield ──
+# FAO-56 field-scale water balance
+"ecology.water_balance" = { provider = "airspring", method = "science.water_balance" }
+# Stewart (1977) yield response to water stress
+"ecology.yield_response" = { provider = "airspring", method = "science.yield_response" }
+# Full ecology pipeline: ET₀ → water balance → yield (single call)
+"ecology.full_pipeline" = { provider = "airspring", method = "ecology.full_pipeline" }
+
+# ── Soil physics ──
+# 1D Richards equation (van Genuchten-Mualem, implicit Euler + Picard)
+"ecology.richards_1d" = { provider = "airspring", method = "science.richards_1d" }
+# SCS Curve Number runoff (USDA SCS 1972)
+"ecology.scs_cn_runoff" = { provider = "airspring", method = "science.scs_cn_runoff" }
+# Green-Ampt (1911) infiltration model
+"ecology.green_ampt" = { provider = "airspring", method = "science.green_ampt_infiltration" }
+# Topp equation (1980) TDR dielectric → VWC
+"ecology.soil_moisture" = { provider = "airspring", method = "science.soil_moisture_topp" }
+# Saxton-Rawls (2006) pedotransfer functions
+"ecology.pedotransfer" = { provider = "airspring", method = "science.pedotransfer_saxton_rawls" }
+
+# ── Crop & irrigation ──
+# FAO-56 dual crop coefficient (Chapters 7+11)
+"ecology.dual_kc" = { provider = "airspring", method = "science.dual_kc" }
+# SoilWatch 10 sensor calibration (Topp polynomial)
+"ecology.sensor_cal" = { provider = "airspring", method = "science.sensor_calibration" }
+# Growing degree-days (GDD)
+"ecology.gdd" = { provider = "airspring", method = "science.gdd" }
+
+# ── Biodiversity ──
+# Shannon/Simpson/Chao1 alpha diversity
+"ecology.shannon" = { provider = "airspring", method = "science.shannon_diversity" }
+# Bray-Curtis beta diversity (dissimilarity)
+"ecology.bray_curtis" = { provider = "airspring", method = "science.bray_curtis" }
+
+# ── Geophysics coupling ──
+# Anderson soil-geophysics coupling chain
+"ecology.anderson" = { provider = "airspring", method = "science.anderson_coupling" }
+
+# ------------------------------------------------------------------------------
+# Game Science Domain (ludoSpring)
+# Ludology: game mechanics, interaction design, procedural generation,
+# accessibility scoring, engagement metrics, Tufte-on-games analysis.
+# ludoSpring is a science spring — it studies games as systems and provides
+# validated interaction models that benefit every primal's UI.
+# Added: Phase 2 ludoSpring scaffold (Mar 10, 2026)
+# ------------------------------------------------------------------------------
+
+[domains.game]
+provider = "ludospring"
+capabilities = [
+    "game",
+    "ludology",
+    "interaction_design",
+    "procedural_generation",
+    "accessibility_scoring",
+    "engagement_metrics"
+]
+
+[translations.game]
+# Tufte constraint analysis on game/application UIs
+"game.analyze_ui" = { provider = "ludospring", method = "game.analyze_ui" }
+# Flow state evaluation (Csikszentmihalyi model)
+"game.evaluate_flow" = { provider = "ludospring", method = "game.evaluate_flow" }
+# Fitts's law interaction cost
+"game.fitts_cost" = { provider = "ludospring", method = "game.fitts_cost" }
+# Engagement metrics from behavior snapshot
+"game.engagement" = { provider = "ludospring", method = "game.engagement" }
+# Procedural noise field generation
+"game.generate_noise" = { provider = "ludospring", method = "game.generate_noise" }
+# Wave function collapse step (constraint propagation)
+"game.wfc_step" = { provider = "ludospring", method = "game.wfc_step" }
+# Accessibility dimension scoring
+"game.accessibility" = { provider = "ludospring", method = "game.accessibility" }
+# Dynamic difficulty adjustment recommendation
+"game.difficulty_adjustment" = { provider = "ludospring", method = "game.difficulty_adjustment" }
+
+# ------------------------------------------------------------------------------
+# Visualization Domain (petalTongue)
+# Tufte-inspired visualization, export, UI rendering, interaction subscriptions.
+# petalTongue is a visualization primal — it renders charts, exports SVG/PNG/JSON,
+# and provides UI/status display via JSON-RPC IPC.
+# Added: petalTongue biomeOS integration (Mar 11, 2026)
+# ------------------------------------------------------------------------------
+
+[domains.visualization]
+provider = "petaltongue"
+capabilities = [
+    "visualization",
+    "ui",
+    "interaction",
+    "representation"
+]
+
+[translations.visualization]
+# Render visualizations
+"visualization.render" = { provider = "petaltongue", method = "visualization.render" }
+# Export to SVG/PNG/JSON
+"visualization.export" = { provider = "petaltongue", method = "visualization.export" }
+# Capability introspection
+"visualization.capabilities" = { provider = "petaltongue", method = "visualization.capabilities" }
+
+[translations.ui]
+# UI rendering
+"ui.render" = { provider = "petaltongue", method = "ui.render" }
+# Status display
+"ui.display_status" = { provider = "petaltongue", method = "ui.display_status" }
+
+[translations.interaction]
+# Event subscriptions
+"interaction.subscribe" = { provider = "petaltongue", method = "interaction.subscribe" }
+
+# ------------------------------------------------------------------------------
+# XR / Immersive Domain (petalTongue + ludoSpring)
+# Stereo rendering, motion tracking, haptic feedback
+# petalTongue provides the rendering and device integration layer;
+# ludoSpring provides interaction semantics and game-loop coordination.
+# Added: Phase 2 XR/VR evolution (Mar 11, 2026)
+# ------------------------------------------------------------------------------
+
+[domains.xr]
+provider = "petaltongue"
+capabilities = [
+    "xr",
+    "stereo",
+    "vr",
+    "ar",
+    "tracking",
+    "haptic",
+    "mocap"
+]
+
+[translations.xr]
+# Stereo rendering pipeline
+"xr.negotiate_stereo" = { provider = "petaltongue", method = "xr.negotiate_stereo" }
+"xr.submit_frame" = { provider = "petaltongue", method = "xr.submit_frame" }
+"xr.get_render_targets" = { provider = "petaltongue", method = "xr.get_render_targets" }
+# Motion tracking
+"xr.get_tracking_frame" = { provider = "petaltongue", method = "xr.get_tracking_frame" }
+"xr.start_tracking" = { provider = "petaltongue", method = "xr.start_tracking" }
+"xr.stop_tracking" = { provider = "petaltongue", method = "xr.stop_tracking" }
+"xr.calibrate_tracking" = { provider = "petaltongue", method = "xr.calibrate_tracking" }
+# Haptic feedback
+"xr.discover_haptic" = { provider = "petaltongue", method = "xr.discover_haptic" }
+"xr.send_haptic" = { provider = "petaltongue", method = "xr.send_haptic" }
+"xr.stop_haptic" = { provider = "petaltongue", method = "xr.stop_haptic" }
+# Session lifecycle
+"xr.begin_session" = { provider = "petaltongue", method = "xr.begin_session" }
+"xr.end_session" = { provider = "petaltongue", method = "xr.end_session" }
+"xr.get_session_state" = { provider = "petaltongue", method = "xr.get_session_state" }
+
+# ------------------------------------------------------------------------------
+# Medical / Surgical Domain (healthSpring)
+# Anatomy modeling, tissue physics, surgical tool simulation,
+# biosignal processing, pharmacokinetics.
+# healthSpring is the medical science primal; it consumes ToadStool GPU
+# for tissue deformation and petalTongue for anatomy rendering.
+# Added: Phase 2 surgical VR evolution (Mar 11, 2026)
+# ------------------------------------------------------------------------------
+
+[domains.medical]
+provider = "healthspring"
+capabilities = [
+    "medical",
+    "surgical",
+    "anatomy",
+    "tissue",
+    "biosignal",
+    "pharmacokinetics"
+]
+
+[translations.medical]
+# Anatomy models
+"medical.load_anatomy" = { provider = "healthspring", method = "medical.load_anatomy" }
+"medical.list_anatomy" = { provider = "healthspring", method = "medical.list_anatomy" }
+"medical.get_anatomy_layers" = { provider = "healthspring", method = "medical.get_anatomy_layers" }
+# Tissue physics
+"medical.simulate_tissue" = { provider = "healthspring", method = "medical.simulate_tissue" }
+"medical.deform_tissue" = { provider = "healthspring", method = "medical.deform_tissue" }
+"medical.reset_tissue" = { provider = "healthspring", method = "medical.reset_tissue" }
+# Surgical tool simulation
+"medical.register_tool" = { provider = "healthspring", method = "medical.register_tool" }
+"medical.update_tool_pose" = { provider = "healthspring", method = "medical.update_tool_pose" }
+"medical.get_tool_interaction" = { provider = "healthspring", method = "medical.get_tool_interaction" }
+# Biosignal processing
+"medical.process_biosignal" = { provider = "healthspring", method = "medical.process_biosignal" }
+"medical.start_biosignal_stream" = { provider = "healthspring", method = "medical.start_biosignal_stream" }
+# Pharmacokinetics
+"medical.pk_model" = { provider = "healthspring", method = "medical.pk_model" }
+"medical.drug_interaction" = { provider = "healthspring", method = "medical.drug_interaction" }
 
 # ==============================================================================
 # SOCKET PATH TEMPLATES

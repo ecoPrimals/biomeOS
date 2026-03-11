@@ -101,11 +101,12 @@ impl GenomeFactory {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use biomeos_genomebin_v3::GenomeBin;
     use tempfile::TempDir;
 
     #[test]
     fn test_compose_empty() {
-        let temp_dir = TempDir::new().unwrap();
+        let temp_dir = TempDir::new().expect("temp dir");
         let factory = GenomeFactory::new(temp_dir.path());
 
         let request = GenomeComposeRequest {
@@ -114,8 +115,106 @@ mod tests {
             genomes: vec![],
         };
 
-        // Empty genomes should fail
         let result = factory.compose_genome(request);
         assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("No genomes provided"));
+    }
+
+    #[test]
+    fn test_compose_request_serialization() {
+        let request = GenomeComposeRequest {
+            name: "tower".to_string(),
+            nucleus_type: "TOWER".to_string(),
+            genomes: vec!["beardog".to_string(), "nest".to_string()],
+        };
+        let json = serde_json::to_string(&request).expect("serialize");
+        assert!(json.contains("\"name\":\"tower\""));
+        assert!(json.contains("TOWER"));
+        let deserialized: GenomeComposeRequest = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(deserialized.name, request.name);
+        assert_eq!(deserialized.genomes.len(), 2);
+    }
+
+    #[test]
+    fn test_compose_response_serialization() {
+        let response = GenomeComposeResponse {
+            genome_id: "tower-atomic".to_string(),
+            path: PathBuf::from("/tmp/tower.genome"),
+            size: 1024,
+            embedded_genomes: vec!["beardog".to_string()],
+            nucleus_type: "TOWER".to_string(),
+        };
+        let json = serde_json::to_string(&response).expect("serialize");
+        assert!(json.contains("\"genome_id\":\"tower-atomic\""));
+        assert!(json.contains("\"size\":1024"));
+    }
+
+    #[test]
+    fn test_compose_nonexistent_genome() {
+        let temp_dir = TempDir::new().expect("temp dir");
+        let factory = GenomeFactory::new(temp_dir.path());
+
+        let request = GenomeComposeRequest {
+            name: "tower".to_string(),
+            nucleus_type: "TOWER".to_string(),
+            genomes: vec!["nonexistent-genome".to_string()],
+        };
+
+        let result = factory.compose_genome(request);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("Failed to load genome"));
+    }
+
+    #[test]
+    fn test_compose_success() {
+        let temp_dir = TempDir::new().expect("temp dir");
+        let factory = GenomeFactory::new(temp_dir.path());
+
+        let genome = GenomeBin::new("beardog");
+        genome
+            .save(&factory.genome_path("beardog"))
+            .expect("save genome");
+
+        let genome2 = GenomeBin::new("songbird");
+        genome2
+            .save(&factory.genome_path("songbird"))
+            .expect("save genome");
+
+        let request = GenomeComposeRequest {
+            name: "tower".to_string(),
+            nucleus_type: "TOWER".to_string(),
+            genomes: vec!["beardog".to_string(), "songbird".to_string()],
+        };
+
+        let result = factory.compose_genome(request);
+        let response = result.expect("compose should succeed");
+        assert_eq!(response.genome_id, "tower-atomic");
+        assert_eq!(response.embedded_genomes, vec!["beardog", "songbird"]);
+        assert_eq!(response.nucleus_type, "TOWER");
+        assert!(factory.genome_exists("tower"));
+    }
+
+    #[test]
+    fn test_compose_success_standalone_type() {
+        let temp_dir = TempDir::new().expect("temp dir");
+        let factory = GenomeFactory::new(temp_dir.path());
+
+        let genome = GenomeBin::new("custom-primal");
+        genome
+            .save(&factory.genome_path("custom-primal"))
+            .expect("save genome");
+
+        let request = GenomeComposeRequest {
+            name: "custom-atomic".to_string(),
+            nucleus_type: "STANDALONE".to_string(),
+            genomes: vec!["custom-primal".to_string()],
+        };
+
+        let result = factory.compose_genome(request);
+        let response = result.expect("compose should succeed");
+        assert_eq!(response.genome_id, "custom-atomic-atomic");
+        assert_eq!(response.embedded_genomes, vec!["custom-primal"]);
     }
 }

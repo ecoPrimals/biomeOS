@@ -38,6 +38,7 @@ tokio = { version = "1.0", features = ["full"] }
 anyhow = "1.0"
 tracing = "0.1"
 serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 
 # Crypto (standalone until beardog crates are wired)
 ed25519-dalek = { version = "2.0", features = ["rand_core"] }

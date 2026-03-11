@@ -124,14 +124,54 @@ mod tests {
 
     #[test]
     fn test_default_install_dir() {
-        let dir = GenomeBin::default_install_dir().unwrap();
-        assert!(dir.is_absolute());
+        let dir = GenomeBin::default_install_dir().expect("default_install_dir should succeed");
+        assert!(dir.is_absolute(), "install dir should be absolute path");
         // Should be /opt for root or ~/.local for non-root
-        let path_str = dir.to_str().unwrap();
+        let path_str = dir.to_str().expect("path should be valid UTF-8");
         assert!(
             path_str.contains("/opt")
                 || path_str.contains("/.local")
-                || path_str.contains("/data/local/tmp")
+                || path_str.contains("/data/local/tmp"),
+            "path should be platform-appropriate, got: {}",
+            path_str
         );
+    }
+
+    #[test]
+    fn test_extract_no_binary_for_arch() {
+        // GenomeBin with no binary for current arch should fail
+        let genome = GenomeBin::new("empty-genome");
+        let temp = tempfile::tempdir().expect("temp dir");
+        let err = genome
+            .extract(temp.path())
+            .expect_err("extract should fail when no binary");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("No binary") || msg.contains("architecture"),
+            "error should mention missing binary/arch: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn test_extract_success() {
+        let mut genome = GenomeBin::new("extract-test");
+        genome.add_binary_bytes(Arch::detect(), b"#!/bin/sh\necho hello");
+        let temp = tempfile::tempdir().expect("temp dir");
+        let path = genome
+            .extract(temp.path())
+            .expect("extract should succeed with binary for current arch");
+        assert!(path.exists(), "extracted binary should exist");
+        assert_eq!(path.file_name().unwrap(), "extract-test");
+        let contents = std::fs::read(&path).expect("read binary");
+        assert_eq!(contents, b"#!/bin/sh\necho hello");
+    }
+
+    #[test]
+    fn test_has_current_arch() {
+        let mut genome = GenomeBin::new("arch-test");
+        assert!(!genome.has_current_arch());
+        genome.add_binary_bytes(Arch::detect(), b"data");
+        assert!(genome.has_current_arch());
     }
 }

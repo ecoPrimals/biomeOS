@@ -323,4 +323,142 @@ interactions: []
         let def = NicheDefinition::from_yaml(yaml).unwrap();
         assert_eq!(def.niche.id, "test-niche");
     }
+
+    #[test]
+    fn test_validate_empty_organisms_fails() {
+        let yaml = r#"
+niche:
+  id: empty-niche
+  name: Empty
+  version: "1.0.0"
+  description: No organisms
+
+organisms:
+  chimeras: {}
+  primals: {}
+
+interactions: []
+"#;
+        let def: NicheDefinition = serde_yaml::from_str(yaml).unwrap();
+        let result = def.validate();
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("at least one organism"));
+    }
+
+    #[test]
+    fn test_validate_invalid_interaction_from() {
+        let yaml = r#"
+niche:
+  id: bad-niche
+  name: Bad
+  version: "1.0.0"
+  description: Bad interaction
+
+organisms:
+  chimeras:
+    mesh:
+      type: p2p-secure
+  primals: {}
+
+interactions:
+  - from: nonexistent.foo
+    to: mesh.bar
+    type: stream
+"#;
+        let def: NicheDefinition = serde_yaml::from_str(yaml).unwrap();
+        let result = def.validate();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Unknown organism"));
+    }
+
+    #[test]
+    fn test_apply_customization_missing_required() {
+        let yaml = r#"
+niche:
+  id: custom-niche
+  name: Custom
+  version: "1.0.0"
+  description: Has required customization
+
+organisms:
+  chimeras:
+    mesh:
+      type: p2p-secure
+  primals: {}
+
+customization:
+  - id: required_option
+    name: Required
+    type: select
+    required: true
+"#;
+        let mut def: NicheDefinition = serde_yaml::from_str(yaml).unwrap();
+        let values = HashMap::new();
+        let result = def.apply_customization(&values);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("required_option"));
+    }
+
+    #[test]
+    fn test_apply_customization_with_values() {
+        let yaml = r#"
+niche:
+  id: custom-niche
+  name: Custom
+  version: "1.0.0"
+  description: Has required customization
+
+organisms:
+  chimeras:
+    mesh:
+      type: p2p-secure
+  primals: {}
+
+customization:
+  - id: required_option
+    name: Required
+    type: select
+    required: true
+"#;
+        let mut def: NicheDefinition = serde_yaml::from_str(yaml).unwrap();
+        let mut values = HashMap::new();
+        values.insert("required_option".to_string(), serde_json::json!("value"));
+        let result = def.apply_customization(&values);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_niche_resources_default() {
+        let resources = NicheResources::default();
+        assert!(resources.base.cpu_cores.is_none());
+        assert!(resources.base.memory_gb.is_none());
+        assert!(resources.gpu.is_none());
+    }
+
+    #[test]
+    fn test_niche_customization_serialization() {
+        let custom = NicheCustomization {
+            id: "custom_id".to_string(),
+            name: "Custom Name".to_string(),
+            description: "Custom desc".to_string(),
+            option_type: "select".to_string(),
+            options: vec!["a".to_string(), "b".to_string()],
+            default: serde_json::json!("a"),
+            required: true,
+            min: Some(0),
+            max: Some(100),
+        };
+        let json = serde_json::to_string(&custom).expect("serialize");
+        let restored: NicheCustomization = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(custom.id, restored.id);
+        assert_eq!(custom.required, restored.required);
+    }
+
+    #[test]
+    fn test_network_requirements_default() {
+        let req = NetworkRequirements::default();
+        assert!(req.latency_target_ms.is_none());
+        assert!(req.jitter_tolerance_ms.is_none());
+    }
 }

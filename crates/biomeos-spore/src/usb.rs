@@ -75,16 +75,33 @@ async fn probe_device(path: PathBuf) -> SporeResult<UsbDevice> {
         return Err(SporeError::InvalidConfig("Not a directory".to_string()));
     }
 
-    // Try to get filesystem stats
+    // Try to get filesystem stats via statvfs (Unix) or fallback
     #[cfg(unix)]
     let (available_space, total_space) = {
-        // Simplified - in production, use statvfs or similar
-        let size = metadata.len();
-        (size, size * 2) // Placeholder
+        let path_clone = path.clone();
+        match tokio::task::spawn_blocking(move || {
+            nix::sys::statvfs::statvfs(path_clone.as_path())
+        })
+        .await
+        {
+            Ok(Ok(st)) => {
+                let avail = st.blocks_available() as u64 * st.fragment_size() as u64;
+                let total = st.blocks() as u64 * st.fragment_size() as u64;
+                (avail, total)
+            }
+            _ => {
+                // Fallback to placeholder if statvfs fails
+                let size = metadata.len();
+                (size, size.saturating_mul(2))
+            }
+        }
     };
 
     #[cfg(not(unix))]
-    let (available_space, total_space) = (0, 0);
+    let (available_space, total_space) = {
+        let size = metadata.len();
+        (size, size.saturating_mul(2))
+    };
 
     // Extract label from path (last component)
     let label = path

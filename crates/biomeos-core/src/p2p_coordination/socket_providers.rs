@@ -46,7 +46,7 @@ impl SocketRpcClient {
     }
 
     /// Set the timeout for RPC calls (builder pattern)
-    #[allow(dead_code)] // Part of public API, used by consumers configuring timeouts
+    #[allow(dead_code)] // Part of public API; used in tests; available for production config
     pub fn with_timeout(mut self, timeout: Duration) -> Self {
         self.timeout = timeout;
         self
@@ -98,7 +98,7 @@ impl SocketRpcClient {
     }
 
     /// Get the socket path this client connects to
-    #[allow(dead_code)] // Part of public API for diagnostics/logging
+    #[allow(dead_code)] // Part of public API; used in tests and diagnostics
     pub fn socket_path(&self) -> &PathBuf {
         &self.socket_path
     }

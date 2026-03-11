@@ -396,7 +396,7 @@ impl ComputeNode for LeafNode {
 /// This is intentional - we may use it in future for resource reservation/limits.
 pub struct ParentNode {
     config: NodeConfig,
-    #[allow(dead_code)] // Reserved for future resource reservation/limits
+    #[allow(dead_code)] // TODO: Wire up for resource reservation/limits
     resources: ResourceInfo,
     children: Vec<Arc<dyn ComputeNode>>,
 }

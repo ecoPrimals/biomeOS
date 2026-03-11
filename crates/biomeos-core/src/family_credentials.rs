@@ -45,7 +45,6 @@ pub enum CredentialsError {
 }
 
 // Alias for backward compatibility
-#[allow(dead_code)]
 type BirdSongError = CredentialsError;
 
 /// Secure wrapper for family seed that zeroizes on drop
@@ -150,7 +149,7 @@ impl FamilyCredentials {
     /// - age encryption (github.com/FiloSottile/age)
     /// - System keychain integration (keyring-rs)
     /// - Environment-based key derivation
-    #[allow(dead_code)]
+    #[allow(dead_code)] // TODO: Wire up when age/keychain integration is implemented
     pub fn from_encrypted_file(
         path: impl AsRef<Path>,
         _encryption_key: &[u8],

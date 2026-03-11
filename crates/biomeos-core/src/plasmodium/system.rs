@@ -93,3 +93,51 @@ pub(crate) fn num_cpus() -> usize {
         .map(|s| s.lines().filter(|l| l.starts_with("processor")).count())
         .unwrap_or(1)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_system_load_returns_valid_range() {
+        let load = get_system_load();
+        assert!(
+            (0.0..=1.0).contains(&load),
+            "Load should be normalized to [0,1], got {}",
+            load
+        );
+    }
+
+    #[test]
+    fn test_get_system_ram_gb_non_negative() {
+        let ram = get_system_ram_gb();
+        assert!(
+            ram < 1_000_000,
+            "RAM in GB should be reasonable, got {}",
+            ram
+        );
+    }
+
+    #[test]
+    fn test_num_cpus_at_least_one() {
+        let cores = num_cpus();
+        assert!(cores >= 1, "Should have at least 1 CPU, got {}", cores);
+    }
+
+    #[test]
+    fn test_compute_info_types() {
+        use crate::plasmodium::types::{ComputeInfo, GpuInfo};
+        let info = ComputeInfo {
+            gpus: vec![GpuInfo {
+                name: "Test GPU".to_string(),
+                vram_mb: 8192,
+                gate_id: "local".to_string(),
+            }],
+            ram_gb: 16,
+            cpu_cores: 8,
+        };
+        assert_eq!(info.gpus.len(), 1);
+        assert_eq!(info.ram_gb, 16);
+        assert_eq!(info.cpu_cores, 8);
+    }
+}

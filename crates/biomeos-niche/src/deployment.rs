@@ -67,7 +67,7 @@ struct OrganismHandle {
 
 /// Organism status
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[allow(dead_code)] // Status variants for future use
+#[allow(dead_code)] // TODO: Wire up for organism lifecycle state machine
 enum OrganismStatus {
     Pending,
     Starting,
@@ -305,5 +305,85 @@ mod tests {
 
         deployment.stop().await.unwrap();
         assert_eq!(deployment.status().await, DeploymentStatus::Stopped);
+    }
+
+    #[tokio::test]
+    async fn test_deployment_is_healthy() {
+        let temp_dir = TempDir::new().unwrap();
+        let definition = create_test_niche();
+        let deployment = NicheDeployment::new(Arc::new(definition), temp_dir.path().to_path_buf());
+
+        deployment.start().await.unwrap();
+        assert!(deployment.is_healthy().await);
+    }
+
+    #[tokio::test]
+    async fn test_deployment_manager_deploy() {
+        let temp_dir = TempDir::new().unwrap();
+        let manager = DeploymentManager::new();
+        let definition = create_test_niche();
+
+        let deployment = manager
+            .deploy(definition, temp_dir.path().to_path_buf())
+            .await
+            .expect("deploy should succeed");
+
+        assert_eq!(deployment.status().await, DeploymentStatus::Running);
+        let list = manager.list().await;
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0].1, "test-niche");
+    }
+
+    #[tokio::test]
+    async fn test_deployment_manager_get() {
+        let temp_dir = TempDir::new().unwrap();
+        let manager = DeploymentManager::new();
+        let definition = create_test_niche();
+
+        let deployment = manager
+            .deploy(definition, temp_dir.path().to_path_buf())
+            .await
+            .expect("deploy should succeed");
+
+        let got = manager.get(deployment.id).await;
+        assert!(got.is_some());
+        assert_eq!(got.unwrap().id, deployment.id);
+    }
+
+    #[tokio::test]
+    async fn test_deployment_manager_undeploy() {
+        let temp_dir = TempDir::new().unwrap();
+        let manager = DeploymentManager::new();
+        let definition = create_test_niche();
+
+        let deployment = manager
+            .deploy(definition, temp_dir.path().to_path_buf())
+            .await
+            .expect("deploy should succeed");
+
+        manager.undeploy(deployment.id).await.unwrap();
+        assert!(manager.get(deployment.id).await.is_none());
+    }
+
+    #[test]
+    fn test_deployment_status_serialization() {
+        for status in [
+            DeploymentStatus::Preparing,
+            DeploymentStatus::Starting,
+            DeploymentStatus::Running,
+            DeploymentStatus::Stopping,
+            DeploymentStatus::Stopped,
+            DeploymentStatus::Failed,
+        ] {
+            let json = serde_json::to_string(&status).expect("serialize");
+            let restored: DeploymentStatus = serde_json::from_str(&json).expect("deserialize");
+            assert_eq!(status, restored);
+        }
+    }
+
+    #[test]
+    fn test_deployment_status_equality() {
+        assert_eq!(DeploymentStatus::Running, DeploymentStatus::Running);
+        assert_ne!(DeploymentStatus::Running, DeploymentStatus::Stopped);
     }
 }

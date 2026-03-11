@@ -299,6 +299,149 @@ impl PrimalResponse {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_request_priority_ordering() {
+        assert!(RequestPriority::Critical > RequestPriority::Low);
+        assert!(RequestPriority::High > RequestPriority::Normal);
+        assert_eq!(RequestPriority::Low as i32, 1);
+        assert_eq!(RequestPriority::Critical as i32, 4);
+    }
+
+    #[test]
+    fn test_response_status_variants() {
+        assert!(matches!(ResponseStatus::Success, ResponseStatus::Success));
+        assert!(matches!(ResponseStatus::Error, ResponseStatus::Error));
+        assert!(matches!(ResponseStatus::Timeout, ResponseStatus::Timeout));
+    }
+
+    #[test]
+    fn test_primal_request_default() {
+        let req = PrimalRequest::default();
+        assert_eq!(req.priority, RequestPriority::Normal);
+        assert_eq!(req.timeout_ms, Some(30000));
+        assert!(req.request_id != uuid::Uuid::nil());
+    }
+
+    #[test]
+    fn test_primal_request_new() {
+        let req = PrimalRequest::new("health_check");
+        assert_eq!(req.method, "health_check");
+    }
+
+    #[test]
+    fn test_primal_request_builder() {
+        let req = PrimalRequest::new("test")
+            .with_payload(serde_json::json!({"key": "value"}))
+            .with_priority(RequestPriority::High)
+            .with_timeout(5000)
+            .with_source("beardog")
+            .with_metadata("trace", "123")
+            .with_correlation_id(uuid::Uuid::new_v4());
+        assert_eq!(req.method, "test");
+        assert_eq!(req.priority, RequestPriority::High);
+        assert_eq!(req.timeout_ms, Some(5000));
+        assert_eq!(req.source.as_deref(), Some("beardog"));
+    }
+
+    #[test]
+    fn test_primal_response_success() {
+        let id = uuid::Uuid::new_v4();
+        let resp = PrimalResponse::success(id, serde_json::json!({"ok": true}));
+        assert_eq!(resp.request_id, id);
+        assert_eq!(resp.status, ResponseStatus::Success);
+        assert!(resp.error.is_none());
+    }
+
+    #[test]
+    fn test_primal_response_error() {
+        let id = uuid::Uuid::new_v4();
+        let err = BiomeError::internal_error("validation failed", None::<String>);
+        let resp = PrimalResponse::error(id, err);
+        assert_eq!(resp.status, ResponseStatus::Error);
+        assert!(resp.error.is_some());
+    }
+
+    #[test]
+    fn test_primal_response_accepted() {
+        let id = uuid::Uuid::new_v4();
+        let resp = PrimalResponse::accepted(id);
+        assert_eq!(resp.status, ResponseStatus::Accepted);
+    }
+
+    #[test]
+    fn test_primal_response_builder() {
+        let resp = PrimalResponse::default()
+            .with_processing_time(100)
+            .with_metadata("key", "value");
+        assert_eq!(resp.processing_time_ms, 100);
+    }
+
+    #[test]
+    fn test_primal_metadata_default() {
+        let meta = PrimalMetadata::default();
+        assert_eq!(meta.name, "Unknown Primal");
+        assert_eq!(meta.version, "0.1.0");
+        assert!(meta.capabilities.is_empty());
+    }
+
+    #[test]
+    fn test_helpers_health_check_request() {
+        let req = helpers::health_check_request();
+        assert_eq!(req.method, "health_check");
+        assert_eq!(req.priority, RequestPriority::High);
+        assert_eq!(req.timeout_ms, Some(5000));
+    }
+
+    #[test]
+    fn test_helpers_capability_discovery_request() {
+        let req = helpers::capability_discovery_request();
+        assert_eq!(req.method, "get_capabilities");
+    }
+
+    #[test]
+    fn test_helpers_healthy_response() {
+        let id = uuid::Uuid::new_v4();
+        let resp = helpers::healthy_response(id);
+        assert_eq!(resp.request_id, id);
+        assert_eq!(resp.status, ResponseStatus::Success);
+    }
+
+    #[test]
+    fn test_helpers_degraded_response() {
+        let id = uuid::Uuid::new_v4();
+        let resp = helpers::degraded_response(id, vec!["issue1".to_string()]);
+        assert_eq!(resp.request_id, id);
+        let issues = resp
+            .payload
+            .get("issues")
+            .and_then(|v| v.as_array())
+            .expect("issues array");
+        assert_eq!(issues.len(), 1);
+    }
+
+    #[test]
+    fn test_helpers_critical_response() {
+        let id = uuid::Uuid::new_v4();
+        let resp = helpers::critical_response(id, vec!["critical".to_string()]);
+        assert_eq!(resp.request_id, id);
+        assert_eq!(
+            resp.payload.get("health").and_then(|v| v.as_str()),
+            Some("critical")
+        );
+    }
+
+    #[test]
+    fn test_types_serialization() {
+        let req = PrimalRequest::new("test");
+        let json = serde_json::to_string(&req).expect("serialize");
+        let _: PrimalRequest = serde_json::from_str(&json).expect("deserialize");
+    }
+}
+
 /// Helper functions for creating common primal operations
 pub mod helpers {
     use super::*;

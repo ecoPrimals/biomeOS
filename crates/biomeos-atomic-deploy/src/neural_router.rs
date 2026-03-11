@@ -548,27 +548,6 @@ impl NeuralRouter {
         }
     }
 
-    /// Discover a single primal by capability
-    #[allow(dead_code)] // Reserved for single-capability discovery queries
-    async fn discover_single_primal(
-        &self,
-        primal_hint: &str,
-        capability: &str,
-    ) -> Result<DiscoveredAtomic> {
-        debug!("   Discovering single primal for {}", capability);
-
-        let primal = self.find_primal_by_socket(primal_hint).await?;
-
-        info!("   ✅ Discovered {} for {}", primal.name, capability);
-
-        Ok(DiscoveredAtomic {
-            capability: capability.to_string(),
-            primals: vec![primal.clone()],
-            atomic_type: None,
-            primary_socket: primal.socket_path,
-        })
-    }
-
     /// Find primal by socket pattern (runtime discovery)
     ///
     /// **Zero Hardcoding**: Constructs socket path from family_id + primal name

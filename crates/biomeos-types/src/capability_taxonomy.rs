@@ -192,6 +192,42 @@ pub enum CapabilityTaxonomy {
     /// Typical provider: petalTongue
     RealtimeUpdates,
 
+    /// Stereoscopic 3D rendering (VR/AR)
+    /// Typical provider: petalTongue (behind VisualOutputCapability::ThreeD)
+    StereoRendering,
+
+    /// Motion capture and 6DoF tracking (head, hand, tool)
+    /// Typical provider: petalTongue (MotionCaptureAdapter)
+    MotionTracking,
+
+    /// Haptic feedback output (force feedback, vibration)
+    /// Typical provider: petalTongue
+    HapticFeedback,
+
+    // =============================================================================
+    // Medical / Surgical Domain
+    // =============================================================================
+
+    /// Biosignal processing (ECG, PPG, EDA)
+    /// Typical provider: healthSpring
+    BiosignalProcessing,
+
+    /// Pharmacokinetics / Pharmacodynamics modeling
+    /// Typical provider: healthSpring
+    PharmacokineticModeling,
+
+    /// Surgical tool simulation and tracking
+    /// Typical provider: healthSpring + petalTongue
+    SurgicalToolSimulation,
+
+    /// Tissue physics and deformation modeling
+    /// Typical provider: healthSpring + barraCuda
+    TissuePhysics,
+
+    /// Anatomy model rendering and interaction
+    /// Typical provider: healthSpring + petalTongue
+    AnatomyModeling,
+
     // =============================================================================
     // Orchestration & Management
     // =============================================================================
@@ -312,6 +348,16 @@ impl CapabilityTaxonomy {
             Self::MultiModal => Cow::Borrowed("Multi-modal interface"),
             Self::TopologyVisualization => Cow::Borrowed("Visualize network topology"),
             Self::RealtimeUpdates => Cow::Borrowed("Real-time UI updates"),
+            Self::StereoRendering => Cow::Borrowed("Stereoscopic 3D rendering for VR/AR"),
+            Self::MotionTracking => Cow::Borrowed("Motion capture and 6DoF tracking"),
+            Self::HapticFeedback => Cow::Borrowed("Haptic feedback output"),
+
+            // Medical / Surgical
+            Self::BiosignalProcessing => Cow::Borrowed("Biosignal processing (ECG, PPG, EDA)"),
+            Self::PharmacokineticModeling => Cow::Borrowed("Pharmacokinetic/pharmacodynamic modeling"),
+            Self::SurgicalToolSimulation => Cow::Borrowed("Surgical tool simulation and tracking"),
+            Self::TissuePhysics => Cow::Borrowed("Tissue physics and deformation modeling"),
+            Self::AnatomyModeling => Cow::Borrowed("Anatomy model rendering and interaction"),
 
             // Orchestration
             Self::LifecycleManagement => Cow::Borrowed("Primal lifecycle management"),
@@ -377,7 +423,16 @@ impl CapabilityTaxonomy {
             | Self::InputHandling
             | Self::MultiModal
             | Self::TopologyVisualization
-            | Self::RealtimeUpdates => CapabilityCategory::UserInterface,
+            | Self::RealtimeUpdates
+            | Self::StereoRendering
+            | Self::MotionTracking
+            | Self::HapticFeedback => CapabilityCategory::UserInterface,
+
+            Self::BiosignalProcessing
+            | Self::PharmacokineticModeling
+            | Self::SurgicalToolSimulation
+            | Self::TissuePhysics
+            | Self::AnatomyModeling => CapabilityCategory::Specialized,
 
             Self::LifecycleManagement
             | Self::HealthMonitoring
@@ -452,6 +507,26 @@ impl CapabilityTaxonomy {
             "multi_modal" | "multimodal" => Some(Self::MultiModal),
             "topology_visualization" | "topologyvisualization" => Some(Self::TopologyVisualization),
             "realtime_updates" | "realtimeupdates" => Some(Self::RealtimeUpdates),
+            "stereo_rendering" | "stereorendering" | "stereo" | "vr_rendering" => {
+                Some(Self::StereoRendering)
+            }
+            "motion_tracking" | "motiontracking" | "mocap" | "tracking" => {
+                Some(Self::MotionTracking)
+            }
+            "haptic_feedback" | "hapticfeedback" | "haptic" | "haptics" => {
+                Some(Self::HapticFeedback)
+            }
+            "biosignal_processing" | "biosignalprocessing" | "biosignal" => {
+                Some(Self::BiosignalProcessing)
+            }
+            "pharmacokinetic_modeling" | "pharmacokineticmodeling" | "pharmacokinetics" | "pkpd" => {
+                Some(Self::PharmacokineticModeling)
+            }
+            "surgical_tool_simulation" | "surgicaltoolsimulation" | "surgical" => {
+                Some(Self::SurgicalToolSimulation)
+            }
+            "tissue_physics" | "tissuephysics" | "tissue" => Some(Self::TissuePhysics),
+            "anatomy_modeling" | "anatomymodeling" | "anatomy" => Some(Self::AnatomyModeling),
 
             "lifecycle_management" | "lifecyclemanagement" | "lifecycle" => {
                 Some(Self::LifecycleManagement)
@@ -542,7 +617,17 @@ impl CapabilityTaxonomy {
             | Self::InputHandling
             | Self::MultiModal
             | Self::TopologyVisualization
-            | Self::RealtimeUpdates => None, // petalTongue discovered at runtime
+            | Self::RealtimeUpdates
+            | Self::StereoRendering
+            | Self::MotionTracking
+            | Self::HapticFeedback => None, // petalTongue discovered at runtime
+
+            // Medical / Surgical → healthSpring (discovered at runtime)
+            Self::BiosignalProcessing
+            | Self::PharmacokineticModeling
+            | Self::SurgicalToolSimulation
+            | Self::TissuePhysics
+            | Self::AnatomyModeling => None, // healthSpring discovered at runtime
 
             // Orchestration → biomeOS (self)
             Self::LifecycleManagement

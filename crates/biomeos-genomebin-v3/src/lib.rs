@@ -300,6 +300,23 @@ mod tests {
     }
 
     #[test]
+    fn test_arch_target_triple() {
+        assert_eq!(Arch::X86_64.target_triple(), "x86_64-unknown-linux-musl");
+        assert_eq!(Arch::Aarch64.target_triple(), "aarch64-unknown-linux-musl");
+        assert_eq!(Arch::Arm.target_triple(), "arm-unknown-linux-musleabi");
+        assert_eq!(
+            Arch::Riscv64.target_triple(),
+            "riscv64gc-unknown-linux-musl"
+        );
+    }
+
+    #[test]
+    fn test_arch_display() {
+        assert_eq!(format!("{}", Arch::X86_64), "x86_64");
+        assert_eq!(format!("{}", Arch::Aarch64), "aarch64");
+    }
+
+    #[test]
     fn test_compression_roundtrip() {
         let original = b"Hello, genomeBin! This is test data for compression.";
         let compressed = CompressedBinary::compress(Arch::X86_64, original);
@@ -308,6 +325,35 @@ mod tests {
 
         let decompressed = compressed.decompress().expect("Decompression failed");
         assert_eq!(decompressed, original);
+    }
+
+    #[test]
+    fn test_compressed_binary_verify() {
+        let original = b"verify me";
+        let compressed = CompressedBinary::compress(Arch::X86_64, original);
+        compressed.verify().expect("verify should succeed");
+
+        // Tampered data should fail
+        let mut tampered = compressed.clone();
+        tampered.checksum[0] ^= 0xff;
+        tampered
+            .verify()
+            .expect_err("verify should fail on tampered checksum");
+    }
+
+    #[test]
+    fn test_compressed_binary_decompress_wrong_size() {
+        let mut bad = CompressedBinary::compress(Arch::X86_64, b"x");
+        bad.original_size = 999;
+        let err = bad.decompress().expect_err("wrong size should fail");
+        assert!(err.to_string().contains("Size mismatch"));
+    }
+
+    #[test]
+    fn test_compressed_binary_new() {
+        let c = CompressedBinary::new(Arch::Aarch64, b"data");
+        assert_eq!(c.arch, Arch::Aarch64);
+        assert_eq!(c.original_size, 4);
     }
 
     #[test]
@@ -345,6 +391,23 @@ mod tests {
     }
 
     #[test]
+    fn test_get_binary() {
+        let mut genome = GenomeBin::new("test");
+        genome.add_binary_bytes(Arch::X86_64, b"data");
+        assert!(genome.get_binary(Arch::X86_64).is_some());
+        assert!(genome.get_binary(Arch::Aarch64).is_none());
+    }
+
+    #[test]
+    fn test_embed() {
+        let mut parent = GenomeBin::new("parent");
+        let child = GenomeBin::new("child");
+        parent.embed(child).expect("embed should succeed");
+        assert_eq!(parent.embedded_genomes.len(), 1);
+        assert_eq!(parent.embedded_genomes[0].manifest.name, "child");
+    }
+
+    #[test]
     fn test_json_roundtrip() {
         let mut genome = GenomeBin::new("roundtrip-test");
         genome.add_binary_bytes(Arch::X86_64, b"test binary");
@@ -354,5 +417,22 @@ mod tests {
 
         assert_eq!(loaded.manifest.name, "roundtrip-test");
         assert!(loaded.binaries.contains_key(&Arch::X86_64));
+    }
+
+    #[test]
+    fn test_save_load_json() {
+        let mut genome = GenomeBin::new("save-load-test");
+        genome.add_binary_bytes(Arch::X86_64, b"binary");
+        let temp = tempfile::tempdir().expect("temp dir");
+        let path = temp.path().join("genome.json");
+        genome.save(&path).expect("save");
+        let loaded = GenomeBin::load(&path).expect("load");
+        assert_eq!(loaded.manifest.name, "save-load-test");
+    }
+
+    #[test]
+    fn test_from_json_invalid() {
+        let err = GenomeBin::from_json("not json").expect_err("invalid json");
+        assert!(!err.to_string().is_empty());
     }
 }

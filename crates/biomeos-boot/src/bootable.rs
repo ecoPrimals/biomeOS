@@ -412,3 +412,74 @@ impl BootableMediaBuilder {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[allow(clippy::expect_used, clippy::unwrap_used)] // Tests use expect/unwrap for clear failure context
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_boot_target_variants() {
+        let iso = BootTarget::Iso;
+        let usb = BootTarget::Usb;
+        assert!(matches!(iso, BootTarget::Iso));
+        assert!(matches!(usb, BootTarget::Usb));
+    }
+
+    #[test]
+    fn test_boot_target_debug() {
+        assert_eq!(format!("{:?}", BootTarget::Iso), "Iso");
+        assert_eq!(format!("{:?}", BootTarget::Usb), "Usb");
+    }
+
+    #[test]
+    fn test_boot_target_clone_copy() {
+        let t = BootTarget::Iso;
+        let t2 = t;
+        let t3 = t; // Copy, no clone needed
+        assert!(matches!(t2, BootTarget::Iso));
+        assert!(matches!(t3, BootTarget::Iso));
+    }
+
+    #[test]
+    fn test_bootable_media_builder_new() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let project_root = temp.path().to_path_buf();
+        let _builder = BootableMediaBuilder::new(project_root.clone())
+            .expect("BootableMediaBuilder::new should succeed");
+
+        let work_dir = project_root.join("build/boot-media");
+        let output_dir = project_root.join("dist");
+        assert!(work_dir.exists(), "work_dir should be created");
+        assert!(output_dir.exists(), "output_dir should be created");
+    }
+
+    #[test]
+    fn test_bootable_media_builder_paths() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let project_root = temp.path().to_path_buf();
+        let builder = BootableMediaBuilder::new(project_root).expect("new");
+        // Builder stores project_root, work_dir, output_dir - we verified dirs exist above
+        let _ = builder; // use builder
+    }
+
+    #[test]
+    fn test_create_archive_fallback() {
+        // Test the archive fallback path in isolation by creating minimal boot structure
+        let temp = tempfile::tempdir().expect("temp dir");
+        let project_root = temp.path().to_path_buf();
+        let builder = BootableMediaBuilder::new(project_root).expect("new");
+
+        // Create minimal boot dir structure
+        let boot_dir = temp.path().join("build/boot-media/boot-root");
+        std::fs::create_dir_all(&boot_dir).expect("create boot dir");
+        std::fs::write(boot_dir.join("test.txt"), "boot content").expect("write");
+
+        let output = temp.path().join("dist/test.iso");
+        let rt = tokio::runtime::Runtime::new().expect("runtime");
+        let result = rt.block_on(builder.create_archive_fallback(&boot_dir, &output));
+        let path = result.expect("create_archive_fallback should succeed");
+        assert!(path.exists());
+        assert!(path.extension().map(|e| e == "gz").unwrap_or(false));
+    }
+}

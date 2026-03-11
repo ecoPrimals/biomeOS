@@ -1,0 +1,234 @@
+# neuralSpring Spectral Analysis Pipeline Graph
+# Orchestrates neuralSpring's spectral analysis experiments through the NUCLEUS:
+#   Tower (BearDog + Songbird) → ToadStool (GPU) → neuralSpring (science) → NestGate (storage)
+#
+# STATUS: Protocol defined (Feb 27, 2026)
+# Requires: Tower (BearDog + Songbird) + ToadStool + NestGate + neuralSpring
+#
+# Pipeline:
+#   1. Verify prerequisites (ToadStool compute, NestGate storage)
+#   2. Load or generate Hamiltonian / Laplacian data
+#   3. Execute spectral analysis (eigensolve → IPR → disorder sweep)
+#   4. Store results with provenance in NestGate
+#   5. Validate pipeline health and result integrity
+
+[graph]
+id = "neuralspring_spectral_pipeline"
+description = "Spectral analysis pipeline: Hamiltonian → eigensolve → IPR/LSR → provenance store"
+coordination = "Sequential"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 1: ENSURE PREREQUISITES
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "check_toadstool"
+output = "toadstool_healthy"
+capabilities = ["compute"]
+
+[nodes.operation]
+name = "rpc_call"
+target = "toadstool"
+
+[nodes.operation.params]
+method = "toadstool.health"
+params = {}
+
+[nodes.constraints]
+timeout_ms = 10000
+
+[[nodes]]
+id = "check_nestgate"
+output = "nestgate_healthy"
+capabilities = ["storage"]
+
+[nodes.operation]
+name = "rpc_call"
+target = "nestgate"
+
+[nodes.operation.params]
+method = "health"
+params = {}
+
+[nodes.constraints]
+timeout_ms = 10000
+
+[[nodes]]
+id = "check_neuralspring"
+output = "neuralspring_healthy"
+capabilities = ["spectral_analysis"]
+
+[nodes.operation]
+name = "rpc_call"
+target = "neuralspring"
+
+[nodes.operation.params]
+method = "health"
+params = {}
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 2: ANDERSON LOCALIZATION ANALYSIS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Generate Anderson Hamiltonian and run spectral analysis
+[[nodes]]
+id = "anderson_spectral"
+depends_on = ["check_toadstool", "check_neuralspring"]
+output = "anderson_results"
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "science.anderson_localization"
+params = { lattice_size = 20, hopping = 1.0, disorder_values = [0.5, 1.0, 2.0, 4.0, 8.0, 16.0], use_gpu = true }
+
+[nodes.constraints]
+timeout_ms = 600000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 3: HESSIAN EIGENANALYSIS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "hessian_spectral"
+depends_on = ["check_toadstool", "check_neuralspring"]
+output = "hessian_results"
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "science.hessian_eigen"
+params = { dim = 20, surface_type = "quadratic", use_gpu = true }
+
+[nodes.constraints]
+timeout_ms = 300000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 4: MULTI-AGENT COORDINATION SPECTRAL ANALYSIS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "agent_coordination"
+depends_on = ["check_toadstool", "check_neuralspring"]
+output = "coordination_results"
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "science.agent_coordination"
+params = { n_agents = 16, dimensions = 2, comm_range = 3.0, disorder_values = [0.0, 0.5, 1.0, 2.0], use_gpu = true }
+
+[nodes.constraints]
+timeout_ms = 300000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 5: TRAINING TRAJECTORY ANALYSIS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "training_trajectory"
+depends_on = ["check_toadstool", "check_neuralspring"]
+output = "trajectory_results"
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "science.training_trajectory"
+params = { dim = 16, n_epochs = 20, use_gpu = true }
+
+[nodes.constraints]
+timeout_ms = 600000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 6: RESULTS STORAGE (NestGate)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "store_anderson"
+depends_on = ["anderson_spectral", "check_nestgate"]
+output = "anderson_stored"
+
+[nodes.operation]
+name = "rpc_call"
+target = "nestgate"
+
+[nodes.operation.params]
+method = "storage.store"
+params = { key = "science:neuralspring:anderson:${EXPERIMENT_ID}", value = "${ANDERSON_RESULTS_JSON}", family_id = "neuralspring" }
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[[nodes]]
+id = "store_hessian"
+depends_on = ["hessian_spectral", "check_nestgate"]
+output = "hessian_stored"
+
+[nodes.operation]
+name = "rpc_call"
+target = "nestgate"
+
+[nodes.operation.params]
+method = "storage.store"
+params = { key = "science:neuralspring:hessian:${EXPERIMENT_ID}", value = "${HESSIAN_RESULTS_JSON}", family_id = "neuralspring" }
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[[nodes]]
+id = "store_coordination"
+depends_on = ["agent_coordination", "check_nestgate"]
+output = "coordination_stored"
+
+[nodes.operation]
+name = "rpc_call"
+target = "nestgate"
+
+[nodes.operation.params]
+method = "storage.store"
+params = { key = "science:neuralspring:coordination:${EXPERIMENT_ID}", value = "${COORDINATION_RESULTS_JSON}", family_id = "neuralspring" }
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[[nodes]]
+id = "store_trajectory"
+depends_on = ["training_trajectory", "check_nestgate"]
+output = "trajectory_stored"
+
+[nodes.operation]
+name = "rpc_call"
+target = "nestgate"
+
+[nodes.operation.params]
+method = "storage.store"
+params = { key = "science:neuralspring:trajectory:${EXPERIMENT_ID}", value = "${TRAJECTORY_RESULTS_JSON}", family_id = "neuralspring" }
+
+[nodes.constraints]
+timeout_ms = 30000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 7: VALIDATION
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "validate_pipeline"
+depends_on = ["store_anderson", "store_hessian", "store_coordination", "store_trajectory"]
+output = "pipeline_validated"
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.operation.params]
+check_nestgate = true
+check_toadstool = true
+check_neuralspring = true
+check_results_integrity = true
+timeout_seconds = 30

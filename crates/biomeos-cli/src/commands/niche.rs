@@ -5,6 +5,29 @@
 use std::fs;
 use std::path::Path;
 
+/// Map niche category to display icon (testable pure function)
+pub fn category_to_icon(category: &str) -> &'static str {
+    match category {
+        "gaming" => "🎮",
+        "ai_research" => "🧠",
+        "development" => "💻",
+        "federation" => "🌐",
+        _ => "🌿",
+    }
+}
+
+/// Map primal name to display icon (testable pure function)
+pub fn primal_to_icon(primal: &str) -> &'static str {
+    match primal {
+        "nestgate" => "🏰",
+        "songbird" => "🎼",
+        "toadstool" => "🍄",
+        "beardog" => "🐕",
+        "squirrel" => "🐿️",
+        _ => "📦",
+    }
+}
+
 /// List available niche templates
 pub async fn handle_niche_list() -> anyhow::Result<()> {
     let templates_dir = Path::new("niches/templates");
@@ -45,13 +68,7 @@ pub async fn handle_niche_list() -> anyhow::Result<()> {
                         .map(|s| s.trim().trim_matches('"'))
                         .unwrap_or("");
 
-                    let icon = match category {
-                        "gaming" => "🎮",
-                        "ai_research" => "🧠",
-                        "development" => "💻",
-                        "federation" => "🌐",
-                        _ => "🌿",
-                    };
+                    let icon = category_to_icon(category);
 
                     println!("  {} {} ({})", icon, name, id);
                 }
@@ -171,14 +188,7 @@ pub async fn handle_primal_list() -> anyhow::Result<()> {
     }
 
     for (primal, binaries) in &primal_counts {
-        let icon = match primal.as_str() {
-            "nestgate" => "🏰",
-            "songbird" => "🎼",
-            "toadstool" => "🍄",
-            "beardog" => "🐕",
-            "squirrel" => "🐿️",
-            _ => "📦",
-        };
+        let icon = primal_to_icon(primal);
         println!("  {} {} ({} binaries)", icon, primal, binaries.len());
 
         // Show first few
@@ -199,4 +209,30 @@ pub async fn handle_primal_list() -> anyhow::Result<()> {
     );
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_category_to_icon() {
+        assert_eq!(category_to_icon("gaming"), "🎮");
+        assert_eq!(category_to_icon("ai_research"), "🧠");
+        assert_eq!(category_to_icon("development"), "💻");
+        assert_eq!(category_to_icon("federation"), "🌐");
+        assert_eq!(category_to_icon("unknown"), "🌿");
+        assert_eq!(category_to_icon(""), "🌿");
+    }
+
+    #[test]
+    fn test_primal_to_icon() {
+        assert_eq!(primal_to_icon("nestgate"), "🏰");
+        assert_eq!(primal_to_icon("songbird"), "🎼");
+        assert_eq!(primal_to_icon("toadstool"), "🍄");
+        assert_eq!(primal_to_icon("beardog"), "🐕");
+        assert_eq!(primal_to_icon("squirrel"), "🐿️");
+        assert_eq!(primal_to_icon("unknown"), "📦");
+        assert_eq!(primal_to_icon(""), "📦");
+    }
 }

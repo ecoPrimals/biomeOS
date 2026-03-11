@@ -7,7 +7,7 @@ use axum::{
     response::sse::{Event, KeepAlive, Sse},
 };
 use futures::stream::{self, Stream, StreamExt as FuturesStreamExt};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, convert::Infallible, sync::Arc, time::Duration};
 use tokio::sync::RwLock;
 use tokio_stream::StreamExt as TokioStreamExt;
@@ -17,7 +17,7 @@ use crate::AppState;
 use biomeos_core::HealthStatus;
 
 /// Event types that can be streamed
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum EcosystemEvent {
     /// A new primal was discovered
@@ -83,49 +83,74 @@ struct PrimalSnapshot {
 
 /// GET /api/v1/events/stream
 ///
-/// Server-Sent Events endpoint for real-time updates
+/// Server-Sent Events endpoint for real-time updates (PUSH-BASED).
 ///
-/// Streams ecosystem changes including:
-/// - New primal discoveries
-/// - Health status changes
-/// - Topology updates
-/// - Trust level changes
-/// - Periodic heartbeats
+/// Two event sources merged into one stream:
+/// 1. **Graph events** — pushed instantly from `GraphEventBroadcaster`
+///    (tick completions, session state changes, node events)
+/// 2. **Ecosystem events** — discovery-based change detection at 5s intervals
+///    (primal discovered, health changed, topology, heartbeat)
 pub async fn event_stream(
     State(state): State<Arc<AppState>>,
 ) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
-    info!("📡 New SSE client connected");
+    info!("📡 New SSE client connected (push-based)");
 
-    // Track previous state for change detection
-    let previous_state = Arc::new(RwLock::new(EcosystemState {
-        primals: HashMap::new(),
-    }));
-
-    let stream = FuturesStreamExt::then(
-        stream::repeat_with(move || {
-            let state = state.clone();
-            let previous_state = previous_state.clone();
-
-            async move { detect_and_emit_changes(state, previous_state).await }
-        }),
-        |fut| fut,
-    );
-
-    let stream = FuturesStreamExt::flat_map(stream, stream::iter);
-    let stream = TokioStreamExt::throttle(stream, Duration::from_secs(5));
-    let stream = FuturesStreamExt::filter_map(stream, |event| async move {
-        // Attempt to serialize the event to JSON for SSE
-        // If serialization fails (highly unlikely), skip the event and log the error
+    // --- Stream 1: Push-based graph events from broadcaster ---
+    let mut graph_rx = state.event_broadcaster().subscribe();
+    let graph_stream = async_stream::stream! {
+        loop {
+            match graph_rx.recv().await {
+                Ok(event) => {
+                    yield event;
+                }
+                Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
+                    warn!("SSE client lagged, skipped {} graph events", n);
+                }
+                Err(tokio::sync::broadcast::error::RecvError::Closed) => {
+                    break;
+                }
+            }
+        }
+    };
+    let graph_sse = FuturesStreamExt::filter_map(graph_stream, |event| async move {
         match Event::default().json_data(&event) {
-            Ok(sse_event) => Some(Ok(sse_event)),
+            Ok(sse_event) => Some(Ok::<_, Infallible>(sse_event)),
             Err(e) => {
-                tracing::error!("Failed to serialize BiomeEvent to SSE: {}", e);
-                None // Skip this event
+                tracing::error!("Failed to serialize GraphEvent to SSE: {}", e);
+                None
             }
         }
     });
 
-    Sse::new(stream).keep_alive(KeepAlive::default())
+    // --- Stream 2: Ecosystem change detection (retained for backward compat) ---
+    let previous_state = Arc::new(RwLock::new(EcosystemState {
+        primals: HashMap::new(),
+    }));
+
+    let eco_stream = FuturesStreamExt::then(
+        stream::repeat_with(move || {
+            let state = state.clone();
+            let previous_state = previous_state.clone();
+            async move { detect_and_emit_changes(state, previous_state).await }
+        }),
+        |fut| fut,
+    );
+    let eco_stream = FuturesStreamExt::flat_map(eco_stream, stream::iter);
+    let eco_stream = TokioStreamExt::throttle(eco_stream, Duration::from_secs(5));
+    let eco_sse = FuturesStreamExt::filter_map(eco_stream, |event| async move {
+        match Event::default().json_data(&event) {
+            Ok(sse_event) => Some(Ok::<_, Infallible>(sse_event)),
+            Err(e) => {
+                tracing::error!("Failed to serialize EcosystemEvent to SSE: {}", e);
+                None
+            }
+        }
+    });
+
+    // --- Merge both streams: graph events arrive instantly, ecosystem polls at 5s ---
+    let merged = futures::stream::select(graph_sse, eco_sse);
+
+    Sse::new(merged).keep_alive(KeepAlive::default())
 }
 
 /// Detect changes in the ecosystem and emit appropriate events
@@ -292,6 +317,58 @@ fn current_timestamp() -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use async_trait::async_trait;
+    use biomeos_core::{DiscoveryError, DiscoveryResult, PrimalDiscovery, PrimalType};
+    use biomeos_types::{Endpoint, FamilyId, PrimalId};
+    use semver::Version;
+    use std::sync::Arc;
+
+    struct MockDiscovery {
+        primals: Vec<biomeos_core::DiscoveredPrimal>,
+    }
+
+    #[async_trait]
+    impl PrimalDiscovery for MockDiscovery {
+        async fn discover(
+            &self,
+            _endpoint: &biomeos_types::Endpoint,
+        ) -> DiscoveryResult<biomeos_core::DiscoveredPrimal> {
+            Err(DiscoveryError::NotFound {
+                endpoint: "mock".to_string(),
+            })
+        }
+
+        async fn discover_all(&self) -> DiscoveryResult<Vec<biomeos_core::DiscoveredPrimal>> {
+            Ok(self.primals.clone())
+        }
+
+        async fn check_health(
+            &self,
+            _id: &PrimalId,
+        ) -> DiscoveryResult<biomeos_core::HealthStatus> {
+            Ok(biomeos_core::HealthStatus::Healthy)
+        }
+    }
+
+    fn make_primal(
+        id: &str,
+        name: &str,
+        health: biomeos_core::HealthStatus,
+        family_id: Option<&str>,
+        capabilities: Vec<&str>,
+    ) -> biomeos_core::DiscoveredPrimal {
+        biomeos_core::DiscoveredPrimal {
+            id: PrimalId::new_unchecked(id),
+            name: name.to_string(),
+            primal_type: PrimalType::Security,
+            version: Version::new(1, 0, 0),
+            health,
+            capabilities: capabilities.into_iter().map(|c| c.into()).collect(),
+            endpoint: Endpoint::new("http://localhost:9000").expect("valid endpoint"),
+            family_id: family_id.map(FamilyId::new),
+            metadata: serde_json::json!({}),
+        }
+    }
 
     #[test]
     fn test_primal_discovered_event() {
@@ -450,5 +527,214 @@ mod tests {
         let cloned = snapshot.clone();
         assert_eq!(cloned.name, "test");
         assert_eq!(cloned.capabilities_count, 5);
+    }
+
+    // ========== Serialization roundtrip tests ==========
+
+    #[test]
+    fn test_ecosystem_event_roundtrip_primal_discovered() {
+        let event = EcosystemEvent::PrimalDiscovered {
+            primal_id: "p1".to_string(),
+            name: "Primal1".to_string(),
+            primal_type: "security".to_string(),
+            family_id: Some("fam1".to_string()),
+            capabilities: vec!["btsp".to_string(), "birdsong".to_string()],
+        };
+        let json = serde_json::to_string(&event).expect("serialize");
+        let back: EcosystemEvent = serde_json::from_str(&json).expect("deserialize");
+        match (&event, &back) {
+            (
+                EcosystemEvent::PrimalDiscovered { primal_id: a, .. },
+                EcosystemEvent::PrimalDiscovered { primal_id: b, .. },
+            ) => assert_eq!(a, b),
+            _ => panic!("variant mismatch"),
+        }
+    }
+
+    #[test]
+    fn test_ecosystem_event_roundtrip_heartbeat() {
+        let event = EcosystemEvent::Heartbeat {
+            timestamp: 999,
+            primals_count: 0,
+            healthy_count: 0,
+            families: vec![],
+        };
+        let json = serde_json::to_string(&event).expect("serialize");
+        let back: EcosystemEvent = serde_json::from_str(&json).expect("deserialize");
+        match &back {
+            EcosystemEvent::Heartbeat {
+                timestamp,
+                primals_count,
+                healthy_count,
+                families,
+            } => {
+                assert_eq!(*timestamp, 999);
+                assert_eq!(*primals_count, 0);
+                assert_eq!(*healthy_count, 0);
+                assert!(families.is_empty());
+            }
+            _ => panic!("expected Heartbeat"),
+        }
+    }
+
+    #[test]
+    fn test_ecosystem_event_empty_capabilities() {
+        let event = EcosystemEvent::PrimalDiscovered {
+            primal_id: "empty-cap".to_string(),
+            name: "Empty".to_string(),
+            primal_type: "unknown".to_string(),
+            family_id: None,
+            capabilities: vec![],
+        };
+        let json = serde_json::to_string(&event).expect("serialize");
+        let back: EcosystemEvent = serde_json::from_str(&json).expect("deserialize");
+        match &back {
+            EcosystemEvent::PrimalDiscovered { capabilities, .. } => {
+                assert!(capabilities.is_empty());
+            }
+            _ => panic!("expected PrimalDiscovered"),
+        }
+    }
+
+    // ========== detect_and_emit_changes with mock state ==========
+
+    #[tokio::test]
+    async fn test_detect_and_emit_changes_new_primal() {
+        let primals = vec![make_primal(
+            "beardog-1",
+            "BearDog",
+            HealthStatus::Healthy,
+            Some("fam1"),
+            vec!["btsp"],
+        )];
+        let discovery = MockDiscovery { primals };
+        let state = Arc::new(
+            crate::AppState::builder()
+                .discovery(discovery)
+                .build_with_defaults()
+                .expect("build state"),
+        );
+        let previous_state = Arc::new(RwLock::new(EcosystemState {
+            primals: HashMap::new(),
+        }));
+
+        let events = detect_and_emit_changes(state, previous_state).await;
+
+        // Should have PrimalDiscovered, FamilyJoined, Heartbeat
+        assert!(!events.is_empty(), "should emit events");
+        let has_primal_discovered = events
+            .iter()
+            .any(|e| matches!(e, EcosystemEvent::PrimalDiscovered { .. }));
+        assert!(has_primal_discovered, "should emit PrimalDiscovered");
+        let has_heartbeat = events
+            .iter()
+            .any(|e| matches!(e, EcosystemEvent::Heartbeat { .. }));
+        assert!(has_heartbeat, "should end with Heartbeat");
+    }
+
+    #[tokio::test]
+    async fn test_detect_and_emit_changes_discovery_error_returns_heartbeat() {
+        struct FailingDiscovery;
+        #[async_trait]
+        impl PrimalDiscovery for FailingDiscovery {
+            async fn discover(
+                &self,
+                _: &biomeos_types::Endpoint,
+            ) -> DiscoveryResult<biomeos_core::DiscoveredPrimal> {
+                Err(DiscoveryError::NotFound {
+                    endpoint: "fail".to_string(),
+                })
+            }
+            async fn discover_all(&self) -> DiscoveryResult<Vec<biomeos_core::DiscoveredPrimal>> {
+                Err(DiscoveryError::Network("simulated failure".to_string()))
+            }
+            async fn check_health(&self, _: &PrimalId) -> DiscoveryResult<HealthStatus> {
+                Ok(HealthStatus::Healthy)
+            }
+        }
+        let state = Arc::new(
+            crate::AppState::builder()
+                .discovery(FailingDiscovery)
+                .build_with_defaults()
+                .expect("build state"),
+        );
+        let previous_state = Arc::new(RwLock::new(EcosystemState {
+            primals: HashMap::new(),
+        }));
+
+        let events = detect_and_emit_changes(state, previous_state).await;
+
+        // On discovery error, should return single Heartbeat with zeros
+        assert_eq!(events.len(), 1, "should return single heartbeat on error");
+        match &events[0] {
+            EcosystemEvent::Heartbeat {
+                primals_count,
+                healthy_count,
+                families,
+                ..
+            } => {
+                assert_eq!(*primals_count, 0);
+                assert_eq!(*healthy_count, 0);
+                assert!(families.is_empty());
+            }
+            _ => panic!("expected Heartbeat on discovery error"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_detect_and_emit_changes_health_change() {
+        let primals = vec![
+            make_primal("p1", "P1", HealthStatus::Healthy, Some("fam"), vec!["cap1"]),
+            make_primal(
+                "p2",
+                "P2",
+                HealthStatus::Degraded,
+                Some("fam"),
+                vec!["cap1", "cap2"],
+            ),
+        ];
+        let discovery = MockDiscovery { primals };
+        let state = Arc::new(
+            crate::AppState::builder()
+                .discovery(discovery)
+                .build_with_defaults()
+                .expect("build state"),
+        );
+        let mut initial_primals = HashMap::new();
+        initial_primals.insert(
+            "p1".to_string(),
+            PrimalSnapshot {
+                name: "P1".to_string(),
+                health: HealthStatus::Healthy,
+                family_id: Some("fam".to_string()),
+                capabilities_count: 1,
+            },
+        );
+        initial_primals.insert(
+            "p2".to_string(),
+            PrimalSnapshot {
+                name: "P2".to_string(),
+                health: HealthStatus::Healthy,
+                family_id: Some("fam".to_string()),
+                capabilities_count: 1,
+            },
+        );
+        let previous_state = Arc::new(RwLock::new(EcosystemState {
+            primals: initial_primals,
+        }));
+
+        let events = detect_and_emit_changes(state, previous_state).await;
+
+        let health_changed = events
+            .iter()
+            .find(|e| matches!(e, EcosystemEvent::HealthChanged { .. }));
+        assert!(health_changed.is_some(), "should emit HealthChanged for p2");
+        let trust_updated = events
+            .iter()
+            .find(|e| matches!(e, EcosystemEvent::TrustUpdated { .. }));
+        assert!(
+            trust_updated.is_some(),
+            "should emit TrustUpdated for capability change"
+        );
     }
 }

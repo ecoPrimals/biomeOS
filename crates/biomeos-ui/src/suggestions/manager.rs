@@ -22,7 +22,7 @@ pub struct AISuggestionManager {
     ai_provider_socket: Option<std::path::PathBuf>,
 
     /// Family ID
-    #[allow(dead_code)] // Used for family-scoped AI suggestions
+    #[allow(dead_code)] // TODO: Wire up for family-scoped AI suggestions
     pub(crate) family_id: String,
 
     /// Active suggestions

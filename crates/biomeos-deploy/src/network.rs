@@ -176,3 +176,52 @@ impl Drop for NetworkBridge {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_bridge_config_construction() {
+        let config = BridgeConfig {
+            name: "test-br0".to_string(),
+            ip_address: "10.0.0.1/24".to_string(),
+            subnet: "10.0.0.0/24".to_string(),
+        };
+        assert_eq!(config.name, "test-br0");
+        assert_eq!(config.ip_address, "10.0.0.1/24");
+    }
+
+    #[test]
+    fn test_network_bridge_new() {
+        let config = BridgeConfig {
+            name: "biomeos-test-bridge-xyz".to_string(),
+            ip_address: "192.168.100.1/24".to_string(),
+            subnet: "192.168.100.0/24".to_string(),
+        };
+        let bridge = NetworkBridge::new(config);
+        assert_eq!(bridge.name(), "biomeos-test-bridge-xyz");
+    }
+
+    #[test]
+    fn test_network_bridge_exists_nonexistent() {
+        let config = BridgeConfig {
+            name: "nonexistent-bridge-987654321".to_string(),
+            ip_address: "10.0.0.1/24".to_string(),
+            subnet: "10.0.0.0/24".to_string(),
+        };
+        let bridge = NetworkBridge::new(config);
+        assert!(!bridge.exists());
+    }
+
+    #[test]
+    fn test_network_bridge_exists_loopback() {
+        let config = BridgeConfig {
+            name: "lo".to_string(),
+            ip_address: "127.0.0.1/8".to_string(),
+            subnet: "127.0.0.0/8".to_string(),
+        };
+        let bridge = NetworkBridge::new(config);
+        assert!(bridge.exists());
+    }
+}

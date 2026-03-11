@@ -220,7 +220,7 @@ impl Spore {
     }
 
     /// Extract node_id from tower.toml (simple parsing)
-    fn extract_node_id_from_config(config_str: &str) -> Option<String> {
+    pub(crate) fn extract_node_id_from_config(config_str: &str) -> Option<String> {
         for line in config_str.lines() {
             if line.trim().starts_with("node_id") {
                 // Extract value after '=' and trim quotes
@@ -239,4 +239,91 @@ impl Spore {
     }
 }
 
-// Note: Trait implementations are in their respective domain modules
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::spore_types::SporeType;
+    use std::io::Write;
+    use tempfile::TempDir;
+
+    #[test]
+    fn test_extract_node_id_from_config() {
+        let config = r#"
+node_id = "tower1"
+other = "value"
+"#;
+        let node_id = Spore::extract_node_id_from_config(config);
+        assert_eq!(node_id, Some("tower1".to_string()));
+    }
+
+    #[test]
+    fn test_extract_node_id_with_quotes() {
+        let config = r#"
+node_id = "tower-2"
+"#;
+        let node_id = Spore::extract_node_id_from_config(config);
+        assert_eq!(node_id, Some("tower-2".to_string()));
+    }
+
+    #[test]
+    fn test_extract_node_id_single_quotes() {
+        let config = "node_id = 'tower3'";
+        let node_id = Spore::extract_node_id_from_config(config);
+        assert_eq!(node_id, Some("tower3".to_string()));
+    }
+
+    #[test]
+    fn test_extract_node_id_missing() {
+        let config = "other_key = value";
+        let node_id = Spore::extract_node_id_from_config(config);
+        assert!(node_id.is_none());
+    }
+
+    #[test]
+    fn test_extract_node_id_empty_config() {
+        let node_id = Spore::extract_node_id_from_config("");
+        assert!(node_id.is_none());
+    }
+
+    #[test]
+    fn test_spore_from_path_nonexistent() {
+        let result = Spore::from_path(std::path::PathBuf::from("/nonexistent/path"));
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("not found") || err.to_string().contains("Device"));
+    }
+
+    #[test]
+    fn test_spore_from_path_valid() {
+        let temp = TempDir::new().unwrap();
+        let biomeos_dir = temp.path().join("biomeOS");
+        std::fs::create_dir_all(&biomeos_dir).unwrap();
+        let mut f = std::fs::File::create(biomeos_dir.join("tower.toml")).unwrap();
+        f.write_all(b"node_id = \"tower1\"\n").unwrap();
+
+        let result = Spore::from_path(temp.path().to_path_buf());
+        assert!(result.is_ok());
+        let spore = result.unwrap();
+        assert_eq!(spore.config().node_id, "tower1");
+    }
+
+    #[test]
+    fn test_spore_config_construction() {
+        let config = SporeConfig {
+            label: "test".to_string(),
+            node_id: "node1".to_string(),
+            family_id: "abc123".to_string(),
+            spore_type: SporeType::Live,
+        };
+        assert_eq!(config.label, "test");
+        assert_eq!(config.node_id, "node1");
+        assert_eq!(config.family_id, "abc123");
+    }
+
+    #[test]
+    fn test_default_family_id() {
+        std::env::remove_var("FAMILY_ID");
+        let id = crate::spore::types::default_family_id();
+        assert!(!id.is_empty());
+    }
+}

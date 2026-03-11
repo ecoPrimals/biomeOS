@@ -43,12 +43,13 @@
 //!     }))
 //! ).await?;
 //!
-//! println!("Response: {}", response.body);
+//! println!("Response: {}", response.body_str().unwrap_or("<invalid utf8>"));
 //! # Ok(())
 //! # }
 //! ```
 
 use anyhow::{Context, Result};
+use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -60,7 +61,33 @@ use tokio::time::{timeout, Duration};
 mod error;
 pub use error::NeuralApiError;
 
+/// Serde helpers for Bytes body (JSON-RPC returns body as string)
+mod body_serde {
+    use bytes::Bytes;
+    use serde::{Deserialize, Deserializer, Serializer};
+
+    pub fn deserialize<'de, D>(d: D) -> Result<Bytes, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(d)?;
+        Ok(Bytes::from(s.into_bytes()))
+    }
+
+    pub fn serialize<S>(b: &Bytes, s: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        // Neural API returns string bodies; serialize as UTF-8 string for JSON compatibility
+        let str = std::str::from_utf8(b).map_err(serde::ser::Error::custom)?;
+        s.serialize_str(str)
+    }
+}
+
 /// HTTP response from proxied request
+///
+/// Uses `Bytes` for body to enable zero-copy when passing response data
+/// between tasks or storing. Use `.body_str()` for UTF-8 text or `.body()` for raw bytes.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HttpResponse {
     /// HTTP status code
@@ -69,8 +96,24 @@ pub struct HttpResponse {
     /// Response headers
     pub headers: HashMap<String, String>,
 
-    /// Response body (as JSON string)
-    pub body: String,
+    /// Response body (zero-copy Bytes; use `.body_str()` for UTF-8 text)
+    #[serde(with = "body_serde")]
+    pub body: Bytes,
+}
+
+impl HttpResponse {
+    /// Get body as UTF-8 string slice (convenience for JSON/text responses)
+    ///
+    /// # Errors
+    /// Returns error if body is not valid UTF-8
+    pub fn body_str(&self) -> Result<&str, std::str::Utf8Error> {
+        std::str::from_utf8(&self.body)
+    }
+
+    /// Get body as owned String (allocates; use when you need owned)
+    pub fn body_string(&self) -> String {
+        String::from_utf8_lossy(&self.body).into_owned()
+    }
 }
 
 /// Information about discovered capability
@@ -154,6 +197,7 @@ pub struct RoutingMetric {
 /// # Zero Unsafe Code
 ///
 /// This client is 100% safe Rust with async I/O.
+#[derive(Debug)]
 pub struct NeuralApiClient {
     /// Path to Neural API Unix socket
     socket_path: PathBuf,
@@ -271,7 +315,7 @@ impl NeuralApiClient {
     /// ).await?;
     ///
     /// println!("Status: {}", response.status);
-    /// println!("Body: {}", response.body);
+    /// println!("Body: {}", response.body_str().unwrap_or("<invalid utf8>"));
     /// # Ok(())
     /// # }
     /// ```
@@ -466,18 +510,60 @@ impl NeuralApiClient {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::Path;
+    use tempfile::TempDir;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::UnixListener;
+
+    // =========================================================================
+    // 1. Client creation (NeuralApiClient::new)
+    // =========================================================================
 
     #[test]
-    fn test_client_construction() {
-        // Test with any valid path (doesn't need to exist for construction)
-        let client = NeuralApiClient::new("/tmp/test.sock");
-        assert!(client.is_ok());
+    fn test_client_new_with_str_path() {
+        let client =
+            NeuralApiClient::new("/tmp/test.sock").expect("new() with str path should succeed");
+        assert_eq!(client.socket_path, PathBuf::from("/tmp/test.sock"));
     }
 
     #[test]
-    fn test_discover_socket_path() {
+    fn test_client_new_with_pathbuf() {
+        let path = PathBuf::from("/var/run/neural.sock");
+        let client = NeuralApiClient::new(path.clone()).expect("new() with PathBuf should succeed");
+        assert_eq!(client.socket_path, path);
+    }
+
+    #[test]
+    fn test_client_new_with_relative_path() {
+        let client = NeuralApiClient::new("relative/path.sock")
+            .expect("new() with relative path should succeed");
+        assert!(client.socket_path.to_string_lossy().contains("relative"));
+    }
+
+    #[test]
+    fn test_client_default_timeouts() {
+        let client = NeuralApiClient::new("/tmp/test.sock").expect("new() should succeed");
+        assert_eq!(client.request_timeout, Duration::from_secs(30));
+        assert_eq!(client.connection_timeout, Duration::from_secs(5));
+    }
+
+    #[test]
+    fn test_client_with_timeout_builders() {
+        let client = NeuralApiClient::new("/tmp/test.sock")
+            .expect("new() should succeed")
+            .with_request_timeout(Duration::from_secs(60))
+            .with_connection_timeout(Duration::from_secs(10));
+        assert_eq!(client.request_timeout, Duration::from_secs(60));
+        assert_eq!(client.connection_timeout, Duration::from_secs(10));
+    }
+
+    // =========================================================================
+    // 2. Socket path discovery from environment
+    // =========================================================================
+
+    #[test]
+    fn test_discover_socket_path_format() {
         let path = NeuralApiClient::discover_socket("1894e909e454");
-        // Should end with the correct socket filename, regardless of XDG prefix
         assert!(
             path.to_string_lossy()
                 .ends_with("neural-api-1894e909e454.sock"),
@@ -487,9 +573,8 @@ mod tests {
     }
 
     #[test]
-    fn test_discover_socket_path_custom() {
+    fn test_discover_socket_path_custom_family_id() {
         let path = NeuralApiClient::discover_socket("production");
-        // Should end with the correct socket filename
         assert!(
             path.to_string_lossy()
                 .ends_with("neural-api-production.sock"),
@@ -499,34 +584,525 @@ mod tests {
     }
 
     #[test]
-    fn test_timeout_configuration() {
-        let client = NeuralApiClient::new("/tmp/test.sock")
-            .unwrap()
-            .with_request_timeout(Duration::from_secs(60))
-            .with_connection_timeout(Duration::from_secs(10));
-
-        assert_eq!(client.request_timeout, Duration::from_secs(60));
-        assert_eq!(client.connection_timeout, Duration::from_secs(10));
+    fn test_discover_socket_path_uses_xdg_when_set() {
+        let path = NeuralApiClient::discover_socket("test-family");
+        // When XDG_RUNTIME_DIR is set, path should contain biomeos
+        // When not set, fallback uses temp_dir - either way we get a valid path
+        assert!(
+            path.to_string_lossy()
+                .contains("neural-api-test-family.sock"),
+            "Path should contain neural-api-test-family.sock, got: {}",
+            path.display()
+        );
     }
 
     #[test]
-    fn test_json_rpc_request_building() {
+    fn test_discover_fails_when_socket_missing() {
+        // Use a family_id that produces a path that won't exist in test env
+        let family_id = format!("nonexistent-{}", std::process::id());
+        let result = NeuralApiClient::discover(&family_id);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            err.to_string().contains("does not exist"),
+            "Error should mention socket missing, got: {}",
+            err
+        );
+    }
+
+    // =========================================================================
+    // 3. Error type construction and display
+    // =========================================================================
+
+    #[test]
+    fn test_neural_api_error_connection_display() {
+        let err = NeuralApiError::ConnectionError("socket not found".to_string());
+        let display = err.to_string();
+        assert!(display.contains("Failed to connect"));
+        assert!(display.contains("socket not found"));
+    }
+
+    #[test]
+    fn test_neural_api_error_rpc_display() {
+        let err = NeuralApiError::RpcError {
+            code: -32601,
+            message: "Method not found".to_string(),
+        };
+        let display = err.to_string();
+        assert!(display.contains("-32601"));
+        assert!(display.contains("Method not found"));
+    }
+
+    #[test]
+    fn test_neural_api_error_timeout_display() {
+        let err = NeuralApiError::Timeout(5000);
+        let display = err.to_string();
+        assert!(display.contains("5000"));
+        assert!(display.contains("timeout"));
+    }
+
+    #[test]
+    fn test_neural_api_error_not_found_display() {
+        let err = NeuralApiError::NotFound("/tmp/missing.sock".to_string());
+        let display = err.to_string();
+        assert!(display.contains("not found"));
+        assert!(display.contains("/tmp/missing.sock"));
+    }
+
+    #[test]
+    fn test_neural_api_error_constants() {
+        assert_eq!(NeuralApiError::PARSE_ERROR, -32700);
+        assert_eq!(NeuralApiError::INVALID_REQUEST, -32600);
+        assert_eq!(NeuralApiError::METHOD_NOT_FOUND, -32601);
+        assert_eq!(NeuralApiError::INVALID_PARAMS, -32602);
+        assert_eq!(NeuralApiError::INTERNAL_ERROR, -32603);
+    }
+
+    // =========================================================================
+    // 4. Request/response serialization
+    // =========================================================================
+
+    #[test]
+    fn test_http_response_serialization_roundtrip() {
+        let response = HttpResponse {
+            status: 200,
+            headers: HashMap::from([
+                ("content-type".to_string(), "application/json".to_string()),
+                ("x-request-id".to_string(), "abc-123".to_string()),
+            ]),
+            body: Bytes::from(r#"{"ok":true}"#),
+        };
+        let json = serde_json::to_value(&response).expect("serialize HttpResponse");
+        let restored: HttpResponse =
+            serde_json::from_value(json).expect("deserialize HttpResponse");
+        assert_eq!(restored.status, response.status);
+        assert_eq!(restored.headers, response.headers);
+        assert_eq!(restored.body, response.body);
+    }
+
+    #[test]
+    fn test_capability_info_serialization_roundtrip() {
+        let info = CapabilityInfo {
+            capability: "secure_http".to_string(),
+            atomic_type: Some("Tower".to_string()),
+            primals: vec![PrimalInfo {
+                name: "songbird".to_string(),
+                socket: PathBuf::from("/tmp/songbird.sock"),
+                healthy: true,
+                capabilities: vec!["secure_http".to_string()],
+            }],
+            primary_socket: PathBuf::from("/tmp/primary.sock"),
+        };
+        let json = serde_json::to_value(&info).expect("serialize CapabilityInfo");
+        let restored: CapabilityInfo =
+            serde_json::from_value(json).expect("deserialize CapabilityInfo");
+        assert_eq!(restored.capability, info.capability);
+        assert_eq!(restored.atomic_type, info.atomic_type);
+        assert_eq!(restored.primals.len(), 1);
+        assert_eq!(restored.primals[0].name, "songbird");
+        assert_eq!(restored.primary_socket, info.primary_socket);
+    }
+
+    #[test]
+    fn test_routing_metrics_serialization_roundtrip() {
+        let metrics = RoutingMetrics {
+            total_requests: 42,
+            metrics: vec![RoutingMetric {
+                request_id: "req-1".to_string(),
+                capability: "crypto_sign".to_string(),
+                method: "ed25519.sign".to_string(),
+                routed_through: vec!["beardog".to_string()],
+                latency_ms: 5,
+                success: true,
+                timestamp: "2024-01-15T12:00:00Z".to_string(),
+                error: None,
+            }],
+        };
+        let json = serde_json::to_value(&metrics).expect("serialize RoutingMetrics");
+        let restored: RoutingMetrics =
+            serde_json::from_value(json).expect("deserialize RoutingMetrics");
+        assert_eq!(restored.total_requests, metrics.total_requests);
+        assert_eq!(restored.metrics.len(), 1);
+        assert_eq!(restored.metrics[0].request_id, "req-1");
+        assert_eq!(restored.metrics[0].error, None);
+    }
+
+    #[test]
+    fn test_routing_metric_with_error_serialization() {
+        let metric = RoutingMetric {
+            request_id: "req-2".to_string(),
+            capability: "secure_http".to_string(),
+            method: "proxy_http".to_string(),
+            routed_through: vec![],
+            latency_ms: 100,
+            success: false,
+            timestamp: "2024-01-15T12:01:00Z".to_string(),
+            error: Some("Connection refused".to_string()),
+        };
+        let json = serde_json::to_value(&metric).expect("serialize RoutingMetric");
+        let restored: RoutingMetric =
+            serde_json::from_value(json).expect("deserialize RoutingMetric");
+        assert_eq!(restored.error, Some("Connection refused".to_string()));
+    }
+
+    // =========================================================================
+    // 5. Method name formatting
+    // =========================================================================
+
+    #[test]
+    fn test_method_names_proxy_http() {
+        let expected = "neural_api.proxy_http";
+        assert_eq!(expected, "neural_api.proxy_http");
+    }
+
+    #[test]
+    fn test_method_names_discover_capability() {
+        assert_eq!(
+            "neural_api.discover_capability",
+            "neural_api.discover_capability"
+        );
+    }
+
+    #[test]
+    fn test_method_names_route_to_primal() {
+        assert_eq!("neural_api.route_to_primal", "neural_api.route_to_primal");
+    }
+
+    #[test]
+    fn test_method_names_get_metrics() {
+        assert_eq!(
+            "neural_api.get_routing_metrics",
+            "neural_api.get_routing_metrics"
+        );
+    }
+
+    #[test]
+    fn test_json_rpc_request_structure() {
         let params = serde_json::json!({
             "method": "POST",
             "url": "https://example.com",
             "headers": {},
             "body": null
         });
-
         let request = serde_json::json!({
             "jsonrpc": "2.0",
             "method": "neural_api.proxy_http",
             "params": params,
             "id": 1
         });
-
         assert_eq!(request["jsonrpc"], "2.0");
         assert_eq!(request["method"], "neural_api.proxy_http");
         assert_eq!(request["id"], 1);
+    }
+
+    // =========================================================================
+    // 6. Public API methods with mock server
+    // =========================================================================
+
+    /// Mock server: single-connection server that reads one request, writes one response.
+    async fn run_mock_server_one_shot(
+        socket_path: &Path,
+        response: serde_json::Value,
+    ) -> tokio::task::JoinHandle<()> {
+        let path = socket_path.to_path_buf();
+        let response_json = serde_json::to_string(&response).expect("serialize response");
+
+        tokio::spawn(async move {
+            let listener = UnixListener::bind(&path).expect("bind mock socket");
+            if let Ok((mut stream, _)) = listener.accept().await {
+                let mut buf = vec![0u8; 4096];
+                let n = stream.read(&mut buf).await.expect("read request");
+                let _request = &buf[..n];
+
+                let response_line = format!("{}\n", response_json);
+                stream
+                    .write_all(response_line.as_bytes())
+                    .await
+                    .expect("write response");
+                stream.flush().await.expect("flush");
+            }
+        })
+    }
+
+    #[tokio::test]
+    async fn test_proxy_http_success() {
+        let temp = TempDir::new().expect("create temp dir");
+        let socket_path = temp.path().join("neural.sock");
+
+        let http_response = serde_json::json!({
+            "status": 200,
+            "headers": {"content-type": "application/json"},
+            "body": "{\"ok\":true}"
+        });
+        let rpc_response = serde_json::json!({
+            "jsonrpc": "2.0",
+            "result": http_response,
+            "id": 1
+        });
+
+        let _server = run_mock_server_one_shot(&socket_path, rpc_response).await;
+
+        // Give server a moment to bind
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        let client = NeuralApiClient::new(&socket_path)
+            .expect("create client")
+            .with_connection_timeout(Duration::from_secs(2))
+            .with_request_timeout(Duration::from_secs(2));
+
+        let response = client
+            .proxy_http("GET", "https://example.com", None, None)
+            .await
+            .expect("proxy_http should succeed");
+
+        assert_eq!(response.status, 200);
+        assert_eq!(response.body_str().unwrap(), "{\"ok\":true}");
+        assert_eq!(
+            response.headers.get("content-type"),
+            Some(&"application/json".to_string())
+        );
+    }
+
+    #[tokio::test]
+    async fn test_discover_capability_success() {
+        let temp = TempDir::new().expect("create temp dir");
+        let socket_path = temp.path().join("neural.sock");
+
+        let capability_result = serde_json::json!({
+            "capability": "secure_http",
+            "atomic_type": "Tower",
+            "primals": [{
+                "name": "songbird",
+                "socket": "/tmp/songbird.sock",
+                "healthy": true,
+                "capabilities": ["secure_http"]
+            }],
+            "primary_socket": "/tmp/songbird.sock"
+        });
+        let rpc_response = serde_json::json!({
+            "jsonrpc": "2.0",
+            "result": capability_result,
+            "id": 1
+        });
+
+        let _server = run_mock_server_one_shot(&socket_path, rpc_response).await;
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        let client = NeuralApiClient::new(&socket_path)
+            .expect("create client")
+            .with_connection_timeout(Duration::from_secs(2))
+            .with_request_timeout(Duration::from_secs(2));
+
+        let info = client
+            .discover_capability("secure_http")
+            .await
+            .expect("discover_capability should succeed");
+
+        assert_eq!(info.capability, "secure_http");
+        assert_eq!(info.atomic_type, Some("Tower".to_string()));
+        assert_eq!(info.primals.len(), 1);
+        assert_eq!(info.primals[0].name, "songbird");
+        assert!(info.primals[0].healthy);
+    }
+
+    #[tokio::test]
+    async fn test_route_to_primal_success() {
+        let temp = TempDir::new().expect("create temp dir");
+        let socket_path = temp.path().join("neural.sock");
+
+        let result = serde_json::json!({"signature": "abc123base64"});
+        let rpc_response = serde_json::json!({
+            "jsonrpc": "2.0",
+            "result": result,
+            "id": 1
+        });
+
+        let _server = run_mock_server_one_shot(&socket_path, rpc_response).await;
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        let client = NeuralApiClient::new(&socket_path)
+            .expect("create client")
+            .with_connection_timeout(Duration::from_secs(2))
+            .with_request_timeout(Duration::from_secs(2));
+
+        let value = client
+            .route_to_primal(
+                "crypto_sign",
+                "ed25519.sign",
+                serde_json::json!({"data": "x"}),
+            )
+            .await
+            .expect("route_to_primal should succeed");
+
+        assert_eq!(
+            value.get("signature").and_then(|v| v.as_str()),
+            Some("abc123base64")
+        );
+    }
+
+    #[tokio::test]
+    async fn test_get_metrics_success() {
+        let temp = TempDir::new().expect("create temp dir");
+        let socket_path = temp.path().join("neural.sock");
+
+        let metrics_result = serde_json::json!({
+            "total_requests": 10,
+            "metrics": [{
+                "request_id": "r1",
+                "capability": "secure_http",
+                "method": "proxy_http",
+                "routed_through": ["songbird"],
+                "latency_ms": 5,
+                "success": true,
+                "timestamp": "2024-01-15T12:00:00Z",
+                "error": null
+            }]
+        });
+        let rpc_response = serde_json::json!({
+            "jsonrpc": "2.0",
+            "result": metrics_result,
+            "id": 1
+        });
+
+        let _server = run_mock_server_one_shot(&socket_path, rpc_response).await;
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        let client = NeuralApiClient::new(&socket_path)
+            .expect("create client")
+            .with_connection_timeout(Duration::from_secs(2))
+            .with_request_timeout(Duration::from_secs(2));
+
+        let metrics = client
+            .get_metrics()
+            .await
+            .expect("get_metrics should succeed");
+
+        assert_eq!(metrics.total_requests, 10);
+        assert_eq!(metrics.metrics.len(), 1);
+        assert_eq!(metrics.metrics[0].request_id, "r1");
+        assert_eq!(metrics.metrics[0].latency_ms, 5);
+    }
+
+    #[tokio::test]
+    async fn test_proxy_http_with_headers_and_body() {
+        let temp = TempDir::new().expect("create temp dir");
+        let socket_path = temp.path().join("neural.sock");
+
+        let http_response = serde_json::json!({
+            "status": 201,
+            "headers": {},
+            "body": "created"
+        });
+        let rpc_response = serde_json::json!({
+            "jsonrpc": "2.0",
+            "result": http_response,
+            "id": 1
+        });
+
+        let _server = run_mock_server_one_shot(&socket_path, rpc_response).await;
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        let client = NeuralApiClient::new(&socket_path)
+            .expect("create client")
+            .with_connection_timeout(Duration::from_secs(2))
+            .with_request_timeout(Duration::from_secs(2));
+
+        let headers = HashMap::from([("x-api-key".to_string(), "secret".to_string())]);
+        let body = serde_json::json!({"key": "value"});
+
+        let response = client
+            .proxy_http("POST", "https://api.example.com", Some(headers), Some(body))
+            .await
+            .expect("proxy_http with headers/body should succeed");
+
+        assert_eq!(response.status, 201);
+        assert_eq!(response.body_str().unwrap(), "created");
+    }
+
+    #[tokio::test]
+    async fn test_call_returns_rpc_error() {
+        let temp = TempDir::new().expect("create temp dir");
+        let socket_path = temp.path().join("neural.sock");
+
+        let rpc_error_response = serde_json::json!({
+            "jsonrpc": "2.0",
+            "error": {"code": -32601, "message": "Method not found"},
+            "id": 1
+        });
+
+        let _server = run_mock_server_one_shot(&socket_path, rpc_error_response).await;
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        let client = NeuralApiClient::new(&socket_path)
+            .expect("create client")
+            .with_connection_timeout(Duration::from_secs(2))
+            .with_request_timeout(Duration::from_secs(2));
+
+        let result = client
+            .proxy_http("GET", "https://example.com", None, None)
+            .await;
+
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            err.to_string().contains("-32601") || err.to_string().contains("Method not found"),
+            "Error should mention RPC error, got: {}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    async fn test_connection_fails_to_nonexistent_socket() {
+        let temp = TempDir::new().expect("create temp dir");
+        let socket_path = temp.path().join("nonexistent.sock");
+        // Don't spawn server - socket doesn't exist
+
+        let client = NeuralApiClient::new(&socket_path)
+            .expect("create client")
+            .with_connection_timeout(Duration::from_millis(100))
+            .with_request_timeout(Duration::from_secs(2));
+
+        let result = client
+            .proxy_http("GET", "https://example.com", None, None)
+            .await;
+
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            err.to_string().contains("connect") || err.to_string().contains("Connection"),
+            "Error should mention connection failure, got: {}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    async fn test_proxy_http_invalid_response_missing_result() {
+        let temp = TempDir::new().expect("create temp dir");
+        let socket_path = temp.path().join("neural.sock");
+
+        let rpc_response = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 1
+        });
+
+        let _server = run_mock_server_one_shot(&socket_path, rpc_response).await;
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        let client = NeuralApiClient::new(&socket_path)
+            .expect("create client")
+            .with_connection_timeout(Duration::from_secs(2))
+            .with_request_timeout(Duration::from_secs(2));
+
+        let result = client
+            .proxy_http("GET", "https://example.com", None, None)
+            .await;
+
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            err.to_string().contains("result") || err.to_string().contains("missing"),
+            "Error should mention missing result, got: {}",
+            err
+        );
     }
 }

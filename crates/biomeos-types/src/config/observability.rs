@@ -933,7 +933,11 @@ mod tests {
 
     #[test]
     fn test_syslog_protocol_serialization() {
-        for protocol in [SyslogProtocol::Udp, SyslogProtocol::Tcp, SyslogProtocol::Tls] {
+        for protocol in [
+            SyslogProtocol::Udp,
+            SyslogProtocol::Tcp,
+            SyslogProtocol::Tls,
+        ] {
             let json = serde_json::to_string(&protocol).expect("serialize");
             let _: SyslogProtocol = serde_json::from_str(&json).expect("deserialize");
         }
@@ -1137,7 +1141,11 @@ mod tests {
             name: "request_duration_seconds".to_string(),
             metric_type: MetricType::Histogram,
             description: "Request duration in seconds".to_string(),
-            labels: vec!["method".to_string(), "path".to_string(), "status".to_string()],
+            labels: vec![
+                "method".to_string(),
+                "path".to_string(),
+                "status".to_string(),
+            ],
         };
         assert_eq!(config.labels.len(), 3);
     }

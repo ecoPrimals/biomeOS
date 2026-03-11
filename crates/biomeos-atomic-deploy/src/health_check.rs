@@ -302,4 +302,110 @@ mod tests {
         let checker = HealthChecker::with_timeout(PathBuf::from("/tmp"), Duration::from_secs(10));
         assert_eq!(checker.rpc_timeout, Duration::from_secs(10));
     }
+
+    #[test]
+    fn test_health_checker_new_default() {
+        let _checker = HealthChecker::new_default();
+        // Smoke test: should not panic; uses SystemPaths::new_lazy().runtime_dir()
+    }
+
+    #[tokio::test]
+    async fn test_check_primal_deep_nonexistent_returns_basic() {
+        let temp_dir = TempDir::new().unwrap();
+        let checker = HealthChecker::new(temp_dir.path().to_path_buf());
+
+        let socket_path = temp_dir.path().join("nonexistent.sock");
+        let status = checker
+            .check_primal_deep(&socket_path, "health.ping")
+            .await
+            .expect("check_primal_deep should not fail");
+
+        assert!(!status.is_healthy);
+        assert!(!status.socket_exists);
+        assert_eq!(status.rpc_responsive, None);
+    }
+
+    #[tokio::test]
+    async fn test_check_primal_deep_socket_exists_but_rpc_fails() {
+        let temp_dir = TempDir::new().unwrap();
+        let checker =
+            HealthChecker::with_timeout(temp_dir.path().to_path_buf(), Duration::from_millis(100));
+
+        let socket_path = temp_dir.path().join("dumb.sock");
+        let _listener = UnixListener::bind(&socket_path).expect("bind socket");
+
+        // Socket exists but doesn't speak JSON-RPC - RPC ping will fail
+        let status = checker
+            .check_primal_deep(&socket_path, "health.ping")
+            .await
+            .expect("check_primal_deep should not fail");
+
+        assert!(!status.is_healthy);
+        assert!(status.socket_exists);
+        assert!(status.socket_accessible);
+        assert_eq!(status.rpc_responsive, Some(false));
+        assert!(status.latency_ms.is_some());
+        assert!(status
+            .message
+            .as_ref()
+            .is_some_and(|m| m.contains("RPC") || m.contains("ping")));
+    }
+
+    #[tokio::test]
+    async fn test_check_all_nonexistent_runtime_dir() {
+        let checker = HealthChecker::new(PathBuf::from("/nonexistent-biomeos-runtime-xyz-123"));
+
+        let result = checker.check_all("beardog").await;
+
+        let err = result.expect_err("Should fail when runtime dir does not exist");
+        assert!(
+            err.to_string().contains("Failed to read")
+                || err.to_string().contains("runtime")
+                || err.to_string().contains("directory"),
+            "Error should mention read failure: {}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    async fn test_check_all_empty_pattern_no_matches() {
+        let temp_dir = TempDir::new().unwrap();
+        let checker = HealthChecker::new(temp_dir.path().to_path_buf());
+
+        let _socket = UnixListener::bind(temp_dir.path().join("beardog.sock")).unwrap();
+
+        let results = checker
+            .check_all("nonexistent_pattern_xyz")
+            .await
+            .expect("check_all should succeed");
+
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn test_health_status_serialization_with_none_values() {
+        let status = HealthStatus {
+            is_healthy: false,
+            socket_exists: true,
+            socket_accessible: false,
+            rpc_responsive: None,
+            latency_ms: None,
+            message: Some("Path exists but is not a socket".to_string()),
+        };
+
+        let json = serde_json::to_string(&status).expect("serialize");
+        let deserialized: HealthStatus = serde_json::from_str(&json).expect("deserialize");
+
+        assert_eq!(status.is_healthy, deserialized.is_healthy);
+        assert_eq!(status.socket_accessible, deserialized.socket_accessible);
+        assert_eq!(status.rpc_responsive, deserialized.rpc_responsive);
+        assert_eq!(status.latency_ms, deserialized.latency_ms);
+    }
+
+    #[test]
+    fn test_health_checker_clone() {
+        let checker = HealthChecker::new(PathBuf::from("/tmp"));
+        let cloned = checker.clone();
+        assert_eq!(checker.runtime_dir, cloned.runtime_dir);
+    }
 }

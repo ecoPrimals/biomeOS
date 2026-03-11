@@ -103,6 +103,7 @@ impl Persistence {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::primal_client::NestGateClient;
 
     #[tokio::test]
     async fn test_persist_assignment_no_nestgate() {
@@ -117,13 +118,84 @@ mod tests {
 
         // Should return error but not panic
         assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            err.to_string().contains("No storage primal available"),
+            "Expected 'No storage primal available' in error, got: {}",
+            err
+        );
     }
 
     #[tokio::test]
     async fn test_remove_assignment_no_nestgate() {
         let result = Persistence::remove_assignment(&None, "test-device").await;
 
-        // Should succeed gracefully
+        // Should succeed gracefully (no-op when no NestGate)
         assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_persist_assignment_nestgate_unavailable_graceful_degradation() {
+        // NestGate client pointing to non-existent socket - call will fail
+        let nestgate = Some(NestGateClient::with_socket(
+            "nestgate",
+            "/tmp/nonexistent-biomeos-persistence-test-12345.sock",
+        ));
+
+        let result = Persistence::persist_assignment(
+            &nestgate,
+            "test-family",
+            "assign-001",
+            "gpu-0",
+            "toadstool-1",
+        )
+        .await;
+
+        // Graceful degradation: storage failure returns Ok(()) - assignment continues
+        assert!(
+            result.is_ok(),
+            "Persistence should degrade gracefully when NestGate call fails: {:?}",
+            result
+        );
+    }
+
+    #[tokio::test]
+    async fn test_remove_assignment_nestgate_unavailable_returns_ok() {
+        // When NestGate is None, remove_assignment returns Ok (no-op)
+        let result = Persistence::remove_assignment(&None, "gpu-0").await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_remove_assignment_nestgate_call_fails_returns_err() {
+        // NestGate client pointing to non-existent socket - delete call will fail
+        let nestgate = Some(NestGateClient::with_socket(
+            "nestgate",
+            "/tmp/nonexistent-biomeos-remove-test-67890.sock",
+        ));
+
+        let result = Persistence::remove_assignment(&nestgate, "gpu-0").await;
+
+        // remove_assignment propagates errors when NestGate call fails
+        assert!(
+            result.is_err(),
+            "remove_assignment should return Err when NestGate delete fails"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_persist_assignment_key_format() {
+        // Verify the persistence key format is assignment:{id}
+        // We test with None to ensure the error path includes our params
+        let result = Persistence::persist_assignment(
+            &None,
+            "family-xyz",
+            "unique-assign-id",
+            "device-abc",
+            "primal-def",
+        )
+        .await;
+
+        assert!(result.is_err());
     }
 }

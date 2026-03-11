@@ -288,6 +288,7 @@ impl GenomeBin {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
 
     #[test]
     fn test_extractor_entry_size() {
@@ -299,6 +300,26 @@ mod tests {
         let entry = ExtractorEntry::new("x86_64", 0, 0, &[0u8; 32]);
         let bytes = entry.to_bytes();
         assert_eq!(bytes.len(), 40, "ExtractorEntry must be exactly 40 bytes");
+    }
+
+    #[test]
+    fn test_extractor_entry_roundtrip() {
+        let checksum = [1u8; 32];
+        let entry = ExtractorEntry::new("aarch64", 4096, 1024, &checksum);
+        let bytes = entry.to_bytes();
+        assert_eq!(bytes[..16], b"aarch64\0\0\0\0\0\0\0\0\0"[..]);
+        assert_eq!(u64::from_le_bytes(bytes[16..24].try_into().unwrap()), 4096);
+        assert_eq!(u64::from_le_bytes(bytes[24..32].try_into().unwrap()), 1024);
+        assert_eq!(bytes[32..40], checksum[..8]);
+    }
+
+    #[test]
+    fn test_extractor_entry_long_arch_truncated() {
+        let entry = ExtractorEntry::new("x86_64_very_long_name", 0, 0, &[0u8; 32]);
+        let bytes = entry.to_bytes();
+        assert_eq!(bytes.len(), 40);
+        // First 16 bytes should be truncated arch
+        assert_eq!(&bytes[..6], b"x86_64");
     }
 
     #[test]
@@ -317,14 +338,42 @@ mod tests {
     #[test]
     fn test_table_capacity() {
         // Verify table can hold at least 4 architectures (32 bytes each)
-        // Compile-time assertion: if TABLE_SIZE < 128, this won't compile
         const MIN_ARCHITECTURES: usize = 4;
         const _: () = assert!(TABLE_SIZE >= MIN_ARCHITECTURES * 32);
-        // Verify at runtime that table holds expected count
         let capacity = TABLE_SIZE / 32;
         assert!(
             capacity >= MIN_ARCHITECTURES,
             "Table holds {capacity} arch entries (need {MIN_ARCHITECTURES})"
         );
+    }
+
+    #[test]
+    fn test_write_v4_1_empty_extractors() {
+        let mut genome = GenomeBin::new("v41-test");
+        genome.add_binary_bytes(Arch::X86_64, b"binary");
+        let temp = tempfile::tempdir().expect("temp dir");
+        let output = temp.path().join("test.genome");
+        let extractors: HashMap<Arch, &Path> = HashMap::new();
+        // Empty extractors - write_v4_1 skips all (continue for unsupported arch)
+        // So it creates file with bootstrap + empty table + payload
+        let result = genome.write_v4_1(&output, &extractors);
+        assert!(
+            result.is_ok(),
+            "write_v4_1 with empty extractors: {:?}",
+            result
+        );
+        assert!(output.exists());
+        let meta = std::fs::metadata(&output).expect("metadata");
+        assert!(
+            meta.len() > (BOOTSTRAP_SIZE + TABLE_SIZE) as u64,
+            "file should have payload"
+        );
+    }
+
+    #[test]
+    fn test_constants() {
+        assert_eq!(BOOTSTRAP_SIZE, 4096);
+        assert_eq!(TABLE_SIZE, 128);
+        assert_eq!(EXTRACTOR_SIZE, 1_048_576);
     }
 }

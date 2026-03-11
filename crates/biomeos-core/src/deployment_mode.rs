@@ -533,4 +533,141 @@ mod tests {
 
         assert_eq!(os.name(), "Linux (Ubuntu 22.04)");
     }
+
+    #[test]
+    fn test_from_env_string_invalid() {
+        let result = DeploymentMode::from_env_string("invalid_mode");
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("Invalid deployment mode"));
+    }
+
+    #[test]
+    fn test_from_env_string_variants() {
+        // cold_spore, livespore, sibling_spore (underscore variants)
+        let cold = DeploymentMode::from_env_string("cold_spore").unwrap();
+        assert!(matches!(cold, DeploymentMode::ColdSpore { .. }));
+
+        let live = DeploymentMode::from_env_string("live_spore").unwrap();
+        assert!(matches!(live, DeploymentMode::LiveSpore { .. }));
+
+        let sibling = DeploymentMode::from_env_string("sibling_spore").unwrap();
+        assert!(matches!(sibling, DeploymentMode::SiblingSpore { .. }));
+    }
+
+    #[test]
+    fn test_from_env_string_cold_persistence() {
+        std::env::set_var("BIOMEOS_DEPLOYMENT_MODE", "cold");
+        std::env::set_var("BIOMEOS_MEDIA_PATH", "/media/usb1");
+        std::env::set_var("BIOMEOS_PERSISTENCE", "1");
+
+        let mode = DeploymentMode::from_env_string("cold").unwrap();
+        match mode {
+            DeploymentMode::ColdSpore { persistence, .. } => assert!(persistence),
+            _ => panic!("Expected ColdSpore"),
+        }
+    }
+
+    #[test]
+    fn test_socket_prefix_livespore_with_xdg() {
+        std::env::set_var("XDG_RUNTIME_DIR", "/run/user/1000");
+        let mode = DeploymentMode::LiveSpore {
+            root_partition: PathBuf::from("/"),
+            boot_partition: PathBuf::from("/boot"),
+            installed_version: "1.0.0".to_string(),
+        };
+        let prefix = mode.socket_prefix();
+        assert_eq!(prefix, PathBuf::from("/run/user/1000/biomeos"));
+        std::env::remove_var("XDG_RUNTIME_DIR");
+    }
+
+    #[test]
+    fn test_description_cold_ephemeral() {
+        let mode = DeploymentMode::ColdSpore {
+            media_path: PathBuf::from("/media/usb0"),
+            persistence: false,
+            host_os: HostOS::Unknown,
+        };
+        let desc = mode.description();
+        assert!(desc.contains("Cold Spore"));
+        assert!(desc.contains("ephemeral"));
+    }
+
+    #[test]
+    fn test_description_livespore() {
+        let mode = DeploymentMode::LiveSpore {
+            root_partition: PathBuf::from("/"),
+            boot_partition: PathBuf::from("/boot"),
+            installed_version: "2.0.0".to_string(),
+        };
+        let desc = mode.description();
+        assert!(desc.contains("Live Spore"));
+        assert!(desc.contains("2.0.0"));
+    }
+
+    #[test]
+    fn test_description_siblingspore() {
+        let mode = DeploymentMode::SiblingSpore {
+            host_os: HostOS::Windows {
+                version: "11".to_string(),
+            },
+            install_dir: PathBuf::from("/opt/biomeos"),
+            isolation: IsolationLevel::Full,
+        };
+        let desc = mode.description();
+        assert!(desc.contains("Sibling Spore"));
+        assert!(desc.contains("Windows"));
+    }
+
+    #[test]
+    fn test_host_os_name_all_variants() {
+        assert_eq!(
+            HostOS::MacOS {
+                version: "14.0".to_string()
+            }
+            .name(),
+            "macOS 14.0"
+        );
+        assert_eq!(
+            HostOS::Windows {
+                version: "11".to_string()
+            }
+            .name(),
+            "Windows 11"
+        );
+        assert_eq!(
+            HostOS::BSD {
+                variant: "FreeBSD".to_string()
+            }
+            .name(),
+            "FreeBSD"
+        );
+        assert_eq!(HostOS::Unknown.name(), "Unknown OS");
+    }
+
+    #[test]
+    fn test_deployment_mode_serialization() {
+        let mode = DeploymentMode::SiblingSpore {
+            host_os: HostOS::Unknown,
+            install_dir: PathBuf::from("/home/test/.local/share/biomeos"),
+            isolation: IsolationLevel::Sandboxed,
+        };
+        let json = serde_json::to_string(&mode).expect("serialize");
+        let restored: DeploymentMode = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(mode, restored);
+    }
+
+    #[test]
+    fn test_isolation_level_serialization() {
+        let levels = [
+            IsolationLevel::Sandboxed,
+            IsolationLevel::Shared,
+            IsolationLevel::Full,
+        ];
+        for level in levels {
+            let json = serde_json::to_string(&level).expect("serialize");
+            let restored: IsolationLevel = serde_json::from_str(&json).expect("deserialize");
+            assert_eq!(level, restored);
+        }
+    }
 }

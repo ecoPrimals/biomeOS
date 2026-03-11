@@ -16,10 +16,18 @@
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 
-use crate::graph::GraphResult;
+/// Result of a graph execution (used by record_execution).
+#[derive(Debug, Clone, Default)]
+pub struct GraphResult {
+    pub success: bool,
+    pub node_results: HashMap<String, serde_json::Value>,
+    pub errors: Vec<String>,
+    pub duration_ms: u64,
+}
 
 /// Metrics collector for graph executions (ecoBin compliant!)
 #[derive(Clone)]
@@ -85,7 +93,18 @@ pub struct ExecutionRecord {
     pub success: bool,
     pub duration_ms: u64,
     pub executed_at: chrono::DateTime<chrono::Utc>,
-    pub metadata: String, // JSON
+    /// Execution metadata as JSON string
+    pub metadata: String,
+}
+
+/// Node-level execution record (stored for aggregation)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct NodeExecutionRecord {
+    graph_name: String,
+    node_id: String,
+    duration_ms: u64,
+    success: bool,
+    executed_at: chrono::DateTime<chrono::Utc>,
 }
 
 impl MetricsCollector {
@@ -199,41 +218,102 @@ impl MetricsCollector {
     }
 }
 
-// Stub implementations for compatibility
-// TODO: These are intentionally simplified - node-level metrics can be added later if needed
-// Rationale: Current implementation focuses on graph-level metrics for simplicity
-// Future: Add node-level tracking if detailed per-node metrics are required
 impl MetricsCollector {
+    /// Record a node-level execution for metrics aggregation.
+    /// Call with the same graph_name used in record_execution for this run.
     pub async fn record_node_execution(
         &self,
-        _execution_id: i64,
-        _node_id: &str,
+        execution_id: i64,
+        graph_name: &str,
+        node_id: &str,
         _primal_id: &str,
         _operation: &str,
-        _success: bool,
-        _duration_ms: u64,
+        success: bool,
+        duration_ms: u64,
         _error: Option<&str>,
     ) -> Result<()> {
-        // Simplified: Node-level metrics can be added later if needed
+        let record = NodeExecutionRecord {
+            graph_name: graph_name.to_string(),
+            node_id: node_id.to_string(),
+            duration_ms,
+            success,
+            executed_at: chrono::Utc::now(),
+        };
+        let key = format!(
+            "node_exec:{}:{}:{}:{}",
+            graph_name,
+            node_id,
+            execution_id,
+            record.executed_at.timestamp_millis()
+        );
+        let value = serde_json::to_vec(&record).context("Failed to serialize node record")?;
+        self.db
+            .insert(key.as_bytes(), value)
+            .context("Failed to insert node execution record")?;
         Ok(())
     }
 
+    /// Get aggregated metrics for a specific node within a graph.
     pub async fn get_node_metrics(
         &self,
-        _graph_name: &str,
-        _node_id: &str,
+        graph_name: &str,
+        node_id: &str,
     ) -> Result<Option<NodeMetricsAggregate>> {
-        // Simplified: Return None for now
-        Ok(None)
+        let prefix = format!("node_exec:{}:{}:", graph_name, node_id);
+        let mut total = 0u64;
+        let mut successful = 0u64;
+        let mut total_duration = 0u64;
+
+        for item in self.db.scan_prefix(prefix.as_bytes()) {
+            let (_key, value) = item.context("Failed to read database entry")?;
+            let record: NodeExecutionRecord =
+                serde_json::from_slice(&value).context("Failed to deserialize node record")?;
+            if record.graph_name == graph_name && record.node_id == node_id {
+                total += 1;
+                if record.success {
+                    successful += 1;
+                }
+                total_duration += record.duration_ms;
+            }
+        }
+
+        if total == 0 {
+            return Ok(None);
+        }
+
+        Ok(Some(NodeMetricsAggregate {
+            node_id: node_id.to_string(),
+            total_executions: total,
+            successful_executions: successful,
+            avg_duration_ms: (total_duration as f64) / (total as f64),
+            success_rate: (successful as f64) / (total as f64),
+        }))
     }
 
+    /// Get recent graph executions, sorted by id descending.
     pub async fn get_recent_executions(
         &self,
-        _graph_name: &str,
-        _limit: usize,
+        graph_name: &str,
+        limit: usize,
     ) -> Result<Vec<ExecutionRecord>> {
-        // Simplified: Return empty for now
-        Ok(vec![])
+        let prefix = format!("exec:{}:", graph_name);
+        let mut records: Vec<ExecutionRecord> = Vec::new();
+
+        for item in self.db.scan_prefix(prefix.as_bytes()) {
+            let (_key, value) = item.context("Failed to read database entry")?;
+            let record: ExecutionRecord =
+                serde_json::from_slice(&value).context("Failed to deserialize record")?;
+            records.push(record);
+        }
+
+        if records.is_empty() {
+            return Ok(vec![]);
+        }
+
+        // Sort by id descending (most recent first)
+        records.sort_by(|a, b| b.id.cmp(&a.id));
+        records.truncate(limit);
+        Ok(records)
     }
 }
 
@@ -279,7 +359,7 @@ mod tests {
 
         let collector = MetricsCollector::new(&db_path).await.unwrap();
 
-        // Record multiple executions
+        // Record multiple executions (small delay ensures unique timestamps)
         for i in 0..5 {
             let result = GraphResult {
                 success: i % 2 == 0, // Alternate success/failure
@@ -292,6 +372,7 @@ mod tests {
                 .record_execution("multi_graph", &result, (i + 1) * 100)
                 .await
                 .unwrap();
+            tokio::time::sleep(tokio::time::Duration::from_millis(2)).await;
         }
 
         let metrics = collector.get_graph_metrics("multi_graph").await.unwrap();

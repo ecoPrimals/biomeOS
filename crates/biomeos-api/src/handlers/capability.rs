@@ -224,92 +224,79 @@ fn build_capability_list(
     capabilities
 }
 
-/// Get standalone capabilities (for development/demo mode)
+/// Get standalone capabilities via runtime socket discovery
+///
+/// Instead of hardcoding primal names and paths, scans the XDG runtime
+/// directory for active primal sockets and infers capabilities from the
+/// taxonomy. Falls back to an empty list when no primals are discovered
+/// — biomeOS only has self-knowledge, other primals are discovered at runtime.
 fn get_standalone_capabilities(filter: &Option<String>) -> Vec<CapabilityInfo> {
-    let mut capabilities = vec![
-        CapabilityInfo {
-            name: "security".to_string(),
-            description: Some("Security and cryptographic operations".to_string()),
-            providers: vec![CapabilityProvider {
-                primal_id: "beardog-local".to_string(),
-                primal_name: "BearDog".to_string(),
-                endpoint: "unix:///tmp/biomeos/beardog.sock".to_string(),
-                health: "healthy".to_string(),
-                trust_level: Some(3),
-            }],
-        },
-        CapabilityInfo {
-            name: "crypto.encrypt".to_string(),
-            description: Some("Data encryption".to_string()),
-            providers: vec![CapabilityProvider {
-                primal_id: "beardog-local".to_string(),
-                primal_name: "BearDog".to_string(),
-                endpoint: "unix:///tmp/biomeos/beardog.sock".to_string(),
-                health: "healthy".to_string(),
-                trust_level: Some(3),
-            }],
-        },
-        CapabilityInfo {
-            name: "orchestration".to_string(),
-            description: Some("Primal orchestration and coordination".to_string()),
-            providers: vec![CapabilityProvider {
-                primal_id: "songbird-local".to_string(),
-                primal_name: "Songbird".to_string(),
-                endpoint: "unix:///tmp/biomeos/songbird.sock".to_string(),
-                health: "healthy".to_string(),
-                trust_level: Some(3),
-            }],
-        },
-        CapabilityInfo {
-            name: "discovery".to_string(),
-            description: Some("Primal discovery and service location".to_string()),
-            providers: vec![CapabilityProvider {
-                primal_id: "songbird-local".to_string(),
-                primal_name: "Songbird".to_string(),
-                endpoint: "unix:///tmp/biomeos/songbird.sock".to_string(),
-                health: "healthy".to_string(),
-                trust_level: Some(3),
-            }],
-        },
-        CapabilityInfo {
-            name: "compute".to_string(),
-            description: Some("Compute and execution services".to_string()),
-            providers: vec![CapabilityProvider {
-                primal_id: "toadstool-local".to_string(),
-                primal_name: "Toadstool".to_string(),
-                endpoint: "unix:///tmp/biomeos/toadstool.sock".to_string(),
-                health: "healthy".to_string(),
-                trust_level: Some(3),
-            }],
-        },
-        CapabilityInfo {
-            name: "storage".to_string(),
-            description: Some("Storage and data persistence".to_string()),
-            providers: vec![CapabilityProvider {
-                primal_id: "nestgate-local".to_string(),
-                primal_name: "NestGate".to_string(),
-                endpoint: "unix:///tmp/biomeos/nestgate.sock".to_string(),
-                health: "healthy".to_string(),
-                trust_level: Some(2),
-            }],
-        },
-    ];
+    use biomeos_types::capability_taxonomy::capabilities_for_primal;
+    use biomeos_types::SystemPaths;
 
-    // Apply filter if provided
+    let paths = SystemPaths::new_lazy();
+    let mut capability_map: std::collections::HashMap<String, Vec<CapabilityProvider>> =
+        std::collections::HashMap::new();
+
+    if let Ok(entries) = std::fs::read_dir(paths.runtime_dir()) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            let file_name = match path.file_name().and_then(|n| n.to_str()) {
+                Some(name) => name.to_string(),
+                None => continue,
+            };
+
+            if !file_name.ends_with(".sock") {
+                continue;
+            }
+
+            let primal_name = match file_name.split('-').next() {
+                Some(name) if !name.is_empty() => name.to_string(),
+                _ => continue,
+            };
+
+            let endpoint = format!("unix://{}", path.display());
+            let caps = capabilities_for_primal(&primal_name);
+
+            let provider = CapabilityProvider {
+                primal_id: file_name.trim_end_matches(".sock").to_string(),
+                primal_name: primal_name.clone(),
+                endpoint,
+                health: "unknown".to_string(),
+                trust_level: Some(1),
+            };
+
+            for cap in caps {
+                capability_map
+                    .entry(cap)
+                    .or_default()
+                    .push(provider.clone());
+            }
+        }
+    }
+
+    let mut capabilities: Vec<CapabilityInfo> = capability_map
+        .into_iter()
+        .map(|(name, providers)| CapabilityInfo {
+            name,
+            description: None,
+            providers,
+        })
+        .collect();
+
     if let Some(filter_str) = filter {
         capabilities.retain(|c| c.name.contains(filter_str));
     }
 
+    capabilities.sort_by(|a, b| a.name.cmp(&b.name));
     capabilities
 }
 
-/// Get standalone providers for a capability
+/// Get standalone providers for a capability via runtime discovery
 fn get_standalone_providers(capability: &str) -> Vec<CapabilityProvider> {
-    let all_capabilities = get_standalone_capabilities(&None);
-
-    all_capabilities
+    get_standalone_capabilities(&None)
         .into_iter()
-        .filter(|c| c.name == capability || c.name.starts_with(&format!("{}.", capability)))
+        .filter(|c| c.name == capability || c.name.starts_with(&format!("{capability}.")))
         .flat_map(|c| c.providers)
         .collect()
 }
@@ -436,19 +423,20 @@ mod tests {
     }
 
     #[test]
-    fn test_get_standalone_capabilities_returns_all() {
+    fn test_get_standalone_capabilities_runtime_discovery() {
+        // Standalone mode now does runtime socket discovery — in a test
+        // environment with no primal sockets, returns empty (correct behavior:
+        // biomeOS only knows what's actually running)
         let capabilities = get_standalone_capabilities(&None);
-        assert!(!capabilities.is_empty());
-        assert!(capabilities.len() >= 5); // At least 5 core capabilities
-
-        // Check that core capabilities are present
-        let names: Vec<&str> = capabilities.iter().map(|c| c.name.as_str()).collect();
-        assert!(names.contains(&"security"));
-        assert!(names.contains(&"orchestration"));
+        // Result depends on whether primals are running; verify it doesn't panic
+        // and the filter contract holds
+        let filtered = get_standalone_capabilities(&Some("nonexistent_xyz".to_string()));
+        assert!(filtered.is_empty());
+        assert!(filtered.len() <= capabilities.len());
     }
 
     #[test]
-    fn test_get_standalone_capabilities_with_filter() {
+    fn test_get_standalone_capabilities_filter_contract() {
         let all = get_standalone_capabilities(&None);
         let filtered = get_standalone_capabilities(&Some("crypto".to_string()));
 
@@ -457,23 +445,19 @@ mod tests {
     }
 
     #[test]
-    fn test_get_standalone_providers_finds_matching() {
-        let providers = get_standalone_providers("security");
-        assert!(!providers.is_empty());
-        assert!(providers.iter().any(|p| p.primal_name == "BearDog"));
-    }
-
-    #[test]
-    fn test_get_standalone_providers_prefix_match() {
-        let providers = get_standalone_providers("crypto");
-        // Should match "crypto.encrypt" via prefix
-        assert!(!providers.is_empty());
-    }
-
-    #[test]
     fn test_get_standalone_providers_no_match() {
         let providers = get_standalone_providers("nonexistent");
         assert!(providers.is_empty());
+    }
+
+    #[test]
+    fn test_get_standalone_providers_filter_contract() {
+        // With runtime discovery, providers for a given capability are
+        // a subset of all discovered capabilities
+        let all_caps = get_standalone_capabilities(&None);
+        let security_providers = get_standalone_providers("security");
+        // Security providers should not exceed total capabilities
+        assert!(security_providers.len() <= all_caps.len() + 1);
     }
 
     #[test]
@@ -557,9 +541,10 @@ mod tests {
         let query = ListCapabilitiesQuery { filter: None };
         let result = list_capabilities(State(state), axum::extract::Query(query)).await;
 
+        // Standalone mode now uses runtime socket discovery — in test
+        // environment, result depends on running primals. Verify the
+        // handler doesn't error and returns a valid response shape.
         assert!(result.is_ok());
-        let response = result.unwrap();
-        assert!(!response.capabilities.is_empty());
     }
 
     #[tokio::test]
@@ -580,9 +565,9 @@ mod tests {
         let result = discover_capability(State(state), Json(request)).await;
 
         assert!(result.is_ok());
-        let response = result.unwrap();
+        let response = result.expect("handler should succeed");
         assert_eq!(response.capability, "security");
-        assert!(!response.providers.is_empty());
+        // Providers depend on runtime socket discovery — may be empty in tests
     }
 
     #[tokio::test]

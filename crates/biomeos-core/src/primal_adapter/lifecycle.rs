@@ -135,3 +135,118 @@ impl LifecycleResponse {
         matches!(self, LifecycleResponse::Deferred { .. })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_lifecycle_request_new() {
+        let req = LifecycleRequest::new(
+            LifecycleTransition::GracefulStop,
+            TransitionReason::ResourcePressure,
+        );
+        assert!(matches!(req.transition, LifecycleTransition::GracefulStop));
+        assert!(matches!(req.reason, TransitionReason::ResourcePressure));
+        assert!(matches!(req.urgency, Urgency::Normal));
+        assert_eq!(req.requestor, "BiomeOS");
+    }
+
+    #[test]
+    fn test_lifecycle_request_with_urgency() {
+        let req = LifecycleRequest::new(LifecycleTransition::Start, TransitionReason::UserRequest)
+            .with_urgency(Urgency::Critical);
+        assert!(matches!(req.urgency, Urgency::Critical));
+    }
+
+    #[test]
+    fn test_lifecycle_request_with_requestor() {
+        let req =
+            LifecycleRequest::new(LifecycleTransition::Restart, TransitionReason::Maintenance)
+                .with_requestor("admin".to_string());
+        assert_eq!(req.requestor, "admin");
+    }
+
+    #[test]
+    fn test_lifecycle_response_accepted() {
+        let resp = LifecycleResponse::Accepted;
+        assert!(resp.is_success());
+        assert!(!resp.should_retry());
+    }
+
+    #[test]
+    fn test_lifecycle_response_deferred() {
+        let resp = LifecycleResponse::Deferred {
+            duration: Duration::from_secs(10),
+            reason: "busy".to_string(),
+        };
+        assert!(!resp.is_success());
+        assert!(resp.should_retry());
+    }
+
+    #[test]
+    fn test_lifecycle_response_refused() {
+        let resp = LifecycleResponse::Refused {
+            reason: "not now".to_string(),
+        };
+        assert!(!resp.is_success());
+        assert!(!resp.should_retry());
+    }
+
+    #[test]
+    fn test_lifecycle_response_not_supported() {
+        let resp = LifecycleResponse::NotSupported;
+        assert!(!resp.is_success());
+        assert!(!resp.should_retry());
+    }
+
+    #[test]
+    fn test_lifecycle_transition_serialization() {
+        for transition in [
+            LifecycleTransition::Start,
+            LifecycleTransition::GracefulStop,
+            LifecycleTransition::EmergencyStop,
+            LifecycleTransition::Restart,
+            LifecycleTransition::ScaleDown,
+        ] {
+            let json = serde_json::to_string(&transition).expect("serialize");
+            let restored: LifecycleTransition = serde_json::from_str(&json).expect("deserialize");
+            assert!(matches!(
+                (transition, restored),
+                (LifecycleTransition::Start, LifecycleTransition::Start)
+                    | (
+                        LifecycleTransition::GracefulStop,
+                        LifecycleTransition::GracefulStop
+                    )
+                    | (
+                        LifecycleTransition::EmergencyStop,
+                        LifecycleTransition::EmergencyStop
+                    )
+                    | (LifecycleTransition::Restart, LifecycleTransition::Restart)
+                    | (
+                        LifecycleTransition::ScaleDown,
+                        LifecycleTransition::ScaleDown
+                    )
+            ));
+        }
+    }
+
+    #[test]
+    fn test_transition_reason_serialization() {
+        let reason = TransitionReason::Other("custom".to_string());
+        let json = serde_json::to_string(&reason).expect("serialize");
+        let restored: TransitionReason = serde_json::from_str(&json).expect("deserialize");
+        match (&reason, &restored) {
+            (TransitionReason::Other(a), TransitionReason::Other(b)) => assert_eq!(a, b),
+            _ => panic!("Expected Other variant"),
+        }
+    }
+
+    #[test]
+    fn test_urgency_serialization() {
+        let urgency = Urgency::High;
+        let json = serde_json::to_string(&urgency).expect("serialize");
+        let restored: Urgency = serde_json::from_str(&json).expect("deserialize");
+        assert!(matches!(restored, Urgency::High));
+    }
+}

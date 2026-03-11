@@ -51,11 +51,6 @@ pub struct NeuralApiServer {
     /// Path to graphs directory
     pub(super) graphs_dir: PathBuf,
 
-    /// Active executions (execution_id -> status)
-    /// Reserved for async execution tracking in future graph executor evolution
-    #[allow(dead_code)]
-    pub(super) executions: Arc<RwLock<HashMap<String, crate::handlers::graph::ExecutionStatus>>>,
-
     /// Family ID for this server
     pub(super) family_id: String,
 
@@ -92,11 +87,6 @@ pub struct NeuralApiServer {
 
     /// Protocol escalation handler (JSON-RPC → tarpc)
     pub(super) protocol_handler: ProtocolHandler,
-
-    /// Living graph for protocol state tracking
-    /// Reserved for protocol escalation state queries
-    #[allow(dead_code)]
-    pub(super) living_graph: Arc<LivingGraph>,
 
     /// Plasmodium agent registry (meld/split/mix routing contexts)
     pub(super) agent_registry: agents::AgentRegistry,
@@ -160,13 +150,10 @@ impl NeuralApiServer {
 
         Self {
             graphs_dir,
-            executions,
             family_id: family_id_str,
             socket_path: socket_path.into(),
             router,
             mode: Arc::new(RwLock::new(BiomeOsMode::Bootstrap)),
-            // Use XdgRuntime for proper Unix XDG compliance
-            // Falls back to /tmp if XDG_RUNTIME_DIR unavailable
             nucleation: Arc::new(RwLock::new(SocketNucleation::new(
                 SocketStrategy::XdgRuntime,
             ))),
@@ -177,7 +164,6 @@ impl NeuralApiServer {
             niche_handler,
             lifecycle_handler,
             protocol_handler,
-            living_graph,
             agent_registry: agents::AgentRegistry::new(),
         }
     }

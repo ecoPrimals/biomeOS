@@ -102,14 +102,21 @@ mod tests {
 
     #[test]
     fn test_factory_creation() {
-        let temp = TempDir::new().unwrap();
+        let temp = TempDir::new().expect("temp dir");
         let factory = GenomeFactory::new(temp.path());
         assert_eq!(factory.storage_dir(), temp.path());
     }
 
     #[test]
+    fn test_factory_creation_with_pathbuf() {
+        let temp = TempDir::new().expect("temp dir");
+        let factory = GenomeFactory::new(temp.path().to_path_buf());
+        assert_eq!(factory.storage_dir(), temp.path());
+    }
+
+    #[test]
     fn test_genome_path() {
-        let temp = TempDir::new().unwrap();
+        let temp = TempDir::new().expect("temp dir");
         let factory = GenomeFactory::new(temp.path());
 
         let path = factory.genome_path("beardog");
@@ -118,13 +125,44 @@ mod tests {
 
     #[test]
     fn test_genome_exists() {
-        let temp = TempDir::new().unwrap();
+        let temp = TempDir::new().expect("temp dir");
         let factory = GenomeFactory::new(temp.path());
 
         assert!(!factory.genome_exists("nonexistent"));
 
-        // Create a genome file
-        std::fs::write(factory.genome_path("test"), b"test").unwrap();
+        std::fs::write(factory.genome_path("test"), b"test").expect("write");
         assert!(factory.genome_exists("test"));
+    }
+
+    #[test]
+    fn test_list_genomes_empty() {
+        let temp = TempDir::new().expect("temp dir");
+        let factory = GenomeFactory::new(temp.path());
+        let genomes = factory.list_genomes().expect("list");
+        assert!(genomes.is_empty());
+    }
+
+    #[test]
+    fn test_list_genomes_with_files() {
+        let temp = TempDir::new().expect("temp dir");
+        let factory = GenomeFactory::new(temp.path());
+        std::fs::write(factory.genome_path("a"), b"x").expect("write");
+        std::fs::write(factory.genome_path("b"), b"y").expect("write");
+        std::fs::write(temp.path().join("other.txt"), b"z").expect("write");
+
+        let genomes = factory.list_genomes().expect("list");
+        assert_eq!(genomes.len(), 2);
+        assert!(genomes.contains(&"a".to_string()));
+        assert!(genomes.contains(&"b".to_string()));
+    }
+
+    #[test]
+    fn test_load_genome_nonexistent() {
+        let temp = TempDir::new().expect("temp dir");
+        let factory = GenomeFactory::new(temp.path());
+        let result = factory.load_genome("nonexistent");
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("Failed to load genome"));
     }
 }

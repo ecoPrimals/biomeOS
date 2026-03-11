@@ -196,6 +196,12 @@ impl PrimalConnections {
     pub fn squirrel(&self) -> Option<&SquirrelClient> {
         self.clients.get("squirrel")
     }
+
+    /// Add a client for testing (allows discovery/orchestrator tests to inject mock connections)
+    #[cfg(test)]
+    pub fn add_client(&mut self, name: impl Into<String>, client: PrimalClient) {
+        self.clients.insert(name.into(), client);
+    }
 }
 
 #[cfg(test)]

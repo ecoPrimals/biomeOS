@@ -124,8 +124,8 @@ impl Federation {
         Ok(())
     }
 
-    /// Convert VM topology to QEMU config
-    fn vm_topology_to_qemu_config(&self, vm: &VmTopology) -> Result<QemuConfig> {
+    /// Convert VM topology to QEMU config (requires network)
+    pub(crate) fn vm_topology_to_qemu_config(&self, vm: &VmTopology) -> Result<QemuConfig> {
         let bridge_name = self
             .network
             .as_ref()
@@ -231,4 +231,163 @@ pub struct FederationStatus {
     pub running_vms: usize,
     /// Health status of each VM
     pub vm_health: Vec<VmHealth>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::health::{HealthStatus, VmHealth};
+    use crate::topology::{NetworkTopology, TopologyMetadata};
+    use std::collections::HashMap;
+    use std::path::PathBuf;
+
+    fn sample_topology() -> Topology {
+        Topology {
+            metadata: TopologyMetadata {
+                name: "test-federation".to_string(),
+                version: "1.0".to_string(),
+                description: "Test topology".to_string(),
+            },
+            network: NetworkTopology {
+                bridge_name: "biomeos-br0".to_string(),
+                bridge_ip: "10.0.0.1/24".to_string(),
+                subnet: "10.0.0.0/24".to_string(),
+            },
+            vms: vec![VmTopology {
+                name: "vm1".to_string(),
+                memory: 2048,
+                cpus: 2,
+                disk_image: PathBuf::from("/tmp/vm1.qcow2"),
+                ip_address: "10.0.0.10".to_string(),
+                mac_address: "52:54:00:00:00:01".to_string(),
+                serial_log: PathBuf::from("/tmp/vm1.log"),
+                options: HashMap::new(),
+            }],
+        }
+    }
+
+    #[test]
+    fn test_federation_config_construction() {
+        let topology = sample_topology();
+        let config = FederationConfig {
+            topology: topology.clone(),
+            enable_kvm: true,
+            health_check_timeout: 60,
+            wait_for_healthy: false,
+        };
+        assert_eq!(config.topology.metadata.name, "test-federation");
+        assert!(config.enable_kvm);
+        assert_eq!(config.health_check_timeout, 60);
+    }
+
+    #[test]
+    fn test_federation_new() {
+        let config = FederationConfig {
+            topology: sample_topology(),
+            enable_kvm: false,
+            health_check_timeout: 30,
+            wait_for_healthy: true,
+        };
+        let federation = Federation::new(config);
+        assert!(federation.get_vm("vm1").is_none());
+    }
+
+    #[test]
+    fn test_federation_get_vm_empty() {
+        let config = FederationConfig {
+            topology: sample_topology(),
+            enable_kvm: false,
+            health_check_timeout: 30,
+            wait_for_healthy: false,
+        };
+        let federation = Federation::new(config);
+        assert!(federation.get_vm("nonexistent").is_none());
+        assert!(federation.get_vm("vm1").is_none());
+    }
+
+    #[test]
+    fn test_federation_vm_count_empty() {
+        let config = FederationConfig {
+            topology: sample_topology(),
+            enable_kvm: false,
+            health_check_timeout: 30,
+            wait_for_healthy: false,
+        };
+        let mut federation = Federation::new(config);
+        assert_eq!(federation.vm_count(), 0);
+    }
+
+    #[test]
+    fn test_federation_status_serialization() {
+        let status = FederationStatus {
+            name: "test".to_string(),
+            total_vms: 2,
+            running_vms: 1,
+            vm_health: vec![VmHealth {
+                vm_name: "vm1".to_string(),
+                status: HealthStatus::Healthy,
+                last_message_time: None,
+                boot_completed: true,
+                error: None,
+            }],
+        };
+        let json = serde_json::to_string(&status).expect("serialization should succeed");
+        assert!(json.contains("\"name\":\"test\""));
+        assert!(json.contains("\"total_vms\":2"));
+        let deserialized: FederationStatus =
+            serde_json::from_str(&json).expect("deserialization should succeed");
+        assert_eq!(deserialized.name, status.name);
+        assert_eq!(deserialized.total_vms, status.total_vms);
+    }
+
+    #[test]
+    fn test_vm_topology_to_qemu_config_error_no_network() {
+        let topology = sample_topology();
+        let vm = topology.vms[0].clone();
+        let config = FederationConfig {
+            topology,
+            enable_kvm: false,
+            health_check_timeout: 30,
+            wait_for_healthy: false,
+        };
+        let federation = Federation::new(config);
+        let result = federation.vm_topology_to_qemu_config(&vm);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(err, DeployError::QemuConfig { .. }));
+        assert!(err.to_string().contains("Network bridge not initialized"));
+    }
+
+    #[tokio::test]
+    async fn test_federation_health_check_empty() {
+        let config = FederationConfig {
+            topology: sample_topology(),
+            enable_kvm: false,
+            health_check_timeout: 30,
+            wait_for_healthy: false,
+        };
+        let federation = Federation::new(config);
+        let results = federation.get_vm("vm1");
+        assert!(results.is_none());
+        let health_results = federation
+            .health_check()
+            .await
+            .expect("health_check should succeed");
+        assert!(health_results.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_federation_shutdown_empty() {
+        let config = FederationConfig {
+            topology: sample_topology(),
+            enable_kvm: false,
+            health_check_timeout: 30,
+            wait_for_healthy: false,
+        };
+        let mut federation = Federation::new(config);
+        federation
+            .shutdown()
+            .await
+            .expect("shutdown should succeed");
+    }
 }

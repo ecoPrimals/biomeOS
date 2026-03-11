@@ -336,4 +336,90 @@ mod tests {
         assert!(debug.contains("allow"));
         assert!(debug.contains("high"));
     }
+
+    // ========== Error handling and edge cases ==========
+
+    #[test]
+    fn test_trust_evaluation_request_invalid_json_fails() {
+        let json = r#"{"peer_id": "ok", "peer_tags": "not-an-array"}"#;
+        let result: Result<TrustEvaluationRequest, _> = serde_json::from_str(json);
+        assert!(
+            result.is_err(),
+            "invalid peer_tags type should fail deserialization"
+        );
+    }
+
+    #[test]
+    fn test_trust_evaluation_request_missing_peer_id_fails() {
+        let json = r#"{"peer_tags": []}"#;
+        let result: Result<TrustEvaluationRequest, _> = serde_json::from_str(json);
+        assert!(
+            result.is_err(),
+            "missing peer_id should fail deserialization"
+        );
+    }
+
+    #[test]
+    fn test_trust_evaluation_request_empty_peer_id() {
+        let json = r#"{"peer_id": "", "peer_tags": []}"#;
+        let req: TrustEvaluationRequest =
+            serde_json::from_str(json).expect("empty string is valid");
+        assert_eq!(req.peer_id, "");
+        assert!(req.peer_tags.is_empty());
+    }
+
+    #[test]
+    fn test_trust_evaluation_response_invalid_decision_type() {
+        let json = r#"{"decision": 123, "confidence": 0.5, "reason": "x", "trust_level": "low", "metadata": {}}"#;
+        let result: Result<TrustEvaluationResponse, _> = serde_json::from_str(json);
+        assert!(result.is_err(), "decision must be string");
+    }
+
+    #[test]
+    fn test_trust_evaluation_response_confidence_bounds() {
+        let resp = TrustEvaluationResponse {
+            decision: "allow".to_string(),
+            confidence: 0.0,
+            reason: "min".to_string(),
+            trust_level: "none".to_string(),
+            metadata: serde_json::json!({}),
+        };
+        let json = serde_json::to_string(&resp).expect("serialize");
+        let back: TrustEvaluationResponse = serde_json::from_str(&json).expect("deserialize");
+        assert!((back.confidence - 0.0).abs() < f32::EPSILON);
+
+        let resp2 = TrustEvaluationResponse {
+            decision: "allow".to_string(),
+            confidence: 1.0,
+            reason: "max".to_string(),
+            trust_level: "high".to_string(),
+            metadata: serde_json::json!({}),
+        };
+        let json2 = serde_json::to_string(&resp2).expect("serialize");
+        let back2: TrustEvaluationResponse = serde_json::from_str(&json2).expect("deserialize");
+        assert!((back2.confidence - 1.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn test_identity_response_empty_encryption_tag() {
+        let resp = IdentityResponse {
+            encryption_tag: "".to_string(),
+            capabilities: vec![],
+            family_id: "fam".to_string(),
+            identity_attestations: None,
+        };
+        let json = serde_json::to_string(&resp).expect("serialize");
+        let back: IdentityResponse = serde_json::from_str(&json).expect("deserialize");
+        assert!(back.encryption_tag.is_empty());
+        assert_eq!(back.family_id, "fam");
+    }
+
+    #[test]
+    fn test_identity_response_deserialize_with_capabilities_array() {
+        let json = r#"{"encryption_tag": "tag", "capabilities": ["btsp"], "family_id": "fam"}"#;
+        let resp: IdentityResponse = serde_json::from_str(json).expect("valid json");
+        assert_eq!(resp.encryption_tag, "tag");
+        assert_eq!(resp.capabilities.len(), 1);
+        assert_eq!(resp.capabilities[0], "btsp");
+    }
 }

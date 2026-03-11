@@ -5,7 +5,6 @@
 
 use anyhow::Result;
 use biomeos_core::UniversalBiomeOSManager;
-use serde_json::Value;
 use std::collections::HashMap;
 
 use super::utils::{create_spinner, display_results, parse_capabilities};
@@ -91,74 +90,6 @@ pub async fn handle_discover(
 
     // Fix the display_results call - use detailed parameter instead of json macro
     display_results("Discovery Results", &result, detailed).await?;
-
-    Ok(())
-}
-
-/// Display discovery results with optional detailed information
-#[allow(dead_code)]
-async fn display_discovery_results(results: &HashMap<String, Value>, detailed: bool) -> Result<()> {
-    if results.is_empty() {
-        println!("🔍 No services discovered");
-        return Ok(());
-    }
-
-    println!("🎯 Discovered {} service(s):", results.len());
-    println!();
-
-    for (service_id, service_info) in results {
-        println!("🌟 Service: {}", service_id);
-
-        if let Some(primal_type) = service_info.get("primal_type") {
-            println!("   Type: {}", primal_type);
-        }
-
-        if let Some(capabilities) = service_info.get("capabilities").and_then(|c| c.as_array()) {
-            println!(
-                "   Capabilities: {}",
-                capabilities
-                    .iter()
-                    .filter_map(|c| c.as_str())
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            );
-        }
-
-        if let Some(endpoint) = service_info.get("endpoint") {
-            println!("   Endpoint: {}", endpoint);
-        }
-
-        if let Some(health) = service_info.get("health") {
-            println!("   Health: {}", health);
-        }
-
-        if detailed {
-            if let Some(metadata) = service_info.get("metadata") {
-                println!("   Metadata: {}", serde_json::to_string_pretty(metadata)?);
-            }
-
-            if let Some(resource_usage) = service_info.get("resource_usage") {
-                println!(
-                    "   Resources: {}",
-                    serde_json::to_string_pretty(resource_usage)?
-                );
-            }
-        }
-
-        println!();
-    }
-
-    // Summary statistics
-    let healthy_count = results
-        .values()
-        .filter(|v| v.get("health").and_then(|h| h.as_str()) == Some("Healthy"))
-        .count();
-
-    println!(
-        "📊 Summary: {}/{} services healthy",
-        healthy_count,
-        results.len()
-    );
 
     Ok(())
 }

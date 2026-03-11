@@ -37,18 +37,23 @@
 #![deny(unsafe_code)]
 #![warn(missing_docs)]
 
+pub mod continuous;
 pub mod error;
 pub mod events;
 pub mod graph;
 pub mod loader;
+pub mod metrics;
 pub mod node;
+pub mod sensor;
 pub mod validation;
 
+pub use continuous::{ContinuousExecutor, SessionState, TickClock};
 pub use error::{GraphError, Result};
 pub use events::{GraphEvent, GraphEventBroadcaster};
-pub use graph::{DeploymentGraph, GraphMetadata};
+pub use graph::{CoordinationPattern, DeploymentGraph, GraphMetadata, TickConfig};
 pub use loader::GraphLoader;
 pub use node::{GraphNode, NodeConfig, NodeParams};
+pub use sensor::{SensorEvent, SensorEventBus, SensorSource};
 pub use validation::GraphValidator;
 
 #[cfg(test)]

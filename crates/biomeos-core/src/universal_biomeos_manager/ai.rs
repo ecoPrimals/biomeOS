@@ -425,3 +425,215 @@ pub enum Priority {
     /// Can be addressed when convenient
     Low,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::universal_biomeos_manager::UniversalBiomeOSManager;
+    use biomeos_types::BiomeOSConfig;
+
+    async fn test_manager() -> UniversalBiomeOSManager {
+        UniversalBiomeOSManager::new(BiomeOSConfig::default())
+            .await
+            .expect("create test manager")
+    }
+
+    #[tokio::test]
+    async fn test_ai_assist_health_query() {
+        let manager = test_manager().await;
+        let result = manager
+            .ai_assist("what is the system health?", None)
+            .await
+            .expect("ai_assist should succeed");
+        assert!(result.contains_key("response"));
+        assert!(result.contains_key("confidence"));
+        assert!(result.contains_key("suggestions"));
+        assert!(result.contains_key("actions"));
+        assert_eq!(
+            result.get("status").and_then(|v| v.as_str()),
+            Some("success")
+        );
+        let response = result
+            .get("response")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        assert!(response.to_lowercase().contains("health"));
+    }
+
+    #[tokio::test]
+    async fn test_ai_assist_discovery_query() {
+        let manager = test_manager().await;
+        let result = manager
+            .ai_assist("how do I discover services?", Some("context".to_string()))
+            .await
+            .expect("ai_assist should succeed");
+        assert!(result.contains_key("context"));
+        assert_eq!(
+            result.get("query").and_then(|v| v.as_str()),
+            Some("how do I discover services?")
+        );
+    }
+
+    #[tokio::test]
+    async fn test_ai_assist_deployment_query() {
+        let manager = test_manager().await;
+        let result = manager
+            .ai_assist("I want to deploy a manifest", None)
+            .await
+            .expect("ai_assist should succeed");
+        let response = result
+            .get("response")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        assert!(
+            response.to_lowercase().contains("manifest")
+                || response.to_lowercase().contains("deploy")
+        );
+    }
+
+    #[tokio::test]
+    async fn test_ai_assist_troubleshooting_query() {
+        let manager = test_manager().await;
+        let result = manager
+            .ai_assist("I have an error and need to troubleshoot", None)
+            .await
+            .expect("ai_assist should succeed");
+        let response = result
+            .get("response")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        assert!(
+            response.to_lowercase().contains("troubleshoot")
+                || response.to_lowercase().contains("help")
+        );
+    }
+
+    #[tokio::test]
+    async fn test_ai_assist_general_query() {
+        let manager = test_manager().await;
+        let result = manager
+            .ai_assist("tell me about biomeos", None)
+            .await
+            .expect("ai_assist should succeed");
+        assert!(
+            result
+                .get("confidence")
+                .and_then(|v| v.as_f64())
+                .unwrap_or(0.0)
+                <= 1.0
+        );
+    }
+
+    #[tokio::test]
+    async fn test_initialize_partnership_access() {
+        let manager = test_manager().await;
+        manager
+            .initialize_partnership_access("test-key".to_string())
+            .await
+            .expect("initialize_partnership_access should succeed");
+    }
+
+    #[tokio::test]
+    async fn test_initialize_grandma_safe() {
+        let manager = test_manager().await;
+        manager
+            .initialize_grandma_safe()
+            .await
+            .expect("initialize_grandma_safe should succeed");
+    }
+
+    #[tokio::test]
+    async fn test_get_ai_status() {
+        let manager = test_manager().await;
+        let status = manager
+            .get_ai_status()
+            .await
+            .expect("get_ai_status should succeed");
+        assert_eq!(
+            status.get("ai_enabled").and_then(|v| v.as_bool()),
+            Some(true)
+        );
+        assert_eq!(status.get("status").and_then(|v| v.as_str()), Some("ready"));
+        assert!(status.contains_key("capabilities"));
+    }
+
+    #[tokio::test]
+    async fn test_get_ai_recommendations_empty_primals() {
+        let manager = test_manager().await;
+        let recs = manager
+            .get_ai_recommendations()
+            .await
+            .expect("get_ai_recommendations should succeed");
+        assert!(!recs.is_empty());
+        let discovery_rec = recs
+            .iter()
+            .find(|r| r.title.contains("No Services") || r.title.contains("Discover"));
+        assert!(
+            discovery_rec.is_some(),
+            "Should recommend discovery when no primals"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_get_ai_recommendations_with_primals() {
+        use crate::universal_biomeos_manager::PrimalInfo;
+        use biomeos_primal_sdk::PrimalType;
+        use biomeos_types::Health;
+
+        let manager = test_manager().await;
+        let mut registry = manager.registered_primals().write().await;
+        for i in 0..5 {
+            registry.insert(
+                format!("primal-{}", i),
+                PrimalInfo {
+                    id: format!("primal-{}", i),
+                    name: format!("primal-{}", i),
+                    primal_type: PrimalType::from_discovered(
+                        "test",
+                        format!("primal-{}", i),
+                        "1.0.0",
+                    ),
+                    endpoint: format!("/tmp/primal-{}.sock", i),
+                    capabilities: vec![],
+                    health: Health::Healthy,
+                    last_seen: chrono::Utc::now(),
+                    discovered_at: chrono::Utc::now(),
+                    metadata: std::collections::HashMap::new(),
+                },
+            );
+        }
+        drop(registry);
+
+        let recs = manager
+            .get_ai_recommendations()
+            .await
+            .expect("get_ai_recommendations should succeed");
+        assert!(!recs.is_empty());
+        let opt_rec = recs.iter().find(|r| r.title.contains("AI Monitoring"));
+        assert!(
+            opt_rec.is_some(),
+            "Should include optimization recommendation"
+        );
+    }
+
+    #[test]
+    fn test_ai_recommendation_structure() {
+        let rec = AIRecommendation {
+            title: "Test".to_string(),
+            description: "Test desc".to_string(),
+            priority: Priority::High,
+            category: "test".to_string(),
+            action: Some("biomeos test".to_string()),
+            estimated_impact: "impact".to_string(),
+        };
+        assert_eq!(rec.title, "Test");
+        assert!(matches!(rec.priority, Priority::High));
+    }
+
+    #[test]
+    fn test_priority_variants() {
+        let _ = Priority::High;
+        let _ = Priority::Medium;
+        let _ = Priority::Low;
+    }
+}

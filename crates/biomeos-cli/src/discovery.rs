@@ -194,3 +194,25 @@ pub struct DiscoveryReport {
     /// When the discovery was performed
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_discover_by_location_returns_err() {
+        let config = biomeos_types::BiomeOSConfig::default();
+        let manager = UniversalBiomeOSManager::new(config)
+            .await
+            .expect("manager creation should succeed");
+        let result = DiscoveryUtils::discover_by_location(&manager, 0.0, 0.0, 100.0).await;
+        assert!(result.is_err(), "Geolocation discovery should return error");
+        let err = result.unwrap_err();
+        let err_str = err.to_string();
+        assert!(
+            err_str.contains("Songbird") || err_str.contains("Geolocation"),
+            "Error should mention Songbird or geolocation: {}",
+            err_str
+        );
+    }
+}

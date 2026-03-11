@@ -1,0 +1,212 @@
+niche:
+  id: "gaming"
+  name: "Game Engine"
+  version: "1.0.0"
+  description: "Interactive game engine niche — real-time coordination of game science, visualization, compute, and security"
+  category: "gaming"
+  difficulty: "intermediate"
+  author: "ecoPrimals"
+  deploy_graph: "graphs/gaming_niche_deploy.toml"
+
+  features:
+    - "Real-time game logic at 60 Hz"
+    - "Procedural content generation (Perlin, WFC, L-systems)"
+    - "Dynamic difficulty adjustment (Csikszentmihalyi flow model)"
+    - "Multi-modal visualization (GUI, TUI, headless)"
+    - "Engagement metrics and accessibility scoring"
+    - "Encrypted mesh networking"
+    - "GPU-accelerated compute (optional)"
+
+  required_primals:
+    - "beardog"
+    - "songbird"
+
+  optional_primals:
+    - "toadstool"
+    - "squirrel"
+
+  required_springs:
+    - "ludospring"
+    - "petaltongue"
+
+organisms:
+  primals:
+    beardog:
+      type: "beardog"
+      required: true
+      role: "security"
+      capabilities:
+        - "crypto.encrypt"
+        - "crypto.sign"
+        - "crypto.generate_keypair"
+        - "beacon.generate"
+
+    songbird:
+      type: "songbird"
+      required: true
+      role: "discovery"
+      capabilities:
+        - "discovery.announce"
+        - "discovery.query"
+        - "network.http_request"
+        - "mesh.connect"
+      dependencies: ["beardog"]
+
+    toadstool:
+      type: "toadstool"
+      required: false
+      role: "compute"
+      capabilities:
+        - "compute.execute"
+        - "compute.capabilities"
+      dependencies: ["beardog", "songbird"]
+
+    squirrel:
+      type: "squirrel"
+      required: false
+      role: "ai"
+      capabilities:
+        - "ai.inference"
+        - "ai.model_resolve"
+      dependencies: ["beardog", "songbird"]
+
+    ludospring:
+      type: "ludospring"
+      required: true
+      role: "game_science"
+      capabilities:
+        - "game.evaluate_flow"
+        - "game.difficulty_adjustment"
+        - "game.generate_noise"
+        - "game.wfc_step"
+        - "game.engagement"
+        - "game.fitts_cost"
+        - "game.accessibility"
+        - "game.analyze_ui"
+      dependencies: ["beardog", "songbird"]
+
+    petaltongue:
+      type: "petaltongue"
+      required: true
+      role: "visualization"
+      capabilities:
+        - "visualization.render"
+        - "visualization.export"
+        - "ui.render"
+        - "ui.display_status"
+        - "interaction.subscribe"
+      dependencies: ["beardog", "songbird"]
+
+  chimeras:
+    gaming-mesh:
+      type: "gaming-mesh"
+      required: false
+      description: "Fused networking layer for multiplayer coordination"
+      components:
+        - "songbird"
+        - "ludospring"
+      fusion_overrides:
+        tick_hz: 60
+        protocol: "json-rpc"
+
+interactions:
+  - from: "petaltongue"
+    to: "ludospring"
+    type: "data_flow"
+    config:
+      description: "Sensor events (input) flow from visualization to game logic"
+      method: "game.evaluate_flow"
+      tick_hz: 60
+
+  - from: "ludospring"
+    to: "petaltongue"
+    type: "data_flow"
+    config:
+      description: "Game state flows from game logic to visualization for rendering"
+      method: "visualization.render"
+      tick_hz: 60
+
+  - from: "ludospring"
+    to: "toadstool"
+    type: "capability_call"
+    config:
+      description: "GPU-accelerated noise generation and raycasting"
+      capabilities: ["compute.execute"]
+
+  - from: "petaltongue"
+    to: "beardog"
+    type: "capability_call"
+    config:
+      description: "Encrypted session tokens and lineage verification"
+      capabilities: ["crypto.encrypt", "beacon.generate"]
+
+  - from: "ludospring"
+    to: "squirrel"
+    type: "capability_call"
+    config:
+      description: "AI-driven NPC behavior and content generation"
+      capabilities: ["ai.inference"]
+
+customization:
+  - id: "game_type"
+    name: "Game Type"
+    description: "Type of game to build"
+    type: "select"
+    options:
+      - "Voxel World"
+      - "2D Platformer"
+      - "Strategy"
+      - "Puzzle"
+      - "Custom"
+    default: "Voxel World"
+    required: true
+
+  - id: "multiplayer"
+    name: "Multiplayer"
+    description: "Enable multiplayer mesh networking"
+    type: "boolean"
+    default: false
+    required: false
+
+  - id: "gpu_acceleration"
+    name: "GPU Acceleration"
+    description: "Enable GPU-accelerated compute via ToadStool"
+    type: "boolean"
+    default: true
+    required: false
+
+  - id: "ai_npcs"
+    name: "AI NPCs"
+    description: "Enable AI-driven non-player characters via Squirrel"
+    type: "boolean"
+    default: false
+    required: false
+
+  - id: "render_mode"
+    name: "Render Mode"
+    description: "Visualization output mode"
+    type: "select"
+    options:
+      - "Desktop GUI (egui)"
+      - "Terminal (ratatui)"
+      - "Web (axum)"
+      - "Headless (SVG/PNG)"
+    default: "Desktop GUI (egui)"
+    required: true
+
+resources:
+  cpu_cores: 4
+  memory_mb: 4096
+  gpu: "optional"
+  storage_mb: 2048
+
+networking:
+  mesh_enabled: true
+  ports: []
+  protocols: ["json-rpc"]
+  transports: ["unix-socket"]
+
+security:
+  encryption_required: true
+  lineage_verification: true
+  dark_forest_gate: true

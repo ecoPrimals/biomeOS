@@ -212,10 +212,294 @@ impl BirdSongCoordinator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::p2p_coordination::{
+        BroadcastKeys, BroadcastTest, LineageInfo, LineageProof, RelayConnection, RelayOffer,
+        RelayStatus, TransportEndpoint, TransportHealth, TunnelHealth, TunnelRequest,
+    };
+    use async_trait::async_trait;
+    use std::time::SystemTime;
+
+    struct MockSecurityProvider;
+
+    #[async_trait]
+    impl SecurityProvider for MockSecurityProvider {
+        async fn request_tunnel(
+            &self,
+            _node_a: &str,
+            _node_b: &str,
+            _proof: &LineageProof,
+        ) -> Result<TunnelRequest> {
+            unimplemented!("not used in birdsong tests")
+        }
+
+        async fn check_tunnel_health(&self, _tunnel_id: &str) -> Result<TunnelHealth> {
+            unimplemented!("not used in birdsong tests")
+        }
+
+        async fn generate_broadcast_keys(&self, _family_id: &str) -> Result<BroadcastKeys> {
+            Ok(BroadcastKeys {
+                broadcast_key: vec![1, 2, 3],
+                lineage_proof: LineageProof {
+                    lineage_id: "test".to_string(),
+                    depth: 0,
+                    proof: vec![],
+                    timestamp: SystemTime::now(),
+                },
+                generated_at: SystemTime::now(),
+            })
+        }
+
+        async fn verify_lineage(&self, _requester: &str, _target: &str) -> Result<LineageInfo> {
+            Ok(LineageInfo {
+                is_ancestor: true,
+                depth: 1,
+                proof: LineageProof {
+                    lineage_id: "test".to_string(),
+                    depth: 1,
+                    proof: vec![],
+                    timestamp: SystemTime::now(),
+                },
+            })
+        }
+    }
+
+    struct MockDiscoveryProvider {
+        encrypted: bool,
+        success: bool,
+    }
+
+    #[async_trait]
+    impl DiscoveryProvider for MockDiscoveryProvider {
+        async fn register_transport(&self, _endpoint: &TransportEndpoint) -> Result<()> {
+            Ok(())
+        }
+
+        async fn enable_encrypted_mode(&self, _config: EncryptedDiscoveryConfig) -> Result<()> {
+            Ok(())
+        }
+
+        async fn check_transport_health(&self, _transport_id: &str) -> Result<TransportHealth> {
+            unimplemented!("not used in birdsong tests")
+        }
+
+        async fn test_encrypted_broadcast(&self) -> Result<BroadcastTest> {
+            Ok(BroadcastTest {
+                encrypted: self.encrypted,
+                timestamp: SystemTime::now(),
+                success: self.success,
+            })
+        }
+    }
 
     #[test]
     fn test_discovery_mode() {
         assert_eq!(DiscoveryMode::Plaintext, DiscoveryMode::Plaintext);
         assert_ne!(DiscoveryMode::Plaintext, DiscoveryMode::Encrypted);
+    }
+
+    #[test]
+    fn test_birdsong_coordinator_new() {
+        let security = Arc::new(MockSecurityProvider);
+        let discovery = Arc::new(MockDiscoveryProvider {
+            encrypted: false,
+            success: true,
+        });
+        let _coordinator = BirdSongCoordinator::new(security, discovery);
+    }
+
+    #[tokio::test]
+    async fn test_enable_encrypted_discovery() {
+        let security = Arc::new(MockSecurityProvider);
+        let discovery = Arc::new(MockDiscoveryProvider {
+            encrypted: true,
+            success: true,
+        });
+        let coordinator = BirdSongCoordinator::new(security, discovery);
+        let mode = coordinator
+            .enable_encrypted_discovery("family-1")
+            .await
+            .expect("enable_encrypted_discovery should succeed");
+        assert_eq!(mode, DiscoveryMode::Encrypted);
+    }
+
+    #[tokio::test]
+    async fn test_enable_encrypted_discovery_fails_when_not_encrypted() {
+        let security = Arc::new(MockSecurityProvider);
+        let discovery = Arc::new(MockDiscoveryProvider {
+            encrypted: false,
+            success: true,
+        });
+        let coordinator = BirdSongCoordinator::new(security, discovery);
+        let err = coordinator
+            .enable_encrypted_discovery("family-1")
+            .await
+            .expect_err("should fail when broadcast not encrypted");
+        assert!(err.to_string().contains("encrypted"));
+    }
+
+    #[tokio::test]
+    async fn test_enable_encrypted_discovery_fails_when_test_unsuccessful() {
+        let security = Arc::new(MockSecurityProvider);
+        let discovery = Arc::new(MockDiscoveryProvider {
+            encrypted: true,
+            success: false,
+        });
+        let coordinator = BirdSongCoordinator::new(security, discovery);
+        let err = coordinator
+            .enable_encrypted_discovery("family-1")
+            .await
+            .expect_err("should fail when test unsuccessful");
+        assert!(
+            err.to_string().contains("unsuccessful") || err.to_string().contains("verification")
+        );
+    }
+
+    #[tokio::test]
+    async fn test_disable_encrypted_discovery() {
+        let security = Arc::new(MockSecurityProvider);
+        let discovery = Arc::new(MockDiscoveryProvider {
+            encrypted: false,
+            success: true,
+        });
+        let coordinator = BirdSongCoordinator::new(security, discovery);
+        let mode = coordinator
+            .disable_encrypted_discovery()
+            .await
+            .expect("disable_encrypted_discovery should succeed");
+        assert_eq!(mode, DiscoveryMode::Plaintext);
+    }
+
+    #[tokio::test]
+    async fn test_get_discovery_mode_encrypted() {
+        let security = Arc::new(MockSecurityProvider);
+        let discovery = Arc::new(MockDiscoveryProvider {
+            encrypted: true,
+            success: true,
+        });
+        let coordinator = BirdSongCoordinator::new(security, discovery);
+        let mode = coordinator
+            .get_discovery_mode()
+            .await
+            .expect("get_discovery_mode should succeed");
+        assert_eq!(mode, DiscoveryMode::Encrypted);
+    }
+
+    #[tokio::test]
+    async fn test_get_discovery_mode_plaintext() {
+        let security = Arc::new(MockSecurityProvider);
+        let discovery = Arc::new(MockDiscoveryProvider {
+            encrypted: false,
+            success: true,
+        });
+        let coordinator = BirdSongCoordinator::new(security, discovery);
+        let mode = coordinator
+            .get_discovery_mode()
+            .await
+            .expect("get_discovery_mode should succeed");
+        assert_eq!(mode, DiscoveryMode::Plaintext);
+    }
+
+    struct MockRoutingProvider;
+
+    #[async_trait]
+    impl super::RoutingProvider for MockRoutingProvider {
+        async fn request_relay(
+            &self,
+            _requester: &str,
+            _target: &str,
+            _lineage: LineageInfo,
+        ) -> Result<RelayOffer> {
+            Ok(RelayOffer {
+                relay_node: "relay-1".to_string(),
+                relay_endpoint: TransportEndpoint {
+                    node_id: "relay-1".to_string(),
+                    address: "127.0.0.1".to_string(),
+                    port: 9000,
+                    protocol: "tcp".to_string(),
+                    secure: true,
+                },
+                expires_at: SystemTime::now(),
+                lineage_verified: true,
+            })
+        }
+
+        async fn accept_relay(&self, _offer: &RelayOffer) -> Result<RelayConnection> {
+            Ok(RelayConnection {
+                connection_id: "conn-1".to_string(),
+                relay_node: "relay-1".to_string(),
+                established_at: SystemTime::now(),
+                status: RelayStatus::Active,
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn test_coordinate_relay() {
+        let security = Arc::new(MockSecurityProvider);
+        let discovery = Arc::new(MockDiscoveryProvider {
+            encrypted: false,
+            success: true,
+        });
+        let routing = Arc::new(MockRoutingProvider);
+        let coordinator = BirdSongCoordinator::new(security, discovery);
+        let relay_info = coordinator
+            .coordinate_relay("requester-1", "target-1", routing)
+            .await
+            .expect("coordinate_relay should succeed");
+        assert_eq!(relay_info.relay_node, "relay-1");
+        assert_eq!(relay_info.requester, "requester-1");
+        assert_eq!(relay_info.target, "target-1");
+        assert_eq!(relay_info.status, RelayStatus::Active);
+    }
+
+    struct MockSecurityProviderNonAncestor;
+
+    #[async_trait]
+    impl SecurityProvider for MockSecurityProviderNonAncestor {
+        async fn request_tunnel(
+            &self,
+            _node_a: &str,
+            _node_b: &str,
+            _proof: &LineageProof,
+        ) -> Result<TunnelRequest> {
+            unimplemented!("not used")
+        }
+
+        async fn check_tunnel_health(&self, _tunnel_id: &str) -> Result<TunnelHealth> {
+            unimplemented!("not used")
+        }
+
+        async fn generate_broadcast_keys(&self, _family_id: &str) -> Result<BroadcastKeys> {
+            unimplemented!("not used")
+        }
+
+        async fn verify_lineage(&self, _requester: &str, _target: &str) -> Result<LineageInfo> {
+            Ok(LineageInfo {
+                is_ancestor: false,
+                depth: 0,
+                proof: LineageProof {
+                    lineage_id: "test".to_string(),
+                    depth: 0,
+                    proof: vec![],
+                    timestamp: SystemTime::now(),
+                },
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn test_coordinate_relay_fails_when_not_ancestor() {
+        let security = Arc::new(MockSecurityProviderNonAncestor);
+        let discovery = Arc::new(MockDiscoveryProvider {
+            encrypted: false,
+            success: true,
+        });
+        let routing = Arc::new(MockRoutingProvider);
+        let coordinator = BirdSongCoordinator::new(security, discovery);
+        let err = coordinator
+            .coordinate_relay("requester", "target", routing)
+            .await
+            .expect_err("should fail when target is not ancestor");
+        assert!(err.to_string().contains("ancestor") || err.to_string().contains("Lineage"));
     }
 }

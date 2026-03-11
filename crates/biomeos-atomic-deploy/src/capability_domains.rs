@@ -58,6 +58,81 @@ pub(crate) const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
         provider: "squirrel",
         capabilities: &["ai", "mcp", "assistance", "ml"],
     },
+    // Data domain (NestGate live providers)
+    CapabilityDomain {
+        provider: "nestgate",
+        capabilities: &[
+            "data",
+            "ncbi",
+            "noaa",
+            "iris",
+            "weather_data",
+            "seismic_data",
+        ],
+    },
+    // Science domain (wetSpring)
+    CapabilityDomain {
+        provider: "wetspring",
+        capabilities: &["science", "biodiversity", "spectral", "metagenomics"],
+    },
+    // Neural science domain (neuralSpring)
+    CapabilityDomain {
+        provider: "neuralspring",
+        capabilities: &[
+            "spectral_analysis",
+            "anderson_localization",
+            "hessian_eigenanalysis",
+            "agent_coordination",
+            "training_trajectory",
+        ],
+    },
+    // Ecology domain (airSpring)
+    CapabilityDomain {
+        provider: "airspring",
+        capabilities: &[
+            "ecology",
+            "et0",
+            "irrigation",
+            "water_balance",
+            "yield",
+            "agriculture",
+            "soil_science",
+        ],
+    },
+    // Game science domain (ludoSpring)
+    CapabilityDomain {
+        provider: "ludospring",
+        capabilities: &[
+            "game",
+            "ludology",
+            "interaction_design",
+            "procedural_generation",
+            "accessibility_scoring",
+            "engagement_metrics",
+        ],
+    },
+    // Visualization domain (petalTongue)
+    CapabilityDomain {
+        provider: "petaltongue",
+        capabilities: &["visualization", "ui", "interaction", "representation"],
+    },
+    // XR / Immersive domain (petalTongue + ludoSpring)
+    CapabilityDomain {
+        provider: "petaltongue",
+        capabilities: &["xr", "stereo", "vr", "ar", "tracking", "haptic", "mocap"],
+    },
+    // Medical / Surgical domain (healthSpring)
+    CapabilityDomain {
+        provider: "healthspring",
+        capabilities: &[
+            "medical",
+            "surgical",
+            "anatomy",
+            "tissue",
+            "biosignal",
+            "pharmacokinetics",
+        ],
+    },
 ];
 
 /// Resolve capability to provider using domain mappings
@@ -187,11 +262,118 @@ mod tests {
     }
 
     #[test]
+    fn test_capability_to_provider_ecology_domain() {
+        assert_eq!(
+            capability_to_provider_fallback("ecology"),
+            Some("airspring")
+        );
+        assert_eq!(capability_to_provider_fallback("et0"), Some("airspring"));
+        assert_eq!(
+            capability_to_provider_fallback("irrigation"),
+            Some("airspring")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("water_balance"),
+            Some("airspring")
+        );
+        assert_eq!(capability_to_provider_fallback("yield"), Some("airspring"));
+        assert_eq!(
+            capability_to_provider_fallback("agriculture"),
+            Some("airspring")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("ecology.et0_fao56"),
+            Some("airspring")
+        );
+    }
+
+    #[test]
+    fn test_capability_to_provider_science_domains() {
+        assert_eq!(
+            capability_to_provider_fallback("science"),
+            Some("wetspring")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("biodiversity"),
+            Some("wetspring")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("spectral_analysis"),
+            Some("neuralspring")
+        );
+        assert_eq!(capability_to_provider_fallback("data"), Some("nestgate"));
+        assert_eq!(capability_to_provider_fallback("ncbi"), Some("nestgate"));
+    }
+
+    #[test]
     fn test_capability_to_provider_unknown() {
-        // Unknown capabilities should return None
         assert_eq!(capability_to_provider_fallback("unknown"), None);
         assert_eq!(capability_to_provider_fallback("random.capability"), None);
         assert_eq!(capability_to_provider_fallback(""), None);
+    }
+
+    #[test]
+    fn test_capability_to_provider_xr_domain() {
+        assert_eq!(
+            capability_to_provider_fallback("xr"),
+            Some("petaltongue")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("stereo"),
+            Some("petaltongue")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("vr"),
+            Some("petaltongue")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("tracking"),
+            Some("petaltongue")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("haptic"),
+            Some("petaltongue")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("mocap"),
+            Some("petaltongue")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("xr.negotiate_stereo"),
+            Some("petaltongue")
+        );
+    }
+
+    #[test]
+    fn test_capability_to_provider_medical_domain() {
+        assert_eq!(
+            capability_to_provider_fallback("medical"),
+            Some("healthspring")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("surgical"),
+            Some("healthspring")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("anatomy"),
+            Some("healthspring")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("tissue"),
+            Some("healthspring")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("biosignal"),
+            Some("healthspring")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("pharmacokinetics"),
+            Some("healthspring")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("medical.load_anatomy"),
+            Some("healthspring")
+        );
     }
 
     #[test]
@@ -215,5 +397,69 @@ mod tests {
         assert!(providers.contains(&"nestgate"));
         assert!(providers.contains(&"toadstool"));
         assert!(providers.contains(&"squirrel"));
+        assert!(providers.contains(&"wetspring"));
+        assert!(providers.contains(&"neuralspring"));
+        assert!(providers.contains(&"airspring"));
+        assert!(providers.contains(&"ludospring"));
+        assert!(providers.contains(&"petaltongue"));
+        assert!(providers.contains(&"healthspring"));
+    }
+
+    #[test]
+    fn test_capability_to_provider_game_domain() {
+        assert_eq!(capability_to_provider_fallback("game"), Some("ludospring"));
+        assert_eq!(
+            capability_to_provider_fallback("ludology"),
+            Some("ludospring")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("interaction_design"),
+            Some("ludospring")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("procedural_generation"),
+            Some("ludospring")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("accessibility_scoring"),
+            Some("ludospring")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("engagement_metrics"),
+            Some("ludospring")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("game.analyze_ui"),
+            Some("ludospring")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("game.evaluate_flow"),
+            Some("ludospring")
+        );
+    }
+
+    #[test]
+    fn test_capability_to_provider_petaltongue_domain() {
+        assert_eq!(
+            capability_to_provider_fallback("visualization"),
+            Some("petaltongue")
+        );
+        assert_eq!(capability_to_provider_fallback("ui"), Some("petaltongue"));
+        assert_eq!(
+            capability_to_provider_fallback("interaction"),
+            Some("petaltongue")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("representation"),
+            Some("petaltongue")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("visualization.render"),
+            Some("petaltongue")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("ui.render"),
+            Some("petaltongue")
+        );
     }
 }

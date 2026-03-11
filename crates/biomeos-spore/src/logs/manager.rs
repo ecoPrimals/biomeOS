@@ -233,6 +233,8 @@ impl SporeLogManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::logs::session::{ActiveLogSession, LogFile};
+    use chrono::Utc;
     use tempfile::TempDir;
 
     #[tokio::test]
@@ -260,5 +262,93 @@ mod tests {
         assert!(temp.path().join(".spore.logs").exists());
         assert!(temp.path().join(".spore.logs/deployments").exists());
         assert!(temp.path().join(".spore.logs/fossil").exists());
+    }
+
+    #[test]
+    fn test_list_active_sessions_empty() {
+        let temp = TempDir::new().unwrap();
+        let config = LogConfig {
+            active_dir: temp.path().join("active"),
+            fossil_dir: temp.path().join("fossil"),
+            ..Default::default()
+        };
+        let manager = LogManager::new(config);
+        let sessions = manager.list_active_sessions().unwrap();
+        assert!(sessions.is_empty());
+    }
+
+    #[test]
+    fn test_list_active_sessions_nonexistent_dir() {
+        let temp = TempDir::new().unwrap();
+        let config = LogConfig {
+            active_dir: temp.path().join("nonexistent"),
+            fossil_dir: temp.path().join("fossil"),
+            ..Default::default()
+        };
+        let manager = LogManager::new(config);
+        let sessions = manager.list_active_sessions().unwrap();
+        assert!(sessions.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_spore_log_manager_record_deployment() {
+        let temp = TempDir::new().unwrap();
+        let manager = SporeLogManager::new(temp.path().to_path_buf());
+        manager.initialize().await.unwrap();
+
+        manager.record_deployment("deploy-123").await.unwrap();
+
+        let log_path = temp.path().join(".spore.logs/deployments/deploy-123.log");
+        assert!(log_path.exists());
+        let content = std::fs::read_to_string(&log_path).unwrap();
+        assert!(content.contains("deploy-123"));
+    }
+
+    #[tokio::test]
+    async fn test_archive_session() {
+        let temp = TempDir::new().unwrap();
+        let config = LogConfig {
+            active_dir: temp.path().join("active"),
+            fossil_dir: temp.path().join("fossil"),
+            ..Default::default()
+        };
+        let manager = LogManager::new(config.clone());
+        manager.initialize().await.unwrap();
+
+        let mut session = ActiveLogSession::new("node-1".to_string(), "deploy-1".to_string());
+        let log_path = temp.path().join("active/node-1/test.log");
+        std::fs::create_dir_all(log_path.parent().unwrap()).unwrap();
+        std::fs::write(&log_path, "log content").unwrap();
+
+        session.add_log_file(LogFile {
+            primal: "tower".to_string(),
+            path: log_path,
+            pid: None,
+            size_bytes: 10,
+            last_modified: Utc::now(),
+        });
+
+        let fossil = manager
+            .archive_session(&session, crate::logs::ArchivalReason::GracefulShutdown)
+            .await
+            .unwrap();
+
+        assert_eq!(fossil.node_id, "node-1");
+        assert_eq!(fossil.deployment_id, "deploy-1");
+    }
+
+    #[tokio::test]
+    async fn test_cleanup_stale_sessions_empty() {
+        let temp = TempDir::new().unwrap();
+        let config = LogConfig {
+            active_dir: temp.path().join("active"),
+            fossil_dir: temp.path().join("fossil"),
+            ..Default::default()
+        };
+        let manager = LogManager::new(config);
+        manager.initialize().await.unwrap();
+
+        let archived = manager.cleanup_stale_sessions().await.unwrap();
+        assert!(archived.is_empty());
     }
 }

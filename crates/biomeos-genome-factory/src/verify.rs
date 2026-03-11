@@ -95,15 +95,82 @@ impl GenomeFactory {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use biomeos_genomebin_v3::GenomeBin;
     use tempfile::TempDir;
 
     #[test]
     fn test_verify_nonexistent() {
-        let temp_dir = TempDir::new().unwrap();
+        let temp_dir = TempDir::new().expect("temp dir");
         let factory = GenomeFactory::new(temp_dir.path());
 
-        // Verify nonexistent genome should fail
         let result = factory.verify_genome("nonexistent");
         assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("Failed to load genome"));
+    }
+
+    #[test]
+    fn test_verify_request_serialization() {
+        let request = GenomeVerifyRequest {
+            name: "beardog".to_string(),
+        };
+        let json = serde_json::to_string(&request).expect("serialize");
+        assert!(json.contains("\"name\":\"beardog\""));
+        let deserialized: GenomeVerifyRequest = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(deserialized.name, request.name);
+    }
+
+    #[test]
+    fn test_verify_response_serialization() {
+        let mut checksums = HashMap::new();
+        checksums.insert(
+            "x86_64".to_string(),
+            ChecksumResult {
+                expected: "abc123".to_string(),
+                actual: "abc123".to_string(),
+                valid: true,
+            },
+        );
+        let response = GenomeVerifyResponse {
+            genome_id: "beardog".to_string(),
+            valid: true,
+            checksums,
+            manifest_valid: true,
+            embedded_count: 0,
+        };
+        let json = serde_json::to_string(&response).expect("serialize");
+        assert!(json.contains("\"genome_id\":\"beardog\""));
+        assert!(json.contains("\"valid\":true"));
+    }
+
+    #[test]
+    fn test_checksum_result_serialization() {
+        let result = ChecksumResult {
+            expected: "deadbeef".to_string(),
+            actual: "deadbeef".to_string(),
+            valid: true,
+        };
+        let json = serde_json::to_string(&result).expect("serialize");
+        assert!(json.contains("deadbeef"));
+        let deserialized: ChecksumResult = serde_json::from_str(&json).expect("deserialize");
+        assert!(deserialized.valid);
+    }
+
+    #[test]
+    fn test_verify_valid_genome() {
+        let temp_dir = TempDir::new().expect("temp dir");
+        let factory = GenomeFactory::new(temp_dir.path());
+
+        let genome = GenomeBin::new("valid-genome");
+        genome
+            .save(&factory.genome_path("valid-genome"))
+            .expect("save genome");
+
+        let result = factory.verify_genome("valid-genome");
+        let response = result.expect("verify should succeed");
+        assert_eq!(response.genome_id, "valid-genome");
+        assert!(response.valid);
+        assert!(response.manifest_valid);
+        assert_eq!(response.embedded_count, 0);
     }
 }

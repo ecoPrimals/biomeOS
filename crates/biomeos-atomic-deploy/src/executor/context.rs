@@ -44,8 +44,8 @@ pub struct ExecutionContext {
     pub checkpoint_dir: Option<PathBuf>,
     /// Socket nucleation for deterministic socket path assignment
     pub nucleation: Option<Arc<tokio::sync::RwLock<crate::nucleation::SocketNucleation>>>,
-    /// Family ID for socket path namespacing
-    pub family_id: String,
+    /// Family ID for socket path namespacing (Arc<str> for zero-copy clone across tasks)
+    pub family_id: Arc<str>,
 }
 
 impl std::fmt::Debug for ExecutionContext {
@@ -80,8 +80,8 @@ impl ExecutionContext {
         let family_id = env
             .get("FAMILY_ID")
             .or_else(|| env.get("BIOMEOS_FAMILY_ID"))
-            .cloned()
-            .unwrap_or_else(biomeos_core::family_discovery::get_family_id);
+            .map(|s| Arc::from(s.as_str()))
+            .unwrap_or_else(|| Arc::from(biomeos_core::family_discovery::get_family_id().as_str()));
 
         Self {
             env,
@@ -110,12 +110,12 @@ impl ExecutionContext {
         if let Some(ref nucleation) = self.nucleation {
             // Use shared nucleation for coordinated assignment
             let mut nuc = nucleation.write().await;
-            let path = nuc.assign_socket(primal_name, &self.family_id);
+            let path = nuc.assign_socket(primal_name, self.family_id.as_ref());
             path.display().to_string()
         } else {
             // Fallback: create local nucleation for deterministic path
             let mut nuc = crate::nucleation::SocketNucleation::default();
-            nuc.assign_socket(primal_name, &self.family_id)
+            nuc.assign_socket(primal_name, self.family_id.as_ref())
                 .display()
                 .to_string()
         }
@@ -172,7 +172,7 @@ impl ExecutionContext {
 
             let checkpoint_data = serde_json::json!({
                 "statuses": *statuses,
-                "family_id": self.family_id,
+                "family_id": self.family_id.as_ref(),
             });
 
             std::fs::write(
@@ -215,7 +215,7 @@ mod tests {
         env.insert("FAMILY_ID".to_string(), "test".to_string());
 
         let ctx = ExecutionContext::new(env);
-        assert_eq!(ctx.family_id, "test");
+        assert_eq!(ctx.family_id.as_ref(), "test");
     }
 
     #[tokio::test]
@@ -383,7 +383,7 @@ mod tests {
         let mut env = HashMap::new();
         env.insert("BIOMEOS_FAMILY_ID".to_string(), "biomeos_fam".to_string());
         let ctx = ExecutionContext::new(env);
-        assert_eq!(ctx.family_id, "biomeos_fam");
+        assert_eq!(ctx.family_id.as_ref(), "biomeos_fam");
     }
 
     #[test]
@@ -392,7 +392,7 @@ mod tests {
         env.insert("FAMILY_ID".to_string(), "primary".to_string());
         env.insert("BIOMEOS_FAMILY_ID".to_string(), "secondary".to_string());
         let ctx = ExecutionContext::new(env);
-        assert_eq!(ctx.family_id, "primary");
+        assert_eq!(ctx.family_id.as_ref(), "primary");
     }
 
     #[test]

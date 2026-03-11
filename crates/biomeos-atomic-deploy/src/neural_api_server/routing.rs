@@ -168,3 +168,75 @@ impl NeuralApiServer {
         Ok(super::rpc::success_response(result, request.id))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::neural_api_server::NeuralApiServer;
+
+    fn create_test_server() -> NeuralApiServer {
+        let temp = tempfile::tempdir().expect("temp dir");
+        NeuralApiServer::new(temp.path(), "test_family", temp.path().join("neural.sock"))
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_unknown_method() {
+        let server = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"nonexistent.method","id":1}"#;
+        let result = server.handle_request(req).await.expect("should not error");
+        assert_eq!(result["jsonrpc"], "2.0");
+        assert_eq!(result["error"]["code"], -32601);
+        assert!(result["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("nonexistent.method"));
+        assert_eq!(result["id"], 1);
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_invalid_json() {
+        let server = create_test_server();
+        let err = server
+            .handle_request("{broken")
+            .await
+            .expect_err("should fail");
+        assert!(err.to_string().contains("parse") || err.to_string().contains("JSON"));
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_mesh_method_invalid_format_single_part() {
+        let server = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"mesh","id":2}"#;
+        let result = server.handle_request(req).await.expect("should not error");
+        assert_eq!(result["error"]["code"], -32601);
+        assert!(result["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("mesh"));
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_mesh_method_invalid_format_three_parts() {
+        let server = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"a.b.c","id":3}"#;
+        let result = server.handle_request(req).await.expect("should not error");
+        assert_eq!(result["error"]["code"], -32601);
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_empty_method() {
+        let server = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"","id":4}"#;
+        let result = server.handle_request(req).await.expect("should not error");
+        assert_eq!(result["error"]["code"], -32601);
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_method_not_found_response_structure() {
+        let server = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"foo.bar.baz","id":99}"#;
+        let result = server.handle_request(req).await.expect("should not error");
+        assert!(result.get("result").is_none());
+        assert!(result.get("error").is_some());
+        assert_eq!(result["id"], 99);
+    }
+}

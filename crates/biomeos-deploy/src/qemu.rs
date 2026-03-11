@@ -220,3 +220,65 @@ impl Drop for QemuInstance {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sample_qemu_config() -> QemuConfig {
+        QemuConfig {
+            name: "test-vm".to_string(),
+            memory: 1024,
+            cpus: 2,
+            disk_image: PathBuf::from("/tmp/test.qcow2"),
+            bridge_name: "br0".to_string(),
+            mac_address: "52:54:00:00:00:01".to_string(),
+            serial_log: PathBuf::from("/tmp/vm.log"),
+            enable_kvm: false,
+            extra_args: vec!["-no-reboot".to_string()],
+        }
+    }
+
+    #[test]
+    fn test_qemu_config_construction() {
+        let config = sample_qemu_config();
+        assert_eq!(config.name, "test-vm");
+        assert_eq!(config.memory, 1024);
+        assert_eq!(config.cpus, 2);
+        assert_eq!(config.bridge_name, "br0");
+        assert!(!config.enable_kvm);
+        assert_eq!(config.extra_args.len(), 1);
+    }
+
+    #[test]
+    fn test_qemu_instance_new() {
+        let config = sample_qemu_config();
+        let instance = QemuInstance::new(config.clone());
+        assert_eq!(instance.name(), "test-vm");
+        assert_eq!(instance.serial_log_path(), &config.serial_log);
+        assert!(instance.id().as_u128() != 0);
+    }
+
+    #[test]
+    fn test_qemu_instance_is_running_stopped() {
+        let config = sample_qemu_config();
+        let mut instance = QemuInstance::new(config);
+        assert!(!instance.is_running());
+    }
+
+    #[test]
+    fn test_qemu_instance_serial_log_path() {
+        let config = sample_qemu_config();
+        let instance = QemuInstance::new(config);
+        let path = instance.serial_log_path();
+        assert!(path.ends_with("vm.log"));
+    }
+
+    #[test]
+    fn test_qemu_instance_unique_ids() {
+        let config = sample_qemu_config();
+        let instance1 = QemuInstance::new(config.clone());
+        let instance2 = QemuInstance::new(config);
+        assert_ne!(instance1.id(), instance2.id());
+    }
+}
