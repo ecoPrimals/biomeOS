@@ -1,7 +1,7 @@
 # biomeOS Deployment Graphs
 
-**Updated**: February 11, 2026
-**Status**: 4 validated core graphs, all XDG-compliant, all tests passing
+**Updated**: March 12, 2026
+**Status**: 26 deploy graphs (4 core + 22 domain), all XDG-compliant, all tests passing
 
 ---
 
@@ -52,7 +52,7 @@ Each primal declares `capabilities_provided` — semantic-to-actual method mappi
 "stun.probe_port_pattern" = "stun.probe_port_pattern"
 ```
 
-These align with the 124 translations in `capability_translation.rs`.
+These align with the 170+ translations in `capability_translation.rs`.
 
 ---
 
@@ -81,4 +81,15 @@ These are kept as fossil record — do not delete.
 
 ---
 
-**Tests**: 2,539 passing | **Core graphs**: 4 | **Archived**: 53
+## Provenance Graphs (March 2026)
+
+| Graph | Purpose | Primals | Status |
+|-------|---------|---------|--------|
+| `rootpulse_commit.toml` | RootPulse commit workflow (dehydrate → sign → store → commit → attribute) | rhizoCrypt + BearDog + NestGate + LoamSpine + sweetGrass | Defined |
+| `provenance_pipeline.toml` | Universal provenance for any Spring experiment | rhizoCrypt + BearDog + NestGate + LoamSpine + sweetGrass | Defined |
+
+Both graphs are registered as niche templates (`rootpulse`, `provenance-pipeline`) and deployable via `niche.deploy`.
+
+---
+
+**Tests**: 3,148 passing | **Core graphs**: 4 | **Domain graphs**: 22 | **Archived**: 53

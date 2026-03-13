@@ -136,10 +136,10 @@ See [specs/README.md](specs/README.md) for full index. Key specs:
 # Build
 cargo build --workspace
 
-# Test (2,798+ tests)
+# Test (3,148+ tests)
 cargo test --workspace
 
-# Coverage (~61% region)
+# Coverage (~71% region)
 cargo llvm-cov --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -161,6 +161,6 @@ See `ARCHIVE_INDEX.md` in archive for details.
 
 ---
 
-**Documentation current as of February 11, 2026**
+**Documentation current as of March 12, 2026**
 **Active: 19 specs, 15 handoffs, 10 scripts**
-**Tests: 2,798+ passing (60.99% region coverage) | Clippy: PASS | Docs: Full coverage**
+**Tests: 3,148 passing (71.47% region coverage) | Clippy: PASS | Docs: Full coverage**

@@ -54,7 +54,7 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 echo '{"jsonrpc":"2.0","method":"capability.discover","params":{"capability":"crypto"},"id":1}' | \
   nc -U /run/user/$(id -u)/biomeos/neural-api.sock -w 2 -q 1
 
-# List all 124 capability translations
+# List all capability translations
 echo '{"jsonrpc":"2.0","method":"capability.list_translations","params":{},"id":1}' | \
   nc -U /run/user/$(id -u)/biomeos/neural-api.sock -w 2 -q 1
 ```
@@ -70,7 +70,7 @@ echo '{"jsonrpc":"2.0","method":"capability.list_translations","params":{},"id":
 |  Layer 3: AI Bridge                                          |
 |  Squirrel -> http.request -> Songbird -> Cloud/Local AI      |
 +-------------------------------------------------------------+
-|  Layer 2: Neural API (124 semantic translations)             |
+|  Layer 2: Neural API (170+ semantic translations)            |
 |  capability.call -> translate -> route to provider           |
 +-------------------------------------------------------------+
 |  Layer 1: Atomics                                            |
@@ -165,14 +165,15 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 ---
 
-**Status**: Production Ready
+**Status**: Production Ready (v2.32)
 **AI Bridge**: Local + Cloud AI validated
 **Plasmodium**: HTTP JSON-RPC collective (runtime port) + Agent Model
 **Covalent Bond**: Transport ready, beacon discovery pending Songbird fixes
-**Neural API**: 124 semantic translations (part of biomeOS)
+**Neural API**: 170+ semantic translations, 16 capability domains (part of biomeOS)
 **NAT Traversal**: 4-tier strategy (LAN/punch/coordinated/relay)
 **Lifecycle**: Deep health monitoring + auto-resurrection
 **IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate)
 **Primals**: 6/6 ecoBin v2.0 compliant
-**Tests**: 2,798+ passing (60.99% coverage) | **Clippy**: PASS | **Docs**: Full coverage
-**Updated**: February 11, 2026
+**Provenance Trio**: rhizoCrypt + LoamSpine + sweetGrass wired into Neural API
+**Tests**: 3,148 passing (71.47% coverage) | **Clippy**: PASS | **Docs**: Full coverage
+**Updated**: March 12, 2026

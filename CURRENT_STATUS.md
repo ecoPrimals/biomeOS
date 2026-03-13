@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: March 11, 2026 (Deep Debt Evolution + Hardware Learning Wiring)
-**Version**: 2.30
+**Updated**: March 12, 2026 (Provenance Trio Wiring)
+**Version**: 2.32
 **Status**: PRODUCTION READY - Multi-Computer Federation Validated
 
 ---
@@ -24,9 +24,9 @@
 | **Continuous Systems** | ContinuousExecutor (60Hz tick), GraphEventBroadcaster, SensorEventBus |
 | **XR/VR Types** | StereoConfig, Pose6DoF, TrackingFrame, HapticCommand, MotionCaptureAdapter |
 | **Surgical Domain** | SurgicalProcedure, TissueMaterial, AnatomyModel, PkModelParams |
-| **Capability Domains** | 13 domains (+ XR, medical), 170+ translations (+ 5 compute.hardware.*) |
-| **Deploy Graphs** | 24 (+ nucleus_simple, ui_atomic, livespore_create) |
-| **Niche Templates** | 13 (+ ecology-pipeline, hotspring, groundspring, healthspring) |
+| **Capability Domains** | 16 domains (+ rhizocrypt, loamspine, sweetgrass), 170+ translations |
+| **Deploy Graphs** | 26 (+ rootpulse_commit, provenance_pipeline) |
+| **Niche Templates** | 15 (+ rootpulse, provenance-pipeline) |
 | **Genetic Model** | EVOLVED - Mitochondrial + Nuclear DNA |
 | **BirdSong Discovery** | Encrypted, shared beacon model |
 | **Discovery Model** | Dynamic socket scanning + capability taxonomy |
@@ -37,7 +37,7 @@
 | **Plasmodium** | HTTP JSON-RPC collective (runtime port, SSH legacy removed) |
 | **Model Cache** | NUCLEUS-integrated, HuggingFace import, NestGate fallback |
 | **AI Bridge** | Squirrel -> Songbird -> Cloud/Local AI (validated) |
-| **Neural API** | 165+ capability translations, proxy_http, capability.call |
+| **Neural API** | 170+ capability translations, proxy_http, capability.call |
 | **Lifecycle** | Deep health monitoring, auto-resurrection, coordinated shutdown |
 | **SystemPaths** | All paths XDG-compliant via centralized `SystemPaths` |
 | **Hardcoded `/tmp`** | 0 in production code |
@@ -203,11 +203,11 @@ HTTP JSON-RPC collective with runtime port discovery (hardcoded 3492 eliminated)
 
 ### 5. Neural API - Semantic Capability Routing
 
-- 124 capability translations loaded from `tower_atomic_bootstrap.toml`
+- 170+ capability translations across 16 domains
 - `capability.call` routes semantic names to provider-specific methods
 - `proxy_http` delegates HTTPS through Songbird + BearDog TLS
-- Capability domains: crypto, security, http, mesh, stun, relay, onion, compute, storage, ai, inference
-- NEW: `stun.probe_port_pattern`, `punch.coordinate`, `relay.authorize` translations for relay-punch protocol
+- Capability domains: crypto, security, http, mesh, stun, relay, onion, compute, storage, ai, inference, ephemeral_workspace (rhizoCrypt), permanent_storage (LoamSpine), attribution (sweetGrass), game, medical
+- Provenance trio: `dag.*` → rhizoCrypt, `commit.*` → LoamSpine, `provenance.*` → sweetGrass
 
 ### 6. Tower Atomic - Crypto + Network Foundation
 

@@ -2,6 +2,32 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## [v2.32] - 2026-03-12 (Provenance Trio Wiring)
+
+### Provenance Trio Integration
+
+- 3 new capability domains: `rhizocrypt` (ephemeral workspace), `loamspine` (permanent history), `sweetgrass` (attribution)
+- `rootpulse_commit.toml` deploy graph: 6-phase commit workflow (dehydrate → sign → store → commit → attribute)
+- `provenance_pipeline.toml` deploy graph: universal provenance for any Spring experiment
+- `rootpulse` and `provenance-pipeline` niche templates registered in NicheHandler
+- Prefix matching: `dag.create_session` → rhizoCrypt, `commit.session` → LoamSpine, `provenance.create_braid` → sweetGrass
+
+### Root Doc Cleanup
+
+- README, START_HERE, CURRENT_STATUS, DOCUMENTATION, graphs/README aligned to v2.32
+- Stale metrics corrected: 124 → 170+ translations, 2798 → 3148 tests, 61% → 71.47% coverage
+- `.documentation_complete` (Jan 2026 session artifact) removed
+
+### Quality
+| Metric | Before | After |
+|--------|--------|-------|
+| Capability domains | 13 | 16 |
+| Deploy graphs | 24 | 26 |
+| Niche templates | 13 | 15 |
+| Tests passing | 3,148 | 3,148 |
+
+---
+
 ## [v2.31] - 2026-03-11 (Ecosystem plasmidBin — Spring Local Niche)
 
 ### Ecosystem plasmidBin Discovery
