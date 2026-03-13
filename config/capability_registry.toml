@@ -539,6 +539,98 @@ capabilities = [
 "medical.trt_pipeline" = { provider = "healthspring", method = "medical.trt_pipeline" }
 
 # ==============================================================================
+# PROVENANCE TRIO — rhizoCrypt + LoamSpine + sweetGrass
+# ==============================================================================
+# The RootPulse provenance stack. Ephemeral DAG (rhizoCrypt) → permanence
+# (LoamSpine) → attribution (sweetGrass). Each primal discovers others via
+# capability, not by name.
+#
+# Deploy graphs: rhizocrypt_deploy.toml, loamspine_deploy.toml,
+#   sweetgrass_deploy.toml, provenance_trio_deploy.toml
+# Workflow graphs: provenance_pipeline.toml, rootpulse_commit.toml
+
+[domains.ephemeral_workspace]
+provider = "rhizocrypt"
+capabilities = [
+    "ephemeral_workspace",
+    "dag",
+    "session",
+    "merkle",
+    "dehydration",
+    "slice",
+]
+
+[translations.ephemeral_workspace]
+"dag.create_session" = { provider = "rhizocrypt", method = "create_session" }
+"dag.append_event" = { provider = "rhizocrypt", method = "append_event" }
+"dag.get_vertex" = { provider = "rhizocrypt", method = "get_vertex" }
+"dag.get_frontier" = { provider = "rhizocrypt", method = "get_frontier" }
+"dag.query_vertices" = { provider = "rhizocrypt", method = "query_vertices" }
+"dag.dehydrate" = { provider = "rhizocrypt", method = "dehydrate" }
+"dag.get_merkle_root" = { provider = "rhizocrypt", method = "get_merkle_root" }
+"dag.get_merkle_proof" = { provider = "rhizocrypt", method = "get_merkle_proof" }
+"dag.verify_proof" = { provider = "rhizocrypt", method = "verify_proof" }
+"dag.checkout_slice" = { provider = "rhizocrypt", method = "checkout_slice" }
+"dag.get_slice" = { provider = "rhizocrypt", method = "get_slice" }
+"dag.health" = { provider = "rhizocrypt", method = "health" }
+"dag.metrics" = { provider = "rhizocrypt", method = "metrics" }
+
+[domains.permanent_storage]
+provider = "loamspine"
+capabilities = [
+    "permanent_storage",
+    "linear_history",
+    "spine",
+    "certificate",
+    "commit",
+    "proof",
+    "waypoint_anchoring",
+]
+
+[translations.permanent_storage]
+"commit.session" = { provider = "loamspine", method = "session.commit" }
+"commit.braid" = { provider = "loamspine", method = "braid.commit" }
+"spine.create" = { provider = "loamspine", method = "spine.create" }
+"spine.get" = { provider = "loamspine", method = "spine.get" }
+"spine.seal" = { provider = "loamspine", method = "spine.seal" }
+"entry.append" = { provider = "loamspine", method = "entry.append" }
+"entry.get" = { provider = "loamspine", method = "entry.get" }
+"entry.get_tip" = { provider = "loamspine", method = "entry.get_tip" }
+"certificate.mint" = { provider = "loamspine", method = "certificate.mint" }
+"certificate.transfer" = { provider = "loamspine", method = "certificate.transfer" }
+"certificate.loan" = { provider = "loamspine", method = "certificate.loan" }
+"certificate.return" = { provider = "loamspine", method = "certificate.return" }
+"proof.generate_inclusion" = { provider = "loamspine", method = "proof.generate_inclusion" }
+"proof.verify_inclusion" = { provider = "loamspine", method = "proof.verify_inclusion" }
+"permanent-storage.commitSession" = { provider = "loamspine", method = "permanent-storage.commitSession" }
+"permanent-storage.verifyCommit" = { provider = "loamspine", method = "permanent-storage.verifyCommit" }
+"permanent-storage.getCommit" = { provider = "loamspine", method = "permanent-storage.getCommit" }
+"permanent-storage.healthCheck" = { provider = "loamspine", method = "permanent-storage.healthCheck" }
+
+[domains.attribution]
+provider = "sweetgrass"
+capabilities = [
+    "attribution",
+    "braid",
+    "provenance",
+    "contribution",
+    "privacy",
+]
+
+[translations.attribution]
+"provenance.create_braid" = { provider = "sweetgrass", method = "sweetgrass.createBraid" }
+"provenance.get_braid" = { provider = "sweetgrass", method = "sweetgrass.getBraid" }
+"provenance.query_braids" = { provider = "sweetgrass", method = "sweetgrass.queryBraids" }
+"provenance.graph" = { provider = "sweetgrass", method = "sweetgrass.provenanceGraph" }
+"provenance.attribution_chain" = { provider = "sweetgrass", method = "sweetgrass.attributionChain" }
+"provenance.calculate_rewards" = { provider = "sweetgrass", method = "sweetgrass.calculateRewards" }
+"provenance.record_contribution" = { provider = "sweetgrass", method = "sweetgrass.recordContribution" }
+"provenance.record_session" = { provider = "sweetgrass", method = "sweetgrass.recordSession" }
+"provenance.export_provo" = { provider = "sweetgrass", method = "sweetgrass.exportProvo" }
+"provenance.compress_session" = { provider = "sweetgrass", method = "sweetgrass.compressSession" }
+"provenance.health" = { provider = "sweetgrass", method = "sweetgrass.health" }
+
+# ==============================================================================
 # SOCKET PATH TEMPLATES
 # ==============================================================================
 # Socket paths are resolved dynamically using these templates.

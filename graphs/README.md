@@ -81,15 +81,34 @@ These are kept as fossil record — do not delete.
 
 ---
 
-## Provenance Graphs (March 2026)
+## Provenance Trio Graphs (March 2026)
+
+### Deployment Graphs
+
+| Graph | Purpose | Primals | Status |
+|-------|---------|---------|--------|
+| `loamspine_deploy.toml` | LoamSpine permanence primal deployment | LoamSpine (tarpc 9001 + JSON-RPC 8301) | Ready |
+| `rhizocrypt_deploy.toml` | rhizoCrypt ephemeral DAG deployment | rhizoCrypt (tarpc 9400) | Ready |
+| `sweetgrass_deploy.toml` | sweetGrass attribution primal deployment | sweetGrass (HTTP 8302 + tarpc 8091) | Ready |
+| `provenance_trio_deploy.toml` | Full provenance stack (all three) | LoamSpine → rhizoCrypt → sweetGrass | Ready |
+
+### Workflow Graphs
 
 | Graph | Purpose | Primals | Status |
 |-------|---------|---------|--------|
 | `rootpulse_commit.toml` | RootPulse commit workflow (dehydrate → sign → store → commit → attribute) | rhizoCrypt + BearDog + NestGate + LoamSpine + sweetGrass | Defined |
 | `provenance_pipeline.toml` | Universal provenance for any Spring experiment | rhizoCrypt + BearDog + NestGate + LoamSpine + sweetGrass | Defined |
 
-Both graphs are registered as niche templates (`rootpulse`, `provenance-pipeline`) and deployable via `niche.deploy`.
+### Provenance Trio Ports
+
+| Primal | tarpc | JSON-RPC/HTTP | Capabilities |
+|--------|-------|---------------|-------------|
+| LoamSpine | 9001 | 8301 | permanence, spine, certificate, proof, commit |
+| rhizoCrypt | 9400 | — | dag, session, merkle, dehydration, slice |
+| sweetGrass | 8091 | 8302 | attribution, braid, provenance, contribution |
+
+Deploy the trio: `graph.execute provenance_trio_deploy` (requires Tower running).
 
 ---
 
-**Tests**: 3,148 passing | **Core graphs**: 4 | **Domain graphs**: 22 | **Archived**: 53
+**Tests**: 4,033 passing | **Core graphs**: 4 | **Domain graphs**: 26 | **Archived**: 53

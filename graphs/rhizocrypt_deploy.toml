@@ -1,0 +1,49 @@
+# rhizoCrypt Deployment Graph
+# Deploys rhizoCrypt (ephemeral DAG engine) atop Tower Atomic
+#
+# rhizoCrypt provides content-addressed DAGs, sessions, Merkle proofs,
+# dehydration (commit to LoamSpine), and slice management.
+# Protocol: tarpc (9400). Discovers via Songbird.
+#
+# Required: Tower (BearDog + Songbird)
+# Optional: LoamSpine (dehydration target), NestGate (payload storage)
+
+[graph]
+id = "rhizocrypt_deploy"
+version = "1.0.0"
+description = "rhizoCrypt ephemeral DAG engine deployment"
+
+[[nodes]]
+id = "verify-tower"
+action = "check_primal"
+params = { primal = "beardog", required = true }
+
+[[nodes]]
+id = "verify-songbird"
+action = "check_primal"
+params = { primal = "songbird", required = true }
+depends_on = ["verify-tower"]
+
+[[nodes]]
+id = "start-rhizocrypt"
+action = "start_primal"
+params = { primal = "rhizocrypt", binary = "rhizocrypt", args = ["server"] }
+depends_on = ["verify-songbird"]
+
+[nodes.env]
+RHIZOCRYPT_RPC_PORT = "9400"
+RHIZOCRYPT_RPC_HOST = "0.0.0.0"
+RHIZOCRYPT_ENV = "production"
+RHIZOCRYPT_DISCOVERY_ADAPTER = "http://127.0.0.1:8080"
+
+[[nodes]]
+id = "register-capabilities"
+action = "register_capabilities"
+params = { primal = "rhizocrypt", capabilities = ["ephemeral_workspace", "dag", "session", "merkle", "dehydration", "slice"] }
+depends_on = ["start-rhizocrypt"]
+
+[[nodes]]
+id = "verify-health"
+action = "health_check"
+params = { primal = "rhizocrypt", method = "health", port = 9400, protocol = "tarpc", timeout_ms = 5000 }
+depends_on = ["register-capabilities"]

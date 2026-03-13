@@ -1,0 +1,126 @@
+# Provenance Trio Deployment Graph
+# Deploys the RootPulse provenance stack: LoamSpine + rhizoCrypt + sweetGrass
+# atop a running Tower Atomic (BearDog + Songbird).
+#
+# Startup order matters:
+#   1. LoamSpine (permanence) — no dependencies beyond Tower
+#   2. rhizoCrypt (ephemeral DAG) — optional dehydration to LoamSpine
+#   3. sweetGrass (attribution) — optional anchoring to LoamSpine
+#
+# After deployment, use provenance_pipeline.toml or rootpulse_commit.toml
+# to orchestrate the full commit workflow.
+#
+# Required: Tower (BearDog + Songbird)
+# Optional: NestGate (content-addressed payload storage)
+
+[graph]
+id = "provenance_trio_deploy"
+version = "1.0.0"
+description = "RootPulse provenance trio: LoamSpine + rhizoCrypt + sweetGrass"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 1: VERIFY TOWER FOUNDATION
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "verify-beardog"
+action = "check_primal"
+params = { primal = "beardog", required = true }
+
+[[nodes]]
+id = "verify-songbird"
+action = "check_primal"
+params = { primal = "songbird", required = true }
+depends_on = ["verify-beardog"]
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 2: START LOAMSPINE (permanence)
+# Must start first — rhizoCrypt and sweetGrass dehydrate/anchor to it
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "start-loamspine"
+action = "start_primal"
+params = { primal = "loamspine", binary = "loamspine", args = ["server"] }
+depends_on = ["verify-songbird"]
+
+[nodes.env]
+LOAMSPINE_TARPC_PORT = "9001"
+LOAMSPINE_JSONRPC_PORT = "8301"
+LOAMSPINE_BIND_ADDRESS = "0.0.0.0"
+LOAMSPINE_STORAGE_PATH = "${XDG_DATA_HOME}/biomeos/loamspine"
+DISCOVERY_ENDPOINT = "http://127.0.0.1:8080"
+
+[[nodes]]
+id = "health-loamspine"
+action = "health_check"
+params = { primal = "loamspine", method = "health.check", port = 8301, protocol = "jsonrpc", timeout_ms = 10000 }
+depends_on = ["start-loamspine"]
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 3: START RHIZOCRYPT (ephemeral DAG)
+# Connects to LoamSpine for dehydration, BearDog for signing
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "start-rhizocrypt"
+action = "start_primal"
+params = { primal = "rhizocrypt", binary = "rhizocrypt", args = ["server"] }
+depends_on = ["health-loamspine"]
+
+[nodes.env]
+RHIZOCRYPT_RPC_PORT = "9400"
+RHIZOCRYPT_RPC_HOST = "0.0.0.0"
+RHIZOCRYPT_ENV = "production"
+RHIZOCRYPT_DISCOVERY_ADAPTER = "http://127.0.0.1:8080"
+PERMANENT_STORAGE_ENDPOINT = "http://127.0.0.1:8301"
+
+[[nodes]]
+id = "health-rhizocrypt"
+action = "health_check"
+params = { primal = "rhizocrypt", method = "health", port = 9400, protocol = "tarpc", timeout_ms = 10000 }
+depends_on = ["start-rhizocrypt"]
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 4: START SWEETGRASS (attribution)
+# Connects to LoamSpine for anchoring, BearDog for signing
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "start-sweetgrass"
+action = "start_primal"
+params = { primal = "sweetgrass", binary = "sweet-grass-service", args = ["server", "--http-address", "0.0.0.0:8302", "--tarpc-address", "0.0.0.0:8091", "--storage", "sled", "--sled-path", "${XDG_DATA_HOME}/biomeos/sweetgrass"] }
+depends_on = ["health-loamspine"]
+
+[nodes.env]
+PRIMAL_NAME = "sweetgrass"
+DISCOVERY_ADDRESS = "127.0.0.1:8080"
+RUST_LOG = "info"
+
+[[nodes]]
+id = "health-sweetgrass"
+action = "health_check"
+params = { primal = "sweetgrass", url = "http://127.0.0.1:8302/health", timeout_ms = 10000 }
+depends_on = ["start-sweetgrass"]
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 5: REGISTER ALL CAPABILITIES
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "register-loamspine-caps"
+action = "register_capabilities"
+params = { primal = "loamspine", capabilities = ["permanent_storage", "linear_history", "spine", "certificate", "commit", "proof", "waypoint_anchoring"] }
+depends_on = ["health-loamspine"]
+
+[[nodes]]
+id = "register-rhizocrypt-caps"
+action = "register_capabilities"
+params = { primal = "rhizocrypt", capabilities = ["ephemeral_workspace", "dag", "session", "merkle", "dehydration", "slice"] }
+depends_on = ["health-rhizocrypt"]
+
+[[nodes]]
+id = "register-sweetgrass-caps"
+action = "register_capabilities"
+params = { primal = "sweetgrass", capabilities = ["attribution", "braid", "provenance", "contribution", "privacy"] }
+depends_on = ["health-sweetgrass"]

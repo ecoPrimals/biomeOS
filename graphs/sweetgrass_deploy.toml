@@ -1,0 +1,48 @@
+# sweetGrass Deployment Graph
+# Deploys sweetGrass (provenance and attribution primal) atop Tower Atomic
+#
+# sweetGrass provides W3C PROV-O provenance, semantic attribution, braids,
+# contribution tracking, and reward calculation.
+# Dual protocol: HTTP/JSON-RPC (8080) + tarpc (8091). Discovers via Songbird.
+#
+# Required: Tower (BearDog + Songbird)
+# Optional: LoamSpine (anchoring), PostgreSQL or Sled (persistent storage)
+
+[graph]
+id = "sweetgrass_deploy"
+version = "1.0.0"
+description = "sweetGrass provenance and attribution primal deployment"
+
+[[nodes]]
+id = "verify-tower"
+action = "check_primal"
+params = { primal = "beardog", required = true }
+
+[[nodes]]
+id = "verify-songbird"
+action = "check_primal"
+params = { primal = "songbird", required = true }
+depends_on = ["verify-tower"]
+
+[[nodes]]
+id = "start-sweetgrass"
+action = "start_primal"
+params = { primal = "sweetgrass", binary = "sweet-grass-service", args = ["server", "--http-address", "0.0.0.0:8302", "--tarpc-address", "0.0.0.0:8091", "--storage", "sled", "--sled-path", "${XDG_DATA_HOME}/biomeos/sweetgrass"] }
+depends_on = ["verify-songbird"]
+
+[nodes.env]
+PRIMAL_NAME = "sweetgrass"
+DISCOVERY_ADDRESS = "127.0.0.1:8080"
+RUST_LOG = "info"
+
+[[nodes]]
+id = "register-capabilities"
+action = "register_capabilities"
+params = { primal = "sweetgrass", capabilities = ["attribution", "braid", "provenance", "contribution", "privacy"] }
+depends_on = ["start-sweetgrass"]
+
+[[nodes]]
+id = "verify-health"
+action = "health_check"
+params = { primal = "sweetgrass", url = "http://127.0.0.1:8302/health", timeout_ms = 5000 }
+depends_on = ["register-capabilities"]
