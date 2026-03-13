@@ -1,7 +1,7 @@
 # biomeOS Deployment Graphs
 
 **Updated**: March 12, 2026
-**Status**: 26 deploy graphs (4 core + 22 domain), all XDG-compliant, all tests passing
+**Status**: 30 deploy graphs (4 core + 26 domain), all XDG-compliant, all tests passing
 
 ---
 

@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: March 12, 2026 (Provenance Trio Wiring)
-**Version**: 2.32
+**Updated**: March 13, 2026 (Provenance Trio Graph Deployments)
+**Version**: 2.33
 **Status**: PRODUCTION READY - Multi-Computer Federation Validated
 
 ---
@@ -24,8 +24,8 @@
 | **Continuous Systems** | ContinuousExecutor (60Hz tick), GraphEventBroadcaster, SensorEventBus |
 | **XR/VR Types** | StereoConfig, Pose6DoF, TrackingFrame, HapticCommand, MotionCaptureAdapter |
 | **Surgical Domain** | SurgicalProcedure, TissueMaterial, AnatomyModel, PkModelParams |
-| **Capability Domains** | 16 domains (+ rhizocrypt, loamspine, sweetgrass), 170+ translations |
-| **Deploy Graphs** | 26 (+ rootpulse_commit, provenance_pipeline) |
+| **Capability Domains** | 16 domains (+ rhizocrypt, loamspine, sweetgrass), 205+ translations |
+| **Deploy Graphs** | 30 (+ rootpulse_commit, provenance_pipeline, loamspine_deploy, rhizocrypt_deploy, sweetgrass_deploy, provenance_trio_deploy) |
 | **Niche Templates** | 15 (+ rootpulse, provenance-pipeline) |
 | **Genetic Model** | EVOLVED - Mitochondrial + Nuclear DNA |
 | **BirdSong Discovery** | Encrypted, shared beacon model |
@@ -37,7 +37,7 @@
 | **Plasmodium** | HTTP JSON-RPC collective (runtime port, SSH legacy removed) |
 | **Model Cache** | NUCLEUS-integrated, HuggingFace import, NestGate fallback |
 | **AI Bridge** | Squirrel -> Songbird -> Cloud/Local AI (validated) |
-| **Neural API** | 170+ capability translations, proxy_http, capability.call |
+| **Neural API** | 205+ capability translations, proxy_http, capability.call |
 | **Lifecycle** | Deep health monitoring, auto-resurrection, coordinated shutdown |
 | **SystemPaths** | All paths XDG-compliant via centralized `SystemPaths` |
 | **Hardcoded `/tmp`** | 0 in production code |
@@ -242,6 +242,19 @@ Absorbed capabilities from all 7 springs and petalTongue V1.6.1:
 | **Deploy Graphs** | +4: hotspring_deploy, groundspring_deploy, healthspring_deploy, cross_spring_ecology |
 | **Niche Templates** | +4: ecology-pipeline, hotspring, groundspring, healthspring |
 | **Capability Domains** | +5 keywords: kinetics, monitoring, drought, statistics, sensor_stream |
+
+### Provenance Trio Graph Deployments (March 13, 2026)
+
+Integrated loamSpine, rhizoCrypt, and sweetGrass as deployable primals with full Neural API capability routing:
+
+| Category | Change |
+|----------|--------|
+| **loamSpine** | Deploy graph + 18 translations: spine, entry, certificate, proof, commit, health |
+| **rhizoCrypt** | Deploy graph + 13 translations: dag sessions, merkle, dehydration, slice |
+| **sweetGrass** | Deploy graph + 11 translations: braid, provenance, attribution, rewards |
+| **Combined** | `provenance_trio_deploy.toml` — starts all three in dependency order |
+| **Workflow** | `provenance_pipeline.toml` + `rootpulse_commit.toml` ready for execution |
+| **Capability Registry** | 35+ new semantic translations in `capability_registry.toml` |
 
 ### Continuous Systems + XR/Surgical VR Evolution (Mar 11, 2026)
 
@@ -746,7 +759,7 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 **XR/VR**: StereoRenderAdapter, MotionCaptureAdapter, HapticPipeline
 **Surgical Domain**: SurgicalProcedure, TissueMaterial, AnatomyModel, PkModelParams
 **Plasmodium**: HTTP JSON-RPC collective (runtime port, SSH deprecated)
-**Neural API**: 170+ translations, proxy_http, capability.call, compute.hardware.*
+**Neural API**: 205+ translations, proxy_http, capability.call, compute.hardware.*
 **NAT Traversal**: 4-tier strategy orchestrator (LAN/punch/coordinated/relay)
 **Lifecycle**: Deep health monitoring, auto-resurrection
 **Genetic Model**: Evolved (Mitochondrial + Nuclear, Blake3-Lineage-KDF enrollment)

@@ -1,6 +1,6 @@
 # biomeOS Documentation Index
 
-**Updated**: March 11, 2026
+**Updated**: March 13, 2026
 
 ---
 
@@ -15,6 +15,7 @@
 | See what changed | [CHANGELOG.md](CHANGELOG.md) |
 | See evolution roadmap | [specs/EVOLUTION_ROADMAP.md](specs/EVOLUTION_ROADMAP.md) |
 | Deploy to USB/Pixel | [livespore-usb/README.md](livespore-usb/README.md) |
+| Deployment graphs (30 incl. provenance trio) | [graphs/README.md](graphs/README.md) |
 | Start a NUCLEUS | `biomeos nucleus start --mode full --node-id tower1` |
 
 ---
@@ -161,6 +162,7 @@ See `ARCHIVE_INDEX.md` in archive for details.
 
 ---
 
-**Documentation current as of March 12, 2026**
+**Documentation current as of March 13, 2026**
 **Active: 19 specs, 15 handoffs, 10 scripts**
+**Deploy graphs: 30 (incl. provenance trio: loamspine, rhizocrypt, sweetgrass, provenance_trio)**
 **Tests: 3,148 passing (71.47% region coverage) | Clippy: PASS | Docs: Full coverage**

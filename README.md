@@ -18,7 +18,7 @@
 | Formatting | PASS |
 | Deployment | USB + Pixel + Cross-Device AI |
 | AI Bridge | Squirrel -> Songbird -> Cloud/Local AI (validated) |
-| Neural API | 170+ semantic capability translations (incl. compute.hardware.*) |
+| Neural API | 205+ semantic capability translations (incl. compute.hardware.*) |
 | Continuous Systems | ContinuousExecutor (60Hz tick), push events, sensor routing |
 | XR/VR | Stereo rendering, motion capture, haptic feedback pipeline |
 | Surgical Domain | Anatomy models, tissue physics, biosignals, pharmacokinetics |
@@ -38,7 +38,7 @@
 |  AI Bridge                                                   |
 |  Squirrel -> http.request -> Songbird -> Cloud/Local AI      |
 +-------------------------------------------------------------+
-|  Neural API (170+ semantic translations)                     |
+|  Neural API (205+ semantic translations)                     |
 |  capability.call -> translate -> route to provider           |
 +-------------------------------------------------------------+
 |  Atomics                                                     |
@@ -121,7 +121,7 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"Name the largest 
 
 ## Neural API - Semantic Routing
 
-170+ capability translations enable primals to compose without knowing each other:
+205+ capability translations enable primals to compose without knowing each other:
 
 ```
 Squirrel -> capability.call("http", "request", ...) -> Neural API
@@ -333,11 +333,11 @@ AGPL-3.0-only
 
 ---
 
-**Status**: Production Ready (v2.32)
-**Updated**: March 12, 2026
+**Status**: Production Ready (v2.33)
+**Updated**: March 13, 2026
 **Deep Debt Evolution**: 8-phase plan executed — capability routing, path elimination, large file splits, env centralization, Rust modernization, libc removal
-**Spring Absorption**: 170+ translations from 7 springs + petalTongue + hw-learn, 26 deploy graphs, 15 niche templates
-**Provenance Trio**: rhizoCrypt + LoamSpine + sweetGrass wired into Neural API (3 capability domains, RootPulse commit graph, universal provenance pipeline)
+**Spring Absorption**: 205+ translations from 7 springs + petalTongue + hw-learn, 30 deploy graphs, 15 niche templates
+**Provenance Trio**: loamSpine + rhizoCrypt + sweetGrass deployable via 4 graphs (loamspine_deploy, rhizocrypt_deploy, sweetgrass_deploy, provenance_trio_deploy), 35+ capability translations, RootPulse commit + universal provenance pipeline
 **Continuous Systems**: 60Hz tick loop, push events, sensor routing, feedback edges
 **XR/VR**: Stereo rendering, motion capture, haptic feedback, surgical VR niche
 **AI Bridge**: Local + Cloud AI validated

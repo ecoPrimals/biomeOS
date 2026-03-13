@@ -24,6 +24,7 @@ biomeOS is the **ecosystem orchestrator** for ecoPrimals - a federation of auton
 - **Capability Taxonomy**: Canonical primal-to-capability mapping (single source of truth)
 - **NAT Traversal**: 4-tier connection strategy (LAN/punch/coordinated/relay)
 - **Plasmodium Agents**: Dynamic routing contexts that compose capabilities across gates
+- **Provenance Trio**: loamSpine (permanence) + rhizoCrypt (ephemeral DAG) + sweetGrass (attribution) — 4 deploy graphs, 35+ capability translations
 
 ---
 
@@ -165,15 +166,15 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 ---
 
-**Status**: Production Ready (v2.32)
+**Status**: Production Ready (v2.33)
 **AI Bridge**: Local + Cloud AI validated
 **Plasmodium**: HTTP JSON-RPC collective (runtime port) + Agent Model
 **Covalent Bond**: Transport ready, beacon discovery pending Songbird fixes
-**Neural API**: 170+ semantic translations, 16 capability domains (part of biomeOS)
+**Neural API**: 205+ semantic translations, 16 capability domains (part of biomeOS)
 **NAT Traversal**: 4-tier strategy (LAN/punch/coordinated/relay)
 **Lifecycle**: Deep health monitoring + auto-resurrection
 **IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate)
 **Primals**: 6/6 ecoBin v2.0 compliant
 **Provenance Trio**: rhizoCrypt + LoamSpine + sweetGrass wired into Neural API
 **Tests**: 3,148 passing (71.47% coverage) | **Clippy**: PASS | **Docs**: Full coverage
-**Updated**: March 12, 2026
+**Updated**: March 13, 2026

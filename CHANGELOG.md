@@ -2,6 +2,33 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## [v2.33] - 2026-03-13 (Provenance Trio Graph Deployments)
+
+### Provenance Trio Integration
+Pulled and reviewed loamSpine, rhizoCrypt, and sweetGrass — created deployment
+graphs and capability translations for biomeOS orchestration:
+
+- **loamspine_deploy.toml**: Permanence primal (tarpc 9001, JSON-RPC 8301)
+- **rhizocrypt_deploy.toml**: Ephemeral DAG engine (tarpc 9400)
+- **sweetgrass_deploy.toml**: Attribution primal (HTTP 8302, tarpc 8091)
+- **provenance_trio_deploy.toml**: Combined deployment in dependency order (LoamSpine → rhizoCrypt + sweetGrass)
+
+### Capability Translations
+35+ new translations in `capability_registry.toml`:
+- Ephemeral workspace: `dag.create_session`, `dag.dehydrate`, `dag.get_merkle_root`, etc.
+- Permanent storage: `commit.session`, `spine.create`, `certificate.mint`, `proof.generate_inclusion`, etc.
+- Attribution: `provenance.create_braid`, `provenance.attribution_chain`, `provenance.calculate_rewards`, etc.
+
+### Quality
+| Metric | Before | After |
+|--------|--------|-------|
+| Deploy graphs | 26 | 30 |
+| Capability translations | 170+ | 205+ |
+| Tests | 4,033 | 4,033 |
+| Clippy | 0 warnings | 0 warnings |
+
+---
+
 ## [v2.32] - 2026-03-12 (Provenance Trio Wiring)
 
 ### Provenance Trio Integration
