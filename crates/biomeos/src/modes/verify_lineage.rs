@@ -267,6 +267,8 @@ async fn verify_cryptographic_lineage(
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
     use super::*;
     use std::io::Write;
 
@@ -447,5 +449,83 @@ node_id = "test-node-456"
         let v = result.expect("verify_lineage should succeed");
         assert_eq!(v.family_id.as_deref(), Some("only-family"));
         assert_eq!(v.node_id, None);
+    }
+
+    #[tokio::test]
+    async fn test_verify_lineage_manifest_invalid_toml() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        let manifest_path = dir.path().join("manifest.toml");
+        std::fs::write(&manifest_path, "invalid toml {{{").expect("write invalid manifest");
+
+        let path = dir.path().to_path_buf();
+        let result = verify_lineage(&path, false).await;
+        let v = result.expect("verify_lineage should succeed");
+        assert!(v.details.contains(&"Manifest found".to_string()));
+        assert_eq!(v.family_id, None);
+        assert_eq!(v.node_id, None);
+    }
+
+    #[tokio::test]
+    async fn test_run_success_with_valid_directory() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        let manifest_path = dir.path().join("manifest.toml");
+        std::fs::write(
+            &manifest_path,
+            "family_id = \"run-test\"\nnode_id = \"node-1\"\n",
+        )
+        .expect("write manifest");
+        let seed_path = dir.path().join(".family.seed");
+        let mut f = std::fs::File::create(&seed_path).expect("create seed");
+        f.write_all(&[0u8; 64]).expect("write 64 bytes");
+
+        let path = dir.path().to_path_buf();
+        let result = run(path, false).await;
+        assert!(result.is_ok(), "run should succeed: {:?}", result.err());
+    }
+
+    #[tokio::test]
+    async fn test_run_fails_when_verification_invalid() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        let seed_path = dir.path().join(".family.seed");
+        let mut f = std::fs::File::create(&seed_path).expect("create seed");
+        f.write_all(&[0u8; 32]).expect("write 32 bytes");
+
+        let path = dir.path().to_path_buf();
+        let result = run(path, false).await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            err.to_string().contains("failed") || err.to_string().contains("invalid"),
+            "Expected failure: {}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    async fn test_verify_lineage_detailed_skips_when_no_beardog() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        let seed_path = dir.path().join(".family.seed");
+        let mut f = std::fs::File::create(&seed_path).expect("create seed");
+        f.write_all(&[0u8; 64]).expect("write 64 bytes");
+
+        std::env::remove_var("BIOMEOS_SECURITY_PROVIDER");
+        let path = dir.path().to_path_buf();
+        let result = verify_lineage(&path, true).await;
+        let v = result.expect("verify_lineage should succeed");
+        assert!(v.valid);
+        let has_skip_warning = v
+            .warnings
+            .iter()
+            .any(|w| w.contains("Cryptographic") || w.contains("skipped"));
+        let has_crypto_detail = v
+            .details
+            .iter()
+            .any(|d| d.contains("Cryptographic") || d.contains("skipped"));
+        assert!(
+            has_skip_warning || has_crypto_detail,
+            "Expected crypto skip message, got warnings: {:?}, details: {:?}",
+            v.warnings,
+            v.details
+        );
     }
 }

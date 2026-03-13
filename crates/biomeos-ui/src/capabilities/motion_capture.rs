@@ -197,7 +197,7 @@ impl MotionCaptureAdapter {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -329,5 +329,47 @@ mod tests {
         assert_eq!(config.tracking_hz, 1000);
         assert_eq!(config.tracked_devices.len(), 3);
         assert!((config.prediction_ms - 10.0).abs() < 0.001);
+    }
+
+    #[tokio::test]
+    async fn test_start_tracking_already_active() {
+        let config = MotionCaptureConfig::default();
+        let mut adapter = MotionCaptureAdapter::new(config);
+        let client =
+            crate::primal_client::PrimalClient::with_socket("petaltongue", "/nonexistent.sock");
+        adapter.tracking_active = true;
+        let result = adapter.start_tracking(&client).await;
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_calibration_result_debug() {
+        let cal = CalibrationResult {
+            success: true,
+            residual_mm: 0.1,
+            samples: 100,
+            message: "OK".to_string(),
+        };
+        let s = format!("{:?}", cal);
+        assert!(s.contains("success"));
+        assert!(s.contains("0.1"));
+    }
+
+    #[tokio::test]
+    #[ignore = "requires petalTongue socket"]
+    async fn test_start_tracking() {
+        let mut adapter = MotionCaptureAdapter::with_defaults();
+        let client =
+            crate::primal_client::PrimalClient::with_socket("petaltongue", "/tmp/petaltongue.sock");
+        let _ = adapter.start_tracking(&client).await;
+    }
+
+    #[tokio::test]
+    #[ignore = "requires petalTongue socket"]
+    async fn test_calibrate() {
+        let adapter = MotionCaptureAdapter::with_defaults();
+        let client =
+            crate::primal_client::PrimalClient::with_socket("petaltongue", "/tmp/petaltongue.sock");
+        let _ = adapter.calibrate(&client).await;
     }
 }

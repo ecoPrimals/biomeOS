@@ -5,7 +5,7 @@
 //!
 //! Extracted from neural_executor.rs to keep file under 1000 lines.
 
-#![allow(clippy::unwrap_used)]
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use super::neural_executor::GraphExecutor;
 use crate::neural_graph::{Graph, GraphConfig, GraphNode};
@@ -484,4 +484,59 @@ fn test_env_substitution_special_chars_in_value() {
     env.insert("PATH".to_string(), "/usr/bin:/usr/local/bin".to_string());
     let result = GraphExecutor::substitute_env("Path: ${PATH}", &env);
     assert_eq!(result, "Path: /usr/bin:/usr/local/bin");
+}
+
+/// Test execute_node dispatch for unknown node type — returns skipped without error
+#[tokio::test]
+async fn test_execute_node_unknown_type() {
+    let node = create_test_node("unknown_node", vec![]);
+    // Node has no operation and no node_type, so node_type_str becomes "unknown"
+    let graph = Graph {
+        id: "unknown-test".to_string(),
+        version: "1.0".to_string(),
+        description: "Test unknown node".to_string(),
+        nodes: vec![node],
+        config: GraphConfig::default(),
+    };
+    let mut env = HashMap::new();
+    env.insert("FAMILY_ID".to_string(), "test".to_string());
+    env.insert(
+        "XDG_RUNTIME_DIR".to_string(),
+        std::env::temp_dir().to_string_lossy().to_string(),
+    );
+
+    let mut executor = GraphExecutor::new(graph, env);
+    let report = executor.execute().await.unwrap();
+
+    assert!(report.success);
+    assert_eq!(report.phase_results.len(), 1);
+    assert_eq!(report.phase_results[0].completed, 1);
+    assert_eq!(report.phase_results[0].failed, 0);
+}
+
+/// Test execute_node with explicit unknown node_type string
+#[tokio::test]
+async fn test_execute_node_explicit_unknown_type() {
+    let mut node = create_test_node("explicit_unknown", vec![]);
+    node.node_type = Some("custom_unknown_xyz".to_string());
+
+    let graph = Graph {
+        id: "explicit-unknown".to_string(),
+        version: "1.0".to_string(),
+        description: "Test explicit unknown".to_string(),
+        nodes: vec![node],
+        config: GraphConfig::default(),
+    };
+    let mut env = HashMap::new();
+    env.insert("FAMILY_ID".to_string(), "test".to_string());
+    env.insert(
+        "XDG_RUNTIME_DIR".to_string(),
+        std::env::temp_dir().to_string_lossy().to_string(),
+    );
+
+    let mut executor = GraphExecutor::new(graph, env);
+    let report = executor.execute().await.unwrap();
+
+    assert!(report.success);
+    assert_eq!(report.phase_results[0].completed, 1);
 }

@@ -275,3 +275,115 @@ impl AISuggestionManager {
         })
     }
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    #[test]
+    fn test_new() {
+        let manager = AISuggestionManager::new("family-xyz".to_string());
+        assert_eq!(manager.family_id, "family-xyz");
+        assert!(manager.active_suggestions.is_empty());
+    }
+
+    #[test]
+    fn test_get_active_suggestions_empty() {
+        let manager = AISuggestionManager::new("family".to_string());
+        let active = manager.get_active_suggestions();
+        assert!(active.is_empty());
+    }
+
+    #[test]
+    fn test_get_active_suggestions_with_data() {
+        let mut manager = AISuggestionManager::new("family".to_string());
+        let suggestion = AISuggestion {
+            id: "s1".to_string(),
+            suggestion_type: SuggestionType::DeviceAssignment,
+            confidence: 0.8,
+            explanation: "Test".to_string(),
+            action: SuggestedAction::AssignDevice {
+                device_id: "d1".to_string(),
+                primal_id: "p1".to_string(),
+                reason: "Test".to_string(),
+            },
+            impact: Impact {
+                performance_improvement: Some(10.0),
+                cost_change: None,
+                affected_primals: vec![],
+                risk_level: "low".to_string(),
+            },
+        };
+        manager.active_suggestions.insert(suggestion.id.clone(), suggestion);
+        let active = manager.get_active_suggestions();
+        assert_eq!(active.len(), 1);
+        assert_eq!(active[0].id, "s1");
+    }
+
+    #[test]
+    fn test_generate_local_suggestions_multi_device_one_primal() {
+        let manager = AISuggestionManager::new("family".to_string());
+        let context = SuggestionContext {
+            assignments: HashMap::new(),
+            available_devices: vec![
+                DeviceInfo {
+                    id: "gpu0".to_string(),
+                    device_type: "gpu".to_string(),
+                    capabilities: vec!["compute".to_string()],
+                    current_assignment: None,
+                },
+                DeviceInfo {
+                    id: "gpu1".to_string(),
+                    device_type: "gpu".to_string(),
+                    capabilities: vec!["compute".to_string()],
+                    current_assignment: None,
+                },
+            ],
+            running_primals: vec![PrimalInfo {
+                id: "toadstool1".to_string(),
+                name: "ToadStool".to_string(),
+                primal_type: "compute".to_string(),
+                capabilities: vec!["compute".to_string()],
+                health: "healthy".to_string(),
+                load: Some(0.3),
+            }],
+            recent_events: None,
+            preferences: None,
+        };
+        let suggestions = manager.generate_local_suggestions(&context);
+        assert_eq!(suggestions.len(), 2);
+        assert!(suggestions.iter().all(|s| s.suggestion_type == SuggestionType::DeviceAssignment));
+    }
+
+    #[test]
+    fn test_generate_local_suggestions_partial_capability_match() {
+        let manager = AISuggestionManager::new("family".to_string());
+        let context = SuggestionContext {
+            assignments: HashMap::new(),
+            available_devices: vec![DeviceInfo {
+                id: "gpu0".to_string(),
+                device_type: "gpu".to_string(),
+                capabilities: vec!["cuda".to_string(), "compute".to_string()],
+                current_assignment: None,
+            }],
+            running_primals: vec![PrimalInfo {
+                id: "toadstool1".to_string(),
+                name: "ToadStool".to_string(),
+                primal_type: "compute".to_string(),
+                capabilities: vec!["compute".to_string()],
+                health: "healthy".to_string(),
+                load: Some(0.5),
+            }],
+            recent_events: None,
+            preferences: None,
+        };
+        let suggestions = manager.generate_local_suggestions(&context);
+        assert_eq!(suggestions.len(), 1);
+        match &suggestions[0].action {
+            SuggestedAction::AssignDevice { device_id, .. } => assert_eq!(device_id, "gpu0"),
+            _ => panic!("Expected AssignDevice action"),
+        }
+    }
+}

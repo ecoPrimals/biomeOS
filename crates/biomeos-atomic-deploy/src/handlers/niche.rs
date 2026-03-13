@@ -292,6 +292,96 @@ impl NicheHandler {
                     { "name": "AGENT_DID", "required": false, "description": "Agent DID for signing" }
                 ]
             }),
+            json!({
+                "id": "rootpulse-branch",
+                "name": "RootPulse Branch",
+                "description": "Fork history at a commit point into a new spine",
+                "category": "provenance",
+                "required_resources": {
+                    "cpu_cores": 2,
+                    "memory_mb": 2048,
+                    "gpu_count": null,
+                    "storage_gb": 5
+                },
+                "graph_id": "rootpulse_branch",
+                "parameters": [
+                    { "name": "PARENT_COMMIT_ID", "required": true, "description": "Commit to branch from" },
+                    { "name": "BRANCH_NAME", "required": true, "description": "Name for the new branch" },
+                    { "name": "AGENT_DID", "required": false, "description": "Agent DID for attribution" }
+                ]
+            }),
+            json!({
+                "id": "rootpulse-merge",
+                "name": "RootPulse Merge",
+                "description": "Merge a branch spine into a target spine",
+                "category": "provenance",
+                "required_resources": {
+                    "cpu_cores": 2,
+                    "memory_mb": 2048,
+                    "gpu_count": null,
+                    "storage_gb": 5
+                },
+                "graph_id": "rootpulse_merge",
+                "parameters": [
+                    { "name": "SOURCE_SPINE_ID", "required": true, "description": "Branch spine to merge from" },
+                    { "name": "TARGET_SPINE_ID", "required": true, "description": "Target spine to merge into" },
+                    { "name": "SOURCE_SESSION_ID", "required": true, "description": "rhizoCrypt session for source" },
+                    { "name": "AGENT_DID", "required": false, "description": "Agent DID for attribution" }
+                ]
+            }),
+            json!({
+                "id": "rootpulse-diff",
+                "name": "RootPulse Diff",
+                "description": "Compare two commits and produce a structured diff",
+                "category": "provenance",
+                "required_resources": {
+                    "cpu_cores": 2,
+                    "memory_mb": 2048,
+                    "gpu_count": null,
+                    "storage_gb": 1
+                },
+                "graph_id": "rootpulse_diff",
+                "parameters": [
+                    { "name": "COMMIT_A", "required": true, "description": "First commit to compare" },
+                    { "name": "COMMIT_B", "required": true, "description": "Second commit to compare" },
+                    { "name": "SESSION_A", "required": true, "description": "rhizoCrypt session for commit A" },
+                    { "name": "SESSION_B", "required": true, "description": "rhizoCrypt session for commit B" }
+                ]
+            }),
+            json!({
+                "id": "rootpulse-federate",
+                "name": "RootPulse Federate",
+                "description": "Synchronize provenance across peer nodes via Songbird discovery",
+                "category": "provenance",
+                "required_resources": {
+                    "cpu_cores": 2,
+                    "memory_mb": 2048,
+                    "gpu_count": null,
+                    "storage_gb": 5
+                },
+                "graph_id": "rootpulse_federate",
+                "parameters": [
+                    { "name": "SPINE_ID", "required": true, "description": "Spine to synchronize" },
+                    { "name": "AGENT_DID", "required": false, "description": "Agent DID for attribution" }
+                ]
+            }),
+            json!({
+                "id": "soil-microbiome",
+                "name": "Cross-Spring Soil Microbiome",
+                "description": "airSpring soil moisture → wetSpring microbial diversity → provenance",
+                "category": "science",
+                "required_resources": {
+                    "cpu_cores": 4,
+                    "memory_mb": 4096,
+                    "gpu_count": null,
+                    "storage_gb": 5
+                },
+                "graph_id": "cross_spring_soil_microbiome",
+                "parameters": [
+                    { "name": "EXPERIMENT_ID", "required": true, "description": "Experiment identifier" },
+                    { "name": "AGENT_DID", "required": false, "description": "Agent DID for provenance" }
+                ]
+            }),
         ];
 
         Ok(json!(templates))
@@ -325,6 +415,11 @@ impl NicheHandler {
             "healthspring" => "healthspring_deploy",
             "rootpulse" => "rootpulse_commit",
             "provenance-pipeline" => "provenance_pipeline",
+            "rootpulse-branch" => "rootpulse_branch",
+            "rootpulse-merge" => "rootpulse_merge",
+            "rootpulse-diff" => "rootpulse_diff",
+            "rootpulse-federate" => "rootpulse_federate",
+            "soil-microbiome" => "cross_spring_soil_microbiome",
             _ => anyhow::bail!("Unknown template: {}", template_id),
         };
 
@@ -420,6 +515,11 @@ mod tests {
             "healthspring",
             "rootpulse",
             "provenance-pipeline",
+            "rootpulse-branch",
+            "rootpulse-merge",
+            "rootpulse-diff",
+            "rootpulse-federate",
+            "soil-microbiome",
         ];
         for id in expected_ids {
             assert!(

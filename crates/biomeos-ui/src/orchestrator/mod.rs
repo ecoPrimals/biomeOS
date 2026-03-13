@@ -325,6 +325,7 @@ impl InteractiveUIOrchestrator {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::events::UIEvent;
@@ -494,5 +495,73 @@ mod tests {
 
         let result = tokio::time::timeout(std::time::Duration::from_millis(50), rx.recv()).await;
         assert!(result.is_err(), "Event without device_id should not emit");
+    }
+
+    #[tokio::test]
+    async fn test_handle_user_action_unassign_device() {
+        let orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let result = orchestrator
+            .handle_user_action(UserAction::UnassignDevice {
+                device_id: "test-device".to_string(),
+            })
+            .await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_success());
+    }
+
+    #[tokio::test]
+    async fn test_handle_user_action_refresh() {
+        let orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let result = orchestrator.handle_user_action(UserAction::Refresh).await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_success());
+    }
+
+    #[tokio::test]
+    async fn test_handle_user_action_accept_suggestion() {
+        let orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let result = orchestrator
+            .handle_user_action(UserAction::AcceptSuggestion {
+                suggestion_id: "sug-1".to_string(),
+            })
+            .await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_success());
+    }
+
+    #[tokio::test]
+    async fn test_handle_user_action_dismiss_suggestion() {
+        let orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let result = orchestrator
+            .handle_user_action(UserAction::DismissSuggestion {
+                suggestion_id: "sug-2".to_string(),
+            })
+            .await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_success());
+    }
+
+    #[tokio::test]
+    async fn test_handle_user_action_start_primal_no_toadstool() {
+        let orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let result = orchestrator
+            .handle_user_action(UserAction::StartPrimal {
+                primal_name: "beardog".to_string(),
+            })
+            .await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_error());
+    }
+
+    #[tokio::test]
+    #[ignore = "run() blocks indefinitely"]
+    async fn test_run_subscribes_and_loops() {
+        let mut orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        orchestrator.start().await.unwrap();
+        let _ = tokio::time::timeout(
+            std::time::Duration::from_millis(100),
+            orchestrator.run(),
+        )
+        .await;
     }
 }

@@ -252,6 +252,41 @@ enum Mode {
         command: PlasmodiumCommand,
     },
 
+    /// RootPulse - Commit workflow (dehydrate + sign + store + commit + attribute)
+    #[command(name = "rootpulse")]
+    RootPulse {
+        /// rhizoCrypt session ID to commit
+        #[arg(long)]
+        session_id: String,
+
+        /// Agent DID performing the commit
+        #[arg(long)]
+        agent_did: String,
+
+        /// Neural API Unix socket path
+        #[arg(long)]
+        socket: Option<PathBuf>,
+
+        /// Family ID (auto-discovered from .family.seed if not specified)
+        #[arg(long)]
+        family_id: Option<String>,
+
+        /// Dry run (show what would happen)
+        #[arg(short = 'n', long)]
+        dry_run: bool,
+    },
+
+    /// Continuous mode - Run a continuous coordination graph (game loops, dashboards)
+    #[command(name = "continuous")]
+    Continuous {
+        /// Graph file path (must use coordination = "continuous")
+        graph: PathBuf,
+
+        /// Dry run (show pipeline without executing)
+        #[arg(short = 'n', long)]
+        dry_run: bool,
+    },
+
     /// NUCLEUS - Start a NUCLEUS (pure Rust replacement for start_nucleus.sh)
     #[command(name = "nucleus")]
     Nucleus {
@@ -360,6 +395,14 @@ async fn dispatch_mode(cli: Cli) -> Result<()> {
         Mode::Enroll(args) => modes::enroll::run(args).await,
         Mode::ModelCache { command } => modes::model_cache::run(command).await,
         Mode::Plasmodium { command } => modes::plasmodium::run(command).await,
+        Mode::RootPulse {
+            session_id,
+            agent_did,
+            socket,
+            family_id,
+            dry_run,
+        } => modes::rootpulse::run(session_id, agent_did, socket, family_id, dry_run).await,
+        Mode::Continuous { graph, dry_run } => modes::continuous::run(graph, dry_run).await,
         Mode::Nucleus {
             mode: nucleus_mode,
             node_id,
@@ -555,7 +598,7 @@ fn init_logging(log_level: &str, verbose: bool) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used)]
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
 
@@ -573,8 +616,67 @@ mod tests {
     }
 
     #[test]
+    fn test_format_genome_info_empty_architectures() {
+        let info = GenomeInfo {
+            name: "minimal".to_string(),
+            version: "0.1.0".to_string(),
+            architectures: vec![],
+        };
+        let lines = format_genome_info(&info);
+        assert_eq!(lines.len(), 1);
+        assert!(lines[0].contains("minimal"));
+        assert!(lines[0].contains("0.1.0"));
+    }
+
+    #[test]
     fn test_list_genome_bins_nonexistent_dir() {
         let infos = list_genome_bins(std::path::Path::new("/nonexistent-path-xyz-12345")).unwrap();
         assert!(infos.is_empty());
+    }
+
+    #[test]
+    fn test_list_genome_bins_empty_dir() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let infos = list_genome_bins(temp.path()).unwrap();
+        assert!(infos.is_empty());
+    }
+
+    #[test]
+    fn test_list_genome_bins_with_valid_genome() {
+        use biomeos_genomebin_v3::{GenomeBin, GenomeManifest};
+
+        let temp = tempfile::tempdir().expect("temp dir");
+        let genome = GenomeBin::with_manifest(GenomeManifest::new("test-primal").version("2.0.0"));
+        let json = genome.to_json().expect("serialize");
+        let path = temp.path().join("test.genome");
+        std::fs::write(&path, json).expect("write genome");
+
+        let infos = list_genome_bins(temp.path()).unwrap();
+        assert_eq!(infos.len(), 1);
+        assert_eq!(infos[0].name, "test-primal");
+        assert_eq!(infos[0].version, "2.0.0");
+    }
+
+    #[test]
+    fn test_list_genome_bins_skips_invalid_json() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        std::fs::write(temp.path().join("invalid.genome"), "not valid json").expect("write");
+        let infos = list_genome_bins(temp.path()).unwrap();
+        assert!(infos.is_empty());
+    }
+
+    #[test]
+    fn test_list_genome_bins_skips_non_genome_extensions() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        std::fs::write(temp.path().join("other.txt"), "content").expect("write");
+        let infos = list_genome_bins(temp.path()).unwrap();
+        assert!(infos.is_empty());
+    }
+
+    #[test]
+    #[ignore = "init_logging sets global subscriber; run with --test-threads=1"]
+    fn test_init_logging() {
+        let result = init_logging("warn", false);
+        assert!(result.is_ok());
     }
 }

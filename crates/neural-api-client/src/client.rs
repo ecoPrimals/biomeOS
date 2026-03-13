@@ -135,3 +135,87 @@ impl NeuralApiClient {
         .await
     }
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    #[test]
+    fn test_new_with_pathbuf() {
+        let path = PathBuf::from("/var/run/neural.sock");
+        let client = NeuralApiClient::new(path).expect("new");
+        assert_eq!(client.socket_path, PathBuf::from("/var/run/neural.sock"));
+    }
+
+    #[test]
+    fn test_with_request_timeout() {
+        let client = NeuralApiClient::new("/tmp/x.sock")
+            .expect("new")
+            .with_request_timeout(Duration::from_secs(10));
+        assert_eq!(client.request_timeout, Duration::from_secs(10));
+    }
+
+    #[test]
+    fn test_with_connection_timeout() {
+        let client = NeuralApiClient::new("/tmp/x.sock")
+            .expect("new")
+            .with_connection_timeout(Duration::from_secs(2));
+        assert_eq!(client.connection_timeout, Duration::from_secs(2));
+    }
+
+    #[test]
+    fn test_with_both_timeouts() {
+        let client = NeuralApiClient::new("/tmp/x.sock")
+            .expect("new")
+            .with_request_timeout(Duration::from_secs(60))
+            .with_connection_timeout(Duration::from_millis(500));
+        assert_eq!(client.request_timeout, Duration::from_secs(60));
+        assert_eq!(client.connection_timeout, Duration::from_millis(500));
+    }
+
+    #[test]
+    fn test_discover_fails_when_socket_missing() {
+        let result = NeuralApiClient::discover("nonexistent-family-xyz-123");
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("does not exist"));
+        assert!(err.to_string().contains("Neural API"));
+    }
+
+    #[test]
+    fn test_discover_socket_fallback_temp_dir() {
+        let path = NeuralApiClient::discover_socket("fallback-test");
+        assert!(
+            path.to_string_lossy().ends_with("neural-api-fallback-test.sock"),
+            "got: {}",
+            path.display()
+        );
+    }
+
+    #[tokio::test]
+    #[ignore = "requires Neural API socket"]
+    async fn test_proxy_http_integration() {
+        let client = NeuralApiClient::discover("test").expect("discover");
+        let _ = client
+            .proxy_http("GET", "https://example.com", None, None)
+            .await;
+    }
+
+    #[tokio::test]
+    #[ignore = "requires Neural API socket"]
+    async fn test_route_to_primal_integration() {
+        let client = NeuralApiClient::discover("test").expect("discover");
+        let _ = client
+            .route_to_primal("secure_http", "health.check", serde_json::json!({}))
+            .await;
+    }
+
+    #[tokio::test]
+    #[ignore = "requires Neural API socket"]
+    async fn test_get_metrics_integration() {
+        let client = NeuralApiClient::discover("test").expect("discover");
+        let _ = client.get_metrics().await;
+    }
+}

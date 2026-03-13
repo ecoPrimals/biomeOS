@@ -235,7 +235,7 @@ fn discover_beardog_socket() -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used)]
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
 
@@ -243,6 +243,31 @@ mod tests {
     fn test_resolve_device_id_explicit() {
         let id = resolve_device_id(Some("custom-device-123"));
         assert_eq!(id, "custom-device-123");
+    }
+
+    #[test]
+    fn test_resolve_device_id_empty_string_uses_fallback() {
+        let id = resolve_device_id(Some(""));
+        assert!(!id.is_empty());
+    }
+
+    #[test]
+    fn test_enrollment_validation_error_display() {
+        let e = EnrollmentValidationError::AlreadyEnrolled;
+        assert!(e.to_string().contains("already enrolled"));
+        assert!(e.to_string().contains("force"));
+        let e2 = EnrollmentValidationError::FamilySeedNotFound;
+        assert!(e2.to_string().contains("Family seed not found"));
+    }
+
+    #[test]
+    fn test_validate_enrollment_paths_fresh_ok() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let lineage = temp.path().join(".lineage.seed");
+        let family = temp.path().join(".family.seed");
+        std::fs::write(&family, "seed").expect("write family");
+        let result = validate_enrollment_paths(&lineage, &family, false);
+        assert!(result.is_ok());
     }
 
     #[test]

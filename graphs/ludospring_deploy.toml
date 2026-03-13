@@ -160,6 +160,8 @@ timeout_ms = 15000
 "game.wfc_step" = "game.wfc_step"
 "game.accessibility" = "game.accessibility"
 "game.difficulty_adjustment" = "game.difficulty_adjustment"
+"game.tick_logic" = "game.tick_logic"
+"game.tick_physics" = "game.tick_physics"
 
 # =============================================================================
 # Phase 4: Validate ludoSpring Atomic

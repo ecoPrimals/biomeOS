@@ -191,6 +191,43 @@ pub async fn health_check(node: &GraphNode, context: &ExecutionContext) -> Resul
     }))
 }
 
+/// Register capabilities for a primal with the execution context.
+///
+/// Reads `config.primal_name` and `node.capabilities` to record which capabilities
+/// a primal provides. Used by deployment graphs after a primal starts and passes
+/// health checks.
+pub async fn register_capabilities(node: &GraphNode, _context: &ExecutionContext) -> Result<Value> {
+    let primal_name = node
+        .config
+        .get("primal_name")
+        .and_then(|v| v.as_str())
+        .unwrap_or("unknown");
+
+    let capabilities = &node.capabilities;
+
+    if capabilities.is_empty() {
+        warn!(
+            "register_capabilities for '{}': no capabilities listed",
+            primal_name
+        );
+    } else {
+        info!(
+            "Registering {} capabilities for '{}'",
+            capabilities.len(),
+            primal_name
+        );
+        for cap in capabilities {
+            info!("   {} -> {}", cap, primal_name);
+        }
+    }
+
+    Ok(json!({
+        "primal": primal_name,
+        "registered": capabilities,
+        "count": capabilities.len()
+    }))
+}
+
 /// Execute lineage verification via capability-based discovery
 pub async fn lineage_verify(node: &GraphNode, context: &ExecutionContext) -> Result<Value> {
     let primal_name = node
@@ -421,6 +458,8 @@ async fn call_primal_rpc(socket_path: &str, request: &Value) -> Result<Value> {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
     use super::super::context::NodeStatus;
     use super::*;
     use crate::neural_graph::GraphNode;
@@ -891,5 +930,86 @@ mod tests {
         let result = health_check(&node, &ctx).await;
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("primal_name"));
+    }
+
+    // ========================================================================
+    // register_capabilities tests
+    // ========================================================================
+
+    fn test_node_with_capabilities(
+        id: &str,
+        config: HashMap<String, serde_json::Value>,
+        capabilities: Vec<String>,
+    ) -> GraphNode {
+        GraphNode {
+            id: id.to_string(),
+            depends_on: vec![],
+            primal: None,
+            output: None,
+            operation: None,
+            constraints: None,
+            capabilities,
+            capabilities_provided: None,
+            parameter_mappings: None,
+            node_type: None,
+            dependencies: vec![],
+            config,
+            outputs: vec![],
+        }
+    }
+
+    #[tokio::test]
+    async fn test_register_capabilities_with_caps() {
+        let node = test_node_with_capabilities(
+            "reg1",
+            {
+                let mut c = HashMap::new();
+                c.insert("primal_name".to_string(), json!("beardog"));
+                c
+            },
+            vec!["crypto.encrypt".to_string(), "crypto.decrypt".to_string()],
+        );
+        let ctx = test_context();
+
+        let result = register_capabilities(&node, &ctx).await.unwrap();
+        assert_eq!(result["primal"], "beardog");
+        assert_eq!(result["count"], 2);
+        let registered = result["registered"].as_array().unwrap();
+        assert_eq!(registered.len(), 2);
+        assert!(registered
+            .iter()
+            .any(|v| v.as_str() == Some("crypto.encrypt")));
+        assert!(registered
+            .iter()
+            .any(|v| v.as_str() == Some("crypto.decrypt")));
+    }
+
+    #[tokio::test]
+    async fn test_register_capabilities_empty_caps() {
+        let node = test_node_with_capabilities(
+            "reg2",
+            {
+                let mut c = HashMap::new();
+                c.insert("primal_name".to_string(), json!("songbird"));
+                c
+            },
+            vec![],
+        );
+        let ctx = test_context();
+
+        let result = register_capabilities(&node, &ctx).await.unwrap();
+        assert_eq!(result["primal"], "songbird");
+        assert_eq!(result["count"], 0);
+        assert!(result["registered"].as_array().unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_register_capabilities_default_primal_name() {
+        let node = test_node_with_capabilities("reg3", HashMap::new(), vec!["mesh".to_string()]);
+        let ctx = test_context();
+
+        let result = register_capabilities(&node, &ctx).await.unwrap();
+        assert_eq!(result["primal"], "unknown");
+        assert_eq!(result["count"], 1);
     }
 }

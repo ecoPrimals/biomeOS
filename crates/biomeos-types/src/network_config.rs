@@ -401,6 +401,7 @@ pub fn stun_servers() -> Vec<String> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -770,5 +771,91 @@ mod tests {
         let parsed: PortConfig = serde_json::from_str(&json).expect("deserialize");
         assert_eq!(parsed.http, ports.http);
         assert_eq!(parsed.stun, ports.stun);
+    }
+
+    #[test]
+    #[ignore = "env-var tests are thread-unsafe; run with --test-threads=1"]
+    fn test_stun_servers_whitespace_trimmed() {
+        env::set_var(
+            env_vars::STUN_SERVERS,
+            " stun.a.com:3478 , stun.b.com:3478 ,  ",
+        );
+        env::remove_var(env_vars::SELF_HOSTED_STUN);
+        env::set_var(env_vars::NO_PUBLIC_STUN, "1");
+
+        let config = NetworkConfig::from_env();
+        let servers = config.stun_servers();
+
+        assert!(servers.contains(&"stun.a.com:3478".to_string()));
+        assert!(servers.contains(&"stun.b.com:3478".to_string()));
+
+        env::remove_var(env_vars::STUN_SERVERS);
+        env::remove_var(env_vars::NO_PUBLIC_STUN);
+    }
+
+    #[test]
+    #[ignore = "env-var tests are thread-unsafe; run with --test-threads=1"]
+    fn test_stun_servers_empty_entries_filtered() {
+        env::set_var(env_vars::STUN_SERVERS, "stun.a.com:3478,,,stun.b.com:3478");
+        env::remove_var(env_vars::SELF_HOSTED_STUN);
+        env::set_var(env_vars::NO_PUBLIC_STUN, "1");
+
+        let config = NetworkConfig::from_env();
+        let servers = config.stun_servers();
+
+        assert_eq!(servers.len(), 2);
+        assert!(servers.contains(&"stun.a.com:3478".to_string()));
+        assert!(servers.contains(&"stun.b.com:3478".to_string()));
+
+        env::remove_var(env_vars::STUN_SERVERS);
+        env::remove_var(env_vars::NO_PUBLIC_STUN);
+    }
+
+    #[test]
+    fn test_network_config_default_impl() {
+        let config = NetworkConfig::default();
+        assert!(config.bind_address().is_ipv4() || config.bind_address().is_ipv6());
+    }
+
+    #[test]
+    fn test_network_config_clone() {
+        let config = NetworkConfig::localhost();
+        let cloned = config.clone();
+        assert_eq!(config.bind_address(), cloned.bind_address());
+        assert_eq!(config.http_port(), cloned.http_port());
+    }
+
+    #[test]
+    fn test_network_config_serialization_roundtrip() {
+        let config = NetworkConfig::localhost();
+        let json = serde_json::to_string(&config).expect("serialize");
+        let parsed: NetworkConfig = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(config.bind_address(), parsed.bind_address());
+        assert_eq!(config.ports().http, parsed.ports().http);
+    }
+
+    #[test]
+    #[ignore = "env-var tests are thread-unsafe; run with --test-threads=1"]
+    fn test_no_public_stun_false_allows_public() {
+        env::remove_var(env_vars::STUN_SERVERS);
+        env::remove_var(env_vars::SELF_HOSTED_STUN);
+        env::set_var(env_vars::NO_PUBLIC_STUN, "false");
+
+        let config = NetworkConfig::from_env();
+        let servers = config.stun_servers();
+
+        assert!(!servers.is_empty());
+        assert!(config.allows_public_stun());
+
+        env::remove_var(env_vars::NO_PUBLIC_STUN);
+    }
+
+    #[test]
+    fn test_env_vars_constants() {
+        assert_eq!(env_vars::BIND_ADDRESS, "BIND_ADDRESS");
+        assert_eq!(env_vars::BIND_ALL, "BIOMEOS_BIND_ALL");
+        assert_eq!(env_vars::STUN_SERVERS, "BIOMEOS_STUN_SERVERS");
+        assert_eq!(env_vars::SELF_HOSTED_STUN, "BIOMEOS_STUN_SERVER");
+        assert_eq!(env_vars::NO_PUBLIC_STUN, "BIOMEOS_NO_PUBLIC_STUN");
     }
 }

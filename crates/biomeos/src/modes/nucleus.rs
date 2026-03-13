@@ -623,7 +623,7 @@ pub(crate) fn base64_encode(data: &[u8]) -> String {
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used)]
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
 
@@ -733,14 +733,37 @@ mod tests {
     fn test_socket_path_for_capability_uses_taxonomy() {
         let socket_dir = std::path::Path::new("/tmp/sock");
         let family_id = "fam1";
-        // Security -> beardog from taxonomy
         let path = super::socket_path_for_capability(socket_dir, family_id, "security");
         assert!(path.to_string_lossy().contains("beardog"));
         assert!(path.to_string_lossy().contains("fam1"));
         assert!(path.to_string_lossy().ends_with(".sock"));
-        // Discovery -> songbird from taxonomy
         let path2 = super::socket_path_for_capability(socket_dir, family_id, "discovery");
         assert!(path2.to_string_lossy().contains("songbird"));
+    }
+
+    #[test]
+    fn test_socket_path_for_capability_encryption_fallback() {
+        let socket_dir = std::path::Path::new("/tmp/sock");
+        let family_id = "fam1";
+        let path = super::socket_path_for_capability(socket_dir, family_id, "encryption");
+        assert!(path.to_string_lossy().contains("beardog"));
+    }
+
+    #[test]
+    fn test_socket_path_for_capability_registry_fallback() {
+        let socket_dir = std::path::Path::new("/tmp/sock");
+        let family_id = "fam1";
+        let path = super::socket_path_for_capability(socket_dir, family_id, "registry");
+        assert!(path.to_string_lossy().contains("songbird"));
+    }
+
+    #[test]
+    fn test_socket_path_for_capability_unknown_fallback() {
+        let socket_dir = std::path::Path::new("/tmp/sock");
+        let family_id = "fam1";
+        let path = super::socket_path_for_capability(socket_dir, family_id, "unknown-cap");
+        assert!(path.to_string_lossy().contains("unknown"));
+        assert!(path.to_string_lossy().contains("fam1"));
     }
 
     #[test]
@@ -753,6 +776,76 @@ mod tests {
             "node1",
         );
         assert_eq!(cmd.get_program(), std::path::Path::new("/usr/bin/beardog"));
+        let args: Vec<_> = cmd.get_args().collect();
+        assert!(args.iter().any(|a| a.to_str() == Some("server")));
+        assert!(args.iter().any(|a| a.to_str() == Some("--socket")));
+    }
+
+    #[test]
+    fn test_build_primal_command_songbird() {
+        let cmd = build_primal_command(
+            "songbird",
+            std::path::Path::new("/usr/bin/songbird"),
+            std::path::Path::new("/tmp/sockets"),
+            "fam123",
+            "node1",
+        );
+        assert!(cmd
+            .get_envs()
+            .any(|(k, _)| k == "SONGBIRD_SECURITY_PROVIDER"));
+        assert!(cmd.get_envs().any(|(k, _)| k == "FAMILY_ID"));
+    }
+
+    #[test]
+    fn test_build_primal_command_nestgate() {
+        let cmd = build_primal_command(
+            "nestgate",
+            std::path::Path::new("/usr/bin/nestgate"),
+            std::path::Path::new("/tmp/sockets"),
+            "fam123",
+            "node1",
+        );
+        let args: Vec<_> = cmd.get_args().collect();
+        assert!(args.iter().any(|a| a.to_str() == Some("daemon")));
+        assert!(args.iter().any(|a| a.to_str() == Some("--socket-only")));
+        assert!(cmd.get_envs().any(|(k, _)| k == "NESTGATE_JWT_SECRET"));
+    }
+
+    #[test]
+    fn test_build_primal_command_toadstool() {
+        let cmd = build_primal_command(
+            "toadstool",
+            std::path::Path::new("/usr/bin/toadstool"),
+            std::path::Path::new("/tmp/sockets"),
+            "fam123",
+            "node1",
+        );
+        assert!(cmd.get_envs().any(|(k, _)| k == "TOADSTOOL_SOCKET"));
+        assert!(cmd.get_envs().any(|(k, _)| k == "TOADSTOOL_FAMILY_ID"));
+    }
+
+    #[test]
+    fn test_build_primal_command_squirrel() {
+        let cmd = build_primal_command(
+            "squirrel",
+            std::path::Path::new("/usr/bin/squirrel"),
+            std::path::Path::new("/tmp/sockets"),
+            "fam123",
+            "node1",
+        );
+        assert!(cmd.get_envs().any(|(k, _)| k == "SQUIRREL_SOCKET"));
+        assert!(cmd.get_envs().any(|(k, _)| k == "BIOMEOS_DISCOVERY_SOCKET"));
+    }
+
+    #[test]
+    fn test_build_primal_command_unknown_default() {
+        let cmd = build_primal_command(
+            "unknown_primal",
+            std::path::Path::new("/usr/bin/unknown"),
+            std::path::Path::new("/tmp/sockets"),
+            "fam123",
+            "node1",
+        );
         let args: Vec<_> = cmd.get_args().collect();
         assert!(args.iter().any(|a| a.to_str() == Some("server")));
         assert!(args.iter().any(|a| a.to_str() == Some("--socket")));
@@ -778,6 +871,22 @@ mod tests {
         assert!(lines.iter().any(|l| l.contains("Node:")));
         assert!(lines.iter().any(|l| l.contains("beardog")));
         assert!(lines.iter().any(|l| l.contains("1234")));
+    }
+
+    #[test]
+    fn test_format_nucleus_summary_coordinated() {
+        let children = vec![("toadstool".to_string(), 9999)];
+        let lines = format_nucleus_summary(
+            &children,
+            std::path::Path::new("/run/user/1000"),
+            "fam2",
+            "node2",
+            &NucleusMode::Node,
+            "coordinated",
+        );
+        assert!(lines.iter().any(|l| l.contains("coordinated")));
+        assert!(lines.iter().any(|l| l.contains("toadstool")));
+        assert!(lines.iter().any(|l| l.contains("Health check")));
     }
 
     #[test]

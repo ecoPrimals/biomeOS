@@ -171,7 +171,7 @@ impl StereoRenderAdapter {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -298,5 +298,35 @@ mod tests {
         let debug_str = format!("{:?}", targets);
         assert!(debug_str.contains("left"));
         assert!(debug_str.contains("1920"));
+    }
+
+    #[tokio::test]
+    async fn test_begin_session_already_active() {
+        let config = StereoConfig::default();
+        let mut adapter = StereoRenderAdapter::new(config);
+        adapter.session_active = true;
+        let client =
+            crate::primal_client::PrimalClient::with_socket("petaltongue", "/nonexistent.sock");
+        let result = adapter.begin_session(&client).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    #[ignore = "requires petalTongue socket"]
+    async fn test_negotiate() {
+        let adapter = StereoRenderAdapter::with_defaults();
+        let client =
+            crate::primal_client::PrimalClient::with_socket("petaltongue", "/tmp/petaltongue.sock");
+        let _ = adapter.negotiate(&client).await;
+    }
+
+    #[tokio::test]
+    #[ignore = "requires petalTongue socket"]
+    async fn test_begin_session_and_submit_frame() {
+        let mut adapter = StereoRenderAdapter::with_defaults();
+        let client =
+            crate::primal_client::PrimalClient::with_socket("petaltongue", "/tmp/petaltongue.sock");
+        let _ = adapter.begin_session(&client).await;
+        let _ = adapter.submit_frame(&client, 1, 16666).await;
     }
 }

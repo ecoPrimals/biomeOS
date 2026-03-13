@@ -154,7 +154,7 @@ impl Default for HapticPipeline {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use biomeos_types::xr::TrackedDeviceType;
@@ -317,5 +317,58 @@ mod tests {
         assert!(pipeline
             .find_device(HapticDeviceType::Electrotactile)
             .is_some());
+    }
+
+    #[tokio::test]
+    async fn test_send_command_active_device_found_clamping_path() {
+        let mut pipeline = HapticPipeline::new();
+        pipeline.devices = mock_devices();
+        pipeline.active = true;
+        let command = HapticCommand {
+            device: HapticDeviceType::Rumble,
+            target: TrackedDeviceType::RightHand,
+            intensity: 1.5,
+            duration_ms: 100,
+            frequency_hz: Some(600.0),
+            force_vector: None,
+        };
+        let client =
+            crate::primal_client::PrimalClient::with_socket("petaltongue", "/nonexistent.sock");
+        let result = pipeline.send_command(&client, command).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_send_command_active_device_not_in_list() {
+        let mut pipeline = HapticPipeline::new();
+        pipeline.devices = vec![HapticDeviceCapabilities {
+            device_type: HapticDeviceType::Rumble,
+            max_force_n: None,
+            max_frequency_hz: Some(500.0),
+            force_dof: 0,
+            update_hz: 100,
+        }];
+        pipeline.active = true;
+        let command = HapticCommand {
+            device: HapticDeviceType::ForceFeedback,
+            target: TrackedDeviceType::LeftHand,
+            intensity: 0.5,
+            duration_ms: 50,
+            frequency_hz: None,
+            force_vector: Some([10.0, 5.0, -3.0]),
+        };
+        let client =
+            crate::primal_client::PrimalClient::with_socket("petaltongue", "/nonexistent.sock");
+        let result = pipeline.send_command(&client, command).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    #[ignore = "requires petalTongue socket"]
+    async fn test_discover() {
+        let mut pipeline = HapticPipeline::new();
+        let client =
+            crate::primal_client::PrimalClient::with_socket("petaltongue", "/tmp/petaltongue.sock");
+        let _ = pipeline.discover(&client).await;
     }
 }

@@ -2,6 +2,49 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## [v2.34] - 2026-03-13 (Provenance Trio Coordination + RootPulse Evolution)
+
+### capability.call Format Standardized (ISSUE-003 RESOLVED)
+- `CapabilityHandler::call()` now accepts canonical, dotted, and params-alias formats
+- `NeuralApiCapabilityCaller` updated to emit canonical `{ capability, operation, args }` format
+- 2 new tests: `test_call_dotted_capability`, `test_call_params_alias_for_args`
+
+### RootPulse Evolution (branch/merge/diff/federate)
+- `rootpulse_branch.toml`: Fork history at a commit point into a new spine
+- `rootpulse_merge.toml`: Merge a branch spine into target, seal source
+- `rootpulse_diff.toml`: Compare two commits via Merkle tree comparison
+- `rootpulse_federate.toml`: Synchronize provenance across peer nodes via Songbird
+- All 5 new niche templates registered in NicheHandler
+
+### Cross-Spring Pipeline (ISSUE-004 RESOLVED)
+- `cross_spring_soil_microbiome.toml`: airSpring soil → wetSpring diversity → provenance
+- `cross_spring_pipeline_e2e.rs`: 4 integration tests
+- `soil-microbiome` niche template registered
+
+### Provenance Trio E2E Test Infrastructure
+- `provenance_trio_e2e.rs`: 5 E2E tests (health, registration, commit flow, graph, niche)
+- `test_provenance_trio_e2e.sh`: Convenience runner script
+
+### ludoSpring ContinuousExecutor Wiring
+- `game.tick_logic` and `game.tick_physics` translations added to capability registry
+- ludoSpring deploy graph updated with tick capabilities
+
+### SPRING_EVOLUTION_ISSUES Resolved
+- ISSUE-001 (ecology domain): Confirmed present since v2.33
+- ISSUE-003 (capability.call format): Standardized with backward compat
+- ISSUE-004 (cross-primal pipeline): Graph + E2E tests created
+- ISSUE-007 (Spring-as-Provider): Pattern documented in `SPRING_AS_PROVIDER_PATTERN.md`
+
+### Quality
+| Metric | Before | After |
+|--------|--------|-------|
+| Deploy graphs | 30 | 35 |
+| Capability translations | 205+ | 210+ |
+| Niche templates | 15 | 20 |
+| SPRING_EVOLUTION_ISSUES resolved | 0/11 | 4/11 |
+
+---
+
 ## [v2.33] - 2026-03-13 (Provenance Trio Graph Deployments)
 
 ### Provenance Trio Integration
