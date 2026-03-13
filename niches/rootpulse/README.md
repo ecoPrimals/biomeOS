@@ -174,18 +174,23 @@ rootpulse collab start
 ## Implementation Status
 
 ### Ready Now ✅
-- ✅ rhizoCrypt v0.13.0 (A+ grade) - Ephemeral workspace
-- ✅ SweetGrass v0.5.0 (A+ grade) - Semantic attribution
-- ✅ BiomeOS - Primal orchestration
+- ✅ rhizoCrypt v0.13.0-dev (862 tests, 87.78% coverage) - Ephemeral workspace
+- ✅ LoamSpine v0.8.0 (700 tests, 90.6% coverage) - Permanent linear history
+- ✅ SweetGrass v0.7.3 (746 tests, 94% coverage) - Semantic attribution
+- ✅ biomeOS - Primal orchestration, provenance trio graphs
 - ✅ NestGate - Content storage
-- ✅ BearDog - Cryptography
-- ✅ Songbird - Federation
+- ✅ BearDog v0.15.0 - Cryptography
+- ✅ Songbird v3.6 - Federation
+
+### Validated (March 13, 2026)
+- ✅ Provenance trio e2e - Full 6-phase commit workflow
+- ✅ DehydrationSummary serde contract aligned across trio
+- ✅ ludoSpring exp052 - Game session provenance (37/37 checks)
+- ✅ ContinuousExecutor - 60 Hz tick coordination (15 tests)
 
 ### Needs Implementation 🔄
-- 🔄 LoamSpine - Linear history primal (in progress)
-- 🔄 RootPulse coordination patterns
 - 🔄 Unified CLI interface
-- 🔄 Dehydration engine
+- 🔄 NestGate ↔ LoamSpine content storage integration
 
 ### Timeline
 - **Phase 1** (Complete): Primal readiness
