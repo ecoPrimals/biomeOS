@@ -1,18 +1,10 @@
-// =============================================================================
-// Metrics Collection & Storage - Neural API Learning (ecoBin!)
-// =============================================================================
-//
-// Collects and stores graph execution metrics using sled (Pure Rust + ecoBin!)
-//
-// Deep Debt Principles:
-// - 100% Pure Rust (sled - BearDog's proven solution!)
-// - FULL cross-compilation (x86, ARM, macOS, RISC-V, etc.)
-// - Modern async Rust
-// - Safe database operations (no unsafe)
-// - Clear error handling
-// - TRUE ecoBin compliance!
-//
-// =============================================================================
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
+//! Metrics collection and storage for graph execution (ecoBin compliant).
+//!
+//! Uses sled for persistent storage. Records graph and node-level execution
+//! metrics for aggregation and learning.
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
@@ -23,9 +15,13 @@ use std::sync::Arc;
 /// Result of a graph execution (used by record_execution).
 #[derive(Debug, Clone, Default)]
 pub struct GraphResult {
+    /// Whether the graph execution completed successfully.
     pub success: bool,
+    /// Per-node outputs keyed by node ID.
     pub node_results: HashMap<String, serde_json::Value>,
+    /// Error messages from failed nodes.
     pub errors: Vec<String>,
+    /// Total execution duration in milliseconds.
     pub duration_ms: u64,
 }
 
@@ -88,12 +84,17 @@ pub struct NodeMetricsAggregate {
 /// Execution record stored in database
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExecutionRecord {
+    /// Unique execution ID (timestamp-based).
     pub id: i64,
+    /// Name of the graph that was executed.
     pub graph_name: String,
+    /// Whether the execution succeeded.
     pub success: bool,
+    /// Execution duration in milliseconds.
     pub duration_ms: u64,
+    /// Wall-clock time when execution completed.
     pub executed_at: chrono::DateTime<chrono::Utc>,
-    /// Execution metadata as JSON string
+    /// Execution metadata as JSON string (node results, etc.).
     pub metadata: String,
 }
 
@@ -170,7 +171,7 @@ impl MetricsCollector {
             min_duration = min_duration.min(record.duration_ms);
             max_duration_ms = max_duration_ms.max(record.duration_ms);
 
-            if last_executed.map_or(true, |prev| record.executed_at > prev) {
+            if last_executed.is_none_or(|prev| record.executed_at > prev) {
                 last_executed = Some(record.executed_at);
             }
         }
@@ -224,6 +225,7 @@ impl MetricsCollector {
 impl MetricsCollector {
     /// Record a node-level execution for metrics aggregation.
     /// Call with the same graph_name used in record_execution for this run.
+    #[allow(clippy::too_many_arguments)]
     pub async fn record_node_execution(
         &self,
         execution_id: i64,

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Live service monitoring and health-check infrastructure
 //!
 //! Migrated to unified types via `biomeos-types`.
@@ -14,9 +17,9 @@ use tracing::{debug, info, warn};
 #[cfg(unix)]
 fn get_mount_stats(path: &str) -> Option<(u64, u64, u64)> {
     nix::sys::statvfs::statvfs(Path::new(path)).ok().map(|st| {
-        let frsize = st.fragment_size() as u64;
-        let total = st.blocks() as u64 * frsize;
-        let avail = st.blocks_available() as u64 * frsize;
+        let frsize = st.fragment_size();
+        let total = st.blocks() * frsize;
+        let avail = st.blocks_available() * frsize;
         let used = total.saturating_sub(avail);
         (total, used, avail)
     })
@@ -25,6 +28,21 @@ fn get_mount_stats(path: &str) -> Option<(u64, u64, u64)> {
 #[cfg(not(unix))]
 fn get_mount_stats(_path: &str) -> Option<(u64, u64, u64)> {
     None
+}
+
+/// Get real system uptime from /proc/uptime (Linux) via biomeos-system.
+/// Returns error if metrics unavailable (e.g. non-Linux, /proc not mounted).
+async fn get_system_uptime() -> Result<chrono::Duration, anyhow::Error> {
+    let info = biomeos_system::SystemInspector::get_system_info().await?;
+    chrono::Duration::from_std(info.uptime).map_err(|e| anyhow::anyhow!("Invalid uptime: {}", e))
+}
+
+/// Get real system resource usage (CPU, memory, disk) via biomeos-system.
+/// Returns error if metrics unavailable.
+async fn get_system_resource_usage() -> Result<biomeos_types::ResourceMetrics, anyhow::Error> {
+    biomeos_system::SystemInspector::get_resource_usage()
+        .await
+        .map_err(|e| anyhow::anyhow!("{}", e))
 }
 
 /// Runtime service that manages the biomeOS lifecycle
@@ -152,9 +170,17 @@ impl LiveService {
 
         let health_report = self.universal_manager.get_system_health().await;
 
-        // Create placeholder uptime and resource usage since the structure changed
-        let duration = chrono::Utc::now() - health_report.generated_at;
-        let uptime = chrono::Duration::try_seconds(duration.num_seconds()).unwrap_or_default();
+        // Real uptime from system (/proc/uptime on Linux via biomeos-system)
+        let uptime = get_system_uptime().await.unwrap_or_else(|e| {
+            warn!("Could not read system uptime: {}; using zero", e);
+            chrono::Duration::zero()
+        });
+
+        // Real resource usage from system (CPU, memory, disk via biomeos-system)
+        let resource_usage = get_system_resource_usage().await.unwrap_or_else(|e| {
+            warn!("Could not read resource usage: {}; using defaults", e);
+            default_resource_metrics()
+        });
 
         // Re-enabled: Get discovered primals from the universal manager
         let mut primals_map = HashMap::new();
@@ -183,10 +209,7 @@ impl LiveService {
 
         let status = SystemStatus {
             uptime,
-            resource_usage: health_report
-                .metrics
-                .resources
-                .unwrap_or_else(default_resource_metrics),
+            resource_usage,
             health_status: health_report.health,
             primals: primals_map,
         };
@@ -493,5 +516,28 @@ pub fn default_resource_metrics() -> biomeos_types::ResourceMetrics {
         memory_usage: Some(0.0),
         disk_usage: Some(0.0),
         network_io: None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_default_resource_metrics() {
+        let m = default_resource_metrics();
+        assert_eq!(m.cpu_usage, Some(0.0));
+        assert_eq!(m.memory_usage, Some(0.0));
+        assert_eq!(m.disk_usage, Some(0.0));
+    }
+
+    #[tokio::test]
+    async fn test_get_system_uptime_and_resource_usage() {
+        // On Linux with /proc, get_system_uptime succeeds; otherwise returns Err
+        let uptime_result = get_system_uptime().await;
+        if let Ok(u) = uptime_result {
+            assert!(u >= chrono::Duration::zero());
+        }
+        let _ = get_system_resource_usage().await;
     }
 }

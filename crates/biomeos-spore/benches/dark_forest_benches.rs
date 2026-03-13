@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! TRUE Dark Forest Performance Benchmarks
 //!
 //! Quantifies performance improvements of pure noise beacons vs old format.

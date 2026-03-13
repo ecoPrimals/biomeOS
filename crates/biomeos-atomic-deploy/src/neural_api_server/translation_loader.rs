@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Capability translation loading from graphs
 //!
 //! Extracts capability translations from graph nodes and registers them

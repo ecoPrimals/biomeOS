@@ -1,10 +1,13 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! BiomeOS Manifest Management
 //!
 //! This crate provides comprehensive manifest parsing, validation, and management
 //! capabilities for biomeOS.
 
 #![warn(missing_docs)]
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 
 /// TOML-based niche manifest parsing with graph support
 pub mod niche;

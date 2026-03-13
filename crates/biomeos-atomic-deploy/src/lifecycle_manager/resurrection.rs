@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Resurrection: restart degraded/dead primals from deployment graph
 
 use anyhow::Result;

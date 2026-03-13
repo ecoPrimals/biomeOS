@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! JSON-RPC 2.0 WebSocket server for real-time graph events
 //!
 //! This module provides a WebSocket server that streams graph execution events
@@ -171,11 +174,12 @@ impl SubscriptionFilter {
 
 /// Active subscription
 struct Subscription {
-    #[allow(dead_code)] // Held for subscription lifecycle; used when event forwarding is wired
+    /// Subscription ID. Held for lifecycle; used when event forwarding is wired.
+    #[allow(dead_code)] // Future: use for event forwarding and subscription management
     id: String,
     filter: SubscriptionFilter,
     /// Channel sender for pushing events to the WebSocket client
-    #[allow(dead_code)] // Held for subscription lifecycle; used when event forwarding is wired
+    #[allow(dead_code)] // Held for subscription lifecycle; prevents channel closure
     sender: tokio::sync::mpsc::UnboundedSender<GraphEvent>,
 }
 

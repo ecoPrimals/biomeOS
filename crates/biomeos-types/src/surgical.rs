@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Surgical Domain Models
 //!
 //! Defines the protocol types for surgical simulation and medical training,

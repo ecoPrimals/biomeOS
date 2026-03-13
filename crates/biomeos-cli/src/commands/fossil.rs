@@ -1,13 +1,140 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Fossil log management CLI commands
 //!
 //! This handles the fossil record system for archived logs,
 //! separate from the service log streaming (Commands::Logs)
 
 use anyhow::Result;
-use biomeos_spore::logs::{FossilIndex, LogConfig, LogManager};
+use biomeos_spore::logs::{
+    ActiveLogSession, ArchivalReason, FossilIndex, FossilIndexEntry, LogConfig, LogManager,
+};
 use clap::{Args, Subcommand};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tracing::info;
+
+/// Result of computing a cleanup plan for old fossils.
+#[derive(Debug, Clone, Default)]
+pub struct CleanupPlan {
+    /// Paths that would be or were removed
+    pub to_remove: Vec<PathBuf>,
+    /// Total bytes that would be or were freed
+    pub freed_bytes: u64,
+    /// Number of fossils in the plan
+    pub count: usize,
+}
+
+/// Filters sessions by optional node ID. Returns sessions matching the filter.
+pub(crate) fn filter_sessions<'a>(
+    sessions: &'a [ActiveLogSession],
+    node_filter: Option<&str>,
+) -> Vec<&'a ActiveLogSession> {
+    sessions
+        .iter()
+        .filter(|s| node_filter.is_none_or(|n| s.node_id.contains(n)))
+        .collect()
+}
+
+/// Builds display lines for a single session.
+pub(crate) fn format_session_display(session: &ActiveLogSession) -> Vec<String> {
+    let mut lines = Vec::new();
+    let duration = session.duration();
+    let hours = duration.num_hours();
+    let mins = duration.num_minutes() % 60;
+
+    lines.push(format!("Node: {}", session.node_id));
+    lines.push(format!(
+        "  Started: {} ({}h {}m ago)",
+        session.started_at.format("%Y-%m-%d %H:%M:%S"),
+        hours,
+        mins
+    ));
+
+    if !session.process_pids.is_empty() {
+        let pids: Vec<String> = session.process_pids.iter().map(|p| p.to_string()).collect();
+        lines.push(format!("  PIDs: {}", pids.join(" ")));
+    }
+
+    if !session.log_files.is_empty() {
+        lines.push("  Logs:".to_string());
+        for log_file in &session.log_files {
+            let size_kb = log_file.size_bytes / 1024;
+            let status = if log_file.pid.is_some() {
+                "active"
+            } else {
+                "closed"
+            };
+            lines.push(format!(
+                "    • {:<15} ({} KB, {})",
+                format!("{}.log", log_file.primal),
+                size_kb,
+                status
+            ));
+        }
+    }
+
+    lines
+}
+
+/// Builds display lines for fossil detail view.
+pub(crate) fn format_fossil_detail(fossil: &FossilIndexEntry) -> Vec<String> {
+    vec![
+        format!("Node: {}", fossil.node_id),
+        format!(
+            "Session: {}",
+            fossil.session_started.format("%Y-%m-%d %H:%M:%S")
+        ),
+        format!("Reason: {:?}", fossil.archival_reason),
+        format!("Path: {}", fossil.fossil_path.display()),
+        format!("Issues: {}", fossil.issue_count),
+        format!("Encrypted: {}", if fossil.encrypted { "Yes" } else { "No" }),
+    ]
+}
+
+/// Computes which fossils to remove based on cutoff. Does not perform IO.
+pub(crate) fn compute_cleanup_plan(
+    fossils: &[FossilIndexEntry],
+    cutoff: chrono::DateTime<chrono::Utc>,
+) -> CleanupPlan {
+    let mut to_remove = Vec::new();
+    let mut freed_bytes: u64 = 0;
+
+    for fossil in fossils {
+        if fossil.session_started < cutoff && fossil.fossil_path.exists() {
+            if let Ok(metadata) = std::fs::metadata(&fossil.fossil_path) {
+                freed_bytes += metadata.len();
+            }
+            to_remove.push(fossil.fossil_path.clone());
+        }
+    }
+
+    CleanupPlan {
+        count: to_remove.len(),
+        to_remove,
+        freed_bytes,
+    }
+}
+
+/// Scans a directory for .log files. Returns paths to log files found.
+pub(crate) fn scan_old_logs(from: &Path) -> Result<Vec<PathBuf>> {
+    let mut old_logs = Vec::new();
+
+    if !from.exists() {
+        return Ok(old_logs);
+    }
+
+    for entry in std::fs::read_dir(from)? {
+        let entry = entry?;
+        let path = entry.path();
+
+        if path.is_file() && path.extension().is_some_and(|ext| ext == "log") {
+            old_logs.push(path);
+        }
+    }
+
+    Ok(old_logs)
+}
 
 /// Arguments for fossil log management commands
 #[derive(Debug, Args)]
@@ -94,11 +221,7 @@ async fn handle_active(node_filter: Option<String>) -> Result<()> {
     let manager = LogManager::new(config);
 
     let sessions = manager.list_active_sessions()?;
-
-    let filtered: Vec<_> = sessions
-        .iter()
-        .filter(|s| node_filter.as_ref().is_none_or(|n| s.node_id.contains(n)))
-        .collect();
+    let filtered = filter_sessions(&sessions, node_filter.as_deref());
 
     if filtered.is_empty() {
         println!("\n🌱 No active log sessions found");
@@ -111,44 +234,10 @@ async fn handle_active(node_filter: Option<String>) -> Result<()> {
     let total_count = filtered.len();
 
     for session in filtered {
-        let duration = session.duration();
-        let hours = duration.num_hours();
-        let mins = duration.num_minutes() % 60;
-
-        println!("Node: {}", session.node_id);
-        println!(
-            "  Started: {} ({}h {}m ago)",
-            session.started_at.format("%Y-%m-%d %H:%M:%S"),
-            hours,
-            mins
-        );
-
-        if !session.process_pids.is_empty() {
-            print!("  PIDs:");
-            for pid in &session.process_pids {
-                print!(" {}", pid);
-            }
-            println!();
+        let lines = format_session_display(session);
+        for line in lines {
+            println!("{line}");
         }
-
-        if !session.log_files.is_empty() {
-            println!("  Logs:");
-            for log_file in &session.log_files {
-                let size_kb = log_file.size_bytes / 1024;
-                let status = if log_file.pid.is_some() {
-                    "active"
-                } else {
-                    "closed"
-                };
-                println!(
-                    "    • {:<15} ({} KB, {})",
-                    format!("{}.log", log_file.primal),
-                    size_kb,
-                    status
-                );
-            }
-        }
-
         println!();
     }
 
@@ -183,15 +272,10 @@ async fn handle_fossil(
         if idx > 0 && idx <= filtered.len() {
             println!("\n🦴 Fossil Record Details\n");
             let fossil = filtered[idx - 1];
-            println!("Node: {}", fossil.node_id);
-            println!(
-                "Session: {}",
-                fossil.session_started.format("%Y-%m-%d %H:%M:%S")
-            );
-            println!("Reason: {:?}", fossil.archival_reason);
-            println!("Path: {}", fossil.fossil_path.display());
-            println!("Issues: {}", fossil.issue_count);
-            println!("Encrypted: {}", if fossil.encrypted { "Yes" } else { "No" });
+            let lines = format_fossil_detail(fossil);
+            for line in lines {
+                println!("{line}");
+            }
         } else {
             println!("Error: Invalid fossil number {}", idx);
         }
@@ -204,7 +288,7 @@ async fn handle_fossil(
     }
 
     println!("\n🦴 Fossil Record");
-    if let Some(node) = node_filter {
+    if let Some(node) = &node_filter {
         println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         println!("Filtered by node: {}\n", node);
     } else {
@@ -243,7 +327,7 @@ async fn handle_archive(node_id: String) -> Result<()> {
         .ok_or_else(|| anyhow::anyhow!("No active session found for node: {}", node_id))?;
 
     let fossil = manager
-        .archive_session(session, biomeos_spore::logs::ArchivalReason::Manual)
+        .archive_session(session, ArchivalReason::Manual)
         .await?;
 
     println!("✅ Archived session for {}", node_id);
@@ -253,7 +337,6 @@ async fn handle_archive(node_id: String) -> Result<()> {
     Ok(())
 }
 
-/// EVOLVED (Jan 27, 2026): Complete fossil cleanup implementation
 async fn handle_clean(older_than: u64, dry_run: bool) -> Result<()> {
     use chrono::{Duration, Utc};
 
@@ -264,7 +347,6 @@ async fn handle_clean(older_than: u64, dry_run: bool) -> Result<()> {
     let config = LogConfig::default();
     let manager = LogManager::new(config.clone());
 
-    // Initialize and get fossil index
     manager.initialize().await?;
 
     let cutoff = Utc::now() - Duration::days(older_than as i64);
@@ -274,52 +356,45 @@ async fn handle_clean(older_than: u64, dry_run: bool) -> Result<()> {
         cutoff.format("%Y-%m-%d")
     );
 
-    // Get all fossils from index
     let index_path = config.fossil_dir.join("index.toml");
     let index = FossilIndex::load(&index_path)?;
-    let mut cleaned_count = 0;
-    let mut freed_bytes: u64 = 0;
 
-    for fossil in &index.fossils {
-        // Check if fossil is older than cutoff (using session_started as reference)
-        if fossil.session_started < cutoff {
-            // Use fossil_path from the index entry
-            let fossil_path = &fossil.fossil_path;
+    let plan = compute_cleanup_plan(&index.fossils, cutoff);
 
-            if fossil_path.exists() {
-                if let Ok(metadata) = std::fs::metadata(fossil_path) {
-                    freed_bytes += metadata.len();
+    if plan.count > 0 {
+        for fossil_path in &plan.to_remove {
+            if !dry_run {
+                if let Err(e) = std::fs::remove_file(fossil_path) {
+                    let node_id = fossil_path
+                        .file_stem()
+                        .and_then(|s| s.to_str())
+                        .unwrap_or("unknown");
+                    tracing::warn!("Failed to delete fossil {}: {}", node_id, e);
+                } else {
+                    info!("Deleted fossil: {}", fossil_path.display());
                 }
+            }
+        }
 
-                if dry_run {
+        let freed_mb = plan.freed_bytes as f64 / (1024.0 * 1024.0);
+        if dry_run {
+            for fossil in &index.fossils {
+                if fossil.session_started < cutoff && fossil.fossil_path.exists() {
                     println!(
                         "   Would delete: {} ({})",
                         fossil.node_id,
                         fossil.session_started.format("%Y-%m-%d %H:%M")
                     );
-                } else {
-                    if let Err(e) = std::fs::remove_file(fossil_path) {
-                        tracing::warn!("Failed to delete fossil {}: {}", fossil.node_id, e);
-                        continue;
-                    }
-                    info!("Deleted fossil: {}", fossil.node_id);
                 }
-                cleaned_count += 1;
             }
-        }
-    }
-
-    if cleaned_count > 0 {
-        let freed_mb = freed_bytes as f64 / (1024.0 * 1024.0);
-        if dry_run {
             println!(
                 "\n📊 Would clean {} fossils, freeing {:.2} MB",
-                cleaned_count, freed_mb
+                plan.count, freed_mb
             );
         } else {
             println!(
                 "\n✅ Cleaned {} fossils, freed {:.2} MB",
-                cleaned_count, freed_mb
+                plan.count, freed_mb
             );
         }
     } else {
@@ -344,19 +419,9 @@ async fn handle_migrate(from: PathBuf, dry_run: bool) -> Result<()> {
     let config = LogConfig::default();
     let manager = LogManager::new(config.clone());
 
-    // Initialize log directories
     manager.initialize().await?;
 
-    // Scan for old log files
-    let mut old_logs = Vec::new();
-    for entry in std::fs::read_dir(&from)? {
-        let entry = entry?;
-        let path = entry.path();
-
-        if path.is_file() && path.extension().is_some_and(|ext| ext == "log") {
-            old_logs.push(path);
-        }
-    }
+    let old_logs = scan_old_logs(&from)?;
 
     if old_logs.is_empty() {
         println!("✅ No old logs found to migrate");
@@ -366,7 +431,6 @@ async fn handle_migrate(from: PathBuf, dry_run: bool) -> Result<()> {
     println!("Found {} old log files", old_logs.len());
 
     if !dry_run {
-        // Archive to fossil directory
         for log_path in &old_logs {
             let file_name = log_path
                 .file_name()
@@ -420,4 +484,140 @@ async fn handle_cleanup_stale() -> Result<()> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+    use biomeos_spore::logs::LogFile;
+    use chrono::Utc;
+
+    #[test]
+    fn test_filter_sessions_no_filter() {
+        let sessions = vec![
+            ActiveLogSession::new("node-1".into(), "deploy-1".into()),
+            ActiveLogSession::new("node-2".into(), "deploy-1".into()),
+        ];
+        let filtered = filter_sessions(&sessions, None);
+        assert_eq!(filtered.len(), 2);
+    }
+
+    #[test]
+    fn test_filter_sessions_with_filter() {
+        let sessions = vec![
+            ActiveLogSession::new("node-1".into(), "deploy-1".into()),
+            ActiveLogSession::new("node-2".into(), "deploy-1".into()),
+            ActiveLogSession::new("node-10".into(), "deploy-1".into()),
+        ];
+        let filtered = filter_sessions(&sessions, Some("node-1"));
+        assert_eq!(filtered.len(), 2); // node-1 and node-10
+    }
+
+    #[test]
+    fn test_filter_sessions_empty_match() {
+        let sessions = vec![ActiveLogSession::new("node-1".into(), "deploy-1".into())];
+        let filtered = filter_sessions(&sessions, Some("node-99"));
+        assert!(filtered.is_empty());
+    }
+
+    #[test]
+    fn test_format_session_display() {
+        let mut session = ActiveLogSession::new("node-1".into(), "deploy-1".into());
+        session.add_process(1234);
+        session.add_log_file(LogFile {
+            primal: "tower".into(),
+            path: PathBuf::from("/tmp/tower.log"),
+            pid: Some(1234),
+            size_bytes: 1024,
+            last_modified: Utc::now(),
+        });
+
+        let lines = format_session_display(&session);
+        assert!(lines.iter().any(|l| l.contains("node-1")));
+        assert!(lines.iter().any(|l| l.contains("PIDs")));
+        assert!(lines.iter().any(|l| l.contains("tower")));
+    }
+
+    #[test]
+    fn test_format_fossil_detail() {
+        let fossil = FossilIndexEntry {
+            node_id: "node-1".into(),
+            session_started: Utc::now(),
+            archival_reason: ArchivalReason::GracefulShutdown,
+            fossil_path: PathBuf::from("/tmp/fossil1"),
+            issue_count: 2,
+            encrypted: false,
+        };
+
+        let lines = format_fossil_detail(&fossil);
+        assert!(lines.iter().any(|l| l.contains("node-1")));
+        assert!(lines.iter().any(|l| l.contains("Issues: 2")));
+        assert!(lines.iter().any(|l| l.contains("Encrypted: No")));
+    }
+
+    #[test]
+    fn test_compute_cleanup_plan_empty() {
+        let fossils: Vec<FossilIndexEntry> = vec![];
+        let cutoff = Utc::now();
+        let plan = compute_cleanup_plan(&fossils, cutoff);
+        assert_eq!(plan.count, 0);
+        assert!(plan.to_remove.is_empty());
+        assert_eq!(plan.freed_bytes, 0);
+    }
+
+    #[test]
+    fn test_scan_old_logs_nonexistent() {
+        let result = scan_old_logs(Path::new("/nonexistent/path/12345"));
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    #[ignore = "Requires /var/biomeos writable - run with --ignored for full test"]
+    async fn test_run_clean_dry_run() {
+        let args = FossilArgs {
+            action: FossilAction::Clean {
+                older_than: 30,
+                dry_run: true,
+            },
+        };
+        let result = run(args).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_run_migrate_nonexistent_source() {
+        let args = FossilArgs {
+            action: FossilAction::Migrate {
+                from: PathBuf::from("/nonexistent/path/12345"),
+                dry_run: true,
+            },
+        };
+        let result = run(args).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    #[ignore = "Requires /var/biomeos writable - run with --ignored for full test"]
+    async fn test_run_cleanup_stale() {
+        let args = FossilArgs {
+            action: FossilAction::CleanupStale,
+        };
+        let result = run(args).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_run_fossil_no_index() {
+        let args = FossilArgs {
+            action: FossilAction::Fossil {
+                node: None,
+                limit: 10,
+                show: None,
+            },
+        };
+        let result = run(args).await;
+        assert!(result.is_ok());
+    }
 }

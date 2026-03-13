@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Concurrent Test Synchronization Helpers
 //!
 //! Proper async synchronization primitives to replace sleep() anti-patterns.

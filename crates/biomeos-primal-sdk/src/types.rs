@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Primal SDK Types - UNIFIED TYPES IMPLEMENTATION
 //!
 //! ✅ UNIFICATION COMPLETE: Now uses the unified type system exclusively

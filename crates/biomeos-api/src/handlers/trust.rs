@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Trust API handlers
 //!
 //! Proxies trust-related requests to the security provider via Neural API.

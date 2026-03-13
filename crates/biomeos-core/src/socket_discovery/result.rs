@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Discovery Result Types
 //!
 //! Types representing the results of socket discovery operations.

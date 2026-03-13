@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Console Output Abstraction
 //!
 //! Provides reliable console output during early boot, before logging is fully initialized.

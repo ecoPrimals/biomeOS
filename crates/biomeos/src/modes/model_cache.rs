@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Model Cache mode - Manage cached AI models across the NUCLEUS mesh
 //!
 //! Wraps biomeos-core::model_cache with CLI interface.
@@ -253,6 +256,7 @@ async fn show_status() -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ModelCacheCommand;
 
     #[test]
     fn test_format_size_mb() {
@@ -285,5 +289,99 @@ mod tests {
         );
         assert_eq!(hf_dir_to_model_id("other--prefix"), None);
         assert_eq!(hf_dir_to_model_id(""), None);
+    }
+
+    #[tokio::test]
+    async fn test_run_list_empty_cache() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let home = temp.path().to_path_buf();
+        let cache_dir = home.join(".biomeos").join("model-cache");
+        std::fs::create_dir_all(&cache_dir).expect("create cache dir");
+        std::env::set_var("HOME", home.as_path());
+
+        let result = run(ModelCacheCommand::List).await;
+        std::env::remove_var("HOME");
+        assert!(result.is_ok(), "list should succeed: {:?}", result.err());
+    }
+
+    #[tokio::test]
+    async fn test_run_status() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let home = temp.path().to_path_buf();
+        let cache_dir = home.join(".biomeos").join("model-cache");
+        std::fs::create_dir_all(&cache_dir).expect("create cache dir");
+        std::env::set_var("HOME", home.as_path());
+
+        let result = run(ModelCacheCommand::Status).await;
+        std::env::remove_var("HOME");
+        assert!(result.is_ok(), "status should succeed: {:?}", result.err());
+    }
+
+    #[tokio::test]
+    async fn test_run_resolve_not_found() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let home = temp.path().to_path_buf();
+        let cache_dir = home.join(".biomeos").join("model-cache");
+        std::fs::create_dir_all(&cache_dir).expect("create cache dir");
+        std::env::set_var("HOME", home.as_path());
+
+        let result = run(ModelCacheCommand::Resolve {
+            model_id: "nonexistent/model-xyz-123".to_string(),
+        })
+        .await;
+        std::env::remove_var("HOME");
+        assert!(
+            result.is_ok(),
+            "resolve should succeed (NotFound path): {:?}",
+            result.err()
+        );
+    }
+
+    #[tokio::test]
+    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
+    async fn test_run_import_hf_empty() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let home = temp.path().to_path_buf();
+        let cache_dir = home.join(".biomeos").join("model-cache");
+        std::fs::create_dir_all(&cache_dir).expect("create cache dir");
+        let original_home = std::env::var("HOME").ok();
+        std::env::set_var("HOME", home.as_path());
+
+        let result = run(ModelCacheCommand::ImportHf).await;
+        match original_home {
+            Some(h) => std::env::set_var("HOME", h),
+            None => std::env::remove_var("HOME"),
+        }
+        assert!(
+            result.is_ok(),
+            "import-hf should succeed: {:?}",
+            result.err()
+        );
+    }
+
+    #[tokio::test]
+    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
+    async fn test_run_register_model() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let home = temp.path().to_path_buf();
+        let cache_dir = home.join(".biomeos").join("model-cache");
+        std::fs::create_dir_all(&cache_dir).expect("create cache dir");
+        std::env::set_var("HOME", home.as_path());
+
+        let model_dir = temp.path().join("test-model");
+        std::fs::create_dir_all(&model_dir).expect("create model dir");
+        std::fs::write(model_dir.join("config.json"), "{}").expect("write config");
+
+        let result = run(ModelCacheCommand::Register {
+            model_id: "test/register-model".to_string(),
+            path: model_dir,
+        })
+        .await;
+        std::env::remove_var("HOME");
+        assert!(
+            result.is_ok(),
+            "register should succeed: {:?}",
+            result.err()
+        );
     }
 }

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Atomic deployment orchestrator
 //!
 //! Replaces bash "jelly strings" with modern idiomatic Rust
@@ -15,8 +18,11 @@ use crate::primal_launcher::{PrimalInstance, PrimalLauncher};
 /// Atomic type for deployment
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AtomicType {
+    /// Tower orchestrator atomic
     Tower,
+    /// Node atomic (compute unit)
     Node,
+    /// Nest atomic (embedded/niche)
     Nest,
 }
 
@@ -345,10 +351,15 @@ impl DeploymentOrchestrator {
 /// Result of a full deployment
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeploymentResult {
+    /// Deployed tower primal instances
     pub tower: Option<Vec<PrimalInstance>>,
+    /// Deployed node primal instances
     pub node: Option<Vec<PrimalInstance>>,
+    /// Deployed nest primal instances
     pub nest: Option<Vec<PrimalInstance>>,
+    /// Number of atomics successfully deployed
     pub success_count: usize,
+    /// Error messages from failed deployments
     pub errors: Vec<String>,
 }
 

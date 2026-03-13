@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Deploy mode - Execute deployment graph
 //!
 //! Uses biomeos-graph for type-safe TOML graph loading and validation.

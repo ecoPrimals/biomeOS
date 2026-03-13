@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Health Monitoring Operations
 //!
 //! Handles health monitoring, system health checks, and endpoint probing.
@@ -9,10 +12,42 @@ use std::sync::Arc;
 use super::core::UniversalBiomeOSManager;
 use biomeos_types::{BiomeOSConfig, Health, HealthReport};
 
+/// Map Health enum to display string (testable pure function)
+#[allow(dead_code)] // Used by tests
+pub(crate) fn health_to_status_string(health: &Health) -> &'static str {
+    match health {
+        Health::Healthy => "Healthy",
+        Health::Degraded { .. } => "Degraded",
+        Health::Unhealthy { .. } => "Unhealthy",
+        _ => "Unknown",
+    }
+}
+
+/// Map Health to quick scan status ("ok" or "issue")
+#[allow(dead_code)] // Used by tests
+pub(crate) fn health_to_quick_status(health: &Health) -> &'static str {
+    match health {
+        Health::Healthy => "ok",
+        _ => "issue",
+    }
+}
+
+/// Compute health percentage from counts
+#[allow(dead_code)] // Used by tests
+pub(crate) fn health_percentage(healthy: usize, total: usize) -> f64 {
+    if total > 0 {
+        (healthy as f64 / total as f64) * 100.0
+    } else {
+        0.0
+    }
+}
+
 /// Health Monitor for system-wide health tracking
 #[derive(Debug, Clone)]
 pub struct HealthMonitor {
-    #[allow(dead_code)] // TODO: Wire up for health monitoring configuration
+    /// Reserved for health monitoring configuration (interval, thresholds, etc.)
+    #[allow(dead_code)]
+    // Future: wire up for configurable health check intervals and thresholds
     config: Arc<BiomeOSConfig>,
 }
 
@@ -162,15 +197,10 @@ impl UniversalBiomeOSManager {
         let total_count = primals.len();
 
         for (id, primal) in primals.iter() {
-            let health_status = match primal.health {
-                biomeos_types::Health::Healthy => {
-                    healthy_count += 1;
-                    "Healthy"
-                }
-                biomeos_types::Health::Degraded { .. } => "Degraded",
-                biomeos_types::Health::Unhealthy { .. } => "Unhealthy",
-                _ => "Unknown",
-            };
+            let health_status = health_to_status_string(&primal.health);
+            if matches!(primal.health, biomeos_types::Health::Healthy) {
+                healthy_count += 1;
+            }
 
             service_health.insert(
                 id.clone(),
@@ -184,11 +214,14 @@ impl UniversalBiomeOSManager {
         }
 
         result.insert("services".to_string(), serde_json::json!(service_health));
-        result.insert("service_summary".to_string(), serde_json::json!({
-            "total": total_count,
-            "healthy": healthy_count,
-            "health_percentage": if total_count > 0 { (healthy_count as f64 / total_count as f64) * 100.0 } else { 0.0 }
-        }));
+        result.insert(
+            "service_summary".to_string(),
+            serde_json::json!({
+                "total": total_count,
+                "healthy": healthy_count,
+                "health_percentage": health_percentage(healthy_count, total_count)
+            }),
+        );
 
         // System metrics - Future: Integrate with sysinfo crate for real metrics
         result.insert(
@@ -310,13 +343,10 @@ impl UniversalBiomeOSManager {
         let mut service_status = HashMap::new();
 
         for (id, primal) in primals.iter() {
-            let status = match primal.health {
-                biomeos_types::Health::Healthy => "ok",
-                _ => {
-                    issues_found += 1;
-                    "issue"
-                }
-            };
+            let status = health_to_quick_status(&primal.health);
+            if status == "issue" {
+                issues_found += 1;
+            }
 
             service_status.insert(
                 id.clone(),
@@ -391,5 +421,60 @@ impl UniversalBiomeOSManager {
         );
 
         Ok(result)
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+    use biomeos_types::Health;
+    use chrono::Utc;
+
+    #[test]
+    fn test_health_to_status_string() {
+        assert_eq!(health_to_status_string(&Health::Healthy), "Healthy");
+        assert_eq!(
+            health_to_status_string(&Health::Degraded {
+                issues: vec![],
+                impact_score: None,
+            }),
+            "Degraded"
+        );
+        assert_eq!(
+            health_to_status_string(&Health::Unhealthy {
+                issues: vec![],
+                failed_at: Utc::now(),
+            }),
+            "Unhealthy"
+        );
+        assert_eq!(
+            health_to_status_string(&Health::Unknown {
+                reason: "test".into(),
+                last_known: None,
+            }),
+            "Unknown"
+        );
+    }
+
+    #[test]
+    fn test_health_to_quick_status() {
+        assert_eq!(health_to_quick_status(&Health::Healthy), "ok");
+        assert_eq!(
+            health_to_quick_status(&Health::Degraded {
+                issues: vec![],
+                impact_score: None,
+            }),
+            "issue"
+        );
+    }
+
+    #[test]
+    fn test_health_percentage() {
+        assert_eq!(health_percentage(0, 0), 0.0);
+        assert_eq!(health_percentage(5, 10), 50.0);
+        assert_eq!(health_percentage(10, 10), 100.0);
+        let p = health_percentage(1, 3);
+        assert!((p - 33.333).abs() < 0.001, "expected ~33.33, got {}", p);
     }
 }

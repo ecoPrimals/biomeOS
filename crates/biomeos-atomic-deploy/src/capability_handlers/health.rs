@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Capability-based health check handler
 //!
 //! Performs health checks on primals via capability-based discovery,

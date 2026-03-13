@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Graph CRUD and execution handlers.
 //!
 //! This module handles all graph-related JSON-RPC methods:
@@ -33,13 +36,21 @@ use tracing::{debug, error, info, warn};
 /// Execution status tracking.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExecutionStatus {
+    /// Unique execution ID
     pub execution_id: String,
+    /// Current state (running, completed, failed)
     pub state: String,
+    /// Current phase index (if phased execution)
     pub current_phase: Option<usize>,
+    /// Total number of phases
     pub total_phases: usize,
+    /// Node IDs that completed successfully
     pub completed_nodes: Vec<String>,
+    /// Node IDs that failed
     pub failed_nodes: Vec<String>,
+    /// Elapsed time in milliseconds
     pub duration_ms: u64,
+    /// Error message if failed
     pub error: Option<String>,
 }
 

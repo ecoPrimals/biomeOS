@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Integration tests for Sovereign Onion capability translations
 //!
 //! These tests verify that the semantic capability translations work correctly

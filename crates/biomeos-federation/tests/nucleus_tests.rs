@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! NUCLEUS (Secure Discovery Protocol) Tests
 //!
 //! Comprehensive test suite for the 5-layer secure discovery protocol.

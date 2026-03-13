@@ -1,8 +1,14 @@
-//! Full UI Integration Example
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
+//! Full UI Integration Example — DEPRECATED SCAFFOLD
 //!
-//! Demonstrates petalTongue + biomeOS integration with live primals,
-//! showing device management, primal status, and niche deployments
-//! with Neural API visualization.
+//! This example is a stub that does not use `biomeos-ui` or a live petalTongue
+//! connection. For real petalTongue integration, see the petalTongue crate
+//! and `biomeos-ui::primal_client::PetalTongueClient`.
+//!
+//! Original intent: demonstrate petalTongue + biomeOS integration with live
+//! primals, showing device management, primal status, and niche deployments.
 //!
 //! ## Architecture
 //!

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Capability-based primal start handler
 //!
 //! Starts primals via capability-based discovery, configures sockets,
@@ -14,6 +17,7 @@ use crate::executor::context::ExecutionContext;
 use crate::neural_graph::GraphNode;
 
 use super::discovery::{discover_primal_binary, resolve_capability_to_primal};
+use crate::executor::primal_spawner::configure_primal_sockets;
 
 /// Start a primal via capability-based discovery
 ///
@@ -89,12 +93,11 @@ pub async fn primal_start_capability(
     // 3. Build socket path using nucleation
     let socket_path = context.get_socket_path(primal_name).await;
 
-    // 4. Build command with primal-specific arguments
+    // 4. Build command with primal-specific arguments (data-driven via primal_launch_profiles.toml)
     let mut cmd = tokio::process::Command::new(&binary_full_path);
     cmd.arg(mode);
 
-    // Configure primal-specific socket handling
-    configure_primal_socket(&mut cmd, primal_name, &socket_path, &family_id, context).await;
+    configure_primal_sockets(&mut cmd, primal_name, &socket_path, &family_id, context).await;
 
     cmd.env("FAMILY_ID", &family_id);
 
@@ -194,61 +197,6 @@ pub async fn primal_start_capability(
             "socket_confirmed": false,
             "warning": "Socket not detected within 3 seconds"
         }))
-    }
-}
-
-/// Configure primal-specific socket handling
-async fn configure_primal_socket(
-    cmd: &mut tokio::process::Command,
-    primal_name: &str,
-    socket_path: &str,
-    family_id: &str,
-    context: &ExecutionContext,
-) {
-    match primal_name {
-        "beardog" => {
-            // BearDog: GOLD STANDARD - uses CLI flags
-            cmd.arg("--socket").arg(socket_path);
-            cmd.arg("--family-id").arg(family_id);
-        }
-        "squirrel" => {
-            // Squirrel: Uses --socket CLI flag
-            cmd.arg("--socket").arg(socket_path);
-            let neural_api_socket = context.get_socket_path("neural-api").await;
-            cmd.env("SERVICE_MESH_ENDPOINT", neural_api_socket);
-        }
-        "songbird" => {
-            // Songbird v3.33.0: CLI flags + environment variables
-            // Validated Jan 28, 2026 - matches successful manual startup
-            cmd.arg("--socket").arg(socket_path);
-
-            // Bond to BearDog for security (TLS crypto delegation)
-            let beardog_socket = context.get_socket_path("beardog").await;
-            cmd.arg("--beardog-socket").arg(&beardog_socket);
-
-            // Environment variables for Songbird configuration
-            cmd.env("BEARDOG_MODE", "direct"); // Direct RPC to BearDog (Neural API adds routing later)
-            cmd.env("BEARDOG_SOCKET", &beardog_socket);
-            cmd.env("SONGBIRD_SECURITY_PROVIDER", "beardog"); // Provider name, not socket path!
-            cmd.env("FAMILY_ID", family_id);
-
-            // Neural API socket if available (enables capability.call routing)
-            let neural_api_socket = context.get_socket_path("neural-api").await;
-            cmd.env("NEURAL_API_SOCKET", &neural_api_socket);
-
-            info!("   🧬 Bonding Songbird → BearDog: {}", beardog_socket);
-            info!("   🧠 Neural API: {}", neural_api_socket);
-        }
-        "nestgate" | "toadstool" => {
-            // Generic: use CLI flags (follow BearDog pattern)
-            cmd.arg("--socket").arg(socket_path);
-            cmd.arg("--family-id").arg(family_id);
-        }
-        _ => {
-            // Unknown: try both methods
-            cmd.arg("--socket").arg(socket_path);
-            cmd.env("PRIMAL_SOCKET", socket_path);
-        }
     }
 }
 

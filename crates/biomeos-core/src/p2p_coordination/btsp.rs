@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! BTSP (BearDog Transport Security Protocol) Coordination
 //!
 //! BiomeOS coordinates BTSP tunnel creation between any security primal
@@ -267,49 +270,104 @@ enum DegradationCause {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
+    use super::super::HealthStatus;
     use super::*;
 
-    #[test]
-    fn test_compute_overall_status() {
-        use super::super::HealthStatus;
-
-        // Both healthy
-        let security = TunnelHealth {
+    fn healthy_tunnel() -> TunnelHealth {
+        TunnelHealth {
             encryption_status: HealthStatus::Healthy,
             forward_secrecy: true,
             last_key_rotation: None,
             status: HealthStatus::Healthy,
-        };
-        let transport = TransportHealth {
+        }
+    }
+
+    fn healthy_transport() -> TransportHealth {
+        TransportHealth {
             connection_status: HealthStatus::Healthy,
             latency_ms: Some(10),
             packet_loss: Some(0.0),
             status: HealthStatus::Healthy,
-        };
+        }
+    }
+
+    #[test]
+    fn test_compute_overall_status_both_healthy() {
+        let security = healthy_tunnel();
+        let transport = healthy_transport();
         assert_eq!(
             BtspCoordinator::compute_overall_status(&security, &transport),
             HealthStatus::Healthy
         );
+    }
 
-        // Security degraded
-        let security_degraded = TunnelHealth {
+    #[test]
+    fn test_compute_overall_status_security_degraded() {
+        let security = TunnelHealth {
             status: HealthStatus::Degraded,
-            ..security
+            ..healthy_tunnel()
         };
+        let transport = healthy_transport();
         assert_eq!(
-            BtspCoordinator::compute_overall_status(&security_degraded, &transport),
+            BtspCoordinator::compute_overall_status(&security, &transport),
             HealthStatus::Degraded
         );
+    }
 
-        // Transport unhealthy
-        let transport_unhealthy = TransportHealth {
+    #[test]
+    fn test_compute_overall_status_transport_unhealthy() {
+        let security = healthy_tunnel();
+        let transport = TransportHealth {
             status: HealthStatus::Unhealthy,
-            ..transport
+            ..healthy_transport()
         };
         assert_eq!(
-            BtspCoordinator::compute_overall_status(&security, &transport_unhealthy),
+            BtspCoordinator::compute_overall_status(&security, &transport),
             HealthStatus::Unhealthy
+        );
+    }
+
+    #[test]
+    fn test_compute_overall_status_security_unhealthy() {
+        let security = TunnelHealth {
+            status: HealthStatus::Unhealthy,
+            ..healthy_tunnel()
+        };
+        let transport = healthy_transport();
+        assert_eq!(
+            BtspCoordinator::compute_overall_status(&security, &transport),
+            HealthStatus::Unhealthy
+        );
+    }
+
+    #[test]
+    fn test_compute_overall_status_both_degraded() {
+        let security = TunnelHealth {
+            status: HealthStatus::Degraded,
+            ..healthy_tunnel()
+        };
+        let transport = TransportHealth {
+            status: HealthStatus::Degraded,
+            ..healthy_transport()
+        };
+        assert_eq!(
+            BtspCoordinator::compute_overall_status(&security, &transport),
+            HealthStatus::Degraded
+        );
+    }
+
+    #[test]
+    fn test_compute_overall_status_transport_degraded_security_healthy() {
+        let security = healthy_tunnel();
+        let transport = TransportHealth {
+            status: HealthStatus::Degraded,
+            ..healthy_transport()
+        };
+        assert_eq!(
+            BtspCoordinator::compute_overall_status(&security, &transport),
+            HealthStatus::Degraded
         );
     }
 }

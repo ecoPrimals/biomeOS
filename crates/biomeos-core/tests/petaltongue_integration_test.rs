@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! # petalTongue Integration Tests
 //!
 //! Tests live interaction with the petalTongue binary over JSON-RPC.

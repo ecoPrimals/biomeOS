@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! BearDog client for cryptographic operations
 //!
 //! This client discovers BearDog via runtime discovery and delegates

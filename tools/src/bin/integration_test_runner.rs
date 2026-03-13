@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Integration Test Runner
 //! 
 //! Pure Rust replacement for shell-based integration testing.

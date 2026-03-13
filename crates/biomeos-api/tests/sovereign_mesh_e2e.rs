@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Sovereign Mesh E2E Integration Tests
 //!
 //! Simulates 3 devices (Pixel, USB, Tower) each with their own Nucleus

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Health monitoring utilities for CLI
 //!
 //! Specialized health functions: analysis, scoring, trends, conditions.
@@ -374,5 +377,35 @@ mod tests {
         let health2 = system_health(50.0, 50.0, 85.0);
         let score2 = HealthUtils::calculate_health_score(&health2);
         assert_eq!(score2, 100.0);
+    }
+
+    #[test]
+    fn test_calculate_health_score_combined_penalties() {
+        let health = system_health(90.0, 90.0, 95.0);
+        let score = HealthUtils::calculate_health_score(&health);
+        assert!(score < 50.0);
+        assert!((0.0..=100.0).contains(&score));
+    }
+
+    #[test]
+    fn test_calculate_health_score_zero_usage() {
+        let health = system_health(0.0, 0.0, 0.0);
+        let score = HealthUtils::calculate_health_score(&health);
+        assert_eq!(score, 100.0);
+    }
+
+    #[test]
+    fn test_calculate_health_score_just_under_thresholds() {
+        let health = system_health(74.9, 74.9, 84.9);
+        let score = HealthUtils::calculate_health_score(&health);
+        assert_eq!(score, 100.0);
+    }
+
+    #[test]
+    fn test_system_health_debug() {
+        let health = system_health(50.0, 50.0, 50.0);
+        let debug = format!("{:?}", health);
+        assert!(debug.contains("cpu_usage"));
+        assert!(debug.contains("memory_usage"));
     }
 }

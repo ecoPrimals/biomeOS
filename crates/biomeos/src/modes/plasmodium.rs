@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Plasmodium mode - Over-NUCLEUS collective coordination
 //!
 //! Provides a unified view of all covalently bonded NUCLEUS instances.
@@ -46,39 +49,26 @@ pub(crate) fn plural_suffix(count: usize) -> &'static str {
     }
 }
 
-/// Run plasmodium command
-pub async fn run(command: PlasmodiumCommand) -> Result<()> {
-    match command {
-        PlasmodiumCommand::Status => status().await,
-        PlasmodiumCommand::Gates => gates().await,
-        PlasmodiumCommand::Models => models().await,
-    }
-}
-
-/// Show the collective status of all bonded gates
-async fn status() -> Result<()> {
-    let plasmodium = Plasmodium::new();
-    let state = plasmodium.query_collective().await?;
-
+/// Format status table lines (pure, testable).
+pub(crate) fn format_status_table(state: &PlasmodiumState) -> Vec<String> {
+    let mut lines = Vec::new();
     let reachable_gates: Vec<_> = state.gates.iter().filter(|g| g.reachable).collect();
 
-    println!();
-    println!("  Plasmodium Status - Family: {}", state.family_id);
-    println!("  =========================================");
-    println!();
-    println!(
+    lines.push(String::new());
+    lines.push(format!("  Plasmodium Status - Family: {}", state.family_id));
+    lines.push("  =========================================".to_string());
+    lines.push(String::new());
+    lines.push(format!(
         "  Collective: {} gate{} bonded (covalent)",
         reachable_gates.len(),
-        if reachable_gates.len() != 1 { "s" } else { "" }
-    );
-    println!();
-
-    // Table header
-    println!(
+        plural_suffix(reachable_gates.len())
+    ));
+    lines.push(String::new());
+    lines.push(format!(
         "  {:<18} {:<12} {:>5} {:>8} {:>8} {:>7}",
         "GATE", "PRIMALS", "GPUs", "RAM", "LOAD", "MODELS"
-    );
-    println!("  {}", "-".repeat(65));
+    ));
+    lines.push(format!("  {}", "-".repeat(65)));
 
     for gate in &state.gates {
         let primal_status = if gate.reachable {
@@ -108,42 +98,36 @@ async fn status() -> Result<()> {
         };
         let models = gate.models.len().to_string();
 
-        println!(
+        lines.push(format!(
             "  {:<18} {:<12} {:>5} {:>8} {:>8} {:>7}",
             gate_name, primal_status, gpu_count, ram, load, models
-        );
+        ));
     }
 
-    // Totals
-    println!("  {}", "-".repeat(65));
-    println!(
+    lines.push(format!("  {}", "-".repeat(65)));
+    lines.push(format!(
         "  {:<18} {:<12} {:>5} {:>5} GB {:>8} {:>4} unique",
         "TOTAL",
-        format!(
-            "{}",
-            state
-                .gates
-                .iter()
-                .flat_map(|g| &g.primals)
-                .filter(|p| p.healthy)
-                .count()
-        ),
+        state
+            .gates
+            .iter()
+            .flat_map(|g| &g.primals)
+            .filter(|p| p.healthy)
+            .count(),
         state.collective.total_gpus,
         state.collective.total_ram_gb,
         "",
         state.collective.total_models,
-    );
+    ));
 
-    // Capabilities
     if !state.collective.capabilities.is_empty() {
-        println!();
-        println!(
+        lines.push(String::new());
+        lines.push(format!(
             "  Capabilities: {}",
             state.collective.capabilities.join(", ")
-        );
+        ));
     }
 
-    // Bond info
     let bond_types: Vec<String> = state
         .gates
         .iter()
@@ -151,46 +135,41 @@ async fn status() -> Result<()> {
         .map(|g| g.bond_type.to_string())
         .collect();
     if !bond_types.is_empty() {
-        println!(
+        lines.push(format!(
             "  Bond: {} (shared family seed, genetic trust)",
             bond_types.first().unwrap_or(&"none".to_string())
-        );
+        ));
     }
 
-    // Snapshot time
-    println!();
-    println!("  Snapshot: {}", state.snapshot_at);
-    println!();
-
-    Ok(())
+    lines.push(String::new());
+    lines.push(format!("  Snapshot: {}", state.snapshot_at));
+    lines.push(String::new());
+    lines
 }
 
-/// Show detailed per-gate information
-async fn gates() -> Result<()> {
-    let plasmodium = Plasmodium::new();
-    let state = plasmodium.query_collective().await?;
-
-    println!();
-    println!("  Plasmodium Gates - Family: {}", state.family_id);
-    println!("  =========================================");
+/// Format gates detail lines (pure, testable).
+pub(crate) fn format_gates_detail(state: &PlasmodiumState) -> Vec<String> {
+    let mut lines = Vec::new();
+    lines.push(String::new());
+    lines.push(format!("  Plasmodium Gates - Family: {}", state.family_id));
+    lines.push("  =========================================".to_string());
 
     for gate in &state.gates {
-        println!();
+        lines.push(String::new());
         let label = if gate.is_local {
             format!("Gate: {} (local)", gate.gate_id)
         } else {
             format!("Gate: {}", gate.gate_id)
         };
-        println!("  {}", label);
+        lines.push(format!("  {}", label));
 
-        println!("    Address:  {}", gate.address);
-        println!(
+        lines.push(format!("    Address:  {}", gate.address));
+        lines.push(format!(
             "    Status:   {}",
             if gate.reachable { "online" } else { "offline" }
-        );
-        println!("    Bond:     {}", gate.bond_type);
+        ));
+        lines.push(format!("    Bond:     {}", gate.bond_type));
 
-        // Primals
         if !gate.primals.is_empty() {
             let primal_names: Vec<String> = gate
                 .primals
@@ -203,40 +182,102 @@ async fn gates() -> Result<()> {
                     }
                 })
                 .collect();
-            println!("    Primals:  {}", primal_names.join(", "));
+            lines.push(format!("    Primals:  {}", primal_names.join(", ")));
         }
 
-        // GPUs
         if !gate.compute.gpus.is_empty() {
             let gpu_strs: Vec<String> = gate.compute.gpus.iter().map(|g| g.to_string()).collect();
-            println!("    GPUs:     {}", gpu_strs.join(", "));
+            lines.push(format!("    GPUs:     {}", gpu_strs.join(", ")));
         }
 
-        // RAM
         if gate.compute.ram_gb > 0 {
-            println!("    RAM:      {} GB", gate.compute.ram_gb);
+            lines.push(format!("    RAM:      {} GB", gate.compute.ram_gb));
         }
 
-        // CPU
         if gate.compute.cpu_cores > 0 {
-            println!("    CPU:      {} cores", gate.compute.cpu_cores);
+            lines.push(format!("    CPU:      {} cores", gate.compute.cpu_cores));
         }
 
-        // Load
         if gate.reachable {
-            println!("    Load:     {:.0}%", gate.load * 100.0);
+            lines.push(format!("    Load:     {:.0}%", gate.load * 100.0));
         }
 
-        // Models
         if !gate.models.is_empty() {
-            println!("    Models:");
+            lines.push("    Models:".to_string());
             for model in &gate.models {
-                println!("      - {}", model);
+                lines.push(format!("      - {}", model));
             }
         }
     }
 
-    println!();
+    lines.push(String::new());
+    lines
+}
+
+/// Format models table lines (pure, testable).
+pub(crate) fn format_models_table(
+    model_gates: &HashMap<String, Vec<String>>,
+    state: &PlasmodiumState,
+) -> Vec<String> {
+    let mut lines = Vec::new();
+    lines.push(String::new());
+    lines.push(format!("  Plasmodium Models - Family: {}", state.family_id));
+    lines.push("  =========================================".to_string());
+    lines.push(String::new());
+
+    if model_gates.is_empty() {
+        return lines;
+    }
+
+    lines.push(format!("  {:<45} {:<20}", "MODEL", "GATES"));
+    lines.push(format!("  {}", "-".repeat(70)));
+
+    let mut sorted_models: Vec<_> = model_gates.iter().collect();
+    sorted_models.sort_by_key(|(k, _)| (*k).clone());
+
+    for (model_id, gates) in &sorted_models {
+        lines.push(format!("  {:<45} {:<20}", model_id, gates.join(", ")));
+    }
+
+    lines.push(format!("  {}", "-".repeat(70)));
+    let reachable_count = state.gates.iter().filter(|g| g.reachable).count();
+    lines.push(format!(
+        "  Total: {} unique model{} across {} gate{}",
+        sorted_models.len(),
+        plural_suffix(sorted_models.len()),
+        reachable_count,
+        plural_suffix(reachable_count)
+    ));
+    lines.push(String::new());
+    lines
+}
+
+/// Run plasmodium command
+pub async fn run(command: PlasmodiumCommand) -> Result<()> {
+    match command {
+        PlasmodiumCommand::Status => status().await,
+        PlasmodiumCommand::Gates => gates().await,
+        PlasmodiumCommand::Models => models().await,
+    }
+}
+
+/// Show the collective status of all bonded gates
+async fn status() -> Result<()> {
+    let plasmodium = Plasmodium::new();
+    let state = plasmodium.query_collective().await?;
+    for line in format_status_table(&state) {
+        println!("{}", line);
+    }
+    Ok(())
+}
+
+/// Show detailed per-gate information
+async fn gates() -> Result<()> {
+    let plasmodium = Plasmodium::new();
+    let state = plasmodium.query_collective().await?;
+    for line in format_gates_detail(&state) {
+        println!("{}", line);
+    }
     Ok(())
 }
 
@@ -245,20 +286,13 @@ async fn models() -> Result<()> {
     let plasmodium = Plasmodium::new();
     let state = plasmodium.query_collective().await?;
 
-    println!();
-    println!("  Plasmodium Models - Family: {}", state.family_id);
-    println!("  =========================================");
-    println!();
-
     if state.collective.models.is_empty() {
-        // Fall back to showing local models from each gate
         let mut has_models = false;
         for gate in &state.gates {
             if !gate.models.is_empty() {
                 has_models = true;
             }
         }
-
         if !has_models {
             println!("  No models found across the collective.");
             println!("  Run 'biomeos model-cache import-hf' on each gate to register models.");
@@ -268,40 +302,22 @@ async fn models() -> Result<()> {
     }
 
     let model_gates = build_model_gates_map(&state);
-
     if model_gates.is_empty() {
         println!("  No models found across the collective.");
         println!();
         return Ok(());
     }
 
-    // Display
-    println!("  {:<45} {:<20}", "MODEL", "GATES");
-    println!("  {}", "-".repeat(70));
-
-    let mut sorted_models: Vec<_> = model_gates.iter().collect();
-    sorted_models.sort_by_key(|(k, _)| (*k).clone());
-
-    for (model_id, gates) in &sorted_models {
-        println!("  {:<45} {:<20}", model_id, gates.join(", "),);
+    for line in format_models_table(&model_gates, &state) {
+        println!("{}", line);
     }
-
-    println!("  {}", "-".repeat(70));
-    let reachable_count = state.gates.iter().filter(|g| g.reachable).count();
-    println!(
-        "  Total: {} unique model{} across {} gate{}",
-        sorted_models.len(),
-        plural_suffix(sorted_models.len()),
-        reachable_count,
-        plural_suffix(reachable_count)
-    );
-    println!();
-
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used)]
+
     use super::*;
     use biomeos_core::plasmodium::{
         BondType, CollectiveCapabilities, ComputeInfo, GateInfo, ModelAvailability,
@@ -384,5 +400,144 @@ mod tests {
         assert_eq!(plural_suffix(1), "");
         assert_eq!(plural_suffix(2), "s");
         assert_eq!(plural_suffix(42), "s");
+    }
+
+    #[test]
+    fn test_format_status_table_empty() {
+        let state = PlasmodiumState {
+            gates: vec![],
+            snapshot_at: "2024-01-01T00:00:00Z".to_string(),
+            family_id: "test".to_string(),
+            collective: CollectiveCapabilities::default(),
+        };
+        let lines = format_status_table(&state);
+        assert!(!lines.is_empty());
+        assert!(lines.iter().any(|l| l.contains("Plasmodium Status")));
+        assert!(lines.iter().any(|l| l.contains("test")));
+    }
+
+    #[test]
+    fn test_format_gates_detail_empty() {
+        let state = PlasmodiumState {
+            gates: vec![],
+            snapshot_at: "2024-01-01T00:00:00Z".to_string(),
+            family_id: "fam".to_string(),
+            collective: CollectiveCapabilities::default(),
+        };
+        let lines = format_gates_detail(&state);
+        assert!(!lines.is_empty());
+        assert!(lines.iter().any(|l| l.contains("Plasmodium Gates")));
+    }
+
+    #[test]
+    fn test_format_models_table() {
+        let mut model_gates = HashMap::new();
+        model_gates.insert("model/a".to_string(), vec!["gate-1".to_string()]);
+        model_gates.insert(
+            "model/b".to_string(),
+            vec!["gate-1".to_string(), "gate-2".to_string()],
+        );
+        let state = PlasmodiumState {
+            gates: vec![make_gate("gate-1", vec!["model/a"])],
+            snapshot_at: "2024-01-01T00:00:00Z".to_string(),
+            family_id: "test".to_string(),
+            collective: CollectiveCapabilities::default(),
+        };
+        let lines = format_models_table(&model_gates, &state);
+        assert!(!lines.is_empty());
+        assert!(lines.iter().any(|l| l.contains("MODEL")));
+        assert!(lines.iter().any(|l| l.contains("model/a")));
+    }
+
+    #[test]
+    fn test_plural_suffix_edge_cases() {
+        assert_eq!(plural_suffix(usize::MAX), "s");
+        assert_eq!(plural_suffix(1000), "s");
+    }
+
+    #[test]
+    fn test_build_model_gates_map_collective_only_model() {
+        // Model in collective but not in any gate
+        let state = PlasmodiumState {
+            gates: vec![],
+            snapshot_at: "2024-01-01T00:00:00Z".to_string(),
+            family_id: "test".to_string(),
+            collective: CollectiveCapabilities {
+                models: vec![ModelAvailability {
+                    model_id: "orphan-model".to_string(),
+                    size_bytes: 0,
+                    format: "gguf".to_string(),
+                    gates: vec!["gate-x".to_string()],
+                }],
+                ..Default::default()
+            },
+        };
+        let map = build_model_gates_map(&state);
+        assert_eq!(map.len(), 1);
+        assert_eq!(map.get("orphan-model").unwrap(), &["gate-x"]);
+    }
+
+    #[test]
+    fn test_build_model_gates_map_deduplicates_gates_from_collective() {
+        // Collective has gate-a, gate-b for model/1; gates also has gate-a with model/1
+        // Should not duplicate gate-a in the result
+        let state = PlasmodiumState {
+            gates: vec![make_gate("gate-a", vec!["model/1"])],
+            snapshot_at: "2024-01-01T00:00:00Z".to_string(),
+            family_id: "test".to_string(),
+            collective: CollectiveCapabilities {
+                models: vec![ModelAvailability {
+                    model_id: "model/1".to_string(),
+                    size_bytes: 0,
+                    format: "gguf".to_string(),
+                    gates: vec!["gate-a".to_string(), "gate-b".to_string()],
+                }],
+                ..Default::default()
+            },
+        };
+        let map = build_model_gates_map(&state);
+        let gates = map.get("model/1").unwrap();
+        assert!(gates.contains(&"gate-a".to_string()));
+        assert!(gates.contains(&"gate-b".to_string()));
+        assert_eq!(gates.iter().filter(|g| *g == "gate-a").count(), 1);
+    }
+
+    #[test]
+    fn test_build_model_gates_map_gate_with_empty_models() {
+        let mut gate = make_gate("gate-empty", vec![]);
+        gate.models = vec![];
+        let state = PlasmodiumState {
+            gates: vec![gate],
+            snapshot_at: "2024-01-01T00:00:00Z".to_string(),
+            family_id: "test".to_string(),
+            collective: CollectiveCapabilities::default(),
+        };
+        let map = build_model_gates_map(&state);
+        assert!(map.is_empty());
+    }
+
+    #[test]
+    fn test_build_model_gates_map_single_gate_single_model() {
+        let state = PlasmodiumState {
+            gates: vec![make_gate("solo", vec!["model/only"])],
+            snapshot_at: "2024-01-01T00:00:00Z".to_string(),
+            family_id: "test".to_string(),
+            collective: CollectiveCapabilities::default(),
+        };
+        let map = build_model_gates_map(&state);
+        assert_eq!(map.len(), 1);
+        assert_eq!(map.get("model/only").unwrap(), &["solo"]);
+    }
+
+    #[tokio::test]
+    async fn test_run_dispatches_all_commands() {
+        // Exercises run() with each command variant - may succeed or fail depending on env
+        for cmd in [
+            crate::PlasmodiumCommand::Status,
+            crate::PlasmodiumCommand::Gates,
+            crate::PlasmodiumCommand::Models,
+        ] {
+            let _ = run(cmd).await;
+        }
     }
 }

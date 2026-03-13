@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Health check API handler
 //!
 //! Provides health check endpoint for monitoring and load balancer integration.

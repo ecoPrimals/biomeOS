@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! BiomeOS VM Testing Example
 //!
 //! Demonstrates testing a single BiomeOS VM with primals.

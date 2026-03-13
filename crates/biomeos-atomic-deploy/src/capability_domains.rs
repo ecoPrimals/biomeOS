@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Capability Domain Mappings
 //!
 //! Provides fallback resolution when the capability registry

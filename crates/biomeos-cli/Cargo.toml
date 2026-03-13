@@ -36,8 +36,8 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 # HTTP client DEPRECATED: Use atomic_client (Unix sockets) for primal communication
 # reqwest = { version = "0.11", features = ["json"] } # REMOVED - Use Songbird/BearDog
-ratatui = "0.24"
-crossterm = "0.27"
+ratatui = { version = "0.24", optional = true }
+crossterm = { version = "0.27", optional = true }
 chrono = { version = "0.4", features = ["serde"] }
 indicatif = "0.17"
 console = "0.15"
@@ -49,6 +49,12 @@ uuid = { version = "1.0", features = ["v4"] }
 base64 = "0.22"
 sha2 = "0.10"
 # dirs removed — pure Rust via $HOME env resolution
+
+[features]
+default = []
+# DEPRECATED: Legacy TUI dashboard predates petalTongue (the universal UI primal).
+# Enable only for backward compatibility. Use `biomeos-cli dashboard --petaltongue` instead.
+deprecated-tui = ["ratatui", "crossterm"]
 
 [dev-dependencies]
 biomeos-test-utils = { path = "../biomeos-test-utils" }

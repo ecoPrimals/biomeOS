@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Generic primal implementations using capability-based architecture
 //!
 //! NO hardcoded primal names - everything discovered from environment!

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Protocol Escalation Engine: JSON-RPC → tarpc Runtime Evolution
 //!
 //! This module implements the escalation engine that manages runtime

@@ -1,10 +1,13 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Genome Factory - Universal genomeBin production for any primal
 //!
 //! This crate provides a factory for building, composing, and replicating
 //! genomeBins - the self-extracting binary format for ecoPrimals primals.
 //!
 #![warn(missing_docs)]
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 //!
 //! # AGPL-3.0-only License
 //!

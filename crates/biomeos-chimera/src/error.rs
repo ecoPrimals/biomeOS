@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Chimera-specific error types
 //!
 //! Provides detailed, actionable errors for chimera operations.

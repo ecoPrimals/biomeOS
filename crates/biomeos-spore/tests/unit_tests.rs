@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Unit tests for spore system components
 
 use biomeos_spore::{setup_test_binaries, FamilySeed, Spore, SporeConfig, SporeType};

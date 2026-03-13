@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! # `biomeOS` Chimera System
 //!
 //! Chimeras are **mixed-boundary primal amalgams** - custom organisms that fuse
@@ -35,7 +38,7 @@
 //! builder.build_to("bin/chimeras/p2p-secure")?;
 //! ```
 
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 #![warn(missing_docs)]
 #![warn(clippy::all)]
 #![warn(clippy::pedantic)]

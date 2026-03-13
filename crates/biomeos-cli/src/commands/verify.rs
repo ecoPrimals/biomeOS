@@ -1,9 +1,24 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 // crates/biomeos-cli/src/commands/verify.rs
 //! Spore and nucleus verification commands
 
 use anyhow::Result;
 use biomeos_spore::manifest::BinaryManifest;
 use biomeos_spore::verification::{SporeVerifier, VerificationStatus};
+
+/// Map verification status to (icon, text) for display (testable pure function)
+#[allow(dead_code)] // Used by tests
+pub fn verification_status_display(status: VerificationStatus) -> (&'static str, &'static str) {
+    match status {
+        VerificationStatus::Fresh => ("✅", "Fresh"),
+        VerificationStatus::Stale => ("⚠️ ", "Stale"),
+        VerificationStatus::Missing => ("❌", "Missing"),
+        VerificationStatus::Modified => ("⚠️ ", "Modified"),
+        VerificationStatus::Newer => ("❓", "Newer"),
+    }
+}
 use clap::{Args, Subcommand};
 use std::path::PathBuf;
 use tracing::info;
@@ -177,13 +192,7 @@ async fn verify_single_spore(mount_point: &PathBuf) -> Result<()> {
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
     for binary in &report.binaries {
-        let (status_icon, status_text) = match binary.status {
-            VerificationStatus::Fresh => ("✅", "Fresh"),
-            VerificationStatus::Stale => ("⚠️ ", "Stale"),
-            VerificationStatus::Missing => ("❌", "Missing"),
-            VerificationStatus::Modified => ("⚠️ ", "Modified"),
-            VerificationStatus::Newer => ("❓", "Newer"),
-        };
+        let (status_icon, status_text) = verification_status_display(binary.status.clone());
 
         println!("{} {}: {}", status_icon, binary.name, status_text);
         println!(
@@ -267,11 +276,11 @@ async fn verify_all_spores(verbose: bool) -> Result<()> {
         let (status_icon, status_text) = match report.overall_status {
             VerificationStatus::Fresh => {
                 fresh_count += 1;
-                ("✅", "Fresh")
+                verification_status_display(VerificationStatus::Fresh)
             }
             VerificationStatus::Stale => {
                 stale_count += 1;
-                ("⚠️ ", "Stale")
+                verification_status_display(VerificationStatus::Stale)
             }
             _ => {
                 other_count += 1;
@@ -324,10 +333,62 @@ async fn verify_all_spores(verbose: bool) -> Result<()> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
+    use super::*;
+    use biomeos_spore::verification::VerificationStatus;
+
+    #[test]
+    fn test_verification_status_display() {
+        assert_eq!(
+            verification_status_display(VerificationStatus::Fresh),
+            ("✅", "Fresh")
+        );
+        assert_eq!(
+            verification_status_display(VerificationStatus::Stale),
+            ("⚠️ ", "Stale")
+        );
+        assert_eq!(
+            verification_status_display(VerificationStatus::Missing),
+            ("❌", "Missing")
+        );
+        assert_eq!(
+            verification_status_display(VerificationStatus::Modified),
+            ("⚠️ ", "Modified")
+        );
+        assert_eq!(
+            verification_status_display(VerificationStatus::Newer),
+            ("❓", "Newer")
+        );
+    }
+
     #[tokio::test]
     async fn test_verify_args_parsing() {
         // Test that the command structure is valid
         // Actual verification logic is tested in biomeos-spore
+    }
+
+    #[test]
+    fn test_verification_status_display_all_variants() {
+        use biomeos_spore::verification::VerificationStatus;
+        let variants = [
+            (VerificationStatus::Fresh, "✅", "Fresh"),
+            (VerificationStatus::Stale, "⚠️ ", "Stale"),
+            (VerificationStatus::Missing, "❌", "Missing"),
+            (VerificationStatus::Modified, "⚠️ ", "Modified"),
+            (VerificationStatus::Newer, "❓", "Newer"),
+        ];
+        for (status, expected_icon, expected_text) in variants {
+            let (icon, text) = verification_status_display(status.clone());
+            assert_eq!(icon, expected_icon, "icon for {:?}", status);
+            assert_eq!(text, expected_text, "text for {:?}", status);
+        }
+    }
+
+    #[test]
+    fn test_verification_status_display_icons_distinct() {
+        let (fresh_icon, _) = verification_status_display(VerificationStatus::Fresh);
+        let (missing_icon, _) = verification_status_display(VerificationStatus::Missing);
+        assert_ne!(fresh_icon, missing_icon);
     }
 }

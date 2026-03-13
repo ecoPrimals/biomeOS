@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! STUN Extension - Optional Self-Hosted STUN Support
 //!
 //! **OPTIONAL**: biomeOS works without this using public STUN

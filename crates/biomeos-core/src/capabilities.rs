@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Capability-based primal system
 //!
 //! Defines capabilities that primals can provide/require.

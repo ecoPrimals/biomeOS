@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 // Common test infrastructure for NUCLEUS atomic testing
 // Provides fixtures, helpers, chaos engine, and fault injection
 

@@ -1,9 +1,45 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Primal Management Operations
 //!
 //! Handles primal registration, management, and status tracking.
 
 use super::core::{PrimalInfo, UniversalBiomeOSManager};
 use anyhow::Result;
+
+/// Compute primal statistics from a list of primals (testable pure function)
+#[allow(dead_code)] // Used by tests
+pub(crate) fn compute_primal_statistics(
+    primals: impl IntoIterator<Item = PrimalInfo>,
+) -> PrimalStatistics {
+    let mut total = 0;
+    let mut healthy = 0;
+    let mut degraded = 0;
+    let mut unhealthy = 0;
+    let mut unknown = 0;
+    let mut by_type = std::collections::HashMap::new();
+
+    for primal in primals {
+        total += 1;
+        match primal.health {
+            biomeos_types::Health::Healthy => healthy += 1,
+            biomeos_types::Health::Degraded { .. } => degraded += 1,
+            biomeos_types::Health::Unhealthy { .. } => unhealthy += 1,
+            _ => unknown += 1,
+        }
+        *by_type.entry(primal.primal_type.name.clone()).or_insert(0) += 1;
+    }
+
+    PrimalStatistics {
+        total,
+        healthy,
+        degraded,
+        unhealthy,
+        unknown,
+        by_type,
+    }
+}
 
 impl UniversalBiomeOSManager {
     /// Register a primal with the manager
@@ -131,33 +167,7 @@ impl UniversalBiomeOSManager {
     /// Get primal statistics
     pub async fn get_primal_statistics(&self) -> PrimalStatistics {
         let registry = self.registered_primals.read().await;
-        let total = registry.len();
-
-        let mut healthy = 0;
-        let mut degraded = 0;
-        let mut unhealthy = 0;
-        let mut unknown = 0;
-        let mut by_type = std::collections::HashMap::new();
-
-        for primal in registry.values() {
-            match primal.health {
-                biomeos_types::Health::Healthy => healthy += 1,
-                biomeos_types::Health::Degraded { .. } => degraded += 1,
-                biomeos_types::Health::Unhealthy { .. } => unhealthy += 1,
-                _ => unknown += 1,
-            }
-
-            *by_type.entry(primal.primal_type.name.clone()).or_insert(0) += 1;
-        }
-
-        PrimalStatistics {
-            total,
-            healthy,
-            degraded,
-            unhealthy,
-            unknown,
-            by_type,
-        }
+        compute_primal_statistics(registry.values().cloned())
     }
 
     /// Clear all registered primals (useful for testing)
@@ -167,6 +177,57 @@ impl UniversalBiomeOSManager {
         registry.clear();
         tracing::info!("🧹 Cleared {} registered primals", count);
         Ok(())
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+    use biomeos_types::PrimalType;
+    use chrono::Utc;
+
+    fn test_primal(id: &str, name: &str, health: biomeos_types::Health) -> PrimalInfo {
+        PrimalInfo {
+            id: id.to_string(),
+            name: name.to_string(),
+            primal_type: PrimalType::from_discovered("test", name, "1.0.0"),
+            endpoint: format!("unix:/tmp/{}", id),
+            capabilities: vec![],
+            health,
+            last_seen: Utc::now(),
+            discovered_at: Utc::now(),
+            metadata: Default::default(),
+        }
+    }
+
+    #[test]
+    fn test_compute_primal_statistics() {
+        let primals = vec![
+            test_primal("1", "a", biomeos_types::Health::Healthy),
+            test_primal("2", "b", biomeos_types::Health::Healthy),
+            test_primal(
+                "3",
+                "c",
+                biomeos_types::Health::Degraded {
+                    issues: vec![],
+                    impact_score: None,
+                },
+            ),
+        ];
+        let stats = compute_primal_statistics(primals);
+        assert_eq!(stats.total, 3);
+        assert_eq!(stats.healthy, 2);
+        assert_eq!(stats.degraded, 1);
+        assert_eq!(stats.unhealthy, 0);
+        assert_eq!(stats.unknown, 0);
+    }
+
+    #[test]
+    fn test_compute_primal_statistics_empty() {
+        let stats = compute_primal_statistics(vec![]);
+        assert_eq!(stats.total, 0);
+        assert_eq!(stats.healthy, 0);
     }
 }
 

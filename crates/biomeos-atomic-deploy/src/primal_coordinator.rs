@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Primal coordinator - TRUE PRIMAL approach
 //!
 //! Coordinates primal interactions (doesn't launch them!)

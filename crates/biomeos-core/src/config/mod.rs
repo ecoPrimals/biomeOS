@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Configuration Module - UNIFIED TYPES IMPLEMENTATION
 //!
 //! ✅ UNIFICATION COMPLETE: Configuration types now use the unified system from biomeos-types

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Handler modules for Neural API Server.
 //!
 //! Smart decomposition - each handler focuses on one domain:

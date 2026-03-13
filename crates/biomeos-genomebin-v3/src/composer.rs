@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 // biomeos-genomebin-v3/src/composer.rs
 // Fractal composition - compose atomics from genomeBins
 //

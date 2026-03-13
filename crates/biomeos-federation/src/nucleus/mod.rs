@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! NUCLEUS - Secure Primal Discovery Protocol
 //!
 //! Network-Universal Coordinated Lifecycle & Ecosystem Unification System
@@ -113,8 +116,8 @@ pub struct SecureNucleusDiscovery {
     /// Current family ID
     family_id: Option<String>,
 
-    /// Current node ID (reserved for future routing/identification features)
-    #[allow(dead_code)] // TODO: Wire up for multi-node routing in Phase 3
+    /// Current node ID. Reserved for multi-node routing in Phase 3.
+    #[allow(dead_code)] // Future: wire up for multi-node routing in Phase 3
     node_id: Option<String>,
 }
 
@@ -163,12 +166,13 @@ impl SecureNucleusDiscovery {
             .as_secs();
 
         for primal in discovered {
+            let name = primal.name;
             let verified = VerifiedPrimal {
-                name: primal.name.clone(),
+                name: name.clone(),
                 node_id: "unknown".to_string(),
                 family_id: None,
-                endpoints: primal.endpoints.clone(),
-                capabilities: primal.capabilities.clone(),
+                endpoints: primal.endpoints,
+                capabilities: primal.capabilities,
                 identity_proof: IdentityProof {
                     node_id: "unknown".to_string(),
                     family_id: None,
@@ -180,11 +184,11 @@ impl SecureNucleusDiscovery {
                 trust_level: TrustLevel::Unknown,
                 discovered_at: now,
                 verified_at: now,
-                metadata: primal.metadata.clone(),
+                metadata: primal.metadata,
             };
 
             self.verified_primals
-                .entry(primal.name.clone())
+                .entry(name)
                 .or_default()
                 .push(verified);
         }
@@ -226,8 +230,9 @@ impl SecureNucleusDiscovery {
                         "   ✅ Verified: {} (trust: {:?})",
                         verified.name, verified.trust_level
                     );
+                    let name = verified.name.clone();
                     self.verified_primals
-                        .entry(verified.name.clone())
+                        .entry(name)
                         .or_default()
                         .push(verified);
                 }

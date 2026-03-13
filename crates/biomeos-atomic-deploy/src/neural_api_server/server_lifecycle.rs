@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Server lifecycle management: bootstrap, mode detection, and initialization
 //!
 //! Handles the server startup sequence including:
@@ -226,6 +229,7 @@ impl NeuralApiServer {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 
@@ -267,5 +271,36 @@ mod tests {
     #[test]
     fn test_is_explicit_coordinated_mode_str_unknown_not_explicit() {
         assert!(!is_explicit_coordinated_mode_str("unknown"));
+    }
+
+    #[test]
+    fn test_is_explicit_coordinated_mode_str_mixed_case() {
+        assert!(is_explicit_coordinated_mode_str("Coordinated"));
+    }
+
+    #[test]
+    fn test_is_explicit_coordinated_mode_str_whitespace_not_explicit() {
+        assert!(!is_explicit_coordinated_mode_str(" coordinated"));
+    }
+
+    #[test]
+    #[ignore = "Requires BIOMEOS_MODE env var - run with explicit env"]
+    fn test_is_explicit_coordinated_mode_env() {
+        // When BIOMEOS_MODE=coordinated, should return true
+        let _ = is_explicit_coordinated_mode();
+    }
+
+    #[test]
+    fn test_is_explicit_coordinated_mode_str_partial_no_match() {
+        assert!(!is_explicit_coordinated_mode_str("coordinatedx"));
+        assert!(!is_explicit_coordinated_mode_str("xcoordinated"));
+        assert!(!is_explicit_coordinated_mode_str("coordinat")); // partial, no match
+    }
+
+    #[test]
+    fn test_is_explicit_coordinated_mode_str_join_suffix() {
+        // "join" is valid; "joiner" would not match (different string)
+        assert!(is_explicit_coordinated_mode_str("join"));
+        assert!(!is_explicit_coordinated_mode_str("joiner"));
     }
 }

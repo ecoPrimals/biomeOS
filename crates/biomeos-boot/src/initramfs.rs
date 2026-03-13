@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! BiomeOS Initramfs Builder
 //!
 //! Pure Rust initramfs generation. No shell scripts, no external dependencies.

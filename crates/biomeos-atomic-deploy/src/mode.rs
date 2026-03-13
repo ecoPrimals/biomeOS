@@ -1,8 +1,9 @@
-// biomeOS Mode Detection
-//
-// Determines whether biomeOS should operate in:
-// - Bootstrap Mode (genesis - no ecosystem exists)
-// - Coordinated Mode (participant - ecosystem exists)
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
+//! biomeOS operating mode detection.
+//!
+//! Determines Bootstrap (genesis, no ecosystem) vs Coordinated (participant, ecosystem exists).
 
 use std::path::PathBuf;
 use tokio::net::UnixStream;
@@ -144,6 +145,8 @@ impl BiomeOsMode {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used)]
+
     use super::*;
     use tempfile::tempdir;
     use tokio::net::UnixListener;
@@ -219,4 +222,87 @@ mod tests {
         let exists = BiomeOsMode::tower_atomic_exists("no-tower-exists-xyz").await;
         assert!(!exists);
     }
+
+    #[tokio::test]
+    async fn test_detect_coordinated_mode_explicit() {
+        let _guard = ENV_LOCK.lock().await;
+        std::env::set_var("BIOMEOS_MODE", "coordinated");
+        let mode = BiomeOsMode::detect("any-family").await;
+        std::env::remove_var("BIOMEOS_MODE");
+        assert_eq!(mode, BiomeOsMode::Coordinated);
+    }
+
+    #[tokio::test]
+    async fn test_detect_coordinated_mode_coord_alias() {
+        let _guard = ENV_LOCK.lock().await;
+        std::env::set_var("BIOMEOS_MODE", "coord");
+        let mode = BiomeOsMode::detect("any-family").await;
+        std::env::remove_var("BIOMEOS_MODE");
+        assert_eq!(mode, BiomeOsMode::Coordinated);
+    }
+
+    #[tokio::test]
+    async fn test_detect_coordinated_mode_join_alias() {
+        let _guard = ENV_LOCK.lock().await;
+        std::env::set_var("BIOMEOS_MODE", "join");
+        let mode = BiomeOsMode::detect("any-family").await;
+        std::env::remove_var("BIOMEOS_MODE");
+        assert_eq!(mode, BiomeOsMode::Coordinated);
+    }
+
+    #[tokio::test]
+    async fn test_detect_bootstrap_mode_explicit() {
+        let _guard = ENV_LOCK.lock().await;
+        std::env::set_var("BIOMEOS_MODE", "bootstrap");
+        let mode = BiomeOsMode::detect("any-family").await;
+        std::env::remove_var("BIOMEOS_MODE");
+        assert_eq!(mode, BiomeOsMode::Bootstrap);
+    }
+
+    #[tokio::test]
+    async fn test_detect_bootstrap_mode_boot_alias() {
+        let _guard = ENV_LOCK.lock().await;
+        std::env::set_var("BIOMEOS_MODE", "boot");
+        let mode = BiomeOsMode::detect("any-family").await;
+        std::env::remove_var("BIOMEOS_MODE");
+        assert_eq!(mode, BiomeOsMode::Bootstrap);
+    }
+
+    #[tokio::test]
+    async fn test_detect_bootstrap_mode_genesis_alias() {
+        let _guard = ENV_LOCK.lock().await;
+        std::env::set_var("BIOMEOS_MODE", "genesis");
+        let mode = BiomeOsMode::detect("any-family").await;
+        std::env::remove_var("BIOMEOS_MODE");
+        assert_eq!(mode, BiomeOsMode::Bootstrap);
+    }
+
+    #[tokio::test]
+    async fn test_detect_unknown_mode_falls_back_to_autodetect() {
+        let _guard = ENV_LOCK.lock().await;
+        std::env::set_var("BIOMEOS_MODE", "unknown_mode_xyz");
+        let mode = BiomeOsMode::detect("no-tower-exists-xyz").await;
+        std::env::remove_var("BIOMEOS_MODE");
+        assert_eq!(mode, BiomeOsMode::Bootstrap);
+    }
+
+    #[tokio::test]
+    async fn test_primal_reachable_timeout() {
+        let dir = tempdir().unwrap();
+        let socket_path = dir.path().join("timeout.sock");
+        let _listener = UnixListener::bind(&socket_path).unwrap();
+        let reachable = BiomeOsMode::primal_reachable(socket_path.to_str().unwrap()).await;
+        assert!(reachable);
+    }
+
+    #[tokio::test]
+    async fn test_primal_reachable_connection_failed() {
+        let dir = tempdir().unwrap();
+        let socket_path = dir.path().join("conn_fail.sock");
+        std::fs::File::create(&socket_path).unwrap();
+        let reachable = BiomeOsMode::primal_reachable(socket_path.to_str().unwrap()).await;
+        assert!(!reachable);
+    }
+
+    static ENV_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 }

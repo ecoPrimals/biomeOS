@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Unified `BiomeOS` Type System
 //!
 //! This crate provides a comprehensive, unified type system for the `BiomeOS` ecosystem,
@@ -9,7 +12,7 @@
 #![warn(missing_docs)]
 #![allow(clippy::doc_markdown)]
 // Deny unsafe code in type definitions
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 
 use std::collections::HashMap;
 

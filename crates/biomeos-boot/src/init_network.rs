@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Network Configuration for BiomeOS Init
 //!
 //! Configures network interfaces during boot.
@@ -101,10 +104,10 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::unwrap_used)]
     async fn test_network_configuration() {
         let mut mgr = NetworkManager::new();
         assert!(mgr.configure().await.is_ok());
-        // configured is true iff at least one non-loopback interface was detected
         let interfaces = mgr.detect_interfaces().await.unwrap();
         assert_eq!(mgr.is_configured(), !interfaces.is_empty());
     }

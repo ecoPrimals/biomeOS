@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Graph data structures for Neural API
 
 use anyhow::Context;
@@ -7,10 +10,15 @@ use std::collections::HashMap;
 /// Neural API graph
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Graph {
+    /// Unique graph identifier
     pub id: String,
+    /// Semantic version
     pub version: String,
+    /// Human-readable description
     pub description: String,
+    /// Execution nodes in dependency order
     pub nodes: Vec<GraphNode>,
+    /// Execution configuration (parallelism, timeouts, etc.)
     pub config: GraphConfig,
 }
 
@@ -138,40 +146,45 @@ impl Graph {
 /// Graph node
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GraphNode {
+    /// Unique node identifier
     pub id: String,
+    /// How to select the primal (by capability or name)
     #[serde(default)]
     pub primal: Option<PrimalSelector>,
+    /// Output key for downstream nodes
     #[serde(default)]
     pub output: Option<String>,
+    /// Operation to invoke on the primal
     #[serde(default)]
     pub operation: Option<Operation>,
+    /// Timeout and retry constraints
     #[serde(default)]
     pub constraints: Option<Constraints>,
+    /// Node IDs this node depends on
     #[serde(default)]
     pub depends_on: Vec<String>,
-    // Capabilities this primal provides (NEW - for capability registry)
+    /// Capabilities this primal provides (for capability registry)
     #[serde(default)]
     pub capabilities: Vec<String>,
 
-    // NEW v2.0.0: Capability translation mappings (semantic → actual method)
-    // Enables self-describing primals for capability translation
-    // Example: {"crypto.generate_keypair": "x25519_generate_ephemeral"}
+    /// Capability translation mappings (semantic → actual method)
     #[serde(default)]
     pub capabilities_provided: Option<HashMap<String, String>>,
 
-    // NEW v2.0.1: Parameter name mappings (semantic → actual parameter names)
-    // Enables parameter translation for capability calls
-    // Example: {"crypto.ecdh_derive": {"private_key": "our_secret", "public_key": "their_public"}}
+    /// Parameter name mappings (semantic → actual parameter names)
     #[serde(default)]
     pub parameter_mappings: Option<HashMap<String, HashMap<String, String>>>,
 
-    // Legacy fields (for backward compatibility)
+    /// Legacy: node type (prefer primal + operation)
     #[serde(default)]
     pub node_type: Option<String>,
+    /// Legacy: dependency list (alias for depends_on)
     #[serde(default)]
     pub dependencies: Vec<String>,
+    /// Node-specific configuration
     #[serde(default)]
     pub config: HashMap<String, serde_json::Value>,
+    /// Output definitions for this node
     #[serde(default)]
     pub outputs: Vec<NodeOutput>,
 }
@@ -179,8 +192,10 @@ pub struct GraphNode {
 /// Primal selector (capability-based discovery)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PrimalSelector {
+    /// Select primal by capability (e.g., "crypto.encrypt")
     #[serde(default)]
     pub by_capability: Option<String>,
+    /// Select primal by name (e.g., "beardog")
     #[serde(default)]
     pub by_name: Option<String>,
 }
@@ -188,7 +203,9 @@ pub struct PrimalSelector {
 /// Operation definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Operation {
+    /// Operation/capability name (e.g., "crypto.encrypt")
     pub name: String,
+    /// Parameters for the operation
     #[serde(default)]
     pub params: HashMap<String, serde_json::Value>,
 
@@ -200,8 +217,10 @@ pub struct Operation {
 /// Node constraints
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Constraints {
+    /// Per-node timeout in milliseconds
     #[serde(default)]
     pub timeout_ms: Option<u64>,
+    /// Retry configuration on failure
     #[serde(default)]
     pub retry: Option<RetryConfig>,
 }
@@ -209,14 +228,18 @@ pub struct Constraints {
 /// Retry configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RetryConfig {
+    /// Maximum retry attempts before failure
     pub max_attempts: u32,
+    /// Delay between retries in milliseconds
     pub backoff_ms: u64,
 }
 
 /// Node output definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NodeOutput {
+    /// Output name for downstream binding
     pub name: String,
+    /// Output type (e.g., "string", "json")
     #[serde(rename = "type")]
     pub output_type: String,
 }
@@ -224,11 +247,17 @@ pub struct NodeOutput {
 /// Graph execution configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GraphConfig {
+    /// Run in deterministic mode (reproducible execution order)
     pub deterministic: bool,
+    /// Allow parallel execution of independent phases
     pub parallel_phases: bool,
+    /// Maximum concurrent node executions
     pub max_parallelism: usize,
+    /// Total graph timeout in milliseconds
     pub timeout_total_ms: u64,
+    /// Enable checkpointing for resume
     pub checkpoint_enabled: bool,
+    /// Rollback on any node failure
     pub rollback_on_failure: bool,
 }
 

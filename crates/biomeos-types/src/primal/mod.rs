@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Unified Primal Type System
 //!
 //! This module provides a comprehensive primal type system for the BiomeOS ecosystem,

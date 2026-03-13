@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Plasmodium agent types and core logic.
 //!
 //! Defines `CapabilityRoute`, `AgentState`, and `PlasmodiumAgent` with

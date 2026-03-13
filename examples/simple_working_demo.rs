@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Simple BiomeOS Demo
 //!
 //! Demonstrates basic BiomeOS functionality with actual working APIs

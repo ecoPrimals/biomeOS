@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Dark Forest Encrypted Beacon System
 //!
 //! Implements the BirdSong Dark Forest trust model:
@@ -986,5 +989,53 @@ mod tests {
 
         let json = serde_json::to_string(&beacon).expect("serialize");
         assert!(json.contains("\"version\":2"));
+    }
+
+    // ========================================================================
+    // Pure noise beacon format validation (min size, structure)
+    // ========================================================================
+
+    #[test]
+    fn test_pure_noise_beacon_minimum_size() {
+        // try_decrypt_pure_noise_beacon returns None for < 28 bytes (12 nonce + 16 tag)
+        // This tests our understanding of the format
+        let too_small: [u8; 27] = [0u8; 27];
+        assert!(too_small.len() < 28);
+
+        let exactly_min: [u8; 28] = [0u8; 28];
+        assert_eq!(exactly_min.len(), 28);
+    }
+
+    #[test]
+    fn test_discovered_peer_struct() {
+        let peer = DiscoveredPeer {
+            beacon: BeaconPlaintext {
+                family_hash: "h".to_string(),
+                node_id: "n1".to_string(),
+                timestamp: 100,
+                socket_path: "/s".to_string(),
+                capabilities_hash: "c".to_string(),
+                lineage_mode: None,
+            },
+            lineage_verified: true,
+            session_key: Some("key123".to_string()),
+        };
+        assert!(peer.lineage_verified);
+        assert_eq!(peer.session_key.as_deref(), Some("key123"));
+        assert_eq!(peer.beacon.node_id, "n1");
+    }
+
+    #[test]
+    fn test_encrypted_beacon_version_values() {
+        for v in [0u8, 1, 2, 255] {
+            let beacon = EncryptedBeacon {
+                ciphertext: "c".to_string(),
+                nonce: "n".to_string(),
+                tag: "t".to_string(),
+                version: v,
+            };
+            let json = serde_json::to_string(&beacon).unwrap();
+            assert!(json.contains(&format!("\"version\":{}", v)));
+        }
     }
 }

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Network interface information and I/O metrics.
 
 use biomeos_types::{BiomeResult, NetworkIoMetrics};

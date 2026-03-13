@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Error Conversions and Utility Implementations
 //!
 //! This module contains BiomeError constructor methods, trait implementations,

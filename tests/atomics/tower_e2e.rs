@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 // Tower Atomic E2E Tests
 // Tests for BearDog + Songbird integration
 

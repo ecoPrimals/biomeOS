@@ -1,4 +1,8 @@
 #!/bin/bash
+# DEPRECATED: Use `biomeos nucleus start` instead.
+# This script is retained as a fossil record of the original shell-based deployment.
+# See: crates/biomeos/src/modes/nucleus.rs for the Pure Rust replacement.
+#
 #═══════════════════════════════════════════════════════════════════════════════
 # NUCLEUS Unified Startup Script
 # Standard: PRIMAL_DEPLOYMENT_STANDARD v1.0

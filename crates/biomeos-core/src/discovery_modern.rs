@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Modern trait-based primal discovery system
 //!
 //! This module provides a composable, trait-based architecture for discovering

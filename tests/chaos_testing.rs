@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Chaos Testing for BiomeOS
 //!
 //! Comprehensive chaos testing to verify system resilience under various failure conditions,

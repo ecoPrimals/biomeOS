@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Capability Translation Registry for Neural API
 //!
 //! This module provides semantic-to-actual method translation for capability-based
@@ -113,8 +116,8 @@ pub struct CapabilityTranslationRegistry {
     /// Provider → List of semantic capabilities they provide
     provider_capabilities: HashMap<String, Vec<String>>,
 
-    /// Next RPC ID (reserved for future tarpc request correlation)
-    #[allow(dead_code)] // TODO: Wire up for tarpc request correlation
+    /// Next RPC ID. Reserved for tarpc request correlation.
+    #[allow(dead_code)] // Future: wire up for tarpc request correlation
     next_id: std::sync::Arc<std::sync::atomic::AtomicU64>,
 }
 
@@ -624,8 +627,11 @@ impl Default for CapabilityTranslationRegistry {
 /// Registry statistics
 #[derive(Debug, Clone, Serialize)]
 pub struct RegistryStats {
+    /// Total capability translations registered
     pub total_translations: usize,
+    /// Number of unique primal providers
     pub total_providers: usize,
+    /// Capability count per provider (provider name → count)
     pub capabilities_by_provider: HashMap<String, usize>,
 }
 

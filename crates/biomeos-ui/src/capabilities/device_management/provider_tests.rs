@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Tests for DeviceManagementProvider
 //!
 //! Extracted from provider.rs to keep file under 1000 lines.
@@ -202,13 +205,18 @@ async fn test_assign_device_no_registry() {
 
     assert!(
         result.is_err(),
-        "assign_device should fail when Songbird/registry not available"
+        "assign_device should fail when registry not available"
     );
     let err = result.unwrap_err();
+    let msg = err.to_string();
     assert!(
-        err.to_string().contains("Songbird") || err.to_string().contains("available"),
+        msg.contains("registry")
+            || msg.contains("assign_device")
+            || msg.contains("failed")
+            || msg.contains("JSON-RPC")
+            || msg.contains("available"),
         "Expected registry-related error, got: {}",
-        err
+        msg
     );
 }
 

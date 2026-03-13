@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Storage Specifications
 //!
 //! This module contains storage-related manifest types including VolumeSpec,

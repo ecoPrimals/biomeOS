@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Execution context and shared state
 //!
 //! This module contains the execution context that is shared across all nodes
@@ -44,7 +47,7 @@ pub struct ExecutionContext {
     pub checkpoint_dir: Option<PathBuf>,
     /// Socket nucleation for deterministic socket path assignment
     pub nucleation: Option<Arc<tokio::sync::RwLock<crate::nucleation::SocketNucleation>>>,
-    /// Family ID for socket path namespacing (Arc<str> for zero-copy clone across tasks)
+    /// Family ID for socket path namespacing (`Arc<str>` for zero-copy clone across tasks)
     pub family_id: Arc<str>,
 }
 

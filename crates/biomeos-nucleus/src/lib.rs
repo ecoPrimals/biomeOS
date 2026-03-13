@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! # NUCLEUS - Secure Primal Discovery Protocol
 //!
 //! **Core Principle**: Delegate to primals, don't reimplement!
@@ -53,7 +56,7 @@
 //! # }
 //! ```
 
-#![deny(unsafe_code)] // Deep debt principle: Fast AND safe
+#![forbid(unsafe_code)] // Deep debt principle: Fast AND safe
 #![warn(missing_docs)]
 #![warn(clippy::all)]
 #![warn(clippy::pedantic)]

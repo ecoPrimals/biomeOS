@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! # BiomeOS Lab Integration
 //!
 //! Integration layer for benchScale lab environment system.
@@ -244,6 +247,7 @@ impl TestResult {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 
@@ -257,6 +261,14 @@ mod tests {
     }
 
     #[test]
+    fn test_lab_manager_with_path() {
+        let custom_path = PathBuf::from("/custom/benchscale");
+        let manager = LabManager::with_path(custom_path.clone());
+        let scripts = manager.scripts_dir();
+        assert_eq!(scripts, custom_path.join("scripts"));
+    }
+
+    #[test]
     fn test_lab_handle() {
         let manager = LabManager::new();
         let handle = LabHandle {
@@ -267,5 +279,44 @@ mod tests {
 
         assert_eq!(handle.name(), "test-lab");
         assert_eq!(handle.topology(), "simple-lan");
+    }
+
+    #[test]
+    fn test_test_result_passed() {
+        let result = TestResult {
+            test_name: "unit-test".to_string(),
+            success: true,
+            stdout: "ok".to_string(),
+            stderr: "".to_string(),
+        };
+        assert!(result.passed());
+        assert_eq!(result.output(), "ok");
+        assert_eq!(result.errors(), "");
+    }
+
+    #[test]
+    fn test_test_result_failed() {
+        let result = TestResult {
+            test_name: "fail-test".to_string(),
+            success: false,
+            stdout: "".to_string(),
+            stderr: "assertion failed".to_string(),
+        };
+        assert!(!result.passed());
+        assert_eq!(result.output(), "");
+        assert_eq!(result.errors(), "assertion failed");
+    }
+
+    #[test]
+    fn test_test_result_debug_clone() {
+        let result = TestResult {
+            test_name: "clone-test".to_string(),
+            success: true,
+            stdout: "out".to_string(),
+            stderr: "err".to_string(),
+        };
+        let cloned = result.clone();
+        assert_eq!(cloned.test_name, result.test_name);
+        assert_eq!(cloned.success, result.success);
     }
 }

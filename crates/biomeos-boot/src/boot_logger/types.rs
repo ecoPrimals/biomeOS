@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Boot Logger Types
 //!
 //! Common types used throughout the boot logger.
@@ -73,6 +76,8 @@ impl std::fmt::Display for BootStage {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used)]
+
     use super::*;
 
     #[test]
@@ -91,8 +96,73 @@ mod tests {
     }
 
     #[test]
+    fn test_log_level_display_all_variants() {
+        assert_eq!(LogLevel::Debug.to_string(), "DEBUG");
+        assert_eq!(LogLevel::Info.to_string(), "INFO");
+        assert_eq!(LogLevel::Warning.to_string(), "WARN");
+        assert_eq!(LogLevel::Error.to_string(), "ERROR");
+        assert_eq!(LogLevel::Critical.to_string(), "CRIT");
+        assert_eq!(LogLevel::Emergency.to_string(), "EMERG");
+    }
+
+    #[test]
     fn test_boot_stage_display() {
         assert_eq!(BootStage::InitStart.to_string(), "Init Start");
         assert_eq!(BootStage::Complete.to_string(), "Boot Complete");
+    }
+
+    #[test]
+    fn test_boot_stage_display_all_variants() {
+        assert_eq!(BootStage::GrubHandoff.to_string(), "GRUB Handoff");
+        assert_eq!(BootStage::KernelLoad.to_string(), "Kernel Load");
+        assert_eq!(BootStage::InitramfsMount.to_string(), "Initramfs Mount");
+        assert_eq!(BootStage::InitStart.to_string(), "Init Start");
+        assert_eq!(BootStage::FilesystemMount.to_string(), "Filesystem Mount");
+        assert_eq!(
+            BootStage::HardwareDetection.to_string(),
+            "Hardware Detection"
+        );
+        assert_eq!(BootStage::NetworkInit.to_string(), "Network Init");
+        assert_eq!(
+            BootStage::BiomeOSCoreStart.to_string(),
+            "BiomeOS Core Start"
+        );
+        assert_eq!(BootStage::Complete.to_string(), "Boot Complete");
+    }
+
+    #[test]
+    fn test_log_level_debug() {
+        assert!(format!("{:?}", LogLevel::Debug).contains("Debug"));
+        assert!(format!("{:?}", LogLevel::Emergency).contains("Emergency"));
+    }
+
+    #[test]
+    fn test_log_level_clone_copy_eq() {
+        let level = LogLevel::Warning;
+        let cloned = level;
+        assert_eq!(level, cloned);
+        assert_eq!(LogLevel::Info, LogLevel::Info);
+        assert_ne!(LogLevel::Info, LogLevel::Error);
+    }
+
+    #[test]
+    fn test_boot_stage_debug() {
+        assert!(format!("{:?}", BootStage::GrubHandoff).contains("GrubHandoff"));
+        assert!(format!("{:?}", BootStage::Complete).contains("Complete"));
+    }
+
+    #[test]
+    fn test_boot_stage_clone_copy_eq() {
+        let stage = BootStage::InitStart;
+        let cloned = stage;
+        assert_eq!(stage, cloned);
+        assert_eq!(BootStage::Complete, BootStage::Complete);
+        assert_ne!(BootStage::GrubHandoff, BootStage::Complete);
+    }
+
+    #[test]
+    fn test_log_level_partial_ord() {
+        assert!(LogLevel::Debug < LogLevel::Emergency);
+        assert!(LogLevel::Warning >= LogLevel::Info);
     }
 }

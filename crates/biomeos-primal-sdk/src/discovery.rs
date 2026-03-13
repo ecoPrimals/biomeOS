@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Runtime Primal Discovery Patterns
 //!
 //! This module provides runtime discovery of primals without hardcoding paths.
@@ -123,10 +126,9 @@ impl PrimalDiscovery {
             }
         }
 
-        // If we have a capability, try known primals
+        // If we have a capability, try known primals from taxonomy
         if let Some(cap) = &query.capability {
-            let primal_names = providers_for_capability(cap);
-            for name in primal_names {
+            for name in providers_for_capability(cap) {
                 if let Some(primal) = self.try_discover_primal(&socket_dir, name).await {
                     if query.healthy_only && !primal.is_healthy {
                         continue;
@@ -158,6 +160,25 @@ impl PrimalDiscovery {
     pub async fn discover_primal(&self, name: &str) -> Option<DiscoveredPrimal> {
         let socket_dir = self.resolve_socket_dir();
         self.try_discover_primal(&socket_dir, name).await
+    }
+
+    /// Discover primals providing a capability by querying the capability taxonomy.
+    ///
+    /// Uses `CapabilityTaxonomy::resolve_to_primal()` for bootstrap hints, then
+    /// scans the socket directory. Returns names of discovered primals.
+    pub async fn discover_by_capability(&self, capability: &str) -> Result<Vec<String>> {
+        let provider_names: Vec<&str> =
+            biomeos_types::CapabilityTaxonomy::resolve_to_primal(capability)
+                .map(|p| vec![p])
+                .unwrap_or_default();
+        let socket_dir = self.resolve_socket_dir();
+        let mut discovered = Vec::new();
+        for name in provider_names {
+            if self.try_discover_primal(&socket_dir, name).await.is_some() {
+                discovered.push(name.to_string());
+            }
+        }
+        Ok(discovered)
     }
 
     /// 5-tier socket directory resolution per PRIMAL_DEPLOYMENT_STANDARD
@@ -224,7 +245,8 @@ impl PrimalDiscovery {
             return None;
         };
 
-        // Try to determine capability from name
+        // Try to determine capability from name (bootstrap hint when found by path scan)
+        #[allow(deprecated)]
         let capability = capability_from_primal_name(name);
 
         // Quick health check
@@ -253,21 +275,48 @@ impl PrimalDiscovery {
     }
 }
 
-/// Get known provider names for a capability
-pub fn providers_for_capability(cap: &PrimalCapability) -> &'static [&'static str] {
-    // Match on category and name
-    match (cap.category.as_str(), cap.name.as_str()) {
-        ("encryption", _) | ("security", _) => &["beardog"],
-        ("networking", _) => &["songbird"],
-        ("compute", _) => &["toadstool"],
-        ("storage", _) | ("data", _) => &["nestgate"],
-        ("ai", _) | ("ml", _) => &["squirrel"],
-        ("science", _) => &["wetspring", "neuralspring"],
-        _ => &[],
+/// Get known provider names for a capability using the capability taxonomy.
+///
+/// Uses `biomeos_types::CapabilityTaxonomy` for capability→primal resolution.
+/// Returns bootstrap hints only; in sovereign mode, primals self-register at runtime.
+pub fn providers_for_capability(cap: &PrimalCapability) -> Vec<&'static str> {
+    // Try category first (e.g., "encryption", "security", "compute")
+    for key in [cap.category.as_str(), cap.name.as_str()] {
+        if let Some(primal) = biomeos_types::CapabilityTaxonomy::resolve_to_primal(key) {
+            return vec![primal];
+        }
     }
+    // Aliases for taxonomy compatibility
+    let aliases: &[(&str, &str)] = &[
+        ("security", "encryption"),
+        ("registry", "discovery"),
+        ("networking", "discovery"),
+        ("crypto", "encryption"),
+        ("http", "discovery"),
+    ];
+    for (alias, canonical) in aliases {
+        if cap.category.eq_ignore_ascii_case(alias) || cap.name.eq_ignore_ascii_case(alias) {
+            if let Some(primal) = biomeos_types::CapabilityTaxonomy::resolve_to_primal(canonical) {
+                return vec![primal];
+            }
+        }
+    }
+    // Science: taxonomy has no single default; bootstrap hints for wetspring/neuralspring
+    if cap.category.eq_ignore_ascii_case("science") || cap.name.eq_ignore_ascii_case("science") {
+        return vec!["wetspring", "neuralspring"];
+    }
+    Vec::new()
 }
 
-/// Infer capability from primal name
+/// Infer capability from primal name.
+///
+/// **DEPRECATED**: Use capability-based discovery instead. Primals should be
+/// discovered by capability via `discover_by_capability()`, not by name.
+/// This exists only for bootstrap/legacy when a socket is found by path scan.
+#[deprecated(
+    since = "0.1.0",
+    note = "Use capability-based discovery. Primals are discovered by capability, not name."
+)]
 pub fn capability_from_primal_name(name: &str) -> PrimalCapability {
     match name.to_lowercase().as_str() {
         "beardog" => PrimalCapability::encryption(),
@@ -281,6 +330,7 @@ pub fn capability_from_primal_name(name: &str) -> PrimalCapability {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 
@@ -293,20 +343,167 @@ mod tests {
     }
 
     #[test]
-    fn test_capability_providers() {
+    fn test_discovery_query_primal() {
+        let query = DiscoveryQuery::primal("beardog");
+        assert_eq!(query.name, Some("beardog".to_string()));
+        assert!(query.capability.is_none());
+        assert!(!query.healthy_only);
+    }
+
+    #[test]
+    fn test_discovery_query_default() {
+        let query = DiscoveryQuery::default();
+        assert!(query.name.is_none());
+        assert!(query.capability.is_none());
+        assert!(!query.healthy_only);
+        assert!(query.limit.is_none());
+    }
+
+    #[test]
+    fn test_capability_providers_encryption() {
         let providers = providers_for_capability(&PrimalCapability::encryption());
         assert!(providers.contains(&"beardog"));
     }
 
     #[test]
-    fn test_capability_from_name() {
+    fn test_capability_providers_security() {
+        let providers = providers_for_capability(&PrimalCapability::new("security", "x", "1.0"));
+        assert!(providers.contains(&"beardog"));
+    }
+
+    #[test]
+    fn test_capability_providers_networking() {
+        let providers = providers_for_capability(&PrimalCapability::networking());
+        assert!(providers.contains(&"songbird"));
+    }
+
+    #[test]
+    fn test_capability_providers_compute() {
+        let providers = providers_for_capability(&PrimalCapability::compute());
+        assert!(providers.contains(&"toadstool"));
+    }
+
+    #[test]
+    fn test_capability_providers_storage() {
+        let providers = providers_for_capability(&PrimalCapability::storage());
+        assert!(providers.contains(&"nestgate"));
+    }
+
+    #[test]
+    fn test_capability_providers_ai() {
+        let providers = providers_for_capability(&PrimalCapability::ai());
+        assert!(providers.contains(&"squirrel"));
+    }
+
+    #[test]
+    fn test_capability_providers_science() {
+        let providers = providers_for_capability(&PrimalCapability::science());
+        assert!(providers.contains(&"wetspring"));
+        assert!(providers.contains(&"neuralspring"));
+    }
+
+    #[test]
+    fn test_capability_providers_unknown_empty() {
+        let providers = providers_for_capability(&PrimalCapability::new("unknown", "x", "1.0"));
+        assert!(providers.is_empty());
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn test_capability_from_name_beardog() {
         assert_eq!(
             capability_from_primal_name("beardog").category,
             "encryption"
         );
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn test_capability_from_name_songbird() {
         assert_eq!(
             capability_from_primal_name("songbird").category,
             "networking"
         );
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn test_capability_from_name_toadstool() {
+        assert_eq!(capability_from_primal_name("toadstool").category, "compute");
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn test_capability_from_name_nestgate() {
+        assert_eq!(capability_from_primal_name("nestgate").category, "storage");
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn test_capability_from_name_squirrel() {
+        assert_eq!(capability_from_primal_name("squirrel").category, "ai");
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn test_capability_from_name_wetspring() {
+        assert_eq!(capability_from_primal_name("wetspring").category, "science");
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn test_capability_from_name_neuralspring() {
+        assert_eq!(
+            capability_from_primal_name("neuralspring").category,
+            "science"
+        );
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn test_capability_from_name_unknown_custom() {
+        let cap = capability_from_primal_name("unknownprimal");
+        assert_eq!(cap.category, "custom");
+        assert_eq!(cap.name, "unknownprimal");
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn test_capability_from_name_case_insensitive() {
+        assert_eq!(
+            capability_from_primal_name("BEARDOG").category,
+            "encryption"
+        );
+    }
+
+    #[test]
+    fn test_primal_discovery_new() {
+        let discovery = PrimalDiscovery::new("my_family");
+        // Resolve uses env - just verify construction
+        let _ = discovery;
+    }
+
+    #[tokio::test]
+    async fn test_discover_by_capability_returns_vec() {
+        let discovery = PrimalDiscovery::new("test-family");
+        // No primals running in test env; should return empty or discovered names
+        let result = discovery.discover_by_capability("encryption").await;
+        assert!(result.is_ok());
+        let names = result.unwrap();
+        // Names is Vec<String> - may be empty if no beardog socket
+        assert!(names.is_empty() || names.contains(&"beardog".to_string()));
+    }
+
+    #[test]
+    fn test_discovered_primal_serialization() {
+        let primal = DiscoveredPrimal {
+            name: "beardog".to_string(),
+            socket_path: PathBuf::from("/run/user/1000/biomeos/beardog-default.sock"),
+            capability: PrimalCapability::encryption(),
+            discovered_via: DiscoveryMethod::XdgRuntime,
+            is_healthy: true,
+        };
+        let json = serde_json::to_string(&primal).unwrap();
+        assert!(json.contains("beardog"));
     }
 }

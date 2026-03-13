@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Motion Capture Adapter
 //!
 //! Provides 6DoF tracking integration between biomeOS graph nodes and
@@ -194,6 +197,7 @@ impl MotionCaptureAdapter {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 
@@ -263,5 +267,67 @@ mod tests {
             crate::primal_client::PrimalClient::with_socket("petaltongue", "/nonexistent.sock");
         let result = adapter.stop_tracking(&client).await;
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_adapter_new() {
+        let config = MotionCaptureConfig {
+            backend: "steamvr".to_string(),
+            tracking_hz: 90,
+            tracked_devices: vec![TrackedDeviceType::Head],
+            prediction_ms: 15.0,
+        };
+        let adapter = MotionCaptureAdapter::new(config);
+        assert!(!adapter.is_tracking_active());
+        assert_eq!(adapter.frame_count(), 0);
+        assert_eq!(adapter.config().backend, "steamvr");
+    }
+
+    #[test]
+    fn test_calibration_result_failed() {
+        let cal = CalibrationResult {
+            success: false,
+            residual_mm: 2.5,
+            samples: 128,
+            message: "Tracking lost".to_string(),
+        };
+        let json = serde_json::to_string(&cal).unwrap();
+        let back: CalibrationResult = serde_json::from_str(&json).unwrap();
+        assert!(!back.success);
+        assert!((back.residual_mm - 2.5).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_get_device_pose_empty_frame() {
+        let frame = TrackingFrame {
+            frame: 0,
+            timestamp_us: 0,
+            devices: std::collections::HashMap::new(),
+            confidence: 0.0,
+        };
+        assert!(MotionCaptureAdapter::get_device_pose(&frame, "head").is_none());
+    }
+
+    #[test]
+    fn test_get_device_pose_different_key_format() {
+        let mut devices = std::collections::HashMap::new();
+        devices.insert("left_hand".to_string(), Pose6DoF::default());
+        let frame = TrackingFrame {
+            frame: 1,
+            timestamp_us: 16666,
+            devices,
+            confidence: 0.95,
+        };
+        assert!(MotionCaptureAdapter::get_device_pose(&frame, "left_hand").is_some());
+        assert!(MotionCaptureAdapter::get_device_pose(&frame, "LeftHand").is_none());
+    }
+
+    #[test]
+    fn test_motion_capture_config_default() {
+        let config = MotionCaptureConfig::default();
+        assert_eq!(config.backend, "openxr");
+        assert_eq!(config.tracking_hz, 1000);
+        assert_eq!(config.tracked_devices.len(), 3);
+        assert!((config.prediction_ms - 10.0).abs() < 0.001);
     }
 }

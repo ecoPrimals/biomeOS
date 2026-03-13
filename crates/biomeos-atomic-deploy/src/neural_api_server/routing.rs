@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Request routing for Neural API Server
 //!
 //! Routes JSON-RPC requests to appropriate handlers based on method name.
@@ -44,7 +47,7 @@ enum Route {
     CapabilityDiscover,
     CapabilityList,
     CapabilityProviders,
-    CapabilityRoute,
+    CapabilityResolve,
     CapabilityMetrics,
     CapabilityCall,
     CapabilityDiscoverTranslations,
@@ -112,8 +115,8 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("neural_api.discover_capability", Route::CapabilityDiscover),
     ("capability.list", Route::CapabilityList),
     ("capability.providers", Route::CapabilityProviders),
-    ("capability.route", Route::CapabilityRoute),
-    ("neural_api.route_to_primal", Route::CapabilityRoute),
+    ("capability.route", Route::CapabilityResolve),
+    ("neural_api.route_to_primal", Route::CapabilityResolve),
     ("capability.metrics", Route::CapabilityMetrics),
     ("neural_api.get_routing_metrics", Route::CapabilityMetrics),
     ("capability.call", Route::CapabilityCall),
@@ -239,7 +242,7 @@ impl NeuralApiServer {
             Route::CapabilityProviders => {
                 self.capability_handler.providers(&request.params).await?
             }
-            Route::CapabilityRoute => self.capability_handler.route(&request.params).await?,
+            Route::CapabilityResolve => self.capability_handler.route(&request.params).await?,
             Route::CapabilityMetrics => self.capability_handler.get_metrics().await?,
             Route::CapabilityCall => self.capability_handler.call(&request.params).await?,
             Route::CapabilityDiscoverTranslations => {
@@ -279,17 +282,21 @@ impl NeuralApiServer {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use crate::neural_api_server::NeuralApiServer;
 
-    fn create_test_server() -> NeuralApiServer {
+    fn create_test_server() -> (NeuralApiServer, tempfile::TempDir) {
         let temp = tempfile::tempdir().expect("temp dir");
-        NeuralApiServer::new(temp.path(), "test_family", temp.path().join("neural.sock"))
+        std::fs::create_dir_all(temp.path()).expect("create graphs dir");
+        let server =
+            NeuralApiServer::new(temp.path(), "test_family", temp.path().join("neural.sock"));
+        (server, temp)
     }
 
     #[tokio::test]
     async fn test_handle_request_unknown_method() {
-        let server = create_test_server();
+        let (server, _temp) = create_test_server();
         let req = r#"{"jsonrpc":"2.0","method":"nonexistent.method","id":1}"#;
         let result = server.handle_request(req).await.expect("should not error");
         assert_eq!(result["jsonrpc"], "2.0");
@@ -303,7 +310,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_request_invalid_json() {
-        let server = create_test_server();
+        let (server, _temp) = create_test_server();
         let err = server
             .handle_request("{broken")
             .await
@@ -313,7 +320,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_request_mesh_method_invalid_format_single_part() {
-        let server = create_test_server();
+        let (server, _temp) = create_test_server();
         let req = r#"{"jsonrpc":"2.0","method":"mesh","id":2}"#;
         let result = server.handle_request(req).await.expect("should not error");
         assert_eq!(result["error"]["code"], -32601);
@@ -325,7 +332,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_request_mesh_method_invalid_format_three_parts() {
-        let server = create_test_server();
+        let (server, _temp) = create_test_server();
         let req = r#"{"jsonrpc":"2.0","method":"a.b.c","id":3}"#;
         let result = server.handle_request(req).await.expect("should not error");
         assert_eq!(result["error"]["code"], -32601);
@@ -333,7 +340,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_request_empty_method() {
-        let server = create_test_server();
+        let (server, _temp) = create_test_server();
         let req = r#"{"jsonrpc":"2.0","method":"","id":4}"#;
         let result = server.handle_request(req).await.expect("should not error");
         assert_eq!(result["error"]["code"], -32601);
@@ -341,11 +348,172 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_request_method_not_found_response_structure() {
-        let server = create_test_server();
+        let (server, _temp) = create_test_server();
         let req = r#"{"jsonrpc":"2.0","method":"foo.bar.baz","id":99}"#;
         let result = server.handle_request(req).await.expect("should not error");
         assert!(result.get("result").is_none());
         assert!(result.get("error").is_some());
         assert_eq!(result["id"], 99);
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_graph_list_route() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"graph.list","id":10}"#;
+        let result = server.handle_request(req).await.expect("should not error");
+        assert_eq!(result["jsonrpc"], "2.0");
+        assert!(result.get("result").is_some());
+        assert!(result.get("error").is_none());
+        assert_eq!(result["id"], 10);
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_neural_api_list_graphs_alias() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"neural_api.list_graphs","id":11}"#;
+        let result = server.handle_request(req).await.expect("should not error");
+        assert!(result.get("result").is_some());
+        assert_eq!(result["id"], 11);
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_topology_get_route() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"topology.get","id":12}"#;
+        let result = server.handle_request(req).await.expect("should not error");
+        assert!(result.get("result").is_some());
+        assert_eq!(result["id"], 12);
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_lifecycle_status_route() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"lifecycle.status","id":13}"#;
+        let result = server.handle_request(req).await.expect("should not error");
+        assert!(result.get("result").is_some());
+        assert_eq!(result["id"], 13);
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_capability_list_route() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"capability.list","id":14}"#;
+        let result = server.handle_request(req).await.expect("should not error");
+        assert!(result.get("result").is_some());
+        assert_eq!(result["id"], 14);
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_niche_list_route() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"niche.list","id":15}"#;
+        let result = server.handle_request(req).await.expect("should not error");
+        assert!(result.get("result").is_some());
+        assert_eq!(result["id"], 15);
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_protocol_status_route() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"protocol.status","id":16}"#;
+        let result = server.handle_request(req).await.expect("should not error");
+        assert!(result.get("result").is_some());
+        assert_eq!(result["id"], 16);
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_missing_id() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"graph.list"}"#;
+        let err = server
+            .handle_request(req)
+            .await
+            .expect_err("missing id should fail");
+        assert!(
+            err.to_string().contains("parse") || err.to_string().contains("missing"),
+            "expected parse/missing error: {}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_mesh_status_route_dispatches() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"mesh.status","params":{},"id":24}"#;
+        // mesh capability not registered in test server - handler returns Err
+        let result = server.handle_request(req).await;
+        assert!(
+            result.is_err()
+                || result
+                    .as_ref()
+                    .map(|r| r.get("result").is_some())
+                    .unwrap_or(false)
+        );
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_mesh_find_path_route_dispatches() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"mesh.find_path","params":{},"id":25}"#;
+        let result = server.handle_request(req).await;
+        assert!(
+            result.is_err()
+                || result
+                    .as_ref()
+                    .map(|r| r.get("result").is_some())
+                    .unwrap_or(false)
+        );
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_capability_register_route() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"capability.register","params":{"capability":"encryption","primal":"beardog","socket":"/tmp/beardog.sock"},"id":28}"#;
+        let result = server.handle_request(req).await.expect("should not error");
+        assert!(result.get("result").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_capability_list_translations_route() {
+        let (server, _temp) = create_test_server();
+        let req =
+            r#"{"jsonrpc":"2.0","method":"capability.list_translations","params":{},"id":31}"#;
+        let result = server.handle_request(req).await.expect("should not error");
+        assert!(result.get("result").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_capability_discover_missing_params_returns_err() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"capability.discover","params":{},"id":40}"#;
+        let result = server.handle_request(req).await;
+        assert!(
+            result.is_err(),
+            "missing capability should propagate handler error"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_graph_get_missing_params_returns_err() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"graph.get","params":{},"id":41}"#;
+        let result = server.handle_request(req).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_graph_status_route_dispatches() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"graph.status","params":{"execution_id":"nonexistent"},"id":43}"#;
+        // Execution not found returns Err - route dispatch is what we test
+        let _ = server.handle_request(req).await;
+    }
+
+    #[tokio::test]
+    async fn test_handle_request_capability_metrics_route() {
+        let (server, _temp) = create_test_server();
+        let req = r#"{"jsonrpc":"2.0","method":"capability.metrics","params":{},"id":44}"#;
+        let result = server.handle_request(req).await.expect("should not error");
+        assert!(result.get("result").is_some());
     }
 }

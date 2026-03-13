@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! TUI Dashboard Types for Ecosystem Interface
 //!
 //! Comprehensive types for BiomeOS as the human/AI interface to a headless, AI-first ecosystem.

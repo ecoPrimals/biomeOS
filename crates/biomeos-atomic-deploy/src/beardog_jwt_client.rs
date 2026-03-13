@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! BearDog JWT Client for Neural API
 //!
 //! Provides orchestrator-managed JWT secret provisioning from BearDog to primals.
@@ -16,17 +19,17 @@ use tracing::{debug, info, warn};
 #[derive(Debug, Deserialize)]
 struct JwtSecretResult {
     secret: String,
-    #[allow(dead_code)] // Parsed from BearDog JWT response wire format
+    #[allow(dead_code)] // wire format — deserialized but not read directly
     purpose: String,
-    #[allow(dead_code)] // Parsed from BearDog JWT response wire format
+    #[allow(dead_code)] // wire format — deserialized but not read directly
     strength: String,
-    #[allow(dead_code)] // Parsed from BearDog JWT response wire format
+    #[allow(dead_code)] // wire format — deserialized but not read directly
     byte_length: usize,
     #[serde(default)]
-    #[allow(dead_code)] // Parsed from BearDog JWT response wire format
+    #[allow(dead_code)] // wire format — deserialized but not read directly
     encoded_length: usize,
     #[serde(default)]
-    #[allow(dead_code)] // Parsed from BearDog JWT response wire format
+    #[allow(dead_code)] // wire format — deserialized but not read directly
     algorithm: String,
 }
 

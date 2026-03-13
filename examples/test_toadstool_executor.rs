@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Quick ToadStool Test - Verify Neural API executor works
 //!
 //! Since ToadStool already has a properly configured Unix socket,

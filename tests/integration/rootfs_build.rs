@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Integration test for rootfs building
 //!
 //! These tests require sudo and external tools (qemu-img, qemu-nbd, mkfs.ext4)

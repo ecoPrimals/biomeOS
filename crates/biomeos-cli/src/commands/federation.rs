@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! CLI commands for sub-federation management
 
 use anyhow::{Context, Result};
@@ -11,6 +14,28 @@ fn default_federation_config_dir() -> PathBuf {
     biomeos_types::SystemPaths::new_lazy()
         .data_dir()
         .join("federation")
+}
+
+/// Parse comma-separated members string (testable pure function)
+#[allow(dead_code)] // Used by tests
+pub(crate) fn parse_members_from_comma_separated(s: &str) -> Vec<String> {
+    s.split(',').map(|s| s.trim().to_string()).collect()
+}
+
+/// Parse isolation level string to enum (testable pure function)
+#[allow(dead_code)] // Used by tests
+pub(crate) fn parse_isolation_level(s: &str) -> Result<IsolationLevel> {
+    match s.to_lowercase().as_str() {
+        "none" => Ok(IsolationLevel::None),
+        "low" => Ok(IsolationLevel::Low),
+        "medium" => Ok(IsolationLevel::Medium),
+        "high" => Ok(IsolationLevel::High),
+        "critical" => Ok(IsolationLevel::Critical),
+        _ => Err(anyhow::anyhow!(
+            "Invalid isolation level: {}. Must be one of: none, low, medium, high, critical",
+            s
+        )),
+    }
 }
 
 /// Arguments for creating a sub-federation
@@ -98,11 +123,7 @@ pub async fn handle_federation_create_subfed(args: &CreateSubfedArgs) -> Result<
     info!("Creating sub-federation: {}", args.name);
 
     // Parse members
-    let members: Vec<String> = args
-        .members
-        .split(',')
-        .map(|s| s.trim().to_string())
-        .collect();
+    let members = parse_members_from_comma_separated(&args.members);
 
     // Parse capabilities
     let capabilities: Vec<Capability> = args
@@ -113,19 +134,7 @@ pub async fn handle_federation_create_subfed(args: &CreateSubfedArgs) -> Result<
     let capability_set = CapabilitySet::from_vec(capabilities);
 
     // Parse isolation level
-    let isolation_level = match args.isolation.to_lowercase().as_str() {
-        "none" => IsolationLevel::None,
-        "low" => IsolationLevel::Low,
-        "medium" => IsolationLevel::Medium,
-        "high" => IsolationLevel::High,
-        "critical" => IsolationLevel::Critical,
-        _ => {
-            return Err(anyhow::anyhow!(
-                "Invalid isolation level: {}. Must be one of: none, low, medium, high, critical",
-                args.isolation
-            ));
-        }
-    };
+    let isolation_level = parse_isolation_level(&args.isolation)?;
 
     // Create manager
     let mut manager = SubFederationManager::new(args.config_dir.clone());
@@ -324,9 +333,45 @@ pub(crate) fn truncate(s: &str, max: usize) -> String {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use biomeos_federation::capability::{Capability, CapabilitySet};
+    use biomeos_federation::subfederation::IsolationLevel;
+
+    #[test]
+    fn test_parse_isolation_level() {
+        assert!(matches!(
+            parse_isolation_level("none").unwrap(),
+            IsolationLevel::None
+        ));
+        assert!(matches!(
+            parse_isolation_level("low").unwrap(),
+            IsolationLevel::Low
+        ));
+        assert!(matches!(
+            parse_isolation_level("LOW").unwrap(),
+            IsolationLevel::Low
+        ));
+        assert!(matches!(
+            parse_isolation_level("medium").unwrap(),
+            IsolationLevel::Medium
+        ));
+        assert!(matches!(
+            parse_isolation_level("high").unwrap(),
+            IsolationLevel::High
+        ));
+        assert!(matches!(
+            parse_isolation_level("critical").unwrap(),
+            IsolationLevel::Critical
+        ));
+    }
+
+    #[test]
+    fn test_parse_isolation_level_invalid() {
+        assert!(parse_isolation_level("invalid").is_err());
+        assert!(parse_isolation_level("").is_err());
+    }
 
     #[test]
     fn test_format_capabilities() {
@@ -364,5 +409,43 @@ mod tests {
     fn test_truncate_short_max() {
         // When max=3, prefix length is 0 (max-3), so result is "..."
         assert_eq!(truncate("hello", 3), "...");
+    }
+
+    #[test]
+    fn test_truncate_max_zero() {
+        // max=0: saturating_sub(3)=0, so "..."
+        assert_eq!(truncate("hello", 0), "...");
+    }
+
+    #[test]
+    fn test_truncate_empty_string() {
+        // Empty string is always returned as-is when len <= max
+        assert_eq!(truncate("", 10), "");
+        // max=0: len 0 <= 0, so return as-is
+        assert_eq!(truncate("", 0), "");
+    }
+
+    #[test]
+    fn test_parse_members_from_comma_separated() {
+        assert_eq!(
+            parse_members_from_comma_separated("a,b,c"),
+            vec!["a", "b", "c"]
+        );
+        assert_eq!(
+            parse_members_from_comma_separated("node-1, node-2 , node-3"),
+            vec!["node-1", "node-2", "node-3"]
+        );
+        assert_eq!(parse_members_from_comma_separated("single"), vec!["single"]);
+        assert_eq!(parse_members_from_comma_separated(""), vec![""]);
+    }
+
+    #[test]
+    fn test_parse_isolation_level_error_message() {
+        let err = parse_isolation_level("invalid").unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("Invalid isolation level"));
+        assert!(msg.contains("invalid"));
+        assert!(msg.contains("none"));
+        assert!(msg.contains("critical"));
     }
 }

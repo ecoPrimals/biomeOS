@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Capability-based primal handlers
 //!
 //! This module contains the handlers for capability-based primal operations,
@@ -12,9 +15,9 @@
 //!
 //! ## Module structure
 //!
-//! - [`discovery`] - Capability resolution and binary discovery
-//! - [`primal_start`] - Capability-based primal start handler
-//! - [`health`] - Capability-based health check handler
+//! - `discovery` - Capability resolution and binary discovery
+//! - `primal_start` - Capability-based primal start handler
+//! - `health` - Capability-based health check handler
 //!
 //! ## Dispatch
 //!

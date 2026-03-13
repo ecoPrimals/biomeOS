@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Encryption and key management configuration.
 //!
 //! Contains configuration for data-at-rest encryption, key storage,

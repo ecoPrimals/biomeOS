@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Socket-Based Provider Implementations
 //!
 //! DEEP DEBT REFACTORING (Feb 7, 2026):
@@ -471,6 +474,7 @@ impl RoutingProvider for SocketRoutingProvider {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 
@@ -485,5 +489,47 @@ mod tests {
         let client = SocketRpcClient::new(PathBuf::from("/tmp/test.sock"))
             .with_timeout(Duration::from_secs(30));
         assert_eq!(client.timeout, Duration::from_secs(30));
+    }
+
+    #[test]
+    fn test_socket_security_provider_new() {
+        let provider = SocketSecurityProvider::new(PathBuf::from("/run/beardog.sock"));
+        assert_eq!(
+            provider.rpc.socket_path(),
+            &PathBuf::from("/run/beardog.sock")
+        );
+    }
+
+    #[test]
+    fn test_socket_discovery_provider_new() {
+        let provider = SocketDiscoveryProvider::new(PathBuf::from("/run/songbird.sock"));
+        assert_eq!(
+            provider.rpc.socket_path(),
+            &PathBuf::from("/run/songbird.sock")
+        );
+    }
+
+    #[test]
+    fn test_socket_routing_provider_new() {
+        let provider = SocketRoutingProvider::new(PathBuf::from("/run/relay.sock"));
+        assert_eq!(
+            provider.rpc.socket_path(),
+            &PathBuf::from("/run/relay.sock")
+        );
+    }
+
+    #[test]
+    fn test_jsonrpc_request_format() {
+        let request = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "test.method",
+            "params": {"key": "value"}
+        });
+        let bytes = serde_json::to_vec(&request).unwrap();
+        let parsed: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(parsed["jsonrpc"], "2.0");
+        assert_eq!(parsed["method"], "test.method");
+        assert_eq!(parsed["params"]["key"], "value");
     }
 }

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 // Nest Atomic E2E Tests
 // Tests for Tower + NestGate + Squirrel integration
 

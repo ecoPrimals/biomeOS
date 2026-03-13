@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Chimera definition types
 //!
 //! Defines the structure for chimera YAML definitions.

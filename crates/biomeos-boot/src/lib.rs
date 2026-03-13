@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! BiomeOS Boot Infrastructure
 //!
 //! Pure Rust boot system for BiomeOS. Provides:
@@ -9,7 +12,7 @@
 //!
 //! Zero bash scripts. Zero external dependencies (except kernel). 100% Rust.
 
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 #![warn(missing_docs)]
 #![warn(clippy::unwrap_used)]
 #![warn(clippy::expect_used)]

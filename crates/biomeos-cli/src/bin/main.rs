@@ -1,7 +1,66 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 use anyhow::Result;
 use biomeos_cli::{commands::*, CliUtils, OutputFormat};
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
+
+/// Parsed AI intent from natural language query (pure, testable)
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum AiIntent {
+    Status,
+    Health,
+    Deploy,
+    Discover,
+    Unknown,
+}
+
+/// Parse AI intent from query string (pure, testable)
+pub(crate) fn parse_ai_intent(query: &str) -> AiIntent {
+    let q = query.to_lowercase();
+    if q.contains("health") {
+        AiIntent::Health
+    } else if q.contains("discover") {
+        AiIntent::Discover
+    } else if q.contains("deploy") {
+        AiIntent::Deploy
+    } else if q.contains("status") {
+        AiIntent::Status
+    } else {
+        AiIntent::Unknown
+    }
+}
+
+/// Format AI response lines for intent (pure, testable)
+pub(crate) fn format_ai_response(intent: AiIntent) -> Vec<String> {
+    match intent {
+        AiIntent::Health => vec![
+            "🏥 Health Status Analysis".to_string(),
+            "• Checking system health via Universal BiomeOS Manager...".to_string(),
+            "• Aggregating health data from discovered primals...".to_string(),
+            "• Delegating detailed health checks to Songbird discovery...".to_string(),
+        ],
+        AiIntent::Discover => vec![
+            "🔍 Primal Discovery".to_string(),
+            "• Initiating capability-based discovery...".to_string(),
+            "• Scanning for available primals in ecosystem...".to_string(),
+            "• Using Songbird service discovery for coordination...".to_string(),
+        ],
+        AiIntent::Deploy => vec![
+            "🚀 Deployment Analysis".to_string(),
+            "• Analyzing biome.yaml manifest...".to_string(),
+            "• Delegating manifest parsing to Toadstool...".to_string(),
+            "• Coordinating deployment via Universal Adapter...".to_string(),
+        ],
+        AiIntent::Status | AiIntent::Unknown => vec![
+            "💡 AI Suggestions".to_string(),
+            "• Try: 'biomeos ai \"health status\"' for system health".to_string(),
+            "• Try: 'biomeos ai \"discover primals\"' for discovery".to_string(),
+            "• Try: 'biomeos ai \"deploy help\"' for deployment guidance".to_string(),
+        ],
+    }
+}
 
 /// Chimera subcommands
 #[derive(Subcommand)]
@@ -613,32 +672,10 @@ async fn handle_ai_command(query: String, context: Option<String>) -> anyhow::Re
         println!("{} {}", "Context:".bright_white().bold(), ctx.bright_blue());
     }
 
-    // Basic AI command processing - integrated with universal adapter architecture
-    match query.to_lowercase().as_str() {
-        q if q.contains("health") => {
-            println!("\n{}", "🏥 Health Status Analysis".bright_green().bold());
-            println!("• Checking system health via Universal BiomeOS Manager...");
-            println!("• Aggregating health data from discovered primals...");
-            println!("• Delegating detailed health checks to Songbird discovery...");
-        }
-        q if q.contains("discover") => {
-            println!("\n{}", "🔍 Primal Discovery".bright_blue().bold());
-            println!("• Initiating capability-based discovery...");
-            println!("• Scanning for available primals in ecosystem...");
-            println!("• Using Songbird service discovery for coordination...");
-        }
-        q if q.contains("deploy") => {
-            println!("\n{}", "🚀 Deployment Analysis".bright_magenta().bold());
-            println!("• Analyzing biome.yaml manifest...");
-            println!("• Delegating manifest parsing to Toadstool...");
-            println!("• Coordinating deployment via Universal Adapter...");
-        }
-        _ => {
-            println!("\n{}", "💡 AI Suggestions".bright_yellow().bold());
-            println!("• Try: 'biomeos ai \"health status\"' for system health");
-            println!("• Try: 'biomeos ai \"discover primals\"' for discovery");
-            println!("• Try: 'biomeos ai \"deploy help\"' for deployment guidance");
-        }
+    let intent = parse_ai_intent(&query);
+    let lines = format_ai_response(intent);
+    for line in lines {
+        println!("\n{}", line);
     }
 
     println!(
@@ -646,4 +683,50 @@ async fn handle_ai_command(query: String, context: Option<String>) -> anyhow::Re
         "✨ BiomeOS AI is continuously learning from the ecosystem!".bright_cyan()
     );
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+
+    use super::*;
+
+    #[test]
+    fn test_parse_ai_intent_health() {
+        assert_eq!(parse_ai_intent("health status"), AiIntent::Health);
+        assert_eq!(parse_ai_intent("check health"), AiIntent::Health);
+    }
+
+    #[test]
+    fn test_parse_ai_intent_discover() {
+        assert_eq!(parse_ai_intent("discover primals"), AiIntent::Discover);
+    }
+
+    #[test]
+    fn test_parse_ai_intent_deploy() {
+        assert_eq!(parse_ai_intent("deploy help"), AiIntent::Deploy);
+    }
+
+    #[test]
+    fn test_parse_ai_intent_status() {
+        assert_eq!(parse_ai_intent("status"), AiIntent::Status);
+    }
+
+    #[test]
+    fn test_parse_ai_intent_unknown() {
+        assert_eq!(parse_ai_intent("random query"), AiIntent::Unknown);
+    }
+
+    #[test]
+    fn test_format_ai_response_health() {
+        let lines = format_ai_response(AiIntent::Health);
+        assert!(!lines.is_empty());
+        assert!(lines[0].contains("Health"));
+    }
+
+    #[test]
+    fn test_format_ai_response_unknown() {
+        let lines = format_ai_response(AiIntent::Unknown);
+        assert!(lines.iter().any(|l| l.contains("Suggestions")));
+    }
 }

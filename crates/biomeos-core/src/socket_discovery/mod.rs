@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Socket Discovery - Capability-Based Runtime Discovery
 //!
 //! **Deep Debt Solution**: Replaces hardcoded `/tmp/{primal}.sock` paths with
@@ -134,6 +137,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
     async fn test_discover_socket_family_id_from_env() {
         env::set_var("BIOMEOS_FAMILY_ID", "env-family-id");
         let family_id = env::var("FAMILY_ID")

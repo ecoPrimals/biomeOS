@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Simplified unit tests for SporeVerifier
 //!
 //! Tests the actual public API of SporeVerifier

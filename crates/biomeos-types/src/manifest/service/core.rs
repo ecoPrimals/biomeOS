@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Core Service Types
 //!
 //! This module contains the core service specification types including ServiceSpec,

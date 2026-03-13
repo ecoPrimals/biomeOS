@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Genome binary discovery and path resolution.
 //!
 //! Locates the `wateringHole/genomeBin/` directory for genome distribution.

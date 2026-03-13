@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Test Assertions
 //!
 //! Custom assertions for BiomeOS testing that provide better error messages.

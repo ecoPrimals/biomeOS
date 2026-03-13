@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Adaptive HTTP Client Infrastructure (DEPRECATED - Use atomic_client instead!)
 //!
 //! ⚠️ WARNING: This module uses HTTP transport with C dependencies (reqwest->openssl-sys).

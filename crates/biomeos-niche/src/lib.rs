@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! # `BiomeOS` Niche System
 //!
 //! Niches are **biomes** - complete environments where primals and chimeras
@@ -19,7 +22,7 @@
 //! └─────────────────────────────────────────────────────────────────┘
 //! ```
 
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 #![warn(missing_docs)]
 #![warn(clippy::all)]
 #![warn(clippy::pedantic)]

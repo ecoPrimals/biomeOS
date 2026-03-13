@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 // Unit tests for manifest types
 //
 // Tests BinaryManifest and SporeManifest serialization, deserialization,

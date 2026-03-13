@@ -1,11 +1,10 @@
-// biomeOS HTTP Client - Tower Atomic Integration
-//
-// Provides HTTP/HTTPS capabilities for biomeOS via Songbird delegation
-// Used for:
-// - Fetching binaries from HTTP servers
-// - Checking for updates (GitHub releases, etc.)
-// - Niche deployment (git clone over HTTP)
-// - Health checks of remote services
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
+//! HTTP client for Tower Atomic integration.
+//!
+//! Provides HTTP/HTTPS via Songbird delegation: fetching binaries, update checks,
+//! niche deployment (git clone), and remote health checks.
 
 use anyhow::{Context, Result};
 use serde::Deserialize;
@@ -27,8 +26,11 @@ pub struct BiomeOsHttpClient {
 /// HTTP response from Songbird
 #[derive(Debug, Deserialize)]
 pub struct HttpResponse {
+    /// HTTP status code (200, 404, etc.)
     pub status: u16,
+    /// Response headers
     pub headers: HashMap<String, String>,
+    /// Response body (parsed JSON)
     pub body: Value,
 }
 
@@ -226,7 +228,28 @@ impl Default for BiomeOsHttpClient {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used)]
+
     use super::*;
+    use tempfile::tempdir;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::UnixListener;
+
+    async fn spawn_mock_server(response: &str) -> (tempfile::TempDir, std::path::PathBuf) {
+        let dir = tempdir().unwrap();
+        let socket_path = dir.path().join("mock.sock");
+        let path = socket_path.clone();
+        let resp = response.to_string();
+        tokio::spawn(async move {
+            let listener = UnixListener::bind(&path).unwrap();
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let mut buf = vec![0u8; 4096];
+            let _ = stream.read(&mut buf).await;
+            stream.write_all(resp.as_bytes()).await.unwrap();
+        });
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        (dir, socket_path)
+    }
 
     #[test]
     fn test_client_creation() {
@@ -406,6 +429,112 @@ mod tests {
         // This test documents the contract: Err => false
         let client = BiomeOsHttpClient::with_socket("/tmp/nonexistent-http-test.sock");
         let reachable = client.is_reachable("http://example.com/404").await;
+        assert!(!reachable);
+    }
+
+    #[tokio::test]
+    async fn test_get_rpc_error_returns_err() {
+        let rpc_error =
+            r#"{"jsonrpc":"2.0","error":{"code":-1,"message":"Songbird unavailable"},"id":1}"#;
+        let (_dir, socket_path) = spawn_mock_server(rpc_error).await;
+
+        let client = BiomeOsHttpClient::with_socket(socket_path.to_string_lossy().as_ref());
+        let result = client.get("http://example.com").await;
+
+        let err = result.expect_err("get should fail on RPC error");
+        assert!(err.to_string().contains("Songbird RPC error"));
+        assert!(err.to_string().contains("Songbird unavailable"));
+    }
+
+    #[tokio::test]
+    async fn test_get_no_result_returns_err() {
+        let no_result = r#"{"jsonrpc":"2.0","id":1}"#;
+        let (_dir, socket_path) = spawn_mock_server(no_result).await;
+
+        let client = BiomeOsHttpClient::with_socket(socket_path.to_string_lossy().as_ref());
+        let result = client.get("http://example.com").await;
+
+        let err = result.expect_err("get should fail when no result");
+        assert!(err.to_string().contains("No result"));
+    }
+
+    #[tokio::test]
+    async fn test_get_body_not_string_returns_err() {
+        let body_object = r#"{"jsonrpc":"2.0","result":{"status":200,"headers":{},"body":{"key":"value"}},"id":1}"#;
+        let (_dir, socket_path) = spawn_mock_server(body_object).await;
+
+        let client = BiomeOsHttpClient::with_socket(socket_path.to_string_lossy().as_ref());
+        let result = client.get("http://example.com").await;
+
+        let err = result.expect_err("get should fail when body is not string");
+        assert!(err.to_string().contains("Response body is not a string"));
+    }
+
+    #[tokio::test]
+    async fn test_get_invalid_json_response_returns_err() {
+        let invalid_json = "not valid json";
+        let (_dir, socket_path) = spawn_mock_server(invalid_json).await;
+
+        let client = BiomeOsHttpClient::with_socket(socket_path.to_string_lossy().as_ref());
+        let result = client.get("http://example.com").await;
+
+        let err = result.expect_err("get should fail on invalid JSON");
+        assert!(
+            err.to_string().contains("parse") || err.to_string().contains("JSON"),
+            "Error should mention parse/JSON: {}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    async fn test_get_success_returns_body() {
+        let success =
+            r#"{"jsonrpc":"2.0","result":{"status":200,"headers":{},"body":"hello world"},"id":1}"#;
+        let (_dir, socket_path) = spawn_mock_server(success).await;
+
+        let client = BiomeOsHttpClient::with_socket(socket_path.to_string_lossy().as_ref());
+        let result = client.get("http://example.com").await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "hello world");
+    }
+
+    #[tokio::test]
+    async fn test_post_body_not_string_returns_err() {
+        let body_object =
+            r#"{"jsonrpc":"2.0","result":{"status":200,"headers":{},"body":[1,2,3]},"id":1}"#;
+        let (_dir, socket_path) = spawn_mock_server(body_object).await;
+
+        let client = BiomeOsHttpClient::with_socket(socket_path.to_string_lossy().as_ref());
+        let result = client
+            .post("http://example.com", serde_json::json!({"x": 1}))
+            .await;
+
+        let err = result.expect_err("post should fail when body is not string");
+        assert!(err.to_string().contains("Response body is not a string"));
+    }
+
+    #[tokio::test]
+    async fn test_is_reachable_returns_true_on_2xx() {
+        let success =
+            r#"{"jsonrpc":"2.0","result":{"status":200,"headers":{},"body":"ok"},"id":1}"#;
+        let (_dir, socket_path) = spawn_mock_server(success).await;
+
+        let client = BiomeOsHttpClient::with_socket(socket_path.to_string_lossy().as_ref());
+        let reachable = client.is_reachable("http://example.com").await;
+
+        assert!(reachable);
+    }
+
+    #[tokio::test]
+    async fn test_is_reachable_returns_false_on_4xx_status() {
+        let four_oh_four =
+            r#"{"jsonrpc":"2.0","result":{"status":404,"headers":{},"body":"not found"},"id":1}"#;
+        let (_dir, socket_path) = spawn_mock_server(four_oh_four).await;
+
+        let client = BiomeOsHttpClient::with_socket(socket_path.to_string_lossy().as_ref());
+        let reachable = client.is_reachable("http://example.com/404").await;
+
         assert!(!reachable);
     }
 }

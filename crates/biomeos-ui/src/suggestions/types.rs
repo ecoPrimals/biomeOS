@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! AI suggestion types — pure data structures for suggestion engine.
 
 use serde::{Deserialize, Serialize};

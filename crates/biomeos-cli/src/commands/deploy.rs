@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Deploy and Create Command Handlers
 //!
 //! Handles deployment operations including manifest deployment,
@@ -10,6 +13,73 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use super::utils::create_spinner;
+
+/// Maps deployment/creation status to (icon, message) for display.
+pub(crate) fn status_to_display(status: &str) -> (&'static str, &'static str) {
+    match status {
+        "created" => ("✅", "Successfully created"),
+        "planned" => ("📋", "Creation plan generated"),
+        "updated" => ("🔄", "Service updated"),
+        "error" => ("❌", "Creation failed"),
+        _ => ("🔹", "Status unknown"),
+    }
+}
+
+/// Builds display lines for deployment/creation result.
+pub(crate) fn format_deployment_result(
+    result: &HashMap<String, Value>,
+    dry_run: bool,
+) -> Vec<String> {
+    let mut lines = Vec::new();
+
+    let title = if dry_run {
+        "Creation Plan"
+    } else {
+        "Creation Results"
+    };
+    lines.push(format!("📋 {}:", title));
+
+    if let Some(service_name) = result.get("service_name") {
+        lines.push(format!("🌟 Service: {}", service_name));
+    }
+
+    if let Some(service_id) = result.get("service_id") {
+        lines.push(format!("🆔 ID: {}", service_id));
+    }
+
+    if let Some(status) = result.get("status") {
+        let status_str = status.as_str().unwrap_or("");
+        let (icon, message) = status_to_display(status_str);
+        lines.push(format!("{} Status: {}", icon, message));
+    }
+
+    if let Some(endpoint) = result.get("endpoint") {
+        lines.push(format!("🌐 Endpoint: {}", endpoint));
+    }
+
+    if let Some(capabilities) = result.get("capabilities").and_then(|c| c.as_array()) {
+        let caps_str = capabilities
+            .iter()
+            .filter_map(|c| c.as_str())
+            .collect::<Vec<_>>()
+            .join(", ");
+        lines.push(format!("⚡ Capabilities: {}", caps_str));
+    }
+
+    if dry_run {
+        if let Some(plan) = result.get("execution_plan") {
+            lines.push("\n📝 Execution Plan:".to_string());
+            if let Ok(pretty) = serde_json::to_string_pretty(plan) {
+                for line in pretty.lines() {
+                    lines.push(format!("   {}", line));
+                }
+            }
+        }
+    }
+
+    lines.push(String::new());
+    lines
+}
 
 /// Handle deployment command
 pub async fn handle_deploy(
@@ -116,7 +186,7 @@ pub async fn handle_create(
 
     spinner.finish_with_message("✅ Service operation completed");
 
-    display_create_result(&result, dry_run).await?;
+    display_create_result(&result, dry_run);
 
     Ok(())
 }
@@ -146,61 +216,88 @@ pub async fn handle_deploy_graph_direct(_graph_path: PathBuf, validate_only: boo
     );
 }
 
-/// Display service creation results
-async fn display_create_result(result: &HashMap<String, Value>, dry_run: bool) -> Result<()> {
-    let title = if dry_run {
-        "Creation Plan"
-    } else {
-        "Creation Results"
-    };
-
-    println!("📋 {}:", title);
-
-    if let Some(service_name) = result.get("service_name") {
-        println!("🌟 Service: {}", service_name);
+/// Display service creation results (thin wrapper)
+fn display_create_result(result: &HashMap<String, Value>, dry_run: bool) {
+    let lines = format_deployment_result(result, dry_run);
+    for line in lines {
+        println!("{line}");
     }
+}
 
-    if let Some(service_id) = result.get("service_id") {
-        println!("🆔 ID: {}", service_id);
-    }
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
 
-    if let Some(status) = result.get("status") {
-        let (icon, message) = match status.as_str() {
-            Some("created") => ("✅", "Successfully created"),
-            Some("planned") => ("📋", "Creation plan generated"),
-            Some("updated") => ("🔄", "Service updated"),
-            Some("error") => ("❌", "Creation failed"),
-            _ => ("🔹", "Status unknown"),
-        };
-        println!("{} Status: {}", icon, message);
-    }
-
-    if let Some(endpoint) = result.get("endpoint") {
-        println!("🌐 Endpoint: {}", endpoint);
-    }
-
-    if let Some(capabilities) = result.get("capabilities").and_then(|c| c.as_array()) {
-        println!(
-            "⚡ Capabilities: {}",
-            capabilities
-                .iter()
-                .filter_map(|c| c.as_str())
-                .collect::<Vec<_>>()
-                .join(", ")
+    #[test]
+    fn test_status_to_display_all_variants() {
+        assert_eq!(status_to_display("created"), ("✅", "Successfully created"));
+        assert_eq!(
+            status_to_display("planned"),
+            ("📋", "Creation plan generated")
         );
+        assert_eq!(status_to_display("updated"), ("🔄", "Service updated"));
+        assert_eq!(status_to_display("error"), ("❌", "Creation failed"));
+        assert_eq!(status_to_display("unknown"), ("🔹", "Status unknown"));
+        assert_eq!(status_to_display(""), ("🔹", "Status unknown"));
     }
 
-    if dry_run {
-        if let Some(plan) = result.get("execution_plan") {
-            println!("\n📝 Execution Plan:");
-            if let Ok(pretty) = serde_json::to_string_pretty(plan) {
-                for line in pretty.lines() {
-                    println!("   {}", line);
-                }
-            }
-        }
+    #[test]
+    fn test_format_deployment_result_empty() {
+        let result = HashMap::new();
+        let lines = format_deployment_result(&result, false);
+        assert!(lines[0].contains("Creation Results"));
+        assert!(lines.last().is_some_and(|l| l.is_empty()));
     }
 
-    println!();
-    Ok(())
+    #[test]
+    fn test_format_deployment_result_with_status() {
+        let mut result = HashMap::new();
+        result.insert("status".to_string(), Value::String("created".to_string()));
+        result.insert(
+            "service_name".to_string(),
+            Value::String("mysvc".to_string()),
+        );
+        let lines = format_deployment_result(&result, false);
+        assert!(lines.iter().any(|l| l.contains("✅")));
+        assert!(lines.iter().any(|l| l.contains("Successfully created")));
+        assert!(lines.iter().any(|l| l.contains("mysvc")));
+    }
+
+    #[tokio::test]
+    async fn test_handle_graph_deploy_validate_only() {
+        // Deprecated path - validate_only returns Ok with deprecation message
+        let result = handle_deploy(
+            PathBuf::from("/nonexistent/niche.yaml"),
+            true, // validate_only
+            true, // use_graph
+            Some("test-graph".to_string()),
+        )
+        .await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_handle_graph_deploy_deprecated_error() {
+        // use_graph without validate_only should bail with deprecation
+        let result =
+            handle_deploy(PathBuf::from("/nonexistent/niche.yaml"), false, true, None).await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("DEPRECATED"));
+    }
+
+    #[tokio::test]
+    async fn test_handle_deploy_graph_direct_validate_only() {
+        let result = handle_deploy_graph_direct(PathBuf::from("/nonexistent"), true).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_handle_deploy_graph_direct_deprecated_error() {
+        let result = handle_deploy_graph_direct(PathBuf::from("/nonexistent"), false).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("DEPRECATED"));
+    }
 }

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Songbird Universal UI Integration Demo
 //!
 //! This demo connects to Songbird's orchestration endpoints and demonstrates

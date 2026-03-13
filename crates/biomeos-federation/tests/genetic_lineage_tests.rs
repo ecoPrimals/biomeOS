@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Comprehensive tests for genetic lineage verification
 //!
 //! **NOTE**: These tests require a running BearDog instance for lineage operations.

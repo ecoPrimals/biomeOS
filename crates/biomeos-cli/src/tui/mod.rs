@@ -1,7 +1,13 @@
-//! BiomeOS TUI Dashboard - Modular Structure
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
+//! BiomeOS TUI Dashboard — **DEPRECATED**
 //!
-//! This module provides a comprehensive terminal user interface for the BiomeOS ecosystem,
-//! organized into focused sub-modules for better maintainability.
+//! This module is superseded by petalTongue, the universal UI primal for the ecoPrimals
+//! ecosystem. It remains behind the `deprecated-tui` feature flag for backward compatibility
+//! only. New UI work should target petalTongue.
+//!
+//! Enable with: `cargo build -p biomeos-cli --features deprecated-tui`
 
 pub mod dashboard;
 pub mod events;

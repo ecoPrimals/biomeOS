@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Deployment graph types with compile-time validation.
 //!
 //! These types ensure that when a graph is loaded from TOML,

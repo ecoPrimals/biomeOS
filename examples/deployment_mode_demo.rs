@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Deployment Mode Detection Demo
 //!
 //! Demonstrates how biomeOS detects its deployment mode and adapts socket paths accordingly.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Node execution handlers for Neural API graphs
 //!
 //! This module contains handlers for each node type in the graph execution system.

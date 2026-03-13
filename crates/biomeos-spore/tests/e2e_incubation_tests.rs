@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! E2E tests for spore incubation workflow
 
 use biomeos_spore::incubation::SporeIncubator;

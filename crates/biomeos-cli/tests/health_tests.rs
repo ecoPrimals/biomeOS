@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Integration tests for biomeos-cli health commands
 //!
 //! EVOLVED (Jan 28, 2026): Concurrency-First Design

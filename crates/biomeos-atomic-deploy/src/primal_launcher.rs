@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Primal process launcher
 //!
 //! Modern Rust replacement for bash process management
@@ -14,9 +17,13 @@ use tracing::{debug, info};
 /// Primal instance information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PrimalInstance {
+    /// Primal name (e.g., beardog, songbird)
     pub primal_name: String,
+    /// Process ID of the spawned primal
     pub pid: u32,
+    /// Path to the tarpc/JSON-RPC Unix socket
     pub socket_path: PathBuf,
+    /// When the primal was started
     pub started_at: chrono::DateTime<chrono::Utc>,
 }
 

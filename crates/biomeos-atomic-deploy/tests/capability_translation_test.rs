@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Tests for capability translation socket communication
 //!
 //! **Concurrency-First Design**: Tests use proper synchronization (oneshot channels)

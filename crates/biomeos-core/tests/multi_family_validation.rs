@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Multi-family validation tests
 //!
 //! These tests prove that the biomeOS infrastructure works deterministically

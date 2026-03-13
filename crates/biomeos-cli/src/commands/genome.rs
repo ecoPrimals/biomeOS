@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Genome CLI Commands
 //!
 //! CLI interface for genomeBin operations.
@@ -6,6 +9,14 @@
 
 use anyhow::{Context, Result};
 use biomeos_genomebin_v3::{Arch, GenomeBin, GenomeBinBuilder, GenomeBinComposer};
+
+/// Extract genome name from binary path (defaults to "genome" if unparseable)
+pub fn extract_genome_name_from_path(path: &std::path::Path) -> String {
+    path.file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("genome")
+        .to_string()
+}
 
 /// Parse architecture string to Arch enum (testable pure function)
 pub fn parse_arch(arch: &str) -> Result<Arch> {
@@ -160,13 +171,9 @@ pub fn handle_genome_create(args: CreateArgs) -> Result<()> {
     let arch = parse_arch(&args.arch)?;
 
     // Determine genome name
-    let genome_name = args.name.unwrap_or_else(|| {
-        args.binary
-            .file_stem()
-            .and_then(|s| s.to_str())
-            .unwrap_or("genome")
-            .to_string()
-    });
+    let genome_name = args
+        .name
+        .unwrap_or_else(|| extract_genome_name_from_path(&args.binary));
 
     let mut builder = GenomeBinBuilder::new(&genome_name);
 
@@ -399,13 +406,7 @@ pub async fn execute(args: GenomeArgs) -> Result<()> {
             let arch_enum = parse_arch(&arch)?;
 
             // Determine genome name
-            let genome_name = name.unwrap_or_else(|| {
-                binary
-                    .file_stem()
-                    .and_then(|s| s.to_str())
-                    .unwrap_or("genome")
-                    .to_string()
-            });
+            let genome_name = name.unwrap_or_else(|| extract_genome_name_from_path(&binary));
 
             // Build genomeBin
             let mut builder = GenomeBinBuilder::new(&genome_name);
@@ -577,8 +578,36 @@ pub async fn execute(args: GenomeArgs) -> Result<()> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+    use std::path::{Path, PathBuf};
+
+    #[test]
+    fn test_extract_genome_name_from_path() {
+        assert_eq!(
+            extract_genome_name_from_path(Path::new("/usr/bin/beardog")),
+            "beardog"
+        );
+        assert_eq!(
+            extract_genome_name_from_path(Path::new("tower-x86_64")),
+            "tower-x86_64"
+        );
+        assert_eq!(extract_genome_name_from_path(Path::new("nest")), "nest");
+    }
+
+    #[test]
+    fn test_extract_genome_name_from_path_empty() {
+        assert_eq!(extract_genome_name_from_path(Path::new("")), "genome");
+    }
+
+    #[test]
+    fn test_extract_genome_name_from_path_dotfile() {
+        assert_eq!(
+            extract_genome_name_from_path(Path::new("/tmp/.hidden")),
+            ".hidden"
+        );
+    }
 
     #[test]
     fn test_parse_arch_valid() {
@@ -601,5 +630,33 @@ mod tests {
     fn test_parse_arch_empty() {
         let result = parse_arch("");
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_arch_case_sensitive() {
+        assert!(parse_arch("X86_64").is_err());
+        assert!(parse_arch("AARCH64").is_err());
+    }
+
+    #[test]
+    fn test_get_genome_storage_dir_with_xdg() {
+        let orig = std::env::var("XDG_DATA_HOME").ok();
+        std::env::set_var("XDG_DATA_HOME", "/tmp/xdg_test");
+        let dir = get_genome_storage_dir();
+        if let Some(ref o) = orig {
+            std::env::set_var("XDG_DATA_HOME", o);
+        } else {
+            std::env::remove_var("XDG_DATA_HOME");
+        }
+        assert_eq!(dir, PathBuf::from("/tmp/xdg_test/biomeos/genomes"));
+    }
+
+    #[test]
+    #[ignore = "modifies env vars; run with --ignored"]
+    fn test_get_genome_storage_dir_home_fallback() {
+        let _ = std::env::var("XDG_DATA_HOME").ok();
+        std::env::remove_var("XDG_DATA_HOME");
+        let dir = get_genome_storage_dir();
+        assert!(dir.to_string_lossy().contains("genomes"));
     }
 }

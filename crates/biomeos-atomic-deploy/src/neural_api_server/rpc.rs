@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! JSON-RPC 2.0 protocol types and utilities
 //!
 //! Provides types for parsing and handling JSON-RPC 2.0 requests and responses.
@@ -9,10 +12,14 @@ use serde_json::{json, Value};
 /// JSON-RPC 2.0 request structure
 #[derive(Debug, Deserialize)]
 pub struct JsonRpcRequest {
-    #[allow(dead_code)] // Part of JSON-RPC 2.0 wire format; required for deserialization
+    /// JSON-RPC version ("2.0")
+    #[allow(dead_code)] // wire format — deserialized but not read directly
     pub jsonrpc: String,
+    /// Method name to invoke
     pub method: String,
+    /// Optional parameters
     pub params: Option<Value>,
+    /// Request ID for response correlation
     pub id: u64,
 }
 

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! biomeOS Federation - Hierarchical trust and sub-federation management
 //!
 //! This module provides:
@@ -8,7 +11,7 @@
 //! - NUCLEUS secure discovery protocol (5-layer verification)
 
 #![warn(missing_docs)]
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 
 pub mod beardog_client;
 pub mod capability;

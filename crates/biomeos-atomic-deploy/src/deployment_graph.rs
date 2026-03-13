@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Neural API integration for deployment orchestration
 //!
 //! Makes deployment deterministic and manageable via graph execution
@@ -11,9 +14,13 @@ pub use crate::orchestrator::DeploymentResult;
 /// Neural API deployment graph node
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeploymentGraphNode {
+    /// Unique node identifier within the graph
     pub id: String,
+    /// Capability type (e.g., filesystem.check_exists, crypto.derive_seed)
     pub node_type: String,
+    /// Node IDs this node depends on (execution order)
     pub dependencies: Vec<String>,
+    /// Node-specific configuration as JSON
     pub config: serde_json::Value,
 }
 

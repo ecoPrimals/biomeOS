@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! USB device discovery and management
 //!
 //! Provides capability-based USB device discovery without hardcoding.
@@ -83,8 +86,8 @@ async fn probe_device(path: PathBuf) -> SporeResult<UsbDevice> {
             .await
         {
             Ok(Ok(st)) => {
-                let avail = st.blocks_available() as u64 * st.fragment_size() as u64;
-                let total = st.blocks() as u64 * st.fragment_size() as u64;
+                let avail = st.blocks_available() * st.fragment_size();
+                let total = st.blocks() * st.fragment_size();
                 (avail, total)
             }
             _ => {

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Lifecycle management handler for Neural API
 //!
 //! Exposes lifecycle management operations via JSON-RPC:

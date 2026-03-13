@@ -1,5 +1,7 @@
 # Gaming Tournament Recursive Architecture - Command Reference
 
+> **DEPRECATED** — This template references `biome deploy` and `biome status` which are not current biomeOS commands. Use `neural-deploy graphs/*.toml` and `biomeos nucleus start` for deployment. Retained as reference only.
+
 This document shows how to deploy and manage the recursive gaming tournament architecture with "ring of songbirds hosted on toadstools" for multi-region orchestration and dedicated physics computation.
 
 ## Architecture Overview

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Update Strategies and Deployment Types
 //!
 //! This module contains update strategy specifications including

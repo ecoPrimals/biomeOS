@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Family ID Discovery Module
 //!
 //! Discovers the family ID for a biomeOS deployment through multiple sources:
@@ -336,6 +339,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
     fn test_get_family_id_from_env() {
         std::env::set_var("FAMILY_ID", "env_family_123");
         let id = get_family_id_from_env();

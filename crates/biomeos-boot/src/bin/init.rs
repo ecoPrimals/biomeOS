@@ -1,4 +1,6 @@
-#!/usr/bin/env -S cargo +nightly -Zscript
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! BiomeOS Init - Pure Rust PID 1
 //!
 //! This is the first userspace process that runs when BiomeOS boots.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Auto-meld from Plasmodium collective state.
 //!
 //! Builds agents automatically from a Plasmodium collective snapshot,

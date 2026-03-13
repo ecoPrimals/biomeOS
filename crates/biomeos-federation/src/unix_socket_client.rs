@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Unix socket JSON-RPC client for BearDog
 //!
 //! Implements a simple JSON-RPC 2.0 client over Unix sockets.

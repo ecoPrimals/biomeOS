@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Connection Strategy Orchestrator
 //!
 //! Selects the optimal connection tier for reaching a peer, using the Neural API

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Device Manager - Ensure Required Devices Exist
 //!
 //! Creates and manages device nodes required for boot logging.
@@ -117,8 +120,10 @@ impl DeviceManager {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+    use std::path::Path;
 
     #[test]
     fn test_device_manager_safe() {
@@ -132,5 +137,21 @@ mod tests {
         // Verify device paths are correct
         assert_eq!("/dev/ttyS0".len(), 10);
         assert_eq!("/dev/tty0".len(), 9);
+    }
+
+    #[test]
+    fn test_serial_device_path() {
+        assert_eq!(Path::new("/dev/ttyS0").parent(), Some(Path::new("/dev")));
+    }
+
+    #[test]
+    fn test_vga_device_path() {
+        assert_eq!(Path::new("/dev/tty0").parent(), Some(Path::new("/dev")));
+    }
+
+    #[test]
+    fn test_console_symlink_target() {
+        let target = "/dev/ttyS0";
+        assert!(target.starts_with("/dev"));
     }
 }

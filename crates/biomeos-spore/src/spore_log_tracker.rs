@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Spore-specific log tracking module
 //!
 //! This module provides spore lifecycle event tracking, recording events like:

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Neural API JSON-RPC Server
 //!
 //! Exposes the Neural API graph orchestration engine via JSON-RPC 2.0 over Unix socket.

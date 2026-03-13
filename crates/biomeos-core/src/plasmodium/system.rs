@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! System probing — pure Rust OS-level information gathering.
 //!
 //! Reads `/proc` and `/sys` for GPU, RAM, CPU, and load information

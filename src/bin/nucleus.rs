@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! NUCLEUS Deployment Binary
 //!
 //! Pure Rust orchestration system for deploying complete biomeOS NUCLEUS.

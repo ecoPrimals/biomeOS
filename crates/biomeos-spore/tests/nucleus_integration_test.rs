@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Integration tests for plasmidBin deployment
 //!
 //! Tests the complete pipeline from plasmidBin/ to spore creation.

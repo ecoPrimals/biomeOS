@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Agent registry — in-memory store of active Plasmodium agents.
 
 use anyhow::Result;

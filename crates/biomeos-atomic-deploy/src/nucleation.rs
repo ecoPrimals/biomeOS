@@ -1,7 +1,9 @@
-// Socket Nucleation: Deterministic Socket Assignment
-//
-// Neural API as nucleation point - assigns sockets to primals
-// for coordinated, aligned startup (no race conditions)
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
+//! Socket nucleation: deterministic socket assignment for primals.
+//!
+//! Neural API assigns sockets for coordinated startup (no race conditions).
 
 use std::collections::HashMap;
 use std::path::PathBuf;

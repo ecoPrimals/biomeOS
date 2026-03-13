@@ -194,5 +194,7 @@ for diagnostics.
 ---
 
 **Status**: Production Ready
-**Updated**: March 11, 2026
-**Tests**: 3,148 passing sequential (71.47% region coverage)
+**Updated**: March 13, 2026
+**Tests**: 4,033 passing (75.36% region coverage)
+
+**Note**: `biomeos monitor dashboard` now redirects to petalTongue (TUI deprecated).

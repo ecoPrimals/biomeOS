@@ -1,6 +1,10 @@
-//! # Ecosystem Visualizations Example
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
+//! # Ecosystem Visualizations Example — DEPRECATED SCAFFOLD
 //!
-//! Demonstrates biomeOS ecosystem visualization using petalTongue.
+//! This example is a scaffold that prints to stdout rather than delegating to
+//! petalTongue. For real visualization, use the petalTongue primal directly.
 //!
 //! This example showcases:
 //! 1. Live USB Spore deployment lifecycle

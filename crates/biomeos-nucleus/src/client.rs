@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Unix socket JSON-RPC client and NUCLEUS coordinator
 //!
 //! Shared utility for talking to primals via Unix sockets.
@@ -60,13 +63,13 @@ struct JsonRpcRequest {
 /// JSON-RPC response
 #[derive(Debug, Deserialize)]
 struct JsonRpcResponse {
-    #[allow(dead_code)] // Part of JSON-RPC 2.0 wire format; required for deserialization
+    #[allow(dead_code)] // wire format — deserialized but not read directly
     jsonrpc: String,
     #[serde(default)]
     result: Option<serde_json::Value>,
     #[serde(default)]
     error: Option<JsonRpcError>,
-    #[allow(dead_code)] // Part of JSON-RPC 2.0 wire format; required for deserialization
+    #[allow(dead_code)] // wire format — deserialized but not read directly
     id: u64,
 }
 
@@ -445,8 +448,19 @@ impl Default for NucleusClientBuilder {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_nucleus_client_builder_default() {
+        let _builder = NucleusClientBuilder::default();
+    }
+
+    #[test]
+    fn test_nucleus_client_builder_new() {
+        let _builder = NucleusClientBuilder::new();
+    }
 
     #[test]
     fn test_jsonrpc_request_serialization() {
@@ -483,5 +497,37 @@ mod tests {
         let error = response.error.unwrap();
         assert_eq!(error.code, -32600);
         assert_eq!(error.message, "Invalid request");
+    }
+
+    #[test]
+    fn test_jsonrpc_response_with_null_result() {
+        let json = r#"{"jsonrpc":"2.0","result":null,"id":42}"#;
+        let response: JsonRpcResponse = serde_json::from_str(json).unwrap();
+        assert!(
+            response.result.is_none(),
+            "serde maps JSON null to None for Option<Value>"
+        );
+        assert_eq!(response.id, 42);
+    }
+
+    #[test]
+    fn test_jsonrpc_response_nested_result() {
+        let json = r#"{"jsonrpc":"2.0","result":{"nested":{"value":123}},"id":1}"#;
+        let response: JsonRpcResponse = serde_json::from_str(json).unwrap();
+        let result = response.result.unwrap();
+        assert_eq!(result["nested"]["value"], 123);
+    }
+
+    #[test]
+    fn test_jsonrpc_request_params_empty_object() {
+        let request = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            method: "ping".to_string(),
+            params: serde_json::json!({}),
+            id: 999,
+        };
+        let json = serde_json::to_string(&request).unwrap();
+        assert!(json.contains("\"params\":{}"));
+        assert!(json.contains("\"id\":999"));
     }
 }

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 // LiveSpore USB device discovery handler
 
 use axum::{extract::State, Json};
@@ -54,8 +57,9 @@ pub struct LiveSporesResponse {
     pub discovered_at: String,
 }
 
-/// Calculate utilization percentage from available and total space
-#[allow(dead_code)] // Utility for future storage analytics
+/// Calculate utilization percentage from available and total space.
+/// Reserved for future storage analytics.
+#[allow(dead_code)] // Future: use for storage analytics dashboard
 fn calculate_utilization(available: u64, total: u64) -> f64 {
     if total == 0 {
         return 0.0;

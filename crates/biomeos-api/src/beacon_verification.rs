@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Shared Beacon Verification — Deep Debt Evolution
 //!
 //! Single source of truth for Dark Forest beacon verification.

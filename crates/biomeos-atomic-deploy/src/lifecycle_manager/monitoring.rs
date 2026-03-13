@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Health monitoring: interval-based health checks and state transitions
 
 use anyhow::Result;
@@ -147,5 +150,46 @@ impl LifecycleManager {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+    use crate::lifecycle_manager::ApoptosisReason;
+    use std::path::PathBuf;
+
+    #[tokio::test]
+    async fn test_check_primal_health_not_found() {
+        let manager = LifecycleManager::new("test-family");
+        let result = manager.check_primal_health("nonexistent").await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("not found"));
+    }
+
+    #[tokio::test]
+    async fn test_check_primal_health_skips_dead_state() {
+        let manager = LifecycleManager::new("test-family");
+        manager
+            .register_primal("dead-primal", PathBuf::from("/tmp/dead.sock"), None, None)
+            .await
+            .unwrap();
+
+        manager
+            .apoptosis("dead-primal", ApoptosisReason::UserRequest)
+            .await
+            .unwrap();
+
+        let result = manager.check_primal_health("dead-primal").await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_start_monitoring_returns_ok() {
+        let manager = LifecycleManager::new("test-family");
+        let result = manager.start_monitoring().await;
+        assert!(result.is_ok());
+        manager.shutdown_all().await.unwrap();
     }
 }

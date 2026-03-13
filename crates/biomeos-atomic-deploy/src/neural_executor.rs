@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Graph executor for deterministic deployment orchestration
 //!
 //! This module executes Neural API graphs with:
@@ -261,6 +264,20 @@ impl GraphExecutor {
         };
 
         result.context(format!("Node execution failed: {}", node.id))
+    }
+
+    /// Split capability string into (domain, operation) for capability.call semantics.
+    /// e.g. "ecology.et0_fao56" -> ("ecology", "et0_fao56"), "single" -> ("single", "execute")
+    #[allow(dead_code)] // Used by tests
+    pub(crate) fn split_capability(capability: &str) -> (String, String) {
+        if let Some(dot_pos) = capability.find('.') {
+            (
+                capability[..dot_pos].to_string(),
+                capability[dot_pos + 1..].to_string(),
+            )
+        } else {
+            (capability.to_string(), "execute".to_string())
+        }
     }
 
     /// Substitute environment variables in a string
@@ -630,11 +647,7 @@ impl GraphExecutor {
             .unwrap_or(30_000);
 
         // Split capability into (domain, operation) for capability.call semantics
-        let (cap_domain, cap_operation) = if let Some(dot_pos) = capability.find('.') {
-            (&capability[..dot_pos], &capability[dot_pos + 1..])
-        } else {
-            (capability, "execute")
-        };
+        let (cap_domain, cap_operation) = Self::split_capability(capability);
 
         // Strategy 1: Route via neural-api capability.call
         let neural_api_socket = context.get_socket_path("neural-api").await;
@@ -645,8 +658,8 @@ impl GraphExecutor {
                 "jsonrpc": "2.0",
                 "method": "capability.call",
                 "params": {
-                    "capability": cap_domain,
-                    "operation": cap_operation,
+                    "capability": &cap_domain,
+                    "operation": &cap_operation,
                     "args": params,
                 },
                 "id": 1,
@@ -702,7 +715,7 @@ impl GraphExecutor {
 
         // Strategy 2: Direct primal resolution via capability domains
         let provider = crate::capability_domains::capability_to_provider_fallback(capability)
-            .or_else(|| crate::capability_domains::capability_to_provider_fallback(cap_domain));
+            .or_else(|| crate::capability_domains::capability_to_provider_fallback(&cap_domain));
 
         let provider = provider.ok_or_else(|| {
             anyhow::anyhow!(

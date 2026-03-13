@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Real Primal Adapters for P2P Coordination
 //!
 //! These adapters connect BiomeOS's P2P coordination logic to real primals.

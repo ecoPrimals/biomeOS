@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Runtime Defaults Module
 //!
 //! This module provides DEFAULT values for runtime configuration, particularly
@@ -288,6 +291,7 @@ pub fn join_socket_path(dir: impl AsRef<Path>, service: &str) -> PathBuf {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 
@@ -371,6 +375,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
     fn test_runtime_config_from_env() {
         env::remove_var("BIOMEOS_SOCKET_DIR");
         let config = RuntimeConfig::from_env();
@@ -603,5 +608,109 @@ mod tests {
 
         assert!(debug_str.contains("RuntimeConfig"));
         assert!(debug_str.contains("/test"));
+    }
+
+    #[test]
+    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
+    fn test_https_port_default() {
+        std::env::remove_var("HTTPS_PORT");
+        let config = RuntimeConfig::from_env();
+        assert_eq!(config.https_port(), 8443);
+    }
+
+    #[test]
+    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
+    fn test_https_port_env_override() {
+        std::env::set_var("HTTPS_PORT", "9443");
+        let config = RuntimeConfig::from_env();
+        assert_eq!(config.https_port(), 9443);
+        std::env::remove_var("HTTPS_PORT");
+    }
+
+    #[test]
+    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
+    fn test_websocket_port_default() {
+        std::env::remove_var("WEBSOCKET_PORT");
+        let config = RuntimeConfig::from_env();
+        assert_eq!(config.websocket_port(), 8081);
+    }
+
+    #[test]
+    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
+    fn test_websocket_port_env_override() {
+        std::env::set_var("WEBSOCKET_PORT", "9081");
+        let config = RuntimeConfig::from_env();
+        assert_eq!(config.websocket_port(), 9081);
+        std::env::remove_var("WEBSOCKET_PORT");
+    }
+
+    #[test]
+    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
+    fn test_discovery_port_default() {
+        std::env::remove_var("DISCOVERY_PORT");
+        let config = RuntimeConfig::from_env();
+        assert_eq!(config.discovery_port(), 8001);
+    }
+
+    #[test]
+    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
+    fn test_discovery_port_env_override() {
+        std::env::set_var("DISCOVERY_PORT", "9001");
+        let config = RuntimeConfig::from_env();
+        assert_eq!(config.discovery_port(), 9001);
+        std::env::remove_var("DISCOVERY_PORT");
+    }
+
+    #[test]
+    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
+    fn test_mcp_port_mcp_env_fallback() {
+        std::env::set_var("MCP_PORT", "4000");
+        std::env::remove_var("MCP_WEBSOCKET_PORT");
+        let config = RuntimeConfig::from_env();
+        assert_eq!(config.mcp_port(), 4000);
+        std::env::remove_var("MCP_PORT");
+    }
+
+    #[test]
+    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
+    fn test_bind_address_biomeos_precedence() {
+        std::env::set_var("BIOMEOS_BIND_ADDRESS", "127.0.0.1");
+        std::env::set_var("BIND_ADDRESS", "0.0.0.0");
+        let config = RuntimeConfig::from_env();
+        assert_eq!(config.bind_address(), "127.0.0.1");
+        std::env::remove_var("BIOMEOS_BIND_ADDRESS");
+        std::env::remove_var("BIND_ADDRESS");
+    }
+
+    #[test]
+    fn test_runtime_config_default_impl() {
+        let config = RuntimeConfig::default();
+        assert!(!config.socket_dir().as_os_str().is_empty());
+    }
+
+    #[test]
+    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
+    fn test_neural_api_socket_env_override() {
+        std::env::set_var("NEURAL_API_SOCKET", "/custom/neural.sock");
+        let config = RuntimeConfig::with_socket_dir("/default");
+        let path = config.neural_api_socket();
+        std::env::remove_var("NEURAL_API_SOCKET");
+        assert_eq!(path.to_str().unwrap(), "/custom/neural.sock");
+    }
+
+    #[test]
+    fn test_socket_path_empty_service_name() {
+        let path = socket_path("");
+        assert!(path.is_ok());
+        assert!(path.unwrap().to_string_lossy().ends_with(".sock"));
+    }
+
+    #[test]
+    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
+    fn test_http_port_invalid_parse_fallback() {
+        std::env::set_var("HTTP_PORT", "not_a_number");
+        let config = RuntimeConfig::from_env();
+        assert_eq!(config.http_port(), 8080);
+        std::env::remove_var("HTTP_PORT");
     }
 }

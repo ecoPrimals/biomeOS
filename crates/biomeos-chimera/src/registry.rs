@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Chimera Registry
 //!
 //! Manages a collection of chimera definitions, providing discovery and lookup.
@@ -219,6 +222,8 @@ pub struct ChimeraSummary {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used)]
+
     use super::*;
     use std::io::Write;
     use tempfile::TempDir;
@@ -276,5 +281,281 @@ fusion:
 
         let songbird_chimeras = registry.by_primal("songbird");
         assert!(songbird_chimeras.is_empty());
+    }
+
+    #[test]
+    fn test_registry_get_and_contains() {
+        let temp_dir = TempDir::new().unwrap();
+        create_test_chimera(temp_dir.path(), "chimera-x");
+
+        let registry = ChimeraRegistry::from_directory(temp_dir.path()).unwrap();
+
+        assert!(registry.contains("chimera-x"));
+        assert!(!registry.contains("nonexistent"));
+
+        let def = registry.get("chimera-x");
+        assert!(def.is_some());
+        assert_eq!(def.unwrap().chimera.id, "chimera-x");
+
+        assert!(registry.get("nonexistent").is_none());
+    }
+
+    #[test]
+    fn test_registry_list_and_all() {
+        let temp_dir = TempDir::new().unwrap();
+        create_test_chimera(temp_dir.path(), "a");
+        create_test_chimera(temp_dir.path(), "b");
+
+        let registry = ChimeraRegistry::from_directory(temp_dir.path()).unwrap();
+
+        let list = registry.list();
+        assert_eq!(list.len(), 2);
+        assert!(list.contains(&"a".to_string()));
+        assert!(list.contains(&"b".to_string()));
+
+        let all = registry.all();
+        assert_eq!(all.len(), 2);
+    }
+
+    #[test]
+    fn test_registry_is_empty_and_len() {
+        let registry = ChimeraRegistry::new();
+        assert!(registry.is_empty());
+        assert_eq!(registry.len(), 0);
+
+        let temp_dir = TempDir::new().unwrap();
+        create_test_chimera(temp_dir.path(), "single");
+        let registry = ChimeraRegistry::from_directory(temp_dir.path()).unwrap();
+        assert!(!registry.is_empty());
+        assert_eq!(registry.len(), 1);
+    }
+
+    #[test]
+    fn test_registry_load_file() {
+        let temp_dir = TempDir::new().unwrap();
+        let path = create_test_chimera(temp_dir.path(), "loaded");
+
+        let mut registry = ChimeraRegistry::new();
+        registry.load_file(&path).unwrap();
+        assert_eq!(registry.len(), 1);
+        assert!(registry.contains("loaded"));
+    }
+
+    #[test]
+    fn test_registry_from_nonexistent_dir() {
+        let result = ChimeraRegistry::from_directory("/nonexistent/path/12345");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_registry_summary() {
+        let temp_dir = TempDir::new().unwrap();
+        create_test_chimera(temp_dir.path(), "summary-test");
+
+        let registry = ChimeraRegistry::from_directory(temp_dir.path()).unwrap();
+        let summary = registry.summary();
+
+        assert_eq!(summary.len(), 1);
+        let s = summary.get("summary-test").unwrap();
+        assert_eq!(s.name, "Test summary-test");
+        assert_eq!(s.version, "1.0.0");
+        assert!(s.primals.contains(&"beardog".to_string()));
+    }
+
+    #[test]
+    fn test_registry_reload() {
+        let temp_dir = TempDir::new().unwrap();
+        create_test_chimera(temp_dir.path(), "reload-test");
+
+        let mut registry = ChimeraRegistry::from_directory(temp_dir.path()).unwrap();
+        assert_eq!(registry.len(), 1);
+
+        let count = registry.reload().unwrap();
+        assert_eq!(count, 1);
+        assert_eq!(registry.len(), 1);
+    }
+
+    #[test]
+    fn test_chimera_summary_struct() {
+        let summary = ChimeraSummary {
+            name: "Test".to_string(),
+            version: "1.0.0".to_string(),
+            primals: vec!["beardog".to_string(), "songbird".to_string()],
+            uses_arrays: true,
+        };
+        assert_eq!(summary.name, "Test");
+        assert_eq!(summary.primals.len(), 2);
+        assert!(summary.uses_arrays);
+    }
+
+    fn create_chimera_with_array(dir: &Path, id: &str) -> PathBuf {
+        let yaml = format!(
+            r#"
+chimera:
+  id: {id}
+  name: Test {id}
+  version: "1.0.0"
+  description: Test chimera with array
+
+components:
+  beardog:
+    source: primals/beardog
+    version: ">=1.0.0"
+    modules: []
+    array:
+      enabled: true
+      min: 2
+      max: 8
+
+fusion:
+  bindings: {{}}
+  api:
+    endpoints: []
+"#
+        );
+        let path = dir.join(format!("{id}.yaml"));
+        let mut file = std::fs::File::create(&path).unwrap();
+        file.write_all(yaml.as_bytes()).unwrap();
+        path
+    }
+
+    fn create_chimera_with_songbird(dir: &Path, id: &str) -> PathBuf {
+        let yaml = format!(
+            r#"
+chimera:
+  id: {id}
+  name: Test {id}
+  version: "1.0.0"
+  description: Test chimera with songbird
+
+components:
+  songbird:
+    source: primals/songbird
+    version: ">=1.0.0"
+    modules: []
+
+fusion:
+  bindings: {{}}
+  api:
+    endpoints: []
+"#
+        );
+        let path = dir.join(format!("{id}.yaml"));
+        let mut file = std::fs::File::create(&path).unwrap();
+        file.write_all(yaml.as_bytes()).unwrap();
+        path
+    }
+
+    #[test]
+    fn test_registry_default() {
+        let registry = ChimeraRegistry::default();
+        assert!(registry.is_empty());
+        assert_eq!(registry.len(), 0);
+    }
+
+    #[test]
+    fn test_registry_load_directory_skips_invalid_yaml() {
+        let temp_dir = TempDir::new().unwrap();
+        create_test_chimera(temp_dir.path(), "valid");
+        let invalid_path = temp_dir.path().join("invalid.yaml");
+        std::fs::write(&invalid_path, "not: valid: yaml: [").unwrap();
+
+        let registry = ChimeraRegistry::from_directory(temp_dir.path()).unwrap();
+
+        assert_eq!(registry.len(), 1);
+        assert!(registry.contains("valid"));
+    }
+
+    #[test]
+    fn test_registry_load_directory_skips_non_yaml_files() {
+        let temp_dir = TempDir::new().unwrap();
+        create_test_chimera(temp_dir.path(), "chimera-a");
+        std::fs::write(temp_dir.path().join("readme.txt"), "not a chimera").unwrap();
+        std::fs::write(temp_dir.path().join("config.json"), "{}").unwrap();
+
+        let registry = ChimeraRegistry::from_directory(temp_dir.path()).unwrap();
+
+        assert_eq!(registry.len(), 1);
+        assert!(registry.contains("chimera-a"));
+    }
+
+    #[test]
+    fn test_registry_load_directory_nested_subdir() {
+        let temp_dir = TempDir::new().unwrap();
+        let subdir = temp_dir.path().join("subdir");
+        std::fs::create_dir_all(&subdir).unwrap();
+        create_test_chimera(temp_dir.path(), "root-chimera");
+        create_test_chimera(&subdir, "nested-chimera");
+
+        let registry = ChimeraRegistry::from_directory(temp_dir.path()).unwrap();
+
+        assert_eq!(registry.len(), 2);
+        assert!(registry.contains("root-chimera"));
+        assert!(registry.contains("nested-chimera"));
+    }
+
+    #[test]
+    fn test_registry_by_primal_multiple_chimeras() {
+        let temp_dir = TempDir::new().unwrap();
+        create_test_chimera(temp_dir.path(), "chimera-1");
+        create_test_chimera(temp_dir.path(), "chimera-2");
+
+        let registry = ChimeraRegistry::from_directory(temp_dir.path()).unwrap();
+
+        let beardog_chimeras = registry.by_primal("beardog");
+        assert_eq!(beardog_chimeras.len(), 2);
+    }
+
+    #[test]
+    fn test_registry_summary_uses_arrays() {
+        let temp_dir = TempDir::new().unwrap();
+        create_chimera_with_array(temp_dir.path(), "array-chimera");
+
+        let registry = ChimeraRegistry::from_directory(temp_dir.path()).unwrap();
+        let summary = registry.summary();
+
+        let s = summary.get("array-chimera").unwrap();
+        assert!(s.uses_arrays);
+        assert_eq!(s.primals, vec!["beardog"]);
+    }
+
+    #[test]
+    fn test_registry_by_primal_songbird() {
+        let temp_dir = TempDir::new().unwrap();
+        create_chimera_with_songbird(temp_dir.path(), "songbird-chimera");
+
+        let registry = ChimeraRegistry::from_directory(temp_dir.path()).unwrap();
+
+        let songbird_chimeras = registry.by_primal("songbird");
+        assert_eq!(songbird_chimeras.len(), 1);
+        assert_eq!(songbird_chimeras[0].chimera.id, "songbird-chimera");
+    }
+
+    #[test]
+    fn test_registry_reload_multiple_dirs() {
+        let temp_dir1 = TempDir::new().unwrap();
+        let temp_dir2 = TempDir::new().unwrap();
+        create_test_chimera(temp_dir1.path(), "chimera-1");
+        create_test_chimera(temp_dir2.path(), "chimera-2");
+
+        let mut registry = ChimeraRegistry::new();
+        registry.load_directory(temp_dir1.path()).unwrap();
+        registry.load_directory(temp_dir2.path()).unwrap();
+        assert_eq!(registry.len(), 2);
+
+        let count = registry.reload().unwrap();
+        assert_eq!(count, 2);
+        assert_eq!(registry.len(), 2);
+    }
+
+    #[test]
+    fn test_registry_load_file_invalid_returns_err() {
+        let temp_dir = TempDir::new().unwrap();
+        let invalid_path = temp_dir.path().join("bad.yaml");
+        std::fs::write(&invalid_path, "invalid: [yaml").unwrap();
+
+        let mut registry = ChimeraRegistry::new();
+        let result = registry.load_file(&invalid_path);
+        assert!(result.is_err());
     }
 }

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Graph modification system for real-time collaborative editing
 //!
 //! This module provides type-safe graph modifications that work with the

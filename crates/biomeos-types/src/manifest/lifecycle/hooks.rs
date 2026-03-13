@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Lifecycle Hooks and Actions
 //!
 //! This module contains lifecycle hook definitions, phases, actions,

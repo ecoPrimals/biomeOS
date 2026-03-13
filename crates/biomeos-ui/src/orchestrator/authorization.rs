@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Authorization Module
 //!
 //! Handles authorization checks via BearDog security primal.
@@ -124,8 +127,90 @@ impl Authorization {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+    use biomeos_core::atomic_client::{JsonRpcRequest, JsonRpcResponse};
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+    use tokio::net::UnixListener;
+
+    async fn spawn_mock_beardog(
+        authorized: bool,
+        reason: Option<&str>,
+    ) -> (String, tokio::task::JoinHandle<()>) {
+        let dir = tempfile::tempdir().unwrap();
+        let socket_path = dir.path().join("beardog.sock");
+        let path_str = socket_path.to_str().unwrap().to_string();
+
+        let auth_response = if authorized {
+            serde_json::json!({"authorized": true})
+        } else {
+            serde_json::json!({"authorized": false, "reason": reason.unwrap_or("Denied")})
+        };
+
+        let path_for_listener = path_str.clone();
+        let handle = tokio::spawn(async move {
+            let _dir = dir;
+            let listener = UnixListener::bind(&path_for_listener).unwrap();
+            if let Ok((stream, _)) = listener.accept().await {
+                let (reader, mut writer) = tokio::io::split(stream);
+                let mut reader = BufReader::new(reader);
+                let mut line = String::new();
+                if reader.read_line(&mut line).await.is_ok() {
+                    if let Ok(req) = serde_json::from_str::<JsonRpcRequest>(&line) {
+                        let response = JsonRpcResponse {
+                            jsonrpc: "2.0".to_string(),
+                            result: Some(auth_response),
+                            error: None,
+                            id: req.id,
+                        };
+                        let _ = writer
+                            .write_all(serde_json::to_string(&response).unwrap().as_bytes())
+                            .await;
+                        let _ = writer.write_all(b"\n").await;
+                    }
+                }
+            }
+        });
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        (path_str, handle)
+    }
+
+    async fn spawn_mock_beardog_user(user_id: &str) -> (String, tokio::task::JoinHandle<()>) {
+        let dir = tempfile::tempdir().unwrap();
+        let socket_path = dir.path().join("beardog.sock");
+        let path_str = socket_path.to_str().unwrap().to_string();
+        let user_id = user_id.to_string();
+
+        let path_for_listener = path_str.clone();
+        let handle = tokio::spawn(async move {
+            let _dir = dir;
+            let listener = UnixListener::bind(&path_for_listener).unwrap();
+            if let Ok((stream, _)) = listener.accept().await {
+                let (reader, mut writer) = tokio::io::split(stream);
+                let mut reader = BufReader::new(reader);
+                let mut line = String::new();
+                if reader.read_line(&mut line).await.is_ok() {
+                    if let Ok(req) = serde_json::from_str::<JsonRpcRequest>(&line) {
+                        let response = JsonRpcResponse {
+                            jsonrpc: "2.0".to_string(),
+                            result: Some(serde_json::json!({"user_id": user_id})),
+                            error: None,
+                            id: req.id,
+                        };
+                        let _ = writer
+                            .write_all(serde_json::to_string(&response).unwrap().as_bytes())
+                            .await;
+                        let _ = writer.write_all(b"\n").await;
+                    }
+                }
+            }
+        });
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        (path_str, handle)
+    }
 
     #[tokio::test]
     async fn test_authorization_no_beardog() {
@@ -213,6 +298,73 @@ mod tests {
         assert_eq!(denied1, denied2);
         assert_ne!(authorized1, denied1);
         assert_ne!(denied1, denied3);
+    }
+
+    #[tokio::test]
+    async fn test_authorization_beardog_denied() {
+        let (path, _handle) = spawn_mock_beardog(false, Some("Insufficient permissions")).await;
+        let client = Some(crate::primal_client::BearDogClient::with_socket(
+            "beardog", &path,
+        ));
+        let result = Authorization::authorize_device_assignment(
+            &client,
+            "test-user",
+            "test-device",
+            "test-primal",
+        )
+        .await;
+
+        assert!(result.is_ok());
+        assert_eq!(
+            result.unwrap(),
+            AuthorizationResult::Denied("Insufficient permissions".to_string())
+        );
+    }
+
+    #[tokio::test]
+    async fn test_authorization_beardog_authorized() {
+        let (path, _handle) = spawn_mock_beardog(true, None).await;
+        let client = Some(crate::primal_client::BearDogClient::with_socket(
+            "beardog", &path,
+        ));
+        let result = Authorization::authorize_device_assignment(
+            &client,
+            "test-user",
+            "test-device",
+            "test-primal",
+        )
+        .await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), AuthorizationResult::Authorized);
+    }
+
+    #[tokio::test]
+    async fn test_authorization_beardog_call_fails_fallback() {
+        let client = Some(crate::primal_client::BearDogClient::with_socket(
+            "beardog",
+            "/nonexistent/beardog.sock",
+        ));
+        let result = Authorization::authorize_device_assignment(
+            &client,
+            "test-user",
+            "test-device",
+            "test-primal",
+        )
+        .await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), AuthorizationResult::Authorized);
+    }
+
+    #[tokio::test]
+    async fn test_get_current_user_from_beardog() {
+        let (path, _handle) = spawn_mock_beardog_user("beardog-user-123").await;
+        let client = Some(crate::primal_client::BearDogClient::with_socket(
+            "beardog", &path,
+        ));
+        let user_id = Authorization::get_current_user_id(&client).await;
+        assert_eq!(user_id, "beardog-user-123");
     }
 
     #[tokio::test]

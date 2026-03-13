@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! benchScale integration: Testing BiomeOS P2P coordination in a lab environment
 //!
 //! This example demonstrates:

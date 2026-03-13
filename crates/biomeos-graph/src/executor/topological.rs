@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Topological Sorting Module
 //!
 //! Performs dependency resolution and phase planning for graph execution.

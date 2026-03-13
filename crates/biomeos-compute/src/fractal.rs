@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 // =============================================================================
 // Fractal Builder - Recursive Node Construction
 // =============================================================================
@@ -396,7 +399,8 @@ impl ComputeNode for LeafNode {
 /// This is intentional - we may use it in future for resource reservation/limits.
 pub struct ParentNode {
     config: NodeConfig,
-    #[allow(dead_code)] // TODO: Wire up for resource reservation/limits
+    /// Reserved for resource reservation/limits.
+    #[allow(dead_code)] // Future: wire up for resource reservation/limits
     resources: ResourceInfo,
     children: Vec<Arc<dyn ComputeNode>>,
 }

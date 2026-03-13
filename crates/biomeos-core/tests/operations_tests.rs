@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Comprehensive tests for operations module
 //!
 //! Tests the new HTTP implementations for logs, command execution, and scaling

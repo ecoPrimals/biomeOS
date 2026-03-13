@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! CLI mode - System management commands
 //!
 //! EVOLVED (Jan 27, 2026): Provides a bridge to the full biomeos-cli functionality.

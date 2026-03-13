@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Device Enrollment Mode
 //!
 //! Enrolls a new device into the family by deriving a unique lineage seed.
@@ -26,8 +29,8 @@ use biomeos_spore::beacon_genetics::{
 };
 use biomeos_types::Uuid;
 use clap::Args;
-use std::path::PathBuf;
-use tracing::{error, info, warn};
+use std::path::{Path, PathBuf};
+use tracing::{info, warn};
 
 /// Device enrollment arguments
 #[derive(Args, Debug)]
@@ -62,21 +65,64 @@ pub struct EnrollArgs {
     pub force: bool,
 }
 
+/// Resolve device ID from explicit value or machine-id (pure where possible).
+/// Falls back to UUID generation if no device_id provided and machine-id unavailable.
+pub(crate) fn resolve_device_id(device_id: Option<&str>) -> String {
+    device_id
+        .map(|s| s.to_string())
+        .filter(|s| !s.is_empty())
+        .or_else(get_machine_id)
+        .unwrap_or_else(|| Uuid::new_v4().to_string())
+}
+
+/// Validation error for enrollment paths
+#[derive(Debug)]
+pub(crate) enum EnrollmentValidationError {
+    AlreadyEnrolled,
+    FamilySeedNotFound,
+}
+
+impl std::fmt::Display for EnrollmentValidationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::AlreadyEnrolled => write!(f, "Device already enrolled. Use --force to re-enroll"),
+            Self::FamilySeedNotFound => write!(f, "Family seed not found"),
+        }
+    }
+}
+
+impl std::error::Error for EnrollmentValidationError {}
+
+/// Validate enrollment paths before enrollment.
+/// Returns Err if family seed is missing, or if lineage exists and force is false.
+pub(crate) fn validate_enrollment_paths(
+    lineage_path: &Path,
+    family_seed_path: &Path,
+    force: bool,
+) -> std::result::Result<(), EnrollmentValidationError> {
+    if lineage_path.exists() && !force {
+        return Err(EnrollmentValidationError::AlreadyEnrolled);
+    }
+    if !family_seed_path.exists() {
+        return Err(EnrollmentValidationError::FamilySeedNotFound);
+    }
+    Ok(())
+}
+
 /// Run device enrollment
 pub async fn run(args: EnrollArgs) -> Result<()> {
     info!("🧬 Device Enrollment for biomeOS");
     info!("   Family: {}", args.family_id);
     info!("   Node: {}", args.node_id);
 
-    // Check if already enrolled
-    if args.lineage_seed.exists() && !args.force {
+    if let Err(EnrollmentValidationError::AlreadyEnrolled) =
+        validate_enrollment_paths(&args.lineage_seed, &args.family_seed, args.force)
+    {
         warn!(
             "⚠️  Device already enrolled (lineage exists at {})",
             args.lineage_seed.display()
         );
         warn!("   Use --force to re-enroll");
-
-        // Load and display existing lineage
         if let Ok(lineage) = LineageDeriver::<DirectBeardogCaller>::load_lineage(&args.lineage_seed)
         {
             info!("   Existing enrollment:");
@@ -85,32 +131,18 @@ pub async fn run(args: EnrollArgs) -> Result<()> {
             info!("      Family: {}", lineage.family_id);
             info!("      Generation: {}", lineage.generation);
         }
-
         return Ok(());
     }
+    validate_enrollment_paths(&args.lineage_seed, &args.family_seed, args.force)
+        .map_err(|e| anyhow::anyhow!("{}", e))?;
 
-    // Get device ID
-    let device_id = args
-        .device_id
-        .clone()
-        .or_else(get_machine_id)
-        .unwrap_or_else(|| {
-            let id = Uuid::new_v4().to_string();
-            warn!("No device ID provided, generated: {}", id);
-            id
-        });
-
+    let device_id = resolve_device_id(args.device_id.as_deref());
+    if args.device_id.is_none() && get_machine_id().is_none() {
+        warn!("No device ID provided, generated: {}", device_id);
+    }
     info!("   Device ID: {}", device_id);
 
-    // Check family seed exists
-    if !args.family_seed.exists() {
-        error!("❌ Family seed not found at {}", args.family_seed.display());
-        error!("   Please ensure the family seed file exists before enrollment.");
-        return Err(anyhow::anyhow!(
-            "Family seed not found: {}",
-            args.family_seed.display()
-        ));
-    }
+    validate_enrollment_paths(&args.lineage_seed, &args.family_seed, args.force)?;
 
     // Discover BearDog socket
     let beardog_socket = args
@@ -203,7 +235,60 @@ fn discover_beardog_socket() -> Option<String> {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used)]
+
     use super::*;
+
+    #[test]
+    fn test_resolve_device_id_explicit() {
+        let id = resolve_device_id(Some("custom-device-123"));
+        assert_eq!(id, "custom-device-123");
+    }
+
+    #[test]
+    fn test_resolve_device_id_none_generates() {
+        let id = resolve_device_id(None);
+        assert!(!id.is_empty());
+        // Should be UUID format when machine-id unavailable
+        assert!(id.len() >= 32);
+    }
+
+    #[test]
+    fn test_validate_enrollment_paths_family_seed_missing() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let lineage = temp.path().join(".lineage.seed");
+        let family = temp.path().join("nonexistent.family.seed");
+        let result = validate_enrollment_paths(&lineage, &family, false);
+        assert!(matches!(
+            result,
+            Err(EnrollmentValidationError::FamilySeedNotFound)
+        ));
+    }
+
+    #[test]
+    fn test_validate_enrollment_paths_already_enrolled() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let lineage = temp.path().join(".lineage.seed");
+        std::fs::write(&lineage, "existing").expect("write lineage");
+        let family = temp.path().join(".family.seed");
+        std::fs::write(&family, "seed").expect("write family");
+        let result = validate_enrollment_paths(&lineage, &family, false);
+        assert!(matches!(
+            result,
+            Err(EnrollmentValidationError::AlreadyEnrolled)
+        ));
+    }
+
+    #[test]
+    fn test_validate_enrollment_paths_force_ok() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let lineage = temp.path().join(".lineage.seed");
+        std::fs::write(&lineage, "existing").expect("write lineage");
+        let family = temp.path().join(".family.seed");
+        std::fs::write(&family, "seed").expect("write family");
+        let result = validate_enrollment_paths(&lineage, &family, true);
+        assert!(result.is_ok());
+    }
 
     #[test]
     fn test_get_machine_id() {
@@ -217,5 +302,219 @@ mod tests {
         std::env::remove_var("XDG_RUNTIME_DIR");
         // Note: This might still find a socket if one exists on the system
         let _ = discover_beardog_socket();
+    }
+
+    #[tokio::test]
+    async fn test_run_fails_when_family_seed_missing() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let args = EnrollArgs {
+            family_id: "test-family".to_string(),
+            node_id: "test-node".to_string(),
+            device_id: Some("test-device-123".to_string()),
+            family_seed: temp.path().join("nonexistent.family.seed"),
+            lineage_seed: temp.path().join(".lineage.seed"),
+            beardog_socket: None,
+            force: false,
+        };
+        let result = run(args).await;
+        assert!(result.is_err(), "run should fail when family seed missing");
+        let err = result.unwrap_err();
+        assert!(
+            err.to_string().contains("Family seed not found"),
+            "Expected family seed error: {}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    async fn test_run_fails_when_beardog_socket_missing() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let family_seed = temp.path().join(".family.seed");
+        std::fs::write(&family_seed, "test-seed-content").expect("write family seed");
+
+        std::env::remove_var("XDG_RUNTIME_DIR");
+        std::env::remove_var("FAMILY_ID");
+
+        let args = EnrollArgs {
+            family_id: "test-family".to_string(),
+            node_id: "test-node".to_string(),
+            device_id: Some("test-device-123".to_string()),
+            family_seed,
+            lineage_seed: temp.path().join(".lineage.seed"),
+            beardog_socket: None,
+            force: false,
+        };
+        let result = run(args).await;
+        assert!(
+            result.is_err(),
+            "run should fail when BearDog socket not found"
+        );
+        let err = result.unwrap_err();
+        assert!(
+            err.to_string().contains("BearDog") || err.to_string().contains("socket"),
+            "Expected BearDog/socket error: {}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    async fn test_run_uses_device_id_when_provided() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let family_seed = temp.path().join(".family.seed");
+        std::fs::write(&family_seed, "test-seed").expect("write family seed");
+
+        let args = EnrollArgs {
+            family_id: "test".to_string(),
+            node_id: "node".to_string(),
+            device_id: Some("custom-device-id-xyz".to_string()),
+            family_seed,
+            lineage_seed: temp.path().join(".lineage.seed"),
+            beardog_socket: None,
+            force: false,
+        };
+        let result = run(args).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_run_returns_ok_when_already_enrolled_no_force() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let lineage_seed = temp.path().join(".lineage.seed");
+        std::fs::write(&lineage_seed, "existing-lineage-seed").expect("write lineage");
+        let family_seed = temp.path().join(".family.seed");
+        std::fs::write(&family_seed, "test-seed").expect("write family seed");
+
+        let args = EnrollArgs {
+            family_id: "test".to_string(),
+            node_id: "node".to_string(),
+            device_id: Some("device-1".to_string()),
+            family_seed,
+            lineage_seed,
+            beardog_socket: None,
+            force: false,
+        };
+        let result = run(args).await;
+        assert!(
+            result.is_ok(),
+            "already enrolled should return Ok (early exit): {:?}",
+            result.err()
+        );
+    }
+
+    #[tokio::test]
+    async fn test_run_force_attempts_enrollment_when_lineage_exists() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let lineage_seed = temp.path().join(".lineage.seed");
+        std::fs::write(&lineage_seed, "existing-lineage-seed").expect("write lineage");
+        let family_seed = temp.path().join(".family.seed");
+        std::fs::write(&family_seed, "test-seed").expect("write family seed");
+
+        let args = EnrollArgs {
+            family_id: "test".to_string(),
+            node_id: "node".to_string(),
+            device_id: Some("device-1".to_string()),
+            family_seed,
+            lineage_seed,
+            beardog_socket: None,
+            force: true,
+        };
+        let result = run(args).await;
+        assert!(
+            result.is_err(),
+            "force re-enroll without BearDog should fail: {:?}",
+            result
+        );
+        let err = result.unwrap_err();
+        assert!(
+            err.to_string().contains("BearDog") || err.to_string().contains("socket"),
+            "Expected BearDog/socket error: {}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    async fn test_run_fails_when_lineage_seed_is_directory() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let lineage_seed = temp.path().join(".lineage.seed");
+        std::fs::create_dir_all(&lineage_seed).expect("create lineage dir");
+        let family_seed = temp.path().join(".family.seed");
+        std::fs::write(&family_seed, "test-seed").expect("write family seed");
+
+        let args = EnrollArgs {
+            family_id: "test".to_string(),
+            node_id: "node".to_string(),
+            device_id: Some("device-1".to_string()),
+            family_seed,
+            lineage_seed,
+            beardog_socket: None,
+            force: false,
+        };
+        let result = run(args).await;
+        assert!(
+            result.is_ok(),
+            "lineage_seed as dir: exists() is true, early exit"
+        );
+    }
+
+    #[test]
+    fn test_enroll_args_construction() {
+        let args = EnrollArgs {
+            family_id: "fam123".to_string(),
+            node_id: "tower".to_string(),
+            device_id: Some("dev456".to_string()),
+            family_seed: std::path::PathBuf::from(".family.seed"),
+            lineage_seed: std::path::PathBuf::from(".lineage.seed"),
+            beardog_socket: None,
+            force: false,
+        };
+        assert_eq!(args.family_id, "fam123");
+        assert_eq!(args.node_id, "tower");
+        assert_eq!(args.device_id, Some("dev456".to_string()));
+        assert!(!args.force);
+        assert_eq!(args.family_seed, std::path::PathBuf::from(".family.seed"));
+        assert_eq!(args.lineage_seed, std::path::PathBuf::from(".lineage.seed"));
+    }
+
+    #[test]
+    fn test_enroll_args_with_custom_paths() {
+        let custom_family = PathBuf::from("/custom/.family.seed");
+        let custom_lineage = PathBuf::from("/custom/.lineage.seed");
+        let args = EnrollArgs {
+            family_id: "f".to_string(),
+            node_id: "n".to_string(),
+            device_id: None,
+            family_seed: custom_family.clone(),
+            lineage_seed: custom_lineage.clone(),
+            beardog_socket: Some("/tmp/beardog.sock".to_string()),
+            force: true,
+        };
+        assert_eq!(args.family_seed, custom_family);
+        assert_eq!(args.lineage_seed, custom_lineage);
+        assert!(args.force);
+        assert_eq!(args.beardog_socket, Some("/tmp/beardog.sock".to_string()));
+    }
+
+    #[test]
+    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
+    fn test_discover_beardog_socket_finds_xdg_socket() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let biomeos_dir = temp.path().join("biomeos");
+        std::fs::create_dir_all(&biomeos_dir).expect("create biomeos dir");
+        let socket_path = biomeos_dir.join("beardog.sock");
+        std::fs::write(&socket_path, "").expect("create socket file");
+
+        let old_xdg = std::env::var("XDG_RUNTIME_DIR").ok();
+        std::env::set_var("XDG_RUNTIME_DIR", temp.path());
+        let result = discover_beardog_socket();
+        if let Some(xdg) = old_xdg {
+            std::env::set_var("XDG_RUNTIME_DIR", xdg);
+        } else {
+            std::env::remove_var("XDG_RUNTIME_DIR");
+        }
+        assert!(
+            result.is_some(),
+            "Should find socket when XDG_RUNTIME_DIR/biomeos/beardog.sock exists"
+        );
+        assert!(result.unwrap().contains("beardog.sock"));
     }
 }

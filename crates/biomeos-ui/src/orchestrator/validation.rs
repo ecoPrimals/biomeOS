@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Validation Module
 //!
 //! Handles validation checks via Songbird service registry.
@@ -92,8 +95,55 @@ impl Validation {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+    use biomeos_core::atomic_client::{JsonRpcRequest, JsonRpcResponse};
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+    use tokio::net::UnixListener;
+
+    async fn spawn_mock_songbird(
+        valid: bool,
+        reason: Option<&str>,
+    ) -> (String, tokio::task::JoinHandle<()>) {
+        let dir = tempfile::tempdir().unwrap();
+        let socket_path = dir.path().join("songbird.sock");
+        let path_str = socket_path.to_str().unwrap().to_string();
+
+        let validation_response = if valid {
+            serde_json::json!({"valid": true})
+        } else {
+            serde_json::json!({"valid": false, "reason": reason.unwrap_or("Validation failed")})
+        };
+
+        let path_for_listener = path_str.clone();
+        let handle = tokio::spawn(async move {
+            let _dir = dir;
+            let listener = UnixListener::bind(&path_for_listener).unwrap();
+            if let Ok((stream, _)) = listener.accept().await {
+                let (reader, mut writer) = tokio::io::split(stream);
+                let mut reader = BufReader::new(reader);
+                let mut line = String::new();
+                if reader.read_line(&mut line).await.is_ok() {
+                    if let Ok(req) = serde_json::from_str::<JsonRpcRequest>(&line) {
+                        let response = JsonRpcResponse {
+                            jsonrpc: "2.0".to_string(),
+                            result: Some(validation_response),
+                            error: None,
+                            id: req.id,
+                        };
+                        let _ = writer
+                            .write_all(serde_json::to_string(&response).unwrap().as_bytes())
+                            .await;
+                        let _ = writer.write_all(b"\n").await;
+                    }
+                }
+            }
+        });
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        (path_str, handle)
+    }
 
     #[tokio::test]
     async fn test_validation_no_songbird() {
@@ -164,5 +214,47 @@ mod tests {
         assert_eq!(invalid1, invalid2);
         assert_ne!(valid1, invalid1);
         assert_ne!(invalid1, invalid3);
+    }
+
+    #[tokio::test]
+    async fn test_validation_songbird_invalid() {
+        let (path, _handle) = spawn_mock_songbird(false, Some("Device already assigned")).await;
+        let client = Some(crate::primal_client::SongbirdClient::with_socket(
+            "songbird", &path,
+        ));
+        let result =
+            Validation::validate_device_assignment(&client, "test-device", "test-primal").await;
+
+        assert!(result.is_ok());
+        match result.unwrap() {
+            ValidationResult::Invalid(reason) => assert_eq!(reason, "Device already assigned"),
+            _ => panic!("Expected Invalid"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_validation_songbird_valid() {
+        let (path, _handle) = spawn_mock_songbird(true, None).await;
+        let client = Some(crate::primal_client::SongbirdClient::with_socket(
+            "songbird", &path,
+        ));
+        let result =
+            Validation::validate_device_assignment(&client, "test-device", "test-primal").await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), ValidationResult::Valid);
+    }
+
+    #[tokio::test]
+    async fn test_validation_songbird_call_fails_fallback() {
+        let client = Some(crate::primal_client::SongbirdClient::with_socket(
+            "songbird",
+            "/nonexistent/songbird.sock",
+        ));
+        let result =
+            Validation::validate_device_assignment(&client, "test-device", "test-primal").await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), ValidationResult::Valid);
     }
 }

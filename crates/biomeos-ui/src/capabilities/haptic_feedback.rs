@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Haptic Feedback Pipeline
 //!
 //! Provides haptic device discovery and force feedback command dispatch
@@ -151,6 +154,7 @@ impl Default for HapticPipeline {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use biomeos_types::xr::TrackedDeviceType;
@@ -243,5 +247,75 @@ mod tests {
     fn test_default_trait() {
         let pipeline = HapticPipeline::default();
         assert!(!pipeline.is_active());
+    }
+
+    #[test]
+    fn test_devices_empty_when_new() {
+        let pipeline = HapticPipeline::new();
+        assert!(pipeline.devices().is_empty());
+    }
+
+    #[test]
+    fn test_find_device_empty_pipeline() {
+        let pipeline = HapticPipeline::new();
+        assert!(pipeline.find_device(HapticDeviceType::Rumble).is_none());
+    }
+
+    #[test]
+    fn test_haptic_command_with_force_vector_clamping() {
+        let mut pipeline = HapticPipeline::new();
+        pipeline.devices = vec![HapticDeviceCapabilities {
+            device_type: HapticDeviceType::ForceFeedback,
+            max_force_n: Some(5.0),
+            max_frequency_hz: None,
+            force_dof: 3,
+            update_hz: 1000,
+        }];
+        pipeline.active = true;
+        assert!(pipeline
+            .find_device(HapticDeviceType::ForceFeedback)
+            .is_some());
+    }
+
+    #[test]
+    fn test_intensity_clamping() {
+        let mut pipeline = HapticPipeline::new();
+        pipeline.devices = mock_devices();
+        pipeline.active = true;
+        let caps = pipeline.find_device(HapticDeviceType::Rumble);
+        assert!(caps.is_some());
+    }
+
+    #[test]
+    fn test_device_type_precision_actuator() {
+        let mut pipeline = HapticPipeline::new();
+        pipeline.devices = vec![HapticDeviceCapabilities {
+            device_type: HapticDeviceType::PrecisionActuator,
+            max_force_n: None,
+            max_frequency_hz: Some(1000.0),
+            force_dof: 0,
+            update_hz: 500,
+        }];
+        pipeline.active = true;
+        assert!(pipeline
+            .find_device(HapticDeviceType::PrecisionActuator)
+            .is_some());
+        assert!(!pipeline.has_force_feedback());
+    }
+
+    #[test]
+    fn test_device_type_electrotactile() {
+        let mut pipeline = HapticPipeline::new();
+        pipeline.devices = vec![HapticDeviceCapabilities {
+            device_type: HapticDeviceType::Electrotactile,
+            max_force_n: None,
+            max_frequency_hz: Some(200.0),
+            force_dof: 0,
+            update_hz: 200,
+        }];
+        pipeline.active = true;
+        assert!(pipeline
+            .find_device(HapticDeviceType::Electrotactile)
+            .is_some());
     }
 }

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Atomic Multi-Transport Client - Universal IPC Standard v3.0
 //!
 //! This module provides a lightweight, atomic client for primal communication

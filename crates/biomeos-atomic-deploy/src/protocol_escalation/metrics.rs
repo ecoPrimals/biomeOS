@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Metrics and status retrieval for protocol escalation
 
 use serde_json::{json, Value};

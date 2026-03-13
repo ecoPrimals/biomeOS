@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Lifecycle manager helpers: dependency graph, status, and task cloning
 
 use std::collections::HashMap;

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Graph node types with type-safe parameters.
 //!
 //! Each node represents an execution unit in the graph.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Configuration Module Tests
 //!
 //! Comprehensive tests for the configuration system covering:
@@ -11,6 +14,7 @@
 //! - Environment-specific configuration
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod config_tests {
     use crate::config::*;
     use std::collections::HashMap;
@@ -686,5 +690,66 @@ metadata:
         let _ = security.authentication;
         let _ = security.authorization;
         let _ = security.encryption;
+    }
+
+    #[test]
+    fn test_config_metadata_default_version_and_name() {
+        let metadata = ConfigMetadata::default();
+        assert_eq!(metadata.version, "1.0.0");
+        assert_eq!(metadata.name, "default-biome-config");
+    }
+
+    #[test]
+    fn test_builder_version() {
+        let config = BiomeOSConfig::builder().version("3.1.0").build().unwrap();
+        assert_eq!(config.metadata.version, "3.1.0");
+    }
+
+    #[test]
+    fn test_to_file_io_error() {
+        let config = BiomeOSConfig::default();
+        let result = config.to_file("/nonexistent/readonly/path/config.yaml");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_for_environment_applies_variables() -> Result<(), Box<dyn std::error::Error>> {
+        let mut config = BiomeOSConfig::default();
+        let mut env_config = test_env_config();
+        env_config
+            .variables
+            .insert("TEST_VAR".to_string(), "test_value".to_string());
+        config.environments.insert("test".to_string(), env_config);
+
+        let _ = config.for_environment("test")?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_merge_invalidates_on_bad_config() {
+        let mut base = BiomeOSConfig::default();
+        let mut other = BiomeOSConfig::default();
+        other.system.timeouts.default_request_timeout = std::time::Duration::from_secs(0);
+        let result = base.merge(other);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_config_metadata_serde_with_optionals() -> Result<(), Box<dyn std::error::Error>> {
+        let metadata = ConfigMetadata {
+            version: "2.0.0".to_string(),
+            name: "custom".to_string(),
+            description: Some("desc".to_string()),
+            author: Some("author".to_string()),
+            created_at: chrono::Utc::now(),
+            modified_at: chrono::Utc::now(),
+            tags: vec!["a".to_string(), "b".to_string()],
+            custom: HashMap::new(),
+        };
+        let json = serde_json::to_string(&metadata)?;
+        let parsed: ConfigMetadata = serde_json::from_str(&json)?;
+        assert_eq!(parsed.description, Some("desc".to_string()));
+        assert_eq!(parsed.tags.len(), 2);
+        Ok(())
     }
 }

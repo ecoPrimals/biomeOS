@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Capability Caller - NeuralAPI and Direct Integration
 //!
 //! Abstracts capability.call mechanism for beacon genetics operations.

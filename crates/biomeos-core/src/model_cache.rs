@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Model Cache - NUCLEUS-integrated model artifact management
 //!
 //! Provides persistent caching for AI model files (HuggingFace, GGUF, safetensors)
@@ -113,8 +116,8 @@ impl CacheManifest {
 /// Manages model artifacts with NestGate integration and filesystem fallback.
 /// Designed for zero re-downloads across the biomeOS mesh.
 pub struct ModelCache {
-    /// Root directory for cached models (used for mesh model sharing in Plasmodium Phase 2)
-    #[allow(dead_code)] // TODO: Wire up for mesh model sharing in Plasmodium Phase 2
+    /// Root directory for cached models. Reserved for mesh model sharing in Plasmodium Phase 2.
+    #[allow(dead_code)] // Future: wire up for mesh model sharing in Plasmodium Phase 2
     cache_dir: PathBuf,
 
     /// Path to the local manifest file
@@ -689,6 +692,7 @@ impl std::fmt::Display for ModelResolution {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use tempfile::TempDir;
@@ -865,5 +869,134 @@ mod tests {
 
         assert!(!cache.has_model("ephemeral/model"));
         assert!(cache.get_model_path("ephemeral/model").is_none());
+    }
+
+    #[tokio::test]
+    async fn test_detect_format_pytorch() {
+        let tmp = TempDir::new().unwrap();
+        let model_dir = tmp.path().join("pytorch-model");
+        std::fs::create_dir_all(&model_dir).unwrap();
+        std::fs::write(model_dir.join("pytorch_model.bin"), b"pytorch").unwrap();
+
+        let cache_dir = tmp.path().join("cache");
+        let mut cache = ModelCache::with_cache_dir(cache_dir).await.unwrap();
+        cache
+            .register_model("pytorch/test", &model_dir, "test://")
+            .await
+            .unwrap();
+
+        let entry = cache.get_model("pytorch/test").unwrap();
+        assert_eq!(entry.format, "pytorch");
+    }
+
+    #[tokio::test]
+    async fn test_detect_format_default_huggingface() {
+        let tmp = TempDir::new().unwrap();
+        let model_dir = tmp.path().join("hf-model");
+        std::fs::create_dir_all(&model_dir).unwrap();
+        std::fs::write(model_dir.join("config.json"), b"{}").unwrap();
+
+        let cache_dir = tmp.path().join("cache");
+        let mut cache = ModelCache::with_cache_dir(cache_dir).await.unwrap();
+        cache
+            .register_model("hf/test", &model_dir, "test://")
+            .await
+            .unwrap();
+
+        let entry = cache.get_model("hf/test").unwrap();
+        assert_eq!(entry.format, "huggingface");
+    }
+
+    #[tokio::test]
+    async fn test_model_resolution_local_display() {
+        let tmp = TempDir::new().unwrap();
+        let model_dir = tmp.path().join("display-model");
+        std::fs::create_dir_all(&model_dir).unwrap();
+        std::fs::write(model_dir.join("model.gguf"), b"x").unwrap();
+
+        let cache_dir = tmp.path().join("cache");
+        let mut cache = ModelCache::with_cache_dir(cache_dir).await.unwrap();
+        cache
+            .register_model("display/test", &model_dir, "test://")
+            .await
+            .unwrap();
+
+        let resolution = cache.resolve("display/test").await;
+        let s = format!("{}", resolution);
+        assert!(s.starts_with("LOCAL:"));
+        assert!(s.contains("display/test"));
+    }
+
+    #[tokio::test]
+    async fn test_model_resolution_remote_display() {
+        let entry = ModelEntry {
+            model_id: "remote/model".to_string(),
+            local_path: PathBuf::from("/tmp/remote"),
+            size_bytes: 1024 * 1024,
+            source: "mesh".to_string(),
+            sha256: None,
+            cached_at: chrono::Utc::now().to_rfc3339(),
+            gate_id: "gate-1".to_string(),
+            format: "gguf".to_string(),
+            files: vec![],
+        };
+        let resolution = ModelResolution::Remote(entry);
+        let s = format!("{}", resolution);
+        assert!(s.starts_with("REMOTE:"));
+        assert!(s.contains("remote/model"));
+        assert!(s.contains("gate-1"));
+    }
+
+    #[tokio::test]
+    async fn test_corrupt_manifest_recovery() {
+        let tmp = TempDir::new().unwrap();
+        let cache_dir = tmp.path().join("cache");
+        std::fs::create_dir_all(&cache_dir).unwrap();
+        std::fs::write(cache_dir.join("manifest.json"), "invalid json {{{").unwrap();
+
+        let cache = ModelCache::with_cache_dir(cache_dir).await.unwrap();
+        assert!(cache.list_models().is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_list_models_filters_missing_paths() {
+        let tmp = TempDir::new().unwrap();
+        let cache_dir = tmp.path().join("cache");
+        let mut cache = ModelCache::with_cache_dir(cache_dir).await.unwrap();
+
+        let model_dir = tmp.path().join("list-model");
+        std::fs::create_dir_all(&model_dir).unwrap();
+        std::fs::write(model_dir.join("model.safetensors"), b"data").unwrap();
+        cache
+            .register_model("list/test", &model_dir, "test://")
+            .await
+            .unwrap();
+
+        let models = cache.list_models();
+        assert_eq!(models.len(), 1);
+
+        std::fs::remove_dir_all(&model_dir).unwrap();
+        let models_after = cache.list_models();
+        assert!(models_after.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_model_file_serialization() {
+        let file = ModelFile {
+            relative_path: "model.safetensors".to_string(),
+            size_bytes: 1024,
+            sha256: Some("abc123".to_string()),
+        };
+        let json = serde_json::to_value(&file).unwrap();
+        let restored: ModelFile = serde_json::from_value(json).unwrap();
+        assert_eq!(file.relative_path, restored.relative_path);
+        assert_eq!(file.sha256, restored.sha256);
+    }
+
+    #[tokio::test]
+    async fn test_cache_manifest_default() {
+        let manifest = CacheManifest::default();
+        assert_eq!(manifest.version, 0);
+        assert!(manifest.models.is_empty());
     }
 }

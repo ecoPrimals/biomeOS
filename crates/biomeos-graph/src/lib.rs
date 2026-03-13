@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! # biomeos-graph
 //!
 //! Type-safe ingestion layer for Neural API deployment graphs.
@@ -34,7 +37,7 @@
 //! println!("Loaded graph: {} with {} nodes", graph.id(), graph.nodes().len());
 //! ```
 
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
 pub mod continuous;

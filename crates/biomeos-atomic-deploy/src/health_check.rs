@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Health checking for deployed primals
 //!
 //! **Universal IPC v3.0**: Uses AtomicClient for multi-transport health checks.
@@ -18,13 +21,17 @@ use tracing::{debug, warn};
 /// Health status of a primal
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HealthStatus {
+    /// Overall health (all checks passed)
     pub is_healthy: bool,
+    /// Unix socket file exists on disk
     pub socket_exists: bool,
+    /// Socket file is readable/writable (permission check)
     pub socket_accessible: bool,
     /// JSON-RPC ping succeeded (if attempted)
     pub rpc_responsive: Option<bool>,
     /// Response latency in milliseconds (if RPC ping attempted)
     pub latency_ms: Option<u64>,
+    /// Human-readable status or error message
     pub message: Option<String>,
 }
 

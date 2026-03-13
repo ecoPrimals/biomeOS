@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Core Error Types
 //!
 //! This module contains the main BiomeError enum and core error types

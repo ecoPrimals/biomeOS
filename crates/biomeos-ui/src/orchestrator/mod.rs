@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Interactive UI Orchestrator
 //!
 //! Coordinates between multiple primals to create the interactive UI network effect.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Common test utilities and fixtures for biomeOS testing
 //!
 //! Provides modern testing patterns, mock objects, and shared utilities

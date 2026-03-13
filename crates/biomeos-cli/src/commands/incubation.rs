@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! CLI commands for spore incubation and local node management
 
 use anyhow::Result;
@@ -148,5 +151,56 @@ fn truncate(s: &str, max: usize) -> String {
         s.to_string()
     } else {
         format!("{}...", &s[..max.saturating_sub(3)])
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_truncate_short_string() {
+        assert_eq!(truncate("short", 10), "short");
+        assert_eq!(truncate("", 5), "");
+    }
+
+    #[test]
+    fn test_truncate_exact_length() {
+        assert_eq!(truncate("hello", 5), "hello");
+    }
+
+    #[test]
+    fn test_truncate_long_string() {
+        assert_eq!(truncate("hello world", 8), "hello...");
+        assert_eq!(truncate("abcdefghij", 6), "abc...");
+    }
+
+    #[test]
+    fn test_truncate_boundary() {
+        assert_eq!(truncate("abc", 3), "abc");
+        assert_eq!(truncate("abcd", 4), "abcd");
+        assert_eq!(truncate("abcde", 5), "abcde");
+        assert_eq!(truncate("abcdef", 6), "abcdef");
+        assert_eq!(truncate("abcdefg", 6), "abc...");
+    }
+
+    #[test]
+    fn test_incubate_args_debug() {
+        let args = IncubateArgs {
+            spore: PathBuf::from("/tmp/spore"),
+            computer_name: Some("test-pc".to_string()),
+            deploy_local: true,
+        };
+        let _ = format!("{:?}", args);
+    }
+
+    #[test]
+    fn test_list_local_args_debug() {
+        let args = ListLocalArgs {
+            spore_id: Some("spore-1".to_string()),
+            detailed: true,
+        };
+        let _ = format!("{:?}", args);
     }
 }

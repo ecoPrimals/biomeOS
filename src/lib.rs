@@ -1,8 +1,12 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! BiomeOS - Universal Operating System
 //!
 //! A capability-based orchestration layer for managing primals and ecosystems
 
 #![warn(missing_docs)]
+#![forbid(unsafe_code)]
 
 use serde::{Deserialize, Serialize};
 

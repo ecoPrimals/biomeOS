@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Discovery Module
 //!
 //! Handles runtime discovery of primals, devices, and saved state.
@@ -139,11 +142,16 @@ impl Discovery {
     pub async fn load_saved_state(connections: &PrimalConnections, family_id: &str) -> Result<()> {
         info!("Loading saved UI state...");
 
-        let storage_name = resolve_capability_provider(
+        let storage_name = match resolve_capability_provider(
             "BIOMEOS_STORAGE_PROVIDER",
             CapabilityTaxonomy::DataStorage,
-        )
-        .expect("DataStorage capability must have a default provider");
+        ) {
+            Some(name) => name,
+            None => {
+                info!("No DataStorage provider available; skipping state load");
+                return Ok(());
+            }
+        };
 
         if let Some(storage) = connections.get(&storage_name) {
             match storage

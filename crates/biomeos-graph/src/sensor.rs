@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Sensor event routing for continuous graph execution.
 //!
 //! Routes real-time input events from sensor sources (e.g. petalTongue's
@@ -16,7 +19,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{broadcast, RwLock};
-use tracing::{debug, info, warn};
+use tracing::{debug, warn};
 
 /// A sensor event from an input device.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -99,9 +102,8 @@ impl SensorEventBus {
                 .or_insert(0) += 1;
         }
 
-        match self.sender.send(event) {
-            Ok(n) => debug!("Sensor event delivered to {} subscribers", n),
-            Err(_) => {} // No subscribers — fine for sensor data
+        if let Ok(n) = self.sender.send(event) {
+            debug!("Sensor event delivered to {} subscribers", n);
         }
     }
 

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Runtime primal discovery
 //!
 //! This module provides runtime discovery of primals without hardcoding.

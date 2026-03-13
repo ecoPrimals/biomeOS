@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Service Lifecycle Operations
 //!
 //! Handles service creation, scaling, auto-scaling, and status queries.
@@ -10,6 +13,27 @@ use std::path::Path;
 
 use super::core::{PrimalInfo, UniversalBiomeOSManager};
 use biomeos_types::PrimalCapability;
+
+/// Scaling result
+#[derive(Debug, Serialize, PartialEq)]
+pub(crate) struct ScaleResult {
+    pub(crate) current_replicas: u32,
+    pub(crate) target_replicas: u32,
+    pub(crate) status: String,
+}
+
+/// Parse scale result from JSON-RPC response (testable pure function)
+#[allow(dead_code)] // Used by tests
+pub(crate) fn parse_scale_result_from_json(
+    result: &serde_json::Value,
+    target_replicas: u32,
+) -> ScaleResult {
+    ScaleResult {
+        current_replicas: result["current_replicas"].as_u64().unwrap_or(1) as u32,
+        target_replicas,
+        status: result["status"].as_str().unwrap_or("scaling").to_string(),
+    }
+}
 
 impl UniversalBiomeOSManager {
     /// Create a new service
@@ -81,27 +105,26 @@ impl UniversalBiomeOSManager {
                                         "Discovered primal {} not in registry, using environment fallback",
                                         primal_id
                                     );
-                                    {
-                                        let endpoint = std::env::var("TOADSTOOL_ENDPOINT")
-                                            .map_err(|_| anyhow::anyhow!(
-                                                "TOADSTOOL_ENDPOINT not set and discovery failed. \
-                                                 Set environment variable or ensure Songbird discovery is available."
-                                            ))?;
-                                        format!("{}/{}", endpoint, name)
-                                    }
+                                    let endpoint = std::env::var("BIOMEOS_COMPUTE_ENDPOINT")
+                                        .or_else(|_| std::env::var("TOADSTOOL_ENDPOINT"))
+                                        .map_err(|_| anyhow::anyhow!(
+                                            "BIOMEOS_COMPUTE_ENDPOINT not set and discovery failed. \
+                                             Set BIOMEOS_COMPUTE_ENDPOINT or ensure capability discovery is available."
+                                        ))?;
+                                    format!("{}/{}", endpoint, name)
                                 }
                             } else {
                                 // No compute primal discovered - return error
                                 return Err(anyhow::anyhow!(
                                     "No compute primal discovered. \
-                                     Set TOADSTOOL_ENDPOINT environment variable or ensure Songbird discovery is running."
+                                     Set BIOMEOS_COMPUTE_ENDPOINT or ensure discovery service is running."
                                 ));
                             }
                         }
                         Err(e) => {
                             return Err(anyhow::anyhow!(
                                 "Discovery failed: {}. \
-                                 Set TOADSTOOL_ENDPOINT environment variable or fix discovery service.",
+                                 Set BIOMEOS_COMPUTE_ENDPOINT or fix discovery service.",
                                 e
                             ));
                         }
@@ -326,12 +349,7 @@ impl UniversalBiomeOSManager {
         match client.call("scale_service", scale_request).await {
             Ok(result) => {
                 tracing::debug!("✅ Scaling completed for {}", primal.name);
-
-                Ok(ScaleResult {
-                    current_replicas: result["current_replicas"].as_u64().unwrap_or(1) as u32,
-                    target_replicas: replicas,
-                    status: result["status"].as_str().unwrap_or("scaling").to_string(),
-                })
+                Ok(parse_scale_result_from_json(&result, replicas))
             }
             Err(e) => {
                 tracing::error!("Failed to scale service {}: {}", primal.name, e);
@@ -345,10 +363,53 @@ impl UniversalBiomeOSManager {
     }
 }
 
-/// Scaling result
-#[derive(Debug, Serialize)]
-pub(super) struct ScaleResult {
-    current_replicas: u32,
-    target_replicas: u32,
-    status: String,
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_scale_result_from_json() {
+        let json = serde_json::json!({
+            "current_replicas": 3,
+            "status": "scaled"
+        });
+        let result = parse_scale_result_from_json(&json, 3);
+        assert_eq!(result.current_replicas, 3);
+        assert_eq!(result.target_replicas, 3);
+        assert_eq!(result.status, "scaled");
+    }
+
+    #[test]
+    fn test_parse_scale_result_from_json_defaults() {
+        let json = serde_json::json!({});
+        let result = parse_scale_result_from_json(&json, 5);
+        assert_eq!(result.current_replicas, 1);
+        assert_eq!(result.target_replicas, 5);
+        assert_eq!(result.status, "scaling");
+    }
+
+    #[test]
+    fn test_parse_scale_result_from_json_partial() {
+        let json = serde_json::json!({"status": "pending"});
+        let result = parse_scale_result_from_json(&json, 10);
+        assert_eq!(result.current_replicas, 1);
+        assert_eq!(result.target_replicas, 10);
+        assert_eq!(result.status, "pending");
+    }
+
+    #[test]
+    fn test_scale_result_equality() {
+        let a = ScaleResult {
+            current_replicas: 2,
+            target_replicas: 3,
+            status: "scaling".to_string(),
+        };
+        let b = ScaleResult {
+            current_replicas: 2,
+            target_replicas: 3,
+            status: "scaling".to_string(),
+        };
+        assert_eq!(a, b);
+    }
 }

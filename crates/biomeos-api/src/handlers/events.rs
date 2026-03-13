@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Real-time events via Server-Sent Events (SSE)
 //!
 //! Provides live updates to clients about ecosystem changes.
@@ -180,11 +183,12 @@ async fn detect_and_emit_changes(
     // Detect changes
     for primal in &current_primals {
         let primal_id = primal.id.to_string();
+        let name = primal.name.as_str();
 
         match prev.primals.get(&primal_id) {
             None => {
                 // New primal discovered!
-                info!("🆕 SSE: New primal discovered: {}", primal.name);
+                info!("🆕 SSE: New primal discovered: {}", name);
                 events.push(EcosystemEvent::PrimalDiscovered {
                     primal_id: primal_id.clone(),
                     name: primal.name.clone(),
@@ -202,7 +206,7 @@ async fn detect_and_emit_changes(
                     events.push(EcosystemEvent::FamilyJoined {
                         primal_id: primal_id.clone(),
                         name: primal.name.clone(),
-                        family_id: family_id.to_string(),
+                        family_id: family_id.as_str().to_string(),
                     });
                 }
             }
@@ -211,7 +215,7 @@ async fn detect_and_emit_changes(
                 if prev_snapshot.health != primal.health {
                     info!(
                         "💊 SSE: Health changed for {}: {:?} -> {:?}",
-                        primal.name, prev_snapshot.health, primal.health
+                        name, prev_snapshot.health, primal.health
                     );
                     events.push(EcosystemEvent::HealthChanged {
                         primal_id: primal_id.clone(),
@@ -226,7 +230,7 @@ async fn detect_and_emit_changes(
                 if prev_snapshot.capabilities_count != cap_count {
                     info!(
                         "🔒 SSE: Capabilities updated for {}: {} -> {}",
-                        primal.name, prev_snapshot.capabilities_count, cap_count
+                        name, prev_snapshot.capabilities_count, cap_count
                     );
                     // Emit as trust update (more capabilities = higher trust)
                     events.push(EcosystemEvent::TrustUpdated {
@@ -242,7 +246,7 @@ async fn detect_and_emit_changes(
 
                 if prev_family != curr_family {
                     if let Some(family_id) = &primal.family_id {
-                        info!("👨‍👩‍👧‍👦 SSE: Family joined for {}: {}", primal.name, family_id);
+                        info!("👨‍👩‍👧‍👦 SSE: Family joined for {}: {}", name, family_id);
                         events.push(EcosystemEvent::FamilyJoined {
                             primal_id: primal_id.clone(),
                             name: primal.name.clone(),

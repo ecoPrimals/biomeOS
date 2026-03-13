@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Continuous coordination executor for fixed-timestep graph loops.
 //!
 //! Enables real-time niches (game engines, dashboards, audio pipelines, surgical VR)
@@ -156,7 +159,8 @@ impl std::fmt::Display for SessionState {
 #[derive(Debug, Clone)]
 struct CachedOutput {
     value: serde_json::Value,
-    #[allow(dead_code)] // Written for diagnostics; will be read for cache-staleness checks
+    /// Tick counter for diagnostics and future cache-staleness checks.
+    #[allow(dead_code)] // Future: read for cache-staleness checks
     tick: u64,
 }
 
@@ -175,7 +179,7 @@ struct CachedOutput {
 /// The executor is controlled via [`SessionCommand`]s sent through a channel.
 pub struct ContinuousExecutor {
     graph: DeploymentGraph,
-    tick_config: TickConfig,
+    tick_config: Arc<TickConfig>,
     broadcaster: GraphEventBroadcaster,
     state_tx: watch::Sender<SessionState>,
     state_rx: watch::Receiver<SessionState>,
@@ -201,7 +205,7 @@ impl ContinuousExecutor {
     /// The graph's `tick` config is used for clock parameters.
     /// Falls back to 60 Hz defaults if no tick config is present.
     pub fn new(graph: DeploymentGraph, broadcaster: GraphEventBroadcaster) -> Self {
-        let tick_config = graph.definition.tick.clone().unwrap_or_default();
+        let tick_config = Arc::new(graph.definition.tick.clone().unwrap_or_default());
 
         let (state_tx, state_rx) = watch::channel(SessionState::Starting);
 
@@ -255,50 +259,59 @@ impl ContinuousExecutor {
         F: Fn(String, GraphNode, Option<serde_json::Value>) -> Fut + Send + Sync + 'static,
         Fut: std::future::Future<Output = anyhow::Result<serde_json::Value>> + Send,
     {
-        let graph_id = self.graph.id().as_str().to_string();
+        let graph_id: Arc<str> = Arc::from(self.graph.id().as_str());
         info!(
             "Continuous session starting: {} @ {} Hz",
-            graph_id, self.tick_config.target_hz
+            graph_id.as_ref(),
+            self.tick_config.target_hz
         );
 
         let _ = self.state_tx.send(SessionState::Running);
         let _ = self
             .broadcaster
             .broadcast(GraphEvent::SessionStarted {
-                graph_id: graph_id.clone(),
+                graph_id: graph_id.as_ref().to_string(),
                 target_hz: self.tick_config.target_hz,
                 timestamp: Utc::now(),
             })
             .await;
 
-        let mut clock = TickClock::from_config(&self.tick_config);
+        let mut clock = TickClock::from_config(self.tick_config.as_ref());
         let budget_warning = Duration::from_secs_f64(self.tick_config.budget_warning_ms / 1000.0);
 
         loop {
             // Check for commands (non-blocking)
             match cmd_rx.try_recv() {
                 Ok(SessionCommand::Stop) => {
-                    info!("Session stop requested: {}", graph_id);
+                    info!("Session stop requested: {}", graph_id.as_ref());
                     let _ = self.state_tx.send(SessionState::Stopping);
-                    self.broadcast_state_change(&graph_id, "stopping", clock.tick_count())
+                    self.broadcast_state_change(graph_id.as_ref(), "stopping", clock.tick_count())
                         .await;
                     break;
                 }
                 Ok(SessionCommand::Pause) => {
                     if *self.state_rx.borrow() == SessionState::Running {
                         let _ = self.state_tx.send(SessionState::Paused);
-                        self.broadcast_state_change(&graph_id, "paused", clock.tick_count())
-                            .await;
-                        info!("Session paused: {}", graph_id);
+                        self.broadcast_state_change(
+                            graph_id.as_ref(),
+                            "paused",
+                            clock.tick_count(),
+                        )
+                        .await;
+                        info!("Session paused: {}", graph_id.as_ref());
                     }
                 }
                 Ok(SessionCommand::Resume) => {
                     if *self.state_rx.borrow() == SessionState::Paused {
                         clock.reset_accumulator();
                         let _ = self.state_tx.send(SessionState::Running);
-                        self.broadcast_state_change(&graph_id, "running", clock.tick_count())
-                            .await;
-                        info!("Session resumed: {}", graph_id);
+                        self.broadcast_state_change(
+                            graph_id.as_ref(),
+                            "running",
+                            clock.tick_count(),
+                        )
+                        .await;
+                        info!("Session resumed: {}", graph_id.as_ref());
                     }
                 }
                 Err(_) => {}
@@ -375,7 +388,7 @@ impl ContinuousExecutor {
                 let _ = self
                     .broadcaster
                     .broadcast(GraphEvent::TickCompleted {
-                        graph_id: graph_id.clone(),
+                        graph_id: graph_id.as_ref().to_string(),
                         tick: tick_num,
                         duration_us: tick_duration_us,
                         budget_overruns,
@@ -390,11 +403,11 @@ impl ContinuousExecutor {
         }
 
         let _ = self.state_tx.send(SessionState::Stopped);
-        self.broadcast_state_change(&graph_id, "stopped", clock.tick_count())
+        self.broadcast_state_change(graph_id.as_ref(), "stopped", clock.tick_count())
             .await;
         info!(
             "Continuous session stopped: {} (total ticks: {})",
-            graph_id,
+            graph_id.as_ref(),
             clock.tick_count()
         );
     }
@@ -439,7 +452,7 @@ mod tests {
 
     #[test]
     fn test_tick_clock_basic() {
-        let mut clock = TickClock::new(60.0);
+        let clock = TickClock::new(60.0);
         assert_eq!(clock.tick_count(), 0);
         assert!((clock.target_hz() - 60.0).abs() < 0.01);
 

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Discovery Operations
 //!
 //! Handles all service discovery operations including registry discovery,
@@ -448,5 +451,48 @@ impl UniversalBiomeOSManager {
         }
 
         Ok(services)
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+    use biomeos_primal_sdk::PrimalCapability;
+    use biomeos_types::{Health, PrimalType};
+
+    #[test]
+    fn test_discovery_result_construction() {
+        let result = DiscoveryResult {
+            id: "primal-1".to_string(),
+            endpoint: "unix:///run/beardog.sock".to_string(),
+            primal_type: PrimalType::new("security", "beardog", "1.0"),
+            capabilities: vec![PrimalCapability::new("security", "crypto", "1.0")],
+            health: Health::Healthy,
+            discovered_at: chrono::Utc::now(),
+        };
+        assert_eq!(result.id, "primal-1");
+        assert!(result.endpoint.contains("beardog"));
+        assert_eq!(result.capabilities.len(), 1);
+        assert_eq!(result.primal_type.name, "beardog");
+    }
+
+    #[test]
+    fn test_probe_result_construction() {
+        let result = ProbeResult {
+            name: "beardog".to_string(),
+            version: "1.2.3".to_string(),
+            capabilities: vec![],
+            health: Health::Healthy,
+        };
+        assert_eq!(result.name, "beardog");
+        assert_eq!(result.version, "1.2.3");
+    }
+
+    #[test]
+    fn test_primal_discovery_service_new() {
+        let config = Arc::new(BiomeOSConfig::default());
+        let service = PrimalDiscoveryService::new(config);
+        let _ = service;
     }
 }

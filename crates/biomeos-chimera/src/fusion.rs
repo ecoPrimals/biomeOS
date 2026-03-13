@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Fusion configuration for chimeras
 //!
 //! Defines how primal components are fused together into a unified chimera.

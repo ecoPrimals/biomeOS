@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Mock Primal Server for Testing
 //!
 //! Provides a lightweight HTTP server that simulates a primal's API
@@ -162,6 +165,7 @@ pub struct MockPrimalBuilder {
 }
 
 impl MockPrimalBuilder {
+    /// Create a new builder for a mock primal with the given name.
     pub fn new(name: impl Into<String>) -> Self {
         Self {
             name: name.into(),

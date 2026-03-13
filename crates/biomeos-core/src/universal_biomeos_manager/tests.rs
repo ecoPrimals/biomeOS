@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Tests for Universal BiomeOS Manager
 //!
 //! Basic smoke tests - will expand as implementation grows

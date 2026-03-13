@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Fault injection testing - Simulate specific failure modes
 //!
 //! These tests inject faults at specific points to ensure robust error handling.

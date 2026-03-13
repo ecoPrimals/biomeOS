@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Transport Endpoint Types - Universal IPC Standard v3.0
 //!
 //! Defines the transport endpoint abstraction for multi-transport IPC.
@@ -387,5 +390,57 @@ mod tests {
             port: 9101,
         };
         assert_ne!(tcp1, tcp3);
+    }
+
+    #[test]
+    fn test_parse_http_jsonrpc() {
+        let endpoint = TransportEndpoint::parse("http://192.168.1.100:8080").unwrap();
+        assert!(matches!(endpoint, TransportEndpoint::HttpJsonRpc { .. }));
+        if let TransportEndpoint::HttpJsonRpc { host, port } = endpoint {
+            assert_eq!(host, "192.168.1.100");
+            assert_eq!(port, 8080);
+        }
+    }
+
+    #[test]
+    fn test_parse_http_jsonrpc_with_suffix() {
+        let endpoint = TransportEndpoint::parse("http://localhost:8080/jsonrpc").unwrap();
+        assert!(matches!(endpoint, TransportEndpoint::HttpJsonRpc { .. }));
+        if let TransportEndpoint::HttpJsonRpc { host, port } = endpoint {
+            assert_eq!(host, "localhost");
+            assert_eq!(port, 8080);
+        }
+    }
+
+    #[test]
+    fn test_display_http_jsonrpc() {
+        let http = TransportEndpoint::HttpJsonRpc {
+            host: "songbird.local".to_string(),
+            port: 8080,
+        };
+        assert_eq!(http.display_string(), "http://songbird.local:8080/jsonrpc");
+        assert_eq!(http.tier(), 2);
+        assert!(!http.is_native());
+    }
+
+    #[test]
+    fn test_tier_http_jsonrpc() {
+        let http = TransportEndpoint::HttpJsonRpc {
+            host: "127.0.0.1".to_string(),
+            port: 8080,
+        };
+        assert_eq!(http.tier(), 2);
+        assert!(!http.is_native());
+    }
+
+    #[test]
+    fn test_parse_http_jsonrpc_hostname() {
+        let endpoint = TransportEndpoint::parse("http://api.example.com:443").unwrap();
+        if let TransportEndpoint::HttpJsonRpc { host, port } = endpoint {
+            assert_eq!(host, "api.example.com");
+            assert_eq!(port, 443);
+        } else {
+            panic!("Expected HttpJsonRpc");
+        }
     }
 }

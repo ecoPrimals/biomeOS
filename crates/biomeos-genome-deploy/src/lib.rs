@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! genomeBin Deployment Library
 //!
 //! Rust implementation of genomeBin deployment, replacing POSIX shell wrappers
@@ -8,10 +11,10 @@
 //! Uses `std::fs::read()` for genomeBin extraction — 100% safe Rust with
 //! zero `unsafe` blocks. For a one-shot deployment tool, the allocation
 //! cost of reading the file is negligible compared to the disk I/O and
-//! extraction time. This allows `#![deny(unsafe_code)]` across the entire crate.
+//! extraction time. This allows `#![forbid(unsafe_code)]` across the entire crate.
 
 #![warn(missing_docs)]
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 
 use anyhow::{bail, Context, Result};
 use colored::Colorize;

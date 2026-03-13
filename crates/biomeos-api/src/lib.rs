@@ -1,10 +1,13 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! biomeOS API Server Library
 //!
 //! REST API library for primal orchestration and discovery.
 //! This module exposes the core types and functions used by the binary.
 
 #![warn(missing_docs)]
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 
 /// Shared beacon verification — single source of truth for Dark Forest token verification
 pub mod beacon_verification;

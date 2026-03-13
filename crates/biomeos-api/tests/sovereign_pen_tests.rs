@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Sovereign Security Pen Tests
 //!
 //! These tests verify the Dark Forest gate cannot be bypassed.

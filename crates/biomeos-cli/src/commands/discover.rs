@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Discovery Command Handler
 //!
 //! Handles service discovery operations including capability-based discovery,
@@ -5,9 +8,23 @@
 
 use anyhow::Result;
 use biomeos_core::UniversalBiomeOSManager;
+use serde_json::Value;
 use std::collections::HashMap;
 
 use super::utils::{create_spinner, display_results, parse_capabilities};
+
+/// Builds the discovery result HashMap from method and raw result.
+pub(crate) fn build_discovery_result(method: &str, result: &[String]) -> HashMap<String, Value> {
+    let mut map = HashMap::new();
+    map.insert("method".to_string(), serde_json::json!(method));
+    map.insert("endpoints".to_string(), serde_json::json!(result));
+    map.insert("count".to_string(), serde_json::json!(result.len()));
+    map.insert(
+        "timestamp".to_string(),
+        serde_json::json!(chrono::Utc::now()),
+    );
+    map
+}
 
 /// Discovery methods supported by the CLI
 #[derive(clap::ValueEnum, Clone, Debug)]
@@ -73,23 +90,62 @@ pub async fn handle_discover(
 
     spinner.finish_with_message("✅ Discovery completed!");
 
-    let mut result = HashMap::new();
-    result.insert(
-        "method".to_string(),
-        serde_json::json!(format!("{:?}", method)),
-    );
-    result.insert("endpoints".to_string(), serde_json::json!(discovery_result));
-    result.insert(
-        "count".to_string(),
-        serde_json::json!(discovery_result.len()),
-    );
-    result.insert(
-        "timestamp".to_string(),
-        serde_json::json!(chrono::Utc::now()),
-    );
-
-    // Fix the display_results call - use detailed parameter instead of json macro
+    let result = build_discovery_result(&format!("{:?}", method), &discovery_result);
     display_results("Discovery Results", &result, detailed).await?;
 
     Ok(())
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_build_discovery_result_empty() {
+        let result = build_discovery_result("CapabilityBased", &[]);
+        assert_eq!(
+            result.get("method").and_then(|v| v.as_str()),
+            Some("CapabilityBased")
+        );
+        assert_eq!(result.get("count").and_then(|v| v.as_u64()), Some(0));
+        assert!(result.contains_key("endpoints"));
+        assert!(result.contains_key("timestamp"));
+    }
+
+    #[test]
+    fn test_build_discovery_result_with_endpoints() {
+        let endpoints = vec!["http://a".to_string(), "http://b".to_string()];
+        let result = build_discovery_result("Multicast", &endpoints);
+        assert_eq!(result.get("count").and_then(|v| v.as_u64()), Some(2));
+        let eps = result.get("endpoints").and_then(|v| v.as_array()).unwrap();
+        assert_eq!(eps.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_handle_discover_registry_required() {
+        // Registry-based discovery without URL returns error
+        let result = handle_discover(
+            None,
+            None,
+            DiscoveryMethod::RegistryBased,
+            None, // no registry URL
+            false,
+        )
+        .await;
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Registry URL required"));
+    }
+
+    #[test]
+    fn test_discovery_method_variants() {
+        // Ensure all variants are usable
+        let _ = DiscoveryMethod::CapabilityBased;
+        let _ = DiscoveryMethod::RegistryBased;
+        let _ = DiscoveryMethod::DnsBased;
+        let _ = DiscoveryMethod::Multicast;
+    }
 }

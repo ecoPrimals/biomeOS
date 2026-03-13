@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Core Universal BiomeOS Manager
 //!
 //! Central coordination system for managing the entire biomeOS ecosystem.

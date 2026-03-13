@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! AI-powered graph advisor using Squirrel integration
 //!
 //! This module provides AI-driven suggestions and learning for graph modifications.

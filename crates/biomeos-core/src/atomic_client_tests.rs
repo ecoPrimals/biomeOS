@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! AtomicClient Tests
 //!
 //! Extracted from atomic_client.rs to maintain files under 1000 lines.

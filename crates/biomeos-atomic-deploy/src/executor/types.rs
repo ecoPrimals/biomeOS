@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Shared types for graph execution
 //!
 //! This module contains result types and report structures used throughout

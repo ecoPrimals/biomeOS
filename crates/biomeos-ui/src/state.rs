@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! UI state management
 //!
 //! Manages the current state of devices, primals, and assignments.

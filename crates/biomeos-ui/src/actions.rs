@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! User actions
 //!
 //! Actions represent user interactions that need to be handled by the orchestrator.

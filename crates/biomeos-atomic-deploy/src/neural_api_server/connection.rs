@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Connection handling for Neural API Server
 //!
 //! Handles incoming Unix socket connections, reads requests, and writes responses.

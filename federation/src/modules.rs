@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Federation modules for biomeOS
 //!
 //! This module provides the core federation functionality including
@@ -171,4 +174,199 @@ pub async fn validate_config(config_path: &str) -> Result<()> {
     }
 
     Ok(())
+}
+
+// ============================================================================
+// TESTS
+// ============================================================================
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_deploy_manifest_valid_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let manifest_path = dir.path().join("manifest.yaml");
+        let manifest_content = r#"
+metadata:
+  name: test-manifest
+  version: "1.0.0"
+"#;
+        std::fs::write(&manifest_path, manifest_content).unwrap();
+
+        let result = deploy_manifest(manifest_path.to_str().unwrap()).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_deploy_manifest_unnamed_version() {
+        let dir = tempfile::tempdir().unwrap();
+        let manifest_path = dir.path().join("minimal.yaml");
+        std::fs::write(&manifest_path, "{}").unwrap();
+
+        let result = deploy_manifest(manifest_path.to_str().unwrap()).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_deploy_manifest_nonexistent_file() {
+        let result = deploy_manifest("/nonexistent/path/manifest.yaml").await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_deploy_manifest_invalid_yaml() {
+        let dir = tempfile::tempdir().unwrap();
+        let manifest_path = dir.path().join("bad.yaml");
+        std::fs::write(&manifest_path, "invalid: yaml: content: [").unwrap();
+
+        let result = deploy_manifest(manifest_path.to_str().unwrap()).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_list_manifests() {
+        let result = list_manifests().await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_load_config_none() {
+        let result = load_config(None).await;
+        assert!(result.is_ok());
+        let config = result.unwrap();
+        assert!(config.get("federation").is_some());
+        assert!(config
+            .get("federation")
+            .and_then(|f| f.get("discovery"))
+            .is_some());
+    }
+
+    #[tokio::test]
+    async fn test_load_config_from_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("config.yaml");
+        let config_content = r#"
+federation:
+  discovery:
+    method: test_scan
+    timeout: 60
+  coordination:
+    enabled: true
+"#;
+        std::fs::write(&config_path, config_content).unwrap();
+
+        let result = load_config(Some(config_path.to_str().unwrap())).await;
+        assert!(result.is_ok());
+        let config = result.unwrap();
+        assert_eq!(
+            config
+                .get("federation")
+                .and_then(|f| f.get("discovery"))
+                .and_then(|d| d.get("method"))
+                .and_then(|m| m.as_str()),
+            Some("test_scan")
+        );
+    }
+
+    #[tokio::test]
+    async fn test_load_config_nonexistent_file() {
+        let result = load_config(Some("/nonexistent/config.yaml")).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_show_status() {
+        let result = show_status().await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_validate_config_valid() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("valid_config.yaml");
+        let config_content = r#"
+federation:
+  discovery:
+    method: network_scan
+    timeout: 30
+"#;
+        std::fs::write(&config_path, config_content).unwrap();
+
+        let result = validate_config(config_path.to_str().unwrap()).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_validate_config_missing_federation() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("no_federation.yaml");
+        std::fs::write(&config_path, "other: value").unwrap();
+
+        let result = validate_config(config_path.to_str().unwrap()).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_validate_config_missing_discovery() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("no_discovery.yaml");
+        let config_content = r#"
+federation:
+  coordination:
+    enabled: true
+"#;
+        std::fs::write(&config_path, config_content).unwrap();
+
+        let result = validate_config(config_path.to_str().unwrap()).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_validate_config_missing_method() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("no_method.yaml");
+        let config_content = r#"
+federation:
+  discovery:
+    timeout: 30
+"#;
+        std::fs::write(&config_path, config_content).unwrap();
+
+        let result = validate_config(config_path.to_str().unwrap()).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_validate_config_missing_timeout() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("no_timeout.yaml");
+        let config_content = r#"
+federation:
+  discovery:
+    method: network_scan
+"#;
+        std::fs::write(&config_path, config_content).unwrap();
+
+        let result = validate_config(config_path.to_str().unwrap()).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_validate_config_nonexistent_file() {
+        let result = validate_config("/nonexistent/config.yaml").await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_validate_config_invalid_yaml() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("bad.yaml");
+        std::fs::write(&config_path, "invalid: [yaml").unwrap();
+
+        let result = validate_config(config_path.to_str().unwrap()).await;
+        assert!(result.is_err());
+    }
 }

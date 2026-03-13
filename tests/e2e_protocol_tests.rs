@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! End-to-end tests for dual-protocol support
 //!
 //! These tests verify the complete flow from tower.toml to primal execution:

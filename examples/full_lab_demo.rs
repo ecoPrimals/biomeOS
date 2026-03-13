@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! # Full Lab Demo
 //!
 //! Comprehensive demo showing BiomeOS orchestrating multiple lab experiments.

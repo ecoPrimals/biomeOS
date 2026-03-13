@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Capability resolution and binary discovery
 //!
 //! Resolves capabilities to primal names via taxonomy and discovers primal binaries

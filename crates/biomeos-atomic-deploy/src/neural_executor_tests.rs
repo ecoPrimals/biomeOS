@@ -1,10 +1,43 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Tests for GraphExecutor
 //!
 //! Extracted from neural_executor.rs to keep file under 1000 lines.
 
+#![allow(clippy::unwrap_used)]
+
 use super::neural_executor::GraphExecutor;
 use crate::neural_graph::{Graph, GraphConfig, GraphNode};
 use std::collections::HashMap;
+
+#[test]
+fn test_split_capability_with_dot() {
+    let (domain, op) = GraphExecutor::split_capability("ecology.et0_fao56");
+    assert_eq!(domain, "ecology");
+    assert_eq!(op, "et0_fao56");
+}
+
+#[test]
+fn test_split_capability_without_dot() {
+    let (domain, op) = GraphExecutor::split_capability("single");
+    assert_eq!(domain, "single");
+    assert_eq!(op, "execute");
+}
+
+#[test]
+fn test_split_capability_empty() {
+    let (domain, op) = GraphExecutor::split_capability("");
+    assert_eq!(domain, "");
+    assert_eq!(op, "execute");
+}
+
+#[test]
+fn test_split_capability_multiple_dots() {
+    let (domain, op) = GraphExecutor::split_capability("a.b.c");
+    assert_eq!(domain, "a");
+    assert_eq!(op, "b.c");
+}
 
 #[test]
 fn test_env_substitution() {
@@ -393,4 +426,62 @@ fn test_topological_sort_three_node_cycle() {
     let result = executor.topological_sort();
     assert!(result.is_err());
     assert!(result.unwrap_err().to_string().contains("cycle"));
+}
+
+#[test]
+fn test_topological_sort_unreachable_node() {
+    // Node b depends on a, but c is unreachable (no path from roots)
+    // Actually: a has no deps, b depends on a. If we add c with no deps, c is reachable.
+    // Unreachable: node that nothing points to AND doesn't have in_degree 0?
+    // In Kahn's algorithm, unreachable nodes never get in_degree 0, so they're never processed.
+    // Graph: a->b, c (isolated). a and c have in_degree 0. So both get processed in phase 1.
+    // Then b gets processed. All 3 in phases. So actually that works.
+    // True unreachable: d depends on c, c depends on b, b depends on a, but we also have e
+    // with no deps. e is in phase 1. a is in phase 1. b in phase 2, c in phase 3, d in phase 4.
+    // All 5 processed. OK.
+    // Cycle with unreachable: a->b->a (cycle), c (isolated). Phase 1: c only (a and b have in_degree 1).
+    // Then nothing else. Sum = 1 != 3. So we detect "cycles or unreachable".
+    let graph = Graph {
+        id: "test".to_string(),
+        version: "1.0".to_string(),
+        description: "test".to_string(),
+        nodes: vec![
+            create_test_node("a", vec!["b".to_string()]),
+            create_test_node("b", vec!["a".to_string()]),
+            create_test_node("c", vec![]),
+        ],
+        config: GraphConfig::default(),
+    };
+    let executor = GraphExecutor::new(graph, HashMap::new());
+    let result = executor.topological_sort();
+    assert!(result.is_err());
+    let err_msg = result.unwrap_err().to_string();
+    assert!(
+        err_msg.contains("cycle") || err_msg.contains("unreachable"),
+        "Expected cycle or unreachable error, got: {}",
+        err_msg
+    );
+}
+
+#[test]
+fn test_split_capability_leading_dot() {
+    // "domain.op" format - leading dot would be edge case
+    let (domain, op) = GraphExecutor::split_capability(".onlyop");
+    assert_eq!(domain, "");
+    assert_eq!(op, "onlyop");
+}
+
+#[test]
+fn test_split_capability_trailing_dot() {
+    let (domain, op) = GraphExecutor::split_capability("domain.");
+    assert_eq!(domain, "domain");
+    assert_eq!(op, "");
+}
+
+#[test]
+fn test_env_substitution_special_chars_in_value() {
+    let mut env = HashMap::new();
+    env.insert("PATH".to_string(), "/usr/bin:/usr/local/bin".to_string());
+    let result = GraphExecutor::substitute_env("Path: ${PATH}", &env);
+    assert_eq!(result, "Path: /usr/bin:/usr/local/bin");
 }

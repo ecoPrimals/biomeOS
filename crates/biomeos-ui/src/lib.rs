@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Interactive UI Orchestration for `biomeOS`
 //!
 //! This crate implements the orchestration layer for `biomeOS`'s interactive UI,
@@ -5,7 +8,7 @@
 
 // Crate-level lint configuration
 #![allow(clippy::doc_markdown)] // Allow technical terms without backticks
-#![deny(unsafe_code)] // No unsafe code in UI
+#![forbid(unsafe_code)] // No unsafe code in UI
 
 //! ## Network Effect Architecture
 //!

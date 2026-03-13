@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Unified Constants Module
 //!
 //! This module centralizes all constants that were previously scattered across
@@ -602,5 +605,80 @@ mod tests {
         assert_eq!(env_vars::BIND_ADDRESS, "BIND_ADDRESS");
         assert_eq!(env_vars::HTTP_PORT, "HTTP_PORT");
         assert_eq!(env_vars::MAX_CONNECTIONS, "MAX_CONNECTIONS");
+    }
+
+    #[test]
+    fn test_network_accessors() {
+        let _ = network::http_port();
+        let _ = network::https_port();
+        let _ = network::websocket_port();
+        let _ = network::mcp_port();
+        let _ = network::discovery_port();
+        assert_eq!(network::DEFAULT_HTTP_PORT, 8080);
+        assert_eq!(network::DEFAULT_DISCOVERY_PORT, 8001);
+        assert_eq!(network::LINK_LOCAL_RANGE, "169.254.0.0/16");
+        assert_eq!(network::PRIVATE_CLASS_A, "10.0.0.0/8");
+        assert_eq!(network::PRIVATE_CLASS_B, "172.16.0.0/12");
+        assert_eq!(network::PRIVATE_CLASS_C, "192.168.0.0/16");
+        assert_eq!(network::DEFAULT_MCP_SUBPROTOCOL, "mcp");
+    }
+
+    #[test]
+    fn test_endpoints_bind_address() {
+        let addr = endpoints::bind_address();
+        assert!(!addr.is_empty());
+        assert!(addr.contains('.') || addr.contains(':'));
+    }
+
+    #[test]
+    fn test_endpoints_production_bind_address() {
+        let addr = endpoints::production_bind_address();
+        assert!(!addr.is_empty());
+    }
+
+    #[test]
+    fn test_files_current_primal_plugin_dir() {
+        let dir = files::current_primal_plugin_dir();
+        assert!(dir.contains("plugins"));
+    }
+
+    #[test]
+    fn test_limits_constants() {
+        assert_eq!(limits::DEFAULT_SERVICE_MESH_MAX_SERVICES, 100);
+        assert_eq!(limits::DEFAULT_MEMORY_LIMIT_MB, 1024);
+        assert_eq!(limits::DEFAULT_CPU_LIMIT_MILLICORES, 1000);
+        assert_eq!(limits::DEFAULT_DISK_LIMIT_GB, 10);
+    }
+
+    #[test]
+    fn test_timeouts_more_constants() {
+        assert_eq!(timeouts::DEFAULT_HEALTH_CHECK_TIMEOUT.as_secs(), 10);
+        assert_eq!(timeouts::DEFAULT_HEALTH_CHECK_INTERVAL.as_secs(), 30);
+        assert_eq!(timeouts::DEFAULT_CACHE_TTL.as_secs(), 300);
+        assert_eq!(timeouts::DEFAULT_HEARTBEAT_INTERVAL.as_secs(), 30);
+    }
+
+    #[test]
+    fn test_events_all_constants() {
+        assert_eq!(events::PLUGIN_STOPPED, "plugin.stopped");
+        assert_eq!(events::PLUGIN_ERROR, "plugin.error");
+        assert_eq!(events::COMMAND_FAILED, "command.failed");
+        assert_eq!(events::SYSTEM_SHUTDOWN, "system.shutdown");
+        assert_eq!(events::CUSTOM_EVENT, "custom.event");
+    }
+
+    #[test]
+    fn test_files_base64_alphabet() {
+        assert_eq!(files::BASE64_ALPHABET.len(), 64);
+        assert!(files::SIZE_UNITS.contains(&"MB"));
+        assert!(files::SIZE_UNITS.contains(&"GB"));
+    }
+
+    #[test]
+    fn test_capabilities_all() {
+        assert_eq!(capabilities::VISUALIZATION, "visualization");
+        assert_eq!(capabilities::NETWORKING, "networking");
+        assert_eq!(capabilities::MONITORING, "monitoring");
+        assert_eq!(capabilities::DATA_PROCESSING, "data-processing");
     }
 }

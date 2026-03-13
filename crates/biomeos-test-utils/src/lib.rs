@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! BiomeOS Test Utilities
 //!
 //! Shared test infrastructure for BiomeOS crates, including:
@@ -9,7 +12,7 @@
 //! This crate is only for testing - it should never be used in production code.
 
 #![warn(missing_docs)]
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 
 pub mod assertions;
 pub mod fixtures;

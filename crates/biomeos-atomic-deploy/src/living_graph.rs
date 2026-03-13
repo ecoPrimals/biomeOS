@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Living Graph: Runtime Protocol State for Primal Connections
 //!
 //! This module tracks the runtime protocol state of all primal connections,
@@ -34,11 +37,14 @@ use crate::neural_graph::Graph as DeploymentGraph;
 /// Unique identifier for a connection between two primals
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ConnectionId {
+    /// Source primal name
     pub from: String,
+    /// Target primal name
     pub to: String,
 }
 
 impl ConnectionId {
+    /// Create a connection ID from source and target primal names.
     pub fn new(from: impl Into<String>, to: impl Into<String>) -> Self {
         Self {
             from: from.into(),
@@ -288,8 +294,9 @@ impl ConnectionState {
 
 /// Living deployment graph with runtime protocol state
 pub struct LivingGraph {
-    /// Static deployment definition (from TOML) - reserved for future graph validation
-    #[allow(dead_code)] // TODO: Wire up graph validation when graph-based deployment is active
+    /// Static deployment definition (from TOML). Reserved for graph validation when graph-based deployment is active.
+    #[allow(dead_code)]
+    // Future: wire up graph validation when graph-based deployment is active
     deployment: Option<DeploymentGraph>,
     /// Runtime state: primal → protocol state
     protocol_state: RwLock<HashMap<String, PrimalProtocolState>>,
@@ -511,9 +518,13 @@ impl LivingGraph {
 /// Protocol summary statistics
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ProtocolSummary {
+    /// Connections using JSON-RPC only
     pub json_rpc: usize,
+    /// Connections using tarpc
     pub tarpc: usize,
+    /// Connections using hybrid (both)
     pub hybrid: usize,
+    /// Connections in degraded fallback mode
     pub degraded: usize,
 }
 

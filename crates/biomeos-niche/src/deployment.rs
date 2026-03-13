@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Niche deployment management
 //!
 //! Handles deploying and managing running niche instances.
@@ -66,8 +69,9 @@ struct OrganismHandle {
 }
 
 /// Organism status
+/// Organism lifecycle status. Reserved for organism lifecycle state machine.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[allow(dead_code)] // TODO: Wire up for organism lifecycle state machine
+#[allow(dead_code)] // Future: wire up for organism lifecycle state machine
 enum OrganismStatus {
     Pending,
     Starting,

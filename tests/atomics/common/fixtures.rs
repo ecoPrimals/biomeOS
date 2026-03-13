@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 // Test fixtures for NUCLEUS atomic testing
 //
 // Deep Debt: Fast AND Safe - uses nix crate for safe POSIX syscalls

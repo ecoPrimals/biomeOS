@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Modern application state with builder pattern
 //!
 //! Provides a clean, type-safe way to configure the API server.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! E2E test for full VM deployment and federation discovery
 //!
 //! These tests require:

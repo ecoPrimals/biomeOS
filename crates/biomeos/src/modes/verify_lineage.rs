@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Verify lineage mode - Validate genetic lineage
 //!
 //! EVOLVED (Jan 27, 2026): Complete lineage verification implementation

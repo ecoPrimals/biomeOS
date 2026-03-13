@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Layer 3: Capability Verification
 //!
 //! Verifies that discovered primals actually have the capabilities they claim.

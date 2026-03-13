@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! BiomeOS Federation Validation Binary
 //!
 //! Uses VmFederationManager for proper, type-safe validation.

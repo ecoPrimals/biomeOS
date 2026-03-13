@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Primal process spawning and lifecycle management
 //!
 //! This module handles the discovery and spawning of primal binaries,
@@ -265,7 +268,9 @@ fn load_launch_profiles() -> LaunchProfilesConfig {
 /// Uses data-driven launch profiles from `config/primal_launch_profiles.toml`.
 /// Primals not listed in the config inherit the `[default]` profile.
 /// New primals can be onboarded by adding a TOML entry — no code changes needed.
-async fn configure_primal_sockets(
+///
+/// Pub(crate) for reuse by capability_handlers::primal_start (capability-based, no hardcoded names).
+pub(crate) async fn configure_primal_sockets(
     cmd: &mut Command,
     primal_name: &str,
     socket_path: &str,

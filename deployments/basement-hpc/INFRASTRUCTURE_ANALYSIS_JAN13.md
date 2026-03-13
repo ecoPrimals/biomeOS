@@ -1,5 +1,7 @@
 # 🏠 Basement HPC Infrastructure Analysis & biomeOS Deployment
 
+> **DEPRECATED** — This document is from January 2026 and may be stale. Infrastructure and deployment patterns have evolved. See `biomeos nucleus start` and current deploy graphs for current deployment guidance.
+
 **Date**: 2026-01-13  
 **Location**: Basement HPC (~$15k investment)  
 **Internet Gateway**: FlockGate (at brother's house)  

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Spore incubation - Deploy spores on local computers with local entropy mixing
 //!
 //! This module enables USB spores to be deployed on multiple computers while maintaining
@@ -22,6 +25,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use tokio::fs;
 use tracing::{debug, info, warn};
 
@@ -346,9 +350,10 @@ impl SporeIncubator {
         let deployed_seed = self.derive_deployed_seed(&local_entropy)?;
         let deployed_seed_hash = Self::hash_seed(&deployed_seed);
 
-        // 3. Determine spore ID and node ID
+        // 3. Determine spore ID and node ID (hostname in Arc for cheap clone across async)
         let spore_id = self.extract_spore_id()?;
-        let node_id = format!("node-{}-{}", spore_id, local_entropy.hostname);
+        let hostname: Arc<str> = Arc::from(local_entropy.hostname.as_str());
+        let node_id = format!("node-{}-{}", spore_id, hostname.as_ref());
 
         info!("Creating incubated node: {}", node_id);
 
@@ -360,6 +365,7 @@ impl SporeIncubator {
             &node_id,
             &deployed_seed_hash,
             &entropy_hash,
+            hostname.as_ref(),
             &local_entropy,
         )
         .await?;
@@ -373,7 +379,7 @@ impl SporeIncubator {
         log_tracker.initialize().await?;
 
         let mut metadata = std::collections::HashMap::new();
-        metadata.insert("computer_name".to_string(), local_entropy.hostname.clone());
+        metadata.insert("computer_name".to_string(), hostname.as_ref().to_string());
         metadata.insert("entropy_hash".to_string(), entropy_hash.clone());
         metadata.insert("node_id".to_string(), node_id.clone());
 
@@ -384,7 +390,7 @@ impl SporeIncubator {
                     "incubation".to_string(),
                 ),
                 node_id: Some(node_id.clone()),
-                deployed_to: Some(local_entropy.hostname.clone()),
+                deployed_to: Some(hostname.as_ref().to_string()),
                 metadata,
             })
             .await?;
@@ -473,6 +479,7 @@ impl SporeIncubator {
     }
 
     /// Create local configuration for incubated node
+    #[allow(clippy::too_many_arguments)]
     async fn create_local_config(
         &self,
         config_path: &Path,
@@ -480,6 +487,7 @@ impl SporeIncubator {
         node_id: &str,
         deployed_seed_hash: &str,
         entropy_hash: &str,
+        computer_name: &str,
         local_entropy: &LocalEntropy,
     ) -> SporeResult<()> {
         // Create directory
@@ -504,7 +512,7 @@ impl SporeIncubator {
                 spore_id: spore_id.to_string(),
                 node_id: node_id.to_string(),
                 deployed_at: Utc::now(),
-                computer_name: local_entropy.hostname.clone(),
+                computer_name: computer_name.to_string(),
                 entropy_hash: entropy_hash.to_string(),
             },
             lineage: LineageInfo {

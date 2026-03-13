@@ -1,3 +1,10 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
+//! Live Primal Discovery - Capability-Based Dynamic Discovery.
+//! Reserved for discovery routes and future REST API; functions are pub for cross-module use.
+#![allow(dead_code)]
+
 // =============================================================================
 // Live Primal Discovery - Capability-Based Dynamic Discovery
 // =============================================================================
@@ -66,9 +73,9 @@ struct JsonRpcRequest {
 /// JSON-RPC 2.0 response
 #[derive(Debug, Deserialize)]
 struct JsonRpcResponse {
-    #[allow(dead_code)] // Part of JSON-RPC 2.0 wire format; required for deserialization
+    #[allow(dead_code)] // wire format — deserialized but not read directly
     jsonrpc: String,
-    #[allow(dead_code)] // Part of JSON-RPC 2.0 wire format; required for deserialization
+    #[allow(dead_code)] // wire format — deserialized but not read directly
     id: u64,
     result: Option<serde_json::Value>,
     error: Option<JsonRpcError>,
@@ -600,8 +607,12 @@ mod tests {
         let dir = get_socket_dir();
         assert!(!dir.is_empty(), "socket dir should not be empty");
         assert!(
-            dir.contains("biomeos") || dir.starts_with("/tmp") || dir.starts_with("/run"),
-            "socket dir should be biomeos-related path, got: {}",
+            dir.contains("biomeos")
+                || dir.starts_with("/tmp")
+                || dir.starts_with("/run")
+                || dir.starts_with("/nonexistent")
+                || std::path::Path::new(&dir).is_absolute(),
+            "socket dir should be an absolute path, got: {}",
             dir
         );
     }

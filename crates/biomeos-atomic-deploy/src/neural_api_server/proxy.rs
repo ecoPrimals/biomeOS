@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! HTTP proxy functionality for Neural API Server
 //!
 //! Enables primals to make HTTP/HTTPS requests through Tower Atomic

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Primal operation executor trait
 //!
 //! Defines the interface for executing operations on primals.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Resources Configuration
 //!
 //! This module contains resource management and service discovery configuration types.

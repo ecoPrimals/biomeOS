@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! TLS and data-in-transit configuration.
 //!
 //! Contains configuration for TLS versions, cipher suites, and HSTS.

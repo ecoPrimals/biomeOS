@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Topology and system metrics handlers.
 //!
 //! This module handles topology discovery and system metrics:

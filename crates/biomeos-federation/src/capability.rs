@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Capability-based access control for sub-federations
 //!
 //! This module defines capabilities that can be granted to nodes within sub-federations.

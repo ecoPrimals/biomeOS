@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Layers 2 & 3: Identity and Capability Verification
 //!
 //! Identity proof via challenge-response, capability verification via primal query.

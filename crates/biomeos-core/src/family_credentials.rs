@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Family Credentials Management
 //!
 //! This module provides secure handling of family seeds and credentials for
@@ -28,9 +31,15 @@
 //! ```
 
 use biomeos_types::identifiers::FamilyId;
-use serde::Deserialize;
+use hmac::{Hmac, Mac};
+use serde::{Deserialize, Serialize};
+use sha2::Sha256;
+use std::fs;
+use std::io::Write;
 use std::path::Path;
 use zeroize::{Zeroize, ZeroizeOnDrop};
+
+type HmacSha256 = Hmac<Sha256>;
 
 /// Error type for credentials operations
 #[derive(Debug, thiserror::Error)]
@@ -46,6 +55,76 @@ pub enum CredentialsError {
 
 // Alias for backward compatibility
 type BirdSongError = CredentialsError;
+
+/// Version 2 credential file format: payload + HMAC for integrity
+#[derive(Debug, Serialize, Deserialize)]
+struct CredentialFileV2 {
+    version: u8,
+    payload: String,
+    hmac: String,
+}
+
+/// Payload structure for version 2 format
+#[derive(Debug, Serialize, Deserialize)]
+struct CredentialPayload {
+    family_id: String,
+    family_seed: String,
+}
+
+fn load_credential_v2(file: CredentialFileV2) -> Result<FamilyCredentials, BirdSongError> {
+    if file.version != 2 {
+        return Err(BirdSongError::InvalidCredentials(format!(
+            "Unsupported credential version: {}",
+            file.version
+        )));
+    }
+
+    let payload_bytes =
+        base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &file.payload).map_err(
+            |e| BirdSongError::InvalidCredentials(format!("Invalid payload base64: {}", e)),
+        )?;
+
+    let payload: CredentialPayload = serde_json::from_slice(&payload_bytes)
+        .map_err(|e| BirdSongError::InvalidCredentials(format!("Invalid payload JSON: {}", e)))?;
+
+    let seed = SecretSeed::new(payload.family_seed.clone())?;
+    let seed_bytes =
+        base64::Engine::decode(&base64::engine::general_purpose::STANDARD, seed.as_str()).map_err(
+            |e| BirdSongError::InvalidCredentials(format!("Invalid seed base64: {}", e)),
+        )?;
+
+    let expected_tag =
+        base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &file.hmac).map_err(
+            |e| BirdSongError::InvalidCredentials(format!("Invalid HMAC base64: {}", e)),
+        )?;
+
+    let mut mac = HmacSha256::new_from_slice(&seed_bytes)
+        .map_err(|e| BirdSongError::InvalidCredentials(format!("HMAC init failed: {}", e)))?;
+    mac.update(&payload_bytes);
+    mac.verify_slice(&expected_tag).map_err(|_| {
+        BirdSongError::InvalidCredentials(
+            "Credential file integrity check failed (HMAC mismatch)".to_string(),
+        )
+    })?;
+
+    let family_id = FamilyId::new(payload.family_id);
+    FamilyCredentials::new(family_id, seed)
+}
+
+fn load_credential_legacy(contents: &str) -> Result<FamilyCredentials, BirdSongError> {
+    #[derive(Deserialize)]
+    struct LegacyFormat {
+        family_id: String,
+        family_seed: String,
+    }
+
+    let file: LegacyFormat = serde_json::from_str(contents)
+        .map_err(|e| BirdSongError::InvalidCredentials(format!("Invalid JSON: {}", e)))?;
+
+    let family_id = FamilyId::new(file.family_id);
+    let seed = SecretSeed::new(file.family_seed)?;
+    FamilyCredentials::new(family_id, seed)
+}
 
 /// Secure wrapper for family seed that zeroizes on drop
 #[derive(Clone, Zeroize, ZeroizeOnDrop)]
@@ -138,42 +217,96 @@ impl FamilyCredentials {
         Self::new(family_id, seed)
     }
 
-    /// Load credentials from encrypted file (future enhancement)
+    /// Load credentials from file.
     ///
-    /// **NOTE**: This is a development placeholder. Production systems should implement
-    /// age-encrypted files or integrate with system keychains (e.g., `keyring` crate).
+    /// Supports two formats:
+    /// - **Version 2** (preferred): Structured format with HMAC integrity verification.
+    ///   Uses file permissions (0o600 recommended) and HMAC-SHA256 over payload.
+    /// - **Version 1** (legacy): Plaintext JSON for backward compatibility.
     ///
-    /// Current implementation loads from plaintext JSON for development only.
-    ///
-    /// Future implementation should use:
-    /// - age encryption (github.com/FiloSottile/age)
-    /// - System keychain integration (keyring-rs)
-    /// - Environment-based key derivation
-    #[allow(dead_code)] // TODO: Wire up when age/keychain integration is implemented
+    /// The `_encryption_key` parameter is reserved for future age/keychain integration.
     pub fn from_encrypted_file(
         path: impl AsRef<Path>,
         _encryption_key: &[u8],
     ) -> Result<Self, BirdSongError> {
-        // Future: Implement age-encrypted file format
-        // For now, load from plaintext JSON (development only)
-        let contents = std::fs::read_to_string(path.as_ref()).map_err(|e| {
+        let contents = fs::read_to_string(path.as_ref()).map_err(|e| {
             BirdSongError::InvalidCredentials(format!("Failed to read file: {}", e))
         })?;
 
-        #[derive(Deserialize)]
-        struct FileFormat {
-            family_id: String,
-            family_seed: String,
+        // Try versioned format first
+        if let Ok(v2) = serde_json::from_str::<CredentialFileV2>(&contents) {
+            return load_credential_v2(v2);
         }
 
-        let file: FileFormat = serde_json::from_str(&contents)
-            .map_err(|e| BirdSongError::InvalidCredentials(format!("Invalid JSON: {}", e)))?;
+        // Fallback to legacy plaintext JSON (version 1)
+        load_credential_legacy(&contents)
+    }
 
-        let family_id = FamilyId::new(file.family_id);
+    /// Save credentials to file with secure storage.
+    ///
+    /// - Writes with file permissions 0o600 (owner read/write only)
+    /// - Uses version 2 format with HMAC-SHA256 integrity verification
+    /// - Payload is base64-encoded; HMAC is computed over raw payload bytes using the seed
+    pub fn save_to_file(&self, path: impl AsRef<Path>) -> Result<(), BirdSongError> {
+        let payload = CredentialPayload {
+            family_id: self.family_id.as_str().to_string(),
+            family_seed: self.seed.as_str().to_string(),
+        };
+        let payload_json = serde_json::to_string(&payload).map_err(|e| {
+            BirdSongError::InvalidCredentials(format!("Failed to serialize: {}", e))
+        })?;
+        let payload_b64 = base64::Engine::encode(
+            &base64::engine::general_purpose::STANDARD,
+            payload_json.as_bytes(),
+        );
 
-        let seed = SecretSeed::new(file.family_seed)?;
+        let seed_bytes = base64::Engine::decode(
+            &base64::engine::general_purpose::STANDARD,
+            self.seed.as_str(),
+        )
+        .map_err(|e| BirdSongError::InvalidCredentials(format!("Invalid seed for HMAC: {}", e)))?;
 
-        Self::new(family_id, seed)
+        let mut mac = HmacSha256::new_from_slice(&seed_bytes)
+            .map_err(|e| BirdSongError::InvalidCredentials(format!("HMAC init failed: {}", e)))?;
+        mac.update(payload_json.as_bytes());
+        let tag = mac.finalize().into_bytes();
+        let hmac_b64 =
+            base64::Engine::encode(&base64::engine::general_purpose::STANDARD, tag.as_slice());
+
+        let file = CredentialFileV2 {
+            version: 2,
+            payload: payload_b64,
+            hmac: hmac_b64,
+        };
+        let contents = serde_json::to_string(&file).map_err(|e| {
+            BirdSongError::InvalidCredentials(format!("Failed to serialize file: {}", e))
+        })?;
+
+        let mut f = fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(path.as_ref())
+            .map_err(|e| {
+                BirdSongError::InvalidCredentials(format!("Failed to create file: {}", e))
+            })?;
+        f.write_all(contents.as_bytes()).map_err(|e| {
+            BirdSongError::InvalidCredentials(format!("Failed to write file: {}", e))
+        })?;
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            f.set_permissions(fs::Permissions::from_mode(0o600))
+                .map_err(|e| {
+                    BirdSongError::InvalidCredentials(format!(
+                        "Failed to set file permissions 0o600: {}",
+                        e
+                    ))
+                })?;
+        }
+
+        Ok(())
     }
 
     /// Get the family ID
@@ -299,5 +432,65 @@ mod tests {
         // Cleanup
         std::env::remove_var("FAMILY_ID");
         std::env::remove_var("FAMILY_SEED");
+    }
+
+    #[test]
+    fn test_from_encrypted_file_legacy_format() {
+        let temp = tempfile::NamedTempFile::new().unwrap();
+        let json = r#"{"family_id":"legacy-family","family_seed":"iIDnVX3Tein1LFkrkkq7Wo3wsxPNek9XZqp0VL4Kn88="}"#;
+        std::fs::write(temp.path(), json).unwrap();
+
+        let creds =
+            FamilyCredentials::from_encrypted_file(temp.path(), b"").expect("load legacy format");
+        assert_eq!(creds.family_id().as_str(), "legacy-family");
+    }
+
+    #[test]
+    fn test_save_and_load_v2_format() {
+        let family_id = FamilyId::new("save-test-family");
+        let seed =
+            SecretSeed::new("iIDnVX3Tein1LFkrkkq7Wo3wsxPNek9XZqp0VL4Kn88=".to_string()).unwrap();
+        let creds = FamilyCredentials::new(family_id, seed).unwrap();
+
+        let temp = tempfile::NamedTempFile::new().unwrap();
+        creds.save_to_file(temp.path()).expect("save");
+
+        let loaded =
+            FamilyCredentials::from_encrypted_file(temp.path(), b"").expect("load v2 format");
+        assert_eq!(loaded.family_id().as_str(), "save-test-family");
+    }
+
+    #[test]
+    fn test_v2_hmac_tamper_detection() {
+        let family_id = FamilyId::new("tamper-test");
+        let seed =
+            SecretSeed::new("iIDnVX3Tein1LFkrkkq7Wo3wsxPNek9XZqp0VL4Kn88=".to_string()).unwrap();
+        let creds = FamilyCredentials::new(family_id, seed).unwrap();
+
+        let temp = tempfile::NamedTempFile::new().unwrap();
+        creds.save_to_file(temp.path()).expect("save");
+
+        // Tamper with the payload: decode, modify family_id, re-encode (invalidates HMAC)
+        let mut file: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(temp.path()).unwrap()).unwrap();
+        let payload_b64 = file["payload"].as_str().unwrap();
+        let mut payload_bytes =
+            base64::Engine::decode(&base64::engine::general_purpose::STANDARD, payload_b64)
+                .unwrap();
+        let mut payload: serde_json::Value = serde_json::from_slice(&payload_bytes).unwrap();
+        payload["family_id"] = serde_json::Value::String("evil-family".to_string());
+        payload_bytes = serde_json::to_vec(&payload).unwrap();
+        file["payload"] = serde_json::Value::String(base64::Engine::encode(
+            &base64::engine::general_purpose::STANDARD,
+            &payload_bytes,
+        ));
+        std::fs::write(temp.path(), serde_json::to_string(&file).unwrap()).unwrap();
+
+        let result = FamilyCredentials::from_encrypted_file(temp.path(), b"");
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("integrity check failed"));
     }
 }

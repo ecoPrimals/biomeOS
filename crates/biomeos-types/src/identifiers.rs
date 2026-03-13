@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Strong-typed identifiers for BiomeOS domain concepts
 //!
 //! This module provides NewType wrappers for domain identifiers,
@@ -420,6 +423,7 @@ pub enum IdError {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

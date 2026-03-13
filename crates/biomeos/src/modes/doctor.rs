@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Doctor mode - Health diagnostics
 //!
 //! Comprehensive health checks for biomeOS system
@@ -14,6 +17,9 @@ pub(crate) struct Diagnostics {
     overall_status: HealthStatus,
     recommendations: Vec<String>,
 }
+
+/// Alias for diagnostic check (used in format/aggregate APIs)
+pub(crate) type DiagnosticCheck = HealthCheck;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct HealthCheck {
@@ -56,6 +62,73 @@ impl Diagnostics {
     }
 }
 
+/// Format diagnostics as text lines (pure, testable).
+pub(crate) fn format_text_report(results: &Diagnostics) -> Vec<String> {
+    let mut lines = Vec::new();
+    for check in &results.checks {
+        let status_icon = match check.status {
+            HealthStatus::Healthy => "✅",
+            HealthStatus::Warning => "⚠️ ",
+            HealthStatus::Critical => "❌",
+        };
+        lines.push(format!("{} {}", status_icon, check.name.bold()));
+        for detail in &check.details {
+            lines.push(format!("   {}", detail));
+        }
+        lines.push(String::new());
+    }
+    lines.push(
+        "═══════════════════════════════════════════════════════════════"
+            .bright_black()
+            .to_string(),
+    );
+    let overall_status_text = match results.overall_status {
+        HealthStatus::Healthy => "✅ HEALTHY".bright_green().to_string(),
+        HealthStatus::Warning => "⚠️  HEALTHY (warnings)".bright_yellow().to_string(),
+        HealthStatus::Critical => "❌ CRITICAL".bright_red().to_string(),
+    };
+    lines.push(format!(
+        "{}: {}",
+        "Overall Health".bold(),
+        overall_status_text
+    ));
+    if !results.recommendations.is_empty() {
+        lines.push(String::new());
+        lines.push(format!("{}:", "Recommendations".bold()));
+        for rec in &results.recommendations {
+            lines.push(format!("  {} {}", "•".bright_cyan(), rec));
+        }
+    }
+    lines
+}
+
+/// Format diagnostics as JSON string (pure, testable).
+pub(crate) fn format_json_report(results: &Diagnostics) -> Result<String> {
+    serde_json::to_string_pretty(results).map_err(Into::into)
+}
+
+/// Aggregate recommendations from diagnostic checks (pure, testable).
+pub(crate) fn aggregate_recommendations(results: &[DiagnosticCheck]) -> Vec<String> {
+    let mut recommendations = Vec::new();
+    for check in results {
+        match check.name.as_str() {
+            "Primal Discovery" if check.status != HealthStatus::Healthy => {
+                recommendations.push("Start missing primals for full functionality".to_string());
+            }
+            "System Resources" if check.status != HealthStatus::Healthy => {
+                recommendations
+                    .push("System resources under pressure - consider scaling".to_string());
+            }
+            "Graphs Directory" if check.status != HealthStatus::Healthy => {
+                recommendations
+                    .push("Create graphs/ directory and add deployment graphs".to_string());
+            }
+            _ => {}
+        }
+    }
+    recommendations
+}
+
 pub async fn run(detailed: bool, format: String, subsystem: Option<String>) -> Result<()> {
     let diagnostics = if let Some(subsys) = subsystem {
         check_subsystem(&subsys, detailed).await?
@@ -65,10 +138,12 @@ pub async fn run(detailed: bool, format: String, subsystem: Option<String>) -> R
 
     match format.as_str() {
         "json" => {
-            println!("{}", serde_json::to_string_pretty(&diagnostics)?);
+            println!("{}", format_json_report(&diagnostics)?);
         }
         _ => {
-            print_diagnostics(&diagnostics);
+            for line in format_text_report(&diagnostics) {
+                println!("{}", line);
+            }
         }
     }
 
@@ -118,7 +193,7 @@ async fn check_all_subsystems(detailed: bool) -> Result<Diagnostics> {
     Ok(diag)
 }
 
-async fn check_subsystem(name: &str, _detailed: bool) -> Result<Diagnostics> {
+pub(crate) async fn check_subsystem(name: &str, _detailed: bool) -> Result<Diagnostics> {
     let mut diag = Diagnostics::new();
 
     match name {
@@ -167,7 +242,7 @@ async fn check_binary_health() -> Result<HealthCheck> {
     Ok(check)
 }
 
-async fn check_configuration() -> Result<HealthCheck> {
+pub(crate) async fn check_configuration() -> Result<HealthCheck> {
     let mut check = HealthCheck {
         name: "Configuration".to_string(),
         status: HealthStatus::Healthy,
@@ -196,7 +271,7 @@ async fn check_configuration() -> Result<HealthCheck> {
     Ok(check)
 }
 
-async fn check_graphs_dir() -> Result<HealthCheck> {
+pub(crate) async fn check_graphs_dir() -> Result<HealthCheck> {
     let mut check = HealthCheck {
         name: "Graphs Directory".to_string(),
         status: HealthStatus::Healthy,
@@ -300,7 +375,7 @@ async fn check_primal_discovery() -> Result<HealthCheck> {
     Ok(check)
 }
 
-async fn check_plasmid_bin() -> Result<HealthCheck> {
+pub(crate) async fn check_plasmid_bin() -> Result<HealthCheck> {
     let mut check = HealthCheck {
         name: "PlasmidBin".to_string(),
         status: HealthStatus::Healthy,
@@ -399,7 +474,7 @@ async fn check_system_resources() -> Result<HealthCheck> {
     Ok(check)
 }
 
-async fn check_dependencies() -> Result<HealthCheck> {
+pub(crate) async fn check_dependencies() -> Result<HealthCheck> {
     let check = HealthCheck {
         name: "Dependencies".to_string(),
         status: HealthStatus::Healthy,
@@ -414,71 +489,23 @@ async fn check_dependencies() -> Result<HealthCheck> {
 }
 
 pub(crate) fn add_recommendations(diag: &mut Diagnostics) {
-    // Collect recommendations to add (to avoid borrow checker issues)
-    let mut recommendations = Vec::new();
-
-    for check in &diag.checks {
-        match &check.name[..] {
-            "Primal Discovery" if check.status != HealthStatus::Healthy => {
-                recommendations.push("Start missing primals for full functionality".to_string());
-            }
-            "System Resources" if check.status != HealthStatus::Healthy => {
-                recommendations
-                    .push("System resources under pressure - consider scaling".to_string());
-            }
-            "Graphs Directory" if check.status != HealthStatus::Healthy => {
-                recommendations
-                    .push("Create graphs/ directory and add deployment graphs".to_string());
-            }
-            _ => {}
-        }
-    }
-
-    // Add all collected recommendations
-    for rec in recommendations {
+    for rec in aggregate_recommendations(&diag.checks) {
         diag.add_recommendation(rec);
     }
 }
 
+/// Print diagnostics to stdout (uses format_text_report)
+#[cfg(test)]
 pub(crate) fn print_diagnostics(diag: &Diagnostics) {
-    for check in &diag.checks {
-        let status_icon = match check.status {
-            HealthStatus::Healthy => "✅",
-            HealthStatus::Warning => "⚠️ ",
-            HealthStatus::Critical => "❌",
-        };
-
-        println!("{} {}", status_icon, check.name.bold());
-        for detail in &check.details {
-            println!("   {}", detail);
-        }
-        println!();
-    }
-
-    println!(
-        "{}",
-        "═══════════════════════════════════════════════════════════════".bright_black()
-    );
-
-    let overall_status_text = match diag.overall_status {
-        HealthStatus::Healthy => "✅ HEALTHY".bright_green(),
-        HealthStatus::Warning => "⚠️  HEALTHY (warnings)".bright_yellow(),
-        HealthStatus::Critical => "❌ CRITICAL".bright_red(),
-    };
-
-    println!("{}: {}", "Overall Health".bold(), overall_status_text);
-
-    if !diag.recommendations.is_empty() {
-        println!();
-        println!("{}:", "Recommendations".bold());
-        for rec in &diag.recommendations {
-            println!("  {} {}", "•".bright_cyan(), rec);
-        }
+    for line in format_text_report(diag) {
+        println!("{}", line);
     }
 }
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used)]
+
     use super::*;
 
     #[tokio::test]
@@ -579,6 +606,59 @@ mod tests {
         assert_eq!(diag.recommendations.len(), 2);
         assert_eq!(diag.recommendations[0], "Fix something");
         assert_eq!(diag.recommendations[1], "Fix another");
+    }
+
+    #[test]
+    fn test_format_text_report() {
+        let diag = Diagnostics {
+            checks: vec![HealthCheck {
+                name: "Test".to_string(),
+                status: HealthStatus::Healthy,
+                details: vec!["ok".to_string()],
+            }],
+            overall_status: HealthStatus::Healthy,
+            recommendations: vec![],
+        };
+        let lines = format_text_report(&diag);
+        assert!(!lines.is_empty());
+        assert!(lines.iter().any(|l| l.contains("Test")));
+        assert!(lines.iter().any(|l| l.contains("HEALTHY")));
+    }
+
+    #[test]
+    fn test_format_json_report() {
+        let diag = Diagnostics {
+            checks: vec![HealthCheck {
+                name: "Test".to_string(),
+                status: HealthStatus::Warning,
+                details: vec!["detail".to_string()],
+            }],
+            overall_status: HealthStatus::Warning,
+            recommendations: vec!["Fix it".to_string()],
+        };
+        let json = format_json_report(&diag).unwrap();
+        assert!(json.contains("Test"));
+        assert!(json.contains("Warning"));
+        assert!(json.contains("Fix it"));
+    }
+
+    #[test]
+    fn test_aggregate_recommendations() {
+        let checks = vec![
+            HealthCheck {
+                name: "Primal Discovery".to_string(),
+                status: HealthStatus::Warning,
+                details: vec![],
+            },
+            HealthCheck {
+                name: "Binary".to_string(),
+                status: HealthStatus::Healthy,
+                details: vec![],
+            },
+        ];
+        let recs = aggregate_recommendations(&checks);
+        assert_eq!(recs.len(), 1);
+        assert!(recs[0].contains("primals"));
     }
 
     #[test]
@@ -726,5 +806,270 @@ mod tests {
             recommendations: vec![],
         };
         print_diagnostics(&diag);
+    }
+
+    #[test]
+    fn test_print_diagnostics_all_statuses() {
+        let diag = Diagnostics {
+            checks: vec![
+                HealthCheck {
+                    name: "Healthy".to_string(),
+                    status: HealthStatus::Healthy,
+                    details: vec!["ok".to_string()],
+                },
+                HealthCheck {
+                    name: "Warning".to_string(),
+                    status: HealthStatus::Warning,
+                    details: vec!["warning".to_string()],
+                },
+                HealthCheck {
+                    name: "Critical".to_string(),
+                    status: HealthStatus::Critical,
+                    details: vec!["critical".to_string()],
+                },
+            ],
+            overall_status: HealthStatus::Critical,
+            recommendations: vec!["Fix it".to_string()],
+        };
+        print_diagnostics(&diag);
+    }
+
+    #[tokio::test]
+    async fn test_run_with_subsystem_binary() {
+        let result = super::run(false, "text".to_string(), Some("binary".to_string())).await;
+        assert!(
+            result.is_ok(),
+            "binary subsystem should succeed: {:?}",
+            result.err()
+        );
+    }
+
+    #[tokio::test]
+    async fn test_run_with_subsystem_config() {
+        let result = super::run(false, "text".to_string(), Some("config".to_string())).await;
+        assert!(
+            result.is_ok(),
+            "config subsystem should succeed: {:?}",
+            result.err()
+        );
+    }
+
+    #[tokio::test]
+    async fn test_run_with_subsystem_graphs() {
+        let result = super::run(false, "text".to_string(), Some("graphs".to_string())).await;
+        assert!(
+            result.is_ok(),
+            "graphs subsystem should succeed: {:?}",
+            result.err()
+        );
+    }
+
+    #[tokio::test]
+    async fn test_run_with_subsystem_primals() {
+        let result = super::run(false, "text".to_string(), Some("primals".to_string())).await;
+        assert!(
+            result.is_ok(),
+            "primals subsystem should succeed: {:?}",
+            result.err()
+        );
+    }
+
+    #[tokio::test]
+    async fn test_run_with_subsystem_plasmidbin() {
+        let result = super::run(false, "text".to_string(), Some("plasmidbin".to_string())).await;
+        assert!(
+            result.is_ok(),
+            "plasmidbin subsystem should succeed: {:?}",
+            result.err()
+        );
+    }
+
+    #[tokio::test]
+    async fn test_run_with_subsystem_system() {
+        let result = super::run(false, "text".to_string(), Some("system".to_string())).await;
+        assert!(
+            result.is_ok(),
+            "system subsystem should succeed: {:?}",
+            result.err()
+        );
+    }
+
+    #[tokio::test]
+    async fn test_run_json_format() {
+        let result = super::run(false, "json".to_string(), None).await;
+        assert!(
+            result.is_ok(),
+            "json format should succeed: {:?}",
+            result.err()
+        );
+    }
+
+    #[tokio::test]
+    async fn test_run_all_subsystems_detailed() {
+        let result = super::run(true, "text".to_string(), None).await;
+        assert!(
+            result.is_ok(),
+            "detailed run should succeed: {:?}",
+            result.err()
+        );
+    }
+
+    #[tokio::test]
+    #[ignore = "cwd-changing test is thread-unsafe; run with --test-threads=1"]
+    async fn test_check_graphs_dir_no_directory() {
+        let temp = tempfile::tempdir().unwrap();
+        let old_cwd = std::env::current_dir().unwrap();
+        std::env::set_current_dir(temp.path()).unwrap();
+        let check = check_graphs_dir().await.unwrap();
+        std::env::set_current_dir(&old_cwd).unwrap();
+        assert_eq!(check.status, HealthStatus::Warning);
+        assert!(check
+            .details
+            .iter()
+            .any(|d| d.contains("not found") || d.contains("Directory")));
+    }
+
+    #[tokio::test]
+    #[ignore = "cwd-changing test is thread-unsafe; run with --test-threads=1"]
+    async fn test_check_graphs_dir_with_toml_files() {
+        let temp = tempfile::tempdir().unwrap();
+        let graphs_dir = temp.path().join("graphs");
+        std::fs::create_dir_all(&graphs_dir).unwrap();
+        std::fs::write(graphs_dir.join("deploy.toml"), "name = \"test\"").unwrap();
+        let old_cwd = std::env::current_dir().unwrap();
+        std::env::set_current_dir(temp.path()).unwrap();
+        let check = check_graphs_dir().await.unwrap();
+        std::env::set_current_dir(&old_cwd).unwrap();
+        assert_eq!(check.status, HealthStatus::Healthy);
+        assert!(check.details.iter().any(|d| d.contains("Graphs found: 1")));
+    }
+
+    #[tokio::test]
+    #[ignore = "cwd-changing test is thread-unsafe; run with --test-threads=1"]
+    async fn test_check_graphs_dir_empty_graphs_dir() {
+        let temp = tempfile::tempdir().unwrap();
+        let graphs_dir = temp.path().join("graphs");
+        std::fs::create_dir_all(&graphs_dir).unwrap();
+        let old_cwd = std::env::current_dir().unwrap();
+        std::env::set_current_dir(temp.path()).unwrap();
+        let check = check_graphs_dir().await.unwrap();
+        std::env::set_current_dir(&old_cwd).unwrap();
+        assert_eq!(check.status, HealthStatus::Warning);
+        assert!(check.details.iter().any(|d| d.contains("No graph")));
+    }
+
+    #[tokio::test]
+    #[ignore = "cwd-changing test is thread-unsafe; run with --test-threads=1"]
+    async fn test_check_plasmid_bin_no_directory() {
+        let temp = tempfile::tempdir().unwrap();
+        let old_cwd = std::env::current_dir().unwrap();
+        std::env::set_current_dir(temp.path()).unwrap();
+        let check = check_plasmid_bin().await.unwrap();
+        std::env::set_current_dir(&old_cwd).unwrap();
+        assert_eq!(check.status, HealthStatus::Warning);
+        assert!(check
+            .details
+            .iter()
+            .any(|d| d.contains("not found") || d.contains("Directory")));
+    }
+
+    #[tokio::test]
+    #[ignore = "cwd-changing test is thread-unsafe; run with --test-threads=1"]
+    async fn test_check_plasmid_bin_with_binaries() {
+        let temp = tempfile::tempdir().unwrap();
+        let plasmid_dir = temp.path().join("plasmidBin").join("primals");
+        std::fs::create_dir_all(&plasmid_dir).unwrap();
+        std::fs::write(plasmid_dir.join("beardog"), "fake-binary").unwrap();
+        let old_cwd = std::env::current_dir().unwrap();
+        std::env::set_current_dir(temp.path()).unwrap();
+        let check = check_plasmid_bin().await.unwrap();
+        std::env::set_current_dir(&old_cwd).unwrap();
+        assert_eq!(check.status, HealthStatus::Healthy);
+        assert!(check.details.iter().any(|d| d.contains("Binaries: 1")));
+    }
+
+    #[tokio::test]
+    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
+    async fn test_check_configuration_no_config() {
+        let temp = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(temp.path().join("biomeos")).unwrap();
+        let old_xdg = std::env::var("XDG_CONFIG_HOME").ok();
+        std::env::set_var("XDG_CONFIG_HOME", temp.path());
+        let check = check_configuration().await.unwrap();
+        if let Some(xdg) = old_xdg {
+            std::env::set_var("XDG_CONFIG_HOME", xdg);
+        } else {
+            std::env::remove_var("XDG_CONFIG_HOME");
+        }
+        assert_eq!(check.status, HealthStatus::Warning);
+        assert!(check.details.iter().any(|d| d.contains("Not found")));
+    }
+
+    #[tokio::test]
+    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
+    async fn test_check_configuration_with_config() {
+        let temp = tempfile::tempdir().unwrap();
+        let config_dir = temp.path().join("biomeos");
+        std::fs::create_dir_all(&config_dir).unwrap();
+        std::fs::write(config_dir.join("config.toml"), "[default]").unwrap();
+        let old_xdg = std::env::var("XDG_CONFIG_HOME").ok();
+        std::env::set_var("XDG_CONFIG_HOME", temp.path());
+        let check = check_configuration().await.unwrap();
+        if let Some(xdg) = old_xdg {
+            std::env::set_var("XDG_CONFIG_HOME", xdg);
+        } else {
+            std::env::remove_var("XDG_CONFIG_HOME");
+        }
+        assert_eq!(check.status, HealthStatus::Healthy);
+        assert!(check.details.iter().any(|d| d.contains("Found")));
+    }
+
+    #[tokio::test]
+    async fn test_check_dependencies() {
+        let check = check_dependencies().await.unwrap();
+        assert_eq!(check.status, HealthStatus::Healthy);
+        assert_eq!(check.name, "Dependencies");
+        assert!(check.details.iter().any(|d| d.contains("Pure Rust")));
+    }
+
+    #[test]
+    fn test_diagnostics_json_roundtrip() {
+        let diag = Diagnostics {
+            checks: vec![HealthCheck {
+                name: "Test".to_string(),
+                status: HealthStatus::Warning,
+                details: vec!["detail".to_string()],
+            }],
+            overall_status: HealthStatus::Warning,
+            recommendations: vec!["rec".to_string()],
+        };
+        let json = serde_json::to_string(&diag).unwrap();
+        let parsed: Diagnostics = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.checks.len(), 1);
+        assert_eq!(parsed.overall_status, HealthStatus::Warning);
+        assert_eq!(parsed.recommendations.len(), 1);
+    }
+
+    #[test]
+    fn test_add_recommendations_multiple_checks() {
+        let mut diag = Diagnostics::new();
+        diag.add_check(
+            "Primal Discovery",
+            HealthCheck {
+                name: "Primal Discovery".to_string(),
+                status: HealthStatus::Warning,
+                details: vec![],
+            },
+        );
+        diag.add_check(
+            "System Resources",
+            HealthCheck {
+                name: "System Resources".to_string(),
+                status: HealthStatus::Warning,
+                details: vec![],
+            },
+        );
+        add_recommendations(&mut diag);
+        assert_eq!(diag.recommendations.len(), 2);
     }
 }

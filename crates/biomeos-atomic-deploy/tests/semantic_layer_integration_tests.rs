@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Semantic Layer Integration Tests
 //!
 //! Tests for capability translation, runtime discovery, and semantic method routing

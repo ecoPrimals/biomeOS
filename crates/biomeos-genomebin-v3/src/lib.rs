@@ -1,10 +1,13 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! genomeBin v3.0 - TRUE Binary Isomorphic Format
 //!
 //! A pure Rust implementation of a self-extracting, multi-architecture
 //! binary format for distributing ecoPrimals primals.
 //!
 #![warn(missing_docs)]
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 //!
 //! # Deep Debt Principles
 //!

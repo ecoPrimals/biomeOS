@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! # Platypus - A Fused Chimera
 //!
 //! Platypus demonstrates **deep genetic mixing** - not orchestration of
@@ -25,7 +28,7 @@
 //!   with each mutation cryptographically signed
 //! - **Aquatic operation**: Designed for fluid, changing network conditions
 
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
 pub mod crypto;

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Graph template management with NestGate integration
 //!
 //! This module provides functionality to save, load, and manage graph templates

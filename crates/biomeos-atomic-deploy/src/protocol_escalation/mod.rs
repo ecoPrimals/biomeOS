@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Protocol Escalation Manager: JSON-RPC → tarpc Runtime Evolution
 //!
 //! This module manages the runtime escalation of primal connections from

@@ -1,10 +1,14 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! BiomeOS CLI Library
 //!
-//! This crate provides command-line interface utilities for BiomeOS,
-//! including TUI components, discovery, formatting, and health monitoring.
+//! Command-line interface utilities for BiomeOS: discovery, formatting,
+//! health monitoring, and command handlers. Ecosystem visualization is
+//! provided by petalTongue (the universal UI primal).
 
 #![warn(missing_docs)]
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 
 /// CLI command implementations
 pub mod commands;
@@ -14,7 +18,9 @@ pub mod discovery;
 pub mod formatting;
 /// Health monitoring utilities
 pub mod health;
-/// Terminal user interface components
+/// Legacy TUI dashboard — DEPRECATED in favor of petalTongue (the universal UI primal).
+/// Enable the `deprecated-tui` feature to compile this module.
+#[cfg(feature = "deprecated-tui")]
 pub mod tui;
 
 // Re-export key types and utilities

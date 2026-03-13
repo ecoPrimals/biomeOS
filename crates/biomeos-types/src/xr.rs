@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Extended Reality (XR) types for VR, AR, and immersive systems.
 //!
 //! Provides the type-safe foundation for:
@@ -18,19 +21,15 @@ use serde::{Deserialize, Serialize};
 /// Visual output capability describing the rendering target.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum VisualOutputCapability {
     /// Standard 2D rendering (single viewport)
+    #[default]
     TwoD,
     /// Stereoscopic 3D rendering (dual viewport for VR/AR headsets)
     ThreeD(StereoConfig),
     /// Passthrough AR (camera feed + overlay)
     Passthrough,
-}
-
-impl Default for VisualOutputCapability {
-    fn default() -> Self {
-        Self::TwoD
-    }
 }
 
 /// Configuration for stereoscopic 3D rendering.

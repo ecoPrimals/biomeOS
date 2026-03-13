@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Component definitions for chimeras
 //!
 //! Components represent the primal parts that are pulled into a chimera.

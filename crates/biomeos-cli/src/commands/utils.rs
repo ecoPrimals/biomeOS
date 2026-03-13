@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! CLI Utility Functions
 //!
 //! Shared utility functions used across CLI command handlers.

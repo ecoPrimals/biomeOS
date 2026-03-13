@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! AI Suggestion Manager — discovery, heuristics, and feedback loop.
 //!
 //! Interfaces with any primal that provides the "ai" capability to get

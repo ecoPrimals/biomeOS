@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! XR Rendering Adapter
 //!
 //! Provides stereo 3D rendering negotiation and frame submission
@@ -168,6 +171,7 @@ impl StereoRenderAdapter {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 
@@ -237,5 +241,62 @@ mod tests {
             crate::primal_client::PrimalClient::with_socket("petaltongue", "/nonexistent.sock");
         let result = adapter.end_session(&client).await;
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_stereo_config_default() {
+        let config = StereoConfig::default();
+        assert_eq!(config.eye_resolution, (2064, 2208));
+        assert_eq!(config.refresh_hz, 90);
+        assert_eq!(config.ipd_mm, 63);
+    }
+
+    #[test]
+    fn test_adapter_new_custom() {
+        let config = StereoConfig {
+            eye_resolution: (1920, 1080),
+            refresh_hz: 72,
+            ipd_mm: 64,
+            fov_degrees: 90,
+            color_format: "rgba8".to_string(),
+        };
+        let adapter = StereoRenderAdapter::new(config);
+        assert!(!adapter.is_session_active());
+        assert_eq!(adapter.config().eye_resolution, (1920, 1080));
+        assert_eq!(adapter.config().refresh_hz, 72);
+    }
+
+    #[test]
+    fn test_supports_stereo_three_d_with_config() {
+        let config = StereoConfig::default();
+        let cap = VisualOutputCapability::ThreeD(config);
+        assert!(StereoRenderAdapter::supports_stereo(&cap));
+    }
+
+    #[test]
+    fn test_supports_stereo_two_d() {
+        assert!(!StereoRenderAdapter::supports_stereo(
+            &VisualOutputCapability::TwoD
+        ));
+    }
+
+    #[test]
+    fn test_supports_stereo_passthrough() {
+        assert!(!StereoRenderAdapter::supports_stereo(
+            &VisualOutputCapability::Passthrough
+        ));
+    }
+
+    #[test]
+    fn test_render_targets_debug() {
+        let targets = RenderTargets {
+            left_eye: "left".to_string(),
+            right_eye: "right".to_string(),
+            resolution: (1920, 1080),
+            refresh_hz: 90,
+        };
+        let debug_str = format!("{:?}", targets);
+        assert!(debug_str.contains("left"));
+        assert!(debug_str.contains("1920"));
     }
 }

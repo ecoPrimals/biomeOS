@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Formatting utilities for CLI output
 //!
 //! Additional formatting functions: table, duration, file_size, percentage, timestamp.

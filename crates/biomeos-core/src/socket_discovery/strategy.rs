@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Discovery Strategy Configuration
 //!
 //! Configures how socket discovery behaves across different platforms and use cases.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! BiomeOS + benchScale Integration - VM Federation Manager
 //!
 //! This module provides high-level APIs for managing BiomeOS VM federations
@@ -19,6 +22,40 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::time::{Duration, Instant};
 use tracing::{debug, info, warn};
+
+/// Parse IP address from virsh domifaddr output (testable pure function)
+///
+/// Parses lines like "ipv4         192.168.122.34/24" and extracts the first 192.168.x.x IP.
+#[allow(dead_code)] // Used by tests
+pub(crate) fn parse_ip_from_domifaddr_output(ip_text: &str) -> Option<String> {
+    for ip_line in ip_text.lines() {
+        if ip_line.contains("ipv4") || ip_line.contains("192.168") {
+            if let Some(ip_part) = ip_line.split_whitespace().last() {
+                if let Some(ip) = ip_part.split('/').next() {
+                    if ip.starts_with("192.168") {
+                        return Some(ip.to_string());
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Extract VM names from virsh list output that match federation name
+#[allow(dead_code)] // Used by tests
+pub(crate) fn parse_vm_names_from_list(vm_list: &str, federation_name: &str) -> Vec<String> {
+    let mut names = Vec::new();
+    for line in vm_list.lines() {
+        if line.contains(federation_name) {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() >= 2 {
+                names.push(parts[1].to_string());
+            }
+        }
+    }
+    names
+}
 
 /// Configuration for VM validation
 #[derive(Debug, Clone)]
@@ -474,7 +511,68 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_parse_ip_from_domifaddr_output() {
+        let output = " Name       MAC address          Protocol     Address\n\nvnet0      xx:xx:xx:xx:xx:xx    ipv4         192.168.122.34/24\n";
+        assert_eq!(
+            super::parse_ip_from_domifaddr_output(output),
+            Some("192.168.122.34".to_string())
+        );
+    }
+
+    #[test]
+    fn test_parse_ip_from_domifaddr_output_no_match() {
+        assert_eq!(super::parse_ip_from_domifaddr_output(""), None);
+        assert_eq!(
+            super::parse_ip_from_domifaddr_output("ipv6  fe80::1/64"),
+            None
+        );
+    }
+
+    #[test]
+    fn test_parse_vm_names_from_list() {
+        let list = " Id    Name                           State\n----------------------------------------------------\n 1     my-fed-node1                   running\n 2     my-fed-node2                   running\n";
+        let names = super::parse_vm_names_from_list(list, "my-fed");
+        assert_eq!(names, vec!["my-fed-node1", "my-fed-node2"]);
+    }
+
+    #[test]
+    fn test_parse_vm_names_from_list_empty() {
+        let names = super::parse_vm_names_from_list("", "nonexistent");
+        assert!(names.is_empty());
+    }
+
+    #[test]
+    fn test_parse_ip_from_domifaddr_multiple_lines() {
+        let output = " Name       MAC address          Protocol     Address\n\nvnet0      xx:xx    ipv4         192.168.122.100/24\nvnet1      yy:yy    ipv4         192.168.122.101/24\n";
+        let ip = super::parse_ip_from_domifaddr_output(output);
+        assert_eq!(ip, Some("192.168.122.100".to_string()));
+    }
+
+    #[test]
+    fn test_parse_ip_from_domifaddr_ipv6_only() {
+        assert_eq!(
+            super::parse_ip_from_domifaddr_output("ipv6  fe80::1/64"),
+            None
+        );
+    }
+
+    #[test]
+    fn test_parse_vm_names_from_list_partial_match() {
+        let list = " 1     fed-node1    running\n 2     fed-node2    running\n 3     other-node   running\n";
+        let names = super::parse_vm_names_from_list(list, "fed");
+        assert_eq!(names, vec!["fed-node1", "fed-node2"]);
+    }
+
+    #[test]
+    fn test_parse_vm_names_from_list_single_vm() {
+        let list = " 1     my-fed-node1    running\n";
+        let names = super::parse_vm_names_from_list(list, "my-fed");
+        assert_eq!(names, vec!["my-fed-node1"]);
+    }
+
     #[tokio::test]
+    #[ignore = "requires benchscale and libvirt"]
     async fn test_full_lifecycle() -> Result<()> {
         // Only run if benchscale is available AND libvirt testing is enabled
         if std::env::var("BENCHSCALE_TEST_LIBVIRT").is_err() {

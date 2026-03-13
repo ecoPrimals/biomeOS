@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Mesh networking - inherited from Songbird lineage
 //!
 //! This module contains genetic material from Songbird, adapted

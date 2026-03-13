@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Neural API + Atomic Integration Demo
 //!
 //! Demonstrates how Neural API graphs adapt to deployment mode and coordinate

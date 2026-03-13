@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Chaos Tests for Tower Atomic Resilience
 //!
 //! These tests verify system behavior under failure conditions:

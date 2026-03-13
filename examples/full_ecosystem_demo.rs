@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Full Ecosystem Demo
 //!
 //! Demonstrates BiomeOS as the substrate that makes ecoPrimals accessible:

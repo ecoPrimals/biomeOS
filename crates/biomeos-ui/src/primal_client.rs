@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Primal Client - Pure Rust JSON-RPC Communication
 //!
 //! EVOLVED (Jan 27, 2026): Extracted from orchestrator.rs for reuse
@@ -157,6 +160,15 @@ impl PrimalConnections {
         self.clients.get(name)
     }
 
+    /// Get a primal client by capability (capability-based discovery)
+    ///
+    /// Uses CapabilityTaxonomy to resolve capability → primal name, then looks up
+    /// in the discovered registry. No hardcoded primal names.
+    pub fn get_by_capability(&self, capability: &str) -> Option<&PrimalClient> {
+        biomeos_types::CapabilityTaxonomy::resolve_to_primal(capability)
+            .and_then(|name| self.clients.get(name))
+    }
+
     /// Count available primals
     pub fn count_available(&self) -> usize {
         self.clients.len()
@@ -168,33 +180,42 @@ impl PrimalConnections {
     }
 
     // ===================================================================
-    // Typed accessors for backward compatibility
-    // These delegate to the dynamic registry.
+    // Typed accessors — capability-based with name fallback
+    // Primary: CapabilityTaxonomy lookup. Fallback: direct name (runtime-discovered primals).
     // ===================================================================
 
-    /// PetalTongue UI framework connection
+    /// PetalTongue UI framework connection (capability: ui, visualization)
     pub fn petaltongue(&self) -> Option<&PetalTongueClient> {
-        self.clients.get("petaltongue")
+        self.get_by_capability("ui")
+            .or_else(|| self.get_by_capability("visualization"))
+            .or_else(|| self.get("petaltongue"))
     }
-    /// Songbird discovery/networking connection
+    /// Songbird discovery/networking connection (capability: discovery, network)
     pub fn songbird(&self) -> Option<&SongbirdClient> {
-        self.clients.get("songbird")
+        self.get_by_capability("discovery")
+            .or_else(|| self.get_by_capability("network"))
+            .or_else(|| self.get("songbird"))
     }
-    /// BearDog security/crypto connection
+    /// BearDog security/crypto connection (capability: encryption, security)
     pub fn beardog(&self) -> Option<&BearDogClient> {
-        self.clients.get("beardog")
+        self.get_by_capability("encryption")
+            .or_else(|| self.get_by_capability("security"))
+            .or_else(|| self.get("beardog"))
     }
-    /// NestGate storage connection
+    /// NestGate storage connection (capability: storage)
     pub fn nestgate(&self) -> Option<&NestGateClient> {
-        self.clients.get("nestgate")
+        self.get_by_capability("storage")
+            .or_else(|| self.get("nestgate"))
     }
-    /// ToadStool compute/GPU connection
+    /// ToadStool compute/GPU connection (capability: compute)
     pub fn toadstool(&self) -> Option<&ToadStoolClient> {
-        self.clients.get("toadstool")
+        self.get_by_capability("compute")
+            .or_else(|| self.get("toadstool"))
     }
-    /// Squirrel AI connection
+    /// Squirrel AI connection (capability: ai)
     pub fn squirrel(&self) -> Option<&SquirrelClient> {
-        self.clients.get("squirrel")
+        self.get_by_capability("ai")
+            .or_else(|| self.get("squirrel"))
     }
 
     /// Add a client for testing (allows discovery/orchestrator tests to inject mock connections)

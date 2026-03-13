@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Universal Service Registration Standard Implementation
 //!
 //! Implements the universal API standards for ecosystem integration

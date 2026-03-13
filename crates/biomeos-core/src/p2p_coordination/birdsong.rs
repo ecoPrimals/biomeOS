@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! BirdSong Encrypted Discovery Coordination
 //!
 //! BiomeOS coordinates BirdSong (encrypted, lineage-based discovery) between
@@ -229,11 +232,11 @@ mod tests {
             _node_b: &str,
             _proof: &LineageProof,
         ) -> Result<TunnelRequest> {
-            unimplemented!("not used in birdsong tests")
+            Err(anyhow::anyhow!("not used in birdsong tests"))
         }
 
         async fn check_tunnel_health(&self, _tunnel_id: &str) -> Result<TunnelHealth> {
-            unimplemented!("not used in birdsong tests")
+            Err(anyhow::anyhow!("not used in birdsong tests"))
         }
 
         async fn generate_broadcast_keys(&self, _family_id: &str) -> Result<BroadcastKeys> {
@@ -279,7 +282,7 @@ mod tests {
         }
 
         async fn check_transport_health(&self, _transport_id: &str) -> Result<TransportHealth> {
-            unimplemented!("not used in birdsong tests")
+            Err(anyhow::anyhow!("not used in birdsong tests"))
         }
 
         async fn test_encrypted_broadcast(&self) -> Result<BroadcastTest> {
@@ -462,15 +465,15 @@ mod tests {
             _node_b: &str,
             _proof: &LineageProof,
         ) -> Result<TunnelRequest> {
-            unimplemented!("not used")
+            Err(anyhow::anyhow!("not used"))
         }
 
         async fn check_tunnel_health(&self, _tunnel_id: &str) -> Result<TunnelHealth> {
-            unimplemented!("not used")
+            Err(anyhow::anyhow!("not used"))
         }
 
         async fn generate_broadcast_keys(&self, _family_id: &str) -> Result<BroadcastKeys> {
-            unimplemented!("not used")
+            Err(anyhow::anyhow!("not used"))
         }
 
         async fn verify_lineage(&self, _requester: &str, _target: &str) -> Result<LineageInfo> {

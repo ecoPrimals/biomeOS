@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! NUCLEUS Startup Mode
 //!
 //! Pure Rust replacement for `start_nucleus.sh`.
@@ -26,7 +29,7 @@ use tracing::{info, warn};
 
 /// Detected ecosystem state at startup
 #[derive(Debug)]
-enum EcosystemState {
+pub(crate) enum EcosystemState {
     /// No ecosystem detected -- we are the genesis orchestrator
     Bootstrap,
     /// Existing ecosystem detected with these active primals
@@ -75,19 +78,160 @@ impl NucleusMode {
     }
 }
 
+/// Resolved startup configuration (pure, testable)
+#[derive(Debug, Clone)]
+pub(crate) struct StartupConfig {
+    pub mode: NucleusMode,
+    pub node_id: String,
+    pub family_id: String,
+    pub socket_dir: PathBuf,
+}
+
+/// Resolve startup configuration from mode string and optional overrides.
+pub(crate) fn resolve_startup_config(
+    mode: &str,
+    node_id: &str,
+    family_id: Option<&str>,
+) -> Result<StartupConfig> {
+    let mode: NucleusMode = mode.parse()?;
+    let family_id = family_id
+        .map(String::from)
+        .unwrap_or_else(biomeos_core::family_discovery::get_family_id);
+    let socket_dir = resolve_socket_dir()?;
+    Ok(StartupConfig {
+        mode,
+        node_id: node_id.to_string(),
+        family_id,
+        socket_dir,
+    })
+}
+
+/// Resolve socket path for a capability using taxonomy (not hardcoded primal names).
+fn socket_path_for_capability(
+    socket_dir: &std::path::Path,
+    family_id: &str,
+    capability: &str,
+) -> PathBuf {
+    let primal_name = biomeos_types::CapabilityTaxonomy::resolve_to_primal(capability).unwrap_or(
+        match capability {
+            "security" | "encryption" => "beardog",
+            "discovery" | "registry" => "songbird",
+            _ => "unknown",
+        },
+    );
+    socket_dir.join(format!("{}-{}.sock", primal_name, family_id))
+}
+
+/// Build a primal process command (testable, no spawn).
+/// Returns std::process::Command for inspection and testing.
+/// Socket paths use capability-based resolution via taxonomy.
+pub(crate) fn build_primal_command(
+    name: &str,
+    binary: &std::path::Path,
+    socket_dir: &std::path::Path,
+    family_id: &str,
+    node_id: &str,
+) -> std::process::Command {
+    let socket_path = socket_dir.join(format!("{}-{}.sock", name, family_id));
+    let mut cmd = std::process::Command::new(binary);
+
+    match name {
+        "beardog" => {
+            cmd.arg("server").arg("--socket").arg(&socket_path);
+        }
+        "songbird" => {
+            let security_socket = socket_path_for_capability(socket_dir, family_id, "security");
+            cmd.arg("server")
+                .arg("--socket")
+                .arg(&socket_path)
+                .env("SONGBIRD_SECURITY_PROVIDER", &security_socket)
+                .env("BIOMEOS_SECURITY_SOCKET", &security_socket)
+                .env("BEARDOG_SOCKET", &security_socket); // Legacy; prefer BIOMEOS_SECURITY_SOCKET
+        }
+        "nestgate" => {
+            cmd.arg("daemon")
+                .arg("--socket-only")
+                .arg("--family-id")
+                .arg(family_id)
+                .env("NESTGATE_JWT_SECRET", generate_jwt_secret());
+        }
+        "toadstool" => {
+            cmd.arg("server")
+                .arg("--socket")
+                .arg(socket_path.as_os_str())
+                .env("TOADSTOOL_SOCKET", socket_path.as_os_str())
+                .env("TOADSTOOL_FAMILY_ID", family_id);
+        }
+        "squirrel" => {
+            let discovery_socket = socket_path_for_capability(socket_dir, family_id, "discovery");
+            cmd.arg("server")
+                .arg("--socket")
+                .arg(socket_path.as_os_str())
+                .env("SQUIRREL_SOCKET", socket_path.as_os_str())
+                .env("BIOMEOS_DISCOVERY_SOCKET", &discovery_socket)
+                .env("HTTP_REQUEST_PROVIDER_SOCKET", discovery_socket.as_os_str());
+            if std::env::var("ANTHROPIC_API_KEY").is_ok() || std::env::var("OPENAI_API_KEY").is_ok()
+            {
+                cmd.env(
+                    "AI_HTTP_PROVIDERS",
+                    std::env::var("AI_HTTP_PROVIDERS")
+                        .unwrap_or_else(|_| "anthropic,openai".to_string()),
+                );
+            }
+        }
+        _ => {
+            cmd.arg("server").arg("--socket").arg(&socket_path);
+        }
+    }
+
+    cmd.env("FAMILY_ID", family_id)
+        .env("NODE_ID", node_id)
+        .env("BEARDOG_NODE_ID", node_id);
+    cmd
+}
+
+/// Format nucleus summary lines (pure, testable).
+/// children: (name, pid) pairs.
+pub(crate) fn format_nucleus_summary(
+    children: &[(String, u32)],
+    socket_dir: &std::path::Path,
+    family_id: &str,
+    node_id: &str,
+    mode: &NucleusMode,
+    mode_label: &str,
+) -> Vec<String> {
+    let mut lines = Vec::new();
+    lines.push(String::new());
+    lines.push(format!("NUCLEUS started ({:?} mode, {})", mode, mode_label));
+    lines.push(format!("  Family:  {}", family_id));
+    lines.push(format!("  Node:    {}", node_id));
+    lines.push(format!("  Sockets: {}", socket_dir.display()));
+    lines.push("  Health:  monitoring active (10s interval)".to_string());
+    lines.push(String::new());
+    for (name, pid) in children {
+        let socket = socket_dir.join(format!("{}-{}.sock", name, family_id));
+        lines.push(format!("  {} (PID {}) -> {}", name, pid, socket.display()));
+    }
+    lines.push(String::new());
+    let security_socket = socket_path_for_capability(socket_dir, family_id, "security");
+    lines.push(format!(
+        "Health check: echo '{{\"jsonrpc\":\"2.0\",\"method\":\"health\",\"params\":{{}},\"id\":1}}' | nc -U {} -w 2 -q 1",
+        security_socket.display()
+    ));
+    lines
+}
+
 /// Run the nucleus startup
 pub async fn run(mode: String, node_id: String, family_id: Option<String>) -> Result<()> {
-    let mode: NucleusMode = mode.parse()?;
-
-    // Resolve family ID
-    let family_id = family_id.unwrap_or_else(biomeos_core::family_discovery::get_family_id);
+    let config = resolve_startup_config(&mode, &node_id, family_id.as_deref())?;
+    let mode = config.mode;
+    let family_id = config.family_id;
+    let socket_dir = config.socket_dir;
+    let node_id = config.node_id;
 
     info!("Starting NUCLEUS in {:?} mode", mode);
     info!("  Node ID:   {}", node_id);
     info!("  Family ID: {}", family_id);
-
-    // Resolve socket directory
-    let socket_dir = resolve_socket_dir()?;
     info!("  Socket dir: {}", socket_dir.display());
     tokio::fs::create_dir_all(&socket_dir).await?;
 
@@ -202,21 +346,21 @@ pub async fn run(mode: String, node_id: String, family_id: Option<String>) -> Re
         EcosystemState::Bootstrap => "bootstrap",
         EcosystemState::Coordinated { .. } => "coordinated",
     };
-    println!();
-    println!("NUCLEUS started ({:?} mode, {})", mode, mode_label);
-    println!("  Family:  {}", family_id);
-    println!("  Node:    {}", node_id);
-    println!("  Sockets: {}", socket_dir.display());
-    println!("  Health:  monitoring active (10s interval)");
-    println!();
-    for (name, child) in &children {
-        let pid = child.id().unwrap_or(0);
-        let socket = socket_dir.join(format!("{}-{}.sock", name, family_id));
-        println!("  {} (PID {}) -> {}", name, pid, socket.display());
+    let children_pids: Vec<(String, u32)> = children
+        .iter()
+        .map(|(name, child)| (name.clone(), child.id().unwrap_or(0)))
+        .collect();
+    let summary_lines = format_nucleus_summary(
+        &children_pids,
+        &socket_dir,
+        &family_id,
+        &node_id,
+        &mode,
+        mode_label,
+    );
+    for line in summary_lines {
+        println!("{}", line);
     }
-    println!();
-    println!("Health check: echo '{{\"jsonrpc\":\"2.0\",\"method\":\"health\",\"params\":{{}},\"id\":1}}' | nc -U {}/beardog-{}.sock -w 2 -q 1",
-             socket_dir.display(), family_id);
 
     // Keep running until interrupted
     info!("NUCLEUS running with lifecycle monitoring. Press Ctrl+C to stop.");
@@ -371,68 +515,18 @@ async fn start_primal(
     node_id: &str,
     socket_dir: &std::path::Path,
 ) -> Result<tokio::process::Child> {
-    // Remove stale socket
     let _ = tokio::fs::remove_file(socket_path).await;
 
-    let mut cmd = Command::new(binary);
-
-    // Primal-specific startup arguments
-    match name {
-        "beardog" => {
-            cmd.arg("server").arg("--socket").arg(socket_path);
-        }
-        "songbird" => {
-            let beardog_socket = socket_dir.join(format!("beardog-{}.sock", family_id));
-            cmd.arg("server")
-                .arg("--socket")
-                .arg(socket_path)
-                .env("SONGBIRD_SECURITY_PROVIDER", &beardog_socket)
-                .env("BEARDOG_SOCKET", &beardog_socket);
-        }
-        "nestgate" => {
-            cmd.arg("daemon")
-                .arg("--socket-only")
-                .arg("--family-id")
-                .arg(family_id)
-                .env("NESTGATE_JWT_SECRET", generate_jwt_secret());
-        }
-        "toadstool" => {
-            cmd.arg("server")
-                .arg("--socket")
-                .arg(socket_path.as_os_str())
-                .env("TOADSTOOL_SOCKET", socket_path.as_os_str())
-                .env("TOADSTOOL_FAMILY_ID", family_id);
-        }
-        "squirrel" => {
-            let songbird_socket = socket_dir.join(format!("songbird-{}.sock", family_id));
-            cmd.arg("server")
-                .arg("--socket")
-                .arg(socket_path.as_os_str())
-                .env("SQUIRREL_SOCKET", socket_path.as_os_str())
-                .env("HTTP_REQUEST_PROVIDER_SOCKET", songbird_socket.as_os_str());
-
-            // Load AI providers if env vars are set
-            if std::env::var("ANTHROPIC_API_KEY").is_ok() || std::env::var("OPENAI_API_KEY").is_ok()
-            {
-                cmd.env(
-                    "AI_HTTP_PROVIDERS",
-                    std::env::var("AI_HTTP_PROVIDERS")
-                        .unwrap_or_else(|_| "anthropic,openai".to_string()),
-                );
-            }
-        }
-        _ => {
-            cmd.arg("server").arg("--socket").arg(socket_path);
+    let std_cmd = build_primal_command(name, binary, socket_dir, family_id, node_id);
+    let mut tokio_cmd = Command::new(std_cmd.get_program());
+    tokio_cmd.args(std_cmd.get_args());
+    for (k, v) in std_cmd.get_envs() {
+        if let Some(v) = v {
+            tokio_cmd.env(k, v);
         }
     }
 
-    // Common environment
-    cmd.env("FAMILY_ID", family_id)
-        .env("NODE_ID", node_id)
-        .env("BEARDOG_NODE_ID", node_id);
-
-    // Spawn as background process
-    let child = cmd
+    let child = tokio_cmd
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .spawn()
@@ -529,6 +623,8 @@ pub(crate) fn base64_encode(data: &[u8]) -> String {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used)]
+
     use super::*;
 
     #[test]
@@ -634,6 +730,78 @@ mod tests {
     }
 
     #[test]
+    fn test_socket_path_for_capability_uses_taxonomy() {
+        let socket_dir = std::path::Path::new("/tmp/sock");
+        let family_id = "fam1";
+        // Security -> beardog from taxonomy
+        let path = super::socket_path_for_capability(socket_dir, family_id, "security");
+        assert!(path.to_string_lossy().contains("beardog"));
+        assert!(path.to_string_lossy().contains("fam1"));
+        assert!(path.to_string_lossy().ends_with(".sock"));
+        // Discovery -> songbird from taxonomy
+        let path2 = super::socket_path_for_capability(socket_dir, family_id, "discovery");
+        assert!(path2.to_string_lossy().contains("songbird"));
+    }
+
+    #[test]
+    fn test_build_primal_command_beardog() {
+        let cmd = build_primal_command(
+            "beardog",
+            std::path::Path::new("/usr/bin/beardog"),
+            std::path::Path::new("/tmp/sockets"),
+            "fam123",
+            "node1",
+        );
+        assert_eq!(cmd.get_program(), std::path::Path::new("/usr/bin/beardog"));
+        let args: Vec<_> = cmd.get_args().collect();
+        assert!(args.iter().any(|a| a.to_str() == Some("server")));
+        assert!(args.iter().any(|a| a.to_str() == Some("--socket")));
+    }
+
+    #[test]
+    fn test_format_nucleus_summary() {
+        let children = vec![
+            ("beardog".to_string(), 1234),
+            ("songbird".to_string(), 1235),
+        ];
+        let lines = format_nucleus_summary(
+            &children,
+            std::path::Path::new("/tmp/sock"),
+            "fam1",
+            "node1",
+            &NucleusMode::Tower,
+            "bootstrap",
+        );
+        assert!(!lines.is_empty());
+        assert!(lines.iter().any(|l| l.contains("NUCLEUS started")));
+        assert!(lines.iter().any(|l| l.contains("Family:")));
+        assert!(lines.iter().any(|l| l.contains("Node:")));
+        assert!(lines.iter().any(|l| l.contains("beardog")));
+        assert!(lines.iter().any(|l| l.contains("1234")));
+    }
+
+    #[test]
+    fn test_resolve_startup_config_invalid_mode() {
+        let result = resolve_startup_config("invalid", "node1", None);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Unknown nucleus mode"));
+    }
+
+    #[test]
+    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
+    fn test_resolve_startup_config_valid() {
+        let config = resolve_startup_config("tower", "node1", Some("fam1")).unwrap();
+        assert!(matches!(config.mode, NucleusMode::Tower));
+        assert_eq!(config.node_id, "node1");
+        assert_eq!(config.family_id, "fam1");
+        assert!(!config.socket_dir.as_os_str().is_empty());
+    }
+
+    #[test]
+    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
     fn test_resolve_socket_dir_env_override() {
         let test_path = "/tmp/biomeos-test-socket-dir";
         std::env::set_var("BIOMEOS_SOCKET_DIR", test_path);
@@ -649,7 +817,55 @@ mod tests {
     }
 
     #[test]
+    fn test_nucleus_mode_from_str_case_insensitive() {
+        assert!(matches!(
+            "NODE".parse::<NucleusMode>().expect("parse"),
+            NucleusMode::Node
+        ));
+        assert!(matches!(
+            "FULL".parse::<NucleusMode>().expect("parse"),
+            NucleusMode::Full
+        ));
+    }
+
+    #[test]
+    fn test_base64_encode_two_bytes() {
+        let result = base64_encode(&[0x4d, 0x61]);
+        assert_eq!(result.len(), 4);
+        assert!(result.ends_with("="));
+    }
+
+    #[test]
+    fn test_base64_encode_four_bytes() {
+        let result = base64_encode(&[0x4d, 0x61, 0x6e, 0x21]);
+        assert_eq!(result, "TWFuIQ==");
+    }
+
+    #[test]
+    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
+    fn test_resolve_socket_dir_default() {
+        std::env::remove_var("BIOMEOS_SOCKET_DIR");
+        let result = resolve_socket_dir();
+        assert!(result.is_ok());
+        let path = result.unwrap();
+        assert!(!path.as_os_str().is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_run_fails_on_invalid_mode() {
+        let result = run("invalid_mode_xyz".to_string(), "node1".to_string(), None).await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            err.to_string().contains("Unknown nucleus mode"),
+            "Expected parse error: {}",
+            err
+        );
+    }
+
+    #[test]
     #[cfg(unix)]
+    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
     fn test_discover_binaries_finds_in_path() {
         use std::os::unix::fs::PermissionsExt;
 
@@ -681,5 +897,71 @@ mod tests {
             unique_name,
             map
         );
+    }
+
+    #[tokio::test]
+    async fn test_wait_for_socket_times_out_on_nonexistent() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let path = temp.path().join("nonexistent.sock");
+        let result = wait_for_socket(&path, Duration::from_millis(50)).await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("did not appear"));
+    }
+
+    #[tokio::test]
+    async fn test_wait_for_socket_succeeds_when_file_exists() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let path = temp.path().join("test.sock");
+        std::fs::write(&path, "").expect("create socket file");
+        let result = wait_for_socket(&path, Duration::from_secs(1)).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_detect_ecosystem_bootstrap_when_dir_nonexistent() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let nonexistent = temp.path().join("nonexistent_subdir");
+        let state = detect_ecosystem(&nonexistent, "test-family").await;
+        assert!(
+            matches!(state, EcosystemState::Bootstrap),
+            "Expected Bootstrap when dir does not exist, got: {:?}",
+            state
+        );
+    }
+
+    #[tokio::test]
+    async fn test_detect_ecosystem_bootstrap_when_dir_empty() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let state = detect_ecosystem(temp.path(), "test-family").await;
+        assert!(
+            matches!(state, EcosystemState::Bootstrap),
+            "Expected Bootstrap when dir is empty, got: {:?}",
+            state
+        );
+    }
+
+    #[tokio::test]
+    async fn test_detect_ecosystem_bootstrap_when_stale_sockets_only() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let socket_path = temp.path().join("beardog-test-family.sock");
+        std::fs::write(&socket_path, "").expect("create stale socket");
+        let state = detect_ecosystem(temp.path(), "test-family").await;
+        assert!(
+            matches!(state, EcosystemState::Bootstrap),
+            "Expected Bootstrap when sockets exist but don't respond, got: {:?}",
+            state
+        );
+    }
+
+    #[test]
+    fn test_base64_encode_standard_vectors() {
+        assert_eq!(base64_encode(b""), "");
+        assert_eq!(base64_encode(b"f"), "Zg==");
+        assert_eq!(base64_encode(b"fo"), "Zm8=");
+        assert_eq!(base64_encode(b"foo"), "Zm9v");
+        assert_eq!(base64_encode(b"foob"), "Zm9vYg==");
+        assert_eq!(base64_encode(b"fooba"), "Zm9vYmE=");
+        assert_eq!(base64_encode(b"foobar"), "Zm9vYmFy");
     }
 }

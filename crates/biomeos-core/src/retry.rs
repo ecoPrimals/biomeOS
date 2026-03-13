@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Retry Logic and Circuit Breaker Patterns
 //!
 //! This module provides fault tolerance patterns for resilient primal communication.

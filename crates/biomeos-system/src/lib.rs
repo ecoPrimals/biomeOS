@@ -1,10 +1,13 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! BiomeOS System Information and Monitoring
 //!
 //! This crate provides comprehensive system information gathering, health monitoring,
 //! and resource metrics for the BiomeOS ecosystem.
 
 #![warn(missing_docs)]
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 
 mod cpu;
 mod disk;

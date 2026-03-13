@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Features Configuration
 //!
 //! This module contains feature flags, UI configuration, and environment-specific settings.

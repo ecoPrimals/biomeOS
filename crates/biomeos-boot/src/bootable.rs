@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! BiomeOS Bootable Media Creator
 //!
 //! Pure Rust implementation of bootable USB/ISO creation.
@@ -18,7 +21,7 @@ pub struct BootableMediaBuilder {
 }
 
 /// Boot target type
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BootTarget {
     /// ISO image for optical media or virtual machines
     Iso,
@@ -170,8 +173,8 @@ impl BootableMediaBuilder {
         Ok(boot_dir)
     }
 
-    /// Create GRUB configuration with modern syntax
-    fn create_grub_config(&self, grub_dir: &Path) -> Result<()> {
+    /// Create GRUB configuration with modern syntax (pub for testing)
+    pub(crate) fn create_grub_config(&self, grub_dir: &Path) -> Result<()> {
         use std::io::Write;
 
         let grub_cfg = grub_dir.join("grub.cfg");
@@ -249,8 +252,8 @@ impl BootableMediaBuilder {
         Ok(())
     }
 
-    /// Copy directory recursively with proper error handling
-    fn copy_directory(&self, src: &Path, dest: &Path) -> Result<()> {
+    /// Copy directory recursively with proper error handling (pub for testing)
+    pub(crate) fn copy_directory(&self, src: &Path, dest: &Path) -> Result<()> {
         std::fs::create_dir_all(dest)
             .with_context(|| format!("Failed to create directory: {}", dest.display()))?;
 
@@ -481,5 +484,69 @@ mod tests {
         let path = result.expect("create_archive_fallback should succeed");
         assert!(path.exists());
         assert!(path.extension().map(|e| e == "gz").unwrap_or(false));
+    }
+
+    #[test]
+    fn test_copy_directory() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let project_root = temp.path().to_path_buf();
+        let builder = BootableMediaBuilder::new(project_root).expect("new");
+
+        let src = temp.path().join("src");
+        let dest = temp.path().join("dest");
+        std::fs::create_dir_all(&src).expect("create src");
+        std::fs::write(src.join("file1.txt"), "content1").expect("write");
+        std::fs::create_dir_all(src.join("subdir")).expect("create subdir");
+        std::fs::write(src.join("subdir").join("file2.txt"), "content2").expect("write");
+
+        builder.copy_directory(&src, &dest).expect("copy");
+
+        assert!(dest.join("file1.txt").exists());
+        assert!(dest.join("subdir").join("file2.txt").exists());
+        assert_eq!(
+            std::fs::read_to_string(dest.join("file1.txt")).unwrap(),
+            "content1"
+        );
+        assert_eq!(
+            std::fs::read_to_string(dest.join("subdir").join("file2.txt")).unwrap(),
+            "content2"
+        );
+    }
+
+    #[test]
+    fn test_boot_target_equality() {
+        assert_eq!(BootTarget::Iso, BootTarget::Iso);
+        assert_eq!(BootTarget::Usb, BootTarget::Usb);
+        assert_ne!(BootTarget::Iso, BootTarget::Usb);
+    }
+
+    #[test]
+    fn test_bootable_media_builder_creates_nested_dirs() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let project_root = temp.path().to_path_buf();
+        let builder = BootableMediaBuilder::new(project_root).expect("new");
+        let work_dir = temp.path().join("build/boot-media");
+        let output_dir = temp.path().join("dist");
+        assert!(work_dir.exists());
+        assert!(output_dir.exists());
+        assert!(!work_dir.join("boot-root").exists());
+        let _ = builder;
+    }
+
+    #[test]
+    fn test_grub_config_path_structure() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let builder = BootableMediaBuilder::new(temp.path().to_path_buf()).expect("new");
+        let boot_root = temp.path().join("build/boot-media/boot-root");
+        std::fs::create_dir_all(boot_root.join("boot/grub")).expect("create");
+        let result = builder.create_grub_config(&boot_root.join("boot/grub"));
+        assert!(result.is_ok());
+        let grub_cfg = boot_root.join("boot/grub/grub.cfg");
+        assert!(grub_cfg.exists());
+        let content = std::fs::read_to_string(&grub_cfg).expect("read");
+        assert!(content.contains("BiomeOS"));
+        assert!(content.contains("menuentry"));
+        assert!(content.contains("vmlinuz"));
+        assert!(content.contains("initramfs"));
     }
 }

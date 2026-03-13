@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Discovery utilities for CLI
 //!
 //! Specialized discovery functions: type filtering, comprehensive discovery,
@@ -63,12 +66,7 @@ impl DiscoveryUtils {
     ) -> Result<Vec<DiscoveryResult>> {
         let all_endpoints = manager.discover_network_scan().await?;
         let all_services = Self::endpoints_to_discovery_results(manager, all_endpoints).await?;
-        let filtered: Vec<DiscoveryResult> = all_services
-            .into_iter()
-            .filter(|service| {
-                service.primal_type.category.to_lowercase() == service_type.to_lowercase()
-            })
-            .collect();
+        let filtered = filter_by_type(&all_services, service_type);
         Ok(filtered)
     }
 
@@ -83,12 +81,7 @@ impl DiscoveryUtils {
         let all_services = Self::endpoints_to_discovery_results(manager, all_endpoints).await?;
 
         // Categorize services
-        let mut by_type: std::collections::HashMap<String, Vec<_>> =
-            std::collections::HashMap::new();
-        for service in &all_services {
-            let category = service.primal_type.category.clone();
-            by_type.entry(category).or_default().push(service.clone());
-        }
+        let by_type = categorize_by_type(&all_services);
 
         // Test connectivity to each service
         let mut healthy_services = 0;
@@ -195,7 +188,35 @@ pub struct DiscoveryReport {
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
+/// Filter discovery results by primal type category (testable pure function)
+#[allow(dead_code)] // Used by tests
+pub(crate) fn filter_by_type(
+    services: &[DiscoveryResult],
+    service_type: &str,
+) -> Vec<DiscoveryResult> {
+    services
+        .iter()
+        .filter(|s| s.primal_type.category.to_lowercase() == service_type.to_lowercase())
+        .cloned()
+        .collect()
+}
+
+/// Categorize services by primal type (testable pure function)
+#[allow(dead_code)] // Used by tests
+pub(crate) fn categorize_by_type(
+    services: &[DiscoveryResult],
+) -> std::collections::HashMap<String, Vec<DiscoveryResult>> {
+    let mut by_type: std::collections::HashMap<String, Vec<DiscoveryResult>> =
+        std::collections::HashMap::new();
+    for service in services {
+        let category = service.primal_type.category.clone();
+        by_type.entry(category).or_default().push(service.clone());
+    }
+    by_type
+}
+
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 
@@ -214,5 +235,100 @@ mod tests {
             "Error should mention Songbird or geolocation: {}",
             err_str
         );
+    }
+
+    #[test]
+    fn test_discovery_report_structure() {
+        let report = DiscoveryReport {
+            total_services: 3,
+            services_by_type: std::collections::HashMap::new(),
+            healthy_services: 2,
+            unhealthy_services: 1,
+            discovery_time_ms: 150,
+            timestamp: chrono::Utc::now(),
+        };
+        assert_eq!(report.total_services, 3);
+        assert_eq!(report.healthy_services, 2);
+        assert_eq!(report.unhealthy_services, 1);
+        assert_eq!(report.discovery_time_ms, 150);
+    }
+
+    #[test]
+    fn test_filter_by_type() {
+        let services = vec![
+            DiscoveryResult {
+                id: "1".to_string(),
+                primal_type: PrimalType::new("discovery", "Discovery", "1.0"),
+                endpoint: "http://a".to_string(),
+                capabilities: vec![],
+                health: Health::Healthy,
+                discovered_at: chrono::Utc::now(),
+            },
+            DiscoveryResult {
+                id: "2".to_string(),
+                primal_type: PrimalType::new("compute", "Compute", "1.0"),
+                endpoint: "http://b".to_string(),
+                capabilities: vec![],
+                health: Health::Healthy,
+                discovered_at: chrono::Utc::now(),
+            },
+            DiscoveryResult {
+                id: "3".to_string(),
+                primal_type: PrimalType::new("discovery", "Discovery", "2.0"),
+                endpoint: "http://c".to_string(),
+                capabilities: vec![],
+                health: Health::Healthy,
+                discovered_at: chrono::Utc::now(),
+            },
+        ];
+        let filtered = filter_by_type(&services, "discovery");
+        assert_eq!(filtered.len(), 2);
+        assert!(filtered
+            .iter()
+            .all(|s| s.primal_type.category == "discovery"));
+
+        let filtered_case = filter_by_type(&services, "DISCOVERY");
+        assert_eq!(filtered_case.len(), 2);
+    }
+
+    #[test]
+    fn test_filter_by_type_empty() {
+        let services: Vec<DiscoveryResult> = vec![];
+        let filtered = filter_by_type(&services, "discovery");
+        assert!(filtered.is_empty());
+    }
+
+    #[test]
+    fn test_categorize_by_type() {
+        let services = vec![
+            DiscoveryResult {
+                id: "1".to_string(),
+                primal_type: PrimalType::new("a", "A", "1.0"),
+                endpoint: "http://a".to_string(),
+                capabilities: vec![],
+                health: Health::Healthy,
+                discovered_at: chrono::Utc::now(),
+            },
+            DiscoveryResult {
+                id: "2".to_string(),
+                primal_type: PrimalType::new("b", "B", "1.0"),
+                endpoint: "http://b".to_string(),
+                capabilities: vec![],
+                health: Health::Healthy,
+                discovered_at: chrono::Utc::now(),
+            },
+            DiscoveryResult {
+                id: "3".to_string(),
+                primal_type: PrimalType::new("a", "A2", "2.0"),
+                endpoint: "http://c".to_string(),
+                capabilities: vec![],
+                health: Health::Healthy,
+                discovered_at: chrono::Utc::now(),
+            },
+        ];
+        let by_type = categorize_by_type(&services);
+        assert_eq!(by_type.len(), 2);
+        assert_eq!(by_type.get("a").map(|v| v.len()), Some(2));
+        assert_eq!(by_type.get("b").map(|v| v.len()), Some(1));
     }
 }

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! BiomeOS Primal SDK
 //!
 //! Complete SDK for developing autonomous primals that follow deep debt principles:
@@ -7,7 +10,7 @@
 //! - Graceful degradation
 //!
 #![warn(missing_docs)]
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 //!
 //! # Quick Start
 //!

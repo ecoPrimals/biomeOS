@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Manifest parsing and querying for genome distribution.
 //!
 //! Handles manifest.toml, checksums.toml, and version lookups.

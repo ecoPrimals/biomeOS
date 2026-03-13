@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Testing Module
 //! 
 //! Enhanced testing utilities and coverage analysis for biomeOS.

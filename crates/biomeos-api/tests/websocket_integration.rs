@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Integration tests for JSON-RPC WebSocket server
 //!
 //! Tests the full WebSocket lifecycle including:

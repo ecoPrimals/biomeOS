@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Fusion - Where genetics combine into novel capabilities
 //!
 //! This is the heart of Platypus - the integration layer that

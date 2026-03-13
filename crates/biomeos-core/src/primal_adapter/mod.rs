@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Primal Adapter Pattern - CLI Agnostic Primal Integration
 //!
 //! This module provides adaptive integration with primals, learning their interfaces

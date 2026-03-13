@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Error types for Neural API Client
 //!
 //! Modern idiomatic Rust error handling using thiserror.

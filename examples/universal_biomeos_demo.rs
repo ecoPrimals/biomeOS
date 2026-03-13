@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Universal biomeOS Manager Demo
 //!
 //! This example demonstrates how the new universal biomeOS manager works

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! TRUE Dark Forest Pure Noise Beacon Tests
 //!
 //! Tests A++ security with zero metadata leaks.

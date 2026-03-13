@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Client Registry for Primal Clients
 //!
 //! Manages the lifecycle of primal clients, including discovery,

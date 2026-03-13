@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Capacity Module
 //!
 //! Handles capacity checks via ToadStool compute primal.
@@ -97,8 +100,55 @@ impl Capacity {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+    use biomeos_core::atomic_client::{JsonRpcRequest, JsonRpcResponse};
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+    use tokio::net::UnixListener;
+
+    async fn spawn_mock_toadstool(
+        available: bool,
+        reason: Option<&str>,
+    ) -> (String, tokio::task::JoinHandle<()>) {
+        let dir = tempfile::tempdir().unwrap();
+        let socket_path = dir.path().join("toadstool.sock");
+        let path_str = socket_path.to_str().unwrap().to_string();
+
+        let capacity_response = if available {
+            serde_json::json!({"available": true})
+        } else {
+            serde_json::json!({"available": false, "reason": reason.unwrap_or("Insufficient capacity")})
+        };
+
+        let path_for_listener = path_str.clone();
+        let handle = tokio::spawn(async move {
+            let _dir = dir;
+            let listener = UnixListener::bind(&path_for_listener).unwrap();
+            if let Ok((stream, _)) = listener.accept().await {
+                let (reader, mut writer) = tokio::io::split(stream);
+                let mut reader = BufReader::new(reader);
+                let mut line = String::new();
+                if reader.read_line(&mut line).await.is_ok() {
+                    if let Ok(req) = serde_json::from_str::<JsonRpcRequest>(&line) {
+                        let response = JsonRpcResponse {
+                            jsonrpc: "2.0".to_string(),
+                            result: Some(capacity_response),
+                            error: None,
+                            id: req.id,
+                        };
+                        let _ = writer
+                            .write_all(serde_json::to_string(&response).unwrap().as_bytes())
+                            .await;
+                        let _ = writer.write_all(b"\n").await;
+                    }
+                }
+            }
+        });
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        (path_str, handle)
+    }
 
     #[tokio::test]
     async fn test_capacity_no_toadstool() {
@@ -180,5 +230,46 @@ mod tests {
         assert_eq!(insufficient1, insufficient2);
         assert_ne!(available1, insufficient1);
         assert_ne!(insufficient1, insufficient3);
+    }
+
+    #[tokio::test]
+    async fn test_capacity_toadstool_insufficient() {
+        let (path, _handle) = spawn_mock_toadstool(false, Some("Not enough memory")).await;
+        let client = Some(crate::primal_client::ToadStoolClient::with_socket(
+            "toadstool",
+            &path,
+        ));
+        let result = Capacity::check_primal_capacity(&client, "test-device", "test-primal").await;
+
+        assert!(result.is_ok());
+        match result.unwrap() {
+            CapacityResult::Insufficient { reason } => assert_eq!(reason, "Not enough memory"),
+            _ => panic!("Expected Insufficient"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_capacity_toadstool_available() {
+        let (path, _handle) = spawn_mock_toadstool(true, None).await;
+        let client = Some(crate::primal_client::ToadStoolClient::with_socket(
+            "toadstool",
+            &path,
+        ));
+        let result = Capacity::check_primal_capacity(&client, "test-device", "test-primal").await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), CapacityResult::Available);
+    }
+
+    #[tokio::test]
+    async fn test_capacity_toadstool_call_fails_fallback() {
+        let client = Some(crate::primal_client::ToadStoolClient::with_socket(
+            "toadstool",
+            "/nonexistent/toadstool.sock",
+        ));
+        let result = Capacity::check_primal_capacity(&client, "test-device", "test-primal").await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), CapacityResult::Available);
     }
 }

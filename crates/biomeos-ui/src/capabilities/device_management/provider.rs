@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Device Management Capability Provider
 //!
 //! Generic implementation of the `device.management` capability.

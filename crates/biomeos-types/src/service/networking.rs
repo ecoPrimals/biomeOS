@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Service Networking Configurations
 //!
 //! This module contains networking-related types including service networking,

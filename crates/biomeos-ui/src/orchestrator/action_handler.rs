@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Action Handler Module
 //!
 //! Handles all user actions by coordinating between multiple primals.
@@ -571,6 +574,7 @@ impl ActionHandler {
 // ============================================================================
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 
@@ -735,6 +739,84 @@ mod tests {
     async fn test_handle_user_action_refresh() {
         let connections = PrimalConnections::default();
         let action = UserAction::Refresh;
+        let result = ActionHandler::handle_user_action(action, "family-123", &connections).await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_success());
+    }
+
+    #[tokio::test]
+    async fn test_handle_start_primal_toadstool_connection_fails() {
+        let mut connections = PrimalConnections::default();
+        connections.add_client(
+            "toadstool",
+            ToadStoolClient::with_socket("toadstool", "/nonexistent/toadstool.sock"),
+        );
+        let action = UserAction::StartPrimal {
+            primal_name: "beardog".to_string(),
+        };
+        let result = ActionHandler::handle_user_action(action, "family-123", &connections).await;
+        assert!(result.is_ok());
+        let action_result = result.unwrap();
+        assert!(action_result.is_error());
+    }
+
+    #[tokio::test]
+    async fn test_handle_stop_primal_toadstool_connection_fails() {
+        let mut connections = PrimalConnections::default();
+        connections.add_client(
+            "toadstool",
+            ToadStoolClient::with_socket("toadstool", "/nonexistent/toadstool.sock"),
+        );
+        let action = UserAction::StopPrimal {
+            primal_id: "primal-123".to_string(),
+        };
+        let result = ActionHandler::handle_user_action(action, "family-123", &connections).await;
+        assert!(result.is_ok());
+        let action_result = result.unwrap();
+        assert!(action_result.is_error());
+    }
+
+    #[tokio::test]
+    async fn test_handle_refresh_with_failing_clients() {
+        let mut connections = PrimalConnections::default();
+        connections.add_client(
+            "songbird",
+            SongbirdClient::with_socket("songbird", "/nonexistent/songbird.sock"),
+        );
+        connections.add_client(
+            "toadstool",
+            ToadStoolClient::with_socket("toadstool", "/nonexistent/toadstool.sock"),
+        );
+        let action = UserAction::Refresh;
+        let result = ActionHandler::handle_user_action(action, "family-123", &connections).await;
+        assert!(result.is_ok());
+        let action_result = result.unwrap();
+        assert!(action_result.is_success());
+        if let ActionResult::Success { message } = &action_result {
+            assert!(message.contains("0 sources"));
+        }
+    }
+
+    #[tokio::test]
+    async fn test_register_assignment_songbird_returns_fallback_id() {
+        let result = ActionHandler::register_assignment(&None, "device-001", "primal-001").await;
+        assert!(result.is_ok());
+        let id = result.unwrap();
+        assert!(id.starts_with("local-"));
+        assert!(id.contains("device-001"));
+        assert!(id.contains("primal-001"));
+    }
+
+    #[tokio::test]
+    async fn test_handle_unassign_device_with_songbird_failing() {
+        let mut connections = PrimalConnections::default();
+        connections.add_client(
+            "songbird",
+            SongbirdClient::with_socket("songbird", "/nonexistent/songbird.sock"),
+        );
+        let action = UserAction::UnassignDevice {
+            device_id: "dev-123".to_string(),
+        };
         let result = ActionHandler::handle_user_action(action, "family-123", &connections).await;
         assert!(result.is_ok());
         assert!(result.unwrap().is_success());

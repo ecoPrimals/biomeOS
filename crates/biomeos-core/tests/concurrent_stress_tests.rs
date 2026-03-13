@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Concurrent stress tests for biomeOS
 //!
 //! **Purpose**: Validate that our concurrent evolution is production-ready

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Filesystem Management for BiomeOS Init
 //!
 //! Handles mounting and managing essential filesystems during boot.
@@ -144,6 +147,7 @@ impl Default for FilesystemManager {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 
@@ -154,10 +158,35 @@ mod tests {
     }
 
     #[test]
+    fn test_filesystem_manager_default() {
+        let mgr = FilesystemManager::default();
+        assert_eq!(mgr.mounted_filesystems().len(), 0);
+    }
+
+    #[test]
     fn test_is_mounted() {
         let mut mgr = FilesystemManager::new();
         assert!(!mgr.is_mounted("/proc"));
         mgr.mounted.insert(PathBuf::from("/proc"));
         assert!(mgr.is_mounted("/proc"));
+    }
+
+    #[test]
+    fn test_is_mounted_multiple() {
+        let mut mgr = FilesystemManager::new();
+        mgr.mounted.insert(PathBuf::from("/proc"));
+        mgr.mounted.insert(PathBuf::from("/sys"));
+        assert!(mgr.is_mounted("/proc"));
+        assert!(mgr.is_mounted("/sys"));
+        assert!(!mgr.is_mounted("/dev"));
+    }
+
+    #[test]
+    fn test_mounted_filesystems_returns_paths() {
+        let mut mgr = FilesystemManager::new();
+        mgr.mounted.insert(PathBuf::from("/proc"));
+        let paths = mgr.mounted_filesystems();
+        assert_eq!(paths.len(), 1);
+        assert_eq!(paths[0], Path::new("/proc"));
     }
 }

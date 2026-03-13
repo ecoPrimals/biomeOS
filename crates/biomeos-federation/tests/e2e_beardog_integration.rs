@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! E2E tests for BearDog integration
 //!
 //! These tests require a running BearDog instance.

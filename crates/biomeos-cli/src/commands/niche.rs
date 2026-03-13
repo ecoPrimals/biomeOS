@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Niche CLI Commands
 //!
 //! Commands for managing niche (biome) templates and deployments.
@@ -14,6 +17,26 @@ pub fn category_to_icon(category: &str) -> &'static str {
         "federation" => "🌐",
         _ => "🌿",
     }
+}
+
+/// Parse name and category from niche YAML content (testable pure function)
+#[allow(dead_code)] // Used by tests
+pub fn parse_niche_yaml_info(content: &str) -> (String, String) {
+    let name = content
+        .lines()
+        .find(|l| l.contains("name:") && !l.contains("primal"))
+        .and_then(|l| l.split(':').nth(1))
+        .map(|s| s.trim().trim_matches('"').to_string())
+        .unwrap_or_else(|| "Unknown".to_string());
+
+    let category = content
+        .lines()
+        .find(|l| l.contains("category:"))
+        .and_then(|l| l.split(':').nth(1))
+        .map(|s| s.trim().trim_matches('"').to_string())
+        .unwrap_or_default();
+
+    (name, category)
 }
 
 /// Map primal name to display icon (testable pure function)
@@ -54,23 +77,10 @@ pub async fn handle_niche_list() -> anyhow::Result<()> {
                         .and_then(|s| s.to_str())
                         .unwrap_or("unknown");
 
-                    let name = content
-                        .lines()
-                        .find(|l| l.contains("name:") && !l.contains("primal"))
-                        .and_then(|l| l.split(':').nth(1))
-                        .map(|s| s.trim().trim_matches('"'))
-                        .unwrap_or("Unknown");
+                    let (name, category) = parse_niche_yaml_info(&content);
+                    let icon = category_to_icon(&category);
 
-                    let category = content
-                        .lines()
-                        .find(|l| l.contains("category:"))
-                        .and_then(|l| l.split(':').nth(1))
-                        .map(|s| s.trim().trim_matches('"'))
-                        .unwrap_or("");
-
-                    let icon = category_to_icon(category);
-
-                    println!("  {} {} ({})", icon, name, id);
+                    println!("  {} {} ({})", icon, &name, id);
                 }
             }
         }
@@ -212,8 +222,29 @@ pub async fn handle_primal_list() -> anyhow::Result<()> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_parse_niche_yaml_info() {
+        let yaml = r#"
+niche:
+  name: "Gaming Niche"
+  category: "gaming"
+  description: "For gaming"
+"#;
+        let (name, category) = parse_niche_yaml_info(yaml);
+        assert_eq!(name, "Gaming Niche");
+        assert_eq!(category, "gaming");
+    }
+
+    #[test]
+    fn test_parse_niche_yaml_info_missing() {
+        let (name, category) = parse_niche_yaml_info("");
+        assert_eq!(name, "Unknown");
+        assert_eq!(category, "");
+    }
 
     #[test]
     fn test_category_to_icon() {

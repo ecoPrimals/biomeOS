@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Executor module for graph execution and primal lifecycle management
 //!
 //! This module provides the core execution infrastructure for Neural API graphs,

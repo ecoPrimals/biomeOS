@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Genome binary distribution and download logic.
 //!
 //! Handles binary downloads and LiveSpore updates.

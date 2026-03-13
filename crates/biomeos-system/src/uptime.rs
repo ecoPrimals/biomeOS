@@ -1,22 +1,39 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! System uptime.
 
 use std::fs;
 
-use biomeos_types::BiomeResult;
+use biomeos_types::{BiomeError, BiomeResult};
 
-/// Get system uptime
+/// Get system uptime by reading from /proc/uptime on Linux.
+///
+/// Returns an error if /proc/uptime is not available (e.g. on non-Linux)
+/// or cannot be read/parsed.
 pub(crate) fn get_uptime() -> BiomeResult<std::time::Duration> {
-    // Try to read from /proc/uptime on Linux
-    if let Ok(uptime_str) = fs::read_to_string("/proc/uptime") {
-        if let Some(uptime_seconds) = uptime_str.split_whitespace().next() {
-            if let Ok(seconds) = uptime_seconds.parse::<f64>() {
-                return Ok(std::time::Duration::from_secs(seconds as u64));
-            }
-        }
-    }
+    let uptime_str = fs::read_to_string("/proc/uptime").map_err(|e| {
+        BiomeError::internal_error(
+            format!("Cannot read /proc/uptime: {}", e),
+            Some("UPTIME_READ_FAILED"),
+        )
+    })?;
 
-    // Fallback
-    Ok(std::time::Duration::from_secs(3600)) // 1 hour placeholder
+    let uptime_seconds = uptime_str.split_whitespace().next().ok_or_else(|| {
+        BiomeError::internal_error(
+            "Empty or invalid /proc/uptime content",
+            Some("UPTIME_PARSE_EMPTY"),
+        )
+    })?;
+
+    let seconds: f64 = uptime_seconds.parse().map_err(|_| {
+        BiomeError::internal_error(
+            format!("Invalid uptime value in /proc/uptime: {}", uptime_seconds),
+            Some("UPTIME_PARSE_INVALID"),
+        )
+    })?;
+
+    Ok(std::time::Duration::from_secs_f64(seconds))
 }
 
 #[cfg(test)]

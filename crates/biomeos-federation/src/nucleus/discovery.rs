@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Layer 1: Physical Discovery
 //!
 //! Node/primal discovery via Songbird or socket scanning fallback.
@@ -28,6 +31,20 @@ pub(crate) struct SongbirdDiscoveryResponse {
     pub services: Vec<SongbirdServiceInfo>,
 }
 
+/// Convert SongbirdServiceInfo address/port to PrimalEndpoint (testable pure function)
+#[allow(dead_code)] // Used by tests
+pub(crate) fn service_address_to_endpoint(service: &SongbirdServiceInfo) -> PrimalEndpoint {
+    if service.address.starts_with('/') {
+        PrimalEndpoint::UnixSocket {
+            path: PathBuf::from(&service.address),
+        }
+    } else {
+        PrimalEndpoint::Http {
+            url: format!("http://{}:{}", service.address, service.port),
+        }
+    }
+}
+
 /// Layer 1: Physical Discovery via Songbird
 pub(crate) async fn layer1_physical_discovery_songbird(
     songbird: &UnixSocketClient,
@@ -56,15 +73,7 @@ pub(crate) async fn layer1_physical_discovery_songbird(
                         .map(|service| {
                             let capabilities = CapabilitySet::from_tags(&service.tags);
 
-                            let endpoint = if service.address.starts_with('/') {
-                                PrimalEndpoint::UnixSocket {
-                                    path: PathBuf::from(&service.address),
-                                }
-                            } else {
-                                PrimalEndpoint::Http {
-                                    url: format!("http://{}:{}", service.address, service.port),
-                                }
-                            };
+                            let endpoint = service_address_to_endpoint(&service);
 
                             DiscoveredPrimal {
                                 name: service.name.clone(),
@@ -110,8 +119,64 @@ pub(crate) async fn layer1_physical_discovery_sockets() -> FederationResult<Vec<
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_service_address_to_endpoint_unix() {
+        let service = SongbirdServiceInfo {
+            id: "s1".to_string(),
+            name: "test".to_string(),
+            address: "/tmp/biomeos.sock".to_string(),
+            port: 0,
+            tags: vec![],
+            health: "ok".to_string(),
+        };
+        let ep = service_address_to_endpoint(&service);
+        match &ep {
+            PrimalEndpoint::UnixSocket { path } => {
+                assert_eq!(path.to_string_lossy(), "/tmp/biomeos.sock");
+            }
+            _ => panic!("Expected UnixSocket"),
+        }
+    }
+
+    #[test]
+    fn test_service_address_to_endpoint_http() {
+        let service = SongbirdServiceInfo {
+            id: "s2".to_string(),
+            name: "http-svc".to_string(),
+            address: "127.0.0.1".to_string(),
+            port: 9000,
+            tags: vec!["discovery".to_string()],
+            health: "healthy".to_string(),
+        };
+        let ep = service_address_to_endpoint(&service);
+        match &ep {
+            PrimalEndpoint::Http { url } => {
+                assert_eq!(url, "http://127.0.0.1:9000");
+            }
+            _ => panic!("Expected Http"),
+        }
+    }
+
+    #[test]
+    fn test_service_address_to_endpoint_unix_relative_path() {
+        let service = SongbirdServiceInfo {
+            id: "s3".to_string(),
+            name: "rel".to_string(),
+            address: "/var/run/sock".to_string(),
+            port: 0,
+            tags: vec![],
+            health: "ok".to_string(),
+        };
+        let ep = service_address_to_endpoint(&service);
+        match &ep {
+            PrimalEndpoint::UnixSocket { path } => assert!(path.to_string_lossy().starts_with('/')),
+            _ => panic!("Expected UnixSocket"),
+        }
+    }
 
     #[test]
     fn test_songbird_service_info_serde() {

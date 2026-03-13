@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Lifecycle types: states, configs, and managed primal structures
 
 use serde::{Deserialize, Serialize};
@@ -14,32 +17,43 @@ pub enum LifecycleState {
 
     /// Startup monitoring - waiting for socket and health
     Incubating {
+        /// When incubation started
         started_at: chrono::DateTime<chrono::Utc>,
+        /// Timeout in ms before marking failed
         timeout_ms: u64,
     },
 
     /// Running and healthy
     Active {
+        /// When primal became active
         since: chrono::DateTime<chrono::Utc>,
+        /// Last successful health check
         last_health_check: chrono::DateTime<chrono::Utc>,
     },
 
     /// Running but unhealthy - will attempt resurrection
     Degraded {
+        /// When degradation was detected
         since: chrono::DateTime<chrono::Utc>,
+        /// Failure reason
         reason: String,
+        /// Resurrection attempts so far
         resurrection_attempts: u32,
     },
 
     /// Programmed graceful shutdown
     Apoptosis {
+        /// Why apoptosis was triggered
         reason: ApoptosisReason,
+        /// When shutdown started
         started_at: chrono::DateTime<chrono::Utc>,
     },
 
     /// Dead - process terminated
     Dead {
+        /// When death was detected
         since: chrono::DateTime<chrono::Utc>,
+        /// Death reason
         reason: String,
     },
 }

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Operation Types for Error Context
 //!
 //! This module contains various operation type enums that provide

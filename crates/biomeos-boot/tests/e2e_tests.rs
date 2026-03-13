@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! End-to-end tests for biomeos-boot CLI tools
 //!
 //! These tests execute the actual binaries and verify their behavior.

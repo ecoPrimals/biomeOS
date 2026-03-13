@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! P2P Coordination Module
 //!
 //! BiomeOS coordinates peer-to-peer capabilities across primals in pure Rust.
@@ -163,81 +166,99 @@ impl P2PCoordinator {
 
     /// Discover a primal that provides security capabilities
     ///
-    /// Uses capability-based discovery to find any primal providing crypto/security.
+    /// Uses capability-based discovery to find any primal providing security/encryption.
     /// Works with BearDog or any compatible security primal.
     async fn discover_security_provider() -> Result<Arc<dyn SecurityProvider>> {
         use crate::socket_discovery::SocketDiscovery;
 
-        tracing::info!("🔐 Discovering security provider (capability: crypto)");
+        tracing::info!("🔐 Discovering security provider (capability: security)");
 
-        // Get family ID from environment
         let family_id = crate::family_discovery::get_family_id();
-
-        // Use socket discovery to find primals by capability
         let discovery = SocketDiscovery::new(&family_id);
 
-        // Try to discover a security provider by capability
-        if let Some(primal) = discovery.discover_capability("crypto").await {
-            tracing::info!(
-                "✅ Found security provider: {:?} at {}",
-                primal.primal_name,
-                primal.path.display()
-            );
-            return Ok(Arc::new(SocketSecurityProvider::new(primal.path)));
-        }
-
-        // DEEP DEBT: Name-based fallback gated behind strict discovery
-        if std::env::var("BIOMEOS_STRICT_DISCOVERY").is_err() {
-            if let Some(primal) = discovery.discover_primal("beardog").await {
-                tracing::warn!(
-                    "⚠️  Found security provider by NAME (not capability): {:?}. Set BIOMEOS_STRICT_DISCOVERY=1 to require capability-based discovery.",
-                    primal.primal_name
+        // Try capability strings from taxonomy (security, encryption)
+        for cap in ["security", "encryption", "crypto"] {
+            if let Some(primal) = discovery.discover_capability(cap).await {
+                tracing::info!(
+                    "✅ Found security provider: {:?} at {}",
+                    primal.primal_name,
+                    primal.path.display()
                 );
                 return Ok(Arc::new(SocketSecurityProvider::new(primal.path)));
             }
         }
 
+        // Taxonomy bootstrap: resolve capability → primal name, then discover by path
+        if std::env::var("BIOMEOS_STRICT_DISCOVERY").is_err() {
+            if let Some(primal_name) =
+                biomeos_types::CapabilityTaxonomy::resolve_to_primal("security")
+                    .or_else(|| biomeos_types::CapabilityTaxonomy::resolve_to_primal("encryption"))
+            {
+                tracing::warn!(
+                    "⚠️  Capability registry unavailable; using taxonomy bootstrap for security. Set BIOMEOS_STRICT_DISCOVERY=1 to require registry-based discovery."
+                );
+                if let Some(primal) = discovery.discover_primal(primal_name).await {
+                    return Ok(Arc::new(SocketSecurityProvider::new(primal.path)));
+                }
+            }
+        } else {
+            anyhow::bail!(
+                "BIOMEOS_STRICT_DISCOVERY=1: No security provider found via capability registry. \
+                 Ensure a primal with security capability is running and registered."
+            );
+        }
+
         anyhow::bail!(
-            "No security provider found. Ensure a primal with crypto capability is running."
+            "No security provider found. Ensure a primal with security capability is running."
         )
     }
 
-    /// Discover a primal that provides discovery/HTTP capabilities
+    /// Discover a primal that provides discovery/registry capabilities
     ///
-    /// Uses capability-based discovery to find any primal providing http/discovery.
+    /// Uses capability-based discovery to find any primal providing discovery/registry.
     /// Works with Songbird or any compatible discovery primal.
     async fn discover_discovery_provider() -> Result<Arc<dyn DiscoveryProvider>> {
         use crate::socket_discovery::SocketDiscovery;
 
-        tracing::info!("🔍 Discovering discovery provider (capability: http)");
+        tracing::info!("🔍 Discovering discovery provider (capability: discovery)");
 
         let family_id = crate::family_discovery::get_family_id();
-
         let discovery = SocketDiscovery::new(&family_id);
 
-        // Try to discover by capability
-        if let Some(primal) = discovery.discover_capability("http").await {
-            tracing::info!(
-                "✅ Found discovery provider: {:?} at {}",
-                primal.primal_name,
-                primal.path.display()
-            );
-            return Ok(Arc::new(SocketDiscoveryProvider::new(primal.path)));
-        }
-
-        // DEEP DEBT: Name-based fallback gated behind strict discovery
-        if std::env::var("BIOMEOS_STRICT_DISCOVERY").is_err() {
-            if let Some(primal) = discovery.discover_primal("songbird").await {
-                tracing::warn!(
-                    "⚠️  Found discovery provider by NAME (not capability): {:?}. Set BIOMEOS_STRICT_DISCOVERY=1 to require capability-based discovery.",
-                    primal.primal_name
+        // Try capability strings from taxonomy (discovery, registry, http)
+        for cap in ["discovery", "registry", "http"] {
+            if let Some(primal) = discovery.discover_capability(cap).await {
+                tracing::info!(
+                    "✅ Found discovery provider: {:?} at {}",
+                    primal.primal_name,
+                    primal.path.display()
                 );
                 return Ok(Arc::new(SocketDiscoveryProvider::new(primal.path)));
             }
         }
 
+        // Taxonomy bootstrap: resolve capability → primal name, then discover by path
+        if std::env::var("BIOMEOS_STRICT_DISCOVERY").is_err() {
+            if let Some(primal_name) =
+                biomeos_types::CapabilityTaxonomy::resolve_to_primal("discovery")
+                    .or_else(|| biomeos_types::CapabilityTaxonomy::resolve_to_primal("registry"))
+            {
+                tracing::warn!(
+                    "⚠️  Capability registry unavailable; using taxonomy bootstrap for discovery. Set BIOMEOS_STRICT_DISCOVERY=1 to require registry-based discovery."
+                );
+                if let Some(primal) = discovery.discover_primal(primal_name).await {
+                    return Ok(Arc::new(SocketDiscoveryProvider::new(primal.path)));
+                }
+            }
+        } else {
+            anyhow::bail!(
+                "BIOMEOS_STRICT_DISCOVERY=1: No discovery provider found via capability registry. \
+                 Ensure a primal with discovery capability is running and registered."
+            );
+        }
+
         anyhow::bail!(
-            "No discovery provider found. Ensure a primal with http capability is running."
+            "No discovery provider found. Ensure a primal with discovery capability is running."
         )
     }
 
@@ -335,7 +356,7 @@ impl P2PCoordinator {
             .await
             .context("Failed to check transport health from discovery provider")?;
 
-        let status = Self::compute_status(&security_health, &transport_health);
+        let status = compute_status_impl(&security_health, &transport_health);
 
         Ok(OverallHealth {
             tunnel_id: tunnel_id.to_string(),
@@ -344,17 +365,22 @@ impl P2PCoordinator {
             status,
         })
     }
+}
 
-    fn compute_status(security: &TunnelHealth, transport: &TransportHealth) -> HealthStatus {
-        if security.status == HealthStatus::Healthy && transport.status == HealthStatus::Healthy {
-            HealthStatus::Healthy
-        } else if security.status == HealthStatus::Degraded
-            || transport.status == HealthStatus::Degraded
-        {
-            HealthStatus::Degraded
-        } else {
-            HealthStatus::Unhealthy
-        }
+/// Compute combined health status from security and transport (testable pure function)
+#[allow(dead_code)] // Used by tests
+pub(crate) fn compute_status_impl(
+    security: &TunnelHealth,
+    transport: &TransportHealth,
+) -> HealthStatus {
+    if security.status == HealthStatus::Healthy && transport.status == HealthStatus::Healthy {
+        HealthStatus::Healthy
+    } else if security.status == HealthStatus::Degraded
+        || transport.status == HealthStatus::Degraded
+    {
+        HealthStatus::Degraded
+    } else {
+        HealthStatus::Unhealthy
     }
 }
 
@@ -366,13 +392,96 @@ impl P2PCoordinator {
 use socket_providers::{SocketDiscoveryProvider, SocketRoutingProvider, SocketSecurityProvider};
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_compute_status_impl() {
+        let healthy = TunnelHealth {
+            encryption_status: HealthStatus::Healthy,
+            forward_secrecy: true,
+            last_key_rotation: None,
+            status: HealthStatus::Healthy,
+        };
+        let transport_healthy = TransportHealth {
+            connection_status: HealthStatus::Healthy,
+            latency_ms: Some(10),
+            packet_loss: None,
+            status: HealthStatus::Healthy,
+        };
+        assert_eq!(
+            compute_status_impl(&healthy, &transport_healthy),
+            HealthStatus::Healthy
+        );
+
+        let degraded = TunnelHealth {
+            encryption_status: HealthStatus::Healthy,
+            forward_secrecy: true,
+            last_key_rotation: None,
+            status: HealthStatus::Degraded,
+        };
+        assert_eq!(
+            compute_status_impl(&degraded, &transport_healthy),
+            HealthStatus::Degraded
+        );
+
+        let unhealthy = TransportHealth {
+            connection_status: HealthStatus::Healthy,
+            latency_ms: None,
+            packet_loss: None,
+            status: HealthStatus::Unhealthy,
+        };
+        assert_eq!(
+            compute_status_impl(&healthy, &unhealthy),
+            HealthStatus::Unhealthy
+        );
+    }
 
     #[test]
     fn test_capability_constants() {
         assert_eq!(CAPABILITY_SECURITY, "security");
         assert_eq!(CAPABILITY_DISCOVERY, "discovery");
         assert_eq!(CAPABILITY_ROUTING, "routing");
+    }
+
+    #[test]
+    fn test_compute_status_both_degraded() {
+        let security = TunnelHealth {
+            encryption_status: HealthStatus::Degraded,
+            forward_secrecy: true,
+            last_key_rotation: None,
+            status: HealthStatus::Degraded,
+        };
+        let transport = TransportHealth {
+            connection_status: HealthStatus::Healthy,
+            latency_ms: Some(100),
+            packet_loss: None,
+            status: HealthStatus::Healthy,
+        };
+        assert_eq!(
+            compute_status_impl(&security, &transport),
+            HealthStatus::Degraded
+        );
+    }
+
+    #[test]
+    fn test_compute_status_both_unhealthy() {
+        let security = TunnelHealth {
+            encryption_status: HealthStatus::Unhealthy,
+            forward_secrecy: false,
+            last_key_rotation: None,
+            status: HealthStatus::Unhealthy,
+        };
+        let transport = TransportHealth {
+            connection_status: HealthStatus::Unhealthy,
+            latency_ms: None,
+            packet_loss: Some(50.0),
+            status: HealthStatus::Unhealthy,
+        };
+        assert_eq!(
+            compute_status_impl(&security, &transport),
+            HealthStatus::Unhealthy
+        );
     }
 }

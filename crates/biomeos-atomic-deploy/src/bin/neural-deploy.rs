@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Neural Deploy Client Binary
 //!
 //! Client for deploying ecosystems via Neural API graphs.

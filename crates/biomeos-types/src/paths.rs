@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 // =============================================================================
 // System Paths - XDG Base Directory Compliance
 // =============================================================================
@@ -432,6 +435,7 @@ impl Default for SystemPaths {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use tempfile::tempdir;
@@ -502,5 +506,106 @@ mod tests {
         let seed = paths.genetic_seed("family-alpha");
         assert!(seed.to_string_lossy().contains("family-alpha.seed"));
         assert!(seed.starts_with(paths.data_dir()));
+    }
+
+    #[test]
+    fn test_new_lazy_and_ensure_all_dirs() {
+        let temp = tempdir().unwrap();
+        let base = temp.path().join("lazy-base");
+        std::fs::create_dir_all(&base).unwrap();
+
+        let _paths = SystemPaths::with_base(&base).unwrap();
+        let lazy_paths = SystemPaths::new_lazy();
+        let _ = lazy_paths.runtime_dir();
+        let _ = lazy_paths.data_dir();
+        let _ = lazy_paths.config_dir();
+        let _ = lazy_paths.cache_dir();
+        let _ = lazy_paths.state_dir();
+
+        let paths_with_base = SystemPaths::with_base(&base).unwrap();
+        assert!(paths_with_base.ensure_all_dirs().is_ok());
+    }
+
+    #[test]
+    fn test_default_impl() {
+        let paths = SystemPaths::default();
+        assert!(!paths.runtime_dir().as_os_str().is_empty());
+    }
+
+    #[test]
+    fn test_all_path_resolution_methods() {
+        let temp = tempdir().unwrap();
+        let paths = SystemPaths::with_base(temp.path()).unwrap();
+
+        let pid = paths.pid_file("test-service");
+        assert!(pid.to_string_lossy().contains("test-service.pid"));
+
+        let lock = paths.lock_file("test-lock");
+        assert!(lock.to_string_lossy().contains("test-lock.lock"));
+
+        let spore = paths.spore_dir();
+        assert!(spore.ends_with("spores"));
+
+        let temp_ws = paths.temp_workspace("my-workspace");
+        assert!(temp_ws.to_string_lossy().contains("my-workspace"));
+
+        let download = paths.download_cache();
+        assert!(download.ends_with("downloads"));
+
+        let fossil = paths.fossil_record_dir();
+        assert!(fossil.ends_with("fossil-record"));
+
+        let audit = paths.audit_log();
+        assert!(audit.ends_with("audit.log"));
+
+        let graph = paths.graph_dir();
+        assert!(graph.ends_with("graphs"));
+    }
+
+    #[test]
+    fn test_path_error_display() {
+        let err = PathError::InvalidPath("bad-path".to_string());
+        assert!(err.to_string().contains("Invalid path"));
+        assert!(err.to_string().contains("bad-path"));
+    }
+
+    #[test]
+    #[ignore = "env-var tests are thread-unsafe; run with --test-threads=1"]
+    fn test_xdg_runtime_dir_override() {
+        let temp = tempdir().unwrap();
+        let xdg_runtime = temp.path().join("xdg-runtime");
+        std::fs::create_dir_all(&xdg_runtime).unwrap();
+        std::env::set_var("XDG_RUNTIME_DIR", xdg_runtime.clone());
+
+        let paths = SystemPaths::new();
+        std::env::remove_var("XDG_RUNTIME_DIR");
+
+        if let Ok(p) = paths {
+            assert!(p.runtime_dir().to_string_lossy().contains("xdg-runtime"));
+        }
+    }
+
+    #[test]
+    #[ignore = "env-var tests are thread-unsafe; run with --test-threads=1"]
+    fn test_xdg_data_home_override() {
+        let temp = tempdir().unwrap();
+        let xdg_data = temp.path().join("xdg-data");
+        std::fs::create_dir_all(&xdg_data).unwrap();
+        std::env::set_var("XDG_DATA_HOME", xdg_data.clone());
+
+        let paths = SystemPaths::new();
+        std::env::remove_var("XDG_DATA_HOME");
+
+        if let Ok(p) = paths {
+            assert!(p.data_dir().to_string_lossy().contains("xdg-data"));
+        }
+    }
+
+    #[test]
+    fn test_empty_primal_id_in_socket() {
+        let temp = tempdir().unwrap();
+        let paths = SystemPaths::with_base(temp.path()).unwrap();
+        let socket = paths.primal_socket("");
+        assert!(socket.ends_with(".sock"));
     }
 }

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Serial Channel - Direct Serial Port Access
 //!
 //! Provides direct access to /dev/ttyS0 (COM1) for boot logging,

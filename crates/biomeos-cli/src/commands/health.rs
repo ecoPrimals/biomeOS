@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Health Command Handlers
 //!
 //! Handles health monitoring operations including health checks,
@@ -9,6 +12,276 @@ use serde_json::Value;
 use std::collections::HashMap;
 
 use super::utils::{create_spinner, display_results, format_bytes};
+
+/// Maps health status strings to display icons.
+pub(crate) fn status_to_icon(status: &str) -> &'static str {
+    match status {
+        "Healthy" => "✅",
+        "Degraded" => "⚠️",
+        "Critical" => "🔴",
+        "Unhealthy" => "❌",
+        "Starting" => "🔄",
+        "Stopping" => "⏹️",
+        "Maintenance" => "🔧",
+        "Unknown" => "❓",
+        _ => "🔹",
+    }
+}
+
+/// Computes memory usage percentage. Returns 0.0 if total is 0.
+pub(crate) fn compute_memory_percent(used: u64, total: u64) -> f64 {
+    if total == 0 {
+        return 0.0;
+    }
+    (used as f64 / total as f64) * 100.0
+}
+
+/// Builds all display lines for health check results without printing.
+pub(crate) fn format_health_summary(
+    results: &HashMap<String, Value>,
+    detailed: bool,
+) -> Vec<String> {
+    let mut lines = Vec::new();
+
+    if let Some(overall_status) = results.get("overall_status") {
+        let status_str = overall_status.as_str().unwrap_or("Unknown");
+        let icon = status_to_icon(status_str);
+        lines.push(format!("{icon} Overall Status: {status_str}"));
+    }
+
+    if let Some(services) = results.get("services").and_then(|s| s.as_object()) {
+        lines.push(format!(
+            "\n🎯 Service Health ({} services):",
+            services.len()
+        ));
+
+        for (service_name, service_health) in services {
+            let health_status = service_health
+                .get("status")
+                .and_then(|s| s.as_str())
+                .unwrap_or("Unknown");
+            let icon = status_to_icon(health_status);
+
+            lines.push(format!("  {} {}: {}", icon, service_name, health_status));
+
+            if detailed {
+                if let Some(issues) = service_health.get("issues").and_then(|i| i.as_array()) {
+                    for issue in issues {
+                        if let Some(message) = issue.get("message") {
+                            lines.push(format!("    • {}", message));
+                        }
+                    }
+                }
+
+                if let Some(metrics) = service_health.get("metrics") {
+                    lines.extend(format_health_metrics(metrics, 2));
+                }
+            }
+        }
+    }
+
+    if let Some(system_metrics) = results.get("system_metrics") {
+        lines.push("\n📊 System Metrics:".to_string());
+        lines.extend(format_health_metrics(system_metrics, 1));
+    }
+
+    lines.push(String::new());
+    lines
+}
+
+/// Builds display lines for probe results.
+pub(crate) fn format_probe_results(service: &str, results: &HashMap<String, Value>) -> Vec<String> {
+    let mut lines = Vec::new();
+    lines.push(format!("🔍 Deep probe results for '{}':", service));
+
+    if let Some(connectivity) = results.get("connectivity") {
+        lines.push("\n🌐 Connectivity:".to_string());
+        lines.extend(format_connectivity_results(connectivity));
+    }
+
+    if let Some(performance) = results.get("performance") {
+        lines.push("\n⚡ Performance:".to_string());
+        lines.extend(format_performance_metrics(performance));
+    }
+
+    if let Some(diagnostics) = results.get("diagnostics") {
+        lines.push("\n🔧 Diagnostics:".to_string());
+        lines.extend(format_diagnostics(diagnostics));
+    }
+
+    lines
+}
+
+/// Builds scan results as a formatted string based on format type.
+pub(crate) fn format_scan_results(
+    results: &HashMap<String, Value>,
+    format: &str,
+) -> Result<String> {
+    match format {
+        "json" => serde_json::to_string_pretty(results).map_err(Into::into),
+        "summary" => Ok(format_scan_summary(results)),
+        _ => Ok(format_scan_default(results)),
+    }
+}
+
+fn format_health_metrics(metrics: &Value, indent_level: usize) -> Vec<String> {
+    let mut lines = Vec::new();
+    let indent = "  ".repeat(indent_level);
+
+    if let Some(cpu) = metrics.get("cpu_usage") {
+        lines.push(format!("{}💻 CPU Usage: {}%", indent, cpu));
+    }
+
+    if let Some(memory) = metrics.get("memory_usage") {
+        if let Some(used) = memory.get("used_bytes") {
+            if let Some(total) = memory.get("total_bytes") {
+                let used_gb = used.as_u64().unwrap_or(0) as f64 / 1_073_741_824.0;
+                let total_gb = total.as_u64().unwrap_or(0) as f64 / 1_073_741_824.0;
+                let percent =
+                    compute_memory_percent(used.as_u64().unwrap_or(0), total.as_u64().unwrap_or(0));
+                lines.push(format!(
+                    "{}🧠 Memory: {:.1}GB / {:.1}GB ({:.1}%)",
+                    indent, used_gb, total_gb, percent
+                ));
+            }
+        }
+    }
+
+    if let Some(disk) = metrics.get("disk_usage") {
+        if let Some(used) = disk.get("used_bytes") {
+            lines.push(format!(
+                "{}💾 Disk Usage: {}",
+                indent,
+                format_bytes(used.as_u64().unwrap_or(0))
+            ));
+        }
+    }
+
+    if let Some(network) = metrics.get("network") {
+        if let Some(bytes_sent) = network.get("bytes_sent") {
+            if let Some(bytes_received) = network.get("bytes_received") {
+                lines.push(format!(
+                    "{}🌐 Network: ↑{} ↓{}",
+                    indent,
+                    format_bytes(bytes_sent.as_u64().unwrap_or(0)),
+                    format_bytes(bytes_received.as_u64().unwrap_or(0))
+                ));
+            }
+        }
+    }
+
+    lines
+}
+
+fn format_connectivity_results(connectivity: &Value) -> Vec<String> {
+    let mut lines = Vec::new();
+
+    if let Some(reachable) = connectivity.get("reachable") {
+        let icon = if reachable.as_bool().unwrap_or(false) {
+            "✅"
+        } else {
+            "❌"
+        };
+        lines.push(format!("  {} Reachable: {}", icon, reachable));
+    }
+
+    if let Some(response_time) = connectivity.get("response_time_ms") {
+        lines.push(format!("  ⏱️  Response Time: {}ms", response_time));
+    }
+
+    if let Some(endpoints) = connectivity.get("endpoints").and_then(|e| e.as_array()) {
+        lines.push("  🔗 Endpoints:".to_string());
+        for endpoint in endpoints {
+            if let Some(url) = endpoint.get("url") {
+                let status = endpoint
+                    .get("status")
+                    .and_then(|s| s.as_str())
+                    .unwrap_or("unknown");
+                let icon = if status == "ok" { "✅" } else { "❌" };
+                lines.push(format!("    {} {}: {}", icon, url, status));
+            }
+        }
+    }
+
+    lines
+}
+
+fn format_performance_metrics(performance: &Value) -> Vec<String> {
+    let mut lines = Vec::new();
+
+    if let Some(throughput) = performance.get("throughput_rps") {
+        lines.push(format!("  📈 Throughput: {} req/s", throughput));
+    }
+
+    if let Some(latency) = performance.get("avg_latency_ms") {
+        lines.push(format!("  ⏱️  Avg Latency: {}ms", latency));
+    }
+
+    if let Some(error_rate) = performance.get("error_rate_percent") {
+        lines.push(format!("  ❌ Error Rate: {}%", error_rate));
+    }
+
+    lines
+}
+
+fn format_diagnostics(diagnostics: &Value) -> Vec<String> {
+    let mut lines = Vec::new();
+
+    if let Some(diag_obj) = diagnostics.as_object() {
+        for (key, value) in diag_obj {
+            let line = match value {
+                Value::String(s) => format!("  {key}: {s}"),
+                Value::Number(n) => format!("  {key}: {n}"),
+                Value::Bool(b) => format!("  {key}: {b}"),
+                Value::Array(arr) => format!("  {key}: {} items", arr.len()),
+                Value::Object(_) => format!("  {key}: [object]"),
+                Value::Null => format!("  {key}: null"),
+            };
+            lines.push(line);
+        }
+    } else {
+        lines.push(format!("  {diagnostics}"));
+    }
+
+    lines
+}
+
+fn format_scan_summary(results: &HashMap<String, Value>) -> String {
+    let mut lines = Vec::new();
+    lines.push("📋 System Scan Summary:".to_string());
+    if let Some(issues_found) = results.get("issues_count") {
+        lines.push(format!("  Issues found: {}", issues_found));
+    }
+    if let Some(services_scanned) = results.get("services_scanned") {
+        lines.push(format!("  Services scanned: {}", services_scanned));
+    }
+    lines.join("\n")
+}
+
+fn format_scan_default(results: &HashMap<String, Value>) -> String {
+    // display_results is async and does IO - we need a sync version for format
+    // The "default" format uses display_results which prints. We'll build a similar
+    // structure that can be printed line by line.
+    let mut lines = Vec::new();
+    if results.is_empty() {
+        lines.push("📋 System Scan Results: No results".to_string());
+        return lines.join("\n");
+    }
+    lines.push(format!("📋 System Scan Results ({} items):", results.len()));
+    lines.push(String::new());
+    for (key, value) in results {
+        lines.push(format!("🔹 {}", key));
+        if let Ok(pretty) = serde_json::to_string_pretty(value) {
+            for line in pretty.lines() {
+                lines.push(format!("   {}", line));
+            }
+        } else {
+            lines.push(format!("   {}", value));
+        }
+        lines.push(String::new());
+    }
+    lines.join("\n")
+}
 
 /// Handle health check command
 pub async fn handle_health(
@@ -98,7 +371,7 @@ pub async fn handle_probe(service: String, timeout: u64) -> Result<()> {
 
     spinner.finish_with_message("✅ Probe completed");
 
-    display_probe_results(&service, &probe_result).await?;
+    display_probe_results(&service, &probe_result);
 
     Ok(())
 }
@@ -164,128 +437,30 @@ async fn perform_health_check(
         }
     };
 
-    display_health_results(&health_result, detailed).await?;
+    display_health_results(&health_result, detailed);
     Ok(())
 }
 
-/// Display health check results
-async fn display_health_results(results: &HashMap<String, Value>, detailed: bool) -> Result<()> {
-    if let Some(overall_status) = results.get("overall_status") {
-        let icon = match overall_status.as_str() {
-            Some("Healthy") => "✅",
-            Some("Degraded") => "⚠️",
-            Some("Critical") => "🔴",
-            Some("Unhealthy") => "❌",
-            Some("Starting") => "🔄",
-            Some("Stopping") => "⏹️",
-            Some("Maintenance") => "🔧",
-            Some("Unknown") => "❓",
-            _ => "🔹",
-        };
-        println!("{icon} Overall Status: {overall_status}");
+/// Display health check results (thin wrapper)
+fn display_health_results(results: &HashMap<String, Value>, detailed: bool) {
+    let lines = format_health_summary(results, detailed);
+    for line in lines {
+        println!("{line}");
     }
-
-    if let Some(services) = results.get("services").and_then(|s| s.as_object()) {
-        println!("\n🎯 Service Health ({} services):", services.len());
-
-        for (service_name, service_health) in services {
-            let health_status = service_health
-                .get("status")
-                .and_then(|s| s.as_str())
-                .unwrap_or("Unknown");
-            let icon = match health_status {
-                "Healthy" => "✅",
-                "Degraded" => "⚠️",
-                "Critical" => "🔴",
-                "Unhealthy" => "❌",
-                "Starting" => "🔄",
-                "Stopping" => "⏹️",
-                "Maintenance" => "🔧",
-                _ => "❓",
-            };
-
-            println!("  {} {}: {}", icon, service_name, health_status);
-
-            if detailed {
-                if let Some(issues) = service_health.get("issues").and_then(|i| i.as_array()) {
-                    for issue in issues {
-                        if let Some(message) = issue.get("message") {
-                            println!("    • {}", message);
-                        }
-                    }
-                }
-
-                if let Some(metrics) = service_health.get("metrics") {
-                    display_health_metrics(metrics, 2).await?;
-                }
-            }
-        }
-    }
-
-    if let Some(system_metrics) = results.get("system_metrics") {
-        println!("\n📊 System Metrics:");
-        display_health_metrics(system_metrics, 1).await?;
-    }
-
-    println!();
-    Ok(())
 }
 
-/// Display probe results
-async fn display_probe_results(service: &str, results: &HashMap<String, Value>) -> Result<()> {
-    println!("🔍 Deep probe results for '{}':", service);
-
-    if let Some(connectivity) = results.get("connectivity") {
-        println!("\n🌐 Connectivity:");
-        display_connectivity_results(connectivity).await?;
+/// Display probe results (thin wrapper)
+fn display_probe_results(service: &str, results: &HashMap<String, Value>) {
+    let lines = format_probe_results(service, results);
+    for line in lines {
+        println!("{line}");
     }
-
-    if let Some(performance) = results.get("performance") {
-        println!("\n⚡ Performance:");
-        display_performance_metrics(performance).await?;
-    }
-
-    if let Some(diagnostics) = results.get("diagnostics") {
-        println!("\n🔧 Diagnostics:");
-        if let Some(diag_obj) = diagnostics.as_object() {
-            for (key, value) in diag_obj {
-                match value {
-                    Value::String(s) => println!("  {key}: {s}"),
-                    Value::Number(n) => println!("  {key}: {n}"),
-                    Value::Bool(b) => println!("  {key}: {b}"),
-                    Value::Array(arr) => println!("  {key}: {} items", arr.len()),
-                    Value::Object(_) => println!("  {key}: [object]"),
-                    Value::Null => println!("  {key}: null"),
-                }
-            }
-        } else {
-            println!("  {diagnostics}");
-        }
-    }
-
-    Ok(())
 }
 
-/// Display scan results
+/// Display scan results (thin wrapper)
 async fn display_scan_results(results: &HashMap<String, Value>, format: &str) -> Result<()> {
-    match format {
-        "json" => {
-            println!("{}", serde_json::to_string_pretty(results)?);
-        }
-        "summary" => {
-            println!("📋 System Scan Summary:");
-            if let Some(issues_found) = results.get("issues_count") {
-                println!("  Issues found: {}", issues_found);
-            }
-            if let Some(services_scanned) = results.get("services_scanned") {
-                println!("  Services scanned: {}", services_scanned);
-            }
-        }
-        _ => {
-            display_results("System Scan Results", results, true).await?;
-        }
-    }
-
+    let output = format_scan_results(results, format)?;
+    println!("{output}");
     Ok(())
 }
 
@@ -312,103 +487,159 @@ async fn display_status_results(
     Ok(())
 }
 
-/// Display health metrics with indentation
-async fn display_health_metrics(metrics: &Value, indent_level: usize) -> Result<()> {
-    let indent = "  ".repeat(indent_level);
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
 
-    if let Some(cpu) = metrics.get("cpu_usage") {
-        println!("{}💻 CPU Usage: {}%", indent, cpu);
+    #[test]
+    fn test_status_to_icon_all_variants() {
+        assert_eq!(status_to_icon("Healthy"), "✅");
+        assert_eq!(status_to_icon("Degraded"), "⚠️");
+        assert_eq!(status_to_icon("Critical"), "🔴");
+        assert_eq!(status_to_icon("Unhealthy"), "❌");
+        assert_eq!(status_to_icon("Starting"), "🔄");
+        assert_eq!(status_to_icon("Stopping"), "⏹️");
+        assert_eq!(status_to_icon("Maintenance"), "🔧");
+        assert_eq!(status_to_icon("Unknown"), "❓");
+        assert_eq!(status_to_icon("custom"), "🔹");
+        assert_eq!(status_to_icon(""), "🔹");
     }
 
-    if let Some(memory) = metrics.get("memory_usage") {
-        if let Some(used) = memory.get("used_bytes") {
-            if let Some(total) = memory.get("total_bytes") {
-                let used_gb = used.as_u64().unwrap_or(0) as f64 / 1_073_741_824.0;
-                let total_gb = total.as_u64().unwrap_or(0) as f64 / 1_073_741_824.0;
-                let percent = if total_gb > 0.0 {
-                    (used_gb / total_gb) * 100.0
-                } else {
-                    0.0
-                };
-                println!(
-                    "{}🧠 Memory: {:.1}GB / {:.1}GB ({:.1}%)",
-                    indent, used_gb, total_gb, percent
-                );
-            }
-        }
+    #[test]
+    fn test_compute_memory_percent() {
+        assert_eq!(compute_memory_percent(0, 0), 0.0);
+        assert_eq!(compute_memory_percent(512, 1024), 50.0);
+        assert_eq!(compute_memory_percent(256, 1024), 25.0);
+        assert_eq!(compute_memory_percent(1024, 1024), 100.0);
+        let p = compute_memory_percent(1, 3);
+        assert!((p - 33.333).abs() < 0.001, "expected ~33.333, got {}", p);
     }
 
-    if let Some(disk) = metrics.get("disk_usage") {
-        if let Some(used) = disk.get("used_bytes") {
-            println!(
-                "{}💾 Disk Usage: {}",
-                indent,
-                format_bytes(used.as_u64().unwrap_or(0))
-            );
-        }
+    #[test]
+    fn test_format_health_summary_empty() {
+        let results = HashMap::new();
+        let lines = format_health_summary(&results, false);
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0], "");
     }
 
-    if let Some(network) = metrics.get("network") {
-        if let Some(bytes_sent) = network.get("bytes_sent") {
-            if let Some(bytes_received) = network.get("bytes_received") {
-                println!(
-                    "{}🌐 Network: ↑{} ↓{}",
-                    indent,
-                    format_bytes(bytes_sent.as_u64().unwrap_or(0)),
-                    format_bytes(bytes_received.as_u64().unwrap_or(0))
-                );
-            }
-        }
+    #[test]
+    fn test_format_health_summary_overall_status() {
+        let mut results = HashMap::new();
+        results.insert("overall_status".to_string(), serde_json::json!("Healthy"));
+        let lines = format_health_summary(&results, false);
+        assert!(lines[0].contains("✅"));
+        assert!(lines[0].contains("Healthy"));
     }
 
-    Ok(())
-}
-
-/// Display connectivity results
-async fn display_connectivity_results(connectivity: &Value) -> Result<()> {
-    if let Some(reachable) = connectivity.get("reachable") {
-        let icon = if reachable.as_bool().unwrap_or(false) {
-            "✅"
-        } else {
-            "❌"
-        };
-        println!("  {} Reachable: {}", icon, reachable);
+    #[test]
+    fn test_format_health_summary_with_services() {
+        let mut results = HashMap::new();
+        results.insert(
+            "services".to_string(),
+            serde_json::json!({
+                "svc1": {"status": "Healthy"},
+                "svc2": {"status": "Degraded"}
+            }),
+        );
+        let lines = format_health_summary(&results, false);
+        assert!(lines.iter().any(|l| l.contains("Service Health")));
+        assert!(lines
+            .iter()
+            .any(|l| l.contains("svc1") && l.contains("Healthy")));
+        assert!(lines
+            .iter()
+            .any(|l| l.contains("svc2") && l.contains("Degraded")));
     }
 
-    if let Some(response_time) = connectivity.get("response_time_ms") {
-        println!("  ⏱️  Response Time: {}ms", response_time);
+    #[test]
+    fn test_format_probe_results_empty() {
+        let results = HashMap::new();
+        let lines = format_probe_results("mysvc", &results);
+        assert_eq!(lines[0], "🔍 Deep probe results for 'mysvc':");
     }
 
-    if let Some(endpoints) = connectivity.get("endpoints").and_then(|e| e.as_array()) {
-        println!("  🔗 Endpoints:");
-        for endpoint in endpoints {
-            if let Some(url) = endpoint.get("url") {
-                let status = endpoint
-                    .get("status")
-                    .and_then(|s| s.as_str())
-                    .unwrap_or("unknown");
-                let icon = if status == "ok" { "✅" } else { "❌" };
-                println!("    {} {}: {}", icon, url, status);
-            }
-        }
+    #[test]
+    fn test_format_probe_results_with_connectivity() {
+        let mut results = HashMap::new();
+        results.insert(
+            "connectivity".to_string(),
+            serde_json::json!({
+                "reachable": true,
+                "response_time_ms": 42
+            }),
+        );
+        let lines = format_probe_results("mysvc", &results);
+        assert!(lines.iter().any(|l| l.contains("Connectivity")));
+        assert!(lines.iter().any(|l| l.contains("Reachable")));
+        assert!(lines.iter().any(|l| l.contains("42ms")));
     }
 
-    Ok(())
-}
-
-/// Display performance metrics
-async fn display_performance_metrics(performance: &Value) -> Result<()> {
-    if let Some(throughput) = performance.get("throughput_rps") {
-        println!("  📈 Throughput: {} req/s", throughput);
+    #[test]
+    fn test_format_scan_results_json() {
+        let mut results = HashMap::new();
+        results.insert("key".to_string(), serde_json::json!("value"));
+        let output = format_scan_results(&results, "json").unwrap();
+        assert!(output.contains("\"key\""));
+        assert!(output.contains("value"));
     }
 
-    if let Some(latency) = performance.get("avg_latency_ms") {
-        println!("  ⏱️  Avg Latency: {}ms", latency);
+    #[test]
+    fn test_format_scan_results_summary() {
+        let mut results = HashMap::new();
+        results.insert("issues_count".to_string(), serde_json::json!(5));
+        results.insert("services_scanned".to_string(), serde_json::json!(10));
+        let output = format_scan_results(&results, "summary").unwrap();
+        assert!(output.contains("System Scan Summary"));
+        assert!(output.contains("Issues found"));
+        assert!(output.contains("5"));
+        assert!(output.contains("Services scanned"));
+        assert!(output.contains("10"));
     }
 
-    if let Some(error_rate) = performance.get("error_rate_percent") {
-        println!("  ❌ Error Rate: {}%", error_rate);
+    #[test]
+    fn test_format_scan_results_default() {
+        let mut results = HashMap::new();
+        results.insert("status".to_string(), serde_json::json!("ok"));
+        let output = format_scan_results(&results, "table").unwrap();
+        assert!(output.contains("System Scan Results"));
+        assert!(output.contains("status"));
     }
 
-    Ok(())
+    #[tokio::test]
+    async fn test_handle_health_graph_missing_niche() {
+        let result = handle_health(
+            None, false, false, 10, true, // use_graph
+            None, // niche_path - required for graph health
+        )
+        .await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("niche"));
+    }
+
+    #[tokio::test]
+    async fn test_handle_health_graph_deprecated() {
+        let result = handle_health(
+            None,
+            false,
+            false,
+            10,
+            true,
+            Some(PathBuf::from("/tmp/test-niche")),
+        )
+        .await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("deprecated"));
+    }
+
+    #[test]
+    fn test_format_bytes_edge_cases() {
+        use super::super::utils::format_bytes;
+        assert_eq!(format_bytes(0), "0 B");
+        assert_eq!(format_bytes(1023), "1023 B");
+        assert_eq!(format_bytes(1024), "1.0 KB");
+        assert_eq!(format_bytes(1536), "1.5 KB");
+    }
 }

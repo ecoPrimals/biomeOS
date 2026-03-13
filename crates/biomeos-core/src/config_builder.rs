@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! BiomeOS Configuration Builder - REWRITTEN FOR UNIFIED TYPES
 //!
 //! ✅ MIGRATION COMPLETE: Now uses unified types from biomeos-types

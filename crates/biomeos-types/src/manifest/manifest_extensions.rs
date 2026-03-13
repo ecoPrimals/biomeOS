@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Manifest Extensions and Dependencies
 //!
 //! This module contains manifest extension types including BiomeDependency,

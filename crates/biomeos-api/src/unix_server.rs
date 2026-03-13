@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Unix socket server for biomeOS API
 //!
 //! Provides secure, port-free communication via Unix sockets with JSON-RPC 2.0.

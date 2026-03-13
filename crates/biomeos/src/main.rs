@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! biomeOS Universal Nucleus & Orchestrator
 //!
 //! UniBin architecture with mode-based execution.
@@ -14,9 +17,17 @@
 
 use anyhow::Result;
 use clap::{Args, Parser, Subcommand};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 mod modes;
+
+/// Genome info for list output (pure, testable)
+#[derive(Debug, Clone)]
+pub(crate) struct GenomeInfo {
+    pub name: String,
+    pub version: String,
+    pub architectures: Vec<String>,
+}
 
 // ============================================================================
 // GENOME COMMAND DEFINITIONS
@@ -307,14 +318,8 @@ enum ModelCacheCommand {
     Status,
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
-    let cli = Cli::parse();
-
-    // Initialize logging
-    init_logging(&cli.log_level, cli.verbose)?;
-
-    // Dispatch to mode handler
+/// Dispatch to mode handler based on CLI (thin orchestration)
+async fn dispatch_mode(cli: Cli) -> Result<()> {
     match cli.mode {
         Mode::Cli {} => modes::cli::run(modes::cli::CliCommand).await,
         Mode::Genome { command } => handle_genome_command(command).await,
@@ -323,10 +328,17 @@ async fn main() -> Result<()> {
             family_id,
             socket,
         } => {
-            // Use family discovery if not explicitly specified
-            let resolved_family_id =
-                family_id.unwrap_or_else(biomeos_core::family_discovery::get_family_id);
-            modes::neural_api::run(graphs_dir, resolved_family_id, socket).await
+            let config = modes::neural_api::resolve_neural_api_config(
+                graphs_dir,
+                socket,
+                family_id.as_deref(),
+            );
+            modes::neural_api::run(
+                config.graphs_dir,
+                config.family_id,
+                Some(config.socket_path),
+            )
+            .await
         }
         Mode::Deploy {
             graph,
@@ -354,6 +366,55 @@ async fn main() -> Result<()> {
             family_id,
         } => modes::nucleus::run(nucleus_mode, node_id, family_id).await,
     }
+}
+
+/// List genome bins in directory (pure filesystem scan + parse)
+pub(crate) fn list_genome_bins(dir: &Path) -> Result<Vec<GenomeInfo>> {
+    use biomeos_genomebin_v3::GenomeBin;
+
+    let mut infos = Vec::new();
+    if !dir.exists() {
+        return Ok(infos);
+    }
+    for entry in std::fs::read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path
+            .extension()
+            .is_some_and(|e| e == "genome" || e == "json")
+        {
+            if let Ok(content) = std::fs::read_to_string(&path) {
+                if let Ok(genome) = GenomeBin::from_json(&content) {
+                    infos.push(GenomeInfo {
+                        name: genome.manifest.name,
+                        version: genome.manifest.version,
+                        architectures: genome
+                            .manifest
+                            .architectures
+                            .iter()
+                            .map(|a| format!("{:?}", a))
+                            .collect(),
+                    });
+                }
+            }
+        }
+    }
+    Ok(infos)
+}
+
+/// Format genome info as display lines (pure, testable)
+pub(crate) fn format_genome_info(info: &GenomeInfo) -> Vec<String> {
+    vec![format!(
+        "  {} v{} ({:?})",
+        info.name, info.version, info.architectures
+    )]
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    let cli = Cli::parse();
+    init_logging(&cli.log_level, cli.verbose)?;
+    dispatch_mode(cli).await
 }
 
 /// Handle genome subcommands
@@ -458,28 +519,14 @@ async fn handle_genome_command(command: GenomeCommand) -> Result<()> {
         GenomeCommand::List(args) => {
             info!("📋 Listing genomeBins in: {}", args.directory.display());
 
-            if !args.directory.exists() {
+            let infos = list_genome_bins(&args.directory)?;
+            if infos.is_empty() && !args.directory.exists() {
                 println!("Directory not found: {}", args.directory.display());
                 return Ok(());
             }
-
-            for entry in std::fs::read_dir(&args.directory)? {
-                let entry = entry?;
-                let path = entry.path();
-                if path
-                    .extension()
-                    .is_some_and(|e| e == "genome" || e == "json")
-                {
-                    if let Ok(content) = std::fs::read_to_string(&path) {
-                        if let Ok(genome) = GenomeBin::from_json(&content) {
-                            println!(
-                                "  {} v{} ({:?})",
-                                genome.manifest.name,
-                                genome.manifest.version,
-                                genome.manifest.architectures
-                            );
-                        }
-                    }
+            for info in &infos {
+                for line in format_genome_info(info) {
+                    println!("{}", line);
                 }
             }
             Ok(())
@@ -504,4 +551,30 @@ fn init_logging(log_level: &str, verbose: bool) -> Result<()> {
         .init();
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+
+    use super::*;
+
+    #[test]
+    fn test_format_genome_info() {
+        let info = GenomeInfo {
+            name: "beardog".to_string(),
+            version: "1.0.0".to_string(),
+            architectures: vec!["X86_64".to_string(), "Aarch64".to_string()],
+        };
+        let lines = format_genome_info(&info);
+        assert_eq!(lines.len(), 1);
+        assert!(lines[0].contains("beardog"));
+        assert!(lines[0].contains("1.0.0"));
+    }
+
+    #[test]
+    fn test_list_genome_bins_nonexistent_dir() {
+        let infos = list_genome_bins(std::path::Path::new("/nonexistent-path-xyz-12345")).unwrap();
+        assert!(infos.is_empty());
+    }
 }

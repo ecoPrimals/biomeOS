@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Organism types for niches
 //!
 //! Organisms are the living components of a niche - either chimeras or standalone primals.

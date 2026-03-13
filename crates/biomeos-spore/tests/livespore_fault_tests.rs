@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Fault Injection Tests for LiveSpore Deployments
 //!
 //! Tests that verify LiveSpore resilience under various failure conditions:

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Tests for Unix socket health check implementation
 //!
 //! **Concurrency-First Design**: All tests use proper synchronization instead of sleep()

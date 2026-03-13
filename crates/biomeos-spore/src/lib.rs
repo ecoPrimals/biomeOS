@@ -1,9 +1,12 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! # biomeOS Spore System
 //!
 //! USB spore creation and management for biomeOS towers.
 //!
 #![warn(missing_docs)]
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 //!
 //! ## Architectural Principle: Composability
 //!

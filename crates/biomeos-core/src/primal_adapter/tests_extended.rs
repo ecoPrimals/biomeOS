@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 // Additional comprehensive tests for primal adapter
 use super::*;
 use crate::primal_adapter::types::{HealthCheckConfig, PortConfigMethod, PrimalState};

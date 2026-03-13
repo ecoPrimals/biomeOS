@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Tests for TRUE PRIMAL discovery implementations
 //!
 //! These tests verify that we query primals for their self-knowledge

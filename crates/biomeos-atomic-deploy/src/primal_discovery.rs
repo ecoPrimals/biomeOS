@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Primal discovery - TRUE PRIMAL approach
 //!
 //! Discovers running primals via Unix socket scanning (no launching!)

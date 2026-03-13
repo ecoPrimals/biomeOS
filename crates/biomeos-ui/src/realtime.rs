@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Real-time event streaming for Interactive UI
 //!
 //! Phase 4: Real-time WebSocket updates
@@ -122,9 +125,9 @@ pub enum RealTimeEvent {
 /// JSON-RPC notification (for events from WebSocket)
 #[derive(Debug, Clone, Deserialize)]
 pub(crate) struct JsonRpcNotification {
-    #[allow(dead_code)] // Part of JSON-RPC 2.0 wire format; required for deserialization
+    #[allow(dead_code)] // wire format — deserialized but not read directly
     jsonrpc: String,
-    #[allow(dead_code)] // Part of JSON-RPC 2.0 wire format; used for event type routing
+    #[allow(dead_code)] // wire format — deserialized but not read directly
     method: String,
     params: serde_json::Value,
 }
@@ -143,8 +146,8 @@ pub struct RealTimeEventSubscriber {
     /// SSE URL (if available)
     sse_url: Option<String>,
 
-    /// Family ID for filtering
-    #[allow(dead_code)] // TODO: Wire up for family-scoped event filtering
+    /// Family ID for filtering. Reserved for family-scoped event filtering.
+    #[allow(dead_code)] // Future: wire up for family-scoped event filtering
     family_id: String,
 }
 
@@ -293,7 +296,8 @@ impl RealTimeEventSubscriber {
     /// data: {"graph_id": "123", ...}
     ///
     /// ```
-    #[allow(dead_code)] // Used by tests; will be used when SSE parsing is needed for fallback
+    /// Parse SSE event text. Used by tests; will be used when SSE parsing is needed for fallback.
+    #[allow(dead_code)]
     fn parse_sse_event(text: &str) -> Option<RealTimeEvent> {
         let mut event_type: Option<String> = None;
         let mut data: Option<String> = None;
@@ -390,6 +394,8 @@ impl RealTimeEventHandler {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used)]
+
     use super::{JsonRpcNotification, *};
 
     #[tokio::test]
@@ -825,5 +831,144 @@ mod tests {
             "Expected context about URL, got: {}",
             err
         );
+    }
+
+    #[tokio::test]
+    async fn test_subscribe_sse_no_url_returns_err() {
+        let subscriber = RealTimeEventSubscriber::new("test_family".to_string());
+        // sse_url is None by default
+        let result = subscriber.subscribe_sse().await;
+        assert!(
+            result.is_err(),
+            "subscribe_sse should fail when SSE URL not discovered"
+        );
+        let err = result.unwrap_err();
+        assert!(
+            err.to_string().contains("SSE URL not discovered"),
+            "Expected context about SSE URL, got: {}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    async fn test_process_events_handler_error_continues() {
+        use std::sync::atomic::{AtomicU32, Ordering};
+
+        let subscriber = Arc::new(RealTimeEventSubscriber::new("test_family".to_string()));
+        let handler = RealTimeEventHandler::new(subscriber.clone());
+
+        let processed = Arc::new(AtomicU32::new(0));
+        let errored = Arc::new(std::sync::atomic::AtomicBool::new(false));
+
+        let p = processed.clone();
+        let e = errored.clone();
+        let mut h = handler;
+        let handle = tokio::spawn(async move {
+            h.process_events(move |event| {
+                p.fetch_add(1, Ordering::SeqCst);
+                if matches!(event, RealTimeEvent::Heartbeat { .. }) {
+                    e.store(true, Ordering::SeqCst);
+                    Err(anyhow::anyhow!("simulated handler error"))
+                } else {
+                    Ok(())
+                }
+            })
+            .await
+        });
+
+        let _ = subscriber.event_tx.send(RealTimeEvent::Heartbeat {
+            timestamp: 1,
+            primals_count: 1,
+            healthy_count: 1,
+        });
+        let _ = subscriber.event_tx.send(RealTimeEvent::Heartbeat {
+            timestamp: 2,
+            primals_count: 2,
+            healthy_count: 2,
+        });
+
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        assert!(
+            processed.load(Ordering::SeqCst) >= 1,
+            "handler should have processed at least one event"
+        );
+        assert!(
+            errored.load(Ordering::SeqCst),
+            "handler should have seen the error path"
+        );
+        handle.abort();
+    }
+
+    #[tokio::test]
+    async fn test_process_events_receives_and_processes() {
+        use std::sync::atomic::{AtomicU32, Ordering};
+
+        let subscriber = Arc::new(RealTimeEventSubscriber::new("test_family".to_string()));
+        let handler = RealTimeEventHandler::new(subscriber.clone());
+
+        let event_count = Arc::new(AtomicU32::new(0));
+        let ec = event_count.clone();
+        let mut h = handler;
+        let _handle = tokio::spawn(async move {
+            h.process_events(move |_| {
+                ec.fetch_add(1, Ordering::SeqCst);
+                Ok(())
+            })
+            .await
+        });
+
+        let _ = subscriber.event_tx.send(RealTimeEvent::Heartbeat {
+            timestamp: 1,
+            primals_count: 1,
+            healthy_count: 1,
+        });
+
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        assert!(
+            event_count.load(Ordering::SeqCst) >= 1,
+            "should have processed at least one event"
+        );
+    }
+
+    #[test]
+    fn test_parse_event_params_empty_object() {
+        let notification = JsonRpcNotification {
+            jsonrpc: "2.0".to_string(),
+            method: "event.notify".to_string(),
+            params: serde_json::json!({}),
+        };
+        let result = RealTimeEventSubscriber::parse_event_for_test(&notification);
+        assert!(
+            result.is_err(),
+            "empty params should fail to parse as RealTimeEvent"
+        );
+    }
+
+    #[test]
+    fn test_parse_event_params_null() {
+        let notification = JsonRpcNotification {
+            jsonrpc: "2.0".to_string(),
+            method: "event.notify".to_string(),
+            params: serde_json::Value::Null,
+        };
+        let result = RealTimeEventSubscriber::parse_event_for_test(&notification);
+        assert!(result.is_err(), "null params should fail to parse");
+    }
+
+    #[test]
+    fn test_sse_event_parsing_event_only_no_data() {
+        let sse_text = "event: heartbeat";
+        let event = RealTimeEventSubscriber::parse_sse_event(sse_text);
+        assert!(
+            event.is_none(),
+            "event line without data should return None"
+        );
+    }
+
+    #[test]
+    fn test_sse_event_parsing_multiple_event_lines() {
+        let sse_text = "event: first\nevent: second\ndata: {\"type\":\"heartbeat\",\"timestamp\":1,\"primals_count\":1,\"healthy_count\":1}";
+        let event = RealTimeEventSubscriber::parse_sse_event(sse_text);
+        assert!(event.is_some(), "last event type and data should be used");
     }
 }

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! biomeos-compute - Isomorphic & Fractal Compute Architecture
 //!
 //! A fractal, isomorphic compute system where the same interface works at
@@ -6,7 +9,7 @@
 //! "Same structure at every level" - Nature's pattern
 
 #![warn(missing_docs)]
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 
 /// Fractal recursive node construction
 pub mod fractal;

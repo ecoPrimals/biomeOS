@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Inter-Primal Communication Helpers
 //!
 //! Standard patterns for secure communication between primals using BearDog BTSP.
@@ -52,13 +55,13 @@ struct JsonRpcRequest {
 /// JSON-RPC 2.0 response
 #[derive(Debug, Deserialize)]
 struct JsonRpcResponse {
-    #[allow(dead_code)] // Part of JSON-RPC 2.0 wire format; required for deserialization
+    #[allow(dead_code)] // wire format — deserialized but not read directly
     jsonrpc: String,
     #[serde(default)]
     result: Option<Value>,
     #[serde(default)]
     error: Option<JsonRpcError>,
-    #[allow(dead_code)] // Part of JSON-RPC 2.0 wire format; required for deserialization
+    #[allow(dead_code)] // wire format — deserialized but not read directly
     id: u64,
 }
 
@@ -67,7 +70,7 @@ struct JsonRpcError {
     code: i32,
     message: String,
     #[serde(default)]
-    #[allow(dead_code)] // Part of JSON-RPC 2.0 wire format; required for deserialization
+    #[allow(dead_code)] // wire format — deserialized but not read directly
     data: Option<Value>,
 }
 
@@ -232,8 +235,10 @@ impl SecureTunnel {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+    use crate::discovery::{DiscoveredPrimal, DiscoveryMethod};
 
     #[test]
     fn test_jsonrpc_request_serialization() {
@@ -247,5 +252,74 @@ mod tests {
         let json = serde_json::to_string(&request).unwrap();
         assert!(json.contains("\"jsonrpc\":\"2.0\""));
         assert!(json.contains("\"method\":\"test_method\""));
+    }
+
+    #[test]
+    fn test_jsonrpc_request_params_types() {
+        let request = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            method: "echo".to_string(),
+            params: serde_json::json!({"nested": {"a": 1, "b": [2, 3]}}),
+            id: 42,
+        };
+        let json = serde_json::to_string(&request).unwrap();
+        assert!(json.contains("\"id\":42"));
+        assert!(json.contains("nested"));
+    }
+
+    #[test]
+    fn test_jsonrpc_response_deserialization_success() {
+        let json = r#"{"jsonrpc":"2.0","result":{"ok":true},"id":1}"#;
+        let response: JsonRpcResponse = serde_json::from_str(json).unwrap();
+        assert_eq!(response.jsonrpc, "2.0");
+        assert!(response.result.is_some());
+        assert!(response.error.is_none());
+        assert_eq!(response.id, 1);
+    }
+
+    #[test]
+    fn test_jsonrpc_response_deserialization_error() {
+        let json =
+            r#"{"jsonrpc":"2.0","error":{"code":-32600,"message":"Invalid Request"},"id":1}"#;
+        let response: JsonRpcResponse = serde_json::from_str(json).unwrap();
+        assert!(response.result.is_none());
+        let err = response.error.unwrap();
+        assert_eq!(err.code, -32600);
+        assert_eq!(err.message, "Invalid Request");
+    }
+
+    #[test]
+    fn test_jsonrpc_response_error_with_data() {
+        let json = r#"{"jsonrpc":"2.0","error":{"code":-32000,"message":"Server error","data":{"detail":"oom"}},"id":2}"#;
+        let response: JsonRpcResponse = serde_json::from_str(json).unwrap();
+        let err = response.error.unwrap();
+        assert_eq!(err.data, Some(serde_json::json!({"detail":"oom"})));
+    }
+
+    #[test]
+    fn test_primal_client_new() {
+        let primal = DiscoveredPrimal {
+            name: "test-primal".to_string(),
+            socket_path: PathBuf::from("/tmp/test.sock"),
+            capability: PrimalCapability::encryption(),
+            discovered_via: DiscoveryMethod::TmpFallback,
+            is_healthy: true,
+        };
+        let client = PrimalClient::new(primal.clone());
+        assert_eq!(client.primal().name, "test-primal");
+        assert_eq!(client.primal().socket_path, PathBuf::from("/tmp/test.sock"));
+    }
+
+    #[test]
+    fn test_primal_client_with_timeout() {
+        let primal = DiscoveredPrimal {
+            name: "x".to_string(),
+            socket_path: PathBuf::from("/tmp/x.sock"),
+            capability: PrimalCapability::encryption(),
+            discovered_via: DiscoveryMethod::XdgRuntime,
+            is_healthy: false,
+        };
+        let client = PrimalClient::new(primal).with_timeout(Duration::from_secs(5));
+        assert_eq!(client.primal().name, "x");
     }
 }

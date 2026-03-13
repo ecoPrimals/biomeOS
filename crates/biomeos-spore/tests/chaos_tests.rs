@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Chaos testing - Filesystem failures, permission issues, etc.
 //!
 //! These tests simulate real-world failure scenarios using isolated fixtures.

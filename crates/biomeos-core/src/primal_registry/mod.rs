@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Primal binary registry and deployment system
 //!
 //! BiomeOS as a bootable platform needs to:
