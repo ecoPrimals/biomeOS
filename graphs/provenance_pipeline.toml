@@ -1,0 +1,150 @@
+# Provenance Pipeline Graph
+# Reusable pipeline for any Spring to persist experiment results with provenance.
+#
+# Flow: Spring produces results → rhizoCrypt captures session → dehydrate →
+#       LoamSpine permanence → sweetGrass attribution
+#
+# Any Spring can use this by providing SESSION_ID and EXPERIMENT_ID parameters.
+# The pipeline handles dehydration, signing, storage, and attribution.
+#
+# Required: Tower (BearDog + Songbird) + rhizoCrypt + NestGate + LoamSpine
+# Optional: sweetGrass (attribution), petalTongue (visualization)
+
+[graph]
+id = "provenance_pipeline"
+description = "Universal provenance: capture experiment results with permanent history and attribution"
+coordination = "Sequential"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 1: VERIFY PROVENANCE STACK
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "check_dag"
+output = "dag_healthy"
+capabilities = ["dag"]
+
+[nodes.operation]
+name = "rpc_call"
+target = "rhizocrypt"
+
+[nodes.operation.params]
+method = "health"
+params = {}
+
+[nodes.constraints]
+timeout_ms = 5000
+
+[[nodes]]
+id = "check_permanence"
+output = "permanence_healthy"
+capabilities = ["permanent_storage"]
+
+[nodes.operation]
+name = "rpc_call"
+target = "loamspine"
+
+[nodes.operation.params]
+method = "health"
+params = {}
+
+[nodes.constraints]
+timeout_ms = 5000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 2: DEHYDRATE EXPERIMENT SESSION
+# Extract results from ephemeral DAG
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "dehydrate"
+depends_on = ["check_dag"]
+output = "dehydration_summary"
+capabilities = ["dehydration"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "dag.dehydrate"
+params = { session_id = "${SESSION_ID}" }
+
+[nodes.constraints]
+timeout_ms = 60000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 3: SIGN AND STORE
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "sign_results"
+depends_on = ["dehydrate"]
+output = "signed_results"
+capabilities = ["crypto"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "crypto.sign"
+params = { data = "${DEHYDRATION_SUMMARY}", did = "${AGENT_DID}" }
+
+[nodes.constraints]
+timeout_ms = 10000
+
+[[nodes]]
+id = "store_results"
+depends_on = ["sign_results"]
+output = "content_hash"
+capabilities = ["storage"]
+
+[nodes.operation]
+name = "rpc_call"
+target = "nestgate"
+
+[nodes.operation.params]
+method = "storage.store"
+params = { key = "provenance:${EXPERIMENT_ID}", value = "${SIGNED_RESULTS}", family_id = "${FAMILY_ID}" }
+
+[nodes.constraints]
+timeout_ms = 30000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 4: PERMANENT COMMIT
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "commit"
+depends_on = ["store_results", "check_permanence"]
+output = "commit_ref"
+capabilities = ["permanent_storage"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "commit.session"
+params = { summary = "${SIGNED_RESULTS}", content_hash = "${CONTENT_HASH}" }
+
+[nodes.constraints]
+timeout_ms = 30000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 5: ATTRIBUTION (optional)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "attribute"
+depends_on = ["commit"]
+output = "braid_ref"
+capabilities = ["attribution"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "provenance.create_braid"
+params = { commit_ref = "${COMMIT_REF}", experiment_id = "${EXPERIMENT_ID}", agents = "${AGENT_SUMMARIES}" }
+
+[nodes.constraints]
+timeout_ms = 15000

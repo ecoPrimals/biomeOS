@@ -148,6 +148,43 @@ pub(crate) const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
             "pharmacokinetics",
         ],
     },
+    // Ephemeral workspace domain (rhizoCrypt)
+    CapabilityDomain {
+        provider: "rhizocrypt",
+        capabilities: &[
+            "ephemeral_workspace",
+            "dag",
+            "session",
+            "merkle",
+            "dehydration",
+            "slice",
+            "vertex",
+        ],
+    },
+    // Permanent history domain (LoamSpine)
+    CapabilityDomain {
+        provider: "loamspine",
+        capabilities: &[
+            "permanent_storage",
+            "linear_history",
+            "spine",
+            "certificate",
+            "temporal_anchor",
+            "commit",
+        ],
+    },
+    // Attribution domain (sweetGrass)
+    CapabilityDomain {
+        provider: "sweetgrass",
+        capabilities: &[
+            "attribution",
+            "braid",
+            "provenance",
+            "contribution",
+            "privacy",
+            "prov_export",
+        ],
+    },
 ];
 
 /// Resolve capability to provider using domain mappings
@@ -348,6 +385,79 @@ mod tests {
     }
 
     #[test]
+    fn test_capability_to_provider_provenance_trio() {
+        // Ephemeral workspace (rhizoCrypt)
+        assert_eq!(
+            capability_to_provider_fallback("ephemeral_workspace"),
+            Some("rhizocrypt")
+        );
+        assert_eq!(capability_to_provider_fallback("dag"), Some("rhizocrypt"));
+        assert_eq!(
+            capability_to_provider_fallback("session"),
+            Some("rhizocrypt")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("merkle"),
+            Some("rhizocrypt")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("dehydration"),
+            Some("rhizocrypt")
+        );
+        assert_eq!(capability_to_provider_fallback("slice"), Some("rhizocrypt"));
+        assert_eq!(
+            capability_to_provider_fallback("dag.create_session"),
+            Some("rhizocrypt")
+        );
+
+        // Permanent history (LoamSpine)
+        assert_eq!(
+            capability_to_provider_fallback("permanent_storage"),
+            Some("loamspine")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("linear_history"),
+            Some("loamspine")
+        );
+        assert_eq!(capability_to_provider_fallback("spine"), Some("loamspine"));
+        assert_eq!(
+            capability_to_provider_fallback("certificate"),
+            Some("loamspine")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("commit"),
+            Some("loamspine")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("commit.session"),
+            Some("loamspine")
+        );
+
+        // Attribution (sweetGrass)
+        assert_eq!(
+            capability_to_provider_fallback("attribution"),
+            Some("sweetgrass")
+        );
+        assert_eq!(capability_to_provider_fallback("braid"), Some("sweetgrass"));
+        assert_eq!(
+            capability_to_provider_fallback("provenance"),
+            Some("sweetgrass")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("contribution"),
+            Some("sweetgrass")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("privacy"),
+            Some("sweetgrass")
+        );
+        assert_eq!(
+            capability_to_provider_fallback("provenance.create_braid"),
+            Some("sweetgrass")
+        );
+    }
+
+    #[test]
     fn test_capability_to_provider_unknown() {
         assert_eq!(capability_to_provider_fallback("unknown"), None);
         assert_eq!(capability_to_provider_fallback("random.capability"), None);
@@ -439,6 +549,9 @@ mod tests {
         assert!(providers.contains(&"ludospring"));
         assert!(providers.contains(&"petaltongue"));
         assert!(providers.contains(&"healthspring"));
+        assert!(providers.contains(&"rhizocrypt"));
+        assert!(providers.contains(&"loamspine"));
+        assert!(providers.contains(&"sweetgrass"));
     }
 
     #[test]

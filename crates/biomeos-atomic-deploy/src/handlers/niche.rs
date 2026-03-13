@@ -254,6 +254,41 @@ impl NicheHandler {
                 "graph_id": "healthspring_deploy",
                 "parameters": []
             }),
+            json!({
+                "id": "rootpulse",
+                "name": "RootPulse",
+                "description": "Emergent version control: rhizoCrypt (DAG) + LoamSpine (linear) + sweetGrass (attribution)",
+                "category": "provenance",
+                "required_resources": {
+                    "cpu_cores": 2,
+                    "memory_mb": 4096,
+                    "gpu_count": null,
+                    "storage_gb": 10
+                },
+                "graph_id": "rootpulse_commit",
+                "parameters": [
+                    { "name": "SESSION_ID", "required": true, "description": "rhizoCrypt session to commit" },
+                    { "name": "AGENT_DID", "required": false, "description": "Agent DID for signing" }
+                ]
+            }),
+            json!({
+                "id": "provenance-pipeline",
+                "name": "Provenance Pipeline",
+                "description": "Universal provenance: any Spring experiment → permanent history + attribution",
+                "category": "provenance",
+                "required_resources": {
+                    "cpu_cores": 2,
+                    "memory_mb": 2048,
+                    "gpu_count": null,
+                    "storage_gb": 5
+                },
+                "graph_id": "provenance_pipeline",
+                "parameters": [
+                    { "name": "SESSION_ID", "required": true, "description": "rhizoCrypt session to dehydrate" },
+                    { "name": "EXPERIMENT_ID", "required": true, "description": "Experiment identifier" },
+                    { "name": "AGENT_DID", "required": false, "description": "Agent DID for signing" }
+                ]
+            }),
         ];
 
         Ok(json!(templates))
@@ -285,6 +320,8 @@ impl NicheHandler {
             "hotspring" => "hotspring_deploy",
             "groundspring" => "groundspring_deploy",
             "healthspring" => "healthspring_deploy",
+            "rootpulse" => "rootpulse_commit",
+            "provenance-pipeline" => "provenance_pipeline",
             _ => anyhow::bail!("Unknown template: {}", template_id),
         };
 
@@ -378,6 +415,8 @@ mod tests {
             "hotspring",
             "groundspring",
             "healthspring",
+            "rootpulse",
+            "provenance-pipeline",
         ];
         for id in expected_ids {
             assert!(
