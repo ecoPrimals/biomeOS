@@ -13,12 +13,12 @@
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
 | Code Quality | A++ (Pure Rust, idiomatic, zero warnings, full doc coverage, deep debt audit, zero-copy) |
 | Tests | 4,647 passing (0 failures, 205 ignored) (75.98% region, 78.78% function, 74.96% line) |
-| Unsafe Code | 0 in production |
+| Unsafe Code | 0 in production (ring removed) |
 | Clippy | PASS (0 warnings, entire workspace) |
 | Formatting | PASS |
 | Deployment | USB + Pixel + Cross-Device AI |
 | AI Bridge | Squirrel -> Songbird -> Cloud/Local AI (validated) |
-| Neural API | 210+ semantic capability translations (incl. compute.hardware.*) |
+| Neural API | 210+ semantic capability translations (incl. compute.hardware.*), MetricsCollector Phase 2 |
 | Continuous Systems | ContinuousExecutor (60Hz tick), push events, sensor routing |
 | XR/VR | Stereo rendering, motion capture, haptic feedback pipeline |
 | Surgical Domain | Anatomy models, tissue physics, biosignals, pharmacokinetics |
@@ -274,7 +274,7 @@ biomeOS/
 │   ├── biomeos-cli/           # Command-line interface + TUI
 │   ├── biomeos-api/           # HTTP/WebSocket API server
 │   ├── biomeos-compute/       # Fractal compute architecture
-│   ├── biomeos-graph/         # Graph execution engine
+│   ├── biomeos-graph/         # Graph execution engine (sled→redb)
 │   ├── biomeos-spore/         # Deployment packaging + beacon genetics
 │   ├── biomeos-ui/            # Interactive UI orchestration
 │   ├── biomeos-atomic-deploy/ # Atomic deployment + Neural API + Lifecycle
@@ -286,6 +286,7 @@ biomeOS/
 │   ├── biomeos-genomebin-v3/  # genomeBin v3.0 binary format
 │   ├── biomeos-primal-sdk/    # Primal development SDK
 │   ├── biomeos-genome-deploy/  # genomeBin deployment
+│   ├── neural-api-client-sync/ # Synchronous Neural API client
 │   └── ...                    # + 8 more (manifest, niche, chimera, test-utils, etc.)
 ├── livespore-usb/             # USB deployment
 │   ├── x86_64/                # Intel/AMD binaries
