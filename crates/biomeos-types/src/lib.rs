@@ -44,7 +44,7 @@ pub use api_schema::{
     ApiSchemaResponse, ApiSchemaType, OperationMetadata, ParameterMetadata, PrimalInfo,
     SchemaDiscoveryConfig,
 };
-pub use jsonrpc::{JsonRpcError, JsonRpcRequest, JsonRpcResponse};
+pub use jsonrpc::{JsonRpcError, JsonRpcRequest, JsonRpcResponse, JSONRPC_VERSION};
 
 // tarpc types for high-performance RPC
 pub use capability_taxonomy::CapabilityTaxonomy; // Well-known capability taxonomy (enum)

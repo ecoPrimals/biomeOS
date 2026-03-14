@@ -137,10 +137,10 @@ See [specs/README.md](specs/README.md) for full index. Key specs:
 # Build
 cargo build --workspace
 
-# Test (3,148+ tests)
+# Test (4,383 tests)
 cargo test --workspace
 
-# Coverage (~71% region)
+# Coverage (76.06% region)
 cargo llvm-cov --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -162,7 +162,7 @@ See `ARCHIVE_INDEX.md` in archive for details.
 
 ---
 
-**Documentation current as of March 13, 2026**
+**Documentation current as of March 14, 2026**
 **Active: 19 specs, 15 handoffs, 10 scripts**
 **Deploy graphs: 30 (incl. provenance trio: loamspine, rhizocrypt, sweetgrass, provenance_trio)**
-**Tests: 3,148 passing (71.47% region coverage) | Clippy: PASS | Docs: Full coverage**
+**Tests: 4,383 passing (76.06% region coverage) | Clippy: PASS | Docs: Full coverage**

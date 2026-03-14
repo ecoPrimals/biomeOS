@@ -94,6 +94,7 @@ pub(crate) async fn get_cpu_usage() -> BiomeResult<f64> {
             return Ok(0.0);
         }
 
+        // u64->f64: precision loss acceptable for percentage metrics
         let usage = 1.0 - (idle_delta as f64 / total_delta as f64);
         Ok(usage.clamp(0.0, 1.0))
     }

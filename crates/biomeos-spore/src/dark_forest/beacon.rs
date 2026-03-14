@@ -7,6 +7,7 @@
 //! capability-routed crypto (primal-agnostic).
 
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
+use biomeos_types::{JsonRpcRequest, JSONRPC_VERSION};
 use std::path::Path;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -85,19 +86,18 @@ impl DarkForestBeacon {
 
     /// Derive family broadcast key from seed
     async fn derive_broadcast_key(&self) -> SporeResult<String> {
-        let request = serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": "genetic.derive_lineage_key",
-            "params": {
+        let request = JsonRpcRequest::new(
+            "genetic.derive_lineage_key",
+            serde_json::json!({
                 "our_family_id": "family",
                 "peer_family_id": "broadcast",
                 "context": "birdsong-broadcast-v1",
                 "lineage_seed": self.family_seed_b64
-            },
-            "id": 1
-        });
-
-        let response = self.call_beardog(&request).await?;
+            }),
+        );
+        let request_value = serde_json::to_value(&request)
+            .map_err(|e| SporeError::SerializationError(format!("JSON error: {}", e)))?;
+        let response = self.call_beardog(&request_value).await?;
 
         response
             .get("result")
@@ -152,17 +152,16 @@ impl DarkForestBeacon {
         let beacon_b64 = BASE64.encode(beacon_json.as_bytes());
 
         // Encrypt with ChaCha20-Poly1305
-        let encrypt_request = serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": "crypto.chacha20_poly1305_encrypt",
-            "params": {
+        let encrypt_request = JsonRpcRequest::new(
+            "crypto.chacha20_poly1305_encrypt",
+            serde_json::json!({
                 "key": broadcast_key,
                 "plaintext": beacon_b64
-            },
-            "id": 2
-        });
-
-        let response = self.call_beardog(&encrypt_request).await?;
+            }),
+        );
+        let encrypt_value = serde_json::to_value(&encrypt_request)
+            .map_err(|e| SporeError::SerializationError(format!("JSON error: {}", e)))?;
+        let response = self.call_beardog(&encrypt_value).await?;
         let result = response.get("result").ok_or_else(|| {
             SporeError::ValidationFailed("No result in encrypt response".to_string())
         })?;
@@ -204,19 +203,18 @@ impl DarkForestBeacon {
         let broadcast_key = self.derive_broadcast_key().await?;
 
         // Try to decrypt
-        let decrypt_request = serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": "crypto.chacha20_poly1305_decrypt",
-            "params": {
+        let decrypt_request = JsonRpcRequest::new(
+            "crypto.chacha20_poly1305_decrypt",
+            serde_json::json!({
                 "key": broadcast_key,
                 "ciphertext": beacon.ciphertext,
                 "nonce": beacon.nonce,
                 "tag": beacon.tag
-            },
-            "id": 3
-        });
-
-        let response = self.call_beardog(&decrypt_request).await?;
+            }),
+        );
+        let decrypt_value = serde_json::to_value(&decrypt_request)
+            .map_err(|e| SporeError::SerializationError(format!("JSON error: {}", e)))?;
+        let response = self.call_beardog(&decrypt_value).await?;
 
         // Check if decryption failed (not family)
         if response.get("error").is_some() {
@@ -252,16 +250,13 @@ impl DarkForestBeacon {
     async fn hash_string(&self, input: &str) -> SporeResult<String> {
         let input_b64 = BASE64.encode(input.as_bytes());
 
-        let request = serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": "crypto.blake3_hash",
-            "params": {
-                "data": input_b64
-            },
-            "id": 10
-        });
-
-        let response = self.call_beardog(&request).await?;
+        let request = JsonRpcRequest::new(
+            "crypto.blake3_hash",
+            serde_json::json!({ "data": input_b64 }),
+        );
+        let request_value = serde_json::to_value(&request)
+            .map_err(|e| SporeError::SerializationError(format!("JSON error: {}", e)))?;
+        let response = self.call_beardog(&request_value).await?;
 
         response
             .get("result")
@@ -295,7 +290,7 @@ impl DarkForestBeacon {
             })?;
 
         Ok(serde_json::json!({
-            "jsonrpc": "2.0",
+            "jsonrpc": JSONRPC_VERSION,
             "result": result,
             "id": request.get("id").cloned().unwrap_or(serde_json::json!(1))
         }))
@@ -309,19 +304,18 @@ impl DarkForestBeacon {
     ) -> SporeResult<bool> {
         info!("🔍 Verifying peer lineage (independent validation)");
 
-        let request = serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": "genetic.verify_lineage",
-            "params": {
+        let request = JsonRpcRequest::new(
+            "genetic.verify_lineage",
+            serde_json::json!({
                 "our_family_id": "family",
                 "peer_family_id": peer_family_id,
                 "lineage_proof": peer_proof,
                 "lineage_seed": self.family_seed_b64
-            },
-            "id": 4
-        });
-
-        let response = self.call_beardog(&request).await?;
+            }),
+        );
+        let request_value = serde_json::to_value(&request)
+            .map_err(|e| SporeError::SerializationError(format!("JSON error: {}", e)))?;
+        let response = self.call_beardog(&request_value).await?;
 
         let valid = response
             .get("result")
@@ -340,18 +334,17 @@ impl DarkForestBeacon {
 
     /// Generate a lineage proof for this node
     pub async fn generate_lineage_proof(&self, peer_family_id: &str) -> SporeResult<String> {
-        let request = serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": "genetic.generate_lineage_proof",
-            "params": {
+        let request = JsonRpcRequest::new(
+            "genetic.generate_lineage_proof",
+            serde_json::json!({
                 "our_family_id": "family",
                 "peer_family_id": peer_family_id,
                 "lineage_seed": self.family_seed_b64
-            },
-            "id": 5
-        });
-
-        let response = self.call_beardog(&request).await?;
+            }),
+        );
+        let request_value = serde_json::to_value(&request)
+            .map_err(|e| SporeError::SerializationError(format!("JSON error: {}", e)))?;
+        let response = self.call_beardog(&request_value).await?;
 
         response
             .get("result")
@@ -365,19 +358,18 @@ impl DarkForestBeacon {
 
     /// Derive a session key for encrypted communication with a verified peer
     pub async fn derive_session_key(&self, peer_id: &str, context: &str) -> SporeResult<String> {
-        let request = serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": "genetic.derive_lineage_key",
-            "params": {
+        let request = JsonRpcRequest::new(
+            "genetic.derive_lineage_key",
+            serde_json::json!({
                 "our_family_id": "family",
                 "peer_family_id": peer_id,
                 "context": context,
                 "lineage_seed": self.family_seed_b64
-            },
-            "id": 6
-        });
-
-        let response = self.call_beardog(&request).await?;
+            }),
+        );
+        let request_value = serde_json::to_value(&request)
+            .map_err(|e| SporeError::SerializationError(format!("JSON error: {}", e)))?;
+        let response = self.call_beardog(&request_value).await?;
 
         response
             .get("result")
@@ -393,14 +385,11 @@ impl DarkForestBeacon {
 
     /// Derive dedicated beacon key from lineage (TRUE Dark Forest)
     async fn derive_dedicated_beacon_key(&self) -> SporeResult<String> {
-        let request = serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": "genetic.derive_lineage_beacon_key",
-            "params": {},
-            "id": 101
-        });
-
-        let response = self.call_beardog(&request).await?;
+        let request =
+            JsonRpcRequest::new("genetic.derive_lineage_beacon_key", serde_json::json!({}));
+        let request_value = serde_json::to_value(&request)
+            .map_err(|e| SporeError::SerializationError(format!("JSON error: {}", e)))?;
+        let response = self.call_beardog(&request_value).await?;
 
         response
             .get("result")
@@ -520,19 +509,18 @@ impl DarkForestBeacon {
         let ciphertext_b64 = BASE64.encode(ciphertext);
         let tag_b64 = BASE64.encode(tag);
 
-        let decrypt_request = serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": "crypto.chacha20_poly1305_decrypt",
-            "params": {
+        let decrypt_request = JsonRpcRequest::new(
+            "crypto.chacha20_poly1305_decrypt",
+            serde_json::json!({
                 "key": beacon_key,
                 "ciphertext": ciphertext_b64,
                 "nonce": nonce_b64,
                 "tag": tag_b64
-            },
-            "id": 103
-        });
-
-        let response = match self.call_beardog(&decrypt_request).await {
+            }),
+        );
+        let decrypt_value = serde_json::to_value(&decrypt_request)
+            .map_err(|e| SporeError::SerializationError(format!("JSON error: {}", e)))?;
+        let response = match self.call_beardog(&decrypt_value).await {
             Ok(resp) => resp,
             Err(_) => return Ok(None),
         };

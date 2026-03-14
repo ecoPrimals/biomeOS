@@ -29,6 +29,7 @@
 use super::types::{BroadcastKeys, EncryptedDiscoveryConfig, TransportHealth, TunnelHealth};
 use super::{DiscoveryProvider, SecurityProvider};
 use crate::api_adapter::cli_adapter::CliAdapter;
+use bytes::Bytes;
 // Legacy client imports - commented out
 // use crate::clients::songbird::SongbirdClient;
 use anyhow::{Context, Result};
@@ -110,7 +111,7 @@ impl SecurityProvider for BeardogSecurityAdapter {
             id: tunnel_id,
             endpoint_a,
             endpoint_b,
-            encryption_key: vec![], // Parsed from output in real impl
+            encryption_key: Bytes::new(), // Parsed from output in real impl
             created_at: SystemTime::now(),
         })
     }
@@ -173,11 +174,11 @@ impl SecurityProvider for BeardogSecurityAdapter {
         let broadcast_key = Self::parse_broadcast_key(output)?;
 
         Ok(BroadcastKeys {
-            broadcast_key,
+            broadcast_key: Bytes::from(broadcast_key),
             lineage_proof: super::LineageProof {
                 lineage_id: family_id.to_string(),
                 depth: 0,
-                proof: vec![],
+                proof: Bytes::new(),
                 timestamp: SystemTime::now(),
             },
             generated_at: SystemTime::now(),
@@ -219,7 +220,7 @@ impl SecurityProvider for BeardogSecurityAdapter {
             proof: super::LineageProof {
                 lineage_id: requester.to_string(),
                 depth: 1,
-                proof: vec![],
+                proof: Bytes::new(),
                 timestamp: SystemTime::now(),
             },
         })

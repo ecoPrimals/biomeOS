@@ -99,8 +99,8 @@ pub fn load_adapter(primal_name: &str) -> Result<PrimalAdapter> {
     cache.load(primal_name)
 }
 
-/// Check if adapter is cached
-#[allow(dead_code)] // TODO: Wire up for CLI diagnostics and cache management
+/// Check if adapter is cached (for CLI diagnostics and cache management).
+#[allow(dead_code)]
 pub fn is_cached(primal_name: &str) -> bool {
     AdapterCache::new()
         .map(|cache| cache.exists(primal_name))

@@ -54,6 +54,7 @@ pub fn parse_meminfo_bytes(s: &str) -> (u64, u64) {
 pub fn parse_uptime_seconds(s: &str) -> u64 {
     if let Some(first) = s.split_whitespace().next() {
         if let Ok(secs) = first.parse::<f64>() {
+            // f64->u64: truncation intentional for uptime seconds
             return secs as u64;
         }
     }
@@ -72,6 +73,7 @@ pub async fn cpu_percent() -> f64 {
         if total_delta == 0 {
             return 0.0;
         }
+        // u64->f64: precision loss acceptable for CPU percentage
         let usage = 1.0 - (idle_delta as f64 / total_delta as f64);
         usage.clamp(0.0, 1.0) * 100.0
     }

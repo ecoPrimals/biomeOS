@@ -12,13 +12,13 @@
 | IPC | Universal IPC v3.0 (Unix + Abstract + TCP + HTTP JSON-RPC) + tarpc binary escalation |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
 | Code Quality | A++ (Pure Rust, idiomatic, zero warnings, full doc coverage, deep debt audit, zero-copy) |
-| Tests | 4,275 passing sequential (75.21% region coverage) |
+| Tests | 4,383 passing (76.06% region, 78.93% function, 74.95% line) |
 | Unsafe Code | 0 in production |
 | Clippy | PASS (0 warnings, entire workspace) |
 | Formatting | PASS |
 | Deployment | USB + Pixel + Cross-Device AI |
 | AI Bridge | Squirrel -> Songbird -> Cloud/Local AI (validated) |
-| Neural API | 205+ semantic capability translations (incl. compute.hardware.*) |
+| Neural API | 210+ semantic capability translations (incl. compute.hardware.*) |
 | Continuous Systems | ContinuousExecutor (60Hz tick), push events, sensor routing |
 | XR/VR | Stereo rendering, motion capture, haptic feedback pipeline |
 | Surgical Domain | Anatomy models, tissue physics, biosignals, pharmacokinetics |
@@ -38,7 +38,7 @@
 |  AI Bridge                                                   |
 |  Squirrel -> http.request -> Songbird -> Cloud/Local AI      |
 +-------------------------------------------------------------+
-|  Neural API (205+ semantic translations)                     |
+|  Neural API (210+ semantic translations)                     |
 |  capability.call -> translate -> route to provider           |
 +-------------------------------------------------------------+
 |  Atomics                                                     |
@@ -121,7 +121,7 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"Name the largest 
 
 ## Neural API - Semantic Routing
 
-205+ capability translations enable primals to compose without knowing each other:
+210+ capability translations enable primals to compose without knowing each other:
 
 ```
 Squirrel -> capability.call("http", "request", ...) -> Neural API
@@ -222,7 +222,7 @@ After:  [0x4a, 0x8f, 0x2c, ...]                   <- pure noise
 
 | Standard | Status |
 |----------|--------|
-| ecoBin v2.0 | 100% Pure Rust |
+| ecoBin v3.0 | 100% Pure Rust |
 | Universal IPC v3.0 | Multi-transport (Unix/Abstract/TCP/HTTP JSON-RPC) |
 | PRIMAL_DEPLOYMENT_STANDARD v1.0 | Deterministic behavior |
 | Semantic Method Naming | capability.call routing |
@@ -240,13 +240,13 @@ After:  [0x4a, 0x8f, 0x2c, ...]                   <- pure noise
 cargo build --workspace
 ```
 
-### Test (3,148+ tests)
+### Test (4,383 tests)
 
 ```bash
 cargo test --workspace
 ```
 
-### Coverage (~71% region)
+### Coverage (76.06% region)
 
 ```bash
 cargo llvm-cov --workspace
@@ -267,7 +267,7 @@ cargo doc --workspace      # 0 missing_docs warnings
 
 ```
 biomeOS/
-├── crates/                    # Rust workspace (26 crates)
+├── crates/                    # Rust workspace (24 crates)
 │   ├── biomeos/               # Main binary (CLI + nucleus modes)
 │   ├── biomeos-core/          # Core orchestration + discovery + plasmodium
 │   ├── biomeos-types/         # Shared types, SystemPaths, capability taxonomy
@@ -333,10 +333,10 @@ AGPL-3.0-only
 
 ---
 
-**Status**: Production Ready (v2.35)
+**Status**: Production Ready (v2.36)
 **Updated**: March 14, 2026
 **Deep Debt Evolution**: 8-phase plan + zero-copy + primal constants + tarpc wiring + coverage push
-**Spring Absorption**: 205+ translations from 7 springs + petalTongue + hw-learn, 30 deploy graphs, 15 niche templates
+**Spring Absorption**: 210+ translations from 7 springs + petalTongue + hw-learn, 30 deploy graphs, 15 niche templates
 **Provenance Trio**: loamSpine + rhizoCrypt + sweetGrass deployable via 4 graphs, 35+ capability translations, RootPulse commit + universal provenance pipeline
 **Continuous Systems**: 60Hz tick loop, push events, sensor routing, feedback edges
 **XR/VR**: Stereo rendering, motion capture, haptic feedback, surgical VR niche
@@ -346,4 +346,4 @@ AGPL-3.0-only
 **Zero-Copy**: `bytes::Bytes` for binary payloads, `Arc<str>` for identifiers, base64 serde helpers
 **Primal Constants**: Centralized `primal_names` module — no hardcoded primal strings anywhere
 **tarpc Transport**: Unix socket helpers, naming conventions, protocol escalation ready
-**Tests**: 4,275 passing sequential (75.21% coverage) | **Clippy**: PASS (0 warnings) | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0
+**Tests**: 4,383 passing (76.06% region) | **Clippy**: PASS (0 warnings) | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0

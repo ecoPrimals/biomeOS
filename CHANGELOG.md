@@ -2,6 +2,32 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## [v2.36] - 2026-03-14 (Deep Debt Audit + Evolution Pass)
+
+### Deep Debt Audit + Evolution
+- Deep debt audit and evolution pass across workspace
+- JSON-RPC: `JSONRPC_VERSION` constant + `JsonRpcRequest::new()` builders (30+ sites)
+- Zero-copy: `Vec<u8>` → `bytes::Bytes` across 5 crates for binary payloads
+- Safe casts: 15 `as`-casts evolved to `try_from`/arithmetic
+- SystemPaths: `/tmp/` paths eliminated in 4 modes
+- Primal name constants: 3 more files evolved to centralized constants
+- `node_handlers.rs`: 1015→461 lines (refactor)
+- `deny.toml`: evolved for cargo-deny 0.19
+- 4 env-var race tests fixed
+- Dead code/TODO resolution (8 sites)
+
+### Quality
+| Metric | Before | After |
+|--------|--------|-------|
+| Tests | 4,275 | 4,383 (+108) |
+| Region coverage | 75.21% | 76.06% (+0.85pp) |
+| Clippy | PASS | PASS (0 warnings, pedantic+nursery, -D warnings) |
+| Formatting | PASS | PASS (cargo fmt --check clean) |
+| Unsafe | 0 | 0 |
+| Files >1000 LOC | 0 | 0 |
+
+---
+
 ## [v2.35] - 2026-03-14 (Zero-Copy + Primal Constants + tarpc Wiring + Coverage Push)
 
 ### Zero-Copy Evolution

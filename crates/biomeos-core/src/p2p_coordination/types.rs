@@ -6,6 +6,7 @@
 //! These types are **agnostic** - they work with any primal that provides
 //! the required capabilities.
 
+use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use std::time::SystemTime;
 
@@ -18,8 +19,9 @@ pub struct LineageProof {
     /// Depth in lineage tree
     pub depth: u32,
 
-    /// Cryptographic proof
-    pub proof: Vec<u8>,
+    /// Cryptographic proof (zero-copy via `bytes::Bytes`)
+    #[serde(with = "biomeos_types::tarpc_types::bytes_serde")]
+    pub proof: Bytes,
 
     /// Timestamp
     pub timestamp: SystemTime,
@@ -37,8 +39,9 @@ pub struct TunnelRequest {
     /// Endpoint for node B
     pub endpoint_b: TransportEndpoint,
 
-    /// Encryption key (for coordination)
-    pub encryption_key: Vec<u8>,
+    /// Encryption key (for coordination, zero-copy via `bytes::Bytes`)
+    #[serde(with = "biomeos_types::tarpc_types::bytes_serde")]
+    pub encryption_key: Bytes,
 
     /// Tunnel created at
     pub created_at: SystemTime,
@@ -159,8 +162,9 @@ pub enum TunnelStatus {
 /// Broadcast encryption keys
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BroadcastKeys {
-    /// Broadcast encryption key
-    pub broadcast_key: Vec<u8>,
+    /// Broadcast encryption key (zero-copy via `bytes::Bytes`)
+    #[serde(with = "biomeos_types::tarpc_types::bytes_serde")]
+    pub broadcast_key: Bytes,
 
     /// Lineage proof for filtering
     pub lineage_proof: LineageProof,
@@ -172,8 +176,9 @@ pub struct BroadcastKeys {
 /// Configuration for encrypted discovery
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EncryptedDiscoveryConfig {
-    /// Encryption key
-    pub encryption_key: Vec<u8>,
+    /// Encryption key (zero-copy via `bytes::Bytes`)
+    #[serde(with = "biomeos_types::tarpc_types::bytes_serde")]
+    pub encryption_key: Bytes,
 
     /// Lineage filter
     pub lineage_filter: LineageProof,

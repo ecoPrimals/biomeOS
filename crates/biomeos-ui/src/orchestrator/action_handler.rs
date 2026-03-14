@@ -863,7 +863,8 @@ mod tests {
         });
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         let songbird = SongbirdClient::with_socket("songbird", &socket_path);
-        let result = ActionHandler::register_assignment(&Some(songbird), "device-1", "primal-1").await;
+        let result =
+            ActionHandler::register_assignment(&Some(songbird), "device-1", "primal-1").await;
         assert!(result.is_ok());
         let id = result.unwrap();
         assert_eq!(id, "songbird-abc-123");

@@ -4,6 +4,7 @@
 //! JSON-RPC connection management for Neural API
 
 use anyhow::{Context, Result};
+use biomeos_types::JsonRpcRequest;
 use serde_json::Value;
 use std::path::PathBuf;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -30,12 +31,7 @@ pub async fn json_rpc_call(
             )
         })?;
 
-    let request = serde_json::json!({
-        "jsonrpc": "2.0",
-        "method": method,
-        "params": params,
-        "id": 1
-    });
+    let request = JsonRpcRequest::new(method, params.clone());
 
     let request_bytes = serde_json::to_vec(&request).context("Failed to serialize request")?;
 
@@ -59,7 +55,11 @@ pub async fn json_rpc_call(
         serde_json::from_slice(&response_bytes).context("Failed to parse JSON-RPC response")?;
 
     if let Some(error) = response.get("error") {
-        let code = error.get("code").and_then(|c| c.as_i64()).unwrap_or(-1) as i32;
+        let code = error
+            .get("code")
+            .and_then(|c| c.as_i64())
+            .and_then(|c| i32::try_from(c).ok())
+            .unwrap_or(-1);
         let message = error
             .get("message")
             .and_then(|m| m.as_str())

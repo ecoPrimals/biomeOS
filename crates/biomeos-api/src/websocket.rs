@@ -29,7 +29,7 @@ use tokio_tungstenite::WebSocketStream;
 
 // Re-export JSON-RPC types and graph types
 pub use biomeos_graph::{GraphEvent, GraphEventBroadcaster};
-pub use biomeos_types::{JsonRpcError, JsonRpcRequest, JsonRpcResponse};
+pub use biomeos_types::{JsonRpcError, JsonRpcRequest, JsonRpcResponse, JSONRPC_VERSION};
 
 /// Subscription filter parameters
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
@@ -87,13 +87,11 @@ impl SubscriptionFilter {
 
 /// Active subscription
 struct Subscription {
-    /// Subscription ID. Held for lifecycle; used when event forwarding is wired.
-    #[allow(dead_code)] // Future: use for event forwarding and subscription management
+    /// Subscription ID (used in list_subscriptions and event notifications)
     id: String,
     filter: SubscriptionFilter,
-    /// Channel sender for pushing events to the WebSocket client
-    #[allow(dead_code)] // Held for subscription lifecycle; prevents channel closure
-    sender: tokio::sync::mpsc::UnboundedSender<GraphEvent>,
+    /// Channel sender (held to keep subscription alive; future: event forwarding)
+    _sender: tokio::sync::mpsc::UnboundedSender<GraphEvent>,
 }
 
 /// JSON-RPC 2.0 WebSocket server for graph events
@@ -207,23 +205,19 @@ impl GraphEventWebSocketServer {
         let request: JsonRpcRequest = match serde_json::from_str(text) {
             Ok(req) => req,
             Err(_) => {
-                return JsonRpcResponse {
-                    jsonrpc: "2.0".to_string(),
-                    result: None,
-                    error: Some(JsonRpcError::parse_error()),
-                    id: serde_json::Value::Null,
-                };
+                return JsonRpcResponse::error(
+                    serde_json::Value::Null,
+                    JsonRpcError::parse_error(),
+                );
             }
         };
 
         // Validate JSON-RPC version
-        if request.jsonrpc != "2.0" {
-            return JsonRpcResponse {
-                jsonrpc: "2.0".to_string(),
-                result: None,
-                error: Some(JsonRpcError::invalid_request()),
-                id: request.id.unwrap_or(serde_json::Value::Null),
-            };
+        if request.jsonrpc != JSONRPC_VERSION {
+            return JsonRpcResponse::error(
+                request.id.unwrap_or(serde_json::Value::Null),
+                JsonRpcError::invalid_request(),
+            );
         }
 
         let params = request.params.unwrap_or(serde_json::Value::Null);
@@ -242,18 +236,8 @@ impl GraphEventWebSocketServer {
 
         // Build response
         match result {
-            Ok(value) => JsonRpcResponse {
-                jsonrpc: "2.0".to_string(),
-                result: Some(value),
-                error: None,
-                id,
-            },
-            Err(error) => JsonRpcResponse {
-                jsonrpc: "2.0".to_string(),
-                result: None,
-                error: Some(error),
-                id,
-            },
+            Ok(value) => JsonRpcResponse::success(id, value),
+            Err(error) => JsonRpcResponse::error(id, error),
         }
     }
 
@@ -285,15 +269,13 @@ impl GraphEventWebSocketServer {
                 // Apply filter
                 if filter_clone.matches(&event) {
                     // Send event as JSON-RPC notification
-                    let notification = JsonRpcResponse {
-                        jsonrpc: "2.0".to_string(),
-                        result: Some(serde_json::json!({
+                    let notification = JsonRpcResponse::success(
+                        serde_json::Value::Null, // Notifications have no ID
+                        serde_json::json!({
                             "subscription_id": sub_id_clone,
                             "event": event,
-                        })),
-                        error: None,
-                        id: serde_json::Value::Null, // Notifications have no ID
-                    };
+                        }),
+                    );
 
                     if let Ok(json) = serde_json::to_string(&notification) {
                         let _ = response_tx.send(json);
@@ -306,7 +288,7 @@ impl GraphEventWebSocketServer {
         let subscription = Subscription {
             id: sub_id.clone(),
             filter,
-            sender: event_tx,
+            _sender: event_tx,
         };
 
         subscriptions

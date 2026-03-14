@@ -13,11 +13,13 @@ use crate::ModelCacheCommand;
 
 /// Format bytes as MB string (e.g. "123.4 MB")
 pub(crate) fn format_size_mb(bytes: u64) -> String {
+    // u64->f64: precision loss acceptable for size display (exact up to 2^53 bytes)
     format!("{:.1} MB", bytes as f64 / 1_048_576.0)
 }
 
 /// Format bytes as GB string (e.g. "1.2 GB")
 pub(crate) fn format_size_gb(bytes: u64) -> String {
+    // u64->f64: precision loss acceptable for size display (exact up to 2^53 bytes)
     format!("{:.1} GB", bytes as f64 / 1_073_741_824.0)
 }
 

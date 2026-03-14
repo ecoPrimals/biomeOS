@@ -122,10 +122,10 @@ pub trait DiscoveryRpc {
 #[tarpc::service]
 pub trait SecurityRpc {
     /// Sign data with primal's key
-    async fn sign(data: Vec<u8>) -> SignatureResult;
+    async fn sign(data: Bytes) -> SignatureResult;
 
     /// Verify a signature
-    async fn verify(data: Vec<u8>, signature: Vec<u8>, public_key: Vec<u8>) -> bool;
+    async fn verify(data: Bytes, signature: Bytes, public_key: Bytes) -> bool;
 
     /// Get JWT secret for service
     async fn get_jwt_secret(service_name: String) -> JwtSecretResult;

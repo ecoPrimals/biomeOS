@@ -12,7 +12,7 @@ repository = "https://github.com/your-org/biomeos"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
-bytes = "1.0"
+bytes = { version = "1.0", features = ["serde"] }
 base64 = "0.21"
 
 # RPC framework (tarpc for high-performance binary RPC)

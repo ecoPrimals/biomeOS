@@ -91,7 +91,7 @@ Detailed handoffs in `docs/handoffs/`:
 | Script | Purpose | Evolution Target |
 |--------|---------|-----------------|
 | `start_nucleus.sh` | NUCLEUS startup | `biomeos nucleus start` (Rust) |
-| `build-genome.sh` | genomeBin build | Keep (build tooling) |
+| `build-genome.sh` | genomeBin build | `biomeos genome build` — archived Mar 14, 2026 |
 | `build_primals_for_testing.sh` | Test builds | Keep (dev tooling) |
 | `create_sibling_spore.sh` | Spore creation | `biomeos spore create` (Rust) |
 | `validate_beacon_discovery.sh` | Beacon validation | `biomeos validate beacon` (Rust) |

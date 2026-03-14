@@ -601,20 +601,29 @@ pub(crate) fn base64_encode(data: &[u8]) -> String {
 
     let mut result = String::with_capacity(data.len().div_ceil(3) * 4);
     for chunk in data.chunks(3) {
-        let b0 = chunk[0] as u32;
-        let b1 = if chunk.len() > 1 { chunk[1] as u32 } else { 0 };
-        let b2 = if chunk.len() > 2 { chunk[2] as u32 } else { 0 };
+        let b0 = u32::from(chunk[0]);
+        let b1 = if chunk.len() > 1 {
+            u32::from(chunk[1])
+        } else {
+            0
+        };
+        let b2 = if chunk.len() > 2 {
+            u32::from(chunk[2])
+        } else {
+            0
+        };
         let triple = (b0 << 16) | (b1 << 8) | b2;
 
-        result.push(ALPHABET[((triple >> 18) & 0x3F) as usize] as char);
-        result.push(ALPHABET[((triple >> 12) & 0x3F) as usize] as char);
+        let idx = |shift: u32| usize::try_from((triple >> shift) & 0x3F).unwrap_or(0);
+        result.push(char::from(ALPHABET[idx(18)]));
+        result.push(char::from(ALPHABET[idx(12)]));
         if chunk.len() > 1 {
-            result.push(ALPHABET[((triple >> 6) & 0x3F) as usize] as char);
+            result.push(char::from(ALPHABET[idx(6)]));
         } else {
             result.push('=');
         }
         if chunk.len() > 2 {
-            result.push(ALPHABET[(triple & 0x3F) as usize] as char);
+            result.push(char::from(ALPHABET[idx(0)]));
         } else {
             result.push('=');
         }

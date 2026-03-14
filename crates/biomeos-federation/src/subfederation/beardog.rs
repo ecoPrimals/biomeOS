@@ -6,6 +6,7 @@
 //! Lineage verification and key derivation via JSON-RPC.
 
 use crate::{FederationError, FederationResult};
+use biomeos_types::JsonRpcRequest;
 use tracing::{debug, info};
 
 /// Discover BearDog socket path via XDG-compliant SystemPaths
@@ -51,15 +52,13 @@ pub async fn verify_member_lineage(
     let (reader, mut writer) = stream.into_split();
     let mut reader = BufReader::new(reader);
 
-    let request = serde_json::json!({
-        "jsonrpc": "2.0",
-        "method": "lineage.verify_members",
-        "params": {
+    let request = JsonRpcRequest::new(
+        "lineage.verify_members",
+        serde_json::json!({
             "family_id": parent_family,
             "member_patterns": members
-        },
-        "id": 1
-    });
+        }),
+    );
 
     let request_str = serde_json::to_string(&request)
         .map_err(|e| FederationError::Generic(format!("JSON error: {}", e)))?
@@ -140,16 +139,14 @@ pub async fn request_subfederation_key(
     let (reader, mut writer) = stream.into_split();
     let mut reader = BufReader::new(reader);
 
-    let request = serde_json::json!({
-        "jsonrpc": "2.0",
-        "method": "crypto.derive_subfederation_key",
-        "params": {
+    let request = JsonRpcRequest::new(
+        "crypto.derive_subfederation_key",
+        serde_json::json!({
             "family_id": parent_family,
             "subfederation_name": subfed_name,
             "purpose": "subfederation-encryption-v1"
-        },
-        "id": 1
-    });
+        }),
+    );
 
     let request_str = serde_json::to_string(&request)
         .map_err(|e| FederationError::Generic(format!("JSON error: {}", e)))?

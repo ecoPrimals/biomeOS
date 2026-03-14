@@ -18,6 +18,7 @@
 #![forbid(unsafe_code)]
 
 use anyhow::{Context, Result};
+use biomeos_types::JsonRpcRequest;
 use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -210,19 +211,19 @@ impl RealTimeEventSubscriber {
         let (mut write, mut read) = ws_stream.split();
 
         // Subscribe to events via JSON-RPC
-        let subscribe_request = serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": "events.subscribe",
-            "params": {
+        let subscribe_request = JsonRpcRequest::new(
+            "events.subscribe",
+            serde_json::json!({
                 "graph_id": null, // Subscribe to all graphs
                 "event_types": null, // Subscribe to all event types
                 "node_filter": null,
-            },
-            "id": 1,
-        });
+            }),
+        );
 
         write
-            .send(Message::Text(subscribe_request.to_string()))
+            .send(Message::Text(
+                serde_json::to_string(&subscribe_request).unwrap(),
+            ))
             .await
             .context("Failed to send subscribe request")?;
 

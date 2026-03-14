@@ -223,16 +223,6 @@ fn discover_beardog_socket() -> Option<String> {
         return Some(family_socket.to_string_lossy().to_string());
     }
 
-    // Legacy /tmp fallback
-    let bd_sock = format!("{}.sock", BEARDOG);
-    let bd_family_sock = format!("{}-{}.sock", BEARDOG, family_id);
-    for name in &[bd_sock.as_str(), bd_family_sock.as_str()] {
-        let path = format!("/tmp/{}", name);
-        if std::path::Path::new(&path).exists() {
-            return Some(path);
-        }
-    }
-
     None
 }
 

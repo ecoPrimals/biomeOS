@@ -26,7 +26,7 @@ mod tests {
     #[tokio::test]
     async fn test_suggestion_manager_creation() {
         let manager = AISuggestionManager::new("test_family".to_string());
-        assert_eq!(manager.family_id, "test_family");
+        assert_eq!(manager._family_id, "test_family");
         assert!(manager.active_suggestions.is_empty());
     }
 

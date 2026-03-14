@@ -43,6 +43,7 @@ pub use builder::GenomeBinBuilder;
 pub use composer::GenomeBinComposer;
 pub use manifest::GenomeManifest;
 
+use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -119,8 +120,9 @@ impl std::fmt::Display for Arch {
 pub struct CompressedBinary {
     /// Target architecture
     pub arch: Arch,
-    /// Compressed binary data (LZ4)
-    pub data: Vec<u8>,
+    /// Compressed binary data (LZ4, zero-copy via `bytes::Bytes`)
+    #[serde(with = "biomeos_types::tarpc_types::bytes_serde")]
+    pub data: Bytes,
     /// Original (uncompressed) size for allocation
     pub original_size: usize,
     /// BLAKE3 checksum of original (uncompressed) data
@@ -136,7 +138,7 @@ impl CompressedBinary {
 
         Self {
             arch,
-            data: compressed,
+            data: Bytes::from(compressed),
             original_size: data.len(),
             checksum: *hash.as_bytes(),
         }
@@ -158,7 +160,7 @@ impl CompressedBinary {
 
     /// Decompress and verify integrity
     pub fn decompress(&self) -> anyhow::Result<Vec<u8>> {
-        let decompressed = lz4_flex::decompress_size_prepended(&self.data)
+        let decompressed = lz4_flex::decompress_size_prepended(self.data.as_ref())
             .map_err(|e| anyhow::anyhow!("LZ4 decompression failed: {}", e))?;
 
         // Verify checksum

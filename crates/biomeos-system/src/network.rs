@@ -194,6 +194,7 @@ pub(crate) async fn get_network_io() -> BiomeResult<NetworkIoMetrics> {
         |(rx, tx, rxp, txp), (_, a, b, c, d)| (rx + a, tx + c, rxp + b, txp + d),
     );
 
+    // u64->f64: precision loss acceptable for I/O metrics
     Ok(NetworkIoMetrics {
         bytes_in_per_sec: (final_rx.saturating_sub(init_rx)) as f64,
         bytes_out_per_sec: (final_tx.saturating_sub(init_tx)) as f64,

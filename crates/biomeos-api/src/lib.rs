@@ -18,6 +18,7 @@ mod state;
 mod unix_server;
 mod websocket;
 
+use biomeos_types::JSONRPC_VERSION;
 pub use state::{AppState, AppStateBuilder, Config};
 pub use websocket::{
     GraphEventWebSocketServer, JsonRpcError, JsonRpcRequest, JsonRpcResponse, SubscriptionFilter,
@@ -98,7 +99,7 @@ async fn handle_websocket(socket: axum::extract::ws::WebSocket, state: Arc<AppSt
     let next_sub_id = AtomicU64::new(1);
 
     let welcome = serde_json::json!({
-        "jsonrpc": "2.0",
+        "jsonrpc": JSONRPC_VERSION,
         "method": "connection.established",
         "params": {
             "message": "Connected to biomeOS Graph Event Stream (JSON-RPC 2.0)",
@@ -133,7 +134,7 @@ async fn handle_websocket(socket: axum::extract::ws::WebSocket, state: Arc<AppSt
                         continue;
                     }
                     let notification = serde_json::json!({
-                        "jsonrpc": "2.0",
+                        "jsonrpc": JSONRPC_VERSION,
                         "method": "events.notification",
                         "params": event,
                     });
@@ -165,15 +166,13 @@ async fn handle_websocket(socket: axum::extract::ws::WebSocket, state: Arc<AppSt
                                         });
                                     let sub_id = format!("sub_{}", next_sub_id.fetch_add(1, Ordering::SeqCst));
                                     subscriptions.write().await.insert(sub_id.clone(), filter);
-                                    JsonRpcResponse {
-                                        jsonrpc: "2.0".to_string(),
-                                        result: Some(serde_json::json!({
+                                    JsonRpcResponse::success(
+                                        req.id.clone().unwrap_or(serde_json::Value::Null),
+                                        serde_json::json!({
                                             "subscription_id": sub_id,
                                             "success": true,
-                                        })),
-                                        error: None,
-                                        id: req.id.clone().unwrap_or(serde_json::Value::Null),
-                                    }
+                                        }),
+                                    )
                                 }
                                 "events.unsubscribe" => {
                                     let sub_id = req
@@ -183,46 +182,34 @@ async fn handle_websocket(socket: axum::extract::ws::WebSocket, state: Arc<AppSt
                                         .and_then(serde_json::Value::as_str)
                                         .unwrap_or("");
                                     let existed = subscriptions.write().await.remove(sub_id).is_some();
-                                    JsonRpcResponse {
-                                        jsonrpc: "2.0".to_string(),
-                                        result: Some(serde_json::json!({
+                                    JsonRpcResponse::success(
+                                        req.id.clone().unwrap_or(serde_json::Value::Null),
+                                        serde_json::json!({
                                             "success": existed,
                                             "subscription_id": sub_id,
-                                        })),
-                                        error: None,
-                                        id: req.id.clone().unwrap_or(serde_json::Value::Null),
-                                    }
+                                        }),
+                                    )
                                 }
                                 "events.list_subscriptions" => {
                                     let subs = subscriptions.read().await;
                                     let sub_list: Vec<_> = subs.keys().collect();
-                                    JsonRpcResponse {
-                                        jsonrpc: "2.0".to_string(),
-                                        result: Some(serde_json::json!({
+                                    JsonRpcResponse::success(
+                                        req.id.clone().unwrap_or(serde_json::Value::Null),
+                                        serde_json::json!({
                                             "subscriptions": sub_list,
                                             "count": sub_list.len(),
-                                        })),
-                                        error: None,
-                                        id: req.id.clone().unwrap_or(serde_json::Value::Null),
-                                    }
+                                        }),
+                                    )
                                 }
-                                _ => JsonRpcResponse {
-                                    jsonrpc: "2.0".to_string(),
-                                    result: None,
-                                    error: Some(JsonRpcError {
-                                        code: -32601,
-                                        message: "Method not found".to_string(),
-                                        data: None,
-                                    }),
-                                    id: req.id.clone().unwrap_or(serde_json::Value::Null),
-                                },
+                                _ => JsonRpcResponse::error(
+                                    req.id.clone().unwrap_or(serde_json::Value::Null),
+                                    JsonRpcError::method_not_found(),
+                                ),
                             },
-                            Err(_) => JsonRpcResponse {
-                                jsonrpc: "2.0".to_string(),
-                                result: None,
-                                error: Some(JsonRpcError::parse_error()),
-                                id: serde_json::Value::Null,
-                            },
+                            Err(_) => JsonRpcResponse::error(
+                                serde_json::Value::Null,
+                                JsonRpcError::parse_error(),
+                            ),
                         };
                         if let Ok(json) = serde_json::to_string(&response) {
                             let _ = sender.send(Message::Text(json)).await;

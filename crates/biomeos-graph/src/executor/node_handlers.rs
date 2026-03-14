@@ -14,6 +14,7 @@
 //! - Deployment reporting
 
 use anyhow::{Context, Result};
+use biomeos_types::JsonRpcRequest;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
@@ -117,17 +118,15 @@ pub async fn node_crypto_derive_seed(
     let mut reader = BufReader::new(reader);
 
     // Prepare JSON-RPC request to BearDog
-    let request = serde_json::json!({
-        "jsonrpc": "2.0",
-        "method": "crypto.derive_child_seed",
-        "params": {
+    let request = JsonRpcRequest::new(
+        "crypto.derive_child_seed",
+        serde_json::json!({
             "parent_seed": parent_seed,
             "node_id": node_id,
             "output_path": output_path,
             "deployment_batch": deployment_batch
-        },
-        "id": 1
-    });
+        }),
+    );
 
     // Send request
     let request_str = serde_json::to_string(&request)? + "\n";
@@ -409,12 +408,7 @@ async fn ping_primal(socket_path: &str) -> Result<u64> {
     let mut reader = BufReader::new(reader);
 
     // Send health ping
-    let request = serde_json::json!({
-        "jsonrpc": "2.0",
-        "method": "health.ping",
-        "params": {},
-        "id": 1
-    });
+    let request = JsonRpcRequest::new("health.ping", serde_json::json!({}));
     let request_str = serde_json::to_string(&request)? + "\n";
     writer.write_all(request_str.as_bytes()).await?;
     writer.flush().await?;
@@ -471,15 +465,13 @@ pub async fn node_lineage_verify(
     let (reader, mut writer) = stream.into_split();
     let mut reader = BufReader::new(reader);
 
-    let request = serde_json::json!({
-        "jsonrpc": "2.0",
-        "method": "lineage.verify_siblings",
-        "params": {
+    let request = JsonRpcRequest::new(
+        "lineage.verify_siblings",
+        serde_json::json!({
             "family_id": family_id,
             "siblings": siblings
-        },
-        "id": 1
-    });
+        }),
+    );
     let request_str = serde_json::to_string(&request)? + "\n";
     writer.write_all(request_str.as_bytes()).await?;
     writer.flush().await?;

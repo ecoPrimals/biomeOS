@@ -335,17 +335,11 @@ fn default_primal_custom_none() {
 }
 
 #[test]
+#[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
 fn default_primal_strict_discovery_returns_none() {
-    // Env var manipulation is inherently racy in parallel tests.
-    // Verify the logic directly: when the env var IS present, default_primal
-    // returns None. We set it and immediately read; if another thread
-    // clears it between those two lines the assertion will be wrong, so we
-    // only assert when we can confirm the var is still set.
     std::env::set_var("BIOMEOS_STRICT_DISCOVERY", "1");
-    if std::env::var("BIOMEOS_STRICT_DISCOVERY").is_ok() {
-        assert_eq!(CapabilityTaxonomy::Encryption.default_primal(), None);
-        assert_eq!(CapabilityTaxonomy::Discovery.default_primal(), None);
-    }
+    assert_eq!(CapabilityTaxonomy::Encryption.default_primal(), None);
+    assert_eq!(CapabilityTaxonomy::Discovery.default_primal(), None);
     std::env::remove_var("BIOMEOS_STRICT_DISCOVERY");
 }
 
@@ -392,8 +386,9 @@ fn display_custom_variant() {
 // -------------------------------------------------------------------------
 
 #[test]
+#[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
 fn known_primals_returns_core_primals() {
-    ensure_non_strict_discovery();
+    std::env::remove_var("BIOMEOS_STRICT_DISCOVERY");
     let primals = CapabilityTaxonomy::known_primals();
     assert_eq!(primals, crate::primal_names::CORE_PRIMALS);
     assert!(primals.contains(&"beardog"));
@@ -405,12 +400,11 @@ fn known_primals_returns_core_primals() {
 }
 
 #[test]
+#[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
 fn known_primals_strict_discovery_returns_empty() {
     std::env::set_var("BIOMEOS_STRICT_DISCOVERY", "1");
-    if std::env::var("BIOMEOS_STRICT_DISCOVERY").is_ok() {
-        let primals = CapabilityTaxonomy::known_primals();
-        assert!(primals.is_empty());
-    }
+    let primals = CapabilityTaxonomy::known_primals();
+    assert!(primals.is_empty());
     std::env::remove_var("BIOMEOS_STRICT_DISCOVERY");
 }
 

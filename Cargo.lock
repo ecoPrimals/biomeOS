@@ -448,6 +448,7 @@ dependencies = [
  "biomeos-graph",
  "biomeos-spore",
  "biomeos-types",
+ "bytes 1.11.0",
  "chrono",
  "rand",
  "regex",
@@ -561,6 +562,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "biomeos-types",
+ "bytes 1.11.0",
  "chrono",
  "futures 0.3.31",
  "serde",
@@ -586,6 +589,7 @@ dependencies = [
  "biomeos-primal-sdk",
  "biomeos-system",
  "biomeos-types",
+ "bytes 1.11.0",
  "chrono",
  "clap",
  "config",
@@ -704,6 +708,7 @@ dependencies = [
  "anyhow",
  "biomeos-types",
  "blake3",
+ "bytes 1.11.0",
  "chrono",
  "etcetera",
  "hex",
@@ -1059,6 +1064,9 @@ name = "bytes"
 version = "1.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b35204fbdc0b3f4446b89fc1ac2cf84a8a68971995d0bf2e925ec7cd960f9cb3"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "cassowary"

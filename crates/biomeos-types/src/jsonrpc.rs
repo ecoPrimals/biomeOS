@@ -5,6 +5,9 @@
 
 use serde::{Deserialize, Serialize};
 
+/// JSON-RPC 2.0 protocol version string.
+pub const JSONRPC_VERSION: &str = "2.0";
+
 /// JSON-RPC 2.0 request.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JsonRpcRequest {
@@ -31,10 +34,20 @@ impl JsonRpcRequest {
         static REQUEST_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
         let id = REQUEST_ID.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         Self {
-            jsonrpc: "2.0".to_string(),
+            jsonrpc: JSONRPC_VERSION.to_owned(),
             method: method.into(),
             params: Some(params),
             id: Some(serde_json::Value::Number(serde_json::Number::from(id))),
+        }
+    }
+
+    /// Create a notification (no id, no response expected).
+    pub fn notification(method: impl Into<String>, params: serde_json::Value) -> Self {
+        Self {
+            jsonrpc: JSONRPC_VERSION.to_owned(),
+            method: method.into(),
+            params: Some(params),
+            id: None,
         }
     }
 }
@@ -52,6 +65,28 @@ pub struct JsonRpcResponse {
     pub error: Option<JsonRpcError>,
     /// Request identifier echoed back.
     pub id: serde_json::Value,
+}
+
+impl JsonRpcResponse {
+    /// Build a success response for the given request id.
+    pub fn success(id: serde_json::Value, result: serde_json::Value) -> Self {
+        Self {
+            jsonrpc: JSONRPC_VERSION.to_owned(),
+            result: Some(result),
+            error: None,
+            id,
+        }
+    }
+
+    /// Build an error response for the given request id.
+    pub fn error(id: serde_json::Value, error: JsonRpcError) -> Self {
+        Self {
+            jsonrpc: JSONRPC_VERSION.to_owned(),
+            result: None,
+            error: Some(error),
+            id,
+        }
+    }
 }
 
 /// JSON-RPC 2.0 error object.

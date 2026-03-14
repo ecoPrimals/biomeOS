@@ -8,6 +8,7 @@
 //! Falls back to local heuristics when no AI provider is available.
 
 use anyhow::Result;
+use biomeos_types::JsonRpcRequest;
 use std::collections::HashMap;
 use tracing::{debug, info, warn};
 
@@ -24,9 +25,8 @@ pub struct AISuggestionManager {
     /// not specifically "Squirrel".
     ai_provider_socket: Option<std::path::PathBuf>,
 
-    /// Family ID
-    #[allow(dead_code)] // TODO: Wire up for family-scoped AI suggestions
-    pub(crate) family_id: String,
+    /// Family ID (for family-scoped AI suggestions)
+    pub(crate) _family_id: String,
 
     /// Active suggestions
     pub(crate) active_suggestions: HashMap<String, AISuggestion>,
@@ -37,7 +37,7 @@ impl AISuggestionManager {
     pub fn new(family_id: String) -> Self {
         Self {
             ai_provider_socket: None,
-            family_id,
+            _family_id: family_id,
             active_suggestions: HashMap::new(),
         }
     }
@@ -110,12 +110,7 @@ impl AISuggestionManager {
         let _ = stream.set_read_timeout(Some(std::time::Duration::from_secs(2)));
         let _ = stream.set_write_timeout(Some(std::time::Duration::from_secs(2)));
 
-        let request = serde_json::json!({
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "capabilities",
-            "params": {}
-        });
+        let request = JsonRpcRequest::new("capabilities", serde_json::json!({}));
 
         if let Ok(bytes) = serde_json::to_vec(&request) {
             let _ = stream.write_all(&bytes);
@@ -239,13 +234,14 @@ impl AISuggestionManager {
                         confidence: 0.6,
                         explanation: format!(
                             "Primal '{}' is at {}% capacity. Consider adding more nodes or redistributing load.",
-                            primal.name, (load * 100.0) as u32
+                            primal.name,
+                            (load * 100.0).round().clamp(0.0, 100.0) as u32
                         ),
                         action: SuggestedAction::AddCapacity {
                             primal_type: primal.primal_type.clone(),
                             estimated_need: format!(
                                 "{}% more capacity",
-                                ((1.0 - load) * 100.0) as u32
+                                ((1.0 - load) * 100.0).round().clamp(0.0, 100.0) as u32
                             ),
                         },
                         impact: Impact {
@@ -289,7 +285,7 @@ mod tests {
     #[test]
     fn test_new() {
         let mgr = AISuggestionManager::new("fam1".to_string());
-        assert_eq!(mgr.family_id, "fam1");
+        assert_eq!(mgr._family_id, "fam1");
         assert!(mgr.get_active_suggestions().is_empty());
     }
 

@@ -11,6 +11,7 @@ readme = "README.md"
 [dependencies]
 # Types
 biomeos-types = { path = "../biomeos-types" }
+bytes = { workspace = true }
 
 # Error handling (Pure Rust)
 anyhow = { workspace = true }

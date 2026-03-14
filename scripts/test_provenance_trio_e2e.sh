@@ -61,14 +61,14 @@ mkdir -p "$SOCKET_DIR"
 
 log "Starting Tower Atomic (BearDog + Songbird)..."
 
-if [ -f "$PROJECT_DIR/scripts/start_nucleus.sh" ]; then
-    log "Using start_nucleus.sh for Tower bootstrap"
-    FAMILY_ID="$FAMILY_ID" bash "$PROJECT_DIR/scripts/start_nucleus.sh" tower-only &
+if command -v biomeos &>/dev/null; then
+    log "Using biomeos nucleus start for Tower bootstrap"
+    (cd "$PROJECT_DIR" && FAMILY_ID="$FAMILY_ID" biomeos nucleus start --mode tower --node-id tower1 --family-id "$FAMILY_ID") &
     PIDS+=($!)
     wait_for_socket "$SOCKET_DIR/beardog-$FAMILY_ID.sock" "BearDog"
     wait_for_socket "$SOCKET_DIR/songbird-$FAMILY_ID.sock" "Songbird"
 else
-    log "start_nucleus.sh not found — assuming Tower is already running"
+    log "biomeos not found — assuming Tower is already running"
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════════

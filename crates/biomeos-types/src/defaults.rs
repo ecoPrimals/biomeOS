@@ -754,6 +754,9 @@ mod tests {
         assert_eq!(env_vars::NESTGATE_SOCKET, "NESTGATE_SOCKET");
         assert_eq!(env_vars::TOADSTOOL_SOCKET, "TOADSTOOL_SOCKET");
         assert_eq!(env_vars::PETALTONGUE_SOCKET, "PETALTONGUE_SOCKET");
-        assert_eq!(env_vars::DISCOVERY_REGISTRY_SOCKET, "DISCOVERY_REGISTRY_SOCKET");
+        assert_eq!(
+            env_vars::DISCOVERY_REGISTRY_SOCKET,
+            "DISCOVERY_REGISTRY_SOCKET"
+        );
     }
 }

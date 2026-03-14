@@ -12,6 +12,7 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
+use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
@@ -162,8 +163,9 @@ pub struct Workload {
     pub name: String,
     /// Execution runtime
     pub runtime: Runtime,
-    /// Workload code/payload bytes
-    pub code: Vec<u8>,
+    /// Workload code/payload bytes (zero-copy via `bytes::Bytes`)
+    #[serde(with = "biomeos_types::tarpc_types::bytes_serde")]
+    pub code: Bytes,
     /// Whether the workload can be split across nodes
     pub parallelizable: bool,
     /// Resource requirements for execution
@@ -179,7 +181,7 @@ impl Workload {
             id: WorkloadId::new(),
             name: name.into(),
             runtime,
-            code: Vec::new(),
+            code: Bytes::new(),
             parallelizable: false,
             resource_requirements: ResourceRequirements::default(),
             priority: WorkloadPriority::Normal,
@@ -449,8 +451,8 @@ impl WorkloadBuilder {
     }
 
     /// Set the workload code/payload
-    pub fn code(mut self, code: Vec<u8>) -> Self {
-        self.workload.code = code;
+    pub fn code(mut self, code: impl Into<Bytes>) -> Self {
+        self.workload.code = code.into();
         self
     }
 

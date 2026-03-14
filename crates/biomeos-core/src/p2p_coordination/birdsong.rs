@@ -25,6 +25,7 @@ use super::{
     RoutingProvider, SecurityProvider,
 };
 use anyhow::{Context, Result};
+use bytes::Bytes;
 use std::sync::Arc;
 
 /// BirdSong discovery coordinator
@@ -181,11 +182,11 @@ impl BirdSongCoordinator {
     /// - Performance optimization
     pub async fn disable_encrypted_discovery(&self) -> Result<DiscoveryMode> {
         let config = EncryptedDiscoveryConfig {
-            encryption_key: vec![],
+            encryption_key: Bytes::new(),
             lineage_filter: super::LineageProof {
                 lineage_id: String::new(),
                 depth: 0,
-                proof: vec![],
+                proof: Bytes::new(),
                 timestamp: std::time::SystemTime::now(),
             },
             mode: DiscoveryMode::Plaintext,
@@ -241,11 +242,11 @@ mod tests {
 
         async fn generate_broadcast_keys(&self, _family_id: &str) -> Result<BroadcastKeys> {
             Ok(BroadcastKeys {
-                broadcast_key: vec![1, 2, 3],
+                broadcast_key: Bytes::from_static(&[1, 2, 3]),
                 lineage_proof: LineageProof {
                     lineage_id: "test".to_string(),
                     depth: 0,
-                    proof: vec![],
+                    proof: Bytes::new(),
                     timestamp: SystemTime::now(),
                 },
                 generated_at: SystemTime::now(),
@@ -259,7 +260,7 @@ mod tests {
                 proof: LineageProof {
                     lineage_id: "test".to_string(),
                     depth: 1,
-                    proof: vec![],
+                    proof: Bytes::new(),
                     timestamp: SystemTime::now(),
                 },
             })
@@ -483,7 +484,7 @@ mod tests {
                 proof: LineageProof {
                     lineage_id: "test".to_string(),
                     depth: 0,
-                    proof: vec![],
+                    proof: Bytes::new(),
                     timestamp: SystemTime::now(),
                 },
             })

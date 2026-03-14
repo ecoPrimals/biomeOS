@@ -11,6 +11,7 @@
 //! - Custom JSON-RPC rollback calls
 
 use anyhow::Result;
+use biomeos_types::JsonRpcRequest;
 use std::path::PathBuf;
 use tracing::{debug, info, warn};
 
@@ -135,12 +136,7 @@ impl<'a> RollbackManager<'a> {
         let (reader, mut writer) = stream.into_split();
         let mut reader = BufReader::new(reader);
 
-        let request = serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": "shutdown",
-            "params": { "graceful": true },
-            "id": 1
-        });
+        let request = JsonRpcRequest::new("shutdown", serde_json::json!({ "graceful": true }));
         let request_str = serde_json::to_string(&request)? + "\n";
         writer.write_all(request_str.as_bytes()).await?;
         writer.flush().await?;
@@ -198,12 +194,7 @@ impl<'a> RollbackManager<'a> {
         let (reader, mut writer) = stream.into_split();
         let mut reader = BufReader::new(reader);
 
-        let request = serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": method,
-            "params": params,
-            "id": 1
-        });
+        let request = JsonRpcRequest::new(method, params);
         let request_str = serde_json::to_string(&request)? + "\n";
         writer.write_all(request_str.as_bytes()).await?;
         writer.flush().await?;

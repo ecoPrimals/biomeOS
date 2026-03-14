@@ -10,6 +10,7 @@
 //! - Live monitoring and metrics
 
 use anyhow::{Context, Result};
+use biomeos_types::JsonRpcRequest;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::PathBuf;
@@ -621,12 +622,7 @@ impl GraphExecutor {
         let (reader, mut writer) = stream.into_split();
         let mut reader = BufReader::new(reader);
 
-        let request = serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": "shutdown",
-            "params": { "graceful": true },
-            "id": 1
-        });
+        let request = JsonRpcRequest::new("shutdown", serde_json::json!({ "graceful": true }));
         writer.write_all((serde_json::to_string(&request)? + "\n").as_bytes()).await?;
         writer.flush().await?;
 
@@ -644,12 +640,7 @@ impl GraphExecutor {
         let (reader, mut writer) = stream.into_split();
         let mut reader = BufReader::new(reader);
 
-        let request = serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": method,
-            "params": params,
-            "id": 1
-        });
+        let request = JsonRpcRequest::new(method, params);
         writer.write_all((serde_json::to_string(&request)? + "\n").as_bytes()).await?;
         writer.flush().await?;
 

@@ -76,12 +76,7 @@ fn send_rpc_request(
     stream.set_read_timeout(Some(Duration::from_secs(5)))?;
     stream.set_write_timeout(Some(Duration::from_secs(5)))?;
 
-    let request = JsonRpcRequest {
-        jsonrpc: "2.0".to_string(),
-        method: method.to_string(),
-        params: Some(params),
-        id: Some(serde_json::json!(1)),
-    };
+    let request = JsonRpcRequest::new(method, params);
 
     let request_bytes = serde_json::to_vec(&request)?;
     stream.write_all(&request_bytes)?;

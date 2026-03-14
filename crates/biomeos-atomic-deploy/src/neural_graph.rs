@@ -115,11 +115,13 @@ impl Graph {
                 max_parallelism: exec_table
                     .get("max_parallelism")
                     .and_then(|v| v.as_integer())
-                    .unwrap_or(3) as usize,
+                    .and_then(|v| usize::try_from(v).ok())
+                    .unwrap_or(3),
                 timeout_total_ms: exec_table
                     .get("timeout_total_ms")
                     .and_then(|v| v.as_integer())
-                    .unwrap_or(60000) as u64,
+                    .and_then(|v| u64::try_from(v).ok())
+                    .unwrap_or(60000),
                 checkpoint_enabled: exec_table
                     .get("checkpoint_enabled")
                     .and_then(|v| v.as_bool())

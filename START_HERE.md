@@ -1,6 +1,6 @@
 # Start Here - biomeOS
 
-**Last Updated**: March 11, 2026
+**Last Updated**: March 14, 2026
 **Status**: Production Ready - Full Doc Coverage, Zero Warnings, Zero C deps
 
 ---
@@ -14,7 +14,7 @@ biomeOS is the **ecosystem orchestrator** for ecoPrimals - a federation of auton
 - **Primals**: Self-contained Rust binaries with specific capabilities
 - **Atomics**: Primal combinations (Tower = BearDog + Songbird)
 - **NUCLEUS**: Complete system (Tower + Node + Nest + Squirrel)
-- **Neural API**: Semantic routing via `capability.call` (170+ translations, part of biomeOS)
+- **Neural API**: Semantic routing via `capability.call` (210+ translations, part of biomeOS)
 - **Universal IPC v3.0**: Multi-transport communication (Unix/Abstract/TCP/HTTP JSON-RPC)
 - **Dark Forest**: Zero-metadata beacon discovery using genetic lineage
 - **Plasmodium**: Over-NUCLEUS collective coordination (slime mold pattern)
@@ -71,7 +71,7 @@ echo '{"jsonrpc":"2.0","method":"capability.list_translations","params":{},"id":
 |  Layer 3: AI Bridge                                          |
 |  Squirrel -> http.request -> Songbird -> Cloud/Local AI      |
 +-------------------------------------------------------------+
-|  Layer 2: Neural API (170+ semantic translations)            |
+|  Layer 2: Neural API (210+ semantic translations)            |
 |  capability.call -> translate -> route to provider           |
 +-------------------------------------------------------------+
 |  Layer 1: Atomics                                            |
@@ -101,14 +101,14 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 ### Deep Debt Principles
 
-1. **Pure Rust**: Zero C dependencies (safe `nix` crate for POSIX syscalls)
+1. **Pure Rust**: Zero C dependencies (safe `rustix` crate for POSIX syscalls)
 2. **Capability-based**: Primals discover each other at runtime, not by name
 3. **XDG-compliant**: All paths via `SystemPaths` -- no hardcoded `/tmp` or `/run/user/1000`
 4. **No production mocks**: Stubs replaced with real implementations or honest errors
 5. **Idiomatic Rust**: Modern patterns (OnceLock, or_default, Default trait)
 6. **Zero warnings**: Clippy clean, full doc coverage (0 `missing_docs` warnings across 8 crates)
 7. **Self-healing**: LifecycleManager auto-resurrects degraded primals
-8. **Tested**: 2,798+ tests, 60.99% region coverage (llvm-cov)
+8. **Tested**: 4,383 tests, 76.06% region coverage (llvm-cov)
 
 ---
 
@@ -157,7 +157,7 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 | Standard | Description |
 |----------|-------------|
-| **ecoBin v2.0** | 100% Pure Rust, zero C deps |
+| **ecoBin v3.0** | 100% Pure Rust, zero C deps |
 | **Universal IPC v3.0** | Multi-transport (Unix/Abstract/TCP/HTTP) |
 | **PRIMAL_DEPLOYMENT_STANDARD** | Deterministic cross-platform |
 | **Semantic Method Naming** | capability.call routing |
@@ -166,15 +166,15 @@ No primal imports another primal's code. They compose through sockets and JSON-R
 
 ---
 
-**Status**: Production Ready (v2.33)
+**Status**: Production Ready (v2.36)
 **AI Bridge**: Local + Cloud AI validated
 **Plasmodium**: HTTP JSON-RPC collective (runtime port) + Agent Model
 **Covalent Bond**: Transport ready, beacon discovery pending Songbird fixes
-**Neural API**: 205+ semantic translations, 16 capability domains (part of biomeOS)
+**Neural API**: 210+ semantic translations, 16 capability domains (part of biomeOS)
 **NAT Traversal**: 4-tier strategy (LAN/punch/coordinated/relay)
 **Lifecycle**: Deep health monitoring + auto-resurrection
 **IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate)
-**Primals**: 6/6 ecoBin v2.0 compliant
+**Primals**: 6/6 ecoBin v3.0 compliant
 **Provenance Trio**: rhizoCrypt + LoamSpine + sweetGrass wired into Neural API
-**Tests**: 3,148 passing (71.47% coverage) | **Clippy**: PASS | **Docs**: Full coverage
-**Updated**: March 13, 2026
+**Tests**: 4,383 passing (76.06% coverage) | **Clippy**: PASS | **Docs**: Full coverage
+**Updated**: March 14, 2026

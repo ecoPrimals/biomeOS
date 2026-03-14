@@ -86,10 +86,7 @@ mod tests {
     fn lifecycle_spec_default() {
         let spec = LifecycleSpec::default();
         assert!(spec.hooks.is_empty());
-        assert_eq!(
-            spec.termination_grace_period,
-            Some(Duration::from_secs(30))
-        );
+        assert_eq!(spec.termination_grace_period, Some(Duration::from_secs(30)));
         assert!(spec.shutdown.is_none());
         assert!(spec.startup.is_none());
         assert!(spec.update_strategy.is_none());
@@ -116,10 +113,7 @@ mod tests {
             startup: None,
             update_strategy: None,
         };
-        assert_eq!(
-            spec.termination_grace_period,
-            Some(Duration::from_secs(60))
-        );
+        assert_eq!(spec.termination_grace_period, Some(Duration::from_secs(60)));
     }
 
     #[test]

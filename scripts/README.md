@@ -9,7 +9,6 @@
 
 | Script | Purpose | Status |
 |--------|---------|--------|
-| `build-genome.sh` | Build genomeBin packages | Active |
 | `build_primals_for_testing.sh` | Build primal binaries from source repos | Active |
 | `create_livespore.sh` | Create bootable LiveSpore USB (Alpine Linux) | Active |
 | `create_sibling_spore.sh` | Create sibling spore with genetic lineage | Active |
@@ -20,6 +19,7 @@
 | Former Script | Replacement |
 |----------------|-------------|
 | `start_nucleus.sh` | `biomeos nucleus start` — archived to `archive/scripts-feb13-2026/` |
+| `build-genome.sh` | `biomeos genome build` — archived to `archive/biomeos-mar14-2026/` |
 | `stop_ecosystem.sh` | `biomeos nucleus stop` / `LifecycleManager::shutdown_all()` |
 | `deploy-*-lineage.sh` | Neural API graph-based deployment (`graphs/*.toml`) |
 | `harvest-primals.sh` | `cargo build --workspace` + primal repos |

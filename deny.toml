@@ -2,13 +2,9 @@
 # biomeOS dependency policy — enforced by `cargo deny check`
 
 [advisories]
-vulnerability = "deny"
-unmaintained = "warn"
-yanked = "warn"
-notice = "warn"
+ignore = []
 
 [licenses]
-unlicensed = "deny"
 allow = [
     "AGPL-3.0-only",
     "Apache-2.0",
@@ -19,29 +15,33 @@ allow = [
     "ISC",
     "MIT",
     "MPL-2.0",
+    "Unicode-3.0",
     "Unicode-DFS-2016",
     "Zlib",
 ]
-copyleft = "warn"
+confidence-threshold = 0.8
 
 [[licenses.clarify]]
-name = "ring"
+crate = "ring"
 expression = "MIT AND ISC AND OpenSSL"
 license-files = [{ path = "LICENSE", hash = 0xbd0eed23 }]
+
+[licenses.private]
+ignore = false
 
 [bans]
 multiple-versions = "warn"
 wildcards = "deny"
 deny = [
     # C-binding crates banned for ecoBin compliance
-    { name = "openssl-sys", wrappers = [] },
-    { name = "openssl", wrappers = [] },
-    { name = "native-tls", wrappers = [] },
-    { name = "ring", wrappers = [] },
-    { name = "aws-lc-sys", wrappers = [] },
-    { name = "aws-lc-rs", wrappers = [] },
-    { name = "zstd-sys", wrappers = [] },
-    { name = "dirs-sys", wrappers = [] },
+    { crate = "openssl-sys", wrappers = [] },
+    { crate = "openssl", wrappers = [] },
+    { crate = "native-tls", wrappers = [] },
+    { crate = "ring", wrappers = [] },
+    { crate = "aws-lc-sys", wrappers = [] },
+    { crate = "aws-lc-rs", wrappers = [] },
+    { crate = "zstd-sys", wrappers = [] },
+    { crate = "dirs-sys", wrappers = [] },
 ]
 
 [sources]

@@ -107,11 +107,7 @@ async fn test_springs_registered() {
         let primals = result["result"]["primals"]
             .as_array()
             .expect("primals array");
-        assert!(
-            !primals.is_empty(),
-            "No providers for {} domain",
-            domain
-        );
+        assert!(!primals.is_empty(), "No providers for {} domain", domain);
         eprintln!("  {} domain: {} provider(s)", domain, primals.len());
     }
 }
@@ -147,10 +143,7 @@ async fn test_airspring_to_wetspring_capability_chain() {
     .await
     .expect("ecology.et0_fao56 should succeed");
 
-    assert!(
-        et0["result"].is_object(),
-        "ET₀ result should be object"
-    );
+    assert!(et0["result"].is_object(), "ET₀ result should be object");
     eprintln!("  airSpring ET₀: {:?}", et0["result"]);
 
     // Step 2: wetSpring diversity analysis

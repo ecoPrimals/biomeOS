@@ -8,7 +8,7 @@
 
 use anyhow::Result;
 use biomeos_core::atomic_client::AtomicClient;
-use biomeos_types::CapabilityTaxonomy;
+use biomeos_types::{CapabilityTaxonomy, JsonRpcRequest};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
@@ -748,12 +748,7 @@ impl DeviceManagementProvider {
         };
 
         // Send JSON-RPC request for identity
-        let request = serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": "identity.get",
-            "params": {},
-            "id": 1
-        });
+        let request = JsonRpcRequest::new("identity.get", serde_json::json!({}));
 
         let request_str = match serde_json::to_string(&request) {
             Ok(s) => s + "\n",
@@ -814,12 +809,7 @@ impl DeviceManagementProvider {
         };
 
         // Send JSON-RPC health check request
-        let request = serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": "health.check",
-            "params": {},
-            "id": 1
-        });
+        let request = JsonRpcRequest::new("health.check", serde_json::json!({}));
 
         let request_str = match serde_json::to_string(&request) {
             Ok(s) => s + "\n",
@@ -894,12 +884,7 @@ impl DeviceManagementProvider {
         };
 
         // Send JSON-RPC request for capabilities
-        let request = serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": "capabilities.list",
-            "params": {},
-            "id": 1
-        });
+        let request = JsonRpcRequest::new("capabilities.list", serde_json::json!({}));
 
         let request_str = match serde_json::to_string(&request) {
             Ok(s) => s + "\n",

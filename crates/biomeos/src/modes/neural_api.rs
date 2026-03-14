@@ -7,6 +7,7 @@
 
 use anyhow::{Context, Result};
 use biomeos_atomic_deploy::neural_api_server::NeuralApiServer;
+use biomeos_types::paths::SystemPaths;
 use std::path::PathBuf;
 use tracing::info;
 
@@ -27,8 +28,9 @@ pub(crate) fn resolve_neural_api_config(
     let family_id = family_id
         .map(String::from)
         .unwrap_or_else(biomeos_core::family_discovery::get_family_id);
-    let socket_path =
-        socket.unwrap_or_else(|| PathBuf::from(format!("/tmp/neural-api-{}.sock", family_id)));
+    let socket_path = socket.unwrap_or_else(|| {
+        SystemPaths::new_lazy().primal_socket(&format!("neural-api-{}", family_id))
+    });
     NeuralApiConfig {
         graphs_dir,
         family_id,
@@ -36,9 +38,11 @@ pub(crate) fn resolve_neural_api_config(
     }
 }
 
-/// Resolve socket path: use explicit path or default /tmp/neural-api-{family_id}.sock
+/// Resolve socket path: use explicit path or XDG-compliant SystemPaths default
 pub(crate) fn resolve_socket_path(socket: Option<PathBuf>, family_id: &str) -> PathBuf {
-    socket.unwrap_or_else(|| PathBuf::from(format!("/tmp/neural-api-{}.sock", family_id)))
+    socket.unwrap_or_else(|| {
+        SystemPaths::new_lazy().primal_socket(&format!("neural-api-{}", family_id))
+    })
 }
 
 pub async fn run(graphs_dir: PathBuf, family_id: String, socket: Option<PathBuf>) -> Result<()> {
@@ -81,7 +85,8 @@ mod tests {
     #[test]
     fn test_resolve_socket_path_default() {
         let path = resolve_socket_path(None, "my-family");
-        assert_eq!(path, PathBuf::from("/tmp/neural-api-my-family.sock"));
+        assert!(path.to_string_lossy().contains("neural-api-my-family.sock"));
+        assert!(path.is_absolute());
     }
 
     #[test]
@@ -101,7 +106,8 @@ mod tests {
     #[test]
     fn test_resolve_socket_path_empty_family_id() {
         let path = resolve_socket_path(None, "");
-        assert_eq!(path, PathBuf::from("/tmp/neural-api-.sock"));
+        assert!(path.to_string_lossy().contains("neural-api-.sock"));
+        assert!(path.is_absolute());
     }
 
     #[test]
@@ -115,7 +121,6 @@ mod tests {
     fn test_resolve_socket_path_default_format() {
         let path = resolve_socket_path(None, "abc123");
         assert!(path.is_absolute());
-        assert!(path.parent().unwrap() == std::path::Path::new("/tmp"));
         assert_eq!(path.file_name().unwrap(), "neural-api-abc123.sock");
     }
 

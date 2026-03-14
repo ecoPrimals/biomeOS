@@ -8,6 +8,7 @@
 //! -> NestGate store -> LoamSpine commit -> sweetGrass attribute.
 
 use anyhow::{Context, Result};
+use biomeos_types::{JsonRpcRequest, SystemPaths};
 use std::path::PathBuf;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
@@ -29,8 +30,9 @@ pub async fn run(
     info!("  agent:    {}", agent_did);
 
     let family = family_id.unwrap_or_else(biomeos_core::family_discovery::get_family_id);
-    let socket_path =
-        socket.unwrap_or_else(|| PathBuf::from(format!("/tmp/neural-api-{}.sock", family)));
+    let socket_path = socket.unwrap_or_else(|| {
+        SystemPaths::new_lazy().primal_socket(&format!("neural-api-{}", family))
+    });
 
     info!("  family:   {}", family);
     info!("  socket:   {}", socket_path.display());
@@ -43,19 +45,17 @@ pub async fn run(
         return Ok(());
     }
 
-    let request = serde_json::json!({
-        "jsonrpc": "2.0",
-        "method": "graph.execute",
-        "params": {
+    let request = JsonRpcRequest::new(
+        "graph.execute",
+        serde_json::json!({
             "graph_id": "rootpulse_commit",
             "params": {
                 "SESSION_ID": session_id,
                 "AGENT_DID": agent_did,
                 "FAMILY_ID": family,
             }
-        },
-        "id": 1
-    });
+        }),
+    );
 
     let response = send_jsonrpc(&socket_path, &request).await?;
 
@@ -74,7 +74,7 @@ pub async fn run(
 /// Send a JSON-RPC request over Unix socket and return the parsed response.
 async fn send_jsonrpc(
     socket_path: &PathBuf,
-    request: &serde_json::Value,
+    request: &JsonRpcRequest,
 ) -> Result<serde_json::Value> {
     let stream = UnixStream::connect(socket_path).await.with_context(|| {
         format!(
@@ -85,7 +85,7 @@ async fn send_jsonrpc(
 
     let (reader, mut writer) = stream.into_split();
 
-    let payload = format!("{}\n", serde_json::to_string(request)?);
+    let payload = format!("{}\n", serde_json::to_string(&request)?);
     writer.write_all(payload.as_bytes()).await?;
 
     let mut buf_reader = BufReader::new(reader);

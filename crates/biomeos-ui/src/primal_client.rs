@@ -194,13 +194,13 @@ impl PrimalConnections {
     pub fn songbird(&self) -> Option<&SongbirdClient> {
         self.get_by_capability("discovery")
             .or_else(|| self.get_by_capability("network"))
-            .or_else(|| self.get("songbird"))
+            .or_else(|| self.get(biomeos_types::primal_names::SONGBIRD))
     }
     /// BearDog security/crypto connection (capability: encryption, security)
     pub fn beardog(&self) -> Option<&BearDogClient> {
         self.get_by_capability("encryption")
             .or_else(|| self.get_by_capability("security"))
-            .or_else(|| self.get("beardog"))
+            .or_else(|| self.get(biomeos_types::primal_names::BEARDOG))
     }
     /// NestGate storage connection (capability: storage)
     pub fn nestgate(&self) -> Option<&NestGateClient> {

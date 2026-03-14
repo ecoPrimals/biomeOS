@@ -7,6 +7,7 @@
 //! niche deployment (git clone), and remote health checks.
 
 use anyhow::{Context, Result};
+use bytes::Bytes;
 use serde::Deserialize;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -121,13 +122,13 @@ impl BiomeOsHttpClient {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn fetch_binary(&self, url: &str) -> Result<Vec<u8>> {
+    pub async fn fetch_binary(&self, url: &str) -> Result<Bytes> {
         info!("📦 Fetching binary: {}", url);
         let body = self.get(url).await?;
 
         // For now, HTTP returns string body
         // Note: Songbird returns string body; binary would need base64 encoding
-        Ok(body.into_bytes())
+        Ok(Bytes::from(body.into_bytes()))
     }
 
     /// Check if a URL is reachable (health check)

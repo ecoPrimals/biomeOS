@@ -198,12 +198,10 @@ impl StunExtension {
         use tokio::net::UnixStream;
         use tokio::time::timeout;
 
-        let request = serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": "stun.get_public_address",
-            "params": { "server": server },
-            "id": 1
-        });
+        let request = biomeos_types::JsonRpcRequest::new(
+            "stun.get_public_address",
+            serde_json::json!({ "server": server }),
+        );
 
         let timeout_duration = Duration::from_millis(self.config.check_timeout_ms);
 

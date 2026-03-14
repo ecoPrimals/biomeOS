@@ -124,7 +124,10 @@ impl CapabilityHandler {
             .await?;
 
         // Log metrics
-        let latency = start.elapsed().as_millis() as u64;
+        let latency = {
+            let e = start.elapsed();
+            e.as_secs() * 1000 + u64::from(e.subsec_millis())
+        };
         self.router
             .log_metric(RoutingMetrics {
                 request_id: request_id.clone(),
@@ -322,13 +325,20 @@ impl CapabilityHandler {
         let (capability, operation) = if let Some(explicit_op) = params["operation"].as_str() {
             (raw_capability, explicit_op.to_string())
         } else if let Some(dot_pos) = raw_capability.find('.') {
-            (&raw_capability[..dot_pos], raw_capability[dot_pos + 1..].to_string())
+            (
+                &raw_capability[..dot_pos],
+                raw_capability[dot_pos + 1..].to_string(),
+            )
         } else {
-            anyhow::bail!("Missing 'operation' field and capability '{}' has no dotted operation", raw_capability);
+            anyhow::bail!(
+                "Missing 'operation' field and capability '{}' has no dotted operation",
+                raw_capability
+            );
         };
 
         // Accept both "args" and "params" (backward compat for older callers)
-        let args = params.get("args")
+        let args = params
+            .get("args")
             .or_else(|| params.get("params"))
             .cloned()
             .unwrap_or(json!({}));

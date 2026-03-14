@@ -24,6 +24,8 @@
 //! - Runtime primal discovery (self-knowledge only)
 
 use anyhow::{Context, Result};
+use biomeos_types::JsonRpcRequest;
+use serde::Serialize;
 use std::collections::{HashMap, VecDeque};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -173,7 +175,10 @@ impl GraphExecutor {
             }
         }
 
-        phase_result.duration_ms = phase_start.elapsed().as_millis() as u64;
+        phase_result.duration_ms = {
+            let e = phase_start.elapsed();
+            e.as_secs() * 1000 + u64::from(e.subsec_millis())
+        };
 
         if phase_result.failed > 0 {
             error!("❌ {} nodes failed in this phase:", phase_result.failed);
@@ -257,9 +262,7 @@ impl GraphExecutor {
             "capability_call" => Self::node_capability_call(node, context).await,
 
             // Capability registration for deployment graphs
-            "register_capabilities" => {
-                node_handlers::register_capabilities(node, context).await
-            }
+            "register_capabilities" => node_handlers::register_capabilities(node, context).await,
 
             // Unknown
             _ => {
@@ -273,7 +276,6 @@ impl GraphExecutor {
 
     /// Split capability string into (domain, operation) for capability.call semantics.
     /// e.g. "ecology.et0_fao56" -> ("ecology", "et0_fao56"), "single" -> ("single", "execute")
-    #[allow(dead_code)] // Used by tests
     pub(crate) fn split_capability(capability: &str) -> (String, String) {
         if let Some(dot_pos) = capability.find('.') {
             (
@@ -285,8 +287,8 @@ impl GraphExecutor {
         }
     }
 
-    /// Substitute environment variables in a string
-    #[allow(dead_code)] // Used by tests; shared with executor::node_handlers for production
+    /// Substitute environment variables in a string (used by tests; production uses executor::substitute_env)
+    #[cfg(test)]
     pub(crate) fn substitute_env(s: &str, env: &HashMap<String, String>) -> String {
         let mut result = s.to_string();
 
@@ -544,12 +546,7 @@ impl GraphExecutor {
         let socket_path = context.get_socket_path(target).await;
 
         // Build JSON-RPC request
-        let request = serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": method,
-            "params": params,
-            "id": 1
-        });
+        let request = JsonRpcRequest::new(method, params);
 
         // Connect to primal
         let stream =
@@ -659,16 +656,14 @@ impl GraphExecutor {
         let neural_api_path = std::path::PathBuf::from(&neural_api_socket);
 
         if neural_api_path.exists() {
-            let request = serde_json::json!({
-                "jsonrpc": "2.0",
-                "method": "capability.call",
-                "params": {
+            let request = JsonRpcRequest::new(
+                "capability.call",
+                serde_json::json!({
                     "capability": &cap_domain,
                     "operation": &cap_operation,
                     "args": params,
-                },
-                "id": 1,
-            });
+                }),
+            );
 
             match tokio::time::timeout(
                 Duration::from_millis(timeout_ms),
@@ -736,12 +731,7 @@ impl GraphExecutor {
 
         let socket_path = context.get_socket_path(provider).await;
 
-        let request = serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": capability,
-            "params": params,
-            "id": 1,
-        });
+        let request = JsonRpcRequest::new(capability, params);
 
         let response = tokio::time::timeout(
             Duration::from_millis(timeout_ms),
@@ -780,7 +770,7 @@ impl GraphExecutor {
     /// Helper: send a JSON-RPC request over a Unix socket and return the response.
     async fn send_jsonrpc_async(
         socket_path: &str,
-        request: &serde_json::Value,
+        request: &impl Serialize,
     ) -> Result<serde_json::Value> {
         use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
         use tokio::net::UnixStream;

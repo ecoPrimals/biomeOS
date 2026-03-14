@@ -729,12 +729,7 @@ impl SocketDiscovery {
         let (reader, mut writer) = stream.into_split();
         let mut reader = BufReader::new(reader);
 
-        let request = serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": method,
-            "params": params,
-            "id": 1
-        });
+        let request = biomeos_types::JsonRpcRequest::new(method, params.clone());
 
         let request_str = serde_json::to_string(&request).map_err(|e| e.to_string())? + "\n";
         writer

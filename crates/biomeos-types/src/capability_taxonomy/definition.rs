@@ -563,7 +563,7 @@ impl CapabilityTaxonomy {
             | Self::Trust
             | Self::KeyManagement
             | Self::HardwareSecurity
-            | Self::SecureTunneling => Some("beardog"),
+            | Self::SecureTunneling => Some(crate::primal_names::BEARDOG),
 
             // Discovery & Communication → Songbird
             Self::Discovery
@@ -577,14 +577,14 @@ impl CapabilityTaxonomy {
             | Self::HolePunch
             | Self::StunClient
             | Self::OnionService
-            | Self::RelayServer => Some("songbird"),
+            | Self::RelayServer => Some(crate::primal_names::SONGBIRD),
 
             // Compute → Toadstool
             Self::WorkloadExecution
             | Self::ResourceScheduling
             | Self::ProcessIsolation
             | Self::FractalCompute
-            | Self::GpuAcceleration => Some("toadstool"),
+            | Self::GpuAcceleration => Some(crate::primal_names::TOADSTOOL),
 
             // Storage → NestGate
             Self::DataStorage
@@ -592,13 +592,13 @@ impl CapabilityTaxonomy {
             | Self::Compression
             | Self::Replication
             | Self::Deduplication
-            | Self::ContentAddressed => Some("nestgate"),
+            | Self::ContentAddressed => Some(crate::primal_names::NESTGATE),
 
             // AI → Squirrel
             Self::AiCoordination
             | Self::AiMultiProvider
             | Self::McpServer
-            | Self::AiCapabilityDiscovery => Some("squirrel"),
+            | Self::AiCapabilityDiscovery => Some(crate::primal_names::SQUIRREL),
 
             // UI → petalTongue (integrated when available via Songbird discovery)
             Self::VisualRendering

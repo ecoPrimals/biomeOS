@@ -59,21 +59,7 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 
 ---
 
-## Option 2: Shell Script (Legacy)
-
-```bash
-# Full NUCLEUS (all primals + Neural API + AI bridge)
-NODE_ID=tower1 ./scripts/start_nucleus.sh full
-
-# Tower Atomic only (BearDog + Songbird)
-NODE_ID=tower1 ./scripts/start_nucleus.sh tower
-```
-
-The shell script is retained for compatibility but `biomeos nucleus start` is preferred.
-
----
-
-## Option 3: Manual Primal Start
+## Option 2: Manual Primal Start
 
 ```bash
 SOCKET_DIR=/run/user/$(id -u)/biomeos
@@ -107,7 +93,7 @@ NODE_ID=tower1 \
 
 ---
 
-## Option 4: Pixel 8a (Android)
+## Option 3: Pixel 8a (Android)
 
 ```bash
 adb push pixel8a-deploy /data/local/tmp/biomeos
@@ -194,7 +180,7 @@ for diagnostics.
 ---
 
 **Status**: Production Ready
-**Updated**: March 13, 2026
-**Tests**: 4,033 passing (75.36% region coverage)
+**Updated**: March 14, 2026
+**Tests**: 4,383 passing (76.06% region coverage)
 
 **Note**: `biomeos monitor dashboard` now redirects to petalTongue (TUI deprecated).

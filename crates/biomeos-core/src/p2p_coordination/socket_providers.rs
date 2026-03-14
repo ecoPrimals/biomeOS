@@ -15,6 +15,7 @@
 
 use anyhow::{Context, Result};
 use async_trait::async_trait;
+use bytes::Bytes;
 use std::io::{Read, Write};
 use std::os::unix::net::UnixStream;
 use std::path::PathBuf;
@@ -63,12 +64,7 @@ impl SocketRpcClient {
         stream.set_read_timeout(Some(self.timeout))?;
         stream.set_write_timeout(Some(self.timeout))?;
 
-        let request = serde_json::json!({
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": method,
-            "params": params
-        });
+        let request = biomeos_types::JsonRpcRequest::new(method, params);
 
         let request_bytes = serde_json::to_vec(&request)?;
         stream.write_all(&request_bytes)?;
@@ -187,7 +183,7 @@ impl SecurityProvider for SocketSecurityProvider {
                 protocol: "tcp".to_string(),
                 secure: true,
             },
-            encryption_key: Vec::new(),
+            encryption_key: Bytes::new(),
             created_at: std::time::SystemTime::now(),
         })
     }
@@ -237,11 +233,11 @@ impl SecurityProvider for SocketSecurityProvider {
             .to_vec();
 
         Ok(BroadcastKeys {
-            broadcast_key: key_data,
+            broadcast_key: Bytes::from(key_data),
             lineage_proof: LineageProof {
                 lineage_id: family_id.to_string(),
                 depth: 0,
-                proof: Vec::new(),
+                proof: Bytes::new(),
                 timestamp: std::time::SystemTime::now(),
             },
             generated_at: std::time::SystemTime::now(),
@@ -269,7 +265,7 @@ impl SecurityProvider for SocketSecurityProvider {
             proof: LineageProof {
                 lineage_id: requester.to_string(),
                 depth: 0,
-                proof: Vec::new(),
+                proof: Bytes::new(),
                 timestamp: std::time::SystemTime::now(),
             },
         })

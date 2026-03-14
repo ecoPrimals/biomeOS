@@ -63,6 +63,7 @@
 
 use anyhow::{anyhow, Result};
 use biomeos_core::atomic_client::AtomicClient;
+use biomeos_types::primal_names::{BEARDOG, NESTGATE, SONGBIRD, SQUIRREL, TOADSTOOL};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::{debug, info, trace};
@@ -116,9 +117,8 @@ pub struct CapabilityTranslationRegistry {
     /// Provider → List of semantic capabilities they provide
     provider_capabilities: HashMap<String, Vec<String>>,
 
-    /// Next RPC ID. Reserved for tarpc request correlation.
-    #[allow(dead_code)] // Future: wire up for tarpc request correlation
-    next_id: std::sync::Arc<std::sync::atomic::AtomicU64>,
+    /// Next RPC ID (reserved for tarpc request correlation)
+    _next_id: std::sync::Arc<std::sync::atomic::AtomicU64>,
 }
 
 impl CapabilityTranslationRegistry {
@@ -127,7 +127,7 @@ impl CapabilityTranslationRegistry {
         Self {
             translations: HashMap::new(),
             provider_capabilities: HashMap::new(),
-            next_id: std::sync::Arc::new(std::sync::atomic::AtomicU64::new(1)),
+            _next_id: std::sync::Arc::new(std::sync::atomic::AtomicU64::new(1)),
         }
     }
 
@@ -430,11 +430,11 @@ impl CapabilityTranslationRegistry {
             }
         };
 
-        let security_provider = resolve_provider("BIOMEOS_SECURITY_PROVIDER", "beardog");
-        let network_provider = resolve_provider("BIOMEOS_NETWORK_PROVIDER", "songbird");
-        let storage_provider = resolve_provider("BIOMEOS_STORAGE_PROVIDER", "nestgate");
-        let compute_provider = resolve_provider("BIOMEOS_COMPUTE_PROVIDER", "toadstool");
-        let ai_provider = resolve_provider("BIOMEOS_AI_PROVIDER", "squirrel");
+        let security_provider = resolve_provider("BIOMEOS_SECURITY_PROVIDER", BEARDOG);
+        let network_provider = resolve_provider("BIOMEOS_NETWORK_PROVIDER", SONGBIRD);
+        let storage_provider = resolve_provider("BIOMEOS_STORAGE_PROVIDER", NESTGATE);
+        let compute_provider = resolve_provider("BIOMEOS_COMPUTE_PROVIDER", TOADSTOOL);
+        let ai_provider = resolve_provider("BIOMEOS_AI_PROVIDER", SQUIRREL);
 
         // Define domain → provider mappings
         // The semantic capability names (left) are stable API contracts
@@ -443,7 +443,7 @@ impl CapabilityTranslationRegistry {
         let domain_providers: DomainProviderMappings = &[
             // Security domain - cryptographic operations
             (
-                "beardog", // Default, overridden by security_provider
+                BEARDOG, // Default, overridden by security_provider
                 "security",
                 &[
                     // Beacon genetics
@@ -480,7 +480,7 @@ impl CapabilityTranslationRegistry {
             ),
             // Network domain - HTTP, discovery, peer communication, mesh relay
             (
-                "songbird", // Default, overridden by network_provider
+                SONGBIRD, // Default, overridden by network_provider
                 "network",
                 &[
                     // HTTP operations
@@ -516,7 +516,7 @@ impl CapabilityTranslationRegistry {
             ),
             // Storage domain - data persistence
             (
-                "nestgate", // Default, overridden by storage_provider
+                NESTGATE, // Default, overridden by storage_provider
                 "storage",
                 &[
                     ("storage.put", "storage.put"),
@@ -527,13 +527,13 @@ impl CapabilityTranslationRegistry {
             ),
             // Compute domain - workload execution
             (
-                "toadstool", // Default, overridden by compute_provider
+                TOADSTOOL, // Default, overridden by compute_provider
                 "compute",
                 &[("compute.execute", "execute"), ("compute.parse", "parse")],
             ),
             // AI domain - machine learning and inference
             (
-                "squirrel", // Default, overridden by ai_provider
+                SQUIRREL, // Default, overridden by ai_provider
                 "ai",
                 &[
                     ("ai.query", "query"),
@@ -912,7 +912,9 @@ mod tests {
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
         assert!(
-            err_msg.contains("Provider") || err_msg.contains("connect") || err_msg.contains("socket"),
+            err_msg.contains("Provider")
+                || err_msg.contains("connect")
+                || err_msg.contains("socket"),
             "Expected provider/connection error, got: {}",
             err_msg
         );

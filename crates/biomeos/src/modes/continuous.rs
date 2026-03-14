@@ -15,6 +15,8 @@ use biomeos_graph::continuous::SessionCommand;
 use biomeos_graph::{
     ContinuousExecutor, CoordinationPattern, GraphEventBroadcaster, GraphLoader, GraphNode,
 };
+use biomeos_types::paths::SystemPaths;
+use biomeos_types::JsonRpcRequest;
 use std::path::PathBuf;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
@@ -23,24 +25,14 @@ use tracing::{debug, info, warn};
 /// Resolve a primal's Unix socket path.
 ///
 /// Priority (per wateringHole `UNIVERSAL_IPC_STANDARD_V3`):
-/// 1. `BIOMEOS_SOCKET_DIR/{primal}.sock`
-/// 2. `$XDG_RUNTIME_DIR/biomeos/{primal}.sock`
-/// 3. `/tmp/{primal}.sock`
+/// 1. `BIOMEOS_SOCKET_DIR/{primal}.sock` (explicit override)
+/// 2. XDG-compliant path via SystemPaths (runtime_dir + primal.sock)
 fn resolve_primal_socket(primal: &str) -> PathBuf {
     if let Ok(dir) = std::env::var("BIOMEOS_SOCKET_DIR") {
         return PathBuf::from(dir).join(format!("{primal}.sock"));
     }
 
-    if let Ok(xdg) = std::env::var("XDG_RUNTIME_DIR") {
-        let p = PathBuf::from(xdg)
-            .join("biomeos")
-            .join(format!("{primal}.sock"));
-        if p.exists() {
-            return p;
-        }
-    }
-
-    PathBuf::from("/tmp").join(format!("{primal}.sock"))
+    SystemPaths::new_lazy().primal_socket(primal)
 }
 
 /// Send a JSON-RPC capability call to a primal over Unix socket.
@@ -55,12 +47,7 @@ async fn call_primal(
 
     let (reader, mut writer) = stream.into_split();
 
-    let request = serde_json::json!({
-        "jsonrpc": "2.0",
-        "method": method,
-        "params": params,
-        "id": 1
-    });
+    let request = JsonRpcRequest::new(method, params);
 
     let payload = format!("{}\n", serde_json::to_string(&request)?);
     writer.write_all(payload.as_bytes()).await?;
@@ -238,10 +225,10 @@ mod tests {
     fn test_resolve_primal_socket_default() {
         // Clear env vars that would override
         std::env::remove_var("BIOMEOS_SOCKET_DIR");
-        std::env::remove_var("XDG_RUNTIME_DIR");
 
         let path = resolve_primal_socket("ludospring");
-        assert_eq!(path, PathBuf::from("/tmp/ludospring.sock"));
+        assert!(path.is_absolute());
+        assert_eq!(path.file_name().unwrap(), "ludospring.sock");
     }
 
     #[test]

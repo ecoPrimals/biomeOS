@@ -148,12 +148,7 @@ impl PrimalDiscovery {
         })?;
 
         // Query for primal info via JSON-RPC
-        let request = serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": "get_primal_info",
-            "params": {},
-            "id": 1
-        });
+        let request = biomeos_types::JsonRpcRequest::new("get_primal_info", serde_json::json!({}));
 
         let request_bytes = serde_json::to_vec(&request).map_err(|e| {
             crate::FederationError::DiscoveryError(format!("Failed to serialize request: {}", e))
@@ -372,15 +367,13 @@ impl PrimalDiscovery {
         let mut reader = BufReader::new(reader);
 
         // Query for discovered peers
-        let request = serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": "discovery.list_peers",
-            "params": {
+        let request = biomeos_types::JsonRpcRequest::new(
+            "discovery.list_peers",
+            serde_json::json!({
                 "include_capabilities": true,
                 "include_endpoints": true
-            },
-            "id": 1
-        });
+            }),
+        );
 
         let request_str = serde_json::to_string(&request)
             .map_err(|e| crate::FederationError::DiscoveryError(format!("JSON error: {}", e)))?

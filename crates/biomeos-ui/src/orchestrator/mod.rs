@@ -558,10 +558,7 @@ mod tests {
     async fn test_run_subscribes_and_loops() {
         let mut orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
         orchestrator.start().await.unwrap();
-        let _ = tokio::time::timeout(
-            std::time::Duration::from_millis(100),
-            orchestrator.run(),
-        )
-        .await;
+        let _ =
+            tokio::time::timeout(std::time::Duration::from_millis(100), orchestrator.run()).await;
     }
 }

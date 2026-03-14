@@ -196,15 +196,20 @@ fn test_sweetgrass_deploy_graph_parses() {
         .expect("register-capabilities node");
     assert_eq!(
         reg_node.capabilities,
-        vec!["attribution", "braid", "provenance", "contribution", "privacy"]
+        vec![
+            "attribution",
+            "braid",
+            "provenance",
+            "contribution",
+            "privacy"
+        ]
     );
 }
 
 #[test]
 fn test_provenance_trio_deploy_graph_parses() {
     let path = graphs_dir().join("provenance_trio_deploy.toml");
-    let graph =
-        Graph::from_toml_file(&path).expect("provenance_trio_deploy.toml should parse");
+    let graph = Graph::from_toml_file(&path).expect("provenance_trio_deploy.toml should parse");
 
     assert_eq!(graph.id, "provenance_trio_deploy");
     assert_eq!(graph.nodes.len(), 11);
@@ -329,9 +334,7 @@ fn test_provenance_trio_topological_order() {
             .unwrap_or_else(|| panic!("Node '{}' not found", id))
     };
 
-    let deps_of = |id: &str| -> &Vec<String> {
-        &graph.nodes[node_index(id)].depends_on
-    };
+    let deps_of = |id: &str| -> &Vec<String> { &graph.nodes[node_index(id)].depends_on };
 
     // rhizoCrypt depends on loamSpine being healthy
     assert!(
@@ -422,11 +425,7 @@ async fn test_trio_capabilities_registered() {
             "No providers for domain '{}' — trio not fully registered",
             domain
         );
-        eprintln!(
-            "  {} domain: {} provider(s)",
-            domain,
-            primals.len()
-        );
+        eprintln!("  {} domain: {} provider(s)", domain, primals.len());
     }
 }
 
@@ -558,10 +557,7 @@ async fn test_rootpulse_commit_e2e() {
     .await
     .expect("provenance.get_braid should succeed");
 
-    assert!(
-        verify["result"].is_object(),
-        "Braid should be retrievable"
-    );
+    assert!(verify["result"].is_object(), "Braid should be retrievable");
     eprintln!("  Verified braid retrieval");
 
     eprintln!("\n  RootPulse commit E2E: PASSED");

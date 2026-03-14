@@ -259,7 +259,7 @@ impl BtspCoordinator {
 
 /// Reasons why a tunnel might be degraded
 #[derive(Debug, Clone, Copy)]
-#[allow(dead_code)] // Used in health monitoring; TODO: expand for full degradation reporting
+#[allow(dead_code)]
 enum DegradationCause {
     /// Security keys are expiring soon
     SecurityKeyExpiring,
