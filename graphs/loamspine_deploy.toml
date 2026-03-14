@@ -2,7 +2,7 @@
 # Deploys LoamSpine (permanence primal) atop Nest Atomic (Tower + NestGate)
 #
 # LoamSpine provides immutable ledger, certificates, proofs, waypoint anchoring.
-# Dual protocol: tarpc (9001) + JSON-RPC (8080). Discovers via Songbird.
+# Dual protocol: tarpc (9001) + JSON-RPC (8301). Discovers via Songbird.
 #
 # Required: Tower (BearDog + Songbird)
 # Optional: NestGate (backup storage)
@@ -12,38 +12,71 @@ id = "loamspine_deploy"
 version = "1.0.0"
 description = "LoamSpine permanence primal deployment"
 
+# PHASE 1: VERIFY TOWER FOUNDATION
+
 [[nodes]]
 id = "verify-tower"
-action = "check_primal"
-params = { primal = "beardog", required = true }
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.config]
+primal_name = "beardog"
+timeout_secs = 10
 
 [[nodes]]
 id = "verify-songbird"
-action = "check_primal"
-params = { primal = "songbird", required = true }
 depends_on = ["verify-tower"]
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.config]
+primal_name = "songbird"
+timeout_secs = 10
+
+# PHASE 2: START LOAMSPINE
 
 [[nodes]]
 id = "start-loamspine"
-action = "start_primal"
-params = { primal = "loamspine", binary = "loamspine", args = ["server"] }
 depends_on = ["verify-songbird"]
 
-[nodes.env]
+[nodes.operation]
+name = "primal.launch"
+
+[nodes.operation.environment]
 LOAMSPINE_TARPC_PORT = "9001"
 LOAMSPINE_JSONRPC_PORT = "8301"
 LOAMSPINE_BIND_ADDRESS = "0.0.0.0"
 LOAMSPINE_STORAGE_PATH = "${XDG_DATA_HOME}/biomeos/loamspine"
 DISCOVERY_ENDPOINT = "http://127.0.0.1:8080"
 
+[nodes.config]
+primal_name = "loamspine"
+mode = "server"
+
+# PHASE 3: REGISTER CAPABILITIES
+
 [[nodes]]
 id = "register-capabilities"
-action = "register_capabilities"
-params = { primal = "loamspine", capabilities = ["permanent_storage", "linear_history", "spine", "certificate", "commit", "proof", "waypoint_anchoring"] }
 depends_on = ["start-loamspine"]
+capabilities = ["permanent_storage", "linear_history", "spine", "certificate", "commit", "proof", "waypoint_anchoring"]
+
+[nodes.operation]
+name = "register_capabilities"
+
+[nodes.config]
+primal_name = "loamspine"
+
+# PHASE 4: VERIFY HEALTH
 
 [[nodes]]
 id = "verify-health"
-action = "health_check"
-params = { primal = "loamspine", method = "health.check", port = 8301, protocol = "jsonrpc", timeout_ms = 5000 }
 depends_on = ["register-capabilities"]
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.config]
+primal_name = "loamspine"
+timeout_secs = 5

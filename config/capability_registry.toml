@@ -400,6 +400,11 @@ capabilities = [
 # Dynamic difficulty adjustment recommendation
 "game.difficulty_adjustment" = { provider = "ludospring", method = "game.difficulty_adjustment" }
 
+# ── ContinuousExecutor: 60Hz game loop tick capabilities ──
+# Used by game_engine_tick.toml continuous graph
+"game.tick_logic" = { provider = "ludospring", method = "game.tick_logic" }
+"game.tick_physics" = { provider = "ludospring", method = "game.tick_physics" }
+
 # ------------------------------------------------------------------------------
 # Visualization Domain (petalTongue)
 # Tufte-inspired visualization, export, UI rendering, interaction subscriptions.

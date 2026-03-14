@@ -28,19 +28,23 @@
 use biomeos_core::atomic_client::AtomicClient;
 use tracing::debug;
 
-/// Trait for calling capabilities via neuralAPI
+/// Trait for calling capabilities via neuralAPI.
 ///
 /// This abstracts the actual RPC mechanism, allowing:
 /// - Real capability.call via CapabilityTranslationRegistry
 /// - Mock implementations for testing
 /// - Different transport mechanisms
+///
+/// Callers pass dotted semantic names (e.g. `"beacon.encrypt"`); the
+/// implementation splits them into the canonical `{ capability, operation, args }`
+/// format before forwarding to the Neural API.
 #[async_trait::async_trait]
 pub trait CapabilityCaller: Send + Sync {
-    /// Call a semantic capability
+    /// Call a semantic capability.
     ///
     /// # Arguments
-    /// * `capability` - Semantic capability name (e.g., "beacon.encrypt")
-    /// * `params` - Parameters as JSON value
+    /// * `capability` - Dotted semantic name (e.g., `"beacon.encrypt"`)
+    /// * `params` - Operation arguments as JSON value
     ///
     /// # Returns
     /// Result from the provider primal
@@ -93,10 +97,19 @@ impl CapabilityCaller for NeuralApiCapabilityCaller {
         // Create AtomicClient for neuralAPI socket (Universal IPC v3.0)
         let client = AtomicClient::unix(&self.neural_api_socket);
 
-        // Build capability.call params
+        // Build capability.call params in canonical format:
+        // { capability: "domain", operation: "method", args: {...} }
+        // Split dotted capability names (e.g. "beacon.encrypt" → "beacon" + "encrypt")
+        let (domain, operation) = if let Some(dot_pos) = capability.find('.') {
+            (&capability[..dot_pos], &capability[dot_pos + 1..])
+        } else {
+            (capability, "call")
+        };
+
         let call_params = serde_json::json!({
-            "capability": capability,
-            "params": params
+            "capability": domain,
+            "operation": operation,
+            "args": params
         });
 
         // Call neuralAPI's capability.call method using AtomicClient

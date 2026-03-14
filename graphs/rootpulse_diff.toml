@@ -1,0 +1,153 @@
+# RootPulse Diff Workflow
+# Compares two commits to produce a structured diff summary.
+#
+# A "diff" in RootPulse means:
+# 1. Retrieve dehydration summaries for both commits
+# 2. Compare Merkle trees to identify changed vertices
+# 3. Generate a structured diff report
+# 4. Optionally record the comparison as provenance
+#
+# This supports code review, audit trails, and branch comparison
+# before merging.
+#
+# Required: Tower (BearDog) + rhizoCrypt + LoamSpine
+# Optional: sweetGrass (attribution)
+
+[graph]
+id = "rootpulse_diff"
+description = "RootPulse diff: compare two commits and produce a structured diff"
+coordination = "Sequential"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 1: RETRIEVE BOTH COMMITS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "check_trio"
+output = "trio_healthy"
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.operation.params]
+check_rhizocrypt = true
+check_loamspine = true
+timeout_seconds = 10
+
+[nodes.constraints]
+timeout_ms = 15000
+
+[[nodes]]
+id = "get_commit_a"
+depends_on = ["check_trio"]
+output = "commit_a"
+capabilities = ["permanent_storage"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "spine"
+operation = "get"
+args = { commit_id = "${COMMIT_A}" }
+
+[nodes.constraints]
+timeout_ms = 10000
+
+[[nodes]]
+id = "get_commit_b"
+depends_on = ["check_trio"]
+output = "commit_b"
+capabilities = ["permanent_storage"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "spine"
+operation = "get"
+args = { commit_id = "${COMMIT_B}" }
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 2: COMPARE MERKLE TREES (rhizoCrypt)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "get_proof_a"
+depends_on = ["get_commit_a"]
+output = "merkle_a"
+capabilities = ["dag"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "dag"
+operation = "get_merkle_root"
+args = { session_id = "${SESSION_A}" }
+
+[nodes.constraints]
+timeout_ms = 15000
+
+[[nodes]]
+id = "get_proof_b"
+depends_on = ["get_commit_b"]
+output = "merkle_b"
+capabilities = ["dag"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "dag"
+operation = "get_merkle_root"
+args = { session_id = "${SESSION_B}" }
+
+[nodes.constraints]
+timeout_ms = 15000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 3: COMPUTE DIFF
+# Query vertices that differ between the two sessions
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "query_changes"
+depends_on = ["get_proof_a", "get_proof_b"]
+output = "diff_result"
+capabilities = ["dag"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "dag"
+operation = "query_vertices"
+args = { base_session = "${SESSION_A}", target_session = "${SESSION_B}", filter = "changed" }
+
+[nodes.constraints]
+timeout_ms = 30000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 4: DIFF PROVENANCE (optional)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "attribute_diff"
+depends_on = ["query_changes"]
+output = "diff_braid"
+capabilities = ["attribution"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "provenance"
+operation = "create_braid"
+args = { metadata = { type = "diff", commit_a = "${COMMIT_A}", commit_b = "${COMMIT_B}", changes = "${DIFF_RESULT}" }, agents = [{ did = "${AGENT_DID}", role = "reviewer", contribution = 1.0 }] }
+
+[nodes.constraints]
+timeout_ms = 15000

@@ -66,7 +66,7 @@ pub async fn run(graphs_dir: PathBuf, family_id: String, socket: Option<PathBuf>
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used)]
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
 
@@ -117,5 +117,40 @@ mod tests {
         assert!(path.is_absolute());
         assert!(path.parent().unwrap() == std::path::Path::new("/tmp"));
         assert_eq!(path.file_name().unwrap(), "neural-api-abc123.sock");
+    }
+
+    #[test]
+    fn test_resolve_neural_api_config_with_socket() {
+        let socket = PathBuf::from("/custom/neural.sock");
+        let config =
+            resolve_neural_api_config(PathBuf::from("graphs"), Some(socket.clone()), Some("fam1"));
+        assert_eq!(config.socket_path, socket);
+        assert_eq!(config.family_id, "fam1");
+        assert_eq!(config.graphs_dir, PathBuf::from("graphs"));
+    }
+
+    #[test]
+    fn test_neural_api_config_debug() {
+        let config = NeuralApiConfig {
+            graphs_dir: PathBuf::from("g"),
+            family_id: "f".to_string(),
+            socket_path: PathBuf::from("/tmp/s.sock"),
+        };
+        let s = format!("{:?}", config);
+        assert!(s.contains("NeuralApiConfig"));
+        assert!(s.contains("g"));
+        assert!(s.contains("f"));
+    }
+
+    #[test]
+    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
+    fn test_resolve_neural_api_config_family_from_discovery() {
+        let config = resolve_neural_api_config(PathBuf::from("g"), None, None);
+        assert!(!config.family_id.is_empty());
+        assert_eq!(config.graphs_dir, PathBuf::from("g"));
+        assert!(config
+            .socket_path
+            .to_string_lossy()
+            .contains(&config.family_id));
     }
 }

@@ -255,6 +255,8 @@ async fn show_status() -> Result<()> {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
     use super::*;
     use crate::ModelCacheCommand;
 
@@ -289,6 +291,23 @@ mod tests {
         );
         assert_eq!(hf_dir_to_model_id("other--prefix"), None);
         assert_eq!(hf_dir_to_model_id(""), None);
+        assert_eq!(hf_dir_to_model_id("models--"), Some("".to_string()));
+        assert_eq!(
+            hf_dir_to_model_id("models--single--level"),
+            Some("single/level".to_string())
+        );
+    }
+
+    #[test]
+    fn test_format_size_mb_large() {
+        assert_eq!(format_size_mb(1_073_741_824), "1024.0 MB");
+        assert_eq!(format_size_mb(2_097_152_000), "2000.0 MB");
+    }
+
+    #[test]
+    fn test_format_size_gb_fractional() {
+        assert_eq!(format_size_gb(1_610_612_736), "1.5 GB");
+        assert_eq!(format_size_gb(5_368_709_120), "5.0 GB");
     }
 
     #[tokio::test]

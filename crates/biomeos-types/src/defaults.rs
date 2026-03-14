@@ -291,7 +291,7 @@ pub fn join_socket_path(dir: impl AsRef<Path>, service: &str) -> PathBuf {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -712,5 +712,48 @@ mod tests {
         let config = RuntimeConfig::from_env();
         assert_eq!(config.http_port(), 8080);
         std::env::remove_var("HTTP_PORT");
+    }
+
+    #[test]
+    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
+    fn test_runtime_config_from_env_xdg_runtime_dir() {
+        env::remove_var("BIOMEOS_SOCKET_DIR");
+        env::set_var("XDG_RUNTIME_DIR", "/tmp/xdg-test-12345");
+        let config = RuntimeConfig::from_env();
+        let socket_dir = config.socket_dir();
+        env::remove_var("XDG_RUNTIME_DIR");
+        assert!(socket_dir.to_string_lossy().contains("biomeos"));
+        assert!(socket_dir.to_string_lossy().contains("xdg-test"));
+    }
+
+    #[test]
+    fn test_join_socket_path_with_pathbuf() {
+        let dir = PathBuf::from("/var/run");
+        let path = join_socket_path(dir, "myservice");
+        assert_eq!(path.to_str().unwrap(), "/var/run/myservice.sock");
+    }
+
+    #[test]
+    fn test_runtime_config_socket_dir_accessor() {
+        let config = RuntimeConfig::with_socket_dir("/run/biomeos");
+        assert_eq!(config.socket_dir(), Path::new("/run/biomeos"));
+    }
+
+    #[test]
+    fn test_service_socket_env_override_takes_precedence() {
+        env::set_var("OVERRIDE_SVC_SOCKET", "/absolute/override.sock");
+        let config = RuntimeConfig::with_socket_dir("/default/dir");
+        let path = config.service_socket("override-svc");
+        env::remove_var("OVERRIDE_SVC_SOCKET");
+        assert_eq!(path.to_str().unwrap(), "/absolute/override.sock");
+    }
+
+    #[test]
+    fn test_env_vars_all_constants() {
+        assert_eq!(env_vars::SQUIRREL_SOCKET, "SQUIRREL_SOCKET");
+        assert_eq!(env_vars::NESTGATE_SOCKET, "NESTGATE_SOCKET");
+        assert_eq!(env_vars::TOADSTOOL_SOCKET, "TOADSTOOL_SOCKET");
+        assert_eq!(env_vars::PETALTONGUE_SOCKET, "PETALTONGUE_SOCKET");
+        assert_eq!(env_vars::DISCOVERY_REGISTRY_SOCKET, "DISCOVERY_REGISTRY_SOCKET");
     }
 }

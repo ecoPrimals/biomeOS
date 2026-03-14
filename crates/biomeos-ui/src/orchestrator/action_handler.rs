@@ -574,9 +574,10 @@ impl ActionHandler {
 // ============================================================================
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
     #[tokio::test]
     async fn test_handle_start_primal_no_toadstool() {
@@ -820,5 +821,52 @@ mod tests {
         let result = ActionHandler::handle_user_action(action, "family-123", &connections).await;
         assert!(result.is_ok());
         assert!(result.unwrap().is_success());
+    }
+
+    #[tokio::test]
+    async fn test_handle_assign_device_success_with_empty_connections() {
+        let connections = PrimalConnections::default();
+        let action = UserAction::AssignDevice {
+            device_id: "gpu-0".to_string(),
+            primal_id: "toadstool".to_string(),
+        };
+        let result = ActionHandler::handle_user_action(action, "family-1", &connections).await;
+        assert!(result.is_ok());
+        let ar = result.unwrap();
+        assert!(ar.is_success());
+        if let ActionResult::Success { message } = &ar {
+            assert!(message.contains("gpu-0"));
+            assert!(message.contains("toadstool"));
+        }
+    }
+
+    #[tokio::test]
+    async fn test_register_assignment_songbird_returns_id() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let socket_path = temp.path().join("songbird.sock");
+        let path = socket_path.clone();
+        let server = tokio::spawn(async move {
+            let listener = tokio::net::UnixListener::bind(&path).expect("bind");
+            if let Ok((mut stream, _)) = listener.accept().await {
+                let mut buf = vec![0u8; 4096];
+                let n = stream.read(&mut buf).await.expect("read");
+                let _req: serde_json::Value = serde_json::from_slice(&buf[..n]).expect("parse");
+                let resp = serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "result": {"assignment_id": "songbird-abc-123"},
+                    "id": 1
+                });
+                let line = format!("{}\n", resp);
+                stream.write_all(line.as_bytes()).await.expect("write");
+                stream.flush().await.expect("flush");
+            }
+        });
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        let songbird = SongbirdClient::with_socket("songbird", &socket_path);
+        let result = ActionHandler::register_assignment(&Some(songbird), "device-1", "primal-1").await;
+        assert!(result.is_ok());
+        let id = result.unwrap();
+        assert_eq!(id, "songbird-abc-123");
+        server.abort();
     }
 }

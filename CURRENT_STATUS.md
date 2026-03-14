@@ -24,9 +24,9 @@
 | **Continuous Systems** | ContinuousExecutor (60Hz tick), GraphEventBroadcaster, SensorEventBus |
 | **XR/VR Types** | StereoConfig, Pose6DoF, TrackingFrame, HapticCommand, MotionCaptureAdapter |
 | **Surgical Domain** | SurgicalProcedure, TissueMaterial, AnatomyModel, PkModelParams |
-| **Capability Domains** | 16 domains (+ rhizocrypt, loamspine, sweetgrass), 205+ translations |
-| **Deploy Graphs** | 30 (+ rootpulse_commit, provenance_pipeline, loamspine_deploy, rhizocrypt_deploy, sweetgrass_deploy, provenance_trio_deploy) |
-| **Niche Templates** | 15 (+ rootpulse, provenance-pipeline) |
+| **Capability Domains** | 16 domains (+ rhizocrypt, loamspine, sweetgrass), 210+ translations |
+| **Deploy Graphs** | 35 (+ rootpulse_branch, rootpulse_merge, rootpulse_diff, rootpulse_federate, cross_spring_soil_microbiome) |
+| **Niche Templates** | 20 (+ rootpulse-branch, rootpulse-merge, rootpulse-diff, rootpulse-federate, soil-microbiome) |
 | **Genetic Model** | EVOLVED - Mitochondrial + Nuclear DNA |
 | **BirdSong Discovery** | Encrypted, shared beacon model |
 | **Discovery Model** | Dynamic socket scanning + capability taxonomy |
@@ -40,7 +40,7 @@
 | **Plasmodium** | HTTP JSON-RPC collective (runtime port, SSH legacy removed) |
 | **Model Cache** | NUCLEUS-integrated, HuggingFace import, NestGate fallback |
 | **AI Bridge** | Squirrel -> Songbird -> Cloud/Local AI (validated) |
-| **Neural API** | 205+ capability translations, proxy_http, capability.call |
+| **Neural API** | 210+ capability translations, proxy_http, capability.call (canonical + dotted + params-alias) |
 | **Lifecycle** | Deep health monitoring, auto-resurrection, coordinated shutdown |
 | **SystemPaths** | All paths XDG-compliant via centralized `SystemPaths` |
 | **Hardcoded `/tmp`** | 0 in production code |

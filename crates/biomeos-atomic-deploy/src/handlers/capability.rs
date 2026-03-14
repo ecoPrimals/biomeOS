@@ -14,11 +14,20 @@
 //! # Architecture
 //!
 //! ```text
-//! Consumer → capability.call("crypto", "sha256", data)
+//! Consumer → capability.call({ capability: "crypto", operation: "sha256", args: {...} })
 //!              │
 //!              ▼
 //! CapabilityHandler → Translation Registry → NeuralRouter → Primal
 //! ```
+//!
+//! # Canonical Parameter Format
+//!
+//! ```json
+//! { "capability": "domain", "operation": "method", "args": {...} }
+//! ```
+//!
+//! Backward-compatible: dotted capability names (`"crypto.sha256"`) split on
+//! first dot; `"params"` accepted as alias for `"args"`.
 
 use crate::capability_translation::CapabilityTranslationRegistry;
 use crate::neural_router::{NeuralRouter, RoutingMetrics};
@@ -291,26 +300,43 @@ impl CapabilityHandler {
     /// This is the main entry point for TRUE PRIMAL communication.
     /// Consumers use semantic names; we translate and route.
     ///
-    /// # Parameters
-    /// - `capability`: Target capability (e.g., "crypto")
+    /// # Parameters (canonical format)
+    /// - `capability`: Target capability domain (e.g., "crypto")
     /// - `operation`: Semantic operation (e.g., "sha256")
     /// - `args`: Arguments for the operation
+    ///
+    /// # Backward-compatible formats
+    /// - Dotted capability: `{ "capability": "crypto.sha256", "args": {...} }`
+    ///   splits on first dot into domain + operation.
+    /// - `params` alias: `{ "capability": "crypto", "operation": "sha256", "params": {...} }`
+    ///   treated as `args`.
     pub async fn call(&self, params: &Option<Value>) -> Result<Value> {
         let start = std::time::Instant::now();
         let params = params.as_ref().context("Missing parameters")?;
 
-        let capability = params["capability"]
+        let raw_capability = params["capability"]
             .as_str()
             .context("Missing 'capability' field")?;
-        let operation = params["operation"]
-            .as_str()
-            .context("Missing 'operation' field")?;
-        let args = params.get("args").cloned().unwrap_or(json!({}));
 
-        trace!("capability.call: {}.{}", capability, operation);
+        // Support dotted capability names: "crypto.sha256" → domain="crypto", op="sha256"
+        let (capability, operation) = if let Some(explicit_op) = params["operation"].as_str() {
+            (raw_capability, explicit_op.to_string())
+        } else if let Some(dot_pos) = raw_capability.find('.') {
+            (&raw_capability[..dot_pos], raw_capability[dot_pos + 1..].to_string())
+        } else {
+            anyhow::bail!("Missing 'operation' field and capability '{}' has no dotted operation", raw_capability);
+        };
+
+        // Accept both "args" and "params" (backward compat for older callers)
+        let args = params.get("args")
+            .or_else(|| params.get("params"))
+            .cloned()
+            .unwrap_or(json!({}));
+
+        trace!("capability.call: {}.{}", capability, &operation);
 
         // Construct semantic name
-        let semantic_name = format!("{}.{}", capability, operation);
+        let semantic_name = format!("{}.{}", capability, &operation);
 
         // Look up translation
         let registry = self.translation_registry.read().await;
@@ -704,6 +730,37 @@ mod tests {
         let params = Some(json!({ "capability": "crypto" }));
         let result = handler.call(&params).await;
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_call_dotted_capability() {
+        let handler = handler_with_registration().await;
+        // "crypto.sha256" should split into capability="crypto", operation="sha256"
+        let params = Some(json!({
+            "capability": "crypto.sha256",
+            "args": { "data": "test" }
+        }));
+        // Will fail at socket level but should NOT fail at param parsing
+        let result = handler.call(&params).await;
+        // Reaches routing (no socket) rather than "missing operation" error
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(!err.contains("Missing 'operation'"));
+    }
+
+    #[tokio::test]
+    async fn test_call_params_alias_for_args() {
+        let handler = handler_with_registration().await;
+        // "params" should be accepted as alias for "args"
+        let params = Some(json!({
+            "capability": "crypto",
+            "operation": "sha256",
+            "params": { "data": "test" }
+        }));
+        let result = handler.call(&params).await;
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(!err.contains("Missing"));
     }
 
     // ── capability.route ───────────────────────────────────────────────

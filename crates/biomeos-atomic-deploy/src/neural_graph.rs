@@ -276,7 +276,58 @@ impl Default for GraphConfig {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
     use super::*;
+
+    #[test]
+    fn test_from_toml_str_missing_graph_section() {
+        let toml = r#"
+id = "orphan"
+[nodes]
+"#;
+        let result = Graph::from_toml_str(toml);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("[graph]"));
+    }
+
+    #[test]
+    fn test_from_toml_str_missing_nodes_array() {
+        let toml = r#"
+[graph]
+id = "no_nodes"
+version = "1.0.0"
+description = "No nodes"
+"#;
+        let result = Graph::from_toml_str(toml);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("nodes"));
+    }
+
+    #[test]
+    fn test_from_toml_str_invalid_toml() {
+        let toml = "this is not valid [toml = syntax";
+        let result = Graph::from_toml_str(toml);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_from_toml_str_empty_nodes_array() {
+        // nodes must be top-level; in TOML, keys under [graph] go into graph table
+        let toml = r#"
+nodes = []
+
+[graph]
+id = "empty_graph"
+version = "1.0.0"
+description = "Empty nodes"
+"#;
+        let result = Graph::from_toml_str(toml);
+        assert!(result.is_ok());
+        let graph = result.unwrap();
+        assert_eq!(graph.id, "empty_graph");
+        assert!(graph.nodes.is_empty());
+    }
 
     #[test]
     fn test_parse_simple_graph() {

@@ -1,0 +1,207 @@
+# Cross-Spring Soil Microbiome Pipeline
+# Connects airSpring soil moisture → wetSpring diversity analysis
+# with Provenance Trio attribution for the full chain.
+#
+# Flow:
+#   1. airSpring computes soil moisture via Richards PDE
+#   2. airSpring computes water balance for environmental context
+#   3. wetSpring analyzes microbial diversity under those soil conditions
+#   4. wetSpring runs beta diversity comparison across sites
+#   5. Provenance Trio attributes the cross-spring results
+#
+# This is a cross-Spring coordination test: airSpring output feeds
+# wetSpring input, and the combined results get provenance braids.
+#
+# Required: Tower + airSpring + wetSpring
+# Optional: Provenance Trio (attribution), neuralSpring (spectral)
+
+[graph]
+id = "cross_spring_soil_microbiome"
+version = "1.0.0"
+description = "Cross-spring pipeline: soil moisture (airSpring) → microbial diversity (wetSpring) → provenance"
+coordination = "Sequential"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 1: HEALTH CHECKS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "check_airspring"
+output = "airspring_healthy"
+capabilities = ["ecology"]
+
+[nodes.operation]
+name = "rpc_call"
+target = "airspring"
+
+[nodes.operation.params]
+method = "health"
+params = {}
+
+[nodes.constraints]
+timeout_ms = 5000
+
+[[nodes]]
+id = "check_wetspring"
+output = "wetspring_healthy"
+capabilities = ["science"]
+
+[nodes.operation]
+name = "rpc_call"
+target = "wetspring"
+
+[nodes.operation.params]
+method = "health"
+params = {}
+
+[nodes.constraints]
+timeout_ms = 5000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 2: SOIL PHYSICS (airSpring)
+# Compute soil moisture profile via Richards 1D equation and pedotransfer
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "pedotransfer"
+depends_on = ["check_airspring"]
+output = "soil_hydraulic_params"
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "ecology"
+operation = "pedotransfer"
+args = { sand_pct = 40.0, clay_pct = 20.0, organic_matter_pct = 3.5 }
+
+[nodes.constraints]
+timeout_ms = 10000
+
+[[nodes]]
+id = "richards_1d"
+depends_on = ["pedotransfer"]
+output = "moisture_profile"
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "ecology"
+operation = "richards_1d"
+args = { depth_cm = 100, layers = 20, dt_seconds = 3600, simulation_hours = 48, initial_vwc = 0.30 }
+
+[nodes.constraints]
+timeout_ms = 30000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 3: ENVIRONMENTAL CONTEXT (airSpring)
+# Water balance and ET₀ for the same period
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "compute_et0"
+depends_on = ["check_airspring"]
+output = "et0_result"
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "ecology"
+operation = "et0_fao56"
+args = { tmax = 28.0, tmin = 15.0, solar_radiation = 18.5, wind_speed_2m = 1.2, actual_vapour_pressure = 1.0, day_of_year = 150, latitude_deg = 42.727, elevation_m = 256.0 }
+
+[nodes.constraints]
+timeout_ms = 10000
+
+[[nodes]]
+id = "water_balance"
+depends_on = ["compute_et0"]
+output = "water_balance_result"
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "ecology"
+operation = "water_balance"
+args = { et0_mm = 4.5, kc = 1.0, precipitation_mm = 2.0, soil_water_mm = 120.0, field_capacity_mm = 200.0, wilting_point_mm = 50.0 }
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 4: MICROBIAL DIVERSITY (wetSpring)
+# Analyze microbial community under the computed soil conditions
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "alpha_diversity"
+depends_on = ["check_wetspring", "richards_1d"]
+output = "diversity_result"
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "science"
+operation = "diversity"
+args = { soil_moisture_context = "${MOISTURE_PROFILE}", analysis_type = "alpha" }
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[[nodes]]
+id = "beta_diversity"
+depends_on = ["alpha_diversity"]
+output = "beta_diversity_result"
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "science"
+operation = "beta_diversity"
+args = { communities = "${DIVERSITY_RESULT}" }
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[[nodes]]
+id = "qs_model"
+depends_on = ["check_wetspring", "water_balance"]
+output = "quorum_sensing_result"
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "science"
+operation = "qs_model"
+args = { environmental_context = "${WATER_BALANCE_RESULT}" }
+
+[nodes.constraints]
+timeout_ms = 30000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 5: PROVENANCE ATTRIBUTION (sweetGrass, optional)
+# Create a provenance braid attributing both springs' contributions
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "attribute_pipeline"
+depends_on = ["beta_diversity", "qs_model"]
+output = "braid_ref"
+capabilities = ["attribution"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "provenance"
+operation = "create_braid"
+args = { experiment_id = "${EXPERIMENT_ID}", agents = [{ did = "did:primal:airspring", role = "data_provider", contribution = 0.4 }, { did = "did:primal:wetspring", role = "analyzer", contribution = 0.4 }, { did = "${AGENT_DID}", role = "orchestrator", contribution = 0.2 }] }
+
+[nodes.constraints]
+timeout_ms = 15000

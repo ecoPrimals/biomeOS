@@ -112,13 +112,12 @@ pub fn plasmid_bin_dir() -> Option<PathBuf> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_family_id_not_set() {
-        // When neither env var is set, returns None
-        // (Can't control other tests' env, so just verify the function runs)
         let _ = family_id();
     }
 
@@ -134,5 +133,99 @@ mod tests {
         assert!(vars::SECURITY_PROVIDER.starts_with("BIOMEOS_"));
         assert!(vars::NETWORK_PROVIDER.starts_with("BIOMEOS_"));
         assert!(vars::SOCKET_DIR.starts_with("BIOMEOS_"));
+    }
+
+    #[test]
+    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
+    fn test_family_id_biomeos_precedence() {
+        env::set_var(vars::FAMILY_ID, "biomeos-family");
+        env::set_var(vars::FAMILY_ID_LEGACY, "legacy-family");
+        let id = family_id();
+        env::remove_var(vars::FAMILY_ID);
+        env::remove_var(vars::FAMILY_ID_LEGACY);
+        assert_eq!(id, Some("biomeos-family".to_string()));
+    }
+
+    #[test]
+    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
+    fn test_family_id_legacy_fallback() {
+        env::remove_var(vars::FAMILY_ID);
+        env::set_var(vars::FAMILY_ID_LEGACY, "legacy-only");
+        let id = family_id();
+        env::remove_var(vars::FAMILY_ID_LEGACY);
+        assert_eq!(id, Some("legacy-only".to_string()));
+    }
+
+    #[test]
+    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
+    fn test_security_provider() {
+        env::set_var(vars::SECURITY_PROVIDER, "custom-security");
+        let provider = security_provider();
+        env::remove_var(vars::SECURITY_PROVIDER);
+        assert_eq!(provider, Some("custom-security".to_string()));
+    }
+
+    #[test]
+    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
+    fn test_network_provider() {
+        env::set_var(vars::NETWORK_PROVIDER, "custom-network");
+        let provider = network_provider();
+        env::remove_var(vars::NETWORK_PROVIDER);
+        assert_eq!(provider, Some("custom-network".to_string()));
+    }
+
+    #[test]
+    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
+    fn test_strict_discovery_enabled() {
+        env::set_var(vars::STRICT_DISCOVERY, "1");
+        assert!(strict_discovery());
+        env::remove_var(vars::STRICT_DISCOVERY);
+    }
+
+    #[test]
+    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
+    fn test_socket_dir() {
+        env::set_var(vars::SOCKET_DIR, "/run/biomeos");
+        let dir = socket_dir();
+        env::remove_var(vars::SOCKET_DIR);
+        assert_eq!(dir, Some(PathBuf::from("/run/biomeos")));
+    }
+
+    #[test]
+    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
+    fn test_xdg_runtime_dir() {
+        env::set_var(vars::XDG_RUNTIME_DIR, "/tmp/xdg-test");
+        let dir = xdg_runtime_dir();
+        env::remove_var(vars::XDG_RUNTIME_DIR);
+        assert_eq!(dir, Some(PathBuf::from("/tmp/xdg-test")));
+    }
+
+    #[test]
+    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
+    fn test_plasmid_bin_dir_ecoprimals() {
+        env::set_var(vars::PLASMID_BIN, "/eco/plasmid");
+        env::remove_var(vars::PLASMID_BIN_DIR);
+        let dir = plasmid_bin_dir();
+        env::remove_var(vars::PLASMID_BIN);
+        assert_eq!(dir, Some(PathBuf::from("/eco/plasmid")));
+    }
+
+    #[test]
+    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
+    fn test_plasmid_bin_dir_biomeos_fallback() {
+        env::remove_var(vars::PLASMID_BIN);
+        env::set_var(vars::PLASMID_BIN_DIR, "/biomeos/bin");
+        let dir = plasmid_bin_dir();
+        env::remove_var(vars::PLASMID_BIN_DIR);
+        assert_eq!(dir, Some(PathBuf::from("/biomeos/bin")));
+    }
+
+    #[test]
+    fn test_vars_all_constants() {
+        assert_eq!(vars::FAMILY_ID, "BIOMEOS_FAMILY_ID");
+        assert_eq!(vars::FAMILY_ID_LEGACY, "FAMILY_ID");
+        assert_eq!(vars::NEURAL_API_SOCKET, "NEURAL_API_SOCKET");
+        assert_eq!(vars::BEARDOG_SOCKET, "BEARDOG_SOCKET");
+        assert_eq!(vars::SONGBIRD_SOCKET, "SONGBIRD_SOCKET");
     }
 }

@@ -76,3 +76,63 @@ impl Default for LifecycleSpec {
         }
     }
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lifecycle_spec_default() {
+        let spec = LifecycleSpec::default();
+        assert!(spec.hooks.is_empty());
+        assert_eq!(
+            spec.termination_grace_period,
+            Some(Duration::from_secs(30))
+        );
+        assert!(spec.shutdown.is_none());
+        assert!(spec.startup.is_none());
+        assert!(spec.update_strategy.is_none());
+    }
+
+    #[test]
+    fn lifecycle_spec_serialization_roundtrip() {
+        let spec = LifecycleSpec::default();
+        let json = serde_json::to_string(&spec).expect("serialize");
+        let parsed: LifecycleSpec = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(spec.hooks.len(), parsed.hooks.len());
+        assert_eq!(
+            spec.termination_grace_period,
+            parsed.termination_grace_period
+        );
+    }
+
+    #[test]
+    fn lifecycle_spec_with_hooks() {
+        let spec = LifecycleSpec {
+            hooks: vec![],
+            termination_grace_period: Some(Duration::from_secs(60)),
+            shutdown: None,
+            startup: None,
+            update_strategy: None,
+        };
+        assert_eq!(
+            spec.termination_grace_period,
+            Some(Duration::from_secs(60))
+        );
+    }
+
+    #[test]
+    fn lifecycle_spec_clone() {
+        let spec = LifecycleSpec::default();
+        let cloned = spec.clone();
+        assert_eq!(spec.hooks.len(), cloned.hooks.len());
+    }
+
+    #[test]
+    fn lifecycle_spec_debug() {
+        let spec = LifecycleSpec::default();
+        let debug_str = format!("{:?}", spec);
+        assert!(debug_str.contains("LifecycleSpec"));
+    }
+}

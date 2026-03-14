@@ -1,0 +1,180 @@
+# RootPulse Merge Workflow
+# Merges a branch spine back into a target spine.
+#
+# A "merge" in RootPulse means:
+# 1. Dehydrate the source branch's latest session (rhizoCrypt)
+# 2. Retrieve the merge base (common ancestor commit)
+# 3. Create a merge commit on the target spine (LoamSpine)
+#    referencing both the source and target tips
+# 4. Seal the source spine (LoamSpine) to prevent further appends
+# 5. Record the merge with full provenance (sweetGrass)
+#
+# Conflict resolution is out of scope for the graph engine — the merge
+# commit records the merge metadata and the consuming application is
+# responsible for resolving content conflicts.
+#
+# Required: Tower (BearDog + Songbird) + rhizoCrypt + LoamSpine
+# Optional: sweetGrass (attribution)
+
+[graph]
+id = "rootpulse_merge"
+description = "RootPulse merge: merge a branch spine into a target spine"
+coordination = "Sequential"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 1: HEALTH CHECKS AND VALIDATE INPUTS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "check_trio"
+output = "trio_healthy"
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.operation.params]
+check_rhizocrypt = true
+check_loamspine = true
+timeout_seconds = 10
+
+[nodes.constraints]
+timeout_ms = 15000
+
+[[nodes]]
+id = "get_source_tip"
+depends_on = ["check_trio"]
+output = "source_tip"
+capabilities = ["permanent_storage"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "entry"
+operation = "get_tip"
+args = { spine_id = "${SOURCE_SPINE_ID}" }
+
+[nodes.constraints]
+timeout_ms = 10000
+
+[[nodes]]
+id = "get_target_tip"
+depends_on = ["check_trio"]
+output = "target_tip"
+capabilities = ["permanent_storage"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "entry"
+operation = "get_tip"
+args = { spine_id = "${TARGET_SPINE_ID}" }
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 2: DEHYDRATE SOURCE BRANCH
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "dehydrate_source"
+depends_on = ["get_source_tip"]
+output = "source_summary"
+capabilities = ["dehydration"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "dag"
+operation = "dehydrate"
+args = { session_id = "${SOURCE_SESSION_ID}" }
+
+[nodes.constraints]
+timeout_ms = 30000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 3: SIGN MERGE
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "sign_merge"
+depends_on = ["dehydrate_source"]
+output = "signed_merge"
+capabilities = ["crypto"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "crypto"
+operation = "sign"
+args = { data = "${SOURCE_SUMMARY}", did = "${AGENT_DID}" }
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 4: CREATE MERGE COMMIT ON TARGET SPINE
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "merge_commit"
+depends_on = ["sign_merge", "get_target_tip"]
+output = "merge_ref"
+capabilities = ["permanent_storage"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "entry"
+operation = "append"
+args = { spine_id = "${TARGET_SPINE_ID}", entry = { type = "merge", source_spine = "${SOURCE_SPINE_ID}", source_tip = "${SOURCE_TIP}", target_tip = "${TARGET_TIP}", merge_summary = "${SIGNED_MERGE}", merged_by = "${AGENT_DID}" } }
+
+[nodes.constraints]
+timeout_ms = 30000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 5: SEAL SOURCE SPINE
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "seal_source"
+depends_on = ["merge_commit"]
+output = "sealed"
+capabilities = ["permanent_storage"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "spine"
+operation = "seal"
+args = { spine_id = "${SOURCE_SPINE_ID}", reason = "merged", merge_commit = "${MERGE_REF}" }
+
+[nodes.constraints]
+timeout_ms = 10000
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 6: MERGE PROVENANCE (sweetGrass, optional)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "attribute_merge"
+depends_on = ["merge_commit", "seal_source"]
+output = "merge_braid"
+capabilities = ["attribution"]
+
+[nodes.operation]
+name = "capability_call"
+
+[nodes.operation.params]
+capability = "provenance"
+operation = "create_braid"
+args = { metadata = { type = "merge", source_spine = "${SOURCE_SPINE_ID}", target_spine = "${TARGET_SPINE_ID}", merge_commit = "${MERGE_REF}" }, agents = [{ did = "${AGENT_DID}", role = "merger", contribution = 1.0 }] }
+
+[nodes.constraints]
+timeout_ms = 15000

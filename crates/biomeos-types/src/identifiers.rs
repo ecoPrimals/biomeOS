@@ -423,7 +423,7 @@ pub enum IdError {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -571,5 +571,123 @@ mod tests {
         assert!(e.to_string().contains("empty"));
         let e2 = IdError::InvalidCharacters;
         assert!(e2.to_string().contains("invalid"));
+    }
+
+    #[test]
+    fn primal_id_from_conversion() {
+        let id = PrimalId::new("beardog").expect("valid");
+        let s: String = id.into_string();
+        let id2 = PrimalId::new(&s).expect("valid");
+        assert_eq!(id2.as_str(), "beardog");
+    }
+
+    #[test]
+    fn primal_id_from_into_string() {
+        let id = PrimalId::new("test-id").expect("valid");
+        let s: String = id.into_string();
+        assert_eq!(s, "test-id");
+    }
+
+    #[test]
+    fn primal_id_deserialize_invalid() {
+        let result: Result<PrimalId, _> = serde_json::from_str(r#""bad@char""#);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn primal_id_deserialize_empty() {
+        let result: Result<PrimalId, _> = serde_json::from_str(r#""""#);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn family_id_from_conversion() {
+        let family = FamilyId::new("iidn");
+        let s: String = family.into_string();
+        assert_eq!(s, "iidn");
+    }
+
+    #[test]
+    fn family_id_serialization() {
+        let family = FamilyId::new("test-family");
+        let json = serde_json::to_string(&family).expect("serialize");
+        assert_eq!(json, r#""test-family""#);
+        let loaded: FamilyId = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(loaded.as_str(), "test-family");
+    }
+
+    #[test]
+    fn family_id_as_ref() {
+        let family = FamilyId::new("ref-test");
+        let s: &str = family.as_ref();
+        assert_eq!(s, "ref-test");
+    }
+
+    #[test]
+    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
+    fn family_id_get_or_create_from_env() {
+        std::env::set_var("BIOMEOS_FAMILY_ID", "env-created");
+        let id = FamilyId::get_or_create();
+        std::env::remove_var("BIOMEOS_FAMILY_ID");
+        assert_eq!(id.as_str(), "env-created");
+    }
+
+    #[test]
+    fn tower_id_serialization() {
+        let tower = TowerId::new("tower-1");
+        let json = serde_json::to_string(&tower).expect("serialize");
+        assert_eq!(json, r#""tower-1""#);
+        let loaded: TowerId = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(loaded.as_str(), "tower-1");
+    }
+
+    #[test]
+    fn tower_id_from_conversion() {
+        let tower = TowerId::new("tower-alpha");
+        let s: String = tower.into();
+        assert_eq!(s, "tower-alpha");
+    }
+
+    #[test]
+    fn tower_id_as_str() {
+        let tower = TowerId::new("tower-x");
+        assert_eq!(tower.as_str(), "tower-x");
+    }
+
+    #[test]
+    fn session_id_display() {
+        let uuid = uuid::Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap();
+        let session = SessionId::from_uuid(uuid);
+        let s = format!("{}", session);
+        assert!(s.contains("550e8400"));
+    }
+
+    #[test]
+    fn session_id_serialization() {
+        let session = SessionId::new();
+        let json = serde_json::to_string(&session).expect("serialize");
+        let loaded: SessionId = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(session.uuid(), loaded.uuid());
+    }
+
+    #[test]
+    fn endpoint_display() {
+        let ep = Endpoint::new("http://example.com").expect("valid");
+        let s = format!("{}", ep);
+        assert!(s.contains("example.com"));
+    }
+
+    #[test]
+    fn endpoint_as_ref() {
+        let ep = Endpoint::new("http://localhost:8080").expect("valid");
+        let s: &str = ep.as_ref();
+        assert!(s.starts_with("http://"));
+    }
+
+    #[test]
+    fn id_error_invalid_url() {
+        let err = Endpoint::new("not-a-valid-url").unwrap_err();
+        let id_err: IdError = err.into();
+        assert!(format!("{}", id_err).to_lowercase().contains("url"));
     }
 }

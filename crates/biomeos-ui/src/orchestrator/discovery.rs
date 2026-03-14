@@ -235,6 +235,7 @@ impl Discovery {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::primal_client::{PrimalClient, PrimalConnections};
@@ -436,5 +437,43 @@ mod tests {
             .as_array()
             .expect("assignments")
             .is_empty());
+    }
+
+    #[test]
+    #[ignore = "env var mutation races with parallel tests"]
+    fn test_resolve_capability_provider_unset_returns_taxonomy() {
+        std::env::remove_var("BIOMEOS_REGISTRY_PROVIDER");
+        std::env::remove_var("BIOMEOS_STRICT_DISCOVERY");
+        let result =
+            resolve_capability_provider("BIOMEOS_REGISTRY_PROVIDER", CapabilityTaxonomy::Discovery);
+        assert!(result.is_some());
+    }
+
+    #[test]
+    fn test_discovery_result_has_connections() {
+        let result = DiscoveryResult {
+            connections: PrimalConnections::default(),
+        };
+        assert_eq!(result.connections.count_available(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_discover_active_primals_registry_not_available() {
+        std::env::set_var("BIOMEOS_REGISTRY_PROVIDER", "nonexistent-registry");
+        let connections = PrimalConnections::default();
+        let result = Discovery::discover_active_primals(&connections).await;
+        std::env::remove_var("BIOMEOS_REGISTRY_PROVIDER");
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    #[ignore = "env var BIOMEOS_STRICT_DISCOVERY races with parallel tests"]
+    async fn test_load_saved_state_no_provider_strict() {
+        std::env::set_var("BIOMEOS_STRICT_DISCOVERY", "1");
+        std::env::remove_var("BIOMEOS_STORAGE_PROVIDER");
+        let connections = PrimalConnections::default();
+        let result = Discovery::load_saved_state(&connections, "test-family").await;
+        std::env::remove_var("BIOMEOS_STRICT_DISCOVERY");
+        assert!(result.is_ok());
     }
 }

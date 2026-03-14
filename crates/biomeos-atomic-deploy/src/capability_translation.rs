@@ -637,6 +637,8 @@ pub struct RegistryStats {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
     use super::*;
 
     #[test]
@@ -867,6 +869,52 @@ mod tests {
         assert_eq!(
             translation.param_mappings.get("public_key"),
             Some(&"their_public".to_string())
+        );
+    }
+
+    #[test]
+    fn test_get_translation_unknown_capability() {
+        let registry = CapabilityTranslationRegistry::new();
+        assert!(registry.get_translation("nonexistent.capability").is_none());
+        assert!(!registry.has_capability("nonexistent.capability"));
+    }
+
+    #[tokio::test]
+    async fn test_call_capability_no_provider() {
+        let registry = CapabilityTranslationRegistry::new();
+
+        let result = registry
+            .call_capability("unknown.capability", serde_json::json!({}))
+            .await;
+
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("No provider for capability"));
+    }
+
+    #[tokio::test]
+    async fn test_call_capability_socket_connection_fails() {
+        let mut registry = CapabilityTranslationRegistry::new();
+        registry.register_translation(
+            "test.fake_call",
+            "fake_primal",
+            "fake_method",
+            "/nonexistent/path/does-not-exist-12345.sock",
+            None,
+        );
+
+        let result = registry
+            .call_capability("test.fake_call", serde_json::json!({}))
+            .await;
+
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("Provider") || err_msg.contains("connect") || err_msg.contains("socket"),
+            "Expected provider/connection error, got: {}",
+            err_msg
         );
     }
 }

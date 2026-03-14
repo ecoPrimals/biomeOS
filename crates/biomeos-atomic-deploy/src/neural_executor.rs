@@ -256,6 +256,11 @@ impl GraphExecutor {
             // Falls back to direct primal RPC if neural-api is unavailable.
             "capability_call" => Self::node_capability_call(node, context).await,
 
+            // Capability registration for deployment graphs
+            "register_capabilities" => {
+                node_handlers::register_capabilities(node, context).await
+            }
+
             // Unknown
             _ => {
                 warn!("Unknown node type: {}, skipping", node_type_str);
