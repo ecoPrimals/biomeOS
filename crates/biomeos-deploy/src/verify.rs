@@ -33,7 +33,7 @@ impl Default for VerifyConfig {
     fn default() -> Self {
         // Use XDG-compliant path with fallback to /tmp
         let serial_log = std::env::var("XDG_RUNTIME_DIR")
-            .map(|dir| PathBuf::from(format!("{}/biomeos/verify.log", dir)))
+            .map(|dir| PathBuf::from(format!("{dir}/biomeos/verify.log")))
             .unwrap_or_else(|_| PathBuf::from("/tmp/biomeos-verify.log"));
 
         Self {
@@ -94,17 +94,17 @@ impl VerifyResult {
         }
 
         if let Some(boot_time) = self.boot_time_ms {
-            summary.push_str(&format!("⏱️  Boot time: {}ms\n", boot_time));
+            summary.push_str(&format!("⏱️  Boot time: {boot_time}ms\n"));
         }
 
         if let Some(count) = self.primal_count {
             summary.push_str("\n📦 Primal Installation Check:\n\n");
-            summary.push_str(&format!("✅ Found {} primals\n", count));
+            summary.push_str(&format!("✅ Found {count} primals\n"));
 
             if !self.primals.is_empty() {
                 summary.push_str("\nPrimals:\n");
                 for primal in &self.primals {
-                    summary.push_str(&format!("  • {}\n", primal));
+                    summary.push_str(&format!("  • {primal}\n"));
                 }
             }
         }
@@ -257,7 +257,7 @@ impl VmVerifier {
                 .next_entry()
                 .await
                 .map_err(|e| DeployError::ConfigError {
-                    message: format!("Failed to read directory entry: {}", e),
+                    message: format!("Failed to read directory entry: {e}"),
                 })?
         {
             let file_name = entry.file_name();

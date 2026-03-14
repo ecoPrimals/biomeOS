@@ -57,7 +57,7 @@ async fn main() -> Result<()> {
                 spores.push((node_id.to_string(), seed_bytes, seed_hash));
             }
             Err(e) => {
-                println!("  ⚠️  Failed to read {}: {}", node_id, e);
+                println!("  ⚠️  Failed to read {node_id}: {e}");
             }
         }
     }
@@ -87,7 +87,7 @@ async fn main() -> Result<()> {
             let (node_a, _seed_a, _hash_a) = &spores[i];
             let (node_b, seed_b_bytes, hash_b) = &spores[j];
 
-            println!("Testing: {} ↔ {}", node_a, node_b);
+            println!("Testing: {node_a} ↔ {node_b}");
 
             // Convert seed_b to base64 for BearDog API
             use base64::Engine;
@@ -105,7 +105,7 @@ async fn main() -> Result<()> {
                     }
                 }
                 Err(e) => {
-                    println!("  ⚠️  Verification failed: {}", e);
+                    println!("  ⚠️  Verification failed: {e}");
                     println!("     This might indicate:");
                     println!("     - BearDog API not fully implemented");
                     println!("     - Seeds from different deployment batches");

@@ -38,6 +38,7 @@ impl Default for LogConfig {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 
@@ -46,5 +47,21 @@ mod tests {
         let config = LogConfig::default();
         assert_eq!(config.max_active_age_secs, 86400);
         assert!(config.compress_fossils);
+    }
+
+    #[test]
+    fn test_log_config_serde_roundtrip() {
+        let config = LogConfig {
+            active_dir: PathBuf::from("/var/log/active"),
+            fossil_dir: PathBuf::from("/var/log/fossil"),
+            max_active_age_secs: 3600,
+            enable_encryption: true,
+            compress_fossils: false,
+        };
+        let json = serde_json::to_string(&config).unwrap();
+        let restored: LogConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(config.active_dir, restored.active_dir);
+        assert_eq!(config.max_active_age_secs, restored.max_active_age_secs);
+        assert_eq!(config.enable_encryption, restored.enable_encryption);
     }
 }

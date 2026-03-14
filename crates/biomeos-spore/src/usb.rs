@@ -128,7 +128,7 @@ pub async fn find_device_by_label(label: &str) -> SporeResult<UsbDevice> {
     devices
         .into_iter()
         .find(|d| d.label.as_deref() == Some(label))
-        .ok_or_else(|| SporeError::DeviceNotFound(PathBuf::from(format!("label:{}", label))))
+        .ok_or_else(|| SporeError::DeviceNotFound(PathBuf::from(format!("label:{label}"))))
 }
 
 #[cfg(test)]
@@ -292,7 +292,7 @@ mod tests {
             total_space: 2048,
         };
 
-        let debug = format!("{:?}", device);
+        let debug = format!("{device:?}");
         assert!(debug.contains("USB_DRIVE"));
         assert!(debug.contains("/media/usb0"));
     }

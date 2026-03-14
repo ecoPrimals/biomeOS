@@ -49,7 +49,7 @@ async fn main() -> Result<()> {
             lab
         }
         Err(e) => {
-            println!("❌ Failed to create lab: {}", e);
+            println!("❌ Failed to create lab: {e}");
             println!();
             println!("💡 Make sure:");
             println!("   - LXD is installed: sudo snap install lxd");
@@ -73,7 +73,7 @@ async fn main() -> Result<()> {
             println!();
         }
         Err(e) => {
-            println!("⚠️  Deployment warnings: {}", e);
+            println!("⚠️  Deployment warnings: {e}");
             println!("   (This is OK - we may not have primal binaries yet)");
             println!();
         }
@@ -109,7 +109,7 @@ async fn main() -> Result<()> {
             output.to_string()
         };
         println!("Output:");
-        println!("{}", preview);
+        println!("{preview}");
         println!();
     }
 

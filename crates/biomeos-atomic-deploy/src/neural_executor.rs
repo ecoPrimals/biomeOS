@@ -137,7 +137,7 @@ impl GraphExecutor {
                 .nodes
                 .iter()
                 .find(|n| &n.id == node_id)
-                .ok_or_else(|| anyhow::anyhow!("Node not found: {}", node_id))?
+                .ok_or_else(|| anyhow::anyhow!("Node not found: {node_id}"))?
                 .clone();
 
             let context = self.context.clone();
@@ -293,7 +293,7 @@ impl GraphExecutor {
         let mut result = s.to_string();
 
         for (key, value) in env {
-            let placeholder = format!("${{{}}}", key);
+            let placeholder = format!("${{{key}}}");
             result = result.replace(&placeholder, value);
         }
 
@@ -426,7 +426,7 @@ impl GraphExecutor {
                             info!("      ✅ {} socket exists", dep_id);
                             verified.push(dep_id.clone());
                         } else {
-                            anyhow::bail!("Socket not found for {}: {}", dep_id, socket);
+                            anyhow::bail!("Socket not found for {dep_id}: {socket}");
                         }
                     }
                 }
@@ -552,14 +552,8 @@ impl GraphExecutor {
         let stream =
             tokio::time::timeout(Duration::from_secs(10), UnixStream::connect(&socket_path))
                 .await
-                .context(format!(
-                    "Timeout connecting to {} at {}",
-                    target, socket_path
-                ))?
-                .context(format!(
-                    "Failed to connect to {} at {}",
-                    target, socket_path
-                ))?;
+                .context(format!("Timeout connecting to {target} at {socket_path}"))?
+                .context(format!("Failed to connect to {target} at {socket_path}"))?;
 
         let (read_half, mut write_half) = stream.into_split();
 
@@ -577,11 +571,11 @@ impl GraphExecutor {
             reader.read_line(&mut response_line),
         )
         .await
-        .context(format!("Timeout waiting for {} response", target))?
-        .context(format!("Failed to read response from {}", target))?;
+        .context(format!("Timeout waiting for {target} response"))?
+        .context(format!("Failed to read response from {target}"))?;
 
         let response: serde_json::Value = serde_json::from_str(&response_line)
-            .context(format!("Invalid JSON response from {}", target))?;
+            .context(format!("Invalid JSON response from {target}"))?;
 
         // Check for error
         if let Some(error) = response.get("error") {
@@ -589,7 +583,7 @@ impl GraphExecutor {
                 .get("message")
                 .and_then(|m| m.as_str())
                 .unwrap_or("Unknown error");
-            anyhow::bail!("RPC error from {}: {}", target, error_msg);
+            anyhow::bail!("RPC error from {target}: {error_msg}");
         }
 
         // Extract result
@@ -719,8 +713,7 @@ impl GraphExecutor {
 
         let provider = provider.ok_or_else(|| {
             anyhow::anyhow!(
-                "No provider found for capability '{}' (neither neural-api nor fallback)",
-                capability
+                "No provider found for capability '{capability}' (neither neural-api nor fallback)"
             )
         })?;
 
@@ -738,10 +731,9 @@ impl GraphExecutor {
             Self::send_jsonrpc_async(&socket_path, &request),
         )
         .await
-        .context(format!("Timeout on capability call: {}", capability))?
+        .context(format!("Timeout on capability call: {capability}"))?
         .context(format!(
-            "Failed capability call {} → {} at {}",
-            capability, provider, socket_path
+            "Failed capability call {capability} → {provider} at {socket_path}"
         ))?;
 
         if let Some(error) = response.get("error") {
@@ -749,7 +741,7 @@ impl GraphExecutor {
                 .get("message")
                 .and_then(|m| m.as_str())
                 .unwrap_or("unknown");
-            anyhow::bail!("Capability call {} failed: {}", capability, msg);
+            anyhow::bail!("Capability call {capability} failed: {msg}");
         }
 
         let result = response
@@ -777,7 +769,7 @@ impl GraphExecutor {
 
         let stream = UnixStream::connect(socket_path)
             .await
-            .context(format!("Connecting to {}", socket_path))?;
+            .context(format!("Connecting to {socket_path}"))?;
 
         let (read_half, mut write_half) = stream.into_split();
 

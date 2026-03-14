@@ -38,7 +38,7 @@ pub async fn run(detailed: bool, format: String, subsystem: Option<String>) -> R
         }
         _ => {
             for line in format_text_report(&diagnostics) {
-                println!("{}", line);
+                println!("{line}");
             }
         }
     }
@@ -100,7 +100,7 @@ pub(crate) async fn check_subsystem(name: &str, _detailed: bool) -> Result<Diagn
         "plasmidbin" => diag.add_check("PlasmidBin", check_plasmid_bin().await?),
         "system" => diag.add_check("System", check_system_resources().await?),
         _ => {
-            anyhow::bail!("Unknown subsystem: {}", name);
+            anyhow::bail!("Unknown subsystem: {name}");
         }
     }
 
@@ -123,8 +123,7 @@ mod tests {
         let err = result.unwrap_err();
         assert!(
             err.to_string().contains("Unknown subsystem"),
-            "Expected 'Unknown subsystem' in error: {}",
-            err
+            "Expected 'Unknown subsystem' in error: {err}"
         );
     }
 

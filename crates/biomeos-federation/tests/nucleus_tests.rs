@@ -52,10 +52,7 @@ async fn test_insecure_discovery() {
         }
         Ok(Err(e)) => {
             // Discovery returned an error - that's ok, just log it
-            println!(
-                "⚠️  Insecure discovery error (expected without Songbird): {}",
-                e
-            );
+            println!("⚠️  Insecure discovery error (expected without Songbird): {e}");
         }
         Err(_) => {
             // Timeout - this is acceptable when no discovery service is running

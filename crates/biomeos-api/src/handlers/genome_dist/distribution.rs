@@ -89,7 +89,7 @@ pub async fn download_binary(
                 (
                     StatusCode::NOT_FOUND,
                     Json(DistError {
-                        error: format!("Primal not found: {}", primal),
+                        error: format!("Primal not found: {primal}"),
                         code: "PRIMAL_NOT_FOUND".to_string(),
                     }),
                 )
@@ -99,11 +99,11 @@ pub async fn download_binary(
     };
 
     // Build binary path: primals/{primal}/v{version}/{primal}-{arch}
-    let binary_filename = format!("{}-{}", primal, arch);
+    let binary_filename = format!("{primal}-{arch}");
     let binary_path = genome_bin
         .join("primals")
         .join(&primal)
-        .join(format!("v{}", actual_version))
+        .join(format!("v{actual_version}"))
         .join(&binary_filename);
 
     if !binary_path.exists() {
@@ -111,7 +111,7 @@ pub async fn download_binary(
         return Err((
             StatusCode::NOT_FOUND,
             Json(DistError {
-                error: format!("Binary not found: {}/{}/{}", primal, actual_version, arch),
+                error: format!("Binary not found: {primal}/{actual_version}/{arch}"),
                 code: "BINARY_NOT_FOUND".to_string(),
             }),
         ));
@@ -155,7 +155,7 @@ pub async fn download_binary(
         .header(header::CONTENT_TYPE, "application/octet-stream")
         .header(
             header::CONTENT_DISPOSITION,
-            format!("attachment; filename=\"{}\"", binary_filename),
+            format!("attachment; filename=\"{binary_filename}\""),
         )
         .header(header::CONTENT_LENGTH, metadata.len())
         .header("X-Primal-Name", &primal)
@@ -223,11 +223,11 @@ pub async fn update_livespore(
 
         for (primal_name, primal_info) in &manifest.primals {
             let version = &primal_info.latest;
-            let binary_filename = format!("{}-{}", primal_name, arch);
+            let binary_filename = format!("{primal_name}-{arch}");
             let source_path = genome_bin
                 .join("primals")
                 .join(primal_name)
-                .join(format!("v{}", version))
+                .join(format!("v{version}"))
                 .join(&binary_filename);
 
             if source_path.exists() {
@@ -294,7 +294,7 @@ pub async fn update_livespore(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::handlers::genome_dist::discovery::GENOMEBIN_PATH_LOCK;
+    use serial_test::serial;
     use std::io::Write;
 
     #[test]
@@ -352,9 +352,8 @@ mod tests {
     }
 
     #[tokio::test]
-    #[allow(clippy::await_holding_lock)]
+    #[serial]
     async fn test_download_binary_file_not_found() {
-        let _guard = GENOMEBIN_PATH_LOCK.lock().expect("lock");
         let temp = tempfile::tempdir().expect("create temp dir");
         std::fs::write(
             temp.path().join("manifest.toml"),
@@ -382,9 +381,8 @@ mod tests {
     }
 
     #[tokio::test]
-    #[allow(clippy::await_holding_lock)]
+    #[serial]
     async fn test_download_binary_success() {
-        let _guard = GENOMEBIN_PATH_LOCK.lock().expect("lock");
         let temp = tempfile::tempdir().expect("create temp dir");
         std::fs::write(
             temp.path().join("manifest.toml"),
@@ -427,9 +425,8 @@ mod tests {
     }
 
     #[tokio::test]
-    #[allow(clippy::await_holding_lock)]
+    #[serial]
     async fn test_update_livespore_success() {
-        let _guard = GENOMEBIN_PATH_LOCK.lock().expect("lock");
         let temp = tempfile::tempdir().expect("create temp dir");
         std::fs::write(
             temp.path().join("manifest.toml"),
@@ -460,9 +457,8 @@ mod tests {
     }
 
     #[tokio::test]
-    #[allow(clippy::await_holding_lock)]
+    #[serial]
     async fn test_download_binary_latest_resolution() {
-        let _guard = GENOMEBIN_PATH_LOCK.lock().expect("lock");
         // Test that "latest" version resolves from manifest
         let temp = tempfile::tempdir().expect("create temp dir");
         let manifest_content = r#"

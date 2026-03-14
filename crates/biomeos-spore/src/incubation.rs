@@ -180,7 +180,7 @@ impl LocalEntropy {
 
                 for path in ifaces {
                     let iface_str = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-                    let mac_path = format!("/sys/class/net/{}/address", iface_str);
+                    let mac_path = format!("/sys/class/net/{iface_str}/address");
                     if let Ok(mac) = std::fs::read_to_string(&mac_path) {
                         let mac = mac.trim().to_string();
                         if !mac.is_empty() {

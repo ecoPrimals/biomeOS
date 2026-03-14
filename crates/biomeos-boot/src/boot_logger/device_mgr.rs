@@ -51,7 +51,7 @@ impl DeviceManager {
         mknodat(CWD, path, FileType::CharacterDevice, mode, makedev(4, 64)).map_err(|e| {
             BootError::DeviceCreation {
                 device: path.to_string(),
-                error: format!("mknod failed: {}", e),
+                error: format!("mknod failed: {e}"),
             }
         })?;
 
@@ -81,7 +81,7 @@ impl DeviceManager {
         mknodat(CWD, path, FileType::CharacterDevice, mode, makedev(4, 0)).map_err(|e| {
             BootError::DeviceCreation {
                 device: path.to_string(),
-                error: format!("mknod failed: {}", e),
+                error: format!("mknod failed: {e}"),
             }
         })?;
 
@@ -105,7 +105,7 @@ impl DeviceManager {
         std::os::unix::fs::symlink(target, console_path).map_err(|e| {
             BootError::DeviceCreation {
                 device: console_path.to_string(),
-                error: format!("symlink failed: {}", e),
+                error: format!("symlink failed: {e}"),
             }
         })?;
 

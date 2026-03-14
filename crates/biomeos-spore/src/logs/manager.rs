@@ -218,7 +218,7 @@ impl SporeLogManager {
     /// Record a new deployment
     pub async fn record_deployment(&self, deployment_id: &str) -> SporeResult<()> {
         let log_dir = self.spore_root.join(".spore.logs/deployments");
-        let log_file = log_dir.join(format!("{}.log", deployment_id));
+        let log_file = log_dir.join(format!("{deployment_id}.log"));
 
         let entry = format!(
             "[{}] Deployment: {}\n",

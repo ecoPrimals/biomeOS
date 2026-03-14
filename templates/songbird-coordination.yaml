@@ -521,16 +521,16 @@ documentation:
     
   usage: |
     # Deploy the coordination demo
-    biome deploy songbird-coordination.yaml
+    biomeos deploy songbird-coordination.yaml
     
     # Monitor coordination status
-    biome exec songbird-coordination songbird-coordinator -- /coordination/status
+    biomeos exec songbird-coordination songbird-coordinator -- /coordination/status
     
     # Access the demo frontend
     open http://localhost:3010
     
     # View coordination metrics
-    biome exec songbird-coordination songbird-coordinator -- /metrics
+    biomeos exec songbird-coordination songbird-coordinator -- /metrics
 
 # Metadata
 metadata:

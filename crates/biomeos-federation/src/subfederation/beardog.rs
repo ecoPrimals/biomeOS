@@ -24,7 +24,7 @@ pub fn discover_beardog_socket() -> FederationResult<String> {
     }
 
     if let Ok(family_id) = std::env::var("BIOMEOS_FAMILY_ID") {
-        let family_socket = paths.primal_socket(&format!("{}-{}", security_provider, family_id));
+        let family_socket = paths.primal_socket(&format!("{security_provider}-{family_id}"));
         if family_socket.exists() {
             return Ok(family_socket.to_string_lossy().to_string());
         }
@@ -47,7 +47,7 @@ pub async fn verify_member_lineage(
 
     let stream = UnixStream::connect(&beardog_socket)
         .await
-        .map_err(|e| FederationError::Generic(format!("BearDog connection failed: {}", e)))?;
+        .map_err(|e| FederationError::Generic(format!("BearDog connection failed: {e}")))?;
 
     let (reader, mut writer) = stream.into_split();
     let mut reader = BufReader::new(reader);
@@ -61,26 +61,26 @@ pub async fn verify_member_lineage(
     );
 
     let request_str = serde_json::to_string(&request)
-        .map_err(|e| FederationError::Generic(format!("JSON error: {}", e)))?
+        .map_err(|e| FederationError::Generic(format!("JSON error: {e}")))?
         + "\n";
 
     writer
         .write_all(request_str.as_bytes())
         .await
-        .map_err(|e| FederationError::Generic(format!("Write error: {}", e)))?;
+        .map_err(|e| FederationError::Generic(format!("Write error: {e}")))?;
     writer
         .flush()
         .await
-        .map_err(|e| FederationError::Generic(format!("Flush error: {}", e)))?;
+        .map_err(|e| FederationError::Generic(format!("Flush error: {e}")))?;
 
     let mut response_line = String::new();
     reader
         .read_line(&mut response_line)
         .await
-        .map_err(|e| FederationError::Generic(format!("Read error: {}", e)))?;
+        .map_err(|e| FederationError::Generic(format!("Read error: {e}")))?;
 
     let response: serde_json::Value = serde_json::from_str(response_line.trim())
-        .map_err(|e| FederationError::Generic(format!("JSON parse error: {}", e)))?;
+        .map_err(|e| FederationError::Generic(format!("JSON parse error: {e}")))?;
 
     if let Some(error) = response.get("error") {
         let msg = error
@@ -88,8 +88,7 @@ pub async fn verify_member_lineage(
             .and_then(|m| m.as_str())
             .unwrap_or("Unknown");
         return Err(FederationError::Generic(format!(
-            "Lineage verification failed: {}",
-            msg
+            "Lineage verification failed: {msg}"
         )));
     }
 
@@ -116,8 +115,7 @@ pub async fn verify_member_lineage(
             .unwrap_or_default();
 
         Err(FederationError::Generic(format!(
-            "Lineage verification failed for: {}",
-            failed
+            "Lineage verification failed for: {failed}"
         )))
     }
 }
@@ -134,7 +132,7 @@ pub async fn request_subfederation_key(
 
     let stream = UnixStream::connect(&beardog_socket)
         .await
-        .map_err(|e| FederationError::Generic(format!("BearDog connection failed: {}", e)))?;
+        .map_err(|e| FederationError::Generic(format!("BearDog connection failed: {e}")))?;
 
     let (reader, mut writer) = stream.into_split();
     let mut reader = BufReader::new(reader);
@@ -149,26 +147,26 @@ pub async fn request_subfederation_key(
     );
 
     let request_str = serde_json::to_string(&request)
-        .map_err(|e| FederationError::Generic(format!("JSON error: {}", e)))?
+        .map_err(|e| FederationError::Generic(format!("JSON error: {e}")))?
         + "\n";
 
     writer
         .write_all(request_str.as_bytes())
         .await
-        .map_err(|e| FederationError::Generic(format!("Write error: {}", e)))?;
+        .map_err(|e| FederationError::Generic(format!("Write error: {e}")))?;
     writer
         .flush()
         .await
-        .map_err(|e| FederationError::Generic(format!("Flush error: {}", e)))?;
+        .map_err(|e| FederationError::Generic(format!("Flush error: {e}")))?;
 
     let mut response_line = String::new();
     reader
         .read_line(&mut response_line)
         .await
-        .map_err(|e| FederationError::Generic(format!("Read error: {}", e)))?;
+        .map_err(|e| FederationError::Generic(format!("Read error: {e}")))?;
 
     let response: serde_json::Value = serde_json::from_str(response_line.trim())
-        .map_err(|e| FederationError::Generic(format!("JSON parse error: {}", e)))?;
+        .map_err(|e| FederationError::Generic(format!("JSON parse error: {e}")))?;
 
     if let Some(error) = response.get("error") {
         let msg = error
@@ -176,8 +174,7 @@ pub async fn request_subfederation_key(
             .and_then(|m| m.as_str())
             .unwrap_or("Unknown");
         return Err(FederationError::Generic(format!(
-            "Key derivation failed: {}",
-            msg
+            "Key derivation failed: {msg}"
         )));
     }
 

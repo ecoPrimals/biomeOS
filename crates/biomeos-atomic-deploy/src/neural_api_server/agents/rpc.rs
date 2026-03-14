@@ -175,7 +175,7 @@ pub async fn handle_agent_request(
             }
         }
 
-        _ => Err(anyhow::anyhow!("Unknown agent method: {}", method)),
+        _ => Err(anyhow::anyhow!("Unknown agent method: {method}")),
     }
 }
 

@@ -335,8 +335,7 @@ mod tests {
         let err = result.expect_err("Should fail when primal.by_capability is missing");
         assert!(
             err.to_string().contains("by_capability"),
-            "Error should mention by_capability: {}",
-            err
+            "Error should mention by_capability: {err}"
         );
     }
 
@@ -371,8 +370,7 @@ mod tests {
         let err = result.expect_err("Should fail when by_capability is None");
         assert!(
             err.to_string().contains("by_capability"),
-            "Error should mention by_capability: {}",
-            err
+            "Error should mention by_capability: {err}"
         );
     }
 
@@ -403,8 +401,7 @@ mod tests {
         let err = result.expect_err("Should fail when operation is missing");
         assert!(
             err.to_string().contains("operation"),
-            "Error should mention operation: {}",
-            err
+            "Error should mention operation: {err}"
         );
     }
 

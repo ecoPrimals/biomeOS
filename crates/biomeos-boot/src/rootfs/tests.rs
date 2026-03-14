@@ -70,7 +70,7 @@ mod run {
                 assert!(device.starts_with("/dev/nbd"));
             }
             Err(e) => {
-                let err_msg = format!("{}", e);
+                let err_msg = format!("{e}");
                 assert!(err_msg.contains("No available NBD devices"));
             }
         }
@@ -212,7 +212,7 @@ mod run {
             std::fs::create_dir_all(root.join(dir)).unwrap();
         }
         for dir in &dirs {
-            assert!(root.join(dir).exists(), "{} should exist", dir);
+            assert!(root.join(dir).exists(), "{dir} should exist");
         }
     }
 

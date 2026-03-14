@@ -30,7 +30,7 @@ impl GenomeBin {
 
         // Verify each binary
         for (arch, compressed) in &self.binaries {
-            let arch_name = format!("{:?}", arch);
+            let arch_name = format!("{arch:?}");
 
             tracing::debug!("Verifying {} binary...", arch_name);
 
@@ -73,7 +73,7 @@ impl GenomeBin {
             })?;
 
             for (key, result) in embedded_results {
-                results.insert(format!("embedded[{}]/{}", i, key), result);
+                results.insert(format!("embedded[{i}]/{key}"), result);
             }
         }
 

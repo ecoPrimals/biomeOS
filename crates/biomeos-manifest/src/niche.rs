@@ -223,8 +223,7 @@ impl NicheManifest {
         let default_count = self.graphs.iter().filter(|g| g.default).count();
         if default_count > 1 {
             return Err(NicheError::ValidationError(format!(
-                "Multiple default graphs ({}), only one allowed",
-                default_count
+                "Multiple default graphs ({default_count}), only one allowed"
             )));
         }
 

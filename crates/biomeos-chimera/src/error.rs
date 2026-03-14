@@ -249,4 +249,40 @@ mod tests {
         let msg = err.to_string();
         assert!(msg.contains("file not found"));
     }
+
+    #[test]
+    fn test_yaml_error_conversion() {
+        let yaml_err = serde_yaml::from_str::<serde_yaml::Value>("invalid: [yaml: [");
+        let err: ChimeraError = yaml_err.unwrap_err().into();
+        let msg = err.to_string();
+        assert!(!msg.is_empty());
+        assert!(msg.to_lowercase().contains("yaml") || msg.contains("error"));
+    }
+
+    #[test]
+    fn test_json_error_conversion() {
+        let json_err = serde_json::from_str::<serde_json::Value>("{invalid json");
+        let err: ChimeraError = json_err.unwrap_err().into();
+        let msg = err.to_string();
+        assert!(!msg.is_empty());
+    }
+
+    #[test]
+    fn test_chimera_result_type() {
+        let ok_result: ChimeraResult<u32> = Ok(42);
+        assert!(ok_result.is_ok());
+
+        let err_result: ChimeraResult<u32> = Err(ChimeraError::RegistryError("test".to_string()));
+        assert!(err_result.is_err());
+    }
+
+    #[test]
+    fn test_audit_destination_debug() {
+        let err = ChimeraError::DefinitionNotFound {
+            path: PathBuf::from("/etc/chimera.yaml"),
+        };
+        let debug = format!("{err:?}");
+        assert!(debug.contains("DefinitionNotFound"));
+        assert!(debug.contains("chimera.yaml"));
+    }
 }

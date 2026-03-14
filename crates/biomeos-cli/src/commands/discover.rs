@@ -90,7 +90,7 @@ pub async fn handle_discover(
 
     spinner.finish_with_message("✅ Discovery completed!");
 
-    let result = build_discovery_result(&format!("{:?}", method), &discovery_result);
+    let result = build_discovery_result(&format!("{method:?}"), &discovery_result);
     display_results("Discovery Results", &result, detailed).await?;
 
     Ok(())

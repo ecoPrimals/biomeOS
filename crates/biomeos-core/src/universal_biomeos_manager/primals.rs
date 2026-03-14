@@ -9,7 +9,6 @@ use super::core::{PrimalInfo, UniversalBiomeOSManager};
 use anyhow::Result;
 
 /// Compute primal statistics from a list of primals (testable pure function)
-#[allow(dead_code)] // Used by tests
 pub(crate) fn compute_primal_statistics(
     primals: impl IntoIterator<Item = PrimalInfo>,
 ) -> PrimalStatistics {
@@ -74,7 +73,7 @@ impl UniversalBiomeOSManager {
             tracing::info!("🔄 Updated primal: {}", id);
             Ok(())
         } else {
-            Err(anyhow::anyhow!("Primal not found: {}", id))
+            Err(anyhow::anyhow!("Primal not found: {id}"))
         }
     }
 
@@ -86,7 +85,7 @@ impl UniversalBiomeOSManager {
                 tracing::info!("🗑️ Unregistered primal: {} ({})", primal.name, id);
                 Ok(primal)
             }
-            None => Err(anyhow::anyhow!("Primal not found: {}", id)),
+            None => Err(anyhow::anyhow!("Primal not found: {id}")),
         }
     }
 
@@ -138,7 +137,7 @@ impl UniversalBiomeOSManager {
             tracing::debug!("🏥 Updated health for primal {}: {:?}", id, primal.health);
             Ok(())
         } else {
-            Err(anyhow::anyhow!("Primal not found: {}", id))
+            Err(anyhow::anyhow!("Primal not found: {id}"))
         }
     }
 
@@ -192,7 +191,7 @@ mod tests {
             id: id.to_string(),
             name: name.to_string(),
             primal_type: PrimalType::from_discovered("test", name, "1.0.0"),
-            endpoint: format!("unix:/tmp/{}", id),
+            endpoint: format!("unix:/tmp/{id}"),
             capabilities: vec![],
             health,
             last_seen: Utc::now(),

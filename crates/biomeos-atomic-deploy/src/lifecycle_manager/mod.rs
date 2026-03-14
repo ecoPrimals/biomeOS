@@ -319,7 +319,7 @@ mod tests {
             manager
                 .register_primal(
                     *name,
-                    PathBuf::from(format!("/tmp/{}.sock", name)),
+                    PathBuf::from(format!("/tmp/{name}.sock")),
                     Some(100),
                     None,
                 )
@@ -482,7 +482,7 @@ mod tests {
             manager
                 .register_primal(
                     *name,
-                    PathBuf::from(format!("/tmp/{}.sock", name)),
+                    PathBuf::from(format!("/tmp/{name}.sock")),
                     None,
                     None,
                 )
@@ -496,8 +496,7 @@ mod tests {
         for state in status.values() {
             assert!(
                 matches!(state, LifecycleState::Dead { .. }),
-                "Expected Dead state, got: {:?}",
-                state
+                "Expected Dead state, got: {state:?}"
             );
         }
     }

@@ -179,7 +179,7 @@ impl Spore {
 
         // Create sibling config (same family, different node_id)
         let sibling_config = SporeConfig {
-            label: format!("biomeOS-{}", sibling_node_id),
+            label: format!("biomeOS-{sibling_node_id}"),
             node_id: sibling_node_id.to_string(),
             family_id: self.config.family_id.clone(),
             spore_type: self.config.spore_type,

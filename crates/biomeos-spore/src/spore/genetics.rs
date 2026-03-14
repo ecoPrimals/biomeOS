@@ -31,7 +31,7 @@ impl GeneticsOps for Spore {
         let seed_path_clone = seed_path.clone();
         tokio::task::spawn_blocking(move || FamilySeed::generate_and_write(&seed_path_clone))
             .await
-            .map_err(|e| SporeError::InvalidConfig(format!("Task join error: {}", e)))??;
+            .map_err(|e| SporeError::InvalidConfig(format!("Task join error: {e}")))??;
 
         debug!("Family seed generated at: {}", seed_path.display());
         Ok(())

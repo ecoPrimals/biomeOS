@@ -26,8 +26,7 @@ pub fn parse_arch(arch: &str) -> Result<Arch> {
         "arm" => Ok(Arch::Arm),
         "riscv64" => Ok(Arch::Riscv64),
         _ => Err(anyhow::anyhow!(
-            "Invalid architecture: {}. Supported: x86_64, aarch64, arm, riscv64",
-            arch
+            "Invalid architecture: {arch}. Supported: x86_64, aarch64, arm, riscv64"
         )),
     }
 }
@@ -195,7 +194,7 @@ pub fn handle_genome_create(args: CreateArgs) -> Result<()> {
     println!("✅ Created genomeBin: {}", args.output.display());
     println!("   Name: {}", genome.manifest.name);
     println!("   Version: {}", genome.manifest.version);
-    println!("   Arch: {:?}", arch);
+    println!("   Arch: {arch:?}");
 
     Ok(())
 }
@@ -270,7 +269,7 @@ pub fn handle_genome_self_replicate() -> Result<()> {
 
     println!("✅ Self-replicated biomeOS CLI");
     println!("   Size: {} bytes", binary_data.len());
-    println!("   Arch: {:?}", arch);
+    println!("   Arch: {arch:?}");
 
     Ok(())
 }
@@ -348,7 +347,7 @@ pub fn handle_genome_list() -> Result<()> {
         );
     } else {
         println!();
-        println!("Total: {} genome(s)", genomes_found);
+        println!("Total: {genomes_found} genome(s)");
     }
 
     Ok(())
@@ -377,7 +376,7 @@ pub fn handle_genome_verify(args: VerifyArgs) -> Result<()> {
             }
         }
         Err(e) => {
-            anyhow::bail!("Verification error: {}", e);
+            anyhow::bail!("Verification error: {e}");
         }
     }
 }
@@ -459,7 +458,7 @@ pub async fn execute(args: GenomeArgs) -> Result<()> {
                     }
                 }
                 Err(e) => {
-                    anyhow::bail!("Verification error: {}", e);
+                    anyhow::bail!("Verification error: {e}");
                 }
             }
         }
@@ -510,10 +509,7 @@ pub async fn execute(args: GenomeArgs) -> Result<()> {
                     output_path.display()
                 );
             } else {
-                anyhow::bail!(
-                    "No binary available for current architecture: {:?}",
-                    current_arch
-                );
+                anyhow::bail!("No binary available for current architecture: {current_arch:?}");
             }
 
             Ok(())
@@ -542,7 +538,7 @@ pub async fn execute(args: GenomeArgs) -> Result<()> {
             println!();
             println!("Architectures:");
             for arch in &genome.manifest.architectures {
-                println!("  - {}", arch);
+                println!("  - {arch}");
             }
 
             println!();
@@ -560,13 +556,13 @@ pub async fn execute(args: GenomeArgs) -> Result<()> {
                 println!();
                 println!("Capabilities:");
                 for cap in &genome.manifest.capabilities {
-                    println!("  - {}", cap);
+                    println!("  - {cap}");
                 }
             }
 
             if let Some(nucleus) = &genome.manifest.nucleus_atomic {
                 println!();
-                println!("NUCLEUS Atomic: {}", nucleus);
+                println!("NUCLEUS Atomic: {nucleus}");
             }
 
             println!();

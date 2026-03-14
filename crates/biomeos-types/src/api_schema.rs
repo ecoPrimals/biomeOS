@@ -181,8 +181,10 @@ impl Default for SchemaDiscoveryConfig {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
 
     #[test]
     fn test_schema_type_serialization() {
@@ -237,5 +239,74 @@ mod tests {
         let json = serde_json::to_value(&op).unwrap();
         assert_eq!(json["operation_id"], "createBucket");
         assert_eq!(json["method"], "POST");
+    }
+
+    #[test]
+    fn test_api_schema_type_all_variants() {
+        for schema_type in [
+            ApiSchemaType::OpenAPI,
+            ApiSchemaType::JSONSchema,
+            ApiSchemaType::GraphQL,
+            ApiSchemaType::Custom,
+        ] {
+            let json = serde_json::to_string(&schema_type).unwrap();
+            let back: ApiSchemaType = serde_json::from_str(&json).unwrap();
+            assert_eq!(schema_type, back);
+        }
+    }
+
+    #[test]
+    fn test_api_schema_response_serde_roundtrip() {
+        let response = ApiSchemaResponse {
+            schema_type: ApiSchemaType::OpenAPI,
+            schema_version: "3.1.0".to_string(),
+            schema: serde_json::json!({"openapi": "3.1.0", "info": {"title": "Test"}}),
+            capabilities: vec!["storage".to_string()],
+            primal_info: Some(PrimalInfo {
+                name: "nestgate".to_string(),
+                version: "1.0.0".to_string(),
+                metadata: HashMap::new(),
+            }),
+        };
+        let json = serde_json::to_string(&response).unwrap();
+        let back: ApiSchemaResponse = serde_json::from_str(&json).unwrap();
+        assert_eq!(response.schema_type, back.schema_type);
+        assert_eq!(response.capabilities, back.capabilities);
+    }
+
+    #[test]
+    fn test_primal_info_serde_roundtrip() {
+        let info = PrimalInfo {
+            name: "test-primal".to_string(),
+            version: "0.1.0".to_string(),
+            metadata: HashMap::from([("key".to_string(), serde_json::json!("value"))]),
+        };
+        let json = serde_json::to_string(&info).unwrap();
+        let back: PrimalInfo = serde_json::from_str(&json).unwrap();
+        assert_eq!(info.name, back.name);
+        assert_eq!(info.metadata.get("key"), back.metadata.get("key"));
+    }
+
+    #[test]
+    fn test_parameter_metadata_serde_roundtrip() {
+        let param = ParameterMetadata {
+            name: "bucket_id".to_string(),
+            location: "path".to_string(),
+            required: true,
+            schema: Some(serde_json::json!({"type": "string"})),
+        };
+        let json = serde_json::to_string(&param).unwrap();
+        let back: ParameterMetadata = serde_json::from_str(&json).unwrap();
+        assert_eq!(param.name, back.name);
+        assert_eq!(param.required, back.required);
+    }
+
+    #[test]
+    fn test_schema_discovery_config_serde_roundtrip() {
+        let config = SchemaDiscoveryConfig::default();
+        let json = serde_json::to_string(&config).unwrap();
+        let back: SchemaDiscoveryConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(config.timeout_secs, back.timeout_secs);
+        assert_eq!(config.cache_schemas, back.cache_schemas);
     }
 }

@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: March 14, 2026 (Deep Debt Evolution: Zero-Copy + JSON-RPC Builders + Safe Casts + SystemPaths)
-**Version**: 2.36
+**Updated**: March 14, 2026 (Deep Debt Audit: Capability-Based Discovery + Pedantic Clippy + Smart Refactoring + Coverage Push)
+**Version**: 2.37
 **Status**: PRODUCTION READY - Multi-Computer Federation Validated
 
 ---
@@ -16,8 +16,8 @@
 | **Security Grade** | A++ (TRUE PRIMAL + Security Headers + Dark Forest Gate) |
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, ecoBin v3.0, zero warnings, full doc coverage, sovereignty audit) |
-| **Tests Passing** | 4,383 sequential (0 failures, 204 ignored) |
-| **Test Coverage** | 76.06% region, 78.93% function, 74.95% line (llvm-cov) |
+| **Tests Passing** | 4,647 sequential (0 failures, 205 ignored) |
+| **Test Coverage** | 75.98% region, 78.78% function, 74.96% line (llvm-cov, climbing toward 90%) |
 | **Unsafe Code** | 0 production, 0 test |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`) |
 | **Formatting** | PASS (rustfmt.toml enforced, `cargo fmt --check` clean) |
@@ -34,10 +34,10 @@
 | **P2P Sovereign Onion** | PRODUCTION READY |
 | **External C deps** | 0 (nix removed → rustix, sysinfo removed → /proc, libc removed, dirs → etcetera) |
 | **ecoBin v3.0** | COMPLIANT (pure Rust: rustix for POSIX, /proc for metrics, zero -sys crates) |
-| **Files >1000 LOC** | 0 (node_handlers.rs 1015→461 via test extraction) |
+| **Files >1000 LOC** | 0 (max 985, graph.rs 998→404, realtime.rs 975→422, security/mod.rs 957→594 via smart refactoring) |
 | **JSON-RPC types** | `JSONRPC_VERSION` const + `JsonRpcRequest::new()` builder everywhere, `JsonRpcResponse::success()`/`error()` builders |
 | **Zero-copy** | `bytes::Bytes` for binary payloads (`SecurityRpc`, P2P, compute, genomeBin, HTTP client); `Arc<str>` for identifiers |
-| **Safe casts** | 0 truncation `as` casts — all evolved to `try_from`, `u64::from`, arithmetic duration |
+| **Safe casts** | 0 truncation `as` casts — PID casts use `i32::try_from().unwrap_or(-1)`, duration use `u32::try_from().unwrap_or(MAX)` |
 | **Dep policy** | `deny.toml` (cargo-deny 0.19) bans openssl-sys, ring, aws-lc-sys, native-tls, zstd-sys, dirs-sys |
 | **Plasmodium** | HTTP JSON-RPC collective (runtime port, SSH legacy removed) |
 | **Model Cache** | NUCLEUS-integrated, HuggingFace import, NestGate fallback |
@@ -46,7 +46,7 @@
 | **Lifecycle** | Deep health monitoring, auto-resurrection, coordinated shutdown |
 | **SystemPaths** | All paths XDG-compliant via centralized `SystemPaths` (production `/tmp/` eliminated) |
 | **Hardcoded `/tmp`** | 0 in production code (rootpulse, neural_api, continuous, enroll evolved to SystemPaths) |
-| **Hardcoded Primals** | 0 in routing code (all via `primal_names::` constants + `CapabilityTaxonomy`) |
+| **Hardcoded Primals** | 0 in routing code (all via capability-based discovery + `DISCOVERY_PROVIDER`/`SECURITY_PROVIDER` env) |
 | **Hardcoded user paths** | 0 (tools evolved to runtime workspace discovery) |
 | **Production unwrap()** | 0 (all replaced with `expect()` + context) |
 | **Federation** | api.nestgate.io via Cloudflare Tunnel (QUIC, 4x HA) |

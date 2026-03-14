@@ -70,6 +70,7 @@ ureq = { workspace = true }
 # Test utilities
 serde_json = { workspace = true }
 tracing-test = "0.2"
+serial_test = "3.0"
 
 [features]
 default = []

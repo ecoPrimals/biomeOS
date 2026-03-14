@@ -124,8 +124,7 @@ mod tests {
         let err = result.unwrap_err();
         assert!(
             err.to_string().contains("No storage primal available"),
-            "Expected 'No storage primal available' in error, got: {}",
-            err
+            "Expected 'No storage primal available' in error, got: {err}"
         );
     }
 
@@ -157,8 +156,7 @@ mod tests {
         // Graceful degradation: storage failure returns Ok(()) - assignment continues
         assert!(
             result.is_ok(),
-            "Persistence should degrade gracefully when NestGate call fails: {:?}",
-            result
+            "Persistence should degrade gracefully when NestGate call fails: {result:?}"
         );
     }
 

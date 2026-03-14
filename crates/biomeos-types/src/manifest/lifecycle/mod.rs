@@ -126,7 +126,7 @@ mod tests {
     #[test]
     fn lifecycle_spec_debug() {
         let spec = LifecycleSpec::default();
-        let debug_str = format!("{:?}", spec);
+        let debug_str = format!("{spec:?}");
         assert!(debug_str.contains("LifecycleSpec"));
     }
 }

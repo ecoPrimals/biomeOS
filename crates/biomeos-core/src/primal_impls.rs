@@ -42,7 +42,7 @@ impl GenericManagedPrimal {
     pub fn from_env() -> BiomeResult<Self> {
         let config = PrimalConfig::from_env()?;
         let id = PrimalId::new(config.id.clone()).map_err(|e| {
-            BiomeError::config_error(format!("Invalid primal ID: {}", e), Some("PRIMAL_ID"))
+            BiomeError::config_error(format!("Invalid primal ID: {e}"), Some("PRIMAL_ID"))
         })?;
 
         info!("🌱 Created primal from environment:");
@@ -68,7 +68,7 @@ impl GenericManagedPrimal {
     /// Create with explicit config (for testing or manual construction)
     pub fn with_config(config: PrimalConfig) -> BiomeResult<Self> {
         let id = PrimalId::new(config.id.clone()).map_err(|e| {
-            BiomeError::config_error(format!("Invalid primal ID: {}", e), Some("PRIMAL_ID"))
+            BiomeError::config_error(format!("Invalid primal ID: {e}"), Some("PRIMAL_ID"))
         })?;
 
         Ok(Self {
@@ -106,7 +106,7 @@ impl ManagedPrimal for GenericManagedPrimal {
 
         // Try Unix socket first
         if let Ok(socket_path) = std::env::var("PRIMAL_SOCKET_PATH") {
-            if let Ok(endpoint) = Endpoint::new(format!("unix://{}", socket_path)) {
+            if let Ok(endpoint) = Endpoint::new(format!("unix://{socket_path}")) {
                 return Some(endpoint);
             }
         }
@@ -126,7 +126,7 @@ impl ManagedPrimal for GenericManagedPrimal {
             let runtime_config = RuntimeConfig::from_env();
             let bind_addr = runtime_config.bind_address();
             let http_port = runtime_config.http_port();
-            let url = format!("http://{}:{}", bind_addr, http_port);
+            let url = format!("http://{bind_addr}:{http_port}");
             Endpoint::new(&url).ok()
         } else {
             None
@@ -181,9 +181,9 @@ impl ManagedPrimal for GenericManagedPrimal {
             // EVOLVED: Environment-driven fallback (no hardcoded /tmp)
             // Respects BIOMEOS_LOG_DIR or falls back to writable directory
             let log_dir = std::env::var("BIOMEOS_LOG_DIR")
-                .or_else(|_| std::env::var("XDG_STATE_HOME").map(|p| format!("{}/biomeos/logs", p)))
+                .or_else(|_| std::env::var("XDG_STATE_HOME").map(|p| format!("{p}/biomeos/logs")))
                 .or_else(|_| {
-                    std::env::var("HOME").map(|p| format!("{}/.local/state/biomeos/logs", p))
+                    std::env::var("HOME").map(|p| format!("{p}/.local/state/biomeos/logs"))
                 })
                 .unwrap_or_else(|_| {
                     warn!("No XDG paths available, using current directory for logs");
@@ -214,7 +214,7 @@ impl ManagedPrimal for GenericManagedPrimal {
         let child = cmd
             .stdout(Stdio::from(log_file.try_clone().map_err(|e| {
                 BiomeError::internal_error(
-                    format!("Failed to clone log file handle: {}", e),
+                    format!("Failed to clone log file handle: {e}"),
                     Some("log_file_clone_failure"),
                 )
             })?))
@@ -485,8 +485,7 @@ mod tests {
                 let err_msg = e.to_string();
                 assert!(
                     err_msg.contains("Binary path") || err_msg.contains("PRIMAL_BINARY"),
-                    "Expected binary path error, got: {}",
-                    err_msg
+                    "Expected binary path error, got: {err_msg}"
                 );
             }
         }

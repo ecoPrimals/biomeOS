@@ -117,7 +117,7 @@ mod tests {
                 "error" => Some(tracing::Level::ERROR),
                 _ => None,
             };
-            assert!(parsed.is_some(), "Level {} should parse", level);
+            assert!(parsed.is_some(), "Level {level} should parse");
         }
     }
 }

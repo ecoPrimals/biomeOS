@@ -248,7 +248,7 @@ impl CapabilityTranslationRegistry {
         // 1. Lookup translation
         let translation = self
             .get_translation(semantic)
-            .ok_or_else(|| anyhow!("No provider for capability: {}", semantic))?;
+            .ok_or_else(|| anyhow!("No provider for capability: {semantic}"))?;
 
         info!(
             "🔄 Translating {} → {} (provider: {}, socket: {})",
@@ -346,10 +346,10 @@ impl CapabilityTranslationRegistry {
         F: Fn(&str, &str) -> String,
     {
         let config_content = std::fs::read_to_string(config_path.as_ref())
-            .map_err(|e| anyhow!("Failed to read capability config: {}", e))?;
+            .map_err(|e| anyhow!("Failed to read capability config: {e}"))?;
 
         let config: toml::Value = toml::from_str(&config_content)
-            .map_err(|e| anyhow!("Failed to parse capability config: {}", e))?;
+            .map_err(|e| anyhow!("Failed to parse capability config: {e}"))?;
 
         let family_id = biomeos_core::family_discovery::get_family_id();
         let mut count = 0;
@@ -611,7 +611,7 @@ pub fn resolve_primal_socket(primal: &str, family_id: &str) -> String {
     }
 
     // 2. XDG-compliant resolution via SystemPaths
-    let primal_id = format!("{}-{}", primal, family_id);
+    let primal_id = format!("{primal}-{family_id}");
     biomeos_types::paths::SystemPaths::new_lazy()
         .primal_socket(&primal_id)
         .to_string_lossy()
@@ -915,8 +915,71 @@ mod tests {
             err_msg.contains("Provider")
                 || err_msg.contains("connect")
                 || err_msg.contains("socket"),
-            "Expected provider/connection error, got: {}",
-            err_msg
+            "Expected provider/connection error, got: {err_msg}"
         );
+    }
+
+    #[test]
+    fn test_capability_translation_struct() {
+        let mut param_mappings = HashMap::new();
+        param_mappings.insert("a".to_string(), "b".to_string());
+
+        let translation = CapabilityTranslation {
+            semantic: "test.semantic".to_string(),
+            provider: "beardog".to_string(),
+            actual_method: "actual_method".to_string(),
+            socket: "/tmp/beardog.sock".to_string(),
+            param_mappings: param_mappings.clone(),
+            metadata: HashMap::new(),
+        };
+
+        assert_eq!(translation.semantic, "test.semantic");
+        assert_eq!(translation.provider, "beardog");
+        assert_eq!(translation.param_mappings.get("a"), Some(&"b".to_string()));
+    }
+
+    #[test]
+    fn test_capability_translation_serde() {
+        let translation = CapabilityTranslation {
+            semantic: "crypto.encrypt".to_string(),
+            provider: "beardog".to_string(),
+            actual_method: "chacha20_encrypt".to_string(),
+            socket: "/tmp/b.sock".to_string(),
+            param_mappings: HashMap::new(),
+            metadata: HashMap::new(),
+        };
+
+        let json = serde_json::to_string(&translation).expect("serialize");
+        assert!(json.contains("crypto.encrypt"));
+        let parsed: CapabilityTranslation = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(parsed.semantic, translation.semantic);
+    }
+
+    #[test]
+    fn test_registry_stats_struct() {
+        let mut registry = CapabilityTranslationRegistry::new();
+        registry.register_translation("a", "p1", "m1", "/tmp/1.sock", None);
+        registry.register_translation("b", "p1", "m2", "/tmp/1.sock", None);
+        registry.register_translation("c", "p2", "m3", "/tmp/2.sock", None);
+
+        let stats = registry.stats();
+        assert_eq!(stats.total_translations, 3);
+        assert_eq!(stats.total_providers, 2);
+        assert_eq!(stats.capabilities_by_provider["p1"], 2);
+        assert_eq!(stats.capabilities_by_provider["p2"], 1);
+    }
+
+    #[test]
+    fn test_registry_stats_serialization() {
+        let stats = RegistryStats {
+            total_translations: 10,
+            total_providers: 3,
+            capabilities_by_provider: [("a".to_string(), 5), ("b".to_string(), 3)]
+                .into_iter()
+                .collect(),
+        };
+        let json = serde_json::to_string(&stats).expect("serialize");
+        assert!(json.contains("10"));
+        assert!(json.contains("3"));
     }
 }

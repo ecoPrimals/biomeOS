@@ -205,7 +205,7 @@ impl InitramfsBuilder {
         for dir in dirs {
             let path = self.root.join(dir);
             fs::create_dir_all(&path)
-                .with_context(|| format!("Failed to create directory: {}", dir))?;
+                .with_context(|| format!("Failed to create directory: {dir}"))?;
             self.directories.push(dir.to_string());
         }
 

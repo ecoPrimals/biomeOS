@@ -96,7 +96,7 @@ impl PrimalOrchestrator {
             let primals = self.primals.read().await;
             let record = primals.get(id).ok_or_else(|| {
                 BiomeError::discovery_failed(
-                    format!("Primal not found: {}", id),
+                    format!("Primal not found: {id}"),
                     Some(id.to_string()),
                 )
             })?;
@@ -127,7 +127,7 @@ impl PrimalOrchestrator {
                 primal
                     .start()
                     .await
-                    .map_err(|e| anyhow::anyhow!("Start failed: {}", e))
+                    .map_err(|e| anyhow::anyhow!("Start failed: {e}"))
             })
             .await;
 
@@ -151,7 +151,7 @@ impl PrimalOrchestrator {
                     }
                     Ok(Err(e)) => {
                         error!("Primal {} failed health check: {}", id, e);
-                        self.mark_failed(id, format!("Health check failed: {}", e))
+                        self.mark_failed(id, format!("Health check failed: {e}"))
                             .await;
                         Err(e)
                     }
@@ -167,7 +167,7 @@ impl PrimalOrchestrator {
                 error!("Failed to start primal {}: {}", id, e);
                 self.mark_failed(id, e.to_string()).await;
                 Err(BiomeError::internal_error(
-                    format!("Failed to start {}: {}", id, e),
+                    format!("Failed to start {id}: {e}"),
                     Some("primal_start_failure"),
                 ))
             }
@@ -187,8 +187,8 @@ impl PrimalOrchestrator {
 
         if providers.is_empty() {
             return Err(BiomeError::discovery_failed(
-                format!("No provider found for capability: {}", capability),
-                Some(format!("capability:{:?}", capability)),
+                format!("No provider found for capability: {capability}"),
+                Some(format!("capability:{capability:?}")),
             ));
         }
 
@@ -220,10 +220,7 @@ impl PrimalOrchestrator {
         }
 
         Err(BiomeError::internal_error(
-            format!(
-                "All providers for capability {} failed to start",
-                capability
-            ),
+            format!("All providers for capability {capability} failed to start"),
             Some("capability_startup_failure"),
         ))
     }
@@ -237,7 +234,7 @@ impl PrimalOrchestrator {
             let primals = self.primals.read().await;
             let record = primals.get(id).ok_or_else(|| {
                 BiomeError::discovery_failed(
-                    format!("Primal not found: {}", id),
+                    format!("Primal not found: {id}"),
                     Some(id.to_string()),
                 )
             })?;
@@ -254,7 +251,7 @@ impl PrimalOrchestrator {
 
         primal.stop().await.map_err(|e| {
             BiomeError::internal_error(
-                format!("Failed to stop primal {}: {}", id, e),
+                format!("Failed to stop primal {id}: {e}"),
                 Some("primal_stop_failure"),
             )
         })?;
@@ -589,7 +586,7 @@ mod tests {
         orch.register(primal.clone()).await;
 
         let result = orch.start_primal(&pid("healthy-svc")).await;
-        assert!(result.is_ok(), "healthy primal should start: {:?}", result);
+        assert!(result.is_ok(), "healthy primal should start: {result:?}");
 
         assert_eq!(
             orch.get_state(&pid("healthy-svc")).await,
@@ -672,7 +669,7 @@ mod tests {
             Some(PrimalState::Failed { reason }) => {
                 assert!(!reason.is_empty());
             }
-            other => panic!("expected Failed state, got {:?}", other),
+            other => panic!("expected Failed state, got {other:?}"),
         }
     }
 

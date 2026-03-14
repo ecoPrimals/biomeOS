@@ -69,9 +69,8 @@ async fn test_e2e_multi_computer_incubation_simulation() {
             r#"
 [meta]
 node_id = "alpha"
-family_id = "{}"
-            "#,
-            test_family
+family_id = "{test_family}"
+            "#
         ),
     )
     .unwrap();
@@ -106,9 +105,8 @@ async fn test_e2e_genetic_lineage_preservation() {
             r#"
 [meta]
 node_id = "lineage-test"
-family_id = "{}"
-            "#,
-            test_family
+family_id = "{test_family}"
+            "#
         ),
     )
     .unwrap();

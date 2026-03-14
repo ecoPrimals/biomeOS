@@ -68,10 +68,12 @@ struct OrganismHandle {
     status: OrganismStatus,
 }
 
-/// Organism status
-/// Organism lifecycle status. Reserved for organism lifecycle state machine.
+/// Organism lifecycle status.
+///
+/// Full state machine variants are defined for the complete lifecycle;
+/// transitions will be wired up as organism management matures.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[allow(dead_code)] // Future: wire up for organism lifecycle state machine
+#[allow(dead_code)]
 enum OrganismStatus {
     Pending,
     Starting,

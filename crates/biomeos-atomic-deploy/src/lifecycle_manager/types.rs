@@ -184,3 +184,105 @@ pub struct PrimalMetrics {
     /// Requests served (if available)
     pub requests_served: u64,
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    #[test]
+    fn test_health_config_default() {
+        let config = HealthConfig::default();
+        assert_eq!(config.check_interval, Duration::from_secs(30));
+        assert_eq!(config.timeout, Duration::from_secs(5));
+        assert_eq!(config.failure_threshold, 3);
+        assert_eq!(config.health_method, "health");
+    }
+
+    #[test]
+    fn test_resurrection_config_default() {
+        let config = ResurrectionConfig::default();
+        assert!(config.enabled);
+        assert_eq!(config.max_attempts, 5);
+        assert_eq!(config.base_delay, Duration::from_secs(2));
+        assert_eq!(config.max_delay, Duration::from_secs(60));
+    }
+
+    #[test]
+    fn test_primal_metrics_default() {
+        let metrics = PrimalMetrics::default();
+        assert_eq!(metrics.total_uptime_secs, 0);
+        assert_eq!(metrics.resurrection_count, 0);
+        assert_eq!(metrics.health_failures, 0);
+    }
+
+    #[test]
+    fn test_apoptosis_reason_serde_roundtrip() {
+        for reason in [
+            ApoptosisReason::UserRequest,
+            ApoptosisReason::EcosystemHealth,
+            ApoptosisReason::ResourcePressure,
+            ApoptosisReason::DependencyDeath("beardog".to_string()),
+            ApoptosisReason::ResurrectionExhausted,
+            ApoptosisReason::SystemShutdown,
+        ] {
+            let json = serde_json::to_string(&reason).unwrap();
+            let parsed: ApoptosisReason = serde_json::from_str(&json).unwrap();
+            assert_eq!(reason, parsed);
+        }
+    }
+
+    #[test]
+    fn test_lifecycle_state_germinating_serde() {
+        let state = LifecycleState::Germinating;
+        let json = serde_json::to_string(&state).unwrap();
+        let parsed: LifecycleState = serde_json::from_str(&json).unwrap();
+        assert_eq!(state, parsed);
+    }
+
+    #[test]
+    fn test_lifecycle_state_incubating_serde() {
+        let now = chrono::Utc::now();
+        let state = LifecycleState::Incubating {
+            started_at: now,
+            timeout_ms: 5000,
+        };
+        let json = serde_json::to_string(&state).unwrap();
+        let parsed: LifecycleState = serde_json::from_str(&json).unwrap();
+        assert_eq!(state, parsed);
+    }
+
+    #[test]
+    fn test_lifecycle_state_apoptosis_serde() {
+        let now = chrono::Utc::now();
+        let state = LifecycleState::Apoptosis {
+            reason: ApoptosisReason::UserRequest,
+            started_at: now,
+        };
+        let json = serde_json::to_string(&state).unwrap();
+        let parsed: LifecycleState = serde_json::from_str(&json).unwrap();
+        assert_eq!(state, parsed);
+    }
+
+    #[test]
+    fn test_managed_primal_serde_roundtrip() {
+        let primal = ManagedPrimal {
+            name: "beardog".to_string(),
+            family_id: "fam-1".to_string(),
+            socket_path: PathBuf::from("/tmp/beardog.sock"),
+            pid: Some(1234),
+            state: LifecycleState::Germinating,
+            deployment_node: None,
+            depends_on: vec![],
+            depended_by: vec!["songbird".to_string()],
+            health_config: HealthConfig::default(),
+            resurrection_config: ResurrectionConfig::default(),
+            metrics: PrimalMetrics::default(),
+        };
+        let json = serde_json::to_string(&primal).unwrap();
+        let parsed: ManagedPrimal = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.name, primal.name);
+        assert_eq!(parsed.pid, primal.pid);
+    }
+}

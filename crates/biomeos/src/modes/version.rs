@@ -81,7 +81,7 @@ pub async fn run(detailed: bool) -> Result<()> {
             "🦀 100% Rust  •  🌱 Self-Evolving  •  ⚛️  TRUE PRIMAL".bright_green()
         );
     } else {
-        println!("biomeOS v{}", version);
+        println!("biomeOS v{version}");
     }
 
     Ok(())
@@ -106,7 +106,7 @@ mod tests {
     #[test]
     fn test_version_format_string() {
         let version = env!("CARGO_PKG_VERSION");
-        let simple = format!("biomeOS v{}", version);
+        let simple = format!("biomeOS v{version}");
         assert!(
             simple.starts_with("biomeOS v"),
             "Version string should start with 'biomeOS v'"

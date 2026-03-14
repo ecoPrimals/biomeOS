@@ -32,12 +32,12 @@ pub fn success_response(result: Value, id: Value) -> Value {
 
 /// Create a JSON-RPC internal error response
 pub fn internal_error_response(error: &anyhow::Error, id: Option<Value>) -> Value {
-    error_response(-32603, format!("Internal error: {}", error), id)
+    error_response(-32603, format!("Internal error: {error}"), id)
 }
 
 /// Create a JSON-RPC method not found error response
 pub fn method_not_found_response(method: &str, id: Value) -> Value {
-    error_response(-32601, format!("Method not found: {}", method), Some(id))
+    error_response(-32601, format!("Method not found: {method}"), Some(id))
 }
 
 #[cfg(test)]
@@ -79,8 +79,7 @@ mod tests {
                 || msg.contains("JSON")
                 || msg.contains("key")
                 || msg.contains("error"),
-            "error: {}",
-            msg
+            "error: {msg}"
         );
     }
 

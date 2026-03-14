@@ -681,7 +681,7 @@ mod tests {
     #[test]
     fn test_feature_flags_debug() {
         let flags = FeatureFlags::default();
-        let debug = format!("{:?}", flags);
+        let debug = format!("{flags:?}");
         assert!(debug.contains("ai_first"));
     }
 }

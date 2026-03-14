@@ -749,21 +749,21 @@ mod tests {
     #[test]
     fn test_allocation_policy_debug() {
         let policy = AllocationPolicy::Custom("weighted-fair".to_string());
-        let debug = format!("{:?}", policy);
+        let debug = format!("{policy:?}");
         assert!(debug.contains("weighted-fair"));
     }
 
     #[test]
     fn test_discovery_method_debug() {
         let method = DiscoveryMethod::Kubernetes;
-        let debug = format!("{:?}", method);
+        let debug = format!("{method:?}");
         assert!(debug.contains("Kubernetes"));
     }
 
     #[test]
     fn test_metrics_format_debug() {
         let format = MetricsFormat::Prometheus;
-        let debug = format!("{:?}", format);
+        let debug = format!("{format:?}");
         assert!(debug.contains("Prometheus"));
     }
 }

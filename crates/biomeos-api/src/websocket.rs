@@ -59,7 +59,7 @@ impl SubscriptionFilter {
 
         // Check event_types filter
         if let Some(ref event_types) = self.event_types {
-            let event_debug = format!("{:?}", event);
+            let event_debug = format!("{event:?}");
             let event_type = event_debug.split('{').next().unwrap_or("").trim();
             if !event_types.iter().any(|t| t == event_type) {
                 return false;

@@ -423,3 +423,165 @@ impl Default for ServiceHealth {
         }
     }
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_service_health_default() {
+        let health = ServiceHealth::default();
+        assert!(health.health_checks.is_empty());
+        assert!(health.liveness_probe.is_none());
+        assert!(health.reporting.enabled);
+        assert_eq!(health.reporting.interval, 30);
+        assert!(matches!(health.reporting.format, HealthReportFormat::Json));
+    }
+
+    #[test]
+    fn test_service_health_serde_roundtrip() {
+        let val = ServiceHealth::default();
+        let json = serde_json::to_string(&val).unwrap();
+        let back: ServiceHealth = serde_json::from_str(&json).unwrap();
+        assert_eq!(val.health_checks.len(), back.health_checks.len());
+        assert_eq!(val.reporting.enabled, back.reporting.enabled);
+    }
+
+    #[test]
+    fn test_probe_config_serde() {
+        let probe = ProbeConfig {
+            handler: ProbeHandler::HttpGet {
+                path: "/health".to_string(),
+                port: ProbePort::Number(8080),
+                host: None,
+                scheme: HttpScheme::Http,
+                http_headers: vec![],
+            },
+            initial_delay_seconds: 10,
+            period_seconds: 5,
+            timeout_seconds: 3,
+            success_threshold: 1,
+            failure_threshold: 3,
+            termination_grace_period_seconds: Some(30),
+        };
+        let json = serde_json::to_string(&probe).unwrap();
+        let back: ProbeConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(probe.period_seconds, back.period_seconds);
+    }
+
+    #[test]
+    fn test_probe_handler_variants_serde() {
+        let http = ProbeHandler::HttpGet {
+            path: "/ready".to_string(),
+            port: ProbePort::Name("http".to_string()),
+            host: Some("localhost".to_string()),
+            scheme: HttpScheme::Https,
+            http_headers: vec![HttpHeader {
+                name: "X-Custom".to_string(),
+                value: "value".to_string(),
+            }],
+        };
+        let json = serde_json::to_string(&http).unwrap();
+        let _: ProbeHandler = serde_json::from_str(&json).unwrap();
+
+        let tcp = ProbeHandler::TcpSocket {
+            port: ProbePort::Number(9090),
+            host: Some("0.0.0.0".to_string()),
+        };
+        let json = serde_json::to_string(&tcp).unwrap();
+        let _: ProbeHandler = serde_json::from_str(&json).unwrap();
+
+        let exec = ProbeHandler::Exec {
+            command: vec!["/bin/healthcheck".to_string()],
+        };
+        let json = serde_json::to_string(&exec).unwrap();
+        let _: ProbeHandler = serde_json::from_str(&json).unwrap();
+    }
+
+    #[test]
+    fn test_health_report_format_serde() {
+        for fmt in [
+            HealthReportFormat::Json,
+            HealthReportFormat::Prometheus,
+            HealthReportFormat::Custom("custom".to_string()),
+        ] {
+            let json = serde_json::to_string(&fmt).unwrap();
+            let back: HealthReportFormat = serde_json::from_str(&json).unwrap();
+            assert_eq!(format!("{fmt:?}"), format!("{back:?}"));
+        }
+    }
+
+    #[test]
+    fn test_health_status_serde() {
+        for status in [
+            HealthStatus::Healthy,
+            HealthStatus::Unhealthy,
+            HealthStatus::Degraded,
+            HealthStatus::Unknown,
+        ] {
+            let json = serde_json::to_string(&status).unwrap();
+            let back: HealthStatus = serde_json::from_str(&json).unwrap();
+            assert_eq!(format!("{status:?}"), format!("{back:?}"));
+        }
+    }
+
+    #[test]
+    fn test_aggregation_strategy_serde() {
+        for strategy in [
+            AggregationStrategy::All,
+            AggregationStrategy::Any,
+            AggregationStrategy::Majority,
+            AggregationStrategy::Weighted,
+            AggregationStrategy::Custom("custom".to_string()),
+        ] {
+            let json = serde_json::to_string(&strategy).unwrap();
+            let back: AggregationStrategy = serde_json::from_str(&json).unwrap();
+            assert_eq!(format!("{strategy:?}"), format!("{back:?}"));
+        }
+    }
+
+    #[test]
+    fn test_alert_severity_serde() {
+        for severity in [
+            AlertSeverity::Info,
+            AlertSeverity::Warning,
+            AlertSeverity::Error,
+            AlertSeverity::Critical,
+        ] {
+            let json = serde_json::to_string(&severity).unwrap();
+            let back: AlertSeverity = serde_json::from_str(&json).unwrap();
+            assert_eq!(format!("{severity:?}"), format!("{back:?}"));
+        }
+    }
+
+    #[test]
+    fn test_dashboard_theme_serde() {
+        for theme in [
+            DashboardTheme::Light,
+            DashboardTheme::Dark,
+            DashboardTheme::Auto,
+            DashboardTheme::Custom("custom".to_string()),
+        ] {
+            let json = serde_json::to_string(&theme).unwrap();
+            let back: DashboardTheme = serde_json::from_str(&json).unwrap();
+            assert_eq!(format!("{theme:?}"), format!("{back:?}"));
+        }
+    }
+
+    #[test]
+    fn test_health_check_result_serde() {
+        let result = HealthCheckResult {
+            name: "main".to_string(),
+            status: HealthStatus::Healthy,
+            message: Some("OK".to_string()),
+            details: std::collections::HashMap::new(),
+            timestamp: chrono::Utc::now(),
+            duration_ms: 5,
+        };
+        let json = serde_json::to_string(&result).unwrap();
+        let back: HealthCheckResult = serde_json::from_str(&json).unwrap();
+        assert_eq!(result.name, back.name);
+        assert_eq!(result.duration_ms, back.duration_ms);
+    }
+}

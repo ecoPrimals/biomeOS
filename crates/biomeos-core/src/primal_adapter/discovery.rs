@@ -109,7 +109,7 @@ async fn try_subcommand(binary: &Path, cmd: &str) -> Result<PrimalInterface> {
                 stop_cmd,
             })
         }
-        _ => Err(anyhow::anyhow!("Subcommand {} not found", cmd)),
+        _ => Err(anyhow::anyhow!("Subcommand {cmd} not found")),
     }
 }
 

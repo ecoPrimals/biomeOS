@@ -66,7 +66,7 @@ impl NeuralApiServer {
             .log_metric(RoutingMetrics {
                 request_id: request_id.clone(),
                 capability: "secure_http".to_string(),
-                method: format!("http.{}", method),
+                method: format!("http.{method}"),
                 routed_through: atomic.primals.iter().map(|p| p.name.clone()).collect(),
                 latency_ms: latency,
                 success: true,
@@ -97,8 +97,7 @@ mod tests {
         let err = result.expect_err("should fail with missing params");
         assert!(
             err.to_string().contains("Missing") || err.to_string().contains("parameter"),
-            "expected missing params error, got: {}",
-            err
+            "expected missing params error, got: {err}"
         );
     }
 
@@ -113,8 +112,7 @@ mod tests {
         let err = result.expect_err("should fail with missing method");
         assert!(
             err.to_string().contains("method") || err.to_string().contains("Method"),
-            "expected missing method error, got: {}",
-            err
+            "expected missing method error, got: {err}"
         );
     }
 
@@ -129,8 +127,7 @@ mod tests {
         let err = result.expect_err("should fail with missing URL");
         assert!(
             err.to_string().contains("URL") || err.to_string().contains("url"),
-            "expected missing URL error, got: {}",
-            err
+            "expected missing URL error, got: {err}"
         );
     }
 

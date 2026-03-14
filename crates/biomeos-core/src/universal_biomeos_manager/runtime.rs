@@ -38,7 +38,7 @@ impl UniversalBiomeOSManager {
             .values()
             .find(|p| p.name == service || p.id == service);
 
-        let primal = primal.ok_or_else(|| anyhow::anyhow!("Service not found: {}", service))?;
+        let primal = primal.ok_or_else(|| anyhow::anyhow!("Service not found: {service}"))?;
 
         // Generate logs from service
         let logs = self.generate_service_logs(primal, tail, since).await?;
@@ -90,7 +90,7 @@ impl UniversalBiomeOSManager {
         let primal = primals
             .values()
             .find(|p| p.name == service || p.id == service)
-            .ok_or_else(|| anyhow::anyhow!("Service not found: {}", service))?;
+            .ok_or_else(|| anyhow::anyhow!("Service not found: {service}"))?;
 
         // Execute command via primal's API
         let execution_start = std::time::Instant::now();

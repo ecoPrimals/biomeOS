@@ -99,8 +99,7 @@ mod tests {
             msg.contains("Failed to connect")
                 || msg.contains("timeout")
                 || msg.contains("Connection"),
-            "Expected connection error, got: {}",
-            msg
+            "Expected connection error, got: {msg}"
         );
     }
 }

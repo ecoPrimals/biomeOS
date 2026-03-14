@@ -246,10 +246,9 @@ impl UniversalBiomeOSManager {
     async fn generate_general_response(&self, query: &str, _context: Option<&str>) -> String {
         // This would be enhanced with actual AI/ML processing
         format!(
-            "I understand you're asking about '{}'. BiomeOS provides comprehensive ecosystem management. \
+            "I understand you're asking about '{query}'. BiomeOS provides comprehensive ecosystem management. \
              Key areas include service discovery, health monitoring, deployment management, and system orchestration. \
-             What specific aspect would you like help with?",
-            query
+             What specific aspect would you like help with?"
         )
     }
 
@@ -587,16 +586,16 @@ mod tests {
         let mut registry = manager.registered_primals().write().await;
         for i in 0..5 {
             registry.insert(
-                format!("primal-{}", i),
+                format!("primal-{i}"),
                 PrimalInfo {
-                    id: format!("primal-{}", i),
-                    name: format!("primal-{}", i),
+                    id: format!("primal-{i}"),
+                    name: format!("primal-{i}"),
                     primal_type: PrimalType::from_discovered(
                         "test",
-                        format!("primal-{}", i),
+                        format!("primal-{i}"),
                         "1.0.0",
                     ),
-                    endpoint: format!("/tmp/primal-{}.sock", i),
+                    endpoint: format!("/tmp/primal-{i}.sock"),
                     capabilities: vec![],
                     health: Health::Healthy,
                     last_seen: chrono::Utc::now(),

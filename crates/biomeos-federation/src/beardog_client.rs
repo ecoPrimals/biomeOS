@@ -123,7 +123,7 @@ impl BearDogClient {
         } else if endpoint.starts_with("http://") || endpoint.starts_with("https://") {
             BearDogEndpoint::Http(endpoint)
         } else {
-            return Err(anyhow::anyhow!("Invalid endpoint format: {}", endpoint));
+            return Err(anyhow::anyhow!("Invalid endpoint format: {endpoint}"));
         };
 
         Ok(Self { endpoint })
@@ -167,8 +167,7 @@ impl BearDogClient {
                         Ok(())
                     } else {
                         Err(anyhow::anyhow!(
-                            "BearDog reports unhealthy status: {}",
-                            status
+                            "BearDog reports unhealthy status: {status}"
                         ))
                     }
                 } else {
@@ -346,6 +345,7 @@ impl BearDogClient {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 
@@ -444,5 +444,48 @@ mod tests {
         assert!(display.contains("member=true"));
         assert!(display.contains("relationship=child"));
         assert!(display.contains("parent_hash=parent-hash"));
+    }
+
+    #[test]
+    fn test_with_endpoint_unix_path() {
+        let client =
+            BearDogClient::with_endpoint("unix:///run/user/1000/biomeos/beardog.sock".to_string())
+                .unwrap();
+        assert!(matches!(client.endpoint, BearDogEndpoint::UnixSocket(_)));
+    }
+
+    #[test]
+    fn test_invalid_endpoint_ftp() {
+        let result = BearDogClient::with_endpoint("ftp://localhost/path".to_string());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_invalid_endpoint_empty() {
+        let result = BearDogClient::with_endpoint("".to_string());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_key_derivation_request_clone() {
+        let req = KeyDerivationRequest {
+            parent_family: "fam".to_string(),
+            subfed_name: "sub".to_string(),
+            purpose: "encryption".to_string(),
+        };
+        let cloned = req.clone();
+        assert_eq!(cloned.parent_family, req.parent_family);
+    }
+
+    #[test]
+    fn test_lineage_verification_response_not_member() {
+        let resp = LineageVerificationResponse {
+            is_family_member: false,
+            parent_seed_hash: "".to_string(),
+            relationship: "unknown".to_string(),
+        };
+        let display = resp.to_string();
+        assert!(display.contains("member=false"));
+        assert!(display.contains("unknown"));
     }
 }

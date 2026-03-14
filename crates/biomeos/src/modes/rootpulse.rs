@@ -176,17 +176,6 @@ async fn run_status(
     Ok(())
 }
 
-/// Backward-compatible alias for the commit workflow.
-pub async fn run(
-    session_id: String,
-    agent_did: String,
-    socket: Option<PathBuf>,
-    family_id: Option<String>,
-    dry_run: bool,
-) -> Result<()> {
-    run_commit(session_id, agent_did, socket, family_id, dry_run).await
-}
-
 /// Send a JSON-RPC request over Unix socket and return the parsed response.
 async fn send_jsonrpc(
     socket_path: &PathBuf,

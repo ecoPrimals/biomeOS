@@ -57,8 +57,7 @@ impl BeaconGeneticsManager {
 
         std::fs::create_dir_all(&seeds_dir).map_err(|e| {
             SporeError::IoError(std::io::Error::other(format!(
-                "Failed to create .beacon_seeds directory: {}",
-                e
+                "Failed to create .beacon_seeds directory: {e}"
             )))
         })?;
 
@@ -85,7 +84,7 @@ impl BeaconGeneticsManager {
             .capability_caller
             .call("beacon.generate", serde_json::json!({}))
             .await
-            .map_err(|e| SporeError::ValidationFailed(format!("beacon.generate failed: {}", e)))?;
+            .map_err(|e| SporeError::ValidationFailed(format!("beacon.generate failed: {e}")))?;
 
         let beacon_id = response
             .get("beacon_id")
@@ -97,11 +96,10 @@ impl BeaconGeneticsManager {
         let seed_path = self.root_path.join(".beacon.seed");
         if let Some(seed_hex) = response.get("seed_hex").and_then(|s| s.as_str()) {
             let seed_bytes = hex::decode(seed_hex)
-                .map_err(|e| SporeError::DeserializationError(format!("Invalid hex: {}", e)))?;
+                .map_err(|e| SporeError::DeserializationError(format!("Invalid hex: {e}")))?;
             std::fs::write(&seed_path, seed_bytes).map_err(|e| {
                 SporeError::IoError(std::io::Error::other(format!(
-                    "Failed to write beacon seed: {}",
-                    e
+                    "Failed to write beacon seed: {e}"
                 )))
             })?;
         }
@@ -114,7 +112,7 @@ impl BeaconGeneticsManager {
             let seed_data = std::fs::read(&family_seed_path).map_err(|e| {
                 SporeError::IoError(std::io::Error::new(
                     std::io::ErrorKind::NotFound,
-                    format!("Failed to read family seed: {}", e),
+                    format!("Failed to read family seed: {e}"),
                 ))
             })?;
             if seed_data.len() >= 8 {
@@ -146,7 +144,7 @@ impl BeaconGeneticsManager {
             .capability_caller
             .call("beacon.get_id", serde_json::json!({}))
             .await
-            .map_err(|e| SporeError::ValidationFailed(format!("beacon.get_id failed: {}", e)))?;
+            .map_err(|e| SporeError::ValidationFailed(format!("beacon.get_id failed: {e}")))?;
 
         let our_beacon_id = our_id_response
             .get("beacon_id")
@@ -157,7 +155,7 @@ impl BeaconGeneticsManager {
             .capability_caller
             .call("beacon.get_seed", serde_json::json!({}))
             .await
-            .map_err(|e| SporeError::ValidationFailed(format!("beacon.get_seed failed: {}", e)))?;
+            .map_err(|e| SporeError::ValidationFailed(format!("beacon.get_seed failed: {e}")))?;
 
         let our_seed_hex = our_seed_response
             .get("seed_hex")
@@ -174,7 +172,7 @@ impl BeaconGeneticsManager {
                 }),
             )
             .await
-            .map_err(|e| SporeError::ValidationFailed(format!("crypto.encrypt failed: {}", e)))?;
+            .map_err(|e| SporeError::ValidationFailed(format!("crypto.encrypt failed: {e}")))?;
 
         let our_seed_encrypted = encrypted_response
             .get("ciphertext")
@@ -197,7 +195,7 @@ impl BeaconGeneticsManager {
             )
             .await
             .map_err(|e| {
-                SporeError::ValidationFailed(format!("network.beacon_exchange failed: {}", e))
+                SporeError::ValidationFailed(format!("network.beacon_exchange failed: {e}"))
             })?;
 
         let peer_beacon_id = exchange_response
@@ -222,7 +220,7 @@ impl BeaconGeneticsManager {
                 }),
             )
             .await
-            .map_err(|e| SporeError::ValidationFailed(format!("crypto.decrypt failed: {}", e)))?;
+            .map_err(|e| SporeError::ValidationFailed(format!("crypto.decrypt failed: {e}")))?;
 
         let peer_seed_hex = decrypt_response
             .get("plaintext")
@@ -250,7 +248,7 @@ impl BeaconGeneticsManager {
             notes: "Met via direct exchange".to_string(),
             relationship: MeetingRelationship::Direct,
             visibility: MeetingVisibility::Mutual,
-            seed_file: format!("{}.seed", beacon_id_short),
+            seed_file: format!("{beacon_id_short}.seed"),
         };
 
         if let Some(ref mut manifest) = self.manifest {
@@ -278,7 +276,7 @@ impl BeaconGeneticsManager {
             )
             .await
             .map_err(|e| {
-                SporeError::ValidationFailed(format!("crypto.encrypt_with_lineage failed: {}", e))
+                SporeError::ValidationFailed(format!("crypto.encrypt_with_lineage failed: {e}"))
             })?;
 
         let encrypted = encrypted_response
@@ -290,8 +288,7 @@ impl BeaconGeneticsManager {
 
         std::fs::write(&seed_file, encrypted).map_err(|e| {
             SporeError::IoError(std::io::Error::other(format!(
-                "Failed to write met seed: {}",
-                e
+                "Failed to write met seed: {e}"
             )))
         })?;
         debug!("Stored met seed: {}", seed_file.display());
@@ -305,7 +302,7 @@ impl BeaconGeneticsManager {
         let encrypted = std::fs::read_to_string(&seed_file).map_err(|e| {
             SporeError::IoError(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
-                format!("Met seed not found: {}", e),
+                format!("Met seed not found: {e}"),
             ))
         })?;
 
@@ -320,7 +317,7 @@ impl BeaconGeneticsManager {
             )
             .await
             .map_err(|e| {
-                SporeError::ValidationFailed(format!("crypto.decrypt_with_lineage failed: {}", e))
+                SporeError::ValidationFailed(format!("crypto.decrypt_with_lineage failed: {e}"))
             })?;
 
         decrypt_response

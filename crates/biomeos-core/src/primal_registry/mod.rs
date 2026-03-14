@@ -279,10 +279,10 @@ impl PrimalRegistry {
             self.binaries
                 .get(primal_name)
                 .and_then(|versions| versions.iter().find(|b| b.version == v))
-                .ok_or_else(|| anyhow::anyhow!("Primal {} version {} not found", primal_name, v))?
+                .ok_or_else(|| anyhow::anyhow!("Primal {primal_name} version {v} not found"))?
         } else {
             self.get_latest(primal_name)
-                .ok_or_else(|| anyhow::anyhow!("Primal {} not found", primal_name))?
+                .ok_or_else(|| anyhow::anyhow!("Primal {primal_name} not found"))?
         };
 
         tracing::info!(
@@ -358,7 +358,7 @@ impl PrimalRegistry {
 
         let contents = tokio::fs::read(path).await?;
         let hash = Sha256::digest(&contents);
-        Ok(format!("{:x}", hash))
+        Ok(format!("{hash:x}"))
     }
 
     /// Get default metadata for a primal
@@ -368,7 +368,7 @@ impl PrimalRegistry {
         // This is only used as a fallback for legacy primals that don't support
         // capability announcement
         PrimalMetadata {
-            description: format!("{} primal (query for capabilities)", name),
+            description: format!("{name} primal (query for capabilities)"),
             capabilities: vec![], // Will be discovered at runtime via JSON-RPC
             default_ports: HashMap::new(), // Will be discovered or configured
             config_hints: HashMap::new(),

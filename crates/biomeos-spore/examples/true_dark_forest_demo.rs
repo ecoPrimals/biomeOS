@@ -50,21 +50,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("📦 Creating test family seed...");
     let seed_bytes = b"test_family_seed_32bytes_long!!!";
     std::fs::write(family_seed_path, seed_bytes)?;
-    println!("✅ Created: {} (32 bytes)", family_seed_path);
+    println!("✅ Created: {family_seed_path} (32 bytes)");
     println!();
 
     // Check beardog availability
     println!("🔍 Checking beardog availability...");
     if !std::path::Path::new(beardog_socket).exists() {
-        eprintln!("❌ BearDog not running at {}", beardog_socket);
+        eprintln!("❌ BearDog not running at {beardog_socket}");
         eprintln!("   Start beardog first:");
-        eprintln!(
-            "   FAMILY_ID=demo ./beardog server --socket {}",
-            beardog_socket
-        );
+        eprintln!("   FAMILY_ID=demo ./beardog server --socket {beardog_socket}");
         return Ok(());
     }
-    println!("✅ BearDog socket found: {}", beardog_socket);
+    println!("✅ BearDog socket found: {beardog_socket}");
     println!();
 
     // Create Dark Forest beacon manager
@@ -92,7 +89,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
     let duration = start.elapsed();
 
-    println!("✅ Pure noise beacon generated in {:?}", duration);
+    println!("✅ Pure noise beacon generated in {duration:?}");
     println!("   Size: {} bytes", pure_noise_beacon.len());
     println!("   Format: [nonce (12)] + [ciphertext] + [tag (16)]");
     println!();
@@ -146,7 +143,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         Some(decrypted) => {
             let duration = start.elapsed();
-            println!("✅ DECRYPTION SUCCESS (same family) in {:?}", duration);
+            println!("✅ DECRYPTION SUCCESS (same family) in {duration:?}");
             println!("   Decrypted data:");
             println!(
                 "   - node_id: {}",
@@ -156,7 +153,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "   - capabilities: {}",
                 decrypted["capabilities"]
                     .as_array()
-                    .map(|v| format!("{:?}", v))
+                    .map(|v| format!("{v:?}"))
                     .unwrap_or_else(|| "[]".to_string())
             );
             println!(
@@ -194,10 +191,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         None => {
             let duration = start.elapsed();
-            println!(
-                "✅ SILENT FAILURE (different family/noise) in {:?}",
-                duration
-            );
+            println!("✅ SILENT FAILURE (different family/noise) in {duration:?}");
             println!("   Result: None (indistinguishable from noise)");
             println!("   No error logs, no exceptions - true Dark Forest");
         }
@@ -220,7 +214,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     for i in 1..=10 {
         let start = Instant::now();
         let beacon = beacon_mgr
-            .generate_pure_noise_beacon(&format!("/tmp/demo_{}.sock", i), &["test"], None)
+            .generate_pure_noise_beacon(&format!("/tmp/demo_{i}.sock"), &["test"], None)
             .await?;
         total_duration += start.elapsed();
         sizes.push(beacon.len());
@@ -230,8 +224,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let avg_size = sizes.iter().sum::<usize>() / sizes.len();
 
     println!("✅ Performance Results:");
-    println!("   Average generation time: {:?}", avg_duration);
-    println!("   Average beacon size: {} bytes", avg_size);
+    println!("   Average generation time: {avg_duration:?}");
+    println!("   Average beacon size: {avg_size} bytes");
     println!(
         "   Throughput: ~{} beacons/sec",
         1000 / avg_duration.as_millis().max(1)
@@ -241,7 +235,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Network transmission analysis
     println!("📊 Network Transmission Analysis:");
     println!("   Old format (JSON): ~{} bytes", avg_size * 2); // Rough estimate with base64
-    println!("   New format (pure noise): ~{} bytes", avg_size);
+    println!("   New format (pure noise): ~{avg_size} bytes");
     println!(
         "   Bandwidth savings: ~{}%",
         ((avg_size as f64) / (avg_size as f64 * 2.0) * 100.0) as u32
@@ -265,8 +259,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Security Grade: 🏆 A++ LEGENDARY");
     println!();
     println!("Performance:");
-    println!("  ⚡ Average generation: {:?}", avg_duration);
-    println!("  📦 Average size: {} bytes", avg_size);
+    println!("  ⚡ Average generation: {avg_duration:?}");
+    println!("  📦 Average size: {avg_size} bytes");
     println!("  🚀 Ready for production deployment");
     println!();
 

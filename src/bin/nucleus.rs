@@ -100,7 +100,7 @@ async fn deploy_nucleus(family_id: &str, graph_path: &str) -> Result<()> {
     // Verify graph exists
     let graph_file = PathBuf::from(graph_path);
     if tokio::fs::metadata(&graph_file).await.is_err() {
-        return Err(anyhow::anyhow!("Graph not found: {}", graph_path));
+        return Err(anyhow::anyhow!("Graph not found: {graph_path}"));
     }
 
     // Load graph
@@ -123,8 +123,8 @@ async fn deploy_nucleus(family_id: &str, graph_path: &str) -> Result<()> {
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), family_id.to_string());
     env.insert("UID".to_string(), uid.clone());
-    env.insert("RUNTIME_DIR".to_string(), format!("/run/user/{}", uid));
-    env.insert("SOCKET_DIR".to_string(), format!("/run/user/{}", uid));
+    env.insert("RUNTIME_DIR".to_string(), format!("/run/user/{uid}"));
+    env.insert("SOCKET_DIR".to_string(), format!("/run/user/{uid}"));
     env.insert("LOG_DIR".to_string(), "/tmp".to_string());
 
     // JWT secret for NestGate
@@ -194,7 +194,7 @@ async fn verify_nucleus() -> Result<()> {
 
     // Check for required primal sockets
     let uid = std::env::var("UID").unwrap_or_else(|_| "1000".to_string());
-    let socket_dir = format!("/run/user/{}", uid);
+    let socket_dir = format!("/run/user/{uid}");
 
     let required_primals = vec!["beardog", "toadstool", "nestgate"];
     let mut healthy = true;
@@ -226,12 +226,12 @@ async fn check_primal_health(socket_dir: &str, primal: &str) -> Result<()> {
     let mut entries = tokio::fs::read_dir(socket_dir).await?;
     while let Some(entry) = entries.next_entry().await? {
         if let Some(name) = entry.file_name().to_str() {
-            if name.starts_with(&format!("{}-", primal)) && name.ends_with(".sock") {
+            if name.starts_with(&format!("{primal}-")) && name.ends_with(".sock") {
                 // Found socket, try to connect
-                let socket_path = format!("{}/{}", socket_dir, name);
+                let socket_path = format!("{socket_dir}/{name}");
                 match tokio::net::UnixStream::connect(&socket_path).await {
                     Ok(_) => return Ok(()),
-                    Err(e) => return Err(anyhow::anyhow!("Cannot connect: {}", e)),
+                    Err(e) => return Err(anyhow::anyhow!("Cannot connect: {e}")),
                 }
             }
         }
@@ -267,7 +267,7 @@ async fn show_status() -> Result<()> {
     // Show sockets
     info!("Available Sockets:");
     let uid = std::env::var("UID").unwrap_or_else(|_| "1000".to_string());
-    let socket_dir = format!("/run/user/{}", uid);
+    let socket_dir = format!("/run/user/{uid}");
 
     let mut entries = tokio::fs::read_dir(&socket_dir).await?;
     while let Some(entry) = entries.next_entry().await? {
@@ -296,13 +296,12 @@ async fn launch_ui() -> Result<()> {
 
     if tokio::fs::metadata(petaltongue_bin).await.is_err() {
         return Err(anyhow::anyhow!(
-            "petalTongue binary not found at {}",
-            petaltongue_bin
+            "petalTongue binary not found at {petaltongue_bin}"
         ));
     }
 
     let uid = std::env::var("UID").unwrap_or_else(|_| "1000".to_string());
-    let biomeos_socket = format!("unix:///run/user/{}/biomeos-device-management.sock", uid);
+    let biomeos_socket = format!("unix:///run/user/{uid}/biomeos-device-management.sock");
 
     info!("🔌 Connecting to: {}", biomeos_socket);
 
@@ -345,7 +344,7 @@ async fn serve_neural_api(family_id: &str) -> Result<()> {
     info!("");
 
     // Determine socket path
-    let socket_path = format!("/tmp/biomeos-neural-api-{}.sock", family_id);
+    let socket_path = format!("/tmp/biomeos-neural-api-{family_id}.sock");
 
     // Graphs directory
     let graphs_dir = "graphs";

@@ -198,7 +198,7 @@ impl TopologyHandler {
 
         // Priority 4: /tmp/biomeos-$USER (user-namespaced)
         if let Ok(user) = std::env::var("USER") {
-            let path = PathBuf::from(format!("/tmp/biomeos-{}", user));
+            let path = PathBuf::from(format!("/tmp/biomeos-{user}"));
             if !dirs.contains(&path) && path.exists() {
                 dirs.push(path);
             }
@@ -528,13 +528,11 @@ mod tests {
             .collect();
         assert!(
             primal_ids.contains(&"beardog-test-family"),
-            "Should have beardog, got {:?}",
-            primal_ids
+            "Should have beardog, got {primal_ids:?}"
         );
         assert!(
             primal_ids.contains(&"songbird-test-family"),
-            "Should have songbird, got {:?}",
-            primal_ids
+            "Should have songbird, got {primal_ids:?}"
         );
 
         if !connections.is_empty() {
@@ -586,8 +584,7 @@ mod tests {
         let status = health["status"].as_str().expect("status is string");
         assert!(
             ["healthy", "degraded", "critical"].contains(&status),
-            "status must be healthy/degraded/critical, got {}",
-            status
+            "status must be healthy/degraded/critical, got {status}"
         );
 
         assert!(result.get("self_awareness").is_some());

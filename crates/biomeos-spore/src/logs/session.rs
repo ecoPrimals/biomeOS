@@ -56,7 +56,7 @@ impl ActiveLogSession {
     pub fn is_active(&self) -> bool {
         self.process_pids.iter().any(|&pid| {
             // Check if process exists via /proc
-            PathBuf::from(format!("/proc/{}", pid)).exists()
+            PathBuf::from(format!("/proc/{pid}")).exists()
         })
     }
 

@@ -388,7 +388,7 @@ mod tests {
                 } else {
                     SporeEventType::Refresh
                 },
-                node_id: Some(format!("node-{}", i)),
+                node_id: Some(format!("node-{i}")),
                 deployed_to: None,
                 metadata: HashMap::new(),
             };

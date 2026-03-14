@@ -85,7 +85,7 @@ mod config_tests {
     #[test]
     fn test_config_debug() {
         let config = BiomeOSConfig::default();
-        let debug_str = format!("{:?}", config);
+        let debug_str = format!("{config:?}");
         assert!(debug_str.contains("BiomeOSConfig"));
         assert!(debug_str.contains("metadata"));
     }
@@ -658,7 +658,7 @@ metadata:
         for env in envs {
             let json = serde_json::to_string(&env).expect("serialize env");
             let parsed: Environment = serde_json::from_str(&json).expect("parse env");
-            assert_eq!(format!("{:?}", env), format!("{:?}", parsed));
+            assert_eq!(format!("{env:?}"), format!("{:?}", parsed));
         }
     }
 
@@ -674,7 +674,7 @@ metadata:
         for scale in scales {
             let json = serde_json::to_string(&scale).expect("serialize scale");
             let parsed: OrganizationScale = serde_json::from_str(&json).expect("parse scale");
-            assert_eq!(format!("{:?}", scale), format!("{:?}", parsed));
+            assert_eq!(format!("{scale:?}"), format!("{:?}", parsed));
         }
     }
 

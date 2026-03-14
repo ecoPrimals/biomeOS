@@ -41,9 +41,9 @@ impl TowerAtomicFixture {
         Self {
             family_id: family_id.to_string(),
             socket_dir: socket_dir.clone(),
-            beardog_socket: socket_dir.join(format!("beardog-{}.sock", family_id)),
-            songbird_socket: socket_dir.join(format!("songbird-{}.sock", family_id)),
-            neural_api_socket: socket_dir.join(format!("neural-api-{}.sock", family_id)),
+            beardog_socket: socket_dir.join(format!("beardog-{family_id}.sock")),
+            songbird_socket: socket_dir.join(format!("songbird-{family_id}.sock")),
+            neural_api_socket: socket_dir.join(format!("neural-api-{family_id}.sock")),
         }
     }
 
@@ -136,11 +136,7 @@ async fn test_capability_call_routing() {
     )
     .await;
 
-    assert!(
-        result.is_ok(),
-        "capability.call should succeed: {:?}",
-        result
-    );
+    assert!(result.is_ok(), "capability.call should succeed: {result:?}");
     let response = result.unwrap();
     assert!(response.get("result").is_some() || response.get("error").is_some());
 }
@@ -162,15 +158,13 @@ async fn test_nucleation_xdg_paths() {
         beardog_socket
             .to_string_lossy()
             .contains("/run/user/1000/biomeos/"),
-        "BearDog socket should be in XDG runtime dir: {:?}",
-        beardog_socket
+        "BearDog socket should be in XDG runtime dir: {beardog_socket:?}"
     );
     assert!(
         songbird_socket
             .to_string_lossy()
             .contains("/run/user/1000/biomeos/"),
-        "Songbird socket should be in XDG runtime dir: {:?}",
-        songbird_socket
+        "Songbird socket should be in XDG runtime dir: {songbird_socket:?}"
     );
 
     // Verify deterministic assignment
@@ -201,9 +195,8 @@ async fn test_nucleation_batch_assignment() {
     for (primal, path) in &assignments {
         assert!(
             path.to_string_lossy()
-                .contains(&format!("{}-batch-test.sock", primal)),
-            "Socket path should include primal and family: {:?}",
-            path
+                .contains(&format!("{primal}-batch-test.sock")),
+            "Socket path should include primal and family: {path:?}"
         );
     }
 }
@@ -229,7 +222,6 @@ async fn test_execution_context_socket_paths() {
 
     assert!(
         beardog_socket.contains("/run/user/1000/biomeos/beardog-context-test.sock"),
-        "Context should use XDG socket path: {}",
-        beardog_socket
+        "Context should use XDG socket path: {beardog_socket}"
     );
 }

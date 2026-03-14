@@ -64,9 +64,9 @@ impl MockPrimalFactory {
         let now = chrono::Utc::now();
         PrimalInfo {
             id: id.to_string(),
-            name: format!("{} Compute Service", id),
+            name: format!("{id} Compute Service"),
             primal_type: PrimalType::new("compute", id, "1.0.0"),
-            endpoint: format!("http://localhost:8084/{}", id),
+            endpoint: format!("http://localhost:8084/{id}"),
             capabilities: vec![
                 PrimalCapability::new("compute", "provider", "1.0.0"),
                 PrimalCapability::new("compute", "wasm_execution", "1.0.0"),
@@ -87,9 +87,9 @@ impl MockPrimalFactory {
         let now = chrono::Utc::now();
         PrimalInfo {
             id: id.to_string(),
-            name: format!("{} Storage Service", id),
+            name: format!("{id} Storage Service"),
             primal_type: PrimalType::new("storage", id, "1.0.0"),
-            endpoint: format!("http://localhost:8082/{}", id),
+            endpoint: format!("http://localhost:8082/{id}"),
             capabilities: vec![
                 PrimalCapability::new("storage", "provider", "1.0.0"),
                 PrimalCapability::new("storage", "file_system", "1.0.0"),
@@ -110,9 +110,9 @@ impl MockPrimalFactory {
         let now = chrono::Utc::now();
         PrimalInfo {
             id: id.to_string(),
-            name: format!("{} Orchestration Service", id),
+            name: format!("{id} Orchestration Service"),
             primal_type: PrimalType::new("orchestration", id, "1.0.0"),
-            endpoint: format!("http://localhost:8081/{}", id),
+            endpoint: format!("http://localhost:8081/{id}"),
             capabilities: vec![
                 PrimalCapability::new("orchestration", "provider", "1.0.0"),
                 PrimalCapability::new("orchestration", "service_discovery", "1.0.0"),
@@ -184,9 +184,7 @@ impl TestAssertions {
         for expected_id in expected_ids {
             assert!(
                 found_ids.contains(expected_id),
-                "Expected to find primal '{}' in discovery results: {:?}",
-                expected_id,
-                found_ids
+                "Expected to find primal '{expected_id}' in discovery results: {found_ids:?}"
             );
         }
     }
@@ -200,7 +198,7 @@ impl TestAssertions {
         let primal = results
             .iter()
             .find(|r| r.id == primal_id)
-            .unwrap_or_else(|| panic!("Primal '{}' not found in results", primal_id));
+            .unwrap_or_else(|| panic!("Primal '{primal_id}' not found in results"));
 
         let has_capability = primal
             .capabilities
@@ -209,8 +207,7 @@ impl TestAssertions {
 
         assert!(
             has_capability,
-            "Primal '{}' should have capability in category '{}'",
-            primal_id, expected_category
+            "Primal '{primal_id}' should have capability in category '{expected_category}'"
         );
     }
 
@@ -219,30 +216,29 @@ impl TestAssertions {
         match &health.health {
             Health::Healthy => { /* Good! */ }
             Health::Degraded { issues, .. } => {
-                println!("Warning: System health is degraded: {:?}", issues);
+                println!("Warning: System health is degraded: {issues:?}");
             }
             Health::Critical { issues, .. } => {
                 panic!(
-                    "System health is critical - test environment may be compromised: {:?}",
-                    issues
+                    "System health is critical - test environment may be compromised: {issues:?}"
                 );
             }
             Health::Unknown { reason, .. } => {
-                println!("Warning: System health status is unknown: {}", reason);
+                println!("Warning: System health status is unknown: {reason}");
             }
             Health::Unhealthy { issues, .. } => {
-                println!("Warning: System is unhealthy: {:?}", issues);
+                println!("Warning: System is unhealthy: {issues:?}");
             }
             Health::Starting { phase, progress } => {
-                println!("System starting: {:?} ({progress}%)", phase);
+                println!("System starting: {phase:?} ({progress}%)");
             }
             Health::Stopping { phase, progress } => {
-                println!("System stopping: {:?} ({progress}%)", phase);
+                println!("System stopping: {phase:?} ({progress}%)");
             }
             Health::Maintenance {
                 maintenance_type, ..
             } => {
-                println!("System under maintenance: {:?}", maintenance_type);
+                println!("System under maintenance: {maintenance_type:?}");
             }
         }
     }

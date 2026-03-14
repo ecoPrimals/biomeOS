@@ -45,17 +45,18 @@ niches/
 ├── templates/        # Reusable niche templates (BYOB starting points)
 │   ├── gaming-tournament.yaml
 │   ├── research-lab.yaml
-│   ├── sovereign-home.yaml
-│   └── dev-environment.yaml
+│   ├── ai-research.yaml
+│   ├── web-development.yaml
+│   ├── federation-aware.yaml
+│   └── custom-generic.yaml
 │
-├── deployed/         # Currently running niche instances
-│   ├── my-gaming-setup/
-│   └── ml-experiments/
+├── examples/         # Example configurations and tutorials
+│   └── minimal-p2p.yaml
 │
-└── examples/         # Example configurations and tutorials
-    ├── minimal-p2p.yaml
-    ├── full-ecosystem.yaml
-    └── README.md
+└── rootpulse/        # RootPulse niche (compute orchestration)
+    ├── rootpulse-niche.yaml
+    ├── QUICKSTART.md
+    └── examples/
 ```
 
 ## Niche vs Chimera vs Primal

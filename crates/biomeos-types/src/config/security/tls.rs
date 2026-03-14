@@ -65,4 +65,32 @@ mod tests {
         assert_eq!(config.max_age, 31536000);
         assert!(config.preload);
     }
+
+    #[test]
+    fn test_data_in_transit_serde_roundtrip() {
+        let config = DataInTransitConfig {
+            enabled: false,
+            min_tls_version: "1.3".to_string(),
+            cipher_suites: vec!["TLS_AES_256_GCM_SHA384".to_string()],
+        };
+        let json = serde_json::to_string(&config).expect("serialize");
+        let deserialized: DataInTransitConfig = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(config.enabled, deserialized.enabled);
+        assert_eq!(config.min_tls_version, deserialized.min_tls_version);
+        assert_eq!(config.cipher_suites, deserialized.cipher_suites);
+    }
+
+    #[test]
+    fn test_hsts_config_serde_roundtrip() {
+        let config = HstsConfig {
+            max_age: 86400,
+            include_subdomains: false,
+            preload: false,
+        };
+        let json = serde_json::to_string(&config).expect("serialize");
+        let deserialized: HstsConfig = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(config.max_age, deserialized.max_age);
+        assert_eq!(config.include_subdomains, deserialized.include_subdomains);
+        assert_eq!(config.preload, deserialized.preload);
+    }
 }

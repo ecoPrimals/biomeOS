@@ -97,7 +97,7 @@ mod run {
             lineage_mode: None,
         };
 
-        let debug = format!("{:?}", beacon);
+        let debug = format!("{beacon:?}");
         assert!(debug.contains("BeaconPlaintext"));
         assert!(debug.contains("node_id"));
     }
@@ -143,7 +143,7 @@ mod run {
             version: 1,
         };
 
-        let debug = format!("{:?}", beacon);
+        let debug = format!("{beacon:?}");
         assert!(debug.contains("EncryptedBeacon"));
         assert!(debug.contains("version"));
     }
@@ -271,7 +271,7 @@ mod run {
                 version: v,
             };
             let json = serde_json::to_string(&beacon).unwrap();
-            assert!(json.contains(&format!("\"version\":{}", v)));
+            assert!(json.contains(&format!("\"version\":{v}")));
         }
     }
 }

@@ -295,7 +295,7 @@ mod tests {
             resolution: (1920, 1080),
             refresh_hz: 90,
         };
-        let debug_str = format!("{:?}", targets);
+        let debug_str = format!("{targets:?}");
         assert!(debug_str.contains("left"));
         assert!(debug_str.contains("1920"));
     }

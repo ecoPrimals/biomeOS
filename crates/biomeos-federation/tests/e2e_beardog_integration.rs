@@ -42,7 +42,7 @@ async fn beardog_available() -> Option<BearDogClient> {
                         .unwrap_or(false);
 
                 if available {
-                    println!("✅ Found BearDog at: {}", endpoint);
+                    println!("✅ Found BearDog at: {endpoint}");
                     return Some(client);
                 }
             }
@@ -75,7 +75,7 @@ async fn test_beardog_discovery() {
 
             match health_result {
                 Ok(Ok(())) => println!("✅ BearDog health check passed"),
-                Ok(Err(e)) => println!("⚠️  BearDog health check failed: {}", e),
+                Ok(Err(e)) => println!("⚠️  BearDog health check failed: {e}"),
                 Err(_) => println!("⚠️  BearDog health check timed out"),
             }
         }
@@ -112,10 +112,10 @@ async fn test_beardog_lineage_verification() {
 
     match result {
         Ok(Ok(response)) => {
-            println!("✅ Lineage verification response: {}", response);
+            println!("✅ Lineage verification response: {response}");
         }
         Ok(Err(e)) => {
-            println!("⚠️  Lineage verification failed: {}", e);
+            println!("⚠️  Lineage verification failed: {e}");
             println!("   This is expected if BearDog API is not yet implemented");
         }
         Err(_) => {
@@ -155,7 +155,7 @@ async fn test_beardog_key_derivation() {
             println!("   created_at: {}", response.created_at);
         }
         Ok(Err(e)) => {
-            println!("⚠️  Key derivation failed: {}", e);
+            println!("⚠️  Key derivation failed: {e}");
             println!("   This is expected if BearDog API is not yet implemented");
         }
         Err(_) => {
@@ -208,10 +208,10 @@ async fn test_beardog_with_real_seed() {
 
                 match result {
                     Ok(Ok(response)) => {
-                        println!("✅ Lineage verified: {}", response);
+                        println!("✅ Lineage verified: {response}");
                     }
                     Ok(Err(e)) => {
-                        println!("⚠️  Lineage verification failed: {}", e);
+                        println!("⚠️  Lineage verification failed: {e}");
                     }
                     Err(_) => {
                         println!("⚠️  Lineage verification timed out");
@@ -244,7 +244,7 @@ async fn test_beardog_full_workflow() {
     match health_result {
         Ok(Ok(())) => println!("   ✅ BearDog is healthy"),
         Ok(Err(e)) => {
-            println!("   ❌ Health check failed: {}", e);
+            println!("   ❌ Health check failed: {e}");
             return;
         }
         Err(_) => {
@@ -261,8 +261,8 @@ async fn test_beardog_full_workflow() {
     .await;
 
     match lineage_result {
-        Ok(Ok(response)) => println!("   ✅ Lineage check: {}", response),
-        Ok(Err(e)) => println!("   ⚠️  Lineage check: {}", e),
+        Ok(Ok(response)) => println!("   ✅ Lineage check: {response}"),
+        Ok(Err(e)) => println!("   ⚠️  Lineage check: {e}"),
         Err(_) => println!("   ⚠️  Lineage check timed out"),
     }
 
@@ -279,7 +279,7 @@ async fn test_beardog_full_workflow() {
 
     match key_result {
         Ok(Ok(response)) => println!("   ✅ Key derived: {}", response.key_ref),
-        Ok(Err(e)) => println!("   ⚠️  Key derivation: {}", e),
+        Ok(Err(e)) => println!("   ⚠️  Key derivation: {e}"),
         Err(_) => println!("   ⚠️  Key derivation timed out"),
     }
 

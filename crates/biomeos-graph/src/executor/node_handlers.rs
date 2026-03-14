@@ -101,18 +101,22 @@ pub async fn node_crypto_derive_seed(
         .and_then(|v| v.as_str())
         .map(|s| s.to_string());
 
-    // Discover BearDog socket (capability-based, no hardcoding)
-    let beardog_socket = discover_beardog_socket(&context.env)?;
+    let security_provider = context
+        .env
+        .get("SECURITY_PROVIDER")
+        .cloned()
+        .unwrap_or_else(|| "beardog".to_string());
+    let security_socket = discover_capability_socket(&security_provider, &context.env)?;
 
     debug!(
-        "Calling BearDog for seed derivation: node_id={}, output={}",
-        node_id, output_path
+        "Calling security provider '{security_provider}' for seed derivation: node_id={node_id}, output={output_path}",
     );
 
-    // Connect to BearDog
-    let stream = UnixStream::connect(&beardog_socket)
+    let stream = UnixStream::connect(&security_socket)
         .await
-        .context(format!("Failed to connect to BearDog at {}", beardog_socket))?;
+        .context(format!(
+            "Failed to connect to security provider '{security_provider}' at {security_socket}"
+        ))?;
 
     let (reader, mut writer) = stream.into_split();
     let mut reader = BufReader::new(reader);
@@ -145,29 +149,44 @@ pub async fn node_crypto_derive_seed(
         let message = error
             .get("message")
             .and_then(|m| m.as_str())
-            .ok_or("Unknown BearDog error")
-            .map_err(|_| anyhow::anyhow!("Unknown BearDog error"))?;
-        anyhow::bail!("BearDog seed derivation failed: {}", message);
+            .unwrap_or("Unknown error");
+        anyhow::bail!(
+            "Security provider '{security_provider}' seed derivation failed: {message}"
+        );
     }
 
-    // Return the result (seed path and metadata)
     response
         .get("result")
         .cloned()
-        .ok_or_else(|| anyhow::anyhow!("BearDog returned empty result"))
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "Security provider '{security_provider}' returned empty result"
+            )
+        })
 }
 
-/// Discover BearDog socket path (capability-based discovery)
+/// Discover a primal socket by capability name using runtime discovery.
 ///
-/// Uses XDG-compliant paths via `SystemPaths` instead of hardcoded `/tmp/` paths.
-fn discover_beardog_socket(env: &HashMap<String, String>) -> Result<String> {
+/// Primals have self-knowledge only; other primals are discovered at runtime
+/// through XDG-compliant paths and environment-based overrides.
+///
+/// Discovery priority:
+/// 1. Explicit `{CAPABILITY}_SOCKET` env var (graph env or process env)
+/// 2. Family-scoped XDG socket (`$XDG_RUNTIME_DIR/biomeos/{primal}-{family}.sock`)
+/// 3. Generic XDG socket (`$XDG_RUNTIME_DIR/biomeos/{primal}.sock`)
+fn discover_capability_socket(
+    capability_provider: &str,
+    env: &HashMap<String, String>,
+) -> Result<String> {
     use biomeos_types::paths::SystemPaths;
 
+    let env_key = format!("{}_SOCKET", capability_provider.to_uppercase());
+
     // Priority 1: Explicit environment variable
-    if let Some(socket) = env.get("BEARDOG_SOCKET") {
+    if let Some(socket) = env.get(&env_key) {
         return Ok(socket.clone());
     }
-    if let Ok(socket) = std::env::var("BEARDOG_SOCKET") {
+    if let Ok(socket) = std::env::var(&env_key) {
         return Ok(socket);
     }
 
@@ -179,33 +198,21 @@ fn discover_beardog_socket(env: &HashMap<String, String>) -> Result<String> {
         .or_else(|| std::env::var("BIOMEOS_FAMILY_ID").ok())
         .unwrap_or_else(|| "default".to_string());
 
-    // Try family-specific socket first
-    let family_socket = paths.primal_socket(&format!("beardog-{}", family_id));
+    let family_socket =
+        paths.primal_socket(&format!("{capability_provider}-{family_id}"));
     if family_socket.exists() {
         return Ok(family_socket.display().to_string());
     }
 
-    // Try generic beardog socket
-    let generic_socket = paths.primal_socket("beardog");
+    let generic_socket = paths.primal_socket(capability_provider);
     if generic_socket.exists() {
         return Ok(generic_socket.display().to_string());
     }
 
-    // Priority 3: Fallback patterns (legacy compatibility)
-    let fallback_patterns = [
-        format!("{}/beardog-{}.sock", std::env::temp_dir().display(), family_id),
-        format!("{}/beardog.sock", std::env::temp_dir().display()),
-        "/run/biomeos/beardog.sock".to_string(),
-    ];
-    for pattern in &fallback_patterns {
-        if std::path::Path::new(pattern).exists() {
-            return Ok(pattern.clone());
-        }
-    }
-
     anyhow::bail!(
-        "BearDog socket not found. Set BEARDOG_SOCKET or ensure BearDog is running. \
-         Checked: BEARDOG_SOCKET env, XDG runtime dir: {:?}",
+        "Socket not found for capability provider '{capability_provider}'. \
+         Set {env_key} or ensure the primal is running. \
+         Checked: {env_key} env, XDG runtime dir: {:?}",
         paths.runtime_dir()
     )
 }

@@ -415,3 +415,160 @@ impl Default for ServiceRuntime {
         }
     }
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_service_runtime_default() {
+        let runtime = ServiceRuntime::default();
+        match &runtime.runtime_type {
+            RuntimeType::Binary {
+                executable,
+                binary_type,
+            } => {
+                assert_eq!(executable, "service");
+                assert!(matches!(binary_type, BinaryType::Executable));
+            }
+            _ => panic!("Expected Binary runtime type"),
+        }
+        assert_eq!(runtime.limits.max_fds, Some(1024));
+    }
+
+    #[test]
+    fn test_service_runtime_serde_roundtrip() {
+        let val = ServiceRuntime::default();
+        let json = serde_json::to_string(&val).unwrap();
+        let back: ServiceRuntime = serde_json::from_str(&json).unwrap();
+        assert_eq!(val.args.len(), back.args.len());
+    }
+
+    #[test]
+    fn test_container_engine_serde() {
+        for engine in [
+            ContainerEngine::Docker,
+            ContainerEngine::Podman,
+            ContainerEngine::Containerd,
+            ContainerEngine::Crio,
+            ContainerEngine::Custom("custom".to_string()),
+        ] {
+            let json = serde_json::to_string(&engine).unwrap();
+            let back: ContainerEngine = serde_json::from_str(&json).unwrap();
+            assert_eq!(format!("{engine:?}"), format!("{back:?}"));
+        }
+    }
+
+    #[test]
+    fn test_image_pull_policy_serde() {
+        for policy in [
+            ImagePullPolicy::Always,
+            ImagePullPolicy::IfNotPresent,
+            ImagePullPolicy::Never,
+        ] {
+            let json = serde_json::to_string(&policy).unwrap();
+            let back: ImagePullPolicy = serde_json::from_str(&json).unwrap();
+            assert_eq!(format!("{policy:?}"), format!("{back:?}"));
+        }
+    }
+
+    #[test]
+    fn test_binary_type_serde() {
+        let exec = BinaryType::Executable;
+        let json = serde_json::to_string(&exec).unwrap();
+        let _: BinaryType = serde_json::from_str(&json).unwrap();
+
+        let script = BinaryType::Script {
+            interpreter: "python3".to_string(),
+        };
+        let json = serde_json::to_string(&script).unwrap();
+        let back: BinaryType = serde_json::from_str(&json).unwrap();
+        if let BinaryType::Script { interpreter } = back {
+            assert_eq!(interpreter, "python3");
+        } else {
+            panic!("Expected Script variant");
+        }
+    }
+
+    #[test]
+    fn test_wasm_engine_serde() {
+        for engine in [
+            WasmEngine::Wasmtime,
+            WasmEngine::Wasmer,
+            WasmEngine::WasmEdge,
+            WasmEngine::Custom("custom".to_string()),
+        ] {
+            let json = serde_json::to_string(&engine).unwrap();
+            let back: WasmEngine = serde_json::from_str(&json).unwrap();
+            assert_eq!(format!("{engine:?}"), format!("{back:?}"));
+        }
+    }
+
+    #[test]
+    fn test_vm_type_serde() {
+        for vm_type in [
+            VmType::Qemu,
+            VmType::Kvm,
+            VmType::Xen,
+            VmType::VirtualBox,
+            VmType::VMware,
+            VmType::Custom("custom".to_string()),
+        ] {
+            let json = serde_json::to_string(&vm_type).unwrap();
+            let back: VmType = serde_json::from_str(&json).unwrap();
+            assert_eq!(format!("{vm_type:?}"), format!("{back:?}"));
+        }
+    }
+
+    #[test]
+    fn test_mount_type_serde() {
+        for mt in [
+            MountType::Bind,
+            MountType::Volume,
+            MountType::Tmpfs,
+            MountType::Cache,
+        ] {
+            let json = serde_json::to_string(&mt).unwrap();
+            let back: MountType = serde_json::from_str(&json).unwrap();
+            assert_eq!(format!("{mt:?}"), format!("{back:?}"));
+        }
+    }
+
+    #[test]
+    fn test_container_image_serde() {
+        let image = ContainerImage {
+            registry: Some("docker.io".to_string()),
+            repository: "nginx".to_string(),
+            tag: "latest".to_string(),
+            digest: None,
+            pull_policy: ImagePullPolicy::IfNotPresent,
+            pull_secrets: vec![],
+        };
+        let json = serde_json::to_string(&image).unwrap();
+        let back: ContainerImage = serde_json::from_str(&json).unwrap();
+        assert_eq!(image.repository, back.repository);
+    }
+
+    #[test]
+    fn test_runtime_type_container_serde() {
+        let rt = RuntimeType::Container {
+            engine: ContainerEngine::Docker,
+            image: ContainerImage {
+                registry: None,
+                repository: "alpine".to_string(),
+                tag: "3.18".to_string(),
+                digest: None,
+                pull_policy: ImagePullPolicy::IfNotPresent,
+                pull_secrets: vec![],
+            },
+        };
+        let json = serde_json::to_string(&rt).unwrap();
+        let back: RuntimeType = serde_json::from_str(&json).unwrap();
+        if let RuntimeType::Container { image, .. } = back {
+            assert_eq!(image.repository, "alpine");
+        } else {
+            panic!("Expected Container variant");
+        }
+    }
+}

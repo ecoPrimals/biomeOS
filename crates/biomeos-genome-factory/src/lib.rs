@@ -69,7 +69,7 @@ impl GenomeFactory {
 
     /// Get path for a specific genome
     pub fn genome_path(&self, name: &str) -> PathBuf {
-        self.storage_dir.join(format!("{}.genome", name))
+        self.storage_dir.join(format!("{name}.genome"))
     }
 
     /// Check if genome exists

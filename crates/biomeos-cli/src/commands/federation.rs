@@ -17,13 +17,11 @@ fn default_federation_config_dir() -> PathBuf {
 }
 
 /// Parse comma-separated members string (testable pure function)
-#[allow(dead_code)] // Used by tests
 pub(crate) fn parse_members_from_comma_separated(s: &str) -> Vec<String> {
     s.split(',').map(|s| s.trim().to_string()).collect()
 }
 
 /// Parse isolation level string to enum (testable pure function)
-#[allow(dead_code)] // Used by tests
 pub(crate) fn parse_isolation_level(s: &str) -> Result<IsolationLevel> {
     match s.to_lowercase().as_str() {
         "none" => Ok(IsolationLevel::None),
@@ -32,8 +30,7 @@ pub(crate) fn parse_isolation_level(s: &str) -> Result<IsolationLevel> {
         "high" => Ok(IsolationLevel::High),
         "critical" => Ok(IsolationLevel::Critical),
         _ => Err(anyhow::anyhow!(
-            "Invalid isolation level: {}. Must be one of: none, low, medium, high, critical",
-            s
+            "Invalid isolation level: {s}. Must be one of: none, low, medium, high, critical"
         )),
     }
 }
@@ -160,7 +157,7 @@ pub async fn handle_federation_create_subfed(args: &CreateSubfedArgs) -> Result<
         "  Capabilities:      {}",
         format_capabilities(&capability_set)
     );
-    println!("  Isolation:         {:?}", isolation_level);
+    println!("  Isolation:         {isolation_level:?}");
     println!("  Created At:        {}", subfed.created_at.to_rfc3339());
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("\n✅ Sub-federation ready! Members can now access granted capabilities.");
@@ -216,7 +213,7 @@ pub async fn handle_federation_list_subfeds(args: &ListSubfedsArgs) -> Result<()
         if args.detailed {
             println!("  Members:");
             for member in &subfed.members {
-                println!("    - {}", member);
+                println!("    - {member}");
             }
             println!();
         }
@@ -256,14 +253,14 @@ pub async fn handle_federation_check_access(args: &CheckAccessArgs) -> Result<()
         // Check specific sub-federation
         let subfed = manager
             .get(subfed_name)
-            .context(format!("Sub-federation '{}' not found", subfed_name))?;
+            .context(format!("Sub-federation '{subfed_name}' not found"))?;
 
         let has_access = subfed.has_capability(&args.node, &capability);
 
         println!("\n🔍 Access Check:");
         println!("  Node:              {}", args.node);
-        println!("  Capability:        {}", capability);
-        println!("  Sub-Federation:    {}", subfed_name);
+        println!("  Capability:        {capability}");
+        println!("  Sub-Federation:    {subfed_name}");
         println!(
             "  Access:            {}",
             if has_access {
@@ -291,7 +288,7 @@ pub async fn handle_federation_check_access(args: &CheckAccessArgs) -> Result<()
 
         println!("\n🔍 Access Check:");
         println!("  Node:              {}", args.node);
-        println!("  Capability:        {}", capability);
+        println!("  Capability:        {capability}");
         println!(
             "  Access:            {}",
             if has_access {

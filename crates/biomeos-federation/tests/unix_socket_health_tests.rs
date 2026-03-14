@@ -152,8 +152,7 @@ async fn test_unix_socket_health_check_no_socket() {
         let error_msg = e.to_string();
         assert!(
             error_msg.contains("not found") || error_msg.contains("Unix socket"),
-            "Error should indicate socket not found: {}",
-            error_msg
+            "Error should indicate socket not found: {error_msg}"
         );
     }
 }

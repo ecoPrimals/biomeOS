@@ -20,7 +20,7 @@ pub async fn get_genome_info(
             let archs: Vec<String> = genome
                 .binaries
                 .keys()
-                .map(|a| format!("{:?}", a).to_lowercase())
+                .map(|a| format!("{a:?}").to_lowercase())
                 .collect();
 
             Ok(Json(GenomeInfoResponse {
@@ -49,7 +49,7 @@ pub async fn download_genome(Path(id): Path<String>) -> Result<Json<DownloadResp
     let size = std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
 
     Ok(Json(DownloadResponse {
-        url: format!("/api/v1/genome/{}/data", id),
+        url: format!("/api/v1/genome/{id}/data"),
         size,
     }))
 }
@@ -66,7 +66,7 @@ pub async fn list_genomes() -> Result<Json<ListGenomesResponse>, StatusCode> {
                     let archs: Vec<String> = genome
                         .binaries
                         .keys()
-                        .map(|a| format!("{:?}", a).to_lowercase())
+                        .map(|a| format!("{a:?}").to_lowercase())
                         .collect();
                     GenomeSummary {
                         id: id.clone(),

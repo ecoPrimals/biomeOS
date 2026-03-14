@@ -103,7 +103,7 @@ impl GenomeBinBuilder {
 
             genome
                 .add_binary(arch, &path)
-                .with_context(|| format!("Failed to add {:?} binary", arch))?;
+                .with_context(|| format!("Failed to add {arch:?} binary"))?;
         }
 
         tracing::info!(

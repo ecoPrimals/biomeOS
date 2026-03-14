@@ -23,13 +23,13 @@ pub(crate) struct ScaleResult {
 }
 
 /// Parse scale result from JSON-RPC response (testable pure function)
-#[allow(dead_code)] // Used by tests
 pub(crate) fn parse_scale_result_from_json(
     result: &serde_json::Value,
     target_replicas: u32,
 ) -> ScaleResult {
     ScaleResult {
-        current_replicas: result["current_replicas"].as_u64().unwrap_or(1) as u32,
+        current_replicas: u32::try_from(result["current_replicas"].as_u64().unwrap_or(1))
+            .unwrap_or(1),
         target_replicas,
         status: result["status"].as_str().unwrap_or("scaling").to_string(),
     }
@@ -111,7 +111,7 @@ impl UniversalBiomeOSManager {
                                             "BIOMEOS_COMPUTE_ENDPOINT not set and discovery failed. \
                                              Set BIOMEOS_COMPUTE_ENDPOINT or ensure capability discovery is available."
                                         ))?;
-                                    format!("{}/{}", endpoint, name)
+                                    format!("{endpoint}/{name}")
                                 }
                             } else {
                                 // No compute primal discovered - return error
@@ -123,9 +123,8 @@ impl UniversalBiomeOSManager {
                         }
                         Err(e) => {
                             return Err(anyhow::anyhow!(
-                                "Discovery failed: {}. \
-                                 Set BIOMEOS_COMPUTE_ENDPOINT or fix discovery service.",
-                                e
+                                "Discovery failed: {e}. \
+                                 Set BIOMEOS_COMPUTE_ENDPOINT or fix discovery service."
                             ));
                         }
                     };
@@ -177,7 +176,7 @@ impl UniversalBiomeOSManager {
         let primal = primals
             .values()
             .find(|p| p.name == service || p.id == service)
-            .ok_or_else(|| anyhow::anyhow!("Service not found: {}", service))?;
+            .ok_or_else(|| anyhow::anyhow!("Service not found: {service}"))?;
 
         {
             if auto_scaling {
@@ -318,8 +317,7 @@ impl UniversalBiomeOSManager {
         );
         // Integration point with template system
         Ok(format!(
-            "Service '{}' of type '{}' created successfully",
-            name, service_type
+            "Service '{name}' of type '{service_type}' created successfully"
         ))
     }
 

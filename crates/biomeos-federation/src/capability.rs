@@ -61,7 +61,7 @@ impl fmt::Display for Capability {
             Capability::ReadOnly => write!(f, "read_only"),
             Capability::Write => write!(f, "write"),
             Capability::Admin => write!(f, "admin"),
-            Capability::Custom(s) => write!(f, "custom:{}", s),
+            Capability::Custom(s) => write!(f, "custom:{s}"),
         }
     }
 }

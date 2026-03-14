@@ -188,8 +188,7 @@ pub enum PrimalState {
 
     /// Running and healthy
     Running {
-        /// Process handle (if we started it)
-        #[allow(dead_code)] // Used for process lifecycle management and diagnostics
+        /// Process handle (if we started it). Used for process lifecycle management and diagnostics.
         pid: Option<u32>,
         /// Port it's running on
         port: u16,

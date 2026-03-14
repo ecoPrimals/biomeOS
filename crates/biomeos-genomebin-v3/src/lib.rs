@@ -159,9 +159,11 @@ impl CompressedBinary {
     }
 
     /// Decompress and verify integrity
-    pub fn decompress(&self) -> anyhow::Result<Vec<u8>> {
+    ///
+    /// Returns [`Bytes`] for zero-copy read-only access to decompressed data.
+    pub fn decompress(&self) -> anyhow::Result<Bytes> {
         let decompressed = lz4_flex::decompress_size_prepended(self.data.as_ref())
-            .map_err(|e| anyhow::anyhow!("LZ4 decompression failed: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("LZ4 decompression failed: {e}"))?;
 
         // Verify checksum
         let actual_hash = blake3::hash(&decompressed);
@@ -182,7 +184,7 @@ impl CompressedBinary {
             );
         }
 
-        Ok(decompressed)
+        Ok(Bytes::from(decompressed))
     }
 
     /// Verify integrity without decompressing
@@ -329,7 +331,7 @@ mod tests {
         assert_eq!(compressed.original_size, original.len());
 
         let decompressed = compressed.decompress().expect("Decompression failed");
-        assert_eq!(decompressed, original);
+        assert_eq!(decompressed.as_ref(), original);
     }
 
     #[test]

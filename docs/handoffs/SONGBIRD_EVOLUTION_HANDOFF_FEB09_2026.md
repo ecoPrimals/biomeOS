@@ -1,3 +1,5 @@
+> **HISTORICAL** — This handoff predates v2.37. See CURRENT_STATUS.md for latest.
+
 # Songbird Evolution Handoff - February 9, 2026
 
 **Team**: Songbird (phase1/songbird)

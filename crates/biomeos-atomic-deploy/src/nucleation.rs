@@ -47,7 +47,7 @@ impl SocketNucleation {
     /// assignment that prevents race conditions and enables coordinated startup
     pub fn assign_socket(&mut self, primal: &str, family_id: &str) -> PathBuf {
         // Check if already assigned
-        let key = format!("{}-{}", primal, family_id);
+        let key = format!("{primal}-{family_id}");
         if let Some(existing) = self.assignments.get(&key) {
             debug!("Socket already assigned for {}: {:?}", key, existing);
             return existing.clone();
@@ -162,7 +162,7 @@ impl SocketNucleation {
 
         // Use SystemPaths for XDG-compliant paths
         let paths = SystemPaths::new_lazy();
-        paths.primal_socket(&format!("{}-{}", primal, family_id))
+        paths.primal_socket(&format!("{primal}-{family_id}"))
     }
 
     /// XDG runtime path using SystemPaths
@@ -179,7 +179,7 @@ impl SocketNucleation {
             tracing::warn!("Failed to create runtime dir: {}", e);
         }
 
-        paths.primal_socket(&format!("{}-{}", primal, family_id))
+        paths.primal_socket(&format!("{primal}-{family_id}"))
     }
 }
 
@@ -197,13 +197,11 @@ mod tests {
         let socket_str = socket.to_string_lossy();
         assert!(
             socket_str.contains("beardog-test_family"),
-            "Socket should contain primal-family: {}",
-            socket_str
+            "Socket should contain primal-family: {socket_str}"
         );
         assert!(
             socket_str.ends_with(".sock"),
-            "Socket should end with .sock: {}",
-            socket_str
+            "Socket should end with .sock: {socket_str}"
         );
 
         // Second assignment should return same socket (deterministic)

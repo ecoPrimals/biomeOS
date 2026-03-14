@@ -197,9 +197,9 @@ mod tests {
         };
 
         // Test Debug trait
-        assert!(format!("{:?}", available).contains("Available"));
-        assert!(format!("{:?}", insufficient).contains("Insufficient"));
-        assert!(format!("{:?}", insufficient).contains("test reason"));
+        assert!(format!("{available:?}").contains("Available"));
+        assert!(format!("{insufficient:?}").contains("Insufficient"));
+        assert!(format!("{insufficient:?}").contains("test reason"));
     }
 
     #[test]

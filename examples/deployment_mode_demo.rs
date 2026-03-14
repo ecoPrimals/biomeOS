@@ -37,7 +37,7 @@ fn main() {
             let family_id = biomeos_core::family_discovery::get_family_id();
             println!("🔌 Socket Configuration:");
             println!("   Base Path: {}", socket_prefix.display());
-            println!("   Family ID: {} (from .family.seed)", family_id);
+            println!("   Family ID: {family_id} (from .family.seed)");
             println!("   Example Sockets:");
             println!(
                 "     - beardog:   {}/beardog-{}.sock",
@@ -96,7 +96,7 @@ fn main() {
                     println!("💿 Live Spore Details:");
                     println!("   Root: {}", root_partition.display());
                     println!("   Boot: {}", boot_partition.display());
-                    println!("   Version: {}\n", installed_version);
+                    println!("   Version: {installed_version}\n");
 
                     println!("💡 Live Spore Mode:");
                     println!("   - Installed to bare metal");
@@ -112,7 +112,7 @@ fn main() {
                     println!("🤝 Sibling Spore Details:");
                     println!("   Host OS: {}", host_os.name());
                     println!("   Install Dir: {}", install_dir.display());
-                    println!("   Isolation: {:?}\n", isolation);
+                    println!("   Isolation: {isolation:?}\n");
 
                     println!("💡 Sibling Spore Mode:");
                     println!("   - Running on top of existing OS");
@@ -123,7 +123,7 @@ fn main() {
             }
         }
         Err(e) => {
-            println!("❌ Error detecting deployment mode: {}\n", e);
+            println!("❌ Error detecting deployment mode: {e}\n");
             println!("This might happen if:");
             println!("  - Running in an unsupported environment");
             println!("  - Missing required permissions");

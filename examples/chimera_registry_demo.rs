@@ -20,10 +20,7 @@ fn main() {
     let definitions_dir = Path::new("chimeras/definitions");
 
     if !definitions_dir.exists() {
-        println!(
-            "❌ Chimera definitions directory not found: {:?}",
-            definitions_dir
-        );
+        println!("❌ Chimera definitions directory not found: {definitions_dir:?}");
         println!("   Run from biomeOS root directory");
         return;
     }
@@ -34,7 +31,7 @@ fn main() {
             println!("✅ Loaded {} chimera definitions:\n", registry.len());
 
             for (id, summary) in registry.summary() {
-                println!("🧬 {}", id);
+                println!("🧬 {id}");
                 println!("   Name: {}", summary.name);
                 println!("   Version: {}", summary.version);
                 println!("   Primals: {}", summary.primals.join(", "));
@@ -58,7 +55,7 @@ fn main() {
             }
         }
         Err(e) => {
-            println!("❌ Failed to load chimera registry: {}", e);
+            println!("❌ Failed to load chimera registry: {e}");
         }
     }
 

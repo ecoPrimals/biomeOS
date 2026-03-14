@@ -345,7 +345,7 @@ mod tests {
 
         let result = run(graph_path, false).await;
         let err = result.expect_err("sequential graph should fail");
-        assert!(err.to_string().contains("Continuous"), "error: {}", err);
+        assert!(err.to_string().contains("Continuous"), "error: {err}");
     }
 
     #[tokio::test]
@@ -411,8 +411,7 @@ mod tests {
         let err = result.expect_err("invalid toml should fail");
         assert!(
             err.to_string().contains("parse") || err.to_string().contains("Failed"),
-            "error: {}",
-            err
+            "error: {err}"
         );
     }
 
@@ -680,7 +679,7 @@ mod tests {
         handle.await.expect("executor task");
 
         assert!(
-            tick_count >= 4 && tick_count <= 8,
+            (4..=8).contains(&tick_count),
             "Expected ~5 ticks at 10 Hz over 500ms, got {}",
             tick_count
         );

@@ -68,7 +68,7 @@ impl GraphLoader {
             let location = source
                 .map(|p| p.display().to_string())
                 .unwrap_or_else(|| "<string>".to_string());
-            GraphError::Parse(format!("Failed to parse {} as graph: {}", location, e))
+            GraphError::Parse(format!("Failed to parse {location} as graph: {e}"))
         })?;
 
         // Step 2: Validate structure
@@ -87,7 +87,7 @@ pub fn load_graphs_from_dir(dir: impl AsRef<Path>) -> Result<Vec<DeploymentGraph
         .map_err(|e| GraphError::Io(format!("Failed to read directory {}: {}", dir.display(), e)))?
     {
         let entry =
-            entry.map_err(|e| GraphError::Io(format!("Failed to read directory entry: {}", e)))?;
+            entry.map_err(|e| GraphError::Io(format!("Failed to read directory entry: {e}")))?;
         let path = entry.path();
 
         if path.extension().is_some_and(|ext| ext == "toml") {

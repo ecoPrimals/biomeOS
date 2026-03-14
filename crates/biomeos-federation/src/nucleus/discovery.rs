@@ -32,7 +32,6 @@ pub(crate) struct SongbirdDiscoveryResponse {
 }
 
 /// Convert SongbirdServiceInfo address/port to PrimalEndpoint (testable pure function)
-#[allow(dead_code)] // Used by tests
 pub(crate) fn service_address_to_endpoint(service: &SongbirdServiceInfo) -> PrimalEndpoint {
     if service.address.starts_with('/') {
         PrimalEndpoint::UnixSocket {

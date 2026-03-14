@@ -12,7 +12,7 @@ use serde_json::{json, Value};
 
 /// Deploy a biome manifest to the federation
 pub async fn deploy_manifest(manifest_path: &str) -> Result<()> {
-    println!("🚀 Deploying manifest: {}", manifest_path);
+    println!("🚀 Deploying manifest: {manifest_path}");
 
     // Load and validate the manifest
     let manifest_content = std::fs::read_to_string(manifest_path)?;
@@ -31,7 +31,7 @@ pub async fn deploy_manifest(manifest_path: &str) -> Result<()> {
         .and_then(|v| v.as_str())
         .unwrap_or("unknown");
 
-    println!("  📋 Manifest: {} v{}", name, version);
+    println!("  📋 Manifest: {name} v{version}");
 
     // Simulate deployment process
     println!("  🔍 Discovering available primals...");
@@ -62,7 +62,7 @@ pub async fn list_manifests() -> Result<()> {
             "Pending" => "🟡",
             _ => "⚪",
         };
-        println!("  {} {} v{} - {}", status_icon, name, version, status);
+        println!("  {status_icon} {name} v{version} - {status}");
     }
 
     Ok(())
@@ -72,7 +72,7 @@ pub async fn list_manifests() -> Result<()> {
 pub async fn load_config(config_path: Option<&str>) -> Result<Value> {
     let config = match config_path {
         Some(path) => {
-            println!("📖 Loading config from: {}", path);
+            println!("📖 Loading config from: {path}");
             let content = std::fs::read_to_string(path)?;
             serde_yaml::from_str(&content)?
         }
@@ -125,7 +125,7 @@ pub async fn show_status() -> Result<()> {
             "Critical" => "🔴",
             _ => "⚪",
         };
-        println!("    {} {} (:{}) - {}", health_icon, name, port, health);
+        println!("    {health_icon} {name} (:{port}) - {health}");
     }
 
     // Resource usage
@@ -139,7 +139,7 @@ pub async fn show_status() -> Result<()> {
 
 /// Validate configuration file
 pub async fn validate_config(config_path: &str) -> Result<()> {
-    println!("🔍 Validating configuration: {}", config_path);
+    println!("🔍 Validating configuration: {config_path}");
 
     // Load and parse configuration
     let content = std::fs::read_to_string(config_path)?;
@@ -168,7 +168,7 @@ pub async fn validate_config(config_path: &str) -> Result<()> {
     } else {
         println!("❌ Configuration validation failed:");
         for error in errors {
-            println!("    • {}", error);
+            println!("    • {error}");
         }
         return Err(anyhow::anyhow!("Configuration validation failed"));
     }

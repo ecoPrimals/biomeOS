@@ -240,13 +240,13 @@ fn probe_live_sockets() -> Vec<DiscoveredPrimal> {
             .to_string();
 
         primals.push(DiscoveredPrimal {
-            id: format!("{}-probed", primal_name),
+            id: format!("{primal_name}-probed"),
             name: primal_name.clone(),
             primal_type: "probed".to_string(), // Unknown until primal self-reports
             version,
             health,
             capabilities,
-            endpoint: format!("unix://{}", socket_path),
+            endpoint: format!("unix://{socket_path}"),
             last_seen: now,
             trust_level: Some(1), // Discovered, not yet verified
             family_id: None,      // Unknown until lineage check

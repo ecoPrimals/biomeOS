@@ -174,17 +174,17 @@ async fn test_complete_system_lifecycle() -> Result<()> {
                 0 => {
                     // Health checks
                     let _health = manager_clone.get_system_health().await;
-                    format!("health-{}", i)
+                    format!("health-{i}")
                 }
                 1 => {
                     // Primal queries
                     let _primals = manager_clone.get_registered_primals().await;
-                    format!("query-{}", i)
+                    format!("query-{i}")
                 }
                 2 => {
                     // Discovery operations
                     let _discovered = manager_clone.discover().await;
-                    format!("discovery-{}", i)
+                    format!("discovery-{i}")
                 }
                 _ => unreachable!(),
             }
@@ -384,20 +384,19 @@ async fn test_high_load_concurrent_workflow() -> Result<()> {
 
             let primal = match primal_type {
                 "compute" => {
-                    MockPrimalFactory::create_compute_primal(&format!("concurrent-compute-{}", i))
+                    MockPrimalFactory::create_compute_primal(&format!("concurrent-compute-{i}"))
                 }
                 "storage" => {
-                    MockPrimalFactory::create_storage_primal(&format!("concurrent-storage-{}", i))
+                    MockPrimalFactory::create_storage_primal(&format!("concurrent-storage-{i}"))
                 }
                 "orchestration" => MockPrimalFactory::create_orchestration_primal(&format!(
-                    "concurrent-orchestration-{}",
-                    i
+                    "concurrent-orchestration-{i}"
                 )),
                 _ => unreachable!(),
             };
 
             manager_clone.register_primal(primal).await.unwrap();
-            format!("{}-{}", primal_type, i)
+            format!("{primal_type}-{i}")
         });
         registration_handles.push(handle);
     }
@@ -541,7 +540,7 @@ async fn test_error_recovery_workflow() -> Result<()> {
             let _ = results;
         }
         Err(e) => {
-            println!("   ❌ Invalid discovery failed as expected: {}", e);
+            println!("   ❌ Invalid discovery failed as expected: {e}");
         }
     }
 
@@ -588,10 +587,7 @@ async fn test_error_recovery_workflow() -> Result<()> {
         }
     }
 
-    println!(
-        "   📊 {}/3 edge case primals handled",
-        successful_registrations
-    );
+    println!("   📊 {successful_registrations}/3 edge case primals handled");
 
     // System should remain stable
     let health_after_edge_cases = manager.get_system_health().await;
@@ -640,10 +636,7 @@ async fn test_error_recovery_workflow() -> Result<()> {
     }
 
     assert_eq!(error_results.len(), error_operations);
-    println!(
-        "   ⚡ {} concurrent error scenarios handled",
-        error_operations
-    );
+    println!("   ⚡ {error_operations} concurrent error scenarios handled");
 
     // 4. Final system verification
     println!("4️⃣ Final system health verification...");

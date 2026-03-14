@@ -196,7 +196,7 @@ BEARDOG_NODE_ID = "test-node"
         Err(e) => {
             // Log error for debugging but don't fail test
             // (verification logic may have stricter requirements)
-            eprintln!("Verification error (acceptable): {}", e);
+            eprintln!("Verification error (acceptable): {e}");
         }
     }
 }

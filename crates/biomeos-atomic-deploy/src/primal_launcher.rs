@@ -42,7 +42,8 @@ impl PrimalInstance {
 
         // Signal 0 checks process existence without sending an actual signal
         // Returns Ok if process exists and we have permission to signal it
-        Pid::from_raw(self.pid as i32).is_some_and(|pid| test_kill_process(pid).is_ok())
+        let pid_i32 = i32::try_from(self.pid).unwrap_or(-1);
+        Pid::from_raw(pid_i32).is_some_and(|pid| test_kill_process(pid).is_ok())
     }
 }
 
@@ -82,7 +83,7 @@ impl PrimalLauncher {
         let socket_env_key = self.socket_env_key(primal_name);
         let socket_path = env
             .get(socket_env_key)
-            .ok_or_else(|| anyhow::anyhow!("Socket path not provided for {}", primal_name))?
+            .ok_or_else(|| anyhow::anyhow!("Socket path not provided for {primal_name}"))?
             .clone();
 
         // Clean up old socket if it exists
@@ -106,7 +107,7 @@ impl PrimalLauncher {
         // Spawn process
         let child = cmd
             .spawn()
-            .context(format!("Failed to spawn {}", primal_name))?;
+            .context(format!("Failed to spawn {primal_name}"))?;
 
         let pid = child
             .id()

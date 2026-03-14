@@ -1,3 +1,5 @@
+> **HISTORICAL** — This handoff predates v2.37. See CURRENT_STATUS.md for latest.
+
 # NestGate Model Cache Integration Handoff
 
 **Date**: February 9, 2026  

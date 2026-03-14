@@ -546,7 +546,7 @@ mod tests {
     #[test]
     fn scaling_spec_debug() {
         let spec = ScalingSpec::default();
-        let debug_str = format!("{:?}", spec);
+        let debug_str = format!("{spec:?}");
         assert!(debug_str.contains("ScalingSpec"));
     }
 }

@@ -153,7 +153,7 @@ impl WidgetRenderer {
             .collect();
         let primal_items: Vec<ListItem> = format_primal_list_items_data(&primal_data)
             .into_iter()
-            .map(|(display_text, icon, _color)| ListItem::new(format!("{} {}", icon, display_text)))
+            .map(|(display_text, icon, _color)| ListItem::new(format!("{icon} {display_text}")))
             .collect();
 
         let primal_list = List::new(primal_items)
@@ -260,7 +260,7 @@ impl WidgetRenderer {
 
             map_text.push(Line::from(vec![
                 Span::raw(format!("  {} {} ", health_icon, primal_state.metadata.name)),
-                Span::styled(format!("({})", id), Style::default().fg(Color::Gray)),
+                Span::styled(format!("({id})"), Style::default().fg(Color::Gray)),
             ]));
 
             // Show services under each primal
@@ -311,7 +311,7 @@ impl WidgetRenderer {
 
         // Add top capabilities
         for (cap, count) in compute_top_capabilities(&state.capability_stats, 5) {
-            all_text.push(Line::from(format!("  • {}: {}", cap, count)));
+            all_text.push(Line::from(format!("  • {cap}: {count}")));
         }
 
         let metrics = Paragraph::new(all_text)
@@ -352,7 +352,7 @@ impl WidgetRenderer {
         let details = vec![
             Line::from(format!("🎯 Primal: {}", primal_state.metadata.name)),
             Line::from(""),
-            Line::from(format!("ID: {}", id)),
+            Line::from(format!("ID: {id}")),
             Line::from(format!("Version: {}", primal_state.metadata.version)),
             Line::from(format!("Endpoint: {}", primal_state.endpoint)),
             Line::from(format!("Health: {:?}", primal_state.health)),
@@ -564,7 +564,7 @@ impl WidgetRenderer {
             .iter()
             .map(|(endpoint, status)| {
                 let status_icon = api_status_to_icon(api_status_to_str(&status.status));
-                Line::from(format!("{} {}", status_icon, endpoint))
+                Line::from(format!("{status_icon} {endpoint}"))
             })
             .collect();
 
@@ -785,10 +785,10 @@ impl WidgetRenderer {
             .map(|(k, v)| (k.clone(), v))
             .collect();
         for (name, cpu, mem, disk) in format_resource_usage_lines(&primal_items) {
-            resource_lines.push(Line::from(format!("🎯 {}", name)));
-            resource_lines.push(Line::from(format!("  CPU: {:.1}%", cpu)));
-            resource_lines.push(Line::from(format!("  Memory: {:.1} MB", mem)));
-            resource_lines.push(Line::from(format!("  Disk: {:.1} GB", disk)));
+            resource_lines.push(Line::from(format!("🎯 {name}")));
+            resource_lines.push(Line::from(format!("  CPU: {cpu:.1}%")));
+            resource_lines.push(Line::from(format!("  Memory: {mem:.1} MB")));
+            resource_lines.push(Line::from(format!("  Disk: {disk:.1} GB")));
             resource_lines.push(Line::from(""));
         }
 
@@ -809,10 +809,10 @@ impl WidgetRenderer {
             .map(|(k, v)| (k.clone(), v))
             .collect();
         for (name, error_rate, response_ms, rps) in format_performance_lines(&primal_items) {
-            perf_lines.push(Line::from(format!("🎯 {}", name)));
-            perf_lines.push(Line::from(format!("  RPS: {:.1}", rps)));
-            perf_lines.push(Line::from(format!("  Response: {:.0}ms", response_ms)));
-            perf_lines.push(Line::from(format!("  Error Rate: {:.2}%", error_rate)));
+            perf_lines.push(Line::from(format!("🎯 {name}")));
+            perf_lines.push(Line::from(format!("  RPS: {rps:.1}")));
+            perf_lines.push(Line::from(format!("  Response: {response_ms:.0}ms")));
+            perf_lines.push(Line::from(format!("  Error Rate: {error_rate:.2}%")));
             perf_lines.push(Line::from(""));
         }
 

@@ -157,7 +157,7 @@ pub async fn spawn_primal_process(
     // 1. Discover binary path
     let binary_path = discover_primal_binary(primal_name, context)
         .await
-        .context(format!("Failed to discover binary for {}", primal_name))?;
+        .context(format!("Failed to discover binary for {primal_name}"))?;
 
     info!("   Discovered: {} → {}", primal_name, binary_path.display());
 
@@ -215,7 +215,7 @@ pub async fn spawn_primal_process(
     // 8. Spawn process
     let child = cmd
         .spawn()
-        .context(format!("Failed to spawn primal: {}", primal_name))?;
+        .context(format!("Failed to spawn primal: {primal_name}"))?;
 
     let pid = child.id().unwrap_or(0);
     info!("   Process started: PID {}", pid);
@@ -410,8 +410,7 @@ mod tests {
         let err = result.expect_err("Should fail for nonexistent primal");
         assert!(
             err.to_string().contains("Binary not found"),
-            "Error should mention binary: {}",
-            err
+            "Error should mention binary: {err}"
         );
     }
 
@@ -426,8 +425,7 @@ mod tests {
         let err = result.expect_err("Should fail when dir has no binary");
         assert!(
             err.to_string().contains("Binary not found"),
-            "Error should mention binary: {}",
-            err
+            "Error should mention binary: {err}"
         );
     }
 
@@ -437,8 +435,7 @@ mod tests {
         let err = result.expect_err("Should timeout on nonexistent socket");
         assert!(
             err.to_string().contains("Socket did not become available"),
-            "Error should mention socket timeout: {}",
-            err
+            "Error should mention socket timeout: {err}"
         );
     }
 
@@ -467,8 +464,7 @@ mod tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
             stdout.contains("/tmp/beardog.sock") || stdout.contains("--socket"),
-            "Beardog should get --socket arg: {}",
-            stdout
+            "Beardog should get --socket arg: {stdout}"
         );
     }
 
@@ -485,8 +481,7 @@ mod tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
             stdout.contains("/tmp/squirrel.sock"),
-            "Squirrel should get socket: {}",
-            stdout
+            "Squirrel should get socket: {stdout}"
         );
     }
 
@@ -503,8 +498,7 @@ mod tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
             stdout.contains("/tmp/songbird.sock"),
-            "Songbird should get socket: {}",
-            stdout
+            "Songbird should get socket: {stdout}"
         );
     }
 
@@ -521,8 +515,7 @@ mod tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
             stdout.contains("/tmp/nestgate.sock"),
-            "Nestgate should get socket: {}",
-            stdout
+            "Nestgate should get socket: {stdout}"
         );
     }
 
@@ -546,8 +539,7 @@ mod tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(
             stdout.contains("/tmp/unknown.sock"),
-            "Unknown primal should get generic socket config: {}",
-            stdout
+            "Unknown primal should get generic socket config: {stdout}"
         );
     }
 
@@ -580,8 +572,7 @@ mod tests {
         assert!(
             err.to_string().contains("Failed to discover binary")
                 || err.to_string().contains("Binary not found"),
-            "Error should mention binary discovery: {}",
-            err
+            "Error should mention binary discovery: {err}"
         );
     }
 
@@ -614,7 +605,7 @@ mod tests {
         assert!(pattern_musl.contains(primal_name));
         assert!(pattern_musl.contains("musl"));
 
-        let pattern_simple = format!("{}/{}", primal_name, primal_name);
+        let pattern_simple = format!("{primal_name}/{primal_name}");
         assert_eq!(pattern_simple, "beardog/beardog");
     }
 

@@ -189,7 +189,7 @@ impl ProtocolHandler {
         manager
             .get_connection_metrics(from, to)
             .await
-            .ok_or_else(|| anyhow!("Connection not found: {} → {}", from, to))
+            .ok_or_else(|| anyhow!("Connection not found: {from} → {to}"))
     }
 
     /// Handle graph.protocol_map
@@ -446,7 +446,7 @@ mod tests {
     use super::*;
     use crate::protocol_escalation::EscalationConfig;
 
-    async fn create_test_handler() -> ProtocolHandler {
+    fn create_test_handler() -> ProtocolHandler {
         let graph = Arc::new(LivingGraph::new("test-family"));
         let manager = Arc::new(RwLock::new(ProtocolEscalationManager::new(
             graph.clone(),
@@ -457,7 +457,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_status() {
-        let handler = create_test_handler().await;
+        let handler = create_test_handler();
 
         handler.graph.register_connection("a", "b").await;
 
@@ -470,7 +470,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_protocol_map() {
-        let handler = create_test_handler().await;
+        let handler = create_test_handler();
 
         // Register a primal
         handler
@@ -496,7 +496,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_register_primal() {
-        let handler = create_test_handler().await;
+        let handler = create_test_handler();
 
         let params = Some(json!({
             "primal_id": "test-primal",
@@ -515,7 +515,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_register_connection() {
-        let handler = create_test_handler().await;
+        let handler = create_test_handler();
 
         let params = Some(json!({
             "from": "primal-a",
@@ -538,7 +538,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_record_request() {
-        let handler = create_test_handler().await;
+        let handler = create_test_handler();
 
         // First register the connection
         handler.graph.register_connection("a", "b").await;
@@ -562,7 +562,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_metrics() {
-        let handler = create_test_handler().await;
+        let handler = create_test_handler();
 
         // Register and add requests
         handler.graph.register_connection("x", "y").await;
@@ -588,7 +588,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_missing_params() {
-        let handler = create_test_handler().await;
+        let handler = create_test_handler();
 
         // Missing 'from'
         let params = Some(json!({ "to": "b" }));
@@ -603,7 +603,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_escalate_none_params() {
-        let handler = create_test_handler().await;
+        let handler = create_test_handler();
         let result = handler.escalate(&None).await;
         assert!(result.is_err());
         assert!(
@@ -618,7 +618,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_fallback_missing_params() {
-        let handler = create_test_handler().await;
+        let handler = create_test_handler();
 
         let params = Some(json!({ "to": "b" }));
         let result = handler.fallback(&params).await;
@@ -631,14 +631,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_fallback_none_params() {
-        let handler = create_test_handler().await;
+        let handler = create_test_handler();
         let result = handler.fallback(&None).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_fallback_with_reason() {
-        let handler = create_test_handler().await;
+        let handler = create_test_handler();
         handler.graph.register_connection("src", "dst").await;
 
         let params = Some(json!({
@@ -655,7 +655,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_fallback_default_reason() {
-        let handler = create_test_handler().await;
+        let handler = create_test_handler();
         handler.graph.register_connection("a", "b").await;
 
         let params = Some(json!({ "from": "a", "to": "b" }));
@@ -665,7 +665,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_metrics_missing_params() {
-        let handler = create_test_handler().await;
+        let handler = create_test_handler();
 
         let params = Some(json!({ "to": "b" }));
         let result = handler.metrics(&params).await;
@@ -678,14 +678,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_metrics_none_params() {
-        let handler = create_test_handler().await;
+        let handler = create_test_handler();
         let result = handler.metrics(&None).await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_metrics_connection_not_found() {
-        let handler = create_test_handler().await;
+        let handler = create_test_handler();
 
         let params = Some(json!({
             "from": "nonexistent",
@@ -705,7 +705,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_register_primal_with_tarpc_socket() {
-        let handler = create_test_handler().await;
+        let handler = create_test_handler();
 
         let params = Some(json!({
             "primal_id": "tarpc-primal",
@@ -733,7 +733,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_register_primal_missing_params() {
-        let handler = create_test_handler().await;
+        let handler = create_test_handler();
 
         let result = handler.register_primal(&None).await;
         assert!(result.is_err());
@@ -745,7 +745,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_register_connection_missing_params() {
-        let handler = create_test_handler().await;
+        let handler = create_test_handler();
 
         let result = handler.register_connection(&None).await;
         assert!(result.is_err());
@@ -761,7 +761,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_record_request_success_false() {
-        let handler = create_test_handler().await;
+        let handler = create_test_handler();
         handler.graph.register_connection("a", "b").await;
 
         let params = Some(json!({
@@ -780,7 +780,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_record_request_default_success() {
-        let handler = create_test_handler().await;
+        let handler = create_test_handler();
         handler.graph.register_connection("x", "y").await;
 
         let params = Some(json!({
@@ -795,7 +795,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_record_request_missing_params() {
-        let handler = create_test_handler().await;
+        let handler = create_test_handler();
 
         let result = handler.record_request(&None).await;
         assert!(result.is_err());
@@ -807,7 +807,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_start_monitoring() {
-        let handler = create_test_handler().await;
+        let handler = create_test_handler();
         let result = handler.start_monitoring().await.unwrap();
         assert_eq!(result["status"], "started");
         assert!(result["message"].as_str().unwrap().contains("started"));
@@ -815,7 +815,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_stop_monitoring() {
-        let handler = create_test_handler().await;
+        let handler = create_test_handler();
         let result = handler.stop_monitoring().await.unwrap();
         assert_eq!(result["status"], "stopped");
         assert!(result["message"].as_str().unwrap().contains("stopped"));
@@ -823,7 +823,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_protocol_map_empty() {
-        let handler = create_test_handler().await;
+        let handler = create_test_handler();
         let result = handler.protocol_map().await.unwrap();
 
         assert_eq!(result["family_id"], "test-family");
@@ -835,7 +835,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_protocol_map_node_structure() {
-        let handler = create_test_handler().await;
+        let handler = create_test_handler();
         handler
             .graph
             .register_primal(PrimalProtocolState::new(
@@ -854,7 +854,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_escalate_registered_connection() {
-        let handler = create_test_handler().await;
+        let handler = create_test_handler();
         handler.graph.register_connection("client", "server").await;
 
         let params = Some(json!({

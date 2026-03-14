@@ -35,7 +35,7 @@ fn ws_test_url() -> String {
         .ok()
         .and_then(|v| v.parse::<u16>().ok())
         .unwrap_or(biomeos_types::constants::network::DEFAULT_HTTP_PORT);
-    format!("ws://127.0.0.1:{}/ws", port)
+    format!("ws://127.0.0.1:{port}/ws")
 }
 
 /// Helper to parse JSON-RPC response
@@ -429,8 +429,8 @@ async fn test_high_frequency_events() -> Result<()> {
     let broadcast_task = tokio::spawn(async move {
         for i in 0..1000 {
             let event = GraphEvent::GraphStarted {
-                graph_id: format!("graph_{}", i),
-                graph_name: format!("Graph {}", i),
+                graph_id: format!("graph_{i}"),
+                graph_name: format!("Graph {i}"),
                 total_nodes: 3,
                 coordination: "parallel".to_string(),
                 timestamp: Utc::now(),
@@ -455,7 +455,7 @@ async fn test_high_frequency_events() -> Result<()> {
     let received = receive_task.await?;
 
     // Should receive most or all events
-    assert!(received >= 900, "Expected ~1000 events, got {}", received);
+    assert!(received >= 900, "Expected ~1000 events, got {received}");
 
     Ok(())
 }

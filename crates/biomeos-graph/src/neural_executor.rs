@@ -587,7 +587,8 @@ impl GraphExecutor {
                     #[cfg(unix)]
                     {
                         use rustix::process::{kill_process, Pid, Signal};
-                        if let Some(pid) = Pid::from_raw(*pid as i32) {
+                        let pid_i32 = i32::try_from(*pid).unwrap_or(-1);
+                        if let Some(pid) = Pid::from_raw(pid_i32) {
                             let _ = kill_process(pid, Signal::Term);
                             tokio::time::sleep(Duration::from_secs(1)).await;
                             let _ = kill_process(pid, Signal::Kill);

@@ -99,7 +99,7 @@ impl PrimalHealthMonitor {
         let request = r#"{"jsonrpc":"2.0","method":"health.check","id":1}"#;
 
         if writer
-            .write_all(format!("{}\n", request).as_bytes())
+            .write_all(format!("{request}\n").as_bytes())
             .await
             .is_err()
         {

@@ -9,7 +9,6 @@ use biomeos_spore::manifest::BinaryManifest;
 use biomeos_spore::verification::{SporeVerifier, VerificationStatus};
 
 /// Map verification status to (icon, text) for display (testable pure function)
-#[allow(dead_code)] // Used by tests
 pub fn verification_status_display(status: VerificationStatus) -> (&'static str, &'static str) {
     match status {
         VerificationStatus::Fresh => ("✅", "Fresh"),
@@ -119,7 +118,7 @@ async fn verify_nucleus(nucleus_path: &PathBuf) -> Result<()> {
         println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
         for (name, binary) in &manifest.binaries {
-            println!("✅ {}", name);
+            println!("✅ {name}");
             println!("   Version:    {}", binary.version);
             println!(
                 "   Size:       {} bytes ({:.2} MB)",
@@ -209,7 +208,7 @@ async fn verify_single_spore(mount_point: &PathBuf) -> Result<()> {
                     &actual_sha256[..16]
                 );
             } else {
-                println!("   Actual:   v{} (SHA256: unknown)", actual_version);
+                println!("   Actual:   v{actual_version} (SHA256: unknown)");
             }
         } else {
             println!("   Actual:   MISSING");
@@ -221,7 +220,7 @@ async fn verify_single_spore(mount_point: &PathBuf) -> Result<()> {
         println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         println!("💡 Recommendations:");
         for rec in &report.recommendations {
-            println!("   • {}", rec);
+            println!("   • {rec}");
         }
         println!();
     }
@@ -312,9 +311,9 @@ async fn verify_all_spores(verbose: bool) -> Result<()> {
 
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("Summary:");
-    println!("  ✅ Fresh:  {}", fresh_count);
-    println!("  ⚠️  Stale:  {}", stale_count);
-    println!("  ❌ Issues: {}", other_count);
+    println!("  ✅ Fresh:  {fresh_count}");
+    println!("  ⚠️  Stale:  {stale_count}");
+    println!("  ❌ Issues: {other_count}");
     println!("  📊 Total:  {}", reports.len());
     println!();
 
@@ -380,8 +379,8 @@ mod tests {
         ];
         for (status, expected_icon, expected_text) in variants {
             let (icon, text) = verification_status_display(status.clone());
-            assert_eq!(icon, expected_icon, "icon for {:?}", status);
-            assert_eq!(text, expected_text, "text for {:?}", status);
+            assert_eq!(icon, expected_icon, "icon for {status:?}");
+            assert_eq!(text, expected_text, "text for {status:?}");
         }
     }
 

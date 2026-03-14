@@ -135,7 +135,7 @@ pub async fn run(args: EnrollArgs) -> Result<()> {
         return Ok(());
     }
     validate_enrollment_paths(&args.lineage_seed, &args.family_seed, args.force)
-        .map_err(|e| anyhow::anyhow!("{}", e))?;
+        .map_err(|e| anyhow::anyhow!("{e}"))?;
 
     let device_id = resolve_device_id(args.device_id.as_deref());
     if args.device_id.is_none() && get_machine_id().is_none() {
@@ -195,14 +195,14 @@ fn get_machine_id() -> Option<String> {
 fn discover_beardog_socket() -> Option<String> {
     // Try XDG runtime dir first
     if let Ok(runtime_dir) = std::env::var("XDG_RUNTIME_DIR") {
-        let xdg_path = format!("{}/biomeos/{}.sock", runtime_dir, BEARDOG);
+        let xdg_path = format!("{runtime_dir}/biomeos/{BEARDOG}.sock");
         if std::path::Path::new(&xdg_path).exists() {
             return Some(xdg_path);
         }
 
         // Try with family ID
         if let Ok(family_id) = std::env::var("FAMILY_ID") {
-            let family_path = format!("{}/biomeos/{}-{}.sock", runtime_dir, BEARDOG, family_id);
+            let family_path = format!("{runtime_dir}/biomeos/{BEARDOG}-{family_id}.sock");
             if std::path::Path::new(&family_path).exists() {
                 return Some(family_path);
             }
@@ -218,7 +218,7 @@ fn discover_beardog_socket() -> Option<String> {
 
     // Also check family-suffixed variant
     let family_id = std::env::var("FAMILY_ID").unwrap_or_else(|_| "family".to_string());
-    let family_socket = paths.primal_socket(&format!("{}-{}", BEARDOG, family_id));
+    let family_socket = paths.primal_socket(&format!("{BEARDOG}-{family_id}"));
     if family_socket.exists() {
         return Some(family_socket.to_string_lossy().to_string());
     }
@@ -320,8 +320,7 @@ mod tests {
         let err = result.unwrap_err();
         assert!(
             err.to_string().contains("Family seed not found"),
-            "Expected family seed error: {}",
-            err
+            "Expected family seed error: {err}"
         );
     }
 
@@ -351,8 +350,7 @@ mod tests {
         let err = result.unwrap_err();
         assert!(
             err.to_string().contains("BearDog") || err.to_string().contains("socket"),
-            "Expected BearDog/socket error: {}",
-            err
+            "Expected BearDog/socket error: {err}"
         );
     }
 
@@ -420,14 +418,12 @@ mod tests {
         let result = run(args).await;
         assert!(
             result.is_err(),
-            "force re-enroll without BearDog should fail: {:?}",
-            result
+            "force re-enroll without BearDog should fail: {result:?}"
         );
         let err = result.unwrap_err();
         assert!(
             err.to_string().contains("BearDog") || err.to_string().contains("socket"),
-            "Expected BearDog/socket error: {}",
-            err
+            "Expected BearDog/socket error: {err}"
         );
     }
 

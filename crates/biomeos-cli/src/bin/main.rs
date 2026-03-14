@@ -505,8 +505,8 @@ async fn main() -> Result<()> {
         Commands::Primal { action } => match action {
             PrimalAction::List => handle_primal_list().await?,
             PrimalAction::Pull { name } => {
-                println!("🔨 Building primal: {}", name);
-                println!("   Run: ./bin/pull-primals.sh {}", name);
+                println!("🔨 Building primal: {name}");
+                println!("   Run: ./bin/pull-primals.sh {name}");
             }
         },
         Commands::Spore { action } => match action {
@@ -675,7 +675,7 @@ async fn handle_ai_command(query: String, context: Option<String>) -> anyhow::Re
     let intent = parse_ai_intent(&query);
     let lines = format_ai_response(intent);
     for line in lines {
-        println!("\n{}", line);
+        println!("\n{line}");
     }
 
     println!(

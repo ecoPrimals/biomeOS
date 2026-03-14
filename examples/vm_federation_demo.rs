@@ -22,14 +22,14 @@ async fn main() -> Result<()> {
     let manager = VmFederationManager::new()?;
     let federation_name = "biomeos-demo-federation";
 
-    println!("Federation: {}", federation_name);
+    println!("Federation: {federation_name}");
     println!();
 
     // Check status first
     println!("📊 Checking current status...");
     match manager.status(federation_name).await {
         Ok(status) => {
-            println!("{}", status);
+            println!("{status}");
             if status.contains("not found") || status.contains("does not exist") {
                 println!();
                 println!("Federation not found. Creating new one...");
@@ -43,7 +43,7 @@ async fn main() -> Result<()> {
             }
         }
         Err(e) => {
-            println!("Status check failed (likely doesn't exist yet): {}", e);
+            println!("Status check failed (likely doesn't exist yet): {e}");
             println!();
             println!("Creating new federation...");
             manager.create(federation_name).await?;
@@ -72,7 +72,7 @@ async fn main() -> Result<()> {
     // Check final status
     println!("Step 4: Final status...");
     let final_status = manager.status(federation_name).await?;
-    println!("{}", final_status);
+    println!("{final_status}");
     println!();
 
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -83,8 +83,8 @@ async fn main() -> Result<()> {
     println!();
     println!("Or manually:");
     println!("  cd ../benchscale");
-    println!("  cargo run -- stop {}", federation_name);
-    println!("  cargo run -- destroy {}", federation_name);
+    println!("  cargo run -- stop {federation_name}");
+    println!("  cargo run -- destroy {federation_name}");
 
     Ok(())
 }

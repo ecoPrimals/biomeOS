@@ -624,7 +624,7 @@ mod tests {
             stack_trace: None,
             ai_context: default_ai_context(),
         };
-        let debug_str = format!("{:?}", err);
+        let debug_str = format!("{err:?}");
         assert!(debug_str.contains("Internal"));
         assert!(debug_str.contains("debug"));
     }

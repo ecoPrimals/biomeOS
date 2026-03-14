@@ -15,7 +15,7 @@ use tracing::{error, info};
 
 async fn call_toadstool_rpc(method: &str, params: serde_json::Value) -> Result<serde_json::Value> {
     let uid = std::env::var("UID").unwrap_or_else(|_| "1000".to_string());
-    let socket_path = format!("/run/user/{}/toadstool-default.jsonrpc.sock", uid);
+    let socket_path = format!("/run/user/{uid}/toadstool-default.jsonrpc.sock");
 
     info!("Connecting to ToadStool at {}", socket_path);
 
@@ -111,10 +111,7 @@ async fn main() -> Result<()> {
             println!("  Result: {}", serde_json::to_string_pretty(&result)?);
         }
         Err(e) => {
-            println!(
-                "  ⚠️  Resource estimation failed: {} (method may not exist)",
-                e
-            );
+            println!("  ⚠️  Resource estimation failed: {e} (method may not exist)");
         }
     }
 

@@ -45,7 +45,7 @@ pub async fn register_self_in_registry(
     };
     drop(mode_guard);
 
-    let primal_name = format!("biomeos-{}", family_id);
+    let primal_name = format!("biomeos-{family_id}");
     let capabilities = vec![
         "primal.germination",
         "primal.terraria",
@@ -168,9 +168,7 @@ pub async fn transition_to_coordinated(family_id: &str) -> Result<()> {
         if start.elapsed() > max_wait {
             return Err(anyhow::anyhow!(
                 "Tower Atomic did not become available within 30s. \
-                 Ensure {} and {} primals are running for bootstrap.",
-                security_provider,
-                network_provider
+                 Ensure {security_provider} and {network_provider} primals are running for bootstrap."
             ));
         }
 
@@ -346,13 +344,11 @@ mod tests {
         let err = result.expect_err("Should fail when bootstrap graph not found");
         assert!(
             err.to_string().contains("Bootstrap graph not found"),
-            "Error should mention missing graph: {}",
-            err
+            "Error should mention missing graph: {err}"
         );
         assert!(
             err.to_string().contains("tower_atomic_bootstrap.toml"),
-            "Error should mention expected filename: {}",
-            err
+            "Error should mention expected filename: {err}"
         );
     }
 
@@ -375,8 +371,7 @@ mod tests {
         let err = result.expect_err("Should fail on invalid TOML");
         assert!(
             err.to_string().contains("parse") || err.to_string().contains("TOML"),
-            "Error should mention parse/TOML: {}",
-            err
+            "Error should mention parse/TOML: {err}"
         );
     }
 

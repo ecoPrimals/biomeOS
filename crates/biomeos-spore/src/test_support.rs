@@ -87,7 +87,7 @@ pub fn setup_test_binaries() -> SporeResult<PathBuf> {
             let primal_path = primals_dir.join(primal);
             // Only create if it doesn't exist (might be a directory with versions)
             if !primal_path.exists() {
-                fs::write(&primal_path, format!("#!/bin/sh\necho 'Mock {}'\n", primal))?;
+                fs::write(&primal_path, format!("#!/bin/sh\necho 'Mock {primal}'\n"))?;
                 #[cfg(unix)]
                 {
                     use std::os::unix::fs::PermissionsExt;
@@ -142,7 +142,7 @@ pub fn setup_test_binaries_at(base_dir: &Path) -> SporeResult<PathBuf> {
     // Create mock primal binaries (UniBin compliant names)
     for primal in ["beardog", "songbird"] {
         let primal_bin = primals_dir.join(primal);
-        fs::write(&primal_bin, format!("#!/bin/sh\necho 'Mock {}'\n", primal))?;
+        fs::write(&primal_bin, format!("#!/bin/sh\necho 'Mock {primal}'\n"))?;
 
         #[cfg(unix)]
         {

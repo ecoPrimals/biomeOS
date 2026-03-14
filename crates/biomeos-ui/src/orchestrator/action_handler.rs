@@ -150,15 +150,13 @@ impl ActionHandler {
             Ok(AuthorizationResult::Denied(reason)) => {
                 warn!("❌ Authorization: Denied - {}", reason);
                 return Ok(ActionResult::error(format!(
-                    "Authorization denied: {}",
-                    reason
+                    "Authorization denied: {reason}"
                 )));
             }
             Err(e) => {
                 warn!("⚠️ Authorization check failed: {}", e);
                 return Ok(ActionResult::error(format!(
-                    "Authorization check failed: {}",
-                    e
+                    "Authorization check failed: {e}"
                 )));
             }
         }
@@ -173,17 +171,11 @@ impl ActionHandler {
             }
             Ok(ValidationResult::Invalid(reason)) => {
                 warn!("❌ Validation: Failed - {}", reason);
-                return Ok(ActionResult::error(format!(
-                    "Validation failed: {}",
-                    reason
-                )));
+                return Ok(ActionResult::error(format!("Validation failed: {reason}")));
             }
             Err(e) => {
                 warn!("⚠️ Validation check failed: {}", e);
-                return Ok(ActionResult::error(format!(
-                    "Validation check failed: {}",
-                    e
-                )));
+                return Ok(ActionResult::error(format!("Validation check failed: {e}")));
             }
         }
 
@@ -198,8 +190,7 @@ impl ActionHandler {
             Ok(CapacityResult::Insufficient { reason }) => {
                 warn!("❌ Capacity: Insufficient - {}", reason);
                 return Ok(ActionResult::error(format!(
-                    "Insufficient capacity: {}",
-                    reason
+                    "Insufficient capacity: {reason}"
                 )));
             }
             Err(e) => {
@@ -218,8 +209,7 @@ impl ActionHandler {
                 Err(e) => {
                     warn!("❌ Failed to register assignment: {}", e);
                     return Ok(ActionResult::error(format!(
-                        "Failed to register assignment: {}",
-                        e
+                        "Failed to register assignment: {e}"
                     )));
                 }
             };
@@ -256,8 +246,7 @@ impl ActionHandler {
         );
 
         Ok(ActionResult::success(format!(
-            "Device {} successfully assigned to primal {}",
-            device_id, primal_id
+            "Device {device_id} successfully assigned to primal {primal_id}"
         )))
     }
 
@@ -288,7 +277,7 @@ impl ActionHandler {
                         .get("assignment_id")
                         .and_then(|v| v.as_str())
                         .map(|s| s.to_string())
-                        .unwrap_or_else(|| format!("songbird-{}-{}", device_id, primal_id));
+                        .unwrap_or_else(|| format!("songbird-{device_id}-{primal_id}"));
                     info!("✅ Registered via Songbird: {}", assignment_id);
                     return Ok(assignment_id);
                 }
@@ -298,7 +287,7 @@ impl ActionHandler {
             }
         }
 
-        let assignment_id = format!("local-{}-{}", device_id, primal_id);
+        let assignment_id = format!("local-{device_id}-{primal_id}");
         info!("✅ Registered locally: {}", assignment_id);
         Ok(assignment_id)
     }
@@ -333,8 +322,7 @@ impl ActionHandler {
         let _ = UISync::update_ui_after_unassignment(petaltongue, device_id).await;
 
         Ok(ActionResult::success(format!(
-            "Device {} unassigned successfully",
-            device_id
+            "Device {device_id} unassigned successfully"
         )))
     }
 
@@ -357,15 +345,13 @@ impl ActionHandler {
                     let pid = result.get("pid").and_then(|v| v.as_u64()).unwrap_or(0);
                     info!("✅ Primal {} started with PID {}", primal_name, pid);
                     return Ok(ActionResult::success(format!(
-                        "Primal {} started (PID: {})",
-                        primal_name, pid
+                        "Primal {primal_name} started (PID: {pid})"
                     )));
                 }
                 Err(e) => {
                     warn!("❌ Failed to start primal {}: {}", primal_name, e);
                     return Ok(ActionResult::error(format!(
-                        "Failed to start {}: {}",
-                        primal_name, e
+                        "Failed to start {primal_name}: {e}"
                     )));
                 }
             }
@@ -393,16 +379,12 @@ impl ActionHandler {
             {
                 Ok(_) => {
                     info!("✅ Primal {} stopped", primal_id);
-                    return Ok(ActionResult::success(format!(
-                        "Primal {} stopped",
-                        primal_id
-                    )));
+                    return Ok(ActionResult::success(format!("Primal {primal_id} stopped")));
                 }
                 Err(e) => {
                     warn!("❌ Failed to stop primal {}: {}", primal_id, e);
                     return Ok(ActionResult::error(format!(
-                        "Failed to stop {}: {}",
-                        primal_id, e
+                        "Failed to stop {primal_id}: {e}"
                     )));
                 }
             }
@@ -432,15 +414,13 @@ impl ActionHandler {
                     let new_pid = result.get("pid").and_then(|v| v.as_u64()).unwrap_or(0);
                     info!("✅ Primal {} restarted with PID {}", primal_id, new_pid);
                     return Ok(ActionResult::success(format!(
-                        "Primal {} restarted (new PID: {})",
-                        primal_id, new_pid
+                        "Primal {primal_id} restarted (new PID: {new_pid})"
                     )));
                 }
                 Err(e) => {
                     warn!("❌ Failed to restart primal {}: {}", primal_id, e);
                     return Ok(ActionResult::error(format!(
-                        "Failed to restart {}: {}",
-                        primal_id, e
+                        "Failed to restart {primal_id}: {e}"
                     )));
                 }
             }
@@ -480,8 +460,7 @@ impl ActionHandler {
         }
 
         Ok(ActionResult::success(format!(
-            "Suggestion {} accepted",
-            suggestion_id
+            "Suggestion {suggestion_id} accepted"
         )))
     }
 
@@ -514,8 +493,7 @@ impl ActionHandler {
         }
 
         Ok(ActionResult::success(format!(
-            "Suggestion {} dismissed",
-            suggestion_id
+            "Suggestion {suggestion_id} dismissed"
         )))
     }
 
@@ -856,7 +834,7 @@ mod tests {
                     "result": {"assignment_id": "songbird-abc-123"},
                     "id": 1
                 });
-                let line = format!("{}\n", resp);
+                let line = format!("{resp}\n");
                 stream.write_all(line.as_bytes()).await.expect("write");
                 stream.flush().await.expect("flush");
             }

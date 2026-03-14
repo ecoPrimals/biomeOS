@@ -273,9 +273,9 @@ mod tests {
         let denied = AuthorizationResult::Denied("test reason".to_string());
 
         // Test Debug trait
-        assert!(format!("{:?}", authorized).contains("Authorized"));
-        assert!(format!("{:?}", denied).contains("Denied"));
-        assert!(format!("{:?}", denied).contains("test reason"));
+        assert!(format!("{authorized:?}").contains("Authorized"));
+        assert!(format!("{denied:?}").contains("Denied"));
+        assert!(format!("{denied:?}").contains("test reason"));
     }
 
     #[test]

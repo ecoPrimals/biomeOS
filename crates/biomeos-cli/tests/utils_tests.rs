@@ -83,11 +83,11 @@ fn format_duration(duration: std::time::Duration) -> String {
     let seconds = total_secs % 60;
 
     if hours > 0 {
-        format!("{}h {}m {}s", hours, minutes, seconds)
+        format!("{hours}h {minutes}m {seconds}s")
     } else if minutes > 0 {
-        format!("{}m {}s", minutes, seconds)
+        format!("{minutes}m {seconds}s")
     } else {
-        format!("{}s", seconds)
+        format!("{seconds}s")
     }
 }
 

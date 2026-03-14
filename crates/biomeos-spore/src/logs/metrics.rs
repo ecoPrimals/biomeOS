@@ -79,6 +79,7 @@ impl Default for LogMetrics {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 
@@ -92,5 +93,58 @@ mod tests {
     fn test_default_metrics() {
         let metrics = LogMetrics::default();
         assert_eq!(metrics.total_lines, 0);
+    }
+
+    #[test]
+    fn test_issue_severity_serde_roundtrip() {
+        for sev in [
+            IssueSeverity::Critical,
+            IssueSeverity::Error,
+            IssueSeverity::Warning,
+            IssueSeverity::Info,
+        ] {
+            let json = serde_json::to_string(&sev).unwrap();
+            let restored: IssueSeverity = serde_json::from_str(&json).unwrap();
+            assert_eq!(sev, restored);
+        }
+    }
+
+    #[test]
+    fn test_log_metrics_serde_roundtrip() {
+        let m = LogMetrics {
+            total_lines: 100,
+            errors: 5,
+            warnings: 10,
+            info: 85,
+            total_size_bytes: 4096,
+            duration_secs: 60,
+        };
+        let json = serde_json::to_string(&m).unwrap();
+        let restored: LogMetrics = serde_json::from_str(&json).unwrap();
+        assert_eq!(m.total_lines, restored.total_lines);
+        assert_eq!(m.errors, restored.errors);
+    }
+
+    #[test]
+    fn test_log_metrics_new() {
+        let m = LogMetrics::new();
+        assert_eq!(m.total_lines, 0);
+        assert_eq!(m.errors, 0);
+        assert_eq!(m.warnings, 0);
+    }
+
+    #[test]
+    fn test_log_issue_serde_roundtrip() {
+        let issue = LogIssue {
+            timestamp: chrono::Utc::now(),
+            severity: IssueSeverity::Warning,
+            primal: "songbird".to_string(),
+            description: "test issue".to_string(),
+            log_line: Some("line 42".to_string()),
+        };
+        let json = serde_json::to_string(&issue).unwrap();
+        let restored: LogIssue = serde_json::from_str(&json).unwrap();
+        assert_eq!(issue.primal, restored.primal);
+        assert_eq!(issue.severity, restored.severity);
     }
 }

@@ -12,6 +12,7 @@ plasmidBin/archive/**/*
 !plasmidBin/archive/.gitkeep
 !plasmidBin/MANIFEST.md
 plasmidBin/neural-api-server
+plasmidBin/beardog-server
 plasmidBin/primals/*
 !plasmidBin/primals/.gitkeep
 # PlasmidBin - Stable deployment binaries (not tracked in git)

@@ -19,17 +19,17 @@ use tracing::{debug, info, warn};
 #[derive(Debug, Deserialize)]
 struct JwtSecretResult {
     secret: String,
-    #[allow(dead_code)] // wire format — deserialized but not read directly
+    /// Purpose of the secret (wire format)
+    #[allow(dead_code)]
     purpose: String,
-    #[allow(dead_code)] // wire format — deserialized but not read directly
+    /// Cryptographic strength (wire format)
     strength: String,
-    #[allow(dead_code)] // wire format — deserialized but not read directly
+    /// Secret size in bytes (wire format)
     byte_length: usize,
     #[serde(default)]
-    #[allow(dead_code)] // wire format — deserialized but not read directly
+    #[allow(dead_code)]
     encoded_length: usize,
     #[serde(default)]
-    #[allow(dead_code)] // wire format — deserialized but not read directly
     algorithm: String,
 }
 
@@ -65,8 +65,7 @@ pub async fn fetch_jwt_secret_from_beardog(socket_path: &str, purpose: &str) -> 
         )
         .await
         .context(format!(
-            "Failed to fetch JWT secret from BearDog at {}",
-            socket_path
+            "Failed to fetch JWT secret from BearDog at {socket_path}"
         ))?;
 
     debug!("   Received response from BearDog");
@@ -119,10 +118,9 @@ pub async fn fetch_jwt_secret_with_discovery(purpose: &str) -> Result<String> {
     info!("   Purpose: {}", purpose);
 
     // Use auto-discovery with fallback (Unix → Abstract → TCP)
-    let client = AtomicClient::discover(&provider).await.context(format!(
-        "Failed to discover security provider '{}'",
-        provider
-    ))?;
+    let client = AtomicClient::discover(&provider)
+        .await
+        .context(format!("Failed to discover security provider '{provider}'"))?;
 
     info!("   Discovered {} via: {}", provider, client.endpoint());
 
@@ -272,7 +270,7 @@ mod tests {
         use base64::Engine;
         let secret = generate_secure_random_jwt(64).expect("should succeed");
         let decoded = base64::engine::general_purpose::STANDARD.decode(&secret);
-        assert!(decoded.is_ok(), "Output should be valid base64: {}", secret);
+        assert!(decoded.is_ok(), "Output should be valid base64: {secret}");
         assert_eq!(decoded.unwrap().len(), 64, "Decoded should be 64 bytes");
     }
 
@@ -310,8 +308,7 @@ mod tests {
                 || err.to_string().contains("connect")
                 || err.to_string().contains("Connection refused")
                 || err.to_string().contains("No such file"),
-            "Error should mention BearDog/connection: {}",
-            err
+            "Error should mention BearDog/connection: {err}"
         );
     }
 
@@ -327,8 +324,7 @@ mod tests {
                     || e.to_string().contains("connect")
                     || e.to_string().contains("BearDog")
                     || e.to_string().contains("security"),
-                "Error should be about discovery/connection: {}",
-                e
+                "Error should be about discovery/connection: {e}"
             );
         }
         // If it succeeds (e.g. BearDog running in CI), that's also valid

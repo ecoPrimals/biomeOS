@@ -78,7 +78,7 @@ pub fn format_table<T: serde::Serialize>(data: &[T]) -> String {
 /// Format duration in human readable format
 pub fn format_duration(seconds: i64) -> String {
     if seconds < 60 {
-        format!("{}s", seconds)
+        format!("{seconds}s")
     } else if seconds < 3600 {
         format!("{}m {}s", seconds / 60, seconds % 60)
     } else if seconds < 86400 {
@@ -108,7 +108,7 @@ pub fn format_file_size(bytes: u64) -> String {
 
 /// Format percentage with color coding
 pub fn format_percentage(value: f64) -> String {
-    let formatted = format!("{:.1}%", value);
+    let formatted = format!("{value:.1}%");
     if value >= 90.0 {
         formatted.red().to_string()
     } else if value >= 75.0 {

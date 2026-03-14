@@ -103,7 +103,7 @@ impl DeploymentConfig {
                             #[cfg(not(unix))]
                             "1000".to_string()
                         });
-                    PathBuf::from(format!("/run/user/{}", uid))
+                    PathBuf::from(format!("/run/user/{uid}"))
                 }),
             deployment_mode: DeploymentMode::detect().unwrap_or_else(|_| {
                 DeploymentMode::SiblingSpore {
@@ -207,9 +207,7 @@ impl DeploymentOrchestrator {
                 result.success_count += 1;
             }
             Err(e) => {
-                result
-                    .errors
-                    .push(format!("Tower deployment failed: {}", e));
+                result.errors.push(format!("Tower deployment failed: {e}"));
             }
         }
 
@@ -220,7 +218,7 @@ impl DeploymentOrchestrator {
                 result.success_count += 1;
             }
             Err(e) => {
-                result.errors.push(format!("Node deployment failed: {}", e));
+                result.errors.push(format!("Node deployment failed: {e}"));
             }
         }
 
@@ -231,7 +229,7 @@ impl DeploymentOrchestrator {
                 result.success_count += 1;
             }
             Err(e) => {
-                result.errors.push(format!("Nest deployment failed: {}", e));
+                result.errors.push(format!("Nest deployment failed: {e}"));
             }
         }
 
@@ -299,7 +297,7 @@ impl DeploymentOrchestrator {
             "songbird-orchestrator" => "SONGBIRD_SOCKET",
             "toadstool" => "TOADSTOOL_SOCKET",
             "nestgate" => "NESTGATE_SOCKET",
-            _ => return Err(anyhow::anyhow!("Unknown primal: {}", primal_name)),
+            _ => return Err(anyhow::anyhow!("Unknown primal: {primal_name}")),
         };
 
         env.insert(socket_env.to_string(), socket_path.display().to_string());
@@ -410,7 +408,7 @@ mod tests {
         PrimalInstance {
             primal_name: name.to_string(),
             pid,
-            socket_path: PathBuf::from(format!("/tmp/{}.sock", name)),
+            socket_path: PathBuf::from(format!("/tmp/{name}.sock")),
             started_at: chrono::Utc::now(),
         }
     }
@@ -449,13 +447,11 @@ mod tests {
             let primals = atomic.required_primals();
             assert!(
                 primals.contains(&"beardog-server"),
-                "{:?} must require beardog-server",
-                atomic
+                "{atomic:?} must require beardog-server"
             );
             assert!(
                 primals.contains(&"songbird-orchestrator"),
-                "{:?} must require songbird-orchestrator",
-                atomic
+                "{atomic:?} must require songbird-orchestrator"
             );
         }
     }
@@ -539,7 +535,7 @@ mod tests {
         let temp_dir = TempDir::new().expect("create temp dir");
         let config = DeploymentConfig::test_config(temp_dir.path().join("s.seed"));
 
-        let dbg = format!("{:?}", config);
+        let dbg = format!("{config:?}");
         assert!(dbg.contains("DeploymentConfig"));
         assert!(dbg.contains("1894e909e454"));
     }
@@ -662,7 +658,7 @@ mod tests {
     #[test]
     fn test_deployment_result_debug() {
         let result = DeploymentResult::new();
-        let dbg = format!("{:?}", result);
+        let dbg = format!("{result:?}");
         assert!(dbg.contains("DeploymentResult"));
     }
 
@@ -745,8 +741,7 @@ mod tests {
         let err_msg = result.unwrap_err().to_string();
         assert!(
             err_msg.contains("USB seed not found"),
-            "unexpected error: {}",
-            err_msg
+            "unexpected error: {err_msg}"
         );
     }
 }

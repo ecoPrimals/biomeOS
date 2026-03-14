@@ -31,3 +31,25 @@ pub fn generate_device_entropy() -> Vec<u8> {
 
     entropy
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_generate_device_entropy_length() {
+        let entropy = generate_device_entropy();
+        assert_eq!(entropy.len(), 32);
+    }
+
+    #[test]
+    fn test_generate_device_entropy_deterministic_per_run() {
+        let e1 = generate_device_entropy();
+        let e2 = generate_device_entropy();
+        assert_eq!(e1.len(), e2.len());
+        // Entropy uses time/pid/thread - may differ between calls
+        assert!(!e1.is_empty());
+        assert!(!e2.is_empty());
+    }
+}

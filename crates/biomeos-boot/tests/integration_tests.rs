@@ -108,13 +108,13 @@ async fn test_multiple_initramfs_builds() -> Result<()> {
 
     // Build multiple initramfs images
     for i in 0..3 {
-        let mut builder = InitramfsBuilder::new(project_root.join(format!("build_{}", i)))?;
+        let mut builder = InitramfsBuilder::new(project_root.join(format!("build_{i}")))?;
         builder.create_directory_structure()?;
         builder.add_biomeos_binaries(project_root)?;
         builder.install_binaries()?;
         builder.create_init_script()?;
 
-        let output = project_root.join(format!("dist/test-initramfs-{}.img", i));
+        let output = project_root.join(format!("dist/test-initramfs-{i}.img"));
         builder.build(&output)?;
 
         assert!(output.exists());
@@ -151,13 +151,13 @@ fn test_concurrent_initramfs_builds() -> Result<()> {
             let root = project_root.clone();
             thread::spawn(move || -> Result<()> {
                 let mut builder =
-                    InitramfsBuilder::new(root.join(format!("build_concurrent_{}", i)))?;
+                    InitramfsBuilder::new(root.join(format!("build_concurrent_{i}")))?;
                 builder.create_directory_structure()?;
                 builder.add_biomeos_binaries(&root)?;
                 builder.install_binaries()?;
                 builder.create_init_script()?;
 
-                let output = root.join(format!("dist/concurrent-{}.img", i));
+                let output = root.join(format!("dist/concurrent-{i}.img"));
                 builder.build(&output)?;
 
                 assert!(output.exists());
@@ -191,7 +191,7 @@ async fn test_initramfs_size_reasonable() -> Result<()> {
     let size_mb = metadata.len() / (1024 * 1024);
 
     // Should be between 0.1MB and 100MB
-    assert!(size_mb < 100, "Initramfs too large: {} MB", size_mb);
+    assert!(size_mb < 100, "Initramfs too large: {size_mb} MB");
 
     Ok(())
 }
@@ -224,7 +224,7 @@ async fn test_initramfs_reproducible_builds() -> Result<()> {
     let diff = (size1 as i64 - size2 as i64).unsigned_abs();
     let percent_diff = (diff * 100) / size1.max(size2);
 
-    assert!(percent_diff < 10, "Builds differ by {}%", percent_diff);
+    assert!(percent_diff < 10, "Builds differ by {percent_diff}%");
 
     Ok(())
 }
@@ -262,8 +262,7 @@ fn test_kernel_manager_error_no_kernel() {
             let err_msg = e.to_string();
             assert!(
                 err_msg.contains("No kernel found") || err_msg.contains("kernel"),
-                "Error message should mention kernel: {}",
-                err_msg
+                "Error message should mention kernel: {err_msg}"
             );
         }
     }

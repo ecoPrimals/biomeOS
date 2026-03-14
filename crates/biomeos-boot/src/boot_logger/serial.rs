@@ -111,7 +111,7 @@ mod tests {
             // Should either succeed or fail gracefully
             match result {
                 Ok(_) => println!("Serial channel opened successfully"),
-                Err(e) => println!("Serial channel failed (expected in test): {:?}", e),
+                Err(e) => println!("Serial channel failed (expected in test): {e:?}"),
             }
         }
     }

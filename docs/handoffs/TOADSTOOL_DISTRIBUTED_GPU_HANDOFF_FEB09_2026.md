@@ -1,3 +1,5 @@
+> **HISTORICAL** — This handoff predates v2.37. See CURRENT_STATUS.md for latest.
+
 # Toadstool Distributed GPU Compute Handoff
 
 **Date**: February 9, 2026  

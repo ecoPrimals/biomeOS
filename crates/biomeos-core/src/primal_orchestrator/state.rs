@@ -82,7 +82,7 @@ mod tests {
         let failed = PrimalState::Failed {
             reason: "boom".into(),
         };
-        let dbg = format!("{:?}", failed);
+        let dbg = format!("{failed:?}");
         assert!(dbg.contains("Failed"));
         assert!(dbg.contains("boom"));
     }

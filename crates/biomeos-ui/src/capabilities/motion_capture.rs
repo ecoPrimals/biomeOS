@@ -92,7 +92,7 @@ impl MotionCaptureAdapter {
             .config
             .tracked_devices
             .iter()
-            .map(|d| format!("{:?}", d).to_lowercase())
+            .map(|d| format!("{d:?}").to_lowercase())
             .collect();
 
         let params = serde_json::json!({
@@ -350,7 +350,7 @@ mod tests {
             samples: 100,
             message: "OK".to_string(),
         };
-        let s = format!("{:?}", cal);
+        let s = format!("{cal:?}");
         assert!(s.contains("success"));
         assert!(s.contains("0.1"));
     }

@@ -1,3 +1,5 @@
+> **HISTORICAL** — This handoff predates v2.37. See CURRENT_STATUS.md for latest.
+
 # NUC Federation & Binary Evolution Handoff
 **Date**: February 13, 2026
 **Session Focus**: LiveSpore Deployment to NUC, Binary Format Discovery

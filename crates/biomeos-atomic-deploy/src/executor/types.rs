@@ -319,7 +319,7 @@ mod tests {
     #[test]
     fn test_execution_report_debug() {
         let report = ExecutionReport::new("debug-test").mark_failed("kaboom");
-        let debug_str = format!("{:?}", report);
+        let debug_str = format!("{report:?}");
         assert!(debug_str.contains("ExecutionReport"));
         assert!(debug_str.contains("debug-test"));
         assert!(debug_str.contains("kaboom"));

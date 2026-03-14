@@ -37,7 +37,7 @@ async fn main() -> ExitCode {
             // Fallback to stdout if BootLogger fails
             use std::io::Write;
             let _ =
-                std::io::stderr().write_all(format!("BootLogger init failed: {}\n", e).as_bytes());
+                std::io::stderr().write_all(format!("BootLogger init failed: {e}\n").as_bytes());
             let _ = std::io::stdout().write_all(b"\n[BiomeOS] Init - Fallback mode\n");
             None
         }
@@ -48,12 +48,12 @@ async fn main() -> ExitCode {
     let pid_raw = rustix::process::Pid::as_raw(Some(pid));
 
     if let Some(ref mut logger) = boot_logger {
-        logger.info(&format!("PID: {}", pid_raw));
+        logger.info(&format!("PID: {pid_raw}"));
     }
 
     if !pid.is_init() {
         if let Some(ref mut logger) = boot_logger {
-            logger.critical(&format!("Must run as PID 1, got {}", pid_raw));
+            logger.critical(&format!("Must run as PID 1, got {pid_raw}"));
         }
         return ExitCode::FAILURE;
     }
@@ -95,7 +95,7 @@ async fn main() -> ExitCode {
     // Run initialization sequence
     if let Err(e) = initialize().await {
         if let Some(ref mut logger) = boot_logger {
-            logger.critical(&format!("Initialization failed: {:#}", e));
+            logger.critical(&format!("Initialization failed: {e:#}"));
         }
         error!("Initialization failed: {:#}", e);
         error!("Entering emergency mode...");
@@ -112,7 +112,7 @@ async fn main() -> ExitCode {
     if let Some(ref observer) = observer {
         observer.record_boot_time(boot_time);
         if let Some(ref mut logger) = boot_logger {
-            logger.info(&format!("Boot time recorded: {:?}", boot_time));
+            logger.info(&format!("Boot time recorded: {boot_time:?}"));
         }
         info!("📊 Boot time: {:?}", boot_time);
     }
@@ -263,7 +263,7 @@ async fn mount_essential_filesystems() -> Result<()> {
 fn mount_filesystem(source: &str, target: &str, fstype: &str, flags: MountFlags) -> Result<()> {
     // Create mount point if it doesn't exist
     std::fs::create_dir_all(target)
-        .with_context(|| format!("Failed to create directory: {}", target))?;
+        .with_context(|| format!("Failed to create directory: {target}"))?;
 
     // Try to mount - if already mounted (EBUSY), that's OK
     match mount(source, target, fstype, flags, "") {
@@ -276,12 +276,7 @@ fn mount_filesystem(source: &str, target: &str, fstype: &str, flags: MountFlags)
             info!("  ✓ {} (already mounted)", target);
             Ok(())
         }
-        Err(e) => Err(anyhow::anyhow!(
-            "Failed to mount {} on {}: {}",
-            source,
-            target,
-            e
-        )),
+        Err(e) => Err(anyhow::anyhow!("Failed to mount {source} on {target}: {e}")),
     }
 }
 

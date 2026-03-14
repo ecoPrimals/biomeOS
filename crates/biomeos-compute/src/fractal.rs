@@ -399,9 +399,8 @@ impl ComputeNode for LeafNode {
 /// This is intentional - we may use it in future for resource reservation/limits.
 pub struct ParentNode {
     config: NodeConfig,
-    /// Reserved for resource reservation/limits.
-    #[allow(dead_code)] // Future: wire up for resource reservation/limits
-    resources: ResourceInfo,
+    /// Planned: wire up for resource reservation/limits in Phase 3.
+    _resources: ResourceInfo,
     children: Vec<Arc<dyn ComputeNode>>,
 }
 
@@ -414,7 +413,7 @@ impl ParentNode {
     ) -> Self {
         Self {
             config,
-            resources,
+            _resources: resources,
             children,
         }
     }
@@ -660,5 +659,72 @@ impl ComputeNode for ParentNode {
             aggregate_resources: aggregate_resources.clone(),
             aggregate_utilization: self.get_utilization().await?,
         })
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_fractal_builder_binary_tree() {
+        let root = FractalBuilder::new("root")
+            .topology(NodeTopology::BinaryTree)
+            .depth(2)
+            .build()
+            .await
+            .unwrap();
+        let count = root.get_node_count().await.unwrap();
+        assert!(count >= 3); // root + 2 children at least, or more at depth 2
+    }
+
+    #[tokio::test]
+    async fn test_fractal_builder_quad_tree() {
+        let root = FractalBuilder::new("quad")
+            .topology(NodeTopology::QuadTree)
+            .depth(1)
+            .build()
+            .await
+            .unwrap();
+        let count = root.get_node_count().await.unwrap();
+        assert!(count >= 5); // root + 4 children
+    }
+
+    #[tokio::test]
+    async fn test_fractal_builder_leaf_node() {
+        let root = FractalBuilder::new("leaf")
+            .topology(NodeTopology::Leaf)
+            .depth(0)
+            .build()
+            .await
+            .unwrap();
+        assert!(root.is_leaf());
+        assert_eq!(root.get_child_count(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_fractal_leaf_node_workload() {
+        let root = FractalBuilder::new("leaf")
+            .topology(NodeTopology::Leaf)
+            .depth(0)
+            .build()
+            .await
+            .unwrap();
+        let workload = Workload::new("test", Runtime::Native);
+        let id = root.submit_workload(workload).await.unwrap();
+        let status = root.get_workload_status(&id).await.unwrap();
+        assert!(matches!(status, WorkloadStatus::Running));
+    }
+
+    #[tokio::test]
+    async fn test_fractal_health_check() {
+        let root = FractalBuilder::new("health")
+            .depth(1)
+            .build()
+            .await
+            .unwrap();
+        let status = root.health_check().await.unwrap();
+        assert!(matches!(status, HealthStatus::Healthy));
     }
 }

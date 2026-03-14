@@ -189,7 +189,6 @@ pub struct DiscoveryReport {
 }
 
 /// Filter discovery results by primal type category (testable pure function)
-#[allow(dead_code)] // Used by tests
 pub(crate) fn filter_by_type(
     services: &[DiscoveryResult],
     service_type: &str,
@@ -202,7 +201,6 @@ pub(crate) fn filter_by_type(
 }
 
 /// Categorize services by primal type (testable pure function)
-#[allow(dead_code)] // Used by tests
 pub(crate) fn categorize_by_type(
     services: &[DiscoveryResult],
 ) -> std::collections::HashMap<String, Vec<DiscoveryResult>> {
@@ -232,8 +230,7 @@ mod tests {
         let err_str = err.to_string();
         assert!(
             err_str.contains("Songbird") || err_str.contains("Geolocation"),
-            "Error should mention Songbird or geolocation: {}",
-            err_str
+            "Error should mention Songbird or geolocation: {err_str}"
         );
     }
 
@@ -330,5 +327,65 @@ mod tests {
         assert_eq!(by_type.len(), 2);
         assert_eq!(by_type.get("a").map(|v| v.len()), Some(2));
         assert_eq!(by_type.get("b").map(|v| v.len()), Some(1));
+    }
+
+    #[test]
+    fn test_categorize_by_type_empty() {
+        let services: Vec<DiscoveryResult> = vec![];
+        let by_type = categorize_by_type(&services);
+        assert!(by_type.is_empty());
+    }
+
+    #[test]
+    fn test_categorize_by_type_single_category() {
+        let services = vec![
+            DiscoveryResult {
+                id: "1".to_string(),
+                primal_type: PrimalType::new("compute", "Compute", "1.0"),
+                endpoint: "http://a".to_string(),
+                capabilities: vec![],
+                health: Health::Healthy,
+                discovered_at: chrono::Utc::now(),
+            },
+            DiscoveryResult {
+                id: "2".to_string(),
+                primal_type: PrimalType::new("compute", "Compute2", "2.0"),
+                endpoint: "http://b".to_string(),
+                capabilities: vec![],
+                health: Health::Healthy,
+                discovered_at: chrono::Utc::now(),
+            },
+        ];
+        let by_type = categorize_by_type(&services);
+        assert_eq!(by_type.len(), 1);
+        assert_eq!(by_type.get("compute").map(|v| v.len()), Some(2));
+    }
+
+    #[test]
+    fn test_filter_by_type_no_match() {
+        let services = vec![DiscoveryResult {
+            id: "1".to_string(),
+            primal_type: PrimalType::new("storage", "Storage", "1.0"),
+            endpoint: "http://a".to_string(),
+            capabilities: vec![],
+            health: Health::Healthy,
+            discovered_at: chrono::Utc::now(),
+        }];
+        let filtered = filter_by_type(&services, "compute");
+        assert!(filtered.is_empty());
+    }
+
+    #[test]
+    fn test_discovery_report_debug() {
+        let report = DiscoveryReport {
+            total_services: 5,
+            services_by_type: std::collections::HashMap::new(),
+            healthy_services: 4,
+            unhealthy_services: 1,
+            discovery_time_ms: 250,
+            timestamp: chrono::Utc::now(),
+        };
+        let debug = format!("{report:?}");
+        assert!(debug.contains("DiscoveryReport"));
     }
 }

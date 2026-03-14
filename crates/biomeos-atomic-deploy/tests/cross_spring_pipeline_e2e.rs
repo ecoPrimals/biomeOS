@@ -42,7 +42,7 @@ impl CrossSpringFixture {
 
         Self {
             family_id: family_id.to_string(),
-            neural_api_socket: socket_dir.join(format!("neural-api-{}.sock", family_id)),
+            neural_api_socket: socket_dir.join(format!("neural-api-{family_id}.sock")),
             socket_dir,
         }
     }
@@ -102,12 +102,12 @@ async fn test_springs_registered() {
             json!({ "capability": domain }),
         )
         .await
-        .unwrap_or_else(|e| panic!("capability.discover({}) failed: {}", domain, e));
+        .unwrap_or_else(|e| panic!("capability.discover({domain}) failed: {e}"));
 
         let primals = result["result"]["primals"]
             .as_array()
             .expect("primals array");
-        assert!(!primals.is_empty(), "No providers for {} domain", domain);
+        assert!(!primals.is_empty(), "No providers for {domain} domain");
         eprintln!("  {} domain: {} provider(s)", domain, primals.len());
     }
 }

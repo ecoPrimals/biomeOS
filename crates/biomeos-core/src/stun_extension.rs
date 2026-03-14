@@ -561,7 +561,7 @@ mod tests {
         assert!(result.is_err());
         match result.unwrap_err() {
             StunExtensionError::AllServersFailed => {}
-            e => panic!("Expected AllServersFailed, got: {}", e),
+            e => panic!("Expected AllServersFailed, got: {e}"),
         }
     }
 

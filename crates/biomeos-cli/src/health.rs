@@ -247,7 +247,7 @@ impl HealthUtils {
             conditions.push(HealthCondition {
                 condition: "LongUptime".to_string(),
                 severity: "Info".to_string(),
-                description: format!("System uptime: {} hours", uptime_hours),
+                description: format!("System uptime: {uptime_hours} hours"),
                 action: "Consider scheduled reboot for updates".to_string(),
             });
         }
@@ -404,8 +404,61 @@ mod tests {
     #[test]
     fn test_system_health_debug() {
         let health = system_health(50.0, 50.0, 50.0);
-        let debug = format!("{:?}", health);
+        let debug = format!("{health:?}");
         assert!(debug.contains("cpu_usage"));
         assert!(debug.contains("memory_usage"));
+    }
+
+    #[test]
+    fn test_system_health_construction() {
+        let health = SystemHealth {
+            overall_status: Health::Degraded {
+                issues: vec![],
+                impact_score: Some(0.2),
+            },
+            cpu_usage: 25.0,
+            memory_usage: 60.0,
+            disk_usage: 40.0,
+            network_status: "Degraded".to_string(),
+        };
+        assert_eq!(health.cpu_usage, 25.0);
+        assert_eq!(health.network_status, "Degraded");
+    }
+
+    #[test]
+    fn test_service_health_construction() {
+        let svc = ServiceHealth {
+            name: "beardog".to_string(),
+            endpoint: "http://localhost:9000".to_string(),
+            status: Health::Healthy,
+            response_time_ms: 42,
+        };
+        assert_eq!(svc.name, "beardog");
+        assert_eq!(svc.response_time_ms, 42);
+    }
+
+    #[test]
+    fn test_health_condition_construction() {
+        let cond = HealthCondition {
+            condition: "HighMemory".to_string(),
+            severity: "warning".to_string(),
+            description: "High memory usage".to_string(),
+            action: "Consider adding memory".to_string(),
+        };
+        assert_eq!(cond.condition, "HighMemory");
+        assert_eq!(cond.severity, "warning");
+        assert!(cond.description.contains("memory"));
+    }
+
+    #[test]
+    fn test_cli_health_report_debug() {
+        let report = CLIHealthReport {
+            system: system_health(50.0, 50.0, 50.0),
+            services: vec![],
+            timestamp: chrono::Utc::now(),
+        };
+        let debug = format!("{report:?}");
+        assert!(debug.contains("system"));
+        assert!(debug.contains("services"));
     }
 }

@@ -21,7 +21,7 @@ impl UniversalBiomeOSManager {
         tracing::info!("📋 Planning service creation");
 
         let config: serde_json::Value = serde_json::from_str(config_data)
-            .map_err(|e| anyhow::anyhow!("Failed to parse config: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("Failed to parse config: {e}"))?;
 
         let mut plan = HashMap::new();
         plan.insert("status".to_string(), serde_json::json!("planned"));

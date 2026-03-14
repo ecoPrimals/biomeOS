@@ -93,7 +93,7 @@ impl Graph {
         for (idx, node_value) in nodes_array.iter().enumerate() {
             tracing::debug!("   Parsing node {}...", idx);
             let node: GraphNode = toml::from_str(&toml::to_string(node_value)?)
-                .with_context(|| format!("Failed to parse node {} structure", idx))?;
+                .with_context(|| format!("Failed to parse node {idx} structure"))?;
             tracing::debug!("   ✅ Node {}: id={}", idx, node.id);
             nodes.push(node);
         }
@@ -451,9 +451,7 @@ max_parallelism = 2
         for (key, val) in env {
             assert!(
                 !val.contains("/tmp/"),
-                "Songbird env {} should not use /tmp/, got: {}",
-                key,
-                val
+                "Songbird env {key} should not use /tmp/, got: {val}"
             );
         }
     }
@@ -521,8 +519,7 @@ max_parallelism = 2
         let neural_api_sock = env.get("NEURAL_API_SOCKET").unwrap();
         assert!(
             neural_api_sock.contains("XDG_RUNTIME_DIR"),
-            "NEURAL_API_SOCKET should use XDG_RUNTIME_DIR, got: {}",
-            neural_api_sock
+            "NEURAL_API_SOCKET should use XDG_RUNTIME_DIR, got: {neural_api_sock}"
         );
         // Verify no port 3492 in any operation params
         for node in &graph.nodes {
@@ -570,20 +567,19 @@ max_parallelism = 2
             }
             match Graph::from_toml_file(&path) {
                 Ok(graph) => {
-                    assert!(!graph.id.is_empty(), "Graph {} has empty id", filename);
-                    assert!(!graph.nodes.is_empty(), "Graph {} has no nodes", filename);
+                    assert!(!graph.id.is_empty(), "Graph {filename} has empty id");
+                    assert!(!graph.nodes.is_empty(), "Graph {filename} has no nodes");
                     parsed_count += 1;
                 }
                 Err(e) => {
-                    errors.push(format!("{}: {}", filename, e));
+                    errors.push(format!("{filename}: {e}"));
                 }
             }
         }
 
         assert!(
             parsed_count >= 4,
-            "Expected to parse at least 4 deployment graphs, got {}",
-            parsed_count
+            "Expected to parse at least 4 deployment graphs, got {parsed_count}"
         );
         if !errors.is_empty() {
             panic!("Deployment graph parse errors:\n{}", errors.join("\n"));

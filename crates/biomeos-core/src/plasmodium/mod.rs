@@ -270,8 +270,9 @@ impl Plasmodium {
     async fn discover_peers(&self) -> Vec<PeerInfo> {
         let mut peers = Vec::new();
 
-        // Try Songbird mesh first
-        if let Ok(client) = AtomicClient::discover("songbird").await {
+        let discovery_provider =
+            std::env::var("DISCOVERY_PROVIDER").unwrap_or_else(|_| "songbird".to_string());
+        if let Ok(client) = AtomicClient::discover(&discovery_provider).await {
             if let Ok(result) = client.call("mesh.peers", json!({})).await {
                 let peers_array = result
                     .get("peers")
@@ -294,7 +295,10 @@ impl Plasmodium {
                 debug!("mesh.peers call failed, falling back to env var");
             }
         } else {
-            debug!("Songbird not available, using PLASMODIUM_PEERS for peer discovery");
+            debug!(
+                "Discovery provider '{discovery_provider}' not available, \
+                 using PLASMODIUM_PEERS for peer discovery"
+            );
         }
 
         // Always merge PLASMODIUM_PEERS env var (supplements Songbird mesh)
@@ -329,18 +333,16 @@ impl Plasmodium {
         peers
     }
 
-    /// Query a remote gate's NUCLEUS status via Songbird HTTP JSON-RPC gateway
+    /// Query a remote gate's NUCLEUS status via HTTP JSON-RPC gateway
     ///
-    /// Uses HTTP POST to `/jsonrpc` on the remote Songbird
-    /// instance. The port is runtime-discovered from the
-    /// `mesh.peers` response (beacon exchange), with `SONGBIRD_MESH_PORT` env
-    /// var and Songbird's default (8080) as fallbacks.
+    /// Uses HTTP POST to `/jsonrpc` on the remote discovery provider.
+    /// The port is runtime-discovered from the `mesh.peers` response
+    /// (beacon exchange), with env var and constants as fallbacks.
     async fn query_remote_gate(&self, address: &str, node_id: &str) -> Result<GateInfo> {
-        // Runtime-discoverable default port: env var → Songbird default (8080)
         let default_port: u16 = std::env::var("SONGBIRD_MESH_PORT")
             .ok()
             .and_then(|p| p.parse().ok())
-            .unwrap_or(8080);
+            .unwrap_or(biomeos_types::constants::network::DEFAULT_HTTP_PORT);
 
         // Parse host:port from mesh.peers address (port comes from beacon discovery)
         let (host, port) = if let Some(idx) = address.rfind(':') {
@@ -359,7 +361,7 @@ impl Plasmodium {
         let reachable = health_result.is_ok();
 
         if !reachable {
-            anyhow::bail!("Gate {} not reachable at {}:{}", node_id, host, port);
+            anyhow::bail!("Gate {node_id} not reachable at {host}:{port}");
         }
 
         // Query remote primals
@@ -402,10 +404,11 @@ impl Plasmodium {
             }
         }
 
-        // Fallback: just check if Songbird is healthy (we already connected)
         if primals.is_empty() {
+            let discovery_provider =
+                std::env::var("DISCOVERY_PROVIDER").unwrap_or_else(|_| "songbird".to_string());
             primals.push(PrimalStatus {
-                name: "songbird".to_string(),
+                name: discovery_provider,
                 healthy: true,
                 version: None,
             });

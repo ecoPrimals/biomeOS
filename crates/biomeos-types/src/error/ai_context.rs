@@ -600,7 +600,7 @@ mod tests {
             },
         ];
         for v in variants {
-            let debug_str = format!("{:?}", v);
+            let debug_str = format!("{v:?}");
             assert!(!debug_str.is_empty());
         }
     }
@@ -620,7 +620,7 @@ mod tests {
         for v in variants {
             let json = serde_json::to_string(&v).expect("serialize");
             let parsed: ActionType = serde_json::from_str(&json).expect("deserialize");
-            assert_eq!(v, parsed, "round-trip failed for {:?}", v);
+            assert_eq!(v, parsed, "round-trip failed for {v:?}");
         }
     }
 

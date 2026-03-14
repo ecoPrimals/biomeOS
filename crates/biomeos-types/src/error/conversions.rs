@@ -227,7 +227,7 @@ impl BiomeError {
 impl From<std::io::Error> for BiomeError {
     fn from(err: std::io::Error) -> Self {
         BiomeError::internal_error(
-            format!("IO error: {}", err),
+            format!("IO error: {err}"),
             Some(format!("io_error_{}", err.kind() as u8)),
         )
     }
@@ -236,7 +236,7 @@ impl From<std::io::Error> for BiomeError {
 impl From<serde_json::Error> for BiomeError {
     fn from(err: serde_json::Error) -> Self {
         BiomeError::validation_error(
-            format!("JSON serialization error: {}", err),
+            format!("JSON serialization error: {err}"),
             vec![ValidationError {
                 field: "json".to_string(),
                 message: err.to_string(),
@@ -250,7 +250,7 @@ impl From<serde_json::Error> for BiomeError {
 impl From<uuid::Error> for BiomeError {
     fn from(err: uuid::Error) -> Self {
         BiomeError::validation_error(
-            format!("UUID error: {}", err),
+            format!("UUID error: {err}"),
             vec![ValidationError {
                 field: "uuid".to_string(),
                 message: err.to_string(),
@@ -470,5 +470,50 @@ mod tests {
         }
 
         assert!(test_fn().is_err());
+    }
+
+    #[test]
+    fn test_biome_error_display_configuration() {
+        let err = BiomeError::config_error("Invalid config", Some("key"));
+        let s = err.to_string();
+        assert!(s.contains("Configuration"));
+        assert!(s.contains("Invalid config"));
+    }
+
+    #[test]
+    fn test_biome_error_display_network() {
+        let err = BiomeError::network_error("Connection refused", None::<String>, None);
+        let s = err.to_string();
+        assert!(s.contains("Network"));
+        assert!(s.contains("Connection refused"));
+    }
+
+    #[test]
+    fn test_biome_error_display_security() {
+        let err = BiomeError::security_error("Access denied", None);
+        let s = err.to_string();
+        assert!(s.contains("Security"));
+    }
+
+    #[test]
+    fn test_biome_error_display_validation() {
+        let err = BiomeError::validation_error("Validation failed", vec![]);
+        let s = err.to_string();
+        assert!(s.contains("Validation"));
+    }
+
+    #[test]
+    fn test_biome_error_display_timeout() {
+        let err = BiomeError::timeout_error("Request timed out", 5000, None::<String>);
+        let s = err.to_string();
+        assert!(s.contains("Timeout"));
+        assert!(s.contains("timed out"));
+    }
+
+    #[test]
+    fn test_biome_error_display_internal() {
+        let err = BiomeError::internal_error("Unexpected", Some("ERR_001"));
+        let s = err.to_string();
+        assert!(!s.is_empty());
     }
 }

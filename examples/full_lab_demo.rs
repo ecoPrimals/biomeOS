@@ -45,7 +45,7 @@ async fn main() -> Result<()> {
         }
         Err(e) => {
             results.push(("Simple LAN", false));
-            println!("❌ Experiment 1 error: {}", e);
+            println!("❌ Experiment 1 error: {e}");
         }
     }
     println!();
@@ -73,7 +73,7 @@ async fn main() -> Result<()> {
         }
         Err(e) => {
             results.push(("Multi-Tower", false));
-            println!("❌ Experiment 2 error: {}", e);
+            println!("❌ Experiment 2 error: {e}");
         }
     }
     println!();
@@ -94,7 +94,7 @@ async fn main() -> Result<()> {
         }
         Err(e) => {
             results.push(("NAT Traversal", false));
-            println!("❌ Experiment 3 error: {}", e);
+            println!("❌ Experiment 3 error: {e}");
         }
     }
     println!();
@@ -114,7 +114,7 @@ async fn main() -> Result<()> {
     }
 
     println!();
-    println!("Summary: {}/{} experiments passed", passed, total);
+    println!("Summary: {passed}/{total} experiments passed");
     println!();
 
     if passed == total {
@@ -144,7 +144,7 @@ async fn run_experiment(
     name: &str,
     test: &str,
 ) -> Result<bool> {
-    println!("Creating lab: {} ({})", name, topology);
+    println!("Creating lab: {name} ({topology})");
     let lab = manager.create_lab(topology, name).await?;
     println!("✅ Lab created");
 
@@ -152,7 +152,7 @@ async fn run_experiment(
     let _ = lab.deploy("templates/p2p-secure-mesh.biome.yaml").await;
     println!("✅ Deploy attempted");
 
-    println!("Running test: {}", test);
+    println!("Running test: {test}");
     let result = lab.run_test(test).await?;
     let success = result.passed();
     println!(

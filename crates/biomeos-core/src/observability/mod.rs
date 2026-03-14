@@ -351,10 +351,7 @@ impl Default for MinimalObserver {
     fn default() -> Self {
         // Graceful degradation: If local_only fails, use disabled mode
         Self::local_only().unwrap_or_else(|e| {
-            eprintln!(
-                "Warning: Failed to create observer: {}, using disabled mode",
-                e
-            );
+            eprintln!("Warning: Failed to create observer: {e}, using disabled mode");
             // Fallback to disabled mode
             Self {
                 mode: ObservabilityMode::Disabled,
@@ -366,6 +363,7 @@ impl Default for MinimalObserver {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 
@@ -432,5 +430,66 @@ mod tests {
         // Disabled mode doesn't record
         // But we still return default metrics
         assert!(metrics.boot_time.is_none());
+    }
+
+    #[test]
+    fn test_observability_mode_default() {
+        assert_eq!(ObservabilityMode::default(), ObservabilityMode::LocalOnly);
+    }
+
+    #[test]
+    fn test_observability_mode_serde_roundtrip() {
+        for mode in [
+            ObservabilityMode::Disabled,
+            ObservabilityMode::LocalOnly,
+            ObservabilityMode::FamilyFederation,
+        ] {
+            let json = serde_json::to_string(&mode).unwrap();
+            let restored: ObservabilityMode = serde_json::from_str(&json).unwrap();
+            assert_eq!(mode, restored);
+        }
+    }
+
+    #[test]
+    fn test_resource_metrics_default() {
+        let m = ResourceMetrics::default();
+        assert!(m.cpu_percent.is_none());
+        assert!(m.memory_bytes.is_none());
+    }
+
+    #[test]
+    fn test_resource_metrics_serde_roundtrip() {
+        let m = ResourceMetrics {
+            cpu_percent: Some(50.0),
+            memory_bytes: Some(1024),
+            disk_bytes: Some(2048),
+            network_tx_bytes: Some(100),
+            network_rx_bytes: Some(200),
+        };
+        let json = serde_json::to_string(&m).unwrap();
+        let restored: ResourceMetrics = serde_json::from_str(&json).unwrap();
+        assert_eq!(m.cpu_percent, restored.cpu_percent);
+        assert_eq!(m.memory_bytes, restored.memory_bytes);
+    }
+
+    #[test]
+    fn test_local_metrics_default() {
+        let m = LocalMetrics::default();
+        assert!(m.boot_time.is_none());
+        assert!(m.primal_health.is_empty());
+        assert!(!m.biomeos_version.is_empty());
+    }
+
+    #[test]
+    fn test_resource_recording() {
+        let observer = MinimalObserver::local_only().unwrap();
+        observer.record_resource_usage(ResourceMetrics {
+            cpu_percent: Some(75.0),
+            memory_bytes: Some(1024),
+            ..Default::default()
+        });
+        let metrics = observer.get_local_metrics();
+        assert_eq!(metrics.resource_usage.cpu_percent, Some(75.0));
+        assert_eq!(metrics.resource_usage.memory_bytes, Some(1024));
     }
 }

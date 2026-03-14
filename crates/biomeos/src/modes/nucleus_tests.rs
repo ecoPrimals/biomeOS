@@ -98,8 +98,7 @@ fn test_base64_encode_roundtrip_alphabet() {
     for c in encoded.chars() {
         assert!(
             c.is_ascii_alphanumeric() || c == '+' || c == '/' || c == '=',
-            "Invalid base64 char: {:?}",
-            c
+            "Invalid base64 char: {c:?}"
         );
     }
 }
@@ -273,7 +272,7 @@ fn test_startup_config_debug() {
         family_id: "f1".to_string(),
         socket_dir: PathBuf::from("/tmp"),
     };
-    let _ = format!("{:?}", config);
+    let _ = format!("{config:?}");
 }
 
 #[test]
@@ -354,8 +353,7 @@ async fn test_run_fails_on_invalid_mode() {
     let err = result.unwrap_err();
     assert!(
         err.to_string().contains("Unknown nucleus mode"),
-        "Expected parse error: {}",
-        err
+        "Expected parse error: {err}"
     );
 }
 
@@ -389,9 +387,7 @@ fn test_discover_binaries_finds_in_path() {
 
     assert!(
         map.contains_key(unique_name),
-        "{} should be found in PATH, got: {:?}",
-        unique_name,
-        map
+        "{unique_name} should be found in PATH, got: {map:?}"
     );
 }
 
@@ -421,8 +417,7 @@ async fn test_detect_ecosystem_bootstrap_when_dir_nonexistent() {
     let state = detect_ecosystem(&nonexistent, "test-family").await;
     assert!(
         matches!(state, EcosystemState::Bootstrap),
-        "Expected Bootstrap when dir does not exist, got: {:?}",
-        state
+        "Expected Bootstrap when dir does not exist, got: {state:?}"
     );
 }
 
@@ -432,8 +427,7 @@ async fn test_detect_ecosystem_bootstrap_when_dir_empty() {
     let state = detect_ecosystem(temp.path(), "test-family").await;
     assert!(
         matches!(state, EcosystemState::Bootstrap),
-        "Expected Bootstrap when dir is empty, got: {:?}",
-        state
+        "Expected Bootstrap when dir is empty, got: {state:?}"
     );
 }
 
@@ -445,8 +439,7 @@ async fn test_detect_ecosystem_bootstrap_when_stale_sockets_only() {
     let state = detect_ecosystem(temp.path(), "test-family").await;
     assert!(
         matches!(state, EcosystemState::Bootstrap),
-        "Expected Bootstrap when sockets exist but don't respond, got: {:?}",
-        state
+        "Expected Bootstrap when sockets exist but don't respond, got: {state:?}"
     );
 }
 

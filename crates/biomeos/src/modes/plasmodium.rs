@@ -74,7 +74,7 @@ pub(crate) fn format_status_table(state: &PlasmodiumState) -> Vec<String> {
         let primal_status = if gate.reachable {
             let healthy = gate.primals.iter().filter(|p| p.healthy).count();
             let total = gate.primals.len();
-            format!("{}/{}", healthy, total)
+            format!("{healthy}/{total}")
         } else {
             "offline".to_string()
         };
@@ -99,8 +99,7 @@ pub(crate) fn format_status_table(state: &PlasmodiumState) -> Vec<String> {
         let models = gate.models.len().to_string();
 
         lines.push(format!(
-            "  {:<18} {:<12} {:>5} {:>8} {:>8} {:>7}",
-            gate_name, primal_status, gpu_count, ram, load, models
+            "  {gate_name:<18} {primal_status:<12} {gpu_count:>5} {ram:>8} {load:>8} {models:>7}"
         ));
     }
 
@@ -161,7 +160,7 @@ pub(crate) fn format_gates_detail(state: &PlasmodiumState) -> Vec<String> {
         } else {
             format!("Gate: {}", gate.gate_id)
         };
-        lines.push(format!("  {}", label));
+        lines.push(format!("  {label}"));
 
         lines.push(format!("    Address:  {}", gate.address));
         lines.push(format!(
@@ -205,7 +204,7 @@ pub(crate) fn format_gates_detail(state: &PlasmodiumState) -> Vec<String> {
         if !gate.models.is_empty() {
             lines.push("    Models:".to_string());
             for model in &gate.models {
-                lines.push(format!("      - {}", model));
+                lines.push(format!("      - {model}"));
             }
         }
     }
@@ -266,7 +265,7 @@ async fn status() -> Result<()> {
     let plasmodium = Plasmodium::new();
     let state = plasmodium.query_collective().await?;
     for line in format_status_table(&state) {
-        println!("{}", line);
+        println!("{line}");
     }
     Ok(())
 }
@@ -276,7 +275,7 @@ async fn gates() -> Result<()> {
     let plasmodium = Plasmodium::new();
     let state = plasmodium.query_collective().await?;
     for line in format_gates_detail(&state) {
-        println!("{}", line);
+        println!("{line}");
     }
     Ok(())
 }
@@ -309,7 +308,7 @@ async fn models() -> Result<()> {
     }
 
     for line in format_models_table(&model_gates, &state) {
-        println!("{}", line);
+        println!("{line}");
     }
     Ok(())
 }
@@ -327,7 +326,7 @@ mod tests {
     fn make_gate(gate_id: &str, models: Vec<&str>) -> GateInfo {
         GateInfo {
             gate_id: gate_id.to_string(),
-            address: format!("{}:8080", gate_id),
+            address: format!("{gate_id}:8080"),
             is_local: gate_id == "local",
             primals: vec![PrimalStatus {
                 name: "beardog".to_string(),

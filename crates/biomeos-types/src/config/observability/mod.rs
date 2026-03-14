@@ -161,7 +161,7 @@ mod tests {
     #[test]
     fn test_log_level_debug() {
         let level = LogLevel::Info;
-        let debug = format!("{:?}", level);
+        let debug = format!("{level:?}");
         assert!(debug.contains("Info"));
     }
 }

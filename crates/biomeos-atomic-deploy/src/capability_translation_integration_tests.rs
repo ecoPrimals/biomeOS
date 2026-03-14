@@ -101,7 +101,7 @@ mod tests {
         for cap in &onion_crypto_caps {
             let translation = registry
                 .get_translation(cap)
-                .unwrap_or_else(|| panic!("Translation missing for {}", cap));
+                .unwrap_or_else(|| panic!("Translation missing for {cap}"));
 
             assert_eq!(
                 translation.provider, "beardog",
@@ -130,8 +130,7 @@ mod tests {
         for cap in &mesh_caps {
             assert!(
                 registry.has_capability(cap),
-                "Mesh capability {} not registered",
-                cap
+                "Mesh capability {cap} not registered"
             );
         }
     }
@@ -162,7 +161,7 @@ mod tests {
         for cap in &songbird_caps {
             let translation = registry
                 .get_translation(cap)
-                .unwrap_or_else(|| panic!("Translation missing for {}", cap));
+                .unwrap_or_else(|| panic!("Translation missing for {cap}"));
 
             assert_eq!(
                 translation.provider, "songbird",
@@ -235,15 +234,13 @@ mod tests {
         for cap in &relay_caps {
             assert!(
                 registry.has_capability(cap),
-                "Relay capability {} not registered",
-                cap
+                "Relay capability {cap} not registered"
             );
 
             let translation = registry.get_translation(cap).unwrap();
             assert_eq!(
                 translation.provider, "songbird",
-                "Relay {} should route to Songbird",
-                cap
+                "Relay {cap} should route to Songbird"
             );
         }
     }
@@ -270,8 +267,7 @@ mod tests {
         for cap in &expected_beardog_caps {
             assert!(
                 beardog_caps.contains(&cap.to_string()),
-                "BearDog missing capability: {}",
-                cap
+                "BearDog missing capability: {cap}"
             );
         }
 
@@ -283,8 +279,7 @@ mod tests {
         for cap in &expected_songbird_caps {
             assert!(
                 songbird_caps.contains(&cap.to_string()),
-                "Songbird missing capability: {}",
-                cap
+                "Songbird missing capability: {cap}"
             );
         }
     }
@@ -311,7 +306,7 @@ mod tests {
         for (semantic, expected_actual) in cases {
             let translation = registry
                 .get_translation(semantic)
-                .unwrap_or_else(|| panic!("No translation for {}", semantic));
+                .unwrap_or_else(|| panic!("No translation for {semantic}"));
 
             assert_eq!(
                 translation.actual_method, expected_actual,
@@ -410,7 +405,7 @@ mod tests {
         for (cap, expected_provider) in required_caps {
             let translation = registry
                 .get_translation(cap)
-                .unwrap_or_else(|| panic!("Missing capability: {}", cap));
+                .unwrap_or_else(|| panic!("Missing capability: {cap}"));
 
             assert_eq!(
                 translation.provider, expected_provider,

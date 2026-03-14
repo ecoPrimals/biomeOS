@@ -347,10 +347,10 @@ impl AtomicClient {
         port: u16,
         request: JsonRpcRequest,
     ) -> Result<JsonRpcResponse> {
-        let addr = format!("{}:{}", host, port);
+        let addr = format!("{host}:{port}");
         let stream = TcpStream::connect(&addr)
             .await
-            .context(format!("Failed to connect to TCP: {}", addr))?;
+            .context(format!("Failed to connect to TCP: {addr}"))?;
 
         self.send_request(stream, request).await
     }
@@ -370,10 +370,10 @@ impl AtomicClient {
         port: u16,
         request: JsonRpcRequest,
     ) -> Result<JsonRpcResponse> {
-        let addr = format!("{}:{}", host, port);
+        let addr = format!("{host}:{port}");
         let mut stream = TcpStream::connect(&addr)
             .await
-            .context(format!("Failed to connect to HTTP endpoint: {}", addr))?;
+            .context(format!("Failed to connect to HTTP endpoint: {addr}"))?;
 
         // Serialize JSON-RPC request body
         let body =
@@ -456,12 +456,12 @@ impl AtomicClient {
 
         // Create abstract socket address
         let addr = SocketAddr::from_abstract_name(name)
-            .context(format!("Invalid abstract socket name: {}", name))?;
+            .context(format!("Invalid abstract socket name: {name}"))?;
 
         // Connect using blocking socket, then wrap in tokio
         // Note: tokio doesn't directly support abstract socket connect
         let std_stream = std::os::unix::net::UnixStream::connect_addr(&addr)
-            .context(format!("Failed to connect to abstract socket: @{}", name))?;
+            .context(format!("Failed to connect to abstract socket: @{name}"))?;
         std_stream.set_nonblocking(true)?;
 
         let stream = UnixStream::from_std(std_stream)?;
@@ -655,7 +655,7 @@ impl AtomicPrimalClient {
         if result.get("status") == Some(&Value::String("ok".to_string())) {
             Ok(())
         } else {
-            anyhow::bail!("Primal health check failed: {:?}", result)
+            anyhow::bail!("Primal health check failed: {result:?}")
         }
     }
 

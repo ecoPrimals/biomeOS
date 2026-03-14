@@ -164,7 +164,7 @@ fn test_service_phase_enum_serde() {
     for phase in phases {
         let json = serde_json::to_string(&phase).unwrap();
         let deserialized: ServicePhase = serde_json::from_str(&json).unwrap();
-        assert_eq!(format!("{:?}", phase), format!("{:?}", deserialized));
+        assert_eq!(format!("{phase:?}"), format!("{:?}", deserialized));
     }
 }
 
@@ -178,7 +178,7 @@ fn test_condition_status_enum_serde() {
     for s in statuses {
         let json = serde_json::to_string(&s).unwrap();
         let deserialized: ConditionStatus = serde_json::from_str(&json).unwrap();
-        assert_eq!(format!("{:?}", s), format!("{:?}", deserialized));
+        assert_eq!(format!("{s:?}"), format!("{:?}", deserialized));
     }
 }
 
@@ -403,15 +403,15 @@ fn test_restart_policy_and_lifecycle_failure_action_serde() {
 #[test]
 fn test_debug_implementations() {
     let service = UniversalService::default();
-    let debug_str = format!("{:?}", service);
+    let debug_str = format!("{service:?}");
     assert!(debug_str.contains("UniversalService"));
     assert!(debug_str.contains("default-service"));
 
     let phase = ServicePhase::Running;
-    assert!(format!("{:?}", phase).contains("Running"));
+    assert!(format!("{phase:?}").contains("Running"));
 
     let endpoint = EndpointProtocol::Https;
-    assert!(format!("{:?}", endpoint).contains("Https"));
+    assert!(format!("{endpoint:?}").contains("Https"));
 }
 
 #[test]

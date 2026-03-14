@@ -54,7 +54,7 @@ impl MockPrimalServer {
                         let mut buf = vec![0u8; 4096];
                         if let Ok(n) = socket.read(&mut buf).await {
                             let request = String::from_utf8_lossy(&buf[..n]);
-                            println!("Mock server received: {}", request);
+                            println!("Mock server received: {request}");
 
                             // Parse request
                             if let Ok(req) = serde_json::from_str::<serde_json::Value>(&request) {
@@ -62,8 +62,7 @@ impl MockPrimalServer {
                                 if let Some(method) = req.get("method").and_then(|m| m.as_str()) {
                                     assert_eq!(
                                         method, expected_method,
-                                        "Expected method {}, got {}",
-                                        expected_method, method
+                                        "Expected method {expected_method}, got {method}"
                                     );
                                 }
 
@@ -200,8 +199,7 @@ async fn test_translation_not_found() {
         err.to_string().contains("not registered")
             || err.to_string().contains("No translation found")
             || err.to_string().contains("No provider"),
-        "Expected 'not registered' or 'No provider' error, got: {}",
-        err
+        "Expected 'not registered' or 'No provider' error, got: {err}"
     );
 }
 

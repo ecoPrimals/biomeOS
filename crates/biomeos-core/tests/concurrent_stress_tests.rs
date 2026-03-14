@@ -130,8 +130,7 @@ async fn stress_concurrent_message_passing() {
         assert_eq!(
             sender_messages.len(),
             MESSAGES_PER_SENDER,
-            "Sender {} should send all messages",
-            sender_id
+            "Sender {sender_id} should send all messages"
         );
     }
 }
@@ -169,8 +168,7 @@ async fn stress_barrier_synchronization() {
             let count = counter_clone.load(Ordering::SeqCst);
             assert_eq!(
                 count, NUM_TASKS as u64,
-                "Task {} sees count {} (expected {})",
-                task_id, count, NUM_TASKS
+                "Task {task_id} sees count {count} (expected {NUM_TASKS})"
             );
 
             task_id
@@ -326,7 +324,7 @@ async fn stress_exponential_backoff() {
                 attempts += 1;
 
                 if attempts > 20 {
-                    panic!("Poller {} took too long", poller_id);
+                    panic!("Poller {poller_id} took too long");
                 }
             }
         });
@@ -344,9 +342,7 @@ async fn stress_exponential_backoff() {
     for (poller_id, attempts) in results {
         assert!(
             attempts < 15,
-            "Poller {} took {} attempts (too many)",
-            poller_id,
-            attempts
+            "Poller {poller_id} took {attempts} attempts (too many)"
         );
     }
 }
@@ -495,8 +491,7 @@ async fn benchmark_concurrent_throughput() {
     let ops_per_sec = NUM_OPERATIONS as f64 / duration.as_secs_f64();
 
     println!(
-        "📊 Concurrent throughput: {:.0} ops/sec ({} ops in {:?})",
-        ops_per_sec, NUM_OPERATIONS, duration
+        "📊 Concurrent throughput: {ops_per_sec:.0} ops/sec ({NUM_OPERATIONS} ops in {duration:?})"
     );
 
     // Just verify it completes (no strict assertion on speed)

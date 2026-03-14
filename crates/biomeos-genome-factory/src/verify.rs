@@ -49,7 +49,7 @@ impl GenomeFactory {
     /// Load a genome from storage
     pub fn load_genome(&self, name: &str) -> Result<GenomeBin> {
         let path = self.genome_path(name);
-        GenomeBin::load(&path).with_context(|| format!("Failed to load genome: {}", name))
+        GenomeBin::load(&path).with_context(|| format!("Failed to load genome: {name}"))
     }
 
     /// Verify genomeBin integrity

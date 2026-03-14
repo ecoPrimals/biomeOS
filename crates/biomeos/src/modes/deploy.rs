@@ -85,8 +85,7 @@ mod tests {
         let err = result.expect_err("missing file should error");
         assert!(
             err.to_string().contains("not found") || err.to_string().contains("Graph file"),
-            "error should mention missing file: {}",
-            err
+            "error should mention missing file: {err}"
         );
     }
 
@@ -120,8 +119,7 @@ mod tests {
         let err = result.expect_err("invalid graph should error");
         assert!(
             err.to_string().contains("parse") || err.to_string().contains("Failed to load"),
-            "error should mention parse/load: {}",
-            err
+            "error should mention parse/load: {err}"
         );
     }
 

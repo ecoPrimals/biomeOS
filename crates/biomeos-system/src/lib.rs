@@ -358,7 +358,7 @@ impl SystemMonitor {
                     callback(health_report);
                 }
                 Err(e) => {
-                    eprintln!("Failed to get system health: {}", e);
+                    eprintln!("Failed to get system health: {e}");
                 }
             }
         }
@@ -454,22 +454,19 @@ mod tests {
         let cpu = resource_usage.cpu_usage.unwrap();
         assert!(
             (0.0..=1.0).contains(&cpu),
-            "cpu_usage should be in 0-1 range, got {}",
-            cpu
+            "cpu_usage should be in 0-1 range, got {cpu}"
         );
 
         let memory = resource_usage.memory_usage.unwrap();
         assert!(
             (0.0..=1.0).contains(&memory),
-            "memory_usage should be in 0-1 range, got {}",
-            memory
+            "memory_usage should be in 0-1 range, got {memory}"
         );
 
         let disk = resource_usage.disk_usage.unwrap();
         assert!(
             (0.0..=1.0).contains(&disk),
-            "disk_usage should be in 0-1 range, got {}",
-            disk
+            "disk_usage should be in 0-1 range, got {disk}"
         );
 
         let network = resource_usage.network_io.as_ref().unwrap();
@@ -604,8 +601,7 @@ mod tests {
         let received = report_count.load(Ordering::SeqCst);
         assert!(
             received >= 1,
-            "should receive at least 1 report within 3s, got {}",
-            received
+            "should receive at least 1 report within 3s, got {received}"
         );
     }
 

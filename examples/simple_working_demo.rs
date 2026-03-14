@@ -32,7 +32,7 @@ async fn main() -> Result<()> {
             );
         }
         Err(e) => {
-            println!("⚠️ Network scan failed: {}", e);
+            println!("⚠️ Network scan failed: {e}");
         }
     }
 

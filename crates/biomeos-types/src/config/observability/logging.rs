@@ -267,3 +267,131 @@ impl Default for LogRotationConfig {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    #[test]
+    fn test_log_level_serde() {
+        for level in [
+            LogLevel::Trace,
+            LogLevel::Debug,
+            LogLevel::Info,
+            LogLevel::Warn,
+            LogLevel::Error,
+            LogLevel::Off,
+        ] {
+            let json = serde_json::to_string(&level).expect("serialize");
+            let _: LogLevel = serde_json::from_str(&json).expect("deserialize");
+        }
+    }
+
+    #[test]
+    fn test_log_format_serde() {
+        for format in [
+            LogFormat::Json,
+            LogFormat::Plain,
+            LogFormat::Pretty,
+            LogFormat::Compact,
+            LogFormat::Custom("%t %m".to_string()),
+        ] {
+            let json = serde_json::to_string(&format).expect("serialize");
+            let _: LogFormat = serde_json::from_str(&json).expect("deserialize");
+        }
+    }
+
+    #[test]
+    fn test_log_destination_serde() {
+        let destinations = [
+            LogDestination::Stdout,
+            LogDestination::Stderr,
+            LogDestination::File(PathBuf::from("/var/log/app.log")),
+        ];
+        for dest in destinations {
+            let json = serde_json::to_string(&dest).expect("serialize");
+            let _: LogDestination = serde_json::from_str(&json).expect("deserialize");
+        }
+    }
+
+    #[test]
+    fn test_syslog_protocol_serde() {
+        for proto in [
+            SyslogProtocol::Udp,
+            SyslogProtocol::Tcp,
+            SyslogProtocol::Tls,
+        ] {
+            let json = serde_json::to_string(&proto).expect("serialize");
+            let _: SyslogProtocol = serde_json::from_str(&json).expect("deserialize");
+        }
+    }
+
+    #[test]
+    fn test_rotation_schedule_serde() {
+        for schedule in [
+            RotationSchedule::Hourly,
+            RotationSchedule::Daily,
+            RotationSchedule::Weekly,
+            RotationSchedule::Monthly,
+            RotationSchedule::Custom("0 0 * * *".to_string()),
+        ] {
+            let json = serde_json::to_string(&schedule).expect("serialize");
+            let _: RotationSchedule = serde_json::from_str(&json).expect("deserialize");
+        }
+    }
+
+    #[test]
+    fn test_log_filter_action_serde() {
+        for action in [
+            LogFilterAction::Allow,
+            LogFilterAction::Deny,
+            LogFilterAction::Transform("template".to_string()),
+        ] {
+            let json = serde_json::to_string(&action).expect("serialize");
+            let _: LogFilterAction = serde_json::from_str(&json).expect("deserialize");
+        }
+    }
+
+    #[test]
+    fn test_sampling_strategy_serde() {
+        for strategy in [
+            SamplingStrategy::Random,
+            SamplingStrategy::Deterministic,
+            SamplingStrategy::RateLimited { rate: 100 },
+            SamplingStrategy::Custom("custom".to_string()),
+        ] {
+            let json = serde_json::to_string(&strategy).expect("serialize");
+            let _: SamplingStrategy = serde_json::from_str(&json).expect("deserialize");
+        }
+    }
+
+    #[test]
+    fn test_logging_config_default() {
+        let config = LoggingConfig::default();
+        assert!(matches!(config.level, LogLevel::Info));
+        assert!(matches!(config.format, LogFormat::Json));
+        assert!(matches!(config.destination, LogDestination::Stdout));
+        assert!(config.structured);
+        assert!(config.filtering.is_none());
+        assert!(config.sampling.is_none());
+    }
+
+    #[test]
+    fn test_logging_config_serde_roundtrip() {
+        let config = LoggingConfig::default();
+        let json = serde_json::to_string(&config).expect("serialize");
+        let deserialized: LoggingConfig = serde_json::from_str(&json).expect("deserialize");
+        assert!(matches!(deserialized.level, LogLevel::Info));
+        assert!(deserialized.structured);
+    }
+
+    #[test]
+    fn test_log_rotation_config_default() {
+        let config = LogRotationConfig::default();
+        assert_eq!(config.max_size, 100 * 1024 * 1024);
+        assert_eq!(config.max_files, 10);
+        assert!(config.compress);
+        assert!(config.schedule.is_none());
+    }
+}

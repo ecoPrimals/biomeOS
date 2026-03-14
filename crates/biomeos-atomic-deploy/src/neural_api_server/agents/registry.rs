@@ -65,12 +65,12 @@ impl AgentRegistry {
             .await
             .get(source)
             .cloned()
-            .ok_or_else(|| anyhow::anyhow!("Source agent '{}' not found", source))?;
+            .ok_or_else(|| anyhow::anyhow!("Source agent '{source}' not found"))?;
 
         let mut agents = self.agents.write().await;
         let target_agent = agents
             .get_mut(target)
-            .ok_or_else(|| anyhow::anyhow!("Target agent '{}' not found", target))?;
+            .ok_or_else(|| anyhow::anyhow!("Target agent '{target}' not found"))?;
 
         target_agent.meld(&source_agent);
         Ok(())
@@ -81,7 +81,7 @@ impl AgentRegistry {
         let mut agents = self.agents.write().await;
         let agent = agents
             .get_mut(agent_name)
-            .ok_or_else(|| anyhow::anyhow!("Agent '{}' not found", agent_name))?;
+            .ok_or_else(|| anyhow::anyhow!("Agent '{agent_name}' not found"))?;
 
         let split_agent = agent.split(gate_id);
 

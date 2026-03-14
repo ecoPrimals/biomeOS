@@ -310,7 +310,7 @@ impl DeviceManagementProvider {
                 }
                 Err(e) => {
                     warn!("❌ Niche deployment failed: {}", e);
-                    return Err(anyhow::anyhow!("Niche deployment failed: {}", e));
+                    return Err(anyhow::anyhow!("Niche deployment failed: {e}"));
                 }
             }
         }
@@ -389,7 +389,7 @@ impl DeviceManagementProvider {
                 }
                 Err(e) => {
                     warn!("❌ Device assignment failed: {}", e);
-                    return Err(anyhow::anyhow!("Device assignment failed: {}", e));
+                    return Err(anyhow::anyhow!("Device assignment failed: {e}"));
                 }
             }
         }
@@ -443,7 +443,7 @@ impl DeviceManagementProvider {
                 let info_path = gpu_dir.join("information");
 
                 if let Ok(info) = tokio::fs::read_to_string(&info_path).await {
-                    let mut name = format!("NVIDIA GPU {}", idx);
+                    let mut name = format!("NVIDIA GPU {idx}");
                     let mut memory_total_mb: u64 = 0;
 
                     for line in info.lines() {
@@ -455,7 +455,7 @@ impl DeviceManagementProvider {
 
                     // Try to get memory from sysfs
                     let pci_id = entry.file_name().to_string_lossy().to_string();
-                    let mem_path = format!("/sys/bus/pci/devices/{}/mem_info_vram_total", pci_id);
+                    let mem_path = format!("/sys/bus/pci/devices/{pci_id}/mem_info_vram_total");
                     if let Ok(mem_str) = tokio::fs::read_to_string(&mem_path).await {
                         if let Ok(bytes) = mem_str.trim().parse::<u64>() {
                             memory_total_mb = bytes / (1024 * 1024);
@@ -463,7 +463,7 @@ impl DeviceManagementProvider {
                     }
 
                     gpus.push(Device {
-                        id: format!("gpu-{}", idx),
+                        id: format!("gpu-{idx}"),
                         name,
                         device_type: DeviceType::Gpu,
                         status: DeviceStatus::Available,
@@ -496,7 +496,7 @@ impl DeviceManagementProvider {
 
             cpus.push(Device {
                 id: "cpu-0".to_string(),
-                name: format!("CPU ({} cores)", cpu_count),
+                name: format!("CPU ({cpu_count} cores)"),
                 device_type: DeviceType::Cpu,
                 status: if cpu_usage > 0.9 {
                     DeviceStatus::InUse
@@ -576,7 +576,7 @@ impl DeviceManagementProvider {
                             .unwrap_or(("unknown".to_string(), "unknown".to_string(), 0.0));
 
                         storage.push(Device {
-                            id: format!("storage-{}", idx),
+                            id: format!("storage-{idx}"),
                             name: mount_point.to_string(),
                             device_type: DeviceType::Storage,
                             status: DeviceStatus::Available,
@@ -624,11 +624,11 @@ impl DeviceManagementProvider {
         let mut size = bytes as f64;
         for unit in UNITS {
             if size < 1024.0 {
-                return format!("{:.1}{}", size, unit);
+                return format!("{size:.1}{unit}");
             }
             size /= 1024.0;
         }
-        format!("{:.1}P", size)
+        format!("{size:.1}P")
     }
 
     /// Discover network interfaces (pure Rust via /sys/class/net/)
@@ -646,14 +646,14 @@ impl DeviceManagementProvider {
                 }
 
                 // Read operstate to determine if interface is up
-                let operstate_path = format!("/sys/class/net/{}/operstate", name);
+                let operstate_path = format!("/sys/class/net/{name}/operstate");
                 let status = match tokio::fs::read_to_string(&operstate_path).await {
                     Ok(state) if state.trim() == "up" => DeviceStatus::InUse,
                     _ => DeviceStatus::Offline,
                 };
 
                 network.push(Device {
-                    id: format!("net-{}", name),
+                    id: format!("net-{name}"),
                     name,
                     device_type: DeviceType::Network,
                     status,
@@ -673,7 +673,7 @@ impl DeviceManagementProvider {
 
         // Check for running primal processes and their sockets
         let uid = std::env::var("UID").unwrap_or_else(|_| "1000".to_string());
-        let socket_dir = format!("/run/user/{}", uid);
+        let socket_dir = format!("/run/user/{uid}");
 
         // Look for primal sockets
         if let Ok(mut entries) = tokio::fs::read_dir(&socket_dir).await {
@@ -681,7 +681,7 @@ impl DeviceManagementProvider {
                 if let Some(name) = entry.file_name().to_str() {
                     // Check for any .sock file (discovery!)
                     if name.ends_with(".sock") {
-                        let socket_path = format!("{}/{}", socket_dir, name);
+                        let socket_path = format!("{socket_dir}/{name}");
 
                         // Query primal for its identity (TRUE PRIMAL!)
                         let primal_name = self.query_primal_identity(&socket_path).await;

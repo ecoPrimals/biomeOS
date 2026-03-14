@@ -242,3 +242,125 @@ impl Default for BiomeSpec {
         }
     }
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    #[test]
+    fn test_biome_manifest_default() {
+        let manifest = BiomeManifest::default();
+        assert_eq!(manifest.metadata.name, "default");
+        assert_eq!(manifest.metadata.version, "1.0.0");
+        assert!(manifest.services.is_empty());
+        assert!(manifest.networks.is_empty());
+        assert!(manifest.volumes.is_empty());
+    }
+
+    #[test]
+    fn test_biome_manifest_serde_roundtrip() {
+        let val = BiomeManifest::default();
+        let json = serde_json::to_string(&val).unwrap();
+        let back: BiomeManifest = serde_json::from_str(&json).unwrap();
+        assert_eq!(val.metadata.name, back.metadata.name);
+        assert_eq!(val.metadata.api_version, back.metadata.api_version);
+    }
+
+    #[test]
+    fn test_manifest_metadata_default() {
+        let meta = ManifestMetadata::default();
+        assert_eq!(meta.name, "default");
+        assert_eq!(meta.kind, "BiomeManifest");
+        assert!(meta.tags.is_empty());
+    }
+
+    #[test]
+    fn test_manifest_metadata_serde_roundtrip() {
+        let meta = ManifestMetadata::default();
+        let json = serde_json::to_string(&meta).unwrap();
+        let back: ManifestMetadata = serde_json::from_str(&json).unwrap();
+        assert_eq!(meta.name, back.name);
+    }
+
+    #[test]
+    fn test_biome_spec_default() {
+        let spec = BiomeSpec::default();
+        assert!(matches!(spec.environment, Environment::Development));
+        assert!(spec.resources.is_none());
+        if let BiomeType::Application { app_type, .. } = &spec.biome_type {
+            assert_eq!(app_type, "generic");
+        } else {
+            panic!("Expected Application biome type");
+        }
+    }
+
+    #[test]
+    fn test_biome_type_serde() {
+        let app = BiomeType::Application {
+            app_type: "web".to_string(),
+            framework: Some("actix".to_string()),
+        };
+        let json = serde_json::to_string(&app).unwrap();
+        let back: BiomeType = serde_json::from_str(&json).unwrap();
+        if let BiomeType::Application {
+            app_type,
+            framework,
+        } = back
+        {
+            assert_eq!(app_type, "web");
+            assert_eq!(framework, Some("actix".to_string()));
+        } else {
+            panic!("Expected Application variant");
+        }
+
+        let service = BiomeType::Service {
+            service_type: "api".to_string(),
+            protocol: Some("http".to_string()),
+        };
+        let json = serde_json::to_string(&service).unwrap();
+        let back: BiomeType = serde_json::from_str(&json).unwrap();
+        if let BiomeType::Service { service_type, .. } = back {
+            assert_eq!(service_type, "api");
+        } else {
+            panic!("Expected Service variant");
+        }
+
+        let infra = BiomeType::Infrastructure {
+            component: "load-balancer".to_string(),
+            provider: Some("nginx".to_string()),
+        };
+        let json = serde_json::to_string(&infra).unwrap();
+        let _: BiomeType = serde_json::from_str(&json).unwrap();
+
+        let dev = BiomeType::Development {
+            dev_env: "vscode".to_string(),
+            tools: vec!["rust".to_string(), "cargo".to_string()],
+        };
+        let json = serde_json::to_string(&dev).unwrap();
+        let back: BiomeType = serde_json::from_str(&json).unwrap();
+        if let BiomeType::Development { tools, .. } = back {
+            assert_eq!(tools.len(), 2);
+        } else {
+            panic!("Expected Development variant");
+        }
+
+        let custom = BiomeType::Custom {
+            type_name: "custom".to_string(),
+            attributes: HashMap::from([("key".to_string(), "value".to_string())]),
+        };
+        let json = serde_json::to_string(&custom).unwrap();
+        let back: BiomeType = serde_json::from_str(&json).unwrap();
+        if let BiomeType::Custom {
+            type_name,
+            attributes,
+        } = back
+        {
+            assert_eq!(type_name, "custom");
+            assert_eq!(attributes.get("key"), Some(&"value".to_string()));
+        } else {
+            panic!("Expected Custom variant");
+        }
+    }
+}

@@ -75,9 +75,9 @@ impl NeuralApiCapabilityCaller {
     pub fn default_socket() -> String {
         // XDG-compliant path
         if let Ok(runtime_dir) = std::env::var("XDG_RUNTIME_DIR") {
-            format!("{}/biomeos/neural-api.sock", runtime_dir)
+            format!("{runtime_dir}/biomeos/neural-api.sock")
         } else if let Ok(uid) = std::env::var("UID") {
-            format!("/run/user/{}/biomeos/neural-api.sock", uid)
+            format!("/run/user/{uid}/biomeos/neural-api.sock")
         } else {
             std::env::temp_dir()
                 .join("biomeos/neural-api.sock")
@@ -116,7 +116,7 @@ impl CapabilityCaller for NeuralApiCapabilityCaller {
         client
             .call("capability.call", call_params)
             .await
-            .map_err(|e| format!("Capability call failed: {}", e))
+            .map_err(|e| format!("Capability call failed: {e}"))
     }
 }
 
@@ -157,9 +157,9 @@ impl DirectBeardogCaller {
     pub fn default_socket() -> String {
         // XDG-compliant path
         if let Ok(runtime_dir) = std::env::var("XDG_RUNTIME_DIR") {
-            format!("{}/biomeos/beardog.sock", runtime_dir)
+            format!("{runtime_dir}/biomeos/beardog.sock")
         } else if let Ok(uid) = std::env::var("UID") {
-            format!("/run/user/{}/biomeos/beardog.sock", uid)
+            format!("/run/user/{uid}/biomeos/beardog.sock")
         } else {
             std::env::temp_dir()
                 .join("biomeos/beardog.sock")
@@ -225,7 +225,7 @@ impl CapabilityCaller for DirectBeardogCaller {
         client
             .call(method, params)
             .await
-            .map_err(|e| format!("Direct BearDog call failed: {}", e))
+            .map_err(|e| format!("Direct BearDog call failed: {e}"))
     }
 }
 

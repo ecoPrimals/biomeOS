@@ -39,7 +39,7 @@ impl CapabilityCaller for MockCapabilityCaller {
         responses
             .get(capability)
             .cloned()
-            .ok_or_else(|| format!("No mock response for {}", capability))
+            .ok_or_else(|| format!("No mock response for {capability}"))
     }
 }
 

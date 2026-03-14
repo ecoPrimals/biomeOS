@@ -211,3 +211,116 @@ impl Default for TracingResourceConfig {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::observability::logging::LogLevel;
+
+    #[test]
+    fn test_tracing_config_default() {
+        let config = TracingConfig::default();
+        assert!(!config.enabled);
+        assert!(matches!(config.level, LogLevel::Info));
+        assert!(matches!(config.exporter, TracingExporter::Console));
+        assert!((config.sampling.rate - 1.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_tracing_exporter_serde() {
+        let exporters = [
+            TracingExporter::Console,
+            TracingExporter::Jaeger(JaegerConfig {
+                endpoint: "http://localhost:14268".to_string(),
+                service_name: "test".to_string(),
+                auth: None,
+            }),
+            TracingExporter::Zipkin(ZipkinConfig {
+                endpoint: "http://localhost:9411".to_string(),
+                service_name: "test".to_string(),
+            }),
+            TracingExporter::Otlp(OtlpConfig {
+                endpoint: "http://localhost:4317".to_string(),
+                protocol: OtlpProtocol::Grpc,
+                headers: HashMap::new(),
+                compression: Some(OtlpCompression::Gzip),
+            }),
+            TracingExporter::Custom("custom".to_string()),
+        ];
+        for exporter in exporters {
+            let json = serde_json::to_string(&exporter).expect("serialize");
+            let _: TracingExporter = serde_json::from_str(&json).expect("deserialize");
+        }
+    }
+
+    #[test]
+    fn test_otlp_protocol_serde() {
+        for proto in [OtlpProtocol::Grpc, OtlpProtocol::Http] {
+            let json = serde_json::to_string(&proto).expect("serialize");
+            let _: OtlpProtocol = serde_json::from_str(&json).expect("deserialize");
+        }
+    }
+
+    #[test]
+    fn test_otlp_compression_serde() {
+        for comp in [OtlpCompression::Gzip, OtlpCompression::None] {
+            let json = serde_json::to_string(&comp).expect("serialize");
+            let _: OtlpCompression = serde_json::from_str(&json).expect("deserialize");
+        }
+    }
+
+    #[test]
+    fn test_tracing_auth_serde() {
+        let auths = [
+            TracingAuth::Bearer("token".to_string()),
+            TracingAuth::Basic {
+                username: "user".to_string(),
+                password: "pass".to_string(),
+            },
+            TracingAuth::ApiKey {
+                key: "key".to_string(),
+                header: "X-API-Key".to_string(),
+            },
+        ];
+        for auth in auths {
+            let json = serde_json::to_string(&auth).expect("serialize");
+            let _: TracingAuth = serde_json::from_str(&json).expect("deserialize");
+        }
+    }
+
+    #[test]
+    fn test_tracing_sampling_strategy_serde() {
+        let strategies = [
+            TracingSamplingStrategy::Always,
+            TracingSamplingStrategy::Never,
+            TracingSamplingStrategy::TraceIdRatio,
+            TracingSamplingStrategy::RateLimited { rate: 100 },
+            TracingSamplingStrategy::Custom("custom".to_string()),
+        ];
+        for s in strategies {
+            let json = serde_json::to_string(&s).expect("serialize");
+            let _: TracingSamplingStrategy = serde_json::from_str(&json).expect("deserialize");
+        }
+    }
+
+    #[test]
+    fn test_span_limits_default() {
+        let limits = SpanLimitsConfig::default();
+        assert_eq!(limits.max_attributes, Some(128));
+        assert_eq!(limits.max_events, Some(128));
+        assert_eq!(limits.max_links, Some(128));
+        assert_eq!(limits.max_attribute_value_length, Some(4096));
+    }
+
+    #[test]
+    fn test_tracing_config_serde_roundtrip() {
+        let config = TracingConfig::default();
+        let json = serde_json::to_string(&config).expect("serialize");
+        let deserialized: TracingConfig = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(config.enabled, deserialized.enabled);
+        assert_eq!(
+            config.resource.service_name,
+            deserialized.resource.service_name
+        );
+    }
+}

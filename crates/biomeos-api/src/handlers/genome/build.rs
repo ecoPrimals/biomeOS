@@ -94,7 +94,7 @@ pub async fn create_genome(
     Ok(Json(CreateGenomeResponse {
         success: true,
         genome_id: genome_id.clone(),
-        message: format!("Created genome: {}", genome_id),
+        message: format!("Created genome: {genome_id}"),
     }))
 }
 
@@ -190,12 +190,11 @@ pub async fn self_replicate() -> Result<Json<SelfReplicateResponse>, StatusCode>
         success: true,
         genome_id: genome_id.clone(),
         size,
-        message: format!("Self-replicated biomeOS: {} bytes", size),
+        message: format!("Self-replicated biomeOS: {size} bytes"),
     }))
 }
 
 /// Parse architecture string for genome build (testable pure function)
-#[allow(dead_code)] // Used by tests
 pub(crate) fn parse_arch_for_build(arch: &str) -> Result<Arch, &'static str> {
     match arch {
         "x86_64" => Ok(Arch::X86_64),

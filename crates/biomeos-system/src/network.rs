@@ -107,7 +107,7 @@ pub(crate) async fn get_network_info() -> BiomeResult<Vec<NetworkInterface>> {
             NetworkInterfaceType::Other(name.clone())
         };
 
-        let status = fs::read_to_string(format!("/sys/class/net/{}/operstate", name))
+        let status = fs::read_to_string(format!("/sys/class/net/{name}/operstate"))
             .ok()
             .map(|s| match s.trim() {
                 "up" => NetworkInterfaceStatus::Up,
@@ -116,12 +116,12 @@ pub(crate) async fn get_network_info() -> BiomeResult<Vec<NetworkInterface>> {
             })
             .unwrap_or(NetworkInterfaceStatus::Unknown);
 
-        let mac_address = fs::read_to_string(format!("/sys/class/net/{}/address", name))
+        let mac_address = fs::read_to_string(format!("/sys/class/net/{name}/address"))
             .ok()
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty());
 
-        let mtu = fs::read_to_string(format!("/sys/class/net/{}/mtu", name))
+        let mtu = fs::read_to_string(format!("/sys/class/net/{name}/mtu"))
             .ok()
             .and_then(|s| s.trim().parse().ok())
             .unwrap_or(0);

@@ -1,3 +1,5 @@
+> **HISTORICAL** — This handoff predates v2.37. See CURRENT_STATUS.md for latest.
+
 # biomeOS Evolution Handoff - February 9, 2026
 
 **Team**: biomeOS (phase2/biomeOS)

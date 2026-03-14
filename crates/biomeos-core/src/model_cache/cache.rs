@@ -15,8 +15,8 @@ use super::types::{CacheManifest, ModelEntry, ModelFile, ModelResolution};
 
 /// NUCLEUS Model Cache Manager
 pub struct ModelCache {
-    #[allow(dead_code)]
-    cache_dir: PathBuf,
+    /// Base directory for cached models; used for logging and future path operations.
+    _cache_dir: PathBuf,
 
     manifest_path: PathBuf,
 
@@ -92,7 +92,7 @@ impl ModelCache {
         );
 
         Ok(Self {
-            cache_dir,
+            _cache_dir: cache_dir,
             manifest_path,
             manifest,
             nestgate,
@@ -197,12 +197,8 @@ impl ModelCache {
 
         let snapshot_dir = Self::find_hf_snapshot(&hf_cache)?;
 
-        self.register_model(
-            model_id,
-            &snapshot_dir,
-            &format!("huggingface:{}", model_id),
-        )
-        .await?;
+        self.register_model(model_id, &snapshot_dir, &format!("huggingface:{model_id}"))
+            .await?;
 
         Ok(snapshot_dir)
     }
@@ -248,7 +244,7 @@ impl ModelCache {
     /// Check the mesh (NestGate) for a model available on another gate
     pub async fn find_on_mesh(&self, model_id: &str) -> Option<ModelEntry> {
         let client = self.nestgate.as_ref()?;
-        let key = format!("model-cache:{}", model_id);
+        let key = format!("model-cache:{model_id}");
 
         let exists = match client
             .call(

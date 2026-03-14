@@ -66,7 +66,7 @@ async fn test_missing_plasmidbin() {
             println!("ℹ️ Spore created (plasmidBin found via fallback discovery)");
         }
         Err(e) => {
-            println!("✅ Spore creation failed as expected: {}", e);
+            println!("✅ Spore creation failed as expected: {e}");
         }
     }
 
@@ -144,7 +144,7 @@ songbird: git:ghi789"#,
     for primal in ["beardog", "songbird"] {
         std::fs::write(
             primals_dir.join(primal),
-            format!("#!/bin/sh\necho 'Mock {}'\n", primal),
+            format!("#!/bin/sh\necho 'Mock {primal}'\n"),
         )
         .unwrap();
 

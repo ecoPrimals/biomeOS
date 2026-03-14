@@ -1,3 +1,5 @@
+> **HISTORICAL** — This handoff predates v2.37. See CURRENT_STATUS.md for latest.
+
 # Tor Integration & Pure Rust Evolution Handoff
 
 **Date**: February 7, 2026 (Updated 17:00 UTC)  

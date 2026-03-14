@@ -107,7 +107,7 @@ fn test_biomeos_init_binary() -> Result<()> {
     // Check dynamic libraries
     let output = Command::new("ldd").arg(&init_path).output()?;
     let ldd_output = String::from_utf8_lossy(&output.stdout);
-    println!("biomeos-init dependencies:\n{}", ldd_output);
+    println!("biomeos-init dependencies:\n{ldd_output}");
 
     assert!(ldd_output.contains("libc.so"), "Missing libc");
 
@@ -128,7 +128,7 @@ fn test_qemu_available() {
             );
         }
         Err(e) => {
-            eprintln!("⚠️  QEMU not available: {}", e);
+            eprintln!("⚠️  QEMU not available: {e}");
             eprintln!("Install: sudo apt install qemu-system-x86");
         }
     }

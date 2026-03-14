@@ -62,13 +62,13 @@ pub(crate) fn format_health_summary(
                 .unwrap_or("Unknown");
             let icon = status_to_icon(health_status);
 
-            lines.push(format!("  {} {}: {}", icon, service_name, health_status));
+            lines.push(format!("  {icon} {service_name}: {health_status}"));
 
             if detailed {
                 if let Some(issues) = service_health.get("issues").and_then(|i| i.as_array()) {
                     for issue in issues {
                         if let Some(message) = issue.get("message") {
-                            lines.push(format!("    • {}", message));
+                            lines.push(format!("    • {message}"));
                         }
                     }
                 }
@@ -92,7 +92,7 @@ pub(crate) fn format_health_summary(
 /// Builds display lines for probe results.
 pub(crate) fn format_probe_results(service: &str, results: &HashMap<String, Value>) -> Vec<String> {
     let mut lines = Vec::new();
-    lines.push(format!("🔍 Deep probe results for '{}':", service));
+    lines.push(format!("🔍 Deep probe results for '{service}':"));
 
     if let Some(connectivity) = results.get("connectivity") {
         lines.push("\n🌐 Connectivity:".to_string());
@@ -129,7 +129,7 @@ fn format_health_metrics(metrics: &Value, indent_level: usize) -> Vec<String> {
     let indent = "  ".repeat(indent_level);
 
     if let Some(cpu) = metrics.get("cpu_usage") {
-        lines.push(format!("{}💻 CPU Usage: {}%", indent, cpu));
+        lines.push(format!("{indent}💻 CPU Usage: {cpu}%"));
     }
 
     if let Some(memory) = metrics.get("memory_usage") {
@@ -140,8 +140,7 @@ fn format_health_metrics(metrics: &Value, indent_level: usize) -> Vec<String> {
                 let percent =
                     compute_memory_percent(used.as_u64().unwrap_or(0), total.as_u64().unwrap_or(0));
                 lines.push(format!(
-                    "{}🧠 Memory: {:.1}GB / {:.1}GB ({:.1}%)",
-                    indent, used_gb, total_gb, percent
+                    "{indent}🧠 Memory: {used_gb:.1}GB / {total_gb:.1}GB ({percent:.1}%)"
                 ));
             }
         }
@@ -182,11 +181,11 @@ fn format_connectivity_results(connectivity: &Value) -> Vec<String> {
         } else {
             "❌"
         };
-        lines.push(format!("  {} Reachable: {}", icon, reachable));
+        lines.push(format!("  {icon} Reachable: {reachable}"));
     }
 
     if let Some(response_time) = connectivity.get("response_time_ms") {
-        lines.push(format!("  ⏱️  Response Time: {}ms", response_time));
+        lines.push(format!("  ⏱️  Response Time: {response_time}ms"));
     }
 
     if let Some(endpoints) = connectivity.get("endpoints").and_then(|e| e.as_array()) {
@@ -198,7 +197,7 @@ fn format_connectivity_results(connectivity: &Value) -> Vec<String> {
                     .and_then(|s| s.as_str())
                     .unwrap_or("unknown");
                 let icon = if status == "ok" { "✅" } else { "❌" };
-                lines.push(format!("    {} {}: {}", icon, url, status));
+                lines.push(format!("    {icon} {url}: {status}"));
             }
         }
     }
@@ -210,15 +209,15 @@ fn format_performance_metrics(performance: &Value) -> Vec<String> {
     let mut lines = Vec::new();
 
     if let Some(throughput) = performance.get("throughput_rps") {
-        lines.push(format!("  📈 Throughput: {} req/s", throughput));
+        lines.push(format!("  📈 Throughput: {throughput} req/s"));
     }
 
     if let Some(latency) = performance.get("avg_latency_ms") {
-        lines.push(format!("  ⏱️  Avg Latency: {}ms", latency));
+        lines.push(format!("  ⏱️  Avg Latency: {latency}ms"));
     }
 
     if let Some(error_rate) = performance.get("error_rate_percent") {
-        lines.push(format!("  ❌ Error Rate: {}%", error_rate));
+        lines.push(format!("  ❌ Error Rate: {error_rate}%"));
     }
 
     lines
@@ -250,10 +249,10 @@ fn format_scan_summary(results: &HashMap<String, Value>) -> String {
     let mut lines = Vec::new();
     lines.push("📋 System Scan Summary:".to_string());
     if let Some(issues_found) = results.get("issues_count") {
-        lines.push(format!("  Issues found: {}", issues_found));
+        lines.push(format!("  Issues found: {issues_found}"));
     }
     if let Some(services_scanned) = results.get("services_scanned") {
-        lines.push(format!("  Services scanned: {}", services_scanned));
+        lines.push(format!("  Services scanned: {services_scanned}"));
     }
     lines.join("\n")
 }
@@ -270,13 +269,13 @@ fn format_scan_default(results: &HashMap<String, Value>) -> String {
     lines.push(format!("📋 System Scan Results ({} items):", results.len()));
     lines.push(String::new());
     for (key, value) in results {
-        lines.push(format!("🔹 {}", key));
+        lines.push(format!("🔹 {key}"));
         if let Ok(pretty) = serde_json::to_string_pretty(value) {
             for line in pretty.lines() {
-                lines.push(format!("   {}", line));
+                lines.push(format!("   {line}"));
             }
         } else {
-            lines.push(format!("   {}", value));
+            lines.push(format!("   {value}"));
         }
         lines.push(String::new());
     }
@@ -302,10 +301,7 @@ pub async fn handle_health(
     let manager = UniversalBiomeOSManager::new(config).await?;
 
     if continuous {
-        println!(
-            "🔄 Starting continuous health monitoring (interval: {}s)",
-            interval
-        );
+        println!("🔄 Starting continuous health monitoring (interval: {interval}s)");
         println!("Press Ctrl+C to stop");
 
         loop {
@@ -330,10 +326,7 @@ async fn handle_graph_health_check(
         .ok_or_else(|| anyhow::anyhow!("--niche required for graph-based health check"))?;
 
     if continuous {
-        println!(
-            "🔄 Starting continuous health monitoring via Neural API (interval: {}s)",
-            interval
-        );
+        println!("🔄 Starting continuous health monitoring via Neural API (interval: {interval}s)");
         println!("Press Ctrl+C to stop");
 
         loop {
@@ -362,7 +355,7 @@ async fn perform_graph_health_check(_niche_path: &std::path::Path) -> Result<()>
 
 /// Handle probe command for deep health diagnostics
 pub async fn handle_probe(service: String, timeout: u64) -> Result<()> {
-    let spinner = create_spinner(&format!("🔍 Probing service '{}'...", service));
+    let spinner = create_spinner(&format!("🔍 Probing service '{service}'..."));
 
     let config = biomeos_types::BiomeOSConfig::default();
     let manager = UniversalBiomeOSManager::new(config).await?;
@@ -379,7 +372,7 @@ pub async fn handle_probe(service: String, timeout: u64) -> Result<()> {
 /// Handle system scan command
 pub async fn handle_scan(quick: bool, output_format: String) -> Result<()> {
     let scan_type = if quick { "Quick" } else { "Comprehensive" };
-    let spinner = create_spinner(&format!("🔬 {} system scan...", scan_type));
+    let spinner = create_spinner(&format!("🔬 {scan_type} system scan..."));
 
     let config = biomeos_types::BiomeOSConfig::default();
     let manager = UniversalBiomeOSManager::new(config).await?;
@@ -428,7 +421,7 @@ async fn perform_health_check(
 ) -> Result<()> {
     let health_result = match service {
         Some(service_name) => {
-            println!("🩺 Health check for service: {}", service_name);
+            println!("🩺 Health check for service: {service_name}");
             manager.check_service_health(service_name).await?
         }
         None => {
@@ -476,7 +469,7 @@ async fn display_status_results(
         }
         "brief" => {
             if let Some(status) = results.get("status") {
-                println!("Status: {}", status);
+                println!("Status: {status}");
             }
         }
         _ => {
@@ -514,7 +507,7 @@ mod tests {
         assert_eq!(compute_memory_percent(256, 1024), 25.0);
         assert_eq!(compute_memory_percent(1024, 1024), 100.0);
         let p = compute_memory_percent(1, 3);
-        assert!((p - 33.333).abs() < 0.001, "expected ~33.333, got {}", p);
+        assert!((p - 33.333).abs() < 0.001, "expected ~33.333, got {p}");
     }
 
     #[test]

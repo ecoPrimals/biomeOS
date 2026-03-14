@@ -91,7 +91,7 @@ impl BootLogger {
             .unwrap_or(0);
 
         // Format message
-        let formatted = format!("[{:010}] [{:?}] {}\n", timestamp, level, msg);
+        let formatted = format!("[{timestamp:010}] [{level:?}] {msg}\n");
 
         // Write to serial (direct device access)
         if let Some(ref mut serial) = self.serial {
@@ -125,7 +125,7 @@ impl BootLogger {
     ///
     /// Records progress through boot stages for diagnostics.
     pub fn checkpoint(&mut self, stage: BootStage) {
-        self.info(&format!("Boot checkpoint: {:?}", stage));
+        self.info(&format!("Boot checkpoint: {stage:?}"));
     }
 
     /// Flush all output channels
@@ -182,7 +182,7 @@ mod tests {
         ];
 
         for stage in stages {
-            let debug_str = format!("{:?}", stage);
+            let debug_str = format!("{stage:?}");
             assert!(!debug_str.is_empty());
         }
     }
@@ -202,7 +202,7 @@ mod tests {
             serial_active: true,
         };
 
-        let debug_str = format!("{:?}", stats);
+        let debug_str = format!("{stats:?}");
         assert!(debug_str.contains("10"));
         assert!(debug_str.contains("5000"));
         assert!(debug_str.contains("true"));
@@ -228,7 +228,7 @@ mod tests {
         let level = LogLevel::Info;
         let msg = "Test message";
 
-        let formatted = format!("[{:010}] [{:?}] {}\n", timestamp, level, msg);
+        let formatted = format!("[{timestamp:010}] [{level:?}] {msg}\n");
 
         assert!(formatted.contains("[1234567890]"));
         assert!(formatted.contains("[Info]"));
@@ -239,7 +239,7 @@ mod tests {
     #[test]
     fn test_checkpoint_message_format() {
         let stage = BootStage::FilesystemMount;
-        let checkpoint_msg = format!("Boot checkpoint: {:?}", stage);
+        let checkpoint_msg = format!("Boot checkpoint: {stage:?}");
 
         assert!(checkpoint_msg.contains("Boot checkpoint"));
         assert!(checkpoint_msg.contains("FilesystemMount"));

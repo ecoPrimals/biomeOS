@@ -250,7 +250,7 @@ async fn test_routing_concurrent_metrics() {
         let router_clone = router.clone();
         let handle = task::spawn(async move {
             let metric = RoutingMetrics {
-                request_id: format!("test-{}", i),
+                request_id: format!("test-{i}"),
                 capability: "test".to_string(),
                 method: "test.method".to_string(),
                 routed_through: vec![],
@@ -365,7 +365,7 @@ async fn test_neural_router_concurrent_discovery() {
         let router_clone = router.clone();
         let handle = task::spawn(async move {
             router_clone
-                .discover_capability(&format!("capability-{}", i))
+                .discover_capability(&format!("capability-{i}"))
                 .await
         });
         handles.push(handle);

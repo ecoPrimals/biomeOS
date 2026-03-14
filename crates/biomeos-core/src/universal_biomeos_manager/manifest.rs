@@ -18,7 +18,7 @@ impl UniversalBiomeOSManager {
 
         // Parse the manifest content
         let manifest: BiomeManifest = serde_yaml::from_str(manifest_content)
-            .map_err(|e| anyhow::anyhow!("Failed to parse manifest: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("Failed to parse manifest: {e}"))?;
 
         // Basic validation - in Universal Adapter architecture, this would delegate to Toadstool
         if manifest.metadata.name.is_empty() {
@@ -70,8 +70,7 @@ impl UniversalBiomeOSManager {
         tracing::debug!("Validating manifest: {}", manifest_path);
         // Integration point with Toadstool parser
         Ok(format!(
-            "Manifest validation completed for: {}",
-            manifest_path
+            "Manifest validation completed for: {manifest_path}"
         ))
     }
 
@@ -84,7 +83,7 @@ impl UniversalBiomeOSManager {
     ) -> Result<String> {
         tracing::debug!("Deploying via ecosystem integration: {}", manifest_path);
         // Integration point with Toadstool for compute orchestration
-        Ok(format!("Deployment completed for: {}", manifest_path))
+        Ok(format!("Deployment completed for: {manifest_path}"))
     }
 }
 
@@ -206,8 +205,7 @@ mod tests {
             .expect_err("empty services should fail");
         assert!(
             err.to_string().contains("service") || err.to_string().contains("one"),
-            "error: {}",
-            err
+            "error: {err}"
         );
     }
 

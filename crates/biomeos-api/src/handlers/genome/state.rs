@@ -44,7 +44,7 @@ impl GenomeState {
     pub fn with_storage(storage_dir: PathBuf) -> Result<Self, String> {
         if !storage_dir.exists() {
             std::fs::create_dir_all(&storage_dir)
-                .map_err(|e| format!("Failed to create genome storage: {}", e))?;
+                .map_err(|e| format!("Failed to create genome storage: {e}"))?;
         }
         Ok(Self {
             genomes: RwLock::new(HashMap::new()),
@@ -54,7 +54,7 @@ impl GenomeState {
 
     /// Get path for a genome file
     pub fn genome_path(&self, id: &str) -> PathBuf {
-        self.storage_dir.join(format!("{}.genome", id))
+        self.storage_dir.join(format!("{id}.genome"))
     }
 
     /// Save genome to persistent storage
@@ -62,7 +62,7 @@ impl GenomeState {
         let path = self.genome_path(id);
         genome
             .save(&path)
-            .map_err(|e| format!("Failed to save genome: {}", e))?;
+            .map_err(|e| format!("Failed to save genome: {e}"))?;
 
         let mut cache = self.genomes.write().await;
         cache.insert(id.to_string(), genome.clone());
@@ -82,10 +82,10 @@ impl GenomeState {
 
         let path = self.genome_path(id);
         if !path.exists() {
-            return Err(format!("Genome not found: {}", id));
+            return Err(format!("Genome not found: {id}"));
         }
 
-        let genome = GenomeBin::load(&path).map_err(|e| format!("Failed to load genome: {}", e))?;
+        let genome = GenomeBin::load(&path).map_err(|e| format!("Failed to load genome: {e}"))?;
 
         {
             let mut cache = self.genomes.write().await;
@@ -104,7 +104,7 @@ impl GenomeState {
         }
 
         let entries = std::fs::read_dir(&self.storage_dir)
-            .map_err(|e| format!("Failed to read storage dir: {}", e))?;
+            .map_err(|e| format!("Failed to read storage dir: {e}"))?;
 
         for entry in entries.flatten() {
             let path = entry.path();

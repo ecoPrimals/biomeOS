@@ -464,4 +464,66 @@ customization:
         assert!(req.latency_target_ms.is_none());
         assert!(req.jitter_tolerance_ms.is_none());
     }
+
+    #[test]
+    fn test_niche_networking_default_and_serde() {
+        let net = NicheNetworking::default();
+        assert!(net.mode.is_empty());
+        assert!(net.ports.is_empty());
+        let json = serde_json::to_string(&net).expect("serialize");
+        let _: NicheNetworking = serde_json::from_str(&json).expect("deserialize");
+    }
+
+    #[test]
+    fn test_niche_security_default_and_serde() {
+        let sec = NicheSecurity::default();
+        assert!(sec.encryption.is_empty());
+        assert!(sec.authentication.is_empty());
+        assert!(!sec.audit_logging);
+        let json = serde_json::to_string(&sec).expect("serialize");
+        let _: NicheSecurity = serde_json::from_str(&json).expect("deserialize");
+    }
+
+    #[test]
+    fn test_resource_limits_serde() {
+        let limits = ResourceLimits {
+            cpu_cores: Some(4),
+            memory_gb: Some(16),
+            storage_gb: Some(100),
+        };
+        let json = serde_json::to_string(&limits).expect("serialize");
+        let deserialized: ResourceLimits = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(limits.cpu_cores, deserialized.cpu_cores);
+        assert_eq!(limits.memory_gb, deserialized.memory_gb);
+    }
+
+    #[test]
+    fn test_gpu_requirements_serde() {
+        let gpu = GpuRequirements {
+            required: true,
+            min_vram_gb: Some(8),
+        };
+        let json = serde_json::to_string(&gpu).expect("serialize");
+        let deserialized: GpuRequirements = serde_json::from_str(&json).expect("deserialize");
+        assert!(deserialized.required);
+        assert_eq!(deserialized.min_vram_gb, Some(8));
+    }
+
+    #[test]
+    fn test_niche_metadata_serde() {
+        let meta = NicheMetadata {
+            id: "gaming-niche".to_string(),
+            name: "Gaming Niche".to_string(),
+            version: "1.0.0".to_string(),
+            description: "For gaming".to_string(),
+            category: "gaming".to_string(),
+            difficulty: "medium".to_string(),
+            author: "test".to_string(),
+            features: vec!["multiplayer".to_string()],
+        };
+        let json = serde_json::to_string(&meta).expect("serialize");
+        let deserialized: NicheMetadata = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(meta.id, deserialized.id);
+        assert_eq!(meta.category, deserialized.category);
+    }
 }

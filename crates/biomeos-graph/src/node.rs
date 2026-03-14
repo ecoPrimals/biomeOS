@@ -88,8 +88,7 @@ impl NodeId {
             .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
         {
             return Err(format!(
-                "Node ID must be alphanumeric with hyphens/underscores: {}",
-                id
+                "Node ID must be alphanumeric with hyphens/underscores: {id}"
             ));
         }
         Ok(Self(id))
@@ -368,7 +367,7 @@ mod tests {
     #[test]
     fn test_node_id_display() {
         let id = NodeId::new("step-one").unwrap();
-        assert_eq!(format!("{}", id), "step-one");
+        assert_eq!(format!("{id}"), "step-one");
     }
 
     #[test]

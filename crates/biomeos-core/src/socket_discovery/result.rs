@@ -258,7 +258,7 @@ mod tests {
         );
 
         // Just verify Debug trait works
-        let debug_str = format!("{:?}", socket);
+        let debug_str = format!("{socket:?}");
         assert!(debug_str.contains("DiscoveredSocket"));
     }
 }

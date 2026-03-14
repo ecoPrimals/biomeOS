@@ -274,7 +274,7 @@ pub async fn get_latest(
         Err((
             StatusCode::NOT_FOUND,
             Json(DistError {
-                error: format!("Primal not found: {}", primal),
+                error: format!("Primal not found: {primal}"),
                 code: "PRIMAL_NOT_FOUND".to_string(),
             }),
         ))
@@ -333,7 +333,7 @@ pub async fn get_checksum(
             (
                 StatusCode::NOT_FOUND,
                 Json(DistError {
-                    error: format!("Checksum not found: {}/{}/{}", primal, version, arch),
+                    error: format!("Checksum not found: {primal}/{version}/{arch}"),
                     code: "CHECKSUM_NOT_FOUND".to_string(),
                 }),
             )
@@ -362,8 +362,8 @@ pub async fn get_checksum(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::handlers::genome_dist::discovery::GENOMEBIN_PATH_LOCK;
     use axum::extract::Path;
+    use serial_test::serial;
 
     #[test]
     fn test_dist_manifest_serialization() {
@@ -477,9 +477,8 @@ mod tests {
     }
 
     #[tokio::test]
-    #[allow(clippy::await_holding_lock)]
+    #[serial]
     async fn test_get_manifest_success() {
-        let _guard = GENOMEBIN_PATH_LOCK.lock().expect("lock");
         let temp = tempfile::tempdir().expect("create temp dir");
         let manifest_content = r#"
 [manifest]
@@ -521,9 +520,8 @@ versions = ["1.0.0"]
     }
 
     #[tokio::test]
-    #[allow(clippy::await_holding_lock)]
+    #[serial]
     async fn test_get_manifest_manifest_file_missing() {
-        let _guard = GENOMEBIN_PATH_LOCK.lock().expect("lock");
         // Dir exists but manifest.toml is missing -> MANIFEST_READ_ERROR
         let temp = tempfile::tempdir().expect("create temp dir");
         let saved = std::env::var("GENOMEBIN_PATH").ok();
@@ -542,9 +540,8 @@ versions = ["1.0.0"]
     }
 
     #[tokio::test]
-    #[allow(clippy::await_holding_lock)]
+    #[serial]
     async fn test_get_manifest_parse_error() {
-        let _guard = GENOMEBIN_PATH_LOCK.lock().expect("lock");
         let temp = tempfile::tempdir().expect("create temp dir");
         std::fs::write(temp.path().join("manifest.toml"), "invalid toml {{{")
             .expect("write bad manifest");
@@ -564,9 +561,8 @@ versions = ["1.0.0"]
     }
 
     #[tokio::test]
-    #[allow(clippy::await_holding_lock)]
+    #[serial]
     async fn test_get_manifest_partial_primal_fields() {
-        let _guard = GENOMEBIN_PATH_LOCK.lock().expect("lock");
         let temp = tempfile::tempdir().expect("create temp dir");
         let manifest_content = r#"
 [manifest]
@@ -598,9 +594,8 @@ latest = "0.1.0"
     }
 
     #[tokio::test]
-    #[allow(clippy::await_holding_lock)]
+    #[serial]
     async fn test_get_latest_success() {
-        let _guard = GENOMEBIN_PATH_LOCK.lock().expect("lock");
         let temp = tempfile::tempdir().expect("create temp dir");
         let manifest_content = r#"
 [manifest]
@@ -629,9 +624,8 @@ architectures = ["x86_64-linux-musl"]
     }
 
     #[tokio::test]
-    #[allow(clippy::await_holding_lock)]
+    #[serial]
     async fn test_get_latest_primal_not_found() {
-        let _guard = GENOMEBIN_PATH_LOCK.lock().expect("lock");
         let temp = tempfile::tempdir().expect("create temp dir");
         std::fs::write(
             temp.path().join("manifest.toml"),
@@ -654,9 +648,8 @@ architectures = ["x86_64-linux-musl"]
     }
 
     #[tokio::test]
-    #[allow(clippy::await_holding_lock)]
+    #[serial]
     async fn test_get_checksum_success() {
-        let _guard = GENOMEBIN_PATH_LOCK.lock().expect("lock");
         let temp = tempfile::tempdir().expect("create temp dir");
         std::fs::write(
             temp.path().join("manifest.toml"),
@@ -694,9 +687,8 @@ size = 999
     }
 
     #[tokio::test]
-    #[allow(clippy::await_holding_lock)]
+    #[serial]
     async fn test_get_checksum_not_found() {
-        let _guard = GENOMEBIN_PATH_LOCK.lock().expect("lock");
         let temp = tempfile::tempdir().expect("create temp dir");
         std::fs::write(
             temp.path().join("manifest.toml"),
@@ -729,9 +721,8 @@ size = 999
     }
 
     #[tokio::test]
-    #[allow(clippy::await_holding_lock)]
+    #[serial]
     async fn test_get_checksum_checksums_file_missing() {
-        let _guard = GENOMEBIN_PATH_LOCK.lock().expect("lock");
         // Dir exists with manifest but checksums.toml missing -> CHECKSUMS_READ_ERROR
         let temp = tempfile::tempdir().expect("create temp dir");
         std::fs::write(

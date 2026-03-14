@@ -106,25 +106,20 @@ mod tests {
         let load = get_system_load();
         assert!(
             (0.0..=1.0).contains(&load),
-            "Load should be normalized to [0,1], got {}",
-            load
+            "Load should be normalized to [0,1], got {load}"
         );
     }
 
     #[test]
     fn test_get_system_ram_gb_non_negative() {
         let ram = get_system_ram_gb();
-        assert!(
-            ram < 1_000_000,
-            "RAM in GB should be reasonable, got {}",
-            ram
-        );
+        assert!(ram < 1_000_000, "RAM in GB should be reasonable, got {ram}");
     }
 
     #[test]
     fn test_num_cpus_at_least_one() {
         let cores = num_cpus();
-        assert!(cores >= 1, "Should have at least 1 CPU, got {}", cores);
+        assert!(cores >= 1, "Should have at least 1 CPU, got {cores}");
     }
 
     #[test]

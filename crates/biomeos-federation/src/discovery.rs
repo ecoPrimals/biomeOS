@@ -82,7 +82,7 @@ impl PrimalDiscovery {
     /// Discover primals at runtime
     ///
     /// This uses multiple discovery methods:
-    /// 1. Unix socket scanning (/tmp/*.sock)
+    /// 1. Unix socket scanning (XDG runtime dir)
     /// 2. UDP multicast (Songbird discovery)
     /// 3. Environment variables (PRIMAL_* endpoints)
     pub async fn discover(&mut self) -> FederationResult<Vec<DiscoveredPrimal>> {
@@ -115,11 +115,11 @@ impl PrimalDiscovery {
         }
 
         let mut entries = tokio::fs::read_dir(&socket_dir).await.map_err(|e| {
-            crate::FederationError::DiscoveryError(format!("Failed to read socket dir: {}", e))
+            crate::FederationError::DiscoveryError(format!("Failed to read socket dir: {e}"))
         })?;
 
         while let Some(entry) = entries.next_entry().await.map_err(|e| {
-            crate::FederationError::DiscoveryError(format!("Failed to read entry: {}", e))
+            crate::FederationError::DiscoveryError(format!("Failed to read entry: {e}"))
         })? {
             let path = entry.path();
 
@@ -151,25 +151,25 @@ impl PrimalDiscovery {
         let request = biomeos_types::JsonRpcRequest::new("get_primal_info", serde_json::json!({}));
 
         let request_bytes = serde_json::to_vec(&request).map_err(|e| {
-            crate::FederationError::DiscoveryError(format!("Failed to serialize request: {}", e))
+            crate::FederationError::DiscoveryError(format!("Failed to serialize request: {e}"))
         })?;
 
         // Send request (simplified - production would use proper framing)
         let (mut read_half, mut write_half) = stream.into_split();
         write_half.write_all(&request_bytes).await.map_err(|e| {
-            crate::FederationError::DiscoveryError(format!("Failed to write request: {}", e))
+            crate::FederationError::DiscoveryError(format!("Failed to write request: {e}"))
         })?;
         write_half.write_all(b"\n").await.ok(); // Newline delimiter
 
         // Read response (simplified)
         let mut response_bytes = vec![0u8; 4096];
         let n = read_half.read(&mut response_bytes).await.map_err(|e| {
-            crate::FederationError::DiscoveryError(format!("Failed to read response: {}", e))
+            crate::FederationError::DiscoveryError(format!("Failed to read response: {e}"))
         })?;
 
         response_bytes.truncate(n);
         let response: serde_json::Value = serde_json::from_slice(&response_bytes).map_err(|e| {
-            crate::FederationError::DiscoveryError(format!("Failed to parse response: {}", e))
+            crate::FederationError::DiscoveryError(format!("Failed to parse response: {e}"))
         })?;
 
         // Extract primal info from response
@@ -360,7 +360,7 @@ impl PrimalDiscovery {
 
         // Connect to Songbird
         let stream = UnixStream::connect(&songbird_socket).await.map_err(|e| {
-            crate::FederationError::DiscoveryError(format!("Songbird connection failed: {}", e))
+            crate::FederationError::DiscoveryError(format!("Songbird connection failed: {e}"))
         })?;
 
         let (reader, mut writer) = stream.into_split();
@@ -376,28 +376,28 @@ impl PrimalDiscovery {
         );
 
         let request_str = serde_json::to_string(&request)
-            .map_err(|e| crate::FederationError::DiscoveryError(format!("JSON error: {}", e)))?
+            .map_err(|e| crate::FederationError::DiscoveryError(format!("JSON error: {e}")))?
             + "\n";
 
         writer
             .write_all(request_str.as_bytes())
             .await
-            .map_err(|e| crate::FederationError::DiscoveryError(format!("Write error: {}", e)))?;
+            .map_err(|e| crate::FederationError::DiscoveryError(format!("Write error: {e}")))?;
         writer
             .flush()
             .await
-            .map_err(|e| crate::FederationError::DiscoveryError(format!("Flush error: {}", e)))?;
+            .map_err(|e| crate::FederationError::DiscoveryError(format!("Flush error: {e}")))?;
 
         // Read response
         let mut response_line = String::new();
         reader
             .read_line(&mut response_line)
             .await
-            .map_err(|e| crate::FederationError::DiscoveryError(format!("Read error: {}", e)))?;
+            .map_err(|e| crate::FederationError::DiscoveryError(format!("Read error: {e}")))?;
 
         let response: serde_json::Value =
             serde_json::from_str(response_line.trim()).map_err(|e| {
-                crate::FederationError::DiscoveryError(format!("JSON parse error: {}", e))
+                crate::FederationError::DiscoveryError(format!("JSON parse error: {e}"))
             })?;
 
         // Check for errors
@@ -407,8 +407,7 @@ impl PrimalDiscovery {
                 .and_then(|m| m.as_str())
                 .unwrap_or("Unknown");
             return Err(crate::FederationError::DiscoveryError(format!(
-                "Songbird discovery failed: {}",
-                msg
+                "Songbird discovery failed: {msg}"
             )));
         }
 
@@ -425,39 +424,43 @@ impl PrimalDiscovery {
         Ok(())
     }
 
-    /// Find Songbird socket using XDG-compliant discovery
+    /// Find discovery provider socket using XDG-compliant resolution.
+    ///
+    /// Resolves via `SystemPaths` — no hardcoded `/tmp/` paths.
     fn discover_songbird_socket(&self) -> FederationResult<String> {
-        // Priority 1: Environment variable
-        if let Ok(socket) = std::env::var("SONGBIRD_SOCKET") {
+        use biomeos_types::paths::SystemPaths;
+
+        let provider =
+            std::env::var("DISCOVERY_PROVIDER").unwrap_or_else(|_| "songbird".to_string());
+
+        // Priority 1: Explicit environment variable
+        if let Ok(socket) =
+            std::env::var("SONGBIRD_SOCKET").or_else(|_| std::env::var("DISCOVERY_SOCKET"))
+        {
             return Ok(socket);
         }
 
-        // Priority 2: XDG runtime directory
-        if let Ok(runtime) = std::env::var("XDG_RUNTIME_DIR") {
-            let socket = format!("{}/biomeos/songbird.sock", runtime);
-            if std::path::Path::new(&socket).exists() {
-                return Ok(socket);
-            }
-        }
+        // Priority 2: XDG-compliant paths via SystemPaths
+        let paths = SystemPaths::new_lazy();
 
-        // Priority 3: Family-based discovery
         if let Ok(family_id) = std::env::var("BIOMEOS_FAMILY_ID") {
-            let socket = format!("/tmp/songbird-{}.sock", family_id);
-            if std::path::Path::new(&socket).exists() {
-                return Ok(socket);
+            let family_socket = paths.primal_socket(&format!("{provider}-{family_id}"));
+            if family_socket.exists() {
+                return Ok(family_socket.display().to_string());
             }
         }
 
-        // Priority 4: Common patterns
-        for pattern in &["/tmp/songbird.sock", "/run/biomeos/songbird.sock"] {
-            if std::path::Path::new(pattern).exists() {
-                return Ok((*pattern).to_string());
-            }
+        let generic_socket = paths.primal_socket(&provider);
+        if generic_socket.exists() {
+            return Ok(generic_socket.display().to_string());
         }
 
-        Err(crate::FederationError::DiscoveryError(
-            "Songbird socket not found".to_string(),
-        ))
+        Err(crate::FederationError::DiscoveryError(format!(
+            "Discovery provider '{provider}' socket not found. \
+             Set SONGBIRD_SOCKET or ensure the discovery provider is running. \
+             Checked: XDG runtime dir: {:?}",
+            paths.runtime_dir()
+        )))
     }
 
     /// Register a peer discovered via Songbird UDP multicast
@@ -546,7 +549,7 @@ mod tests {
             Some(PrimalEndpoint::UnixSocket { path }) => {
                 assert_eq!(path, PathBuf::from("/tmp/test.sock"));
             }
-            other => panic!("expected UnixSocket, got {:?}", other),
+            other => panic!("expected UnixSocket, got {other:?}"),
         }
     }
 
@@ -558,7 +561,7 @@ mod tests {
                 assert_eq!(addr.port(), 8080);
                 assert_eq!(addr.ip().to_string(), "127.0.0.1");
             }
-            other => panic!("expected Udp, got {:?}", other),
+            other => panic!("expected Udp, got {other:?}"),
         }
     }
 
@@ -569,7 +572,7 @@ mod tests {
             Some(PrimalEndpoint::Http { url }) => {
                 assert_eq!(url, "http://localhost:3000");
             }
-            other => panic!("expected Http, got {:?}", other),
+            other => panic!("expected Http, got {other:?}"),
         }
     }
 
@@ -580,7 +583,7 @@ mod tests {
             Some(PrimalEndpoint::Http { url }) => {
                 assert_eq!(url, "https://example.com/api");
             }
-            other => panic!("expected Http, got {:?}", other),
+            other => panic!("expected Http, got {other:?}"),
         }
     }
 
@@ -618,7 +621,7 @@ mod tests {
         let restored: PrimalEndpoint = serde_json::from_str(&json).expect("deserialize");
         match restored {
             PrimalEndpoint::Http { url } => assert_eq!(url, "http://example.com"),
-            other => panic!("expected Http, got {:?}", other),
+            other => panic!("expected Http, got {other:?}"),
         }
     }
 
@@ -631,7 +634,7 @@ mod tests {
         let restored: PrimalEndpoint = serde_json::from_str(&json).expect("deserialize");
         match restored {
             PrimalEndpoint::Udp { addr: a } => assert_eq!(a.port(), 9000),
-            other => panic!("expected Udp, got {:?}", other),
+            other => panic!("expected Udp, got {other:?}"),
         }
     }
 
@@ -640,7 +643,7 @@ mod tests {
         let ep = PrimalEndpoint::UnixSocket {
             path: PathBuf::from("/a"),
         };
-        assert!(format!("{:?}", ep).contains("UnixSocket"));
+        assert!(format!("{ep:?}").contains("UnixSocket"));
     }
 
     #[test]
@@ -698,7 +701,7 @@ mod tests {
             endpoints: vec![],
             metadata: HashMap::new(),
         };
-        let dbg = format!("{:?}", dp);
+        let dbg = format!("{dp:?}");
         assert!(dbg.contains("test"));
         assert!(dbg.contains("DiscoveredPrimal"));
     }
@@ -892,7 +895,7 @@ mod tests {
         };
         let cloned = info.clone();
         assert_eq!(cloned.name, "test");
-        let dbg = format!("{:?}", info);
+        let dbg = format!("{info:?}");
         assert!(dbg.contains("PrimalInfo"));
     }
 
@@ -908,7 +911,7 @@ mod tests {
         let result = pd.discover_songbird_socket();
         // We just verify it returns a Result (may succeed if env var is set)
         if let Err(e) = result {
-            let err_msg = format!("{}", e);
+            let err_msg = format!("{e}");
             assert!(err_msg.contains("not found") || err_msg.contains("Songbird"));
         }
     }

@@ -127,11 +127,11 @@ pub fn socket_path(service: &str) -> Result<PathBuf, String> {
 
     // 2. Check socket directory + service name
     if let Ok(socket_dir) = env::var(env_vars::SOCKET_DIR) {
-        return Ok(PathBuf::from(socket_dir).join(format!("{}.sock", service)));
+        return Ok(PathBuf::from(socket_dir).join(format!("{service}.sock")));
     }
 
     // 3. Fallback to default
-    Ok(PathBuf::from(DEFAULT_SOCKET_DIR).join(format!("{}.sock", service)))
+    Ok(PathBuf::from(DEFAULT_SOCKET_DIR).join(format!("{service}.sock")))
 }
 
 /// Runtime configuration with environment variable overrides
@@ -170,7 +170,7 @@ impl RuntimeConfig {
                 // Try /run/user/{uid}/biomeos using $UID or $EUID env var
                 // This avoids unsafe libc calls while still finding the systemd runtime dir
                 if let Ok(uid) = env::var("UID").or_else(|_| env::var("EUID")) {
-                    let uid_path = PathBuf::from(format!("/run/user/{}/biomeos", uid));
+                    let uid_path = PathBuf::from(format!("/run/user/{uid}/biomeos"));
                     if uid_path.parent().is_some_and(|p| p.exists()) {
                         return uid_path;
                     }
@@ -207,7 +207,7 @@ impl RuntimeConfig {
             return PathBuf::from(path);
         }
         // Fall back to our configured socket directory
-        self.socket_dir.join(format!("{}.sock", service))
+        self.socket_dir.join(format!("{service}.sock"))
     }
 
     /// Get socket directory
@@ -287,7 +287,7 @@ impl Default for RuntimeConfig {
 /// assert_eq!(path.to_str().unwrap(), "/run/neural-api.sock");
 /// ```
 pub fn join_socket_path(dir: impl AsRef<Path>, service: &str) -> PathBuf {
-    dir.as_ref().join(format!("{}.sock", service))
+    dir.as_ref().join(format!("{service}.sock"))
 }
 
 #[cfg(test)]
@@ -363,6 +363,18 @@ mod tests {
     }
 
     #[test]
+    fn test_join_socket_path_basic() {
+        let path = join_socket_path("/run", "neural-api");
+        assert_eq!(path.to_str().unwrap(), "/run/neural-api.sock");
+    }
+
+    #[test]
+    fn test_join_socket_path_with_subdir() {
+        let path = join_socket_path("/var/run/biomeos", "beardog");
+        assert_eq!(path.to_str().unwrap(), "/var/run/biomeos/beardog.sock");
+    }
+
+    #[test]
     fn test_runtime_config() {
         // Clear environment variables to test default behavior
         env::remove_var("NEURAL_API_SOCKET");
@@ -386,8 +398,7 @@ mod tests {
         let path_str = socket_path.to_string_lossy();
         assert!(
             path_str.contains("biomeos") || path_str.starts_with(DEFAULT_SOCKET_DIR),
-            "Socket path should be XDG-resolved or fallback: {}",
-            path_str
+            "Socket path should be XDG-resolved or fallback: {path_str}"
         );
     }
 
@@ -529,8 +540,7 @@ mod tests {
         // Socket should either be from socket_dir or default /tmp
         assert!(
             socket.starts_with("/run/biomeos") || socket.starts_with("/tmp"),
-            "Socket path was: {:?}",
-            socket
+            "Socket path was: {socket:?}"
         );
     }
 
@@ -574,10 +584,8 @@ mod tests {
         ] {
             let socket = config.service_socket(primal);
             assert!(
-                socket.ends_with(format!("{}.sock", primal).as_str()),
-                "Expected {}.sock, got {:?}",
-                primal,
-                socket
+                socket.ends_with(format!("{primal}.sock").as_str()),
+                "Expected {primal}.sock, got {socket:?}"
             );
         }
     }
@@ -604,7 +612,7 @@ mod tests {
     #[test]
     fn test_runtime_config_debug() {
         let config = RuntimeConfig::with_socket_dir("/test");
-        let debug_str = format!("{:?}", config);
+        let debug_str = format!("{config:?}");
 
         assert!(debug_str.contains("RuntimeConfig"));
         assert!(debug_str.contains("/test"));

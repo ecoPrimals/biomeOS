@@ -382,8 +382,8 @@ mod multi_family_tests {
         let mut families = Vec::new();
 
         for i in 0..num_families {
-            let family_id = FamilyId::new(format!("family-{:03}", i));
-            let seed_str = format!("seed-{:03}-123456789012345678901234567", i);
+            let family_id = FamilyId::new(format!("family-{i:03}"));
+            let seed_str = format!("seed-{i:03}-123456789012345678901234567");
             let seed = SecretSeed::new(STANDARD.encode(seed_str.as_bytes()))
                 .expect("Should create valid seed");
 

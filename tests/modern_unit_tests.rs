@@ -142,7 +142,7 @@ mod primal_registration_tests {
         for i in 0..10 {
             let manager_clone = manager.clone();
             let handle = tokio::spawn(async move {
-                let primal = MockPrimalFactory::create_compute_primal(&format!("concurrent-{}", i));
+                let primal = MockPrimalFactory::create_compute_primal(&format!("concurrent-{i}"));
                 manager_clone.register_primal(primal).await
             });
             handles.push(handle);
@@ -450,7 +450,7 @@ mod zero_copy_tests {
         let large_primal_count = 100;
         let (_, _allocation_estimate) = PerformanceTestUtils::measure_allocations(async {
             for i in 0..large_primal_count {
-                let primal = MockPrimalFactory::create_compute_primal(&format!("primal-{}", i));
+                let primal = MockPrimalFactory::create_compute_primal(&format!("primal-{i}"));
                 manager.register_primal(primal).await.unwrap();
             }
         })

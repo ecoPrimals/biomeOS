@@ -269,7 +269,7 @@ mod tests {
     #[test]
     fn test_error_debug_format() {
         let err = SporeError::BinaryNotFound("songbird".to_string());
-        let debug = format!("{:?}", err);
+        let debug = format!("{err:?}");
         assert!(debug.contains("BinaryNotFound"));
         assert!(debug.contains("songbird"));
     }

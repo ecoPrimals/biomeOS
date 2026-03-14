@@ -104,23 +104,20 @@ impl PrimalCoordinator {
         let start_commands = required_primals
             .iter()
             .map(|&primal| {
-                format!(
-                    "FAMILY_ID={} NODE_ID={}-{} ./{} &",
-                    family_id, atomic_name, primal, primal
-                )
+                format!("FAMILY_ID={family_id} NODE_ID={atomic_name}-{primal} ./{primal} &")
             })
             .collect();
 
         let expected_sockets = required_primals
             .iter()
-            .map(|&primal| format!("{}-{}.sock", primal, family_id))
+            .map(|&primal| format!("{primal}-{family_id}.sock"))
             .collect();
 
         DeploymentGuide {
             atomic_name: atomic_name.to_string(),
             required_primals: required_primals.iter().map(|s| s.to_string()).collect(),
             start_commands,
-            verification: format!("ls /run/user/$(id -u)/*{}*.sock", family_id),
+            verification: format!("ls /run/user/$(id -u)/*{family_id}*.sock"),
             expected_sockets,
         }
     }
@@ -254,7 +251,7 @@ mod tests {
         let discovery = PrimalDiscovery::new(temp_dir.path().to_path_buf()).unwrap();
         let coordinator = PrimalCoordinator::new(discovery);
 
-        let debug_str = format!("{:?}", coordinator);
+        let debug_str = format!("{coordinator:?}");
         assert!(debug_str.contains("PrimalCoordinator"));
     }
 

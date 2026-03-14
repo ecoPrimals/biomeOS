@@ -95,7 +95,7 @@ fn get_tower_pid_file() -> PathBuf {
         .or_else(|_| std::env::var("FAMILY_ID"))
         .unwrap_or_else(|_| "default".to_string());
 
-    PathBuf::from(format!("/tmp/biomeos-{}/tower.pid", family_id))
+    PathBuf::from(format!("/tmp/biomeos-{family_id}/tower.pid"))
 }
 
 /// Get the socket directory
@@ -112,7 +112,7 @@ fn get_socket_dir() -> PathBuf {
         .or_else(|_| std::env::var("FAMILY_ID"))
         .unwrap_or_else(|_| "default".to_string());
 
-    PathBuf::from(format!("/tmp/biomeos-{}/sockets", family_id))
+    PathBuf::from(format!("/tmp/biomeos-{family_id}/sockets"))
 }
 
 /// Write the PID file for the running tower

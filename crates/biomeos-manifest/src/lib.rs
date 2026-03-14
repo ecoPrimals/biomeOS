@@ -44,7 +44,7 @@ impl BiomeManifestProcessor {
         for (service_name, service) in &manifest.services {
             Self::validate_service(service_name, service).map_err(|e| {
                 BiomeError::validation_error(
-                    format!("Invalid service '{}': {}", service_name, e),
+                    format!("Invalid service '{service_name}': {e}"),
                     vec![],
                 )
             })?;
@@ -59,7 +59,7 @@ impl BiomeManifestProcessor {
         for (network_name, network) in &manifest.networks {
             Self::validate_network(network_name, network).map_err(|e| {
                 BiomeError::validation_error(
-                    format!("Invalid network '{}': {}", network_name, e),
+                    format!("Invalid network '{network_name}': {e}"),
                     vec![],
                 )
             })?;
@@ -73,7 +73,7 @@ impl BiomeManifestProcessor {
         // Validate that the service has essential fields
         if service.metadata.name.is_empty() {
             return Err(BiomeError::validation_error(
-                format!("Service '{}' must have a name", service_name),
+                format!("Service '{service_name}' must have a name"),
                 vec![],
             ));
         }
@@ -83,7 +83,7 @@ impl BiomeManifestProcessor {
             // Port validation - u16 cannot be > 65535, so this comparison is removed
             if port.port == 0 {
                 return Err(BiomeError::validation_error(
-                    format!("Service '{}' has invalid port: 0", service_name),
+                    format!("Service '{service_name}' has invalid port: 0"),
                     vec![],
                 ));
             }
@@ -118,11 +118,11 @@ impl BiomeManifestProcessor {
     /// Load manifest from YAML file
     pub fn load_from_file<P: AsRef<Path>>(path: P) -> BiomeResult<BiomeManifest> {
         let content = fs::read_to_string(path).map_err(|e| {
-            BiomeError::validation_error(format!("Failed to read manifest file: {}", e), vec![])
+            BiomeError::validation_error(format!("Failed to read manifest file: {e}"), vec![])
         })?;
 
         let manifest: BiomeManifest = serde_yaml::from_str(&content).map_err(|e| {
-            BiomeError::validation_error(format!("Failed to parse manifest YAML: {}", e), vec![])
+            BiomeError::validation_error(format!("Failed to parse manifest YAML: {e}"), vec![])
         })?;
 
         Self::validate(&manifest)?;
@@ -135,13 +135,13 @@ impl BiomeManifestProcessor {
 
         let yaml_content = serde_yaml::to_string(manifest).map_err(|e| {
             BiomeError::validation_error(
-                format!("Failed to serialize manifest to YAML: {}", e),
+                format!("Failed to serialize manifest to YAML: {e}"),
                 vec![],
             )
         })?;
 
         fs::write(path, yaml_content).map_err(|e| {
-            BiomeError::validation_error(format!("Failed to write manifest file: {}", e), vec![])
+            BiomeError::validation_error(format!("Failed to write manifest file: {e}"), vec![])
         })?;
 
         Ok(())
@@ -150,7 +150,7 @@ impl BiomeManifestProcessor {
     /// Load manifest from YAML content
     pub fn load_from_yaml(content: &str) -> BiomeResult<BiomeManifest> {
         let manifest: BiomeManifest = serde_yaml::from_str(content).map_err(|e| {
-            BiomeError::validation_error(format!("Failed to parse YAML manifest: {}", e), vec![])
+            BiomeError::validation_error(format!("Failed to parse YAML manifest: {e}"), vec![])
         })?;
 
         Self::validate(&manifest)?;
@@ -163,7 +163,7 @@ impl BiomeManifestProcessor {
 
         serde_yaml::to_string(manifest).map_err(|e| {
             BiomeError::validation_error(
-                format!("Failed to serialize manifest to YAML: {}", e),
+                format!("Failed to serialize manifest to YAML: {e}"),
                 vec![],
             )
         })
@@ -185,11 +185,11 @@ impl BiomeManifestTemplates {
 
         BiomeManifest {
             metadata: ManifestMetadata {
-                name: format!("{}-biome", name),
+                name: format!("{name}-biome"),
                 version: "1.0.0".to_string(),
                 api_version: "biomeOS/v1".to_string(),
                 kind: "BiomeManifest".to_string(),
-                description: Some(format!("Web application biome for {}", name)),
+                description: Some(format!("Web application biome for {name}")),
                 author: Some("BiomeOS Templates".to_string()),
                 license: Some("MIT".to_string()),
                 repository: None,
@@ -248,11 +248,11 @@ impl BiomeManifestTemplates {
 
         BiomeManifest {
             metadata: ManifestMetadata {
-                name: format!("{}-db-biome", name),
+                name: format!("{name}-db-biome"),
                 version: "1.0.0".to_string(),
                 api_version: "biomeOS/v1".to_string(),
                 kind: "BiomeManifest".to_string(),
-                description: Some(format!("{} database biome for {}", db_type, name)),
+                description: Some(format!("{db_type} database biome for {name}")),
                 author: Some("BiomeOS Templates".to_string()),
                 license: Some("MIT".to_string()),
                 repository: None,
@@ -317,7 +317,7 @@ impl ManifestAnalyzer {
                 .metadata
                 .capabilities
                 .iter()
-                .map(|cap| format!("{:?}", cap)) // Convert PrimalCapability to String representation
+                .map(|cap| format!("{cap:?}")) // Convert PrimalCapability to String representation
                 .collect();
             capabilities.extend(service_caps);
         }
@@ -350,7 +350,7 @@ impl ManifestAnalyzer {
                 .metadata
                 .capabilities
                 .iter()
-                .map(|cap| format!("{:?}", cap))
+                .map(|cap| format!("{cap:?}"))
                 .collect();
             if required_caps.iter().any(|cap| service_caps.contains(cap)) {
                 matching_services.push(service_name.clone());

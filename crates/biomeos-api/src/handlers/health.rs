@@ -79,6 +79,7 @@ pub async fn liveness(_state: State<Arc<AppState>>) -> Json<HealthResponse> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use crate::AppState;
@@ -289,5 +290,34 @@ mod tests {
         assert!(health_resp.timestamp.is_some());
         assert!(readiness_resp.timestamp.is_some());
         assert!(liveness_resp.timestamp.is_some());
+    }
+
+    #[test]
+    fn test_health_response_debug() {
+        let response = HealthResponse {
+            status: "healthy".to_string(),
+            version: "1.0.0".to_string(),
+            mode: "standalone".to_string(),
+            uptime_seconds: Some(3600),
+            timestamp: None,
+        };
+        let debug_str = format!("{response:?}");
+        assert!(debug_str.contains("healthy"));
+        assert!(debug_str.contains("1.0.0"));
+    }
+
+    #[test]
+    fn test_health_response_serde_roundtrip() {
+        let response = HealthResponse {
+            status: "ready".to_string(),
+            version: "0.2.0".to_string(),
+            mode: "live".to_string(),
+            uptime_seconds: Some(7200),
+            timestamp: Some("2026-03-14T12:00:00Z".to_string()),
+        };
+        let json = serde_json::to_string(&response).unwrap();
+        let parsed: HealthResponse = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.status, response.status);
+        assert_eq!(parsed.uptime_seconds, response.uptime_seconds);
     }
 }

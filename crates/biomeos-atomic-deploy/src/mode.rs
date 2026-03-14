@@ -156,8 +156,8 @@ mod tests {
         let bootstrap = BiomeOsMode::Bootstrap;
         let coordinated = BiomeOsMode::Coordinated;
 
-        assert!(format!("{:?}", bootstrap).contains("Bootstrap"));
-        assert!(format!("{:?}", coordinated).contains("Coordinated"));
+        assert!(format!("{bootstrap:?}").contains("Bootstrap"));
+        assert!(format!("{coordinated:?}").contains("Coordinated"));
     }
 
     #[test]

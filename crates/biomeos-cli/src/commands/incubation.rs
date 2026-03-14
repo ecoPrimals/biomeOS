@@ -192,7 +192,7 @@ mod tests {
             computer_name: Some("test-pc".to_string()),
             deploy_local: true,
         };
-        let _ = format!("{:?}", args);
+        let _ = format!("{args:?}");
     }
 
     #[test]
@@ -201,6 +201,6 @@ mod tests {
             spore_id: Some("spore-1".to_string()),
             detailed: true,
         };
-        let _ = format!("{:?}", args);
+        let _ = format!("{args:?}");
     }
 }

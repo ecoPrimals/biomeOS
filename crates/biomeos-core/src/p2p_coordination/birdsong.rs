@@ -143,9 +143,7 @@ impl BirdSongCoordinator {
 
         if !lineage.is_ancestor {
             anyhow::bail!(
-                "Lineage verification failed: {} is not an ancestor of {}",
-                target,
-                requester
+                "Lineage verification failed: {target} is not an ancestor of {requester}"
             );
         }
 

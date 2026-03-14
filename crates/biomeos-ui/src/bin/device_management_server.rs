@@ -59,7 +59,7 @@ async fn main() -> Result<()> {
 
     // Get socket path
     let uid = std::env::var("UID").unwrap_or_else(|_| "1000".to_string());
-    let socket_path = format!("/run/user/{}/biomeos-device-management.sock", uid);
+    let socket_path = format!("/run/user/{uid}/biomeos-device-management.sock");
 
     // Remove old socket if it exists
     let _ = tokio::fs::remove_file(&socket_path).await;
@@ -151,7 +151,7 @@ async fn handle_method(
                 Ok(devices) => Ok(json!(devices)),
                 Err(e) => Err(JsonRpcError {
                     code: -32603,
-                    message: format!("Internal error: {}", e),
+                    message: format!("Internal error: {e}"),
                     data: None,
                 }),
             }
@@ -162,7 +162,7 @@ async fn handle_method(
                 Ok(primals) => Ok(json!(primals)),
                 Err(e) => Err(JsonRpcError {
                     code: -32603,
-                    message: format!("Internal error: {}", e),
+                    message: format!("Internal error: {e}"),
                     data: None,
                 }),
             }
@@ -173,7 +173,7 @@ async fn handle_method(
                 Ok(templates) => Ok(json!(templates)),
                 Err(e) => Err(JsonRpcError {
                     code: -32603,
-                    message: format!("Internal error: {}", e),
+                    message: format!("Internal error: {e}"),
                     data: None,
                 }),
             }
@@ -191,7 +191,7 @@ async fn handle_method(
                 Ok(success) => Ok(json!({"success": success})),
                 Err(e) => Err(JsonRpcError {
                     code: -32603,
-                    message: format!("Internal error: {}", e),
+                    message: format!("Internal error: {e}"),
                     data: None,
                 }),
             }
@@ -208,7 +208,7 @@ async fn handle_method(
                         result: None,
                         error: Some(JsonRpcError {
                             code: -32603,
-                            message: format!("Failed to get templates: {}", e),
+                            message: format!("Failed to get templates: {e}"),
                             data: None,
                         }),
                         id: request.id,
@@ -225,7 +225,7 @@ async fn handle_method(
                         result: None,
                         error: Some(JsonRpcError {
                             code: -32602,
-                            message: format!("Template not found: {}", template_id),
+                            message: format!("Template not found: {template_id}"),
                             data: None,
                         }),
                         id: request.id,
@@ -237,7 +237,7 @@ async fn handle_method(
                 Ok(result) => Ok(json!(result)),
                 Err(e) => Err(JsonRpcError {
                     code: -32603,
-                    message: format!("Internal error: {}", e),
+                    message: format!("Internal error: {e}"),
                     data: None,
                 }),
             }
@@ -251,7 +251,7 @@ async fn handle_method(
                 Ok(niche_id) => Ok(json!({"niche_id": niche_id})),
                 Err(e) => Err(JsonRpcError {
                     code: -32603,
-                    message: format!("Internal error: {}", e),
+                    message: format!("Internal error: {e}"),
                     data: None,
                 }),
             }
@@ -338,7 +338,7 @@ async fn register_with_songbird(socket_path: &str) -> Result<()> {
         let msg = response["error"]["message"]
             .as_str()
             .unwrap_or("Unknown error");
-        anyhow::bail!("Songbird registration failed: {}", msg);
+        anyhow::bail!("Songbird registration failed: {msg}");
     }
 
     info!("✅ Registered with Songbird for UDP multicast discovery");
@@ -354,7 +354,7 @@ fn discover_songbird_socket() -> Result<String> {
 
     // Priority 2: XDG runtime directory
     if let Ok(runtime) = std::env::var("XDG_RUNTIME_DIR") {
-        let socket = format!("{}/biomeos/songbird.sock", runtime);
+        let socket = format!("{runtime}/biomeos/songbird.sock");
         if std::path::Path::new(&socket).exists() {
             return Ok(socket);
         }
@@ -366,13 +366,13 @@ fn discover_songbird_socket() -> Result<String> {
     {
         // XDG path first
         if let Ok(runtime) = std::env::var("XDG_RUNTIME_DIR") {
-            let socket = format!("{}/biomeos/songbird-{}.sock", runtime, family_id);
+            let socket = format!("{runtime}/biomeos/songbird-{family_id}.sock");
             if std::path::Path::new(&socket).exists() {
                 return Ok(socket);
             }
         }
         // Legacy fallback
-        let socket = format!("/tmp/songbird-{}.sock", family_id);
+        let socket = format!("/tmp/songbird-{family_id}.sock");
         if std::path::Path::new(&socket).exists() {
             tracing::warn!("⚠️ Using legacy /tmp path: {}", socket);
             return Ok(socket);

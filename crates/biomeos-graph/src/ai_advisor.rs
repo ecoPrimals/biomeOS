@@ -607,6 +607,7 @@ impl Default for AiGraphAdvisor {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use crate::graph::{CoordinationPattern, EdgeType, GraphEdge, GraphId};
@@ -757,5 +758,41 @@ mod tests {
 
         let suggestions = result.unwrap();
         assert!(!suggestions.is_empty());
+    }
+
+    #[test]
+    fn test_ai_advisor_default() {
+        let advisor = AiGraphAdvisor::default();
+        assert!(!advisor.squirrel_available);
+    }
+
+    #[test]
+    fn test_suggestion_type_serde_roundtrip() {
+        for st in [
+            SuggestionType::Optimization,
+            SuggestionType::ErrorPrevention,
+            SuggestionType::PerformanceImprovement,
+            SuggestionType::BestPractice,
+            SuggestionType::PatternBased,
+            SuggestionType::LearningBased,
+        ] {
+            let json = serde_json::to_string(&st).unwrap();
+            let restored: SuggestionType = serde_json::from_str(&json).unwrap();
+            assert_eq!(st, restored);
+        }
+    }
+
+    #[test]
+    fn test_impact_estimate_serde_roundtrip() {
+        let impact = ImpactEstimate {
+            performance: 0.5,
+            reliability: 0.8,
+            complexity: -0.2,
+            summary: "test".to_string(),
+        };
+        let json = serde_json::to_string(&impact).unwrap();
+        let restored: ImpactEstimate = serde_json::from_str(&json).unwrap();
+        assert_eq!(impact.performance, restored.performance);
+        assert_eq!(impact.summary, restored.summary);
     }
 }

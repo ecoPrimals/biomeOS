@@ -368,7 +368,6 @@ impl P2PCoordinator {
 }
 
 /// Compute combined health status from security and transport (testable pure function)
-#[allow(dead_code)] // Used by tests
 pub(crate) fn compute_status_impl(
     security: &TunnelHealth,
     transport: &TransportHealth,

@@ -23,7 +23,7 @@ pub(crate) fn format_system_overview(system: &Value) -> Vec<String> {
     let mut lines = Vec::new();
 
     if let Some(cpu) = system.get("cpu_usage_percent") {
-        lines.push(format!("  💻 CPU: {}%", cpu));
+        lines.push(format!("  💻 CPU: {cpu}%"));
     }
 
     if let Some(memory) = system.get("memory") {
@@ -34,8 +34,7 @@ pub(crate) fn format_system_overview(system: &Value) -> Vec<String> {
                     .and_then(|p| p.as_f64())
                     .unwrap_or(0.0);
                 lines.push(format!(
-                    "  🧠 Memory: {:.1}GB / {:.1}GB ({:.1}%)",
-                    used_gb, total_gb, percent
+                    "  🧠 Memory: {used_gb:.1}GB / {total_gb:.1}GB ({percent:.1}%)"
                 ));
             }
         }
@@ -43,13 +42,13 @@ pub(crate) fn format_system_overview(system: &Value) -> Vec<String> {
 
     if let Some(disk) = system.get("disk") {
         if let Some(usage_percent) = disk.get("usage_percent") {
-            lines.push(format!("  💾 Disk: {}%", usage_percent));
+            lines.push(format!("  💾 Disk: {usage_percent}%"));
         }
     }
 
     if let Some(load) = system.get("load_average") {
         if let Some(load_1m) = load.get("1m") {
-            lines.push(format!("  📊 Load: {}", load_1m));
+            lines.push(format!("  📊 Load: {load_1m}"));
         }
     }
 
@@ -83,14 +82,13 @@ pub(crate) fn format_service_rows(services: &Value) -> Vec<String> {
             let health_icon = service_health_icon(health);
 
             lines.push(format!(
-                "  {} {} {}: {} | {}",
-                status_icon, health_icon, service_name, status, health
+                "  {status_icon} {health_icon} {service_name}: {status} | {health}"
             ));
 
             if let Some(resources) = service_data.get("resources") {
                 if let Some(cpu) = resources.get("cpu_percent") {
                     if let Some(memory_mb) = resources.get("memory_mb") {
-                        lines.push(format!("    📊 CPU: {}% | Memory: {}MB", cpu, memory_mb));
+                        lines.push(format!("    📊 CPU: {cpu}% | Memory: {memory_mb}MB"));
                     }
                 }
             }
@@ -115,7 +113,7 @@ pub(crate) fn format_network_activity(network: &Value) -> Vec<String> {
     }
 
     if let Some(connections) = network.get("active_connections") {
-        lines.push(format!("  🔗 Active connections: {}", connections));
+        lines.push(format!("  🔗 Active connections: {connections}"));
     }
 
     lines
@@ -135,7 +133,7 @@ pub(crate) fn format_alert_rows(alerts: &Value) -> Vec<String> {
                         .and_then(|s| s.as_str())
                         .unwrap_or("info");
                     let icon = alert_severity_icon(severity);
-                    lines.push(format!("  {} {}", icon, message));
+                    lines.push(format!("  {icon} {message}"));
                 }
             }
         }
@@ -177,14 +175,14 @@ pub(crate) fn format_exec_output(results: &HashMap<String, Value>) -> Vec<String
         } else {
             "❌"
         };
-        lines.push(format!("{} Exit code: {}", icon, exit_code));
+        lines.push(format!("{icon} Exit code: {exit_code}"));
     }
 
     if let Some(stdout) = results.get("stdout").and_then(|s| s.as_str()) {
         if !stdout.trim().is_empty() {
             lines.push("\n📤 STDOUT:".to_string());
             for line in stdout.lines() {
-                lines.push(format!("  {}", line));
+                lines.push(format!("  {line}"));
             }
         }
     }
@@ -193,13 +191,13 @@ pub(crate) fn format_exec_output(results: &HashMap<String, Value>) -> Vec<String
         if !stderr.trim().is_empty() {
             lines.push("\n📥 STDERR:".to_string());
             for line in stderr.lines() {
-                lines.push(format!("  {}", line));
+                lines.push(format!("  {line}"));
             }
         }
     }
 
     if let Some(duration_ms) = results.get("duration_ms") {
-        lines.push(format!("\n⏱️  Execution time: {}ms", duration_ms));
+        lines.push(format!("\n⏱️  Execution time: {duration_ms}ms"));
     }
 
     lines
@@ -211,34 +209,34 @@ pub(crate) fn format_scale_output(results: &HashMap<String, Value>, auto: bool) 
 
     if let Some(status) = results.get("status") {
         let icon = scale_status_icon(status.as_str().unwrap_or(""));
-        lines.push(format!("{} Status: {}", icon, status));
+        lines.push(format!("{icon} Status: {status}"));
     }
 
     if let Some(current_replicas) = results.get("current_replicas") {
-        lines.push(format!("📊 Current replicas: {}", current_replicas));
+        lines.push(format!("📊 Current replicas: {current_replicas}"));
     }
 
     if let Some(target_replicas) = results.get("target_replicas") {
-        lines.push(format!("🎯 Target replicas: {}", target_replicas));
+        lines.push(format!("🎯 Target replicas: {target_replicas}"));
     }
 
     if auto {
         if let Some(auto_scaling_info) = results.get("auto_scaling") {
             lines.push("\n🤖 Auto-scaling configuration:".to_string());
             if let Some(min_replicas) = auto_scaling_info.get("min_replicas") {
-                lines.push(format!("  📉 Min replicas: {}", min_replicas));
+                lines.push(format!("  📉 Min replicas: {min_replicas}"));
             }
             if let Some(max_replicas) = auto_scaling_info.get("max_replicas") {
-                lines.push(format!("  📈 Max replicas: {}", max_replicas));
+                lines.push(format!("  📈 Max replicas: {max_replicas}"));
             }
             if let Some(cpu_threshold) = auto_scaling_info.get("cpu_threshold_percent") {
-                lines.push(format!("  🖥️  CPU threshold: {}%", cpu_threshold));
+                lines.push(format!("  🖥️  CPU threshold: {cpu_threshold}%"));
             }
         }
     }
 
     if let Some(message) = results.get("message") {
-        lines.push(format!("\n💬 {}", message));
+        lines.push(format!("\n💬 {message}"));
     }
 
     lines
@@ -261,9 +259,9 @@ pub async fn handle_monitor(
     let config = biomeos_types::BiomeOSConfig::default();
     let manager = UniversalBiomeOSManager::new(config).await?;
 
-    println!("🔍 Starting system monitoring (interval: {}s)", interval);
+    println!("🔍 Starting system monitoring (interval: {interval}s)");
     if let Some(duration_s) = duration {
-        println!("Duration: {}s", duration_s);
+        println!("Duration: {duration_s}s");
     }
     println!("Press Ctrl+C to stop\n");
 
@@ -309,7 +307,7 @@ pub async fn handle_dashboard(interval: u64, refresh: bool) -> Result<()> {
     let manager = UniversalBiomeOSManager::new(config).await?;
     let mut dashboard = BiomeOSDashboard::new(manager);
     if refresh {
-        println!("Auto-refresh enabled (interval: {}s)", interval);
+        println!("Auto-refresh enabled (interval: {interval}s)");
     }
     dashboard.run().await?;
     Ok(())
@@ -337,12 +335,9 @@ pub async fn handle_logs(
     let manager = UniversalBiomeOSManager::new(config).await?;
 
     if follow {
-        println!(
-            "📜 Following logs for service '{}' (Press Ctrl+C to stop)",
-            service
-        );
+        println!("📜 Following logs for service '{service}' (Press Ctrl+C to stop)");
     } else {
-        println!("📜 Fetching logs for service '{}'", service);
+        println!("📜 Fetching logs for service '{service}'");
     }
 
     let logs_result = manager
@@ -360,7 +355,7 @@ pub async fn handle_exec(service: String, command: Vec<String>, interactive: boo
     let manager = UniversalBiomeOSManager::new(config).await?;
 
     let command_str = command.join(" ");
-    println!("⚡ Executing '{}' in service '{}'", command_str, service);
+    println!("⚡ Executing '{command_str}' in service '{service}'");
 
     if interactive {
         println!("Interactive mode enabled");
@@ -377,7 +372,7 @@ pub async fn handle_exec(service: String, command: Vec<String>, interactive: boo
 
 /// Handle scale command
 pub async fn handle_scale(service: String, replicas: Option<u32>, auto: bool) -> Result<()> {
-    let spinner = create_spinner(&format!("⚖️  Scaling service '{}'...", service));
+    let spinner = create_spinner(&format!("⚖️  Scaling service '{service}'..."));
 
     let config = biomeos_types::BiomeOSConfig::default();
     let manager = UniversalBiomeOSManager::new(config).await?;
@@ -450,7 +445,7 @@ fn display_logs_result(service: &str, results: &HashMap<String, Value>) {
             println!("{}", format_log_entry(log_entry));
         }
     } else {
-        println!("📜 No logs available for service '{}'", service);
+        println!("📜 No logs available for service '{service}'");
     }
 
     if let Some(follow_info) = results.get("following") {
@@ -462,10 +457,7 @@ fn display_logs_result(service: &str, results: &HashMap<String, Value>) {
 
 /// Display exec results (thin wrapper)
 fn display_exec_result(service: &str, command: &str, results: &HashMap<String, Value>) {
-    println!(
-        "⚡ Execution results for '{}' in service '{}':",
-        command, service
-    );
+    println!("⚡ Execution results for '{command}' in service '{service}':");
 
     let lines = format_exec_output(results);
     for line in lines {
@@ -480,7 +472,7 @@ fn display_scale_result(service: &str, results: &HashMap<String, Value>, auto_sc
     } else {
         "Manual scaling"
     };
-    println!("⚖️  {} results for service '{}':", operation, service);
+    println!("⚖️  {operation} results for service '{service}':");
 
     let lines = format_scale_output(results, auto_scaling);
     for line in lines {

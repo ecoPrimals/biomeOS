@@ -58,9 +58,9 @@ pub struct LiveSporesResponse {
 }
 
 /// Calculate utilization percentage from available and total space.
-/// Reserved for future storage analytics.
-#[allow(dead_code)] // Future: use for storage analytics dashboard
-fn calculate_utilization(available: u64, total: u64) -> f64 {
+/// Planned for storage analytics dashboard.
+#[allow(dead_code)]
+pub(crate) fn calculate_utilization(available: u64, total: u64) -> f64 {
     if total == 0 {
         return 0.0;
     }
@@ -177,6 +177,7 @@ pub async fn get_livespores(
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 
@@ -384,8 +385,7 @@ mod tests {
         let result = get_livespores(axum::extract::State(std::sync::Arc::new(state))).await;
         assert!(
             result.is_ok(),
-            "get_livespores should return Ok (graceful degradation), got: {:?}",
-            result
+            "get_livespores should return Ok (graceful degradation), got: {result:?}"
         );
 
         let response = result.expect("response");
@@ -398,5 +398,42 @@ mod tests {
         // available > total (edge case - should not panic)
         let util = calculate_utilization(2000, 1000);
         assert!((0.0..=100.0).contains(&util));
+    }
+
+    #[test]
+    fn test_livespore_device_clone() {
+        let device = LiveSporeDevice {
+            id: "clone-test".to_string(),
+            mount_point: "/mnt/test".to_string(),
+            label: Some("LABEL".to_string()),
+            available_space: 100,
+            total_space: 200,
+            utilization_percent: 50.0,
+            has_genetic_seed: true,
+            genetic_preview: None,
+            primals: vec!["beardog".to_string()],
+            spore_type: Some("live".to_string()),
+        };
+        let cloned = device.clone();
+        assert_eq!(cloned.id, device.id);
+        assert_eq!(cloned.utilization_percent, device.utilization_percent);
+    }
+
+    #[test]
+    fn test_livespore_device_debug() {
+        let device = LiveSporeDevice {
+            id: "debug".to_string(),
+            mount_point: "/mnt".to_string(),
+            label: None,
+            available_space: 0,
+            total_space: 0,
+            utilization_percent: 0.0,
+            has_genetic_seed: false,
+            genetic_preview: None,
+            primals: vec![],
+            spore_type: None,
+        };
+        let debug_str = format!("{device:?}");
+        assert!(debug_str.contains("debug"));
     }
 }

@@ -20,7 +20,7 @@ impl LifecycleManager {
         let mut primals = self.primals.write().await;
         let primal = primals
             .get_mut(name)
-            .ok_or_else(|| anyhow::anyhow!("Primal not found: {}", name))?;
+            .ok_or_else(|| anyhow::anyhow!("Primal not found: {name}"))?;
 
         // Check if resurrection is enabled
         if !primal.resurrection_config.enabled {
@@ -113,7 +113,8 @@ impl LifecycleManager {
                 {
                     use rustix::process::{kill_process, test_kill_process, Pid, Signal};
 
-                    if let Some(rustix_pid) = Pid::from_raw(pid as i32) {
+                    let pid_i32 = i32::try_from(pid).unwrap_or(-1);
+                    if let Some(rustix_pid) = Pid::from_raw(pid_i32) {
                         // Try graceful SIGTERM
                         if kill_process(rustix_pid, Signal::Term).is_ok() {
                             // Wait up to 5 seconds for graceful shutdown
@@ -191,7 +192,7 @@ mod tests {
         ManagedPrimal {
             name: name.to_string(),
             family_id: "test-family".to_string(),
-            socket_path: PathBuf::from(format!("/tmp/test-{}.sock", name)),
+            socket_path: PathBuf::from(format!("/tmp/test-{name}.sock")),
             pid: None,
             state,
             deployment_node: None,

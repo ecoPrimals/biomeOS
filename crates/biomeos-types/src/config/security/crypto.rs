@@ -217,7 +217,7 @@ mod tests {
     #[test]
     fn test_encryption_algorithm_debug() {
         let alg = EncryptionAlgorithm::ChaCha20Poly1305;
-        let debug = format!("{:?}", alg);
+        let debug = format!("{alg:?}");
         assert!(debug.contains("ChaCha20"));
     }
 }

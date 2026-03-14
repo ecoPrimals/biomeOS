@@ -187,7 +187,7 @@ fn get_standalone_topology() -> (Vec<TopologyNode>, Vec<TopologyEdge>) {
     let primals = vec![
         // Security capability provider (crypto operations)
         TopologyNode {
-            id: format!("security-{}-{}", family_id, node_id),
+            id: format!("security-{family_id}-{node_id}"),
             name: "security-provider".to_string(),
             primal_type: "security".to_string(),
             health: "healthy".to_string(),
@@ -201,7 +201,7 @@ fn get_standalone_topology() -> (Vec<TopologyNode>, Vec<TopologyEdge>) {
             endpoints: Some(NodeEndpoints {
                 unix_socket: Some(
                     biomeos_types::paths::SystemPaths::new_lazy()
-                        .primal_socket(&format!("security-{}", family_id))
+                        .primal_socket(&format!("security-{family_id}"))
                         .to_string_lossy()
                         .to_string(),
                 ),
@@ -216,7 +216,7 @@ fn get_standalone_topology() -> (Vec<TopologyNode>, Vec<TopologyEdge>) {
         },
         // Discovery capability provider (HTTP, networking)
         TopologyNode {
-            id: format!("discovery-{}-{}", family_id, node_id),
+            id: format!("discovery-{family_id}-{node_id}"),
             name: "discovery-provider".to_string(),
             primal_type: "discovery".to_string(),
             health: "healthy".to_string(),
@@ -229,7 +229,7 @@ fn get_standalone_topology() -> (Vec<TopologyNode>, Vec<TopologyEdge>) {
             endpoints: Some(NodeEndpoints {
                 unix_socket: Some(
                     biomeos_types::paths::SystemPaths::new_lazy()
-                        .primal_socket(&format!("discovery-{}", family_id))
+                        .primal_socket(&format!("discovery-{family_id}"))
                         .to_string_lossy()
                         .to_string(),
                 ),
@@ -246,8 +246,8 @@ fn get_standalone_topology() -> (Vec<TopologyNode>, Vec<TopologyEdge>) {
 
     // Connection: Discovery provider uses Security for encrypted requests
     let connections = vec![TopologyEdge {
-        from: format!("discovery-{}-{}", family_id, node_id),
-        to: format!("security-{}-{}", family_id, node_id),
+        from: format!("discovery-{family_id}-{node_id}"),
+        to: format!("security-{family_id}-{node_id}"),
         edge_type: "capability_invocation".to_string(),
         capability: Some("crypto.encrypt".to_string()),
         metrics: Some(EdgeMetrics {

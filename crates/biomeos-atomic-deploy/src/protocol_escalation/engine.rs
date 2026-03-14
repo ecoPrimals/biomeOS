@@ -200,7 +200,7 @@ impl ProtocolEscalationManager {
             .graph
             .get_connection(from, to)
             .await
-            .ok_or_else(|| format!("Connection not found: {} → {}", from, to))?;
+            .ok_or_else(|| format!("Connection not found: {from} → {to}"))?;
 
         let previous_mode = conn.protocol;
 
@@ -214,7 +214,7 @@ impl ProtocolEscalationManager {
                     current_mode: previous_mode,
                     tarpc_socket: None,
                     success: false,
-                    message: format!("Failed to query tarpc endpoint: {}", e),
+                    message: format!("Failed to query tarpc endpoint: {e}"),
                 });
             }
         };
@@ -241,7 +241,7 @@ impl ProtocolEscalationManager {
                 current_mode: previous_mode,
                 tarpc_socket,
                 success: false,
-                message: format!("Failed to notify source primal: {}", e),
+                message: format!("Failed to notify source primal: {e}"),
             });
         }
 
@@ -265,7 +265,7 @@ impl ProtocolEscalationManager {
             current_mode: ProtocolMode::Tarpc,
             tarpc_socket,
             success: true,
-            message: format!("Successfully escalated {} → {} to tarpc", from, to),
+            message: format!("Successfully escalated {from} → {to} to tarpc"),
         })
     }
 
@@ -274,7 +274,7 @@ impl ProtocolEscalationManager {
             .graph
             .get_primal_state(primal)
             .await
-            .ok_or_else(|| format!("Primal not found: {}", primal))?;
+            .ok_or_else(|| format!("Primal not found: {primal}"))?;
 
         if let Some(socket) = &state.tarpc_socket {
             return Ok(TarpcEndpoint {
@@ -295,7 +295,7 @@ impl ProtocolEscalationManager {
             Ok(response) => {
                 if let Some(result) = response.get("result") {
                     let endpoint: TarpcEndpoint = serde_json::from_value(result.clone())
-                        .map_err(|e| format!("Invalid tarpc endpoint response: {}", e))?;
+                        .map_err(|e| format!("Invalid tarpc endpoint response: {e}"))?;
                     Ok(endpoint)
                 } else if let Some(_error) = response.get("error") {
                     debug!("Primal {} doesn't support tarpc: {:?}", primal, _error);
@@ -329,7 +329,7 @@ impl ProtocolEscalationManager {
             .graph
             .get_primal_state(from)
             .await
-            .ok_or_else(|| format!("Source primal not found: {}", from))?;
+            .ok_or_else(|| format!("Source primal not found: {from}"))?;
 
         let request = json!({
             "jsonrpc": "2.0",
@@ -352,7 +352,7 @@ impl ProtocolEscalationManager {
                 .and_then(|e| e.get("message"))
                 .and_then(|m| m.as_str())
                 .unwrap_or("Unknown error");
-            return Err(format!("Escalation notification failed: {}", error));
+            return Err(format!("Escalation notification failed: {error}"));
         }
 
         Ok(())
@@ -379,7 +379,7 @@ impl ProtocolEscalationManager {
             .graph
             .get_connection(from, to)
             .await
-            .ok_or_else(|| format!("Connection not found: {} → {}", from, to))?;
+            .ok_or_else(|| format!("Connection not found: {from} → {to}"))?;
 
         let previous_mode = conn.protocol;
 
@@ -398,7 +398,7 @@ impl ProtocolEscalationManager {
             current_mode: ProtocolMode::Degraded,
             tarpc_socket: None,
             success: true,
-            message: format!("Fell back to JSON-RPC: {}", reason),
+            message: format!("Fell back to JSON-RPC: {reason}"),
         })
     }
 
@@ -407,7 +407,7 @@ impl ProtocolEscalationManager {
             .graph
             .get_primal_state(from)
             .await
-            .ok_or_else(|| format!("Source primal not found: {}", from))?;
+            .ok_or_else(|| format!("Source primal not found: {from}"))?;
 
         let request = json!({
             "jsonrpc": "2.0",
@@ -429,7 +429,7 @@ impl ProtocolEscalationManager {
                 .and_then(|e| e.get("message"))
                 .and_then(|m| m.as_str())
                 .unwrap_or("Unknown error");
-            return Err(format!("Fallback notification failed: {}", error));
+            return Err(format!("Fallback notification failed: {error}"));
         }
 
         Ok(())
@@ -441,16 +441,16 @@ impl ProtocolEscalationManager {
             .map_err(|e| format!("Failed to connect to {}: {}", socket_path.display(), e))?;
 
         let request_str = serde_json::to_string(request)
-            .map_err(|e| format!("Failed to serialize request: {}", e))?;
+            .map_err(|e| format!("Failed to serialize request: {e}"))?;
 
         stream
             .write_all(request_str.as_bytes())
             .await
-            .map_err(|e| format!("Failed to write request: {}", e))?;
+            .map_err(|e| format!("Failed to write request: {e}"))?;
         stream
             .write_all(b"\n")
             .await
-            .map_err(|e| format!("Failed to write newline: {}", e))?;
+            .map_err(|e| format!("Failed to write newline: {e}"))?;
 
         let mut reader = BufReader::new(stream);
         let mut response_line = String::new();
@@ -459,11 +459,11 @@ impl ProtocolEscalationManager {
             .await
         {
             Ok(Ok(_)) => {}
-            Ok(Err(e)) => return Err(format!("Failed to read response: {}", e)),
+            Ok(Err(e)) => return Err(format!("Failed to read response: {e}")),
             Err(_) => return Err("Response timeout (>5s)".to_string()),
         }
 
-        serde_json::from_str(&response_line).map_err(|e| format!("Failed to parse response: {}", e))
+        serde_json::from_str(&response_line).map_err(|e| format!("Failed to parse response: {e}"))
     }
 
     /// Get protocol status for all connections (for JSON-RPC API)
@@ -484,7 +484,7 @@ mod tests {
     #[tokio::test]
     async fn test_escalation_manager_creation() {
         let graph = Arc::new(LivingGraph::new("test-family"));
-        let manager = ProtocolEscalationManager::with_defaults(graph.clone());
+        let manager = ProtocolEscalationManager::with_defaults(graph);
 
         assert_eq!(manager.graph().family_id(), "test-family");
         assert!(manager.config().auto_escalate);

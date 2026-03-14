@@ -178,7 +178,7 @@ impl DeploymentMode {
                 } else {
                     // Fallback: construct XDG-compliant path using UID
                     let uid = Self::get_uid();
-                    PathBuf::from(format!("/run/user/{}/biomeos", uid))
+                    PathBuf::from(format!("/run/user/{uid}/biomeos"))
                 }
             }
             DeploymentMode::SiblingSpore { install_dir, .. } => {
@@ -205,7 +205,7 @@ impl DeploymentMode {
             DeploymentMode::LiveSpore {
                 installed_version, ..
             } => {
-                format!("Live Spore (v{})", installed_version)
+                format!("Live Spore (v{installed_version})")
             }
             DeploymentMode::SiblingSpore { host_os, .. } => {
                 format!("Sibling Spore (on {})", host_os.name())
@@ -255,7 +255,7 @@ impl DeploymentMode {
                     isolation,
                 })
             }
-            _ => anyhow::bail!("Invalid deployment mode: {}", s),
+            _ => anyhow::bail!("Invalid deployment mode: {s}"),
         }
     }
 
@@ -436,9 +436,9 @@ impl HostOS {
     /// Get a short name for the host OS
     pub fn name(&self) -> String {
         match self {
-            HostOS::Linux { distro } => format!("Linux ({})", distro),
-            HostOS::MacOS { version } => format!("macOS {}", version),
-            HostOS::Windows { version } => format!("Windows {}", version),
+            HostOS::Linux { distro } => format!("Linux ({distro})"),
+            HostOS::MacOS { version } => format!("macOS {version}"),
+            HostOS::Windows { version } => format!("Windows {version}"),
             HostOS::BSD { variant } => variant.clone(),
             HostOS::Unknown => "Unknown OS".to_string(),
         }

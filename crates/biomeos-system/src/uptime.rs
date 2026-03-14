@@ -14,7 +14,7 @@ use biomeos_types::{BiomeError, BiomeResult};
 pub(crate) fn get_uptime() -> BiomeResult<std::time::Duration> {
     let uptime_str = fs::read_to_string("/proc/uptime").map_err(|e| {
         BiomeError::internal_error(
-            format!("Cannot read /proc/uptime: {}", e),
+            format!("Cannot read /proc/uptime: {e}"),
             Some("UPTIME_READ_FAILED"),
         )
     })?;
@@ -28,7 +28,7 @@ pub(crate) fn get_uptime() -> BiomeResult<std::time::Duration> {
 
     let seconds: f64 = uptime_seconds.parse().map_err(|_| {
         BiomeError::internal_error(
-            format!("Invalid uptime value in /proc/uptime: {}", uptime_seconds),
+            format!("Invalid uptime value in /proc/uptime: {uptime_seconds}"),
             Some("UPTIME_PARSE_INVALID"),
         )
     })?;

@@ -140,8 +140,7 @@ async fn test_config_creation_success() {
             let err_msg = e.to_string();
             assert!(
                 err_msg.contains("not found") || err_msg.contains("BinaryNotFound"),
-                "Should fail gracefully with clear message, got: {}",
-                err_msg
+                "Should fail gracefully with clear message, got: {err_msg}"
             );
         }
     }
@@ -330,13 +329,10 @@ async fn test_empty_primals_directory() {
             let primal_count = std::fs::read_dir(&spore_primals)
                 .map(|entries| entries.count())
                 .unwrap_or(0);
-            println!(
-                "✅ Spore created with {} primals (may use fallback discovery)",
-                primal_count
-            );
+            println!("✅ Spore created with {primal_count} primals (may use fallback discovery)");
         }
         Err(e) => {
-            println!("ℹ️ Spore creation failed (acceptable): {}", e);
+            println!("ℹ️ Spore creation failed (acceptable): {e}");
         }
     }
 

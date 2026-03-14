@@ -23,7 +23,7 @@
 | `stop_ecosystem.sh` | `biomeos nucleus stop` / `LifecycleManager::shutdown_all()` |
 | `deploy-*-lineage.sh` | Neural API graph-based deployment (`graphs/*.toml`) |
 | `harvest-primals.sh` | `cargo build --workspace` + primal repos |
-| `validate_*.sh` | `cargo test --workspace` (4,275+ tests) |
+| `validate_*.sh` | `cargo test --workspace` (4,647 tests) |
 
 The Rust replacement (`biomeos nucleus start`) provides:
 - Binary discovery across `livespore-usb/`, `plasmidBin/`, `target/release/`, `$PATH`

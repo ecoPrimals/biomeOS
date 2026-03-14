@@ -189,7 +189,7 @@ mod tests {
             vram_mb: 24 * 1024, // 24 GB
             gate_id: "gate-1".to_string(),
         };
-        assert_eq!(format!("{}", gpu), "RTX 4090 (24 GB)");
+        assert_eq!(format!("{gpu}"), "RTX 4090 (24 GB)");
     }
 
     #[test]

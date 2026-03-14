@@ -51,3 +51,68 @@ impl Default for RootFsConfig {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_rootfs_config_default() {
+        let config = RootFsConfig::default();
+        assert_eq!(config.size, "8G");
+        assert_eq!(config.output, PathBuf::from("biomeos-root.qcow2"));
+        assert!(config.primals_dir.is_none());
+        assert!(config.services_dir.is_none());
+        assert!(config.mount_point.is_none());
+        assert_eq!(config.fs_type, "ext4");
+        assert!(config.dns_servers.is_none());
+        assert!(config.nbd_device.is_none());
+        assert_eq!(config.hostname, "biomeos");
+    }
+
+    #[test]
+    fn test_rootfs_config_custom() {
+        let config = RootFsConfig {
+            size: "16G".to_string(),
+            output: PathBuf::from("/tmp/custom.qcow2"),
+            primals_dir: Some(PathBuf::from("/opt/primals")),
+            services_dir: Some(PathBuf::from("/etc/systemd")),
+            mount_point: Some(PathBuf::from("/mnt/build")),
+            fs_type: "xfs".to_string(),
+            dns_servers: Some(vec!["8.8.8.8".to_string(), "1.1.1.1".to_string()]),
+            nbd_device: Some("/dev/nbd1".to_string()),
+            hostname: "custom-host".to_string(),
+        };
+        assert_eq!(config.size, "16G");
+        assert_eq!(config.fs_type, "xfs");
+        assert_eq!(config.dns_servers.as_ref().map(Vec::len).unwrap_or(0), 2);
+        assert_eq!(config.nbd_device.as_deref(), Some("/dev/nbd1"));
+        assert_eq!(config.hostname, "custom-host");
+    }
+
+    #[test]
+    fn test_rootfs_config_clone() {
+        let config = RootFsConfig {
+            size: "4G".to_string(),
+            output: PathBuf::from("test.qcow2"),
+            primals_dir: None,
+            services_dir: None,
+            mount_point: None,
+            fs_type: "ext4".to_string(),
+            dns_servers: None,
+            nbd_device: None,
+            hostname: "clone-test".to_string(),
+        };
+        let cloned = config.clone();
+        assert_eq!(config.size, cloned.size);
+        assert_eq!(config.hostname, cloned.hostname);
+    }
+
+    #[test]
+    fn test_rootfs_config_debug() {
+        let config = RootFsConfig::default();
+        let debug = format!("{config:?}");
+        assert!(debug.contains("RootFsConfig"));
+        assert!(debug.contains("biomeos"));
+    }
+}

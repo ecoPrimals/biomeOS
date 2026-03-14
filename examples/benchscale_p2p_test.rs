@@ -116,7 +116,7 @@ async fn run_real_lab_test(benchscale_path: &PathBuf) -> Result<()> {
 
     // List Docker containers to verify
     let docker_ps = Command::new("docker")
-        .args(["ps", "--filter", &format!("name={}", lab_name)])
+        .args(["ps", "--filter", &format!("name={lab_name}")])
         .output()?;
 
     info!("Lab nodes:");
@@ -139,7 +139,7 @@ async fn run_real_lab_test(benchscale_path: &PathBuf) -> Result<()> {
     let ping_output = Command::new("docker")
         .args([
             "exec",
-            &format!("{}-node-1-beardog-songbird", lab_name),
+            &format!("{lab_name}-node-1-beardog-songbird"),
             "ping",
             "-c",
             "3",

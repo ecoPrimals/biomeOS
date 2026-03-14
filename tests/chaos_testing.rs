@@ -359,10 +359,7 @@ async fn test_intermittent_failures() -> Result<()> {
     }
 
     // Should have mix of successes and failures
-    println!(
-        "Intermittent failures test: {} successes, {} failures",
-        success_count, failure_count
-    );
+    println!("Intermittent failures test: {success_count} successes, {failure_count} failures");
 
     // System should handle failures gracefully without crashing
     let health_report = manager.get_system_health().await;
@@ -403,7 +400,7 @@ async fn test_recovery_after_cascade_failure() -> Result<()> {
     // Should fail or timeout gracefully
     match cascade_result {
         Ok(Ok(_)) => println!("Unexpected success during cascade failure"),
-        Ok(Err(e)) => println!("Expected error during cascade: {}", e),
+        Ok(Err(e)) => println!("Expected error during cascade: {e}"),
         Err(_) => println!("Expected timeout during cascade"),
     }
 
@@ -489,8 +486,7 @@ async fn test_health_monitoring_during_chaos() -> Result<()> {
                     | Health::Critical { .. }
                     | Health::Unknown { .. }
             ),
-            "Invalid health status at {:?}",
-            elapsed
+            "Invalid health status at {elapsed:?}"
         );
     }
 
@@ -520,7 +516,7 @@ async fn test_request_counting_under_load() -> Result<()> {
         let uri = chaos_server.uri();
         let handle = tokio::spawn(async move {
             let _ = manager_clone
-                .discover_registry(&format!("{}/api/v1/health", uri))
+                .discover_registry(&format!("{uri}/api/v1/health"))
                 .await;
         });
         handles.push(handle);
@@ -533,7 +529,7 @@ async fn test_request_counting_under_load() -> Result<()> {
 
     // Check request count
     let count = chaos_server.get_request_count();
-    println!("Total requests processed: {}", count);
+    println!("Total requests processed: {count}");
     // Request count is usize so always >= 0, validation complete
 
     Ok(())

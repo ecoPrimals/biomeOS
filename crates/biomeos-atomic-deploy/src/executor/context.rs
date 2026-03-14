@@ -375,7 +375,7 @@ mod tests {
         let mut env = HashMap::new();
         env.insert("FAMILY_ID".to_string(), "test_fam".to_string());
         let ctx = ExecutionContext::new(env);
-        let debug_str = format!("{:?}", ctx);
+        let debug_str = format!("{ctx:?}");
         assert!(debug_str.contains("ExecutionContext"));
         assert!(debug_str.contains("FAMILY_ID"));
         assert!(debug_str.contains("test_fam"));

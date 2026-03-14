@@ -294,10 +294,9 @@ impl ConnectionState {
 
 /// Living deployment graph with runtime protocol state
 pub struct LivingGraph {
-    /// Static deployment definition (from TOML). Reserved for graph validation when graph-based deployment is active.
-    #[allow(dead_code)]
-    // Future: wire up graph validation when graph-based deployment is active
-    deployment: Option<DeploymentGraph>,
+    /// Static deployment definition (from TOML).
+    /// Planned: wire up graph validation when graph-based deployment is active.
+    _deployment: Option<DeploymentGraph>,
     /// Runtime state: primal → protocol state
     protocol_state: RwLock<HashMap<String, PrimalProtocolState>>,
     /// Active connections between primals
@@ -312,7 +311,7 @@ impl LivingGraph {
     /// Create a new living graph
     pub fn new(family_id: impl Into<String>) -> Self {
         Self {
-            deployment: None,
+            _deployment: None,
             protocol_state: RwLock::new(HashMap::new()),
             connections: RwLock::new(HashMap::new()),
             family_id: family_id.into(),
@@ -323,7 +322,7 @@ impl LivingGraph {
     /// Create from a deployment graph
     pub fn from_deployment(family_id: impl Into<String>, deployment: DeploymentGraph) -> Self {
         Self {
-            deployment: Some(deployment),
+            _deployment: Some(deployment),
             protocol_state: RwLock::new(HashMap::new()),
             connections: RwLock::new(HashMap::new()),
             family_id: family_id.into(),

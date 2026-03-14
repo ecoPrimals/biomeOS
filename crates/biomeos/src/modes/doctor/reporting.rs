@@ -20,7 +20,7 @@ pub(crate) fn format_text_report(results: &Diagnostics) -> Vec<String> {
         };
         lines.push(format!("{} {}", status_icon, check.name.bold()));
         for detail in &check.details {
-            lines.push(format!("   {}", detail));
+            lines.push(format!("   {detail}"));
         }
         lines.push(String::new());
     }
@@ -86,7 +86,7 @@ pub(crate) fn add_recommendations(diag: &mut Diagnostics) {
 #[cfg(test)]
 pub(crate) fn print_diagnostics(diag: &Diagnostics) {
     for line in format_text_report(diag) {
-        println!("{}", line);
+        println!("{line}");
     }
 }
 

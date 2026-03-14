@@ -80,19 +80,19 @@ impl Default for FamilyDiscoveryConfig {
             // XDG data directory
             PathBuf::from(std::env::var("XDG_DATA_HOME").unwrap_or_else(|_| {
                 let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-                format!("{}/.local/share", home)
+                format!("{home}/.local/share")
             }))
             .join("biomeos/.family.seed"),
         ];
 
         // Add USB mount points
         if let Ok(user) = std::env::var("USER") {
-            seed_paths.push(PathBuf::from(format!("/media/{}", user)).join("biomeOS/.family.seed"));
+            seed_paths.push(PathBuf::from(format!("/media/{user}")).join("biomeOS/.family.seed"));
             seed_paths.push(
-                PathBuf::from(format!("/media/{}", user)).join("biomeOS1/biomeOS/.family.seed"),
+                PathBuf::from(format!("/media/{user}")).join("biomeOS1/biomeOS/.family.seed"),
             );
             seed_paths.push(
-                PathBuf::from(format!("/media/{}", user)).join("biomeOS21/biomeOS/.family.seed"),
+                PathBuf::from(format!("/media/{user}")).join("biomeOS21/biomeOS/.family.seed"),
             );
         }
 
@@ -243,6 +243,7 @@ pub fn get_family_id_from_env() -> String {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use std::io::Write;
@@ -263,6 +264,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_discover_from_seed_file() {
         let temp_dir = TempDir::new().unwrap();
         let seed_path = temp_dir.path().join(".family.seed");
@@ -294,6 +296,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_get_family_id_default() {
         std::env::remove_var("FAMILY_ID");
         std::env::remove_var("BIOMEOS_FAMILY_ID");
@@ -320,6 +323,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_read_family_seed_too_short() {
         let temp_dir = TempDir::new().unwrap();
         let seed_path = temp_dir.path().join(".family.seed");
@@ -367,5 +371,47 @@ mod tests {
         };
         assert_eq!(family.id, "abc123");
         assert_eq!(family.source, FamilySource::FamilyIdEnv);
+    }
+
+    #[test]
+    fn test_family_discovery_config_default() {
+        let config = FamilyDiscoveryConfig::default();
+        assert!(config.allow_default);
+        assert_eq!(config.default_family, "default");
+        assert!(!config.seed_file_paths.is_empty());
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_discover_biomeos_env_takes_precedence_over_default() {
+        std::env::set_var("BIOMEOS_FAMILY_ID", "biomeos_test_123");
+        std::env::remove_var("FAMILY_ID");
+
+        let config = FamilyDiscoveryConfig {
+            seed_file_paths: vec![],
+            allow_default: true,
+            default_family: "default".to_string(),
+        };
+        let result = discover_family_with_config(&config);
+        std::env::remove_var("BIOMEOS_FAMILY_ID");
+
+        assert!(result.is_some());
+        assert_eq!(result.unwrap().id, "biomeos_test_123");
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_nat0_deprecated_ignored() {
+        std::env::set_var("FAMILY_ID", "nat0");
+        let config = FamilyDiscoveryConfig {
+            seed_file_paths: vec![],
+            allow_default: true,
+            default_family: "fallback".to_string(),
+        };
+        let result = discover_family_with_config(&config);
+        std::env::remove_var("FAMILY_ID");
+        // nat0 is ignored, should fall through to default
+        assert!(result.is_some());
+        assert_eq!(result.unwrap().id, "fallback");
     }
 }

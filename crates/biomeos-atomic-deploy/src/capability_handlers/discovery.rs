@@ -53,7 +53,7 @@ pub async fn discover_primal_binary(
     // Auto-detect architecture
     let arch = std::env::consts::ARCH;
     let os = std::env::consts::OS;
-    let target = format!("{}-{}", arch, os);
+    let target = format!("{arch}-{os}");
 
     debug!("   Discovering {} binary for {}", primal_name, target);
 
@@ -77,7 +77,7 @@ pub async fn discover_primal_binary(
         }
     }
 
-    anyhow::bail!("Binary not found for: {}", primal_name)
+    anyhow::bail!("Binary not found for: {primal_name}")
 }
 
 #[cfg(test)]
@@ -290,7 +290,7 @@ mod tests {
         let temp = tempfile::tempdir().expect("temp dir");
         let arch = std::env::consts::ARCH;
         let os = std::env::consts::OS;
-        let target_dir = temp.path().join(format!("{}-{}", arch, os));
+        let target_dir = temp.path().join(format!("{arch}-{os}"));
         std::fs::create_dir_all(&target_dir).expect("create dir");
         let bin_path = target_dir.join("squirrel");
         std::fs::write(&bin_path, "#!/bin/sh\nexit 0").expect("write stub");
@@ -331,8 +331,7 @@ mod tests {
         let err = result.expect_err("Should fail when binary not found");
         assert!(
             err.to_string().contains("Binary not found"),
-            "Error should mention binary: {}",
-            err
+            "Error should mention binary: {err}"
         );
         assert!(
             err.to_string().contains("nonexistent_primal"),
@@ -401,7 +400,7 @@ mod tests {
     fn test_binary_discovery_path_construction() {
         let arch = std::env::consts::ARCH;
         let os = std::env::consts::OS;
-        let target = format!("{}-{}", arch, os);
+        let target = format!("{arch}-{os}");
 
         assert!(target.contains(arch));
         assert!(target.contains(os));

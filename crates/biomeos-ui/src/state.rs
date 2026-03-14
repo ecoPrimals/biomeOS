@@ -271,6 +271,7 @@ impl UIState {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use chrono::Utc;
@@ -372,7 +373,7 @@ mod tests {
                 timestamp: Utc::now(),
                 source: "test".to_string(),
                 level: LogLevel::Info,
-                message: format!("Log entry {}", i),
+                message: format!("Log entry {i}"),
             });
         }
 
@@ -493,9 +494,9 @@ mod tests {
 
         for i in 0..10 {
             state.add_device(Device {
-                id: format!("device-{}", i),
+                id: format!("device-{i}"),
                 device_type: "gpu".to_string(),
-                name: format!("GPU {}", i),
+                name: format!("GPU {i}"),
                 capabilities: vec![],
                 resources: HashMap::new(),
                 status: DeviceStatus::Available,
@@ -521,5 +522,83 @@ mod tests {
         assert_eq!(health.uptime, 7200);
         assert_eq!(health.cpu_usage, 25.5);
         assert_eq!(health.memory_usage, 1024);
+    }
+
+    #[test]
+    fn test_ui_state_default() {
+        let state = UIState::default();
+        assert!(state.devices.is_empty());
+        assert!(state.primals.is_empty());
+        assert!(state.assignments.is_empty());
+        assert!(state.logs.is_empty());
+        assert!(state.topology.nodes.is_empty());
+    }
+
+    #[test]
+    fn test_assignment_serde_roundtrip() {
+        let assignment = Assignment {
+            device_id: "gpu0".to_string(),
+            primal_id: "beardog-1".to_string(),
+            assigned_at: Utc::now(),
+            status: AssignmentStatus::Active,
+        };
+        let json = serde_json::to_string(&assignment).unwrap();
+        let parsed: Assignment = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.device_id, assignment.device_id);
+        assert_eq!(parsed.status, assignment.status);
+    }
+
+    #[test]
+    fn test_log_entry_serde_roundtrip() {
+        let entry = LogEntry {
+            timestamp: Utc::now(),
+            source: "beardog".to_string(),
+            level: LogLevel::Warning,
+            message: "test".to_string(),
+        };
+        let json = serde_json::to_string(&entry).unwrap();
+        let parsed: LogEntry = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.source, entry.source);
+        assert_eq!(parsed.level, entry.level);
+    }
+
+    #[test]
+    fn test_topology_node_serde_roundtrip() {
+        let node = TopologyNode {
+            id: "n1".to_string(),
+            node_type: "device".to_string(),
+            name: "GPU 0".to_string(),
+            status: "available".to_string(),
+        };
+        let json = serde_json::to_string(&node).unwrap();
+        let parsed: TopologyNode = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.id, node.id);
+    }
+
+    #[test]
+    fn test_topology_edge_serde_roundtrip() {
+        let edge = TopologyEdge {
+            from: "gpu0".to_string(),
+            to: "beardog-1".to_string(),
+            edge_type: "assigned".to_string(),
+        };
+        let json = serde_json::to_string(&edge).unwrap();
+        let parsed: TopologyEdge = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.from, edge.from);
+    }
+
+    #[test]
+    fn test_enum_variants_serde() {
+        let statuses = [
+            DeviceStatus::Available,
+            DeviceStatus::Assigned,
+            DeviceStatus::Offline,
+            DeviceStatus::Error,
+        ];
+        for s in statuses {
+            let json = serde_json::to_string(&s).unwrap();
+            let parsed: DeviceStatus = serde_json::from_str(&json).unwrap();
+            assert_eq!(s, parsed);
+        }
     }
 }

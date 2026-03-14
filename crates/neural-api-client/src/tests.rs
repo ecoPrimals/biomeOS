@@ -25,7 +25,7 @@ mod client_tests {
                 let n = stream.read(&mut buf).await.expect("read request");
                 let _request = &buf[..n];
 
-                let response_line = format!("{}\n", response_json);
+                let response_line = format!("{response_json}\n");
                 stream
                     .write_all(response_line.as_bytes())
                     .await

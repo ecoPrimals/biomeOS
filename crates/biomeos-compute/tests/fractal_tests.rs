@@ -163,7 +163,7 @@ async fn test_metrics_aggregation() {
 
     // Submit some workloads
     for i in 0..4 {
-        let workload = Workload::builder(format!("workload-{}", i), Runtime::Native)
+        let workload = Workload::builder(format!("workload-{i}"), Runtime::Native)
             .cpu_cores(1)
             .build();
         root.submit_workload(workload)

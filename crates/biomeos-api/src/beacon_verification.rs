@@ -105,7 +105,7 @@ pub async fn hash_via_capability(
     // FALLBACK: Direct socket discovery
     let paths = biomeos_types::paths::SystemPaths::new_lazy();
     let runtime_dir = paths.runtime_dir();
-    let socket_path = runtime_dir.join(format!("beardog-{}.sock", family_id));
+    let socket_path = runtime_dir.join(format!("beardog-{family_id}.sock"));
 
     if socket_path.exists() {
         let client = biomeos_core::AtomicClient::unix(socket_path.to_string_lossy().as_ref())
@@ -150,7 +150,7 @@ pub fn discover_neural_api_socket(family_id: &str) -> Option<String> {
     }
 
     // 3. System temp dir fallback (bootstrap scenarios)
-    let tmp_path = std::env::temp_dir().join(format!("neural-api-{}.sock", family_id));
+    let tmp_path = std::env::temp_dir().join(format!("neural-api-{family_id}.sock"));
     if tmp_path.exists() {
         return Some(tmp_path.to_string_lossy().to_string());
     }
@@ -281,7 +281,7 @@ fn discover_beacon_providers(
 
     // Try known beacon-capable primals with family-scoped sockets
     for primal in &["beardog", "songbird"] {
-        let path = runtime_dir.join(format!("{}-{}.sock", primal, family_id));
+        let path = runtime_dir.join(format!("{primal}-{family_id}.sock"));
         if path.exists() {
             providers.push(path);
         }
@@ -379,7 +379,7 @@ mod tests {
             family_id: "test".to_string(),
             plaintext: "data".to_string(),
         };
-        let debug = format!("{:?}", v);
+        let debug = format!("{v:?}");
         assert!(debug.contains("test"));
     }
 

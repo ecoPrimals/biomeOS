@@ -511,7 +511,7 @@ pub(crate) fn list_genome_bins(dir: &Path) -> Result<Vec<GenomeInfo>> {
                             .manifest
                             .architectures
                             .iter()
-                            .map(|a| format!("{:?}", a))
+                            .map(|a| format!("{a:?}"))
                             .collect(),
                     });
                 }
@@ -558,7 +558,7 @@ async fn handle_genome_command(command: GenomeCommand) -> Result<()> {
             if let Some(ref path) = args.binary_x86_64 {
                 genome
                     .add_binary(Arch::X86_64, path)
-                    .map_err(|e| anyhow::anyhow!("Failed to add x86_64 binary: {}", e))?;
+                    .map_err(|e| anyhow::anyhow!("Failed to add x86_64 binary: {e}"))?;
                 info!("   Added x86_64 binary: {}", path.display());
             }
 
@@ -566,14 +566,14 @@ async fn handle_genome_command(command: GenomeCommand) -> Result<()> {
             if let Some(ref path) = args.binary_aarch64 {
                 genome
                     .add_binary(Arch::Aarch64, path)
-                    .map_err(|e| anyhow::anyhow!("Failed to add aarch64 binary: {}", e))?;
+                    .map_err(|e| anyhow::anyhow!("Failed to add aarch64 binary: {e}"))?;
                 info!("   Added aarch64 binary: {}", path.display());
             }
 
             // Save as JSON manifest
             let json = genome
                 .to_json()
-                .map_err(|e| anyhow::anyhow!("Failed to serialize: {}", e))?;
+                .map_err(|e| anyhow::anyhow!("Failed to serialize: {e}"))?;
             std::fs::write(&args.output, json)?;
 
             info!("✅ GenomeBin created: {}", args.output.display());
@@ -611,7 +611,7 @@ async fn handle_genome_command(command: GenomeCommand) -> Result<()> {
 
             let content = std::fs::read_to_string(&args.path)?;
             let genome = GenomeBin::from_json(&content)
-                .map_err(|e| anyhow::anyhow!("Failed to parse: {}", e))?;
+                .map_err(|e| anyhow::anyhow!("Failed to parse: {e}"))?;
 
             info!("   Name: {}", genome.manifest.name);
             info!("   Version: {}", genome.manifest.version);
@@ -623,14 +623,14 @@ async fn handle_genome_command(command: GenomeCommand) -> Result<()> {
         GenomeCommand::Info(args) => {
             let content = std::fs::read_to_string(&args.path)?;
             let genome = GenomeBin::from_json(&content)
-                .map_err(|e| anyhow::anyhow!("Failed to parse: {}", e))?;
+                .map_err(|e| anyhow::anyhow!("Failed to parse: {e}"))?;
 
             println!("GenomeBin: {}", genome.manifest.name);
             println!("  Version: {}", genome.manifest.version);
             println!("  Description: {}", genome.manifest.description);
             println!("  Architectures:");
             for arch in &genome.manifest.architectures {
-                println!("    - {:?}", arch);
+                println!("    - {arch:?}");
             }
             Ok(())
         }
@@ -645,7 +645,7 @@ async fn handle_genome_command(command: GenomeCommand) -> Result<()> {
             }
             for info in &infos {
                 for line in format_genome_info(info) {
-                    println!("{}", line);
+                    println!("{line}");
                 }
             }
             Ok(())

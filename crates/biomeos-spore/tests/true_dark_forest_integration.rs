@@ -48,7 +48,7 @@ async fn test_same_family_discovery() -> Result<(), Box<dyn std::error::Error>> 
 
     // Check beardog availability
     if !std::path::Path::new(&beardog).exists() {
-        eprintln!("⚠️  Skipping: BearDog not running at {}", beardog);
+        eprintln!("⚠️  Skipping: BearDog not running at {beardog}");
         return Ok(());
     }
 
@@ -98,7 +98,7 @@ async fn test_different_family_isolation() -> Result<(), Box<dyn std::error::Err
     let beardog = beardog_socket();
 
     if !std::path::Path::new(&beardog).exists() {
-        eprintln!("⚠️  Skipping: BearDog not running at {}", beardog);
+        eprintln!("⚠️  Skipping: BearDog not running at {beardog}");
         return Ok(());
     }
 
@@ -157,7 +157,7 @@ async fn test_beacon_determinism() -> Result<(), Box<dyn std::error::Error>> {
     let beardog = beardog_socket();
 
     if !std::path::Path::new(&beardog).exists() {
-        eprintln!("⚠️  Skipping: BearDog not running at {}", beardog);
+        eprintln!("⚠️  Skipping: BearDog not running at {beardog}");
         return Ok(());
     }
 
@@ -215,7 +215,7 @@ async fn test_network_indistinguishability() -> Result<(), Box<dyn std::error::E
     let beardog = beardog_socket();
 
     if !std::path::Path::new(&beardog).exists() {
-        eprintln!("⚠️  Skipping: BearDog not running at {}", beardog);
+        eprintln!("⚠️  Skipping: BearDog not running at {beardog}");
         return Ok(());
     }
 
@@ -230,7 +230,7 @@ async fn test_network_indistinguishability() -> Result<(), Box<dyn std::error::E
     let mut beacons = Vec::new();
     for i in 0..10 {
         let beacon = mgr
-            .generate_pure_noise_beacon(&format!("/tmp/test_{}.sock", i), &["test"], None)
+            .generate_pure_noise_beacon(&format!("/tmp/test_{i}.sock"), &["test"], None)
             .await?;
         beacons.push(beacon);
     }
@@ -281,11 +281,10 @@ async fn test_network_indistinguishability() -> Result<(), Box<dyn std::error::E
 
     assert!(
         found_identifiers.is_empty(),
-        "Found identifiers: {:?}",
-        found_identifiers
+        "Found identifiers: {found_identifiers:?}"
     );
     println!("✅ PASSED: No identifiable strings found");
-    println!("   Checked: {:?}", identifiers);
+    println!("   Checked: {identifiers:?}");
 
     // Test 4: Size consistency
     println!("\n📊 Test 4: Verify size consistency");
@@ -294,9 +293,9 @@ async fn test_network_indistinguishability() -> Result<(), Box<dyn std::error::E
     let max_size = sizes.iter().max().unwrap();
     let size_variance = max_size - min_size;
 
-    println!("   Min size: {} bytes", min_size);
-    println!("   Max size: {} bytes", max_size);
-    println!("   Variance: {} bytes", size_variance);
+    println!("   Min size: {min_size} bytes");
+    println!("   Max size: {max_size} bytes");
+    println!("   Variance: {size_variance} bytes");
 
     // Should be minimal variance (only from different socket path lengths)
     assert!(size_variance < 50, "Size variance should be minimal");
@@ -337,7 +336,7 @@ async fn test_performance_characteristics() -> Result<(), Box<dyn std::error::Er
     let beardog = beardog_socket();
 
     if !std::path::Path::new(&beardog).exists() {
-        eprintln!("⚠️  Skipping: BearDog not running at {}", beardog);
+        eprintln!("⚠️  Skipping: BearDog not running at {beardog}");
         return Ok(());
     }
 
@@ -354,7 +353,7 @@ async fn test_performance_characteristics() -> Result<(), Box<dyn std::error::Er
 
     for i in 0..50 {
         let beacon = mgr
-            .generate_pure_noise_beacon(&format!("/tmp/perf_{}.sock", i), &["test"], None)
+            .generate_pure_noise_beacon(&format!("/tmp/perf_{i}.sock"), &["test"], None)
             .await?;
         beacons.push(beacon);
     }
@@ -363,8 +362,8 @@ async fn test_performance_characteristics() -> Result<(), Box<dyn std::error::Er
     let avg_generation = generation_time / 50;
 
     println!("✅ Generation results:");
-    println!("   Total time: {:?}", generation_time);
-    println!("   Average: {:?} per beacon", avg_generation);
+    println!("   Total time: {generation_time:?}");
+    println!("   Average: {avg_generation:?} per beacon");
     println!(
         "   Throughput: ~{} beacons/sec",
         1000 / avg_generation.as_millis().max(1)
@@ -383,8 +382,8 @@ async fn test_performance_characteristics() -> Result<(), Box<dyn std::error::Er
     let avg_decrypt_success = decrypt_success_time / 50;
 
     println!("✅ Successful decryption results:");
-    println!("   Total time: {:?}", decrypt_success_time);
-    println!("   Average: {:?} per beacon", avg_decrypt_success);
+    println!("   Total time: {decrypt_success_time:?}");
+    println!("   Average: {avg_decrypt_success:?} per beacon");
 
     // Benchmark decryption (failure case - random noise)
     println!("\n⚡ Benchmarking silent failure (50 iterations)...");
@@ -407,8 +406,8 @@ async fn test_performance_characteristics() -> Result<(), Box<dyn std::error::Er
     let avg_decrypt_failure = decrypt_failure_time / 50;
 
     println!("✅ Silent failure results:");
-    println!("   Total time: {:?}", decrypt_failure_time);
-    println!("   Average: {:?} per beacon", avg_decrypt_failure);
+    println!("   Total time: {decrypt_failure_time:?}");
+    println!("   Average: {avg_decrypt_failure:?} per beacon");
     println!(
         "   Speedup vs success: {:.1}x",
         avg_decrypt_success.as_micros() as f64 / avg_decrypt_failure.as_micros() as f64
@@ -417,9 +416,9 @@ async fn test_performance_characteristics() -> Result<(), Box<dyn std::error::Er
     cleanup_test_seed(seed_path).await;
 
     println!("\n🏆 Performance Summary:");
-    println!("  Generation: ~{:?} avg", avg_generation);
-    println!("  Success decrypt: ~{:?} avg", avg_decrypt_success);
-    println!("  Silent failure: ~{:?} avg", avg_decrypt_failure);
+    println!("  Generation: ~{avg_generation:?} avg");
+    println!("  Success decrypt: ~{avg_decrypt_success:?} avg");
+    println!("  Silent failure: ~{avg_decrypt_failure:?} avg");
     println!("  Status: ⚡ Production-ready performance\n");
 
     Ok(())

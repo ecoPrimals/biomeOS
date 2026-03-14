@@ -27,7 +27,7 @@ async fn main() -> Result<()> {
             manager
         }
         Err(e) => {
-            println!("❌ Failed to initialize: {}", e);
+            println!("❌ Failed to initialize: {e}");
             return Err(e);
         }
     };
@@ -39,15 +39,15 @@ async fn main() -> Result<()> {
             println!("Found {} endpoints:", endpoints.len());
 
             for endpoint in &endpoints {
-                println!("  🔗 Network endpoint: {}", endpoint);
+                println!("  🔗 Network endpoint: {endpoint}");
 
                 // Test endpoint probing for each discovered endpoint
                 match manager.probe_endpoint(endpoint).await {
                     Ok(probe_result) => {
-                        println!("     Status: {}", probe_result);
+                        println!("     Status: {probe_result}");
                     }
                     Err(e) => {
-                        println!("     Status: Probe failed - {}", e);
+                        println!("     Status: Probe failed - {e}");
                     }
                 }
                 println!();
@@ -59,7 +59,7 @@ async fn main() -> Result<()> {
                 );
             }
         }
-        Err(e) => println!("❌ Discovery failed: {}", e),
+        Err(e) => println!("❌ Discovery failed: {e}"),
     }
 
     // Test health monitoring
@@ -76,10 +76,10 @@ async fn main() -> Result<()> {
         Ok(network_primals) => {
             println!("  Found {} primals via network scan", network_primals.len());
             for endpoint in network_primals {
-                println!("    🔗 Network endpoint: {}", endpoint);
+                println!("    🔗 Network endpoint: {endpoint}");
             }
         }
-        Err(e) => println!("❌ Network discovery failed: {}", e),
+        Err(e) => println!("❌ Network discovery failed: {e}"),
     }
 
     // Test primal registration

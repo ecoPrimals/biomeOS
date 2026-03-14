@@ -61,3 +61,119 @@ impl LifecycleManager {
         }
     }
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    #[tokio::test]
+    async fn test_get_status_empty() {
+        let manager = LifecycleManager::new("test-family");
+        let status = manager.get_status().await;
+        assert!(status.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_get_status_after_register() {
+        let manager = LifecycleManager::new("test-family");
+        manager
+            .register_primal("beardog", PathBuf::from("/tmp/bd.sock"), Some(42), None)
+            .await
+            .unwrap();
+        let status = manager.get_status().await;
+        assert_eq!(status.len(), 1);
+        assert!(status.contains_key("beardog"));
+    }
+
+    #[tokio::test]
+    async fn test_get_primal_info_found() {
+        let manager = LifecycleManager::new("test-family");
+        manager
+            .register_primal("songbird", PathBuf::from("/tmp/sb.sock"), Some(100), None)
+            .await
+            .unwrap();
+        let info = manager.get_primal_info("songbird").await;
+        assert!(info.is_some());
+        let info = info.unwrap();
+        assert_eq!(info.name, "songbird");
+        assert_eq!(info.pid, Some(100));
+    }
+
+    #[tokio::test]
+    async fn test_get_primal_info_not_found() {
+        let manager = LifecycleManager::new("test-family");
+        let info = manager.get_primal_info("nonexistent").await;
+        assert!(info.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_clone_for_task_shares_state() {
+        let manager = LifecycleManager::new("test-family");
+        manager
+            .register_primal("test", PathBuf::from("/tmp/t.sock"), None, None)
+            .await
+            .unwrap();
+        let cloned = manager.clone_for_task();
+        let status = cloned.get_status().await;
+        assert_eq!(status.len(), 1);
+        assert!(status.contains_key("test"));
+    }
+
+    #[tokio::test]
+    async fn test_update_dependency_graph() {
+        let manager = LifecycleManager::new("test-family");
+        let beardog_node = crate::neural_graph::GraphNode {
+            id: "beardog".to_string(),
+            primal: None,
+            output: None,
+            operation: None,
+            constraints: None,
+            depends_on: vec![],
+            capabilities: vec![],
+            capabilities_provided: None,
+            parameter_mappings: None,
+            node_type: None,
+            dependencies: vec![],
+            config: std::collections::HashMap::new(),
+            outputs: vec![],
+        };
+        let songbird_node = crate::neural_graph::GraphNode {
+            id: "songbird".to_string(),
+            primal: None,
+            output: None,
+            operation: None,
+            constraints: None,
+            depends_on: vec!["beardog".to_string()],
+            capabilities: vec![],
+            capabilities_provided: None,
+            parameter_mappings: None,
+            node_type: None,
+            dependencies: vec![],
+            config: std::collections::HashMap::new(),
+            outputs: vec![],
+        };
+        manager
+            .register_primal(
+                "beardog",
+                PathBuf::from("/tmp/beardog.sock"),
+                None,
+                Some(beardog_node),
+            )
+            .await
+            .unwrap();
+        manager
+            .register_primal(
+                "songbird",
+                PathBuf::from("/tmp/songbird.sock"),
+                None,
+                Some(songbird_node),
+            )
+            .await
+            .unwrap();
+        manager.update_dependency_graph().await;
+        let beardog_info = manager.get_primal_info("beardog").await.unwrap();
+        assert!(beardog_info.depended_by.contains(&"songbird".to_string()));
+    }
+}

@@ -137,7 +137,7 @@ async fn list_models() -> Result<()> {
 
 /// Resolve a model across the mesh
 async fn resolve_model(model_id: &str) -> Result<()> {
-    println!("\n  Resolving: {}\n", model_id);
+    println!("\n  Resolving: {model_id}\n");
 
     let cache = ModelCache::new().await?;
     let resolution = cache.resolve(model_id).await;
@@ -167,7 +167,7 @@ async fn resolve_model(model_id: &str) -> Result<()> {
             println!("  NOT FOUND in local cache or mesh.");
             println!();
             println!("  To cache this model:");
-            println!("    1. Download: python3 -c \"from transformers import AutoModel; AutoModel.from_pretrained('{}')\"", model_id);
+            println!("    1. Download: python3 -c \"from transformers import AutoModel; AutoModel.from_pretrained('{model_id}')\"");
             println!("    2. Register: biomeos model-cache import-hf");
         }
     }
@@ -217,7 +217,7 @@ async fn show_status() -> Result<()> {
     } else {
         "connected (mesh registry active)"
     };
-    println!("    NestGate:  {}", nestgate_status);
+    println!("    NestGate:  {nestgate_status}");
 
     // Check HuggingFace cache
     let hf_cache = std::env::var("HOME")
@@ -244,7 +244,7 @@ async fn show_status() -> Result<()> {
             println!();
             println!("  HuggingFace cache:");
             println!("    Models:       {}", hf_models.len());
-            println!("    Unregistered: {}", unregistered);
+            println!("    Unregistered: {unregistered}");
             if unregistered > 0 {
                 println!("    Run 'biomeos model-cache import-hf' to register them");
             }

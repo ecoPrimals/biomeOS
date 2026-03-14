@@ -52,7 +52,7 @@ impl fmt::Display for Capability {
             Capability::Observability => write!(f, "observability"),
             Capability::Federation => write!(f, "federation"),
             Capability::Network => write!(f, "network"),
-            Capability::Custom(s) => write!(f, "custom:{}", s),
+            Capability::Custom(s) => write!(f, "custom:{s}"),
         }
     }
 }
@@ -180,7 +180,7 @@ impl PrimalConfig {
             .take(8)
             .collect::<String>();
 
-        Ok(format!("{}@{}-{}", binary_name, hostname, random_suffix))
+        Ok(format!("{binary_name}@{hostname}-{random_suffix}"))
     }
 
     /// Create config for a specific primal type (for manual construction)

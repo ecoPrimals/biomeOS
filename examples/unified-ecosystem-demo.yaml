@@ -473,19 +473,19 @@ documentation:
     
   examples: |
     # Complete ecosystem deployment
-    biome deploy unified-ecosystem-demo.yaml
+    biomeos deploy unified-ecosystem-demo.yaml
     
     # Check ecosystem health
-    biome status unified-ecosystem-demo
+    biomeos status unified-ecosystem-demo
     
     # Scale web application
-    biome scale unified-ecosystem-demo web-application --replicas 5
+    biomeos scale unified-ecosystem-demo web-application --replicas 5
     
     # View logs across all Primals
-    biome logs unified-ecosystem-demo --all-primals
+    biomeos logs unified-ecosystem-demo --all-primals
     
     # Test cross-Primal coordination
-    biome exec unified-ecosystem-demo web-application -- curl nestgate:8082/health
+    biomeos exec unified-ecosystem-demo web-application -- curl nestgate:8082/health
 
 # Metadata
 metadata:

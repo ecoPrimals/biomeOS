@@ -237,12 +237,12 @@ impl BeaconGeneticsManifest {
         let contents = std::fs::read_to_string(path).map_err(|e| {
             SporeError::IoError(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
-                format!("Failed to read beacon genetics: {}", e),
+                format!("Failed to read beacon genetics: {e}"),
             ))
         })?;
 
         serde_json::from_str(&contents)
-            .map_err(|e| SporeError::DeserializationError(format!("Invalid JSON: {}", e)))
+            .map_err(|e| SporeError::DeserializationError(format!("Invalid JSON: {e}")))
     }
 
     /// Save to JSON file
@@ -252,8 +252,7 @@ impl BeaconGeneticsManifest {
 
         std::fs::write(path, contents).map_err(|e| {
             SporeError::IoError(std::io::Error::other(format!(
-                "Failed to write beacon genetics: {}",
-                e
+                "Failed to write beacon genetics: {e}"
             )))
         })
     }
@@ -298,7 +297,7 @@ mod tests {
     #[test]
     fn test_beacon_id_display() {
         let id = BeaconId::from_hex("a3f912b7deadbeef");
-        assert_eq!(format!("{}", id), "a3f912b7deadbeef");
+        assert_eq!(format!("{id}"), "a3f912b7deadbeef");
         assert_eq!(id.short(), "a3f912b7");
     }
 
@@ -318,7 +317,7 @@ mod tests {
     fn test_beacon_id_empty() {
         let id = BeaconId::from_hex("");
         assert_eq!(id.short(), "");
-        assert_eq!(format!("{}", id), "");
+        assert_eq!(format!("{id}"), "");
     }
 
     #[test]
@@ -439,12 +438,7 @@ mod tests {
             (MeetingVisibility::OneWayOut, "one_way_out"),
         ] {
             let json = serde_json::to_string(&vis).expect("serialize");
-            assert!(
-                json.contains(expected),
-                "expected '{}' in {}",
-                expected,
-                json
-            );
+            assert!(json.contains(expected), "expected '{expected}' in {json}");
             let restored: MeetingVisibility = serde_json::from_str(&json).expect("deserialize");
             assert_eq!(vis, restored);
         }
@@ -517,7 +511,7 @@ mod tests {
         };
         let cloned = result.clone();
         assert_eq!(cloned.added, 1);
-        let dbg = format!("{:?}", result);
+        let dbg = format!("{result:?}");
         assert!(dbg.contains("SyncResult"));
     }
 
@@ -674,7 +668,7 @@ mod tests {
         let manifest = BeaconGeneticsManifest::new(BeaconId::from_hex("clone"), "h");
         let cloned = manifest.clone();
         assert_eq!(cloned.own_beacon_id, manifest.own_beacon_id);
-        let dbg = format!("{:?}", manifest);
+        let dbg = format!("{manifest:?}");
         assert!(dbg.contains("BeaconGeneticsManifest"));
     }
 }

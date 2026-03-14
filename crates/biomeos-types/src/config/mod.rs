@@ -157,14 +157,11 @@ impl BiomeOSConfig {
     /// Load configuration from file
     pub fn from_file(path: impl AsRef<std::path::Path>) -> BiomeResult<Self> {
         let content = std::fs::read_to_string(path).map_err(|e| {
-            BiomeError::config_error(format!("Failed to read config file: {}", e), None::<String>)
+            BiomeError::config_error(format!("Failed to read config file: {e}"), None::<String>)
         })?;
 
         let config: Self = serde_yaml::from_str(&content).map_err(|e| {
-            BiomeError::config_error(
-                format!("Failed to parse config file: {}", e),
-                None::<String>,
-            )
+            BiomeError::config_error(format!("Failed to parse config file: {e}"), None::<String>)
         })?;
 
         config.validate()?;
@@ -174,14 +171,11 @@ impl BiomeOSConfig {
     /// Save configuration to file
     pub fn to_file(&self, path: impl AsRef<std::path::Path>) -> BiomeResult<()> {
         let content = serde_yaml::to_string(self).map_err(|e| {
-            BiomeError::config_error(format!("Failed to serialize config: {}", e), None::<String>)
+            BiomeError::config_error(format!("Failed to serialize config: {e}"), None::<String>)
         })?;
 
         std::fs::write(path, content).map_err(|e| {
-            BiomeError::config_error(
-                format!("Failed to write config file: {}", e),
-                None::<String>,
-            )
+            BiomeError::config_error(format!("Failed to write config file: {e}"), None::<String>)
         })?;
 
         Ok(())
@@ -318,7 +312,7 @@ impl BiomeOSConfig {
             // Apply environment-specific endpoints
             for (service, endpoint) in &env_config.endpoints {
                 config.metadata.custom.insert(
-                    format!("{}_endpoint", service),
+                    format!("{service}_endpoint"),
                     serde_json::Value::String(endpoint.clone()),
                 );
             }

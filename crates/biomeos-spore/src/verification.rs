@@ -197,7 +197,7 @@ impl SporeVerifier {
                 .count();
 
             if stale_count > 0 {
-                recommendations.push(format!("{} stale binaries need update", stale_count));
+                recommendations.push(format!("{stale_count} stale binaries need update"));
             }
         }
 
@@ -249,7 +249,7 @@ impl SporeVerifier {
         hasher.update(&bytes);
         let result = hasher.finalize();
 
-        Ok(format!("{:x}", result))
+        Ok(format!("{result:x}"))
     }
 
     /// Discover mounted spores by scanning /media/*

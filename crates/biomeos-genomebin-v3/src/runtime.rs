@@ -23,7 +23,7 @@ impl GenomeBin {
         let compressed = self
             .binaries
             .get(&arch)
-            .with_context(|| format!("No binary for current architecture: {:?}", arch))?;
+            .with_context(|| format!("No binary for current architecture: {arch:?}"))?;
 
         // Decompress
         let decompressed = compressed
@@ -113,7 +113,7 @@ impl GenomeBin {
             .with_context(|| format!("Failed to execute: {}", binary_path.display()))?;
 
         if !status.success() {
-            anyhow::bail!("Process exited with status: {}", status);
+            anyhow::bail!("Process exited with status: {status}");
         }
 
         // Temp dir automatically cleaned up on drop
@@ -135,8 +135,7 @@ mod tests {
             path_str.contains("/opt")
                 || path_str.contains("/.local")
                 || path_str.contains("/data/local/tmp"),
-            "path should be platform-appropriate, got: {}",
-            path_str
+            "path should be platform-appropriate, got: {path_str}"
         );
     }
 
@@ -151,8 +150,7 @@ mod tests {
         let msg = err.to_string();
         assert!(
             msg.contains("No binary") || msg.contains("architecture"),
-            "error should mention missing binary/arch: {}",
-            msg
+            "error should mention missing binary/arch: {msg}"
         );
     }
 

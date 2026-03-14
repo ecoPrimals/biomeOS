@@ -475,7 +475,7 @@ mod tests {
     #[test]
     fn primal_id_display() {
         let id = PrimalId::new("beardog").expect("valid");
-        assert_eq!(format!("{}", id), "beardog");
+        assert_eq!(format!("{id}"), "beardog");
     }
 
     #[test]
@@ -488,7 +488,7 @@ mod tests {
     #[test]
     fn family_id_display() {
         let family = FamilyId::new("iidn");
-        assert_eq!(format!("{}", family), "iidn");
+        assert_eq!(format!("{family}"), "iidn");
     }
 
     #[test]
@@ -510,7 +510,7 @@ mod tests {
     #[test]
     fn tower_id_display() {
         let tower = TowerId::new("tower-alpha");
-        assert_eq!(format!("{}", tower), "tower-alpha");
+        assert_eq!(format!("{tower}"), "tower-alpha");
     }
 
     #[test]
@@ -658,7 +658,7 @@ mod tests {
     fn session_id_display() {
         let uuid = uuid::Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap();
         let session = SessionId::from_uuid(uuid);
-        let s = format!("{}", session);
+        let s = format!("{session}");
         assert!(s.contains("550e8400"));
     }
 
@@ -673,7 +673,7 @@ mod tests {
     #[test]
     fn endpoint_display() {
         let ep = Endpoint::new("http://example.com").expect("valid");
-        let s = format!("{}", ep);
+        let s = format!("{ep}");
         assert!(s.contains("example.com"));
     }
 
@@ -688,6 +688,6 @@ mod tests {
     fn id_error_invalid_url() {
         let err = Endpoint::new("not-a-valid-url").unwrap_err();
         let id_err: IdError = err.into();
-        assert!(format!("{}", id_err).to_lowercase().contains("url"));
+        assert!(format!("{id_err}").to_lowercase().contains("url"));
     }
 }

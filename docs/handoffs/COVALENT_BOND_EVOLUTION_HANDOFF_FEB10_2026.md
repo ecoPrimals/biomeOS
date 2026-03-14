@@ -1,3 +1,5 @@
+> **HISTORICAL** — This handoff predates v2.37. See CURRENT_STATUS.md for latest.
+
 # Covalent Bond Evolution Handoff - Feb 10, 2026
 
 ## Goal

@@ -176,7 +176,7 @@ impl DiscoveryBootstrap {
             const CANDIDATE_PORTS: &[u16] = &[3000, 9199, 8080, 5000];
 
             for &port in CANDIDATE_PORTS {
-                let addr = format!("127.0.0.1:{}", port);
+                let addr = format!("127.0.0.1:{port}");
                 match tokio::time::timeout(
                     Duration::from_secs(2),
                     tokio::net::TcpStream::connect(&addr),
@@ -184,7 +184,7 @@ impl DiscoveryBootstrap {
                 .await
                 {
                     Ok(Ok(_)) => {
-                        let endpoint = format!("http://127.0.0.1:{}", port);
+                        let endpoint = format!("http://127.0.0.1:{port}");
                         tracing::info!("mDNS-style discovery: found service at {}", endpoint);
                         return Ok(endpoint);
                     }
@@ -234,10 +234,10 @@ impl DiscoveryBootstrap {
         // Bind to any available port for sending
         let socket = UdpSocket::bind("0.0.0.0:0")
             .await
-            .map_err(|e| anyhow::anyhow!("Failed to bind UDP socket: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("Failed to bind UDP socket: {e}"))?;
         socket
             .set_broadcast(true)
-            .map_err(|e| anyhow::anyhow!("Failed to enable broadcast: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("Failed to enable broadcast: {e}"))?;
 
         // Send discovery packet
         let request = serde_json::json!({
@@ -246,12 +246,12 @@ impl DiscoveryBootstrap {
             "service": self.service_name,
         });
         let packet = serde_json::to_vec(&request)?;
-        let broadcast_addr = format!("255.255.255.255:{}", discovery_port);
+        let broadcast_addr = format!("255.255.255.255:{discovery_port}");
 
         socket
             .send_to(&packet, &broadcast_addr)
             .await
-            .map_err(|e| anyhow::anyhow!("Failed to send broadcast: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("Failed to send broadcast: {e}"))?;
 
         tracing::debug!(
             "Broadcast sent to {}, listening for responses...",
@@ -268,9 +268,9 @@ impl DiscoveryBootstrap {
                         return Ok(endpoint.to_string());
                     }
                 }
-                Err(anyhow::anyhow!("Invalid broadcast response from {}", addr))
+                Err(anyhow::anyhow!("Invalid broadcast response from {addr}"))
             }
-            Ok(Err(e)) => Err(anyhow::anyhow!("Broadcast receive error: {}", e)),
+            Ok(Err(e)) => Err(anyhow::anyhow!("Broadcast receive error: {e}")),
             Err(_) => {
                 tracing::trace!("Broadcast discovery timed out (3s)");
                 Err(anyhow::anyhow!("No services responded to broadcast"))
@@ -362,7 +362,7 @@ mod tests {
     #[test]
     fn test_bootstrap_debug() {
         let bootstrap = DiscoveryBootstrap::new("test");
-        let debug_str = format!("{:?}", bootstrap);
+        let debug_str = format!("{bootstrap:?}");
         assert!(debug_str.contains("DiscoveryBootstrap"));
         assert!(debug_str.contains("test"));
     }

@@ -201,7 +201,7 @@ impl CapabilityRegistry {
         let paths = SystemPaths::new_lazy();
         let socket_path = paths
             .runtime_dir()
-            .join(format!("biomeos-registry-{}.sock", family_id));
+            .join(format!("biomeos-registry-{family_id}.sock"));
 
         info!("🔧 Creating biomeOS capability registry");
         info!("   Family: {}", family_id);
@@ -292,7 +292,7 @@ impl CapabilityRegistry {
             Ok(())
         } else {
             Err(BiomeError::resource_error(
-                format!("Primal not found: {:?}", primal_id),
+                format!("Primal not found: {primal_id:?}"),
                 "registry",
                 None::<String>,
                 None::<String>,
@@ -326,7 +326,7 @@ impl CapabilityRegistry {
             Ok(())
         } else {
             Err(BiomeError::resource_error(
-                format!("Primal not found: {:?}", primal_id),
+                format!("Primal not found: {primal_id:?}"),
                 "registry",
                 None::<String>,
                 None::<String>,
@@ -340,7 +340,7 @@ impl CapabilityRegistry {
         if self.socket_path.exists() {
             std::fs::remove_file(&self.socket_path).map_err(|e| {
                 BiomeError::resource_error(
-                    format!("Failed to remove existing socket: {}", e),
+                    format!("Failed to remove existing socket: {e}"),
                     "registry_socket",
                     None::<String>,
                     None::<String>,
@@ -351,7 +351,7 @@ impl CapabilityRegistry {
         // Create Unix listener
         let listener = UnixListener::bind(&self.socket_path).map_err(|e| {
             BiomeError::resource_error(
-                format!("Failed to bind Unix socket: {}", e),
+                format!("Failed to bind Unix socket: {e}"),
                 "registry_socket",
                 None::<String>,
                 None::<String>,
@@ -477,7 +477,7 @@ impl CapabilityRegistry {
                     request_id,
                     status: ResponseStatus::Error,
                     data: None,
-                    error: Some(format!("Invalid primal ID: {}", e)),
+                    error: Some(format!("Invalid primal ID: {e}")),
                 },
             },
 
@@ -496,14 +496,14 @@ impl CapabilityRegistry {
                         request_id,
                         status: ResponseStatus::Error,
                         data: None,
-                        error: Some(format!("Failed to serialize provider info: {}", e)),
+                        error: Some(format!("Failed to serialize provider info: {e}")),
                     },
                 },
                 Ok(None) => RegistryResponse {
                     request_id,
                     status: ResponseStatus::NotFound,
                     data: None,
-                    error: Some(format!("No provider found for: {:?}", capability)),
+                    error: Some(format!("No provider found for: {capability:?}")),
                 },
                 Err(e) => RegistryResponse {
                     request_id,
@@ -526,7 +526,7 @@ impl CapabilityRegistry {
                         request_id,
                         status: ResponseStatus::Error,
                         data: None,
-                        error: Some(format!("Failed to serialize primals list: {}", e)),
+                        error: Some(format!("Failed to serialize primals list: {e}")),
                     },
                 }
             }
@@ -555,7 +555,7 @@ impl CapabilityRegistry {
                     request_id,
                     status: ResponseStatus::Error,
                     data: None,
-                    error: Some(format!("Invalid primal ID: {}", e)),
+                    error: Some(format!("Invalid primal ID: {e}")),
                 },
             },
 
@@ -583,7 +583,7 @@ impl CapabilityRegistry {
                     request_id,
                     status: ResponseStatus::Error,
                     data: None,
-                    error: Some(format!("Invalid primal ID: {}", e)),
+                    error: Some(format!("Invalid primal ID: {e}")),
                 },
             },
         }

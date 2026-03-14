@@ -14,10 +14,7 @@ pub async fn handle_chimera_list() -> anyhow::Result<()> {
     let definitions_dir = Path::new("chimeras/definitions");
 
     if !definitions_dir.exists() {
-        println!(
-            "❌ Chimera definitions directory not found: {:?}",
-            definitions_dir
-        );
+        println!("❌ Chimera definitions directory not found: {definitions_dir:?}");
         println!("   Run from biomeOS root directory");
         return Ok(());
     }
@@ -39,7 +36,7 @@ pub async fn handle_chimera_list() -> anyhow::Result<()> {
             }
         }
         Err(e) => {
-            println!("❌ Failed to load chimera registry: {}", e);
+            println!("❌ Failed to load chimera registry: {e}");
         }
     }
 
@@ -60,7 +57,7 @@ pub async fn handle_chimera_show(id: &str) -> anyhow::Result<()> {
             println!();
             println!("   Description:");
             for line in def.chimera.description.lines() {
-                println!("     {}", line);
+                println!("     {line}");
             }
             println!();
 
@@ -91,7 +88,7 @@ pub async fn handle_chimera_show(id: &str) -> anyhow::Result<()> {
             }
         }
         None => {
-            println!("❌ Chimera not found: {}", id);
+            println!("❌ Chimera not found: {id}");
             println!("   Run 'biomeos chimera list' to see available chimeras");
         }
     }
@@ -106,7 +103,7 @@ pub async fn handle_chimera_build(id: &str) -> anyhow::Result<()> {
 
     match registry.get(id) {
         Some(def) => {
-            println!("🔨 Building chimera: {}", id);
+            println!("🔨 Building chimera: {id}");
 
             let builder = ChimeraBuilder::new(Arc::clone(&def))
                 .output_dir("bin/chimeras")
@@ -118,7 +115,7 @@ pub async fn handle_chimera_build(id: &str) -> anyhow::Result<()> {
                     println!("   ✅ Found {} required primal binaries", paths.len());
                 }
                 Err(e) => {
-                    println!("   ❌ Missing primals: {}", e);
+                    println!("   ❌ Missing primals: {e}");
                     println!("   Run './bin/pull-primals.sh --all' first");
                     return Ok(());
                 }
@@ -130,24 +127,25 @@ pub async fn handle_chimera_build(id: &str) -> anyhow::Result<()> {
                     println!("   ✅ Built in {:?}", result.duration);
                     println!("   📦 Output: {:?}", result.binary_path);
                     for warning in &result.warnings {
-                        println!("   ⚠️  {}", warning);
+                        println!("   ⚠️  {warning}");
                     }
                 }
                 Err(e) => {
-                    println!("   ❌ Build failed: {}", e);
+                    println!("   ❌ Build failed: {e}");
                 }
             }
         }
         None => {
-            println!("❌ Chimera not found: {}", id);
+            println!("❌ Chimera not found: {id}");
         }
     }
 
     Ok(())
 }
 
-/// Parse chimera ID from YAML content (testable pure function)
-#[allow(dead_code)] // Used by tests
+/// Parse chimera ID from YAML content (testable pure function).
+/// Planned utility for YAML-based chimera workflows.
+#[allow(dead_code)]
 pub(crate) fn parse_chimera_id_from_yaml(content: &str) -> Option<String> {
     for line in content.lines() {
         let trimmed = line.trim();

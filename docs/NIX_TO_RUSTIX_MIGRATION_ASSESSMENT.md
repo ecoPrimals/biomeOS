@@ -1,5 +1,7 @@
 # nix to rustix Migration Assessment
 
+> **STATUS: COMPLETED** — Migration fully executed. This document is retained as a fossil record of the assessment.
+
 **Date:** 2026-03-13  
 **Status:** COMPLETED — all 8 crates migrated from nix to rustix. See CURRENT_STATUS.md.  
 **Scope:** Crates using `nix` in the biomeOS workspace.

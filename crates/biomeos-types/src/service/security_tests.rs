@@ -238,10 +238,10 @@ fn enum_auth_method_variants() {
         ),
     ] {
         let parsed: AuthMethod = serde_json::from_str(json).unwrap();
-        assert_eq!(format!("{:?}", parsed), format!("{:?}", expected));
+        assert_eq!(format!("{parsed:?}"), format!("{:?}", expected));
         let roundtrip = serde_json::to_string(&parsed).unwrap();
         let reparsed: AuthMethod = serde_json::from_str(&roundtrip).unwrap();
-        assert_eq!(format!("{:?}", reparsed), format!("{:?}", expected));
+        assert_eq!(format!("{reparsed:?}"), format!("{:?}", expected));
     }
 }
 

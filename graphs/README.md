@@ -1,7 +1,7 @@
 # biomeOS Deployment Graphs
 
 **Updated**: March 12, 2026
-**Status**: 30 deploy graphs (4 core + 26 domain), all XDG-compliant, all tests passing
+**Status**: 35 deploy graphs (4 core + 31 domain), all XDG-compliant, all tests passing
 
 ---
 
@@ -52,7 +52,7 @@ Each primal declares `capabilities_provided` — semantic-to-actual method mappi
 "stun.probe_port_pattern" = "stun.probe_port_pattern"
 ```
 
-These align with the 170+ translations in `capability_translation.rs`.
+These align with the 210+ translations in `capability_translation.rs`.
 
 ---
 
@@ -111,4 +111,4 @@ Deploy the trio: `graph.execute provenance_trio_deploy` (requires Tower running)
 
 ---
 
-**Tests**: 4,033 passing | **Core graphs**: 4 | **Domain graphs**: 26 | **Archived**: 53
+**Tests**: 4,647 passing | **Core graphs**: 4 | **Domain graphs**: 31 | **Archived**: 53

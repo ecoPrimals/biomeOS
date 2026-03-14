@@ -139,7 +139,7 @@ async fn test_metrics_multiple() {
 
     for i in 0..5 {
         let metric = RoutingMetrics {
-            request_id: format!("test-{}", i),
+            request_id: format!("test-{i}"),
             capability: "test".to_string(),
             method: "test.method".to_string(),
             routed_through: vec![],

@@ -91,7 +91,7 @@ impl LifecycleManager {
         if let Some(primal) = primals.get_mut(name) {
             primal.state = LifecycleState::Dead {
                 since: chrono::Utc::now(),
-                reason: format!("{:?}", reason),
+                reason: format!("{reason:?}"),
             };
             primal.pid = None;
         }

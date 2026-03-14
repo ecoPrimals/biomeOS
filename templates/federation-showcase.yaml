@@ -633,16 +633,16 @@ documentation:
     
   deployment: |
     # Deploy the complete federation showcase
-    biome deploy federation-showcase.yaml
+    biomeos deploy federation-showcase.yaml
     
     # Monitor deployment progress
-    biome status federation-showcase --watch
+    biomeos status federation-showcase --watch
     
     # Access the federation dashboard
     open http://localhost:3000
     
     # Run demonstration scenarios
-    biome exec federation-showcase federation-dashboard -- /scenarios/complete_ecosystem
+    biomeos exec federation-showcase federation-dashboard -- /scenarios/complete_ecosystem
     
   architecture: |
     The federation showcase demonstrates:

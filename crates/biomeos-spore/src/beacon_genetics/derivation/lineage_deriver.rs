@@ -34,7 +34,7 @@ impl<C: CapabilityCaller> LineageDeriver<C> {
     ) -> SporeResult<DeviceLineage> {
         info!("🧬 Deriving device lineage for {} ({})", node_id, device_id);
 
-        let context = format!("ecoPrimals-device-lineage-v1:{}:{}", family_id, device_id);
+        let context = format!("ecoPrimals-device-lineage-v1:{family_id}:{device_id}");
 
         let params = serde_json::json!({
             "our_family_id": format!("{}-{}", family_id, device_id),
@@ -49,7 +49,7 @@ impl<C: CapabilityCaller> LineageDeriver<C> {
             .caller
             .call("genetic.derive_lineage_key", params)
             .await
-            .map_err(|e| SporeError::SystemError(format!("Failed to derive lineage key: {}", e)))?;
+            .map_err(|e| SporeError::SystemError(format!("Failed to derive lineage key: {e}")))?;
 
         let derived_key = result
             .get("key")
@@ -102,10 +102,8 @@ impl<C: CapabilityCaller> LineageDeriver<C> {
         derived_seed: &str,
         derived_at: u64,
     ) -> Option<String> {
-        let sign_data = format!(
-            "lineage:{}:{}:{}:{}:{}",
-            device_id, node_id, family_id, derived_seed, derived_at
-        );
+        let sign_data =
+            format!("lineage:{device_id}:{node_id}:{family_id}:{derived_seed}:{derived_at}");
 
         let params = serde_json::json!({
             "data": sign_data,
@@ -180,7 +178,7 @@ impl<C: CapabilityCaller> LineageDeriver<C> {
         let family_seed_bytes = std::fs::read(family_seed_path).map_err(|e| {
             SporeError::IoError(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
-                format!("Failed to read family seed: {}", e),
+                format!("Failed to read family seed: {e}"),
             ))
         })?;
 
@@ -208,12 +206,11 @@ impl<C: CapabilityCaller> LineageDeriver<C> {
     pub fn save_lineage(&self, lineage: &DeviceLineage, path: &Path) -> SporeResult<()> {
         let seed_bytes = BASE64
             .decode(&lineage.derived_seed)
-            .map_err(|e| SporeError::DeserializationError(format!("Invalid base64 seed: {}", e)))?;
+            .map_err(|e| SporeError::DeserializationError(format!("Invalid base64 seed: {e}")))?;
 
         std::fs::write(path, &seed_bytes).map_err(|e| {
             SporeError::IoError(std::io::Error::other(format!(
-                "Failed to write lineage seed: {}",
-                e
+                "Failed to write lineage seed: {e}"
             )))
         })?;
 
@@ -223,8 +220,7 @@ impl<C: CapabilityCaller> LineageDeriver<C> {
 
         std::fs::write(&metadata_path, metadata).map_err(|e| {
             SporeError::IoError(std::io::Error::other(format!(
-                "Failed to write lineage metadata: {}",
-                e
+                "Failed to write lineage metadata: {e}"
             )))
         })?;
 
@@ -241,17 +237,17 @@ impl<C: CapabilityCaller> LineageDeriver<C> {
             let contents = std::fs::read_to_string(&metadata_path).map_err(|e| {
                 SporeError::IoError(std::io::Error::new(
                     std::io::ErrorKind::NotFound,
-                    format!("Failed to read lineage metadata: {}", e),
+                    format!("Failed to read lineage metadata: {e}"),
                 ))
             })?;
 
             serde_json::from_str(&contents)
-                .map_err(|e| SporeError::DeserializationError(format!("Invalid JSON: {}", e)))
+                .map_err(|e| SporeError::DeserializationError(format!("Invalid JSON: {e}")))
         } else {
             let seed_bytes = std::fs::read(lineage_path).map_err(|e| {
                 SporeError::IoError(std::io::Error::new(
                     std::io::ErrorKind::NotFound,
-                    format!("Failed to read lineage seed: {}", e),
+                    format!("Failed to read lineage seed: {e}"),
                 ))
             })?;
 
@@ -289,7 +285,7 @@ impl<C: CapabilityCaller> LineageDeriver<C> {
             .caller
             .call("genetic.generate_lineage_proof", params)
             .await
-            .map_err(|e| SporeError::SystemError(format!("Failed to generate proof: {}", e)))?;
+            .map_err(|e| SporeError::SystemError(format!("Failed to generate proof: {e}")))?;
 
         result
             .get("proof")
@@ -316,7 +312,7 @@ impl<C: CapabilityCaller> LineageDeriver<C> {
             .caller
             .call("genetic.verify_lineage", params)
             .await
-            .map_err(|e| SporeError::SystemError(format!("Failed to verify proof: {}", e)))?;
+            .map_err(|e| SporeError::SystemError(format!("Failed to verify proof: {e}")))?;
 
         Ok(result
             .get("valid")

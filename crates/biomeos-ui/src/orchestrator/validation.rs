@@ -189,9 +189,9 @@ mod tests {
         let invalid = ValidationResult::Invalid("test reason".to_string());
 
         // Test Debug trait
-        assert!(format!("{:?}", valid).contains("Valid"));
-        assert!(format!("{:?}", invalid).contains("Invalid"));
-        assert!(format!("{:?}", invalid).contains("test reason"));
+        assert!(format!("{valid:?}").contains("Valid"));
+        assert!(format!("{invalid:?}").contains("Invalid"));
+        assert!(format!("{invalid:?}").contains("test reason"));
     }
 
     #[test]

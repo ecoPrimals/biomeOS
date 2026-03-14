@@ -285,7 +285,7 @@ impl UniversalBiomeOSManager {
         );
 
         // Use a specific orchestration discovery endpoint
-        let orchestration_url = format!("{}/api/v1/discovery/services", registry_url);
+        let orchestration_url = format!("{registry_url}/api/v1/discovery/services");
         let results = self
             .discovery_service
             .discover_orchestration(&orchestration_url)

@@ -28,8 +28,7 @@ pub(crate) async fn check_system_resources() -> Result<HealthCheck> {
     };
 
     check.details.push(format!(
-        "Memory: {:.1}GB ({:.1}GB available, {:.0}% used)",
-        total_mem_gb, avail_mem_gb, mem_percent
+        "Memory: {total_mem_gb:.1}GB ({avail_mem_gb:.1}GB available, {mem_percent:.0}% used)"
     ));
 
     if mem_percent > 90.0 {
@@ -47,8 +46,7 @@ pub(crate) async fn check_system_resources() -> Result<HealthCheck> {
         };
 
         check.details.push(format!(
-            "Disk: {:.1}GB ({:.1}GB available, {:.0}% used)",
-            total_gb, avail_gb, used_percent
+            "Disk: {total_gb:.1}GB ({avail_gb:.1}GB available, {used_percent:.0}% used)"
         ));
 
         if used_percent > 90.0 {
@@ -58,11 +56,11 @@ pub(crate) async fn check_system_resources() -> Result<HealthCheck> {
 
     // CPU (pure Rust via /proc/cpuinfo)
     let cpu_count = proc_metrics::cpu_count();
-    check.details.push(format!("CPUs: {} cores", cpu_count));
+    check.details.push(format!("CPUs: {cpu_count} cores"));
 
     // Load average (pure Rust via /proc/loadavg)
     let load_avg = proc_metrics::load_average_one();
-    check.details.push(format!("Load: {:.2}", load_avg));
+    check.details.push(format!("Load: {load_avg:.2}"));
 
     Ok(check)
 }

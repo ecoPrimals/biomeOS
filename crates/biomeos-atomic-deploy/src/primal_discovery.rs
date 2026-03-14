@@ -155,7 +155,7 @@ impl PrimalDiscovery {
         all_primals
             .into_iter()
             .find(|p| p.name == name)
-            .ok_or_else(|| anyhow::anyhow!("Primal '{}' not found. Is it running?", name))
+            .ok_or_else(|| anyhow::anyhow!("Primal '{name}' not found. Is it running?"))
     }
 
     /// Find primals by family ID
@@ -178,11 +178,7 @@ impl PrimalDiscovery {
             }
 
             if start.elapsed() > timeout {
-                anyhow::bail!(
-                    "Timeout waiting for primal '{}' (waited {:?})",
-                    name,
-                    timeout
-                );
+                anyhow::bail!("Timeout waiting for primal '{name}' (waited {timeout:?})");
             }
 
             sleep(Duration::from_millis(500)).await;

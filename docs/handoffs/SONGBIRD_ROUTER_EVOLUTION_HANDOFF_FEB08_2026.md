@@ -1,3 +1,5 @@
+> **HISTORICAL** — This handoff predates v2.37. See CURRENT_STATUS.md for latest.
+
 # Songbird Router Evolution Handoff
 
 **Date**: February 8, 2026  

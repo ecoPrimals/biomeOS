@@ -367,7 +367,7 @@ impl CapabilityTaxonomy {
             Self::NicheDeployment => Cow::Borrowed("Niche deployment"),
 
             // Custom capabilities use Owned to avoid memory leaks
-            Self::Custom(name) => Cow::Owned(format!("Custom: {}", name)),
+            Self::Custom(name) => Cow::Owned(format!("Custom: {name}")),
         }
     }
 
@@ -665,9 +665,9 @@ impl CapabilityTaxonomy {
 impl fmt::Display for CapabilityTaxonomy {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Custom(name) => write!(f, "custom:{}", name),
+            Self::Custom(name) => write!(f, "custom:{name}"),
             _ => {
-                let s = format!("{:?}", self);
+                let s = format!("{self:?}");
                 write!(f, "{}", s.to_lowercase())
             }
         }

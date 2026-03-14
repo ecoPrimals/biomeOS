@@ -382,6 +382,7 @@ impl CircuitBreaker {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 
@@ -418,6 +419,39 @@ mod tests {
 
         assert!(delay5 <= Duration::from_millis(500));
         assert!(delay10 <= Duration::from_millis(500));
+    }
+
+    #[test]
+    fn test_retry_error_display() {
+        let err = RetryError::RetryExhausted("test".to_string());
+        assert!(err.to_string().contains("retries"));
+        let err2 = RetryError::CircuitBreakerOpen("open".to_string());
+        assert!(err2.to_string().contains("Circuit breaker"));
+    }
+
+    #[test]
+    fn test_retry_policy_fixed() {
+        let policy = RetryPolicy::fixed(5, Duration::from_millis(50));
+        assert_eq!(policy.initial_delay, Duration::from_millis(50));
+        assert_eq!(policy.max_delay, Duration::from_millis(50));
+    }
+
+    #[test]
+    fn test_retry_policy_no_retry() {
+        let policy = RetryPolicy::no_retry();
+        assert_eq!(policy.max_attempts, 1);
+    }
+
+    #[test]
+    fn test_retry_policy_default() {
+        let policy = RetryPolicy::default();
+        assert_eq!(policy.max_attempts, 3);
+    }
+
+    #[test]
+    fn test_circuit_state_equality() {
+        assert_eq!(CircuitState::Closed, CircuitState::Closed);
+        assert_eq!(CircuitState::HalfOpen, CircuitState::HalfOpen);
     }
 
     #[tokio::test]

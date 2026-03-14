@@ -82,8 +82,7 @@ async fn test_get_discovered_primals_standalone_mode() {
     let mode = json["mode"].as_str().unwrap_or("");
     assert!(
         mode == "socket_probe" || mode == "live" || mode == "live_failed",
-        "Expected socket_probe/live/live_failed mode, got: {}",
-        mode
+        "Expected socket_probe/live/live_failed mode, got: {mode}"
     );
 
     // Probed primals may be empty if no sockets exist (acceptable in test env)
@@ -173,8 +172,7 @@ async fn test_discovered_primals_response_structure() {
         let health = primal["health"].as_str().unwrap();
         assert!(
             ["healthy", "degraded", "unhealthy", "unknown"].contains(&health),
-            "Invalid health status: {}",
-            health
+            "Invalid health status: {health}"
         );
 
         // Capabilities should be non-empty array
@@ -298,9 +296,7 @@ async fn test_discovered_primals_timestamp_validity() {
         // Should be within last hour and not in future
         assert!(
             last_seen > now - 3600 && last_seen <= now,
-            "Invalid timestamp: {} (now: {})",
-            last_seen,
-            now
+            "Invalid timestamp: {last_seen} (now: {now})"
         );
     }
 }
@@ -366,8 +362,7 @@ async fn test_discovered_primals_endpoint_format() {
                 || endpoint.starts_with("https://")
                 || endpoint.starts_with("unix://")
                 || endpoint.starts_with('/'),
-            "Invalid endpoint format: {}",
-            endpoint
+            "Invalid endpoint format: {endpoint}"
         );
     }
 }

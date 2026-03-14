@@ -34,7 +34,7 @@ fn get_mount_stats(_path: &str) -> Option<(u64, u64, u64)> {
 /// Returns error if metrics unavailable (e.g. non-Linux, /proc not mounted).
 async fn get_system_uptime() -> Result<chrono::Duration, anyhow::Error> {
     let info = biomeos_system::SystemInspector::get_system_info().await?;
-    chrono::Duration::from_std(info.uptime).map_err(|e| anyhow::anyhow!("Invalid uptime: {}", e))
+    chrono::Duration::from_std(info.uptime).map_err(|e| anyhow::anyhow!("Invalid uptime: {e}"))
 }
 
 /// Get real system resource usage (CPU, memory, disk) via biomeos-system.
@@ -42,7 +42,7 @@ async fn get_system_uptime() -> Result<chrono::Duration, anyhow::Error> {
 async fn get_system_resource_usage() -> Result<biomeos_types::ResourceMetrics, anyhow::Error> {
     biomeos_system::SystemInspector::get_resource_usage()
         .await
-        .map_err(|e| anyhow::anyhow!("{}", e))
+        .map_err(|e| anyhow::anyhow!("{e}"))
 }
 
 /// Runtime service that manages the biomeOS lifecycle

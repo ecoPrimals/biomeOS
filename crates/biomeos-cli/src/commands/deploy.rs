@@ -37,24 +37,24 @@ pub(crate) fn format_deployment_result(
     } else {
         "Creation Results"
     };
-    lines.push(format!("📋 {}:", title));
+    lines.push(format!("📋 {title}:"));
 
     if let Some(service_name) = result.get("service_name") {
-        lines.push(format!("🌟 Service: {}", service_name));
+        lines.push(format!("🌟 Service: {service_name}"));
     }
 
     if let Some(service_id) = result.get("service_id") {
-        lines.push(format!("🆔 ID: {}", service_id));
+        lines.push(format!("🆔 ID: {service_id}"));
     }
 
     if let Some(status) = result.get("status") {
         let status_str = status.as_str().unwrap_or("");
         let (icon, message) = status_to_display(status_str);
-        lines.push(format!("{} Status: {}", icon, message));
+        lines.push(format!("{icon} Status: {message}"));
     }
 
     if let Some(endpoint) = result.get("endpoint") {
-        lines.push(format!("🌐 Endpoint: {}", endpoint));
+        lines.push(format!("🌐 Endpoint: {endpoint}"));
     }
 
     if let Some(capabilities) = result.get("capabilities").and_then(|c| c.as_array()) {
@@ -63,7 +63,7 @@ pub(crate) fn format_deployment_result(
             .filter_map(|c| c.as_str())
             .collect::<Vec<_>>()
             .join(", ");
-        lines.push(format!("⚡ Capabilities: {}", caps_str));
+        lines.push(format!("⚡ Capabilities: {caps_str}"));
     }
 
     if dry_run {
@@ -71,7 +71,7 @@ pub(crate) fn format_deployment_result(
             lines.push("\n📝 Execution Plan:".to_string());
             if let Ok(pretty) = serde_json::to_string_pretty(plan) {
                 for line in pretty.lines() {
-                    lines.push(format!("   {}", line));
+                    lines.push(format!("   {line}"));
                 }
             }
         }
@@ -99,7 +99,7 @@ pub async fn handle_deploy(
     } else {
         "Deploying"
     };
-    let spinner = create_spinner(&format!("🚀 {} manifest...", action));
+    let spinner = create_spinner(&format!("🚀 {action} manifest..."));
 
     let config = biomeos_types::BiomeOSConfig::default();
     let manager = UniversalBiomeOSManager::new(config).await?;
@@ -122,7 +122,7 @@ pub async fn handle_deploy(
             "🎉 Biome '{}' deployed successfully!",
             validated_manifest.metadata.name
         );
-        println!("📋 Deployment ID: {}", deployment_id);
+        println!("📋 Deployment ID: {deployment_id}");
     }
 
     Ok(())
@@ -160,7 +160,7 @@ pub async fn handle_create(
     dry_run: bool,
 ) -> Result<()> {
     let action = if dry_run { "Planning" } else { "Creating" };
-    let spinner = create_spinner(&format!("🏗️  {} service '{}'...", action, name));
+    let spinner = create_spinner(&format!("🏗️  {action} service '{name}'..."));
 
     let config = biomeos_types::BiomeOSConfig::default();
     let manager = UniversalBiomeOSManager::new(config).await?;

@@ -59,8 +59,7 @@ pub fn parse_capabilities(caps_str: &str) -> Result<Vec<PrimalCapability>> {
 
     if capabilities.is_empty() {
         return Err(anyhow::anyhow!(
-            "No valid capabilities found in: {}",
-            caps_str
+            "No valid capabilities found in: {caps_str}"
         ));
     }
 
@@ -74,7 +73,7 @@ pub async fn display_results(
     show_details: bool,
 ) -> Result<()> {
     if results.is_empty() {
-        println!("📋 {}: No results", title);
+        println!("📋 {title}: No results");
         return Ok(());
     }
 
@@ -82,24 +81,24 @@ pub async fn display_results(
     println!();
 
     for (key, value) in results {
-        println!("🔹 {}", key);
+        println!("🔹 {key}");
 
         if show_details {
             if let Ok(pretty) = serde_json::to_string_pretty(value) {
                 // Indent the JSON output
                 for line in pretty.lines() {
-                    println!("   {}", line);
+                    println!("   {line}");
                 }
             } else {
-                println!("   {}", value);
+                println!("   {value}");
             }
         } else {
             // Show just a summary
             if let Some(status) = value.get("status") {
-                println!("   Status: {}", status);
+                println!("   Status: {status}");
             }
             if let Some(health) = value.get("health") {
-                println!("   Health: {}", health);
+                println!("   Health: {health}");
             }
         }
         println!();
@@ -112,7 +111,7 @@ pub async fn display_results(
 pub fn format_duration(duration: Duration) -> String {
     let secs = duration.as_secs();
     if secs < 60 {
-        format!("{}s", secs)
+        format!("{secs}s")
     } else if secs < 3600 {
         format!("{}m {}s", secs / 60, secs % 60)
     } else {

@@ -68,9 +68,9 @@ impl TransportEndpoint {
     pub fn display_string(&self) -> String {
         match self {
             Self::UnixSocket { path } => format!("unix://{}", path.display()),
-            Self::AbstractSocket { name } => format!("abstract://@{}", name),
-            Self::TcpSocket { host, port } => format!("tcp://{}:{}", host, port),
-            Self::HttpJsonRpc { host, port } => format!("http://{}:{}/jsonrpc", host, port),
+            Self::AbstractSocket { name } => format!("abstract://@{name}"),
+            Self::TcpSocket { host, port } => format!("tcp://{host}:{port}"),
+            Self::HttpJsonRpc { host, port } => format!("http://{host}:{port}/jsonrpc"),
         }
     }
 
@@ -347,14 +347,14 @@ mod tests {
         let unix = TransportEndpoint::UnixSocket {
             path: PathBuf::from("/tmp/beardog-1894e909e454.sock"),
         };
-        let display = format!("{}", unix);
+        let display = format!("{unix}");
         assert_eq!(display, "unix:///tmp/beardog-1894e909e454.sock");
 
         let tcp = TransportEndpoint::TcpSocket {
             host: "192.168.1.100".to_string(),
             port: 9100,
         };
-        let display = format!("{}", tcp);
+        let display = format!("{tcp}");
         assert_eq!(display, "tcp://192.168.1.100:9100");
     }
 

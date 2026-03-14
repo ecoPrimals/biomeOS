@@ -105,7 +105,7 @@ async fn test_discover_nestgate_if_available() {
                 assert!(adapter.interface.is_known());
             }
             Err(e) => {
-                println!("⚠️  Could not discover NestGate (may be expected): {}", e);
+                println!("⚠️  Could not discover NestGate (may be expected): {e}");
                 // Not a failure - binary might not be available
             }
         }
@@ -128,7 +128,7 @@ async fn test_discover_beardog_if_available() {
                 assert!(adapter.interface.is_known());
             }
             Err(e) => {
-                println!("⚠️  Could not discover BearDog (may be expected): {}", e);
+                println!("⚠️  Could not discover BearDog (may be expected): {e}");
             }
         }
     } else {
@@ -149,7 +149,7 @@ async fn test_discover_toadstool_if_available() {
                 assert!(adapter.interface.is_known());
             }
             Err(e) => {
-                println!("⚠️  Could not discover Toadstool (may be expected): {}", e);
+                println!("⚠️  Could not discover Toadstool (may be expected): {e}");
             }
         }
     } else {
@@ -170,7 +170,7 @@ async fn test_discover_squirrel_if_available() {
                 assert!(adapter.interface.is_known());
             }
             Err(e) => {
-                println!("⚠️  Could not discover Squirrel (may be expected): {}", e);
+                println!("⚠️  Could not discover Squirrel (may be expected): {e}");
             }
         }
     } else {
@@ -228,13 +228,13 @@ async fn test_discover_running_nestgate() {
             if (200..300).contains(&status) {
                 println!("✅ NestGate is running and responsive");
                 assert!(!body.is_empty(), "Health response should not be empty");
-                println!("   Health response: {}", body);
+                println!("   Health response: {body}");
             } else {
-                println!("⚠️  NestGate returned non-success status: {}", status);
+                println!("⚠️  NestGate returned non-success status: {status}");
             }
         }
         Err(e) => {
-            println!("⏭️  NestGate not running (expected if not started): {}", e);
+            println!("⏭️  NestGate not running (expected if not started): {e}");
         }
     }
 }
@@ -256,21 +256,21 @@ async fn test_capability_based_discovery() {
     for name in storage_primals {
         if find_primal_binary(name).is_some() {
             found_storage = true;
-            println!("✅ Storage capability available: {}", name);
+            println!("✅ Storage capability available: {name}");
         }
     }
 
     for name in encryption_primals {
         if find_primal_binary(name).is_some() {
             found_encryption = true;
-            println!("✅ Encryption capability available: {}", name);
+            println!("✅ Encryption capability available: {name}");
         }
     }
 
     for name in compute_primals {
         if find_primal_binary(name).is_some() {
             found_compute = true;
-            println!("✅ Compute capability available: {}", name);
+            println!("✅ Compute capability available: {name}");
         }
     }
 
@@ -317,7 +317,7 @@ async fn test_cli_tool_architecture() {
     for name in cli_primals {
         if let Some(path) = find_primal_binary(name) {
             if let Ok(adapter) = discover_primal_interface(&path).await {
-                println!("✅ CLI primal discovered: {}", name);
+                println!("✅ CLI primal discovered: {name}");
                 found_cli = true;
 
                 // Verify it's a Direct or Subcommand interface
@@ -389,7 +389,7 @@ async fn test_no_hardcoded_endpoints() {
         if let Some(path) = find_primal_binary(name) {
             // Discovery happens purely by introspecting the binary
             if let Ok(_adapter) = discover_primal_interface(&path).await {
-                println!("✅ Discovered {} without hardcoded knowledge", name);
+                println!("✅ Discovered {name} without hardcoded knowledge");
                 discovered_without_hardcoding = true;
             }
         }
@@ -476,7 +476,7 @@ async fn test_federation_discovery() {
                         })
                         .count();
 
-                    println!("   Peer discoveries in logs: {}", peer_count);
+                    println!("   Peer discoveries in logs: {peer_count}");
 
                     if peer_count > 0 {
                         println!("✅ Federation peers discovered!");

@@ -211,12 +211,12 @@ async fn test_concurrent_spore_creation() {
 
     // Create 3 spores SEQUENTIALLY to avoid working directory races
     for i in 1..=3 {
-        let mount_point = temp_dir.path().join(format!("usb{}", i));
+        let mount_point = temp_dir.path().join(format!("usb{i}"));
         fs::create_dir_all(&mount_point).unwrap();
 
         let config = SporeConfig {
-            label: format!("spore{}", i),
-            node_id: format!("node{}", i),
+            label: format!("spore{i}"),
+            node_id: format!("node{i}"),
             spore_type: SporeType::Live,
             family_id: "test-family".to_string(),
         };

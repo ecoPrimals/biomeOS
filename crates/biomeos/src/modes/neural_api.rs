@@ -29,7 +29,7 @@ pub(crate) fn resolve_neural_api_config(
         .map(String::from)
         .unwrap_or_else(biomeos_core::family_discovery::get_family_id);
     let socket_path = socket.unwrap_or_else(|| {
-        SystemPaths::new_lazy().primal_socket(&format!("neural-api-{}", family_id))
+        SystemPaths::new_lazy().primal_socket(&format!("neural-api-{family_id}"))
     });
     NeuralApiConfig {
         graphs_dir,
@@ -41,7 +41,7 @@ pub(crate) fn resolve_neural_api_config(
 /// Resolve socket path: use explicit path or XDG-compliant SystemPaths default
 pub(crate) fn resolve_socket_path(socket: Option<PathBuf>, family_id: &str) -> PathBuf {
     socket.unwrap_or_else(|| {
-        SystemPaths::new_lazy().primal_socket(&format!("neural-api-{}", family_id))
+        SystemPaths::new_lazy().primal_socket(&format!("neural-api-{family_id}"))
     })
 }
 
@@ -141,7 +141,7 @@ mod tests {
             family_id: "f".to_string(),
             socket_path: PathBuf::from("/tmp/s.sock"),
         };
-        let s = format!("{:?}", config);
+        let s = format!("{config:?}");
         assert!(s.contains("NeuralApiConfig"));
         assert!(s.contains("g"));
         assert!(s.contains("f"));

@@ -26,11 +26,11 @@ struct ChaosFixture {
 
 impl ChaosFixture {
     fn new(test_name: &str) -> Self {
-        let socket_dir = std::env::temp_dir().join(format!("biomeos-chaos-{}", test_name));
+        let socket_dir = std::env::temp_dir().join(format!("biomeos-chaos-{test_name}"));
         std::fs::create_dir_all(&socket_dir).ok();
 
         Self {
-            family_id: format!("chaos-{}", test_name),
+            family_id: format!("chaos-{test_name}"),
             socket_dir,
         }
     }
@@ -333,8 +333,7 @@ async fn test_env_var_injection_safety() {
     // This test documents that family_id is used in the filename, not as a path
     assert!(
         malicious_socket.to_string_lossy().contains("test"),
-        "Socket path should contain primal name: {:?}",
-        malicious_socket
+        "Socket path should contain primal name: {malicious_socket:?}"
     );
 }
 

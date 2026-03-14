@@ -544,7 +544,7 @@ mod tests {
 
         for (reason_param, expected_reason) in reasons {
             let handler = LifecycleHandler::new("test-family");
-            let name = format!("primal-{}", reason_param);
+            let name = format!("primal-{reason_param}");
             handler
                 .register(&Some(json!({
                     "name": name,
@@ -564,9 +564,7 @@ mod tests {
             assert_eq!(
                 result["reason"].as_str(),
                 Some(expected_reason),
-                "reason {} should map to {}",
-                reason_param,
-                expected_reason
+                "reason {reason_param} should map to {expected_reason}"
             );
         }
     }

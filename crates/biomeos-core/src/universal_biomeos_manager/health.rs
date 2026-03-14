@@ -13,7 +13,6 @@ use super::core::UniversalBiomeOSManager;
 use biomeos_types::{BiomeOSConfig, Health, HealthReport};
 
 /// Map Health enum to display string (testable pure function)
-#[allow(dead_code)] // Used by tests
 pub(crate) fn health_to_status_string(health: &Health) -> &'static str {
     match health {
         Health::Healthy => "Healthy",
@@ -24,7 +23,6 @@ pub(crate) fn health_to_status_string(health: &Health) -> &'static str {
 }
 
 /// Map Health to quick scan status ("ok" or "issue")
-#[allow(dead_code)] // Used by tests
 pub(crate) fn health_to_quick_status(health: &Health) -> &'static str {
     match health {
         Health::Healthy => "ok",
@@ -33,7 +31,6 @@ pub(crate) fn health_to_quick_status(health: &Health) -> &'static str {
 }
 
 /// Compute health percentage from counts
-#[allow(dead_code)] // Used by tests
 pub(crate) fn health_percentage(healthy: usize, total: usize) -> f64 {
     if total > 0 {
         (healthy as f64 / total as f64) * 100.0
@@ -45,16 +42,15 @@ pub(crate) fn health_percentage(healthy: usize, total: usize) -> f64 {
 /// Health Monitor for system-wide health tracking
 #[derive(Debug, Clone)]
 pub struct HealthMonitor {
-    /// Reserved for health monitoring configuration (interval, thresholds, etc.)
-    #[allow(dead_code)]
-    // Future: wire up for configurable health check intervals and thresholds
-    config: Arc<BiomeOSConfig>,
+    /// Reserved for health monitoring configuration (interval, thresholds, etc.).
+    /// Planned: wire up for configurable health check intervals and thresholds.
+    _config: Arc<BiomeOSConfig>,
 }
 
 impl HealthMonitor {
     /// Create new health monitor with Arc-wrapped config for zero-copy sharing
     pub fn new(config: Arc<BiomeOSConfig>) -> Self {
-        Self { config }
+        Self { _config: config }
     }
 
     /// Get system health report
@@ -475,6 +471,49 @@ mod tests {
         assert_eq!(health_percentage(5, 10), 50.0);
         assert_eq!(health_percentage(10, 10), 100.0);
         let p = health_percentage(1, 3);
-        assert!((p - 33.333).abs() < 0.001, "expected ~33.33, got {}", p);
+        assert!((p - 33.333).abs() < 0.001, "expected ~33.33, got {p}");
+    }
+
+    #[test]
+    fn test_health_monitor_construction() {
+        let config = Arc::new(BiomeOSConfig::default());
+        let monitor = HealthMonitor::new(config);
+        assert!(std::mem::size_of_val(&monitor) > 0);
+    }
+
+    #[tokio::test]
+    async fn test_health_monitor_get_system_health() {
+        let config = Arc::new(BiomeOSConfig::default());
+        let monitor = HealthMonitor::new(config);
+        let report = monitor.get_system_health().await;
+        assert_eq!(report.subject.id, "system");
+        assert!(matches!(report.health, Health::Healthy));
+    }
+
+    #[test]
+    fn test_health_to_status_string_critical() {
+        let health = Health::Critical {
+            issues: vec![],
+            affected_capabilities: vec!["compute".to_string()],
+        };
+        assert_eq!(health_to_status_string(&health), "Unknown");
+    }
+
+    #[test]
+    fn test_health_to_status_string_starting() {
+        let health = Health::Starting {
+            phase: biomeos_types::StartupPhase::Initializing,
+            progress: 50,
+        };
+        assert_eq!(health_to_status_string(&health), "Unknown");
+    }
+
+    #[test]
+    fn test_health_to_quick_status_unknown() {
+        let health = Health::Unknown {
+            reason: "test".into(),
+            last_known: None,
+        };
+        assert_eq!(health_to_quick_status(&health), "issue");
     }
 }

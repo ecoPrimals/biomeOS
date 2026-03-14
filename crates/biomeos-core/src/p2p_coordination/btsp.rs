@@ -257,9 +257,10 @@ impl BtspCoordinator {
     }
 }
 
-/// Reasons why a tunnel might be degraded
-#[derive(Debug, Clone, Copy)]
+/// Reasons why a tunnel might be degraded.
+/// Domain model with planned state transitions; not all variants constructed yet.
 #[allow(dead_code)]
+#[derive(Debug, Clone, Copy)]
 enum DegradationCause {
     /// Security keys are expiring soon
     SecurityKeyExpiring,

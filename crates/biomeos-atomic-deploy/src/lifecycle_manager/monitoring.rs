@@ -63,7 +63,7 @@ impl LifecycleManager {
         let mut primals = self.primals.write().await;
         let primal = primals
             .get_mut(name)
-            .ok_or_else(|| anyhow::anyhow!("Primal not found: {}", name))?;
+            .ok_or_else(|| anyhow::anyhow!("Primal not found: {name}"))?;
 
         // Skip if not in active or incubating state
         match &primal.state {

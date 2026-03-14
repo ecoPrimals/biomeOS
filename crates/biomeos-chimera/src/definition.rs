@@ -305,4 +305,146 @@ fusion:
         assert_eq!(def.chimera.id, "test-chimera");
         assert_eq!(def.required_primals(), vec!["beardog"]);
     }
+
+    #[test]
+    fn test_resource_spec_default_and_serde() {
+        let spec = ResourceSpec::default();
+        assert!(spec.cpu_cores.is_none());
+        assert!(spec.memory_mb.is_none());
+        assert!(spec.storage_mb.is_none());
+        assert!(spec.gpu.is_none());
+        assert!(spec.network.is_none());
+
+        let spec_with_values = ResourceSpec {
+            cpu_cores: Some(4),
+            memory_mb: Some(8192),
+            storage_mb: Some(100_000),
+            gpu: Some(GpuSpec {
+                required: true,
+                optional: false,
+                min_vram_mb: Some(4096),
+            }),
+            network: Some(NetworkSpec {
+                ports: vec![8080, 9090],
+                latency_target_ms: Some(50),
+                jitter_tolerance_ms: Some(10),
+            }),
+            per_instance: None,
+        };
+        let json = serde_json::to_string(&spec_with_values).expect("serialize");
+        let deserialized: ResourceSpec = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(deserialized.cpu_cores, Some(4));
+        assert_eq!(deserialized.memory_mb, Some(8192));
+        assert!(deserialized.gpu.is_some());
+        assert!(deserialized.network.is_some());
+    }
+
+    #[test]
+    fn test_deployment_spec_default_and_serde() {
+        let spec = DeploymentSpec::default();
+        assert!(!spec.singleton);
+        assert!(!spec.requirements.network);
+        assert!(!spec.requirements.gpu);
+        assert!(!spec.requirements.federation);
+
+        let json = serde_json::to_string(&spec).expect("serialize");
+        let _: DeploymentSpec = serde_json::from_str(&json).expect("deserialize");
+    }
+
+    #[test]
+    fn test_health_spec_default() {
+        let spec = HealthSpec::default();
+        assert!(spec.checks.is_empty());
+    }
+
+    #[test]
+    fn test_chimera_metadata_serde() {
+        let meta = ChimeraMetadata {
+            id: "p2p-secure".to_string(),
+            name: "P2P Secure".to_string(),
+            version: "2.0.0".to_string(),
+            description: "Secure P2P mesh".to_string(),
+        };
+        let json = serde_json::to_string(&meta).expect("serialize");
+        let deserialized: ChimeraMetadata = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(meta.id, deserialized.id);
+        assert_eq!(meta.version, deserialized.version);
+    }
+
+    #[test]
+    fn test_uses_arrays_false() {
+        let yaml = r#"
+chimera:
+  id: no-array
+  name: No Array
+  version: "1.0.0"
+  description: Test
+
+components:
+  beardog:
+    source: primals/beardog
+    version: ">=1.0.0"
+    modules: []
+
+fusion:
+  bindings: {}
+  api:
+    endpoints: []
+"#;
+        let def = ChimeraDefinition::from_yaml(yaml).unwrap();
+        assert!(!def.uses_arrays());
+    }
+
+    #[test]
+    fn test_uses_arrays_true() {
+        let yaml = r#"
+chimera:
+  id: with-array
+  name: With Array
+  version: "1.0.0"
+  description: Test
+
+components:
+  songbird:
+    source: primals/songbird
+    version: ">=1.0.0"
+    modules: []
+    array:
+      enabled: true
+      min: 2
+      max: 8
+
+fusion:
+  bindings: {}
+  api:
+    endpoints: []
+"#;
+        let def = ChimeraDefinition::from_yaml(yaml).unwrap();
+        assert!(def.uses_arrays());
+        assert_eq!(def.required_primals(), vec!["songbird"]);
+    }
+
+    #[test]
+    fn test_validate_empty_components_fails() {
+        let yaml = r#"
+chimera:
+  id: empty
+  name: Empty
+  version: "1.0.0"
+  description: No components
+
+components: {}
+
+fusion:
+  bindings: {}
+  api:
+    endpoints: []
+"#;
+        let result = ChimeraDefinition::from_yaml(yaml);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("at least one component"));
+    }
 }

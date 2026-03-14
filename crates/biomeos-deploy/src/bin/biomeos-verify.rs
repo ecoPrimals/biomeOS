@@ -101,7 +101,7 @@ async fn main() -> anyhow::Result<()> {
         }
         Err(e) => {
             error!("Verification error: {}", e);
-            eprintln!("\n❌ Verification failed: {}\n", e);
+            eprintln!("\n❌ Verification failed: {e}\n");
             std::process::exit(1);
         }
     }

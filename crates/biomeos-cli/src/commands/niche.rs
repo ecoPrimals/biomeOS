@@ -20,7 +20,6 @@ pub fn category_to_icon(category: &str) -> &'static str {
 }
 
 /// Parse name and category from niche YAML content (testable pure function)
-#[allow(dead_code)] // Used by tests
 pub fn parse_niche_yaml_info(content: &str) -> (String, String) {
     let name = content
         .lines()
@@ -57,10 +56,7 @@ pub async fn handle_niche_list() -> anyhow::Result<()> {
     let templates_dir = Path::new("niches/templates");
 
     if !templates_dir.exists() {
-        println!(
-            "❌ Niche templates directory not found: {:?}",
-            templates_dir
-        );
+        println!("❌ Niche templates directory not found: {templates_dir:?}");
         return Ok(());
     }
 
@@ -95,17 +91,17 @@ pub async fn handle_niche_list() -> anyhow::Result<()> {
 
 /// Show details for a specific niche template
 pub async fn handle_niche_show(id: &str) -> anyhow::Result<()> {
-    let template_path = Path::new("niches/templates").join(format!("{}.yaml", id));
+    let template_path = Path::new("niches/templates").join(format!("{id}.yaml"));
 
     if !template_path.exists() {
-        println!("❌ Niche template not found: {}", id);
+        println!("❌ Niche template not found: {id}");
         println!("   Run 'biomeos niche list' to see available templates");
         return Ok(());
     }
 
     let content = fs::read_to_string(&template_path)?;
 
-    println!("🌿 Niche Template: {}", id);
+    println!("🌿 Niche Template: {id}");
     println!();
 
     // Parse and display sections
@@ -142,25 +138,25 @@ pub async fn handle_niche_show(id: &str) -> anyhow::Result<()> {
                     || trimmed.starts_with("category:")
                     || trimmed.starts_with("features:")
                 {
-                    println!("   {}", trimmed);
+                    println!("   {trimmed}");
                 }
             }
             "organisms" => {
                 if !trimmed.is_empty() && !trimmed.starts_with('#') {
                     let current_indent = line.len() - line.trim_start().len();
                     if current_indent <= 4 {
-                        println!("   {}", trimmed);
+                        println!("   {trimmed}");
                     }
                 }
             }
             "customization" => {
                 if trimmed.starts_with("- id:") || trimmed.starts_with("name:") {
-                    println!("   {}", trimmed);
+                    println!("   {trimmed}");
                 }
             }
             "resources" => {
                 if !trimmed.is_empty() && !trimmed.starts_with('#') {
-                    println!("   {}", trimmed);
+                    println!("   {trimmed}");
                 }
             }
             _ => {}
@@ -204,7 +200,7 @@ pub async fn handle_primal_list() -> anyhow::Result<()> {
 
         // Show first few
         for bin in binaries.iter().take(3) {
-            println!("     └─ {}", bin);
+            println!("     └─ {bin}");
         }
         if binaries.len() > 3 {
             println!("     └─ ... and {} more", binaries.len() - 3);
@@ -266,5 +262,35 @@ niche:
         assert_eq!(primal_to_icon("squirrel"), "🐿️");
         assert_eq!(primal_to_icon("unknown"), "📦");
         assert_eq!(primal_to_icon(""), "📦");
+    }
+
+    #[test]
+    fn test_parse_niche_yaml_info_with_category_only() {
+        let yaml = "category: ai_research\n";
+        let (name, category) = parse_niche_yaml_info(yaml);
+        assert_eq!(name, "Unknown");
+        assert_eq!(category, "ai_research");
+    }
+
+    #[test]
+    fn test_parse_niche_yaml_info_multiline() {
+        let yaml = r#"
+other: stuff
+  name: "Research Lab"
+  category: "development"
+"#;
+        let (name, category) = parse_niche_yaml_info(yaml);
+        assert_eq!(name, "Research Lab");
+        assert_eq!(category, "development");
+    }
+
+    #[test]
+    fn test_category_to_icon_all_variants() {
+        assert_eq!(category_to_icon("gaming"), "🎮");
+        assert_eq!(category_to_icon("ai_research"), "🧠");
+        assert_eq!(category_to_icon("development"), "💻");
+        assert_eq!(category_to_icon("federation"), "🌐");
+        assert_eq!(category_to_icon("research"), "🌿");
+        assert_eq!(category_to_icon("custom"), "🌿");
     }
 }

@@ -125,7 +125,7 @@ mod run {
                 assert_eq!(entry.model_id, "local/test");
                 assert_eq!(entry.format, "gguf");
             }
-            _ => panic!("Expected ModelResolution::Local, got {:?}", resolution),
+            _ => panic!("Expected ModelResolution::Local, got {resolution:?}"),
         }
     }
 
@@ -136,7 +136,7 @@ mod run {
             .await
             .unwrap();
         let resolution = cache.resolve("nonexistent/model").await;
-        let s = format!("{}", resolution);
+        let s = format!("{resolution}");
         assert_eq!(s, "NOT FOUND");
     }
 
@@ -236,7 +236,7 @@ mod run {
             .unwrap();
 
         let resolution = cache.resolve("display/test").await;
-        let s = format!("{}", resolution);
+        let s = format!("{resolution}");
         assert!(s.starts_with("LOCAL:"));
         assert!(s.contains("display/test"));
     }
@@ -255,7 +255,7 @@ mod run {
             files: vec![],
         };
         let resolution = ModelResolution::Remote(entry);
-        let s = format!("{}", resolution);
+        let s = format!("{resolution}");
         assert!(s.starts_with("REMOTE:"));
         assert!(s.contains("remote/model"));
         assert!(s.contains("gate-1"));

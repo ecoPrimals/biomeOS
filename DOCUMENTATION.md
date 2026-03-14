@@ -15,7 +15,7 @@
 | See what changed | [CHANGELOG.md](CHANGELOG.md) |
 | See evolution roadmap | [specs/EVOLUTION_ROADMAP.md](specs/EVOLUTION_ROADMAP.md) |
 | Deploy to USB/Pixel | [livespore-usb/README.md](livespore-usb/README.md) |
-| Deployment graphs (30 incl. provenance trio) | [graphs/README.md](graphs/README.md) |
+| Deployment graphs (35 incl. provenance trio) | [graphs/README.md](graphs/README.md) |
 | Start a NUCLEUS | `biomeos nucleus start --mode full --node-id tower1` |
 
 ---
@@ -49,7 +49,7 @@ See [specs/README.md](specs/README.md) for full index. Key specs:
 
 ---
 
-## Handoffs & Evolution Reports (15 active)
+## Handoffs & Evolution Reports (16 active)
 
 ### Relay-Assisted Coordinated Punch (Feb 11, 2026)
 
@@ -137,10 +137,10 @@ See [specs/README.md](specs/README.md) for full index. Key specs:
 # Build
 cargo build --workspace
 
-# Test (4,383 tests)
+# Test (4,647 tests)
 cargo test --workspace
 
-# Coverage (76.06% region)
+# Coverage (75.98% region)
 cargo llvm-cov --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -163,6 +163,6 @@ See `ARCHIVE_INDEX.md` in archive for details.
 ---
 
 **Documentation current as of March 14, 2026**
-**Active: 19 specs, 15 handoffs, 10 scripts**
-**Deploy graphs: 30 (incl. provenance trio: loamspine, rhizocrypt, sweetgrass, provenance_trio)**
-**Tests: 4,383 passing (76.06% region coverage) | Clippy: PASS | Docs: Full coverage**
+**Active: 19 specs, 16 handoffs, 10 scripts**
+**Deploy graphs: 35 (incl. provenance trio: loamspine, rhizocrypt, sweetgrass, provenance_trio)**
+**Tests: 4,647 passing (75.98% region coverage) | Clippy: PASS | Docs: Full coverage**

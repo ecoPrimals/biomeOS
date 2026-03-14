@@ -387,7 +387,7 @@ mod tests {
                 assert_eq!(primal_id, "beardog-1");
                 assert_eq!(status, "started");
             }
-            _ => panic!("Expected PrimalStatusChanged, got {:?}", received),
+            _ => panic!("Expected PrimalStatusChanged, got {received:?}"),
         }
     }
 
@@ -408,7 +408,7 @@ mod tests {
                 assert_eq!(primal_id, "songbird-1");
                 assert_eq!(status, "stopped");
             }
-            _ => panic!("Expected PrimalStatusChanged, got {:?}", received),
+            _ => panic!("Expected PrimalStatusChanged, got {received:?}"),
         }
     }
 
@@ -429,7 +429,7 @@ mod tests {
                 assert_eq!(device_id, "gpu-0");
                 assert_eq!(status, "connected");
             }
-            _ => panic!("Expected DeviceStatusChanged, got {:?}", received),
+            _ => panic!("Expected DeviceStatusChanged, got {received:?}"),
         }
     }
 
@@ -450,7 +450,7 @@ mod tests {
                 assert_eq!(device_id, "gpu-0");
                 assert_eq!(status, "disconnected");
             }
-            _ => panic!("Expected DeviceStatusChanged, got {:?}", received),
+            _ => panic!("Expected DeviceStatusChanged, got {received:?}"),
         }
     }
 

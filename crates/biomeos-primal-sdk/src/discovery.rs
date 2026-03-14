@@ -111,7 +111,7 @@ impl PrimalDiscovery {
         discovery
             .discover_capability(cap.clone())
             .await?
-            .ok_or_else(|| anyhow::anyhow!("No primal found for capability: {:?}", cap))
+            .ok_or_else(|| anyhow::anyhow!("No primal found for capability: {cap:?}"))
     }
 
     /// Discover primals matching query
@@ -195,7 +195,7 @@ impl PrimalDiscovery {
 
         // Tier 3: Linux /run/user (get UID from environment or /proc)
         if let Ok(uid) = std::env::var("UID") {
-            let run_user = PathBuf::from(format!("/run/user/{}/biomeos", uid));
+            let run_user = PathBuf::from(format!("/run/user/{uid}/biomeos"));
             if run_user.parent().map(|p| p.exists()).unwrap_or(false) {
                 return run_user;
             }
@@ -207,7 +207,7 @@ impl PrimalDiscovery {
             use std::os::unix::fs::MetadataExt;
             if let Ok(meta) = std::fs::metadata("/proc/self") {
                 let uid = meta.uid();
-                let run_user = PathBuf::from(format!("/run/user/{}/biomeos", uid));
+                let run_user = PathBuf::from(format!("/run/user/{uid}/biomeos"));
                 if run_user.parent().map(|p| p.exists()).unwrap_or(false) {
                     return run_user;
                 }
@@ -235,7 +235,7 @@ impl PrimalDiscovery {
         let socket_path = socket_dir.join(&socket_name);
 
         // Also try without family suffix
-        let alt_socket_path = socket_dir.join(format!("{}.sock", name));
+        let alt_socket_path = socket_dir.join(format!("{name}.sock"));
 
         let (path, method) = if socket_path.exists() {
             (socket_path, self.method_for_dir(socket_dir))

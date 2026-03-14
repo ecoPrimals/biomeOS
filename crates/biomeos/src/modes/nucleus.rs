@@ -60,8 +60,7 @@ impl std::str::FromStr for NucleusMode {
             "nest" => Ok(NucleusMode::Nest),
             "full" | "nucleus" => Ok(NucleusMode::Full),
             _ => Err(anyhow::anyhow!(
-                "Unknown nucleus mode: '{}'. Use tower|node|nest|full",
-                s
+                "Unknown nucleus mode: '{s}'. Use tower|node|nest|full"
             )),
         }
     }
@@ -120,7 +119,7 @@ fn socket_path_for_capability(
             _ => "unknown",
         },
     );
-    socket_dir.join(format!("{}-{}.sock", primal_name, family_id))
+    socket_dir.join(format!("{primal_name}-{family_id}.sock"))
 }
 
 /// Build a primal process command (testable, no spawn).
@@ -133,7 +132,7 @@ pub(crate) fn build_primal_command(
     family_id: &str,
     node_id: &str,
 ) -> std::process::Command {
-    let socket_path = socket_dir.join(format!("{}-{}.sock", name, family_id));
+    let socket_path = socket_dir.join(format!("{name}-{family_id}.sock"));
     let mut cmd = std::process::Command::new(binary);
 
     match name {
@@ -203,14 +202,14 @@ pub(crate) fn format_nucleus_summary(
 ) -> Vec<String> {
     let mut lines = Vec::new();
     lines.push(String::new());
-    lines.push(format!("NUCLEUS started ({:?} mode, {})", mode, mode_label));
-    lines.push(format!("  Family:  {}", family_id));
-    lines.push(format!("  Node:    {}", node_id));
+    lines.push(format!("NUCLEUS started ({mode:?} mode, {mode_label})"));
+    lines.push(format!("  Family:  {family_id}"));
+    lines.push(format!("  Node:    {node_id}"));
     lines.push(format!("  Sockets: {}", socket_dir.display()));
     lines.push("  Health:  monitoring active (10s interval)".to_string());
     lines.push(String::new());
     for (name, pid) in children {
-        let socket = socket_dir.join(format!("{}-{}.sock", name, family_id));
+        let socket = socket_dir.join(format!("{name}-{family_id}.sock"));
         lines.push(format!("  {} (PID {}) -> {}", name, pid, socket.display()));
     }
     lines.push(String::new());
@@ -282,14 +281,14 @@ pub async fn run(mode: String, node_id: String, family_id: Option<String>) -> Re
     for primal in &primals_needed {
         let binary = binary_map
             .get(*primal)
-            .ok_or_else(|| anyhow::anyhow!("Binary not found for primal: {}", primal))?;
+            .ok_or_else(|| anyhow::anyhow!("Binary not found for primal: {primal}"))?;
 
-        let socket_path = socket_dir.join(format!("{}-{}.sock", primal, family_id));
+        let socket_path = socket_dir.join(format!("{primal}-{family_id}.sock"));
 
         // Toadstool exposes tarpc on .sock and JSON-RPC on .jsonrpc.sock
         // NUCLEUS health checks use JSON-RPC, so use the jsonrpc socket for health monitoring
         let health_socket = if *primal == TOADSTOOL {
-            socket_dir.join(format!("{}-{}.jsonrpc.sock", primal, family_id))
+            socket_dir.join(format!("{primal}-{family_id}.jsonrpc.sock"))
         } else {
             socket_path.clone()
         };
@@ -305,7 +304,7 @@ pub async fn run(mode: String, node_id: String, family_id: Option<String>) -> Re
             &socket_dir,
         )
         .await
-        .with_context(|| format!("Failed to start {}", primal))?;
+        .with_context(|| format!("Failed to start {primal}"))?;
 
         let pid = child.id();
 
@@ -360,7 +359,7 @@ pub async fn run(mode: String, node_id: String, family_id: Option<String>) -> Re
         mode_label,
     );
     for line in summary_lines {
-        println!("{}", line);
+        println!("{line}");
     }
 
     // Keep running until interrupted
@@ -400,7 +399,7 @@ async fn detect_ecosystem(socket_dir: &std::path::Path, family_id: &str) -> Ecos
     let mut active = Vec::new();
 
     for primal in known_primals {
-        let socket_path = socket_dir.join(format!("{}-{}.sock", primal, family_id));
+        let socket_path = socket_dir.join(format!("{primal}-{family_id}.sock"));
         if socket_path.exists() {
             // Socket file exists -- try a health check
             match health_check(&socket_path).await {
@@ -531,7 +530,7 @@ async fn start_primal(
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .spawn()
-        .with_context(|| format!("Failed to spawn {}", name))?;
+        .with_context(|| format!("Failed to spawn {name}"))?;
 
     Ok(child)
 }
@@ -569,7 +568,7 @@ async fn health_check(socket_path: &std::path::Path) -> Result<()> {
                 .and_then(|s| s.to_str())
                 .and_then(|s| s.split('-').next())
                 .unwrap_or("unknown");
-            let semantic_method = format!("{}.health", primal_name);
+            let semantic_method = format!("{primal_name}.health");
             client
                 .call(&semantic_method, serde_json::json!({}))
                 .await

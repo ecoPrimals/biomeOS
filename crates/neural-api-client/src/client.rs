@@ -50,9 +50,9 @@ impl NeuralApiClient {
     /// Discover socket path from family ID
     pub fn discover_socket(family_id: &str) -> PathBuf {
         if let Ok(paths) = biomeos_types::SystemPaths::new() {
-            paths.primal_socket(&format!("neural-api-{}", family_id))
+            paths.primal_socket(&format!("neural-api-{family_id}"))
         } else {
-            std::env::temp_dir().join(format!("neural-api-{}.sock", family_id))
+            std::env::temp_dir().join(format!("neural-api-{family_id}.sock"))
         }
     }
 
@@ -178,8 +178,7 @@ mod tests {
         let msg = err.to_string();
         assert!(
             msg.contains("not exist") || msg.contains("not found") || msg.contains("Neural API"),
-            "Expected socket missing error, got: {}",
-            msg
+            "Expected socket missing error, got: {msg}"
         );
     }
 

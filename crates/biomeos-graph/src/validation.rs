@@ -124,8 +124,7 @@ impl GraphValidator {
                     Self::detect_cycle(node.id.as_str(), &adj, &mut visited, &mut rec_stack)
                 {
                     return Err(GraphError::CyclicDependency(format!(
-                        "Dependency cycle detected involving node '{}'",
-                        cycle_node
+                        "Dependency cycle detected involving node '{cycle_node}'"
                     )));
                 }
             }
@@ -216,8 +215,7 @@ mod tests {
         for ns in expected {
             assert!(
                 validator.known_namespaces.contains(ns),
-                "Missing namespace: {}",
-                ns
+                "Missing namespace: {ns}"
             );
         }
     }

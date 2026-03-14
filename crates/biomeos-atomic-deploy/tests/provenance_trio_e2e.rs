@@ -49,10 +49,10 @@ impl ProvenanceTrioFixture {
         Self {
             family_id: family_id.to_string(),
             socket_dir: socket_dir.clone(),
-            neural_api_socket: socket_dir.join(format!("neural-api-{}.sock", family_id)),
-            rhizocrypt_socket: socket_dir.join(format!("rhizocrypt-{}.sock", family_id)),
-            loamspine_socket: socket_dir.join(format!("loamspine-{}.sock", family_id)),
-            sweetgrass_socket: socket_dir.join(format!("sweetgrass-{}.sock", family_id)),
+            neural_api_socket: socket_dir.join(format!("neural-api-{family_id}.sock")),
+            rhizocrypt_socket: socket_dir.join(format!("rhizocrypt-{family_id}.sock")),
+            loamspine_socket: socket_dir.join(format!("loamspine-{family_id}.sock")),
+            sweetgrass_socket: socket_dir.join(format!("sweetgrass-{family_id}.sock")),
         }
     }
 
@@ -302,7 +302,7 @@ fn test_all_deployment_graphs_have_environment_on_launch_nodes() {
     for graph_name in &deploy_graphs {
         let path = graphs_dir().join(graph_name);
         let graph = Graph::from_toml_file(&path)
-            .unwrap_or_else(|e| panic!("{} should parse: {}", graph_name, e));
+            .unwrap_or_else(|e| panic!("{graph_name} should parse: {e}"));
 
         for node in &graph.nodes {
             if let Some(ref op) = node.operation {
@@ -331,7 +331,7 @@ fn test_provenance_trio_topological_order() {
             .nodes
             .iter()
             .position(|n| n.id == id)
-            .unwrap_or_else(|| panic!("Node '{}' not found", id))
+            .unwrap_or_else(|| panic!("Node '{id}' not found"))
     };
 
     let deps_of = |id: &str| -> &Vec<String> { &graph.nodes[node_index(id)].depends_on };
@@ -381,11 +381,9 @@ async fn test_trio_health_checks() {
         let response = result.unwrap();
         assert!(
             response.get("result").is_some(),
-            "{} returned error: {}",
-            name,
-            response
+            "{name} returned error: {response}"
         );
-        eprintln!("  {} healthy", name);
+        eprintln!("  {name} healthy");
     }
 }
 
@@ -422,8 +420,7 @@ async fn test_trio_capabilities_registered() {
             .expect("primals should be an array");
         assert!(
             !primals.is_empty(),
-            "No providers for domain '{}' — trio not fully registered",
-            domain
+            "No providers for domain '{domain}' — trio not fully registered"
         );
         eprintln!("  {} domain: {} provider(s)", domain, primals.len());
     }
@@ -452,7 +449,7 @@ async fn test_rootpulse_commit_e2e() {
     let session_id = session["result"]["session_id"]
         .as_str()
         .expect("session_id in response");
-    eprintln!("  Created session: {}", session_id);
+    eprintln!("  Created session: {session_id}");
 
     // Step 2: Append some events to the session
     let _ = capability_call(
@@ -484,7 +481,7 @@ async fn test_rootpulse_commit_e2e() {
     let merkle_root = dehydration["result"]["merkle_root"]
         .as_str()
         .expect("merkle_root in dehydration");
-    eprintln!("  Dehydrated — merkle root: {}", merkle_root);
+    eprintln!("  Dehydrated — merkle root: {merkle_root}");
 
     // Step 4: Sign the dehydration summary
     let signed = capability_call(
@@ -522,7 +519,7 @@ async fn test_rootpulse_commit_e2e() {
         .as_str()
         .or_else(|| commit["result"]["entry_id"].as_str())
         .expect("commit_id or entry_id in response");
-    eprintln!("  Committed: {}", commit_id);
+    eprintln!("  Committed: {commit_id}");
 
     // Step 6: Create attribution braid
     let braid = capability_call(
@@ -545,7 +542,7 @@ async fn test_rootpulse_commit_e2e() {
         .as_str()
         .or_else(|| braid["result"]["id"].as_str())
         .expect("braid_id in response");
-    eprintln!("  Attribution braid: {}", braid_id);
+    eprintln!("  Attribution braid: {braid_id}");
 
     // Step 7: Verify the braid exists
     let verify = capability_call(
@@ -561,10 +558,10 @@ async fn test_rootpulse_commit_e2e() {
     eprintln!("  Verified braid retrieval");
 
     eprintln!("\n  RootPulse commit E2E: PASSED");
-    eprintln!("    session:    {}", session_id);
-    eprintln!("    merkle:     {}", merkle_root);
-    eprintln!("    commit:     {}", commit_id);
-    eprintln!("    braid:      {}", braid_id);
+    eprintln!("    session:    {session_id}");
+    eprintln!("    merkle:     {merkle_root}");
+    eprintln!("    commit:     {commit_id}");
+    eprintln!("    braid:      {braid_id}");
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

@@ -1,3 +1,5 @@
+> **HISTORICAL** — This handoff predates v2.37. See CURRENT_STATUS.md for latest.
+
 # Squirrel AI Bridge via Neural API - Evolution Handoff
 
 **Date**: February 9, 2026

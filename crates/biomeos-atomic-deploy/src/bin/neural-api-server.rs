@@ -45,7 +45,7 @@ async fn main() -> Result<()> {
     let socket_path = std::env::args()
         .position(|arg| arg == "--socket")
         .and_then(|i| std::env::args().nth(i + 1))
-        .unwrap_or_else(|| format!("/tmp/neural-api-{}.sock", family_id));
+        .unwrap_or_else(|| format!("/tmp/neural-api-{family_id}.sock"));
 
     info!("╔══════════════════════════════════════════════════════════════════════════╗");
     info!("║                                                                          ║");

@@ -80,7 +80,7 @@ pub async fn crypto_derive_seed(node: &GraphNode, context: &ExecutionContext) ->
             if let Some(result) = response.get("result") {
                 Ok(result.clone())
             } else if let Some(err) = response.get("error") {
-                anyhow::bail!("Crypto derive failed: {}", err);
+                anyhow::bail!("Crypto derive failed: {err}");
             } else {
                 anyhow::bail!("Invalid response from security provider");
             }
@@ -88,7 +88,7 @@ pub async fn crypto_derive_seed(node: &GraphNode, context: &ExecutionContext) ->
         None => {
             // Fallback: Generate deterministic seed from family_id
             warn!("⚠️  No security provider found, using deterministic fallback");
-            let seed = format!("seed-{}-{}", family_id, source);
+            let seed = format!("seed-{family_id}-{source}");
             Ok(json!({
                 "seed": seed,
                 "derived_from": source,
@@ -165,7 +165,7 @@ pub async fn health_check(node: &GraphNode, context: &ExecutionContext) -> Resul
         call_primal_rpc(&socket_path, &request),
     )
     .await
-    .map_err(|_| anyhow::anyhow!("Health check timeout after {}s", timeout_secs))??;
+    .map_err(|_| anyhow::anyhow!("Health check timeout after {timeout_secs}s"))??;
 
     let healthy = response
         .get("result")
@@ -362,8 +362,8 @@ pub fn substitute_env(s: &str, env: &HashMap<String, String>) -> String {
     let mut result = s.to_string();
 
     for (key, value) in env {
-        result = result.replace(&format!("${{{}}}", key), value);
-        result = result.replace(&format!("${}", key), value);
+        result = result.replace(&format!("${{{key}}}"), value);
+        result = result.replace(&format!("${key}"), value);
     }
 
     result
@@ -386,7 +386,7 @@ async fn discover_capability_provider(
     let cap_upper = capability.to_uppercase();
 
     // 1. Check environment for explicit socket
-    if let Some(socket) = context.env().get(&format!("{}_SOCKET", cap_upper)) {
+    if let Some(socket) = context.env().get(&format!("{cap_upper}_SOCKET")) {
         if tokio::fs::metadata(socket).await.is_ok() {
             debug!(
                 "Found {} provider via {}_SOCKET: {}",
@@ -397,7 +397,7 @@ async fn discover_capability_provider(
     }
 
     // 2. Check for endpoint environment variable
-    if let Some(endpoint) = context.env().get(&format!("{}_ENDPOINT", cap_upper)) {
+    if let Some(endpoint) = context.env().get(&format!("{cap_upper}_ENDPOINT")) {
         debug!(
             "Found {} provider via {}_ENDPOINT: {}",
             capability, cap_upper, endpoint
@@ -428,7 +428,7 @@ async fn discover_capability_provider(
 async fn call_primal_rpc(socket_path: &str, request: &impl Serialize) -> Result<Value> {
     let stream = UnixStream::connect(socket_path)
         .await
-        .with_context(|| format!("Failed to connect to {}", socket_path))?;
+        .with_context(|| format!("Failed to connect to {socket_path}"))?;
 
     let (read_half, mut write_half) = stream.into_split();
 
@@ -444,7 +444,7 @@ async fn call_primal_rpc(socket_path: &str, request: &impl Serialize) -> Result<
     reader.read_line(&mut response_line).await?;
 
     let response: Value = serde_json::from_str(&response_line)
-        .with_context(|| format!("Invalid JSON response from {}", socket_path))?;
+        .with_context(|| format!("Invalid JSON response from {socket_path}"))?;
 
     Ok(response)
 }

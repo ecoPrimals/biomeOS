@@ -406,21 +406,21 @@ mod tests {
     #[test]
     fn test_environment_debug() {
         let env = Environment::Production;
-        let debug = format!("{:?}", env);
+        let debug = format!("{env:?}");
         assert!(debug.contains("Production"));
     }
 
     #[test]
     fn test_organization_scale_debug() {
         let scale = OrganizationScale::Enterprise;
-        let debug = format!("{:?}", scale);
+        let debug = format!("{scale:?}");
         assert!(debug.contains("Enterprise"));
     }
 
     #[test]
     fn test_system_config_debug() {
         let config = SystemConfig::default();
-        let debug = format!("{:?}", config);
+        let debug = format!("{config:?}");
         assert!(debug.contains("biomeos"));
     }
 }

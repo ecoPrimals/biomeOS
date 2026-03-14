@@ -96,7 +96,7 @@ async fn test_pure_noise_beacon_generation() {
             panic!("❌ Same family should decrypt successfully");
         }
         Err(e) => {
-            panic!("❌ Decryption error: {}", e);
+            panic!("❌ Decryption error: {e}");
         }
     }
 

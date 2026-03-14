@@ -278,7 +278,7 @@ impl GraphEventBroadcaster {
         // Send to all subscribers
         match self.sender.send(event) {
             Ok(count) => Ok(count),
-            Err(e) => Err(format!("Failed to broadcast event: {}", e)),
+            Err(e) => Err(format!("Failed to broadcast event: {e}")),
         }
     }
 
@@ -420,8 +420,8 @@ mod tests {
         // Send multiple events
         for i in 0..5 {
             let event = GraphEvent::NodeStarted {
-                graph_id: format!("graph_{}", i),
-                node_id: format!("node_{}", i),
+                graph_id: format!("graph_{i}"),
+                node_id: format!("node_{i}"),
                 primal: "test".to_string(),
                 operation: "test".to_string(),
                 timestamp: Utc::now(),
@@ -432,7 +432,7 @@ mod tests {
         // Receive in order
         for i in 0..5 {
             let received = receiver.recv().await.unwrap();
-            assert_eq!(received.graph_id(), format!("graph_{}", i));
+            assert_eq!(received.graph_id(), format!("graph_{i}"));
         }
     }
 
@@ -445,8 +445,8 @@ mod tests {
         // Broadcast events
         for i in 0..3 {
             let event = GraphEvent::NodeCompleted {
-                graph_id: format!("graph_{}", i),
-                node_id: format!("node_{}", i),
+                graph_id: format!("graph_{i}"),
+                node_id: format!("node_{i}"),
                 duration_ms: 100,
                 output: None,
                 timestamp: Utc::now(),
@@ -509,8 +509,8 @@ mod tests {
             let handle = tokio::spawn(async move {
                 for j in 0..10 {
                     let event = GraphEvent::NodeStarted {
-                        graph_id: format!("graph_{}_{}", i, j),
-                        node_id: format!("node_{}_{}", i, j),
+                        graph_id: format!("graph_{i}_{j}"),
+                        node_id: format!("node_{i}_{j}"),
                         primal: "test".to_string(),
                         operation: "test".to_string(),
                         timestamp: Utc::now(),

@@ -66,7 +66,7 @@ impl VerificationResult {
             let msg = check
                 .message
                 .as_ref()
-                .map(|m| format!(": {}", m))
+                .map(|m| format!(": {m}"))
                 .unwrap_or_default();
             println!("  {} {}{}", icon, check.name, msg);
         }
@@ -131,7 +131,7 @@ impl SporeVerification {
         for dir in &required_dirs {
             let path = spore_path.join(dir);
             result.add_check(
-                format!("Directory: {}", dir),
+                format!("Directory: {dir}"),
                 path.exists() && path.is_dir(),
                 if !path.exists() {
                     Some("Missing".to_string())
@@ -180,7 +180,7 @@ impl SporeVerification {
                     if secure {
                         None
                     } else {
-                        Some(format!("Expected 0600, found {:o}", mode))
+                        Some(format!("Expected 0600, found {mode:o}"))
                     },
                 );
             }
@@ -264,7 +264,7 @@ impl SporeVerification {
                     let is_executable = perms.mode() & 0o111 != 0;
 
                     result.add_check(
-                        format!("{} executable", name),
+                        format!("{name} executable"),
                         is_executable,
                         if !is_executable {
                             Some("Not executable".to_string())

@@ -499,6 +499,23 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_node_topology_serde_roundtrip() {
+        for topo in [
+            NodeTopology::Leaf,
+            NodeTopology::BinaryTree,
+            NodeTopology::NAryTree {
+                branching_factor: 4,
+            },
+            NodeTopology::QuadTree,
+            NodeTopology::Hybrid,
+        ] {
+            let json = serde_json::to_string(&topo).unwrap();
+            let restored: NodeTopology = serde_json::from_str(&json).unwrap();
+            assert_eq!(format!("{:?}", topo), format!("{:?}", restored));
+        }
+    }
+
+    #[test]
     fn workload_id_new_and_display() {
         let id = WorkloadId::new();
         let s = id.to_string();
@@ -507,7 +524,20 @@ mod tests {
     }
 
     #[test]
+    fn test_workload_id_new_and_display() {
+        let id = WorkloadId::new();
+        assert!(!id.0.is_nil());
+        assert!(!id.to_string().is_empty());
+    }
+
+    #[test]
     fn workload_id_default() {
+        let id = WorkloadId::default();
+        assert!(!id.0.is_nil());
+    }
+
+    #[test]
+    fn test_workload_id_default() {
         let id = WorkloadId::default();
         assert!(!id.0.is_nil());
     }
@@ -518,6 +548,13 @@ mod tests {
         assert_eq!(req.cpu_cores, Some(1));
         assert_eq!(req.memory_mb, Some(256));
         assert!(req.gpu_memory_mb.is_none());
+    }
+
+    #[test]
+    fn test_resource_requirements_default() {
+        let r = ResourceRequirements::default();
+        assert_eq!(r.cpu_cores, Some(1));
+        assert_eq!(r.memory_mb, Some(256));
     }
 
     #[test]
@@ -545,7 +582,36 @@ mod tests {
     }
 
     #[test]
+    fn test_resource_info_aggregate() {
+        let mut r1 = ResourceInfo {
+            cpu_cores: 4,
+            memory_mb: 1024,
+            gpu_count: 0,
+            gpu_memory_mb: 0,
+            disk_mb: 100,
+        };
+        let r2 = ResourceInfo {
+            cpu_cores: 2,
+            memory_mb: 512,
+            gpu_count: 1,
+            gpu_memory_mb: 4096,
+            disk_mb: 50,
+        };
+        r1.aggregate(r2);
+        assert_eq!(r1.cpu_cores, 6);
+        assert_eq!(r1.memory_mb, 1536);
+        assert_eq!(r1.gpu_count, 1);
+    }
+
+    #[test]
     fn workload_priority_ordering() {
+        assert!(WorkloadPriority::Critical > WorkloadPriority::High);
+        assert!(WorkloadPriority::High > WorkloadPriority::Normal);
+        assert!(WorkloadPriority::Normal > WorkloadPriority::Low);
+    }
+
+    #[test]
+    fn test_workload_priority_ordering() {
         assert!(WorkloadPriority::Critical > WorkloadPriority::High);
         assert!(WorkloadPriority::High > WorkloadPriority::Normal);
         assert!(WorkloadPriority::Normal > WorkloadPriority::Low);
@@ -564,6 +630,23 @@ mod tests {
     }
 
     #[test]
+    fn test_workload_status_serde_roundtrip() {
+        for status in [
+            WorkloadStatus::Queued,
+            WorkloadStatus::Running,
+            WorkloadStatus::Completed,
+            WorkloadStatus::Failed {
+                error: "test".to_string(),
+            },
+            WorkloadStatus::Cancelled,
+        ] {
+            let json = serde_json::to_string(&status).unwrap();
+            let restored: WorkloadStatus = serde_json::from_str(&json).unwrap();
+            assert_eq!(format!("{:?}", status), format!("{:?}", restored));
+        }
+    }
+
+    #[test]
     fn node_topology_variants() {
         let leaf = NodeTopology::Leaf;
         let binary = NodeTopology::BinaryTree;
@@ -576,6 +659,15 @@ mod tests {
     }
 
     #[test]
+    fn test_workload_new() {
+        let w = Workload::new("test", Runtime::Wasm);
+        assert_eq!(w.name, "test");
+        assert_eq!(w.runtime, Runtime::Wasm);
+        assert!(w.code.is_empty());
+        assert!(!w.parallelizable);
+    }
+
+    #[test]
     fn runtime_variants() {
         for r in [
             Runtime::Native,
@@ -585,6 +677,21 @@ mod tests {
             Runtime::Gpu,
         ] {
             let _ = format!("{:?}", r);
+        }
+    }
+
+    #[test]
+    fn test_runtime_serde_roundtrip() {
+        for r in [
+            Runtime::Native,
+            Runtime::Wasm,
+            Runtime::Container,
+            Runtime::Python,
+            Runtime::Gpu,
+        ] {
+            let json = serde_json::to_string(&r).unwrap();
+            let restored: Runtime = serde_json::from_str(&json).unwrap();
+            assert_eq!(r, restored);
         }
     }
 
@@ -608,6 +715,23 @@ mod tests {
     }
 
     #[test]
+    fn test_health_status_serde_roundtrip() {
+        for status in [
+            HealthStatus::Healthy,
+            HealthStatus::Degraded {
+                reason: "load".to_string(),
+            },
+            HealthStatus::Unhealthy {
+                error: "crash".to_string(),
+            },
+        ] {
+            let json = serde_json::to_string(&status).unwrap();
+            let restored: HealthStatus = serde_json::from_str(&json).unwrap();
+            assert_eq!(format!("{:?}", status), format!("{:?}", restored));
+        }
+    }
+
+    #[test]
     fn workload_builder_fluent() {
         let w = Workload::builder("test", Runtime::Native)
             .cpu_cores(4)
@@ -621,6 +745,19 @@ mod tests {
         assert_eq!(w.resource_requirements.memory_mb, Some(512));
         assert_eq!(w.priority, WorkloadPriority::High);
         assert!(w.parallelizable);
+    }
+
+    #[test]
+    fn test_workload_builder() {
+        let w = Workload::builder("my-workload", Runtime::Native)
+            .cpu_cores(4)
+            .memory_mb(512)
+            .priority(WorkloadPriority::High)
+            .build();
+        assert_eq!(w.name, "my-workload");
+        assert_eq!(w.resource_requirements.cpu_cores, Some(4));
+        assert_eq!(w.resource_requirements.memory_mb, Some(512));
+        assert_eq!(w.priority, WorkloadPriority::High);
     }
 
     #[test]

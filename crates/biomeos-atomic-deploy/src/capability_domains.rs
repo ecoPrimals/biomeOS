@@ -219,8 +219,17 @@ pub(crate) fn capability_to_provider_fallback(capability: &str) -> Option<&'stat
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_capability_domain_struct_access() {
+        let domain = &CAPABILITY_DOMAINS[0];
+        assert_eq!(domain.provider, "beardog");
+        assert!(domain.capabilities.contains(&"security"));
+        assert!(domain.capabilities.contains(&"crypto"));
+    }
 
     #[test]
     fn test_capability_to_provider_security_domain() {

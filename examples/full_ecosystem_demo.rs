@@ -81,7 +81,7 @@ fn discover_primals() {
             "squirrel" => "🐿️",
             _ => "📦",
         };
-        println!("   {} {} ({} binaries)", icon, primal, count);
+        println!("   {icon} {primal} ({count} binaries)");
     }
     println!();
 }
@@ -96,7 +96,7 @@ fn load_chimeras() {
     match ChimeraRegistry::from_directory(definitions_dir) {
         Ok(registry) => {
             for (id, summary) in registry.summary() {
-                println!("   🧬 {}", id);
+                println!("   🧬 {id}");
                 println!("      Name: {}", summary.name);
                 println!("      Primals: {}", summary.primals.join(" + "));
                 if summary.uses_arrays {
@@ -106,7 +106,7 @@ fn load_chimeras() {
             }
         }
         Err(e) => {
-            println!("   ❌ Failed to load: {}", e);
+            println!("   ❌ Failed to load: {e}");
         }
     }
 }
@@ -136,7 +136,7 @@ fn show_niches() {
                             .and_then(|s| s.to_str())
                             .unwrap_or("unknown");
 
-                        println!("   🌿 {} ({})", name, id);
+                        println!("   🌿 {name} ({id})");
                     }
                 }
             }

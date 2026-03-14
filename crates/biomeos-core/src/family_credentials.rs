@@ -81,25 +81,23 @@ fn load_credential_v2(file: CredentialFileV2) -> Result<FamilyCredentials, BirdS
 
     let payload_bytes =
         base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &file.payload).map_err(
-            |e| BirdSongError::InvalidCredentials(format!("Invalid payload base64: {}", e)),
+            |e| BirdSongError::InvalidCredentials(format!("Invalid payload base64: {e}")),
         )?;
 
     let payload: CredentialPayload = serde_json::from_slice(&payload_bytes)
-        .map_err(|e| BirdSongError::InvalidCredentials(format!("Invalid payload JSON: {}", e)))?;
+        .map_err(|e| BirdSongError::InvalidCredentials(format!("Invalid payload JSON: {e}")))?;
 
     let seed = SecretSeed::new(payload.family_seed.clone())?;
     let seed_bytes =
-        base64::Engine::decode(&base64::engine::general_purpose::STANDARD, seed.as_str()).map_err(
-            |e| BirdSongError::InvalidCredentials(format!("Invalid seed base64: {}", e)),
-        )?;
+        base64::Engine::decode(&base64::engine::general_purpose::STANDARD, seed.as_str())
+            .map_err(|e| BirdSongError::InvalidCredentials(format!("Invalid seed base64: {e}")))?;
 
     let expected_tag =
-        base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &file.hmac).map_err(
-            |e| BirdSongError::InvalidCredentials(format!("Invalid HMAC base64: {}", e)),
-        )?;
+        base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &file.hmac)
+            .map_err(|e| BirdSongError::InvalidCredentials(format!("Invalid HMAC base64: {e}")))?;
 
     let mut mac = HmacSha256::new_from_slice(&seed_bytes)
-        .map_err(|e| BirdSongError::InvalidCredentials(format!("HMAC init failed: {}", e)))?;
+        .map_err(|e| BirdSongError::InvalidCredentials(format!("HMAC init failed: {e}")))?;
     mac.update(&payload_bytes);
     mac.verify_slice(&expected_tag).map_err(|_| {
         BirdSongError::InvalidCredentials(
@@ -119,7 +117,7 @@ fn load_credential_legacy(contents: &str) -> Result<FamilyCredentials, BirdSongE
     }
 
     let file: LegacyFormat = serde_json::from_str(contents)
-        .map_err(|e| BirdSongError::InvalidCredentials(format!("Invalid JSON: {}", e)))?;
+        .map_err(|e| BirdSongError::InvalidCredentials(format!("Invalid JSON: {e}")))?;
 
     let family_id = FamilyId::new(file.family_id);
     let seed = SecretSeed::new(file.family_seed)?;
@@ -137,9 +135,8 @@ impl SecretSeed {
     /// Create a new secret seed from base64 string
     pub fn new(seed: String) -> Result<Self, BirdSongError> {
         // Validate base64 format
-        base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &seed).map_err(|e| {
-            BirdSongError::InvalidCredentials(format!("Invalid base64 seed: {}", e))
-        })?;
+        base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &seed)
+            .map_err(|e| BirdSongError::InvalidCredentials(format!("Invalid base64 seed: {e}")))?;
 
         Ok(Self { seed })
     }
@@ -153,7 +150,7 @@ impl SecretSeed {
     pub fn validate(&self) -> Result<(), BirdSongError> {
         let decoded =
             base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &self.seed)
-                .map_err(|e| BirdSongError::InvalidCredentials(format!("Invalid base64: {}", e)))?;
+                .map_err(|e| BirdSongError::InvalidCredentials(format!("Invalid base64: {e}")))?;
 
         // Require minimum seed length (32 bytes = 256 bits)
         if decoded.len() < 32 {
@@ -229,9 +226,8 @@ impl FamilyCredentials {
         path: impl AsRef<Path>,
         _encryption_key: &[u8],
     ) -> Result<Self, BirdSongError> {
-        let contents = fs::read_to_string(path.as_ref()).map_err(|e| {
-            BirdSongError::InvalidCredentials(format!("Failed to read file: {}", e))
-        })?;
+        let contents = fs::read_to_string(path.as_ref())
+            .map_err(|e| BirdSongError::InvalidCredentials(format!("Failed to read file: {e}")))?;
 
         // Try versioned format first
         if let Ok(v2) = serde_json::from_str::<CredentialFileV2>(&contents) {
@@ -252,9 +248,8 @@ impl FamilyCredentials {
             family_id: self.family_id.as_str().to_string(),
             family_seed: self.seed.as_str().to_string(),
         };
-        let payload_json = serde_json::to_string(&payload).map_err(|e| {
-            BirdSongError::InvalidCredentials(format!("Failed to serialize: {}", e))
-        })?;
+        let payload_json = serde_json::to_string(&payload)
+            .map_err(|e| BirdSongError::InvalidCredentials(format!("Failed to serialize: {e}")))?;
         let payload_b64 = base64::Engine::encode(
             &base64::engine::general_purpose::STANDARD,
             payload_json.as_bytes(),
@@ -264,10 +259,10 @@ impl FamilyCredentials {
             &base64::engine::general_purpose::STANDARD,
             self.seed.as_str(),
         )
-        .map_err(|e| BirdSongError::InvalidCredentials(format!("Invalid seed for HMAC: {}", e)))?;
+        .map_err(|e| BirdSongError::InvalidCredentials(format!("Invalid seed for HMAC: {e}")))?;
 
         let mut mac = HmacSha256::new_from_slice(&seed_bytes)
-            .map_err(|e| BirdSongError::InvalidCredentials(format!("HMAC init failed: {}", e)))?;
+            .map_err(|e| BirdSongError::InvalidCredentials(format!("HMAC init failed: {e}")))?;
         mac.update(payload_json.as_bytes());
         let tag = mac.finalize().into_bytes();
         let hmac_b64 =
@@ -279,7 +274,7 @@ impl FamilyCredentials {
             hmac: hmac_b64,
         };
         let contents = serde_json::to_string(&file).map_err(|e| {
-            BirdSongError::InvalidCredentials(format!("Failed to serialize file: {}", e))
+            BirdSongError::InvalidCredentials(format!("Failed to serialize file: {e}"))
         })?;
 
         let mut f = fs::OpenOptions::new()
@@ -288,11 +283,10 @@ impl FamilyCredentials {
             .truncate(true)
             .open(path.as_ref())
             .map_err(|e| {
-                BirdSongError::InvalidCredentials(format!("Failed to create file: {}", e))
+                BirdSongError::InvalidCredentials(format!("Failed to create file: {e}"))
             })?;
-        f.write_all(contents.as_bytes()).map_err(|e| {
-            BirdSongError::InvalidCredentials(format!("Failed to write file: {}", e))
-        })?;
+        f.write_all(contents.as_bytes())
+            .map_err(|e| BirdSongError::InvalidCredentials(format!("Failed to write file: {e}")))?;
 
         #[cfg(unix)]
         {
@@ -300,8 +294,7 @@ impl FamilyCredentials {
             f.set_permissions(fs::Permissions::from_mode(0o600))
                 .map_err(|e| {
                     BirdSongError::InvalidCredentials(format!(
-                        "Failed to set file permissions 0o600: {}",
-                        e
+                        "Failed to set file permissions 0o600: {e}"
                     ))
                 })?;
         }
@@ -381,7 +374,7 @@ mod tests {
     fn test_secret_seed_debug() {
         let seed =
             SecretSeed::new("iIDnVX3Tein1LFkrkkq7Wo3wsxPNek9XZqp0VL4Kn88=".to_string()).unwrap();
-        let debug_str = format!("{:?}", seed);
+        let debug_str = format!("{seed:?}");
         assert!(debug_str.contains("REDACTED"));
         assert!(!debug_str.contains("iIDn"));
     }
@@ -393,7 +386,7 @@ mod tests {
             SecretSeed::new("iIDnVX3Tein1LFkrkkq7Wo3wsxPNek9XZqp0VL4Kn88=".to_string()).unwrap();
         let creds = FamilyCredentials::new(family_id, seed).unwrap();
 
-        let debug_str = format!("{:?}", creds);
+        let debug_str = format!("{creds:?}");
         assert!(debug_str.contains("test-family"));
         assert!(debug_str.contains("REDACTED"));
         assert!(!debug_str.contains("iIDn"));

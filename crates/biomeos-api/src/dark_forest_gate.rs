@@ -292,8 +292,7 @@ mod tests {
         for path in BYPASS_PATHS {
             assert!(
                 path.contains("well-known"),
-                "Bypass path should only be for ACME: {}",
-                path
+                "Bypass path should only be for ACME: {path}"
             );
         }
     }
@@ -304,8 +303,7 @@ mod tests {
         for path in BARE_OK_PATHS {
             assert!(
                 path.contains("health"),
-                "Bare OK path should be health-related: {}",
-                path
+                "Bare OK path should be health-related: {path}"
             );
         }
     }
@@ -465,8 +463,8 @@ mod tests {
             "/admin",
         ];
         for path in &paths {
-            assert!(!is_bypass_path(path), "{} should not bypass gate", path);
-            assert!(!is_bare_ok_path(path), "{} should not be bare OK", path);
+            assert!(!is_bypass_path(path), "{path} should not bypass gate");
+            assert!(!is_bare_ok_path(path), "{path} should not be bare OK");
         }
     }
 
@@ -478,7 +476,7 @@ mod tests {
             "/.well-known/openid-configuration",
         ];
         for path in &paths {
-            assert!(is_bypass_path(path), "{} should bypass gate", path);
+            assert!(is_bypass_path(path), "{path} should bypass gate");
         }
     }
 
@@ -506,7 +504,7 @@ mod tests {
             neural_api_socket: None,
             family_id: "test".to_string(),
         };
-        let debug_str = format!("{:?}", config);
+        let debug_str = format!("{config:?}");
         assert!(debug_str.contains("enabled"));
         assert!(debug_str.contains("family_id"));
     }

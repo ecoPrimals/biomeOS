@@ -630,7 +630,7 @@ impl DashboardState {
             for capability in &service.capabilities {
                 *self
                     .capability_stats
-                    .entry(format!("{:?}", capability))
+                    .entry(format!("{capability:?}"))
                     .or_insert(0) += 1;
             }
         }
@@ -640,7 +640,7 @@ impl DashboardState {
             for capability in &primal_state.capabilities {
                 *self
                     .capability_stats
-                    .entry(format!("{:?}", capability))
+                    .entry(format!("{capability:?}"))
                     .or_insert(0) += 1;
             }
         }

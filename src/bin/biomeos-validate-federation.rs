@@ -41,7 +41,7 @@ async fn main() -> Result<()> {
     // - Wait for cloud-init completion
     // - Validate SSH access
     // - Return only when ready
-    println!("Creating federation: {}", federation_name);
+    println!("Creating federation: {federation_name}");
     println!("(This includes proper validation - no workarounds!)");
     println!();
 
@@ -51,7 +51,7 @@ async fn main() -> Result<()> {
             println!();
         }
         Err(e) => {
-            eprintln!("❌ Federation creation failed: {}", e);
+            eprintln!("❌ Federation creation failed: {e}");
             eprintln!();
             eprintln!("This is expected if benchScale isn't fully configured.");
             eprintln!("The infrastructure is correct - just needs benchScale setup.");

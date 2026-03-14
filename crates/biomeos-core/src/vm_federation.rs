@@ -26,7 +26,7 @@ use tracing::{debug, info, warn};
 /// Parse IP address from virsh domifaddr output (testable pure function)
 ///
 /// Parses lines like "ipv4         192.168.122.34/24" and extracts the first 192.168.x.x IP.
-#[allow(dead_code)] // Used by tests
+#[allow(dead_code)]
 pub(crate) fn parse_ip_from_domifaddr_output(ip_text: &str) -> Option<String> {
     for ip_line in ip_text.lines() {
         if ip_line.contains("ipv4") || ip_line.contains("192.168") {
@@ -43,7 +43,7 @@ pub(crate) fn parse_ip_from_domifaddr_output(ip_text: &str) -> Option<String> {
 }
 
 /// Extract VM names from virsh list output that match federation name
-#[allow(dead_code)] // Used by tests
+#[allow(dead_code)]
 pub(crate) fn parse_vm_names_from_list(vm_list: &str, federation_name: &str) -> Vec<String> {
     let mut names = Vec::new();
     for line in vm_list.lines() {
@@ -247,7 +247,7 @@ impl VmFederationManager {
         }
 
         if ips.is_empty() {
-            anyhow::bail!("No VM IPs found for federation: {}", federation_name);
+            anyhow::bail!("No VM IPs found for federation: {federation_name}");
         }
 
         Ok(ips)
@@ -294,7 +294,7 @@ impl VmFederationManager {
                         "StrictHostKeyChecking=no",
                         "-o",
                         "BatchMode=yes",
-                        &format!("biomeos@{}", ip),
+                        &format!("biomeos@{ip}"),
                         "echo 'SSH ready'",
                     ])
                     .output();
@@ -308,9 +308,7 @@ impl VmFederationManager {
 
                 if attempt >= self.validation_config.ssh_max_retries {
                     anyhow::bail!(
-                        "Failed to SSH to {} after {} attempts. Check cloud-init logs.",
-                        ip,
-                        attempt
+                        "Failed to SSH to {ip} after {attempt} attempts. Check cloud-init logs."
                     );
                 }
 
@@ -333,14 +331,14 @@ impl VmFederationManager {
                     "ConnectTimeout=5",
                     "-o",
                     "StrictHostKeyChecking=no",
-                    &format!("biomeos@{}", ip),
+                    &format!("biomeos@{ip}"),
                     "hostname && uptime",
                 ])
                 .output()
-                .context(format!("Failed to validate SSH to {}", ip))?;
+                .context(format!("Failed to validate SSH to {ip}"))?;
 
             if !output.status.success() {
-                anyhow::bail!("SSH validation failed for {}", ip);
+                anyhow::bail!("SSH validation failed for {ip}");
             }
 
             info!(
@@ -487,8 +485,7 @@ mod tests {
                 // benchscale doesn't exist - expected in CI/test environments
                 assert!(
                     e.to_string().contains("benchscale not found"),
-                    "Error should be about missing benchscale, got: {}",
-                    e
+                    "Error should be about missing benchscale, got: {e}"
                 );
             }
         }
@@ -504,8 +501,7 @@ mod tests {
                 assert!(
                     e.to_string().contains("benchscale not found")
                         || e.to_string().contains("parent"),
-                    "Expected benchscale or path error, got: {}",
-                    e
+                    "Expected benchscale or path error, got: {e}"
                 );
             }
         }

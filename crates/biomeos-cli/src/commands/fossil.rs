@@ -241,7 +241,7 @@ async fn handle_active(node_filter: Option<String>) -> Result<()> {
         println!();
     }
 
-    println!("Total: {} active session(s)", total_count);
+    println!("Total: {total_count} active session(s)");
 
     Ok(())
 }
@@ -277,7 +277,7 @@ async fn handle_fossil(
                 println!("{line}");
             }
         } else {
-            println!("Error: Invalid fossil number {}", idx);
+            println!("Error: Invalid fossil number {idx}");
         }
         return Ok(());
     }
@@ -290,7 +290,7 @@ async fn handle_fossil(
     println!("\n🦴 Fossil Record");
     if let Some(node) = &node_filter {
         println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        println!("Filtered by node: {}\n", node);
+        println!("Filtered by node: {node}\n");
     } else {
         println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
     }
@@ -324,13 +324,13 @@ async fn handle_archive(node_id: String) -> Result<()> {
     let session = sessions
         .iter()
         .find(|s| s.node_id == node_id)
-        .ok_or_else(|| anyhow::anyhow!("No active session found for node: {}", node_id))?;
+        .ok_or_else(|| anyhow::anyhow!("No active session found for node: {node_id}"))?;
 
     let fossil = manager
         .archive_session(session, ArchivalReason::Manual)
         .await?;
 
-    println!("✅ Archived session for {}", node_id);
+    println!("✅ Archived session for {node_id}");
     println!("   Duration: {} seconds", fossil.duration().num_seconds());
     println!("   Issues: {}", fossil.issues.len());
 
@@ -398,7 +398,7 @@ async fn handle_clean(older_than: u64, dry_run: bool) -> Result<()> {
             );
         }
     } else {
-        println!("✅ No fossils older than {} days found", older_than);
+        println!("✅ No fossils older than {older_than} days found");
     }
 
     Ok(())
@@ -443,7 +443,7 @@ async fn handle_migrate(from: PathBuf, dry_run: bool) -> Result<()> {
             }
             std::fs::rename(log_path, &dest)?;
 
-            println!("  ✅ Migrated: {}", file_name);
+            println!("  ✅ Migrated: {file_name}");
         }
 
         println!("\n✅ Migration complete!");
@@ -453,7 +453,7 @@ async fn handle_migrate(from: PathBuf, dry_run: bool) -> Result<()> {
                 .file_name()
                 .expect("log path has no filename")
                 .to_string_lossy();
-            println!("  Would migrate: {}", file_name);
+            println!("  Would migrate: {file_name}");
         }
     }
 

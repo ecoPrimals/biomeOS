@@ -130,6 +130,7 @@ pub fn node_template() -> NicheTemplate {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 
@@ -229,5 +230,44 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn test_niche_template_serde_roundtrip() {
+        let tower = tower_template();
+        let json = serde_json::to_string(&tower).unwrap();
+        let parsed: NicheTemplate = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.id, tower.id);
+        assert_eq!(parsed.name, tower.name);
+        assert_eq!(parsed.required_primals.len(), tower.required_primals.len());
+    }
+
+    #[test]
+    fn test_primal_role_serde_roundtrip() {
+        let role = PrimalRole {
+            role: "security".to_string(),
+            capabilities: vec!["crypto".to_string()],
+            min_health: 0.9,
+            metadata: serde_json::json!({}),
+        };
+        let json = serde_json::to_string(&role).unwrap();
+        let parsed: PrimalRole = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.role, role.role);
+        assert_eq!(parsed.min_health, role.min_health);
+    }
+
+    #[test]
+    fn test_resource_requirements_serde_roundtrip() {
+        let reqs = ResourceRequirements {
+            cpu_cores: 4,
+            memory_mb: 2048,
+            storage_gb: 10,
+            gpu_required: true,
+            network_bandwidth_mbps: 100,
+        };
+        let json = serde_json::to_string(&reqs).unwrap();
+        let parsed: ResourceRequirements = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.cpu_cores, reqs.cpu_cores);
+        assert_eq!(parsed.gpu_required, reqs.gpu_required);
     }
 }

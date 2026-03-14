@@ -1,3 +1,5 @@
+> **HISTORICAL** — This handoff predates v2.37. See CURRENT_STATUS.md for latest.
+
 # Relay-Assisted Coordinated Punch — Ownership Handoff
 
 **Date**: February 11, 2026  

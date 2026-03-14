@@ -13,6 +13,7 @@
 
 use crate::{Arch, GenomeBin};
 use anyhow::{Context, Result};
+use bytes::Bytes;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{Read, Write};
@@ -51,13 +52,13 @@ impl ExtractorEntry {
         }
     }
 
-    fn to_bytes(&self) -> Vec<u8> {
+    fn to_bytes(&self) -> Bytes {
         let mut bytes = Vec::with_capacity(32);
         bytes.extend_from_slice(&self.architecture);
         bytes.extend_from_slice(&self.offset.to_le_bytes());
         bytes.extend_from_slice(&self.size.to_le_bytes());
         bytes.extend_from_slice(&self.checksum);
-        bytes
+        Bytes::from(bytes)
     }
 }
 
@@ -101,12 +102,12 @@ impl GenomeBin {
 
         // Sort extractors for deterministic output (Deep Debt: no arbitrary ordering)
         let mut sorted_extractors: Vec<_> = extractors.iter().collect();
-        sorted_extractors.sort_by_key(|(arch, _)| format!("{:?}", arch));
+        sorted_extractors.sort_by_key(|(arch, _)| format!("{arch:?}"));
 
         for (arch, extractor_path) in sorted_extractors {
             // Read extractor binary
             let mut extractor_file = File::open(extractor_path)
-                .with_context(|| format!("Failed to open extractor: {:?}", extractor_path))?;
+                .with_context(|| format!("Failed to open extractor: {extractor_path:?}"))?;
 
             let mut extractor_bytes = Vec::new();
             extractor_file.read_to_end(&mut extractor_bytes)?;
@@ -130,7 +131,7 @@ impl GenomeBin {
             let entry =
                 ExtractorEntry::new(arch_str, current_offset as u64, actual_size, &checksum);
 
-            table.extend_from_slice(&entry.to_bytes());
+            table.extend_from_slice(entry.to_bytes().as_ref());
 
             // Pad extractor to EXTRACTOR_SIZE (alignment for fast seeking)
             extractor_bytes.resize(EXTRACTOR_SIZE, 0);
@@ -230,7 +231,7 @@ impl GenomeBin {
 
         // Hash binaries in deterministic order
         let mut sorted_binaries: Vec<_> = self.binaries.iter().collect();
-        sorted_binaries.sort_by_key(|(arch, _)| format!("{:?}", arch));
+        sorted_binaries.sort_by_key(|(arch, _)| format!("{arch:?}"));
 
         for (_arch, bin) in &sorted_binaries {
             hasher.update(&bin.data);
@@ -362,8 +363,7 @@ mod tests {
         let result = genome.write_v4_1(&output, &extractors);
         assert!(
             result.is_ok(),
-            "write_v4_1 with empty extractors: {:?}",
-            result
+            "write_v4_1 with empty extractors: {result:?}"
         );
         assert!(output.exists());
         let meta = std::fs::metadata(&output).expect("metadata");

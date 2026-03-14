@@ -286,7 +286,7 @@ impl BootableMediaBuilder {
         info!("💿 Creating bootable image with GRUB...");
 
         let timestamp = chrono::Utc::now().format("%Y%m%d-%H%M%S");
-        let output = self.output_dir.join(format!("biomeos-{}.iso", timestamp));
+        let output = self.output_dir.join(format!("biomeos-{timestamp}.iso"));
 
         // Try grub-mkrescue first (clean, modern approach)
         if let Ok(path) = self.create_with_grub_mkrescue(boot_dir, &output).await {

@@ -116,7 +116,7 @@ impl DependencyGraph {
                     })
                     .collect();
 
-                anyhow::bail!("Circular dependency or missing capabilities: {:?}", unmet);
+                anyhow::bail!("Circular dependency or missing capabilities: {unmet:?}");
             }
 
             // Sort wave for deterministic ordering (by display string)
@@ -418,8 +418,7 @@ mod tests {
         let err_msg = format!("{}", result.unwrap_err());
         assert!(
             err_msg.contains("Circular dependency") || err_msg.contains("missing capabilities"),
-            "error should mention circular dependency, got: {}",
-            err_msg
+            "error should mention circular dependency, got: {err_msg}"
         );
     }
 
@@ -531,7 +530,7 @@ mod tests {
 
         // 5 primals all depending on "security"
         for i in 0..5 {
-            let leaf = pid(&format!("leaf-{}", i));
+            let leaf = pid(&format!("leaf-{i}"));
             provides.insert(leaf.clone(), HashSet::new());
             requires.insert(leaf.clone(), HashSet::from(["security".into()]));
         }
@@ -740,7 +739,7 @@ mod tests {
             requires: HashMap::new(),
             capability_providers: HashMap::new(),
         };
-        let debug_str = format!("{:?}", graph);
+        let debug_str = format!("{graph:?}");
         assert!(debug_str.contains("DependencyGraph"));
     }
 
@@ -867,11 +866,7 @@ mod tests {
         }
 
         let result = start_in_waves(&orchestrator, primals).await;
-        assert!(
-            result.is_ok(),
-            "start_in_waves should succeed: {:?}",
-            result
-        );
+        assert!(result.is_ok(), "start_in_waves should succeed: {result:?}");
     }
 
     #[tokio::test]

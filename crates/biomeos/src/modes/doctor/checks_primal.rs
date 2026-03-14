@@ -31,12 +31,12 @@ pub(crate) async fn check_primal_discovery() -> Result<HealthCheck> {
     check
         .details
         .push(format!("Socket dir: {}", runtime_dir.display()));
-    check.details.push(format!("Family ID: {}", family_id));
+    check.details.push(format!("Family ID: {family_id}"));
 
     let mut found_count = 0;
     for primal_name in primals {
         // Use family-suffixed socket naming convention
-        let socket_path = runtime_dir.join(format!("{}-{}.sock", primal_name, family_id));
+        let socket_path = runtime_dir.join(format!("{primal_name}-{family_id}.sock"));
 
         match health_checker.check_primal(&socket_path).await {
             Ok(status) if status.is_healthy => {
@@ -49,19 +49,17 @@ pub(crate) async fn check_primal_discovery() -> Result<HealthCheck> {
             }
             Ok(status) => {
                 let msg = status.message.unwrap_or_else(|| "Not found".to_string());
-                check.details.push(format!("{}: ❌ {}", primal_name, msg));
+                check.details.push(format!("{primal_name}: ❌ {msg}"));
             }
             Err(e) => {
-                check
-                    .details
-                    .push(format!("{}: ❌ Error: {}", primal_name, e));
+                check.details.push(format!("{primal_name}: ❌ Error: {e}"));
             }
         }
     }
 
     check
         .details
-        .push(format!("Total: {}/5 primals discovered", found_count));
+        .push(format!("Total: {found_count}/5 primals discovered"));
 
     if found_count < 3 {
         check.status = HealthStatus::Warning;
@@ -97,7 +95,7 @@ pub(crate) async fn check_plasmid_bin() -> Result<HealthCheck> {
             .details
             .push(format!("Path: {}", plasmid_dir.display()));
         check.details.push(format!("Binaries: {}", binaries.len()));
-        check.details.push(format!("Total size: {:.1}M", size_mb));
+        check.details.push(format!("Total size: {size_mb:.1}M"));
         check.details.push("Status: ✅ Ready".to_string());
     } else {
         check.status = HealthStatus::Warning;

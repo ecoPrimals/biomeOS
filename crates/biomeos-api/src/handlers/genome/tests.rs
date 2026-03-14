@@ -61,8 +61,7 @@ async fn test_get_genome_info_not_found() {
     let result = get_genome_info(Path("nonexistent-genome-xyz".to_string())).await;
     assert!(
         matches!(result, Err(axum::http::StatusCode::NOT_FOUND)),
-        "got: {:?}",
-        result
+        "got: {result:?}"
     );
 }
 
@@ -80,8 +79,7 @@ async fn test_build_genome_invalid_arch() {
     let result = build_genome(axum::Json(req)).await;
     assert!(
         matches!(result, Err(axum::http::StatusCode::BAD_REQUEST)),
-        "got: {:?}",
-        result
+        "got: {result:?}"
     );
 }
 
@@ -111,8 +109,7 @@ async fn test_verify_genome_file_not_found() {
     let result = verify_genome_file(axum::Json(req)).await;
     assert!(
         matches!(result, Err(axum::http::StatusCode::NOT_FOUND)),
-        "expected NOT_FOUND, got: {:?}",
-        result
+        "expected NOT_FOUND, got: {result:?}"
     );
 }
 
@@ -124,8 +121,7 @@ async fn test_verify_genome_not_found() {
     let result = verify_genome(Path("nonexistent-genome-xyz-123".to_string())).await;
     assert!(
         matches!(result, Err(axum::http::StatusCode::NOT_FOUND)),
-        "expected NOT_FOUND, got: {:?}",
-        result
+        "expected NOT_FOUND, got: {result:?}"
     );
 }
 
@@ -138,8 +134,7 @@ async fn test_download_genome_not_found() {
     let result = download_genome(Path("nonexistent-download-xyz".to_string())).await;
     assert!(
         matches!(result, Err(axum::http::StatusCode::NOT_FOUND)),
-        "expected NOT_FOUND, got: {:?}",
-        result
+        "expected NOT_FOUND, got: {result:?}"
     );
 }
 

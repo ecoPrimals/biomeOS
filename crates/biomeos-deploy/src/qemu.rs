@@ -139,7 +139,7 @@ impl QemuInstance {
             .stderr(Stdio::piped())
             .spawn()
             .map_err(|e| DeployError::QemuProcess {
-                message: format!("Failed to spawn QEMU: {}", e),
+                message: format!("Failed to spawn QEMU: {e}"),
             })?;
 
         self.process = Some(child);
@@ -167,7 +167,8 @@ impl QemuInstance {
             {
                 use rustix::process::{kill_process, Pid, Signal};
 
-                if let Some(pid) = Pid::from_raw(process.id() as i32) {
+                let pid_i32 = i32::try_from(process.id()).unwrap_or(-1);
+                if let Some(pid) = Pid::from_raw(pid_i32) {
                     kill_process(pid, Signal::Term).map_err(DeployError::Process)?;
                 }
             }
@@ -189,7 +190,7 @@ impl QemuInstance {
                                 self.config.name
                             );
                             process.kill().map_err(|e| DeployError::QemuProcess {
-                                message: format!("Failed to kill QEMU process: {}", e),
+                                message: format!("Failed to kill QEMU process: {e}"),
                             })?;
                             return Ok(());
                         }
@@ -197,7 +198,7 @@ impl QemuInstance {
                     }
                     Err(e) => {
                         return Err(DeployError::QemuProcess {
-                            message: format!("Failed to wait for QEMU process: {}", e),
+                            message: format!("Failed to wait for QEMU process: {e}"),
                         });
                     }
                 }
@@ -283,5 +284,41 @@ mod tests {
         let instance1 = QemuInstance::new(config.clone());
         let instance2 = QemuInstance::new(config);
         assert_ne!(instance1.id(), instance2.id());
+    }
+
+    #[test]
+    fn test_qemu_config_clone() {
+        let config = sample_qemu_config();
+        let cloned = config.clone();
+        assert_eq!(config.name, cloned.name);
+        assert_eq!(config.memory, cloned.memory);
+        assert_eq!(config.cpus, cloned.cpus);
+        assert_eq!(config.extra_args, cloned.extra_args);
+    }
+
+    #[test]
+    fn test_qemu_config_debug() {
+        let config = sample_qemu_config();
+        let debug = format!("{config:?}");
+        assert!(debug.contains("QemuConfig"));
+        assert!(debug.contains("test-vm"));
+        assert!(debug.contains("1024"));
+    }
+
+    #[test]
+    fn test_qemu_config_with_empty_extra_args() {
+        let config = QemuConfig {
+            name: "minimal".to_string(),
+            memory: 512,
+            cpus: 1,
+            disk_image: PathBuf::from("/tmp/disk.qcow2"),
+            bridge_name: "virbr0".to_string(),
+            mac_address: "52:54:00:11:22:33".to_string(),
+            serial_log: PathBuf::from("/tmp/serial.log"),
+            enable_kvm: true,
+            extra_args: vec![],
+        };
+        let instance = QemuInstance::new(config);
+        assert_eq!(instance.name(), "minimal");
     }
 }

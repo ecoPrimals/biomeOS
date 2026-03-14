@@ -249,8 +249,7 @@ mod tests {
         let err = result.unwrap_err();
         assert!(
             err.to_string().contains("Failed to execute") || err.to_string().contains("No such"),
-            "Expected execution error, got: {}",
-            err
+            "Expected execution error, got: {err}"
         );
     }
 }

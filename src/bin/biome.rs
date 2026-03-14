@@ -78,27 +78,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
             println!("✅ Deployment successful! (simulated)");
             println!("   Deployment ID: dep-simulated-id");
-            println!("   Team: {}", team);
+            println!("   Team: {team}");
             println!("   Status: Pending");
         }
         Commands::List { team } => {
-            println!("📋 Listing deployments for team: {}", team);
-            println!(
-                "   No deployments found for team {} (this is expected in demo mode)",
-                team
-            );
+            println!("📋 Listing deployments for team: {team}");
+            println!("   No deployments found for team {team} (this is expected in demo mode)");
         }
         Commands::Status { deployment_id } => {
-            println!("📊 Checking status for deployment: {}", deployment_id);
+            println!("📊 Checking status for deployment: {deployment_id}");
             println!("   Status: Running (simulated)");
         }
         Commands::Remove { deployment_id } => {
-            println!("🗑️  Removing deployment: {}", deployment_id);
+            println!("🗑️  Removing deployment: {deployment_id}");
             println!("✅ Deployment removed successfully! (simulated)");
         }
         Commands::Workspace { team } => {
-            println!("🏠 Team workspace for: {}", team);
-            println!("   Team ID: {}", team);
+            println!("🏠 Team workspace for: {team}");
+            println!("   Team ID: {team}");
             println!("   Created: {}", chrono::Utc::now());
             println!("   Resource Quota:");
             println!("     CPU: 16 cores");
@@ -111,7 +108,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("     Secrets: true");
         }
         Commands::Init { template, output } => {
-            println!("📝 Initializing biome manifest with template: {}", template);
+            println!("📝 Initializing biome manifest with template: {template}");
 
             let manifest_content = match template.as_str() {
                 "basic" => create_basic_template(),
@@ -119,7 +116,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "ai-research" => create_ai_research_template(),
                 "gaming" => create_gaming_template(),
                 _ => {
-                    eprintln!("❌ Unknown template: {}", template);
+                    eprintln!("❌ Unknown template: {template}");
                     std::process::exit(1);
                 }
             };
@@ -129,7 +126,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("✅ Manifest created: {}", output.display());
                 }
                 Err(e) => {
-                    eprintln!("❌ Failed to write manifest: {}", e);
+                    eprintln!("❌ Failed to write manifest: {e}");
                     std::process::exit(1);
                 }
             }
@@ -165,13 +162,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             }
                         }
                         Err(e) => {
-                            eprintln!("❌ Invalid YAML: {}", e);
+                            eprintln!("❌ Invalid YAML: {e}");
                             std::process::exit(1);
                         }
                     }
                 }
                 Err(e) => {
-                    eprintln!("❌ Failed to read manifest: {}", e);
+                    eprintln!("❌ Failed to read manifest: {e}");
                     std::process::exit(1);
                 }
             }

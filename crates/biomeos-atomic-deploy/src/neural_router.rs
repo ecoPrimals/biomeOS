@@ -271,8 +271,7 @@ impl NeuralRouter {
             "ai" | "ai.routing" | "ai.text_generation" | "ai.coordination" => "ai",
             _ => {
                 return Err(anyhow!(
-                    "Capability '{}' does not map to a known category (security, discovery, ai)",
-                    capability
+                    "Capability '{capability}' does not map to a known category (security, discovery, ai)"
                 ));
             }
         };
@@ -290,7 +289,7 @@ impl NeuralRouter {
         for (registered_cap, providers) in registry.iter() {
             // Check if this registered capability matches the category
             // This handles both exact matches and category-based matches
-            if registered_cap == category || registered_cap.starts_with(&format!("{}.", category)) {
+            if registered_cap == category || registered_cap.starts_with(&format!("{category}.")) {
                 matching_providers.extend(providers.iter().cloned());
             }
         }
@@ -545,8 +544,7 @@ impl NeuralRouter {
             self.find_primal_by_socket(primal).await
         } else {
             Err(anyhow!(
-                "No primal found for capability '{}'. Register a provider or check the capability name.",
-                capability
+                "No primal found for capability '{capability}'. Register a provider or check the capability name."
             ))
         }
     }

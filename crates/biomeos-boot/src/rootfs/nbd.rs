@@ -37,7 +37,7 @@ impl NbdGuard {
             .context("Failed to attach NBD device")?;
 
         if !status.success() {
-            anyhow::bail!("qemu-nbd failed to attach {}", device);
+            anyhow::bail!("qemu-nbd failed to attach {device}");
         }
 
         std::thread::sleep(std::time::Duration::from_millis(500));
@@ -53,9 +53,9 @@ impl NbdGuard {
     /// Find an available NBD device
     pub fn find_available_device() -> Result<String> {
         for i in 0..16 {
-            let device = format!("/dev/nbd{}", i);
+            let device = format!("/dev/nbd{i}");
 
-            let size_path = format!("/sys/block/nbd{}/size", i);
+            let size_path = format!("/sys/block/nbd{i}/size");
             if let Ok(mut file) = fs::File::open(&size_path) {
                 let mut contents = String::new();
                 if file.read_to_string(&mut contents).is_ok() {

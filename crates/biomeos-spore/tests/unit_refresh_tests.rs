@@ -123,7 +123,7 @@ BEARDOG_NODE_ID = "test-node"
             assert!(report.refreshed_binaries.is_empty() || !report.refreshed_binaries.is_empty());
         }
         Err(e) => {
-            eprintln!("Refresh error (acceptable): {}", e);
+            eprintln!("Refresh error (acceptable): {e}");
         }
     }
 }
@@ -217,7 +217,7 @@ BEARDOG_NODE_ID = "test-node"
             assert_eq!(report.failed_binaries.len(), 0);
         }
         Err(e) => {
-            eprintln!("Refresh error (acceptable): {}", e);
+            eprintln!("Refresh error (acceptable): {e}");
         }
     }
 }
@@ -268,7 +268,7 @@ BEARDOG_NODE_ID = "test-node"
             // Good - refresh completed
         }
         Err(e) => {
-            eprintln!("Refresh error (acceptable): {}", e);
+            eprintln!("Refresh error (acceptable): {e}");
         }
     }
 }

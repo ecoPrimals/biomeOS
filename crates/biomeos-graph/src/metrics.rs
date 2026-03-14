@@ -147,7 +147,7 @@ impl MetricsCollector {
 
     /// Get aggregated metrics for a graph (sled queries!)
     pub async fn get_graph_metrics(&self, graph_name: &str) -> Result<Option<GraphMetrics>> {
-        let prefix = format!("exec:{}:", graph_name);
+        let prefix = format!("exec:{graph_name}:");
 
         let mut total = 0u64;
         let mut successful = 0u64;
@@ -264,7 +264,7 @@ impl MetricsCollector {
         graph_name: &str,
         node_id: &str,
     ) -> Result<Option<NodeMetricsAggregate>> {
-        let prefix = format!("node_exec:{}:{}:", graph_name, node_id);
+        let prefix = format!("node_exec:{graph_name}:{node_id}:");
         let mut total = 0u64;
         let mut successful = 0u64;
         let mut total_duration = 0u64;
@@ -301,7 +301,7 @@ impl MetricsCollector {
         graph_name: &str,
         limit: usize,
     ) -> Result<Vec<ExecutionRecord>> {
-        let prefix = format!("exec:{}:", graph_name);
+        let prefix = format!("exec:{graph_name}:");
         let mut records: Vec<ExecutionRecord> = Vec::new();
 
         for item in self.db.scan_prefix(prefix.as_bytes()) {
@@ -323,6 +323,7 @@ impl MetricsCollector {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use tempfile::tempdir;
@@ -487,5 +488,29 @@ mod tests {
         let json = serde_json::to_string(&record).unwrap();
         assert!(json.contains("test_graph"));
         assert!(json.contains("150"));
+    }
+
+    #[test]
+    fn test_graph_result_default() {
+        let result = GraphResult::default();
+        assert!(!result.success);
+        assert!(result.node_results.is_empty());
+        assert!(result.errors.is_empty());
+        assert_eq!(result.duration_ms, 0);
+    }
+
+    #[test]
+    fn test_node_metrics_aggregate_serde_roundtrip() {
+        let m = NodeMetricsAggregate {
+            node_id: "node1".to_string(),
+            total_executions: 10,
+            successful_executions: 8,
+            avg_duration_ms: 50.5,
+            success_rate: 0.8,
+        };
+        let json = serde_json::to_string(&m).unwrap();
+        let restored: NodeMetricsAggregate = serde_json::from_str(&json).unwrap();
+        assert_eq!(m.node_id, restored.node_id);
+        assert_eq!(m.success_rate, restored.success_rate);
     }
 }

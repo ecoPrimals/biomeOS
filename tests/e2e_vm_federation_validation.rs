@@ -37,7 +37,7 @@ async fn test_vm_federation_with_validation() -> anyhow::Result<()> {
 
     // Verify status
     let status = manager.status(federation_name).await?;
-    println!("Federation status:\n{}", status);
+    println!("Federation status:\n{status}");
 
     // Cleanup
     manager.stop(federation_name).await?;

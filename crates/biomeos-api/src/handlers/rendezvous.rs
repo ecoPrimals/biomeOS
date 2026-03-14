@@ -132,7 +132,7 @@ impl RendezvousState {
             &data,
         )
         .await
-        .unwrap_or_else(|| format!("anon-{}", epoch))
+        .unwrap_or_else(|| format!("anon-{epoch}"))
     }
 }
 

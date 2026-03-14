@@ -413,4 +413,78 @@ mod tests {
         assert!(HealthStatus::Healthy.is_healthy());
         assert!(!HealthStatus::Degraded.is_healthy());
     }
+
+    #[test]
+    fn discovery_error_variants() {
+        let not_found = DiscoveryError::NotFound {
+            endpoint: "http://localhost:9999".to_string(),
+        };
+        assert!(not_found.to_string().contains("localhost:9999"));
+
+        let timeout = DiscoveryError::Timeout {
+            timeout: Duration::from_secs(5),
+        };
+        assert!(timeout.to_string().contains("timeout"));
+
+        let invalid = DiscoveryError::InvalidResponse {
+            message: "bad json".to_string(),
+        };
+        assert!(invalid.to_string().contains("Invalid response"));
+
+        let auth = DiscoveryError::AuthFailed {
+            id: "primal-1".to_string(),
+        };
+        assert!(auth.to_string().contains("Authentication failed"));
+
+        let network = DiscoveryError::Network("connection refused".to_string());
+        assert!(network.to_string().contains("Network"));
+    }
+
+    #[test]
+    fn primal_type_variants() {
+        let _ = PrimalType::Security;
+        let _ = PrimalType::Orchestration;
+        let _ = PrimalType::Storage;
+        let _ = PrimalType::Compute;
+        let _ = PrimalType::Ai;
+        let _ = PrimalType::Tower;
+        let _ = PrimalType::Visualization;
+        let _ = PrimalType::Custom;
+    }
+
+    #[tokio::test]
+    async fn composite_discovery_default() {
+        let discovery = CompositeDiscovery::default();
+        let primals = discovery.discover_all().await.unwrap();
+        assert!(primals.is_empty());
+    }
+
+    #[test]
+    fn discovered_primal_creation() {
+        let primal = DiscoveredPrimal {
+            id: PrimalId::new("test").unwrap(),
+            name: "Test".to_string(),
+            primal_type: PrimalType::Security,
+            version: semver::Version::new(1, 0, 0),
+            health: HealthStatus::Healthy,
+            capabilities: vec![Capability::new("crypto")],
+            endpoint: Endpoint::new("http://localhost:9000").unwrap(),
+            family_id: Some(FamilyId::new("fam1")),
+            metadata: serde_json::json!({"key": "value"}),
+        };
+        assert_eq!(primal.name, "Test");
+        assert_eq!(primal.capabilities.len(), 1);
+    }
+
+    #[test]
+    fn capability_new_and_as_str() {
+        let cap = Capability::new("crypto.encrypt");
+        assert_eq!(cap.as_str(), "crypto.encrypt");
+    }
+
+    #[test]
+    fn capability_from_string() {
+        let cap: Capability = "storage.put".into();
+        assert_eq!(cap.as_str(), "storage.put");
+    }
 }

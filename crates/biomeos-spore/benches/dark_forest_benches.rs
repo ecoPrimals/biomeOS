@@ -71,10 +71,7 @@ fn bench_pure_noise_generation(c: &mut Criterion) {
 
     // Check if beardog is available
     if !std::path::Path::new(&beardog).exists() {
-        eprintln!(
-            "⚠️  Skipping benchmarks: BearDog not running at {}",
-            beardog
-        );
+        eprintln!("⚠️  Skipping benchmarks: BearDog not running at {beardog}");
         return;
     }
 

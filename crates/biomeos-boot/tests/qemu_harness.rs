@@ -128,7 +128,7 @@ fn test_qemu_boot_iso() -> Result<()> {
     assert!(found_kernel, "Kernel did not boot");
 
     let output = vm.serial_output()?;
-    println!("Serial output:\n{}", output);
+    println!("Serial output:\n{output}");
 
     // Check for our init
     assert!(output.contains("Run /init as init process") || output.contains("BiomeOS"));
@@ -181,7 +181,7 @@ fn test_qemu_boot_with_disk() -> Result<()> {
     assert!(found_init, "Init not executed");
 
     let output = vm.serial_output()?;
-    println!("Serial output:\n{}", output);
+    println!("Serial output:\n{output}");
 
     Ok(())
 }

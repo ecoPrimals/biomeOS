@@ -43,7 +43,7 @@ async fn test_beardog_style_socket_communication() {
         let mut buf = vec![0u8; 1024];
         let n = socket.read(&mut buf).await.unwrap();
         let request = String::from_utf8_lossy(&buf[..n]);
-        println!("Server received: {}", request);
+        println!("Server received: {request}");
 
         // Send response WITHOUT closing socket (BearDog behavior)
         let response = r#"{"jsonrpc":"2.0","result":{"test":"value"},"id":1}"#;
@@ -87,7 +87,7 @@ async fn test_beardog_style_socket_communication() {
             println!("Response: {}", String::from_utf8_lossy(&response));
         }
         Ok(Err(e)) => {
-            println!("❌ Read error: {}", e);
+            println!("❌ Read error: {e}");
         }
         Err(_) => {
             println!("❌ Timeout after {:?}", start.elapsed());
@@ -165,7 +165,7 @@ async fn test_json_aware_reading() {
                 }
             }
             Ok(Err(e)) => {
-                println!("Read error: {}", e);
+                println!("Read error: {e}");
                 break;
             }
             Err(_) => {
@@ -277,18 +277,17 @@ async fn test_concurrent_socket_connections() {
                 successes += 1;
             }
             Ok(Err(e)) => {
-                println!("Connection {} failed: {}", i, e);
+                println!("Connection {i} failed: {e}");
             }
             Err(e) => {
-                println!("Task {} panicked: {}", i, e);
+                println!("Task {i} panicked: {e}");
             }
         }
     }
 
     assert!(
         successes >= 8,
-        "At least 8/10 concurrent connections should succeed, got {}",
-        successes
+        "At least 8/10 concurrent connections should succeed, got {successes}"
     );
 }
 
@@ -313,6 +312,6 @@ fn test_nc_behavior() {
             println!("Stdout: {}", String::from_utf8_lossy(&output.stdout));
             println!("Stderr: {}", String::from_utf8_lossy(&output.stderr));
         }
-        Err(e) => println!("Command error: {}", e),
+        Err(e) => println!("Command error: {e}"),
     }
 }

@@ -51,14 +51,18 @@ impl BiomeOsHttpClient {
     pub fn new() -> Self {
         use crate::nucleation::SocketNucleation;
 
-        let songbird_socket = std::env::var("SONGBIRD_SOCKET").unwrap_or_else(|_| {
-            let family_id = biomeos_core::family_discovery::get_family_id();
-            let mut nucleation = SocketNucleation::default();
-            nucleation
-                .assign_socket("songbird", &family_id)
-                .to_string_lossy()
-                .into_owned()
-        });
+        let discovery_provider =
+            std::env::var("DISCOVERY_PROVIDER").unwrap_or_else(|_| "songbird".to_string());
+        let songbird_socket = std::env::var("SONGBIRD_SOCKET")
+            .or_else(|_| std::env::var("DISCOVERY_SOCKET"))
+            .unwrap_or_else(|_| {
+                let family_id = biomeos_core::family_discovery::get_family_id();
+                let mut nucleation = SocketNucleation::default();
+                nucleation
+                    .assign_socket(&discovery_provider, &family_id)
+                    .to_string_lossy()
+                    .into_owned()
+            });
 
         info!("🌐 biomeOS HTTP client initialized (via Tower Atomic)");
         debug!("   Songbird socket: {}", songbird_socket);
@@ -201,7 +205,7 @@ impl BiomeOsHttpClient {
 
         // Check for errors
         if let Some(error) = rpc_response.get("error") {
-            anyhow::bail!("Songbird RPC error: {}", error);
+            anyhow::bail!("Songbird RPC error: {error}");
         }
 
         // Extract result
@@ -318,8 +322,7 @@ mod tests {
                 || err.to_string().contains("Songbird")
                 || err.to_string().contains("Connection refused")
                 || err.to_string().contains("No such file"),
-            "Error should mention connection failure: {}",
-            err
+            "Error should mention connection failure: {err}"
         );
     }
 
@@ -337,8 +340,7 @@ mod tests {
                 || err.to_string().contains("Songbird")
                 || err.to_string().contains("Connection refused")
                 || err.to_string().contains("No such file"),
-            "Error should mention connection failure: {}",
-            err
+            "Error should mention connection failure: {err}"
         );
     }
 
@@ -354,8 +356,7 @@ mod tests {
                 || err.to_string().contains("Songbird")
                 || err.to_string().contains("Connection refused")
                 || err.to_string().contains("No such file"),
-            "Error should mention connection failure: {}",
-            err
+            "Error should mention connection failure: {err}"
         );
     }
 
@@ -482,8 +483,7 @@ mod tests {
         let err = result.expect_err("get should fail on invalid JSON");
         assert!(
             err.to_string().contains("parse") || err.to_string().contains("JSON"),
-            "Error should mention parse/JSON: {}",
-            err
+            "Error should mention parse/JSON: {err}"
         );
     }
 

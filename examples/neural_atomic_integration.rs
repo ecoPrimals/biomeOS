@@ -43,16 +43,16 @@ async fn main() -> Result<()> {
     let total_timeout = base_timeout as f64 * multiplier;
 
     println!("⏱️  Step 2: Adaptive Timeout Calculation");
-    println!("   Base Timeout: {}ms", base_timeout);
-    println!("   Mode Multiplier: {:.1}x", multiplier);
-    println!("   Adaptive Timeout: {:.0}ms\n", total_timeout);
+    println!("   Base Timeout: {base_timeout}ms");
+    println!("   Mode Multiplier: {multiplier:.1}x");
+    println!("   Adaptive Timeout: {total_timeout:.0}ms\n");
 
     // Step 3: Check for available atomics
     println!("🔍 Step 3: Atomic Availability Check");
     let available_atomics = check_atomic_availability(&mode).await?;
 
     for atomic in &available_atomics {
-        println!("   ✅ {} Atomic: Available", atomic);
+        println!("   ✅ {atomic} Atomic: Available");
     }
 
     if available_atomics.is_empty() {
@@ -65,7 +65,7 @@ async fn main() -> Result<()> {
     // Step 4: Graph selection based on availability
     println!("📊 Step 4: Graph Selection");
     let selected_graph = select_graph_for_mode(&mode, &available_atomics);
-    println!("   Selected: {}", selected_graph);
+    println!("   Selected: {selected_graph}");
     println!(
         "   Reason: {}\n",
         graph_selection_reason(&mode, &available_atomics)
@@ -118,24 +118,24 @@ async fn check_atomic_availability(mode: &DeploymentMode) -> Result<Vec<String>>
     let family_id = biomeos_core::family_discovery::get_family_id();
 
     // Check for Tower atomic (BearDog + Songbird)
-    if socket_exists(&socket_prefix, &format!("beardog-{}.sock", family_id))
-        && socket_exists(&socket_prefix, &format!("songbird-{}.sock", family_id))
+    if socket_exists(&socket_prefix, &format!("beardog-{family_id}.sock"))
+        && socket_exists(&socket_prefix, &format!("songbird-{family_id}.sock"))
     {
         available.push("Tower".to_string());
     }
 
     // Check for Node atomic (Tower + ToadStool)
-    if socket_exists(&socket_prefix, &format!("beardog-{}.sock", family_id))
-        && socket_exists(&socket_prefix, &format!("songbird-{}.sock", family_id))
-        && socket_exists(&socket_prefix, &format!("toadstool-{}.sock", family_id))
+    if socket_exists(&socket_prefix, &format!("beardog-{family_id}.sock"))
+        && socket_exists(&socket_prefix, &format!("songbird-{family_id}.sock"))
+        && socket_exists(&socket_prefix, &format!("toadstool-{family_id}.sock"))
     {
         available.push("Node".to_string());
     }
 
     // Check for Nest atomic (Tower + NestGate)
-    if socket_exists(&socket_prefix, &format!("beardog-{}.sock", family_id))
-        && socket_exists(&socket_prefix, &format!("songbird-{}.sock", family_id))
-        && socket_exists(&socket_prefix, &format!("nestgate-{}.sock", family_id))
+    if socket_exists(&socket_prefix, &format!("beardog-{family_id}.sock"))
+        && socket_exists(&socket_prefix, &format!("songbird-{family_id}.sock"))
+        && socket_exists(&socket_prefix, &format!("nestgate-{family_id}.sock"))
     {
         available.push("Nest".to_string());
     }
@@ -237,7 +237,7 @@ fn demonstrate_execution_strategy(mode: &DeploymentMode, available: &[String]) {
         DeploymentMode::SiblingSpore { isolation, .. } => {
             println!("   - Optimize for coexistence with host OS");
             println!("   - Respect host resource limits");
-            println!("   - Isolation: {:?}", isolation);
+            println!("   - Isolation: {isolation:?}");
         }
     }
 }

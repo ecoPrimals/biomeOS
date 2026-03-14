@@ -148,8 +148,8 @@ impl RootFsBuilder {
         std::thread::sleep(std::time::Duration::from_millis(100));
 
         for i in 0..16 {
-            let device = format!("/dev/nbd{}", i);
-            let size_path = format!("/sys/block/nbd{}/size", i);
+            let device = format!("/dev/nbd{i}");
+            let size_path = format!("/sys/block/nbd{i}/size");
 
             if let Ok(mut file) = fs::File::open(&size_path) {
                 let mut contents = String::new();
@@ -347,7 +347,7 @@ impl RootFsBuilder {
                     std::fs::remove_file(&symlink_dest)?;
                 }
                 std::os::unix::fs::symlink(&dest, &symlink_dest)
-                    .with_context(|| format!("Failed to symlink service {}", service_name))?;
+                    .with_context(|| format!("Failed to symlink service {service_name}"))?;
 
                 info!("  ✓ Installed and enabled service {}", service_name);
                 count += 1;
@@ -388,7 +388,7 @@ impl RootFsBuilder {
 
         let mut content = String::new();
         for server in &dns_servers {
-            content.push_str(&format!("nameserver {}\n", server));
+            content.push_str(&format!("nameserver {server}\n"));
         }
 
         std::fs::write(&resolv_conf, content)?;

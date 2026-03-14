@@ -274,7 +274,7 @@ mod tests {
     #[test]
     fn test_primal_client_debug() {
         let client = PrimalClient::with_socket("nestgate", "/tmp/nestgate.sock");
-        let debug_str = format!("{:?}", client);
+        let debug_str = format!("{client:?}");
         assert!(debug_str.contains("nestgate"));
     }
 
@@ -337,7 +337,7 @@ mod tests {
         ] {
             connections.clients.insert(
                 name.to_string(),
-                PrimalClient::with_socket(name, format!("/tmp/{}.sock", name)),
+                PrimalClient::with_socket(name, format!("/tmp/{name}.sock")),
             );
         }
         assert_eq!(connections.count_available(), 6);

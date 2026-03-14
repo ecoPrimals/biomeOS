@@ -45,7 +45,7 @@ impl ConsoleWriter {
     ///
     /// Returns an error if writing to any output fails.
     pub fn write_line(&mut self, msg: &str) -> io::Result<()> {
-        let line = format!("{}\n", msg);
+        let line = format!("{msg}\n");
         self.write_bytes(line.as_bytes())
     }
 
@@ -55,7 +55,7 @@ impl ConsoleWriter {
     ///
     /// Returns an error if writing fails.
     pub fn write_error(&mut self, msg: &str) -> io::Result<()> {
-        let line = format!("[ERROR] {}\n", msg);
+        let line = format!("[ERROR] {msg}\n");
 
         self.stderr.write_all(line.as_bytes())?;
         self.stderr.flush()?;

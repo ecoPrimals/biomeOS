@@ -135,7 +135,7 @@ pub(crate) async fn verify_lineage(path: &PathBuf, detailed: bool) -> Result<Lin
                 let count = entries.count();
                 verification
                     .details
-                    .push(format!("Primals directory: {} binaries", count));
+                    .push(format!("Primals directory: {count} binaries"));
             }
         } else {
             verification
@@ -152,7 +152,7 @@ pub(crate) async fn verify_lineage(path: &PathBuf, detailed: bool) -> Result<Lin
                 Err(e) => {
                     verification
                         .warnings
-                        .push(format!("Cryptographic verification skipped: {}", e));
+                        .push(format!("Cryptographic verification skipped: {e}"));
                 }
             }
         }
@@ -170,7 +170,7 @@ pub(crate) async fn verify_lineage(path: &PathBuf, detailed: bool) -> Result<Lin
         } else {
             verification
                 .warnings
-                .push(format!("Unknown file format ({} bytes)", file_size));
+                .push(format!("Unknown file format ({file_size} bytes)"));
         }
     }
 
@@ -198,8 +198,7 @@ async fn verify_cryptographic_lineage(
     let beardog = AtomicClient::discover(&security_provider)
         .await
         .context(format!(
-            "{} not available for cryptographic verification",
-            security_provider
+            "{security_provider} not available for cryptographic verification"
         ))?;
 
     debug!(
@@ -243,22 +242,22 @@ async fn verify_cryptographic_lineage(
                 details.push("Cryptographic lineage verified ✓".to_string());
 
                 if let Some(generation) = response.get("generation").and_then(|v| v.as_u64()) {
-                    details.push(format!("Generation: {}", generation));
+                    details.push(format!("Generation: {generation}"));
                 }
 
                 if let Some(parent) = response.get("parent_id").and_then(|v| v.as_str()) {
-                    details.push(format!("Parent: {}", parent));
+                    details.push(format!("Parent: {parent}"));
                 }
             } else {
                 let reason = response
                     .get("reason")
                     .and_then(|v| v.as_str())
                     .unwrap_or("Unknown");
-                details.push(format!("Cryptographic verification failed: {}", reason));
+                details.push(format!("Cryptographic verification failed: {reason}"));
             }
         }
         Err(e) => {
-            details.push(format!("BearDog verification call failed: {}", e));
+            details.push(format!("BearDog verification call failed: {e}"));
         }
     }
 
@@ -296,8 +295,7 @@ mod tests {
         let err = result.unwrap_err();
         assert!(
             err.to_string().contains("Path not found") || err.to_string().contains("not found"),
-            "Expected path not found error: {}",
-            err
+            "Expected path not found error: {err}"
         );
     }
 

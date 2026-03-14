@@ -158,9 +158,7 @@ impl SporeRefresher {
         if let Some(expected) = expected_sha256 {
             if source_sha256 != expected {
                 return Err(anyhow::anyhow!(
-                    "Source binary SHA256 mismatch: expected {}, got {}",
-                    expected,
-                    source_sha256
+                    "Source binary SHA256 mismatch: expected {expected}, got {source_sha256}"
                 ));
             }
         }
@@ -396,7 +394,7 @@ mod tests {
             error: "Source binary SHA256 mismatch".to_string(),
         };
 
-        let debug = format!("{:?}", failed);
+        let debug = format!("{failed:?}");
         assert!(debug.contains("beardog"));
         assert!(debug.contains("SHA256 mismatch"));
     }
@@ -450,7 +448,7 @@ mod tests {
             failed_binaries: vec![],
         };
 
-        let debug = format!("{:?}", report);
+        let debug = format!("{report:?}");
         assert!(debug.contains("debug-node"));
         assert!(debug.contains("/test"));
     }

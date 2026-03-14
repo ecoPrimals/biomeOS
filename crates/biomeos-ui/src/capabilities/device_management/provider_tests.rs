@@ -190,8 +190,7 @@ async fn test_deploy_niche_no_orchestration() {
     let err = result.unwrap_err();
     assert!(
         err.to_string().contains("orchestration") || err.to_string().contains("capability"),
-        "Expected orchestration-related error, got: {}",
-        err
+        "Expected orchestration-related error, got: {err}"
     );
 }
 
@@ -215,8 +214,7 @@ async fn test_assign_device_no_registry() {
             || msg.contains("failed")
             || msg.contains("JSON-RPC")
             || msg.contains("available"),
-        "Expected registry-related error, got: {}",
-        msg
+        "Expected registry-related error, got: {msg}"
     );
 }
 

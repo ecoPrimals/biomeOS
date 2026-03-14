@@ -165,7 +165,7 @@ impl HealthChecker {
                     socket_accessible: true,
                     rpc_responsive: Some(false),
                     latency_ms: Some(latency_ms),
-                    message: Some(format!("RPC ping failed: {}", e)),
+                    message: Some(format!("RPC ping failed: {e}")),
                 })
             }
         }
@@ -369,8 +369,7 @@ mod tests {
             err.to_string().contains("Failed to read")
                 || err.to_string().contains("runtime")
                 || err.to_string().contains("directory"),
-            "Error should mention read failure: {}",
-            err
+            "Error should mention read failure: {err}"
         );
     }
 

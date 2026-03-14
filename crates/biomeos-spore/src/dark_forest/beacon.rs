@@ -56,7 +56,7 @@ impl DarkForestBeacon {
         let seed_bytes = tokio::fs::read(seed_path.as_ref()).await.map_err(|e| {
             SporeError::IoError(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
-                format!("Failed to read seed file: {}", e),
+                format!("Failed to read seed file: {e}"),
             ))
         })?;
 
@@ -96,7 +96,7 @@ impl DarkForestBeacon {
             }),
         );
         let request_value = serde_json::to_value(&request)
-            .map_err(|e| SporeError::SerializationError(format!("JSON error: {}", e)))?;
+            .map_err(|e| SporeError::SerializationError(format!("JSON error: {e}")))?;
         let response = self.call_beardog(&request_value).await?;
 
         response
@@ -127,7 +127,7 @@ impl DarkForestBeacon {
         // Create beacon plaintext
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .map_err(|e| SporeError::SystemError(format!("Time error: {}", e)))?
+            .map_err(|e| SporeError::SystemError(format!("Time error: {e}")))?
             .as_secs();
 
         // Hash family ID (don't reveal actual ID)
@@ -160,7 +160,7 @@ impl DarkForestBeacon {
             }),
         );
         let encrypt_value = serde_json::to_value(&encrypt_request)
-            .map_err(|e| SporeError::SerializationError(format!("JSON error: {}", e)))?;
+            .map_err(|e| SporeError::SerializationError(format!("JSON error: {e}")))?;
         let response = self.call_beardog(&encrypt_value).await?;
         let result = response.get("result").ok_or_else(|| {
             SporeError::ValidationFailed("No result in encrypt response".to_string())
@@ -213,7 +213,7 @@ impl DarkForestBeacon {
             }),
         );
         let decrypt_value = serde_json::to_value(&decrypt_request)
-            .map_err(|e| SporeError::SerializationError(format!("JSON error: {}", e)))?;
+            .map_err(|e| SporeError::SerializationError(format!("JSON error: {e}")))?;
         let response = self.call_beardog(&decrypt_value).await?;
 
         // Check if decryption failed (not family)
@@ -233,10 +233,10 @@ impl DarkForestBeacon {
 
         let plaintext_bytes = BASE64
             .decode(plaintext_b64)
-            .map_err(|e| SporeError::DeserializationError(format!("Invalid base64: {}", e)))?;
+            .map_err(|e| SporeError::DeserializationError(format!("Invalid base64: {e}")))?;
 
         let beacon: BeaconPlaintext = serde_json::from_slice(&plaintext_bytes)
-            .map_err(|e| SporeError::DeserializationError(format!("Invalid beacon JSON: {}", e)))?;
+            .map_err(|e| SporeError::DeserializationError(format!("Invalid beacon JSON: {e}")))?;
 
         info!(
             "✅ Beacon decrypted - family member found: {}",
@@ -255,7 +255,7 @@ impl DarkForestBeacon {
             serde_json::json!({ "data": input_b64 }),
         );
         let request_value = serde_json::to_value(&request)
-            .map_err(|e| SporeError::SerializationError(format!("JSON error: {}", e)))?;
+            .map_err(|e| SporeError::SerializationError(format!("JSON error: {e}")))?;
         let response = self.call_beardog(&request_value).await?;
 
         response
@@ -285,7 +285,7 @@ impl DarkForestBeacon {
             .map_err(|e| {
                 SporeError::IoError(std::io::Error::new(
                     std::io::ErrorKind::ConnectionRefused,
-                    format!("Capability call '{}' failed: {}", method, e),
+                    format!("Capability call '{method}' failed: {e}"),
                 ))
             })?;
 
@@ -314,7 +314,7 @@ impl DarkForestBeacon {
             }),
         );
         let request_value = serde_json::to_value(&request)
-            .map_err(|e| SporeError::SerializationError(format!("JSON error: {}", e)))?;
+            .map_err(|e| SporeError::SerializationError(format!("JSON error: {e}")))?;
         let response = self.call_beardog(&request_value).await?;
 
         let valid = response
@@ -343,7 +343,7 @@ impl DarkForestBeacon {
             }),
         );
         let request_value = serde_json::to_value(&request)
-            .map_err(|e| SporeError::SerializationError(format!("JSON error: {}", e)))?;
+            .map_err(|e| SporeError::SerializationError(format!("JSON error: {e}")))?;
         let response = self.call_beardog(&request_value).await?;
 
         response
@@ -368,7 +368,7 @@ impl DarkForestBeacon {
             }),
         );
         let request_value = serde_json::to_value(&request)
-            .map_err(|e| SporeError::SerializationError(format!("JSON error: {}", e)))?;
+            .map_err(|e| SporeError::SerializationError(format!("JSON error: {e}")))?;
         let response = self.call_beardog(&request_value).await?;
 
         response
@@ -388,7 +388,7 @@ impl DarkForestBeacon {
         let request =
             JsonRpcRequest::new("genetic.derive_lineage_beacon_key", serde_json::json!({}));
         let request_value = serde_json::to_value(&request)
-            .map_err(|e| SporeError::SerializationError(format!("JSON error: {}", e)))?;
+            .map_err(|e| SporeError::SerializationError(format!("JSON error: {e}")))?;
         let response = self.call_beardog(&request_value).await?;
 
         response
@@ -415,7 +415,7 @@ impl DarkForestBeacon {
 
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .map_err(|e| SporeError::SystemError(format!("Time error: {}", e)))?
+            .map_err(|e| SporeError::SystemError(format!("Time error: {e}")))?
             .as_secs();
 
         let beacon = serde_json::json!({
@@ -460,13 +460,13 @@ impl DarkForestBeacon {
 
         let nonce = BASE64
             .decode(nonce_b64)
-            .map_err(|e| SporeError::DeserializationError(format!("Invalid nonce: {}", e)))?;
+            .map_err(|e| SporeError::DeserializationError(format!("Invalid nonce: {e}")))?;
         let ciphertext = BASE64
             .decode(ciphertext_b64)
-            .map_err(|e| SporeError::DeserializationError(format!("Invalid ciphertext: {}", e)))?;
+            .map_err(|e| SporeError::DeserializationError(format!("Invalid ciphertext: {e}")))?;
         let tag = BASE64
             .decode(tag_b64)
-            .map_err(|e| SporeError::DeserializationError(format!("Invalid tag: {}", e)))?;
+            .map_err(|e| SporeError::DeserializationError(format!("Invalid tag: {e}")))?;
 
         let mut beacon_bytes = Vec::with_capacity(nonce.len() + ciphertext.len() + tag.len());
         beacon_bytes.extend_from_slice(&nonce);
@@ -519,7 +519,7 @@ impl DarkForestBeacon {
             }),
         );
         let decrypt_value = serde_json::to_value(&decrypt_request)
-            .map_err(|e| SporeError::SerializationError(format!("JSON error: {}", e)))?;
+            .map_err(|e| SporeError::SerializationError(format!("JSON error: {e}")))?;
         let response = match self.call_beardog(&decrypt_value).await {
             Ok(resp) => resp,
             Err(_) => return Ok(None),

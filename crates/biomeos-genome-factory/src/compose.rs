@@ -63,7 +63,7 @@ impl GenomeFactory {
         for genome_name in &request.genomes {
             let genome = self
                 .load_genome(genome_name)
-                .with_context(|| format!("Failed to load genome: {}", genome_name))?;
+                .with_context(|| format!("Failed to load genome: {genome_name}"))?;
 
             genome_names.push(genome.manifest.name.clone());
             composer = composer.add_genome(genome);

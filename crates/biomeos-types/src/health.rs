@@ -654,8 +654,9 @@ impl Default for HealthCheckConfig {
         };
 
         Self {
-            interval_secs: DEFAULT_HEALTH_CHECK_INTERVAL.as_secs() as u32,
-            timeout_secs: DEFAULT_HEALTH_CHECK_TIMEOUT.as_secs() as u32,
+            interval_secs: u32::try_from(DEFAULT_HEALTH_CHECK_INTERVAL.as_secs())
+                .unwrap_or(u32::MAX),
+            timeout_secs: u32::try_from(DEFAULT_HEALTH_CHECK_TIMEOUT.as_secs()).unwrap_or(u32::MAX),
             failure_threshold: 3,
             success_threshold: 1,
             check_target: HealthCheckTarget::Http {

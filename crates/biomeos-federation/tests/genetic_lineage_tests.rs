@@ -60,9 +60,9 @@ fn test_seed_hash(input: &str) -> String {
     // Convert to hex string manually
     let hex_string = hash_bytes
         .iter()
-        .map(|b| format!("{:02x}", b))
+        .map(|b| format!("{b:02x}"))
         .collect::<String>();
-    format!("sha256:{}", hex_string)
+    format!("sha256:{hex_string}")
 }
 
 // ============================================================================
@@ -123,8 +123,7 @@ async fn test_invalid_seed_hash_format() {
                     // Should not verify as family member
                     assert!(
                         !response.is_family_member,
-                        "Invalid hash format '{}' should not verify",
-                        invalid_hash
+                        "Invalid hash format '{invalid_hash}' should not verify"
                     );
                 }
                 Err(e) => {
@@ -172,7 +171,7 @@ async fn test_wrong_seed_for_family() {
 
         // Try multiple wrong seeds
         for i in 0..5 {
-            let wrong_seed = test_seed_hash(&format!("wrong_seed_{}", i));
+            let wrong_seed = test_seed_hash(&format!("wrong_seed_{i}"));
             let result = client
                 .verify_same_family(&family_id, &wrong_seed, "node_test")
                 .await;
@@ -181,8 +180,7 @@ async fn test_wrong_seed_for_family() {
                 // Should not verify with wrong seed
                 assert!(
                     !response.is_family_member,
-                    "Wrong seed {} should not verify",
-                    i
+                    "Wrong seed {i} should not verify"
                 );
             }
         }
@@ -329,7 +327,7 @@ async fn test_verify_multiple_families_sequentially() {
         // Verify against multiple families
         for (i, family_id) in families.iter().enumerate() {
             let result = client
-                .verify_same_family(family_id, &seed, &format!("node_{}", i))
+                .verify_same_family(family_id, &seed, &format!("node_{i}"))
                 .await;
 
             // Each verification should complete without panic
@@ -354,7 +352,7 @@ async fn test_verify_multiple_seeds_same_family() {
         // Verify multiple seeds against same family
         for (i, seed) in seeds.iter().enumerate() {
             let result = client
-                .verify_same_family(&family_id, seed, &format!("node_{}", i))
+                .verify_same_family(&family_id, seed, &format!("node_{i}"))
                 .await;
 
             // Each verification should complete
@@ -380,11 +378,11 @@ async fn test_concurrent_family_verifications() {
         for i in 0..10 {
             let client_clone = Arc::clone(&client);
             let family_clone = family_id.clone();
-            let seed = test_seed_hash(&format!("concurrent_seed_{}", i));
+            let seed = test_seed_hash(&format!("concurrent_seed_{i}"));
 
             join_set.spawn(async move {
                 client_clone
-                    .verify_same_family(&family_clone, &seed, &format!("node_{}", i))
+                    .verify_same_family(&family_clone, &seed, &format!("node_{i}"))
                     .await
             });
         }
@@ -497,9 +495,9 @@ async fn test_large_scale_family_verification() {
 
         // Test with many seeds (stress test)
         for i in 0..50 {
-            let seed = test_seed_hash(&format!("bulk_seed_{}", i));
+            let seed = test_seed_hash(&format!("bulk_seed_{i}"));
             let result = client
-                .verify_same_family(&family_id, &seed, &format!("node_{}", i))
+                .verify_same_family(&family_id, &seed, &format!("node_{i}"))
                 .await;
 
             // Should handle large volume without errors
@@ -730,7 +728,7 @@ async fn test_rapid_successive_verifications() {
         // Rapid successive calls
         for i in 0..20 {
             let result = client
-                .verify_same_family(&family_id, &seed, &format!("node_{}", i))
+                .verify_same_family(&family_id, &seed, &format!("node_{i}"))
                 .await;
 
             // Should handle rapid calls without errors
@@ -753,7 +751,7 @@ async fn test_verification_response_serialization() {
 
         if let Ok(response) = result {
             // Test Display trait implementation
-            let display_str = format!("{}", response);
+            let display_str = format!("{response}");
             assert!(!display_str.is_empty(), "Display should produce output");
             assert!(
                 display_str.contains("is_member="),

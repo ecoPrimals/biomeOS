@@ -127,7 +127,7 @@ impl GenomeBinComposer {
                 let required = vec!["beardog", "songbird", "toadstool", "nestgate"];
                 for primal in &required {
                     if !self.genomes.iter().any(|g| g.manifest.name == *primal) {
-                        anyhow::bail!("NUCLEUS requires {}", primal);
+                        anyhow::bail!("NUCLEUS requires {primal}");
                     }
                 }
                 Ok(())
@@ -143,7 +143,7 @@ impl GenomeBinComposer {
     fn validate_components(&self, expected: &[&str], atomic_name: &str) -> Result<()> {
         for component in expected {
             if !self.genomes.iter().any(|g| g.manifest.name == *component) {
-                anyhow::bail!("{} atomic requires {}", atomic_name, component);
+                anyhow::bail!("{atomic_name} atomic requires {component}");
             }
         }
         Ok(())

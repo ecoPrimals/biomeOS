@@ -78,7 +78,7 @@ impl CapabilityHandler {
 
         Ok(json!({
             "capability": atomic.capability,
-            "atomic_type": atomic.atomic_type.map(|t| format!("{:?}", t)),
+            "atomic_type": atomic.atomic_type.map(|t| format!("{t:?}")),
             "primals": atomic.primals.iter().map(|p| {
                 json!({
                     "name": p.name,
@@ -240,7 +240,7 @@ impl CapabilityHandler {
             let mut registry = self.translation_registry.write().await;
             for (semantic_op, value) in mappings_obj {
                 if let Some(actual_method) = value.as_str() {
-                    let semantic_name = format!("{}.{}", capability, semantic_op);
+                    let semantic_name = format!("{capability}.{semantic_op}");
                     registry.register_translation(
                         &semantic_name,
                         primal_name,
@@ -331,8 +331,7 @@ impl CapabilityHandler {
             )
         } else {
             anyhow::bail!(
-                "Missing 'operation' field and capability '{}' has no dotted operation",
-                raw_capability
+                "Missing 'operation' field and capability '{raw_capability}' has no dotted operation"
             );
         };
 
@@ -682,11 +681,7 @@ mod tests {
 
         let result = handler.list_translations().await.unwrap();
         let count = result["count"].as_u64().unwrap();
-        assert!(
-            count >= 2,
-            "Expected at least 2 translations, got {}",
-            count
-        );
+        assert!(count >= 2, "Expected at least 2 translations, got {count}");
 
         let translations = result["translations"].as_array().unwrap();
         let semantics: Vec<&str> = translations

@@ -31,6 +31,8 @@
 
 pub mod capability;
 pub mod graph;
+#[cfg(test)]
+mod graph_tests;
 pub mod lifecycle;
 pub mod niche;
 pub mod protocol;

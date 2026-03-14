@@ -74,7 +74,7 @@ impl SocketDiscovery {
 
     /// Discover socket for a primal by name
     pub async fn discover_primal(&self, primal_name: &str) -> Option<DiscoveredSocket> {
-        let cache_key = format!("primal:{}", primal_name);
+        let cache_key = format!("primal:{primal_name}");
 
         // 1. Check cache
         if self.strategy.enable_cache {
@@ -121,7 +121,7 @@ impl SocketDiscovery {
 
     /// Discover socket by capability
     pub async fn discover_capability(&self, capability: &str) -> Option<DiscoveredSocket> {
-        let cache_key = format!("capability:{}", capability);
+        let cache_key = format!("capability:{capability}");
 
         if self.strategy.enable_cache {
             if let Some(cached) = self.check_cache(&cache_key).await {
@@ -157,7 +157,7 @@ impl SocketDiscovery {
     ///
     /// **Universal IPC Standard v3.0**: Implements graceful transport fallback.
     pub async fn discover_with_fallback(&self, primal_name: &str) -> Option<TransportEndpoint> {
-        let cache_key = format!("endpoint:{}", primal_name);
+        let cache_key = format!("endpoint:{primal_name}");
 
         // 1. Check cache
         if self.strategy.enable_cache {
@@ -267,19 +267,19 @@ impl SocketDiscovery {
         let prefix = primal_name.to_uppercase().replace('-', "_");
 
         // Check TCP first
-        if let Ok(tcp) = env::var(format!("{}_TCP", prefix)) {
+        if let Ok(tcp) = env::var(format!("{prefix}_TCP")) {
             if let Some(endpoint) = TransportEndpoint::parse(&tcp) {
                 if matches!(endpoint, TransportEndpoint::TcpSocket { .. }) {
                     return Some(endpoint);
                 }
             }
-            if let Some(endpoint) = TransportEndpoint::parse(&format!("tcp://{}", tcp)) {
+            if let Some(endpoint) = TransportEndpoint::parse(&format!("tcp://{tcp}")) {
                 return Some(endpoint);
             }
         }
 
         // Check generic endpoint
-        if let Ok(endpoint_str) = env::var(format!("{}_ENDPOINT", prefix)) {
+        if let Ok(endpoint_str) = env::var(format!("{prefix}_ENDPOINT")) {
             if let Some(endpoint) = TransportEndpoint::parse(&endpoint_str) {
                 return Some(endpoint);
             }
@@ -287,9 +287,9 @@ impl SocketDiscovery {
 
         // Check socket
         for var_name in [
-            format!("{}_SOCKET", prefix),
-            format!("{}_SOCKET_PATH", prefix),
-            format!("BIOMEOS_{}_SOCKET", prefix),
+            format!("{prefix}_SOCKET"),
+            format!("{prefix}_SOCKET_PATH"),
+            format!("BIOMEOS_{prefix}_SOCKET"),
         ] {
             if let Ok(value) = env::var(&var_name) {
                 if let Some(endpoint) = TransportEndpoint::parse(&value) {
@@ -316,7 +316,7 @@ impl SocketDiscovery {
             return Some(socket_path);
         }
 
-        let legacy_path = biomeos_dir.join(format!("{}.sock", primal_name));
+        let legacy_path = biomeos_dir.join(format!("{primal_name}.sock"));
         if self.verify_unix_socket(&legacy_path).await {
             return Some(legacy_path);
         }
@@ -333,7 +333,7 @@ impl SocketDiscovery {
             return Some(socket_path);
         }
 
-        let legacy_path = temp_dir.join(format!("{}.sock", primal_name));
+        let legacy_path = temp_dir.join(format!("{primal_name}.sock"));
         if self.verify_unix_socket(&legacy_path).await {
             return Some(legacy_path);
         }
@@ -407,7 +407,7 @@ impl SocketDiscovery {
         let host = &self.strategy.tcp_fallback_host;
         let prefix = primal_name.to_uppercase().replace('-', "_");
 
-        if let Ok(tcp_env) = env::var(format!("{}_TCP", prefix)) {
+        if let Ok(tcp_env) = env::var(format!("{prefix}_TCP")) {
             if let Some(TransportEndpoint::TcpSocket { host: h, port: p }) =
                 TransportEndpoint::parse(&tcp_env)
             {
@@ -437,7 +437,7 @@ impl SocketDiscovery {
     }
 
     pub(crate) async fn verify_tcp_connection(&self, host: &str, port: u16) -> bool {
-        let addr = format!("{}:{}", host, port);
+        let addr = format!("{host}:{port}");
         match tokio::time::timeout(
             std::time::Duration::from_millis(500),
             TcpStream::connect(&addr),
@@ -483,7 +483,7 @@ impl SocketDiscovery {
 
         // Tier 3: Linux /run/user/$UID/biomeos/
         if let Ok(uid) = env::var("UID") {
-            let run_user = PathBuf::from(format!("/run/user/{}/biomeos", uid));
+            let run_user = PathBuf::from(format!("/run/user/{uid}/biomeos"));
             if run_user.parent().map(|p| p.exists()).unwrap_or(false) {
                 std::fs::create_dir_all(&run_user).ok();
                 return run_user.join(&socket_name);
@@ -495,7 +495,7 @@ impl SocketDiscovery {
             use std::os::unix::fs::MetadataExt;
             if let Ok(meta) = std::fs::metadata("/proc/self") {
                 let uid = meta.uid();
-                let run_user = PathBuf::from(format!("/run/user/{}/biomeos", uid));
+                let run_user = PathBuf::from(format!("/run/user/{uid}/biomeos"));
                 if run_user.parent().map(|p| p.exists()).unwrap_or(false) {
                     std::fs::create_dir_all(&run_user).ok();
                     return run_user.join(&socket_name);
@@ -568,7 +568,7 @@ impl SocketDiscovery {
             );
         }
 
-        let legacy_path = biomeos_dir.join(format!("{}.sock", primal_name));
+        let legacy_path = biomeos_dir.join(format!("{primal_name}.sock"));
         if legacy_path.exists() {
             debug!("Discovered {} via XDG runtime (legacy)", primal_name);
             return Some(
@@ -593,7 +593,7 @@ impl SocketDiscovery {
             );
         }
 
-        let legacy_path = temp_dir.join(format!("{}.sock", primal_name));
+        let legacy_path = temp_dir.join(format!("{primal_name}.sock"));
         if legacy_path.exists() {
             debug!("Discovered {} via temp dir (legacy)", primal_name);
             return Some(
@@ -724,7 +724,7 @@ impl SocketDiscovery {
         )
         .await
         .map_err(|_| "Connection timeout")?
-        .map_err(|e| format!("Connection failed: {}", e))?;
+        .map_err(|e| format!("Connection failed: {e}"))?;
 
         let (reader, mut writer) = stream.into_split();
         let mut reader = BufReader::new(reader);
@@ -742,13 +742,13 @@ impl SocketDiscovery {
         timeout(Duration::from_secs(5), reader.read_line(&mut response_line))
             .await
             .map_err(|_| "Response timeout")?
-            .map_err(|e| format!("Read failed: {}", e))?;
+            .map_err(|e| format!("Read failed: {e}"))?;
 
-        let response: serde_json::Value = serde_json::from_str(response_line.trim())
-            .map_err(|e| format!("Parse failed: {}", e))?;
+        let response: serde_json::Value =
+            serde_json::from_str(response_line.trim()).map_err(|e| format!("Parse failed: {e}"))?;
 
         if let Some(error) = response.get("error") {
-            return Err(format!("Registry error: {}", error));
+            return Err(format!("Registry error: {error}"));
         }
 
         response

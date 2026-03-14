@@ -69,7 +69,7 @@ async fn main() -> Result<()> {
 fn print_usage(program: &str) {
     println!("🧬 biomeOS Primal Launcher");
     println!();
-    println!("Usage: {} <primal|atomic> <family_id>", program);
+    println!("Usage: {program} <primal|atomic> <family_id>");
     println!();
     println!("Atomics (launch multiple primals):");
     println!("  tower <family>    Launch Tower (BearDog + Songbird)");
@@ -84,8 +84,8 @@ fn print_usage(program: &str) {
     println!("  squirrel <family>  Launch Squirrel (AI)");
     println!();
     println!("Example:");
-    println!("  {} tower nat0", program);
-    println!("  {} beardog nat0", program);
+    println!("  {program} tower nat0");
+    println!("  {program} beardog nat0");
 }
 
 async fn launch_atomic_primals(primals: &[&str], family_id: &str) -> Result<()> {
@@ -138,12 +138,12 @@ async fn launch_primal(primal: &str, family_id: &str) -> Result<()> {
     // Also set primal-specific variants for backward compat
     // (primals should migrate to BIOMEOS_* prefix)
     let primal_upper = primal.to_uppercase();
-    cmd.env(format!("{}_FAMILY_ID", primal_upper), family_id);
-    cmd.env(format!("{}_SOCKET", primal_upper), &socket_path);
+    cmd.env(format!("{primal_upper}_FAMILY_ID"), family_id);
+    cmd.env(format!("{primal_upper}_SOCKET"), &socket_path);
 
     // Check if binary needs special args (from manifest/config)
     // Instead of hardcoding per primal, check if there's a start command
-    if let Ok(start_cmd) = std::env::var(format!("{}_START_CMD", primal_upper)) {
+    if let Ok(start_cmd) = std::env::var(format!("{primal_upper}_START_CMD")) {
         for arg in start_cmd.split_whitespace() {
             cmd.arg(arg);
         }
@@ -161,7 +161,7 @@ async fn launch_primal(primal: &str, family_id: &str) -> Result<()> {
 
     let mut child = cmd
         .spawn()
-        .with_context(|| format!("Failed to spawn {} process", primal))?;
+        .with_context(|| format!("Failed to spawn {primal} process"))?;
 
     // Wait briefly to see if it crashes immediately
     tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
@@ -211,13 +211,13 @@ fn get_socket_path(primal: &str, family_id: &str) -> Result<String> {
         .or_else(|_| std::env::var("USER").map(|_| "1000".to_string()))
         .unwrap_or_else(|_| "1000".to_string());
 
-    let socket_dir = format!("/run/user/{}", uid);
-    let socket_name = format!("{}-{}.sock", primal, family_id);
-    let socket_path = format!("{}/{}", socket_dir, socket_name);
+    let socket_dir = format!("/run/user/{uid}");
+    let socket_name = format!("{primal}-{family_id}.sock");
+    let socket_path = format!("{socket_dir}/{socket_name}");
 
     Ok(socket_path)
 }
 
 fn get_log_path(primal: &str, family_id: &str) -> String {
-    format!("/tmp/{}-{}.log", primal, family_id)
+    format!("/tmp/{primal}-{family_id}.log")
 }

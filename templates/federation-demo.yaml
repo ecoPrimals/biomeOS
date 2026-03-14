@@ -405,10 +405,10 @@ deployment:
     
   # Deployment steps
   deploy:
-    - "biome deploy federation-demo.yaml"
-    - "biome status federation-demo"
-    - "biome logs federation-demo"
-    - "biome dashboard federation-demo"
+    - "biomeos deploy federation-demo.yaml"
+    - "biomeos status federation-demo"
+    - "biomeos logs federation-demo"
+    - "biomeos dashboard federation-demo"
     
   # Verification
   verify:
@@ -429,10 +429,10 @@ documentation:
     
     ```bash
     # Deploy the federation demo
-    biome deploy federation-demo.yaml
+    biomeos deploy federation-demo.yaml
     
     # Check deployment status
-    biome status federation-demo
+    biomeos status federation-demo
     
     # Access the dashboard
     open http://localhost:3000
@@ -468,13 +468,13 @@ documentation:
     
     ```bash
     # Check federation status
-    biome exec federation-demo songbird-coordinator -- /status
+    biomeos exec federation-demo songbird-coordinator -- /status
     
     # Verify security tunnels
-    biome exec federation-demo beardog-security -- /tunnels
+    biomeos exec federation-demo beardog-security -- /tunnels
     
     # Test discovery
-    biome exec federation-demo federation-discovery -- /discover
+    biomeos exec federation-demo federation-discovery -- /discover
     ```
 
 # Metadata

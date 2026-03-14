@@ -67,7 +67,7 @@ impl NetworkBridge {
             .args(["ip", "link", "add", &self.config.name, "type", "bridge"])
             .output()
             .map_err(|e| DeployError::NetworkBridge {
-                message: format!("Failed to create bridge: {}", e),
+                message: format!("Failed to create bridge: {e}"),
             })?;
 
         if !output.status.success() {
@@ -91,7 +91,7 @@ impl NetworkBridge {
             ])
             .output()
             .map_err(|e| DeployError::NetworkBridge {
-                message: format!("Failed to set IP address: {}", e),
+                message: format!("Failed to set IP address: {e}"),
             })?;
 
         if !output.status.success() {
@@ -108,7 +108,7 @@ impl NetworkBridge {
             .args(["ip", "link", "set", &self.config.name, "up"])
             .output()
             .map_err(|e| DeployError::NetworkBridge {
-                message: format!("Failed to bring up bridge: {}", e),
+                message: format!("Failed to bring up bridge: {e}"),
             })?;
 
         if !output.status.success() {
@@ -146,7 +146,7 @@ impl NetworkBridge {
             .args(["ip", "link", "delete", &self.config.name])
             .output()
             .map_err(|e| DeployError::NetworkBridge {
-                message: format!("Failed to destroy bridge: {}", e),
+                message: format!("Failed to destroy bridge: {e}"),
             })?;
 
         if !output.status.success() {

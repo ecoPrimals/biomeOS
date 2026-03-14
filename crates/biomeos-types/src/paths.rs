@@ -161,17 +161,17 @@ impl SystemPaths {
     ///
     /// Example: `beardog-main` → `$XDG_RUNTIME_DIR/biomeos/beardog-main.sock`
     pub fn primal_socket(&self, primal_id: &str) -> PathBuf {
-        self.runtime_dir.join(format!("{}.sock", primal_id))
+        self.runtime_dir.join(format!("{primal_id}.sock"))
     }
 
     /// Get PID file path
     pub fn pid_file(&self, service_name: &str) -> PathBuf {
-        self.runtime_dir.join(format!("{}.pid", service_name))
+        self.runtime_dir.join(format!("{service_name}.pid"))
     }
 
     /// Get lock file path
     pub fn lock_file(&self, name: &str) -> PathBuf {
-        self.runtime_dir.join(format!("{}.lock", name))
+        self.runtime_dir.join(format!("{name}.lock"))
     }
 
     // =============================================================================
@@ -185,7 +185,7 @@ impl SystemPaths {
 
     /// Get database file path
     pub fn database(&self, name: &str) -> PathBuf {
-        self.data_dir.join(format!("{}.db", name))
+        self.data_dir.join(format!("{name}.db"))
     }
 
     /// Get metrics database path
@@ -202,7 +202,7 @@ impl SystemPaths {
     pub fn genetic_seed(&self, family_id: &str) -> PathBuf {
         self.data_dir
             .join("seeds")
-            .join(format!("{}.seed", family_id))
+            .join(format!("{family_id}.seed"))
     }
 
     // =============================================================================
@@ -261,7 +261,7 @@ impl SystemPaths {
     pub fn log_file(&self, service_name: &str) -> PathBuf {
         self.state_dir
             .join("logs")
-            .join(format!("{}.log", service_name))
+            .join(format!("{service_name}.log"))
     }
 
     /// Get fossil record directory
@@ -298,7 +298,7 @@ impl SystemPaths {
 
         // 2. Fallback to /tmp/biomeos-$USER
         let username = Self::get_username();
-        Ok(env::temp_dir().join(format!("biomeos-{}", username)))
+        Ok(env::temp_dir().join(format!("biomeos-{username}")))
     }
 
     /// Get XDG data directory
@@ -650,5 +650,64 @@ mod tests {
     fn test_safe_uid() {
         let uid = safe_uid();
         assert_ne!(uid, 0, "safe_uid should return non-zero value");
+    }
+
+    #[test]
+    fn test_path_error_create_dir_failed_display() {
+        let err = PathError::CreateDirFailed {
+            path: "/invalid/path".to_string(),
+            source: std::io::Error::new(std::io::ErrorKind::PermissionDenied, "denied"),
+        };
+        let s = err.to_string();
+        assert!(s.contains("Failed to create directory"));
+        assert!(s.contains("/invalid/path"));
+    }
+
+    #[test]
+    fn test_path_error_no_home_dir_display() {
+        let err = PathError::NoHomeDir;
+        let s = err.to_string();
+        assert!(s.to_lowercase().contains("home"));
+    }
+
+    #[test]
+    fn test_path_error_invalid_path_display() {
+        let err = PathError::InvalidPath("bad/path".to_string());
+        let s = err.to_string();
+        assert!(s.contains("Invalid path"));
+        assert!(s.contains("bad/path"));
+    }
+
+    #[test]
+    fn test_path_error_debug() {
+        let err = PathError::NoHomeDir;
+        let s = format!("{:?}", err);
+        assert!(s.contains("NoHomeDir"));
+    }
+
+    #[test]
+    fn test_spore_dir_path() {
+        let temp = tempdir().unwrap();
+        let paths = SystemPaths::with_base(temp.path()).unwrap();
+        let spore = paths.spore_dir();
+        assert!(spore.ends_with("spores"));
+    }
+
+    #[test]
+    fn test_graph_dir_path() {
+        let temp = tempdir().unwrap();
+        let paths = SystemPaths::with_base(temp.path()).unwrap();
+        let graph = paths.graph_dir();
+        assert!(graph.ends_with("graphs"));
+    }
+
+    #[test]
+    fn test_new_lazy_default_paths() {
+        let paths = SystemPaths::new_lazy();
+        assert!(!paths.runtime_dir().as_os_str().is_empty());
+        assert!(!paths.data_dir().as_os_str().is_empty());
+        assert!(!paths.config_dir().as_os_str().is_empty());
+        assert!(!paths.cache_dir().as_os_str().is_empty());
+        assert!(!paths.state_dir().as_os_str().is_empty());
     }
 }

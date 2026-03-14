@@ -24,7 +24,7 @@ async fn test_discover_direct_interface() {
                 assert_eq!(adapter.name, "squirrel");
             }
             Err(e) => {
-                println!("⚠️ Could not discover Squirrel (may be expected): {}", e);
+                println!("⚠️ Could not discover Squirrel (may be expected): {e}");
             }
         }
     } else {
@@ -49,7 +49,7 @@ async fn test_adapter_cache() {
     // Save to cache
     let result = save_adapter(&adapter);
     if let Err(e) = &result {
-        println!("Cache save result: {:?}", e);
+        println!("Cache save result: {e:?}");
     }
 
     // Try to load (may fail if home dir not accessible in test env)
@@ -61,7 +61,7 @@ async fn test_adapter_cache() {
                 assert!(loaded_adapter.capabilities.lifecycle.can_start);
             }
             Err(e) => {
-                println!("Cache load failed (may be expected in test): {}", e);
+                println!("Cache load failed (may be expected in test): {e}");
             }
         }
     }

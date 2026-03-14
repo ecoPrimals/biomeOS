@@ -197,7 +197,7 @@ async fn detect_and_emit_changes(
                     capabilities: primal
                         .capabilities
                         .iter()
-                        .map(|c| format!("{:?}", c))
+                        .map(|c| format!("{c:?}"))
                         .collect(),
                 });
 
@@ -471,7 +471,7 @@ mod tests {
             healthy_count: 0,
             families: vec![],
         };
-        let debug_str = format!("{:?}", event);
+        let debug_str = format!("{event:?}");
         assert!(debug_str.contains("Heartbeat"));
     }
 

@@ -116,9 +116,8 @@ pub struct SecureNucleusDiscovery {
     /// Current family ID
     family_id: Option<String>,
 
-    /// Current node ID. Reserved for multi-node routing in Phase 3.
-    #[allow(dead_code)] // Future: wire up for multi-node routing in Phase 3
-    node_id: Option<String>,
+    /// Planned: wire up for multi-node routing in Phase 3.
+    _node_id: Option<String>,
 }
 
 impl SecureNucleusDiscovery {
@@ -130,7 +129,7 @@ impl SecureNucleusDiscovery {
             beardog: None,
             verified_primals: HashMap::new(),
             family_id: None,
-            node_id: None,
+            _node_id: None,
         }
     }
 
@@ -145,7 +144,7 @@ impl SecureNucleusDiscovery {
             beardog,
             verified_primals: HashMap::new(),
             family_id: std::env::var("FAMILY_ID").ok(),
-            node_id: std::env::var("NODE_ID").ok(),
+            _node_id: std::env::var("NODE_ID").ok(),
         }
     }
 
@@ -427,20 +426,20 @@ mod tests {
     #[test]
     fn test_selection_criteria_debug() {
         let c = SelectionCriteria::ByCapability(Capability::Storage);
-        assert!(format!("{:?}", c).contains("ByCapability"));
+        assert!(format!("{c:?}").contains("ByCapability"));
 
         let c2 = SelectionCriteria::ByNodeId("node-1".into());
-        assert!(format!("{:?}", c2).contains("node-1"));
+        assert!(format!("{c2:?}").contains("node-1"));
 
         let c3 = SelectionCriteria::Any;
-        assert!(format!("{:?}", c3).contains("Any"));
+        assert!(format!("{c3:?}").contains("Any"));
     }
 
     #[test]
     fn test_selection_criteria_clone() {
         let c = SelectionCriteria::ByFamily("fam-1".into());
         let c2 = c.clone();
-        assert!(format!("{:?}", c2).contains("fam-1"));
+        assert!(format!("{c2:?}").contains("fam-1"));
     }
 
     #[test]

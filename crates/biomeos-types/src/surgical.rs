@@ -301,6 +301,15 @@ mod tests {
     }
 
     #[test]
+    fn test_biosignal_stream_config_default_roundtrip() {
+        let val = BiosignalStreamConfig::default();
+        let json = serde_json::to_string(&val).unwrap();
+        let back: BiosignalStreamConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(val.sample_hz, back.sample_hz);
+        assert_eq!(val.signals.len(), back.signals.len());
+    }
+
+    #[test]
     fn test_biosignal_sample_serde() {
         let sample = BiosignalSample {
             signal: BiosignalType::Ecg,

@@ -47,7 +47,7 @@ impl Architecture {
             "aarch64" | "arm64" => Ok(Self::Aarch64),
             "armv7" => Ok(Self::Armv7),
             "riscv64" => Ok(Self::Riscv64),
-            arch => bail!("Unsupported architecture: {}", arch),
+            arch => bail!("Unsupported architecture: {arch}"),
         }
     }
 
@@ -87,7 +87,7 @@ impl Platform {
             "linux" => Ok(Self::Linux),
             "macos" => Ok(Self::MacOS),
             "windows" => Ok(Self::Windows),
-            os => bail!("Unsupported platform: {}", os),
+            os => bail!("Unsupported platform: {os}"),
         }
     }
 
@@ -172,15 +172,15 @@ impl GenomeDeployer {
             .unwrap_or_else(|_| std::env::var("USER").map(|u| u == "root").unwrap_or(false));
 
         match self.platform {
-            Platform::Android => PathBuf::from(format!("/data/local/tmp/{}", primal_name)),
+            Platform::Android => PathBuf::from(format!("/data/local/tmp/{primal_name}")),
             Platform::Linux => {
                 if is_root {
-                    PathBuf::from(format!("/opt/{}", primal_name))
+                    PathBuf::from(format!("/opt/{primal_name}"))
                 } else {
-                    home_dir().join(format!(".local/{}", primal_name))
+                    home_dir().join(format!(".local/{primal_name}"))
                 }
             }
-            Platform::MacOS => home_dir().join(format!("Library/{}", primal_name)),
+            Platform::MacOS => home_dir().join(format!("Library/{primal_name}")),
             Platform::Windows => std::env::var("LOCALAPPDATA")
                 .map(PathBuf::from)
                 .unwrap_or_else(|_| PathBuf::from("C:\\ProgramData"))
@@ -401,14 +401,14 @@ impl GenomeDeployer {
             println!();
         }
 
-        println!("2. Start {}:", primal_name);
+        println!("2. Start {primal_name}:");
         println!("   {}/{}", install_dir.display(), primal_name);
         println!();
 
         if self.platform.supports_abstract_sockets() {
             println!("{}", "Platform features:".blue());
             if self.platform == Platform::Android {
-                println!("  • Abstract socket namespace (@biomeos_{})", primal_name);
+                println!("  • Abstract socket namespace (@biomeos_{primal_name})");
                 println!("  • Android HSM integration available");
             } else {
                 println!("  • Unix socket support");
@@ -481,7 +481,7 @@ mod tests {
     #[test]
     fn test_architecture_debug() {
         let arch = Architecture::X86_64;
-        let debug_str = format!("{:?}", arch);
+        let debug_str = format!("{arch:?}");
         assert!(debug_str.contains("X86_64"));
     }
 
@@ -533,7 +533,7 @@ mod tests {
     #[test]
     fn test_platform_debug() {
         let platform = Platform::Linux;
-        let debug_str = format!("{:?}", platform);
+        let debug_str = format!("{platform:?}");
         assert!(debug_str.contains("Linux"));
     }
 
@@ -577,7 +577,7 @@ mod tests {
             description: "Security primal".to_string(),
             architectures: vec![Architecture::X86_64],
         };
-        let debug_str = format!("{:?}", metadata);
+        let debug_str = format!("{metadata:?}");
         assert!(debug_str.contains("beardog"));
         assert!(debug_str.contains("0.9.0"));
     }

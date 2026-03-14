@@ -48,7 +48,7 @@ async fn main() -> Result<()> {
         .map(|s| s.as_str())
         .unwrap_or("nat0");
 
-    let socket_path = format!("/tmp/neural-api-{}.sock", family_id);
+    let socket_path = format!("/tmp/neural-api-{family_id}.sock");
 
     info!("╔══════════════════════════════════════════════════════════════════════════╗");
     info!("║                                                                          ║");
@@ -66,8 +66,7 @@ async fn main() -> Result<()> {
     info!("🔌 Connecting to Neural API...");
     if !Path::new(&socket_path).exists() {
         anyhow::bail!(
-            "Neural API socket not found: {}\nIs the Neural API server running?",
-            socket_path
+            "Neural API socket not found: {socket_path}\nIs the Neural API server running?"
         );
     }
 
@@ -105,7 +104,7 @@ async fn main() -> Result<()> {
         serde_json::from_str(&response_line).context("Failed to parse response")?;
 
     if let Some(error) = response.get("error") {
-        anyhow::bail!("Execution failed: {}", error);
+        anyhow::bail!("Execution failed: {error}");
     }
 
     let result = response

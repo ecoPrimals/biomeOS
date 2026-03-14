@@ -266,7 +266,7 @@ mod tests {
     #[test]
     fn test_config_debug() {
         let config = EscalationConfig::default();
-        let debug_str = format!("{:?}", config);
+        let debug_str = format!("{config:?}");
         assert!(debug_str.contains("min_requests"));
         assert!(debug_str.contains("auto_escalate"));
     }
@@ -302,7 +302,7 @@ mod tests {
         assert_eq!(cloned.from, result.from);
         assert_eq!(cloned.tarpc_socket, result.tarpc_socket);
 
-        let debug_str = format!("{:?}", result);
+        let debug_str = format!("{result:?}");
         assert!(debug_str.contains("EscalationResult"));
     }
 
@@ -337,7 +337,7 @@ mod tests {
         };
         let cloned = endpoint.clone();
         assert_eq!(cloned.available, endpoint.available);
-        let debug_str = format!("{:?}", endpoint);
+        let debug_str = format!("{endpoint:?}");
         assert!(debug_str.contains("TarpcEndpoint"));
     }
 
@@ -356,7 +356,7 @@ mod tests {
                 current_mode: mode,
                 tarpc_socket: None,
                 success: true,
-                message: format!("mode: {:?}", mode),
+                message: format!("mode: {mode:?}"),
             };
             let json = serde_json::to_string(&result).unwrap();
             let parsed: EscalationResult = serde_json::from_str(&json).unwrap();

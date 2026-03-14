@@ -458,8 +458,7 @@ fn test_topological_sort_unreachable_node() {
     let err_msg = result.unwrap_err().to_string();
     assert!(
         err_msg.contains("cycle") || err_msg.contains("unreachable"),
-        "Expected cycle or unreachable error, got: {}",
-        err_msg
+        "Expected cycle or unreachable error, got: {err_msg}"
     );
 }
 

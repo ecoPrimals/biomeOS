@@ -38,7 +38,7 @@ pub async fn verify_primal_health(socket_path: &Path, primal_name: &str) -> Resu
     let response = client
         .call("primal.capabilities", json!({}))
         .await
-        .context(format!("Failed to query capabilities from {}", primal_name))?;
+        .context(format!("Failed to query capabilities from {primal_name}"))?;
 
     // Extract capabilities from result
     let capabilities = response
@@ -72,7 +72,7 @@ pub async fn verify_primal_health_with_discovery(primal_name: &str) -> Result<Ve
     // Discover primal with automatic transport fallback
     let client = AtomicClient::discover(primal_name)
         .await
-        .context(format!("Failed to discover primal: {}", primal_name))?;
+        .context(format!("Failed to discover primal: {primal_name}"))?;
 
     debug!("Discovered {} via {}", primal_name, client.endpoint());
 
@@ -80,7 +80,7 @@ pub async fn verify_primal_health_with_discovery(primal_name: &str) -> Result<Ve
     let response = client
         .call("primal.capabilities", json!({}))
         .await
-        .context(format!("Failed to query capabilities from {}", primal_name))?;
+        .context(format!("Failed to query capabilities from {primal_name}"))?;
 
     // Extract capabilities from result
     let capabilities = response
@@ -149,8 +149,7 @@ pub async fn establish_btsp_tunnel_with_discovery(family_id: &str) -> Result<Str
     let client = AtomicClient::discover(&security_provider)
         .await
         .context(format!(
-            "Failed to discover {} for BTSP tunnel",
-            security_provider
+            "Failed to discover {security_provider} for BTSP tunnel"
         ))?;
 
     debug!(

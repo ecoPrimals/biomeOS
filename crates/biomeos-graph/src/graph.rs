@@ -133,8 +133,7 @@ impl GraphId {
             .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
         {
             return Err(format!(
-                "Graph ID must be lowercase alphanumeric with hyphens: {}",
-                id
+                "Graph ID must be lowercase alphanumeric with hyphens: {id}"
             ));
         }
         Ok(Self(id))
@@ -368,7 +367,7 @@ mod tests {
     #[test]
     fn test_graph_id_display() {
         let id = GraphId::new("test-graph").unwrap();
-        assert_eq!(format!("{}", id), "test-graph");
+        assert_eq!(format!("{id}"), "test-graph");
     }
 
     #[test]

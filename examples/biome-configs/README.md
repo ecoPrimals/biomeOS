@@ -116,22 +116,22 @@ This directory contains sample `biome.yaml` configurations for different use cas
 3. **Deploy Biome**:
    ```bash
    # Validate configuration
-   biome validate my-biome.yaml
+   biomeos validate my-biome.yaml
    
    # Deploy biome
-   biome deploy my-biome.yaml --team your-team
+   biomeos deploy my-biome.yaml --team your-team
    
    # Check deployment status
-   biome status --team your-team
+   biomeos status --team your-team
    ```
 
 4. **Access Services**:
    ```bash
    # List running services
-   biome services --team your-team
+   biomeos services --team your-team
    
    # Get service endpoints
-   biome endpoints --team your-team
+   biomeos endpoints --team your-team
    ```
 
 ## 📊 Configuration Comparison
@@ -228,16 +228,16 @@ This directory contains sample `biome.yaml` configurations for different use cas
 
 ```bash
 # Validate syntax
-biome validate my-biome.yaml
+biomeos validate my-biome.yaml
 
 # Check resource requirements
-biome check-resources my-biome.yaml
+biomeos check-resources my-biome.yaml
 
 # Dry-run deployment
-biome deploy my-biome.yaml --dry-run
+biomeos deploy my-biome.yaml --dry-run
 
 # Validate security settings
-biome security-scan my-biome.yaml
+biomeos security-scan my-biome.yaml
 ```
 
 ### Common Validation Errors
@@ -394,16 +394,16 @@ resources:
 
 ```bash
 # Check deployment status
-biome status --team your-team --verbose
+biomeos status --team your-team --verbose
 
 # View service logs
-biome logs service-name --team your-team
+biomeos logs service-name --team your-team
 
 # Check resource usage
-biome resources --team your-team
+biomeos resources --team your-team
 
 # Troubleshoot connectivity
-biome network-test --team your-team
+biomeos network-test --team your-team
 ```
 
 ## 🆘 Support

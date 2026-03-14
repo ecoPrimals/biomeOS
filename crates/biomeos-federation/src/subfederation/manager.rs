@@ -85,8 +85,7 @@ impl SubFederationManager {
     ) -> FederationResult<SubFederation> {
         if self.sub_federations.contains_key(&name) {
             return Err(FederationError::Generic(format!(
-                "Sub-federation '{}' already exists",
-                name
+                "Sub-federation '{name}' already exists"
             )));
         }
 

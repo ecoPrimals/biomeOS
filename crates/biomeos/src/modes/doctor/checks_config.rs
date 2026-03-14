@@ -21,7 +21,7 @@ pub(crate) async fn check_binary_health() -> Result<HealthCheck> {
 
         if let Ok(metadata) = std::fs::metadata(&exe) {
             let size_mb = metadata.len() as f64 / 1_048_576.0;
-            check.details.push(format!("Size: {:.1}M", size_mb));
+            check.details.push(format!("Size: {size_mb:.1}M"));
         }
     } else {
         check.status = HealthStatus::Warning;
@@ -87,7 +87,7 @@ pub(crate) async fn check_graphs_dir() -> Result<HealthCheck> {
         check
             .details
             .push(format!("Path: {}", graphs_dir.display()));
-        check.details.push(format!("Graphs found: {}", graph_count));
+        check.details.push(format!("Graphs found: {graph_count}"));
 
         if graph_count == 0 {
             check.status = HealthStatus::Warning;

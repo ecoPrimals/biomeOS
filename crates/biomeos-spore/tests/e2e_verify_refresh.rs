@@ -99,7 +99,7 @@ BEARDOG_NODE_ID = "test-node"
     // Test passes if verification completes (ok or err)
     match result {
         Ok(_) => {} // Fresh spore verified
-        Err(e) => eprintln!("Verification error (acceptable): {}", e),
+        Err(e) => eprintln!("Verification error (acceptable): {e}"),
     }
 }
 
@@ -191,7 +191,7 @@ BEARDOG_NODE_ID = "test-node"
             let tower_check = verify_report.binaries.iter().find(|b| b.name == "tower");
             assert!(tower_check.is_some());
         }
-        Err(e) => eprintln!("Verification error (acceptable): {}", e),
+        Err(e) => eprintln!("Verification error (acceptable): {e}"),
     }
 
     // E2E Step 2: Refresh should update the binary
@@ -204,7 +204,7 @@ BEARDOG_NODE_ID = "test-node"
             // Length is always non-negative for Vec, this assertion always passes
             let _ = refresh_report.refreshed_binaries.len();
         }
-        Err(e) => eprintln!("Refresh error (acceptable): {}", e),
+        Err(e) => eprintln!("Refresh error (acceptable): {e}"),
     }
 }
 
@@ -349,7 +349,7 @@ async fn test_e2e_verify_all_spores() {
 
     // Create multiple spores
     for i in 1..=3 {
-        let spore_path = temp_dir.path().join(format!("spore{}/biomeOS", i));
+        let spore_path = temp_dir.path().join(format!("spore{i}/biomeOS"));
         fs::create_dir_all(spore_path.join("bin")).await.unwrap();
         fs::write(spore_path.join("bin/tower"), b"tower")
             .await
@@ -359,12 +359,11 @@ async fn test_e2e_verify_all_spores() {
             r#"
 [meta]
 family_id = "test-family"
-node_id = "test-node-{}"
+node_id = "test-node-{i}"
 
 [primals.env]
-BEARDOG_NODE_ID = "test-node-{}"
-"#,
-            i, i
+BEARDOG_NODE_ID = "test-node-{i}"
+"#
         );
         fs::write(spore_path.join("tower.toml"), tower_toml)
             .await

@@ -85,7 +85,7 @@ impl LabManager {
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            anyhow::bail!("Failed to create lab: {}", stderr);
+            anyhow::bail!("Failed to create lab: {stderr}");
         }
 
         info!("Lab created successfully: {}", name);
@@ -167,7 +167,7 @@ impl LabManager {
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            anyhow::bail!("Failed to destroy lab: {}", stderr);
+            anyhow::bail!("Failed to destroy lab: {stderr}");
         }
 
         info!("Lab destroyed successfully: {}", lab_name);

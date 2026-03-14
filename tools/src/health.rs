@@ -243,7 +243,12 @@ async fn check_ecosystem_components(_config: &HealthConfig) -> Result<Vec<Health
 
     let runtime_dir = std::env::var("XDG_RUNTIME_DIR")
         .map(PathBuf::from)
-        .unwrap_or_else(|_| PathBuf::from("/tmp"))
+        .or_else(|_| {
+            std::env::var("UID")
+                .or_else(|_| std::env::var("EUID"))
+                .map(|uid| PathBuf::from(format!("/run/user/{uid}")))
+        })
+        .unwrap_or_else(|_| std::env::temp_dir())
         .join("biomeos");
 
     if !runtime_dir.exists() {

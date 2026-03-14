@@ -99,7 +99,7 @@ mod manager_discovery_integration {
             let manager_clone = manager.clone();
             let handle = tokio::spawn(async move {
                 let _results = manager_clone.discover().await;
-                format!("discovery-{}", i)
+                format!("discovery-{i}")
             });
             handles.push(handle);
         }
@@ -108,9 +108,9 @@ mod manager_discovery_integration {
         for i in 0..5 {
             let manager_clone = manager.clone();
             let handle = tokio::spawn(async move {
-                let primal = MockPrimalFactory::create_compute_primal(&format!("concurrent-{}", i));
+                let primal = MockPrimalFactory::create_compute_primal(&format!("concurrent-{i}"));
                 manager_clone.register_primal(primal).await.unwrap();
-                format!("registration-{}", i)
+                format!("registration-{i}")
             });
             handles.push(handle);
         }
@@ -254,7 +254,7 @@ mod primal_sdk_integration {
         for (capability, domain_name) in capability_tests {
             // Create primal with specific capability
             let mut primal =
-                MockPrimalFactory::create_compute_primal(&format!("{}-test", domain_name));
+                MockPrimalFactory::create_compute_primal(&format!("{domain_name}-test"));
             primal.capabilities = vec![capability.clone()];
 
             manager.register_primal(primal).await?;
@@ -281,7 +281,7 @@ mod primal_sdk_integration {
         ];
 
         for (i, primal_type) in primal_types.into_iter().enumerate() {
-            let mut primal = MockPrimalFactory::create_compute_primal(&format!("type-test-{}", i));
+            let mut primal = MockPrimalFactory::create_compute_primal(&format!("type-test-{i}"));
             primal.primal_type = primal_type;
 
             manager.register_primal(primal).await?;
@@ -315,8 +315,7 @@ mod primal_sdk_integration {
         ];
 
         for (i, health_state) in health_states.into_iter().enumerate() {
-            let mut primal =
-                MockPrimalFactory::create_compute_primal(&format!("health-test-{}", i));
+            let mut primal = MockPrimalFactory::create_compute_primal(&format!("health-test-{i}"));
             primal.health = health_state.clone();
 
             manager.register_primal(primal).await?;
@@ -348,13 +347,13 @@ mod error_resilience_integration {
 
         // Register some healthy primals
         for i in 0..3 {
-            let primal = MockPrimalFactory::create_compute_primal(&format!("healthy-{}", i));
+            let primal = MockPrimalFactory::create_compute_primal(&format!("healthy-{i}"));
             manager.register_primal(primal).await?;
         }
 
         // Register some unhealthy primals
         for i in 0..2 {
-            let mut primal = MockPrimalFactory::create_storage_primal(&format!("unhealthy-{}", i));
+            let mut primal = MockPrimalFactory::create_storage_primal(&format!("unhealthy-{i}"));
             primal.health = Health::unhealthy(vec![]);
             manager.register_primal(primal).await?;
         }
@@ -456,7 +455,7 @@ mod performance_integration {
         let start_time = std::time::Instant::now();
 
         for i in 0..primal_count {
-            let primal = MockPrimalFactory::create_compute_primal(&format!("scale-test-{}", i));
+            let primal = MockPrimalFactory::create_compute_primal(&format!("scale-test-{i}"));
             manager.register_primal(primal).await?;
         }
 
@@ -504,7 +503,7 @@ mod performance_integration {
                 match i % 4 {
                     0 => {
                         let primal =
-                            MockPrimalFactory::create_compute_primal(&format!("concurrent-{}", i));
+                            MockPrimalFactory::create_compute_primal(&format!("concurrent-{i}"));
                         manager_clone.register_primal(primal).await.unwrap();
                     }
                     1 => {

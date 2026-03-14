@@ -196,8 +196,7 @@ mod tests {
         let err = result.expect_err("Should fail when operation is missing");
         assert!(
             err.to_string().contains("operation"),
-            "Error should mention operation: {}",
-            err
+            "Error should mention operation: {err}"
         );
     }
 
@@ -250,8 +249,7 @@ mod tests {
         let total = result["total_checks"].as_u64().unwrap_or(0);
         assert!(
             total <= 5,
-            "Should check at most 5 known primals, got {}",
-            total
+            "Should check at most 5 known primals, got {total}"
         );
         assert!(result.get("healthy").is_some());
         assert!(result.get("checks_passed").is_some());

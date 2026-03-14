@@ -37,17 +37,14 @@ pub fn get_genome_bin_path() -> Option<PathBuf> {
     None
 }
 
-/// Serializes tests that mutate GENOMEBIN_PATH to avoid races when running in parallel.
-#[cfg(test)]
-pub(crate) static GENOMEBIN_PATH_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
     #[test]
+    #[serial]
     fn test_get_genome_bin_path_env_var() {
-        let _guard = GENOMEBIN_PATH_LOCK.lock().expect("lock");
         let temp = tempfile::tempdir().expect("create temp dir");
         let manifest_path = temp.path().join("manifest.toml");
         std::fs::write(&manifest_path, "[manifest]\nversion = \"1.0\"").expect("write manifest");
@@ -67,8 +64,8 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_get_genome_bin_path_env_var_nonexistent_does_not_return_it() {
-        let _guard = GENOMEBIN_PATH_LOCK.lock().expect("lock");
         // When GENOMEBIN_PATH points to nonexistent path, we fall through to search_paths.
         // If we get a result, it must not be the nonexistent path we set.
         let saved = std::env::var("GENOMEBIN_PATH").ok();

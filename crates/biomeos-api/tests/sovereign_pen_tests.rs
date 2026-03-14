@@ -69,9 +69,7 @@ async fn assert_dark_forest_rejection(response: axum::http::Response<Body>, cont
     assert_eq!(
         status,
         StatusCode::FORBIDDEN,
-        "Expected 403 for {}, got {}",
-        context,
-        status
+        "Expected 403 for {context}, got {status}"
     );
 
     assert!(
@@ -97,9 +95,7 @@ async fn assert_bare_health_ok(response: axum::http::Response<Body>, context: &s
     assert_eq!(
         status,
         StatusCode::OK,
-        "Expected 200 for {}, got {}",
-        context,
-        status
+        "Expected 200 for {context}, got {status}"
     );
 
     assert!(
@@ -121,31 +117,26 @@ fn assert_no_info_leak(headers: &axum::http::HeaderMap, context: &str) {
         let server_str = server.to_str().unwrap_or("");
         assert!(
             !server_str.to_lowercase().contains("axum"),
-            "Server header leaks 'axum' for {}",
-            context
+            "Server header leaks 'axum' for {context}"
         );
         assert!(
             !server_str.to_lowercase().contains("hyper"),
-            "Server header leaks 'hyper' for {}",
-            context
+            "Server header leaks 'hyper' for {context}"
         );
         assert!(
             !server_str.to_lowercase().contains("biomeos"),
-            "Server header leaks 'biomeos' for {}",
-            context
+            "Server header leaks 'biomeos' for {context}"
         );
         assert!(
             !server_str.to_lowercase().contains("tower"),
-            "Server header leaks 'tower' for {}",
-            context
+            "Server header leaks 'tower' for {context}"
         );
     }
 
     // Should not have X-Powered-By or similar
     assert!(
         headers.get("x-powered-by").is_none(),
-        "X-Powered-By header present for {}",
-        context
+        "X-Powered-By header present for {context}"
     );
 
     // Content-Type on empty 403 should not be application/json
@@ -154,10 +145,7 @@ fn assert_no_info_leak(headers: &axum::http::HeaderMap, context: &str) {
         let ct_str = ct.to_str().unwrap_or("");
         // For empty bodies, there should be no content-type, or it should be generic
         if ct_str.contains("application/json") {
-            panic!(
-                "Content-Type 'application/json' on rejection leaks API info for {}",
-                context
-            );
+            panic!("Content-Type 'application/json' on rejection leaks API info for {context}");
         }
     }
 }
@@ -294,9 +282,7 @@ async fn pentest_health_path_variants() {
             resp_status == StatusCode::OK
                 || resp_status == StatusCode::FORBIDDEN
                 || resp_status == StatusCode::NOT_FOUND,
-            "Unexpected status {} for {}",
-            resp_status,
-            path
+            "Unexpected status {resp_status} for {path}"
         );
 
         // If it's a 200 or 403 from our gate, body must be empty
@@ -343,15 +329,11 @@ async fn pentest_well_known_no_path_traversal() {
             let body_str = String::from_utf8_lossy(&body);
             assert!(
                 !body_str.contains("primals"),
-                "Path traversal via {} leaked primal data: {}",
-                path,
-                body_str
+                "Path traversal via {path} leaked primal data: {body_str}"
             );
             assert!(
                 !body_str.contains("version"),
-                "Path traversal via {} leaked version: {}",
-                path,
-                body_str
+                "Path traversal via {path} leaked version: {body_str}"
             );
         }
 
@@ -362,9 +344,7 @@ async fn pentest_well_known_no_path_traversal() {
                 || status == StatusCode::NOT_FOUND
                 // .well-known paths pass through to router which returns 404 for unknown sub-paths
                 || (status == StatusCode::OK && body.is_empty()),
-            "Unexpected status {} for traversal attempt: {}",
-            status,
-            path
+            "Unexpected status {status} for traversal attempt: {path}"
         );
     }
 }
@@ -398,9 +378,7 @@ async fn pentest_health_path_spoofing() {
             let body_str = String::from_utf8_lossy(&body);
             assert!(
                 !body_str.contains("primals") && !body_str.contains("count"),
-                "Health path spoofing via {} leaked data: {}",
-                path,
-                body_str
+                "Health path spoofing via {path} leaked data: {body_str}"
             );
         }
     }
@@ -517,9 +495,7 @@ async fn pentest_token_wrong_header() {
         assert_eq!(
             status,
             StatusCode::FORBIDDEN,
-            "Expected 403 for header {}: {}",
-            header_name,
-            header_value
+            "Expected 403 for header {header_name}: {header_value}"
         );
     }
 }
@@ -564,9 +540,7 @@ async fn pentest_all_http_methods_gated() {
         assert_eq!(
             status,
             StatusCode::FORBIDDEN,
-            "{} /api/v1/primals should be 403, got {}",
-            method,
-            status
+            "{method} /api/v1/primals should be 403, got {status}"
         );
 
         // Body must be empty regardless of method
@@ -608,8 +582,7 @@ async fn pentest_cors_preflight_reveals_nothing() {
         let origin = acao.to_str().unwrap_or("");
         assert!(
             origin != "*" && origin != "https://evil.com",
-            "CORS allows evil.com origin: {}",
-            origin
+            "CORS allows evil.com origin: {origin}"
         );
     }
 
@@ -734,8 +707,7 @@ async fn pentest_timing_consistency() {
     let max_bad_token = bad_token_times.iter().max().unwrap();
     assert!(
         max_bad_token.as_secs() < 6,
-        "Bad token took too long: {:?} (possible hanging connection)",
-        max_bad_token
+        "Bad token took too long: {max_bad_token:?} (possible hanging connection)"
     );
 
     // No-token path should be very fast (pure in-process)
@@ -848,9 +820,7 @@ async fn pentest_url_encoding_bypass() {
             let body_str = String::from_utf8_lossy(&body);
             assert!(
                 !body_str.contains("primals") && !body_str.contains("count"),
-                "URL encoding bypass via {} leaked data: {}",
-                path,
-                body_str
+                "URL encoding bypass via {path} leaked data: {body_str}"
             );
         }
     }

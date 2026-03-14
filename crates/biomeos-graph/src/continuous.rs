@@ -159,9 +159,8 @@ impl std::fmt::Display for SessionState {
 #[derive(Debug, Clone)]
 struct CachedOutput {
     value: serde_json::Value,
-    /// Tick counter for diagnostics and future cache-staleness checks.
-    #[allow(dead_code)] // Future: read for cache-staleness checks
-    tick: u64,
+    /// Tick counter for diagnostics and cache-staleness checks.
+    _tick: u64,
 }
 
 // ---------------------------------------------------------------------------
@@ -367,7 +366,7 @@ impl ContinuousExecutor {
                                 node_id.clone(),
                                 CachedOutput {
                                     value: output,
-                                    tick: tick_num,
+                                    _tick: tick_num,
                                 },
                             );
                         }
@@ -478,8 +477,7 @@ mod tests {
         let ticks = clock.advance();
         assert!(
             ticks >= 1,
-            "250ms should produce at least one 100ms tick, got {}",
-            ticks
+            "250ms should produce at least one 100ms tick, got {ticks}"
         );
         assert!(clock.tick_count() >= 1);
     }
@@ -496,8 +494,7 @@ mod tests {
         let ticks = clock.advance();
         assert!(
             ticks <= 2,
-            "Should clamp to max_accumulator worth of ticks, got {}",
-            ticks
+            "Should clamp to max_accumulator worth of ticks, got {ticks}"
         );
     }
 

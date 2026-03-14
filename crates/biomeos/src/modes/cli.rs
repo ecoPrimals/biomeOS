@@ -69,7 +69,7 @@ async fn show_system_summary() -> Result<()> {
     // Check for running primals by looking for sockets
     let socket_dirs = [
         std::env::var("XDG_RUNTIME_DIR")
-            .map(|d| format!("{}/biomeos", d))
+            .map(|d| format!("{d}/biomeos"))
             .ok(),
         Some("/tmp".to_string()),
     ];
@@ -182,7 +182,7 @@ mod tests {
     #[test]
     fn test_cli_command_debug() {
         let cmd = CliCommand;
-        let s = format!("{:?}", cmd);
+        let s = format!("{cmd:?}");
         assert_eq!(s, "CliCommand");
     }
 

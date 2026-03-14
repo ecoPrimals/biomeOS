@@ -420,13 +420,13 @@ impl NicheHandler {
             "rootpulse-diff" => "rootpulse_diff",
             "rootpulse-federate" => "rootpulse_federate",
             "soil-microbiome" => "cross_spring_soil_microbiome",
-            _ => anyhow::bail!("Unknown template: {}", template_id),
+            _ => anyhow::bail!("Unknown template: {template_id}"),
         };
 
         // Load the graph
-        let graph_path = self.graphs_dir.join(format!("{}.toml", graph_id));
+        let graph_path = self.graphs_dir.join(format!("{graph_id}.toml"));
         if !graph_path.exists() {
-            anyhow::bail!("Graph not found: {}", graph_id);
+            anyhow::bail!("Graph not found: {graph_id}");
         }
 
         let graph = Graph::from_toml_file(&graph_path)?;
@@ -524,8 +524,7 @@ mod tests {
         for id in expected_ids {
             assert!(
                 templates.iter().any(|t| t["id"] == id),
-                "Template {} should be in list",
-                id
+                "Template {id} should be in list"
             );
         }
     }
@@ -633,8 +632,7 @@ mod tests {
         let err_msg = result.unwrap_err().to_string();
         assert!(
             err_msg.to_lowercase().contains("not found") || err_msg.contains("nucleus_simple"),
-            "Error should mention graph not found: {}",
-            err_msg
+            "Error should mention graph not found: {err_msg}"
         );
     }
 

@@ -28,7 +28,7 @@ struct LiveSporeFaultFixture {
 impl LiveSporeFaultFixture {
     fn new(test_name: &str) -> Self {
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
-        let spore_path = temp_dir.path().join(format!("test-spore-{}", test_name));
+        let spore_path = temp_dir.path().join(format!("test-spore-{test_name}"));
         std::fs::create_dir_all(&spore_path).expect("Failed to create spore dir");
 
         Self {
@@ -272,7 +272,7 @@ fn test_very_long_path() {
         }
         Err(e) => {
             // Failed gracefully (path too long)
-            eprintln!("Deep path creation failed (expected): {}", e);
+            eprintln!("Deep path creation failed (expected): {e}");
         }
     }
 }

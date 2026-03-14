@@ -71,7 +71,7 @@ fn send_rpc_request(
     debug!("📡 Sending RPC to {}: {}", socket_path, method);
 
     let mut stream = UnixStream::connect(socket_path)
-        .with_context(|| format!("Failed to connect to socket: {}", socket_path))?;
+        .with_context(|| format!("Failed to connect to socket: {socket_path}"))?;
 
     stream.set_read_timeout(Some(Duration::from_secs(5)))?;
     stream.set_write_timeout(Some(Duration::from_secs(5)))?;
@@ -201,7 +201,7 @@ pub async fn discover_primal(socket_path: &str) -> Result<LivePrimalInfo> {
         }
         Err(e) => {
             warn!("⚠️  Discovery task failed for {}: {}", socket_path, e);
-            Err(anyhow::anyhow!("Task join error: {}", e))
+            Err(anyhow::anyhow!("Task join error: {e}"))
         }
     }
 }
@@ -424,7 +424,7 @@ pub async fn discover_by_capability(capability: &str) -> Vec<LivePrimalInfo> {
         .filter(|p| {
             p.capabilities
                 .iter()
-                .any(|c| c == capability || c.starts_with(&format!("{}.", capability)))
+                .any(|c| c == capability || c.starts_with(&format!("{capability}.")))
         })
         .collect()
 }
@@ -514,7 +514,7 @@ mod tests {
         let dir = get_socket_dir();
         // Default fallback uses username for isolation
         let username = std::env::var("USER").unwrap_or_else(|_| "default".to_string());
-        assert_eq!(dir, format!("/tmp/biomeos-{}", username));
+        assert_eq!(dir, format!("/tmp/biomeos-{username}"));
     }
 
     #[test]
@@ -582,8 +582,7 @@ mod tests {
                 || dir.starts_with("/run")
                 || dir.starts_with("/nonexistent")
                 || std::path::Path::new(&dir).is_absolute(),
-            "socket dir should be an absolute path, got: {}",
-            dir
+            "socket dir should be an absolute path, got: {dir}"
         );
     }
 

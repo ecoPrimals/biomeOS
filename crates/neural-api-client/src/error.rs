@@ -42,7 +42,6 @@ pub enum NeuralApiError {
 }
 
 /// Standard JSON-RPC error codes
-#[allow(dead_code)] // Constants used for error code matching; part of public API
 impl NeuralApiError {
     /// Parse error (-32700)
     pub const PARSE_ERROR: i32 = -32700;

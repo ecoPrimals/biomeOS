@@ -524,21 +524,21 @@ mod tests {
     #[test]
     fn test_tls_version_debug() {
         let version = TlsVersion::V1_3;
-        let debug = format!("{:?}", version);
+        let debug = format!("{version:?}");
         assert!(debug.contains("V1_3"));
     }
 
     #[test]
     fn test_load_balancing_algorithm_debug() {
         let alg = LoadBalancingAlgorithm::LeastConnections;
-        let debug = format!("{:?}", alg);
+        let debug = format!("{alg:?}");
         assert!(debug.contains("LeastConnections"));
     }
 
     #[test]
     fn test_rate_limiting_key_debug() {
         let key = RateLimitingKey::Custom("tenant-id".to_string());
-        let debug = format!("{:?}", key);
+        let debug = format!("{key:?}");
         assert!(debug.contains("tenant-id"));
     }
 }

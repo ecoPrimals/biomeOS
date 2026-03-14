@@ -15,8 +15,43 @@ pub use definition::CapabilityTaxonomy;
 pub use helpers::capabilities_for_primal;
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_capability_serde_roundtrip() {
+        let cap = CapabilityTaxonomy::Encryption;
+        let json = serde_json::to_string(&cap).unwrap();
+        let back: CapabilityTaxonomy = serde_json::from_str(&json).unwrap();
+        assert_eq!(cap, back);
+    }
+
+    #[test]
+    fn test_capability_custom_serde() {
+        let cap = CapabilityTaxonomy::Custom("my-custom-cap".to_string());
+        let json = serde_json::to_string(&cap).unwrap();
+        let back: CapabilityTaxonomy = serde_json::from_str(&json).unwrap();
+        assert_eq!(cap, back);
+    }
+
+    #[test]
+    fn test_capability_category_serde() {
+        for cat in [
+            CapabilityCategory::Security,
+            CapabilityCategory::Communication,
+            CapabilityCategory::Compute,
+            CapabilityCategory::Storage,
+            CapabilityCategory::UserInterface,
+            CapabilityCategory::Orchestration,
+            CapabilityCategory::AI,
+            CapabilityCategory::Specialized,
+        ] {
+            let json = serde_json::to_string(&cat).unwrap();
+            let back: CapabilityCategory = serde_json::from_str(&json).unwrap();
+            assert_eq!(cat, back);
+        }
+    }
 
     #[test]
     fn test_capability_description() {

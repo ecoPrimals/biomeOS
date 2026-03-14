@@ -348,7 +348,7 @@ pub mod files {
     /// assert_eq!(dir, ".squirrel/plugins");
     /// ```
     pub fn default_plugin_dir(primal_name: &str) -> String {
-        format!(".{}/plugins", primal_name)
+        format!(".{primal_name}/plugins")
     }
 
     /// Get default plugins directory for current primal (from environment)

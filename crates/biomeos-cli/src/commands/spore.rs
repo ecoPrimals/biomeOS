@@ -35,8 +35,7 @@ pub fn parse_spore_type(s: &str) -> Result<SporeType> {
         "live" => Ok(SporeType::Live),
         "cold" => Ok(SporeType::Cold),
         _ => Err(anyhow::anyhow!(
-            "Invalid spore type: '{}'. Valid types: 'live' (deployable) or 'cold' (storage)",
-            s
+            "Invalid spore type: '{s}'. Valid types: 'live' (deployable) or 'cold' (storage)"
         )),
     }
 }
@@ -81,7 +80,8 @@ pub(crate) fn gather_spore_structure_info(path: &Path) -> Vec<PathInfo> {
 }
 
 /// Computes refresh plan from paths and parallel would_refresh flags.
-#[allow(dead_code)] // Extracted for testability; used in tests
+/// Planned utility for spore refresh workflows.
+#[allow(dead_code)]
 pub(crate) fn compute_refresh_plan(paths: &[PathBuf], would_refresh: &[bool]) -> RefreshReport {
     let mut to_refresh = Vec::new();
     let mut to_keep = Vec::new();
@@ -105,7 +105,7 @@ pub(crate) fn format_spore_create_summary(spore_info: &Value) -> Vec<String> {
     let mut lines = Vec::new();
 
     if let Some(location) = spore_info.get("location").and_then(|v| v.as_str()) {
-        lines.push(format!("   Location: {}", location));
+        lines.push(format!("   Location: {location}"));
     }
 
     lines.push(String::new());
@@ -132,9 +132,9 @@ pub async fn handle_spore_create(
 ) -> Result<()> {
     let spore_type = parse_spore_type(&spore_type_str)?;
 
-    println!("🔐 Creating {} USB spore...", spore_type);
-    println!("   Label: {}", label);
-    println!("   Node ID: {}", node_id);
+    println!("🔐 Creating {spore_type} USB spore...");
+    println!("   Label: {label}");
+    println!("   Node ID: {node_id}");
     println!("   Mount: {}", mount.display());
     println!("   Type: {} {}", spore_type.emoji(), spore_type);
 
@@ -166,7 +166,7 @@ pub async fn handle_spore_clone(from: PathBuf, to: PathBuf, node_id: String) -> 
     println!("🔄 Cloning spore to create sibling...");
     println!("   Source: {}", from.display());
     println!("   Target: {}", to.display());
-    println!("   New Node ID: {}", node_id);
+    println!("   New Node ID: {node_id}");
 
     // Load source spore
     let source = Spore::from_path(from)?;
@@ -229,7 +229,7 @@ pub async fn handle_spore_info(mount: PathBuf) -> Result<()> {
 
                 #[cfg(unix)]
                 if let Some(mode) = info.permissions {
-                    println!("      Permissions: {:o}", mode);
+                    println!("      Permissions: {mode:o}");
                 }
             }
         }
@@ -266,7 +266,7 @@ pub async fn handle_spore_list() -> Result<()> {
         println!("📱 Device:");
         println!("   Mount: {}", device.mount_point.display());
         if let Some(ref label) = device.label {
-            println!("   Label: {}", label);
+            println!("   Label: {label}");
         }
         println!(
             "   Space: {:.2} GB available / {:.2} GB total ({:.1}% used)",
@@ -440,13 +440,11 @@ mod tests {
         let msg = err.to_string();
         assert!(
             msg.contains("invalid"),
-            "error should mention invalid input: {}",
-            msg
+            "error should mention invalid input: {msg}"
         );
         assert!(
             msg.contains("live") || msg.contains("cold"),
-            "error should mention valid types: {}",
-            msg
+            "error should mention valid types: {msg}"
         );
     }
 

@@ -48,7 +48,7 @@ mod derivation_tests {
             responses
                 .get(capability)
                 .cloned()
-                .unwrap_or_else(|| Err(format!("No mock for {}", capability)))
+                .unwrap_or_else(|| Err(format!("No mock for {capability}")))
         }
     }
 

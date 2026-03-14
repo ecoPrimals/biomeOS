@@ -78,7 +78,7 @@ async fn call_security_provider(
     // Try Neural API first (preferred — capability-routed)
     if let Some(socket) = discover_neural_api_socket() {
         let client = neural_api_client::NeuralApiClient::new(&socket)
-            .map_err(|e| format!("Failed to create Neural API client: {}", e))?;
+            .map_err(|e| format!("Failed to create Neural API client: {e}"))?;
 
         match client
             .route_to_primal("trust", method, params.clone())
@@ -120,7 +120,7 @@ async fn call_security_provider(
     client
         .call(method, params)
         .await
-        .map_err(|e| format!("Security provider call failed: {}", e))
+        .map_err(|e| format!("Security provider call failed: {e}"))
 }
 
 /// POST /api/v1/trust/evaluate
@@ -133,17 +133,17 @@ pub async fn evaluate_trust(
     // Deep Debt: No fake trust decisions. Always call security provider.
     // Security decisions must NEVER be fabricated — deny by default.
     let params = serde_json::to_value(&request)
-        .map_err(|e| crate::ApiError::Internal(format!("Serialization error: {}", e)))?;
+        .map_err(|e| crate::ApiError::Internal(format!("Serialization error: {e}")))?;
 
     let result = call_security_provider("trust.evaluate", params)
         .await
         .map_err(|e| {
             error!("   ❌ Trust evaluation failed: {}", e);
-            crate::ApiError::Internal(format!("Failed to evaluate trust: {}", e))
+            crate::ApiError::Internal(format!("Failed to evaluate trust: {e}"))
         })?;
 
     let response: TrustEvaluationResponse = serde_json::from_value(result)
-        .map_err(|e| crate::ApiError::Internal(format!("Failed to parse trust response: {}", e)))?;
+        .map_err(|e| crate::ApiError::Internal(format!("Failed to parse trust response: {e}")))?;
 
     info!("   ✅ Trust evaluated: {}", response.trust_level);
     Ok(Json(response))
@@ -161,11 +161,11 @@ pub async fn get_identity(
         .await
         .map_err(|e| {
             error!("   ❌ Identity retrieval failed: {}", e);
-            crate::ApiError::Internal(format!("Failed to get identity: {}", e))
+            crate::ApiError::Internal(format!("Failed to get identity: {e}"))
         })?;
 
     let response: IdentityResponse = serde_json::from_value(result).map_err(|e| {
-        crate::ApiError::Internal(format!("Failed to parse identity response: {}", e))
+        crate::ApiError::Internal(format!("Failed to parse identity response: {e}"))
     })?;
 
     info!("   ✅ Identity retrieved: {}", response.encryption_tag);
@@ -322,7 +322,7 @@ mod tests {
             peer_id: "debug-peer".to_string(),
             peer_tags: vec!["test".to_string()],
         };
-        let debug = format!("{:?}", req);
+        let debug = format!("{req:?}");
         assert!(debug.contains("debug-peer"));
     }
 
@@ -335,7 +335,7 @@ mod tests {
             trust_level: "high".to_string(),
             metadata: serde_json::json!(null),
         };
-        let debug = format!("{:?}", resp);
+        let debug = format!("{resp:?}");
         assert!(debug.contains("allow"));
         assert!(debug.contains("high"));
     }
