@@ -27,11 +27,13 @@ pub mod env_config; // Centralized environment variable constants and typed acce
 pub mod error;
 pub mod health;
 pub mod identifiers;
+pub mod jsonrpc;
 pub mod manifest;
 pub mod network_config; // Capability-based network configuration
 /// XDG-compliant system paths
 pub mod paths;
 pub mod primal;
+pub mod primal_names;
 pub mod service;
 pub mod surgical; // Surgical simulation and medical domain types
 pub mod tarpc_types; // tarpc service definitions for high-performance RPC
@@ -42,6 +44,7 @@ pub use api_schema::{
     ApiSchemaResponse, ApiSchemaType, OperationMetadata, ParameterMetadata, PrimalInfo,
     SchemaDiscoveryConfig,
 };
+pub use jsonrpc::{JsonRpcError, JsonRpcRequest, JsonRpcResponse};
 
 // tarpc types for high-performance RPC
 pub use capability_taxonomy::CapabilityTaxonomy; // Well-known capability taxonomy (enum)

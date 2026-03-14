@@ -806,3 +806,7 @@ pub struct RingHashSpec {
     /// Maximum ring size
     pub maximum_ring_size: Option<u64>,
 }
+
+#[cfg(test)]
+#[path = "networking_services_tests.rs"]
+mod tests;

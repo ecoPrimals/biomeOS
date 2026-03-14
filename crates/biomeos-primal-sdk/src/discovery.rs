@@ -319,11 +319,11 @@ pub fn providers_for_capability(cap: &PrimalCapability) -> Vec<&'static str> {
 )]
 pub fn capability_from_primal_name(name: &str) -> PrimalCapability {
     match name.to_lowercase().as_str() {
-        "beardog" => PrimalCapability::encryption(),
-        "songbird" => PrimalCapability::networking(),
-        "toadstool" => PrimalCapability::compute(),
-        "nestgate" => PrimalCapability::storage(),
-        "squirrel" => PrimalCapability::ai(),
+        biomeos_types::primal_names::BEARDOG => PrimalCapability::encryption(),
+        biomeos_types::primal_names::SONGBIRD => PrimalCapability::networking(),
+        biomeos_types::primal_names::TOADSTOOL => PrimalCapability::compute(),
+        biomeos_types::primal_names::NESTGATE => PrimalCapability::storage(),
+        biomeos_types::primal_names::SQUIRREL => PrimalCapability::ai(),
         "wetspring" | "neuralspring" => PrimalCapability::science(),
         _ => PrimalCapability::custom(name),
     }

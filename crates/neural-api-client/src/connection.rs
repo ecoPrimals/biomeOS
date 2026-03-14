@@ -74,3 +74,33 @@ pub async fn json_rpc_call(
         .ok_or_else(|| anyhow::anyhow!("Response missing 'result' field"))
         .cloned()
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+
+    use super::*;
+
+    #[tokio::test]
+    async fn test_json_rpc_call_connection_timeout_on_nonexistent_socket() {
+        let path = std::path::PathBuf::from("/nonexistent/socket/that/does/not/exist.sock");
+        let result = json_rpc_call(
+            &path,
+            "test.method",
+            &serde_json::json!({}),
+            Duration::from_secs(1),
+            Duration::from_millis(10),
+        )
+        .await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        let msg = err.to_string();
+        assert!(
+            msg.contains("Failed to connect")
+                || msg.contains("timeout")
+                || msg.contains("Connection"),
+            "Expected connection error, got: {}",
+            msg
+        );
+    }
+}

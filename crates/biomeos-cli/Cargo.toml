@@ -44,7 +44,7 @@ console = "0.15"
 colored = "2.0"
 comfy-table = "7.0"
 humantime = "2.1"
-sysinfo = "0.29"
+# sysinfo removed (ecoBin v3): use biomeos-system pure /proc metrics
 uuid = { version = "1.0", features = ["v4"] }
 base64 = "0.22"
 sha2 = "0.10"

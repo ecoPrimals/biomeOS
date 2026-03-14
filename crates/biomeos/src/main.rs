@@ -20,6 +20,7 @@ use clap::{Args, Parser, Subcommand};
 use std::path::{Path, PathBuf};
 
 mod modes;
+mod proc_metrics;
 
 /// Genome info for list output (pure, testable)
 #[derive(Debug, Clone)]

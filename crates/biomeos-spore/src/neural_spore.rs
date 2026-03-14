@@ -86,28 +86,33 @@ impl RollbackState {
             info!("   Killing process {}", pid);
             #[cfg(unix)]
             {
-                use nix::sys::signal::{kill, Signal};
-                use nix::unistd::Pid;
-                if let Err(e) = kill(Pid::from_raw(*pid as i32), Signal::SIGTERM) {
-                    warn!("   Failed to kill {}: {}", pid, e);
-                } else {
-                    // Modern async: Wait for process to actually exit (with timeout)
-                    let pid_to_check = *pid as i32;
-                    let wait_for_exit = async {
-                        let mut interval = tokio::time::interval(Duration::from_millis(10));
-                        for _ in 0..100 {
-                            // Check for up to 1 second
-                            interval.tick().await;
-                            // Check if process still exists
-                            if kill(Pid::from_raw(pid_to_check), None).is_err() {
-                                // Process is gone
-                                return;
+                use rustix::process::{kill_process, test_kill_process, Pid, Signal};
+                if let Some(rustix_pid) = Pid::from_raw(*pid as i32) {
+                    if let Err(e) = kill_process(rustix_pid, Signal::Term) {
+                        warn!("   Failed to kill {}: {}", pid, e);
+                    } else {
+                        // Modern async: Wait for process to actually exit (with timeout)
+                        let pid_to_check = *pid as i32;
+                        let wait_for_exit = async {
+                            let mut interval = tokio::time::interval(Duration::from_millis(10));
+                            for _ in 0..100 {
+                                // Check for up to 1 second
+                                interval.tick().await;
+                                // Check if process still exists (test_kill_process returns Err when gone)
+                                if let Some(p) = Pid::from_raw(pid_to_check) {
+                                    if test_kill_process(p).is_err() {
+                                        // Process is gone
+                                        return;
+                                    }
+                                }
                             }
-                        }
-                        // Force kill if still alive
-                        let _ = kill(Pid::from_raw(pid_to_check), Signal::SIGKILL);
-                    };
-                    wait_for_exit.await;
+                            // Force kill if still alive
+                            if let Some(p) = Pid::from_raw(pid_to_check) {
+                                let _ = kill_process(p, Signal::Kill);
+                            }
+                        };
+                        wait_for_exit.await;
+                    }
                 }
             }
         }

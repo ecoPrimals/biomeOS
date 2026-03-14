@@ -1,0 +1,169 @@
+# Provenance Node Atomic Deployment Graph
+# ========================================
+# Unified deployment: Tower (BearDog + Songbird) + Provenance Trio
+# (LoamSpine + rhizoCrypt + sweetGrass) as a single atomic unit.
+#
+# This is the minimum viable deployment for the fermenting system:
+# persistent memory-bound objects with provenance, trading, and lending.
+#
+# BearDog provides signing for certificates and DAG integrity.
+# Songbird provides discovery for runtime capability resolution.
+# The trio provides the memory-ownership-attribution stack.
+#
+# Usage:
+#   biomeos deploy graphs/provenance_node_atomic.toml
+#   ECOPRIMALS_PLASMID_BIN=/path/to/plasmidBin biomeos deploy graphs/provenance_node_atomic.toml
+
+[graph]
+id = "provenance_node_atomic"
+version = "1.0.0"
+description = "Tower + Provenance Trio: BearDog + Songbird + LoamSpine + rhizoCrypt + sweetGrass"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 1: TOWER FOUNDATION (BearDog + Songbird)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "start-beardog"
+action = "start_primal"
+params = { primal = "beardog", binary = "beardog", args = ["server"] }
+
+[nodes.env]
+FAMILY_ID = "${FAMILY_ID}"
+RUST_LOG = "info"
+
+[[nodes]]
+id = "health-beardog"
+action = "health_check"
+params = { primal = "beardog", timeout_ms = 15000 }
+depends_on = ["start-beardog"]
+
+[[nodes]]
+id = "start-songbird"
+action = "start_primal"
+params = { primal = "songbird", binary = "songbird", args = ["server"] }
+depends_on = ["health-beardog"]
+
+[nodes.env]
+FAMILY_ID = "${FAMILY_ID}"
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
+SONGBIRD_SECURITY_PROVIDER = "beardog"
+RUST_LOG = "info"
+
+[[nodes]]
+id = "health-songbird"
+action = "health_check"
+params = { primal = "songbird", timeout_ms = 15000 }
+depends_on = ["start-songbird"]
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 2: LOAMSPINE (permanence — certificates, spines, proofs)
+# Must start before rhizoCrypt (dehydration target) and sweetGrass (anchor target)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "start-loamspine"
+action = "start_primal"
+params = { primal = "loamspine", binary = "loamspine", args = ["server"] }
+depends_on = ["health-songbird"]
+
+[nodes.env]
+LOAMSPINE_TARPC_PORT = "9001"
+LOAMSPINE_JSONRPC_PORT = "8301"
+LOAMSPINE_BIND_ADDRESS = "0.0.0.0"
+LOAMSPINE_STORAGE_PATH = "${XDG_DATA_HOME}/biomeos/loamspine"
+DISCOVERY_ENDPOINT = "http://127.0.0.1:8080"
+
+[[nodes]]
+id = "health-loamspine"
+action = "health_check"
+params = { primal = "loamspine", method = "health.check", port = 8301, protocol = "jsonrpc", timeout_ms = 10000 }
+depends_on = ["start-loamspine"]
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 3: RHIZOCRYPT (ephemeral DAG — sessions, vertices, Merkle)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "start-rhizocrypt"
+action = "start_primal"
+params = { primal = "rhizocrypt", binary = "rhizocrypt", args = ["server"] }
+depends_on = ["health-loamspine"]
+
+[nodes.env]
+RHIZOCRYPT_RPC_PORT = "9400"
+RHIZOCRYPT_RPC_HOST = "0.0.0.0"
+RHIZOCRYPT_ENV = "production"
+RHIZOCRYPT_DISCOVERY_ADAPTER = "http://127.0.0.1:8080"
+PERMANENT_STORAGE_ENDPOINT = "http://127.0.0.1:8301"
+
+[[nodes]]
+id = "health-rhizocrypt"
+action = "health_check"
+params = { primal = "rhizocrypt", method = "health", port = 9400, protocol = "tarpc", timeout_ms = 10000 }
+depends_on = ["start-rhizocrypt"]
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 4: SWEETGRASS (attribution — braids, PROV-O, contribution)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "start-sweetgrass"
+action = "start_primal"
+params = { primal = "sweetgrass", binary = "sweet-grass-service", args = ["server", "--http-address", "0.0.0.0:8302", "--tarpc-address", "0.0.0.0:8091", "--storage", "sled", "--sled-path", "${XDG_DATA_HOME}/biomeos/sweetgrass"] }
+depends_on = ["health-loamspine"]
+
+[nodes.env]
+PRIMAL_NAME = "sweetgrass"
+DISCOVERY_ADDRESS = "127.0.0.1:8080"
+RUST_LOG = "info"
+
+[[nodes]]
+id = "health-sweetgrass"
+action = "health_check"
+params = { primal = "sweetgrass", url = "http://127.0.0.1:8302/health", timeout_ms = 10000 }
+depends_on = ["start-sweetgrass"]
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 5: REGISTER ALL CAPABILITIES
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "register-beardog-caps"
+action = "register_capabilities"
+params = { primal = "beardog", capabilities = ["crypto", "tls_crypto", "genetic", "security", "beacon"] }
+depends_on = ["health-beardog"]
+
+[[nodes]]
+id = "register-songbird-caps"
+action = "register_capabilities"
+params = { primal = "songbird", capabilities = ["http", "discovery", "secure_http", "mesh"] }
+depends_on = ["health-songbird"]
+
+[[nodes]]
+id = "register-loamspine-caps"
+action = "register_capabilities"
+params = { primal = "loamspine", capabilities = ["permanent_storage", "linear_history", "spine", "certificate", "commit", "proof", "waypoint_anchoring"] }
+depends_on = ["health-loamspine"]
+
+[[nodes]]
+id = "register-rhizocrypt-caps"
+action = "register_capabilities"
+params = { primal = "rhizocrypt", capabilities = ["ephemeral_workspace", "dag", "session", "merkle", "dehydration", "slice"] }
+depends_on = ["health-rhizocrypt"]
+
+[[nodes]]
+id = "register-sweetgrass-caps"
+action = "register_capabilities"
+params = { primal = "sweetgrass", capabilities = ["attribution", "braid", "provenance", "contribution", "privacy"] }
+depends_on = ["health-sweetgrass"]
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 6: VALIDATE ATOMIC HEALTH
+# ═══════════════════════════════════════════════════════════════════════════════
+
+[[nodes]]
+id = "validate-atomic"
+action = "health_check"
+params = { check_all = true, expected_primals = 5, timeout_ms = 15000 }
+depends_on = ["register-beardog-caps", "register-songbird-caps", "register-loamspine-caps", "register-rhizocrypt-caps", "register-sweetgrass-caps"]

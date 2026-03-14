@@ -40,6 +40,9 @@ mod tests {
     use serde_json::json;
     use std::collections::HashMap;
 
+    /// Test fixture address for a remote gate — not a real network address.
+    const TEST_REMOTE_GATE_ADDR: &str = "198.51.100.1:8080";
+
     // ── Helper: create a test route ────────────────────────────────────
 
     fn route(
@@ -700,7 +703,7 @@ mod tests {
             ),
             mock_gate(
                 "gate2",
-                "192.168.1.132:8080",
+                TEST_REMOTE_GATE_ADDR,
                 false,
                 vec![("toadstool", true), ("nestgate", true)],
                 24576,
@@ -797,7 +800,7 @@ mod tests {
             mock_gate("tower", "local", true, vec![("beardog", true)], 0),
             mock_gate(
                 "gate2",
-                "192.168.1.132:8080",
+                TEST_REMOTE_GATE_ADDR,
                 false,
                 vec![("toadstool", true)],
                 0,
@@ -810,10 +813,8 @@ mod tests {
         assert_eq!(tower_route.socket, "beardog-test_cf7e.sock");
 
         let gate2_route = agents[1].resolve("compute").unwrap();
-        assert_eq!(
-            gate2_route.socket,
-            "192.168.1.132:8080:toadstool-test_cf7e.sock"
-        );
+        let expected_socket = format!("{TEST_REMOTE_GATE_ADDR}:toadstool-test_cf7e.sock");
+        assert_eq!(gate2_route.socket, expected_socket);
     }
 
     #[test]
@@ -847,7 +848,7 @@ mod tests {
             ),
             mock_gate(
                 "gate2",
-                "192.168.1.132:8080",
+                TEST_REMOTE_GATE_ADDR,
                 false,
                 vec![("toadstool", true)],
                 24576,

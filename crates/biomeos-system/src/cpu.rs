@@ -61,20 +61,76 @@ pub(crate) fn get_cpu_info() -> BiomeResult<CpuInfo> {
     }
 }
 
-/// Get current CPU usage using sysinfo
+/// Get current CPU usage via /proc/stat (pure Rust - ecoBin v3).
+///
+/// Reads /proc/stat twice with a short delay and computes usage from jiffies.
 pub(crate) async fn get_cpu_usage() -> BiomeResult<f64> {
-    use sysinfo::{CpuRefreshKind, RefreshKind, System};
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = tokio::time::Duration::from_millis(1);
+        return Ok(0.0);
+    }
 
-    let mut sys =
-        System::new_with_specifics(RefreshKind::new().with_cpu(CpuRefreshKind::everything()));
+    #[cfg(target_os = "linux")]
+    {
+        let first = read_cpu_jiffies().ok_or_else(|| {
+            biomeos_types::BiomeError::internal_error(
+                "Cannot read /proc/stat",
+                Some("CPU_READ_FAILED"),
+            )
+        })?;
+        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+        let second = read_cpu_jiffies().ok_or_else(|| {
+            biomeos_types::BiomeError::internal_error(
+                "Cannot read /proc/stat (second read)",
+                Some("CPU_READ_FAILED"),
+            )
+        })?;
 
-    // Need to refresh twice for accurate CPU usage
-    sys.refresh_cpu();
-    tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
-    sys.refresh_cpu();
+        let total_delta = second.total.saturating_sub(first.total);
+        let idle_delta = second.idle.saturating_sub(first.idle);
 
-    let global_cpu = sys.global_cpu_info();
-    Ok(f64::from(global_cpu.cpu_usage()) / 100.0)
+        if total_delta == 0 {
+            return Ok(0.0);
+        }
+
+        let usage = 1.0 - (idle_delta as f64 / total_delta as f64);
+        Ok(usage.clamp(0.0, 1.0))
+    }
+}
+
+/// Jiffies from /proc/stat first line (cpu ...)
+#[cfg(target_os = "linux")]
+struct CpuJiffies {
+    total: u64,
+    idle: u64,
+}
+
+#[cfg(target_os = "linux")]
+fn read_cpu_jiffies() -> Option<CpuJiffies> {
+    let stat = fs::read_to_string("/proc/stat").ok()?;
+    let line = stat.lines().next()?;
+    // cpu  user nice system idle iowait irq softirq steal guest guest_nice
+    let parts: Vec<&str> = line.split_whitespace().collect();
+    if parts.len() < 5 || parts[0] != "cpu" {
+        return None;
+    }
+    let user: u64 = parts.get(1)?.parse().ok()?;
+    let nice: u64 = parts.get(2)?.parse().ok()?;
+    let system: u64 = parts.get(3)?.parse().ok()?;
+    let idle: u64 = parts.get(4)?.parse().ok()?;
+    let iowait: u64 = parts.get(5).and_then(|s| s.parse().ok()).unwrap_or(0);
+    let irq: u64 = parts.get(6).and_then(|s| s.parse().ok()).unwrap_or(0);
+    let softirq: u64 = parts.get(7).and_then(|s| s.parse().ok()).unwrap_or(0);
+    let steal: u64 = parts.get(8).and_then(|s| s.parse().ok()).unwrap_or(0);
+    let guest: u64 = parts.get(9).and_then(|s| s.parse().ok()).unwrap_or(0);
+    let guest_nice: u64 = parts.get(10).and_then(|s| s.parse().ok()).unwrap_or(0);
+
+    let total = user + nice + system + idle + iowait + irq + softirq + steal + guest + guest_nice;
+    Some(CpuJiffies {
+        total,
+        idle: idle + iowait,
+    })
 }
 
 /// Get load average

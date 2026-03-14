@@ -6,7 +6,7 @@
 //! Handles mounting and managing essential filesystems during boot.
 
 use crate::init_error::{BootError, Result};
-use nix::mount::{mount, MsFlags};
+use rustix::mount::{mount, MountFlags};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use tracing::info;
@@ -36,31 +36,31 @@ impl FilesystemManager {
         info!("📁 Mounting essential filesystems...");
 
         // /proc - Process information
-        self.mount_if_needed("/proc", "proc", "proc", MsFlags::empty())
+        self.mount_if_needed("/proc", "proc", "proc", MountFlags::empty())
             .await?;
 
         // /sys - Kernel and device information
-        self.mount_if_needed("/sys", "sysfs", "sysfs", MsFlags::empty())
+        self.mount_if_needed("/sys", "sysfs", "sysfs", MountFlags::empty())
             .await?;
 
         // /dev - Device files (may already be mounted by kernel)
-        self.mount_if_needed("/dev", "devtmpfs", "devtmpfs", MsFlags::empty())
+        self.mount_if_needed("/dev", "devtmpfs", "devtmpfs", MountFlags::empty())
             .await?;
 
         // /dev/pts - Pseudo-terminals
-        self.mount_if_needed("/dev/pts", "devpts", "devpts", MsFlags::empty())
+        self.mount_if_needed("/dev/pts", "devpts", "devpts", MountFlags::empty())
             .await?;
 
         // /dev/shm - Shared memory
-        self.mount_if_needed("/dev/shm", "tmpfs", "tmpfs", MsFlags::empty())
+        self.mount_if_needed("/dev/shm", "tmpfs", "tmpfs", MountFlags::empty())
             .await?;
 
         // /run - Runtime data
-        self.mount_if_needed("/run", "tmpfs", "tmpfs", MsFlags::empty())
+        self.mount_if_needed("/run", "tmpfs", "tmpfs", MountFlags::empty())
             .await?;
 
         // /tmp - Temporary files
-        self.mount_if_needed("/tmp", "tmpfs", "tmpfs", MsFlags::empty())
+        self.mount_if_needed("/tmp", "tmpfs", "tmpfs", MountFlags::empty())
             .await?;
 
         info!("✅ Essential filesystems mounted");
@@ -85,7 +85,7 @@ impl FilesystemManager {
         target: impl AsRef<Path>,
         source: &str,
         fstype: &str,
-        flags: MsFlags,
+        flags: MountFlags,
     ) -> Result<()> {
         let target_path = target.as_ref().to_path_buf();
 
@@ -102,20 +102,14 @@ impl FilesystemManager {
             }
         })?;
 
-        // Try to mount
-        match mount(
-            Some(source),
-            target.as_ref(),
-            Some(fstype),
-            flags,
-            None::<&str>,
-        ) {
+        // Try to mount (rustix: source, target, fstype, flags, data)
+        match mount(source, target.as_ref(), fstype, flags, "") {
             Ok(_) => {
                 info!("  ✓ {}", target.as_ref().display());
                 self.mounted.insert(target_path);
                 Ok(())
             }
-            Err(nix::errno::Errno::EBUSY) => {
+            Err(rustix::io::Errno::BUSY) => {
                 // Already mounted by kernel - this is fine
                 info!("  ✓ {} (already mounted)", target.as_ref().display());
                 self.mounted.insert(target_path);

@@ -788,3 +788,7 @@ impl Default for ServiceLifecycle {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "core_tests.rs"]
+mod tests;

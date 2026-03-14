@@ -150,10 +150,10 @@ mod tests {
 
     #[test]
     fn test_parse_network_mode() {
-        let params = parse_cmdline("biomeos.network=192.168.1.1:8080").unwrap();
+        let params = parse_cmdline("biomeos.network=192.0.2.1:8080").unwrap();
         match params.mode {
             BootMode::Network { server: Some(s) } => {
-                assert_eq!(s, "192.168.1.1:8080");
+                assert_eq!(s, "192.0.2.1:8080");
             }
             _ => panic!("Expected Network mode with server"),
         }

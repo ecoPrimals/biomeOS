@@ -7,33 +7,11 @@
 //! we can test the graph executor with it first!
 
 use anyhow::Result;
+use biomeos_types::{JsonRpcRequest, JsonRpcResponse};
 use serde_json::json;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
 use tracing::{error, info};
-
-#[derive(serde::Serialize)]
-struct JsonRpcRequest {
-    jsonrpc: String,
-    method: String,
-    params: serde_json::Value,
-    id: u64,
-}
-
-#[derive(serde::Deserialize, Debug)]
-#[allow(dead_code)] // Fields used by serde deserialization
-struct JsonRpcResponse {
-    jsonrpc: String,
-    result: Option<serde_json::Value>,
-    error: Option<JsonRpcError>,
-    id: u64,
-}
-
-#[derive(serde::Deserialize, Debug)]
-struct JsonRpcError {
-    code: i32,
-    message: String,
-}
 
 async fn call_toadstool_rpc(method: &str, params: serde_json::Value) -> Result<serde_json::Value> {
     let uid = std::env::var("UID").unwrap_or_else(|_| "1000".to_string());
@@ -48,8 +26,8 @@ async fn call_toadstool_rpc(method: &str, params: serde_json::Value) -> Result<s
     let request = JsonRpcRequest {
         jsonrpc: "2.0".to_string(),
         method: method.to_string(),
-        params,
-        id: 1,
+        params: Some(params),
+        id: Some(json!(1)),
     };
 
     let request_json = serde_json::to_string(&request)? + "\n";

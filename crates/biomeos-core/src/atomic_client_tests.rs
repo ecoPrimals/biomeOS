@@ -22,8 +22,8 @@ fn test_jsonrpc_request_creation() {
     let request = JsonRpcRequest::new("test_method", serde_json::json!({"key": "value"}));
     assert_eq!(request.jsonrpc, "2.0");
     assert_eq!(request.method, "test_method");
-    assert_eq!(request.params["key"], "value");
-    assert!(request.id > 0);
+    assert_eq!(request.params.as_ref().unwrap()["key"], "value");
+    assert!(request.id.as_ref().and_then(|v| v.as_u64()).unwrap_or(0) > 0);
 }
 
 // ========================================================================
@@ -188,8 +188,11 @@ fn test_jsonrpc_request_auto_increment_id() {
     let req3 = JsonRpcRequest::new("method3", Value::Null);
 
     // IDs should be sequential
-    assert!(req2.id > req1.id);
-    assert!(req3.id > req2.id);
+    let id1 = req1.id.as_ref().and_then(|v| v.as_u64()).unwrap_or(0);
+    let id2 = req2.id.as_ref().and_then(|v| v.as_u64()).unwrap_or(0);
+    let id3 = req3.id.as_ref().and_then(|v| v.as_u64()).unwrap_or(0);
+    assert!(id2 > id1);
+    assert!(id3 > id2);
 }
 
 #[test]
@@ -208,7 +211,7 @@ fn test_jsonrpc_response_with_result() {
         jsonrpc: "2.0".to_string(),
         result: Some(json!({"status": "ok"})),
         error: None,
-        id: 1,
+        id: serde_json::json!(1),
     };
     assert!(response.result.is_some());
     assert!(response.error.is_none());
@@ -225,7 +228,7 @@ fn test_jsonrpc_response_with_error() {
         jsonrpc: "2.0".to_string(),
         result: None,
         error: Some(error),
-        id: 1,
+        id: serde_json::json!(1),
     };
     assert!(response.result.is_none());
     assert!(response.error.is_some());
@@ -352,7 +355,7 @@ fn test_jsonrpc_request_different_methods() {
 
     assert_eq!(req1.method, "method_a");
     assert_eq!(req2.method, "method_b");
-    assert_eq!(req2.params["param"], 123);
+    assert_eq!(req2.params.as_ref().unwrap()["param"], 123);
 }
 
 #[test]
@@ -365,8 +368,9 @@ fn test_jsonrpc_request_complex_params() {
         "number": 42
     });
     let request = JsonRpcRequest::new("complex_method", params);
-    assert_eq!(request.params["number"], 42);
-    assert_eq!(request.params["nested"]["key"], "value");
+    let p = request.params.as_ref().unwrap();
+    assert_eq!(p["number"], 42);
+    assert_eq!(p["nested"]["key"], "value");
 }
 
 #[test]
@@ -412,21 +416,23 @@ fn test_atomic_client_zero_timeout() {
 #[test]
 fn test_jsonrpc_request_null_params() {
     let request = JsonRpcRequest::new("method", Value::Null);
-    assert!(request.params.is_null());
+    assert!(request.params.as_ref().unwrap().is_null());
 }
 
 #[test]
 fn test_jsonrpc_request_empty_object_params() {
     let request = JsonRpcRequest::new("method", json!({}));
-    assert!(request.params.is_object());
-    assert!(request.params.as_object().unwrap().is_empty());
+    let params = request.params.as_ref().unwrap();
+    assert!(params.is_object());
+    assert!(params.as_object().unwrap().is_empty());
 }
 
 #[test]
 fn test_jsonrpc_request_array_params() {
     let request = JsonRpcRequest::new("method", json!([1, 2, 3]));
-    assert!(request.params.is_array());
-    assert_eq!(request.params.as_array().unwrap().len(), 3);
+    let params = request.params.as_ref().unwrap();
+    assert!(params.is_array());
+    assert_eq!(params.as_array().unwrap().len(), 3);
 }
 
 #[test]

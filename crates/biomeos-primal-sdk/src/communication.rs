@@ -33,53 +33,21 @@
 //! ```
 
 use anyhow::{anyhow, Context, Result};
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::path::PathBuf;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::UnixStream;
 use tokio::time::{timeout, Duration};
 
+use biomeos_types::{JsonRpcRequest, JsonRpcResponse};
+
 use crate::discovery::{DiscoveredPrimal, PrimalDiscovery};
 use crate::PrimalCapability;
-
-/// JSON-RPC 2.0 request
-#[derive(Debug, Serialize)]
-struct JsonRpcRequest {
-    jsonrpc: String,
-    method: String,
-    params: Value,
-    id: u64,
-}
-
-/// JSON-RPC 2.0 response
-#[derive(Debug, Deserialize)]
-struct JsonRpcResponse {
-    #[allow(dead_code)] // wire format — deserialized but not read directly
-    jsonrpc: String,
-    #[serde(default)]
-    result: Option<Value>,
-    #[serde(default)]
-    error: Option<JsonRpcError>,
-    #[allow(dead_code)] // wire format — deserialized but not read directly
-    id: u64,
-}
-
-#[derive(Debug, Deserialize)]
-struct JsonRpcError {
-    code: i32,
-    message: String,
-    #[serde(default)]
-    #[allow(dead_code)] // wire format — deserialized but not read directly
-    data: Option<Value>,
-}
 
 /// Client for communicating with other primals
 pub struct PrimalClient {
     /// Target primal info
     primal: DiscoveredPrimal,
-    /// Request counter
-    request_id: std::sync::atomic::AtomicU64,
     /// Timeout for requests
     timeout: Duration,
 }
@@ -108,7 +76,6 @@ impl PrimalClient {
     pub fn new(primal: DiscoveredPrimal) -> Self {
         Self {
             primal,
-            request_id: std::sync::atomic::AtomicU64::new(1),
             timeout: Duration::from_secs(30),
         }
     }
@@ -132,16 +99,7 @@ impl PrimalClient {
     /// # }
     /// ```
     pub async fn request(&self, method: impl Into<String>, params: Value) -> Result<Value> {
-        let id = self
-            .request_id
-            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-
-        let request = JsonRpcRequest {
-            jsonrpc: "2.0".to_string(),
-            method: method.into(),
-            params,
-            id,
-        };
+        let request = JsonRpcRequest::new(method, params);
 
         let response = timeout(self.timeout, self.send_request(request))
             .await
@@ -242,12 +200,7 @@ mod tests {
 
     #[test]
     fn test_jsonrpc_request_serialization() {
-        let request = JsonRpcRequest {
-            jsonrpc: "2.0".to_string(),
-            method: "test_method".to_string(),
-            params: serde_json::json!({"key": "value"}),
-            id: 1,
-        };
+        let request = JsonRpcRequest::new("test_method", serde_json::json!({"key": "value"}));
 
         let json = serde_json::to_string(&request).unwrap();
         assert!(json.contains("\"jsonrpc\":\"2.0\""));
@@ -256,14 +209,10 @@ mod tests {
 
     #[test]
     fn test_jsonrpc_request_params_types() {
-        let request = JsonRpcRequest {
-            jsonrpc: "2.0".to_string(),
-            method: "echo".to_string(),
-            params: serde_json::json!({"nested": {"a": 1, "b": [2, 3]}}),
-            id: 42,
-        };
+        let request =
+            JsonRpcRequest::new("echo", serde_json::json!({"nested": {"a": 1, "b": [2, 3]}}));
         let json = serde_json::to_string(&request).unwrap();
-        assert!(json.contains("\"id\":42"));
+        assert!(request.id.as_ref().and_then(|v| v.as_u64()).unwrap_or(0) > 0);
         assert!(json.contains("nested"));
     }
 
@@ -274,7 +223,7 @@ mod tests {
         assert_eq!(response.jsonrpc, "2.0");
         assert!(response.result.is_some());
         assert!(response.error.is_none());
-        assert_eq!(response.id, 1);
+        assert_eq!(response.id.as_u64().unwrap(), 1);
     }
 
     #[test]
@@ -286,6 +235,7 @@ mod tests {
         let err = response.error.unwrap();
         assert_eq!(err.code, -32600);
         assert_eq!(err.message, "Invalid Request");
+        assert_eq!(response.id.as_u64().unwrap(), 1);
     }
 
     #[test]

@@ -596,16 +596,15 @@ impl DeviceManagementProvider {
         Ok(storage)
     }
 
-    /// Get filesystem stats via nix::sys::statvfs (pure Rust, no libc)
+    /// Get filesystem stats via rustix::fs::statvfs (pure Rust, no libc)
     fn statvfs_info(path: &str) -> Option<(String, String, f64)> {
         #[cfg(unix)]
         {
-            use nix::sys::statvfs::statvfs;
-            let stat = statvfs(path).ok()?;
+            let stat = rustix::fs::statvfs(path).ok()?;
 
-            let block_size = stat.fragment_size() as u64;
-            let total = stat.blocks() * block_size;
-            let available = stat.blocks_available() * block_size;
+            let block_size = stat.f_frsize;
+            let total = stat.f_blocks * block_size;
+            let available = stat.f_bavail * block_size;
             let used = total.saturating_sub(available);
             let usage = if total > 0 {
                 used as f64 / total as f64

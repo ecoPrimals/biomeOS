@@ -3,11 +3,10 @@
 
 //! Hardware Detection for BiomeOS Init
 //!
-//! Detects and reports hardware capabilities during boot.
+//! Detects and reports hardware capabilities during boot (pure Rust via /proc - ecoBin v3).
 
 use crate::init_error::{BootError, Result};
 use std::num::NonZeroUsize;
-use sysinfo::System;
 use tracing::info;
 
 /// Hardware information detected during boot
@@ -65,25 +64,35 @@ impl Architecture {
     }
 }
 
-/// Detects hardware capabilities
+/// Detects hardware capabilities via /proc (pure Rust).
 ///
 /// # Errors
 ///
 /// Returns an error if hardware detection fails.
 pub async fn detect() -> Result<HardwareInfo> {
-    let mut sys = System::new_all();
-    sys.refresh_all();
+    let _ = tokio::task::yield_now().await;
 
-    // Detect CPU count
-    let cpu_count = NonZeroUsize::new(sys.cpus().len()).ok_or_else(|| {
-        BootError::HardwareDetection(Box::new(std::io::Error::other("No CPUs detected")))
-    })?;
+    #[cfg(target_os = "linux")]
+    let (cpu_count, total_memory_gb) = {
+        let cpu_count = read_cpu_count().ok_or_else(|| {
+            BootError::HardwareDetection(Box::new(std::io::Error::other("No CPUs detected")))
+        })?;
+        let total_memory = read_total_memory_kb().unwrap_or(0) * 1024; // Convert kB to bytes
+        let total_memory_gb = total_memory / (1024 * 1024 * 1024);
+        (cpu_count, total_memory_gb)
+    };
 
-    // Detect memory
-    let total_memory = sys.total_memory();
-    let total_memory_gb = total_memory / (1024 * 1024 * 1024);
+    #[cfg(not(target_os = "linux"))]
+    let (cpu_count, total_memory_gb) = {
+        let n = std::thread::available_parallelism()
+            .map(|p| p.get())
+            .unwrap_or(1);
+        let cpu_count = NonZeroUsize::new(n).ok_or_else(|| {
+            BootError::HardwareDetection(Box::new(std::io::Error::other("No CPUs detected")))
+        })?;
+        (cpu_count, 0u64)
+    };
 
-    // Detect architecture
     let architecture = Architecture::detect();
 
     let info = HardwareInfo {
@@ -100,6 +109,27 @@ pub async fn detect() -> Result<HardwareInfo> {
     );
 
     Ok(info)
+}
+
+#[cfg(target_os = "linux")]
+fn read_cpu_count() -> Option<NonZeroUsize> {
+    let cpuinfo = std::fs::read_to_string("/proc/cpuinfo").ok()?;
+    let count = cpuinfo
+        .lines()
+        .filter(|l| l.starts_with("processor"))
+        .count();
+    NonZeroUsize::new(count.max(1))
+}
+
+#[cfg(target_os = "linux")]
+fn read_total_memory_kb() -> Option<u64> {
+    let meminfo = std::fs::read_to_string("/proc/meminfo").ok()?;
+    for line in meminfo.lines() {
+        if line.starts_with("MemTotal:") {
+            return line.split_whitespace().nth(1)?.parse().ok();
+        }
+    }
+    None
 }
 
 #[cfg(test)]

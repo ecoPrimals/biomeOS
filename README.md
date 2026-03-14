@@ -8,11 +8,11 @@
 
 | Metric | Value |
 |--------|-------|
-| Primals | 6/6 ecoBin v2.0 compliant |
-| IPC | Universal IPC v3.0 (Unix + Abstract + TCP + HTTP JSON-RPC) |
+| Primals | 6/6 ecoBin v3.0 compliant |
+| IPC | Universal IPC v3.0 (Unix + Abstract + TCP + HTTP JSON-RPC) + tarpc binary escalation |
 | Security | A++ LEGENDARY + Dark Forest Beacon Genetics |
-| Code Quality | A+ (Pure Rust, idiomatic, zero warnings, full doc coverage, deep debt audit) |
-| Tests | 3,148 passing sequential (71.47% region coverage) |
+| Code Quality | A++ (Pure Rust, idiomatic, zero warnings, full doc coverage, deep debt audit, zero-copy) |
+| Tests | 4,275 passing sequential (75.21% region coverage) |
 | Unsafe Code | 0 in production |
 | Clippy | PASS (0 warnings, entire workspace) |
 | Formatting | PASS |
@@ -324,7 +324,7 @@ AGPL-3.0-only
 ### Principles
 
 1. **Capability-based**: Primals discover, don't hardcode
-2. **Pure Rust**: Zero C dependencies (safe `nix` crate for POSIX syscalls)
+2. **Pure Rust**: Zero C dependencies (`rustix` for POSIX syscalls, `/proc` for metrics)
 3. **XDG-compliant**: All paths via `SystemPaths` -- portable across systems
 4. **Deterministic**: Same behavior across architectures
 5. **Autonomous**: Self-extracting, self-discovering
@@ -333,14 +333,17 @@ AGPL-3.0-only
 
 ---
 
-**Status**: Production Ready (v2.33)
-**Updated**: March 13, 2026
-**Deep Debt Evolution**: 8-phase plan executed — capability routing, path elimination, large file splits, env centralization, Rust modernization, libc removal
+**Status**: Production Ready (v2.35)
+**Updated**: March 14, 2026
+**Deep Debt Evolution**: 8-phase plan + zero-copy + primal constants + tarpc wiring + coverage push
 **Spring Absorption**: 205+ translations from 7 springs + petalTongue + hw-learn, 30 deploy graphs, 15 niche templates
-**Provenance Trio**: loamSpine + rhizoCrypt + sweetGrass deployable via 4 graphs (loamspine_deploy, rhizocrypt_deploy, sweetgrass_deploy, provenance_trio_deploy), 35+ capability translations, RootPulse commit + universal provenance pipeline
+**Provenance Trio**: loamSpine + rhizoCrypt + sweetGrass deployable via 4 graphs, 35+ capability translations, RootPulse commit + universal provenance pipeline
 **Continuous Systems**: 60Hz tick loop, push events, sensor routing, feedback edges
 **XR/VR**: Stereo rendering, motion capture, haptic feedback, surgical VR niche
 **AI Bridge**: Local + Cloud AI validated
 **Plasmodium**: HTTP JSON-RPC collective (runtime port) + Agent Model
 **NAT Traversal**: 4-tier strategy (LAN/punch/coordinated/relay)
-**Tests**: 3,148 passing sequential (71.47% coverage) | **Clippy**: PASS | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0
+**Zero-Copy**: `bytes::Bytes` for binary payloads, `Arc<str>` for identifiers, base64 serde helpers
+**Primal Constants**: Centralized `primal_names` module — no hardcoded primal strings anywhere
+**tarpc Transport**: Unix socket helpers, naming conventions, protocol escalation ready
+**Tests**: 4,275 passing sequential (75.21% coverage) | **Clippy**: PASS (0 warnings) | **Docs**: Full coverage | **Format**: PASS | **C deps**: 0

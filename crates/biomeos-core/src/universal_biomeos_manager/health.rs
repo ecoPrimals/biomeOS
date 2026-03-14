@@ -223,7 +223,7 @@ impl UniversalBiomeOSManager {
             }),
         );
 
-        // System metrics - Future: Integrate with sysinfo crate for real metrics
+        // System metrics via biomeos-system (pure Rust /proc - ecoBin v3)
         result.insert(
             "system_metrics".to_string(),
             serde_json::json!({

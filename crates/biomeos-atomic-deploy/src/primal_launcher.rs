@@ -36,14 +36,13 @@ impl PrimalInstance {
     /// Check if process is still running
     ///
     /// Uses signal 0 (null signal) to test process existence without affecting it.
-    /// This is safe and idiomatic using the nix crate's signal handling.
+    /// This is safe and idiomatic using the rustix crate's signal handling.
     pub fn is_running(&self) -> bool {
-        use nix::sys::signal::kill;
-        use nix::unistd::Pid;
+        use rustix::process::{test_kill_process, Pid};
 
         // Signal 0 checks process existence without sending an actual signal
         // Returns Ok if process exists and we have permission to signal it
-        kill(Pid::from_raw(self.pid as i32), None).is_ok()
+        Pid::from_raw(self.pid as i32).is_some_and(|pid| test_kill_process(pid).is_ok())
     }
 }
 

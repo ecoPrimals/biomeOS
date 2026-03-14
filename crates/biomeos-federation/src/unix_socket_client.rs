@@ -6,67 +6,14 @@
 //! Implements a simple JSON-RPC 2.0 client over Unix sockets.
 
 use anyhow::{Context, Result};
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
 use tracing::{debug, error};
 
-/// A JSON-RPC 2.0 request envelope
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct JsonRpcRequest {
-    /// Protocol version (always "2.0")
-    pub jsonrpc: String,
-    /// Method name to invoke
-    pub method: String,
-    /// Method parameters
-    pub params: Value,
-    /// Request identifier
-    pub id: u64,
-}
-
-impl JsonRpcRequest {
-    /// Create a new request with an auto-incrementing id
-    pub fn new(method: impl Into<String>, params: Value) -> Self {
-        use std::sync::atomic::{AtomicU64, Ordering};
-        static REQUEST_ID: AtomicU64 = AtomicU64::new(1);
-
-        Self {
-            jsonrpc: "2.0".to_string(),
-            method: method.into(),
-            params,
-            id: REQUEST_ID.fetch_add(1, Ordering::SeqCst),
-        }
-    }
-}
-
-/// A JSON-RPC 2.0 response envelope
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct JsonRpcResponse {
-    /// Protocol version (always "2.0")
-    pub jsonrpc: String,
-    /// Successful result payload (mutually exclusive with `error`)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub result: Option<Value>,
-    /// Error payload (mutually exclusive with `result`)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub error: Option<JsonRpcError>,
-    /// Request identifier this response corresponds to
-    pub id: u64,
-}
-
-/// A JSON-RPC 2.0 error object
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct JsonRpcError {
-    /// Numeric error code
-    pub code: i32,
-    /// Human-readable error message
-    pub message: String,
-    /// Optional structured error data
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub data: Option<Value>,
-}
+// Re-export JSON-RPC types from biomeos-types for backwards compatibility
+pub use biomeos_types::{JsonRpcError, JsonRpcRequest, JsonRpcResponse};
 
 /// Unix socket client for JSON-RPC communication
 pub struct UnixSocketClient {
@@ -140,7 +87,11 @@ impl UnixSocketClient {
     }
 
     /// Helper to call a method and extract result
-    pub async fn call_method(&self, method: impl Into<String>, params: Value) -> Result<Value> {
+    pub async fn call_method(
+        &self,
+        method: impl Into<String>,
+        params: serde_json::Value,
+    ) -> Result<Value> {
         let request = JsonRpcRequest::new(method, params);
         let response = self.call(request).await?;
 
@@ -160,8 +111,8 @@ mod tests {
         let request = JsonRpcRequest::new("test.method", json!({"key": "value"}));
         assert_eq!(request.jsonrpc, "2.0");
         assert_eq!(request.method, "test.method");
-        assert_eq!(request.params["key"], "value");
-        assert!(request.id > 0);
+        assert_eq!(request.params.as_ref().unwrap()["key"], "value");
+        assert!(request.id.as_ref().and_then(|v| v.as_u64()).unwrap_or(0) > 0);
     }
 
     #[test]

@@ -47,13 +47,14 @@ struct JsonRpcResponse {
     result: Option<serde_json::Value>,
     #[serde(default)]
     error: Option<JsonRpcError>,
+    #[serde(default)]
     id: Option<serde_json::Value>,
 }
 
 #[derive(Debug, serde::Deserialize)]
 #[allow(dead_code)]
 struct JsonRpcError {
-    code: i32,
+    code: i64,
     message: String,
 }
 

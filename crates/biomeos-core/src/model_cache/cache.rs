@@ -1,0 +1,619 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
+//! Model cache management - NestGate integration and filesystem fallback
+
+use anyhow::{Context, Result};
+use serde_json::json;
+use std::path::{Path, PathBuf};
+use tokio::fs;
+use tracing::{debug, info, warn};
+
+use crate::atomic_client::AtomicClient;
+
+use super::types::{CacheManifest, ModelEntry, ModelFile, ModelResolution};
+
+/// NUCLEUS Model Cache Manager
+pub struct ModelCache {
+    #[allow(dead_code)]
+    cache_dir: PathBuf,
+
+    manifest_path: PathBuf,
+
+    manifest: CacheManifest,
+
+    nestgate: Option<AtomicClient>,
+
+    family_id: String,
+
+    gate_id: String,
+}
+
+impl ModelCache {
+    /// Create a new ModelCache with automatic NestGate discovery
+    pub async fn new() -> Result<Self> {
+        let cache_dir = Self::default_cache_dir()?;
+        Self::with_cache_dir(cache_dir).await
+    }
+
+    /// Create a ModelCache with a specific cache directory
+    pub async fn with_cache_dir(cache_dir: PathBuf) -> Result<Self> {
+        fs::create_dir_all(&cache_dir)
+            .await
+            .context("Failed to create model cache directory")?;
+
+        let manifest_path = cache_dir.join("manifest.json");
+
+        let manifest = if manifest_path.exists() {
+            let data = fs::read_to_string(&manifest_path).await?;
+            serde_json::from_str(&data).unwrap_or_else(|e| {
+                warn!("Corrupt manifest, creating new: {}", e);
+                CacheManifest::new()
+            })
+        } else {
+            CacheManifest::new()
+        };
+
+        let storage_primal = biomeos_types::CapabilityTaxonomy::DataStorage
+            .default_primal()
+            .unwrap_or(biomeos_types::primal_names::NESTGATE);
+        let nestgate = match AtomicClient::discover(storage_primal).await {
+            Ok(client) => {
+                info!("NestGate connected for model registry");
+                Some(client)
+            }
+            Err(e) => {
+                debug!("NestGate not available (filesystem fallback): {}", e);
+                None
+            }
+        };
+
+        let family_id = std::env::var("FAMILY_ID")
+            .or_else(|_| std::env::var("NODE_FAMILY_ID"))
+            .unwrap_or_else(|_| "default".to_string());
+
+        let gate_id = std::env::var("GATE_ID")
+            .or_else(|_| std::env::var("HOSTNAME"))
+            .unwrap_or_else(|_| {
+                std::fs::read_to_string("/etc/hostname")
+                    .map(|s| s.trim().to_string())
+                    .unwrap_or_else(|_| "unknown".to_string())
+            });
+
+        info!(
+            "Model cache initialized: {} ({} models cached, NestGate: {})",
+            cache_dir.display(),
+            manifest.models.len(),
+            if nestgate.is_some() {
+                "connected"
+            } else {
+                "offline"
+            }
+        );
+
+        Ok(Self {
+            cache_dir,
+            manifest_path,
+            manifest,
+            nestgate,
+            family_id,
+            gate_id,
+        })
+    }
+
+    fn default_cache_dir() -> Result<PathBuf> {
+        let home = std::env::var("HOME").context("HOME not set")?;
+        Ok(PathBuf::from(home).join(".biomeos").join("model-cache"))
+    }
+
+    /// Check if a model is cached locally
+    pub fn has_model(&self, model_id: &str) -> bool {
+        if let Some(entry) = self.manifest.models.get(model_id) {
+            entry.local_path.exists()
+        } else {
+            false
+        }
+    }
+
+    /// Get the local path for a cached model
+    pub fn get_model_path(&self, model_id: &str) -> Option<&Path> {
+        self.manifest
+            .models
+            .get(model_id)
+            .filter(|e| e.local_path.exists())
+            .map(|e| e.local_path.as_path())
+    }
+
+    /// Get full model entry with metadata
+    pub fn get_model(&self, model_id: &str) -> Option<&ModelEntry> {
+        self.manifest
+            .models
+            .get(model_id)
+            .filter(|e| e.local_path.exists())
+    }
+
+    /// List all cached models
+    pub fn list_models(&self) -> Vec<&ModelEntry> {
+        self.manifest
+            .models
+            .values()
+            .filter(|e| e.local_path.exists())
+            .collect()
+    }
+
+    /// Register an existing model directory in the cache
+    pub async fn register_model(
+        &mut self,
+        model_id: &str,
+        local_path: &Path,
+        source: &str,
+    ) -> Result<()> {
+        if !local_path.exists() {
+            anyhow::bail!("Model path does not exist: {}", local_path.display());
+        }
+
+        let (size_bytes, files) = Self::scan_model_dir(local_path).await?;
+
+        let entry = ModelEntry {
+            model_id: model_id.to_string(),
+            local_path: local_path.to_path_buf(),
+            size_bytes,
+            source: source.to_string(),
+            sha256: None,
+            cached_at: chrono::Utc::now().to_rfc3339(),
+            gate_id: self.gate_id.clone(),
+            format: Self::detect_format(local_path).await,
+            files,
+        };
+
+        info!(
+            "Registered model '{}' ({:.1} MB) at {}",
+            model_id,
+            size_bytes as f64 / 1_048_576.0,
+            local_path.display()
+        );
+
+        self.manifest
+            .models
+            .insert(model_id.to_string(), entry.clone());
+        self.save_manifest().await?;
+
+        self.register_with_nestgate(&entry).await;
+
+        Ok(())
+    }
+
+    /// Register a model with the HuggingFace cache path
+    pub async fn register_huggingface_model(&mut self, model_id: &str) -> Result<PathBuf> {
+        let hf_cache = Self::find_huggingface_model(model_id)?;
+
+        if !hf_cache.exists() {
+            anyhow::bail!(
+                "HuggingFace model '{}' not found in cache at {}",
+                model_id,
+                hf_cache.display()
+            );
+        }
+
+        let snapshot_dir = Self::find_hf_snapshot(&hf_cache)?;
+
+        self.register_model(
+            model_id,
+            &snapshot_dir,
+            &format!("huggingface:{}", model_id),
+        )
+        .await?;
+
+        Ok(snapshot_dir)
+    }
+
+    /// Import all HuggingFace models from the default cache
+    pub async fn import_huggingface_cache(&mut self) -> Result<Vec<String>> {
+        let hf_hub = Self::huggingface_hub_dir()?;
+        if !hf_hub.exists() {
+            return Ok(vec![]);
+        }
+
+        let mut imported = Vec::new();
+
+        let mut entries = fs::read_dir(&hf_hub).await?;
+        while let Some(entry) = entries.next_entry().await? {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name.starts_with("models--") {
+                let model_id = name
+                    .strip_prefix("models--")
+                    .unwrap_or(&name)
+                    .replace("--", "/");
+
+                if !self.has_model(&model_id) {
+                    match self.register_huggingface_model(&model_id).await {
+                        Ok(_) => {
+                            imported.push(model_id);
+                        }
+                        Err(e) => {
+                            debug!("Skipping {}: {}", name, e);
+                        }
+                    }
+                }
+            }
+        }
+
+        if !imported.is_empty() {
+            info!("Imported {} models from HuggingFace cache", imported.len());
+        }
+
+        Ok(imported)
+    }
+
+    /// Check the mesh (NestGate) for a model available on another gate
+    pub async fn find_on_mesh(&self, model_id: &str) -> Option<ModelEntry> {
+        let client = self.nestgate.as_ref()?;
+        let key = format!("model-cache:{}", model_id);
+
+        let exists = match client
+            .call(
+                "storage.exists",
+                json!({
+                    "family_id": self.family_id,
+                    "key": key
+                }),
+            )
+            .await
+        {
+            Ok(response) => response
+                .get("exists")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false),
+            Err(e) => {
+                debug!("NestGate mesh existence check failed: {}", e);
+                return None;
+            }
+        };
+
+        if !exists {
+            return None;
+        }
+
+        let result = client
+            .call(
+                "storage.retrieve",
+                json!({
+                    "family_id": self.family_id,
+                    "key": key
+                }),
+            )
+            .await;
+
+        match result {
+            Ok(response) => {
+                if let Some(data) = response.get("data") {
+                    if !data.is_null() {
+                        serde_json::from_value(data.clone()).ok()
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            }
+            Err(e) => {
+                debug!("NestGate mesh retrieve failed: {}", e);
+                None
+            }
+        }
+    }
+
+    /// List all models known across the mesh
+    pub async fn list_mesh_models(&self) -> Vec<ModelEntry> {
+        let client = match self.nestgate.as_ref() {
+            Some(c) => c,
+            None => return vec![],
+        };
+
+        let result = client
+            .call(
+                "storage.list",
+                json!({
+                    "family_id": self.family_id,
+                    "prefix": "model-cache:"
+                }),
+            )
+            .await;
+
+        match result {
+            Ok(response) => {
+                let keys = response
+                    .get("keys")
+                    .and_then(|k| k.as_array())
+                    .cloned()
+                    .unwrap_or_default();
+
+                let mut models = Vec::new();
+                for key in keys {
+                    if let Some(key_str) = key.as_str() {
+                        let model_id = key_str.strip_prefix("model-cache:").unwrap_or(key_str);
+                        if let Some(entry) = self.find_on_mesh(model_id).await {
+                            models.push(entry);
+                        }
+                    }
+                }
+                models
+            }
+            Err(e) => {
+                debug!("NestGate mesh list failed: {}", e);
+                vec![]
+            }
+        }
+    }
+
+    /// Resolve a model: check local cache, then mesh
+    pub async fn resolve(&self, model_id: &str) -> ModelResolution {
+        if let Some(entry) = self.get_model(model_id) {
+            return ModelResolution::Local(entry.clone());
+        }
+
+        if let Some(entry) = self.find_on_mesh(model_id).await {
+            return ModelResolution::Remote(entry);
+        }
+
+        ModelResolution::NotFound
+    }
+
+    async fn save_manifest(&self) -> Result<()> {
+        let data = serde_json::to_string_pretty(&self.manifest)?;
+        fs::write(&self.manifest_path, data).await?;
+        Ok(())
+    }
+
+    async fn register_with_nestgate(&self, entry: &ModelEntry) {
+        let client = match self.nestgate.as_ref() {
+            Some(c) => c,
+            None => return,
+        };
+
+        let result = client
+            .call(
+                "storage.store",
+                json!({
+                    "family_id": self.family_id,
+                    "key": format!("model-cache:{}", entry.model_id),
+                    "value": serde_json::to_value(entry).unwrap_or_default()
+                }),
+            )
+            .await;
+
+        match result {
+            Ok(_) => {
+                info!(
+                    "Registered '{}' with NestGate mesh registry",
+                    entry.model_id
+                );
+            }
+            Err(e) => {
+                warn!(
+                    "NestGate registration failed (model still cached locally): {}",
+                    e
+                );
+            }
+        }
+    }
+
+    async fn scan_model_dir(dir: &Path) -> Result<(u64, Vec<ModelFile>)> {
+        let mut total_size = 0u64;
+        let mut files = Vec::new();
+
+        let mut stack = vec![dir.to_path_buf()];
+        while let Some(current) = stack.pop() {
+            let mut entries = fs::read_dir(&current).await?;
+            while let Some(entry) = entries.next_entry().await? {
+                let real_path = fs::canonicalize(entry.path())
+                    .await
+                    .unwrap_or_else(|_| entry.path());
+                let metadata = match fs::metadata(&real_path).await {
+                    Ok(m) => m,
+                    Err(_) => match std::fs::symlink_metadata(entry.path()) {
+                        Ok(m) => m,
+                        Err(_) => continue,
+                    },
+                };
+
+                if metadata.is_dir() {
+                    stack.push(entry.path());
+                } else {
+                    let size = metadata.len();
+                    total_size += size;
+
+                    let relative = entry
+                        .path()
+                        .strip_prefix(dir)
+                        .unwrap_or(&entry.path())
+                        .to_string_lossy()
+                        .to_string();
+
+                    files.push(ModelFile {
+                        relative_path: relative,
+                        size_bytes: size,
+                        sha256: None,
+                    });
+                }
+            }
+        }
+
+        Ok((total_size, files))
+    }
+
+    async fn detect_format(dir: &Path) -> String {
+        if let Ok(mut entries) = fs::read_dir(dir).await {
+            while let Ok(Some(entry)) = entries.next_entry().await {
+                let name = entry.file_name().to_string_lossy().to_string();
+                if name.ends_with(".safetensors") {
+                    return "safetensors".to_string();
+                }
+                if name.ends_with(".gguf") {
+                    return "gguf".to_string();
+                }
+                if name.ends_with(".bin") && name.contains("pytorch") {
+                    return "pytorch".to_string();
+                }
+            }
+        }
+        "huggingface".to_string()
+    }
+
+    fn find_huggingface_model(model_id: &str) -> Result<PathBuf> {
+        let hf_hub = Self::huggingface_hub_dir()?;
+        let dir_name = format!("models--{}", model_id.replace('/', "--"));
+        Ok(hf_hub.join(dir_name))
+    }
+
+    fn huggingface_hub_dir() -> Result<PathBuf> {
+        if let Ok(cache) = std::env::var("HF_HOME") {
+            return Ok(PathBuf::from(cache).join("hub"));
+        }
+        let home = std::env::var("HOME").context("HOME not set")?;
+        Ok(PathBuf::from(home)
+            .join(".cache")
+            .join("huggingface")
+            .join("hub"))
+    }
+
+    fn find_hf_snapshot(model_dir: &Path) -> Result<PathBuf> {
+        let snapshots_dir = model_dir.join("snapshots");
+        if !snapshots_dir.exists() {
+            anyhow::bail!("No snapshots directory in {}", model_dir.display());
+        }
+
+        let mut entries: Vec<_> = std::fs::read_dir(&snapshots_dir)?
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_type().map(|t| t.is_dir()).unwrap_or(false))
+            .collect();
+
+        entries.sort_by_key(|e| e.file_name());
+
+        entries
+            .last()
+            .map(|e| e.path())
+            .ok_or_else(|| anyhow::anyhow!("No snapshot found in {}", snapshots_dir.display()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+
+    use super::*;
+
+    #[tokio::test]
+    async fn test_has_model_false_for_nonexistent() {
+        let tmp = tempfile::tempdir().unwrap();
+        let cache = ModelCache::with_cache_dir(tmp.path().to_path_buf())
+            .await
+            .unwrap();
+        assert!(!cache.has_model("nonexistent/model"));
+    }
+
+    #[tokio::test]
+    async fn test_get_model_path_none_for_nonexistent() {
+        let tmp = tempfile::tempdir().unwrap();
+        let cache = ModelCache::with_cache_dir(tmp.path().to_path_buf())
+            .await
+            .unwrap();
+        assert!(cache.get_model_path("nonexistent/model").is_none());
+        assert!(cache.get_model("nonexistent/model").is_none());
+    }
+
+    #[tokio::test]
+    async fn test_list_models_empty() {
+        let tmp = tempfile::tempdir().unwrap();
+        let cache = ModelCache::with_cache_dir(tmp.path().to_path_buf())
+            .await
+            .unwrap();
+        assert!(cache.list_models().is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_register_model_validates_path_exists() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mut cache = ModelCache::with_cache_dir(tmp.path().join("cache"))
+            .await
+            .unwrap();
+        let result = cache
+            .register_model("m", tmp.path().join("nonexistent").as_path(), "src")
+            .await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("does not exist"));
+    }
+
+    #[tokio::test]
+    async fn test_resolve_returns_not_found_when_empty() {
+        let tmp = tempfile::tempdir().unwrap();
+        let cache = ModelCache::with_cache_dir(tmp.path().to_path_buf())
+            .await
+            .unwrap();
+        let res = cache.resolve("any/model").await;
+        assert!(matches!(res, ModelResolution::NotFound));
+    }
+
+    #[tokio::test]
+    async fn test_register_and_resolve_local() {
+        let tmp = tempfile::tempdir().unwrap();
+        let model_dir = tmp.path().join("m");
+        std::fs::create_dir_all(&model_dir).unwrap();
+        std::fs::write(model_dir.join("model.safetensors"), b"data").unwrap();
+
+        let mut cache = ModelCache::with_cache_dir(tmp.path().join("cache"))
+            .await
+            .unwrap();
+        cache
+            .register_model("test/m", &model_dir, "test://")
+            .await
+            .unwrap();
+
+        let res = cache.resolve("test/m").await;
+        match res {
+            ModelResolution::Local(e) => {
+                assert_eq!(e.model_id, "test/m");
+                assert_eq!(e.format, "safetensors");
+            }
+            _ => panic!("expected Local"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_scan_model_dir_nested() {
+        let tmp = tempfile::tempdir().unwrap();
+        let model_dir = tmp.path().join("nested");
+        std::fs::create_dir_all(model_dir.join("subdir")).unwrap();
+        std::fs::write(model_dir.join("a.bin"), b"a").unwrap();
+        std::fs::write(model_dir.join("subdir").join("b.bin"), b"b").unwrap();
+
+        let mut cache = ModelCache::with_cache_dir(tmp.path().join("cache"))
+            .await
+            .unwrap();
+        cache
+            .register_model("nested", &model_dir, "test://")
+            .await
+            .unwrap();
+
+        let entry = cache.get_model("nested").unwrap();
+        assert!(entry.size_bytes >= 2);
+        assert!(entry.files.len() >= 2);
+    }
+
+    #[tokio::test]
+    async fn test_detect_format_gguf() {
+        let tmp = tempfile::tempdir().unwrap();
+        let model_dir = tmp.path().join("gguf");
+        std::fs::create_dir_all(&model_dir).unwrap();
+        std::fs::write(model_dir.join("model.gguf"), b"gguf").unwrap();
+
+        let mut cache = ModelCache::with_cache_dir(tmp.path().join("cache"))
+            .await
+            .unwrap();
+        cache
+            .register_model("gguf/m", &model_dir, "test://")
+            .await
+            .unwrap();
+        assert_eq!(cache.get_model("gguf/m").unwrap().format, "gguf");
+    }
+}

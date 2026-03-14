@@ -41,12 +41,13 @@ pub fn parse_niche_yaml_info(content: &str) -> (String, String) {
 
 /// Map primal name to display icon (testable pure function)
 pub fn primal_to_icon(primal: &str) -> &'static str {
+    use biomeos_types::primal_names::*;
     match primal {
-        "nestgate" => "🏰",
-        "songbird" => "🎼",
-        "toadstool" => "🍄",
-        "beardog" => "🐕",
-        "squirrel" => "🐿️",
+        NESTGATE => "🏰",
+        SONGBIRD => "🎼",
+        TOADSTOOL => "🍄",
+        BEARDOG => "🐕",
+        SQUIRREL => "🐿️",
         _ => "📦",
     }
 }

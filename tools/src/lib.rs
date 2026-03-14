@@ -6,13 +6,36 @@
 //! Pure Rust tooling for biomeOS development, testing, and ecosystem management.
 //! Eliminates shell scripts in favor of "Rust until the very edge" philosophy.
 
+#![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
 use anyhow::Result;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::path::Path;
 use tokio::process::Command as AsyncCommand;
-use tracing::{info, warn, error};
+use tracing::{error, info};
+
+/// Discovers the workspace root by walking up from the current directory
+/// looking for a `Cargo.toml` with `[workspace]`.
+pub fn discover_workspace_root() -> Result<PathBuf> {
+    let start = std::env::current_dir()?;
+    let mut dir = start.as_path();
+    loop {
+        let candidate = dir.join("Cargo.toml");
+        if candidate.exists() {
+            let content = std::fs::read_to_string(&candidate)?;
+            if content.contains("[workspace]") {
+                return Ok(dir.to_path_buf());
+            }
+        }
+        dir = dir.parent().ok_or_else(|| {
+            anyhow::anyhow!(
+                "Could not find workspace root (Cargo.toml with [workspace]) from {}",
+                start.display()
+            )
+        })?;
+    }
+}
 
 pub mod integration;
 pub mod testing;

@@ -103,5 +103,5 @@ pub enum DeployError {
 
     /// Generic process errors
     #[error("Process execution error: {0}")]
-    Process(#[from] nix::errno::Errno),
+    Process(#[from] rustix::io::Errno),
 }

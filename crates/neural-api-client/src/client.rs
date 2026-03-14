@@ -135,3 +135,68 @@ impl NeuralApiClient {
         .await
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+
+    use super::*;
+
+    #[test]
+    fn test_new_succeeds() {
+        let client = NeuralApiClient::new("/tmp/neural.sock").unwrap();
+        assert_eq!(
+            client.socket_path,
+            std::path::PathBuf::from("/tmp/neural.sock")
+        );
+        assert_eq!(client.request_timeout, tokio::time::Duration::from_secs(30));
+        assert_eq!(
+            client.connection_timeout,
+            tokio::time::Duration::from_secs(5)
+        );
+    }
+
+    #[test]
+    fn test_new_with_pathbuf() {
+        let path = std::path::PathBuf::from("/var/run/neural.sock");
+        let client = NeuralApiClient::new(path.clone()).unwrap();
+        assert_eq!(client.socket_path, path);
+    }
+
+    #[test]
+    fn test_discover_socket_format() {
+        let path = NeuralApiClient::discover_socket("fam123");
+        assert!(path.to_string_lossy().contains("neural-api"));
+        assert!(path.to_string_lossy().contains("fam123"));
+    }
+
+    #[test]
+    fn test_discover_fails_when_socket_missing() {
+        let result = NeuralApiClient::discover("nonexistent_family_xyz_12345");
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        let msg = err.to_string();
+        assert!(
+            msg.contains("not exist") || msg.contains("not found") || msg.contains("Neural API"),
+            "Expected socket missing error, got: {}",
+            msg
+        );
+    }
+
+    #[test]
+    fn test_with_request_timeout() {
+        let client = NeuralApiClient::new("/tmp/sock").unwrap();
+        let client = client.with_request_timeout(tokio::time::Duration::from_secs(10));
+        assert_eq!(client.request_timeout, tokio::time::Duration::from_secs(10));
+    }
+
+    #[test]
+    fn test_with_connection_timeout() {
+        let client = NeuralApiClient::new("/tmp/sock").unwrap();
+        let client = client.with_connection_timeout(tokio::time::Duration::from_millis(100));
+        assert_eq!(
+            client.connection_timeout,
+            tokio::time::Duration::from_millis(100)
+        );
+    }
+}

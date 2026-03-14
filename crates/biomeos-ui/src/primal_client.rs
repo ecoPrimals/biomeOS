@@ -205,17 +205,17 @@ impl PrimalConnections {
     /// NestGate storage connection (capability: storage)
     pub fn nestgate(&self) -> Option<&NestGateClient> {
         self.get_by_capability("storage")
-            .or_else(|| self.get("nestgate"))
+            .or_else(|| self.get(biomeos_types::primal_names::NESTGATE))
     }
     /// ToadStool compute/GPU connection (capability: compute)
     pub fn toadstool(&self) -> Option<&ToadStoolClient> {
         self.get_by_capability("compute")
-            .or_else(|| self.get("toadstool"))
+            .or_else(|| self.get(biomeos_types::primal_names::TOADSTOOL))
     }
     /// Squirrel AI connection (capability: ai)
     pub fn squirrel(&self) -> Option<&SquirrelClient> {
         self.get_by_capability("ai")
-            .or_else(|| self.get("squirrel"))
+            .or_else(|| self.get(biomeos_types::primal_names::SQUIRREL))
     }
 
     /// Add a client for testing (allows discovery/orchestrator tests to inject mock connections)

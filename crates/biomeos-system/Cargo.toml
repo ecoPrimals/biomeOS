@@ -24,9 +24,9 @@ uuid = { version = "1.6", features = ["v4", "serde"] }
 # Async runtime
 tokio = { version = "1.0", features = ["full"] }
 
-# System information utilities
+# System information utilities (pure Rust - ecoBin v3)
 hostname = "0.3"
-sysinfo = "0.30"
+rustix = { version = "0.38", features = ["fs", "mount"] }
 
 [dev-dependencies]
 tokio-test = "0.4"

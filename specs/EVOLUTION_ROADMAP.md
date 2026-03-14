@@ -105,11 +105,11 @@ Detailed handoffs in `docs/handoffs/`:
 
 ---
 
-## 5. Deep Debt Metrics (Updated Feb 9, 2026)
+## 5. Deep Debt Metrics (Updated Mar 14, 2026)
 
 | Metric | Value |
 |--------|-------|
-| TODO markers in source | 1 (intentional design note) |
+| TODO markers in source | 4 (all intentional: family-scoped AI, discovery config, cache CLI, degradation reporting) |
 | FIXME/HACK/WORKAROUND | 0 |
 | Unsafe code | 1 (`Mmap::map` in biomeos-genome-deploy -- documented, OS-level) |
 | Clippy warnings | 0 (entire workspace, including biomeos-boot) |
@@ -117,6 +117,11 @@ Detailed handoffs in `docs/handoffs/`:
 | Shell-outs from Rust | 3 (`sudo ip link/addr/set` in deploy/network.rs -- requires root) |
 | `deny(unsafe_code)` crates | 8 |
 | Mocks in production | 0 |
+| Tests | 4,275 (0 failures, 167 ignored) |
+| Region coverage | 75.21% (llvm-cov) |
+| Files >1000 LOC | 0 |
+| Hardcoded primal strings | 0 (centralized `primal_names` constants) |
+| Zero-copy payloads | `bytes::Bytes` with base64 serde |
 | Bypasses | 5 (all documented with evolution paths) |
 | Workspace tests passing | 1,789 |
 | Specs | 19 active / 47 archived |

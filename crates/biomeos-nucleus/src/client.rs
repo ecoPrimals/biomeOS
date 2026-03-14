@@ -8,35 +8,10 @@
 //!
 //! Also provides the high-level `NucleusClient` that coordinates all 5 layers.
 
-use serde::{Deserialize, Serialize};
 use std::path::Path;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
-/// Global atomic counter for JSON-RPC request IDs.
-///
-/// This ensures unique IDs across concurrent requests, enabling proper
-/// request/response correlation in JSON-RPC 2.0.
-///
-/// # Safety
-///
-/// This uses `AtomicU64` which is a safe, lock-free atomic operation.
-/// `Ordering::Relaxed` is sufficient here since we only need uniqueness,
-/// not strict ordering guarantees. This is a zero-cost abstraction over
-/// platform-specific atomic instructions.
-static REQUEST_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
-
-/// Get the next unique request ID.
-///
-/// # Safety
-///
-/// This function is safe - it uses atomic operations which are guaranteed
-/// to be thread-safe and cannot cause data races. The counter will wrap
-/// around after 2^64 requests, which is acceptable for this use case.
-#[inline]
-fn next_request_id() -> u64 {
-    REQUEST_ID_COUNTER.fetch_add(1, Ordering::Relaxed)
-}
+use biomeos_types::{JsonRpcRequest, JsonRpcResponse};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
 use tokio::time::{timeout, Duration};
@@ -50,35 +25,6 @@ use crate::{
     trust::{TrustLayer, TrustLayerImpl, TrustLevel},
     Error, Result, VerifiedPrimal,
 };
-
-/// JSON-RPC request
-#[derive(Debug, Serialize)]
-struct JsonRpcRequest {
-    jsonrpc: String,
-    method: String,
-    params: serde_json::Value,
-    id: u64,
-}
-
-/// JSON-RPC response
-#[derive(Debug, Deserialize)]
-struct JsonRpcResponse {
-    #[allow(dead_code)] // wire format — deserialized but not read directly
-    jsonrpc: String,
-    #[serde(default)]
-    result: Option<serde_json::Value>,
-    #[serde(default)]
-    error: Option<JsonRpcError>,
-    #[allow(dead_code)] // wire format — deserialized but not read directly
-    id: u64,
-}
-
-/// JSON-RPC error
-#[derive(Debug, Deserialize)]
-struct JsonRpcError {
-    code: i64,
-    message: String,
-}
 
 /// Call a Unix socket JSON-RPC method
 ///
@@ -112,12 +58,7 @@ pub async fn call_unix_socket_rpc<T: serde::de::DeserializeOwned>(
     let (read_half, mut write_half) = stream.into_split();
 
     // Create request with unique ID for concurrent request correlation
-    let request = JsonRpcRequest {
-        jsonrpc: "2.0".to_string(),
-        method: method.to_string(),
-        params,
-        id: next_request_id(),
-    };
+    let request = JsonRpcRequest::new(method, params);
 
     // Serialize and send request
     let request_json = serde_json::to_string(&request)?;
@@ -464,16 +405,18 @@ mod tests {
 
     #[test]
     fn test_jsonrpc_request_serialization() {
-        let request = JsonRpcRequest {
-            jsonrpc: "2.0".to_string(),
-            method: "test_method".to_string(),
-            params: serde_json::json!({"key": "value"}),
-            id: 1,
-        };
+        let request = JsonRpcRequest::new("test_method", serde_json::json!({"key": "value"}));
 
         let json = serde_json::to_string(&request).unwrap();
         assert!(json.contains("test_method"));
-        assert!(json.contains("\"id\":1"));
+        assert!(
+            request
+                .id
+                .as_ref()
+                .and_then(serde_json::Value::as_u64)
+                .unwrap_or(0)
+                > 0
+        );
     }
 
     #[test]
@@ -482,7 +425,7 @@ mod tests {
         let response: JsonRpcResponse = serde_json::from_str(json).unwrap();
 
         assert_eq!(response.jsonrpc, "2.0");
-        assert_eq!(response.id, 1);
+        assert_eq!(response.id.as_u64().unwrap(), 1);
         assert!(response.result.is_some());
         assert!(response.error.is_none());
     }
@@ -507,7 +450,7 @@ mod tests {
             response.result.is_none(),
             "serde maps JSON null to None for Option<Value>"
         );
-        assert_eq!(response.id, 42);
+        assert_eq!(response.id.as_u64().unwrap(), 42);
     }
 
     #[test]
@@ -520,14 +463,16 @@ mod tests {
 
     #[test]
     fn test_jsonrpc_request_params_empty_object() {
-        let request = JsonRpcRequest {
-            jsonrpc: "2.0".to_string(),
-            method: "ping".to_string(),
-            params: serde_json::json!({}),
-            id: 999,
-        };
+        let request = JsonRpcRequest::new("ping", serde_json::json!({}));
         let json = serde_json::to_string(&request).unwrap();
         assert!(json.contains("\"params\":{}"));
-        assert!(json.contains("\"id\":999"));
+        assert!(
+            request
+                .id
+                .as_ref()
+                .and_then(serde_json::Value::as_u64)
+                .unwrap_or(0)
+                > 0
+        );
     }
 }

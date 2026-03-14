@@ -658,9 +658,7 @@ impl CapabilityTaxonomy {
         if std::env::var("BIOMEOS_STRICT_DISCOVERY").is_ok() {
             return &[];
         }
-        // Bootstrap hints only — NOT the canonical list
-        // Primals self-register their capabilities at startup
-        &["beardog", "songbird", "toadstool", "nestgate", "squirrel"]
+        crate::primal_names::CORE_PRIMALS
     }
 }
 
@@ -675,3 +673,8 @@ impl fmt::Display for CapabilityTaxonomy {
         }
     }
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+#[path = "definition_tests.rs"]
+mod tests;

@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
-//! Disk information and metrics.
+//! Disk information and metrics (pure Rust via /proc/mounts + statvfs - ecoBin v3).
+
+use std::fs;
+use std::path::Path;
 
 use biomeos_types::BiomeResult;
 
@@ -20,44 +23,57 @@ pub struct DiskInfo {
     pub used_gb: f64,
     /// Available disk space in GiB
     pub available_gb: f64,
-    /// Disk usage as a percentage (0–100)
+    /// Disk usage as a percentage (0–1)
     pub usage_percent: f64,
 }
 
-/// Get disk information using sysinfo for cross-platform support
+/// Get disk information via /proc/mounts + rustix statvfs (pure Rust).
+#[cfg(target_os = "linux")]
 pub(crate) async fn get_disk_info() -> BiomeResult<Vec<DiskInfo>> {
-    use sysinfo::Disks;
-
-    let disks_info = Disks::new_with_refreshed_list();
+    let mounts = fs::read_to_string("/proc/mounts").unwrap_or_default();
     let mut result = Vec::new();
 
-    for disk in &disks_info {
-        let total_bytes = disk.total_space();
-        let available_bytes = disk.available_space();
-        let used_bytes = total_bytes.saturating_sub(available_bytes);
+    for line in mounts.lines() {
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        if parts.len() < 3 {
+            continue;
+        }
+        let device = parts[0].to_string();
+        let mount_point = parts[1].to_string();
+        let filesystem = parts[2].to_string();
 
-        let total_gb = total_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
-        let used_gb = used_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
-        let available_gb = available_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
+        // Skip virtual filesystems that often fail statvfs
+        if filesystem == "proc" || filesystem == "sysfs" || filesystem == "devtmpfs" {
+            continue;
+        }
 
-        let usage_percent = if total_gb > 0.0 {
-            used_gb / total_gb
-        } else {
-            0.0
-        };
+        if let Ok(st) = rustix::fs::statvfs(Path::new(&mount_point)) {
+            let total_bytes = st.f_blocks.saturating_mul(st.f_frsize);
+            let available_bytes = st.f_bavail.saturating_mul(st.f_frsize);
+            let used_bytes = total_bytes.saturating_sub(available_bytes);
 
-        result.push(DiskInfo {
-            device: disk.name().to_string_lossy().to_string(),
-            mount_point: disk.mount_point().to_string_lossy().to_string(),
-            filesystem: disk.file_system().to_string_lossy().to_string(),
-            total_gb,
-            used_gb,
-            available_gb,
-            usage_percent,
-        });
+            let total_gb = total_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
+            let used_gb = used_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
+            let available_gb = available_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
+
+            let usage_percent = if total_gb > 0.0 {
+                used_gb / total_gb
+            } else {
+                0.0
+            };
+
+            result.push(DiskInfo {
+                device,
+                mount_point,
+                filesystem,
+                total_gb,
+                used_gb,
+                available_gb,
+                usage_percent,
+            });
+        }
     }
 
-    // Ensure at least one disk entry for systems where detection fails
     if result.is_empty() {
         result.push(DiskInfo {
             device: "unknown".to_string(),
@@ -71,6 +87,20 @@ pub(crate) async fn get_disk_info() -> BiomeResult<Vec<DiskInfo>> {
     }
 
     Ok(result)
+}
+
+/// Non-Linux fallback (returns minimal placeholder).
+#[cfg(not(target_os = "linux"))]
+pub(crate) async fn get_disk_info() -> BiomeResult<Vec<DiskInfo>> {
+    Ok(vec![DiskInfo {
+        device: "unknown".to_string(),
+        mount_point: "/".to_string(),
+        filesystem: "unknown".to_string(),
+        total_gb: 0.0,
+        used_gb: 0.0,
+        available_gb: 0.0,
+        usage_percent: 0.0,
+    }])
 }
 
 /// Get current disk usage (average across all disks)

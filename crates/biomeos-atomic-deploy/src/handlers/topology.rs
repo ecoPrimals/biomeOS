@@ -354,14 +354,22 @@ impl TopologyHandler {
         }))
     }
 
-    /// Get aggregated metrics.
+    /// Get aggregated metrics (pure Rust via /proc - ecoBin v3).
     ///
     /// JSON-RPC method: `topology.metrics`
     pub async fn get_metrics(&self) -> Result<Value> {
         info!("📊 Neural API: get_metrics called");
 
-        let mut sys = sysinfo::System::new_all();
-        sys.refresh_all();
+        let cpu_percent = crate::proc_metrics::cpu_percent().await;
+        let (memory_total, memory_used) = crate::proc_metrics::memory_bytes();
+        let memory_total_mb = memory_total / 1024 / 1024;
+        let memory_used_mb = memory_used / 1024 / 1024;
+        let memory_percent = if memory_total > 0 {
+            (memory_used as f64 / memory_total as f64) * 100.0
+        } else {
+            0.0
+        };
+        let uptime_seconds = crate::proc_metrics::uptime_seconds();
 
         let primals = self.discover_active_primals().await?;
         let primal_count = primals.len();
@@ -378,11 +386,11 @@ impl TopologyHandler {
         Ok(json!({
             "timestamp": chrono::Utc::now().to_rfc3339(),
             "system": {
-                "cpu_percent": sys.global_cpu_usage(),
-                "memory_used_mb": sys.used_memory() / 1024 / 1024,
-                "memory_total_mb": sys.total_memory() / 1024 / 1024,
-                "memory_percent": (sys.used_memory() as f64 / sys.total_memory() as f64) * 100.0,
-                "uptime_seconds": sysinfo::System::uptime()
+                "cpu_percent": cpu_percent,
+                "memory_used_mb": memory_used_mb,
+                "memory_total_mb": memory_total_mb,
+                "memory_percent": memory_percent,
+                "uptime_seconds": uptime_seconds
             },
             "neural_api": {
                 "family_id": self.family_id,

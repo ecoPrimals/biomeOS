@@ -21,11 +21,10 @@ serde = { version = "1", features = ["derive"] }
 serde_yaml = "0.9"
 toml = "0.8"
 
-# System interaction (pure Rust)
-nix = { version = "0.29", features = ["mount", "fs", "process", "net", "ioctl", "reboot", "hostname", "user"] }
+# System interaction (pure Rust via rustix)
+rustix = { version = "0.38", features = ["fs", "mount", "process"] }
 
-# Hardware detection (pure Rust)
-sysinfo = "0.31"
+# Hardware detection (pure Rust via /proc - ecoBin v3)
 
 # UUID for device identification
 uuid = { version = "1", features = ["v4", "serde"] }

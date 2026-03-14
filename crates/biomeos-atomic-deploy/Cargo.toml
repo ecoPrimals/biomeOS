@@ -12,9 +12,9 @@ tokio = { version = "1.35", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }  # For binaries
 thiserror = "1.0"
-nix = { version = "0.29", features = ["signal"] }
+rustix = { version = "0.38", features = ["process"] }
 users = "0.11"  # For Neural API server
-sysinfo = "0.32"  # For system metrics
+# System metrics: pure Rust via /proc (ecoBin v3)
 regex = "1.11"  # For socket pattern matching
 rand = "0.8"  # For JWT secret generation
 base64 = "0.22"  # For JWT secret encoding

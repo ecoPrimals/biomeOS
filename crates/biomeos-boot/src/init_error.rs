@@ -31,7 +31,7 @@ pub enum BootError {
         /// Filesystem source device
         fs_source: String,
         /// System error number
-        errno: nix::errno::Errno,
+        errno: rustix::io::Errno,
     },
 
     /// Filesystem is already mounted
@@ -161,7 +161,7 @@ impl BootError {
     pub fn mount_failed(
         target: impl Into<String>,
         fs_source: impl Into<String>,
-        errno: nix::errno::Errno,
+        errno: rustix::io::Errno,
     ) -> Self {
         Self::MountFailed {
             target: target.into(),

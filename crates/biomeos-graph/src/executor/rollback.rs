@@ -96,22 +96,21 @@ impl<'a> RollbackManager<'a> {
             }
         }
 
-        // Signal-based process termination (safe Rust via nix)
+        // Signal-based process termination (safe Rust via rustix)
         #[cfg(unix)]
         {
-            use nix::sys::signal::{kill, Signal};
-            use nix::unistd::Pid;
-            let pid_t = Pid::from_raw(pid as i32);
+            use rustix::process::{kill_process, test_kill_process, Pid, Signal};
+            if let Some(pid) = Pid::from_raw(pid as i32) {
+                // Check if process exists (signal 0 = test)
+                if test_kill_process(pid).is_ok() {
+                    // Process still running, send SIGTERM
+                    let _ = kill_process(pid, Signal::Term);
+                    tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
 
-            // Check if process exists (signal 0 = test)
-            if kill(pid_t, None).is_ok() {
-                // Process still running, send SIGTERM
-                let _ = kill(pid_t, Signal::SIGTERM);
-                tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
-
-                // Check again, send SIGKILL if still running
-                if kill(pid_t, None).is_ok() {
-                    let _ = kill(pid_t, Signal::SIGKILL);
+                    // Check again, send SIGKILL if still running
+                    if test_kill_process(pid).is_ok() {
+                        let _ = kill_process(pid, Signal::Kill);
+                    }
                 }
             }
         }

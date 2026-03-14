@@ -201,7 +201,7 @@ impl Plasmodium {
 
         // Fallback: if socket directory scan found nothing, try known primals via env-based discovery
         if primals.is_empty() {
-            for primal_name in &["beardog", "songbird", "toadstool", "nestgate", "squirrel"] {
+            for primal_name in biomeos_types::primal_names::CORE_PRIMALS {
                 if let Ok(client) = AtomicClient::discover(primal_name).await {
                     let health = Self::check_primal_health(&client, primal_name).await;
                     primals.push(health);

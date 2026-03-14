@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: March 13, 2026 (Provenance Trio Graph Deployments)
-**Version**: 2.33
+**Updated**: March 14, 2026 (Zero-Copy + Primal Constants + tarpc Wiring + Coverage Push)
+**Version**: 2.35
 **Status**: PRODUCTION READY - Multi-Computer Federation Validated
 
 ---
@@ -15,12 +15,12 @@
 | **IPC Standard** | Universal IPC v3.0 + HTTP JSON-RPC (inter-gate) |
 | **Security Grade** | A++ (TRUE PRIMAL + Security Headers + Dark Forest Gate) |
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
-| **Code Quality** | A+ (Pure Rust, idiomatic, zero warnings, full doc coverage, sovereignty audit) |
-| **Tests Passing** | 3,148 sequential (0 failures, 24 ignored) |
-| **Test Coverage** | 71.47% region, 74.32% function, 69.88% line (llvm-cov) |
-| **Unsafe Code** | 0 production, 0 test (libc::getuid → nix::unistd::Uid) |
-| **Clippy** | PASS (0 warnings) |
-| **Formatting** | PASS |
+| **Code Quality** | A++ (Pure Rust, ecoBin v3.0, zero warnings, full doc coverage, sovereignty audit) |
+| **Tests Passing** | 4,275 sequential (0 failures, 167 ignored) |
+| **Test Coverage** | 75.21% region, 78.14% function, 73.95% line (llvm-cov) |
+| **Unsafe Code** | 0 production, 0 test |
+| **Clippy** | PASS (0 warnings, pedantic+nursery) |
+| **Formatting** | PASS (rustfmt.toml enforced) |
 | **Continuous Systems** | ContinuousExecutor (60Hz tick), GraphEventBroadcaster, SensorEventBus |
 | **XR/VR Types** | StereoConfig, Pose6DoF, TrackingFrame, HapticCommand, MotionCaptureAdapter |
 | **Surgical Domain** | SurgicalProcedure, TissueMaterial, AnatomyModel, PkModelParams |
@@ -32,8 +32,11 @@
 | **Discovery Model** | Dynamic socket scanning + capability taxonomy |
 | **NAT Traversal** | 4-tier strategy (LAN/punch/coordinated/relay) |
 | **P2P Sovereign Onion** | PRODUCTION READY |
-| **External C deps** | 0 (`dirs` deprecated → `etcetera`, `libc` removed, `nix` for safe POSIX) |
-| **Files >1000 LOC** | 0 production (7 files have tests pushing total >1000; agents.rs + lifecycle_manager.rs refactored into modules) |
+| **External C deps** | 0 (nix removed → rustix, sysinfo removed → /proc, libc removed, dirs → etcetera) |
+| **ecoBin v3.0** | COMPLIANT (pure Rust: rustix for POSIX, /proc for metrics, zero -sys crates) |
+| **Files >1000 LOC** | 0 (all 8 previous violations refactored into domain modules) |
+| **JSON-RPC types** | Consolidated — single `biomeos-types::jsonrpc` module, no duplication |
+| **Dep policy** | `deny.toml` bans openssl-sys, ring, aws-lc-sys, native-tls, zstd-sys, dirs-sys |
 | **Plasmodium** | HTTP JSON-RPC collective (runtime port, SSH legacy removed) |
 | **Model Cache** | NUCLEUS-integrated, HuggingFace import, NestGate fallback |
 | **AI Bridge** | Squirrel -> Songbird -> Cloud/Local AI (validated) |
@@ -42,6 +45,7 @@
 | **SystemPaths** | All paths XDG-compliant via centralized `SystemPaths` |
 | **Hardcoded `/tmp`** | 0 in production code |
 | **Hardcoded Primals** | 0 in routing code (all via `CapabilityTaxonomy`) |
+| **Hardcoded user paths** | 0 (tools evolved to runtime workspace discovery) |
 | **Production unwrap()** | 0 (all replaced with `expect()` + context) |
 | **Federation** | api.nestgate.io via Cloudflare Tunnel (QUIC, 4x HA) |
 | **External Access** | LAN + Cloudflare (ISP-invisible, Tor-blocked workaround) |
@@ -203,7 +207,7 @@ HTTP JSON-RPC collective with runtime port discovery (hardcoded 3492 eliminated)
 
 ### 5. Neural API - Semantic Capability Routing
 
-- 170+ capability translations across 16 domains
+- 205+ capability translations across 16 domains
 - `capability.call` routes semantic names to provider-specific methods
 - `proxy_http` delegates HTTPS through Songbird + BearDog TLS
 - Capability domains: crypto, security, http, mesh, stun, relay, onion, compute, storage, ai, inference, ephemeral_workspace (rhizoCrypt), permanent_storage (LoamSpine), attribution (sweetGrass), game, medical
@@ -228,6 +232,42 @@ HTTP JSON-RPC collective with runtime port discovery (hardcoded 3492 eliminated)
 ---
 
 ## Completed Evolution Items (biomeOS Team)
+
+### Zero-Copy + Primal Constants + tarpc Wiring + Coverage Push (Mar 14, 2026)
+
+Continued deep debt evolution: zero-copy binary payloads, centralized primal names, tarpc transport, and major test expansion.
+
+| Category | Change |
+|----------|--------|
+| **Zero-copy (Bytes)** | `SignatureResult.signature` evolved from `Vec<u8>` to `bytes::Bytes` with base64 serde helpers; `bytes` added as workspace dep |
+| **Primal name constants** | New `biomeos-types::primal_names` module: `BEARDOG`, `SONGBIRD`, `TOADSTOOL`, `NESTGATE`, `SQUIRREL`, `LOAMSPINE`, `RHIZOCRYPT`, `SWEETGRASS`; 15 production files across 8 crates updated to use constants |
+| **tarpc transport** | `unix` feature enabled on workspace tarpc; new `biomeos-primal-sdk::tarpc_transport` module with `prepare_socket()`, `tarpc_socket_name()`, `tarpc_socket_path()` |
+| **Coverage expansion** | +183 new tests: capability_taxonomy (35), subfederation manager (20), dark forest beacon (22), service core (27), service security (20), networking types (22), error types (29), tarpc transport (7) |
+| **Test extraction** | 6 files over 1000 LOC split into `*_tests.rs` files: nucleus, definition, beacon, core, security, networking_services |
+| **Clippy** | 0 warnings (fixed redundant closures in biomeos-nucleus, borrowed expression in beacon tests, duplicated attributes) |
+| **File compliance** | 0 production files over 1000 lines (largest: 998) |
+| **Test total** | 4,092 → 4,275 (+183), 0 failures, 167 ignored |
+
+### Deep Debt Evolution + ecoBin v3.0 Compliance (Mar 13, 2026)
+
+Comprehensive audit and evolution pass against ecoPrimals wateringHole standards:
+
+| Category | Change |
+|----------|--------|
+| **nix → rustix** | All 8 crates migrated from `nix` (libc wrapper) to `rustix` (pure Rust syscalls). Zero unsafe code. |
+| **sysinfo → /proc** | All 5 crates migrated from `sysinfo` (C deps) to direct `/proc` reads + `rustix::fs::statvfs`. ecoBin v3.0 compliant. |
+| **Large file refactoring** | 8 files >1000 lines refactored into domain modules: widgets.rs (1571→3 files), doctor.rs (1075→6 files), ai_first_api.rs (1049→4 files), dark_forest.rs (1041→4 files), subfederation.rs (1019→5 files), rootfs.rs (1005→7 files), model_cache.rs (1002→4 files). Max file now 998 lines. |
+| **JSON-RPC consolidation** | 5+ duplicate `JsonRpcRequest`/`JsonRpcResponse` definitions unified into `biomeos-types::jsonrpc` |
+| **Hardcoded paths** | `/home/strandgate/Development` removed from 4 `tools/src/*.rs` files → runtime `discover_workspace_root()` |
+| **Hardcoded IPs** | `192.168.1.132:8080` in tests → RFC 5737 documentation address; `192.168.1.1` → `192.0.2.1` |
+| **Mock production code** | 3 mock implementations in `tools/src/` evolved to real: sovereignty→dep tree inspection, coverage→llvm-cov parsing, health→runtime socket discovery |
+| **deny.toml** | New — bans openssl-sys, ring, aws-lc-sys, native-tls, zstd-sys, dirs-sys |
+| **rustfmt.toml** | New — enforces edition 2021, max_width 100 |
+| **forbid(unsafe)** | Added to `tools/src/lib.rs` (was the only gap) |
+| **tools Cargo.toml** | Fixed broken workspace inheritance (self-contained workspace with explicit deps) |
+| **Test coverage** | 4,033 → 4,275 tests (+242); 74.91% → 75.21% region coverage; new proc_metrics, nucleus, model_cache, neural-api-client, suggestions, capability_taxonomy, subfederation, beacon, tarpc tests |
+| **sysinfo version alignment** | Removed entirely (was 4 different versions: 0.29, 0.30, 0.31, 0.32) |
+| **Format regression** | Fixed `capability_domains.rs` formatting diff |
 
 ### Spring Absorption — Cross-Spring Evolution (Mar 11, 2026)
 
@@ -394,7 +434,7 @@ Plasmodium `query_remote_gate()` uses HTTP POST `/jsonrpc` with runtime port dis
 from shared `.family.seed`. Unique per-device `.lineage.seed` files.
 
 ### Pure Rust System Calls
-All production shell-outs replaced with pure Rust (`/proc`, `/sys`, `nix` crate).
+All production shell-outs replaced with pure Rust (`/proc`, `/sys`, `rustix` crate).
 
 ### Internalized `start_nucleus.sh`
 `biomeos nucleus start` is the pure Rust replacement. Binary discovery,
@@ -594,7 +634,7 @@ Tower (pop-os, x86_64):
   CPU:    24 cores (i9-14900)
   AI:     Ollama (phi3, llama3.2, tinyllama)
   Primals: BearDog, Songbird, NestGate, Toadstool, Squirrel
-  biomeOS: Neural API capability routing (124 translations + agent routing)
+  biomeOS: Neural API capability routing (205+ translations + agent routing)
 
 gate2 (pop-os, x86_64):
   GPU:    RTX 3090 (24 GB VRAM)
@@ -645,9 +685,9 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 
 ---
 
-## Test Coverage Analysis (llvm-cov, Feb 10, 2026)
+## Test Coverage Analysis (llvm-cov, Mar 14, 2026)
 
-**Overall**: 56.75% region coverage across 314 source files (80,769 regions, 34,933 missed)
+**Overall**: 75.21% region coverage (4,275 tests, 0 failures)
 
 ### Coverage Distribution
 
@@ -731,7 +771,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 # Build
 cargo build --workspace
 
-# Test (2,798+ tests)
+# Test (4,275+ tests)
 cargo test --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -766,8 +806,8 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 **IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate)
 **Security**: A++ (Two-seed Dark Forest)
 **Code Quality**: A+ (Pure Rust, idiomatic, zero warnings, full doc coverage, table-driven routing)
-**Tests**: 3,148 passing sequential (71.47% region coverage via llvm-cov)
+**Tests**: 4,275 passing sequential (75.21% region coverage via llvm-cov)
 **Clippy**: PASS (0 warnings) | **Format**: PASS
 **Docs**: Full coverage (0 missing_docs warnings across 8 crates)
 **Unsafe Code**: 0 (production + tests)
-**External C deps**: 0 (libc removed, pure Rust)
+**External C deps**: 0 (nix→rustix, sysinfo→/proc, libc removed, pure Rust)

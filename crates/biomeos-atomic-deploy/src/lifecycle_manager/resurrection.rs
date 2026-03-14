@@ -111,24 +111,23 @@ impl LifecycleManager {
                 // Send SIGTERM first
                 #[cfg(unix)]
                 {
-                    use nix::sys::signal::{kill, Signal};
-                    use nix::unistd::Pid;
+                    use rustix::process::{kill_process, test_kill_process, Pid, Signal};
 
-                    let pid = Pid::from_raw(pid as i32);
-
-                    // Try graceful SIGTERM
-                    if kill(pid, Signal::SIGTERM).is_ok() {
-                        // Wait up to 5 seconds for graceful shutdown
-                        for _ in 0..50 {
-                            tokio::time::sleep(Duration::from_millis(100)).await;
-                            if kill(pid, None).is_err() {
-                                return Ok(()); // Process dead
+                    if let Some(rustix_pid) = Pid::from_raw(pid as i32) {
+                        // Try graceful SIGTERM
+                        if kill_process(rustix_pid, Signal::Term).is_ok() {
+                            // Wait up to 5 seconds for graceful shutdown
+                            for _ in 0..50 {
+                                tokio::time::sleep(Duration::from_millis(100)).await;
+                                if test_kill_process(rustix_pid).is_err() {
+                                    return Ok(()); // Process dead
+                                }
                             }
-                        }
 
-                        // Force SIGKILL if still running
-                        warn!("⚠️ {} didn't terminate gracefully, sending SIGKILL", name);
-                        kill(pid, Signal::SIGKILL).ok();
+                            // Force SIGKILL if still running
+                            warn!("⚠️ {} didn't terminate gracefully, sending SIGKILL", name);
+                            let _ = kill_process(rustix_pid, Signal::Kill);
+                        }
                     }
                 }
             }

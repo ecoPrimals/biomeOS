@@ -16,10 +16,10 @@ use tracing::{debug, info, warn};
 /// Get (total, used, available) bytes for a mount point via statvfs.
 #[cfg(unix)]
 fn get_mount_stats(path: &str) -> Option<(u64, u64, u64)> {
-    nix::sys::statvfs::statvfs(Path::new(path)).ok().map(|st| {
-        let frsize = st.fragment_size();
-        let total = st.blocks() * frsize;
-        let avail = st.blocks_available() * frsize;
+    rustix::fs::statvfs(Path::new(path)).ok().map(|st| {
+        let frsize = st.f_frsize;
+        let total = st.f_blocks * frsize;
+        let avail = st.f_bavail * frsize;
         let used = total.saturating_sub(avail);
         (total, used, avail)
     })

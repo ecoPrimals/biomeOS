@@ -7,22 +7,27 @@
 //! Replaces shell scripts with pure Rust tooling.
 
 use anyhow::Result;
-use std::path::Path;
-use crate::{execute_command, print_section, print_success, print_info};
+use std::path::{Path, PathBuf};
+
+use crate::{discover_workspace_root, execute_command, print_info, print_section, print_success};
 
 /// Demo configuration
 #[derive(Debug, Clone)]
 pub struct DemoConfig {
-    pub workspace_root: String,
+    /// Workspace root — discovered at runtime, never hardcoded.
+    pub workspace_root: PathBuf,
+    /// Whether to auto-advance between demos.
     pub auto_advance: bool,
+    /// Whether to pause for interactive input.
     pub interactive: bool,
+    /// Verbose output.
     pub verbose: bool,
 }
 
 impl Default for DemoConfig {
     fn default() -> Self {
         Self {
-            workspace_root: "/home/strandgate/Development".to_string(),
+            workspace_root: discover_workspace_root().unwrap_or_else(|_| PathBuf::from(".")),
             auto_advance: false,
             interactive: true,
             verbose: true,
@@ -35,115 +40,38 @@ pub async fn run_all_demos(config: &DemoConfig) -> Result<()> {
     print_section("biomeOS COMPREHENSIVE DEMO SUITE");
     print_info("Showcasing the complete biomeOS ecosystem capabilities");
     
-    // 1. Ecosystem showcase
-    run_ecosystem_showcase(config).await?;
+    // 1. Core tests demo
+    run_core_tests(config).await?;
     
-    // 2. Core platform demo
-    run_core_demo(config).await?;
-    
-    // 3. Integration tests demo
-    run_integration_demo(config).await?;
-    
-    // 4. UI showcase
-    run_ui_showcase(config).await?;
-    
-    // 5. Sovereignty features demo
+    // 2. Sovereignty features demo
     run_sovereignty_demo(config).await?;
+    
+    // 3. Capabilities overview
+    demo_capabilities(config).await?;
     
     print_success("All demonstrations completed successfully!");
     Ok(())
 }
 
-/// Run the ecosystem showcase
-async fn run_ecosystem_showcase(config: &DemoConfig) -> Result<()> {
-    print_section("🌟 ECOSYSTEM SHOWCASE");
-    print_info("Demonstrating live orchestration and ecosystem coordination");
+/// Run core workspace tests as a demo
+async fn run_core_tests(config: &DemoConfig) -> Result<()> {
+    print_section("CORE TESTS");
+    print_info("Running workspace test suite");
     
-    let workspace_path = Path::new(&config.workspace_root).join("biomeOS");
-    
+    let workspace_path = &config.workspace_root;
+
     execute_command(
         "cargo",
-        &["run", "--bin", "showcase"],
-        Some(&workspace_path)
-    ).await?;
+        &["test", "--workspace", "--", "--test-threads=1"],
+        Some(workspace_path),
+    )
+    .await?;
     
     if config.interactive {
-        wait_for_user_input("Press Enter to continue to core demo...");
+        wait_for_user_input("Press Enter to continue...");
     }
     
-    print_success("Ecosystem showcase completed");
-    Ok(())
-}
-
-/// Run the core platform demo
-async fn run_core_demo(config: &DemoConfig) -> Result<()> {
-    print_section("🧬 CORE PLATFORM DEMO");
-    print_info("Demonstrating AI-first installer and universal platform capabilities");
-    
-    let workspace_path = Path::new(&config.workspace_root).join("biomeOS");
-    
-    execute_command(
-        "cargo",
-        &["run", "--bin", "demo"],
-        Some(&workspace_path)
-    ).await?;
-    
-    if config.interactive {
-        wait_for_user_input("Press Enter to continue to integration tests...");
-    }
-    
-    print_success("Core platform demo completed");
-    Ok(())
-}
-
-/// Run integration tests as a demo
-async fn run_integration_demo(config: &DemoConfig) -> Result<()> {
-    print_section("🧪 INTEGRATION TESTS DEMO");
-    print_info("Demonstrating comprehensive ecosystem testing");
-    
-    let workspace_path = Path::new(&config.workspace_root);
-    
-    execute_command(
-        "cargo",
-        &["run", "--bin", "integration_test_runner"],
-        Some(workspace_path)
-    ).await?;
-    
-    if config.interactive {
-        wait_for_user_input("Press Enter to continue to UI showcase...");
-    }
-    
-    print_success("Integration tests demo completed");
-    Ok(())
-}
-
-/// Run UI showcase
-async fn run_ui_showcase(config: &DemoConfig) -> Result<()> {
-    print_section("🎨 UI SHOWCASE");
-    print_info("Launching biomeOS Bootstrap UI (will open in new window)");
-    
-    let workspace_path = Path::new(&config.workspace_root).join("biomeOS");
-    
-    // Launch UI in background
-    print_info("Starting biomeOS UI - check for new window...");
-    
-    // Note: We don't wait for UI to complete as it runs indefinitely
-    tokio::spawn(async move {
-        let _ = execute_command(
-            "cargo",
-            &["run", "--bin", "biomeos-ui"],
-            Some(&workspace_path)
-        ).await;
-    });
-    
-    // Give UI time to start
-    tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
-    
-    if config.interactive {
-        wait_for_user_input("UI should be running. Press Enter when ready to continue...");
-    }
-    
-    print_success("UI showcase launched");
+    print_success("Core tests completed");
     Ok(())
 }
 
@@ -187,13 +115,13 @@ async fn run_sovereignty_demo(config: &DemoConfig) -> Result<()> {
 
 /// Wait for user input (when in interactive mode)
 fn wait_for_user_input(prompt: &str) {
-    println!("\n{}", prompt);
+    println!("\n{prompt}");
     let mut input = String::new();
-    std::io::stdin().read_line(&mut input).unwrap();
+    let _ = std::io::stdin().read_line(&mut input);
 }
 
 /// Demo system capabilities
-pub async fn demo_capabilities(config: &DemoConfig) -> Result<()> {
+pub async fn demo_capabilities(_config: &DemoConfig) -> Result<()> {
     print_section("🎯 biomeOS CAPABILITIES DEMONSTRATION");
     
     print_info("🌍 Universal Platform Support:");

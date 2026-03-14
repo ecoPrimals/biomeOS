@@ -165,11 +165,11 @@ impl QemuInstance {
             // Send SIGTERM for graceful shutdown
             #[cfg(unix)]
             {
-                use nix::sys::signal::{kill, Signal};
-                use nix::unistd::Pid;
+                use rustix::process::{kill_process, Pid, Signal};
 
-                let pid = Pid::from_raw(process.id() as i32);
-                kill(pid, Signal::SIGTERM).map_err(DeployError::Process)?;
+                if let Some(pid) = Pid::from_raw(process.id() as i32) {
+                    kill_process(pid, Signal::Term).map_err(DeployError::Process)?;
+                }
             }
 
             // Wait for process to exit (with timeout)

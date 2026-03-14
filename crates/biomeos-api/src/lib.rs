@@ -157,8 +157,9 @@ async fn handle_websocket(socket: axum::extract::ws::WebSocket, state: Arc<AppSt
                         let response = match serde_json::from_str::<JsonRpcRequest>(&text) {
                             Ok(req) => match req.method.as_str() {
                                 "events.subscribe" => {
+                                    let params = req.params.clone().unwrap_or(serde_json::json!({}));
                                     let filter: SubscriptionFilter =
-                                        serde_json::from_value(req.params.clone()).unwrap_or_else(|e| {
+                                        serde_json::from_value(params).unwrap_or_else(|e| {
                                             tracing::warn!("JSON parse fallback: {}", e);
                                             Default::default()
                                         });
@@ -171,12 +172,16 @@ async fn handle_websocket(socket: axum::extract::ws::WebSocket, state: Arc<AppSt
                                             "success": true,
                                         })),
                                         error: None,
-                                        id: req.id,
+                                        id: req.id.clone().unwrap_or(serde_json::Value::Null),
                                     }
                                 }
                                 "events.unsubscribe" => {
-                                    let sub_id = req.params.get("subscription_id")
-                                        .and_then(|v| v.as_str()).unwrap_or("");
+                                    let sub_id = req
+                                        .params
+                                        .as_ref()
+                                        .and_then(|p| p.get("subscription_id"))
+                                        .and_then(serde_json::Value::as_str)
+                                        .unwrap_or("");
                                     let existed = subscriptions.write().await.remove(sub_id).is_some();
                                     JsonRpcResponse {
                                         jsonrpc: "2.0".to_string(),
@@ -185,7 +190,7 @@ async fn handle_websocket(socket: axum::extract::ws::WebSocket, state: Arc<AppSt
                                             "subscription_id": sub_id,
                                         })),
                                         error: None,
-                                        id: req.id,
+                                        id: req.id.clone().unwrap_or(serde_json::Value::Null),
                                     }
                                 }
                                 "events.list_subscriptions" => {
@@ -198,7 +203,7 @@ async fn handle_websocket(socket: axum::extract::ws::WebSocket, state: Arc<AppSt
                                             "count": sub_list.len(),
                                         })),
                                         error: None,
-                                        id: req.id,
+                                        id: req.id.clone().unwrap_or(serde_json::Value::Null),
                                     }
                                 }
                                 _ => JsonRpcResponse {
@@ -209,18 +214,14 @@ async fn handle_websocket(socket: axum::extract::ws::WebSocket, state: Arc<AppSt
                                         message: "Method not found".to_string(),
                                         data: None,
                                     }),
-                                    id: req.id,
+                                    id: req.id.clone().unwrap_or(serde_json::Value::Null),
                                 },
                             },
                             Err(_) => JsonRpcResponse {
                                 jsonrpc: "2.0".to_string(),
                                 result: None,
-                                error: Some(JsonRpcError {
-                                    code: -32700,
-                                    message: "Parse error".to_string(),
-                                    data: None,
-                                }),
-                                id: None,
+                                error: Some(JsonRpcError::parse_error()),
+                                id: serde_json::Value::Null,
                             },
                         };
                         if let Ok(json) = serde_json::to_string(&response) {
@@ -512,7 +513,7 @@ mod tests {
             jsonrpc: "2.0".to_string(),
             result: Some(serde_json::json!({"data": "test"})),
             error: None,
-            id: Some(serde_json::json!(1)),
+            id: serde_json::json!(1),
         };
         assert!(response.result.is_some());
         assert!(response.error.is_none());
@@ -528,7 +529,7 @@ mod tests {
                 message: "Invalid request".to_string(),
                 data: None,
             }),
-            id: None,
+            id: serde_json::Value::Null,
         };
         assert!(response.result.is_none());
         assert!(response.error.is_some());
@@ -601,7 +602,10 @@ mod tests {
         let req: JsonRpcRequest = serde_json::from_str(json).expect("deserialize");
         assert_eq!(req.method, "events.subscribe");
         assert_eq!(
-            req.params.get("graph_id").and_then(|v| v.as_str()),
+            req.params
+                .as_ref()
+                .and_then(|p| p.get("graph_id"))
+                .and_then(|v| v.as_str()),
             Some("g1")
         );
     }
@@ -612,7 +616,7 @@ mod tests {
             jsonrpc: "2.0".to_string(),
             result: Some(serde_json::json!({"subscription_id": "sub_1"})),
             error: None,
-            id: Some(serde_json::json!(42)),
+            id: serde_json::json!(42),
         };
         let json = serde_json::to_string(&response).expect("serialize");
         assert!(json.contains("sub_1"));

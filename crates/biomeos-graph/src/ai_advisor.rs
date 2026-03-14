@@ -197,7 +197,7 @@ struct LocalPattern {
 impl AiGraphAdvisor {
     /// Resolve the AI provider primal name via capability taxonomy
     fn ai_provider() -> &'static str {
-        CapabilityTaxonomy::resolve_to_primal("ai").unwrap_or("squirrel")
+        CapabilityTaxonomy::resolve_to_primal("ai").unwrap_or(biomeos_types::primal_names::SQUIRREL)
     }
 
     /// Create a new AI advisor

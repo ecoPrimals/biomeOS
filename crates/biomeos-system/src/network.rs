@@ -1,9 +1,38 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
-//! Network interface information and I/O metrics.
+//! Network interface information and I/O metrics (pure Rust via /proc/net/dev - ecoBin v3).
+
+use std::fs;
 
 use biomeos_types::{BiomeResult, NetworkIoMetrics};
+
+/// Parsed line from /proc/net/dev: interface name and rx/tx bytes + packets
+fn parse_net_dev(content: &str) -> Vec<(String, u64, u64, u64, u64)> {
+    let mut out = Vec::new();
+    for line in content.lines().skip(2) {
+        // Format: "  eth0: bytes packets ..."
+        let colon = match line.find(':') {
+            Some(i) => i,
+            None => continue,
+        };
+        let name = line[..colon].trim().to_string();
+        let rest = line[colon + 1..].trim();
+        let nums: Vec<u64> = rest
+            .split_whitespace()
+            .filter_map(|s| s.parse().ok())
+            .collect();
+        // Receive: bytes, packets, ... Transmit: bytes, packets, ...
+        if nums.len() >= 8 {
+            let rx_bytes = nums[0];
+            let rx_packets = nums[1];
+            let tx_bytes = nums[8];
+            let tx_packets = nums[9];
+            out.push((name, rx_bytes, rx_packets, tx_bytes, tx_packets));
+        }
+    }
+    out
+}
 
 /// Network interface information
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -58,42 +87,59 @@ pub enum NetworkInterfaceStatus {
     Unknown,
 }
 
-/// Get network information using sysinfo for cross-platform support
+/// Get network information via /proc/net/dev + /sys/class/net (pure Rust).
+#[cfg(target_os = "linux")]
 pub(crate) async fn get_network_info() -> BiomeResult<Vec<NetworkInterface>> {
-    use sysinfo::Networks;
-
-    let networks = Networks::new_with_refreshed_list();
+    let content = fs::read_to_string("/proc/net/dev").unwrap_or_default();
+    let parsed = parse_net_dev(&content);
     let mut result = Vec::new();
 
-    for (interface_name, network) in &networks {
-        // Determine interface type based on name
-        let interface_type = if interface_name.starts_with("lo") {
+    for (name, rx_bytes, rx_packets, tx_bytes, tx_packets) in parsed {
+        let interface_type = if name.starts_with("lo") {
             NetworkInterfaceType::Loopback
-        } else if interface_name.starts_with("eth") || interface_name.starts_with("enp") {
+        } else if name.starts_with("eth") || name.starts_with("enp") {
             NetworkInterfaceType::Ethernet
-        } else if interface_name.starts_with("wlan") || interface_name.starts_with("wlp") {
+        } else if name.starts_with("wlan") || name.starts_with("wlp") {
             NetworkInterfaceType::Wireless
-        } else if interface_name.starts_with("docker") || interface_name.starts_with("br") {
+        } else if name.starts_with("docker") || name.starts_with("br") {
             NetworkInterfaceType::Bridge
         } else {
-            NetworkInterfaceType::Other(interface_name.clone())
+            NetworkInterfaceType::Other(name.clone())
         };
 
+        let status = fs::read_to_string(format!("/sys/class/net/{}/operstate", name))
+            .ok()
+            .map(|s| match s.trim() {
+                "up" => NetworkInterfaceStatus::Up,
+                "down" => NetworkInterfaceStatus::Down,
+                _ => NetworkInterfaceStatus::Unknown,
+            })
+            .unwrap_or(NetworkInterfaceStatus::Unknown);
+
+        let mac_address = fs::read_to_string(format!("/sys/class/net/{}/address", name))
+            .ok()
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty());
+
+        let mtu = fs::read_to_string(format!("/sys/class/net/{}/mtu", name))
+            .ok()
+            .and_then(|s| s.trim().parse().ok())
+            .unwrap_or(0);
+
         result.push(NetworkInterface {
-            name: interface_name.clone(),
+            name,
             interface_type,
-            status: NetworkInterfaceStatus::Up, // sysinfo only shows active interfaces
-            addresses: vec![],                  // IP addresses not directly available in sysinfo
-            mac_address: Some(format!("{:?}", network.mac_address())),
-            mtu: 0, // MTU not available in sysinfo
-            bytes_sent: network.total_transmitted(),
-            bytes_received: network.total_received(),
-            packets_sent: network.total_packets_transmitted(),
-            packets_received: network.total_packets_received(),
+            status,
+            addresses: vec![], // Would require /proc/net or ip parsing
+            mac_address,
+            mtu,
+            bytes_sent: tx_bytes,
+            bytes_received: rx_bytes,
+            packets_sent: tx_packets,
+            packets_received: rx_packets,
         });
     }
 
-    // Ensure at least loopback interface for systems where detection fails
     if result.is_empty() {
         result.push(NetworkInterface {
             name: "lo".to_string(),
@@ -112,45 +158,58 @@ pub(crate) async fn get_network_info() -> BiomeResult<Vec<NetworkInterface>> {
     Ok(result)
 }
 
-/// Get current network I/O using sysinfo
+/// Non-Linux fallback.
+#[cfg(not(target_os = "linux"))]
+pub(crate) async fn get_network_info() -> BiomeResult<Vec<NetworkInterface>> {
+    Ok(vec![NetworkInterface {
+        name: "lo".to_string(),
+        interface_type: NetworkInterfaceType::Loopback,
+        status: NetworkInterfaceStatus::Up,
+        addresses: vec!["127.0.0.1".to_string()],
+        mac_address: None,
+        mtu: 65536,
+        bytes_sent: 0,
+        bytes_received: 0,
+        packets_sent: 0,
+        packets_received: 0,
+    }])
+}
+
+/// Get current network I/O via /proc/net/dev (pure Rust).
+#[cfg(target_os = "linux")]
 pub(crate) async fn get_network_io() -> BiomeResult<NetworkIoMetrics> {
-    use sysinfo::Networks;
+    let content1 = fs::read_to_string("/proc/net/dev").unwrap_or_default();
+    let parsed1 = parse_net_dev(&content1);
+    let (init_rx, init_tx, init_rxp, init_txp) = parsed1.iter().fold(
+        (0u64, 0u64, 0u64, 0u64),
+        |(rx, tx, rxp, txp), (_, a, b, c, d)| (rx + a, tx + c, rxp + b, txp + d),
+    );
 
-    let mut networks = Networks::new_with_refreshed_list();
-
-    // First measurement
-    let initial_rx: u64 = networks.values().map(|data| data.total_received()).sum();
-    let initial_tx: u64 = networks.values().map(|data| data.total_transmitted()).sum();
-    let initial_rx_packets: u64 = networks
-        .values()
-        .map(|data| data.total_packets_received())
-        .sum();
-    let initial_tx_packets: u64 = networks
-        .values()
-        .map(|data| data.total_packets_transmitted())
-        .sum();
-
-    // Wait 1 second
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
-    // Second measurement
-    networks.refresh();
-    let final_rx: u64 = networks.values().map(|data| data.total_received()).sum();
-    let final_tx: u64 = networks.values().map(|data| data.total_transmitted()).sum();
-    let final_rx_packets: u64 = networks
-        .values()
-        .map(|data| data.total_packets_received())
-        .sum();
-    let final_tx_packets: u64 = networks
-        .values()
-        .map(|data| data.total_packets_transmitted())
-        .sum();
+    let content2 = fs::read_to_string("/proc/net/dev").unwrap_or_default();
+    let parsed2 = parse_net_dev(&content2);
+    let (final_rx, final_tx, final_rxp, final_txp) = parsed2.iter().fold(
+        (0u64, 0u64, 0u64, 0u64),
+        |(rx, tx, rxp, txp), (_, a, b, c, d)| (rx + a, tx + c, rxp + b, txp + d),
+    );
 
     Ok(NetworkIoMetrics {
-        bytes_in_per_sec: (final_rx.saturating_sub(initial_rx)) as f64,
-        bytes_out_per_sec: (final_tx.saturating_sub(initial_tx)) as f64,
-        packets_in_per_sec: (final_rx_packets.saturating_sub(initial_rx_packets)) as f64,
-        packets_out_per_sec: (final_tx_packets.saturating_sub(initial_tx_packets)) as f64,
+        bytes_in_per_sec: (final_rx.saturating_sub(init_rx)) as f64,
+        bytes_out_per_sec: (final_tx.saturating_sub(init_tx)) as f64,
+        packets_in_per_sec: (final_rxp.saturating_sub(init_rxp)) as f64,
+        packets_out_per_sec: (final_txp.saturating_sub(init_txp)) as f64,
+    })
+}
+
+/// Non-Linux fallback.
+#[cfg(not(target_os = "linux"))]
+pub(crate) async fn get_network_io() -> BiomeResult<NetworkIoMetrics> {
+    Ok(NetworkIoMetrics {
+        bytes_in_per_sec: 0.0,
+        bytes_out_per_sec: 0.0,
+        packets_in_per_sec: 0.0,
+        packets_out_per_sec: 0.0,
     })
 }
 

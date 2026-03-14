@@ -5,35 +5,12 @@
 //!
 //! Provides types for parsing and handling JSON-RPC 2.0 requests and responses.
 
-use anyhow::{Context, Result};
-use serde::Deserialize;
 use serde_json::{json, Value};
 
-/// JSON-RPC 2.0 request structure
-#[derive(Debug, Deserialize)]
-pub struct JsonRpcRequest {
-    /// JSON-RPC version ("2.0")
-    #[allow(dead_code)] // wire format — deserialized but not read directly
-    pub jsonrpc: String,
-    /// Method name to invoke
-    pub method: String,
-    /// Optional parameters
-    pub params: Option<Value>,
-    /// Request ID for response correlation
-    pub id: u64,
-}
-
-impl JsonRpcRequest {
-    /// Parse a JSON-RPC request from a string
-    ///
-    /// Named `parse` to avoid confusion with `std::str::FromStr::from_str`
-    pub fn parse(request_line: &str) -> Result<Self> {
-        serde_json::from_str(request_line.trim()).context("Failed to parse JSON-RPC request")
-    }
-}
+pub use biomeos_types::JsonRpcRequest;
 
 /// Create a JSON-RPC error response
-pub fn error_response(code: i32, message: String, id: Option<u64>) -> Value {
+pub fn error_response(code: i32, message: String, id: Option<Value>) -> Value {
     json!({
         "jsonrpc": "2.0",
         "error": {
@@ -45,7 +22,7 @@ pub fn error_response(code: i32, message: String, id: Option<u64>) -> Value {
 }
 
 /// Create a JSON-RPC success response
-pub fn success_response(result: Value, id: u64) -> Value {
+pub fn success_response(result: Value, id: Value) -> Value {
     json!({
         "jsonrpc": "2.0",
         "result": result,
@@ -54,12 +31,12 @@ pub fn success_response(result: Value, id: u64) -> Value {
 }
 
 /// Create a JSON-RPC internal error response
-pub fn internal_error_response(error: &anyhow::Error, id: Option<u64>) -> Value {
+pub fn internal_error_response(error: &anyhow::Error, id: Option<Value>) -> Value {
     error_response(-32603, format!("Internal error: {}", error), id)
 }
 
 /// Create a JSON-RPC method not found error response
-pub fn method_not_found_response(method: &str, id: u64) -> Value {
+pub fn method_not_found_response(method: &str, id: Value) -> Value {
     error_response(-32601, format!("Method not found: {}", method), Some(id))
 }
 
@@ -72,7 +49,7 @@ mod tests {
         let json = r#"{"jsonrpc":"2.0","method":"test.method","params":{"a":1},"id":42}"#;
         let req = JsonRpcRequest::parse(json).expect("parse should succeed");
         assert_eq!(req.method, "test.method");
-        assert_eq!(req.id, 42);
+        assert_eq!(req.id.as_ref().and_then(|v| v.as_u64()).unwrap(), 42);
         assert_eq!(req.params.as_ref().unwrap()["a"], 1);
     }
 
@@ -81,7 +58,7 @@ mod tests {
         let json = "  \n  {\"jsonrpc\":\"2.0\",\"method\":\"foo\",\"id\":1}  ";
         let req = JsonRpcRequest::parse(json).expect("parse should succeed");
         assert_eq!(req.method, "foo");
-        assert_eq!(req.id, 1);
+        assert_eq!(req.id.as_ref().and_then(|v| v.as_u64()).unwrap(), 1);
         assert!(req.params.is_none());
     }
 
@@ -90,13 +67,21 @@ mod tests {
         let json = r#"{"jsonrpc":"2.0","method":"bar","params":null,"id":0}"#;
         let req = JsonRpcRequest::parse(json).expect("parse should succeed");
         assert_eq!(req.method, "bar");
-        assert_eq!(req.id, 0);
+        assert_eq!(req.id.as_ref().and_then(|v| v.as_u64()).unwrap(), 0);
     }
 
     #[test]
     fn test_jsonrpc_request_parse_invalid_json() {
         let err = JsonRpcRequest::parse("{invalid").expect_err("parse should fail");
-        assert!(err.to_string().contains("parse") || err.to_string().contains("JSON"));
+        let msg = err.to_string();
+        assert!(
+            msg.contains("parse")
+                || msg.contains("JSON")
+                || msg.contains("key")
+                || msg.contains("error"),
+            "error: {}",
+            msg
+        );
     }
 
     #[test]
@@ -114,7 +99,7 @@ mod tests {
 
     #[test]
     fn test_error_response() {
-        let resp = error_response(-32600, "Parse error".to_string(), Some(1));
+        let resp = error_response(-32600, "Parse error".to_string(), Some(json!(1)));
         assert_eq!(resp["jsonrpc"], "2.0");
         assert_eq!(resp["error"]["code"], -32600);
         assert_eq!(resp["error"]["message"], "Parse error");
@@ -130,7 +115,7 @@ mod tests {
     #[test]
     fn test_success_response() {
         let result = serde_json::json!({"ok": true});
-        let resp = success_response(result.clone(), 99);
+        let resp = success_response(result.clone(), json!(99));
         assert_eq!(resp["jsonrpc"], "2.0");
         assert_eq!(resp["result"], result);
         assert_eq!(resp["id"], 99);
@@ -139,7 +124,7 @@ mod tests {
     #[test]
     fn test_internal_error_response() {
         let err = anyhow::anyhow!("Something broke");
-        let resp = internal_error_response(&err, Some(5));
+        let resp = internal_error_response(&err, Some(json!(5)));
         assert_eq!(resp["error"]["code"], -32603);
         assert!(resp["error"]["message"]
             .as_str()
@@ -157,7 +142,7 @@ mod tests {
 
     #[test]
     fn test_method_not_found_response() {
-        let resp = method_not_found_response("unknown.method", 123);
+        let resp = method_not_found_response("unknown.method", json!(123));
         assert_eq!(resp["error"]["code"], -32601);
         assert_eq!(resp["error"]["message"], "Method not found: unknown.method");
         assert_eq!(resp["id"], 123);

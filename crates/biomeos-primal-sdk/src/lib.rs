@@ -73,6 +73,9 @@ pub mod discovery;
 /// Inter-primal communication helpers
 pub mod communication;
 
+/// tarpc binary transport helpers for protocol escalation
+pub mod tarpc_transport;
+
 /// Convenient prelude for common SDK imports
 pub mod prelude {
     pub use crate::communication::{PrimalClient, SecureTunnel};

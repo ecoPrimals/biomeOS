@@ -275,3 +275,237 @@ impl AISuggestionManager {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+
+    use super::*;
+    use crate::suggestions::types::{
+        DeviceInfo, Impact, PrimalInfo, SuggestedAction, SuggestionContext, SuggestionFeedback,
+        SuggestionType,
+    };
+
+    #[test]
+    fn test_new() {
+        let mgr = AISuggestionManager::new("fam1".to_string());
+        assert_eq!(mgr.family_id, "fam1");
+        assert!(mgr.get_active_suggestions().is_empty());
+    }
+
+    #[test]
+    fn test_generate_local_suggestions_empty_context() {
+        let mgr = AISuggestionManager::new("fam1".to_string());
+        let ctx = SuggestionContext {
+            assignments: std::collections::HashMap::new(),
+            available_devices: vec![],
+            running_primals: vec![],
+            recent_events: None,
+            preferences: None,
+        };
+        let suggestions = mgr.generate_local_suggestions(&ctx);
+        assert!(suggestions.is_empty());
+    }
+
+    #[test]
+    fn test_generate_local_suggestions_unassigned_device() {
+        let mgr = AISuggestionManager::new("fam1".to_string());
+        let ctx = SuggestionContext {
+            assignments: std::collections::HashMap::new(),
+            available_devices: vec![DeviceInfo {
+                id: "dev1".to_string(),
+                device_type: "gpu".to_string(),
+                capabilities: vec!["compute".to_string()],
+                current_assignment: None,
+            }],
+            running_primals: vec![PrimalInfo {
+                id: "p1".to_string(),
+                name: "beardog".to_string(),
+                primal_type: "compute".to_string(),
+                capabilities: vec!["compute".to_string()],
+                health: "healthy".to_string(),
+                load: Some(0.5),
+            }],
+            recent_events: None,
+            preferences: None,
+        };
+        let suggestions = mgr.generate_local_suggestions(&ctx);
+        assert_eq!(suggestions.len(), 1);
+        assert!(suggestions[0].id.starts_with("local_assign_"));
+        assert_eq!(
+            suggestions[0].suggestion_type,
+            SuggestionType::DeviceAssignment
+        );
+    }
+
+    #[test]
+    fn test_generate_local_suggestions_overloaded_primal() {
+        let mgr = AISuggestionManager::new("fam1".to_string());
+        let ctx = SuggestionContext {
+            assignments: std::collections::HashMap::new(),
+            available_devices: vec![],
+            running_primals: vec![PrimalInfo {
+                id: "p1".to_string(),
+                name: "heavy".to_string(),
+                primal_type: "compute".to_string(),
+                capabilities: vec!["compute".to_string()],
+                health: "healthy".to_string(),
+                load: Some(0.9),
+            }],
+            recent_events: None,
+            preferences: None,
+        };
+        let suggestions = mgr.generate_local_suggestions(&ctx);
+        assert_eq!(suggestions.len(), 1);
+        assert!(suggestions[0].id.starts_with("local_rebalance_"));
+        assert_eq!(
+            suggestions[0].suggestion_type,
+            SuggestionType::ResourceReallocation
+        );
+    }
+
+    #[test]
+    fn test_generate_local_suggestions_no_compatible_primal() {
+        let mgr = AISuggestionManager::new("fam1".to_string());
+        let ctx = SuggestionContext {
+            assignments: std::collections::HashMap::new(),
+            available_devices: vec![DeviceInfo {
+                id: "dev1".to_string(),
+                device_type: "gpu".to_string(),
+                capabilities: vec!["special".to_string()],
+                current_assignment: None,
+            }],
+            running_primals: vec![PrimalInfo {
+                id: "p1".to_string(),
+                name: "beardog".to_string(),
+                primal_type: "security".to_string(),
+                capabilities: vec!["security".to_string()],
+                health: "healthy".to_string(),
+                load: None,
+            }],
+            recent_events: None,
+            preferences: None,
+        };
+        let suggestions = mgr.generate_local_suggestions(&ctx);
+        assert!(suggestions.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_request_suggestions_stores_active() {
+        let mut mgr = AISuggestionManager::new("fam1".to_string());
+        let ctx = SuggestionContext {
+            assignments: std::collections::HashMap::new(),
+            available_devices: vec![DeviceInfo {
+                id: "dev1".to_string(),
+                device_type: "gpu".to_string(),
+                capabilities: vec!["compute".to_string()],
+                current_assignment: None,
+            }],
+            running_primals: vec![PrimalInfo {
+                id: "p1".to_string(),
+                name: "beardog".to_string(),
+                primal_type: "compute".to_string(),
+                capabilities: vec!["compute".to_string()],
+                health: "healthy".to_string(),
+                load: None,
+            }],
+            recent_events: None,
+            preferences: None,
+        };
+        let suggestions = mgr.request_suggestions(ctx).await.unwrap();
+        assert_eq!(suggestions.len(), 1);
+        assert_eq!(mgr.get_active_suggestions().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_send_feedback_removes_on_accepted() {
+        let mut mgr = AISuggestionManager::new("fam1".to_string());
+        mgr.active_suggestions.insert(
+            "s1".to_string(),
+            AISuggestion {
+                id: "s1".to_string(),
+                suggestion_type: SuggestionType::DeviceAssignment,
+                confidence: 0.8,
+                explanation: "test".to_string(),
+                action: SuggestedAction::AssignDevice {
+                    device_id: "d1".to_string(),
+                    primal_id: "p1".to_string(),
+                    reason: "test".to_string(),
+                },
+                impact: Impact {
+                    performance_improvement: Some(10.0),
+                    cost_change: None,
+                    affected_primals: vec![],
+                    risk_level: "low".to_string(),
+                },
+            },
+        );
+        mgr.send_feedback("s1", SuggestionFeedback::Accepted)
+            .await
+            .unwrap();
+        assert!(mgr.get_active_suggestions().is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_send_feedback_removes_on_rejected() {
+        let mut mgr = AISuggestionManager::new("fam1".to_string());
+        mgr.active_suggestions.insert(
+            "s2".to_string(),
+            AISuggestion {
+                id: "s2".to_string(),
+                suggestion_type: SuggestionType::DeviceAssignment,
+                confidence: 0.5,
+                explanation: "test".to_string(),
+                action: SuggestedAction::AssignDevice {
+                    device_id: "d1".to_string(),
+                    primal_id: "p1".to_string(),
+                    reason: "test".to_string(),
+                },
+                impact: Impact {
+                    performance_improvement: None,
+                    cost_change: None,
+                    affected_primals: vec![],
+                    risk_level: "low".to_string(),
+                },
+            },
+        );
+        mgr.send_feedback(
+            "s2",
+            SuggestionFeedback::Rejected {
+                reason: "not needed".to_string(),
+            },
+        )
+        .await
+        .unwrap();
+        assert!(mgr.get_active_suggestions().is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_send_feedback_dismissed_keeps_in_map() {
+        let mut mgr = AISuggestionManager::new("fam1".to_string());
+        mgr.active_suggestions.insert(
+            "s3".to_string(),
+            AISuggestion {
+                id: "s3".to_string(),
+                suggestion_type: SuggestionType::DeviceAssignment,
+                confidence: 0.5,
+                explanation: "test".to_string(),
+                action: SuggestedAction::AssignDevice {
+                    device_id: "d1".to_string(),
+                    primal_id: "p1".to_string(),
+                    reason: "test".to_string(),
+                },
+                impact: Impact {
+                    performance_improvement: None,
+                    cost_change: None,
+                    affected_primals: vec![],
+                    risk_level: "low".to_string(),
+                },
+            },
+        );
+        mgr.send_feedback("s3", SuggestionFeedback::Dismissed)
+            .await
+            .unwrap();
+        assert_eq!(mgr.get_active_suggestions().len(), 1);
+    }
+}

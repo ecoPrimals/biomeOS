@@ -6,26 +6,49 @@
 //! Ecosystem health monitoring and diagnostics for biomeOS.
 
 use anyhow::Result;
-use std::path::Path;
-use crate::{execute_command, print_section, print_success, print_info, print_warning, print_error};
+use std::path::{Path, PathBuf};
+
+use crate::{
+    discover_workspace_root, execute_command, print_error, print_info, print_section,
+    print_success, print_warning,
+};
 
 /// Health check configuration
 #[derive(Debug, Clone)]
 pub struct HealthConfig {
-    pub workspace_root: String,
+    /// Root of the workspace tree (discovered at runtime).
+    pub workspace_root: PathBuf,
+    /// Whether to run detailed per-crate checks.
     pub detailed_checks: bool,
+    /// Whether to check external dep freshness (requires `cargo-outdated`).
     pub check_external_deps: bool,
+    /// Per-command timeout.
     pub timeout_seconds: u64,
+}
+
+impl HealthConfig {
+    /// Create a config with the workspace root discovered from `cwd`.
+    ///
+    /// # Errors
+    /// Returns an error if no workspace root is found.
+    pub fn discover() -> Result<Self> {
+        Ok(Self {
+            workspace_root: discover_workspace_root()?,
+            detailed_checks: true,
+            check_external_deps: false,
+            timeout_seconds: 60,
+        })
+    }
 }
 
 impl Default for HealthConfig {
     fn default() -> Self {
-        Self {
-            workspace_root: "/home/strandgate/Development".to_string(),
+        Self::discover().unwrap_or_else(|_| Self {
+            workspace_root: PathBuf::from("."),
             detailed_checks: true,
             check_external_deps: false,
             timeout_seconds: 60,
-        }
+        })
     }
 }
 
@@ -82,14 +105,9 @@ pub async fn check_ecosystem_health(config: &HealthConfig) -> Result<Vec<HealthR
 async fn check_biomeos_core(config: &HealthConfig) -> Result<HealthResult> {
     print_info("Checking biomeOS core...");
     
-    let workspace_path = Path::new(&config.workspace_root).join("biomeOS");
-    
-    // Try to compile core
-    match execute_command(
-        "cargo",
-        &["check", "-p", "biomeos-core"],
-        Some(&workspace_path)
-    ).await {
+    let workspace_path = &config.workspace_root;
+
+    match execute_command("cargo", &["check", "-p", "biomeos-core"], Some(workspace_path)).await {
         Ok(_) => Ok(HealthResult {
             component: "biomeOS Core".to_string(),
             status: HealthStatus::Healthy,
@@ -116,14 +134,9 @@ async fn check_biomeos_core(config: &HealthConfig) -> Result<HealthResult> {
 async fn check_ui_system(config: &HealthConfig) -> Result<HealthResult> {
     print_info("Checking UI system...");
     
-    let workspace_path = Path::new(&config.workspace_root).join("biomeOS");
-    
-    // Check UI compilation
-    match execute_command(
-        "cargo",
-        &["check", "-p", "biomeos-ui"],
-        Some(&workspace_path)
-    ).await {
+    let workspace_path = &config.workspace_root;
+
+    match execute_command("cargo", &["check", "-p", "biomeos-ui"], Some(workspace_path)).await {
         Ok(_) => Ok(HealthResult {
             component: "UI System".to_string(),
             status: HealthStatus::Healthy,
@@ -150,14 +163,9 @@ async fn check_ui_system(config: &HealthConfig) -> Result<HealthResult> {
 async fn check_build_system(config: &HealthConfig) -> Result<HealthResult> {
     print_info("Checking build system...");
     
-    let workspace_path = Path::new(&config.workspace_root).join("biomeOS");
-    
-    // Check workspace compilation
-    match execute_command(
-        "cargo",
-        &["check", "--workspace"],
-        Some(&workspace_path)
-    ).await {
+    let workspace_path = &config.workspace_root;
+
+    match execute_command("cargo", &["check", "--workspace"], Some(workspace_path)).await {
         Ok(_) => Ok(HealthResult {
             component: "Build System".to_string(),
             status: HealthStatus::Healthy,
@@ -184,14 +192,9 @@ async fn check_build_system(config: &HealthConfig) -> Result<HealthResult> {
 async fn check_dependencies(config: &HealthConfig) -> Result<HealthResult> {
     print_info("Checking dependencies...");
     
-    let workspace_path = Path::new(&config.workspace_root).join("biomeOS");
-    
-    // Check for outdated dependencies
-    match execute_command(
-        "cargo",
-        &["outdated", "--workspace"],
-        Some(&workspace_path)
-    ).await {
+    let workspace_path = &config.workspace_root;
+
+    match execute_command("cargo", &["outdated", "--workspace"], Some(workspace_path)).await {
         Ok(output) => {
             if output.contains("All dependencies are up to date") || output.is_empty() {
                 Ok(HealthResult {
@@ -229,66 +232,127 @@ async fn check_dependencies(config: &HealthConfig) -> Result<HealthResult> {
     }
 }
 
-/// Check ecosystem components health
-async fn check_ecosystem_components(config: &HealthConfig) -> Result<Vec<HealthResult>> {
-    print_info("Checking ecosystem components...");
-    
+/// Check ecosystem components by probing runtime sockets.
+///
+/// Uses XDG runtime directory socket scanning — primals are discovered by
+/// capability, not by hardcoded paths.
+async fn check_ecosystem_components(_config: &HealthConfig) -> Result<Vec<HealthResult>> {
+    print_info("Checking ecosystem components via runtime socket discovery...");
+
     let mut results = Vec::new();
-    
-    // Check individual ecosystem components
-    let components = vec![
-        ("Toadstool", "toadstool"),
-        ("Songbird", "songbird"),
-        ("NestGate", "nestgate"),
-        ("Squirrel", "squirrel"),
-        ("BearDog", "bearDog2/beardog"),
-    ];
-    
-    for (name, path) in components {
-        let component_path = Path::new(&config.workspace_root).join(path);
-        
-        if component_path.exists() {
-            results.push(HealthResult {
-                component: name.to_string(),
-                status: HealthStatus::Warning,
-                message: "Component available but not integrated".to_string(),
-                details: vec![
-                    "⚠️ Component found in ecosystem".to_string(),
-                    "⚠️ Integration pending".to_string(),
-                ],
-            });
-        } else {
-            results.push(HealthResult {
-                component: name.to_string(),
-                status: HealthStatus::Unknown,
-                message: "Component not found in current workspace".to_string(),
-                details: vec![
-                    "ℹ️ Component may be in separate repository".to_string(),
-                    "ℹ️ Discovery and integration available".to_string(),
-                ],
-            });
+
+    let runtime_dir = std::env::var("XDG_RUNTIME_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| PathBuf::from("/tmp"))
+        .join("biomeos");
+
+    if !runtime_dir.exists() {
+        results.push(HealthResult {
+            component: "Runtime Discovery".to_string(),
+            status: HealthStatus::Warning,
+            message: "No biomeos runtime directory found — primals may not be running".to_string(),
+            details: vec![format!("Checked: {}", runtime_dir.display())],
+        });
+        return Ok(results);
+    }
+
+    let mut socket_count = 0u32;
+    if let Ok(entries) = std::fs::read_dir(&runtime_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            let looks_like_socket = path
+                .extension()
+                .map_or(true, |ext| ext == "sock")
+                && path.file_name().and_then(|n| n.to_str()).map_or(false, |n| {
+                    n.contains('-') || n.ends_with(".sock")
+                });
+            if looks_like_socket {
+                if let Some(name) = path.file_stem().and_then(|s| s.to_str()) {
+                    let primal_name = name.split('-').next().unwrap_or(name);
+                    socket_count += 1;
+                    results.push(HealthResult {
+                        component: primal_name.to_string(),
+                        status: HealthStatus::Healthy,
+                        message: format!("Socket discovered: {}", path.display()),
+                        details: vec!["Discovered via runtime socket scan".to_string()],
+                    });
+                }
+            }
         }
     }
-    
+
+    if socket_count == 0 {
+        results.push(HealthResult {
+            component: "Primals".to_string(),
+            status: HealthStatus::Unknown,
+            message: "No primal sockets found in runtime directory".to_string(),
+            details: vec![
+                format!("Scanned: {}", runtime_dir.display()),
+                "Start primals with `biomeos nucleus start`".to_string(),
+            ],
+        });
+    }
+
     Ok(results)
 }
 
-/// Check sovereignty features health
-async fn check_sovereignty_features(_config: &HealthConfig) -> Result<HealthResult> {
+/// Check sovereignty features by inspecting the dependency tree and build config.
+async fn check_sovereignty_features(config: &HealthConfig) -> Result<HealthResult> {
     print_info("Checking sovereignty features...");
-    
-    // Mock sovereignty check - in real implementation this would
-    // verify crypto locks, genetic keys, AI cat door, etc.
+
+    let workspace_path = &config.workspace_root;
+    let mut details = Vec::new();
+    let mut warnings = 0u32;
+
+    // Check for forbidden C-binding crates in the dep tree
+    let forbidden = ["openssl-sys", "ring", "aws-lc-sys", "native-tls", "zstd-sys"];
+    match execute_command("cargo", &["tree", "--workspace", "--prefix", "none"], Some(workspace_path)).await {
+        Ok(tree_output) => {
+            for dep in &forbidden {
+                if tree_output.contains(dep) {
+                    details.push(format!("C-binding detected: {dep}"));
+                    warnings += 1;
+                } else {
+                    details.push(format!("No {dep} in dependency tree"));
+                }
+            }
+        }
+        Err(e) => {
+            details.push(format!("Could not inspect dep tree: {e}"));
+            warnings += 1;
+        }
+    }
+
+    // Check AGPL license in workspace Cargo.toml
+    let cargo_toml = workspace_path.join("Cargo.toml");
+    if cargo_toml.exists() {
+        let content = std::fs::read_to_string(&cargo_toml).unwrap_or_default();
+        if content.contains("AGPL-3.0-only") {
+            details.push("License: AGPL-3.0-only".to_string());
+        } else {
+            details.push("License: NOT AGPL-3.0-only — sovereignty violation".to_string());
+            warnings += 1;
+        }
+    }
+
+    // Check for unsafe code policy
+    let forbid_count = match execute_command("grep", &["-r", "forbid(unsafe_code)", "crates/"], Some(workspace_path)).await {
+        Ok(output) => output.lines().count(),
+        Err(_) => 0,
+    };
+    details.push(format!("{forbid_count} crates forbid unsafe code"));
+
+    let status = if warnings > 0 {
+        HealthStatus::Warning
+    } else {
+        HealthStatus::Healthy
+    };
+
     Ok(HealthResult {
-        component: "Sovereignty Features".to_string(),
-        status: HealthStatus::Healthy,
-        message: "All sovereignty features operational".to_string(),
-        details: vec![
-            "✅ Crypto locks: 5 active, 0 bypassed".to_string(),
-            "✅ Genetic keys: Individual access level".to_string(),
-            "✅ AI cat door: $20/month protection active".to_string(),
-            "✅ Compliance score: 3/3 (Fully Sovereign)".to_string(),
-        ],
+        component: "Sovereignty".to_string(),
+        status,
+        message: format!("{warnings} sovereignty concern(s) detected"),
+        details,
     })
 }
 

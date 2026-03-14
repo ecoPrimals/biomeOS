@@ -135,7 +135,7 @@ mod tests {
                             jsonrpc: "2.0".to_string(),
                             result: Some(capacity_response),
                             error: None,
-                            id: req.id,
+                            id: req.id.clone().unwrap_or(serde_json::Value::Null),
                         };
                         let _ = writer
                             .write_all(serde_json::to_string(&response).unwrap().as_bytes())

@@ -21,3 +21,12 @@ futures = "0.3"
 
 # Tokio for async runtime
 tokio = { workspace = true }
+
+# tarpc for high-performance binary RPC (protocol escalation)
+tarpc = { workspace = true }
+
+# Tracing
+tracing = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3.8"

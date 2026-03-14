@@ -25,6 +25,7 @@
 // =============================================================================
 
 use anyhow::{Context, Result};
+use biomeos_types::{JsonRpcRequest, JsonRpcResponse};
 use serde::{Deserialize, Serialize};
 use std::io::{Read, Write};
 use std::os::unix::net::UnixStream;
@@ -61,32 +62,6 @@ pub struct IdentityAttestation {
     pub data: serde_json::Value,
 }
 
-/// JSON-RPC 2.0 request
-#[derive(Debug, Serialize)]
-struct JsonRpcRequest {
-    jsonrpc: &'static str,
-    id: u64,
-    method: String,
-    params: serde_json::Value,
-}
-
-/// JSON-RPC 2.0 response
-#[derive(Debug, Deserialize)]
-struct JsonRpcResponse {
-    #[allow(dead_code)] // wire format — deserialized but not read directly
-    jsonrpc: String,
-    #[allow(dead_code)] // wire format — deserialized but not read directly
-    id: u64,
-    result: Option<serde_json::Value>,
-    error: Option<JsonRpcError>,
-}
-
-#[derive(Debug, Deserialize)]
-struct JsonRpcError {
-    code: i32,
-    message: String,
-}
-
 /// Send a JSON-RPC request over Unix socket
 fn send_rpc_request(
     socket_path: &str,
@@ -102,10 +77,10 @@ fn send_rpc_request(
     stream.set_write_timeout(Some(Duration::from_secs(5)))?;
 
     let request = JsonRpcRequest {
-        jsonrpc: "2.0",
-        id: 1,
+        jsonrpc: "2.0".to_string(),
         method: method.to_string(),
-        params,
+        params: Some(params),
+        id: Some(serde_json::json!(1)),
     };
 
     let request_bytes = serde_json::to_vec(&request)?;

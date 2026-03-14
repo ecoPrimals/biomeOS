@@ -27,6 +27,7 @@ use anyhow::{Context, Result};
 use biomeos_spore::beacon_genetics::{
     generate_device_entropy, DirectBeardogCaller, LineageDeriver,
 };
+use biomeos_types::primal_names::BEARDOG;
 use biomeos_types::Uuid;
 use clap::Args;
 use std::path::{Path, PathBuf};
@@ -194,14 +195,14 @@ fn get_machine_id() -> Option<String> {
 fn discover_beardog_socket() -> Option<String> {
     // Try XDG runtime dir first
     if let Ok(runtime_dir) = std::env::var("XDG_RUNTIME_DIR") {
-        let xdg_path = format!("{}/biomeos/beardog.sock", runtime_dir);
+        let xdg_path = format!("{}/biomeos/{}.sock", runtime_dir, BEARDOG);
         if std::path::Path::new(&xdg_path).exists() {
             return Some(xdg_path);
         }
 
         // Try with family ID
         if let Ok(family_id) = std::env::var("FAMILY_ID") {
-            let family_path = format!("{}/biomeos/beardog-{}.sock", runtime_dir, family_id);
+            let family_path = format!("{}/biomeos/{}-{}.sock", runtime_dir, BEARDOG, family_id);
             if std::path::Path::new(&family_path).exists() {
                 return Some(family_path);
             }
@@ -210,20 +211,22 @@ fn discover_beardog_socket() -> Option<String> {
 
     // Try XDG-compliant paths (no hardcoded UID)
     let paths = biomeos_types::paths::SystemPaths::new_lazy();
-    let xdg_socket = paths.primal_socket("beardog");
+    let xdg_socket = paths.primal_socket(BEARDOG);
     if xdg_socket.exists() {
         return Some(xdg_socket.to_string_lossy().to_string());
     }
 
     // Also check family-suffixed variant
     let family_id = std::env::var("FAMILY_ID").unwrap_or_else(|_| "family".to_string());
-    let family_socket = paths.primal_socket(&format!("beardog-{}", family_id));
+    let family_socket = paths.primal_socket(&format!("{}-{}", BEARDOG, family_id));
     if family_socket.exists() {
         return Some(family_socket.to_string_lossy().to_string());
     }
 
     // Legacy /tmp fallback
-    for name in &["beardog.sock", &format!("beardog-{}.sock", family_id)] {
+    let bd_sock = format!("{}.sock", BEARDOG);
+    let bd_family_sock = format!("{}-{}.sock", BEARDOG, family_id);
+    for name in &[bd_sock.as_str(), bd_family_sock.as_str()] {
         let path = format!("/tmp/{}", name);
         if std::path::Path::new(&path).exists() {
             return Some(path);
@@ -243,6 +246,12 @@ mod tests {
     fn test_resolve_device_id_explicit() {
         let id = resolve_device_id(Some("custom-device-123"));
         assert_eq!(id, "custom-device-123");
+    }
+
+    #[test]
+    fn test_resolve_device_id_empty_string_filters() {
+        let id = resolve_device_id(Some(""));
+        assert!(!id.is_empty());
     }
 
     #[test]

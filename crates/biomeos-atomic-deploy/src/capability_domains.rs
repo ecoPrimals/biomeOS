@@ -12,6 +12,10 @@
 //! biomeOS orchestrates, primals execute primitives.
 //! The mapping is SEMANTIC → PROVIDER (not implementation-specific).
 
+use biomeos_types::primal_names::{
+    BEARDOG, LOAMSPINE, NESTGATE, RHIZOCRYPT, SONGBIRD, SQUIRREL, SWEETGRASS, TOADSTOOL,
+};
+
 /// Capability domain configuration
 /// Loaded from config/capability_registry.toml in production
 pub(crate) struct CapabilityDomain {
@@ -24,7 +28,7 @@ pub(crate) struct CapabilityDomain {
 pub(crate) const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
     // Security domain (BearDog)
     CapabilityDomain {
-        provider: "beardog",
+        provider: BEARDOG,
         capabilities: &[
             "security",
             "crypto",
@@ -37,7 +41,7 @@ pub(crate) const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
     },
     // Network domain (Songbird)
     CapabilityDomain {
-        provider: "songbird",
+        provider: SONGBIRD,
         capabilities: &[
             "discovery",
             "http",
@@ -48,22 +52,22 @@ pub(crate) const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
     },
     // Storage domain (NestGate)
     CapabilityDomain {
-        provider: "nestgate",
+        provider: NESTGATE,
         capabilities: &["storage", "versioning", "persistence"],
     },
     // Compute domain (ToadStool)
     CapabilityDomain {
-        provider: "toadstool",
+        provider: TOADSTOOL,
         capabilities: &["compute", "execution", "parsing", "hardware_learning"],
     },
     // AI domain (Squirrel)
     CapabilityDomain {
-        provider: "squirrel",
+        provider: SQUIRREL,
         capabilities: &["ai", "mcp", "assistance", "ml"],
     },
     // Data domain (NestGate live providers)
     CapabilityDomain {
-        provider: "nestgate",
+        provider: NESTGATE,
         capabilities: &[
             "data",
             "ncbi",
@@ -153,7 +157,7 @@ pub(crate) const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
     },
     // Ephemeral workspace domain (rhizoCrypt)
     CapabilityDomain {
-        provider: "rhizocrypt",
+        provider: RHIZOCRYPT,
         capabilities: &[
             "ephemeral_workspace",
             "dag",
@@ -166,7 +170,7 @@ pub(crate) const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
     },
     // Permanent history domain (LoamSpine)
     CapabilityDomain {
-        provider: "loamspine",
+        provider: LOAMSPINE,
         capabilities: &[
             "permanent_storage",
             "linear_history",
@@ -178,7 +182,7 @@ pub(crate) const CAPABILITY_DOMAINS: &[CapabilityDomain] = &[
     },
     // Attribution domain (sweetGrass)
     CapabilityDomain {
-        provider: "sweetgrass",
+        provider: SWEETGRASS,
         capabilities: &[
             "attribution",
             "braid",
@@ -427,10 +431,7 @@ mod tests {
             capability_to_provider_fallback("certificate"),
             Some("loamspine")
         );
-        assert_eq!(
-            capability_to_provider_fallback("commit"),
-            Some("loamspine")
-        );
+        assert_eq!(capability_to_provider_fallback("commit"), Some("loamspine"));
         assert_eq!(
             capability_to_provider_fallback("commit.session"),
             Some("loamspine")

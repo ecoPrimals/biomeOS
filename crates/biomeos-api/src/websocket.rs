@@ -27,96 +27,9 @@ use tokio::sync::RwLock;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::WebSocketStream;
 
-// Re-export GraphEvent and GraphEventBroadcaster from biomeos-graph
-// This maintains proper module boundaries
+// Re-export JSON-RPC types and graph types
 pub use biomeos_graph::{GraphEvent, GraphEventBroadcaster};
-
-/// JSON-RPC 2.0 request structure
-#[derive(Debug, Clone, Deserialize)]
-pub struct JsonRpcRequest {
-    /// JSON-RPC version (must be "2.0")
-    pub jsonrpc: String,
-    /// Method name to invoke
-    pub method: String,
-    /// Method parameters
-    pub params: serde_json::Value,
-    /// Request identifier (None for notifications)
-    pub id: Option<serde_json::Value>,
-}
-
-/// JSON-RPC 2.0 response structure
-#[derive(Debug, Clone, Serialize)]
-pub struct JsonRpcResponse {
-    /// JSON-RPC version (always "2.0")
-    pub jsonrpc: String,
-    /// Successful result value
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub result: Option<serde_json::Value>,
-    /// Error object (mutually exclusive with result)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub error: Option<JsonRpcError>,
-    /// Request identifier echoed back
-    pub id: Option<serde_json::Value>,
-}
-
-/// JSON-RPC 2.0 error structure
-#[derive(Debug, Clone, Serialize)]
-pub struct JsonRpcError {
-    /// Standard JSON-RPC error code
-    pub code: i32,
-    /// Human-readable error message
-    pub message: String,
-    /// Additional error data
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub data: Option<serde_json::Value>,
-}
-
-impl JsonRpcError {
-    /// Create a parse error (-32700)
-    pub fn parse_error() -> Self {
-        Self {
-            code: -32700,
-            message: "Parse error".to_string(),
-            data: None,
-        }
-    }
-
-    /// Create an invalid request error (-32600)
-    pub fn invalid_request() -> Self {
-        Self {
-            code: -32600,
-            message: "Invalid Request".to_string(),
-            data: None,
-        }
-    }
-
-    /// Create a method not found error (-32601)
-    pub fn method_not_found() -> Self {
-        Self {
-            code: -32601,
-            message: "Method not found".to_string(),
-            data: None,
-        }
-    }
-
-    /// Create an invalid params error (-32602)
-    pub fn invalid_params(details: Option<String>) -> Self {
-        Self {
-            code: -32602,
-            message: "Invalid params".to_string(),
-            data: details.map(|d| serde_json::json!({"details": d})),
-        }
-    }
-
-    /// Create an internal error (-32603)
-    pub fn internal_error(details: Option<String>) -> Self {
-        Self {
-            code: -32603,
-            message: "Internal error".to_string(),
-            data: details.map(|d| serde_json::json!({"details": d})),
-        }
-    }
-}
+pub use biomeos_types::{JsonRpcError, JsonRpcRequest, JsonRpcResponse};
 
 /// Subscription filter parameters
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
@@ -298,7 +211,7 @@ impl GraphEventWebSocketServer {
                     jsonrpc: "2.0".to_string(),
                     result: None,
                     error: Some(JsonRpcError::parse_error()),
-                    id: None,
+                    id: serde_json::Value::Null,
                 };
             }
         };
@@ -309,25 +222,23 @@ impl GraphEventWebSocketServer {
                 jsonrpc: "2.0".to_string(),
                 result: None,
                 error: Some(JsonRpcError::invalid_request()),
-                id: request.id,
+                id: request.id.unwrap_or(serde_json::Value::Null),
             };
         }
+
+        let params = request.params.unwrap_or(serde_json::Value::Null);
 
         // Handle method
         let result = match request.method.as_str() {
             "events.subscribe" => {
-                Self::handle_subscribe(
-                    request.params,
-                    subscriptions,
-                    event_broadcaster,
-                    response_tx,
-                )
-                .await
+                Self::handle_subscribe(params, subscriptions, event_broadcaster, response_tx).await
             }
-            "events.unsubscribe" => Self::handle_unsubscribe(request.params, subscriptions).await,
+            "events.unsubscribe" => Self::handle_unsubscribe(params, subscriptions).await,
             "events.list_subscriptions" => Self::handle_list_subscriptions(subscriptions).await,
             _ => Err(JsonRpcError::method_not_found()),
         };
+
+        let id = request.id.unwrap_or(serde_json::Value::Null);
 
         // Build response
         match result {
@@ -335,13 +246,13 @@ impl GraphEventWebSocketServer {
                 jsonrpc: "2.0".to_string(),
                 result: Some(value),
                 error: None,
-                id: request.id,
+                id,
             },
             Err(error) => JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
                 result: None,
                 error: Some(error),
-                id: request.id,
+                id,
             },
         }
     }
@@ -381,7 +292,7 @@ impl GraphEventWebSocketServer {
                             "event": event,
                         })),
                         error: None,
-                        id: None, // Notifications have no ID
+                        id: serde_json::Value::Null, // Notifications have no ID
                     };
 
                     if let Ok(json) = serde_json::to_string(&notification) {
@@ -565,7 +476,7 @@ mod tests {
             jsonrpc: "2.0".to_string(),
             result: Some(serde_json::json!({"success": true})),
             error: None,
-            id: Some(serde_json::json!(1)),
+            id: serde_json::json!(1),
         };
 
         let json = serde_json::to_string(&response).expect("serialize");
@@ -730,7 +641,7 @@ mod tests {
             error: Some(JsonRpcError::invalid_params(Some(
                 "missing field".to_string(),
             ))),
-            id: Some(serde_json::json!("req-1")),
+            id: serde_json::json!("req-1"),
         };
         let json = serde_json::to_string(&response).expect("serialize");
         assert!(json.contains("error"));

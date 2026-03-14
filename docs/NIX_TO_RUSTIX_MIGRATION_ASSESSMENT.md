@@ -1,7 +1,7 @@
 # nix to rustix Migration Assessment
 
-**Date:** 2025-03-13  
-**Status:** Assessment only — DO NOT migrate without careful testing.  
+**Date:** 2026-03-13  
+**Status:** COMPLETED — all 8 crates migrated from nix to rustix. See CURRENT_STATUS.md.  
 **Scope:** Crates using `nix` in the biomeOS workspace.
 
 ---

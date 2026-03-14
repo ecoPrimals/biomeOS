@@ -193,8 +193,8 @@ async fn verify_cryptographic_lineage(
 
     // Discover security provider for cryptographic operations
     // DEEP DEBT EVOLUTION: Resolve provider name from env, not hardcoded
-    let security_provider =
-        std::env::var("BIOMEOS_SECURITY_PROVIDER").unwrap_or_else(|_| "beardog".to_string());
+    let security_provider = std::env::var("BIOMEOS_SECURITY_PROVIDER")
+        .unwrap_or_else(|_| biomeos_types::primal_names::BEARDOG.to_string());
     let beardog = AtomicClient::discover(&security_provider)
         .await
         .context(format!(
@@ -267,6 +267,8 @@ async fn verify_cryptographic_lineage(
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used)]
+
     use super::*;
     use std::io::Write;
 
@@ -447,5 +449,44 @@ node_id = "test-node-456"
         let v = result.expect("verify_lineage should succeed");
         assert_eq!(v.family_id.as_deref(), Some("only-family"));
         assert_eq!(v.node_id, None);
+    }
+
+    #[tokio::test]
+    async fn test_verify_lineage_manifest_invalid_toml() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        let manifest_path = dir.path().join("manifest.toml");
+        std::fs::write(&manifest_path, "invalid toml [ broken \n").expect("write manifest");
+
+        let path = dir.path().to_path_buf();
+        let result = verify_lineage(&path, false).await;
+        let v = result.expect("verify_lineage should succeed");
+        assert!(v.valid);
+        assert!(v.details.contains(&"Manifest found".to_string()));
+        assert_eq!(v.family_id, None);
+        assert_eq!(v.node_id, None);
+    }
+
+    #[tokio::test]
+    async fn test_verify_lineage_manifest_empty() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        let manifest_path = dir.path().join("manifest.toml");
+        std::fs::write(&manifest_path, "").expect("write manifest");
+
+        let path = dir.path().to_path_buf();
+        let result = verify_lineage(&path, false).await;
+        let v = result.expect("verify_lineage should succeed");
+        assert!(v.valid);
+    }
+
+    #[tokio::test]
+    async fn test_run_success_displays_details() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        let manifest_path = dir.path().join("manifest.toml");
+        std::fs::write(&manifest_path, "family_id = \"f\"\nnode_id = \"n\"\n").expect("write");
+        let seed_path = dir.path().join(".family.seed");
+        std::fs::write(&seed_path, [0u8; 64]).expect("write seed");
+
+        let result = run(dir.path().to_path_buf(), false).await;
+        assert!(result.is_ok());
     }
 }

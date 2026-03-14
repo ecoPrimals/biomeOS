@@ -10,8 +10,8 @@
 use anyhow::{Context, Result};
 use biomeos_boot::{BootLogger, BootStage};
 use biomeos_core::observability::MinimalObserver;
-use nix::mount::{mount, MsFlags};
-use nix::unistd::getpid;
+use rustix::mount::{mount, MountFlags};
+use rustix::process::getpid;
 use std::path::Path;
 use std::process::ExitCode;
 use std::time::Instant;
@@ -45,14 +45,15 @@ async fn main() -> ExitCode {
 
     // Verify we're PID 1
     let pid = getpid();
+    let pid_raw = rustix::process::Pid::as_raw(Some(pid));
 
     if let Some(ref mut logger) = boot_logger {
-        logger.info(&format!("PID: {}", pid));
+        logger.info(&format!("PID: {}", pid_raw));
     }
 
-    if pid.as_raw() != 1 {
+    if !pid.is_init() {
         if let Some(ref mut logger) = boot_logger {
-            logger.critical(&format!("Must run as PID 1, got {}", pid));
+            logger.critical(&format!("Must run as PID 1, got {}", pid_raw));
         }
         return ExitCode::FAILURE;
     }
@@ -89,7 +90,7 @@ async fn main() -> ExitCode {
     info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     info!("BiomeOS Init - Pure Rust Initialization System");
     info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    info!("PID: {}", pid);
+    info!("PID: {}", pid_raw);
 
     // Run initialization sequence
     if let Err(e) = initialize().await {
@@ -227,46 +228,50 @@ async fn mount_essential_filesystems() -> Result<()> {
     info!("📁 Mounting essential filesystems...");
 
     // /proc - Process information
-    mount_filesystem("proc", "/proc", "proc", MsFlags::empty()).context("Failed to mount /proc")?;
+    mount_filesystem("proc", "/proc", "proc", MountFlags::empty())
+        .context("Failed to mount /proc")?;
 
     // /sys - Kernel and device information
-    mount_filesystem("sysfs", "/sys", "sysfs", MsFlags::empty()).context("Failed to mount /sys")?;
+    mount_filesystem("sysfs", "/sys", "sysfs", MountFlags::empty())
+        .context("Failed to mount /sys")?;
 
     // /dev - Device files
-    mount_filesystem("devtmpfs", "/dev", "devtmpfs", MsFlags::empty())
+    mount_filesystem("devtmpfs", "/dev", "devtmpfs", MountFlags::empty())
         .context("Failed to mount /dev")?;
 
     // /dev/pts - Pseudo-terminals
-    mount_filesystem("devpts", "/dev/pts", "devpts", MsFlags::empty())
+    mount_filesystem("devpts", "/dev/pts", "devpts", MountFlags::empty())
         .context("Failed to mount /dev/pts")?;
 
     // /dev/shm - Shared memory
-    mount_filesystem("tmpfs", "/dev/shm", "tmpfs", MsFlags::empty())
+    mount_filesystem("tmpfs", "/dev/shm", "tmpfs", MountFlags::empty())
         .context("Failed to mount /dev/shm")?;
 
     // /run - Runtime data
-    mount_filesystem("tmpfs", "/run", "tmpfs", MsFlags::empty()).context("Failed to mount /run")?;
+    mount_filesystem("tmpfs", "/run", "tmpfs", MountFlags::empty())
+        .context("Failed to mount /run")?;
 
     // /tmp - Temporary files
-    mount_filesystem("tmpfs", "/tmp", "tmpfs", MsFlags::empty()).context("Failed to mount /tmp")?;
+    mount_filesystem("tmpfs", "/tmp", "tmpfs", MountFlags::empty())
+        .context("Failed to mount /tmp")?;
 
     info!("✅ Essential filesystems mounted");
     Ok(())
 }
 
 /// Mount a single filesystem (helper)
-fn mount_filesystem(source: &str, target: &str, fstype: &str, flags: MsFlags) -> Result<()> {
+fn mount_filesystem(source: &str, target: &str, fstype: &str, flags: MountFlags) -> Result<()> {
     // Create mount point if it doesn't exist
     std::fs::create_dir_all(target)
         .with_context(|| format!("Failed to create directory: {}", target))?;
 
     // Try to mount - if already mounted (EBUSY), that's OK
-    match mount(Some(source), target, Some(fstype), flags, None::<&str>) {
+    match mount(source, target, fstype, flags, "") {
         Ok(_) => {
             info!("  ✓ {}", target);
             Ok(())
         }
-        Err(nix::errno::Errno::EBUSY) => {
+        Err(rustix::io::Errno::BUSY) => {
             // Already mounted - this is fine
             info!("  ✓ {} (already mounted)", target);
             Ok(())
@@ -280,20 +285,41 @@ fn mount_filesystem(source: &str, target: &str, fstype: &str, flags: MsFlags) ->
     }
 }
 
-/// Detect hardware capabilities
+/// Detect hardware capabilities via /proc (pure Rust - ecoBin v3).
 async fn detect_hardware() -> Result<HardwareInfo> {
-    use sysinfo::System;
+    let _ = tokio::task::yield_now().await;
 
-    let mut sys = System::new_all();
-    sys.refresh_all();
+    #[cfg(target_os = "linux")]
+    let (cpu_count, total_memory_gb) = {
+        let cpu_count = std::fs::read_to_string("/proc/cpuinfo")
+            .ok()
+            .map(|s| s.lines().filter(|l| l.starts_with("processor")).count())
+            .unwrap_or(1)
+            .max(1);
+        let total_memory_gb = std::fs::read_to_string("/proc/meminfo")
+            .ok()
+            .and_then(|s| {
+                s.lines()
+                    .find(|l| l.starts_with("MemTotal:"))
+                    .and_then(|l| l.split_whitespace().nth(1))
+                    .and_then(|v| v.parse::<u64>().ok())
+            })
+            .map(|kb| (kb * 1024) / (1024 * 1024 * 1024))
+            .unwrap_or(0) as usize;
+        (cpu_count, total_memory_gb)
+    };
 
-    let cpu_count = sys.cpus().len();
-    let total_memory = sys.total_memory();
-    let total_memory_gb = total_memory / (1024 * 1024 * 1024);
+    #[cfg(not(target_os = "linux"))]
+    let (cpu_count, total_memory_gb) = (
+        std::thread::available_parallelism()
+            .map(|p| p.get())
+            .unwrap_or(1),
+        0usize,
+    );
 
     Ok(HardwareInfo {
         cpu_count,
-        total_memory_gb: total_memory_gb as usize,
+        total_memory_gb,
     })
 }
 
@@ -344,7 +370,7 @@ async fn mount_biomeos_usb(device: &Path) -> Result<()> {
         .to_str()
         .ok_or_else(|| anyhow::anyhow!("Invalid UTF-8 in device path"))?;
 
-    mount_filesystem(device_str, "/biomeos", "auto", MsFlags::MS_RDONLY)
+    mount_filesystem(device_str, "/biomeos", "auto", MountFlags::RDONLY)
         .context("Failed to mount BiomeOS USB")?;
 
     info!("✅ BiomeOS USB mounted at /biomeos");

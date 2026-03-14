@@ -41,7 +41,6 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::net::{TcpStream, UnixStream};
@@ -51,59 +50,8 @@ use tracing::{debug, trace};
 // Import the Universal IPC v3.0 transport types
 use crate::socket_discovery::{SocketDiscovery, TransportEndpoint};
 
-/// JSON-RPC 2.0 Request
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct JsonRpcRequest {
-    /// Protocol version (always "2.0")
-    pub jsonrpc: String,
-    /// Method name
-    pub method: String,
-    /// Method parameters
-    pub params: Value,
-    /// Request identifier
-    pub id: u64,
-}
-
-impl JsonRpcRequest {
-    /// Create a new JSON-RPC request with auto-incremented ID
-    pub fn new(method: impl Into<String>, params: Value) -> Self {
-        static REQUEST_ID: AtomicU64 = AtomicU64::new(1);
-
-        Self {
-            jsonrpc: "2.0".to_string(),
-            method: method.into(),
-            params,
-            id: REQUEST_ID.fetch_add(1, Ordering::SeqCst),
-        }
-    }
-}
-
-/// JSON-RPC 2.0 Response
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct JsonRpcResponse {
-    /// Protocol version
-    pub jsonrpc: String,
-    /// Successful result payload
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub result: Option<Value>,
-    /// Error payload
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub error: Option<JsonRpcError>,
-    /// Corresponding request identifier
-    pub id: u64,
-}
-
-/// JSON-RPC 2.0 Error
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct JsonRpcError {
-    /// Numeric error code
-    pub code: i32,
-    /// Human-readable error message
-    pub message: String,
-    /// Optional structured data
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub data: Option<Value>,
-}
+// Re-export JSON-RPC types from biomeos-types for backwards compatibility
+pub use biomeos_types::{JsonRpcError, JsonRpcRequest, JsonRpcResponse};
 
 /// Atomic Multi-Transport Client - Universal IPC Standard v3.0
 ///

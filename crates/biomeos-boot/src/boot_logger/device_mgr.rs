@@ -6,7 +6,7 @@
 //! Creates and manages device nodes required for boot logging.
 
 use crate::init_error::{BootError, Result};
-use nix::sys::stat::{makedev, mknod, Mode, SFlag};
+use rustix::fs::{makedev, mknodat, FileType, Mode, CWD};
 use std::path::Path;
 
 /// Manages device node creation and permissions
@@ -47,15 +47,12 @@ impl DeviceManager {
 
         // Create character device
         // Major 4 = TTY devices, Minor 64 = ttyS0 (COM1)
-        mknod(
-            path,
-            SFlag::S_IFCHR,
-            Mode::S_IRUSR | Mode::S_IWUSR | Mode::S_IRGRP | Mode::S_IWGRP,
-            makedev(4, 64),
-        )
-        .map_err(|e| BootError::DeviceCreation {
-            device: path.to_string(),
-            error: format!("mknod failed: {}", e),
+        let mode = Mode::from_bits_truncate(0o660);
+        mknodat(CWD, path, FileType::CharacterDevice, mode, makedev(4, 64)).map_err(|e| {
+            BootError::DeviceCreation {
+                device: path.to_string(),
+                error: format!("mknod failed: {}", e),
+            }
         })?;
 
         // Note: chown requires additional nix features
@@ -80,15 +77,12 @@ impl DeviceManager {
         }
 
         // Major 4, Minor 0 = tty0 (VGA console)
-        mknod(
-            path,
-            SFlag::S_IFCHR,
-            Mode::S_IRUSR | Mode::S_IWUSR | Mode::S_IRGRP | Mode::S_IWGRP,
-            makedev(4, 0),
-        )
-        .map_err(|e| BootError::DeviceCreation {
-            device: path.to_string(),
-            error: format!("mknod failed: {}", e),
+        let mode = Mode::from_bits_truncate(0o660);
+        mknodat(CWD, path, FileType::CharacterDevice, mode, makedev(4, 0)).map_err(|e| {
+            BootError::DeviceCreation {
+                device: path.to_string(),
+                error: format!("mknod failed: {}", e),
+            }
         })?;
 
         Ok(())

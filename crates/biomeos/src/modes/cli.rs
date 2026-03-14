@@ -80,10 +80,9 @@ async fn show_system_summary() -> Result<()> {
             for entry in entries.flatten() {
                 let name = entry.file_name().to_string_lossy().to_string();
                 if name.ends_with(".sock")
-                    && (name.contains("beardog")
-                        || name.contains("songbird")
-                        || name.contains("nestgate")
-                        || name.contains("toadstool"))
+                    && biomeos_types::primal_names::CORE_PRIMALS
+                        .iter()
+                        .any(|p| name.contains(p))
                 {
                     primal_count += 1;
                 }

@@ -7,12 +7,11 @@
 ## Prerequisites
 
 ```bash
-# BiomeOS with required primals
-cd biomeOS/
-./deploy-real-primals.sh
+# Start biomeOS with required primals
+biomeos nucleus start --mode full --node-id tower1
 
 # Verify primals
-./showcase/common/discovery.sh
+biomeos doctor
 ```
 
 **Required Primals**:
@@ -193,7 +192,7 @@ rootpulse log --anchor consensus  # Consensus ordering
 # Error: "rhizoCrypt not discovered"
 
 # Check primal status
-./showcase/common/discovery.sh
+biomeos doctor
 
 # Install missing primal
 # (See PRIMAL_GAPS.md for each primal)

@@ -6,23 +6,28 @@
 //! Enhanced testing utilities and coverage analysis for biomeOS.
 
 use anyhow::Result;
-use std::path::Path;
-use crate::{execute_command, print_section, print_success, print_info};
+use std::path::{Path, PathBuf};
+
+use crate::{discover_workspace_root, execute_command, print_info, print_section, print_success};
 
 /// Test suite configuration
 #[derive(Debug, Clone)]
 pub struct TestConfig {
-    pub workspace_root: String,
+    /// Workspace root — discovered at runtime, never hardcoded.
+    pub workspace_root: PathBuf,
+    /// Minimum acceptable coverage percentage.
     pub coverage_threshold: f64,
+    /// Per-test timeout in seconds.
     pub test_timeout: u64,
+    /// Whether to run tests in parallel.
     pub parallel: bool,
 }
 
 impl Default for TestConfig {
     fn default() -> Self {
         Self {
-            workspace_root: "/home/strandgate/Development".to_string(),
-            coverage_threshold: 50.0,
+            workspace_root: discover_workspace_root().unwrap_or_else(|_| PathBuf::from(".")),
+            coverage_threshold: 90.0,
             test_timeout: 300,
             parallel: true,
         }
@@ -33,18 +38,11 @@ impl Default for TestConfig {
 pub async fn run_all_tests(config: &TestConfig) -> Result<()> {
     print_section("biomeOS COMPREHENSIVE TEST SUITE");
     
-    let workspace_path = Path::new(&config.workspace_root);
-    
-    // Run unit tests
+    let workspace_path = &config.workspace_root;
+
     run_unit_tests(workspace_path).await?;
-    
-    // Run integration tests
     run_integration_tests(workspace_path).await?;
-    
-    // Run UI tests
     run_ui_tests(workspace_path).await?;
-    
-    // Run benchmark tests
     run_benchmarks(workspace_path).await?;
     
     print_success("All test suites completed successfully");
@@ -115,55 +113,55 @@ async fn run_benchmarks(workspace_path: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Generate test coverage report
+/// Generate test coverage report using `cargo llvm-cov`.
 pub async fn generate_coverage_report(config: &TestConfig) -> Result<f64> {
-    print_section("Test Coverage Analysis");
-    
-    let workspace_path = Path::new(&config.workspace_root);
-    
-    // Install tarpaulin if needed
-    if !crate::binary_exists("cargo-tarpaulin") {
-        print_info("Installing cargo-tarpaulin...");
-        execute_command("cargo", &["install", "cargo-tarpaulin"], None).await?;
+    print_section("Test Coverage Analysis (llvm-cov)");
+
+    let workspace_path = &config.workspace_root;
+
+    if !crate::binary_exists("cargo-llvm-cov") {
+        print_info("Installing cargo-llvm-cov...");
+        execute_command("cargo", &["install", "cargo-llvm-cov"], None).await?;
     }
-    
-    // Generate coverage report
+
     let output = execute_command(
         "cargo",
-        &[
-            "tarpaulin",
-            "--workspace",
-            "--exclude-files", "target/*",
-            "--exclude-files", "*/tests/*",
-            "--out", "Html",
-            "--output-dir", "target/coverage"
-        ],
-        Some(workspace_path)
-    ).await?;
-    
-    let coverage = extract_coverage_percentage(&output);
-    
-    print_info(&format!("Test coverage: {:.1}%", coverage));
-    print_info("Coverage report generated at target/coverage/tarpaulin-report.html");
-    
+        &["llvm-cov", "--workspace", "--summary-only"],
+        Some(workspace_path),
+    )
+    .await?;
+
+    let coverage = extract_llvm_cov_region_percent(&output);
+
+    print_info(&format!("Region coverage: {coverage:.1}%"));
+
     if coverage >= config.coverage_threshold {
-        print_success(&format!("Coverage {:.1}% meets threshold of {:.1}%", coverage, config.coverage_threshold));
+        print_success(&format!(
+            "Coverage {coverage:.1}% meets threshold of {:.1}%",
+            config.coverage_threshold
+        ));
     } else {
-        crate::print_warning(&format!("Coverage {:.1}% below threshold of {:.1}%", coverage, config.coverage_threshold));
+        crate::print_warning(&format!(
+            "Coverage {coverage:.1}% below threshold of {:.1}%",
+            config.coverage_threshold
+        ));
     }
-    
+
     Ok(coverage)
 }
 
-/// Extract coverage percentage from tarpaulin output
-fn extract_coverage_percentage(output: &str) -> f64 {
-    // Parse tarpaulin output to extract coverage percentage
-    // This is a simplified version - real implementation would parse properly
-    for line in output.lines() {
-        if line.contains("Coverage Results:") || line.contains("%") {
-            // Extract percentage using regex or string parsing
-            // For now, return a mock value
-            return 73.5;
+/// Parse the TOTAL line from `cargo llvm-cov --summary-only`.
+fn extract_llvm_cov_region_percent(output: &str) -> f64 {
+    for line in output.lines().rev() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("TOTAL") {
+            for token in trimmed.split_whitespace() {
+                if let Some(pct_str) = token.strip_suffix('%') {
+                    if let Ok(pct) = pct_str.parse::<f64>() {
+                        return pct;
+                    }
+                }
+            }
         }
     }
     0.0

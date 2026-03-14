@@ -82,12 +82,10 @@ async fn probe_device(path: PathBuf) -> SporeResult<UsbDevice> {
     #[cfg(unix)]
     let (available_space, total_space) = {
         let path_clone = path.clone();
-        match tokio::task::spawn_blocking(move || nix::sys::statvfs::statvfs(path_clone.as_path()))
-            .await
-        {
+        match tokio::task::spawn_blocking(move || rustix::fs::statvfs(path_clone.as_path())).await {
             Ok(Ok(st)) => {
-                let avail = st.blocks_available() * st.fragment_size();
-                let total = st.blocks() * st.fragment_size();
+                let avail = st.f_bavail * st.f_frsize;
+                let total = st.f_blocks * st.f_frsize;
                 (avail, total)
             }
             _ => {

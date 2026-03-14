@@ -6,7 +6,7 @@
 //! Routes JSON-RPC requests to appropriate handlers based on method name.
 //! Uses a table-driven handler registry for O(1) lookup.
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use serde_json::Value;
 use tracing::{debug, trace};
 
@@ -184,15 +184,17 @@ impl NeuralApiServer {
     /// - Lifecycle management → LifecycleHandler
     /// - Protocol escalation → ProtocolHandler
     pub async fn handle_request(&self, request_line: &str) -> Result<Value> {
-        let request = JsonRpcRequest::parse(request_line)?;
+        let request =
+            JsonRpcRequest::parse(request_line).context("Failed to parse JSON-RPC request")?;
 
-        debug!("📥 Request: {} (id: {})", request.method, request.id);
+        let id = request.id.clone().unwrap_or(serde_json::Value::Null);
+        debug!("📥 Request: {} (id: {})", request.method, id);
         trace!("📥 Full request: {}", request_line.trim());
 
         let route = match lookup_route(&request.method) {
             Some(r) => r,
             None => {
-                return Ok(method_not_found_response(&request.method, request.id));
+                return Ok(method_not_found_response(&request.method, id));
             }
         };
 
@@ -272,12 +274,18 @@ impl NeuralApiServer {
                     }));
                     self.capability_handler.call(&cap_params).await?
                 } else {
-                    return Ok(method_not_found_response(&request.method, request.id));
+                    return Ok(method_not_found_response(
+                        &request.method,
+                        request.id.clone().unwrap_or(serde_json::Value::Null),
+                    ));
                 }
             }
         };
 
-        Ok(super::rpc::success_response(result, request.id))
+        Ok(super::rpc::success_response(
+            result,
+            request.id.clone().unwrap_or(serde_json::Value::Null),
+        ))
     }
 }
 
@@ -423,17 +431,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_handle_request_missing_id() {
+        // JSON-RPC 2.0 allows omitting id (notification); we accept and echo null
         let (server, _temp) = create_test_server();
         let req = r#"{"jsonrpc":"2.0","method":"graph.list"}"#;
-        let err = server
+        let result = server
             .handle_request(req)
             .await
-            .expect_err("missing id should fail");
-        assert!(
-            err.to_string().contains("parse") || err.to_string().contains("missing"),
-            "expected parse/missing error: {}",
-            err
-        );
+            .expect("request without id is valid");
+        assert_eq!(result["id"], serde_json::Value::Null);
     }
 
     #[tokio::test]

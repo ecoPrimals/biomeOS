@@ -2,6 +2,50 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## [v2.35] - 2026-03-14 (Zero-Copy + Primal Constants + tarpc Wiring + Coverage Push)
+
+### Zero-Copy Evolution
+- `SignatureResult.signature` evolved from `Vec<u8>` to `bytes::Bytes` with custom base64 serde helpers for JSON compatibility
+- `bytes` and `base64` added as workspace dependencies in `biomeos-types`
+
+### Centralized Primal Names
+- New `biomeos-types::primal_names` module: canonical constants for all 8 primals (`BEARDOG`, `SONGBIRD`, `TOADSTOOL`, `NESTGATE`, `SQUIRREL`, `LOAMSPINE`, `RHIZOCRYPT`, `SWEETGRASS`)
+- `CORE_PRIMALS` and `PROVENANCE_PRIMALS` slices, `is_known_primal()` helper
+- 15 production files across 8 crates updated — zero hardcoded primal strings remain
+
+### tarpc Transport Wiring
+- `unix` feature enabled on workspace `tarpc` dependency
+- New `biomeos-primal-sdk::tarpc_transport` module: `prepare_socket()`, `tarpc_socket_name()`, `tarpc_socket_path()`
+- Documented protocol escalation pattern (JSON-RPC primary → tarpc binary for performance)
+
+### Coverage Push (+183 tests)
+- capability_taxonomy definition: 35 new tests (resolve, ambiguity, fallback, strictness)
+- subfederation manager: 20 new tests (registration, routing, health scoring)
+- dark forest beacon: 22 new tests (ECDH exchange, renewal, lineage verification)
+- service core: 27 new tests (serde roundtrips, method equality, default values)
+- service security: 20 new tests (JWT, signing, trust level transitions)
+- networking services: 22 new tests (relay config, STUN, mesh routing)
+- tarpc transport: 7 new tests (naming, socket prep, path conventions)
+
+### Code Quality
+| Metric | Before | After |
+|--------|--------|-------|
+| Tests | 4,092 | 4,275 |
+| Clippy warnings | 0 | 0 |
+| Files >1000 LOC | 0 | 0 |
+| Hardcoded primals | scattered | 0 (centralized constants) |
+| Zero-copy payloads | partial | `bytes::Bytes` + base64 serde |
+
+---
+
+## [v2.34] - 2026-03-13 (Deep Debt Evolution + ecoBin v3.0 Compliance)
+
+Deep debt evolution: nix→rustix, sysinfo→/proc, large file refactoring, JSON-RPC consolidation,
+hardcoded path/IP elimination, mock production code evolution, deny.toml, forbid(unsafe).
+4,092 tests, 75.21% region coverage, 0 clippy warnings, 0 unsafe code, 0 C dependencies.
+
+---
+
 ## [v2.33] - 2026-03-13 (Provenance Trio Graph Deployments)
 
 ### Provenance Trio Integration

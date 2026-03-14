@@ -25,7 +25,60 @@
 //! tarpc (fast, binary, type-safe)
 //! ```
 
+use bytes::Bytes;
 use serde::{Deserialize, Serialize};
+
+/// Serde helpers for `bytes::Bytes` — serializes as base64 for JSON-RPC wire
+/// compatibility while preserving zero-copy semantics in memory.
+pub mod bytes_serde {
+    use bytes::Bytes;
+    use serde::{Deserialize, Deserializer, Serializer};
+
+    /// Serialize `Bytes` as base64 string.
+    pub fn serialize<S: Serializer>(b: &Bytes, s: S) -> Result<S::Ok, S::Error> {
+        use base64::Engine;
+        s.serialize_str(&base64::engine::general_purpose::STANDARD.encode(b))
+    }
+
+    /// Deserialize `Bytes` from base64 string.
+    pub fn deserialize<'de, D: Deserializer<'de>>(d: D) -> Result<Bytes, D::Error> {
+        use base64::Engine;
+        let encoded = String::deserialize(d)?;
+        base64::engine::general_purpose::STANDARD
+            .decode(&encoded)
+            .map(Bytes::from)
+            .map_err(serde::de::Error::custom)
+    }
+}
+
+/// Serde helpers for `Option<Bytes>`.
+pub mod option_bytes_serde {
+    use bytes::Bytes;
+    use serde::{Deserialize, Deserializer, Serializer};
+
+    /// Serialize `Option<Bytes>` as optional base64 string.
+    pub fn serialize<S: Serializer>(opt: &Option<Bytes>, s: S) -> Result<S::Ok, S::Error> {
+        match opt {
+            Some(b) => super::bytes_serde::serialize(b, s),
+            None => s.serialize_none(),
+        }
+    }
+
+    /// Deserialize `Option<Bytes>` from optional base64 string.
+    pub fn deserialize<'de, D: Deserializer<'de>>(d: D) -> Result<Option<Bytes>, D::Error> {
+        let opt: Option<String> = Option::deserialize(d)?;
+        match opt {
+            Some(encoded) => {
+                use base64::Engine;
+                base64::engine::general_purpose::STANDARD
+                    .decode(&encoded)
+                    .map(|v| Some(Bytes::from(v)))
+                    .map_err(serde::de::Error::custom)
+            }
+            None => Ok(None),
+        }
+    }
+}
 
 // ============================================================================
 // Core tarpc Service Traits
@@ -64,6 +117,8 @@ pub trait DiscoveryRpc {
 }
 
 /// Security service - implemented by BearDog
+///
+/// Binary payloads use `bytes::Bytes` for zero-copy passing between layers.
 #[tarpc::service]
 pub trait SecurityRpc {
     /// Sign data with primal's key
@@ -187,8 +242,9 @@ pub struct ProtocolInfo {
 pub struct SignatureResult {
     /// Whether signing succeeded
     pub success: bool,
-    /// Signature bytes
-    pub signature: Option<Vec<u8>>,
+    /// Signature bytes (zero-copy via `bytes::Bytes`)
+    #[serde(default, with = "option_bytes_serde")]
+    pub signature: Option<Bytes>,
     /// Error message if failed
     pub error: Option<String>,
 }
@@ -257,8 +313,10 @@ pub fn protocol_from_env() -> ProtocolPreference {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+    use bytes::Bytes;
 
     #[test]
     fn test_health_status() {
@@ -376,10 +434,23 @@ mod tests {
     fn test_signature_result() {
         let ok = SignatureResult {
             success: true,
-            signature: Some(vec![1, 2, 3]),
+            signature: Some(Bytes::from_static(&[1, 2, 3])),
             error: None,
         };
         assert!(ok.success);
+        assert_eq!(ok.signature.as_ref().unwrap().len(), 3);
+    }
+
+    #[test]
+    fn test_signature_result_serde_roundtrip() {
+        let original = SignatureResult {
+            success: true,
+            signature: Some(Bytes::from_static(&[0xde, 0xad, 0xbe, 0xef])),
+            error: None,
+        };
+        let json = serde_json::to_string(&original).expect("serialize");
+        let parsed: SignatureResult = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(parsed.signature, original.signature);
     }
 
     #[test]
