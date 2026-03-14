@@ -1,0 +1,120 @@
+# =============================================================================
+# ludoSpring Analysis Loop — Continuous Game-Science Coordination
+# =============================================================================
+#
+# Runs ludoSpring's game-science analysis at 10 Hz alongside a live game:
+#
+#   telemetry → flow analysis → engagement → difficulty adjustment
+#                                            ↑ feedback
+#
+# Unlike game_engine_tick.toml (60 Hz render loop), this is a slower
+# analysis loop that consumes telemetry events and produces adaptive
+# recommendations. At 10 Hz, each tick has a 100ms budget — comfortable
+# for the statistical analysis functions.
+#
+# Provenance: On session end, the accumulated analysis is committed to
+# the provenance trio via provenance_pipeline.toml.
+#
+# Prerequisites:
+#   - ludoSpring IPC server running (socket available)
+#   - Optionally: rhizoCrypt + loamSpine + sweetGrass for provenance
+#
+# Usage:
+#   biomeos continuous graphs/ludospring_analysis_loop.toml
+#
+# =============================================================================
+
+[graph]
+id = "ludospring-analysis-loop"
+name = "ludoSpring Game-Science Analysis"
+version = "1.0.0"
+description = "10 Hz continuous game-science analysis: telemetry → flow → engagement → DDA"
+coordination = "continuous"
+
+[graph.tick]
+target_hz = 10.0
+max_accumulator_ms = 500.0
+budget_warning_ms = 50.0
+
+[graph.metadata]
+category = "analysis"
+author = "biomeOS + ludoSpring"
+created = "2026-03-14"
+
+# =============================================================================
+# Node: Telemetry Ingest
+# =============================================================================
+# Polls the telemetry stream for new events since last tick.
+# Events are NDJSON from the game engine or experiment harness.
+
+[[graph.nodes]]
+id = "telemetry"
+name = "Telemetry Ingest"
+capability = "game.poll_telemetry"
+budget_ms = 10.0
+
+[graph.nodes.config]
+primal = "ludospring"
+
+[graph.nodes.params]
+batch = true
+since_last_tick = true
+
+# =============================================================================
+# Node: Flow Analysis
+# =============================================================================
+# Evaluate flow state (challenge vs skill) from recent telemetry.
+# Uses ludoSpring's evaluate_flow with accumulator-derived metrics.
+
+[[graph.nodes]]
+id = "flow"
+name = "Flow Analysis"
+capability = "game.evaluate_flow"
+depends_on = ["telemetry"]
+budget_ms = 20.0
+
+[graph.nodes.config]
+primal = "ludospring"
+
+[graph.nodes.params]
+events_ref = "${telemetry.output}"
+
+# =============================================================================
+# Node: Engagement Metrics
+# =============================================================================
+# Compute real-time engagement composite from accumulated session data.
+# Runs alongside flow analysis (no dependency between them).
+
+[[graph.nodes]]
+id = "engagement"
+name = "Engagement Metrics"
+capability = "game.engagement"
+depends_on = ["telemetry"]
+budget_ms = 20.0
+
+[graph.nodes.config]
+primal = "ludospring"
+
+[graph.nodes.params]
+events_ref = "${telemetry.output}"
+
+# =============================================================================
+# Node: Difficulty Adjustment
+# =============================================================================
+# Suggest difficulty changes based on flow state and engagement.
+# Feeds back to the next tick's telemetry interpretation.
+
+[[graph.nodes]]
+id = "dda"
+name = "Difficulty Adjustment"
+capability = "game.difficulty_adjustment"
+depends_on = ["flow", "engagement"]
+feedback_to = "telemetry"
+budget_ms = 20.0
+
+[graph.nodes.config]
+primal = "ludospring"
+
+[graph.nodes.params]
+flow_ref = "${flow.output}"
+engagement_ref = "${engagement.output}"
