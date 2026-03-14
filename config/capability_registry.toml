@@ -623,17 +623,25 @@ capabilities = [
 ]
 
 [translations.attribution]
-"provenance.create_braid" = { provider = "sweetgrass", method = "sweetgrass.createBraid" }
-"provenance.get_braid" = { provider = "sweetgrass", method = "sweetgrass.getBraid" }
-"provenance.query_braids" = { provider = "sweetgrass", method = "sweetgrass.queryBraids" }
-"provenance.graph" = { provider = "sweetgrass", method = "sweetgrass.provenanceGraph" }
-"provenance.attribution_chain" = { provider = "sweetgrass", method = "sweetgrass.attributionChain" }
-"provenance.calculate_rewards" = { provider = "sweetgrass", method = "sweetgrass.calculateRewards" }
-"provenance.record_contribution" = { provider = "sweetgrass", method = "sweetgrass.recordContribution" }
-"provenance.record_session" = { provider = "sweetgrass", method = "sweetgrass.recordSession" }
-"provenance.export_provo" = { provider = "sweetgrass", method = "sweetgrass.exportProvo" }
-"provenance.compress_session" = { provider = "sweetgrass", method = "sweetgrass.compressSession" }
-"provenance.health" = { provider = "sweetgrass", method = "sweetgrass.health" }
+# sweetGrass v0.7.5: methods follow {domain}.{operation} snake_case standard
+"provenance.create_braid" = { provider = "sweetgrass", method = "braid.create" }
+"provenance.get_braid" = { provider = "sweetgrass", method = "braid.get" }
+"provenance.get_braid_by_hash" = { provider = "sweetgrass", method = "braid.get_by_hash" }
+"provenance.query_braids" = { provider = "sweetgrass", method = "braid.query" }
+"provenance.delete_braid" = { provider = "sweetgrass", method = "braid.delete" }
+"provenance.commit_braid" = { provider = "sweetgrass", method = "braid.commit" }
+"provenance.graph" = { provider = "sweetgrass", method = "provenance.graph" }
+"provenance.export_provo" = { provider = "sweetgrass", method = "provenance.export_provo" }
+"provenance.attribution_chain" = { provider = "sweetgrass", method = "attribution.chain" }
+"provenance.top_contributors" = { provider = "sweetgrass", method = "attribution.top_contributors" }
+"provenance.compress_session" = { provider = "sweetgrass", method = "compression.compress_session" }
+"provenance.record_contribution" = { provider = "sweetgrass", method = "contribution.record" }
+"provenance.record_session" = { provider = "sweetgrass", method = "contribution.record_session" }
+"provenance.record_dehydration" = { provider = "sweetgrass", method = "contribution.record_dehydration" }
+"provenance.anchor" = { provider = "sweetgrass", method = "anchoring.anchor" }
+"provenance.verify_anchor" = { provider = "sweetgrass", method = "anchoring.verify" }
+"provenance.get_anchors" = { provider = "sweetgrass", method = "anchoring.get_anchors" }
+"provenance.health" = { provider = "sweetgrass", method = "health.check" }
 
 # ==============================================================================
 # SOCKET PATH TEMPLATES
