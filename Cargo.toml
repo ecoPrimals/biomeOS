@@ -157,6 +157,9 @@ description.workspace = true
 keywords.workspace = true
 categories.workspace = true
 
+[lib]
+doc = false
+
 [dependencies]
 # Core BiomeOS components
 biomeos-core = { path = "crates/biomeos-core" }

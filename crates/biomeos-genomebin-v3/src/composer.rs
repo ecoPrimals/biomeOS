@@ -11,6 +11,7 @@
 
 use crate::GenomeBin;
 use anyhow::{Context, Result};
+use biomeos_types::primal_names::{BEARDOG, NESTGATE, SONGBIRD, TOADSTOOL};
 
 /// Composer for fractal genomeBin composition
 pub struct GenomeBinComposer {
@@ -82,16 +83,16 @@ impl GenomeBinComposer {
         match atomic_type {
             "TOWER" => {
                 // TOWER = BearDog + Songbird
-                let expected = vec!["beardog", "songbird"];
+                let expected = vec![BEARDOG, SONGBIRD];
                 self.validate_components(&expected, "TOWER")
             }
             "NODE" => {
                 // NODE = TOWER + Toadstool
                 // Accept either: (beardog + songbird + toadstool) OR (tower + toadstool)
                 let has_tower = self.genomes.iter().any(|g| g.manifest.name == "tower");
-                let has_components = self.genomes.iter().any(|g| g.manifest.name == "beardog")
-                    && self.genomes.iter().any(|g| g.manifest.name == "songbird");
-                let has_toadstool = self.genomes.iter().any(|g| g.manifest.name == "toadstool");
+                let has_components = self.genomes.iter().any(|g| g.manifest.name == BEARDOG)
+                    && self.genomes.iter().any(|g| g.manifest.name == SONGBIRD);
+                let has_toadstool = self.genomes.iter().any(|g| g.manifest.name == TOADSTOOL);
 
                 if !has_toadstool {
                     anyhow::bail!("NODE atomic requires toadstool");
@@ -108,9 +109,9 @@ impl GenomeBinComposer {
             "NEST" => {
                 // NEST = TOWER + NestGate
                 let has_tower = self.genomes.iter().any(|g| g.manifest.name == "tower");
-                let has_components = self.genomes.iter().any(|g| g.manifest.name == "beardog")
-                    && self.genomes.iter().any(|g| g.manifest.name == "songbird");
-                let has_nestgate = self.genomes.iter().any(|g| g.manifest.name == "nestgate");
+                let has_components = self.genomes.iter().any(|g| g.manifest.name == BEARDOG)
+                    && self.genomes.iter().any(|g| g.manifest.name == SONGBIRD);
+                let has_nestgate = self.genomes.iter().any(|g| g.manifest.name == NESTGATE);
 
                 if !has_nestgate {
                     anyhow::bail!("NEST atomic requires nestgate");
@@ -124,7 +125,7 @@ impl GenomeBinComposer {
             }
             "NUCLEUS" => {
                 // NUCLEUS = TOWER + NODE + NEST (or all 5 primals)
-                let required = vec!["beardog", "songbird", "toadstool", "nestgate"];
+                let required = vec![BEARDOG, SONGBIRD, TOADSTOOL, NESTGATE];
                 for primal in &required {
                     if !self.genomes.iter().any(|g| g.manifest.name == *primal) {
                         anyhow::bail!("NUCLEUS requires {primal}");

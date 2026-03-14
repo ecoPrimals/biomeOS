@@ -50,7 +50,7 @@ created = "2026-03-11"
 [[graph.nodes]]
 id = "input"
 name = "Input Collection"
-capability = "interaction.poll_sensors"
+capability = "interaction.poll"
 budget_ms = 1.0
 
 [graph.nodes.config]
@@ -111,7 +111,7 @@ dt = "fixed"
 [[graph.nodes]]
 id = "scene"
 name = "Scene Build"
-capability = "visualization.build_scene"
+capability = "visualization.render"
 depends_on = ["physics"]
 feedback_to = "render"
 budget_ms = 3.0

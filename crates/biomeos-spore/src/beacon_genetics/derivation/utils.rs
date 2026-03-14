@@ -3,8 +3,10 @@
 
 //! Device lineage derivation utilities
 
+use bytes::Bytes;
+
 /// Generate device entropy from available sources
-pub fn generate_device_entropy() -> Vec<u8> {
+pub fn generate_device_entropy() -> Bytes {
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
 
@@ -29,7 +31,7 @@ pub fn generate_device_entropy() -> Vec<u8> {
         entropy.extend_from_slice(&h.finish().to_le_bytes());
     }
 
-    entropy
+    Bytes::from(entropy)
 }
 
 #[cfg(test)]

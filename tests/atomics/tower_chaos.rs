@@ -9,7 +9,7 @@ mod tests {
     use anyhow::Result;
     use serial_test::serial;
     use std::time::Duration;
-    use tokio::time::sleep;
+    use tokio::time::{sleep, timeout};
     use nix::sys::signal::Signal;
     
     // Import common test infrastructure
@@ -38,8 +38,18 @@ mod tests {
             signal: Signal::SIGKILL,
         }).await?;
         
-        // Wait for detection
-        sleep(Duration::from_secs(5)).await;
+        // Wait for Songbird to detect BearDog failure (poll until health fails or timeout)
+        let _ = timeout(
+            Duration::from_secs(5),
+            async {
+                loop {
+                    if tower.songbird.health_check().await.is_err() {
+                        break;
+                    }
+                    sleep(Duration::from_millis(50)).await;
+                }
+            },
+        ).await;
         
         // Verify Songbird detects failure
         println!("🔷 Checking Songbird status...");
@@ -49,10 +59,9 @@ mod tests {
         
         println!("✅ BearDog termination detected");
         
-        // Restart BearDog (recovery test)
+        // Restart BearDog (recovery test) - start_beardog already waits for health
         println!("🔷 Recovering: Restarting BearDog...");
         let new_beardog = start_beardog().await?;
-        sleep(Duration::from_secs(3)).await;
         
         // Verify recovery
         assert!(new_beardog.health_check().await.is_ok(), "BearDog recovery failed");
@@ -87,8 +96,7 @@ mod tests {
             duration: Duration::from_secs(10),
         }).await?;
         
-        // Verify still functional under load
-        sleep(Duration::from_secs(5)).await;
+        // chaos.inject blocks for duration; verify still functional after load
         println!("🔷 Checking health under CPU load...");
         
         // Health checks may be slower but should still work
@@ -103,10 +111,7 @@ mod tests {
         
         println!("✅ Tower survived CPU load");
         
-        // Wait for chaos to end
-        sleep(Duration::from_secs(6)).await;
-        
-        // Verify recovery
+        // chaos.inject already blocked for full duration; verify recovery
         assert!(tower.is_healthy().await, "Tower didn't recover from CPU load");
         println!("✅ Tower recovered from CPU load");
         
@@ -137,8 +142,7 @@ mod tests {
             duration: Duration::from_secs(5),
         }).await?;
         
-        // Verify still functional
-        sleep(Duration::from_secs(3)).await;
+        // chaos.inject blocks for duration; verify still functional after pressure
         println!("🔷 Checking health under memory pressure...");
         
         // System should still respond
@@ -147,10 +151,7 @@ mod tests {
         
         println!("✅ Tower survived memory pressure");
         
-        // Wait for recovery
-        sleep(Duration::from_secs(3)).await;
-        
-        // Verify full recovery
+        // chaos.inject already blocked for full duration; verify full recovery
         assert!(tower.is_healthy().await, "Tower didn't recover from memory pressure");
         println!("✅ Tower recovered from memory pressure");
         
@@ -181,8 +182,7 @@ mod tests {
             socket_path: beardog_socket.clone(),
         }).await?;
         
-        // Try to connect (should fail)
-        sleep(Duration::from_secs(1)).await;
+        // Socket corruption is immediate; try to connect (should fail)
         println!("🔷 Attempting connection to corrupted socket...");
         let result = tower.beardog.health_check().await;
         assert!(result.is_err(), "Should fail to connect to corrupted socket");
@@ -195,9 +195,7 @@ mod tests {
             socket_path: beardog_socket,
         }).await?;
         
-        sleep(Duration::from_secs(1)).await;
-        
-        // Verify recovery
+        // Recover restores permissions immediately; verify with health check
         assert!(tower.beardog.health_check().await.is_ok(), "Socket recovery failed");
         println!("✅ Socket recovered");
         

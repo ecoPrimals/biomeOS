@@ -14,12 +14,16 @@ mod client_tests {
     async fn run_mock_server_one_shot(
         socket_path: &Path,
         response: serde_json::Value,
+        ready_tx: Option<tokio::sync::oneshot::Sender<()>>,
     ) -> tokio::task::JoinHandle<()> {
         let path = socket_path.to_path_buf();
         let response_json = serde_json::to_string(&response).expect("serialize response");
 
         tokio::spawn(async move {
             let listener = UnixListener::bind(&path).expect("bind mock socket");
+            if let Some(tx) = ready_tx {
+                let _ = tx.send(());
+            }
             if let Ok((mut stream, _)) = listener.accept().await {
                 let mut buf = vec![0u8; 4096];
                 let n = stream.read(&mut buf).await.expect("read request");
@@ -79,8 +83,9 @@ mod client_tests {
             "id": 1
         });
 
-        let _server = run_mock_server_one_shot(&socket_path, rpc_response).await;
-        tokio::time::sleep(Duration::from_millis(50)).await;
+        let (ready_tx, ready_rx) = tokio::sync::oneshot::channel();
+        let _server = run_mock_server_one_shot(&socket_path, rpc_response, Some(ready_tx)).await;
+        ready_rx.await.expect("server ready");
 
         let client = NeuralApiClient::new(&socket_path)
             .expect("create client")
@@ -118,8 +123,9 @@ mod client_tests {
             "id": 1
         });
 
-        let _server = run_mock_server_one_shot(&socket_path, rpc_response).await;
-        tokio::time::sleep(Duration::from_millis(50)).await;
+        let (ready_tx, ready_rx) = tokio::sync::oneshot::channel();
+        let _server = run_mock_server_one_shot(&socket_path, rpc_response, Some(ready_tx)).await;
+        ready_rx.await.expect("server ready");
 
         let client = NeuralApiClient::new(&socket_path)
             .expect("create client")

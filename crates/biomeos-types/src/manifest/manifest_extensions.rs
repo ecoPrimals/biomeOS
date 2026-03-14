@@ -6,6 +6,7 @@
 //! This module contains manifest extension types including BiomeDependency,
 //! ConfigSpec, SecretSpec, health monitoring, and other extension specifications.
 
+use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -58,7 +59,7 @@ pub struct ConfigSpec {
     pub data: HashMap<String, String>,
 
     /// Binary data
-    pub binary_data: HashMap<String, Vec<u8>>,
+    pub binary_data: HashMap<String, Bytes>,
 
     /// Immutable flag
     pub immutable: bool,
@@ -71,7 +72,7 @@ pub struct SecretSpec {
     pub secret_type: SecretType,
 
     /// Secret data
-    pub data: HashMap<String, Vec<u8>>,
+    pub data: HashMap<String, Bytes>,
 
     /// String data
     pub string_data: HashMap<String, String>,

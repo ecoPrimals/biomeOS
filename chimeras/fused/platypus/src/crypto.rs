@@ -6,8 +6,9 @@
 //! This module contains genetic material from BearDog, adapted
 //! for the Platypus organism's unique niche.
 
-use ed25519_dalek::{SigningKey, VerifyingKey, Signature, Signer, Verifier};
 use blake3::Hasher;
+use bytes::Bytes;
+use ed25519_dalek::{SigningKey, Signature, Signer, VerifyingKey, Verifier};
 use serde::{Deserialize, Serialize};
 
 /// Genetic keys - cryptographic identity that can evolve
@@ -108,7 +109,7 @@ pub struct Identity {
     pub id: String,
     
     /// Public key bytes
-    pub public_key: Vec<u8>,
+    pub public_key: Bytes,
     
     /// Generation
     pub generation: u64,
@@ -127,7 +128,7 @@ impl Identity {
         
         Self {
             id: format!("did:platypus:{}", hex::encode(&id_hash.as_bytes()[..16])),
-            public_key: verifying.as_bytes().to_vec(),
+            public_key: Bytes::from(verifying.as_bytes().to_vec()),
             generation: keys.generation(),
             lineage_hashes: keys.lineage.iter()
                 .map(|h| hex::encode(&h[..8]))
@@ -141,7 +142,7 @@ impl Identity {
             return false;
         }
         
-        let key_bytes: [u8; 32] = match self.public_key.as_slice().try_into() {
+        let key_bytes: [u8; 32] = match self.public_key[..].try_into() {
             Ok(bytes) => bytes,
             Err(_) => return false,
         };

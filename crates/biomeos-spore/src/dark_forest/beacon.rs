@@ -8,6 +8,7 @@
 
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use biomeos_types::{JsonRpcRequest, JSONRPC_VERSION};
+use bytes::Bytes;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -407,7 +408,7 @@ impl DarkForestBeacon {
         socket_path: &str,
         capabilities: &[&str],
         lineage_mode: Option<&str>,
-    ) -> SporeResult<Vec<u8>> {
+    ) -> SporeResult<Bytes> {
         info!("🌑 Generating pure noise Dark Forest beacon (A++ security)");
 
         let beacon_key = self.derive_dedicated_beacon_key().await?;
@@ -478,7 +479,7 @@ impl DarkForestBeacon {
             beacon_bytes.len()
         );
 
-        Ok(beacon_bytes)
+        Ok(Bytes::from(beacon_bytes))
     }
 
     /// Try to decrypt pure noise beacon (TRUE Dark Forest)

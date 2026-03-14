@@ -5,12 +5,40 @@
 //
 // Deep Debt: Fast AND Safe - uses nix crate for safe POSIX syscalls
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::time::Duration;
-use tokio::time::sleep;
+use tokio::time::Instant;
 use anyhow::{Result, Context};
 use nix::unistd::Uid;
+
+/// Wait for a Unix socket to appear on the filesystem.
+async fn wait_for_socket(path: &Path, timeout: Duration) -> Result<()> {
+    let deadline = Instant::now() + timeout;
+    loop {
+        if path.exists() {
+            return Ok(());
+        }
+        if Instant::now() > deadline {
+            anyhow::bail!("Socket {} did not appear within {:?}", path.display(), timeout);
+        }
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+}
+
+/// Wait for a primal to respond to health checks (socket exists and service is ready).
+async fn wait_for_health(handle: &PrimalHandle, timeout: Duration) -> Result<()> {
+    let deadline = Instant::now() + timeout;
+    loop {
+        if handle.health_check().await.is_ok() {
+            return Ok(());
+        }
+        if Instant::now() > deadline {
+            anyhow::bail!("{} did not become healthy within {:?}", handle.name, timeout);
+        }
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+}
 
 /// Primal process handle
 pub struct PrimalHandle {
@@ -116,21 +144,15 @@ pub async fn start_beardog() -> Result<PrimalHandle> {
     
     let pid = process.id();
     
-    // Wait for socket creation
-    for _ in 0..30 {
-        if socket_path.exists() {
-            sleep(Duration::from_millis(500)).await; // Stabilize
-            return Ok(PrimalHandle {
-                name: "beardog".to_string(),
-                process,
-                socket_path,
-                pid,
-            });
-        }
-        sleep(Duration::from_millis(100)).await;
-    }
-    
-    Err(anyhow::anyhow!("BearDog socket not created within 3 seconds"))
+    wait_for_socket(&socket_path, Duration::from_secs(5)).await?;
+    let handle = PrimalHandle {
+        name: "beardog".to_string(),
+        process,
+        socket_path,
+        pid,
+    };
+    wait_for_health(&handle, Duration::from_secs(2)).await?;
+    Ok(handle)
 }
 
 /// Start Songbird primal
@@ -155,21 +177,15 @@ pub async fn start_songbird(beardog: &PrimalHandle) -> Result<PrimalHandle> {
     
     let pid = process.id();
     
-    // Wait for socket creation
-    for _ in 0..30 {
-        if socket_path.exists() {
-            sleep(Duration::from_millis(500)).await; // Stabilize
-            return Ok(PrimalHandle {
-                name: "songbird".to_string(),
-                process,
-                socket_path,
-                pid,
-            });
-        }
-        sleep(Duration::from_millis(100)).await;
-    }
-    
-    Err(anyhow::anyhow!("Songbird socket not created within 3 seconds"))
+    wait_for_socket(&socket_path, Duration::from_secs(5)).await?;
+    let handle = PrimalHandle {
+        name: "songbird".to_string(),
+        process,
+        socket_path,
+        pid,
+    };
+    wait_for_health(&handle, Duration::from_secs(2)).await?;
+    Ok(handle)
 }
 
 /// Start Toadstool primal
@@ -192,21 +208,15 @@ pub async fn start_toadstool() -> Result<PrimalHandle> {
     
     let pid = process.id();
     
-    // Wait for socket creation
-    for _ in 0..30 {
-        if socket_path.exists() {
-            sleep(Duration::from_millis(500)).await; // Stabilize
-            return Ok(PrimalHandle {
-                name: "toadstool".to_string(),
-                process,
-                socket_path,
-                pid,
-            });
-        }
-        sleep(Duration::from_millis(100)).await;
-    }
-    
-    Err(anyhow::anyhow!("Toadstool socket not created within 3 seconds"))
+    wait_for_socket(&socket_path, Duration::from_secs(5)).await?;
+    let handle = PrimalHandle {
+        name: "toadstool".to_string(),
+        process,
+        socket_path,
+        pid,
+    };
+    wait_for_health(&handle, Duration::from_secs(2)).await?;
+    Ok(handle)
 }
 
 /// Start NestGate primal (socket-only mode)
@@ -234,21 +244,15 @@ pub async fn start_nestgate_socket_only() -> Result<PrimalHandle> {
     
     let pid = process.id();
     
-    // Wait for socket creation
-    for _ in 0..30 {
-        if socket_path.exists() {
-            sleep(Duration::from_millis(500)).await; // Stabilize
-            return Ok(PrimalHandle {
-                name: "nestgate".to_string(),
-                process,
-                socket_path,
-                pid,
-            });
-        }
-        sleep(Duration::from_millis(100)).await;
-    }
-    
-    Err(anyhow::anyhow!("NestGate socket not created within 3 seconds"))
+    wait_for_socket(&socket_path, Duration::from_secs(5)).await?;
+    let handle = PrimalHandle {
+        name: "nestgate".to_string(),
+        process,
+        socket_path,
+        pid,
+    };
+    wait_for_health(&handle, Duration::from_secs(2)).await?;
+    Ok(handle)
 }
 
 /// Start Squirrel primal
@@ -270,56 +274,36 @@ pub async fn start_squirrel() -> Result<PrimalHandle> {
     
     let pid = process.id();
     
-    // Wait for socket creation
-    for _ in 0..30 {
-        if socket_path.exists() {
-            sleep(Duration::from_millis(500)).await; // Stabilize
-            return Ok(PrimalHandle {
-                name: "squirrel".to_string(),
-                process,
-                socket_path,
-                pid,
-            });
-        }
-        sleep(Duration::from_millis(100)).await;
-    }
-    
-    Err(anyhow::anyhow!("Squirrel socket not created within 3 seconds"))
+    wait_for_socket(&socket_path, Duration::from_secs(5)).await?;
+    let handle = PrimalHandle {
+        name: "squirrel".to_string(),
+        process,
+        socket_path,
+        pid,
+    };
+    wait_for_health(&handle, Duration::from_secs(2)).await?;
+    Ok(handle)
 }
 
 /// Start Tower Atomic (BearDog + Songbird)
 pub async fn start_tower_atomic() -> Result<TowerHandle> {
     let beardog = start_beardog().await?;
-    sleep(Duration::from_secs(2)).await;
-    
     let songbird = start_songbird(&beardog).await?;
-    sleep(Duration::from_secs(2)).await;
-    
     Ok(TowerHandle { beardog, songbird })
 }
 
 /// Start Node Atomic (Tower + Toadstool)
 pub async fn start_node_atomic() -> Result<NodeHandle> {
     let tower = start_tower_atomic().await?;
-    sleep(Duration::from_secs(2)).await;
-    
     let toadstool = start_toadstool().await?;
-    sleep(Duration::from_secs(3)).await;
-    
     Ok(NodeHandle { tower, toadstool })
 }
 
 /// Start Nest Atomic (Tower + NestGate + Squirrel)
 pub async fn start_nest_atomic() -> Result<NestHandle> {
     let tower = start_tower_atomic().await?;
-    sleep(Duration::from_secs(2)).await;
-    
     let nestgate = start_nestgate_socket_only().await?;
-    sleep(Duration::from_secs(2)).await;
-    
     let squirrel = start_squirrel().await?;
-    sleep(Duration::from_secs(2)).await;
-    
     Ok(NestHandle { tower, nestgate, squirrel })
 }
 

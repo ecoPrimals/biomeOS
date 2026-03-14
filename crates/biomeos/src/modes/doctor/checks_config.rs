@@ -178,6 +178,19 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_check_binary_health_structure() {
+        let check = check_binary_health().await.unwrap();
+        assert_eq!(check.name, "Binary Health");
+        assert!(check.details.iter().any(|d| d.starts_with("Version:")));
+        assert!(check.details.iter().any(|d| d.contains("Modes:")));
+        assert!(check.details.iter().any(|d| d.contains("UniBin")));
+        // When running as cargo test, current_exe typically succeeds
+        if check.status == HealthStatus::Healthy {
+            assert!(check.details.iter().any(|d| d.starts_with("Binary:")));
+        }
+    }
+
+    #[tokio::test]
     #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
     async fn test_check_configuration_with_config() {
         let temp = tempfile::tempdir().unwrap();

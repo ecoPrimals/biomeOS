@@ -7,6 +7,7 @@
 //! for the Platypus organism's aquatic niche.
 
 use crate::crypto::Identity;
+use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -202,7 +203,7 @@ impl MeshNode {
         let hash = blake3::hash(addr.as_bytes());
         Identity {
             id: format!("did:platypus:discovered:{}", hash),
-            public_key: Vec::new(),
+            public_key: Bytes::new(),
             generation: 0,
             lineage_hashes: vec![],
         }
@@ -243,9 +244,9 @@ pub enum MeshMessage {
         /// Recipient (or broadcast)
         to: Option<String>,
         /// Payload
-        payload: Vec<u8>,
+        payload: Bytes,
         /// Signature
-        signature: Vec<u8>,
+        signature: Bytes,
     },
     
     /// Lineage verification request

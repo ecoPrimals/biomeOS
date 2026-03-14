@@ -32,6 +32,7 @@
 //! └──────────────────────────────────────────────────────────────┘
 //! ```
 
+pub mod discovery;
 pub mod provider;
 pub mod templates;
 pub mod types;

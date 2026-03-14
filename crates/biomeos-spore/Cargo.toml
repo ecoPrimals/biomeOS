@@ -28,6 +28,7 @@ gethostname = { workspace = true }  # For node identification
 
 # Genetic derivation (sibling seeds)
 sha2 = { workspace = true }  # For SHA256-based seed derivation
+bytes = { version = "1", features = ["serde"] }  # Zero-copy binary data
 getrandom = "0.2"  # For secure random nonce generation
 serde_bytes = "0.11"  # For binary data serialization
 base64 = "0.22"  # For beacon encoding

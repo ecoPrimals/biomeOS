@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! Beacon Genetics Manager - Orchestration Layer
 //!
 //! Manages beacon genetics (address book, seeds, meetings) using capability.call.

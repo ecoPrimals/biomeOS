@@ -2,6 +2,46 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## [v2.38] - 2026-03-14 (Deep Debt Evolution — Modern Idiomatic Rust)
+
+### Zero-Copy
+- 22 `Vec<u8>` sites migrated to `bytes::Bytes` across 13 files (crypto keys, payloads, signatures, entropy)
+- Added `bytes` dependency to 4 crates (biomeos-spore, biomeos-federation, biomeos-nucleus, platypus)
+
+### Capability-Based Discovery
+- 9 production files evolved from hardcoded primal name strings to `primal_names::*` constants
+- `PROVENANCE_PRIMALS` slice replaces manual arrays in rootpulse
+- Federation modules, genomebin composer, graph handlers all use constants
+
+### Async-First Tests
+- ~70 sleep-based synchronization sites replaced with proper async primitives
+- New patterns: `wait_for_socket()`, `wait_for_health()`, oneshot readiness channels, `Notify`, `watch`
+- Eliminates flaky CI behavior and reveals real concurrency issues
+
+### Smart Refactoring
+- `capability_translation.rs` (985 LOC) → `mod.rs` (302) + `defaults.rs` (191) + `socket.rs` (28) + tests (337)
+- `device_management/provider.rs` (944 LOC) → `provider.rs` (407) + `discovery.rs` (494)
+- `concurrent_startup.rs` (931 LOC) → `concurrent_startup.rs` (210) + tests (672)
+- Max file now 925 LOC (was 985)
+
+### Path Hardcoding
+- `neural-api-client` socket fallback → `socket_path()` XDG resolution
+- `biomeos-federation` discovery → `SystemPaths::new_lazy().runtime_dir()`
+- SPDX headers: 619/619 `.rs` files covered
+
+### Quality
+| Metric | Before | After |
+|--------|--------|-------|
+| Tests | 4,383 | 4,728 (+345) |
+| Line coverage | 75.38% | 76.15% |
+| Clippy | PASS | PASS (0 warnings, pedantic+nursery, -D warnings) |
+| Formatting | PASS | PASS |
+| Files >1000 LOC | 0 | 0 (max 925) |
+| SPDX headers | 618/619 | 619/619 |
+| Doc collision | 1 warning | 0 |
+
+---
+
 ## [v2.36] - 2026-03-14 (Deep Debt Audit + Evolution Pass)
 
 ### Deep Debt Audit + Evolution

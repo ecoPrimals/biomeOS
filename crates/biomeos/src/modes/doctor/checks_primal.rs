@@ -132,6 +132,23 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_check_primal_discovery_structure() {
+        let check = check_primal_discovery().await.unwrap();
+        assert_eq!(check.name, "Primal Discovery");
+        assert!(check.details.iter().any(|d| d.starts_with("Socket dir:")));
+        assert!(check.details.iter().any(|d| d.starts_with("Family ID:")));
+        assert!(check
+            .details
+            .iter()
+            .any(|d| d.contains("primals discovered")));
+        // Status may be Healthy or Warning depending on running primals
+        assert!(matches!(
+            check.status,
+            HealthStatus::Healthy | HealthStatus::Warning
+        ));
+    }
+
+    #[tokio::test]
     #[ignore = "cwd-changing test is thread-unsafe; run with --test-threads=1"]
     async fn test_check_plasmid_bin_with_binaries() {
         let temp = tempfile::tempdir().unwrap();

@@ -107,7 +107,9 @@ impl PrimalDiscovery {
 
     /// Discover primals via Unix sockets
     async fn discover_unix_sockets(&mut self) -> FederationResult<()> {
-        let socket_dir = PathBuf::from("/tmp");
+        let socket_dir = biomeos_types::paths::SystemPaths::new_lazy()
+            .runtime_dir()
+            .to_path_buf();
 
         if !socket_dir.exists() {
             warn!("Socket directory does not exist: {}", socket_dir.display());
@@ -430,8 +432,8 @@ impl PrimalDiscovery {
     fn discover_songbird_socket(&self) -> FederationResult<String> {
         use biomeos_types::paths::SystemPaths;
 
-        let provider =
-            std::env::var("DISCOVERY_PROVIDER").unwrap_or_else(|_| "songbird".to_string());
+        let provider = std::env::var("DISCOVERY_PROVIDER")
+            .unwrap_or_else(|_| biomeos_types::primal_names::SONGBIRD.to_string());
 
         // Priority 1: Explicit environment variable
         if let Ok(socket) =

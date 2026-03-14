@@ -7,6 +7,7 @@
 //! manifest deployment, configuration management, and status monitoring.
 
 use anyhow::Result;
+use biomeos_types::primal_names::{BEARDOG, NESTGATE, SONGBIRD, TOADSTOOL};
 use serde_json::{json, Value};
 // Removed unused import: use std::collections::HashMap;
 
@@ -112,10 +113,10 @@ pub async fn show_status() -> Result<()> {
     // Active services
     println!("\n📦 Active Services:");
     let services = vec![
-        ("toadstool", "8080", "Healthy"),
-        ("songbird", "8081", "Healthy"),
-        ("nestgate", "8082", "Warning"),
-        ("beardog", "8083", "Healthy"),
+        (TOADSTOOL, "8080", "Healthy"),
+        (SONGBIRD, "8081", "Healthy"),
+        (NESTGATE, "8082", "Warning"),
+        (BEARDOG, "8083", "Healthy"),
     ];
 
     for (name, port, health) in services {

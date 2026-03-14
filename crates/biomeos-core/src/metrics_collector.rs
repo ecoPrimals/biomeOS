@@ -122,16 +122,20 @@ impl MetricsCollector {
             .or_insert(0) += 1;
 
         for (a, b) in pairs(&metrics.primals_invoked) {
-            let key = if a <= b { (a.clone(), b.clone()) } else { (b.clone(), a.clone()) };
-            inner
-                .co_occurrences
-                .entry(key)
-                .or_default()
-                .count += 1;
+            let key = if a <= b {
+                (a.clone(), b.clone())
+            } else {
+                (b.clone(), a.clone())
+            };
+            inner.co_occurrences.entry(key).or_default().count += 1;
         }
 
         for primal_id in &metrics.primals_invoked {
-            let latency = metrics.latencies.get(primal_id).copied().unwrap_or(Duration::ZERO);
+            let latency = metrics
+                .latencies
+                .get(primal_id)
+                .copied()
+                .unwrap_or(Duration::ZERO);
             let entry = inner.primal_stats.entry(primal_id.clone()).or_default();
             entry.invocation_count += 1;
             if metrics.success {
@@ -259,7 +263,10 @@ mod tests {
         let stats = collector.primal_stats().await;
         assert_eq!(stats.get("primal-a").unwrap().invocation_count, 1);
         assert_eq!(stats.get("primal-a").unwrap().success_count, 1);
-        assert_eq!(stats.get("primal-a").unwrap().min_latency, Duration::from_millis(10));
+        assert_eq!(
+            stats.get("primal-a").unwrap().min_latency,
+            Duration::from_millis(10)
+        );
         assert_eq!(stats.get("primal-b").unwrap().invocation_count, 1);
     }
 
@@ -278,7 +285,13 @@ mod tests {
                 .await;
         }
         collector
-            .record_execution(make_metrics("graph-2", &["primal-b"], &[("primal-b", 50)], true, 50))
+            .record_execution(make_metrics(
+                "graph-2",
+                &["primal-b"],
+                &[("primal-b", 50)],
+                true,
+                50,
+            ))
             .await;
 
         assert_eq!(collector.total_executions().await, 6);
@@ -312,9 +325,18 @@ mod tests {
             .await;
 
         let co = collector.co_occurrences().await;
-        assert_eq!(co.get(&("a".to_string(), "b".to_string())).unwrap().count, 2);
-        assert_eq!(co.get(&("a".to_string(), "c".to_string())).unwrap().count, 1);
-        assert_eq!(co.get(&("b".to_string(), "c".to_string())).unwrap().count, 1);
+        assert_eq!(
+            co.get(&("a".to_string(), "b".to_string())).unwrap().count,
+            2
+        );
+        assert_eq!(
+            co.get(&("a".to_string(), "c".to_string())).unwrap().count,
+            1
+        );
+        assert_eq!(
+            co.get(&("b".to_string(), "c".to_string())).unwrap().count,
+            1
+        );
     }
 
     #[tokio::test]
@@ -343,7 +365,13 @@ mod tests {
     async fn test_top_primals() {
         let collector = MetricsCollector::new();
         collector
-            .record_execution(make_metrics("g1", &["a", "b"], &[("a", 1), ("b", 1)], true, 2))
+            .record_execution(make_metrics(
+                "g1",
+                &["a", "b"],
+                &[("a", 1), ("b", 1)],
+                true,
+                2,
+            ))
             .await;
         for _ in 0..3 {
             collector

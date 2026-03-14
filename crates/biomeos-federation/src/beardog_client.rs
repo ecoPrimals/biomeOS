@@ -7,6 +7,7 @@
 //! all cryptographic operations to BearDog's HSM.
 
 use anyhow::{Context, Result};
+use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::path::PathBuf;
@@ -97,7 +98,7 @@ impl BearDogClient {
             .context("Failed to discover primals")?;
 
         let beardog = discovery
-            .get("beardog")
+            .get(biomeos_types::primal_names::BEARDOG)
             .ok_or_else(|| anyhow::anyhow!("BearDog not found via discovery"))?;
 
         if beardog.endpoints.is_empty() {
@@ -310,7 +311,7 @@ impl BearDogClient {
         nonce: &str,
         tag: &str,
         key_ref: &str,
-    ) -> Result<Vec<u8>> {
+    ) -> Result<Bytes> {
         match &self.endpoint {
             BearDogEndpoint::UnixSocket(path) => {
                 let client = UnixSocketClient::new(path);
@@ -330,9 +331,10 @@ impl BearDogClient {
                 use base64::Engine;
                 let engine = base64::engine::general_purpose::STANDARD;
                 let data_b64 = result["data"].as_str().unwrap_or("");
-                engine
+                let data = engine
                     .decode(data_b64)
-                    .context("Failed to decode decrypted data")
+                    .context("Failed to decode decrypted data")?;
+                Ok(Bytes::from(data))
             }
             BearDogEndpoint::Http(_url) => {
                 // DEPRECATED: BearDog only uses Unix sockets (no HTTP)

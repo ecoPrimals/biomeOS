@@ -17,6 +17,7 @@ path = "src/main.rs"
 
 [dependencies]
 biomeos-core = { path = "../crates/biomeos-core" }
+biomeos-types = { path = "../crates/biomeos-types" }
 biomeos-manifest = { path = "../crates/biomeos-manifest" }
 biomeos-system = { path = "../crates/biomeos-system" }
 tokio = { workspace = true }

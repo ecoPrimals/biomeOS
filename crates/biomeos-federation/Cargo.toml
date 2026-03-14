@@ -25,6 +25,7 @@ tracing = { workspace = true }
 
 # biomeOS types (SystemPaths, CapabilityTaxonomy)
 biomeos-types = { path = "../biomeos-types" }
+bytes = "1"
 
 # HTTP client DEPRECATED: Use atomic_client (Unix sockets) for BearDog/Songbird
 # # reqwest = { workspace = true }  # REMOVED: Use Tower Atomic (Songbird + BearDog) for Pure Rust HTTPS # REMOVED - Songbird/BearDog handle HTTP/TLS

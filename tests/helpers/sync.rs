@@ -294,7 +294,9 @@ mod tests {
         let ready_clone = ready.clone();
         
         let handle = tokio::spawn(async move {
-            tokio::time::sleep(Duration::from_millis(50)).await;
+            for _ in 0..5 {
+                tokio::task::yield_now().await;
+            }
             ready_clone.signal();
         });
         
@@ -312,7 +314,7 @@ mod tests {
         let watcher_clone = watcher.clone();
         tokio::spawn(async move {
             for i in 1..=5 {
-                tokio::time::sleep(Duration::from_millis(10)).await;
+                tokio::task::yield_now().await;
                 watcher_clone.update(i);
             }
         });

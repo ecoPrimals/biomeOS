@@ -52,7 +52,9 @@ impl NeuralApiClient {
         if let Ok(paths) = biomeos_types::SystemPaths::new() {
             paths.primal_socket(&format!("neural-api-{family_id}"))
         } else {
-            std::env::temp_dir().join(format!("neural-api-{family_id}.sock"))
+            biomeos_types::defaults::socket_path(&format!("neural-api-{family_id}")).unwrap_or_else(
+                |_| std::env::temp_dir().join(format!("neural-api-{family_id}.sock")),
+            )
         }
     }
 

@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: March 14, 2026 (Deep Debt Audit: Capability-Based Discovery + Pedantic Clippy + Smart Refactoring + Coverage Push)
-**Version**: 2.37
+**Updated**: March 14, 2026 (Deep Debt Evolution: Modern Idiomatic Rust + Zero-Copy + Async-First Tests + Module Refactoring)
+**Version**: 2.38
 **Status**: PRODUCTION READY - Multi-Computer Federation Validated
 
 ---
@@ -16,8 +16,8 @@
 | **Security Grade** | A++ (TRUE PRIMAL + Security Headers + Dark Forest Gate) |
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, ecoBin v3.0, zero warnings, full doc coverage, sovereignty audit) |
-| **Tests Passing** | 4,647 sequential (0 failures, 205 ignored) |
-| **Test Coverage** | 75.98% region, 78.78% function, 74.96% line (llvm-cov, climbing toward 90%) |
+| **Tests Passing** | 4,728 sequential (0 failures, 203 ignored) |
+| **Test Coverage** | 76.15% line, 79.23% function (llvm-cov, climbing toward 90%) |
 | **Unsafe Code** | 0 production, 0 test |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`) |
 | **Formatting** | PASS (rustfmt.toml enforced, `cargo fmt --check` clean) |
@@ -34,7 +34,7 @@
 | **P2P Sovereign Onion** | PRODUCTION READY |
 | **External C deps** | 0 (nix removed → rustix, sysinfo removed → /proc, libc removed, dirs → etcetera) |
 | **ecoBin v3.0** | COMPLIANT (pure Rust: rustix for POSIX, /proc for metrics, zero -sys crates) |
-| **Files >1000 LOC** | 0 (max 985, graph.rs 998→404, realtime.rs 975→422, security/mod.rs 957→594 via smart refactoring) |
+| **Files >1000 LOC** | 0 (max 925, capability_translation 985→302+191+28, provider 944→407+494, concurrent_startup 931→210+672) |
 | **JSON-RPC types** | `JSONRPC_VERSION` const + `JsonRpcRequest::new()` builder everywhere, `JsonRpcResponse::success()`/`error()` builders |
 | **Zero-copy** | `bytes::Bytes` for binary payloads (`SecurityRpc`, P2P, compute, genomeBin, HTTP client); `Arc<str>` for identifiers |
 | **Safe casts** | 0 truncation `as` casts — PID casts use `i32::try_from().unwrap_or(-1)`, duration use `u32::try_from().unwrap_or(MAX)` |
@@ -234,6 +234,24 @@ HTTP JSON-RPC collective with runtime port discovery (hardcoded 3492 eliminated)
 ---
 
 ## Completed Evolution Items (biomeOS Team)
+
+### Deep Debt Evolution — Modern Idiomatic Rust (Mar 14, 2026)
+
+Comprehensive evolution pass: zero-copy binary payloads, capability-based discovery, async-first tests, smart module refactoring.
+
+| Category | Change |
+|----------|--------|
+| **Zero-copy (Bytes)** | 22 `Vec<u8>` sites migrated to `bytes::Bytes` across 13 files (cryptographic keys, payloads, signatures, entropy) |
+| **Primal name constants** | 9 production files evolved from hardcoded string literals to `primal_names::*` constants; `PROVENANCE_PRIMALS` slice for arrays |
+| **SystemPaths** | `neural-api-client` fallback and `biomeos-federation` discovery evolved from `/tmp/` to XDG-aware `SystemPaths` / `socket_path()` |
+| **Async-first tests** | ~70 sleep-based synchronization sites replaced with proper async primitives: `wait_for_socket()`, `wait_for_health()`, oneshot readiness, `Notify`, `watch` channels, `yield_now()` |
+| **Smart refactoring** | `capability_translation.rs` (985→302+191+28), `provider.rs` (944→407+494), `concurrent_startup.rs` (931→210+672) — split at logical boundaries, not arbitrary lines |
+| **Error handling** | `concurrent_startup.rs` `expect` → `unwrap_or` for malformed dependency graphs (no panic) |
+| **Doc collision** | Root `[lib] doc = false` eliminates `biomeos/index.html` collision between workspace root and `crates/biomeos` |
+| **SPDX headers** | 619/619 `.rs` files now have `SPDX-License-Identifier: AGPL-3.0-only` |
+| **Coverage expansion** | ~25 new tests for `checks_config`, `checks_primal`, `model_cache`, `rootpulse`, `main.rs`, `neural-api-client-sync` |
+| **Test total** | 4,383 → 4,728 (+345), 0 failures, 203 ignored |
+| **Coverage** | 75.38% → 76.15% line; per-file: rootpulse 45→67%, model_cache 47→54%, main 38→44% |
 
 ### Deep Debt Audit + Zero-Copy + JSON-RPC Builders + Safe Casts + SystemPaths (Mar 14, 2026)
 
@@ -709,7 +727,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 
 ## Test Coverage Analysis (llvm-cov, Mar 14, 2026)
 
-**Overall**: 76.06% region coverage (4,383 tests, 0 failures)
+**Overall**: 76.15% line coverage (4,728 tests, 0 failures)
 
 ### Coverage Distribution
 
@@ -828,7 +846,7 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 **IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate)
 **Security**: A++ (Two-seed Dark Forest)
 **Code Quality**: A++ (Pure Rust, zero-copy, safe casts, JSON-RPC builders, zero warnings, full doc coverage, table-driven routing)
-**Tests**: 4,383 passing sequential (76.06% region coverage via llvm-cov)
+**Tests**: 4,728 passing sequential (76.15% line coverage via llvm-cov)
 **Clippy**: PASS (0 warnings, `-D warnings`) | **Format**: PASS (`cargo fmt --check` clean)
 **Docs**: Full coverage (0 missing_docs warnings across 8 crates)
 **Unsafe Code**: 0 (production + tests)

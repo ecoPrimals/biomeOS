@@ -47,6 +47,8 @@ pub mod capability_handlers; // Extracted capability-based primal handlers
 pub mod capability_translation;
 #[cfg(test)]
 mod capability_translation_integration_tests; // Sovereign Onion translation tests
+#[cfg(test)]
+mod capability_translation_tests;
 pub mod handlers; // NEW: Smart decomposition of neural_api_server
 pub mod http_client;
 pub mod lifecycle_manager; // NEW: Primal lifecycle management (resurrection, apoptosis)

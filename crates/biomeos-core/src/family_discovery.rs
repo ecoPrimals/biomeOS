@@ -18,6 +18,7 @@
 //! - The genesis seed (first 32 bytes) is shared among family members
 //! - The node key (bytes 32-63) is unique per node
 
+use bytes::Bytes;
 use std::path::{Path, PathBuf};
 use tracing::{debug, info, warn};
 
@@ -32,9 +33,9 @@ pub struct DiscoveredFamily {
     /// Source of discovery
     pub source: FamilySource,
     /// Full genesis seed if available (32 bytes)
-    pub genesis_seed: Option<Vec<u8>>,
+    pub genesis_seed: Option<Bytes>,
     /// Node key if available (32 bytes)
-    pub node_key: Option<Vec<u8>>,
+    pub node_key: Option<Bytes>,
 }
 
 /// Source of family ID discovery
@@ -201,9 +202,9 @@ fn read_family_seed(path: &Path) -> Option<DiscoveredFamily> {
             let family_id = hex::encode(&data[0..8]);
 
             // Extract genesis seed and node key
-            let genesis_seed = data[0..32].to_vec();
+            let genesis_seed = Bytes::from(data[0..32].to_vec());
             let node_key = if data.len() >= 64 {
-                Some(data[32..64].to_vec())
+                Some(Bytes::from(data[32..64].to_vec()))
             } else {
                 None
             };

@@ -11,6 +11,7 @@
 
 use crate::crypto::{GeneticKeys, Identity};
 use crate::mesh::{MeshNode, MeshTopology, Peer};
+use bytes::Bytes;
 use crate::{PlatypusError, Result};
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -186,7 +187,7 @@ impl Platypus {
         let signature = keys.sign(data);
         
         GeneticSignature {
-            signature: signature.to_bytes().to_vec(),
+            signature: Bytes::from(signature.to_bytes().to_vec()),
             signer: identity.clone(),
             generation: keys.generation(),
         }
@@ -275,7 +276,7 @@ impl TrustedPeer {
 #[derive(Debug, Clone)]
 pub struct GeneticSignature {
     /// The cryptographic signature
-    pub signature: Vec<u8>,
+    pub signature: Bytes,
     
     /// Signer identity
     pub signer: Identity,

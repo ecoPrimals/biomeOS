@@ -212,7 +212,9 @@ pub mod presets {
                 let discovery = SocketDiscovery::new(family_id);
                 format!(
                     "unix://{}",
-                    discovery.build_socket_path("songbird").to_string_lossy()
+                    discovery
+                        .build_socket_path(biomeos_types::primal_names::SONGBIRD)
+                        .to_string_lossy()
                 )
             });
 

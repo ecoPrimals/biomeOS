@@ -6,6 +6,7 @@
 //! This module contains storage-related manifest types including VolumeSpec,
 //! SecretSpec, ConfigSpec, and storage configuration.
 
+use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -645,7 +646,7 @@ pub struct ConfigSpec {
 
     /// Binary data
     #[serde(default)]
-    pub binary_data: HashMap<String, Vec<u8>>,
+    pub binary_data: HashMap<String, Bytes>,
 
     /// Immutable
     #[serde(default)]

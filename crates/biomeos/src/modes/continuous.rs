@@ -247,10 +247,7 @@ mod tests {
                 Some(v) => std::env::set_var(key, v),
                 None => std::env::remove_var(key),
             }
-            Self {
-                key,
-                original,
-            }
+            Self { key, original }
         }
     }
     impl Drop for EnvGuard {
@@ -367,7 +364,7 @@ mod tests {
             [[graph.nodes]]
             id = "input"
             name = "Input"
-            capability = "interaction.poll_sensors"
+            capability = "interaction.poll"
             budget_ms = 1.0
 
             [graph.nodes.config]
@@ -428,8 +425,11 @@ mod tests {
         let sock = dir.path().join("test-primal.sock");
         let sock_clone = sock.clone();
 
+        let (ready_tx, ready_rx) = tokio::sync::oneshot::channel();
+
         let server = tokio::spawn(async move {
             let listener = tokio::net::UnixListener::bind(&sock_clone).expect("bind");
+            let _ = ready_tx.send(());
             if let Ok((stream, _)) = listener.accept().await {
                 let (reader, mut writer) = stream.into_split();
                 let mut br = BufReader::new(reader);
@@ -447,7 +447,7 @@ mod tests {
             }
         });
 
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        ready_rx.await.expect("server ready");
 
         let result = call_primal(&sock, "health.check", serde_json::json!({})).await;
         assert!(result.is_ok(), "call_primal failed: {:?}", result.err());
@@ -482,17 +482,17 @@ mod tests {
         let sock_path = dir.path().join("mockprimal.sock");
         let received: Arc<Mutex<Vec<serde_json::Value>>> = Arc::new(Mutex::new(Vec::new()));
         let received_clone = Arc::clone(&received);
+        let first_request = Arc::new(tokio::sync::Notify::new());
+        let first_request_clone = Arc::clone(&first_request);
 
         let server = tokio::spawn(async move {
             let listener = tokio::net::UnixListener::bind(&sock_path).expect("bind");
             for _ in 0..20 {
-                if let Ok(Ok((stream, _))) = tokio::time::timeout(
-                    std::time::Duration::from_secs(2),
-                    listener.accept(),
-                )
-                .await
+                if let Ok(Ok((stream, _))) =
+                    tokio::time::timeout(std::time::Duration::from_secs(2), listener.accept()).await
                 {
                     let recv = Arc::clone(&received_clone);
+                    let first_req = Arc::clone(&first_request_clone);
                     tokio::spawn(async move {
                         let (reader, mut writer) = stream.into_split();
                         let mut br = BufReader::new(reader);
@@ -500,15 +500,14 @@ mod tests {
                         let _ = br.read_line(&mut line).await;
                         if let Ok(req) = serde_json::from_str::<serde_json::Value>(&line) {
                             recv.lock().await.push(req);
+                            first_req.notify_waiters();
                         }
                         let response = serde_json::json!({
                             "jsonrpc": "2.0",
                             "result": {"ok": true},
                             "id": 1
                         });
-                        let _ = writer
-                            .write_all(format!("{response}\n").as_bytes())
-                            .await;
+                        let _ = writer.write_all(format!("{response}\n").as_bytes()).await;
                     });
                 }
             }
@@ -543,8 +542,9 @@ mod tests {
 
         let (cmd_tx, cmd_rx) = mpsc::channel::<SessionCommand>(16);
         let cmd_tx_stop = cmd_tx.clone();
+        let first_request_waiter = Arc::clone(&first_request);
         tokio::spawn(async move {
-            tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+            first_request_waiter.notified().await;
             let _ = cmd_tx_stop.send(SessionCommand::Stop).await;
         });
 
@@ -565,7 +565,8 @@ mod tests {
             "Executor should have sent at least one JSON-RPC request to the mock socket"
         );
         assert!(
-            reqs.iter().any(|r| r.get("method").and_then(|m| m.as_str()) == Some("game.tick_logic")),
+            reqs.iter()
+                .any(|r| r.get("method").and_then(|m| m.as_str()) == Some("game.tick_logic")),
             "Expected game.tick_logic method in received requests"
         );
     }
@@ -604,7 +605,8 @@ mod tests {
         let (cmd_tx, cmd_rx) = mpsc::channel::<SessionCommand>(16);
         let cmd_tx_stop = cmd_tx.clone();
         tokio::spawn(async move {
-            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+            // Intentional: allow executor to run a few ticks before stop (no event to wait for)
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
             let _ = cmd_tx_stop.send(SessionCommand::Stop).await;
         });
 
@@ -639,12 +641,12 @@ mod tests {
         let graph: biomeos_graph::DeploymentGraph = toml::from_str(toml_str).unwrap();
         let broadcaster = GraphEventBroadcaster::new(1024);
         let mut receiver = broadcaster.subscribe();
-        let mut executor =
-            biomeos_graph::ContinuousExecutor::new(graph, broadcaster);
+        let mut executor = biomeos_graph::ContinuousExecutor::new(graph, broadcaster);
 
         let (cmd_tx, cmd_rx) = mpsc::channel::<SessionCommand>(16);
         let cmd_tx_stop = cmd_tx.clone();
         tokio::spawn(async move {
+            // Intentional: testing tick timing over 500ms at 10 Hz (~5 ticks)
             tokio::time::sleep(std::time::Duration::from_millis(500)).await;
             let _ = cmd_tx_stop.send(SessionCommand::Stop).await;
         });
@@ -659,18 +661,17 @@ mod tests {
 
         let mut tick_count = 0u64;
         loop {
-            let event = tokio::time::timeout(
-                std::time::Duration::from_secs(2),
-                receiver.recv(),
-            )
-            .await;
+            let event =
+                tokio::time::timeout(std::time::Duration::from_secs(2), receiver.recv()).await;
             match event {
                 Ok(Ok(biomeos_graph::GraphEvent::TickCompleted { tick, .. })) => {
                     tick_count = tick;
                 }
-                Ok(Ok(biomeos_graph::GraphEvent::SessionStateChanged {
-                    new_state, ..
-                })) if new_state == "stopped" => break,
+                Ok(Ok(biomeos_graph::GraphEvent::SessionStateChanged { new_state, .. }))
+                    if new_state == "stopped" =>
+                {
+                    break
+                }
                 Ok(Err(_)) | Err(_) => break,
                 _ => {}
             }

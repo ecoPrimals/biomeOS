@@ -33,7 +33,7 @@ fn test_entropy_hash_deterministic() {
         machine_id: "12345".to_string(),
         timestamp,
         mac_address: Some("00:11:22:33:44:55".to_string()),
-        random_nonce: vec![1, 2, 3],
+        random_nonce: vec![1, 2, 3].into(),
         cpu_hash: None,
         disk_serial: None,
     };
@@ -58,7 +58,7 @@ fn test_entropy_hash_unique() {
         machine_id: "12345".to_string(),
         timestamp,
         mac_address: Some("00:11:22:33:44:55".to_string()),
-        random_nonce: vec![1, 2, 3],
+        random_nonce: vec![1, 2, 3].into(),
         cpu_hash: None,
         disk_serial: None,
     };
@@ -68,7 +68,7 @@ fn test_entropy_hash_unique() {
         machine_id: "12345".to_string(),
         timestamp,
         mac_address: Some("00:11:22:33:44:55".to_string()),
-        random_nonce: vec![1, 2, 3],
+        random_nonce: vec![1, 2, 3].into(),
         cpu_hash: None,
         disk_serial: None,
     };
@@ -91,7 +91,7 @@ fn test_entropy_with_all_fields() {
         machine_id: "12345".to_string(),
         timestamp: Utc::now(),
         mac_address: Some("00:11:22:33:44:55".to_string()),
-        random_nonce: vec![1, 2, 3, 4, 5],
+        random_nonce: vec![1, 2, 3, 4, 5].into(),
         cpu_hash: Some("cpu-abc123".to_string()),
         disk_serial: Some("disk-xyz789".to_string()),
     };
@@ -109,7 +109,7 @@ fn test_entropy_with_optional_fields_none() {
         machine_id: "12345".to_string(),
         timestamp: Utc::now(),
         mac_address: None,
-        random_nonce: vec![1, 2, 3],
+        random_nonce: vec![1, 2, 3].into(),
         cpu_hash: None,
         disk_serial: None,
     };

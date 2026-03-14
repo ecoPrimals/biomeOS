@@ -105,7 +105,7 @@ pub async fn node_crypto_derive_seed(
         .env
         .get("SECURITY_PROVIDER")
         .cloned()
-        .unwrap_or_else(|| "beardog".to_string());
+        .unwrap_or_else(|| biomeos_types::primal_names::BEARDOG.to_string());
     let security_socket = discover_capability_socket(&security_provider, &context.env)?;
 
     debug!(

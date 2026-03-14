@@ -11,8 +11,9 @@
 //! - `status`  → health checks on the provenance trio
 
 use anyhow::{Context, Result};
+use biomeos_types::primal_names::{BEARDOG, NESTGATE, PROVENANCE_PRIMALS};
 use biomeos_types::{JsonRpcRequest, SystemPaths};
-use biomeos_types::{primal_names, CapabilityTaxonomy};
+use biomeos_types::CapabilityTaxonomy;
 use std::path::PathBuf;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
@@ -37,11 +38,20 @@ pub async fn dispatch(cmd: RootPulseCommand) -> Result<()> {
             socket,
             family_id,
             dry_run,
-        } => run_graph("rootpulse_branch", serde_json::json!({
-            "SESSION_ID": session_id,
-            "BRANCH_NAME": branch_name,
-            "AGENT_DID": agent_did,
-        }), socket, family_id, dry_run).await,
+        } => {
+            run_graph(
+                "rootpulse_branch",
+                serde_json::json!({
+                    "SESSION_ID": session_id,
+                    "BRANCH_NAME": branch_name,
+                    "AGENT_DID": agent_did,
+                }),
+                socket,
+                family_id,
+                dry_run,
+            )
+            .await
+        }
         RootPulseCommand::Merge {
             source_session,
             target_session,
@@ -49,24 +59,39 @@ pub async fn dispatch(cmd: RootPulseCommand) -> Result<()> {
             socket,
             family_id,
             dry_run,
-        } => run_graph("rootpulse_merge", serde_json::json!({
-            "SOURCE_SESSION": source_session,
-            "TARGET_SESSION": target_session,
-            "AGENT_DID": agent_did,
-        }), socket, family_id, dry_run).await,
+        } => {
+            run_graph(
+                "rootpulse_merge",
+                serde_json::json!({
+                    "SOURCE_SESSION": source_session,
+                    "TARGET_SESSION": target_session,
+                    "AGENT_DID": agent_did,
+                }),
+                socket,
+                family_id,
+                dry_run,
+            )
+            .await
+        }
         RootPulseCommand::Diff {
             from,
             to,
             socket,
             family_id,
-        } => run_graph("rootpulse_diff", serde_json::json!({
-            "FROM_REF": from,
-            "TO_REF": to,
-        }), socket, family_id, false).await,
-        RootPulseCommand::Status {
-            socket,
-            family_id,
-        } => run_status(socket, family_id).await,
+        } => {
+            run_graph(
+                "rootpulse_diff",
+                serde_json::json!({
+                    "FROM_REF": from,
+                    "TO_REF": to,
+                }),
+                socket,
+                family_id,
+                false,
+            )
+            .await
+        }
+        RootPulseCommand::Status { socket, family_id } => run_status(socket, family_id).await,
     }
 }
 
@@ -78,10 +103,17 @@ pub async fn run_commit(
     family_id: Option<String>,
     dry_run: bool,
 ) -> Result<()> {
-    run_graph("rootpulse_commit", serde_json::json!({
-        "SESSION_ID": session_id,
-        "AGENT_DID": agent_did,
-    }), socket, family_id, dry_run).await
+    run_graph(
+        "rootpulse_commit",
+        serde_json::json!({
+            "SESSION_ID": session_id,
+            "AGENT_DID": agent_did,
+        }),
+        socket,
+        family_id,
+        dry_run,
+    )
+    .await
 }
 
 /// Execute an arbitrary RootPulse graph.
@@ -93,9 +125,8 @@ async fn run_graph(
     dry_run: bool,
 ) -> Result<()> {
     let family = family_id.unwrap_or_else(biomeos_core::family_discovery::get_family_id);
-    let socket_path = socket.unwrap_or_else(|| {
-        SystemPaths::new_lazy().primal_socket(&format!("neural-api-{family}"))
-    });
+    let socket_path = socket
+        .unwrap_or_else(|| SystemPaths::new_lazy().primal_socket(&format!("neural-api-{family}")));
 
     info!("RootPulse {graph_id}");
     info!("  family: {family}");
@@ -103,12 +134,18 @@ async fn run_graph(
 
     let mut full_params = params;
     if let Some(obj) = full_params.as_object_mut() {
-        obj.insert("FAMILY_ID".to_string(), serde_json::Value::String(family.clone()));
+        obj.insert(
+            "FAMILY_ID".to_string(),
+            serde_json::Value::String(family.clone()),
+        );
     }
 
     if dry_run {
         info!("  [dry run] Would execute {graph_id} graph with:");
-        info!("    params = {}", serde_json::to_string_pretty(&full_params)?);
+        info!(
+            "    params = {}",
+            serde_json::to_string_pretty(&full_params)?
+        );
         return Ok(());
     }
 
@@ -135,30 +172,23 @@ async fn run_graph(
 }
 
 /// Check the health of the provenance trio.
-async fn run_status(
-    socket: Option<PathBuf>,
-    family_id: Option<String>,
-) -> Result<()> {
+async fn run_status(socket: Option<PathBuf>, family_id: Option<String>) -> Result<()> {
     let family = family_id.unwrap_or_else(biomeos_core::family_discovery::get_family_id);
-    let socket_path = socket.unwrap_or_else(|| {
-        SystemPaths::new_lazy().primal_socket(&format!("neural-api-{family}"))
-    });
+    let socket_path = socket
+        .unwrap_or_else(|| SystemPaths::new_lazy().primal_socket(&format!("neural-api-{family}")));
 
     info!("RootPulse status");
     info!("  family: {family}");
     info!("  socket: {}", socket_path.display());
 
-    // Capability-based discovery: check health of primals providing RootPulse-required capabilities.
-    // Maps capability identifiers → primal names (via taxonomy or provenance trio constants).
-    let primals: Vec<&str> = [
-        primal_names::RHIZOCRYPT,  // dag.session (ephemeral DAG)
-        primal_names::LOAMSPINE,   // commit.session (permanence)
-        primal_names::SWEETGRASS,  // provenance.create_braid (attribution)
-        CapabilityTaxonomy::resolve_to_primal("crypto").unwrap_or(primal_names::BEARDOG),   // crypto.sign
-        CapabilityTaxonomy::resolve_to_primal("storage").unwrap_or(primal_names::NESTGATE),  // storage.put
-    ]
-    .into_iter()
-    .collect();
+    let primals: Vec<&str> = PROVENANCE_PRIMALS
+        .iter()
+        .copied()
+        .chain([
+            CapabilityTaxonomy::resolve_to_primal("crypto").unwrap_or(BEARDOG),
+            CapabilityTaxonomy::resolve_to_primal("storage").unwrap_or(NESTGATE),
+        ])
+        .collect();
 
     for primal in &primals {
         let request = JsonRpcRequest::new(
@@ -175,7 +205,12 @@ async fn run_status(
                 if response.get("result").is_some() {
                     info!("  {primal}: healthy");
                 } else {
-                    info!("  {primal}: unhealthy ({})", response.get("error").map_or("unknown".to_string(), |e| e.to_string()));
+                    info!(
+                        "  {primal}: unhealthy ({})",
+                        response
+                            .get("error")
+                            .map_or("unknown".to_string(), |e| e.to_string())
+                    );
                 }
             }
             Err(_) => {
@@ -267,6 +302,64 @@ mod tests {
             err.to_string().contains("connect") || err.to_string().contains("Failed"),
             "error should mention connection failure: {err}",
         );
+    }
+
+    #[tokio::test]
+    async fn test_dispatch_branch_dry_run() {
+        let result = dispatch(RootPulseCommand::Branch {
+            session_id: "sess-1".to_string(),
+            branch_name: "feature-x".to_string(),
+            agent_did: "did:key:z6MkTest".to_string(),
+            socket: None,
+            family_id: Some("test-family".to_string()),
+            dry_run: true,
+        })
+        .await;
+        result.expect("branch dry run should succeed");
+    }
+
+    #[tokio::test]
+    async fn test_dispatch_merge_dry_run() {
+        let result = dispatch(RootPulseCommand::Merge {
+            source_session: "sess-a".to_string(),
+            target_session: "sess-b".to_string(),
+            agent_did: "did:key:z6MkTest".to_string(),
+            socket: None,
+            family_id: Some("test-family".to_string()),
+            dry_run: true,
+        })
+        .await;
+        result.expect("merge dry run should succeed");
+    }
+
+    #[tokio::test]
+    async fn test_dispatch_diff_fails_without_socket() {
+        let result = dispatch(RootPulseCommand::Diff {
+            from: "ref-a".to_string(),
+            to: "ref-b".to_string(),
+            socket: Some(PathBuf::from("/tmp/nonexistent-neural-diff.sock")),
+            family_id: Some("test-family".to_string()),
+        })
+        .await;
+        let err = result.expect_err("diff without socket should fail");
+        assert!(
+            err.to_string().contains("connect") || err.to_string().contains("Failed"),
+            "error should mention connection: {err}"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_run_graph_non_object_params() {
+        // When params is not an object, we can't insert FAMILY_ID - should still work for dry run
+        let result = run_graph(
+            "rootpulse_test",
+            serde_json::json!([]), // array, not object
+            Some(PathBuf::from("/tmp/nonexistent.sock")),
+            Some("test-family".to_string()),
+            true, // dry run - won't connect
+        )
+        .await;
+        result.expect("dry run with non-object params should succeed");
     }
 
     #[test]

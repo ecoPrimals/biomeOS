@@ -381,6 +381,28 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_run_register_model_nonexistent_path_fails() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let home = temp.path().to_path_buf();
+        let cache_dir = home.join(".biomeos").join("model-cache");
+        std::fs::create_dir_all(&cache_dir).expect("create cache dir");
+        std::env::set_var("HOME", home.as_path());
+
+        let nonexistent = temp.path().join("nonexistent-model-dir-xyz");
+        let result = run(ModelCacheCommand::Register {
+            model_id: "test/nonexistent".to_string(),
+            path: nonexistent,
+        })
+        .await;
+        std::env::remove_var("HOME");
+        assert!(
+            result.is_err(),
+            "register with nonexistent path should fail: {:?}",
+            result
+        );
+    }
+
+    #[tokio::test]
     #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
     async fn test_run_register_model() {
         let temp = tempfile::tempdir().expect("temp dir");

@@ -174,7 +174,7 @@ impl SecurityProvider for BeardogSecurityAdapter {
         let broadcast_key = Self::parse_broadcast_key(output)?;
 
         Ok(BroadcastKeys {
-            broadcast_key: Bytes::from(broadcast_key),
+            broadcast_key,
             lineage_proof: super::LineageProof {
                 lineage_id: family_id.to_string(),
                 depth: 0,
@@ -239,7 +239,7 @@ impl BeardogSecurityAdapter {
             .context("Failed to parse tunnel_id from BearDog output")
     }
 
-    fn parse_broadcast_key(output: &str) -> Result<Vec<u8>> {
+    fn parse_broadcast_key(output: &str) -> Result<Bytes> {
         let key_str = output
             .lines()
             .find(|line| line.contains("broadcast_key"))
@@ -248,7 +248,7 @@ impl BeardogSecurityAdapter {
             .context("Failed to parse broadcast_key from BearDog output")?;
 
         // In real impl, parse hex or base64
-        Ok(key_str.as_bytes().to_vec())
+        Ok(Bytes::from(key_str.as_bytes().to_vec()))
     }
 }
 

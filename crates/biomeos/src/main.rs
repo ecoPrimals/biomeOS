@@ -436,7 +436,7 @@ enum ModelCacheCommand {
 }
 
 /// Dispatch to mode handler based on CLI (thin orchestration)
-async fn dispatch_mode(cli: Cli) -> Result<()> {
+pub(crate) async fn dispatch_mode(cli: Cli) -> Result<()> {
     match cli.mode {
         Mode::Cli {} => modes::cli::run(modes::cli::CliCommand).await,
         Mode::Genome { command } => handle_genome_command(command).await,
@@ -747,6 +747,91 @@ mod tests {
         std::fs::write(temp.path().join("other.txt"), "content").expect("write");
         let infos = list_genome_bins(temp.path()).unwrap();
         assert!(infos.is_empty());
+    }
+
+    #[test]
+    fn test_cli_parse_version() {
+        let cli = Cli::parse_from(["biomeos", "version"]);
+        match &cli.mode {
+            Mode::Version { detailed } => assert!(!detailed),
+            _ => panic!("expected Version mode"),
+        }
+    }
+
+    #[test]
+    fn test_cli_parse_version_detailed() {
+        let cli = Cli::parse_from(["biomeos", "version", "--detailed"]);
+        match &cli.mode {
+            Mode::Version { detailed } => assert!(*detailed),
+            _ => panic!("expected Version mode"),
+        }
+    }
+
+    #[test]
+    fn test_cli_parse_doctor() {
+        let cli = Cli::parse_from(["biomeos", "doctor"]);
+        match &cli.mode {
+            Mode::Doctor { format, .. } => assert_eq!(format, "text"),
+            _ => panic!("expected Doctor mode"),
+        }
+    }
+
+    #[test]
+    fn test_cli_parse_doctor_json_format() {
+        let cli = Cli::parse_from(["biomeos", "doctor", "-f", "json"]);
+        match &cli.mode {
+            Mode::Doctor { format, .. } => assert_eq!(format, "json"),
+            _ => panic!("expected Doctor mode"),
+        }
+    }
+
+    #[test]
+    fn test_cli_parse_model_cache_list() {
+        let cli = Cli::parse_from(["biomeos", "model-cache", "list"]);
+        match &cli.mode {
+            Mode::ModelCache { command } => match command {
+                ModelCacheCommand::List => {}
+                _ => panic!("expected List subcommand"),
+            },
+            _ => panic!("expected ModelCache mode"),
+        }
+    }
+
+    #[test]
+    fn test_cli_parse_rootpulse_commit() {
+        let cli = Cli::parse_from([
+            "biomeos",
+            "rootpulse",
+            "commit",
+            "--session-id",
+            "sess-1",
+            "--agent-did",
+            "did:key:z6Mk",
+        ]);
+        match &cli.mode {
+            Mode::RootPulse { command } => match command {
+                RootPulseCommand::Commit {
+                    session_id,
+                    agent_did,
+                    dry_run,
+                    ..
+                } => {
+                    assert_eq!(session_id, "sess-1");
+                    assert_eq!(agent_did, "did:key:z6Mk");
+                    assert!(!*dry_run);
+                }
+                _ => panic!("expected Commit subcommand"),
+            },
+            _ => panic!("expected RootPulse mode"),
+        }
+    }
+
+    #[tokio::test]
+    #[ignore = "init_logging sets global subscriber; run with --test-threads=1"]
+    async fn test_dispatch_mode_version() {
+        let cli = Cli::parse_from(["biomeos", "version"]);
+        let result = dispatch_mode(cli).await;
+        result.expect("dispatch version should succeed");
     }
 
     #[test]

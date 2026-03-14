@@ -270,8 +270,8 @@ impl Plasmodium {
     async fn discover_peers(&self) -> Vec<PeerInfo> {
         let mut peers = Vec::new();
 
-        let discovery_provider =
-            std::env::var("DISCOVERY_PROVIDER").unwrap_or_else(|_| "songbird".to_string());
+        let discovery_provider = std::env::var("DISCOVERY_PROVIDER")
+            .unwrap_or_else(|_| biomeos_types::primal_names::SONGBIRD.to_string());
         if let Ok(client) = AtomicClient::discover(&discovery_provider).await {
             if let Ok(result) = client.call("mesh.peers", json!({})).await {
                 let peers_array = result

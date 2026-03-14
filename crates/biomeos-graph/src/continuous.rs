@@ -468,6 +468,7 @@ mod tests {
 
     #[test]
     fn test_tick_clock_advance_after_sleep() {
+        // Intentional: testing clock advancement with real elapsed time
         let mut clock = TickClock::new(10.0); // 10 Hz = 100ms per tick
         std::thread::sleep(Duration::from_millis(10));
         let _ticks = clock.advance();
@@ -484,6 +485,7 @@ mod tests {
 
     #[test]
     fn test_tick_clock_max_accumulator_clamp() {
+        // Intentional: testing accumulator clamping with real elapsed time
         let config = TickConfig {
             target_hz: 10.0,
             max_accumulator_ms: 200.0,
@@ -500,6 +502,7 @@ mod tests {
 
     #[test]
     fn test_tick_clock_reset_accumulator() {
+        // Intentional: testing reset with real elapsed time
         let mut clock = TickClock::new(60.0);
         std::thread::sleep(Duration::from_millis(50));
         clock.reset_accumulator();
@@ -603,7 +606,6 @@ mod tests {
             state_rx.changed().await.unwrap();
         }
 
-        tokio::time::sleep(Duration::from_millis(50)).await;
         cmd_tx.send(SessionCommand::Stop).await.unwrap();
 
         handle.await.unwrap();
@@ -645,10 +647,14 @@ mod tests {
         }
 
         cmd_tx.send(SessionCommand::Pause).await.unwrap();
-        tokio::time::sleep(Duration::from_millis(50)).await;
+        while *state_rx.borrow() != SessionState::Paused {
+            state_rx.changed().await.unwrap();
+        }
 
         cmd_tx.send(SessionCommand::Resume).await.unwrap();
-        tokio::time::sleep(Duration::from_millis(50)).await;
+        while *state_rx.borrow() != SessionState::Running {
+            state_rx.changed().await.unwrap();
+        }
 
         cmd_tx.send(SessionCommand::Stop).await.unwrap();
         handle.await.unwrap();

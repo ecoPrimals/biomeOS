@@ -18,7 +18,7 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::time::{sleep, timeout, Instant};
+use tokio::time::{timeout, Instant};
 use tracing_test::traced_test;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, Request, Respond, ResponseTemplate};
@@ -293,9 +293,27 @@ async fn test_network_partition_resilience() -> Result<()> {
 
     // Recovery: remove partition
     chaos_server.set_partitioned(false);
-    sleep(Duration::from_millis(500)).await;
 
-    // Should recover
+    // Wait for recovery: poll until discover succeeds or timeout
+    let recovered = tokio::time::timeout(Duration::from_secs(5), async {
+        loop {
+            if manager
+                .discover_registry(&format!("{}/api/v1/services", chaos_server.uri()))
+                .await
+                .is_ok()
+            {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+    })
+    .await;
+    assert!(
+        recovered.is_ok(),
+        "Should recover within 5s after partition lifted"
+    );
+
+    // Should have recovered
     let _recovered_result = manager
         .discover_registry(&format!("{}/api/v1/services", chaos_server.uri()))
         .await;
@@ -355,7 +373,7 @@ async fn test_intermittent_failures() -> Result<()> {
             Ok(_) => success_count += 1,
             Err(_) => failure_count += 1,
         }
-        sleep(Duration::from_millis(100)).await;
+        tokio::task::yield_now().await;
     }
 
     // Should have mix of successes and failures
@@ -388,8 +406,6 @@ async fn test_recovery_after_cascade_failure() -> Result<()> {
     chaos_server.set_degraded(true);
     chaos_server.set_failure_rate(0.8);
 
-    sleep(Duration::from_millis(200)).await;
-
     // Try operations during total failure
     let cascade_result = timeout(
         Duration::from_secs(2),
@@ -404,16 +420,11 @@ async fn test_recovery_after_cascade_failure() -> Result<()> {
         Err(_) => println!("Expected timeout during cascade"),
     }
 
-    // Begin recovery
+    // Begin recovery (mock state changes are immediate)
     chaos_server.set_partitioned(false);
-    sleep(Duration::from_millis(300)).await;
-
     chaos_server.set_failure_rate(0.2);
-    sleep(Duration::from_millis(300)).await;
-
     chaos_server.set_degraded(false);
     chaos_server.set_failure_rate(0.0);
-    sleep(Duration::from_millis(300)).await;
 
     // System should recover
     let health_report = manager.get_system_health().await;
@@ -467,7 +478,8 @@ async fn test_health_monitoring_during_chaos() -> Result<()> {
     while monitoring_start.elapsed() < monitoring_duration {
         let health_report = manager.get_system_health().await;
         health_checks.push((monitoring_start.elapsed(), health_report));
-        sleep(Duration::from_millis(500)).await;
+        // Intentional: polling interval for health monitoring simulation
+        tokio::time::sleep(Duration::from_millis(500)).await;
     }
 
     // Verify we collected health data

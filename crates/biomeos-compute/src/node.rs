@@ -626,7 +626,10 @@ mod tests {
             error: "oops".into(),
         };
         let cancelled = WorkloadStatus::Cancelled;
-        let _ = format!("{:?} {:?} {:?} {:?} {:?}", queued, running, completed, failed, cancelled);
+        let _ = format!(
+            "{:?} {:?} {:?} {:?} {:?}",
+            queued, running, completed, failed, cancelled
+        );
     }
 
     #[test]
@@ -697,7 +700,12 @@ mod tests {
 
     #[test]
     fn resource_type_variants() {
-        for t in [ResourceType::Cpu, ResourceType::Gpu, ResourceType::Memory, ResourceType::Hybrid] {
+        for t in [
+            ResourceType::Cpu,
+            ResourceType::Gpu,
+            ResourceType::Memory,
+            ResourceType::Hybrid,
+        ] {
             let _ = format!("{:?}", t);
         }
     }

@@ -8,6 +8,7 @@
 //!
 //! Also provides the high-level `NucleusClient` that coordinates all 5 layers.
 
+use bytes::Bytes;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -244,7 +245,7 @@ impl NucleusClient {
             let family_seed = Self::get_family_seed_from_storage();
             let trust = match self
                 .trust
-                .evaluate_trust(&primal, &identity.proof, &family_seed)
+                .evaluate_trust(&primal, &identity.proof, family_seed.as_ref())
                 .await
             {
                 Ok(trust) => {
@@ -310,14 +311,14 @@ impl NucleusClient {
     /// Family seed is NOT hardcoded. It's discovered from the environment
     /// or secure runtime storage. Missing seed results in reduced trust
     /// rather than failure.
-    fn get_family_seed_from_storage() -> Vec<u8> {
+    fn get_family_seed_from_storage() -> Bytes {
         use base64::{engine::general_purpose::STANDARD, Engine};
 
         // Priority 1: Environment variable (for bootstrap/testing)
         if let Ok(seed_b64) = std::env::var("BIOMEOS_FAMILY_SEED") {
             if let Ok(seed) = STANDARD.decode(&seed_b64) {
                 debug!("Family seed loaded from BIOMEOS_FAMILY_SEED environment");
-                return seed;
+                return Bytes::from(seed);
             }
             warn!("BIOMEOS_FAMILY_SEED set but invalid base64, ignoring");
         }
@@ -332,7 +333,7 @@ impl NucleusClient {
                     "Family seed loaded from XDG runtime dir: {}",
                     seed_path.display()
                 );
-                return seed;
+                return Bytes::from(seed);
             }
         }
 
@@ -350,13 +351,13 @@ impl NucleusClient {
                     "Family seed loaded from user runtime dir: {}",
                     seed_path.display()
                 );
-                return seed;
+                return Bytes::from(seed);
             }
         }
 
         // Graceful degradation: no seed available, trust evaluation will use Known level
         debug!("No family seed available - trust evaluation will use Known level");
-        Vec::new()
+        Bytes::new()
     }
 }
 

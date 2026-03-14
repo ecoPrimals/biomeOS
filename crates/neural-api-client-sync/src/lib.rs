@@ -314,6 +314,121 @@ mod tests {
     }
 
     #[test]
+    fn with_timeout_builder() {
+        let bridge = NeuralBridge {
+            socket_path: PathBuf::from("/tmp/test.sock"),
+            timeout: Duration::from_secs(30),
+        };
+        let bridge = bridge.with_timeout(Duration::from_secs(5));
+        assert_eq!(bridge.timeout, Duration::from_secs(5));
+    }
+
+    #[test]
+    fn socket_path_getter() {
+        let path = PathBuf::from("/tmp/neural-api.sock");
+        let bridge = NeuralBridge {
+            socket_path: path.clone(),
+            timeout: Duration::from_secs(30),
+        };
+        assert_eq!(bridge.socket_path(), path.as_path());
+    }
+
+    #[test]
+    fn neural_error_display() {
+        let err = NeuralError::NotFound("socket not found".to_string());
+        assert!(err.to_string().contains("Neural API not found"));
+        assert!(err.to_string().contains("socket not found"));
+
+        let io_err = std::io::Error::new(std::io::ErrorKind::NotFound, "file not found");
+        let err = NeuralError::Connection(io_err);
+        assert!(err.to_string().contains("Connection error"));
+
+        let err = NeuralError::Json("parse error".to_string());
+        assert!(err.to_string().contains("JSON error"));
+
+        let err = NeuralError::Rpc {
+            code: -32601,
+            message: "Method not found".to_string(),
+        };
+        assert!(err.to_string().contains("RPC error"));
+        assert!(err.to_string().contains("-32601"));
+
+        let err = NeuralError::Timeout;
+        assert_eq!(err.to_string(), "Timeout");
+    }
+
+    #[test]
+    fn parse_response_null_result() {
+        let resp = serde_json::json!({
+            "jsonrpc": "2.0",
+            "result": null,
+            "id": 1
+        });
+        let result = parse_response(&resp).unwrap();
+        assert!(result.value.is_null());
+    }
+
+    #[test]
+    fn parse_response_missing_result() {
+        let resp = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 1
+        });
+        let result = parse_response(&resp).unwrap();
+        assert!(result.value.is_null());
+    }
+
+    #[test]
+    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
+    fn resolve_socket_via_env_var() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let sock_path = temp.path().join("neural-api.sock");
+        std::fs::write(&sock_path, "").expect("create socket file");
+        std::env::set_var("NEURAL_API_SOCKET", sock_path.as_os_str());
+        std::env::set_var("FAMILY_ID", "test-family");
+
+        let bridge = NeuralBridge::discover();
+        std::env::remove_var("NEURAL_API_SOCKET");
+        std::env::remove_var("FAMILY_ID");
+        assert!(bridge.is_some());
+        assert_eq!(bridge.unwrap().socket_path(), sock_path.as_path());
+    }
+
+    #[test]
+    fn capability_call_fails_on_nonexistent_socket() {
+        let bridge = NeuralBridge {
+            socket_path: PathBuf::from("/nonexistent/path/neural-api-xyz.sock"),
+            timeout: Duration::from_millis(100),
+        };
+        let result = bridge.capability_call("ecology", "et0_pm", &serde_json::json!({}));
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(err, NeuralError::Connection(_)));
+    }
+
+    #[test]
+    fn discover_capability_fails_on_nonexistent_socket() {
+        let bridge = NeuralBridge {
+            socket_path: PathBuf::from("/nonexistent/path/neural-api-xyz.sock"),
+            timeout: Duration::from_millis(100),
+        };
+        let result = bridge.discover_capability("ecology");
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), NeuralError::Connection(_)));
+    }
+
+    #[test]
+    fn health_check_fails_on_nonexistent_socket() {
+        let bridge = NeuralBridge {
+            socket_path: PathBuf::from("/nonexistent/path/neural-api-xyz.sock"),
+            timeout: Duration::from_millis(100),
+        };
+        let result = bridge.health_check();
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), NeuralError::Connection(_)));
+    }
+
+    #[test]
     fn uid_from_runtime_dir_returns_valid_uid_on_linux() {
         #[cfg(target_os = "linux")]
         {
@@ -322,8 +437,7 @@ mod tests {
             // unless the test is actually running as nobody. In CI or normal dev,
             // we expect a real UID. 65534 indicates failure to read /proc/self/status.
             assert_ne!(
-                uid,
-                65534,
+                uid, 65534,
                 "uid_from_runtime_dir should return real UID on Linux, not nobody (65534)"
             );
         }

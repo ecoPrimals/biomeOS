@@ -30,6 +30,8 @@ pub mod capability_registry; // Central capability registry with Unix socket IPC
 mod capability_registry_tests;
 /// Wave-based concurrent primal startup
 pub mod concurrent_startup;
+#[cfg(test)]
+mod concurrent_startup_tests;
 /// Deployment mode detection (LiveSpore vs development)
 pub mod deployment_mode;
 pub mod discovery_bootstrap;

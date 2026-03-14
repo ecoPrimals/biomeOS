@@ -21,6 +21,7 @@
 //! ```
 
 use anyhow::{Context, Result};
+use bytes::Bytes;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -49,8 +50,7 @@ pub struct LocalEntropy {
     pub mac_address: Option<String>,
 
     /// Random nonce for additional entropy
-    #[serde(with = "serde_bytes")]
-    pub random_nonce: Vec<u8>,
+    pub random_nonce: Bytes,
 
     /// CPU info hash (optional)
     pub cpu_hash: Option<String>,
@@ -89,6 +89,7 @@ impl LocalEntropy {
         // 5. Random nonce (32 bytes)
         let mut random_nonce = vec![0u8; 32];
         getrandom::getrandom(&mut random_nonce).context("Failed to generate random nonce")?;
+        let random_nonce = Bytes::from(random_nonce);
 
         // 6. CPU hash (optional)
         let cpu_hash = Self::get_cpu_hash().ok();
@@ -121,7 +122,7 @@ impl LocalEntropy {
             hasher.update(mac.as_bytes());
         }
 
-        hasher.update(&self.random_nonce);
+        hasher.update(&self.random_nonce[..]);
 
         if let Some(ref cpu) = self.cpu_hash {
             hasher.update(cpu.as_bytes());
@@ -416,7 +417,7 @@ impl SporeIncubator {
     /// - Each deployment is unique
     /// - Same spore on different computers = different seeds
     /// - Deterministic (same computer + same spore = same seed)
-    fn derive_deployed_seed(&self, local_entropy: &LocalEntropy) -> SporeResult<Vec<u8>> {
+    fn derive_deployed_seed(&self, local_entropy: &LocalEntropy) -> SporeResult<Bytes> {
         let spore_seed_bytes = std::fs::read(self.spore_path.join(".family.seed"))?;
         let entropy_hash = local_entropy.hash();
 
@@ -424,7 +425,7 @@ impl SporeIncubator {
         hasher.update(&spore_seed_bytes);
         hasher.update(entropy_hash.as_bytes());
 
-        Ok(hasher.finalize().to_vec())
+        Ok(Bytes::from(hasher.finalize().to_vec()))
     }
 
     /// Hash a seed for display/storage
@@ -663,7 +664,7 @@ mod tests {
             machine_id: "12345".to_string(),
             timestamp: Utc::now(),
             mac_address: Some("00:11:22:33:44:55".to_string()),
-            random_nonce: vec![1, 2, 3],
+            random_nonce: Bytes::from_static(&[1, 2, 3]),
             cpu_hash: None,
             disk_serial: None,
         };
@@ -683,7 +684,7 @@ mod tests {
             machine_id: "same-id".to_string(),
             timestamp: now,
             mac_address: None,
-            random_nonce: vec![1, 2, 3],
+            random_nonce: Bytes::from_static(&[1, 2, 3]),
             cpu_hash: None,
             disk_serial: None,
         };
@@ -693,7 +694,7 @@ mod tests {
             machine_id: "same-id".to_string(),
             timestamp: now,
             mac_address: None,
-            random_nonce: vec![1, 2, 3],
+            random_nonce: Bytes::from_static(&[1, 2, 3]),
             cpu_hash: None,
             disk_serial: None,
         };
@@ -710,7 +711,7 @@ mod tests {
             machine_id: "id".to_string(),
             timestamp: now,
             mac_address: None,
-            random_nonce: vec![1],
+            random_nonce: Bytes::from_static(&[1]),
             cpu_hash: None,
             disk_serial: None,
         };
@@ -720,7 +721,7 @@ mod tests {
             machine_id: "id".to_string(),
             timestamp: now,
             mac_address: Some("00:11:22:33:44:55".to_string()),
-            random_nonce: vec![1],
+            random_nonce: Bytes::from_static(&[1]),
             cpu_hash: None,
             disk_serial: None,
         };
@@ -730,7 +731,7 @@ mod tests {
             machine_id: "id".to_string(),
             timestamp: now,
             mac_address: None,
-            random_nonce: vec![1],
+            random_nonce: Bytes::from_static(&[1]),
             cpu_hash: Some("cpu_hash_val".to_string()),
             disk_serial: None,
         };
@@ -740,7 +741,7 @@ mod tests {
             machine_id: "id".to_string(),
             timestamp: now,
             mac_address: None,
-            random_nonce: vec![1],
+            random_nonce: Bytes::from_static(&[1]),
             cpu_hash: None,
             disk_serial: Some("disk_serial_val".to_string()),
         };
@@ -764,7 +765,7 @@ mod tests {
             machine_id: "id".to_string(),
             timestamp: Utc::now(),
             mac_address: Some("aa:bb:cc:dd:ee:ff".to_string()),
-            random_nonce: vec![10, 20, 30],
+            random_nonce: Bytes::from_static(&[10, 20, 30]),
             cpu_hash: Some("cpu".to_string()),
             disk_serial: Some("disk".to_string()),
         };
@@ -783,7 +784,7 @@ mod tests {
             machine_id: "abc123".to_string(),
             timestamp: Utc::now(),
             mac_address: Some("00:11:22:33:44:55".to_string()),
-            random_nonce: vec![1, 2, 3, 4],
+            random_nonce: Bytes::from_static(&[1, 2, 3, 4]),
             cpu_hash: None,
             disk_serial: None,
         };
