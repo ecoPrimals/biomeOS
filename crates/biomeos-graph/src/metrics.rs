@@ -3,14 +3,27 @@
 
 //! Metrics collection and storage for graph execution (ecoBin compliant).
 //!
-//! Uses sled for persistent storage. Records graph and node-level execution
+//! Uses redb for persistent storage. Records graph and node-level execution
 //! metrics for aggregation and learning.
 
 use anyhow::{Context, Result};
+use redb::{Database, TableDefinition};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
+
+/// Key-value table for metrics storage
+const METRICS_TABLE: TableDefinition<&str, &[u8]> = TableDefinition::new("metrics");
+
+/// Returns the exclusive end bound for a prefix range (e.g. "exec:graph:" -> "exec:graph;")
+fn prefix_end(prefix: &str) -> String {
+    let mut s = prefix.to_string();
+    if let Some(last) = s.pop() {
+        s.push(char::from_u32(last as u32 + 1).unwrap_or('\u{10ffff}'));
+    }
+    s
+}
 
 /// Result of a graph execution (used by record_execution).
 #[derive(Debug, Clone, Default)]
@@ -28,7 +41,7 @@ pub struct GraphResult {
 /// Metrics collector for graph executions (ecoBin compliant!)
 #[derive(Clone)]
 pub struct MetricsCollector {
-    db: Arc<sled::Db>,
+    db: Arc<Database>,
 }
 
 /// Aggregated metrics for a graph
@@ -109,14 +122,22 @@ struct NodeExecutionRecord {
 }
 
 impl MetricsCollector {
-    /// Create a new metrics collector (sled - ecoBin compliant!)
+    /// Create a new metrics collector (redb - ecoBin compliant!)
     pub async fn new<P: AsRef<Path>>(db_path: P) -> Result<Self> {
-        let db = sled::open(db_path.as_ref()).context("Failed to open metrics database")?;
+        let path = db_path.as_ref();
+        let db = Database::create(path).map_err(|e| anyhow::anyhow!("{}", e)).context("Failed to open metrics database")?;
+
+        // Ensure the metrics table exists (redb creates tables on first write)
+        let txn = db.begin_write().map_err(|e| anyhow::anyhow!("{}", e)).context("Failed to initialize metrics database")?;
+        {
+            let _ = txn.open_table(METRICS_TABLE).map_err(|e| anyhow::anyhow!("{}", e)).context("Failed to create metrics table")?;
+        }
+        txn.commit().map_err(|e| anyhow::anyhow!("{}", e)).context("Failed to commit initialization")?;
 
         Ok(Self { db: Arc::new(db) })
     }
 
-    /// Record a graph execution (sled storage - ecoBin!)
+    /// Record a graph execution (redb storage - ecoBin!)
     pub async fn record_execution(
         &self,
         graph_name: &str,
@@ -138,16 +159,23 @@ impl MetricsCollector {
         let key = format!("exec:{}:{}", graph_name, record.id);
         let value = serde_json::to_vec(&record).context("Failed to serialize record")?;
 
-        self.db
-            .insert(key.as_bytes(), value)
-            .context("Failed to insert execution record")?;
+        let txn = self.db.begin_write().map_err(|e| anyhow::anyhow!("{}", e)).context("Failed to begin write transaction")?;
+        {
+            let mut table = txn.open_table(METRICS_TABLE).map_err(|e| anyhow::anyhow!("{}", e)).context("Failed to open metrics table")?;
+            table.insert(key.as_str(), value.as_slice()).map_err(|e| anyhow::anyhow!("{}", e)).context("Failed to insert execution record")?;
+        }
+        txn.commit().map_err(|e| anyhow::anyhow!("{}", e)).context("Failed to commit transaction")?;
 
         Ok(())
     }
 
-    /// Get aggregated metrics for a graph (sled queries!)
+    /// Get aggregated metrics for a graph (redb queries!)
     pub async fn get_graph_metrics(&self, graph_name: &str) -> Result<Option<GraphMetrics>> {
-        let prefix = format!("exec:{graph_name}:");
+        let prefix = format!("exec:{}:", graph_name);
+        let end = prefix_end(&prefix);
+
+        let txn = self.db.begin_read().map_err(|e| anyhow::anyhow!("{}", e)).context("Failed to begin read transaction")?;
+        let table = txn.open_table(METRICS_TABLE).map_err(|e| anyhow::anyhow!("{}", e)).context("Failed to open metrics table")?;
 
         let mut total = 0u64;
         let mut successful = 0u64;
@@ -156,12 +184,12 @@ impl MetricsCollector {
         let mut max_duration_ms = 0u64;
         let mut last_executed: Option<chrono::DateTime<chrono::Utc>> = None;
 
-        // Iterate through all records for this graph
-        for item in self.db.scan_prefix(prefix.as_bytes()) {
-            let (_key, value) = item.context("Failed to read database entry")?;
+        for item in table.range(prefix.as_str()..end.as_str()).map_err(|e| anyhow::anyhow!("{}", e))? {
+            let (_key, value) = item.map_err(|e| anyhow::anyhow!("{}", e)).context("Failed to read database entry")?;
+            let value = value.value();
 
             let record: ExecutionRecord =
-                serde_json::from_slice(&value).context("Failed to deserialize record")?;
+                serde_json::from_slice(value).context("Failed to deserialize record")?;
 
             total += 1;
             if record.success {
@@ -200,10 +228,14 @@ impl MetricsCollector {
     /// Get all tracked graphs
     pub async fn get_tracked_graphs(&self) -> Result<Vec<String>> {
         let mut graphs = std::collections::HashSet::new();
+        let end = prefix_end("exec:");
 
-        for item in self.db.scan_prefix(b"exec:") {
-            let (key, _) = item.context("Failed to read database entry")?;
-            let key_str = String::from_utf8_lossy(&key);
+        let txn = self.db.begin_read().map_err(|e| anyhow::anyhow!("{}", e)).context("Failed to begin read transaction")?;
+        let table = txn.open_table(METRICS_TABLE).map_err(|e| anyhow::anyhow!("{}", e)).context("Failed to open metrics table")?;
+
+        for item in table.range("exec:"..end.as_str()).map_err(|e| anyhow::anyhow!("{}", e))? {
+            let (key, _) = item.map_err(|e| anyhow::anyhow!("{}", e)).context("Failed to read database entry")?;
+            let key_str = key.value();
 
             // Parse "exec:graph_name:timestamp" format
             let parts: Vec<&str> = key_str.split(':').collect();
@@ -217,7 +249,29 @@ impl MetricsCollector {
 
     /// Clear all metrics (for testing or reset)
     pub async fn clear_all(&self) -> Result<()> {
-        self.db.clear().context("Failed to clear database")?;
+        let txn = self.db.begin_read().map_err(|e| anyhow::anyhow!("{}", e)).context("Failed to begin read transaction")?;
+        let table = txn.open_table(METRICS_TABLE).map_err(|e| anyhow::anyhow!("{}", e)).context("Failed to open metrics table")?;
+
+        let keys: Vec<String> = table
+            .range::<&str>(""..)
+            .map_err(|e| anyhow::anyhow!("{}", e))?
+            .filter_map(|item| {
+                item.map(|(k, _)| k.value().to_string()).ok()
+            })
+            .collect();
+
+        drop(table);
+        drop(txn);
+
+        let write_txn = self.db.begin_write().map_err(|e| anyhow::anyhow!("{}", e)).context("Failed to begin write transaction")?;
+        {
+            let mut table = write_txn.open_table(METRICS_TABLE).map_err(|e| anyhow::anyhow!("{}", e)).context("Failed to open metrics table")?;
+            for key in keys {
+                table.remove(key.as_str()).map_err(|e| anyhow::anyhow!("{}", e))?;
+            }
+        }
+        write_txn.commit().map_err(|e| anyhow::anyhow!("{}", e)).context("Failed to commit transaction")?;
+
         Ok(())
     }
 }
@@ -252,9 +306,14 @@ impl MetricsCollector {
             record.executed_at.timestamp_millis()
         );
         let value = serde_json::to_vec(&record).context("Failed to serialize node record")?;
-        self.db
-            .insert(key.as_bytes(), value)
-            .context("Failed to insert node execution record")?;
+
+        let txn = self.db.begin_write().map_err(|e| anyhow::anyhow!("{}", e)).context("Failed to begin write transaction")?;
+        {
+            let mut table = txn.open_table(METRICS_TABLE).map_err(|e| anyhow::anyhow!("{}", e)).context("Failed to open metrics table")?;
+            table.insert(key.as_str(), value.as_slice()).map_err(|e| anyhow::anyhow!("{}", e)).context("Failed to insert node execution record")?;
+        }
+        txn.commit().map_err(|e| anyhow::anyhow!("{}", e)).context("Failed to commit transaction")?;
+
         Ok(())
     }
 
@@ -264,15 +323,20 @@ impl MetricsCollector {
         graph_name: &str,
         node_id: &str,
     ) -> Result<Option<NodeMetricsAggregate>> {
-        let prefix = format!("node_exec:{graph_name}:{node_id}:");
+        let prefix = format!("node_exec:{}:{}:", graph_name, node_id);
+        let end = prefix_end(&prefix);
         let mut total = 0u64;
         let mut successful = 0u64;
         let mut total_duration = 0u64;
 
-        for item in self.db.scan_prefix(prefix.as_bytes()) {
-            let (_key, value) = item.context("Failed to read database entry")?;
+        let txn = self.db.begin_read().map_err(|e| anyhow::anyhow!("{}", e)).context("Failed to begin read transaction")?;
+        let table = txn.open_table(METRICS_TABLE).map_err(|e| anyhow::anyhow!("{}", e)).context("Failed to open metrics table")?;
+
+        for item in table.range(prefix.as_str()..end.as_str()).map_err(|e| anyhow::anyhow!("{}", e))? {
+            let (_key, value) = item.map_err(|e| anyhow::anyhow!("{}", e)).context("Failed to read database entry")?;
+            let value = value.value();
             let record: NodeExecutionRecord =
-                serde_json::from_slice(&value).context("Failed to deserialize node record")?;
+                serde_json::from_slice(value).context("Failed to deserialize node record")?;
             if record.graph_name == graph_name && record.node_id == node_id {
                 total += 1;
                 if record.success {
@@ -301,13 +365,18 @@ impl MetricsCollector {
         graph_name: &str,
         limit: usize,
     ) -> Result<Vec<ExecutionRecord>> {
-        let prefix = format!("exec:{graph_name}:");
+        let prefix = format!("exec:{}:", graph_name);
+        let end = prefix_end(&prefix);
         let mut records: Vec<ExecutionRecord> = Vec::new();
 
-        for item in self.db.scan_prefix(prefix.as_bytes()) {
-            let (_key, value) = item.context("Failed to read database entry")?;
+        let txn = self.db.begin_read().map_err(|e| anyhow::anyhow!("{}", e)).context("Failed to begin read transaction")?;
+        let table = txn.open_table(METRICS_TABLE).map_err(|e| anyhow::anyhow!("{}", e)).context("Failed to open metrics table")?;
+
+        for item in table.range(prefix.as_str()..end.as_str()).map_err(|e| anyhow::anyhow!("{}", e))? {
+            let (_key, value) = item.map_err(|e| anyhow::anyhow!("{}", e)).context("Failed to read database entry")?;
+            let value = value.value();
             let record: ExecutionRecord =
-                serde_json::from_slice(&value).context("Failed to deserialize record")?;
+                serde_json::from_slice(value).context("Failed to deserialize record")?;
             records.push(record);
         }
 
@@ -331,7 +400,7 @@ mod tests {
     #[tokio::test]
     async fn test_metrics_collection_ecobin() {
         let dir = tempdir().unwrap();
-        let db_path = dir.path().join("metrics.sled");
+        let db_path = dir.path().join("metrics.redb");
 
         let collector = MetricsCollector::new(&db_path).await.unwrap();
 
@@ -361,7 +430,7 @@ mod tests {
     #[tokio::test]
     async fn test_multiple_executions() {
         let dir = tempdir().unwrap();
-        let db_path = dir.path().join("metrics_multi.sled");
+        let db_path = dir.path().join("metrics_multi.redb");
 
         let collector = MetricsCollector::new(&db_path).await.unwrap();
 
@@ -393,7 +462,7 @@ mod tests {
     #[tokio::test]
     async fn test_no_metrics_for_unknown_graph() {
         let dir = tempdir().unwrap();
-        let db_path = dir.path().join("metrics_empty.sled");
+        let db_path = dir.path().join("metrics_empty.redb");
 
         let collector = MetricsCollector::new(&db_path).await.unwrap();
 
@@ -404,7 +473,7 @@ mod tests {
     #[tokio::test]
     async fn test_tracked_graphs() {
         let dir = tempdir().unwrap();
-        let db_path = dir.path().join("metrics_tracked.sled");
+        let db_path = dir.path().join("metrics_tracked.redb");
 
         let collector = MetricsCollector::new(&db_path).await.unwrap();
 
@@ -432,7 +501,7 @@ mod tests {
     #[tokio::test]
     async fn test_clear_all() {
         let dir = tempdir().unwrap();
-        let db_path = dir.path().join("metrics_clear.sled");
+        let db_path = dir.path().join("metrics_clear.redb");
 
         let collector = MetricsCollector::new(&db_path).await.unwrap();
 

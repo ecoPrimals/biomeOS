@@ -47,6 +47,7 @@ pub mod graph;
 pub mod loader;
 pub mod metrics;
 pub mod node;
+pub mod pathway_learner;
 pub mod sensor;
 pub mod validation;
 
@@ -56,6 +57,7 @@ pub use events::{GraphEvent, GraphEventBroadcaster};
 pub use graph::{CoordinationPattern, DeploymentGraph, GraphMetadata, TickConfig};
 pub use loader::GraphLoader;
 pub use node::{GraphNode, NodeConfig, NodeParams};
+pub use pathway_learner::{GraphAnalysis, OptimizationSuggestion, OptimizationType, PathwayLearner};
 pub use sensor::{SensorEvent, SensorEventBus, SensorSource};
 pub use validation::GraphValidator;
 

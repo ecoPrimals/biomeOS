@@ -20,7 +20,8 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 use std::time::Duration;
 
-// Helper function for HTTP health checks (pure Rust via ureq)
+// Helper for HTTP health checks. Uses ureq with default-features = false (no TLS).
+// Local-only URLs (http://localhost) — production HTTPS delegates to Songbird.
 fn http_get(url: &str, timeout_secs: u64) -> Result<(u16, String), String> {
     ureq::get(url)
         .timeout(Duration::from_secs(timeout_secs))

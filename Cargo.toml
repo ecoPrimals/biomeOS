@@ -84,8 +84,10 @@ axum = { version = "0.7", features = ["ws"] }
 tower = { version = "0.5", features = [] }
 tower-http = { version = "0.5", features = ["cors"] }
 # reqwest REMOVED for ecoBin v2.0 compliance (C bindings via openssl-sys)
-# Use ureq for pure Rust HTTP client needs, or atomic_client for primal communication
-ureq = { version = "2.9", features = ["json"] } # Pure Rust HTTP client
+# Use ureq for local HTTP (dev/tests) or BiomeOsHttpClient/Songbird for production HTTPS.
+# default-features = false avoids ureq/tls → rustls → ring (ecoBin: no C/asm crypto).
+# Production HTTP/HTTPS: delegate to Songbird via BiomeOsHttpClient (Unix socket).
+ureq = { version = "2.9", default-features = false, features = ["json"] }
 
 # benchScale is an external tool (ecoPrimals/primalTools/benchscale)
 # Should be invoked as a separate binary, not a hard dependency

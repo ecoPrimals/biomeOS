@@ -12,6 +12,7 @@
 
 use anyhow::{Context, Result};
 use biomeos_types::{JsonRpcRequest, SystemPaths};
+use biomeos_types::{primal_names, CapabilityTaxonomy};
 use std::path::PathBuf;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
@@ -147,7 +148,17 @@ async fn run_status(
     info!("  family: {family}");
     info!("  socket: {}", socket_path.display());
 
-    let primals = ["rhizocrypt", "loamspine", "sweetgrass", "beardog", "nestgate"];
+    // Capability-based discovery: check health of primals providing RootPulse-required capabilities.
+    // Maps capability identifiers → primal names (via taxonomy or provenance trio constants).
+    let primals: Vec<&str> = [
+        primal_names::RHIZOCRYPT,  // dag.session (ephemeral DAG)
+        primal_names::LOAMSPINE,   // commit.session (permanence)
+        primal_names::SWEETGRASS,  // provenance.create_braid (attribution)
+        CapabilityTaxonomy::resolve_to_primal("crypto").unwrap_or(primal_names::BEARDOG),   // crypto.sign
+        CapabilityTaxonomy::resolve_to_primal("storage").unwrap_or(primal_names::NESTGATE),  // storage.put
+    ]
+    .into_iter()
+    .collect();
 
     for primal in &primals {
         let request = JsonRpcRequest::new(

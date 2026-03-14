@@ -185,34 +185,40 @@ impl PrimalConnections {
     // ===================================================================
 
     /// PetalTongue UI framework connection (capability: ui, visualization)
+    #[deprecated(note = "use get_by_capability(\"ui\") or get_by_capability(\"visualization\") instead")]
     pub fn petaltongue(&self) -> Option<&PetalTongueClient> {
         self.get_by_capability("ui")
             .or_else(|| self.get_by_capability("visualization"))
             .or_else(|| self.get("petaltongue"))
     }
     /// Songbird discovery/networking connection (capability: discovery, network)
+    #[deprecated(note = "use get_by_capability(\"discovery\") or get_by_capability(\"network\") instead")]
     pub fn songbird(&self) -> Option<&SongbirdClient> {
         self.get_by_capability("discovery")
             .or_else(|| self.get_by_capability("network"))
             .or_else(|| self.get(biomeos_types::primal_names::SONGBIRD))
     }
     /// BearDog security/crypto connection (capability: encryption, security)
+    #[deprecated(note = "use get_by_capability(\"crypto\") or get_by_capability(\"encryption\") instead")]
     pub fn beardog(&self) -> Option<&BearDogClient> {
         self.get_by_capability("encryption")
             .or_else(|| self.get_by_capability("security"))
             .or_else(|| self.get(biomeos_types::primal_names::BEARDOG))
     }
     /// NestGate storage connection (capability: storage)
+    #[deprecated(note = "use get_by_capability(\"storage\") instead")]
     pub fn nestgate(&self) -> Option<&NestGateClient> {
         self.get_by_capability("storage")
             .or_else(|| self.get(biomeos_types::primal_names::NESTGATE))
     }
     /// ToadStool compute/GPU connection (capability: compute)
+    #[deprecated(note = "use get_by_capability(\"compute\") instead")]
     pub fn toadstool(&self) -> Option<&ToadStoolClient> {
         self.get_by_capability("compute")
             .or_else(|| self.get(biomeos_types::primal_names::TOADSTOOL))
     }
     /// Squirrel AI connection (capability: ai)
+    #[deprecated(note = "use get_by_capability(\"ai\") instead")]
     pub fn squirrel(&self) -> Option<&SquirrelClient> {
         self.get_by_capability("ai")
             .or_else(|| self.get(biomeos_types::primal_names::SQUIRREL))
@@ -226,6 +232,7 @@ impl PrimalConnections {
 }
 
 #[cfg(test)]
+#[allow(deprecated)]
 mod tests {
     use super::*;
     use std::path::PathBuf;

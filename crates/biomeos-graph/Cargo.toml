@@ -27,7 +27,7 @@ tracing = "0.1"
 rustix = { version = "0.38", features = ["process"] }
 
 # Metrics storage (Pure Rust, ecoBin compliant)
-sled = "0.34"
+redb = "2.4"
 
 # biomeOS internal crates
 biomeos-types = { path = "../biomeos-types" }
