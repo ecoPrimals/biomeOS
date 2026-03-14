@@ -77,3 +77,86 @@ pub enum DataOperation {
     /// Migrating data
     Migrate,
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn network_operation_debug() {
+        let ops = [
+            NetworkOperation::Connect,
+            NetworkOperation::Send,
+            NetworkOperation::Receive,
+            NetworkOperation::Disconnect,
+            NetworkOperation::Resolve,
+            NetworkOperation::Handshake,
+        ];
+        for op in ops {
+            let _ = format!("{:?}", op);
+        }
+    }
+
+    #[test]
+    fn security_violation_type_debug() {
+        let types = [
+            SecurityViolationType::AuthenticationFailure,
+            SecurityViolationType::AuthorizationDenied,
+            SecurityViolationType::TokenExpired,
+            SecurityViolationType::InvalidCredentials,
+            SecurityViolationType::AccessDenied,
+            SecurityViolationType::RateLimitExceeded,
+            SecurityViolationType::SuspiciousActivity,
+        ];
+        for t in types {
+            let _ = format!("{:?}", t);
+        }
+    }
+
+    #[test]
+    fn resource_operation_debug() {
+        let ops = [
+            ResourceOperation::Allocate,
+            ResourceOperation::Deallocate,
+            ResourceOperation::Monitor,
+            ResourceOperation::Scale,
+            ResourceOperation::Limit,
+        ];
+        for op in ops {
+            let _ = format!("{:?}", op);
+        }
+    }
+
+    #[test]
+    fn data_operation_debug() {
+        let ops = [
+            DataOperation::Read,
+            DataOperation::Write,
+            DataOperation::Update,
+            DataOperation::Delete,
+            DataOperation::Validate,
+            DataOperation::Transform,
+            DataOperation::Migrate,
+        ];
+        for op in ops {
+            let _ = format!("{:?}", op);
+        }
+    }
+
+    #[test]
+    fn network_operation_serialize_roundtrip() {
+        let op = NetworkOperation::Connect;
+        let json = serde_json::to_string(&op).expect("serialize");
+        let parsed: NetworkOperation = serde_json::from_str(&json).expect("deserialize");
+        assert!(matches!(parsed, NetworkOperation::Connect));
+    }
+
+    #[test]
+    fn security_violation_type_serialize_roundtrip() {
+        let t = SecurityViolationType::TokenExpired;
+        let json = serde_json::to_string(&t).expect("serialize");
+        let parsed: SecurityViolationType = serde_json::from_str(&json).expect("deserialize");
+        assert!(matches!(parsed, SecurityViolationType::TokenExpired));
+    }
+}

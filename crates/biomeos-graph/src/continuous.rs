@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright 2025 ecoPrimals Project
+// Copyright (C) 2024–2026 ecoPrimals Project
 
 //! Continuous coordination executor for fixed-timestep graph loops.
 //!

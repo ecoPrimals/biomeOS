@@ -52,6 +52,9 @@ pub mod primal_registry;
 // Lab integration module (benchScale)
 pub mod lab;
 
+// Pathway-learning metrics for Neural API Phase 2
+pub mod metrics_collector;
+
 // VM Federation (benchScale + libvirt)
 pub mod vm_federation;
 

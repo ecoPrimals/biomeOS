@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright 2025 ecoPrimals Project
+// Copyright (C) 2024–2026 ecoPrimals Project
 
 //! Continuous mode — fixed-timestep graph execution via JSON-RPC IPC
 //!
@@ -20,6 +20,7 @@ use biomeos_types::JsonRpcRequest;
 use std::path::PathBuf;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
+use tokio::sync::mpsc;
 use tracing::{debug, info, warn};
 
 /// Resolve a primal's Unix socket path.
@@ -123,6 +124,26 @@ pub async fn run(graph_path: PathBuf, dry_run: bool) -> Result<()> {
     info!("biomeOS Continuous Mode");
     info!("  graph: {}", graph_path.display());
 
+    let (cmd_tx, cmd_rx) = mpsc::channel::<SessionCommand>(16);
+    let cmd_tx_signal = cmd_tx.clone();
+    tokio::spawn(async move {
+        tokio::signal::ctrl_c().await.ok();
+        info!("Shutdown signal received");
+        let _ = cmd_tx_signal.send(SessionCommand::Stop).await;
+    });
+
+    run_controlled(graph_path, dry_run, cmd_rx).await
+}
+
+/// Run a continuous graph with caller-controlled command channel.
+///
+/// Used by tests to control when the session stops (e.g. after N ticks).
+/// Production code uses `run()` which wires ctrl_c to this.
+pub(crate) async fn run_controlled(
+    graph_path: PathBuf,
+    dry_run: bool,
+    cmd_rx: mpsc::Receiver<SessionCommand>,
+) -> Result<()> {
     if !graph_path.exists() {
         anyhow::bail!("Graph file not found: {}", graph_path.display());
     }
@@ -200,15 +221,6 @@ pub async fn run(graph_path: PathBuf, dry_run: bool) -> Result<()> {
     let broadcaster = GraphEventBroadcaster::new(1024);
     let mut executor = ContinuousExecutor::new(graph, broadcaster);
 
-    let (cmd_tx, cmd_rx) = tokio::sync::mpsc::channel::<SessionCommand>(16);
-
-    let cmd_tx_signal = cmd_tx.clone();
-    tokio::spawn(async move {
-        tokio::signal::ctrl_c().await.ok();
-        info!("Shutdown signal received");
-        let _ = cmd_tx_signal.send(SessionCommand::Stop).await;
-    });
-
     info!("Starting continuous execution...");
     executor.run(cmd_rx, execute_node).await;
     info!("Continuous session ended.");
@@ -220,6 +232,35 @@ pub async fn run(graph_path: PathBuf, dry_run: bool) -> Result<()> {
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
+
+    /// Restore env var on drop (avoids test pollution when tests run in parallel).
+    struct EnvGuard {
+        key: &'static str,
+        original: Option<String>,
+    }
+    impl EnvGuard {
+        fn new(key: &'static str, value: Option<&str>) -> Self {
+            let original = std::env::var(key).ok();
+            match value {
+                Some(v) => std::env::set_var(key, v),
+                None => std::env::remove_var(key),
+            }
+            Self {
+                key,
+                original,
+            }
+        }
+    }
+    impl Drop for EnvGuard {
+        fn drop(&mut self) {
+            match &self.original {
+                Some(v) => std::env::set_var(self.key, v),
+                None => std::env::remove_var(self.key),
+            }
+        }
+    }
 
     #[test]
     fn test_resolve_primal_socket_default() {
@@ -233,9 +274,8 @@ mod tests {
 
     #[test]
     fn test_resolve_primal_socket_biomeos_dir() {
-        std::env::set_var("BIOMEOS_SOCKET_DIR", "/run/biomeos");
+        let _guard = EnvGuard::new("BIOMEOS_SOCKET_DIR", Some("/run/biomeos"));
         let path = resolve_primal_socket("petaltongue");
-        std::env::remove_var("BIOMEOS_SOCKET_DIR");
         assert_eq!(path, PathBuf::from("/run/biomeos/petaltongue.sock"));
     }
 
@@ -433,5 +473,216 @@ mod tests {
 
         let result = execute_node("test".to_string(), node, None).await;
         assert!(result.is_err());
+    }
+
+    /// Live socket validation: Create a temp Unix socket, spawn a mock JSON-RPC server,
+    /// run the ContinuousExecutor for a few ticks, verify it sends requests to the socket.
+    #[tokio::test]
+    async fn test_continuous_executor_with_mock_socket() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let sock_path = dir.path().join("mockprimal.sock");
+        let received: Arc<Mutex<Vec<serde_json::Value>>> = Arc::new(Mutex::new(Vec::new()));
+        let received_clone = Arc::clone(&received);
+
+        let server = tokio::spawn(async move {
+            let listener = tokio::net::UnixListener::bind(&sock_path).expect("bind");
+            for _ in 0..20 {
+                if let Ok(Ok((stream, _))) = tokio::time::timeout(
+                    std::time::Duration::from_secs(2),
+                    listener.accept(),
+                )
+                .await
+                {
+                    let recv = Arc::clone(&received_clone);
+                    tokio::spawn(async move {
+                        let (reader, mut writer) = stream.into_split();
+                        let mut br = BufReader::new(reader);
+                        let mut line = String::new();
+                        let _ = br.read_line(&mut line).await;
+                        if let Ok(req) = serde_json::from_str::<serde_json::Value>(&line) {
+                            recv.lock().await.push(req);
+                        }
+                        let response = serde_json::json!({
+                            "jsonrpc": "2.0",
+                            "result": {"ok": true},
+                            "id": 1
+                        });
+                        let _ = writer
+                            .write_all(format!("{response}\n").as_bytes())
+                            .await;
+                    });
+                }
+            }
+        });
+
+        let graph_path = dir.path().join("graph.toml");
+        std::fs::write(
+            &graph_path,
+            r#"
+            [graph]
+            id = "mock-socket-test"
+            name = "Mock Socket Test"
+            version = "1.0.0"
+            coordination = "continuous"
+
+            [graph.tick]
+            target_hz = 20.0
+
+            [[graph.nodes]]
+            id = "node1"
+            name = "Node 1"
+            capability = "game.tick_logic"
+            budget_ms = 1.0
+
+            [graph.nodes.config]
+            primal = "mockprimal"
+        "#,
+        )
+        .expect("write graph");
+
+        let _env = EnvGuard::new("BIOMEOS_SOCKET_DIR", dir.path().to_str());
+
+        let (cmd_tx, cmd_rx) = mpsc::channel::<SessionCommand>(16);
+        let cmd_tx_stop = cmd_tx.clone();
+        tokio::spawn(async move {
+            tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+            let _ = cmd_tx_stop.send(SessionCommand::Stop).await;
+        });
+
+        let result = tokio::time::timeout(
+            std::time::Duration::from_secs(5),
+            run_controlled(graph_path, false, cmd_rx),
+        )
+        .await;
+
+        server.abort();
+
+        let res = result.expect("run_controlled should complete within timeout");
+        res.expect("run_controlled should succeed");
+
+        let reqs = received.lock().await;
+        assert!(
+            !reqs.is_empty(),
+            "Executor should have sent at least one JSON-RPC request to the mock socket"
+        );
+        assert!(
+            reqs.iter().any(|r| r.get("method").and_then(|m| m.as_str()) == Some("game.tick_logic")),
+            "Expected game.tick_logic method in received requests"
+        );
+    }
+
+    /// Run the executor with a non-existent socket path; verify it doesn't panic, just logs warnings.
+    #[tokio::test]
+    async fn test_continuous_executor_graceful_degradation() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let graph_path = dir.path().join("graph.toml");
+        std::fs::write(
+            &graph_path,
+            r#"
+            [graph]
+            id = "graceful-test"
+            name = "Graceful Degradation"
+            version = "1.0.0"
+            coordination = "continuous"
+
+            [graph.tick]
+            target_hz = 10.0
+
+            [[graph.nodes]]
+            id = "node1"
+            name = "Node 1"
+            capability = "health.check"
+            budget_ms = 1.0
+
+            [graph.nodes.config]
+            primal = "nonexistent-primal-xyz-12345"
+        "#,
+        )
+        .expect("write graph");
+
+        let _env = EnvGuard::new("BIOMEOS_SOCKET_DIR", dir.path().to_str());
+
+        let (cmd_tx, cmd_rx) = mpsc::channel::<SessionCommand>(16);
+        let cmd_tx_stop = cmd_tx.clone();
+        tokio::spawn(async move {
+            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+            let _ = cmd_tx_stop.send(SessionCommand::Stop).await;
+        });
+
+        let result = tokio::time::timeout(
+            std::time::Duration::from_secs(5),
+            run_controlled(graph_path, false, cmd_rx),
+        )
+        .await;
+
+        let res = result.expect("run_controlled should complete within timeout");
+        res.expect("run_controlled should succeed (graceful degradation)");
+    }
+
+    /// Run at 10 Hz for ~500ms; verify we get approximately 4–6 ticks.
+    /// This test lives in biomeos-graph (see continuous.rs there).
+    #[tokio::test]
+    async fn test_continuous_executor_tick_timing() {
+        let toml_str = r#"
+            [graph]
+            id = "tick-timing-test"
+            name = "Tick Timing"
+            version = "1.0.0"
+            coordination = "continuous"
+
+            [graph.tick]
+            target_hz = 10.0
+
+            [[graph.nodes]]
+            id = "node1"
+            name = "Node 1"
+        "#;
+        let graph: biomeos_graph::DeploymentGraph = toml::from_str(toml_str).unwrap();
+        let broadcaster = GraphEventBroadcaster::new(1024);
+        let mut receiver = broadcaster.subscribe();
+        let mut executor =
+            biomeos_graph::ContinuousExecutor::new(graph, broadcaster);
+
+        let (cmd_tx, cmd_rx) = mpsc::channel::<SessionCommand>(16);
+        let cmd_tx_stop = cmd_tx.clone();
+        tokio::spawn(async move {
+            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+            let _ = cmd_tx_stop.send(SessionCommand::Stop).await;
+        });
+
+        let handle = tokio::spawn(async move {
+            executor
+                .run(cmd_rx, |_node_id, _node, _feedback| async {
+                    Ok(serde_json::json!({"ok": true}))
+                })
+                .await;
+        });
+
+        let mut tick_count = 0u64;
+        loop {
+            let event = tokio::time::timeout(
+                std::time::Duration::from_secs(2),
+                receiver.recv(),
+            )
+            .await;
+            match event {
+                Ok(Ok(biomeos_graph::GraphEvent::TickCompleted { tick, .. })) => {
+                    tick_count = tick;
+                }
+                Ok(Ok(biomeos_graph::GraphEvent::SessionStateChanged {
+                    new_state, ..
+                })) if new_state == "stopped" => break,
+                Ok(Err(_)) | Err(_) => break,
+                _ => {}
+            }
+        }
+
+        handle.await.expect("executor task");
+
+        assert!(
+            tick_count >= 4 && tick_count <= 8,
+            "Expected ~5 ticks at 10 Hz over 500ms, got {}",
+            tick_count
+        );
     }
 }

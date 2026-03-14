@@ -253,28 +253,11 @@ enum Mode {
         command: PlasmodiumCommand,
     },
 
-    /// RootPulse - Commit workflow (dehydrate + sign + store + commit + attribute)
+    /// RootPulse - Emergent version control via provenance trio coordination
     #[command(name = "rootpulse")]
     RootPulse {
-        /// rhizoCrypt session ID to commit
-        #[arg(long)]
-        session_id: String,
-
-        /// Agent DID performing the commit
-        #[arg(long)]
-        agent_did: String,
-
-        /// Neural API Unix socket path
-        #[arg(long)]
-        socket: Option<PathBuf>,
-
-        /// Family ID (auto-discovered from .family.seed if not specified)
-        #[arg(long)]
-        family_id: Option<String>,
-
-        /// Dry run (show what would happen)
-        #[arg(short = 'n', long)]
-        dry_run: bool,
+        #[command(subcommand)]
+        command: RootPulseCommand,
     },
 
     /// Continuous mode - Run a continuous coordination graph (game loops, dashboards)
@@ -300,6 +283,104 @@ enum Mode {
         node_id: String,
 
         /// Family ID (auto-derived from .family.seed if not specified)
+        #[arg(long)]
+        family_id: Option<String>,
+    },
+}
+
+/// RootPulse subcommands — emergent version control via provenance trio
+#[derive(Debug, Subcommand)]
+enum RootPulseCommand {
+    /// Commit a session (dehydrate + sign + store + commit + attribute)
+    #[command(name = "commit")]
+    Commit {
+        /// rhizoCrypt session ID to commit
+        #[arg(long)]
+        session_id: String,
+        /// Agent DID performing the commit
+        #[arg(long)]
+        agent_did: String,
+        /// Neural API Unix socket path
+        #[arg(long)]
+        socket: Option<PathBuf>,
+        /// Family ID (auto-discovered from .family.seed if not specified)
+        #[arg(long)]
+        family_id: Option<String>,
+        /// Dry run (show what would happen)
+        #[arg(short = 'n', long)]
+        dry_run: bool,
+    },
+
+    /// Create a branch from a session
+    #[command(name = "branch")]
+    Branch {
+        /// Source session ID to branch from
+        #[arg(long)]
+        session_id: String,
+        /// Name for the new branch
+        #[arg(long)]
+        branch_name: String,
+        /// Agent DID performing the branch
+        #[arg(long)]
+        agent_did: String,
+        /// Neural API Unix socket path
+        #[arg(long)]
+        socket: Option<PathBuf>,
+        /// Family ID
+        #[arg(long)]
+        family_id: Option<String>,
+        /// Dry run
+        #[arg(short = 'n', long)]
+        dry_run: bool,
+    },
+
+    /// Merge two sessions
+    #[command(name = "merge")]
+    Merge {
+        /// Source session ID (branch to merge from)
+        #[arg(long)]
+        source_session: String,
+        /// Target session ID (branch to merge into)
+        #[arg(long)]
+        target_session: String,
+        /// Agent DID performing the merge
+        #[arg(long)]
+        agent_did: String,
+        /// Neural API Unix socket path
+        #[arg(long)]
+        socket: Option<PathBuf>,
+        /// Family ID
+        #[arg(long)]
+        family_id: Option<String>,
+        /// Dry run
+        #[arg(short = 'n', long)]
+        dry_run: bool,
+    },
+
+    /// Diff between two commits
+    #[command(name = "diff")]
+    Diff {
+        /// First commit reference
+        #[arg(long)]
+        from: String,
+        /// Second commit reference
+        #[arg(long)]
+        to: String,
+        /// Neural API Unix socket path
+        #[arg(long)]
+        socket: Option<PathBuf>,
+        /// Family ID
+        #[arg(long)]
+        family_id: Option<String>,
+    },
+
+    /// Show status of the provenance trio
+    #[command(name = "status")]
+    Status {
+        /// Neural API Unix socket path
+        #[arg(long)]
+        socket: Option<PathBuf>,
+        /// Family ID
         #[arg(long)]
         family_id: Option<String>,
     },
@@ -396,13 +477,7 @@ async fn dispatch_mode(cli: Cli) -> Result<()> {
         Mode::Enroll(args) => modes::enroll::run(args).await,
         Mode::ModelCache { command } => modes::model_cache::run(command).await,
         Mode::Plasmodium { command } => modes::plasmodium::run(command).await,
-        Mode::RootPulse {
-            session_id,
-            agent_did,
-            socket,
-            family_id,
-            dry_run,
-        } => modes::rootpulse::run(session_id, agent_did, socket, family_id, dry_run).await,
+        Mode::RootPulse { command } => modes::rootpulse::dispatch(command).await,
         Mode::Continuous { graph, dry_run } => modes::continuous::run(graph, dry_run).await,
         Mode::Nucleus {
             mode: nucleus_mode,

@@ -421,6 +421,43 @@ impl SystemPaths {
         Self::ensure_dir(&self.state_dir)?;
         Ok(())
     }
+
+    /// Returns the real UID of the current process without using `unsafe`.
+    ///
+    /// Reads `/proc/self/status` and parses the `Uid:` line to obtain the real UID.
+    /// Falls back to 65534 (nobody) if the proc filesystem is unavailable (e.g. non-Linux).
+    ///
+    /// This approach avoids `unsafe` by using pure Rust I/O (`std::fs::read_to_string`)
+    /// instead of libc's `getuid()`, making it safe for use in restricted environments
+    /// and avoiding FFI boundary concerns.
+    #[must_use]
+    pub fn safe_uid() -> u32 {
+        safe_uid()
+    }
+}
+
+/// Returns the real UID of the current process without using `unsafe`.
+///
+/// Reads `/proc/self/status` and parses the `Uid:` line to obtain the real UID.
+/// Falls back to 65534 (nobody) if the proc filesystem is unavailable (e.g. non-Linux).
+///
+/// This approach avoids `unsafe` by using pure Rust I/O (`std::fs::read_to_string`)
+/// instead of libc's `getuid()`, making it safe for use in restricted environments
+/// and avoiding FFI boundary concerns.
+#[must_use]
+pub fn safe_uid() -> u32 {
+    const PROC_STATUS_PATH: &str = "/proc/self/status";
+    const NOBODY_UID: u32 = 65534;
+    std::fs::read_to_string(PROC_STATUS_PATH)
+        .ok()
+        .and_then(|status| {
+            status.lines().find_map(|line| {
+                line.strip_prefix("Uid:")
+                    .and_then(|rest| rest.split_whitespace().next())
+                    .and_then(|s| s.parse::<u32>().ok())
+            })
+        })
+        .unwrap_or(NOBODY_UID)
 }
 
 impl Default for SystemPaths {
@@ -607,5 +644,11 @@ mod tests {
         let paths = SystemPaths::with_base(temp.path()).unwrap();
         let socket = paths.primal_socket("");
         assert!(socket.ends_with(".sock"));
+    }
+
+    #[test]
+    fn test_safe_uid() {
+        let uid = safe_uid();
+        assert_ne!(uid, 0, "safe_uid should return non-zero value");
     }
 }

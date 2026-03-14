@@ -492,3 +492,143 @@ impl Workload {
         WorkloadBuilder::new(name, runtime)
     }
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn workload_id_new_and_display() {
+        let id = WorkloadId::new();
+        let s = id.to_string();
+        assert!(!s.is_empty());
+        assert!(s.len() >= 32);
+    }
+
+    #[test]
+    fn workload_id_default() {
+        let id = WorkloadId::default();
+        assert!(!id.0.is_nil());
+    }
+
+    #[test]
+    fn resource_requirements_default() {
+        let req = ResourceRequirements::default();
+        assert_eq!(req.cpu_cores, Some(1));
+        assert_eq!(req.memory_mb, Some(256));
+        assert!(req.gpu_memory_mb.is_none());
+    }
+
+    #[test]
+    fn resource_info_aggregate() {
+        let mut a = ResourceInfo {
+            cpu_cores: 4,
+            memory_mb: 1024,
+            gpu_count: 0,
+            gpu_memory_mb: 0,
+            disk_mb: 100,
+        };
+        let b = ResourceInfo {
+            cpu_cores: 2,
+            memory_mb: 512,
+            gpu_count: 1,
+            gpu_memory_mb: 4096,
+            disk_mb: 50,
+        };
+        a.aggregate(b);
+        assert_eq!(a.cpu_cores, 6);
+        assert_eq!(a.memory_mb, 1536);
+        assert_eq!(a.gpu_count, 1);
+        assert_eq!(a.gpu_memory_mb, 4096);
+        assert_eq!(a.disk_mb, 150);
+    }
+
+    #[test]
+    fn workload_priority_ordering() {
+        assert!(WorkloadPriority::Critical > WorkloadPriority::High);
+        assert!(WorkloadPriority::High > WorkloadPriority::Normal);
+        assert!(WorkloadPriority::Normal > WorkloadPriority::Low);
+    }
+
+    #[test]
+    fn workload_status_variants() {
+        let queued = WorkloadStatus::Queued;
+        let running = WorkloadStatus::Running;
+        let completed = WorkloadStatus::Completed;
+        let failed = WorkloadStatus::Failed {
+            error: "oops".into(),
+        };
+        let cancelled = WorkloadStatus::Cancelled;
+        let _ = format!("{:?} {:?} {:?} {:?} {:?}", queued, running, completed, failed, cancelled);
+    }
+
+    #[test]
+    fn node_topology_variants() {
+        let leaf = NodeTopology::Leaf;
+        let binary = NodeTopology::BinaryTree;
+        let nary = NodeTopology::NAryTree {
+            branching_factor: 4,
+        };
+        let quad = NodeTopology::QuadTree;
+        let hybrid = NodeTopology::Hybrid;
+        let _ = format!("{:?} {:?} {:?} {:?} {:?}", leaf, binary, nary, quad, hybrid);
+    }
+
+    #[test]
+    fn runtime_variants() {
+        for r in [
+            Runtime::Native,
+            Runtime::Wasm,
+            Runtime::Container,
+            Runtime::Python,
+            Runtime::Gpu,
+        ] {
+            let _ = format!("{:?}", r);
+        }
+    }
+
+    #[test]
+    fn resource_type_variants() {
+        for t in [ResourceType::Cpu, ResourceType::Gpu, ResourceType::Memory, ResourceType::Hybrid] {
+            let _ = format!("{:?}", t);
+        }
+    }
+
+    #[test]
+    fn health_status_variants() {
+        let healthy = HealthStatus::Healthy;
+        let degraded = HealthStatus::Degraded {
+            reason: "load".into(),
+        };
+        let unhealthy = HealthStatus::Unhealthy {
+            error: "crash".into(),
+        };
+        let _ = format!("{:?} {:?} {:?}", healthy, degraded, unhealthy);
+    }
+
+    #[test]
+    fn workload_builder_fluent() {
+        let w = Workload::builder("test", Runtime::Native)
+            .cpu_cores(4)
+            .memory_mb(512)
+            .priority(WorkloadPriority::High)
+            .parallelizable(true)
+            .build();
+        assert_eq!(w.name, "test");
+        assert_eq!(w.runtime, Runtime::Native);
+        assert_eq!(w.resource_requirements.cpu_cores, Some(4));
+        assert_eq!(w.resource_requirements.memory_mb, Some(512));
+        assert_eq!(w.priority, WorkloadPriority::High);
+        assert!(w.parallelizable);
+    }
+
+    #[test]
+    fn workload_new() {
+        let w = Workload::new("simple", Runtime::Wasm);
+        assert_eq!(w.name, "simple");
+        assert_eq!(w.runtime, Runtime::Wasm);
+        assert!(!w.parallelizable);
+        assert_eq!(w.priority, WorkloadPriority::Normal);
+    }
+}

@@ -174,9 +174,9 @@ rootpulse collab start
 ## Implementation Status
 
 ### Ready Now ✅
-- ✅ rhizoCrypt v0.13.0-dev (862 tests, 87.78% coverage) - Ephemeral workspace
-- ✅ LoamSpine v0.8.0 (700 tests, 90.6% coverage) - Permanent linear history
-- ✅ SweetGrass v0.7.3 (746 tests, 94% coverage) - Semantic attribution
+- ✅ rhizoCrypt v0.13.0-dev (1075 tests, 91% coverage) - Ephemeral workspace
+- ✅ LoamSpine v0.8.2 (744 tests, ~91% coverage) - Permanent linear history
+- ✅ SweetGrass v0.7.5 (794 tests, 91% coverage) - Semantic attribution
 - ✅ biomeOS - Primal orchestration, provenance trio graphs
 - ✅ NestGate - Content storage
 - ✅ BearDog v0.15.0 - Cryptography

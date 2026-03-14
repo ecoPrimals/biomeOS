@@ -19,6 +19,7 @@ similar_names = "allow"          # avg_cpu vs avg_gpu is intentionally similar
 [workspace]
 resolver = "2"
 members = [
+    "crates/neural-api-client-sync",
     "crates/biomeos-genome-deploy",
     "crates/biomeos",  # NEW UniBin!
     "crates/biomeos-types",

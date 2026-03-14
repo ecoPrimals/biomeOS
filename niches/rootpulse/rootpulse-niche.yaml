@@ -323,14 +323,15 @@ spec:
       - "Federation via Songbird"
       - "Visualization via PetalTongue"
   
-  # Known Gaps
+  # Known Gaps (updated March 2026)
   gaps:
-    critical:
-      - "LoamSpine primal not yet implemented (linear history)"
-      - "Dehydration engine not yet built"
-      - "CLI wrapper needs generation"
-    
-    minor:
+    resolved:
+      - "LoamSpine primal: v0.8.2 (744 tests, ~91% coverage, CertificateStorage, waypoints)"
+      - "Dehydration engine: rhizoCrypt v0.13.0-dev (dag.dehydrate capability, 1075 tests)"
+      - "CLI commit workflow: `biomeos rootpulse` runs rootpulse_commit graph via Neural API"
+
+    remaining:
+      - "CLI subcommands (init, branch, merge, log, status, push, pull) not yet implemented"
       - "Git migration tools not yet created"
       - "Performance benchmarks needed"
       - "Production hardening required"

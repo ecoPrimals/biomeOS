@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
+// Copyright 2025 ecoPrimals Project
+
 //! JSON-RPC 2.0 wire types.
 //!
 //! Shared across all biomeOS crates to avoid duplicating the protocol format.
@@ -145,5 +147,126 @@ impl JsonRpcError {
             message: "Internal error".to_string(),
             data: details.map(|d| serde_json::json!({"details": d})),
         }
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn jsonrpc_version_constant() {
+        assert_eq!(JSONRPC_VERSION, "2.0");
+    }
+
+    #[test]
+    fn request_parse_valid() {
+        let json = r#"{"jsonrpc":"2.0","method":"test","params":{"a":1},"id":1}"#;
+        let req = JsonRpcRequest::parse(json).expect("parse");
+        assert_eq!(req.jsonrpc, "2.0");
+        assert_eq!(req.method, "test");
+        assert_eq!(req.params, Some(serde_json::json!({"a": 1})));
+        assert_eq!(req.id, Some(serde_json::json!(1)));
+    }
+
+    #[test]
+    fn request_parse_trims_whitespace() {
+        let json = "  \n  {\"jsonrpc\":\"2.0\",\"method\":\"m\",\"id\":1}  ";
+        let req = JsonRpcRequest::parse(json).expect("parse");
+        assert_eq!(req.method, "m");
+    }
+
+    #[test]
+    fn request_parse_invalid_returns_error() {
+        let err = JsonRpcRequest::parse("not json").unwrap_err();
+        assert!(err.to_string().contains("expected"));
+    }
+
+    #[test]
+    fn request_new_has_id_and_params() {
+        let req = JsonRpcRequest::new("method", serde_json::json!({"x": 42}));
+        assert_eq!(req.method, "method");
+        assert_eq!(req.params, Some(serde_json::json!({"x": 42})));
+        assert!(req.id.is_some());
+    }
+
+    #[test]
+    fn request_notification_has_no_id() {
+        let req = JsonRpcRequest::notification("notify", serde_json::json!({}));
+        assert_eq!(req.method, "notify");
+        assert_eq!(req.id, None);
+    }
+
+    #[test]
+    fn response_success() {
+        let id = serde_json::json!(1);
+        let result = serde_json::json!({"ok": true});
+        let resp = JsonRpcResponse::success(id.clone(), result.clone());
+        assert_eq!(resp.result, Some(result));
+        assert!(resp.error.is_none());
+        assert_eq!(resp.id, id);
+    }
+
+    #[test]
+    fn response_error() {
+        let id = serde_json::json!(2);
+        let err = JsonRpcError::method_not_found();
+        let resp = JsonRpcResponse::error(id.clone(), err);
+        assert!(resp.result.is_none());
+        assert!(resp.error.is_some());
+        assert_eq!(resp.error.as_ref().unwrap().code, -32601);
+        assert_eq!(resp.id, id);
+    }
+
+    #[test]
+    fn error_parse_error() {
+        let e = JsonRpcError::parse_error();
+        assert_eq!(e.code, -32700);
+        assert_eq!(e.message, "Parse error");
+        assert!(e.data.is_none());
+    }
+
+    #[test]
+    fn error_invalid_request() {
+        let e = JsonRpcError::invalid_request();
+        assert_eq!(e.code, -32600);
+        assert_eq!(e.message, "Invalid Request");
+    }
+
+    #[test]
+    fn error_method_not_found() {
+        let e = JsonRpcError::method_not_found();
+        assert_eq!(e.code, -32601);
+        assert_eq!(e.message, "Method not found");
+    }
+
+    #[test]
+    fn error_invalid_params_with_details() {
+        let e = JsonRpcError::invalid_params(Some("bad param".into()));
+        assert_eq!(e.code, -32602);
+        assert_eq!(e.message, "Invalid params");
+        assert_eq!(e.data, Some(serde_json::json!({"details": "bad param"})));
+    }
+
+    #[test]
+    fn error_invalid_params_without_details() {
+        let e = JsonRpcError::invalid_params(None);
+        assert!(e.data.is_none());
+    }
+
+    #[test]
+    fn error_internal_error_with_details() {
+        let e = JsonRpcError::internal_error(Some("crash".into()));
+        assert_eq!(e.code, -32603);
+        assert_eq!(e.data, Some(serde_json::json!({"details": "crash"})));
+    }
+
+    #[test]
+    fn roundtrip_serialize_request() {
+        let req = JsonRpcRequest::new("ping", serde_json::json!({}));
+        let s = serde_json::to_string(&req).expect("serialize");
+        let parsed = JsonRpcRequest::parse(&s).expect("parse");
+        assert_eq!(parsed.method, req.method);
     }
 }

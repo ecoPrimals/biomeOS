@@ -1,0 +1,17 @@
+[package]
+name = "neural-api-client-sync"
+description = "Synchronous Neural API client for biomeOS — zero-tokio, std + serde_json only"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-only"
+repository = "https://github.com/ecoPrimals/biomeOS"
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+
+[dev-dependencies]
+tempfile = "3.8"
+
+[lints]
+workspace = true
