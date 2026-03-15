@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
-//! Bring Your Own Beardog (BYOB) Manager
+//! Build Your Own Biome (BYOB) Manager
+//!
+//! BYOB is niche deployment via capability-based graph execution,
+//! managed by the Neural API. Teams get isolated resource pools
+//! with configurable capabilities.
 
 use anyhow::Result;
 use biomeos_types::BiomeOSConfig;
@@ -73,9 +77,33 @@ impl ByobManager {
         Ok(())
     }
 
-    /// Validate team configuration
-    fn validate_team_config(&self, _team_id: &str, _config: &ByobTeamConfig) -> Result<()> {
-        // Validation logic would go here
+    /// Validate team configuration against resource and naming constraints.
+    fn validate_team_config(&self, team_id: &str, config: &ByobTeamConfig) -> Result<()> {
+        anyhow::ensure!(!team_id.is_empty(), "team_id must not be empty");
+        anyhow::ensure!(
+            !config.team_id.is_empty(),
+            "ByobTeamConfig.team_id must not be empty"
+        );
+        anyhow::ensure!(
+            config.resource_limits.max_cpu_percent > 0.0,
+            "max_cpu_percent must be positive"
+        );
+        anyhow::ensure!(
+            config.resource_limits.max_cpu_percent <= 100.0,
+            "max_cpu_percent must not exceed 100"
+        );
+        anyhow::ensure!(
+            config.resource_limits.max_memory_mb > 0,
+            "max_memory_mb must be positive"
+        );
+        anyhow::ensure!(
+            config.resource_limits.max_disk_mb > 0,
+            "max_disk_mb must be positive"
+        );
+        anyhow::ensure!(
+            config.resource_limits.max_network_mbps >= 0.0,
+            "max_network_mbps must not be negative"
+        );
         Ok(())
     }
 
@@ -279,5 +307,92 @@ mod tests {
             config.allowed_capabilities.len(),
             deserialized.allowed_capabilities.len()
         );
+    }
+
+    #[tokio::test]
+    async fn test_validate_rejects_empty_team_id() {
+        let config = create_test_config();
+        let mut manager = ByobManager::new(config);
+        let team_config = create_test_team_config("t", IsolationLevel::Basic);
+
+        let result = manager.configure_team(String::new(), team_config).await;
+
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("team_id must not be empty"));
+    }
+
+    #[tokio::test]
+    async fn test_validate_rejects_zero_cpu() {
+        let config = create_test_config();
+        let mut manager = ByobManager::new(config);
+        let mut team_config = create_test_team_config("team-bad-cpu", IsolationLevel::Basic);
+        team_config.resource_limits.max_cpu_percent = 0.0;
+
+        let result = manager
+            .configure_team("team-bad-cpu".to_string(), team_config)
+            .await;
+
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("max_cpu_percent must be positive"));
+    }
+
+    #[tokio::test]
+    async fn test_validate_rejects_cpu_over_100() {
+        let config = create_test_config();
+        let mut manager = ByobManager::new(config);
+        let mut team_config = create_test_team_config("team-over-cpu", IsolationLevel::Basic);
+        team_config.resource_limits.max_cpu_percent = 150.0;
+
+        let result = manager
+            .configure_team("team-over-cpu".to_string(), team_config)
+            .await;
+
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("must not exceed 100"));
+    }
+
+    #[tokio::test]
+    async fn test_validate_rejects_zero_memory() {
+        let config = create_test_config();
+        let mut manager = ByobManager::new(config);
+        let mut team_config = create_test_team_config("team-bad-mem", IsolationLevel::Basic);
+        team_config.resource_limits.max_memory_mb = 0;
+
+        let result = manager
+            .configure_team("team-bad-mem".to_string(), team_config)
+            .await;
+
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("max_memory_mb must be positive"));
+    }
+
+    #[tokio::test]
+    async fn test_validate_rejects_zero_disk() {
+        let config = create_test_config();
+        let mut manager = ByobManager::new(config);
+        let mut team_config = create_test_team_config("team-bad-disk", IsolationLevel::Basic);
+        team_config.resource_limits.max_disk_mb = 0;
+
+        let result = manager
+            .configure_team("team-bad-disk".to_string(), team_config)
+            .await;
+
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("max_disk_mb must be positive"));
     }
 }

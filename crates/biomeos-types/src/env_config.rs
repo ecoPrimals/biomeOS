@@ -17,6 +17,7 @@
 //! let socket_dir = env_config::socket_dir();
 //! ```
 
+use std::collections::HashMap;
 use std::env;
 use std::path::PathBuf;
 
@@ -73,47 +74,84 @@ pub mod vars {
 
 /// Get the family ID from environment (checks both `BIOMEOS_FAMILY_ID` and `FAMILY_ID`)
 pub fn family_id() -> Option<String> {
-    env::var(vars::FAMILY_ID)
-        .ok()
-        .or_else(|| env::var(vars::FAMILY_ID_LEGACY).ok())
+    family_id_with(&env::vars().collect::<HashMap<_, _>>())
+}
+
+/// Get the family ID from an explicit environment map (for testing / DI)
+fn family_id_with(env: &HashMap<String, String>) -> Option<String> {
+    env.get(vars::FAMILY_ID)
+        .cloned()
+        .or_else(|| env.get(vars::FAMILY_ID_LEGACY).cloned())
 }
 
 /// Get the security provider name override, or `None` for taxonomy-based resolution
 pub fn security_provider() -> Option<String> {
-    env::var(vars::SECURITY_PROVIDER).ok()
+    security_provider_with(&env::vars().collect::<HashMap<_, _>>())
+}
+
+/// Get the security provider from an explicit environment map (for testing / DI)
+fn security_provider_with(env: &HashMap<String, String>) -> Option<String> {
+    env.get(vars::SECURITY_PROVIDER).cloned()
 }
 
 /// Get the network provider name override, or `None` for taxonomy-based resolution
 pub fn network_provider() -> Option<String> {
-    env::var(vars::NETWORK_PROVIDER).ok()
+    network_provider_with(&env::vars().collect::<HashMap<_, _>>())
+}
+
+/// Get the network provider from an explicit environment map (for testing / DI)
+fn network_provider_with(env: &HashMap<String, String>) -> Option<String> {
+    env.get(vars::NETWORK_PROVIDER).cloned()
 }
 
 /// Returns `true` if strict discovery mode is enabled (no fallback providers)
 pub fn strict_discovery() -> bool {
-    env::var(vars::STRICT_DISCOVERY).is_ok()
+    strict_discovery_with(&env::vars().collect::<HashMap<_, _>>())
+}
+
+/// Check strict discovery from an explicit environment map (for testing / DI)
+fn strict_discovery_with(env: &HashMap<String, String>) -> bool {
+    env.contains_key(vars::STRICT_DISCOVERY)
 }
 
 /// Get the socket directory override, or `None` for XDG-resolved default
 pub fn socket_dir() -> Option<PathBuf> {
-    env::var(vars::SOCKET_DIR).ok().map(PathBuf::from)
+    socket_dir_with(&env::vars().collect::<HashMap<_, _>>())
+}
+
+/// Get the socket directory from an explicit environment map (for testing / DI)
+fn socket_dir_with(env: &HashMap<String, String>) -> Option<PathBuf> {
+    env.get(vars::SOCKET_DIR).map(|s| PathBuf::from(s.as_str()))
 }
 
 /// Get the XDG runtime directory
 pub fn xdg_runtime_dir() -> Option<PathBuf> {
-    env::var(vars::XDG_RUNTIME_DIR).ok().map(PathBuf::from)
+    xdg_runtime_dir_with(&env::vars().collect::<HashMap<_, _>>())
+}
+
+/// Get the XDG runtime directory from an explicit environment map (for testing / DI)
+fn xdg_runtime_dir_with(env: &HashMap<String, String>) -> Option<PathBuf> {
+    env.get(vars::XDG_RUNTIME_DIR)
+        .map(|s| PathBuf::from(s.as_str()))
 }
 
 /// Get the primal binary directory (tries ecosystem-level, then biomeOS-local)
 pub fn plasmid_bin_dir() -> Option<PathBuf> {
-    env::var(vars::PLASMID_BIN)
-        .ok()
-        .or_else(|| env::var(vars::PLASMID_BIN_DIR).ok())
-        .map(PathBuf::from)
+    plasmid_bin_dir_with(&env::vars().collect::<HashMap<_, _>>())
+}
+
+/// Get the plasmid bin directory from an explicit environment map (for testing / DI)
+fn plasmid_bin_dir_with(env: &HashMap<String, String>) -> Option<PathBuf> {
+    env.get(vars::PLASMID_BIN)
+        .or_else(|| env.get(vars::PLASMID_BIN_DIR))
+        .map(|s| PathBuf::from(s.as_str()))
 }
 
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
+    use std::collections::HashMap;
+
     use super::*;
 
     #[test]
@@ -123,8 +161,8 @@ mod tests {
 
     #[test]
     fn test_strict_discovery_default() {
-        env::remove_var(vars::STRICT_DISCOVERY);
-        assert!(!strict_discovery());
+        let env: HashMap<String, String> = HashMap::new();
+        assert!(!strict_discovery_with(&env));
     }
 
     #[test]
@@ -136,88 +174,100 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
     fn test_family_id_biomeos_precedence() {
-        env::set_var(vars::FAMILY_ID, "biomeos-family");
-        env::set_var(vars::FAMILY_ID_LEGACY, "legacy-family");
-        let id = family_id();
-        env::remove_var(vars::FAMILY_ID);
-        env::remove_var(vars::FAMILY_ID_LEGACY);
-        assert_eq!(id, Some("biomeos-family".to_string()));
+        let mut env = HashMap::new();
+        env.insert(vars::FAMILY_ID.to_string(), "biomeos-family".to_string());
+        env.insert(
+            vars::FAMILY_ID_LEGACY.to_string(),
+            "legacy-family".to_string(),
+        );
+        assert_eq!(family_id_with(&env), Some("biomeos-family".to_string()));
     }
 
     #[test]
-    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
     fn test_family_id_legacy_fallback() {
-        env::remove_var(vars::FAMILY_ID);
-        env::set_var(vars::FAMILY_ID_LEGACY, "legacy-only");
-        let id = family_id();
-        env::remove_var(vars::FAMILY_ID_LEGACY);
-        assert_eq!(id, Some("legacy-only".to_string()));
+        let mut env = HashMap::new();
+        env.insert(
+            vars::FAMILY_ID_LEGACY.to_string(),
+            "legacy-only".to_string(),
+        );
+        assert_eq!(family_id_with(&env), Some("legacy-only".to_string()));
     }
 
     #[test]
-    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
     fn test_security_provider() {
-        env::set_var(vars::SECURITY_PROVIDER, "custom-security");
-        let provider = security_provider();
-        env::remove_var(vars::SECURITY_PROVIDER);
-        assert_eq!(provider, Some("custom-security".to_string()));
+        let mut env = HashMap::new();
+        env.insert(
+            vars::SECURITY_PROVIDER.to_string(),
+            "custom-security".to_string(),
+        );
+        assert_eq!(
+            security_provider_with(&env),
+            Some("custom-security".to_string())
+        );
     }
 
     #[test]
-    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
     fn test_network_provider() {
-        env::set_var(vars::NETWORK_PROVIDER, "custom-network");
-        let provider = network_provider();
-        env::remove_var(vars::NETWORK_PROVIDER);
-        assert_eq!(provider, Some("custom-network".to_string()));
+        let mut env = HashMap::new();
+        env.insert(
+            vars::NETWORK_PROVIDER.to_string(),
+            "custom-network".to_string(),
+        );
+        assert_eq!(
+            network_provider_with(&env),
+            Some("custom-network".to_string())
+        );
     }
 
     #[test]
-    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
     fn test_strict_discovery_enabled() {
-        env::set_var(vars::STRICT_DISCOVERY, "1");
-        assert!(strict_discovery());
-        env::remove_var(vars::STRICT_DISCOVERY);
+        let mut env = HashMap::new();
+        env.insert(vars::STRICT_DISCOVERY.to_string(), "1".to_string());
+        assert!(strict_discovery_with(&env));
     }
 
     #[test]
-    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
     fn test_socket_dir() {
-        env::set_var(vars::SOCKET_DIR, "/run/biomeos");
-        let dir = socket_dir();
-        env::remove_var(vars::SOCKET_DIR);
-        assert_eq!(dir, Some(PathBuf::from("/run/biomeos")));
+        let mut env = HashMap::new();
+        env.insert(vars::SOCKET_DIR.to_string(), "/run/biomeos".to_string());
+        assert_eq!(socket_dir_with(&env), Some(PathBuf::from("/run/biomeos")));
     }
 
     #[test]
-    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
     fn test_xdg_runtime_dir() {
-        env::set_var(vars::XDG_RUNTIME_DIR, "/tmp/xdg-test");
-        let dir = xdg_runtime_dir();
-        env::remove_var(vars::XDG_RUNTIME_DIR);
-        assert_eq!(dir, Some(PathBuf::from("/tmp/xdg-test")));
+        let mut env = HashMap::new();
+        env.insert(
+            vars::XDG_RUNTIME_DIR.to_string(),
+            "/tmp/xdg-test".to_string(),
+        );
+        assert_eq!(
+            xdg_runtime_dir_with(&env),
+            Some(PathBuf::from("/tmp/xdg-test"))
+        );
     }
 
     #[test]
-    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
     fn test_plasmid_bin_dir_ecoprimals() {
-        env::set_var(vars::PLASMID_BIN, "/eco/plasmid");
-        env::remove_var(vars::PLASMID_BIN_DIR);
-        let dir = plasmid_bin_dir();
-        env::remove_var(vars::PLASMID_BIN);
-        assert_eq!(dir, Some(PathBuf::from("/eco/plasmid")));
+        let mut env = HashMap::new();
+        env.insert(vars::PLASMID_BIN.to_string(), "/eco/plasmid".to_string());
+        assert_eq!(
+            plasmid_bin_dir_with(&env),
+            Some(PathBuf::from("/eco/plasmid"))
+        );
     }
 
     #[test]
-    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
     fn test_plasmid_bin_dir_biomeos_fallback() {
-        env::remove_var(vars::PLASMID_BIN);
-        env::set_var(vars::PLASMID_BIN_DIR, "/biomeos/bin");
-        let dir = plasmid_bin_dir();
-        env::remove_var(vars::PLASMID_BIN_DIR);
-        assert_eq!(dir, Some(PathBuf::from("/biomeos/bin")));
+        let mut env = HashMap::new();
+        env.insert(
+            vars::PLASMID_BIN_DIR.to_string(),
+            "/biomeos/bin".to_string(),
+        );
+        assert_eq!(
+            plasmid_bin_dir_with(&env),
+            Some(PathBuf::from("/biomeos/bin"))
+        );
     }
 
     #[test]

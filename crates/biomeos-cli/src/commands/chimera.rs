@@ -144,8 +144,7 @@ pub async fn handle_chimera_build(id: &str) -> anyhow::Result<()> {
 }
 
 /// Parse chimera ID from YAML content (testable pure function).
-/// Planned utility for YAML-based chimera workflows.
-#[allow(dead_code)]
+#[cfg(test)]
 pub(crate) fn parse_chimera_id_from_yaml(content: &str) -> Option<String> {
     for line in content.lines() {
         let trimmed = line.trim();

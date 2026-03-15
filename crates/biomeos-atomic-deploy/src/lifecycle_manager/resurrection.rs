@@ -204,7 +204,6 @@ mod tests {
         }
     }
 
-    #[allow(dead_code)]
     #[tokio::test]
     async fn test_attempt_resurrection_nonexistent_primal() {
         let manager = LifecycleManager::new("test-family");

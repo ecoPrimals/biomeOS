@@ -25,6 +25,50 @@ pub struct JsonRpcRequest {
     pub id: Option<serde_json::Value>,
 }
 
+/// Parsed JSON-RPC input — either a single request or a batch (Section 6).
+#[derive(Debug, Clone)]
+pub enum JsonRpcInput {
+    /// A single JSON-RPC request object.
+    Single(JsonRpcRequest),
+    /// A batch of JSON-RPC requests (array).
+    Batch(Vec<JsonRpcRequest>),
+}
+
+impl JsonRpcInput {
+    /// Parse a JSON-RPC input line which may be a single object or a batch array.
+    ///
+    /// Per JSON-RPC 2.0 Section 6:
+    /// - `{}` → `Single`
+    /// - `[{}, {}]` → `Batch`
+    /// - `[]` → error (empty batch is invalid)
+    pub fn parse(input: &str) -> Result<Self, JsonRpcError> {
+        let trimmed = input.trim();
+        let value: serde_json::Value =
+            serde_json::from_str(trimmed).map_err(|_| JsonRpcError::parse_error())?;
+
+        match value {
+            serde_json::Value::Array(arr) => {
+                if arr.is_empty() {
+                    return Err(JsonRpcError::invalid_request());
+                }
+                let mut requests = Vec::with_capacity(arr.len());
+                for item in arr {
+                    let req: JsonRpcRequest = serde_json::from_value(item)
+                        .map_err(|_| JsonRpcError::invalid_request())?;
+                    requests.push(req);
+                }
+                Ok(Self::Batch(requests))
+            }
+            serde_json::Value::Object(_) => {
+                let req: JsonRpcRequest =
+                    serde_json::from_value(value).map_err(|_| JsonRpcError::invalid_request())?;
+                Ok(Self::Single(req))
+            }
+            _ => Err(JsonRpcError::invalid_request()),
+        }
+    }
+}
+
 impl JsonRpcRequest {
     /// Parse a JSON-RPC request from a string.
     pub fn parse(request_line: &str) -> Result<Self, serde_json::Error> {
@@ -419,5 +463,49 @@ mod tests {
         let err = JsonRpcError::parse_error();
         let s = format!("{:?}", err);
         assert!(s.contains("-32700") || s.contains("Parse"));
+    }
+
+    #[test]
+    fn jsonrpc_input_parse_single_object() {
+        let input = r#"{"jsonrpc":"2.0","method":"test","id":1}"#;
+        let parsed = JsonRpcInput::parse(input).expect("parse single");
+        match parsed {
+            JsonRpcInput::Single(req) => assert_eq!(req.method, "test"),
+            JsonRpcInput::Batch(_) => panic!("expected Single"),
+        }
+    }
+
+    #[test]
+    fn jsonrpc_input_parse_batch_array() {
+        let input =
+            r#"[{"jsonrpc":"2.0","method":"a","id":1},{"jsonrpc":"2.0","method":"b","id":2}]"#;
+        let parsed = JsonRpcInput::parse(input).expect("parse batch");
+        match parsed {
+            JsonRpcInput::Batch(reqs) => {
+                assert_eq!(reqs.len(), 2);
+                assert_eq!(reqs[0].method, "a");
+                assert_eq!(reqs[1].method, "b");
+            }
+            JsonRpcInput::Single(_) => panic!("expected Batch"),
+        }
+    }
+
+    #[test]
+    fn jsonrpc_input_parse_empty_array_is_invalid() {
+        let input = "[]";
+        let err = JsonRpcInput::parse(input).unwrap_err();
+        assert_eq!(err.code, -32600, "empty array should be invalid request");
+    }
+
+    #[test]
+    fn jsonrpc_input_parse_invalid_json() {
+        let err = JsonRpcInput::parse("not json").unwrap_err();
+        assert_eq!(err.code, -32700, "bad json should be parse error");
+    }
+
+    #[test]
+    fn jsonrpc_input_parse_primitive_is_invalid() {
+        let err = JsonRpcInput::parse("42").unwrap_err();
+        assert_eq!(err.code, -32600);
     }
 }

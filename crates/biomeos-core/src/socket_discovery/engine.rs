@@ -264,10 +264,24 @@ impl SocketDiscovery {
         &self,
         primal_name: &str,
     ) -> Option<TransportEndpoint> {
+        self.discover_endpoint_via_env_with(primal_name, None).await
+    }
+
+    /// Discover endpoint via env with explicit overrides (for testing without env mutation).
+    pub(crate) async fn discover_endpoint_via_env_with(
+        &self,
+        primal_name: &str,
+        env_overrides: Option<&HashMap<String, String>>,
+    ) -> Option<TransportEndpoint> {
         let prefix = primal_name.to_uppercase().replace('-', "_");
+        let get_env = |key: &str| {
+            env_overrides
+                .and_then(|m| m.get(key).cloned())
+                .or_else(|| env::var(key).ok())
+        };
 
         // Check TCP first
-        if let Ok(tcp) = env::var(format!("{prefix}_TCP")) {
+        if let Some(tcp) = get_env(&format!("{prefix}_TCP")) {
             if let Some(endpoint) = TransportEndpoint::parse(&tcp) {
                 if matches!(endpoint, TransportEndpoint::TcpSocket { .. }) {
                     return Some(endpoint);
@@ -279,7 +293,7 @@ impl SocketDiscovery {
         }
 
         // Check generic endpoint
-        if let Ok(endpoint_str) = env::var(format!("{prefix}_ENDPOINT")) {
+        if let Some(endpoint_str) = get_env(&format!("{prefix}_ENDPOINT")) {
             if let Some(endpoint) = TransportEndpoint::parse(&endpoint_str) {
                 return Some(endpoint);
             }
@@ -291,7 +305,7 @@ impl SocketDiscovery {
             format!("{prefix}_SOCKET_PATH"),
             format!("BIOMEOS_{prefix}_SOCKET"),
         ] {
-            if let Ok(value) = env::var(&var_name) {
+            if let Some(value) = get_env(&var_name) {
                 if let Some(endpoint) = TransportEndpoint::parse(&value) {
                     if let TransportEndpoint::UnixSocket { ref path } = endpoint {
                         if path.exists() {
@@ -463,10 +477,23 @@ impl SocketDiscovery {
     ///
     /// Implements 5-tier socket resolution per PRIMAL_DEPLOYMENT_STANDARD.
     pub fn build_socket_path(&self, primal_name: &str) -> PathBuf {
+        self.build_socket_path_with(primal_name, None, None)
+    }
+
+    /// Build socket path with explicit env overrides (for testing without env mutation).
+    pub(crate) fn build_socket_path_with(
+        &self,
+        primal_name: &str,
+        primal_socket: Option<&str>,
+        xdg_runtime_dir: Option<&Path>,
+    ) -> PathBuf {
         let socket_name = format!("{}-{}.sock", primal_name, self.family_id);
 
         // Tier 1: Explicit override via PRIMAL_SOCKET
-        if let Ok(primal_socket) = env::var("PRIMAL_SOCKET") {
+        let primal_socket_val = primal_socket
+            .map(String::from)
+            .or_else(|| env::var("PRIMAL_SOCKET").ok());
+        if let Some(primal_socket) = primal_socket_val {
             let path = PathBuf::from(&primal_socket);
             if path.is_dir() || !path.exists() {
                 return path.join(&socket_name);
@@ -475,7 +502,10 @@ impl SocketDiscovery {
         }
 
         // Tier 2: XDG runtime directory
-        if let Some(runtime_dir) = self.get_xdg_runtime_dir() {
+        let runtime_dir = xdg_runtime_dir
+            .map(PathBuf::from)
+            .or_else(|| self.get_xdg_runtime_dir());
+        if let Some(runtime_dir) = runtime_dir {
             let biomeos_dir = runtime_dir.join("biomeos");
             std::fs::create_dir_all(&biomeos_dir).ok();
             return biomeos_dir.join(&socket_name);
@@ -524,6 +554,15 @@ impl SocketDiscovery {
         &self,
         primal_name: &str,
     ) -> Option<DiscoveredSocket> {
+        self.discover_via_env_hint_with(primal_name, None).await
+    }
+
+    /// Discover via env hint with explicit overrides (for testing without env mutation).
+    pub(crate) async fn discover_via_env_hint_with(
+        &self,
+        primal_name: &str,
+        env_overrides: Option<&HashMap<String, String>>,
+    ) -> Option<DiscoveredSocket> {
         let env_patterns = vec![
             format!("{}_SOCKET", primal_name.to_uppercase().replace('-', "_")),
             format!(
@@ -536,8 +575,14 @@ impl SocketDiscovery {
             ),
         ];
 
+        let get_env = |key: &str| {
+            env_overrides
+                .and_then(|m| m.get(key).cloned())
+                .or_else(|| env::var(key).ok())
+        };
+
         for env_var in env_patterns {
-            if let Ok(path_str) = env::var(&env_var) {
+            if let Some(path_str) = get_env(&env_var) {
                 let path = PathBuf::from(&path_str);
                 if path.exists() {
                     debug!("Discovered {} via env hint: {}", primal_name, env_var);
@@ -769,14 +814,24 @@ impl SocketDiscovery {
     }
 
     pub(crate) fn get_neural_api_socket(&self) -> Option<PathBuf> {
+        self.get_neural_api_socket_with(None)
+    }
+
+    /// Get neural API socket with explicit env override (for testing without env mutation).
+    pub(crate) fn get_neural_api_socket_with(
+        &self,
+        neural_api_env_override: Option<&Path>,
+    ) -> Option<PathBuf> {
         if let Some(ref socket) = self.neural_api_socket {
             if socket.exists() {
                 return Some(socket.clone());
             }
         }
 
-        if let Ok(path) = env::var("NEURAL_API_SOCKET") {
-            let path = PathBuf::from(path);
+        let env_path = neural_api_env_override
+            .map(PathBuf::from)
+            .or_else(|| env::var("NEURAL_API_SOCKET").ok().map(PathBuf::from));
+        if let Some(path) = env_path {
             if path.exists() {
                 return Some(path);
             }

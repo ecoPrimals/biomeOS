@@ -2,6 +2,62 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## [v2.40] - 2026-03-15 (Spring Absorption Deep Debt — BYOB + Batch + DI)
+
+### BYOB Graph Deployment
+- BYOB redefined: "Build Your Own Biome" — niche via graph deployment managed by Neural API
+- Deleted orphaned `byob/manager.rs` (incompatible with graph-based architecture)
+- `NicheDeployment` now spawns organism processes via `which` + `std::process::Command`
+- Process termination via `rustix::process::kill_process` (pure Rust, replaces `libc::kill`)
+- Real `validate_team_config()` with team_id, isolation, and resource limit validation
+
+### JSON-RPC 2.0 Batch
+- New `JsonRpcInput` enum: `Single(JsonRpcRequest)` | `Batch(Vec<JsonRpcRequest>)`
+- `JsonRpcInput::parse()` handles single objects and arrays
+- Neural API connection handler processes batch requests concurrently via `futures::future::join_all`
+- Added `futures` workspace dependency to `biomeos-atomic-deploy`
+
+### Capability Translations
+- 6 new compute translations: `compute.dispatch.submit/status/cancel`, `compute.hardware.observe/distill/apply`
+- Health alignment: `health.ping` and `health.status` → canonical `health.check`
+
+### Runtime TOML Registry
+- Neural API startup loads three layers: hardcoded defaults → `config/capability_registry.toml` → graph translations
+- `load_translations_on_startup()` evolved to support overlay loading
+
+### Real Capability Querying
+- `query_primal_capabilities()` connects to primal sockets, sends `capability.list` JSON-RPC, parses response
+- 500ms connection and read timeouts for resilience; falls back to empty list on error
+
+### Dependency Injection (50 #[ignore] removed)
+- `network_config.rs`: `from_env_with()`, `parse_port_with()`, `resolve_stun_servers_with()` — 18 `#[ignore]` removed
+- `defaults.rs`: `socket_path_with()`, `RuntimeConfig::from_env_with_map()` + 8 `_with` variants — 11 `#[ignore]` removed + 35 `env::set_var` calls eliminated
+- `env_config.rs`: 7 private `_with` helpers — 9 `#[ignore]` removed
+- `engine_tests.rs`: `build_socket_path_with()`, `discover_via_env_hint_with()` + 3 more — 11 `#[ignore]` removed
+
+### Hardcoded Primal Names
+- `primal_discovery.rs` `matches!()` block → `primal_names::is_known_primal()` (case-insensitive)
+- Added `BIOMEOS` and `BIOMEOS_DEVICE_MANAGEMENT` constants to `primal_names.rs`
+
+### Dead Code Cleanup
+- `beardog_jwt_client.rs`: `#[allow(dead_code)]` → `#[serde(rename)]` + `_` prefix for wire-format fields
+- `livespores.rs`, `spore.rs`, `chimera.rs`: planned utilities gated with `#[cfg(test)]`
+- `resurrection.rs`: spurious `#[allow(dead_code)]` removed from test function
+
+### Dependencies
+- `biomeos-niche`: added `which = "6"`, `rustix = { version = "0.38", features = ["process"] }`
+- `biomeos-atomic-deploy`: added `futures = { workspace = true }`
+
+### Quality
+| Metric | Before | After |
+|--------|--------|-------|
+| Tests | 4,885 | 4,946 (+61) |
+| Ignored | 181 | 131 (-50) |
+| Clippy | PASS | PASS (0 warnings) |
+| Formatting | PASS | PASS |
+
+---
+
 ## [v2.39] - 2026-03-15 (Concurrency Evolution — Fully Concurrent Test Suite)
 
 ### Concurrency-First Architecture

@@ -15,6 +15,7 @@ use super::engine::SocketDiscovery;
 use super::result::{DiscoveredSocket, DiscoveryMethod};
 use super::strategy::DiscoveryStrategy;
 use super::transport::TransportEndpoint;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use tempfile::TempDir;
 
@@ -28,12 +29,9 @@ fn test_build_socket_path() {
 }
 
 #[test]
-#[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
 fn test_build_socket_path_with_primal_socket_env() {
-    std::env::set_var("PRIMAL_SOCKET", "/custom/socket/dir");
     let discovery = SocketDiscovery::new("test-family");
-    let path = discovery.build_socket_path("beardog");
-    std::env::remove_var("PRIMAL_SOCKET");
+    let path = discovery.build_socket_path_with("beardog", Some("/custom/socket/dir"), None);
 
     assert!(path.to_string_lossy().contains("beardog"));
     assert!(path.to_string_lossy().contains("test-family"));
@@ -96,21 +94,22 @@ fn test_socket_discovery_with_neural_api() {
 }
 
 #[tokio::test]
-#[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
 async fn test_env_hint_discovery() {
-    std::env::set_var("TEST_PRIMAL_SOCKET", "/tmp/test-primal.sock");
-
+    let env_overrides: HashMap<String, String> = [(
+        "TEST_PRIMAL_SOCKET".to_string(),
+        "/tmp/test-primal.sock".to_string(),
+    )]
+    .into();
     let discovery = SocketDiscovery::new("test");
-    let result = discovery.discover_via_env_hint("test_primal").await;
-
-    std::env::remove_var("TEST_PRIMAL_SOCKET");
+    let result = discovery
+        .discover_via_env_hint_with("test_primal", Some(&env_overrides))
+        .await;
 
     // Result is None because socket doesn't exist
     assert!(result.is_none());
 }
 
 #[tokio::test]
-#[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
 async fn test_env_hint_discovery_with_existing_socket() {
     let temp_dir = TempDir::new().unwrap();
     let socket_path = temp_dir.path().join("test.sock");
@@ -118,44 +117,47 @@ async fn test_env_hint_discovery_with_existing_socket() {
     // Create a dummy socket file
     std::fs::File::create(&socket_path).unwrap();
 
-    std::env::set_var("TEST_PRIMAL_SOCKET", socket_path.to_str().unwrap());
-
+    let env_overrides: HashMap<String, String> = [(
+        "TEST_PRIMAL_SOCKET".to_string(),
+        socket_path.to_string_lossy().to_string(),
+    )]
+    .into();
     let discovery = SocketDiscovery::new("test");
-    let result = discovery.discover_via_env_hint("test_primal").await;
-
-    std::env::remove_var("TEST_PRIMAL_SOCKET");
+    let result = discovery
+        .discover_via_env_hint_with("test_primal", Some(&env_overrides))
+        .await;
 
     // Should find the socket even though it's not a real Unix socket
     assert!(result.is_some());
 }
 
 #[tokio::test]
-#[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
 async fn test_env_hint_discovery_multiple_vars() {
     let temp_dir = TempDir::new().unwrap();
     let socket_path = temp_dir.path().join("test.sock");
     std::fs::File::create(&socket_path).unwrap();
 
-    // Test different env var patterns
-    std::env::set_var("BEARDOG_SOCKET_PATH", socket_path.to_str().unwrap());
-
+    let env_overrides: HashMap<String, String> = [(
+        "BEARDOG_SOCKET_PATH".to_string(),
+        socket_path.to_string_lossy().to_string(),
+    )]
+    .into();
     let discovery = SocketDiscovery::new("test");
-    let result = discovery.discover_via_env_hint("beardog").await;
-
-    std::env::remove_var("BEARDOG_SOCKET_PATH");
+    let result = discovery
+        .discover_via_env_hint_with("beardog", Some(&env_overrides))
+        .await;
 
     assert!(result.is_some());
 }
 
 #[tokio::test]
-#[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
 async fn test_discover_endpoint_via_env_tcp() {
-    std::env::set_var("BEARDOG_TCP", "127.0.0.1:9100");
-
+    let env_overrides: HashMap<String, String> =
+        [("BEARDOG_TCP".to_string(), "127.0.0.1:9100".to_string())].into();
     let discovery = SocketDiscovery::new("test");
-    let result = discovery.discover_endpoint_via_env("beardog").await;
-
-    std::env::remove_var("BEARDOG_TCP");
+    let result = discovery
+        .discover_endpoint_via_env_with("beardog", Some(&env_overrides))
+        .await;
 
     assert!(result.is_some());
     if let Some(TransportEndpoint::TcpSocket { host, port }) = result {
@@ -167,31 +169,35 @@ async fn test_discover_endpoint_via_env_tcp() {
 }
 
 #[tokio::test]
-#[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
 async fn test_discover_endpoint_via_env_endpoint_var() {
-    std::env::set_var("BEARDOG_ENDPOINT", "tcp://192.168.1.1:8080");
-
+    let env_overrides: HashMap<String, String> = [(
+        "BEARDOG_ENDPOINT".to_string(),
+        "tcp://192.168.1.1:8080".to_string(),
+    )]
+    .into();
     let discovery = SocketDiscovery::new("test");
-    let result = discovery.discover_endpoint_via_env("beardog").await;
-
-    std::env::remove_var("BEARDOG_ENDPOINT");
+    let result = discovery
+        .discover_endpoint_via_env_with("beardog", Some(&env_overrides))
+        .await;
 
     assert!(result.is_some());
 }
 
 #[tokio::test]
-#[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
 async fn test_discover_endpoint_via_env_unix() {
     let temp_dir = TempDir::new().unwrap();
     let socket_path = temp_dir.path().join("beardog.sock");
     std::fs::File::create(&socket_path).unwrap();
 
-    std::env::set_var("BEARDOG_SOCKET", socket_path.to_str().unwrap());
-
+    let env_overrides: HashMap<String, String> = [(
+        "BEARDOG_SOCKET".to_string(),
+        socket_path.to_string_lossy().to_string(),
+    )]
+    .into();
     let discovery = SocketDiscovery::new("test");
-    let result = discovery.discover_endpoint_via_env("beardog").await;
-
-    std::env::remove_var("BEARDOG_SOCKET");
+    let result = discovery
+        .discover_endpoint_via_env_with("beardog", Some(&env_overrides))
+        .await;
 
     assert!(result.is_some());
 }
@@ -215,18 +221,13 @@ async fn test_get_neural_api_socket() {
 }
 
 #[tokio::test]
-#[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
 async fn test_get_neural_api_socket_from_env() {
     let temp_dir = TempDir::new().unwrap();
     let socket_path = temp_dir.path().join("neural.sock");
     std::fs::File::create(&socket_path).unwrap();
 
-    std::env::set_var("NEURAL_API_SOCKET", socket_path.to_str().unwrap());
-
     let discovery = SocketDiscovery::new("test");
-    let result = discovery.get_neural_api_socket();
-
-    std::env::remove_var("NEURAL_API_SOCKET");
+    let result = discovery.get_neural_api_socket_with(Some(socket_path.as_path()));
 
     assert!(result.is_some());
 }
@@ -360,20 +361,10 @@ async fn test_verify_tcp_connection_invalid() {
 }
 
 #[test]
-#[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
 fn test_build_socket_path_xdg() {
-    let original_xdg = std::env::var("XDG_RUNTIME_DIR").ok();
     let temp_dir = TempDir::new().unwrap();
-    std::env::set_var("XDG_RUNTIME_DIR", temp_dir.path());
-
     let discovery = SocketDiscovery::new("test-family");
-    let path = discovery.build_socket_path("beardog");
-
-    if let Some(xdg) = original_xdg {
-        std::env::set_var("XDG_RUNTIME_DIR", xdg);
-    } else {
-        std::env::remove_var("XDG_RUNTIME_DIR");
-    }
+    let path = discovery.build_socket_path_with("beardog", None, Some(temp_dir.path()));
 
     assert!(path.to_string_lossy().contains("beardog"));
     assert!(path.to_string_lossy().contains("test-family"));
@@ -391,16 +382,14 @@ fn test_build_socket_path_family_id_injection() {
 }
 
 #[test]
-#[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
 fn test_build_socket_path_primal_socket_as_dir() {
     let temp_dir = TempDir::new().unwrap();
     let socket_dir = temp_dir.path().join("sockets");
     std::fs::create_dir_all(&socket_dir).unwrap();
 
-    std::env::set_var("PRIMAL_SOCKET", socket_dir.to_str().unwrap());
     let discovery = SocketDiscovery::new("fam");
-    let path = discovery.build_socket_path("beardog");
-    std::env::remove_var("PRIMAL_SOCKET");
+    let path =
+        discovery.build_socket_path_with("beardog", Some(socket_dir.to_str().unwrap()), None);
 
     assert_eq!(
         path,
@@ -410,16 +399,14 @@ fn test_build_socket_path_primal_socket_as_dir() {
 }
 
 #[test]
-#[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
 fn test_build_socket_path_primal_socket_as_existing_file() {
     let temp_dir = TempDir::new().unwrap();
     let socket_file = temp_dir.path().join("custom.sock");
     std::fs::File::create(&socket_file).unwrap();
 
-    std::env::set_var("PRIMAL_SOCKET", socket_file.to_str().unwrap());
     let discovery = SocketDiscovery::new("fam");
-    let path = discovery.build_socket_path("beardog");
-    std::env::remove_var("PRIMAL_SOCKET");
+    let path =
+        discovery.build_socket_path_with("beardog", Some(socket_file.to_str().unwrap()), None);
 
     assert_eq!(
         path, socket_file,

@@ -51,7 +51,7 @@ pub use atomic::{
     AtomicCapability, AtomicTier, FullNucleus, NestAtomic, NodeAtomic, PrimalHealth,
     ProviderHealthMap, TowerAtomic,
 };
-pub use jsonrpc::{JsonRpcError, JsonRpcRequest, JsonRpcResponse, JSONRPC_VERSION};
+pub use jsonrpc::{JsonRpcError, JsonRpcInput, JsonRpcRequest, JsonRpcResponse, JSONRPC_VERSION};
 
 // tarpc types for high-performance RPC
 pub use capability_taxonomy::CapabilityTaxonomy; // Well-known capability taxonomy (enum)

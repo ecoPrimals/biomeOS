@@ -28,6 +28,7 @@ biomeos-federation = { path = "../biomeos-federation", version = "0.1.0" }
 biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
 biomeos-graph = { path = "../biomeos-graph", version = "0.1.0" }
 chrono = "0.4"
+futures = { workspace = true }
 uuid = { version = "1.11", features = ["v4"] }  # For request ID generation
 toml = "0.8"  # For Neural API graph parsing
 

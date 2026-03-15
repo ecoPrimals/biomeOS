@@ -58,8 +58,7 @@ pub struct LiveSporesResponse {
 }
 
 /// Calculate utilization percentage from available and total space.
-/// Planned for storage analytics dashboard.
-#[allow(dead_code)]
+#[cfg(test)]
 pub(crate) fn calculate_utilization(available: u64, total: u64) -> f64 {
     if total == 0 {
         return 0.0;

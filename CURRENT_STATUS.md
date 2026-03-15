@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: March 15, 2026 (Concurrency Evolution: Fully Concurrent Test Suite + Dependency Injection + Zero Global State Races)
-**Version**: 2.39
+**Updated**: March 15, 2026 (Spring Absorption + Deep Debt: BYOB, JSON-RPC batch, compute.dispatch, runtime TOML registry, 50 #[ignore] removed)
+**Version**: 2.40
 **Status**: PRODUCTION READY - Multi-Computer Federation Validated
 
 ---
@@ -16,7 +16,7 @@
 | **Security Grade** | A++ (TRUE PRIMAL + Security Headers + Dark Forest Gate) |
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit) |
-| **Tests Passing** | 4,885 fully concurrent (0 failures, 181 ignored) |
+| **Tests Passing** | 4,946 fully concurrent (0 failures, 131 ignored) |
 | **Test Coverage** | 76.15% line, 79.23% function (llvm-cov, climbing toward 90%) |
 | **Unsafe Code** | 0 production, 0 test |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`) |
@@ -42,7 +42,7 @@
 | **Plasmodium** | HTTP JSON-RPC collective (runtime port, SSH legacy removed) |
 | **Model Cache** | NUCLEUS-integrated, HuggingFace import, NestGate fallback |
 | **AI Bridge** | Squirrel -> Songbird -> Cloud/Local AI (validated) |
-| **Neural API** | 210+ capability translations, proxy_http, capability.call (canonical + dotted + params-alias) |
+| **Neural API** | 210+ capability translations, JSON-RPC 2.0 batch, runtime TOML registry, proxy_http, capability.call (canonical + dotted + params-alias) |
 | **Lifecycle** | Deep health monitoring, auto-resurrection, coordinated shutdown |
 | **SystemPaths** | All paths XDG-compliant via centralized `SystemPaths` (production `/tmp/` eliminated) |
 | **Hardcoded `/tmp`** | 0 in production code (rootpulse, neural_api, continuous, enroll evolved to SystemPaths) |
@@ -234,6 +234,24 @@ HTTP JSON-RPC collective with runtime port discovery (hardcoded 3492 eliminated)
 ---
 
 ## Completed Evolution Items (biomeOS Team)
+
+### Spring Absorption Deep Debt — v2.40 (Mar 15, 2026)
+
+Absorbed spring capabilities, eliminated deep debt across 9 phases: BYOB graph deployment, JSON-RPC 2.0 batch, compute dispatch, runtime TOML registry, real capability querying, 50 `#[ignore]` removed via DI, hardcoded primal name constants, dead code cleanup, semantic health alignment.
+
+| Category | Change |
+|----------|--------|
+| **BYOB evolution** | Redefined from "Bring Your Own Beardog" to "Build Your Own Biome" — graph-based niche deployment via Neural API; deleted orphaned `byob/manager.rs`; `NicheDeployment` spawns processes via `which` + `std::process::Command`, kills via `rustix` (pure Rust) |
+| **JSON-RPC 2.0 batch** | `JsonRpcInput` enum (Single/Batch) with concurrent batch processing via `futures::future::join_all` in Neural API connection handler |
+| **Compute dispatch translations** | 6 new translations: `compute.dispatch.submit/status/cancel`, `compute.hardware.observe/distill/apply` for barraCuda integration |
+| **Runtime TOML registry** | Neural API loads `config/capability_registry.toml` at startup, overlaying hardcoded defaults; three-layer loading: defaults → TOML → graph |
+| **Real capability querying** | `query_primal_capabilities()` connects to primal sockets via `capability.list` JSON-RPC, replacing stub |
+| **DI for env-var tests** | 50 `#[ignore]` annotations removed across `network_config.rs`, `defaults.rs`, `env_config.rs`, `engine_tests.rs` — all use `_with` variants with explicit `HashMap` |
+| **Primal name constants** | Hardcoded primal names in `primal_discovery.rs` → `biomeos_types::primal_names::is_known_primal()` (case-insensitive) |
+| **Dead code cleanup** | `#[allow(dead_code)]` resolved: `#[serde(rename)]` for wire fields, `#[cfg(test)]` for planned utilities |
+| **Health alignment** | `health.ping` and `health.status` aliases translate to canonical `health.check` |
+| **Pure Rust process mgmt** | `libc::kill` → `rustix::process::kill_process` for SIGTERM; `which` crate for binary discovery |
+| **Tests** | 4,885 → 4,946 (+61), ignored 181 → 131 (-50), 0 failures |
 
 ### Concurrency Evolution — Fully Concurrent Test Suite (Mar 15, 2026)
 
@@ -862,7 +880,7 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 **IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate)
 **Security**: A++ (Two-seed Dark Forest)
 **Code Quality**: A++ (Pure Rust, fully concurrent, zero-copy, safe casts, JSON-RPC builders, zero warnings, full doc coverage, table-driven routing)
-**Tests**: 4,885 passing fully concurrent (76.15% line coverage via llvm-cov)
+**Tests**: 4,946 passing fully concurrent (76.15% line coverage via llvm-cov)
 **Clippy**: PASS (0 warnings, `-D warnings`) | **Format**: PASS (`cargo fmt --check` clean)
 **Docs**: Full coverage (0 missing_docs warnings across 8 crates)
 **Unsafe Code**: 0 (production + tests)

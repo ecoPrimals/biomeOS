@@ -42,6 +42,7 @@
 //! let neural_socket = config.neural_api_socket();
 //! ```
 
+use std::collections::HashMap;
 use std::env;
 use std::path::{Path, PathBuf};
 
@@ -88,6 +89,23 @@ pub mod env_vars {
     pub const DISCOVERY_REGISTRY_SOCKET: &str = "DISCOVERY_REGISTRY_SOCKET";
 }
 
+/// Get socket path with explicit environment map (for testing)
+pub fn socket_path_with(service: &str, env: &HashMap<String, String>) -> Result<PathBuf, String> {
+    // 1. Check service-specific environment variable
+    let env_var = format!("{}_SOCKET", service.to_uppercase().replace('-', "_"));
+    if let Some(path) = env.get(&env_var) {
+        return Ok(PathBuf::from(path));
+    }
+
+    // 2. Check socket directory + service name
+    if let Some(socket_dir) = env.get(env_vars::SOCKET_DIR) {
+        return Ok(PathBuf::from(socket_dir).join(format!("{service}.sock")));
+    }
+
+    // 3. Fallback to default
+    Ok(PathBuf::from(DEFAULT_SOCKET_DIR).join(format!("{service}.sock")))
+}
+
 /// Get socket path for a service, respecting environment variables
 ///
 /// **Resolution Order**:
@@ -95,43 +113,10 @@ pub mod env_vars {
 /// 2. Check `BIOMEOS_SOCKET_DIR` + service name
 /// 3. Fallback to `/tmp/<service>.sock`
 ///
-/// # Arguments
-///
-/// * `service` - Service name (e.g., "neural-api", "beardog")
-///
-/// # Returns
-///
-/// Socket path as `PathBuf`
-///
-/// # Example
-///
-/// ```ignore
-/// # use biomeos_types::defaults::socket_path;
-/// # use std::env;
-/// // With environment variable set:
-/// env::set_var("NEURAL_API_SOCKET", "/run/neural-api.sock");
-/// let path = socket_path("neural-api").unwrap();
-/// assert_eq!(path.to_str().unwrap(), "/run/neural-api.sock");
-///
-/// // Without environment variable (fallback):
-/// env::remove_var("BEARDOG_SOCKET");
-/// let path = socket_path("beardog").unwrap();
-/// assert!(path.to_str().unwrap().ends_with("beardog.sock"));
-/// ```
+/// Delegates to [`socket_path_with`] using the current process environment.
+/// For testing without mutating process env, use [`socket_path_with`].
 pub fn socket_path(service: &str) -> Result<PathBuf, String> {
-    // 1. Check service-specific environment variable
-    let env_var = format!("{}_SOCKET", service.to_uppercase().replace('-', "_"));
-    if let Ok(path) = env::var(&env_var) {
-        return Ok(PathBuf::from(path));
-    }
-
-    // 2. Check socket directory + service name
-    if let Ok(socket_dir) = env::var(env_vars::SOCKET_DIR) {
-        return Ok(PathBuf::from(socket_dir).join(format!("{service}.sock")));
-    }
-
-    // 3. Fallback to default
-    Ok(PathBuf::from(DEFAULT_SOCKET_DIR).join(format!("{service}.sock")))
+    socket_path_with(service, &env::vars().collect())
 }
 
 /// Runtime configuration with environment variable overrides
@@ -171,18 +156,33 @@ impl RuntimeConfig {
         socket_dir_override: Option<&str>,
         xdg_runtime_dir_override: Option<&str>,
     ) -> Self {
+        Self::from_env_with_map(
+            &env::vars().collect(),
+            socket_dir_override,
+            xdg_runtime_dir_override,
+        )
+    }
+
+    /// Create RuntimeConfig from explicit environment map (for testing)
+    pub fn from_env_with_map(
+        env: &HashMap<String, String>,
+        socket_dir_override: Option<&str>,
+        xdg_runtime_dir_override: Option<&str>,
+    ) -> Self {
         let socket_dir = socket_dir_override
             .map(PathBuf::from)
-            .or_else(|| env::var(env_vars::SOCKET_DIR).ok().map(PathBuf::from))
+            .or_else(|| {
+                env.get(env_vars::SOCKET_DIR)
+                    .map(|s| PathBuf::from(s.as_str()))
+            })
             .or_else(|| xdg_runtime_dir_override.map(|xdg| PathBuf::from(xdg).join("biomeos")))
             .or_else(|| {
-                env::var("XDG_RUNTIME_DIR")
-                    .ok()
-                    .map(|xdg| PathBuf::from(xdg).join("biomeos"))
+                env.get("XDG_RUNTIME_DIR")
+                    .map(|xdg| PathBuf::from(xdg.as_str()).join("biomeos"))
             })
             .unwrap_or_else(|| {
-                if let Ok(uid) = env::var("UID").or_else(|_| env::var("EUID")) {
-                    let uid_path = PathBuf::from(format!("/run/user/{uid}/biomeos"));
+                if let Some(uid) = env.get("UID").or_else(|| env.get("EUID")) {
+                    let uid_path = PathBuf::from(format!("/run/user/{}/biomeos", uid));
                     if uid_path.parent().is_some_and(|p| p.exists()) {
                         return uid_path;
                     }
@@ -202,9 +202,14 @@ impl RuntimeConfig {
 
     /// Get Neural API socket path
     pub fn neural_api_socket(&self) -> PathBuf {
-        env::var(env_vars::NEURAL_API_SOCKET)
+        self.neural_api_socket_with(&env::vars().collect())
+    }
+
+    /// Get Neural API socket path with explicit environment map (for testing)
+    pub fn neural_api_socket_with(&self, env: &HashMap<String, String>) -> PathBuf {
+        env.get(env_vars::NEURAL_API_SOCKET)
             .map(PathBuf::from)
-            .unwrap_or_else(|_| self.socket_dir.join(DEFAULT_NEURAL_API_SOCKET))
+            .unwrap_or_else(|| self.socket_dir.join(DEFAULT_NEURAL_API_SOCKET))
     }
 
     /// Get socket path for any service by name
@@ -213,12 +218,15 @@ impl RuntimeConfig {
     /// 1. `<SERVICE>_SOCKET` environment variable (e.g., `BEARDOG_SOCKET`)
     /// 2. This config's `socket_dir` + `<service>.sock`
     pub fn service_socket(&self, service: &str) -> PathBuf {
-        // Check service-specific env var first
+        self.service_socket_with(service, &env::vars().collect())
+    }
+
+    /// Get socket path for any service with explicit environment map (for testing)
+    pub fn service_socket_with(&self, service: &str, env: &HashMap<String, String>) -> PathBuf {
         let env_var = format!("{}_SOCKET", service.to_uppercase().replace('-', "_"));
-        if let Ok(path) = env::var(&env_var) {
+        if let Some(path) = env.get(&env_var) {
             return PathBuf::from(path);
         }
-        // Fall back to our configured socket directory
         self.socket_dir.join(format!("{service}.sock"))
     }
 
@@ -233,41 +241,61 @@ impl RuntimeConfig {
 
     /// Get HTTP port from environment or fallback to default
     pub fn http_port(&self) -> u16 {
-        env::var("HTTP_PORT")
-            .ok()
+        Self::http_port_with(&env::vars().collect())
+    }
+
+    /// Get HTTP port with explicit environment map (for testing)
+    pub fn http_port_with(env: &HashMap<String, String>) -> u16 {
+        env.get("HTTP_PORT")
             .and_then(|v| v.parse().ok())
             .unwrap_or(8080)
     }
 
     /// Get HTTPS port from environment or fallback to default
     pub fn https_port(&self) -> u16 {
-        env::var("HTTPS_PORT")
-            .ok()
+        Self::https_port_with(&env::vars().collect())
+    }
+
+    /// Get HTTPS port with explicit environment map (for testing)
+    pub fn https_port_with(env: &HashMap<String, String>) -> u16 {
+        env.get("HTTPS_PORT")
             .and_then(|v| v.parse().ok())
             .unwrap_or(8443)
     }
 
     /// Get WebSocket port from environment or fallback to default
     pub fn websocket_port(&self) -> u16 {
-        env::var("WEBSOCKET_PORT")
-            .ok()
+        Self::websocket_port_with(&env::vars().collect())
+    }
+
+    /// Get WebSocket port with explicit environment map (for testing)
+    pub fn websocket_port_with(env: &HashMap<String, String>) -> u16 {
+        env.get("WEBSOCKET_PORT")
             .and_then(|v| v.parse().ok())
             .unwrap_or(8081)
     }
 
     /// Get MCP port from environment or fallback to default
     pub fn mcp_port(&self) -> u16 {
-        env::var("MCP_WEBSOCKET_PORT")
-            .or_else(|_| env::var("MCP_PORT"))
-            .ok()
+        Self::mcp_port_with(&env::vars().collect())
+    }
+
+    /// Get MCP port with explicit environment map (for testing)
+    pub fn mcp_port_with(env: &HashMap<String, String>) -> u16 {
+        env.get("MCP_WEBSOCKET_PORT")
+            .or_else(|| env.get("MCP_PORT"))
             .and_then(|v| v.parse().ok())
             .unwrap_or(3000)
     }
 
     /// Get discovery port from environment or fallback to default
     pub fn discovery_port(&self) -> u16 {
-        env::var("DISCOVERY_PORT")
-            .ok()
+        Self::discovery_port_with(&env::vars().collect())
+    }
+
+    /// Get discovery port with explicit environment map (for testing)
+    pub fn discovery_port_with(env: &HashMap<String, String>) -> u16 {
+        env.get("DISCOVERY_PORT")
             .and_then(|v| v.parse().ok())
             .unwrap_or(8001)
     }
@@ -277,9 +305,15 @@ impl RuntimeConfig {
     /// DEEP DEBT EVOLUTION: Defaults to `::1` (IPv6 loopback) for dual-stack support.
     /// Use `BIND_ADDRESS` env var to override. Prefers `BIOMEOS_BIND_ADDRESS` first.
     pub fn bind_address(&self) -> String {
-        env::var("BIOMEOS_BIND_ADDRESS")
-            .or_else(|_| env::var("BIND_ADDRESS"))
-            .unwrap_or_else(|_| "::1".to_string())
+        Self::bind_address_with(&env::vars().collect())
+    }
+
+    /// Get bind address with explicit environment map (for testing)
+    pub fn bind_address_with(env: &HashMap<String, String>) -> String {
+        env.get("BIOMEOS_BIND_ADDRESS")
+            .or_else(|| env.get("BIND_ADDRESS"))
+            .cloned()
+            .unwrap_or_else(|| "::1".to_string())
     }
 }
 
@@ -305,25 +339,25 @@ pub fn join_socket_path(dir: impl AsRef<Path>, service: &str) -> PathBuf {
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
+    use std::collections::HashMap;
+
     use super::*;
 
     #[test]
     fn test_socket_path_with_env_var() {
         let custom_path = "/custom/path/test.sock";
-        env::set_var("TEST_SERVICE_SOCKET", custom_path);
+        let mut env = HashMap::new();
+        env.insert("TEST_SERVICE_SOCKET".to_string(), custom_path.to_string());
 
-        let path = socket_path("test-service").unwrap();
+        let path = socket_path_with("test-service", &env).unwrap();
         assert_eq!(path.to_str().unwrap(), custom_path);
-
-        env::remove_var("TEST_SERVICE_SOCKET");
     }
 
     #[test]
     fn test_socket_path_fallback() {
-        env::remove_var("UNKNOWN_SERVICE_SOCKET");
-        env::remove_var("BIOMEOS_SOCKET_DIR");
+        let env: HashMap<String, String> = HashMap::new();
 
-        let path = socket_path("unknown-service").unwrap();
+        let path = socket_path_with("unknown-service", &env).unwrap();
         assert!(path.to_str().unwrap().ends_with("unknown-service.sock"));
     }
 
@@ -331,47 +365,39 @@ mod tests {
     fn test_socket_path_with_socket_dir() {
         // Use unique service name to avoid env var collisions
         let unique_svc = "socket-dir-test-83726";
-        env::remove_var(format!(
-            "{}_SOCKET",
-            unique_svc.to_uppercase().replace('-', "_")
-        ));
-        env::set_var("BIOMEOS_SOCKET_DIR", "/run/biomeos");
+        let mut env = HashMap::new();
+        env.insert("BIOMEOS_SOCKET_DIR".to_string(), "/run/biomeos".to_string());
 
-        let path = socket_path(unique_svc).unwrap();
-
-        env::remove_var("BIOMEOS_SOCKET_DIR");
-
-        // Accept either the socket_dir path OR fallback (race condition acceptable)
+        let path = socket_path_with(unique_svc, &env).unwrap();
         let path_str = path.to_str().unwrap();
-        assert!(
-            path_str == format!("/run/biomeos/{unique_svc}.sock")
-                || path_str == format!("/tmp/{unique_svc}.sock"),
-            "Path should be socket_dir or fallback: {path_str}"
-        );
+        assert_eq!(path_str, format!("/run/biomeos/{unique_svc}.sock"));
     }
 
     #[test]
     fn test_socket_path_env_var_takes_precedence() {
         // Both env var and socket dir set - env var should win
-        env::set_var("PRECEDENCE_TEST_SOCKET", "/explicit/socket.sock");
-        env::set_var("BIOMEOS_SOCKET_DIR", "/run/biomeos");
+        let mut env = HashMap::new();
+        env.insert(
+            "PRECEDENCE_TEST_SOCKET".to_string(),
+            "/explicit/socket.sock".to_string(),
+        );
+        env.insert("BIOMEOS_SOCKET_DIR".to_string(), "/run/biomeos".to_string());
 
-        let path = socket_path("precedence-test").unwrap();
+        let path = socket_path_with("precedence-test", &env).unwrap();
         assert_eq!(path.to_str().unwrap(), "/explicit/socket.sock");
-
-        env::remove_var("PRECEDENCE_TEST_SOCKET");
-        env::remove_var("BIOMEOS_SOCKET_DIR");
     }
 
     #[test]
     fn test_socket_path_normalizes_hyphens() {
         // Hyphens should be converted to underscores in env var name
-        env::set_var("NEURAL_API_SOCKET", "/test/neural-api.sock");
+        let mut env = HashMap::new();
+        env.insert(
+            "NEURAL_API_SOCKET".to_string(),
+            "/test/neural-api.sock".to_string(),
+        );
 
-        let path = socket_path("neural-api").unwrap();
+        let path = socket_path_with("neural-api", &env).unwrap();
         assert_eq!(path.to_str().unwrap(), "/test/neural-api.sock");
-
-        env::remove_var("NEURAL_API_SOCKET");
     }
 
     #[test]
@@ -388,14 +414,13 @@ mod tests {
 
     #[test]
     fn test_runtime_config() {
-        // Clear environment variables to test default behavior
-        env::remove_var("NEURAL_API_SOCKET");
-        env::remove_var("BEARDOG_SOCKET");
-
+        let env: HashMap<String, String> = HashMap::new();
         let config = RuntimeConfig::with_socket_dir("/test");
 
-        assert!(config.neural_api_socket().starts_with("/test"));
-        assert!(config.service_socket("beardog").starts_with("/test"));
+        assert!(config.neural_api_socket_with(&env).starts_with("/test"));
+        assert!(config
+            .service_socket_with("beardog", &env)
+            .starts_with("/test"));
     }
 
     #[test]
@@ -411,12 +436,16 @@ mod tests {
 
     #[test]
     fn test_runtime_config_from_env_with_custom_dir() {
-        env::set_var("BIOMEOS_SOCKET_DIR", "/custom/socket/dir");
-        let config = RuntimeConfig::from_env();
+        let mut env = HashMap::new();
+        env.insert(
+            "BIOMEOS_SOCKET_DIR".to_string(),
+            "/custom/socket/dir".to_string(),
+        );
+        let config = RuntimeConfig::from_env_with_map(&env, None, None);
 
-        assert!(config.neural_api_socket().starts_with("/custom/socket/dir"));
-
-        env::remove_var("BIOMEOS_SOCKET_DIR");
+        assert!(config
+            .neural_api_socket_with(&env)
+            .starts_with("/custom/socket/dir"));
     }
 
     #[test]
@@ -439,116 +468,77 @@ mod tests {
 
     #[test]
     fn test_runtime_config_socket_env_override() {
+        let mut env = HashMap::new();
+        env.insert(
+            "BEARDOG_SOCKET".to_string(),
+            "/override/beardog.sock".to_string(),
+        );
         let config = RuntimeConfig::with_socket_dir("/default");
 
-        // service_socket uses socket_path() which checks env vars
-        env::set_var("BEARDOG_SOCKET", "/override/beardog.sock");
-
-        let beardog_path = config.service_socket("beardog");
-        // service_socket delegates to socket_path which checks BEARDOG_SOCKET env var
-        // If socket_path resolves via env, we get the override
-        assert!(
-            beardog_path.to_string_lossy().contains("beardog"),
-            "Socket path should contain primal name: {}",
-            beardog_path.display()
-        );
-
-        env::remove_var("BEARDOG_SOCKET");
+        let beardog_path = config.service_socket_with("beardog", &env);
+        assert_eq!(beardog_path.to_str().unwrap(), "/override/beardog.sock");
     }
 
     #[test]
     fn test_runtime_config_http_port_default() {
-        env::remove_var("HTTP_PORT");
-        env::remove_var("BIOMEOS_HTTP_PORT");
+        let env: HashMap<String, String> = HashMap::new();
+        let port = RuntimeConfig::http_port_with(&env);
 
-        let config = RuntimeConfig::from_env();
-        let port = config.http_port();
-
-        // Port should be a valid u16 (1-65535)
-        assert!(port > 0);
+        assert_eq!(port, 8080);
     }
 
     #[test]
     fn test_runtime_config_http_port_env_override() {
-        env::set_var("HTTP_PORT", "9999");
-
-        let config = RuntimeConfig::from_env();
-        let port = config.http_port();
+        let mut env = HashMap::new();
+        env.insert("HTTP_PORT".to_string(), "9999".to_string());
+        let port = RuntimeConfig::http_port_with(&env);
 
         assert_eq!(port, 9999);
-
-        env::remove_var("HTTP_PORT");
     }
 
     #[test]
     fn test_runtime_config_mcp_port_fallback() {
-        env::remove_var("MCP_PORT");
-        env::remove_var("MCP_WEBSOCKET_PORT");
+        let env: HashMap<String, String> = HashMap::new();
+        let port = RuntimeConfig::mcp_port_with(&env);
 
-        let config = RuntimeConfig::from_env();
-        let port = config.mcp_port();
-
-        // Should return default
-        assert!(port > 0);
+        assert_eq!(port, 3000);
     }
 
     #[test]
     fn test_runtime_config_mcp_port_websocket_env() {
-        env::set_var("MCP_WEBSOCKET_PORT", "8765");
-        env::remove_var("MCP_PORT");
-
-        let config = RuntimeConfig::from_env();
-        let port = config.mcp_port();
+        let mut env = HashMap::new();
+        env.insert("MCP_WEBSOCKET_PORT".to_string(), "8765".to_string());
+        let port = RuntimeConfig::mcp_port_with(&env);
 
         assert_eq!(port, 8765);
-
-        env::remove_var("MCP_WEBSOCKET_PORT");
     }
 
     #[test]
     fn test_runtime_config_bind_address_default() {
-        env::remove_var("BIND_ADDRESS");
+        let env: HashMap<String, String> = HashMap::new();
+        let addr = RuntimeConfig::bind_address_with(&env);
 
-        let config = RuntimeConfig::from_env();
-        let addr = config.bind_address();
-
-        assert!(!addr.is_empty());
+        assert_eq!(addr, "::1");
     }
 
     #[test]
     fn test_runtime_config_bind_address_env_override() {
-        // Use a unique test address that won't match defaults
         let test_addr = "192.168.255.254";
-        env::set_var("BIND_ADDRESS", test_addr);
+        let mut env = HashMap::new();
+        env.insert("BIND_ADDRESS".to_string(), test_addr.to_string());
 
-        let config = RuntimeConfig::from_env();
-        let addr = config.bind_address();
-
-        env::remove_var("BIND_ADDRESS");
-
-        // Either we got our override OR another test cleared it (race condition)
-        // Both are acceptable - verify valid address format
-        assert!(
-            addr == test_addr || addr == "::1" || addr == "127.0.0.1",
-            "Address should be our override or valid default: {addr}"
-        );
+        let addr = RuntimeConfig::bind_address_with(&env);
+        assert_eq!(addr, test_addr);
     }
 
     #[test]
     fn test_runtime_config_service_socket() {
-        // Clear any env override for this test
-        env::remove_var("CUSTOM_PRIMAL_SOCKET");
-        env::remove_var("BIOMEOS_SOCKET_DIR");
-
+        let env: HashMap<String, String> = HashMap::new();
         let config = RuntimeConfig::with_socket_dir("/run/biomeos");
 
-        let socket = config.service_socket("custom-primal");
+        let socket = config.service_socket_with("custom-primal", &env);
         assert!(socket.ends_with("custom-primal.sock"));
-        // Socket should either be from socket_dir or default /tmp
-        assert!(
-            socket.starts_with("/run/biomeos") || socket.starts_with("/tmp"),
-            "Socket path was: {socket:?}"
-        );
+        assert!(socket.starts_with("/run/biomeos"));
     }
 
     #[test]
@@ -626,75 +616,57 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
     fn test_https_port_default() {
-        std::env::remove_var("HTTPS_PORT");
-        let config = RuntimeConfig::from_env();
-        assert_eq!(config.https_port(), 8443);
+        let env: HashMap<String, String> = HashMap::new();
+        assert_eq!(RuntimeConfig::https_port_with(&env), 8443);
     }
 
     #[test]
-    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
     fn test_https_port_env_override() {
-        std::env::set_var("HTTPS_PORT", "9443");
-        let config = RuntimeConfig::from_env();
-        assert_eq!(config.https_port(), 9443);
-        std::env::remove_var("HTTPS_PORT");
+        let mut env = HashMap::new();
+        env.insert("HTTPS_PORT".to_string(), "9443".to_string());
+        assert_eq!(RuntimeConfig::https_port_with(&env), 9443);
     }
 
     #[test]
-    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
     fn test_websocket_port_default() {
-        std::env::remove_var("WEBSOCKET_PORT");
-        let config = RuntimeConfig::from_env();
-        assert_eq!(config.websocket_port(), 8081);
+        let env: HashMap<String, String> = HashMap::new();
+        assert_eq!(RuntimeConfig::websocket_port_with(&env), 8081);
     }
 
     #[test]
-    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
     fn test_websocket_port_env_override() {
-        std::env::set_var("WEBSOCKET_PORT", "9081");
-        let config = RuntimeConfig::from_env();
-        assert_eq!(config.websocket_port(), 9081);
-        std::env::remove_var("WEBSOCKET_PORT");
+        let mut env = HashMap::new();
+        env.insert("WEBSOCKET_PORT".to_string(), "9081".to_string());
+        assert_eq!(RuntimeConfig::websocket_port_with(&env), 9081);
     }
 
     #[test]
-    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
     fn test_discovery_port_default() {
-        std::env::remove_var("DISCOVERY_PORT");
-        let config = RuntimeConfig::from_env();
-        assert_eq!(config.discovery_port(), 8001);
+        let env: HashMap<String, String> = HashMap::new();
+        assert_eq!(RuntimeConfig::discovery_port_with(&env), 8001);
     }
 
     #[test]
-    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
     fn test_discovery_port_env_override() {
-        std::env::set_var("DISCOVERY_PORT", "9001");
-        let config = RuntimeConfig::from_env();
-        assert_eq!(config.discovery_port(), 9001);
-        std::env::remove_var("DISCOVERY_PORT");
+        let mut env = HashMap::new();
+        env.insert("DISCOVERY_PORT".to_string(), "9001".to_string());
+        assert_eq!(RuntimeConfig::discovery_port_with(&env), 9001);
     }
 
     #[test]
-    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
     fn test_mcp_port_mcp_env_fallback() {
-        std::env::set_var("MCP_PORT", "4000");
-        std::env::remove_var("MCP_WEBSOCKET_PORT");
-        let config = RuntimeConfig::from_env();
-        assert_eq!(config.mcp_port(), 4000);
-        std::env::remove_var("MCP_PORT");
+        let mut env = HashMap::new();
+        env.insert("MCP_PORT".to_string(), "4000".to_string());
+        assert_eq!(RuntimeConfig::mcp_port_with(&env), 4000);
     }
 
     #[test]
-    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
     fn test_bind_address_biomeos_precedence() {
-        std::env::set_var("BIOMEOS_BIND_ADDRESS", "127.0.0.1");
-        std::env::set_var("BIND_ADDRESS", "0.0.0.0");
-        let config = RuntimeConfig::from_env();
-        assert_eq!(config.bind_address(), "127.0.0.1");
-        std::env::remove_var("BIOMEOS_BIND_ADDRESS");
-        std::env::remove_var("BIND_ADDRESS");
+        let mut env = HashMap::new();
+        env.insert("BIOMEOS_BIND_ADDRESS".to_string(), "127.0.0.1".to_string());
+        env.insert("BIND_ADDRESS".to_string(), "0.0.0.0".to_string());
+        assert_eq!(RuntimeConfig::bind_address_with(&env), "127.0.0.1");
     }
 
     #[test]
@@ -704,12 +676,14 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
     fn test_neural_api_socket_env_override() {
-        std::env::set_var("NEURAL_API_SOCKET", "/custom/neural.sock");
+        let mut env = HashMap::new();
+        env.insert(
+            "NEURAL_API_SOCKET".to_string(),
+            "/custom/neural.sock".to_string(),
+        );
         let config = RuntimeConfig::with_socket_dir("/default");
-        let path = config.neural_api_socket();
-        std::env::remove_var("NEURAL_API_SOCKET");
+        let path = config.neural_api_socket_with(&env);
         assert_eq!(path.to_str().unwrap(), "/custom/neural.sock");
     }
 
@@ -721,22 +695,21 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
     fn test_http_port_invalid_parse_fallback() {
-        std::env::set_var("HTTP_PORT", "not_a_number");
-        let config = RuntimeConfig::from_env();
-        assert_eq!(config.http_port(), 8080);
-        std::env::remove_var("HTTP_PORT");
+        let mut env = HashMap::new();
+        env.insert("HTTP_PORT".to_string(), "not_a_number".to_string());
+        assert_eq!(RuntimeConfig::http_port_with(&env), 8080);
     }
 
     #[test]
-    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
     fn test_runtime_config_from_env_xdg_runtime_dir() {
-        env::remove_var("BIOMEOS_SOCKET_DIR");
-        env::set_var("XDG_RUNTIME_DIR", "/tmp/xdg-test-12345");
-        let config = RuntimeConfig::from_env();
+        let mut env = HashMap::new();
+        env.insert(
+            "XDG_RUNTIME_DIR".to_string(),
+            "/tmp/xdg-test-12345".to_string(),
+        );
+        let config = RuntimeConfig::from_env_with_map(&env, None, None);
         let socket_dir = config.socket_dir();
-        env::remove_var("XDG_RUNTIME_DIR");
         assert!(socket_dir.to_string_lossy().contains("biomeos"));
         assert!(socket_dir.to_string_lossy().contains("xdg-test"));
     }
@@ -756,10 +729,13 @@ mod tests {
 
     #[test]
     fn test_service_socket_env_override_takes_precedence() {
-        env::set_var("OVERRIDE_SVC_SOCKET", "/absolute/override.sock");
+        let mut env = HashMap::new();
+        env.insert(
+            "OVERRIDE_SVC_SOCKET".to_string(),
+            "/absolute/override.sock".to_string(),
+        );
         let config = RuntimeConfig::with_socket_dir("/default/dir");
-        let path = config.service_socket("override-svc");
-        env::remove_var("OVERRIDE_SVC_SOCKET");
+        let path = config.service_socket_with("override-svc", &env);
         assert_eq!(path.to_str().unwrap(), "/absolute/override.sock");
     }
 

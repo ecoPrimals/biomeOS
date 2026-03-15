@@ -451,6 +451,7 @@ dependencies = [
  "biomeos-types",
  "bytes 1.11.1",
  "chrono",
+ "futures 0.3.32",
  "rand",
  "regex",
  "rustix 0.38.44",
@@ -769,6 +770,7 @@ dependencies = [
  "chrono",
  "dashmap",
  "futures 0.3.32",
+ "rustix 0.38.44",
  "serde",
  "serde_json",
  "serde_yaml",
@@ -779,6 +781,7 @@ dependencies = [
  "tracing",
  "uuid",
  "walkdir",
+ "which",
 ]
 
 [[package]]

@@ -35,6 +35,7 @@
 //! - Defaults only used when discovery unavailable
 
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::env;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 
@@ -139,7 +140,17 @@ impl NetworkConfig {
     /// For production, override defaults via environment.
     /// For development, defaults work out of the box.
     pub fn from_env() -> Self {
-        let bind_all = env::var(env_vars::BIND_ALL)
+        let env: HashMap<String, String> = env::vars().collect();
+        Self::from_env_with(&env)
+    }
+
+    /// Create NetworkConfig from an explicit environment map (for testing)
+    ///
+    /// Use this in tests to avoid env-var races. Pass a `HashMap` with the
+    /// variables you need; missing vars use defaults.
+    pub fn from_env_with(env: &HashMap<String, String>) -> Self {
+        let bind_all = env
+            .get(env_vars::BIND_ALL)
             .map(|v| v == "1" || v.to_lowercase() == "true")
             .unwrap_or(false);
 
@@ -148,37 +159,37 @@ impl NetworkConfig {
             // This is critical for sovereign beacon: Pixel connects via IPv6 direct
             IpAddr::V6(Ipv6Addr::UNSPECIFIED) // [::]
         } else {
-            env::var(env_vars::BIND_ADDRESS)
-                .ok()
+            env.get(env_vars::BIND_ADDRESS)
                 .and_then(|s| s.parse().ok())
                 .unwrap_or(IpAddr::V4(Ipv4Addr::LOCALHOST)) // 127.0.0.1
         };
 
-        let stun_servers = Self::resolve_stun_servers();
-        let self_hosted_stun = env::var(env_vars::SELF_HOSTED_STUN).ok();
+        let stun_servers = Self::resolve_stun_servers_with(env);
+        let self_hosted_stun = env.get(env_vars::SELF_HOSTED_STUN).cloned();
         // DEEP DEBT: In sovereign mode, public STUN is disabled by default
-        let is_sovereign = env::var("BIOMEOS_SOVEREIGN")
+        let is_sovereign = env
+            .get("BIOMEOS_SOVEREIGN")
             .map(|v| v == "1" || v.to_lowercase() == "true")
             .unwrap_or(false);
 
         let allow_public_stun = if is_sovereign {
             // Sovereign mode: no external dependencies unless explicitly opted in
-            env::var("BIOMEOS_ALLOW_PUBLIC_STUN")
+            env.get("BIOMEOS_ALLOW_PUBLIC_STUN")
                 .map(|v| v == "1" || v.to_lowercase() == "true")
                 .unwrap_or(false)
         } else {
-            env::var(env_vars::NO_PUBLIC_STUN)
+            env.get(env_vars::NO_PUBLIC_STUN)
                 .map(|v| v != "1" && v.to_lowercase() != "true")
                 .unwrap_or(true)
         };
 
         let ports = PortConfig {
-            http: Self::parse_port_env(env_vars::HTTP_PORT, 8080),
-            https: Self::parse_port_env(env_vars::HTTPS_PORT, 8443),
-            websocket: Self::parse_port_env(env_vars::WEBSOCKET_PORT, 8081),
-            discovery: Self::parse_port_env(env_vars::DISCOVERY_PORT, 8001),
-            relay: Self::parse_port_env(env_vars::RELAY_PORT, 3490),
-            stun: Self::parse_port_env(env_vars::STUN_PORT, 3478),
+            http: Self::parse_port_with(env, env_vars::HTTP_PORT, 8080),
+            https: Self::parse_port_with(env, env_vars::HTTPS_PORT, 8443),
+            websocket: Self::parse_port_with(env, env_vars::WEBSOCKET_PORT, 8081),
+            discovery: Self::parse_port_with(env, env_vars::DISCOVERY_PORT, 8001),
+            relay: Self::parse_port_with(env, env_vars::RELAY_PORT, 3490),
+            stun: Self::parse_port_with(env, env_vars::STUN_PORT, 3478),
         };
 
         Self {
@@ -335,15 +346,12 @@ impl NetworkConfig {
     // Internal Helpers
     // =========================================================================
 
-    fn parse_port_env(var: &str, default: u16) -> u16 {
-        env::var(var)
-            .ok()
-            .and_then(|s| s.parse().ok())
-            .unwrap_or(default)
+    fn parse_port_with(env: &HashMap<String, String>, var: &str, default: u16) -> u16 {
+        env.get(var).and_then(|s| s.parse().ok()).unwrap_or(default)
     }
 
-    fn resolve_stun_servers() -> Vec<String> {
-        if let Ok(servers) = env::var(env_vars::STUN_SERVERS) {
+    fn resolve_stun_servers_with(env: &HashMap<String, String>) -> Vec<String> {
+        if let Some(servers) = env.get(env_vars::STUN_SERVERS) {
             servers
                 .split(',')
                 .map(|s| s.trim().to_string())
@@ -405,43 +413,35 @@ pub fn stun_servers() -> Vec<String> {
 mod tests {
     use super::*;
 
-    #[test]
-    #[ignore = "env-var tests are thread-unsafe; run with --test-threads=1"]
-    fn test_default_config() {
-        // Clear env vars for clean test
-        env::remove_var(env_vars::BIND_ADDRESS);
-        env::remove_var(env_vars::BIND_ALL);
+    fn env_map(entries: &[(&str, &str)]) -> HashMap<String, String> {
+        entries
+            .iter()
+            .map(|(k, v)| ((*k).to_string(), (*v).to_string()))
+            .collect()
+    }
 
-        let config = NetworkConfig::from_env();
+    #[test]
+    fn test_default_config() {
+        let env = HashMap::new();
+        let config = NetworkConfig::from_env_with(&env);
         assert_eq!(config.bind_address(), IpAddr::V4(Ipv4Addr::LOCALHOST));
         assert!(!config.bind_all);
     }
 
     #[test]
-    #[ignore = "env-var tests are thread-unsafe; run with --test-threads=1"]
     fn test_bind_all() {
-        env::set_var(env_vars::BIND_ALL, "true");
-
-        let config = NetworkConfig::from_env();
+        let env = env_map(&[(env_vars::BIND_ALL, "true")]);
+        let config = NetworkConfig::from_env_with(&env);
         // DEEP DEBT: bind_all uses IPv6 [::] for dual-stack (accepts IPv4 + IPv6)
         assert_eq!(config.bind_address(), IpAddr::V6(Ipv6Addr::UNSPECIFIED));
         assert!(config.bind_all);
-
-        env::remove_var(env_vars::BIND_ALL);
     }
 
     #[test]
-    #[ignore = "env-var tests are thread-unsafe; run with --test-threads=1"]
     fn test_custom_bind_address() {
-        env::set_var(env_vars::BIND_ADDRESS, "192.168.1.100");
-        env::remove_var(env_vars::BIND_ALL);
-
-        let config = NetworkConfig::from_env();
-        // May be overridden or default depending on test order
-        // Just verify it's a valid IP
+        let env = env_map(&[(env_vars::BIND_ADDRESS, "192.168.1.100")]);
+        let config = NetworkConfig::from_env_with(&env);
         assert!(config.bind_address().is_ipv4() || config.bind_address().is_ipv6());
-
-        env::remove_var(env_vars::BIND_ADDRESS);
     }
 
     #[test]
@@ -465,77 +465,54 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "env-var tests are thread-unsafe; run with --test-threads=1"]
     fn test_custom_port() {
-        env::set_var(env_vars::HTTP_PORT, "9999");
-
-        let config = NetworkConfig::from_env();
+        let env = env_map(&[(env_vars::HTTP_PORT, "9999")]);
+        let config = NetworkConfig::from_env_with(&env);
         assert_eq!(config.http_port(), 9999);
-
-        env::remove_var(env_vars::HTTP_PORT);
     }
 
     #[test]
-    #[ignore = "env-var tests are thread-unsafe; run with --test-threads=1"]
     fn test_stun_servers_default() {
-        env::remove_var(env_vars::STUN_SERVERS);
-        env::remove_var(env_vars::SELF_HOSTED_STUN);
-        env::remove_var(env_vars::NO_PUBLIC_STUN);
-
-        let config = NetworkConfig::from_env();
+        let env = HashMap::new();
+        let config = NetworkConfig::from_env_with(&env);
         let servers = config.stun_servers();
 
         // Should have public fallback servers
         assert!(!servers.is_empty());
-        assert!(servers[0].contains(":"));
+        assert!(servers[0].contains(':'));
     }
 
     #[test]
-    #[ignore = "env-var tests are thread-unsafe; run with --test-threads=1"]
     fn test_custom_stun_servers() {
-        env::set_var(
+        let env = env_map(&[(
             env_vars::STUN_SERVERS,
             "stun.example.com:3478,stun2.example.com:3478",
-        );
-
-        let config = NetworkConfig::from_env();
+        )]);
+        let config = NetworkConfig::from_env_with(&env);
         let servers = config.stun_servers();
 
         assert!(servers.contains(&"stun.example.com:3478".to_string()));
         assert!(servers.contains(&"stun2.example.com:3478".to_string()));
-
-        env::remove_var(env_vars::STUN_SERVERS);
     }
 
     #[test]
-    #[ignore = "env-var tests are thread-unsafe; run with --test-threads=1"]
     fn test_self_hosted_stun_priority() {
-        env::set_var(env_vars::SELF_HOSTED_STUN, "my-stun.local:3478");
-        env::remove_var(env_vars::STUN_SERVERS);
-
-        let config = NetworkConfig::from_env();
+        let env = env_map(&[(env_vars::SELF_HOSTED_STUN, "my-stun.local:3478")]);
+        let config = NetworkConfig::from_env_with(&env);
         let servers = config.stun_servers();
 
         // Self-hosted should be first
         assert_eq!(servers[0], "my-stun.local:3478");
-
-        env::remove_var(env_vars::SELF_HOSTED_STUN);
     }
 
     #[test]
-    #[ignore = "env-var tests are thread-unsafe; run with --test-threads=1"]
     fn test_no_public_stun() {
-        env::set_var(env_vars::NO_PUBLIC_STUN, "true");
-        env::remove_var(env_vars::STUN_SERVERS);
-        env::remove_var(env_vars::SELF_HOSTED_STUN);
-
-        let config = NetworkConfig::from_env();
+        let env = env_map(&[(env_vars::NO_PUBLIC_STUN, "true")]);
+        let config = NetworkConfig::from_env_with(&env);
         let servers = config.stun_servers();
 
         // No servers when public disabled and no custom configured
         assert!(servers.is_empty());
-
-        env::remove_var(env_vars::NO_PUBLIC_STUN);
     }
 
     #[test]
@@ -632,105 +609,78 @@ mod tests {
         assert!(servers.is_empty() || servers.iter().all(|s| s.contains(':')));
     }
 
-    // ── Additional env-var tests (marked #[ignore]) ─────────────────────────
+    // ── Additional env-var tests (using from_env_with) ──────────────────────
 
     #[test]
-    #[ignore = "env-var tests are thread-unsafe; run with --test-threads=1"]
     fn test_from_env_bind_all_one() {
-        env::set_var(env_vars::BIND_ALL, "1");
-        let config = NetworkConfig::from_env();
+        let env = env_map(&[(env_vars::BIND_ALL, "1")]);
+        let config = NetworkConfig::from_env_with(&env);
         assert_eq!(config.bind_address(), IpAddr::V6(Ipv6Addr::UNSPECIFIED));
-        env::remove_var(env_vars::BIND_ALL);
     }
 
     #[test]
-    #[ignore = "env-var tests are thread-unsafe; run with --test-threads=1"]
     fn test_from_env_bind_address_ipv6() {
-        env::remove_var(env_vars::BIND_ALL);
-        env::set_var(env_vars::BIND_ADDRESS, "::1");
-        let config = NetworkConfig::from_env();
+        let env = env_map(&[(env_vars::BIND_ADDRESS, "::1")]);
+        let config = NetworkConfig::from_env_with(&env);
         assert!(config.bind_address().is_ipv6());
-        env::remove_var(env_vars::BIND_ADDRESS);
     }
 
     #[test]
-    #[ignore = "env-var tests are thread-unsafe; run with --test-threads=1"]
     fn test_from_env_invalid_bind_address_fallback() {
-        env::remove_var(env_vars::BIND_ALL);
-        env::set_var(env_vars::BIND_ADDRESS, "not-an-ip");
-        let config = NetworkConfig::from_env();
+        let env = env_map(&[(env_vars::BIND_ADDRESS, "not-an-ip")]);
+        let config = NetworkConfig::from_env_with(&env);
         // Should fall back to localhost when parse fails
         assert_eq!(config.bind_address(), IpAddr::V4(Ipv4Addr::LOCALHOST));
-        env::remove_var(env_vars::BIND_ADDRESS);
     }
 
     #[test]
-    #[ignore = "env-var tests are thread-unsafe; run with --test-threads=1"]
     fn test_stun_servers_self_hosted_first() {
-        env::set_var(env_vars::SELF_HOSTED_STUN, "stun.self.local:3478");
-        env::set_var(env_vars::STUN_SERVERS, "stun.custom.com:3478");
-        env::remove_var(env_vars::NO_PUBLIC_STUN);
-
-        let config = NetworkConfig::from_env();
+        let env = env_map(&[
+            (env_vars::SELF_HOSTED_STUN, "stun.self.local:3478"),
+            (env_vars::STUN_SERVERS, "stun.custom.com:3478"),
+        ]);
+        let config = NetworkConfig::from_env_with(&env);
         let servers = config.stun_servers();
 
         assert!(!servers.is_empty());
         assert_eq!(servers[0], "stun.self.local:3478");
-
-        env::remove_var(env_vars::SELF_HOSTED_STUN);
-        env::remove_var(env_vars::STUN_SERVERS);
     }
 
     #[test]
-    #[ignore = "env-var tests are thread-unsafe; run with --test-threads=1"]
     fn test_stun_servers_custom_only_no_public() {
-        env::set_var(env_vars::STUN_SERVERS, "stun.a.com:3478,stun.b.com:3478");
-        env::remove_var(env_vars::SELF_HOSTED_STUN);
-        env::set_var(env_vars::NO_PUBLIC_STUN, "1");
-
-        let config = NetworkConfig::from_env();
+        let env = env_map(&[
+            (env_vars::STUN_SERVERS, "stun.a.com:3478,stun.b.com:3478"),
+            (env_vars::NO_PUBLIC_STUN, "1"),
+        ]);
+        let config = NetworkConfig::from_env_with(&env);
         let servers = config.stun_servers();
 
         assert_eq!(servers.len(), 2);
         assert!(servers.contains(&"stun.a.com:3478".to_string()));
         assert!(servers.contains(&"stun.b.com:3478".to_string()));
-
-        env::remove_var(env_vars::STUN_SERVERS);
-        env::remove_var(env_vars::NO_PUBLIC_STUN);
     }
 
     #[test]
-    #[ignore = "env-var tests are thread-unsafe; run with --test-threads=1"]
     fn test_stun_servers_sovereign_mode_no_public() {
-        env::set_var("BIOMEOS_SOVEREIGN", "true");
-        env::remove_var(env_vars::STUN_SERVERS);
-        env::remove_var(env_vars::SELF_HOSTED_STUN);
-
-        let config = NetworkConfig::from_env();
+        let env = env_map(&[("BIOMEOS_SOVEREIGN", "true")]);
+        let config = NetworkConfig::from_env_with(&env);
         let servers = config.stun_servers();
 
         assert!(servers.is_empty());
         assert!(!config.allows_public_stun());
-
-        env::remove_var("BIOMEOS_SOVEREIGN");
     }
 
     #[test]
-    #[ignore = "env-var tests are thread-unsafe; run with --test-threads=1"]
     fn test_stun_servers_sovereign_with_opt_in() {
-        env::set_var("BIOMEOS_SOVEREIGN", "1");
-        env::set_var("BIOMEOS_ALLOW_PUBLIC_STUN", "true");
-        env::remove_var(env_vars::STUN_SERVERS);
-        env::remove_var(env_vars::SELF_HOSTED_STUN);
-
-        let config = NetworkConfig::from_env();
+        let env = env_map(&[
+            ("BIOMEOS_SOVEREIGN", "1"),
+            ("BIOMEOS_ALLOW_PUBLIC_STUN", "true"),
+        ]);
+        let config = NetworkConfig::from_env_with(&env);
         let servers = config.stun_servers();
 
         assert!(!servers.is_empty());
         assert!(config.allows_public_stun());
-
-        env::remove_var("BIOMEOS_SOVEREIGN");
-        env::remove_var("BIOMEOS_ALLOW_PUBLIC_STUN");
     }
 
     #[test]
@@ -774,41 +724,33 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "env-var tests are thread-unsafe; run with --test-threads=1"]
     fn test_stun_servers_whitespace_trimmed() {
-        env::set_var(
-            env_vars::STUN_SERVERS,
-            " stun.a.com:3478 , stun.b.com:3478 ,  ",
-        );
-        env::remove_var(env_vars::SELF_HOSTED_STUN);
-        env::set_var(env_vars::NO_PUBLIC_STUN, "1");
-
-        let config = NetworkConfig::from_env();
+        let env = env_map(&[
+            (
+                env_vars::STUN_SERVERS,
+                " stun.a.com:3478 , stun.b.com:3478 ,  ",
+            ),
+            (env_vars::NO_PUBLIC_STUN, "1"),
+        ]);
+        let config = NetworkConfig::from_env_with(&env);
         let servers = config.stun_servers();
 
         assert!(servers.contains(&"stun.a.com:3478".to_string()));
         assert!(servers.contains(&"stun.b.com:3478".to_string()));
-
-        env::remove_var(env_vars::STUN_SERVERS);
-        env::remove_var(env_vars::NO_PUBLIC_STUN);
     }
 
     #[test]
-    #[ignore = "env-var tests are thread-unsafe; run with --test-threads=1"]
     fn test_stun_servers_empty_entries_filtered() {
-        env::set_var(env_vars::STUN_SERVERS, "stun.a.com:3478,,,stun.b.com:3478");
-        env::remove_var(env_vars::SELF_HOSTED_STUN);
-        env::set_var(env_vars::NO_PUBLIC_STUN, "1");
-
-        let config = NetworkConfig::from_env();
+        let env = env_map(&[
+            (env_vars::STUN_SERVERS, "stun.a.com:3478,,,stun.b.com:3478"),
+            (env_vars::NO_PUBLIC_STUN, "1"),
+        ]);
+        let config = NetworkConfig::from_env_with(&env);
         let servers = config.stun_servers();
 
         assert_eq!(servers.len(), 2);
         assert!(servers.contains(&"stun.a.com:3478".to_string()));
         assert!(servers.contains(&"stun.b.com:3478".to_string()));
-
-        env::remove_var(env_vars::STUN_SERVERS);
-        env::remove_var(env_vars::NO_PUBLIC_STUN);
     }
 
     #[test]
@@ -835,19 +777,13 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "env-var tests are thread-unsafe; run with --test-threads=1"]
     fn test_no_public_stun_false_allows_public() {
-        env::remove_var(env_vars::STUN_SERVERS);
-        env::remove_var(env_vars::SELF_HOSTED_STUN);
-        env::set_var(env_vars::NO_PUBLIC_STUN, "false");
-
-        let config = NetworkConfig::from_env();
+        let env = env_map(&[(env_vars::NO_PUBLIC_STUN, "false")]);
+        let config = NetworkConfig::from_env_with(&env);
         let servers = config.stun_servers();
 
         assert!(!servers.is_empty());
         assert!(config.allows_public_stun());
-
-        env::remove_var(env_vars::NO_PUBLIC_STUN);
     }
 
     #[test]

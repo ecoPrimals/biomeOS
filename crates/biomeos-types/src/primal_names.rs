@@ -62,6 +62,12 @@ pub const HEALTHSPRING: &str = "healthspring";
 /// ludoSpring — game science, HCI, procedural content, interaction design.
 pub const LUDOSPRING: &str = "ludospring";
 
+/// biomeOS itself — appears in socket discovery as a pseudo-primal.
+pub const BIOMEOS: &str = "biomeos";
+
+/// biomeOS device management variant.
+pub const BIOMEOS_DEVICE_MANAGEMENT: &str = "biomeos-device-management";
+
 /// All bootstrap-time primal names (Tower + Node + Nest core).
 pub const CORE_PRIMALS: &[&str] = &[BEARDOG, SONGBIRD, TOADSTOOL, NESTGATE, SQUIRREL];
 
@@ -86,6 +92,8 @@ pub fn is_known_primal(name: &str) -> bool {
     CORE_PRIMALS.contains(&lower.as_str())
         || PROVENANCE_PRIMALS.contains(&lower.as_str())
         || SPRING_PRIMALS.contains(&lower.as_str())
+        || lower == BIOMEOS
+        || lower == BIOMEOS_DEVICE_MANAGEMENT
 }
 
 #[cfg(test)]

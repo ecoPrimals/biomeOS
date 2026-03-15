@@ -214,25 +214,9 @@ impl PrimalDiscovery {
         }
     }
 
-    /// Check if a name is a known primal
+    /// Check if a name is a known primal (delegates to `primal_names::is_known_primal`).
     fn is_primal_name(&self, name: &str) -> bool {
-        matches!(
-            name,
-            "beardog"
-                | "songbird"
-                | "toadstool"
-                | "nestgate"
-                | "squirrel"
-                | "biomeos"
-                | "biomeos-device-management"
-                | "airspring"
-                | "wetspring"
-                | "neuralspring"
-                | "groundspring"
-                | "hotspring"
-                | "healthspring"
-                | "ludospring"
-        )
+        biomeos_types::primal_names::is_known_primal(name)
     }
 }
 
@@ -398,7 +382,7 @@ mod tests {
         assert!(!discovery.is_primal_name("unknown"));
         assert!(!discovery.is_primal_name(""));
         assert!(!discovery.is_primal_name("neural-api"));
-        assert!(!discovery.is_primal_name("BEARDOG")); // case-sensitive
+        assert!(discovery.is_primal_name("BEARDOG")); // case-insensitive via primal_names
     }
 
     // ========================================================================

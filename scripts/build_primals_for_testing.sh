@@ -29,6 +29,10 @@ log_success() {
     echo -e "${GREEN}[✓]${NC} $1"
 }
 
+log_warning() {
+    echo -e "${YELLOW}[⚠]${NC} $1"
+}
+
 log_section() {
     echo ""
     echo -e "${BLUE}═══════════════════════════════════════════════════════════════${NC}"

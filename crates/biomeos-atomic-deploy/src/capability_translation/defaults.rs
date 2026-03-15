@@ -126,7 +126,16 @@ pub fn load_defaults_into(registry: &mut CapabilityTranslationRegistry) -> usize
         (
             TOADSTOOL,
             "compute",
-            &[("compute.execute", "execute"), ("compute.parse", "parse")],
+            &[
+                ("compute.execute", "execute"),
+                ("compute.parse", "parse"),
+                ("compute.dispatch.submit", "dispatch_binary"),
+                ("compute.dispatch.status", "dispatch_status"),
+                ("compute.dispatch.cancel", "dispatch_cancel"),
+                ("compute.hardware.observe", "hw_learn.observe"),
+                ("compute.hardware.distill", "hw_learn.distill"),
+                ("compute.hardware.apply", "hw_learn.apply"),
+            ],
         ),
         // AI domain
         (
@@ -139,6 +148,20 @@ pub fn load_defaults_into(registry: &mut CapabilityTranslationRegistry) -> usize
             ],
         ),
     ];
+
+    // Health domain translations (provider-agnostic, resolved to biomeOS itself)
+    let health_translations: &[MethodTranslation] = &[
+        ("health.ping", "health.check"),
+        ("health.status", "health.check"),
+    ];
+    for (semantic, method) in health_translations {
+        registry.register_translation(*semantic, "biomeos", *method, "local", None);
+        count += 1;
+    }
+    debug!(
+        "📦 Loaded {} health semantic aliases",
+        health_translations.len()
+    );
 
     let provider_overrides: std::collections::HashMap<&str, String> = [
         ("security", security_provider),

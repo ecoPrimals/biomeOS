@@ -21,11 +21,10 @@ pub struct PathInfo {
 }
 
 /// Report of what would be refreshed in a dry run.
+#[cfg(test)]
 #[derive(Debug, Clone, Default)]
 pub struct RefreshReport {
-    /// Paths that would be refreshed
     pub to_refresh: Vec<PathBuf>,
-    /// Paths that would stay (already fresh)
     pub to_keep: Vec<PathBuf>,
 }
 
@@ -80,8 +79,7 @@ pub(crate) fn gather_spore_structure_info(path: &Path) -> Vec<PathInfo> {
 }
 
 /// Computes refresh plan from paths and parallel would_refresh flags.
-/// Planned utility for spore refresh workflows.
-#[allow(dead_code)]
+#[cfg(test)]
 pub(crate) fn compute_refresh_plan(paths: &[PathBuf], would_refresh: &[bool]) -> RefreshReport {
     let mut to_refresh = Vec::new();
     let mut to_keep = Vec::new();

@@ -29,7 +29,7 @@ ALPINE_VERSION="3.19"
 ALPINE_URL="https://dl-cdn.alpinelinux.org/alpine/v${ALPINE_VERSION}/releases/x86_64/alpine-standard-${ALPINE_VERSION}.0-x86_64.iso"
 ALPINE_ISO="/tmp/alpine-livespore.iso"
 FAMILY_ID="8ff3b864a4bc589a"
-PARENT_MITO_SEED="/media/eastgate/BEA6-BBCE/biomeOS/.family.seed"
+PARENT_MITO_SEED="${BIOMEOS_MITO_SEED:-/media/${USER}/BEA6-BBCE/biomeOS/.family.seed}"
 
 # Functions
 log_info() { echo -e "${BLUE}ℹ️  $1${NC}"; }

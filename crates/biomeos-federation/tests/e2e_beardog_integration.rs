@@ -179,10 +179,9 @@ async fn test_beardog_with_real_seed() {
     // Try to load a real seed from a spore
     use std::path::PathBuf;
 
-    let possible_spore_paths = vec![
-        PathBuf::from("/media/eastgate/BEA6-BBCE/biomeOS"),
-        PathBuf::from("./test-spore/biomeOS"),
-    ];
+    let possible_spore_paths = vec![std::env::var("BIOMEOS_SPORE_PATH")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| PathBuf::from("./test-spore/biomeOS"))];
 
     for spore_path in possible_spore_paths {
         let seed_path = spore_path.join(".family.seed");

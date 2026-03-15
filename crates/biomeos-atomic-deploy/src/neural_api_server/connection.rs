@@ -6,19 +6,22 @@
 //! Handles incoming Unix socket connections, reads requests, and writes responses.
 
 use anyhow::Result;
+use biomeos_types::jsonrpc::{JsonRpcInput, JsonRpcResponse};
+use serde_json::Value;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
 use tokio::time::{timeout, Duration};
-use tracing::error;
+use tracing::{debug, error};
 
 use super::rpc::internal_error_response;
 use super::NeuralApiServer;
 
 impl NeuralApiServer {
-    /// Handle a client connection
+    /// Handle a client connection.
     ///
-    /// Reads JSON-RPC requests line-by-line and processes them.
-    /// Uses timeouts to detect when clients close their write side.
+    /// Reads JSON-RPC requests line-by-line.  Supports both single request
+    /// objects and JSON-RPC 2.0 Section 6 batch arrays.  Batch elements are
+    /// processed concurrently via `futures::future::join_all`.
     pub async fn handle_connection(&self, stream: UnixStream) -> Result<()> {
         let mut reader = BufReader::new(stream);
         let mut line = String::new();
@@ -26,39 +29,67 @@ impl NeuralApiServer {
         loop {
             line.clear();
 
-            // Try to read next request with timeout (client may have shut down write side)
             let read_result =
                 timeout(Duration::from_millis(100), reader.read_line(&mut line)).await;
 
             match read_result {
                 Ok(Ok(n)) if n > 0 => {
-                    // Request received, handle it
-                    let response = match self.handle_request(&line).await {
-                        Ok(response) => response,
-                        Err(e) => {
-                            error!("Request error: {}", e);
-                            internal_error_response(&e, None)
-                        }
-                    };
+                    let response_value = self.dispatch_line(&line).await;
 
-                    // Write response
-                    let response_str = serde_json::to_string(&response)? + "\n";
+                    let response_str = serde_json::to_string(&response_value)? + "\n";
                     let stream = reader.get_mut();
                     stream.write_all(response_str.as_bytes()).await?;
                     stream.flush().await?;
 
-                    // After sending response, check if we can read more (short timeout)
-                    // If client shut down write side, this will timeout quickly
                     continue;
                 }
                 Ok(Ok(_)) | Ok(Err(_)) | Err(_) => {
-                    // EOF, error, or timeout - client is done
                     break;
                 }
             }
         }
 
         Ok(())
+    }
+
+    /// Dispatch a single input line, handling both single and batch JSON-RPC.
+    async fn dispatch_line(&self, line: &str) -> Value {
+        match JsonRpcInput::parse(line) {
+            Ok(JsonRpcInput::Single(req)) => {
+                let raw = serde_json::to_string(&req).unwrap_or_default();
+                match self.handle_request(&raw).await {
+                    Ok(resp) => resp,
+                    Err(e) => {
+                        error!("Request error: {}", e);
+                        internal_error_response(&e, req.id)
+                    }
+                }
+            }
+            Ok(JsonRpcInput::Batch(requests)) => {
+                debug!("Processing JSON-RPC batch of {} requests", requests.len());
+                let futures: Vec<_> = requests
+                    .into_iter()
+                    .map(|req| {
+                        let raw = serde_json::to_string(&req).unwrap_or_default();
+                        let id = req.id.clone();
+                        async move {
+                            match self.handle_request(&raw).await {
+                                Ok(resp) => resp,
+                                Err(e) => {
+                                    error!("Batch request error: {}", e);
+                                    internal_error_response(&e, id)
+                                }
+                            }
+                        }
+                    })
+                    .collect();
+
+                let results = futures::future::join_all(futures).await;
+                serde_json::to_value(results).unwrap_or(Value::Array(vec![]))
+            }
+            Err(err) => serde_json::to_value(JsonRpcResponse::error(Value::Null, err))
+                .unwrap_or(Value::Null),
+        }
     }
 }
 
@@ -130,7 +161,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_handle_connection_invalid_json_returns_internal_error() {
+    async fn test_handle_connection_invalid_json_returns_parse_error() {
         let (server_stream, mut client_stream) =
             tokio::net::UnixStream::pair().expect("UnixStream::pair");
         let server = create_test_server();
@@ -152,6 +183,67 @@ mod tests {
 
         let _ = read_result.expect("read");
         conn_result.expect("connection handler");
-        assert!(buf.contains("Internal error") || buf.contains("-32603"));
+        assert!(
+            buf.contains("Parse error") || buf.contains("-32700"),
+            "invalid JSON should return parse error, got: {buf}"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_handle_connection_batch_request() {
+        let (server_stream, mut client_stream) =
+            tokio::net::UnixStream::pair().expect("UnixStream::pair");
+        let server = create_test_server();
+
+        let batch = r#"[{"jsonrpc":"2.0","method":"topology.get","id":1},{"jsonrpc":"2.0","method":"topology.primals","id":2}]"#;
+        client_stream
+            .write_all((batch.to_string() + "\n").as_bytes())
+            .await
+            .expect("write batch");
+        client_stream.flush().await.expect("flush");
+
+        let mut buf = String::new();
+        let (read_result, conn_result) = tokio::join!(
+            async {
+                let mut reader = tokio::io::BufReader::new(&mut client_stream);
+                reader.read_line(&mut buf).await
+            },
+            server.handle_connection(server_stream)
+        );
+
+        let _ = read_result.expect("read");
+        conn_result.expect("handle batch");
+        let parsed: serde_json::Value = serde_json::from_str(&buf).expect("response is valid json");
+        assert!(parsed.is_array(), "batch response must be an array");
+        assert_eq!(parsed.as_array().unwrap().len(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_handle_connection_empty_batch_returns_invalid_request() {
+        let (server_stream, mut client_stream) =
+            tokio::net::UnixStream::pair().expect("UnixStream::pair");
+        let server = create_test_server();
+
+        client_stream
+            .write_all(b"[]\n")
+            .await
+            .expect("write empty batch");
+        client_stream.flush().await.expect("flush");
+
+        let mut buf = String::new();
+        let (read_result, conn_result) = tokio::join!(
+            async {
+                let mut reader = tokio::io::BufReader::new(&mut client_stream);
+                reader.read_line(&mut buf).await
+            },
+            server.handle_connection(server_stream)
+        );
+
+        let _ = read_result.expect("read");
+        conn_result.expect("handle empty batch");
+        assert!(
+            buf.contains("Invalid Request") || buf.contains("-32600"),
+            "empty batch should return invalid request, got: {buf}"
+        );
     }
 }

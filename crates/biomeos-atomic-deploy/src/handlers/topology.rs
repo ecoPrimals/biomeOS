@@ -157,11 +157,60 @@ impl TopologyHandler {
         Ok(primals)
     }
 
-    /// Query a primal for its capabilities via JSON-RPC.
-    async fn query_primal_capabilities(&self, _socket_path: &str) -> Result<Vec<String>> {
-        // Future: Actually call health.capabilities on the socket
-        // For now, return empty - we'll use registered capabilities
-        Ok(vec![])
+    /// Query a primal for its capabilities via JSON-RPC `capability.list`.
+    ///
+    /// Connects to the primal's Unix socket, sends a `capability.list`
+    /// request, and parses the response into a list of capability names.
+    /// Falls back to an empty list on connection/parse errors so that
+    /// topology discovery remains resilient.
+    async fn query_primal_capabilities(&self, socket_path: &str) -> Result<Vec<String>> {
+        use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+        use tokio::net::UnixStream;
+
+        let stream = match tokio::time::timeout(
+            std::time::Duration::from_millis(500),
+            UnixStream::connect(socket_path),
+        )
+        .await
+        {
+            Ok(Ok(s)) => s,
+            _ => return Ok(vec![]),
+        };
+
+        let request = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": "capability.list",
+            "id": 1
+        });
+        let request_line = serde_json::to_string(&request)? + "\n";
+
+        let mut reader = BufReader::new(stream);
+        let stream_mut = reader.get_mut();
+        if stream_mut.write_all(request_line.as_bytes()).await.is_err() {
+            return Ok(vec![]);
+        }
+        let _ = stream_mut.flush().await;
+
+        let mut response_line = String::new();
+        match tokio::time::timeout(
+            std::time::Duration::from_millis(500),
+            reader.read_line(&mut response_line),
+        )
+        .await
+        {
+            Ok(Ok(n)) if n > 0 => {}
+            _ => return Ok(vec![]),
+        }
+
+        let resp: serde_json::Value = serde_json::from_str(&response_line).unwrap_or_default();
+        if let Some(caps) = resp["result"]["capabilities"].as_array() {
+            Ok(caps
+                .iter()
+                .filter_map(|c| c.as_str().map(String::from))
+                .collect())
+        } else {
+            Ok(vec![])
+        }
     }
 
     /// Get XDG-compliant socket directories for primal discovery

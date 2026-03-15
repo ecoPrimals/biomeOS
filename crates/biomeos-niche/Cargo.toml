@@ -32,6 +32,10 @@ tracing = { workspace = true }
 dashmap = { workspace = true }
 walkdir = { workspace = true }
 
+# Process management
+which = "6"
+rustix = { version = "0.38", features = ["process"] }
+
 [dev-dependencies]
 tokio-test = { workspace = true }
 tempfile = { workspace = true }

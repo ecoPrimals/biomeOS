@@ -75,10 +75,6 @@ fn find_primal_binary(name: &str) -> Option<std::path::PathBuf> {
     let locations = vec![
         format!("primals/{}", name),
         format!("../phase1/{}/target/release/{}", name, name),
-        format!(
-            "/home/eastgate/Development/ecoPrimals/phase2/biomeOS/primals/{}",
-            name
-        ),
     ];
 
     for location in locations {
@@ -476,8 +472,10 @@ async fn test_federation_discovery() {
             println!("✅ Federation orchestrator running (PID: {})", pid.trim());
 
             // Check Songbird logs for peer discoveries
-            let log_path =
-                "/home/eastgate/Development/ecoPrimals/phase2/biomeOS/logs/primals/songbird.log";
+            let log_dir =
+                std::env::var("BIOMEOS_LOG_DIR").unwrap_or_else(|_| "logs/primals".to_string());
+            let log_path_buf = std::path::PathBuf::from(&log_dir).join("songbird.log");
+            let log_path = log_path_buf.to_str().unwrap_or("logs/primals/songbird.log");
             if Path::new(log_path).exists() {
                 if let Ok(contents) = std::fs::read_to_string(log_path) {
                     let peer_count = contents

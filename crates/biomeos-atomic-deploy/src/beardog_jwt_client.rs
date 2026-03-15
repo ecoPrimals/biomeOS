@@ -19,16 +19,12 @@ use tracing::{debug, info, warn};
 #[derive(Debug, Deserialize)]
 struct JwtSecretResult {
     secret: String,
-    /// Purpose of the secret (wire format)
-    #[allow(dead_code)]
-    purpose: String,
-    /// Cryptographic strength (wire format)
+    #[serde(rename = "purpose")]
+    _purpose: String,
     strength: String,
-    /// Secret size in bytes (wire format)
     byte_length: usize,
-    #[serde(default)]
-    #[allow(dead_code)]
-    encoded_length: usize,
+    #[serde(default, rename = "encoded_length")]
+    _encoded_length: usize,
     #[serde(default)]
     algorithm: String,
 }

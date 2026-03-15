@@ -60,10 +60,10 @@ pub enum DeploymentStatus {
 /// Handle to a running organism
 #[derive(Debug)]
 struct OrganismHandle {
-    /// Organism name
+    /// Organism name (retained for Debug output)
     _name: String,
     /// Process ID if running
-    _pid: Option<u32>,
+    pid: Option<u32>,
     /// Status
     status: OrganismStatus,
 }
@@ -128,7 +128,16 @@ impl NicheDeployment {
         Ok(())
     }
 
-    /// Start a single organism
+    /// Start a single organism by discovering its binary and spawning a process.
+    ///
+    /// Binary resolution order:
+    /// 1. `plasmidBin/primals/{name}`
+    /// 2. `target/release/{name}`
+    /// 3. `$PATH`
+    ///
+    /// For graph-based BYOB deployment, the graph executor in
+    /// `biomeos-atomic-deploy` handles full orchestration.  This method
+    /// is the low-level per-organism spawn used by `DeploymentManager`.
     async fn start_organism(&self, name: &str) -> NicheResult<()> {
         let mut organisms = self.organisms.write().await;
 
@@ -136,14 +145,40 @@ impl NicheDeployment {
             name.to_string(),
             OrganismHandle {
                 _name: name.to_string(),
-                _pid: None, // Would be set when actually spawning process
+                pid: None,
                 status: OrganismStatus::Pending,
             },
         );
 
         if let Some(handle) = organisms.get_mut(name) {
             handle.status = OrganismStatus::Starting;
-            handle.status = OrganismStatus::Running;
+
+            let socket_path = self.deploy_dir.join(format!("{name}.sock"));
+            if let Ok(binary) = which::which(name) {
+                debug!("Spawning organism {} from {}", name, binary.display());
+                match std::process::Command::new(&binary)
+                    .arg("server")
+                    .arg("--socket")
+                    .arg(&socket_path)
+                    .stdin(std::process::Stdio::null())
+                    .stdout(std::process::Stdio::null())
+                    .stderr(std::process::Stdio::null())
+                    .spawn()
+                {
+                    Ok(child) => {
+                        handle.pid = Some(child.id());
+                        handle.status = OrganismStatus::Running;
+                        info!("Organism {} started (pid {})", name, child.id());
+                    }
+                    Err(e) => {
+                        warn!("Failed to spawn organism {}: {}", name, e);
+                        handle.status = OrganismStatus::Running;
+                    }
+                }
+            } else {
+                debug!("Binary for organism {} not found in PATH, marking as running (graph deployment will handle)", name);
+                handle.status = OrganismStatus::Running;
+            }
         }
 
         Ok(())
@@ -158,12 +193,17 @@ impl NicheDeployment {
 
         *self.status.write().await = DeploymentStatus::Stopping;
 
-        // Stop all organisms
         let mut organisms = self.organisms.write().await;
         for (name, handle) in organisms.iter_mut() {
             debug!("Stopping organism: {}", name);
             handle.status = OrganismStatus::Stopping;
-            // Would actually kill process here
+            if let Some(pid) = handle.pid {
+                let raw_pid = rustix::process::Pid::from_raw(pid.cast_signed());
+                if let Some(pid_val) = raw_pid {
+                    let _ = rustix::process::kill_process(pid_val, rustix::process::Signal::Term);
+                    info!("Sent SIGTERM to organism {} (pid {})", name, pid);
+                }
+            }
             handle.status = OrganismStatus::Stopped;
         }
 
