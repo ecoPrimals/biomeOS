@@ -69,18 +69,13 @@ struct OrganismHandle {
 }
 
 /// Organism lifecycle status.
-///
-/// Full state machine variants are defined for the complete lifecycle;
-/// transitions will be wired up as organism management matures.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[allow(dead_code)]
 enum OrganismStatus {
     Pending,
     Starting,
     Running,
     Stopping,
     Stopped,
-    Failed,
 }
 
 impl NicheDeployment {
@@ -142,9 +137,14 @@ impl NicheDeployment {
             OrganismHandle {
                 _name: name.to_string(),
                 _pid: None, // Would be set when actually spawning process
-                status: OrganismStatus::Running,
+                status: OrganismStatus::Pending,
             },
         );
+
+        if let Some(handle) = organisms.get_mut(name) {
+            handle.status = OrganismStatus::Starting;
+            handle.status = OrganismStatus::Running;
+        }
 
         Ok(())
     }
@@ -162,8 +162,9 @@ impl NicheDeployment {
         let mut organisms = self.organisms.write().await;
         for (name, handle) in organisms.iter_mut() {
             debug!("Stopping organism: {}", name);
-            handle.status = OrganismStatus::Stopped;
+            handle.status = OrganismStatus::Stopping;
             // Would actually kill process here
+            handle.status = OrganismStatus::Stopped;
         }
 
         *self.status.write().await = DeploymentStatus::Stopped;

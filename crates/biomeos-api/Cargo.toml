@@ -27,12 +27,12 @@ toml = "0.8"
 
 # Internal dependencies
 # NOTE: http-transport feature REMOVED - using Unix sockets for primal communication
-biomeos-core = { path = "../biomeos-core" }
-biomeos-types = { path = "../biomeos-types" }
-biomeos-graph = { path = "../biomeos-graph" }
-biomeos-spore = { path = "../biomeos-spore" }
-biomeos-genome-factory = { path = "../biomeos-genome-factory" }
-biomeos-genomebin-v3 = { path = "../biomeos-genomebin-v3" }
+biomeos-core = { path = "../biomeos-core", version = "0.1.0" }
+biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
+biomeos-graph = { path = "../biomeos-graph", version = "0.1.0" }
+biomeos-spore = { path = "../biomeos-spore", version = "0.1.0" }
+biomeos-genome-factory = { path = "../biomeos-genome-factory", version = "1.0.0" }
+biomeos-genomebin-v3 = { path = "../biomeos-genomebin-v3", version = "3.0.0" }
 neural-api-client = { path = "../neural-api-client" }
 
 # Async utilities
@@ -68,7 +68,6 @@ async-stream = "0.3.6"
 [dev-dependencies]
 # Testing utilities
 tokio-test = "0.4"
-serial_test = "3.0"
 http-body-util = "0.1"
 sha2 = "0.10"
 hex = "0.4"

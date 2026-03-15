@@ -122,6 +122,36 @@ impl SystemPaths {
         })
     }
 
+    /// Create SystemPaths with XDG env overrides (for testing without mutating env)
+    pub fn new_with_xdg_overrides(
+        xdg_runtime_dir: Option<impl AsRef<Path>>,
+        xdg_data_home: Option<impl AsRef<Path>>,
+    ) -> Result<Self> {
+        let runtime_dir = match xdg_runtime_dir {
+            Some(p) => Ok(p.as_ref().to_path_buf().join("biomeos")),
+            None => Self::get_runtime_dir(),
+        }?;
+        let data_dir = match xdg_data_home {
+            Some(p) => Ok(p.as_ref().to_path_buf().join("biomeos")),
+            None => Self::get_data_dir(),
+        }?;
+        let config_dir = Self::get_config_dir()?;
+        let cache_dir = Self::get_cache_dir()?;
+        let state_dir = Self::get_state_dir()?;
+        Self::ensure_dir(&runtime_dir)?;
+        Self::ensure_dir(&data_dir)?;
+        Self::ensure_dir(&config_dir)?;
+        Self::ensure_dir(&cache_dir)?;
+        Self::ensure_dir(&state_dir)?;
+        Ok(Self {
+            runtime_dir,
+            data_dir,
+            config_dir,
+            cache_dir,
+            state_dir,
+        })
+    }
+
     /// Create SystemPaths with custom base directories
     ///
     /// Use this for testing or custom deployments
@@ -607,35 +637,26 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "env-var tests are thread-unsafe; run with --test-threads=1"]
     fn test_xdg_runtime_dir_override() {
         let temp = tempdir().unwrap();
         let xdg_runtime = temp.path().join("xdg-runtime");
         std::fs::create_dir_all(&xdg_runtime).unwrap();
-        std::env::set_var("XDG_RUNTIME_DIR", xdg_runtime.clone());
 
-        let paths = SystemPaths::new();
-        std::env::remove_var("XDG_RUNTIME_DIR");
-
-        if let Ok(p) = paths {
-            assert!(p.runtime_dir().to_string_lossy().contains("xdg-runtime"));
-        }
+        let paths = SystemPaths::new_with_xdg_overrides(Some(&xdg_runtime), None::<&Path>).unwrap();
+        assert!(paths
+            .runtime_dir()
+            .to_string_lossy()
+            .contains("xdg-runtime"));
     }
 
     #[test]
-    #[ignore = "env-var tests are thread-unsafe; run with --test-threads=1"]
     fn test_xdg_data_home_override() {
         let temp = tempdir().unwrap();
         let xdg_data = temp.path().join("xdg-data");
         std::fs::create_dir_all(&xdg_data).unwrap();
-        std::env::set_var("XDG_DATA_HOME", xdg_data.clone());
 
-        let paths = SystemPaths::new();
-        std::env::remove_var("XDG_DATA_HOME");
-
-        if let Ok(p) = paths {
-            assert!(p.data_dir().to_string_lossy().contains("xdg-data"));
-        }
+        let paths = SystemPaths::new_with_xdg_overrides(None::<&Path>, Some(&xdg_data)).unwrap();
+        assert!(paths.data_dir().to_string_lossy().contains("xdg-data"));
     }
 
     #[test]

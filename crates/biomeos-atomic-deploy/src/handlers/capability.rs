@@ -254,16 +254,57 @@ impl CapabilityHandler {
         Ok(())
     }
 
-    /// List all known capabilities.
+    /// List all known capabilities with provider details and available operations.
     ///
     /// JSON-RPC method: `capability.list`
+    ///
+    /// Returns a rich response including:
+    /// - Per-capability provider information (primal, socket, registration time)
+    /// - Available operations (from the capability translation registry)
+    /// - Total counts
+    ///
+    /// This resolves `wateringHole/SPRING_EVOLUTION_ISSUES` ISSUE-012.
     pub async fn list(&self) -> Result<Value> {
         let capabilities = self.router.list_capabilities().await;
-        let cap_list: Vec<String> = capabilities.keys().cloned().collect();
+        let registry = self.translation_registry.read().await;
+
+        let mut cap_entries: Vec<Value> = Vec::new();
+
+        for (cap_name, providers) in &capabilities {
+            let provider_list: Vec<Value> = providers
+                .iter()
+                .map(|p| {
+                    json!({
+                        "primal": p.primal_name,
+                        "socket": p.socket_path.display().to_string(),
+                        "source": p.source,
+                        "registered_at": p.registered_at.to_rfc3339()
+                    })
+                })
+                .collect();
+
+            let operations: Vec<String> = registry
+                .list_translations(cap_name)
+                .unwrap_or_default()
+                .into_iter()
+                .map(|(semantic, _actual)| semantic)
+                .collect();
+
+            cap_entries.push(json!({
+                "capability": cap_name,
+                "providers": provider_list,
+                "provider_count": provider_list.len(),
+                "operations": operations,
+                "operation_count": operations.len(),
+            }));
+        }
+
+        let cap_names: Vec<&String> = capabilities.keys().collect();
 
         Ok(json!({
-            "capabilities": cap_list,
-            "count": cap_list.len()
+            "capabilities": cap_names,
+            "details": cap_entries,
+            "count": cap_names.len()
         }))
     }
 

@@ -1,6 +1,6 @@
 # biomeOS Documentation Index
 
-**Updated**: March 14, 2026
+**Updated**: March 15, 2026
 
 ---
 
@@ -137,10 +137,10 @@ See [specs/README.md](specs/README.md) for full index. Key specs:
 # Build
 cargo build --workspace
 
-# Test (4,647 tests)
+# Test (4,885 tests — fully concurrent)
 cargo test --workspace
 
-# Coverage (75.98% region)
+# Coverage (76.15% line)
 cargo llvm-cov --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -162,7 +162,7 @@ See `ARCHIVE_INDEX.md` in archive for details.
 
 ---
 
-**Documentation current as of March 14, 2026**
+**Documentation current as of March 15, 2026**
 **Active: 19 specs, 16 handoffs, 10 scripts**
 **Deploy graphs: 35 (incl. provenance trio: loamspine, rhizocrypt, sweetgrass, provenance_trio)**
-**Tests: 4,647 passing (75.98% region coverage) | Clippy: PASS | Docs: Full coverage**
+**Tests: 4,885 passing, fully concurrent (76.15% line coverage) | Clippy: PASS | Docs: Full coverage**

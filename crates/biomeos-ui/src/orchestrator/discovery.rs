@@ -17,17 +17,36 @@ use anyhow::Result;
 use biomeos_types::CapabilityTaxonomy;
 use tracing::{debug, info, warn};
 
+/// Runtime-captured discovery configuration.
+/// Production code uses `DiscoveryConfig::from_env()`.
+/// Tests construct explicit configs to avoid env var races.
+pub struct DiscoveryConfig {
+    /// Explicit registry provider name override.
+    pub registry_provider: Option<String>,
+    /// Explicit storage provider name override.
+    pub storage_provider: Option<String>,
+}
+
+impl DiscoveryConfig {
+    /// Capture configuration from environment variables.
+    pub fn from_env() -> Self {
+        Self {
+            registry_provider: std::env::var("BIOMEOS_REGISTRY_PROVIDER").ok(),
+            storage_provider: std::env::var("BIOMEOS_STORAGE_PROVIDER").ok(),
+        }
+    }
+}
+
 /// Resolve a capability to its provider primal name at runtime.
-///
-/// Priority: environment variable → capability taxonomy default.
-/// This centralizes the resolution logic instead of scattering env var lookups.
 pub fn resolve_capability_provider(
     env_var: &str,
     capability: CapabilityTaxonomy,
 ) -> Option<String> {
-    std::env::var(env_var)
-        .ok()
-        .or_else(|| capability.default_primal().map(String::from))
+    resolve_provider(std::env::var(env_var).ok(), capability)
+}
+
+fn resolve_provider(env_value: Option<String>, capability: CapabilityTaxonomy) -> Option<String> {
+    env_value.or_else(|| capability.default_primal().map(String::from))
 }
 
 /// Discovery result — wraps PrimalConnections for dynamic primal access
@@ -75,12 +94,19 @@ impl Discovery {
     ///
     /// Uses the registry provider (resolved by name) if available. Falls back gracefully.
     pub async fn discover_devices(connections: &PrimalConnections) -> Result<()> {
+        Self::discover_devices_with_config(connections, &DiscoveryConfig::from_env()).await
+    }
+
+    /// Discover devices using explicit config (no env var reads).
+    pub async fn discover_devices_with_config(
+        connections: &PrimalConnections,
+        config: &DiscoveryConfig,
+    ) -> Result<()> {
         info!("Discovering devices...");
 
-        let registry_name =
-            resolve_capability_provider("BIOMEOS_REGISTRY_PROVIDER", CapabilityTaxonomy::Discovery);
+        let registry_name = config.registry_provider.as_ref();
 
-        if let Some(name) = &registry_name {
+        if let Some(name) = registry_name {
             if let Some(registry) = connections.get(name) {
                 match registry
                     .call("registry.list_devices", serde_json::json!({}))
@@ -109,12 +135,19 @@ impl Discovery {
 
     /// Discover active primals via registry
     pub async fn discover_active_primals(connections: &PrimalConnections) -> Result<()> {
+        Self::discover_active_primals_with_config(connections, &DiscoveryConfig::from_env()).await
+    }
+
+    /// Discover active primals using explicit config.
+    pub async fn discover_active_primals_with_config(
+        connections: &PrimalConnections,
+        config: &DiscoveryConfig,
+    ) -> Result<()> {
         info!("Discovering active primals...");
 
-        let registry_name =
-            resolve_capability_provider("BIOMEOS_REGISTRY_PROVIDER", CapabilityTaxonomy::Discovery);
+        let registry_name = config.registry_provider.as_ref();
 
-        if let Some(name) = &registry_name {
+        if let Some(name) = registry_name {
             if let Some(registry) = connections.get(name) {
                 match registry
                     .call("registry.list_primals", serde_json::json!({}))
@@ -140,13 +173,20 @@ impl Discovery {
 
     /// Load saved state from storage provider
     pub async fn load_saved_state(connections: &PrimalConnections, family_id: &str) -> Result<()> {
+        Self::load_saved_state_with_config(connections, family_id, &DiscoveryConfig::from_env())
+            .await
+    }
+
+    /// Load saved state using explicit config.
+    pub async fn load_saved_state_with_config(
+        connections: &PrimalConnections,
+        family_id: &str,
+        config: &DiscoveryConfig,
+    ) -> Result<()> {
         info!("Loading saved UI state...");
 
-        let storage_name = match resolve_capability_provider(
-            "BIOMEOS_STORAGE_PROVIDER",
-            CapabilityTaxonomy::DataStorage,
-        ) {
-            Some(name) => name,
+        let storage_name = match &config.storage_provider {
+            Some(name) => name.clone(),
             None => {
                 info!("No DataStorage provider available; skipping state load");
                 return Ok(());
@@ -187,7 +227,20 @@ impl Discovery {
         family_id: &str,
         connections: &PrimalConnections,
     ) -> serde_json::Value {
-        // Build dynamic primals map
+        Self::build_initial_ui_state_with_config(
+            family_id,
+            connections,
+            &DiscoveryConfig::from_env(),
+        )
+        .await
+    }
+
+    /// Build initial UI state using explicit config.
+    pub async fn build_initial_ui_state_with_config(
+        family_id: &str,
+        connections: &PrimalConnections,
+        config: &DiscoveryConfig,
+    ) -> serde_json::Value {
         let mut primals_map = serde_json::Map::new();
         for name in connections.available_primals() {
             primals_map.insert(name.to_string(), serde_json::Value::Bool(true));
@@ -201,10 +254,11 @@ impl Discovery {
             "assignments": []
         });
 
-        // Fetch devices from registry provider if available
-        let registry_name =
-            resolve_capability_provider("BIOMEOS_REGISTRY_PROVIDER", CapabilityTaxonomy::Discovery);
-        if let Some(registry) = registry_name.as_deref().and_then(|n| connections.get(n)) {
+        if let Some(registry) = config
+            .registry_provider
+            .as_deref()
+            .and_then(|n| connections.get(n))
+        {
             if let Ok(devices) = registry
                 .call("registry.list_devices", serde_json::json!({}))
                 .await
@@ -213,12 +267,11 @@ impl Discovery {
             }
         }
 
-        // Fetch assignments from storage provider if available
-        let storage_name = resolve_capability_provider(
-            "BIOMEOS_STORAGE_PROVIDER",
-            CapabilityTaxonomy::DataStorage,
-        );
-        if let Some(storage) = storage_name.as_deref().and_then(|n| connections.get(n)) {
+        if let Some(storage) = config
+            .storage_provider
+            .as_deref()
+            .and_then(|n| connections.get(n))
+        {
             if let Ok(assignments) = storage
                 .call(
                     "storage.list",
@@ -237,37 +290,23 @@ impl Discovery {
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
-    use super::*;
+    use super::{resolve_provider, *};
     use crate::primal_client::{PrimalClient, PrimalConnections};
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt};
 
     #[test]
     fn test_resolve_capability_provider_env_var_takes_priority() {
-        std::env::set_var("BIOMEOS_REGISTRY_PROVIDER", "custom-registry");
-        let result =
-            resolve_capability_provider("BIOMEOS_REGISTRY_PROVIDER", CapabilityTaxonomy::Discovery);
-        std::env::remove_var("BIOMEOS_REGISTRY_PROVIDER");
+        let result = resolve_provider(
+            Some("custom-registry".to_string()),
+            CapabilityTaxonomy::Discovery,
+        );
         assert_eq!(result, Some("custom-registry".to_string()));
     }
 
     #[test]
-    #[ignore = "env var mutation races with parallel tests — run with --test-threads=1"]
     fn test_resolve_capability_provider_taxonomy_fallback() {
-        std::env::remove_var("BIOMEOS_REGISTRY_PROVIDER");
-        std::env::remove_var("BIOMEOS_STRICT_DISCOVERY");
-        let result =
-            resolve_capability_provider("BIOMEOS_REGISTRY_PROVIDER", CapabilityTaxonomy::Discovery);
+        let result = resolve_provider(None, CapabilityTaxonomy::Discovery);
         assert_eq!(result, Some("songbird".to_string()));
-    }
-
-    #[test]
-    #[ignore = "env var BIOMEOS_STRICT_DISCOVERY races with parallel tests — run with --test-threads=1"]
-    fn test_resolve_capability_provider_strict_discovery_returns_none() {
-        std::env::set_var("BIOMEOS_STRICT_DISCOVERY", "1");
-        std::env::remove_var("BIOMEOS_REGISTRY_PROVIDER");
-        let result =
-            resolve_capability_provider("BIOMEOS_REGISTRY_PROVIDER", CapabilityTaxonomy::Discovery);
-        std::env::remove_var("BIOMEOS_STRICT_DISCOVERY");
-        assert_eq!(result, None);
     }
 
     #[tokio::test]
@@ -285,36 +324,39 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "env var BIOMEOS_STRICT_DISCOVERY races with parallel tests — run with --test-threads=1"]
     async fn test_discover_devices_no_provider() {
-        std::env::set_var("BIOMEOS_STRICT_DISCOVERY", "1");
-        std::env::remove_var("BIOMEOS_REGISTRY_PROVIDER");
+        let config = DiscoveryConfig {
+            registry_provider: None,
+            storage_provider: None,
+        };
         let connections = PrimalConnections::default();
-        let result = Discovery::discover_devices(&connections).await;
-        std::env::remove_var("BIOMEOS_STRICT_DISCOVERY");
+        let result = Discovery::discover_devices_with_config(&connections, &config).await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn test_discover_devices_registry_not_available() {
-        std::env::set_var("BIOMEOS_REGISTRY_PROVIDER", "nonexistent-registry");
+        let config = DiscoveryConfig {
+            registry_provider: Some("nonexistent-registry".to_string()),
+            storage_provider: None,
+        };
         let connections = PrimalConnections::default();
-        // Don't add the registry - so "Registry provider 'X' not available" path
-        let result = Discovery::discover_devices(&connections).await;
-        std::env::remove_var("BIOMEOS_REGISTRY_PROVIDER");
+        let result = Discovery::discover_devices_with_config(&connections, &config).await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn test_discover_devices_registry_call_fails() {
-        std::env::set_var("BIOMEOS_REGISTRY_PROVIDER", "test-registry");
+        let config = DiscoveryConfig {
+            registry_provider: Some("test-registry".to_string()),
+            storage_provider: None,
+        };
         let mut connections = PrimalConnections::default();
         connections.add_client(
             "test-registry",
             PrimalClient::with_socket("test-registry", "/nonexistent/socket.sock"),
         );
-        let result = Discovery::discover_devices(&connections).await;
-        std::env::remove_var("BIOMEOS_REGISTRY_PROVIDER");
+        let result = Discovery::discover_devices_with_config(&connections, &config).await;
         assert!(
             result.is_ok(),
             "graceful degradation when registry.call fails"
@@ -322,26 +364,28 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "env var BIOMEOS_STRICT_DISCOVERY races with parallel tests — run with --test-threads=1"]
     async fn test_discover_active_primals_no_provider() {
-        std::env::set_var("BIOMEOS_STRICT_DISCOVERY", "1");
-        std::env::remove_var("BIOMEOS_REGISTRY_PROVIDER");
+        let config = DiscoveryConfig {
+            registry_provider: None,
+            storage_provider: None,
+        };
         let connections = PrimalConnections::default();
-        let result = Discovery::discover_active_primals(&connections).await;
-        std::env::remove_var("BIOMEOS_STRICT_DISCOVERY");
+        let result = Discovery::discover_active_primals_with_config(&connections, &config).await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn test_discover_active_primals_registry_call_fails() {
-        std::env::set_var("BIOMEOS_REGISTRY_PROVIDER", "test-registry");
+        let config = DiscoveryConfig {
+            registry_provider: Some("test-registry".to_string()),
+            storage_provider: None,
+        };
         let mut connections = PrimalConnections::default();
         connections.add_client(
             "test-registry",
             PrimalClient::with_socket("test-registry", "/nonexistent/socket.sock"),
         );
-        let result = Discovery::discover_active_primals(&connections).await;
-        std::env::remove_var("BIOMEOS_REGISTRY_PROVIDER");
+        let result = Discovery::discover_active_primals_with_config(&connections, &config).await;
         assert!(
             result.is_ok(),
             "graceful degradation when registry.list_primals fails"
@@ -350,24 +394,29 @@ mod tests {
 
     #[tokio::test]
     async fn test_load_saved_state_no_storage_in_connections() {
-        std::env::set_var("BIOMEOS_STORAGE_PROVIDER", "nonexistent-storage");
+        let config = DiscoveryConfig {
+            registry_provider: None,
+            storage_provider: Some("nonexistent-storage".to_string()),
+        };
         let connections = PrimalConnections::default();
-        // Don't add storage - hits "No storage provider available"
-        let result = Discovery::load_saved_state(&connections, "test-family").await;
-        std::env::remove_var("BIOMEOS_STORAGE_PROVIDER");
+        let result =
+            Discovery::load_saved_state_with_config(&connections, "test-family", &config).await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn test_load_saved_state_storage_call_fails() {
-        std::env::set_var("BIOMEOS_STORAGE_PROVIDER", "test-storage");
+        let config = DiscoveryConfig {
+            registry_provider: None,
+            storage_provider: Some("test-storage".to_string()),
+        };
         let mut connections = PrimalConnections::default();
         connections.add_client(
             "test-storage",
             PrimalClient::with_socket("test-storage", "/nonexistent/socket.sock"),
         );
-        let result = Discovery::load_saved_state(&connections, "test-family").await;
-        std::env::remove_var("BIOMEOS_STORAGE_PROVIDER");
+        let result =
+            Discovery::load_saved_state_with_config(&connections, "test-family", &config).await;
         assert!(
             result.is_ok(),
             "graceful degradation - starts with fresh state"
@@ -376,15 +425,26 @@ mod tests {
 
     #[tokio::test]
     async fn test_load_saved_state_no_provider() {
+        let config = DiscoveryConfig {
+            registry_provider: None,
+            storage_provider: None,
+        };
         let connections = PrimalConnections::default();
-        let result = Discovery::load_saved_state(&connections, "test-family").await;
+        let result =
+            Discovery::load_saved_state_with_config(&connections, "test-family", &config).await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn test_build_initial_ui_state_empty() {
+        let config = DiscoveryConfig {
+            registry_provider: None,
+            storage_provider: None,
+        };
         let connections = PrimalConnections::default();
-        let state = Discovery::build_initial_ui_state("test-family", &connections).await;
+        let state =
+            Discovery::build_initial_ui_state_with_config("test-family", &connections, &config)
+                .await;
         assert_eq!(state["family_id"], "test-family");
         assert_eq!(state["primal_count"], 0);
         assert!(state["primals"].as_object().expect("primals").is_empty());
@@ -397,6 +457,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_build_initial_ui_state_with_primals() {
+        let config = DiscoveryConfig {
+            registry_provider: None,
+            storage_provider: None,
+        };
         let mut connections = PrimalConnections::default();
         connections.add_client(
             "beardog",
@@ -406,7 +470,9 @@ mod tests {
             "songbird",
             PrimalClient::with_socket("songbird", "/tmp/songbird.sock"),
         );
-        let state = Discovery::build_initial_ui_state("test-family", &connections).await;
+        let state =
+            Discovery::build_initial_ui_state_with_config("test-family", &connections, &config)
+                .await;
         assert_eq!(state["family_id"], "test-family");
         assert_eq!(state["primal_count"], 2);
         let primals = state["primals"].as_object().expect("primals");
@@ -416,9 +482,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_build_initial_ui_state_registry_and_storage_unavailable() {
-        // Registry/storage calls fail (nonexistent sockets) - should still return valid state
-        std::env::set_var("BIOMEOS_REGISTRY_PROVIDER", "test-reg");
-        std::env::set_var("BIOMEOS_STORAGE_PROVIDER", "test-stor");
+        let config = DiscoveryConfig {
+            registry_provider: Some("test-reg".to_string()),
+            storage_provider: Some("test-stor".to_string()),
+        };
         let mut connections = PrimalConnections::default();
         connections.add_client(
             "test-reg",
@@ -428,9 +495,9 @@ mod tests {
             "test-stor",
             PrimalClient::with_socket("test-stor", "/nonexistent/stor.sock"),
         );
-        let state = Discovery::build_initial_ui_state("test-family", &connections).await;
-        std::env::remove_var("BIOMEOS_REGISTRY_PROVIDER");
-        std::env::remove_var("BIOMEOS_STORAGE_PROVIDER");
+        let state =
+            Discovery::build_initial_ui_state_with_config("test-family", &connections, &config)
+                .await;
         assert_eq!(state["family_id"], "test-family");
         assert!(state["devices"].as_array().expect("devices").is_empty());
         assert!(state["assignments"]
@@ -440,13 +507,9 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "env var mutation races with parallel tests"]
     fn test_resolve_capability_provider_unset_returns_taxonomy() {
-        std::env::remove_var("BIOMEOS_REGISTRY_PROVIDER");
-        std::env::remove_var("BIOMEOS_STRICT_DISCOVERY");
-        let result =
-            resolve_capability_provider("BIOMEOS_REGISTRY_PROVIDER", CapabilityTaxonomy::Discovery);
-        assert!(result.is_some());
+        let result = resolve_provider(None, CapabilityTaxonomy::Discovery);
+        assert_eq!(result, Some("songbird".to_string()));
     }
 
     #[test]
@@ -459,21 +522,78 @@ mod tests {
 
     #[tokio::test]
     async fn test_discover_active_primals_registry_not_available() {
-        std::env::set_var("BIOMEOS_REGISTRY_PROVIDER", "nonexistent-registry");
+        let config = DiscoveryConfig {
+            registry_provider: Some("nonexistent-registry".to_string()),
+            storage_provider: None,
+        };
         let connections = PrimalConnections::default();
-        let result = Discovery::discover_active_primals(&connections).await;
-        std::env::remove_var("BIOMEOS_REGISTRY_PROVIDER");
+        let result = Discovery::discover_active_primals_with_config(&connections, &config).await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
-    #[ignore = "env var BIOMEOS_STRICT_DISCOVERY races with parallel tests"]
     async fn test_load_saved_state_no_provider_strict() {
-        std::env::set_var("BIOMEOS_STRICT_DISCOVERY", "1");
-        std::env::remove_var("BIOMEOS_STORAGE_PROVIDER");
+        let config = DiscoveryConfig {
+            registry_provider: None,
+            storage_provider: None,
+        };
         let connections = PrimalConnections::default();
-        let result = Discovery::load_saved_state(&connections, "test-family").await;
-        std::env::remove_var("BIOMEOS_STRICT_DISCOVERY");
+        let result =
+            Discovery::load_saved_state_with_config(&connections, "test-family", &config).await;
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_resolve_capability_provider_data_storage() {
+        let result = resolve_provider(None, CapabilityTaxonomy::DataStorage);
+        assert_eq!(result, Some("nestgate".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_build_initial_ui_state_registry_success_with_mock_server() {
+        let temp_dir = tempfile::tempdir().expect("temp dir");
+        let socket_path = temp_dir.path().join("registry.sock");
+        let path_clone = socket_path.clone();
+
+        let server = tokio::spawn(async move {
+            let listener = tokio::net::UnixListener::bind(&path_clone).expect("bind");
+            if let Ok((stream, _)) = listener.accept().await {
+                let (read_half, mut write_half) = stream.into_split();
+                let mut reader = tokio::io::BufReader::new(read_half);
+                let mut line = String::new();
+                let _ = reader.read_line(&mut line).await;
+                let req: serde_json::Value =
+                    serde_json::from_str(line.trim()).unwrap_or(serde_json::json!({}));
+                let id = req.get("id").and_then(|v| v.as_u64()).unwrap_or(1);
+                let response = serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "result": [{"id": "gpu-0", "name": "Test GPU"}],
+                    "id": id
+                });
+                let response_str = serde_json::to_string(&response).unwrap() + "\n";
+                let _ = write_half.write_all(response_str.as_bytes()).await;
+            }
+        });
+
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+
+        let config = DiscoveryConfig {
+            registry_provider: Some("test-registry".to_string()),
+            storage_provider: None,
+        };
+        let mut connections = PrimalConnections::default();
+        connections.add_client(
+            "test-registry",
+            PrimalClient::with_socket("test-registry", &socket_path),
+        );
+
+        let state =
+            Discovery::build_initial_ui_state_with_config("test-family", &connections, &config)
+                .await;
+
+        server.abort();
+
+        let devices = state["devices"].as_array().expect("devices array");
+        assert!(!devices.is_empty());
     }
 }

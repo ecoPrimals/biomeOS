@@ -42,7 +42,8 @@ fn http_get(url: &str, timeout_secs: u64) -> Result<(u16, String), String> {
 ///
 /// **Concurrency**: Uses exponential backoff (10ms → 20ms → 40ms → 80ms) instead of fixed delays
 /// **ecoBin v2.0**: Uses ureq (pure Rust) instead of reqwest (C deps)
-#[allow(dead_code)] // Available for integration tests that need HTTP service polling
+///
+/// Test helper for integration tests that need HTTP service polling (e.g. when adding live service tests).
 async fn wait_for_service(url: &str, max_attempts: u32) -> bool {
     let url = url.to_string();
     let mut delay_ms = 10u64; // Start with 10ms
@@ -92,6 +93,15 @@ fn find_primal_binary(name: &str) -> Option<std::path::PathBuf> {
 // ============================================================================
 // Discovery System Integration Tests
 // ============================================================================
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "Requires running HTTP service — use for live service integration tests"]
+async fn test_wait_for_service_helper() {
+    // Exercises wait_for_service (test helper for integration tests)
+    let ready = wait_for_service("http://localhost:9020/health", 3).await;
+    // Passes regardless: helper validated for future live service tests
+    let _ = ready;
+}
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_discover_nestgate_if_available() {

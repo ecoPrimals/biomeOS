@@ -8,7 +8,7 @@ description = "biomeOS USB spore management - orchestration layer only"
 
 [dependencies]
 # Core biomeOS dependencies
-biomeos-core = { path = "../biomeos-core" }
+biomeos-core = { path = "../biomeos-core", version = "0.1.0" }
 
 # Core async and serialization
 tokio = { workspace = true }
@@ -38,7 +38,7 @@ uuid = { workspace = true }  # For unique IDs
 async-fs = "2.1"  # For async file operations
 
 # biomeOS dependencies
-biomeos-types = { path = "../biomeos-types" }
+biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
 
 # Logging
 tracing = { workspace = true }
@@ -50,7 +50,6 @@ tracing = { workspace = true }
 tokio-test = "0.4"
 tempfile = { workspace = true }
 futures = "0.3"
-serial_test = "3.0"
 tracing-subscriber = { workspace = true }
 criterion = { version = "0.5", features = ["async_tokio"] }
 

@@ -189,12 +189,8 @@ impl PathwayLearner {
                     continue;
                 }
 
-                let a_lat = node_metrics
-                    .get(a_id)
-                    .map_or(0.0, |m| m.avg_duration_ms);
-                let b_lat = node_metrics
-                    .get(b_id)
-                    .map_or(0.0, |m| m.avg_duration_ms);
+                let a_lat = node_metrics.get(a_id).map_or(0.0, |m| m.avg_duration_ms);
+                let b_lat = node_metrics.get(b_id).map_or(0.0, |m| m.avg_duration_ms);
 
                 if a_lat + b_lat < 1.0 {
                     continue;
@@ -285,7 +281,7 @@ impl PathwayLearner {
                 nodes.iter().any(|n| {
                     node_metrics
                         .get(n.as_str())
-                        .map_or(false, |m| m.total_executions > 0)
+                        .is_some_and(|m| m.total_executions > 0)
                 })
             })
             .map(|(primal, nodes)| {
@@ -461,10 +457,7 @@ mod tests {
     fn prewarm_detects_high_latency_primals() {
         let graph = make_graph(vec![make_node("a", vec![], Some("beardog"))]);
 
-        let metrics = HashMap::from([(
-            "a".to_string(),
-            make_node_metrics("a", 100, 200.0),
-        )]);
+        let metrics = HashMap::from([("a".to_string(), make_node_metrics("a", 100, 200.0))]);
 
         let learner = make_test_learner(0);
         let suggestions = learner.find_prewarm_candidates(&graph, &metrics);
@@ -479,10 +472,7 @@ mod tests {
     fn prewarm_ignores_low_latency_primals() {
         let graph = make_graph(vec![make_node("a", vec![], Some("speedy"))]);
 
-        let metrics = HashMap::from([(
-            "a".to_string(),
-            make_node_metrics("a", 100, 5.0),
-        )]);
+        let metrics = HashMap::from([("a".to_string(), make_node_metrics("a", 100, 5.0))]);
 
         let learner = make_test_learner(0);
         let suggestions = learner.find_prewarm_candidates(&graph, &metrics);

@@ -79,8 +79,11 @@ impl FilesystemOps for Spore {
     async fn copy_binaries(&self) -> SporeResult<()> {
         info!("Copying genetic material from plasmidBin/ (capability-based, agnostic)");
 
-        // Source: PlasmidBin - Single source of truth for stable binaries
-        let nucleus_dir = PathBuf::from("plasmidBin");
+        let nucleus_dir = self
+            .config
+            .plasmid_bin_dir
+            .clone()
+            .unwrap_or_else(|| PathBuf::from("plasmidBin"));
 
         // Verify nucleus exists
         if !nucleus_dir.exists() {

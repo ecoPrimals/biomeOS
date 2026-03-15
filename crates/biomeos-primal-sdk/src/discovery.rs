@@ -220,8 +220,10 @@ impl PrimalDiscovery {
             return android;
         }
 
-        // Tier 5: Fallback
-        PathBuf::from("/tmp/biomeos")
+        // Tier 5: Fallback — XDG-compliant via SystemPaths
+        biomeos_types::SystemPaths::new_lazy()
+            .runtime_dir()
+            .to_path_buf()
     }
 
     /// Try to discover a specific primal

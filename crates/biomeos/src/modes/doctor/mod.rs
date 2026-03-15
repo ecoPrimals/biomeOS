@@ -19,8 +19,7 @@ pub(crate) use checks_config::{check_configuration, check_graphs_dir};
 pub(crate) use checks_primal::check_primal_discovery;
 pub(crate) use checks_system::{check_dependencies, check_system_resources};
 pub(crate) use reporting::{add_recommendations, format_json_report, format_text_report};
-#[allow(unused_imports)]
-pub(crate) use types::{DiagnosticCheck, Diagnostics, HealthCheck, HealthStatus};
+pub(crate) use types::{Diagnostics, HealthStatus};
 
 use checks_config::check_binary_health;
 use checks_primal::check_plasmid_bin;

@@ -162,16 +162,16 @@ doc = false
 
 [dependencies]
 # Core BiomeOS components
-biomeos-core = { path = "crates/biomeos-core" }
-biomeos-types = { path = "crates/biomeos-types" }
-biomeos-primal-sdk = { path = "crates/biomeos-primal-sdk" }
-biomeos-manifest = { path = "crates/biomeos-manifest" }
-biomeos-system = { path = "crates/biomeos-system" }
-biomeos-chimera = { path = "crates/biomeos-chimera" }
-biomeos-atomic-deploy = { path = "crates/biomeos-atomic-deploy" }
-biomeos-niche = { path = "crates/biomeos-niche" }
-biomeos-spore = { path = "crates/biomeos-spore" }
-biomeos-graph = { path = "crates/biomeos-graph" }  # Neural API graph orchestration
+biomeos-core = { path = "crates/biomeos-core", version = "0.1.0" }
+biomeos-types = { path = "crates/biomeos-types", version = "0.1.0" }
+biomeos-primal-sdk = { path = "crates/biomeos-primal-sdk", version = "0.1.0" }
+biomeos-manifest = { path = "crates/biomeos-manifest", version = "0.1.0" }
+biomeos-system = { path = "crates/biomeos-system", version = "0.1.0" }
+biomeos-chimera = { path = "crates/biomeos-chimera", version = "0.1.0" }
+biomeos-atomic-deploy = { path = "crates/biomeos-atomic-deploy", version = "0.1.0" }
+biomeos-niche = { path = "crates/biomeos-niche", version = "0.1.0" }
+biomeos-spore = { path = "crates/biomeos-spore", version = "0.1.0" }
+biomeos-graph = { path = "crates/biomeos-graph", version = "0.1.0" }  # Neural API graph orchestration
 # biomeos-ui = { path = "crates/biomeos-ui" }  # Archived 2025-12-23
 
 # Async runtime

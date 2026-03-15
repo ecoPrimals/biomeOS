@@ -8,6 +8,7 @@
 use axum::{extract::Path, http::StatusCode, Json};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::path::PathBuf;
 use tokio::fs;
 use tracing::{error, info, warn};
 
@@ -94,6 +95,13 @@ pub async fn get_manifest() -> Result<Json<DistManifest>, (StatusCode, Json<Dist
         )
     })?;
 
+    get_manifest_from(genome_bin).await.map(Json)
+}
+
+pub(crate) async fn get_manifest_from(
+    genome_bin: impl AsRef<std::path::Path>,
+) -> Result<DistManifest, (StatusCode, Json<DistError>)> {
+    let genome_bin = genome_bin.as_ref();
     let manifest_path = genome_bin.join("manifest.toml");
     let manifest_content = fs::read_to_string(&manifest_path).await.map_err(|e| {
         error!("Failed to read manifest: {}", e);
@@ -248,12 +256,12 @@ pub async fn get_manifest() -> Result<Json<DistManifest>, (StatusCode, Json<Dist
         atomics.len()
     );
 
-    Ok(Json(DistManifest {
+    Ok(DistManifest {
         version: manifest_version,
         generated,
         primals,
         atomics,
-    }))
+    })
 }
 
 /// Get latest version for a primal
@@ -262,7 +270,25 @@ pub async fn get_latest(
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<DistError>)> {
     info!("📦 Getting latest version for: {}", primal);
 
-    let manifest = get_manifest().await?;
+    let genome_bin = discovery::get_genome_bin_path().ok_or_else(|| {
+        error!("genomeBin path not found");
+        (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(DistError {
+                error: "Genome distribution not configured".to_string(),
+                code: "GENOMEBIN_NOT_FOUND".to_string(),
+            }),
+        )
+    })?;
+
+    get_latest_from(genome_bin, primal).await
+}
+
+pub(crate) async fn get_latest_from(
+    genome_bin: impl AsRef<std::path::Path>,
+    primal: String,
+) -> Result<Json<serde_json::Value>, (StatusCode, Json<DistError>)> {
+    let manifest = get_manifest_from(genome_bin).await?;
 
     if let Some(info) = manifest.primals.get(&primal) {
         Ok(Json(serde_json::json!({
@@ -299,7 +325,15 @@ pub async fn get_checksum(
         )
     })?;
 
-    // Read checksums.toml
+    get_checksum_from(genome_bin, primal, version, arch).await
+}
+
+pub(crate) async fn get_checksum_from(
+    genome_bin: PathBuf,
+    primal: String,
+    version: String,
+    arch: String,
+) -> Result<Json<ChecksumResponse>, (StatusCode, Json<DistError>)> {
     let checksums_path = genome_bin.join("checksums.toml");
     let checksums_content = fs::read_to_string(&checksums_path).await.map_err(|e| {
         error!("Failed to read checksums: {}", e);
@@ -362,8 +396,6 @@ pub async fn get_checksum(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::extract::Path;
-    use serial_test::serial;
 
     #[test]
     fn test_dist_manifest_serialization() {
@@ -477,7 +509,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[serial]
     async fn test_get_manifest_success() {
         let temp = tempfile::tempdir().expect("create temp dir");
         let manifest_content = r#"
@@ -502,14 +533,7 @@ versions = ["1.0.0"]
 "#;
         std::fs::write(temp.path().join("manifest.toml"), manifest_content)
             .expect("write manifest");
-        let saved = std::env::var("GENOMEBIN_PATH").ok();
-        std::env::set_var("GENOMEBIN_PATH", temp.path());
-        let result = get_manifest().await;
-        if let Some(prev) = saved {
-            std::env::set_var("GENOMEBIN_PATH", prev);
-        } else {
-            std::env::remove_var("GENOMEBIN_PATH");
-        }
+        let result = get_manifest_from(temp.path().to_path_buf()).await;
         let json = result.expect("get_manifest should succeed");
         assert_eq!(json.version, "2.0.0");
         assert_eq!(json.generated, "2026-03-11");
@@ -520,18 +544,9 @@ versions = ["1.0.0"]
     }
 
     #[tokio::test]
-    #[serial]
     async fn test_get_manifest_manifest_file_missing() {
-        // Dir exists but manifest.toml is missing -> MANIFEST_READ_ERROR
         let temp = tempfile::tempdir().expect("create temp dir");
-        let saved = std::env::var("GENOMEBIN_PATH").ok();
-        std::env::set_var("GENOMEBIN_PATH", temp.path());
-        let result = get_manifest().await;
-        if let Some(prev) = saved {
-            std::env::set_var("GENOMEBIN_PATH", prev);
-        } else {
-            std::env::remove_var("GENOMEBIN_PATH");
-        }
+        let result = get_manifest_from(temp.path().to_path_buf()).await;
         let Err((status, body)) = result else {
             panic!("expected Err when manifest.toml missing");
         };
@@ -540,19 +555,11 @@ versions = ["1.0.0"]
     }
 
     #[tokio::test]
-    #[serial]
     async fn test_get_manifest_parse_error() {
         let temp = tempfile::tempdir().expect("create temp dir");
         std::fs::write(temp.path().join("manifest.toml"), "invalid toml {{{")
             .expect("write bad manifest");
-        let saved = std::env::var("GENOMEBIN_PATH").ok();
-        std::env::set_var("GENOMEBIN_PATH", temp.path());
-        let result = get_manifest().await;
-        if let Some(prev) = saved {
-            std::env::set_var("GENOMEBIN_PATH", prev);
-        } else {
-            std::env::remove_var("GENOMEBIN_PATH");
-        }
+        let result = get_manifest_from(temp.path().to_path_buf()).await;
         let Err((status, body)) = result else {
             panic!("expected Err for invalid TOML");
         };
@@ -561,7 +568,6 @@ versions = ["1.0.0"]
     }
 
     #[tokio::test]
-    #[serial]
     async fn test_get_manifest_partial_primal_fields() {
         let temp = tempfile::tempdir().expect("create temp dir");
         let manifest_content = r#"
@@ -569,19 +575,11 @@ versions = ["1.0.0"]
 version = "1.0"
 
 [primals.minimal]
-# No name, description, etc. - should use defaults
 latest = "0.1.0"
 "#;
         std::fs::write(temp.path().join("manifest.toml"), manifest_content)
             .expect("write manifest");
-        let saved = std::env::var("GENOMEBIN_PATH").ok();
-        std::env::set_var("GENOMEBIN_PATH", temp.path());
-        let result = get_manifest().await;
-        if let Some(prev) = saved {
-            std::env::set_var("GENOMEBIN_PATH", prev);
-        } else {
-            std::env::remove_var("GENOMEBIN_PATH");
-        }
+        let result = get_manifest_from(temp.path().to_path_buf()).await;
         let json = result.expect("should succeed with partial fields");
         assert!(json.primals.contains_key("minimal"));
         let p = &json.primals["minimal"];
@@ -594,7 +592,6 @@ latest = "0.1.0"
     }
 
     #[tokio::test]
-    #[serial]
     async fn test_get_latest_success() {
         let temp = tempfile::tempdir().expect("create temp dir");
         let manifest_content = r#"
@@ -610,21 +607,13 @@ architectures = ["x86_64-linux-musl"]
 "#;
         std::fs::write(temp.path().join("manifest.toml"), manifest_content)
             .expect("write manifest");
-        let saved = std::env::var("GENOMEBIN_PATH").ok();
-        std::env::set_var("GENOMEBIN_PATH", temp.path());
-        let result = get_latest(Path("beardog".to_string())).await;
-        if let Some(prev) = saved {
-            std::env::set_var("GENOMEBIN_PATH", prev);
-        } else {
-            std::env::remove_var("GENOMEBIN_PATH");
-        }
+        let result = get_latest_from(temp.path().to_path_buf(), "beardog".to_string()).await;
         let json = result.expect("get_latest should succeed");
         assert_eq!(json["primal"], "beardog");
         assert_eq!(json["latest"], "0.9.0");
     }
 
     #[tokio::test]
-    #[serial]
     async fn test_get_latest_primal_not_found() {
         let temp = tempfile::tempdir().expect("create temp dir");
         std::fs::write(
@@ -632,14 +621,8 @@ architectures = ["x86_64-linux-musl"]
             "[manifest]\nversion = \"1.0\"",
         )
         .expect("write manifest");
-        let saved = std::env::var("GENOMEBIN_PATH").ok();
-        std::env::set_var("GENOMEBIN_PATH", temp.path());
-        let result = get_latest(Path("nonexistent-primal".to_string())).await;
-        if let Some(prev) = saved {
-            std::env::set_var("GENOMEBIN_PATH", prev);
-        } else {
-            std::env::remove_var("GENOMEBIN_PATH");
-        }
+        let result =
+            get_latest_from(temp.path().to_path_buf(), "nonexistent-primal".to_string()).await;
         let Err((status, body)) = result else {
             panic!("expected Err for unknown primal");
         };
@@ -648,7 +631,6 @@ architectures = ["x86_64-linux-musl"]
     }
 
     #[tokio::test]
-    #[serial]
     async fn test_get_checksum_success() {
         let temp = tempfile::tempdir().expect("create temp dir");
         std::fs::write(
@@ -665,19 +647,13 @@ size = 999
 "#;
         std::fs::write(temp.path().join("checksums.toml"), checksums_content)
             .expect("write checksums");
-        let saved = std::env::var("GENOMEBIN_PATH").ok();
-        std::env::set_var("GENOMEBIN_PATH", temp.path());
-        let result = get_checksum(Path((
+        let result = get_checksum_from(
+            temp.path().to_path_buf(),
             "beardog".to_string(),
             "0.9.0".to_string(),
             "x86_64-linux-musl".to_string(),
-        )))
+        )
         .await;
-        if let Some(prev) = saved {
-            std::env::set_var("GENOMEBIN_PATH", prev);
-        } else {
-            std::env::remove_var("GENOMEBIN_PATH");
-        }
         let json = result.expect("get_checksum should succeed");
         assert_eq!(json.primal, "beardog");
         assert_eq!(json.version, "0.9.0");
@@ -687,7 +663,6 @@ size = 999
     }
 
     #[tokio::test]
-    #[serial]
     async fn test_get_checksum_not_found() {
         let temp = tempfile::tempdir().expect("create temp dir");
         std::fs::write(
@@ -700,19 +675,13 @@ size = 999
             "[other]\nversion = \"1.0\"",
         )
         .expect("write checksums");
-        let saved = std::env::var("GENOMEBIN_PATH").ok();
-        std::env::set_var("GENOMEBIN_PATH", temp.path());
-        let result = get_checksum(Path((
+        let result = get_checksum_from(
+            temp.path().to_path_buf(),
             "beardog".to_string(),
             "0.9.0".to_string(),
             "x86_64-linux-musl".to_string(),
-        )))
+        )
         .await;
-        if let Some(prev) = saved {
-            std::env::set_var("GENOMEBIN_PATH", prev);
-        } else {
-            std::env::remove_var("GENOMEBIN_PATH");
-        }
         let Err((status, body)) = result else {
             panic!("expected Err for missing checksum");
         };
@@ -721,28 +690,20 @@ size = 999
     }
 
     #[tokio::test]
-    #[serial]
     async fn test_get_checksum_checksums_file_missing() {
-        // Dir exists with manifest but checksums.toml missing -> CHECKSUMS_READ_ERROR
         let temp = tempfile::tempdir().expect("create temp dir");
         std::fs::write(
             temp.path().join("manifest.toml"),
             "[manifest]\nversion = \"1.0\"",
         )
         .expect("write manifest");
-        let saved = std::env::var("GENOMEBIN_PATH").ok();
-        std::env::set_var("GENOMEBIN_PATH", temp.path());
-        let result = get_checksum(Path((
+        let result = get_checksum_from(
+            temp.path().to_path_buf(),
             "beardog".to_string(),
             "0.9.0".to_string(),
             "x86_64".to_string(),
-        )))
+        )
         .await;
-        if let Some(prev) = saved {
-            std::env::set_var("GENOMEBIN_PATH", prev);
-        } else {
-            std::env::remove_var("GENOMEBIN_PATH");
-        }
         let Err((status, body)) = result else {
             panic!("expected Err when checksums.toml missing");
         };

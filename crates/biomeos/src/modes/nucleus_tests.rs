@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright 2025 ecoPrimals Project
 
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
 use super::*;
 use std::path::PathBuf;
 
@@ -286,23 +288,27 @@ fn test_resolve_startup_config_invalid_mode() {
 }
 
 #[test]
-#[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
 fn test_resolve_startup_config_valid() {
-    let config = resolve_startup_config("tower", "node1", Some("fam1")).unwrap();
+    let config =
+        resolve_startup_config_with("tower", "node1", Some("fam1"), Some("/tmp/test-nucleus"))
+            .unwrap();
     assert!(matches!(config.mode, NucleusMode::Tower));
     assert_eq!(config.node_id, "node1");
     assert_eq!(config.family_id, "fam1");
-    assert!(!config.socket_dir.as_os_str().is_empty());
+    assert_eq!(
+        config.socket_dir,
+        std::path::PathBuf::from("/tmp/test-nucleus")
+    );
 }
 
 #[test]
-#[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
 fn test_resolve_socket_dir_env_override() {
-    let test_path = "/tmp/biomeos-test-socket-dir";
-    std::env::set_var("BIOMEOS_SOCKET_DIR", test_path);
-    let result = resolve_socket_dir().expect("resolve_socket_dir should succeed");
-    std::env::remove_var("BIOMEOS_SOCKET_DIR");
-    assert_eq!(result, std::path::PathBuf::from(test_path));
+    let result =
+        resolve_socket_dir_with(Some("/tmp/biomeos-test-socket-dir")).expect("should succeed");
+    assert_eq!(
+        result,
+        std::path::PathBuf::from("/tmp/biomeos-test-socket-dir")
+    );
 }
 
 #[test]
@@ -337,10 +343,8 @@ fn test_base64_encode_four_bytes() {
 }
 
 #[test]
-#[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
 fn test_resolve_socket_dir_default() {
-    std::env::remove_var("BIOMEOS_SOCKET_DIR");
-    let result = resolve_socket_dir();
+    let result = resolve_socket_dir_with(None);
     assert!(result.is_ok());
     let path = result.unwrap();
     assert!(!path.as_os_str().is_empty());
@@ -359,7 +363,6 @@ async fn test_run_fails_on_invalid_mode() {
 
 #[test]
 #[cfg(unix)]
-#[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
 fn test_discover_binaries_finds_in_path() {
     use std::os::unix::fs::PermissionsExt;
 
@@ -371,19 +374,9 @@ fn test_discover_binaries_finds_in_path() {
     perms.set_mode(0o755);
     std::fs::set_permissions(&binary_path, perms).unwrap();
 
-    let original_path = std::env::var("PATH").ok();
-    let dir_str = temp_dir.path().to_string_lossy().into_owned();
-    std::env::set_var(
-        "PATH",
-        format!("{}:{}", dir_str, original_path.as_deref().unwrap_or("")),
-    );
-
-    let map = discover_binaries(&[unique_name]).expect("discover should succeed");
-    if let Some(original) = original_path {
-        std::env::set_var("PATH", original);
-    } else {
-        std::env::remove_var("PATH");
-    }
+    let path_dirs = vec![temp_dir.path()];
+    let map =
+        discover_binaries_with(&[unique_name], None, &path_dirs).expect("discover should succeed");
 
     assert!(
         map.contains_key(unique_name),
@@ -452,4 +445,151 @@ fn test_base64_encode_standard_vectors() {
     assert_eq!(base64_encode(b"foob"), "Zm9vYg==");
     assert_eq!(base64_encode(b"fooba"), "Zm9vYmE=");
     assert_eq!(base64_encode(b"foobar"), "Zm9vYmFy");
+}
+
+#[test]
+fn test_build_primal_command_nestgate_has_jwt_secret() {
+    let cmd = build_primal_command(
+        "nestgate",
+        std::path::Path::new("/usr/bin/nestgate"),
+        std::path::Path::new("/tmp/sock"),
+        "fam1",
+        "node1",
+    );
+    let envs: Vec<_> = cmd.get_envs().collect();
+    let jwt = envs
+        .iter()
+        .find(|(k, _)| k == &std::ffi::OsStr::new("NESTGATE_JWT_SECRET"));
+    assert!(jwt.is_some(), "NESTGATE_JWT_SECRET should be set");
+    let (_, v) = jwt.unwrap();
+    assert!(v.is_some(), "JWT secret value should be present");
+    let secret = v.unwrap().to_string_lossy();
+    assert!(!secret.is_empty(), "JWT secret should be non-empty");
+}
+
+#[test]
+fn test_build_primal_command_squirrel_with_ai_providers() {
+    let cmd = build_primal_command_with(
+        "squirrel",
+        std::path::Path::new("/usr/bin/squirrel"),
+        std::path::Path::new("/tmp/sock"),
+        "fam1",
+        "node1",
+        Some("test-key"),
+        None,
+        None,
+    );
+    let envs: Vec<_> = cmd.get_envs().collect();
+    let ai_providers = envs
+        .iter()
+        .find(|(k, _)| k == &std::ffi::OsStr::new("AI_HTTP_PROVIDERS"));
+    assert!(
+        ai_providers.is_some(),
+        "AI_HTTP_PROVIDERS should be set when API key present"
+    );
+}
+
+#[test]
+fn test_build_primal_command_squirrel_with_openai_key() {
+    let cmd = build_primal_command_with(
+        "squirrel",
+        std::path::Path::new("/usr/bin/squirrel"),
+        std::path::Path::new("/tmp/sock"),
+        "fam1",
+        "node1",
+        None,
+        Some("sk-test"),
+        None,
+    );
+    let envs: Vec<_> = cmd.get_envs().collect();
+    let ai_providers = envs
+        .iter()
+        .find(|(k, _)| k == &std::ffi::OsStr::new("AI_HTTP_PROVIDERS"));
+    assert!(ai_providers.is_some());
+}
+
+#[test]
+fn test_discover_binaries_finds_in_plasmidbin() {
+    let temp = tempfile::tempdir().expect("temp dir");
+    let plasmid_bin = temp.path().join("primals");
+    std::fs::create_dir_all(&plasmid_bin).expect("create primals dir");
+    let unique_name = "biomeos_test_primal_xyz";
+    let binary_path = plasmid_bin.join(unique_name);
+    std::fs::write(&binary_path, "#!/bin/sh\nexit 0").expect("write test binary");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = std::fs::metadata(&binary_path).unwrap().permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&binary_path, perms).unwrap();
+    }
+
+    let plasmid_bin_dir = plasmid_bin.parent().unwrap();
+    let map = discover_binaries_with(&[unique_name], Some(plasmid_bin_dir), &[])
+        .expect("discover should succeed");
+
+    assert!(
+        map.contains_key(unique_name),
+        "{unique_name} should be found in plasmidBin, got: {map:?}"
+    );
+}
+
+#[test]
+fn test_discover_binaries_finds_in_plasmidbin_subdir() {
+    let temp = tempfile::tempdir().expect("temp dir");
+    let plasmid_bin = temp.path().join("primals");
+    std::fs::create_dir_all(&plasmid_bin).expect("create primals dir");
+    let unique_name = "biomeos_test_subdir_xyz";
+    let primal_dir = plasmid_bin.join(unique_name);
+    std::fs::create_dir_all(&primal_dir).expect("create primal subdir");
+    let binary_path = primal_dir.join(unique_name);
+    std::fs::write(&binary_path, "#!/bin/sh\nexit 0").expect("write test binary");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = std::fs::metadata(&binary_path).unwrap().permissions();
+        perms.set_mode(0o755);
+        std::fs::set_permissions(&binary_path, perms).unwrap();
+    }
+
+    let plasmid_bin_dir = plasmid_bin.parent().unwrap();
+    let map = discover_binaries_with(&[unique_name], Some(plasmid_bin_dir), &[])
+        .expect("discover should succeed");
+
+    assert!(
+        map.contains_key(unique_name),
+        "{unique_name} should be found in plasmidBin subdir, got: {map:?}"
+    );
+}
+
+#[test]
+fn test_discover_binaries_warns_on_missing() {
+    let map =
+        discover_binaries(&["nonexistent_primal_xyz_12345"]).expect("discover should succeed");
+    assert!(map.is_empty());
+}
+
+#[test]
+fn test_format_nucleus_summary_health_check_line() {
+    let lines = format_nucleus_summary(
+        &[("beardog".to_string(), 1)],
+        std::path::Path::new("/tmp/sock"),
+        "fam1",
+        "node1",
+        &NucleusMode::Tower,
+        "bootstrap",
+    );
+    assert!(lines.iter().any(|l| l.contains("nc -U")));
+    assert!(lines.iter().any(|l| l.contains("health")));
+}
+
+#[test]
+fn test_socket_path_for_capability_unknown_returns_unknown_sock() {
+    let path = super::socket_path_for_capability(
+        std::path::Path::new("/tmp"),
+        "fam1",
+        "arbitrary-unknown-capability",
+    );
+    assert!(path.to_string_lossy().contains("unknown"));
+    assert!(path.to_string_lossy().ends_with(".sock"));
 }

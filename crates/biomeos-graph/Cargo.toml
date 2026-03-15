@@ -30,8 +30,8 @@ rustix = { version = "0.38", features = ["process"] }
 redb = "2.4"
 
 # biomeOS internal crates
-biomeos-types = { path = "../biomeos-types" }
-biomeos-nucleus = { path = "../biomeos-nucleus" }
+biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
+biomeos-nucleus = { path = "../biomeos-nucleus", version = "0.1.0" }
 
 [dev-dependencies]
 # Testing

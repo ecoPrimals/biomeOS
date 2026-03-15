@@ -16,10 +16,10 @@ name = "biome-federation"
 path = "src/main.rs"
 
 [dependencies]
-biomeos-core = { path = "../crates/biomeos-core" }
-biomeos-types = { path = "../crates/biomeos-types" }
-biomeos-manifest = { path = "../crates/biomeos-manifest" }
-biomeos-system = { path = "../crates/biomeos-system" }
+biomeos-core = { path = "../crates/biomeos-core", version = "0.1.0" }
+biomeos-types = { path = "../crates/biomeos-types", version = "0.1.0" }
+biomeos-manifest = { path = "../crates/biomeos-manifest", version = "0.1.0" }
+biomeos-system = { path = "../crates/biomeos-system", version = "0.1.0" }
 tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

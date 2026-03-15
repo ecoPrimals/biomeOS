@@ -9,10 +9,10 @@ repository = "https://github.com/ecoPrimals/biomeOS"
 
 [dependencies]
 # genomeBin v3.0 engine
-biomeos-genomebin-v3 = { path = "../biomeos-genomebin-v3" }
+biomeos-genomebin-v3 = { path = "../biomeos-genomebin-v3", version = "3.0.0" }
 
 # Types
-biomeos-types = { path = "../biomeos-types" }
+biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
 
 # Error handling (Pure Rust)
 anyhow = { workspace = true }

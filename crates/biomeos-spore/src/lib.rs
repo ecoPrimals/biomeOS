@@ -39,6 +39,7 @@
 //!         node_id: "tower1".to_string(),
 //!         spore_type: SporeType::Live,
 //!         family_id: "1894e909e454".to_string(),
+//!         plasmid_bin_dir: None,
 //!     };
 //!     
 //!     let spore = Spore::create(

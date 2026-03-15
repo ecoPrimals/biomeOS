@@ -194,6 +194,11 @@ impl MotionCaptureAdapter {
     pub fn get_device_pose(frame: &TrackingFrame, device: &str) -> Option<Pose6DoF> {
         frame.devices.get(device).copied()
     }
+
+    #[cfg(test)]
+    pub(crate) fn set_tracking_active_for_test(&mut self, v: bool) {
+        self.tracking_active = v;
+    }
 }
 
 #[cfg(test)]
@@ -337,7 +342,7 @@ mod tests {
         let mut adapter = MotionCaptureAdapter::new(config);
         let client =
             crate::primal_client::PrimalClient::with_socket("petaltongue", "/nonexistent.sock");
-        adapter.tracking_active = true;
+        adapter.set_tracking_active_for_test(true);
         let result = adapter.start_tracking(&client).await;
         assert!(result.is_ok());
     }
@@ -371,5 +376,44 @@ mod tests {
         let client =
             crate::primal_client::PrimalClient::with_socket("petaltongue", "/tmp/petaltongue.sock");
         let _ = adapter.calibrate(&client).await;
+    }
+
+    #[tokio::test]
+    async fn test_poll_frame_when_active_but_call_fails_returns_none() {
+        let mut adapter = MotionCaptureAdapter::with_defaults();
+        adapter.set_tracking_active_for_test(true);
+        let client =
+            crate::primal_client::PrimalClient::with_socket("petaltongue", "/nonexistent.sock");
+        let result = adapter.poll_frame(&client).await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn test_start_tracking_with_nonexistent_socket_returns_err() {
+        let mut adapter = MotionCaptureAdapter::with_defaults();
+        let client =
+            crate::primal_client::PrimalClient::with_socket("petaltongue", "/nonexistent.sock");
+        let result = adapter.start_tracking(&client).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_calibrate_with_nonexistent_socket_returns_err() {
+        let adapter = MotionCaptureAdapter::with_defaults();
+        let client =
+            crate::primal_client::PrimalClient::with_socket("petaltongue", "/nonexistent.sock");
+        let result = adapter.calibrate(&client).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_stop_tracking_when_active_but_call_fails_returns_err() {
+        let mut adapter = MotionCaptureAdapter::with_defaults();
+        adapter.set_tracking_active_for_test(true);
+        let client =
+            crate::primal_client::PrimalClient::with_socket("petaltongue", "/nonexistent.sock");
+        let result = adapter.stop_tracking(&client).await;
+        assert!(result.is_err());
     }
 }

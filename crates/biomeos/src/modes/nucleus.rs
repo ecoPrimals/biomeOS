@@ -23,7 +23,7 @@
 use anyhow::{Context, Result};
 use biomeos_types::primal_names::{self, BEARDOG, NESTGATE, SONGBIRD, SQUIRREL, TOADSTOOL};
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 use tokio::process::Command;
 use tracing::{info, warn};
@@ -93,11 +93,25 @@ pub(crate) fn resolve_startup_config(
     node_id: &str,
     family_id: Option<&str>,
 ) -> Result<StartupConfig> {
+    resolve_startup_config_with(
+        mode,
+        node_id,
+        family_id,
+        std::env::var("BIOMEOS_SOCKET_DIR").ok().as_deref(),
+    )
+}
+
+pub(crate) fn resolve_startup_config_with(
+    mode: &str,
+    node_id: &str,
+    family_id: Option<&str>,
+    socket_dir_override: Option<&str>,
+) -> Result<StartupConfig> {
     let mode: NucleusMode = mode.parse()?;
     let family_id = family_id
         .map(String::from)
         .unwrap_or_else(biomeos_core::family_discovery::get_family_id);
-    let socket_dir = resolve_socket_dir()?;
+    let socket_dir = resolve_socket_dir_with(socket_dir_override)?;
     Ok(StartupConfig {
         mode,
         node_id: node_id.to_string(),
@@ -132,6 +146,34 @@ pub(crate) fn build_primal_command(
     family_id: &str,
     node_id: &str,
 ) -> std::process::Command {
+    let has_ai =
+        std::env::var("ANTHROPIC_API_KEY").is_ok() || std::env::var("OPENAI_API_KEY").is_ok();
+    let ai_providers = has_ai.then(|| {
+        std::env::var("AI_HTTP_PROVIDERS").unwrap_or_else(|_| "anthropic,openai".to_string())
+    });
+    build_primal_command_with(
+        name,
+        binary,
+        socket_dir,
+        family_id,
+        node_id,
+        std::env::var("ANTHROPIC_API_KEY").ok().as_deref(),
+        std::env::var("OPENAI_API_KEY").ok().as_deref(),
+        ai_providers.as_deref(),
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn build_primal_command_with(
+    name: &str,
+    binary: &std::path::Path,
+    socket_dir: &std::path::Path,
+    family_id: &str,
+    node_id: &str,
+    anthropic_api_key: Option<&str>,
+    openai_api_key: Option<&str>,
+    ai_http_providers: Option<&str>,
+) -> std::process::Command {
     let socket_path = socket_dir.join(format!("{name}-{family_id}.sock"));
     let mut cmd = std::process::Command::new(binary);
 
@@ -146,7 +188,7 @@ pub(crate) fn build_primal_command(
                 .arg(&socket_path)
                 .env("SONGBIRD_SECURITY_PROVIDER", &security_socket)
                 .env("BIOMEOS_SECURITY_SOCKET", &security_socket)
-                .env("BEARDOG_SOCKET", &security_socket); // Legacy; prefer BIOMEOS_SECURITY_SOCKET
+                .env("BEARDOG_SOCKET", &security_socket);
         }
         NESTGATE => {
             cmd.arg("daemon")
@@ -170,12 +212,10 @@ pub(crate) fn build_primal_command(
                 .env("SQUIRREL_SOCKET", socket_path.as_os_str())
                 .env("BIOMEOS_DISCOVERY_SOCKET", &discovery_socket)
                 .env("HTTP_REQUEST_PROVIDER_SOCKET", discovery_socket.as_os_str());
-            if std::env::var("ANTHROPIC_API_KEY").is_ok() || std::env::var("OPENAI_API_KEY").is_ok()
-            {
+            if anthropic_api_key.is_some() || openai_api_key.is_some() {
                 cmd.env(
                     "AI_HTTP_PROVIDERS",
-                    std::env::var("AI_HTTP_PROVIDERS")
-                        .unwrap_or_else(|_| "anthropic,openai".to_string()),
+                    ai_http_providers.unwrap_or("anthropic,openai"),
                 );
             }
         }
@@ -424,17 +464,14 @@ async fn detect_ecosystem(socket_dir: &std::path::Path, family_id: &str) -> Ecos
     }
 }
 
-/// Resolve the socket directory
+/// Resolve the socket directory with an explicit override.
 ///
-/// Uses `BIOMEOS_SOCKET_DIR` env var if set, otherwise delegates to
+/// Uses the provided `socket_dir` override if set, otherwise delegates to
 /// `SystemPaths::new_lazy()` for XDG-compliant runtime directory resolution.
-fn resolve_socket_dir() -> Result<PathBuf> {
-    // Explicit override takes priority
-    if let Ok(dir) = std::env::var("BIOMEOS_SOCKET_DIR") {
+pub(crate) fn resolve_socket_dir_with(socket_dir: Option<&str>) -> Result<PathBuf> {
+    if let Some(dir) = socket_dir {
         return Ok(PathBuf::from(dir));
     }
-
-    // XDG-compliant path via SystemPaths (handles XDG_RUNTIME_DIR, /run/user/$UID, /tmp fallbacks)
     Ok(biomeos_types::paths::SystemPaths::new_lazy()
         .runtime_dir()
         .to_path_buf())
@@ -442,38 +479,42 @@ fn resolve_socket_dir() -> Result<PathBuf> {
 
 /// Discover primal binaries from known locations
 fn discover_binaries(primals: &[&str]) -> Result<HashMap<String, PathBuf>> {
+    let plasmid_bin_dir = biomeos_types::env_config::plasmid_bin_dir();
+    let path_owned: Vec<PathBuf> = std::env::var("PATH")
+        .ok()
+        .map(|s| s.split(':').map(PathBuf::from).collect())
+        .unwrap_or_default();
+    let path_dirs: Vec<&Path> = path_owned.iter().map(|p| p.as_path()).collect();
+    discover_binaries_with(primals, plasmid_bin_dir.as_deref(), &path_dirs)
+}
+
+pub(crate) fn discover_binaries_with(
+    primals: &[&str],
+    plasmid_bin_dir: Option<&Path>,
+    path_dirs: &[&Path],
+) -> Result<HashMap<String, PathBuf>> {
     let mut map = HashMap::new();
 
-    // Ecosystem-level plasmidBin (ecoPrimals/plasmidBin/) via env or path traversal
-    let ecosystem_plasmid_bin = biomeos_types::env_config::plasmid_bin_dir();
-
     let mut search_paths = vec![
-        // Current architecture livespore
         PathBuf::from("livespore-usb")
             .join(std::env::consts::ARCH)
             .join("primals"),
-        // Generic livespore
         PathBuf::from("livespore-usb/primals"),
-        // Local plasmidBin
         PathBuf::from("plasmidBin"),
         PathBuf::from("plasmidBin/optimized").join(std::env::consts::ARCH),
     ];
 
-    // Ecosystem root plasmidBin (ecoPrimals/plasmidBin/) — reached from phase2/biomeOS/
-    if let Some(ref eco) = ecosystem_plasmid_bin {
+    if let Some(eco) = plasmid_bin_dir {
         search_paths.push(eco.join("primals"));
-        search_paths.push(eco.clone());
+        search_paths.push(eco.to_path_buf());
     }
     search_paths.push(PathBuf::from("../../plasmidBin/primals"));
     search_paths.push(PathBuf::from("../../plasmidBin"));
-
-    // Cargo build output
     search_paths.push(PathBuf::from("target/release"));
 
     for primal in primals {
         let mut found = false;
         for search in &search_paths {
-            // Try direct match and primal/primal subdir pattern
             for candidate in &[search.join(primal), search.join(primal).join(primal)] {
                 if candidate.exists() && candidate.is_file() {
                     map.insert(primal.to_string(), candidate.clone());
@@ -486,15 +527,12 @@ fn discover_binaries(primals: &[&str]) -> Result<HashMap<String, PathBuf>> {
             }
         }
         if !found {
-            // Scan PATH directories (pure Rust, no `which` shell-out)
-            if let Ok(path_var) = std::env::var("PATH") {
-                for dir in path_var.split(':') {
-                    let candidate = PathBuf::from(dir).join(primal);
-                    if candidate.is_file() {
-                        map.insert(primal.to_string(), candidate);
-                        found = true;
-                        break;
-                    }
+            for dir in path_dirs {
+                let candidate = dir.join(primal);
+                if candidate.is_file() {
+                    map.insert(primal.to_string(), candidate);
+                    found = true;
+                    break;
                 }
             }
         }
@@ -631,6 +669,5 @@ pub(crate) fn base64_encode(data: &[u8]) -> String {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 #[path = "nucleus_tests.rs"]
 mod tests;

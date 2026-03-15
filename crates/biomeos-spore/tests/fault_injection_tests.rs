@@ -5,36 +5,11 @@
 //!
 //! These tests inject faults at specific points to ensure robust error handling.
 //! Uses proper plasmidBin structure via test_support utilities.
-//!
-//! **Concurrency-First Design**: Tests that modify global state (current_dir)
-//! must properly restore state even on failure to prevent test pollution.
 
 use biomeos_spore::test_support::setup_test_binaries_at;
 use biomeos_spore::{Spore, SporeConfig, SporeType};
 use std::fs;
 use tempfile::TempDir;
-
-/// RAII guard to restore the current directory on drop
-struct DirGuard {
-    original: Option<std::path::PathBuf>,
-}
-
-impl DirGuard {
-    fn new() -> Self {
-        // Try to get current dir - may fail if it doesn't exist
-        let original = std::env::current_dir().ok();
-        Self { original }
-    }
-}
-
-impl Drop for DirGuard {
-    fn drop(&mut self) {
-        if let Some(ref dir) = self.original {
-            // Restore original directory if possible
-            let _ = std::env::set_current_dir(dir);
-        }
-    }
-}
 
 /// Test behavior when seed generation fails (secrets/ read-only)
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
@@ -65,6 +40,7 @@ async fn test_seed_generation_failure() {
         node_id: "test-node".to_string(),
         spore_type: SporeType::Live,
         family_id: "test-family".to_string(),
+        plasmid_bin_dir: Some(temp_dir.path().join("plasmidBin")),
     };
 
     let result = Spore::create(mount_point.clone(), config).await;
@@ -90,15 +66,10 @@ async fn test_seed_generation_failure() {
 }
 
 /// Test behavior when tower.toml creation would fail
-#[tokio::test(flavor = "current_thread")]
-#[serial_test::serial]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_config_creation_success() {
-    // RAII guard ensures directory restoration even on panic
-    let _dir_guard = DirGuard::new();
-
     let temp_dir = TempDir::new().unwrap();
 
-    // Setup proper plasmidBin structure (this changes CWD to temp_dir)
     let plasmid_path = setup_test_binaries_at(temp_dir.path()).unwrap();
 
     // Verify setup succeeded before proceeding
@@ -121,6 +92,7 @@ async fn test_config_creation_success() {
         node_id: "test-node".to_string(),
         spore_type: SporeType::Live,
         family_id: "test-family".to_string(),
+        plasmid_bin_dir: Some(temp_dir.path().join("plasmidBin")),
     };
 
     // Normal creation should work
@@ -147,12 +119,8 @@ async fn test_config_creation_success() {
 }
 
 /// Test behavior when binary copy is interrupted (missing binaries)
-#[tokio::test(flavor = "current_thread")]
-#[serial_test::serial]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_partial_binary_copy() {
-    // RAII guard ensures directory restoration even on panic
-    let _dir_guard = DirGuard::new();
-
     let temp_dir = TempDir::new().unwrap();
 
     // Setup plasmidBin with ONLY tower and beardog (missing songbird)
@@ -186,8 +154,6 @@ async fn test_partial_binary_copy() {
         fs::set_permissions(&beardog_bin, perms).unwrap();
     }
 
-    std::env::set_current_dir(temp_dir.path()).unwrap();
-
     let mount_point = temp_dir.path().join("usb");
     fs::create_dir_all(&mount_point).unwrap();
 
@@ -196,6 +162,7 @@ async fn test_partial_binary_copy() {
         node_id: "test-node".to_string(),
         spore_type: SporeType::Live,
         family_id: "test-family".to_string(),
+        plasmid_bin_dir: Some(temp_dir.path().join("plasmidBin")),
     };
 
     let result = Spore::create(mount_point.clone(), config).await;
@@ -225,8 +192,6 @@ async fn test_partial_binary_copy() {
         "beardog content should be from our mock, not the real binary. Got: {}",
         beardog_content.chars().take(50).collect::<String>()
     );
-
-    // Note: DirGuard will restore original directory when dropped
 }
 
 /// Test behavior with invalid/edge-case node IDs
@@ -252,6 +217,7 @@ async fn test_invalid_node_id() {
             node_id: node_id.to_string(),
             spore_type: SporeType::Live,
             family_id: "test-family".to_string(),
+            plasmid_bin_dir: Some(temp_dir.path().join("plasmidBin")),
         };
 
         let result = Spore::create(mount_point.clone(), config).await;
@@ -275,12 +241,8 @@ async fn test_invalid_node_id() {
 }
 
 /// Test that primals/ must have at least one binary
-#[tokio::test(flavor = "current_thread")]
-#[serial_test::serial]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_empty_primals_directory() {
-    // RAII guard ensures directory restoration even on panic
-    let _dir_guard = DirGuard::new();
-
     let temp_dir = TempDir::new().unwrap();
 
     // Setup plasmidBin with tower but EMPTY primals/
@@ -304,8 +266,6 @@ async fn test_empty_primals_directory() {
 
     // primals/ is empty!
 
-    std::env::set_current_dir(temp_dir.path()).unwrap();
-
     let mount_point = temp_dir.path().join("usb");
     fs::create_dir_all(&mount_point).unwrap();
 
@@ -314,6 +274,7 @@ async fn test_empty_primals_directory() {
         node_id: "test-node".to_string(),
         spore_type: SporeType::Live,
         family_id: "test-family".to_string(),
+        plasmid_bin_dir: Some(temp_dir.path().join("plasmidBin")),
     };
 
     let result = Spore::create(mount_point.clone(), config).await;
@@ -335,6 +296,4 @@ async fn test_empty_primals_directory() {
             println!("ℹ️ Spore creation failed (acceptable): {e}");
         }
     }
-
-    // Note: DirGuard will restore original directory when dropped
 }

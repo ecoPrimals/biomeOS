@@ -145,6 +145,7 @@ pub async fn handle_spore_create(
         node_id: node_id.clone(),
         family_id,
         spore_type,
+        plasmid_bin_dir: None,
     };
 
     let spore = Spore::create(mount, config).await?;

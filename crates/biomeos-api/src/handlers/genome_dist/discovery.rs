@@ -5,30 +5,25 @@
 //!
 //! Locates the `wateringHole/genomeBin/` directory for genome distribution.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-/// Get the genome distribution base path
-///
-/// Searches for `wateringHole/genomeBin/` relative to the workspace.
-pub fn get_genome_bin_path() -> Option<PathBuf> {
-    // Try environment variable first
-    if let Ok(path) = std::env::var("GENOMEBIN_PATH") {
+const DEFAULT_SEARCH_PATHS: &[&str] = &[
+    "../../../wateringHole/genomeBin",
+    "../../wateringHole/genomeBin",
+    "../wateringHole/genomeBin",
+    "wateringHole/genomeBin",
+];
+
+pub fn get_genome_bin_path_with(env_path: Option<&str>, search_paths: &[&Path]) -> Option<PathBuf> {
+    if let Some(path) = env_path {
         let p = PathBuf::from(path);
         if p.exists() {
             return Some(p);
         }
     }
 
-    // Try relative paths from current directory
-    let search_paths = [
-        "../../../wateringHole/genomeBin", // From binary location
-        "../../wateringHole/genomeBin",    // From biomeOS root
-        "../wateringHole/genomeBin",       // From phase2
-        "wateringHole/genomeBin",          // Direct
-    ];
-
-    for path in &search_paths {
-        let p = PathBuf::from(path);
+    for path in search_paths {
+        let p = PathBuf::from(*path);
         if p.exists() && p.join("manifest.toml").exists() {
             return Some(p);
         }
@@ -37,25 +32,26 @@ pub fn get_genome_bin_path() -> Option<PathBuf> {
     None
 }
 
+/// Get the genome distribution base path
+///
+/// Searches for `wateringHole/genomeBin/` relative to the workspace.
+pub fn get_genome_bin_path() -> Option<PathBuf> {
+    let env_path = std::env::var("GENOMEBIN_PATH").ok();
+    let search_paths: Vec<&Path> = DEFAULT_SEARCH_PATHS.iter().map(Path::new).collect();
+    get_genome_bin_path_with(env_path.as_deref(), &search_paths)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serial_test::serial;
+    use std::path::{Path, PathBuf};
 
     #[test]
-    #[serial]
     fn test_get_genome_bin_path_env_var() {
         let temp = tempfile::tempdir().expect("create temp dir");
         let manifest_path = temp.path().join("manifest.toml");
         std::fs::write(&manifest_path, "[manifest]\nversion = \"1.0\"").expect("write manifest");
-        let saved = std::env::var("GENOMEBIN_PATH").ok();
-        std::env::set_var("GENOMEBIN_PATH", temp.path());
-        let result = get_genome_bin_path();
-        if let Some(prev) = saved {
-            std::env::set_var("GENOMEBIN_PATH", prev);
-        } else {
-            std::env::remove_var("GENOMEBIN_PATH");
-        }
+        let result = get_genome_bin_path_with(Some(temp.path().to_str().unwrap()), &[]);
         assert!(
             result.is_some(),
             "GENOMEBIN_PATH with valid dir should return Some"
@@ -64,19 +60,10 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn test_get_genome_bin_path_env_var_nonexistent_does_not_return_it() {
-        // When GENOMEBIN_PATH points to nonexistent path, we fall through to search_paths.
-        // If we get a result, it must not be the nonexistent path we set.
-        let saved = std::env::var("GENOMEBIN_PATH").ok();
         let nonexistent = "/nonexistent/genomebin/path/12345";
-        std::env::set_var("GENOMEBIN_PATH", nonexistent);
-        let result = get_genome_bin_path();
-        if let Some(prev) = saved {
-            std::env::set_var("GENOMEBIN_PATH", prev);
-        } else {
-            std::env::remove_var("GENOMEBIN_PATH");
-        }
+        let search_paths: Vec<&Path> = DEFAULT_SEARCH_PATHS.iter().map(|s| Path::new(s)).collect();
+        let result = get_genome_bin_path_with(Some(nonexistent), &search_paths);
         if let Some(p) = result {
             assert_ne!(
                 p,

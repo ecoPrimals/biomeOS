@@ -93,8 +93,8 @@ mod derivation_tests {
 
     #[test]
     fn test_generate_device_entropy() {
-        let entropy1 = generate_device_entropy();
-        let entropy2 = generate_device_entropy();
+        let entropy1 = generate_device_entropy().expect("device entropy generation");
+        let entropy2 = generate_device_entropy().expect("device entropy generation");
         assert_eq!(entropy1.len(), 32);
         assert_eq!(entropy2.len(), 32);
         assert_ne!(entropy1, entropy2);

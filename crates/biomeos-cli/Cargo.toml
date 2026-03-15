@@ -16,16 +16,16 @@ name = "verify-lineage"
 path = "src/bin/verify-lineage.rs"
 
 [dependencies]
-biomeos-core = { path = "../biomeos-core" }
-biomeos-primal-sdk = { path = "../biomeos-primal-sdk" }
-biomeos-types = { path = "../biomeos-types" }
-biomeos-chimera = { path = "../biomeos-chimera" }
-biomeos-spore = { path = "../biomeos-spore" }
-biomeos-federation = { path = "../biomeos-federation" }
-biomeos-graph = { path = "../biomeos-graph" }
-biomeos-manifest = { path = "../biomeos-manifest" }
-biomeos-genome-factory = { path = "../biomeos-genome-factory" }
-biomeos-genomebin-v3 = { path = "../biomeos-genomebin-v3" }
+biomeos-core = { path = "../biomeos-core", version = "0.1.0" }
+biomeos-primal-sdk = { path = "../biomeos-primal-sdk", version = "0.1.0" }
+biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
+biomeos-chimera = { path = "../biomeos-chimera", version = "0.1.0" }
+biomeos-spore = { path = "../biomeos-spore", version = "0.1.0" }
+biomeos-federation = { path = "../biomeos-federation", version = "0.1.0" }
+biomeos-graph = { path = "../biomeos-graph", version = "0.1.0" }
+biomeos-manifest = { path = "../biomeos-manifest", version = "0.1.0" }
+biomeos-genome-factory = { path = "../biomeos-genome-factory", version = "1.0.0" }
+biomeos-genomebin-v3 = { path = "../biomeos-genomebin-v3", version = "3.0.0" }
 clap = { version = "4.4", features = ["derive", "color"] }
 tokio = { version = "1.0", features = ["full"] }
 anyhow = "1.0"
@@ -57,7 +57,7 @@ default = []
 deprecated-tui = ["ratatui", "crossterm"]
 
 [dev-dependencies]
-biomeos-test-utils = { path = "../biomeos-test-utils" }
+biomeos-test-utils = { path = "../biomeos-test-utils", version = "0.1.0" }
 # Testing HTTP client - for benchmarks comparing Tower atomic vs HTTP
 # reqwest = { workspace = true }  # REMOVED: CLI uses atomic_client for Pure Rust # For testing/benchmarking only
 tokio = { workspace = true, features = ["full"] }

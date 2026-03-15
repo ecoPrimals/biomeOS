@@ -154,7 +154,7 @@ async fn test_generate_encrypted_beacon_success() {
     let result = beacon_mgr
         .generate_encrypted_beacon("/tmp/sock", &["compute", "storage"], Some("genesis"))
         .await
-        .unwrap();
+        .expect("beacon generation should succeed");
 
     assert_eq!(result.version, 1);
     assert_eq!(result.ciphertext, "encrypted_payload_b64");
@@ -192,7 +192,7 @@ async fn test_try_decrypt_beacon_success() {
         capabilities_hash: "capshash12345678".to_string(),
         lineage_mode: Some("sibling".to_string()),
     };
-    let json = serde_json::to_string(&plaintext).unwrap();
+    let json = serde_json::to_string(&plaintext).expect("BeaconPlaintext serialization");
     let plaintext_b64 = BASE64.encode(json.as_bytes());
 
     let mock = MockDarkForestCaller::new();
@@ -207,10 +207,13 @@ async fn test_try_decrypt_beacon_success() {
         version: 1,
     };
 
-    let result = beacon_mgr.try_decrypt_beacon(&encrypted).await.unwrap();
+    let result = beacon_mgr
+        .try_decrypt_beacon(&encrypted)
+        .await
+        .expect("decrypt should succeed");
 
     assert!(result.is_some());
-    let decrypted = result.unwrap();
+    let decrypted = result.expect("decrypted beacon");
     assert_eq!(decrypted.node_id, "peer_tower");
     assert_eq!(decrypted.socket_path, "/run/peer/beardog.sock");
     assert_eq!(decrypted.timestamp, 1700000000);
@@ -295,7 +298,7 @@ async fn test_verify_peer_lineage_valid() {
     let valid = beacon_mgr
         .verify_peer_lineage("peer_family", "proof_abc123")
         .await
-        .unwrap();
+        .expect("verify lineage");
 
     assert!(valid);
 }
@@ -310,7 +313,7 @@ async fn test_verify_peer_lineage_invalid() {
     let valid = beacon_mgr
         .verify_peer_lineage("other_family", "bad_proof")
         .await
-        .unwrap();
+        .expect("verify lineage");
 
     assert!(!valid);
 }
@@ -325,7 +328,7 @@ async fn test_generate_lineage_proof_success() {
     let proof = beacon_mgr
         .generate_lineage_proof("peer_family")
         .await
-        .unwrap();
+        .expect("generate lineage proof");
 
     assert_eq!(proof, "our_proof_xyz");
 }
@@ -344,7 +347,7 @@ async fn test_derive_session_key_success() {
     let key = beacon_mgr
         .derive_session_key("peer_id", "birdsong-session-v1")
         .await
-        .unwrap();
+        .expect("derive session key");
 
     assert_eq!(key, "session_key_abc");
 }
@@ -364,8 +367,9 @@ fn test_beacon_plaintext_serde_roundtrip() {
         lineage_mode: Some("genesis".to_string()),
     };
 
-    let json = serde_json::to_string(&beacon).unwrap();
-    let parsed: BeaconPlaintext = serde_json::from_str(&json).unwrap();
+    let json = serde_json::to_string(&beacon).expect("BeaconPlaintext serialization");
+    let parsed: BeaconPlaintext =
+        serde_json::from_str(&json).expect("BeaconPlaintext deserialization");
 
     assert_eq!(parsed.family_hash, beacon.family_hash);
     assert_eq!(parsed.node_id, beacon.node_id);
@@ -386,9 +390,10 @@ fn test_beacon_plaintext_serde_roundtrip_no_lineage() {
         lineage_mode: None,
     };
 
-    let json = serde_json::to_string(&beacon).unwrap();
+    let json = serde_json::to_string(&beacon).expect("BeaconPlaintext serialization");
     assert!(!json.contains("lineage_mode"));
-    let parsed: BeaconPlaintext = serde_json::from_str(&json).unwrap();
+    let parsed: BeaconPlaintext =
+        serde_json::from_str(&json).expect("BeaconPlaintext deserialization");
     assert!(parsed.lineage_mode.is_none());
 }
 
@@ -401,8 +406,9 @@ fn test_encrypted_beacon_serde_roundtrip() {
         version: 1,
     };
 
-    let json = serde_json::to_string(&beacon).unwrap();
-    let parsed: EncryptedBeacon = serde_json::from_str(&json).unwrap();
+    let json = serde_json::to_string(&beacon).expect("EncryptedBeacon serialization");
+    let parsed: EncryptedBeacon =
+        serde_json::from_str(&json).expect("EncryptedBeacon deserialization");
 
     assert_eq!(parsed.ciphertext, beacon.ciphertext);
     assert_eq!(parsed.nonce, beacon.nonce);
@@ -421,10 +427,11 @@ fn test_beacon_plaintext_json_to_base64_roundtrip() {
         lineage_mode: Some("genesis".to_string()),
     };
 
-    let json = serde_json::to_string(&beacon).unwrap();
+    let json = serde_json::to_string(&beacon).expect("BeaconPlaintext serialization");
     let b64 = BASE64.encode(json.as_bytes());
-    let decoded_bytes = BASE64.decode(&b64).unwrap();
-    let decoded: BeaconPlaintext = serde_json::from_slice(&decoded_bytes).unwrap();
+    let decoded_bytes = BASE64.decode(&b64).expect("base64 decode");
+    let decoded: BeaconPlaintext =
+        serde_json::from_slice(&decoded_bytes).expect("BeaconPlaintext deserialization");
 
     assert_eq!(decoded.family_hash, beacon.family_hash);
     assert_eq!(decoded.node_id, beacon.node_id);
@@ -485,7 +492,7 @@ async fn test_verify_lineage_missing_result_returns_false() {
     let valid = beacon_mgr
         .verify_peer_lineage("peer", "proof")
         .await
-        .unwrap();
+        .expect("verify lineage");
 
     assert!(!valid);
 }
@@ -522,7 +529,7 @@ async fn test_try_decrypt_pure_noise_beacon_too_small_returns_none() {
     let result = beacon_mgr
         .try_decrypt_pure_noise_beacon(&too_small)
         .await
-        .unwrap();
+        .expect("try_decrypt_pure_noise_beacon");
 
     assert!(result.is_none());
 }
@@ -544,7 +551,7 @@ async fn test_try_decrypt_pure_noise_beacon_ciphertext_too_short_returns_none() 
     let result = beacon_mgr
         .try_decrypt_pure_noise_beacon(&bytes)
         .await
-        .unwrap();
+        .expect("try_decrypt_pure_noise_beacon");
 
     // ciphertext_and_tag.len() = 16, so ciphertext = 0 bytes, tag = 16
     // The decrypt will be called with empty ciphertext - mock has no response
@@ -561,7 +568,11 @@ async fn test_try_decrypt_pure_noise_beacon_success() {
         "capabilities": ["compute"],
         "lineage_mode": "genesis"
     });
-    let plaintext_b64 = BASE64.encode(serde_json::to_string(&inner).unwrap().as_bytes());
+    let plaintext_b64 = BASE64.encode(
+        serde_json::to_string(&inner)
+            .expect("inner JSON serialization")
+            .as_bytes(),
+    );
 
     let mock = MockDarkForestCaller::new();
     mock.set_response(
@@ -585,10 +596,10 @@ async fn test_try_decrypt_pure_noise_beacon_success() {
     let result = beacon_mgr
         .try_decrypt_pure_noise_beacon(&bytes)
         .await
-        .unwrap();
+        .expect("try_decrypt_pure_noise_beacon");
 
     assert!(result.is_some());
-    let decrypted = result.unwrap();
+    let decrypted = result.expect("decrypted pure noise beacon");
     assert_eq!(
         decrypted.get("node_id").and_then(|v| v.as_str()),
         Some("tower2")
@@ -618,7 +629,7 @@ async fn test_generate_pure_noise_beacon_success() {
     let result = beacon_mgr
         .generate_pure_noise_beacon("/tmp/sock", &["compute"], Some("genesis"))
         .await
-        .unwrap();
+        .expect("generate pure noise beacon");
 
     assert_eq!(result.len(), 12 + 32 + 16);
     assert_eq!(&result[0..12], &[0u8; 12]);

@@ -18,6 +18,8 @@ use std::collections::HashMap;
 
 // Core unified modules
 pub mod api_schema;
+/// NUCLEUS atomic type definitions (Tower, Node, Nest, Full)
+pub mod atomic;
 /// Well-known capability taxonomy for discovery
 pub mod capability_taxonomy;
 pub mod config;
@@ -37,12 +39,17 @@ pub mod primal_names;
 pub mod service;
 pub mod surgical; // Surgical simulation and medical domain types
 pub mod tarpc_types; // tarpc service definitions for high-performance RPC
+pub mod time_series; // Cross-spring time series exchange (ecoPrimals/time-series/v1)
 pub mod xr; // Extended Reality (VR/AR/XR) types
 
 // Re-export key types from each module
 pub use api_schema::{
     ApiSchemaResponse, ApiSchemaType, OperationMetadata, ParameterMetadata, PrimalInfo,
     SchemaDiscoveryConfig,
+};
+pub use atomic::{
+    AtomicCapability, AtomicTier, FullNucleus, NestAtomic, NodeAtomic, PrimalHealth,
+    ProviderHealthMap, TowerAtomic,
 };
 pub use jsonrpc::{JsonRpcError, JsonRpcRequest, JsonRpcResponse, JSONRPC_VERSION};
 
@@ -98,6 +105,9 @@ pub use surgical::{
     PkModelParams, PkModelResult, SurgicalProcedure, SurgicalSessionMetrics, SurgicalSessionState,
     ToolTissueInteraction,
 };
+
+// Cross-spring time series exports
+pub use time_series::{CrossSpringTimeSeries, TimeSeriesError, TimeSeriesSource, SCHEMA_V1};
 
 // XR (Extended Reality) type exports
 pub use xr::{

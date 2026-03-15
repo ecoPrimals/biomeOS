@@ -551,8 +551,12 @@ impl CapabilityTaxonomy {
     /// Set `BIOMEOS_STRICT_DISCOVERY=1` to disable this fallback and require
     /// all capabilities to be discovered via Songbird.
     pub fn default_primal(&self) -> Option<&'static str> {
-        // Check if strict discovery is enabled (no fallback)
-        if std::env::var("BIOMEOS_STRICT_DISCOVERY").is_ok() {
+        self.default_primal_with(std::env::var("BIOMEOS_STRICT_DISCOVERY").is_ok())
+    }
+
+    /// Same as `default_primal()` but with explicit strict flag (no env var).
+    pub fn default_primal_with(&self, strict: bool) -> Option<&'static str> {
+        if strict {
             return None;
         }
 
@@ -654,8 +658,12 @@ impl CapabilityTaxonomy {
     ///
     /// Bootstrap-time primal name hints (empty if strict discovery is enabled)
     pub fn known_primals() -> &'static [&'static str] {
-        // In strict discovery mode, return nothing — primals discover at runtime
-        if std::env::var("BIOMEOS_STRICT_DISCOVERY").is_ok() {
+        Self::known_primals_with(std::env::var("BIOMEOS_STRICT_DISCOVERY").is_ok())
+    }
+
+    /// Returns known primal names; empty when `strict` is `true`.
+    pub fn known_primals_with(strict: bool) -> &'static [&'static str] {
+        if strict {
             return &[];
         }
         crate::primal_names::CORE_PRIMALS

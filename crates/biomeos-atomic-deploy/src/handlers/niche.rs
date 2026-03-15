@@ -382,6 +382,48 @@ impl NicheHandler {
                     { "name": "AGENT_DID", "required": false, "description": "Agent DID for provenance" }
                 ]
             }),
+            json!({
+                "id": "airspring",
+                "name": "Ecology & Agriculture",
+                "description": "airSpring ecology primal (ET₀, water balance, crop modeling, soil moisture)",
+                "category": "science",
+                "required_resources": {
+                    "cpu_cores": 2,
+                    "memory_mb": 2048,
+                    "gpu_count": null,
+                    "storage_gb": 5
+                },
+                "graph_id": "airspring_deploy",
+                "parameters": []
+            }),
+            json!({
+                "id": "wetspring",
+                "name": "Life Science",
+                "description": "wetSpring life science primal (microbial ecology, analytical chemistry, FASTQ diversity)",
+                "category": "science",
+                "required_resources": {
+                    "cpu_cores": 2,
+                    "memory_mb": 4096,
+                    "gpu_count": null,
+                    "storage_gb": 10
+                },
+                "graph_id": "wetspring_deploy",
+                "parameters": []
+            }),
+            json!({
+                "id": "neuralspring",
+                "name": "Machine Learning",
+                "description": "neuralSpring ML surrogates primal (spectral analysis, Anderson, Hessian, isomorphic learning)",
+                "category": "science",
+                "required_resources": {
+                    "cpu_cores": 4,
+                    "memory_mb": 8192,
+                    "gpu_count": 1,
+                    "storage_gb": 10
+                },
+                "graph_id": "neuralspring_deploy",
+                "parameters": []
+            }),
         ];
 
         Ok(json!(templates))
@@ -420,6 +462,9 @@ impl NicheHandler {
             "rootpulse-diff" => "rootpulse_diff",
             "rootpulse-federate" => "rootpulse_federate",
             "soil-microbiome" => "cross_spring_soil_microbiome",
+            "airspring" => "airspring_deploy",
+            "wetspring" => "wetspring_deploy",
+            "neuralspring" => "neuralspring_deploy",
             _ => anyhow::bail!("Unknown template: {template_id}"),
         };
 
@@ -520,6 +565,9 @@ mod tests {
             "rootpulse-diff",
             "rootpulse-federate",
             "soil-microbiome",
+            "airspring",
+            "wetspring",
+            "neuralspring",
         ];
         for id in expected_ids {
             assert!(

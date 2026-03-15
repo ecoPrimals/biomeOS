@@ -214,6 +214,18 @@ pub mod network {
     /// Default discovery port (fallback only)
     pub const DEFAULT_DISCOVERY_PORT: u16 = 8001;
 
+    /// Default BearDog (security) port (fallback only)
+    pub const DEFAULT_BEARDOG_PORT: u16 = 9000;
+
+    /// Default Songbird (universal adapter) port (fallback only)
+    pub const DEFAULT_SONGBIRD_PORT: u16 = 3000;
+
+    /// Default broadcast discovery port (fallback only)
+    pub const DEFAULT_BROADCAST_DISCOVERY_PORT: u16 = 9199;
+
+    /// Default dev server port (common Flask/alternative HTTP fallback)
+    pub const DEFAULT_DEV_PORT: u16 = 5000;
+
     /// Get HTTP port from environment or fallback to default
     ///
     /// Checks `HTTP_PORT` environment variable first.
@@ -263,6 +275,28 @@ pub mod network {
             .ok()
             .and_then(|v| v.parse().ok())
             .unwrap_or(DEFAULT_DISCOVERY_PORT)
+    }
+
+    /// Get BearDog port from environment or fallback to default
+    ///
+    /// Checks `BEARDOG_PORT` environment variable first.
+    pub fn beardog_port() -> u16 {
+        env::var(env_vars::BEARDOG_PORT)
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(DEFAULT_BEARDOG_PORT)
+    }
+
+    /// Get Songbird port from environment or fallback to default
+    ///
+    /// Checks `SONGBIRD_PORT` or `MCP_PORT` environment variable first.
+    pub fn songbird_port() -> u16 {
+        env::var(env_vars::SONGBIRD_PORT)
+            .or_else(|_| env::var(env_vars::MCP_WEBSOCKET_PORT))
+            .or_else(|_| env::var("MCP_PORT"))
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(DEFAULT_SONGBIRD_PORT)
     }
 
     /// Link local address range
@@ -454,6 +488,31 @@ pub mod capabilities {
 
     /// Data processing capability
     pub const DATA_PROCESSING: &str = "data-processing";
+
+    // =====================================================================
+    // Spring capability domains — registered by springs at runtime.
+    // =====================================================================
+
+    /// Ecology and agriculture capability (airSpring)
+    pub const ECOLOGY: &str = "ecology";
+
+    /// Life science, analytical chemistry, microbial ecology (wetSpring)
+    pub const SCIENCE: &str = "science";
+
+    /// Medical, PK/PD, microbiome, biosignal (healthSpring)
+    pub const MEDICAL: &str = "medical";
+
+    /// Game science, HCI, procedural content (ludoSpring)
+    pub const GAME: &str = "game";
+
+    /// Computational physics, nuclear EOS, GPU compute (hotSpring)
+    pub const PHYSICS: &str = "physics";
+
+    /// Measurement, signal processing, inverse problems (groundSpring)
+    pub const MEASUREMENT: &str = "measurement";
+
+    /// Machine learning, surrogates, isomorphic patterns (neuralSpring)
+    pub const LEARNING: &str = "learning";
 }
 
 /// Environment variable names
@@ -472,6 +531,18 @@ pub mod env_vars {
 
     /// MCP WebSocket port environment variable
     pub const MCP_WEBSOCKET_PORT: &str = "MCP_WEBSOCKET_PORT";
+
+    /// BearDog endpoint URL environment variable
+    pub const BEARDOG_ENDPOINT: &str = "BEARDOG_ENDPOINT";
+
+    /// BearDog port environment variable
+    pub const BEARDOG_PORT: &str = "BEARDOG_PORT";
+
+    /// Songbird endpoint URL environment variable
+    pub const SONGBIRD_ENDPOINT: &str = "SONGBIRD_ENDPOINT";
+
+    /// Songbird port environment variable
+    pub const SONGBIRD_PORT: &str = "SONGBIRD_PORT";
 
     /// Connection timeout environment variable
     pub const CONNECTION_TIMEOUT: &str = "CONNECTION_TIMEOUT";
@@ -556,6 +627,10 @@ mod tests {
         assert_eq!(network::DEFAULT_HTTPS_PORT, 8443);
         assert_eq!(network::DEFAULT_WS_PORT, 8081);
         assert_eq!(network::DEFAULT_MCP_PORT, 3000);
+        assert_eq!(network::DEFAULT_BEARDOG_PORT, 9000);
+        assert_eq!(network::DEFAULT_SONGBIRD_PORT, 3000);
+        assert_eq!(network::DEFAULT_BROADCAST_DISCOVERY_PORT, 9199);
+        assert_eq!(network::DEFAULT_DEV_PORT, 5000);
         assert_eq!(network::DEFAULT_USER_AGENT, "biomeOS/1.0");
         assert_eq!(network::DEFAULT_CONTENT_TYPE, "application/json");
     }

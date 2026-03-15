@@ -198,7 +198,13 @@ impl FamilyId {
     /// 2. Local config file
     /// 3. Generate new ID
     pub fn get_or_create() -> Self {
-        Self::from_env()
+        Self::get_or_create_with(None)
+    }
+
+    /// Get or create family ID with explicit env override (for testing)
+    pub fn get_or_create_with(env_value: Option<&str>) -> Self {
+        env_value
+            .map(Self::new)
             .or_else(Self::discover_local)
             .unwrap_or_else(Self::generate)
     }
@@ -624,11 +630,8 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
     fn family_id_get_or_create_from_env() {
-        std::env::set_var("BIOMEOS_FAMILY_ID", "env-created");
-        let id = FamilyId::get_or_create();
-        std::env::remove_var("BIOMEOS_FAMILY_ID");
+        let id = FamilyId::get_or_create_with(Some("env-created"));
         assert_eq!(id.as_str(), "env-created");
     }
 

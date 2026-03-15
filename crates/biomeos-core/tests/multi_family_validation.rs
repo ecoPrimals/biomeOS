@@ -302,7 +302,6 @@ mod multi_family_tests {
     #[tokio::test]
     async fn test_full_multi_family_scenario() {
         // Scenario: Three organizations, each with their own family
-        #[allow(dead_code)]
         struct Organization {
             name: String,
             family_id: String,
@@ -339,6 +338,7 @@ mod multi_family_tests {
         let mut family_registry: HashMap<String, Vec<String>> = HashMap::new();
 
         for org in organizations {
+            assert!(!org.name.is_empty(), "Organization should have a name");
             let family_id = FamilyId::new(org.family_id.clone());
             let seed = create_test_seed(org.seed_data);
 

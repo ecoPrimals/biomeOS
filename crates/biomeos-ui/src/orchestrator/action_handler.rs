@@ -59,13 +59,12 @@ impl ActionHandler {
         family_id: &str,
         connections: &PrimalConnections,
     ) -> Result<ActionResult> {
-        // Extract typed clients from dynamic registry (backward compatible)
-        let petaltongue = connections.petaltongue().cloned();
-        let songbird = connections.songbird().cloned();
-        let beardog = connections.beardog().cloned();
-        let nestgate = connections.nestgate().cloned();
-        let toadstool = connections.toadstool().cloned();
-        let squirrel = connections.squirrel().cloned();
+        let petaltongue = connections.get_by_capability("ui").cloned();
+        let songbird = connections.get_by_capability("discovery").cloned();
+        let beardog = connections.get_by_capability("encryption").cloned();
+        let nestgate = connections.get_by_capability("storage").cloned();
+        let toadstool = connections.get_by_capability("compute").cloned();
+        let squirrel = connections.get_by_capability("ai").cloned();
 
         match action {
             UserAction::AssignDevice {

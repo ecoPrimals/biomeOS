@@ -170,15 +170,15 @@ impl InteractiveUIOrchestrator {
         self.load_saved_state().await?;
 
         // Phase 4: Launch UI if petalTongue is available
-        if self.connections.petaltongue().is_some() {
-            info!("✅ petalTongue available - UI will be rendered");
+        if self.connections.get_by_capability("ui").is_some() {
+            info!("✅ UI capability available - UI will be rendered");
         } else {
-            warn!("⚠️  No petalTongue available - running headless");
+            warn!("⚠️  No UI capability available - running headless");
         }
 
-        // Phase 5: Sync initial state to petalTongue
+        // Phase 5: Sync initial state to UI provider
         let initial_state = self.build_initial_ui_state().await;
-        let petaltongue = self.connections.petaltongue().cloned();
+        let petaltongue = self.connections.get_by_capability("ui").cloned();
         let _ = UISync::initialize_ui(&petaltongue, initial_state).await;
 
         info!("✅ Interactive UI Orchestrator started successfully!");
@@ -251,7 +251,7 @@ impl InteractiveUIOrchestrator {
             }
 
             // Push any state updates to petalTongue
-            let pt = self.connections.petaltongue().cloned();
+            let pt = self.connections.get_by_capability("ui").cloned();
             let _ = UISync::send_heartbeat(&pt).await;
         }
     }

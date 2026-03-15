@@ -163,12 +163,24 @@ impl RuntimeConfig {
     /// 3. `/run/user/$UID/biomeos` (systemd, derived from env)
     /// 4. `/tmp` fallback (development only)
     pub fn from_env() -> Self {
-        let socket_dir = env::var(env_vars::SOCKET_DIR)
+        Self::from_env_with(None, None)
+    }
+
+    /// Create RuntimeConfig with explicit overrides (for testing)
+    pub fn from_env_with(
+        socket_dir_override: Option<&str>,
+        xdg_runtime_dir_override: Option<&str>,
+    ) -> Self {
+        let socket_dir = socket_dir_override
             .map(PathBuf::from)
-            .or_else(|_| env::var("XDG_RUNTIME_DIR").map(|xdg| PathBuf::from(xdg).join("biomeos")))
-            .unwrap_or_else(|_| {
-                // Try /run/user/{uid}/biomeos using $UID or $EUID env var
-                // This avoids unsafe libc calls while still finding the systemd runtime dir
+            .or_else(|| env::var(env_vars::SOCKET_DIR).ok().map(PathBuf::from))
+            .or_else(|| xdg_runtime_dir_override.map(|xdg| PathBuf::from(xdg).join("biomeos")))
+            .or_else(|| {
+                env::var("XDG_RUNTIME_DIR")
+                    .ok()
+                    .map(|xdg| PathBuf::from(xdg).join("biomeos"))
+            })
+            .unwrap_or_else(|| {
                 if let Ok(uid) = env::var("UID").or_else(|_| env::var("EUID")) {
                     let uid_path = PathBuf::from(format!("/run/user/{uid}/biomeos"));
                     if uid_path.parent().is_some_and(|p| p.exists()) {
@@ -387,13 +399,8 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
     fn test_runtime_config_from_env() {
-        env::remove_var("BIOMEOS_SOCKET_DIR");
-        let config = RuntimeConfig::from_env();
-
-        // DEEP DEBT: from_env() now uses XDG-aware resolution:
-        // $XDG_RUNTIME_DIR/biomeos, /run/user/$UID/biomeos, or /tmp fallback
+        let config = RuntimeConfig::from_env_with(Some("/tmp/biomeos"), None);
         let socket_path = config.neural_api_socket();
         let path_str = socket_path.to_string_lossy();
         assert!(

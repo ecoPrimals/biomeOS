@@ -43,6 +43,7 @@ async fn test_spore_directory_structure() {
         node_id: "tower_test".to_string(),
         spore_type: SporeType::Live,
         family_id: "test-family".to_string(),
+        plasmid_bin_dir: None,
     };
 
     // Note: This will fail without actual binaries, but tests the structure
@@ -67,6 +68,7 @@ async fn test_cold_spore_no_deploy_script() {
         node_id: "tower_cold".to_string(),
         spore_type: SporeType::Cold,
         family_id: "test-family".to_string(),
+        plasmid_bin_dir: None,
     };
 
     let _ = Spore::create(temp_dir.path().to_path_buf(), config).await;
@@ -79,13 +81,14 @@ async fn test_cold_spore_no_deploy_script() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_live_spore_has_deploy_script() {
-    setup_test_binaries().expect("Failed to setup test binaries");
+    let plasmid_bin = setup_test_binaries().expect("Failed to setup test binaries");
     let temp_dir = TempDir::new().unwrap();
     let config = SporeConfig {
         label: "live_test".to_string(),
         node_id: "tower_live".to_string(),
         spore_type: SporeType::Live,
         family_id: "test-family".to_string(),
+        plasmid_bin_dir: Some(plasmid_bin),
     };
 
     let _ = Spore::create(temp_dir.path().to_path_buf(), config).await;
@@ -96,15 +99,16 @@ async fn test_live_spore_has_deploy_script() {
     assert!(root_path.join("deploy.sh").exists());
 }
 
-#[tokio::test(flavor = "current_thread")]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_spore_manifest_creation() {
-    setup_test_binaries().expect("Failed to setup test binaries");
+    let plasmid_bin = setup_test_binaries().expect("Failed to setup test binaries");
     let temp_dir = TempDir::new().unwrap();
     let config = SporeConfig {
         label: "manifest_test".to_string(),
         node_id: "tower_manifest".to_string(),
         spore_type: SporeType::Live,
         family_id: "test-family".to_string(),
+        plasmid_bin_dir: Some(plasmid_bin),
     };
 
     let result = Spore::create(temp_dir.path().to_path_buf(), config).await;
@@ -156,15 +160,15 @@ async fn test_family_seed_generation() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_spore_readme_differentiation() {
-    setup_test_binaries().expect("Failed to setup test binaries");
+    let plasmid_bin = setup_test_binaries().expect("Failed to setup test binaries");
     let temp_dir = TempDir::new().unwrap();
 
-    // Create cold spore
     let cold_config = SporeConfig {
         label: "cold_readme".to_string(),
         node_id: "tower_cold".to_string(),
         spore_type: SporeType::Cold,
         family_id: "test-family".to_string(),
+        plasmid_bin_dir: Some(plasmid_bin.clone()),
     };
     let _ = Spore::create(temp_dir.path().to_path_buf(), cold_config).await;
     let cold_readme = std::fs::read_to_string(temp_dir.path().join("biomeOS/README.md")).unwrap();
@@ -172,12 +176,12 @@ async fn test_spore_readme_differentiation() {
     // Clean up
     std::fs::remove_dir_all(temp_dir.path().join("biomeOS")).unwrap();
 
-    // Create live spore
     let live_config = SporeConfig {
         label: "live_readme".to_string(),
         node_id: "tower_live".to_string(),
         spore_type: SporeType::Live,
         family_id: "test-family".to_string(),
+        plasmid_bin_dir: Some(plasmid_bin),
     };
     let _ = Spore::create(temp_dir.path().to_path_buf(), live_config).await;
     let live_readme = std::fs::read_to_string(temp_dir.path().join("biomeOS/README.md")).unwrap();
@@ -201,6 +205,7 @@ fn test_spore_config_serialization() {
         node_id: "tower_test".to_string(),
         spore_type: SporeType::Cold,
         family_id: "test-family".to_string(),
+        plasmid_bin_dir: None,
     };
 
     // Should be able to serialize to JSON
@@ -232,6 +237,7 @@ async fn test_secrets_directory_permissions() {
         node_id: "tower_test".to_string(),
         spore_type: SporeType::Live,
         family_id: "test-family".to_string(),
+        plasmid_bin_dir: None,
     };
 
     let _ = Spore::create(temp_dir.path().to_path_buf(), config).await;

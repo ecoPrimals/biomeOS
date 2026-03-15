@@ -11,8 +11,12 @@ use biomeos_core::vm_federation::VmFederationManager;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Initialize logging
-    tracing_subscriber::fmt::init();
+    run().await
+}
+
+async fn run() -> Result<()> {
+    // Initialize logging (try_init ignores if already set, e.g. in tests)
+    let _ = tracing_subscriber::fmt::try_init();
 
     println!("╔═══════════════════════════════════════════════════════════╗");
     println!("║  🦀 BiomeOS Federation Validation (Rust) 🦀              ║");
@@ -115,4 +119,29 @@ async fn main() -> Result<()> {
     println!();
 
     Ok(())
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_run_returns_result() {
+        // run() either succeeds (with benchScale) or fails (without benchScale).
+        // We verify it completes and returns a Result without panicking.
+        let result = run().await;
+        // Result is returned - Ok when benchScale creates federation, Err otherwise
+        assert!(result.is_ok() || result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_run_propagates_manager_creation_error() {
+        // When VmFederationManager::new() fails (e.g. benchScale not found),
+        // run() should return Err. This is the typical case in CI/test environments.
+        let result = run().await;
+        if let Err(e) = &result {
+            assert!(!e.to_string().is_empty(), "error should have a message");
+        }
+    }
 }

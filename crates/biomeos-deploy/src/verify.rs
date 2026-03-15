@@ -31,10 +31,10 @@ pub struct VerifyConfig {
 
 impl Default for VerifyConfig {
     fn default() -> Self {
-        // Use XDG-compliant path with fallback to /tmp
-        let serial_log = std::env::var("XDG_RUNTIME_DIR")
-            .map(|dir| PathBuf::from(format!("{dir}/biomeos/verify.log")))
-            .unwrap_or_else(|_| PathBuf::from("/tmp/biomeos-verify.log"));
+        // Use XDG-compliant path via SystemPaths
+        let serial_log = biomeos_types::SystemPaths::new_lazy()
+            .runtime_dir()
+            .join("verify.log");
 
         Self {
             serial_log,

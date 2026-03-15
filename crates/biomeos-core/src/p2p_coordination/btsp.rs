@@ -183,17 +183,9 @@ impl BtspCoordinator {
 
         // Apply appropriate recovery strategy
         match degradation_cause {
-            DegradationCause::SecurityKeyExpiring => {
-                tracing::info!("Recovery: Rotating security keys");
-                self.rotate_tunnel_keys(tunnel_id).await?;
-            }
             DegradationCause::TransportLatency => {
                 tracing::info!("Recovery: Optimizing transport path");
                 self.optimize_transport_path(tunnel_id).await?;
-            }
-            DegradationCause::PartialConnectivity => {
-                tracing::info!("Recovery: Re-establishing transport");
-                self.reestablish_transport(tunnel_id).await?;
             }
         }
 
@@ -222,24 +214,10 @@ impl BtspCoordinator {
         Ok(DegradationCause::TransportLatency)
     }
 
-    /// Rotate security keys for a tunnel
-    async fn rotate_tunnel_keys(&self, _tunnel_id: &str) -> Result<()> {
-        // In production: coordinate with BearDog to rotate keys
-        tracing::debug!("Key rotation completed");
-        Ok(())
-    }
-
     /// Optimize the transport path
     async fn optimize_transport_path(&self, _tunnel_id: &str) -> Result<()> {
         // In production: query alternative routes, select best path
         tracing::debug!("Transport path optimized");
-        Ok(())
-    }
-
-    /// Re-establish transport connection
-    async fn reestablish_transport(&self, _tunnel_id: &str) -> Result<()> {
-        // In production: tear down and rebuild transport layer
-        tracing::debug!("Transport re-established");
         Ok(())
     }
 
@@ -258,16 +236,10 @@ impl BtspCoordinator {
 }
 
 /// Reasons why a tunnel might be degraded.
-/// Domain model with planned state transitions; not all variants constructed yet.
-#[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
 enum DegradationCause {
-    /// Security keys are expiring soon
-    SecurityKeyExpiring,
     /// Transport experiencing high latency
     TransportLatency,
-    /// Partial connectivity issues
-    PartialConnectivity,
 }
 
 #[cfg(test)]

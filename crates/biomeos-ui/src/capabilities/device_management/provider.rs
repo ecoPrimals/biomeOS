@@ -405,3 +405,156 @@ impl DeviceManagementProvider {
         super::templates::builtin_templates()
     }
 }
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod tests {
+    use super::*;
+    use crate::capabilities::device_management::{templates, types};
+
+    #[test]
+    fn test_provider_cache_default() {
+        let cache = ProviderCache::default();
+        assert!(cache.devices.is_empty());
+        assert!(cache.primals.is_empty());
+        assert!(cache.templates.is_empty());
+        assert!(cache.last_update.is_none());
+    }
+
+    #[test]
+    fn test_provider_cache_debug() {
+        let cache = ProviderCache::default();
+        let s = format!("{cache:?}");
+        assert!(s.contains("ProviderCache"));
+    }
+
+    #[test]
+    fn test_provider_new() {
+        let provider = DeviceManagementProvider::new("/run/user/1000/test.sock");
+        assert_eq!(provider.socket_path, "/run/user/1000/test.sock");
+    }
+
+    #[test]
+    fn test_get_builtin_templates() {
+        let provider = DeviceManagementProvider::new("/tmp/test.sock");
+        let templates = provider.get_builtin_templates();
+        assert_eq!(templates.len(), 2);
+        assert!(templates.iter().any(|t| t.id == "tower"));
+        assert!(templates.iter().any(|t| t.id == "node"));
+    }
+
+    #[tokio::test]
+    async fn test_get_devices() {
+        let provider = DeviceManagementProvider::new("/tmp/test.sock");
+        let result = provider.get_devices().await;
+        assert!(result.is_ok());
+        let devices = result.unwrap();
+        assert!(devices.iter().all(|d| !d.id.is_empty()));
+    }
+
+    #[tokio::test]
+    async fn test_get_devices_updates_cache() {
+        let provider = DeviceManagementProvider::new("/tmp/test.sock");
+        let _ = provider.get_devices().await.unwrap();
+        let cache = provider.cache.read().await;
+        assert!(cache.last_update.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_get_primals() {
+        let provider = DeviceManagementProvider::new("/tmp/test.sock");
+        let result = provider.get_primals().await;
+        assert!(result.is_ok());
+        let primals = result.unwrap();
+        assert!(primals.iter().any(|p| p.id == "biomeos"));
+    }
+
+    #[tokio::test]
+    async fn test_get_niche_templates_fallback_to_builtin() {
+        let provider = DeviceManagementProvider::new("/tmp/test.sock");
+        let result = provider.get_niche_templates().await;
+        assert!(result.is_ok());
+        let templates = result.unwrap();
+        assert!(!templates.is_empty());
+        assert!(templates.iter().any(|t| t.id == "tower"));
+    }
+
+    #[tokio::test]
+    async fn test_validate_niche_no_gpu_required() {
+        let provider = DeviceManagementProvider::new("/tmp/test.sock");
+        let template = templates::tower_template();
+        let result = provider.validate_niche(&template).await;
+        assert!(result.is_ok());
+        let vr = result.unwrap();
+        assert!(!vr.valid);
+        assert!(!vr.errors.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_validate_niche_gpu_required_node_template() {
+        let provider = DeviceManagementProvider::new("/tmp/test.sock");
+        let template = templates::node_template();
+        assert!(template.estimated_resources.gpu_required);
+        let result = provider.validate_niche(&template).await;
+        assert!(result.is_ok());
+        let vr = result.unwrap();
+        assert!(!vr.valid);
+        assert!(!vr.errors.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_validate_niche_with_optional_primals() {
+        let provider = DeviceManagementProvider::new("/tmp/test.sock");
+        let mut template = templates::tower_template();
+        template.optional_primals.push(types::PrimalRole {
+            role: "optional_compute".to_string(),
+            capabilities: vec!["gpu".to_string()],
+            min_health: 0.5,
+            metadata: serde_json::json!({}),
+        });
+        let result = provider.validate_niche(&template).await;
+        assert!(result.is_ok());
+        let vr = result.unwrap();
+        assert!(!vr.valid);
+        if !vr.warnings.is_empty() {
+            assert!(vr.warnings.iter().any(|w| w.contains("optional")));
+        }
+    }
+
+    #[tokio::test]
+    async fn test_deploy_niche_no_orchestration() {
+        let provider = DeviceManagementProvider::new("/tmp/test.sock");
+        let result = provider
+            .deploy_niche(serde_json::json!({"template": "tower"}))
+            .await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("orchestration") || err.to_string().contains("No"));
+    }
+
+    #[tokio::test]
+    async fn test_assign_device_no_registry() {
+        let provider = DeviceManagementProvider::new("/tmp/test.sock");
+        let result = provider
+            .assign_device("gpu-0".to_string(), "toadstool-1".to_string())
+            .await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("Songbird") || err.to_string().contains("available"));
+    }
+
+    #[tokio::test]
+    async fn test_start_continues_without_registry() {
+        let provider = DeviceManagementProvider::new("/tmp/test.sock");
+        let result = provider.start().await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_validation_result_structure() {
+        let provider = DeviceManagementProvider::new("/tmp/test.sock");
+        let template = templates::tower_template();
+        let vr = provider.validate_niche(&template).await.unwrap();
+        assert!(vr.errors.iter().all(|e| !e.is_empty()));
+    }
+}

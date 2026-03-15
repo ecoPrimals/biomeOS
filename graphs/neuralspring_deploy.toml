@@ -1,0 +1,177 @@
+# =============================================================================
+# neuralSpring Deploy Graph
+# =============================================================================
+#
+# Deploys neuralSpring as a NUCLEUS science primal atop Node Atomic:
+#   Tower (BearDog + Songbird) → ToadStool (GPU compute) → neuralSpring (ML)
+#
+# neuralSpring registers learning/surrogate capabilities covering:
+#   - Spectral analysis (Hessian eigenvalues, Anderson localization)
+#   - ML surrogates (isomorphic learning, physics-informed)
+#   - Neural architecture search
+#   - Reservoir computing (ESN training)
+#   - Cross-spring model serving
+#
+# Requires: Tower Atomic (BearDog + Songbird), ToadStool (GPU compute)
+# Optional: NestGate (model checkpoints / data caching)
+#
+# Usage:
+#   biomeos deploy graphs/neuralspring_deploy.toml
+#
+# =============================================================================
+
+[graph]
+id = "neuralspring_deploy"
+description = "neuralSpring ML surrogates primal atop Node Atomic"
+coordination = "Sequential"
+
+# =============================================================================
+# Phase 1: Tower Atomic (security + network foundation)
+# =============================================================================
+
+[[nodes]]
+id = "germinate_beardog"
+output = "beardog_genesis"
+capabilities = ["crypto", "tls_crypto", "genetic", "security"]
+
+[nodes.primal]
+by_capability = "security"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[nodes.capabilities_provided]
+"crypto.generate_keypair" = "crypto.x25519_generate_ephemeral"
+"crypto.encrypt" = "crypto.chacha20_poly1305_encrypt"
+"crypto.hash" = "crypto.blake3_hash"
+"crypto.sign" = "crypto.sign_ed25519"
+
+[[nodes]]
+id = "germinate_songbird"
+depends_on = ["germinate_beardog"]
+output = "songbird_genesis"
+capabilities = ["http", "discovery", "secure_http", "tls"]
+
+[nodes.primal]
+by_capability = "discovery"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+
+[nodes.operation.environment]
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
+SONGBIRD_SECURITY_PROVIDER = "beardog"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[nodes.capabilities_provided]
+"network.http_request" = "http.request"
+"network.tls_connect" = "tls.connect"
+"discovery.announce" = "announce_capabilities"
+"discovery.query" = "discover_by_capability"
+
+# =============================================================================
+# Phase 2: ToadStool (GPU/CPU compute — required for ML workloads)
+# =============================================================================
+
+[[nodes]]
+id = "germinate_toadstool"
+depends_on = ["germinate_beardog", "germinate_songbird"]
+output = "toadstool_genesis"
+capabilities = ["compute", "workload"]
+
+[nodes.primal]
+by_capability = "compute"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+
+[nodes.operation.environment]
+BEARDOG_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/beardog-${FAMILY_ID}.sock"
+SONGBIRD_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/songbird-${FAMILY_ID}.sock"
+
+[nodes.constraints]
+timeout_ms = 45000
+
+[nodes.capabilities_provided]
+"compute.health" = "toadstool.health"
+"compute.execute" = "toadstool.execute"
+"compute.capabilities" = "toadstool.query_capabilities"
+
+# =============================================================================
+# Phase 3: neuralSpring (ML surrogates primal)
+# =============================================================================
+
+[[nodes]]
+id = "germinate_neuralspring"
+depends_on = ["germinate_beardog", "germinate_songbird", "germinate_toadstool"]
+output = "neuralspring_genesis"
+capabilities = ["learning", "spectral", "anderson", "hessian", "surrogate", "reservoir"]
+
+[nodes.primal]
+by_capability = "learning"
+
+[nodes.operation]
+name = "start"
+
+[nodes.operation.params]
+mode = "server"
+family_id = "${FAMILY_ID}"
+
+[nodes.operation.environment]
+BIOMEOS_SOCKET_DIR = "${XDG_RUNTIME_DIR}/biomeos"
+FAMILY_ID = "${FAMILY_ID}"
+SONGBIRD_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/songbird-${FAMILY_ID}.sock"
+TOADSTOOL_SOCKET = "${XDG_RUNTIME_DIR}/biomeos/toadstool-${FAMILY_ID}.sock"
+
+[nodes.constraints]
+timeout_ms = 30000
+
+[nodes.capabilities_provided]
+"learning.spectral" = "learning.spectral_analysis"
+"learning.anderson" = "learning.anderson_localization"
+"learning.hessian" = "learning.hessian_eigenvalues"
+"learning.surrogate" = "learning.train_surrogate"
+"learning.reservoir" = "learning.esn_train"
+"learning.predict" = "learning.model_predict"
+"brain.observe" = "brain.observe"
+"brain.attention" = "brain.attention"
+"metrics.snapshot" = "metrics.snapshot"
+
+# =============================================================================
+# Phase 4: Validate neuralSpring Atomic
+# =============================================================================
+
+[[nodes]]
+id = "validate_neuralspring_atomic"
+depends_on = ["germinate_beardog", "germinate_songbird", "germinate_toadstool", "germinate_neuralspring"]
+output = "neuralspring_validated"
+
+[nodes.operation]
+name = "health_check"
+
+[nodes.operation.params]
+check_beardog = true
+check_songbird = true
+check_toadstool = true
+check_neuralspring = true
+timeout_seconds = 15
+
+[nodes.constraints]
+timeout_ms = 20000

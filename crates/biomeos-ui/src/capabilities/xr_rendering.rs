@@ -329,4 +329,33 @@ mod tests {
         let _ = adapter.begin_session(&client).await;
         let _ = adapter.submit_frame(&client, 1, 16666).await;
     }
+
+    #[tokio::test]
+    async fn test_negotiate_with_nonexistent_socket_returns_err() {
+        let adapter = StereoRenderAdapter::with_defaults();
+        let client =
+            crate::primal_client::PrimalClient::with_socket("petaltongue", "/nonexistent.sock");
+        let result = adapter.negotiate(&client).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_begin_session_with_nonexistent_socket_returns_err() {
+        let mut adapter = StereoRenderAdapter::with_defaults();
+        let client =
+            crate::primal_client::PrimalClient::with_socket("petaltongue", "/nonexistent.sock");
+        let result = adapter.begin_session(&client).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_end_session_when_active_but_call_fails() {
+        let mut adapter = StereoRenderAdapter::with_defaults();
+        adapter.session_active = true;
+        let client =
+            crate::primal_client::PrimalClient::with_socket("petaltongue", "/nonexistent.sock");
+        let result = adapter.end_session(&client).await;
+        assert!(result.is_err());
+        assert!(adapter.is_session_active());
+    }
 }

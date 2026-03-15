@@ -9,7 +9,7 @@ repository = "https://github.com/your-org/biomeos"
 
 [dependencies]
 # Unified types from biomeos ecosystem
-biomeos-types = { path = "../biomeos-types" }
+biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }

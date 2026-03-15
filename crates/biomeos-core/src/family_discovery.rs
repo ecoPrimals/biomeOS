@@ -71,6 +71,10 @@ pub struct FamilyDiscoveryConfig {
     pub allow_default: bool,
     /// Default family ID (only used if allow_default is true)
     pub default_family: String,
+    /// Override for FAMILY_ID env var (when Some, skips env lookup)
+    pub family_id_override: Option<String>,
+    /// Override for BIOMEOS_FAMILY_ID env var (when Some, skips env lookup)
+    pub biomeos_family_id_override: Option<String>,
 }
 
 impl Default for FamilyDiscoveryConfig {
@@ -101,6 +105,8 @@ impl Default for FamilyDiscoveryConfig {
             seed_file_paths: seed_paths,
             allow_default: true, // Allow default in dev
             default_family: "default".to_string(),
+            family_id_override: None,
+            biomeos_family_id_override: None,
         }
     }
 }
@@ -130,8 +136,12 @@ pub fn discover_family_with_config(config: &FamilyDiscoveryConfig) -> Option<Dis
         }
     }
 
-    // 2. Check FAMILY_ID env var (explicit override — must be seed-derived, not a tag)
-    if let Ok(family_id) = std::env::var("FAMILY_ID") {
+    // 2. Check FAMILY_ID (config override or env var)
+    let family_id = config
+        .family_id_override
+        .clone()
+        .or_else(|| std::env::var("FAMILY_ID").ok());
+    if let Some(family_id) = family_id {
         if !family_id.is_empty() {
             if family_id == "nat0" {
                 warn!("⚠️ FAMILY_ID='nat0' is a deprecated prototype tag — ignoring. Derive from .family.seed instead.");
@@ -147,8 +157,12 @@ pub fn discover_family_with_config(config: &FamilyDiscoveryConfig) -> Option<Dis
         }
     }
 
-    // 3. Check BIOMEOS_FAMILY_ID env var
-    if let Ok(family_id) = std::env::var("BIOMEOS_FAMILY_ID") {
+    // 3. Check BIOMEOS_FAMILY_ID (config override or env var)
+    let family_id = config
+        .biomeos_family_id_override
+        .clone()
+        .or_else(|| std::env::var("BIOMEOS_FAMILY_ID").ok());
+    if let Some(family_id) = family_id {
         if !family_id.is_empty() && family_id != "nat0" {
             info!("🧬 Family ID from BIOMEOS_FAMILY_ID env: {}", family_id);
             return Some(DiscoveredFamily {
@@ -236,11 +250,42 @@ pub fn get_family_id() -> String {
         .unwrap_or_else(|| "default".to_string())
 }
 
+/// Get family ID with custom configuration
+pub fn get_family_id_with_config(config: &FamilyDiscoveryConfig) -> String {
+    discover_family_with_config(config)
+        .map(|f| f.id)
+        .unwrap_or_else(|| "default".to_string())
+}
+
 /// Get family ID from environment or default
 pub fn get_family_id_from_env() -> String {
-    std::env::var("FAMILY_ID")
-        .or_else(|_| std::env::var("BIOMEOS_FAMILY_ID"))
-        .unwrap_or_else(|_| "default".to_string())
+    get_family_id_from_env_with(None, None, false)
+}
+
+/// Resolve family ID with explicit overrides instead of reading env vars.
+pub fn get_family_id_from_env_with(
+    family_id: Option<&str>,
+    biomeos_family_id: Option<&str>,
+    skip_env: bool,
+) -> String {
+    family_id
+        .map(String::from)
+        .or_else(|| biomeos_family_id.map(String::from))
+        .or_else(|| {
+            if skip_env {
+                None
+            } else {
+                std::env::var("FAMILY_ID").ok()
+            }
+        })
+        .or_else(|| {
+            if skip_env {
+                None
+            } else {
+                std::env::var("BIOMEOS_FAMILY_ID").ok()
+            }
+        })
+        .unwrap_or_else(|| "default".to_string())
 }
 
 #[cfg(test)]
@@ -250,29 +295,28 @@ mod tests {
     use std::io::Write;
     use tempfile::TempDir;
 
-    // NOTE: This test modifies global environment state and may be flaky in parallel execution.
-    // Consider using a dedicated test harness with sequential execution for environment tests.
     #[test]
-    #[ignore = "Env var tests not thread-safe — use cargo test -- --ignored --test-threads=1"]
     fn test_discover_from_env() {
-        std::env::set_var("FAMILY_ID", "test_family_123");
-        let result = discover_family();
+        let config = FamilyDiscoveryConfig {
+            seed_file_paths: vec![],
+            allow_default: false,
+            default_family: "default".to_string(),
+            family_id_override: Some("test_family_123".to_string()),
+            biomeos_family_id_override: Some("".to_string()),
+        };
+        let result = discover_family_with_config(&config);
         assert!(result.is_some());
         let family = result.unwrap();
         assert_eq!(family.id, "test_family_123");
         assert_eq!(family.source, FamilySource::FamilyIdEnv);
-        std::env::remove_var("FAMILY_ID");
     }
 
     #[test]
-    #[serial_test::serial]
     fn test_discover_from_seed_file() {
         let temp_dir = TempDir::new().unwrap();
         let seed_path = temp_dir.path().join(".family.seed");
 
-        // Create 64-byte seed
         let mut seed_data = vec![0u8; 64];
-        // Genesis seed starts with 0xCF7E8729...
         seed_data[0..8].copy_from_slice(&[0xCF, 0x7E, 0x87, 0x29, 0xDC, 0x4F, 0xF0, 0x5F]);
 
         let mut file = std::fs::File::create(&seed_path).unwrap();
@@ -282,11 +326,9 @@ mod tests {
             seed_file_paths: vec![seed_path.clone()],
             allow_default: false,
             default_family: "default".to_string(),
+            family_id_override: Some("".to_string()),
+            biomeos_family_id_override: Some("".to_string()),
         };
-
-        // Clear env vars to ensure seed file is used
-        std::env::remove_var("FAMILY_ID");
-        std::env::remove_var("BIOMEOS_FAMILY_ID");
 
         let result = discover_family_with_config(&config);
         assert!(result.is_some());
@@ -297,15 +339,16 @@ mod tests {
     }
 
     #[test]
-    #[serial_test::serial]
     fn test_get_family_id_default() {
-        std::env::remove_var("FAMILY_ID");
-        std::env::remove_var("BIOMEOS_FAMILY_ID");
-
-        // Will fall back to default
-        let family_id = get_family_id();
-        // Should be either from seed file or "default"
-        assert!(!family_id.is_empty());
+        let config = FamilyDiscoveryConfig {
+            seed_file_paths: vec![],
+            allow_default: true,
+            default_family: "default".to_string(),
+            family_id_override: Some("".to_string()),
+            biomeos_family_id_override: Some("".to_string()),
+        };
+        let family_id = get_family_id_with_config(&config);
+        assert_eq!(family_id, "default");
     }
 
     #[test]
@@ -324,42 +367,34 @@ mod tests {
     }
 
     #[test]
-    #[serial_test::serial]
     fn test_read_family_seed_too_short() {
         let temp_dir = TempDir::new().unwrap();
         let seed_path = temp_dir.path().join(".family.seed");
         let mut file = std::fs::File::create(&seed_path).unwrap();
-        file.write_all(&[0u8; 16]).unwrap(); // Only 16 bytes
-
-        std::env::remove_var("FAMILY_ID");
-        std::env::remove_var("BIOMEOS_FAMILY_ID");
+        file.write_all(&[0u8; 16]).unwrap();
 
         let config = FamilyDiscoveryConfig {
             seed_file_paths: vec![seed_path],
             allow_default: false,
             default_family: "default".to_string(),
+            family_id_override: Some("".to_string()),
+            biomeos_family_id_override: Some("".to_string()),
         };
         let result = discover_family_with_config(&config);
         assert!(result.is_none());
     }
 
     #[test]
-    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
     fn test_get_family_id_from_env() {
-        std::env::set_var("FAMILY_ID", "env_family_123");
-        let id = get_family_id_from_env();
-        assert_eq!(id, "env_family_123");
-        std::env::remove_var("FAMILY_ID");
-
-        std::env::set_var("BIOMEOS_FAMILY_ID", "biomeos_family");
-        let id = get_family_id_from_env();
-        assert_eq!(id, "biomeos_family");
-        std::env::remove_var("BIOMEOS_FAMILY_ID");
-
-        std::env::remove_var("FAMILY_ID");
-        std::env::remove_var("BIOMEOS_FAMILY_ID");
-        let id = get_family_id_from_env();
-        assert_eq!(id, "default");
+        assert_eq!(
+            get_family_id_from_env_with(Some("env_family_123"), None, false),
+            "env_family_123"
+        );
+        assert_eq!(
+            get_family_id_from_env_with(None, Some("biomeos_family"), false),
+            "biomeos_family"
+        );
+        assert_eq!(get_family_id_from_env_with(None, None, true), "default");
     }
 
     #[test]
@@ -383,35 +418,29 @@ mod tests {
     }
 
     #[test]
-    #[serial_test::serial]
     fn test_discover_biomeos_env_takes_precedence_over_default() {
-        std::env::set_var("BIOMEOS_FAMILY_ID", "biomeos_test_123");
-        std::env::remove_var("FAMILY_ID");
-
         let config = FamilyDiscoveryConfig {
             seed_file_paths: vec![],
             allow_default: true,
             default_family: "default".to_string(),
+            family_id_override: Some("".to_string()),
+            biomeos_family_id_override: Some("biomeos_test_123".to_string()),
         };
         let result = discover_family_with_config(&config);
-        std::env::remove_var("BIOMEOS_FAMILY_ID");
-
         assert!(result.is_some());
         assert_eq!(result.unwrap().id, "biomeos_test_123");
     }
 
     #[test]
-    #[serial_test::serial]
     fn test_nat0_deprecated_ignored() {
-        std::env::set_var("FAMILY_ID", "nat0");
         let config = FamilyDiscoveryConfig {
             seed_file_paths: vec![],
             allow_default: true,
             default_family: "fallback".to_string(),
+            family_id_override: Some("nat0".to_string()),
+            biomeos_family_id_override: Some("".to_string()),
         };
         let result = discover_family_with_config(&config);
-        std::env::remove_var("FAMILY_ID");
-        // nat0 is ignored, should fall through to default
         assert!(result.is_some());
         assert_eq!(result.unwrap().id, "fallback");
     }

@@ -39,16 +39,21 @@ pub async fn discover_primal_binary(
     primal_name: &str,
     context: &ExecutionContext,
 ) -> Result<PathBuf> {
-    let base_dirs = vec![
-        context
-            .env()
-            .get("BIOMEOS_PLASMID_BIN_DIR")
-            .cloned()
-            .map(PathBuf::from),
-        Some(PathBuf::from("./plasmidBin")),
-        Some(PathBuf::from("../plasmidBin")),
-        Some(PathBuf::from("../../plasmidBin")),
-    ];
+    let explicit_dir = context
+        .env()
+        .get("BIOMEOS_PLASMID_BIN_DIR")
+        .cloned()
+        .map(PathBuf::from);
+
+    let base_dirs: Vec<Option<PathBuf>> = if explicit_dir.is_some() {
+        vec![explicit_dir]
+    } else {
+        vec![
+            Some(PathBuf::from("./plasmidBin")),
+            Some(PathBuf::from("../plasmidBin")),
+            Some(PathBuf::from("../../plasmidBin")),
+        ]
+    };
 
     // Auto-detect architecture
     let arch = std::env::consts::ARCH;
@@ -341,15 +346,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_discover_primal_binary_empty_dir() {
-        static CWD_LOCK: std::sync::OnceLock<tokio::sync::Mutex<()>> = std::sync::OnceLock::new();
-        fn cwd_lock() -> &'static tokio::sync::Mutex<()> {
-            CWD_LOCK.get_or_init(|| tokio::sync::Mutex::new(()))
-        }
-
-        let _guard = cwd_lock().lock().await;
         let temp = tempfile::tempdir().expect("temp dir");
-        let orig = std::env::current_dir().expect("cwd");
-        std::env::set_current_dir(temp.path()).expect("chdir");
 
         let mut env = HashMap::new();
         env.insert(
@@ -359,8 +356,6 @@ mod tests {
         let ctx = ExecutionContext::new(env);
 
         let result = discover_primal_binary("beardog", &ctx).await;
-
-        std::env::set_current_dir(&orig).expect("restore cwd");
 
         let err = result.expect_err("Empty dir should not find beardog");
         assert!(err.to_string().contains("Binary not found"));

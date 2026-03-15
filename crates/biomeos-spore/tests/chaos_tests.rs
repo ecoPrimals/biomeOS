@@ -4,8 +4,6 @@
 //! Chaos testing - Filesystem failures, permission issues, etc.
 //!
 //! These tests simulate real-world failure scenarios using isolated fixtures.
-//!
-//! NOTE: Tests use `#[serial]` from serial_test to avoid working directory races.
 
 use biomeos_spore::test_support::setup_test_binaries_at;
 use biomeos_spore::{Spore, SporeConfig, SporeType};
@@ -20,13 +18,11 @@ fn setup_isolated_test() -> TempDir {
 }
 
 /// Test behavior when destination filesystem is read-only
-#[tokio::test(flavor = "current_thread")]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[cfg(unix)]
-#[serial_test::serial]
 async fn test_readonly_filesystem() {
     let temp_dir = setup_isolated_test();
 
-    // Create mount point and make it read-only
     let mount_point = temp_dir.path().join("usb");
     fs::create_dir_all(&mount_point).unwrap();
 
@@ -39,6 +35,7 @@ async fn test_readonly_filesystem() {
         node_id: "test-node".to_string(),
         spore_type: SporeType::Live,
         family_id: "test-family".to_string(),
+        plasmid_bin_dir: Some(temp_dir.path().join("plasmidBin")),
     };
 
     let result = Spore::create(mount_point.clone(), config).await;
@@ -63,8 +60,7 @@ async fn test_readonly_filesystem() {
 }
 
 /// Test behavior when disk space is insufficient (simulated)
-#[tokio::test(flavor = "current_thread")]
-#[serial_test::serial]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_disk_full_simulation() {
     let temp_dir = TempDir::new().unwrap();
 
@@ -102,9 +98,6 @@ async fn test_disk_full_simulation() {
         }
     }
 
-    // CRITICAL: Set working directory right before Spore::create (requires #[serial])
-    std::env::set_current_dir(temp_dir.path()).unwrap();
-
     let mount_point = temp_dir.path().join("usb");
     fs::create_dir_all(&mount_point).unwrap();
 
@@ -113,6 +106,7 @@ async fn test_disk_full_simulation() {
         node_id: "test-node".to_string(),
         spore_type: SporeType::Live,
         family_id: "test-family".to_string(),
+        plasmid_bin_dir: Some(temp_dir.path().join("plasmidBin")),
     };
 
     let result = Spore::create(mount_point, config).await;
@@ -124,8 +118,7 @@ async fn test_disk_full_simulation() {
 }
 
 /// Test behavior when binaries are corrupt/invalid
-#[tokio::test(flavor = "current_thread")]
-#[serial_test::serial]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_corrupt_binaries() {
     let temp_dir = TempDir::new().unwrap();
 
@@ -143,9 +136,6 @@ async fn test_corrupt_binaries() {
         fs::write(primals_dir.join(primal), corrupt_data).unwrap();
     }
 
-    // CRITICAL: Set working directory right before Spore::create (requires #[serial])
-    std::env::set_current_dir(temp_dir.path()).unwrap();
-
     let mount_point = temp_dir.path().join("usb");
     fs::create_dir_all(&mount_point).unwrap();
 
@@ -154,6 +144,7 @@ async fn test_corrupt_binaries() {
         node_id: "test-node".to_string(),
         spore_type: SporeType::Live,
         family_id: "test-family".to_string(),
+        plasmid_bin_dir: Some(temp_dir.path().join("plasmidBin")),
     };
 
     let result = Spore::create(mount_point.clone(), config).await;
@@ -173,8 +164,7 @@ async fn test_corrupt_binaries() {
 }
 
 /// Test behavior with FAT32 filesystem limitations
-#[tokio::test(flavor = "current_thread")]
-#[serial_test::serial]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_fat32_limitations() {
     let temp_dir = setup_isolated_test();
 
@@ -186,6 +176,7 @@ async fn test_fat32_limitations() {
         node_id: "test-node".to_string(),
         spore_type: SporeType::Live,
         family_id: "test-family".to_string(),
+        plasmid_bin_dir: Some(temp_dir.path().join("plasmidBin")),
     };
 
     let result = Spore::create(mount_point.clone(), config).await;
@@ -203,13 +194,10 @@ async fn test_fat32_limitations() {
 }
 
 /// Test concurrent spore creation (race conditions)
-/// Note: Uses sequential execution within a single test
-#[tokio::test(flavor = "current_thread")]
-#[serial_test::serial]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_concurrent_spore_creation() {
     let temp_dir = setup_isolated_test();
 
-    // Create 3 spores SEQUENTIALLY to avoid working directory races
     for i in 1..=3 {
         let mount_point = temp_dir.path().join(format!("usb{i}"));
         fs::create_dir_all(&mount_point).unwrap();
@@ -219,6 +207,7 @@ async fn test_concurrent_spore_creation() {
             node_id: format!("node{i}"),
             spore_type: SporeType::Live,
             family_id: "test-family".to_string(),
+            plasmid_bin_dir: Some(temp_dir.path().join("plasmidBin")),
         };
 
         let result = Spore::create(mount_point.clone(), config).await;

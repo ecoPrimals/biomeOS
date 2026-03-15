@@ -8,7 +8,7 @@ description = "Universal SDK for creating biomeOS Primals"
 
 [dependencies]
 # biomeOS unified types
-biomeos-types = { path = "../biomeos-types" }
+biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
 
 # Core async and serialization
 anyhow = { workspace = true }
@@ -24,6 +24,9 @@ tokio = { workspace = true }
 
 # tarpc for high-performance binary RPC (protocol escalation)
 tarpc = { workspace = true }
+
+# Error handling
+thiserror = "1.0"
 
 # Tracing
 tracing = { workspace = true }

@@ -185,7 +185,18 @@ impl ModelCache {
 
     /// Register a model with the HuggingFace cache path
     pub async fn register_huggingface_model(&mut self, model_id: &str) -> Result<PathBuf> {
-        let hf_cache = Self::find_huggingface_model(model_id)?;
+        let hf_hub = Self::huggingface_hub_dir()?;
+        self.register_huggingface_model_from_hub(model_id, &hf_hub)
+            .await
+    }
+
+    /// Register a model from a specific HuggingFace hub directory
+    pub async fn register_huggingface_model_from_hub(
+        &mut self,
+        model_id: &str,
+        hf_hub: &Path,
+    ) -> Result<PathBuf> {
+        let hf_cache = hf_hub.join(format!("models--{}", model_id.replace('/', "--")));
 
         if !hf_cache.exists() {
             anyhow::bail!(
@@ -206,13 +217,18 @@ impl ModelCache {
     /// Import all HuggingFace models from the default cache
     pub async fn import_huggingface_cache(&mut self) -> Result<Vec<String>> {
         let hf_hub = Self::huggingface_hub_dir()?;
+        self.import_huggingface_cache_from(&hf_hub).await
+    }
+
+    /// Import all HuggingFace models from a specific hub directory
+    pub async fn import_huggingface_cache_from(&mut self, hf_hub: &Path) -> Result<Vec<String>> {
         if !hf_hub.exists() {
             return Ok(vec![]);
         }
 
         let mut imported = Vec::new();
 
-        let mut entries = fs::read_dir(&hf_hub).await?;
+        let mut entries = fs::read_dir(hf_hub).await?;
         while let Some(entry) = entries.next_entry().await? {
             let name = entry.file_name().to_string_lossy().to_string();
             if name.starts_with("models--") {
@@ -222,7 +238,10 @@ impl ModelCache {
                     .replace("--", "/");
 
                 if !self.has_model(&model_id) {
-                    match self.register_huggingface_model(&model_id).await {
+                    match self
+                        .register_huggingface_model_from_hub(&model_id, hf_hub)
+                        .await
+                    {
                         Ok(_) => {
                             imported.push(model_id);
                         }
@@ -454,12 +473,6 @@ impl ModelCache {
             }
         }
         "huggingface".to_string()
-    }
-
-    fn find_huggingface_model(model_id: &str) -> Result<PathBuf> {
-        let hf_hub = Self::huggingface_hub_dir()?;
-        let dir_name = format!("models--{}", model_id.replace('/', "--"));
-        Ok(hf_hub.join(dir_name))
     }
 
     fn huggingface_hub_dir() -> Result<PathBuf> {

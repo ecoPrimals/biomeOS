@@ -25,11 +25,29 @@ pub struct SporeConfig {
     /// Type of spore (Cold = storage, Live = deployable)
     #[serde(default)]
     pub spore_type: SporeType,
+
+    /// Explicit plasmidBin directory. When `None`, resolves `./plasmidBin` relative to CWD.
+    #[serde(skip)]
+    pub plasmid_bin_dir: Option<std::path::PathBuf>,
 }
 
 /// Returns the default family ID from `FAMILY_ID` env var or `"default"`
 pub fn default_family_id() -> String {
-    std::env::var("FAMILY_ID").unwrap_or_else(|_| "default".to_string())
+    default_family_id_with(None, false)
+}
+
+/// Resolve default family ID with explicit overrides.
+pub fn default_family_id_with(env_value: Option<&str>, skip_env: bool) -> String {
+    env_value
+        .map(String::from)
+        .or_else(|| {
+            if skip_env {
+                None
+            } else {
+                std::env::var("FAMILY_ID").ok()
+            }
+        })
+        .unwrap_or_else(|| "default".to_string())
 }
 
 #[cfg(test)]
@@ -44,6 +62,7 @@ mod tests {
             node_id: "tower1".to_string(),
             family_id: "cf7e8729dc4ff05f".to_string(),
             spore_type: SporeType::Live,
+            plasmid_bin_dir: None,
         };
         let json = serde_json::to_string(&config).unwrap();
         let restored: SporeConfig = serde_json::from_str(&json).unwrap();
@@ -54,14 +73,12 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "Env var test - run with --test-threads=1"]
     fn test_spore_config_default_family_id() {
-        std::env::remove_var("FAMILY_ID");
-        assert_eq!(default_family_id(), "default");
-
-        std::env::set_var("FAMILY_ID", "custom_family");
-        assert_eq!(default_family_id(), "custom_family");
-        std::env::remove_var("FAMILY_ID");
+        assert_eq!(default_family_id_with(None, true), "default");
+        assert_eq!(
+            default_family_id_with(Some("custom_family"), false),
+            "custom_family"
+        );
     }
 
     #[test]

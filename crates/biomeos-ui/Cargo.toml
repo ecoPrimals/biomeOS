@@ -8,8 +8,8 @@ license = "AGPL-3.0-only"
 
 [dependencies]
 # Core biomeOS
-biomeos-core = { path = "../biomeos-core" }
-biomeos-types = { path = "../biomeos-types" }
+biomeos-core = { path = "../biomeos-core", version = "0.1.0" }
+biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
 
 # Async runtime
 tokio = { version = "1", features = ["full"] }

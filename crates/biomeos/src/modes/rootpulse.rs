@@ -12,8 +12,8 @@
 
 use anyhow::{Context, Result};
 use biomeos_types::primal_names::{BEARDOG, NESTGATE, PROVENANCE_PRIMALS};
-use biomeos_types::{JsonRpcRequest, SystemPaths};
 use biomeos_types::CapabilityTaxonomy;
+use biomeos_types::{JsonRpcRequest, SystemPaths};
 use std::path::PathBuf;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
@@ -255,7 +255,42 @@ async fn send_jsonrpc(
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
     use super::*;
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+    use tokio::net::UnixListener;
+    use tokio::sync::oneshot;
+
+    /// Spawn a mock Neural API server that responds with the given JSON-RPC response.
+    async fn spawn_mock_neural_api(
+        response: serde_json::Value,
+    ) -> (PathBuf, tokio::task::JoinHandle<()>) {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let socket_path = temp.path().join("neural-api.sock");
+        let path_buf = socket_path.to_path_buf();
+        let path_for_listener = path_buf.clone();
+        let (ready_tx, ready_rx) = oneshot::channel();
+
+        let handle = tokio::spawn(async move {
+            let _temp = temp;
+            let listener = UnixListener::bind(&path_for_listener).expect("bind");
+            let _ = ready_tx.send(());
+            if let Ok((stream, _)) = listener.accept().await {
+                let (reader, mut writer) = stream.into_split();
+                let mut reader = BufReader::new(reader);
+                let mut line = String::new();
+                if reader.read_line(&mut line).await.is_ok() {
+                    let response_str = serde_json::to_string(&response).expect("serialize") + "\n";
+                    let _ = writer.write_all(response_str.as_bytes()).await;
+                    let _ = writer.flush().await;
+                }
+            }
+        });
+
+        ready_rx.await.expect("server ready");
+        (path_buf, handle)
+    }
 
     #[tokio::test]
     async fn test_commit_dry_run() {
@@ -381,5 +416,93 @@ mod tests {
         assert_eq!(request["method"], "graph.execute");
         assert_eq!(request["params"]["graph_id"], "rootpulse_commit");
         assert_eq!(request["params"]["params"]["SESSION_ID"], "session-1");
+    }
+
+    #[tokio::test]
+    async fn test_dispatch_commit_dry_run() {
+        let result = dispatch(RootPulseCommand::Commit {
+            session_id: "sess-1".to_string(),
+            agent_did: "did:key:z6MkTest".to_string(),
+            socket: None,
+            family_id: Some("test-family".to_string()),
+            dry_run: true,
+        })
+        .await;
+        result.expect("commit dry run should succeed");
+    }
+
+    #[tokio::test]
+    async fn test_dispatch_status_with_missing_socket() {
+        // run_status catches send_jsonrpc errors and logs "unavailable"; returns Ok
+        let result = dispatch(RootPulseCommand::Status {
+            socket: Some(PathBuf::from("/tmp/nonexistent-neural-status.sock")),
+            family_id: Some("test-family".to_string()),
+        })
+        .await;
+        result.expect("status with missing socket should return Ok (logs unavailable)");
+    }
+
+    #[tokio::test]
+    async fn test_run_commit_success_with_mock_server() {
+        let response = serde_json::json!({
+            "jsonrpc": "2.0",
+            "result": { "commit_id": "abc123", "status": "ok" },
+            "id": 1
+        });
+        let (socket_path, _handle) = spawn_mock_neural_api(response).await;
+
+        let result = run_commit(
+            "test-session".to_string(),
+            "did:key:z6MkTest".to_string(),
+            Some(socket_path),
+            Some("test-family".to_string()),
+            false,
+        )
+        .await;
+        result.expect("commit with mock success should succeed");
+    }
+
+    #[tokio::test]
+    async fn test_run_commit_error_response_from_server() {
+        let response = serde_json::json!({
+            "jsonrpc": "2.0",
+            "error": { "code": -32000, "message": "Graph execution failed" },
+            "id": 1
+        });
+        let (socket_path, _handle) = spawn_mock_neural_api(response).await;
+
+        let result = run_commit(
+            "test-session".to_string(),
+            "did:key:z6MkTest".to_string(),
+            Some(socket_path),
+            Some("test-family".to_string()),
+            false,
+        )
+        .await;
+        let err = result.expect_err("commit with error response should fail");
+        assert!(
+            err.to_string().contains("failed") || err.to_string().contains("error"),
+            "error should mention failure: {err}"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_run_commit_response_neither_result_nor_error() {
+        // When response has neither result nor error, run_graph returns Ok (no bail)
+        let response = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 1
+        });
+        let (socket_path, _handle) = spawn_mock_neural_api(response).await;
+
+        let result = run_commit(
+            "test-session".to_string(),
+            "did:key:z6MkTest".to_string(),
+            Some(socket_path),
+            Some("test-family".to_string()),
+            false,
+        )
+        .await;
+        result.expect("response with no result/error still returns Ok");
     }
 }

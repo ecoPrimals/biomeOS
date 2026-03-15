@@ -3,7 +3,7 @@
 
 //! Unit tests for real-time event streaming (WebSocket/SSE).
 
-#![allow(clippy::unwrap_used)]
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use super::{JsonRpcNotification, *};
 use std::sync::Arc;
@@ -554,4 +554,48 @@ fn test_sse_event_parsing_multiple_event_lines() {
     let sse_text = "event: first\nevent: second\ndata: {\"type\":\"heartbeat\",\"timestamp\":1,\"primals_count\":1,\"healthy_count\":1}";
     let event = RealTimeEventSubscriber::parse_sse_event(sse_text);
     assert!(event.is_some(), "last event type and data should be used");
+}
+
+#[tokio::test]
+async fn test_subscribe_sse_with_websocket_upgrades_to_websocket() {
+    let mut subscriber = RealTimeEventSubscriber::new("test_family".to_string());
+    subscriber.set_urls_for_test(
+        Some("ws://localhost:9999/ws".to_string()),
+        Some("http://localhost:9999/sse".to_string()),
+    );
+    let result = subscriber.subscribe_sse().await;
+    assert!(
+        result.is_err(),
+        "subscribe_sse with both URLs delegates to subscribe_websocket which fails on invalid URL"
+    );
+}
+
+#[tokio::test]
+async fn test_discover_endpoints_with_ws_env() {
+    std::env::set_var("BIOMEOS_WS_ENDPOINT", "ws://test.example/ws");
+    let mut subscriber = RealTimeEventSubscriber::new("test_family".to_string());
+    let result = subscriber.discover_endpoints().await;
+    std::env::remove_var("BIOMEOS_WS_ENDPOINT");
+    assert!(result.is_ok());
+    assert!(subscriber.subscribe_websocket().await.is_err());
+}
+
+#[tokio::test]
+async fn test_discover_endpoints_with_sse_env() {
+    std::env::set_var("BIOMEOS_SSE_ENDPOINT", "http://test.example/sse");
+    let mut subscriber = RealTimeEventSubscriber::new("test_family".to_string());
+    let result = subscriber.discover_endpoints().await;
+    std::env::remove_var("BIOMEOS_SSE_ENDPOINT");
+    assert!(result.is_ok());
+}
+
+#[tokio::test]
+async fn test_discover_endpoints_with_both_env_vars() {
+    std::env::set_var("BIOMEOS_WS_ENDPOINT", "ws://test.example/ws");
+    std::env::set_var("BIOMEOS_SSE_ENDPOINT", "http://test.example/sse");
+    let mut subscriber = RealTimeEventSubscriber::new("test_family".to_string());
+    let result = subscriber.discover_endpoints().await;
+    std::env::remove_var("BIOMEOS_WS_ENDPOINT");
+    std::env::remove_var("BIOMEOS_SSE_ENDPOINT");
+    assert!(result.is_ok());
 }

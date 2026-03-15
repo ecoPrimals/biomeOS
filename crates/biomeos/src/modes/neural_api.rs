@@ -25,8 +25,18 @@ pub(crate) fn resolve_neural_api_config(
     socket: Option<PathBuf>,
     family_id: Option<&str>,
 ) -> NeuralApiConfig {
+    resolve_neural_api_config_with(graphs_dir, socket, family_id, None)
+}
+
+pub(crate) fn resolve_neural_api_config_with(
+    graphs_dir: PathBuf,
+    socket: Option<PathBuf>,
+    family_id: Option<&str>,
+    family_id_from_discovery: Option<&str>,
+) -> NeuralApiConfig {
     let family_id = family_id
         .map(String::from)
+        .or_else(|| family_id_from_discovery.map(String::from))
         .unwrap_or_else(biomeos_core::family_discovery::get_family_id);
     let socket_path = socket.unwrap_or_else(|| {
         SystemPaths::new_lazy().primal_socket(&format!("neural-api-{family_id}"))
@@ -148,14 +158,18 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
     fn test_resolve_neural_api_config_family_from_discovery() {
-        let config = resolve_neural_api_config(PathBuf::from("g"), None, None);
-        assert!(!config.family_id.is_empty());
+        let config = resolve_neural_api_config_with(
+            PathBuf::from("g"),
+            None,
+            None,
+            Some("discovery-family"),
+        );
+        assert_eq!(config.family_id, "discovery-family");
         assert_eq!(config.graphs_dir, PathBuf::from("g"));
         assert!(config
             .socket_path
             .to_string_lossy()
-            .contains(&config.family_id));
+            .contains("discovery-family"));
     }
 }

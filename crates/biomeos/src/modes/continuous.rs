@@ -29,10 +29,13 @@ use tracing::{debug, info, warn};
 /// 1. `BIOMEOS_SOCKET_DIR/{primal}.sock` (explicit override)
 /// 2. XDG-compliant path via SystemPaths (runtime_dir + primal.sock)
 fn resolve_primal_socket(primal: &str) -> PathBuf {
-    if let Ok(dir) = std::env::var("BIOMEOS_SOCKET_DIR") {
+    resolve_primal_socket_with(primal, std::env::var("BIOMEOS_SOCKET_DIR").ok())
+}
+
+fn resolve_primal_socket_with(primal: &str, socket_dir: Option<String>) -> PathBuf {
+    if let Some(dir) = socket_dir {
         return PathBuf::from(dir).join(format!("{primal}.sock"));
     }
-
     SystemPaths::new_lazy().primal_socket(primal)
 }
 
@@ -261,18 +264,14 @@ mod tests {
 
     #[test]
     fn test_resolve_primal_socket_default() {
-        // Clear env vars that would override
-        std::env::remove_var("BIOMEOS_SOCKET_DIR");
-
-        let path = resolve_primal_socket("ludospring");
+        let path = resolve_primal_socket_with("ludospring", None);
         assert!(path.is_absolute());
         assert_eq!(path.file_name().unwrap(), "ludospring.sock");
     }
 
     #[test]
     fn test_resolve_primal_socket_biomeos_dir() {
-        let _guard = EnvGuard::new("BIOMEOS_SOCKET_DIR", Some("/run/biomeos"));
-        let path = resolve_primal_socket("petaltongue");
+        let path = resolve_primal_socket_with("petaltongue", Some("/run/biomeos".to_string()));
         assert_eq!(path, PathBuf::from("/run/biomeos/petaltongue.sock"));
     }
 

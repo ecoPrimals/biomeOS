@@ -302,8 +302,8 @@ impl RealTimeEventSubscriber {
         Ok(())
     }
 
-    /// Parse SSE event format. Planned for SSE fallback when WebSocket unavailable.
-    #[allow(dead_code)]
+    /// Parse SSE event format. Used by tests; planned for SSE fallback when WebSocket unavailable.
+    #[cfg(test)]
     pub(crate) fn parse_sse_event(text: &str) -> Option<RealTimeEvent> {
         let mut event_type: Option<String> = None;
         let mut data: Option<String> = None;

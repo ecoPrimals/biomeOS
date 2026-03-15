@@ -78,9 +78,17 @@ pub async fn download_binary(
         )
     })?;
 
-    // Resolve "latest" to actual version
+    download_binary_from(genome_bin, primal, version, arch).await
+}
+
+pub(crate) async fn download_binary_from(
+    genome_bin: PathBuf,
+    primal: String,
+    version: String,
+    arch: String,
+) -> Result<Response, (StatusCode, Json<DistError>)> {
     let actual_version = if version == "latest" {
-        let manifest = manifest::get_manifest().await?;
+        let manifest = manifest::get_manifest_from(&genome_bin).await?;
         manifest
             .primals
             .get(&primal)
@@ -98,7 +106,6 @@ pub async fn download_binary(
         version.clone()
     };
 
-    // Build binary path: primals/{primal}/v{version}/{primal}-{arch}
     let binary_filename = format!("{primal}-{arch}");
     let binary_path = genome_bin
         .join("primals")
@@ -181,7 +188,13 @@ pub async fn update_livespore(
         )
     })?;
 
-    // Create target directories
+    update_livespore_from(genome_bin, req).await
+}
+
+pub(crate) async fn update_livespore_from(
+    genome_bin: PathBuf,
+    req: UpdateLiveSporeRequest,
+) -> Result<Json<UpdateLiveSporeResponse>, (StatusCode, Json<DistError>)> {
     let target_primals = req.target_path.join("primals");
     fs::create_dir_all(&target_primals).await.map_err(|e| {
         error!("Failed to create target directory: {}", e);
@@ -194,8 +207,7 @@ pub async fn update_livespore(
         )
     })?;
 
-    // Get manifest for primal list
-    let manifest = manifest::get_manifest().await?;
+    let manifest = manifest::get_manifest_from(&genome_bin).await?;
 
     // Determine architectures to copy
     let arches: Vec<String> = req.architectures.unwrap_or_else(|| {
@@ -294,7 +306,6 @@ pub async fn update_livespore(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serial_test::serial;
     use std::io::Write;
 
     #[test]
@@ -352,7 +363,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[serial]
     async fn test_download_binary_file_not_found() {
         let temp = tempfile::tempdir().expect("create temp dir");
         std::fs::write(
@@ -360,19 +370,13 @@ mod tests {
             "[manifest]\nversion = \"1.0\"",
         )
         .expect("write manifest");
-        let saved = std::env::var("GENOMEBIN_PATH").ok();
-        std::env::set_var("GENOMEBIN_PATH", temp.path());
-        let result = download_binary(Path((
+        let result = download_binary_from(
+            temp.path().to_path_buf(),
             "beardog".to_string(),
             "0.9.0".to_string(),
             "x86_64-linux-musl".to_string(),
-        )))
+        )
         .await;
-        if let Some(prev) = saved {
-            std::env::set_var("GENOMEBIN_PATH", prev);
-        } else {
-            std::env::remove_var("GENOMEBIN_PATH");
-        }
         let Err((status, body)) = result else {
             panic!("expected Err when binary missing");
         };
@@ -381,7 +385,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[serial]
     async fn test_download_binary_success() {
         let temp = tempfile::tempdir().expect("create temp dir");
         std::fs::write(
@@ -395,19 +398,13 @@ mod tests {
         let mut f = std::fs::File::create(&binary_path).expect("create binary");
         f.write_all(b"fake binary content").expect("write");
         drop(f);
-        let saved = std::env::var("GENOMEBIN_PATH").ok();
-        std::env::set_var("GENOMEBIN_PATH", temp.path());
-        let result = download_binary(Path((
+        let result = download_binary_from(
+            temp.path().to_path_buf(),
             "beardog".to_string(),
             "0.9.0".to_string(),
             "x86_64-linux-musl".to_string(),
-        )))
+        )
         .await;
-        if let Some(prev) = saved {
-            std::env::set_var("GENOMEBIN_PATH", prev);
-        } else {
-            std::env::remove_var("GENOMEBIN_PATH");
-        }
         let response = result.expect("download should succeed");
         assert_eq!(response.status(), StatusCode::OK);
         let ct = response
@@ -425,7 +422,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[serial]
     async fn test_update_livespore_success() {
         let temp = tempfile::tempdir().expect("create temp dir");
         std::fs::write(
@@ -436,30 +432,24 @@ mod tests {
         std::fs::write(temp.path().join("checksums.toml"), "[checksums]\n")
             .expect("write checksums");
         let target = tempfile::tempdir().expect("target temp dir");
-        let saved = std::env::var("GENOMEBIN_PATH").ok();
-        std::env::set_var("GENOMEBIN_PATH", temp.path());
-        let result = update_livespore(Json(UpdateLiveSporeRequest {
-            target_path: target.path().to_path_buf(),
-            architectures: Some(vec![
-                "x86_64-linux-musl".to_string(),
-                "aarch64-linux-musl".to_string(),
-            ]),
-        }))
+        let result = update_livespore_from(
+            temp.path().to_path_buf(),
+            UpdateLiveSporeRequest {
+                target_path: target.path().to_path_buf(),
+                architectures: Some(vec![
+                    "x86_64-linux-musl".to_string(),
+                    "aarch64-linux-musl".to_string(),
+                ]),
+            },
+        )
         .await;
-        if let Some(prev) = saved {
-            std::env::set_var("GENOMEBIN_PATH", prev);
-        } else {
-            std::env::remove_var("GENOMEBIN_PATH");
-        }
         let json = result.expect("update_livespore should succeed");
         assert!(json.success);
         assert!(json.message.contains("Updated"));
     }
 
     #[tokio::test]
-    #[serial]
     async fn test_download_binary_latest_resolution() {
-        // Test that "latest" version resolves from manifest
         let temp = tempfile::tempdir().expect("create temp dir");
         let manifest_content = r#"
 [manifest]
@@ -478,19 +468,13 @@ architectures = ["x86_64-linux-musl"]
         std::fs::create_dir_all(&primal_dir).expect("create dir");
         std::fs::write(primal_dir.join("beardog-x86_64-linux-musl"), b"binary")
             .expect("write binary");
-        let saved = std::env::var("GENOMEBIN_PATH").ok();
-        std::env::set_var("GENOMEBIN_PATH", temp.path());
-        let result = download_binary(Path((
+        let result = download_binary_from(
+            temp.path().to_path_buf(),
             "beardog".to_string(),
             "latest".to_string(),
             "x86_64-linux-musl".to_string(),
-        )))
+        )
         .await;
-        if let Some(prev) = saved {
-            std::env::set_var("GENOMEBIN_PATH", prev);
-        } else {
-            std::env::remove_var("GENOMEBIN_PATH");
-        }
         let response = result.expect("download with latest should succeed");
         assert_eq!(response.status(), StatusCode::OK);
     }

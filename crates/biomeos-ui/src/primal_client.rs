@@ -185,21 +185,27 @@ impl PrimalConnections {
     // ===================================================================
 
     /// PetalTongue UI framework connection (capability: ui, visualization)
-    #[deprecated(note = "use get_by_capability(\"ui\") or get_by_capability(\"visualization\") instead")]
+    #[deprecated(
+        note = "use get_by_capability(\"ui\") or get_by_capability(\"visualization\") instead"
+    )]
     pub fn petaltongue(&self) -> Option<&PetalTongueClient> {
         self.get_by_capability("ui")
             .or_else(|| self.get_by_capability("visualization"))
             .or_else(|| self.get("petaltongue"))
     }
     /// Songbird discovery/networking connection (capability: discovery, network)
-    #[deprecated(note = "use get_by_capability(\"discovery\") or get_by_capability(\"network\") instead")]
+    #[deprecated(
+        note = "use get_by_capability(\"discovery\") or get_by_capability(\"network\") instead"
+    )]
     pub fn songbird(&self) -> Option<&SongbirdClient> {
         self.get_by_capability("discovery")
             .or_else(|| self.get_by_capability("network"))
             .or_else(|| self.get(biomeos_types::primal_names::SONGBIRD))
     }
     /// BearDog security/crypto connection (capability: encryption, security)
-    #[deprecated(note = "use get_by_capability(\"crypto\") or get_by_capability(\"encryption\") instead")]
+    #[deprecated(
+        note = "use get_by_capability(\"crypto\") or get_by_capability(\"encryption\") instead"
+    )]
     pub fn beardog(&self) -> Option<&BearDogClient> {
         self.get_by_capability("encryption")
             .or_else(|| self.get_by_capability("security"))

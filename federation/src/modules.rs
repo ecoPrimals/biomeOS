@@ -9,7 +9,6 @@
 use anyhow::Result;
 use biomeos_types::primal_names::{BEARDOG, NESTGATE, SONGBIRD, TOADSTOOL};
 use serde_json::{json, Value};
-// Removed unused import: use std::collections::HashMap;
 
 /// Deploy a biome manifest to the federation
 pub async fn deploy_manifest(manifest_path: &str) -> Result<()> {

@@ -41,12 +41,15 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    tracing_subscriber::fmt()
+    run(Args::parse()).await
+}
+
+async fn run(args: Args) -> Result<()> {
+    // Initialize logging (try_init ignores if already set, e.g. in tests)
+    let _ = tracing_subscriber::fmt()
         .with_env_filter("info,biomeos_spore=debug")
         .with_target(false)
-        .init();
-
-    let args = Args::parse();
+        .try_init();
 
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("🌱 Neural LiveSpore Deployment");
@@ -131,4 +134,83 @@ async fn main() -> Result<()> {
     println!();
 
     Ok(())
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_run_fails_when_usb_does_not_exist() {
+        let args = Args {
+            usb: PathBuf::from("/nonexistent/usb/mount"),
+            graphs: PathBuf::from("graphs"),
+            binaries: PathBuf::from("plasmidBin/primals"),
+            nucleus: PathBuf::from("target/release/nucleus"),
+            update: false,
+        };
+        let result = run(args).await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("USB mount point does not exist"));
+    }
+
+    #[tokio::test]
+    async fn test_run_succeeds_with_temp_dirs() {
+        let dir = tempfile::tempdir().unwrap();
+        let usb = dir.path().to_path_buf();
+        let graphs_dir = dir.path().join("graphs");
+        let binaries_dir = dir.path().join("binaries");
+        std::fs::create_dir_all(&graphs_dir).unwrap();
+        std::fs::create_dir_all(&binaries_dir).unwrap();
+
+        let nucleus_file = dir.path().join("nucleus_bin");
+        std::fs::write(&nucleus_file, b"#!/bin/sh\nexit 0").unwrap();
+
+        let args = Args {
+            usb,
+            graphs: graphs_dir.clone(),
+            binaries: binaries_dir.clone(),
+            nucleus: nucleus_file,
+            update: false,
+        };
+        let result = run(args).await;
+        assert!(result.is_ok(), "run should succeed: {:?}", result.err());
+    }
+
+    #[tokio::test]
+    async fn test_run_update_mode_skips_prepare() {
+        let dir = tempfile::tempdir().unwrap();
+        let usb = dir.path().to_path_buf();
+        let graphs_dir = dir.path().join("graphs");
+        let binaries_dir = dir.path().join("binaries");
+        std::fs::create_dir_all(&graphs_dir).unwrap();
+        std::fs::create_dir_all(&binaries_dir).unwrap();
+
+        // Update mode skips prepare(), so we must create the spore structure manually
+        // (biomeOS/graphs, biomeOS/primals, biomeOS/metrics, biomeOS/logs)
+        let spore_root = dir.path().join("biomeOS");
+        std::fs::create_dir_all(spore_root.join("graphs")).unwrap();
+        std::fs::create_dir_all(spore_root.join("primals")).unwrap();
+        std::fs::create_dir_all(spore_root.join("metrics")).unwrap();
+        std::fs::create_dir_all(spore_root.join("logs")).unwrap();
+
+        let nucleus_file = dir.path().join("nucleus_bin");
+        std::fs::write(&nucleus_file, b"#!/bin/sh\nexit 0").unwrap();
+
+        let args = Args {
+            usb,
+            graphs: graphs_dir,
+            binaries: binaries_dir,
+            nucleus: nucleus_file,
+            update: true,
+        };
+        let result = run(args).await;
+        assert!(
+            result.is_ok(),
+            "run with update mode should succeed: {:?}",
+            result.err()
+        );
+    }
 }

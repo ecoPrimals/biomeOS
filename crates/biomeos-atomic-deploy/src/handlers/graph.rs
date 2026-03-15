@@ -221,7 +221,10 @@ impl GraphHandler {
         tokio::spawn(async move {
             let mut env = HashMap::new();
             env.insert("FAMILY_ID".to_string(), family_id_owned.clone());
-            env.insert("UID".to_string(), users::get_current_uid().to_string());
+            env.insert(
+                "UID".to_string(),
+                rustix::process::getuid().as_raw().to_string(),
+            );
 
             // EVOLVED (Jan 27, 2026): XDG-compliant socket directory (no hardcoding!)
             let socket_dir = SystemPaths::new()

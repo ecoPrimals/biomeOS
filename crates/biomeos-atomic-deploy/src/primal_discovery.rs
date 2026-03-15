@@ -225,6 +225,13 @@ impl PrimalDiscovery {
                 | "squirrel"
                 | "biomeos"
                 | "biomeos-device-management"
+                | "airspring"
+                | "wetspring"
+                | "neuralspring"
+                | "groundspring"
+                | "hotspring"
+                | "healthspring"
+                | "ludospring"
         )
     }
 }
@@ -370,11 +377,24 @@ mod tests {
     }
 
     #[test]
+    fn test_is_primal_name_springs() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let discovery = PrimalDiscovery::new(temp_dir.path().to_path_buf()).unwrap();
+
+        assert!(discovery.is_primal_name("airspring"));
+        assert!(discovery.is_primal_name("wetspring"));
+        assert!(discovery.is_primal_name("neuralspring"));
+        assert!(discovery.is_primal_name("groundspring"));
+        assert!(discovery.is_primal_name("hotspring"));
+        assert!(discovery.is_primal_name("healthspring"));
+        assert!(discovery.is_primal_name("ludospring"));
+    }
+
+    #[test]
     fn test_is_primal_name_unknown() {
         let temp_dir = tempfile::tempdir().unwrap();
         let discovery = PrimalDiscovery::new(temp_dir.path().to_path_buf()).unwrap();
 
-        assert!(!discovery.is_primal_name("neural"));
         assert!(!discovery.is_primal_name("unknown"));
         assert!(!discovery.is_primal_name(""));
         assert!(!discovery.is_primal_name("neural-api"));

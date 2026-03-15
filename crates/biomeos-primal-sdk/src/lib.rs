@@ -73,6 +73,9 @@ pub mod discovery;
 /// Inter-primal communication helpers
 pub mod communication;
 
+/// Spring-as-Provider pattern: data abstraction + capability registration + provenance helpers
+pub mod provider;
+
 /// tarpc binary transport helpers for protocol escalation
 pub mod tarpc_transport;
 
@@ -80,6 +83,7 @@ pub mod tarpc_transport;
 pub mod prelude {
     pub use crate::communication::{PrimalClient, SecureTunnel};
     pub use crate::discovery::{DiscoveredPrimal, DiscoveryQuery, PrimalDiscovery};
+    pub use crate::provider::{BiomeosProvider, CapabilityRegistration, Provider, ProviderError};
     pub use crate::types::{PrimalRequest, PrimalResponse, RequestPriority};
     pub use crate::{BiomeResult, Health, PrimalCapability, PrimalType, UniversalPrimalService};
 }

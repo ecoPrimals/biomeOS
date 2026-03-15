@@ -8,7 +8,6 @@
 
 // Core functionality and initialization
 pub mod ai;
-// pub mod client_registry;  // Depends on legacy clients module
 pub mod core;
 pub mod discovery;
 pub mod health;
@@ -39,8 +38,3 @@ pub use primals::PrimalStatistics;
 
 // Re-export from ai module
 pub use ai::{AIRecommendation, GeneticAccessKey, Priority};
-
-// Re-export from client_registry module (commented out - depends on legacy clients)
-// pub use client_registry::ClientRegistry;
-
-// Legacy type aliases for backwards compatibility - REMOVED duplicate GeneticAccessKey

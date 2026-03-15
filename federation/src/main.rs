@@ -70,28 +70,41 @@ enum Commands {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let cli = Cli::parse();
+    run(Cli::parse()).await
+}
 
-    // Initialize logging
+async fn run(cli: Cli) -> Result<()> {
+    // Initialize logging (try_init ignores if already set, e.g. in tests)
     let log_level = if cli.verbose {
         Level::DEBUG
     } else {
         Level::INFO
     };
-    tracing_subscriber::fmt().with_max_level(log_level).init();
+    let _ = tracing_subscriber::fmt()
+        .with_max_level(log_level)
+        .try_init();
 
     info!("🏰 BiomeOS Federation CLI v1.0.0");
 
     // Load configuration
-    let config_path = Some(cli.config.to_str().unwrap());
+    let config_path = Some(
+        cli.config
+            .to_str()
+            .expect("config path must be valid UTF-8"),
+    );
     let config = load_config(config_path).await?;
 
-    // Validate configuration - convert to string for validation
     let config_str = serde_yaml::to_string(&config)?;
-    let temp_file = std::env::temp_dir().join("temp_config.yaml");
-    std::fs::write(&temp_file, config_str)?;
-    validate_config(temp_file.to_str().unwrap()).await?;
-    std::fs::remove_file(&temp_file)?;
+    let temp_file = std::env::temp_dir().join(format!(
+        "biome-federation-validate-{}-{:?}.yaml",
+        std::process::id(),
+        std::thread::current().id()
+    ));
+    std::fs::write(&temp_file, &config_str)?;
+    let validate_result =
+        validate_config(temp_file.to_str().expect("temp path must be valid UTF-8")).await;
+    let _ = std::fs::remove_file(&temp_file);
+    validate_result?;
 
     // Execute command
     match cli.command {
@@ -109,5 +122,127 @@ async fn main() -> Result<()> {
             info!("✅ Configuration validation passed");
             Ok(())
         }
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    fn valid_federation_config() -> String {
+        r#"
+federation:
+  discovery:
+    method: network_scan
+    timeout: 30
+  coordination:
+    enabled: true
+"#
+        .to_string()
+    }
+
+    #[tokio::test]
+    async fn test_run_list_command() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("federation.toml");
+        std::fs::write(&config_path, valid_federation_config()).unwrap();
+
+        let cli = Cli {
+            command: Commands::List { detailed: false },
+            verbose: false,
+            config: config_path,
+        };
+        let result = run(cli).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_run_validate_command() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("federation.toml");
+        std::fs::write(&config_path, valid_federation_config()).unwrap();
+
+        let cli = Cli {
+            command: Commands::Validate,
+            verbose: false,
+            config: config_path,
+        };
+        let result = run(cli).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_run_status_command() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("federation.toml");
+        std::fs::write(&config_path, valid_federation_config()).unwrap();
+
+        let cli = Cli {
+            command: Commands::Status {
+                deployment: None,
+                watch: false,
+            },
+            verbose: false,
+            config: config_path,
+        };
+        let result = run(cli).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_run_deploy_command() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("federation.toml");
+        std::fs::write(&config_path, valid_federation_config()).unwrap();
+        let manifest_path = dir.path().join("manifest.yaml");
+        std::fs::write(
+            &manifest_path,
+            r#"
+metadata:
+  name: test-manifest
+  version: "1.0.0"
+"#,
+        )
+        .unwrap();
+
+        let cli = Cli {
+            command: Commands::Deploy {
+                manifest: manifest_path.to_string_lossy().to_string(),
+                dry_run: false,
+                force: false,
+            },
+            verbose: false,
+            config: config_path,
+        };
+        let result = run(cli).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_run_fails_with_invalid_config() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("bad.toml");
+        std::fs::write(&config_path, "other: value").unwrap();
+
+        let cli = Cli {
+            command: Commands::Validate,
+            verbose: false,
+            config: config_path,
+        };
+        let result = run(cli).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_run_fails_with_nonexistent_config() {
+        let cli = Cli {
+            command: Commands::List { detailed: false },
+            verbose: false,
+            config: PathBuf::from("/nonexistent/federation.toml"),
+        };
+        let result = run(cli).await;
+        assert!(result.is_err());
     }
 }

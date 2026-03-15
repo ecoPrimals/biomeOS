@@ -302,6 +302,25 @@ pub struct FederationInfo {
     pub sub_federations: Vec<String>,
 }
 
+/// Parameters for creating local node configuration during incubation.
+#[derive(Debug, Clone)]
+pub struct CreateLocalConfigParams<'a> {
+    /// Directory path for the config (e.g. ~/.config/biomeos/deployed-nodes/{spore-id})
+    pub config_path: &'a Path,
+    /// Spore identifier
+    pub spore_id: &'a str,
+    /// Unique node identifier (derived from entropy mixing)
+    pub node_id: &'a str,
+    /// SHA-256 hash of the deployed seed
+    pub deployed_seed_hash: &'a str,
+    /// SHA-256 hash of the local entropy
+    pub entropy_hash: &'a str,
+    /// Computer hostname
+    pub computer_name: &'a str,
+    /// Local entropy used for deployment
+    pub local_entropy: &'a LocalEntropy,
+}
+
 /// Spore incubator - Handles deployment of spores on local computers
 pub struct SporeIncubator {
     spore_path: PathBuf,
@@ -360,15 +379,15 @@ impl SporeIncubator {
 
         // 4. Create local configuration
         let local_config_path = self.get_local_config_path(&spore_id)?;
-        self.create_local_config(
-            &local_config_path,
-            &spore_id,
-            &node_id,
-            &deployed_seed_hash,
-            &entropy_hash,
-            hostname.as_ref(),
-            &local_entropy,
-        )
+        self.create_local_config(CreateLocalConfigParams {
+            config_path: &local_config_path,
+            spore_id: &spore_id,
+            node_id: &node_id,
+            deployed_seed_hash: &deployed_seed_hash,
+            entropy_hash: &entropy_hash,
+            computer_name: hostname.as_ref(),
+            local_entropy: &local_entropy,
+        })
         .await?;
 
         // 5. Store deployed seed securely
@@ -480,19 +499,9 @@ impl SporeIncubator {
     }
 
     /// Create local configuration for incubated node
-    #[allow(clippy::too_many_arguments)]
-    async fn create_local_config(
-        &self,
-        config_path: &Path,
-        spore_id: &str,
-        node_id: &str,
-        deployed_seed_hash: &str,
-        entropy_hash: &str,
-        computer_name: &str,
-        local_entropy: &LocalEntropy,
-    ) -> SporeResult<()> {
+    async fn create_local_config(&self, params: CreateLocalConfigParams<'_>) -> SporeResult<()> {
         // Create directory
-        fs::create_dir_all(config_path).await?;
+        fs::create_dir_all(params.config_path).await?;
 
         // Read parent and spore seed hashes
         let spore_seed_bytes = std::fs::read(self.spore_path.join(".family.seed"))?;
@@ -510,16 +519,16 @@ impl SporeIncubator {
         // Create node config
         let config = NodeConfig {
             node: NodeInfo {
-                spore_id: spore_id.to_string(),
-                node_id: node_id.to_string(),
+                spore_id: params.spore_id.to_string(),
+                node_id: params.node_id.to_string(),
                 deployed_at: Utc::now(),
-                computer_name: computer_name.to_string(),
-                entropy_hash: entropy_hash.to_string(),
+                computer_name: params.computer_name.to_string(),
+                entropy_hash: params.entropy_hash.to_string(),
             },
             lineage: LineageInfo {
                 parent_seed_hash,
                 spore_seed_hash,
-                deployed_seed_hash: deployed_seed_hash.to_string(),
+                deployed_seed_hash: params.deployed_seed_hash.to_string(),
             },
             spore: SporeInfo {
                 original_path: Some(self.spore_path.clone()),
@@ -535,14 +544,14 @@ impl SporeIncubator {
         // Write node.toml
         let config_toml =
             toml::to_string_pretty(&config).context("Failed to serialize node config")?;
-        fs::write(config_path.join("node.toml"), config_toml).await?;
+        fs::write(params.config_path.join("node.toml"), config_toml).await?;
 
         // Write entropy.json for reference
-        let entropy_json =
-            serde_json::to_string_pretty(&local_entropy).context("Failed to serialize entropy")?;
-        fs::write(config_path.join("entropy.json"), entropy_json).await?;
+        let entropy_json = serde_json::to_string_pretty(params.local_entropy)
+            .context("Failed to serialize entropy")?;
+        fs::write(params.config_path.join("entropy.json"), entropy_json).await?;
 
-        info!("Created local config at: {}", config_path.display());
+        info!("Created local config at: {}", params.config_path.display());
 
         Ok(())
     }

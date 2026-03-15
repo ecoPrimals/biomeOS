@@ -6,8 +6,9 @@
 use anyhow::Result;
 use colored::Colorize;
 
-#[allow(unused_imports)]
-use super::types::{DiagnosticCheck, Diagnostics, HealthCheck, HealthStatus};
+#[cfg(test)]
+use super::types::HealthCheck;
+use super::types::{DiagnosticCheck, Diagnostics, HealthStatus};
 
 /// Format diagnostics as text lines (pure, testable).
 pub(crate) fn format_text_report(results: &Diagnostics) -> Vec<String> {

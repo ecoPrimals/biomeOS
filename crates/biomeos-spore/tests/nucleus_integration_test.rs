@@ -5,47 +5,15 @@
 //!
 //! Tests the complete pipeline from plasmidBin/ to spore creation.
 //! Uses proper UniBin-compliant binary names (beardog, songbird - no suffixes).
-//!
-//! **Concurrency-First Design**: Tests that modify global state (current_dir)
-//! use RAII guards to ensure cleanup even on panic.
 
 use biomeos_spore::test_support::setup_test_binaries_at;
 use biomeos_spore::{Spore, SporeConfig, SporeType};
 use tempfile::TempDir;
 
-/// RAII guard to restore the current directory on drop
-struct DirGuard {
-    original: Option<std::path::PathBuf>,
-}
-
-impl DirGuard {
-    fn new() -> Self {
-        // Try to get current dir - may fail if it doesn't exist
-        let original = std::env::current_dir().ok();
-        Self { original }
-    }
-}
-
-impl Drop for DirGuard {
-    fn drop(&mut self) {
-        if let Some(ref dir) = self.original {
-            // Restore original directory if possible
-            let _ = std::env::set_current_dir(dir);
-        }
-    }
-}
-
 /// Test that spore creation fails gracefully if plasmidBin is missing
-#[tokio::test(flavor = "current_thread")]
-#[serial_test::serial]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_missing_plasmidbin() {
-    // RAII guard ensures directory restoration even on panic
-    let _dir_guard = DirGuard::new();
-
     let temp_dir = TempDir::new().unwrap();
-
-    // Change to temp dir where plasmidBin doesn't exist
-    std::env::set_current_dir(temp_dir.path()).unwrap();
 
     let mount_point = temp_dir.path().join("usb");
     std::fs::create_dir_all(&mount_point).unwrap();
@@ -55,6 +23,7 @@ async fn test_missing_plasmidbin() {
         node_id: "test-node".to_string(),
         spore_type: SporeType::Live,
         family_id: "test-family".to_string(),
+        plasmid_bin_dir: Some(temp_dir.path().join("plasmidBin")),
     };
 
     let result = Spore::create(mount_point, config).await;
@@ -69,20 +38,13 @@ async fn test_missing_plasmidbin() {
             println!("✅ Spore creation failed as expected: {e}");
         }
     }
-
-    // Note: DirGuard will restore original directory when dropped
 }
 
 /// Test that spore creation succeeds with plasmidBin present
-#[tokio::test(flavor = "current_thread")]
-#[serial_test::serial]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_plasmidbin_deployment() {
-    // RAII guard ensures directory restoration even on panic
-    let _dir_guard = DirGuard::new();
-
     let temp_dir = TempDir::new().unwrap();
 
-    // Setup proper plasmidBin structure using test utility
     setup_test_binaries_at(temp_dir.path()).unwrap();
 
     let mount_point = temp_dir.path().join("usb");
@@ -93,6 +55,7 @@ async fn test_plasmidbin_deployment() {
         node_id: "test-node".to_string(),
         spore_type: SporeType::Live,
         family_id: "test-family".to_string(),
+        plasmid_bin_dir: Some(temp_dir.path().join("plasmidBin")),
     };
 
     let result = Spore::create(mount_point.clone(), config).await;
@@ -119,7 +82,7 @@ async fn test_plasmidbin_deployment() {
 }
 
 /// Test that VERSION.txt format is correct for primal tracking
-#[tokio::test(flavor = "current_thread")]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_version_tracking() {
     let temp_dir = TempDir::new().unwrap();
 
@@ -176,15 +139,10 @@ songbird: git:ghi789"#,
 }
 
 /// Test spore manifest is created correctly
-#[tokio::test(flavor = "current_thread")]
-#[serial_test::serial]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_spore_manifest_creation() {
-    // RAII guard ensures directory restoration even on panic
-    let _dir_guard = DirGuard::new();
-
     let temp_dir = TempDir::new().unwrap();
 
-    // Setup proper plasmidBin structure
     setup_test_binaries_at(temp_dir.path()).unwrap();
 
     let mount_point = temp_dir.path().join("usb");
@@ -195,6 +153,7 @@ async fn test_spore_manifest_creation() {
         node_id: "test-node".to_string(),
         spore_type: SporeType::Live,
         family_id: "test-family".to_string(),
+        plasmid_bin_dir: Some(temp_dir.path().join("plasmidBin")),
     };
 
     let result = Spore::create(mount_point.clone(), config).await;

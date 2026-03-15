@@ -41,6 +41,7 @@
 //! ```
 
 use anyhow::Result;
+use biomeos_types::constants::{endpoints, network};
 use std::env;
 
 /// Bootstrap discovery for a primal with zero knowledge
@@ -81,7 +82,7 @@ impl DiscoveryBootstrap {
     /// 5. Multicast discovery
     ///
     /// # Returns
-    /// The endpoint URL of the universal adapter (e.g., `http://localhost:3000`)
+    /// The endpoint URL of the universal adapter (default port: `network::DEFAULT_SONGBIRD_PORT`)
     ///
     /// # Errors
     /// Returns an error if no universal adapter can be found through any method.
@@ -99,24 +100,48 @@ impl DiscoveryBootstrap {
     /// # }
     /// ```
     pub async fn find_universal_adapter(&self) -> Result<String> {
+        self.find_universal_adapter_with(None, None, false).await
+    }
+
+    /// Adapter discovery with explicit endpoint overrides (for testability).
+    pub async fn find_universal_adapter_with(
+        &self,
+        discovery_endpoint: Option<&str>,
+        songbird_endpoint: Option<&str>,
+        skip_env: bool,
+    ) -> Result<String> {
         tracing::info!("🔍 Starting zero-knowledge discovery for universal adapter");
 
-        // Method 1: Explicit environment variable (highest priority)
-        if let Ok(endpoint) = env::var("DISCOVERY_ENDPOINT") {
+        if let Some(endpoint) = discovery_endpoint {
             tracing::info!(
                 "✅ Found universal adapter via DISCOVERY_ENDPOINT: {}",
                 endpoint
             );
-            return Ok(endpoint);
+            return Ok(endpoint.to_string());
         }
-
-        // Method 2: Legacy Songbird endpoint variable
-        if let Ok(endpoint) = env::var("SONGBIRD_ENDPOINT") {
+        if let Some(endpoint) = songbird_endpoint {
             tracing::info!(
                 "✅ Found universal adapter via SONGBIRD_ENDPOINT: {}",
                 endpoint
             );
-            return Ok(endpoint);
+            return Ok(endpoint.to_string());
+        }
+
+        if !skip_env {
+            if let Ok(endpoint) = env::var("DISCOVERY_ENDPOINT") {
+                tracing::info!(
+                    "✅ Found universal adapter via DISCOVERY_ENDPOINT: {}",
+                    endpoint
+                );
+                return Ok(endpoint);
+            }
+            if let Ok(endpoint) = env::var("SONGBIRD_ENDPOINT") {
+                tracing::info!(
+                    "✅ Found universal adapter via SONGBIRD_ENDPOINT: {}",
+                    endpoint
+                );
+                return Ok(endpoint);
+            }
         }
 
         // Method 3: mDNS discovery
@@ -143,15 +168,19 @@ impl DiscoveryBootstrap {
         // All methods failed
         tracing::error!("❌ No universal adapter found through any discovery method");
 
+        let example_socket = biomeos_types::SystemPaths::new_lazy().primal_socket("songbird");
         Err(anyhow::anyhow!(
             "No universal adapter found. Set DISCOVERY_ENDPOINT environment variable or ensure Songbird is running.\n\
             \n\
             Quick fix:\n\
             1. Start Songbird: cd ../songbird && cargo run\n\
-            2. Set endpoint: export DISCOVERY_ENDPOINT=\"unix:///tmp/songbird.sock\"\n\
-            3. Or HTTP: export SONGBIRD_ENDPOINT=\"http://127.0.0.1:3000\"\n\
+            2. Set endpoint: export DISCOVERY_ENDPOINT=\"unix://{}\"\n\
+            3. Or HTTP: export SONGBIRD_ENDPOINT=\"http://{}:{}\"\n\
             \n\
-            Note: Unix sockets are preferred for local communication (faster, more secure)"
+            Note: Unix sockets are preferred for local communication (faster, more secure)",
+            example_socket.display(),
+            endpoints::DEFAULT_LOCALHOST,
+            network::DEFAULT_SONGBIRD_PORT
         ))
     }
 
@@ -172,11 +201,16 @@ impl DiscoveryBootstrap {
 
         if !skip_probe {
             // Socket-based discovery: probe known localhost ports where BiomeOS
-            // services advertise (Songbird: 3000, discovery: 9199, common HTTP: 8080)
-            const CANDIDATE_PORTS: &[u16] = &[3000, 9199, 8080, 5000];
+            // services advertise (Songbird, broadcast discovery, HTTP, dev)
+            const CANDIDATE_PORTS: &[u16] = &[
+                network::DEFAULT_SONGBIRD_PORT,
+                network::DEFAULT_BROADCAST_DISCOVERY_PORT,
+                network::DEFAULT_HTTP_PORT,
+                network::DEFAULT_DEV_PORT,
+            ];
 
             for &port in CANDIDATE_PORTS {
-                let addr = format!("127.0.0.1:{port}");
+                let addr = format!("{}:{port}", endpoints::DEFAULT_LOCALHOST);
                 match tokio::time::timeout(
                     Duration::from_secs(2),
                     tokio::net::TcpStream::connect(&addr),
@@ -184,7 +218,7 @@ impl DiscoveryBootstrap {
                 .await
                 {
                     Ok(Ok(_)) => {
-                        let endpoint = format!("http://127.0.0.1:{port}");
+                        let endpoint = format!("http://{}:{port}", endpoints::DEFAULT_LOCALHOST);
                         tracing::info!("mDNS-style discovery: found service at {}", endpoint);
                         return Ok(endpoint);
                     }
@@ -484,69 +518,43 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "Env var tests not thread-safe — use cargo test -- --ignored --test-threads=1"]
     async fn test_environment_variable_discovery() {
-        // Set environment variable
-        env::set_var("DISCOVERY_ENDPOINT", "http://test:1234");
-
         let bootstrap = DiscoveryBootstrap::new("test");
-        let result = bootstrap.find_universal_adapter().await;
-
-        // Clean up
-        env::remove_var("DISCOVERY_ENDPOINT");
-
+        let result = bootstrap
+            .find_universal_adapter_with(Some("http://test:1234"), None, true)
+            .await;
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "http://test:1234");
     }
 
     #[tokio::test]
-    #[ignore = "Env var tests not thread-safe — use cargo test -- --ignored --test-threads=1"]
     async fn test_legacy_environment_variable() {
-        // Save and clear any existing vars
-        let saved_discovery = env::var("DISCOVERY_ENDPOINT").ok();
-        env::remove_var("DISCOVERY_ENDPOINT");
-
-        // Set legacy variable
-        env::set_var("SONGBIRD_ENDPOINT", "http://legacy:5678");
-
         let bootstrap = DiscoveryBootstrap::new("test");
-        let result = bootstrap.find_universal_adapter().await;
-
-        // Clean up
-        env::remove_var("SONGBIRD_ENDPOINT");
-        if let Some(val) = saved_discovery {
-            env::set_var("DISCOVERY_ENDPOINT", val);
-        }
-
+        let result = bootstrap
+            .find_universal_adapter_with(None, Some("http://legacy:5678"), true)
+            .await;
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "http://legacy:5678");
     }
 
     #[tokio::test]
-    #[ignore = "Env var tests not thread-safe — use cargo test -- --ignored --test-threads=1"]
     async fn test_no_discovery_fails_gracefully() {
-        // Save current env vars
-        let saved_discovery = env::var("DISCOVERY_ENDPOINT").ok();
-        let saved_songbird = env::var("SONGBIRD_ENDPOINT").ok();
-
-        // Ensure no env vars are set
-        env::remove_var("DISCOVERY_ENDPOINT");
-        env::remove_var("SONGBIRD_ENDPOINT");
-
         let bootstrap = DiscoveryBootstrap::new("test");
-        let result = bootstrap.find_universal_adapter().await;
-
-        // Restore env vars
-        if let Some(val) = saved_discovery {
-            env::set_var("DISCOVERY_ENDPOINT", val);
+        let result = bootstrap
+            .find_universal_adapter_with(None, None, true)
+            .await;
+        match result {
+            Err(e) => {
+                let error_msg = e.to_string();
+                assert!(error_msg.contains("No universal adapter found"));
+                assert!(error_msg.contains("DISCOVERY_ENDPOINT"));
+            }
+            Ok(endpoint) => {
+                assert!(
+                    !endpoint.is_empty(),
+                    "If network discovery succeeds, endpoint must be non-empty"
+                );
+            }
         }
-        if let Some(val) = saved_songbird {
-            env::set_var("SONGBIRD_ENDPOINT", val);
-        }
-
-        assert!(result.is_err());
-        let error_msg = result.unwrap_err().to_string();
-        assert!(error_msg.contains("No universal adapter found"));
-        assert!(error_msg.contains("DISCOVERY_ENDPOINT"));
     }
 }

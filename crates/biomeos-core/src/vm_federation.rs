@@ -26,7 +26,6 @@ use tracing::{debug, info, warn};
 /// Parse IP address from virsh domifaddr output (testable pure function)
 ///
 /// Parses lines like "ipv4         192.168.122.34/24" and extracts the first 192.168.x.x IP.
-#[allow(dead_code)]
 pub(crate) fn parse_ip_from_domifaddr_output(ip_text: &str) -> Option<String> {
     for ip_line in ip_text.lines() {
         if ip_line.contains("ipv4") || ip_line.contains("192.168") {
@@ -43,7 +42,6 @@ pub(crate) fn parse_ip_from_domifaddr_output(ip_text: &str) -> Option<String> {
 }
 
 /// Extract VM names from virsh list output that match federation name
-#[allow(dead_code)]
 pub(crate) fn parse_vm_names_from_list(vm_list: &str, federation_name: &str) -> Vec<String> {
     let mut names = Vec::new();
     for line in vm_list.lines() {
@@ -213,35 +211,15 @@ impl VmFederationManager {
             .context("Failed to list VMs")?;
 
         let vm_list = String::from_utf8_lossy(&output.stdout);
+        let vm_names = parse_vm_names_from_list(&vm_list, federation_name);
         let mut ips = Vec::new();
 
-        // Find VM names that match our federation
-        for line in vm_list.lines() {
-            if line.contains(federation_name) {
-                // Extract VM name
-                let parts: Vec<&str> = line.split_whitespace().collect();
-                if parts.len() >= 2 {
-                    let vm_name = parts[1];
-
-                    // Get IP for this VM
-                    if let Ok(ip_output) =
-                        Command::new("virsh").args(["domifaddr", vm_name]).output()
-                    {
-                        let ip_text = String::from_utf8_lossy(&ip_output.stdout);
-                        for ip_line in ip_text.lines() {
-                            if ip_line.contains("ipv4") || ip_line.contains("192.168") {
-                                // Extract IP address (format: "ipv4         192.168.122.34/24")
-                                if let Some(ip_part) = ip_line.split_whitespace().last() {
-                                    if let Some(ip) = ip_part.split('/').next() {
-                                        if ip.starts_with("192.168") {
-                                            debug!("Found VM {} with IP {}", vm_name, ip);
-                                            ips.push(ip.to_string());
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+        for vm_name in vm_names {
+            if let Ok(ip_output) = Command::new("virsh").args(["domifaddr", &vm_name]).output() {
+                let ip_text = String::from_utf8_lossy(&ip_output.stdout);
+                if let Some(ip) = parse_ip_from_domifaddr_output(&ip_text) {
+                    debug!("Found VM {} with IP {}", vm_name, ip);
+                    ips.push(ip);
                 }
             }
         }

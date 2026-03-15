@@ -8,8 +8,8 @@ description = "Niche (biome) system for BiomeOS - environments where primals and
 
 [dependencies]
 # Core BiomeOS types
-biomeos-types = { path = "../biomeos-types" }
-biomeos-chimera = { path = "../biomeos-chimera" }
+biomeos-types = { path = "../biomeos-types", version = "0.1.0" }
+biomeos-chimera = { path = "../biomeos-chimera", version = "0.1.0" }
 
 # Async runtime
 tokio = { workspace = true }

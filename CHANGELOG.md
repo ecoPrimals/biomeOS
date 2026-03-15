@@ -2,6 +2,60 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## [v2.39] - 2026-03-15 (Concurrency Evolution — Fully Concurrent Test Suite)
+
+### Concurrency-First Architecture
+- Systematic dependency injection: 30+ functions evolved with `_with`/`_in` variants accepting explicit config params
+- `std::env::set_var` / `remove_var` removed from all unit/integration tests
+- `std::env::set_current_dir` removed from all tests — `SporeConfig.plasmid_bin_dir`, `DiscoveryConfig`, `FamilyDiscoveryConfig` introduced
+- All 4,885 tests run fully concurrent — race conditions treated as production pitfalls, not test artifacts
+
+### Test Concurrency
+- 13 `#[serial_test::serial]` annotations removed from non-chaos tests across biomeos-core, biomeos-spore, biomeos-api, continuous, enroll
+- 22 `#[ignore]` annotations removed — tests now pass config directly (nucleus, model_cache, doctor, paths, identifiers, defaults, discovery_bootstrap, neural-api-client-sync, capability_taxonomy)
+- `serial_test` dependency removed from `biomeos-core` and `biomeos-spore` Cargo.toml (only legitimate E2E/chaos tests in `tests/atomics/` retain it)
+
+### Modules Evolved
+| Module | Pattern |
+|--------|---------|
+| `continuous.rs` | `resolve_primal_socket_with(primal, socket_dir)` |
+| `enroll.rs` | `discover_beardog_socket_in(socket_dir, family_id)` |
+| `family_discovery.rs` | `FamilyDiscoveryConfig` with override fields |
+| `genome_dist/discovery.rs` | `get_genome_bin_path_with(env_path, search_paths)` |
+| `biomeos-ui/discovery.rs` | `DiscoveryConfig` struct + `_with_config` variants |
+| `capability_taxonomy` | `default_primal_with(strict)`, `known_primals_with(strict)` |
+| `nucleus.rs` | `resolve_socket_dir_with`, `discover_binaries_with`, `build_primal_command_with` |
+| `model_cache.rs` | `run_with(cache_dir, hf_hub_dir, command)` |
+| `doctor/checks_*.rs` | `check_plasmid_bin_at(base_dir)`, `check_configuration_with(config_dir)` |
+| `biomeos-spore` | `SporeConfig.plasmid_bin_dir` + `default_family_id_with(env_value, skip_env)` |
+| `paths.rs` | `SystemPaths::new_with_xdg_overrides(xdg_runtime_dir, xdg_data_home)` |
+| `identifiers.rs` | `FamilyId::get_or_create_with(env_value)` |
+| `defaults.rs` | `RuntimeConfig::from_env_with(socket_dir_override, xdg_runtime_dir_override)` |
+| `discovery_bootstrap.rs` | `find_universal_adapter_with(discovery_endpoint, songbird_endpoint, skip_env)` |
+| `neural-api-client-sync` | `resolve_socket_with(neural_api_socket, family_id_override)` |
+
+### Flaky Test Fixes
+- `test_discover_primal_binary_empty_dir`: `discover_primal_binary` now prioritizes explicit `BIOMEOS_PLASMID_BIN_DIR` over CWD-relative fallbacks
+- `test_no_discovery_fails_gracefully`: Handles non-deterministic network discovery gracefully
+
+### Cleanup
+- Removed dead `fn resolve_socket()` from `neural-api-client-sync`
+- Removed `DirGuard` pattern from spore tests
+- Removed all `EnvGuard` patterns from tests
+
+### Quality
+| Metric | Before | After |
+|--------|--------|-------|
+| Tests | 4,728 | 4,885 (+157) |
+| Ignored | 203 | 181 (-22) |
+| #[serial] (non-chaos) | 13 | 0 |
+| #[ignore] (env-var) | 22 | 0 |
+| Clippy | PASS | PASS (0 warnings, pedantic+nursery, -D warnings) |
+| Formatting | PASS | PASS |
+| Concurrency | sequential | fully concurrent |
+
+---
+
 ## [v2.38] - 2026-03-14 (Deep Debt Evolution — Modern Idiomatic Rust)
 
 ### Zero-Copy

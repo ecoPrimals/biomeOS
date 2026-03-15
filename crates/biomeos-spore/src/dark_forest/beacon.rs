@@ -556,6 +556,5 @@ impl DarkForestBeacon {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
 #[path = "beacon_tests.rs"]
 mod tests;

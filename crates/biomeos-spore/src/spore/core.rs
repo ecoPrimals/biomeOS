@@ -75,6 +75,7 @@ impl Spore {
     ///     node_id: "tower1".to_string(),
     ///     spore_type: SporeType::Live,
     ///     family_id: "1894e909e454".to_string(),
+    ///     plasmid_bin_dir: None,
     /// };
     ///
     /// let spore = Spore::create(
@@ -151,6 +152,7 @@ impl Spore {
             family_id: default_family_id(),
             node_id,
             spore_type: SporeType::default(), // Detect from manifest if available
+            plasmid_bin_dir: None,
         };
 
         Ok(Self { root_path, config })
@@ -183,6 +185,7 @@ impl Spore {
             node_id: sibling_node_id.to_string(),
             family_id: self.config.family_id.clone(),
             spore_type: self.config.spore_type,
+            plasmid_bin_dir: self.config.plasmid_bin_dir.clone(),
         };
 
         // Create new spore with same genetic seed
@@ -314,6 +317,7 @@ node_id = "tower-2"
             node_id: "node1".to_string(),
             family_id: "abc123".to_string(),
             spore_type: SporeType::Live,
+            plasmid_bin_dir: None,
         };
         assert_eq!(config.label, "test");
         assert_eq!(config.node_id, "node1");

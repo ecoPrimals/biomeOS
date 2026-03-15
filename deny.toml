@@ -2,7 +2,8 @@
 # biomeOS dependency policy — enforced by `cargo deny check`
 
 [advisories]
-ignore = []
+# TODO: bincode v1 unmaintained (RUSTSEC-2025-0141) - pulled in transitively by tarpc (serde-transport-bincode) and tokio-serde (bincode feature); neither supports bincode v2. Upgrade when upstream does.
+ignore = ["RUSTSEC-2025-0141"]
 
 [licenses]
 allow = [
@@ -37,6 +38,7 @@ deny = [
     { crate = "aws-lc-rs", wrappers = [] },
     { crate = "zstd-sys", wrappers = [] },
     { crate = "dirs-sys", wrappers = [] },
+    { crate = "users", wrappers = [] },       # RUSTSEC-2024-0399 + RUSTSEC-2025-0040: unmaintained, use rustix
 ]
 
 [sources]

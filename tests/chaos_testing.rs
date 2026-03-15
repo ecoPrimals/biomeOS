@@ -23,24 +23,6 @@ use tracing_test::traced_test;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, Request, Respond, ResponseTemplate};
 
-/// Chaos testing scenarios
-#[derive(Debug, Clone)]
-#[allow(dead_code)]
-enum ChaosScenario {
-    /// Network partition - services become unreachable
-    NetworkPartition,
-    /// Service degradation - services respond slowly
-    ServiceDegradation,
-    /// Intermittent failures - services fail randomly
-    IntermittentFailures,
-    /// Resource exhaustion - services report high resource usage
-    ResourceExhaustion,
-    /// Cascade failures - failures propagate through system
-    CascadeFailures,
-    /// Recovery testing - services come back online
-    RecoveryTesting,
-}
-
 /// Chaos responder implementing the Respond trait for dynamic mock responses
 struct ChaosHealthResponder {
     failure_rate: Arc<AtomicUsize>,

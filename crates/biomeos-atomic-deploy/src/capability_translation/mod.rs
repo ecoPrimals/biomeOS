@@ -150,6 +150,26 @@ impl CapabilityTranslationRegistry {
         self.translations.values().collect()
     }
 
+    /// List translations for a specific capability domain.
+    ///
+    /// Returns `(semantic_name, actual_method)` pairs for all translations
+    /// whose semantic name starts with the given prefix (e.g. `"crypto"` matches
+    /// `"crypto.sha256"`, `"crypto.sign"`).
+    pub fn list_translations(&self, domain: &str) -> Option<Vec<(String, String)>> {
+        let prefix = format!("{domain}.");
+        let matches: Vec<(String, String)> = self
+            .translations
+            .iter()
+            .filter(|(k, _)| k.starts_with(&prefix) || k == &domain)
+            .map(|(k, v)| (k.clone(), v.actual_method.clone()))
+            .collect();
+        if matches.is_empty() {
+            None
+        } else {
+            Some(matches)
+        }
+    }
+
     /// Call a capability with automatic translation
     pub async fn call_capability(
         &self,

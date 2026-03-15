@@ -17,18 +17,21 @@
 //! ```ignore
 //! use biomeos_core::{CompositeDiscovery, HttpDiscovery, PrimalDiscovery};
 //! use biomeos_types::{Endpoint, PrimalId};
+//! use biomeos_types::constants::{endpoints, network};
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-//! // Create discovery sources
+//! // Create discovery sources (use constants/config, not hardcoded URLs)
+//! let beardog_url = format!("http://{}:{}", endpoints::DEFAULT_LOCALHOST, network::beardog_port());
+//! let songbird_url = format!("http://{}:{}", endpoints::DEFAULT_LOCALHOST, network::songbird_port());
 //! let beardog = HttpDiscovery::new(
-//!     Endpoint::new("http://localhost:9000")?,
+//!     Endpoint::new(&beardog_url)?,
 //!     PrimalId::new("beardog-local")?,
 //!     "BearDog".to_string(),
 //!     biomeos_core::PrimalType::Security,
 //! );
 //!
 //! let songbird = HttpDiscovery::new(
-//!     Endpoint::new("http://localhost:8080")?,
+//!     Endpoint::new(&songbird_url)?,
 //!     PrimalId::new("songbird-local")?,
 //!     "Songbird".to_string(),
 //!     biomeos_core::PrimalType::Orchestration,

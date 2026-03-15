@@ -153,9 +153,6 @@ pub fn setup_test_binaries_at(base_dir: &Path) -> SporeResult<PathBuf> {
         }
     }
 
-    // Change working directory to base_dir so relative paths work
-    std::env::set_current_dir(base_dir)?;
-
     Ok(plasmid_bin)
 }
 

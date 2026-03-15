@@ -19,9 +19,8 @@ use tempfile::TempDir;
 
 /// Test fixture for LiveSpore fault testing
 struct LiveSporeFaultFixture {
-    /// Temp dir kept alive to prevent cleanup during test
-    #[allow(dead_code)]
-    temp_dir: TempDir,
+    /// Held for `Drop`: prevents temp dir cleanup during test lifetime
+    _temp_dir: TempDir,
     spore_path: PathBuf,
 }
 
@@ -32,7 +31,7 @@ impl LiveSporeFaultFixture {
         std::fs::create_dir_all(&spore_path).expect("Failed to create spore dir");
 
         Self {
-            temp_dir,
+            _temp_dir: temp_dir,
             spore_path,
         }
     }

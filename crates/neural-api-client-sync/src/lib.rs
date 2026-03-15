@@ -83,7 +83,12 @@ impl NeuralBridge {
     /// Returns `None` if biomeOS is not running (no socket found).
     #[must_use]
     pub fn discover() -> Option<Self> {
-        let path = resolve_socket()?;
+        Self::discover_with(None, None)
+    }
+
+    #[must_use]
+    pub fn discover_with(neural_api_socket: Option<&str>, family_id: Option<&str>) -> Option<Self> {
+        let path = resolve_socket_with(neural_api_socket, family_id)?;
         Some(Self {
             socket_path: path,
             timeout: Duration::from_secs(30),
@@ -195,16 +200,20 @@ impl NeuralBridge {
     }
 }
 
-fn resolve_socket() -> Option<PathBuf> {
-    // Tier 1: explicit env var
-    if let Ok(path) = std::env::var("NEURAL_API_SOCKET") {
-        let p = PathBuf::from(&path);
+pub fn resolve_socket_with(
+    neural_api_socket: Option<&str>,
+    family_id_override: Option<&str>,
+) -> Option<PathBuf> {
+    if let Some(path) = neural_api_socket {
+        let p = PathBuf::from(path);
         if p.exists() {
             return Some(p);
         }
     }
 
-    let family_id = std::env::var("FAMILY_ID").ok()?;
+    let family_id = family_id_override
+        .map(String::from)
+        .or_else(|| std::env::var("FAMILY_ID").ok())?;
 
     // Tier 2: XDG_RUNTIME_DIR
     if let Ok(xdg) = std::env::var("XDG_RUNTIME_DIR") {
@@ -285,9 +294,11 @@ mod tests {
 
     #[test]
     fn no_socket_returns_none() {
-        std::env::remove_var("NEURAL_API_SOCKET");
-        std::env::remove_var("FAMILY_ID");
-        assert!(NeuralBridge::discover().is_none());
+        assert!(NeuralBridge::discover_with(
+            Some("/nonexistent/neural-api.sock"),
+            Some("test-family")
+        )
+        .is_none());
     }
 
     #[test]
@@ -379,17 +390,15 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "env-var test is thread-unsafe; run with --test-threads=1"]
     fn resolve_socket_via_env_var() {
         let temp = tempfile::tempdir().expect("temp dir");
         let sock_path = temp.path().join("neural-api.sock");
         std::fs::write(&sock_path, "").expect("create socket file");
-        std::env::set_var("NEURAL_API_SOCKET", sock_path.as_os_str());
-        std::env::set_var("FAMILY_ID", "test-family");
 
-        let bridge = NeuralBridge::discover();
-        std::env::remove_var("NEURAL_API_SOCKET");
-        std::env::remove_var("FAMILY_ID");
+        let bridge = NeuralBridge::discover_with(
+            Some(sock_path.to_string_lossy().as_ref()),
+            Some("test-family"),
+        );
         assert!(bridge.is_some());
         assert_eq!(bridge.unwrap().socket_path(), sock_path.as_path());
     }

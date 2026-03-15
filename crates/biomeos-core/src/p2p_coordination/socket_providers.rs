@@ -49,8 +49,9 @@ impl SocketRpcClient {
         }
     }
 
-    /// Set the timeout for RPC calls (builder pattern)
-    #[allow(dead_code)]
+    /// Set the timeout for RPC calls (builder pattern).
+    /// Used by tests; production uses default timeout.
+    #[cfg(test)]
     pub fn with_timeout(mut self, timeout: Duration) -> Self {
         self.timeout = timeout;
         self
@@ -96,8 +97,9 @@ impl SocketRpcClient {
         tokio::task::spawn_blocking(move || client.call(&method, params)).await?
     }
 
-    /// Get the socket path this client connects to
-    #[allow(dead_code)]
+    /// Get the socket path this client connects to.
+    /// Used by tests to verify client configuration.
+    #[cfg(test)]
     pub fn socket_path(&self) -> &PathBuf {
         &self.socket_path
     }
