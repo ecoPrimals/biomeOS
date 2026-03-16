@@ -40,7 +40,6 @@ niches/
 | File | Purpose |
 |------|---------|
 | `test-biome.yaml` | Basic test manifest |
-| `test-deployment.yaml` | Deployment testing |
 
 ## Usage
 

@@ -8,7 +8,7 @@
 //! Command-line interface for deploying and managing federation BYOB manifests
 //! Pure Rust implementation for self-contained federation deployment
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use tracing::{Level, info};
@@ -92,7 +92,7 @@ async fn run(cli: Cli) -> Result<()> {
     let config_path = Some(
         cli.config
             .to_str()
-            .expect("config path must be valid UTF-8"),
+            .context("config path must be valid UTF-8")?,
     );
     let config = load_config(config_path).await?;
 
@@ -103,8 +103,12 @@ async fn run(cli: Cli) -> Result<()> {
         std::thread::current().id()
     ));
     std::fs::write(&temp_file, &config_str)?;
-    let validate_result =
-        validate_config(temp_file.to_str().expect("temp path must be valid UTF-8")).await;
+    let validate_result = validate_config(
+        temp_file
+            .to_str()
+            .context("temp path must be valid UTF-8")?,
+    )
+    .await;
     let _ = std::fs::remove_file(&temp_file);
     validate_result?;
 

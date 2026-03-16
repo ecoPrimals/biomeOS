@@ -22,7 +22,7 @@
 | `build-genome.sh` | `biomeos genome build` — archived to `ecoPrimals/archive/` |
 | `stop_ecosystem.sh` | `biomeos nucleus stop` / `LifecycleManager::shutdown_all()` |
 | `deploy-*-lineage.sh` | Neural API graph-based deployment (`graphs/*.toml`) |
-| `harvest-primals.sh` | `cargo build --workspace` + primal repos |
+| `harvest-primals.sh` | `tools/harvest` (biomeos-harvest binary) — `cargo run -p biomeos-harvest` |
 | `validate_*.sh` | `cargo test --workspace` (5,168+ tests) |
 
 The Rust replacement (`biomeos nucleus start`) provides:

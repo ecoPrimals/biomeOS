@@ -664,7 +664,7 @@ mod tests {
     #[test]
     fn test_dns_config_creation() {
         let config = DnsConfig {
-            servers: vec!["8.8.8.8".to_string(), "8.8.4.4".to_string()],
+            servers: vec!["192.0.2.53".to_string(), "192.0.2.54".to_string()],
             domain: "biomeos.local".to_string(),
             timeout: Duration::from_secs(5),
         };

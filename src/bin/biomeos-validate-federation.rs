@@ -136,12 +136,43 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_run_output_format() {
+        // Verify run() returns a Result with proper type - no panic, completes.
+        let result: Result<()> = run().await;
+        match &result {
+            Ok(()) => {}
+            Err(e) => {
+                assert!(!e.to_string().is_empty(), "error should have a message");
+            }
+        }
+    }
+
+    #[tokio::test]
     async fn test_run_propagates_manager_creation_error() {
         // When VmFederationManager::new() fails (e.g. benchScale not found),
         // run() should return Err. This is the typical case in CI/test environments.
         let result = run().await;
         if let Err(e) = &result {
             assert!(!e.to_string().is_empty(), "error should have a message");
+        }
+    }
+
+    #[test]
+    fn test_vm_federation_manager_new_fails_without_benchscale() {
+        // VmFederationManager::new() requires benchScale at a specific path.
+        // In CI/test environments it typically isn't there, so we get Err.
+        let result = VmFederationManager::new();
+        match &result {
+            Ok(_) => {
+                // benchScale is present - skip assertion
+            }
+            Err(e) => {
+                let msg = e.to_string();
+                assert!(
+                    msg.contains("benchscale") || msg.contains("benchScale"),
+                    "error when benchScale missing should mention benchscale: {msg}"
+                );
+            }
         }
     }
 }

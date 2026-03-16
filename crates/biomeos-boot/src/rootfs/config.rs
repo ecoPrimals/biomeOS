@@ -79,7 +79,7 @@ mod tests {
             services_dir: Some(PathBuf::from("/etc/systemd")),
             mount_point: Some(PathBuf::from("/mnt/build")),
             fs_type: "xfs".to_string(),
-            dns_servers: Some(vec!["8.8.8.8".to_string(), "1.1.1.1".to_string()]),
+            dns_servers: Some(vec!["192.0.2.53".to_string(), "198.51.100.53".to_string()]),
             nbd_device: Some("/dev/nbd1".to_string()),
             hostname: "custom-host".to_string(),
         };

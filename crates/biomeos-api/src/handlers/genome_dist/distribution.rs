@@ -157,7 +157,7 @@ pub(crate) async fn download_binary_from(
         metadata.len()
     );
 
-    Ok(Response::builder()
+    Response::builder()
         .status(StatusCode::OK)
         .header(header::CONTENT_TYPE, "application/octet-stream")
         .header(
@@ -169,7 +169,16 @@ pub(crate) async fn download_binary_from(
         .header("X-Primal-Version", &actual_version)
         .header("X-Primal-Arch", &arch)
         .body(body)
-        .unwrap())
+        .map_err(|e| {
+            error!("Failed to build response: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(DistError {
+                    error: "Failed to build response".to_string(),
+                    code: "RESPONSE_BUILD_ERROR".to_string(),
+                }),
+            )
+        })
 }
 
 /// Update a LiveSpore with all genomes from genomeBin

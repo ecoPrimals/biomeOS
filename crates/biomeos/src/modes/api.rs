@@ -74,7 +74,7 @@ pub async fn run(port: Option<u16>, socket: Option<PathBuf>, unix_only: bool) ->
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used)]
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
 
@@ -98,5 +98,38 @@ mod tests {
             PathBuf::from("/run/user/1000/biomeos-api.sock")
         );
         assert_eq!(config.port_deprecated, None);
+    }
+
+    #[test]
+    fn test_resolve_api_config_port_only_no_socket() {
+        let config =
+            resolve_api_config(Some(3000), None, PathBuf::from("/run/biomeos/default.sock"));
+        assert_eq!(
+            config.socket_path,
+            PathBuf::from("/run/biomeos/default.sock")
+        );
+        assert_eq!(config.port_deprecated, Some(3000));
+    }
+
+    #[test]
+    fn test_resolve_api_config_socket_overrides_port() {
+        let config = resolve_api_config(
+            Some(9999),
+            Some(PathBuf::from("/var/run/api.sock")),
+            PathBuf::from("/default.sock"),
+        );
+        assert_eq!(config.socket_path, PathBuf::from("/var/run/api.sock"));
+        assert_eq!(config.port_deprecated, Some(9999));
+    }
+
+    #[test]
+    fn test_api_config_debug() {
+        let config = ApiConfig {
+            socket_path: PathBuf::from("/tmp/sock"),
+            port_deprecated: Some(80),
+        };
+        let s = format!("{config:?}");
+        assert!(s.contains("socket_path"));
+        assert!(s.contains("port_deprecated"));
     }
 }

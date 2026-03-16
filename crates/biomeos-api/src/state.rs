@@ -208,7 +208,7 @@ impl Config {
             .map(PathBuf::from)
             .unwrap_or_else(|_| Self::default_socket_path());
 
-        // HTTP bridge (TEMPORARY - for PetalTongue transition)
+        // HTTP bridge (DEPRECATED — for PetalTongue transition, removal in v0.5.0)
         let enable_http_bridge = std::env::var("BIOMEOS_API_HTTP_BRIDGE")
             .ok()
             .and_then(|v| v.parse::<bool>().ok())

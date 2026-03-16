@@ -440,3 +440,84 @@ fn test_build_socket_path_socket_name_format() {
     let name = path.file_name().unwrap().to_string_lossy();
     assert_eq!(name, "my-primal-test.sock");
 }
+
+#[tokio::test]
+async fn test_discover_endpoint_via_env_tcp_port_only() {
+    // BEARDOG_TCP with just port number uses strategy.tcp_fallback_host
+    let env_overrides: HashMap<String, String> =
+        [("BEARDOG_TCP".to_string(), "9100".to_string())].into();
+    let discovery = SocketDiscovery::new("test");
+    let result = discovery
+        .discover_endpoint_via_env_with("beardog", Some(&env_overrides))
+        .await;
+
+    // May or may not succeed depending on whether 127.0.0.1:9100 is listening
+    // Just verify it doesn't panic - TCP verification happens in try_tcp_fallback
+    let _ = result;
+}
+
+#[tokio::test]
+async fn test_discover_endpoint_via_env_biomeos_prefix() {
+    let temp_dir = TempDir::new().unwrap();
+    let socket_path = temp_dir.path().join("beardog.sock");
+    std::fs::File::create(&socket_path).unwrap();
+
+    let env_overrides: HashMap<String, String> = [(
+        "BIOMEOS_BEARDOG_SOCKET".to_string(),
+        socket_path.to_string_lossy().to_string(),
+    )]
+    .into();
+    let discovery = SocketDiscovery::new("test");
+    let result = discovery
+        .discover_endpoint_via_env_with("beardog", Some(&env_overrides))
+        .await;
+
+    assert!(result.is_some());
+}
+
+#[tokio::test]
+async fn test_discover_endpoint_via_env_primal_name_with_dash() {
+    let env_overrides: HashMap<String, String> =
+        [("MY_PRIMAL_TCP".to_string(), "127.0.0.1:9200".to_string())].into();
+    let discovery = SocketDiscovery::new("test");
+    let result = discovery
+        .discover_endpoint_via_env_with("my-primal", Some(&env_overrides))
+        .await;
+
+    assert!(result.is_some());
+    if let Some(TransportEndpoint::TcpSocket { host, port }) = result {
+        assert_eq!(host.as_ref(), "127.0.0.1");
+        assert_eq!(port, 9200);
+    }
+}
+
+#[test]
+fn test_calculate_primal_port_empty_name() {
+    let discovery = SocketDiscovery::new("test");
+    let port = discovery.calculate_primal_port("");
+    assert!((9100..9200).contains(&port));
+}
+
+#[test]
+fn test_calculate_primal_port_unicode_name() {
+    let discovery = SocketDiscovery::new("test");
+    let port = discovery.calculate_primal_port("primal-é");
+    assert!((9100..9200).contains(&port));
+}
+
+#[test]
+fn test_build_socket_path_with_xdg_and_primal_socket() {
+    let temp_dir = TempDir::new().unwrap();
+    let socket_dir = temp_dir.path().join("custom");
+    std::fs::create_dir_all(&socket_dir).unwrap();
+
+    let discovery = SocketDiscovery::new("fam");
+    let path = discovery.build_socket_path_with(
+        "beardog",
+        Some(socket_dir.to_str().unwrap()),
+        Some(temp_dir.path()),
+    );
+
+    // primal_socket takes precedence over xdg
+    assert_eq!(path, socket_dir.join("beardog-fam.sock"));
+}

@@ -168,7 +168,8 @@ impl DiscoveryBootstrap {
         // All methods failed
         tracing::error!("❌ No universal adapter found through any discovery method");
 
-        let example_socket = biomeos_types::SystemPaths::new_lazy().primal_socket("songbird");
+        let example_socket = biomeos_types::SystemPaths::new_lazy()
+            .primal_socket(biomeos_types::primal_names::SONGBIRD);
         Err(anyhow::anyhow!(
             "No universal adapter found. Set DISCOVERY_ENDPOINT environment variable or ensure Songbird is running.\n\
             \n\

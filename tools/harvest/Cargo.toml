@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 authors = ["biomeOS Team"]
 description = "Modern Rust-based primal harvesting system - NUCLEUS evolution"
+license = "AGPL-3.0-only"
 
 [[bin]]
 name = "biomeos-harvest"

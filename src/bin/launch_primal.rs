@@ -255,4 +255,68 @@ mod tests {
         assert!(path.contains("/run/user/1234"));
         assert!(path.contains("beardog-nat0.sock"));
     }
+
+    #[test]
+    fn test_print_usage_does_not_panic() {
+        print_usage("test_binary");
+    }
+
+    #[test]
+    fn test_get_primal_binary_path_songbird_fallback() {
+        // Songbird resolves to songbird-orchestrator when those paths exist,
+        // otherwise falls back to plasmidBin/songbird. Verify path structure.
+        let path = get_primal_binary_path("songbird").unwrap();
+        let path_str = path.to_string_lossy();
+        assert!(
+            path_str.contains("songbird"),
+            "songbird path should contain songbird, got: {path_str}"
+        );
+        assert!(
+            path_str.contains("plasmidBin"),
+            "songbird path should contain plasmidBin, got: {path_str}"
+        );
+        // When songbird-orchestrator exists, path contains it; otherwise plasmidBin/songbird
+        assert!(
+            path_str.ends_with("songbird-orchestrator") || path_str.ends_with("songbird"),
+            "songbird path should end with songbird-orchestrator or songbird, got: {path_str}"
+        );
+    }
+
+    #[test]
+    fn test_get_socket_path_without_uid_env() {
+        // When UID and USER are not set, should use "1000" fallback
+        let _guard_uid = TestEnvGuard::remove("UID");
+        let _guard_user = TestEnvGuard::remove("USER");
+        let path = get_socket_path("beardog", "nat0").unwrap();
+        assert!(
+            path.contains("/run/user/1000"),
+            "without UID env should use 1000 fallback, got: {path}"
+        );
+    }
+
+    #[test]
+    fn test_get_log_path_special_characters() {
+        // family_id with special chars produces valid path
+        let path = get_log_path("beardog", "nat0-cf7e8729");
+        assert_eq!(path, "/tmp/beardog-nat0-cf7e8729.log");
+
+        let path = get_log_path("songbird", "family_with-dash");
+        assert_eq!(path, "/tmp/songbird-family_with-dash.log");
+    }
+
+    #[test]
+    fn test_get_primal_binary_path_all_primals() {
+        for primal in ["beardog", "songbird", "toadstool", "nestgate", "squirrel"] {
+            let path = get_primal_binary_path(primal).unwrap();
+            let path_str = path.to_string_lossy();
+            assert!(
+                path_str.contains(primal),
+                "{primal} path should contain {primal}, got: {path_str}"
+            );
+            assert!(
+                path_str.contains("plasmidBin"),
+                "{primal} path should contain plasmidBin, got: {path_str}"
+            );
+        }
+    }
 }

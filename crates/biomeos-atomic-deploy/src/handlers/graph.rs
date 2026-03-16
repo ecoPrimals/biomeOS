@@ -377,7 +377,7 @@ impl GraphHandler {
     /// 2. Node ID (fallback)
     ///
     /// REMOVED: Hardcoded capability → primal mapping
-    fn resolve_primal_name(node: &crate::neural_graph::GraphNode) -> String {
+    pub(crate) fn resolve_primal_name(node: &crate::neural_graph::GraphNode) -> String {
         node.primal
             .as_ref()
             .and_then(|p| p.by_name.clone())
@@ -775,7 +775,8 @@ impl GraphHandler {
         Ok(serde_json::to_value(analysis)?)
     }
 
-    fn extract_session_id(params: &Option<Value>) -> Result<String> {
+    /// Extract session_id from params (pure logic, testable).
+    pub(crate) fn extract_session_id(params: &Option<Value>) -> Result<String> {
         let params = params.as_ref().context("Missing parameters")?;
         Ok(params["session_id"]
             .as_str()

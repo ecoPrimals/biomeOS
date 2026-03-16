@@ -595,3 +595,63 @@ fn test_socket_path_for_capability_unknown_returns_unknown_sock() {
     assert!(path.to_string_lossy().contains("unknown"));
     assert!(path.to_string_lossy().ends_with(".sock"));
 }
+
+#[test]
+fn test_build_primal_command_squirrel_without_ai_keys() {
+    let config = super::PrimalCommandConfig {
+        name: "squirrel",
+        binary: std::path::Path::new("/usr/bin/squirrel"),
+        socket_dir: std::path::Path::new("/tmp/sock"),
+        family_id: "fam1",
+        node_id: "node1",
+        anthropic_api_key: None,
+        openai_api_key: None,
+        ai_http_providers: None,
+    };
+    let cmd = super::build_primal_command_with(config);
+    let envs: Vec<_> = cmd.get_envs().collect();
+    let ai_providers = envs
+        .iter()
+        .find(|(k, _)| k == &std::ffi::OsStr::new("AI_HTTP_PROVIDERS"));
+    assert!(
+        ai_providers.is_none(),
+        "AI_HTTP_PROVIDERS should not be set when no API keys"
+    );
+}
+
+#[test]
+fn test_resolve_startup_config_family_from_env_when_not_provided() {
+    let config = resolve_startup_config_with("tower", "node1", None, Some("/tmp/sock"));
+    assert!(config.is_ok());
+    let config = config.unwrap();
+    assert!(!config.family_id.is_empty());
+}
+
+#[test]
+fn test_format_nucleus_summary_coordinated_mode() {
+    let lines = format_nucleus_summary(
+        &[("beardog".to_string(), 999)],
+        std::path::Path::new("/run/sock"),
+        "fam1",
+        "node1",
+        &NucleusMode::Full,
+        "coordinated",
+    );
+    assert!(lines.iter().any(|l| l.contains("coordinated")));
+    assert!(lines.iter().any(|l| l.contains("999")));
+}
+
+#[test]
+fn test_primal_command_config_debug() {
+    let config = super::PrimalCommandConfig {
+        name: "beardog",
+        binary: std::path::Path::new("/bin/beardog"),
+        socket_dir: std::path::Path::new("/tmp"),
+        family_id: "f",
+        node_id: "n",
+        anthropic_api_key: None,
+        openai_api_key: None,
+        ai_http_providers: None,
+    };
+    let _ = format!("{config:?}");
+}

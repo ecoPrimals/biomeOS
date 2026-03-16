@@ -554,6 +554,44 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_handle_user_action_stop_primal() {
+        let orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let result = orchestrator
+            .handle_user_action(UserAction::StopPrimal {
+                primal_id: "beardog-1".to_string(),
+            })
+            .await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_error());
+    }
+
+    #[tokio::test]
+    async fn test_handle_user_action_restart_primal() {
+        let orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let result = orchestrator
+            .handle_user_action(UserAction::RestartPrimal {
+                primal_id: "songbird-1".to_string(),
+            })
+            .await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_error());
+    }
+
+    #[tokio::test]
+    async fn test_handle_primal_event_missing_type_uses_unknown() {
+        let orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();
+        let mut rx = orchestrator.events().subscribe();
+
+        let event = serde_json::json!({
+            "data": "no type field"
+        });
+        orchestrator.handle_primal_event_for_test(&event);
+
+        let result = tokio::time::timeout(std::time::Duration::from_millis(50), rx.recv()).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
     #[ignore = "run() blocks indefinitely"]
     async fn test_run_subscribes_and_loops() {
         let mut orchestrator = InteractiveUIOrchestrator::new("test-family").await.unwrap();

@@ -153,13 +153,13 @@ pub async fn transition_to_coordinated(family_id: &str) -> Result<()> {
             biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal("security")
                 .map(String::from)
         })
-        .unwrap_or_else(|| "beardog".to_string());
+        .unwrap_or_else(|| biomeos_types::primal_names::BEARDOG.to_string());
     let network_provider = biomeos_types::env_config::network_provider()
         .or_else(|| {
             biomeos_types::capability_taxonomy::CapabilityTaxonomy::resolve_to_primal("discovery")
                 .map(String::from)
         })
-        .unwrap_or_else(|| "songbird".to_string());
+        .unwrap_or_else(|| biomeos_types::primal_names::SONGBIRD.to_string());
     let mut nucleation = SocketNucleation::new(SocketStrategy::default());
     let beardog_socket = nucleation.assign_socket(&security_provider, family_id);
     let songbird_socket = nucleation.assign_socket(&network_provider, family_id);

@@ -85,7 +85,7 @@ mod run {
             services_dir: Some(PathBuf::from("/etc/systemd")),
             mount_point: Some(PathBuf::from("/mnt/build")),
             fs_type: "xfs".to_string(),
-            dns_servers: Some(vec!["8.8.8.8".to_string(), "8.8.4.4".to_string()]),
+            dns_servers: Some(vec!["192.0.2.53".to_string(), "192.0.2.54".to_string()]),
             nbd_device: Some("/dev/nbd0".to_string()),
             hostname: "custom-host".to_string(),
         };

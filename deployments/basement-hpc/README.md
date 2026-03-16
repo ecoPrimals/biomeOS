@@ -43,11 +43,9 @@
 ```bash
 cd /home/eastgate/Development/ecoPrimals/phase2/biomeOS
 
-# Create genetic family seed for basement HPC
-cargo run --bin spore-tools -- create-family \
-  --family-id ${FAMILY_ID} \
-  --description "Basement HPC - LAN + Internet + Mobile" \
-  --output .family.seed
+# Create genetic family seed for basement HPC (32 random bytes)
+openssl rand -hex 16 > .family.seed
+chmod 600 .family.seed
 
 # Backup seed (CRITICAL!)
 cp .family.seed ~/.secrets/basement-hpc-${FAMILY_ID}.seed
@@ -57,22 +55,16 @@ chmod 400 ~/.secrets/basement-hpc-${FAMILY_ID}.seed
 ### **Phase 2: Build LiveSpores (5 USBs)**
 
 ```bash
-# Build 5 genetic sibling spores
+# Build 5 genetic sibling spores (requires parent spore first; use create_livespore.sh for initial)
 for i in {1..5}; do
   SPORE_NAME=$(echo "alpha beta gamma delta epsilon" | cut -d' ' -f$i)
-  cargo run --bin biomeos-spore -- build \
-    --family-seed .family.seed \
-    --niche tower \
-    --spore-id node-$SPORE_NAME \
-    --output /media/liveSpore$i \
-    --fresh-bins \
-    --verify
+  ./scripts/create_sibling_spore.sh /path/to/parent/biomeOS /media/liveSpore$i node-$SPORE_NAME
 done
 
 # Verify all spores are genetic siblings
-cargo run --bin spore-tools -- verify-lineage \
-  --spores /media/liveSpore{1..5} \
-  --family-id ${FAMILY_ID}
+for spore in /media/liveSpore{1..5}/biomeOS; do
+  biomeos verify-lineage "$spore" --detailed
+done
 ```
 
 ### **Phase 3: Deploy LAN Towers (6 nodes)**
@@ -80,35 +72,11 @@ cargo run --bin spore-tools -- verify-lineage \
 Deploy towers on each LAN machine:
 
 ```bash
-# On Northgate
+# On Northgate (and similarly for other nodes)
 export NODE_ID=tower-northgate
 export FAMILY_ID=${FAMILY_ID}
-biomeos deploy --niche tower --config deployments/basement-hpc/northgate.toml --usb /media/liveSpore1
-
-# On Southgate
-export NODE_ID=tower-southgate
-export FAMILY_ID=${FAMILY_ID}
-biomeos deploy --niche tower --config deployments/basement-hpc/southgate.toml --usb /media/liveSpore1
-
-# On Eastgate
-export NODE_ID=tower-eastgate
-export FAMILY_ID=${FAMILY_ID}
-biomeos deploy --niche tower --config deployments/basement-hpc/eastgate.toml --usb /media/liveSpore1
-
-# On Westgate
-export NODE_ID=tower-westgate
-export FAMILY_ID=${FAMILY_ID}
-biomeos deploy --niche tower --config deployments/basement-hpc/westgate.toml --usb /media/liveSpore1
-
-# On Strandgate
-export NODE_ID=tower-strandgate
-export FAMILY_ID=${FAMILY_ID}
-biomeos deploy --niche tower --config deployments/basement-hpc/strandgate.toml --usb /media/liveSpore1
-
-# On BlueGate
-export NODE_ID=tower-bluegate
-export FAMILY_ID=${FAMILY_ID}
-biomeos deploy --niche tower --config deployments/basement-hpc/bluegate.toml --usb /media/liveSpore1
+biomeos nucleus start --mode tower --node-id tower-northgate
+# Or graph-based: biomeos deploy graphs/tower_atomic_bootstrap.toml
 ```
 
 ### **Phase 4: Verify LAN Federation**
@@ -134,16 +102,9 @@ Deploy compute nodes on each machine (see individual config files).
 
 **Example: Northgate**
 ```bash
-# GPU node
+# Compute nodes use biomeos nucleus or graph-based deployment
 export NODE_ID=compute-northgate-rtx5090
-export RESOURCE_TYPE=gpu
-export RESOURCE_ID=0
-biomeos deploy --niche compute-node --config deployments/basement-hpc/northgate.toml
-
-# CPU node
-export NODE_ID=compute-northgate-i9
-export RESOURCE_TYPE=cpu
-biomeos deploy --niche compute-node --config deployments/basement-hpc/northgate.toml
+biomeos deploy graphs/node_atomic_compute.toml
 ```
 
 Repeat for all LAN nodes using their respective config files.
@@ -154,14 +115,12 @@ Repeat for all LAN nodes using their respective config files.
 # On FlockGate (brother's house)
 export NODE_ID=tower-flockgate
 export FAMILY_ID=${FAMILY_ID}
-export INTERNET_ENABLED=true
-biomeos deploy --niche tower --config deployments/basement-hpc/flockgate.toml --usb /media/liveSpore2
+biomeos nucleus start --mode tower --node-id tower-flockgate
 
 # On KinGate (family)
 export NODE_ID=tower-kingate
 export FAMILY_ID=${FAMILY_ID}
-export INTERNET_ENABLED=true
-biomeos deploy --niche tower --config deployments/basement-hpc/kingate.toml --usb /media/liveSpore3
+biomeos nucleus start --mode tower --node-id tower-kingate
 ```
 
 ### **Phase 7: Verify Internet Federation**
@@ -181,16 +140,12 @@ curl --unix-socket /tmp/songbird-tower-northgate.sock \
 # Swiftgate (portable laptop)
 export NODE_ID=tower-swiftgate
 export FAMILY_ID=${FAMILY_ID}
-export MOBILE_MODE=true
-biomeos deploy --niche tower --config deployments/basement-hpc/swiftgate.toml --usb /media/liveSpore4
+biomeos nucleus start --mode tower --node-id tower-swiftgate
 
-# Pixel 8a (Android phone)
-# Use Termux or Android app
+# Pixel 8a (Android phone) - use tower-lite mode if available
 export NODE_ID=tower-pixel8a
 export FAMILY_ID=${FAMILY_ID}
-export MOBILE_MODE=true
-export BEARDOG_HSM_MODE=hardware
-biomeos deploy --niche tower-lite --config deployments/basement-hpc/pixel8a.toml --usb /media/liveSpore5
+biomeos nucleus start --mode tower --node-id tower-pixel8a
 ```
 
 ---
@@ -227,9 +182,9 @@ curl --unix-socket /tmp/compute-node-northgate-rtx5090.sock \
 ### **Test 4: Genetic Lineage Verification**
 ```bash
 # Verify all nodes share genetic lineage
-cargo run --bin spore-tools -- verify-deployed \
-  --family-id ${FAMILY_ID} \
-  --towers tower-{northgate,southgate,eastgate,westgate,strandgate,bluegate,flockgate,kingate,swiftgate,pixel8a}
+for tower in northgate southgate eastgate westgate strandgate bluegate flockgate kingate swiftgate; do
+  biomeos verify-lineage /path/to/tower-$tower/spore --detailed
+done
 ```
 
 ---
@@ -280,19 +235,12 @@ Import dashboards:
 
 ### **Sub-Federations**
 
-Create granular trust domains:
+Create granular trust domains (via Songbird/BearDog family tags):
 ```bash
-# Gaming sub-federation
-cargo run --bin subfed-tools -- create \
-  --parent-family ${FAMILY_ID} \
-  --subfed-name gaming \
-  --members tower-southgate,tower-bluegate,tower-flockgate,tower-kingate
-
-# Bio pipeline sub-federation
-cargo run --bin subfed-tools -- create \
-  --parent-family ${FAMILY_ID} \
-  --subfed-name bio-pipeline \
-  --members tower-strandgate,tower-westgate
+# Sub-federations use family tags; configure via tower.toml or Songbird discovery
+# Example: set FAMILY_ID per sub-fed or use biomeos nucleus --node-id for tower identity
+biomeos nucleus start --mode tower --node-id tower-southgate
+# Trust is established via genetic lineage (biomeos verify-lineage) and family_id
 ```
 
 ---

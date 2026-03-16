@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: March 16, 2026 (v2.44: Deep audit evolution, Edition 2024, capability-based discovery, tarpc binary protocol)
-**Version**: 2.44
+**Updated**: March 16, 2026 (v2.45: Deep debt execution + coverage evolution)
+**Version**: 2.45
 **Status**: PRODUCTION READY - Multi-Computer Federation Validated
 
 ---
@@ -17,8 +17,8 @@
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, Edition 2024, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit) |
 | **Lint hardening** | `deny` on unwrap_used/expect_used |
-| **Tests Passing** | 5,168 lib + bin (0 failures) |
-| **Test Coverage** | 77.92% line, 80.32% function (llvm-cov, climbing toward 90%) |
+| **Tests Passing** | 5,148 lib + bin (0 failures) |
+| **Test Coverage** | 78.27% line, 80.58% function (llvm-cov, climbing toward 90%) |
 | **Unsafe Code** | 0 production, 0 test |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`) |
 | **Formatting** | PASS (rustfmt.toml enforced, `cargo fmt --check` clean) |
@@ -33,6 +33,7 @@
 | **Discovery Model** | Dynamic socket scanning + capability taxonomy |
 | **NAT Traversal** | 4-tier strategy (LAN/punch/coordinated/relay) |
 | **P2P Sovereign Onion** | PRODUCTION READY |
+| **Deep Debt Session (Mar 16)** | Clippy: PASS (was FAIL with 2 dead-code errors); 1 flaky test fixed (deployment_mode env race); 9 Cargo.toml AGPL-3.0-only; Sovereignty: all hardcoded Google DNS removed from tests; Doc warnings: 0 (was 1); Timeout/port constants centralized; serial_test for env-dependent tests |
 | **External C deps** | 0 (nix removed → rustix, sysinfo removed → /proc, libc removed, dirs → etcetera) |
 | **ecoBin v3.0** | COMPLIANT (pure Rust: rustix for POSIX, /proc for metrics, zero -sys crates) |
 | **Capability constants** | `capability` module: CRYPTO, MESH_NETWORKING, TLS, STORAGE, GATEWAY, NAT_TRAVERSAL, etc. |
@@ -763,7 +764,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 
 ## Test Coverage Analysis (llvm-cov, Mar 14, 2026)
 
-**Overall**: 77.92% line coverage (5,168 tests, 0 failures)
+**Overall**: 78.27% line coverage (5,148 tests, 0 failures)
 
 ### Coverage Distribution
 
@@ -847,7 +848,7 @@ Family: Shared .family.seed, both enrolled with Blake3-Lineage-KDF
 # Build
 cargo build --workspace
 
-# Test (5,168 tests)
+# Test (5,148 tests)
 cargo test --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -882,7 +883,7 @@ echo '{"jsonrpc":"2.0","method":"query_ai","params":{"prompt":"hello","model":"c
 **IPC**: Universal IPC v3.0 + HTTP JSON-RPC (inter-gate)
 **Security**: A++ (Two-seed Dark Forest)
 **Code Quality**: A++ (Pure Rust, fully concurrent, zero-copy, safe casts, JSON-RPC builders, zero warnings, full doc coverage, table-driven routing)
-**Tests**: 5,168 passing fully concurrent (77.92% line coverage via llvm-cov)
+**Tests**: 5,148 passing fully concurrent (78.27% line, 80.58% function via llvm-cov)
 **Clippy**: PASS (0 warnings, `-D warnings`) | **Format**: PASS (`cargo fmt --check` clean)
 **Docs**: Full coverage (0 missing_docs warnings across 8 crates)
 **Unsafe Code**: 0 (production + tests)

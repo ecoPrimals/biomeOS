@@ -178,7 +178,7 @@ enum Mode {
         graph: PathBuf,
 
         /// Validate only (don't execute)
-        #[arg(short, long)]
+        #[arg(long)]
         validate_only: bool,
 
         /// Dry run (show what would happen)
@@ -826,6 +826,252 @@ mod tests {
             },
             _ => panic!("expected RootPulse mode"),
         }
+    }
+
+    #[test]
+    fn test_cli_parse_neural_api() {
+        let cli = Cli::parse_from(["biomeos", "neural-api"]);
+        match &cli.mode {
+            Mode::NeuralApi {
+                graphs_dir,
+                family_id,
+                socket,
+            } => {
+                assert_eq!(graphs_dir, &PathBuf::from("graphs"));
+                assert!(family_id.is_none());
+                assert!(socket.is_none());
+            }
+            _ => panic!("expected NeuralApi mode"),
+        }
+    }
+
+    #[test]
+    fn test_cli_parse_neural_api_with_opts() {
+        let cli = Cli::parse_from([
+            "biomeos",
+            "neural-api",
+            "--graphs-dir",
+            "/tmp/graphs",
+            "--family-id",
+            "fam1",
+            "--socket",
+            "/tmp/api.sock",
+        ]);
+        match &cli.mode {
+            Mode::NeuralApi {
+                graphs_dir,
+                family_id,
+                socket,
+            } => {
+                assert_eq!(graphs_dir, &PathBuf::from("/tmp/graphs"));
+                assert_eq!(family_id.as_deref(), Some("fam1"));
+                assert_eq!(
+                    socket.as_ref().map(|p| p.as_path()),
+                    Some(Path::new("/tmp/api.sock"))
+                );
+            }
+            _ => panic!("expected NeuralApi mode"),
+        }
+    }
+
+    #[test]
+    fn test_cli_parse_deploy() {
+        let cli = Cli::parse_from(["biomeos", "deploy", "graph.json"]);
+        match &cli.mode {
+            Mode::Deploy {
+                graph,
+                validate_only,
+                dry_run,
+            } => {
+                assert_eq!(graph, &PathBuf::from("graph.json"));
+                assert!(!*validate_only);
+                assert!(!*dry_run);
+            }
+            _ => panic!("expected Deploy mode"),
+        }
+    }
+
+    #[test]
+    fn test_cli_parse_deploy_validate_dry_run() {
+        let cli = Cli::parse_from([
+            "biomeos",
+            "deploy",
+            "g.json",
+            "--validate-only",
+            "--dry-run",
+        ]);
+        match &cli.mode {
+            Mode::Deploy {
+                validate_only,
+                dry_run,
+                ..
+            } => {
+                assert!(*validate_only);
+                assert!(*dry_run);
+            }
+            _ => panic!("expected Deploy mode"),
+        }
+    }
+
+    #[test]
+    fn test_cli_parse_api() {
+        let cli = Cli::parse_from(["biomeos", "api"]);
+        match &cli.mode {
+            Mode::Api {
+                port,
+                socket,
+                unix_only,
+            } => {
+                assert!(port.is_none());
+                assert!(socket.is_none());
+                assert!(!*unix_only);
+            }
+            _ => panic!("expected Api mode"),
+        }
+    }
+
+    #[test]
+    fn test_cli_parse_api_with_port_and_socket() {
+        let cli = Cli::parse_from(["biomeos", "api", "-p", "8080", "--socket", "/tmp/api.sock"]);
+        match &cli.mode {
+            Mode::Api {
+                port,
+                socket,
+                unix_only,
+            } => {
+                assert_eq!(*port, Some(8080));
+                assert_eq!(
+                    socket.as_ref().map(|p| p.as_path()),
+                    Some(Path::new("/tmp/api.sock"))
+                );
+                assert!(!*unix_only);
+            }
+            _ => panic!("expected Api mode"),
+        }
+    }
+
+    #[test]
+    fn test_cli_parse_verify_lineage() {
+        let cli = Cli::parse_from(["biomeos", "verify-lineage", "/path/to/spore"]);
+        match &cli.mode {
+            Mode::VerifyLineage { path, detailed } => {
+                assert_eq!(path, &PathBuf::from("/path/to/spore"));
+                assert!(!*detailed);
+            }
+            _ => panic!("expected VerifyLineage mode"),
+        }
+    }
+
+    #[test]
+    fn test_cli_parse_verify_lineage_detailed() {
+        let cli = Cli::parse_from(["biomeos", "verify-lineage", "/p", "--detailed"]);
+        match &cli.mode {
+            Mode::VerifyLineage { detailed, .. } => assert!(*detailed),
+            _ => panic!("expected VerifyLineage mode"),
+        }
+    }
+
+    #[test]
+    fn test_cli_parse_nucleus() {
+        let cli = Cli::parse_from(["biomeos", "nucleus", "--node-id", "node1"]);
+        match &cli.mode {
+            Mode::Nucleus {
+                mode,
+                node_id,
+                family_id,
+            } => {
+                assert_eq!(mode, "full");
+                assert_eq!(node_id, "node1");
+                assert!(family_id.is_none());
+            }
+            _ => panic!("expected Nucleus mode"),
+        }
+    }
+
+    #[test]
+    fn test_cli_parse_nucleus_with_mode_and_family() {
+        let cli = Cli::parse_from([
+            "biomeos",
+            "nucleus",
+            "--mode",
+            "tower",
+            "--node-id",
+            "n1",
+            "--family-id",
+            "fam1",
+        ]);
+        match &cli.mode {
+            Mode::Nucleus {
+                mode,
+                node_id,
+                family_id,
+            } => {
+                assert_eq!(mode, "tower");
+                assert_eq!(node_id, "n1");
+                assert_eq!(family_id.as_deref(), Some("fam1"));
+            }
+            _ => panic!("expected Nucleus mode"),
+        }
+    }
+
+    #[test]
+    fn test_cli_parse_continuous() {
+        let cli = Cli::parse_from(["biomeos", "continuous", "graph.json"]);
+        match &cli.mode {
+            Mode::Continuous { graph, dry_run } => {
+                assert_eq!(graph, &PathBuf::from("graph.json"));
+                assert!(!*dry_run);
+            }
+            _ => panic!("expected Continuous mode"),
+        }
+    }
+
+    #[test]
+    fn test_cli_parse_plasmodium_status() {
+        let cli = Cli::parse_from(["biomeos", "plasmodium", "status"]);
+        match &cli.mode {
+            Mode::Plasmodium { command } => match command {
+                PlasmodiumCommand::Status => {}
+                _ => panic!("expected Status subcommand"),
+            },
+            _ => panic!("expected Plasmodium mode"),
+        }
+    }
+
+    #[test]
+    fn test_cli_parse_verbose_and_log_level() {
+        let cli = Cli::parse_from(["biomeos", "--verbose", "--log-level", "debug", "version"]);
+        assert!(cli.verbose);
+        assert_eq!(cli.log_level, "debug");
+    }
+
+    #[test]
+    fn test_cli_parse_genome_list_default_dir() {
+        let cli = Cli::parse_from(["biomeos", "genome", "list"]);
+        match &cli.mode {
+            Mode::Genome { command } => match command {
+                GenomeCommand::List(args) => {
+                    assert_eq!(args.directory, PathBuf::from("plasmidBin"));
+                }
+                _ => panic!("expected List subcommand"),
+            },
+            _ => panic!("expected Genome mode"),
+        }
+    }
+
+    #[test]
+    fn test_list_genome_bins_json_extension() {
+        use biomeos_genomebin_v3::{GenomeBin, GenomeManifest};
+
+        let temp = tempfile::tempdir().expect("temp dir");
+        let genome = GenomeBin::with_manifest(GenomeManifest::new("json-primal").version("1.0"));
+        let json = genome.to_json().expect("serialize");
+        let path = temp.path().join("test.json");
+        std::fs::write(&path, json).expect("write genome");
+
+        let infos = list_genome_bins(temp.path()).unwrap();
+        assert_eq!(infos.len(), 1);
+        assert_eq!(infos[0].name, "json-primal");
     }
 
     #[tokio::test]

@@ -411,7 +411,7 @@ mod tests {
     fn test_family_federation_observer() {
         let observer = MinimalObserver::family_federation(
             "family-123".to_string(),
-            Some("http://family-hub:8080".to_string()),
+            Some("http://family-hub.example.test:8080".to_string()),
         )
         .unwrap();
 

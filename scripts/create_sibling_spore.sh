@@ -149,19 +149,37 @@ log_info "Copying primal binaries..."
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIOMEOS_ROOT="$(dirname "$SCRIPT_DIR")"
-PLASMID_BIN="$BIOMEOS_ROOT/plasmidBin/primals"
+# Try plasmidBin/primals, plasmidBin/, then target/release (actual layout varies)
+PLASMID_PRIMALS="$BIOMEOS_ROOT/plasmidBin/primals"
+PLASMID_ROOT="$BIOMEOS_ROOT/plasmidBin"
+TARGET_RELEASE="$BIOMEOS_ROOT/target/release"
 
-if [[ -d "$PLASMID_BIN" ]]; then
-    for binary in beardog songbird nestgate toadstool; do
-        if [[ -f "$PLASMID_BIN/$binary" ]]; then
-            cp "$PLASMID_BIN/$binary" "$SPORE_ROOT/primals/bin/"
-            chmod +x "$SPORE_ROOT/primals/bin/$binary"
-            log_success "Copied $binary"
+for binary in beardog songbird nestgate toadstool; do
+    src=""
+    for dir in "$PLASMID_PRIMALS" "$PLASMID_ROOT"; do
+        if [[ -f "$dir/$binary" ]]; then
+            src="$dir/$binary"
+            break
+        elif [[ "$binary" == "beardog" ]] && [[ -f "$dir/beardog-server" ]]; then
+            src="$dir/beardog-server"
+            break
         fi
     done
-else
-    log_warn "plasmidBin not found at $PLASMID_BIN - skipping binary copy"
-    log_warn "You'll need to copy binaries manually or build them"
+    if [[ -z "$src" ]] && [[ -d "$TARGET_RELEASE" ]]; then
+        [[ -f "$TARGET_RELEASE/$binary" ]] && src="$TARGET_RELEASE/$binary"
+        [[ -z "$src" ]] && [[ "$binary" == "beardog" ]] && [[ -f "$TARGET_RELEASE/beardog-server" ]] && src="$TARGET_RELEASE/beardog-server"
+    fi
+    if [[ -n "$src" ]]; then
+        dest_name="$binary"
+        cp "$src" "$SPORE_ROOT/primals/bin/$dest_name"
+        chmod +x "$SPORE_ROOT/primals/bin/$dest_name"
+        log_success "Copied $binary"
+    fi
+done
+
+if ! ls "$SPORE_ROOT/primals/bin/"* 1>/dev/null 2>&1; then
+    log_warn "No primal binaries found in plasmidBin/ or target/release"
+    log_warn "You'll need to copy binaries manually (e.g. cargo build -p biomeos)"
 fi
 
 # ============================================================================
@@ -303,10 +321,9 @@ echo "Federation info:"
 echo "   BearDog socket:  $BEARDOG_SOCKET"
 echo "   Songbird socket: $SONGBIRD_SOCKET"
 echo ""
-echo "To verify lineage with a sibling:"
-echo "   neural-api execute graphs/federation_verify_lineage.toml \\"
-echo "     --env LOCAL_SOCKET=$BEARDOG_SOCKET \\"
-echo "     --env REMOTE_SOCKET=/tmp/beardog-<sibling>.sock"
+# NOTE: federation_verify_lineage.toml does not exist; use biomeos verify-lineage or gossip_federation.toml
+# echo "To verify lineage with a sibling:"
+# echo "   biomeos verify-lineage <sibling_spore_path>"
 echo ""
 echo "Press Ctrl+C to stop..."
 wait
@@ -361,11 +378,8 @@ This ensures:
 ### Verify Lineage with Sibling
 
 \`\`\`bash
-neural-api execute graphs/federation_verify_lineage.toml \\
-  --env LOCAL_SOCKET=/tmp/beardog-$NODE_ID.sock \\
-  --env REMOTE_SOCKET=/tmp/beardog-<sibling>.sock \\
-  --env LOCAL_SEED_PATH=$SPORE_ROOT/.family.seed \\
-  --env REMOTE_SEED_PATH=<sibling_seed_path>
+# Use biomeos verify-lineage (federation_verify_lineage.toml graph does not exist)
+biomeos verify-lineage <sibling_spore_path> --detailed
 \`\`\`
 
 ## Security
@@ -405,6 +419,6 @@ echo "  To start this spore:"
 echo "    cd $SPORE_ROOT && ./deploy.sh"
 echo ""
 echo "  To verify lineage with parent:"
-echo "    Both spores must be running, then use federation_verify_lineage.toml"
+echo "    biomeos verify-lineage <sibling_path> --detailed"
 echo ""
 

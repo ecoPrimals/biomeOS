@@ -3,7 +3,7 @@ name = "biomeos-core"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-license.workspace = true
+license = "AGPL-3.0-only"
 description = "Core biomeOS functionality"
 
 [[bin]]
@@ -71,6 +71,7 @@ ureq = { workspace = true }
 biomeos-test-utils = { path = "../biomeos-test-utils" }
 serde_json = { workspace = true }
 tracing-test = "0.2"
+serial_test = "3.2"
 
 [features]
 default = []

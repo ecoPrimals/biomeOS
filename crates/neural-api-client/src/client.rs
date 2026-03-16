@@ -140,9 +140,12 @@ impl NeuralApiClient {
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used)]
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::UnixListener;
+    use tokio::time::Duration;
 
     #[test]
     fn test_new_succeeds() {
@@ -199,5 +202,115 @@ mod tests {
             client.connection_timeout,
             tokio::time::Duration::from_millis(100)
         );
+    }
+
+    #[tokio::test]
+    #[cfg(unix)]
+    async fn test_proxy_http_parse_error() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let socket_path = temp.path().join("proxy_parse.sock");
+        let listener = UnixListener::bind(&socket_path).expect("bind");
+
+        let socket_path_clone = socket_path.clone();
+        tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.expect("accept");
+            let mut buf = vec![0u8; 4096];
+            let _ = stream.read(&mut buf).await;
+            let bad_result = r#"{"jsonrpc":"2.0","result":"not an object","id":1}"#;
+            stream
+                .write_all(bad_result.as_bytes())
+                .await
+                .expect("write");
+            stream.write_all(b"\n").await.expect("write newline");
+        });
+
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        let client = NeuralApiClient::new(socket_path_clone)
+            .unwrap()
+            .with_connection_timeout(Duration::from_secs(2))
+            .with_request_timeout(Duration::from_secs(2));
+
+        let result = client
+            .proxy_http("GET", "http://example.com", None, None)
+            .await;
+
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            err.to_string().contains("parse") || err.to_string().contains("Failed"),
+            "Expected parse error: {}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    #[cfg(unix)]
+    async fn test_discover_capability_parse_error() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let socket_path = temp.path().join("discover_parse.sock");
+        let listener = UnixListener::bind(&socket_path).expect("bind");
+
+        let socket_path_clone = socket_path.clone();
+        tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.expect("accept");
+            let mut buf = vec![0u8; 4096];
+            let _ = stream.read(&mut buf).await;
+            let bad_result = r#"{"jsonrpc":"2.0","result":{"wrong":"structure"},"id":1}"#;
+            stream
+                .write_all(bad_result.as_bytes())
+                .await
+                .expect("write");
+            stream.write_all(b"\n").await.expect("write newline");
+        });
+
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        let client = NeuralApiClient::new(socket_path_clone)
+            .unwrap()
+            .with_connection_timeout(Duration::from_secs(2))
+            .with_request_timeout(Duration::from_secs(2));
+
+        let result = client.discover_capability("security").await;
+
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            err.to_string().contains("parse") || err.to_string().contains("Failed"),
+            "Expected parse error: {}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    #[cfg(unix)]
+    async fn test_get_metrics_parse_error() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let socket_path = temp.path().join("metrics_parse.sock");
+        let listener = UnixListener::bind(&socket_path).expect("bind");
+
+        let socket_path_clone = socket_path.clone();
+        tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.expect("accept");
+            let mut buf = vec![0u8; 4096];
+            let _ = stream.read(&mut buf).await;
+            let bad_result = r#"{"jsonrpc":"2.0","result":"not metrics object","id":1}"#;
+            stream
+                .write_all(bad_result.as_bytes())
+                .await
+                .expect("write");
+            stream.write_all(b"\n").await.expect("write newline");
+        });
+
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        let client = NeuralApiClient::new(socket_path_clone)
+            .unwrap()
+            .with_connection_timeout(Duration::from_secs(2))
+            .with_request_timeout(Duration::from_secs(2));
+
+        let result = client.get_metrics().await;
+
+        assert!(result.is_err());
     }
 }

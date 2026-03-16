@@ -162,6 +162,17 @@ pub mod timeouts {
 
     /// Default pong timeout
     pub const DEFAULT_PONG_TIMEOUT: Duration = Duration::from_secs(10);
+
+    // Millisecond constants for APIs that expect u64 ms
+
+    /// Default timeout for IPC/capability discovery operations (milliseconds).
+    pub const DEFAULT_DISCOVERY_TIMEOUT_MS: u64 = 5000;
+
+    /// Default timeout for connection establishment (milliseconds).
+    pub const DEFAULT_CONNECTION_TIMEOUT_MS: u64 = 5000;
+
+    /// Short timeout for fast operations like health checks (milliseconds).
+    pub const SHORT_TIMEOUT_MS: u64 = 3000;
 }
 
 /// Resource limits and thresholds
@@ -231,6 +242,9 @@ pub mod ports {
 
     /// TURN/relay default port (RFC 5766)
     pub const RELAY: u16 = 3490;
+
+    /// Default TCP port scan start for socket discovery
+    pub const TCP_PORT_SCAN_START: u16 = 9100;
 }
 
 /// Network configuration constants
@@ -717,6 +731,9 @@ mod tests {
         assert_eq!(timeouts::DEFAULT_OPERATION_TIMEOUT.as_secs(), 60);
         assert_eq!(timeouts::DEFAULT_SESSION_TIMEOUT.as_secs(), 3600);
         assert_eq!(timeouts::DEFAULT_RETRY_DELAY.as_millis(), 1000);
+        assert_eq!(timeouts::DEFAULT_DISCOVERY_TIMEOUT_MS, 5000);
+        assert_eq!(timeouts::DEFAULT_CONNECTION_TIMEOUT_MS, 5000);
+        assert_eq!(timeouts::SHORT_TIMEOUT_MS, 3000);
     }
 
     #[test]

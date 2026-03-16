@@ -172,4 +172,40 @@ mod tests {
             .to_string_lossy()
             .contains("discovery-family"));
     }
+
+    #[test]
+    fn test_resolve_neural_api_config_family_id_takes_precedence_over_discovery() {
+        let config = resolve_neural_api_config_with(
+            PathBuf::from("g"),
+            None,
+            Some("explicit-family"),
+            Some("discovery-family"),
+        );
+        assert_eq!(config.family_id, "explicit-family");
+        assert!(config
+            .socket_path
+            .to_string_lossy()
+            .contains("explicit-family"));
+    }
+
+    #[test]
+    fn test_resolve_neural_api_config_socket_takes_precedence() {
+        let custom_socket = PathBuf::from("/custom/neural-api.sock");
+        let config = resolve_neural_api_config_with(
+            PathBuf::from("graphs"),
+            Some(custom_socket.clone()),
+            Some("family"),
+            Some("discovery"),
+        );
+        assert_eq!(config.socket_path, custom_socket);
+        assert_eq!(config.family_id, "family");
+    }
+
+    #[test]
+    fn test_resolve_neural_api_config_all_none_uses_family_discovery() {
+        let config = resolve_neural_api_config_with(PathBuf::from("g"), None, None, None);
+        assert!(!config.family_id.is_empty());
+        assert_eq!(config.graphs_dir, PathBuf::from("g"));
+        assert!(config.socket_path.to_string_lossy().contains("neural-api"));
+    }
 }

@@ -5,6 +5,7 @@
 //!
 //! Configures how socket discovery behaves across different platforms and use cases.
 
+use biomeos_types::constants::ports;
 use std::sync::Arc;
 
 /// Discovery strategy configuration
@@ -53,7 +54,7 @@ impl Default for DiscoveryStrategy {
             use_family_tmp: true,
             query_registry: true,
             enable_tcp_fallback: true, // Universal IPC v3.0: always try TCP
-            tcp_port_start: 9100,      // Default port range for primals
+            tcp_port_start: ports::TCP_PORT_SCAN_START, // Default port range for primals
             tcp_fallback_host: Arc::from("127.0.0.1"),
             scan_sockets: false, // Expensive, disabled by default
             enable_cache: true,
@@ -72,7 +73,7 @@ impl DiscoveryStrategy {
             use_family_tmp: false,      // SELinux may block /tmp sockets
             query_registry: true,
             enable_tcp_fallback: true,
-            tcp_port_start: 9100,
+            tcp_port_start: ports::TCP_PORT_SCAN_START,
             tcp_fallback_host: Arc::from("127.0.0.1"),
             scan_sockets: false,
             enable_cache: true,
@@ -89,7 +90,7 @@ impl DiscoveryStrategy {
             use_family_tmp: false,       // Not cross-device
             query_registry: true,
             enable_tcp_fallback: true, // TCP is primary for cross-device
-            tcp_port_start: 9100,
+            tcp_port_start: ports::TCP_PORT_SCAN_START,
             tcp_fallback_host: Arc::from("0.0.0.0"), // Listen on all interfaces
             scan_sockets: false,
             enable_cache: true,

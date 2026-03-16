@@ -306,7 +306,7 @@ pub async fn run(mode: String, node_id: String, family_id: Option<String>) -> Re
                 .collect();
             if needed.is_empty() {
                 info!("  All primals already running -- nothing to start");
-                println!("NUCLEUS already running with all required primals.");
+                warn!("NUCLEUS already running with all required primals.");
                 return Ok(());
             }
             info!("  Need to start: {:?}", needed);
@@ -409,7 +409,7 @@ pub async fn run(mode: String, node_id: String, family_id: Option<String>) -> Re
         mode_label,
     );
     for line in summary_lines {
-        println!("{line}");
+        info!("{line}");
     }
 
     // Keep running until interrupted

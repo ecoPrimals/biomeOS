@@ -487,4 +487,109 @@ node_id = "test-node-456"
         let result = run(dir.path().to_path_buf(), false).await;
         assert!(result.is_ok());
     }
+
+    #[tokio::test]
+    async fn test_run_fails_when_verification_invalid() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        let seed_path = dir.path().join(".family.seed");
+        std::fs::write(&seed_path, [0u8; 32]).expect("write invalid 32-byte seed");
+
+        let result = run(dir.path().to_path_buf(), false).await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            err.to_string().contains("verification failed") || err.to_string().contains("failed"),
+            "Expected verification failure: {err}"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_verify_lineage_detailed_skips_crypto_when_no_beardog() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        let manifest_path = dir.path().join("manifest.toml");
+        std::fs::write(&manifest_path, "family_id = \"f\"\nnode_id = \"n\"\n").expect("write");
+        let seed_path = dir.path().join(".family.seed");
+        std::fs::write(&seed_path, [0u8; 64]).expect("write seed");
+
+        std::env::set_var("BIOMEOS_SECURITY_PROVIDER", "nonexistent-beardog-xyz");
+        let result = verify_lineage(&dir.path().to_path_buf(), true).await;
+        std::env::remove_var("BIOMEOS_SECURITY_PROVIDER");
+
+        let v = result.expect("verify_lineage should succeed");
+        assert!(v.valid);
+        assert!(
+            v.warnings
+                .iter()
+                .any(|w| w.contains("Cryptographic") || w.contains("skipped"))
+                || v.details
+                    .iter()
+                    .any(|d| d.contains("skipped") || d.contains("no seed")),
+            "Expected crypto skip warning when BearDog unavailable: {:?}",
+            v.warnings
+        );
+    }
+
+    #[tokio::test]
+    async fn test_verify_lineage_detailed_no_seed_skips_crypto() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        let manifest_path = dir.path().join("manifest.toml");
+        std::fs::write(&manifest_path, "family_id = \"f\"\n").expect("write");
+        std::fs::create_dir(dir.path().join("primals")).expect("create primals");
+
+        let result = verify_lineage(&dir.path().to_path_buf(), true).await;
+        let v = result.expect("verify_lineage should succeed");
+        assert!(v.valid);
+        assert!(v.warnings.contains(&"No .family.seed found".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_verify_lineage_directory_with_both_manifest_and_seed() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        let manifest_path = dir.path().join("manifest.toml");
+        std::fs::write(
+            &manifest_path,
+            "family_id = \"full-fam\"\nnode_id = \"full-node\"\n",
+        )
+        .expect("write manifest");
+        let seed_path = dir.path().join(".family.seed");
+        std::fs::write(&seed_path, [0u8; 64]).expect("write seed");
+        std::fs::create_dir(dir.path().join("primals")).expect("create primals");
+
+        let result = verify_lineage(&dir.path().to_path_buf(), false).await;
+        let v = result.expect("verify_lineage should succeed");
+        assert!(v.valid);
+        assert_eq!(v.family_id.as_deref(), Some("full-fam"));
+        assert_eq!(v.node_id.as_deref(), Some("full-node"));
+        assert!(v.details.contains(&"Manifest found".to_string()));
+        assert!(v
+            .details
+            .contains(&"Family seed valid (64 bytes)".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_verify_lineage_empty_directory() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        let path = dir.path().to_path_buf();
+
+        let result = verify_lineage(&path, false).await;
+        let v = result.expect("verify_lineage should succeed");
+        assert!(v.valid);
+        assert!(v.details.contains(&"Directory exists".to_string()));
+        assert!(v.warnings.iter().any(|w| w.contains("manifest")));
+    }
+
+    #[test]
+    fn test_lineage_verification_debug() {
+        let v = LineageVerification {
+            valid: false,
+            family_id: None,
+            node_id: None,
+            details: vec!["d1".to_string()],
+            warnings: vec!["w1".to_string()],
+        };
+        let debug_str = format!("{v:?}");
+        assert!(debug_str.contains("LineageVerification"));
+        assert!(debug_str.contains("valid"));
+        assert!(debug_str.contains("d1"));
+    }
 }

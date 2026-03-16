@@ -40,6 +40,11 @@ fn parse_graph_path_arg(args: &[String]) -> String {
         .unwrap_or_else(|| "graphs/nucleus_ecosystem.toml".to_string())
 }
 
+/// Required primals for NUCLEUS verification. Extracted for testability.
+fn required_primals() -> Vec<&'static str> {
+    vec!["beardog", "toadstool", "nestgate"]
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize logging
@@ -203,10 +208,10 @@ async fn verify_nucleus() -> Result<()> {
     let uid = std::env::var("UID").unwrap_or_else(|_| "1000".to_string());
     let socket_dir = format!("/run/user/{uid}");
 
-    let required_primals = vec!["beardog", "toadstool", "nestgate"];
+    let primals = required_primals();
     let mut healthy = true;
 
-    for primal in required_primals {
+    for primal in primals {
         match check_primal_health(&socket_dir, primal).await {
             Ok(()) => info!("  ✅ {} is healthy", primal),
             Err(e) => {
@@ -379,6 +384,7 @@ async fn serve_neural_api(family_id: &str) -> Result<()> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -431,5 +437,102 @@ mod tests {
             ]),
             "graphs/custom.toml"
         );
+    }
+
+    #[test]
+    fn test_parse_mode_empty_args() {
+        assert_eq!(parse_mode(&[]), "deploy");
+        assert_eq!(parse_mode(&["nucleus".into()]), "deploy");
+    }
+
+    #[test]
+    fn test_parse_family_id_trailing() {
+        assert!(
+            parse_family_id_arg(&["nucleus".into(), "deploy".into(), "--family".into()]).is_none()
+        );
+    }
+
+    #[test]
+    fn test_parse_graph_path_trailing() {
+        assert_eq!(
+            parse_graph_path_arg(&["nucleus".into(), "deploy".into(), "--graph".into()]),
+            "graphs/nucleus_ecosystem.toml"
+        );
+    }
+
+    #[test]
+    fn test_required_primals() {
+        let primals = required_primals();
+        assert_eq!(primals, vec!["beardog", "toadstool", "nestgate"]);
+    }
+
+    #[tokio::test]
+    async fn test_deploy_nucleus_missing_graph() {
+        let mut path = std::env::temp_dir();
+        path.push("nucleus_does_not_exist_12345.toml");
+        let result = deploy_nucleus("test-family", path.to_str().unwrap()).await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("Graph not found"));
+    }
+
+    #[tokio::test]
+    async fn test_deploy_nucleus_valid_graph_loads() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let graph_path = temp.path().join("graphs").join("test.toml");
+        std::fs::create_dir_all(graph_path.parent().unwrap()).expect("create dirs");
+        let toml = r#"
+[graph]
+id = "test_graph"
+version = "1.0.0"
+description = "Test graph"
+
+[[nodes]]
+id = "node1"
+node_type = "primal"
+type = "test.node"
+dependencies = []
+
+[execution]
+mode = "deterministic"
+max_parallelism = 2
+"#;
+        std::fs::write(&graph_path, toml).expect("write graph");
+        let path_str = graph_path.to_str().unwrap();
+        let result = deploy_nucleus("test-family", path_str).await;
+        // Graph loads successfully; executor may fail (no real primals), but loading path is tested
+        if let Err(e) = &result {
+            assert!(
+                !e.to_string().contains("Graph not found"),
+                "Graph should load; got: {}",
+                e
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn test_check_primal_health_no_socket_dir() {
+        let result = check_primal_health("/nonexistent/socket/dir/12345", "beardog").await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(
+            err.to_string().contains("Socket not found")
+                || err.to_string().contains("No such file")
+                || err.to_string().contains("not found"),
+            "expected socket/dir error, got: {}",
+            err
+        );
+    }
+
+    #[tokio::test]
+    async fn test_launch_ui_missing_binary() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let orig = std::env::current_dir().expect("cwd");
+        std::env::set_current_dir(temp.path()).expect("chdir");
+        let result = launch_ui().await;
+        let _ = std::env::set_current_dir(&orig);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("petalTongue binary not found"));
     }
 }

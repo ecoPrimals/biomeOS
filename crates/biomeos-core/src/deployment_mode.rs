@@ -449,8 +449,10 @@ impl HostOS {
 mod tests {
     use super::*;
     use biomeos_test_utils::{remove_test_env, set_test_env};
+    use serial_test::serial;
 
     #[test]
+    #[serial]
     fn test_deployment_mode_from_env_cold() {
         set_test_env("BIOMEOS_DEPLOYMENT_MODE", "cold");
         set_test_env("BIOMEOS_MEDIA_PATH", "/media/usb0");
@@ -463,6 +465,9 @@ mod tests {
             }
             _ => panic!("Expected ColdSpore"),
         }
+
+        remove_test_env("BIOMEOS_DEPLOYMENT_MODE");
+        remove_test_env("BIOMEOS_MEDIA_PATH");
     }
 
     #[test]
@@ -560,6 +565,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_from_env_string_cold_persistence() {
         set_test_env("BIOMEOS_DEPLOYMENT_MODE", "cold");
         set_test_env("BIOMEOS_MEDIA_PATH", "/media/usb1");
@@ -570,9 +576,14 @@ mod tests {
             DeploymentMode::ColdSpore { persistence, .. } => assert!(persistence),
             _ => panic!("Expected ColdSpore"),
         }
+
+        remove_test_env("BIOMEOS_DEPLOYMENT_MODE");
+        remove_test_env("BIOMEOS_MEDIA_PATH");
+        remove_test_env("BIOMEOS_PERSISTENCE");
     }
 
     #[test]
+    #[serial]
     fn test_socket_prefix_livespore_with_xdg() {
         set_test_env("XDG_RUNTIME_DIR", "/run/user/1000");
         let mode = DeploymentMode::LiveSpore {

@@ -17,7 +17,7 @@ struct Cli {
     command: Commands,
 }
 
-#[derive(Subcommand)]
+#[derive(Subcommand, PartialEq, Debug)]
 enum Commands {
     /// Deploy a biome from a manifest file
     Deploy {
@@ -454,5 +454,132 @@ mod tests {
     fn test_get_template_content_unknown_template() {
         assert!(get_template_content("unknown").is_none());
         assert!(get_template_content("").is_none());
+    }
+
+    #[test]
+    fn test_cli_parse_deploy() {
+        let cli = Cli::try_parse_from(["biome", "deploy", "manifest.yaml", "-t", "team1"])
+            .expect("deploy should parse");
+        assert_eq!(
+            cli.command,
+            Commands::Deploy {
+                manifest: PathBuf::from("manifest.yaml"),
+                team: "team1".to_string(),
+            }
+        );
+    }
+
+    #[test]
+    fn test_cli_parse_list() {
+        let cli = Cli::try_parse_from(["biome", "list", "-t", "team1"]).expect("list should parse");
+        assert_eq!(
+            cli.command,
+            Commands::List {
+                team: "team1".to_string(),
+            }
+        );
+    }
+
+    #[test]
+    fn test_cli_parse_status() {
+        let cli = Cli::try_parse_from(["biome", "status", "dep-123"]).expect("status should parse");
+        assert_eq!(
+            cli.command,
+            Commands::Status {
+                deployment_id: "dep-123".to_string(),
+            }
+        );
+    }
+
+    #[test]
+    fn test_cli_parse_remove() {
+        let cli = Cli::try_parse_from(["biome", "remove", "dep-123"]).expect("remove should parse");
+        assert_eq!(
+            cli.command,
+            Commands::Remove {
+                deployment_id: "dep-123".to_string(),
+            }
+        );
+    }
+
+    #[test]
+    fn test_cli_parse_init() {
+        let cli = Cli::try_parse_from(["biome", "init", "-t", "webapp", "-o", "out.yaml"])
+            .expect("init should parse");
+        assert_eq!(
+            cli.command,
+            Commands::Init {
+                template: "webapp".to_string(),
+                output: PathBuf::from("out.yaml"),
+            }
+        );
+    }
+
+    #[test]
+    fn test_cli_parse_validate() {
+        let cli = Cli::try_parse_from(["biome", "validate", "manifest.yaml"])
+            .expect("validate should parse");
+        assert_eq!(
+            cli.command,
+            Commands::Validate {
+                manifest: PathBuf::from("manifest.yaml"),
+            }
+        );
+    }
+
+    #[test]
+    fn test_cli_parse_workspace() {
+        let cli = Cli::try_parse_from(["biome", "workspace", "-t", "team1"])
+            .expect("workspace should parse");
+        assert_eq!(
+            cli.command,
+            Commands::Workspace {
+                team: "team1".to_string(),
+            }
+        );
+    }
+
+    #[test]
+    fn test_template_basic_is_valid_yaml() {
+        let content = create_basic_template();
+        let parsed: serde_yaml::Value =
+            serde_yaml::from_str(&content).expect("basic template should parse as YAML");
+        assert_eq!(
+            parsed.get("apiVersion").and_then(|v| v.as_str()),
+            Some("biomeOS/v1")
+        );
+        assert_eq!(parsed.get("kind").and_then(|v| v.as_str()), Some("Biome"));
+        assert!(parsed.get("metadata").is_some());
+        assert!(parsed.get("services").is_some());
+    }
+
+    #[test]
+    fn test_all_templates_have_required_fields() {
+        let templates = [
+            ("basic", create_basic_template()),
+            ("webapp", create_webapp_template()),
+            ("ai-research", create_ai_research_template()),
+            ("gaming", create_gaming_template()),
+        ];
+        for (name, content) in templates {
+            let parsed: serde_yaml::Value = serde_yaml::from_str(&content)
+                .unwrap_or_else(|_| panic!("{name} template should parse as YAML"));
+            assert!(
+                parsed.get("apiVersion").is_some(),
+                "{name} template should have apiVersion"
+            );
+            assert!(
+                parsed.get("kind").is_some(),
+                "{name} template should have kind"
+            );
+            assert!(
+                parsed.get("metadata").is_some(),
+                "{name} template should have metadata"
+            );
+            assert!(
+                parsed.get("services").is_some(),
+                "{name} template should have services"
+            );
+        }
     }
 }

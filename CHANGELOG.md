@@ -2,6 +2,44 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## [v2.45] - 2026-03-16 (Deep Debt Execution + Coverage Evolution)
+
+### CI/Build
+- Fixed 2 clippy dead-code errors in `biomeos-boot/src/rootfs/dns.rs` (constants scoped to `#[cfg(test)]`)
+- Fixed flaky `test_deployment_mode_from_env_cold` with `serial_test` crate
+- Fixed unresolved doc link to `graph` in `biomeos-atomic-deploy`
+- `cargo clippy --workspace -D warnings`: PASS (0 warnings)
+- `cargo doc --workspace`: 0 warnings (was 1)
+- `cargo fmt --check`: PASS
+
+### Sovereignty & Compliance
+- Added `license = "AGPL-3.0-only"` to 9 Cargo.toml files that were missing it
+- Replaced hardcoded Google/Cloudflare DNS (8.8.8.8, 1.1.1.1) with RFC 5737 test addresses in config tests
+- Replaced hardcoded private IP `192.168.1.144:3478` with RFC 5737 `192.0.2.1:3478`
+- Replaced hardcoded `family-hub:8080` with RFC 6761 `family-hub.example.test:8080`
+
+### Code Quality
+- Replaced hardcoded primal name strings with `primal_names::*` constants in `bootstrap.rs`, `discovery_bootstrap.rs`
+- Added timeout constants: `DEFAULT_DISCOVERY_TIMEOUT_MS`, `DEFAULT_CONNECTION_TIMEOUT_MS`, `SHORT_TIMEOUT_MS`
+- Added port constant: `TCP_PORT_SCAN_START`; replaced hardcoded 8080/9100 in production code
+- Fixed production `unwrap()`/`expect()` in `dark_forest_gate.rs`, `genome_dist/distribution.rs`, `federation/main.rs`
+- Replaced `println!` with `tracing::warn!`/`info!` in `nucleus.rs` mode
+- Verified `#![forbid(unsafe_code)]` on all 27 library crates
+- All remaining `#[allow(clippy::unwrap_used)]` are test-only
+
+### Test Coverage
+- 5,148 tests passing (0 failures)
+- Line coverage: 77.77% → 78.27% (+0.50)
+- Function coverage: 80.13% → 80.58% (+0.45)
+- Added ~81 new tests across 15+ files
+- New tests for: CLI parsing, model cache, NUCLEUS modes, API config, lineage verification, neural-api-client, socket discovery, graph handlers, device management server, proc metrics
+- `serial_test` crate added for env-var-dependent test isolation
+
+### Zero-Copy
+- Audited all `Vec<u8>` instances — 0 conversions needed (all justified)
+
+---
+
 ## [v2.44] - 2026-03-16 (Deep Audit Evolution: Modern Idiomatic Rust)
 
 Edition 2024 migration, sovereignty bug fix, capability-based discovery, tarpc binary protocol, zero-copy Arc<str>, lint hardening, large file smart refactoring.

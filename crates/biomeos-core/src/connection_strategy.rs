@@ -694,8 +694,8 @@ mod tests {
                 public_addr: "1.2.3.4:41200".to_string(),
                 nat_type: "symmetric".to_string(),
             }),
-            relay_endpoint: Some("192.168.1.144:3479".to_string()),
-            stun_server: Some("192.168.1.144:3478".to_string()),
+            relay_endpoint: Some("192.0.2.1:3479".to_string()),
+            stun_server: Some("192.0.2.1:3478".to_string()),
         };
 
         let json = serde_json::to_string(&info).expect("serialize");

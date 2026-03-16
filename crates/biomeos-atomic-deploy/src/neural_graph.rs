@@ -21,7 +21,7 @@ pub struct Graph {
     /// Execution configuration (parallelism, timeouts, etc.)
     pub config: GraphConfig,
     /// Coordination pattern (sequential, parallel, continuous, etc.)
-    /// Populated from [graph].coordination when loading DeploymentGraph format.
+    /// Populated from `[graph]`.coordination when loading DeploymentGraph format.
     #[serde(default)]
     pub coordination: Option<String>,
 }

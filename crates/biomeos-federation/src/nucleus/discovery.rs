@@ -9,6 +9,7 @@ use crate::FederationResult;
 use crate::capability::CapabilitySet;
 use crate::discovery::{DiscoveredPrimal, PrimalDiscovery, PrimalEndpoint};
 use crate::unix_socket_client::{JsonRpcRequest, UnixSocketClient};
+use biomeos_types::constants::timeouts;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -55,7 +56,7 @@ pub(crate) async fn layer1_physical_discovery_songbird(
         "discover_by_family",
         serde_json::json!({
             "family_tags": [family_id.unwrap_or("*")],
-            "timeout_ms": 5000
+            "timeout_ms": timeouts::DEFAULT_DISCOVERY_TIMEOUT_MS
         }),
     );
 

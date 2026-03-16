@@ -9,6 +9,7 @@
 //! with customizable discovery settings and deployment-specific values.
 
 // Import unified types from biomeos-types
+use biomeos_types::constants::ports;
 use biomeos_types::{
     BiomeOSConfig, Environment, OrganizationScale,
     config::{
@@ -71,7 +72,7 @@ impl BiomeOSConfigBuilder {
         builder.config.network.port = std::env::var("BIOMEOS_PORT")
             .ok()
             .and_then(|p| p.parse().ok())
-            .unwrap_or(8080);
+            .unwrap_or(ports::HTTP_BRIDGE);
 
         // Configure DNS discovery for local dev
         builder.config.discovery.methods = vec![DiscoveryMethod::Dns];
@@ -513,11 +514,11 @@ mod tests {
     #[test]
     fn test_with_dns_discovery() {
         let config = BiomeOSConfigBuilder::new()
-            .with_dns_discovery(vec!["8.8.8.8".into(), "1.1.1.1".into()])
+            .with_dns_discovery(vec!["192.0.2.53".into(), "198.51.100.53".into()])
             .build();
         assert!(config.discovery.dns.is_some());
         let dns = config.discovery.dns.as_ref().unwrap();
-        assert_eq!(dns.servers, vec!["8.8.8.8", "1.1.1.1"]);
+        assert_eq!(dns.servers, vec!["192.0.2.53", "198.51.100.53"]);
     }
 
     #[test]

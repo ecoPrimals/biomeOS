@@ -3,7 +3,7 @@ name = "biomeos-federation"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-license.workspace = true
+license = "AGPL-3.0-only"
 description = "biomeOS federation and sub-federation management"
 
 [dependencies]

@@ -20,7 +20,7 @@ fn roundtrip_json<T: serde::Serialize + serde::de::DeserializeOwned>(value: &T) 
 #[test]
 fn network_dns_spec_roundtrip() {
     let spec = NetworkDnsSpec {
-        nameservers: vec!["8.8.8.8".into(), "1.1.1.1".into()],
+        nameservers: vec!["192.0.2.53".into(), "198.51.100.53".into()],
         search: vec!["cluster.local".into()],
         options: vec![DnsOptionSpec {
             name: "ndots".into(),

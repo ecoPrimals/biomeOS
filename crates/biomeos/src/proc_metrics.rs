@@ -181,4 +181,57 @@ mod tests {
     fn test_parse_loadavg_first_single_value() {
         assert!((parse_loadavg_first("2.50") - 2.50).abs() < f64::EPSILON);
     }
+
+    #[test]
+    fn test_parse_meminfo_total_extra_whitespace() {
+        assert_eq!(
+            parse_meminfo_total("MemTotal:    16384000 kB\n"),
+            16_384_000 * 1024
+        );
+    }
+
+    #[test]
+    fn test_parse_meminfo_total_only_label_no_value() {
+        assert_eq!(parse_meminfo_total("MemTotal:\n"), 0);
+    }
+
+    #[test]
+    fn test_parse_meminfo_available_only_label_no_value() {
+        assert_eq!(parse_meminfo_available("MemAvailable:\n"), 0);
+    }
+
+    #[test]
+    fn test_parse_meminfo_total_multiple_fields_uses_second() {
+        assert_eq!(
+            parse_meminfo_total("MemTotal: 8192 kB extra stuff\n"),
+            8192 * 1024
+        );
+    }
+
+    #[test]
+    fn test_parse_loadavg_first_whitespace_only() {
+        assert!((parse_loadavg_first("   \n\t  ") - 0.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_parse_loadavg_first_trailing_newline() {
+        assert!((parse_loadavg_first("1.50\n") - 1.50).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_parse_loadavg_first_negative_parsed() {
+        assert!((parse_loadavg_first("-0.5") - (-0.5)).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_parse_meminfo_total_memtotal_after_other_lines() {
+        let s = "MemFree: 1000 kB\nMemTotal: 2048 kB\nMemAvailable: 500 kB\n";
+        assert_eq!(parse_meminfo_total(s), 2048 * 1024);
+    }
+
+    #[test]
+    fn test_parse_meminfo_available_memavailable_after_other_lines() {
+        let s = "MemTotal: 1000 kB\nMemAvailable: 3000 kB\nMemFree: 500 kB\n";
+        assert_eq!(parse_meminfo_available(s), 3000 * 1024);
+    }
 }

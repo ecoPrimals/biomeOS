@@ -1,6 +1,6 @@
 # biomeOS Documentation Index
 
-**Updated**: March 15, 2026
+**Updated**: March 16, 2026
 
 ---
 
@@ -50,6 +50,12 @@ See [specs/README.md](specs/README.md) for full index. Key specs:
 ---
 
 ## Handoffs & Evolution Reports (16 active)
+
+### Deep Debt Execution + Coverage Evolution (Mar 16, 2026)
+
+| Document | Content |
+|----------|---------|
+| Deep Debt Session | Clippy PASS (fixed 2 dead-code errors); flaky deployment_mode test fixed; 9 Cargo.toml AGPL-3.0-only; sovereignty (RFC 5737/6761 in tests); doc warnings 0; timeout/port constants centralized; serial_test for env-dependent tests |
 
 ### Relay-Assisted Coordinated Punch (Feb 11, 2026)
 
@@ -137,10 +143,10 @@ See [specs/README.md](specs/README.md) for full index. Key specs:
 # Build
 cargo build --workspace
 
-# Test (5,017 tests — fully concurrent)
+# Test (5,148 tests — fully concurrent)
 cargo test --workspace
 
-# Coverage (77.61% line)
+# Coverage (78.27% line)
 cargo llvm-cov --workspace
 
 # Clippy (0 warnings, entire workspace)
@@ -162,7 +168,7 @@ See `ARCHIVE_INDEX.md` in archive for details.
 
 ---
 
-**Documentation current as of March 15, 2026**
+**Documentation current as of March 16, 2026**
 **Active: 19 specs, 16 handoffs, 10 scripts**
 **Deploy graphs: 35 (incl. provenance trio: loamspine, rhizocrypt, sweetgrass, provenance_trio)**
-**Tests: 5,017 passing, fully concurrent (77.61% line coverage) | Clippy: PASS | Docs: Full coverage**
+**Tests: 5,148 passing, fully concurrent (78.27% line coverage) | Clippy: PASS | Docs: Full coverage**

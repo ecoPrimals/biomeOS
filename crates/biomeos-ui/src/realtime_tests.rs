@@ -600,3 +600,48 @@ async fn test_discover_endpoints_with_both_env_vars() {
     remove_test_env("BIOMEOS_SSE_ENDPOINT");
     assert!(result.is_ok());
 }
+
+#[test]
+fn test_sse_event_parsing_empty_lines_and_whitespace() {
+    let sse_text = "event: heartbeat\n\n  \ndata: {\"type\":\"heartbeat\",\"timestamp\":1,\"primals_count\":1,\"healthy_count\":1}\n";
+    let event = RealTimeEventSubscriber::parse_sse_event(sse_text);
+    assert!(event.is_some());
+}
+
+#[test]
+fn test_sse_event_parsing_data_with_leading_trailing_whitespace() {
+    let sse_text =
+        "data:  {\"type\":\"heartbeat\",\"timestamp\":1,\"primals_count\":1,\"healthy_count\":1}  ";
+    let event = RealTimeEventSubscriber::parse_sse_event(sse_text);
+    assert!(event.is_some());
+}
+
+#[test]
+fn test_parse_event_params_array_fails() {
+    let notification = JsonRpcNotification::for_test(serde_json::json!([1, 2, 3]));
+    let result = RealTimeEventSubscriber::parse_event_for_test(&notification);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_parse_event_params_string_fails() {
+    let notification = JsonRpcNotification::for_test(serde_json::json!("not an event"));
+    let result = RealTimeEventSubscriber::parse_event_for_test(&notification);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_parse_event_params_number_fails() {
+    let notification = JsonRpcNotification::for_test(serde_json::json!(42));
+    let result = RealTimeEventSubscriber::parse_event_for_test(&notification);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_jsonrpc_notification_for_test() {
+    let notif = JsonRpcNotification::for_test(
+        serde_json::json!({"type":"heartbeat","timestamp":1,"primals_count":1,"healthy_count":1}),
+    );
+    let result = RealTimeEventSubscriber::parse_event_for_test(&notif);
+    assert!(result.is_ok());
+}

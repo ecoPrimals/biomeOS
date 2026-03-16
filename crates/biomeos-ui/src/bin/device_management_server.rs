@@ -391,3 +391,106 @@ fn discover_songbird_socket() -> Result<String> {
 
     anyhow::bail!("Songbird socket not found")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use biomeos_test_utils::TestEnvGuard;
+    use serial_test::serial;
+
+    #[test]
+    fn test_json_rpc_request_deserialize() {
+        let json = r#"{"jsonrpc":"2.0","method":"get_devices","params":null,"id":1}"#;
+        let req: JsonRpcRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.jsonrpc, "2.0");
+        assert_eq!(req.method, "get_devices");
+        assert_eq!(req.id, serde_json::json!(1));
+    }
+
+    #[test]
+    fn test_json_rpc_response_serialize() {
+        let response = JsonRpcResponse {
+            jsonrpc: "2.0".to_string(),
+            result: Some(json!({"devices": []})),
+            error: None,
+            id: json!(1),
+        };
+        let json = serde_json::to_string(&response).unwrap();
+        assert!(json.contains("\"jsonrpc\":\"2.0\""));
+        assert!(json.contains("\"result\""));
+        assert!(json.contains("\"devices\""));
+    }
+
+    #[test]
+    fn test_json_rpc_error_serialize() {
+        let response = JsonRpcResponse {
+            jsonrpc: "2.0".to_string(),
+            result: None,
+            error: Some(JsonRpcError {
+                code: -32601,
+                message: "Method not found".to_string(),
+                data: None,
+            }),
+            id: json!(1),
+        };
+        let json = serde_json::to_string(&response).unwrap();
+        assert!(json.contains("\"error\""));
+        assert!(json.contains("Method not found"));
+        assert!(json.contains("-32601"));
+    }
+
+    #[tokio::test]
+    async fn test_handle_method_unknown_method() {
+        let provider = Arc::new(RwLock::new(DeviceManagementProvider::new(
+            "/tmp/test-device-mgmt.sock",
+        )));
+        let request = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            method: "unknown_method".to_string(),
+            params: None,
+            id: json!(1),
+        };
+        let response = handle_method(request, &provider).await;
+        assert!(response.error.is_some());
+        let err = response.error.unwrap();
+        assert_eq!(err.code, -32601);
+        assert!(err.message.contains("Method not found"));
+    }
+
+    #[tokio::test]
+    async fn test_handle_method_get_devices() {
+        let provider = Arc::new(RwLock::new(DeviceManagementProvider::new(
+            "/tmp/test-device-mgmt-get-devices.sock",
+        )));
+        let request = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            method: "get_devices".to_string(),
+            params: None,
+            id: json!(1),
+        };
+        let response = handle_method(request, &provider).await;
+        assert!(response.error.is_none());
+        assert!(response.result.is_some());
+    }
+
+    #[test]
+    #[serial]
+    fn test_discover_songbird_socket_env_override() {
+        let _guard = TestEnvGuard::set("SONGBIRD_SOCKET", "/custom/songbird.sock");
+        let result = discover_songbird_socket();
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "/custom/songbird.sock");
+    }
+
+    #[test]
+    #[serial]
+    fn test_discover_songbird_socket_not_found() {
+        let _guard_son = TestEnvGuard::remove("SONGBIRD_SOCKET");
+        let _guard_xdg = TestEnvGuard::set("XDG_RUNTIME_DIR", "/nonexistent_xdg_path_for_test");
+        let _guard_fam = TestEnvGuard::remove("BIOMEOS_FAMILY_ID");
+        let _guard_legacy = TestEnvGuard::remove("FAMILY_ID");
+        let result = discover_songbird_socket();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("not found"));
+    }
+}

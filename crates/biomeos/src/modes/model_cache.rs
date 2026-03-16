@@ -748,4 +748,99 @@ mod tests {
     fn test_format_size_gb_zero() {
         assert_eq!(format_size_gb(0), "0.0 GB");
     }
+
+    #[tokio::test]
+    async fn test_run_import_hf_with_existing_models() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let cache_dir = temp.path().join("model-cache");
+        std::fs::create_dir_all(&cache_dir).expect("create cache dir");
+        let model_dir = temp.path().join("existing-model");
+        std::fs::create_dir_all(&model_dir).expect("create model dir");
+        std::fs::write(model_dir.join("config.json"), "{}").expect("write config");
+
+        run_with(
+            cache_dir.clone(),
+            None,
+            ModelCacheCommand::Register {
+                model_id: "test/existing".to_string(),
+                path: model_dir,
+            },
+        )
+        .await
+        .expect("register");
+
+        let result = run_with(cache_dir.clone(), None, ModelCacheCommand::ImportHf).await;
+        assert!(
+            result.is_ok(),
+            "import-hf with existing models should succeed: {:?}",
+            result.err()
+        );
+    }
+
+    #[tokio::test]
+    async fn test_run_resolve_with_empty_model_id() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let cache_dir = temp.path().join("model-cache");
+        std::fs::create_dir_all(&cache_dir).expect("create cache dir");
+
+        let result = run_with(
+            cache_dir,
+            None,
+            ModelCacheCommand::Resolve {
+                model_id: "".to_string(),
+            },
+        )
+        .await;
+        assert!(result.is_ok(), "resolve empty model_id should not panic");
+    }
+
+    #[tokio::test]
+    async fn test_run_status_no_hf_path() {
+        let temp = tempfile::tempdir().expect("temp dir");
+        let cache_dir = temp.path().join("model-cache");
+        std::fs::create_dir_all(&cache_dir).expect("create cache dir");
+
+        let result = run_with(cache_dir, None, ModelCacheCommand::Status).await;
+        assert!(result.is_ok(), "status without HF should succeed");
+    }
+
+    #[test]
+    fn test_hf_dir_to_model_id_edge_cases() {
+        assert_eq!(
+            hf_dir_to_model_id("models--a--b--c"),
+            Some("a/b/c".to_string())
+        );
+        assert_eq!(
+            hf_dir_to_model_id("models--single"),
+            Some("single".to_string())
+        );
+    }
+
+    #[test]
+    fn test_format_size_mb_large_values() {
+        // 1 TB in bytes
+        assert_eq!(format_size_mb(1_099_511_627_776), "1048576.0 MB");
+        // Edge: single byte
+        assert_eq!(format_size_mb(1), "0.0 MB");
+    }
+
+    #[test]
+    fn test_format_size_gb_large_values() {
+        assert_eq!(format_size_gb(10_737_418_240), "10.0 GB");
+        assert_eq!(format_size_gb(1), "0.0 GB");
+    }
+
+    #[test]
+    fn test_hf_dir_to_model_id_multiple_dashes() {
+        assert_eq!(
+            hf_dir_to_model_id("models--org--repo--sub--path"),
+            Some("org/repo/sub/path".to_string())
+        );
+    }
+
+    #[test]
+    fn test_hf_dir_to_model_id_no_prefix() {
+        assert_eq!(hf_dir_to_model_id("random-dir"), None);
+        assert_eq!(hf_dir_to_model_id("models"), None);
+    }
 }

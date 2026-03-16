@@ -47,4 +47,5 @@ chrono = { version = "0.4", features = ["serde"] }
 biomeos-test-utils = { path = "../biomeos-test-utils" }
 tokio-test = "0.4"
 tempfile = "3.0"
+serial_test = "3.2"
 

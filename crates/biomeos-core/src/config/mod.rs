@@ -8,6 +8,7 @@
 
 use biomeos_types::config::features::EnvironmentLimits;
 use biomeos_types::config::resources::RegistryConfig;
+use biomeos_types::constants::timeouts;
 use biomeos_types::{
     BiomeOSConfig, BiomeResult, Environment, OrganizationScale, config::resources::DiscoveryMethod,
 };
@@ -156,7 +157,7 @@ pub mod presets {
             .discovery_method(DiscoveryMethod::Static)
             .enable_feature("real_time_monitoring")
             .max_workers(4)
-            .connection_timeout(5000)
+            .connection_timeout(timeouts::DEFAULT_CONNECTION_TIMEOUT_MS)
             .build()
     }
 
@@ -187,7 +188,7 @@ pub mod presets {
             .discovery_method(DiscoveryMethod::Static)
             .enable_feature("telemetry")
             .max_workers(2)
-            .connection_timeout(3000)
+            .connection_timeout(timeouts::SHORT_TIMEOUT_MS)
             .build()
     }
 
@@ -226,7 +227,7 @@ pub mod presets {
             .discovery_endpoint(discovery_endpoint) // From env or localhost (dev only)
             .enable_feature("real_time_monitoring")
             .max_workers(2)
-            .connection_timeout(5000)
+            .connection_timeout(timeouts::DEFAULT_CONNECTION_TIMEOUT_MS)
             .env_var("RUST_LOG", "debug")
             .build()
     }

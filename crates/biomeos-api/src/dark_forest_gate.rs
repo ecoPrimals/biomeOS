@@ -214,10 +214,9 @@ pub async fn dark_forest_gate_middleware(
     // Bare OK paths: return 200 with empty body — reveals NOTHING about the system
     for bare_path in BARE_OK_PATHS {
         if path == *bare_path || path.starts_with(&format!("{bare_path}/")) {
-            return Response::builder()
-                .status(StatusCode::OK)
-                .body(Body::empty())
-                .expect("static 200 response");
+            let mut res = Response::new(Body::empty());
+            *res.status_mut() = StatusCode::OK;
+            return res;
         }
     }
 
@@ -242,19 +241,17 @@ pub async fn dark_forest_gate_middleware(
                 next.run(request).await
             } else {
                 // Not family — return 403 with no information
-                Response::builder()
-                    .status(StatusCode::FORBIDDEN)
-                    .body(Body::empty())
-                    .expect("static 403 response")
+                let mut res = Response::new(Body::empty());
+                *res.status_mut() = StatusCode::FORBIDDEN;
+                res
             }
         }
         None => {
             // No token — return 403 with no information
             // Dark Forest: reveal nothing about what's expected
-            Response::builder()
-                .status(StatusCode::FORBIDDEN)
-                .body(Body::empty())
-                .expect("static 403 response")
+            let mut res = Response::new(Body::empty());
+            *res.status_mut() = StatusCode::FORBIDDEN;
+            res
         }
     }
 }
