@@ -20,6 +20,10 @@ pub struct Graph {
     pub nodes: Vec<GraphNode>,
     /// Execution configuration (parallelism, timeouts, etc.)
     pub config: GraphConfig,
+    /// Coordination pattern (sequential, parallel, continuous, etc.)
+    /// Populated from [graph].coordination when loading DeploymentGraph format.
+    #[serde(default)]
+    pub coordination: Option<String>,
 }
 
 impl Graph {
@@ -71,31 +75,47 @@ impl Graph {
             .to_string();
 
         // Extract nodes
-        tracing::debug!("🔍 Looking for [[nodes]] array...");
-        let nodes_array = value
-            .get("nodes")
-            .and_then(|v| v.as_array())
-            .ok_or_else(|| {
-                tracing::error!("❌ Missing [[nodes]] array in TOML");
-                tracing::debug!(
-                    "   Available top-level keys: {:?}",
-                    value.as_table().map(|t| t.keys().collect::<Vec<_>>())
-                );
-                anyhow::anyhow!(
-                    "Missing [[nodes]] array. Found keys: {:?}",
-                    value.as_table().map(|t| t.keys().collect::<Vec<_>>())
-                )
-            })?;
+        // Accept both [[nodes]] (neural_graph) and [[graph.nodes]] (DeploymentGraph) formats.
+        // The DeploymentGraph format nests nodes under the [graph] section and uses
+        // a different field schema (capability, budget_ms, feedback_to, config, params).
+        // We convert DeploymentGraph nodes to the neural_graph schema on the fly.
+        tracing::debug!("🔍 Looking for [[nodes]] or [[graph.nodes]] array...");
 
-        tracing::debug!("✅ Found [[nodes]] array with {} nodes", nodes_array.len());
+        let (nodes_array, from_deployment_graph) = if let Some(arr) =
+            value.get("nodes").and_then(|v| v.as_array())
+        {
+            (arr.clone(), false)
+        } else if let Some(arr) = graph_table.get("nodes").and_then(|v| v.as_array()) {
+            tracing::debug!("   Found [[graph.nodes]] format — converting to neural_graph schema");
+            (arr.clone(), true)
+        } else {
+            tracing::error!("❌ Missing [[nodes]] and [[graph.nodes]] arrays in TOML");
+            anyhow::bail!(
+                "Missing [[nodes]] or [[graph.nodes]] array. Found keys: {:?}",
+                value.as_table().map(|t| t.keys().collect::<Vec<_>>())
+            );
+        };
+
+        tracing::debug!(
+            "✅ Found {} nodes (deployment_graph={})",
+            nodes_array.len(),
+            from_deployment_graph
+        );
 
         let mut nodes = Vec::new();
         for (idx, node_value) in nodes_array.iter().enumerate() {
             tracing::debug!("   Parsing node {}...", idx);
-            let node: GraphNode = toml::from_str(&toml::to_string(node_value)?)
-                .with_context(|| format!("Failed to parse node {idx} structure"))?;
-            tracing::debug!("   ✅ Node {}: id={}", idx, node.id);
-            nodes.push(node);
+            if from_deployment_graph {
+                let node = Self::convert_deployment_node(node_value)
+                    .with_context(|| format!("Failed to convert deployment node {idx}"))?;
+                tracing::debug!("   ✅ Node {}: id={}", idx, node.id);
+                nodes.push(node);
+            } else {
+                let node: GraphNode = toml::from_str(&toml::to_string(node_value)?)
+                    .with_context(|| format!("Failed to parse node {idx} structure"))?;
+                tracing::debug!("   ✅ Node {}: id={}", idx, node.id);
+                nodes.push(node);
+            }
         }
 
         tracing::info!("✅ Parsed {} nodes successfully", nodes.len());
@@ -135,13 +155,181 @@ impl Graph {
             GraphConfig::default()
         };
 
+        let coordination = graph_table
+            .get("coordination")
+            .and_then(|v| v.as_str())
+            .map(String::from);
+
         Ok(Self {
             id,
             version,
             description,
             nodes,
             config,
+            coordination,
         })
+    }
+
+    /// Returns true if this graph uses continuous coordination (e.g., 60 Hz game loop).
+    #[must_use]
+    pub fn is_continuous(&self) -> bool {
+        self.coordination
+            .as_deref()
+            .is_some_and(|c| c.eq_ignore_ascii_case("continuous"))
+    }
+
+    /// Convert a `[[graph.nodes]]` (DeploymentGraph) node into the neural_graph `GraphNode` schema.
+    ///
+    /// DeploymentGraph nodes have: id, name, capability, depends_on, feedback_to,
+    /// budget_ms, config.primal, params.*
+    ///
+    /// Neural graph nodes have: id, operation.name, operation.params, constraints.timeout_ms,
+    /// depends_on, capabilities, config.*
+    fn convert_deployment_node(node_value: &toml::Value) -> anyhow::Result<GraphNode> {
+        let table = node_value.as_table().context("Node must be a TOML table")?;
+
+        let id = table
+            .get("id")
+            .and_then(|v| v.as_str())
+            .context("Node missing 'id'")?
+            .to_string();
+
+        let capability = table
+            .get("capability")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+
+        let depends_on: Vec<String> = table
+            .get("depends_on")
+            .and_then(|v| v.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        let budget_ms: Option<u64> = table.get("budget_ms").and_then(|v| {
+            let f = v.as_float().or_else(|| {
+                v.as_integer().map(|i| {
+                    // budget_ms values are small (1-16 ms), no precision loss
+                    i as f64
+                })
+            })?;
+            Some(f as u64)
+        });
+
+        let name = table
+            .get("name")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+
+        let feedback_to = table
+            .get("feedback_to")
+            .and_then(|v| v.as_str())
+            .map(String::from);
+
+        // Extract params from [graph.nodes.params]
+        let params: HashMap<String, serde_json::Value> = table
+            .get("params")
+            .and_then(|v| v.as_table())
+            .map(|t| {
+                t.iter()
+                    .filter_map(|(k, v)| toml_value_to_json(v).map(|jv| (k.clone(), jv)))
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        // Extract primal hint from [graph.nodes.config]
+        let primal_name = table
+            .get("config")
+            .and_then(|v| v.as_table())
+            .and_then(|t| t.get("primal"))
+            .and_then(|v| v.as_str())
+            .map(String::from);
+
+        let operation = if capability.is_empty() {
+            None
+        } else {
+            Some(Operation {
+                name: "capability_call".to_string(),
+                params: {
+                    let mut p = HashMap::new();
+                    p.insert(
+                        "capability".to_string(),
+                        serde_json::Value::String(capability.clone()),
+                    );
+                    for (k, v) in &params {
+                        p.insert(k.clone(), v.clone());
+                    }
+                    p
+                },
+                environment: None,
+            })
+        };
+
+        let constraints = budget_ms.map(|ms| Constraints {
+            timeout_ms: Some(ms),
+            retry: None,
+        });
+
+        let capabilities = if capability.is_empty() {
+            vec![]
+        } else {
+            vec![capability]
+        };
+
+        // Store feedback_to and primal hint in node config for downstream use
+        let mut config = HashMap::new();
+        if let Some(ft) = feedback_to {
+            config.insert("feedback_to".to_string(), serde_json::Value::String(ft));
+        }
+        if let Some(pn) = primal_name {
+            config.insert("primal".to_string(), serde_json::Value::String(pn));
+        }
+        if !name.is_empty() {
+            config.insert("name".to_string(), serde_json::Value::String(name));
+        }
+
+        Ok(GraphNode {
+            id,
+            primal: None,
+            output: None,
+            operation,
+            constraints,
+            depends_on,
+            capabilities,
+            capabilities_provided: None,
+            parameter_mappings: None,
+            node_type: None,
+            dependencies: vec![],
+            config,
+            outputs: vec![],
+        })
+    }
+}
+
+/// Convert a TOML value to a serde_json Value.
+fn toml_value_to_json(v: &toml::Value) -> Option<serde_json::Value> {
+    match v {
+        toml::Value::String(s) => Some(serde_json::Value::String(s.clone())),
+        toml::Value::Integer(i) => Some(serde_json::json!(i)),
+        toml::Value::Float(f) => Some(serde_json::json!(f)),
+        toml::Value::Boolean(b) => Some(serde_json::Value::Bool(*b)),
+        toml::Value::Array(arr) => {
+            let items: Vec<_> = arr.iter().filter_map(toml_value_to_json).collect();
+            Some(serde_json::Value::Array(items))
+        }
+        toml::Value::Table(t) => {
+            let map: serde_json::Map<String, serde_json::Value> = t
+                .iter()
+                .filter_map(|(k, v)| toml_value_to_json(v).map(|jv| (k.clone(), jv)))
+                .collect();
+            Some(serde_json::Value::Object(map))
+        }
+        toml::Value::Datetime(dt) => Some(serde_json::Value::String(dt.to_string())),
     }
 }
 
@@ -628,5 +816,108 @@ max_parallelism = 2
                 }
             }
         }
+    }
+
+    #[test]
+    fn test_parse_deployment_graph_format() {
+        let toml = r#"
+[graph]
+id = "test-continuous"
+name = "Test Continuous Graph"
+version = "1.0.0"
+description = "A test graph in DeploymentGraph format"
+coordination = "continuous"
+
+[graph.tick]
+target_hz = 60.0
+
+[[graph.nodes]]
+id = "input"
+name = "Input Collection"
+capability = "interaction.poll"
+budget_ms = 1.0
+
+[graph.nodes.config]
+primal = "petaltongue"
+
+[graph.nodes.params]
+sources = "keyboard"
+
+[[graph.nodes]]
+id = "logic"
+name = "Game Logic"
+capability = "game.tick_logic"
+depends_on = ["input"]
+feedback_to = "physics"
+budget_ms = 4.0
+
+[graph.nodes.config]
+primal = "ludospring"
+
+[graph.nodes.params]
+input_ref = "${input.output}"
+"#;
+        let graph = Graph::from_toml_str(toml).unwrap();
+        assert_eq!(graph.id, "test-continuous");
+        assert_eq!(graph.nodes.len(), 2);
+        assert!(graph.is_continuous());
+
+        let input_node = &graph.nodes[0];
+        assert_eq!(input_node.id, "input");
+        assert!(input_node.operation.is_some());
+        let op = input_node.operation.as_ref().unwrap();
+        assert_eq!(op.name, "capability_call");
+        assert_eq!(
+            op.params.get("capability").and_then(|v| v.as_str()),
+            Some("interaction.poll")
+        );
+
+        let logic_node = &graph.nodes[1];
+        assert_eq!(logic_node.id, "logic");
+        assert_eq!(logic_node.depends_on, vec!["input"]);
+        assert_eq!(
+            logic_node
+                .config
+                .get("feedback_to")
+                .and_then(|v| v.as_str()),
+            Some("physics")
+        );
+        assert_eq!(
+            logic_node.config.get("primal").and_then(|v| v.as_str()),
+            Some("ludospring")
+        );
+        assert!(logic_node.constraints.is_some());
+        assert_eq!(logic_node.constraints.as_ref().unwrap().timeout_ms, Some(4));
+    }
+
+    #[test]
+    fn test_parse_real_game_engine_tick() {
+        let graph_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .join("graphs/game_engine_tick.toml");
+        if graph_path.exists() {
+            let graph = Graph::from_toml_file(&graph_path).unwrap();
+            assert_eq!(graph.id, "game-engine-tick");
+            assert!(graph.is_continuous());
+            assert_eq!(graph.nodes.len(), 5);
+        }
+    }
+
+    #[test]
+    fn test_is_continuous_false_for_sequential() {
+        let toml = r#"
+[graph]
+id = "seq-test"
+version = "1.0.0"
+description = "Sequential"
+coordination = "Sequential"
+
+nodes = []
+"#;
+        let graph = Graph::from_toml_str(toml).unwrap();
+        assert!(!graph.is_continuous());
     }
 }

@@ -1,7 +1,7 @@
 # biomeOS - Current Status
 
-**Updated**: March 15, 2026 (Deep Audit: CI hardening, sovereignty integration, tarpc forwarding, zero-copy Arc<str>, incubation refactor)
-**Version**: 2.41
+**Updated**: March 15, 2026 (Neural API v2.42: unified graph schema, continuous JSON-RPC, ConditionalDag, PathwayLearner wiring)
+**Version**: 2.42
 **Status**: PRODUCTION READY - Multi-Computer Federation Validated
 
 ---
@@ -16,7 +16,7 @@
 | **Security Grade** | A++ (TRUE PRIMAL + Security Headers + Dark Forest Gate) |
 | **Security Score** | 100/100 (HSTS, X-Frame, CSP, Referrer-Policy, Cache-Control) |
 | **Code Quality** | A++ (Pure Rust, ecoBin v3.0, fully concurrent, zero warnings, full doc coverage, sovereignty audit) |
-| **Tests Passing** | 5,017 fully concurrent (0 failures, 0 ignored) |
+| **Tests Passing** | 4,542 fully concurrent (0 failures, 33 ignored) |
 | **Test Coverage** | 77.61% line, 80.32% function (llvm-cov, climbing toward 90%) |
 | **Unsafe Code** | 0 production, 0 test |
 | **Clippy** | PASS (0 warnings, pedantic+nursery, `-D warnings`) |
@@ -24,8 +24,8 @@
 | **Continuous Systems** | ContinuousExecutor (60Hz tick), GraphEventBroadcaster, SensorEventBus |
 | **XR/VR Types** | StereoConfig, Pose6DoF, TrackingFrame, HapticCommand, MotionCaptureAdapter |
 | **Surgical Domain** | SurgicalProcedure, TissueMaterial, AnatomyModel, PkModelParams |
-| **Capability Domains** | 16 domains (+ rhizocrypt, loamspine, sweetgrass), 210+ translations |
-| **Deploy Graphs** | 35 (+ rootpulse_branch, rootpulse_merge, rootpulse_diff, rootpulse_federate, cross_spring_soil_microbiome) |
+| **Capability Domains** | 19 domains (+ measurement, physics, health_extended), 260+ translations |
+| **Deploy Graphs** | 38 (all parseable via unified schema) |
 | **Niche Templates** | 20 (+ rootpulse-branch, rootpulse-merge, rootpulse-diff, rootpulse-federate, soil-microbiome) |
 | **Genetic Model** | EVOLVED - Mitochondrial + Nuclear DNA |
 | **BirdSong Discovery** | Encrypted, shared beacon model |
@@ -42,7 +42,7 @@
 | **Plasmodium** | HTTP JSON-RPC collective (runtime port, SSH legacy removed) |
 | **Model Cache** | NUCLEUS-integrated, HuggingFace import, NestGate fallback |
 | **AI Bridge** | Squirrel -> Songbird -> Cloud/Local AI (validated) |
-| **Neural API** | 210+ capability translations, JSON-RPC 2.0 batch, runtime TOML registry, proxy_http, capability.call (canonical + dotted + params-alias) |
+| **Neural API** | 260+ capability translations, JSON-RPC 2.0 batch, runtime TOML registry, proxy_http, capability.call, graph.start_continuous, graph.suggest_optimizations |
 | **Lifecycle** | Deep health monitoring, auto-resurrection, coordinated shutdown |
 | **SystemPaths** | All paths XDG-compliant via centralized `SystemPaths` (production `/tmp/` eliminated) |
 | **Hardcoded `/tmp`** | 0 in production code (rootpulse, neural_api, continuous, enroll evolved to SystemPaths) |

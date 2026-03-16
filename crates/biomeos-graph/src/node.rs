@@ -65,6 +65,12 @@ pub struct GraphNode {
     /// In Continuous graphs, if execution exceeds this, the previous output is reused.
     #[serde(default)]
     pub budget_ms: Option<f64>,
+
+    /// Fallback behavior when execution fails or times out.
+    /// "skip" = silently skip (reuse cached output or null), "error" = propagate error (default).
+    /// In Continuous graphs, "skip" allows optional primals to miss ticks without killing the loop.
+    #[serde(default)]
+    pub fallback: Option<String>,
 }
 
 fn default_true() -> bool {
@@ -302,6 +308,11 @@ impl GraphNode {
         } else {
             true
         }
+    }
+
+    /// Returns true if this node uses "skip" fallback (tolerates failures).
+    pub fn is_optional(&self) -> bool {
+        self.fallback.as_deref() == Some("skip")
     }
 }
 
@@ -699,5 +710,19 @@ mod tests {
 
         env.insert("DEPLOY".to_string(), "false".to_string());
         assert!(!node.condition_met(&env));
+    }
+
+    #[test]
+    fn test_node_is_optional() {
+        let node = make_test_node();
+        assert!(!node.is_optional());
+
+        let toml_str = r#"
+            id = "optional-ai"
+            name = "AI Narration"
+            fallback = "skip"
+        "#;
+        let node: GraphNode = toml::from_str(toml_str).unwrap();
+        assert!(node.is_optional());
     }
 }

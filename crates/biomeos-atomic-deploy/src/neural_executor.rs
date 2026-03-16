@@ -24,6 +24,7 @@
 //! - Runtime primal discovery (self-knowledge only)
 
 use anyhow::{Context, Result};
+use biomeos_graph::metrics::{GraphResult, MetricsCollector, NodeExecutionParams};
 use biomeos_types::JsonRpcRequest;
 use serde::Serialize;
 use std::collections::{HashMap, VecDeque};
@@ -43,6 +44,7 @@ pub struct GraphExecutor {
     graph: Graph,
     context: ExecutionContext,
     pub(crate) max_parallelism: usize,
+    metrics: Option<MetricsCollector>,
 }
 
 impl GraphExecutor {
@@ -51,7 +53,8 @@ impl GraphExecutor {
         Self {
             graph,
             context: ExecutionContext::new(env),
-            max_parallelism: 3, // Default from graph spec
+            max_parallelism: 3,
+            metrics: None,
         }
     }
 
@@ -65,7 +68,18 @@ impl GraphExecutor {
             graph,
             context: ExecutionContext::new(env).with_nucleation(nucleation),
             max_parallelism: 3,
+            metrics: None,
         }
+    }
+
+    /// Attach a `MetricsCollector` for PathwayLearner integration.
+    ///
+    /// When set, the executor records per-node and per-graph execution metrics
+    /// so the PathwayLearner can analyze and suggest optimizations.
+    #[must_use]
+    pub fn with_metrics(mut self, metrics: MetricsCollector) -> Self {
+        self.metrics = Some(metrics);
+        self
     }
 
     /// Execute the entire graph
@@ -117,6 +131,22 @@ impl GraphExecutor {
             error!("❌ Graph execution failed: {} ms", report.duration_ms);
         }
 
+        // Record graph-level metrics for PathwayLearner
+        if let Some(ref collector) = self.metrics {
+            let graph_result = GraphResult {
+                success: report.success,
+                node_results: HashMap::new(),
+                errors: vec![],
+                duration_ms: report.duration_ms,
+            };
+            if let Err(e) = collector
+                .record_execution(&self.graph.id, &graph_result, report.duration_ms)
+                .await
+            {
+                warn!("Failed to record graph metrics: {e}");
+            }
+        }
+
         Ok(report)
     }
 
@@ -131,6 +161,8 @@ impl GraphExecutor {
         // Execute nodes in parallel
         let mut handles = Vec::new();
 
+        let execution_id = chrono::Utc::now().timestamp_millis();
+
         for node_id in nodes {
             let node = self
                 .graph
@@ -144,17 +176,23 @@ impl GraphExecutor {
             let permit = semaphore.clone().acquire_owned().await?;
 
             let handle = tokio::spawn(async move {
+                let node_start = std::time::Instant::now();
                 let result = Self::execute_node(&node, &context).await;
-                drop(permit); // Release semaphore
-                (node.id.clone(), result)
+                let duration_ms = node_start.elapsed().as_millis() as u64;
+                drop(permit);
+                (node.id.clone(), result, duration_ms)
             });
 
             handles.push(handle);
         }
 
+        let graph_id = self.graph.id.clone();
+
         // Wait for all nodes to complete
         for handle in handles {
-            let (node_id, result) = handle.await?;
+            let (node_id, result, duration_ms) = handle.await?;
+
+            let success = result.is_ok();
 
             match result {
                 Ok(output) => {
@@ -170,7 +208,26 @@ impl GraphExecutor {
                     self.context
                         .set_status(&node_id, NodeStatus::Failed(error_msg.clone()))
                         .await;
-                    phase_result.errors.push((node_id, error_msg));
+                    phase_result.errors.push((node_id.clone(), error_msg));
+                }
+            }
+
+            // Record per-node metrics for PathwayLearner
+            if let Some(ref collector) = self.metrics {
+                if let Err(e) = collector
+                    .record_node_execution(NodeExecutionParams {
+                        execution_id,
+                        graph_name: &graph_id,
+                        node_id: &node_id,
+                        primal_id: "",
+                        operation: "",
+                        success,
+                        duration_ms,
+                        error: None,
+                    })
+                    .await
+                {
+                    warn!("Failed to record node metrics for {node_id}: {e}");
                 }
             }
         }

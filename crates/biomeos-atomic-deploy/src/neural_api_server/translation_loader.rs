@@ -344,6 +344,7 @@ mod tests {
             description: "".to_string(),
             nodes: vec![],
             config: crate::neural_graph::GraphConfig::default(),
+            coordination: None,
         };
         server
             .load_translations_from_graph(&graph)
@@ -383,6 +384,7 @@ mod tests {
             description: "".to_string(),
             nodes: vec![node],
             config: crate::neural_graph::GraphConfig::default(),
+            coordination: None,
         };
         server
             .load_translations_from_graph(&graph)

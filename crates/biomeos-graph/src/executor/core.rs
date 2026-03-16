@@ -170,11 +170,35 @@ impl GraphExecutor {
 ///
 /// This function dispatches to the appropriate node handler based on node type.
 /// Node handlers are in the `node_handlers` module.
+///
+/// **ConditionalDag support:** Before executing, checks `should_skip` (skip_if)
+/// and `condition_met` (condition). Skipped nodes return a sentinel JSON value
+/// so downstream nodes can detect the skip.
 pub async fn execute_node(
     node: &GraphNode,
     context: &ExecutionContext,
 ) -> Result<serde_json::Value> {
     debug!("   Executing node: {}", node.id);
+
+    let env = &context.env;
+
+    // ConditionalDag: skip_if evaluates to true
+    if node.should_skip(&env) {
+        info!("   ⏭️  Skipping node (skip_if): {}", node.id);
+        context
+            .set_status(node.id.as_str(), NodeStatus::Completed(serde_json::json!({"skipped": true, "reason": "skip_if"})))
+            .await;
+        return Ok(serde_json::json!({"skipped": true, "reason": "skip_if"}));
+    }
+
+    // ConditionalDag: condition evaluates to false
+    if !node.condition_met(&env) {
+        info!("   ⏭️  Skipping node (condition not met): {}", node.id);
+        context
+            .set_status(node.id.as_str(), NodeStatus::Completed(serde_json::json!({"skipped": true, "reason": "condition_not_met"})))
+            .await;
+        return Ok(serde_json::json!({"skipped": true, "reason": "condition_not_met"}));
+    }
 
     // Mark as running
     context.set_status(node.id.as_str(), NodeStatus::Running).await;

@@ -544,6 +544,128 @@ capabilities = [
 # Clinical TRT pipeline (5 archetypes)
 "medical.trt_pipeline" = { provider = "healthspring", method = "medical.trt_pipeline" }
 
+# ------------------------------------------------------------------------------
+# Measurement Domain (groundSpring)
+# Environmental sensor data: soil, water, air, canopy, GPS, conductivity.
+# groundSpring is the field measurement primal — it processes raw sensor
+# data into calibrated environmental observations and feeds them into
+# science pipelines.
+# Added: Phase 2 groundSpring capability gap closure (Mar 15, 2026)
+# ------------------------------------------------------------------------------
+
+[domains.measurement]
+provider = "groundspring"
+capabilities = [
+    "measurement",
+    "sensor",
+    "soil_measurement",
+    "water_measurement",
+    "canopy",
+    "gps",
+    "conductivity"
+]
+
+[translations.measurement]
+# Soil sensor readings (temperature, moisture, EC, pH)
+"measurement.soil_temperature" = { provider = "groundspring", method = "measurement.soil_temperature" }
+"measurement.soil_moisture" = { provider = "groundspring", method = "measurement.soil_moisture" }
+"measurement.soil_ec" = { provider = "groundspring", method = "measurement.soil_ec" }
+"measurement.soil_ph" = { provider = "groundspring", method = "measurement.soil_ph" }
+# Water quality (dissolved oxygen, turbidity, conductivity, ORP)
+"measurement.water_do" = { provider = "groundspring", method = "measurement.water_do" }
+"measurement.water_turbidity" = { provider = "groundspring", method = "measurement.water_turbidity" }
+"measurement.water_conductivity" = { provider = "groundspring", method = "measurement.water_conductivity" }
+"measurement.water_orp" = { provider = "groundspring", method = "measurement.water_orp" }
+# Air quality (PM2.5, PM10, CO2, temperature, humidity)
+"measurement.air_particulate" = { provider = "groundspring", method = "measurement.air_particulate" }
+"measurement.air_co2" = { provider = "groundspring", method = "measurement.air_co2" }
+"measurement.air_temperature" = { provider = "groundspring", method = "measurement.air_temperature" }
+"measurement.air_humidity" = { provider = "groundspring", method = "measurement.air_humidity" }
+# Canopy analysis (NDVI, LAI, PAR, light interception)
+"measurement.canopy_ndvi" = { provider = "groundspring", method = "measurement.canopy_ndvi" }
+"measurement.canopy_lai" = { provider = "groundspring", method = "measurement.canopy_lai" }
+"measurement.canopy_par" = { provider = "groundspring", method = "measurement.canopy_par" }
+# GPS / geolocation
+"measurement.gps_position" = { provider = "groundspring", method = "measurement.gps_position" }
+"measurement.gps_track" = { provider = "groundspring", method = "measurement.gps_track" }
+# Calibration
+"measurement.calibrate_sensor" = { provider = "groundspring", method = "measurement.calibrate_sensor" }
+"measurement.get_calibration" = { provider = "groundspring", method = "measurement.get_calibration" }
+# Full measurement pipeline (all sensors → calibrated dataset)
+"measurement.full_pipeline" = { provider = "groundspring", method = "measurement.full_pipeline" }
+
+# ------------------------------------------------------------------------------
+# Physics Domain (hotSpring)
+# Molecular dynamics, thermodynamics, Hamiltonian mechanics, force fields.
+# hotSpring is the physics simulation primal — it provides MD integration,
+# thermostats, barostats, and energy calculations for molecular systems.
+# Added: Phase 2 hotSpring capability gap closure (Mar 15, 2026)
+# ------------------------------------------------------------------------------
+
+[domains.physics]
+provider = "hotspring"
+capabilities = [
+    "physics",
+    "molecular_dynamics",
+    "thermodynamics",
+    "hamiltonian",
+    "force_field",
+    "integration"
+]
+
+[translations.physics]
+# Molecular dynamics integration (velocity Verlet, leapfrog, RESPA)
+"physics.md_step" = { provider = "hotspring", method = "physics.md_step" }
+"physics.md_run" = { provider = "hotspring", method = "physics.md_run" }
+"physics.md_minimize" = { provider = "hotspring", method = "physics.md_minimize" }
+# Thermostats (Nosé-Hoover, Langevin, Berendsen, velocity rescaling)
+"physics.thermostat" = { provider = "hotspring", method = "physics.thermostat" }
+# Barostats (Parrinello-Rahman, Berendsen, MTK)
+"physics.barostat" = { provider = "hotspring", method = "physics.barostat" }
+# Force field operations (LJ, Coulomb, bonded terms, PME)
+"physics.force_field.evaluate" = { provider = "hotspring", method = "physics.force_field.evaluate" }
+"physics.force_field.load" = { provider = "hotspring", method = "physics.force_field.load" }
+# Energy calculations (kinetic, potential, total, virial)
+"physics.energy" = { provider = "hotspring", method = "physics.energy" }
+"physics.virial" = { provider = "hotspring", method = "physics.virial" }
+# Hamiltonian evaluation (T + V)
+"physics.hamiltonian" = { provider = "hotspring", method = "physics.hamiltonian" }
+# Enhanced sampling (replica exchange, metadynamics, umbrella)
+"physics.replica_exchange" = { provider = "hotspring", method = "physics.replica_exchange" }
+"physics.metadynamics" = { provider = "hotspring", method = "physics.metadynamics" }
+# Observable computation (RDF, MSD, RMSD, RMSF)
+"physics.rdf" = { provider = "hotspring", method = "physics.rdf" }
+"physics.msd" = { provider = "hotspring", method = "physics.msd" }
+"physics.rmsd" = { provider = "hotspring", method = "physics.rmsd" }
+# Health / metrics
+"physics.health" = { provider = "hotspring", method = "physics.health" }
+"physics.metrics" = { provider = "hotspring", method = "physics.metrics" }
+
+# ------------------------------------------------------------------------------
+# Health Science Extended Domain (healthSpring Track 6+7)
+# Population health, epidemiological models, clinical decision support,
+# bioinformatics pipelines. Extends the existing medical domain.
+# Added: Phase 2 healthSpring Track 6+7 gap closure (Mar 15, 2026)
+# ------------------------------------------------------------------------------
+
+[translations.health_extended]
+# Population health
+"medical.population_risk" = { provider = "healthspring", method = "medical.population_risk" }
+"medical.cohort_analysis" = { provider = "healthspring", method = "medical.cohort_analysis" }
+# Epidemiological models (SIR, SEIR, age-structured)
+"medical.sir_model" = { provider = "healthspring", method = "medical.sir_model" }
+"medical.seir_model" = { provider = "healthspring", method = "medical.seir_model" }
+# Clinical decision support
+"medical.clinical_score" = { provider = "healthspring", method = "medical.clinical_score" }
+"medical.risk_stratify" = { provider = "healthspring", method = "medical.risk_stratify" }
+# Bioinformatics
+"medical.variant_call" = { provider = "healthspring", method = "medical.variant_call" }
+"medical.gene_expression" = { provider = "healthspring", method = "medical.gene_expression" }
+"medical.pathway_enrichment" = { provider = "healthspring", method = "medical.pathway_enrichment" }
+# Dose-response modeling
+"medical.dose_response" = { provider = "healthspring", method = "medical.dose_response" }
+"medical.pk_pd_model" = { provider = "healthspring", method = "medical.pk_pd_model" }
+
 # ==============================================================================
 # PROVENANCE TRIO — rhizoCrypt + LoamSpine + sweetGrass
 # ==============================================================================

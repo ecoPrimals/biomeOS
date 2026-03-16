@@ -72,6 +72,7 @@ fn test_graph_executor_creation() {
         description: "Test graph".to_string(),
         nodes: vec![],
         config: GraphConfig::default(),
+        coordination: None,
     };
     let env = HashMap::new();
     let executor = GraphExecutor::new(graph, env);
@@ -107,6 +108,7 @@ fn test_topological_sort_simple() {
             create_test_node("node2", vec!["node1".to_string()]),
         ],
         config: GraphConfig::default(),
+        coordination: None,
     };
 
     let env = HashMap::new();
@@ -130,6 +132,7 @@ fn test_topological_sort_parallel() {
             create_test_node("node3", vec!["node1".to_string(), "node2".to_string()]),
         ],
         config: GraphConfig::default(),
+        coordination: None,
     };
 
     let env = HashMap::new();
@@ -154,6 +157,7 @@ fn test_topological_sort_cycle_detection() {
             create_test_node("node2", vec!["node1".to_string()]),
         ],
         config: GraphConfig::default(),
+        coordination: None,
     };
 
     let env = HashMap::new();
@@ -171,6 +175,7 @@ fn test_topological_sort_empty_graph() {
         description: "test".to_string(),
         nodes: vec![],
         config: GraphConfig::default(),
+        coordination: None,
     };
 
     let env = HashMap::new();
@@ -192,6 +197,7 @@ fn test_topological_sort_complex_dependencies() {
             create_test_node("d", vec!["b".to_string(), "c".to_string()]),
         ],
         config: GraphConfig::default(),
+        coordination: None,
     };
 
     let env = HashMap::new();
@@ -215,6 +221,7 @@ async fn test_execution_context_with_nucleation() {
         description: "test".to_string(),
         nodes: vec![],
         config: GraphConfig::default(),
+        coordination: None,
     };
     let env = HashMap::new();
     let nucleation = Arc::new(tokio::sync::RwLock::new(SocketNucleation::default()));
@@ -241,6 +248,7 @@ fn test_topological_sort_single_node() {
         description: "test".to_string(),
         nodes: vec![create_test_node("solo", vec![])],
         config: GraphConfig::default(),
+        coordination: None,
     };
     let executor = GraphExecutor::new(graph, HashMap::new());
     let phases = executor.topological_sort().unwrap();
@@ -262,6 +270,7 @@ fn test_topological_sort_deep_chain() {
             create_test_node("e", vec!["d".to_string()]),
         ],
         config: GraphConfig::default(),
+        coordination: None,
     };
     let executor = GraphExecutor::new(graph, HashMap::new());
     let phases = executor.topological_sort().unwrap();
@@ -287,6 +296,7 @@ fn test_topological_sort_wide_graph() {
             create_test_node("e", vec![]),
         ],
         config: GraphConfig::default(),
+        coordination: None,
     };
     let executor = GraphExecutor::new(graph, HashMap::new());
     let phases = executor.topological_sort().unwrap();
@@ -315,6 +325,7 @@ fn test_topological_sort_diamond_with_tail() {
             create_test_node("e", vec!["d".to_string()]),
         ],
         config: GraphConfig::default(),
+        coordination: None,
     };
     let executor = GraphExecutor::new(graph, HashMap::new());
     let phases = executor.topological_sort().unwrap();
@@ -388,6 +399,7 @@ fn test_executor_with_custom_env() {
         description: "test with env".to_string(),
         nodes: vec![],
         config: GraphConfig::default(),
+        coordination: None,
     };
 
     let executor = GraphExecutor::new(graph, env);
@@ -403,6 +415,7 @@ fn test_topological_sort_self_cycle() {
         description: "test".to_string(),
         nodes: vec![create_test_node("a", vec!["a".to_string()])],
         config: GraphConfig::default(),
+        coordination: None,
     };
     let executor = GraphExecutor::new(graph, HashMap::new());
     let result = executor.topological_sort();
@@ -421,6 +434,7 @@ fn test_topological_sort_three_node_cycle() {
             create_test_node("c", vec!["b".to_string()]),
         ],
         config: GraphConfig::default(),
+        coordination: None,
     };
     let executor = GraphExecutor::new(graph, HashMap::new());
     let result = executor.topological_sort();
@@ -451,6 +465,7 @@ fn test_topological_sort_unreachable_node() {
             create_test_node("c", vec![]),
         ],
         config: GraphConfig::default(),
+        coordination: None,
     };
     let executor = GraphExecutor::new(graph, HashMap::new());
     let result = executor.topological_sort();
@@ -496,6 +511,7 @@ async fn test_execute_node_unknown_type() {
         description: "Test unknown node".to_string(),
         nodes: vec![node],
         config: GraphConfig::default(),
+        coordination: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());
@@ -525,6 +541,7 @@ async fn test_execute_node_explicit_unknown_type() {
         description: "Test explicit unknown".to_string(),
         nodes: vec![node],
         config: GraphConfig::default(),
+        coordination: None,
     };
     let mut env = HashMap::new();
     env.insert("FAMILY_ID".to_string(), "test".to_string());

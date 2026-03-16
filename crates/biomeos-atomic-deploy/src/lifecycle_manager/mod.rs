@@ -427,6 +427,7 @@ mod tests {
             description: "Test graph".to_string(),
             nodes: vec![test_graph_node("beardog", vec![])],
             config: GraphConfig::default(),
+            coordination: None,
         };
 
         manager.store_deployment_graph("tower-graph", graph).await;

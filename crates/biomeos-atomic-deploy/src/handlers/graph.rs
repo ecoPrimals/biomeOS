@@ -24,6 +24,9 @@ use crate::neural_executor::GraphExecutor;
 use crate::neural_graph::Graph;
 use crate::neural_router::NeuralRouter;
 use anyhow::{Context, Result};
+use biomeos_graph::continuous::{ContinuousExecutor, SessionCommand, SessionState};
+use biomeos_graph::events::GraphEventBroadcaster;
+use biomeos_graph::graph::DeploymentGraph;
 use biomeos_types::SystemPaths;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -54,14 +57,25 @@ pub struct ExecutionStatus {
     pub error: Option<String>,
 }
 
+/// Tracks an active continuous execution session.
+struct ContinuousSession {
+    graph_id: String,
+    command_tx: tokio::sync::mpsc::Sender<SessionCommand>,
+    state_rx: tokio::sync::watch::Receiver<SessionState>,
+    started_at: String,
+}
+
 /// Graph handler for CRUD and execution operations.
 #[derive(Clone)]
 pub struct GraphHandler {
     /// Path to graphs directory
     graphs_dir: PathBuf,
 
-    /// Active executions
+    /// Active executions (transactional)
     executions: Arc<RwLock<HashMap<String, ExecutionStatus>>>,
+
+    /// Active continuous sessions (keyed by session_id)
+    continuous_sessions: Arc<RwLock<HashMap<String, ContinuousSession>>>,
 
     /// Family ID
     family_id: String,
@@ -86,6 +100,7 @@ impl GraphHandler {
             graphs_dir: graphs_dir.into(),
             family_id: family_id.into(),
             executions,
+            continuous_sessions: Arc::new(RwLock::new(HashMap::new())),
             router,
             translation_registry,
         }
@@ -111,6 +126,8 @@ impl GraphHandler {
                         "version": graph.version,
                         "description": graph.description,
                         "node_count": graph.nodes.len(),
+                        "coordination": graph.coordination.as_deref().unwrap_or("sequential"),
+                        "continuous": graph.is_continuous(),
                         "estimated_time_ms": null,
                         "tags": []
                     }));
@@ -162,8 +179,8 @@ impl GraphHandler {
     ///
     /// After execution, primals are registered by their CAPABILITIES, not hardcoded names.
     /// This enables TRUE PRIMAL discovery - consumers ask for capabilities, not primal names.
-    pub async fn execute(&self, params: &Option<Value>) -> Result<Value> {
-        let params = params.as_ref().context("Missing parameters")?;
+    pub async fn execute(&self, raw_params: &Option<Value>) -> Result<Value> {
+        let params = raw_params.as_ref().context("Missing parameters")?;
         let graph_id = params["graph_id"].as_str().context("Missing graph_id")?;
         let family_id_param = params["family_id"].as_str().unwrap_or(&self.family_id);
 
@@ -181,11 +198,18 @@ impl GraphHandler {
             .with_context(|| format!("Failed to load graph from: {}", graph_path.display()))?;
 
         info!(
-            "✅ Graph loaded: {} (version: {}, {} nodes)",
+            "✅ Graph loaded: {} (version: {}, {} nodes, coordination: {})",
             graph.id,
             graph.version,
-            graph.nodes.len()
+            graph.nodes.len(),
+            graph.coordination.as_deref().unwrap_or("sequential"),
         );
+
+        // Auto-redirect continuous graphs to start_continuous
+        if graph.is_continuous() {
+            info!("🔄 Graph is continuous — redirecting to start_continuous");
+            return self.start_continuous(raw_params).await;
+        }
 
         // Load capability translations from graph
         self.load_translations_from_graph(&graph).await?;
@@ -239,7 +263,16 @@ impl GraphHandler {
                     .unwrap_or_else(|_| "CHANGE_ME_IN_PRODUCTION".to_string()),
             );
 
+            // Wire PathwayLearner metrics: record per-node and per-graph execution data
+            let metrics_db_path = SystemPaths::new()
+                .map(|p| p.data_dir().join("neural_api_metrics.redb"))
+                .unwrap_or_else(|_| std::path::PathBuf::from("/tmp/neural_api_metrics.redb"));
+            let metrics = biomeos_graph::metrics::MetricsCollector::new(&metrics_db_path).await;
+
             let mut executor = GraphExecutor::new(graph.clone(), env);
+            if let Ok(m) = metrics {
+                executor = executor.with_metrics(m);
+            }
             let start = std::time::Instant::now();
 
             match executor.execute().await {
@@ -397,11 +430,217 @@ impl GraphHandler {
             .as_str()
             .context("Missing execution_id")?;
 
+        // Check transactional executions
         let executions = self.executions.read().await;
-        let status = executions
-            .get(execution_id)
-            .context("Execution not found")?;
+        if let Some(status) = executions.get(execution_id) {
+            return Ok(serde_json::to_value(status)?);
+        }
+        drop(executions);
 
-        Ok(serde_json::to_value(status)?)
+        // Check continuous sessions
+        let sessions = self.continuous_sessions.read().await;
+        if let Some(session) = sessions.get(execution_id) {
+            let state = *session.state_rx.borrow();
+            return Ok(json!({
+                "execution_id": execution_id,
+                "graph_id": session.graph_id,
+                "state": state.to_string(),
+                "continuous": true,
+                "started_at": session.started_at,
+            }));
+        }
+
+        anyhow::bail!("Execution not found: {execution_id}")
+    }
+
+    // -------------------------------------------------------------------
+    // Continuous session management
+    // -------------------------------------------------------------------
+
+    /// Start a continuous graph execution session.
+    ///
+    /// JSON-RPC method: `graph.start_continuous`
+    ///
+    /// Loads the graph from disk as a `DeploymentGraph`, creates a
+    /// `ContinuousExecutor`, and runs it in a background task. Returns
+    /// a `session_id` that can be used for pause/resume/stop.
+    pub async fn start_continuous(&self, params: &Option<Value>) -> Result<Value> {
+        let params = params.as_ref().context("Missing parameters")?;
+        let graph_id = params["graph_id"].as_str().context("Missing graph_id")?;
+
+        let graph_path = self.graphs_dir.join(format!("{graph_id}.toml"));
+        if !graph_path.exists() {
+            anyhow::bail!("Graph file not found: {}", graph_path.display());
+        }
+
+        let toml_str = std::fs::read_to_string(&graph_path)
+            .with_context(|| format!("Failed to read: {}", graph_path.display()))?;
+
+        let deployment_graph: DeploymentGraph = toml::from_str(&toml_str)
+            .with_context(|| format!("Failed to parse DeploymentGraph: {graph_id}"))?;
+
+        let coordination = &deployment_graph.definition.coordination;
+        if *coordination != biomeos_graph::graph::CoordinationPattern::Continuous {
+            anyhow::bail!("Graph '{graph_id}' has coordination '{coordination:?}', not Continuous");
+        }
+
+        let session_id = format!("{graph_id}-{}", chrono::Utc::now().timestamp_millis());
+        let broadcaster = GraphEventBroadcaster::new(16);
+        let mut executor = ContinuousExecutor::new(deployment_graph, broadcaster);
+
+        let (cmd_tx, cmd_rx) = tokio::sync::mpsc::channel::<SessionCommand>(16);
+        let state_rx = executor.state_receiver();
+        let session_id_log = session_id.clone();
+
+        // Spawn the continuous loop in the background
+        tokio::spawn(async move {
+            info!("🎮 Starting continuous session: {}", session_id_log);
+            executor
+                .run(cmd_rx, |node_id, _params, _feedback| {
+                    let node_id = node_id.to_string();
+                    Box::pin(async move {
+                        debug!("  tick node: {}", node_id);
+                        Ok(serde_json::json!({"node": node_id, "status": "ok"}))
+                    })
+                })
+                .await;
+            info!("🛑 Continuous session stopped: {}", session_id_log);
+        });
+
+        let started_at = chrono::Utc::now().to_rfc3339();
+
+        self.continuous_sessions.write().await.insert(
+            session_id.clone(),
+            ContinuousSession {
+                graph_id: graph_id.to_string(),
+                command_tx: cmd_tx,
+                state_rx,
+                started_at: started_at.clone(),
+            },
+        );
+
+        info!(
+            "✅ Continuous session started: {} ({})",
+            session_id, graph_id
+        );
+
+        Ok(json!({
+            "session_id": session_id,
+            "graph_id": graph_id,
+            "started_at": started_at,
+        }))
+    }
+
+    /// Pause a running continuous session.
+    ///
+    /// JSON-RPC method: `graph.pause_continuous`
+    pub async fn pause_continuous(&self, params: &Option<Value>) -> Result<Value> {
+        let session_id = Self::extract_session_id(params)?;
+        let sessions = self.continuous_sessions.read().await;
+        let session = sessions
+            .get(&session_id)
+            .with_context(|| format!("Continuous session not found: {session_id}"))?;
+
+        session
+            .command_tx
+            .send(SessionCommand::Pause)
+            .await
+            .context("Session command channel closed")?;
+
+        info!("⏸️  Paused continuous session: {}", session_id);
+        Ok(json!({"session_id": session_id, "command": "pause"}))
+    }
+
+    /// Resume a paused continuous session.
+    ///
+    /// JSON-RPC method: `graph.resume_continuous`
+    pub async fn resume_continuous(&self, params: &Option<Value>) -> Result<Value> {
+        let session_id = Self::extract_session_id(params)?;
+        let sessions = self.continuous_sessions.read().await;
+        let session = sessions
+            .get(&session_id)
+            .with_context(|| format!("Continuous session not found: {session_id}"))?;
+
+        session
+            .command_tx
+            .send(SessionCommand::Resume)
+            .await
+            .context("Session command channel closed")?;
+
+        info!("▶️  Resumed continuous session: {}", session_id);
+        Ok(json!({"session_id": session_id, "command": "resume"}))
+    }
+
+    /// Stop a continuous session.
+    ///
+    /// JSON-RPC method: `graph.stop_continuous`
+    pub async fn stop_continuous(&self, params: &Option<Value>) -> Result<Value> {
+        let session_id = Self::extract_session_id(params)?;
+
+        let session = self
+            .continuous_sessions
+            .write()
+            .await
+            .remove(&session_id)
+            .with_context(|| format!("Continuous session not found: {session_id}"))?;
+
+        // Send stop command (best effort — the executor may have already exited)
+        let _ = session.command_tx.send(SessionCommand::Stop).await;
+
+        info!("🛑 Stopped continuous session: {}", session_id);
+        Ok(json!({"session_id": session_id, "command": "stop"}))
+    }
+
+    /// Analyze a graph's execution history and suggest optimizations.
+    ///
+    /// JSON-RPC method: `graph.suggest_optimizations`
+    ///
+    /// Loads the graph as a `DeploymentGraph`, connects to the metrics
+    /// database, and runs the `PathwayLearner` analysis. Returns
+    /// optimization suggestions sorted by estimated impact.
+    pub async fn suggest_optimizations(&self, params: &Option<Value>) -> Result<Value> {
+        let params = params.as_ref().context("Missing parameters")?;
+        let graph_id = params["graph_id"].as_str().context("Missing graph_id")?;
+
+        let min_samples = params["min_samples"].as_u64().unwrap_or(10);
+
+        let graph_path = self.graphs_dir.join(format!("{graph_id}.toml"));
+        if !graph_path.exists() {
+            anyhow::bail!("Graph file not found: {}", graph_path.display());
+        }
+
+        let toml_str = std::fs::read_to_string(&graph_path)
+            .with_context(|| format!("Failed to read: {}", graph_path.display()))?;
+
+        let deployment_graph: DeploymentGraph = toml::from_str(&toml_str)
+            .with_context(|| format!("Failed to parse DeploymentGraph: {graph_id}"))?;
+
+        let metrics_db_path = SystemPaths::new()
+            .map(|p| p.data_dir().join("neural_api_metrics.redb"))
+            .unwrap_or_else(|_| std::path::PathBuf::from("/tmp/neural_api_metrics.redb"));
+
+        let collector = biomeos_graph::metrics::MetricsCollector::new(&metrics_db_path)
+            .await
+            .context("Failed to open metrics database")?;
+
+        let learner = biomeos_graph::pathway_learner::PathwayLearner::new(collector, min_samples);
+        let analysis = learner.analyze(&deployment_graph).await;
+
+        info!(
+            "🧠 PathwayLearner analysis for '{}': {} suggestions from {} samples",
+            graph_id,
+            analysis.suggestions.len(),
+            analysis.sample_size
+        );
+
+        Ok(serde_json::to_value(analysis)?)
+    }
+
+    fn extract_session_id(params: &Option<Value>) -> Result<String> {
+        let params = params.as_ref().context("Missing parameters")?;
+        Ok(params["session_id"]
+            .as_str()
+            .context("Missing session_id")?
+            .to_string())
     }
 }

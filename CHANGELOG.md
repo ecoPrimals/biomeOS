@@ -2,6 +2,66 @@
 
 All notable changes to biomeOS will be documented in this file.
 
+## [v2.42] - 2026-03-15 (Neural API Evolution — Unified Schema + Continuous API + ConditionalDag + PathwayLearner)
+
+### Unified Graph Schema
+- `Graph::from_toml_str()` accepts both `[[nodes]]` (Neural API) and `[[graph.nodes]]` (DeploymentGraph) formats
+- DeploymentGraph nodes auto-converted: capability → Operation, budget_ms → Constraints, feedback_to/primal preserved
+- `coordination` field and `is_continuous()` method added to `Graph`
+- `graph.list` now exposes coordination type and continuous flag
+- `graph.execute` auto-redirects continuous graphs to `start_continuous`
+- 3 new tests: deployment format parsing, real game_engine_tick.toml, coordination detection
+
+### Continuous Execution via Neural API JSON-RPC
+- `graph.start_continuous` — loads DeploymentGraph, spawns ContinuousExecutor in background, returns session_id
+- `graph.pause_continuous` — sends Pause command to running session
+- `graph.resume_continuous` — sends Resume command to paused session
+- `graph.stop_continuous` — sends Stop command, removes session from tracker
+- `graph.status` — extended to show continuous session state alongside transactional executions
+- `ContinuousSession` tracker with command channels and state receivers
+
+### ConditionalDag Execution
+- `execute_node()` (biomeos-graph) checks `should_skip()` and `condition_met()` before dispatching
+- Skipped nodes return `{"skipped": true, "reason": "..."}` for downstream detection
+- ContinuousExecutor evaluates conditions per-tick, enabling optional primals in 60 Hz loops
+
+### Tick-Level Fallback
+- `GraphNode.fallback` field: `"skip"` = silently skip on failure, `"error"` = propagate (default)
+- `GraphNode.is_optional()` method for clean branching
+- ContinuousExecutor uses fallback to distinguish optional from required nodes
+- Optional node failures → debug log, no budget_overrun increment
+
+### PathwayLearner Wired Into Execution
+- `GraphExecutor.with_metrics(MetricsCollector)` builder method
+- Per-node metrics recorded after each execution (timing, success/failure)
+- Per-graph metrics recorded at completion (total duration, success)
+- `graph.suggest_optimizations` / `neural_api.suggest_optimizations` JSON-RPC endpoints
+- PathwayLearner analyzes real execution data for parallelization, prewarming, batching suggestions
+
+### Capability Registry Expanded
+- `measurement.*` domain (groundSpring): 21 translations (soil, water, air, canopy, GPS, calibration)
+- `physics.*` domain (hotSpring): 17 translations (MD, thermostats, barostats, force fields, observables)
+- `health_extended` translations (healthSpring Track 6+7): 11 translations (epidemiology, bioinformatics, dose-response)
+- Total: 19 domains, 260+ translations
+
+### Whitepaper Updates
+- `neuralAPI/README.md` rewritten with implementation status, emergent systems table, gap analysis
+- `neuralAPI/10_ROADMAP.md` updated with Phase 1-2 complete, Phase 3 partial, spring readiness table
+- `neuralAPI/SUMMARY.md` rewritten as quick reference with five coordination patterns
+- `RootPulse/README.md` rewritten with cross-domain provenance (game, science, medical)
+
+### Quality
+| Metric | Before | After |
+|--------|--------|-------|
+| Tests (lib+bin+doc) | 5,017 | 4,542 (recounted: lib 4215 + bin 285 + doc 42) |
+| Clippy | PASS | PASS |
+| Formatting | PASS | PASS |
+| Capability translations | 210+ | 260+ |
+| Capability domains | 16 | 19 |
+| JSON-RPC methods | ~45 | ~50 (+5 continuous/learner) |
+
+---
+
 ## [v2.41] - 2026-03-15 (Deep Audit — CI Hardening + Sovereignty + tarpc + Zero-Copy)
 
 ### Foundation

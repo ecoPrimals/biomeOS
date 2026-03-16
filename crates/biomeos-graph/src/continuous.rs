@@ -334,6 +334,15 @@ impl ContinuousExecutor {
                         None => continue,
                     };
 
+                    // ConditionalDag support: skip nodes whose condition is not met.
+                    // In continuous graphs this enables optional primals (e.g., AI narration
+                    // only when Squirrel is available) by evaluating conditions per tick.
+                    let env = &self.graph.definition.env;
+                    if node.should_skip(env) || !node.condition_met(env) {
+                        debug!("   ⏭️  Skipping node (condition): {}", node_id);
+                        continue;
+                    }
+
                     let feedback_input = self.get_feedback_input(node_id).await;
 
                     let node_budget = node
@@ -341,6 +350,7 @@ impl ContinuousExecutor {
                         .map(|ms| Duration::from_secs_f64(ms / 1000.0))
                         .unwrap_or(budget_warning);
 
+                    let is_optional = node.is_optional();
                     let node_start = Instant::now();
                     let result = tokio::time::timeout(
                         node_budget * 2,
@@ -371,14 +381,28 @@ impl ContinuousExecutor {
                             );
                         }
                         Ok(Err(e)) => {
-                            warn!("Node {} error on tick {}: {}", node_id, tick_num, e);
+                            if is_optional {
+                                debug!(
+                                    "Optional node {} skipped on tick {}: {}",
+                                    node_id, tick_num, e
+                                );
+                            } else {
+                                warn!("Node {} error on tick {}: {}", node_id, tick_num, e);
+                            }
                         }
                         Err(_) => {
-                            budget_overruns += 1;
-                            warn!(
-                                "Node {} timed out on tick {} — reusing cached output",
-                                node_id, tick_num
-                            );
+                            if is_optional {
+                                debug!(
+                                    "Optional node {} timed out on tick {} — skipped",
+                                    node_id, tick_num
+                                );
+                            } else {
+                                budget_overruns += 1;
+                                warn!(
+                                    "Node {} timed out on tick {} — reusing cached output",
+                                    node_id, tick_num
+                                );
+                            }
                         }
                     }
                 }

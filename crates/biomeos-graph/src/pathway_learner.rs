@@ -366,6 +366,7 @@ mod tests {
             params: Default::default(),
             feedback_to: None,
             budget_ms: None,
+            fallback: None,
         }
     }
 

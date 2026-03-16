@@ -21,6 +21,11 @@ enum Route {
     GraphSave,
     GraphExecute,
     GraphStatus,
+    GraphStartContinuous,
+    GraphPauseContinuous,
+    GraphResumeContinuous,
+    GraphStopContinuous,
+    GraphSuggestOptimizations,
     TopologyGet,
     TopologyPrimals,
     TopologyProprioception,
@@ -71,6 +76,20 @@ const ROUTE_TABLE: &[(&str, Route)] = &[
     ("graph.execute", Route::GraphExecute),
     ("neural_api.get_execution_status", Route::GraphStatus),
     ("graph.status", Route::GraphStatus),
+    // Continuous session management
+    ("graph.start_continuous", Route::GraphStartContinuous),
+    ("graph.pause_continuous", Route::GraphPauseContinuous),
+    ("graph.resume_continuous", Route::GraphResumeContinuous),
+    ("graph.stop_continuous", Route::GraphStopContinuous),
+    // Pathway Learner
+    (
+        "graph.suggest_optimizations",
+        Route::GraphSuggestOptimizations,
+    ),
+    (
+        "neural_api.suggest_optimizations",
+        Route::GraphSuggestOptimizations,
+    ),
     // Topology
     ("neural_api.get_topology", Route::TopologyGet),
     ("topology.get", Route::TopologyGet),
@@ -204,6 +223,25 @@ impl NeuralApiServer {
             Route::GraphSave => self.graph_handler.save(&request.params).await?,
             Route::GraphExecute => self.graph_handler.execute(&request.params).await?,
             Route::GraphStatus => self.graph_handler.get_status(&request.params).await?,
+            Route::GraphStartContinuous => {
+                self.graph_handler.start_continuous(&request.params).await?
+            }
+            Route::GraphPauseContinuous => {
+                self.graph_handler.pause_continuous(&request.params).await?
+            }
+            Route::GraphResumeContinuous => {
+                self.graph_handler
+                    .resume_continuous(&request.params)
+                    .await?
+            }
+            Route::GraphStopContinuous => {
+                self.graph_handler.stop_continuous(&request.params).await?
+            }
+            Route::GraphSuggestOptimizations => {
+                self.graph_handler
+                    .suggest_optimizations(&request.params)
+                    .await?
+            }
             Route::TopologyGet => self.topology_handler.get().await?,
             Route::TopologyPrimals => self.topology_handler.get_primals().await?,
             Route::TopologyProprioception => self.topology_handler.get_proprioception().await?,
